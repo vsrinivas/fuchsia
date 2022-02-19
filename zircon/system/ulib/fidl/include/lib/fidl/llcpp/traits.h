@@ -21,7 +21,7 @@
 // The contracts of a FIDL type |T| are as follows:
 //
 // |IsFidlType<T>|    resolves to std::true_type.
-// |IsFidlMessage<T>| resolves to std::true_type iff |T| is a transactional message.
+// |IsFidlTransactionalMessage<T>| resolves to std::true_type iff |T| is a transactional message.
 // |IsResource<T>|    resolves to std::true_type iff |T| is a resource type.
 //
 // |TypeTraits<T>| will be specialized for the type, see documentation below for
@@ -32,9 +32,10 @@ namespace fidl {
 // A type trait that indicates whether the given type is a request/response type
 // i.e. has a FIDL message header.
 template <typename T>
-struct IsFidlMessage : public std::false_type {};
+struct IsFidlTransactionalMessage : public std::false_type {};
 
-// Code-gen will explicitly conform the generated FIDL transactional messages to IsFidlMessage.
+// Code-gen will explicitly conform the generated FIDL transactional messages to
+// IsFidlTransactionalMessage.
 
 // A type trait that indicates whether the given type is allowed to appear in
 // generated binding APIs and can be encoded/decoded.

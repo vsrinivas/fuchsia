@@ -16,11 +16,11 @@ extern "C" const fidl_type_t
     WireResult(
         ::fidl::UnownedClientEnd<::test_placementofattributes::ExampleProtocol>
             client,
-        ::fidl::WireRequest<
+        ::fidl::internal::TransactionalRequest<
             ::test_placementofattributes::ExampleProtocol::Method>* request) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::unstable::OwnedEncodedMessage<
-      ::fidl::WireRequest<
+      ::fidl::internal::TransactionalRequest<
           ::test_placementofattributes::ExampleProtocol::Method>,
       ::fidl::internal::ChannelTransport>
       request_message(::fidl::internal::AllowUnownedInputRef{}, request);
@@ -39,7 +39,7 @@ namespace test_placementofattributes {
         ::fidl::UnownedClientEnd<::test_placementofattributes::ExampleProtocol>
             client_end,
         ::fidl::internal::AnyBufferAllocator& allocator,
-        ::fidl::WireRequest<
+        ::fidl::internal::TransactionalRequest<
             ::test_placementofattributes::ExampleProtocol::Method>* request) {
   constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<
       ::test_placementofattributes::ExampleProtocol::Method>();
@@ -53,8 +53,9 @@ namespace test_placementofattributes {
   uint32_t request_byte_capacity = buffer_size;
   uint8_t* request_bytes = buffer;
 
-  ::fidl::unstable::UnownedEncodedMessage<::fidl::WireRequest<
-      ::test_placementofattributes::ExampleProtocol::Method>>
+  ::fidl::unstable::UnownedEncodedMessage<
+      ::fidl::internal::TransactionalRequest<
+          ::test_placementofattributes::ExampleProtocol::Method>>
       request_message(request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
   outgoing.Write(client_end.handle());
@@ -70,10 +71,11 @@ namespace test_placementofattributes {
     ::test_placementofattributes::ExampleProtocol>::
     Method(const ::test_exampleusing::wire::Empty& arg) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::WireRequest<::test_placementofattributes::ExampleProtocol::Method>
+  ::fidl::internal::TransactionalRequest<
+      ::test_placementofattributes::ExampleProtocol::Method>
       _request_object{arg};
   ::fidl::unstable::OwnedEncodedMessage<
-      ::fidl::WireRequest<
+      ::fidl::internal::TransactionalRequest<
           ::test_placementofattributes::ExampleProtocol::Method>,
       ::fidl::internal::ChannelTransport>
       _request_message(::fidl::internal::AllowUnownedInputRef{},
@@ -92,10 +94,12 @@ namespace test_placementofattributes {
     return _allocation.error_value();
   }
 
-  ::fidl::WireRequest<::test_placementofattributes::ExampleProtocol::Method>
+  ::fidl::internal::TransactionalRequest<
+      ::test_placementofattributes::ExampleProtocol::Method>
       _request{arg};
-  ::fidl::unstable::UnownedEncodedMessage<::fidl::WireRequest<
-      ::test_placementofattributes::ExampleProtocol::Method>>
+  ::fidl::unstable::UnownedEncodedMessage<
+      ::fidl::internal::TransactionalRequest<
+          ::test_placementofattributes::ExampleProtocol::Method>>
       _request_message(_allocation->data, _buffer_size, &_request);
   return _client_base()->SendOneWay(_request_message.GetOutgoingMessage());
 }
@@ -172,13 +176,14 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<
         [](void* interface, ::fidl::IncomingMessage&& msg,
            internal::IncomingTransportContext transport_context,
            ::fidl::Transaction* txn) {
-          ::fidl::unstable::DecodedMessage<::fidl::WireRequest<
-              ::test_placementofattributes::ExampleProtocol::Method>>
+          ::fidl::unstable::DecodedMessage<
+              ::fidl::internal::TransactionalRequest<
+                  ::test_placementofattributes::ExampleProtocol::Method>>
               decoded{std::move(msg)};
           if (unlikely(!decoded.ok())) {
             return decoded.status();
           }
-          auto* primary = decoded.PrimaryObject();
+          auto* primary = &decoded.PrimaryObject()->body;
           ::fidl::internal::WireCompleter<
               ::test_placementofattributes::ExampleProtocol::Method>::Sync
               completer(txn);
@@ -224,10 +229,11 @@ void fidl::WireServer<::test_placementofattributes::ExampleProtocol>::
 }
 #endif  // __Fuchsia__
 
-void ::fidl::WireRequest<
+void ::fidl::internal::TransactionalRequest<
     ::test_placementofattributes::ExampleProtocol::Method>::_InitHeader() {
   fidl_init_txn_header(
-      &_hdr, 0, ::test_placementofattributes::kExampleProtocol_Method_Ordinal);
+      &header, 0,
+      ::test_placementofattributes::kExampleProtocol_Method_Ordinal);
 }
 
 #ifdef __Fuchsia__

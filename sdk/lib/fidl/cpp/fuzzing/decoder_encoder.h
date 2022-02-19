@@ -105,7 +105,7 @@ DecoderEncoderStatus DecoderEncoderImpl(uint8_t* bytes, uint32_t num_bytes, zx_h
   };
 
   std::optional<fidl::IncomingMessage> incoming_initialize_later;
-  constexpr bool kTransactionalMessage = fidl::IsFidlMessage<T>::value;
+  constexpr bool kTransactionalMessage = fidl::IsFidlTransactionalMessage<T>::value;
   if (kTransactionalMessage) {
     incoming_initialize_later =
         fidl::IncomingMessage::Create(bytes, num_bytes, handles, handle_metadata, num_handles);

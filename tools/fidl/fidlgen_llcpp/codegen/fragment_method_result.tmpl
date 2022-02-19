@@ -10,10 +10,10 @@ template<>
 class {{ .WireResult }} final : public ::fidl::Result {
   public:
     {{ .WireResult.Self }}(::{{ .Transport.Namespace }}::UnownedClientEnd<{{ .Protocol }}> client,
-        {{ .WireRequest }}* request);
+        {{ .WireTransactionalRequest }}* request);
    {{- if .HasResponse }}
     {{ .WireResult.Self }}(::{{ .Transport.Namespace }}::UnownedClientEnd<{{ .Protocol }}> client,
-        {{ .WireRequest }}* request, zx_time_t _deadline);
+        {{ .WireTransactionalRequest }}* request, zx_time_t _deadline);
    {{- end }}
    explicit {{ .WireResult.Self }}(const ::fidl::Result& result) : ::fidl::Result(result) {}
    {{ .WireResult.Self }}({{ .WireResult.Self }}&&) = delete;
@@ -31,13 +31,14 @@ class {{ .WireResult }} final : public ::fidl::Result {
    {{- end }}
    {{- if .HasResponse }}
 
+   {{- if .ResponseArgs }}
    {{ .WireResponse }}* Unwrap() {
      ZX_DEBUG_ASSERT(ok());
-     return reinterpret_cast<{{ .WireResponse }}*>(bytes_.data());
+     return reinterpret_cast<{{ .WireResponse }}*>(bytes_.data() + sizeof(fidl_message_header_t));
    }
    const {{ .WireResponse }}* Unwrap() const {
      ZX_DEBUG_ASSERT(ok());
-     return reinterpret_cast<const {{ .WireResponse }}*>(bytes_.data());
+     return reinterpret_cast<const {{ .WireResponse }}*>(bytes_.data() + sizeof(fidl_message_header_t));
    }
 
    {{ .WireResponse }}& value() { return *Unwrap(); }
@@ -49,10 +50,11 @@ class {{ .WireResult }} final : public ::fidl::Result {
    {{ .WireResponse }}& operator*() { return value(); }
    const {{ .WireResponse }}& operator*() const { return value(); }
    {{- end }}
+   {{- end }}
 
   private:
    {{- if .HasResponse }}
-     {{ .Response.ClientAllocationV1.BackingBufferType }} bytes_;
+   {{ .Response.ClientAllocationV1.BackingBufferType }} bytes_;
    {{- end }}
 };
 {{- end }}
@@ -67,14 +69,14 @@ class {{ .WireResult }} final : public ::fidl::Result {
 {{- EnsureNamespace "" }}
 {{ .WireResult }}::{{ .WireResult.Self }}(
     ::{{ .Transport.Namespace }}::UnownedClientEnd<{{ .Protocol }}> client,
-    {{ .WireRequest }}* request) {
+    {{ .WireTransactionalRequest }}* request) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<{{ .WireRequest }}, {{ .Transport.Type }}> request_message(
+  ::fidl::unstable::OwnedEncodedMessage<{{ .WireTransactionalRequest }}, {{ .Transport.Type }}> request_message(
       ::fidl::internal::AllowUnownedInputRef{},
       request);
   auto& outgoing = request_message.GetOutgoingMessage();
   {{- if .HasResponse }}
-  outgoing.Call<{{ .WireResponse }}>(
+  outgoing.Call<{{ .WireTransactionalResponse }}>(
     client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()));
   {{- else }}
   outgoing.Write(client.handle());
@@ -85,12 +87,12 @@ class {{ .WireResult }} final : public ::fidl::Result {
 
 {{ .WireResult }}::{{ .WireResult.Self }}(
     ::{{ .Transport.Namespace }}::UnownedClientEnd<{{ .Protocol }}> client,
-    {{ .WireRequest }}* request, zx_time_t deadline) {
+    {{ .WireTransactionalRequest }}* request, zx_time_t deadline) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::unstable::OwnedEncodedMessage<{{ .WireRequest }}, {{ .Transport.Type }}> request_message(
+  ::fidl::unstable::OwnedEncodedMessage<{{ .WireTransactionalRequest }}, {{ .Transport.Type }}> request_message(
       ::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
-  outgoing.Call<{{ .WireResponse }}>(
+  outgoing.Call<{{ .WireTransactionalResponse }}>(
     client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()), fidl::CallOptions{.deadline = deadline});
   SetResult(outgoing);
 }

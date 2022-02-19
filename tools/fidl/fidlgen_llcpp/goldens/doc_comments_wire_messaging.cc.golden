@@ -14,10 +14,12 @@ namespace test_doccomments {
 }  // namespace test_doccomments
 ::fidl::WireResult<::test_doccomments::Interface::Method>::WireResult(
     ::fidl::UnownedClientEnd<::test_doccomments::Interface> client,
-    ::fidl::WireRequest<::test_doccomments::Interface::Method>* request) {
+    ::fidl::internal::TransactionalRequest<
+        ::test_doccomments::Interface::Method>* request) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::unstable::OwnedEncodedMessage<
-      ::fidl::WireRequest<::test_doccomments::Interface::Method>,
+      ::fidl::internal::TransactionalRequest<
+          ::test_doccomments::Interface::Method>,
       ::fidl::internal::ChannelTransport>
       request_message(::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
@@ -33,9 +35,11 @@ namespace test_doccomments {
 ::fidl::Result fidl::internal::WireWeakOnewayClientImpl<
     ::test_doccomments::Interface>::Method() {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::WireRequest<::test_doccomments::Interface::Method> _request_object{};
+  ::fidl::internal::TransactionalRequest<::test_doccomments::Interface::Method>
+      _request_object{};
   ::fidl::unstable::OwnedEncodedMessage<
-      ::fidl::WireRequest<::test_doccomments::Interface::Method>,
+      ::fidl::internal::TransactionalRequest<
+          ::test_doccomments::Interface::Method>,
       ::fidl::internal::ChannelTransport>
       _request_message(::fidl::internal::AllowUnownedInputRef{},
                        &_request_object);
@@ -52,9 +56,11 @@ namespace test_doccomments {
     return _allocation.error_value();
   }
 
-  ::fidl::WireRequest<::test_doccomments::Interface::Method> _request{};
+  ::fidl::internal::TransactionalRequest<::test_doccomments::Interface::Method>
+      _request{};
   ::fidl::unstable::UnownedEncodedMessage<
-      ::fidl::WireRequest<::test_doccomments::Interface::Method>>
+      ::fidl::internal::TransactionalRequest<
+          ::test_doccomments::Interface::Method>>
       _request_message(_allocation->data, _buffer_size, &_request);
   return _client_base()->SendOneWay(_request_message.GetOutgoingMessage());
 }
@@ -74,9 +80,9 @@ fidl::WireSyncEventHandler<::test_doccomments::Interface>::HandleOneEvent(
   }
   constexpr uint32_t kHandleAllocSize = ([]() constexpr {
     uint32_t x = 0;
-    if (::fidl::TypeTraits<::fidl::WireEvent<
+    if (::fidl::TypeTraits<::fidl::internal::TransactionalEvent<
             ::test_doccomments::Interface::OnEvent>>::kMaxNumHandles >= x) {
-      x = ::fidl::TypeTraits<::fidl::WireEvent<
+      x = ::fidl::TypeTraits<::fidl::internal::TransactionalEvent<
           ::test_doccomments::Interface::OnEvent>>::kMaxNumHandles;
     }
     if (x > ZX_CHANNEL_MAX_MSG_HANDLES) {
@@ -107,13 +113,15 @@ fidl::WireSyncEventHandler<::test_doccomments::Interface>::HandleOneEvent(
   fidl_message_header_t* hdr = msg.header();
   switch (hdr->ordinal) {
     case ::test_doccomments::kInterface_OnEvent_Ordinal: {
-      ::fidl::unstable::DecodedMessage<
-          ::fidl::WireEvent<::test_doccomments::Interface::OnEvent>>
+      ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalEvent<
+          ::test_doccomments::Interface::OnEvent>>
           decoded{::std::move(msg)};
       if (!decoded.ok()) {
         return ::fidl::Result(decoded);
       }
-      OnEvent(decoded.PrimaryObject());
+      ::fidl::WireEvent<::test_doccomments::Interface::OnEvent> empty_event;
+      auto* primary = &empty_event;
+      OnEvent(primary);
       return ::fidl::Result::Ok();
     }
     default: {
@@ -128,14 +136,16 @@ std::optional<::fidl::UnbindInfo> fidl::internal::
         ::fidl::internal::IncomingTransportContext transport_context) {
   switch (msg.header()->ordinal) {
     case ::test_doccomments::kInterface_OnEvent_Ordinal: {
-      ::fidl::unstable::DecodedMessage<
-          ::fidl::WireEvent<::test_doccomments::Interface::OnEvent>>
+      ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalEvent<
+          ::test_doccomments::Interface::OnEvent>>
           decoded{std::move(msg)};
       if (!decoded.ok()) {
         return ::fidl::UnbindInfo{decoded};
       }
       if (event_handler()) {
-        event_handler()->OnEvent(decoded.PrimaryObject());
+        ::fidl::WireEvent<::test_doccomments::Interface::OnEvent> empty_event;
+        auto* primary = &empty_event;
+        event_handler()->OnEvent(primary);
       }
       return std::nullopt;
     }
@@ -155,9 +165,9 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<
         [](void* interface, ::fidl::IncomingMessage&& msg,
            internal::IncomingTransportContext transport_context,
            ::fidl::Transaction* txn) {
-          auto* primary = reinterpret_cast<
-              ::fidl::WireRequest<::test_doccomments::Interface::Method>*>(
-              msg.bytes());
+          ::fidl::WireRequest<::test_doccomments::Interface::Method>
+              empty_request;
+          auto* primary = &empty_request;
           ::fidl::internal::WireCompleter<
               ::test_doccomments::Interface::Method>::Sync completer(txn);
           reinterpret_cast<::fidl::WireServer<::test_doccomments::Interface>*>(
@@ -199,12 +209,15 @@ void fidl::WireServer<::test_doccomments::Interface>::dispatch_message(
 }
 #endif  // __Fuchsia__
 
-void ::fidl::WireRequest<::test_doccomments::Interface::Method>::_InitHeader() {
-  fidl_init_txn_header(&_hdr, 0, ::test_doccomments::kInterface_Method_Ordinal);
+void ::fidl::internal::TransactionalRequest<
+    ::test_doccomments::Interface::Method>::_InitHeader() {
+  fidl_init_txn_header(&header, 0,
+                       ::test_doccomments::kInterface_Method_Ordinal);
 }
 
-void ::fidl::WireEvent<::test_doccomments::Interface::OnEvent>::_InitHeader() {
-  fidl_init_txn_header(&_hdr, 0,
+void ::fidl::internal::TransactionalEvent<
+    ::test_doccomments::Interface::OnEvent>::_InitHeader() {
+  fidl_init_txn_header(&header, 0,
                        ::test_doccomments::kInterface_OnEvent_Ordinal);
 }
 
@@ -212,10 +225,12 @@ void ::fidl::WireEvent<::test_doccomments::Interface::OnEvent>::_InitHeader() {
 
 fidl::Result
 fidl::internal::WireWeakEventSender<::test_doccomments::Interface>::OnEvent() {
-  ::fidl::WireEvent<::test_doccomments::Interface::OnEvent> _response{};
+  ::fidl::internal::TransactionalEvent<::test_doccomments::Interface::OnEvent>
+      _response{};
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::unstable::OwnedEncodedMessage<
-      ::fidl::WireEvent<::test_doccomments::Interface::OnEvent>,
+      ::fidl::internal::TransactionalEvent<
+          ::test_doccomments::Interface::OnEvent>,
       ::fidl::internal::ChannelTransport>
       _response_message{::fidl::internal::AllowUnownedInputRef{}, &_response};
   return _inner().SendEvent(_response_message.GetOutgoingMessage());
@@ -232,9 +247,11 @@ fidl::Result fidl::internal::WireWeakBufferEventSender<
     return _allocation.error_value();
   }
 
-  ::fidl::WireEvent<::test_doccomments::Interface::OnEvent> _response{};
+  ::fidl::internal::TransactionalEvent<::test_doccomments::Interface::OnEvent>
+      _response{};
   ::fidl::unstable::UnownedEncodedMessage<
-      ::fidl::WireEvent<::test_doccomments::Interface::OnEvent>,
+      ::fidl::internal::TransactionalEvent<
+          ::test_doccomments::Interface::OnEvent>,
       ::fidl::internal::ChannelTransport>
       _response_message(_allocation->data, _buffer_size, &_response);
   return _inner().SendEvent(_response_message.GetOutgoingMessage());
@@ -242,10 +259,12 @@ fidl::Result fidl::internal::WireWeakBufferEventSender<
 
 fidl::Result
 fidl::internal::WireEventSender<::test_doccomments::Interface>::OnEvent() {
-  ::fidl::WireEvent<::test_doccomments::Interface::OnEvent> _response{};
+  ::fidl::internal::TransactionalEvent<::test_doccomments::Interface::OnEvent>
+      _response{};
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::unstable::OwnedEncodedMessage<
-      ::fidl::WireEvent<::test_doccomments::Interface::OnEvent>,
+      ::fidl::internal::TransactionalEvent<
+          ::test_doccomments::Interface::OnEvent>,
       ::fidl::internal::ChannelTransport>
       _response_message{::fidl::internal::AllowUnownedInputRef{}, &_response};
   auto& _message = _response_message.GetOutgoingMessage();
@@ -263,9 +282,11 @@ fidl::Result fidl::internal::WireBufferEventSender<
     return _allocation.error_value();
   }
 
-  ::fidl::WireEvent<::test_doccomments::Interface::OnEvent> _response{};
+  ::fidl::internal::TransactionalEvent<::test_doccomments::Interface::OnEvent>
+      _response{};
   ::fidl::unstable::UnownedEncodedMessage<
-      ::fidl::WireEvent<::test_doccomments::Interface::OnEvent>,
+      ::fidl::internal::TransactionalEvent<
+          ::test_doccomments::Interface::OnEvent>,
       ::fidl::internal::ChannelTransport>
       _response_message(_allocation->data, _buffer_size, &_response);
   auto& _message = _response_message.GetOutgoingMessage();

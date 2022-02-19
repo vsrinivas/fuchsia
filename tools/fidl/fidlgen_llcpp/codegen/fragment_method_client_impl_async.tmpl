@@ -17,8 +17,13 @@
   void {{ .Name }}({{ RenderParams .RequestArgs
                    (printf "::fidl::WireClientCallback<%s> _cb" .Marker) }});
 
+  {{- if .ResponseArgs }}
   void {{ .Name }}({{ RenderParams .RequestArgs
                    (printf "::fit::callback<void (%s* response)> _cb" .WireResponse) }});
+  {{- else -}}
+  void {{ .Name }}({{ RenderParams .RequestArgs
+                   (printf "::fit::callback<void ()> _cb") }});
+  {{- end -}}
 
 {{- end }}
 
@@ -44,16 +49,21 @@
     };
 
     auto* _context = new ResponseContext(std::move(_cb));
-    {{ .WireRequest }} _request{ {{ RenderForwardParams .RequestArgs }} };
+    {{ .WireTransactionalRequest }} _request{ {{ RenderForwardParams .RequestArgs }} };
     FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-    ::fidl::unstable::OwnedEncodedMessage<{{ .WireRequest }}, {{ .Transport.Type }}> _request_message(
+    ::fidl::unstable::OwnedEncodedMessage<{{ .WireTransactionalRequest }}, {{ .Transport.Type }}> _request_message(
           ::fidl::internal::AllowUnownedInputRef{}, &_request);
     _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
   }
 
   void {{ .Protocol.WireWeakAsyncClientImpl.NoLeading }}::{{ .Name }}(
+    {{- if .ResponseArgs }}
     {{ RenderParams .RequestArgs
       (printf "::fit::callback<void (%s* response)> _cb" .WireResponse) }}) {
+    {{- else -}}
+    {{ RenderParams .RequestArgs
+      (printf "::fit::callback<void ()> _cb") }}) {
+    {{- end -}}
     using Callback = decltype(_cb);
     class ResponseContext final : public {{ .WireResponseContext }} {
     public:
@@ -62,8 +72,12 @@
 
       void OnResult({{ .WireUnownedResult }}& result) override {
         if (result.ok()) {
-          ::fidl::WireResponse<{{ .Marker }}>* response = result.Unwrap();
+          {{- if .ResponseArgs }}
+          {{ .WireResponse }}* response = result.Unwrap();
           cb_(response);
+          {{- else -}}
+          cb_();
+          {{- end -}}
         }
         delete this;
       }
@@ -73,9 +87,9 @@
     };
 
     auto* _context = new ResponseContext(std::move(_cb));
-    {{ .WireRequest }} _request{ {{ RenderForwardParams .RequestArgs }} };
+    {{ .WireTransactionalRequest }} _request{ {{ RenderForwardParams .RequestArgs }} };
     FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-    ::fidl::unstable::OwnedEncodedMessage<{{ .WireRequest }}, {{ .Transport.Type }}> _request_message(
+    ::fidl::unstable::OwnedEncodedMessage<{{ .WireTransactionalRequest }}, {{ .Transport.Type }}> _request_message(
     ::fidl::internal::AllowUnownedInputRef{}, &_request);
     _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
   }

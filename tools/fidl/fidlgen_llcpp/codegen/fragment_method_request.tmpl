@@ -9,28 +9,23 @@
 {{- if .Request.IsResource }}
 {{- IfdefFuchsia -}}
 {{- end }}
+
 template<>
 struct {{ .WireRequest }} final {
 {{- range .RequestAnonymousChildren }}
   using {{ .ScopedName }} = {{ .FlattenedName }};
 {{- end }}
 
+  {{ if .RequestArgs }}
   FIDL_ALIGNDECL
-  {{- /* Add underscore to prevent name collision */}}
-  fidl_message_header_t _hdr;
     {{- range $index, $param := .RequestArgs }}
   {{ $param.Type }} {{ $param.Name }};
     {{- end }}
 
-  {{ if .RequestArgs }}
   explicit {{ .WireRequest.Self }}({{ RenderParams .RequestArgs }})
-  {{ RenderInitMessage .RequestArgs }} {
-    _InitHeader();
-  }
+  {{ RenderInitMessage .RequestArgs }}{}
   {{- end }}
-  {{ .WireRequest.Self }}() {
-    _InitHeader();
-  }
+  {{ .WireRequest.Self }}() = default;
 
     {{- if and .HasResponse .ResponseArgs }}
   using ResponseType = {{ .WireResponse }};
@@ -38,6 +33,34 @@ struct {{ .WireRequest }} final {
 
   {{- if .Request.IsResource }}
   void _CloseHandles();
+  {{- end }}
+};
+
+template<>
+struct {{ .WireTransactionalRequest }} final {
+  FIDL_ALIGNDECL
+  fidl_message_header_t header;
+  {{ if .RequestArgs }}
+  {{ .WireRequest }} body;
+  explicit {{ .WireTransactionalRequest.Self }}({{ RenderParams .RequestArgs }})
+  : body({{ .WireRequest }}({{ RenderForwardParams .RequestArgs }})) {
+    _InitHeader();
+  }
+  {{- end }}
+  {{ .WireTransactionalRequest.Self }}() {
+    _InitHeader();
+  }
+
+    {{- if and .HasResponse .ResponseArgs }}
+  using ResponseType = {{ .WireTransactionalResponse }};
+    {{- end }}
+
+  {{- if .Request.IsResource }}
+  void _CloseHandles() {
+    {{- if .RequestArgs }}
+    body._CloseHandles();
+    {{- end }}
+  }
   {{- end }}
 
  private:
@@ -58,8 +81,8 @@ struct {{ .WireRequest }} final {
 {{- if .Request.IsResource }}
 {{- IfdefFuchsia -}}
 {{- end }}
-  void {{ .WireRequest }}::_InitHeader() {
-    fidl_init_txn_header(&_hdr, 0, {{ .OrdinalName }});
+  void {{ .WireTransactionalRequest }}::_InitHeader() {
+    fidl_init_txn_header(&header, 0, {{ .OrdinalName }});
   }
 
   {{ if .Request.IsResource }}

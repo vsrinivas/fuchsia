@@ -191,8 +191,10 @@ TEST(MagicNumberTest, ResponseWrite) {
                     .buffer(fidl_buffer.view())
                     ->Grob(fidl::StringView::FromExternal(s));
   ASSERT_OK(result.status());
-  auto hdr = reinterpret_cast<fidl_message_header_t*>(result.Unwrap());
-  ASSERT_EQ(hdr->magic_number, kFidlWireFormatMagicNumberInitial);
+  uint8_t* body_bytes = reinterpret_cast<uint8_t*>(result.Unwrap());
+  auto resp = reinterpret_cast<fidl::internal::TransactionalResponse<test::Frobinator::Grob>*>(
+      body_bytes - sizeof(fidl_message_header_t));
+  ASSERT_EQ(resp->header.magic_number, kFidlWireFormatMagicNumberInitial);
 }
 
 // Send an event with an incompatible magic number and check that the event
@@ -202,10 +204,12 @@ TEST(MagicNumberTest, EventRead) {
   ASSERT_EQ(endpoints.status_value(), ZX_OK);
   auto [local, remote] = std::move(*endpoints);
   std::string s = "foo";
-  fidl::WireEvent<test::Frobinator::Hrob> _response(fidl::StringView::FromExternal(s));
+  fidl::internal::TransactionalEvent<test::Frobinator::Hrob> _response(
+      fidl::StringView::FromExternal(s));
   // Set an incompatible magic number
-  _response._hdr.magic_number = 0;
-  fidl::unstable::OwnedEncodedMessage<fidl::WireEvent<test::Frobinator::Hrob>> encoded(&_response);
+  _response.header.magic_number = 0;
+  fidl::unstable::OwnedEncodedMessage<fidl::WireEvent<test::Frobinator::Hrob>> encoded(
+      &_response.body);
   encoded.Write(remote.channel());
   ASSERT_OK(encoded.status());
 

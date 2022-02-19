@@ -27,8 +27,8 @@ void {{ .Protocol.WireWeakAsyncBufferClientImpl.NoLeading }}::{{ .Name }}(
     return;
   }
 
-  {{ .WireRequest }} _request{ {{ RenderForwardParams .RequestArgs }} };
-  ::fidl::unstable::UnownedEncodedMessage<{{ .WireRequest }}> _request_message(
+  {{ .WireTransactionalRequest }} _request{ {{ RenderForwardParams .RequestArgs }} };
+  ::fidl::unstable::UnownedEncodedMessage<{{ .WireTransactionalRequest }}> _request_message(
       _allocation->data, _buffer_size, &_request);
   _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
 }

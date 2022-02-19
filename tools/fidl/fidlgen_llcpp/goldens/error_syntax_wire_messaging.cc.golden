@@ -30,16 +30,18 @@ extern "C" const fidl_type_t
     WireResult(
         ::fidl::UnownedClientEnd<::test_errorsyntax::ExampleUseOfErrorSyntax>
             client,
-        ::fidl::WireRequest<::test_errorsyntax::ExampleUseOfErrorSyntax::
-                                ComposedCallWhichMayFail>* request) {
+        ::fidl::internal::TransactionalRequest<
+            ::test_errorsyntax::ExampleUseOfErrorSyntax::
+                ComposedCallWhichMayFail>* request) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::unstable::OwnedEncodedMessage<
-      ::fidl::WireRequest<::test_errorsyntax::ExampleUseOfErrorSyntax::
-                              ComposedCallWhichMayFail>,
+      ::fidl::internal::TransactionalRequest<
+          ::test_errorsyntax::ExampleUseOfErrorSyntax::
+              ComposedCallWhichMayFail>,
       ::fidl::internal::ChannelTransport>
       request_message(::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
-  outgoing.Call<::fidl::WireResponse<
+  outgoing.Call<::fidl::internal::TransactionalResponse<
       ::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>>(
       client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()));
   SetResult(outgoing);
@@ -50,17 +52,19 @@ extern "C" const fidl_type_t
     WireResult(
         ::fidl::UnownedClientEnd<::test_errorsyntax::ExampleUseOfErrorSyntax>
             client,
-        ::fidl::WireRequest<::test_errorsyntax::ExampleUseOfErrorSyntax::
-                                ComposedCallWhichMayFail>* request,
+        ::fidl::internal::TransactionalRequest<
+            ::test_errorsyntax::ExampleUseOfErrorSyntax::
+                ComposedCallWhichMayFail>* request,
         zx_time_t deadline) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::unstable::OwnedEncodedMessage<
-      ::fidl::WireRequest<::test_errorsyntax::ExampleUseOfErrorSyntax::
-                              ComposedCallWhichMayFail>,
+      ::fidl::internal::TransactionalRequest<
+          ::test_errorsyntax::ExampleUseOfErrorSyntax::
+              ComposedCallWhichMayFail>,
       ::fidl::internal::ChannelTransport>
       request_message(::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
-  outgoing.Call<::fidl::WireResponse<
+  outgoing.Call<::fidl::internal::TransactionalResponse<
       ::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>>(
       client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()),
       fidl::CallOptions{.deadline = deadline});
@@ -77,8 +81,9 @@ namespace test_errorsyntax {
         ::fidl::UnownedClientEnd<::test_errorsyntax::ExampleUseOfErrorSyntax>
             client_end,
         ::fidl::internal::AnyBufferAllocator& allocator,
-        ::fidl::WireRequest<::test_errorsyntax::ExampleUseOfErrorSyntax::
-                                ComposedCallWhichMayFail>* request) {
+        ::fidl::internal::TransactionalRequest<
+            ::test_errorsyntax::ExampleUseOfErrorSyntax::
+                ComposedCallWhichMayFail>* request) {
   constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<
       ::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>();
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation =
@@ -88,20 +93,23 @@ namespace test_errorsyntax {
     return;
   }
   uint8_t* buffer = allocation->data;
-  constexpr uint32_t request_byte_capacity = ::fidl::MaxSizeInChannel<
-      ::fidl::WireRequest<::test_errorsyntax::ExampleUseOfErrorSyntax::
-                              ComposedCallWhichMayFail>,
-      ::fidl::MessageDirection::kSending>();
+  constexpr uint32_t request_byte_capacity =
+      ::fidl::MaxSizeInChannel<::fidl::internal::TransactionalRequest<
+                                   ::test_errorsyntax::ExampleUseOfErrorSyntax::
+                                       ComposedCallWhichMayFail>,
+                               ::fidl::MessageDirection::kSending>();
   uint8_t* request_bytes = buffer;
   static_assert(buffer_size > request_byte_capacity);
   uint32_t response_byte_capacity = buffer_size - request_byte_capacity;
   uint8_t* response_bytes = &buffer[request_byte_capacity];
 
-  ::fidl::unstable::UnownedEncodedMessage<::fidl::WireRequest<
-      ::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>>
+  ::fidl::unstable::UnownedEncodedMessage<
+      ::fidl::internal::TransactionalRequest<
+          ::test_errorsyntax::ExampleUseOfErrorSyntax::
+              ComposedCallWhichMayFail>>
       request_message(request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
-  outgoing.Call<::fidl::WireResponse<
+  outgoing.Call<::fidl::internal::TransactionalResponse<
       ::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>>(
       client_end.handle(), response_bytes, response_byte_capacity);
   bytes_ = response_bytes;
@@ -117,17 +125,17 @@ namespace test_errorsyntax {
     WireResult(
         ::fidl::UnownedClientEnd<::test_errorsyntax::ExampleUseOfErrorSyntax>
             client,
-        ::fidl::WireRequest<
+        ::fidl::internal::TransactionalRequest<
             ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>*
             request) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::unstable::OwnedEncodedMessage<
-      ::fidl::WireRequest<
+      ::fidl::internal::TransactionalRequest<
           ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>,
       ::fidl::internal::ChannelTransport>
       request_message(::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
-  outgoing.Call<::fidl::WireResponse<
+  outgoing.Call<::fidl::internal::TransactionalResponse<
       ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>>(
       client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()));
   SetResult(outgoing);
@@ -138,18 +146,18 @@ namespace test_errorsyntax {
     WireResult(
         ::fidl::UnownedClientEnd<::test_errorsyntax::ExampleUseOfErrorSyntax>
             client,
-        ::fidl::WireRequest<
+        ::fidl::internal::TransactionalRequest<
             ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>*
             request,
         zx_time_t deadline) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::unstable::OwnedEncodedMessage<
-      ::fidl::WireRequest<
+      ::fidl::internal::TransactionalRequest<
           ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>,
       ::fidl::internal::ChannelTransport>
       request_message(::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
-  outgoing.Call<::fidl::WireResponse<
+  outgoing.Call<::fidl::internal::TransactionalResponse<
       ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>>(
       client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()),
       fidl::CallOptions{.deadline = deadline});
@@ -166,7 +174,7 @@ namespace test_errorsyntax {
         ::fidl::UnownedClientEnd<::test_errorsyntax::ExampleUseOfErrorSyntax>
             client_end,
         ::fidl::internal::AnyBufferAllocator& allocator,
-        ::fidl::WireRequest<
+        ::fidl::internal::TransactionalRequest<
             ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>*
             request) {
   constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<
@@ -179,7 +187,7 @@ namespace test_errorsyntax {
   }
   uint8_t* buffer = allocation->data;
   constexpr uint32_t request_byte_capacity = ::fidl::MaxSizeInChannel<
-      ::fidl::WireRequest<
+      ::fidl::internal::TransactionalRequest<
           ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>,
       ::fidl::MessageDirection::kSending>();
   uint8_t* request_bytes = buffer;
@@ -187,11 +195,12 @@ namespace test_errorsyntax {
   uint32_t response_byte_capacity = buffer_size - request_byte_capacity;
   uint8_t* response_bytes = &buffer[request_byte_capacity];
 
-  ::fidl::unstable::UnownedEncodedMessage<::fidl::WireRequest<
-      ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>>
+  ::fidl::unstable::UnownedEncodedMessage<
+      ::fidl::internal::TransactionalRequest<
+          ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>>
       request_message(request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
-  outgoing.Call<::fidl::WireResponse<
+  outgoing.Call<::fidl::internal::TransactionalResponse<
       ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>>(
       client_end.handle(), response_bytes, response_byte_capacity);
   bytes_ = response_bytes;
@@ -231,13 +240,14 @@ void fidl::internal::WireWeakAsyncClientImpl<
   };
 
   auto* _context = new ResponseContext(std::move(_cb));
-  ::fidl::WireRequest<
+  ::fidl::internal::TransactionalRequest<
       ::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>
       _request{s};
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::unstable::OwnedEncodedMessage<
-      ::fidl::WireRequest<::test_errorsyntax::ExampleUseOfErrorSyntax::
-                              ComposedCallWhichMayFail>,
+      ::fidl::internal::TransactionalRequest<
+          ::test_errorsyntax::ExampleUseOfErrorSyntax::
+              ComposedCallWhichMayFail>,
       ::fidl::internal::ChannelTransport>
       _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
   _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
@@ -277,13 +287,14 @@ void fidl::internal::WireWeakAsyncClientImpl<
   };
 
   auto* _context = new ResponseContext(std::move(_cb));
-  ::fidl::WireRequest<
+  ::fidl::internal::TransactionalRequest<
       ::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>
       _request{s};
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::unstable::OwnedEncodedMessage<
-      ::fidl::WireRequest<::test_errorsyntax::ExampleUseOfErrorSyntax::
-                              ComposedCallWhichMayFail>,
+      ::fidl::internal::TransactionalRequest<
+          ::test_errorsyntax::ExampleUseOfErrorSyntax::
+              ComposedCallWhichMayFail>,
       ::fidl::internal::ChannelTransport>
       _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
   _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
@@ -315,12 +326,12 @@ void fidl::internal::WireWeakAsyncClientImpl<
   };
 
   auto* _context = new ResponseContext(std::move(_cb));
-  ::fidl::WireRequest<
+  ::fidl::internal::TransactionalRequest<
       ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>
       _request{s};
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::unstable::OwnedEncodedMessage<
-      ::fidl::WireRequest<
+      ::fidl::internal::TransactionalRequest<
           ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>,
       ::fidl::internal::ChannelTransport>
       _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
@@ -360,12 +371,12 @@ void fidl::internal::WireWeakAsyncClientImpl<
   };
 
   auto* _context = new ResponseContext(std::move(_cb));
-  ::fidl::WireRequest<
+  ::fidl::internal::TransactionalRequest<
       ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>
       _request{s};
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::unstable::OwnedEncodedMessage<
-      ::fidl::WireRequest<
+      ::fidl::internal::TransactionalRequest<
           ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>,
       ::fidl::internal::ChannelTransport>
       _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
@@ -389,11 +400,13 @@ void fidl::internal::WireWeakAsyncBufferClientImpl<
     return;
   }
 
-  ::fidl::WireRequest<
+  ::fidl::internal::TransactionalRequest<
       ::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>
       _request{s};
-  ::fidl::unstable::UnownedEncodedMessage<::fidl::WireRequest<
-      ::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>>
+  ::fidl::unstable::UnownedEncodedMessage<
+      ::fidl::internal::TransactionalRequest<
+          ::test_errorsyntax::ExampleUseOfErrorSyntax::
+              ComposedCallWhichMayFail>>
       _request_message(_allocation->data, _buffer_size, &_request);
   _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
 }
@@ -415,11 +428,12 @@ void fidl::internal::WireWeakAsyncBufferClientImpl<
     return;
   }
 
-  ::fidl::WireRequest<
+  ::fidl::internal::TransactionalRequest<
       ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>
       _request{s};
-  ::fidl::unstable::UnownedEncodedMessage<::fidl::WireRequest<
-      ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>>
+  ::fidl::unstable::UnownedEncodedMessage<
+      ::fidl::internal::TransactionalRequest<
+          ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>>
       _request_message(_allocation->data, _buffer_size, &_request);
   _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
 }
@@ -432,7 +446,7 @@ fidl::internal::WireWeakSyncClientImpl<
   return _client_base()->MakeSyncCallWith([&](std::shared_ptr<
                                               ::fidl::internal::AnyTransport>
                                                   _transport) {
-    ::fidl::WireRequest<
+    ::fidl::internal::TransactionalRequest<
         ::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>
         _request{s};
     return ::fidl::WireResult<
@@ -450,7 +464,7 @@ fidl::internal::WireWeakSyncClientImpl<
     CallWhichMayFail(::fidl::StringView s) {
   return _client_base()->MakeSyncCallWith(
       [&](std::shared_ptr<::fidl::internal::AnyTransport> _transport) {
-        ::fidl::WireRequest<
+        ::fidl::internal::TransactionalRequest<
             ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>
             _request{s};
         return ::fidl::WireResult<
@@ -536,13 +550,14 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<
            internal::IncomingTransportContext transport_context,
            ::fidl::Transaction* txn) {
           ::fidl::unstable::DecodedMessage<
-              ::fidl::WireRequest<::test_errorsyntax::ExampleUseOfErrorSyntax::
-                                      ComposedCallWhichMayFail>>
+              ::fidl::internal::TransactionalRequest<
+                  ::test_errorsyntax::ExampleUseOfErrorSyntax::
+                      ComposedCallWhichMayFail>>
               decoded{std::move(msg)};
           if (unlikely(!decoded.ok())) {
             return decoded.status();
           }
-          auto* primary = decoded.PrimaryObject();
+          auto* primary = &decoded.PrimaryObject()->body;
           ::fidl::internal::WireCompleter<
               ::test_errorsyntax::ExampleUseOfErrorSyntax::
                   ComposedCallWhichMayFail>::Sync completer(txn);
@@ -558,13 +573,15 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<
         [](void* interface, ::fidl::IncomingMessage&& msg,
            internal::IncomingTransportContext transport_context,
            ::fidl::Transaction* txn) {
-          ::fidl::unstable::DecodedMessage<::fidl::WireRequest<
-              ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>>
+          ::fidl::unstable::DecodedMessage<
+              ::fidl::internal::TransactionalRequest<
+                  ::test_errorsyntax::ExampleUseOfErrorSyntax::
+                      CallWhichMayFail>>
               decoded{std::move(msg)};
           if (unlikely(!decoded.ok())) {
             return decoded.status();
           }
-          auto* primary = decoded.PrimaryObject();
+          auto* primary = &decoded.PrimaryObject()->body;
           ::fidl::internal::WireCompleter<
               ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>::
               Sync completer(txn);
@@ -615,13 +632,14 @@ void fidl::WireServer<::test_errorsyntax::ExampleUseOfErrorSyntax>::
     ::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>::
     Reply(::test_errorsyntax_parent::wire::
               ParentUsesErrorSyntaxComposedCallWhichMayFailResult result) {
-  ::fidl::WireResponse<
+  ::fidl::internal::TransactionalResponse<
       ::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>
       _response{result};
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::unstable::OwnedEncodedMessage<
-      ::fidl::WireResponse<::test_errorsyntax::ExampleUseOfErrorSyntax::
-                               ComposedCallWhichMayFail>,
+      ::fidl::internal::TransactionalResponse<
+          ::test_errorsyntax::ExampleUseOfErrorSyntax::
+              ComposedCallWhichMayFail>,
       ::fidl::internal::ChannelTransport>
       _response_message{::fidl::internal::AllowUnownedInputRef{}, &_response};
   return ::fidl::internal::WireCompleterBase<
@@ -657,11 +675,13 @@ void fidl::WireServer<::test_errorsyntax::ExampleUseOfErrorSyntax>::
     Reply(::fidl::BufferSpan _buffer,
           ::test_errorsyntax_parent::wire::
               ParentUsesErrorSyntaxComposedCallWhichMayFailResult result) {
-  ::fidl::WireResponse<
+  ::fidl::internal::TransactionalResponse<
       ::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>
       _response{result};
-  ::fidl::unstable::UnownedEncodedMessage<::fidl::WireResponse<
-      ::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>>
+  ::fidl::unstable::UnownedEncodedMessage<
+      ::fidl::internal::TransactionalResponse<
+          ::test_errorsyntax::ExampleUseOfErrorSyntax::
+              ComposedCallWhichMayFail>>
       _response_message(_buffer.data, _buffer.capacity, &_response);
   return CompleterBase::SendReply(&_response_message.GetOutgoingMessage(),
                                   ::fidl::internal::OutgoingTransportContext());
@@ -689,12 +709,12 @@ void fidl::WireServer<::test_errorsyntax::ExampleUseOfErrorSyntax>::
     Reply(
         ::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResult
             result) {
-  ::fidl::WireResponse<
+  ::fidl::internal::TransactionalResponse<
       ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>
       _response{result};
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::unstable::OwnedEncodedMessage<
-      ::fidl::WireResponse<
+      ::fidl::internal::TransactionalResponse<
           ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>,
       ::fidl::internal::ChannelTransport>
       _response_message{::fidl::internal::AllowUnownedInputRef{}, &_response};
@@ -731,11 +751,12 @@ void fidl::WireServer<::test_errorsyntax::ExampleUseOfErrorSyntax>::
         ::fidl::BufferSpan _buffer,
         ::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResult
             result) {
-  ::fidl::WireResponse<
+  ::fidl::internal::TransactionalResponse<
       ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>
       _response{result};
-  ::fidl::unstable::UnownedEncodedMessage<::fidl::WireResponse<
-      ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>>
+  ::fidl::unstable::UnownedEncodedMessage<
+      ::fidl::internal::TransactionalResponse<
+          ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>>
       _response_message(_buffer.data, _buffer.capacity, &_response);
   return CompleterBase::SendReply(&_response_message.GetOutgoingMessage(),
                                   ::fidl::internal::OutgoingTransportContext());
@@ -756,33 +777,37 @@ void fidl::WireServer<::test_errorsyntax::ExampleUseOfErrorSyntax>::
 }
 #endif  // __Fuchsia__
 
-void ::fidl::WireRequest<::test_errorsyntax::ExampleUseOfErrorSyntax::
-                             ComposedCallWhichMayFail>::_InitHeader() {
+void ::fidl::internal::TransactionalRequest<
+    ::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>::
+    _InitHeader() {
   fidl_init_txn_header(
-      &_hdr, 0,
+      &header, 0,
       ::test_errorsyntax::
           kExampleUseOfErrorSyntax_ComposedCallWhichMayFail_Ordinal);
 }
 
-void ::fidl::WireResponse<::test_errorsyntax::ExampleUseOfErrorSyntax::
-                              ComposedCallWhichMayFail>::_InitHeader() {
+void ::fidl::internal::TransactionalResponse<
+    ::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>::
+    _InitHeader() {
   fidl_init_txn_header(
-      &_hdr, 0,
+      &header, 0,
       ::test_errorsyntax::
           kExampleUseOfErrorSyntax_ComposedCallWhichMayFail_Ordinal);
 }
 
-void ::fidl::WireRequest<::test_errorsyntax::ExampleUseOfErrorSyntax::
-                             CallWhichMayFail>::_InitHeader() {
+void ::fidl::internal::TransactionalRequest<
+    ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>::
+    _InitHeader() {
   fidl_init_txn_header(
-      &_hdr, 0,
+      &header, 0,
       ::test_errorsyntax::kExampleUseOfErrorSyntax_CallWhichMayFail_Ordinal);
 }
 
-void ::fidl::WireResponse<::test_errorsyntax::ExampleUseOfErrorSyntax::
-                              CallWhichMayFail>::_InitHeader() {
+void ::fidl::internal::TransactionalResponse<
+    ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>::
+    _InitHeader() {
   fidl_init_txn_header(
-      &_hdr, 0,
+      &header, 0,
       ::test_errorsyntax::kExampleUseOfErrorSyntax_CallWhichMayFail_Ordinal);
 }
 

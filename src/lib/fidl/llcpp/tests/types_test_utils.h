@@ -63,7 +63,7 @@ void CannotProxyUnknownEnvelope(std::vector<uint8_t> bytes, std::vector<zx_handl
   // HasFlexibleEnvelope exist.
   // It also assumes the type under test exists under field .result within the
   // wrapper struct
-  static_assert(fidl::IsFidlMessage<FidlType>::value, "FIDL message type required");
+  static_assert(fidl::IsFidlTransactionalMessage<FidlType>::value, "FIDL message type required");
 
   HandleChecker handle_checker;
   for (const auto& handle : handles) {
@@ -82,7 +82,7 @@ void CannotProxyUnknownEnvelope(std::vector<uint8_t> bytes, std::vector<zx_handl
   const char* decode_error;
   uint8_t* trimmed_bytes = bytes.data();
   uint32_t trimmed_num_bytes = static_cast<uint32_t>(bytes.size());
-  if (fidl::IsFidlMessage<FidlType>::value) {
+  if (fidl::IsFidlTransactionalMessage<FidlType>::value) {
     zx_status_t status = ::fidl::internal::fidl_exclude_header_bytes(
         trimmed_bytes, trimmed_num_bytes, &trimmed_bytes, &trimmed_num_bytes, &decode_error);
     ASSERT_EQ(status, ZX_OK) << decode_error;
@@ -93,8 +93,8 @@ void CannotProxyUnknownEnvelope(std::vector<uint8_t> bytes, std::vector<zx_handl
       static_cast<uint32_t>(handle_infos.size()), &decode_error);
   ASSERT_EQ(status, ZX_OK) << decode_error;
 
-  auto result = reinterpret_cast<FidlType*>(&bytes[0]);
-  check(result->result);
+  auto result = reinterpret_cast<FidlType*>(bytes.data());
+  check(result->body.result);
   handle_checker.CheckEvents();
 
   // Here we want to encode a message with unknown data. To be able to encoded all the unknown data,

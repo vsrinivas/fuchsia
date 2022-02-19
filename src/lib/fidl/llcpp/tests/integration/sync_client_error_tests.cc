@@ -55,11 +55,11 @@ TEST(SyncClientErrorTest, DecodeError) {
     ASSERT_OK(
         endpoints->server.channel().wait_one(ZX_CHANNEL_READABLE, zx::time::infinite(), &observed));
     ASSERT_EQ(ZX_CHANNEL_READABLE, observed & ZX_CHANNEL_READABLE);
-    fidl::WireRequest<test::EnumMethods::GetEnum> request{};
+    fidl::internal::TransactionalRequest<test::EnumMethods::GetEnum> request{};
     uint32_t actual;
     endpoints->server.channel().read(0, &request, nullptr, sizeof(request), 0, &actual, nullptr);
     ASSERT_EQ(sizeof(request), actual);
-    fidl::WireResponse<test::EnumMethods::GetEnum> message;
+    fidl::internal::TransactionalResponse<test::EnumMethods::GetEnum> message;
 
     // Zero the message body, to prevent hitting the "non-zero padding bytes" error, which is
     // checked before the "not valid enum member" error we're interested in
@@ -67,8 +67,8 @@ TEST(SyncClientErrorTest, DecodeError) {
 
     // Send the number 42 as |MyError|, which will fail validation at the sync client when it
     // receives the message.
-    fidl_init_txn_header(&message._hdr, request._hdr.txid, request._hdr.ordinal);
-    message.e = static_cast<test::wire::MyError>(42);
+    fidl_init_txn_header(&message.header, request.header.txid, request.header.ordinal);
+    message.body.e = static_cast<test::wire::MyError>(42);
     ASSERT_OK(endpoints->server.channel().write(0, reinterpret_cast<void*>(&message),
                                                 sizeof(message), nullptr, 0));
   }};

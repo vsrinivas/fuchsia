@@ -20,8 +20,13 @@ void {{ .Name }}({{ RenderParams .RequestArgs
 //
 {{- end }}
 // Caller provides the backing storage for FIDL message.
+{{- if .ResponseArgs }}
 void {{ .Name }}({{ RenderParams .RequestArgs
                     (printf "::fit::callback<void (%s*)> _cb" .WireResponse) }});
+{{- else -}}
+void {{ .Name }}({{ RenderParams .RequestArgs
+                    (printf "::fit::callback<void ()> _cb") }});
+{{- end -}}
 
 {{ template "Method:ClientImplAsyncBuffer:WireMessagingHeader" . }}
 
@@ -51,7 +56,11 @@ void {{ .Protocol.WireWeakAsyncBufferClientImpl.NoLeading }}::{{ .Name }}(
 }
 
 void {{ .Protocol.WireWeakAsyncBufferClientImpl.NoLeading }}::{{ .Name }}(
+  {{- if .ResponseArgs }}
   {{- RenderParams .RequestArgs (printf "::fit::callback<void (%s*)> _cb" .WireResponse) }}) {
+  {{- else -}}
+  {{- RenderParams .RequestArgs (printf "::fit::callback<void ()> _cb") }}) {
+  {{- end -}}
   using Callback = decltype(_cb);
   class ResponseContext final : public {{ .WireResponseContext }} {
   public:
@@ -59,8 +68,12 @@ void {{ .Protocol.WireWeakAsyncBufferClientImpl.NoLeading }}::{{ .Name }}(
 
     void OnResult({{ .WireUnownedResult }}& result) override {
       if (result.ok()) {
-        ::fidl::WireResponse<{{ .Marker }}>* response = result.Unwrap();
+        {{- if .ResponseArgs }}
+        {{ .WireResponse }}* response = result.Unwrap();
         cb_(response);
+        {{- else -}}
+        cb_();
+        {{- end -}}
       }
       delete this;
     }
@@ -78,8 +91,8 @@ void {{ .Protocol.WireWeakAsyncBufferClientImpl.NoLeading }}::{{ .Name }}(
   constexpr uint32_t _buffer_size = ::fidl::AsyncClientMethodBufferSizeInChannel<{{ .Marker }}>();
   uint8_t* _buffer = static_cast<uint8_t*>(_arena().Allocate(_buffer_size));
 
-  {{ .WireRequest }} _request{ {{ RenderForwardParams .RequestArgs }} };
-  ::fidl::unstable::UnownedEncodedMessage<{{ .WireRequest }}, {{ .Transport.Type }}> _request_message(
+  {{ .WireTransactionalRequest }} _request{ {{ RenderForwardParams .RequestArgs }} };
+  ::fidl::unstable::UnownedEncodedMessage<{{ .WireTransactionalRequest }}, {{ .Transport.Type }}> _request_message(
       _buffer, _buffer_size, &_request);
   fidl::WriteOptions _options = {};
   _options.outgoing_transport_context =

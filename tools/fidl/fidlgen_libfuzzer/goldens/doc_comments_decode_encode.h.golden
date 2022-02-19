@@ -25,18 +25,20 @@ inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoderForType, 4>
         },
 
         ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name =
-                "::fidl::WireRequest<::test_doccomments::Interface::Method>",
+            .fidl_type_name = "::fidl::internal::TransactionalRequest<::test_"
+                              "doccomments::Interface::Method>",
             .has_flexible_envelope = false,
             .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<
-                ::fidl::WireRequest<::test_doccomments::Interface::Method>>,
+                ::fidl::internal::TransactionalRequest<
+                    ::test_doccomments::Interface::Method>>,
         },
         ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name =
-                "::fidl::WireEvent<::test_doccomments::Interface::OnEvent>",
+            .fidl_type_name = "::fidl::internal::TransactionalEvent<::test_"
+                              "doccomments::Interface::OnEvent>",
             .has_flexible_envelope = false,
             .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<
-                ::fidl::WireEvent<::test_doccomments::Interface::OnEvent>>,
+                ::fidl::internal::TransactionalEvent<
+                    ::test_doccomments::Interface::OnEvent>>,
         },
 };
 

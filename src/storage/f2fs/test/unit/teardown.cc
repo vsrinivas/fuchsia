@@ -4,6 +4,7 @@
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/fidl/llcpp/wire_messaging_declarations.h>
 
 #include <gtest/gtest.h>
 
@@ -49,11 +50,13 @@ class AsyncTearDownVnode : public VnodeF2fs {
   sync_completion_t* completions_;
 };
 
+// TODO(fxbug.dev/94157): Stop relying on FIDL internals like TransactionalRequest.header.
 void SendDirSync(fidl::UnownedClientEnd<fuchsia_io::Directory> client) {
   FIDL_ALIGNDECL
-  fidl::WireRequest<fuchsia_io::Directory::Sync> request;
-  fidl::unstable::OwnedEncodedMessage<fidl::WireRequest<fuchsia_io::Directory::Sync>> encoded(
-      &request);
+  fidl::internal::TransactionalRequest<fuchsia_io::Directory::Sync> request;
+  fidl::unstable::OwnedEncodedMessage<
+      fidl::internal::TransactionalRequest<fuchsia_io::Directory::Sync>>
+      encoded(&request);
   ASSERT_EQ(encoded.status(), ZX_OK);
   encoded.GetOutgoingMessage().set_txid(5);
   encoded.Write(zx::unowned_channel(client.handle()));

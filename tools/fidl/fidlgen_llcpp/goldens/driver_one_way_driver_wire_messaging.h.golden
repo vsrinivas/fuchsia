@@ -59,14 +59,26 @@ struct ::fidl::internal::WireServerDispatcher<::test_driveroneway::OneWay>
 template <>
 struct ::fidl::WireRequest<::test_driveroneway::OneWay::Send> final {
   FIDL_ALIGNDECL
-  fidl_message_header_t _hdr;
   ::test_driveroneway::wire::Payload payload;
 
   explicit WireRequest(const ::test_driveroneway::wire::Payload& payload)
-      : payload(payload) {
+      : payload(payload) {}
+  WireRequest() = default;
+};
+
+template <>
+struct ::fidl::internal::TransactionalRequest<::test_driveroneway::OneWay::Send>
+    final {
+  FIDL_ALIGNDECL
+  fidl_message_header_t header;
+
+  ::fidl::WireRequest<::test_driveroneway::OneWay::Send> body;
+  explicit TransactionalRequest(
+      const ::test_driveroneway::wire::Payload& payload)
+      : body(::fidl::WireRequest<::test_driveroneway::OneWay::Send>(payload)) {
     _InitHeader();
   }
-  WireRequest() { _InitHeader(); }
+  TransactionalRequest() { _InitHeader(); }
 
  private:
   void _InitHeader();
@@ -75,14 +87,24 @@ struct ::fidl::WireRequest<::test_driveroneway::OneWay::Send> final {
 namespace fidl {
 
 template <>
+struct IsFidlType<
+    ::fidl::internal::TransactionalRequest<::test_driveroneway::OneWay::Send>>
+    : public std::true_type {};
+template <>
 struct IsFidlType<::fidl::WireRequest<::test_driveroneway::OneWay::Send>>
     : public std::true_type {};
 template <>
-struct IsFidlMessage<::fidl::WireRequest<::test_driveroneway::OneWay::Send>>
+struct IsFidlTransactionalMessage<
+    ::fidl::internal::TransactionalRequest<::test_driveroneway::OneWay::Send>>
     : public std::true_type {};
+template <>
+struct IsFidlTransactionalMessage<
+    ::fidl::WireRequest<::test_driveroneway::OneWay::Send>>
+    : public std::false_type {};
 
 template <>
-struct TypeTraits<::fidl::WireRequest<::test_driveroneway::OneWay::Send>> {
+struct TypeTraits<
+    ::fidl::internal::TransactionalRequest<::test_driveroneway::OneWay::Send>> {
   static constexpr const fidl_type_t* kType =
       &::test_driveroneway::test_driveroneway_OneWaySendRequestTable;
   static constexpr uint32_t kMaxNumHandles = 0;
@@ -98,12 +120,37 @@ struct TypeTraits<::fidl::WireRequest<::test_driveroneway::OneWay::Send>> {
       ::fidl::internal::TransactionalMessageKind::kRequest;
 };
 
+static_assert(sizeof(::fidl::internal::TransactionalRequest<
+                     ::test_driveroneway::OneWay::Send>) ==
+              TypeTraits<::fidl::internal::TransactionalRequest<
+                  ::test_driveroneway::OneWay::Send>>::kPrimarySize);
+static_assert(offsetof(::fidl::internal::TransactionalRequest<
+                           ::test_driveroneway::OneWay::Send>,
+                       header) == 0);
+static_assert(offsetof(::fidl::internal::TransactionalRequest<
+                           ::test_driveroneway::OneWay::Send>,
+                       body) == sizeof(fidl_message_header_t));
+
+template <>
+struct TypeTraits<::fidl::WireRequest<::test_driveroneway::OneWay::Send>> {
+  static constexpr const fidl_type_t* kType =
+      &::test_driveroneway::test_driveroneway_OneWaySendRequestTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(4);
+  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(4);
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasFlexibleEnvelope = false;
+  static constexpr bool kHasPointer = false;
+  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
+      ::fidl::internal::TransactionalMessageKind::kRequest;
+};
 static_assert(
     sizeof(::fidl::WireRequest<::test_driveroneway::OneWay::Send>) ==
     TypeTraits<
         ::fidl::WireRequest<::test_driveroneway::OneWay::Send>>::kPrimarySize);
 static_assert(offsetof(::fidl::WireRequest<::test_driveroneway::OneWay::Send>,
-                       payload) == 0 + sizeof(fidl_message_header_t));
+                       payload) == 0);
 
 }  // namespace fidl
 namespace test_driveroneway {
@@ -116,7 +163,8 @@ class ::fdf::WireUnownedResult<::test_driveroneway::OneWay::Send> final
   explicit WireUnownedResult(
       ::fdf::UnownedClientEnd<::test_driveroneway::OneWay> client_end,
       const ::fdf::Arena& arena,
-      ::fidl::WireRequest<::test_driveroneway::OneWay::Send>* request);
+      ::fidl::internal::TransactionalRequest<::test_driveroneway::OneWay::Send>*
+          request);
   explicit WireUnownedResult(const ::fidl::Result& result)
       : ::fidl::Result(result) {}
   WireUnownedResult(WireUnownedResult&&) = delete;
@@ -184,7 +232,8 @@ class ::fidl::internal::WireSyncBufferClientImpl<::test_driveroneway::OneWay>
   // `.buffer()`.
   ::fdf::WireUnownedResult<::test_driveroneway::OneWay::Send> Send(
       const ::test_driveroneway::wire::Payload& payload) {
-    ::fidl::WireRequest<::test_driveroneway::OneWay::Send> _request{payload};
+    ::fidl::internal::TransactionalRequest<::test_driveroneway::OneWay::Send>
+        _request{payload};
     return ::fdf::WireUnownedResult<::test_driveroneway::OneWay::Send>(
         _client_end(), _arena(), &_request);
   }

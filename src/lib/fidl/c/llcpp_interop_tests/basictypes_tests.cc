@@ -149,6 +149,12 @@ void FillRequest(FillRequestHandles& handles,
   }
 }
 
+void FillRequest(
+    FillRequestHandles& handles,
+    fidl::internal::TransactionalRequest<basictypes::TestInterface::ConsumeSimpleStruct>& request) {
+  FillRequest(handles, request.body);
+}
+
 TEST(BasicTypesTest, RawChannelCallStruct) {
   zx::channel client, server;
   ASSERT_OK(zx::channel::create(0, &client, &server));
@@ -156,11 +162,11 @@ TEST(BasicTypesTest, RawChannelCallStruct) {
   async_loop_t* loop = nullptr;
   ASSERT_NO_FATAL_FAILURE(SpinUpAsyncCServerHelper(std::move(server), &loop));
 
-  fidl::WireRequest<basictypes::TestInterface::ConsumeSimpleStruct> request;
+  fidl::internal::TransactionalRequest<basictypes::TestInterface::ConsumeSimpleStruct> request;
   FillRequestHandles handles;
   FillRequest(handles, request);
   fidl::unstable::OwnedEncodedMessage<
-      fidl::WireRequest<basictypes::TestInterface::ConsumeSimpleStruct>>
+      fidl::internal::TransactionalRequest<basictypes::TestInterface::ConsumeSimpleStruct>>
       encoded(&request);
 
   FIDL_ALIGNDECL uint8_t response_storage[512];
@@ -171,10 +177,10 @@ TEST(BasicTypesTest, RawChannelCallStruct) {
 
   ASSERT_TRUE(encoded.ok());
 
-  auto response =
-      reinterpret_cast<fidl::WireResponse<basictypes::TestInterface::ConsumeSimpleStruct>*>(
-          response_storage);
-  ASSERT_EQ(response->field, 123);
+  auto response = reinterpret_cast<
+      fidl::internal::TransactionalResponse<basictypes::TestInterface::ConsumeSimpleStruct>*>(
+      response_storage);
+  ASSERT_EQ(response->body.field, 123);
 
   TearDownAsyncCServerHelper(loop);
 }

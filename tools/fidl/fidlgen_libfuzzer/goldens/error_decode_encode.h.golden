@@ -19,17 +19,20 @@ inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoderForType, 3>
         },
 
         ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name = "::fidl::WireRequest<::test_error::Example::Foo>",
+            .fidl_type_name = "::fidl::internal::TransactionalRequest<::test_"
+                              "error::Example::Foo>",
             .has_flexible_envelope = false,
             .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<
-                ::fidl::WireRequest<::test_error::Example::Foo>>,
+                ::fidl::internal::TransactionalRequest<
+                    ::test_error::Example::Foo>>,
         },
         ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name =
-                "::fidl::WireResponse<::test_error::Example::Foo>",
+            .fidl_type_name = "::fidl::internal::TransactionalResponse<::test_"
+                              "error::Example::Foo>",
             .has_flexible_envelope = false,
             .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<
-                ::fidl::WireResponse<::test_error::Example::Foo>>,
+                ::fidl::internal::TransactionalResponse<
+                    ::test_error::Example::Foo>>,
         },
 };
 

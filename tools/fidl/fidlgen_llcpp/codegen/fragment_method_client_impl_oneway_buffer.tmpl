@@ -25,8 +25,8 @@
     return _allocation.error_value();
   }
 
-  {{ .WireRequest }} _request{ {{ RenderForwardParams .RequestArgs }} };
-  ::fidl::unstable::UnownedEncodedMessage<{{ .WireRequest }}> _request_message(
+  {{ .WireTransactionalRequest }} _request{ {{ RenderForwardParams .RequestArgs }} };
+  ::fidl::unstable::UnownedEncodedMessage<{{ .WireTransactionalRequest }}> _request_message(
       _allocation->data, _buffer_size, &_request);
   return _client_base()->SendOneWay(_request_message.GetOutgoingMessage());
 }

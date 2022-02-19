@@ -190,15 +190,16 @@ TEST(DebugDataTests, ConfirmMatchingFuchsiaIODefinitions) {
   ASSERT_EQ(fuchsia_io_OPEN_RIGHT_WRITABLE, fio::wire::kOpenRightWritable);
 
   // LLCPP doesn't expose the ordinal, so we have to dig into internals to assert this.
-  fidl::WireRequest<fio::Directory::Open> for_ordinal;
-  ASSERT_EQ(fuchsia_io_DirectoryOpenOrdinal, for_ordinal._hdr.ordinal);
+  fidl::internal::TransactionalRequest<fio::Directory::Open> for_ordinal;
+  ASSERT_EQ(fuchsia_io_DirectoryOpenOrdinal, for_ordinal.header.ordinal);
 
   zx::channel ch1, ch2;
   ASSERT_OK(zx::channel::create(0, &ch1, &ch2));
   fidl::ServerEnd<fio::Node> server_end(std::move(ch2));
-  fidl::WireRequest<fio::Directory::Open> request{0, 0, fidl::StringView(""),
-                                                  std::move(server_end)};
-  fidl::unstable::OwnedEncodedMessage<fidl::WireRequest<fio::Directory::Open>> msg{&request};
+  fidl::internal::TransactionalRequest<fio::Directory::Open> request{0, 0, fidl::StringView(""),
+                                                                     std::move(server_end)};
+  fidl::unstable::OwnedEncodedMessage<fidl::internal::TransactionalRequest<fio::Directory::Open>>
+      msg{&request};
   ASSERT_OK(msg.status());
   ASSERT_EQ(sizeof(fuchsia_io_DirectoryOpenRequest), msg.GetOutgoingMessage().CopyBytes().size());
 }

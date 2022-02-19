@@ -193,10 +193,16 @@ struct ::fidl::internal::WireServerDispatcher<::test_versions::Protocol> final {
 
 template <>
 struct ::fidl::WireRequest<::test_versions::Protocol::Foo> final {
-  FIDL_ALIGNDECL
-  fidl_message_header_t _hdr;
+  WireRequest() = default;
+};
 
-  WireRequest() { _InitHeader(); }
+template <>
+struct ::fidl::internal::TransactionalRequest<::test_versions::Protocol::Foo>
+    final {
+  FIDL_ALIGNDECL
+  fidl_message_header_t header;
+
+  TransactionalRequest() { _InitHeader(); }
 
  private:
   void _InitHeader();
@@ -205,14 +211,24 @@ struct ::fidl::WireRequest<::test_versions::Protocol::Foo> final {
 namespace fidl {
 
 template <>
+struct IsFidlType<
+    ::fidl::internal::TransactionalRequest<::test_versions::Protocol::Foo>>
+    : public std::true_type {};
+template <>
 struct IsFidlType<::fidl::WireRequest<::test_versions::Protocol::Foo>>
     : public std::true_type {};
 template <>
-struct IsFidlMessage<::fidl::WireRequest<::test_versions::Protocol::Foo>>
+struct IsFidlTransactionalMessage<
+    ::fidl::internal::TransactionalRequest<::test_versions::Protocol::Foo>>
     : public std::true_type {};
+template <>
+struct IsFidlTransactionalMessage<
+    ::fidl::WireRequest<::test_versions::Protocol::Foo>>
+    : public std::false_type {};
 
 template <>
-struct TypeTraits<::fidl::WireRequest<::test_versions::Protocol::Foo>> {
+struct TypeTraits<
+    ::fidl::internal::TransactionalRequest<::test_versions::Protocol::Foo>> {
   static constexpr const fidl_type_t* kType = nullptr;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kPrimarySize =
@@ -227,9 +243,28 @@ struct TypeTraits<::fidl::WireRequest<::test_versions::Protocol::Foo>> {
       ::fidl::internal::TransactionalMessageKind::kRequest;
 };
 
-static_assert(sizeof(::fidl::WireRequest<::test_versions::Protocol::Foo>) ==
-              TypeTraits<::fidl::WireRequest<::test_versions::Protocol::Foo>>::
-                  kPrimarySize);
+static_assert(sizeof(::fidl::internal::TransactionalRequest<
+                     ::test_versions::Protocol::Foo>) ==
+              TypeTraits<::fidl::internal::TransactionalRequest<
+                  ::test_versions::Protocol::Foo>>::kPrimarySize);
+static_assert(
+    offsetof(
+        ::fidl::internal::TransactionalRequest<::test_versions::Protocol::Foo>,
+        header) == 0);
+
+template <>
+struct TypeTraits<::fidl::WireRequest<::test_versions::Protocol::Foo>> {
+  static constexpr const fidl_type_t* kType = nullptr;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(0);
+  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(0);
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasFlexibleEnvelope = false;
+  static constexpr bool kHasPointer = false;
+  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
+      ::fidl::internal::TransactionalMessageKind::kRequest;
+};
 
 }  // namespace fidl
 namespace test_versions {
@@ -239,8 +274,10 @@ template <>
 class ::fidl::WireResult<::test_versions::Protocol::Foo> final
     : public ::fidl::Result {
  public:
-  WireResult(::fidl::UnownedClientEnd<::test_versions::Protocol> client,
-             ::fidl::WireRequest<::test_versions::Protocol::Foo>* request);
+  WireResult(
+      ::fidl::UnownedClientEnd<::test_versions::Protocol> client,
+      ::fidl::internal::TransactionalRequest<::test_versions::Protocol::Foo>*
+          request);
   explicit WireResult(const ::fidl::Result& result) : ::fidl::Result(result) {}
   WireResult(WireResult&&) = delete;
   WireResult(const WireResult&) = delete;
@@ -257,7 +294,8 @@ class ::fidl::WireUnownedResult<::test_versions::Protocol::Foo> final
   explicit WireUnownedResult(
       ::fidl::UnownedClientEnd<::test_versions::Protocol> client_end,
       ::fidl::internal::AnyBufferAllocator& allocator,
-      ::fidl::WireRequest<::test_versions::Protocol::Foo>* request);
+      ::fidl::internal::TransactionalRequest<::test_versions::Protocol::Foo>*
+          request);
   explicit WireUnownedResult(const ::fidl::Result& result)
       : ::fidl::Result(result) {}
   WireUnownedResult(WireUnownedResult&&) = delete;
@@ -326,7 +364,8 @@ class ::fidl::internal::WireSyncClientImpl<::test_versions::Protocol> final
   // Allocates 32 bytes of message buffer on the stack. No heap allocation
   // necessary.
   ::fidl::WireResult<::test_versions::Protocol::Foo> Foo() {
-    ::fidl::WireRequest<::test_versions::Protocol::Foo> _request{};
+    ::fidl::internal::TransactionalRequest<::test_versions::Protocol::Foo>
+        _request{};
     return ::fidl::WireResult<::test_versions::Protocol::Foo>(_client_end(),
                                                               &_request);
   }
@@ -347,7 +386,8 @@ class ::fidl::internal::WireSyncBufferClientImpl<::test_versions::Protocol>
   // Caller provides the backing storage for FIDL message via an argument to
   // `.buffer()`.
   ::fidl::WireUnownedResult<::test_versions::Protocol::Foo> Foo() {
-    ::fidl::WireRequest<::test_versions::Protocol::Foo> _request{};
+    ::fidl::internal::TransactionalRequest<::test_versions::Protocol::Foo>
+        _request{};
     return ::fidl::WireUnownedResult<::test_versions::Protocol::Foo>(
         _client_end(), _allocator(), &_request);
   }

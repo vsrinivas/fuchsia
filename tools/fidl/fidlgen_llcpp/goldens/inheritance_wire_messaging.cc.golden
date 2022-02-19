@@ -14,29 +14,33 @@ extern "C" const fidl_type_t test_inheritance_SuperFooTopResponseTable;
 }  // namespace test_inheritance
 ::fidl::WireResult<::test_inheritance::Super::Foo>::WireResult(
     ::fidl::UnownedClientEnd<::test_inheritance::Super> client,
-    ::fidl::WireRequest<::test_inheritance::Super::Foo>* request) {
+    ::fidl::internal::TransactionalRequest<::test_inheritance::Super::Foo>*
+        request) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::unstable::OwnedEncodedMessage<
-      ::fidl::WireRequest<::test_inheritance::Super::Foo>,
+      ::fidl::internal::TransactionalRequest<::test_inheritance::Super::Foo>,
       ::fidl::internal::ChannelTransport>
       request_message(::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
-  outgoing.Call<::fidl::WireResponse<::test_inheritance::Super::Foo>>(
+  outgoing.Call<
+      ::fidl::internal::TransactionalResponse<::test_inheritance::Super::Foo>>(
       client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()));
   SetResult(outgoing);
 }
 
 ::fidl::WireResult<::test_inheritance::Super::Foo>::WireResult(
     ::fidl::UnownedClientEnd<::test_inheritance::Super> client,
-    ::fidl::WireRequest<::test_inheritance::Super::Foo>* request,
+    ::fidl::internal::TransactionalRequest<::test_inheritance::Super::Foo>*
+        request,
     zx_time_t deadline) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::unstable::OwnedEncodedMessage<
-      ::fidl::WireRequest<::test_inheritance::Super::Foo>,
+      ::fidl::internal::TransactionalRequest<::test_inheritance::Super::Foo>,
       ::fidl::internal::ChannelTransport>
       request_message(::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
-  outgoing.Call<::fidl::WireResponse<::test_inheritance::Super::Foo>>(
+  outgoing.Call<
+      ::fidl::internal::TransactionalResponse<::test_inheritance::Super::Foo>>(
       client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()),
       fidl::CallOptions{.deadline = deadline});
   SetResult(outgoing);
@@ -49,7 +53,8 @@ namespace test_inheritance {
 ::fidl::WireUnownedResult<::test_inheritance::Super::Foo>::WireUnownedResult(
     ::fidl::UnownedClientEnd<::test_inheritance::Super> client_end,
     ::fidl::internal::AnyBufferAllocator& allocator,
-    ::fidl::WireRequest<::test_inheritance::Super::Foo>* request) {
+    ::fidl::internal::TransactionalRequest<::test_inheritance::Super::Foo>*
+        request) {
   constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<
       ::test_inheritance::Super::Foo>();
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation =
@@ -60,7 +65,7 @@ namespace test_inheritance {
   }
   uint8_t* buffer = allocation->data;
   constexpr uint32_t request_byte_capacity = ::fidl::MaxSizeInChannel<
-      ::fidl::WireRequest<::test_inheritance::Super::Foo>,
+      ::fidl::internal::TransactionalRequest<::test_inheritance::Super::Foo>,
       ::fidl::MessageDirection::kSending>();
   uint8_t* request_bytes = buffer;
   static_assert(buffer_size > request_byte_capacity);
@@ -68,10 +73,11 @@ namespace test_inheritance {
   uint8_t* response_bytes = &buffer[request_byte_capacity];
 
   ::fidl::unstable::UnownedEncodedMessage<
-      ::fidl::WireRequest<::test_inheritance::Super::Foo>>
+      ::fidl::internal::TransactionalRequest<::test_inheritance::Super::Foo>>
       request_message(request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
-  outgoing.Call<::fidl::WireResponse<::test_inheritance::Super::Foo>>(
+  outgoing.Call<
+      ::fidl::internal::TransactionalResponse<::test_inheritance::Super::Foo>>(
       client_end.handle(), response_bytes, response_byte_capacity);
   bytes_ = response_bytes;
   ::fidl::Result::operator=(outgoing);
@@ -102,10 +108,11 @@ void fidl::internal::WireWeakAsyncClientImpl<::test_inheritance::Super>::Foo(
   };
 
   auto* _context = new ResponseContext(std::move(_cb));
-  ::fidl::WireRequest<::test_inheritance::Super::Foo> _request{s};
+  ::fidl::internal::TransactionalRequest<::test_inheritance::Super::Foo>
+      _request{s};
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::unstable::OwnedEncodedMessage<
-      ::fidl::WireRequest<::test_inheritance::Super::Foo>,
+      ::fidl::internal::TransactionalRequest<::test_inheritance::Super::Foo>,
       ::fidl::internal::ChannelTransport>
       _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
   _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
@@ -137,10 +144,11 @@ void fidl::internal::WireWeakAsyncClientImpl<::test_inheritance::Super>::Foo(
   };
 
   auto* _context = new ResponseContext(std::move(_cb));
-  ::fidl::WireRequest<::test_inheritance::Super::Foo> _request{s};
+  ::fidl::internal::TransactionalRequest<::test_inheritance::Super::Foo>
+      _request{s};
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::unstable::OwnedEncodedMessage<
-      ::fidl::WireRequest<::test_inheritance::Super::Foo>,
+      ::fidl::internal::TransactionalRequest<::test_inheritance::Super::Foo>,
       ::fidl::internal::ChannelTransport>
       _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
   _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
@@ -159,9 +167,10 @@ void fidl::internal::WireWeakAsyncBufferClientImpl<::test_inheritance::Super>::
     return;
   }
 
-  ::fidl::WireRequest<::test_inheritance::Super::Foo> _request{s};
+  ::fidl::internal::TransactionalRequest<::test_inheritance::Super::Foo>
+      _request{s};
   ::fidl::unstable::UnownedEncodedMessage<
-      ::fidl::WireRequest<::test_inheritance::Super::Foo>>
+      ::fidl::internal::TransactionalRequest<::test_inheritance::Super::Foo>>
       _request_message(_allocation->data, _buffer_size, &_request);
   _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
 }
@@ -171,7 +180,8 @@ fidl::internal::WireWeakSyncClientImpl<::test_inheritance::Super>::Foo(
     ::fidl::StringView s) {
   return _client_base()->MakeSyncCallWith(
       [&](std::shared_ptr<::fidl::internal::AnyTransport> _transport) {
-        ::fidl::WireRequest<::test_inheritance::Super::Foo> _request{s};
+        ::fidl::internal::TransactionalRequest<::test_inheritance::Super::Foo>
+            _request{s};
         return ::fidl::WireResult<::test_inheritance::Super::Foo>(
             ::fidl::UnownedClientEnd<::test_inheritance::Super>(
                 _transport->get<::fidl::internal::ChannelTransport>()),
@@ -249,12 +259,13 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<
            internal::IncomingTransportContext transport_context,
            ::fidl::Transaction* txn) {
           ::fidl::unstable::DecodedMessage<
-              ::fidl::WireRequest<::test_inheritance::Super::Foo>>
+              ::fidl::internal::TransactionalRequest<
+                  ::test_inheritance::Super::Foo>>
               decoded{std::move(msg)};
           if (unlikely(!decoded.ok())) {
             return decoded.status();
           }
-          auto* primary = decoded.PrimaryObject();
+          auto* primary = &decoded.PrimaryObject()->body;
           ::fidl::internal::WireCompleter<::test_inheritance::Super::Foo>::Sync
               completer(txn);
           reinterpret_cast<::fidl::WireServer<::test_inheritance::Super>*>(
@@ -297,10 +308,11 @@ void fidl::WireServer<::test_inheritance::Super>::dispatch_message(
 #ifdef __Fuchsia__
 ::fidl::Result fidl::internal::WireCompleterBase<
     ::test_inheritance::Super::Foo>::Reply(int64_t y) {
-  ::fidl::WireResponse<::test_inheritance::Super::Foo> _response{y};
+  ::fidl::internal::TransactionalResponse<::test_inheritance::Super::Foo>
+      _response{y};
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::unstable::OwnedEncodedMessage<
-      ::fidl::WireResponse<::test_inheritance::Super::Foo>,
+      ::fidl::internal::TransactionalResponse<::test_inheritance::Super::Foo>,
       ::fidl::internal::ChannelTransport>
       _response_message{::fidl::internal::AllowUnownedInputRef{}, &_response};
   return ::fidl::internal::WireCompleterBase<::test_inheritance::Super::Foo>::
@@ -311,21 +323,24 @@ void fidl::WireServer<::test_inheritance::Super>::dispatch_message(
 ::fidl::Result
 fidl::internal::WireCompleterBase<::test_inheritance::Super::Foo>::Reply(
     ::fidl::BufferSpan _buffer, int64_t y) {
-  ::fidl::WireResponse<::test_inheritance::Super::Foo> _response{y};
+  ::fidl::internal::TransactionalResponse<::test_inheritance::Super::Foo>
+      _response{y};
   ::fidl::unstable::UnownedEncodedMessage<
-      ::fidl::WireResponse<::test_inheritance::Super::Foo>>
+      ::fidl::internal::TransactionalResponse<::test_inheritance::Super::Foo>>
       _response_message(_buffer.data, _buffer.capacity, &_response);
   return CompleterBase::SendReply(&_response_message.GetOutgoingMessage(),
                                   ::fidl::internal::OutgoingTransportContext());
 }
 #endif  // __Fuchsia__
 
-void ::fidl::WireRequest<::test_inheritance::Super::Foo>::_InitHeader() {
-  fidl_init_txn_header(&_hdr, 0, ::test_inheritance::ksuper_foo_Ordinal);
+void ::fidl::internal::TransactionalRequest<
+    ::test_inheritance::Super::Foo>::_InitHeader() {
+  fidl_init_txn_header(&header, 0, ::test_inheritance::ksuper_foo_Ordinal);
 }
 
-void ::fidl::WireResponse<::test_inheritance::Super::Foo>::_InitHeader() {
-  fidl_init_txn_header(&_hdr, 0, ::test_inheritance::ksuper_foo_Ordinal);
+void ::fidl::internal::TransactionalResponse<
+    ::test_inheritance::Super::Foo>::_InitHeader() {
+  fidl_init_txn_header(&header, 0, ::test_inheritance::ksuper_foo_Ordinal);
 }
 
 #ifdef __Fuchsia__
@@ -342,29 +357,33 @@ extern "C" const fidl_type_t test_inheritance_SuperFooTopResponseTable;
 }  // namespace test_inheritance
 ::fidl::WireResult<::test_inheritance::Sub::Foo>::WireResult(
     ::fidl::UnownedClientEnd<::test_inheritance::Sub> client,
-    ::fidl::WireRequest<::test_inheritance::Sub::Foo>* request) {
+    ::fidl::internal::TransactionalRequest<::test_inheritance::Sub::Foo>*
+        request) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::unstable::OwnedEncodedMessage<
-      ::fidl::WireRequest<::test_inheritance::Sub::Foo>,
+      ::fidl::internal::TransactionalRequest<::test_inheritance::Sub::Foo>,
       ::fidl::internal::ChannelTransport>
       request_message(::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
-  outgoing.Call<::fidl::WireResponse<::test_inheritance::Sub::Foo>>(
+  outgoing.Call<
+      ::fidl::internal::TransactionalResponse<::test_inheritance::Sub::Foo>>(
       client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()));
   SetResult(outgoing);
 }
 
 ::fidl::WireResult<::test_inheritance::Sub::Foo>::WireResult(
     ::fidl::UnownedClientEnd<::test_inheritance::Sub> client,
-    ::fidl::WireRequest<::test_inheritance::Sub::Foo>* request,
+    ::fidl::internal::TransactionalRequest<::test_inheritance::Sub::Foo>*
+        request,
     zx_time_t deadline) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::unstable::OwnedEncodedMessage<
-      ::fidl::WireRequest<::test_inheritance::Sub::Foo>,
+      ::fidl::internal::TransactionalRequest<::test_inheritance::Sub::Foo>,
       ::fidl::internal::ChannelTransport>
       request_message(::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
-  outgoing.Call<::fidl::WireResponse<::test_inheritance::Sub::Foo>>(
+  outgoing.Call<
+      ::fidl::internal::TransactionalResponse<::test_inheritance::Sub::Foo>>(
       client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()),
       fidl::CallOptions{.deadline = deadline});
   SetResult(outgoing);
@@ -377,7 +396,8 @@ namespace test_inheritance {
 ::fidl::WireUnownedResult<::test_inheritance::Sub::Foo>::WireUnownedResult(
     ::fidl::UnownedClientEnd<::test_inheritance::Sub> client_end,
     ::fidl::internal::AnyBufferAllocator& allocator,
-    ::fidl::WireRequest<::test_inheritance::Sub::Foo>* request) {
+    ::fidl::internal::TransactionalRequest<::test_inheritance::Sub::Foo>*
+        request) {
   constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<
       ::test_inheritance::Sub::Foo>();
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation =
@@ -388,7 +408,7 @@ namespace test_inheritance {
   }
   uint8_t* buffer = allocation->data;
   constexpr uint32_t request_byte_capacity = ::fidl::MaxSizeInChannel<
-      ::fidl::WireRequest<::test_inheritance::Sub::Foo>,
+      ::fidl::internal::TransactionalRequest<::test_inheritance::Sub::Foo>,
       ::fidl::MessageDirection::kSending>();
   uint8_t* request_bytes = buffer;
   static_assert(buffer_size > request_byte_capacity);
@@ -396,10 +416,11 @@ namespace test_inheritance {
   uint8_t* response_bytes = &buffer[request_byte_capacity];
 
   ::fidl::unstable::UnownedEncodedMessage<
-      ::fidl::WireRequest<::test_inheritance::Sub::Foo>>
+      ::fidl::internal::TransactionalRequest<::test_inheritance::Sub::Foo>>
       request_message(request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
-  outgoing.Call<::fidl::WireResponse<::test_inheritance::Sub::Foo>>(
+  outgoing.Call<
+      ::fidl::internal::TransactionalResponse<::test_inheritance::Sub::Foo>>(
       client_end.handle(), response_bytes, response_byte_capacity);
   bytes_ = response_bytes;
   ::fidl::Result::operator=(outgoing);
@@ -430,10 +451,11 @@ void fidl::internal::WireWeakAsyncClientImpl<::test_inheritance::Sub>::Foo(
   };
 
   auto* _context = new ResponseContext(std::move(_cb));
-  ::fidl::WireRequest<::test_inheritance::Sub::Foo> _request{s};
+  ::fidl::internal::TransactionalRequest<::test_inheritance::Sub::Foo> _request{
+      s};
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::unstable::OwnedEncodedMessage<
-      ::fidl::WireRequest<::test_inheritance::Sub::Foo>,
+      ::fidl::internal::TransactionalRequest<::test_inheritance::Sub::Foo>,
       ::fidl::internal::ChannelTransport>
       _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
   _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
@@ -465,10 +487,11 @@ void fidl::internal::WireWeakAsyncClientImpl<::test_inheritance::Sub>::Foo(
   };
 
   auto* _context = new ResponseContext(std::move(_cb));
-  ::fidl::WireRequest<::test_inheritance::Sub::Foo> _request{s};
+  ::fidl::internal::TransactionalRequest<::test_inheritance::Sub::Foo> _request{
+      s};
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::unstable::OwnedEncodedMessage<
-      ::fidl::WireRequest<::test_inheritance::Sub::Foo>,
+      ::fidl::internal::TransactionalRequest<::test_inheritance::Sub::Foo>,
       ::fidl::internal::ChannelTransport>
       _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
   _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
@@ -487,9 +510,10 @@ void fidl::internal::WireWeakAsyncBufferClientImpl<::test_inheritance::Sub>::
     return;
   }
 
-  ::fidl::WireRequest<::test_inheritance::Sub::Foo> _request{s};
+  ::fidl::internal::TransactionalRequest<::test_inheritance::Sub::Foo> _request{
+      s};
   ::fidl::unstable::UnownedEncodedMessage<
-      ::fidl::WireRequest<::test_inheritance::Sub::Foo>>
+      ::fidl::internal::TransactionalRequest<::test_inheritance::Sub::Foo>>
       _request_message(_allocation->data, _buffer_size, &_request);
   _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
 }
@@ -499,7 +523,8 @@ fidl::internal::WireWeakSyncClientImpl<::test_inheritance::Sub>::Foo(
     ::fidl::StringView s) {
   return _client_base()->MakeSyncCallWith(
       [&](std::shared_ptr<::fidl::internal::AnyTransport> _transport) {
-        ::fidl::WireRequest<::test_inheritance::Sub::Foo> _request{s};
+        ::fidl::internal::TransactionalRequest<::test_inheritance::Sub::Foo>
+            _request{s};
         return ::fidl::WireResult<::test_inheritance::Sub::Foo>(
             ::fidl::UnownedClientEnd<::test_inheritance::Sub>(
                 _transport->get<::fidl::internal::ChannelTransport>()),
@@ -577,12 +602,13 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<
            internal::IncomingTransportContext transport_context,
            ::fidl::Transaction* txn) {
           ::fidl::unstable::DecodedMessage<
-              ::fidl::WireRequest<::test_inheritance::Sub::Foo>>
+              ::fidl::internal::TransactionalRequest<
+                  ::test_inheritance::Sub::Foo>>
               decoded{std::move(msg)};
           if (unlikely(!decoded.ok())) {
             return decoded.status();
           }
-          auto* primary = decoded.PrimaryObject();
+          auto* primary = &decoded.PrimaryObject()->body;
           ::fidl::internal::WireCompleter<::test_inheritance::Sub::Foo>::Sync
               completer(txn);
           reinterpret_cast<::fidl::WireServer<::test_inheritance::Sub>*>(
@@ -625,10 +651,11 @@ void fidl::WireServer<::test_inheritance::Sub>::dispatch_message(
 #ifdef __Fuchsia__
 ::fidl::Result fidl::internal::WireCompleterBase<
     ::test_inheritance::Sub::Foo>::Reply(int64_t y) {
-  ::fidl::WireResponse<::test_inheritance::Sub::Foo> _response{y};
+  ::fidl::internal::TransactionalResponse<::test_inheritance::Sub::Foo>
+      _response{y};
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::unstable::OwnedEncodedMessage<
-      ::fidl::WireResponse<::test_inheritance::Sub::Foo>,
+      ::fidl::internal::TransactionalResponse<::test_inheritance::Sub::Foo>,
       ::fidl::internal::ChannelTransport>
       _response_message{::fidl::internal::AllowUnownedInputRef{}, &_response};
   return ::fidl::internal::WireCompleterBase<::test_inheritance::Sub::Foo>::
@@ -639,21 +666,24 @@ void fidl::WireServer<::test_inheritance::Sub>::dispatch_message(
 ::fidl::Result
 fidl::internal::WireCompleterBase<::test_inheritance::Sub::Foo>::Reply(
     ::fidl::BufferSpan _buffer, int64_t y) {
-  ::fidl::WireResponse<::test_inheritance::Sub::Foo> _response{y};
+  ::fidl::internal::TransactionalResponse<::test_inheritance::Sub::Foo>
+      _response{y};
   ::fidl::unstable::UnownedEncodedMessage<
-      ::fidl::WireResponse<::test_inheritance::Sub::Foo>>
+      ::fidl::internal::TransactionalResponse<::test_inheritance::Sub::Foo>>
       _response_message(_buffer.data, _buffer.capacity, &_response);
   return CompleterBase::SendReply(&_response_message.GetOutgoingMessage(),
                                   ::fidl::internal::OutgoingTransportContext());
 }
 #endif  // __Fuchsia__
 
-void ::fidl::WireRequest<::test_inheritance::Sub::Foo>::_InitHeader() {
-  fidl_init_txn_header(&_hdr, 0, ::test_inheritance::ksub_foo_Ordinal);
+void ::fidl::internal::TransactionalRequest<
+    ::test_inheritance::Sub::Foo>::_InitHeader() {
+  fidl_init_txn_header(&header, 0, ::test_inheritance::ksub_foo_Ordinal);
 }
 
-void ::fidl::WireResponse<::test_inheritance::Sub::Foo>::_InitHeader() {
-  fidl_init_txn_header(&_hdr, 0, ::test_inheritance::ksub_foo_Ordinal);
+void ::fidl::internal::TransactionalResponse<
+    ::test_inheritance::Sub::Foo>::_InitHeader() {
+  fidl_init_txn_header(&header, 0, ::test_inheritance::ksub_foo_Ordinal);
 }
 
 #ifdef __Fuchsia__

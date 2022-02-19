@@ -15,6 +15,8 @@
 using ::test_types::TypesTest;
 using ::test_types::wire::VectorStruct;
 using NonNullableChannelRequest = fidl::WireRequest<TypesTest::NonNullableChannel>;
+using NonNullableChannelTransactionalRequest =
+    fidl::internal::TransactionalRequest<TypesTest::NonNullableChannel>;
 
 namespace {
 
@@ -51,24 +53,24 @@ TEST(LlcppTypesTests, EncodedMessageTest) {
 
 // Start with a message, then encode, decode and encode again.
 TEST(LlcppTypesTests, RoundTripTest) {
-  NonNullableChannelRequest msg{};
+  NonNullableChannelTransactionalRequest msg{};
 
   // Capture the extra handle here; it will not be cleaned by encoded_message
   zx::channel channel_1;
 
-  EXPECT_EQ(zx::channel::create(0, &msg.channel, &channel_1), ZX_OK);
+  EXPECT_EQ(zx::channel::create(0, &msg.body.channel, &channel_1), ZX_OK);
 
-  zx_handle_t unsafe_handle_backup(msg.channel.get());
+  zx_handle_t unsafe_handle_backup(msg.body.channel.get());
 
   // We need to define our own storage because it is used after encoded is deleted.
-  FIDL_ALIGNDECL uint8_t storage[sizeof(NonNullableChannelRequest)];
+  FIDL_ALIGNDECL uint8_t storage[sizeof(NonNullableChannelTransactionalRequest)];
 
-  auto* encoded = new fidl::unstable::UnownedEncodedMessage<NonNullableChannelRequest>(
+  auto* encoded = new fidl::unstable::UnownedEncodedMessage<NonNullableChannelTransactionalRequest>(
       storage, sizeof(storage), &msg);
   EXPECT_EQ(encoded->status(), ZX_OK);
   encoded->GetOutgoingMessage().set_txid(10);
   auto encoded_bytes = encoded->GetOutgoingMessage().CopyBytes();
-  EXPECT_EQ(encoded_bytes.size(), sizeof(NonNullableChannelRequest));
+  EXPECT_EQ(encoded_bytes.size(), sizeof(NonNullableChannelTransactionalRequest));
 
   uint8_t golden_encoded[] = {0x0a, 0x00, 0x00, 0x00,   // txid
                               0x02, 0x00, 0x00, 0x01,   // flags and version
@@ -86,11 +88,12 @@ TEST(LlcppTypesTests, RoundTripTest) {
   auto converted = fidl::OutgoingToIncomingMessage(encoded->GetOutgoingMessage());
   auto& incoming = converted.incoming_message();
   ASSERT_EQ(ZX_OK, incoming.status());
-  auto decoded = fidl::unstable::DecodedMessage<NonNullableChannelRequest>(std::move(incoming));
+  auto decoded =
+      fidl::unstable::DecodedMessage<NonNullableChannelTransactionalRequest>(std::move(incoming));
   EXPECT_TRUE(decoded.ok());
-  EXPECT_EQ(decoded.PrimaryObject()->_hdr.txid, 10u);
-  EXPECT_EQ(decoded.PrimaryObject()->_hdr.ordinal, 0x67982ebd88e037a2lu);
-  EXPECT_EQ(decoded.PrimaryObject()->channel.get(), unsafe_handle_backup);
+  EXPECT_EQ(decoded.PrimaryObject()->header.txid, 10u);
+  EXPECT_EQ(decoded.PrimaryObject()->header.ordinal, 0x67982ebd88e037a2lu);
+  EXPECT_EQ(decoded.PrimaryObject()->body.channel.get(), unsafe_handle_backup);
   // encoded_message should be consumed
   EXPECT_EQ(encoded->GetOutgoingMessage().handle_actual(), 0u);
   delete encoded;
@@ -100,13 +103,13 @@ TEST(LlcppTypesTests, RoundTripTest) {
 
   // Encode
   {
-    fidl::unstable::OwnedEncodedMessage<NonNullableChannelRequest> encoded2(
+    fidl::unstable::OwnedEncodedMessage<NonNullableChannelTransactionalRequest> encoded2(
         decoded.PrimaryObject());
     EXPECT_TRUE(encoded2.ok());
 
     // Byte-level comparison
     auto encoded2_bytes = encoded2.GetOutgoingMessage().CopyBytes();
-    EXPECT_EQ(encoded2_bytes.size(), sizeof(NonNullableChannelRequest));
+    EXPECT_EQ(encoded2_bytes.size(), sizeof(NonNullableChannelTransactionalRequest));
     EXPECT_EQ(memcmp(golden_encoded, encoded2_bytes.data(), encoded2_bytes.size()), 0);
     EXPECT_EQ(encoded2.GetOutgoingMessage().handle_actual(), 1u);
     EXPECT_EQ(encoded2.GetOutgoingMessage().handles()[0], unsafe_handle_backup);

@@ -177,13 +177,13 @@ class OutgoingMessage : public ::fidl::Result {
   // Encodes the data.
   template <typename FidlType>
   void Encode(FidlType* data) {
-    is_transactional_ = fidl::IsFidlMessage<FidlType>::value;
+    is_transactional_ = fidl::IsFidlTransactionalMessage<FidlType>::value;
     EncodeImpl(fidl::internal::WireFormatVersion::kV1, fidl::TypeTraits<FidlType>::kType, data);
   }
 
   template <typename FidlType>
   void Encode(fidl::internal::WireFormatVersion wire_format_version, FidlType* data) {
-    is_transactional_ = fidl::IsFidlMessage<FidlType>::value;
+    is_transactional_ = fidl::IsFidlTransactionalMessage<FidlType>::value;
     EncodeImpl(wire_format_version, fidl::TypeTraits<FidlType>::kType, data);
   }
 
@@ -508,7 +508,7 @@ class IncomingMessage : public ::fidl::Result {
     ZX_ASSERT(!is_transactional_);
     ZX_ASSERT(fidl::TypeTraits<FidlType>::kType != nullptr);
     Decode(wire_format_version, fidl::TypeTraits<FidlType>::kType,
-           fidl::IsFidlMessage<FidlType>::value, out_transformed_buffer);
+           fidl::IsFidlTransactionalMessage<FidlType>::value, out_transformed_buffer);
   }
 
   // Release the handle ownership after the message has been converted to its
@@ -600,7 +600,7 @@ class DecodedMessageBase : public ::fidl::Result {
   // The first 16 bytes of the message are assumed to be the FIDL message header and are used
   // for determining the wire format version for decoding.
   explicit DecodedMessageBase(::fidl::IncomingMessage&& msg) {
-    static_assert(fidl::IsFidlMessage<FidlType>::value);
+    static_assert(fidl::IsFidlTransactionalMessage<FidlType>::value);
     msg.Decode<FidlType>(&allocated_buffer_);
     bytes_ = msg.bytes();
     SetResult(msg);
@@ -611,7 +611,7 @@ class DecodedMessageBase : public ::fidl::Result {
   // Consumes |msg|.
   explicit DecodedMessageBase(internal::WireFormatVersion wire_format_version,
                               ::fidl::IncomingMessage&& msg) {
-    static_assert(!fidl::IsFidlMessage<FidlType>::value);
+    static_assert(!fidl::IsFidlTransactionalMessage<FidlType>::value);
     msg.Decode<FidlType>(wire_format_version, &allocated_buffer_);
     bytes_ = msg.bytes();
     SetResult(msg);
@@ -666,9 +666,7 @@ class UnownedEncodedMessage final {
   UnownedEncodedMessage(uint32_t iovec_capacity, uint8_t* backing_buffer,
                         uint32_t backing_buffer_size, FidlType* response)
       : UnownedEncodedMessage(fidl::internal::kLLCPPWireFormatVersion, iovec_capacity,
-                              backing_buffer, backing_buffer_size, response) {
-    static_assert(IsFidlMessage<FidlType>::value);
-  }
+                              backing_buffer, backing_buffer_size, response) {}
   UnownedEncodedMessage(fidl::internal::WireFormatVersion wire_format_version,
                         uint32_t iovec_capacity, uint8_t* backing_buffer,
                         uint32_t backing_buffer_size, FidlType* response)

@@ -77,7 +77,7 @@ bool EncodeSuccess(FidlWireFormatVersion wire_format_version, FidlType* value,
                    const std::vector<uint8_t>& expected_bytes,
                    const std::vector<zx_handle_disposition_t>& expected_handle_dispositions,
                    bool check_handle_rights) {
-  static_assert(!fidl::IsFidlMessage<FidlType>::value,
+  static_assert(!fidl::IsFidlTransactionalMessage<FidlType>::value,
                 "EncodeSuccess assumes non-transactional messages");
 
   // Linearize the built objects using LLCPP encode -> decode.

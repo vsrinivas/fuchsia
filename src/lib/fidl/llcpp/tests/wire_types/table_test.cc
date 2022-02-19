@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fidl/test.types/cpp/wire.h>
+#include <lib/fidl/llcpp/wire_messaging_declarations.h>
 
 #include <gtest/gtest.h>
 #include <src/lib/fidl/llcpp/tests/types_test_utils.h>
@@ -221,7 +222,8 @@ TEST(Table, UnknownHandlesResource) {
     EXPECT_EQ(table.x(), 0xab);
   };
   llcpp_types_test_utils::CannotProxyUnknownEnvelope<
-      fidl::WireResponse<test::MsgWrapper::TestResourceTable>>(bytes, handles, std::move(check));
+      fidl::internal::TransactionalResponse<test::MsgWrapper::TestResourceTable>>(bytes, handles,
+                                                                                  std::move(check));
 }
 
 TEST(Table, UnknownHandlesNonResource) {
@@ -247,5 +249,6 @@ TEST(Table, UnknownHandlesNonResource) {
     EXPECT_EQ(table.x(), 0xab);
   };
   llcpp_types_test_utils::CannotProxyUnknownEnvelope<
-      fidl::WireResponse<test::MsgWrapper::TestTable>>(bytes, handles, std::move(check));
+      fidl::internal::TransactionalResponse<test::MsgWrapper::TestTable>>(bytes, handles,
+                                                                          std::move(check));
 }

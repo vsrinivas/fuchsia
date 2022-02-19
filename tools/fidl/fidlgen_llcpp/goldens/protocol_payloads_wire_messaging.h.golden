@@ -219,174 +219,372 @@ struct ::fidl::WireRequest<
     ::test_protocolpayloads::MainProtocol::OneWayComposed>
     final {
   FIDL_ALIGNDECL
-  fidl_message_header_t _hdr;
   int32_t a;
 
-  explicit WireRequest(int32_t a) : a(a) { _InitHeader(); }
-  WireRequest() { _InitHeader(); }
+  explicit WireRequest(int32_t a) : a(a) {}
+  WireRequest() = default;
+};
+
+template <>
+struct ::fidl::internal::TransactionalRequest<
+    ::test_protocolpayloads::MainProtocol::OneWayComposed>
+    final {
+  FIDL_ALIGNDECL
+  fidl_message_header_t header;
+
+  ::fidl::WireRequest<::test_protocolpayloads::MainProtocol::OneWayComposed>
+      body;
+  explicit TransactionalRequest(int32_t a)
+      : body(::fidl::WireRequest<
+             ::test_protocolpayloads::MainProtocol::OneWayComposed>(a)) {
+    _InitHeader();
+  }
+  TransactionalRequest() { _InitHeader(); }
 
  private:
   void _InitHeader();
 };
+
 template <>
 struct ::fidl::WireRequest<
     ::test_protocolpayloads::MainProtocol::TwoWayComposed>
     final {
   FIDL_ALIGNDECL
-  fidl_message_header_t _hdr;
   int32_t a;
 
-  explicit WireRequest(int32_t a) : a(a) { _InitHeader(); }
-  WireRequest() { _InitHeader(); }
+  explicit WireRequest(int32_t a) : a(a) {}
+  WireRequest() = default;
   using ResponseType = ::fidl::WireResponse<
+      ::test_protocolpayloads::MainProtocol::TwoWayComposed>;
+};
+
+template <>
+struct ::fidl::internal::TransactionalRequest<
+    ::test_protocolpayloads::MainProtocol::TwoWayComposed>
+    final {
+  FIDL_ALIGNDECL
+  fidl_message_header_t header;
+
+  ::fidl::WireRequest<::test_protocolpayloads::MainProtocol::TwoWayComposed>
+      body;
+  explicit TransactionalRequest(int32_t a)
+      : body(::fidl::WireRequest<
+             ::test_protocolpayloads::MainProtocol::TwoWayComposed>(a)) {
+    _InitHeader();
+  }
+  TransactionalRequest() { _InitHeader(); }
+  using ResponseType = ::fidl::internal::TransactionalResponse<
       ::test_protocolpayloads::MainProtocol::TwoWayComposed>;
 
  private:
   void _InitHeader();
 };
+
 template <>
 struct ::fidl::WireResponse<
     ::test_protocolpayloads::MainProtocol::TwoWayComposed>
     final {
   FIDL_ALIGNDECL
-  fidl_message_header_t _hdr;
   int32_t a;
 
-  explicit WireResponse(int32_t a) : a(a) { _InitHeader(); }
-  WireResponse() { _InitHeader(); }
+  explicit WireResponse(int32_t a) : a(a) {}
+  WireResponse() = default;
+};
+
+template <>
+struct ::fidl::internal::TransactionalResponse<
+    ::test_protocolpayloads::MainProtocol::TwoWayComposed>
+    final {
+  FIDL_ALIGNDECL
+  fidl_message_header_t header;
+
+  ::fidl::WireResponse<::test_protocolpayloads::MainProtocol::TwoWayComposed>
+      body;
+  explicit TransactionalResponse(int32_t a)
+      : body(::fidl::WireResponse<
+             ::test_protocolpayloads::MainProtocol::TwoWayComposed>(a)) {
+    _InitHeader();
+  }
+  TransactionalResponse() { _InitHeader(); }
 
  private:
   void _InitHeader();
 };
+
 template <>
 struct ::fidl::WireRequest<
     ::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>
     final {
   FIDL_ALIGNDECL
-  fidl_message_header_t _hdr;
   int32_t a;
 
-  explicit WireRequest(int32_t a) : a(a) { _InitHeader(); }
-  WireRequest() { _InitHeader(); }
+  explicit WireRequest(int32_t a) : a(a) {}
+  WireRequest() = default;
   using ResponseType = ::fidl::WireResponse<
+      ::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>;
+};
+
+template <>
+struct ::fidl::internal::TransactionalRequest<
+    ::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>
+    final {
+  FIDL_ALIGNDECL
+  fidl_message_header_t header;
+
+  ::fidl::WireRequest<
+      ::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>
+      body;
+  explicit TransactionalRequest(int32_t a)
+      : body(::fidl::WireRequest<
+             ::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>(
+            a)) {
+    _InitHeader();
+  }
+  TransactionalRequest() { _InitHeader(); }
+  using ResponseType = ::fidl::internal::TransactionalResponse<
       ::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>;
 
  private:
   void _InitHeader();
 };
+
 template <>
 struct ::fidl::WireResponse<
     ::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>
     final {
   FIDL_ALIGNDECL
-  fidl_message_header_t _hdr;
   ::test_protocolpayloads_imported::wire::
       ComposedProtocolTwoWayComposedWithErrorResult result;
 
   explicit WireResponse(
       ::test_protocolpayloads_imported::wire::
           ComposedProtocolTwoWayComposedWithErrorResult result)
-      : result(result) {
+      : result(result) {}
+  WireResponse() = default;
+};
+
+template <>
+struct ::fidl::internal::TransactionalResponse<
+    ::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>
+    final {
+  FIDL_ALIGNDECL
+  fidl_message_header_t header;
+
+  ::fidl::WireResponse<
+      ::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>
+      body;
+  explicit TransactionalResponse(
+      ::test_protocolpayloads_imported::wire::
+          ComposedProtocolTwoWayComposedWithErrorResult result)
+      : body(::fidl::WireResponse<
+             ::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>(
+            result)) {
     _InitHeader();
   }
-  WireResponse() { _InitHeader(); }
+  TransactionalResponse() { _InitHeader(); }
 
  private:
   void _InitHeader();
 };
+
 template <>
 struct ::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnComposed>
     final {
   FIDL_ALIGNDECL
-  fidl_message_header_t _hdr;
   int32_t a;
 
-  explicit WireEvent(int32_t a) : a(a) { _InitHeader(); }
-  WireEvent() { _InitHeader(); }
+  explicit WireEvent(int32_t a) : a(a) {}
+  WireEvent() = default;
+};
+
+template <>
+struct ::fidl::internal::TransactionalEvent<
+    ::test_protocolpayloads::MainProtocol::OnComposed>
+    final {
+  FIDL_ALIGNDECL
+  fidl_message_header_t header;
+
+  ::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnComposed> body;
+  explicit TransactionalEvent(int32_t a)
+      : body(::fidl::WireEvent<
+             ::test_protocolpayloads::MainProtocol::OnComposed>(a)) {
+    _InitHeader();
+  }
+  TransactionalEvent() { _InitHeader(); }
 
  private:
   void _InitHeader();
 };
+
 template <>
 struct ::fidl::WireEvent<
     ::test_protocolpayloads::MainProtocol::OnComposedWithError>
     final {
   FIDL_ALIGNDECL
-  fidl_message_header_t _hdr;
   ::test_protocolpayloads_imported::wire::
       ComposedProtocolOnComposedWithErrorResult result;
 
   explicit WireEvent(::test_protocolpayloads_imported::wire::
                          ComposedProtocolOnComposedWithErrorResult result)
-      : result(result) {
+      : result(result) {}
+  WireEvent() = default;
+};
+
+template <>
+struct ::fidl::internal::TransactionalEvent<
+    ::test_protocolpayloads::MainProtocol::OnComposedWithError>
+    final {
+  FIDL_ALIGNDECL
+  fidl_message_header_t header;
+
+  ::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnComposedWithError>
+      body;
+  explicit TransactionalEvent(
+      ::test_protocolpayloads_imported::wire::
+          ComposedProtocolOnComposedWithErrorResult result)
+      : body(::fidl::WireEvent<
+             ::test_protocolpayloads::MainProtocol::OnComposedWithError>(
+            result)) {
     _InitHeader();
   }
-  WireEvent() { _InitHeader(); }
+  TransactionalEvent() { _InitHeader(); }
 
  private:
   void _InitHeader();
 };
+
 template <>
 struct ::fidl::WireRequest<::test_protocolpayloads::MainProtocol::OneWayLocal>
     final {
   FIDL_ALIGNDECL
-  fidl_message_header_t _hdr;
   uint32_t a;
   uint32_t b;
 
-  explicit WireRequest(uint32_t a, uint32_t b) : a(a), b(b) { _InitHeader(); }
-  WireRequest() { _InitHeader(); }
+  explicit WireRequest(uint32_t a, uint32_t b) : a(a), b(b) {}
+  WireRequest() = default;
+};
+
+template <>
+struct ::fidl::internal::TransactionalRequest<
+    ::test_protocolpayloads::MainProtocol::OneWayLocal>
+    final {
+  FIDL_ALIGNDECL
+  fidl_message_header_t header;
+
+  ::fidl::WireRequest<::test_protocolpayloads::MainProtocol::OneWayLocal> body;
+  explicit TransactionalRequest(uint32_t a, uint32_t b)
+      : body(::fidl::WireRequest<
+             ::test_protocolpayloads::MainProtocol::OneWayLocal>(a, b)) {
+    _InitHeader();
+  }
+  TransactionalRequest() { _InitHeader(); }
 
  private:
   void _InitHeader();
 };
+
 template <>
 struct ::fidl::WireRequest<::test_protocolpayloads::MainProtocol::TwoWayLocal>
     final {
   FIDL_ALIGNDECL
-  fidl_message_header_t _hdr;
   uint32_t a;
   uint32_t b;
 
-  explicit WireRequest(uint32_t a, uint32_t b) : a(a), b(b) { _InitHeader(); }
-  WireRequest() { _InitHeader(); }
+  explicit WireRequest(uint32_t a, uint32_t b) : a(a), b(b) {}
+  WireRequest() = default;
   using ResponseType =
       ::fidl::WireResponse<::test_protocolpayloads::MainProtocol::TwoWayLocal>;
+};
+
+template <>
+struct ::fidl::internal::TransactionalRequest<
+    ::test_protocolpayloads::MainProtocol::TwoWayLocal>
+    final {
+  FIDL_ALIGNDECL
+  fidl_message_header_t header;
+
+  ::fidl::WireRequest<::test_protocolpayloads::MainProtocol::TwoWayLocal> body;
+  explicit TransactionalRequest(uint32_t a, uint32_t b)
+      : body(::fidl::WireRequest<
+             ::test_protocolpayloads::MainProtocol::TwoWayLocal>(a, b)) {
+    _InitHeader();
+  }
+  TransactionalRequest() { _InitHeader(); }
+  using ResponseType = ::fidl::internal::TransactionalResponse<
+      ::test_protocolpayloads::MainProtocol::TwoWayLocal>;
 
  private:
   void _InitHeader();
 };
+
 template <>
 struct ::fidl::WireResponse<::test_protocolpayloads::MainProtocol::TwoWayLocal>
     final {
   FIDL_ALIGNDECL
-  fidl_message_header_t _hdr;
   uint32_t a;
   uint32_t b;
 
-  explicit WireResponse(uint32_t a, uint32_t b) : a(a), b(b) { _InitHeader(); }
-  WireResponse() { _InitHeader(); }
+  explicit WireResponse(uint32_t a, uint32_t b) : a(a), b(b) {}
+  WireResponse() = default;
+};
+
+template <>
+struct ::fidl::internal::TransactionalResponse<
+    ::test_protocolpayloads::MainProtocol::TwoWayLocal>
+    final {
+  FIDL_ALIGNDECL
+  fidl_message_header_t header;
+
+  ::fidl::WireResponse<::test_protocolpayloads::MainProtocol::TwoWayLocal> body;
+  explicit TransactionalResponse(uint32_t a, uint32_t b)
+      : body(::fidl::WireResponse<
+             ::test_protocolpayloads::MainProtocol::TwoWayLocal>(a, b)) {
+    _InitHeader();
+  }
+  TransactionalResponse() { _InitHeader(); }
 
  private:
   void _InitHeader();
 };
+
 template <>
 struct ::fidl::WireRequest<
     ::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>
     final {
   FIDL_ALIGNDECL
-  fidl_message_header_t _hdr;
   uint32_t a;
   uint32_t b;
 
-  explicit WireRequest(uint32_t a, uint32_t b) : a(a), b(b) { _InitHeader(); }
-  WireRequest() { _InitHeader(); }
+  explicit WireRequest(uint32_t a, uint32_t b) : a(a), b(b) {}
+  WireRequest() = default;
   using ResponseType = ::fidl::WireResponse<
+      ::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>;
+};
+
+template <>
+struct ::fidl::internal::TransactionalRequest<
+    ::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>
+    final {
+  FIDL_ALIGNDECL
+  fidl_message_header_t header;
+
+  ::fidl::WireRequest<
+      ::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>
+      body;
+  explicit TransactionalRequest(uint32_t a, uint32_t b)
+      : body(::fidl::WireRequest<
+             ::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>(a,
+                                                                          b)) {
+    _InitHeader();
+  }
+  TransactionalRequest() { _InitHeader(); }
+  using ResponseType = ::fidl::internal::TransactionalResponse<
       ::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>;
 
  private:
   void _InitHeader();
 };
+
 template <>
 struct ::fidl::WireResponse<
     ::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>
@@ -395,33 +593,68 @@ struct ::fidl::WireResponse<
       test_protocolpayloads::wire::MainProtocolTwoWayLocalWithErrorResult;
 
   FIDL_ALIGNDECL
-  fidl_message_header_t _hdr;
   ::test_protocolpayloads::wire::MainProtocolTwoWayLocalWithErrorResult result;
 
   explicit WireResponse(
       ::test_protocolpayloads::wire::MainProtocolTwoWayLocalWithErrorResult
           result)
-      : result(result) {
+      : result(result) {}
+  WireResponse() = default;
+};
+
+template <>
+struct ::fidl::internal::TransactionalResponse<
+    ::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>
+    final {
+  FIDL_ALIGNDECL
+  fidl_message_header_t header;
+
+  ::fidl::WireResponse<
+      ::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>
+      body;
+  explicit TransactionalResponse(
+      ::test_protocolpayloads::wire::MainProtocolTwoWayLocalWithErrorResult
+          result)
+      : body(::fidl::WireResponse<
+             ::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>(
+            result)) {
     _InitHeader();
   }
-  WireResponse() { _InitHeader(); }
+  TransactionalResponse() { _InitHeader(); }
 
  private:
   void _InitHeader();
 };
+
 template <>
 struct ::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnLocal> final {
   FIDL_ALIGNDECL
-  fidl_message_header_t _hdr;
   uint32_t a;
   uint32_t b;
 
-  explicit WireEvent(uint32_t a, uint32_t b) : a(a), b(b) { _InitHeader(); }
-  WireEvent() { _InitHeader(); }
+  explicit WireEvent(uint32_t a, uint32_t b) : a(a), b(b) {}
+  WireEvent() = default;
+};
+
+template <>
+struct ::fidl::internal::TransactionalEvent<
+    ::test_protocolpayloads::MainProtocol::OnLocal>
+    final {
+  FIDL_ALIGNDECL
+  fidl_message_header_t header;
+
+  ::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnLocal> body;
+  explicit TransactionalEvent(uint32_t a, uint32_t b)
+      : body(::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnLocal>(
+            a, b)) {
+    _InitHeader();
+  }
+  TransactionalEvent() { _InitHeader(); }
 
  private:
   void _InitHeader();
 };
+
 template <>
 struct ::fidl::WireEvent<
     ::test_protocolpayloads::MainProtocol::OnLocalWithError>
@@ -430,76 +663,163 @@ struct ::fidl::WireEvent<
       test_protocolpayloads::wire::MainProtocolOnLocalWithErrorResult;
 
   FIDL_ALIGNDECL
-  fidl_message_header_t _hdr;
   ::test_protocolpayloads::wire::MainProtocolOnLocalWithErrorResult result;
 
   explicit WireEvent(
       ::test_protocolpayloads::wire::MainProtocolOnLocalWithErrorResult result)
-      : result(result) {
+      : result(result) {}
+  WireEvent() = default;
+};
+
+template <>
+struct ::fidl::internal::TransactionalEvent<
+    ::test_protocolpayloads::MainProtocol::OnLocalWithError>
+    final {
+  FIDL_ALIGNDECL
+  fidl_message_header_t header;
+
+  ::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnLocalWithError>
+      body;
+  explicit TransactionalEvent(
+      ::test_protocolpayloads::wire::MainProtocolOnLocalWithErrorResult result)
+      : body(::fidl::WireEvent<
+             ::test_protocolpayloads::MainProtocol::OnLocalWithError>(result)) {
     _InitHeader();
   }
-  WireEvent() { _InitHeader(); }
+  TransactionalEvent() { _InitHeader(); }
 
  private:
   void _InitHeader();
 };
+
 template <>
 struct ::fidl::WireRequest<::test_protocolpayloads::MainProtocol::OneWayImport>
     final {
   FIDL_ALIGNDECL
-  fidl_message_header_t _hdr;
   int32_t a;
 
-  explicit WireRequest(int32_t a) : a(a) { _InitHeader(); }
-  WireRequest() { _InitHeader(); }
+  explicit WireRequest(int32_t a) : a(a) {}
+  WireRequest() = default;
+};
+
+template <>
+struct ::fidl::internal::TransactionalRequest<
+    ::test_protocolpayloads::MainProtocol::OneWayImport>
+    final {
+  FIDL_ALIGNDECL
+  fidl_message_header_t header;
+
+  ::fidl::WireRequest<::test_protocolpayloads::MainProtocol::OneWayImport> body;
+  explicit TransactionalRequest(int32_t a)
+      : body(::fidl::WireRequest<
+             ::test_protocolpayloads::MainProtocol::OneWayImport>(a)) {
+    _InitHeader();
+  }
+  TransactionalRequest() { _InitHeader(); }
 
  private:
   void _InitHeader();
 };
+
 template <>
 struct ::fidl::WireRequest<::test_protocolpayloads::MainProtocol::TwoWayImport>
     final {
   FIDL_ALIGNDECL
-  fidl_message_header_t _hdr;
   int32_t a;
 
-  explicit WireRequest(int32_t a) : a(a) { _InitHeader(); }
-  WireRequest() { _InitHeader(); }
+  explicit WireRequest(int32_t a) : a(a) {}
+  WireRequest() = default;
   using ResponseType =
       ::fidl::WireResponse<::test_protocolpayloads::MainProtocol::TwoWayImport>;
+};
+
+template <>
+struct ::fidl::internal::TransactionalRequest<
+    ::test_protocolpayloads::MainProtocol::TwoWayImport>
+    final {
+  FIDL_ALIGNDECL
+  fidl_message_header_t header;
+
+  ::fidl::WireRequest<::test_protocolpayloads::MainProtocol::TwoWayImport> body;
+  explicit TransactionalRequest(int32_t a)
+      : body(::fidl::WireRequest<
+             ::test_protocolpayloads::MainProtocol::TwoWayImport>(a)) {
+    _InitHeader();
+  }
+  TransactionalRequest() { _InitHeader(); }
+  using ResponseType = ::fidl::internal::TransactionalResponse<
+      ::test_protocolpayloads::MainProtocol::TwoWayImport>;
 
  private:
   void _InitHeader();
 };
+
 template <>
 struct ::fidl::WireResponse<::test_protocolpayloads::MainProtocol::TwoWayImport>
     final {
   FIDL_ALIGNDECL
-  fidl_message_header_t _hdr;
   int32_t a;
 
-  explicit WireResponse(int32_t a) : a(a) { _InitHeader(); }
-  WireResponse() { _InitHeader(); }
+  explicit WireResponse(int32_t a) : a(a) {}
+  WireResponse() = default;
+};
+
+template <>
+struct ::fidl::internal::TransactionalResponse<
+    ::test_protocolpayloads::MainProtocol::TwoWayImport>
+    final {
+  FIDL_ALIGNDECL
+  fidl_message_header_t header;
+
+  ::fidl::WireResponse<::test_protocolpayloads::MainProtocol::TwoWayImport>
+      body;
+  explicit TransactionalResponse(int32_t a)
+      : body(::fidl::WireResponse<
+             ::test_protocolpayloads::MainProtocol::TwoWayImport>(a)) {
+    _InitHeader();
+  }
+  TransactionalResponse() { _InitHeader(); }
 
  private:
   void _InitHeader();
 };
+
 template <>
 struct ::fidl::WireRequest<
     ::test_protocolpayloads::MainProtocol::TwoWayImportWithError>
     final {
   FIDL_ALIGNDECL
-  fidl_message_header_t _hdr;
   int32_t a;
 
-  explicit WireRequest(int32_t a) : a(a) { _InitHeader(); }
-  WireRequest() { _InitHeader(); }
+  explicit WireRequest(int32_t a) : a(a) {}
+  WireRequest() = default;
   using ResponseType = ::fidl::WireResponse<
+      ::test_protocolpayloads::MainProtocol::TwoWayImportWithError>;
+};
+
+template <>
+struct ::fidl::internal::TransactionalRequest<
+    ::test_protocolpayloads::MainProtocol::TwoWayImportWithError>
+    final {
+  FIDL_ALIGNDECL
+  fidl_message_header_t header;
+
+  ::fidl::WireRequest<
+      ::test_protocolpayloads::MainProtocol::TwoWayImportWithError>
+      body;
+  explicit TransactionalRequest(int32_t a)
+      : body(::fidl::WireRequest<
+             ::test_protocolpayloads::MainProtocol::TwoWayImportWithError>(a)) {
+    _InitHeader();
+  }
+  TransactionalRequest() { _InitHeader(); }
+  using ResponseType = ::fidl::internal::TransactionalResponse<
       ::test_protocolpayloads::MainProtocol::TwoWayImportWithError>;
 
  private:
   void _InitHeader();
 };
+
 template <>
 struct ::fidl::WireResponse<
     ::test_protocolpayloads::MainProtocol::TwoWayImportWithError>
@@ -508,33 +828,68 @@ struct ::fidl::WireResponse<
       test_protocolpayloads::wire::MainProtocolTwoWayImportWithErrorResult;
 
   FIDL_ALIGNDECL
-  fidl_message_header_t _hdr;
   ::test_protocolpayloads::wire::MainProtocolTwoWayImportWithErrorResult result;
 
   explicit WireResponse(
       ::test_protocolpayloads::wire::MainProtocolTwoWayImportWithErrorResult
           result)
-      : result(result) {
+      : result(result) {}
+  WireResponse() = default;
+};
+
+template <>
+struct ::fidl::internal::TransactionalResponse<
+    ::test_protocolpayloads::MainProtocol::TwoWayImportWithError>
+    final {
+  FIDL_ALIGNDECL
+  fidl_message_header_t header;
+
+  ::fidl::WireResponse<
+      ::test_protocolpayloads::MainProtocol::TwoWayImportWithError>
+      body;
+  explicit TransactionalResponse(
+      ::test_protocolpayloads::wire::MainProtocolTwoWayImportWithErrorResult
+          result)
+      : body(::fidl::WireResponse<
+             ::test_protocolpayloads::MainProtocol::TwoWayImportWithError>(
+            result)) {
     _InitHeader();
   }
-  WireResponse() { _InitHeader(); }
+  TransactionalResponse() { _InitHeader(); }
 
  private:
   void _InitHeader();
 };
+
 template <>
 struct ::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnImport>
     final {
   FIDL_ALIGNDECL
-  fidl_message_header_t _hdr;
   int32_t a;
 
-  explicit WireEvent(int32_t a) : a(a) { _InitHeader(); }
-  WireEvent() { _InitHeader(); }
+  explicit WireEvent(int32_t a) : a(a) {}
+  WireEvent() = default;
+};
+
+template <>
+struct ::fidl::internal::TransactionalEvent<
+    ::test_protocolpayloads::MainProtocol::OnImport>
+    final {
+  FIDL_ALIGNDECL
+  fidl_message_header_t header;
+
+  ::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnImport> body;
+  explicit TransactionalEvent(int32_t a)
+      : body(::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnImport>(
+            a)) {
+    _InitHeader();
+  }
+  TransactionalEvent() { _InitHeader(); }
 
  private:
   void _InitHeader();
 };
+
 template <>
 struct ::fidl::WireEvent<
     ::test_protocolpayloads::MainProtocol::OnImportWithError>
@@ -543,80 +898,168 @@ struct ::fidl::WireEvent<
       test_protocolpayloads::wire::MainProtocolOnImportWithErrorResult;
 
   FIDL_ALIGNDECL
-  fidl_message_header_t _hdr;
   ::test_protocolpayloads::wire::MainProtocolOnImportWithErrorResult result;
 
   explicit WireEvent(
       ::test_protocolpayloads::wire::MainProtocolOnImportWithErrorResult result)
-      : result(result) {
+      : result(result) {}
+  WireEvent() = default;
+};
+
+template <>
+struct ::fidl::internal::TransactionalEvent<
+    ::test_protocolpayloads::MainProtocol::OnImportWithError>
+    final {
+  FIDL_ALIGNDECL
+  fidl_message_header_t header;
+
+  ::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnImportWithError>
+      body;
+  explicit TransactionalEvent(
+      ::test_protocolpayloads::wire::MainProtocolOnImportWithErrorResult result)
+      : body(::fidl::WireEvent<
+             ::test_protocolpayloads::MainProtocol::OnImportWithError>(
+            result)) {
     _InitHeader();
   }
-  WireEvent() { _InitHeader(); }
+  TransactionalEvent() { _InitHeader(); }
 
  private:
   void _InitHeader();
 };
+
 template <>
 struct ::fidl::WireRequest<::test_protocolpayloads::MainProtocol::OneWayAnon>
     final {
   FIDL_ALIGNDECL
-  fidl_message_header_t _hdr;
   uint32_t a;
   uint32_t b;
 
-  explicit WireRequest(uint32_t a, uint32_t b) : a(a), b(b) { _InitHeader(); }
-  WireRequest() { _InitHeader(); }
+  explicit WireRequest(uint32_t a, uint32_t b) : a(a), b(b) {}
+  WireRequest() = default;
+};
+
+template <>
+struct ::fidl::internal::TransactionalRequest<
+    ::test_protocolpayloads::MainProtocol::OneWayAnon>
+    final {
+  FIDL_ALIGNDECL
+  fidl_message_header_t header;
+
+  ::fidl::WireRequest<::test_protocolpayloads::MainProtocol::OneWayAnon> body;
+  explicit TransactionalRequest(uint32_t a, uint32_t b)
+      : body(::fidl::WireRequest<
+             ::test_protocolpayloads::MainProtocol::OneWayAnon>(a, b)) {
+    _InitHeader();
+  }
+  TransactionalRequest() { _InitHeader(); }
 
  private:
   void _InitHeader();
 };
+
 template <>
 struct ::fidl::WireRequest<::test_protocolpayloads::MainProtocol::TwoWayAnon>
     final {
   FIDL_ALIGNDECL
-  fidl_message_header_t _hdr;
   uint32_t a;
   uint32_t b;
 
-  explicit WireRequest(uint32_t a, uint32_t b) : a(a), b(b) { _InitHeader(); }
-  WireRequest() { _InitHeader(); }
+  explicit WireRequest(uint32_t a, uint32_t b) : a(a), b(b) {}
+  WireRequest() = default;
   using ResponseType =
       ::fidl::WireResponse<::test_protocolpayloads::MainProtocol::TwoWayAnon>;
+};
+
+template <>
+struct ::fidl::internal::TransactionalRequest<
+    ::test_protocolpayloads::MainProtocol::TwoWayAnon>
+    final {
+  FIDL_ALIGNDECL
+  fidl_message_header_t header;
+
+  ::fidl::WireRequest<::test_protocolpayloads::MainProtocol::TwoWayAnon> body;
+  explicit TransactionalRequest(uint32_t a, uint32_t b)
+      : body(::fidl::WireRequest<
+             ::test_protocolpayloads::MainProtocol::TwoWayAnon>(a, b)) {
+    _InitHeader();
+  }
+  TransactionalRequest() { _InitHeader(); }
+  using ResponseType = ::fidl::internal::TransactionalResponse<
+      ::test_protocolpayloads::MainProtocol::TwoWayAnon>;
 
  private:
   void _InitHeader();
 };
+
 template <>
 struct ::fidl::WireResponse<::test_protocolpayloads::MainProtocol::TwoWayAnon>
     final {
   FIDL_ALIGNDECL
-  fidl_message_header_t _hdr;
   uint32_t a;
   uint32_t b;
 
-  explicit WireResponse(uint32_t a, uint32_t b) : a(a), b(b) { _InitHeader(); }
-  WireResponse() { _InitHeader(); }
+  explicit WireResponse(uint32_t a, uint32_t b) : a(a), b(b) {}
+  WireResponse() = default;
+};
+
+template <>
+struct ::fidl::internal::TransactionalResponse<
+    ::test_protocolpayloads::MainProtocol::TwoWayAnon>
+    final {
+  FIDL_ALIGNDECL
+  fidl_message_header_t header;
+
+  ::fidl::WireResponse<::test_protocolpayloads::MainProtocol::TwoWayAnon> body;
+  explicit TransactionalResponse(uint32_t a, uint32_t b)
+      : body(::fidl::WireResponse<
+             ::test_protocolpayloads::MainProtocol::TwoWayAnon>(a, b)) {
+    _InitHeader();
+  }
+  TransactionalResponse() { _InitHeader(); }
 
  private:
   void _InitHeader();
 };
+
 template <>
 struct ::fidl::WireRequest<
     ::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>
     final {
   FIDL_ALIGNDECL
-  fidl_message_header_t _hdr;
   uint32_t a;
   uint32_t b;
 
-  explicit WireRequest(uint32_t a, uint32_t b) : a(a), b(b) { _InitHeader(); }
-  WireRequest() { _InitHeader(); }
+  explicit WireRequest(uint32_t a, uint32_t b) : a(a), b(b) {}
+  WireRequest() = default;
   using ResponseType = ::fidl::WireResponse<
+      ::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>;
+};
+
+template <>
+struct ::fidl::internal::TransactionalRequest<
+    ::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>
+    final {
+  FIDL_ALIGNDECL
+  fidl_message_header_t header;
+
+  ::fidl::WireRequest<
+      ::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>
+      body;
+  explicit TransactionalRequest(uint32_t a, uint32_t b)
+      : body(::fidl::WireRequest<
+             ::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>(a,
+                                                                         b)) {
+    _InitHeader();
+  }
+  TransactionalRequest() { _InitHeader(); }
+  using ResponseType = ::fidl::internal::TransactionalResponse<
       ::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>;
 
  private:
   void _InitHeader();
 };
+
 template <>
 struct ::fidl::WireResponse<
     ::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>
@@ -625,48 +1068,98 @@ struct ::fidl::WireResponse<
       test_protocolpayloads::wire::MainProtocolTwoWayAnonWithErrorResult;
 
   FIDL_ALIGNDECL
-  fidl_message_header_t _hdr;
   ::test_protocolpayloads::wire::MainProtocolTwoWayAnonWithErrorResult result;
 
   explicit WireResponse(
       ::test_protocolpayloads::wire::MainProtocolTwoWayAnonWithErrorResult
           result)
-      : result(result) {
+      : result(result) {}
+  WireResponse() = default;
+};
+
+template <>
+struct ::fidl::internal::TransactionalResponse<
+    ::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>
+    final {
+  FIDL_ALIGNDECL
+  fidl_message_header_t header;
+
+  ::fidl::WireResponse<
+      ::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>
+      body;
+  explicit TransactionalResponse(
+      ::test_protocolpayloads::wire::MainProtocolTwoWayAnonWithErrorResult
+          result)
+      : body(::fidl::WireResponse<
+             ::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>(
+            result)) {
     _InitHeader();
   }
-  WireResponse() { _InitHeader(); }
+  TransactionalResponse() { _InitHeader(); }
 
  private:
   void _InitHeader();
 };
+
 template <>
 struct ::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnAnon> final {
   FIDL_ALIGNDECL
-  fidl_message_header_t _hdr;
   uint32_t a;
   uint32_t b;
 
-  explicit WireEvent(uint32_t a, uint32_t b) : a(a), b(b) { _InitHeader(); }
-  WireEvent() { _InitHeader(); }
+  explicit WireEvent(uint32_t a, uint32_t b) : a(a), b(b) {}
+  WireEvent() = default;
+};
+
+template <>
+struct ::fidl::internal::TransactionalEvent<
+    ::test_protocolpayloads::MainProtocol::OnAnon>
+    final {
+  FIDL_ALIGNDECL
+  fidl_message_header_t header;
+
+  ::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnAnon> body;
+  explicit TransactionalEvent(uint32_t a, uint32_t b)
+      : body(::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnAnon>(
+            a, b)) {
+    _InitHeader();
+  }
+  TransactionalEvent() { _InitHeader(); }
 
  private:
   void _InitHeader();
 };
+
 template <>
 struct ::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnAnonWithError>
     final {
   using Result = test_protocolpayloads::wire::MainProtocolOnAnonWithErrorResult;
 
   FIDL_ALIGNDECL
-  fidl_message_header_t _hdr;
   ::test_protocolpayloads::wire::MainProtocolOnAnonWithErrorResult result;
 
   explicit WireEvent(
       ::test_protocolpayloads::wire::MainProtocolOnAnonWithErrorResult result)
-      : result(result) {
+      : result(result) {}
+  WireEvent() = default;
+};
+
+template <>
+struct ::fidl::internal::TransactionalEvent<
+    ::test_protocolpayloads::MainProtocol::OnAnonWithError>
+    final {
+  FIDL_ALIGNDECL
+  fidl_message_header_t header;
+
+  ::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnAnonWithError>
+      body;
+  explicit TransactionalEvent(
+      ::test_protocolpayloads::wire::MainProtocolOnAnonWithErrorResult result)
+      : body(::fidl::WireEvent<
+             ::test_protocolpayloads::MainProtocol::OnAnonWithError>(result)) {
     _InitHeader();
   }
-  WireEvent() { _InitHeader(); }
+  TransactionalEvent() { _InitHeader(); }
 
  private:
   void _InitHeader();
@@ -675,16 +1168,24 @@ struct ::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnAnonWithError>
 namespace fidl {
 
 template <>
+struct IsFidlType<::fidl::internal::TransactionalRequest<
+    ::test_protocolpayloads::MainProtocol::OneWayComposed>>
+    : public std::true_type {};
+template <>
 struct IsFidlType<
     ::fidl::WireRequest<::test_protocolpayloads::MainProtocol::OneWayComposed>>
     : public std::true_type {};
 template <>
-struct IsFidlMessage<
-    ::fidl::WireRequest<::test_protocolpayloads::MainProtocol::OneWayComposed>>
+struct IsFidlTransactionalMessage<::fidl::internal::TransactionalRequest<
+    ::test_protocolpayloads::MainProtocol::OneWayComposed>>
     : public std::true_type {};
+template <>
+struct IsFidlTransactionalMessage<
+    ::fidl::WireRequest<::test_protocolpayloads::MainProtocol::OneWayComposed>>
+    : public std::false_type {};
 
 template <>
-struct TypeTraits<::fidl::WireRequest<
+struct TypeTraits<::fidl::internal::TransactionalRequest<
     ::test_protocolpayloads::MainProtocol::OneWayComposed>> {
   static constexpr const fidl_type_t* kType =
       &::test_protocolpayloads::
@@ -703,6 +1204,36 @@ struct TypeTraits<::fidl::WireRequest<
 };
 
 static_assert(
+    sizeof(::fidl::internal::TransactionalRequest<
+           ::test_protocolpayloads::MainProtocol::OneWayComposed>) ==
+    TypeTraits<::fidl::internal::TransactionalRequest<
+        ::test_protocolpayloads::MainProtocol::OneWayComposed>>::kPrimarySize);
+static_assert(
+    offsetof(::fidl::internal::TransactionalRequest<
+                 ::test_protocolpayloads::MainProtocol::OneWayComposed>,
+             header) == 0);
+static_assert(
+    offsetof(::fidl::internal::TransactionalRequest<
+                 ::test_protocolpayloads::MainProtocol::OneWayComposed>,
+             body) == sizeof(fidl_message_header_t));
+
+template <>
+struct TypeTraits<::fidl::WireRequest<
+    ::test_protocolpayloads::MainProtocol::OneWayComposed>> {
+  static constexpr const fidl_type_t* kType =
+      &::test_protocolpayloads::
+          test_protocolpayloads_imported_ImportStructPayloadTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(4);
+  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(4);
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasFlexibleEnvelope = false;
+  static constexpr bool kHasPointer = false;
+  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
+      ::fidl::internal::TransactionalMessageKind::kRequest;
+};
+static_assert(
     sizeof(::fidl::WireRequest<
            ::test_protocolpayloads::MainProtocol::OneWayComposed>) ==
     TypeTraits<::fidl::WireRequest<
@@ -710,19 +1241,27 @@ static_assert(
 static_assert(
     offsetof(::fidl::WireRequest<
                  ::test_protocolpayloads::MainProtocol::OneWayComposed>,
-             a) == 0 + sizeof(fidl_message_header_t));
+             a) == 0);
 
+template <>
+struct IsFidlType<::fidl::internal::TransactionalRequest<
+    ::test_protocolpayloads::MainProtocol::TwoWayComposed>>
+    : public std::true_type {};
 template <>
 struct IsFidlType<
     ::fidl::WireRequest<::test_protocolpayloads::MainProtocol::TwoWayComposed>>
     : public std::true_type {};
 template <>
-struct IsFidlMessage<
-    ::fidl::WireRequest<::test_protocolpayloads::MainProtocol::TwoWayComposed>>
+struct IsFidlTransactionalMessage<::fidl::internal::TransactionalRequest<
+    ::test_protocolpayloads::MainProtocol::TwoWayComposed>>
     : public std::true_type {};
+template <>
+struct IsFidlTransactionalMessage<
+    ::fidl::WireRequest<::test_protocolpayloads::MainProtocol::TwoWayComposed>>
+    : public std::false_type {};
 
 template <>
-struct TypeTraits<::fidl::WireRequest<
+struct TypeTraits<::fidl::internal::TransactionalRequest<
     ::test_protocolpayloads::MainProtocol::TwoWayComposed>> {
   static constexpr const fidl_type_t* kType =
       &::test_protocolpayloads::
@@ -741,6 +1280,36 @@ struct TypeTraits<::fidl::WireRequest<
 };
 
 static_assert(
+    sizeof(::fidl::internal::TransactionalRequest<
+           ::test_protocolpayloads::MainProtocol::TwoWayComposed>) ==
+    TypeTraits<::fidl::internal::TransactionalRequest<
+        ::test_protocolpayloads::MainProtocol::TwoWayComposed>>::kPrimarySize);
+static_assert(
+    offsetof(::fidl::internal::TransactionalRequest<
+                 ::test_protocolpayloads::MainProtocol::TwoWayComposed>,
+             header) == 0);
+static_assert(
+    offsetof(::fidl::internal::TransactionalRequest<
+                 ::test_protocolpayloads::MainProtocol::TwoWayComposed>,
+             body) == sizeof(fidl_message_header_t));
+
+template <>
+struct TypeTraits<::fidl::WireRequest<
+    ::test_protocolpayloads::MainProtocol::TwoWayComposed>> {
+  static constexpr const fidl_type_t* kType =
+      &::test_protocolpayloads::
+          test_protocolpayloads_imported_ImportStructPayloadTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(4);
+  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(4);
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasFlexibleEnvelope = false;
+  static constexpr bool kHasPointer = false;
+  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
+      ::fidl::internal::TransactionalMessageKind::kRequest;
+};
+static_assert(
     sizeof(::fidl::WireRequest<
            ::test_protocolpayloads::MainProtocol::TwoWayComposed>) ==
     TypeTraits<::fidl::WireRequest<
@@ -748,19 +1317,27 @@ static_assert(
 static_assert(
     offsetof(::fidl::WireRequest<
                  ::test_protocolpayloads::MainProtocol::TwoWayComposed>,
-             a) == 0 + sizeof(fidl_message_header_t));
+             a) == 0);
 
+template <>
+struct IsFidlType<::fidl::internal::TransactionalResponse<
+    ::test_protocolpayloads::MainProtocol::TwoWayComposed>>
+    : public std::true_type {};
 template <>
 struct IsFidlType<
     ::fidl::WireResponse<::test_protocolpayloads::MainProtocol::TwoWayComposed>>
     : public std::true_type {};
 template <>
-struct IsFidlMessage<
-    ::fidl::WireResponse<::test_protocolpayloads::MainProtocol::TwoWayComposed>>
+struct IsFidlTransactionalMessage<::fidl::internal::TransactionalResponse<
+    ::test_protocolpayloads::MainProtocol::TwoWayComposed>>
     : public std::true_type {};
+template <>
+struct IsFidlTransactionalMessage<
+    ::fidl::WireResponse<::test_protocolpayloads::MainProtocol::TwoWayComposed>>
+    : public std::false_type {};
 
 template <>
-struct TypeTraits<::fidl::WireResponse<
+struct TypeTraits<::fidl::internal::TransactionalResponse<
     ::test_protocolpayloads::MainProtocol::TwoWayComposed>> {
   static constexpr const fidl_type_t* kType =
       &::test_protocolpayloads::
@@ -779,6 +1356,36 @@ struct TypeTraits<::fidl::WireResponse<
 };
 
 static_assert(
+    sizeof(::fidl::internal::TransactionalResponse<
+           ::test_protocolpayloads::MainProtocol::TwoWayComposed>) ==
+    TypeTraits<::fidl::internal::TransactionalResponse<
+        ::test_protocolpayloads::MainProtocol::TwoWayComposed>>::kPrimarySize);
+static_assert(
+    offsetof(::fidl::internal::TransactionalResponse<
+                 ::test_protocolpayloads::MainProtocol::TwoWayComposed>,
+             header) == 0);
+static_assert(
+    offsetof(::fidl::internal::TransactionalResponse<
+                 ::test_protocolpayloads::MainProtocol::TwoWayComposed>,
+             body) == sizeof(fidl_message_header_t));
+
+template <>
+struct TypeTraits<::fidl::WireResponse<
+    ::test_protocolpayloads::MainProtocol::TwoWayComposed>> {
+  static constexpr const fidl_type_t* kType =
+      &::test_protocolpayloads::
+          test_protocolpayloads_imported_ImportStructPayloadTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(4);
+  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(4);
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasFlexibleEnvelope = false;
+  static constexpr bool kHasPointer = false;
+  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
+      ::fidl::internal::TransactionalMessageKind::kResponse;
+};
+static_assert(
     sizeof(::fidl::WireResponse<
            ::test_protocolpayloads::MainProtocol::TwoWayComposed>) ==
     TypeTraits<::fidl::WireResponse<
@@ -786,19 +1393,27 @@ static_assert(
 static_assert(
     offsetof(::fidl::WireResponse<
                  ::test_protocolpayloads::MainProtocol::TwoWayComposed>,
-             a) == 0 + sizeof(fidl_message_header_t));
+             a) == 0);
 
+template <>
+struct IsFidlType<::fidl::internal::TransactionalRequest<
+    ::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>>
+    : public std::true_type {};
 template <>
 struct IsFidlType<::fidl::WireRequest<
     ::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>>
     : public std::true_type {};
 template <>
-struct IsFidlMessage<::fidl::WireRequest<
+struct IsFidlTransactionalMessage<::fidl::internal::TransactionalRequest<
     ::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>>
     : public std::true_type {};
+template <>
+struct IsFidlTransactionalMessage<::fidl::WireRequest<
+    ::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>>
+    : public std::false_type {};
 
 template <>
-struct TypeTraits<::fidl::WireRequest<
+struct TypeTraits<::fidl::internal::TransactionalRequest<
     ::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>> {
   static constexpr const fidl_type_t* kType =
       &::test_protocolpayloads::
@@ -817,6 +1432,39 @@ struct TypeTraits<::fidl::WireRequest<
 };
 
 static_assert(
+    sizeof(::fidl::internal::TransactionalRequest<
+           ::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>) ==
+    TypeTraits<::fidl::internal::TransactionalRequest<
+        ::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>>::
+        kPrimarySize);
+static_assert(
+    offsetof(
+        ::fidl::internal::TransactionalRequest<
+            ::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>,
+        header) == 0);
+static_assert(
+    offsetof(
+        ::fidl::internal::TransactionalRequest<
+            ::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>,
+        body) == sizeof(fidl_message_header_t));
+
+template <>
+struct TypeTraits<::fidl::WireRequest<
+    ::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>> {
+  static constexpr const fidl_type_t* kType =
+      &::test_protocolpayloads::
+          test_protocolpayloads_imported_ImportStructPayloadTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(4);
+  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(4);
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasFlexibleEnvelope = false;
+  static constexpr bool kHasPointer = false;
+  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
+      ::fidl::internal::TransactionalMessageKind::kRequest;
+};
+static_assert(
     sizeof(::fidl::WireRequest<
            ::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>) ==
     TypeTraits<::fidl::WireRequest<::test_protocolpayloads::MainProtocol::
@@ -825,19 +1473,27 @@ static_assert(
     offsetof(
         ::fidl::WireRequest<
             ::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>,
-        a) == 0 + sizeof(fidl_message_header_t));
+        a) == 0);
 
+template <>
+struct IsFidlType<::fidl::internal::TransactionalResponse<
+    ::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>>
+    : public std::true_type {};
 template <>
 struct IsFidlType<::fidl::WireResponse<
     ::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>>
     : public std::true_type {};
 template <>
-struct IsFidlMessage<::fidl::WireResponse<
+struct IsFidlTransactionalMessage<::fidl::internal::TransactionalResponse<
     ::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>>
     : public std::true_type {};
+template <>
+struct IsFidlTransactionalMessage<::fidl::WireResponse<
+    ::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>>
+    : public std::false_type {};
 
 template <>
-struct TypeTraits<::fidl::WireResponse<
+struct TypeTraits<::fidl::internal::TransactionalResponse<
     ::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>> {
   static constexpr const fidl_type_t* kType =
       &::test_protocolpayloads::
@@ -856,6 +1512,39 @@ struct TypeTraits<::fidl::WireResponse<
 };
 
 static_assert(
+    sizeof(::fidl::internal::TransactionalResponse<
+           ::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>) ==
+    TypeTraits<::fidl::internal::TransactionalResponse<
+        ::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>>::
+        kPrimarySize);
+static_assert(
+    offsetof(
+        ::fidl::internal::TransactionalResponse<
+            ::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>,
+        header) == 0);
+static_assert(
+    offsetof(
+        ::fidl::internal::TransactionalResponse<
+            ::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>,
+        body) == sizeof(fidl_message_header_t));
+
+template <>
+struct TypeTraits<::fidl::WireResponse<
+    ::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>> {
+  static constexpr const fidl_type_t* kType =
+      &::test_protocolpayloads::
+          test_protocolpayloads_imported_ComposedProtocolTwoWayComposedWithErrorTopResponseTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(16);
+  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(24);
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 8;
+  static constexpr bool kHasFlexibleEnvelope = false;
+  static constexpr bool kHasPointer = true;
+  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
+      ::fidl::internal::TransactionalMessageKind::kResponse;
+};
+static_assert(
     sizeof(::fidl::WireResponse<
            ::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>) ==
     TypeTraits<::fidl::WireResponse<
@@ -865,20 +1554,28 @@ static_assert(
     offsetof(
         ::fidl::WireResponse<
             ::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>,
-        result) == 0 + sizeof(fidl_message_header_t));
+        result) == 0);
 
+template <>
+struct IsFidlType<::fidl::internal::TransactionalEvent<
+    ::test_protocolpayloads::MainProtocol::OnComposed>>
+    : public std::true_type {};
 template <>
 struct IsFidlType<
     ::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnComposed>>
     : public std::true_type {};
 template <>
-struct IsFidlMessage<
-    ::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnComposed>>
+struct IsFidlTransactionalMessage<::fidl::internal::TransactionalEvent<
+    ::test_protocolpayloads::MainProtocol::OnComposed>>
     : public std::true_type {};
+template <>
+struct IsFidlTransactionalMessage<
+    ::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnComposed>>
+    : public std::false_type {};
 
 template <>
-struct TypeTraits<
-    ::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnComposed>> {
+struct TypeTraits<::fidl::internal::TransactionalEvent<
+    ::test_protocolpayloads::MainProtocol::OnComposed>> {
   static constexpr const fidl_type_t* kType =
       &::test_protocolpayloads::
           test_protocolpayloads_imported_ImportStructPayloadTable;
@@ -896,6 +1593,34 @@ struct TypeTraits<
 };
 
 static_assert(
+    sizeof(::fidl::internal::TransactionalEvent<
+           ::test_protocolpayloads::MainProtocol::OnComposed>) ==
+    TypeTraits<::fidl::internal::TransactionalEvent<
+        ::test_protocolpayloads::MainProtocol::OnComposed>>::kPrimarySize);
+static_assert(offsetof(::fidl::internal::TransactionalEvent<
+                           ::test_protocolpayloads::MainProtocol::OnComposed>,
+                       header) == 0);
+static_assert(offsetof(::fidl::internal::TransactionalEvent<
+                           ::test_protocolpayloads::MainProtocol::OnComposed>,
+                       body) == sizeof(fidl_message_header_t));
+
+template <>
+struct TypeTraits<
+    ::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnComposed>> {
+  static constexpr const fidl_type_t* kType =
+      &::test_protocolpayloads::
+          test_protocolpayloads_imported_ImportStructPayloadTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(4);
+  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(4);
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasFlexibleEnvelope = false;
+  static constexpr bool kHasPointer = false;
+  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
+      ::fidl::internal::TransactionalMessageKind::kResponse;
+};
+static_assert(
     sizeof(
         ::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnComposed>) ==
     TypeTraits<::fidl::WireEvent<
@@ -903,19 +1628,27 @@ static_assert(
 static_assert(
     offsetof(
         ::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnComposed>,
-        a) == 0 + sizeof(fidl_message_header_t));
+        a) == 0);
 
+template <>
+struct IsFidlType<::fidl::internal::TransactionalEvent<
+    ::test_protocolpayloads::MainProtocol::OnComposedWithError>>
+    : public std::true_type {};
 template <>
 struct IsFidlType<::fidl::WireEvent<
     ::test_protocolpayloads::MainProtocol::OnComposedWithError>>
     : public std::true_type {};
 template <>
-struct IsFidlMessage<::fidl::WireEvent<
+struct IsFidlTransactionalMessage<::fidl::internal::TransactionalEvent<
     ::test_protocolpayloads::MainProtocol::OnComposedWithError>>
     : public std::true_type {};
+template <>
+struct IsFidlTransactionalMessage<::fidl::WireEvent<
+    ::test_protocolpayloads::MainProtocol::OnComposedWithError>>
+    : public std::false_type {};
 
 template <>
-struct TypeTraits<::fidl::WireEvent<
+struct TypeTraits<::fidl::internal::TransactionalEvent<
     ::test_protocolpayloads::MainProtocol::OnComposedWithError>> {
   static constexpr const fidl_type_t* kType =
       &::test_protocolpayloads::
@@ -934,6 +1667,37 @@ struct TypeTraits<::fidl::WireEvent<
 };
 
 static_assert(
+    sizeof(::fidl::internal::TransactionalEvent<
+           ::test_protocolpayloads::MainProtocol::OnComposedWithError>) ==
+    TypeTraits<::fidl::internal::TransactionalEvent<
+        ::test_protocolpayloads::MainProtocol::OnComposedWithError>>::
+        kPrimarySize);
+static_assert(
+    offsetof(::fidl::internal::TransactionalEvent<
+                 ::test_protocolpayloads::MainProtocol::OnComposedWithError>,
+             header) == 0);
+static_assert(
+    offsetof(::fidl::internal::TransactionalEvent<
+                 ::test_protocolpayloads::MainProtocol::OnComposedWithError>,
+             body) == sizeof(fidl_message_header_t));
+
+template <>
+struct TypeTraits<::fidl::WireEvent<
+    ::test_protocolpayloads::MainProtocol::OnComposedWithError>> {
+  static constexpr const fidl_type_t* kType =
+      &::test_protocolpayloads::
+          test_protocolpayloads_imported_ComposedProtocolOnComposedWithErrorRequestTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(16);
+  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(24);
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 8;
+  static constexpr bool kHasFlexibleEnvelope = false;
+  static constexpr bool kHasPointer = true;
+  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
+      ::fidl::internal::TransactionalMessageKind::kResponse;
+};
+static_assert(
     sizeof(::fidl::WireEvent<
            ::test_protocolpayloads::MainProtocol::OnComposedWithError>) ==
     TypeTraits<::fidl::WireEvent<::test_protocolpayloads::MainProtocol::
@@ -941,20 +1705,28 @@ static_assert(
 static_assert(
     offsetof(::fidl::WireEvent<
                  ::test_protocolpayloads::MainProtocol::OnComposedWithError>,
-             result) == 0 + sizeof(fidl_message_header_t));
+             result) == 0);
 
+template <>
+struct IsFidlType<::fidl::internal::TransactionalRequest<
+    ::test_protocolpayloads::MainProtocol::OneWayLocal>>
+    : public std::true_type {};
 template <>
 struct IsFidlType<
     ::fidl::WireRequest<::test_protocolpayloads::MainProtocol::OneWayLocal>>
     : public std::true_type {};
 template <>
-struct IsFidlMessage<
-    ::fidl::WireRequest<::test_protocolpayloads::MainProtocol::OneWayLocal>>
+struct IsFidlTransactionalMessage<::fidl::internal::TransactionalRequest<
+    ::test_protocolpayloads::MainProtocol::OneWayLocal>>
     : public std::true_type {};
+template <>
+struct IsFidlTransactionalMessage<
+    ::fidl::WireRequest<::test_protocolpayloads::MainProtocol::OneWayLocal>>
+    : public std::false_type {};
 
 template <>
-struct TypeTraits<
-    ::fidl::WireRequest<::test_protocolpayloads::MainProtocol::OneWayLocal>> {
+struct TypeTraits<::fidl::internal::TransactionalRequest<
+    ::test_protocolpayloads::MainProtocol::OneWayLocal>> {
   static constexpr const fidl_type_t* kType =
       &::test_protocolpayloads::test_protocolpayloads_LocalStructPayloadTable;
   static constexpr uint32_t kMaxNumHandles = 0;
@@ -970,6 +1742,33 @@ struct TypeTraits<
       ::fidl::internal::TransactionalMessageKind::kRequest;
 };
 
+static_assert(
+    sizeof(::fidl::internal::TransactionalRequest<
+           ::test_protocolpayloads::MainProtocol::OneWayLocal>) ==
+    TypeTraits<::fidl::internal::TransactionalRequest<
+        ::test_protocolpayloads::MainProtocol::OneWayLocal>>::kPrimarySize);
+static_assert(offsetof(::fidl::internal::TransactionalRequest<
+                           ::test_protocolpayloads::MainProtocol::OneWayLocal>,
+                       header) == 0);
+static_assert(offsetof(::fidl::internal::TransactionalRequest<
+                           ::test_protocolpayloads::MainProtocol::OneWayLocal>,
+                       body) == sizeof(fidl_message_header_t));
+
+template <>
+struct TypeTraits<
+    ::fidl::WireRequest<::test_protocolpayloads::MainProtocol::OneWayLocal>> {
+  static constexpr const fidl_type_t* kType =
+      &::test_protocolpayloads::test_protocolpayloads_LocalStructPayloadTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(8);
+  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(8);
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasFlexibleEnvelope = false;
+  static constexpr bool kHasPointer = false;
+  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
+      ::fidl::internal::TransactionalMessageKind::kRequest;
+};
 static_assert(
     sizeof(::fidl::WireRequest<
            ::test_protocolpayloads::MainProtocol::OneWayLocal>) ==
@@ -978,24 +1777,32 @@ static_assert(
 static_assert(
     offsetof(
         ::fidl::WireRequest<::test_protocolpayloads::MainProtocol::OneWayLocal>,
-        a) == 0 + sizeof(fidl_message_header_t));
+        a) == 0);
 static_assert(
     offsetof(
         ::fidl::WireRequest<::test_protocolpayloads::MainProtocol::OneWayLocal>,
-        b) == 4 + sizeof(fidl_message_header_t));
+        b) == 4);
 
+template <>
+struct IsFidlType<::fidl::internal::TransactionalRequest<
+    ::test_protocolpayloads::MainProtocol::TwoWayLocal>>
+    : public std::true_type {};
 template <>
 struct IsFidlType<
     ::fidl::WireRequest<::test_protocolpayloads::MainProtocol::TwoWayLocal>>
     : public std::true_type {};
 template <>
-struct IsFidlMessage<
-    ::fidl::WireRequest<::test_protocolpayloads::MainProtocol::TwoWayLocal>>
+struct IsFidlTransactionalMessage<::fidl::internal::TransactionalRequest<
+    ::test_protocolpayloads::MainProtocol::TwoWayLocal>>
     : public std::true_type {};
+template <>
+struct IsFidlTransactionalMessage<
+    ::fidl::WireRequest<::test_protocolpayloads::MainProtocol::TwoWayLocal>>
+    : public std::false_type {};
 
 template <>
-struct TypeTraits<
-    ::fidl::WireRequest<::test_protocolpayloads::MainProtocol::TwoWayLocal>> {
+struct TypeTraits<::fidl::internal::TransactionalRequest<
+    ::test_protocolpayloads::MainProtocol::TwoWayLocal>> {
   static constexpr const fidl_type_t* kType =
       &::test_protocolpayloads::test_protocolpayloads_LocalStructPayloadTable;
   static constexpr uint32_t kMaxNumHandles = 0;
@@ -1012,6 +1819,33 @@ struct TypeTraits<
 };
 
 static_assert(
+    sizeof(::fidl::internal::TransactionalRequest<
+           ::test_protocolpayloads::MainProtocol::TwoWayLocal>) ==
+    TypeTraits<::fidl::internal::TransactionalRequest<
+        ::test_protocolpayloads::MainProtocol::TwoWayLocal>>::kPrimarySize);
+static_assert(offsetof(::fidl::internal::TransactionalRequest<
+                           ::test_protocolpayloads::MainProtocol::TwoWayLocal>,
+                       header) == 0);
+static_assert(offsetof(::fidl::internal::TransactionalRequest<
+                           ::test_protocolpayloads::MainProtocol::TwoWayLocal>,
+                       body) == sizeof(fidl_message_header_t));
+
+template <>
+struct TypeTraits<
+    ::fidl::WireRequest<::test_protocolpayloads::MainProtocol::TwoWayLocal>> {
+  static constexpr const fidl_type_t* kType =
+      &::test_protocolpayloads::test_protocolpayloads_LocalStructPayloadTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(8);
+  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(8);
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasFlexibleEnvelope = false;
+  static constexpr bool kHasPointer = false;
+  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
+      ::fidl::internal::TransactionalMessageKind::kRequest;
+};
+static_assert(
     sizeof(::fidl::WireRequest<
            ::test_protocolpayloads::MainProtocol::TwoWayLocal>) ==
     TypeTraits<::fidl::WireRequest<
@@ -1019,24 +1853,32 @@ static_assert(
 static_assert(
     offsetof(
         ::fidl::WireRequest<::test_protocolpayloads::MainProtocol::TwoWayLocal>,
-        a) == 0 + sizeof(fidl_message_header_t));
+        a) == 0);
 static_assert(
     offsetof(
         ::fidl::WireRequest<::test_protocolpayloads::MainProtocol::TwoWayLocal>,
-        b) == 4 + sizeof(fidl_message_header_t));
+        b) == 4);
 
+template <>
+struct IsFidlType<::fidl::internal::TransactionalResponse<
+    ::test_protocolpayloads::MainProtocol::TwoWayLocal>>
+    : public std::true_type {};
 template <>
 struct IsFidlType<
     ::fidl::WireResponse<::test_protocolpayloads::MainProtocol::TwoWayLocal>>
     : public std::true_type {};
 template <>
-struct IsFidlMessage<
-    ::fidl::WireResponse<::test_protocolpayloads::MainProtocol::TwoWayLocal>>
+struct IsFidlTransactionalMessage<::fidl::internal::TransactionalResponse<
+    ::test_protocolpayloads::MainProtocol::TwoWayLocal>>
     : public std::true_type {};
+template <>
+struct IsFidlTransactionalMessage<
+    ::fidl::WireResponse<::test_protocolpayloads::MainProtocol::TwoWayLocal>>
+    : public std::false_type {};
 
 template <>
-struct TypeTraits<
-    ::fidl::WireResponse<::test_protocolpayloads::MainProtocol::TwoWayLocal>> {
+struct TypeTraits<::fidl::internal::TransactionalResponse<
+    ::test_protocolpayloads::MainProtocol::TwoWayLocal>> {
   static constexpr const fidl_type_t* kType =
       &::test_protocolpayloads::test_protocolpayloads_LocalStructPayloadTable;
   static constexpr uint32_t kMaxNumHandles = 0;
@@ -1053,28 +1895,63 @@ struct TypeTraits<
 };
 
 static_assert(
+    sizeof(::fidl::internal::TransactionalResponse<
+           ::test_protocolpayloads::MainProtocol::TwoWayLocal>) ==
+    TypeTraits<::fidl::internal::TransactionalResponse<
+        ::test_protocolpayloads::MainProtocol::TwoWayLocal>>::kPrimarySize);
+static_assert(offsetof(::fidl::internal::TransactionalResponse<
+                           ::test_protocolpayloads::MainProtocol::TwoWayLocal>,
+                       header) == 0);
+static_assert(offsetof(::fidl::internal::TransactionalResponse<
+                           ::test_protocolpayloads::MainProtocol::TwoWayLocal>,
+                       body) == sizeof(fidl_message_header_t));
+
+template <>
+struct TypeTraits<
+    ::fidl::WireResponse<::test_protocolpayloads::MainProtocol::TwoWayLocal>> {
+  static constexpr const fidl_type_t* kType =
+      &::test_protocolpayloads::test_protocolpayloads_LocalStructPayloadTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(8);
+  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(8);
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasFlexibleEnvelope = false;
+  static constexpr bool kHasPointer = false;
+  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
+      ::fidl::internal::TransactionalMessageKind::kResponse;
+};
+static_assert(
     sizeof(::fidl::WireResponse<
            ::test_protocolpayloads::MainProtocol::TwoWayLocal>) ==
     TypeTraits<::fidl::WireResponse<
         ::test_protocolpayloads::MainProtocol::TwoWayLocal>>::kPrimarySize);
 static_assert(offsetof(::fidl::WireResponse<
                            ::test_protocolpayloads::MainProtocol::TwoWayLocal>,
-                       a) == 0 + sizeof(fidl_message_header_t));
+                       a) == 0);
 static_assert(offsetof(::fidl::WireResponse<
                            ::test_protocolpayloads::MainProtocol::TwoWayLocal>,
-                       b) == 4 + sizeof(fidl_message_header_t));
+                       b) == 4);
 
+template <>
+struct IsFidlType<::fidl::internal::TransactionalRequest<
+    ::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>>
+    : public std::true_type {};
 template <>
 struct IsFidlType<::fidl::WireRequest<
     ::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>>
     : public std::true_type {};
 template <>
-struct IsFidlMessage<::fidl::WireRequest<
+struct IsFidlTransactionalMessage<::fidl::internal::TransactionalRequest<
     ::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>>
     : public std::true_type {};
+template <>
+struct IsFidlTransactionalMessage<::fidl::WireRequest<
+    ::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>>
+    : public std::false_type {};
 
 template <>
-struct TypeTraits<::fidl::WireRequest<
+struct TypeTraits<::fidl::internal::TransactionalRequest<
     ::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>> {
   static constexpr const fidl_type_t* kType =
       &::test_protocolpayloads::test_protocolpayloads_LocalStructPayloadTable;
@@ -1092,6 +1969,36 @@ struct TypeTraits<::fidl::WireRequest<
 };
 
 static_assert(
+    sizeof(::fidl::internal::TransactionalRequest<
+           ::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>) ==
+    TypeTraits<::fidl::internal::TransactionalRequest<
+        ::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>>::
+        kPrimarySize);
+static_assert(
+    offsetof(::fidl::internal::TransactionalRequest<
+                 ::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>,
+             header) == 0);
+static_assert(
+    offsetof(::fidl::internal::TransactionalRequest<
+                 ::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>,
+             body) == sizeof(fidl_message_header_t));
+
+template <>
+struct TypeTraits<::fidl::WireRequest<
+    ::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>> {
+  static constexpr const fidl_type_t* kType =
+      &::test_protocolpayloads::test_protocolpayloads_LocalStructPayloadTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(8);
+  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(8);
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasFlexibleEnvelope = false;
+  static constexpr bool kHasPointer = false;
+  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
+      ::fidl::internal::TransactionalMessageKind::kRequest;
+};
+static_assert(
     sizeof(::fidl::WireRequest<
            ::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>) ==
     TypeTraits<::fidl::WireRequest<::test_protocolpayloads::MainProtocol::
@@ -1099,23 +2006,31 @@ static_assert(
 static_assert(
     offsetof(::fidl::WireRequest<
                  ::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>,
-             a) == 0 + sizeof(fidl_message_header_t));
+             a) == 0);
 static_assert(
     offsetof(::fidl::WireRequest<
                  ::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>,
-             b) == 4 + sizeof(fidl_message_header_t));
+             b) == 4);
 
+template <>
+struct IsFidlType<::fidl::internal::TransactionalResponse<
+    ::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>>
+    : public std::true_type {};
 template <>
 struct IsFidlType<::fidl::WireResponse<
     ::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>>
     : public std::true_type {};
 template <>
-struct IsFidlMessage<::fidl::WireResponse<
+struct IsFidlTransactionalMessage<::fidl::internal::TransactionalResponse<
     ::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>>
     : public std::true_type {};
+template <>
+struct IsFidlTransactionalMessage<::fidl::WireResponse<
+    ::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>>
+    : public std::false_type {};
 
 template <>
-struct TypeTraits<::fidl::WireResponse<
+struct TypeTraits<::fidl::internal::TransactionalResponse<
     ::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>> {
   static constexpr const fidl_type_t* kType =
       &::test_protocolpayloads::
@@ -1134,6 +2049,37 @@ struct TypeTraits<::fidl::WireResponse<
 };
 
 static_assert(
+    sizeof(::fidl::internal::TransactionalResponse<
+           ::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>) ==
+    TypeTraits<::fidl::internal::TransactionalResponse<
+        ::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>>::
+        kPrimarySize);
+static_assert(
+    offsetof(::fidl::internal::TransactionalResponse<
+                 ::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>,
+             header) == 0);
+static_assert(
+    offsetof(::fidl::internal::TransactionalResponse<
+                 ::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>,
+             body) == sizeof(fidl_message_header_t));
+
+template <>
+struct TypeTraits<::fidl::WireResponse<
+    ::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>> {
+  static constexpr const fidl_type_t* kType =
+      &::test_protocolpayloads::
+          test_protocolpayloads_MainProtocolTwoWayLocalWithErrorTopResponseTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(16);
+  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(24);
+  static constexpr uint32_t kMaxOutOfLine = 8;
+  static constexpr uint32_t kMaxOutOfLineV1 = 8;
+  static constexpr bool kHasFlexibleEnvelope = false;
+  static constexpr bool kHasPointer = true;
+  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
+      ::fidl::internal::TransactionalMessageKind::kResponse;
+};
+static_assert(
     sizeof(::fidl::WireResponse<
            ::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>) ==
     TypeTraits<::fidl::WireResponse<::test_protocolpayloads::MainProtocol::
@@ -1141,20 +2087,26 @@ static_assert(
 static_assert(
     offsetof(::fidl::WireResponse<
                  ::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>,
-             result) == 0 + sizeof(fidl_message_header_t));
+             result) == 0);
 
+template <>
+struct IsFidlType<::fidl::internal::TransactionalEvent<
+    ::test_protocolpayloads::MainProtocol::OnLocal>> : public std::true_type {};
 template <>
 struct IsFidlType<
     ::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnLocal>>
     : public std::true_type {};
 template <>
-struct IsFidlMessage<
+struct IsFidlTransactionalMessage<::fidl::internal::TransactionalEvent<
+    ::test_protocolpayloads::MainProtocol::OnLocal>> : public std::true_type {};
+template <>
+struct IsFidlTransactionalMessage<
     ::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnLocal>>
-    : public std::true_type {};
+    : public std::false_type {};
 
 template <>
-struct TypeTraits<
-    ::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnLocal>> {
+struct TypeTraits<::fidl::internal::TransactionalEvent<
+    ::test_protocolpayloads::MainProtocol::OnLocal>> {
   static constexpr const fidl_type_t* kType =
       &::test_protocolpayloads::test_protocolpayloads_LocalStructPayloadTable;
   static constexpr uint32_t kMaxNumHandles = 0;
@@ -1171,27 +2123,62 @@ struct TypeTraits<
 };
 
 static_assert(
+    sizeof(::fidl::internal::TransactionalEvent<
+           ::test_protocolpayloads::MainProtocol::OnLocal>) ==
+    TypeTraits<::fidl::internal::TransactionalEvent<
+        ::test_protocolpayloads::MainProtocol::OnLocal>>::kPrimarySize);
+static_assert(offsetof(::fidl::internal::TransactionalEvent<
+                           ::test_protocolpayloads::MainProtocol::OnLocal>,
+                       header) == 0);
+static_assert(offsetof(::fidl::internal::TransactionalEvent<
+                           ::test_protocolpayloads::MainProtocol::OnLocal>,
+                       body) == sizeof(fidl_message_header_t));
+
+template <>
+struct TypeTraits<
+    ::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnLocal>> {
+  static constexpr const fidl_type_t* kType =
+      &::test_protocolpayloads::test_protocolpayloads_LocalStructPayloadTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(8);
+  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(8);
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasFlexibleEnvelope = false;
+  static constexpr bool kHasPointer = false;
+  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
+      ::fidl::internal::TransactionalMessageKind::kResponse;
+};
+static_assert(
     sizeof(::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnLocal>) ==
     TypeTraits<::fidl::WireEvent<
         ::test_protocolpayloads::MainProtocol::OnLocal>>::kPrimarySize);
 static_assert(
     offsetof(::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnLocal>,
-             a) == 0 + sizeof(fidl_message_header_t));
+             a) == 0);
 static_assert(
     offsetof(::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnLocal>,
-             b) == 4 + sizeof(fidl_message_header_t));
+             b) == 4);
 
+template <>
+struct IsFidlType<::fidl::internal::TransactionalEvent<
+    ::test_protocolpayloads::MainProtocol::OnLocalWithError>>
+    : public std::true_type {};
 template <>
 struct IsFidlType<
     ::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnLocalWithError>>
     : public std::true_type {};
 template <>
-struct IsFidlMessage<
-    ::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnLocalWithError>>
+struct IsFidlTransactionalMessage<::fidl::internal::TransactionalEvent<
+    ::test_protocolpayloads::MainProtocol::OnLocalWithError>>
     : public std::true_type {};
+template <>
+struct IsFidlTransactionalMessage<
+    ::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnLocalWithError>>
+    : public std::false_type {};
 
 template <>
-struct TypeTraits<::fidl::WireEvent<
+struct TypeTraits<::fidl::internal::TransactionalEvent<
     ::test_protocolpayloads::MainProtocol::OnLocalWithError>> {
   static constexpr const fidl_type_t* kType =
       &::test_protocolpayloads::
@@ -1210,6 +2197,37 @@ struct TypeTraits<::fidl::WireEvent<
 };
 
 static_assert(
+    sizeof(::fidl::internal::TransactionalEvent<
+           ::test_protocolpayloads::MainProtocol::OnLocalWithError>) ==
+    TypeTraits<::fidl::internal::TransactionalEvent<
+        ::test_protocolpayloads::MainProtocol::OnLocalWithError>>::
+        kPrimarySize);
+static_assert(
+    offsetof(::fidl::internal::TransactionalEvent<
+                 ::test_protocolpayloads::MainProtocol::OnLocalWithError>,
+             header) == 0);
+static_assert(
+    offsetof(::fidl::internal::TransactionalEvent<
+                 ::test_protocolpayloads::MainProtocol::OnLocalWithError>,
+             body) == sizeof(fidl_message_header_t));
+
+template <>
+struct TypeTraits<::fidl::WireEvent<
+    ::test_protocolpayloads::MainProtocol::OnLocalWithError>> {
+  static constexpr const fidl_type_t* kType =
+      &::test_protocolpayloads::
+          test_protocolpayloads_MainProtocolOnLocalWithErrorRequestTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(16);
+  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(24);
+  static constexpr uint32_t kMaxOutOfLine = 8;
+  static constexpr uint32_t kMaxOutOfLineV1 = 8;
+  static constexpr bool kHasFlexibleEnvelope = false;
+  static constexpr bool kHasPointer = true;
+  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
+      ::fidl::internal::TransactionalMessageKind::kResponse;
+};
+static_assert(
     sizeof(::fidl::WireEvent<
            ::test_protocolpayloads::MainProtocol::OnLocalWithError>) ==
     TypeTraits<::fidl::WireEvent<::test_protocolpayloads::MainProtocol::
@@ -1217,16 +2235,55 @@ static_assert(
 static_assert(
     offsetof(::fidl::WireEvent<
                  ::test_protocolpayloads::MainProtocol::OnLocalWithError>,
-             result) == 0 + sizeof(fidl_message_header_t));
+             result) == 0);
 
+template <>
+struct IsFidlType<::fidl::internal::TransactionalRequest<
+    ::test_protocolpayloads::MainProtocol::OneWayImport>>
+    : public std::true_type {};
 template <>
 struct IsFidlType<
     ::fidl::WireRequest<::test_protocolpayloads::MainProtocol::OneWayImport>>
     : public std::true_type {};
 template <>
-struct IsFidlMessage<
-    ::fidl::WireRequest<::test_protocolpayloads::MainProtocol::OneWayImport>>
+struct IsFidlTransactionalMessage<::fidl::internal::TransactionalRequest<
+    ::test_protocolpayloads::MainProtocol::OneWayImport>>
     : public std::true_type {};
+template <>
+struct IsFidlTransactionalMessage<
+    ::fidl::WireRequest<::test_protocolpayloads::MainProtocol::OneWayImport>>
+    : public std::false_type {};
+
+template <>
+struct TypeTraits<::fidl::internal::TransactionalRequest<
+    ::test_protocolpayloads::MainProtocol::OneWayImport>> {
+  static constexpr const fidl_type_t* kType =
+      &::test_protocolpayloads::
+          test_protocolpayloads_imported_ImportStructPayloadTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize =
+      FIDL_ALIGN(4 + sizeof(fidl_message_header_t));
+  static constexpr uint32_t kPrimarySizeV1 =
+      FIDL_ALIGN(4 + sizeof(fidl_message_header_t));
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasFlexibleEnvelope = false;
+  static constexpr bool kHasPointer = false;
+  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
+      ::fidl::internal::TransactionalMessageKind::kRequest;
+};
+
+static_assert(
+    sizeof(::fidl::internal::TransactionalRequest<
+           ::test_protocolpayloads::MainProtocol::OneWayImport>) ==
+    TypeTraits<::fidl::internal::TransactionalRequest<
+        ::test_protocolpayloads::MainProtocol::OneWayImport>>::kPrimarySize);
+static_assert(offsetof(::fidl::internal::TransactionalRequest<
+                           ::test_protocolpayloads::MainProtocol::OneWayImport>,
+                       header) == 0);
+static_assert(offsetof(::fidl::internal::TransactionalRequest<
+                           ::test_protocolpayloads::MainProtocol::OneWayImport>,
+                       body) == sizeof(fidl_message_header_t));
 
 template <>
 struct TypeTraits<
@@ -1235,10 +2292,8 @@ struct TypeTraits<
       &::test_protocolpayloads::
           test_protocolpayloads_imported_ImportStructPayloadTable;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize =
-      FIDL_ALIGN(4 + sizeof(fidl_message_header_t));
-  static constexpr uint32_t kPrimarySizeV1 =
-      FIDL_ALIGN(4 + sizeof(fidl_message_header_t));
+  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(4);
+  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(4);
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -1246,7 +2301,6 @@ struct TypeTraits<
   static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
       ::fidl::internal::TransactionalMessageKind::kRequest;
 };
-
 static_assert(
     sizeof(::fidl::WireRequest<
            ::test_protocolpayloads::MainProtocol::OneWayImport>) ==
@@ -1254,20 +2308,28 @@ static_assert(
         ::test_protocolpayloads::MainProtocol::OneWayImport>>::kPrimarySize);
 static_assert(offsetof(::fidl::WireRequest<
                            ::test_protocolpayloads::MainProtocol::OneWayImport>,
-                       a) == 0 + sizeof(fidl_message_header_t));
+                       a) == 0);
 
+template <>
+struct IsFidlType<::fidl::internal::TransactionalRequest<
+    ::test_protocolpayloads::MainProtocol::TwoWayImport>>
+    : public std::true_type {};
 template <>
 struct IsFidlType<
     ::fidl::WireRequest<::test_protocolpayloads::MainProtocol::TwoWayImport>>
     : public std::true_type {};
 template <>
-struct IsFidlMessage<
-    ::fidl::WireRequest<::test_protocolpayloads::MainProtocol::TwoWayImport>>
+struct IsFidlTransactionalMessage<::fidl::internal::TransactionalRequest<
+    ::test_protocolpayloads::MainProtocol::TwoWayImport>>
     : public std::true_type {};
+template <>
+struct IsFidlTransactionalMessage<
+    ::fidl::WireRequest<::test_protocolpayloads::MainProtocol::TwoWayImport>>
+    : public std::false_type {};
 
 template <>
-struct TypeTraits<
-    ::fidl::WireRequest<::test_protocolpayloads::MainProtocol::TwoWayImport>> {
+struct TypeTraits<::fidl::internal::TransactionalRequest<
+    ::test_protocolpayloads::MainProtocol::TwoWayImport>> {
   static constexpr const fidl_type_t* kType =
       &::test_protocolpayloads::
           test_protocolpayloads_imported_ImportStructPayloadTable;
@@ -1285,26 +2347,62 @@ struct TypeTraits<
 };
 
 static_assert(
+    sizeof(::fidl::internal::TransactionalRequest<
+           ::test_protocolpayloads::MainProtocol::TwoWayImport>) ==
+    TypeTraits<::fidl::internal::TransactionalRequest<
+        ::test_protocolpayloads::MainProtocol::TwoWayImport>>::kPrimarySize);
+static_assert(offsetof(::fidl::internal::TransactionalRequest<
+                           ::test_protocolpayloads::MainProtocol::TwoWayImport>,
+                       header) == 0);
+static_assert(offsetof(::fidl::internal::TransactionalRequest<
+                           ::test_protocolpayloads::MainProtocol::TwoWayImport>,
+                       body) == sizeof(fidl_message_header_t));
+
+template <>
+struct TypeTraits<
+    ::fidl::WireRequest<::test_protocolpayloads::MainProtocol::TwoWayImport>> {
+  static constexpr const fidl_type_t* kType =
+      &::test_protocolpayloads::
+          test_protocolpayloads_imported_ImportStructPayloadTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(4);
+  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(4);
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasFlexibleEnvelope = false;
+  static constexpr bool kHasPointer = false;
+  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
+      ::fidl::internal::TransactionalMessageKind::kRequest;
+};
+static_assert(
     sizeof(::fidl::WireRequest<
            ::test_protocolpayloads::MainProtocol::TwoWayImport>) ==
     TypeTraits<::fidl::WireRequest<
         ::test_protocolpayloads::MainProtocol::TwoWayImport>>::kPrimarySize);
 static_assert(offsetof(::fidl::WireRequest<
                            ::test_protocolpayloads::MainProtocol::TwoWayImport>,
-                       a) == 0 + sizeof(fidl_message_header_t));
+                       a) == 0);
 
+template <>
+struct IsFidlType<::fidl::internal::TransactionalResponse<
+    ::test_protocolpayloads::MainProtocol::TwoWayImport>>
+    : public std::true_type {};
 template <>
 struct IsFidlType<
     ::fidl::WireResponse<::test_protocolpayloads::MainProtocol::TwoWayImport>>
     : public std::true_type {};
 template <>
-struct IsFidlMessage<
-    ::fidl::WireResponse<::test_protocolpayloads::MainProtocol::TwoWayImport>>
+struct IsFidlTransactionalMessage<::fidl::internal::TransactionalResponse<
+    ::test_protocolpayloads::MainProtocol::TwoWayImport>>
     : public std::true_type {};
+template <>
+struct IsFidlTransactionalMessage<
+    ::fidl::WireResponse<::test_protocolpayloads::MainProtocol::TwoWayImport>>
+    : public std::false_type {};
 
 template <>
-struct TypeTraits<
-    ::fidl::WireResponse<::test_protocolpayloads::MainProtocol::TwoWayImport>> {
+struct TypeTraits<::fidl::internal::TransactionalResponse<
+    ::test_protocolpayloads::MainProtocol::TwoWayImport>> {
   static constexpr const fidl_type_t* kType =
       &::test_protocolpayloads::
           test_protocolpayloads_imported_ImportStructPayloadTable;
@@ -1322,25 +2420,61 @@ struct TypeTraits<
 };
 
 static_assert(
+    sizeof(::fidl::internal::TransactionalResponse<
+           ::test_protocolpayloads::MainProtocol::TwoWayImport>) ==
+    TypeTraits<::fidl::internal::TransactionalResponse<
+        ::test_protocolpayloads::MainProtocol::TwoWayImport>>::kPrimarySize);
+static_assert(offsetof(::fidl::internal::TransactionalResponse<
+                           ::test_protocolpayloads::MainProtocol::TwoWayImport>,
+                       header) == 0);
+static_assert(offsetof(::fidl::internal::TransactionalResponse<
+                           ::test_protocolpayloads::MainProtocol::TwoWayImport>,
+                       body) == sizeof(fidl_message_header_t));
+
+template <>
+struct TypeTraits<
+    ::fidl::WireResponse<::test_protocolpayloads::MainProtocol::TwoWayImport>> {
+  static constexpr const fidl_type_t* kType =
+      &::test_protocolpayloads::
+          test_protocolpayloads_imported_ImportStructPayloadTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(4);
+  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(4);
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasFlexibleEnvelope = false;
+  static constexpr bool kHasPointer = false;
+  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
+      ::fidl::internal::TransactionalMessageKind::kResponse;
+};
+static_assert(
     sizeof(::fidl::WireResponse<
            ::test_protocolpayloads::MainProtocol::TwoWayImport>) ==
     TypeTraits<::fidl::WireResponse<
         ::test_protocolpayloads::MainProtocol::TwoWayImport>>::kPrimarySize);
 static_assert(offsetof(::fidl::WireResponse<
                            ::test_protocolpayloads::MainProtocol::TwoWayImport>,
-                       a) == 0 + sizeof(fidl_message_header_t));
+                       a) == 0);
 
+template <>
+struct IsFidlType<::fidl::internal::TransactionalRequest<
+    ::test_protocolpayloads::MainProtocol::TwoWayImportWithError>>
+    : public std::true_type {};
 template <>
 struct IsFidlType<::fidl::WireRequest<
     ::test_protocolpayloads::MainProtocol::TwoWayImportWithError>>
     : public std::true_type {};
 template <>
-struct IsFidlMessage<::fidl::WireRequest<
+struct IsFidlTransactionalMessage<::fidl::internal::TransactionalRequest<
     ::test_protocolpayloads::MainProtocol::TwoWayImportWithError>>
     : public std::true_type {};
+template <>
+struct IsFidlTransactionalMessage<::fidl::WireRequest<
+    ::test_protocolpayloads::MainProtocol::TwoWayImportWithError>>
+    : public std::false_type {};
 
 template <>
-struct TypeTraits<::fidl::WireRequest<
+struct TypeTraits<::fidl::internal::TransactionalRequest<
     ::test_protocolpayloads::MainProtocol::TwoWayImportWithError>> {
   static constexpr const fidl_type_t* kType =
       &::test_protocolpayloads::
@@ -1359,6 +2493,37 @@ struct TypeTraits<::fidl::WireRequest<
 };
 
 static_assert(
+    sizeof(::fidl::internal::TransactionalRequest<
+           ::test_protocolpayloads::MainProtocol::TwoWayImportWithError>) ==
+    TypeTraits<::fidl::internal::TransactionalRequest<
+        ::test_protocolpayloads::MainProtocol::TwoWayImportWithError>>::
+        kPrimarySize);
+static_assert(
+    offsetof(::fidl::internal::TransactionalRequest<
+                 ::test_protocolpayloads::MainProtocol::TwoWayImportWithError>,
+             header) == 0);
+static_assert(
+    offsetof(::fidl::internal::TransactionalRequest<
+                 ::test_protocolpayloads::MainProtocol::TwoWayImportWithError>,
+             body) == sizeof(fidl_message_header_t));
+
+template <>
+struct TypeTraits<::fidl::WireRequest<
+    ::test_protocolpayloads::MainProtocol::TwoWayImportWithError>> {
+  static constexpr const fidl_type_t* kType =
+      &::test_protocolpayloads::
+          test_protocolpayloads_imported_ImportStructPayloadTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(4);
+  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(4);
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasFlexibleEnvelope = false;
+  static constexpr bool kHasPointer = false;
+  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
+      ::fidl::internal::TransactionalMessageKind::kRequest;
+};
+static_assert(
     sizeof(::fidl::WireRequest<
            ::test_protocolpayloads::MainProtocol::TwoWayImportWithError>) ==
     TypeTraits<::fidl::WireRequest<::test_protocolpayloads::MainProtocol::
@@ -1366,19 +2531,27 @@ static_assert(
 static_assert(
     offsetof(::fidl::WireRequest<
                  ::test_protocolpayloads::MainProtocol::TwoWayImportWithError>,
-             a) == 0 + sizeof(fidl_message_header_t));
+             a) == 0);
 
+template <>
+struct IsFidlType<::fidl::internal::TransactionalResponse<
+    ::test_protocolpayloads::MainProtocol::TwoWayImportWithError>>
+    : public std::true_type {};
 template <>
 struct IsFidlType<::fidl::WireResponse<
     ::test_protocolpayloads::MainProtocol::TwoWayImportWithError>>
     : public std::true_type {};
 template <>
-struct IsFidlMessage<::fidl::WireResponse<
+struct IsFidlTransactionalMessage<::fidl::internal::TransactionalResponse<
     ::test_protocolpayloads::MainProtocol::TwoWayImportWithError>>
     : public std::true_type {};
+template <>
+struct IsFidlTransactionalMessage<::fidl::WireResponse<
+    ::test_protocolpayloads::MainProtocol::TwoWayImportWithError>>
+    : public std::false_type {};
 
 template <>
-struct TypeTraits<::fidl::WireResponse<
+struct TypeTraits<::fidl::internal::TransactionalResponse<
     ::test_protocolpayloads::MainProtocol::TwoWayImportWithError>> {
   static constexpr const fidl_type_t* kType =
       &::test_protocolpayloads::
@@ -1397,6 +2570,37 @@ struct TypeTraits<::fidl::WireResponse<
 };
 
 static_assert(
+    sizeof(::fidl::internal::TransactionalResponse<
+           ::test_protocolpayloads::MainProtocol::TwoWayImportWithError>) ==
+    TypeTraits<::fidl::internal::TransactionalResponse<
+        ::test_protocolpayloads::MainProtocol::TwoWayImportWithError>>::
+        kPrimarySize);
+static_assert(
+    offsetof(::fidl::internal::TransactionalResponse<
+                 ::test_protocolpayloads::MainProtocol::TwoWayImportWithError>,
+             header) == 0);
+static_assert(
+    offsetof(::fidl::internal::TransactionalResponse<
+                 ::test_protocolpayloads::MainProtocol::TwoWayImportWithError>,
+             body) == sizeof(fidl_message_header_t));
+
+template <>
+struct TypeTraits<::fidl::WireResponse<
+    ::test_protocolpayloads::MainProtocol::TwoWayImportWithError>> {
+  static constexpr const fidl_type_t* kType =
+      &::test_protocolpayloads::
+          test_protocolpayloads_MainProtocolTwoWayImportWithErrorTopResponseTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(16);
+  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(24);
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 8;
+  static constexpr bool kHasFlexibleEnvelope = false;
+  static constexpr bool kHasPointer = true;
+  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
+      ::fidl::internal::TransactionalMessageKind::kResponse;
+};
+static_assert(
     sizeof(::fidl::WireResponse<
            ::test_protocolpayloads::MainProtocol::TwoWayImportWithError>) ==
     TypeTraits<::fidl::WireResponse<::test_protocolpayloads::MainProtocol::
@@ -1404,20 +2608,28 @@ static_assert(
 static_assert(
     offsetof(::fidl::WireResponse<
                  ::test_protocolpayloads::MainProtocol::TwoWayImportWithError>,
-             result) == 0 + sizeof(fidl_message_header_t));
+             result) == 0);
 
+template <>
+struct IsFidlType<::fidl::internal::TransactionalEvent<
+    ::test_protocolpayloads::MainProtocol::OnImport>> : public std::true_type {
+};
 template <>
 struct IsFidlType<
     ::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnImport>>
     : public std::true_type {};
 template <>
-struct IsFidlMessage<
+struct IsFidlTransactionalMessage<::fidl::internal::TransactionalEvent<
+    ::test_protocolpayloads::MainProtocol::OnImport>> : public std::true_type {
+};
+template <>
+struct IsFidlTransactionalMessage<
     ::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnImport>>
-    : public std::true_type {};
+    : public std::false_type {};
 
 template <>
-struct TypeTraits<
-    ::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnImport>> {
+struct TypeTraits<::fidl::internal::TransactionalEvent<
+    ::test_protocolpayloads::MainProtocol::OnImport>> {
   static constexpr const fidl_type_t* kType =
       &::test_protocolpayloads::
           test_protocolpayloads_imported_ImportStructPayloadTable;
@@ -1435,25 +2647,61 @@ struct TypeTraits<
 };
 
 static_assert(
+    sizeof(::fidl::internal::TransactionalEvent<
+           ::test_protocolpayloads::MainProtocol::OnImport>) ==
+    TypeTraits<::fidl::internal::TransactionalEvent<
+        ::test_protocolpayloads::MainProtocol::OnImport>>::kPrimarySize);
+static_assert(offsetof(::fidl::internal::TransactionalEvent<
+                           ::test_protocolpayloads::MainProtocol::OnImport>,
+                       header) == 0);
+static_assert(offsetof(::fidl::internal::TransactionalEvent<
+                           ::test_protocolpayloads::MainProtocol::OnImport>,
+                       body) == sizeof(fidl_message_header_t));
+
+template <>
+struct TypeTraits<
+    ::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnImport>> {
+  static constexpr const fidl_type_t* kType =
+      &::test_protocolpayloads::
+          test_protocolpayloads_imported_ImportStructPayloadTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(4);
+  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(4);
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasFlexibleEnvelope = false;
+  static constexpr bool kHasPointer = false;
+  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
+      ::fidl::internal::TransactionalMessageKind::kResponse;
+};
+static_assert(
     sizeof(
         ::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnImport>) ==
     TypeTraits<::fidl::WireEvent<
         ::test_protocolpayloads::MainProtocol::OnImport>>::kPrimarySize);
 static_assert(
     offsetof(::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnImport>,
-             a) == 0 + sizeof(fidl_message_header_t));
+             a) == 0);
 
+template <>
+struct IsFidlType<::fidl::internal::TransactionalEvent<
+    ::test_protocolpayloads::MainProtocol::OnImportWithError>>
+    : public std::true_type {};
 template <>
 struct IsFidlType<
     ::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnImportWithError>>
     : public std::true_type {};
 template <>
-struct IsFidlMessage<
-    ::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnImportWithError>>
+struct IsFidlTransactionalMessage<::fidl::internal::TransactionalEvent<
+    ::test_protocolpayloads::MainProtocol::OnImportWithError>>
     : public std::true_type {};
+template <>
+struct IsFidlTransactionalMessage<
+    ::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnImportWithError>>
+    : public std::false_type {};
 
 template <>
-struct TypeTraits<::fidl::WireEvent<
+struct TypeTraits<::fidl::internal::TransactionalEvent<
     ::test_protocolpayloads::MainProtocol::OnImportWithError>> {
   static constexpr const fidl_type_t* kType =
       &::test_protocolpayloads::
@@ -1472,6 +2720,37 @@ struct TypeTraits<::fidl::WireEvent<
 };
 
 static_assert(
+    sizeof(::fidl::internal::TransactionalEvent<
+           ::test_protocolpayloads::MainProtocol::OnImportWithError>) ==
+    TypeTraits<::fidl::internal::TransactionalEvent<
+        ::test_protocolpayloads::MainProtocol::OnImportWithError>>::
+        kPrimarySize);
+static_assert(
+    offsetof(::fidl::internal::TransactionalEvent<
+                 ::test_protocolpayloads::MainProtocol::OnImportWithError>,
+             header) == 0);
+static_assert(
+    offsetof(::fidl::internal::TransactionalEvent<
+                 ::test_protocolpayloads::MainProtocol::OnImportWithError>,
+             body) == sizeof(fidl_message_header_t));
+
+template <>
+struct TypeTraits<::fidl::WireEvent<
+    ::test_protocolpayloads::MainProtocol::OnImportWithError>> {
+  static constexpr const fidl_type_t* kType =
+      &::test_protocolpayloads::
+          test_protocolpayloads_MainProtocolOnImportWithErrorRequestTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(16);
+  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(24);
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 8;
+  static constexpr bool kHasFlexibleEnvelope = false;
+  static constexpr bool kHasPointer = true;
+  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
+      ::fidl::internal::TransactionalMessageKind::kResponse;
+};
+static_assert(
     sizeof(::fidl::WireEvent<
            ::test_protocolpayloads::MainProtocol::OnImportWithError>) ==
     TypeTraits<::fidl::WireEvent<::test_protocolpayloads::MainProtocol::
@@ -1479,20 +2758,28 @@ static_assert(
 static_assert(
     offsetof(::fidl::WireEvent<
                  ::test_protocolpayloads::MainProtocol::OnImportWithError>,
-             result) == 0 + sizeof(fidl_message_header_t));
+             result) == 0);
 
+template <>
+struct IsFidlType<::fidl::internal::TransactionalRequest<
+    ::test_protocolpayloads::MainProtocol::OneWayAnon>>
+    : public std::true_type {};
 template <>
 struct IsFidlType<
     ::fidl::WireRequest<::test_protocolpayloads::MainProtocol::OneWayAnon>>
     : public std::true_type {};
 template <>
-struct IsFidlMessage<
-    ::fidl::WireRequest<::test_protocolpayloads::MainProtocol::OneWayAnon>>
+struct IsFidlTransactionalMessage<::fidl::internal::TransactionalRequest<
+    ::test_protocolpayloads::MainProtocol::OneWayAnon>>
     : public std::true_type {};
+template <>
+struct IsFidlTransactionalMessage<
+    ::fidl::WireRequest<::test_protocolpayloads::MainProtocol::OneWayAnon>>
+    : public std::false_type {};
 
 template <>
-struct TypeTraits<
-    ::fidl::WireRequest<::test_protocolpayloads::MainProtocol::OneWayAnon>> {
+struct TypeTraits<::fidl::internal::TransactionalRequest<
+    ::test_protocolpayloads::MainProtocol::OneWayAnon>> {
   static constexpr const fidl_type_t* kType =
       &::test_protocolpayloads::
           test_protocolpayloads_MainProtocolOneWayAnonRequestTable;
@@ -1510,6 +2797,34 @@ struct TypeTraits<
 };
 
 static_assert(
+    sizeof(::fidl::internal::TransactionalRequest<
+           ::test_protocolpayloads::MainProtocol::OneWayAnon>) ==
+    TypeTraits<::fidl::internal::TransactionalRequest<
+        ::test_protocolpayloads::MainProtocol::OneWayAnon>>::kPrimarySize);
+static_assert(offsetof(::fidl::internal::TransactionalRequest<
+                           ::test_protocolpayloads::MainProtocol::OneWayAnon>,
+                       header) == 0);
+static_assert(offsetof(::fidl::internal::TransactionalRequest<
+                           ::test_protocolpayloads::MainProtocol::OneWayAnon>,
+                       body) == sizeof(fidl_message_header_t));
+
+template <>
+struct TypeTraits<
+    ::fidl::WireRequest<::test_protocolpayloads::MainProtocol::OneWayAnon>> {
+  static constexpr const fidl_type_t* kType =
+      &::test_protocolpayloads::
+          test_protocolpayloads_MainProtocolOneWayAnonRequestTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(8);
+  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(8);
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasFlexibleEnvelope = false;
+  static constexpr bool kHasPointer = false;
+  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
+      ::fidl::internal::TransactionalMessageKind::kRequest;
+};
+static_assert(
     sizeof(::fidl::WireRequest<
            ::test_protocolpayloads::MainProtocol::OneWayAnon>) ==
     TypeTraits<::fidl::WireRequest<
@@ -1517,24 +2832,32 @@ static_assert(
 static_assert(
     offsetof(
         ::fidl::WireRequest<::test_protocolpayloads::MainProtocol::OneWayAnon>,
-        a) == 0 + sizeof(fidl_message_header_t));
+        a) == 0);
 static_assert(
     offsetof(
         ::fidl::WireRequest<::test_protocolpayloads::MainProtocol::OneWayAnon>,
-        b) == 4 + sizeof(fidl_message_header_t));
+        b) == 4);
 
+template <>
+struct IsFidlType<::fidl::internal::TransactionalRequest<
+    ::test_protocolpayloads::MainProtocol::TwoWayAnon>>
+    : public std::true_type {};
 template <>
 struct IsFidlType<
     ::fidl::WireRequest<::test_protocolpayloads::MainProtocol::TwoWayAnon>>
     : public std::true_type {};
 template <>
-struct IsFidlMessage<
-    ::fidl::WireRequest<::test_protocolpayloads::MainProtocol::TwoWayAnon>>
+struct IsFidlTransactionalMessage<::fidl::internal::TransactionalRequest<
+    ::test_protocolpayloads::MainProtocol::TwoWayAnon>>
     : public std::true_type {};
+template <>
+struct IsFidlTransactionalMessage<
+    ::fidl::WireRequest<::test_protocolpayloads::MainProtocol::TwoWayAnon>>
+    : public std::false_type {};
 
 template <>
-struct TypeTraits<
-    ::fidl::WireRequest<::test_protocolpayloads::MainProtocol::TwoWayAnon>> {
+struct TypeTraits<::fidl::internal::TransactionalRequest<
+    ::test_protocolpayloads::MainProtocol::TwoWayAnon>> {
   static constexpr const fidl_type_t* kType =
       &::test_protocolpayloads::
           test_protocolpayloads_MainProtocolTwoWayAnonRequestTable;
@@ -1552,6 +2875,34 @@ struct TypeTraits<
 };
 
 static_assert(
+    sizeof(::fidl::internal::TransactionalRequest<
+           ::test_protocolpayloads::MainProtocol::TwoWayAnon>) ==
+    TypeTraits<::fidl::internal::TransactionalRequest<
+        ::test_protocolpayloads::MainProtocol::TwoWayAnon>>::kPrimarySize);
+static_assert(offsetof(::fidl::internal::TransactionalRequest<
+                           ::test_protocolpayloads::MainProtocol::TwoWayAnon>,
+                       header) == 0);
+static_assert(offsetof(::fidl::internal::TransactionalRequest<
+                           ::test_protocolpayloads::MainProtocol::TwoWayAnon>,
+                       body) == sizeof(fidl_message_header_t));
+
+template <>
+struct TypeTraits<
+    ::fidl::WireRequest<::test_protocolpayloads::MainProtocol::TwoWayAnon>> {
+  static constexpr const fidl_type_t* kType =
+      &::test_protocolpayloads::
+          test_protocolpayloads_MainProtocolTwoWayAnonRequestTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(8);
+  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(8);
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasFlexibleEnvelope = false;
+  static constexpr bool kHasPointer = false;
+  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
+      ::fidl::internal::TransactionalMessageKind::kRequest;
+};
+static_assert(
     sizeof(::fidl::WireRequest<
            ::test_protocolpayloads::MainProtocol::TwoWayAnon>) ==
     TypeTraits<::fidl::WireRequest<
@@ -1559,24 +2910,32 @@ static_assert(
 static_assert(
     offsetof(
         ::fidl::WireRequest<::test_protocolpayloads::MainProtocol::TwoWayAnon>,
-        a) == 0 + sizeof(fidl_message_header_t));
+        a) == 0);
 static_assert(
     offsetof(
         ::fidl::WireRequest<::test_protocolpayloads::MainProtocol::TwoWayAnon>,
-        b) == 4 + sizeof(fidl_message_header_t));
+        b) == 4);
 
+template <>
+struct IsFidlType<::fidl::internal::TransactionalResponse<
+    ::test_protocolpayloads::MainProtocol::TwoWayAnon>>
+    : public std::true_type {};
 template <>
 struct IsFidlType<
     ::fidl::WireResponse<::test_protocolpayloads::MainProtocol::TwoWayAnon>>
     : public std::true_type {};
 template <>
-struct IsFidlMessage<
-    ::fidl::WireResponse<::test_protocolpayloads::MainProtocol::TwoWayAnon>>
+struct IsFidlTransactionalMessage<::fidl::internal::TransactionalResponse<
+    ::test_protocolpayloads::MainProtocol::TwoWayAnon>>
     : public std::true_type {};
+template <>
+struct IsFidlTransactionalMessage<
+    ::fidl::WireResponse<::test_protocolpayloads::MainProtocol::TwoWayAnon>>
+    : public std::false_type {};
 
 template <>
-struct TypeTraits<
-    ::fidl::WireResponse<::test_protocolpayloads::MainProtocol::TwoWayAnon>> {
+struct TypeTraits<::fidl::internal::TransactionalResponse<
+    ::test_protocolpayloads::MainProtocol::TwoWayAnon>> {
   static constexpr const fidl_type_t* kType =
       &::test_protocolpayloads::
           test_protocolpayloads_MainProtocolTwoWayAnonTopResponseTable;
@@ -1594,6 +2953,34 @@ struct TypeTraits<
 };
 
 static_assert(
+    sizeof(::fidl::internal::TransactionalResponse<
+           ::test_protocolpayloads::MainProtocol::TwoWayAnon>) ==
+    TypeTraits<::fidl::internal::TransactionalResponse<
+        ::test_protocolpayloads::MainProtocol::TwoWayAnon>>::kPrimarySize);
+static_assert(offsetof(::fidl::internal::TransactionalResponse<
+                           ::test_protocolpayloads::MainProtocol::TwoWayAnon>,
+                       header) == 0);
+static_assert(offsetof(::fidl::internal::TransactionalResponse<
+                           ::test_protocolpayloads::MainProtocol::TwoWayAnon>,
+                       body) == sizeof(fidl_message_header_t));
+
+template <>
+struct TypeTraits<
+    ::fidl::WireResponse<::test_protocolpayloads::MainProtocol::TwoWayAnon>> {
+  static constexpr const fidl_type_t* kType =
+      &::test_protocolpayloads::
+          test_protocolpayloads_MainProtocolTwoWayAnonTopResponseTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(8);
+  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(8);
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasFlexibleEnvelope = false;
+  static constexpr bool kHasPointer = false;
+  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
+      ::fidl::internal::TransactionalMessageKind::kResponse;
+};
+static_assert(
     sizeof(::fidl::WireResponse<
            ::test_protocolpayloads::MainProtocol::TwoWayAnon>) ==
     TypeTraits<::fidl::WireResponse<
@@ -1601,23 +2988,31 @@ static_assert(
 static_assert(
     offsetof(
         ::fidl::WireResponse<::test_protocolpayloads::MainProtocol::TwoWayAnon>,
-        a) == 0 + sizeof(fidl_message_header_t));
+        a) == 0);
 static_assert(
     offsetof(
         ::fidl::WireResponse<::test_protocolpayloads::MainProtocol::TwoWayAnon>,
-        b) == 4 + sizeof(fidl_message_header_t));
+        b) == 4);
 
+template <>
+struct IsFidlType<::fidl::internal::TransactionalRequest<
+    ::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>>
+    : public std::true_type {};
 template <>
 struct IsFidlType<::fidl::WireRequest<
     ::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>>
     : public std::true_type {};
 template <>
-struct IsFidlMessage<::fidl::WireRequest<
+struct IsFidlTransactionalMessage<::fidl::internal::TransactionalRequest<
     ::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>>
     : public std::true_type {};
+template <>
+struct IsFidlTransactionalMessage<::fidl::WireRequest<
+    ::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>>
+    : public std::false_type {};
 
 template <>
-struct TypeTraits<::fidl::WireRequest<
+struct TypeTraits<::fidl::internal::TransactionalRequest<
     ::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>> {
   static constexpr const fidl_type_t* kType =
       &::test_protocolpayloads::
@@ -1636,6 +3031,37 @@ struct TypeTraits<::fidl::WireRequest<
 };
 
 static_assert(
+    sizeof(::fidl::internal::TransactionalRequest<
+           ::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>) ==
+    TypeTraits<::fidl::internal::TransactionalRequest<
+        ::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>>::
+        kPrimarySize);
+static_assert(
+    offsetof(::fidl::internal::TransactionalRequest<
+                 ::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>,
+             header) == 0);
+static_assert(
+    offsetof(::fidl::internal::TransactionalRequest<
+                 ::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>,
+             body) == sizeof(fidl_message_header_t));
+
+template <>
+struct TypeTraits<::fidl::WireRequest<
+    ::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>> {
+  static constexpr const fidl_type_t* kType =
+      &::test_protocolpayloads::
+          test_protocolpayloads_MainProtocolTwoWayAnonWithErrorRequestTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(8);
+  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(8);
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasFlexibleEnvelope = false;
+  static constexpr bool kHasPointer = false;
+  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
+      ::fidl::internal::TransactionalMessageKind::kRequest;
+};
+static_assert(
     sizeof(::fidl::WireRequest<
            ::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>) ==
     TypeTraits<::fidl::WireRequest<::test_protocolpayloads::MainProtocol::
@@ -1643,23 +3069,31 @@ static_assert(
 static_assert(
     offsetof(::fidl::WireRequest<
                  ::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>,
-             a) == 0 + sizeof(fidl_message_header_t));
+             a) == 0);
 static_assert(
     offsetof(::fidl::WireRequest<
                  ::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>,
-             b) == 4 + sizeof(fidl_message_header_t));
+             b) == 4);
 
+template <>
+struct IsFidlType<::fidl::internal::TransactionalResponse<
+    ::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>>
+    : public std::true_type {};
 template <>
 struct IsFidlType<::fidl::WireResponse<
     ::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>>
     : public std::true_type {};
 template <>
-struct IsFidlMessage<::fidl::WireResponse<
+struct IsFidlTransactionalMessage<::fidl::internal::TransactionalResponse<
     ::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>>
     : public std::true_type {};
+template <>
+struct IsFidlTransactionalMessage<::fidl::WireResponse<
+    ::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>>
+    : public std::false_type {};
 
 template <>
-struct TypeTraits<::fidl::WireResponse<
+struct TypeTraits<::fidl::internal::TransactionalResponse<
     ::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>> {
   static constexpr const fidl_type_t* kType =
       &::test_protocolpayloads::
@@ -1678,6 +3112,37 @@ struct TypeTraits<::fidl::WireResponse<
 };
 
 static_assert(
+    sizeof(::fidl::internal::TransactionalResponse<
+           ::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>) ==
+    TypeTraits<::fidl::internal::TransactionalResponse<
+        ::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>>::
+        kPrimarySize);
+static_assert(
+    offsetof(::fidl::internal::TransactionalResponse<
+                 ::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>,
+             header) == 0);
+static_assert(
+    offsetof(::fidl::internal::TransactionalResponse<
+                 ::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>,
+             body) == sizeof(fidl_message_header_t));
+
+template <>
+struct TypeTraits<::fidl::WireResponse<
+    ::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>> {
+  static constexpr const fidl_type_t* kType =
+      &::test_protocolpayloads::
+          test_protocolpayloads_MainProtocolTwoWayAnonWithErrorTopResponseTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(16);
+  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(24);
+  static constexpr uint32_t kMaxOutOfLine = 8;
+  static constexpr uint32_t kMaxOutOfLineV1 = 8;
+  static constexpr bool kHasFlexibleEnvelope = false;
+  static constexpr bool kHasPointer = true;
+  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
+      ::fidl::internal::TransactionalMessageKind::kResponse;
+};
+static_assert(
     sizeof(::fidl::WireResponse<
            ::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>) ==
     TypeTraits<::fidl::WireResponse<::test_protocolpayloads::MainProtocol::
@@ -1685,20 +3150,26 @@ static_assert(
 static_assert(
     offsetof(::fidl::WireResponse<
                  ::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>,
-             result) == 0 + sizeof(fidl_message_header_t));
+             result) == 0);
 
+template <>
+struct IsFidlType<::fidl::internal::TransactionalEvent<
+    ::test_protocolpayloads::MainProtocol::OnAnon>> : public std::true_type {};
 template <>
 struct IsFidlType<
     ::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnAnon>>
     : public std::true_type {};
 template <>
-struct IsFidlMessage<
+struct IsFidlTransactionalMessage<::fidl::internal::TransactionalEvent<
+    ::test_protocolpayloads::MainProtocol::OnAnon>> : public std::true_type {};
+template <>
+struct IsFidlTransactionalMessage<
     ::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnAnon>>
-    : public std::true_type {};
+    : public std::false_type {};
 
 template <>
-struct TypeTraits<
-    ::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnAnon>> {
+struct TypeTraits<::fidl::internal::TransactionalEvent<
+    ::test_protocolpayloads::MainProtocol::OnAnon>> {
   static constexpr const fidl_type_t* kType =
       &::test_protocolpayloads::
           test_protocolpayloads_MainProtocolOnAnonRequestTable;
@@ -1716,28 +3187,64 @@ struct TypeTraits<
 };
 
 static_assert(
+    sizeof(::fidl::internal::TransactionalEvent<
+           ::test_protocolpayloads::MainProtocol::OnAnon>) ==
+    TypeTraits<::fidl::internal::TransactionalEvent<
+        ::test_protocolpayloads::MainProtocol::OnAnon>>::kPrimarySize);
+static_assert(offsetof(::fidl::internal::TransactionalEvent<
+                           ::test_protocolpayloads::MainProtocol::OnAnon>,
+                       header) == 0);
+static_assert(offsetof(::fidl::internal::TransactionalEvent<
+                           ::test_protocolpayloads::MainProtocol::OnAnon>,
+                       body) == sizeof(fidl_message_header_t));
+
+template <>
+struct TypeTraits<
+    ::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnAnon>> {
+  static constexpr const fidl_type_t* kType =
+      &::test_protocolpayloads::
+          test_protocolpayloads_MainProtocolOnAnonRequestTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(8);
+  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(8);
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasFlexibleEnvelope = false;
+  static constexpr bool kHasPointer = false;
+  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
+      ::fidl::internal::TransactionalMessageKind::kResponse;
+};
+static_assert(
     sizeof(::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnAnon>) ==
     TypeTraits<::fidl::WireEvent<
         ::test_protocolpayloads::MainProtocol::OnAnon>>::kPrimarySize);
 static_assert(
     offsetof(::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnAnon>,
-             a) == 0 + sizeof(fidl_message_header_t));
+             a) == 0);
 static_assert(
     offsetof(::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnAnon>,
-             b) == 4 + sizeof(fidl_message_header_t));
+             b) == 4);
 
+template <>
+struct IsFidlType<::fidl::internal::TransactionalEvent<
+    ::test_protocolpayloads::MainProtocol::OnAnonWithError>>
+    : public std::true_type {};
 template <>
 struct IsFidlType<
     ::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnAnonWithError>>
     : public std::true_type {};
 template <>
-struct IsFidlMessage<
-    ::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnAnonWithError>>
+struct IsFidlTransactionalMessage<::fidl::internal::TransactionalEvent<
+    ::test_protocolpayloads::MainProtocol::OnAnonWithError>>
     : public std::true_type {};
+template <>
+struct IsFidlTransactionalMessage<
+    ::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnAnonWithError>>
+    : public std::false_type {};
 
 template <>
-struct TypeTraits<
-    ::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnAnonWithError>> {
+struct TypeTraits<::fidl::internal::TransactionalEvent<
+    ::test_protocolpayloads::MainProtocol::OnAnonWithError>> {
   static constexpr const fidl_type_t* kType =
       &::test_protocolpayloads::
           test_protocolpayloads_MainProtocolOnAnonWithErrorRequestTable;
@@ -1755,6 +3262,36 @@ struct TypeTraits<
 };
 
 static_assert(
+    sizeof(::fidl::internal::TransactionalEvent<
+           ::test_protocolpayloads::MainProtocol::OnAnonWithError>) ==
+    TypeTraits<::fidl::internal::TransactionalEvent<
+        ::test_protocolpayloads::MainProtocol::OnAnonWithError>>::kPrimarySize);
+static_assert(
+    offsetof(::fidl::internal::TransactionalEvent<
+                 ::test_protocolpayloads::MainProtocol::OnAnonWithError>,
+             header) == 0);
+static_assert(
+    offsetof(::fidl::internal::TransactionalEvent<
+                 ::test_protocolpayloads::MainProtocol::OnAnonWithError>,
+             body) == sizeof(fidl_message_header_t));
+
+template <>
+struct TypeTraits<
+    ::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnAnonWithError>> {
+  static constexpr const fidl_type_t* kType =
+      &::test_protocolpayloads::
+          test_protocolpayloads_MainProtocolOnAnonWithErrorRequestTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(16);
+  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(24);
+  static constexpr uint32_t kMaxOutOfLine = 8;
+  static constexpr uint32_t kMaxOutOfLineV1 = 8;
+  static constexpr bool kHasFlexibleEnvelope = false;
+  static constexpr bool kHasPointer = true;
+  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
+      ::fidl::internal::TransactionalMessageKind::kResponse;
+};
+static_assert(
     sizeof(::fidl::WireEvent<
            ::test_protocolpayloads::MainProtocol::OnAnonWithError>) ==
     TypeTraits<::fidl::WireEvent<
@@ -1762,7 +3299,7 @@ static_assert(
 static_assert(
     offsetof(::fidl::WireEvent<
                  ::test_protocolpayloads::MainProtocol::OnAnonWithError>,
-             result) == 0 + sizeof(fidl_message_header_t));
+             result) == 0);
 
 }  // namespace fidl
 namespace test_protocolpayloads {
@@ -1774,7 +3311,7 @@ class ::fidl::WireResult<::test_protocolpayloads::MainProtocol::OneWayComposed>
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_protocolpayloads::MainProtocol> client,
-      ::fidl::WireRequest<
+      ::fidl::internal::TransactionalRequest<
           ::test_protocolpayloads::MainProtocol::OneWayComposed>* request);
   explicit WireResult(const ::fidl::Result& result) : ::fidl::Result(result) {}
   WireResult(WireResult&&) = delete;
@@ -1794,7 +3331,7 @@ class ::fidl::WireUnownedResult<
       ::fidl::UnownedClientEnd<::test_protocolpayloads::MainProtocol>
           client_end,
       ::fidl::internal::AnyBufferAllocator& allocator,
-      ::fidl::WireRequest<
+      ::fidl::internal::TransactionalRequest<
           ::test_protocolpayloads::MainProtocol::OneWayComposed>* request);
   explicit WireUnownedResult(const ::fidl::Result& result)
       : ::fidl::Result(result) {}
@@ -1810,11 +3347,11 @@ class ::fidl::WireResult<::test_protocolpayloads::MainProtocol::TwoWayComposed>
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_protocolpayloads::MainProtocol> client,
-      ::fidl::WireRequest<
+      ::fidl::internal::TransactionalRequest<
           ::test_protocolpayloads::MainProtocol::TwoWayComposed>* request);
   WireResult(
       ::fidl::UnownedClientEnd<::test_protocolpayloads::MainProtocol> client,
-      ::fidl::WireRequest<
+      ::fidl::internal::TransactionalRequest<
           ::test_protocolpayloads::MainProtocol::TwoWayComposed>* request,
       zx_time_t _deadline);
   explicit WireResult(const ::fidl::Result& result) : ::fidl::Result(result) {}
@@ -1823,19 +3360,20 @@ class ::fidl::WireResult<::test_protocolpayloads::MainProtocol::TwoWayComposed>
   WireResult* operator=(WireResult&&) = delete;
   WireResult* operator=(const WireResult&) = delete;
   ~WireResult() = default;
-
   ::fidl::WireResponse<::test_protocolpayloads::MainProtocol::TwoWayComposed>*
   Unwrap() {
     ZX_DEBUG_ASSERT(ok());
     return reinterpret_cast<::fidl::WireResponse<
-        ::test_protocolpayloads::MainProtocol::TwoWayComposed>*>(bytes_.data());
+        ::test_protocolpayloads::MainProtocol::TwoWayComposed>*>(
+        bytes_.data() + sizeof(fidl_message_header_t));
   }
   const ::fidl::WireResponse<
       ::test_protocolpayloads::MainProtocol::TwoWayComposed>*
   Unwrap() const {
     ZX_DEBUG_ASSERT(ok());
     return reinterpret_cast<const ::fidl::WireResponse<
-        ::test_protocolpayloads::MainProtocol::TwoWayComposed>*>(bytes_.data());
+        ::test_protocolpayloads::MainProtocol::TwoWayComposed>*>(
+        bytes_.data() + sizeof(fidl_message_header_t));
   }
 
   ::fidl::WireResponse<::test_protocolpayloads::MainProtocol::TwoWayComposed>&
@@ -1880,16 +3418,16 @@ class ::fidl::WireUnownedResult<
       ::fidl::UnownedClientEnd<::test_protocolpayloads::MainProtocol>
           client_end,
       ::fidl::internal::AnyBufferAllocator& allocator,
-      ::fidl::WireRequest<
+      ::fidl::internal::TransactionalRequest<
           ::test_protocolpayloads::MainProtocol::TwoWayComposed>* request);
   explicit WireUnownedResult(
-      ::fidl::WireResponse<
+      ::fidl::internal::TransactionalResponse<
           ::test_protocolpayloads::MainProtocol::TwoWayComposed>* response)
       : bytes_(reinterpret_cast<uint8_t*>(response)) {}
   explicit WireUnownedResult(const ::fidl::Result& result)
       : ::fidl::Result(result) {}
   explicit WireUnownedResult(
-      ::fidl::unstable::DecodedMessage<::fidl::WireResponse<
+      ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<
           ::test_protocolpayloads::MainProtocol::TwoWayComposed>>&& decoded,
       ::fidl::internal::IncomingTransportContext context)
       : ::fidl::Result(decoded) {
@@ -1905,19 +3443,22 @@ class ::fidl::WireUnownedResult<
   WireUnownedResult* operator=(WireUnownedResult&&) = delete;
   WireUnownedResult* operator=(const WireUnownedResult&) = delete;
   ~WireUnownedResult() = default;
-
   ::fidl::WireResponse<::test_protocolpayloads::MainProtocol::TwoWayComposed>*
   Unwrap() {
     ZX_DEBUG_ASSERT(ok());
-    return reinterpret_cast<::fidl::WireResponse<
-        ::test_protocolpayloads::MainProtocol::TwoWayComposed>*>(bytes_);
+    return &(
+        reinterpret_cast<::fidl::internal::TransactionalResponse<
+            ::test_protocolpayloads::MainProtocol::TwoWayComposed>*>(bytes_)
+            ->body);
   }
   const ::fidl::WireResponse<
       ::test_protocolpayloads::MainProtocol::TwoWayComposed>*
   Unwrap() const {
     ZX_DEBUG_ASSERT(ok());
-    return reinterpret_cast<const ::fidl::WireResponse<
-        ::test_protocolpayloads::MainProtocol::TwoWayComposed>*>(bytes_);
+    return &(
+        reinterpret_cast<const ::fidl::internal::TransactionalResponse<
+            ::test_protocolpayloads::MainProtocol::TwoWayComposed>*>(bytes_)
+            ->body);
   }
 
   ::fidl::WireResponse<::test_protocolpayloads::MainProtocol::TwoWayComposed>&
@@ -1960,12 +3501,12 @@ class ::fidl::WireResult<
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_protocolpayloads::MainProtocol> client,
-      ::fidl::WireRequest<
+      ::fidl::internal::TransactionalRequest<
           ::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>*
           request);
   WireResult(
       ::fidl::UnownedClientEnd<::test_protocolpayloads::MainProtocol> client,
-      ::fidl::WireRequest<
+      ::fidl::internal::TransactionalRequest<
           ::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>*
           request,
       zx_time_t _deadline);
@@ -1975,14 +3516,13 @@ class ::fidl::WireResult<
   WireResult* operator=(WireResult&&) = delete;
   WireResult* operator=(const WireResult&) = delete;
   ~WireResult() = default;
-
   ::fidl::WireResponse<
       ::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>*
   Unwrap() {
     ZX_DEBUG_ASSERT(ok());
     return reinterpret_cast<::fidl::WireResponse<
         ::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>*>(
-        bytes_.data());
+        bytes_.data() + sizeof(fidl_message_header_t));
   }
   const ::fidl::WireResponse<
       ::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>*
@@ -1990,7 +3530,7 @@ class ::fidl::WireResult<
     ZX_DEBUG_ASSERT(ok());
     return reinterpret_cast<const ::fidl::WireResponse<
         ::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>*>(
-        bytes_.data());
+        bytes_.data() + sizeof(fidl_message_header_t));
   }
 
   ::fidl::WireResponse<
@@ -2038,18 +3578,18 @@ class ::fidl::WireUnownedResult<
       ::fidl::UnownedClientEnd<::test_protocolpayloads::MainProtocol>
           client_end,
       ::fidl::internal::AnyBufferAllocator& allocator,
-      ::fidl::WireRequest<
+      ::fidl::internal::TransactionalRequest<
           ::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>*
           request);
   explicit WireUnownedResult(
-      ::fidl::WireResponse<
+      ::fidl::internal::TransactionalResponse<
           ::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>*
           response)
       : bytes_(reinterpret_cast<uint8_t*>(response)) {}
   explicit WireUnownedResult(const ::fidl::Result& result)
       : ::fidl::Result(result) {}
   explicit WireUnownedResult(
-      ::fidl::unstable::DecodedMessage<::fidl::WireResponse<
+      ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<
           ::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>>&&
           decoded,
       ::fidl::internal::IncomingTransportContext context)
@@ -2066,22 +3606,25 @@ class ::fidl::WireUnownedResult<
   WireUnownedResult* operator=(WireUnownedResult&&) = delete;
   WireUnownedResult* operator=(const WireUnownedResult&) = delete;
   ~WireUnownedResult() = default;
-
   ::fidl::WireResponse<
       ::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>*
   Unwrap() {
     ZX_DEBUG_ASSERT(ok());
-    return reinterpret_cast<::fidl::WireResponse<
-        ::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>*>(
-        bytes_);
+    return &(
+        reinterpret_cast<::fidl::internal::TransactionalResponse<
+            ::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>*>(
+            bytes_)
+            ->body);
   }
   const ::fidl::WireResponse<
       ::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>*
   Unwrap() const {
     ZX_DEBUG_ASSERT(ok());
-    return reinterpret_cast<const ::fidl::WireResponse<
-        ::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>*>(
-        bytes_);
+    return &(
+        reinterpret_cast<const ::fidl::internal::TransactionalResponse<
+            ::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>*>(
+            bytes_)
+            ->body);
   }
 
   ::fidl::WireResponse<
@@ -2126,8 +3669,8 @@ class ::fidl::WireResult<::test_protocolpayloads::MainProtocol::OneWayLocal>
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_protocolpayloads::MainProtocol> client,
-      ::fidl::WireRequest<::test_protocolpayloads::MainProtocol::OneWayLocal>*
-          request);
+      ::fidl::internal::TransactionalRequest<
+          ::test_protocolpayloads::MainProtocol::OneWayLocal>* request);
   explicit WireResult(const ::fidl::Result& result) : ::fidl::Result(result) {}
   WireResult(WireResult&&) = delete;
   WireResult(const WireResult&) = delete;
@@ -2146,8 +3689,8 @@ class ::fidl::WireUnownedResult<
       ::fidl::UnownedClientEnd<::test_protocolpayloads::MainProtocol>
           client_end,
       ::fidl::internal::AnyBufferAllocator& allocator,
-      ::fidl::WireRequest<::test_protocolpayloads::MainProtocol::OneWayLocal>*
-          request);
+      ::fidl::internal::TransactionalRequest<
+          ::test_protocolpayloads::MainProtocol::OneWayLocal>* request);
   explicit WireUnownedResult(const ::fidl::Result& result)
       : ::fidl::Result(result) {}
   WireUnownedResult(WireUnownedResult&&) = delete;
@@ -2162,12 +3705,12 @@ class ::fidl::WireResult<::test_protocolpayloads::MainProtocol::TwoWayLocal>
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_protocolpayloads::MainProtocol> client,
-      ::fidl::WireRequest<::test_protocolpayloads::MainProtocol::TwoWayLocal>*
-          request);
+      ::fidl::internal::TransactionalRequest<
+          ::test_protocolpayloads::MainProtocol::TwoWayLocal>* request);
   WireResult(
       ::fidl::UnownedClientEnd<::test_protocolpayloads::MainProtocol> client,
-      ::fidl::WireRequest<::test_protocolpayloads::MainProtocol::TwoWayLocal>*
-          request,
+      ::fidl::internal::TransactionalRequest<
+          ::test_protocolpayloads::MainProtocol::TwoWayLocal>* request,
       zx_time_t _deadline);
   explicit WireResult(const ::fidl::Result& result) : ::fidl::Result(result) {}
   WireResult(WireResult&&) = delete;
@@ -2175,19 +3718,20 @@ class ::fidl::WireResult<::test_protocolpayloads::MainProtocol::TwoWayLocal>
   WireResult* operator=(WireResult&&) = delete;
   WireResult* operator=(const WireResult&) = delete;
   ~WireResult() = default;
-
   ::fidl::WireResponse<::test_protocolpayloads::MainProtocol::TwoWayLocal>*
   Unwrap() {
     ZX_DEBUG_ASSERT(ok());
     return reinterpret_cast<::fidl::WireResponse<
-        ::test_protocolpayloads::MainProtocol::TwoWayLocal>*>(bytes_.data());
+        ::test_protocolpayloads::MainProtocol::TwoWayLocal>*>(
+        bytes_.data() + sizeof(fidl_message_header_t));
   }
   const ::fidl::WireResponse<
       ::test_protocolpayloads::MainProtocol::TwoWayLocal>*
   Unwrap() const {
     ZX_DEBUG_ASSERT(ok());
     return reinterpret_cast<const ::fidl::WireResponse<
-        ::test_protocolpayloads::MainProtocol::TwoWayLocal>*>(bytes_.data());
+        ::test_protocolpayloads::MainProtocol::TwoWayLocal>*>(
+        bytes_.data() + sizeof(fidl_message_header_t));
   }
 
   ::fidl::WireResponse<::test_protocolpayloads::MainProtocol::TwoWayLocal>&
@@ -2232,16 +3776,16 @@ class ::fidl::WireUnownedResult<
       ::fidl::UnownedClientEnd<::test_protocolpayloads::MainProtocol>
           client_end,
       ::fidl::internal::AnyBufferAllocator& allocator,
-      ::fidl::WireRequest<::test_protocolpayloads::MainProtocol::TwoWayLocal>*
-          request);
+      ::fidl::internal::TransactionalRequest<
+          ::test_protocolpayloads::MainProtocol::TwoWayLocal>* request);
   explicit WireUnownedResult(
-      ::fidl::WireResponse<::test_protocolpayloads::MainProtocol::TwoWayLocal>*
-          response)
+      ::fidl::internal::TransactionalResponse<
+          ::test_protocolpayloads::MainProtocol::TwoWayLocal>* response)
       : bytes_(reinterpret_cast<uint8_t*>(response)) {}
   explicit WireUnownedResult(const ::fidl::Result& result)
       : ::fidl::Result(result) {}
   explicit WireUnownedResult(
-      ::fidl::unstable::DecodedMessage<::fidl::WireResponse<
+      ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<
           ::test_protocolpayloads::MainProtocol::TwoWayLocal>>&& decoded,
       ::fidl::internal::IncomingTransportContext context)
       : ::fidl::Result(decoded) {
@@ -2257,19 +3801,20 @@ class ::fidl::WireUnownedResult<
   WireUnownedResult* operator=(WireUnownedResult&&) = delete;
   WireUnownedResult* operator=(const WireUnownedResult&) = delete;
   ~WireUnownedResult() = default;
-
   ::fidl::WireResponse<::test_protocolpayloads::MainProtocol::TwoWayLocal>*
   Unwrap() {
     ZX_DEBUG_ASSERT(ok());
-    return reinterpret_cast<::fidl::WireResponse<
-        ::test_protocolpayloads::MainProtocol::TwoWayLocal>*>(bytes_);
+    return &(reinterpret_cast<::fidl::internal::TransactionalResponse<
+                 ::test_protocolpayloads::MainProtocol::TwoWayLocal>*>(bytes_)
+                 ->body);
   }
   const ::fidl::WireResponse<
       ::test_protocolpayloads::MainProtocol::TwoWayLocal>*
   Unwrap() const {
     ZX_DEBUG_ASSERT(ok());
-    return reinterpret_cast<const ::fidl::WireResponse<
-        ::test_protocolpayloads::MainProtocol::TwoWayLocal>*>(bytes_);
+    return &(reinterpret_cast<const ::fidl::internal::TransactionalResponse<
+                 ::test_protocolpayloads::MainProtocol::TwoWayLocal>*>(bytes_)
+                 ->body);
   }
 
   ::fidl::WireResponse<::test_protocolpayloads::MainProtocol::TwoWayLocal>&
@@ -2312,12 +3857,12 @@ class ::fidl::WireResult<
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_protocolpayloads::MainProtocol> client,
-      ::fidl::WireRequest<
+      ::fidl::internal::TransactionalRequest<
           ::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>*
           request);
   WireResult(
       ::fidl::UnownedClientEnd<::test_protocolpayloads::MainProtocol> client,
-      ::fidl::WireRequest<
+      ::fidl::internal::TransactionalRequest<
           ::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>* request,
       zx_time_t _deadline);
   explicit WireResult(const ::fidl::Result& result) : ::fidl::Result(result) {}
@@ -2326,14 +3871,13 @@ class ::fidl::WireResult<
   WireResult* operator=(WireResult&&) = delete;
   WireResult* operator=(const WireResult&) = delete;
   ~WireResult() = default;
-
   ::fidl::WireResponse<
       ::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>*
   Unwrap() {
     ZX_DEBUG_ASSERT(ok());
     return reinterpret_cast<::fidl::WireResponse<
         ::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>*>(
-        bytes_.data());
+        bytes_.data() + sizeof(fidl_message_header_t));
   }
   const ::fidl::WireResponse<
       ::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>*
@@ -2341,7 +3885,7 @@ class ::fidl::WireResult<
     ZX_DEBUG_ASSERT(ok());
     return reinterpret_cast<const ::fidl::WireResponse<
         ::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>*>(
-        bytes_.data());
+        bytes_.data() + sizeof(fidl_message_header_t));
   }
 
   ::fidl::WireResponse<
@@ -2389,18 +3933,18 @@ class ::fidl::WireUnownedResult<
       ::fidl::UnownedClientEnd<::test_protocolpayloads::MainProtocol>
           client_end,
       ::fidl::internal::AnyBufferAllocator& allocator,
-      ::fidl::WireRequest<
+      ::fidl::internal::TransactionalRequest<
           ::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>*
           request);
   explicit WireUnownedResult(
-      ::fidl::WireResponse<
+      ::fidl::internal::TransactionalResponse<
           ::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>*
           response)
       : bytes_(reinterpret_cast<uint8_t*>(response)) {}
   explicit WireUnownedResult(const ::fidl::Result& result)
       : ::fidl::Result(result) {}
   explicit WireUnownedResult(
-      ::fidl::unstable::DecodedMessage<::fidl::WireResponse<
+      ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<
           ::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>>&&
           decoded,
       ::fidl::internal::IncomingTransportContext context)
@@ -2417,20 +3961,23 @@ class ::fidl::WireUnownedResult<
   WireUnownedResult* operator=(WireUnownedResult&&) = delete;
   WireUnownedResult* operator=(const WireUnownedResult&) = delete;
   ~WireUnownedResult() = default;
-
   ::fidl::WireResponse<
       ::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>*
   Unwrap() {
     ZX_DEBUG_ASSERT(ok());
-    return reinterpret_cast<::fidl::WireResponse<
-        ::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>*>(bytes_);
+    return &(reinterpret_cast<::fidl::internal::TransactionalResponse<
+                 ::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>*>(
+                 bytes_)
+                 ->body);
   }
   const ::fidl::WireResponse<
       ::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>*
   Unwrap() const {
     ZX_DEBUG_ASSERT(ok());
-    return reinterpret_cast<const ::fidl::WireResponse<
-        ::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>*>(bytes_);
+    return &(reinterpret_cast<const ::fidl::internal::TransactionalResponse<
+                 ::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>*>(
+                 bytes_)
+                 ->body);
   }
 
   ::fidl::WireResponse<
@@ -2475,8 +4022,8 @@ class ::fidl::WireResult<::test_protocolpayloads::MainProtocol::OneWayImport>
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_protocolpayloads::MainProtocol> client,
-      ::fidl::WireRequest<::test_protocolpayloads::MainProtocol::OneWayImport>*
-          request);
+      ::fidl::internal::TransactionalRequest<
+          ::test_protocolpayloads::MainProtocol::OneWayImport>* request);
   explicit WireResult(const ::fidl::Result& result) : ::fidl::Result(result) {}
   WireResult(WireResult&&) = delete;
   WireResult(const WireResult&) = delete;
@@ -2495,8 +4042,8 @@ class ::fidl::WireUnownedResult<
       ::fidl::UnownedClientEnd<::test_protocolpayloads::MainProtocol>
           client_end,
       ::fidl::internal::AnyBufferAllocator& allocator,
-      ::fidl::WireRequest<::test_protocolpayloads::MainProtocol::OneWayImport>*
-          request);
+      ::fidl::internal::TransactionalRequest<
+          ::test_protocolpayloads::MainProtocol::OneWayImport>* request);
   explicit WireUnownedResult(const ::fidl::Result& result)
       : ::fidl::Result(result) {}
   WireUnownedResult(WireUnownedResult&&) = delete;
@@ -2511,12 +4058,12 @@ class ::fidl::WireResult<::test_protocolpayloads::MainProtocol::TwoWayImport>
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_protocolpayloads::MainProtocol> client,
-      ::fidl::WireRequest<::test_protocolpayloads::MainProtocol::TwoWayImport>*
-          request);
+      ::fidl::internal::TransactionalRequest<
+          ::test_protocolpayloads::MainProtocol::TwoWayImport>* request);
   WireResult(
       ::fidl::UnownedClientEnd<::test_protocolpayloads::MainProtocol> client,
-      ::fidl::WireRequest<::test_protocolpayloads::MainProtocol::TwoWayImport>*
-          request,
+      ::fidl::internal::TransactionalRequest<
+          ::test_protocolpayloads::MainProtocol::TwoWayImport>* request,
       zx_time_t _deadline);
   explicit WireResult(const ::fidl::Result& result) : ::fidl::Result(result) {}
   WireResult(WireResult&&) = delete;
@@ -2524,19 +4071,20 @@ class ::fidl::WireResult<::test_protocolpayloads::MainProtocol::TwoWayImport>
   WireResult* operator=(WireResult&&) = delete;
   WireResult* operator=(const WireResult&) = delete;
   ~WireResult() = default;
-
   ::fidl::WireResponse<::test_protocolpayloads::MainProtocol::TwoWayImport>*
   Unwrap() {
     ZX_DEBUG_ASSERT(ok());
     return reinterpret_cast<::fidl::WireResponse<
-        ::test_protocolpayloads::MainProtocol::TwoWayImport>*>(bytes_.data());
+        ::test_protocolpayloads::MainProtocol::TwoWayImport>*>(
+        bytes_.data() + sizeof(fidl_message_header_t));
   }
   const ::fidl::WireResponse<
       ::test_protocolpayloads::MainProtocol::TwoWayImport>*
   Unwrap() const {
     ZX_DEBUG_ASSERT(ok());
     return reinterpret_cast<const ::fidl::WireResponse<
-        ::test_protocolpayloads::MainProtocol::TwoWayImport>*>(bytes_.data());
+        ::test_protocolpayloads::MainProtocol::TwoWayImport>*>(
+        bytes_.data() + sizeof(fidl_message_header_t));
   }
 
   ::fidl::WireResponse<::test_protocolpayloads::MainProtocol::TwoWayImport>&
@@ -2581,16 +4129,16 @@ class ::fidl::WireUnownedResult<
       ::fidl::UnownedClientEnd<::test_protocolpayloads::MainProtocol>
           client_end,
       ::fidl::internal::AnyBufferAllocator& allocator,
-      ::fidl::WireRequest<::test_protocolpayloads::MainProtocol::TwoWayImport>*
-          request);
+      ::fidl::internal::TransactionalRequest<
+          ::test_protocolpayloads::MainProtocol::TwoWayImport>* request);
   explicit WireUnownedResult(
-      ::fidl::WireResponse<::test_protocolpayloads::MainProtocol::TwoWayImport>*
-          response)
+      ::fidl::internal::TransactionalResponse<
+          ::test_protocolpayloads::MainProtocol::TwoWayImport>* response)
       : bytes_(reinterpret_cast<uint8_t*>(response)) {}
   explicit WireUnownedResult(const ::fidl::Result& result)
       : ::fidl::Result(result) {}
   explicit WireUnownedResult(
-      ::fidl::unstable::DecodedMessage<::fidl::WireResponse<
+      ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<
           ::test_protocolpayloads::MainProtocol::TwoWayImport>>&& decoded,
       ::fidl::internal::IncomingTransportContext context)
       : ::fidl::Result(decoded) {
@@ -2606,19 +4154,20 @@ class ::fidl::WireUnownedResult<
   WireUnownedResult* operator=(WireUnownedResult&&) = delete;
   WireUnownedResult* operator=(const WireUnownedResult&) = delete;
   ~WireUnownedResult() = default;
-
   ::fidl::WireResponse<::test_protocolpayloads::MainProtocol::TwoWayImport>*
   Unwrap() {
     ZX_DEBUG_ASSERT(ok());
-    return reinterpret_cast<::fidl::WireResponse<
-        ::test_protocolpayloads::MainProtocol::TwoWayImport>*>(bytes_);
+    return &(reinterpret_cast<::fidl::internal::TransactionalResponse<
+                 ::test_protocolpayloads::MainProtocol::TwoWayImport>*>(bytes_)
+                 ->body);
   }
   const ::fidl::WireResponse<
       ::test_protocolpayloads::MainProtocol::TwoWayImport>*
   Unwrap() const {
     ZX_DEBUG_ASSERT(ok());
-    return reinterpret_cast<const ::fidl::WireResponse<
-        ::test_protocolpayloads::MainProtocol::TwoWayImport>*>(bytes_);
+    return &(reinterpret_cast<const ::fidl::internal::TransactionalResponse<
+                 ::test_protocolpayloads::MainProtocol::TwoWayImport>*>(bytes_)
+                 ->body);
   }
 
   ::fidl::WireResponse<::test_protocolpayloads::MainProtocol::TwoWayImport>&
@@ -2661,12 +4210,12 @@ class ::fidl::WireResult<
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_protocolpayloads::MainProtocol> client,
-      ::fidl::WireRequest<
+      ::fidl::internal::TransactionalRequest<
           ::test_protocolpayloads::MainProtocol::TwoWayImportWithError>*
           request);
   WireResult(
       ::fidl::UnownedClientEnd<::test_protocolpayloads::MainProtocol> client,
-      ::fidl::WireRequest<
+      ::fidl::internal::TransactionalRequest<
           ::test_protocolpayloads::MainProtocol::TwoWayImportWithError>*
           request,
       zx_time_t _deadline);
@@ -2676,14 +4225,13 @@ class ::fidl::WireResult<
   WireResult* operator=(WireResult&&) = delete;
   WireResult* operator=(const WireResult&) = delete;
   ~WireResult() = default;
-
   ::fidl::WireResponse<
       ::test_protocolpayloads::MainProtocol::TwoWayImportWithError>*
   Unwrap() {
     ZX_DEBUG_ASSERT(ok());
     return reinterpret_cast<::fidl::WireResponse<
         ::test_protocolpayloads::MainProtocol::TwoWayImportWithError>*>(
-        bytes_.data());
+        bytes_.data() + sizeof(fidl_message_header_t));
   }
   const ::fidl::WireResponse<
       ::test_protocolpayloads::MainProtocol::TwoWayImportWithError>*
@@ -2691,7 +4239,7 @@ class ::fidl::WireResult<
     ZX_DEBUG_ASSERT(ok());
     return reinterpret_cast<const ::fidl::WireResponse<
         ::test_protocolpayloads::MainProtocol::TwoWayImportWithError>*>(
-        bytes_.data());
+        bytes_.data() + sizeof(fidl_message_header_t));
   }
 
   ::fidl::WireResponse<
@@ -2739,18 +4287,18 @@ class ::fidl::WireUnownedResult<
       ::fidl::UnownedClientEnd<::test_protocolpayloads::MainProtocol>
           client_end,
       ::fidl::internal::AnyBufferAllocator& allocator,
-      ::fidl::WireRequest<
+      ::fidl::internal::TransactionalRequest<
           ::test_protocolpayloads::MainProtocol::TwoWayImportWithError>*
           request);
   explicit WireUnownedResult(
-      ::fidl::WireResponse<
+      ::fidl::internal::TransactionalResponse<
           ::test_protocolpayloads::MainProtocol::TwoWayImportWithError>*
           response)
       : bytes_(reinterpret_cast<uint8_t*>(response)) {}
   explicit WireUnownedResult(const ::fidl::Result& result)
       : ::fidl::Result(result) {}
   explicit WireUnownedResult(
-      ::fidl::unstable::DecodedMessage<::fidl::WireResponse<
+      ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<
           ::test_protocolpayloads::MainProtocol::TwoWayImportWithError>>&&
           decoded,
       ::fidl::internal::IncomingTransportContext context)
@@ -2767,20 +4315,25 @@ class ::fidl::WireUnownedResult<
   WireUnownedResult* operator=(WireUnownedResult&&) = delete;
   WireUnownedResult* operator=(const WireUnownedResult&) = delete;
   ~WireUnownedResult() = default;
-
   ::fidl::WireResponse<
       ::test_protocolpayloads::MainProtocol::TwoWayImportWithError>*
   Unwrap() {
     ZX_DEBUG_ASSERT(ok());
-    return reinterpret_cast<::fidl::WireResponse<
-        ::test_protocolpayloads::MainProtocol::TwoWayImportWithError>*>(bytes_);
+    return &(
+        reinterpret_cast<::fidl::internal::TransactionalResponse<
+            ::test_protocolpayloads::MainProtocol::TwoWayImportWithError>*>(
+            bytes_)
+            ->body);
   }
   const ::fidl::WireResponse<
       ::test_protocolpayloads::MainProtocol::TwoWayImportWithError>*
   Unwrap() const {
     ZX_DEBUG_ASSERT(ok());
-    return reinterpret_cast<const ::fidl::WireResponse<
-        ::test_protocolpayloads::MainProtocol::TwoWayImportWithError>*>(bytes_);
+    return &(
+        reinterpret_cast<const ::fidl::internal::TransactionalResponse<
+            ::test_protocolpayloads::MainProtocol::TwoWayImportWithError>*>(
+            bytes_)
+            ->body);
   }
 
   ::fidl::WireResponse<
@@ -2825,8 +4378,8 @@ class ::fidl::WireResult<::test_protocolpayloads::MainProtocol::OneWayAnon>
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_protocolpayloads::MainProtocol> client,
-      ::fidl::WireRequest<::test_protocolpayloads::MainProtocol::OneWayAnon>*
-          request);
+      ::fidl::internal::TransactionalRequest<
+          ::test_protocolpayloads::MainProtocol::OneWayAnon>* request);
   explicit WireResult(const ::fidl::Result& result) : ::fidl::Result(result) {}
   WireResult(WireResult&&) = delete;
   WireResult(const WireResult&) = delete;
@@ -2845,8 +4398,8 @@ class ::fidl::WireUnownedResult<
       ::fidl::UnownedClientEnd<::test_protocolpayloads::MainProtocol>
           client_end,
       ::fidl::internal::AnyBufferAllocator& allocator,
-      ::fidl::WireRequest<::test_protocolpayloads::MainProtocol::OneWayAnon>*
-          request);
+      ::fidl::internal::TransactionalRequest<
+          ::test_protocolpayloads::MainProtocol::OneWayAnon>* request);
   explicit WireUnownedResult(const ::fidl::Result& result)
       : ::fidl::Result(result) {}
   WireUnownedResult(WireUnownedResult&&) = delete;
@@ -2861,12 +4414,12 @@ class ::fidl::WireResult<::test_protocolpayloads::MainProtocol::TwoWayAnon>
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_protocolpayloads::MainProtocol> client,
-      ::fidl::WireRequest<::test_protocolpayloads::MainProtocol::TwoWayAnon>*
-          request);
+      ::fidl::internal::TransactionalRequest<
+          ::test_protocolpayloads::MainProtocol::TwoWayAnon>* request);
   WireResult(
       ::fidl::UnownedClientEnd<::test_protocolpayloads::MainProtocol> client,
-      ::fidl::WireRequest<::test_protocolpayloads::MainProtocol::TwoWayAnon>*
-          request,
+      ::fidl::internal::TransactionalRequest<
+          ::test_protocolpayloads::MainProtocol::TwoWayAnon>* request,
       zx_time_t _deadline);
   explicit WireResult(const ::fidl::Result& result) : ::fidl::Result(result) {}
   WireResult(WireResult&&) = delete;
@@ -2874,18 +4427,19 @@ class ::fidl::WireResult<::test_protocolpayloads::MainProtocol::TwoWayAnon>
   WireResult* operator=(WireResult&&) = delete;
   WireResult* operator=(const WireResult&) = delete;
   ~WireResult() = default;
-
   ::fidl::WireResponse<::test_protocolpayloads::MainProtocol::TwoWayAnon>*
   Unwrap() {
     ZX_DEBUG_ASSERT(ok());
     return reinterpret_cast<::fidl::WireResponse<
-        ::test_protocolpayloads::MainProtocol::TwoWayAnon>*>(bytes_.data());
+        ::test_protocolpayloads::MainProtocol::TwoWayAnon>*>(
+        bytes_.data() + sizeof(fidl_message_header_t));
   }
   const ::fidl::WireResponse<::test_protocolpayloads::MainProtocol::TwoWayAnon>*
   Unwrap() const {
     ZX_DEBUG_ASSERT(ok());
     return reinterpret_cast<const ::fidl::WireResponse<
-        ::test_protocolpayloads::MainProtocol::TwoWayAnon>*>(bytes_.data());
+        ::test_protocolpayloads::MainProtocol::TwoWayAnon>*>(
+        bytes_.data() + sizeof(fidl_message_header_t));
   }
 
   ::fidl::WireResponse<::test_protocolpayloads::MainProtocol::TwoWayAnon>&
@@ -2927,16 +4481,16 @@ class ::fidl::WireUnownedResult<
       ::fidl::UnownedClientEnd<::test_protocolpayloads::MainProtocol>
           client_end,
       ::fidl::internal::AnyBufferAllocator& allocator,
-      ::fidl::WireRequest<::test_protocolpayloads::MainProtocol::TwoWayAnon>*
-          request);
+      ::fidl::internal::TransactionalRequest<
+          ::test_protocolpayloads::MainProtocol::TwoWayAnon>* request);
   explicit WireUnownedResult(
-      ::fidl::WireResponse<::test_protocolpayloads::MainProtocol::TwoWayAnon>*
-          response)
+      ::fidl::internal::TransactionalResponse<
+          ::test_protocolpayloads::MainProtocol::TwoWayAnon>* response)
       : bytes_(reinterpret_cast<uint8_t*>(response)) {}
   explicit WireUnownedResult(const ::fidl::Result& result)
       : ::fidl::Result(result) {}
   explicit WireUnownedResult(
-      ::fidl::unstable::DecodedMessage<::fidl::WireResponse<
+      ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<
           ::test_protocolpayloads::MainProtocol::TwoWayAnon>>&& decoded,
       ::fidl::internal::IncomingTransportContext context)
       : ::fidl::Result(decoded) {
@@ -2952,18 +4506,19 @@ class ::fidl::WireUnownedResult<
   WireUnownedResult* operator=(WireUnownedResult&&) = delete;
   WireUnownedResult* operator=(const WireUnownedResult&) = delete;
   ~WireUnownedResult() = default;
-
   ::fidl::WireResponse<::test_protocolpayloads::MainProtocol::TwoWayAnon>*
   Unwrap() {
     ZX_DEBUG_ASSERT(ok());
-    return reinterpret_cast<::fidl::WireResponse<
-        ::test_protocolpayloads::MainProtocol::TwoWayAnon>*>(bytes_);
+    return &(reinterpret_cast<::fidl::internal::TransactionalResponse<
+                 ::test_protocolpayloads::MainProtocol::TwoWayAnon>*>(bytes_)
+                 ->body);
   }
   const ::fidl::WireResponse<::test_protocolpayloads::MainProtocol::TwoWayAnon>*
   Unwrap() const {
     ZX_DEBUG_ASSERT(ok());
-    return reinterpret_cast<const ::fidl::WireResponse<
-        ::test_protocolpayloads::MainProtocol::TwoWayAnon>*>(bytes_);
+    return &(reinterpret_cast<const ::fidl::internal::TransactionalResponse<
+                 ::test_protocolpayloads::MainProtocol::TwoWayAnon>*>(bytes_)
+                 ->body);
   }
 
   ::fidl::WireResponse<::test_protocolpayloads::MainProtocol::TwoWayAnon>&
@@ -3003,11 +4558,11 @@ class ::fidl::WireResult<
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_protocolpayloads::MainProtocol> client,
-      ::fidl::WireRequest<
+      ::fidl::internal::TransactionalRequest<
           ::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>* request);
   WireResult(
       ::fidl::UnownedClientEnd<::test_protocolpayloads::MainProtocol> client,
-      ::fidl::WireRequest<
+      ::fidl::internal::TransactionalRequest<
           ::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>* request,
       zx_time_t _deadline);
   explicit WireResult(const ::fidl::Result& result) : ::fidl::Result(result) {}
@@ -3016,14 +4571,13 @@ class ::fidl::WireResult<
   WireResult* operator=(WireResult&&) = delete;
   WireResult* operator=(const WireResult&) = delete;
   ~WireResult() = default;
-
   ::fidl::WireResponse<
       ::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>*
   Unwrap() {
     ZX_DEBUG_ASSERT(ok());
     return reinterpret_cast<::fidl::WireResponse<
         ::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>*>(
-        bytes_.data());
+        bytes_.data() + sizeof(fidl_message_header_t));
   }
   const ::fidl::WireResponse<
       ::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>*
@@ -3031,7 +4585,7 @@ class ::fidl::WireResult<
     ZX_DEBUG_ASSERT(ok());
     return reinterpret_cast<const ::fidl::WireResponse<
         ::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>*>(
-        bytes_.data());
+        bytes_.data() + sizeof(fidl_message_header_t));
   }
 
   ::fidl::WireResponse<
@@ -3079,16 +4633,16 @@ class ::fidl::WireUnownedResult<
       ::fidl::UnownedClientEnd<::test_protocolpayloads::MainProtocol>
           client_end,
       ::fidl::internal::AnyBufferAllocator& allocator,
-      ::fidl::WireRequest<
+      ::fidl::internal::TransactionalRequest<
           ::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>* request);
   explicit WireUnownedResult(
-      ::fidl::WireResponse<
+      ::fidl::internal::TransactionalResponse<
           ::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>* response)
       : bytes_(reinterpret_cast<uint8_t*>(response)) {}
   explicit WireUnownedResult(const ::fidl::Result& result)
       : ::fidl::Result(result) {}
   explicit WireUnownedResult(
-      ::fidl::unstable::DecodedMessage<::fidl::WireResponse<
+      ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<
           ::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>>&&
           decoded,
       ::fidl::internal::IncomingTransportContext context)
@@ -3105,20 +4659,23 @@ class ::fidl::WireUnownedResult<
   WireUnownedResult* operator=(WireUnownedResult&&) = delete;
   WireUnownedResult* operator=(const WireUnownedResult&) = delete;
   ~WireUnownedResult() = default;
-
   ::fidl::WireResponse<
       ::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>*
   Unwrap() {
     ZX_DEBUG_ASSERT(ok());
-    return reinterpret_cast<::fidl::WireResponse<
-        ::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>*>(bytes_);
+    return &(reinterpret_cast<::fidl::internal::TransactionalResponse<
+                 ::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>*>(
+                 bytes_)
+                 ->body);
   }
   const ::fidl::WireResponse<
       ::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>*
   Unwrap() const {
     ZX_DEBUG_ASSERT(ok());
-    return reinterpret_cast<const ::fidl::WireResponse<
-        ::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>*>(bytes_);
+    return &(reinterpret_cast<const ::fidl::internal::TransactionalResponse<
+                 ::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>*>(
+                 bytes_)
+                 ->body);
   }
 
   ::fidl::WireResponse<
@@ -3250,7 +4807,8 @@ class ::fidl::internal::WireSyncClientImpl<
   // necessary.
   ::fidl::WireResult<::test_protocolpayloads::MainProtocol::OneWayComposed>
   OneWayComposed(int32_t a) {
-    ::fidl::WireRequest<::test_protocolpayloads::MainProtocol::OneWayComposed>
+    ::fidl::internal::TransactionalRequest<
+        ::test_protocolpayloads::MainProtocol::OneWayComposed>
         _request{a};
     return ::fidl::WireResult<
         ::test_protocolpayloads::MainProtocol::OneWayComposed>(_client_end(),
@@ -3261,7 +4819,8 @@ class ::fidl::internal::WireSyncClientImpl<
   // necessary.
   ::fidl::WireResult<::test_protocolpayloads::MainProtocol::TwoWayComposed>
   TwoWayComposed(int32_t a) {
-    ::fidl::WireRequest<::test_protocolpayloads::MainProtocol::TwoWayComposed>
+    ::fidl::internal::TransactionalRequest<
+        ::test_protocolpayloads::MainProtocol::TwoWayComposed>
         _request{a};
     return ::fidl::WireResult<
         ::test_protocolpayloads::MainProtocol::TwoWayComposed>(_client_end(),
@@ -3273,7 +4832,7 @@ class ::fidl::internal::WireSyncClientImpl<
   ::fidl::WireResult<
       ::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>
   TwoWayComposedWithError(int32_t a) {
-    ::fidl::WireRequest<
+    ::fidl::internal::TransactionalRequest<
         ::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>
         _request{a};
     return ::fidl::WireResult<
@@ -3285,7 +4844,8 @@ class ::fidl::internal::WireSyncClientImpl<
   // necessary.
   ::fidl::WireResult<::test_protocolpayloads::MainProtocol::OneWayLocal>
   OneWayLocal(uint32_t a, uint32_t b) {
-    ::fidl::WireRequest<::test_protocolpayloads::MainProtocol::OneWayLocal>
+    ::fidl::internal::TransactionalRequest<
+        ::test_protocolpayloads::MainProtocol::OneWayLocal>
         _request{a, b};
     return ::fidl::WireResult<
         ::test_protocolpayloads::MainProtocol::OneWayLocal>(_client_end(),
@@ -3296,7 +4856,8 @@ class ::fidl::internal::WireSyncClientImpl<
   // necessary.
   ::fidl::WireResult<::test_protocolpayloads::MainProtocol::TwoWayLocal>
   TwoWayLocal(uint32_t a, uint32_t b) {
-    ::fidl::WireRequest<::test_protocolpayloads::MainProtocol::TwoWayLocal>
+    ::fidl::internal::TransactionalRequest<
+        ::test_protocolpayloads::MainProtocol::TwoWayLocal>
         _request{a, b};
     return ::fidl::WireResult<
         ::test_protocolpayloads::MainProtocol::TwoWayLocal>(_client_end(),
@@ -3308,7 +4869,7 @@ class ::fidl::internal::WireSyncClientImpl<
   ::fidl::WireResult<
       ::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>
   TwoWayLocalWithError(uint32_t a, uint32_t b) {
-    ::fidl::WireRequest<
+    ::fidl::internal::TransactionalRequest<
         ::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>
         _request{a, b};
     return ::fidl::WireResult<
@@ -3320,7 +4881,8 @@ class ::fidl::internal::WireSyncClientImpl<
   // necessary.
   ::fidl::WireResult<::test_protocolpayloads::MainProtocol::OneWayImport>
   OneWayImport(int32_t a) {
-    ::fidl::WireRequest<::test_protocolpayloads::MainProtocol::OneWayImport>
+    ::fidl::internal::TransactionalRequest<
+        ::test_protocolpayloads::MainProtocol::OneWayImport>
         _request{a};
     return ::fidl::WireResult<
         ::test_protocolpayloads::MainProtocol::OneWayImport>(_client_end(),
@@ -3331,7 +4893,8 @@ class ::fidl::internal::WireSyncClientImpl<
   // necessary.
   ::fidl::WireResult<::test_protocolpayloads::MainProtocol::TwoWayImport>
   TwoWayImport(int32_t a) {
-    ::fidl::WireRequest<::test_protocolpayloads::MainProtocol::TwoWayImport>
+    ::fidl::internal::TransactionalRequest<
+        ::test_protocolpayloads::MainProtocol::TwoWayImport>
         _request{a};
     return ::fidl::WireResult<
         ::test_protocolpayloads::MainProtocol::TwoWayImport>(_client_end(),
@@ -3343,7 +4906,7 @@ class ::fidl::internal::WireSyncClientImpl<
   ::fidl::WireResult<
       ::test_protocolpayloads::MainProtocol::TwoWayImportWithError>
   TwoWayImportWithError(int32_t a) {
-    ::fidl::WireRequest<
+    ::fidl::internal::TransactionalRequest<
         ::test_protocolpayloads::MainProtocol::TwoWayImportWithError>
         _request{a};
     return ::fidl::WireResult<
@@ -3355,7 +4918,8 @@ class ::fidl::internal::WireSyncClientImpl<
   // necessary.
   ::fidl::WireResult<::test_protocolpayloads::MainProtocol::OneWayAnon>
   OneWayAnon(uint32_t a, uint32_t b) {
-    ::fidl::WireRequest<::test_protocolpayloads::MainProtocol::OneWayAnon>
+    ::fidl::internal::TransactionalRequest<
+        ::test_protocolpayloads::MainProtocol::OneWayAnon>
         _request{a, b};
     return ::fidl::WireResult<
         ::test_protocolpayloads::MainProtocol::OneWayAnon>(_client_end(),
@@ -3366,7 +4930,8 @@ class ::fidl::internal::WireSyncClientImpl<
   // necessary.
   ::fidl::WireResult<::test_protocolpayloads::MainProtocol::TwoWayAnon>
   TwoWayAnon(uint32_t a, uint32_t b) {
-    ::fidl::WireRequest<::test_protocolpayloads::MainProtocol::TwoWayAnon>
+    ::fidl::internal::TransactionalRequest<
+        ::test_protocolpayloads::MainProtocol::TwoWayAnon>
         _request{a, b};
     return ::fidl::WireResult<
         ::test_protocolpayloads::MainProtocol::TwoWayAnon>(_client_end(),
@@ -3377,7 +4942,7 @@ class ::fidl::internal::WireSyncClientImpl<
   // necessary.
   ::fidl::WireResult<::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>
   TwoWayAnonWithError(uint32_t a, uint32_t b) {
-    ::fidl::WireRequest<
+    ::fidl::internal::TransactionalRequest<
         ::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>
         _request{a, b};
     return ::fidl::WireResult<
@@ -3405,7 +4970,8 @@ class ::fidl::internal::WireSyncBufferClientImpl<
   ::fidl::WireUnownedResult<
       ::test_protocolpayloads::MainProtocol::OneWayComposed>
   OneWayComposed(int32_t a) {
-    ::fidl::WireRequest<::test_protocolpayloads::MainProtocol::OneWayComposed>
+    ::fidl::internal::TransactionalRequest<
+        ::test_protocolpayloads::MainProtocol::OneWayComposed>
         _request{a};
     return ::fidl::WireUnownedResult<
         ::test_protocolpayloads::MainProtocol::OneWayComposed>(
@@ -3417,7 +4983,8 @@ class ::fidl::internal::WireSyncBufferClientImpl<
   ::fidl::WireUnownedResult<
       ::test_protocolpayloads::MainProtocol::TwoWayComposed>
   TwoWayComposed(int32_t a) {
-    ::fidl::WireRequest<::test_protocolpayloads::MainProtocol::TwoWayComposed>
+    ::fidl::internal::TransactionalRequest<
+        ::test_protocolpayloads::MainProtocol::TwoWayComposed>
         _request{a};
     return ::fidl::WireUnownedResult<
         ::test_protocolpayloads::MainProtocol::TwoWayComposed>(
@@ -3429,7 +4996,7 @@ class ::fidl::internal::WireSyncBufferClientImpl<
   ::fidl::WireUnownedResult<
       ::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>
   TwoWayComposedWithError(int32_t a) {
-    ::fidl::WireRequest<
+    ::fidl::internal::TransactionalRequest<
         ::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>
         _request{a};
     return ::fidl::WireUnownedResult<
@@ -3441,7 +5008,8 @@ class ::fidl::internal::WireSyncBufferClientImpl<
   // `.buffer()`.
   ::fidl::WireUnownedResult<::test_protocolpayloads::MainProtocol::OneWayLocal>
   OneWayLocal(uint32_t a, uint32_t b) {
-    ::fidl::WireRequest<::test_protocolpayloads::MainProtocol::OneWayLocal>
+    ::fidl::internal::TransactionalRequest<
+        ::test_protocolpayloads::MainProtocol::OneWayLocal>
         _request{a, b};
     return ::fidl::WireUnownedResult<
         ::test_protocolpayloads::MainProtocol::OneWayLocal>(
@@ -3452,7 +5020,8 @@ class ::fidl::internal::WireSyncBufferClientImpl<
   // `.buffer()`.
   ::fidl::WireUnownedResult<::test_protocolpayloads::MainProtocol::TwoWayLocal>
   TwoWayLocal(uint32_t a, uint32_t b) {
-    ::fidl::WireRequest<::test_protocolpayloads::MainProtocol::TwoWayLocal>
+    ::fidl::internal::TransactionalRequest<
+        ::test_protocolpayloads::MainProtocol::TwoWayLocal>
         _request{a, b};
     return ::fidl::WireUnownedResult<
         ::test_protocolpayloads::MainProtocol::TwoWayLocal>(
@@ -3464,7 +5033,7 @@ class ::fidl::internal::WireSyncBufferClientImpl<
   ::fidl::WireUnownedResult<
       ::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>
   TwoWayLocalWithError(uint32_t a, uint32_t b) {
-    ::fidl::WireRequest<
+    ::fidl::internal::TransactionalRequest<
         ::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>
         _request{a, b};
     return ::fidl::WireUnownedResult<
@@ -3476,7 +5045,8 @@ class ::fidl::internal::WireSyncBufferClientImpl<
   // `.buffer()`.
   ::fidl::WireUnownedResult<::test_protocolpayloads::MainProtocol::OneWayImport>
   OneWayImport(int32_t a) {
-    ::fidl::WireRequest<::test_protocolpayloads::MainProtocol::OneWayImport>
+    ::fidl::internal::TransactionalRequest<
+        ::test_protocolpayloads::MainProtocol::OneWayImport>
         _request{a};
     return ::fidl::WireUnownedResult<
         ::test_protocolpayloads::MainProtocol::OneWayImport>(
@@ -3487,7 +5057,8 @@ class ::fidl::internal::WireSyncBufferClientImpl<
   // `.buffer()`.
   ::fidl::WireUnownedResult<::test_protocolpayloads::MainProtocol::TwoWayImport>
   TwoWayImport(int32_t a) {
-    ::fidl::WireRequest<::test_protocolpayloads::MainProtocol::TwoWayImport>
+    ::fidl::internal::TransactionalRequest<
+        ::test_protocolpayloads::MainProtocol::TwoWayImport>
         _request{a};
     return ::fidl::WireUnownedResult<
         ::test_protocolpayloads::MainProtocol::TwoWayImport>(
@@ -3499,7 +5070,7 @@ class ::fidl::internal::WireSyncBufferClientImpl<
   ::fidl::WireUnownedResult<
       ::test_protocolpayloads::MainProtocol::TwoWayImportWithError>
   TwoWayImportWithError(int32_t a) {
-    ::fidl::WireRequest<
+    ::fidl::internal::TransactionalRequest<
         ::test_protocolpayloads::MainProtocol::TwoWayImportWithError>
         _request{a};
     return ::fidl::WireUnownedResult<
@@ -3511,7 +5082,8 @@ class ::fidl::internal::WireSyncBufferClientImpl<
   // `.buffer()`.
   ::fidl::WireUnownedResult<::test_protocolpayloads::MainProtocol::OneWayAnon>
   OneWayAnon(uint32_t a, uint32_t b) {
-    ::fidl::WireRequest<::test_protocolpayloads::MainProtocol::OneWayAnon>
+    ::fidl::internal::TransactionalRequest<
+        ::test_protocolpayloads::MainProtocol::OneWayAnon>
         _request{a, b};
     return ::fidl::WireUnownedResult<
         ::test_protocolpayloads::MainProtocol::OneWayAnon>(
@@ -3522,7 +5094,8 @@ class ::fidl::internal::WireSyncBufferClientImpl<
   // `.buffer()`.
   ::fidl::WireUnownedResult<::test_protocolpayloads::MainProtocol::TwoWayAnon>
   TwoWayAnon(uint32_t a, uint32_t b) {
-    ::fidl::WireRequest<::test_protocolpayloads::MainProtocol::TwoWayAnon>
+    ::fidl::internal::TransactionalRequest<
+        ::test_protocolpayloads::MainProtocol::TwoWayAnon>
         _request{a, b};
     return ::fidl::WireUnownedResult<
         ::test_protocolpayloads::MainProtocol::TwoWayAnon>(
@@ -3534,7 +5107,7 @@ class ::fidl::internal::WireSyncBufferClientImpl<
   ::fidl::WireUnownedResult<
       ::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>
   TwoWayAnonWithError(uint32_t a, uint32_t b) {
-    ::fidl::WireRequest<
+    ::fidl::internal::TransactionalRequest<
         ::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>
         _request{a, b};
     return ::fidl::WireUnownedResult<
@@ -3979,7 +5552,6 @@ class ::fidl::internal::WireWeakAsyncClientImpl<
                       ::fidl::WireClientCallback<
                           ::test_protocolpayloads::MainProtocol::TwoWayComposed>
                           _cb);
-
   void TwoWayComposed(
       int32_t a,
       ::fit::callback<void(
@@ -3993,7 +5565,6 @@ class ::fidl::internal::WireWeakAsyncClientImpl<
       ::fidl::WireClientCallback<
           ::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>
           _cb);
-
   void TwoWayComposedWithError(
       int32_t a,
       ::fit::callback<
@@ -4006,7 +5577,6 @@ class ::fidl::internal::WireWeakAsyncClientImpl<
                    ::fidl::WireClientCallback<
                        ::test_protocolpayloads::MainProtocol::TwoWayLocal>
                        _cb);
-
   void TwoWayLocal(
       uint32_t a, uint32_t b,
       ::fit::callback<
@@ -4020,7 +5590,6 @@ class ::fidl::internal::WireWeakAsyncClientImpl<
       ::fidl::WireClientCallback<
           ::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>
           _cb);
-
   void TwoWayLocalWithError(
       uint32_t a, uint32_t b,
       ::fit::callback<
@@ -4033,7 +5602,6 @@ class ::fidl::internal::WireWeakAsyncClientImpl<
                     ::fidl::WireClientCallback<
                         ::test_protocolpayloads::MainProtocol::TwoWayImport>
                         _cb);
-
   void TwoWayImport(
       int32_t a,
       ::fit::callback<
@@ -4047,7 +5615,6 @@ class ::fidl::internal::WireWeakAsyncClientImpl<
       ::fidl::WireClientCallback<
           ::test_protocolpayloads::MainProtocol::TwoWayImportWithError>
           _cb);
-
   void TwoWayImportWithError(
       int32_t a,
       ::fit::callback<
@@ -4060,7 +5627,6 @@ class ::fidl::internal::WireWeakAsyncClientImpl<
                   ::fidl::WireClientCallback<
                       ::test_protocolpayloads::MainProtocol::TwoWayAnon>
                       _cb);
-
   void TwoWayAnon(
       uint32_t a, uint32_t b,
       ::fit::callback<
@@ -4074,7 +5640,6 @@ class ::fidl::internal::WireWeakAsyncClientImpl<
       ::fidl::WireClientCallback<
           ::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>
           _cb);
-
   void TwoWayAnonWithError(
       uint32_t a, uint32_t b,
       ::fit::callback<

@@ -485,7 +485,7 @@ void Device::DeviceObjectNotificationHandler(ACPI_HANDLE object, uint32_t value,
 
   device->pending_notify_count_.fetch_add(1, std::memory_order_acq_rel);
   if (device->notify_handler_ && device->notify_handler_->is_valid()) {
-    device->notify_handler_.value()->Handle(value, [device](auto* response) {
+    device->notify_handler_.value()->Handle(value, [device]() {
       device->pending_notify_count_.fetch_sub(1, std::memory_order_acq_rel);
     });
   }

@@ -16,33 +16,37 @@ extern "C" const fidl_type_t
 }  // namespace test_anonymous
 ::fidl::WireResult<::test_anonymous::SomeProtocol::SomeMethod>::WireResult(
     ::fidl::UnownedClientEnd<::test_anonymous::SomeProtocol> client,
-    ::fidl::WireRequest<::test_anonymous::SomeProtocol::SomeMethod>* request) {
+    ::fidl::internal::TransactionalRequest<
+        ::test_anonymous::SomeProtocol::SomeMethod>* request) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::unstable::OwnedEncodedMessage<
-      ::fidl::WireRequest<::test_anonymous::SomeProtocol::SomeMethod>,
+      ::fidl::internal::TransactionalRequest<
+          ::test_anonymous::SomeProtocol::SomeMethod>,
       ::fidl::internal::ChannelTransport>
       request_message(::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
-  outgoing
-      .Call<::fidl::WireResponse<::test_anonymous::SomeProtocol::SomeMethod>>(
-          client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()));
+  outgoing.Call<::fidl::internal::TransactionalResponse<
+      ::test_anonymous::SomeProtocol::SomeMethod>>(
+      client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()));
   SetResult(outgoing);
 }
 
 ::fidl::WireResult<::test_anonymous::SomeProtocol::SomeMethod>::WireResult(
     ::fidl::UnownedClientEnd<::test_anonymous::SomeProtocol> client,
-    ::fidl::WireRequest<::test_anonymous::SomeProtocol::SomeMethod>* request,
+    ::fidl::internal::TransactionalRequest<
+        ::test_anonymous::SomeProtocol::SomeMethod>* request,
     zx_time_t deadline) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::unstable::OwnedEncodedMessage<
-      ::fidl::WireRequest<::test_anonymous::SomeProtocol::SomeMethod>,
+      ::fidl::internal::TransactionalRequest<
+          ::test_anonymous::SomeProtocol::SomeMethod>,
       ::fidl::internal::ChannelTransport>
       request_message(::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
-  outgoing
-      .Call<::fidl::WireResponse<::test_anonymous::SomeProtocol::SomeMethod>>(
-          client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()),
-          fidl::CallOptions{.deadline = deadline});
+  outgoing.Call<::fidl::internal::TransactionalResponse<
+      ::test_anonymous::SomeProtocol::SomeMethod>>(
+      client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()),
+      fidl::CallOptions{.deadline = deadline});
   SetResult(outgoing);
 }
 namespace test_anonymous {
@@ -54,8 +58,8 @@ namespace test_anonymous {
     WireUnownedResult(
         ::fidl::UnownedClientEnd<::test_anonymous::SomeProtocol> client_end,
         ::fidl::internal::AnyBufferAllocator& allocator,
-        ::fidl::WireRequest<::test_anonymous::SomeProtocol::SomeMethod>*
-            request) {
+        ::fidl::internal::TransactionalRequest<
+            ::test_anonymous::SomeProtocol::SomeMethod>* request) {
   constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<
       ::test_anonymous::SomeProtocol::SomeMethod>();
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation =
@@ -65,21 +69,23 @@ namespace test_anonymous {
     return;
   }
   uint8_t* buffer = allocation->data;
-  constexpr uint32_t request_byte_capacity = ::fidl::MaxSizeInChannel<
-      ::fidl::WireRequest<::test_anonymous::SomeProtocol::SomeMethod>,
-      ::fidl::MessageDirection::kSending>();
+  constexpr uint32_t request_byte_capacity =
+      ::fidl::MaxSizeInChannel<::fidl::internal::TransactionalRequest<
+                                   ::test_anonymous::SomeProtocol::SomeMethod>,
+                               ::fidl::MessageDirection::kSending>();
   uint8_t* request_bytes = buffer;
   static_assert(buffer_size > request_byte_capacity);
   uint32_t response_byte_capacity = buffer_size - request_byte_capacity;
   uint8_t* response_bytes = &buffer[request_byte_capacity];
 
   ::fidl::unstable::UnownedEncodedMessage<
-      ::fidl::WireRequest<::test_anonymous::SomeProtocol::SomeMethod>>
+      ::fidl::internal::TransactionalRequest<
+          ::test_anonymous::SomeProtocol::SomeMethod>>
       request_message(request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
-  outgoing
-      .Call<::fidl::WireResponse<::test_anonymous::SomeProtocol::SomeMethod>>(
-          client_end.handle(), response_bytes, response_byte_capacity);
+  outgoing.Call<::fidl::internal::TransactionalResponse<
+      ::test_anonymous::SomeProtocol::SomeMethod>>(
+      client_end.handle(), response_bytes, response_byte_capacity);
   bytes_ = response_bytes;
   ::fidl::Result::operator=(outgoing);
 }
@@ -114,11 +120,13 @@ void fidl::internal::WireWeakAsyncClientImpl<::test_anonymous::SomeProtocol>::
   };
 
   auto* _context = new ResponseContext(std::move(_cb));
-  ::fidl::WireRequest<::test_anonymous::SomeProtocol::SomeMethod> _request{
-      union_member, table_member};
+  ::fidl::internal::TransactionalRequest<
+      ::test_anonymous::SomeProtocol::SomeMethod>
+      _request{union_member, table_member};
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::unstable::OwnedEncodedMessage<
-      ::fidl::WireRequest<::test_anonymous::SomeProtocol::SomeMethod>,
+      ::fidl::internal::TransactionalRequest<
+          ::test_anonymous::SomeProtocol::SomeMethod>,
       ::fidl::internal::ChannelTransport>
       _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
   _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
@@ -154,11 +162,13 @@ void fidl::internal::WireWeakAsyncClientImpl<::test_anonymous::SomeProtocol>::
   };
 
   auto* _context = new ResponseContext(std::move(_cb));
-  ::fidl::WireRequest<::test_anonymous::SomeProtocol::SomeMethod> _request{
-      union_member, table_member};
+  ::fidl::internal::TransactionalRequest<
+      ::test_anonymous::SomeProtocol::SomeMethod>
+      _request{union_member, table_member};
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::unstable::OwnedEncodedMessage<
-      ::fidl::WireRequest<::test_anonymous::SomeProtocol::SomeMethod>,
+      ::fidl::internal::TransactionalRequest<
+          ::test_anonymous::SomeProtocol::SomeMethod>,
       ::fidl::internal::ChannelTransport>
       _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
   _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
@@ -180,10 +190,12 @@ void fidl::internal::
     return;
   }
 
-  ::fidl::WireRequest<::test_anonymous::SomeProtocol::SomeMethod> _request{
-      union_member, table_member};
+  ::fidl::internal::TransactionalRequest<
+      ::test_anonymous::SomeProtocol::SomeMethod>
+      _request{union_member, table_member};
   ::fidl::unstable::UnownedEncodedMessage<
-      ::fidl::WireRequest<::test_anonymous::SomeProtocol::SomeMethod>>
+      ::fidl::internal::TransactionalRequest<
+          ::test_anonymous::SomeProtocol::SomeMethod>>
       _request_message(_allocation->data, _buffer_size, &_request);
   _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
 }
@@ -194,7 +206,8 @@ void fidl::internal::
         ::test_anonymous::wire::TableMember table_member) {
   return _client_base()->MakeSyncCallWith(
       [&](std::shared_ptr<::fidl::internal::AnyTransport> _transport) {
-        ::fidl::WireRequest<::test_anonymous::SomeProtocol::SomeMethod>
+        ::fidl::internal::TransactionalRequest<
+            ::test_anonymous::SomeProtocol::SomeMethod>
             _request{union_member, table_member};
         return ::fidl::WireResult<::test_anonymous::SomeProtocol::SomeMethod>(
             ::fidl::UnownedClientEnd<::test_anonymous::SomeProtocol>(
@@ -273,12 +286,13 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<
            internal::IncomingTransportContext transport_context,
            ::fidl::Transaction* txn) {
           ::fidl::unstable::DecodedMessage<
-              ::fidl::WireRequest<::test_anonymous::SomeProtocol::SomeMethod>>
+              ::fidl::internal::TransactionalRequest<
+                  ::test_anonymous::SomeProtocol::SomeMethod>>
               decoded{std::move(msg)};
           if (unlikely(!decoded.ok())) {
             return decoded.status();
           }
-          auto* primary = decoded.PrimaryObject();
+          auto* primary = &decoded.PrimaryObject()->body;
           ::fidl::internal::WireCompleter<
               ::test_anonymous::SomeProtocol::SomeMethod>::Sync completer(txn);
           reinterpret_cast<::fidl::WireServer<::test_anonymous::SomeProtocol>*>(
@@ -324,11 +338,13 @@ void fidl::WireServer<::test_anonymous::SomeProtocol>::dispatch_message(
 ::fidl::Result fidl::internal::
     WireCompleterBase<::test_anonymous::SomeProtocol::SomeMethod>::Reply(
         ::test_anonymous::wire::SomeProtocolSomeMethodResult result) {
-  ::fidl::WireResponse<::test_anonymous::SomeProtocol::SomeMethod> _response{
-      result};
+  ::fidl::internal::TransactionalResponse<
+      ::test_anonymous::SomeProtocol::SomeMethod>
+      _response{result};
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::unstable::OwnedEncodedMessage<
-      ::fidl::WireResponse<::test_anonymous::SomeProtocol::SomeMethod>,
+      ::fidl::internal::TransactionalResponse<
+          ::test_anonymous::SomeProtocol::SomeMethod>,
       ::fidl::internal::ChannelTransport>
       _response_message{::fidl::internal::AllowUnownedInputRef{}, &_response};
   return ::fidl::internal::
@@ -357,10 +373,12 @@ void fidl::WireServer<::test_anonymous::SomeProtocol>::dispatch_message(
     WireCompleterBase<::test_anonymous::SomeProtocol::SomeMethod>::Reply(
         ::fidl::BufferSpan _buffer,
         ::test_anonymous::wire::SomeProtocolSomeMethodResult result) {
-  ::fidl::WireResponse<::test_anonymous::SomeProtocol::SomeMethod> _response{
-      result};
+  ::fidl::internal::TransactionalResponse<
+      ::test_anonymous::SomeProtocol::SomeMethod>
+      _response{result};
   ::fidl::unstable::UnownedEncodedMessage<
-      ::fidl::WireResponse<::test_anonymous::SomeProtocol::SomeMethod>>
+      ::fidl::internal::TransactionalResponse<
+          ::test_anonymous::SomeProtocol::SomeMethod>>
       _response_message(_buffer.data, _buffer.capacity, &_response);
   return CompleterBase::SendReply(&_response_message.GetOutgoingMessage(),
                                   ::fidl::internal::OutgoingTransportContext());
@@ -378,15 +396,15 @@ void fidl::WireServer<::test_anonymous::SomeProtocol>::dispatch_message(
 }
 #endif  // __Fuchsia__
 
-void ::fidl::WireRequest<
+void ::fidl::internal::TransactionalRequest<
     ::test_anonymous::SomeProtocol::SomeMethod>::_InitHeader() {
-  fidl_init_txn_header(&_hdr, 0,
+  fidl_init_txn_header(&header, 0,
                        ::test_anonymous::kSomeProtocol_SomeMethod_Ordinal);
 }
 
-void ::fidl::WireResponse<
+void ::fidl::internal::TransactionalResponse<
     ::test_anonymous::SomeProtocol::SomeMethod>::_InitHeader() {
-  fidl_init_txn_header(&_hdr, 0,
+  fidl_init_txn_header(&header, 0,
                        ::test_anonymous::kSomeProtocol_SomeMethod_Ordinal);
 }
 

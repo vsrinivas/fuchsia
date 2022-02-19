@@ -87,12 +87,21 @@ struct ::fidl::internal::WireServerDispatcher<::test_protocolrequest::Parent>
 
 template <>
 struct ::fidl::WireRequest<::test_protocolrequest::Parent::GetChild> final {
-  FIDL_ALIGNDECL
-  fidl_message_header_t _hdr;
-
-  WireRequest() { _InitHeader(); }
+  WireRequest() = default;
   using ResponseType =
       ::fidl::WireResponse<::test_protocolrequest::Parent::GetChild>;
+};
+
+template <>
+struct ::fidl::internal::TransactionalRequest<
+    ::test_protocolrequest::Parent::GetChild>
+    final {
+  FIDL_ALIGNDECL
+  fidl_message_header_t header;
+
+  TransactionalRequest() { _InitHeader(); }
+  using ResponseType = ::fidl::internal::TransactionalResponse<
+      ::test_protocolrequest::Parent::GetChild>;
 
  private:
   void _InitHeader();
@@ -102,15 +111,30 @@ struct ::fidl::WireRequest<::test_protocolrequest::Parent::GetChild> final {
 template <>
 struct ::fidl::WireResponse<::test_protocolrequest::Parent::GetChild> final {
   FIDL_ALIGNDECL
-  fidl_message_header_t _hdr;
   ::fidl::ClientEnd<::test_protocolrequest::Child> c;
 
   explicit WireResponse(::fidl::ClientEnd<::test_protocolrequest::Child>&& c)
-      : c(std::move(c)) {
+      : c(std::move(c)) {}
+  WireResponse() = default;
+  void _CloseHandles();
+};
+
+template <>
+struct ::fidl::internal::TransactionalResponse<
+    ::test_protocolrequest::Parent::GetChild>
+    final {
+  FIDL_ALIGNDECL
+  fidl_message_header_t header;
+
+  ::fidl::WireResponse<::test_protocolrequest::Parent::GetChild> body;
+  explicit TransactionalResponse(
+      ::fidl::ClientEnd<::test_protocolrequest::Child>&& c)
+      : body(::fidl::WireResponse<::test_protocolrequest::Parent::GetChild>(
+            std::move(c))) {
     _InitHeader();
   }
-  WireResponse() { _InitHeader(); }
-  void _CloseHandles();
+  TransactionalResponse() { _InitHeader(); }
+  void _CloseHandles() { body._CloseHandles(); }
 
  private:
   void _InitHeader();
@@ -120,12 +144,21 @@ struct ::fidl::WireResponse<::test_protocolrequest::Parent::GetChild> final {
 template <>
 struct ::fidl::WireRequest<::test_protocolrequest::Parent::GetChildRequest>
     final {
-  FIDL_ALIGNDECL
-  fidl_message_header_t _hdr;
-
-  WireRequest() { _InitHeader(); }
+  WireRequest() = default;
   using ResponseType =
       ::fidl::WireResponse<::test_protocolrequest::Parent::GetChildRequest>;
+};
+
+template <>
+struct ::fidl::internal::TransactionalRequest<
+    ::test_protocolrequest::Parent::GetChildRequest>
+    final {
+  FIDL_ALIGNDECL
+  fidl_message_header_t header;
+
+  TransactionalRequest() { _InitHeader(); }
+  using ResponseType = ::fidl::internal::TransactionalResponse<
+      ::test_protocolrequest::Parent::GetChildRequest>;
 
  private:
   void _InitHeader();
@@ -136,15 +169,30 @@ template <>
 struct ::fidl::WireResponse<::test_protocolrequest::Parent::GetChildRequest>
     final {
   FIDL_ALIGNDECL
-  fidl_message_header_t _hdr;
   ::fidl::ServerEnd<::test_protocolrequest::Child> r;
 
   explicit WireResponse(::fidl::ServerEnd<::test_protocolrequest::Child>&& r)
-      : r(std::move(r)) {
+      : r(std::move(r)) {}
+  WireResponse() = default;
+  void _CloseHandles();
+};
+
+template <>
+struct ::fidl::internal::TransactionalResponse<
+    ::test_protocolrequest::Parent::GetChildRequest>
+    final {
+  FIDL_ALIGNDECL
+  fidl_message_header_t header;
+
+  ::fidl::WireResponse<::test_protocolrequest::Parent::GetChildRequest> body;
+  explicit TransactionalResponse(
+      ::fidl::ServerEnd<::test_protocolrequest::Child>&& r)
+      : body(::fidl::WireResponse<
+             ::test_protocolrequest::Parent::GetChildRequest>(std::move(r))) {
     _InitHeader();
   }
-  WireResponse() { _InitHeader(); }
-  void _CloseHandles();
+  TransactionalResponse() { _InitHeader(); }
+  void _CloseHandles() { body._CloseHandles(); }
 
  private:
   void _InitHeader();
@@ -156,15 +204,30 @@ struct ::fidl::WireResponse<::test_protocolrequest::Parent::GetChildRequest>
 template <>
 struct ::fidl::WireRequest<::test_protocolrequest::Parent::TakeChild> final {
   FIDL_ALIGNDECL
-  fidl_message_header_t _hdr;
   ::fidl::ClientEnd<::test_protocolrequest::Child> c;
 
   explicit WireRequest(::fidl::ClientEnd<::test_protocolrequest::Child>&& c)
-      : c(std::move(c)) {
+      : c(std::move(c)) {}
+  WireRequest() = default;
+  void _CloseHandles();
+};
+
+template <>
+struct ::fidl::internal::TransactionalRequest<
+    ::test_protocolrequest::Parent::TakeChild>
+    final {
+  FIDL_ALIGNDECL
+  fidl_message_header_t header;
+
+  ::fidl::WireRequest<::test_protocolrequest::Parent::TakeChild> body;
+  explicit TransactionalRequest(
+      ::fidl::ClientEnd<::test_protocolrequest::Child>&& c)
+      : body(::fidl::WireRequest<::test_protocolrequest::Parent::TakeChild>(
+            std::move(c))) {
     _InitHeader();
   }
-  WireRequest() { _InitHeader(); }
-  void _CloseHandles();
+  TransactionalRequest() { _InitHeader(); }
+  void _CloseHandles() { body._CloseHandles(); }
 
  private:
   void _InitHeader();
@@ -177,15 +240,30 @@ template <>
 struct ::fidl::WireRequest<::test_protocolrequest::Parent::TakeChildRequest>
     final {
   FIDL_ALIGNDECL
-  fidl_message_header_t _hdr;
   ::fidl::ServerEnd<::test_protocolrequest::Child> r;
 
   explicit WireRequest(::fidl::ServerEnd<::test_protocolrequest::Child>&& r)
-      : r(std::move(r)) {
+      : r(std::move(r)) {}
+  WireRequest() = default;
+  void _CloseHandles();
+};
+
+template <>
+struct ::fidl::internal::TransactionalRequest<
+    ::test_protocolrequest::Parent::TakeChildRequest>
+    final {
+  FIDL_ALIGNDECL
+  fidl_message_header_t header;
+
+  ::fidl::WireRequest<::test_protocolrequest::Parent::TakeChildRequest> body;
+  explicit TransactionalRequest(
+      ::fidl::ServerEnd<::test_protocolrequest::Child>&& r)
+      : body(::fidl::WireRequest<
+             ::test_protocolrequest::Parent::TakeChildRequest>(std::move(r))) {
     _InitHeader();
   }
-  WireRequest() { _InitHeader(); }
-  void _CloseHandles();
+  TransactionalRequest() { _InitHeader(); }
+  void _CloseHandles() { body._CloseHandles(); }
 
  private:
   void _InitHeader();
@@ -195,16 +273,22 @@ struct ::fidl::WireRequest<::test_protocolrequest::Parent::TakeChildRequest>
 namespace fidl {
 
 template <>
+struct IsFidlType<::fidl::internal::TransactionalRequest<
+    ::test_protocolrequest::Parent::GetChild>> : public std::true_type {};
+template <>
 struct IsFidlType<::fidl::WireRequest<::test_protocolrequest::Parent::GetChild>>
     : public std::true_type {};
 template <>
-struct IsFidlMessage<
+struct IsFidlTransactionalMessage<::fidl::internal::TransactionalRequest<
+    ::test_protocolrequest::Parent::GetChild>> : public std::true_type {};
+template <>
+struct IsFidlTransactionalMessage<
     ::fidl::WireRequest<::test_protocolrequest::Parent::GetChild>>
-    : public std::true_type {};
+    : public std::false_type {};
 
 template <>
-struct TypeTraits<
-    ::fidl::WireRequest<::test_protocolrequest::Parent::GetChild>> {
+struct TypeTraits<::fidl::internal::TransactionalRequest<
+    ::test_protocolrequest::Parent::GetChild>> {
   static constexpr const fidl_type_t* kType = nullptr;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kPrimarySize =
@@ -219,28 +303,55 @@ struct TypeTraits<
       ::fidl::internal::TransactionalMessageKind::kRequest;
 };
 
-static_assert(
-    sizeof(::fidl::WireRequest<::test_protocolrequest::Parent::GetChild>) ==
-    TypeTraits<::fidl::WireRequest<::test_protocolrequest::Parent::GetChild>>::
-        kPrimarySize);
+static_assert(sizeof(::fidl::internal::TransactionalRequest<
+                     ::test_protocolrequest::Parent::GetChild>) ==
+              TypeTraits<::fidl::internal::TransactionalRequest<
+                  ::test_protocolrequest::Parent::GetChild>>::kPrimarySize);
+static_assert(offsetof(::fidl::internal::TransactionalRequest<
+                           ::test_protocolrequest::Parent::GetChild>,
+                       header) == 0);
 
+template <>
+struct TypeTraits<
+    ::fidl::WireRequest<::test_protocolrequest::Parent::GetChild>> {
+  static constexpr const fidl_type_t* kType = nullptr;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(0);
+  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(0);
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasFlexibleEnvelope = false;
+  static constexpr bool kHasPointer = false;
+  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
+      ::fidl::internal::TransactionalMessageKind::kRequest;
+};
+
+template <>
+struct IsFidlType<::fidl::internal::TransactionalResponse<
+    ::test_protocolrequest::Parent::GetChild>> : public std::true_type {};
 template <>
 struct IsFidlType<
     ::fidl::WireResponse<::test_protocolrequest::Parent::GetChild>>
     : public std::true_type {};
 template <>
-struct IsFidlMessage<
+struct IsFidlTransactionalMessage<::fidl::internal::TransactionalResponse<
+    ::test_protocolrequest::Parent::GetChild>> : public std::true_type {};
+template <>
+struct IsFidlTransactionalMessage<
     ::fidl::WireResponse<::test_protocolrequest::Parent::GetChild>>
-    : public std::true_type {};
+    : public std::false_type {};
 #ifdef __Fuchsia__
+template <>
+struct IsResource<::fidl::internal::TransactionalResponse<
+    ::test_protocolrequest::Parent::GetChild>> : public std::true_type {};
 template <>
 struct IsResource<
     ::fidl::WireResponse<::test_protocolrequest::Parent::GetChild>>
     : public std::true_type {};
 
 template <>
-struct TypeTraits<
-    ::fidl::WireResponse<::test_protocolrequest::Parent::GetChild>> {
+struct TypeTraits<::fidl::internal::TransactionalResponse<
+    ::test_protocolrequest::Parent::GetChild>> {
   static constexpr const fidl_type_t* kType =
       &::test_protocolrequest::
           test_protocolrequest_ParentGetChildTopResponseTable;
@@ -257,27 +368,62 @@ struct TypeTraits<
       ::fidl::internal::TransactionalMessageKind::kResponse;
 };
 
+static_assert(sizeof(::fidl::internal::TransactionalResponse<
+                     ::test_protocolrequest::Parent::GetChild>) ==
+              TypeTraits<::fidl::internal::TransactionalResponse<
+                  ::test_protocolrequest::Parent::GetChild>>::kPrimarySize);
+static_assert(offsetof(::fidl::internal::TransactionalResponse<
+                           ::test_protocolrequest::Parent::GetChild>,
+                       header) == 0);
+static_assert(offsetof(::fidl::internal::TransactionalResponse<
+                           ::test_protocolrequest::Parent::GetChild>,
+                       body) == sizeof(fidl_message_header_t));
+
+template <>
+struct TypeTraits<
+    ::fidl::WireResponse<::test_protocolrequest::Parent::GetChild>> {
+  static constexpr const fidl_type_t* kType =
+      &::test_protocolrequest::
+          test_protocolrequest_ParentGetChildTopResponseTable;
+  static constexpr uint32_t kMaxNumHandles = 1;
+  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(4);
+  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(4);
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasFlexibleEnvelope = false;
+  static constexpr bool kHasPointer = false;
+  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
+      ::fidl::internal::TransactionalMessageKind::kResponse;
+};
 static_assert(
     sizeof(::fidl::WireResponse<::test_protocolrequest::Parent::GetChild>) ==
     TypeTraits<::fidl::WireResponse<::test_protocolrequest::Parent::GetChild>>::
         kPrimarySize);
 static_assert(
     offsetof(::fidl::WireResponse<::test_protocolrequest::Parent::GetChild>,
-             c) == 0 + sizeof(fidl_message_header_t));
+             c) == 0);
 #endif  // __Fuchsia__
 
+template <>
+struct IsFidlType<::fidl::internal::TransactionalRequest<
+    ::test_protocolrequest::Parent::GetChildRequest>> : public std::true_type {
+};
 template <>
 struct IsFidlType<
     ::fidl::WireRequest<::test_protocolrequest::Parent::GetChildRequest>>
     : public std::true_type {};
 template <>
-struct IsFidlMessage<
+struct IsFidlTransactionalMessage<::fidl::internal::TransactionalRequest<
+    ::test_protocolrequest::Parent::GetChildRequest>> : public std::true_type {
+};
+template <>
+struct IsFidlTransactionalMessage<
     ::fidl::WireRequest<::test_protocolrequest::Parent::GetChildRequest>>
-    : public std::true_type {};
+    : public std::false_type {};
 
 template <>
-struct TypeTraits<
-    ::fidl::WireRequest<::test_protocolrequest::Parent::GetChildRequest>> {
+struct TypeTraits<::fidl::internal::TransactionalRequest<
+    ::test_protocolrequest::Parent::GetChildRequest>> {
   static constexpr const fidl_type_t* kType = nullptr;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kPrimarySize =
@@ -293,28 +439,58 @@ struct TypeTraits<
 };
 
 static_assert(
-    sizeof(
-        ::fidl::WireRequest<::test_protocolrequest::Parent::GetChildRequest>) ==
-    TypeTraits<::fidl::WireRequest<
+    sizeof(::fidl::internal::TransactionalRequest<
+           ::test_protocolrequest::Parent::GetChildRequest>) ==
+    TypeTraits<::fidl::internal::TransactionalRequest<
         ::test_protocolrequest::Parent::GetChildRequest>>::kPrimarySize);
+static_assert(offsetof(::fidl::internal::TransactionalRequest<
+                           ::test_protocolrequest::Parent::GetChildRequest>,
+                       header) == 0);
 
+template <>
+struct TypeTraits<
+    ::fidl::WireRequest<::test_protocolrequest::Parent::GetChildRequest>> {
+  static constexpr const fidl_type_t* kType = nullptr;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(0);
+  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(0);
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasFlexibleEnvelope = false;
+  static constexpr bool kHasPointer = false;
+  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
+      ::fidl::internal::TransactionalMessageKind::kRequest;
+};
+
+template <>
+struct IsFidlType<::fidl::internal::TransactionalResponse<
+    ::test_protocolrequest::Parent::GetChildRequest>> : public std::true_type {
+};
 template <>
 struct IsFidlType<
     ::fidl::WireResponse<::test_protocolrequest::Parent::GetChildRequest>>
     : public std::true_type {};
 template <>
-struct IsFidlMessage<
+struct IsFidlTransactionalMessage<::fidl::internal::TransactionalResponse<
+    ::test_protocolrequest::Parent::GetChildRequest>> : public std::true_type {
+};
+template <>
+struct IsFidlTransactionalMessage<
     ::fidl::WireResponse<::test_protocolrequest::Parent::GetChildRequest>>
-    : public std::true_type {};
+    : public std::false_type {};
 #ifdef __Fuchsia__
+template <>
+struct IsResource<::fidl::internal::TransactionalResponse<
+    ::test_protocolrequest::Parent::GetChildRequest>> : public std::true_type {
+};
 template <>
 struct IsResource<
     ::fidl::WireResponse<::test_protocolrequest::Parent::GetChildRequest>>
     : public std::true_type {};
 
 template <>
-struct TypeTraits<
-    ::fidl::WireResponse<::test_protocolrequest::Parent::GetChildRequest>> {
+struct TypeTraits<::fidl::internal::TransactionalResponse<
+    ::test_protocolrequest::Parent::GetChildRequest>> {
   static constexpr const fidl_type_t* kType =
       &::test_protocolrequest::
           test_protocolrequest_ParentGetChildRequestTopResponseTable;
@@ -332,6 +508,34 @@ struct TypeTraits<
 };
 
 static_assert(
+    sizeof(::fidl::internal::TransactionalResponse<
+           ::test_protocolrequest::Parent::GetChildRequest>) ==
+    TypeTraits<::fidl::internal::TransactionalResponse<
+        ::test_protocolrequest::Parent::GetChildRequest>>::kPrimarySize);
+static_assert(offsetof(::fidl::internal::TransactionalResponse<
+                           ::test_protocolrequest::Parent::GetChildRequest>,
+                       header) == 0);
+static_assert(offsetof(::fidl::internal::TransactionalResponse<
+                           ::test_protocolrequest::Parent::GetChildRequest>,
+                       body) == sizeof(fidl_message_header_t));
+
+template <>
+struct TypeTraits<
+    ::fidl::WireResponse<::test_protocolrequest::Parent::GetChildRequest>> {
+  static constexpr const fidl_type_t* kType =
+      &::test_protocolrequest::
+          test_protocolrequest_ParentGetChildRequestTopResponseTable;
+  static constexpr uint32_t kMaxNumHandles = 1;
+  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(4);
+  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(4);
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasFlexibleEnvelope = false;
+  static constexpr bool kHasPointer = false;
+  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
+      ::fidl::internal::TransactionalMessageKind::kResponse;
+};
+static_assert(
     sizeof(::fidl::WireResponse<
            ::test_protocolrequest::Parent::GetChildRequest>) ==
     TypeTraits<::fidl::WireResponse<
@@ -339,26 +543,35 @@ static_assert(
 static_assert(
     offsetof(
         ::fidl::WireResponse<::test_protocolrequest::Parent::GetChildRequest>,
-        r) == 0 + sizeof(fidl_message_header_t));
+        r) == 0);
 #endif  // __Fuchsia__
 
+template <>
+struct IsFidlType<::fidl::internal::TransactionalRequest<
+    ::test_protocolrequest::Parent::TakeChild>> : public std::true_type {};
 template <>
 struct IsFidlType<
     ::fidl::WireRequest<::test_protocolrequest::Parent::TakeChild>>
     : public std::true_type {};
 template <>
-struct IsFidlMessage<
+struct IsFidlTransactionalMessage<::fidl::internal::TransactionalRequest<
+    ::test_protocolrequest::Parent::TakeChild>> : public std::true_type {};
+template <>
+struct IsFidlTransactionalMessage<
     ::fidl::WireRequest<::test_protocolrequest::Parent::TakeChild>>
-    : public std::true_type {};
+    : public std::false_type {};
 #ifdef __Fuchsia__
+template <>
+struct IsResource<::fidl::internal::TransactionalRequest<
+    ::test_protocolrequest::Parent::TakeChild>> : public std::true_type {};
 template <>
 struct IsResource<
     ::fidl::WireRequest<::test_protocolrequest::Parent::TakeChild>>
     : public std::true_type {};
 
 template <>
-struct TypeTraits<
-    ::fidl::WireRequest<::test_protocolrequest::Parent::TakeChild>> {
+struct TypeTraits<::fidl::internal::TransactionalRequest<
+    ::test_protocolrequest::Parent::TakeChild>> {
   static constexpr const fidl_type_t* kType =
       &::test_protocolrequest::test_protocolrequest_ParentTakeChildRequestTable;
   static constexpr uint32_t kMaxNumHandles = 1;
@@ -374,32 +587,70 @@ struct TypeTraits<
       ::fidl::internal::TransactionalMessageKind::kRequest;
 };
 
+static_assert(sizeof(::fidl::internal::TransactionalRequest<
+                     ::test_protocolrequest::Parent::TakeChild>) ==
+              TypeTraits<::fidl::internal::TransactionalRequest<
+                  ::test_protocolrequest::Parent::TakeChild>>::kPrimarySize);
+static_assert(offsetof(::fidl::internal::TransactionalRequest<
+                           ::test_protocolrequest::Parent::TakeChild>,
+                       header) == 0);
+static_assert(offsetof(::fidl::internal::TransactionalRequest<
+                           ::test_protocolrequest::Parent::TakeChild>,
+                       body) == sizeof(fidl_message_header_t));
+
+template <>
+struct TypeTraits<
+    ::fidl::WireRequest<::test_protocolrequest::Parent::TakeChild>> {
+  static constexpr const fidl_type_t* kType =
+      &::test_protocolrequest::test_protocolrequest_ParentTakeChildRequestTable;
+  static constexpr uint32_t kMaxNumHandles = 1;
+  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(4);
+  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(4);
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasFlexibleEnvelope = false;
+  static constexpr bool kHasPointer = false;
+  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
+      ::fidl::internal::TransactionalMessageKind::kRequest;
+};
 static_assert(
     sizeof(::fidl::WireRequest<::test_protocolrequest::Parent::TakeChild>) ==
     TypeTraits<::fidl::WireRequest<::test_protocolrequest::Parent::TakeChild>>::
         kPrimarySize);
 static_assert(
     offsetof(::fidl::WireRequest<::test_protocolrequest::Parent::TakeChild>,
-             c) == 0 + sizeof(fidl_message_header_t));
+             c) == 0);
 #endif  // __Fuchsia__
 
+template <>
+struct IsFidlType<::fidl::internal::TransactionalRequest<
+    ::test_protocolrequest::Parent::TakeChildRequest>> : public std::true_type {
+};
 template <>
 struct IsFidlType<
     ::fidl::WireRequest<::test_protocolrequest::Parent::TakeChildRequest>>
     : public std::true_type {};
 template <>
-struct IsFidlMessage<
+struct IsFidlTransactionalMessage<::fidl::internal::TransactionalRequest<
+    ::test_protocolrequest::Parent::TakeChildRequest>> : public std::true_type {
+};
+template <>
+struct IsFidlTransactionalMessage<
     ::fidl::WireRequest<::test_protocolrequest::Parent::TakeChildRequest>>
-    : public std::true_type {};
+    : public std::false_type {};
 #ifdef __Fuchsia__
+template <>
+struct IsResource<::fidl::internal::TransactionalRequest<
+    ::test_protocolrequest::Parent::TakeChildRequest>> : public std::true_type {
+};
 template <>
 struct IsResource<
     ::fidl::WireRequest<::test_protocolrequest::Parent::TakeChildRequest>>
     : public std::true_type {};
 
 template <>
-struct TypeTraits<
-    ::fidl::WireRequest<::test_protocolrequest::Parent::TakeChildRequest>> {
+struct TypeTraits<::fidl::internal::TransactionalRequest<
+    ::test_protocolrequest::Parent::TakeChildRequest>> {
   static constexpr const fidl_type_t* kType =
       &::test_protocolrequest::
           test_protocolrequest_ParentTakeChildRequestRequestTable;
@@ -417,6 +668,34 @@ struct TypeTraits<
 };
 
 static_assert(
+    sizeof(::fidl::internal::TransactionalRequest<
+           ::test_protocolrequest::Parent::TakeChildRequest>) ==
+    TypeTraits<::fidl::internal::TransactionalRequest<
+        ::test_protocolrequest::Parent::TakeChildRequest>>::kPrimarySize);
+static_assert(offsetof(::fidl::internal::TransactionalRequest<
+                           ::test_protocolrequest::Parent::TakeChildRequest>,
+                       header) == 0);
+static_assert(offsetof(::fidl::internal::TransactionalRequest<
+                           ::test_protocolrequest::Parent::TakeChildRequest>,
+                       body) == sizeof(fidl_message_header_t));
+
+template <>
+struct TypeTraits<
+    ::fidl::WireRequest<::test_protocolrequest::Parent::TakeChildRequest>> {
+  static constexpr const fidl_type_t* kType =
+      &::test_protocolrequest::
+          test_protocolrequest_ParentTakeChildRequestRequestTable;
+  static constexpr uint32_t kMaxNumHandles = 1;
+  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(4);
+  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(4);
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasFlexibleEnvelope = false;
+  static constexpr bool kHasPointer = false;
+  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
+      ::fidl::internal::TransactionalMessageKind::kRequest;
+};
+static_assert(
     sizeof(::fidl::WireRequest<
            ::test_protocolrequest::Parent::TakeChildRequest>) ==
     TypeTraits<::fidl::WireRequest<
@@ -424,7 +703,7 @@ static_assert(
 static_assert(
     offsetof(
         ::fidl::WireRequest<::test_protocolrequest::Parent::TakeChildRequest>,
-        r) == 0 + sizeof(fidl_message_header_t));
+        r) == 0);
 #endif  // __Fuchsia__
 
 }  // namespace fidl
@@ -435,13 +714,13 @@ template <>
 class ::fidl::WireResult<::test_protocolrequest::Parent::GetChild> final
     : public ::fidl::Result {
  public:
-  WireResult(
-      ::fidl::UnownedClientEnd<::test_protocolrequest::Parent> client,
-      ::fidl::WireRequest<::test_protocolrequest::Parent::GetChild>* request);
-  WireResult(
-      ::fidl::UnownedClientEnd<::test_protocolrequest::Parent> client,
-      ::fidl::WireRequest<::test_protocolrequest::Parent::GetChild>* request,
-      zx_time_t _deadline);
+  WireResult(::fidl::UnownedClientEnd<::test_protocolrequest::Parent> client,
+             ::fidl::internal::TransactionalRequest<
+                 ::test_protocolrequest::Parent::GetChild>* request);
+  WireResult(::fidl::UnownedClientEnd<::test_protocolrequest::Parent> client,
+             ::fidl::internal::TransactionalRequest<
+                 ::test_protocolrequest::Parent::GetChild>* request,
+             zx_time_t _deadline);
   explicit WireResult(const ::fidl::Result& result) : ::fidl::Result(result) {}
   WireResult(WireResult&&) = delete;
   WireResult(const WireResult&) = delete;
@@ -452,19 +731,18 @@ class ::fidl::WireResult<::test_protocolrequest::Parent::GetChild> final
       Unwrap()->_CloseHandles();
     }
   }
-
   ::fidl::WireResponse<::test_protocolrequest::Parent::GetChild>* Unwrap() {
     ZX_DEBUG_ASSERT(ok());
     return reinterpret_cast<
         ::fidl::WireResponse<::test_protocolrequest::Parent::GetChild>*>(
-        bytes_.data());
+        bytes_.data() + sizeof(fidl_message_header_t));
   }
   const ::fidl::WireResponse<::test_protocolrequest::Parent::GetChild>* Unwrap()
       const {
     ZX_DEBUG_ASSERT(ok());
     return reinterpret_cast<
         const ::fidl::WireResponse<::test_protocolrequest::Parent::GetChild>*>(
-        bytes_.data());
+        bytes_.data() + sizeof(fidl_message_header_t));
   }
 
   ::fidl::WireResponse<::test_protocolrequest::Parent::GetChild>& value() {
@@ -501,14 +779,16 @@ class ::fidl::WireUnownedResult<::test_protocolrequest::Parent::GetChild> final
   explicit WireUnownedResult(
       ::fidl::UnownedClientEnd<::test_protocolrequest::Parent> client_end,
       ::fidl::internal::AnyBufferAllocator& allocator,
-      ::fidl::WireRequest<::test_protocolrequest::Parent::GetChild>* request);
+      ::fidl::internal::TransactionalRequest<
+          ::test_protocolrequest::Parent::GetChild>* request);
   explicit WireUnownedResult(
-      ::fidl::WireResponse<::test_protocolrequest::Parent::GetChild>* response)
+      ::fidl::internal::TransactionalResponse<
+          ::test_protocolrequest::Parent::GetChild>* response)
       : bytes_(reinterpret_cast<uint8_t*>(response)) {}
   explicit WireUnownedResult(const ::fidl::Result& result)
       : ::fidl::Result(result) {}
   explicit WireUnownedResult(
-      ::fidl::unstable::DecodedMessage<::fidl::WireResponse<
+      ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<
           ::test_protocolrequest::Parent::GetChild>>&& decoded,
       ::fidl::internal::IncomingTransportContext context)
       : ::fidl::Result(decoded) {
@@ -528,19 +808,18 @@ class ::fidl::WireUnownedResult<::test_protocolrequest::Parent::GetChild> final
       Unwrap()->_CloseHandles();
     }
   }
-
   ::fidl::WireResponse<::test_protocolrequest::Parent::GetChild>* Unwrap() {
     ZX_DEBUG_ASSERT(ok());
-    return reinterpret_cast<
-        ::fidl::WireResponse<::test_protocolrequest::Parent::GetChild>*>(
-        bytes_);
+    return &(reinterpret_cast<::fidl::internal::TransactionalResponse<
+                 ::test_protocolrequest::Parent::GetChild>*>(bytes_)
+                 ->body);
   }
   const ::fidl::WireResponse<::test_protocolrequest::Parent::GetChild>* Unwrap()
       const {
     ZX_DEBUG_ASSERT(ok());
-    return reinterpret_cast<
-        const ::fidl::WireResponse<::test_protocolrequest::Parent::GetChild>*>(
-        bytes_);
+    return &(reinterpret_cast<const ::fidl::internal::TransactionalResponse<
+                 ::test_protocolrequest::Parent::GetChild>*>(bytes_)
+                 ->body);
   }
 
   ::fidl::WireResponse<::test_protocolrequest::Parent::GetChild>& value() {
@@ -574,15 +853,13 @@ template <>
 class ::fidl::WireResult<::test_protocolrequest::Parent::GetChildRequest> final
     : public ::fidl::Result {
  public:
-  WireResult(
-      ::fidl::UnownedClientEnd<::test_protocolrequest::Parent> client,
-      ::fidl::WireRequest<::test_protocolrequest::Parent::GetChildRequest>*
-          request);
-  WireResult(
-      ::fidl::UnownedClientEnd<::test_protocolrequest::Parent> client,
-      ::fidl::WireRequest<::test_protocolrequest::Parent::GetChildRequest>*
-          request,
-      zx_time_t _deadline);
+  WireResult(::fidl::UnownedClientEnd<::test_protocolrequest::Parent> client,
+             ::fidl::internal::TransactionalRequest<
+                 ::test_protocolrequest::Parent::GetChildRequest>* request);
+  WireResult(::fidl::UnownedClientEnd<::test_protocolrequest::Parent> client,
+             ::fidl::internal::TransactionalRequest<
+                 ::test_protocolrequest::Parent::GetChildRequest>* request,
+             zx_time_t _deadline);
   explicit WireResult(const ::fidl::Result& result) : ::fidl::Result(result) {}
   WireResult(WireResult&&) = delete;
   WireResult(const WireResult&) = delete;
@@ -593,19 +870,19 @@ class ::fidl::WireResult<::test_protocolrequest::Parent::GetChildRequest> final
       Unwrap()->_CloseHandles();
     }
   }
-
   ::fidl::WireResponse<::test_protocolrequest::Parent::GetChildRequest>*
   Unwrap() {
     ZX_DEBUG_ASSERT(ok());
     return reinterpret_cast<
         ::fidl::WireResponse<::test_protocolrequest::Parent::GetChildRequest>*>(
-        bytes_.data());
+        bytes_.data() + sizeof(fidl_message_header_t));
   }
   const ::fidl::WireResponse<::test_protocolrequest::Parent::GetChildRequest>*
   Unwrap() const {
     ZX_DEBUG_ASSERT(ok());
     return reinterpret_cast<const ::fidl::WireResponse<
-        ::test_protocolrequest::Parent::GetChildRequest>*>(bytes_.data());
+        ::test_protocolrequest::Parent::GetChildRequest>*>(
+        bytes_.data() + sizeof(fidl_message_header_t));
   }
 
   ::fidl::WireResponse<::test_protocolrequest::Parent::GetChildRequest>&
@@ -645,16 +922,16 @@ class ::fidl::WireUnownedResult<::test_protocolrequest::Parent::GetChildRequest>
   explicit WireUnownedResult(
       ::fidl::UnownedClientEnd<::test_protocolrequest::Parent> client_end,
       ::fidl::internal::AnyBufferAllocator& allocator,
-      ::fidl::WireRequest<::test_protocolrequest::Parent::GetChildRequest>*
-          request);
+      ::fidl::internal::TransactionalRequest<
+          ::test_protocolrequest::Parent::GetChildRequest>* request);
   explicit WireUnownedResult(
-      ::fidl::WireResponse<::test_protocolrequest::Parent::GetChildRequest>*
-          response)
+      ::fidl::internal::TransactionalResponse<
+          ::test_protocolrequest::Parent::GetChildRequest>* response)
       : bytes_(reinterpret_cast<uint8_t*>(response)) {}
   explicit WireUnownedResult(const ::fidl::Result& result)
       : ::fidl::Result(result) {}
   explicit WireUnownedResult(
-      ::fidl::unstable::DecodedMessage<::fidl::WireResponse<
+      ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<
           ::test_protocolrequest::Parent::GetChildRequest>>&& decoded,
       ::fidl::internal::IncomingTransportContext context)
       : ::fidl::Result(decoded) {
@@ -674,19 +951,19 @@ class ::fidl::WireUnownedResult<::test_protocolrequest::Parent::GetChildRequest>
       Unwrap()->_CloseHandles();
     }
   }
-
   ::fidl::WireResponse<::test_protocolrequest::Parent::GetChildRequest>*
   Unwrap() {
     ZX_DEBUG_ASSERT(ok());
-    return reinterpret_cast<
-        ::fidl::WireResponse<::test_protocolrequest::Parent::GetChildRequest>*>(
-        bytes_);
+    return &(reinterpret_cast<::fidl::internal::TransactionalResponse<
+                 ::test_protocolrequest::Parent::GetChildRequest>*>(bytes_)
+                 ->body);
   }
   const ::fidl::WireResponse<::test_protocolrequest::Parent::GetChildRequest>*
   Unwrap() const {
     ZX_DEBUG_ASSERT(ok());
-    return reinterpret_cast<const ::fidl::WireResponse<
-        ::test_protocolrequest::Parent::GetChildRequest>*>(bytes_);
+    return &(reinterpret_cast<const ::fidl::internal::TransactionalResponse<
+                 ::test_protocolrequest::Parent::GetChildRequest>*>(bytes_)
+                 ->body);
   }
 
   ::fidl::WireResponse<::test_protocolrequest::Parent::GetChildRequest>&
@@ -723,9 +1000,9 @@ template <>
 class ::fidl::WireResult<::test_protocolrequest::Parent::TakeChild> final
     : public ::fidl::Result {
  public:
-  WireResult(
-      ::fidl::UnownedClientEnd<::test_protocolrequest::Parent> client,
-      ::fidl::WireRequest<::test_protocolrequest::Parent::TakeChild>* request);
+  WireResult(::fidl::UnownedClientEnd<::test_protocolrequest::Parent> client,
+             ::fidl::internal::TransactionalRequest<
+                 ::test_protocolrequest::Parent::TakeChild>* request);
   explicit WireResult(const ::fidl::Result& result) : ::fidl::Result(result) {}
   WireResult(WireResult&&) = delete;
   WireResult(const WireResult&) = delete;
@@ -742,7 +1019,8 @@ class ::fidl::WireUnownedResult<::test_protocolrequest::Parent::TakeChild> final
   explicit WireUnownedResult(
       ::fidl::UnownedClientEnd<::test_protocolrequest::Parent> client_end,
       ::fidl::internal::AnyBufferAllocator& allocator,
-      ::fidl::WireRequest<::test_protocolrequest::Parent::TakeChild>* request);
+      ::fidl::internal::TransactionalRequest<
+          ::test_protocolrequest::Parent::TakeChild>* request);
   explicit WireUnownedResult(const ::fidl::Result& result)
       : ::fidl::Result(result) {}
   WireUnownedResult(WireUnownedResult&&) = delete;
@@ -755,10 +1033,9 @@ template <>
 class ::fidl::WireResult<::test_protocolrequest::Parent::TakeChildRequest> final
     : public ::fidl::Result {
  public:
-  WireResult(
-      ::fidl::UnownedClientEnd<::test_protocolrequest::Parent> client,
-      ::fidl::WireRequest<::test_protocolrequest::Parent::TakeChildRequest>*
-          request);
+  WireResult(::fidl::UnownedClientEnd<::test_protocolrequest::Parent> client,
+             ::fidl::internal::TransactionalRequest<
+                 ::test_protocolrequest::Parent::TakeChildRequest>* request);
   explicit WireResult(const ::fidl::Result& result) : ::fidl::Result(result) {}
   WireResult(WireResult&&) = delete;
   WireResult(const WireResult&) = delete;
@@ -776,8 +1053,8 @@ class ::fidl::WireUnownedResult<
   explicit WireUnownedResult(
       ::fidl::UnownedClientEnd<::test_protocolrequest::Parent> client_end,
       ::fidl::internal::AnyBufferAllocator& allocator,
-      ::fidl::WireRequest<::test_protocolrequest::Parent::TakeChildRequest>*
-          request);
+      ::fidl::internal::TransactionalRequest<
+          ::test_protocolrequest::Parent::TakeChildRequest>* request);
   explicit WireUnownedResult(const ::fidl::Result& result)
       : ::fidl::Result(result) {}
   WireUnownedResult(WireUnownedResult&&) = delete;
@@ -849,7 +1126,9 @@ class ::fidl::internal::WireSyncClientImpl<::test_protocolrequest::Parent> final
   // Allocates 40 bytes of message buffer on the stack. No heap allocation
   // necessary.
   ::fidl::WireResult<::test_protocolrequest::Parent::GetChild> GetChild() {
-    ::fidl::WireRequest<::test_protocolrequest::Parent::GetChild> _request{};
+    ::fidl::internal::TransactionalRequest<
+        ::test_protocolrequest::Parent::GetChild>
+        _request{};
     return ::fidl::WireResult<::test_protocolrequest::Parent::GetChild>(
         _client_end(), &_request);
   }
@@ -858,7 +1137,8 @@ class ::fidl::internal::WireSyncClientImpl<::test_protocolrequest::Parent> final
   // necessary.
   ::fidl::WireResult<::test_protocolrequest::Parent::GetChildRequest>
   GetChildRequest() {
-    ::fidl::WireRequest<::test_protocolrequest::Parent::GetChildRequest>
+    ::fidl::internal::TransactionalRequest<
+        ::test_protocolrequest::Parent::GetChildRequest>
         _request{};
     return ::fidl::WireResult<::test_protocolrequest::Parent::GetChildRequest>(
         _client_end(), &_request);
@@ -868,8 +1148,9 @@ class ::fidl::internal::WireSyncClientImpl<::test_protocolrequest::Parent> final
   // necessary.
   ::fidl::WireResult<::test_protocolrequest::Parent::TakeChild> TakeChild(
       ::fidl::ClientEnd<::test_protocolrequest::Child>&& c) {
-    ::fidl::WireRequest<::test_protocolrequest::Parent::TakeChild> _request{
-        std::move(c)};
+    ::fidl::internal::TransactionalRequest<
+        ::test_protocolrequest::Parent::TakeChild>
+        _request{std::move(c)};
     return ::fidl::WireResult<::test_protocolrequest::Parent::TakeChild>(
         _client_end(), &_request);
   }
@@ -878,7 +1159,8 @@ class ::fidl::internal::WireSyncClientImpl<::test_protocolrequest::Parent> final
   // necessary.
   ::fidl::WireResult<::test_protocolrequest::Parent::TakeChildRequest>
   TakeChildRequest(::fidl::ServerEnd<::test_protocolrequest::Child>&& r) {
-    ::fidl::WireRequest<::test_protocolrequest::Parent::TakeChildRequest>
+    ::fidl::internal::TransactionalRequest<
+        ::test_protocolrequest::Parent::TakeChildRequest>
         _request{std::move(r)};
     return ::fidl::WireResult<::test_protocolrequest::Parent::TakeChildRequest>(
         _client_end(), &_request);
@@ -901,7 +1183,9 @@ class ::fidl::internal::WireSyncBufferClientImpl<::test_protocolrequest::Parent>
   // `.buffer()`.
   ::fidl::WireUnownedResult<::test_protocolrequest::Parent::GetChild>
   GetChild() {
-    ::fidl::WireRequest<::test_protocolrequest::Parent::GetChild> _request{};
+    ::fidl::internal::TransactionalRequest<
+        ::test_protocolrequest::Parent::GetChild>
+        _request{};
     return ::fidl::WireUnownedResult<::test_protocolrequest::Parent::GetChild>(
         _client_end(), _allocator(), &_request);
   }
@@ -910,7 +1194,8 @@ class ::fidl::internal::WireSyncBufferClientImpl<::test_protocolrequest::Parent>
   // `.buffer()`.
   ::fidl::WireUnownedResult<::test_protocolrequest::Parent::GetChildRequest>
   GetChildRequest() {
-    ::fidl::WireRequest<::test_protocolrequest::Parent::GetChildRequest>
+    ::fidl::internal::TransactionalRequest<
+        ::test_protocolrequest::Parent::GetChildRequest>
         _request{};
     return ::fidl::WireUnownedResult<
         ::test_protocolrequest::Parent::GetChildRequest>(
@@ -921,8 +1206,9 @@ class ::fidl::internal::WireSyncBufferClientImpl<::test_protocolrequest::Parent>
   // `.buffer()`.
   ::fidl::WireUnownedResult<::test_protocolrequest::Parent::TakeChild>
   TakeChild(::fidl::ClientEnd<::test_protocolrequest::Child>&& c) {
-    ::fidl::WireRequest<::test_protocolrequest::Parent::TakeChild> _request{
-        std::move(c)};
+    ::fidl::internal::TransactionalRequest<
+        ::test_protocolrequest::Parent::TakeChild>
+        _request{std::move(c)};
     return ::fidl::WireUnownedResult<::test_protocolrequest::Parent::TakeChild>(
         _client_end(), _allocator(), &_request);
   }
@@ -931,7 +1217,8 @@ class ::fidl::internal::WireSyncBufferClientImpl<::test_protocolrequest::Parent>
   // `.buffer()`.
   ::fidl::WireUnownedResult<::test_protocolrequest::Parent::TakeChildRequest>
   TakeChildRequest(::fidl::ServerEnd<::test_protocolrequest::Child>&& r) {
-    ::fidl::WireRequest<::test_protocolrequest::Parent::TakeChildRequest>
+    ::fidl::internal::TransactionalRequest<
+        ::test_protocolrequest::Parent::TakeChildRequest>
         _request{std::move(r)};
     return ::fidl::WireUnownedResult<
         ::test_protocolrequest::Parent::TakeChildRequest>(
@@ -1223,7 +1510,6 @@ class ::fidl::internal::WireWeakAsyncClientImpl<::test_protocolrequest::Parent>
   // on the heap.
   void GetChild(
       ::fidl::WireClientCallback<::test_protocolrequest::Parent::GetChild> _cb);
-
   void GetChild(
       ::fit::callback<void(::fidl::WireResponse<
                            ::test_protocolrequest::Parent::GetChild>* response)>
@@ -1233,7 +1519,6 @@ class ::fidl::internal::WireWeakAsyncClientImpl<::test_protocolrequest::Parent>
   void GetChildRequest(::fidl::WireClientCallback<
                        ::test_protocolrequest::Parent::GetChildRequest>
                            _cb);
-
   void GetChildRequest(
       ::fit::callback<void(
           ::fidl::WireResponse<::test_protocolrequest::Parent::GetChildRequest>*

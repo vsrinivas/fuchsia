@@ -9,31 +9,50 @@
 {{- if .Response.IsResource }}
 {{- IfdefFuchsia -}}
 {{- end }}
+
 template<>
 struct {{ .WireResponse }} final {
 {{- range .ResponseAnonymousChildren }}
   using {{ .ScopedName }} = {{ .FlattenedName }};
 {{- end }}
 
+  {{ if .ResponseArgs }}
   FIDL_ALIGNDECL
-    {{- /* Add underscore to prevent name collision */}}
-  fidl_message_header_t _hdr;
     {{- range $index, $param := .ResponseArgs }}
   {{ $param.Type }} {{ $param.Name }};
     {{- end }}
 
-  {{ if .ResponseArgs }}
   explicit {{ .WireResponse.Self }}({{ RenderParams .ResponseArgs }})
-  {{ RenderInitMessage .ResponseArgs }} {
-  _InitHeader();
-  }
+  {{ RenderInitMessage .ResponseArgs }} {}
   {{- end }}
-  {{ .WireResponse.Self }}() {
-  _InitHeader();
-  }
+  {{ .WireResponse.Self }}() = default;
 
   {{- if .Response.IsResource }}
   void _CloseHandles();
+  {{- end }}
+};
+
+template<>
+struct {{ .WireTransactionalResponse }} final {
+  FIDL_ALIGNDECL
+  fidl_message_header_t header;
+  {{ if .ResponseArgs }}
+  {{ .WireResponse }} body;
+  explicit {{ .WireTransactionalResponse.Self }}({{ RenderParams .ResponseArgs }})
+  : body({{ .WireResponse }}({{ RenderForwardParams .ResponseArgs }})) {
+    _InitHeader();
+  }
+  {{- end }}
+  {{ .WireTransactionalResponse.Self }}() {
+    _InitHeader();
+  }
+
+  {{- if .Response.IsResource }}
+  void _CloseHandles() {
+    {{- if .ResponseArgs }}
+    body._CloseHandles();
+    {{- end }}
+  }
   {{- end }}
 
  private:
@@ -53,8 +72,8 @@ struct {{ .WireResponse }} final {
 {{- if .Response.IsResource }}
 {{- IfdefFuchsia -}}
 {{- end }}
-  void {{ .WireResponse }}::_InitHeader() {
-    fidl_init_txn_header(&_hdr, 0, {{ .OrdinalName }});
+  void {{ .WireTransactionalResponse }}::_InitHeader() {
+    fidl_init_txn_header(&header, 0, {{ .OrdinalName }});
   }
 
   {{ if .Response.IsResource }}

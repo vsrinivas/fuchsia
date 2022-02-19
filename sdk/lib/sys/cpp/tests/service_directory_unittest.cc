@@ -25,8 +25,9 @@ TEST(ServiceDirectoryTest, Control) {
   auto message = buffer.CreateEmptyIncomingMessage();
   message.Read(svc_server.get(), 0);
 
-  fidl::WireRequest<fio::Directory::Open> for_ordinal;
-  EXPECT_EQ(for_ordinal._hdr.ordinal, message.ordinal());
+  // TODO(fxbug.dev/94155): Stop relying on FIDL internals like TransactionalRequest.header.
+  fidl::internal::TransactionalRequest<fio::Directory::Open> for_ordinal;
+  EXPECT_EQ(for_ordinal.header.ordinal, message.ordinal());
 }
 
 TEST(ServiceDirectoryTest, CreateWithRequest) {
@@ -41,8 +42,9 @@ TEST(ServiceDirectoryTest, CreateWithRequest) {
   auto message = buffer.CreateEmptyIncomingMessage();
   message.Read(svc_server.get(), 0);
 
-  fidl::WireRequest<fio::Directory::Open> for_ordinal;
-  EXPECT_EQ(for_ordinal._hdr.ordinal, message.ordinal());
+  // TODO(fxbug.dev/94155): Stop relying on FIDL internals like TransactionalRequest.header.
+  fidl::internal::TransactionalRequest<fio::Directory::Open> for_ordinal;
+  EXPECT_EQ(for_ordinal.header.ordinal, message.ordinal());
 }
 
 TEST(ServiceDirectoryTest, Clone) {
@@ -57,8 +59,9 @@ TEST(ServiceDirectoryTest, Clone) {
   auto message = buffer.CreateEmptyIncomingMessage();
   message.Read(svc_server.get(), 0);
 
-  fidl::WireRequest<fio::Directory::Clone> for_ordinal;
-  EXPECT_EQ(for_ordinal._hdr.ordinal, message.ordinal());
+  // TODO(fxbug.dev/94155): Stop relying on FIDL internals like TransactionalRequest.header.
+  fidl::internal::TransactionalRequest<fio::Directory::Clone> for_ordinal;
+  EXPECT_EQ(for_ordinal.header.ordinal, message.ordinal());
 }
 
 TEST(ServiceDirectoryTest, Invalid) {

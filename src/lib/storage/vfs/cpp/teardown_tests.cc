@@ -96,10 +96,12 @@ class AsyncTearDownVnode : public FdCountVnode {
   zx_status_t status_for_sync_;
 };
 
+// TODO(fxbug.dev/94157): Stop relying on FIDL internals like TransactionalRequest.header.
 void SendSync(fidl::UnownedClientEnd<fuchsia_io::Node> client) {
   FIDL_ALIGNDECL
-  fidl::WireRequest<fuchsia_io::Node::Sync> request;
-  fidl::unstable::OwnedEncodedMessage<fidl::WireRequest<fuchsia_io::Node::Sync>> encoded(&request);
+  fidl::internal::TransactionalRequest<fuchsia_io::Node::Sync> request;
+  fidl::unstable::OwnedEncodedMessage<fidl::internal::TransactionalRequest<fuchsia_io::Node::Sync>>
+      encoded(&request);
   ASSERT_OK(encoded.status());
   encoded.GetOutgoingMessage().set_txid(5);
   encoded.Write(zx::unowned_channel(client.handle()));

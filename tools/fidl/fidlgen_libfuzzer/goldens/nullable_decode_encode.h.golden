@@ -57,18 +57,20 @@ inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoderForType, 10>
         },
 
         ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name =
-                "::fidl::WireRequest<::test_nullable::SimpleProtocol::Add>",
+            .fidl_type_name = "::fidl::internal::TransactionalRequest<::test_"
+                              "nullable::SimpleProtocol::Add>",
             .has_flexible_envelope = false,
             .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<
-                ::fidl::WireRequest<::test_nullable::SimpleProtocol::Add>>,
+                ::fidl::internal::TransactionalRequest<
+                    ::test_nullable::SimpleProtocol::Add>>,
         },
         ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name =
-                "::fidl::WireResponse<::test_nullable::SimpleProtocol::Add>",
+            .fidl_type_name = "::fidl::internal::TransactionalResponse<::test_"
+                              "nullable::SimpleProtocol::Add>",
             .has_flexible_envelope = false,
             .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<
-                ::fidl::WireResponse<::test_nullable::SimpleProtocol::Add>>,
+                ::fidl::internal::TransactionalResponse<
+                    ::test_nullable::SimpleProtocol::Add>>,
         },
         ::fidl::fuzzing::DecoderEncoderForType{
             .fidl_type_name = "::test_nullable::wire::Int32Wrapper",

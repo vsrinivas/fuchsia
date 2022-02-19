@@ -72,9 +72,9 @@ template <>
 struct fidl::IsFidlType<TwoWayResponse> : public std::true_type {};
 
 template <>
-struct fidl::IsFidlMessage<TwoWayRequest> : public std::true_type {};
+struct fidl::IsFidlTransactionalMessage<TwoWayRequest> : public std::true_type {};
 template <>
-struct fidl::IsFidlMessage<TwoWayResponse> : public std::true_type {};
+struct fidl::IsFidlTransactionalMessage<TwoWayResponse> : public std::true_type {};
 
 class MockEventDispatcher : public fidl::internal::IncomingEventDispatcherBase {
  public:

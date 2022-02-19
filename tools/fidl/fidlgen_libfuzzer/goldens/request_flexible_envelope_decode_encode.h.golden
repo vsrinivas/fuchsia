@@ -13,40 +13,44 @@ inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoderForType, 4>
     test_requestflexibleenvelope_decoder_encoders = {
 
         ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name =
-                "::fidl::WireRequest<::test_requestflexibleenvelope::Protocol::"
-                "RequestStrictResponseFlexible>",
+            .fidl_type_name = "::fidl::internal::TransactionalRequest<::test_"
+                              "requestflexibleenvelope::Protocol::"
+                              "RequestStrictResponseFlexible>",
             .has_flexible_envelope = false,
             .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<
-                ::fidl::WireRequest<::test_requestflexibleenvelope::Protocol::
-                                        RequestStrictResponseFlexible>>,
+                ::fidl::internal::TransactionalRequest<
+                    ::test_requestflexibleenvelope::Protocol::
+                        RequestStrictResponseFlexible>>,
         },
         ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name =
-                "::fidl::WireResponse<::test_requestflexibleenvelope::Protocol:"
-                ":RequestStrictResponseFlexible>",
+            .fidl_type_name = "::fidl::internal::TransactionalResponse<::test_"
+                              "requestflexibleenvelope::Protocol::"
+                              "RequestStrictResponseFlexible>",
             .has_flexible_envelope = true,
             .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<
-                ::fidl::WireResponse<::test_requestflexibleenvelope::Protocol::
-                                         RequestStrictResponseFlexible>>,
+                ::fidl::internal::TransactionalResponse<
+                    ::test_requestflexibleenvelope::Protocol::
+                        RequestStrictResponseFlexible>>,
         },
         ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name =
-                "::fidl::WireRequest<::test_requestflexibleenvelope::Protocol::"
-                "RequestFlexibleResponseStrict>",
+            .fidl_type_name = "::fidl::internal::TransactionalRequest<::test_"
+                              "requestflexibleenvelope::Protocol::"
+                              "RequestFlexibleResponseStrict>",
             .has_flexible_envelope = true,
             .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<
-                ::fidl::WireRequest<::test_requestflexibleenvelope::Protocol::
-                                        RequestFlexibleResponseStrict>>,
+                ::fidl::internal::TransactionalRequest<
+                    ::test_requestflexibleenvelope::Protocol::
+                        RequestFlexibleResponseStrict>>,
         },
         ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name =
-                "::fidl::WireResponse<::test_requestflexibleenvelope::Protocol:"
-                ":RequestFlexibleResponseStrict>",
+            .fidl_type_name = "::fidl::internal::TransactionalResponse<::test_"
+                              "requestflexibleenvelope::Protocol::"
+                              "RequestFlexibleResponseStrict>",
             .has_flexible_envelope = false,
             .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<
-                ::fidl::WireResponse<::test_requestflexibleenvelope::Protocol::
-                                         RequestFlexibleResponseStrict>>,
+                ::fidl::internal::TransactionalResponse<
+                    ::test_requestflexibleenvelope::Protocol::
+                        RequestFlexibleResponseStrict>>,
         },
 };
 

@@ -167,17 +167,20 @@ var (
 	WireServerDispatcher           = internalNs.member("WireServerDispatcher")
 
 	// Method related
-	WireRequest         = fidlNs.member("WireRequest")
-	WireResponse        = fidlNs.member("WireResponse")
-	WireEvent           = fidlNs.member("WireEvent")
-	WireResult          = fidlNs.member("WireResult")
-	WireUnownedResult   = transportNs.member("WireUnownedResult")
-	WireResponseContext = fidlNs.member("WireResponseContext")
-	WireCompleter       = internalNs.member("WireCompleter")
-	WireCompleterBase   = internalNs.member("WireCompleterBase")
-	WireMethodTypes     = internalNs.member("WireMethodTypes")
-	WireOrdinal         = internalNs.member("WireOrdinal")
-	WireRequestView     = internalNs.member("WireRequestView")
+	TransactionalRequest  = internalNs.member("TransactionalRequest")
+	TransactionalResponse = internalNs.member("TransactionalResponse")
+	TransactionalEvent    = internalNs.member("TransactionalEvent")
+	WireRequest           = fidlNs.member("WireRequest")
+	WireRequestView       = internalNs.member("WireRequestView")
+	WireResponse          = fidlNs.member("WireResponse")
+	WireEvent             = fidlNs.member("WireEvent")
+	WireResult            = fidlNs.member("WireResult")
+	WireUnownedResult     = transportNs.member("WireUnownedResult")
+	WireResponseContext   = fidlNs.member("WireResponseContext")
+	WireCompleter         = internalNs.member("WireCompleter")
+	WireCompleterBase     = internalNs.member("WireCompleterBase")
+	WireMethodTypes       = internalNs.member("WireMethodTypes")
+	WireOrdinal           = internalNs.member("WireOrdinal")
 )
 
 type wireTypeNames struct {
@@ -430,37 +433,43 @@ func newMessage(inner messageInner, args []Parameter, wire wireTypeNames,
 }
 
 type wireMethod struct {
-	WireCompleterAlias   name
-	WireCompleter        name
-	WireCompleterBase    name
-	WireMethodTypes      name
-	WireOrdinal          name
-	WireRequest          name
-	WireRequestView      name
-	WireRequestViewAlias name
-	WireResponse         name
-	WireResponseContext  name
-	WireEvent            name
-	WireResult           name
-	WireUnownedResult    name
+	WireCompleterAlias        name
+	WireCompleter             name
+	WireCompleterBase         name
+	WireMethodTypes           name
+	WireOrdinal               name
+	WireRequest               name
+	WireRequestView           name
+	WireRequestViewAlias      name
+	WireEvent                 name
+	WireResponse              name
+	WireResponseContext       name
+	WireTransactionalRequest  name
+	WireTransactionalEvent    name
+	WireTransactionalResponse name
+	WireResult                name
+	WireUnownedResult         name
 }
 
 func newWireMethod(name string, wireTypes wireTypeNames, protocolMarker name, methodMarker name) wireMethod {
 	s := wireTypes.WireServer.nest(name)
 	return wireMethod{
-		WireCompleterAlias:   s.appendName("Completer"),
-		WireCompleter:        WireCompleter.template(methodMarker),
-		WireCompleterBase:    WireCompleterBase.template(methodMarker),
-		WireMethodTypes:      WireMethodTypes.template(methodMarker),
-		WireOrdinal:          WireOrdinal.template(methodMarker),
-		WireRequest:          WireRequest.template(methodMarker),
-		WireRequestView:      WireRequestView.template(methodMarker),
-		WireRequestViewAlias: s.appendName("RequestView"),
-		WireEvent:            WireEvent.template(methodMarker),
-		WireResponse:         WireResponse.template(methodMarker),
-		WireResponseContext:  WireResponseContext.template(methodMarker),
-		WireResult:           WireResult.template(methodMarker),
-		WireUnownedResult:    WireUnownedResult.template(methodMarker),
+		WireCompleterAlias:        s.appendName("Completer"),
+		WireCompleter:             WireCompleter.template(methodMarker),
+		WireCompleterBase:         WireCompleterBase.template(methodMarker),
+		WireMethodTypes:           WireMethodTypes.template(methodMarker),
+		WireOrdinal:               WireOrdinal.template(methodMarker),
+		WireRequest:               WireRequest.template(methodMarker),
+		WireRequestView:           WireRequestView.template(methodMarker),
+		WireRequestViewAlias:      s.appendName("RequestView"),
+		WireEvent:                 WireEvent.template(methodMarker),
+		WireResponse:              WireResponse.template(methodMarker),
+		WireResponseContext:       WireResponseContext.template(methodMarker),
+		WireTransactionalRequest:  TransactionalRequest.template(methodMarker),
+		WireTransactionalEvent:    TransactionalEvent.template(methodMarker),
+		WireTransactionalResponse: TransactionalResponse.template(methodMarker),
+		WireResult:                WireResult.template(methodMarker),
+		WireUnownedResult:         WireUnownedResult.template(methodMarker),
 	}
 }
 

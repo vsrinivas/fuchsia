@@ -6,6 +6,7 @@
 #include <fidl/fidl.llcpp.linearized.test/cpp/wire_types.h>
 #include <fidl/fidl.test.misc/cpp/wire_messaging.h>
 #include <lib/fidl/llcpp/message.h>
+#include <lib/fidl/llcpp/wire_messaging_declarations.h>
 #include <zircon/errors.h>
 
 #include <iterator>
@@ -401,7 +402,7 @@ TEST(OutgoingMessage, SettingTxIdRequiresTransactionalMessageNegative) {
 }
 
 TEST(OutgoingMessage, SettingTxIdRequiresTransactionalMessagePositive) {
-  using Request = fidl::WireRequest<fidl_test_misc::Echo::EchoString>;
+  using Request = fidl::internal::TransactionalRequest<fidl_test_misc::Echo::EchoString>;
   Request request{fidl::StringView("")};
   fidl::unstable::OwnedEncodedMessage<Request> encoded(fidl::internal::WireFormatVersion::kV1,
                                                        &request);
@@ -426,10 +427,10 @@ TEST(OutgoingMessage, GoodEncodeNoBody) {
           .backing_buffer_capacity = std::size(backing_buffer),
       });
 
-  using Request = fidl::WireRequest<fidl_llcpp_empty_test::OnlyEmpty::Empty>;
+  using Request = fidl::internal::TransactionalRequest<fidl_llcpp_empty_test::OnlyEmpty::Empty>;
   Request request;
   fidl_init_txn_header(
-      &request._hdr, 1,
+      &request.header, 1,
       ::fidl::internal::WireOrdinal<::fidl_llcpp_empty_test::OnlyEmpty::Empty>::value);
 
   msg.Encode<Request>(fidl::internal::WireFormatVersion::kV1, &request);
@@ -451,10 +452,10 @@ TEST(OutgoingMessage, BadEncodeNoBodyBufferTooLarge) {
           .backing_buffer_capacity = std::size(backing_buffer),
       });
 
-  using Request = fidl::WireRequest<fidl_llcpp_empty_test::OnlyEmpty::Empty>;
+  using Request = fidl::internal::TransactionalRequest<fidl_llcpp_empty_test::OnlyEmpty::Empty>;
   Request request;
   fidl_init_txn_header(
-      &request._hdr, 1,
+      &request.header, 1,
       ::fidl::internal::WireOrdinal<::fidl_llcpp_empty_test::OnlyEmpty::Empty>::value);
 
   msg.Encode<Request>(fidl::internal::WireFormatVersion::kV1, &request);

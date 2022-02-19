@@ -97,51 +97,50 @@ class Server {
   }
 
   zx_status_t DoCountNumDirectories(
-      fidl_txn_t* txn,
-      fidl::unstable::DecodedMessage<
-          fidl::WireRequest<gen::DirEntTestInterface::CountNumDirectories>>& decoded) {
+      fidl_txn_t* txn, fidl::unstable::DecodedMessage<fidl::internal::TransactionalRequest<
+                           gen::DirEntTestInterface::CountNumDirectories>>& decoded) {
     count_num_directories_num_calls_.fetch_add(1);
     const auto& request = *decoded.PrimaryObject();
     int64_t count = 0;
-    for (const auto& dirent : request.dirents) {
+    for (const auto& dirent : request.body.dirents) {
       if (dirent.is_dir) {
         count++;
       }
     }
-    fidl::WireResponse<gen::DirEntTestInterface::CountNumDirectories> response(count);
-    response._hdr.txid = request._hdr.txid;
+    fidl::internal::TransactionalResponse<gen::DirEntTestInterface::CountNumDirectories> response(
+        count);
+    response.header.txid = request.header.txid;
     return Reply(txn, &response);
   }
 
   zx_status_t DoReadDir(
       fidl_txn_t* txn,
-      fidl::unstable::DecodedMessage<fidl::WireRequest<gen::DirEntTestInterface::ReadDir>>&
-          decoded) {
+      fidl::unstable::DecodedMessage<
+          fidl::internal::TransactionalRequest<gen::DirEntTestInterface::ReadDir>>& decoded) {
     read_dir_num_calls_.fetch_add(1);
     auto golden = golden_dirents();
-    fidl::WireResponse<gen::DirEntTestInterface::ReadDir> response(golden);
-    response._hdr.txid = decoded.PrimaryObject()->_hdr.txid;
+    fidl::internal::TransactionalResponse<gen::DirEntTestInterface::ReadDir> response(golden);
+    response.header.txid = decoded.PrimaryObject()->header.txid;
     return Reply(txn, &response);
   }
 
   zx_status_t DoConsumeDirectories(
-      fidl_txn_t* txn,
-      fidl::unstable::DecodedMessage<
-          fidl::WireRequest<gen::DirEntTestInterface::ConsumeDirectories>>& decoded) {
+      fidl_txn_t* txn, fidl::unstable::DecodedMessage<fidl::internal::TransactionalRequest<
+                           gen::DirEntTestInterface::ConsumeDirectories>>& decoded) {
     consume_directories_num_calls_.fetch_add(1);
-    EXPECT_EQ(decoded.PrimaryObject()->dirents.count(), 3);
-    fidl::WireResponse<gen::DirEntTestInterface::ConsumeDirectories> response;
-    fidl_init_txn_header(&response._hdr, 0, decoded.PrimaryObject()->_hdr.ordinal);
+    EXPECT_EQ(decoded.PrimaryObject()->body.dirents.count(), 3);
+    fidl::internal::TransactionalResponse<gen::DirEntTestInterface::ConsumeDirectories> response;
+    fidl_init_txn_header(&response.header, 0, decoded.PrimaryObject()->header.ordinal);
     return Reply(txn, &response);
   }
 
   zx_status_t DoOneWayDirents(
       fidl_txn_t* txn,
-      fidl::unstable::DecodedMessage<fidl::WireRequest<gen::DirEntTestInterface::OneWayDirents>>&
-          decoded) {
+      fidl::unstable::DecodedMessage<
+          fidl::internal::TransactionalRequest<gen::DirEntTestInterface::OneWayDirents>>& decoded) {
     one_way_dirents_num_calls_.fetch_add(1);
-    EXPECT_EQ(decoded.PrimaryObject()->dirents.count(), 3);
-    EXPECT_OK(decoded.PrimaryObject()->ep.signal_peer(0, ZX_EVENTPAIR_SIGNALED));
+    EXPECT_EQ(decoded.PrimaryObject()->body.dirents.count(), 3);
+    EXPECT_OK(decoded.PrimaryObject()->body.ep.signal_peer(0, ZX_EVENTPAIR_SIGNALED));
     // No response required for one-way calls.
     return ZX_OK;
   }
@@ -161,30 +160,35 @@ class Server {
     Server* server = reinterpret_cast<Server*>(ctx);
     switch (hdr->ordinal) {
       case fidl_test_llcpp_dirent_DirEntTestInterfaceCountNumDirectoriesOrdinal: {
-        auto result =
-            DecodeAs<fidl::WireRequest<gen::DirEntTestInterface::CountNumDirectories>>(msg);
+        auto result = DecodeAs<
+            fidl::internal::TransactionalRequest<gen::DirEntTestInterface::CountNumDirectories>>(
+            msg);
         if (!result.ok()) {
           return result.status();
         }
         return server->DoCountNumDirectories(txn, result);
       }
       case fidl_test_llcpp_dirent_DirEntTestInterfaceReadDirOrdinal: {
-        auto result = DecodeAs<fidl::WireRequest<gen::DirEntTestInterface::ReadDir>>(msg);
+        auto result =
+            DecodeAs<fidl::internal::TransactionalRequest<gen::DirEntTestInterface::ReadDir>>(msg);
         if (!result.ok()) {
           return result.status();
         }
         return server->DoReadDir(txn, result);
       }
       case fidl_test_llcpp_dirent_DirEntTestInterfaceConsumeDirectoriesOrdinal: {
-        auto result =
-            DecodeAs<fidl::WireRequest<gen::DirEntTestInterface::ConsumeDirectories>>(msg);
+        auto result = DecodeAs<
+            fidl::internal::TransactionalRequest<gen::DirEntTestInterface::ConsumeDirectories>>(
+            msg);
         if (!result.ok()) {
           return result.status();
         }
         return server->DoConsumeDirectories(txn, result);
       }
       case fidl_test_llcpp_dirent_DirEntTestInterfaceOneWayDirentsOrdinal: {
-        auto result = DecodeAs<fidl::WireRequest<gen::DirEntTestInterface::OneWayDirents>>(msg);
+        auto result =
+            DecodeAs<fidl::internal::TransactionalRequest<gen::DirEntTestInterface::OneWayDirents>>(
+                msg);
         if (!result.ok()) {
           return result.status();
         }

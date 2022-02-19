@@ -11,11 +11,12 @@ namespace test_service {
 }  // namespace test_service
 ::fidl::WireResult<::test_service::SecondProtocol::MethodOnSecond>::WireResult(
     ::fidl::UnownedClientEnd<::test_service::SecondProtocol> client,
-    ::fidl::WireRequest<::test_service::SecondProtocol::MethodOnSecond>*
-        request) {
+    ::fidl::internal::TransactionalRequest<
+        ::test_service::SecondProtocol::MethodOnSecond>* request) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::unstable::OwnedEncodedMessage<
-      ::fidl::WireRequest<::test_service::SecondProtocol::MethodOnSecond>,
+      ::fidl::internal::TransactionalRequest<
+          ::test_service::SecondProtocol::MethodOnSecond>,
       ::fidl::internal::ChannelTransport>
       request_message(::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
@@ -31,10 +32,12 @@ namespace test_service {
 ::fidl::Result fidl::internal::WireWeakOnewayClientImpl<
     ::test_service::SecondProtocol>::MethodOnSecond() {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::WireRequest<::test_service::SecondProtocol::MethodOnSecond>
+  ::fidl::internal::TransactionalRequest<
+      ::test_service::SecondProtocol::MethodOnSecond>
       _request_object{};
   ::fidl::unstable::OwnedEncodedMessage<
-      ::fidl::WireRequest<::test_service::SecondProtocol::MethodOnSecond>,
+      ::fidl::internal::TransactionalRequest<
+          ::test_service::SecondProtocol::MethodOnSecond>,
       ::fidl::internal::ChannelTransport>
       _request_message(::fidl::internal::AllowUnownedInputRef{},
                        &_request_object);
@@ -51,10 +54,12 @@ namespace test_service {
     return _allocation.error_value();
   }
 
-  ::fidl::WireRequest<::test_service::SecondProtocol::MethodOnSecond>
+  ::fidl::internal::TransactionalRequest<
+      ::test_service::SecondProtocol::MethodOnSecond>
       _request{};
   ::fidl::unstable::UnownedEncodedMessage<
-      ::fidl::WireRequest<::test_service::SecondProtocol::MethodOnSecond>>
+      ::fidl::internal::TransactionalRequest<
+          ::test_service::SecondProtocol::MethodOnSecond>>
       _request_message(_allocation->data, _buffer_size, &_request);
   return _client_base()->SendOneWay(_request_message.GetOutgoingMessage());
 }
@@ -128,8 +133,9 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<
         [](void* interface, ::fidl::IncomingMessage&& msg,
            internal::IncomingTransportContext transport_context,
            ::fidl::Transaction* txn) {
-          auto* primary = reinterpret_cast<::fidl::WireRequest<
-              ::test_service::SecondProtocol::MethodOnSecond>*>(msg.bytes());
+          ::fidl::WireRequest<::test_service::SecondProtocol::MethodOnSecond>
+              empty_request;
+          auto* primary = &empty_request;
           ::fidl::internal::WireCompleter<
               ::test_service::SecondProtocol::MethodOnSecond>::Sync
               completer(txn);
@@ -172,9 +178,9 @@ void fidl::WireServer<::test_service::SecondProtocol>::dispatch_message(
 }
 #endif  // __Fuchsia__
 
-void ::fidl::WireRequest<
+void ::fidl::internal::TransactionalRequest<
     ::test_service::SecondProtocol::MethodOnSecond>::_InitHeader() {
-  fidl_init_txn_header(&_hdr, 0,
+  fidl_init_txn_header(&header, 0,
                        ::test_service::kSecondProtocol_MethodOnSecond_Ordinal);
 }
 
@@ -189,11 +195,12 @@ namespace test_service {
 }  // namespace test_service
 ::fidl::WireResult<::test_service::FirstProtocol::MethodOnFirst>::WireResult(
     ::fidl::UnownedClientEnd<::test_service::FirstProtocol> client,
-    ::fidl::WireRequest<::test_service::FirstProtocol::MethodOnFirst>*
-        request) {
+    ::fidl::internal::TransactionalRequest<
+        ::test_service::FirstProtocol::MethodOnFirst>* request) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::unstable::OwnedEncodedMessage<
-      ::fidl::WireRequest<::test_service::FirstProtocol::MethodOnFirst>,
+      ::fidl::internal::TransactionalRequest<
+          ::test_service::FirstProtocol::MethodOnFirst>,
       ::fidl::internal::ChannelTransport>
       request_message(::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
@@ -209,10 +216,12 @@ namespace test_service {
 ::fidl::Result fidl::internal::WireWeakOnewayClientImpl<
     ::test_service::FirstProtocol>::MethodOnFirst() {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::WireRequest<::test_service::FirstProtocol::MethodOnFirst>
+  ::fidl::internal::TransactionalRequest<
+      ::test_service::FirstProtocol::MethodOnFirst>
       _request_object{};
   ::fidl::unstable::OwnedEncodedMessage<
-      ::fidl::WireRequest<::test_service::FirstProtocol::MethodOnFirst>,
+      ::fidl::internal::TransactionalRequest<
+          ::test_service::FirstProtocol::MethodOnFirst>,
       ::fidl::internal::ChannelTransport>
       _request_message(::fidl::internal::AllowUnownedInputRef{},
                        &_request_object);
@@ -229,9 +238,12 @@ namespace test_service {
     return _allocation.error_value();
   }
 
-  ::fidl::WireRequest<::test_service::FirstProtocol::MethodOnFirst> _request{};
+  ::fidl::internal::TransactionalRequest<
+      ::test_service::FirstProtocol::MethodOnFirst>
+      _request{};
   ::fidl::unstable::UnownedEncodedMessage<
-      ::fidl::WireRequest<::test_service::FirstProtocol::MethodOnFirst>>
+      ::fidl::internal::TransactionalRequest<
+          ::test_service::FirstProtocol::MethodOnFirst>>
       _request_message(_allocation->data, _buffer_size, &_request);
   return _client_base()->SendOneWay(_request_message.GetOutgoingMessage());
 }
@@ -305,8 +317,9 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<
         [](void* interface, ::fidl::IncomingMessage&& msg,
            internal::IncomingTransportContext transport_context,
            ::fidl::Transaction* txn) {
-          auto* primary = reinterpret_cast<::fidl::WireRequest<
-              ::test_service::FirstProtocol::MethodOnFirst>*>(msg.bytes());
+          ::fidl::WireRequest<::test_service::FirstProtocol::MethodOnFirst>
+              empty_request;
+          auto* primary = &empty_request;
           ::fidl::internal::WireCompleter<
               ::test_service::FirstProtocol::MethodOnFirst>::Sync
               completer(txn);
@@ -349,9 +362,9 @@ void fidl::WireServer<::test_service::FirstProtocol>::dispatch_message(
 }
 #endif  // __Fuchsia__
 
-void ::fidl::WireRequest<
+void ::fidl::internal::TransactionalRequest<
     ::test_service::FirstProtocol::MethodOnFirst>::_InitHeader() {
-  fidl_init_txn_header(&_hdr, 0,
+  fidl_init_txn_header(&header, 0,
                        ::test_service::kFirstProtocol_MethodOnFirst_Ordinal);
 }
 

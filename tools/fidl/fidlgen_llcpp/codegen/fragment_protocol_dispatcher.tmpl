@@ -36,13 +36,14 @@ constexpr ::fidl::internal::MethodEntry {{ .WireServerDispatcher.NoLeading }}::e
       [](void* interface, ::fidl::IncomingMessage&& msg,
         internal::IncomingTransportContext transport_context, ::fidl::Transaction* txn) {
         {{- if .RequestArgs }}
-        ::fidl::unstable::DecodedMessage<{{ .WireRequest }}> decoded{std::move(msg)};
+        ::fidl::unstable::DecodedMessage<{{ .WireTransactionalRequest }}> decoded{std::move(msg)};
         if (unlikely(!decoded.ok())) {
           return decoded.status();
         }
-        auto* primary = decoded.PrimaryObject();
+        auto* primary = &decoded.PrimaryObject()->body;
         {{- else }}
-        auto* primary = reinterpret_cast<{{ .WireRequest }}*>(msg.bytes());
+        {{ .WireRequest }} empty_request;
+        auto* primary = &empty_request;
         {{- end }}
         {{ .WireCompleter }}::Sync completer(txn);
         {{- if eq .Transport.Name "Driver" }}

@@ -10,24 +10,24 @@
 
 {{- if .HasRequest }}
 ::fidl::fuzzing::DecoderEncoderForType{
-	.fidl_type_name = "{{ .WireRequest }}",
+	.fidl_type_name = "{{ .WireTransactionalRequest }}",
 	.has_flexible_envelope = {{ .Request.TypeShapeV1.HasFlexibleEnvelope }},
-	.decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<{{ .WireRequest }}>,
+	.decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<{{ .WireTransactionalRequest }}>,
 },
 {{- end -}}
 
 {{- if .HasResponse }}
 {{- if .IsEvent }}
 ::fidl::fuzzing::DecoderEncoderForType{
-	.fidl_type_name = "{{ .WireEvent }}",
+	.fidl_type_name = "{{ .WireTransactionalEvent }}",
 	.has_flexible_envelope = {{ .Response.TypeShapeV1.HasFlexibleEnvelope }},
-	.decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<{{ .WireEvent }}>,
+	.decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<{{ .WireTransactionalEvent }}>,
 },
 {{- else }}
 ::fidl::fuzzing::DecoderEncoderForType{
-	.fidl_type_name = "{{ .WireResponse }}",
+	.fidl_type_name = "{{ .WireTransactionalResponse }}",
 	.has_flexible_envelope = {{ .Response.TypeShapeV1.HasFlexibleEnvelope }},
-	.decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<{{ .WireResponse }}>,
+	.decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<{{ .WireTransactionalResponse }}>,
 },
 {{- end -}}
 {{- end -}}

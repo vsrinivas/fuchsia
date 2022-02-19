@@ -114,10 +114,11 @@ namespace test_versions {
 }  // namespace test_versions
 ::fidl::WireResult<::test_versions::Protocol::Foo>::WireResult(
     ::fidl::UnownedClientEnd<::test_versions::Protocol> client,
-    ::fidl::WireRequest<::test_versions::Protocol::Foo>* request) {
+    ::fidl::internal::TransactionalRequest<::test_versions::Protocol::Foo>*
+        request) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::unstable::OwnedEncodedMessage<
-      ::fidl::WireRequest<::test_versions::Protocol::Foo>,
+      ::fidl::internal::TransactionalRequest<::test_versions::Protocol::Foo>,
       ::fidl::internal::ChannelTransport>
       request_message(::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
@@ -133,9 +134,10 @@ namespace test_versions {
 ::fidl::Result
 fidl::internal::WireWeakOnewayClientImpl<::test_versions::Protocol>::Foo() {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::WireRequest<::test_versions::Protocol::Foo> _request_object{};
+  ::fidl::internal::TransactionalRequest<::test_versions::Protocol::Foo>
+      _request_object{};
   ::fidl::unstable::OwnedEncodedMessage<
-      ::fidl::WireRequest<::test_versions::Protocol::Foo>,
+      ::fidl::internal::TransactionalRequest<::test_versions::Protocol::Foo>,
       ::fidl::internal::ChannelTransport>
       _request_message(::fidl::internal::AllowUnownedInputRef{},
                        &_request_object);
@@ -152,9 +154,10 @@ fidl::internal::WireWeakOnewayClientImpl<::test_versions::Protocol>::Foo() {
     return _allocation.error_value();
   }
 
-  ::fidl::WireRequest<::test_versions::Protocol::Foo> _request{};
+  ::fidl::internal::TransactionalRequest<::test_versions::Protocol::Foo>
+      _request{};
   ::fidl::unstable::UnownedEncodedMessage<
-      ::fidl::WireRequest<::test_versions::Protocol::Foo>>
+      ::fidl::internal::TransactionalRequest<::test_versions::Protocol::Foo>>
       _request_message(_allocation->data, _buffer_size, &_request);
   return _client_base()->SendOneWay(_request_message.GetOutgoingMessage());
 }
@@ -228,9 +231,8 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<
         [](void* interface, ::fidl::IncomingMessage&& msg,
            internal::IncomingTransportContext transport_context,
            ::fidl::Transaction* txn) {
-          auto* primary = reinterpret_cast<
-              ::fidl::WireRequest<::test_versions::Protocol::Foo>*>(
-              msg.bytes());
+          ::fidl::WireRequest<::test_versions::Protocol::Foo> empty_request;
+          auto* primary = &empty_request;
           ::fidl::internal::WireCompleter<::test_versions::Protocol::Foo>::Sync
               completer(txn);
           reinterpret_cast<::fidl::WireServer<::test_versions::Protocol>*>(
@@ -270,8 +272,9 @@ void fidl::WireServer<::test_versions::Protocol>::dispatch_message(
 }
 #endif  // __Fuchsia__
 
-void ::fidl::WireRequest<::test_versions::Protocol::Foo>::_InitHeader() {
-  fidl_init_txn_header(&_hdr, 0, ::test_versions::kProtocol_Foo_Ordinal);
+void ::fidl::internal::TransactionalRequest<
+    ::test_versions::Protocol::Foo>::_InitHeader() {
+  fidl_init_txn_header(&header, 0, ::test_versions::kProtocol_Foo_Ordinal);
 }
 
 #ifdef __Fuchsia__

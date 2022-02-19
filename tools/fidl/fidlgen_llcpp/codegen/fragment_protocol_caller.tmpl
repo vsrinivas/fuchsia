@@ -19,7 +19,7 @@ class {{ .WireSyncClientImpl }} final :
     {{ .Docs }}
     //{{ template "Method:ClientAllocationComment:Helper" . }}
     {{ .WireResult }} {{ .Name }}({{- RenderParams .RequestArgs }}) {
-      {{ .WireRequest }} _request{ {{ RenderForwardParams .RequestArgs }} };
+      {{ .WireTransactionalRequest }} _request{ {{ RenderForwardParams .RequestArgs }} };
       return {{ .WireResult }}(_client_end(), &_request);
     }
 {{ "" }}
@@ -41,7 +41,7 @@ class {{ .WireSyncBufferClientImpl }} final :
     {{- .Docs }}
     // Caller provides the backing storage for FIDL message via an argument to `.buffer()`.
     {{ .WireUnownedResult }} {{ .Name }}({{ RenderParams .RequestArgs }}) {
-      {{ .WireRequest }} _request{ {{ RenderForwardParams .RequestArgs }} };
+      {{ .WireTransactionalRequest }} _request{ {{ RenderForwardParams .RequestArgs }} };
       return {{ .WireUnownedResult }}(_client_end(), _allocator(), &_request);
     }
 {{ "" }}

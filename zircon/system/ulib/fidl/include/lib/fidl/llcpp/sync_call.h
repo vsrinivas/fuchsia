@@ -47,12 +47,13 @@ constexpr uint32_t SyncClientMethodBufferSizeInChannel() {
   // the send/receive size, once Zircon channel calls guarantee that the
   // send/receive buffers can overlap.
   uint32_t size = 0;
-  static_assert(IsFidlMessage<WireRequest<Method>>::value,
+  static_assert(IsFidlTransactionalMessage<internal::TransactionalRequest<Method>>::value,
                 "|Method| must be a FIDL method marker type");
-  size += MaxSizeInChannel<WireRequest<Method>, MessageDirection::kSending>();
+  size += MaxSizeInChannel<internal::TransactionalRequest<Method>, MessageDirection::kSending>();
   // If it's a two-way method, count the response as well.
-  if constexpr (IsFidlMessage<WireResponse<Method>>::value) {
-    size += MaxSizeInChannel<WireResponse<Method>, MessageDirection::kReceiving>();
+  if constexpr (IsFidlTransactionalMessage<internal::TransactionalResponse<Method>>::value) {
+    size +=
+        MaxSizeInChannel<internal::TransactionalResponse<Method>, MessageDirection::kReceiving>();
   }
   return size;
 }
@@ -72,9 +73,9 @@ constexpr uint32_t SyncClientMethodBufferSizeInChannel() {
 // arena or buffer span.
 template <typename Method>
 constexpr uint32_t AsyncClientMethodBufferSizeInChannel() {
-  static_assert(IsFidlMessage<WireRequest<Method>>::value,
+  static_assert(IsFidlTransactionalMessage<internal::TransactionalRequest<Method>>::value,
                 "|Method| must be a FIDL method marker type");
-  return MaxSizeInChannel<WireRequest<Method>, MessageDirection::kSending>();
+  return MaxSizeInChannel<internal::TransactionalRequest<Method>, MessageDirection::kSending>();
 }
 
 // Helper to calculate a safe buffer size for use in caller-allocating flavors
@@ -88,9 +89,9 @@ constexpr uint32_t AsyncClientMethodBufferSizeInChannel() {
 // arena or buffer span.
 template <typename Method>
 constexpr uint32_t ServerReplyBufferSizeInChannel() {
-  static_assert(IsFidlMessage<WireResponse<Method>>::value,
+  static_assert(IsFidlTransactionalMessage<internal::TransactionalResponse<Method>>::value,
                 "|Method| must be a FIDL method marker type");
-  return MaxSizeInChannel<WireResponse<Method>, MessageDirection::kSending>();
+  return MaxSizeInChannel<internal::TransactionalResponse<Method>, MessageDirection::kSending>();
 }
 
 // Helper to calculate a safe buffer size for use in caller-allocating flavors
@@ -104,9 +105,9 @@ constexpr uint32_t ServerReplyBufferSizeInChannel() {
 // arena or buffer span.
 template <typename Method>
 constexpr uint32_t EventReplyBufferSizeInChannel() {
-  static_assert(IsFidlMessage<WireEvent<Method>>::value,
+  static_assert(IsFidlTransactionalMessage<internal::TransactionalEvent<Method>>::value,
                 "|Method| must be a FIDL method marker type");
-  return MaxSizeInChannel<WireEvent<Method>, MessageDirection::kSending>();
+  return MaxSizeInChannel<internal::TransactionalEvent<Method>, MessageDirection::kSending>();
 }
 
 namespace internal {

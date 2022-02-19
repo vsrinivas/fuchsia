@@ -151,7 +151,8 @@ TEST(XUnion, UnknownBytes) {
     EXPECT_EQ(xu.Which(), llcpp_test::wire::TestXUnion::Tag::kUnknown);
   };
   llcpp_types_test_utils::CannotProxyUnknownEnvelope<
-      fidl::WireResponse<llcpp_test::MsgWrapper::TestXUnion>>(bytes, {}, std::move(check_tag));
+      fidl::internal::TransactionalResponse<llcpp_test::MsgWrapper::TestXUnion>>(
+      bytes, {}, std::move(check_tag));
 }
 
 TEST(XUnion, UnknownHandlesResource) {
@@ -172,7 +173,8 @@ TEST(XUnion, UnknownHandlesResource) {
     EXPECT_EQ(xu.Which(), llcpp_test::wire::TestXUnion::Tag::kUnknown);
   };
   llcpp_types_test_utils::CannotProxyUnknownEnvelope<
-      fidl::WireResponse<llcpp_test::MsgWrapper::TestXUnion>>(bytes, handles, std::move(check_tag));
+      fidl::internal::TransactionalResponse<llcpp_test::MsgWrapper::TestXUnion>>(
+      bytes, handles, std::move(check_tag));
 }
 
 TEST(XUnion, UnknownHandlesNonResource) {
@@ -193,6 +195,6 @@ TEST(XUnion, UnknownHandlesNonResource) {
     EXPECT_EQ(xu.Which(), llcpp_test::wire::TestNonResourceXUnion::Tag::kUnknown);
   };
   llcpp_types_test_utils::CannotProxyUnknownEnvelope<
-      fidl::WireResponse<llcpp_test::MsgWrapper::TestNonResourceXUnion>>(bytes, handles,
-                                                                         std::move(check_tag));
+      fidl::internal::TransactionalResponse<llcpp_test::MsgWrapper::TestNonResourceXUnion>>(
+      bytes, handles, std::move(check_tag));
 }

@@ -67,27 +67,50 @@ struct ::fidl::internal::WireServerDispatcher<
 template <>
 struct ::fidl::WireRequest<::test_transitivedependenciescompose::Top::GetFoo>
     final {
-  FIDL_ALIGNDECL
-  fidl_message_header_t _hdr;
-
-  WireRequest() { _InitHeader(); }
+  WireRequest() = default;
   using ResponseType =
       ::fidl::WireResponse<::test_transitivedependenciescompose::Top::GetFoo>;
+};
+
+template <>
+struct ::fidl::internal::TransactionalRequest<
+    ::test_transitivedependenciescompose::Top::GetFoo>
+    final {
+  FIDL_ALIGNDECL
+  fidl_message_header_t header;
+
+  TransactionalRequest() { _InitHeader(); }
+  using ResponseType = ::fidl::internal::TransactionalResponse<
+      ::test_transitivedependenciescompose::Top::GetFoo>;
 
  private:
   void _InitHeader();
 };
+
 template <>
 struct ::fidl::WireResponse<::test_transitivedependenciescompose::Top::GetFoo>
     final {
   FIDL_ALIGNDECL
-  fidl_message_header_t _hdr;
   ::test_bottom::wire::Foo foo;
 
-  explicit WireResponse(const ::test_bottom::wire::Foo& foo) : foo(foo) {
+  explicit WireResponse(const ::test_bottom::wire::Foo& foo) : foo(foo) {}
+  WireResponse() = default;
+};
+
+template <>
+struct ::fidl::internal::TransactionalResponse<
+    ::test_transitivedependenciescompose::Top::GetFoo>
+    final {
+  FIDL_ALIGNDECL
+  fidl_message_header_t header;
+
+  ::fidl::WireResponse<::test_transitivedependenciescompose::Top::GetFoo> body;
+  explicit TransactionalResponse(const ::test_bottom::wire::Foo& foo)
+      : body(::fidl::WireResponse<
+             ::test_transitivedependenciescompose::Top::GetFoo>(foo)) {
     _InitHeader();
   }
-  WireResponse() { _InitHeader(); }
+  TransactionalResponse() { _InitHeader(); }
 
  private:
   void _InitHeader();
@@ -96,17 +119,25 @@ struct ::fidl::WireResponse<::test_transitivedependenciescompose::Top::GetFoo>
 namespace fidl {
 
 template <>
+struct IsFidlType<::fidl::internal::TransactionalRequest<
+    ::test_transitivedependenciescompose::Top::GetFoo>>
+    : public std::true_type {};
+template <>
 struct IsFidlType<
     ::fidl::WireRequest<::test_transitivedependenciescompose::Top::GetFoo>>
     : public std::true_type {};
 template <>
-struct IsFidlMessage<
-    ::fidl::WireRequest<::test_transitivedependenciescompose::Top::GetFoo>>
+struct IsFidlTransactionalMessage<::fidl::internal::TransactionalRequest<
+    ::test_transitivedependenciescompose::Top::GetFoo>>
     : public std::true_type {};
+template <>
+struct IsFidlTransactionalMessage<
+    ::fidl::WireRequest<::test_transitivedependenciescompose::Top::GetFoo>>
+    : public std::false_type {};
 
 template <>
-struct TypeTraits<
-    ::fidl::WireRequest<::test_transitivedependenciescompose::Top::GetFoo>> {
+struct TypeTraits<::fidl::internal::TransactionalRequest<
+    ::test_transitivedependenciescompose::Top::GetFoo>> {
   static constexpr const fidl_type_t* kType = nullptr;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kPrimarySize =
@@ -122,23 +153,49 @@ struct TypeTraits<
 };
 
 static_assert(
-    sizeof(::fidl::WireRequest<
+    sizeof(::fidl::internal::TransactionalRequest<
            ::test_transitivedependenciescompose::Top::GetFoo>) ==
-    TypeTraits<::fidl::WireRequest<
+    TypeTraits<::fidl::internal::TransactionalRequest<
         ::test_transitivedependenciescompose::Top::GetFoo>>::kPrimarySize);
+static_assert(offsetof(::fidl::internal::TransactionalRequest<
+                           ::test_transitivedependenciescompose::Top::GetFoo>,
+                       header) == 0);
 
+template <>
+struct TypeTraits<
+    ::fidl::WireRequest<::test_transitivedependenciescompose::Top::GetFoo>> {
+  static constexpr const fidl_type_t* kType = nullptr;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(0);
+  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(0);
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasFlexibleEnvelope = false;
+  static constexpr bool kHasPointer = false;
+  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
+      ::fidl::internal::TransactionalMessageKind::kRequest;
+};
+
+template <>
+struct IsFidlType<::fidl::internal::TransactionalResponse<
+    ::test_transitivedependenciescompose::Top::GetFoo>>
+    : public std::true_type {};
 template <>
 struct IsFidlType<
     ::fidl::WireResponse<::test_transitivedependenciescompose::Top::GetFoo>>
     : public std::true_type {};
 template <>
-struct IsFidlMessage<
-    ::fidl::WireResponse<::test_transitivedependenciescompose::Top::GetFoo>>
+struct IsFidlTransactionalMessage<::fidl::internal::TransactionalResponse<
+    ::test_transitivedependenciescompose::Top::GetFoo>>
     : public std::true_type {};
+template <>
+struct IsFidlTransactionalMessage<
+    ::fidl::WireResponse<::test_transitivedependenciescompose::Top::GetFoo>>
+    : public std::false_type {};
 
 template <>
-struct TypeTraits<
-    ::fidl::WireResponse<::test_transitivedependenciescompose::Top::GetFoo>> {
+struct TypeTraits<::fidl::internal::TransactionalResponse<
+    ::test_transitivedependenciescompose::Top::GetFoo>> {
   static constexpr const fidl_type_t* kType =
       &::test_transitivedependenciescompose::
           test_bottom_BottomGetFooTopResponseTable;
@@ -156,6 +213,34 @@ struct TypeTraits<
 };
 
 static_assert(
+    sizeof(::fidl::internal::TransactionalResponse<
+           ::test_transitivedependenciescompose::Top::GetFoo>) ==
+    TypeTraits<::fidl::internal::TransactionalResponse<
+        ::test_transitivedependenciescompose::Top::GetFoo>>::kPrimarySize);
+static_assert(offsetof(::fidl::internal::TransactionalResponse<
+                           ::test_transitivedependenciescompose::Top::GetFoo>,
+                       header) == 0);
+static_assert(offsetof(::fidl::internal::TransactionalResponse<
+                           ::test_transitivedependenciescompose::Top::GetFoo>,
+                       body) == sizeof(fidl_message_header_t));
+
+template <>
+struct TypeTraits<
+    ::fidl::WireResponse<::test_transitivedependenciescompose::Top::GetFoo>> {
+  static constexpr const fidl_type_t* kType =
+      &::test_transitivedependenciescompose::
+          test_bottom_BottomGetFooTopResponseTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(4);
+  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(4);
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasFlexibleEnvelope = false;
+  static constexpr bool kHasPointer = false;
+  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
+      ::fidl::internal::TransactionalMessageKind::kResponse;
+};
+static_assert(
     sizeof(::fidl::WireResponse<
            ::test_transitivedependenciescompose::Top::GetFoo>) ==
     TypeTraits<::fidl::WireResponse<
@@ -163,7 +248,7 @@ static_assert(
 static_assert(
     offsetof(
         ::fidl::WireResponse<::test_transitivedependenciescompose::Top::GetFoo>,
-        foo) == 0 + sizeof(fidl_message_header_t));
+        foo) == 0);
 
 }  // namespace fidl
 namespace test_transitivedependenciescompose {
@@ -173,35 +258,34 @@ template <>
 class ::fidl::WireResult<::test_transitivedependenciescompose::Top::GetFoo>
     final : public ::fidl::Result {
  public:
-  WireResult(
-      ::fidl::UnownedClientEnd<::test_transitivedependenciescompose::Top>
-          client,
-      ::fidl::WireRequest<::test_transitivedependenciescompose::Top::GetFoo>*
-          request);
-  WireResult(
-      ::fidl::UnownedClientEnd<::test_transitivedependenciescompose::Top>
-          client,
-      ::fidl::WireRequest<::test_transitivedependenciescompose::Top::GetFoo>*
-          request,
-      zx_time_t _deadline);
+  WireResult(::fidl::UnownedClientEnd<::test_transitivedependenciescompose::Top>
+                 client,
+             ::fidl::internal::TransactionalRequest<
+                 ::test_transitivedependenciescompose::Top::GetFoo>* request);
+  WireResult(::fidl::UnownedClientEnd<::test_transitivedependenciescompose::Top>
+                 client,
+             ::fidl::internal::TransactionalRequest<
+                 ::test_transitivedependenciescompose::Top::GetFoo>* request,
+             zx_time_t _deadline);
   explicit WireResult(const ::fidl::Result& result) : ::fidl::Result(result) {}
   WireResult(WireResult&&) = delete;
   WireResult(const WireResult&) = delete;
   WireResult* operator=(WireResult&&) = delete;
   WireResult* operator=(const WireResult&) = delete;
   ~WireResult() = default;
-
   ::fidl::WireResponse<::test_transitivedependenciescompose::Top::GetFoo>*
   Unwrap() {
     ZX_DEBUG_ASSERT(ok());
     return reinterpret_cast<::fidl::WireResponse<
-        ::test_transitivedependenciescompose::Top::GetFoo>*>(bytes_.data());
+        ::test_transitivedependenciescompose::Top::GetFoo>*>(
+        bytes_.data() + sizeof(fidl_message_header_t));
   }
   const ::fidl::WireResponse<::test_transitivedependenciescompose::Top::GetFoo>*
   Unwrap() const {
     ZX_DEBUG_ASSERT(ok());
     return reinterpret_cast<const ::fidl::WireResponse<
-        ::test_transitivedependenciescompose::Top::GetFoo>*>(bytes_.data());
+        ::test_transitivedependenciescompose::Top::GetFoo>*>(
+        bytes_.data() + sizeof(fidl_message_header_t));
   }
 
   ::fidl::WireResponse<::test_transitivedependenciescompose::Top::GetFoo>&
@@ -243,16 +327,16 @@ class ::fidl::WireUnownedResult<
       ::fidl::UnownedClientEnd<::test_transitivedependenciescompose::Top>
           client_end,
       ::fidl::internal::AnyBufferAllocator& allocator,
-      ::fidl::WireRequest<::test_transitivedependenciescompose::Top::GetFoo>*
-          request);
+      ::fidl::internal::TransactionalRequest<
+          ::test_transitivedependenciescompose::Top::GetFoo>* request);
   explicit WireUnownedResult(
-      ::fidl::WireResponse<::test_transitivedependenciescompose::Top::GetFoo>*
-          response)
+      ::fidl::internal::TransactionalResponse<
+          ::test_transitivedependenciescompose::Top::GetFoo>* response)
       : bytes_(reinterpret_cast<uint8_t*>(response)) {}
   explicit WireUnownedResult(const ::fidl::Result& result)
       : ::fidl::Result(result) {}
   explicit WireUnownedResult(
-      ::fidl::unstable::DecodedMessage<::fidl::WireResponse<
+      ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<
           ::test_transitivedependenciescompose::Top::GetFoo>>&& decoded,
       ::fidl::internal::IncomingTransportContext context)
       : ::fidl::Result(decoded) {
@@ -268,18 +352,19 @@ class ::fidl::WireUnownedResult<
   WireUnownedResult* operator=(WireUnownedResult&&) = delete;
   WireUnownedResult* operator=(const WireUnownedResult&) = delete;
   ~WireUnownedResult() = default;
-
   ::fidl::WireResponse<::test_transitivedependenciescompose::Top::GetFoo>*
   Unwrap() {
     ZX_DEBUG_ASSERT(ok());
-    return reinterpret_cast<::fidl::WireResponse<
-        ::test_transitivedependenciescompose::Top::GetFoo>*>(bytes_);
+    return &(reinterpret_cast<::fidl::internal::TransactionalResponse<
+                 ::test_transitivedependenciescompose::Top::GetFoo>*>(bytes_)
+                 ->body);
   }
   const ::fidl::WireResponse<::test_transitivedependenciescompose::Top::GetFoo>*
   Unwrap() const {
     ZX_DEBUG_ASSERT(ok());
-    return reinterpret_cast<const ::fidl::WireResponse<
-        ::test_transitivedependenciescompose::Top::GetFoo>*>(bytes_);
+    return &(reinterpret_cast<const ::fidl::internal::TransactionalResponse<
+                 ::test_transitivedependenciescompose::Top::GetFoo>*>(bytes_)
+                 ->body);
   }
 
   ::fidl::WireResponse<::test_transitivedependenciescompose::Top::GetFoo>&
@@ -381,7 +466,8 @@ class ::fidl::internal::WireSyncClientImpl<
   // necessary.
   ::fidl::WireResult<::test_transitivedependenciescompose::Top::GetFoo>
   GetFoo() {
-    ::fidl::WireRequest<::test_transitivedependenciescompose::Top::GetFoo>
+    ::fidl::internal::TransactionalRequest<
+        ::test_transitivedependenciescompose::Top::GetFoo>
         _request{};
     return ::fidl::WireResult<
         ::test_transitivedependenciescompose::Top::GetFoo>(_client_end(),
@@ -407,7 +493,8 @@ class ::fidl::internal::WireSyncBufferClientImpl<
   // `.buffer()`.
   ::fidl::WireUnownedResult<::test_transitivedependenciescompose::Top::GetFoo>
   GetFoo() {
-    ::fidl::WireRequest<::test_transitivedependenciescompose::Top::GetFoo>
+    ::fidl::internal::TransactionalRequest<
+        ::test_transitivedependenciescompose::Top::GetFoo>
         _request{};
     return ::fidl::WireUnownedResult<
         ::test_transitivedependenciescompose::Top::GetFoo>(
@@ -506,7 +593,6 @@ class ::fidl::internal::WireWeakAsyncClientImpl<
   void GetFoo(::fidl::WireClientCallback<
               ::test_transitivedependenciescompose::Top::GetFoo>
                   _cb);
-
   void GetFoo(
       ::fit::callback<
           void(::fidl::WireResponse<

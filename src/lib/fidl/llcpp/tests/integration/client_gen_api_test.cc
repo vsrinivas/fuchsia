@@ -353,8 +353,9 @@ TEST(GenAPITestCase, UnbindInfoDecodeError) {
 
   // Set up an Example.OnEvent() message but send it without the payload. This should trigger a
   // decoding error.
-  fidl::WireEvent<Example::OnEvent> resp{fidl::StringView("")};
-  fidl::unstable::OwnedEncodedMessage<fidl::WireEvent<Example::OnEvent>> encoded(&resp);
+  fidl::internal::TransactionalEvent<Example::OnEvent> resp(fidl::StringView(""));
+  fidl::unstable::OwnedEncodedMessage<fidl::internal::TransactionalEvent<Example::OnEvent>> encoded(
+      &resp);
   ASSERT_TRUE(encoded.ok());
   auto bytes = encoded.GetOutgoingMessage().CopyBytes();
   ASSERT_OK(remote.channel().write(0, bytes.data(), sizeof(fidl_message_header_t), nullptr, 0));

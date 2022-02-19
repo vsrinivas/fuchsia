@@ -69,10 +69,17 @@ struct ::fidl::internal::WireServerDispatcher<::test_service::SecondProtocol>
 template <>
 struct ::fidl::WireRequest<::test_service::SecondProtocol::MethodOnSecond>
     final {
-  FIDL_ALIGNDECL
-  fidl_message_header_t _hdr;
+  WireRequest() = default;
+};
 
-  WireRequest() { _InitHeader(); }
+template <>
+struct ::fidl::internal::TransactionalRequest<
+    ::test_service::SecondProtocol::MethodOnSecond>
+    final {
+  FIDL_ALIGNDECL
+  fidl_message_header_t header;
+
+  TransactionalRequest() { _InitHeader(); }
 
  private:
   void _InitHeader();
@@ -81,17 +88,23 @@ struct ::fidl::WireRequest<::test_service::SecondProtocol::MethodOnSecond>
 namespace fidl {
 
 template <>
+struct IsFidlType<::fidl::internal::TransactionalRequest<
+    ::test_service::SecondProtocol::MethodOnSecond>> : public std::true_type {};
+template <>
 struct IsFidlType<
     ::fidl::WireRequest<::test_service::SecondProtocol::MethodOnSecond>>
     : public std::true_type {};
 template <>
-struct IsFidlMessage<
+struct IsFidlTransactionalMessage<::fidl::internal::TransactionalRequest<
+    ::test_service::SecondProtocol::MethodOnSecond>> : public std::true_type {};
+template <>
+struct IsFidlTransactionalMessage<
     ::fidl::WireRequest<::test_service::SecondProtocol::MethodOnSecond>>
-    : public std::true_type {};
+    : public std::false_type {};
 
 template <>
-struct TypeTraits<
-    ::fidl::WireRequest<::test_service::SecondProtocol::MethodOnSecond>> {
+struct TypeTraits<::fidl::internal::TransactionalRequest<
+    ::test_service::SecondProtocol::MethodOnSecond>> {
   static constexpr const fidl_type_t* kType = nullptr;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kPrimarySize =
@@ -107,10 +120,28 @@ struct TypeTraits<
 };
 
 static_assert(
-    sizeof(
-        ::fidl::WireRequest<::test_service::SecondProtocol::MethodOnSecond>) ==
-    TypeTraits<::fidl::WireRequest<
+    sizeof(::fidl::internal::TransactionalRequest<
+           ::test_service::SecondProtocol::MethodOnSecond>) ==
+    TypeTraits<::fidl::internal::TransactionalRequest<
         ::test_service::SecondProtocol::MethodOnSecond>>::kPrimarySize);
+static_assert(offsetof(::fidl::internal::TransactionalRequest<
+                           ::test_service::SecondProtocol::MethodOnSecond>,
+                       header) == 0);
+
+template <>
+struct TypeTraits<
+    ::fidl::WireRequest<::test_service::SecondProtocol::MethodOnSecond>> {
+  static constexpr const fidl_type_t* kType = nullptr;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(0);
+  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(0);
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasFlexibleEnvelope = false;
+  static constexpr bool kHasPointer = false;
+  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
+      ::fidl::internal::TransactionalMessageKind::kRequest;
+};
 
 }  // namespace fidl
 namespace test_service {
@@ -120,10 +151,9 @@ template <>
 class ::fidl::WireResult<::test_service::SecondProtocol::MethodOnSecond> final
     : public ::fidl::Result {
  public:
-  WireResult(
-      ::fidl::UnownedClientEnd<::test_service::SecondProtocol> client,
-      ::fidl::WireRequest<::test_service::SecondProtocol::MethodOnSecond>*
-          request);
+  WireResult(::fidl::UnownedClientEnd<::test_service::SecondProtocol> client,
+             ::fidl::internal::TransactionalRequest<
+                 ::test_service::SecondProtocol::MethodOnSecond>* request);
   explicit WireResult(const ::fidl::Result& result) : ::fidl::Result(result) {}
   WireResult(WireResult&&) = delete;
   WireResult(const WireResult&) = delete;
@@ -140,8 +170,8 @@ class ::fidl::WireUnownedResult<::test_service::SecondProtocol::MethodOnSecond>
   explicit WireUnownedResult(
       ::fidl::UnownedClientEnd<::test_service::SecondProtocol> client_end,
       ::fidl::internal::AnyBufferAllocator& allocator,
-      ::fidl::WireRequest<::test_service::SecondProtocol::MethodOnSecond>*
-          request);
+      ::fidl::internal::TransactionalRequest<
+          ::test_service::SecondProtocol::MethodOnSecond>* request);
   explicit WireUnownedResult(const ::fidl::Result& result)
       : ::fidl::Result(result) {}
   WireUnownedResult(WireUnownedResult&&) = delete;
@@ -214,7 +244,8 @@ class ::fidl::internal::WireSyncClientImpl<::test_service::SecondProtocol> final
   // necessary.
   ::fidl::WireResult<::test_service::SecondProtocol::MethodOnSecond>
   MethodOnSecond() {
-    ::fidl::WireRequest<::test_service::SecondProtocol::MethodOnSecond>
+    ::fidl::internal::TransactionalRequest<
+        ::test_service::SecondProtocol::MethodOnSecond>
         _request{};
     return ::fidl::WireResult<::test_service::SecondProtocol::MethodOnSecond>(
         _client_end(), &_request);
@@ -237,7 +268,8 @@ class ::fidl::internal::WireSyncBufferClientImpl<::test_service::SecondProtocol>
   // `.buffer()`.
   ::fidl::WireUnownedResult<::test_service::SecondProtocol::MethodOnSecond>
   MethodOnSecond() {
-    ::fidl::WireRequest<::test_service::SecondProtocol::MethodOnSecond>
+    ::fidl::internal::TransactionalRequest<
+        ::test_service::SecondProtocol::MethodOnSecond>
         _request{};
     return ::fidl::WireUnownedResult<
         ::test_service::SecondProtocol::MethodOnSecond>(
@@ -319,10 +351,17 @@ struct ::fidl::internal::WireServerDispatcher<::test_service::FirstProtocol>
 
 template <>
 struct ::fidl::WireRequest<::test_service::FirstProtocol::MethodOnFirst> final {
-  FIDL_ALIGNDECL
-  fidl_message_header_t _hdr;
+  WireRequest() = default;
+};
 
-  WireRequest() { _InitHeader(); }
+template <>
+struct ::fidl::internal::TransactionalRequest<
+    ::test_service::FirstProtocol::MethodOnFirst>
+    final {
+  FIDL_ALIGNDECL
+  fidl_message_header_t header;
+
+  TransactionalRequest() { _InitHeader(); }
 
  private:
   void _InitHeader();
@@ -331,17 +370,23 @@ struct ::fidl::WireRequest<::test_service::FirstProtocol::MethodOnFirst> final {
 namespace fidl {
 
 template <>
+struct IsFidlType<::fidl::internal::TransactionalRequest<
+    ::test_service::FirstProtocol::MethodOnFirst>> : public std::true_type {};
+template <>
 struct IsFidlType<
     ::fidl::WireRequest<::test_service::FirstProtocol::MethodOnFirst>>
     : public std::true_type {};
 template <>
-struct IsFidlMessage<
+struct IsFidlTransactionalMessage<::fidl::internal::TransactionalRequest<
+    ::test_service::FirstProtocol::MethodOnFirst>> : public std::true_type {};
+template <>
+struct IsFidlTransactionalMessage<
     ::fidl::WireRequest<::test_service::FirstProtocol::MethodOnFirst>>
-    : public std::true_type {};
+    : public std::false_type {};
 
 template <>
-struct TypeTraits<
-    ::fidl::WireRequest<::test_service::FirstProtocol::MethodOnFirst>> {
+struct TypeTraits<::fidl::internal::TransactionalRequest<
+    ::test_service::FirstProtocol::MethodOnFirst>> {
   static constexpr const fidl_type_t* kType = nullptr;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kPrimarySize =
@@ -356,10 +401,28 @@ struct TypeTraits<
       ::fidl::internal::TransactionalMessageKind::kRequest;
 };
 
-static_assert(
-    sizeof(::fidl::WireRequest<::test_service::FirstProtocol::MethodOnFirst>) ==
-    TypeTraits<::fidl::WireRequest<
-        ::test_service::FirstProtocol::MethodOnFirst>>::kPrimarySize);
+static_assert(sizeof(::fidl::internal::TransactionalRequest<
+                     ::test_service::FirstProtocol::MethodOnFirst>) ==
+              TypeTraits<::fidl::internal::TransactionalRequest<
+                  ::test_service::FirstProtocol::MethodOnFirst>>::kPrimarySize);
+static_assert(offsetof(::fidl::internal::TransactionalRequest<
+                           ::test_service::FirstProtocol::MethodOnFirst>,
+                       header) == 0);
+
+template <>
+struct TypeTraits<
+    ::fidl::WireRequest<::test_service::FirstProtocol::MethodOnFirst>> {
+  static constexpr const fidl_type_t* kType = nullptr;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(0);
+  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(0);
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasFlexibleEnvelope = false;
+  static constexpr bool kHasPointer = false;
+  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
+      ::fidl::internal::TransactionalMessageKind::kRequest;
+};
 
 }  // namespace fidl
 namespace test_service {
@@ -370,8 +433,8 @@ class ::fidl::WireResult<::test_service::FirstProtocol::MethodOnFirst> final
     : public ::fidl::Result {
  public:
   WireResult(::fidl::UnownedClientEnd<::test_service::FirstProtocol> client,
-             ::fidl::WireRequest<::test_service::FirstProtocol::MethodOnFirst>*
-                 request);
+             ::fidl::internal::TransactionalRequest<
+                 ::test_service::FirstProtocol::MethodOnFirst>* request);
   explicit WireResult(const ::fidl::Result& result) : ::fidl::Result(result) {}
   WireResult(WireResult&&) = delete;
   WireResult(const WireResult&) = delete;
@@ -388,8 +451,8 @@ class ::fidl::WireUnownedResult<::test_service::FirstProtocol::MethodOnFirst>
   explicit WireUnownedResult(
       ::fidl::UnownedClientEnd<::test_service::FirstProtocol> client_end,
       ::fidl::internal::AnyBufferAllocator& allocator,
-      ::fidl::WireRequest<::test_service::FirstProtocol::MethodOnFirst>*
-          request);
+      ::fidl::internal::TransactionalRequest<
+          ::test_service::FirstProtocol::MethodOnFirst>* request);
   explicit WireUnownedResult(const ::fidl::Result& result)
       : ::fidl::Result(result) {}
   WireUnownedResult(WireUnownedResult&&) = delete;
@@ -461,7 +524,8 @@ class ::fidl::internal::WireSyncClientImpl<::test_service::FirstProtocol> final
   // necessary.
   ::fidl::WireResult<::test_service::FirstProtocol::MethodOnFirst>
   MethodOnFirst() {
-    ::fidl::WireRequest<::test_service::FirstProtocol::MethodOnFirst>
+    ::fidl::internal::TransactionalRequest<
+        ::test_service::FirstProtocol::MethodOnFirst>
         _request{};
     return ::fidl::WireResult<::test_service::FirstProtocol::MethodOnFirst>(
         _client_end(), &_request);
@@ -484,7 +548,8 @@ class ::fidl::internal::WireSyncBufferClientImpl<::test_service::FirstProtocol>
   // `.buffer()`.
   ::fidl::WireUnownedResult<::test_service::FirstProtocol::MethodOnFirst>
   MethodOnFirst() {
-    ::fidl::WireRequest<::test_service::FirstProtocol::MethodOnFirst>
+    ::fidl::internal::TransactionalRequest<
+        ::test_service::FirstProtocol::MethodOnFirst>
         _request{};
     return ::fidl::WireUnownedResult<
         ::test_service::FirstProtocol::MethodOnFirst>(_client_end(),

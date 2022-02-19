@@ -60,28 +60,56 @@ struct ::fidl::internal::WireServerDispatcher<::test_drivertwoway::TwoWay>
 template <>
 struct ::fidl::WireRequest<::test_drivertwoway::TwoWay::Add> final {
   FIDL_ALIGNDECL
-  fidl_message_header_t _hdr;
   uint16_t addend1;
   uint16_t addend2;
 
   explicit WireRequest(uint16_t addend1, uint16_t addend2)
-      : addend1(addend1), addend2(addend2) {
+      : addend1(addend1), addend2(addend2) {}
+  WireRequest() = default;
+  using ResponseType = ::fidl::WireResponse<::test_drivertwoway::TwoWay::Add>;
+};
+
+template <>
+struct ::fidl::internal::TransactionalRequest<::test_drivertwoway::TwoWay::Add>
+    final {
+  FIDL_ALIGNDECL
+  fidl_message_header_t header;
+
+  ::fidl::WireRequest<::test_drivertwoway::TwoWay::Add> body;
+  explicit TransactionalRequest(uint16_t addend1, uint16_t addend2)
+      : body(::fidl::WireRequest<::test_drivertwoway::TwoWay::Add>(addend1,
+                                                                   addend2)) {
     _InitHeader();
   }
-  WireRequest() { _InitHeader(); }
-  using ResponseType = ::fidl::WireResponse<::test_drivertwoway::TwoWay::Add>;
+  TransactionalRequest() { _InitHeader(); }
+  using ResponseType =
+      ::fidl::internal::TransactionalResponse<::test_drivertwoway::TwoWay::Add>;
 
  private:
   void _InitHeader();
 };
+
 template <>
 struct ::fidl::WireResponse<::test_drivertwoway::TwoWay::Add> final {
   FIDL_ALIGNDECL
-  fidl_message_header_t _hdr;
   uint16_t sum;
 
-  explicit WireResponse(uint16_t sum) : sum(sum) { _InitHeader(); }
-  WireResponse() { _InitHeader(); }
+  explicit WireResponse(uint16_t sum) : sum(sum) {}
+  WireResponse() = default;
+};
+
+template <>
+struct ::fidl::internal::TransactionalResponse<::test_drivertwoway::TwoWay::Add>
+    final {
+  FIDL_ALIGNDECL
+  fidl_message_header_t header;
+
+  ::fidl::WireResponse<::test_drivertwoway::TwoWay::Add> body;
+  explicit TransactionalResponse(uint16_t sum)
+      : body(::fidl::WireResponse<::test_drivertwoway::TwoWay::Add>(sum)) {
+    _InitHeader();
+  }
+  TransactionalResponse() { _InitHeader(); }
 
  private:
   void _InitHeader();
@@ -90,14 +118,24 @@ struct ::fidl::WireResponse<::test_drivertwoway::TwoWay::Add> final {
 namespace fidl {
 
 template <>
+struct IsFidlType<
+    ::fidl::internal::TransactionalRequest<::test_drivertwoway::TwoWay::Add>>
+    : public std::true_type {};
+template <>
 struct IsFidlType<::fidl::WireRequest<::test_drivertwoway::TwoWay::Add>>
     : public std::true_type {};
 template <>
-struct IsFidlMessage<::fidl::WireRequest<::test_drivertwoway::TwoWay::Add>>
+struct IsFidlTransactionalMessage<
+    ::fidl::internal::TransactionalRequest<::test_drivertwoway::TwoWay::Add>>
     : public std::true_type {};
+template <>
+struct IsFidlTransactionalMessage<
+    ::fidl::WireRequest<::test_drivertwoway::TwoWay::Add>>
+    : public std::false_type {};
 
 template <>
-struct TypeTraits<::fidl::WireRequest<::test_drivertwoway::TwoWay::Add>> {
+struct TypeTraits<
+    ::fidl::internal::TransactionalRequest<::test_drivertwoway::TwoWay::Add>> {
   static constexpr const fidl_type_t* kType =
       &::test_drivertwoway::test_drivertwoway_TwoWayAddRequestTable;
   static constexpr uint32_t kMaxNumHandles = 0;
@@ -113,24 +151,59 @@ struct TypeTraits<::fidl::WireRequest<::test_drivertwoway::TwoWay::Add>> {
       ::fidl::internal::TransactionalMessageKind::kRequest;
 };
 
+static_assert(sizeof(::fidl::internal::TransactionalRequest<
+                     ::test_drivertwoway::TwoWay::Add>) ==
+              TypeTraits<::fidl::internal::TransactionalRequest<
+                  ::test_drivertwoway::TwoWay::Add>>::kPrimarySize);
+static_assert(offsetof(::fidl::internal::TransactionalRequest<
+                           ::test_drivertwoway::TwoWay::Add>,
+                       header) == 0);
+static_assert(offsetof(::fidl::internal::TransactionalRequest<
+                           ::test_drivertwoway::TwoWay::Add>,
+                       body) == sizeof(fidl_message_header_t));
+
+template <>
+struct TypeTraits<::fidl::WireRequest<::test_drivertwoway::TwoWay::Add>> {
+  static constexpr const fidl_type_t* kType =
+      &::test_drivertwoway::test_drivertwoway_TwoWayAddRequestTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(4);
+  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(4);
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasFlexibleEnvelope = false;
+  static constexpr bool kHasPointer = false;
+  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
+      ::fidl::internal::TransactionalMessageKind::kRequest;
+};
 static_assert(
     sizeof(::fidl::WireRequest<::test_drivertwoway::TwoWay::Add>) ==
     TypeTraits<
         ::fidl::WireRequest<::test_drivertwoway::TwoWay::Add>>::kPrimarySize);
 static_assert(offsetof(::fidl::WireRequest<::test_drivertwoway::TwoWay::Add>,
-                       addend1) == 0 + sizeof(fidl_message_header_t));
+                       addend1) == 0);
 static_assert(offsetof(::fidl::WireRequest<::test_drivertwoway::TwoWay::Add>,
-                       addend2) == 2 + sizeof(fidl_message_header_t));
+                       addend2) == 2);
 
+template <>
+struct IsFidlType<
+    ::fidl::internal::TransactionalResponse<::test_drivertwoway::TwoWay::Add>>
+    : public std::true_type {};
 template <>
 struct IsFidlType<::fidl::WireResponse<::test_drivertwoway::TwoWay::Add>>
     : public std::true_type {};
 template <>
-struct IsFidlMessage<::fidl::WireResponse<::test_drivertwoway::TwoWay::Add>>
+struct IsFidlTransactionalMessage<
+    ::fidl::internal::TransactionalResponse<::test_drivertwoway::TwoWay::Add>>
     : public std::true_type {};
+template <>
+struct IsFidlTransactionalMessage<
+    ::fidl::WireResponse<::test_drivertwoway::TwoWay::Add>>
+    : public std::false_type {};
 
 template <>
-struct TypeTraits<::fidl::WireResponse<::test_drivertwoway::TwoWay::Add>> {
+struct TypeTraits<
+    ::fidl::internal::TransactionalResponse<::test_drivertwoway::TwoWay::Add>> {
   static constexpr const fidl_type_t* kType =
       &::test_drivertwoway::test_drivertwoway_TwoWayAddTopResponseTable;
   static constexpr uint32_t kMaxNumHandles = 0;
@@ -146,12 +219,37 @@ struct TypeTraits<::fidl::WireResponse<::test_drivertwoway::TwoWay::Add>> {
       ::fidl::internal::TransactionalMessageKind::kResponse;
 };
 
+static_assert(sizeof(::fidl::internal::TransactionalResponse<
+                     ::test_drivertwoway::TwoWay::Add>) ==
+              TypeTraits<::fidl::internal::TransactionalResponse<
+                  ::test_drivertwoway::TwoWay::Add>>::kPrimarySize);
+static_assert(offsetof(::fidl::internal::TransactionalResponse<
+                           ::test_drivertwoway::TwoWay::Add>,
+                       header) == 0);
+static_assert(offsetof(::fidl::internal::TransactionalResponse<
+                           ::test_drivertwoway::TwoWay::Add>,
+                       body) == sizeof(fidl_message_header_t));
+
+template <>
+struct TypeTraits<::fidl::WireResponse<::test_drivertwoway::TwoWay::Add>> {
+  static constexpr const fidl_type_t* kType =
+      &::test_drivertwoway::test_drivertwoway_TwoWayAddTopResponseTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(2);
+  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(2);
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasFlexibleEnvelope = false;
+  static constexpr bool kHasPointer = false;
+  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
+      ::fidl::internal::TransactionalMessageKind::kResponse;
+};
 static_assert(
     sizeof(::fidl::WireResponse<::test_drivertwoway::TwoWay::Add>) ==
     TypeTraits<
         ::fidl::WireResponse<::test_drivertwoway::TwoWay::Add>>::kPrimarySize);
 static_assert(offsetof(::fidl::WireResponse<::test_drivertwoway::TwoWay::Add>,
-                       sum) == 0 + sizeof(fidl_message_header_t));
+                       sum) == 0);
 
 }  // namespace fidl
 namespace test_drivertwoway {
@@ -164,15 +262,17 @@ class ::fdf::WireUnownedResult<::test_drivertwoway::TwoWay::Add> final
   explicit WireUnownedResult(
       ::fdf::UnownedClientEnd<::test_drivertwoway::TwoWay> client_end,
       const ::fdf::Arena& arena,
-      ::fidl::WireRequest<::test_drivertwoway::TwoWay::Add>* request);
+      ::fidl::internal::TransactionalRequest<::test_drivertwoway::TwoWay::Add>*
+          request);
   explicit WireUnownedResult(
-      ::fidl::WireResponse<::test_drivertwoway::TwoWay::Add>* response)
+      ::fidl::internal::TransactionalResponse<::test_drivertwoway::TwoWay::Add>*
+          response)
       : bytes_(reinterpret_cast<uint8_t*>(response)) {}
   explicit WireUnownedResult(const ::fidl::Result& result)
       : ::fidl::Result(result) {}
   explicit WireUnownedResult(
-      ::fidl::unstable::DecodedMessage<
-          ::fidl::WireResponse<::test_drivertwoway::TwoWay::Add>>&& decoded,
+      ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<
+          ::test_drivertwoway::TwoWay::Add>>&& decoded,
       ::fidl::internal::IncomingTransportContext context)
       : ::fidl::Result(decoded),
         arena_(context.release<::fidl::internal::DriverTransport>()) {
@@ -188,16 +288,17 @@ class ::fdf::WireUnownedResult<::test_drivertwoway::TwoWay::Add> final
   WireUnownedResult* operator=(WireUnownedResult&&) = delete;
   WireUnownedResult* operator=(const WireUnownedResult&) = delete;
   ~WireUnownedResult() = default;
-
   ::fidl::WireResponse<::test_drivertwoway::TwoWay::Add>* Unwrap() {
     ZX_DEBUG_ASSERT(ok());
-    return reinterpret_cast<
-        ::fidl::WireResponse<::test_drivertwoway::TwoWay::Add>*>(bytes_);
+    return &(reinterpret_cast<::fidl::internal::TransactionalResponse<
+                 ::test_drivertwoway::TwoWay::Add>*>(bytes_)
+                 ->body);
   }
   const ::fidl::WireResponse<::test_drivertwoway::TwoWay::Add>* Unwrap() const {
     ZX_DEBUG_ASSERT(ok());
-    return reinterpret_cast<
-        const ::fidl::WireResponse<::test_drivertwoway::TwoWay::Add>*>(bytes_);
+    return &(reinterpret_cast<const ::fidl::internal::TransactionalResponse<
+                 ::test_drivertwoway::TwoWay::Add>*>(bytes_)
+                 ->body);
   }
 
   ::fidl::WireResponse<::test_drivertwoway::TwoWay::Add>& value() {
@@ -291,8 +392,8 @@ class ::fidl::internal::WireSyncBufferClientImpl<::test_drivertwoway::TwoWay>
   // `.buffer()`.
   ::fdf::WireUnownedResult<::test_drivertwoway::TwoWay::Add> Add(
       uint16_t addend1, uint16_t addend2) {
-    ::fidl::WireRequest<::test_drivertwoway::TwoWay::Add> _request{addend1,
-                                                                   addend2};
+    ::fidl::internal::TransactionalRequest<::test_drivertwoway::TwoWay::Add>
+        _request{addend1, addend2};
     return ::fdf::WireUnownedResult<::test_drivertwoway::TwoWay::Add>(
         _client_end(), _arena(), &_request);
   }

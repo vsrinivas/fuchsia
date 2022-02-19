@@ -49,9 +49,9 @@ class RewriteTransaction : public fidl::Transaction {
                     fidl::WriteOptions write_options) override {
     ZX_ASSERT(txid_ != 0);
     auto indicator_msg_bytes = indicator_msg->CopyBytes();
-    ZX_ASSERT(
-        indicator_msg_bytes.size() >=
-        sizeof(fidl::WireResponse<test::ReceiveFlexibleEnvelope::GetUnknownXUnionMoreHandles>));
+    ZX_ASSERT(indicator_msg_bytes.size() >=
+              sizeof(fidl::internal::TransactionalResponse<
+                     test::ReceiveFlexibleEnvelope::GetUnknownXUnionMoreHandles>));
 
     char real_msg_bytes[ZX_CHANNEL_MAX_MSG_BYTES] = {};
     zx_handle_t real_msg_handles[ZX_CHANNEL_MAX_MSG_HANDLES] = {};
@@ -134,10 +134,9 @@ class RewriteTransaction : public fidl::Transaction {
           reinterpret_cast<fidl_xunion_t*>(&real_msg_bytes[sizeof(fidl_message_header_t)]);
       real_response->tag = kBadOrdinal;
 
-      auto indicator_response = reinterpret_cast<
-          const fidl::WireResponse<test::ReceiveFlexibleEnvelope::GetUnknownXUnionMoreHandles>*>(
-          indicator_msg_bytes.data());
-      switch (indicator_response->xu.Which()) {
+      auto indicator_response = reinterpret_cast<const fidl::internal::TransactionalResponse<
+          test::ReceiveFlexibleEnvelope::GetUnknownXUnionMoreHandles>*>(indicator_msg_bytes.data());
+      switch (indicator_response->body.xu.Which()) {
         case test::wire::FlexibleXUnion::Tag::kWantMoreThan30Bytes: {
           // Create a message with more bytes than expected
           constexpr uint32_t kUnknownBytes = 5000;
@@ -332,7 +331,8 @@ class FlexibleEnvelopeTest : public ::testing::Test {
 };
 
 static_assert(fidl::internal::ClampedMessageSize<
-                  fidl::WireResponse<test::ReceiveFlexibleEnvelope::GetUnknownXUnionMoreBytes>,
+                  fidl::internal::TransactionalResponse<
+                      test::ReceiveFlexibleEnvelope::GetUnknownXUnionMoreBytes>,
                   fidl::MessageDirection::kReceiving>() == ZX_CHANNEL_MAX_MSG_BYTES,
               "Cannot assume any limit on byte size apart from the channel limit");
 
@@ -345,7 +345,8 @@ TEST_F(FlexibleEnvelopeTest, ReceiveUnknownVariantWithMoreBytes) {
 }
 
 static_assert(fidl::internal::ClampedHandleCount<
-                  fidl::WireResponse<test::ReceiveFlexibleEnvelope::GetUnknownXUnionMoreHandles>,
+                  fidl::internal::TransactionalResponse<
+                      test::ReceiveFlexibleEnvelope::GetUnknownXUnionMoreHandles>,
                   fidl::MessageDirection::kReceiving>() == ZX_CHANNEL_MAX_MSG_HANDLES,
               "Cannot assume any limit on handle count apart from the channel limit");
 
@@ -357,10 +358,12 @@ TEST_F(FlexibleEnvelopeTest, ReceiveUnknownVariantWithMoreHandles) {
   ASSERT_EQ(result.value().xu.Which(), test::wire::FlexibleXUnion::Tag::kUnknown);
 }
 
-static_assert(fidl::internal::ClampedMessageSize<
-                  fidl::WireResponse<test::ReceiveFlexibleEnvelope::GetUnknownTableMoreBytes>,
-                  fidl::MessageDirection::kReceiving>() == ZX_CHANNEL_MAX_MSG_BYTES,
-              "Cannot assume any limit on byte size apart from the channel limit");
+static_assert(
+    fidl::internal::ClampedMessageSize<fidl::internal::TransactionalResponse<
+                                           test::ReceiveFlexibleEnvelope::GetUnknownTableMoreBytes>,
+                                       fidl::MessageDirection::kReceiving>() ==
+        ZX_CHANNEL_MAX_MSG_BYTES,
+    "Cannot assume any limit on byte size apart from the channel limit");
 
 TEST_F(FlexibleEnvelopeTest, ReceiveUnknownTableFieldWithMoreBytes) {
   auto client = TakeClient();
@@ -372,7 +375,8 @@ TEST_F(FlexibleEnvelopeTest, ReceiveUnknownTableFieldWithMoreBytes) {
 }
 
 static_assert(fidl::internal::ClampedHandleCount<
-                  fidl::WireResponse<test::ReceiveFlexibleEnvelope::GetUnknownTableMoreHandles>,
+                  fidl::internal::TransactionalResponse<
+                      test::ReceiveFlexibleEnvelope::GetUnknownTableMoreHandles>,
                   fidl::MessageDirection::kReceiving>() == ZX_CHANNEL_MAX_MSG_HANDLES,
               "Cannot assume any limit on handle count apart from the channel limit");
 

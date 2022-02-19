@@ -64,20 +64,35 @@ struct ::fidl::internal::WireServerDispatcher<::test_doccomments::Interface>
 
 template <>
 struct ::fidl::WireRequest<::test_doccomments::Interface::Method> final {
-  FIDL_ALIGNDECL
-  fidl_message_header_t _hdr;
+  WireRequest() = default;
+};
 
-  WireRequest() { _InitHeader(); }
+template <>
+struct ::fidl::internal::TransactionalRequest<
+    ::test_doccomments::Interface::Method>
+    final {
+  FIDL_ALIGNDECL
+  fidl_message_header_t header;
+
+  TransactionalRequest() { _InitHeader(); }
 
  private:
   void _InitHeader();
 };
+
 template <>
 struct ::fidl::WireEvent<::test_doccomments::Interface::OnEvent> final {
-  FIDL_ALIGNDECL
-  fidl_message_header_t _hdr;
+  WireEvent() = default;
+};
 
-  WireEvent() { _InitHeader(); }
+template <>
+struct ::fidl::internal::TransactionalEvent<
+    ::test_doccomments::Interface::OnEvent>
+    final {
+  FIDL_ALIGNDECL
+  fidl_message_header_t header;
+
+  TransactionalEvent() { _InitHeader(); }
 
  private:
   void _InitHeader();
@@ -86,14 +101,22 @@ struct ::fidl::WireEvent<::test_doccomments::Interface::OnEvent> final {
 namespace fidl {
 
 template <>
+struct IsFidlType<::fidl::internal::TransactionalRequest<
+    ::test_doccomments::Interface::Method>> : public std::true_type {};
+template <>
 struct IsFidlType<::fidl::WireRequest<::test_doccomments::Interface::Method>>
     : public std::true_type {};
 template <>
-struct IsFidlMessage<::fidl::WireRequest<::test_doccomments::Interface::Method>>
-    : public std::true_type {};
+struct IsFidlTransactionalMessage<::fidl::internal::TransactionalRequest<
+    ::test_doccomments::Interface::Method>> : public std::true_type {};
+template <>
+struct IsFidlTransactionalMessage<
+    ::fidl::WireRequest<::test_doccomments::Interface::Method>>
+    : public std::false_type {};
 
 template <>
-struct TypeTraits<::fidl::WireRequest<::test_doccomments::Interface::Method>> {
+struct TypeTraits<::fidl::internal::TransactionalRequest<
+    ::test_doccomments::Interface::Method>> {
   static constexpr const fidl_type_t* kType = nullptr;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kPrimarySize =
@@ -108,20 +131,45 @@ struct TypeTraits<::fidl::WireRequest<::test_doccomments::Interface::Method>> {
       ::fidl::internal::TransactionalMessageKind::kRequest;
 };
 
-static_assert(
-    sizeof(::fidl::WireRequest<::test_doccomments::Interface::Method>) ==
-    TypeTraits<::fidl::WireRequest<::test_doccomments::Interface::Method>>::
-        kPrimarySize);
+static_assert(sizeof(::fidl::internal::TransactionalRequest<
+                     ::test_doccomments::Interface::Method>) ==
+              TypeTraits<::fidl::internal::TransactionalRequest<
+                  ::test_doccomments::Interface::Method>>::kPrimarySize);
+static_assert(offsetof(::fidl::internal::TransactionalRequest<
+                           ::test_doccomments::Interface::Method>,
+                       header) == 0);
 
+template <>
+struct TypeTraits<::fidl::WireRequest<::test_doccomments::Interface::Method>> {
+  static constexpr const fidl_type_t* kType = nullptr;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(0);
+  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(0);
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasFlexibleEnvelope = false;
+  static constexpr bool kHasPointer = false;
+  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
+      ::fidl::internal::TransactionalMessageKind::kRequest;
+};
+
+template <>
+struct IsFidlType<::fidl::internal::TransactionalEvent<
+    ::test_doccomments::Interface::OnEvent>> : public std::true_type {};
 template <>
 struct IsFidlType<::fidl::WireEvent<::test_doccomments::Interface::OnEvent>>
     : public std::true_type {};
 template <>
-struct IsFidlMessage<::fidl::WireEvent<::test_doccomments::Interface::OnEvent>>
-    : public std::true_type {};
+struct IsFidlTransactionalMessage<::fidl::internal::TransactionalEvent<
+    ::test_doccomments::Interface::OnEvent>> : public std::true_type {};
+template <>
+struct IsFidlTransactionalMessage<
+    ::fidl::WireEvent<::test_doccomments::Interface::OnEvent>>
+    : public std::false_type {};
 
 template <>
-struct TypeTraits<::fidl::WireEvent<::test_doccomments::Interface::OnEvent>> {
+struct TypeTraits<::fidl::internal::TransactionalEvent<
+    ::test_doccomments::Interface::OnEvent>> {
   static constexpr const fidl_type_t* kType = nullptr;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kPrimarySize =
@@ -136,10 +184,27 @@ struct TypeTraits<::fidl::WireEvent<::test_doccomments::Interface::OnEvent>> {
       ::fidl::internal::TransactionalMessageKind::kResponse;
 };
 
-static_assert(
-    sizeof(::fidl::WireEvent<::test_doccomments::Interface::OnEvent>) ==
-    TypeTraits<::fidl::WireEvent<::test_doccomments::Interface::OnEvent>>::
-        kPrimarySize);
+static_assert(sizeof(::fidl::internal::TransactionalEvent<
+                     ::test_doccomments::Interface::OnEvent>) ==
+              TypeTraits<::fidl::internal::TransactionalEvent<
+                  ::test_doccomments::Interface::OnEvent>>::kPrimarySize);
+static_assert(offsetof(::fidl::internal::TransactionalEvent<
+                           ::test_doccomments::Interface::OnEvent>,
+                       header) == 0);
+
+template <>
+struct TypeTraits<::fidl::WireEvent<::test_doccomments::Interface::OnEvent>> {
+  static constexpr const fidl_type_t* kType = nullptr;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(0);
+  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(0);
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasFlexibleEnvelope = false;
+  static constexpr bool kHasPointer = false;
+  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
+      ::fidl::internal::TransactionalMessageKind::kResponse;
+};
 
 }  // namespace fidl
 namespace test_doccomments {
@@ -149,9 +214,9 @@ template <>
 class ::fidl::WireResult<::test_doccomments::Interface::Method> final
     : public ::fidl::Result {
  public:
-  WireResult(
-      ::fidl::UnownedClientEnd<::test_doccomments::Interface> client,
-      ::fidl::WireRequest<::test_doccomments::Interface::Method>* request);
+  WireResult(::fidl::UnownedClientEnd<::test_doccomments::Interface> client,
+             ::fidl::internal::TransactionalRequest<
+                 ::test_doccomments::Interface::Method>* request);
   explicit WireResult(const ::fidl::Result& result) : ::fidl::Result(result) {}
   WireResult(WireResult&&) = delete;
   WireResult(const WireResult&) = delete;
@@ -168,7 +233,8 @@ class ::fidl::WireUnownedResult<::test_doccomments::Interface::Method> final
   explicit WireUnownedResult(
       ::fidl::UnownedClientEnd<::test_doccomments::Interface> client_end,
       ::fidl::internal::AnyBufferAllocator& allocator,
-      ::fidl::WireRequest<::test_doccomments::Interface::Method>* request);
+      ::fidl::internal::TransactionalRequest<
+          ::test_doccomments::Interface::Method>* request);
   explicit WireUnownedResult(const ::fidl::Result& result)
       : ::fidl::Result(result) {}
   WireUnownedResult(WireUnownedResult&&) = delete;
@@ -247,7 +313,9 @@ class ::fidl::internal::WireSyncClientImpl<::test_doccomments::Interface> final
   // Allocates 32 bytes of message buffer on the stack. No heap allocation
   // necessary.
   ::fidl::WireResult<::test_doccomments::Interface::Method> Method() {
-    ::fidl::WireRequest<::test_doccomments::Interface::Method> _request{};
+    ::fidl::internal::TransactionalRequest<
+        ::test_doccomments::Interface::Method>
+        _request{};
     return ::fidl::WireResult<::test_doccomments::Interface::Method>(
         _client_end(), &_request);
   }
@@ -271,7 +339,9 @@ class ::fidl::internal::WireSyncBufferClientImpl<::test_doccomments::Interface>
   // Caller provides the backing storage for FIDL message via an argument to
   // `.buffer()`.
   ::fidl::WireUnownedResult<::test_doccomments::Interface::Method> Method() {
-    ::fidl::WireRequest<::test_doccomments::Interface::Method> _request{};
+    ::fidl::internal::TransactionalRequest<
+        ::test_doccomments::Interface::Method>
+        _request{};
     return ::fidl::WireUnownedResult<::test_doccomments::Interface::Method>(
         _client_end(), _allocator(), &_request);
   }

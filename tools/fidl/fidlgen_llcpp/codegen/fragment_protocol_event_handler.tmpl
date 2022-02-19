@@ -73,8 +73,8 @@ class {{ .WireEventDispatcher }} final :
   constexpr uint32_t kHandleAllocSize = ([]() constexpr {
     uint32_t x = 0;
     {{- range .Events }}
-    if (::fidl::TypeTraits<{{ .WireEvent }}>::kMaxNumHandles >= x) {
-      x = ::fidl::TypeTraits<{{ .WireEvent }}>::kMaxNumHandles;
+    if (::fidl::TypeTraits<{{ .WireTransactionalEvent }}>::kMaxNumHandles >= x) {
+      x = ::fidl::TypeTraits<{{ .WireTransactionalEvent }}>::kMaxNumHandles;
     }
     {{- end }}
     if (x > ZX_CHANNEL_MAX_MSG_HANDLES) {
@@ -108,11 +108,17 @@ class {{ .WireEventDispatcher }} final :
   switch (hdr->ordinal) {
   {{- range .Events }}
     case {{ .OrdinalName }}: {
-      ::fidl::unstable::DecodedMessage<{{ .WireEvent }}> decoded{::std::move(msg)};
+      ::fidl::unstable::DecodedMessage<{{ .WireTransactionalEvent }}> decoded{::std::move(msg)};
       if (!decoded.ok()) {
         return ::fidl::Result(decoded);
       }
-      {{ .Name }}(decoded.PrimaryObject());
+      {{- if .ResponseArgs }}
+      auto* primary = &decoded.PrimaryObject()->body;
+      {{- else }}
+      {{ .WireEvent }} empty_event;
+      auto* primary = &empty_event;
+      {{- end }}
+      {{ .Name }}(primary);
       return ::fidl::Result::Ok();
     }
   {{- end }}
@@ -130,12 +136,18 @@ std::optional<::fidl::UnbindInfo>
   {{- range .Events }}
     case {{ .OrdinalName }}:
     {
-      ::fidl::unstable::DecodedMessage<{{ .WireEvent }}> decoded{std::move(msg)};
+      ::fidl::unstable::DecodedMessage<{{ .WireTransactionalEvent }}> decoded{std::move(msg)};
       if (!decoded.ok()) {
         return ::fidl::UnbindInfo{decoded};
       }
       if (event_handler()) {
-        event_handler()->{{ .Name }}(decoded.PrimaryObject());
+        {{- if .ResponseArgs }}
+        auto* primary = &decoded.PrimaryObject()->body;
+        {{- else }}
+        {{ .WireEvent }} empty_event;
+        auto* primary = &empty_event;
+        {{- end }}
+        event_handler()->{{ .Name }}(primary);
       }
       return std::nullopt;
     }

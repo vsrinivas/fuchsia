@@ -13,33 +13,37 @@ inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoderForType, 4>
     test_inheritance_decoder_encoders = {
 
         ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name =
-                "::fidl::WireRequest<::test_inheritance::Super::Foo>",
+            .fidl_type_name = "::fidl::internal::TransactionalRequest<::test_"
+                              "inheritance::Super::Foo>",
             .has_flexible_envelope = false,
             .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<
-                ::fidl::WireRequest<::test_inheritance::Super::Foo>>,
+                ::fidl::internal::TransactionalRequest<
+                    ::test_inheritance::Super::Foo>>,
         },
         ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name =
-                "::fidl::WireResponse<::test_inheritance::Super::Foo>",
+            .fidl_type_name = "::fidl::internal::TransactionalResponse<::test_"
+                              "inheritance::Super::Foo>",
             .has_flexible_envelope = false,
             .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<
-                ::fidl::WireResponse<::test_inheritance::Super::Foo>>,
+                ::fidl::internal::TransactionalResponse<
+                    ::test_inheritance::Super::Foo>>,
         },
 
         ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name =
-                "::fidl::WireRequest<::test_inheritance::Sub::Foo>",
+            .fidl_type_name = "::fidl::internal::TransactionalRequest<::test_"
+                              "inheritance::Sub::Foo>",
             .has_flexible_envelope = false,
             .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<
-                ::fidl::WireRequest<::test_inheritance::Sub::Foo>>,
+                ::fidl::internal::TransactionalRequest<
+                    ::test_inheritance::Sub::Foo>>,
         },
         ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name =
-                "::fidl::WireResponse<::test_inheritance::Sub::Foo>",
+            .fidl_type_name = "::fidl::internal::TransactionalResponse<::test_"
+                              "inheritance::Sub::Foo>",
             .has_flexible_envelope = false,
             .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<
-                ::fidl::WireResponse<::test_inheritance::Sub::Foo>>,
+                ::fidl::internal::TransactionalResponse<
+                    ::test_inheritance::Sub::Foo>>,
         },
 };
 
