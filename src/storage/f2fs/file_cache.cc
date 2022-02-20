@@ -381,11 +381,6 @@ std::vector<fbl::RefPtr<Page>> FileCache::GetLockedDirtyPagesUnsafe(
           page->Unlock();
         }
       } else if (operation.bReleasePages || !vnode_->IsActive()) {
-        // TODO: Fix a bug. The last reference should not have a mapping.
-        if (current->IsMapped()) {
-          ZX_ASSERT(vnode_->IsNode());
-          current->Unmap();
-        }
         current->Unlock();
         EvictUnsafe(&(*current));
       } else {

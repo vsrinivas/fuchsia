@@ -107,7 +107,7 @@ class NodeManager {
   zx_status_t GetNodePage(nid_t nid, fbl::RefPtr<Page> *out);
 
   // Caller should acquire LockType:kFileOp when |ro| = 0.
-  zx_status_t GetDnodeOfData(DnodeOfData &dn, pgoff_t index, int ro);
+  zx_status_t GetDnodeOfData(DnodeOfData &dn, pgoff_t index, bool readonly);
   void FillNodeFooterBlkaddr(Page &page, block_t blkaddr);
 
   zx_status_t RestoreNodeSummary(uint32_t segno, SummaryBlock &sum);

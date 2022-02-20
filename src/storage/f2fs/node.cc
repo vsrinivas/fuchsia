@@ -585,80 +585,65 @@ zx::status<int> NodeManager::GetNodePath(VnodeF2fs &vnode, long block, int (&off
   return zx::ok(level);
 }
 
-// Caller should call f2fs_put_dnode(dn).
-zx_status_t NodeManager::GetDnodeOfData(DnodeOfData &dn, pgoff_t index, int ro) {
+// Caller should call F2fsPutDnode(dn).
+zx_status_t NodeManager::GetDnodeOfData(DnodeOfData &dn, pgoff_t index, bool readonly) {
   fbl::RefPtr<Page> npage[4];
   fbl::RefPtr<Page> parent;
   int offset[4];
   uint32_t noffset[4];
-  nid_t nids[4];
-  int level, i;
-  zx_status_t err = 0;
-  // TODO: Rework struct DnodeOfData and remedy uncomfy dereference below.
-  // TODO: Revisit page locking after read-ahead is available.
+  nid_t nids[4] = {0};
+
   auto node_path = GetNodePath(*dn.vnode, index, offset, noffset);
-  auto release_pages = [&]() {
-    Page::PutPage(std::move(parent), true);
-    if (i > 1) {
-      Page::PutPage(std::move(npage[0]), true);
-    }
-    dn.inode_page = nullptr;
-    dn.node_page = nullptr;
-  };
-  auto release_out = [&dn]() {
-    dn.inode_page = nullptr;
-    dn.node_page = nullptr;
-  };
-  if (node_path.is_error())
+  if (node_path.is_error()) {
     return node_path.error_value();
+  }
 
-  level = *node_path;
-
+  int level = *node_path;
   nids[0] = dn.vnode->Ino();
-  npage[0] = nullptr;
-  err = GetNodePage(nids[0], &npage[0]);
-  if (err)
+  if (zx_status_t err = GetNodePage(nids[0], &npage[0]); err != ZX_OK) {
     return err;
+  }
+
+  auto release_pages = fit::defer([&]() {
+    dn.inode_page = nullptr;
+    dn.node_page = nullptr;
+    // Avoid releasing |npage[0]| twice.
+    if (parent && parent != npage[0]) {
+      Page::PutPage(std::move(parent), true);
+    }
+    for (auto i = 0; i < 4; ++i) {
+      if (npage[i]) {
+        Page::PutPage(std::move(npage[i]), true);
+      }
+    }
+  });
 
   parent = npage[0];
-  if (level != 0)
-    nids[1] = GetNid(*parent, offset[0], true);
   dn.inode_page = npage[0];
   dn.inode_page_locked = true;
 
-  // get indirect or direct nodes
-  for (i = 1; i <= level; ++i) {
-    bool done = false;
+  if (level != 0) {
+    nids[1] = GetNid(*parent, offset[0], true);
+  }
 
-    if (!nids[i] && !ro) {
+  // get indirect or direct nodes
+  for (int i = 1; i <= level; ++i) {
+    if (!nids[i] && !readonly) {
       // alloc new node
       if (!AllocNid(nids[i])) {
-        err = ZX_ERR_NO_SPACE;
-        release_pages();
-        return err;
+        return ZX_ERR_NO_SPACE;
       }
 
       dn.nid = nids[i];
-      npage[i] = nullptr;
-      err = NewNodePage(dn, noffset[i], &npage[i]);
-      if (err) {
+      if (zx_status_t err = NewNodePage(dn, noffset[i], &npage[i]); err != ZX_OK) {
         AllocNidFailed(nids[i]);
-        release_pages();
         return err;
       }
 
       SetNid(*parent, offset[i - 1], nids[i], i == 1);
       AllocNidDone(nids[i]);
-      done = true;
-    } else if (ro && i == level && level > 1) {
-#if 0  // porting needed
-      // err = GetNodePageRa(parent, offset[i - 1], &npage[i]);
-      // if (err) {
-      // 	release_pages();
-      // 	return err;
-      // }
-      // done = true;
-#endif
+    } else if (readonly && i == level && level > 1) {
+      // TODO: Read ahead Pages
     }
     if (i == 1) {
       dn.inode_page_locked = false;
@@ -666,26 +651,21 @@ zx_status_t NodeManager::GetDnodeOfData(DnodeOfData &dn, pgoff_t index, int ro) 
     } else {
       Page::PutPage(std::move(parent), true);
     }
-
-    if (!done) {
-      npage[i] = nullptr;
-      err = GetNodePage(nids[i], &npage[i]);
-      if (err) {
-        Page::PutPage(std::move(npage[0]), false);
-        release_out();
+    if (!npage[i]) {
+      if (zx_status_t err = GetNodePage(nids[i], &npage[i]); err != ZX_OK) {
         return err;
       }
     }
     if (i < level) {
-      parent = npage[i];
+      parent = std::move(npage[i]);
       nids[i + 1] = GetNid(*parent, offset[i], false);
     }
   }
   dn.nid = nids[level];
   dn.ofs_in_node = offset[level];
-  dn.node_page = npage[level];
+  dn.node_page = std::move(npage[level]);
   dn.data_blkaddr = DatablockAddr(dn.node_page.get(), dn.ofs_in_node);
-
+  release_pages.cancel();
   return ZX_OK;
 }
 

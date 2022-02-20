@@ -56,7 +56,7 @@ constexpr int kXattrNodeOffset = -1;
 // store xattrs to one node block per
 // file keeping -1 as its node offset to
 // distinguish from index node blocks.
-constexpr int kRdOnlyNode = 1;
+constexpr bool kRdOnlyNode = true;
 // specify a read-only mode when getting
 // a node block. 0 is read-write mode.
 // used by GetDnodeOfData().
