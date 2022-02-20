@@ -397,34 +397,22 @@ zx_status_t VnodeF2fs::DoTruncate(size_t len) {
 
 int VnodeF2fs::TruncateDataBlocksRange(DnodeOfData *dn, int count) {
   int nr_free = 0, ofs = dn->ofs_in_node;
-  Node *raw_node;
-  uint32_t *addr;
-
-  raw_node = static_cast<Node *>(dn->node_page->GetAddress());
-  addr = BlkaddrInNode(*raw_node) + ofs;
+  Node *raw_node = static_cast<Node *>(dn->node_page->GetAddress());
+  uint32_t *addr = BlkaddrInNode(*raw_node) + ofs;
+  pgoff_t start = NodeManager::StartBidxOfNode(*dn->node_page) + ofs;
+  pgoff_t end = start + count;
 
   for (; count > 0; --count, ++addr, ++dn->ofs_in_node) {
     block_t blkaddr = LeToCpu(*addr);
     if (blkaddr == kNullAddr)
       continue;
-
     UpdateExtentCache(kNullAddr, dn);
     Vfs()->GetSegmentManager().InvalidateBlocks(blkaddr);
     Vfs()->DecValidBlockCount(dn->vnode, 1);
-    uint32_t bidx = NodeManager::StartBidxOfNode(*dn->node_page) + LeToCpu(dn->ofs_in_node);
-    fbl::RefPtr<Page> data_page;
-    if (FindPage(bidx, &data_page) == ZX_OK) {
-      if (data_page->IsUptodate()) {
-        data_page->Lock();
-        data_page->Invalidate();
-        data_page->Unlock();
-      }
-      Page::PutPage(std::move(data_page), false);
-    }
-
     ++nr_free;
   }
   if (nr_free) {
+    InvalidatePages(start, end);
     dn->node_page->SetDirty();
     Vfs()->GetNodeManager().SyncInodePage(*dn);
   }

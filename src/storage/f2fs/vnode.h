@@ -366,7 +366,9 @@ class VnodeF2fs : public fs::Vnode,
     return file_cache_.GetPage(index, out);
   }
   pgoff_t Writeback(WritebackOperation &operation) { return file_cache_.Writeback(operation); }
-  void InvalidateAllPages() { file_cache_.InvalidateAllPages(); }
+  void InvalidatePages(pgoff_t start = 0, pgoff_t end = kPgOffMax) {
+    file_cache_.InvalidatePages(start, end);
+  }
 
   // TODO: When |is_reclaim| is set, release |page| after the IO completion
   zx_status_t WriteDirtyPage(fbl::RefPtr<Page> page, bool is_reclaim);

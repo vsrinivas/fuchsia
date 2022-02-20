@@ -562,7 +562,7 @@ void F2fs::DoCheckpoint(bool is_umount) {
   superblock_info.ClearDirty();
 
   ZX_ASSERT(superblock_info_->GetPageCount(CountType::kDirtyMeta) == 0);
-  meta_vnode_->InvalidateAllPages();
+  meta_vnode_->InvalidatePages();
 }
 
 // We guarantee that this checkpoint procedure should not fail.

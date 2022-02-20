@@ -56,29 +56,14 @@ fpromise::promise<> Writer::SubmitPages(sync_completion_t *completion) {
           FX_LOGS(WARNING) << "[f2fs] RunRequest fails..Redirty Pages..";
           redirty = true;
         }
-        block_t nio = 0;
-        std::vector<pgoff_t> ids;
-        ino_t prev = 0;
-        FileCache *file_cache = nullptr;
-        for (nio = 0; nio < pages.size(); ++nio) {
+        for (block_t nio = 0; nio < pages.size(); ++nio) {
           auto page = std::move(pages[nio]);
-          auto current = page->GetVnodeId();
           pages[nio] = nullptr;
           if (redirty && page->IsUptodate()) {
             page->SetDirty();
           }
           page->ClearWriteback();
-          if (prev == 0) {
-            file_cache = &page->GetFileCache();
-          } else if (prev != current) {
-            file_cache->UnmapAndReleasePages(std::move(ids));
-            file_cache = &page->GetFileCache();
-          }
-          ids.push_back(page->GetKey());
-          prev = current;
-        }
-        if (ids.size()) {
-          file_cache->UnmapAndReleasePages(std::move(ids));
+          Page::PutPage(std::move(page), false);
         }
         if (fs_->GetSuperblockInfo().GetPageCount(CountType::kWriteback) >=
             static_cast<int>(kDefaultBlocksPerSegment)) {
