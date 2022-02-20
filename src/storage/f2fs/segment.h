@@ -77,11 +77,11 @@ struct SitInfo {
   uint32_t dirty_sentries = 0;                       // # of dirty sentries
   uint32_t sents_per_block = 0;                      // # of SIT entries per block
   // for cost-benefit algorithm in cleaning procedure
-  uint64_t elapsed_time = 0;  // elapsed time after mount
-  uint64_t mounted_time = 0;  // mount time
-  uint64_t min_mtime = 0;     // min. modification time
-  uint64_t max_mtime = 0;     // max. modification time
-  std::mutex sentry_lock;     // to protect SIT cache
+  uint64_t elapsed_time = 0;    // elapsed time after mount
+  uint64_t mounted_time = 0;    // mount time
+  uint64_t min_mtime = 0;       // min. modification time
+  uint64_t max_mtime = 0;       // max. modification time
+  fs::SharedMutex sentry_lock;  // to protect SIT cache
 };
 
 struct FreeSegmapInfo {
@@ -167,7 +167,6 @@ class SegmentManager {
 
   zx_status_t BuildSegmentManager();
   void DestroySegmentManager();
-  void RewriteNodePage(Page *page, Summary *sum, block_t old_blkaddr, block_t new_blkaddr);
 
   SegmentEntry &GetSegmentEntry(uint32_t segno);
   SectionEntry *GetSectionEntry(uint32_t segno);
@@ -205,7 +204,7 @@ class SegmentManager {
   block_t StartSumBlock();
   block_t SumBlkAddr(int base, int type);
 
-  bool NeedToFlush();
+  bool NeedToCheckpoint();
   void BalanceFs();
   void LocateDirtySegment(uint32_t segno, enum DirtyType dirty_type);
   void RemoveDirtySegment(uint32_t segno, enum DirtyType dirty_type);
@@ -230,28 +229,25 @@ class SegmentManager {
   void ChangeCurseg(CursegType type, bool reuse);
   void AllocateSegmentByDefault(CursegType type, bool force);
   void AllocateNewSegments();
+  block_t GetWrittenBlockCount();
 #if 0  // porting needed
-  block_t WrittenBlockCount();
-  void VerifyBlockAddr(block_t blk_addr);
-  void EndIoWrite(bio *bio, int err);
-  bio *BioAlloc(block_device *bdev, sector_t first_sector, int nr_vecs,
-                           gfp_t gfp_flags);
-  void DoSubmitBio(PageType type, bool sync);
+  void VerifyBlockAddr(block_t blk_addr) = 0;
 #endif
-  void SubmitBio(PageType type, bool sync);
-  void SubmitWritePage(Page *page, block_t blk_addr, PageType type);
   bool HasCursegSpace(CursegType type);
   CursegType GetSegmentType2(Page &page, PageType p_type);
   CursegType GetSegmentType4(Page &page, PageType p_type);
   CursegType GetSegmentType6(Page &page, PageType p_type);
   CursegType GetSegmentType(Page &page, PageType p_type);
-  void DoWritePage(Page *page, block_t old_blkaddr, block_t *new_blkaddr, Summary *sum,
-                   PageType p_type);
-  zx_status_t WriteMetaPage(Page *page, bool is_reclaim = false);
-  void WriteNodePage(Page *page, uint32_t nid, block_t old_blkaddr, block_t *new_blkaddr);
-  void WriteDataPage(VnodeF2fs *vnode, Page *page, DnodeOfData *dn, block_t old_blkaddr,
-                     block_t *new_blkaddr);
-  void RewriteDataPage(Page *page, block_t old_blk_addr);
+  zx_status_t DoWritePage(fbl::RefPtr<Page> page, block_t old_blkaddr, block_t *new_blkaddr,
+                          Summary *sum, PageType p_type);
+  zx_status_t WriteMetaPage(fbl::RefPtr<Page> page, bool is_reclaim = false);
+  zx_status_t WriteNodePage(fbl::RefPtr<Page> page, uint32_t nid, block_t old_blkaddr,
+                            block_t *new_blkaddr);
+  zx_status_t WriteDataPage(VnodeF2fs *vnode, fbl::RefPtr<Page> page, DnodeOfData *dn,
+                            block_t old_blkaddr, block_t *new_blkaddr);
+  zx_status_t RewriteDataPage(fbl::RefPtr<Page> page, block_t old_blk_addr);
+  void RewriteNodePage(fbl::RefPtr<Page> page, Summary *sum, block_t old_blkaddr,
+                       block_t new_blkaddr);
   void RecoverDataPage(Page *page, Summary *sum, block_t old_blkaddr, block_t new_blkaddr);
 
   zx_status_t ReadCompactedSummaries();

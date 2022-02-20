@@ -169,7 +169,9 @@ zx_status_t VnodeF2fs::FindDataPage(pgoff_t index, fbl::RefPtr<Page> *out) {
     return err;
   }
 
-  if (zx_status_t err = Readpage(Vfs(), (*out).get(), dn.data_blkaddr, kReadSync); err != ZX_OK) {
+  if (zx_status_t err = Vfs()->MakeOperation(storage::OperationType::kRead, *out, dn.data_blkaddr,
+                                             PageType::kData);
+      err != ZX_OK) {
     Page::PutPage(std::move(*out), true);
     return err;
   }
@@ -206,7 +208,8 @@ zx_status_t VnodeF2fs::GetLockDataPage(pgoff_t index, fbl::RefPtr<Page> *out) {
   ZX_ASSERT(dn.data_blkaddr != kNewAddr);
   ZX_ASSERT(dn.data_blkaddr != kNullAddr);
 
-  if (zx_status_t err = VnodeF2fs::Readpage(Vfs(), (*out).get(), dn.data_blkaddr, kReadSync);
+  if (zx_status_t err = Vfs()->MakeOperation(storage::OperationType::kRead, *out, dn.data_blkaddr,
+                                             PageType::kData);
       err != ZX_OK) {
     Page::PutPage(std::move(*out), true);
     return err;
@@ -242,115 +245,31 @@ zx_status_t VnodeF2fs::GetNewDataPage(pgoff_t index, bool new_i_size, fbl::RefPt
   if (dn.data_blkaddr == kNewAddr) {
     (*out)->ZeroUserSegment(0, kPageSize);
   } else {
-    if (zx_status_t err = Readpage(Vfs(), (*out).get(), dn.data_blkaddr, kReadSync); err != ZX_OK) {
+    if (zx_status_t err = Vfs()->MakeOperation(storage::OperationType::kRead, *out, dn.data_blkaddr,
+                                               PageType::kData);
+        err != ZX_OK) {
       Page::PutPage(std::move(*out), true);
       return err;
     }
   }
   (*out)->SetUptodate();
 
-  // if (new_i_size &&
-  //   i_size_read(inode) < ((index + 1) << kPageCacheShift)) {
-  //   i_size_write(inode, ((index + 1) << kPageCacheShift));
-  //   mark_inode_dirty_sync(inode);
-  // }
   if (new_i_size && GetSize() < ((index + 1) << kPageCacheShift)) {
     SetSize((index + 1) << kPageCacheShift);
-#if 0  // porting needed
-    // mark_inode_dirty_sync(inode);
-#endif
+    // TODO: mark sync when fdatasync is available.
+    MarkInodeDirty();
   }
 
   return ZX_OK;
 }
 
 #if 0  // porting needed
-// static void read_end_io(bio *bio, int err)
-// {
-//   const int uptodate = TestBit(BIO_UPTODATE, &bio->bi_flags);
-//   bio_vec *bvec = bio->bi_io_vec + bio->bi_vcnt - 1;
-
-//   do {
-//     page *page = bvec->bv_page;
-
-//     if (--bvec >= bio->bi_io_vec)
-//       prefetchw(&bvec->bv_page->flags);
-
-//     if (uptodate) {
-//       SetPageUptodate(page);
-//     } else {
-//       ClearPageUptodate(page);
-//       SetPageError(page);
-//     }
-//     unlock_page(page);
-//   } while (bvec >= bio->bi_io_vec);
-//   kfree(bio->bi_private);
-//   bio_put(bio);
-// }
-#endif
-
-/**
- * Fill the locked page with data located in the block address.
- * Read operation is synchronous, and caller must unlock the page.
- */
-zx_status_t VnodeF2fs::Readpage(F2fs *fs, Page *page, block_t blk_addr, int type) {
-#if 0  // porting needed
-  //   block_device *bdev = superblock_info->sb->s_bdev;
-  //   bool sync = (type == kReadSync);
-  //   bio *bio;
-
-  //   /* This page can be already read by other threads */
-  //   if (PageUptodate(page)) {
-  //     if (!sync)
-  //       unlock_page(page);
-  //     return 0;
-  //   }
-
-  //   down_read(&superblock_info->bio_sem);
-
-  //   /* Allocate a new bio */
-  //   bio = f2fs_bio_alloc(bdev, blk_addr << (superblock_info->GetLogBlocksize() - 9),
-  //         1, GFP_NOFS | __GFP_HIGH);
-
-  //   /* Initialize the bio */
-  //   bio->bi_end_io = read_end_io;
-  //   if (bio_add_page(bio, page, kPageSize, 0) < kPageSize) {
-  //     kfree(bio->bi_private);
-  //     bio_put(bio);
-  //     up_read(&superblock_info->bio_sem);
-  //     return -EFAULT;
-  //   }
-
-  //   submit_bio(type, bio);
-  //   up_read(&superblock_info->bio_sem);
-
-  //   /* wait for read completion if sync */
-  //   if (sync) {
-  //     lock_page(page);
-  //     if (PageError(page))
-  //       return -EIO;
-  //   }
-  // return 0;
-#else
-  if (page->IsUptodate()) {
-    return ZX_OK;
-  }
-  if (zx_status_t ret = fs->GetBc().Readblk(blk_addr, page->GetAddress()); ret != ZX_OK) {
-    return ret;
-  }
-  // TODO:Move it to EndIO when async io is available
-  page->SetUptodate();
-  return ZX_OK;
-#endif
-}
-
 /**
  * This function should be used by the data read flow only where it
  * does not check the "create" flag that indicates block allocation.
  * The reason for this special functionality is to exploit VFS readahead
  * mechanism.
  */
-#if 0  // porting needed
 // int VnodeF2fs::GetDataBlockRo(inode *inode, sector_t iblock,
 //       buffer_head *bh_result, int create)
 // {
@@ -398,21 +317,9 @@ zx_status_t VnodeF2fs::Readpage(F2fs *fs, Page *page, block_t blk_addr, int type
 //   F2fsPutDnode(&dn);
 //   return 0;
 // }
-
-// int VnodeF2fs::F2fsReadDataPage(file *file, page *page)
-// {
-//   return mpage_readpage(page, VnodeF2fs::GetDataBlockRo);
-// }
-
-// int VnodeF2fs::F2fsReadDataPages(file *file,
-//       address_space *mapping,
-//       list_node_t *pages, unsigned nr_pages)
-// {
-//   return mpage_readpages(mapping, pages, nr_pages, VnodeF2fs::GetDataBlockRo);
-// }
 #endif
 
-zx_status_t VnodeF2fs::DoWriteDataPage(Page *page) {
+zx_status_t VnodeF2fs::DoWriteDataPage(fbl::RefPtr<Page> page) {
   DnodeOfData dn;
   NodeManager::SetNewDnode(dn, this, nullptr, nullptr, 0);
   if (zx_status_t err = Vfs()->GetNodeManager().GetDnodeOfData(dn, page->GetIndex(), kRdOnlyNode);
@@ -424,20 +331,19 @@ zx_status_t VnodeF2fs::DoWriteDataPage(Page *page) {
   // This page is already truncated
   if (old_blk_addr == kNullAddr) {
     F2fsPutDnode(&dn);
-    return ZX_OK;
+    return ZX_ERR_NOT_FOUND;
   }
-
-  page->SetWriteback();
 
   // If current allocation needs SSR,
   // it had better in-place writes for updated data.
-  // TODO: Impl IsCodeData
+  // TODO: GC, Impl IsCodeData
   if (old_blk_addr != kNewAddr && /*! NodeManager::IsColdData(*page) &&*/
       Vfs()->GetSegmentManager().NeedInplaceUpdate(this)) {
-    Vfs()->GetSegmentManager().RewriteDataPage(page, old_blk_addr);
+    Vfs()->GetSegmentManager().RewriteDataPage(std::move(page), old_blk_addr);
   } else {
     block_t new_blk_addr;
-    Vfs()->GetSegmentManager().WriteDataPage(this, page, &dn, old_blk_addr, &new_blk_addr);
+    Vfs()->GetSegmentManager().WriteDataPage(this, std::move(page), &dn, old_blk_addr,
+                                             &new_blk_addr);
     UpdateExtentCache(new_blk_addr, &dn);
     UpdateVersion();
   }
@@ -446,7 +352,7 @@ zx_status_t VnodeF2fs::DoWriteDataPage(Page *page) {
   return ZX_OK;
 }
 
-zx_status_t VnodeF2fs::WriteDataPage(Page *page, bool is_reclaim) {
+zx_status_t VnodeF2fs::WriteDataPage(fbl::RefPtr<Page> page, bool is_reclaim) {
   SuperblockInfo &superblock_info = Vfs()->GetSuperblockInfo();
   const pgoff_t end_index = (GetSize() >> kPageCacheShift);
 
@@ -455,13 +361,16 @@ zx_status_t VnodeF2fs::WriteDataPage(Page *page, bool is_reclaim) {
     // this page does not have to be written to disk.
     unsigned offset = GetSize() & (kPageSize - 1);
     if ((page->GetIndex() >= end_index + 1) || !offset) {
-      if (page->ClearDirtyForIo() && IsDir()) {
-        superblock_info.DecreasePageCount(CountType::kDirtyDents);
-        DecreaseDirtyDentries();
-      } else {
-        superblock_info.DecreasePageCount(CountType::kDirtyData);
+      if (page->ClearDirtyForIo(true)) {
+        page->SetWriteback();
+        if (IsDir()) {
+          superblock_info.DecreasePageCount(CountType::kDirtyDents);
+          DecreaseDirtyDentries();
+        } else {
+          superblock_info.DecreasePageCount(CountType::kDirtyData);
+        }
       }
-      return ZX_OK;
+      return ZX_ERR_OUT_OF_RANGE;
     }
     page->ZeroUserSegment(offset, kPageSize);
   }
@@ -475,7 +384,8 @@ zx_status_t VnodeF2fs::WriteDataPage(Page *page, bool is_reclaim) {
   // return kAopWritepageActivate;
   //}
 
-  if (page->ClearDirtyForIo()) {
+  if (page->ClearDirtyForIo(true)) {
+    page->SetWriteback();
     fs::SharedLock rlock(superblock_info.GetFsLock(LockType::kFileOp));
 
     if (IsDir()) {
@@ -485,51 +395,18 @@ zx_status_t VnodeF2fs::WriteDataPage(Page *page, bool is_reclaim) {
       superblock_info.DecreasePageCount(CountType::kDirtyData);
     }
 
-    if (zx_status_t err = DoWriteDataPage(page); (err != ZX_OK && err != ZX_ERR_NOT_FOUND)) {
+    if (zx_status_t err = DoWriteDataPage(std::move(page)); err != ZX_OK) {
       // TODO: Tracks pages skipping wb
       // ++wbc->pages_skipped;
-      ZX_ASSERT(0);
+      return err;
     }
   }
 
-  // TODO: when merge_write is available, we should flush any data pages waiting for merging.
-
-#if 0  // porting needed
+#if 0  // TODO: impl it, GC
   Vfs()->GetNodeManager().ClearColdData(*page);
 #endif
   return ZX_OK;
 }
-
-#if 0  // porting needed
-// #define MAX_DESIRED_PAGES_WP 4096
-
-// int VnodeF2fs::F2fsWriteDataPages(/*address_space *mapping,*/
-//                                   WritebackControl *wbc) {
-//   // inode *inode = mapping->host;
-//   // SuperblockInfo &superblock_info = Vfs()->GetSuperblockInfo();
-//   int ret;
-//   // long excess_nrtw = 0, desired_nrtw;
-
-//   // if (wbc->nr_to_write < MAX_DESIRED_PAGES_WP) {
-//   //   desired_nrtw = MAX_DESIRED_PAGES_WP;
-//   //   excess_nrtw = desired_nrtw - wbc->nr_to_write;
-//   //   wbc->nr_to_write = desired_nrtw;
-//   // }
-
-//   // if (!IsDir())
-//   //   mutex_lock(&superblock_info->writepages);
-//   // ret = generic_writepages(mapping, wbc);
-//   ret = 0;
-//   // if (!IsDir())
-//   //   mutex_unlock(&superblock_info->writepages);
-//   // Vfs()->GetSegmentManager().SubmitBio(DATA, (wbc->sync_mode == WB_SYNC_ALL));
-
-//   Vfs()->RemoveDirtyDirInode(this);
-
-//   // wbc->nr_to_write -= excess_nrtw;
-//   return ret;
-// }
-#endif
 
 zx_status_t VnodeF2fs::WriteBegin(size_t pos, size_t len, fbl::RefPtr<Page> *out) {
   pgoff_t index = (static_cast<uint64_t>(pos)) >> kPageCacheShift;
@@ -569,14 +446,25 @@ zx_status_t VnodeF2fs::WriteBegin(size_t pos, size_t len, fbl::RefPtr<Page> *out
   if (dn.data_blkaddr == kNewAddr) {
     (*out)->ZeroUserSegment(0, kPageSize);
   } else {
-    if (zx_status_t err = Readpage(Vfs(), (*out).get(), dn.data_blkaddr, kReadSync); err != ZX_OK) {
+    if (zx_status_t err = Vfs()->MakeOperation(storage::OperationType::kRead, *out, dn.data_blkaddr,
+                                               PageType::kData);
+        err != ZX_OK) {
       Page::PutPage(std::move(*out), true);
       return err;
     }
   }
   (*out)->SetUptodate();
-  // TODO: Vfs()->GetNodeManager().ClearColdData(*pagep);
+  // TODO: GC, Vfs()->GetNodeManager().ClearColdData(*pagep);
   return ZX_OK;
+}
+
+zx_status_t VnodeF2fs::WriteDirtyPage(fbl::RefPtr<Page> page, bool is_reclaim) {
+  if (IsMeta()) {
+    return Vfs()->F2fsWriteMetaPage(std::move(page), false);
+  } else if (IsNode()) {
+    return Vfs()->GetNodeManager().F2fsWriteNodePage(std::move(page), false);
+  }
+  return WriteDataPage(std::move(page), false);
 }
 
 }  // namespace f2fs

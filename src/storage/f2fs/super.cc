@@ -17,9 +17,8 @@ void F2fs::PutSuper() {
 #endif
 
   WriteCheckpoint(false, true);
-  node_vnode_.reset();
-  meta_vnode_.reset();
-
+  writer_.reset();
+  ResetPsuedoVnodes();
   GetVCache().Reset();
 
 #ifdef __Fuchsia__
@@ -298,6 +297,7 @@ zx_status_t F2fs::FillSuper() {
 
   node_vnode_ = std::make_unique<VnodeF2fs>(this, GetSuperblockInfo().GetNodeIno());
   meta_vnode_ = std::make_unique<VnodeF2fs>(this, GetSuperblockInfo().GetMetaIno());
+  writer_ = std::make_unique<Writer>(this, bc_.get());
 
   if (err = GetValidCheckpoint(); err != ZX_OK) {
     return err;
@@ -350,7 +350,6 @@ zx_status_t F2fs::FillSuper() {
     return err;
   }
 
-  // TODO: handling dentry cache
   // TODO: recover fsynced data every mount time
   // enable roll forward recovery when node dirty cache is impl.
   if (!superblock_info_->TestOpt(kMountDisableRollForward)) {

@@ -94,7 +94,7 @@ zx_status_t F2fs::FindFsyncDnodes(list_node_t *head) {
 #endif
 
   while (true) {
-    if (VnodeF2fs::Readpage(this, page.get(), blkaddr, kReadSync)) {
+    if (MakeOperation(storage::OperationType::kRead, page, blkaddr, PageType::kNode)) {
       break;
     }
 
@@ -282,7 +282,7 @@ void F2fs::DoRecoverData(VnodeF2fs *vnode, Page *page, block_t blkaddr) {
   NodeManager::FillNodeFooter(*dn.node_page, dn.nid, ni.ino, NodeManager::OfsOfNode(*page), false);
   dn.node_page->SetDirty();
 
-  GetNodeManager().RecoverNodePage(*dn.node_page, sum, ni, blkaddr);
+  GetNodeManager().RecoverNodePage(dn.node_page, sum, ni, blkaddr);
   F2fsPutDnode(&dn);
 }
 
@@ -300,7 +300,7 @@ void F2fs::RecoverData(list_node_t *head, CursegType type) {
     return;
   }
   while (true) {
-    if (VnodeF2fs::Readpage(this, page.get(), blkaddr, kReadSync)) {
+    if (MakeOperation(storage::OperationType::kRead, page, blkaddr, PageType::kNode)) {
       break;
     }
 

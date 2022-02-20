@@ -131,7 +131,7 @@ TEST(SuperblockTest, Reset) {
   ASSERT_FALSE(fs->IsValid());
   fs->ResetSuperblockInfo();
   ASSERT_FALSE(fs->IsValid());
-  fs->ResetRootVnode();
+  fs->ResetPsuedoVnodes();
   ASSERT_FALSE(fs->IsValid());
 
   ASSERT_EQ(fs->FillSuper(), ZX_OK);
@@ -183,89 +183,6 @@ TEST(F2fsTest, CreateFsAndRootException) {
   auto fs_or = CreateFsAndRoot(MountOptions{}, loop.dispatcher(), std::move(bc),
                                std::move(export_root), std::move(on_unmount), serve_layout);
   ASSERT_EQ(fs_or.error_value(), ZX_ERR_OUT_OF_RANGE);
-}
-
-TEST(F2fsTest, FlushDirtyMetaPage) {
-  std::unique_ptr<Bcache> bc;
-  FileTester::MkfsOnFakeDevWithOptions(&bc, MkfsOptions{});
-
-  std::unique_ptr<F2fs> fs;
-  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
-
-  FileTester::MountWithOptions(loop.dispatcher(), MountOptions{}, &bc, &fs);
-
-  Checkpoint &checkpoint = fs->GetSuperblockInfo().GetCheckpoint();
-  block_t checkpoint_block = fs->GetSuperblockInfo().StartCpAddr();
-  fbl::RefPtr<Page> checkpoint_page;
-  fs->GrabMetaPage(checkpoint_block, &checkpoint_page);
-  memcpy(checkpoint_page->GetAddress(), &checkpoint,
-         (1 << fs->GetSuperblockInfo().GetLogBlocksize()));
-  checkpoint_page->SetDirty();
-
-  ASSERT_EQ(FlushDirtyMetaPage(fs.get(), *checkpoint_page), ZX_OK);
-
-  ASSERT_EQ(fs->GetSuperblockInfo().GetPageCount(CountType::kDirtyMeta), 0);
-
-  Page::PutPage(std::move(checkpoint_page), true);
-
-  FileTester::Unmount(std::move(fs), &bc);
-}
-
-TEST(F2fsTest, FlushDirtyNodePage) {
-  std::unique_ptr<Bcache> bc;
-  FileTester::MkfsOnFakeDevWithOptions(&bc, MkfsOptions{});
-
-  std::unique_ptr<F2fs> fs;
-  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
-
-  FileTester::MountWithOptions(loop.dispatcher(), MountOptions{}, &bc, &fs);
-
-  // read the root inode block
-  fbl::RefPtr<Page> root_node_page = nullptr;
-  SuperblockInfo &superblock_info = fs->GetSuperblockInfo();
-  fs->GetNodeManager().GetNodePage(superblock_info.GetRootIno(), &root_node_page);
-  ASSERT_NE(root_node_page, nullptr);
-
-  root_node_page->SetDirty();
-  ASSERT_EQ(FlushDirtyNodePage(fs.get(), *root_node_page), ZX_OK);
-
-  ASSERT_EQ(fs->GetSuperblockInfo().GetPageCount(CountType::kDirtyNodes), 0);
-
-  Page::PutPage(std::move(root_node_page), true);
-  FileTester::Unmount(std::move(fs), &bc);
-}
-
-TEST(F2fsTest, FlushDirtyDataPage) {
-  std::unique_ptr<Bcache> bc;
-  FileTester::MkfsOnFakeDevWithOptions(&bc, MkfsOptions{});
-
-  std::unique_ptr<F2fs> fs;
-  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
-  FileTester::MountWithOptions(loop.dispatcher(), MountOptions{}, &bc, &fs);
-
-  fbl::RefPtr<VnodeF2fs> root;
-  FileTester::CreateRoot(fs.get(), &root);
-  fbl::RefPtr<Dir> root_dir = fbl::RefPtr<Dir>::Downcast(std::move(root));
-
-  fbl::RefPtr<fs::Vnode> vnode;
-  ASSERT_EQ(root_dir->Create("Data", S_IFREG, &vnode), ZX_OK);
-  VnodeF2fs *vn = static_cast<VnodeF2fs *>(vnode.get());
-
-  fbl::RefPtr<Page> data_page;
-
-  vn->GrabCachePage(100, &data_page);
-
-  data_page->SetDirty();
-  ASSERT_EQ(FlushDirtyDataPage(fs.get(), *data_page), ZX_OK);
-
-  Page::PutPage(std::move(data_page), true);
-
-  ASSERT_EQ(vnode->Close(), ZX_OK);
-  vnode = nullptr;
-  ASSERT_EQ(root_dir->Close(), ZX_OK);
-  root_dir = nullptr;
-
-  FileTester::Unmount(std::move(fs), &bc);
 }
 
 TEST(F2fsTest, ResetBc) {

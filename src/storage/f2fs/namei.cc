@@ -225,8 +225,8 @@ zx_status_t Dir::DoUnlink(VnodeF2fs *vnode, std::string_view name) {
     DeleteEntry(de, page.get(), vnode);
   }
 
-  // Vfs()->GetSegmentManager().BalanceFs();
   Page::PutPage(std::move(page), false);
+  Vfs()->GetSegmentManager().BalanceFs();
   return ZX_OK;
 }
 
@@ -273,13 +273,7 @@ zx_status_t Dir::Mkdir(std::string_view name, uint32_t mode, fbl::RefPtr<fs::Vno
   if (zx_status_t err = NewInode(S_IFDIR | mode, &vnode_refptr); err != ZX_OK)
     return err;
   vnode = vnode_refptr.get();
-
   vnode->SetName(name);
-
-#if 0  // porting needed
-  // mapping_set_gfp_mask(inode->i_mapping, GFP_NOFS | __GFP_ZERO);
-#endif
-
   vnode->SetFlag(InodeInfoFlag::kIncLink);
   {
     SuperblockInfo &superblock_info = Vfs()->GetSuperblockInfo();
@@ -564,8 +558,8 @@ zx_status_t Dir::Rename(fbl::RefPtr<fs::Vnode> _newdir, std::string_view oldname
     }
   } while (false);
 
-  Vfs()->GetSegmentManager().BalanceFs();
   reset_pages();
+  Vfs()->GetSegmentManager().BalanceFs();
   return ZX_OK;
 }
 

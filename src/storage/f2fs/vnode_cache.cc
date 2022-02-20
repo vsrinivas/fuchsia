@@ -25,13 +25,10 @@ void VnodeCache::Reset() {
     ZX_ASSERT(dirty_list_.is_empty());
   }
 
-  ForAllVnodes([this](fbl::RefPtr<VnodeF2fs>& vnode) {
-    __UNUSED zx_status_t status = Evict(vnode.get());
-    return ZX_OK;
-  });
+  ForAllVnodes([this](fbl::RefPtr<VnodeF2fs>& vnode) { return Evict(vnode.get()); });
 }
 
-zx_status_t VnodeCache::ForAllVnodes(Callback callback) {
+zx_status_t VnodeCache::ForAllVnodes(VnodeCallback callback) {
   fbl::RefPtr<VnodeF2fs> prev_vnode = nullptr;
 
   while (true) {
@@ -89,7 +86,7 @@ zx_status_t VnodeCache::ForAllVnodes(Callback callback) {
   return ZX_OK;
 }
 
-zx_status_t VnodeCache::ForDirtyVnodesIf(Callback cb, Callback cb_if) {
+zx_status_t VnodeCache::ForDirtyVnodesIf(VnodeCallback cb, VnodeCallback cb_if) {
   std::vector<fbl::RefPtr<VnodeF2fs>> dirty_vnodes(0);
   int count = 0;
   {

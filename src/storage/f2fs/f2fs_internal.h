@@ -274,19 +274,22 @@ class SuperblockInfo {
   std::mutex &GetStatLock() { return stat_lock_; }
 
   void IncreasePageCount(CountType count_type) {
+    // Use release-acquire ordering with nr_pages_.
     atomic_fetch_add_explicit(&nr_pages_[static_cast<int>(count_type)], 1,
-                              std::memory_order_relaxed);
+                              std::memory_order_release);
     SetDirty();
   }
 
   void DecreasePageCount(CountType count_type) {
+    // Use release-acquire ordering with nr_pages_.
     atomic_fetch_sub_explicit(&nr_pages_[static_cast<int>(count_type)], 1,
-                              std::memory_order_relaxed);
+                              std::memory_order_release);
   }
 
   int GetPageCount(CountType count_type) const {
+    // Use release-acquire ordering with nr_pages_.
     return atomic_load_explicit(&nr_pages_[static_cast<int>(count_type)],
-                                std::memory_order_relaxed);
+                                std::memory_order_acquire);
   }
 
   void IncreaseDirtyDir() { ++n_dirty_dirs; }
@@ -333,12 +336,6 @@ class SuperblockInfo {
  private:
   std::shared_ptr<Superblock> raw_superblock_;  // raw super block pointer
   bool is_dirty_ = false;                       // dirty flag for checkpoint
-
-#if 0  // porting needed
-  // struct bio *bio[static_cast<int>(PageType::kNrPageType)];             // bios to merge
-  // sector_t last_block_in_bio[static_cast<int>(PageType::kNrPageType)];  // last block number
-  // rw_semaphore bio_sem;		// IO semaphore
-#endif
 
   union CheckpointBlock {
     Checkpoint checkpoint_;

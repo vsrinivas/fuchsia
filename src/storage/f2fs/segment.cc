@@ -118,19 +118,10 @@ void SegmentManager::GetSitBitmap(void *dst_addr) {
   memcpy(dst_addr, sit_info_->sit_bitmap.get(), sit_info_->bitmap_size);
 }
 
-#if 0  // porting needed
-block_t SegmentManager::WrittenBlockCount() {
-  SuperblockInfo &superblock_info = fs_->GetSuperblockInfo();
-  SitInfo *sit_i = GetSitInfo(&superblock_info);
-  block_t vblocks;
-
-  mtx_lock(&sit_i->sentry_lock);
-  vblocks = sit_i->written_valid_blocks;
-  mtx_unlock(&sit_i->sentry_lock);
-
-  return vblocks;
+block_t SegmentManager::GetWrittenBlockCount() {
+  fs::SharedLock lock(sit_info_->sentry_lock);
+  return sit_info_->written_valid_blocks;
 }
-#endif
 
 block_t SegmentManager::FreeSegments() {
   fs::SharedLock segmap_lock(free_info_->segmap_lock);
@@ -178,8 +169,12 @@ int SegmentManager::GetSsrSegment(CursegType type) {
   return GetVictimByDefault(GcType::kBgGc, type, AllocMode::kSSR, &(curseg->next_segno));
 }
 
-bool SegmentManager::HasNotEnoughFreeSecs() {
-  return FreeSections() <= static_cast<uint32_t>(ReservedSections());
+// TODO: Without gc, we trigger checkpoint aggressively to secure free segments.
+// TODO: When gc is available, we can make it loose.(e.g., 5% of main segments)
+bool SegmentManager::NeedToCheckpoint() {
+  block_t threshold =
+      std::max(static_cast<block_t>(GetMainSegmentsCount() * 2 / 100), static_cast<block_t>(2));
+  return PrefreeSegments() >= threshold;
 }
 
 uint32_t SegmentManager::Utilization() {
@@ -307,7 +302,7 @@ block_t SegmentManager::SumBlkAddr(int base, int type) {
 
 SegmentManager::SegmentManager(F2fs *fs) : fs_(fs) { superblock_info_ = &fs->GetSuperblockInfo(); }
 
-bool SegmentManager::NeedToFlush() {
+bool SegmentManager::HasNotEnoughFreeSecs() {
   uint32_t pages_per_sec =
       (1 << superblock_info_->GetLogBlocksPerSeg()) * superblock_info_->GetSegsPerSec();
   int node_secs = ((superblock_info_->GetPageCount(CountType::kDirtyNodes) + pages_per_sec - 1) >>
@@ -320,12 +315,6 @@ bool SegmentManager::NeedToFlush() {
   if (superblock_info_->IsOnRecovery())
     return false;
 
-  // TODO: Determine a proper threshold for memory usage
-  if (superblock_info_->GetPageCount(CountType::kDirtyData) >= kMaxDirtyDataPages) {
-    FX_LOGS(INFO) << "Flush dirty pages....";
-    return true;
-  }
-
   return FreeSections() <= static_cast<uint32_t>(node_secs + 2 * dent_secs + ReservedSections());
 }
 
@@ -334,23 +323,49 @@ bool SegmentManager::NeedToFlush() {
 void SegmentManager::BalanceFs() {
   if (superblock_info_->IsOnRecovery())
     return;
-
-  // We should do checkpoint when there are so many dirty node pages
-  // with enough free segments. After then, we should do GC.
-  // TODO: Do writeback in an asynchronous manner if it is not urgent.
-  if (NeedToFlush()) {
-    fs_->SyncDirtyDataPages();
-    fs_->GetNodeManager().SyncNodePages(0, false);
+  // when writeback Pages exceeds |writeback_limit|, it trigger a Writer task.
+  block_t writeback_limit =
+      static_cast<block_t>(superblock_info_->GetActiveLogs()) * kDefaultBlocksPerSegment;
+  block_t dirty_data_pages = superblock_info_->GetPageCount(CountType::kDirtyData);
+  block_t writeback_pages = superblock_info_->GetPageCount(CountType::kWriteback);
+  // The limits are adjusted according to the maximum allowable memory usage for f2fs
+  // TODO: when we can get hints about memory pressure, revisit it.
+  block_t soft_limit = kMaxDirtyDataPages - writeback_limit - writeback_pages;
+  block_t hard_limit = kMaxDirtyDataPages;
+  // Without GC, it triggers checkpoint aggressively to secure free segments from pre-free ones.
+  if (NeedToCheckpoint()) {
+    fs_->WriteCheckpoint(false, false);
   }
-
-  // TODO: need to change after gc IMPL
-  // Without GC, f2fs needs to secure free segments aggressively.
-  if (/*HasNotEnoughFreeSecs() &&*/ PrefreeSegments()) {
 #if 0  // porting needed
+  // TODO: Trigger gc when f2fs does not have enough segments.
+  else if (HasNotEnoughFreeSecs()){
     // mtx_lock(&superblock_info.gc_mutex);
     // F2fsGc(&superblock_info, 1);
+  } {
 #endif
-    fs_->WriteCheckpoint(false, false);
+  else if (dirty_data_pages >= soft_limit) {
+    // f2fs starts writeback when the number of dirty pages exceeds a soft limit.
+    WritebackOperation op = {.to_write = dirty_data_pages, .bSync = true};
+
+    if (dirty_data_pages < hard_limit) {
+      op.bSync = false;
+      op.if_vnode = [](fbl::RefPtr<VnodeF2fs> &vnode) {
+        if (!vnode->IsDir()) {
+          return ZX_OK;
+        }
+        return ZX_ERR_NEXT;
+      };
+      op.to_write = kDefaultBlocksPerSegment;
+    }
+
+    // Allocate blocks for dirty pages of dirty vnodes
+    fs_->SyncDirtyDataPages(op);
+    // Schedule a flush task to submit writeback Pages to disk when Writer merges enough writeback
+    // Pages.
+    writeback_pages = superblock_info_->GetPageCount(CountType::kWriteback);
+    if (!op.bSync && writeback_pages >= writeback_limit) {
+      fs_->ScheduleWriterSubmitPages();
+    }
   }
 }
 
@@ -445,8 +460,10 @@ void SegmentManager::ClearPrefreeSegments() {
       --dirty_info_->nr_dirty[static_cast<int>(DirtyType::kPre)];
     }
 
-    if (superblock_info_->TestOpt(kMountDiscard))
-      fs_->GetBc().Trim(StartBlock(segno), (1 << superblock_info_->GetLogBlocksPerSeg()));
+    if (superblock_info_->TestOpt(kMountDiscard)) {
+      fs_->MakeOperation(storage::OperationType::kTrim, nullptr, StartBlock(segno),
+                         PageType::kNrPageType, (1 << superblock_info_->GetLogBlocksPerSeg()));
+    }
   }
 }
 
@@ -799,138 +816,6 @@ void SegmentManager::AllocateNewSegments() {
   }
 }
 
-#if 0  // porting needed
-const segment_allocation default_salloc_ops = {
-        .allocate_segment = AllocateSegmentByDefault,
-};
-
-void SegmentManager::EndIoWrite(bio *bio, int err) {
-  // const int uptodate = TestBit(BIO_UPTODATE, &bio->bi_flags);
-  // bio_vec *bvec = bio->bi_io_vec + bio->bi_vcnt - 1;
-  // BioPrivate *p = bio->bi_private;
-
-  // do {
-  // 	page *page = bvec->bv_page;
-
-  // 	if (--bvec >= bio->bi_io_vec)
-  // 		prefetchw(&bvec->bv_page->flags);
-  // 	if (!uptodate) {
-  // 		SetPageError(page);
-  // 		if (page->mapping)
-  // 			SetBit(AS_EIO, &page->mapping->flags);
-  // 		p->superblock_info->ckpt->ckpt_flags |= kCpErrorFlag;
-  // 		set_page_dirty(page);
-  // 	}
-  // 	end_page_writeback(page);
-  // 	dec_page_count(p->superblock_info, CountType::kWriteback);
-  // } while (bvec >= bio->bi_io_vec);
-
-  // if (p->is_sync)
-  // 	complete(p->wait);
-  // kfree(p);
-  // bio_put(bio);
-}
-
-bio *SegmentManager::BioAlloc(block_device *bdev, sector_t first_sector, int nr_vecs,
-                                 gfp_t gfp_flags) {
-  // 	bio *bio;
-  // repeat:
-  // 	/* allocate new bio */
-  // 	bio = bio_alloc(gfp_flags, nr_vecs);
-
-  // 	if (bio == nullptr && (current->flags & PF_MEMALLOC)) {
-  // 		while (!bio && (nr_vecs /= 2))
-  // 			bio = bio_alloc(gfp_flags, nr_vecs);
-  // 	}
-  // 	if (bio) {
-  // 		bio->bi_bdev = bdev;
-  // 		bio->bi_sector = first_sector;
-  // retry:
-  // 		bio->bi_private = kmalloc(sizeof(BioPrivate),
-  // 						GFP_NOFS | __GFP_HIGH);
-  // 		if (!bio->bi_private) {
-  // 			cond_resched();
-  // 			goto retry;
-  // 		}
-  // 	}
-  // 	if (bio == nullptr) {
-  // 		cond_resched();
-  // 		goto repeat;
-  // 	}
-  // 	return bio;
-  return nullptr;
-}
-
-void SegmentManager::DoSubmitBio(PageType type, bool sync) {
-  // int rw = sync ? kWriteSync : kWrite;
-  // PageType btype = type > META ? META : type;
-
-  // if (type >= PageType::kMetaFlush)
-  // 	rw = kWriteFlushFua;
-
-  // if (superblock_info->bio[btype]) {
-  // 	BioPrivate *p = superblock_info->bio[btype]->bi_private;
-  // 	p->superblock_info = superblock_info;
-  // 	superblock_info->bio[btype]->bi_end_io = f2fs_end_io_write;
-  // 	if (type == PageType::kMetaFlush) {
-  // 		DECLARE_COMPLETION_ONSTACK(wait);
-  // 		p->is_sync = true;
-  // 		p->wait = &wait;
-  // 		submit_bio(rw, superblock_info->bio[btype]);
-  // 		wait_for_completion(&wait);
-  // 	} else {
-  // 		p->is_sync = false;
-  // 		submit_bio(rw, superblock_info->bio[btype]);
-  // 	}
-  // 	superblock_info->bio[btype] = nullptr;
-  // }
-}
-
-void SegmentManager::SubmitBio(PageType type, bool sync) {
-  // down_write(&superblock_info->bio_sem);
-  // DoSubmitBio(type, sync);
-  // up_write(&superblock_info->bio_sem);
-}
-#endif
-
-void SegmentManager::SubmitWritePage(Page *page, block_t blk_addr, PageType type) {
-  if (zx_status_t ret = fs_->GetBc().Writeblk(blk_addr, page->GetAddress()); ret != ZX_OK) {
-    FX_LOGS(ERROR) << "SubmitWritePage error " << ret;
-    return;
-  }
-  // TODO: Call it after io when async io is available
-  page->ClearWriteback();
-#if 0  // porting needed (bio)
-  //	fs_->bc_->Flush();
-
-  // 	block_device *bdev = superblock_info->sb->s_bdev;
-
-  // 	verify_block_addr(superblock_info, blk_addr);
-
-  // 	down_write(&superblock_info->bio_sem);
-
-  // 	superblock_info->IncreasePageCount(CountType::kWriteback);
-
-  // 	if (superblock_info->bio[type] && superblock_info->last_block_in_bio[type] != blk_addr - 1)
-  // 		do_submit_bio(superblock_info, type, false);
-  // alloc_new:
-  // 	if (superblock_info->bio[type] == nullptr)
-  // 		superblock_info->bio[type] = f2fs_bio_alloc(bdev,
-  // 				blk_addr << (superblock_info->GetLogBlocksize() - 9),
-  // 				bio_get_nr_vecs(bdev), GFP_NOFS | __GFP_HIGH);
-
-  // 	if (bio_add_page(superblock_info->bio[type], page, kPageSize, 0) <
-  // 							kPageSize) {
-  // 		do_submit_bio(superblock_info, type, false);
-  // 		goto alloc_new;
-  // 	}
-
-  // 	superblock_info->last_block_in_bio[type] = blk_addr;
-
-  // 	up_write(&superblock_info->bio_sem);
-#endif
-}
-
 bool SegmentManager::HasCursegSpace(CursegType type) {
   SuperblockInfo &superblock_info = fs_->GetSuperblockInfo();
   CursegInfo *curseg = CURSEG_I(type);
@@ -996,8 +881,8 @@ CursegType SegmentManager::GetSegmentType(Page &page, PageType p_type) {
   }
 }
 
-void SegmentManager::DoWritePage(Page *page, block_t old_blkaddr, block_t *new_blkaddr,
-                                 Summary *sum, PageType p_type) {
+zx_status_t SegmentManager::DoWritePage(fbl::RefPtr<Page> page, block_t old_blkaddr,
+                                        block_t *new_blkaddr, Summary *sum, PageType p_type) {
   CursegInfo *curseg;
   CursegType type;
 
@@ -1031,32 +916,28 @@ void SegmentManager::DoWritePage(Page *page, block_t old_blkaddr, block_t *new_b
     }
 
     if (p_type == PageType::kNode)
-      fs_->GetNodeManager().FillNodeFooterBlkaddr(page, NextFreeBlkAddr(type));
+      fs_->GetNodeManager().FillNodeFooterBlkaddr(*page, NextFreeBlkAddr(type));
   }
 
   // writeout dirty page into bdev
-  SubmitWritePage(page, *new_blkaddr, p_type);
+  return fs_->MakeOperation(storage::OperationType::kWrite, std::move(page), *new_blkaddr, p_type);
 }
 
-zx_status_t SegmentManager::WriteMetaPage(Page *page, bool is_reclaim) {
-#if 0  // porting needed
-  // if (wbc && wbc->for_reclaim)
-  // 	return kAopWritepageActivate;
-#endif
-  page->SetWriteback();
-  SubmitWritePage(page, static_cast<block_t>(page->GetIndex()), PageType::kMeta);
-  return ZX_OK;
+zx_status_t SegmentManager::WriteMetaPage(fbl::RefPtr<Page> page, bool is_reclaim) {
+  block_t blkaddr = static_cast<block_t>(page->GetIndex());
+  return fs_->MakeOperation(storage::OperationType::kWrite, std::move(page), blkaddr,
+                            PageType::kMeta);
 }
 
-void SegmentManager::WriteNodePage(Page *page, uint32_t nid, block_t old_blkaddr,
-                                   block_t *new_blkaddr) {
+zx_status_t SegmentManager::WriteNodePage(fbl::RefPtr<Page> page, uint32_t nid, block_t old_blkaddr,
+                                          block_t *new_blkaddr) {
   Summary sum;
   SetSummary(&sum, nid, 0, 0);
-  DoWritePage(page, old_blkaddr, new_blkaddr, &sum, PageType::kNode);
+  return DoWritePage(std::move(page), old_blkaddr, new_blkaddr, &sum, PageType::kNode);
 }
 
-void SegmentManager::WriteDataPage(VnodeF2fs *vnode, Page *page, DnodeOfData *dn,
-                                   block_t old_blkaddr, block_t *new_blkaddr) {
+zx_status_t SegmentManager::WriteDataPage(VnodeF2fs *vnode, fbl::RefPtr<Page> page, DnodeOfData *dn,
+                                          block_t old_blkaddr, block_t *new_blkaddr) {
   Summary sum;
   NodeInfo ni;
 
@@ -1064,11 +945,12 @@ void SegmentManager::WriteDataPage(VnodeF2fs *vnode, Page *page, DnodeOfData *dn
   fs_->GetNodeManager().GetNodeInfo(dn->nid, ni);
   SetSummary(&sum, dn->nid, dn->ofs_in_node, ni.version);
 
-  DoWritePage(page, old_blkaddr, new_blkaddr, &sum, PageType::kData);
+  return DoWritePage(std::move(page), old_blkaddr, new_blkaddr, &sum, PageType::kData);
 }
 
-void SegmentManager::RewriteDataPage(Page *page, block_t old_blk_addr) {
-  SubmitWritePage(page, old_blk_addr, PageType::kData);
+zx_status_t SegmentManager::RewriteDataPage(fbl::RefPtr<Page> page, block_t old_blk_addr) {
+  return fs_->MakeOperation(storage::OperationType::kWrite, std::move(page), old_blk_addr,
+                            PageType::kData);
 }
 
 void SegmentManager::RecoverDataPage(Page *page, Summary *sum, block_t old_blkaddr,
@@ -1112,7 +994,7 @@ void SegmentManager::RecoverDataPage(Page *page, Summary *sum, block_t old_blkad
   LocateDirtySegment(GetSegmentNumber(new_blkaddr));
 }
 
-void SegmentManager::RewriteNodePage(Page *page, Summary *sum, block_t old_blkaddr,
+void SegmentManager::RewriteNodePage(fbl::RefPtr<Page> page, Summary *sum, block_t old_blkaddr,
                                      block_t new_blkaddr) {
   CursegType type = CursegType::kCursegWarmNode;
   CursegInfo *curseg;
@@ -1145,12 +1027,10 @@ void SegmentManager::RewriteNodePage(Page *page, Summary *sum, block_t old_blkad
   curseg->next_blkoff = safemath::checked_cast<uint16_t>(GetSegOffFromSeg0(next_blkaddr) &
                                                          (superblock_info_->GetBlocksPerSeg() - 1));
 
-  // rewrite node page
-  page->SetWriteback();
-  SubmitWritePage(page, new_blkaddr, PageType::kNode);
-#if 0  // porting needed
-  SubmitBio(NODE, true);
-#endif
+  // TODO: Rewrite node page
+  // Clear the update flag of page to prevent a cache hit
+  // page->SetWriteback();
+  fs_->MakeOperation(storage::OperationType::kWrite, std::move(page), new_blkaddr, PageType::kNode);
   RefreshSitEntry(old_blkaddr, new_blkaddr);
 
   LocateDirtySegment(old_cursegno);

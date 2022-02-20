@@ -83,8 +83,6 @@ class Dir : public VnodeF2fs, public fbl::Recyclable<Dir> {
   uint8_t (*InlineDentryFilenameArray(Page *page))[kDentrySlotLen];
 
 #if 0  // porting needed
-//   int F2fsLink(dentry *old_dentry, dentry *dentry);
-//   dentry *F2fsGetParent(dentry *child);
 //   int F2fsSymlink(dentry *dentry, const char *symname);
 //   int F2fsMknod(dentry *dentry, umode_t mode, dev_t rdev);
 #endif

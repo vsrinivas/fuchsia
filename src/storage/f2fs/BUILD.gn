@@ -37,6 +37,7 @@ static_library("f2fs") {
     "third_party/ext2_hash/hash.h",
     "vnode.cc",
     "vnode_cache.cc",
+    "writeback.cc",
   ]
 
   public = [
@@ -58,10 +59,12 @@ static_library("f2fs") {
     "segment.h",
     "vnode.h",
     "vnode_cache.h",
+    "writeback.h",
   ]
 
   public_deps = [
     "//src/lib/storage/vfs/cpp",
+    "//src/lib/storage/vfs/cpp/journal",
     "//src/lib/storage/vfs/cpp/transaction",
     "//src/lib/uuid",
     "//zircon/system/ulib/fbl",

@@ -263,17 +263,6 @@ uint32_t F2fs::ValidInodeCount() {
   return superblock_info_->GetTotalValidInodeCount();
 }
 
-zx_status_t FlushDirtyNodePage(F2fs* fs, Page& page) {
-  ZX_ASSERT(page.GetVnodeId() == fs->GetSuperblockInfo().GetNodeIno());
-
-  if (zx_status_t ret = fs->GetNodeManager().F2fsWriteNodePage(page, false); ret != ZX_OK) {
-    FX_LOGS(ERROR) << "Node page write error " << ret;
-    return ret;
-  }
-
-  return ZX_OK;
-}
-
 #ifdef __Fuchsia__
 
 zx::status<fs::FilesystemInfo> F2fs::GetFilesystemInfo() {
@@ -315,24 +304,64 @@ bool F2fs::IsValid() const {
   return true;
 }
 
-zx_status_t FlushDirtyMetaPage(F2fs* fs, Page& page) {
-  ZX_ASSERT(page.GetVnodeId() == fs->GetSuperblockInfo().GetMetaIno());
-
-  if (zx_status_t ret = fs->F2fsWriteMetaPage(page, false); ret != ZX_OK) {
-    FX_LOGS(ERROR) << "Meta page write error " << ret;
-    return ret;
+// Fill the locked page with data located in the block address.
+zx_status_t F2fs::MakeReadOperation(fbl::RefPtr<Page> page, block_t blk_addr, bool is_sync) {
+  if (page->IsUptodate()) {
+    return ZX_OK;
   }
+
+  if (blk_addr >= GetBc().Maxblk()) {
+    return ZX_ERR_OUT_OF_RANGE;
+  }
+
+  fs::BufferedOperationsBuilder operations;
+  operations.Add(
+      storage::Operation{
+          .type = storage::OperationType::kRead,
+          .vmo_offset = 0,
+          .dev_offset = blk_addr,
+          .length = 1,
+      },
+      page.get());
+
+  // block_client::Client::Transaction() is thread safe.
+  zx_status_t ret = GetBc().RunRequests(operations.TakeOperations());
+  if (ret == ZX_OK && is_sync) {
+    page->SetUptodate();
+  }
+  return ret;
+}
+
+zx_status_t F2fs::MakeWriteOperation(fbl::RefPtr<Page> page, block_t blk_addr, PageType type) {
+  if (blk_addr >= GetBc().Maxblk()) {
+    return ZX_ERR_OUT_OF_RANGE;
+  }
+  // TODO: writer_ needs to keep merged IOs separately for each type.
+  writer_->EnqueuePage(
+      storage::Operation{
+          .type = storage::OperationType::kWrite,
+          .vmo_offset = 0,
+          .dev_offset = blk_addr,
+          .length = 1,
+      },
+      std::move(page));
 
   return ZX_OK;
 }
 
-zx_status_t FlushDirtyDataPage(F2fs* fs, Page& page) {
-  if (zx_status_t ret = page.GetVnode().WriteDataPage(&page, false); ret != ZX_OK) {
-    FX_LOGS(ERROR) << "Data page write error " << ret;
-    return ret;
-  }
-
-  return ZX_OK;
+zx_status_t F2fs::MakeOperation(storage::OperationType op, fbl::RefPtr<Page> page, block_t blk_addr,
+                                PageType type, block_t nblocks) {
+  // TODO: verify_block_addr(superblock_info, blk_addr);
+  switch (op) {
+    case storage::OperationType::kWrite:
+      return MakeWriteOperation(std::move(page), blk_addr, type);
+    case storage::OperationType::kRead:
+      return MakeReadOperation(std::move(page), blk_addr, true);
+    case storage::OperationType::kTrim:
+      return GetBc().Trim(blk_addr, nblocks);
+    default:
+      return ZX_ERR_INVALID_ARGS;
+  };
 }
 
 }  // namespace f2fs

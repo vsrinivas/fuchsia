@@ -74,6 +74,7 @@ void FileTester::Unmount(std::unique_ptr<F2fs> fs, std::unique_ptr<Bcache> *bc) 
 }
 
 void FileTester::SuddenPowerOff(std::unique_ptr<F2fs> fs, std::unique_ptr<Bcache> *bc) {
+  fs->ResetPsuedoVnodes();
   fs->GetVCache().Reset();
 
   // destroy f2fs internal modules

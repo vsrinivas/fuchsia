@@ -23,6 +23,8 @@
 
 #include <fcntl.h>
 
+#include <storage/buffer/vmoid_registry.h>
+
 #include <zircon/assert.h>
 #include <zircon/errors.h>
 #include <zircon/listnode.h>
@@ -52,6 +54,7 @@
 
 #include "src/lib/storage/vfs/cpp/vfs.h"
 #include "src/lib/storage/vfs/cpp/vnode.h"
+#include "src/lib/storage/vfs/cpp/transaction/buffered_operations_builder.h"
 
 #include "src/storage/f2fs/f2fs_types.h"
 #include "src/storage/f2fs/f2fs_lib.h"
@@ -60,10 +63,11 @@
 #include "src/storage/f2fs/f2fs_internal.h"
 #include "src/storage/f2fs/namestring.h"
 #include "src/storage/f2fs/bcache.h"
+#include "src/storage/f2fs/writeback.h"
 #include "src/storage/f2fs/vnode.h"
+#include "src/storage/f2fs/vnode_cache.h"
 #include "src/storage/f2fs/dir.h"
 #include "src/storage/f2fs/file.h"
-#include "src/storage/f2fs/vnode_cache.h"
 #include "src/storage/f2fs/node.h"
 #include "src/storage/f2fs/segment.h"
 #include "src/storage/f2fs/mkfs.h"
@@ -169,7 +173,11 @@ class F2fs : public fs::Vfs {
 
   // For testing Reset() and ResetBc()
   bool IsValid() const;
-  void ResetRootVnode() { root_vnode_.reset(); }
+  void ResetPsuedoVnodes() {
+    root_vnode_.reset();
+    meta_vnode_.reset();
+    node_vnode_.reset();
+  }
   void ResetSuperblockInfo() { superblock_info_.reset(); }
   void ResetSegmentManager() {
     segment_manager_->DestroySegmentManager();
@@ -210,8 +218,8 @@ class F2fs : public fs::Vfs {
   // checkpoint.cc
   zx_status_t GrabMetaPage(pgoff_t index, fbl::RefPtr<Page> *out);
   zx_status_t GetMetaPage(pgoff_t index, fbl::RefPtr<Page> *out);
-  zx_status_t F2fsWriteMetaPage(Page &page, bool is_reclaim = false);
-  int64_t SyncMetaPages(PageType type, long nr_to_write);
+  zx_status_t F2fsWriteMetaPage(fbl::RefPtr<Page> page, bool is_reclaim = false);
+
   zx_status_t CheckOrphanSpace();
   void AddOrphanInode(VnodeF2fs *vnode);
   void AddOrphanInode(nid_t ino);
@@ -221,7 +229,6 @@ class F2fs : public fs::Vfs {
   void WriteOrphanInodes(block_t start_blk);
   zx_status_t GetValidCheckpoint();
   zx_status_t ValidateCheckpoint(block_t cp_addr, uint64_t *version, fbl::RefPtr<Page> *out);
-  uint64_t SyncDirtyDataPages();
   void BlockOperations();
   void UnblockOperations();
   void DoCheckpoint(bool is_umount);
@@ -261,7 +268,21 @@ class F2fs : public fs::Vfs {
   VnodeF2fs &GetNodeVnode() { return *node_vnode_; }
   VnodeF2fs &GetMetaVnode() { return *meta_vnode_; }
 
+  pgoff_t SyncMetaPages(const WritebackOperation &operation);
+  pgoff_t SyncDirtyDataPages(WritebackOperation &operation);
+
+  zx_status_t MakeOperation(storage::OperationType op, fbl::RefPtr<Page> page, block_t blk_addr,
+                            PageType type, block_t nblocks = 1);
+
+  void ScheduleWriterTask(fpromise::pending_task task) { writer_->ScheduleTask(std::move(task)); }
+  void ScheduleWriterSubmitPages(sync_completion_t *completion = nullptr) {
+    writer_->ScheduleSubmitPages(completion);
+  }
+
  private:
+  zx_status_t MakeReadOperation(fbl::RefPtr<Page> page, block_t blk_addr, bool is_sync = true);
+  zx_status_t MakeWriteOperation(fbl::RefPtr<Page> page, block_t blk_addr, PageType type);
+
   std::unique_ptr<f2fs::Bcache> bc_;
 
   std::unique_ptr<VnodeF2fs> node_vnode_;
@@ -276,6 +297,7 @@ class F2fs : public fs::Vfs {
   std::unique_ptr<NodeManager> node_manager_;
 
   VnodeCache vnode_cache_;
+  std::unique_ptr<Writer> writer_;
 
 #ifdef __Fuchsia__
   DirEntryCache dir_entry_cache_;
@@ -288,10 +310,6 @@ class F2fs : public fs::Vfs {
 };
 
 f2fs_hash_t DentryHash(std::string_view name);
-
-zx_status_t FlushDirtyNodePage(F2fs *fs, Page &page);
-zx_status_t FlushDirtyMetaPage(F2fs *fs, Page &page);
-zx_status_t FlushDirtyDataPage(F2fs *fs, Page &page);
 
 }  // namespace f2fs
 

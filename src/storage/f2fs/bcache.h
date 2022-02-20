@@ -88,7 +88,6 @@ class Bcache : public fs::TransactionHandler {
 
   // Raw block read/write/trim functions
   // |bno| is a target LBA in a 4KB block size
-  // TODO: create io functions with vmo and request for removing memory copy
   // These do not track blocks (or attempt to access the block cache)
   // NOTE: Not marked as final, since these are overridden methods on host,
   // but not on __Fuchsia__.
@@ -101,8 +100,6 @@ class Bcache : public fs::TransactionHandler {
   zx_status_t Flush() override { return TransactionHandler::Flush(); }
 #endif  // __Fuchsia__
 
-  // TODO(rvargas): Move this to BlockDevice.
-  // VmoidRegistry interface:
 #ifdef __Fuchsia__
   zx_status_t BlockAttachVmo(const zx::vmo& vmo, storage::Vmoid* out) final;
   zx_status_t BlockDetachVmo(storage::Vmoid vmoid) final;

@@ -43,14 +43,12 @@ class VnodeCache {
   // dirty_list_ is empty.
   void Reset();
 
-  using Callback = fit::function<zx_status_t(fbl::RefPtr<VnodeF2fs>&)>;
-
   // It traverses dirty_lists and executes cb for the dirty vnodes with
   // which cb_if returns ZX_OK.
-  zx_status_t ForDirtyVnodesIf(Callback cb, Callback cb_if = nullptr);
+  zx_status_t ForDirtyVnodesIf(VnodeCallback cb, VnodeCallback cb_if = nullptr);
 
   // It traverses vnode_tables and execute cb with every vnode.
-  zx_status_t ForAllVnodes(Callback callback);
+  zx_status_t ForAllVnodes(VnodeCallback callback);
 
   bool IsDirtyListEmpty() __TA_EXCLUDES(list_lock_) {
     bool ret = false;

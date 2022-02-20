@@ -129,9 +129,9 @@ void NodeManager::CopyNodeFooter(Page &dst, Page &src) {
   memcpy(&dst_rn->footer, &src_rn->footer, sizeof(NodeFooter));
 }
 
-void NodeManager::FillNodeFooterBlkaddr(Page *page, block_t blkaddr) {
+void NodeManager::FillNodeFooterBlkaddr(Page &page, block_t blkaddr) {
   Checkpoint &ckpt = GetSuperblockInfo().GetCheckpoint();
-  Node *rn = static_cast<Node *>(page->GetAddress());
+  Node *rn = static_cast<Node *>(page.GetAddress());
   rn->footer.cp_ver = ckpt.checkpoint_ver;
   rn->footer.next_blkaddr = blkaddr;
 }
@@ -215,7 +215,7 @@ nid_t NodeManager::GetNid(Page &page, int off, bool is_inode) {
 //  - Mark cold data pages in page cache
 bool NodeManager::IsColdFile(VnodeF2fs &vnode) { return (vnode.IsAdviseSet(FAdvise::kCold) != 0); }
 
-#if 0  // porting needed
+#if 0  // When gc impl, use the cold hint.
 int NodeManager::IsColdData(Page *page) {
   // return PageChecked(page);
   return 0;
@@ -1050,7 +1050,7 @@ zx_status_t NodeManager::NewNodePage(DnodeOfData &dn, uint32_t ofs, fbl::RefPtr<
   return ZX_OK;
 }
 
-zx_status_t NodeManager::ReadNodePage(Page &page, nid_t nid, int type) {
+zx_status_t NodeManager::ReadNodePage(fbl::RefPtr<Page> page, nid_t nid, int type) {
   NodeInfo ni;
 
   GetNodeInfo(nid, ni);
@@ -1058,7 +1058,8 @@ zx_status_t NodeManager::ReadNodePage(Page &page, nid_t nid, int type) {
   if (ni.blk_addr == kNullAddr)
     return ZX_ERR_NOT_FOUND;
 
-  return VnodeF2fs::Readpage(fs_, &page, ni.blk_addr, type);
+  return fs_->MakeOperation(storage::OperationType::kRead, std::move(page), ni.blk_addr,
+                            PageType::kNode);
 }
 
 #if 0  // porting needed
@@ -1072,7 +1073,7 @@ zx_status_t NodeManager::GetNodePage(nid_t nid, fbl::RefPtr<Page> *out) {
   if (zx_status_t ret = fs_->GetNodeVnode().GrabCachePage(nid, out); ret != ZX_OK) {
     return ret;
   }
-  if (zx_status_t ret = ReadNodePage(**out, nid, kReadSync); ret != ZX_OK) {
+  if (zx_status_t ret = ReadNodePage(*out, nid, kReadSync); ret != ZX_OK) {
     Page::PutPage(std::move(*out), true);
     return ret;
   }
@@ -1114,30 +1115,30 @@ void NodeManager::SyncInodePage(DnodeOfData &dn) {
   }
 }
 
-uint64_t NodeManager::SyncNodePages(nid_t ino, bool is_reclaim) {
-  zx_status_t status = fs_->GetVCache().ForDirtyVnodesIf(
-      [this](fbl::RefPtr<VnodeF2fs> &vnode) {
-        if (!vnode->ShouldFlush()) {
-          return ZX_ERR_NEXT;
-        }
-        ZX_ASSERT(vnode->WriteInode(false) == ZX_OK);
-        ZX_ASSERT(fs_->GetVCache().RemoveDirty(vnode.get()) == ZX_OK);
-        ZX_ASSERT(vnode->ClearDirty() == true);
-        return ZX_OK;
-      },
-      [](fbl::RefPtr<VnodeF2fs> &vnode) {
-        if (!vnode->ShouldFlush()) {
-          return ZX_ERR_NEXT;
-        }
-        return ZX_OK;
-      });
-  if (status != ZX_OK) {
+pgoff_t NodeManager::SyncNodePages(const WritebackOperation &operation) {
+  if (zx_status_t status = fs_->GetVCache().ForDirtyVnodesIf(
+          [this](fbl::RefPtr<VnodeF2fs> &vnode) {
+            if (!vnode->ShouldFlush()) {
+              return ZX_ERR_NEXT;
+            }
+            ZX_ASSERT(vnode->WriteInode(false) == ZX_OK);
+            ZX_ASSERT(fs_->GetVCache().RemoveDirty(vnode.get()) == ZX_OK);
+            ZX_ASSERT(vnode->ClearDirty() == true);
+            return ZX_OK;
+          },
+          [](fbl::RefPtr<VnodeF2fs> &vnode) {
+            if (!vnode->ShouldFlush()) {
+              return ZX_ERR_NEXT;
+            }
+            return ZX_OK;
+          });
+      status != ZX_OK) {
     FX_LOGS(ERROR) << "Failed to flush dirty vnodes ";
-    return status;
+    return 0;
   }
 
   // TODO: Consider ordered writeback
-  return fs_->GetNodeVnode().Writeback();
+  return fs_->GetNodeVnode().Writeback(operation);
 
 #if 0  // porting needed
   // SuperblockInfo &superblock_info = GetSuperblockInfo();
@@ -1245,7 +1246,7 @@ uint64_t NodeManager::SyncNodePages(nid_t ino, bool is_reclaim) {
 #endif
 }
 
-zx_status_t NodeManager::F2fsWriteNodePage(Page &page, bool is_reclaim) {
+zx_status_t NodeManager::F2fsWriteNodePage(fbl::RefPtr<Page> page, bool is_reclaim) {
 #if 0  // porting needed
   // 	if (wbc->for_reclaim) {
   // 		superblock_info.DecreasePageCount(CountType::kDirtyNodes);
@@ -1255,28 +1256,27 @@ zx_status_t NodeManager::F2fsWriteNodePage(Page &page, bool is_reclaim) {
   // 		return kAopWritepageActivate;
   // 	}
 #endif
-  page.WaitOnWriteback();
-  if (page.ClearDirtyForIo()) {
+  page->WaitOnWriteback();
+  if (page->ClearDirtyForIo(true)) {
+    page->SetWriteback();
     fs::SharedLock rlock(GetSuperblockInfo().GetFsLock(LockType::kNodeOp));
     // get old block addr of this node page
-    nid_t nid = NidOfNode(page);
-    ZX_ASSERT(page.GetIndex() == nid);
+    nid_t nid = NidOfNode(*page);
+    ZX_ASSERT(page->GetIndex() == nid);
 
     NodeInfo ni;
     GetNodeInfo(nid, ni);
     // This page is already truncated
     if (ni.blk_addr == kNullAddr) {
-      return ZX_OK;
+      return ZX_ERR_NOT_FOUND;
     }
 
-    page.SetWriteback();
     block_t new_addr;
     // insert node offset
-    fs_->GetSegmentManager().WriteNodePage(&page, nid, ni.blk_addr, &new_addr);
+    fs_->GetSegmentManager().WriteNodePage(std::move(page), nid, ni.blk_addr, &new_addr);
     SetNodeAddr(ni, new_addr);
     GetSuperblockInfo().DecreasePageCount(CountType::kDirtyNodes);
   }
-  page.Unlock();
   return ZX_OK;
 }
 
@@ -1488,14 +1488,16 @@ void NodeManager::AllocNidFailed(nid_t nid) {
   AddFreeNid(nid);
 }
 
-void NodeManager::RecoverNodePage(Page &page, Summary &sum, NodeInfo &ni, block_t new_blkaddr) {
-  fs_->GetSegmentManager().RewriteNodePage(&page, &sum, ni.blk_addr, new_blkaddr);
+void NodeManager::RecoverNodePage(fbl::RefPtr<Page> page, Summary &sum, NodeInfo &ni,
+                                  block_t new_blkaddr) {
+  fs_->GetSegmentManager().RewriteNodePage(page, &sum, ni.blk_addr, new_blkaddr);
   SetNodeAddr(ni, new_blkaddr);
-  page.Invalidate();
+  page->Invalidate();
+  // TODO: Remove it when impl. recovery.
+  ZX_ASSERT(0);
 }
 
 zx_status_t NodeManager::RecoverInodePage(Page &page) {
-  //[[maybe_unused]] address_space *mapping = superblock_info.node_inode->i_mapping;
   Node *src, *dst;
   nid_t ino = InoOfNode(page);
   NodeInfo old_ni, new_ni;

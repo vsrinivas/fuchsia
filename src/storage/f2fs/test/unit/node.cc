@@ -30,25 +30,25 @@ void FaultInjectToDnodeAndTruncate(NodeManager &node_manager, fbl::RefPtr<VnodeF
 
   ASSERT_EQ(node_manager.GetDnodeOfData(dn, page_index, 0), ZX_OK);
   ino_t node_id = dn.nid;
-  fbl::RefPtr page = dn.node_page;
   F2fsPutDnode(&dn);
   block_t temp_block_address;
 
   // Write out dirty nodes to allocate lba
-  F2fs *fs = vnode->Vfs();
-  FlushDirtyNodePage(fs, *page);
+  WritebackOperation op = {.bSync = true};
+  vnode->Vfs()->GetNodeVnode().Writeback(op);
   MapTester::GetCachedNatEntryBlockAddress(node_manager, node_id, temp_block_address);
+  vnode->Vfs()->GetNodeVnode().InvalidateAllPages();
+
   // Set fault_address to the NAT entry
   MapTester::SetCachedNatEntryBlockAddress(node_manager, node_id, fault_address);
-  // Clear the update flag of page to prevent a cache hit
-  page->ClearUptodate();
-  page.reset();
+
   ASSERT_EQ(node_manager.TruncateInodeBlocks(*vnode, page_index), exception_type);
 
   // Restore the NAT entry
   MapTester::SetCachedNatEntryBlockAddress(node_manager, node_id, temp_block_address);
 
   // Retry truncate
+  vnode->Vfs()->GetNodeVnode().InvalidateAllPages();
   ASSERT_EQ(node_manager.TruncateInodeBlocks(*vnode, page_index), ZX_OK);
 }
 
@@ -366,13 +366,11 @@ TEST_F(NodeManagerTest, NodePageExceptionCase) {
 
   // Check invalid address
   ASSERT_EQ(fs_->GetNodeManager().GetDnodeOfData(dn, indirect_index_lv3 + 1, 0), ZX_OK);
+  F2fsPutDnode(&dn);
 
   // fault injection for ReadNodePage()
   fs_->WriteCheckpoint(false, false);
   MapTester::SetCachedNatEntryBlockAddress(node_manager, dn.nid, kNullAddr);
-  dn.node_page->ClearUptodate();
-  dn.node_page->ClearDirtyForIo();
-  F2fsPutDnode(&dn);
 
   ASSERT_EQ(fs_->GetNodeManager().GetDnodeOfData(dn, indirect_index_lv3 + 1, 0), ZX_ERR_NOT_FOUND);
 

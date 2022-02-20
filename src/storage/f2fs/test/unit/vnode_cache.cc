@@ -186,8 +186,10 @@ TEST_F(VnodeCacheTest, VnoceCacheExceptionCase) {
             ZX_ERR_INVALID_ARGS);
 
   // 6. Check Reset()
-  test_vnode->Writeback();
-  root_dir_->Writeback();
+  WritebackOperation op = {.bSync = true};
+  test_vnode->Writeback(op);
+  WritebackOperation op_root = {.bSync = true};
+  root_dir_->Writeback(op_root);
   fs_->GetVCache().RemoveDirty(test_vnode.get());
   fs_->GetVCache().RemoveDirty(root_dir_.get());
   ASSERT_EQ(GetDirtyVnodeCount(fs_->GetVCache()), 0U);

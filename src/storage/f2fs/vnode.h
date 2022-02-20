@@ -112,23 +112,9 @@ class VnodeF2fs : public fs::Vnode,
 #if 0  // porting needed
   // void F2fsSetInodeFlags();
   // int F2fsIgetTest(void *data);
-  // VnodeF2fs *F2fsIgetNowait(uint64_t ino);
   // static int CheckExtentCache(inode *inode, pgoff_t pgofs,
-  //        buffer_head *bh_result);
   // static int GetDataBlockRo(inode *inode, sector_t iblock,
   //      buffer_head *bh_result, int create);
-  // static int F2fsReadDataPage(file *file, page *page);
-  // static int F2fsReadDataPages(file *file,
-  //       address_space *mapping,
-  //       list_head *pages, unsigned nr_pages);
-  // int F2fsWriteDataPages(/*address_space *mapping,*/
-  //                        WritebackControl *wbc);
-  // ssize_t F2fsDirectIO(/*int rw, kiocb *iocb,
-  //   const iovec *iov, */
-  //                      loff_t offset, uint64_t nr_segs);
-  //   [[maybe_unused]] static void F2fsInvalidateDataPage(Page *page, uint64_t offset);
-  //   [[maybe_unused]] static int F2fsReleaseDataPage(Page *page, gfp_t wait);
-  // int F2fsSetDataPageDirty(Page *page);
 #endif
 
   static zx_status_t Vget(F2fs *fs, ino_t ino, fbl::RefPtr<VnodeF2fs> *out);
@@ -151,9 +137,8 @@ class VnodeF2fs : public fs::Vnode,
   zx_status_t GetLockDataPage(pgoff_t index, fbl::RefPtr<Page> *out);
   zx_status_t GetNewDataPage(pgoff_t index, bool new_i_size, fbl::RefPtr<Page> *out);
 
-  static zx_status_t Readpage(F2fs *fs, Page *page, block_t blk_addr, int type);
-  zx_status_t DoWriteDataPage(Page *page);
-  zx_status_t WriteDataPage(Page *page, bool is_reclaim = false);
+  zx_status_t DoWriteDataPage(fbl::RefPtr<Page> page);
+  zx_status_t WriteDataPage(fbl::RefPtr<Page> page, bool is_reclaim = false);
   zx_status_t WriteBegin(size_t pos, size_t len, fbl::RefPtr<Page> *page);
 
 #ifdef __Fuchsia__
@@ -378,10 +363,13 @@ class VnodeF2fs : public fs::Vnode,
   zx_status_t GrabCachePage(pgoff_t index, fbl::RefPtr<Page> *out) {
     return file_cache_.GetPage(index, out);
   }
-  uint64_t Writeback(const pgoff_t start = 0, const pgoff_t end = kPgOffMax) {
-    return file_cache_.Writeback(start, end);
+  pgoff_t Writeback(const WritebackOperation &operation) {
+    return file_cache_.Writeback(operation);
   }
   void InvalidateAllPages() { file_cache_.InvalidateAllPages(); }
+
+  // TODO: When |is_reclaim| is set, release |page| after the IO completion
+  zx_status_t WriteDirtyPage(fbl::RefPtr<Page> page, bool is_reclaim);
 
  protected:
   void RecycleNode() override;

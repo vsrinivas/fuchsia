@@ -21,6 +21,7 @@ TEST_F(FileCacheTest, WaitOnLock) {
   fbl::RefPtr<Page> page;
 
   vn->GrabCachePage(0, &page);
+  ASSERT_EQ(page->TryLock(), false);
   std::thread thread([&]() { page->Unlock(); });
   // Wait for |thread| to unlock |page|.
   page->Lock();
@@ -38,12 +39,16 @@ TEST_F(FileCacheTest, WaitOnWriteback) {
   fbl::RefPtr<Page> page;
 
   vn->GrabCachePage(0, &page);
-  page->SetWriteback();
   std::thread thread([&]() {
+    page->Lock();
     ASSERT_EQ(page->IsWriteback(), true);
     page->ClearWriteback();
   });
 
+  page->WaitOnWriteback();
+  page->SetWriteback();
+  ASSERT_EQ(page->IsWriteback(), true);
+  page->Unlock();
   // Wait for |thread| to clear kPageWriteback.
   page->WaitOnWriteback();
   ASSERT_EQ(page->IsWriteback(), false);
@@ -94,6 +99,7 @@ TEST_F(FileCacheTest, Basic) {
   // All pages should not be uptodated.
   for (uint16_t i = 0; i < nblocks; ++i) {
     fbl::RefPtr<Page> page;
+    uint8_t r_buf[kPageSize], w_buf[kPageSize];
     vn->GrabCachePage(i, &page);
     // A newly created page should have kPageUptodate/kPageDirty/kPageWriteback flags clear.
     ASSERT_EQ(page->IsUptodate(), false);
@@ -102,6 +108,28 @@ TEST_F(FileCacheTest, Basic) {
     ASSERT_EQ(page->IsAllocated(), true);
     ASSERT_EQ(page->IsWriteback(), false);
     ASSERT_EQ(page->IsLocked(), true);
+
+    // Sanity checks for storage::BlockBuffer.
+    ASSERT_EQ(page->Vmo(), ZX_HANDLE_INVALID);
+    ASSERT_EQ(page->Data(0), page->GetAddress());
+    ASSERT_EQ(page->capacity(), page->BlockSize() / kPageSize);
+    ASSERT_EQ(page->GetVnodeId(), vn->GetKey());
+
+    // Sanity checks for interfaces to Page::vmo_.
+    memset(w_buf, i, kPageSize);
+    ASSERT_EQ(page->VmoWrite(w_buf, 0, kPageSize), ZX_OK);
+    ASSERT_EQ(page->VmoRead(r_buf, 0, kPageSize), ZX_OK);
+    ASSERT_EQ(memcmp(r_buf, w_buf, kPageSize), 0);
+    page->Zero(0, 1);
+    ASSERT_EQ(page->VmoRead(r_buf, 0, kPageSize), ZX_OK);
+    memset(w_buf, 0, kPageSize);
+    ASSERT_EQ(memcmp(r_buf, w_buf, kPageSize), 0);
+
+    const void *ptr1 = page->Data(0);
+    void *ptr2 = page->Data(0);
+    ASSERT_EQ(ptr1, ptr2);
+    ASSERT_EQ(page->Data(page->capacity()), nullptr);
+
     Page::PutPage(std::move(page), true);
   }
 
@@ -124,7 +152,8 @@ TEST_F(FileCacheTest, Basic) {
   }
 
   // Write out some dirty pages
-  vn->Writeback(0, nblocks / 2);
+  WritebackOperation op = {.end = nblocks / 2, .bSync = true};
+  vn->Writeback(op);
 
   // Check if each page has a correct dirty flag.
   for (size_t i = 0; i < nblocks; ++i) {

@@ -165,12 +165,14 @@ void VnodeF2fs::RecycleNode() {
                   GetKey(), open_count());
   }
   if (GetNlink()) {
-    Writeback();
+    WritebackOperation op = {.bSync = true};
+    Writeback(op);
     file_cache_.Reset();
     Vfs()->GetVCache().Downgrade(this);
   } else {
     EvictVnode();
     Deactivate();
+    file_cache_.Reset();
     delete this;
   }
 }
@@ -537,9 +539,6 @@ void VnodeF2fs::EvictVnode() {
   if (ino_ == superblock_info.GetNodeIno() || ino_ == superblock_info.GetMetaIno())
     return;
 
-  InvalidateAllPages();
-  ZX_ASSERT(atomic_load_explicit(&fi_.dirty_dents, std::memory_order_relaxed) == 0);
-
   if (GetNlink() || IsBad())
     return;
 
@@ -552,6 +551,7 @@ void VnodeF2fs::EvictVnode() {
   {
     fs::SharedLock rlock(superblock_info.GetFsLock(LockType::kFileOp));
     Vfs()->GetNodeManager().RemoveInodePage(this);
+    ZX_ASSERT(atomic_load_explicit(&fi_.dirty_dents, std::memory_order_relaxed) == 0);
   }
   Vfs()->EvictVnode(this);
 }

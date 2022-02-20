@@ -346,7 +346,7 @@ void CheckpointTestAddOrphanInode(F2fs *fs, uint32_t expect_cp_position, uint32_
         nid_t ino = LeToCpu(orphan_blk->ino[j]);
         cp_inos.push_back(ino);
       }
-      Page::PutPage(std::move(page), 1);
+      Page::PutPage(std::move(page), true);
     }
 
     // 3. Check orphan inodes
@@ -685,7 +685,7 @@ void CheckpointTestNormalSummaries(F2fs *fs, uint32_t expect_cp_position, uint32
   }
   ASSERT_GT(fs->GetSegmentManager().NpagesForSummaryFlush(), 2);
 
-  Page::PutPage(std::move(cp_page), 1);
+  Page::PutPage(std::move(cp_page), true);
 }
 
 void CheckpointTestSitJournal(F2fs *fs, uint32_t expect_cp_position, uint32_t expect_cp_ver,

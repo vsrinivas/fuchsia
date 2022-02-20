@@ -5,8 +5,11 @@
 #ifndef SRC_STORAGE_F2FS_FILE_CACHE_H_
 #define SRC_STORAGE_F2FS_FILE_CACHE_H_
 
+#include <storage/buffer/block_buffer.h>
+
 namespace f2fs {
 
+class F2fs;
 class VnodeF2fs;
 class FileCache;
 
@@ -16,8 +19,7 @@ enum class PageFlag {
   kPageWriteback,     // It is under writeback.
   kPageLocked,        // It is locked. Wait for it to be unlocked.
   kPageAlloc,         // It has a valid Page::vmo_.
-  kPageMapped,        // It has a valid virtual address mapped to Page::vmo_.
-  kPageReferenced,    // TODO: One or more references to Page
+  kPageMapped,        // It has a valid mapping to the address space and the underlying storage.
   kPageFlagSize = 8,
 };
 
@@ -26,7 +28,23 @@ constexpr pgoff_t kPgOffMax = std::numeric_limits<pgoff_t>::max();
 // Now, the maximum allowable memory for dirty data pages is 200MiB
 constexpr int kMaxDirtyDataPages = 51200;
 
-class Page : public fbl::RefCounted<Page>,
+// It defines a writeback operation.
+struct WritebackOperation {
+  pgoff_t start = 0;  // All dirty Pages within the range of [start, end) are subject to writeback.
+  pgoff_t end = kPgOffMax;
+  pgoff_t to_write = kPgOffMax;  // The number of dirty Pages to be written.
+  bool bSync = false;  // If true, FileCache::Writeback() waits for all IO operations of the written
+                       // dirty Pages to complete.
+  bool bReleasePages =
+      true;  // TODO: If true, it releases clean Pages while traversing FileCache::page_tree_.
+  VnodeCallback if_vnode =
+      nullptr;  // If set, if_vnode() determines which vnodes are subject to writeback.
+  PageCallback if_page =
+      nullptr;  // If set, if_page() determines which Pages are subject to writeback.
+};
+
+class Page : public storage::BlockBuffer,
+             public fbl::RefCounted<Page>,
              public fbl::Recyclable<Page>,
              public fbl::WAVLTreeContainable<fbl::RefPtr<Page>> {
  public:
@@ -63,29 +81,20 @@ class Page : public fbl::RefCounted<Page>,
   zx_status_t VmoOpUnlock();
   void *GetAddress() const {
     // TODO: |address_| needs to be atomically mapped in a on-demand manner.
-    ZX_ASSERT(TestFlag(PageFlag::kPageMapped));
-    return (void *)address_;
+    ZX_ASSERT(IsMapped());
+    return reinterpret_cast<void *>(address_);
   }
 
-  bool IsUptodate() const {
-    return flags_[static_cast<uint8_t>(PageFlag::kPageUptodate)].test(std::memory_order_relaxed);
-  }
-  bool IsDirty() const {
-    return flags_[static_cast<uint8_t>(PageFlag::kPageDirty)].test(std::memory_order_relaxed);
-  }
-  bool IsWriteback() const {
-    return flags_[static_cast<uint8_t>(PageFlag::kPageWriteback)].test(std::memory_order_relaxed);
-  }
-  bool IsLocked() const {
-    return flags_[static_cast<uint8_t>(PageFlag::kPageLocked)].test(std::memory_order_relaxed);
-  }
-  bool IsAllocated() const {
-    return flags_[static_cast<uint8_t>(PageFlag::kPageAlloc)].test(std::memory_order_relaxed);
-  }
-  bool IsMapped() const {
-    return flags_[static_cast<uint8_t>(PageFlag::kPageMapped)].test(std::memory_order_relaxed);
-  }
+  bool IsUptodate() const { return TestFlag(PageFlag::kPageUptodate); }
+  bool IsDirty() const { return TestFlag(PageFlag::kPageDirty); }
+  bool IsWriteback() const { return TestFlag(PageFlag::kPageWriteback); }
+  bool IsLocked() const { return TestFlag(PageFlag::kPageLocked); }
+  bool IsAllocated() const { return TestFlag(PageFlag::kPageAlloc); }
+  bool IsMapped() const { return TestFlag(PageFlag::kPageMapped); }
+
+  void ClearMapped() { ClearFlag(PageFlag::kPageMapped); }
   void Unmap();
+  void Map();
 
   void Lock() {
     while (flags_[static_cast<uint8_t>(PageFlag::kPageLocked)].test_and_set(
@@ -93,34 +102,37 @@ class Page : public fbl::RefCounted<Page>,
       flags_[static_cast<uint8_t>(PageFlag::kPageLocked)].wait(true, std::memory_order_relaxed);
     }
   }
-  void Unlock() {
-    ClearFlag(PageFlag::kPageLocked);
-    WakeupFlag(PageFlag::kPageLocked);
-  }
-  void WaitOnWriteback() { WaitOnFlag(PageFlag::kPageWriteback); }
-  void SetWriteback() {
-    ZX_ASSERT(vmo_.op_range(ZX_VMO_OP_TRY_LOCK, 0, kPageSize, nullptr, 0) == ZX_OK);
-    SetFlag(PageFlag::kPageWriteback);
-  }
-  void ClearWriteback() {
-    ClearFlag(PageFlag::kPageWriteback);
-    WakeupFlag(PageFlag::kPageWriteback);
-    ZX_ASSERT(vmo_.op_range(ZX_VMO_OP_UNLOCK, 0, kPageSize, nullptr, 0) == ZX_OK);
-  }
-  void SetUptodate() { SetFlag(PageFlag::kPageUptodate); }
-  void ClearUptodate() { ClearFlag(PageFlag::kPageUptodate); }
-  bool SetDirty();
-  bool ClearDirtyForIo() {
-    if (IsDirty()) {
-      ClearFlag(PageFlag::kPageDirty);
-      ZX_ASSERT(vmo_.op_range(ZX_VMO_OP_UNLOCK, 0, kPageSize, nullptr, 0) == ZX_OK);
+  bool TryLock() {
+    if (!flags_[static_cast<uint8_t>(PageFlag::kPageLocked)].test_and_set(
+            std::memory_order_acquire)) {
       return true;
     }
     return false;
   }
-  void ClearReferenced() { ClearFlag(PageFlag::kPageReferenced); }
-  void SetReferenced() { SetFlag(PageFlag::kPageReferenced); }
-  void ClearMapped() { ClearFlag(PageFlag::kPageMapped); }
+  void Unlock() {
+    ClearFlag(PageFlag::kPageLocked);
+    WakeupFlag(PageFlag::kPageLocked);
+  }
+
+  void WaitOnWriteback();
+  void SetWriteback();
+  void ClearWriteback();
+
+  void SetUptodate() { SetFlag(PageFlag::kPageUptodate); }
+  void ClearUptodate() { ClearFlag(PageFlag::kPageUptodate); }
+
+  bool SetDirty();
+  bool ClearDirtyForIo(bool for_writeback) {
+    if (IsDirty()) {
+      ClearFlag(PageFlag::kPageDirty);
+      if (!for_writeback) {
+        VmoOpUnlock();
+      }
+      return true;
+    }
+    return false;
+  }
+
   // Truncate or punch-a-hole operations call it to invalidate a Page.
   // It clears PageFlag::kPageUptodate and unmaps |address_|.
   // If the Page is dirty, it clears PageFlag::kPageDirty, decreases the regarding dirty page count,
@@ -134,17 +146,39 @@ class Page : public fbl::RefCounted<Page>,
     }
   }
 
+  // for storage::BlockBuffer
+  void Zero(size_t index, size_t count) final;
+  size_t capacity() const final { return 1; }
+  uint32_t BlockSize() const final { return kPageSize; }
+  zx_handle_t Vmo() const final { return ZX_HANDLE_INVALID; }
+  vmoid_t vmoid() const final { return vmoid_.get(); }
+  void *Data(size_t index) final {
+    if (IsMapped() && index < capacity()) {
+      return GetAddress();
+    }
+    return nullptr;
+  }
+  const void *Data(size_t index) const final {
+    if (IsMapped() && index < capacity()) {
+      return GetAddress();
+    }
+    return nullptr;
+  }
+
+  zx_status_t VmoWrite(const void *buffer, uint64_t offset, size_t buffer_size);
+  zx_status_t VmoRead(void *buffer, uint64_t offset, size_t buffer_size);
+
  private:
   void WaitOnFlag(PageFlag flag) {
-    while (flags_[static_cast<uint8_t>(flag)].test(std::memory_order_relaxed)) {
+    while (flags_[static_cast<uint8_t>(flag)].test(std::memory_order_acquire)) {
       flags_[static_cast<uint8_t>(flag)].wait(true, std::memory_order_relaxed);
     }
   }
   bool TestFlag(PageFlag flag) const {
-    return flags_[static_cast<uint8_t>(flag)].test(std::memory_order_relaxed);
+    return flags_[static_cast<uint8_t>(flag)].test(std::memory_order_acquire);
   }
   void ClearFlag(PageFlag flag) {
-    flags_[static_cast<uint8_t>(flag)].clear(std::memory_order_release);
+    flags_[static_cast<uint8_t>(flag)].clear(std::memory_order_relaxed);
   }
   void WakeupFlag(PageFlag flag) { flags_[static_cast<uint8_t>(flag)].notify_all(); }
   bool SetFlag(PageFlag flag) {
@@ -160,6 +194,7 @@ class Page : public fbl::RefCounted<Page>,
   // It contains the data of the block at |index_|.
   // TODO: when resizeable paged_vmo is available, clone a part of paged_vmo
   zx::vmo vmo_;
+  storage::Vmoid vmoid_;
   // It indicates FileCache to which |this| belongs.
   FileCache *file_cache_ = nullptr;
   // It is used as the key of |this| in a lookup table (i.e., FileCache::page_tree_).
@@ -171,7 +206,7 @@ class Page : public fbl::RefCounted<Page>,
 
 class FileCache {
  public:
-  FileCache(VnodeF2fs *vnode) : vnode_(vnode) {}
+  FileCache(VnodeF2fs *vnode);
   FileCache() = delete;
   FileCache(const FileCache &) = delete;
   FileCache &operator=(const FileCache &) = delete;
@@ -179,20 +214,18 @@ class FileCache {
   FileCache &operator=(const FileCache &&) = delete;
   ~FileCache();
 
-  using Callback = fit::function<zx_status_t(fbl::RefPtr<Page> &)>;
-
   // It unmaps a Page with |index|. If kPageUptodate is not set, it remove it from the lookup
   // |page_tree_|.
   void UnmapAndReleasePage(const pgoff_t index) __TA_EXCLUDES(tree_lock_);
   // f2fs should call FileCache::GetPage() or FileCache::FindPage() to get a Page for a vnode.
   // It returns a locked Page with |index| from the lookup |page_tree_|.
-  // If there is no corresponding Page in |page_tree_|, it returns a locked Page after creating and
-  // inserting it into |page_tree_|.
+  // If there is no corresponding Page in |page_tree_|, it returns a locked Page after creating
+  // and inserting it into |page_tree_|.
   zx_status_t GetPage(const pgoff_t index, fbl::RefPtr<Page> *out) __TA_EXCLUDES(tree_lock_);
   // It does the same things as GetPage() except that it returns a unlocked Page.
   zx_status_t FindPage(const pgoff_t index, fbl::RefPtr<Page> *out) __TA_EXCLUDES(tree_lock_);
-  uint64_t Writeback(const pgoff_t start = 0, const pgoff_t end = kPgOffMax)
-      __TA_EXCLUDES(tree_lock_);
+  // It tries to write out dirty Pages that |operation| indicates from |page_tree_|.
+  pgoff_t Writeback(const WritebackOperation &operation) __TA_EXCLUDES(tree_lock_);
   // It removes and invalidates all Pages in |page_tree_|.
   void InvalidateAllPages() __TA_EXCLUDES(tree_lock_);
   zx_status_t Reset() __TA_EXCLUDES(tree_lock_);

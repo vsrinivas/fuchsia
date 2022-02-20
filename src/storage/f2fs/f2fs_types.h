@@ -17,6 +17,9 @@
 
 namespace f2fs {
 
+class Page;
+class VnodeF2fs;
+
 using sector_t = uint64_t;
 using block_t = uint32_t;
 using f2fs_hash_t = uint32_t;
@@ -26,6 +29,8 @@ using ino_t = uint32_t;
 using pgoff_t = uint64_t;
 using atomic_t = std::atomic_int;
 using umode_t = uint16_t;
+using VnodeCallback = fit::function<zx_status_t(fbl::RefPtr<VnodeF2fs> &)>;
+using PageCallback = fit::function<zx_status_t(fbl::RefPtr<Page> &)>;
 
 #if BYTE_ORDER == BIG_ENDIAN
 inline uint16_t LeToCpu(uint16_t x) { return SWAP_16(x); }

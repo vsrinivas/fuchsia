@@ -103,12 +103,12 @@ class NodeManager {
   void NodeInfoFromRawNat(NodeInfo &ni, RawNatEntry &raw_ne);
   zx_status_t BuildNodeManager();
   void DestroyNodeManager();
-  zx_status_t ReadNodePage(Page &page, nid_t nid, int type);
+  zx_status_t ReadNodePage(fbl::RefPtr<Page> page, nid_t nid, int type);
   zx_status_t GetNodePage(nid_t nid, fbl::RefPtr<Page> *out);
 
   // Caller should acquire LockType:kFileOp when |ro| = 0.
   zx_status_t GetDnodeOfData(DnodeOfData &dn, pgoff_t index, int ro);
-  void FillNodeFooterBlkaddr(Page *page, block_t blkaddr);
+  void FillNodeFooterBlkaddr(Page &page, block_t blkaddr);
 
   zx_status_t RestoreNodeSummary(uint32_t segno, SummaryBlock &sum);
 
@@ -142,8 +142,8 @@ class NodeManager {
   }
 
   void GetNodeInfo(nid_t nid, NodeInfo &out);
-  uint64_t SyncNodePages(nid_t ino, bool is_reclaim = false);
   void SyncInodePage(DnodeOfData &dn);
+  pgoff_t SyncNodePages(const WritebackOperation &operation);
 
   bool AllocNid(nid_t &out);
   void AllocNidFailed(nid_t nid);
@@ -161,11 +161,11 @@ class NodeManager {
   bool FlushNatsInJournal();
   void FlushNatEntries();
 
-  int F2fsWriteNodePage(Page &page, bool is_reclaim = false);
+  int F2fsWriteNodePage(fbl::RefPtr<Page> page, bool is_reclaim = false);
   int F2fsWriteNodePages(VnodeF2fs &vnode, bool is_reclaim = false);
 
   zx_status_t RecoverInodePage(Page &page);
-  void RecoverNodePage(Page &page, Summary &sum, NodeInfo &ni, block_t new_blkaddr);
+  void RecoverNodePage(fbl::RefPtr<Page> page, Summary &sum, NodeInfo &ni, block_t new_blkaddr);
 
   // Check whether the given nid is within node id range.
   void CheckNidRange(const nid_t &nid) { ZX_ASSERT(nid < max_nid_); }
@@ -228,15 +228,12 @@ class NodeManager {
   zx_status_t TruncatePartialNodes(DnodeOfData &dn, Inode &ri, int (&offset)[4], int depth);
   zx_status_t NewNodePage(DnodeOfData &dn, uint32_t ofs, fbl::RefPtr<Page> *out);
 
-#if 0  // porting needed
+#if 0  // Use xxColdxx and RA when gc impl.
   static int IsColdData(Page &page);
   static void ClearColdData(Page &page);
-  Page *GetNodePageRa(Page *parent, int start);
   void SetColdData(Page &page);
+  Page *GetNodePageRa(Page *parent, int start);
   void RaNodePage(nid_t nid);
-
-  int F2fsWriteNodePages(address_space *mapping,
-            WritebackControl *wbc);
 #endif
 
   FreeNid *LookupFreeNidList(nid_t n);

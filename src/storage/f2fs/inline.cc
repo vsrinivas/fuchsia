@@ -177,11 +177,12 @@ zx_status_t Dir::ConvertInlineDir() {
 #if 0  // porting needed
 //   kunmap(page);
 #endif
-  page->SetWriteback();
   page->SetUptodate();
   page->SetDirty();
-  if (page->ClearDirtyForIo()) {
-    Vfs()->GetSegmentManager().WriteDataPage(this, page.get(), &dn, dn.data_blkaddr,
+  if (page->ClearDirtyForIo(true)) {
+    page->SetWriteback();
+    fbl::RefPtr<Page> written_page = page;
+    Vfs()->GetSegmentManager().WriteDataPage(this, std::move(written_page), &dn, dn.data_blkaddr,
                                              &dn.data_blkaddr);
     UpdateExtentCache(dn.data_blkaddr, &dn);
     Vfs()->GetSuperblockInfo().DecreasePageCount(CountType::kDirtyDents);
