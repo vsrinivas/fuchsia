@@ -4,6 +4,8 @@
 
 #include "src/devices/testing/mock-ddk/mock-device.h"
 
+#include <algorithm>
+
 MockDevice::MockDevice(device_add_args_t* args, MockDevice* parent)
     : parent_(parent), ops_(args->ops), ctx_(args->ctx), name_(args->name) {
   if (args->proto_id && args->proto_ops) {
