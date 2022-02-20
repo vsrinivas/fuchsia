@@ -363,15 +363,11 @@ zx_status_t VnodeF2fs::WriteDataPage(fbl::RefPtr<Page> page, bool is_reclaim) {
     if ((page->GetIndex() >= end_index + 1) || !offset) {
       if (page->ClearDirtyForIo(true)) {
         page->SetWriteback();
-        if (IsDir()) {
-          superblock_info.DecreasePageCount(CountType::kDirtyDents);
-          DecreaseDirtyDentries();
-        } else {
-          superblock_info.DecreasePageCount(CountType::kDirtyData);
-        }
       }
       return ZX_ERR_OUT_OF_RANGE;
     }
+    // Writeback Pages for dir/vnode do not have mappings.
+    page->Map();
     page->ZeroUserSegment(offset, kPageSize);
   }
 
@@ -387,14 +383,6 @@ zx_status_t VnodeF2fs::WriteDataPage(fbl::RefPtr<Page> page, bool is_reclaim) {
   if (page->ClearDirtyForIo(true)) {
     page->SetWriteback();
     fs::SharedLock rlock(superblock_info.GetFsLock(LockType::kFileOp));
-
-    if (IsDir()) {
-      superblock_info.DecreasePageCount(CountType::kDirtyDents);
-      DecreaseDirtyDentries();
-    } else {
-      superblock_info.DecreasePageCount(CountType::kDirtyData);
-    }
-
     if (zx_status_t err = DoWriteDataPage(std::move(page)); err != ZX_OK) {
       // TODO: Tracks pages skipping wb
       // ++wbc->pages_skipped;

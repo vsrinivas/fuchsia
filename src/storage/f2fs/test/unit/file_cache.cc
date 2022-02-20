@@ -21,7 +21,7 @@ TEST_F(FileCacheTest, WaitOnLock) {
   fbl::RefPtr<Page> page;
 
   vn->GrabCachePage(0, &page);
-  ASSERT_EQ(page->TryLock(), false);
+  ASSERT_EQ(page->TryLock(), true);
   std::thread thread([&]() { page->Unlock(); });
   // Wait for |thread| to unlock |page|.
   page->Lock();

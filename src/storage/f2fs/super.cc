@@ -34,16 +34,22 @@ void F2fs::PutSuper() {
   superblock_info_.reset();
 }
 
-zx_status_t F2fs::SyncFs(int sync) {
-#if 0  // porting needed
-  //if (!superblock_info_.IsDirty() && !superblock_info_->GetPageCount(CountType::kDirtyNodes))
-  //  return 0;
-#endif
-
-  if (sync)
+void F2fs::SyncFs(bool bShutdown) {
+  // TODO:: Consider !superblock_info_.IsDirty()
+  if (bShutdown) {
+    FX_LOGS(INFO) << "[f2fs] Unmount triggered";
+    WritebackOperation op = {.bSync = true};
+    op.if_vnode = [](fbl::RefPtr<VnodeF2fs> &vnode) {
+      if (!vnode->IsDir()) {
+        return ZX_OK;
+      }
+      return ZX_ERR_NEXT;
+    };
+    SyncDirtyDataPages(op);
+    ScheduleWriterSubmitPages();
+  } else {
     WriteCheckpoint(false, false);
-
-  return ZX_OK;
+  }
 }
 
 #if 0  // porting needed

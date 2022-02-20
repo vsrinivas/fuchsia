@@ -104,7 +104,7 @@ TEST_F(FileTest, NidAndBlkaddrAllocFree) {
     FileTester::AppendToFile(test_file_ptr, buf, kPageSize);
   }
 
-  fs_->WriteCheckpoint(false, false);
+  test_file_ptr->SyncFile(0, test_file_ptr->GetSize(), false);
 
   MapTester::CheckNodeLevel(fs_.get(), test_file_ptr, level);
 
@@ -162,6 +162,7 @@ TEST_F(FileTest, NidAndBlkaddrAllocFree) {
 
   MapTester::CheckNidsFree(fs_.get(), nid_set);
   MapTester::CheckBlkaddrsFree(fs_.get(), blkaddr_set);
+  test_file_vn = nullptr;
 }
 
 }  // namespace

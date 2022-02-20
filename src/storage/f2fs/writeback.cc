@@ -15,19 +15,30 @@ Writer::~Writer() {
 }
 
 void Writer::EnqueuePage(storage::Operation operation, fbl::RefPtr<f2fs::Page> page) {
-  std::lock_guard lock(mutex_);
-  builder_.Add(operation, page.get());
-  pages_.push_back(std::move(page));
+  bool issue = false;
+  {
+    std::lock_guard lock(mutex_);
+    builder_.Add(operation, page.get());
+    pages_.push_back(std::move(page));
+    if (pages_.size() >= kDefaultBlocksPerSegment) {
+      issue = true;
+    }
+  }
+  if (issue) {
+    ScheduleSubmitPages(nullptr);
+  }
 }
 
-std::vector<storage::BufferedOperation> Writer::TakePages() { return builder_.TakeOperations(); }
+std::vector<storage::BufferedOperation> Writer::TakePagesUnsafe() {
+  return builder_.TakeOperations();
+}
 
 fpromise::promise<> Writer::SubmitPages(sync_completion_t *completion) {
   std::vector<storage::BufferedOperation> operations;
   std::vector<fbl::RefPtr<f2fs::Page>> pages;
   {
     std::lock_guard lock(mutex_);
-    operations = TakePages();
+    operations = TakePagesUnsafe();
     pages = std::move(pages_);
   }
   ZX_ASSERT(pages.size() == operations.size());
@@ -41,25 +52,38 @@ fpromise::promise<> Writer::SubmitPages(sync_completion_t *completion) {
       [this, completion, operations = std::move(operations), pages = std::move(pages)]() mutable {
         bool redirty = false;
         if (zx_status_t ret = transaction_handler_->RunRequests(operations); ret != ZX_OK) {
-          // TODO: Redirty all Pages.
-          ZX_ASSERT(0);
+          // Redirty all Pages.
+          FX_LOGS(WARNING) << "[f2fs] RunRequest fails..Redirty Pages..";
           redirty = true;
         }
         block_t nio = 0;
-        for (auto iter : pages) {
+        std::vector<pgoff_t> ids;
+        ino_t prev = 0;
+        FileCache *file_cache = nullptr;
+        for (nio = 0; nio < pages.size(); ++nio) {
           auto page = std::move(pages[nio]);
+          auto current = page->GetVnodeId();
           pages[nio] = nullptr;
           if (redirty && page->IsUptodate()) {
             page->SetDirty();
           }
           page->ClearWriteback();
-          Page::PutPage(std::move(page), false);
-          ++nio;
+          if (prev == 0) {
+            file_cache = &page->GetFileCache();
+          } else if (prev != current) {
+            file_cache->UnmapAndReleasePages(std::move(ids));
+            file_cache = &page->GetFileCache();
+          }
+          ids.push_back(page->GetKey());
+          prev = current;
         }
-        if (nio >= kDefaultBlocksPerSegment) {
-          FX_LOGS(INFO) << "[f2fs]"
-                        << " +" << nio << " Reclaimable Pages ,"
-                        << fs_->GetSuperblockInfo().GetPageCount(CountType::kWriteback);
+        if (ids.size()) {
+          file_cache->UnmapAndReleasePages(std::move(ids));
+        }
+        if (fs_->GetSuperblockInfo().GetPageCount(CountType::kWriteback) >=
+            static_cast<int>(kDefaultBlocksPerSegment)) {
+          FX_LOGS(WARNING) << "[f2fs] High pending WB Pages : "
+                           << fs_->GetSuperblockInfo().GetPageCount(CountType::kWriteback);
         }
         if (completion) {
           sync_completion_signal(completion);

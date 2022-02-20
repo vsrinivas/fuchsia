@@ -68,6 +68,7 @@ void FileTester::MountWithOptions(async_dispatcher_t *dispatcher, const MountOpt
 }
 
 void FileTester::Unmount(std::unique_ptr<F2fs> fs, std::unique_ptr<Bcache> *bc) {
+  fs->SyncFs(true);
   fs->PutSuper();
   fs->ResetBc(bc);
   fs.reset();

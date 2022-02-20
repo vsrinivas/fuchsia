@@ -305,7 +305,8 @@ TEST_F(VnodeTest, SyncFile) {
             ZX_OK);
   ASSERT_FALSE(file_vnode->TestFlag(InodeInfoFlag::kNeedCp));
   curr_checkpoint_ver = fs_->GetSuperblockInfo().GetCheckpoint().checkpoint_ver;
-  ASSERT_EQ(pre_checkpoint_ver + 1, curr_checkpoint_ver);
+  // In this case, SyncFile does nothing since file_vnode is not dirty.
+  ASSERT_EQ(pre_checkpoint_ver, curr_checkpoint_ver);
   fs_->GetSuperblockInfo().SetUserBlockCount(temp_user_block_count);
 
   ASSERT_EQ(file_vnode->Close(), ZX_OK);

@@ -334,6 +334,7 @@ void SegmentManager::BalanceFs() {
   block_t hard_limit = kMaxDirtyDataPages;
   // Without GC, it triggers checkpoint aggressively to secure free segments from pre-free ones.
   if (NeedToCheckpoint()) {
+    FX_LOGS(INFO) << "[f2fs] High prefree segments: " << PrefreeSegments();
     fs_->WriteCheckpoint(false, false);
   }
 #if 0  // porting needed
@@ -343,7 +344,7 @@ void SegmentManager::BalanceFs() {
     // F2fsGc(&superblock_info, 1);
   } {
 #endif
-  else if (dirty_data_pages >= soft_limit) {
+  if (dirty_data_pages >= soft_limit) {
     // f2fs starts writeback when the number of dirty pages exceeds a soft limit.
     WritebackOperation op = {.to_write = dirty_data_pages, .bSync = true};
 
@@ -358,14 +359,16 @@ void SegmentManager::BalanceFs() {
       op.to_write = kDefaultBlocksPerSegment;
     }
 
+    if (op.bSync == true) {
+      FX_LOGS(WARNING) << "[f2fs] High committed pages: " << dirty_data_pages << " / "
+                       << hard_limit;
+    } else {
+      FX_LOGS(INFO) << "[f2fs] Moderate committed pages: " << dirty_data_pages << " / "
+                    << hard_limit;
+    }
+
     // Allocate blocks for dirty pages of dirty vnodes
     fs_->SyncDirtyDataPages(op);
-    // Schedule a flush task to submit writeback Pages to disk when Writer merges enough writeback
-    // Pages.
-    writeback_pages = superblock_info_->GetPageCount(CountType::kWriteback);
-    if (!op.bSync && writeback_pages >= writeback_limit) {
-      fs_->ScheduleWriterSubmitPages();
-    }
   }
 }
 

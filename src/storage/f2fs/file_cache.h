@@ -14,12 +14,15 @@ class VnodeF2fs;
 class FileCache;
 
 enum class PageFlag {
-  kPageUptodate = 0,  // It is uptodate. No need to read blocks from disk.
-  kPageDirty,         // It needs to be written out.
-  kPageWriteback,     // It is under writeback.
-  kPageLocked,        // It is locked. Wait for it to be unlocked.
-  kPageAlloc,         // It has a valid Page::vmo_.
-  kPageMapped,        // It has a valid mapping to the address space and the underlying storage.
+  kPageUptodate = 0,   // It is uptodate. No need to read blocks from disk.
+  kPageDirty,          // It needs to be written out.
+  kPageWriteback,      // It is under writeback.
+  kPageLocked,         // It is locked. Wait for it to be unlocked.
+  kPageAlloc,          // It has a valid Page::vmo_.
+  kPageMapped,         // It has a valid mapping to the address space.
+  kPageStorageMapped,  // It has a valid mapping to the underlying storage for I/O. It should be set
+                       // only when it is subject to IO operations (e.g., ClearDirtyForIo() or
+                       // when it is not uptodate in GetPage()).
   kPageFlagSize = 8,
 };
 
@@ -36,7 +39,7 @@ struct WritebackOperation {
   bool bSync = false;  // If true, FileCache::Writeback() waits for all IO operations of the written
                        // dirty Pages to complete.
   bool bReleasePages =
-      true;  // TODO: If true, it releases clean Pages while traversing FileCache::page_tree_.
+      true;  // If true, it releases clean Pages while traversing FileCache::page_tree_.
   VnodeCallback if_vnode =
       nullptr;  // If set, if_vnode() determines which vnodes are subject to writeback.
   PageCallback if_page =
@@ -77,7 +80,7 @@ class Page : public storage::BlockBuffer,
   // Finally, it resets the reference pointer, and then unmaps |address_| when there is no
   // reference to it except that PageFlag::kPageDirty is set. Writeback will use the mapping of a
   // dirty page soon.
-  static void PutPage(fbl::RefPtr<Page> &&page, int unlock);
+  static void PutPage(fbl::RefPtr<Page> &&page, bool unlock);
   zx_status_t VmoOpUnlock();
   void *GetAddress() const {
     // TODO: |address_| needs to be atomically mapped in a on-demand manner.
@@ -91,10 +94,14 @@ class Page : public storage::BlockBuffer,
   bool IsLocked() const { return TestFlag(PageFlag::kPageLocked); }
   bool IsAllocated() const { return TestFlag(PageFlag::kPageAlloc); }
   bool IsMapped() const { return TestFlag(PageFlag::kPageMapped); }
+  bool IsStorageMapped() const { return TestFlag(PageFlag::kPageStorageMapped); }
 
   void ClearMapped() { ClearFlag(PageFlag::kPageMapped); }
   void Unmap();
   void Map();
+  void StorageUnmap();
+  void StorageMap();
+  void ClearStorageMapped() { ClearFlag(PageFlag::kPageStorageMapped); }
 
   void Lock() {
     while (flags_[static_cast<uint8_t>(PageFlag::kPageLocked)].test_and_set(
@@ -105,9 +112,9 @@ class Page : public storage::BlockBuffer,
   bool TryLock() {
     if (!flags_[static_cast<uint8_t>(PageFlag::kPageLocked)].test_and_set(
             std::memory_order_acquire)) {
-      return true;
+      return false;
     }
-    return false;
+    return true;
   }
   void Unlock() {
     ClearFlag(PageFlag::kPageLocked);
@@ -118,20 +125,11 @@ class Page : public storage::BlockBuffer,
   void SetWriteback();
   void ClearWriteback();
 
-  void SetUptodate() { SetFlag(PageFlag::kPageUptodate); }
-  void ClearUptodate() { ClearFlag(PageFlag::kPageUptodate); }
+  void SetUptodate();
+  void ClearUptodate();
 
   bool SetDirty();
-  bool ClearDirtyForIo(bool for_writeback) {
-    if (IsDirty()) {
-      ClearFlag(PageFlag::kPageDirty);
-      if (!for_writeback) {
-        VmoOpUnlock();
-      }
-      return true;
-    }
-    return false;
-  }
+  bool ClearDirtyForIo(bool for_writeback);
 
   // Truncate or punch-a-hole operations call it to invalidate a Page.
   // It clears PageFlag::kPageUptodate and unmaps |address_|.
@@ -217,21 +215,29 @@ class FileCache {
   // It unmaps a Page with |index|. If kPageUptodate is not set, it remove it from the lookup
   // |page_tree_|.
   void UnmapAndReleasePage(const pgoff_t index) __TA_EXCLUDES(tree_lock_);
+  void UnmapAndReleasePages(std::vector<pgoff_t> ids) __TA_EXCLUDES(tree_lock_);
+  void UnmapAndReleasePageUnsafe(const pgoff_t index) __TA_REQUIRES(tree_lock_);
   // f2fs should call FileCache::GetPage() or FileCache::FindPage() to get a Page for a vnode.
   // It returns a locked Page with |index| from the lookup |page_tree_|.
   // If there is no corresponding Page in |page_tree_|, it returns a locked Page after creating
   // and inserting it into |page_tree_|.
+  // Do release a Page lock before calling methods acquiring |page_lock_|.
   zx_status_t GetPage(const pgoff_t index, fbl::RefPtr<Page> *out) __TA_EXCLUDES(tree_lock_);
   // It does the same things as GetPage() except that it returns a unlocked Page.
   zx_status_t FindPage(const pgoff_t index, fbl::RefPtr<Page> *out) __TA_EXCLUDES(tree_lock_);
   // It tries to write out dirty Pages that |operation| indicates from |page_tree_|.
-  pgoff_t Writeback(const WritebackOperation &operation) __TA_EXCLUDES(tree_lock_);
+  pgoff_t Writeback(WritebackOperation &operation) __TA_EXCLUDES(tree_lock_);
   // It removes and invalidates all Pages in |page_tree_|.
   void InvalidateAllPages() __TA_EXCLUDES(tree_lock_);
+  // Remove all Pages from page_tree_ except for the Writeback Pages which shall be removed after
+  // the writeback.
   zx_status_t Reset() __TA_EXCLUDES(tree_lock_);
   VnodeF2fs &GetVnode() const { return *vnode_; }
 
  private:
+  // It returns a set of dirty Pages that meet |operation|. A caller should unlock the Pages.
+  std::vector<fbl::RefPtr<Page>> GetLockedDirtyPagesUnsafe(const WritebackOperation &operation)
+      __TA_REQUIRES(tree_lock_);
   zx::status<bool> GetPageUnsafe(const pgoff_t index, fbl::RefPtr<Page> *out)
       __TA_REQUIRES(tree_lock_);
   zx_status_t AddPageUnsafe(fbl::RefPtr<Page> page) __TA_REQUIRES(tree_lock_);

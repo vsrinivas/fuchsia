@@ -190,7 +190,8 @@ class F2fs : public fs::Vfs {
 
   // super.cc
   void PutSuper();
-  zx_status_t SyncFs(int sync);
+  void SyncFs(bool bShutdown = false);
+  void Sync(SyncCallback closure);
   zx_status_t SanityCheckRawSuper();
   zx_status_t SanityCheckCkpt();
   void InitSuperblockInfo();
@@ -268,7 +269,9 @@ class F2fs : public fs::Vfs {
   VnodeF2fs &GetNodeVnode() { return *node_vnode_; }
   VnodeF2fs &GetMetaVnode() { return *meta_vnode_; }
 
-  pgoff_t SyncMetaPages(const WritebackOperation &operation);
+  // Flush all dirty Pages for the meta vnode that meet |operation|.if_page.
+  pgoff_t SyncMetaPages(WritebackOperation &operation);
+  // Flush all dirty data Pages for dirty vnodes that meet |operation|.if_vnode and if_page.
   pgoff_t SyncDirtyDataPages(WritebackOperation &operation);
 
   zx_status_t MakeOperation(storage::OperationType op, fbl::RefPtr<Page> page, block_t blk_addr,

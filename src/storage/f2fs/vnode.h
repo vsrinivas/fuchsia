@@ -32,7 +32,7 @@ struct InodeInfo {
 
   uint32_t flags = 0;         // use to pass per-file flags
   uint64_t data_version = 0;  // lastest version of data for fsync
-  atomic_t dirty_dents = 0;   // # of dirty dentry pages
+  atomic_t dirty_pages = 0;   // # of dirty dentry/data pages
   f2fs_hash_t chash;          // hash value of given file name
   uint64_t clevel = 0;        // maximum level of given file name
   nid_t i_xattr_nid = 0;      // node id that contains xattrs
@@ -290,12 +290,14 @@ class VnodeF2fs : public fs::Vnode,
     fi_.clevel = level;
   }
 
-  void IncreaseDirtyDentries() {
-    atomic_fetch_add_explicit(&fi_.dirty_dents, 1, std::memory_order_relaxed);
+  void IncreaseDirtyPageCount() {
+    atomic_fetch_add_explicit(&fi_.dirty_pages, 1, std::memory_order_relaxed);
   }
-
-  void DecreaseDirtyDentries() {
-    atomic_fetch_sub_explicit(&fi_.dirty_dents, 1, std::memory_order_relaxed);
+  void DecreaseDirtyPageCount() {
+    atomic_fetch_sub_explicit(&fi_.dirty_pages, 1, std::memory_order_relaxed);
+  }
+  int GetDirtyPageCount() {
+    return atomic_load_explicit(&fi_.dirty_pages, std::memory_order_acquire);
   }
 
   uint8_t GetDirLevel() const { return fi_.i_dir_level; }
@@ -363,9 +365,7 @@ class VnodeF2fs : public fs::Vnode,
   zx_status_t GrabCachePage(pgoff_t index, fbl::RefPtr<Page> *out) {
     return file_cache_.GetPage(index, out);
   }
-  pgoff_t Writeback(const WritebackOperation &operation) {
-    return file_cache_.Writeback(operation);
-  }
+  pgoff_t Writeback(WritebackOperation &operation) { return file_cache_.Writeback(operation); }
   void InvalidateAllPages() { file_cache_.InvalidateAllPages(); }
 
   // TODO: When |is_reclaim| is set, release |page| after the IO completion

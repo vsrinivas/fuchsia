@@ -20,9 +20,8 @@ void Page::fbl_recycle() {
   ZX_ASSERT(IsWriteback() == false);
   ZX_ASSERT(InContainer() == false);
   ZX_ASSERT(IsDirty() == false);
-  if (IsMapped()) {
-    Unmap();
-  }
+  ZX_ASSERT(IsMapped() == false);
+  ZX_ASSERT(IsStorageMapped() == false);
   delete this;
 }
 
@@ -38,16 +37,45 @@ bool Page::SetDirty() {
     } else if (vnode.IsDir()) {
       superblock_info.IncreasePageCount(CountType::kDirtyDents);
       superblock_info.IncreaseDirtyDir();
-      vnode.IncreaseDirtyDentries();
+      vnode.IncreaseDirtyPageCount();
     } else if (vnode.IsMeta()) {
       superblock_info.IncreasePageCount(CountType::kDirtyMeta);
       superblock_info.SetDirty();
     } else {
       superblock_info.IncreasePageCount(CountType::kDirtyData);
+      vnode.IncreaseDirtyPageCount();
     }
     return false;
   }
   return true;
+}
+
+bool Page::ClearDirtyForIo(bool for_writeback) {
+  ZX_ASSERT(IsLocked());
+  VnodeF2fs &vnode = GetVnode();
+  SuperblockInfo &superblock_info = vnode.Vfs()->GetSuperblockInfo();
+  if (IsDirty()) {
+    ClearFlag(PageFlag::kPageDirty);
+    if (!for_writeback) {
+      VmoOpUnlock();
+    } else {
+      StorageMap();
+    }
+    if (vnode.IsNode()) {
+      superblock_info.DecreasePageCount(CountType::kDirtyNodes);
+    } else if (vnode.IsDir()) {
+      superblock_info.DecreasePageCount(CountType::kDirtyDents);
+      superblock_info.DecreaseDirtyDir();
+      vnode.DecreaseDirtyPageCount();
+    } else if (vnode.IsMeta()) {
+      superblock_info.DecreasePageCount(CountType::kDirtyMeta);
+    } else {
+      superblock_info.DecreasePageCount(CountType::kDirtyData);
+      vnode.DecreaseDirtyPageCount();
+    }
+    return true;
+  }
+  return false;
 }
 
 zx_status_t Page::GetPage(bool need_vmo_lock) {
@@ -77,6 +105,10 @@ zx_status_t Page::GetPage(bool need_vmo_lock) {
       }
     }
   }
+  if (!IsUptodate()) {
+    ZX_ASSERT(!IsWriteback());
+    StorageMap();
+  }
   Map();
   clear_flag.cancel();
   return ret;
@@ -88,7 +120,7 @@ zx_status_t Page::VmoOpUnlock() {
   return ZX_OK;
 }
 
-void Page::PutPage(fbl::RefPtr<Page> &&page, int unlock) {
+void Page::PutPage(fbl::RefPtr<Page> &&page, bool unlock) {
   ZX_ASSERT(page != nullptr);
   pgoff_t index = page->GetKey();
   FileCache &file_cache = page->GetFileCache();
@@ -99,42 +131,51 @@ void Page::PutPage(fbl::RefPtr<Page> &&page, int unlock) {
   file_cache.UnmapAndReleasePage(index);
 }
 
+void Page::StorageUnmap() {
+  if (IsStorageMapped()) {
+    ZX_ASSERT(GetVnode().Vfs()->GetBc().BlockDetachVmo(std::move(vmoid_)) == ZX_OK);
+    ClearStorageMapped();
+  }
+}
+
+void Page::StorageMap() {
+  if (!SetFlag(PageFlag::kPageStorageMapped)) {
+    ZX_ASSERT(GetVnode().Vfs()->GetBc().BlockAttachVmo(vmo_, &vmoid_) == ZX_OK);
+  }
+}
 void Page::Unmap() {
   if (IsMapped()) {
     ClearMapped();
-    ZX_ASSERT(GetVnode().Vfs()->GetBc().BlockDetachVmo(std::move(vmoid_)) == ZX_OK);
     ZX_ASSERT(zx::vmar::root_self()->unmap(address_, BlockSize()) == ZX_OK);
   }
 }
 
 void Page::Map() {
   if (!SetFlag(PageFlag::kPageMapped)) {
-    ZX_ASSERT(GetVnode().Vfs()->GetBc().BlockAttachVmo(vmo_, &vmoid_) == ZX_OK);
     ZX_ASSERT(zx::vmar::root_self()->map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, vmo_, 0,
                                          BlockSize(), &address_) == ZX_OK);
   }
 }
 
 void Page::Invalidate() {
-  VnodeF2fs &vnode = GetVnode();
-  SuperblockInfo &superblock_info = vnode.Vfs()->GetSuperblockInfo();
   WaitOnWriteback();
+  bool locked = TryLock();
   ClearUptodate();
-  if (ClearDirtyForIo(false)) {
-    if (vnode.IsNode()) {
-      superblock_info.DecreasePageCount(CountType::kDirtyNodes);
-    } else if (vnode.IsDir()) {
-      superblock_info.DecreasePageCount(CountType::kDirtyDents);
-      superblock_info.DecreaseDirtyDir();
-      vnode.DecreaseDirtyDentries();
-    } else if (vnode.IsMeta()) {
-      superblock_info.DecreasePageCount(CountType::kDirtyMeta);
-    } else {
-      superblock_info.DecreasePageCount(CountType::kDirtyData);
-    }
-    Unmap();
+  Unmap();
+  ClearDirtyForIo(false);
+  if (!locked) {
+    Unlock();
   }
 }
+
+void Page::SetUptodate() {
+  ZX_ASSERT(IsLocked());
+  if (!SetFlag(PageFlag::kPageUptodate)) {
+    StorageUnmap();
+  }
+}
+
+void Page::ClearUptodate() { ClearFlag(PageFlag::kPageUptodate); }
 
 void Page::WaitOnWriteback() {
   if (IsWriteback()) {
@@ -151,8 +192,9 @@ void Page::SetWriteback() {
 
 void Page::ClearWriteback() {
   if (IsWriteback()) {
-    ClearFlag(PageFlag::kPageWriteback);
+    StorageUnmap();
     GetVnode().Vfs()->GetSuperblockInfo().DecreasePageCount(CountType::kWriteback);
+    ClearFlag(PageFlag::kPageWriteback);
     WakeupFlag(PageFlag::kPageWriteback);
   }
 }
@@ -183,11 +225,29 @@ FileCache::~FileCache() {
 
 void FileCache::UnmapAndReleasePage(const pgoff_t index) {
   std::lock_guard tree_lock(tree_lock_);
+  UnmapAndReleasePageUnsafe(index);
+}
+
+void FileCache::UnmapAndReleasePages(std::vector<pgoff_t> ids) {
+  std::lock_guard tree_lock(tree_lock_);
+  for (auto index : ids) {
+    UnmapAndReleasePageUnsafe(index);
+  }
+}
+
+void FileCache::UnmapAndReleasePageUnsafe(const pgoff_t index) {
   auto iter = page_tree_.find(index);
   if (iter != page_tree_.end() && (*iter).IsLastReference()) {
+    if ((*iter).IsStorageMapped()) {
+      // It failed to be uptodate due to invalid index.
+      // In other cases, StorageUnmap() should be called in ClearWriteback().
+      ZX_ASSERT(!(*iter).IsUptodate());
+      (*iter).StorageUnmap();
+    }
     (*iter).Unmap();
     (*iter).VmoOpUnlock();
-    if (!(*iter).IsUptodate()) {
+    if (!(*iter).IsUptodate() ||
+        (!(*iter).GetVnode().IsActive() && !(*iter).IsDirty() && !(*iter).IsWriteback())) {
       EvictUnsafe(&(*iter));
     }
   }
@@ -212,9 +272,9 @@ zx_status_t FileCache::GetPage(const pgoff_t index, fbl::RefPtr<Page> *out) {
     } else {
       need_vmo_lock = ret.value();
     }
+    (*out)->Lock();
     (*out)->GetPage(need_vmo_lock);
   }
-  (*out)->Lock();
   return ZX_OK;
 }
 
@@ -224,7 +284,9 @@ zx_status_t FileCache::FindPage(const pgoff_t index, fbl::RefPtr<Page> *out) {
   if (ret.is_error()) {
     return ret.error_value();
   }
+  (*out)->Lock();
   (*out)->GetPage(ret.value());
+  (*out)->Unlock();
   return ZX_OK;
 }
 
@@ -264,32 +326,32 @@ zx_status_t FileCache::Reset() {
 }
 
 zx_status_t FileCache::ResetUnsafe() {
+  pgoff_t prev_key = kPgOffMax;
   while (!page_tree_.is_empty()) {
-    fbl::RefPtr<Page> page = page_tree_.pop_front();
-    if (page) {
-      ZX_ASSERT(page->IsDirty() == false);
-      ZX_ASSERT(page->IsWriteback() == false);
-      page->ClearUptodate();
-      page.reset();
+    auto key = (prev_key < kPgOffMax) ? prev_key : page_tree_.front().GetKey();
+    auto current = page_tree_.lower_bound(key);
+    if (current == page_tree_.end()) {
+      break;
+    } else if (prev_key == (*current).GetKey()) {
+      ++current;
+      if (current == page_tree_.end()) {
+        break;
+      }
+    }
+    prev_key = (*current).GetKey();
+    if (!(*current).IsWriteback()) {
+      EvictUnsafe(&(*current));
     }
   }
   return ZX_OK;
 }
 
-// TODO: Do not acquire tree_lock_ during writeback
-// TODO: Reset FileCache of the meta/node vnode after checkpoint
-// TODO: Consider using a global lock as below
-// if (!IsDir())
-//   mutex_lock(&superblock_info->writepages);
-// Writeback()
-// if (!IsDir())
-//   mutex_unlock(&superblock_info->writepages);
-// Vfs()->RemoveDirtyDirInode(this);
-pgoff_t FileCache::Writeback(const WritebackOperation &operation) {
-  pgoff_t written_blocks = 0;
+std::vector<fbl::RefPtr<Page>> FileCache::GetLockedDirtyPagesUnsafe(
+    const WritebackOperation &operation) {
   pgoff_t prev_key = kPgOffMax;
-  while (true) {
-    std::lock_guard tree_lock(tree_lock_);
+  std::vector<fbl::RefPtr<Page>> pages;
+  pgoff_t nwritten = 0;
+  while (nwritten <= operation.to_write) {
     if (page_tree_.is_empty()) {
       break;
     }
@@ -308,46 +370,78 @@ pgoff_t FileCache::Writeback(const WritebackOperation &operation) {
       }
     }
     prev_key = current->GetKey();
-
-    if (current->IsLastReference() && current->TryLock()) {
-      fbl::RefPtr<Page> page = current.CopyPointer();
-      if (page->IsDirty()) {
+    if (current->IsLastReference() && !current->TryLock()) {
+      if (current->IsDirty()) {
+        fbl::RefPtr<Page> page = current.CopyPointer();
         if (!operation.if_page || operation.if_page(page) == ZX_OK) {
           ZX_ASSERT(page->IsUptodate());
-          page->Map();
-          zx_status_t ret = page->GetVnode().WriteDirtyPage(page, false);
-          ZX_ASSERT(!page->IsDirty());
-          if (ret != ZX_OK) {
-            if (ret != ZX_ERR_NOT_FOUND && ret != ZX_ERR_OUT_OF_RANGE) {
-              // TODO: In case of failure, we just redirty it.
-              page->SetDirty();
-              FX_LOGS(WARNING) << "[f2fs] A unexpected error occured during writing Pages: " << ret;
-            }
-            page->ClearWriteback();
-          } else {
-            ++written_blocks;
-            ZX_ASSERT(page->IsWriteback());
-          }
+          pages.push_back(std::move(page));
+          ++nwritten;
+        } else {
+          page->Unlock();
         }
-        page->Unlock();
+      } else if (operation.bReleasePages || !vnode_->IsActive()) {
+        // TODO: Fix a bug. The last reference should not have a mapping.
+        if (current->IsMapped()) {
+          ZX_ASSERT(vnode_->IsNode());
+          current->Unmap();
+        }
+        current->Unlock();
+        EvictUnsafe(&(*current));
       } else {
-        page->Unlock();
-        EvictUnsafe(page.get());
+        current->Unlock();
       }
     }
-    if (written_blocks >= operation.to_write) {
-      break;
-    }
+  }
+  return pages;
+}
+
+// TODO: Consider using a global lock as below
+// if (!IsDir())
+//   mutex_lock(&superblock_info->writepages);
+// Writeback()
+// if (!IsDir())
+//   mutex_unlock(&superblock_info->writepages);
+// Vfs()->RemoveDirtyDirInode(this);
+pgoff_t FileCache::Writeback(WritebackOperation &operation) {
+  std::vector<fbl::RefPtr<Page>> pages;
+  {
+    std::lock_guard tree_lock(tree_lock_);
+    pages = GetLockedDirtyPagesUnsafe(operation);
   }
 
-  sync_completion_t completion;
-  if (written_blocks) {
-    if (operation.bSync) {
-      vnode_->Vfs()->ScheduleWriterSubmitPages(&completion);
-      ZX_ASSERT(sync_completion_wait(&completion, ZX_TIME_INFINITE) == ZX_OK);
+  pgoff_t nwritten = 0;
+  for (size_t i = 0; i < pages.size(); ++i) {
+    fbl::RefPtr<Page> page = std::move(pages[i]);
+    pages[i] = nullptr;
+    ZX_ASSERT(page->IsUptodate());
+    ZX_ASSERT(page->IsLocked());
+    if (vnode_->IsNode() || vnode_->IsMeta()) {
+      page->Map();
     }
+    zx_status_t ret = page->GetVnode().WriteDirtyPage(page, false);
+    ZX_ASSERT(!page->IsDirty());
+    if (ret != ZX_OK) {
+      if (ret != ZX_ERR_NOT_FOUND && ret != ZX_ERR_OUT_OF_RANGE) {
+        // TODO: In case of failure, we just redirty it.
+        page->SetDirty();
+        FX_LOGS(WARNING) << "[f2fs] A unexpected error occured during writing Pages: " << ret;
+      }
+      page->Unmap();
+      page->ClearWriteback();
+    } else {
+      ZX_ASSERT(page->IsWriteback());
+      ++nwritten;
+      --operation.to_write;
+    }
+    page->Unlock();
   }
-  return written_blocks;
+  if (operation.bSync) {
+    sync_completion_t completion;
+    vnode_->Vfs()->ScheduleWriterSubmitPages(&completion);
+    ZX_ASSERT(sync_completion_wait(&completion, ZX_TIME_INFINITE) == ZX_OK);
+  }
+  return nwritten;
 }
 
 }  // namespace f2fs

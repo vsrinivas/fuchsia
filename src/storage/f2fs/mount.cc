@@ -63,7 +63,7 @@ zx_status_t Mount(const MountOptions &options, std::unique_ptr<f2fs::Bcache> bc)
 
   auto on_unmount = [&loop]() {
     loop.Quit();
-    FX_LOGS(WARNING) << "Unmounted";
+    FX_LOGS(INFO) << "[f2fs] Unmounted successfully";
   };
 
   auto fs_or = CreateFsAndRoot(options, loop.dispatcher(), std::move(bc), std::move(export_root),
@@ -73,7 +73,7 @@ zx_status_t Mount(const MountOptions &options, std::unique_ptr<f2fs::Bcache> bc)
     return EXIT_FAILURE;
   }
 
-  FX_LOGS(INFO) << "Mounted successfully";
+  FX_LOGS(INFO) << "[f2fs] Mounted successfully";
 
   ZX_ASSERT(loop.Run() == ZX_ERR_CANCELED);
 

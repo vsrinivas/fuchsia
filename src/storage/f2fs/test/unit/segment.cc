@@ -30,12 +30,14 @@ TEST_F(SegmentManagerTest, BlkChaining) {
     fs_->GetNodeManager().GetNodePage(superblock_info.GetRootIno(), &read_page);
     blk_chain.push_back(NodeManager::NextBlkaddrOfNode(*read_page));
     read_page->SetDirty();
-    fs_->GetNodeManager().F2fsWriteNodePage(read_page, false);
+    Page::PutPage(std::move(read_page), true);
+    WritebackOperation op = {.bSync = true};
+    fs_->GetNodeVnode().Writeback(op);
+
     fs_->GetNodeManager().GetNodeInfo(superblock_info.GetRootIno(), ni);
     ASSERT_NE(ni.blk_addr, kNullAddr);
     ASSERT_NE(ni.blk_addr, kNewAddr);
     ASSERT_EQ(ni.blk_addr, blk_chain[i]);
-    Page::PutPage(std::move(read_page), true);
   }
 }
 
@@ -63,14 +65,15 @@ TEST_F(SegmentManagerTest, DirtyToFree) {
     block_t old_addr = ni.blk_addr;
 
     read_page->SetDirty();
-    fs_->GetNodeManager().F2fsWriteNodePage(read_page, false);
+    Page::PutPage(std::move(read_page), true);
+    WritebackOperation op = {.bSync = true};
+    fs_->GetNodeVnode().Writeback(op);
 
     if (fs_->GetSegmentManager().GetValidBlocks(fs_->GetSegmentManager().GetSegmentNumber(old_addr),
                                                 0) == 0) {
       prefree_array.push_back(fs_->GetSegmentManager().GetSegmentNumber(old_addr));
       ASSERT_EQ(fs_->GetSegmentManager().PrefreeSegments(), ++nprefree);
     }
-    Page::PutPage(std::move(read_page), true);
   }
 
   // check the bitmaps and the number of free/prefree segments
@@ -144,7 +147,10 @@ TEST_F(SegmentManagerTest, GetNewSegmentHeap) {
     ASSERT_NE(ni.blk_addr, kNewAddr);
 
     read_page->SetDirty();
-    fs_->GetNodeManager().F2fsWriteNodePage(read_page, false);
+    Page::PutPage(std::move(read_page), true);
+    WritebackOperation op = {.bSync = true};
+    fs_->GetNodeVnode().Writeback(op);
+
     fs_->GetNodeManager().GetNodeInfo(superblock_info.GetRootIno(), new_ni);
     ASSERT_NE(new_ni.blk_addr, kNullAddr);
     ASSERT_NE(new_ni.blk_addr, kNewAddr);
@@ -155,7 +161,6 @@ TEST_F(SegmentManagerTest, GetNewSegmentHeap) {
     } else {
       ASSERT_GT(new_ni.blk_addr, ni.blk_addr);
     }
-    Page::PutPage(std::move(read_page), true);
   }
 }
 
@@ -307,7 +312,9 @@ TEST(SegmentManagerOptionTest, Section) {
 
     // Consume a block in the current section
     root_node_page->SetDirty();
-    fs->GetNodeManager().F2fsWriteNodePage(root_node_page, false);
+    Page::PutPage(std::move(root_node_page), true);
+    WritebackOperation op = {.bSync = true};
+    fs->GetNodeVnode().Writeback(op);
 
     fs->GetNodeManager().GetNodeInfo(superblock_info.GetRootIno(), ni);
     ASSERT_NE(ni.blk_addr, kNullAddr);
@@ -322,7 +329,6 @@ TEST(SegmentManagerOptionTest, Section) {
               fs->GetSegmentManager().GetValidBlocks(
                   cur_segment->segno, safemath::checked_cast<int>(mkfs_options.segs_per_sec)));
     ASSERT_FALSE(fs->GetSegmentManager().HasNotEnoughFreeSecs());
-    Page::PutPage(std::move(root_node_page), true);
   }
 
   FileTester::Unmount(std::move(fs), &bc);
@@ -360,7 +366,10 @@ TEST(SegmentManagerOptionTest, GetNewSegmentHeap) {
     ASSERT_NE(ni.blk_addr, kNewAddr);
 
     root_node_page->SetDirty();
-    fs->GetNodeManager().F2fsWriteNodePage(root_node_page, false);
+    Page::PutPage(std::move(root_node_page), true);
+    WritebackOperation op = {.bSync = true};
+    fs->GetNodeVnode().Writeback(op);
+
     fs->GetNodeManager().GetNodeInfo(superblock_info.GetRootIno(), new_ni);
     ASSERT_NE(new_ni.blk_addr, kNullAddr);
     ASSERT_NE(new_ni.blk_addr, kNewAddr);
@@ -371,7 +380,6 @@ TEST(SegmentManagerOptionTest, GetNewSegmentHeap) {
     } else {
       ASSERT_GT(new_ni.blk_addr, ni.blk_addr);
     }
-    Page::PutPage(std::move(root_node_page), true);
   }
 
   FileTester::Unmount(std::move(fs), &bc);
@@ -409,13 +417,15 @@ TEST(SegmentManagerOptionTest, GetNewSegmentNoHeap) {
     ASSERT_NE(ni.blk_addr, kNewAddr);
 
     root_node_page->SetDirty();
-    fs->GetNodeManager().F2fsWriteNodePage(root_node_page, false);
+    Page::PutPage(std::move(root_node_page), true);
+    WritebackOperation op = {.bSync = true};
+    fs->GetNodeVnode().Writeback(op);
+
     fs->GetNodeManager().GetNodeInfo(superblock_info.GetRootIno(), new_ni);
     ASSERT_NE(new_ni.blk_addr, kNullAddr);
     ASSERT_NE(new_ni.blk_addr, kNewAddr);
     // It tries to find a free nodesction from the start of main area
     ASSERT_GT(new_ni.blk_addr, ni.blk_addr);
-    Page::PutPage(std::move(root_node_page), true);
   }
 
   FileTester::Unmount(std::move(fs), &bc);

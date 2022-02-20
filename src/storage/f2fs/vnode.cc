@@ -165,8 +165,9 @@ void VnodeF2fs::RecycleNode() {
                   GetKey(), open_count());
   }
   if (GetNlink()) {
-    WritebackOperation op = {.bSync = true};
-    Writeback(op);
+    // f2fs removes the last reference to a dirty vnode from the dirty vnode list
+    // when there is no dirty Page for the vnode at checkpoint time.
+    ZX_ASSERT(GetDirtyPageCount() == 0);
     file_cache_.Reset();
     Vfs()->GetVCache().Downgrade(this);
   } else {
@@ -551,7 +552,7 @@ void VnodeF2fs::EvictVnode() {
   {
     fs::SharedLock rlock(superblock_info.GetFsLock(LockType::kFileOp));
     Vfs()->GetNodeManager().RemoveInodePage(this);
-    ZX_ASSERT(atomic_load_explicit(&fi_.dirty_dents, std::memory_order_relaxed) == 0);
+    ZX_ASSERT(GetDirtyPageCount() == 0);
   }
   Vfs()->EvictVnode(this);
 }
@@ -581,64 +582,42 @@ void VnodeF2fs::Sync(SyncCallback closure) {
 
 zx_status_t VnodeF2fs::SyncFile(loff_t start, loff_t end, int datasync) {
   SuperblockInfo &superblock_info = Vfs()->GetSuperblockInfo();
-  __UNUSED uint64_t cur_version;
   zx_status_t ret = ZX_OK;
   bool need_cp = false;
-#if 0  // porting needed
-  // WritebackControl wbc;
 
-  // wbc.sync_mode = WB_SYNC_ALL;
-  // wbc.nr_to_write = LONG_MAX;
-  // wbc.for_reclaim = 0;
-
-  // ret = filemap_write_and_wait_range(inode->i_mapping, start, end);
-  // if (ret)
-  //   return ret;
-#endif
-
-#if 0  // porting needed
-  // if (inode->i_sb->s_flags & MS_RDONLY)
-  //   goto out;
-  // if (datasync && !(i_state & I_DIRTY_DATASYNC)) {
-  //  goto out;
-  //}
-#endif
-
-  {
-    std::lock_guard cplock(superblock_info.GetCheckpointMutex());
-    cur_version = LeToCpu(superblock_info.GetCheckpoint().checkpoint_ver);
+  // TODO: Do nothing when read-only mode is set
+  // TODO: When fdatasync is available, check if it should be written.
+  // TODO: Consider some case where there is no need to write node or data pages.
+  if (!IsDirty()) {
+    return ret;
   }
 
-#if 0  // porting needed
-  // if (fi.data_version != cur_version &&
-  //        !(i_state & I_DIRTY)) {
-  //  goto out;
-  //}
-#endif
-  --fi_.data_version;
+  // Write out dirty data pages
+  WritebackOperation op = {.bSync = true};
+  Writeback(op);
 
-  if (!IsReg() || GetNlink() != 1)
+  if (!IsReg() || GetNlink() != 1) {
     need_cp = true;
-  if (TestFlag(InodeInfoFlag::kNeedCp))
+  }
+  if (TestFlag(InodeInfoFlag::kNeedCp)) {
     need_cp = true;
-  if (!Vfs()->SpaceForRollForward())
+  }
+  if (!Vfs()->SpaceForRollForward()) {
     need_cp = true;
-  if (superblock_info.TestOpt(kMountDisableRollForward) || NeedToSyncDir())
+  }
+  if (superblock_info.TestOpt(kMountDisableRollForward) || NeedToSyncDir()) {
     need_cp = true;
-
-  // TODO: it intended to update cached page for this, but
-  // the current impl. writes out inode in a sync manner
-  // WriteInode(nullptr);
+  }
 
   if (need_cp) {
-    // TODO: remove it after implementing cache
-    WriteInode(false);
     // all the dirty node pages should be flushed for POR
-    ret = Vfs()->SyncFs(1);
+    Vfs()->SyncFs();
     ClearFlag(InodeInfoFlag::kNeedCp);
   } else {
-    // TODO: it intended to flush all dirty node pages on cache
-    // remove it after cache
+    // TODO: After impl ordered writeback for node pages,
+    // support logging nodes for roll-forward recovery.
+    // kMountDisableRollForward can be removed when gc is available
+    // since LFS cannot be used for nodes without gc.
     fbl::RefPtr<Page> node_page;
     int mark = !Vfs()->GetNodeManager().IsCheckpointedNode(Ino());
     if (ret = Vfs()->GetNodeManager().GetNodePage(Ino(), &node_page); ret != ZX_OK) {
@@ -650,31 +629,11 @@ zx_status_t VnodeF2fs::SyncFile(loff_t start, loff_t end, int datasync) {
 
     UpdateInode(node_page.get());
     Page::PutPage(std::move(node_page), true);
-
-#if 0  // porting needed
-    // while (Vfs()->GetNodeManager().SyncNodePages(Ino(), &wbc) == 0)
-    //   WriteInode(nullptr);
-    // filemap_fdatawait_range(nullptr,//superblock_info->node_inode->i_mapping,
-    //           0, LONG_MAX);
-#endif
   }
-#if 0  // porting needed
-  // out:
-#endif
   return ret;
 }
 
 bool VnodeF2fs::NeedToSyncDir() {
-#if 0  // porting needed
-  // dentry = d_find_any_alias(vnode);
-  // if (!dentry) {
-    //   // Iput(inode);
-  //   return 0;
-  // }
-  // pino = dentry->d_parent->d_inode->i_ino;
-  // dput(dentry);
-  // Iput();
-#endif
   ZX_ASSERT(GetParentNid() < kNullIno);
   return !Vfs()->GetNodeManager().IsCheckpointedNode(GetParentNid());
 }

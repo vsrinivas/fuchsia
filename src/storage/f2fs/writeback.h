@@ -22,24 +22,28 @@ class Writer {
   ~Writer();
 
   void ScheduleTask(fpromise::pending_task task);
-  // It schedule a flush task to request buffered operations merged in |builder_|.
+  // It schedules SubmitPages().
   // If |completion| is set, it notifies the caller of the operation completion.
-  void ScheduleSubmitPages(sync_completion_t *completion);
+  void ScheduleSubmitPages(sync_completion_t *completion) __TA_EXCLUDES(mutex_);
   // It merges Pages to be written.
-  void EnqueuePage(storage::Operation operation, fbl::RefPtr<f2fs::Page> page);
-  std::vector<storage::BufferedOperation> TakePages();
+  void EnqueuePage(storage::Operation operation, fbl::RefPtr<f2fs::Page> page)
+      __TA_EXCLUDES(mutex_);
+  std::vector<storage::BufferedOperation> TakePagesUnsafe() __TA_REQUIRES(mutex_);
 
  private:
+  // It takes writeback operations from |builder_| and passes them to RunReqeusts().
+  // When the operations are complete, it groups Pages by the vnode id and passes each group to the
+  // regarding FileCache for releasing mappings and committed pages.
   fpromise::promise<> SubmitPages(sync_completion_t *completion);
 
-  std::vector<fbl::RefPtr<f2fs::Page>> pages_;
+  std::vector<fbl::RefPtr<f2fs::Page>> pages_ __TA_GUARDED(mutex_);
   F2fs *fs_ = nullptr;
   fs::TransactionHandler *transaction_handler_ = nullptr;
   fs::SharedMutex mutex_;
   // TODO: Maintain a separate builder for each stream.
-  fs::BufferedOperationsBuilder builder_;
+  fs::BufferedOperationsBuilder builder_ __TA_GUARDED(mutex_);
   fs::BackgroundExecutor executor_;
-  // TODO: tracks the last block for each PageType segment
+  // TODO: Track the last block for each PageType segment
 };
 
 }  // namespace f2fs

@@ -1115,10 +1115,14 @@ void NodeManager::SyncInodePage(DnodeOfData &dn) {
   }
 }
 
-pgoff_t NodeManager::SyncNodePages(const WritebackOperation &operation) {
+pgoff_t NodeManager::SyncNodePages(WritebackOperation &operation) {
+  if (superblock_info_->GetPageCount(CountType::kDirtyNodes) == 0 && !operation.bReleasePages) {
+    return 0;
+  }
   if (zx_status_t status = fs_->GetVCache().ForDirtyVnodesIf(
           [this](fbl::RefPtr<VnodeF2fs> &vnode) {
             if (!vnode->ShouldFlush()) {
+              ZX_ASSERT(fs_->GetVCache().RemoveDirty(vnode.get()) == ZX_OK);
               return ZX_ERR_NEXT;
             }
             ZX_ASSERT(vnode->WriteInode(false) == ZX_OK);
@@ -1127,7 +1131,7 @@ pgoff_t NodeManager::SyncNodePages(const WritebackOperation &operation) {
             return ZX_OK;
           },
           [](fbl::RefPtr<VnodeF2fs> &vnode) {
-            if (!vnode->ShouldFlush()) {
+            if (vnode->GetDirtyPageCount()) {
               return ZX_ERR_NEXT;
             }
             return ZX_OK;
@@ -1136,7 +1140,6 @@ pgoff_t NodeManager::SyncNodePages(const WritebackOperation &operation) {
     FX_LOGS(ERROR) << "Failed to flush dirty vnodes ";
     return 0;
   }
-
   // TODO: Consider ordered writeback
   return fs_->GetNodeVnode().Writeback(operation);
 
@@ -1275,7 +1278,6 @@ zx_status_t NodeManager::F2fsWriteNodePage(fbl::RefPtr<Page> page, bool is_recla
     // insert node offset
     fs_->GetSegmentManager().WriteNodePage(std::move(page), nid, ni.blk_addr, &new_addr);
     SetNodeAddr(ni, new_addr);
-    GetSuperblockInfo().DecreasePageCount(CountType::kDirtyNodes);
   }
   return ZX_OK;
 }

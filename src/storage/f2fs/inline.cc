@@ -179,14 +179,13 @@ zx_status_t Dir::ConvertInlineDir() {
 #endif
   page->SetUptodate();
   page->SetDirty();
+  // TODO: Use writeback() while keeping the lock
   if (page->ClearDirtyForIo(true)) {
     page->SetWriteback();
     fbl::RefPtr<Page> written_page = page;
     Vfs()->GetSegmentManager().WriteDataPage(this, std::move(written_page), &dn, dn.data_blkaddr,
                                              &dn.data_blkaddr);
     UpdateExtentCache(dn.data_blkaddr, &dn);
-    Vfs()->GetSuperblockInfo().DecreasePageCount(CountType::kDirtyDents);
-    DecreaseDirtyDentries();
     UpdateVersion();
   }
   // clear inline dir and flag after data writeback

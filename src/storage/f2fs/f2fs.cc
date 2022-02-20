@@ -169,8 +169,6 @@ zx::status<std::unique_ptr<F2fs>> CreateFsAndRoot(const MountOptions& mount_opti
       break;
   }
 
-  FX_LOGS(INFO) << "CreateFsAndRoot";
-
   if (zx_status_t status = fs->ServeDirectory(std::move(export_root), std::move(root));
       status != ZX_OK) {
     FX_LOGS(ERROR) << "failed to establish mount_channel" << status;
@@ -182,9 +180,11 @@ zx::status<std::unique_ptr<F2fs>> CreateFsAndRoot(const MountOptions& mount_opti
 }
 
 #ifdef __Fuchsia__
-void Sync(SyncCallback closure) {
-  if (closure)
+void F2fs::Sync(SyncCallback closure) {
+  SyncFs(true);
+  if (closure) {
     closure(ZX_OK);
+  }
 }
 
 void F2fs::Shutdown(fs::FuchsiaVfs::ShutdownCallback cb) {
