@@ -259,7 +259,7 @@ func GetImages(ctx context.Context, imageManifest string, bootMode Mode) ([]Imag
 	if err != nil {
 		logger.Errorf(ctx, "Failed to fetch images: %s", err)
 	} else {
-		logger.Errorf(ctx, "Completed fetching images")
+		logger.Debugf(ctx, "Completed fetching images")
 	}
 	return imgs, closeFunc, err
 }
