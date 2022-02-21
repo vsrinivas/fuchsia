@@ -1606,39 +1606,23 @@ static zx_status_t iwl_pcie_set_interrupt_capa(struct iwl_trans* trans) {
 enable_msi:
 #endif  // NEEDS_PORTING
 
-  struct {
-    pci_irq_mode_t value;
-    const char* name;
-  } modes[] = {
-      {
-          PCI_IRQ_MODE_MSI,
-          "MSI",
-      },
-      {
-          PCI_IRQ_MODE_LEGACY,
-          "LEGACY",
-      },
-  };
-
   const uint32_t request_irq_count = 1;  // Currently we only request 1 interrupt.
-
-  zx_status_t status;
-  size_t i;
-  for (i = 0; i < ARRAY_SIZE(modes); i++) {
-    trans_pcie->irq_mode = modes[i].value;
-    uint32_t max_irqs;
-    if (ZX_OK == (status = pci_query_irq_mode(trans_pcie->pci, trans_pcie->irq_mode, &max_irqs))) {
-      IWL_INFO(trans, "We choose the IRQ mode: %s\n", modes[i].name);
-      ZX_DEBUG_ASSERT(max_irqs >= request_irq_count);
-      break;
-    }
+  pci_interrupt_modes_t irq_modes = {};
+  pci_get_interrupt_modes(trans_pcie->pci, &irq_modes);
+  pci_irq_mode_t irq_mode = PCI_IRQ_MODE_LEGACY;
+  // Favor MSI interrupt mode if it can supply enough interrupts.
+  if (irq_modes.msi >= request_irq_count) {
+    irq_mode = PCI_IRQ_MODE_MSI;
   }
-  if (i == ARRAY_SIZE(modes)) {
+
+  zx_status_t status = pci_set_interrupt_mode(trans_pcie->pci, irq_mode, request_irq_count);
+  if (status != ZX_OK) {
     IWL_ERR(trans, "cannot find an IRQ mode to use: %s.\n", zx_status_get_string(status));
     return status;
   }
 
-  return pci_set_interrupt_mode(trans_pcie->pci, trans_pcie->irq_mode, request_irq_count);
+  trans_pcie->irq_mode = irq_mode;
+  return status;
 }
 
 #if 0   // NEEDS_PORTING
