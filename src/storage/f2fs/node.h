@@ -268,7 +268,7 @@ class NodeManager {
   NatList clean_nat_list_ __TA_GUARDED(nat_tree_lock_);  // a list for cached clean nats
   NatList dirty_nat_list_ __TA_GUARDED(nat_tree_lock_);  // a list for cached dirty nats
 
-  fs::SharedMutex free_nid_list_lock_;                           // protect free nid list
+  std::mutex free_nid_list_lock_;                                // protect free nid list
   list_node_t free_nid_list_ __TA_GUARDED(free_nid_list_lock_);  // a list for free nids
   std::mutex build_lock_;                                        // lock for building free nids
 

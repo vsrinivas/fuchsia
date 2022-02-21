@@ -39,7 +39,7 @@ class Writer {
   std::vector<fbl::RefPtr<f2fs::Page>> pages_ __TA_GUARDED(mutex_);
   F2fs *fs_ = nullptr;
   fs::TransactionHandler *transaction_handler_ = nullptr;
-  fs::SharedMutex mutex_;
+  std::mutex mutex_;
   // TODO: Maintain a separate builder for each stream.
   fs::BufferedOperationsBuilder builder_ __TA_GUARDED(mutex_);
   fs::BackgroundExecutor executor_;

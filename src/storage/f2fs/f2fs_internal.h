@@ -158,7 +158,7 @@ class SuperblockInfo {
 
   list_node_t &GetOrphanInodeList() { return orphan_inode_list_; }
 
-  fs::SharedMutex &GetOrphanInodeMutex() { return orphan_inode_mutex_; }
+  std::mutex &GetOrphanInodeMutex() { return orphan_inode_mutex_; }
 
   uint64_t GetOrphanCount() const { return n_orphans_; }
 
@@ -354,9 +354,9 @@ class SuperblockInfo {
   bool on_recovery_ = false;  // recovery is doing or not
 
   // for orphan inode management
-  list_node_t orphan_inode_list_;       // orphan inode list
-  fs::SharedMutex orphan_inode_mutex_;  // for orphan inode list
-  uint64_t n_orphans_ = 0;              // # of orphan inodes
+  list_node_t orphan_inode_list_;  // orphan inode list
+  std::mutex orphan_inode_mutex_;  // for orphan inode list
+  uint64_t n_orphans_ = 0;         // # of orphan inodes
 
   uint64_t n_dirty_dirs = 0;           // # of dir inodes
   block_t log_sectors_per_block_ = 0;  // log2 sectors per block

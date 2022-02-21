@@ -325,7 +325,7 @@ class VnodeF2fs : public fs::Vnode,
 
   bool IsActive() __TA_EXCLUDES(mutex_) { return TestFlag(InodeInfoFlag::kActive); }
 
-  bool WaitForDeactive(fs::SharedMutex &mutex) __TA_REQUIRES_SHARED(mutex) {
+  bool WaitForDeactive(std::mutex &mutex) __TA_REQUIRES_SHARED(mutex) {
     if (IsActive()) {
       flag_cvar_.wait(mutex, [this]() {
         return (TestBit(static_cast<int>(InodeInfoFlag::kActive), &fi_.flags) == 0);
