@@ -101,7 +101,7 @@ func updateReadMe(dir string, sha1 []byte) {
 }
 
 func main() {
-	commit := flag.String("commit", "origin/upstream/master", "Upstream commit-ish to check out")
+	commit := flag.String("commit", "origin/master", "Upstream commit-ish to check out")
 
 	flag.Parse()
 
