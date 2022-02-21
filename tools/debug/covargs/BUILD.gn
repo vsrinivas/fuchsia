@@ -45,6 +45,7 @@ go_library("main") {
   deps = [
     ":covargs_lib",
     ":llvm_api",
+    "//third_party/golibs:golang.org/x/sync",
     "//tools/debug/elflib",
     "//tools/debug/symbolize:symbolize_lib",
     "//tools/lib/cache",

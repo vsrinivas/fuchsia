@@ -32,6 +32,7 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 	"go.fuchsia.dev/fuchsia/tools/lib/retry"
 	"go.fuchsia.dev/fuchsia/tools/testing/runtests"
+	"golang.org/x/sync/errgroup"
 )
 
 const (
@@ -233,7 +234,6 @@ func (e *profileReadingError) Error() string {
 
 // Returns the embedded build id read from a profile by invoking llvm-profdata tool.
 // llvm-profdata show --binary-ids
-// TODO(gulfem): Try using goroutines to run `llvm-profdata show` in parallel.
 func readEmbeddedBuildId(ctx context.Context, tool string, profile string) (string, error) {
 	args := []string{
 		"show",
@@ -279,51 +279,65 @@ type profileEntry struct {
 // returning a sequence of entries, where each entry contains
 // a raw profile and module specified by build ID present in that profile.
 func mergeEntries(ctx context.Context, vf *versionFetcher, summary runtests.DataSinkMap, partitions map[uint64]*partition) ([]profileEntry, error) {
-	sinkToModules := make(map[string]string)
-	// TODO(gulfem): Parallelize this loop as reading all the profiles via llvm-profdata is costly.
+	// Dedupe profiles so we only fetch build IDs once for each.
+	profiles := make(map[string]struct{})
 	for _, sink := range summary[llvmProfileSinkType] {
-		// If we read the embedded build id for this sink before, do not read it again.
-		if _, ok := sinkToModules[sink.File]; ok {
-			continue
-		}
-
-		version, err := vf.getVersion(sink.File)
-		if err != nil {
-			// TODO(fxbug.dev/83504): Known issue causes occasional failures on host tests.
-			// Once resolved, return an error.
-			logger.Warningf(ctx, "cannot read version from profile %q: %w", sink.Name, err)
-			continue
-		}
-
-		// Find the associated llvm-profdata tool.
-		partition, ok := partitions[version]
-		if !ok {
-			partition = partitions[0]
-		}
-
-		// Read embedded build ids, which are enabled for profile versions 7 and above.
-		embeddedBuildId, err := readEmbeddedBuildId(ctx, partition.tool, sink.File)
-		if err != nil {
-			switch err.(type) {
-			// TODO(fxbug.dev/83504): Known issue causes occasional malformed profiles on host tests.
-			// Only log the warning for such cases now. Once resolved, return an error.
-			case *profileReadingError:
-				logger.Warningf(ctx, err.Error())
-			default:
-				return nil, err
-			}
-		}
-		sinkToModules[sink.File] = embeddedBuildId
+		profiles[sink.File] = struct{}{}
 	}
 
-	entries := []profileEntry{}
-	for sink, module := range sinkToModules {
-		entries = append(entries, profileEntry{
-			Module:  module,
-			Profile: sink,
+	profileEntryChan := make(chan profileEntry, len(profiles))
+	sems := make(chan struct{}, jobs)
+	var eg errgroup.Group
+	for profile := range profiles {
+		profile := profile // capture range variable.
+		sems <- struct{}{}
+		eg.Go(func() error {
+			defer func() { <-sems }()
+
+			version, err := vf.getVersion(profile)
+			if err != nil {
+				// TODO(fxbug.dev/83504): Known issue causes occasional failures on host tests.
+				// Once resolved, return an error.
+				logger.Warningf(ctx, "cannot read version from profile %q: %w", profile, err)
+				return nil
+			}
+
+			// Find the associated llvm-profdata tool.
+			partition, ok := partitions[version]
+			if !ok {
+				partition = partitions[0]
+			}
+
+			// Read embedded build ids, which are enabled for profile versions 7 and above.
+			embeddedBuildId, err := readEmbeddedBuildId(ctx, partition.tool, profile)
+			if err != nil {
+				switch err.(type) {
+				// TODO(fxbug.dev/83504): Known issue causes occasional malformed profiles on host tests.
+				// Only log the warning for such cases now. Once resolved, return an error.
+				case *profileReadingError:
+					logger.Warningf(ctx, err.Error())
+					return nil
+				default:
+					return err
+				}
+			}
+			profileEntryChan <- profileEntry{
+				Profile: profile,
+				Module:  embeddedBuildId,
+			}
+			return nil
 		})
 	}
 
+	if err := eg.Wait(); err != nil {
+		return nil, err
+	}
+	close(profileEntryChan)
+
+	var entries []profileEntry
+	for pe := range profileEntryChan {
+		entries = append(entries, pe)
+	}
 	return entries, nil
 }
 
