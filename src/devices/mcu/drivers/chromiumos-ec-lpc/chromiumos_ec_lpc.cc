@@ -7,7 +7,6 @@
 #include <fidl/fuchsia.hardware.acpi/cpp/wire.h>
 #include <fidl/fuchsia.hardware.google.ec/cpp/wire_types.h>
 #include <fidl/fuchsia.io/cpp/markers.h>
-#include <fuchsia/hardware/acpi/cpp/banjo.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/driver.h>
 #include <lib/fidl-async/cpp/bind.h>
@@ -84,9 +83,7 @@ zx_status_t ChromiumosEcLpc::Bind() {
       fidl::DiscoverableProtocolName<fuchsia_hardware_acpi::Device>,
       fbl::MakeRefCounted<fs::Service>(
           [this](fidl::ServerEnd<fuchsia_hardware_acpi::Device> request) mutable {
-            ddk::AcpiProtocolClient client(parent(), "acpi");
-            client.ConnectServer(request.TakeChannel());
-            return ZX_OK;
+            return DdkConnectFidlProtocol(std::move(request));
           }));
 
   auto endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();

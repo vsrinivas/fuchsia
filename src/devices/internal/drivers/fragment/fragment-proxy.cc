@@ -31,9 +31,6 @@ zx_status_t FragmentProxy::DdkGetProtocol(uint32_t proto_id, void* out) {
   proto->ctx = this;
 
   switch (proto_id) {
-    case ZX_PROTOCOL_ACPI:
-      proto->ops = &acpi_protocol_ops_;
-      return ZX_OK;
     case ZX_PROTOCOL_AMLOGIC_CANVAS:
       proto->ops = &amlogic_canvas_protocol_ops_;
       return ZX_OK;
@@ -1111,16 +1108,6 @@ zx_status_t FragmentProxy::PowerSensorConnectServer(zx::channel server) {
   zx_handle_t channel = server.release();
   return Rpc(&req.header, sizeof(req), &resp.header, sizeof(resp), &channel, 1, nullptr, 0,
              nullptr);
-}
-
-void FragmentProxy::AcpiConnectServer(zx::channel server) {
-  AcpiProxyRequest req = {};
-  AcpiProxyResponse resp = {};
-  req.header.proto_id = ZX_PROTOCOL_ACPI;
-  req.op = AcpiOp::CONNECT_SERVER;
-
-  zx_handle_t channel = server.release();
-  Rpc(&req.header, sizeof(req), &resp.header, sizeof(resp), &channel, 1, nullptr, 0, nullptr);
 }
 
 const zx_driver_ops_t driver_ops = []() {

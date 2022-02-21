@@ -10,6 +10,7 @@
 #include <zxtest/zxtest.h>
 
 #include "fidl/fuchsia.hardware.acpi/cpp/markers.h"
+#include "lib/fidl/llcpp/channel.h"
 #include "src/devices/board/drivers/x86/acpi/manager.h"
 #include "src/devices/board/drivers/x86/acpi/test/device.h"
 #include "src/devices/board/drivers/x86/acpi/test/mock-acpi.h"
@@ -144,22 +145,23 @@ class AcpiDeviceTest : public zxtest::Test {
   }
 
   void SetUpFidlServer(std::unique_ptr<acpi::Device> device) {
-    ASSERT_OK(device->DdkAdd("test-acpi-device"));
+    ASSERT_OK(device
+                  ->AddDevice("test-acpi-device", cpp20::span<zx_device_prop_t>(),
+                              cpp20::span<zx_device_str_prop_t>(), 0)
+                  .status_value());
 
     // Give mock_ddk ownership of the device.
     zx_device_t* dev = device.release()->zxdev();
     dev->InitOp();
     dev->WaitUntilInitReplyCalled(zx::time::infinite());
 
-    ddk::AcpiProtocolClient acpi(dev);
-    ASSERT_TRUE(acpi.is_valid());
+    // Bind FIDL device.
+    auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_acpi::Device>();
+    ASSERT_OK(endpoints.status_value());
 
-    fidl::ClientEnd<fuchsia_hardware_acpi::Device> client_end;
-    auto server_end = fidl::CreateEndpoints(&client_end);
-    ASSERT_OK(server_end.status_value());
-
-    acpi.ConnectServer(server_end->TakeChannel());
-    fidl_client_ = fidl::WireSyncClient<fuchsia_hardware_acpi::Device>(std::move(client_end));
+    fidl::BindServer(manager_.fidl_dispatcher(), std::move(endpoints->server),
+                     dev->GetDeviceContext<acpi::Device>());
+    fidl_client_.Bind(std::move(endpoints->client));
   }
 
   acpi::DeviceArgs Args(void* handle) {
@@ -172,44 +174,6 @@ class AcpiDeviceTest : public zxtest::Test {
   acpi::test::MockAcpi acpi_;
   fidl::WireSyncClient<fuchsia_hardware_acpi::Device> fidl_client_;
 };
-
-TEST_F(AcpiDeviceTest, TestBanjoConnectServer) {
-  auto device = std::make_unique<acpi::Device>(Args(ACPI_ROOT_OBJECT));
-  SetUpFidlServer(std::move(device));
-
-  auto result = fidl_client_->GetBusId();
-  ASSERT_OK(result.status());
-  ASSERT_TRUE(result.value().result.is_err());
-  ASSERT_EQ(result.value().result.err(), ZX_ERR_BAD_STATE);
-}
-
-TEST_F(AcpiDeviceTest, TestBanjoConnectServerTwice) {
-  auto device = std::make_unique<acpi::Device>(Args(ACPI_ROOT_OBJECT));
-  SetUpFidlServer(std::move(device));
-  {
-    auto result = fidl_client_->GetBusId();
-    ASSERT_OK(result.status());
-    ASSERT_TRUE(result.value().result.is_err());
-    ASSERT_EQ(result.value().result.err(), ZX_ERR_BAD_STATE);
-  }
-
-  // Connect again and make sure it still works.
-  ddk::AcpiProtocolClient acpi(mock_root_->GetLatestChild());
-  ASSERT_TRUE(acpi.is_valid());
-  fidl::ClientEnd<fuchsia_hardware_acpi::Device> client_end2;
-  auto server_end = fidl::CreateEndpoints(&client_end2);
-  ASSERT_OK(server_end.status_value());
-
-  acpi.ConnectServer(server_end->TakeChannel());
-
-  auto fidl_client2 = fidl::WireSyncClient<fuchsia_hardware_acpi::Device>(std::move(client_end2));
-  {
-    auto result = fidl_client2->GetBusId();
-    ASSERT_OK(result.status());
-    ASSERT_TRUE(result.value().result.is_err());
-    ASSERT_EQ(result.value().result.err(), ZX_ERR_BAD_STATE);
-  }
-}
 
 TEST_F(AcpiDeviceTest, TestGetBusId) {
   auto device = std::make_unique<acpi::Device>(std::move(

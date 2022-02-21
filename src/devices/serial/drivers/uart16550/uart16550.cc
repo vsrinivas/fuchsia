@@ -40,7 +40,7 @@ Uart16550::Uart16550()
       acpi_fidl_(acpi::Client::Create(fidl::WireSyncClient<fuchsia_hardware_acpi::Device>())) {}
 
 Uart16550::Uart16550(zx_device_t* parent, acpi::Client acpi)
-    : DeviceType(parent), acpi_(parent, "acpi"), acpi_fidl_(std::move(acpi)) {}
+    : DeviceType(parent), acpi_fidl_(std::move(acpi)) {}
 
 zx_status_t Uart16550::Create(void* /*ctx*/, zx_device_t* parent) {
   auto acpi = acpi::Client::Create(parent);

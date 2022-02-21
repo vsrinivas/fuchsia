@@ -24,7 +24,6 @@ group("tests") {
 
 common_deps = [
   ":intel_gspi_bind",
-  "//sdk/banjo/fuchsia.hardware.acpi:fuchsia.hardware.acpi_banjo_cpp",
   "//sdk/banjo/fuchsia.hardware.pci:fuchsia.hardware.pci_banjo_cpp",
   "//sdk/banjo/fuchsia.hardware.spiimpl:fuchsia.hardware.spiimpl_banjo_cpp",
   "//sdk/fidl/fuchsia.hardware.spi:fuchsia.hardware.spi_llcpp",

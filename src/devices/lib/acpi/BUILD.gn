@@ -4,7 +4,6 @@
 
 source_set("acpi") {
   deps = [
-    "//sdk/banjo/fuchsia.hardware.acpi:fuchsia.hardware.acpi_banjo_cpp",
     "//src/devices/lib/driver",
     "//src/lib/ddk",
     "//zircon/system/ulib/zx",

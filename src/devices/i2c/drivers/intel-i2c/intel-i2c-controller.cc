@@ -75,16 +75,8 @@ zx_status_t IntelI2cController::Create(void* ctx, zx_device_t* parent) {
     return server_end.error_value();
   }
 
-  ddk::AcpiProtocolClient acpi(parent, "acpi");
-  if (!acpi.is_valid()) {
-    zxlogf(ERROR, "Failed to get ACPI fragment from parent");
-    return ZX_ERR_BAD_STATE;
-  }
-  acpi.ConnectServer(server_end->TakeChannel());
-  fidl::WireSyncClient<fuchsia_hardware_acpi::Device> wire_client(std::move(client));
   fbl::AllocChecker ac;
-  auto dev = std::unique_ptr<IntelI2cController>(
-      new (&ac) IntelI2cController(parent, std::move(wire_client)));
+  auto dev = std::unique_ptr<IntelI2cController>(new (&ac) IntelI2cController(parent));
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
@@ -102,12 +94,24 @@ zx_status_t IntelI2cController::Init() {
   mtx_init(&mutex_, mtx_plain);
   mtx_init(&irq_mask_mutex_, mtx_plain);
 
+  auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_acpi::Device>();
+  if (endpoints.is_error()) {
+    return endpoints.error_value();
+  }
+
+  zx_status_t status = DdkConnectFragmentFidlProtocol("acpi", std::move(endpoints->server));
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  acpi_.Bind(std::move(endpoints->client));
+
   uint16_t vendor_id;
   uint16_t device_id;
   pci_.ConfigRead16(PCI_CONFIG_VENDOR_ID, &vendor_id);
   pci_.ConfigRead16(PCI_CONFIG_DEVICE_ID, &device_id);
 
-  auto status = pci_.MapMmio(0u, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio_);
+  status = pci_.MapMmio(0u, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio_);
   if (status != ZX_OK) {
     zxlogf(ERROR, "i2c: failed to map mmio 0: %d", status);
     return status;

@@ -5,7 +5,6 @@
 #ifndef SRC_DEVICES_SERIAL_DRIVERS_UART16550_UART16550_H_
 #define SRC_DEVICES_SERIAL_DRIVERS_UART16550_UART16550_H_
 
-#include <fuchsia/hardware/acpi/cpp/banjo.h>
 #include <fuchsia/hardware/serialimpl/cpp/banjo.h>
 #include <lib/fit/function.h>
 #include <lib/zx/fifo.h>
@@ -87,7 +86,6 @@ class Uart16550 : public DeviceType, public ddk::SerialImplProtocol<Uart16550, d
 
   void HandleInterrupts();
 
-  ddk::AcpiProtocolClient acpi_;
   acpi::Client acpi_fidl_;
   std::mutex device_mutex_;
 

@@ -111,20 +111,6 @@ struct HdmiProxyResponse {
   ProxyResponse header;
 };
 
-// ZX_PROTOCOL_ACPI proxy support.
-enum class AcpiOp {
-  CONNECT_SERVER,
-};
-
-struct AcpiProxyRequest {
-  ProxyRequest header;
-  AcpiOp op;
-};
-
-struct AcpiProxyResponse {
-  ProxyResponse header;
-};
-
 // ZX_PROTOCOL_CODEC proxy support.
 enum class CodecOp {
   GET_CHANNEL,

@@ -16,9 +16,9 @@ shared_public_deps = [
   "//sdk/fidl/fuchsia.hardware.spi:fuchsia.hardware.spi_llcpp",
   "//src/devices/bind/fuchsia.acpi:bind.fuchsia.acpi",
   "//zircon/system/ulib/async-loop:async-loop-cpp",
+  "//zircon/system/ulib/svc",
 ]
 shared_deps = [
-  "//sdk/banjo/fuchsia.hardware.acpi:fuchsia.hardware.acpi_banjo_cpp",
   "//sdk/banjo/fuchsia.hardware.pciroot:fuchsia.hardware.pciroot_banjo_cpp",
   "//sdk/banjo/fuchsia.hardware.platform.bus:fuchsia.hardware.platform.bus_banjo_cpp",
   "//sdk/banjo/fuchsia.hardware.sysmem:fuchsia.hardware.sysmem_banjo_cpp",

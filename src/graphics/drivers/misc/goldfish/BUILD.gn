@@ -16,7 +16,6 @@ driver_bind_rules("goldfish-bind") {
 
 common_deps = [
   ":goldfish-bind",
-  "//sdk/banjo/fuchsia.hardware.acpi:fuchsia.hardware.acpi_banjo_cpp",
   "//sdk/banjo/fuchsia.hardware.goldfish.pipe:fuchsia.hardware.goldfish.pipe_banjo_cpp",
   "//sdk/banjo/fuchsia.hardware.sysmem:fuchsia.hardware.sysmem_banjo_cpp",
   "//sdk/fidl/fuchsia.hardware.goldfish:fuchsia.hardware.goldfish_llcpp",
@@ -79,7 +78,6 @@ test("goldfish-pipe-device-test") {
   deps = common_deps + [
            "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_llcpp",
            "//sdk/banjo/fuchsia.hardware.sysmem:fuchsia.hardware.sysmem_banjo_cpp_mock",
-           "//sdk/banjo/fuchsia.hardware.acpi:fuchsia.hardware.acpi_banjo_cpp_mock",
            "//sdk/banjo/fuchsia.hardware.goldfish.pipe:fuchsia.hardware.goldfish.pipe_banjo_cpp_mock",
            "//src/devices/testing/fake-bti",
            "//src/devices/testing/fake_ddk",

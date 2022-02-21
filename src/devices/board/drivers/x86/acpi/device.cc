@@ -310,6 +310,52 @@ void Device::AcpiConnectServer(zx::channel server) {
   }
 }
 
+zx::status<zx::channel> Device::PrepareOutgoing() {
+  outgoing_.emplace(manager_->fidl_dispatcher());
+  outgoing_->svc_dir()->AddEntry(
+      fidl::DiscoverableProtocolName<fuchsia_hardware_acpi::Device>,
+      fbl::MakeRefCounted<fs::Service>(
+          [this](fidl::ServerEnd<fuchsia_hardware_acpi::Device> request) mutable {
+            return fidl::BindSingleInFlightOnly(manager_->fidl_dispatcher(), std::move(request),
+                                                this);
+          }));
+
+  auto endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
+  if (endpoints.is_error()) {
+    return endpoints.take_error();
+  }
+
+  auto st = outgoing_->Serve(std::move(endpoints->server));
+  if (st != ZX_OK) {
+    zxlogf(ERROR, "Failed to serve the outgoing directory: %s", zx_status_get_string(st));
+    return zx::error(st);
+  }
+
+  return zx::ok(endpoints->client.TakeChannel());
+}
+
+zx::status<> Device::AddDevice(const char* name, cpp20::span<zx_device_prop_t> props,
+                               cpp20::span<zx_device_str_prop_t> str_props, uint32_t flags) {
+  std::array offers = {
+      fidl::DiscoverableProtocolName<fuchsia_hardware_acpi::Device>,
+  };
+
+  auto outgoing = PrepareOutgoing();
+  if (outgoing.is_error()) {
+    zxlogf(ERROR, "failed to add acpi device '%s' - while setting up outgoing: %s", name,
+           outgoing.status_string());
+    return outgoing.take_error();
+  }
+
+  return zx::make_status(DdkAdd(ddk::DeviceAddArgs(name)
+                                    .set_props(props)
+                                    .set_str_props(str_props)
+                                    .set_proto_id(ZX_PROTOCOL_ACPI)
+                                    .set_flags(flags | DEVICE_ADD_MUST_ISOLATE)
+                                    .set_fidl_protocol_offers(offers)
+                                    .set_outgoing_dir(std::move(outgoing.value()))));
+}
+
 void Device::GetBusId(GetBusIdRequestView request, GetBusIdCompleter::Sync& completer) {
   if (bus_id_ == UINT32_MAX) {
     completer.ReplyError(ZX_ERR_BAD_STATE);

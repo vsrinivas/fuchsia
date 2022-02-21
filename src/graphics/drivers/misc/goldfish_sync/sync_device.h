@@ -6,7 +6,6 @@
 #define SRC_GRAPHICS_DRIVERS_MISC_GOLDFISH_SYNC_SYNC_DEVICE_H_
 
 #include <fidl/fuchsia.hardware.goldfish/cpp/wire.h>
-#include <fuchsia/hardware/acpi/cpp/banjo.h>
 #include <fuchsia/hardware/goldfish/sync/cpp/banjo.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/wait.h>

@@ -21,7 +21,6 @@ driver_bind_rules("bind") {
 
 common_deps = [
   ":bind",
-  "//sdk/banjo/fuchsia.hardware.acpi:fuchsia.hardware.acpi_banjo_cpp",
   "//sdk/fidl/fuchsia.hardware.acpi:fuchsia.hardware.acpi_llcpp",
   "//sdk/fidl/fuchsia.hardware.google.ec:fuchsia.hardware.google.ec_llcpp",
   "//src/devices/lib/driver",

@@ -6,7 +6,6 @@
 
 #include <endian.h>
 #include <fidl/fuchsia.hardware.acpi/cpp/wire.h>
-#include <fuchsia/hardware/acpi/cpp/banjo.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
 #include <lib/ddk/driver.h>

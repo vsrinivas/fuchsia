@@ -5,10 +5,10 @@
 #ifndef SRC_DEVICES_BOARD_DRIVERS_X86_ACPI_DEVICE_H_
 #define SRC_DEVICES_BOARD_DRIVERS_X86_ACPI_DEVICE_H_
 #include <fidl/fuchsia.hardware.acpi/cpp/wire.h>
-#include <fuchsia/hardware/acpi/cpp/banjo.h>
 #include <fuchsia/hardware/pciroot/cpp/banjo.h>
 #include <lib/ddk/binding.h>
 #include <lib/fpromise/promise.h>
+#include <lib/svc/outgoing.h>
 
 #include <mutex>
 #include <utility>
@@ -105,7 +105,6 @@ class Device;
 using DeviceType = ddk::Device<::acpi::Device, ddk::Initializable, ddk::Unbindable,
                                ddk::Messageable<fuchsia_hardware_acpi::Device>::Mixin>;
 class Device : public DeviceType,
-               public ddk::AcpiProtocol<Device, ddk::base_protocol>,
                public fidl::WireAsyncEventHandler<fuchsia_hardware_acpi::NotifyHandler> {
  public:
   explicit Device(DeviceArgs&& args) : Device(args) {}
@@ -128,6 +127,10 @@ class Device : public DeviceType,
   zx_device_t** mutable_zxdev() { return &zxdev_; }
 
   void AcpiConnectServer(zx::channel server);
+
+  // Wrapper around |DdkAdd| which handles setting up FIDL outgoing directory.
+  zx::status<> AddDevice(const char* name, cpp20::span<zx_device_prop_t> props,
+                         cpp20::span<zx_device_str_prop_t> str_props, uint32_t flags);
 
   // FIDL impls
   void GetBusId(GetBusIdRequestView request, GetBusIdCompleter::Sync& completer) override;
@@ -161,6 +164,8 @@ class Device : public DeviceType,
   static void DeviceObjectNotificationHandler(ACPI_HANDLE object, uint32_t value, void* context);
   zx_status_t ReportCurrentResources() __TA_REQUIRES(lock_);
   ACPI_STATUS AddResource(ACPI_RESOURCE*) __TA_REQUIRES(lock_);
+  // Set up FIDL outgoing directory and start serving fuchsia.hardware.acpi.Device.
+  zx::status<zx::channel> PrepareOutgoing();
 
   acpi::Manager* manager_;
   acpi::Acpi* acpi_;
@@ -201,6 +206,8 @@ class Device : public DeviceType,
       address_handlers_ __TA_GUARDED(address_handler_lock_);
   std::vector<fpromise::promise<void>> address_handler_teardown_finished_
       __TA_GUARDED(address_handler_lock_);
+
+  std::optional<svc::Outgoing> outgoing_;
 };
 
 }  // namespace acpi

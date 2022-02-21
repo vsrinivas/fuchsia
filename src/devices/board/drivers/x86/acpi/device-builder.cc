@@ -176,7 +176,7 @@ zx::status<zx_device_t*> DeviceBuilder::Build(acpi::Manager* manager) {
     }
     device_args.SetBusMetadata(std::move(*metadata), bus_type_, GetBusId());
   }
-  auto device = std::make_unique<Device>(device_args);
+  auto device = std::make_unique<Device>(std::move(device_args));
 
   // Narrow our custom type down to zx_device_str_prop_t.
   // Any strings in zx_device_str_prop_t will still point at their equivalents
@@ -186,27 +186,20 @@ zx::status<zx_device_t*> DeviceBuilder::Build(acpi::Manager* manager) {
     str_props_for_ddkadd.emplace_back(str_prop);
   }
 
-  uint32_t add_flags = 0;
+  uint32_t add_flags = DEVICE_ADD_MUST_ISOLATE;
   if ((state_ & (ACPI_STA_DEVICE_FUNCTIONING | ACPI_STA_DEVICE_PRESENT)) ==
       ACPI_STA_DEVICE_FUNCTIONING) {
     // Don't bind drivers to this device if it is functioning but not present.
     // See ACPI 6.4 section 6.3.7.
     add_flags |= DEVICE_ADD_NON_BINDABLE;
   }
-  device_add_args_t args = {
-      .name = name_.data(),
-      .props = dev_props_.data(),
-      .prop_count = static_cast<uint32_t>(dev_props_.size()),
-      .str_props = str_props_for_ddkadd.data(),
-      .str_prop_count = static_cast<uint32_t>(str_props_for_ddkadd.size()),
-      .flags = add_flags,
-  };
 
-  zx_status_t result = device->DdkAdd(name_.data(), args);
-  if (result != ZX_OK) {
-    zxlogf(ERROR, "failed to publish acpi device '%s' (parent=%s): %d", name(), parent_->name(),
-           result);
-    return zx::error(result);
+  auto result = device->AddDevice(name(), cpp20::span(dev_props_),
+                                  cpp20::span(str_props_for_ddkadd), add_flags);
+  if (result.is_error()) {
+    zxlogf(ERROR, "failed to publish acpi device '%s' (parent=%s): %s", name(), parent_->name(),
+           result.status_string());
+    return result.take_error();
   }
   zx_device_ = device.release()->zxdev();
   auto status = BuildComposite(manager, str_props_for_ddkadd);

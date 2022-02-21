@@ -5,7 +5,6 @@
 #ifndef SRC_GRAPHICS_DRIVERS_MISC_GOLDFISH_PIPE_DEVICE_H_
 #define SRC_GRAPHICS_DRIVERS_MISC_GOLDFISH_PIPE_DEVICE_H_
 
-#include <fuchsia/hardware/acpi/cpp/banjo.h>
 #include <fuchsia/hardware/goldfish/pipe/cpp/banjo.h>
 #include <lib/ddk/device.h>
 #include <lib/ddk/io-buffer.h>

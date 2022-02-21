@@ -6,7 +6,6 @@
 #define SRC_DEVICES_I2C_DRIVERS_INTEL_I2C_INTEL_I2C_CONTROLLER_H_
 
 #include <fidl/fuchsia.hardware.acpi/cpp/wire.h>
-#include <fuchsia/hardware/acpi/cpp/banjo.h>
 #include <fuchsia/hardware/i2cimpl/cpp/banjo.h>
 #include <fuchsia/hardware/pci/cpp/banjo.h>
 #include <lib/ddk/device.h>
@@ -137,9 +136,8 @@ using IntelI2cControllerType = ddk::Device<IntelI2cController, ddk::Initializabl
 class IntelI2cController : public IntelI2cControllerType,
                            public ddk::I2cImplProtocol<IntelI2cController, ddk::base_protocol> {
  public:
-  explicit IntelI2cController(zx_device_t* parent,
-                              fidl::WireSyncClient<fuchsia_hardware_acpi::Device> acpi)
-      : IntelI2cControllerType(parent), pci_(parent, "pci"), acpi_(std::move(acpi)) {}
+  explicit IntelI2cController(zx_device_t* parent)
+      : IntelI2cControllerType(parent), pci_(parent, "pci") {}
 
   static zx_status_t Create(void* ctx, zx_device_t* parent);
 

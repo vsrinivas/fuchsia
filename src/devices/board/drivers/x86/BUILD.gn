@@ -123,7 +123,6 @@ fuchsia_driver("platform-bus-x86-driver") {
     ":smbios",
     ":x64-bind",
     "acpi",
-    "//sdk/banjo/fuchsia.hardware.acpi:fuchsia.hardware.acpi_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.hidbus:fuchsia.hardware.hidbus_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.pciroot:fuchsia.hardware.pciroot_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.platform.bus:fuchsia.hardware.platform.bus_banjo_cpp",
@@ -177,7 +176,6 @@ test("x86-lid-test") {
   ]
   configs += [ ":config" ]
   deps = [
-    "//sdk/banjo/fuchsia.hardware.acpi:fuchsia.hardware.acpi_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.hidbus:fuchsia.hardware.hidbus_banjo_cpp",
     "//sdk/fidl/fuchsia.hardware.i2c:fuchsia.hardware.i2c_llcpp",
     "//sdk/fidl/fuchsia.hardware.spi:fuchsia.hardware.spi_llcpp",

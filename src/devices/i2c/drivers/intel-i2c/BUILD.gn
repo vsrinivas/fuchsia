@@ -32,7 +32,6 @@ fuchsia_driver("intel-i2c-driver") {
   ]
   deps = [
     ":intel_i2c_bind",
-    "//sdk/banjo/fuchsia.hardware.acpi:fuchsia.hardware.acpi_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.i2c:fuchsia.hardware.i2c_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.i2cimpl:fuchsia.hardware.i2cimpl_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.pci:fuchsia.hardware.pci_banjo_cpp",

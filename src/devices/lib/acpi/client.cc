@@ -5,8 +5,8 @@
 #include "src/devices/lib/acpi/client.h"
 
 #include <fidl/fuchsia.hardware.acpi/cpp/wire.h>
-#include <fuchsia/hardware/acpi/cpp/banjo.h>
 #include <lib/ddk/debug.h>
+#include <lib/ddk/device.h>
 #include <lib/ddk/driver.h>
 #include <zircon/types.h>
 
@@ -15,26 +15,25 @@
 
 namespace acpi {
 zx::status<fidl::ClientEnd<fuchsia_hardware_acpi::Device>> Client::Connect(zx_device_t* parent) {
-  zx::channel local, remote;
-  zx_status_t status = zx::channel::create(0, &local, &remote);
-  if (status != ZX_OK) {
-    return zx::error(status);
+  auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_acpi::Device>();
+  if (endpoints.is_error()) {
+    return endpoints.take_error();
   }
-
-  ddk::AcpiProtocolClient client;
+  zx_status_t result;
   if (device_get_fragment_count(parent) == 0) {
-    client = ddk::AcpiProtocolClient(parent);
+    result = device_connect_fidl_protocol(
+        parent, fidl::DiscoverableProtocolName<fuchsia_hardware_acpi::Device>,
+        endpoints->server.TakeChannel().release());
   } else {
-    client = ddk::AcpiProtocolClient(parent, "acpi");
+    result = device_connect_fragment_fidl_protocol(
+        parent, "acpi", fidl::DiscoverableProtocolName<fuchsia_hardware_acpi::Device>,
+        endpoints->server.TakeChannel().release());
   }
-  if (!client.is_valid()) {
-    return zx::error(ZX_ERR_NOT_FOUND);
+  if (result != ZX_OK) {
+    return zx::error(result);
   }
 
-  client.ConnectServer(std::move(remote));
-
-  fidl::ClientEnd<fuchsia_hardware_acpi::Device> end(std::move(local));
-  return zx::ok(std::move(end));
+  return zx::ok(std::move(endpoints->client));
 }
 
 zx::status<Client> Client::Create(zx_device_t* parent) {

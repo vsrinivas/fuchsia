@@ -5,7 +5,6 @@
 #include "src/graphics/drivers/misc/goldfish_sync/sync_device.h"
 
 #include <fidl/fuchsia.hardware.goldfish/cpp/wire.h>
-#include <fuchsia/hardware/acpi/cpp/banjo-mock.h>
 #include <fuchsia/hardware/goldfish/sync/cpp/banjo.h>
 #include <lib/fake-bti/bti.h>
 #include <lib/fzl/vmo-mapper.h>
@@ -119,11 +118,8 @@ class SyncDeviceTest : public zxtest::Test {
       ASSERT_OK(acpi_bti_.duplicate(ZX_RIGHT_SAME_RIGHTS, &out_bti));
       completer.ReplySuccess(std::move(out_bti));
     });
-    zxlogf(ERROR, "Set up mock ACPI");
 
     fake_parent_ = MockDevice::FakeRootParent();
-    fake_parent_->AddProtocol(ZX_PROTOCOL_ACPI, mock_acpi_.GetProto()->ops,
-                              mock_acpi_.GetProto()->ctx, "acpi");
   }
 
   // |zxtest::Test|
@@ -131,7 +127,6 @@ class SyncDeviceTest : public zxtest::Test {
 
   TestDevice* CreateAndBindDut() {
     auto acpi_client = mock_acpi_fidl_.CreateClient(async_loop_.dispatcher());
-    zxlogf(ERROR, "created ACPI client %s", acpi_client.status_string());
     EXPECT_OK(acpi_client.status_value());
     if (!acpi_client.is_ok()) {
       return nullptr;
@@ -196,7 +191,6 @@ class SyncDeviceTest : public zxtest::Test {
   }
 
  protected:
-  ddk::MockAcpi mock_acpi_;
   acpi::mock::Device mock_acpi_fidl_;
   async::Loop async_loop_;
   std::shared_ptr<MockDevice> fake_parent_;

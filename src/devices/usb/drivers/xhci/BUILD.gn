@@ -107,7 +107,6 @@ source_set("test-libs") {
   public_deps = [
     ":usb_xhci_bind",
     ":usb_xhci_dfv2_bind",
-    "//sdk/banjo/fuchsia.hardware.acpi:fuchsia.hardware.acpi_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.platform.bus:fuchsia.hardware.platform.bus_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.platform.device:fuchsia.hardware.platform.device_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.serialimpl.async:fuchsia.hardware.serialimpl.async_banjo_cpp",

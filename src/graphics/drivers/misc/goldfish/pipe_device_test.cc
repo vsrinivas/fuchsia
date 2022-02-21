@@ -6,7 +6,6 @@
 
 #include <fidl/fuchsia.hardware.goldfish/cpp/wire.h>
 #include <fidl/fuchsia.sysmem/cpp/wire.h>
-#include <fuchsia/hardware/acpi/cpp/banjo-mock.h>
 #include <fuchsia/hardware/goldfish/pipe/c/banjo.h>
 #include <fuchsia/hardware/sysmem/cpp/banjo-mock.h>
 #include <lib/ddk/platform-defs.h>
@@ -249,17 +248,7 @@ class PipeDeviceTest : public zxtest::Test {
 
     entries[0] = fake_ddk::FragmentEntry{
         .name = "acpi",
-        .protocols =
-            std::vector<fake_ddk::ProtocolEntry>{
-                fake_ddk::ProtocolEntry{
-                    .id = ZX_PROTOCOL_ACPI,
-                    .proto =
-                        {
-                            .ops = mock_acpi_.GetProto()->ops,
-                            .ctx = mock_acpi_.GetProto()->ctx,
-                        },
-                },
-            },
+        .protocols = std::vector<fake_ddk::ProtocolEntry>{},
     };
     entries[1] = fake_ddk::FragmentEntry{
         .name = "sysmem",
@@ -294,7 +283,6 @@ class PipeDeviceTest : public zxtest::Test {
 
  protected:
   ddk::MockSysmem mock_sysmem_;
-  ddk::MockAcpi mock_acpi_;
   acpi::mock::Device mock_acpi_fidl_;
   async::Loop async_loop_;
   Binder ddk_;

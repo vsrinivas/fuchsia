@@ -5,7 +5,6 @@
 #ifndef SRC_DEVICES_INTERNAL_DRIVERS_FRAGMENT_FRAGMENT_PROXY_H_
 #define SRC_DEVICES_INTERNAL_DRIVERS_FRAGMENT_FRAGMENT_PROXY_H_
 
-#include <fuchsia/hardware/acpi/cpp/banjo.h>
 #include <fuchsia/hardware/amlogiccanvas/cpp/banjo.h>
 #include <fuchsia/hardware/audio/cpp/banjo.h>
 #include <fuchsia/hardware/clock/cpp/banjo.h>
@@ -43,7 +42,6 @@ class FragmentProxy;
 using FragmentProxyBase = ddk::Device<FragmentProxy, ddk::GetProtocolable>;
 
 class FragmentProxy : public FragmentProxyBase,
-                      public ddk::AcpiProtocol<FragmentProxy>,
                       public ddk::AmlogicCanvasProtocol<FragmentProxy>,
                       public ddk::ClockProtocol<FragmentProxy>,
                       public ddk::EthBoardProtocol<FragmentProxy>,
@@ -89,19 +87,6 @@ class FragmentProxy : public FragmentProxyBase,
     return Rpc(req, req_length, resp, resp_length, nullptr, 0, nullptr, 0, nullptr);
   }
 
-  // TODO(fxbug.dev/78198): move these to FIDL.
-  zx_status_t AcpiGetPio(uint32_t index, zx::resource* out_pio) { return ZX_ERR_NOT_SUPPORTED; }
-  zx_status_t AcpiGetMmio(uint32_t index, acpi_mmio* out_mmio) { return ZX_ERR_NOT_SUPPORTED; }
-  zx_status_t AcpiMapInterrupt(int64_t which_irq, zx::interrupt* handle) {
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-  zx_status_t AcpiGetBti(uint32_t bdf, uint32_t index, zx::bti* bti) {
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-  zx_status_t AcpiConnectSysmem(zx::channel connection) { return ZX_ERR_NOT_SUPPORTED; }
-  zx_status_t AcpiRegisterSysmemHeap(uint64_t heap, zx::channel connection) {
-    return ZX_ERR_NOT_SUPPORTED;
-  }
   void AcpiConnectServer(zx::channel server);
 
   zx_status_t AmlogicCanvasConfig(zx::vmo vmo, size_t offset, const canvas_info_t* info,

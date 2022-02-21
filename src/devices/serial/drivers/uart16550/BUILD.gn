@@ -41,7 +41,6 @@ template("define_common_lib") {
       "//sdk/fidl/fuchsia.hardware.serial:fuchsia.hardware.serial_c",
     ]
     public_deps = [
-      "//sdk/banjo/fuchsia.hardware.acpi:fuchsia.hardware.acpi_banjo_cpp",
       "//sdk/banjo/fuchsia.hardware.serial:fuchsia.hardware.serial_banjo_cpp",
       "//sdk/banjo/fuchsia.hardware.serialimpl:fuchsia.hardware.serialimpl_banjo_cpp",
       "//src/devices/lib/acpi",

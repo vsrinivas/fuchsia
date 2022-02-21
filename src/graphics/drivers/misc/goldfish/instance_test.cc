@@ -6,7 +6,6 @@
 
 #include <fidl/fuchsia.hardware.goldfish/cpp/wire.h>
 #include <fidl/fuchsia.sysmem/cpp/wire.h>
-#include <fuchsia/hardware/acpi/cpp/banjo-mock.h>
 #include <fuchsia/hardware/goldfish/pipe/c/banjo.h>
 #include <fuchsia/hardware/goldfish/pipe/cpp/banjo-mock.h>
 #include <lib/fake-bti/bti.h>
@@ -75,7 +74,6 @@ class InstanceDeviceTest : public zxtest::Test {
   }
 
  protected:
-  ddk::MockAcpi mock_acpi_;
   ddk::MockGoldfishPipe mock_pipe_;
 
   fake_ddk::Bind ddk_;
