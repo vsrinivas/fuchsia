@@ -138,8 +138,6 @@ func TestOOM(t *testing.T) {
 	testOOMCommon(t, cmdlineCommon, "k pmm oom", stateTransitionString)
 }
 
-var allocFailedString string = "memory-pressure: pmm failed one or more alloc calls, taking action..."
-
 // Similar to |TestOOM| this test will trigger an out of memory situation and verify the system
 // reboots.  It differs from |TestOOM| in that once the out of memory condition is reached, the
 // kernel continues to leak memory as fast as it can, which may cause various user mode programs to
@@ -147,18 +145,13 @@ var allocFailedString string = "memory-pressure: pmm failed one or more alloc ca
 // less orderly and predictable.
 func TestOOMHard(t *testing.T) {
 	// This command will keep on trying to allocate even after all memory is exhausted (and
-	// allocations have failed).  Depending on exactly what the MemoryWatchdog is doing when the
-	// first allocation fails we may or may not see a state transition so we wait for either of
-	// these messages.
-	testOOMCommon(t, cmdlineCommon, "k pmm oom hard", stateTransitionString, allocFailedString)
+	// allocations have failed).
+	testOOMCommon(t, cmdlineCommon, "k pmm oom hard", stateTransitionString)
 }
 
 // See that failing to allocate will trigger an OOM reboot.
 func TestOOMDip(t *testing.T) {
-	// Similar to TestOOMHard, depending on what the MemoryWatchdog is doing when the first
-	// allocation fails we may see the state transition or we may see the failed allocation
-	// message.
-	testOOMCommon(t, cmdlineCommon, "k pmm oom dip", stateTransitionString, allocFailedString)
+	testOOMCommon(t, cmdlineCommon, "k pmm oom dip", stateTransitionString)
 }
 
 func execDir(t *testing.T) string {
