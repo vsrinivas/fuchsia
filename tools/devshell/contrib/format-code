@@ -15,6 +15,7 @@
 ##   --dry-run Stops the program short of running the formatters
 ##   --all     Formats all code in the git repo under the current working
 ##             directory.
+##   --args    Formats the configured build's |args.gn|
 ##   --files   Allows the user to specify files.  Files are comma separated.
 ##             Globs are dealt with by bash; fx format-code "--files=foo/*" will
 ##             work as expected.
@@ -161,6 +162,7 @@ function canonicalize() {
   done
 }
 
+ARGS_GN=
 DRY_RUN=
 VERBOSE=
 CHANGED_LINES=
@@ -173,6 +175,7 @@ GET_FILES=get_git_files
 while [ $# -gt 0 ]; do
   ARG="$1"
   case "$1" in
+    --args) ARGS_GN="1" ;;
     --verbose) VERBOSE="1" ;;
     --dry-run) DRY_RUN="1" ;;
     --changed-lines) CHANGED_LINES="1" ;;
@@ -242,6 +245,10 @@ git-print-changed-lines() {
 }
 
 $GET_FILES
+
+if [[ $ARGS_GN == "1" ]]; then
+  FILES+=" $(fx get-build-dir)/args.gn"
+fi
 
 # Do not format these files
 NO_FORMAT=(
