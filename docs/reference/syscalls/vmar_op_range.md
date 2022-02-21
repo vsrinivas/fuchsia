@@ -33,14 +33,14 @@ specified for the corresponding VMO *op* (if there is one) by [`zx_vmo_op_range(
 
 The supported operations are:
 
-**ZX_VMAR_OP_COMMIT** - Requires the **ZX_RIGHT_WRITE** right, and applies only to writable
-mappings. The operation's semantics are otherwise as described by
+**ZX_VMAR_OP_COMMIT** - Requires that *handle*, and the VMO handles used to create any affected
+mappings, have the **ZX_RIGHT_WRITE** right. The operation's semantics are otherwise as described by
 [`zx_vmo_op_range()`](/docs/reference/syscalls/vmo_op_range.md) **ZX_VMO_OP_COMMIT**.
 
 **ZX_VMO_OP_DECOMMIT** - Deprecated. Use **ZX_VMAR_OP_DECOMMIT** instead.
 
-**ZX_VMAR_OP_DECOMMIT** - Requires the **ZX_RIGHT_WRITE** right, and applies only to writable
-mappings. The operation's semantics are otherwise as described by
+**ZX_VMAR_OP_DECOMMIT** - Requires that *handle*, and the VMO handles used to create any affected
+mappings, have the **ZX_RIGHT_WRITE** right. The operation's semantics are otherwise as described by
 [`zx_vmo_op_range()`](/docs/reference/syscalls/vmo_op_range.md) **ZX_VMO_OP_DECOMMIT**.
 
 **ZX_VMAR_OP_MAP_RANGE** - Populates entries in the CPU page tables (or architectural equivalent)
@@ -67,7 +67,9 @@ Please refer to [`zx_vmo_op_range()`](/docs/reference/syscalls/vmo_op_range.md)
 
 <!-- Contents of this heading updated by update-docs-from-fidl, do not edit. -->
 
-If *op* is **ZX_VMO_OP_DECOMMIT**, affected mappings must be writable.
+If *op* is **ZX_VMAR_OP_DECOMMIT**, *handle* must have **ZX_RIGHT_WRITE**.
+
+If *op* is **ZX_VMAR_OP_COMMIT**, *handle* must have **ZX_RIGHT_WRITE**.
 
 ## RETURN VALUE
 
@@ -76,8 +78,9 @@ is returned.
 
 ## ERRORS
 
-**ZX_ERR_ACCESS_DENIED**  *handle*, or one of the affected VMO mappings, does not have sufficient
-rights to perform the operation.
+**ZX_ERR_ACCESS_DENIED**  *handle* does not have the proper rights for the requested change, or the
+original VMO handle used to created one of the affected mappings did not have the rights for the
+requested change, or the VMAR itself did not allow the requested change.
 
 **ZX_ERR_BAD_HANDLE**  *handle* is not a valid handle.
 

@@ -50,7 +50,7 @@ protocol vmar {
     // TODO(fxbug.dev/32803): handle No rights required?
     /// Unmap virtual memory pages.
     vmar_unmap(resource struct {
-        handle handle:VMO;
+        handle handle:VMAR;
         addr vaddr;
         len usize;
     }) -> (struct {
@@ -62,7 +62,7 @@ protocol vmar {
     /// Rights: If options & ZX_VM_PERM_WRITE, handle must be of type ZX_OBJ_TYPE_VMAR and have ZX_RIGHT_WRITE.
     /// Rights: If options & ZX_VM_PERM_EXECUTE, handle must be of type ZX_OBJ_TYPE_VMAR and have ZX_RIGHT_EXECUTE.
     vmar_protect(resource struct {
-        handle handle:VMO;
+        handle handle:VMAR;
         options VmOption;
         addr vaddr;
         len usize;
@@ -71,7 +71,8 @@ protocol vmar {
     });
 
     /// Perform an operation on VMOs mapped into this VMAR.
-    /// Rights: If op is ZX_VMO_OP_DECOMMIT, affected mappings must be writable.
+    /// Rights: If op is ZX_VMAR_OP_DECOMMIT, handle must have ZX_RIGHT_WRITE.
+    /// Rights: If op is ZX_VMAR_OP_COMMIT, handle must have ZX_RIGHT_WRITE.
     vmar_op_range(resource struct {
         handle handle:VMAR;
         op uint32;

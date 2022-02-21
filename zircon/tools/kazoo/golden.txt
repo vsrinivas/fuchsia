@@ -19429,7 +19429,8 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "Perform", "an", "operation", "on", "VMOs", "mapped", "into", "this", "VMAR", "."
       ],
       "requirements": [
-        "If", "op", "is", "ZX_VMO_OP_DECOMMIT", ",", "affected", "mappings", "must", "be", "writable", "."
+        "If", "op", "is", "ZX_VMAR_OP_DECOMMIT", ",", "handle", "must", "have", "ZX_RIGHT_WRITE", ".",
+        "If", "op", "is", "ZX_VMAR_OP_COMMIT", ",", "handle", "must", "have", "ZX_RIGHT_WRITE", "."
       ],
       "arguments": [
         {
