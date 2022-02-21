@@ -72,6 +72,35 @@ struct DeviceIrqResource {
   uint8_t pin;
 };
 
+struct DeviceArgs {
+  zx_device_t* parent_;
+  acpi::Manager* manager_;
+  ACPI_HANDLE handle_;
+
+  // Bus metadata
+  std::vector<uint8_t> metadata_;
+  BusType bus_type_ = BusType::kUnknown;
+  uint32_t bus_id_ = UINT32_MAX;
+
+  // PCI metadata
+  std::vector<pci_bdf_t> bdfs_;
+
+  DeviceArgs(zx_device_t* parent, acpi::Manager* manager, ACPI_HANDLE handle)
+      : parent_(parent), manager_(manager), handle_(handle) {}
+  DeviceArgs(DeviceArgs&) = delete;
+
+  DeviceArgs& SetBusMetadata(std::vector<uint8_t> metadata, BusType bus_type, uint32_t bus_id) {
+    metadata_ = std::move(metadata);
+    bus_type_ = bus_type;
+    bus_id_ = bus_id;
+    return *this;
+  }
+  DeviceArgs& SetPciMetadata(std::vector<pci_bdf_t> bdfs) {
+    bdfs_ = std::move(bdfs);
+    return *this;
+  }
+};
+
 class Device;
 using DeviceType = ddk::Device<::acpi::Device, ddk::Initializable, ddk::Unbindable,
                                ddk::Messageable<fuchsia_hardware_acpi::Device>::Mixin>;
@@ -79,26 +108,16 @@ class Device : public DeviceType,
                public ddk::AcpiProtocol<Device, ddk::base_protocol>,
                public fidl::WireAsyncEventHandler<fuchsia_hardware_acpi::NotifyHandler> {
  public:
-  Device(acpi::Manager* manager, zx_device_t* parent, ACPI_HANDLE acpi_handle)
-      : DeviceType{parent}, manager_{manager}, acpi_{manager->acpi()}, acpi_handle_{acpi_handle} {}
-
-  Device(acpi::Manager* manager, zx_device_t* parent, ACPI_HANDLE acpi_handle,
-         std::vector<uint8_t> metadata, BusType bus_type, uint32_t bus_id)
-      : DeviceType{parent},
-        manager_{manager},
-        acpi_{manager->acpi()},
-        acpi_handle_{acpi_handle},
-        metadata_{std::move(metadata)},
-        bus_type_{bus_type},
-        bus_id_{bus_id} {}
-
-  Device(acpi::Manager* manager, zx_device_t* parent, ACPI_HANDLE acpi_handle,
-         std::vector<pci_bdf_t> pci_bdfs)
-      : DeviceType{parent},
-        manager_{manager},
-        acpi_{manager->acpi()},
-        acpi_handle_{acpi_handle},
-        pci_bdfs_{std::move(pci_bdfs)} {}
+  explicit Device(DeviceArgs&& args) : Device(args) {}
+  explicit Device(DeviceArgs& args)
+      : DeviceType{args.parent_},
+        manager_{args.manager_},
+        acpi_{manager_->acpi()},
+        acpi_handle_{args.handle_},
+        metadata_{std::move(args.metadata_)},
+        bus_type_{args.bus_type_},
+        bus_id_{args.bus_id_},
+        pci_bdfs_{std::move(args.bdfs_)} {}
 
   // DDK mix-in impls.
   void DdkRelease() { delete this; }

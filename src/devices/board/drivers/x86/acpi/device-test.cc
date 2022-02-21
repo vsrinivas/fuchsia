@@ -162,6 +162,10 @@ class AcpiDeviceTest : public zxtest::Test {
     fidl_client_ = fidl::WireSyncClient<fuchsia_hardware_acpi::Device>(std::move(client_end));
   }
 
+  acpi::DeviceArgs Args(void* handle) {
+    return acpi::DeviceArgs(mock_root_.get(), &manager_, handle);
+  }
+
  protected:
   std::shared_ptr<MockDevice> mock_root_;
   acpi::Manager manager_;
@@ -170,7 +174,7 @@ class AcpiDeviceTest : public zxtest::Test {
 };
 
 TEST_F(AcpiDeviceTest, TestBanjoConnectServer) {
-  auto device = std::make_unique<acpi::Device>(&manager_, mock_root_.get(), ACPI_ROOT_OBJECT);
+  auto device = std::make_unique<acpi::Device>(Args(ACPI_ROOT_OBJECT));
   SetUpFidlServer(std::move(device));
 
   auto result = fidl_client_->GetBusId();
@@ -180,7 +184,7 @@ TEST_F(AcpiDeviceTest, TestBanjoConnectServer) {
 }
 
 TEST_F(AcpiDeviceTest, TestBanjoConnectServerTwice) {
-  auto device = std::make_unique<acpi::Device>(&manager_, mock_root_.get(), ACPI_ROOT_OBJECT);
+  auto device = std::make_unique<acpi::Device>(Args(ACPI_ROOT_OBJECT));
   SetUpFidlServer(std::move(device));
   {
     auto result = fidl_client_->GetBusId();
@@ -208,8 +212,8 @@ TEST_F(AcpiDeviceTest, TestBanjoConnectServerTwice) {
 }
 
 TEST_F(AcpiDeviceTest, TestGetBusId) {
-  auto device = std::make_unique<acpi::Device>(&manager_, mock_root_.get(), ACPI_ROOT_OBJECT,
-                                               std::vector<uint8_t>(), acpi::BusType::kI2c, 37);
+  auto device = std::make_unique<acpi::Device>(std::move(
+      Args(ACPI_ROOT_OBJECT).SetBusMetadata(std::vector<uint8_t>(), acpi::BusType::kI2c, 37)));
   SetUpFidlServer(std::move(device));
 
   auto result = fidl_client_->GetBusId();
@@ -223,7 +227,7 @@ TEST_F(AcpiDeviceTest, TestAcquireGlobalLockAccessDenied) {
   acpi::test::Device* hnd = test_dev.get();
   acpi_.GetDeviceRoot()->AddChild(std::move(test_dev));
 
-  auto device = std::make_unique<acpi::Device>(&manager_, mock_root_.get(), hnd);
+  auto device = std::make_unique<acpi::Device>(Args(hnd));
 
   SetUpFidlServer(std::move(device));
 
@@ -240,7 +244,7 @@ TEST_F(AcpiDeviceTest, TestAcquireGlobalLockAccessDeniedButMethodExists) {
   acpi::test::Device* hnd = test_dev.get();
   acpi_.GetDeviceRoot()->AddChild(std::move(test_dev));
 
-  auto device = std::make_unique<acpi::Device>(&manager_, mock_root_.get(), hnd);
+  auto device = std::make_unique<acpi::Device>(Args(hnd));
 
   SetUpFidlServer(std::move(device));
 
@@ -256,7 +260,7 @@ TEST_F(AcpiDeviceTest, TestAcquireGlobalLockImplicitRelease) {
   acpi::test::Device* hnd = test_dev.get();
   acpi_.GetDeviceRoot()->AddChild(std::move(test_dev));
 
-  auto device = std::make_unique<acpi::Device>(&manager_, mock_root_.get(), hnd);
+  auto device = std::make_unique<acpi::Device>(Args(hnd));
 
   SetUpFidlServer(std::move(device));
 
@@ -289,7 +293,7 @@ TEST_F(AcpiDeviceTest, TestInstallNotifyHandler) {
   auto test_dev = std::make_unique<acpi::test::Device>("TEST");
   acpi::test::Device* hnd = test_dev.get();
   acpi_.GetDeviceRoot()->AddChild(std::move(test_dev));
-  auto device = std::make_unique<acpi::Device>(&manager_, mock_root_.get(), hnd);
+  auto device = std::make_unique<acpi::Device>(Args(hnd));
   async::Loop server_loop(&kAsyncLoopConfigNeverAttachToThread);
 
   SetUpFidlServer(std::move(device));
@@ -316,7 +320,7 @@ TEST_F(AcpiDeviceTest, TestNotifyHandlerDropsEvents) {
   auto test_dev = std::make_unique<acpi::test::Device>("TEST");
   acpi::test::Device* hnd = test_dev.get();
   acpi_.GetDeviceRoot()->AddChild(std::move(test_dev));
-  auto device = std::make_unique<acpi::Device>(&manager_, mock_root_.get(), hnd);
+  auto device = std::make_unique<acpi::Device>(Args(hnd));
   async::Loop server_loop(&kAsyncLoopConfigNeverAttachToThread);
 
   SetUpFidlServer(std::move(device));
@@ -362,7 +366,7 @@ TEST_F(AcpiDeviceTest, RemoveAndAddNotifyHandler) {
   auto test_dev = std::make_unique<acpi::test::Device>("TEST");
   acpi::test::Device* hnd = test_dev.get();
   acpi_.GetDeviceRoot()->AddChild(std::move(test_dev));
-  auto device = std::make_unique<acpi::Device>(&manager_, mock_root_.get(), hnd);
+  auto device = std::make_unique<acpi::Device>(Args(hnd));
   async::Loop server_loop(&kAsyncLoopConfigNeverAttachToThread);
 
   SetUpFidlServer(std::move(device));
@@ -407,7 +411,7 @@ TEST_F(AcpiDeviceTest, ReceiveEventAfterUnbind) {
   auto test_dev = std::make_unique<acpi::test::Device>("TEST");
   acpi::test::Device* hnd = test_dev.get();
   acpi_.GetDeviceRoot()->AddChild(std::move(test_dev));
-  auto device = std::make_unique<acpi::Device>(&manager_, mock_root_.get(), hnd);
+  auto device = std::make_unique<acpi::Device>(Args(hnd));
   auto ptr = device.get();
   async::Loop server_loop(&kAsyncLoopConfigNeverAttachToThread);
 
@@ -437,7 +441,7 @@ TEST_F(AcpiDeviceTest, TestAddressHandlerInstall) {
   acpi::test::Device* hnd = test_dev.get();
   acpi_.GetDeviceRoot()->AddChild(std::move(test_dev));
 
-  auto device = std::make_unique<acpi::Device>(&manager_, mock_root_.get(), hnd);
+  auto device = std::make_unique<acpi::Device>(Args(hnd));
 
   SetUpFidlServer(std::move(device));
 
@@ -457,7 +461,7 @@ TEST_F(AcpiDeviceTest, TestAddressHandlerReadWrite) {
   acpi::test::Device* hnd = test_dev.get();
   acpi_.GetDeviceRoot()->AddChild(std::move(test_dev));
 
-  auto device = std::make_unique<acpi::Device>(&manager_, mock_root_.get(), hnd);
+  auto device = std::make_unique<acpi::Device>(Args(hnd));
 
   SetUpFidlServer(std::move(device));
 

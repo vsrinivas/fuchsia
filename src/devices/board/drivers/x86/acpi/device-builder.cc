@@ -167,18 +167,16 @@ zx::status<zx_device_t*> DeviceBuilder::Build(acpi::Manager* manager) {
     zxlogf(ERROR, "This device (%s) has already been built!", name());
     return zx::error(ZX_ERR_BAD_STATE);
   }
-  std::unique_ptr<Device> device;
+  DeviceArgs device_args(manager->acpi_root(), manager, handle_);
   if (HasBusId() && bus_type_ != BusType::kPci) {
     zx::status<std::vector<uint8_t>> metadata = FidlEncodeMetadata();
     if (metadata.is_error()) {
       zxlogf(ERROR, "Error while encoding metadata for '%s': %s", name(), metadata.status_string());
       return metadata.take_error();
     }
-    device = std::make_unique<Device>(manager, manager->acpi_root(), handle_, std::move(*metadata),
-                                      bus_type_, GetBusId());
-  } else {
-    device = std::make_unique<Device>(manager, manager->acpi_root(), handle_);
+    device_args.SetBusMetadata(std::move(*metadata), bus_type_, GetBusId());
   }
+  auto device = std::make_unique<Device>(device_args);
 
   // Narrow our custom type down to zx_device_str_prop_t.
   // Any strings in zx_device_str_prop_t will still point at their equivalents
@@ -361,7 +359,8 @@ zx::status<> DeviceBuilder::BuildComposite(acpi::Manager* manager,
   // TODO(fxbug.dev/93333): For DFv2, we don't add composite device fragments yet.
   auto composite_name = fbl::StringPrintf("%s-composite", name());
   // Don't worry about any metadata, since it's present in the "acpi" parent.
-  auto composite_device = std::make_unique<Device>(manager, parent_->zx_device_, handle_);
+  DeviceArgs args(parent_->zx_device_, manager, handle_);
+  auto composite_device = std::make_unique<Device>(args);
   zx_status_t status = composite_device->DdkAddComposite(composite_name.data(), &composite_desc);
 
   if (status == ZX_OK) {

@@ -583,7 +583,8 @@ zx_status_t pci_init(zx_device_t* platform_bus, ACPI_HANDLE object, ACPI_DEVICE_
   device_add_args_t args{
       .name = "pci",
   };
-  auto device = std::make_unique<acpi::Device>(manager, platform_bus, object, std::move(acpi_bdfs));
+  auto device = std::make_unique<acpi::Device>(
+      acpi::DeviceArgs(platform_bus, manager, object).SetPciMetadata(std::move(acpi_bdfs)));
 
   args.version = DEVICE_ADD_ARGS_VERSION;
   args.ctx = device.get();
