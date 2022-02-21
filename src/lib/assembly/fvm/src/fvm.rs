@@ -97,7 +97,7 @@ pub enum Filesystem {
 }
 
 /// Attributes common to all filesystems.
-#[derive(Clone, Deserialize, Serialize)]
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
 pub struct FilesystemAttributes {
     /// The name of the partition. Typically "blob" or "data".
     pub name: String,

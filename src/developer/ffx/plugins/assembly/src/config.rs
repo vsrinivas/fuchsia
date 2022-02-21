@@ -236,7 +236,7 @@ pub struct KernelConfig {
 }
 
 /// The set of information that defines a fuchsia board.
-#[derive(Deserialize, Serialize)]
+#[derive(Debug, PartialEq, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct BoardConfig {
     /// The name of the base package.
@@ -275,7 +275,7 @@ pub struct FileEntry {
 }
 
 /// The information required to sign a VBMeta image.
-#[derive(Deserialize, Serialize)]
+#[derive(Debug, PartialEq, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct VBMetaConfig {
     /// The partition name of the kernel included as a VBMeta descriptor.
@@ -311,7 +311,7 @@ pub struct BootloaderEntry {
 }
 
 /// The information required to construct a ZBI.
-#[derive(Default, Deserialize, Serialize)]
+#[derive(Debug, PartialEq, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct ZbiConfig {
     /// The name to give the output ZBI file.
@@ -336,6 +336,20 @@ pub struct ZbiConfig {
     pub signing_script: Option<ZbiSigningScript>,
 }
 
+/// A Default impl which matches how serde should deserialize an all-defaults
+/// struct.
+impl Default for ZbiConfig {
+    fn default() -> Self {
+        Self {
+            name: default_zbi_name(),
+            max_size: Default::default(),
+            embed_fvm_in_zbi: default_false(),
+            compression: default_zbi_compression(),
+            signing_script: Default::default(),
+        }
+    }
+}
+
 /// The information needed to custom-package a ZBI for use on a board with
 /// a non-standard (for Fuchsia) bootloader
 ///
@@ -343,7 +357,7 @@ pub struct ZbiConfig {
 ///  -z <path to ZBI>
 ///  -o <output path to write to>
 ///  -B <build dir, relative to tool's pwd>
-#[derive(Deserialize, Serialize)]
+#[derive(Debug, PartialEq, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct ZbiSigningScript {
     /// The path to the tool to use
@@ -368,7 +382,7 @@ fn default_zbi_compression() -> String {
 }
 
 /// The information required to construct a BlobFS.
-#[derive(Default, Deserialize, Serialize)]
+#[derive(Debug, PartialEq, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct BlobFSConfig {
     /// The layout format of the blobs.
@@ -380,6 +394,14 @@ pub struct BlobFSConfig {
     pub compress: bool,
 }
 
+/// A Default impl which matches how serde should deserialize an all-defaults
+/// struct.
+impl Default for BlobFSConfig {
+    fn default() -> Self {
+        Self { layout: default_blob_layout(), compress: default_true() }
+    }
+}
+
 fn default_blob_layout() -> String {
     "compact".to_string()
 }
@@ -389,7 +411,7 @@ fn default_true() -> bool {
 }
 
 /// The information required to construct a FVM.
-#[derive(Deserialize, Serialize)]
+#[derive(Debug, PartialEq, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct FvmConfig {
     /// The size in bytes of each slice.
@@ -422,7 +444,22 @@ fn default_fvm_slice_size() -> u64 {
     8388608
 }
 
-#[derive(Deserialize, Serialize)]
+/// A Default impl which matches how serde should deserialize an all-defaults
+/// struct.
+impl Default for FvmConfig {
+    fn default() -> Self {
+        FvmConfig {
+            slice_size: default_fvm_slice_size(),
+            reserved_slices: Default::default(),
+            max_disk_size: Default::default(),
+            truncate_to_length: Default::default(),
+            fastboot: Default::default(),
+            filesystems: Default::default(),
+        }
+    }
+}
+
+#[derive(Debug, PartialEq, Deserialize, Serialize)]
 pub enum FastbootConfig {
     /// Generate an EMMC-supported FVM for flashing.
     Emmc {
@@ -458,7 +495,7 @@ fn default_fvm_emmc_compression() -> String {
 }
 
 /// A filesystem to add to the FVM.
-#[derive(Deserialize, Serialize)]
+#[derive(Debug, PartialEq, Deserialize, Serialize)]
 pub enum FvmFilesystemEntry {
     /// A BlobFS filesystem.
     BlobFS {
@@ -476,7 +513,7 @@ pub enum FvmFilesystemEntry {
 }
 
 /// The information required to update and flash recovery.
-#[derive(Deserialize, Serialize)]
+#[derive(Debug, PartialEq, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct RecoveryConfig {
     /// The path on the host to the prebuilt recovery ZBI.
@@ -491,6 +528,7 @@ mod tests {
     use super::*;
     use crate::util::from_reader;
     use assert_matches::assert_matches;
+    use serde::de::DeserializeOwned;
     use serde_json::json;
     use std::path::Path;
 
@@ -525,6 +563,14 @@ mod tests {
         }
     }
 
+    fn from_json_str<T>(json: &str) -> Result<T>
+    where
+        T: serde::de::DeserializeOwned,
+    {
+        let mut cursor = std::io::Cursor::new(json);
+        return from_reader(&mut cursor);
+    }
+
     #[test]
     fn product_from_json_file() {
         let json = r#"
@@ -546,8 +592,7 @@ mod tests {
             }
         "#;
 
-        let mut cursor = std::io::Cursor::new(json);
-        let config: PartialProductConfig = from_reader(&mut cursor).expect("parse config");
+        let config: PartialProductConfig = from_json_str(json).unwrap();
         assert_matches!(
             config.kernel,
             Some(PartialKernelConfig { path: Some(_), args: _, clock_backstop: Some(0) })
@@ -578,8 +623,7 @@ mod tests {
             }
         "#;
 
-        let mut cursor = std::io::Cursor::new(json);
-        let config: PartialProductConfig = from_reader(&mut cursor).expect("parse config");
+        let config: PartialProductConfig = from_json_str(json).unwrap();
         assert_matches!(
             config.kernel,
             Some(PartialKernelConfig { path: Some(_), args: _, clock_backstop: Some(0) })
@@ -597,8 +641,7 @@ mod tests {
             }
         "#;
 
-        let mut cursor = std::io::Cursor::new(json);
-        let config: PartialProductConfig = from_reader(&mut cursor).expect("parse config");
+        let config: PartialProductConfig = from_json_str(json).unwrap();
         assert_matches!(
             config.kernel,
             Some(PartialKernelConfig { path: Some(_), args: _, clock_backstop: Some(0) })
@@ -651,21 +694,52 @@ mod tests {
             }
          "#;
 
-        let mut cursor = std::io::Cursor::new(json);
-        let config: BoardConfig = from_reader(&mut cursor).expect("parse config");
+        let config: BoardConfig = from_json_str(json).unwrap();
         assert_eq!(config.base_package_name, "system_image");
     }
 
     #[test]
-    fn board_from_minimal_json_file() {
-        let json = r#"
-            {
-            }
-         "#;
+    fn empty_board_is_defaults() {
+        let empty = from_json_str::<BoardConfig>("{}").unwrap();
+        let empty_members = from_json_str::<BoardConfig>("{ blobfs:{}, zbi:{} }").unwrap();
+        assert_eq!(empty, empty_members)
+    }
 
-        let mut cursor = std::io::Cursor::new(json);
-        let config: BoardConfig = from_reader(&mut cursor).expect("parse config");
+    /// Helper fn that asserts that deserializing an empty dict for a given
+    /// type results in the default() impl for that type.
+    fn assert_deserialized_empty_dict_is_default<T>()
+    where
+        T: DeserializeOwned + Default + std::fmt::Debug + PartialEq,
+    {
+        let dut = from_json_str::<T>("{}").unwrap();
+        let default_value = T::default();
+        assert_eq!(dut, default_value);
+    }
+
+    #[test]
+    fn board_from_minimal_json_file() {
+        let config = from_json_str::<BoardConfig>("{}").unwrap();
         assert_eq!(config.base_package_name, "system_image");
+    }
+
+    #[test]
+    fn board_from_minimal_is_default() {
+        assert_deserialized_empty_dict_is_default::<BoardConfig>();
+    }
+
+    #[test]
+    fn zbi_from_minimal_is_default() {
+        assert_deserialized_empty_dict_is_default::<ZbiConfig>();
+    }
+
+    #[test]
+    fn blobfs_from_minimal_is_default() {
+        assert_deserialized_empty_dict_is_default::<BlobFSConfig>()
+    }
+
+    #[test]
+    fn fvm_from_minimal_is_default() {
+        assert_deserialized_empty_dict_is_default::<FvmConfig>();
     }
 
     #[test]
@@ -676,8 +750,7 @@ mod tests {
             }
         "#;
 
-        let mut cursor = std::io::Cursor::new(json);
-        let config: Result<ProductConfig> = from_reader(&mut cursor);
+        let config: Result<ProductConfig> = from_json_str(json);
         assert!(config.is_err());
     }
 
@@ -689,8 +762,7 @@ mod tests {
             }
         "#;
 
-        let mut cursor = std::io::Cursor::new(json);
-        let config: Result<BoardConfig> = from_reader(&mut cursor);
+        let config: Result<BoardConfig> = from_json_str(json);
         assert!(config.is_err());
     }
 
