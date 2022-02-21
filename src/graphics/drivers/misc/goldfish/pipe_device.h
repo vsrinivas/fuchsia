@@ -71,7 +71,6 @@ class PipeDevice : public DeviceType {
     zx::event pipe_event;
   };
 
-  ddk::AcpiProtocolClient acpi_;
   ddk::SysmemProtocolClient sysmem_;
   acpi::Client acpi_fidl_;
   zx::interrupt irq_;

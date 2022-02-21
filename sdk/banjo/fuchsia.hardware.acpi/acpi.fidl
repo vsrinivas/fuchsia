@@ -22,13 +22,6 @@ protocol Acpi {
     ConnectServer(resource struct {
         server zx.handle:CHANNEL;
     }) -> ();
-    GetBti(struct {
-        bdf uint32;
-        index uint32;
-    }) -> (resource struct {
-        s zx.status;
-        bti zx.handle:BTI;
-    });
 };
 
 /// A generic ACPI device. This will allow devices to query information directly

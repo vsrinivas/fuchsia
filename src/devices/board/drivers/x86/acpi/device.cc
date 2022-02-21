@@ -268,18 +268,31 @@ void Device::GetMmio(GetMmioRequestView request, GetMmioCompleter::Sync& complet
   });
 }
 
-zx_status_t Device::AcpiGetBti(uint32_t bdf, uint32_t index, zx::bti* bti) {
-  // The x86 IOMMU world uses PCI BDFs as the hardware identifiers, so there
-  // will only be one BTI per device.
-  ZX_ASSERT(index == 0);
-  // For dummy IOMMUs, the bti_id just needs to be unique.  For Intel IOMMUs,
-  // the bti_ids correspond to PCI BDFs.
-  zx_handle_t iommu_handle;
-  zx_status_t status = iommu_manager_iommu_for_bdf(bdf, &iommu_handle);
-  if (status != ZX_OK) {
-    return status;
+void Device::GetBti(GetBtiRequestView request, GetBtiCompleter::Sync& completer) {
+  // We only support getting BTIs for devices with no bus.
+  if (bus_type_ != BusType::kUnknown) {
+    completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
+    return;
   }
-  return zx::bti::create(*zx::unowned_iommu{iommu_handle}, 0, bdf, bti);
+  if (request->index != 0) {
+    completer.ReplyError(ZX_ERR_OUT_OF_RANGE);
+    return;
+  }
+
+  // For dummy IOMMUs, the bti_id just needs to be unique.
+  // We assume that the device will never get an actual BTI
+  // because it is a pure ACPI device.
+  //
+  // TODO(fxbug.dev/92140): check the DMAR for ACPI entries.
+  zx_handle_t iommu_handle;
+  zx_status_t status = iommu_manager_dummy_iommu(&iommu_handle);
+  if (status != ZX_OK) {
+    completer.ReplyError(status);
+  }
+  zx::bti bti;
+  zx::bti::create(*zx::unowned_iommu{iommu_handle}, 0, bti_id_, &bti);
+
+  completer.ReplySuccess(std::move(bti));
 }
 
 void Device::AcpiConnectServer(zx::channel server) {

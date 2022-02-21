@@ -108,7 +108,6 @@ class Device : public DeviceType,
   ACPI_HANDLE acpi_handle() const { return acpi_handle_; }
   zx_device_t** mutable_zxdev() { return &zxdev_; }
 
-  zx_status_t AcpiGetBti(uint32_t bdf, uint32_t index, zx::bti* bti);
   void AcpiConnectServer(zx::channel server);
 
   // FIDL impls
@@ -119,6 +118,7 @@ class Device : public DeviceType,
                     MapInterruptCompleter::Sync& completer) override;
   void GetPio(GetPioRequestView request, GetPioCompleter::Sync& completer) override;
   void GetMmio(GetMmioRequestView request, GetMmioCompleter::Sync& completer) override;
+  void GetBti(GetBtiRequestView request, GetBtiCompleter::Sync& completer) override;
   void InstallNotifyHandler(InstallNotifyHandlerRequestView request,
                             InstallNotifyHandlerCompleter::Sync& completer) override;
   void AcquireGlobalLock(AcquireGlobalLockRequestView request,
@@ -147,6 +147,8 @@ class Device : public DeviceType,
   acpi::Acpi* acpi_;
   // Handle to the corresponding ACPI node
   ACPI_HANDLE acpi_handle_;
+  // BTI ID for dummy IOMMU.
+  uint32_t bti_id_ = manager_->GetNextBtiId();
 
   mutable std::mutex lock_;
   bool got_resources_ = false;

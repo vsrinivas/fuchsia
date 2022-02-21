@@ -36,6 +36,9 @@ class Manager {
   // Publish devices to driver manager.
   acpi::status<> PublishDevices(zx_device_t* platform_bus);
 
+  // For devices: get the next unique BTI ID.
+  uint32_t GetNextBtiId() { return next_bti_++; }
+
   // For internal and unit test use only.
   DeviceBuilder* LookupDevice(ACPI_HANDLE handle);
   zx_status_t StartFidlLoop() { return loop_.StartThread("acpi-fidl-thread"); }
@@ -65,6 +68,7 @@ class Manager {
   async::Loop loop_;
   async::Executor executor_;
   uint32_t device_id_ = 1;
+  uint32_t next_bti_ = 0;
 };
 
 }  // namespace acpi

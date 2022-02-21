@@ -35,8 +35,6 @@ using MockAcpiFidl = acpi::mock::Device;
 
 namespace {
 
-constexpr uint32_t kGoldfishBtiId = 0x80888088;
-
 constexpr uint32_t kPipeMinDeviceVersion = 2;
 constexpr uint32_t kMaxSignalledPipes = 64;
 
@@ -179,9 +177,7 @@ class PipeDeviceTest : public zxtest::Test {
   void SetUp() override {
     ASSERT_OK(async_loop_.StartThread("pipe-device-test-dispatcher"));
 
-    zx::bti out_bti;
-    ASSERT_OK(fake_bti_create(out_bti.reset_and_get_address()));
-    ASSERT_OK(out_bti.duplicate(ZX_RIGHT_SAME_RIGHTS, &acpi_bti_));
+    ASSERT_OK(fake_bti_create(acpi_bti_.reset_and_get_address()));
 
     constexpr size_t kCtrlSize = 4096u;
     ASSERT_OK(zx::vmo::create(kCtrlSize, 0u, &vmo_control_));
@@ -210,7 +206,13 @@ class PipeDeviceTest : public zxtest::Test {
       });
     });
 
-    mock_acpi_.ExpectGetBti(ZX_OK, kGoldfishBtiId, 0, std::move(out_bti));
+    mock_acpi_fidl_.SetGetBti([this](acpi::mock::Device::GetBtiRequestView rv,
+                                     acpi::mock::Device::GetBtiCompleter::Sync& completer) {
+      ASSERT_EQ(rv->index, 0);
+      zx::bti out_bti;
+      ASSERT_OK(acpi_bti_.duplicate(ZX_RIGHT_SAME_RIGHTS, &out_bti));
+      completer.ReplySuccess(std::move(out_bti));
+    });
 
     mock_sysmem_.mock_connect().ExpectCallWithMatcher([this](const zx::channel& connection) {
       zx_info_handle_basic_t info;

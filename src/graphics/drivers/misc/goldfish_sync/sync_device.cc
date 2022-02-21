@@ -31,10 +31,6 @@ namespace sync {
 
 namespace {
 
-// This value is passed to bti_create as a marker; it does not have a particular
-// meaning to anything in the system.
-constexpr uint32_t GOLDFISH_SYNC_BTI_ID = 0x80888099;
-
 uint32_t upper_32_bits(uint64_t n) { return static_cast<uint32_t>(n >> 32); }
 
 uint32_t lower_32_bits(uint64_t n) { return static_cast<uint32_t>(n); }
@@ -61,7 +57,6 @@ zx_status_t SyncDevice::Create(void* ctx, zx_device_t* device) {
 SyncDevice::SyncDevice(zx_device_t* parent, bool can_read_multiple_commands, acpi::Client client)
     : SyncDeviceType(parent),
       can_read_multiple_commands_(can_read_multiple_commands),
-      acpi_(parent, "acpi"),
       acpi_fidl_(std::move(client)),
       loop_(&kAsyncLoopConfigNeverAttachToThread) {
   loop_.StartThread("goldfish-sync-loop-thread");
@@ -78,16 +73,13 @@ SyncDevice::~SyncDevice() {
 }
 
 zx_status_t SyncDevice::Bind() {
-  if (!acpi_.is_valid()) {
-    zxlogf(ERROR, "no acpi protocol");
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-
-  zx_status_t status = acpi_.GetBti(GOLDFISH_SYNC_BTI_ID, 0, &bti_);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "GetBti failed: %d", status);
+  auto bti_result = acpi_fidl_.borrow()->GetBti(0);
+  if (!bti_result.ok() || bti_result->result.is_err()) {
+    zx_status_t status = bti_result.ok() ? bti_result->result.err() : bti_result.status();
+    zxlogf(ERROR, "GetBti failed: %d %d", status, bti_result.ok());
     return status;
   }
+  bti_ = std::move(bti_result->result.response().bti);
 
   auto mmio_result = acpi_fidl_.borrow()->GetMmio(0);
   if (!mmio_result.ok() || mmio_result->result.is_err()) {
@@ -99,8 +91,8 @@ zx_status_t SyncDevice::Bind() {
   {
     fbl::AutoLock lock(&mmio_lock_);
     auto& mmio = mmio_result->result.response().mmio;
-    status = ddk::MmioBuffer::Create(mmio.offset, mmio.size, std::move(mmio.vmo),
-                                     ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio_);
+    zx_status_t status = ddk::MmioBuffer::Create(mmio.offset, mmio.size, std::move(mmio.vmo),
+                                                 ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio_);
     if (status != ZX_OK) {
       zxlogf(ERROR, "mmiobuffer create failed: %d", status);
       return status;
@@ -127,7 +119,7 @@ zx_status_t SyncDevice::Bind() {
   fbl::AutoLock cmd_lock(&cmd_lock_);
   fbl::AutoLock mmio_lock(&mmio_lock_);
   static_assert(sizeof(CommandBuffers) <= PAGE_SIZE, "cmds size");
-  status = io_buffer_.Init(bti_.get(), PAGE_SIZE, IO_BUFFER_RW | IO_BUFFER_CONTIG);
+  zx_status_t status = io_buffer_.Init(bti_.get(), PAGE_SIZE, IO_BUFFER_RW | IO_BUFFER_CONTIG);
   if (status != ZX_OK) {
     zxlogf(ERROR, "io_buffer_init failed: %d", status);
     return status;

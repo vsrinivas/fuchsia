@@ -27,10 +27,6 @@ namespace {
 
 const char* kTag = "goldfish-pipe";
 
-// This value is passed to bti_create as a marker; it does not have a particular
-// meaning to anything in the system.
-constexpr uint32_t GOLDFISH_BTI_ID = 0x80888088;
-
 constexpr uint32_t PIPE_DRIVER_VERSION = 4;
 constexpr uint32_t PIPE_MIN_DEVICE_VERSION = 2;
 constexpr uint32_t MAX_SIGNALLED_PIPES = 64;
@@ -112,10 +108,7 @@ zx_status_t PipeDevice::Create(void* ctx, zx_device_t* device) {
 }
 
 PipeDevice::PipeDevice(zx_device_t* parent, acpi::Client client)
-    : DeviceType(parent),
-      acpi_(parent, "acpi"),
-      sysmem_(parent, "sysmem"),
-      acpi_fidl_(std::move(client)) {}
+    : DeviceType(parent), sysmem_(parent, "sysmem"), acpi_fidl_(std::move(client)) {}
 
 PipeDevice::~PipeDevice() {
   if (irq_.is_valid()) {
@@ -125,16 +118,13 @@ PipeDevice::~PipeDevice() {
 }
 
 zx_status_t PipeDevice::Bind() {
-  if (!acpi_.is_valid()) {
-    zxlogf(ERROR, "%s: no acpi protocol", kTag);
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-
-  zx_status_t status = acpi_.GetBti(GOLDFISH_BTI_ID, 0, &bti_);
-  if (status != ZX_OK) {
+  auto bti_result = acpi_fidl_.borrow()->GetBti(0);
+  if (!bti_result.ok() || bti_result->result.is_err()) {
+    zx_status_t status = bti_result.ok() ? bti_result->result.err() : bti_result.status();
     zxlogf(ERROR, "%s: GetBti failed: %d", kTag, status);
     return status;
   }
+  bti_ = std::move(bti_result->result.response().bti);
 
   auto mmio_result = acpi_fidl_.borrow()->GetMmio(0);
   if (!mmio_result.ok() || mmio_result->result.is_err()) {
@@ -145,8 +135,8 @@ zx_status_t PipeDevice::Bind() {
 
   fbl::AutoLock lock(&mmio_lock_);
   auto& mmio = mmio_result->result.response().mmio;
-  status = ddk::MmioBuffer::Create(mmio.offset, mmio.size, std::move(mmio.vmo),
-                                   ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio_);
+  zx_status_t status = ddk::MmioBuffer::Create(mmio.offset, mmio.size, std::move(mmio.vmo),
+                                               ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio_);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: mmiobuffer create failed: %d", kTag, status);
     return status;

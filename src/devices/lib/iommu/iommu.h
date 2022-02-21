@@ -96,6 +96,8 @@ class IommuManager {
   // Returns a handle to the IOMMU that is responsible for the given BDF.
   zx::unowned_iommu IommuForBdf(uint32_t bdf);
 
+  zx::unowned_iommu DummyIommu() { return zx::unowned_iommu(dummy_iommu_); }
+
  private:
   DISALLOW_COPY_ASSIGN_AND_MOVE(IommuManager);
 
@@ -126,5 +128,9 @@ class IommuManager {
 // returned handle is borrowed from the iommu_manager.  The caller
 // must not close the handle.
 zx_status_t iommu_manager_iommu_for_bdf(uint32_t bdf, zx_handle_t* iommu);
+
+// Returns a handle to the dummy IOMMU. The returned handle is borrowed from the iommu_manager.
+// The caller must not close the handle.
+zx_status_t iommu_manager_dummy_iommu(zx_handle_t* iommu);
 
 #endif  // SRC_DEVICES_LIB_IOMMU_IOMMU_H_

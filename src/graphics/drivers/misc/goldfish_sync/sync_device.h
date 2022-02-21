@@ -96,7 +96,6 @@ class SyncDevice : public SyncDeviceType,
   // commands to read on each interrupt.
   const bool can_read_multiple_commands_;
 
-  ddk::AcpiProtocolClient acpi_;
   acpi::Client acpi_fidl_;
   zx::interrupt irq_;
   zx::bti bti_;

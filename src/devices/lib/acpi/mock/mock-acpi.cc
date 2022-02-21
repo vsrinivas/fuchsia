@@ -6,13 +6,17 @@
 
 namespace acpi::mock {
 
-zx::status<acpi::Client> Device::CreateClient(async_dispatcher_t *dispatcher) {
+zx::status<acpi::Client> Device::CreateClient(async_dispatcher_t* dispatcher) {
   auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_acpi::Device>();
   if (endpoints.is_error()) {
     return endpoints.take_error();
   }
 
-  fidl::BindServer(dispatcher, std::move(endpoints->server), this);
+  fidl::BindServer(
+      dispatcher, std::move(endpoints->server), this,
+      [](Device* server, fidl::UnbindInfo info, fidl::ServerEnd<fuchsia_hardware_acpi::Device> se) {
+        fprintf(stderr, "Server went down: %s\n", info.FormatDescription().data());
+      });
   return zx::ok(acpi::Client::Create(
       fidl::WireSyncClient<fuchsia_hardware_acpi::Device>(std::move(endpoints->client))));
 }

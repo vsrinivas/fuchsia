@@ -312,6 +312,16 @@ protocol Device {
         mmio fuchsia.mem.Range;
     }) error zx.status;
 
+    /// Get the BTI at `index` for this device.
+    /// This will return ZX_ERR_NOT_SUPPORTED if the device is not a pure ACPI device.
+    /// This will return ZX_ERR_OUT_OF_RANGE if `index` is out of range for the
+    /// device.
+    GetBti(struct {
+        index uint32;
+    }) -> (resource struct {
+        bti zx.handle:BTI;
+    }) error zx.status;
+
     /// Evaluate the object at the given |path|, relative to this device, with |parameters| as
     /// arguments.
     /// |mode| determines how the return value is treated.

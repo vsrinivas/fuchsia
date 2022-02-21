@@ -38,8 +38,6 @@ namespace sync {
 
 namespace {
 
-constexpr uint32_t kGoldfishSyncBtiId = 0x80888099;
-
 // MMIO Registers of goldfish sync device.
 // The layout should match the register offsets defined in sync_common_defs.h.
 struct __attribute__((__packed__)) Registers {
@@ -84,9 +82,7 @@ class SyncDeviceTest : public zxtest::Test {
   // |zxtest::Test|
   void SetUp() override {
     ASSERT_OK(async_loop_.StartThread("sync-device-test-loop"));
-    zx::bti out_bti;
-    ASSERT_OK(fake_bti_create(out_bti.reset_and_get_address()));
-    ASSERT_OK(out_bti.duplicate(ZX_RIGHT_SAME_RIGHTS, &acpi_bti_));
+    ASSERT_OK(fake_bti_create(acpi_bti_.reset_and_get_address()));
 
     constexpr size_t kCtrlSize = 4096u;
     ASSERT_OK(zx::vmo::create(kCtrlSize, 0u, &vmo_control_));
@@ -116,7 +112,14 @@ class SyncDeviceTest : public zxtest::Test {
       });
     });
 
-    mock_acpi_.ExpectGetBti(ZX_OK, kGoldfishSyncBtiId, 0, std::move(out_bti));
+    mock_acpi_fidl_.SetGetBti([this](acpi::mock::Device::GetBtiRequestView rv,
+                                     acpi::mock::Device::GetBtiCompleter::Sync& completer) {
+      ASSERT_EQ(rv->index, 0);
+      zx::bti out_bti;
+      ASSERT_OK(acpi_bti_.duplicate(ZX_RIGHT_SAME_RIGHTS, &out_bti));
+      completer.ReplySuccess(std::move(out_bti));
+    });
+    zxlogf(ERROR, "Set up mock ACPI");
 
     fake_parent_ = MockDevice::FakeRootParent();
     fake_parent_->AddProtocol(ZX_PROTOCOL_ACPI, mock_acpi_.GetProto()->ops,
@@ -128,6 +131,7 @@ class SyncDeviceTest : public zxtest::Test {
 
   TestDevice* CreateAndBindDut() {
     auto acpi_client = mock_acpi_fidl_.CreateClient(async_loop_.dispatcher());
+    zxlogf(ERROR, "created ACPI client %s", acpi_client.status_string());
     EXPECT_OK(acpi_client.status_value());
     if (!acpi_client.is_ok()) {
       return nullptr;

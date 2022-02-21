@@ -550,3 +550,10 @@ zx_status_t iommu_manager_iommu_for_bdf(uint32_t bdf, zx_handle_t* iommu) {
   *iommu = iommu_mgr->IommuForBdf(bdf)->get();
   return ZX_OK;
 }
+
+zx_status_t iommu_manager_dummy_iommu(zx_handle_t* iommu) {
+  ZX_DEBUG_ASSERT(iommu_mgr);
+
+  *iommu = iommu_mgr->DummyIommu()->get();
+  return ZX_OK;
+}
