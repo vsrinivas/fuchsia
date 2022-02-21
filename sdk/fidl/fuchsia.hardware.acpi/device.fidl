@@ -291,21 +291,24 @@ protocol Device {
         bus_id uint32;
     }) error zx.status;
 
-    /// Get the "index"th interrupt for this device.
+    /// Get the interrupt at `index` for this device.
+    /// Returns ZX_ERR_OUT_OF_RANGE if `index` is out of range.
     MapInterrupt(struct {
         index uint64;
     }) -> (resource struct {
         irq zx.handle:INTERRUPT;
     }) error zx.status;
 
-    /// Get the "index"th I/O port for this device.
+    /// Get the I/O port at `index` for this device.
+    /// Returns ZX_ERR_OUT_OF_RANGE if `index` is out of range.
     GetPio(struct {
         index uint32;
     }) -> (resource struct {
         pio zx.handle:RESOURCE;
     }) error zx.status;
 
-    /// Get the "index"th MMIO region for this device.
+    /// Get the MMIO region at `index` for this device.
+    /// Returns ZX_ERR_OUT_OF_RANGE if `index` is out of range.
     GetMmio(struct {
         index uint32;
     }) -> (resource struct {

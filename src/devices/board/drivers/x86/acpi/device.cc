@@ -238,7 +238,7 @@ void Device::GetMmio(GetMmioRequestView request, GetMmioCompleter::Sync& complet
   }
 
   if (request->index >= mmio_resources_.size()) {
-    completer.ReplyError(ZX_ERR_NOT_FOUND);
+    completer.ReplyError(ZX_ERR_OUT_OF_RANGE);
     return;
   }
 
@@ -386,7 +386,7 @@ void Device::MapInterrupt(MapInterruptRequestView request, MapInterruptCompleter
 
   uint64_t which_irq = request->index;
   if (which_irq >= irqs_.size()) {
-    completer.ReplyError(ZX_ERR_NOT_FOUND);
+    completer.ReplyError(ZX_ERR_OUT_OF_RANGE);
     return;
   }
 
@@ -453,7 +453,7 @@ void Device::GetPio(GetPioRequestView request, GetPioCompleter::Sync& completer)
   }
 
   if (request->index >= pio_resources_.size()) {
-    completer.ReplyError(ZX_ERR_NOT_FOUND);
+    completer.ReplyError(ZX_ERR_OUT_OF_RANGE);
     return;
   }
 
