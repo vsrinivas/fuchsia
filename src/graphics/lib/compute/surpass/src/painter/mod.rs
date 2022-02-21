@@ -74,7 +74,7 @@ fn doubled_area_to_coverage(doubled_area: i32x8, fill_rule: FillRule) -> f32x8 {
                 .clamp(f32x8::splat(0.0), f32x8::splat(1.0))
         }
         FillRule::EvenOdd => {
-            let winding_number = doubled_area >> i32x8::splat(MAGNITUDE_BIT_LEN as i32);
+            let winding_number = doubled_area.shr::<{ MAGNITUDE_BIT_LEN as i32 }>();
             let magnitude: f32x8 = (doubled_area & i32x8::splat(MAGNITUDE_MASK as i32)).into();
             let norm = magnitude * f32x8::splat((PIXEL_DOUBLE_AREA as f32).recip());
 

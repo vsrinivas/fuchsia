@@ -4,9 +4,7 @@
 
 use std::{
     arch::x86_64::*,
-    ops::{
-        Add, AddAssign, BitAnd, BitOr, BitOrAssign, BitXor, Div, Mul, MulAssign, Neg, Not, Shr, Sub,
-    },
+    ops::{Add, AddAssign, BitAnd, BitOr, BitOrAssign, BitXor, Div, Mul, MulAssign, Neg, Not, Sub},
     ptr,
 };
 
@@ -215,6 +213,10 @@ impl i32x8 {
     pub fn eq(self, other: Self) -> m32x8 {
         m32x8(unsafe { _mm256_cmpeq_epi32(self.0, other.0) })
     }
+
+    pub fn shr<const N: i32>(self) -> Self {
+        Self(unsafe { _mm256_srav_epi32(self.0, _mm256_set1_epi32(N)) })
+    }
 }
 
 impl Default for i32x8 {
@@ -244,14 +246,6 @@ impl BitAnd for i32x8 {
 
     fn bitand(self, rhs: Self) -> Self::Output {
         Self(unsafe { _mm256_and_si256(self.0, rhs.0) })
-    }
-}
-
-impl Shr for i32x8 {
-    type Output = Self;
-
-    fn shr(self, rhs: Self) -> Self::Output {
-        Self(unsafe { _mm256_srav_epi32(self.0, rhs.0) })
     }
 }
 

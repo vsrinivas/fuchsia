@@ -4,11 +4,16 @@
 
 #![allow(non_camel_case_types)]
 
-#[cfg(not(all(
-    target_arch = "x86_64",
-    target_feature = "avx",
-    target_feature = "avx2",
-    target_feature = "fma"
+#[cfg(all(target_arch = "aarch64", target_feature = "neon",))]
+mod aarch64;
+#[cfg(not(any(
+    all(
+        target_arch = "x86_64",
+        target_feature = "avx",
+        target_feature = "avx2",
+        target_feature = "fma"
+    ),
+    all(target_arch = "aarch64", target_feature = "neon",),
 )))]
 mod auto;
 #[cfg(all(
@@ -19,11 +24,16 @@ mod auto;
 ))]
 mod avx;
 
-#[cfg(not(all(
-    target_arch = "x86_64",
-    target_feature = "avx",
-    target_feature = "avx2",
-    target_feature = "fma"
+#[cfg(all(target_arch = "aarch64", target_feature = "neon",))]
+pub use aarch64::*;
+#[cfg(not(any(
+    all(
+        target_arch = "x86_64",
+        target_feature = "avx",
+        target_feature = "avx2",
+        target_feature = "fma"
+    ),
+    all(target_arch = "aarch64", target_feature = "neon",),
 )))]
 pub use auto::*;
 #[cfg(all(

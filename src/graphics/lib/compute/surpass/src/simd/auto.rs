@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use std::ops::{
-    Add, AddAssign, BitAnd, BitOr, BitOrAssign, BitXor, Div, Mul, MulAssign, Neg, Not, Shr, Sub,
+    Add, AddAssign, BitAnd, BitOr, BitOrAssign, BitXor, Div, Mul, MulAssign, Neg, Not, Sub,
 };
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -278,6 +278,11 @@ impl i32x8 {
             if self.0[7] == other.0[7] { u32::MAX } else { 0 },
         ])
     }
+
+    pub fn shr<const N: i32>(mut self) -> Self {
+        self.0.iter_mut().for_each(|t| *t >>= N);
+        self
+    }
 }
 
 impl Add for i32x8 {
@@ -303,15 +308,6 @@ impl BitAnd for i32x8 {
 
     fn bitand(mut self, rhs: Self) -> Self::Output {
         self.0.iter_mut().zip(rhs.0.iter()).for_each(|(t, &o)| *t &= o);
-        self
-    }
-}
-
-impl Shr for i32x8 {
-    type Output = Self;
-
-    fn shr(mut self, rhs: Self) -> Self::Output {
-        self.0.iter_mut().zip(rhs.0.iter()).for_each(|(t, &o)| *t >>= o);
         self
     }
 }

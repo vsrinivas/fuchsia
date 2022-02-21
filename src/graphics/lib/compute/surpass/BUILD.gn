@@ -35,6 +35,7 @@ rustc_library("surpass") {
     "src/rasterizer/mod.rs",
     "src/rasterizer/pixel_segment.rs",
     "src/segment.rs",
+    "src/simd/aarch64.rs",
     "src/simd/auto.rs",
     "src/simd/avx.rs",
     "src/simd/mod.rs",
