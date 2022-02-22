@@ -47,7 +47,6 @@ prevent bugs at runtime:
 *   [ShadowCallStack][shadowcallstack] and [SafeStack][safestack] harden the
     generated code against stack overflows.
 
-
 Lastly, Fuchsia uses [libFuzzer][llvm-libfuzzer]{:.external} and
 [syzkaller][syzkaller]{: .external} to perform coverage-directed
 [fuzz testing][fuzz-testing]. Fuzzers are similar to sanitizers in that they
@@ -85,6 +84,8 @@ applied to Rust code for detecting [Rust memory leaks][rust-leaks]{:.external}.
 
 ### Build
 
+#### Fuchsia platform build (in-tree)
+
 To reproduce a sanitizer build, specify the sanitizer variants:
 
 ```posix-terminal
@@ -102,6 +103,18 @@ hardware where a fully instrumented build does not fit on the device.
 
 Specifically to detect use-after-free bugs in kernel code you will need to
 [enable the kernel PMM checker][enable-pmm-checker].
+
+#### Out-of-tree build
+
+When compiling with the Fuchsia toolchain it is sufficient to pass the
+`-fsanitize=` flag to indicate which sanitizers to use.
+See the [compiler documentation][fsanitize]{:.external}.
+
+When creating a Fuchsia package with instrumented components, you need to
+ensure that your package contains all runtime dependencies including the
+sanitizer runtime, which is distributed as part of the Clang toolchain, and
+instrumented C library, which is distributed as part of the Fuchsia SDK
+under sysroot.
 
 ### Test
 
@@ -277,6 +290,7 @@ See also: [sanitizers in the 2021 roadmap][sanitizers-2021-roadmap].
 [asan-disabling]: https://clang.llvm.org/docs/AddressSanitizer.html#disabling-instrumentation-with-attribute-no-sanitize-address
 [enable-pmm-checker]:  /docs/gen/boot-options.md#kernel_pmm_checker_enable_bool
 [ffi]: https://doc.rust-lang.org/nomicon/ffi.html
+[fsanitize]: https://clang.llvm.org/docs/UsersManual.html#controlling-code-generation
 [ftrivial-rfc]: https://lists.llvm.org/pipermail/cfe-dev/2018-November/060172.html
 [fuzz-testing]: /docs/contribute/testing/fuzz_testing.md
 [fxb]: https://bugs.fuchsia.dev/p/fuchsia/issues/list
