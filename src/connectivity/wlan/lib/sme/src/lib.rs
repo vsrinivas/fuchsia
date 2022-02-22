@@ -5,6 +5,7 @@
 pub mod ap;
 pub mod client;
 pub mod mesh;
+pub mod serve;
 #[cfg(test)]
 pub mod test_utils;
 

@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::ap as ap_sme;
 use anyhow::format_err;
 use fidl_fuchsia_wlan_mlme::{self as fidl_mlme, MlmeEventStream, MlmeProxy};
 use fidl_fuchsia_wlan_sme as fidl_sme;
@@ -15,7 +16,6 @@ use pin_utils::pin_mut;
 use std::sync::{Arc, Mutex};
 use void::Void;
 use wlan_common::RadioConfig;
-use wlan_sme::ap as ap_sme;
 
 pub type Endpoint = fidl::endpoints::ServerEnd<fidl_sme::ApSmeMarker>;
 type Sme = ap_sme::ApSme;

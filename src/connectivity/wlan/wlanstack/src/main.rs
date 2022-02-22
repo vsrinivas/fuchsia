@@ -11,7 +11,6 @@ mod device;
 mod future_util;
 mod inspect;
 mod service;
-mod station;
 #[cfg(test)]
 pub mod test_helper;
 

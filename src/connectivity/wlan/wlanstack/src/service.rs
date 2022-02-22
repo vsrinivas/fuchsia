@@ -13,10 +13,10 @@ use fuchsia_zircon as zx;
 use futures::{future::BoxFuture, prelude::*};
 use log::{error, info, warn};
 use std::sync::{atomic::Ordering, Arc};
+use wlan_sme::serve::SmeServer;
 
 use crate::device::{self, IfaceMap};
 use crate::inspect;
-use crate::station;
 use crate::ServiceCfg;
 
 /// Thread-safe counter for spawned ifaces.
@@ -177,13 +177,13 @@ fn query_iface(ifaces: &IfaceMap, id: u16) -> Result<fidl_svc::QueryIfaceRespons
 fn get_client_sme(
     ifaces: &IfaceMap,
     iface_id: u16,
-    endpoint: station::client::Endpoint,
+    endpoint: wlan_sme::serve::client::Endpoint,
 ) -> zx::Status {
     let iface = ifaces.get(&iface_id);
     let server = match iface {
         None => return zx::Status::NOT_FOUND,
         Some(ref iface) => match iface.sme_server {
-            device::SmeServer::Client(ref server) => server,
+            SmeServer::Client(ref server) => server,
             _ => return zx::Status::NOT_SUPPORTED,
         },
     };
@@ -196,12 +196,16 @@ fn get_client_sme(
     }
 }
 
-fn get_ap_sme(ifaces: &IfaceMap, iface_id: u16, endpoint: station::ap::Endpoint) -> zx::Status {
+fn get_ap_sme(
+    ifaces: &IfaceMap,
+    iface_id: u16,
+    endpoint: wlan_sme::serve::ap::Endpoint,
+) -> zx::Status {
     let iface = ifaces.get(&iface_id);
     let server = match iface {
         None => return zx::Status::NOT_FOUND,
         Some(ref iface) => match iface.sme_server {
-            device::SmeServer::Ap(ref server) => server,
+            SmeServer::Ap(ref server) => server,
             _ => return zx::Status::NOT_SUPPORTED,
         },
     };
@@ -214,12 +218,16 @@ fn get_ap_sme(ifaces: &IfaceMap, iface_id: u16, endpoint: station::ap::Endpoint)
     }
 }
 
-fn get_mesh_sme(ifaces: &IfaceMap, iface_id: u16, endpoint: station::mesh::Endpoint) -> zx::Status {
+fn get_mesh_sme(
+    ifaces: &IfaceMap,
+    iface_id: u16,
+    endpoint: wlan_sme::serve::mesh::Endpoint,
+) -> zx::Status {
     let iface = ifaces.get(&iface_id);
     let server = match iface {
         None => return zx::Status::NOT_FOUND,
         Some(ref iface) => match iface.sme_server {
-            device::SmeServer::Mesh(ref server) => server,
+            SmeServer::Mesh(ref server) => server,
             _ => return zx::Status::NOT_SUPPORTED,
         },
     };
@@ -930,7 +938,7 @@ mod tests {
 
     struct FakeClientIface {
         iface: IfaceDevice,
-        new_sme_clients: mpsc::UnboundedReceiver<station::client::Endpoint>,
+        new_sme_clients: mpsc::UnboundedReceiver<wlan_sme::serve::client::Endpoint>,
         mlme_req_stream: fidl_mlme::MlmeRequestStream,
     }
 
@@ -942,7 +950,7 @@ mod tests {
         let device_info = fake_device_info();
         let iface = IfaceDevice {
             phy_ownership: device::PhyOwnership { phy_id: 0, phy_assigned_id: 0 },
-            sme_server: device::SmeServer::Client(sme_sender),
+            sme_server: SmeServer::Client(sme_sender),
             mlme_proxy,
             device_info,
             shutdown_sender,
@@ -952,7 +960,7 @@ mod tests {
 
     struct FakeApIface {
         iface: IfaceDevice,
-        new_sme_clients: mpsc::UnboundedReceiver<station::ap::Endpoint>,
+        new_sme_clients: mpsc::UnboundedReceiver<wlan_sme::serve::ap::Endpoint>,
     }
 
     fn fake_ap_iface() -> FakeApIface {
@@ -962,7 +970,7 @@ mod tests {
         let device_info = fake_device_info();
         let iface = IfaceDevice {
             phy_ownership: device::PhyOwnership { phy_id: 0, phy_assigned_id: 0 },
-            sme_server: device::SmeServer::Ap(sme_sender),
+            sme_server: SmeServer::Ap(sme_sender),
             mlme_proxy,
             device_info,
             shutdown_sender,

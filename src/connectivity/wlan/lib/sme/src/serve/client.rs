@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::client::{
+    self as client_sme, ConnectResult, ConnectTransactionEvent, ConnectTransactionStream,
+};
 use anyhow::format_err;
 use fidl::{endpoints::RequestStream, endpoints::ServerEnd};
 use fidl_fuchsia_wlan_common as fidl_common;
@@ -19,18 +22,12 @@ use std::sync::{Arc, Mutex};
 use void::Void;
 use wlan_common::hasher::WlanHasher;
 use wlan_inspect;
-use wlan_sme::{
-    self as sme,
-    client::{
-        self as client_sme, ConnectResult, ConnectTransactionEvent, ConnectTransactionStream,
-    },
-};
 
 pub type Endpoint = ServerEnd<fidl_sme::ClientSmeMarker>;
 type Sme = client_sme::ClientSme;
 
 pub async fn serve(
-    cfg: sme::Config,
+    cfg: crate::Config,
     proxy: MlmeProxy,
     device_info: fidl_mlme::DeviceInfo,
     event_stream: MlmeEventStream,
@@ -281,6 +278,9 @@ fn convert_connect_result(result: &ConnectResult, is_reconnect: bool) -> fidl_sm
 mod tests {
     use {
         super::*,
+        crate::client::{
+            ConnectFailure, ConnectResult, EstablishRsnaFailure, EstablishRsnaFailureReason,
+        },
         fidl::endpoints::{create_proxy, create_proxy_and_stream},
         fidl_fuchsia_wlan_internal as fidl_internal,
         fidl_fuchsia_wlan_mlme::ScanResultCode,
@@ -293,9 +293,6 @@ mod tests {
         test_case::test_case,
         wlan_common::{assert_variant, bss::BssDescription, random_bss_description},
         wlan_rsn::auth,
-        wlan_sme::client::{
-            ConnectFailure, ConnectResult, EstablishRsnaFailure, EstablishRsnaFailureReason,
-        },
     };
 
     #[test_case(

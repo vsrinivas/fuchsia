@@ -28,6 +28,7 @@ rustc_library("wlan-sme") {
     "//src/connectivity/wlan/lib/wep_deprecated",
     "//src/lib/diagnostics/inspect/contrib/rust",
     "//src/lib/diagnostics/inspect/rust",
+    "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/mundane",
     "//src/lib/zerocopy",
@@ -42,9 +43,12 @@ rustc_library("wlan-sme") {
     "//third_party/rust_crates:maplit",
     "//third_party/rust_crates:nom",
     "//third_party/rust_crates:parking_lot",
+    "//third_party/rust_crates:pin-utils",
+    "//third_party/rust_crates:rand",
     "//third_party/rust_crates:static_assertions",
     "//third_party/rust_crates:test-case",
     "//third_party/rust_crates:thiserror",
+    "//third_party/rust_crates:void",
   ]
 
   sources = [
@@ -67,6 +71,10 @@ rustc_library("wlan-sme") {
     "src/client/wpa.rs",
     "src/lib.rs",
     "src/mesh/mod.rs",
+    "src/serve/ap.rs",
+    "src/serve/client.rs",
+    "src/serve/mesh.rs",
+    "src/serve/mod.rs",
     "src/test_utils.rs",
   ]
 }

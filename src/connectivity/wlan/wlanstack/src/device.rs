@@ -6,20 +6,17 @@ use {
     anyhow::{format_err, Error},
     fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_mlme as fidl_mlme,
     fuchsia_inspect_contrib::{auto_persist, inspect_log},
-    futures::{
-        channel::mpsc,
-        future::{Future, FutureExt, FutureObj},
-        select,
-        stream::StreamExt,
-    },
+    futures::{channel::mpsc, future::Future},
     log::info,
     parking_lot::Mutex,
     std::{collections::HashMap, sync::Arc},
-    wlan_common::hasher::WlanHasher,
     wlan_inspect,
+    wlan_sme::serve::{create_sme, SmeServer},
 };
 
-use crate::{inspect, station, ServiceCfg};
+use crate::{inspect, ServiceCfg};
+
+pub type ShutdownSender = mpsc::Sender<()>;
 
 /// Iface's PHY information.
 #[derive(Debug, PartialEq)]
@@ -38,17 +35,6 @@ pub struct NewIface {
     pub phy_ownership: PhyOwnership,
     // A proxy to communicate with the iface's underlying MLME.
     pub mlme_proxy: fidl_mlme::MlmeProxy,
-}
-
-pub type ClientSmeServer = mpsc::UnboundedSender<super::station::client::Endpoint>;
-pub type ApSmeServer = mpsc::UnboundedSender<super::station::ap::Endpoint>;
-pub type MeshSmeServer = mpsc::UnboundedSender<super::station::mesh::Endpoint>;
-pub type ShutdownSender = mpsc::Sender<()>;
-
-pub enum SmeServer {
-    Client(ClientSmeServer),
-    Ap(ApSmeServer),
-    Mesh(MeshSmeServer),
 }
 
 pub struct IfaceDevice {
@@ -101,12 +87,10 @@ pub fn create_and_serve_sme(
     dev_monitor_proxy: fidl_fuchsia_wlan_device_service::DeviceMonitorProxy,
     persistence_req_sender: auto_persist::PersistenceReqSender,
 ) -> Result<impl Future<Output = Result<(), Error>>, Error> {
-    let event_stream = mlme_proxy.take_event_stream();
     let (shutdown_sender, shutdown_receiver) = mpsc::channel(1);
     let (sme, sme_fut) = create_sme(
-        cfg,
+        cfg.into(),
         mlme_proxy.clone(),
-        event_stream,
         &device_info,
         iface_tree_holder.clone(),
         inspect_tree.hasher.clone(),
@@ -152,59 +136,13 @@ pub fn create_and_serve_sme(
     })
 }
 
-fn create_sme(
-    cfg: ServiceCfg,
-    proxy: fidl_mlme::MlmeProxy,
-    event_stream: fidl_mlme::MlmeEventStream,
-    device_info: &fidl_mlme::DeviceInfo,
-    iface_tree_holder: Arc<wlan_inspect::iface_mgr::IfaceTreeHolder>,
-    hasher: WlanHasher,
-    persistence_req_sender: auto_persist::PersistenceReqSender,
-    mut shutdown_receiver: mpsc::Receiver<()>,
-) -> (SmeServer, impl Future<Output = Result<(), Error>>) {
-    let device_info = device_info.clone();
-    let (server, sme_fut) = match device_info.role {
-        fidl_common::WlanMacRole::Client => {
-            let (sender, receiver) = mpsc::unbounded();
-            let fut = station::client::serve(
-                cfg.into(),
-                proxy,
-                device_info,
-                event_stream,
-                receiver,
-                iface_tree_holder,
-                hasher,
-                persistence_req_sender,
-            );
-            (SmeServer::Client(sender), FutureObj::new(Box::new(fut)))
-        }
-        fidl_common::WlanMacRole::Ap => {
-            let (sender, receiver) = mpsc::unbounded();
-            let fut = station::ap::serve(proxy, device_info, event_stream, receiver);
-            (SmeServer::Ap(sender), FutureObj::new(Box::new(fut)))
-        }
-        fidl_common::WlanMacRole::Mesh => {
-            let (sender, receiver) = mpsc::unbounded();
-            let fut = station::mesh::serve(proxy, device_info, event_stream, receiver);
-            (SmeServer::Mesh(sender), FutureObj::new(Box::new(fut)))
-        }
-    };
-    let sme_fut_with_shutdown = async move {
-        select! {
-            sme_fut = sme_fut.fuse() => sme_fut,
-            _ = shutdown_receiver.select_next_some() => Ok(()),
-        }
-    };
-    (server, sme_fut_with_shutdown)
-}
-
 #[cfg(test)]
 mod tests {
     use {
         super::*, crate::test_helper, fidl::endpoints::create_proxy, fidl_mlme::MlmeMarker,
         fuchsia_async as fasync, fuchsia_inspect::assert_data_tree, futures::channel::mpsc,
-        futures::future::join, futures::sink::SinkExt, futures::task::Poll, pin_utils::pin_mut,
-        wlan_common::assert_variant,
+        futures::future::join, futures::sink::SinkExt, futures::task::Poll, futures::StreamExt,
+        pin_utils::pin_mut, wlan_common::assert_variant,
     };
 
     fn fake_device_info() -> fidl_mlme::DeviceInfo {

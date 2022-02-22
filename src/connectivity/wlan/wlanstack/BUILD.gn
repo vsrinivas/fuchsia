@@ -86,10 +86,6 @@ rustc_binary("bin") {
     "src/inspect.rs",
     "src/main.rs",
     "src/service.rs",
-    "src/station/ap.rs",
-    "src/station/client.rs",
-    "src/station/mesh.rs",
-    "src/station/mod.rs",
     "src/test_helper.rs",
   ]
 }

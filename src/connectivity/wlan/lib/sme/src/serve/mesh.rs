@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use {
+    crate::mesh as mesh_sme,
     anyhow::format_err,
     fidl_fuchsia_wlan_mesh as fidl_mesh, fidl_fuchsia_wlan_mlme as fidl_mlme,
     fidl_fuchsia_wlan_mlme::{MlmeEventStream, MlmeProxy},
@@ -21,7 +22,6 @@ use {
     },
     void::Void,
     wlan_common::timer::TimeEntry,
-    wlan_sme::mesh as mesh_sme,
 };
 
 pub type Endpoint = fidl::endpoints::ServerEnd<fidl_sme::MeshSmeMarker>;
