@@ -24,7 +24,7 @@ rustc_binary("bin") {
   edition = "2018"
 
   deps = []
-  test_deps = [ "//src/lib/fuchsia-async" ]
+  test_deps = [ "//src/lib/fuchsia" ]
 
   sources = [ "src/main.rs" ]
 }

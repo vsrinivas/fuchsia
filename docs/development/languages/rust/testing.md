@@ -23,16 +23,19 @@ following snippet into the bottom of whatever test you want to write:
 ```
 
 This will cause a new mod named `tests` to be created, and this mod will only be
-included when building unit tests. Any functions annotated with `#[test]` will
-be run as a test, and if the function successfully returns then the test passes.
+included when building unit tests. Any functions annotated with
+`#[fuchsia::test]` will be run as a test, and if the function successfully
+returns then the test passes.
 
-For tests exercising asynchronous code, use the
-`#[fasync::run_until_stalled(test)]` annotation as an alternative to
-using an asynchronous executor.
+`#[fuchsia::test]` also supports tests exercising asynchronous code.
 
 ```rust
 {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/hello_world/rust/src/main.rs" region_tag="async_test" adjust_indentation="auto" %}
 ```
+
+The typical `#[test]` annotation also works, but it doesn't support async tests
+or logging out of the box. Prefer `#[test]` in situations where you think the
+crate might get used outside of the Fuchsia codebase.
 
 ### Building tests
 

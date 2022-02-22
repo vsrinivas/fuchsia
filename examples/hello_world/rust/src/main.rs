@@ -23,7 +23,7 @@ fn greeting() -> String {
 // [START test_mod]
 #[cfg(test)]
 mod tests {
-    #[test]
+    #[fuchsia::test]
     fn it_works() {
         assert_eq!(true, true);
     }
@@ -33,17 +33,16 @@ mod tests {
 #[cfg(test)]
 mod hello_tests {
     use crate::greeting;
-    use fuchsia_async as fasync;
 
     // [START async_test]
-    #[fasync::run_until_stalled(test)]
+    #[fuchsia::test]
     async fn my_test() {
         let some_future = async { 4 };
         assert_eq!(some_future.await, 4);
     }
     // [END async_test]
 
-    #[test]
+    #[fuchsia::test]
     fn greeting_test() {
         let expected = String::from("Hello");
         assert_eq!(greeting(), expected)
