@@ -894,8 +894,6 @@ const IPV6_LINK_LOCAL_ADDRESS_CONFIG: PingAddressConfig = PingAddressConfig {
     target_subnet: DEFAULT_IPV6_LINK_LOCAL_TARGET_SUBNET,
 };
 
-// TODO(https://fxbug.dev/90504): Add tests to verify that a response can be
-// received for large payload_lengths.
 #[test_case(
     "ipv4",
     IPV4_ADDRESS_CONFIG,
