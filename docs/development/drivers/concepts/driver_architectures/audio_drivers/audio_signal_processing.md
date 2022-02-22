@@ -206,7 +206,9 @@ The PEs of type `CONNECTION_POINT` allow for:
 1. Repeating channels.
 1. Expanding a single pipeline into multiple pipelines ones (scatter).
 
+{% comment %}
 // TODO(fxbug.dev/64877): Add extra context for multi-pipeline construction.
+{% endcomment %}
 
 ## End points {#end-points}
 
@@ -218,7 +220,9 @@ outgoing edges is an output. For instance, the example in
 pipeline, the single pipeline in topology id 1 starts with PE id 3 and ends with PE id 1, and the
 single pipeline in topology id 2 starts with PE id 2 and ends with PE id 6.
 
+{% comment %}
 // TODO(fxbug.dev/64877): Add extra-context for end points usage.
+{% endcomment %}
 
 <!-- Reference links -->
 

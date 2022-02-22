@@ -238,7 +238,9 @@ established and was still active, the driver must close this channel and
 make every attempt to gracefully quiesce any on-going streaming operations in
 the process.
 
+{% comment %}
 > TODO: specify how compressed bitstream formats will be set
+{% endcomment %}
 
 ## Determining external latency
 
@@ -406,11 +408,12 @@ by applications. Driver with `CAN_ASYNC_NOTIFY` set will reply to the first
 |WatchPlugState| sent by the client and will not respond to subsequent client
 |WatchPlugState| calls until the plug state changes from what was most recently reported.
 
-## Access control capability detection and signaling
-
-> TODO: specify how this works. In particular, specify how drivers indicate to
+{% comment %}
+> TODO: specify how access control capability detection and signaling works.
+> In particular, specify how drivers indicate to
 > applications support for various digital access control mechanisms such as
 > S/PDIF control words and HDCP.
+{% endcomment %}
 
 ## Stream purpose and association
 

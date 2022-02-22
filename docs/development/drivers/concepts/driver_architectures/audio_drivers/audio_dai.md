@@ -151,10 +151,12 @@ configuration is completed and the `RingBuffer` `Start` function has been called
 For a description of the ring buffer functionality, see the [Audio Streaming
 Interface](audio_streaming.md).
 
-## Power Control {#power-control}
+{% comment %}
+> TODO(fxbug.dev/63522): Add support for power control.
+> TODO(fxbug.dev/63523): Add support for content proteccion.
+{% endcomment %}
 
-TODO(fxbug.dev/63522).
+## Signal processing {#signal-processing}
 
-## Content Protection {#content-protection}
+Defined at [Audio Signal Processing](audio_signal_processing.md).
 
-TODO(fxbug.dev/63523).

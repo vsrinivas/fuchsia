@@ -55,10 +55,7 @@ The functionality provided by the codecs is divided into:
 -   [DAI format](#dai-format)
 -   [Gain control](#gain-control)
 -   [Plug detect](#plug-detect)
--   [Power control](#power-control)
--   [Peripheral control](#peripheral-control)
--   [Signal processing control](#signal-processing-control)
--   [Content protection](#content-protection)
+-   [Signal processing control](#signal-processing)
 
 The controller is responsible for configuring and controlling the codecs. Codecs
 advertize capabilities and a controller determines how they are used as
@@ -188,8 +185,10 @@ function. This functions takes a parameter that specifies:
 Once `SetDaiFormat` is successful, the DAI format configuration is considered
 completed and samples can be sent across the DAI.
 
+{% comment %}
 TODO(andresoportus): Add DAI format loss notification support once asynchronous
 notifications are added to Banjo.
+{% endcomment %}
 
 ### Gain Control {#gain-control}
 
@@ -213,14 +212,13 @@ by clients. Drivers with `CAN_ASYNC_NOTIFY` set will reply to the first
 |WatchPlugState| sent by the client and will not respond to subsequent client
 |WatchPlugState| calls until the plug state changes from what was most recently reported.
 
-### Power Control {#power-control}
+{% comment %}
+> TODO(fxbug.dev/63522): Add support for power control.
+> TODO(fxbug.dev/64878): Add support for peripheral control.
+> TODO(fxbug.dev/63523): Add support for content proteccion.
+{% endcomment %}
 
-TODO(fxbug.dev/63522).
+### Signal processing {#signal-processing}
 
-### Peripheral Control {#peripheral-control}
+Defined at [Audio Signal Processing](audio_signal_processing.md).
 
-TODO(fxbug.dev/64878).
-
-### Content Protection {#content-protection}
-
-TODO(fxbug.dev/63523).
