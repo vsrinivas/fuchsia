@@ -7,6 +7,8 @@
 #include <inttypes.h>
 #include <lib/syslog/cpp/macros.h>
 
+#include <algorithm>
+
 #include "src/developer/debug/debug_agent/breakpoint.h"
 #include "src/developer/debug/debug_agent/process_breakpoint.h"
 #include "src/developer/debug/debug_agent/process_handle.h"

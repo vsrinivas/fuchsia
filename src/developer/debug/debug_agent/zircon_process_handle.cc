@@ -4,6 +4,8 @@
 
 #include "src/developer/debug/debug_agent/zircon_process_handle.h"
 
+#include <algorithm>
+
 #include "src/developer/debug/debug_agent/elf_utils.h"
 #include "src/developer/debug/debug_agent/process_handle_observer.h"
 #include "src/developer/debug/debug_agent/zircon_exception_handle.h"

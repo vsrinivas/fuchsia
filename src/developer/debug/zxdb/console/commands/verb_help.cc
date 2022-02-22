@@ -4,6 +4,7 @@
 
 #include "src/developer/debug/zxdb/console/commands/verb_help.h"
 
+#include <algorithm>
 #include <map>
 #include <string>
 

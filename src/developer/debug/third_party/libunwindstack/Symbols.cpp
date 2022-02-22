@@ -14,15 +14,17 @@
  * limitations under the License.
  */
 
+#include "Symbols.h"
+
 #include <elf.h>
 #include <stdint.h>
 
+#include <algorithm>
 #include <string>
 
 #include <unwindstack/Memory.h>
 
 #include "Check.h"
-#include "Symbols.h"
 
 namespace unwindstack {
 
