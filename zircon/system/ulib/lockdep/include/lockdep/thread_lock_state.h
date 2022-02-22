@@ -171,6 +171,14 @@ class ThreadLockState {
       acquired_locks_.erase(*entry);
   }
 
+  void AssertNoLocksHeld() {
+    if (!acquired_locks_.is_empty()) {
+      // For simplicity just generate an error for the most recently acquired lock.
+      SystemLockValidationFatal(&acquired_locks_.back(), this, __GET_CALLER(0), __GET_FRAME(0),
+                                LockResult::ShouldNotHold);
+    }
+  }
+
   // Returns result of the last Acquire operation for testing.
   LockResult last_result() const { return last_result_; }
 
@@ -243,6 +251,13 @@ class ThreadLockState {
 inline void AcquiredLockEntry::Replace(AcquiredLockEntry* target) {
   LockFlags flags = LockClassState::Get(id_)->flags();
   ThreadLockState::Get(flags)->Replace(target, this);
+}
+
+// Generates a fatal system report if the current thread holds any tracked locks.
+inline void AssertNoLocksHeld() {
+  if constexpr (kLockValidationEnabled) {
+    ThreadLockState::Get(LockFlags::LockFlagsNone)->AssertNoLocksHeld();
+  }
 }
 
 }  // namespace lockdep

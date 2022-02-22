@@ -257,6 +257,7 @@ void ResetTrackingState() {
 static bool lock_dep_dynamic_analysis_tests() {
   BEGIN_TEST;
 
+  using lockdep::AssertNoLocksHeld;
   using lockdep::AssertOrderedLock;
   using lockdep::Guard;
   using lockdep::GuardMultiple;
@@ -285,6 +286,9 @@ static bool lock_dep_dynamic_analysis_tests() {
 
   // Reset the tracking state before each test run.
   test::ResetTrackingState();
+
+  // Initially no locks should be held.
+  AssertNoLocksHeld();
 
   // Single lock.
   {
@@ -559,6 +563,17 @@ static bool lock_dep_dynamic_analysis_tests() {
 #if TEST_WILL_DEBUG_ASSERT || 0
     Baz<Mutex> baz3;
     Guard<Mutex> auto_baz3{AssertOrderedLock, baz3.get_lock(), 0};
+#endif
+  }
+
+  // Test that asserting no locks held while holding a log will fail.
+  // TODO(338187): Enable the userspace death test when lockdep has a userspace
+  // runtime and validation can be tested in userspace.
+  {
+#if TEST_WILL_DEBUG_ASSERT || 0
+    Baz<Mutex> baz;
+    Guard<Mutex> auto_baz{&baz.lock};
+    AssertNoLocksHeld();
 #endif
   }
 
@@ -1047,6 +1062,10 @@ static bool lock_dep_dynamic_analysis_tests() {
     zx_status_t status = TriggerAndWaitForLoopDetection(ZX_TIME_INFINITE);
     EXPECT_EQ(ZX_OK, status);
   }
+
+  // With all locks released, regardless of what we did in the middle, should still detect no locks
+  // held.
+  AssertNoLocksHeld();
 
   // Reset the tracking state to ensure that circular dependencies are not
   // reported outside of the test.
