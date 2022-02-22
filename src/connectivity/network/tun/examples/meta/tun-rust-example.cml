@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 {
     include: [
+        "//src/connectivity/network/tun/network-tun/meta/network-tun-test.shard.cml",
         "//src/sys/test_runners/rust/default.shard.cml",
         "syslog/client.shard.cml",
     ],
@@ -14,10 +15,6 @@
             name: "netstack",
             url: "#meta/netstack-debug.cm",
         },
-        {
-            name: "tun",
-            url: "#meta/network-tun.cm",
-        },
     ],
     use: [
         {
@@ -28,19 +25,12 @@
             ],
             from: "#netstack",
         },
-        {
-            protocol: "fuchsia.net.tun.Control",
-            from: "#tun",
-        },
     ],
     offer: [
         {
             protocol: "fuchsia.logger.LogSink",
             from: "parent",
-            to: [
-                "#netstack",
-                "#tun",
-            ],
+            to: "#netstack",
         },
     ],
 }

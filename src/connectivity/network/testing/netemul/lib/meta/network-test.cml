@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 {
     include: [
+        "//src/connectivity/network/tun/network-tun/meta/network-tun-test.shard.cml",
         "//src/sys/test_runners/gtest/default.shard.cml",
         "driver_test_realm/meta/client.shard.cml",
         "syslog/client.shard.cml",
@@ -10,23 +11,4 @@
     program: {
         binary: "bin/network_test",
     },
-    children: [
-        {
-            name: "network-tun",
-            url: "#meta/network-tun.cm",
-        },
-    ],
-    use: [
-        {
-            protocol: "fuchsia.net.tun.Control",
-            from: "#network-tun",
-        },
-    ],
-    offer: [
-        {
-            protocol: "fuchsia.logger.LogSink",
-            from: "parent",
-            to: "#network-tun",
-        },
-    ],
 }
