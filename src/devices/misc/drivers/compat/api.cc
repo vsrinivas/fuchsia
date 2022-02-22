@@ -13,7 +13,7 @@
 extern "C" {
 __EXPORT zx_status_t device_add_from_driver(zx_driver_t* drv, zx_device_t* parent,
                                             device_add_args_t* args, zx_device_t** out) {
-  return drv->AddDevice(parent, args, out);
+  return parent->driver()->AddDevice(parent, args, out);
 }
 
 __EXPORT void device_init_reply(zx_device_t* dev, zx_status_t status,
@@ -70,7 +70,7 @@ __EXPORT zx_handle_t get_root_resource() {
 
 __EXPORT zx_status_t load_firmware_from_driver(zx_driver_t* drv, zx_device_t* dev, const char* path,
                                                zx_handle_t* fw, size_t* size) {
-  auto result = drv->LoadFirmware(dev, path, size);
+  auto result = dev->driver()->LoadFirmware(dev, path, size);
   if (result.is_error()) {
     return result.error_value();
   }
@@ -80,7 +80,7 @@ __EXPORT zx_status_t load_firmware_from_driver(zx_driver_t* drv, zx_device_t* de
 
 __EXPORT void load_firmware_async_from_driver(zx_driver_t* drv, zx_device_t* dev, const char* path,
                                               load_firmware_callback_t callback, void* ctx) {
-  drv->LoadFirmwareAsync(dev, path, callback, ctx);
+  dev->driver()->LoadFirmwareAsync(dev, path, callback, ctx);
 }
 
 __EXPORT zx_status_t device_get_metadata(zx_device_t* dev, uint32_t type, void* buf, size_t buflen,

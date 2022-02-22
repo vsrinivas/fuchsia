@@ -1,0 +1,33 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.hardware.compat;
+
+using zx;
+
+protocol Leaf {
+    GetString() -> (struct {
+        response string:MAX;
+    });
+
+    /// This returns the driver's global counter, and then increments it.
+    /// The global counter starts at 0.
+    GlobalCounter() -> (struct {
+        value uint32;
+    });
+
+    AddChild(struct {
+        name string:MAX;
+    }) -> (struct {
+        status zx.status;
+    });
+};
+
+@transport("Banjo")
+@banjo_layout("ddk-protocol")
+protocol Parent {
+    GetString() -> (struct {
+        response string:MAX;
+    });
+};

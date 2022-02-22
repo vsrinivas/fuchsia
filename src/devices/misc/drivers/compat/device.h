@@ -27,13 +27,15 @@
 
 namespace compat {
 
+class Driver;
+
 // Device is an implementation of a DFv1 device.
 class Device : public std::enable_shared_from_this<Device>,
                public fidl::WireServer<fuchsia_driver_compat::Device> {
  public:
   Device(std::string_view name, void* context, const compat_device_proto_ops_t& proto_ops,
-         const zx_protocol_device_t* ops, std::optional<Device*> parent, driver::Logger& logger,
-         async_dispatcher_t* dispatcher);
+         const zx_protocol_device_t* ops, Driver* driver, std::optional<Device*> parent,
+         driver::Logger& logger, async_dispatcher_t* dispatcher);
 
   ~Device();
 
@@ -67,6 +69,7 @@ class Device : public std::enable_shared_from_this<Device>,
 
   std::string_view topological_path() const { return topological_path_; }
   void set_topological_path(std::string path) { topological_path_ = std::move(path); }
+  Driver* driver() { return driver_; }
 
   fpromise::scope& scope() { return scope_; }
   driver::Logger& logger() { return logger_; }
@@ -98,6 +101,10 @@ class Device : public std::enable_shared_from_this<Device>,
   driver::Logger& logger_;
   async_dispatcher_t* const dispatcher_;
   uint32_t device_flags_ = 0;
+
+  // This device's driver. The driver owns all of its Device objects, so it
+  // is garaunteed to outlive the Device.
+  Driver* driver_ = nullptr;
 
   // The default protocol of the device.
   compat_device_proto_ops_t proto_ops_ = {};

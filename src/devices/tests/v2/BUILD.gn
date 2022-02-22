@@ -6,6 +6,7 @@ group("tests") {
   testonly = true
   deps = [
     "compat:tests",
+    "compat-globals:tests",
     "composite:tests",
     "devfs_exporter:tests",
     "driver-runner-integration:tests",
@@ -19,6 +20,7 @@ group("drivers") {
   testonly = true
   deps = [
     "compat:drivers",
+    "compat-globals:drivers",
     "composite:leaf",
     "composite:root",
     "devfs_exporter:root",

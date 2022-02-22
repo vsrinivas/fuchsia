@@ -1,0 +1,10 @@
+{
+    "short_description": "Leaf driver for Compat test",
+    "manufacturer": "",
+    "families": [],
+    "models": [],
+    "areas": [
+        "DriverFramework",
+        "Test"
+    ]
+}
