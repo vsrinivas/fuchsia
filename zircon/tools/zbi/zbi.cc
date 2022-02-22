@@ -913,10 +913,10 @@ class FileContents final {
 
   // Get unowned file contents from a string.
   // This object won't support PageRoundedView.
-  FileContents(const char* buffer, bool null_terminate)
-      : mapped_(const_cast<char*>(buffer)),
-        mapped_size_(strlen(buffer) + 1),
-        exact_size_(mapped_size_ - (null_terminate ? 0 : 1)),
+  explicit FileContents(std::string_view str)
+      : mapped_(const_cast<char*>(str.data())),
+        mapped_size_(str.size()),
+        exact_size_(mapped_size_),
         owned_(false) {}
 
   FileContents(void* mapped, size_t mapped_size, size_t exact_size)
@@ -1590,13 +1590,12 @@ Extracted items use the file names shown below:\n\
   static ItemPtr CreateFromFile(const File* filenode, const char* file_name, uint32_t type,
                                 std::optional<uint32_t> input_size_limit,
                                 Compressor::Config compress) {
-    bool null_terminate = type == ZBI_TYPE_CMDLINE;
     if (!zbitl::TypeIsStorage(type)) {
       compress.clear();
     }
 
     const auto file = filenode->AsContents();
-    size_t size = file->exact_size() + (null_terminate ? 1 : 0);
+    size_t size = file->exact_size();
     if (input_size_limit) {
       size = std::min(size, static_cast<size_t>(*input_size_limit));
     } else if (size > UINT32_MAX) {
@@ -1613,9 +1612,6 @@ Extracted items use the file names shown below:\n\
       item->payload_.emplace_front(file->PageRoundedView(0, size));
     } else {
       // No space, so we need a separate padding buffer.
-      if (null_terminate) {
-        item->payload_.emplace_front(Iovec("", 1));
-      }
       item->payload_.emplace_front(file->View());
     }
 
@@ -1625,11 +1621,8 @@ Extracted items use the file names shown below:\n\
 
       // Explicit size because if size was limited by |input_size_limit| only calculate the CRC of
       // the first N bytes, not the entire file.
-      crc.Write(file->View(0, size - (null_terminate ? 1 : 0)));
+      crc.Write(file->View(0, size));
 
-      if (null_terminate) {
-        crc.Write(Iovec("", 1));
-      }
       crc.FinalizeHeader(&item->header_);
     }
 
@@ -1789,16 +1782,6 @@ Extracted items use the file names shown below:\n\
     auto path = ExtractedFileName(writer->NextFileNumber(), type(), true);
     auto name = path.c_str();
     if (matcher->Matches(name, true)) {
-      if (type() == ZBI_TYPE_CMDLINE) {
-        // Drop a trailing NUL.
-        iovec iov = payload_.back();
-        auto str = static_cast<const char*>(iov.iov_base);
-        if (str[iov.iov_len - 1] == '\0') {
-          payload_.pop_back();
-          --iov.iov_len;
-          payload_.push_back(iov);
-        }
-      }
       if (AlreadyCompressed()) {
         auto uncompressed = CreateFromCompressed(*this);
         // The uncompressed item must outlive the OutputStream.
@@ -2662,14 +2645,13 @@ int main(int argc, char** argv) {
 
       case 'e':
         if (input_manifest) {
-          bootfs.ImportManifest({optarg, false}, "<command-line>", ignore_missing_files);
+          bootfs.ImportManifest(FileContents{optarg}, "<command-line>", ignore_missing_files);
         } else if (input_type == ZBI_TYPE_CONTAINER) {
           fprintf(stderr, "cannot use --entry (-e) with --target=CONTAINER\n");
           exit(1);
         } else {
-          items.push_back(
-              Item::CreateFromFile(opener.Emplace(optarg, input_type == ZBI_TYPE_CMDLINE),
-                                   "<command-line>", input_type, input_size_limit, compressed));
+          items.push_back(Item::CreateFromFile(opener.Emplace(optarg), "<command-line>", input_type,
+                                               input_size_limit, compressed));
           if (input_type == bootfs_type) {
             bootfs.push_back(&items.back());
           }

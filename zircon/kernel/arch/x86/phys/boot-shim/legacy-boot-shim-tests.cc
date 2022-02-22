@@ -81,11 +81,6 @@ TEST(X86LegacyBootShimTests, CmdlineItem) {
 
   EXPECT_EQ(cmdline_payload_count, 1);
 
-  // The item payload has a NUL terminator appended.
-  ASSERT_FALSE(cmdline_payload.empty());
-  EXPECT_EQ('\0', cmdline_payload.back());
-  cmdline_payload.remove_suffix(1);
-
   // The shim prepends other synthetic command-line arguments, but the actual
   // legacy boot loader command line contents should always come last.
   EXPECT_GT(cmdline_payload.size(), info.cmdline.size());

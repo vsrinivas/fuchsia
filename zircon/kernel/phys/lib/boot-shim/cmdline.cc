@@ -39,10 +39,6 @@ size_t BootShimBase::Cmdline::Collect(std::optional<ItemBase::WritableBytes> pay
     }
   }
 
-  // The ZBI protocol specification technically requires a NUL-terminated
-  // payload, though that's really an obsolete requirement nothing assumes.
-  add({"", 1});
-
   return total;
 }
 

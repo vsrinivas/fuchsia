@@ -313,12 +313,13 @@ typedef struct {
 // and crc32 fields to zero, though setting them to ZBI_FLAG_VERSION and
 // ZBI_ITEM_NO_CRC32 is specified.  The kernel doesn't check.
 
-// A kernel command line fragment, a NUL-terminated UTF-8 string.
-// Multiple ZBI_TYPE_CMDLINE items can appear.  They are treated as if
-// concatenated with ' ' between each item, in the order they appear:
-// first items in the bootable ZBI containing the kernel; then items in
-// the ZBI synthesized by the boot loader.  The kernel interprets the
-// [whole command line](../../../../docs/kernel_cmdline.md).
+// A kernel command line fragment, a UTF-8 string that need not be
+// NUL-terminated.  The kernel's own option parsing accepts only printable
+// ASCII and treats all other characters as equivalent to whitespace. Multiple
+// ZBI_TYPE_CMDLINE items can appear.  They are treated as if concatenated with
+// ' ' between each item, in the order they appear: first items in the bootable
+// ZBI containing the kernel; then items in the ZBI synthesized by the boot
+// loader.  The kernel interprets the [whole command line](../../../../docs/kernel_cmdline.md).
 #define ZBI_TYPE_CMDLINE (0x4c444d43)  // CMDL
 
 // The crash log from the previous boot, a UTF-8 string.
