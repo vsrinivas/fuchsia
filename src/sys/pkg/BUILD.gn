@@ -73,6 +73,10 @@ group("system-update-configurator") {
   ]
 }
 
+group("system-update-configurator-route-to-omaha-client") {
+  public_deps = [ "bin/system-update-configurator:route-to-omaha-core-shard" ]
+}
+
 group("system-update-checker") {
   public_deps = [ "bin/system-update-checker" ]
   deps = [ "//build/validate:non_production_tag" ]

@@ -1,0 +1,9 @@
+{
+    offer: [
+        {
+            protocol: [ "fuchsia.update.config.OptOut" ],
+            from: "#system-update-configurator",
+            to: [ "#omaha-client-service" ],
+        },
+    ],
+}

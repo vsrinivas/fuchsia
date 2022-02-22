@@ -53,6 +53,24 @@ fuchsia_base = {
     }
   }
 
+  # Add the base package labels for the selected SWD policy.
+  extra_core_realm_shards = []
+  if (defined(policy_labels.update_checker)) {
+    foreach(policy, policies_update_checker) {
+      if (policy.name == policy_labels.update_checker) {
+        # TODO(fxbug.dev/93695) Remove the need for
+        # `if_board_supports_update_configurator` and
+        # `board_supports_update_configurator`, replacing them with an
+        # optional capability route when that feature is available.
+        if (board_supports_update_configurator) {
+          inner = policy.if_board_supports_update_configurator
+
+          extra_core_realm_shards += inner.core_realm_shards
+        }
+      }
+    }
+  }
+
   base_driver_packages = [ "//:additional_base_driver_packages" ]
   cache_packages = [ "//:additional_cache_packages" ]
   system_image_deps = [ "//build/input:system_image" ]
@@ -109,7 +127,8 @@ fuchsia_base = {
 
 core_realm("core_realm") {
   package_name = core_realm_package_name
-  deps = core_realm_shards + board_core_realm_shards
+  deps = core_realm_shards + board_core_realm_shards +
+         fuchsia_base.extra_core_realm_shards
   restrict_persistent_storage = core_realm_restrict_persistent_storage
   restrict_full_resolver_to_base = !auto_update_packages
 }

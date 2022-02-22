@@ -68,6 +68,11 @@ core_shard("core-shard") {
   shard_file = "meta/core-shard.cml"
 }
 
+# FIXME(fxbug.dev/93695) Replace with an optional capability route when that feature is available
+core_shard("route-to-omaha-core-shard") {
+  shard_file = "meta/route-to-omaha-core-shard.cml"
+}
+
 fuchsia_unittest_package("system-update-configurator-tests") {
   deps = [ ":lib_test" ]
 }
