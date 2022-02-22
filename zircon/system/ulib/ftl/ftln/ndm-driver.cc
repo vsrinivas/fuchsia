@@ -18,6 +18,10 @@ namespace ftl {
 
 namespace {
 
+// Many of the NDM driver functions and tests require that these constants match. If they ever
+// are updated to be unique constants, the various API contacts need to be updated accordingly.
+static_assert(kNdmUncorrectableEcc == kNdmError, "kNdmUncorrectableEcc should map to kNdmError!");
+
 bool g_init_performed = false;
 
 // Extra configuration data saved to the partition info.
@@ -73,21 +77,12 @@ int ReadPage(uint32_t page, uint8_t* data, uint8_t* spare, void* dev) {
   return ReadPagesImpl(page, 1, data, nullptr, dev);
 }
 
-// Returns kNdmOk or kNdmError on ECC decode failure.
+// Returns kNdmOk, kNdmFatalError, or kNdmUncorrectableEcc on ECC decode failure.
 int ReadSpare(uint32_t page, uint8_t* spare, void* dev) {
   int result = ReadPagesImpl(page, 1, nullptr, spare, dev);
-  if (result == kNdmFatalError || result == kNdmUncorrectableEcc) {
-    return kNdmError;
-  }
-
-  // kNdmUnsafeEcc is also OK as the data is still correct.
-  return kNdmOk;
-}
-
-// Returns kNdmOk or kNdmError.
-int ReadSpareNoEcc(uint32_t page, uint8_t* spare, void* dev) {
-  int result = ReadPagesImpl(page, 1, nullptr, spare, dev);
-  return result == kNdmFatalError ? kNdmError : kNdmOk;
+  // Ensure we translate errors to the correct values above, since
+  // kNdmUnsafeEcc is OK as the data is still correct.
+  return result == kNdmUnsafeEcc ? kNdmOk : result;
 }
 
 // Returns kNdmOk, kNdmError or kNdmFatalError. kNdmError triggers marking the block as bad.
@@ -130,20 +125,24 @@ int IsEmpty(uint32_t page, uint8_t* data, uint8_t* spare, void* dev) {
   return device->IsEmptyPage(page, data, spare) ? kTrue : kFalse;
 }
 
-// Returns kNdmOk or kNdmError, but kNdmError implies aborting initialization.
+// Returns kNdmOk or kNdmFatalError, where kNdmFatalError implies aborting initialization.
 int CheckPage(uint32_t page, uint8_t* data, uint8_t* spare, int* status, void* dev) {
   int result = ReadPagesImpl(page, 1, data, spare, dev);
-  NdmDriver* device = reinterpret_cast<NdmDriver*>(dev);
 
-  if (result == kNdmUncorrectableEcc || result == kNdmFatalError ||
-      device->IncompletePageWrite(spare, data)) {
+  if (result == kNdmFatalError) {
+    *status = NDM_PAGE_INVALID;
+    return kNdmFatalError;
+  }
+
+  // Mark page as invalid if the data fails ECC or if we detected a partial page write, since both
+  // the page and spare data should not be used in that case.
+  NdmDriver* device = reinterpret_cast<NdmDriver*>(dev);
+  if (result == kNdmUncorrectableEcc || device->IncompletePageWrite(spare, data)) {
     *status = NDM_PAGE_INVALID;
     return kNdmOk;
   }
 
-  bool empty = device->IsEmptyPage(page, data, spare) ? kTrue : kFalse;
-
-  *status = empty ? NDM_PAGE_ERASED : NDM_PAGE_VALID;
+  *status = device->IsEmptyPage(page, data, spare) ? NDM_PAGE_ERASED : NDM_PAGE_VALID;
   return kNdmOk;
 }
 
@@ -365,7 +364,10 @@ void NdmBaseDriver::FillNdmDriver(const VolumeOptions& options, bool use_format_
   driver->write_data_and_spare = WritePage;
   driver->read_decode_data = ReadPage;
   driver->read_decode_spare = ReadSpare;
-  driver->read_spare = ReadSpareNoEcc;
+  // Since we have "free" decoding, we use the same ReadSpare function for this callback (which
+  // should never be invoked anyways if FSF_FREE_SPARE_ECC is set). If this changes in the future,
+  // this callback should be updated and the the FSF_FREE_SPARE_ECC flag cleared.
+  driver->read_spare = ReadSpare;
   driver->data_and_spare_erased = IsEmpty;
   driver->data_and_spare_check = CheckPage;
   driver->erase_block = EraseBlock;
