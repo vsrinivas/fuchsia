@@ -408,6 +408,19 @@ mod tests {
         std::collections::HashMap,
     };
 
+    fn create_matched_driver_info(
+        url: String,
+        driver_url: String,
+        colocate: bool,
+    ) -> fdf::MatchedDriverInfo {
+        fdf::MatchedDriverInfo {
+            url: Some(url),
+            driver_url: Some(driver_url),
+            colocate: Some(colocate),
+            ..fdf::MatchedDriverInfo::EMPTY
+        }
+    }
+
     async fn run_resolver_server(
         stream: fidl_fuchsia_pkg::PackageResolverRequestStream,
     ) -> Result<(), anyhow::Error> {
@@ -478,17 +491,19 @@ mod tests {
             let args =
                 fdf::NodeAddArgs { properties: Some(vec![property]), ..fdf::NodeAddArgs::EMPTY };
             let result = proxy.match_driver(args).await.unwrap().unwrap();
-            assert_eq!(
+
+            let expected_url =
                 "fuchsia-pkg://fuchsia.com/driver-index-unittests#meta/test-bind-component.cm"
-                    .to_string(),
-                result.url.unwrap(),
-            );
-            assert_eq!(
+                    .to_string();
+            let expected_driver_url =
                 "fuchsia-pkg://fuchsia.com/driver-index-unittests#driver/fake-driver.so"
-                    .to_string(),
-                result.driver_url.unwrap(),
-            );
-            assert!(result.colocate.unwrap());
+                    .to_string();
+            let expected_result = fdf::MatchedDriver::Driver(create_matched_driver_info(
+                expected_url,
+                expected_driver_url,
+                true,
+            ));
+            assert_eq!(expected_result, result);
 
             // Check the value from the 'test-bind2' binary. This should match my-driver2.cm
             let property = fdf::NodeProperty {
@@ -499,16 +514,19 @@ mod tests {
             let args =
                 fdf::NodeAddArgs { properties: Some(vec![property]), ..fdf::NodeAddArgs::EMPTY };
             let result = proxy.match_driver(args).await.unwrap().unwrap();
-            assert_eq!(
+
+            let expected_url =
                 "fuchsia-pkg://fuchsia.com/driver-index-unittests#meta/test-bind2-component.cm"
-                    .to_string(),
-                result.url.unwrap(),
-            );
-            assert_eq!(
+                    .to_string();
+            let expected_driver_url =
                 "fuchsia-pkg://fuchsia.com/driver-index-unittests#driver/fake-driver2.so"
-                    .to_string(),
-                result.driver_url.unwrap(),
-            );
+                    .to_string();
+            let expected_result = fdf::MatchedDriver::Driver(create_matched_driver_info(
+                expected_url,
+                expected_driver_url,
+                false,
+            ));
+            assert_eq!(expected_result, result);
 
             // Check an unknown value. This should return the NOT_FOUND error.
             let property = fdf::NodeProperty {
@@ -534,11 +552,6 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_bind_string() {
-        use bind::compiler::Symbol;
-        use bind::compiler::SymbolicInstruction;
-        use bind::compiler::SymbolicInstructionInfo;
-        use bind::parser::bind_library::ValueType;
-
         // Make the bind instructions.
         let always_match = bind::compiler::BindRules {
             instructions: vec![SymbolicInstructionInfo {
@@ -548,7 +561,7 @@ mod tests {
                     rhs: Symbol::StringValue("test-value".to_string()),
                 },
             }],
-            symbol_table: std::collections::HashMap::new(),
+            symbol_table: HashMap::new(),
             use_new_bytecode: true,
         };
         let always_match = DecodedRules::new(
@@ -582,11 +595,14 @@ mod tests {
                 fdf::NodeAddArgs { properties: Some(vec![property]), ..fdf::NodeAddArgs::EMPTY };
 
             let result = proxy.match_drivers_v1(args).await.unwrap().unwrap();
-            assert_eq!(1, result.len());
-            assert_eq!(
-                "fuchsia-pkg://fuchsia.com/package#driver/my-driver.cm",
-                result[0].url.as_ref().unwrap().as_str(),
-            );
+
+            let expected_result = vec![fdf::MatchedDriver::Driver(fdf::MatchedDriverInfo {
+                url: Some("fuchsia-pkg://fuchsia.com/package#driver/my-driver.cm".to_string()),
+                colocate: Some(false),
+                ..fdf::MatchedDriverInfo::EMPTY
+            })];
+
+            assert_eq!(expected_result, result);
         }
         .fuse();
 
@@ -652,15 +668,30 @@ mod tests {
                 fdf::NodeAddArgs { properties: Some(vec![property]), ..fdf::NodeAddArgs::EMPTY };
 
             let result = proxy.match_drivers_v1(args).await.unwrap().unwrap();
-            assert_eq!(2, result.len());
-            assert_eq!(
-                "fuchsia-pkg://fuchsia.com/package#driver/my-driver.cm",
-                result[0].url.as_ref().unwrap().as_str(),
-            );
-            assert_eq!(
-                "fuchsia-pkg://fuchsia.com/package#driver/my-driver2.cm",
-                result[1].url.as_ref().unwrap().as_str(),
-            );
+
+            let expected_url_1 =
+                "fuchsia-pkg://fuchsia.com/package#driver/my-driver.cm".to_string();
+            let expected_driver_url_1 =
+                "fuchsia-pkg://fuchsia.com/package#meta/my-driver.so".to_string();
+            let expected_url_2 =
+                "fuchsia-pkg://fuchsia.com/package#driver/my-driver2.cm".to_string();
+            let expected_driver_url_2 =
+                "fuchsia-pkg://fuchsia.com/package#meta/my-driver2.so".to_string();
+
+            let expected_result = vec![
+                fdf::MatchedDriver::Driver(create_matched_driver_info(
+                    expected_url_1,
+                    expected_driver_url_1,
+                    false,
+                )),
+                fdf::MatchedDriver::Driver(create_matched_driver_info(
+                    expected_url_2,
+                    expected_driver_url_2,
+                    false,
+                )),
+            ];
+
+            assert_eq!(expected_result, result);
         }
         .fuse();
 
@@ -709,14 +740,15 @@ mod tests {
             let args =
                 fdf::NodeAddArgs { properties: Some(vec![property]), ..fdf::NodeAddArgs::EMPTY };
             let result = proxy.match_driver(args).await.unwrap().unwrap();
-            assert_eq!(
-                "fuchsia-boot:///#meta/test-bind-component.cm".to_string(),
-                result.url.unwrap(),
-            );
-            assert_eq!(
-                "fuchsia-boot:///#driver/fake-driver.so".to_string(),
-                result.driver_url.unwrap(),
-            );
+
+            let expected_url = "fuchsia-boot:///#meta/test-bind-component.cm".to_string();
+            let expected_driver_url = "fuchsia-boot:///#driver/fake-driver.so".to_string();
+            let expected_result = fdf::MatchedDriver::Driver(create_matched_driver_info(
+                expected_url,
+                expected_driver_url,
+                true,
+            ));
+            assert_eq!(expected_result, result);
 
             // Check the value from the 'test-bind2' binary. This should match my-driver2.cm
             let property = fdf::NodeProperty {
@@ -727,14 +759,15 @@ mod tests {
             let args =
                 fdf::NodeAddArgs { properties: Some(vec![property]), ..fdf::NodeAddArgs::EMPTY };
             let result = proxy.match_driver(args).await.unwrap().unwrap();
-            assert_eq!(
-                "fuchsia-boot:///#meta/test-bind2-component.cm".to_string(),
-                result.url.unwrap(),
-            );
-            assert_eq!(
-                "fuchsia-boot:///#driver/fake-driver2.so".to_string(),
-                result.driver_url.unwrap(),
-            );
+
+            let expected_url = "fuchsia-boot:///#meta/test-bind2-component.cm".to_string();
+            let expected_driver_url = "fuchsia-boot:///#driver/fake-driver2.so".to_string();
+            let expected_result = fdf::MatchedDriver::Driver(create_matched_driver_info(
+                expected_url,
+                expected_driver_url,
+                false,
+            ));
+            assert_eq!(expected_result, result);
 
             // Check an unknown value. This should return the NOT_FOUND error.
             let property = fdf::NodeProperty {
@@ -829,17 +862,21 @@ mod tests {
                 fdf::NodeAddArgs { properties: Some(vec![property]), ..fdf::NodeAddArgs::EMPTY };
 
             let result = proxy.match_driver(args).await.unwrap().unwrap();
-            assert_eq!(
-                "fuchsia-pkg://fuchsia.com/package#driver/my-driver.cm",
-                result.url.as_ref().unwrap().as_str(),
-            );
-            assert_eq!(result.node_index, Some(0));
-            assert_eq!(result.num_nodes, Some(2));
-            assert_eq!(result.composite_name, Some("mimid".to_string()));
-            assert_eq!(
-                result.composite_node_names,
-                Some(vec!["catbird".to_string(), "mockingbird".to_string()])
-            );
+
+            let expected_driver_info = fdf::MatchedDriverInfo {
+                url: Some("fuchsia-pkg://fuchsia.com/package#driver/my-driver.cm".to_string()),
+                colocate: Some(false),
+                ..fdf::MatchedDriverInfo::EMPTY
+            };
+            let expected_result = fdf::MatchedDriver::CompositeDriver(fdf::MatchedCompositeInfo {
+                node_index: Some(0),
+                num_nodes: Some(2),
+                composite_name: Some("mimid".to_string()),
+                node_names: Some(vec!["catbird".to_string(), "mockingbird".to_string()]),
+                driver_info: Some(expected_driver_info),
+                ..fdf::MatchedCompositeInfo::EMPTY
+            });
+            assert_eq!(expected_result, result);
 
             // Match secondary node.
             let args = fdf::NodeAddArgs {
@@ -859,12 +896,21 @@ mod tests {
             };
 
             let result = proxy.match_driver(args).await.unwrap().unwrap();
-            assert_eq!(
-                "fuchsia-pkg://fuchsia.com/package#driver/my-driver.cm",
-                result.url.as_ref().unwrap().as_str(),
-            );
-            assert_eq!(result.node_index, Some(1));
-            assert_eq!(result.num_nodes, Some(2));
+
+            let expected_driver_info = fdf::MatchedDriverInfo {
+                url: Some("fuchsia-pkg://fuchsia.com/package#driver/my-driver.cm".to_string()),
+                colocate: Some(false),
+                ..fdf::MatchedDriverInfo::EMPTY
+            };
+            let expected_result = fdf::MatchedDriver::CompositeDriver(fdf::MatchedCompositeInfo {
+                node_index: Some(1),
+                num_nodes: Some(2),
+                composite_name: Some("mimid".to_string()),
+                node_names: Some(vec!["catbird".to_string(), "mockingbird".to_string()]),
+                driver_info: Some(expected_driver_info),
+                ..fdf::MatchedCompositeInfo::EMPTY
+            });
+            assert_eq!(expected_result, result);
         }
         .fuse();
 

@@ -710,8 +710,31 @@ void DriverRunner::Bind(Node& node, fdf::wire::NodeAddArgs args) {
            zx_status_get_string(result->result.err()));
       return;
     }
+
     auto& matched_driver = result->result.response().driver;
-    if (!matched_driver.has_url()) {
+    if (!matched_driver.is_driver() && !matched_driver.is_composite_driver()) {
+      orphaned();
+      LOGF(WARNING,
+           "Failed to match Node '%s', the MatchedDriver is not a normal or composite"
+           "driver.",
+           driver_node->name().data());
+      return;
+    }
+
+    if (matched_driver.is_composite_driver() &&
+        !matched_driver.composite_driver().has_driver_info()) {
+      orphaned();
+      LOGF(WARNING,
+           "Failed to match Node '%s', the MatchedDriver is missing driver info for a composite "
+           "driver.",
+           driver_node->name().data());
+      return;
+    }
+
+    auto driver_info = matched_driver.is_driver() ? matched_driver.driver()
+                                                  : matched_driver.composite_driver().driver_info();
+
+    if (!driver_info.has_url()) {
       orphaned();
       LOGF(ERROR, "Failed to match Node '%s', the driver URL is missing",
            driver_node->name().data());
@@ -719,16 +742,17 @@ void DriverRunner::Bind(Node& node, fdf::wire::NodeAddArgs args) {
     }
 
     // This is a composite driver, create a composite node for it.
-    if (matched_driver.has_node_index() || matched_driver.has_num_nodes()) {
-      auto composite = CreateCompositeNode(node, matched_driver);
+    if (matched_driver.is_composite_driver()) {
+      auto composite = CreateCompositeNode(node, matched_driver.composite_driver());
+
+      // Orphaned nodes are handled by CreateCompositeNode().
       if (composite.is_error()) {
-        // CreateCompositeNode() handles orphaned nodes.
         return;
       }
       driver_node = *composite;
     }
 
-    auto start_result = StartDriver(*driver_node, matched_driver.url().get());
+    auto start_result = StartDriver(*driver_node, driver_info.url().get());
     if (start_result.is_error()) {
       orphaned();
       LOGF(ERROR, "Failed to start driver '%s': %s", driver_node->name().data(),
@@ -740,7 +764,7 @@ void DriverRunner::Bind(Node& node, fdf::wire::NodeAddArgs args) {
 }
 
 zx::status<Node*> DriverRunner::CreateCompositeNode(
-    Node& node, const fdf::wire::MatchedDriver& matched_driver) {
+    Node& node, const fdf::wire::MatchedCompositeInfo& matched_driver) {
   auto it = AddToCompositeArgs(node.name(), matched_driver);
   if (it.is_error()) {
     orphaned_nodes_.push_back(node.weak_from_this());
@@ -770,34 +794,40 @@ zx::status<Node*> DriverRunner::CreateCompositeNode(
 }
 
 zx::status<DriverRunner::CompositeArgsIterator> DriverRunner::AddToCompositeArgs(
-    const std::string& name, const fdf::wire::MatchedDriver& matched_driver) {
-  if (!matched_driver.has_node_index() || !matched_driver.has_num_nodes()) {
+    const std::string& name, const fdf::wire::MatchedCompositeInfo& composite_info) {
+  if (!composite_info.has_node_index() || !composite_info.has_num_nodes()) {
     LOGF(ERROR, "Failed to match Node '%s', missing fields for composite driver", name.data());
     return zx::error(ZX_ERR_INVALID_ARGS);
   }
-  if (matched_driver.node_index() >= matched_driver.num_nodes()) {
+  if (composite_info.node_index() >= composite_info.num_nodes()) {
     LOGF(ERROR, "Failed to match Node '%s', the node index is out of range", name.data());
     return zx::error(ZX_ERR_INVALID_ARGS);
   }
 
+  if (!composite_info.has_driver_info() || !composite_info.driver_info().has_url()) {
+    LOGF(ERROR, "Failed to match Node '%s', missing driver info fields for composite driver",
+         name.data());
+    return zx::error(ZX_ERR_INVALID_ARGS);
+  }
+  auto url = composite_info.driver_info().url().get().data();
+
   // Check if there are existing composite arguments for the composite driver.
   // We do this by checking if the node index within an existing set of
   // composite arguments has not been set, or has become available.
-  auto [it, end] = composite_args_.equal_range(std::string(matched_driver.url().get()));
+  auto [it, end] = composite_args_.equal_range(url);
   for (; it != end; ++it) {
     auto& [_, nodes] = *it;
-    if (nodes.size() != matched_driver.num_nodes()) {
+    if (nodes.size() != composite_info.num_nodes()) {
       LOGF(ERROR, "Failed to match Node '%s', the number of nodes does not match", name.data());
       return zx::error(ZX_ERR_INVALID_ARGS);
     }
-    if (nodes[matched_driver.node_index()].expired()) {
+    if (nodes[composite_info.node_index()].expired()) {
       break;
     }
   }
   // No composite arguments exist for the composite driver, create a new set.
   if (it == end) {
-    it = composite_args_.emplace(matched_driver.url().get(),
-                                 CompositeArgs{matched_driver.num_nodes()});
+    it = composite_args_.emplace(url, CompositeArgs{composite_info.num_nodes()});
   }
   return zx::ok(it);
 }

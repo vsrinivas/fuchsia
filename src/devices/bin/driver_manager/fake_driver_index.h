@@ -12,10 +12,14 @@
 
 class FakeDriverIndex final : public fidl::WireServer<fuchsia_driver_framework::DriverIndex> {
  public:
+  struct CompositeDriverInfo {
+    uint32_t node_index;
+    uint32_t num_nodes;
+  };
+
   struct MatchResult {
     std::string url;
-    std::optional<uint32_t> node_index;
-    std::optional<uint32_t> num_nodes;
+    std::optional<CompositeDriverInfo> composite;
   };
 
   using MatchCallback =
@@ -39,16 +43,9 @@ class FakeDriverIndex final : public fidl::WireServer<fuchsia_driver_framework::
       completer.ReplyError(match.status_value());
       return;
     }
+
     fidl::Arena arena;
-    fuchsia_driver_framework::wire::MatchedDriver driver(arena);
-    driver.set_url(arena, fidl::StringView::FromExternal(match->url));
-    if (match->node_index) {
-      driver.set_node_index(*match->node_index);
-    }
-    if (match->num_nodes) {
-      driver.set_num_nodes(*match->num_nodes);
-    }
-    completer.ReplySuccess(driver);
+    completer.ReplySuccess(GetMatchedDriver(arena, match.value()));
   }
 
   void WaitForBaseDrivers(WaitForBaseDriversRequestView request,
@@ -63,20 +60,36 @@ class FakeDriverIndex final : public fidl::WireServer<fuchsia_driver_framework::
       completer.ReplyError(match.status_value());
       return;
     }
+
     fidl::Arena arena;
-    fuchsia_driver_framework::wire::MatchedDriver driver(arena);
-    driver.set_driver_url(arena, fidl::StringView::FromExternal(match->url));
-    if (match->node_index) {
-      driver.set_node_index(*match->node_index);
-    }
-    if (match->num_nodes) {
-      driver.set_num_nodes(*match->num_nodes);
-    }
+    auto driver = GetMatchedDriver(arena, match.value());
     completer.ReplySuccess(
         fidl::VectorView<fuchsia_driver_framework::wire::MatchedDriver>::FromExternal(&driver, 1));
   }
 
  private:
+  fuchsia_driver_framework::wire::MatchedDriver GetMatchedDriver(fidl::AnyArena& arena,
+                                                                 MatchResult match) const {
+    auto driver_info = fuchsia_driver_framework::wire::MatchedDriverInfo(arena);
+    driver_info.set_driver_url(fidl::ObjectView<fidl::StringView>(arena, arena, match.url));
+    driver_info.set_url(fidl::ObjectView<fidl::StringView>(arena, arena, match.url));
+
+    if (!match.composite) {
+      return fuchsia_driver_framework::wire::MatchedDriver::WithDriver(
+          fidl::ObjectView<fuchsia_driver_framework::wire::MatchedDriverInfo>(arena, driver_info));
+    }
+
+    auto composite_info = fuchsia_driver_framework::wire::MatchedCompositeInfo(arena);
+    composite_info.set_node_index(match.composite->node_index);
+    composite_info.set_num_nodes(match.composite->num_nodes);
+    composite_info.set_driver_info(
+        fidl::ObjectView<fuchsia_driver_framework::wire::MatchedDriverInfo>(arena, driver_info));
+
+    return fuchsia_driver_framework::wire::MatchedDriver::WithCompositeDriver(
+        fidl::ObjectView<fuchsia_driver_framework::wire::MatchedCompositeInfo>(arena,
+                                                                               composite_info));
+  }
+
   async_dispatcher_t* dispatcher_;
   MatchCallback match_callback_;
 };

@@ -7,30 +7,70 @@ using fuchsia.url;
 
 using zx;
 
-/// Driver matched by the driver index.
-type MatchedDriver = table {
+/// Information for a driver matched by the driver index. This is used by
+/// normal and composite drivers.
+type MatchedDriverInfo = table {
     /// URL of the driver component.
     1: url string:fuchsia.url.MAX_URL_LENGTH;
 
-    /// Node index for a composite driver (optional).
-    2: node_index uint32;
-
-    /// Total number of nodes for a composite driver (optional).
-    3: num_nodes uint32;
-
-    /// A list of all the node names for this composite driver (optional).
-    /// These are ordered according to index.
-    6: composite_node_names vector<string:MAX>:MAX;
-
-    /// The name of the composite device that is created (optional).
-    5: composite_name string:MAX;
-
-    /// URL of the driver library.
-    /// This should only be used by DriverManager before Drivers-As-Components.
-    4: driver_url string:fuchsia.url.MAX_URL_LENGTH;
+    /// URL of the driver library. This should only be used by DriverManager
+    /// before Drivers-As-Components.
+    2: driver_url string:fuchsia.url.MAX_URL_LENGTH;
 
     /// If this is true then the driver should be colocated in its parent's DriverHost.
-    7: colocate bool;
+    3: colocate bool;
+};
+
+/// Information for a composite driver matched by the driver index.
+type MatchedCompositeInfo = table {
+    /// The name of the composite device.
+    1: composite_name string:MAX;
+
+    /// Node index for a composite driver.
+    2: node_index uint32;
+
+    /// Total number of nodes for a composite driver.
+    3: num_nodes uint32;
+
+    /// A list of all the node names for this composite driver.
+    /// These are ordered according to index.
+    4: node_names vector<string:MAX>:MAX;
+
+    /// Information of the driver info.
+    5: driver_info MatchedDriverInfo;
+};
+
+/// Information for a device group matched by the driver index.
+/// TODO(fxb/91510): Implement support for Device Groups. This is
+/// currently unused.
+type MatchedDeviceGroupInfo = table {
+    /// Topological path for a device group.
+    1: topological_path string:MAX;
+
+    /// Node index for the nodes in the device group.
+    2: node_index uint32;
+
+    /// Total number of nodes in the device group.
+    3: num_nodes uint32;
+
+    /// A list of all the node names in the device group. These are ordered
+    /// according to index.
+    4: node_names vector<string:MAX>:MAX;
+
+    /// The name of the device group.
+    5: composite_name string:MAX;
+};
+
+/// Driver matched by the driver index.
+type MatchedDriver = flexible union {
+    /// Information for a normal driver.
+    1: driver MatchedDriverInfo;
+
+    /// Information for a composite driver.
+    2: composite_driver MatchedCompositeInfo;
+
+    /// Information for a device group.
+    3: device_group MatchedDeviceGroupInfo;
 };
 
 /// Protocol through which the driver index can be queried.

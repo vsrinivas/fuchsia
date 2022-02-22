@@ -49,8 +49,12 @@ class FakeDriverLoaderIndex final : public fidl::WireServer<fuchsia_driver_frame
                                                                             driver_urls.size());
     size_t index = 0;
     for (auto& driver : driver_urls) {
-      drivers[index] = fuchsia_driver_framework::wire::MatchedDriver(allocator);
-      drivers[index].set_driver_url(allocator, fidl::StringView::FromExternal(driver));
+      auto driver_info = fuchsia_driver_framework::wire::MatchedDriverInfo(allocator);
+      driver_info.set_driver_url(fidl::ObjectView<fidl::StringView>(allocator, allocator, driver));
+
+      drivers[index] = fuchsia_driver_framework::wire::MatchedDriver::WithDriver(
+          fidl::ObjectView<fuchsia_driver_framework::wire::MatchedDriverInfo>(allocator,
+                                                                              driver_info));
       index++;
     }
     completer.ReplySuccess(drivers);

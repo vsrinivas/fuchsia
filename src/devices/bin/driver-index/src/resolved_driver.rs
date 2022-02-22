@@ -74,7 +74,7 @@ impl ResolvedDriver {
                     return Ok(None);
                 }
 
-                Ok(Some(self.create_matched_driver()))
+                Ok(Some(fdf::MatchedDriver::Driver(self.create_matched_driver_info())))
             }
             DecodedRules::Composite(composite) => {
                 let result = matches_composite_device(composite, properties).map_err(|e| {
@@ -87,39 +87,42 @@ impl ResolvedDriver {
                 }
 
                 let node_index = result.unwrap();
-                let mut matched_driver = self.create_matched_driver();
-                matched_driver.node_index = Some(node_index);
-                matched_driver.num_nodes = Some((composite.additional_nodes.len() + 1) as u32);
-                matched_driver.composite_name =
-                    Some(composite.symbol_table[&composite.device_name_id].clone());
 
                 let mut node_names = vec![];
                 node_names.push(composite.symbol_table[&composite.primary_node.name_id].clone());
                 for node in &composite.additional_nodes {
                     node_names.push(composite.symbol_table[&node.name_id].clone());
                 }
-                matched_driver.composite_node_names = Some(node_names);
 
-                Ok(Some(matched_driver))
+                Ok(Some(fdf::MatchedDriver::CompositeDriver(fdf::MatchedCompositeInfo {
+                    node_index: Some(node_index),
+                    num_nodes: Some((composite.additional_nodes.len() + 1) as u32),
+                    composite_name: Some(composite.symbol_table[&composite.device_name_id].clone()),
+                    node_names: Some(node_names),
+                    driver_info: Some(self.create_matched_driver_info()),
+                    ..fdf::MatchedCompositeInfo::EMPTY
+                })))
             }
         }
     }
 
-    fn create_matched_driver(&self) -> fdf::MatchedDriver {
-        let driver_url = match self.v1_driver_path.as_ref() {
+    fn get_driver_url(&self) -> Option<String> {
+        match self.v1_driver_path.as_ref() {
             Some(p) => {
                 let mut driver_url = self.component_url.clone();
                 driver_url.set_fragment(Some(p));
                 Some(driver_url.to_string())
             }
             None => None,
-        };
+        }
+    }
 
-        fdf::MatchedDriver {
+    fn create_matched_driver_info(&self) -> fdf::MatchedDriverInfo {
+        fdf::MatchedDriverInfo {
             url: Some(self.component_url.as_str().to_string()),
-            driver_url: driver_url,
+            driver_url: self.get_driver_url(),
             colocate: Some(self.colocate),
-            ..fdf::MatchedDriver::EMPTY
+            ..fdf::MatchedDriverInfo::EMPTY
         }
     }
 

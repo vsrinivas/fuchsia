@@ -252,12 +252,13 @@ class DriverRunner : public fidl::WireServer<fuchsia_component_runner::Component
 
   // Create a composite node. Returns a `Node` that is owned by its parents.
   zx::status<Node*> CreateCompositeNode(
-      Node& node, const fuchsia_driver_framework::wire::MatchedDriver& matched_driver);
+      Node& node, const fuchsia_driver_framework::wire::MatchedCompositeInfo& matched_driver);
   // Adds `matched_driver` to an existing set of composite arguments, or creates
   // a new set of composite arguments. Returns an iterator to the set of
   // composite arguments.
   zx::status<CompositeArgsIterator> AddToCompositeArgs(
-      const std::string& name, const fuchsia_driver_framework::wire::MatchedDriver& matched_driver);
+      const std::string& name,
+      const fuchsia_driver_framework::wire::MatchedCompositeInfo& matched_driver);
   zx::status<> StartDriver(Node& node, std::string_view url);
 
   zx::status<std::unique_ptr<DriverHostComponent>> StartDriverHost();

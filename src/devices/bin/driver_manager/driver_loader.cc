@@ -22,6 +22,38 @@
 #include "src/devices/bin/driver_manager/manifest_parser.h"
 #include "src/devices/lib/log/log.h"
 
+namespace {
+
+MatchedCompositeDriver CreateMatchedCompositeDriver(
+    fdf::wire::MatchedCompositeInfo composite_info) {
+  MatchedCompositeDriver composite = {};
+
+  if (composite_info.has_num_nodes()) {
+    composite.num_nodes = composite_info.num_nodes();
+  }
+
+  if (composite_info.has_node_index()) {
+    composite.node = composite_info.node_index();
+  }
+
+  if (composite_info.has_composite_name()) {
+    composite.name =
+        std::string(composite_info.composite_name().data(), composite_info.composite_name().size());
+  }
+
+  if (composite_info.has_node_names()) {
+    std::vector<std::string> names;
+    for (auto& name : composite_info.node_names()) {
+      names.push_back(std::string(name.data(), name.size()));
+    }
+    composite.node_names = std::move(names);
+  }
+
+  return composite;
+}
+
+}  // namespace
+
 DriverLoader::~DriverLoader() {
   if (system_loading_thread_) {
     system_loading_thread_->join();
@@ -241,11 +273,27 @@ const std::vector<MatchedDriver> DriverLoader::MatchPropertiesDriverIndex(
   const auto& drivers = result->result.response().drivers;
 
   for (auto driver : drivers) {
-    if (!driver.has_driver_url()) {
-      LOGF(ERROR, "DriverIndex: MatchDriver response did not have a driver_url");
+    // TODO(fxb/91510): Support device groups.
+    if (driver.is_device_group()) {
       continue;
     }
-    std::string driver_url(driver.driver_url().get());
+
+    if (driver.is_composite_driver() && !driver.composite_driver().has_driver_info()) {
+      LOGF(ERROR,
+           "DriverIndex: MatchDriverV1 response is missing driver info for a"
+           "composite driver");
+      continue;
+    }
+
+    auto driver_info =
+        driver.is_driver() ? driver.driver() : driver.composite_driver().driver_info();
+
+    if (!driver_info.has_driver_url()) {
+      LOGF(ERROR, "DriverIndex: MatchDriverV1 response is missing a driver_url");
+      continue;
+    }
+
+    std::string driver_url(driver_info.driver_url().get());
 
     auto loaded_driver = LoadDriverUrl(driver_url);
     if (!loaded_driver) {
@@ -254,32 +302,12 @@ const std::vector<MatchedDriver> DriverLoader::MatchPropertiesDriverIndex(
     MatchedDriver matched_driver = {};
     matched_driver.driver = loaded_driver;
 
-    if (driver.has_colocate()) {
-      matched_driver.colocate = driver.colocate();
+    if (driver_info.has_colocate()) {
+      matched_driver.colocate = driver_info.colocate();
     }
 
-    MatchedCompositeDriver composite = {};
-    bool uses_composite = false;
-
-    if (driver.has_num_nodes()) {
-      composite.num_nodes = driver.num_nodes();
-      uses_composite = true;
-    }
-    if (driver.has_node_index()) {
-      composite.node = driver.node_index();
-    }
-    if (driver.has_composite_name()) {
-      composite.name = std::string(driver.composite_name().data(), driver.composite_name().size());
-    }
-    if (driver.has_composite_node_names()) {
-      std::vector<std::string> names;
-      for (auto& name : driver.composite_node_names()) {
-        names.push_back(std::string(name.data(), name.size()));
-      }
-      composite.node_names = std::move(names);
-    }
-    if (uses_composite) {
-      matched_driver.composite = std::move(composite);
+    if (driver.is_composite_driver()) {
+      matched_driver.composite = CreateMatchedCompositeDriver(driver.composite_driver());
     }
 
     if (config.only_return_base_and_fallback_drivers) {

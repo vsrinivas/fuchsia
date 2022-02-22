@@ -236,14 +236,17 @@ class DriverRunnerTest : public gtest::TestLoopFixture {
       } else if (args.name().get() == "part-1") {
         return zx::ok(FakeDriverIndex::MatchResult{
             .url = "fuchsia-boot:///#meta/composite-driver.cm",
-            .node_index = std::make_optional(0u),
-            .num_nodes = std::make_optional(2u),
-        });
+            .composite = std::make_optional(FakeDriverIndex::CompositeDriverInfo{
+                .node_index = 0u,
+                .num_nodes = 2u,
+            })});
       } else if (args.name().get() == "part-2") {
         return zx::ok(FakeDriverIndex::MatchResult{
             .url = "fuchsia-boot:///#meta/composite-driver.cm",
-            .node_index = std::make_optional(1u),
-            .num_nodes = std::make_optional(2u),
+            .composite = std::make_optional(FakeDriverIndex::CompositeDriverInfo{
+                .node_index = 1u,
+                .num_nodes = 2u,
+            }),
         });
       } else {
         return zx::error(ZX_ERR_NOT_FOUND);
