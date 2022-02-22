@@ -19,6 +19,10 @@ pub struct Opt {
     #[structopt(short = "b", long = "build-dir", parse(from_os_str))]
     // Path to the build directory.
     pub build_dir: PathBuf,
+
+    #[structopt(short = "d", long = "depfile", parse(from_os_str))]
+    // Path to output a depfile.
+    pub depfile: Option<PathBuf>,
 }
 
 impl Opt {

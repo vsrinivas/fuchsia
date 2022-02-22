@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/board.gni")
+import("//build/compiled_action.gni")
 import("//build/config/build_api_module.gni")
 import("//build/config/compiler.gni")
 import("//build/drivers/check_included_drivers.gni")
@@ -653,6 +654,31 @@ build_api_module("tests") {
 
     # Pull in tests from *_package_labels.
     "//build/images:packages",
+  ]
+}
+
+# test-list.json contains the set of tests in the build along with arbitrary
+# test metadata attached to each test.
+compiled_action("test-list") {
+  testonly = true
+  tool = "//tools/test_list_tool"
+  tool_output_name = "test_list_tool"
+
+  inputs = [ "$root_build_dir/tests.json" ]
+  outputs = [ "$root_build_dir/test-list.json" ]
+  depfile = "$root_build_dir/test-list.json.d"
+
+  deps = [ ":tests" ]
+
+  args = [
+    "--build-dir",
+    ".",
+    "--input",
+    "tests.json",
+    "--output",
+    "test-list.json",
+    "--depfile",
+    "test-list.json.d",
   ]
 }
 

@@ -26,6 +26,8 @@ use {
 const META_FAR_PREFIX: &'static str = "meta/";
 const TEST_TYPE_FACET: &'static str = "fuchsia.test.type";
 const HERMETIC_TEST_TYPE: &'static str = "hermetic";
+const TEST_TYPE_TAG_KEY: &'static str = "type";
+const HERMETIC_TAG_KEY: &'static str = "hermetic";
 
 mod error;
 mod opts;
@@ -77,9 +79,9 @@ fn tags_from_facets(facets: &fdata::Dictionary) -> Result<Vec<TestTag>, Error> {
             match &**val {
                 fdata::DictionaryValue::Str(s) => {
                     return Ok(vec![
-                        TestTag { key: "realm".to_string(), value: s.to_string() },
+                        TestTag { key: TEST_TYPE_TAG_KEY.to_string(), value: s.to_string() },
                         TestTag {
-                            key: "hermetic".to_string(),
+                            key: HERMETIC_TAG_KEY.to_string(),
                             value: s.eq(HERMETIC_TEST_TYPE).to_string(),
                         },
                     ]);
@@ -95,8 +97,8 @@ fn tags_from_facets(facets: &fdata::Dictionary) -> Result<Vec<TestTag>, Error> {
         }
     }
     Ok(vec![
-        TestTag { key: "realm".to_string(), value: HERMETIC_TEST_TYPE.to_string() },
-        TestTag { key: "hermetic".to_string(), value: "true".to_string() },
+        TestTag { key: TEST_TYPE_TAG_KEY.to_string(), value: HERMETIC_TEST_TYPE.to_string() },
+        TestTag { key: HERMETIC_TAG_KEY.to_string(), value: "true".to_string() },
     ])
 }
 
@@ -122,33 +124,59 @@ fn read_tests_json(file: &PathBuf) -> Result<Vec<TestsJsonEntry>, Error> {
     Ok(t)
 }
 
-fn tags_from_manifest(
-    build_dir: &PathBuf,
-    package_url: String,
-    manifest: String,
-) -> Result<Vec<TestTag>, Error> {
+fn tags_from_manifest(package_url: String, meta_far_path: &PathBuf) -> Result<Vec<TestTag>, Error> {
     let pkg_url = PkgUrl::parse(&package_url)?;
     let cm_path =
         pkg_url.resource().ok_or(error::TestListToolError::InvalidPackageURL(package_url))?;
-    let meta_far_path = find_meta_far(build_dir, manifest.clone())?;
     let decl = cm_decl_from_meta_far(&meta_far_path, cm_path)?;
     tags_from_facets(&decl.facets.unwrap_or(fdata::Dictionary::EMPTY))
+}
+
+fn write_depfile(depfile: &PathBuf, output: &PathBuf, inputs: &Vec<PathBuf>) -> Result<(), Error> {
+    if inputs.len() == 0 {
+        return Ok(());
+    }
+    let contents = format!(
+        "{}: {}\n",
+        output.display(),
+        &inputs.iter().map(|i| format!(" {}", i.display())).collect::<String>(),
+    );
+    fs::write(depfile, contents)?;
+    Ok(())
 }
 
 fn run_tool() -> Result<(), Error> {
     let opt = opts::Opt::from_args();
     opt.validate()?;
+
     let tests_json = read_tests_json(&opt.input)?;
     let mut test_list = TestList { tests: vec![] };
+    let mut inputs: Vec<PathBuf> = vec![];
+
     for entry in tests_json {
         // Construct the base TestListEntry.
         let mut test_list_entry = to_test_list_entry(&entry.test);
-        let manifests = entry.test.package_manifests.unwrap_or(vec![]);
+        let pkg_manifests = entry.test.package_manifests.unwrap_or(vec![]);
 
         // Aggregate any tags from the component manifest of the test.
-        if entry.test.package_url.is_some() && manifests.len() > 0 {
+        if entry.test.package_url.is_some() && pkg_manifests.len() > 0 {
             let pkg_url = entry.test.package_url.unwrap();
-            match tags_from_manifest(&opt.build_dir, pkg_url.clone(), manifests[0].clone()) {
+            let pkg_manifest = pkg_manifests[0].clone();
+            inputs.push(pkg_manifest.clone().into());
+
+            let res = find_meta_far(&opt.build_dir, pkg_manifest.clone());
+            if res.is_err() {
+                println!(
+                    "error finding meta.far file in package manifest {}: {:?}",
+                    &pkg_manifest,
+                    res.unwrap_err()
+                );
+                continue;
+            }
+            let meta_far_path = res.unwrap();
+            inputs.push(meta_far_path.clone());
+
+            match tags_from_manifest(pkg_url.clone(), &meta_far_path) {
                 Ok(mut tags) => test_list_entry.tags.append(&mut tags),
                 Err(e) => {
                     println!("error processing manifest for package URL {}: {:?}", &pkg_url, e)
@@ -157,8 +185,11 @@ fn run_tool() -> Result<(), Error> {
         }
         test_list.tests.push(test_list_entry);
     }
-    let test_list_json = serde_json::to_string(&test_list)?;
-    fs::write(opt.output, test_list_json)?;
+    let test_list_json = serde_json::to_string_pretty(&test_list)?;
+    fs::write(&opt.output, test_list_json)?;
+    if let Some(depfile) = opt.depfile {
+        write_depfile(&depfile, &opt.output, &inputs)?;
+    }
     Ok(())
 }
 
@@ -226,8 +257,8 @@ mod tests {
         let mut facets = fdata::Dictionary::EMPTY;
         let mut tags = tags_from_facets(&facets).expect("failed get tags in tags_from_facets");
         let hermetic_tags = vec![
-            TestTag { key: "realm".to_string(), value: HERMETIC_TEST_TYPE.to_string() },
-            TestTag { key: "hermetic".to_string(), value: "true".to_string() },
+            TestTag { key: TEST_TYPE_TAG_KEY.to_string(), value: HERMETIC_TEST_TYPE.to_string() },
+            TestTag { key: HERMETIC_TAG_KEY.to_string(), value: "true".to_string() },
         ];
         assert_eq!(tags, hermetic_tags);
 
