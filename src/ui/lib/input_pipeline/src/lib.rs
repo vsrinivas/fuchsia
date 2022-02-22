@@ -32,7 +32,7 @@ pub mod shortcut_handler;
 pub mod text_settings_handler;
 pub mod touch_injector_handler;
 
-pub mod focus_listening;
+pub mod focus_listener;
 pub mod input_pipeline;
 
 pub use utils::CursorMessage;

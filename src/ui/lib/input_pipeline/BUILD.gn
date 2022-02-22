@@ -77,7 +77,7 @@ rustc_library("input_pipeline") {
     "src/factory_reset_handler.rs",
     "src/fake_input_device_binding.rs",
     "src/fake_input_handler.rs",
-    "src/focus_listening.rs",
+    "src/focus_listener.rs",
     "src/gfx_mouse_handler.rs",
     "src/gfx_touch_handler.rs",
     "src/ime_handler.rs",
