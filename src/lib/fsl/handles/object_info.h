@@ -9,6 +9,7 @@
 #include <zircon/syscalls/object.h>
 #include <zircon/types.h>
 
+#include <functional>
 #include <string>
 #include <utility>
 
