@@ -64,7 +64,7 @@ static_assert(IOFLAG_CLOEXEC == FD_CLOEXEC, "Unexpected fdio flags value");
 // runs.
 fdio_state_t __fdio_global_state = []() constexpr {
   return fdio_state_t{
-      .cwd_path = "/",
+      .cwd_path = fdio_internal::PathBuffer('/'),
   };
 }
 ();
@@ -205,12 +205,11 @@ zx::status<fdio_ptr> open_at_impl(int dirfd, const char* path, int flags, uint32
     return zx::error(ZX_ERR_BAD_HANDLE);
   }
 
-  char clean[PATH_MAX];
-  size_t outlen;
+  fdio_internal::PathBuffer clean;
   bool has_ending_slash;
-  zx_status_t status = cleanpath(path, clean, &outlen, &has_ending_slash);
-  if (status != ZX_OK) {
-    return zx::error(status);
+  bool cleaned = CleanPath(path, &clean, &has_ending_slash);
+  if (!cleaned) {
+    return zx::error(ZX_ERR_BAD_PATH);
   }
   // Emulate EISDIR behavior from
   // http://pubs.opengroup.org/onlinepubs/9699919799/functions/open.html
@@ -235,7 +234,7 @@ zx::status<fdio_ptr> open_at_impl(int dirfd, const char* path, int flags, uint32
   if (zx_flags & ZX_FS_FLAG_VNODE_REF_ONLY) {
     zx_flags &= kZxFsFlagsAllowedWithOPath;
   }
-  return iodir->open(clean, zx_flags, mode);
+  return iodir->open(clean.c_str(), zx_flags, mode);
 }
 
 // Open |path| from the |dirfd| directory, enforcing the POSIX EISDIR error condition. Specifically,
@@ -259,8 +258,7 @@ void update_cwd_path(const char* path) __TA_REQUIRES(fdio_cwd_lock) {
   if (path[0] == '/') {
     // it's "absolute", but we'll still parse it as relative (from /)
     // so that we normalize the path (resolving, ., .., //, etc)
-    fdio_cwd_path[0] = '/';
-    fdio_cwd_path[1] = 0;
+    fdio_cwd_path.Set("/");
     path++;
   }
 
@@ -285,13 +283,13 @@ void update_cwd_path(const char* path) __TA_REQUIRES(fdio_cwd_lock) {
     }
     if ((seglen == 2) && (path[0] == '.') && (path[1] == '.')) {
       // parent directory, remove the trailing path segment from cwd_path
-      char* x = strrchr(fdio_cwd_path, '/');
+      char* x = strrchr(fdio_cwd_path.data(), '/');
       if (x == nullptr) {
         // shouldn't ever happen
         goto wat;
       }
       // remove the current trailing path segment from cwd
-      if (x == fdio_cwd_path) {
+      if (x == fdio_cwd_path.data()) {
         // but never remove the first /
         fdio_cwd_path[1] = 0;
       } else {
@@ -300,22 +298,21 @@ void update_cwd_path(const char* path) __TA_REQUIRES(fdio_cwd_lock) {
       continue;
     }
     // regular path segment, append to cwd_path
-    size_t len = strlen(fdio_cwd_path);
+    size_t len = fdio_cwd_path.length();
     if ((len + seglen + 2) >= PATH_MAX) {
       // doesn't fit, shouldn't happen, but...
       goto wat;
     }
     if (len != 1) {
       // if len is 1, path is "/", so don't append a '/'
-      fdio_cwd_path[len++] = '/';
+      fdio_cwd_path.Append('/');
     }
-    memcpy(fdio_cwd_path + len, path, seglen);
-    fdio_cwd_path[len + seglen] = 0;
+    fdio_cwd_path.Append(path, seglen);
   }
   return;
 
 wat:
-  strcpy(fdio_cwd_path, "(unknown)");
+  fdio_cwd_path.Set("(unknown");
 }
 
 // Buffer used to store a single path component and its null terminator.
@@ -338,17 +335,16 @@ zx::status<fdio_ptr> opendir_containing_at(int dirfd, const char* path, NameBuff
     return zx::error(ZX_ERR_BAD_HANDLE);
   }
 
-  char clean[PATH_MAX];
-  size_t pathlen;
+  fdio_internal::PathBuffer clean;
   bool is_dir;
-  zx_status_t status = cleanpath(path, clean, &pathlen, &is_dir);
-  if (status != ZX_OK) {
-    return zx::error(status);
+  bool cleaned = fdio_internal::CleanPath(path, &clean, &is_dir);
+  if (!cleaned) {
+    return zx::error(ZX_ERR_BAD_PATH);
   }
 
   // Find the last '/'; copy everything after it.
   size_t i = 0;
-  for (i = pathlen - 1; i > 0; i--) {
+  for (i = clean.length() - 1; i > 0; i--) {
     if (clean[i] == '/') {
       clean[i] = 0;
       i++;
@@ -357,14 +353,13 @@ zx::status<fdio_ptr> opendir_containing_at(int dirfd, const char* path, NameBuff
   }
 
   // clean[i] is now the start of the name
-  size_t namelen = pathlen - i;
+  size_t namelen = clean.length() - i;
   if (namelen + (is_dir ? 1 : 0) > NAME_MAX) {
     return zx::error(ZX_ERR_BAD_PATH);
   }
 
   // Copy the trailing 'name' to out.
-  out->Append(clean + i, namelen);
-
+  out->Append(clean.data() + i, namelen);
   if (is_dir_out) {
     *is_dir_out = is_dir;
   } else if (is_dir) {
@@ -381,7 +376,7 @@ zx::status<fdio_ptr> opendir_containing_at(int dirfd, const char* path, NameBuff
     clean[1] = 0;
   }
 
-  return iodir->open(clean, fdio_flags_to_zxio(O_RDONLY | O_DIRECTORY), 0);
+  return iodir->open(clean.c_str(), fdio_flags_to_zxio(O_RDONLY | O_DIRECTORY), 0);
 }
 
 }  // namespace fdio_internal
@@ -475,7 +470,7 @@ extern "C" __EXPORT void __libc_extensions_init(uint32_t handle_count, zx_handle
   zx::status root = fdio_ns_open_root(fdio_root_ns);
   if (root.is_ok()) {
     ZX_ASSERT(fdio_root_handle.try_set(root.value()));
-    zx::status cwd = fdio_internal::open(fdio_cwd_path, O_RDONLY | O_DIRECTORY, 0);
+    zx::status cwd = fdio_internal::open(fdio_cwd_path.c_str(), O_RDONLY | O_DIRECTORY, 0);
     if (cwd.is_ok()) {
       ZX_ASSERT(fdio_cwd_handle.try_set(cwd.value()));
     } else {
@@ -1177,13 +1172,17 @@ int fstat(int fd, struct stat* s) {
   return STATUS(fdio_stat(io, s));
 }
 
-__EXPORT
-int fstatat(int dirfd, const char* fn, struct stat* s, int flags) {
-  zx::status io = fdio_internal::open_at(dirfd, fn, O_PATH, 0);
+int fstatat(int dirfd, std::string_view filename, struct stat* s, int flags) {
+  zx::status io = fdio_internal::open_at(dirfd, filename.data(), O_PATH, 0);
   if (io.is_error()) {
     return ERROR(io.status_value());
   }
   return STATUS(fdio_stat(io.value(), s));
+}
+
+__EXPORT
+int fstatat(int dirfd, const char* fn, struct stat* s, int flags) {
+  return fstatat(dirfd, std::string_view(fn), s, flags);
 }
 
 __EXPORT
@@ -1196,8 +1195,7 @@ __EXPORT
 char* realpath(const char* __restrict filename, char* __restrict resolved) {
   ssize_t r;
   struct stat st;
-  char tmp[PATH_MAX];
-  size_t outlen;
+  fdio_internal::PathBuffer tmp;
   bool is_dir;
 
   if (!filename) {
@@ -1208,38 +1206,38 @@ char* realpath(const char* __restrict filename, char* __restrict resolved) {
   if (filename[0] != '/') {
     // Convert 'filename' from a relative path to an absolute path.
     size_t file_len = strlen(filename);
-    char tmp2[PATH_MAX];
+    fdio_internal::PathBuffer tmp2;
     size_t cwd_len = 0;
     {
       fbl::AutoLock cwd_lock(&fdio_cwd_lock);
-      cwd_len = strlen(fdio_cwd_path);
+      cwd_len = fdio_cwd_path.length();
       if (cwd_len + 1 + file_len >= PATH_MAX) {
         errno = ENAMETOOLONG;
         return nullptr;
       }
-      memcpy(tmp2, fdio_cwd_path, cwd_len);
+      tmp2.Append(fdio_cwd_path);
     }
-    tmp2[cwd_len] = '/';
-    strcpy(tmp2 + cwd_len + 1, filename);
-    zx_status_t status = fdio_internal::cleanpath(tmp2, tmp, &outlen, &is_dir);
-    if (status != ZX_OK) {
+    tmp2.Append('/');
+    tmp2.Append(filename);
+    bool cleaned = fdio_internal::CleanPath(tmp2.data(), &tmp, &is_dir);
+    if (!cleaned) {
       errno = EINVAL;
       return nullptr;
     }
   } else {
     // Clean the provided absolute path
-    zx_status_t status = fdio_internal::cleanpath(filename, tmp, &outlen, &is_dir);
-    if (status != ZX_OK) {
+    bool cleaned = fdio_internal::CleanPath(filename, &tmp, &is_dir);
+    if (!cleaned) {
       errno = EINVAL;
       return nullptr;
     }
 
-    r = stat(tmp, &st);
+    r = fstatat(AT_FDCWD, tmp, &st, 0);
     if (r < 0) {
       return nullptr;
     }
   }
-  return resolved ? strcpy(resolved, tmp) : strdup(tmp);
+  return resolved ? strcpy(resolved, tmp.c_str()) : strdup(tmp.c_str());
 }
 
 static zx_status_t zx_utimens(const fdio_ptr& io, const std::timespec times[2], int flags) {
@@ -1405,9 +1403,9 @@ int faccessat(int dirfd, const char* filename, int amode, int flag) {
 
 __EXPORT
 char* getcwd(char* buf, size_t size) {
-  char tmp[PATH_MAX];
+  fdio_internal::PathBuffer tmp;
   if (buf == nullptr) {
-    buf = tmp;
+    buf = tmp.data();
     size = PATH_MAX;
   } else if (size == 0) {
     errno = EINVAL;
@@ -1417,17 +1415,17 @@ char* getcwd(char* buf, size_t size) {
   char* out = nullptr;
   {
     fbl::AutoLock lock(&fdio_cwd_lock);
-    size_t len = strlen(fdio_cwd_path) + 1;
+    size_t len = fdio_cwd_path.length() + 1;
     if (len < size) {
-      memcpy(buf, fdio_cwd_path, len);
+      memcpy(buf, fdio_cwd_path.data(), len);
       out = buf;
     } else {
       errno = ERANGE;
     }
   }
 
-  if (out == tmp) {
-    out = strdup(tmp);
+  if (out == tmp.data()) {
+    out = strdup(tmp.c_str());
   }
   return out;
 }
@@ -1449,39 +1447,38 @@ int chdir(const char* path) {
   return 0;
 }
 
-static zx_status_t resolve_path(const char* relative, char* out_resolved, size_t* out_length) {
+static bool resolve_path(const char* relative, fdio_internal::PathBuffer* out_resolved) {
   bool is_dir = false;
   if (relative[0] == '/') {
-    return fdio_internal::cleanpath(relative, out_resolved, out_length, &is_dir);
+    return fdio_internal::CleanPath(relative, out_resolved, &is_dir);
   }
 
-  char buffer[PATH_MAX] = {};
+  fdio_internal::PathBuffer buffer;
   {
     fbl::AutoLock cwd_lock(&fdio_cwd_lock);
-    strcpy(buffer, fdio_cwd_path);
+    buffer.Append(fdio_cwd_path);
   }
-  size_t cwd_length = strlen(buffer);
+  size_t cwd_length = buffer.length();
   size_t relative_length = strlen(relative);
 
   if (cwd_length + relative_length + 2 > PATH_MAX) {
-    return ZX_ERR_BAD_PATH;
+    return false;
   }
 
-  buffer[cwd_length] = '/';
-  memcpy(buffer + cwd_length + 1, relative, relative_length + 1);
-  return fdio_internal::cleanpath(buffer, out_resolved, out_length, &is_dir);
+  buffer.Append('/');
+  buffer.Append(relative, relative_length);
+  return fdio_internal::CleanPath(buffer.c_str(), out_resolved, &is_dir);
 }
 
 __EXPORT
 int chroot(const char* path) {
-  char root_path[PATH_MAX];
-  size_t root_path_length = 0u;
-  zx_status_t status = resolve_path(path, root_path, &root_path_length);
-  if (status != ZX_OK) {
-    return ERROR(status);
+  fdio_internal::PathBuffer root_path;
+  bool resolved = resolve_path(path, &root_path);
+  if (!resolved) {
+    return ERRNO(ENAMETOOLONG);
   }
 
-  zx::status io = fdio_internal::open(root_path, O_RDONLY | O_DIRECTORY, 0);
+  zx::status io = fdio_internal::open(root_path.c_str(), O_RDONLY | O_DIRECTORY, 0);
   if (io.is_error()) {
     return ERROR(io.status_value());
   }
@@ -1498,7 +1495,7 @@ int chroot(const char* path) {
     fbl::AutoLock cwd_lock(&fdio_cwd_lock);
     fbl::AutoLock lock(&fdio_lock);
 
-    status = fdio_ns_set_root(fdio_root_ns, io.value().get());
+    zx_status_t status = fdio_ns_set_root(fdio_root_ns, io.value().get());
     if (status != ZX_OK) {
       return ERROR(status);
     }
@@ -1509,13 +1506,12 @@ int chroot(const char* path) {
     // If the new root path is a prefix of the cwd path, then we can express the current cwd as a
     // path in the new root by trimming off the prefix. Otherwise, we no longer have a name for the
     // cwd.
-    if (root_path_length > 1) {
+    if (root_path.length() > 1) {
       std::string_view cwd_view(fdio_cwd_path);
-      if (cwd_view.find(root_path) == 0u && fdio_cwd_path[root_path_length] == '/') {
-        cwd_view.remove_prefix(root_path_length);
-        memmove(fdio_cwd_path, cwd_view.data(), cwd_view.length() + 1);
+      if (cwd_view.find(root_path) == 0u && fdio_cwd_path[root_path.length()] == '/') {
+        fdio_cwd_path.RemovePrefix(root_path.length());
       } else {
-        strcpy(fdio_cwd_path, "(unreachable)");
+        fdio_cwd_path.Set("(unreachable)");
       }
     }
   }

@@ -30,7 +30,13 @@ template <size_t N>
 class __OWNER(char) StringBuffer final {
  public:
   // Creates an empty string buffer.
-  StringBuffer() : length_(0U) { data_[0] = 0; }
+  constexpr StringBuffer() : length_(0U) { data_[0] = 0; }
+
+  // Creates a string buffer containing exactly one character and a null
+  // terminator.  This constructor is constinit in practice so that it can be
+  // used to initialize fdio's "cwd" path element without generating a dynamic
+  // initializer.
+  constexpr explicit StringBuffer(char c) : length_(1), data_{c, '\0'} { static_assert(N >= 1); }
 
   // Releases the string buffer.
   ~StringBuffer() = default;
@@ -59,7 +65,7 @@ class __OWNER(char) StringBuffer final {
   const char* cend() const { return data() + length(); }
 
   // Gets a reference to the character at the specified index.
-  // Position must be greater than or equal to 0 and less than |length()|.
+  // Position must be in the range [0, length()].
   char& operator[](size_t pos) { return data_[pos]; }
   const char& operator[](size_t pos) const { return data_[pos]; }
 
@@ -67,6 +73,15 @@ class __OWNER(char) StringBuffer final {
   void Clear() {
     length_ = 0U;
     data_[0] = 0;
+  }
+
+  // Clears existing data from the buffer and sets the buffer to the new value, plus a null
+  // terminator.
+  void Set(std::string_view data) {
+    ZX_DEBUG_ASSERT(data.size() < N);
+    length_ = data.length();
+    memcpy(data_, data.data(), data.length());
+    data_[length_] = '\0';
   }
 
   // Resizes the string buffer.
@@ -80,6 +95,14 @@ class __OWNER(char) StringBuffer final {
       memset(data_ + length_, ch, count - length_);
     length_ = count;
     data_[length_] = 0;
+  }
+
+  // Remove the first |count| characters from the string buffer.
+  void RemovePrefix(size_t count) {
+    ZX_DEBUG_ASSERT(count <= N);
+    length_ -= count;
+    memmove(data_, data_ + count, length_);
+    data_[length_] = '\0';
   }
 
   // Appends a single character.

@@ -5,17 +5,30 @@
 #ifndef LIB_FDIO_CLEANPATH_H_
 #define LIB_FDIO_CLEANPATH_H_
 
-#include <stddef.h>
 #include <zircon/types.h>
+
+#include <fbl/string_buffer.h>
 
 namespace fdio_internal {
 
-// cleanpath cleans an input path, placing the output
-// in out, which is a buffer of at least "PATH_MAX" bytes.
+// PATH_MAX is defined in POSIX as being inclusive of the null terminator
+// (unlike NAME_MAX and other constants which are exclusive). See the
+// "Rationale" section of
+// https://pubs.opengroup.org/onlinepubs/9699919799/basedefs/limits.h.html for
+// more background on this choice.  fbl::StringBuffer allocates space for a null
+// terminator in addition to the requested size.
+using PathBuffer = fbl::StringBuffer<PATH_MAX - 1>;
+
+// Cleans an input path, transforming it to out, according to the
+// rules defined by "Lexical File Names in Plan 9 or Getting Dot-Dot Right",
+// accessible at: https://9p.io/sys/doc/lexnames.html
 //
-// 'outlen' returns the length of the path placed in out, and 'is_dir'
-// is set to true if the returned path must be a directory.
-zx_status_t cleanpath(const char* in, char* out, size_t* outlen, bool* is_dir);
+// Code heavily inspired by Go's filepath.Clean function, from:
+// https://golang.org/src/path/filepath/path.go
+//
+// If the input cannot be parsed, returns false. Otherwise populates |out| with
+// a clean path and sets is_dir to 'true' if the path is a directory.
+bool CleanPath(const char* in, PathBuffer* out, bool* is_dir);
 
 }  // namespace fdio_internal
 

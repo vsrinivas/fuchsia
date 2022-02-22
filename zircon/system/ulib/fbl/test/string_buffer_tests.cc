@@ -25,6 +25,28 @@ void VAListHelper(Runnable runnable, ...) {
   va_end(ap);
 }
 
+TEST(StringBufferTest, Constructors) {
+  {
+    fbl::StringBuffer<0u> buf;
+    EXPECT_EQ(0, buf.length());
+    EXPECT_EQ('\0', buf[0]);
+  }
+
+  {
+    fbl::StringBuffer<1u> buf('.');
+    EXPECT_EQ(1, buf.length());
+    EXPECT_EQ('.', buf[0]);
+    EXPECT_EQ('\0', buf[1]);
+  }
+
+  {
+    fbl::StringBuffer<2u> buf('.');
+    EXPECT_EQ(1, buf.length());
+    EXPECT_EQ('.', buf[0]);
+    EXPECT_EQ('\0', buf[1]);
+  }
+}
+
 TEST(StringBufferTest, Capacity) {
   {
     fbl::StringBuffer<0u> buf;
@@ -196,6 +218,22 @@ TEST(StringBufferTest, Modify) {
   EXPECT_DATA_AND_LENGTH("yyyyef", str);
 }
 
+TEST(StringBufferTest, Set) {
+  fbl::StringBuffer<16u> str;
+
+  str.Append("foo");
+  EXPECT_STREQ("foo", str.data());
+  EXPECT_EQ(3, str.length());
+
+  str.Set("longer");
+  EXPECT_STREQ("longer", str.data());
+  EXPECT_EQ(6, str.length());
+
+  str.Set("short");
+  EXPECT_STREQ("short", str.data());
+  EXPECT_EQ(5, str.length());
+}
+
 TEST(StringBufferTest, Resize) {
   fbl::StringBuffer<16u> str;
 
@@ -222,6 +260,19 @@ TEST(StringBufferTest, Clear) {
   str.Append("abcdef");
 
   str.Clear();
+  EXPECT_STREQ("", str.data());
+  EXPECT_EQ(0u, str.length());
+}
+
+TEST(StringBufferTest, RemovePrefix) {
+  fbl::StringBuffer<16u> str;
+  str.Append("abcdef");
+
+  str.RemovePrefix(4);
+  EXPECT_STREQ("ef", str.data());
+  EXPECT_EQ(2u, str.length());
+
+  str.RemovePrefix(2);
   EXPECT_STREQ("", str.data());
   EXPECT_EQ(0u, str.length());
 }

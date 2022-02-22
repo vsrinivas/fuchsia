@@ -137,4 +137,5 @@ source_set("cleanpath") {
     "cleanpath.cc",
     "cleanpath.h",
   ]
+  deps = [ "//zircon/system/ulib/fbl" ]
 }

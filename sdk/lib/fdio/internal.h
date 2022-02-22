@@ -23,6 +23,9 @@
 
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
+#include <fbl/string_buffer.h>
+
+#include "sdk/lib/fdio/cleanpath.h"
 
 using fdio_ptr = fbl::RefPtr<fdio>;
 
@@ -375,7 +378,7 @@ using fdio_state_t = struct {
   fdio_slot cwd __TA_GUARDED(lock);
   std::array<fdio_slot, FDIO_MAX_FD> fdtab __TA_GUARDED(lock);
   fdio_ns_t* ns __TA_GUARDED(lock);
-  char cwd_path[PATH_MAX] __TA_GUARDED(cwd_lock);
+  fdio_internal::PathBuffer cwd_path __TA_GUARDED(cwd_lock);
 };
 
 extern fdio_state_t __fdio_global_state;

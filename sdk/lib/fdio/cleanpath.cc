@@ -16,7 +16,7 @@ namespace fdio_internal {
 // PATH_MAX bytes.
 #define CHECK_CAN_INCREMENT(i)         \
   if (unlikely((i) + 1 >= PATH_MAX)) { \
-    return ZX_ERR_BAD_PATH;            \
+    return false;                      \
   }
 
 // Cleans an input path, transforming it to out, according to the
@@ -26,26 +26,23 @@ namespace fdio_internal {
 // Code heavily inspired by Go's filepath.Clean function, from:
 // https://golang.org/src/path/filepath/path.go
 //
-// out is expected to be PATH_MAX bytes long.
 // Sets is_dir to 'true' if the path is a directory, and 'false' otherwise.
-zx_status_t cleanpath(const char* in, char* out, size_t* outlen, bool* is_dir) {
+bool CleanPath(const char* in, PathBuffer* out, bool* is_dir) {
   if (in[0] == 0) {
-    strcpy(out, ".");
-    *outlen = 1;
+    out->Set(".");
     *is_dir = true;
-    return ZX_OK;
+    return true;
   }
 
   bool rooted = (in[0] == '/');
-  size_t in_index = 0;   // Index of the next byte to read
-  size_t out_index = 0;  // Index of the next byte to write
+  size_t in_index = 0;  // Index of the next byte to read
 
   if (rooted) {
-    out[out_index++] = '/';
+    out->Append('/');
     in_index++;
     *is_dir = true;
   }
-  size_t dotdot = out_index;  // The output index at which '..' cannot be cleaned further.
+  size_t dotdot = out->length();  // The output index at which '..' cannot be cleaned further.
 
   while (in[in_index] != 0) {
     *is_dir = true;
@@ -60,51 +57,46 @@ zx_status_t cleanpath(const char* in, char* out, size_t* outlen, bool* is_dir) {
     } else if (in[in_index] == '.' && in[in_index + 1] == '.' && IS_SEPARATOR(in[in_index + 2])) {
       CHECK_CAN_INCREMENT(in_index + 1);
       in_index += 2;
-      if (out_index > dotdot) {
+      if (out->length() > dotdot) {
         // 3. Eliminate .. path elements (the parent directory) and the element that
         // precedes them.
-        out_index--;
-        while (out_index > dotdot && out[out_index] != '/') {
-          out_index--;
+        size_t last_elem = out->length() - 1;
+        while (last_elem > dotdot && (*out)[last_elem] != '/') {
+          last_elem--;
         }
+        out->Resize(last_elem);
       } else if (rooted) {
         // 4. Eliminate .. elements that begin a rooted path, that is, replace /.. by / at
         // the beginning of a path.
         continue;
       } else if (!rooted) {
-        if (out_index > 0) {
-          out[out_index++] = '/';
+        if (out->length() > 0) {
+          out->Append('/');
         }
         // 5. Leave intact .. elements that begin a non-rooted path.
-        out[out_index++] = '.';
-        out[out_index++] = '.';
-        dotdot = out_index;
+        out->Append(std::string_view(".."));
+        dotdot = out->length();
       }
     } else {
       *is_dir = false;
-      if ((rooted && out_index != 1) || (!rooted && out_index != 0)) {
+      if ((rooted && out->length() != 1) || (!rooted && out->length() != 0)) {
         // Add '/' before normal path component, for non-root components.
-        out[out_index++] = '/';
+        out->Append('/');
       }
 
       while (!IS_SEPARATOR(in[in_index])) {
         CHECK_CAN_INCREMENT(in_index);
-        out[out_index++] = in[in_index++];
+        out->Append(in[in_index++]);
       }
     }
   }
 
-  if (out_index == 0) {
-    strcpy(out, ".");
-    *outlen = 1;
+  if (out->length() == 0) {
+    out->Append('.');
     *is_dir = true;
-    return ZX_OK;
   }
 
-  // Append null character
-  *outlen = out_index;
-  out[out_index++] = 0;
-  return ZX_OK;
+  return true;
 }
 
 }  // namespace fdio_internal

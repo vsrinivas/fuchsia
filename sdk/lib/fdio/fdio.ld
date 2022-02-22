@@ -1,6 +1,5 @@
 {
 	global:
-		__fdio_cleanpath;
 		__libc_extensions_fini;
 		__libc_extensions_init;
 		_fd_open_max;

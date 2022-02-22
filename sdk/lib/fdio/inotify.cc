@@ -196,12 +196,11 @@ int inotify_add_watch(int fd, const char* pathname, uint32_t mask) {
   }
 
   // canonicalize path and clean it on client-side.
-  char buffer[PATH_MAX];
-  size_t outlen;
+  fdio_internal::PathBuffer buffer;
   bool has_ending_slash;
-  zx_status_t status = fdio_internal::cleanpath(pathname, buffer, &outlen, &has_ending_slash);
-  if (status != ZX_OK) {
-    return STATUS(status);
+  bool cleaned = fdio_internal::CleanPath(pathname, &buffer, &has_ending_slash);
+  if (!cleaned) {
+    return ERRNO(ENAMETOOLONG);
   }
   std::string cleanpath(buffer);
   // TODO: Only include events which we will support initially.
@@ -232,7 +231,8 @@ int inotify_add_watch(int fd, const char* pathname, uint32_t mask) {
       std::make_unique<FdioInotifyWd>(mask, watch_descriptor_to_use);
 
   zx::socket dup_server_socket_per_filter;
-  status = inotify->server.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup_server_socket_per_filter);
+  zx_status_t status =
+      inotify->server.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup_server_socket_per_filter);
   if (status != ZX_OK) {
     return ERROR(status);
   }

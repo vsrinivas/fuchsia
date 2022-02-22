@@ -25,7 +25,7 @@ zx_status_t fdio_service_connect_at(zx_handle_t dir, const char* path, zx_handle
 }
 
 __EXPORT
-zx_status_t fdio_service_connect_by_name(const char name[], zx_handle_t request) {
+zx_status_t fdio_service_connect_by_name(const char* name, zx_handle_t request) {
   static zx::channel service_root;
 
   {
