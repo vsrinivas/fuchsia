@@ -12,9 +12,12 @@ use {
     fidl_fuchsia_hardware_bluetooth::{EmulatorControllerProxy, EmulatorProxy},
     fidl_fuchsia_io::{self as fio, DirectoryProxy},
     fuchsia_async::{self as fasync, DurationExt, TimeoutExt},
-    fuchsia_bluetooth::{constants::HOST_DEVICE_DIR, util::open_rdwr},
+    fuchsia_bluetooth::{
+        constants::{integration_timeout_duration as watch_timeout, HOST_DEVICE_DIR},
+        util::open_rdwr,
+    },
     fuchsia_component_test::ScopedInstance,
-    fuchsia_zircon::{self as zx, DurationNum, HandleBased},
+    fuchsia_zircon::{self as zx, HandleBased},
     fuchsia_zircon_status as zx_status,
     futures::TryFutureExt,
     io_util,
@@ -24,10 +27,6 @@ use {
         path::{Path, PathBuf},
     },
 };
-
-fn watch_timeout() -> zx::Duration {
-    zx::Duration::from_seconds(10)
-}
 
 pub mod types;
 
@@ -189,7 +188,7 @@ impl TestDevice {
         let name = controller
             .create()
             .map_err(Error::from)
-            .on_timeout(10.seconds().after_now(), || {
+            .on_timeout(watch_timeout().after_now(), || {
                 Err(format_err!("timed out waiting for emulator to create test device"))
             })
             .await?

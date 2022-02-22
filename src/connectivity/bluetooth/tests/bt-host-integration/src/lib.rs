@@ -32,7 +32,6 @@ use {
         host,
         types::{Address, HostInfo, PeerId},
     },
-    fuchsia_zircon as zx,
     hci_emulator_client::Emulator,
     io_util::directory,
     std::{
@@ -68,7 +67,7 @@ async fn test_lifecycle(_: ()) -> Result<(), Error> {
     )
     .await?;
     let mut watcher =
-        DeviceWatcher::new(HOST_DEVICE_DIR, dir_to_watch, zx::Duration::from_seconds(10)).await?;
+        DeviceWatcher::new(HOST_DEVICE_DIR, dir_to_watch, integration_timeout_duration()).await?;
     let _ = emulator.publish(settings).await?;
     let bthost = watcher.watch_new(&hci_topo, WatchFilter::AddedOnly).await?;
 
