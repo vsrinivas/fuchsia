@@ -9,9 +9,17 @@ config("codec_runner_vaapi_include_config") {
 }
 
 source_set("codec_runner_vaapi") {
-  sources = [ "vaapi_utils.cc" ]
+  sources = [
+    "buffer_pool.cc",
+    "codec_adapter_vaapi_decoder.cc",
+    "vaapi_utils.cc",
+  ]
 
-  public = [ "vaapi_utils.h" ]
+  public = [
+    "buffer_pool.h",
+    "codec_adapter_vaapi_decoder.h",
+    "vaapi_utils.h",
+  ]
 
   public_configs = [ ":codec_runner_vaapi_include_config" ]
 
@@ -23,6 +31,7 @@ source_set("codec_runner_vaapi") {
     "//src/lib/fxl",
     "//src/media/lib/codec_impl",
     "//src/media/lib/mpsc_queue",
+    "//src/media/lib/video_utils/h264:h264_parser",
     "//third_party/intel/libva/fuchsia:headers",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",

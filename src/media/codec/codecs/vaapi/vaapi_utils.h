@@ -10,6 +10,7 @@
 #include <va/va.h>
 #include <va/va_magma.h>
 
+#include "media/gpu/h264_decoder.h"
 #include "src/lib/fxl/macros.h"
 
 class VADisplayWrapper {

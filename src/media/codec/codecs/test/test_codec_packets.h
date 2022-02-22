@@ -14,6 +14,9 @@
 
 #include <gtest/gtest.h>
 
+#include "src/media/lib/codec_impl/include/lib/media/codec_impl/codec_buffer.h"
+#include "src/media/lib/codec_impl/include/lib/media/codec_impl/codec_packet.h"
+
 constexpr uint32_t kBufferLifetimeOrdinal = 1;
 
 class CodecPacketForTest : public CodecPacket {
