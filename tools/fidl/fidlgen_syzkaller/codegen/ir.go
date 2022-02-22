@@ -249,7 +249,7 @@ func (c *compiler) compileIdentifier(id fidlgen.Identifier, ext string) string {
 }
 
 func (c *compiler) compileCompoundIdentifier(eci fidlgen.EncodedCompoundIdentifier, ext string) string {
-	val := fidlgen.ParseCompoundIdentifier(eci)
+	val := eci.Parse()
 	strs := []string{}
 	strs = append(strs, formatLibrary(val.Library, "_"))
 	strs = append(strs, changeIfReserved(val.Name, ext))
@@ -629,7 +629,7 @@ func (c *compiler) compileProtocol(val fidlgen.Protocol) Protocol {
 func compile(fidlData fidlgen.Root) Root {
 	fidlData = fidlData.ForBindings("syzkaller")
 	root := Root{}
-	libraryName := fidlgen.ParseLibraryName(fidlData.Name)
+	libraryName := fidlData.Name.Parse()
 	c := compiler{
 		decls:              fidlData.DeclsWithDependencies(),
 		structs:            make(StructMap),

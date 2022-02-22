@@ -17,7 +17,7 @@ func (n name) Equal(o name) bool {
 
 // Helper to parse compound identifiers
 func parseIdent(s string) fidlgen.CompoundIdentifier {
-	return fidlgen.EncodedCompoundIdentifier(s).Parts()
+	return fidlgen.EncodedCompoundIdentifier(s).Parse()
 }
 
 func TestChangeIfReserved(t *testing.T) {

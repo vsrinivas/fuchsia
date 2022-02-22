@@ -85,34 +85,34 @@ namespace {{ . }} {
 
 {{- define "EnumWriterDecls" }}
     {{- range .Enums }}
-std::ostream& operator<<(std::ostream& os, const {{ .Name.Parts.Name }}& value);
+std::ostream& operator<<(std::ostream& os, const {{ .Name.Parse.Name }}& value);
     {{- end }}
 {{- end }}
 
 {{- define "BitWriterDecls" }}
     {{- range .Bits }}
-std::ostream& operator<<(std::ostream& os, const {{ .Name.Parts.Name }}& value);
+std::ostream& operator<<(std::ostream& os, const {{ .Name.Parse.Name }}& value);
     {{- end }}
 {{- end }}
 
 
 {{- define "StructWriterDecls" }}
     {{- range .Structs }}
-std::ostream& operator<<(std::ostream& os, const {{ .Name.Parts.Name }}& value);
+std::ostream& operator<<(std::ostream& os, const {{ .Name.Parse.Name }}& value);
     {{- end }}
 {{- end }}
 
 
 {{- define "TableWriterDecls" }}
     {{- range .Tables }}
-std::ostream& operator<<(std::ostream& os, const {{ .Name.Parts.Name }}& value);
+std::ostream& operator<<(std::ostream& os, const {{ .Name.Parse.Name }}& value);
     {{- end }}
 {{- end }}
 
 
 {{- define "UnionWriterDecls" }}
     {{- range .Unions }}
-std::ostream& operator<<(std::ostream& os, const {{ .Name.Parts.Name }}& value);
+std::ostream& operator<<(std::ostream& os, const {{ .Name.Parse.Name }}& value);
     {{- end }}
 {{- end }}
 
@@ -139,8 +139,8 @@ namespace {{ . }} {
 
 {{- define "EnumWriterDefs" }}
     {{- range .Enums }}
-        {{- $type_name := .Name.Parts.Name }}
-std::ostream& operator<<(std::ostream& os, const {{ .Name.Parts.Name }}& value) {
+        {{- $type_name := .Name.Parse.Name }}
+std::ostream& operator<<(std::ostream& os, const {{ .Name.Parse.Name }}& value) {
   using fidl::operator<<;
   switch (value) {
         {{- range .Members }}
@@ -159,8 +159,8 @@ std::ostream& operator<<(std::ostream& os, const {{ .Name.Parts.Name }}& value) 
 
 {{- define "BitWriterDefs" }}
     {{- range .Bits }}
-        {{- $type_name := .Name.Parts.Name }}
-std::ostream& operator<<(std::ostream& os, const {{ .Name.Parts.Name }}& value) {
+        {{- $type_name := .Name.Parse.Name }}
+std::ostream& operator<<(std::ostream& os, const {{ .Name.Parse.Name }}& value) {
   using fidl::operator<<;
   bool is_first = true;
         {{- range .Members }}
@@ -186,7 +186,7 @@ std::ostream& operator<<(std::ostream& os, const {{ .Name.Parts.Name }}& value) 
 {{- define "StructWriterDefs" }}
     {{- range .Structs }}
 
-std::ostream& operator<<(std::ostream& os, const {{ .Name.Parts.Name }}& value) {
+std::ostream& operator<<(std::ostream& os, const {{ .Name.Parse.Name }}& value) {
   using fidl::operator<<;
   os << ::fostr::Indent;
         {{- range .Members }}
@@ -209,7 +209,7 @@ std::ostream& operator<<(std::ostream& os, const {{ .Name.Parts.Name }}& value) 
 {{- define "TableWriterDefs" }}
     {{- range .Tables }}
 
-std::ostream& operator<<(std::ostream& os, const {{ .Name.Parts.Name }}& value) {
+std::ostream& operator<<(std::ostream& os, const {{ .Name.Parse.Name }}& value) {
   using fidl::operator<<;
   if (value.IsEmpty())
     return os << "<empty table>";
@@ -239,10 +239,10 @@ std::ostream& operator<<(std::ostream& os, const {{ .Name.Parts.Name }}& value) 
 {{- define "UnionWriterDefs" }}
     {{- range .Unions }}
 
-std::ostream& operator<<(std::ostream& os, const {{ .Name.Parts.Name }}& value) {
+std::ostream& operator<<(std::ostream& os, const {{ .Name.Parse.Name }}& value) {
   using fidl::operator<<;
   switch (value.Ordinal()) {
-        {{- $type_name := .Name.Parts.Name }}
+        {{- $type_name := .Name.Parse.Name }}
         {{- range .Members }}
           {{- if not .Reserved }}
     case {{ $type_name }}::Tag::k{{ toUpperCamelCase .Name }}:

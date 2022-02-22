@@ -514,19 +514,19 @@ func (c *compiler) compileCompoundIdentifier(val fidlgen.CompoundIdentifier) str
 }
 
 func (c *compiler) compileCamelCompoundIdentifier(eci fidlgen.EncodedCompoundIdentifier) string {
-	val := fidlgen.ParseCompoundIdentifier(eci)
+	val := eci.Parse()
 	val.Name = fidlgen.Identifier(compileCamelIdentifier(val.Name))
 	return c.compileCompoundIdentifier(val)
 }
 
 func (c *compiler) compileSnakeCompoundIdentifier(eci fidlgen.EncodedCompoundIdentifier) string {
-	val := fidlgen.ParseCompoundIdentifier(eci)
+	val := eci.Parse()
 	val.Name = fidlgen.Identifier(compileSnakeIdentifier(val.Name))
 	return c.compileCompoundIdentifier(val)
 }
 
 func (c *compiler) compileScreamingSnakeCompoundIdentifier(eci fidlgen.EncodedCompoundIdentifier) string {
-	val := fidlgen.ParseCompoundIdentifier(eci)
+	val := eci.Parse()
 	val.Name = fidlgen.Identifier(compileScreamingSnakeIdentifier(val.Name))
 	return c.compileCompoundIdentifier(val)
 }
@@ -554,7 +554,7 @@ func compileLiteral(val fidlgen.Literal, typ fidlgen.Type) string {
 }
 
 func (c *compiler) identifierConstantDeclType(eci EncodedCompoundIdentifier) fidlgen.DeclType {
-	memberless := fidlgen.ParseCompoundIdentifier(eci)
+	memberless := eci.Parse()
 	memberless.Member = ""
 	declInfo, ok := c.decls[memberless.Encode()]
 	if !ok {
@@ -567,7 +567,7 @@ func (c *compiler) compileConstant(val fidlgen.Constant, typ fidlgen.Type) strin
 	switch val.Kind {
 	case fidlgen.IdentifierConstant:
 		declType := c.identifierConstantDeclType(val.Identifier)
-		parts := fidlgen.ParseCompoundIdentifier(val.Identifier)
+		parts := val.Identifier.Parse()
 		switch declType {
 		case fidlgen.ConstDeclType:
 			parts.Name = fidlgen.Identifier(compileScreamingSnakeIdentifier(parts.Name))
@@ -1027,7 +1027,7 @@ func (c *compiler) populateFullStructMaskForType(mask []byte, typ *fidlgen.Type,
 			c.populateFullStructMaskForType(mask[i*elemByteSize:(i+1)*elemByteSize], typ.ElementType, flatten, getTypeShape, getFieldShape)
 		}
 	case fidlgen.IdentifierType:
-		if c.inExternalLibrary(fidlgen.ParseCompoundIdentifier(typ.Identifier)) {
+		if c.inExternalLibrary(typ.Identifier.Parse()) {
 			// This behavior is matched by computeUseFullStructCopy.
 			return
 		}
@@ -1128,7 +1128,7 @@ func (c *compiler) computeUseFidlStructCopy(typ *fidlgen.Type) bool {
 		}
 		return true
 	case fidlgen.IdentifierType:
-		if c.inExternalLibrary(fidlgen.ParseCompoundIdentifier(typ.Identifier)) {
+		if c.inExternalLibrary(typ.Identifier.Parse()) {
 			return false
 		}
 		declType := c.decls[typ.Identifier].Type
@@ -1393,7 +1393,7 @@ func (dc *derivesCompiler) fillDerivesForECI(eci EncodedCompoundIdentifier) deri
 	// derive the minimal set of traits, plus Clone for value types (not having
 	// Clone is especially annoying, so we put resourceness of external types
 	// into the IR as a stopgap solution).
-	if dc.inExternalLibrary(fidlgen.ParseCompoundIdentifier(eci)) {
+	if dc.inExternalLibrary(eci.Parse()) {
 		switch declInfo.Type {
 		case fidlgen.StructDeclType, fidlgen.TableDeclType, fidlgen.UnionDeclType:
 			if declInfo.IsValueType() {
@@ -1584,7 +1584,7 @@ func (dc *derivesCompiler) fillDerivesForType(ogType fidlgen.Type) derives {
 func Compile(r fidlgen.Root) Root {
 	r = r.ForBindings("rust")
 	root := Root{}
-	thisLibParsed := fidlgen.ParseLibraryName(r.Name)
+	thisLibParsed := r.Name.Parse()
 	c := compiler{
 		decls:                  r.DeclsWithDependencies(),
 		library:                thisLibParsed,

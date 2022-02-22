@@ -72,21 +72,21 @@ struct WrapEnum {
 
 {{- define "EnumWriterDecls" }}
     {{- range .Enums }}
-std::ostream& operator<<(std::ostream& os, const WrapEnum<{{ .Name.Parts.Name }}>& value);
+std::ostream& operator<<(std::ostream& os, const WrapEnum<{{ .Name.Parse.Name }}>& value);
     {{- end }}
 {{- end }}
 
 
 {{- define "StructWriterDecls" }}
     {{- range .Structs }}
-std::ostream& operator<<(std::ostream& os, const {{ .Name.Parts.Name }}& value);
+std::ostream& operator<<(std::ostream& os, const {{ .Name.Parse.Name }}& value);
     {{- end }}
 {{- end }}
 
 
 {{- define "UnionWriterDecls" }}
     {{- range .Unions }}
-std::ostream& operator<<(std::ostream& os, const {{ .Name.Parts.Name }}& value);
+std::ostream& operator<<(std::ostream& os, const {{ .Name.Parse.Name }}& value);
     {{- end }}
 {{- end }}
 
@@ -117,8 +117,8 @@ std::ostream& operator<<(std::ostream& os, const std::unique_ptr<T>& value) {
 
 {{- define "EnumWriterDefs" }}
     {{- range .Enums }}
-        {{- $type_name := .Name.Parts.Name }}
-std::ostream& operator<<(std::ostream& os, const WrapEnum<{{ .Name.Parts.Name }}>& value) {
+        {{- $type_name := .Name.Parse.Name }}
+std::ostream& operator<<(std::ostream& os, const WrapEnum<{{ .Name.Parse.Name }}>& value) {
   switch (value.actual_) {
         {{- range .Members }}
     case {{ $type_name }}::{{ .Name }}:
@@ -136,7 +136,7 @@ std::ostream& operator<<(std::ostream& os, const WrapEnum<{{ .Name.Parts.Name }}
 {{- define "StructWriterDefs" }}
     {{- range .Structs }}
 
-std::ostream& operator<<(std::ostream& os, const {{ .Name.Parts.Name }}& value) {
+std::ostream& operator<<(std::ostream& os, const {{ .Name.Parse.Name }}& value) {
   os << fostr::Indent;
         {{- range .Members }}
             {{- if eq .Type.Kind "identifier" }}
@@ -158,9 +158,9 @@ std::ostream& operator<<(std::ostream& os, const {{ .Name.Parts.Name }}& value) 
 {{- define "UnionWriterDefs" }}
     {{- range .Unions }}
 
-std::ostream& operator<<(std::ostream& os, const {{ .Name.Parts.Name }}& value) {
+std::ostream& operator<<(std::ostream& os, const {{ .Name.Parse.Name }}& value) {
   switch (value.Which()) {
-        {{- $type_name := .Name.Parts.Name }}
+        {{- $type_name := .Name.Parse.Name }}
         {{- range .Members }}
     case {{ $type_name }}::Tag::k{{ toUpperCamelCase .Name }}:
             {{- if eq .Type.Kind "identifier" }}

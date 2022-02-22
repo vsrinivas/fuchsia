@@ -626,7 +626,7 @@ func (c *compiler) compileLiteral(val fidlgen.Literal) string {
 func (c *compiler) compileConstant(val fidlgen.Constant, t *Type) string {
 	switch val.Kind {
 	case fidlgen.IdentifierConstant:
-		return c.compileConstantIdentifier(fidlgen.ParseCompoundIdentifier(val.Identifier), constantContext)
+		return c.compileConstantIdentifier(val.Identifier.Parse(), constantContext)
 	case fidlgen.LiteralConstant:
 		return c.compileLiteral(val.Literal)
 	case fidlgen.BinaryOperator:
@@ -724,7 +724,7 @@ func (c *compiler) compileType(val fidlgen.Type) Type {
 			r.typeExpr = baseType
 		}
 	case fidlgen.RequestType:
-		compound := fidlgen.ParseCompoundIdentifier(val.RequestSubtype)
+		compound := val.RequestSubtype.Parse()
 		t := c.compileUpperCamelCompoundIdentifier(compound, "", declarationContext)
 		r.Decl = fmt.Sprintf("$fidl.InterfaceRequest<%s>", t)
 		if c.inExternalLibrary(compound) {
@@ -742,7 +742,7 @@ func (c *compiler) compileType(val fidlgen.Type) Type {
 		r.typedDataDecl = typedDataDecl[val.PrimitiveSubtype]
 		r.typeExpr = typeExprForPrimitiveSubtype(val.PrimitiveSubtype)
 	case fidlgen.IdentifierType:
-		compound := fidlgen.ParseCompoundIdentifier(val.Identifier)
+		compound := val.Identifier.Parse()
 		t := c.compileUpperCamelCompoundIdentifier(compound, "", declarationContext)
 		declInfo, ok := c.decls[val.Identifier]
 		if !ok {
@@ -772,13 +772,13 @@ func (c *compiler) compileType(val fidlgen.Type) Type {
 			if val.Nullable {
 				switch r.declType {
 				case fidlgen.UnionDeclType:
-					r.typeExpr = c.optTypeSymbolForCompoundIdentifier(fidlgen.ParseCompoundIdentifier(val.Identifier))
+					r.typeExpr = c.optTypeSymbolForCompoundIdentifier(val.Identifier.Parse())
 				default:
 					r.typeExpr = fmt.Sprintf("$fidl.PointerType<%s>(element: %s)",
-						t, c.typeSymbolForCompoundIdentifier(fidlgen.ParseCompoundIdentifier(val.Identifier)))
+						t, c.typeSymbolForCompoundIdentifier(val.Identifier.Parse()))
 				}
 			} else {
-				r.typeExpr = c.typeSymbolForCompoundIdentifier(fidlgen.ParseCompoundIdentifier(val.Identifier))
+				r.typeExpr = c.typeSymbolForCompoundIdentifier(val.Identifier.Parse())
 			}
 		case fidlgen.ProtocolDeclType:
 			r.Decl = fmt.Sprintf("$fidl.InterfaceHandle<%s>", t)
@@ -814,7 +814,7 @@ func (c *compiler) compileConst(val fidlgen.Const) Const {
 	t := c.compileType(val.Type)
 	r := Const{
 		Type:       t,
-		Name:       c.compileLowerCamelCompoundIdentifier(fidlgen.ParseCompoundIdentifier(val.Name), "", constantContext),
+		Name:       c.compileLowerCamelCompoundIdentifier(val.Name.Parse(), "", constantContext),
 		Value:      c.compileConstant(val.Value, &t),
 		Documented: docString(val),
 	}
@@ -830,7 +830,7 @@ func (c *compiler) membersAsMapToNull(members []fidlgen.EnumMember) string {
 }
 
 func (c *compiler) compileEnum(val fidlgen.Enum) Enum {
-	ci := fidlgen.ParseCompoundIdentifier(val.Name)
+	ci := val.Name.Parse()
 	n := c.compileUpperCamelCompoundIdentifier(ci, "", declarationContext)
 	e := Enum{
 		Enum:       val,
@@ -852,7 +852,7 @@ func (c *compiler) compileEnum(val fidlgen.Enum) Enum {
 }
 
 func (c *compiler) compileBits(val fidlgen.Bits) Bits {
-	ci := fidlgen.ParseCompoundIdentifier(val.Name)
+	ci := val.Name.Parse()
 	n := c.compileUpperCamelCompoundIdentifier(ci, "", declarationContext)
 	if val.Type.Kind != fidlgen.PrimitiveType {
 		panic("unexpected, only primitives are allowed for bits declarations")
@@ -908,8 +908,8 @@ func (c *compiler) compileMethodResponse(method fidlgen.Method) MethodResponse {
 			WireParameters:    c.compileParameterArray(method.ResponsePayload),
 			MethodParameters:  parameters,
 			HasError:          true,
-			ResultTypeName:    c.compileUpperCamelCompoundIdentifier(fidlgen.ParseCompoundIdentifier(method.ResultType.Identifier), "", declarationContext),
-			ResultTypeTagName: c.compileUpperCamelCompoundIdentifier(fidlgen.ParseCompoundIdentifier(method.ResultType.Identifier), "Tag", declarationContext),
+			ResultTypeName:    c.compileUpperCamelCompoundIdentifier(method.ResultType.Identifier.Parse(), "", declarationContext),
+			ResultTypeTagName: c.compileUpperCamelCompoundIdentifier(method.ResultType.Identifier.Parse(), "Tag", declarationContext),
 			ValueType:         c.compileType(*method.ValueType),
 			ErrorType:         c.compileType(*method.ErrorType),
 		}
@@ -972,7 +972,7 @@ func (c *compiler) compileMethod(val fidlgen.Method, protocol Protocol, fidlProt
 }
 
 func (c *compiler) compileProtocol(val fidlgen.Protocol) Protocol {
-	ci := fidlgen.ParseCompoundIdentifier(val.Name)
+	ci := val.Name.Parse()
 	r := Protocol{
 		val.Attributes,
 		c.compileUpperCamelCompoundIdentifier(ci, "", declarationContext),
@@ -1019,7 +1019,7 @@ func (c *compiler) compileStructMember(val fidlgen.StructMember) StructMember {
 }
 
 func (c *compiler) compileStruct(val fidlgen.Struct) Struct {
-	ci := fidlgen.ParseCompoundIdentifier(val.Name)
+	ci := val.Name.Parse()
 	name := c.compileUpperCamelCompoundIdentifier(ci, "", declarationContext)
 	r := Struct{
 		Identifier: val.Name,
@@ -1099,7 +1099,7 @@ func (c *compiler) compileTableMember(val fidlgen.TableMember) TableMember {
 }
 
 func (c *compiler) compileTable(val fidlgen.Table) Table {
-	ci := fidlgen.ParseCompoundIdentifier(val.Name)
+	ci := val.Name.Parse()
 	r := Table{
 		Table:      val,
 		Name:       c.compileUpperCamelCompoundIdentifier(ci, "", declarationContext),
@@ -1137,7 +1137,7 @@ func (c *compiler) compileUnion(val fidlgen.Union) Union {
 		})
 	}
 
-	ci := fidlgen.ParseCompoundIdentifier(val.Name)
+	ci := val.Name.Parse()
 	r := Union{
 		Union:         val,
 		Name:          c.compileUpperCamelCompoundIdentifier(ci, "", declarationContext),
@@ -1168,7 +1168,7 @@ func Compile(r fidlgen.Root) Root {
 	r = r.ForBindings("dart")
 	c := compiler{
 		decls:              r.DeclsWithDependencies(),
-		library:            fidlgen.ParseLibraryName(r.Name),
+		library:            r.Name.Parse(),
 		typesRoot:          r,
 		messageBodyStructs: map[fidlgen.EncodedCompoundIdentifier]fidlgen.Struct{},
 	}
@@ -1229,7 +1229,7 @@ func Compile(r fidlgen.Root) Root {
 			// We don't need to import our own package.
 			continue
 		}
-		library := fidlgen.ParseLibraryName(l.Name)
+		library := l.Name.Parse()
 		c.Root.Imports = append(c.Root.Imports, Import{
 			LocalName: libraryPrefix(library),
 			AsyncURL:  fmt.Sprintf("package:fidl_%s/fidl_async.dart", formatLibraryName(library)),

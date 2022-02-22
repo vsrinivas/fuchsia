@@ -300,7 +300,7 @@ namespace {{ . }} {
 
 {{/* Produces interface declarations for a C++ binding include file from a types.Interface. */}}
 {{- define "InterfaceIncludeDecls" }}
-    {{- $name := .Name.Parts.Name -}}
+    {{- $name := .Name.Parse.Name -}}
 class {{ $name }}Impl {
  public:
   {{ $name }}Impl(sys::ComponentContext* context);

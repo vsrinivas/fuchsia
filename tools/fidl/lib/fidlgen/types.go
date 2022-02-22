@@ -89,8 +89,17 @@ func (ci CompoundIdentifier) Encode() EncodedCompoundIdentifier {
 	return ci.EncodeDecl()
 }
 
-func (eli EncodedLibraryIdentifier) Parts() LibraryIdentifier {
-	return ParseLibraryName(eli)
+func (eli EncodedLibraryIdentifier) Parts() []string {
+	return strings.Split(string(eli), ".")
+}
+
+func (eli EncodedLibraryIdentifier) Parse() LibraryIdentifier {
+	parts := eli.Parts()
+	idents := make([]Identifier, len(parts))
+	for i, part := range parts {
+		idents[i] = Identifier(part)
+	}
+	return LibraryIdentifier(idents)
 }
 
 func (eli EncodedLibraryIdentifier) PartsReversed() []string {
@@ -103,21 +112,20 @@ func (eli EncodedLibraryIdentifier) PartsReversed() []string {
 	return partsReversed
 }
 
-func (eci EncodedCompoundIdentifier) Parts() CompoundIdentifier {
-	return ParseCompoundIdentifier(eci)
+func (eci EncodedCompoundIdentifier) Parts() []string {
+	return strings.SplitN(string(eci), "/", 2)
 }
 
 func (eci EncodedCompoundIdentifier) LibraryName() EncodedLibraryIdentifier {
-	parts := strings.SplitN(string(eci), "/", 2)
 	raw_library := ""
-	if len(parts) == 2 {
+	if parts := eci.Parts(); len(parts) == 2 {
 		raw_library = parts[0]
 	}
 	return EncodedLibraryIdentifier(raw_library)
 }
 
 func (eci EncodedCompoundIdentifier) DeclName() EncodedCompoundIdentifier {
-	ci := ParseCompoundIdentifier(eci)
+	ci := eci.Parse()
 	parts := []string{}
 	for _, l := range ci.Library {
 		parts = append(parts, string(l))
@@ -126,24 +134,15 @@ func (eci EncodedCompoundIdentifier) DeclName() EncodedCompoundIdentifier {
 		strings.Join(parts, "."), ci.Name))
 }
 
-func ParseLibraryName(eli EncodedLibraryIdentifier) LibraryIdentifier {
-	raw_parts := strings.Split(string(eli), ".")
-	parts := make([]Identifier, len(raw_parts))
-	for i, raw_part := range raw_parts {
-		parts[i] = Identifier(raw_part)
-	}
-	return LibraryIdentifier(parts)
-}
-
-func ParseCompoundIdentifier(eci EncodedCompoundIdentifier) CompoundIdentifier {
-	parts := strings.SplitN(string(eci), "/", 2)
+func (eci EncodedCompoundIdentifier) Parse() CompoundIdentifier {
+	parts := eci.Parts()
 	raw_library := ""
 	raw_name := parts[0]
 	if len(parts) == 2 {
 		raw_library = parts[0]
 		raw_name = parts[1]
 	}
-	library := ParseLibraryName(EncodedLibraryIdentifier(raw_library))
+	library := EncodedLibraryIdentifier(raw_library).Parse()
 	name_parts := strings.SplitN(raw_name, ".", 2)
 	name := Identifier(name_parts[0])
 	member := Identifier("")
@@ -900,7 +899,7 @@ type Protocol struct {
 
 func (d *Protocol) GetServiceName() string {
 	if found := d.HasAttribute("discoverable"); found {
-		ci := ParseCompoundIdentifier(d.Name)
+		ci := d.Name.Parse()
 		var parts []string
 		for _, i := range ci.Library {
 			parts = append(parts, string(i))
@@ -918,7 +917,7 @@ type Service struct {
 }
 
 func (s *Service) GetServiceName() string {
-	ci := ParseCompoundIdentifier(s.Name)
+	ci := s.Name.Parse()
 	var parts []string
 	for _, i := range ci.Library {
 		parts = append(parts, string(i))
@@ -1262,7 +1261,7 @@ func deniedContexts(r *Root, language string) []scopedNamingContext {
 		}
 	}
 	for _, v := range r.Protocols {
-		protocolName := string(v.Name.Parts().Name)
+		protocolName := string(v.Name.Parse().Name)
 		if v.BindingsDenylistIncludes(language) {
 			denied = append(denied, scopedNamingContext{v.Name.LibraryName(), []string{protocolName}})
 		} else {

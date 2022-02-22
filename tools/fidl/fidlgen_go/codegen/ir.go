@@ -617,7 +617,7 @@ func (*compiler) compileIdentifier(id fidlgen.Identifier, export bool, ext strin
 }
 
 func (c *compiler) compileCompoundIdentifier(eci fidlgen.EncodedCompoundIdentifier, export bool, ext string) string {
-	ci := fidlgen.ParseCompoundIdentifier(eci)
+	ci := eci.Parse()
 	var name string
 	if export {
 		name = fidlgen.ToUpperCamelCase(string(ci.Name))
@@ -1048,7 +1048,7 @@ func joinLibraryIdentifier(lib fidlgen.LibraryIdentifier, sep string) string {
 // Compile translates parsed FIDL IR into golang backend IR for code generation.
 func Compile(fidlData fidlgen.Root) Root {
 	fidlData = fidlData.ForBindings("go")
-	libraryName := fidlgen.ParseLibraryName(fidlData.Name)
+	libraryName := fidlData.Name.Parse()
 	libraryPath := compileLibraryIdentifier(libraryName)
 
 	// Collect all libraries.
@@ -1058,7 +1058,7 @@ func Compile(fidlData fidlgen.Root) Root {
 		if v.Name == fidlData.Name {
 			continue
 		}
-		libComponents := fidlgen.ParseLibraryName(v.Name)
+		libComponents := v.Name.Parse()
 		path := compileLibraryIdentifier(libComponents)
 		alias := changeIfReserved(
 			fidlgen.Identifier(fidlgen.ToLowerCamelCase(

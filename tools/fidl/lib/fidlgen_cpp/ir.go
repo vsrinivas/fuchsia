@@ -378,7 +378,7 @@ func formatLibraryPath(library fidlgen.LibraryIdentifier) string {
 }
 
 func codingTableName(ident fidlgen.EncodedCompoundIdentifier) string {
-	ci := fidlgen.ParseCompoundIdentifier(ident)
+	ci := ident.Parse()
 	return formatLibrary(ci.Library, "_", keepPartIfReserved) + "_" + string(ci.Name) + string(ci.Member)
 }
 
@@ -410,7 +410,7 @@ func (c *compiler) isInExternalLibrary(ci fidlgen.CompoundIdentifier) bool {
 }
 
 func (c *compiler) compileNameVariants(eci fidlgen.EncodedCompoundIdentifier) nameVariants {
-	ci := fidlgen.ParseCompoundIdentifier(eci)
+	ci := eci.Parse()
 
 	if isZirconIdentifier(ci) {
 		return commonNameVariants(zirconName(ci))
@@ -431,7 +431,7 @@ func (c *compiler) compileNameVariants(eci fidlgen.EncodedCompoundIdentifier) na
 }
 
 func (c *compiler) compileCodingTableType(eci fidlgen.EncodedCompoundIdentifier) string {
-	return fmt.Sprintf("%s_%sTable", c.symbolPrefix, fidlgen.ParseCompoundIdentifier(eci).Name)
+	return fmt.Sprintf("%s_%sTable", c.symbolPrefix, eci.Parse().Name)
 }
 
 func (c *compiler) compileType(val fidlgen.Type) Type {
@@ -596,13 +596,13 @@ func (c *compiler) getAnonymousChildren(layout fidlgen.Layout) []ScopedLayout {
 
 func compile(r fidlgen.Root) *Root {
 	root := Root{
-		Library: fidlgen.ParseLibraryName(r.Name),
+		Library: r.Name.Parse(),
 	}
 
 	c := compiler{
 		symbolPrefix:       formatLibraryPrefix(root.Library),
 		decls:              r.DeclsWithDependencies(),
-		library:            fidlgen.ParseLibraryName(r.Name),
+		library:            root.Library,
 		handleTypes:        make(map[fidlgen.HandleSubtype]struct{}),
 		resultForUnion:     make(map[fidlgen.EncodedCompoundIdentifier]*Result),
 		messageBodyStructs: make(map[fidlgen.EncodedCompoundIdentifier]fidlgen.Struct),
@@ -747,7 +747,7 @@ func compile(r fidlgen.Root) *Root {
 			// Skip the zircon types library.
 			continue
 		}
-		root.Dependencies = append(root.Dependencies, fidlgen.ParseLibraryName(l.Name))
+		root.Dependencies = append(root.Dependencies, l.Name.Parse())
 	}
 
 	// zx::channel is always referenced by the protocols in llcpp bindings API

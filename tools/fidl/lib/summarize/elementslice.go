@@ -58,7 +58,7 @@ type fqn fidlgen.CompoundIdentifier
 
 // newFqn parses out a fqn from the given string.
 func newFqn(name Name) fqn {
-	ci := fidlgen.ParseCompoundIdentifier(fidlgen.EncodedCompoundIdentifier(name))
+	ci := fidlgen.EncodedCompoundIdentifier(name).Parse()
 	// Convert empty strings to a "maximal" marker to get the expected sort ordering.
 	// If 'name' is a library, it will end up in ci.Name. Otherwise it will end
 	// up parsed in ci.Library.

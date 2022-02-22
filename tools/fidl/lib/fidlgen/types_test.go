@@ -626,7 +626,7 @@ func TestCanUnmarshalTypeAliases(t *testing.T) {
 	}
 }
 
-func TestParseCompoundIdentifier(t *testing.T) {
+func TestEncodedCompoundIdentifierParsing(t *testing.T) {
 	type testCase struct {
 		input          fidlgen.EncodedCompoundIdentifier
 		expectedOutput fidlgen.CompoundIdentifier
@@ -651,7 +651,7 @@ func TestParseCompoundIdentifier(t *testing.T) {
 		},
 	}
 	for _, test := range tests {
-		output := fidlgen.ParseCompoundIdentifier(test.input)
+		output := test.input.Parse()
 		diff := cmp.Diff(output, test.expectedOutput)
 		if len(diff) > 0 {
 			t.Errorf("unexpected output for input %q diff: %s", test.input, diff)
