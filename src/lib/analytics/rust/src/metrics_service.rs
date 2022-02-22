@@ -4,7 +4,7 @@
 
 use {
     anyhow::Result,
-    fuchsia_hyper::new_https_client,
+    fuchsia_hyper::{new_https_client, HttpsClient},
     futures::lock::Mutex,
     hyper::body::HttpBody,
     hyper::{Body, Method, Request},
@@ -35,6 +35,7 @@ lazy_static! {
 pub(crate) struct MetricsService {
     pub(crate) init_state: MetricsServiceInitStatus,
     state: MetricsState,
+    client: HttpsClient,
 }
 
 #[derive(Debug, PartialEq)]
@@ -114,12 +115,11 @@ impl MetricsService {
             );
             match batch_collector {
                 None => {
-                    let client = new_https_client();
                     let req = Request::builder()
                         .method(Method::POST)
                         .uri(GA_URL)
                         .body(Body::from(body))?;
-                    let res = client.request(req).await;
+                    let res = self.client.request(req).await;
                     match res {
                         Ok(res) => log::info!("Analytics response: {}", res.status()),
                         Err(e) => log::debug!("Error posting analytics: {}", e),
@@ -162,12 +162,11 @@ impl MetricsService {
             );
             match batch_collector {
                 None => {
-                    let client = new_https_client();
                     let req = Request::builder()
                         .method(Method::POST)
                         .uri(GA_URL)
                         .body(Body::from(body))?;
-                    let res = client.request(req).await;
+                    let res = self.client.request(req).await;
                     match res {
                         Ok(res) => log::info!("Analytics response: {}", res.status()),
                         Err(e) => log::debug!("Error posting analytics: {}", e),
@@ -209,12 +208,11 @@ impl MetricsService {
             );
             match batch_collector {
                 None => {
-                    let client = new_https_client();
                     let req = Request::builder()
                         .method(Method::POST)
                         .uri(GA_URL)
                         .body(Body::from(body))?;
-                    let res = client.request(req).await;
+                    let res = self.client.request(req).await;
                     match res {
                         Ok(res) => log::info!("Analytics response: {}", res.status()),
                         Err(e) => log::debug!("Error posting analytics: {}", e),
@@ -233,7 +231,6 @@ impl MetricsService {
 
     pub(crate) async fn inner_send_events(&self, body: String, batch: bool) -> Result<()> {
         if self.inner_is_opted_in() {
-            let client = new_https_client();
             let url = match batch {
                 true => GA_BATCH_URL,
                 false => GA_URL,
@@ -242,7 +239,7 @@ impl MetricsService {
             log::debug!("POSTING ANALYTICS: url: {}, \nBODY: {}", &url, &body);
 
             let req = Request::builder().method(Method::POST).uri(url).body(Body::from(body))?;
-            let res = client.request(req).await;
+            let res = self.client.request(req).await;
             match res {
                 Ok(mut res) => {
                     log::info!("Analytics response: {}", res.status());
@@ -262,7 +259,11 @@ impl MetricsService {
 
 impl Default for MetricsService {
     fn default() -> Self {
-        Self { init_state: MetricsServiceInitStatus::UNINITIALIZED, state: MetricsState::default() }
+        Self {
+            init_state: MetricsServiceInitStatus::UNINITIALIZED,
+            state: MetricsState::default(),
+            client: new_https_client(),
+        }
     }
 }
 
@@ -295,6 +296,7 @@ mod tests {
                 ga_product_code,
                 disabled,
             ),
+            client: new_https_client(),
         }
     }
 
