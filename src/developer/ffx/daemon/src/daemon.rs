@@ -430,7 +430,13 @@ impl Daemon {
     async fn handle_requests_from_stream(&self, stream: DaemonRequestStream) -> Result<()> {
         stream
             .map_err(|e| anyhow!("reading FIDL stream: {:#}", e))
-            .try_for_each_concurrent_while_connected(None, |r| self.handle_request(r))
+            .try_for_each_concurrent_while_connected(None, |r| async {
+                let debug_req_string = format!("{:?}", r);
+                if let Err(e) = self.handle_request(r).await {
+                    log::error!("error while handling request `{}`: {}", debug_req_string, e);
+                }
+                Ok(())
+            })
             .await
     }
 
