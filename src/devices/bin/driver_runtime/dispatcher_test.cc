@@ -1323,6 +1323,41 @@ TEST_F(DispatcherTest, WaitUntilIdleMultipleDispatchers) {
   ASSERT_TRUE(dispatcher->IsIdle());
 }
 
+// Tests shutting down the process async loop while requests are still pending.
+TEST_F(DispatcherTest, ShutdownProcessAsyncLoop) {
+  DispatcherDestructedObserver observer;
+
+  const void* driver = CreateFakeDriver();
+  auto scheduler_role = "scheduler_role";
+
+  driver_runtime::Dispatcher* dispatcher;
+  ASSERT_EQ(ZX_OK, driver_runtime::Dispatcher::CreateWithLoop(
+                       FDF_DISPATCHER_OPTION_UNSYNCHRONIZED, scheduler_role, strlen(scheduler_role),
+                       driver, &loop_, observer.fdf_observer(), &dispatcher));
+
+  sync::Completion entered_read;
+  auto channel_read = std::make_unique<fdf::ChannelRead>(
+      local_ch_, 0,
+      [&](fdf_dispatcher_t* dispatcher, fdf::ChannelRead* channel_read, fdf_status_t status) {
+        entered_read.Signal();
+        // Do not let the read callback complete until the loop has entered a shutdown state.
+        while (loop_.GetState() != ASYNC_LOOP_SHUTDOWN) {
+        }
+      });
+  ASSERT_OK(channel_read->Begin(static_cast<fdf_dispatcher_t*>(dispatcher)));
+
+  // Call is reentrant, so the read will be queued on the async loop.
+  ASSERT_EQ(ZX_OK, fdf_channel_write(remote_ch_, 0, nullptr, nullptr, 0, nullptr, 0));
+  // This will queue the wait to run |Dispatcher::CompleteDestroy|.
+  fdf_dispatcher_destroy_async(static_cast<fdf_dispatcher_t*>(dispatcher));
+
+  ASSERT_OK(entered_read.Wait(zx::time::infinite()));
+
+  loop_.Shutdown();
+
+  ASSERT_OK(observer.WaitUntilDestructed());
+}
+
 //
 // Error handling
 //

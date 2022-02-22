@@ -131,8 +131,11 @@ fdf_status_t Dispatcher::CreateWithLoop(uint32_t options, const char* scheduler_
         self->DispatchCallbacks(std::move(event_waiter), std::move(dispatcher_ref));
       });
   dispatcher->event_waiter_ = event_waiter.get();
-  EventWaiter::BeginWaitWithRef(std::move(event_waiter), dispatcher);
-
+  zx_status_t status = EventWaiter::BeginWaitWithRef(std::move(event_waiter), dispatcher);
+  if (status == ZX_ERR_BAD_STATE) {
+    dispatcher->event_waiter_ = nullptr;
+    return status;
+  }
   // This reference will be recovered in |Destroy|.
   *out_dispatcher = fbl::ExportToRawPtr(&dispatcher);
   return ZX_OK;
@@ -196,7 +199,7 @@ void Dispatcher::Destroy() {
       [dispatcher_ref = std::move(dispatcher_ref), to_cancel = std::move(callbacks),
        event = std::move(*event)](async_dispatcher_t* dispatcher, async::Wait* wait,
                                   zx_status_t status, const zx_packet_signal_t* signal) mutable {
-        ZX_ASSERT(status == ZX_OK);
+        ZX_ASSERT(status == ZX_OK || status == ZX_ERR_CANCELED);
         dispatcher_ref->CompleteDestroy(std::move(to_cancel));
         delete wait;
       });
@@ -209,11 +212,18 @@ void Dispatcher::CompleteDestroy(
   {
     fbl::AutoLock lock(&callback_lock_);
 
-    ZX_ASSERT(shutting_down_ && IsIdleLocked());
+    ZX_ASSERT(shutting_down_);
 
-    // Since the event waiter holds a reference to the dispatcher,
-    // we need to cancel it to reclaim it.
-    event_waiter_->Cancel();
+    if (event_waiter_) {
+      ZX_ASSERT(IsIdleLocked());
+      // Since the event waiter holds a reference to the dispatcher,
+      // we need to cancel it to reclaim it.
+      // This should always succeed, as there should be no other threads processing
+      // tasks for this dispatcher, and we should have cleared |event_waiter_| if
+      // the AsyncLoopOwned event waiter was dropped.
+      ZX_ASSERT(event_waiter_->Cancel() != nullptr);
+      event_waiter_ = nullptr;
+    }
   }
   // Call the callbacks outside the lock.
   while (!to_cancel.is_empty()) {
@@ -336,7 +346,7 @@ void Dispatcher::QueueRegisteredCallback(driver_runtime::CallbackRequest* reques
     }
     if (!direct_call) {
       callback_queue_.push_back(std::move(callback_request));
-      if (!event_waiter_->signaled()) {
+      if (event_waiter_ && !event_waiter_->signaled()) {
         event_waiter_->signal();
       }
       return;
@@ -346,7 +356,8 @@ void Dispatcher::QueueRegisteredCallback(driver_runtime::CallbackRequest* reques
 
   fbl::AutoLock lock(&callback_lock_);
   dispatching_sync_ = false;
-  if (!callback_queue_.is_empty() && !event_waiter_->signaled() && !shutting_down_) {
+  if (!callback_queue_.is_empty() && event_waiter_ && !event_waiter_->signaled() &&
+      !shutting_down_) {
     event_waiter_->signal();
   }
 }
@@ -398,8 +409,11 @@ void Dispatcher::DispatchCallbacks(std::unique_ptr<EventWaiter> event_waiter,
       // We call |BeginWaitWithRef| even when shutting down so that the |event_waiter|
       // stays alive until the dispatcher is destroyed. This allows |IsIdleLocked| to
       // correctly check the state of the event waiter. |CompleteDestroy| will cancel
-      // and drop the event waiter
-      event_waiter->BeginWaitWithRef(std::move(event_waiter), dispatcher_ref);
+      // and drop the event waiter.
+      zx_status_t status = event_waiter->BeginWaitWithRef(std::move(event_waiter), dispatcher_ref);
+      if (status == ZX_ERR_BAD_STATE) {
+        event_waiter_ = nullptr;
+      }
     }
     ZX_ASSERT(num_active_threads_ > 0);
     num_active_threads_--;
@@ -417,7 +431,7 @@ void Dispatcher::DispatchCallbacks(std::unique_ptr<EventWaiter> event_waiter,
     // direct call into the driver. In this case, we should designal the event
     // waiter, and once the direct call completes it will signal it again.
     if ((!unsynchronized_ && dispatching_sync_) || shutting_down_) {
-      event_waiter_->designal();
+      event_waiter->designal();
       return;
     }
     dispatching_sync_ = true;
@@ -444,7 +458,10 @@ void Dispatcher::DispatchCallbacks(std::unique_ptr<EventWaiter> event_waiter,
     // Check if there are callbacks left to process and we should wake up an additional thread.
     // For synchronized dispatchers, parallel callbacks are disallowed.
     if (unsynchronized_ && !callback_queue_.is_empty()) {
-      event_waiter->BeginWaitWithRef(std::move(event_waiter), dispatcher_ref);
+      zx_status_t status = event_waiter->BeginWaitWithRef(std::move(event_waiter), dispatcher_ref);
+      if (status == ZX_ERR_BAD_STATE) {
+        event_waiter_ = nullptr;
+      }
     }
   }
 
@@ -464,7 +481,7 @@ void Dispatcher::DispatchCallbacks(std::unique_ptr<EventWaiter> event_waiter,
     }
     dispatching_sync_ = false;
     if (callback_queue_.is_empty() && event_waiter->signaled()) {
-      event_waiter_->designal();
+      event_waiter->designal();
     }
   }
 }
@@ -495,7 +512,8 @@ fdf_status_t Dispatcher::WaitUntilIdle() {
 
 bool Dispatcher::IsIdleLocked() {
   // If the event waiter was signaled, the thread will be scheduled to run soon.
-  return (num_active_threads_ == 0) && callback_queue_.is_empty() && !event_waiter_->signaled();
+  return (num_active_threads_ == 0) && callback_queue_.is_empty() &&
+         (!event_waiter_ || !event_waiter_->signaled());
 }
 
 void Dispatcher::IdleCheckLocked() {
@@ -509,10 +527,12 @@ void Dispatcher::EventWaiter::HandleEvent(std::unique_ptr<EventWaiter> event_wai
                                           zx_status_t status, const zx_packet_signal_t* signal) {
   if (status == ZX_ERR_CANCELED) {
     LOGF(TRACE, "Dispatcher: event waiter shutting down\n");
+    event_waiter->dispatcher_ref_->event_waiter_ = nullptr;
     event_waiter->dispatcher_ref_ = nullptr;
     return;
   } else if (status != ZX_OK) {
     LOGF(ERROR, "Dispatcher: event waiter error: %d\n", status);
+    event_waiter->dispatcher_ref_->event_waiter_ = nullptr;
     event_waiter->dispatcher_ref_ = nullptr;
     return;
   }

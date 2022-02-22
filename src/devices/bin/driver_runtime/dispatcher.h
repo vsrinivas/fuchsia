@@ -181,13 +181,14 @@ class Dispatcher : public async_dispatcher_t, public fbl::RefCounted<Dispatcher>
       callback_(std::move(event_waiter), std::move(dispatcher_ref));
     }
 
-    void Cancel() {
+    std::unique_ptr<EventWaiter> Cancel() {
       // Cancelling may fail if the callback is happening right now, in which
       // case the callback will take ownership of the dispatcher reference.
       auto event = AsyncLoopOwnedEventHandler<EventWaiter>::Cancel();
       if (event) {
         event->dispatcher_ref_ = nullptr;
       }
+      return event;
     }
 
    private:
