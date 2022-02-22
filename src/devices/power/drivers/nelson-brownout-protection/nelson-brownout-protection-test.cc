@@ -18,8 +18,9 @@
 namespace brownout_protection {
 
 namespace audio_fidl = ::fuchsia::hardware::audio;
+namespace signal_fidl = ::fuchsia::hardware::audio::signalprocessing;
 
-class FakeCodec : public audio::SimpleCodecServer, public audio_fidl::SignalProcessing {
+class FakeCodec : public audio::SimpleCodecServer, public signal_fidl::SignalProcessing {
  public:
   FakeCodec(zx_device_t* parent) : SimpleCodecServer(parent) {}
   codec_protocol_t GetProto() { return {&this->codec_protocol_ops_, this}; }
@@ -46,40 +47,36 @@ class FakeCodec : public audio::SimpleCodecServer, public audio_fidl::SignalProc
   bool IsBridgeable() override { return false; }
   void SetBridgedMode(bool enable_bridged_mode) override {}
   void SignalProcessingConnect(
-      fidl::InterfaceRequest<audio_fidl::SignalProcessing> signal_processing) override {
+      fidl::InterfaceRequest<signal_fidl::SignalProcessing> signal_processing) override {
     signal_processing_binding_.emplace(this, std::move(signal_processing), dispatcher());
   }
-  void GetProcessingElements(
-      audio_fidl::SignalProcessing::GetProcessingElementsCallback callback) override {
-    audio_fidl::ProcessingElement pe;
+  void GetElements(GetElementsCallback callback) override {
+    signal_fidl::Element pe;
     pe.set_id(kAglPeId);
-    pe.set_type(audio_fidl::ProcessingElementType::AUTOMATIC_GAIN_LIMITER);
+    pe.set_type(signal_fidl::ElementType::AUTOMATIC_GAIN_LIMITER);
 
-    std::vector<audio_fidl::ProcessingElement> pes;
+    std::vector<signal_fidl::Element> pes;
     pes.emplace_back(std::move(pe));
-    audio_fidl::SignalProcessing_GetProcessingElements_Response response(std::move(pes));
-    audio_fidl::SignalProcessing_GetProcessingElements_Result result;
+    signal_fidl::SignalProcessing_GetElements_Response response(std::move(pes));
+    signal_fidl::SignalProcessing_GetElements_Result result;
     result.set_response(std::move(response));
     callback(std::move(result));
   }
-  void SetProcessingElementState(
-      uint64_t processing_element_id, audio_fidl::ProcessingElementState state,
-      audio_fidl::SignalProcessing::SetProcessingElementStateCallback callback) override {
+  void SetElementState(uint64_t processing_element_id, signal_fidl::ElementState state,
+                       SetElementStateCallback callback) override {
     ASSERT_EQ(processing_element_id, kAglPeId);
     ASSERT_TRUE(state.has_enabled());
     agl_enabled_ = state.enabled();
-    callback(audio_fidl::SignalProcessing_SetProcessingElementState_Result::WithResponse(
-        audio_fidl::SignalProcessing_SetProcessingElementState_Response()));
+    callback(signal_fidl::SignalProcessing_SetElementState_Result::WithResponse(
+        signal_fidl::SignalProcessing_SetElementState_Response()));
   }
-  void WatchProcessingElementState(
-      uint64_t processing_element_id,
-      audio_fidl::SignalProcessing::WatchProcessingElementStateCallback callback) override {}
-  void GetTopologies(audio_fidl::SignalProcessing::GetTopologiesCallback callback) override {
-    callback(audio_fidl::SignalProcessing_GetTopologies_Result::WithErr(ZX_ERR_NOT_SUPPORTED));
+  void WatchElementState(uint64_t processing_element_id,
+                         WatchElementStateCallback callback) override {}
+  void GetTopologies(GetTopologiesCallback callback) override {
+    callback(signal_fidl::SignalProcessing_GetTopologies_Result::WithErr(ZX_ERR_NOT_SUPPORTED));
   }
-  void SetTopology(uint64_t topology_id,
-                   audio_fidl::SignalProcessing::SetTopologyCallback callback) override {
-    callback(audio_fidl::SignalProcessing_SetTopology_Result::WithErr(ZX_ERR_NOT_SUPPORTED));
+  void SetTopology(uint64_t topology_id, SetTopologyCallback callback) override {
+    callback(signal_fidl::SignalProcessing_SetTopology_Result::WithErr(ZX_ERR_NOT_SUPPORTED));
   }
   audio::DaiSupportedFormats GetDaiFormats() override { return {}; }
   zx::status<audio::CodecFormatInfo> SetDaiFormat(const audio::DaiFormat& format) override {
@@ -96,7 +93,7 @@ class FakeCodec : public audio::SimpleCodecServer, public audio_fidl::SignalProc
   audio::GainState gain_state = {};
   // agl_enabled_ is accessed from different threads in SetAgl() and agl_enabled().
   std::atomic<bool> agl_enabled_ = false;
-  std::optional<fidl::Binding<audio_fidl::SignalProcessing>> signal_processing_binding_;
+  std::optional<fidl::Binding<signal_fidl::SignalProcessing>> signal_processing_binding_;
 };
 
 class FakePowerSensor : public ddk::PowerSensorProtocol<FakePowerSensor, ddk::base_protocol>,

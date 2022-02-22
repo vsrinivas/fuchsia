@@ -16,6 +16,7 @@ sdk://fidl/fuchsia.auth
 sdk://fidl/fuchsia.diagnostics
 sdk://fidl/fuchsia.element
 sdk://fidl/fuchsia.hardware.audio
+sdk://fidl/fuchsia.hardware.audio.signalprocessing
 sdk://fidl/fuchsia.images
 sdk://fidl/fuchsia.input
 sdk://fidl/fuchsia.input.report

@@ -23,7 +23,8 @@
 
 namespace audio {
 
-class Tas58xx : public SimpleCodecServer, public fuchsia::hardware::audio::SignalProcessing {
+class Tas58xx : public SimpleCodecServer,
+                public fuchsia::hardware::audio::signalprocessing::SignalProcessing {
  public:
   static zx_status_t Create(zx_device_t* parent);
 
@@ -44,23 +45,26 @@ class Tas58xx : public SimpleCodecServer, public fuchsia::hardware::audio::Signa
   GainFormat GetGainFormat() override;
   GainState GetGainState() override;
   void SetGainState(GainState state) override;
-  void GetProcessingElements(
-      fuchsia::hardware::audio::SignalProcessing::GetProcessingElementsCallback callback) override;
-  void SetProcessingElementState(
-      uint64_t processing_element_id, fuchsia::hardware::audio::ProcessingElementState control,
-      fuchsia::hardware::audio::SignalProcessing::SetProcessingElementStateCallback callback)
-      override;
-  void WatchProcessingElementState(
+  void GetElements(fuchsia::hardware::audio::signalprocessing::SignalProcessing::GetElementsCallback
+                       callback) override;
+  void SetElementState(
       uint64_t processing_element_id,
-      fuchsia::hardware::audio::SignalProcessing::WatchProcessingElementStateCallback callback)
-      override;
+      fuchsia::hardware::audio::signalprocessing::ElementState state,
+      fuchsia::hardware::audio::signalprocessing::SignalProcessing::SetElementStateCallback
+          callback) override;
+  void WatchElementState(
+      uint64_t processing_element_id,
+      fuchsia::hardware::audio::signalprocessing::SignalProcessing::WatchElementStateCallback
+          callback) override;
   void GetTopologies(
-      fuchsia::hardware::audio::SignalProcessing::GetTopologiesCallback callback) override;
-  void SetTopology(
-      uint64_t topology_id,
-      fuchsia::hardware::audio::SignalProcessing::SetTopologyCallback callback) override;
-  void SignalProcessingConnect(fidl::InterfaceRequest<fuchsia::hardware::audio::SignalProcessing>
-                                   signal_processing) override;
+      fuchsia::hardware::audio::signalprocessing::SignalProcessing::GetTopologiesCallback callback)
+      override;
+  void SetTopology(uint64_t topology_id,
+                   fuchsia::hardware::audio::signalprocessing::SignalProcessing::SetTopologyCallback
+                       callback) override;
+  void SignalProcessingConnect(
+      fidl::InterfaceRequest<fuchsia::hardware::audio::signalprocessing::SignalProcessing>
+          signal_processing) override;
 
   // Protected for unit tests.
   zx_status_t SetBand(bool enabled, size_t index, uint32_t frequency, float Q, float gain_db);
@@ -86,11 +90,12 @@ class Tas58xx : public SimpleCodecServer, public fuchsia::hardware::audio::Signa
   zx_status_t WriteRegs(uint8_t* regs, size_t count);
   zx_status_t ReadReg(uint8_t reg, uint8_t* value);
   zx_status_t UpdateReg(uint8_t reg, uint8_t mask, uint8_t value);
-  zx_status_t SetEqualizerProcessingElement(fuchsia::hardware::audio::ProcessingElementState state);
-  void SetAutomaticGainControlProcessingElement(
-      fuchsia::hardware::audio::ProcessingElementState state);
+  zx_status_t SetEqualizerElement(fuchsia::hardware::audio::signalprocessing::ElementState state);
+  void SetAutomaticGainControlElement(
+      fuchsia::hardware::audio::signalprocessing::ElementState state);
   void SendWatchReply(
-      fuchsia::hardware::audio::SignalProcessing::WatchProcessingElementStateCallback callback);
+      fuchsia::hardware::audio::signalprocessing::SignalProcessing::WatchElementStateCallback
+          callback);
 
   ddk::I2cChannel i2c_;
   GainState gain_state_ = {};
@@ -102,9 +107,10 @@ class Tas58xx : public SimpleCodecServer, public fuchsia::hardware::audio::Signa
   // AGL.
   bool last_agl_ = false;
   std::optional<bool> last_reported_agl_;
-  std::optional<fidl::Binding<fuchsia::hardware::audio::SignalProcessing>>
+  std::optional<fidl::Binding<fuchsia::hardware::audio::signalprocessing::SignalProcessing>>
       signal_processing_binding_;
-  std::optional<fuchsia::hardware::audio::SignalProcessing::WatchProcessingElementStateCallback>
+  std::optional<
+      fuchsia::hardware::audio::signalprocessing::SignalProcessing::WatchElementStateCallback>
       agl_callback_;
 
   // Equalizer.
@@ -112,7 +118,8 @@ class Tas58xx : public SimpleCodecServer, public fuchsia::hardware::audio::Signa
   float gains_[kEqualizerNumberOfBands] = {0.f, 0.f, 0.f, 0.f, 0.f};
   bool band_enabled_[kEqualizerNumberOfBands] = {false, false, false, false, false};
   bool equalizer_enabled_ = true;
-  std::optional<fuchsia::hardware::audio::SignalProcessing::WatchProcessingElementStateCallback>
+  std::optional<
+      fuchsia::hardware::audio::signalprocessing::SignalProcessing::WatchElementStateCallback>
       equalizer_callback_;
   bool last_equalizer_update_reported_ = false;
 };

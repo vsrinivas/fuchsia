@@ -57,6 +57,7 @@ constexpr uint8_t kRegAglEnableBitByte0 = 0x80;
 namespace audio {
 
 namespace audio_fidl = ::fuchsia::hardware::audio;
+namespace signal_fidl = ::fuchsia::hardware::audio::signalprocessing;
 
 // TODO(andresoportus): Add handling for the other formats supported by this codec.
 static const std::vector<uint32_t> kSupportedDaiNumberOfChannels = {2, 4};
@@ -219,7 +220,7 @@ Info Tas58xx::GetInfo() {
 zx_status_t Tas58xx::Shutdown() { return ZX_OK; }
 
 void Tas58xx::SignalProcessingConnect(
-    fidl::InterfaceRequest<audio_fidl::SignalProcessing> signal_processing) {
+    fidl::InterfaceRequest<signal_fidl::SignalProcessing> signal_processing) {
   if (signal_processing_binding_.has_value()) {
     signal_processing.Close(ZX_ERR_ALREADY_BOUND);
     return;
@@ -227,55 +228,55 @@ void Tas58xx::SignalProcessingConnect(
   signal_processing_binding_.emplace(this, std::move(signal_processing), dispatcher());
 }
 
-void Tas58xx::GetProcessingElements(
-    audio_fidl::SignalProcessing::GetProcessingElementsCallback callback) {
-  audio_fidl::ProcessingElement pe1;
+void Tas58xx::GetElements(signal_fidl::SignalProcessing::GetElementsCallback callback) {
+  signal_fidl::Element pe1;
   pe1.set_id(kAglPeId);
-  pe1.set_type(audio_fidl::ProcessingElementType::AUTOMATIC_GAIN_LIMITER);
-  audio_fidl::ProcessingElement pe2;
+  pe1.set_type(signal_fidl::ElementType::AUTOMATIC_GAIN_LIMITER);
+  signal_fidl::Element pe2;
   pe2.set_id(kEqPeId);
-  pe2.set_type(audio_fidl::ProcessingElementType::EQUALIZER);
+  pe2.set_type(signal_fidl::ElementType::EQUALIZER);
 
-  audio_fidl::EqualizerTypeSpecific equalizer_parameters;
+  signal_fidl::Equalizer equalizer_parameters;
 
-  std::vector<audio_fidl::EqualizerBand> bands;
+  std::vector<signal_fidl::EqualizerBand> bands;
 
   for (size_t i = 0; i < kEqualizerNumberOfBands; ++i) {
-    audio_fidl::EqualizerBand band;
+    signal_fidl::EqualizerBand band;
     band.set_id(i);  // The id we specify is an index to the array of bands.
     bands.push_back(std::move(band));
   }
 
   equalizer_parameters.set_bands(std::move(bands));
   equalizer_parameters.set_supported_controls(
-      audio_fidl::EqualizerSupportedControls::SUPPORTS_TYPE_PEAK |
-      audio_fidl::EqualizerSupportedControls::CAN_CONTROL_FREQUENCY);
+      signal_fidl::EqualizerSupportedControls::SUPPORTS_TYPE_PEAK |
+      signal_fidl::EqualizerSupportedControls::CAN_CONTROL_FREQUENCY);
   equalizer_parameters.set_min_frequency(kEqualizerMinFrequency);
   equalizer_parameters.set_max_frequency(kEqualizerMaxFrequency);
   equalizer_parameters.set_min_gain_db(kEqualizerMinGainDb);
   equalizer_parameters.set_max_gain_db(kEqualizerMaxGainDb);
 
   pe2.set_type_specific(
-      audio_fidl::ProcessingElementTypeSpecific::WithEqualizer(std::move(equalizer_parameters)));
+      signal_fidl::TypeSpecificElement::WithEqualizer(std::move(equalizer_parameters)));
 
-  std::vector<audio_fidl::ProcessingElement> pes;
+  std::vector<signal_fidl::Element> pes;
   pes.emplace_back(std::move(pe1));
   // Only advertise the EQ support for 1 channel configurations.
   if (number_of_channels_ == 1 || metadata_.bridged) {
     pes.emplace_back(std::move(pe2));
   }
-  audio_fidl::SignalProcessing_GetProcessingElements_Response response(std::move(pes));
-  audio_fidl::SignalProcessing_GetProcessingElements_Result result;
+  signal_fidl::SignalProcessing_GetElements_Response response(std::move(pes));
+  signal_fidl::SignalProcessing_GetElements_Result result;
   result.set_response(std::move(response));
   callback(std::move(result));
 }
 
-zx_status_t Tas58xx::SetEqualizerProcessingElement(audio_fidl::ProcessingElementState state) {
+zx_status_t Tas58xx::SetEqualizerElement(signal_fidl::ElementState state) {
   if (number_of_channels_ != 1 && !metadata_.bridged) {
     return ZX_ERR_NOT_SUPPORTED;
   }
-  bool has_valid_equalizer_specific_state = state.has_state() && state.state().is_equalizer() &&
-                                            state.state().equalizer().has_bands_state();
+  bool has_valid_equalizer_specific_state = state.has_type_specific() &&
+                                            state.type_specific().is_equalizer() &&
+                                            state.type_specific().equalizer().has_bands_state();
   if (state.has_enabled() && state.enabled() && !has_valid_equalizer_specific_state) {
     return ZX_ERR_INVALID_ARGS;
   }
@@ -307,13 +308,13 @@ zx_status_t Tas58xx::SetEqualizerProcessingElement(audio_fidl::ProcessingElement
     return status;
   }
   if (has_valid_equalizer_specific_state) {
-    auto& bands_state = state.state().equalizer().bands_state();
+    auto& bands_state = state.type_specific().equalizer().bands_state();
     for (size_t i = 0; i < bands_state.size(); ++i) {
       auto& band = bands_state[i];
       // The id we specify is an index to the array of bands.
       if (!band.has_id() || band.id() >= kEqualizerNumberOfBands ||
           // We allow the supported type if specified.
-          (band.has_type() && (band.type() != audio_fidl::EqualizerBandType::PEAK)) ||
+          (band.has_type() && (band.type() != signal_fidl::EqualizerBandType::PEAK)) ||
           // We allow the supported Q if specified.
           (band.has_q() && (band.q() != kSupportedQ))) {
         return ZX_ERR_INVALID_ARGS;
@@ -349,7 +350,7 @@ zx_status_t Tas58xx::SetEqualizerProcessingElement(audio_fidl::ProcessingElement
   return ZX_OK;
 }
 
-void Tas58xx::SetAutomaticGainControlProcessingElement(audio_fidl::ProcessingElementState state) {
+void Tas58xx::SetAutomaticGainControlElement(signal_fidl::ElementState state) {
   // If enabled is not present, then perform no operation, we keep the current state.
   if (!state.has_enabled()) {
     return;
@@ -408,7 +409,7 @@ void Tas58xx::SetAutomaticGainControlProcessingElement(audio_fidl::ProcessingEle
         &completion);
     sync_completion_wait(&completion, ZX_TIME_INFINITE);
 
-    audio_fidl::ProcessingElementState state;
+    signal_fidl::ElementState state;
     state.set_enabled(enable_agl);
     if (agl_callback_.has_value()) {
       (*agl_callback_)(std::move(state));
@@ -422,12 +423,11 @@ void Tas58xx::SetAutomaticGainControlProcessingElement(audio_fidl::ProcessingEle
   TRACE_DURATION_END("tas58xx", "SetAgl", "timestamp", zx::clock::get_monotonic().get());
 }
 
-void Tas58xx::WatchProcessingElementState(
-    uint64_t processing_element_id,
-    audio_fidl::SignalProcessing::WatchProcessingElementStateCallback callback) {
+void Tas58xx::WatchElementState(uint64_t processing_element_id,
+                                signal_fidl::SignalProcessing::WatchElementStateCallback callback) {
   if (processing_element_id == kAglPeId) {
     if (!last_reported_agl_.has_value() || last_reported_agl_.value() != last_agl_) {
-      audio_fidl::ProcessingElementState state;
+      signal_fidl::ElementState state;
       state.set_enabled(last_agl_);
       callback(std::move(state));
       last_reported_agl_.emplace(last_agl_);
@@ -458,16 +458,15 @@ void Tas58xx::WatchProcessingElementState(
   }
 }
 
-void Tas58xx::SendWatchReply(
-    audio_fidl::SignalProcessing::WatchProcessingElementStateCallback callback) {
-  audio_fidl::ProcessingElementState state;
-  audio_fidl::EqualizerProcessingElementState equalizer_state;
-  std::vector<audio_fidl::EqualizerBandState> bands_state;
+void Tas58xx::SendWatchReply(signal_fidl::SignalProcessing::WatchElementStateCallback callback) {
+  signal_fidl::ElementState state;
+  signal_fidl::EqualizerElementState equalizer_state;
+  std::vector<signal_fidl::EqualizerBandState> bands_state;
 
   for (size_t i = 0; i < kEqualizerNumberOfBands; ++i) {
-    audio_fidl::EqualizerBandState band;
+    signal_fidl::EqualizerBandState band;
     band.set_id(i);  // The id we specify is an index to the array of bands.
-    band.set_type(audio_fidl::EqualizerBandType::PEAK);
+    band.set_type(signal_fidl::EqualizerBandType::PEAK);
     band.set_frequency(frequencies_[i]);
     band.set_q(kSupportedQ);
     band.set_gain_db(gains_[i]);
@@ -475,62 +474,59 @@ void Tas58xx::SendWatchReply(
     bands_state.push_back(std::move(band));
   }
   equalizer_state.set_bands_state(std::move(bands_state));
-  state.set_state(
-      audio_fidl::ProcessingElementTypeSpecificState::WithEqualizer(std::move(equalizer_state)));
+  state.set_type_specific(
+      signal_fidl::TypeSpecificElementState::WithEqualizer(std::move(equalizer_state)));
   state.set_enabled(equalizer_enabled_);
   callback(std::move(state));
 }
 
-void Tas58xx::GetTopologies(audio_fidl::SignalProcessing::GetTopologiesCallback callback) {
-  audio_fidl::EdgePair edge;
+void Tas58xx::GetTopologies(signal_fidl::SignalProcessing::GetTopologiesCallback callback) {
+  signal_fidl::EdgePair edge;
   edge.processing_element_id_from = kAglPeId;
   edge.processing_element_id_to = kAglPeId;
 
-  std::vector<audio_fidl::EdgePair> edges;
+  std::vector<signal_fidl::EdgePair> edges;
   edges.emplace_back(edge);
 
-  audio_fidl::Topology topology;
+  signal_fidl::Topology topology;
   topology.set_id(kTopologyId);
   topology.set_processing_elements_edge_pairs(edges);
 
-  std::vector<audio_fidl::Topology> topologies;
+  std::vector<signal_fidl::Topology> topologies;
   topologies.emplace_back(std::move(topology));
 
-  audio_fidl::SignalProcessing_GetTopologies_Response response(std::move(topologies));
-  audio_fidl::SignalProcessing_GetTopologies_Result result;
+  signal_fidl::SignalProcessing_GetTopologies_Response response(std::move(topologies));
+  signal_fidl::SignalProcessing_GetTopologies_Result result;
   result.set_response(std::move(response));
   callback(std::move(result));
 }
 
 void Tas58xx::SetTopology(uint64_t topology_id,
-                          audio_fidl::SignalProcessing::SetTopologyCallback callback) {
+                          signal_fidl::SignalProcessing::SetTopologyCallback callback) {
   if (topology_id != kTopologyId) {
-    callback(audio_fidl::SignalProcessing_SetTopology_Result::WithErr(ZX_ERR_INVALID_ARGS));
+    callback(signal_fidl::SignalProcessing_SetTopology_Result::WithErr(ZX_ERR_INVALID_ARGS));
     return;
   }
-  callback(audio_fidl::SignalProcessing_SetTopology_Result::WithResponse(
-      audio_fidl::SignalProcessing_SetTopology_Response()));
+  callback(signal_fidl::SignalProcessing_SetTopology_Result::WithResponse(
+      signal_fidl::SignalProcessing_SetTopology_Response()));
 }
 
-void Tas58xx::SetProcessingElementState(
-    uint64_t processing_element_id, audio_fidl::ProcessingElementState state,
-    audio_fidl::SignalProcessing::SetProcessingElementStateCallback callback) {
+void Tas58xx::SetElementState(uint64_t processing_element_id, signal_fidl::ElementState state,
+                              signal_fidl::SignalProcessing::SetElementStateCallback callback) {
   if (processing_element_id == kEqPeId) {
-    zx_status_t status = SetEqualizerProcessingElement(std::move(state));
+    zx_status_t status = SetEqualizerElement(std::move(state));
     if (status != ZX_OK) {
-      callback(audio_fidl::SignalProcessing_SetProcessingElementState_Result::WithErr(
-          std::move(status)));
+      callback(signal_fidl::SignalProcessing_SetElementState_Result::WithErr(std::move(status)));
     } else {
-      callback(audio_fidl::SignalProcessing_SetProcessingElementState_Result::WithResponse(
-          audio_fidl::SignalProcessing_SetProcessingElementState_Response()));
+      callback(signal_fidl::SignalProcessing_SetElementState_Result::WithResponse(
+          signal_fidl::SignalProcessing_SetElementState_Response()));
     }
   } else if (processing_element_id == kAglPeId) {
-    SetAutomaticGainControlProcessingElement(std::move(state));
-    callback(audio_fidl::SignalProcessing_SetProcessingElementState_Result::WithResponse(
-        audio_fidl::SignalProcessing_SetProcessingElementState_Response()));
+    SetAutomaticGainControlElement(std::move(state));
+    callback(signal_fidl::SignalProcessing_SetElementState_Result::WithResponse(
+        signal_fidl::SignalProcessing_SetElementState_Response()));
   } else {
-    callback(audio_fidl::SignalProcessing_SetProcessingElementState_Result::WithErr(
-        ZX_ERR_INVALID_ARGS));
+    callback(signal_fidl::SignalProcessing_SetElementState_Result::WithErr(ZX_ERR_INVALID_ARGS));
   }
 }
 

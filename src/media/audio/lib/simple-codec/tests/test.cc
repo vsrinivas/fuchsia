@@ -20,11 +20,12 @@ static const uint32_t kTestInstanceCount = 123;
 namespace audio {
 
 namespace audio_fidl = ::fuchsia::hardware::audio;
+namespace signal_fidl = ::fuchsia::hardware::audio::signalprocessing;
 
 class SimpleCodecTest : public inspect::InspectTestHelper, public zxtest::Test {};
 
 // Server tests.
-class TestCodec : public SimpleCodecServer, public audio_fidl::SignalProcessing {
+class TestCodec : public SimpleCodecServer, public signal_fidl::SignalProcessing {
  public:
   explicit TestCodec(zx_device_t* parent) : SimpleCodecServer(parent) {}
   codec_protocol_t GetProto() { return {&this->codec_protocol_ops_, this}; }
@@ -42,62 +43,58 @@ class TestCodec : public SimpleCodecServer, public audio_fidl::SignalProcessing 
   bool IsBridgeable() override { return false; }
   void SetBridgedMode(bool enable_bridged_mode) override {}
   void SignalProcessingConnect(
-      fidl::InterfaceRequest<audio_fidl::SignalProcessing> signal_processing) override {
+      fidl::InterfaceRequest<signal_fidl::SignalProcessing> signal_processing) override {
     signal_processing_binding_.emplace(this, std::move(signal_processing), dispatcher());
   }
-  void GetProcessingElements(
-      audio_fidl::SignalProcessing::GetProcessingElementsCallback callback) override {
-    audio_fidl::ProcessingElement pe;
+  void GetElements(GetElementsCallback callback) override {
+    signal_fidl::Element pe;
     pe.set_id(kAglPeId);
-    pe.set_type(audio_fidl::ProcessingElementType::AUTOMATIC_GAIN_LIMITER);
+    pe.set_type(signal_fidl::ElementType::AUTOMATIC_GAIN_LIMITER);
 
-    std::vector<audio_fidl::ProcessingElement> pes;
+    std::vector<signal_fidl::Element> pes;
     pes.emplace_back(std::move(pe));
-    audio_fidl::SignalProcessing_GetProcessingElements_Response response(std::move(pes));
-    audio_fidl::SignalProcessing_GetProcessingElements_Result result;
+    signal_fidl::SignalProcessing_GetElements_Response response(std::move(pes));
+    signal_fidl::SignalProcessing_GetElements_Result result;
     result.set_response(std::move(response));
     callback(std::move(result));
   }
-  void SetProcessingElementState(
-      uint64_t processing_element_id, audio_fidl::ProcessingElementState state,
-      audio_fidl::SignalProcessing::SetProcessingElementStateCallback callback) override {
+  void SetElementState(uint64_t processing_element_id, signal_fidl::ElementState state,
+                       SetElementStateCallback callback) override {
     ASSERT_EQ(processing_element_id, kAglPeId);
     ASSERT_TRUE(state.has_enabled());
     agl_mode_ = state.enabled();
-    callback(audio_fidl::SignalProcessing_SetProcessingElementState_Result::WithResponse(
-        audio_fidl::SignalProcessing_SetProcessingElementState_Response()));
+    callback(signal_fidl::SignalProcessing_SetElementState_Result::WithResponse(
+        signal_fidl::SignalProcessing_SetElementState_Response()));
   }
-  void WatchProcessingElementState(
-      uint64_t processing_element_id,
-      audio_fidl::SignalProcessing::WatchProcessingElementStateCallback callback) override {}
-  void GetTopologies(audio_fidl::SignalProcessing::GetTopologiesCallback callback) override {
-    audio_fidl::EdgePair edge;
+  void WatchElementState(uint64_t processing_element_id,
+                         WatchElementStateCallback callback) override {}
+  void GetTopologies(GetTopologiesCallback callback) override {
+    signal_fidl::EdgePair edge;
     edge.processing_element_id_from = kAglPeId;
     edge.processing_element_id_to = kAglPeId;
 
-    std::vector<audio_fidl::EdgePair> edges;
+    std::vector<signal_fidl::EdgePair> edges;
     edges.emplace_back(edge);
 
-    audio_fidl::Topology topology;
+    signal_fidl::Topology topology;
     topology.set_id(kTopologyId);
     topology.set_processing_elements_edge_pairs(edges);
 
-    std::vector<audio_fidl::Topology> topologies;
+    std::vector<signal_fidl::Topology> topologies;
     topologies.emplace_back(std::move(topology));
 
-    audio_fidl::SignalProcessing_GetTopologies_Response response(std::move(topologies));
-    audio_fidl::SignalProcessing_GetTopologies_Result result;
+    signal_fidl::SignalProcessing_GetTopologies_Response response(std::move(topologies));
+    signal_fidl::SignalProcessing_GetTopologies_Result result;
     result.set_response(std::move(response));
     callback(std::move(result));
   }
-  void SetTopology(uint64_t topology_id,
-                   audio_fidl::SignalProcessing::SetTopologyCallback callback) override {
+  void SetTopology(uint64_t topology_id, SetTopologyCallback callback) override {
     if (topology_id != kTopologyId) {
-      callback(audio_fidl::SignalProcessing_SetTopology_Result::WithErr(ZX_ERR_INVALID_ARGS));
+      callback(signal_fidl::SignalProcessing_SetTopology_Result::WithErr(ZX_ERR_INVALID_ARGS));
       return;
     }
-    callback(audio_fidl::SignalProcessing_SetTopology_Result::WithResponse(
-        audio_fidl::SignalProcessing_SetTopology_Response()));
+    callback(signal_fidl::SignalProcessing_SetTopology_Result::WithResponse(
+        signal_fidl::SignalProcessing_SetTopology_Response()));
   }
   DaiSupportedFormats GetDaiFormats() override { return {}; }
   zx::status<CodecFormatInfo> SetDaiFormat(const DaiFormat& format) override {
@@ -115,7 +112,7 @@ class TestCodec : public SimpleCodecServer, public audio_fidl::SignalProcessing 
   static constexpr uint64_t kTopologyId = 1;
   GainState gain_state_ = {};
   bool agl_mode_ = false;
-  std::optional<fidl::Binding<audio_fidl::SignalProcessing>> signal_processing_binding_;
+  std::optional<fidl::Binding<signal_fidl::SignalProcessing>> signal_processing_binding_;
 };
 
 TEST_F(SimpleCodecTest, ChannelConnection) {
@@ -239,27 +236,27 @@ TEST_F(SimpleCodecTest, AglStateServerWithClientViaSignalProcessingApi) {
   audio_fidl::CodecSyncPtr codec_client;
   codec_client.Bind(std::move(channel_local));
 
-  fidl::InterfaceHandle<audio_fidl::SignalProcessing> signal_processing_handle;
-  fidl::InterfaceRequest<audio_fidl::SignalProcessing> signal_processing_request =
+  fidl::InterfaceHandle<signal_fidl::SignalProcessing> signal_processing_handle;
+  fidl::InterfaceRequest<signal_fidl::SignalProcessing> signal_processing_request =
       signal_processing_handle.NewRequest();
   ASSERT_OK(codec_client->SignalProcessingConnect(std::move(signal_processing_request)));
   fidl::SynchronousInterfacePtr signal_processing_client = signal_processing_handle.BindSync();
 
   // We should get one PE with AGL support.
-  audio_fidl::SignalProcessing_GetProcessingElements_Result result;
-  ASSERT_OK(signal_processing_client->GetProcessingElements(&result));
+  signal_fidl::SignalProcessing_GetElements_Result result;
+  ASSERT_OK(signal_processing_client->GetElements(&result));
   ASSERT_FALSE(result.is_err());
   ASSERT_EQ(result.response().processing_elements.size(), 1);
   ASSERT_EQ(result.response().processing_elements[0].type(),
-            audio_fidl::ProcessingElementType::AUTOMATIC_GAIN_LIMITER);
+            signal_fidl::ElementType::AUTOMATIC_GAIN_LIMITER);
   ASSERT_FALSE(codec->agl_mode());
 
   // Control with enabled = true.
-  audio_fidl::SignalProcessing_SetProcessingElementState_Result result_enable;
-  audio_fidl::ProcessingElementState state_enable;
+  signal_fidl::SignalProcessing_SetElementState_Result result_enable;
+  signal_fidl::ElementState state_enable;
   state_enable.set_enabled(true);
-  ASSERT_OK(signal_processing_client->SetProcessingElementState(
-      result.response().processing_elements[0].id(), std::move(state_enable), &result_enable));
+  ASSERT_OK(signal_processing_client->SetElementState(result.response().processing_elements[0].id(),
+                                                      std::move(state_enable), &result_enable));
   ASSERT_FALSE(result_enable.is_err());
   ASSERT_TRUE(codec->agl_mode());
 }
@@ -286,10 +283,8 @@ TEST_F(SimpleCodecTest, AglStateServerViaSimpleCodecClientNoSupport) {
   auto fake_parent = MockDevice::FakeRootParent();
   struct TestCodecNoAgl : public TestCodec {
     explicit TestCodecNoAgl(zx_device_t* parent) : TestCodec(parent) {}
-    void GetProcessingElements(
-        audio_fidl::SignalProcessing::GetProcessingElementsCallback callback) override {
-      callback(
-          audio_fidl::SignalProcessing_GetProcessingElements_Result::WithErr(ZX_ERR_NOT_SUPPORTED));
+    void GetElements(GetElementsCallback callback) override {
+      callback(signal_fidl::SignalProcessing_GetElements_Result::WithErr(ZX_ERR_NOT_SUPPORTED));
     }
   };
 

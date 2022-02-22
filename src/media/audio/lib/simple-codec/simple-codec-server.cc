@@ -16,6 +16,7 @@
 namespace audio {
 
 namespace audio_fidl = ::fuchsia::hardware::audio;
+namespace signal_fidl = ::fuchsia::hardware::audio::signalprocessing;
 
 zx_status_t SimpleCodecServer::CreateAndAddToDdkInternal() {
   simple_codec_ = inspect_.GetRoot().CreateChild("simple_codec");
@@ -145,7 +146,7 @@ void SimpleCodecServerInternal<T>::GetInfo(Codec::GetInfoCallback callback) {
 
 template <class T>
 void SimpleCodecServerInternal<T>::SignalProcessingConnect(
-    fidl::InterfaceRequest<audio_fidl::SignalProcessing> signal_processing) {
+    fidl::InterfaceRequest<signal_fidl::SignalProcessing> signal_processing) {
   static_cast<T*>(this)->SignalProcessingConnect(std::move(signal_processing));
 }
 

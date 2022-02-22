@@ -61,8 +61,9 @@ class AmlG12TdmDai : public AmlG12TdmDaiDeviceType,
   void GetHealthState(::fuchsia::hardware::audio::Dai::GetHealthStateCallback callback) override {
     callback({});
   }
-  void SignalProcessingConnect(fidl::InterfaceRequest<fuchsia::hardware::audio::SignalProcessing>
-                                   signal_processing) override {
+  void SignalProcessingConnect(
+      fidl::InterfaceRequest<fuchsia::hardware::audio::signalprocessing::SignalProcessing>
+          signal_processing) override {
     signal_processing.Close(ZX_ERR_NOT_SUPPORTED);
   }
   void GetRingBufferFormats(GetRingBufferFormatsCallback callback) override;

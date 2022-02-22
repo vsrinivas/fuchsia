@@ -106,7 +106,8 @@ class SimpleCodecServer : public SimpleCodecServerDeviceType,
   }
   // Default to no support for custom signal processing API usage.
   virtual void SignalProcessingConnect(
-      fidl::InterfaceRequest<fuchsia::hardware::audio::SignalProcessing> signal_processing) {
+      fidl::InterfaceRequest<fuchsia::hardware::audio::signalprocessing::SignalProcessing>
+          signal_processing) {
     signal_processing.Close(ZX_ERR_NOT_SUPPORTED);
   }
   zx_status_t CodecConnect(zx::channel(channel));

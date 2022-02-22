@@ -43,7 +43,8 @@ class SimpleCodecServerInternal {
   void GetInfo(Codec::GetInfoCallback callback);
   void GetHealthState(Codec::GetHealthStateCallback callback) { callback({}); }
   void SignalProcessingConnect(
-      fidl::InterfaceRequest<fuchsia::hardware::audio::SignalProcessing> signal_processing);
+      fidl::InterfaceRequest<fuchsia::hardware::audio::signalprocessing::SignalProcessing>
+          signal_processing);
   void IsBridgeable(Codec::IsBridgeableCallback callback);
   void SetBridgedMode(bool enable_bridged_mode);
   void GetDaiFormats(Codec::GetDaiFormatsCallback callback);
@@ -89,8 +90,9 @@ class SimpleCodecServerInstance
   void GetHealthState(GetHealthStateCallback callback) override {
     parent_->GetHealthState(std::move(callback));
   }
-  void SignalProcessingConnect(fidl::InterfaceRequest<fuchsia::hardware::audio::SignalProcessing>
-                                   signal_processing) override {
+  void SignalProcessingConnect(
+      fidl::InterfaceRequest<fuchsia::hardware::audio::signalprocessing::SignalProcessing>
+          signal_processing) override {
     parent_->SignalProcessingConnect(std::move(signal_processing));
   }
   void IsBridgeable(IsBridgeableCallback callback) override {

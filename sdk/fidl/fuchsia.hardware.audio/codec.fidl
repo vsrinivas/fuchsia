@@ -4,6 +4,7 @@
 library fuchsia.hardware.audio;
 
 using zx;
+using fuchsia.hardware.audio.signalprocessing;
 
 /// Textual information about the codec.
 type CodecInfo = struct {
@@ -15,6 +16,15 @@ type CodecInfo = struct {
 
     /// Product name of the codec.
     product_name string:MAX_UI_STRING_SIZE;
+};
+
+/// Gain type of representation.
+type GainType = strict enum : uint8 {
+    /// Gain specified in dB, for example -103.0dB or +3.2dB.
+    DECIBELS = 1;
+
+    /// Gain specified as a percentage, for example 10.0% or 80.5%.
+    PERCENT = 2;
 };
 
 /// Gain format/parameters.
@@ -72,7 +82,7 @@ protocol Codec {
     compose Health;
 
     /// Allows providing signal processing capabilities.
-    compose SignalProcessingConnector;
+    compose fuchsia.hardware.audio.signalprocessing.Connector;
 
     /// Resets the codec.
     /// `Reset` returns when the reset is completed. If the driver can't successfully reset the

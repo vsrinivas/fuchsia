@@ -1,0 +1,124 @@
+protocol/member fuchsia.hardware.audio.signalprocessing/Connector.SignalProcessingConnect(server_end:fuchsia.hardware.audio.signalprocessing/SignalProcessing protocol)
+protocol fuchsia.hardware.audio.signalprocessing/Connector
+struct/member fuchsia.hardware.audio.signalprocessing/EdgePair.processing_element_id_from uint64
+struct/member fuchsia.hardware.audio.signalprocessing/EdgePair.processing_element_id_to uint64
+struct fuchsia.hardware.audio.signalprocessing/EdgePair
+table/member fuchsia.hardware.audio.signalprocessing/Element.can_disable bool
+table/member fuchsia.hardware.audio.signalprocessing/Element.description string:256
+table/member fuchsia.hardware.audio.signalprocessing/Element.id uint64
+table/member fuchsia.hardware.audio.signalprocessing/Element.type fuchsia.hardware.audio.signalprocessing/ElementType
+table/member fuchsia.hardware.audio.signalprocessing/Element.type_specific fuchsia.hardware.audio.signalprocessing/TypeSpecificElement
+table fuchsia.hardware.audio.signalprocessing/Element
+table/member fuchsia.hardware.audio.signalprocessing/ElementState.enabled bool
+table/member fuchsia.hardware.audio.signalprocessing/ElementState.latency fuchsia.hardware.audio.signalprocessing/Latency
+table/member fuchsia.hardware.audio.signalprocessing/ElementState.type_specific fuchsia.hardware.audio.signalprocessing/TypeSpecificElementState
+table fuchsia.hardware.audio.signalprocessing/ElementState
+enum/member fuchsia.hardware.audio.signalprocessing/ElementType.AUTOMATIC_GAIN_CONTROL 5
+enum/member fuchsia.hardware.audio.signalprocessing/ElementType.AUTOMATIC_GAIN_LIMITER 6
+enum/member fuchsia.hardware.audio.signalprocessing/ElementType.CONNECTION_POINT 3
+enum/member fuchsia.hardware.audio.signalprocessing/ElementType.DELAY 9
+enum/member fuchsia.hardware.audio.signalprocessing/ElementType.DYNAMIC_RANGE_COMPRESSION 7
+enum/member fuchsia.hardware.audio.signalprocessing/ElementType.END_POINT 2
+enum/member fuchsia.hardware.audio.signalprocessing/ElementType.EQUALIZER 10
+enum/member fuchsia.hardware.audio.signalprocessing/ElementType.GAIN 4
+enum/member fuchsia.hardware.audio.signalprocessing/ElementType.MUTE 8
+enum/member fuchsia.hardware.audio.signalprocessing/ElementType.SAMPLE_RATE_CONVERSION 11
+enum/member fuchsia.hardware.audio.signalprocessing/ElementType.VENDOR_SPECIFIC 1
+flexible enum fuchsia.hardware.audio.signalprocessing/ElementType uint32
+table/member fuchsia.hardware.audio.signalprocessing/Equalizer.bands vector<fuchsia.hardware.audio.signalprocessing/EqualizerBand>:64
+table/member fuchsia.hardware.audio.signalprocessing/Equalizer.can_disable_bands bool
+table/member fuchsia.hardware.audio.signalprocessing/Equalizer.max_frequency uint32
+table/member fuchsia.hardware.audio.signalprocessing/Equalizer.max_gain_db float32
+table/member fuchsia.hardware.audio.signalprocessing/Equalizer.max_q float32
+table/member fuchsia.hardware.audio.signalprocessing/Equalizer.min_frequency uint32
+table/member fuchsia.hardware.audio.signalprocessing/Equalizer.min_gain_db float32
+table/member fuchsia.hardware.audio.signalprocessing/Equalizer.supported_controls fuchsia.hardware.audio.signalprocessing/EqualizerSupportedControls
+table fuchsia.hardware.audio.signalprocessing/Equalizer
+table/member fuchsia.hardware.audio.signalprocessing/EqualizerBand.id uint64
+table fuchsia.hardware.audio.signalprocessing/EqualizerBand
+table/member fuchsia.hardware.audio.signalprocessing/EqualizerBandState.enabled bool
+table/member fuchsia.hardware.audio.signalprocessing/EqualizerBandState.frequency uint32
+table/member fuchsia.hardware.audio.signalprocessing/EqualizerBandState.gain_db float32
+table/member fuchsia.hardware.audio.signalprocessing/EqualizerBandState.id uint64
+table/member fuchsia.hardware.audio.signalprocessing/EqualizerBandState.q float32
+table/member fuchsia.hardware.audio.signalprocessing/EqualizerBandState.type fuchsia.hardware.audio.signalprocessing/EqualizerBandType
+table fuchsia.hardware.audio.signalprocessing/EqualizerBandState
+enum/member fuchsia.hardware.audio.signalprocessing/EqualizerBandType.HIGH_CUT 4
+enum/member fuchsia.hardware.audio.signalprocessing/EqualizerBandType.HIGH_SHELF 6
+enum/member fuchsia.hardware.audio.signalprocessing/EqualizerBandType.LOW_CUT 3
+enum/member fuchsia.hardware.audio.signalprocessing/EqualizerBandType.LOW_SHELF 5
+enum/member fuchsia.hardware.audio.signalprocessing/EqualizerBandType.NOTCH 2
+enum/member fuchsia.hardware.audio.signalprocessing/EqualizerBandType.PEAK 1
+flexible enum fuchsia.hardware.audio.signalprocessing/EqualizerBandType uint64
+table/member fuchsia.hardware.audio.signalprocessing/EqualizerElementState.bands_state vector<fuchsia.hardware.audio.signalprocessing/EqualizerBandState>:64
+table fuchsia.hardware.audio.signalprocessing/EqualizerElementState
+bits/member fuchsia.hardware.audio.signalprocessing/EqualizerSupportedControls.CAN_CONTROL_FREQUENCY 1
+bits/member fuchsia.hardware.audio.signalprocessing/EqualizerSupportedControls.CAN_CONTROL_Q 2
+bits/member fuchsia.hardware.audio.signalprocessing/EqualizerSupportedControls.SUPPORTS_TYPE_HIGH_CUT 32
+bits/member fuchsia.hardware.audio.signalprocessing/EqualizerSupportedControls.SUPPORTS_TYPE_HIGH_SHELF 128
+bits/member fuchsia.hardware.audio.signalprocessing/EqualizerSupportedControls.SUPPORTS_TYPE_LOW_CUT 16
+bits/member fuchsia.hardware.audio.signalprocessing/EqualizerSupportedControls.SUPPORTS_TYPE_LOW_SHELF 64
+bits/member fuchsia.hardware.audio.signalprocessing/EqualizerSupportedControls.SUPPORTS_TYPE_NOTCH 8
+bits/member fuchsia.hardware.audio.signalprocessing/EqualizerSupportedControls.SUPPORTS_TYPE_PEAK 4
+flexible bits fuchsia.hardware.audio.signalprocessing/EqualizerSupportedControls uint64
+table/member fuchsia.hardware.audio.signalprocessing/Gain.domain fuchsia.hardware.audio.signalprocessing/GainDomain
+table/member fuchsia.hardware.audio.signalprocessing/Gain.max_gain float32
+table/member fuchsia.hardware.audio.signalprocessing/Gain.min_gain float32
+table/member fuchsia.hardware.audio.signalprocessing/Gain.min_gain_step float32
+table/member fuchsia.hardware.audio.signalprocessing/Gain.type fuchsia.hardware.audio.signalprocessing/GainType
+table fuchsia.hardware.audio.signalprocessing/Gain
+enum/member fuchsia.hardware.audio.signalprocessing/GainDomain.ANALOG 2
+enum/member fuchsia.hardware.audio.signalprocessing/GainDomain.DIGITAL 1
+enum/member fuchsia.hardware.audio.signalprocessing/GainDomain.MIXED 3
+flexible enum fuchsia.hardware.audio.signalprocessing/GainDomain uint8
+table/member fuchsia.hardware.audio.signalprocessing/GainElementState.gain float32
+table fuchsia.hardware.audio.signalprocessing/GainElementState
+enum/member fuchsia.hardware.audio.signalprocessing/GainType.DECIBELS 1
+enum/member fuchsia.hardware.audio.signalprocessing/GainType.PERCENT 2
+strict enum fuchsia.hardware.audio.signalprocessing/GainType uint8
+union/member fuchsia.hardware.audio.signalprocessing/Latency.latency_frames uint32
+union/member fuchsia.hardware.audio.signalprocessing/Latency.latency_time int64
+flexible union fuchsia.hardware.audio.signalprocessing/Latency
+const fuchsia.hardware.audio.signalprocessing/MAX_COUNT_EQUALIZER_BANDS uint32 64
+const fuchsia.hardware.audio.signalprocessing/MAX_COUNT_PROCESSING_ELEMENTS uint32 64
+const fuchsia.hardware.audio.signalprocessing/MAX_COUNT_PROCESSING_ELEMENTS_EDGE_PAIRS uint32 64
+const fuchsia.hardware.audio.signalprocessing/MAX_COUNT_TOPOLOGIES uint32 64
+const fuchsia.hardware.audio.signalprocessing/MAX_STRING_SIZE uint32 256
+protocol/member fuchsia.hardware.audio.signalprocessing/SignalProcessing.GetElements() -> (fuchsia.hardware.audio.signalprocessing/SignalProcessing_GetElements_Result result)
+protocol/member fuchsia.hardware.audio.signalprocessing/SignalProcessing.GetTopologies() -> (fuchsia.hardware.audio.signalprocessing/SignalProcessing_GetTopologies_Result result)
+protocol/member fuchsia.hardware.audio.signalprocessing/SignalProcessing.SetElementState(uint64 processing_element_id,fuchsia.hardware.audio.signalprocessing/ElementState state) -> (fuchsia.hardware.audio.signalprocessing/SignalProcessing_SetElementState_Result result)
+protocol/member fuchsia.hardware.audio.signalprocessing/SignalProcessing.SetTopology(uint64 topology_id) -> (fuchsia.hardware.audio.signalprocessing/SignalProcessing_SetTopology_Result result)
+protocol/member fuchsia.hardware.audio.signalprocessing/SignalProcessing.WatchElementState(uint64 processing_element_id) -> (fuchsia.hardware.audio.signalprocessing/ElementState state)
+protocol fuchsia.hardware.audio.signalprocessing/SignalProcessing
+struct/member fuchsia.hardware.audio.signalprocessing/SignalProcessing_GetElements_Response.processing_elements vector<fuchsia.hardware.audio.signalprocessing/Element>:64
+struct fuchsia.hardware.audio.signalprocessing/SignalProcessing_GetElements_Response
+union/member fuchsia.hardware.audio.signalprocessing/SignalProcessing_GetElements_Result.err int32
+union/member fuchsia.hardware.audio.signalprocessing/SignalProcessing_GetElements_Result.response fuchsia.hardware.audio.signalprocessing/SignalProcessing_GetElements_Response
+strict union fuchsia.hardware.audio.signalprocessing/SignalProcessing_GetElements_Result
+struct/member fuchsia.hardware.audio.signalprocessing/SignalProcessing_GetTopologies_Response.topologies vector<fuchsia.hardware.audio.signalprocessing/Topology>:64
+struct fuchsia.hardware.audio.signalprocessing/SignalProcessing_GetTopologies_Response
+union/member fuchsia.hardware.audio.signalprocessing/SignalProcessing_GetTopologies_Result.err int32
+union/member fuchsia.hardware.audio.signalprocessing/SignalProcessing_GetTopologies_Result.response fuchsia.hardware.audio.signalprocessing/SignalProcessing_GetTopologies_Response
+strict union fuchsia.hardware.audio.signalprocessing/SignalProcessing_GetTopologies_Result
+struct fuchsia.hardware.audio.signalprocessing/SignalProcessing_SetElementState_Response
+union/member fuchsia.hardware.audio.signalprocessing/SignalProcessing_SetElementState_Result.err int32
+union/member fuchsia.hardware.audio.signalprocessing/SignalProcessing_SetElementState_Result.response fuchsia.hardware.audio.signalprocessing/SignalProcessing_SetElementState_Response
+strict union fuchsia.hardware.audio.signalprocessing/SignalProcessing_SetElementState_Result
+struct fuchsia.hardware.audio.signalprocessing/SignalProcessing_SetTopology_Response
+union/member fuchsia.hardware.audio.signalprocessing/SignalProcessing_SetTopology_Result.err int32
+union/member fuchsia.hardware.audio.signalprocessing/SignalProcessing_SetTopology_Result.response fuchsia.hardware.audio.signalprocessing/SignalProcessing_SetTopology_Response
+strict union fuchsia.hardware.audio.signalprocessing/SignalProcessing_SetTopology_Result
+table/member fuchsia.hardware.audio.signalprocessing/Topology.id uint64
+table/member fuchsia.hardware.audio.signalprocessing/Topology.processing_elements_edge_pairs vector<fuchsia.hardware.audio.signalprocessing/EdgePair>:64
+table fuchsia.hardware.audio.signalprocessing/Topology
+union/member fuchsia.hardware.audio.signalprocessing/TypeSpecificElement.equalizer fuchsia.hardware.audio.signalprocessing/Equalizer
+union/member fuchsia.hardware.audio.signalprocessing/TypeSpecificElement.gain fuchsia.hardware.audio.signalprocessing/Gain
+union/member fuchsia.hardware.audio.signalprocessing/TypeSpecificElement.vendor_specific fuchsia.hardware.audio.signalprocessing/VendorSpecific
+flexible union fuchsia.hardware.audio.signalprocessing/TypeSpecificElement
+union/member fuchsia.hardware.audio.signalprocessing/TypeSpecificElementState.equalizer fuchsia.hardware.audio.signalprocessing/EqualizerElementState
+union/member fuchsia.hardware.audio.signalprocessing/TypeSpecificElementState.gain fuchsia.hardware.audio.signalprocessing/GainElementState
+union/member fuchsia.hardware.audio.signalprocessing/TypeSpecificElementState.vendor_specific fuchsia.hardware.audio.signalprocessing/VendorSpecificState
+flexible union fuchsia.hardware.audio.signalprocessing/TypeSpecificElementState
+table fuchsia.hardware.audio.signalprocessing/VendorSpecific
+table fuchsia.hardware.audio.signalprocessing/VendorSpecificState
+library fuchsia.hardware.audio.signalprocessing

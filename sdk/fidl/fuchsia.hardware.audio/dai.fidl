@@ -4,6 +4,7 @@
 library fuchsia.hardware.audio;
 
 using zx;
+using fuchsia.hardware.audio.signalprocessing;
 
 const MAX_DAI_UI_STRING_SIZE uint32 = 256;
 const MAX_COUNT_DAI_FORMATS uint32 = 64;
@@ -28,7 +29,7 @@ protocol Dai {
     compose Health;
 
     /// Allows providing signal processing capabilities.
-    compose SignalProcessingConnector;
+    compose fuchsia.hardware.audio.signalprocessing.Connector;
 
     /// Resets the DAI HW. The `ring_buffer` channel obtained via `CreateRingBuffer` may be closed
     /// by the driver, in this case the client needs to obtain a new `ring_buffer`.

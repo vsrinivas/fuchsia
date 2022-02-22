@@ -33,9 +33,10 @@ specific business logic.
 
 ### Processing Elements
 
-A PE is expected to be hardware-provided functionality managed by a particular driver (but it could
-be emulated in software, as any other driver functionality). A pipeline is composed of one or more
-PEs and a topology is composed of one or more pipelines.
+A PE (defined in the `SignalProcessing` protocol as `Element`) is expected to be hardware-provided
+functionality managed by a particular driver (but it could be emulated in software, as any other
+driver functionality). A pipeline is composed of one or more PEs and a topology is composed of one
+or more pipelines.
 
 A codec or DAI driver can expose their topology by implementing the `SignalProcessing` protocol.
 A glue driver can use `Codec` and `Dai` protocols signal processing functionality on the
@@ -49,42 +50,42 @@ application such as `audio_core`.
 ## Basic operation
 
 The client is responsible for requesting and then configuring any signal processing capabilities.
-Once the server provides its PEs by replying to a client's `GetProcessingElements`, the client may
-issue `WatchProcessingElement` calls (see [hanging get pattern][hanging-get]) to retrieve
-PE state and `SetProcessingElementState` to dynamically control the PEs parameters as needed. For
+Once the server provides its PEs by replying to a client's `GetElements`, the client may
+issue `WatchElement` calls (see [hanging get pattern][hanging-get]) to retrieve
+PE state and `SetElementState` to dynamically control the PEs parameters as needed. For
 instance, to retrieve the `gain` of a PE of `type` `GAIN`, the client issues
-`WatchProcessingElement` calls, one to retrieve the initial state (the driver will reply to the
-first `WatchProcessingElement` sent by the client), and subsequent ones to get notified of updates
-to the `ProcessingElementState` that includes the `gain`. Similarly, to retrieve the state of a PE
+`WatchElement` calls, one to retrieve the initial state (the driver will reply to the
+first `WatchElement` sent by the client), and subsequent ones to get notified of updates
+to the `ElementState` that includes the `gain`. Similarly, to retrieve the state of a PE
 of `type` `EQUALIZER`, which is composed of multiple bands in its `bands_state`, a client would
-issue a `WatchProcessingElement` that would retrieve the initial state (the driver will reply to the
-first `WatchProcessingElement` sent by the client) including for instance `frequency` fields for
+issue a `WatchElement` that would retrieve the initial state (the driver will reply to the
+first `WatchElement` sent by the client) including for instance `frequency` fields for
 each band.
 
-Also after the server provides its PEs by replying to a client's `GetProcessingElements`, the client
+Also after the server provides its PEs by replying to a client's `GetElements`, the client
 may request available topologies with the `GetTopologies` method. If more than one topology is
 returned by `GetTopologies`, then `SetTopology` can be used to pick the topology to use.
 
-### GetProcessingElements
+### GetElements
 
-`GetProcessingElements` allows to optionally get a list of all PEs. For instance this method may
+`GetElements` allows to optionally get a list of all PEs. For instance this method may
 be called by a glue driver on a codec. Once the list of PEs is known to the client, the client may
 configure the PEs based on the parameters exposed by the PE types.
 
-### SetProcessingElementState
+### SetElementState
 
-`SetProcessingElementState` allows a client to control the state of a PE using an id returned by
-`GetProcessingElements`. PEs of different types may have different state exposed to clients, the
-`SetProcessingElementState` parameter `state` has a different type depending on the type of PE.
+`SetElementState` allows a client to control the state of a PE using an id returned by
+`GetElements`. PEs of different types may have different state exposed to clients, the
+`SetElementState` parameter `state` has a different type depending on the type of PE.
 
-### WatchProcessingElement
+### WatchElement
 
-`WatchProcessingElement` allows a client to monitor the state of a PE using an id returned by
-`GetProcessingElements`. PEs of different types may have different state exposed to clients, the
-`WatchProcessingElement` parameter `state` has a different type depending on the type of PE.
+`WatchElement` allows a client to monitor the state of a PE using an id returned by
+`GetElements`. PEs of different types may have different state exposed to clients, the
+`WatchElement` parameter `state` has a different type depending on the type of PE.
 
 The `state` of a PE is composed of values that may be changed directly by the client via a call to
-`SetProcessingElement`, or indirectly for instance by a calling `SetProcessingElement` on a
+`SetElement`, or indirectly for instance by a calling `SetElement` on a
 different PE, or independent of the client for instance due to a plug detect change.
 
 ### GetTopologies
@@ -100,7 +101,7 @@ topology can be selected at any time.
 
 ## Processing elements types
 
-The PEs returned by `GetProcessingElements` support a number of different types of signal processing
+The PEs returned by `GetElements` support a number of different types of signal processing
 defined by the PE types and parameters. PE types define standard signal processing (e.g. `GAIN`,
 `DELAY`, `EQUALIZER`, etc), vendor specific signal processing (`VENDOR_SPECIFIC` e.g. a type not
 defined in the `SignalProcessing` protocol) and `CONNECTION_POINT`s/`END_POINT`s used to construct
@@ -113,27 +114,27 @@ mixing, PEs may make the number of output channels different from the number of 
 Data in each channel (a.k.a. the signal that is processed) may be altered by the PE. For instance
 if there is a single PE of type `AGL` in a `Codec` protocol with a `DaiFormat` `number_of_channels`
 set to 2, then AGL (Automatic Gain Limiting) can be enabled or disabled for these 2 channels by a
-client calling `SetProcessingElementState` with `state` `enable` set to true or false (this assumes
-the AGL `ProcessingElement`s `can_disable` was set to true).
+client calling `SetElementState` with `state` `enable` set to true or false (this assumes
+the AGL `Element`s `can_disable` was set to true).
 
 If optional fields in the different PE types are not included, then the state of the processing
 element is not changed with respect to the particular field. For instance, if an
-`EqualizerBandState` in a `SetProcessingElement` does not include an optional `frequency` then the
+`EqualizerBandState` in a `SetElement` does not include an optional `frequency` then the
 equalizer's band frequency state is not changed.
 
 ## Topologies {#topologies}
 
 The topologies returned by `GetTopologies` support different arrangements for the PEs returned by
-`GetProcessingElements`. `GetTopologies` may advertise one or multiple topologies.
+`GetElements`. `GetTopologies` may advertise one or multiple topologies.
 
 ### One topology
 
 If one topology is advertised, i.e. `GetTopologies` returns a vector with one element, then all PEs
 are part of this explicit single pipeline. Ordering in this case is explicit. For instance, if
-`GetProcessingElements` returns 2 PEs:
+`GetElements` returns 2 PEs:
 
-1. `ProcessingElement`: id = 1, type = `AUTOMATIC_GAIN_LIMITER` (AGL)
-1. `ProcessingElement`: id = 2, type = `EQUALIZER` (EQ)
+1. `Element`: id = 1, type = `AUTOMATIC_GAIN_LIMITER` (AGL)
+1. `Element`: id = 2, type = `EQUALIZER` (EQ)
 
 The one `Topology` element returned by `GetTopologies` will list an `id` and a
 `processing_elements_edge_pairs` vector explicitly advertising the order in which signal processing
@@ -165,14 +166,14 @@ ordering of PEs define a pipeline.
 By listing only the specific arrangements and ordering of PEs supported, servers restrict what
 combination of pipelines are valid.
 
-For instance, if `GetProcessingElements` returns 6 PEs:
+For instance, if `GetElements` returns 6 PEs:
 
-1. `ProcessingElement`: id = 1, type = `AUTOMATIC_GAIN_LIMITER` (AGL)
-1. `ProcessingElement`: id = 2, type = `EQUALIZER` (EQ)
-1. `ProcessingElement`: id = 3, type = `SAMPLE_RATE_CONVERSION` (SRC)
-1. `ProcessingElement`: id = 4, type = `GAIN`
-1. `ProcessingElement`: id = 5, type = `DYNAMIC_RANGE_COMPRESSION` (DRC1)
-1. `ProcessingElement`: id = 6, type = `DYNAMIC_RANGE_COMPRESSION` (DRC2) parameters different from
+1. `Element`: id = 1, type = `AUTOMATIC_GAIN_LIMITER` (AGL)
+1. `Element`: id = 2, type = `EQUALIZER` (EQ)
+1. `Element`: id = 3, type = `SAMPLE_RATE_CONVERSION` (SRC)
+1. `Element`: id = 4, type = `GAIN`
+1. `Element`: id = 5, type = `DYNAMIC_RANGE_COMPRESSION` (DRC1)
+1. `Element`: id = 6, type = `DYNAMIC_RANGE_COMPRESSION` (DRC2) parameters different from
 DRC1 parameters.
 
 The `Topology` elements returned by `GetTopologies` will list an `id` and a

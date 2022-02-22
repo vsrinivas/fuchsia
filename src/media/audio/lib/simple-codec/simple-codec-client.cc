@@ -66,19 +66,22 @@ zx_status_t SimpleCodecClient::SetProtocol(ddk::CodecProtocolClient proto_client
   // Update the stored gain state, and start a hanging get to receive further gain state changes.
   UpdateGainState(&mutable_response);
 
-  auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_audio::SignalProcessing>();
+  auto endpoints =
+      fidl::CreateEndpoints<fuchsia_hardware_audio_signalprocessing::SignalProcessing>();
   if (endpoints.status_value() != ZX_OK) {
     return ZX_OK;  // We allow servers not supporting signal processing.
   }
   signal_processing_ =
-      fidl::WireSyncClient<fuchsia_hardware_audio::SignalProcessing>(std::move(endpoints->client));
+      fidl::WireSyncClient<fuchsia_hardware_audio_signalprocessing::SignalProcessing>(
+          std::move(endpoints->client));
   codec_.sync()->SignalProcessingConnect(std::move(endpoints->server));
-  auto pes = signal_processing_->GetProcessingElements();
+  auto pes = signal_processing_->GetElements();
   if (!pes.ok() || pes->result.is_err()) {
     return ZX_OK;  // We allow servers not supporting signal processing.
   }
   for (auto& pe : pes->result.response().processing_elements) {
-    if (pe.type() == fuchsia_hardware_audio::wire::ProcessingElementType::kAutomaticGainLimiter) {
+    if (pe.type() ==
+        fuchsia_hardware_audio_signalprocessing::wire::ElementType::kAutomaticGainLimiter) {
       if (pe.has_id()) {
         if (!agl_pe_id_.has_value()) {  // Use the first PE with AGL support.
           agl_pe_id_.emplace(pe.id());
@@ -236,9 +239,9 @@ zx_status_t SimpleCodecClient::SetAgl(bool agl_enable) {
   if (!agl_pe_id_.has_value()) {
     return ZX_ERR_NOT_SUPPORTED;
   }
-  fuchsia_hardware_audio::wire::ProcessingElementState state(allocator);
+  fuchsia_hardware_audio_signalprocessing::wire::ElementState state(allocator);
   state.set_enabled(agl_enable);
-  signal_processing_->SetProcessingElementState(agl_pe_id_.value(), std::move(state));
+  signal_processing_->SetElementState(agl_pe_id_.value(), std::move(state));
   return ZX_OK;
 }
 

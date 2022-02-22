@@ -16,9 +16,10 @@ fidl("fuchsia.hardware.audio") {
     "dai_format.fidl",
     "health.fidl",
     "ring_buffer.fidl",
-    "signal_processing.fidl",
-    "signal_processing_connector.fidl",
     "stream.fidl",
   ]
-  public_deps = [ "//zircon/vdso/zx" ]
+  public_deps = [
+    "//sdk/fidl/fuchsia.hardware.audio.signalprocessing",
+    "//zircon/vdso/zx",
+  ]
 }

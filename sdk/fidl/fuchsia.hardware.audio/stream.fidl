@@ -4,6 +4,7 @@
 library fuchsia.hardware.audio;
 
 using zx;
+using fuchsia.hardware.audio.signalprocessing;
 
 const UNIQUE_ID_SIZE uint32 = 16;
 const MAX_UI_STRING_SIZE uint32 = 256;
@@ -202,7 +203,7 @@ protocol StreamConfig {
     compose Health;
 
     /// Allows providing signal processing capabilities.
-    compose SignalProcessingConnector;
+    compose fuchsia.hardware.audio.signalprocessing.Connector;
 
     /// Retrieves top level static properties.
     GetProperties() -> (struct {
