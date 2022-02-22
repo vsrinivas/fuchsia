@@ -96,6 +96,8 @@ DebuggedProcess::DebuggedProcess(DebugAgent* debug_agent, DebuggedProcessCreateI
 DebuggedProcess::~DebuggedProcess() { DetachFromProcess(); }
 
 void DebuggedProcess::DetachFromProcess() {
+  DEBUG_LOG(Process) << LogPreamble(this) << "DetachFromProcess";
+
   // 1. Remove installed software breakpoints. We need to tell each thread that this will happen.
   for (auto& [address, breakpoint] : software_breakpoints_) {
     for (auto& [thread_koid, thread] : threads_) {
@@ -157,10 +159,20 @@ void DebuggedProcess::OnResume(const debug_ipc::ResumeRequest& request) {
       thread->ClientResume(request);
   } else {
     for (const debug_ipc::ProcessThreadId& id : request.ids) {
-      if (DebuggedThread* thread = GetThread(id.thread))
+      if (id.process != koid()) {
+        // The request may contain resume requests for more than one process.
+        continue;
+      }
+      if (!id.thread) {
+        // A 0 thread koid will resume all threads of the given process.
+        for (auto& [thread_koid, thread] : threads_) {
+          thread->ClientResume(request);
+        }
+      } else if (DebuggedThread* thread = GetThread(id.thread)) {
+        // Might be not found if there is a race between the thread exiting and the client sending
+        // the request.
         thread->ClientResume(request);
-      // Might be not found if there is a race between the thread exiting and the client sending the
-      // request.
+      }
     }
   }
 }

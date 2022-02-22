@@ -8,6 +8,7 @@
 #include "src/developer/debug/debug_agent/arch.h"
 #include "src/developer/debug/debug_agent/breakpoint.h"
 #include "src/developer/debug/debug_agent/mock_process.h"
+#include "src/developer/debug/debug_agent/mock_thread.h"
 #include "src/developer/debug/debug_agent/test_utils.h"
 
 namespace debug_agent {
@@ -242,6 +243,17 @@ TEST(DebuggedProcess, WatchpointRegistration) {
     SCOPED_TRACE(range.ToString());
     ASSERT_EQ(process.RegisterWatchpoint(&breakpoint, range).ok(), expected_ok);
   }
+}
+
+TEST(DebuggedProcess, DetachFromProcess) {
+  MockProcess process(nullptr, kProcessKoid, kProcessName);
+  MockThread* thread = process.AddThread(2);
+
+  ASSERT_TRUE(thread->running());
+  process.ClientSuspendAllThreads();
+  ASSERT_FALSE(thread->running());
+  process.DetachFromProcess();
+  ASSERT_TRUE(thread->running());
 }
 
 }  // namespace

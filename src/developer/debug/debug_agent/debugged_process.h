@@ -159,6 +159,19 @@ class DebuggedProcess : public ProcessHandleObserver {
   // breakpoints know so that it can resume the stepped over threads.
   void OnBreakpointFinishedSteppingOver();
 
+  // This function will gracefully detach from the underlying zircon process.
+  // Detaching correctly requires several steps:
+  //
+  // 1. Remove the installed breakpoints.
+  //
+  // 2. Resume threads from the exception. Only threads that are stopped on an
+  // exception should be resumed. This is because otherwise zircon will treat
+  // this exception as unhandled and will bubble up the exception upwards,
+  // probably resulting in a crash.
+  //
+  // 3. Unbind the exception port.
+  void DetachFromProcess();
+
   // Queue of breakpoints that are currently being stepped over.
   //
   // As stepping over requires suspending all the threads, doing multiple at a time has a fair
@@ -200,19 +213,6 @@ class DebuggedProcess : public ProcessHandleObserver {
 
   // Sends a IO notification over to the client.
   void SendIO(debug_ipc::NotifyIO::Type, const std::vector<char>& data);
-
-  // This function will gracefully detach from the underlying zircon process.
-  // Detaching correctly requires several steps:
-  //
-  // 1. Remove the installed breakpoints.
-  //
-  // 2. Resume threads from the exception. Only threads that are stopped on an
-  // exception should be resumed. This is because otherwise zircon will treat
-  // this exception as unhandled and will bubble up the exception upwards,
-  // probably resulting in a crash.
-  //
-  // 3. Unbind the exception port.
-  void DetachFromProcess();
 
   // Deletes any elements in the step over queue that are no longer valid. This happens when either
   // the thread or the breakpoint went away while the ticket was waiting within the queue.
