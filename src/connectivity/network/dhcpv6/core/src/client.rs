@@ -2462,7 +2462,7 @@ impl ClientState {
             | ClientState::AddressAssigned(_)
             // TODO(https://fxbug.dev/76765): handle Renew retransmission timeout.
             | ClientState::Renewing(_) => {
-                Transition { state: self, actions: vec![], transaction_id: None }
+                unreachable!("received unexpected retransmission timeout in state {:?}.", self);
             }
         }
     }
@@ -2480,10 +2480,11 @@ impl ClientState {
             }
             ClientState::InformationRequesting(_)
             | ClientState::ServerDiscovery(_)
+            // TODO(https://fxbug.dev/88838): add test for Requesting.
             | ClientState::Requesting(_)
             | ClientState::AddressAssigned(_)
             | ClientState::Renewing(_) => {
-                Transition { state: self, actions: vec![], transaction_id: None }
+                unreachable!("received unexpected refresh timeout in state {:?}.", self);
             }
         }
     }
@@ -4934,15 +4935,27 @@ mod tests {
     }
 
     #[test]
-    fn unexpected_events_are_ignored() {
+    #[should_panic(expected = "received unexpected refresh timeout")]
+    fn infomation_requesting_refresh_timeout_is_unreachable() {
         let (mut client, _) = ClientStateMachine::start_stateless(
             [0, 1, 2],
             Vec::new(),
             StepRng::new(std::u64::MAX / 2, 0),
         );
 
-        // The client expects either a reply or retransmission timeout in the current state.
-        assert_eq!(client.handle_timeout(ClientTimerType::Refresh)[..], []);
+        // Should panic if Refresh timeout is received while in
+        // InformationRequesting state.
+        let _actions = client.handle_timeout(ClientTimerType::Refresh);
+    }
+
+    #[test]
+    #[should_panic(expected = "received unexpected retransmission timeout")]
+    fn infomation_received_retransmission_timeout_is_unreachable() {
+        let (mut client, _) = ClientStateMachine::start_stateless(
+            [0, 1, 2],
+            Vec::new(),
+            StepRng::new(std::u64::MAX / 2, 0),
+        );
         let ClientStateMachine { transaction_id, options_to_request: _, state, rng: _ } = &client;
         assert_matches!(
             *state,
@@ -4971,27 +4984,60 @@ mod tests {
             Some(ClientState::InformationReceived(InformationReceived { dns_servers})) if dns_servers.is_empty()
         );
 
-        let mut buf = vec![0; builder.bytes_len()];
-        builder.serialize(&mut buf);
-        let mut buf = &buf[..]; // Implements BufferView.
-        let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
-        // Extra replies received in information received state are ignored.
-        assert_eq!(client.handle_message_receive(msg)[..], []);
-        let ClientStateMachine { transaction_id: _, options_to_request: _, state, rng: _ } =
-            &client;
-        assert_matches!(
-            state,
-            Some(ClientState::InformationReceived(InformationReceived { dns_servers})) if dns_servers.is_empty()
+        // Should panic if Retransmission timeout is received while in
+        // InformationReceived state.
+        let _actions = client.handle_timeout(ClientTimerType::Retransmission);
+    }
+
+    #[test]
+    #[should_panic(expected = "received unexpected refresh timeout")]
+    fn server_discovery_refresh_timeout_is_unreachable() {
+        let client_id = v6::duid_uuid();
+        let mut client = testutil::start_and_assert_server_discovery(
+            [0, 1, 2],
+            client_id.clone(),
+            testutil::to_configured_addresses(1, vec![std_ip_v6!("::ffff:c00a:1ff")]),
+            Vec::new(),
+            StepRng::new(std::u64::MAX / 2, 0),
         );
 
-        // Information received state should only respond to `Refresh` timer.
-        assert_eq!(client.handle_timeout(ClientTimerType::Retransmission)[..], []);
-        let ClientStateMachine { transaction_id: _, options_to_request: _, state, rng: _ } =
-            &client;
-        assert_matches!(
-            state,
-            Some(ClientState::InformationReceived(InformationReceived { dns_servers})) if dns_servers.is_empty()
+        // Should panic if Refresh is received while in ServerDiscovery state.
+        let _actions = client.handle_timeout(ClientTimerType::Refresh);
+    }
+
+    #[test_case(ClientTimerType::Refresh)]
+    #[test_case(ClientTimerType::Retransmission)]
+    #[should_panic(expected = "received unexpected")]
+    fn address_assiged_unexpected_timeout_is_unreachable(timeout: ClientTimerType) {
+        let expected_t1 = v6::NonZeroTimeValue::Finite(
+            v6::NonZeroOrMaxU32::new(60).expect("should succeed for non-zero or u32::MAX values"),
         );
+        let (mut client, _actions) = testutil::assign_addresses_and_assert(
+            v6::duid_uuid(),
+            vec![TestIdentityAssociation {
+                address: std_ip_v6!("::ffff:c00a:1ff"),
+                preferred_lifetime: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(
+                    v6::NonZeroOrMaxU32::new(100)
+                        .expect("should succeed for non-zero or u32::MAX values"),
+                )),
+                valid_lifetime: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(
+                    v6::NonZeroOrMaxU32::new(120)
+                        .expect("should succeed for non-zero or u32::MAX values"),
+                )),
+                t1: v6::TimeValue::NonZero(expected_t1),
+                t2: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(
+                    v6::NonZeroOrMaxU32::new(90)
+                        .expect("should succeed for non-zero or u32::MAX values"),
+                )),
+            }],
+            &[],
+            expected_t1,
+            StepRng::new(std::u64::MAX / 2, 0),
+        );
+
+        // Should panic if Refresh or Retransmission timeout is received while
+        // in AddressAssigned state.
+        let _actions = client.handle_timeout(timeout);
     }
 
     // NOTE: All comparisons are done on millisecond, so this test is not affected by precision

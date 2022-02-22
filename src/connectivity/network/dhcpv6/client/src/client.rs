@@ -1424,6 +1424,7 @@ mod tests {
     }
 
     #[fasync::run_singlethreaded(test)]
+    #[should_panic]
     async fn test_handle_next_event_respects_timer_order() {
         let (_client_end, client_stream) =
             create_request_stream::<ClientMarker>().expect("failed to create test request stream");
@@ -1492,14 +1493,10 @@ mod tests {
             .collect()
         );
 
-        // Now handle_next_event(&mut buf) should trigger a refresh because it precedes
-        // retransmission.
+        // Now handle_next_event(&mut buf) should trigger a refresh because it
+        // precedes retransmission. Refresh is not expected while in
+        // InformationRequesting state and should lead to a panic.
         assert_matches!(client.handle_next_event(&mut buf).await, Ok(Some(())));
-        // The refresh timer is consumed.
-        assert_eq!(
-            client.timer_abort_handles.keys().collect::<Vec<_>>(),
-            vec![&dhcpv6_core::client::ClientTimerType::Retransmission]
-        );
     }
 
     #[fasync::run_singlethreaded(test)]
