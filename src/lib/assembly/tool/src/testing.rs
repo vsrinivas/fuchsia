@@ -42,7 +42,7 @@ impl FakeTool {
 
 impl Tool for FakeTool {
     fn run(&self, args: &[String]) -> Result<()> {
-        self.log.add(ToolCommand::new(self.name.clone(), args.into()));
+        self.log.add(ToolCommand::new(format!("./host_x64/{}", self.name), args.into()));
         Ok(())
     }
 }
@@ -58,14 +58,14 @@ mod test {
         let expected_log: ToolCommandLog = serde_json::from_value(json!({
             "commands": [
                 {
-                    "tool": "my_tool",
+                    "tool": "./host_x64/my_tool",
                     "args": [
                         "foo",
                         "bar",
                     ]
                 },
                 {
-                    "tool": "my_other_tool",
+                    "tool": "./host_x64/my_other_tool",
                     "args": [
                         "cat"
                     ]

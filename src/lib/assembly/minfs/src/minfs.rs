@@ -64,7 +64,7 @@ mod tests {
         let expected_commands: ToolCommandLog = serde_json::from_value(json!({
             "commands": [
                 {
-                    "tool": "minfs",
+                    "tool": "./host_x64/minfs",
                     "args": [
                         "data.blk",
                         "create"

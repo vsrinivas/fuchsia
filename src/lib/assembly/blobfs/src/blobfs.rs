@@ -207,7 +207,7 @@ mod tests {
         let expected_commands: ToolCommandLog = serde_json::from_value(json!({
             "commands": [
                 {
-                    "tool": "blobfs",
+                    "tool": "./host_x64/blobfs",
                     "args": [
                         "--json-output",
                         blobs_json_path,
