@@ -137,7 +137,7 @@ From //products/bringup.gni:45
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:25
+From //BUILD.gn:26
 
 **Current value for `target_cpu = "x64"`:** `[]`
 
@@ -145,7 +145,7 @@ From //products/bringup.gni:45
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:25
+From //BUILD.gn:26
 
 ### base_package_labels
 If you add package labels to this variable, the packages will be included in
@@ -160,7 +160,7 @@ From //out/not-default/args.gn:9
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:32
+From //BUILD.gn:33
 
 **Current value for `target_cpu = "x64"`:** `[]`
 
@@ -168,7 +168,7 @@ From //out/not-default/args.gn:9
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:32
+From //BUILD.gn:33
 
 ### basic_env_names
 The list of environment names to include in "basic_envs".
@@ -659,7 +659,7 @@ From //out/not-default/args.gn:10
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:40
+From //BUILD.gn:41
 
 **Current value for `target_cpu = "x64"`:** `[]`
 
@@ -667,7 +667,7 @@ From //out/not-default/args.gn:10
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:40
+From //BUILD.gn:41
 
 ### camera_debug
 
@@ -2032,7 +2032,7 @@ From //out/not-default/args.gn:11
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:59
+From //BUILD.gn:60
 
 **Current value for `target_cpu = "x64"`:** `["//tools/devshell:fx", "//tools/bindc:host"]`
 
@@ -2040,7 +2040,7 @@ From //out/not-default/args.gn:11
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:59
+From //BUILD.gn:60
 
 ### host_os
 
@@ -3699,7 +3699,7 @@ From //products/bringup.gni:65
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:63
+From //BUILD.gn:64
 
 **Current value for `target_cpu = "x64"`:** `[]`
 
@@ -3707,7 +3707,7 @@ From //products/bringup.gni:65
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:63
+From //BUILD.gn:64
 
 ### sdk_dirs
 The directories to search for parts of the SDK.
@@ -4092,7 +4092,7 @@ afterwards.
 
 **Current value (from the default):** `""`
 
-From //BUILD.gn:46
+From //BUILD.gn:47
 
 ### testonly_in_containers
 Whether to allow testonly=true targets in fuchsia ZBI or base/cache packages.
@@ -4212,7 +4212,7 @@ From //out/not-default/args.gn:12
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:54
+From //BUILD.gn:55
 
 **Current value for `target_cpu = "x64"`:** `["//tools/net/device-finder:host", "//build/images:fastboot", "//bundles:kitchen_sink"]`
 
@@ -4220,7 +4220,7 @@ From //out/not-default/args.gn:12
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:54
+From //BUILD.gn:55
 
 ### update_kernels
 (deprecated) List of kernel images to include in the update (OTA) package.
