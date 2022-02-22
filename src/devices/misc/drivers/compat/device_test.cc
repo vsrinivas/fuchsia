@@ -13,6 +13,7 @@
 
 #include "lib/ddk/binding_priv.h"
 #include "lib/ddk/device.h"
+#include "lib/ddk/driver.h"
 #include "src/devices/misc/drivers/compat/devfs_vnode.h"
 
 namespace fdf = fuchsia_driver_framework;
@@ -156,6 +157,69 @@ TEST_F(DeviceTest, AddChildWithProtoPropAndProtoId) {
   zx_device_prop_t prop{.id = BIND_PROTOCOL, .value = ZX_PROTOCOL_I2C};
   device_add_args_t args{
       .name = "child", .props = &prop, .prop_count = 1, .proto_id = ZX_PROTOCOL_BLOCK};
+  zx_device_t* child = nullptr;
+  zx_status_t status = parent.Add(&args, &child);
+  ASSERT_EQ(ZX_OK, status);
+  EXPECT_NE(nullptr, child);
+  EXPECT_STREQ("child", child->Name());
+  EXPECT_TRUE(parent.HasChildren());
+
+  ASSERT_TRUE(RunLoopUntilIdle());
+  ASSERT_TRUE(ran);
+}
+
+TEST_F(DeviceTest, AddChildWithStringProps) {
+  auto endpoints = fidl::CreateEndpoints<fdf::Node>();
+
+  // Create a node.
+  TestNode node(dispatcher());
+  auto binding = fidl::BindServer(dispatcher(), std::move(endpoints->server), &node);
+
+  // Create a device.
+  zx_protocol_device_t ops{};
+  compat::Device parent("parent", nullptr, {}, &ops, std::nullopt, logger(), dispatcher());
+  parent.Bind({std::move(endpoints->client), dispatcher()});
+
+  bool ran = false;
+  node.SetAddChildHook([&ran](TestNode::AddChildRequestView& rv) {
+    ran = true;
+    auto& prop = rv->args.properties()[0];
+    ASSERT_EQ(strncmp(prop.key().string_value().data(), "hello", prop.key().string_value().size()),
+              0);
+    ASSERT_EQ(prop.value().int_value(), 1u);
+
+    prop = rv->args.properties()[1];
+    ASSERT_EQ(
+        strncmp(prop.key().string_value().data(), "another", prop.key().string_value().size()), 0);
+    ASSERT_EQ(prop.value().bool_value(), true);
+
+    prop = rv->args.properties()[2];
+    ASSERT_EQ(strncmp(prop.key().string_value().data(), "key", prop.key().string_value().size()),
+              0);
+    ASSERT_EQ(
+        strncmp(prop.value().string_value().data(), "value", prop.value().string_value().size()),
+        0);
+  });
+
+  // Add a child device.
+  zx_device_str_prop_t props[3] = {
+      zx_device_str_prop_t{
+          .key = "hello",
+          .property_value = str_prop_int_val(1),
+      },
+      zx_device_str_prop_t{
+          .key = "another",
+          .property_value = str_prop_bool_val(true),
+      },
+      zx_device_str_prop_t{
+          .key = "key",
+          .property_value = str_prop_str_val("value"),
+      },
+  };
+  device_add_args_t args{.name = "child",
+                         .str_props = props,
+                         .str_prop_count = sizeof(props) / sizeof(props[0]),
+                         .proto_id = ZX_PROTOCOL_BLOCK};
   zx_device_t* child = nullptr;
   zx_status_t status = parent.Add(&args, &child);
   ASSERT_EQ(ZX_OK, status);
