@@ -11,6 +11,7 @@
 #include <lib/fitx/result.h>
 #include <zircon/fidl.h>
 
+#include <algorithm>
 #include <cstdint>
 #include <utility>
 #include <variant>
