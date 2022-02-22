@@ -40,6 +40,7 @@ use {
     url::Url,
 };
 
+mod metrics;
 mod tunnel;
 
 const REPOSITORY_MANAGER_SELECTOR: &str = "core/appmgr:out:fuchsia.pkg.RepositoryManager";
@@ -209,7 +210,7 @@ async fn repo_spec_to_backend(
 
 async fn add_repository(
     repo_name: &str,
-    repo_spec: RepositorySpec,
+    repo_spec: &RepositorySpec,
     save_config: SaveConfig,
     inner: Arc<RwLock<RepoInner>>,
 ) -> Result<(), bridge::RepositoryError> {
@@ -243,6 +244,8 @@ async fn add_repository(
     // The repository server is only started when repositories are added to the
     // daemon. Now that we added one, make sure the server has started.
     inner.start_server_warn().await;
+
+    metrics::add_repository_event(&repo_spec).await;
 
     Ok(())
 }
@@ -534,7 +537,16 @@ impl RepoInner {
             ServerState::Stopped(addr) => addr.clone(),
         };
 
-        self.server = ServerState::new_running(addr, Arc::clone(&self.manager)).await?;
+        match ServerState::new_running(addr, Arc::clone(&self.manager)).await {
+            Ok(server) => {
+                self.server = server;
+                metrics::server_started_event().await;
+            }
+            Err(err) => {
+                metrics::server_failed_to_start_event(&err.to_string()).await;
+                return Err(err);
+            }
+        }
 
         Ok(())
     }
@@ -846,17 +858,21 @@ impl<T: EventHandlerProvider + Default + Unpin + 'static> FidlProtocol for Repo<
             bridge::RepositoryRegistryRequest::AddRepository { name, repository, responder } => {
                 let mut res = match repository.try_into() {
                     Ok(repo_spec) => {
-                        add_repository(&name, repo_spec, SaveConfig::Save, Arc::clone(&self.inner))
+                        add_repository(&name, &repo_spec, SaveConfig::Save, Arc::clone(&self.inner))
                             .await
                     }
                     Err(err) => Err(err.into()),
                 };
 
                 responder.send(&mut res)?;
+
                 Ok(())
             }
             bridge::RepositoryRegistryRequest::RemoveRepository { name, responder } => {
                 responder.send(self.remove_repository(cx, &name).await)?;
+
+                metrics::remove_repository_event().await;
+
                 Ok(())
             }
             bridge::RepositoryRegistryRequest::RegisterTarget { target_info, responder } => {
@@ -869,6 +885,9 @@ impl<T: EventHandlerProvider + Default + Unpin + 'static> FidlProtocol for Repo<
                 };
 
                 responder.send(&mut res)?;
+
+                metrics::register_repository_event().await;
+
                 Ok(())
             }
             bridge::RepositoryRegistryRequest::DeregisterTarget {
@@ -879,6 +898,9 @@ impl<T: EventHandlerProvider + Default + Unpin + 'static> FidlProtocol for Repo<
                 responder.send(
                     &mut self.deregister_target(cx, repository_name, target_identifier).await,
                 )?;
+
+                metrics::deregister_repository_event().await;
+
                 Ok(())
             }
             bridge::RepositoryRegistryRequest::ListPackages {
@@ -984,23 +1006,30 @@ impl<T: EventHandlerProvider + Default + Unpin + 'static> FidlProtocol for Repo<
     async fn start(&mut self, cx: &Context) -> Result<(), anyhow::Error> {
         log::info!("Starting repository protocol");
 
-        match pkg_config::repository_server_enabled().await {
-            Ok(true) => match pkg_config::repository_listen_addr().await {
-                Ok(Some(addr)) => {
-                    let mut inner = self.inner.write().await;
-                    inner.server = ServerState::Stopped(addr);
+        match pkg_config::repository_server_mode().await {
+            Ok(mode) => {
+                metrics::server_mode_event(&mode).await;
+
+                if mode == "ffx" {
+                    match pkg_config::repository_listen_addr().await {
+                        Ok(Some(addr)) => {
+                            let mut inner = self.inner.write().await;
+                            inner.server = ServerState::Stopped(addr);
+                        }
+                        Ok(None) => {
+                            log::error!(
+                                "repository.server.listen address not configured, not starting server"
+                            );
+
+                            metrics::server_disabled_event().await;
+                        }
+                        Err(err) => {
+                            log::error!("Failed to read server address from config: {:#}", err);
+                        }
+                    }
+                } else {
+                    log::warn!("Repository server mode is {:?}, not starting server", mode);
                 }
-                Ok(None) => {
-                    log::error!(
-                        "repository.server.listen address not configured, not starting server"
-                    );
-                }
-                Err(err) => {
-                    log::error!("Failed to read server address from config: {:#}", err);
-                }
-            },
-            Ok(false) => {
-                log::warn!("Repository server is disabled, not starting server");
             }
             Err(err) => {
                 log::error!("Failed to determine if server is enabled from config: {:#}", err);
@@ -1028,7 +1057,7 @@ async fn load_repositories_from_config(inner: &Arc<RwLock<RepoInner>>) {
 
         // Add the repository.
         if let Err(err) =
-            add_repository(&name, repo_spec, SaveConfig::DoNotSave, Arc::clone(inner)).await
+            add_repository(&name, &repo_spec, SaveConfig::DoNotSave, Arc::clone(inner)).await
         {
             log::warn!("failed to add the repository {:?}: {:?}", name, err);
         }

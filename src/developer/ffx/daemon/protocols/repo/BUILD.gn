@@ -37,6 +37,7 @@ if (is_host) {
       "//src/developer/ffx/lib/fidl-fuchsia-developer-bridge-ext",
       "//src/developer/ffx/lib/pkg",
       "//src/developer/ffx/lib/protocols:lib",
+      "//src/lib/analytics/rust:lib",
       "//src/lib/fidl/rust/fidl",
       "//src/lib/fuchsia-async",
       "//src/lib/fuchsia-hyper",
@@ -62,6 +63,7 @@ if (is_host) {
 
     sources = [
       "src/lib.rs",
+      "src/metrics.rs",
       "src/tunnel.rs",
     ]
   }

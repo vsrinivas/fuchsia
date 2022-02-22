@@ -16,13 +16,18 @@ const CONFIG_KEY_REGISTRATIONS: &str = "repository.registrations";
 const CONFIG_KEY_DEFAULT_REPOSITORY: &str = "repository.default";
 const ESCAPE_SET: &AsciiSet = &CONTROLS.add(b'%').add(b'.');
 
+/// Return the repository server mode.
+pub async fn repository_server_mode() -> Result<String> {
+    if let Some(mode) = ffx_config::get("repository.server.mode").await? {
+        Ok(mode)
+    } else {
+        Ok(String::new())
+    }
+}
+
 /// Return if the repository server is enabled.
 pub async fn repository_server_enabled() -> Result<bool> {
-    if let Some(mode) = ffx_config::get::<Option<String>, _>("repository.server.mode").await? {
-        Ok(mode == "ffx")
-    } else {
-        Ok(false)
-    }
+    Ok(repository_server_mode().await? == "ffx")
 }
 
 /// Return the repository server address.
