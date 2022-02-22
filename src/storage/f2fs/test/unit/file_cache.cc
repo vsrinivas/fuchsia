@@ -39,12 +39,15 @@ TEST_F(FileCacheTest, WaitOnWriteback) {
   fbl::RefPtr<Page> page;
 
   vn->GrabCachePage(0, &page);
+  page->SetWriteback();
   std::thread thread([&]() {
+    page->ClearWriteback();
     page->Lock();
     ASSERT_EQ(page->IsWriteback(), true);
     page->ClearWriteback();
   });
 
+  // Wait for |thread| to run.
   page->WaitOnWriteback();
   page->SetWriteback();
   ASSERT_EQ(page->IsWriteback(), true);
@@ -83,6 +86,168 @@ TEST_F(FileCacheTest, Map) {
   ASSERT_EQ(raw_ptr->IsMapped(), true);
   ASSERT_EQ(page->IsLocked(), true);
   Page::PutPage(std::move(page), true);
+
+  vn->Close();
+  vn = nullptr;
+}
+
+TEST_F(FileCacheTest, WritebackOperation) {
+  fbl::RefPtr<fs::Vnode> test_file;
+  root_dir_->Create("test", S_IFREG, &test_file);
+  fbl::RefPtr<f2fs::File> vn = fbl::RefPtr<f2fs::File>::Downcast(std::move(test_file));
+  fbl::RefPtr<Page> page;
+  char buf[kPageSize];
+
+  // |vn| should not have any dirty Pages.
+  ASSERT_EQ(vn->GetDirtyPageCount(), 0);
+  FileTester::AppendToFile(vn.get(), buf, kPageSize);
+  FileTester::AppendToFile(vn.get(), buf, kPageSize);
+  // Get the Page of 2nd block.
+  vn->GrabCachePage(1, &page);
+  ASSERT_EQ(vn->GetDirtyPageCount(), 2);
+
+  auto key = page->GetKey();
+  WritebackOperation op = {.start = 0,
+                           .end = 2,
+                           .to_write = 2,
+                           .bSync = false,
+                           .if_page = [&key](fbl::RefPtr<Page> &page) {
+                             if (page->GetKey() <= key) {
+                               return ZX_OK;
+                             }
+                             return ZX_ERR_NEXT;
+                           }};
+
+  // Request writeback for dirty Pages. The Page of 1st block should be written out.
+  ASSERT_EQ(vn->Writeback(op), 1UL);
+  // Writeback() should not touch active Pages such as |page|.
+  ASSERT_EQ(vn->GetDirtyPageCount(), 1);
+  ASSERT_EQ(op.to_write, 1UL);
+  ASSERT_EQ(fs_->GetSuperblockInfo().GetPageCount(CountType::kWriteback), 1);
+  ASSERT_EQ(fs_->GetSuperblockInfo().GetPageCount(CountType::kDirtyData), 1);
+  ASSERT_EQ(page->IsWriteback(), false);
+  ASSERT_EQ(page->IsDirty(), true);
+  Page::PutPage(std::move(page), true);
+
+  key = 0;
+  // Request writeback for dirty Pages, but there is no Page meeting op.if_page.
+  ASSERT_EQ(vn->Writeback(op), 0UL);
+  key = 1;
+  // Now, 2nd Page meets op.if_page.
+  ASSERT_EQ(vn->Writeback(op), 1UL);
+  ASSERT_EQ(op.to_write, 0UL);
+  ASSERT_EQ(vn->GetDirtyPageCount(), 0);
+  ASSERT_EQ(fs_->GetSuperblockInfo().GetPageCount(CountType::kWriteback), 2);
+  ASSERT_EQ(fs_->GetSuperblockInfo().GetPageCount(CountType::kDirtyData), 0);
+
+  // Request sync. writeback.
+  op.bSync = true;
+  // No dirty Pages to be written.
+  // All writeback Pages should be clean.
+  ASSERT_EQ(vn->Writeback(op), 0UL);
+  ASSERT_EQ(fs_->GetSuperblockInfo().GetPageCount(CountType::kWriteback), 0);
+
+  // Do not release clean Pages
+  op.bReleasePages = false;
+  // It should not release any clean Pages.
+  ASSERT_EQ(vn->Writeback(op), 0UL);
+  // Pages at 1st and 2nd blocks should be uptodate
+  vn->GrabCachePage(0, &page);
+  ASSERT_EQ(page->IsUptodate(), true);
+  Page::PutPage(std::move(page), true);
+  vn->GrabCachePage(1, &page);
+  ASSERT_EQ(page->IsUptodate(), true);
+  Page::PutPage(std::move(page), true);
+
+  // Release clean Pages
+  op.bReleasePages = true;
+  // It should release and evict clean Pages from FileCache.
+  ASSERT_EQ(vn->Writeback(op), 0UL);
+  // There is no uptodate Page.
+  vn->GrabCachePage(0, &page);
+  ASSERT_EQ(page->IsUptodate(), false);
+  Page::PutPage(std::move(page), true);
+  vn->GrabCachePage(1, &page);
+  ASSERT_EQ(page->IsUptodate(), false);
+  Page::PutPage(std::move(page), true);
+
+  vn->Close();
+  vn = nullptr;
+}
+
+TEST_F(FileCacheTest, Recycle) {
+  fbl::RefPtr<fs::Vnode> test_file;
+  root_dir_->Create("test", S_IFREG, &test_file);
+  fbl::RefPtr<f2fs::File> vn = fbl::RefPtr<f2fs::File>::Downcast(std::move(test_file));
+  char buf[kPageSize];
+
+  FileTester::AppendToFile(vn.get(), buf, kPageSize);
+
+  fbl::RefPtr<Page> page;
+  vn->GrabCachePage(0, &page);
+  ASSERT_EQ(page->IsDirty(), true);
+  Page *raw_page = page.get();
+  Page::PutPage(std::move(page), true);
+
+  page = fbl::ImportFromRawPtr(raw_page);
+  // ref_count should be set to one in Page::fbl_recycle().
+  ASSERT_EQ(page->IsLastReference(), true);
+  // Leak it to keep alive in FileCache.
+  raw_page = fbl::ExportToRawPtr(&page);
+  FileCache &cache = raw_page->GetFileCache();
+
+  raw_page->Lock();
+  // Test FileCache::GetPage() and FileCache::Downgrade() with multiple threads
+  std::thread thread1([&]() {
+    int i = 1000;
+    while (--i) {
+      fbl::RefPtr<Page> page;
+      vn->GrabCachePage(0, &page);
+      ASSERT_EQ(page->IsDirty(), true);
+      Page::PutPage(std::move(page), true);
+    }
+  });
+
+  std::thread thread2([&]() {
+    int i = 1000;
+    while (--i) {
+      fbl::RefPtr<Page> page;
+      vn->GrabCachePage(0, &page);
+      ASSERT_EQ(page->IsDirty(), true);
+      Page::PutPage(std::move(page), true);
+    }
+  });
+  // Start threads.
+  raw_page->Unlock();
+  thread1.join();
+  thread2.join();
+
+  // Test FileCache::Downgrade() and FileCache::Reset() with multiple threads
+  // Before FileCache::Reset(), a caller should ensure that there is no dirty Pages in FileCache.
+  vn->GrabCachePage(0, &page);
+  page->Invalidate();
+  Page::PutPage(std::move(page), true);
+
+  std::thread thread_get_page([&]() {
+    bool bStop = false;
+    std::thread thread_reset([&]() {
+      while (!bStop) {
+        cache.Reset();
+      }
+    });
+
+    int i = 1000;
+    while (--i) {
+      fbl::RefPtr<Page> page;
+      vn->GrabCachePage(0, &page);
+      ASSERT_EQ(page->IsUptodate(), false);
+      Page::PutPage(std::move(page), true);
+    }
+    bStop = true;
+    thread_reset.join();
+  });
+
+  thread_get_page.join();
 
   vn->Close();
   vn = nullptr;

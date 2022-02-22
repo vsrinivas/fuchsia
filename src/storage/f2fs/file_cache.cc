@@ -300,7 +300,7 @@ zx::status<bool> FileCache::GetPageUnsafe(const pgoff_t index, fbl::RefPtr<Page>
           recycle_cvar_.wait(tree_lock_);
           continue;
         }
-        ZX_ASSERT(!(*out)->IsLastReference());
+        // Here, Page::ref_count should not be less than one.
         return zx::ok(false);
       }
       *out = fbl::ImportFromRawPtr(raw_ptr);
@@ -314,7 +314,7 @@ zx::status<bool> FileCache::GetPageUnsafe(const pgoff_t index, fbl::RefPtr<Page>
 }
 
 zx_status_t FileCache::EvictUnsafe(Page *page) {
-  if (!(*page).InContainer()) {
+  if (!page->InContainer()) {
     return ZX_ERR_NOT_FOUND;
   }
   page_tree_.erase(*page);
@@ -457,7 +457,6 @@ pgoff_t FileCache::Writeback(WritebackOperation &operation) {
       }
       page->ClearWriteback();
     } else {
-      ZX_ASSERT(page->IsWriteback());
       ++nwritten;
       --operation.to_write;
     }
