@@ -1443,7 +1443,7 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
                     Err(s) => responder.send(s.into_raw(), &[])?,
                 }
             }
-            FileRequest::Read2 { count, responder } => {
+            FileRequest::Read { count, responder } => {
                 responder.send(
                     &mut self.handle_read_request(connection, count).map_err(zx::Status::into_raw),
                 )?;

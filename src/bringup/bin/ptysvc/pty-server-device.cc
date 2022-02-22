@@ -54,7 +54,7 @@ void PtyServerDevice::ReadDeprecated(ReadDeprecatedRequestView request,
   ZX_ASSERT(false);
 }
 
-void PtyServerDevice::Read2(Read2RequestView request, Read2Completer::Sync& completer) {
+void PtyServerDevice::Read(ReadRequestView request, ReadCompleter::Sync& completer) {
   ZX_ASSERT(false);
 }
 

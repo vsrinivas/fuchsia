@@ -49,7 +49,7 @@ async fn file_contents_at_path(dir: zx::Channel, path: &str) -> Result<Vec<u8>, 
 
     let attr = file.get_attr().await?.1;
 
-    let vec = file.read2(attr.content_size).await?.map_err(zx::Status::from_raw)?;
+    let vec = file.read(attr.content_size).await?.map_err(zx::Status::from_raw)?;
     Ok(vec)
 }
 

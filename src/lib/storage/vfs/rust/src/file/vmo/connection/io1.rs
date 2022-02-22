@@ -427,7 +427,7 @@ impl VmoFileConnection {
                 })
                 .await?;
             }
-            FileRequest::Read2 { count, responder } => {
+            FileRequest::Read { count, responder } => {
                 self.handle_read(count, |status, content| {
                     if status == zx::Status::OK {
                         responder.send(&mut Ok(content.to_vec()))

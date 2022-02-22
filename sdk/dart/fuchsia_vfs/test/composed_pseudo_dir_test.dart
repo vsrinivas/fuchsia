@@ -38,7 +38,7 @@ void main() {
       composedDir.open(io.openRightReadable, io.modeTypeFile, 'foo.txt',
           InterfaceRequest<io.Node>(fileProxy.ctrl.request().passChannel()));
 
-      final data = await fileProxy.read2(io.maxBuf);
+      final data = await fileProxy.read(io.maxBuf);
       expect(utf8.decode(data), 'hello world');
     });
 
@@ -72,7 +72,7 @@ void main() {
       composedDir.open(io.openRightReadable, io.modeTypeFile, 'foo.txt',
           InterfaceRequest<io.Node>(fileProxy.ctrl.request().passChannel()));
 
-      final data = await fileProxy.read2(io.maxBuf);
+      final data = await fileProxy.read(io.maxBuf);
       expect(utf8.decode(data), 'hello world');
     });
 
@@ -95,7 +95,7 @@ void main() {
           InterfaceRequest<io.Node>(fileProxy.ctrl.request().passChannel()));
 
       await expectLater(
-          fileProxy.read2(io.maxBuf), throwsA(isA<FidlStateException>()));
+          fileProxy.read(io.maxBuf), throwsA(isA<FidlStateException>()));
     });
 
     test('cannot change list of inherited nodes after creation', () async {
@@ -113,7 +113,7 @@ void main() {
           InterfaceRequest<io.Node>(fileProxy.ctrl.request().passChannel()));
 
       await expectLater(
-          fileProxy.read2(io.maxBuf), throwsA(isA<FidlStateException>()));
+          fileProxy.read(io.maxBuf), throwsA(isA<FidlStateException>()));
     });
   });
 }

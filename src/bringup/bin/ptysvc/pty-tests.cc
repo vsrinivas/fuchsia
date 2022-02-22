@@ -199,7 +199,7 @@ TEST_F(PtyTestCase, ServerWithNoClientsInitialConditions) {
 
     // Attempts to read should get 0 bytes and ZX_OK
     {
-      const fidl::WireResult result = server->Read2(10);
+      const fidl::WireResult result = server->Read(10);
       ASSERT_OK(result.status());
       const fidl::WireResponse response = result.value();
       ASSERT_TRUE(response.result.is_response(), "%s", zx_status_get_string(response.result.err()));
@@ -253,14 +253,14 @@ TEST_F(PtyTestCase, ServerWithClientInitialConditions) {
 
   // Attempts to read on either side should get SHOULD_WAIT
   {
-    const fidl::WireResult result = server->Read2(10);
+    const fidl::WireResult result = server->Read(10);
     ASSERT_OK(result.status());
     const fidl::WireResponse response = result.value();
     ASSERT_TRUE(response.result.is_err());
     ASSERT_STATUS(response.result.err(), ZX_ERR_SHOULD_WAIT);
   }
   {
-    const fidl::WireResult result = client->Read2(10);
+    const fidl::WireResult result = client->Read(10);
     ASSERT_OK(result.status());
     const fidl::WireResponse response = result.value();
     ASSERT_TRUE(response.result.is_err());
@@ -282,7 +282,7 @@ TEST_F(PtyTestCase, ServerEmpty0ByteRead) {
   Connection client;
   ASSERT_OK(OpenClient(&server, 1, &client));
 
-  const fidl::WireResult result = server->Read2(0);
+  const fidl::WireResult result = server->Read(0);
   ASSERT_OK(result.status());
   const fidl::WireResponse response = result.value();
   ASSERT_TRUE(response.result.is_response(), "%s", zx_status_get_string(response.result.err()));
@@ -737,7 +737,7 @@ TEST_F(PtyTestCase, ServerClosesWhenClientPresent) {
   // Attempts to drain the buffer should succeed
   {
     // Request more bytes than are present
-    const fidl::WireResult result = client->Read2(std::size(kTestData) + 10);
+    const fidl::WireResult result = client->Read(std::size(kTestData) + 10);
     ASSERT_OK(result.status());
     const fidl::WireResponse response = result.value();
     ASSERT_TRUE(response.result.is_response(), "%s", zx_status_get_string(response.result.err()));
@@ -748,7 +748,7 @@ TEST_F(PtyTestCase, ServerClosesWhenClientPresent) {
 
   // Attempts to read the empty buffer should fail with ZX_ERR_PEER_CLOSED
   {
-    const fidl::WireResult result = client->Read2(10);
+    const fidl::WireResult result = client->Read(10);
     ASSERT_OK(result.status());
     const fidl::WireResponse response = result.value();
     ASSERT_TRUE(response.result.is_err());
@@ -789,7 +789,7 @@ TEST_F(PtyTestCase, ServerReadClientCooked) {
   ASSERT_OK(
       event.wait_one(fuchsia_device::wire::kDeviceSignalReadable, zx::time::infinite(), nullptr));
   {
-    const fidl::WireResult result = server->Read2(std::size(kExpectedReadback) + 10);
+    const fidl::WireResult result = server->Read(std::size(kExpectedReadback) + 10);
     ASSERT_OK(result.status());
     const fidl::WireResponse response = result.value();
     ASSERT_TRUE(response.result.is_response(), "%s", zx_status_get_string(response.result.err()));
@@ -828,7 +828,7 @@ TEST_F(PtyTestCase, ServerWriteClientCooked) {
   ASSERT_OK(
       event.wait_one(fuchsia_device::wire::kDeviceSignalReadable, zx::time::infinite(), nullptr));
   {
-    const fidl::WireResult result = client->Read2(std::size(kExpectedReadbackWithNul) + 10);
+    const fidl::WireResult result = client->Read(std::size(kExpectedReadbackWithNul) + 10);
     ASSERT_OK(result.status());
     const fidl::WireResponse response = result.value();
     ASSERT_TRUE(response.result.is_response(), "%s", zx_status_get_string(response.result.err()));
@@ -869,7 +869,7 @@ TEST_F(PtyTestCase, ServerReadClientRaw) {
   ASSERT_OK(
       event.wait_one(fuchsia_device::wire::kDeviceSignalReadable, zx::time::infinite(), nullptr));
   {
-    const fidl::WireResult result = server->Read2(std::size(kTestData) + 10);
+    const fidl::WireResult result = server->Read(std::size(kTestData) + 10);
     ASSERT_OK(result.status());
     const fidl::WireResponse response = result.value();
     ASSERT_TRUE(response.result.is_response(), "%s", zx_status_get_string(response.result.err()));
@@ -911,7 +911,7 @@ TEST_F(PtyTestCase, ServerWriteClientRaw) {
   ASSERT_OK(
       event.wait_one(fuchsia_device::wire::kDeviceSignalReadable, zx::time::infinite(), nullptr));
   {
-    const fidl::WireResult result = client->Read2(std::size(kTestData) + 10);
+    const fidl::WireResult result = client->Read(std::size(kTestData) + 10);
     ASSERT_OK(result.status());
     const fidl::WireResponse response = result.value();
     ASSERT_TRUE(response.result.is_response(), "%s", zx_status_get_string(response.result.err()));
@@ -968,7 +968,7 @@ TEST_F(PtyTestCase, ServerFillsClientFifo) {
   while (total_read < total_written) {
     ASSERT_OK(
         client_event.wait_one(fuchsia_device::wire::kDeviceSignalReadable, zx::time{}, nullptr));
-    const fidl::WireResult result = client->Read2(std::size(kTestString) - 1);
+    const fidl::WireResult result = client->Read(std::size(kTestString) - 1);
     ASSERT_OK(result.status());
     const fidl::WireResponse response = result.value();
     ASSERT_TRUE(response.result.is_response(), "%s", zx_status_get_string(response.result.err()));
@@ -1020,7 +1020,7 @@ TEST_F(PtyTestCase, ClientFillsServerFifo) {
   while (total_read < total_written) {
     ASSERT_OK(
         server_event.wait_one(fuchsia_device::wire::kDeviceSignalReadable, zx::time{}, nullptr));
-    const fidl::WireResult result = server->Read2(std::size(kTestString) - 1);
+    const fidl::WireResult result = server->Read(std::size(kTestString) - 1);
     ASSERT_OK(result.status());
     const fidl::WireResponse response = result.value();
     ASSERT_TRUE(response.result.is_response(), "%s", zx_status_get_string(response.result.err()));
@@ -1102,7 +1102,7 @@ TEST_F(PtyTestCase, ClientsHaveIndependentFifos) {
 
     ASSERT_OK(event.wait_one(fuchsia_device::wire::kDeviceSignalReadable, zx::time{}, nullptr));
 
-    const fidl::WireResult result = (*client)->Read2(10);
+    const fidl::WireResult result = (*client)->Read(10);
     ASSERT_OK(result.status());
     const fidl::WireResponse response = result.value();
     ASSERT_TRUE(response.result.is_response(), "%s", zx_status_get_string(response.result.err()));

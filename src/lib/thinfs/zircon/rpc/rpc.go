@@ -571,13 +571,13 @@ func (f *fileWrapper) ReadDeprecated(_ fidl.Context, count uint64) (int32, []uin
 	return int32(zx.ErrOk), buf[:r], nil
 }
 
-func (f *fileWrapper) Read2(_ fidl.Context, count uint64) (io.File2Read2Result, error) {
+func (f *fileWrapper) Read(_ fidl.Context, count uint64) (io.File2ReadResult, error) {
 	buf := make([]byte, count)
 	r, err := f.file.Read(buf, 0, fs.WhenceFromCurrent)
 	if zxErr := errorToZx(err); zxErr != zx.ErrOk {
-		return io.File2Read2ResultWithErr(int32(zxErr)), nil
+		return io.File2ReadResultWithErr(int32(zxErr)), nil
 	}
-	return io.File2Read2ResultWithResponse(io.File2Read2Response{Data: buf[:r]}), nil
+	return io.File2ReadResultWithResponse(io.File2ReadResponse{Data: buf[:r]}), nil
 }
 
 func (f *fileWrapper) ReadAtDeprecated(_ fidl.Context, count, offset uint64) (int32, []uint8, error) {

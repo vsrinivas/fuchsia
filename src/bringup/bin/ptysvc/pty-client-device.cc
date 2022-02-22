@@ -90,7 +90,7 @@ void PtyClientDevice::ReadDeprecated(ReadDeprecatedRequestView request,
   ZX_ASSERT(false);
 }
 
-void PtyClientDevice::Read2(Read2RequestView request, Read2Completer::Sync& completer) {
+void PtyClientDevice::Read(ReadRequestView request, ReadCompleter::Sync& completer) {
   ZX_ASSERT(false);
 }
 

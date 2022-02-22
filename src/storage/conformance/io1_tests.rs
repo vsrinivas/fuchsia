@@ -132,7 +132,7 @@ async fn get_token(dir: &io::DirectoryProxy) -> fidl::Handle {
 async fn read_file(dir: &io::DirectoryProxy, path: &str) -> Vec<u8> {
     let file =
         open_node::<io::FileMarker>(dir, io::OPEN_RIGHT_READABLE, io::MODE_TYPE_FILE, path).await;
-    file.read2(100).await.expect("read failed").map_err(zx::Status::from_raw).expect("read error")
+    file.read(100).await.expect("read failed").map_err(zx::Status::from_raw).expect("read error")
 }
 
 /// Attempts to open the given file, and checks the status is `NOT_FOUND`.
@@ -918,7 +918,7 @@ async fn file_read_with_sufficient_rights() {
         let file =
             open_node::<io::FileMarker>(&test_dir, file_flags, io::MODE_TYPE_FILE, TEST_FILE).await;
         let _data: Vec<u8> = file
-            .read2(0)
+            .read(0)
             .await
             .expect("read failed")
             .map_err(zx::Status::from_raw)
@@ -936,7 +936,7 @@ async fn file_read_with_insufficient_rights() {
 
         let file =
             open_node::<io::FileMarker>(&test_dir, file_flags, io::MODE_TYPE_FILE, TEST_FILE).await;
-        let result = file.read2(0).await.expect("read failed").map_err(zx::Status::from_raw);
+        let result = file.read(0).await.expect("read failed").map_err(zx::Status::from_raw);
         assert_eq!(result, Err(zx::Status::BAD_HANDLE))
     }
 }
@@ -1093,7 +1093,7 @@ async fn file_read_in_subdirectory() {
         )
         .await;
         let _data: Vec<u8> = file
-            .read2(0)
+            .read(0)
             .await
             .expect("read failed")
             .map_err(zx::Status::from_raw)

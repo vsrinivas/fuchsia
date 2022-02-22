@@ -407,7 +407,7 @@ class _FileConnection extends File {
   }
 
   @override
-  Future<Uint8List> read2(int count) async {
+  Future<Uint8List> read(int count) async {
     var response = _handleRead(count, seekPos);
     if (response.s != ZX.OK) {
       throw fidl.MethodException(response.s);

@@ -724,7 +724,7 @@ void OutputPipelineTest::TestDifferentMixRates(ClockMode clock_mode) {
   }
 
   {
-    SCOPED_TRACE("Read2");
+    SCOPED_TRACE("Read");
     auto buf = pipeline->ReadLock(rlctx, Fixed(kFramesPerRead), kFramesPerRead);
     RunLoopUntilIdle();
 

@@ -72,7 +72,7 @@ void NullPtyDeviceImpl::ReadDeprecated(ReadDeprecatedRequestView request,
   ZX_ASSERT(false);
 }
 
-void NullPtyDeviceImpl::Read2(Read2RequestView request, Read2Completer::Sync& completer) {
+void NullPtyDeviceImpl::Read(ReadRequestView request, ReadCompleter::Sync& completer) {
   ZX_ASSERT(false);
 }
 

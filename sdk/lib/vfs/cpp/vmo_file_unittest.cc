@@ -78,14 +78,14 @@ TEST(VmoFile, Reading) {
 
   // Reading the VMO from offset 24 should match reading the file from offset 0.
   {
-    fuchsia::io::File2_Read2_Result result;
-    EXPECT_EQ(ZX_OK, file_ptr->Read2(500, &result));
+    fuchsia::io::File2_Read_Result result;
+    EXPECT_EQ(ZX_OK, file_ptr->Read(500, &result));
     ASSERT_TRUE(result.is_response()) << zx_status_get_string(result.err());
     EXPECT_EQ(ReadVmo(test_vmo, 24, 500), result.response().data);
   }
   {
-    fuchsia::io::File2_Read2_Result result;
-    EXPECT_EQ(ZX_OK, file_ptr->Read2(500, &result));
+    fuchsia::io::File2_Read_Result result;
+    EXPECT_EQ(ZX_OK, file_ptr->Read(500, &result));
     ASSERT_TRUE(result.is_response()) << zx_status_get_string(result.err());
     EXPECT_EQ(ReadVmo(test_vmo, 524, 500), result.response().data);
   }

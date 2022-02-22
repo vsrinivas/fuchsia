@@ -214,7 +214,7 @@ mod tests {
                     return async move {
                         loop {
                             let mut vec = remote
-                                .read2(content.len() as u64)
+                                .read(content.len() as u64)
                                 .await
                                 .context("Read failed")?
                                 .map_err(Status::from_raw)

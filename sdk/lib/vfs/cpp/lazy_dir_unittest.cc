@@ -160,8 +160,8 @@ TEST_F(LazyDirConnection, LookupWorks) {
   n->Serve(fuchsia::io::OPEN_RIGHT_READABLE, file_ptr.NewRequest().TakeChannel(),
            dir_.dispatcher());
 
-  fuchsia::io::File2_Read2_Result result;
-  file_ptr->Read2(20, &result);
+  fuchsia::io::File2_Read_Result result;
+  file_ptr->Read(20, &result);
   ASSERT_TRUE(result.is_response()) << zx_status_get_string(result.err());
   std::string str = "file3";
   std::vector<uint8_t> expected_data(str.begin(), str.end());

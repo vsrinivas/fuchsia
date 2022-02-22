@@ -2752,7 +2752,7 @@ mod serve_write_blob_tests {
                 StubRequestor::SetFlagsDeprecatedUseNode => "set_flags_deprecated_use_node",
                 StubRequestor::Write => "write",
                 StubRequestor::WriteAt => "write_at",
-                StubRequestor::Read => "read2",
+                StubRequestor::Read => "read",
                 StubRequestor::ReadAt => "read_at",
                 StubRequestor::Seek => "seek",
                 StubRequestor::Truncate => "truncate",
@@ -2786,7 +2786,7 @@ mod serve_write_blob_tests {
                 }
                 StubRequestor::Write => proxy.write(&[0; 0]).map(|_| ()).boxed(),
                 StubRequestor::WriteAt => proxy.write_at(&[0; 0], 0).map(|_| ()).boxed(),
-                StubRequestor::Read => proxy.read2(0).map(|_| ()).boxed(),
+                StubRequestor::Read => proxy.read(0).map(|_| ()).boxed(),
                 StubRequestor::ReadAt => proxy.read_at(0, 0).map(|_| ()).boxed(),
                 StubRequestor::Seek => {
                     proxy.seek(fidl_fuchsia_io::SeekOrigin::Start, 0).map(|_| ()).boxed()

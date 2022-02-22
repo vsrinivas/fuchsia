@@ -79,14 +79,14 @@ void FileConnection::ReadDeprecated(uint64_t count, ReadDeprecatedCallback callb
   callback(status, std::move(data));
 }
 
-void FileConnection::Read2(uint64_t count, Read2Callback callback) {
+void FileConnection::Read(uint64_t count, ReadCallback callback) {
   ReadDeprecated(count,
                  [callback = std::move(callback)](zx_status_t status, std::vector<uint8_t> data) {
                    if (status != ZX_OK) {
                      callback(fpromise::error(status));
                    } else {
-                     callback(fuchsia::io::File2_Read2_Result::WithResponse(
-                         fuchsia::io::File2_Read2_Response(std::move(data))));
+                     callback(fuchsia::io::File2_Read_Result::WithResponse(
+                         fuchsia::io::File2_Read_Response(std::move(data))));
                    }
                  });
 }

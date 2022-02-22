@@ -265,7 +265,7 @@ mod tests {
                         fio::FileRequest::GetBuffer { responder, .. } => {
                             responder.send(zxs::Status::NOT_SUPPORTED.into_raw(), None).unwrap()
                         }
-                        fio::FileRequest::Read2 { responder, .. } => {
+                        fio::FileRequest::Read { responder, .. } => {
                             let to_send = if !have_sent_bytes {
                                 have_sent_bytes = true;
                                 b"hello, world!".to_vec()

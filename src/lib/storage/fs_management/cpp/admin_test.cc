@@ -208,7 +208,7 @@ TEST_F(OutgoingDirectoryMinfs, CannotWriteToReadOnlyDataRoot) {
 
   // ...we can't actually use the channel
   fidl::WireSyncClient<fio::File> fail_file_client(std::move(fail_file_ends->client));
-  const fidl::WireResult res1 = fail_file_client->Read2(4);
+  const fidl::WireResult res1 = fail_file_client->Read(4);
   ASSERT_EQ(res1.status(), ZX_ERR_PEER_CLOSED) << res1.status_string();
 
   // the channel will be valid if we open the file read-only though
@@ -221,7 +221,7 @@ TEST_F(OutgoingDirectoryMinfs, CannotWriteToReadOnlyDataRoot) {
   ASSERT_TRUE(open_resp2.ok()) << open_resp2.status_string();
 
   fidl::WireSyncClient<fio::File> file_client(std::move(test_file_ends->client));
-  const fidl::WireResult res2 = file_client->Read2(4);
+  const fidl::WireResult res2 = file_client->Read(4);
   ASSERT_TRUE(res2.ok()) << res2.status_string();
   const fidl::WireResponse resp2 = res2.value();
   ASSERT_TRUE(resp2.result.is_response()) << zx_status_get_string(resp2.result.err());

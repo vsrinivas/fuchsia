@@ -603,12 +603,12 @@ func (fState *fileState) ReadDeprecated(_ fidl.Context, count uint64) (int32, []
 	return fState.read(count)
 }
 
-func (fState *fileState) Read2(_ fidl.Context, count uint64) (io.File2Read2Result, error) {
+func (fState *fileState) Read(_ fidl.Context, count uint64) (io.File2ReadResult, error) {
 	s, b, err := fState.read(count)
 	if s != int32(zx.ErrOk) {
-		return io.File2Read2ResultWithErr(s), err
+		return io.File2ReadResultWithErr(s), err
 	}
-	return io.File2Read2ResultWithResponse(io.File2Read2Response{
+	return io.File2ReadResultWithResponse(io.File2ReadResponse{
 		Data: b,
 	}), err
 }

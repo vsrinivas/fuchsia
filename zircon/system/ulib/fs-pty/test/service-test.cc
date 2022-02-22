@@ -137,7 +137,7 @@ TEST_F(PtyTestCase, Read) {
 
   fidl::WireSyncClient<fuchsia_hardware_pty::Device> client;
   ASSERT_NO_FATAL_FAILURE(Connect(&client));
-  const fidl::WireResult result = client->Read2(sizeof(kResponse));
+  const fidl::WireResult result = client->Read(sizeof(kResponse));
   ASSERT_OK(result.status());
   const fidl::WireResponse response = result.value();
   ASSERT_TRUE(response.result.is_response(), "%s", zx_status_get_string(response.result.err()));

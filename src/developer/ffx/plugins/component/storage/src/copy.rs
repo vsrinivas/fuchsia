@@ -171,7 +171,7 @@ mod test {
             // Serve the root directory
             // Reading the file should succeed
             let request = file.try_next().await;
-            if let Ok(Some(FileRequest::Read2 { responder, .. })) = request {
+            if let Ok(Some(FileRequest::Read { responder, .. })) = request {
                 responder.send(&mut Ok(DATA.to_vec())).unwrap();
             } else {
                 panic!("did not get read request: {:?}", request)
@@ -179,7 +179,7 @@ mod test {
 
             // Reading the file should not return any more data
             let request = file.try_next().await;
-            if let Ok(Some(FileRequest::Read2 { responder, .. })) = request {
+            if let Ok(Some(FileRequest::Read { responder, .. })) = request {
                 responder.send(&mut Ok(vec![])).unwrap();
             } else {
                 panic!("did not get read request: {:?}", request)

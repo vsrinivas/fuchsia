@@ -192,7 +192,7 @@ impl Connection {
             FileRequest::ReadDeprecated { count: _, responder } => {
                 responder.send(ZX_ERR_ACCESS_DENIED, &[])?;
             }
-            FileRequest::Read2 { count: _, responder } => {
+            FileRequest::Read { count: _, responder } => {
                 responder.send(&mut Err(ZX_ERR_ACCESS_DENIED))?;
             }
             FileRequest::ReadAtDeprecated { offset: _, count: _, responder } => {
