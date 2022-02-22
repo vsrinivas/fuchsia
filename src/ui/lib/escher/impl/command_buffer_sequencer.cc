@@ -6,6 +6,8 @@
 
 #include <lib/syslog/cpp/macros.h>
 
+#include <algorithm>
+
 namespace escher {
 namespace impl {
 
