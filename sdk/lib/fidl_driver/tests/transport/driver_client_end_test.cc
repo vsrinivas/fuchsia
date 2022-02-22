@@ -23,8 +23,7 @@ class TestServer : public fdf::WireServer<test_transport::SendDriverClientEndTes
   }
 };
 
-// TODO(fxbug.dev/92488): Investigate use-after-free in |driver_runtime::Dispatcher|.
-TEST(DriverTransport, DISABLED_SendDriverClientEnd) {
+TEST(DriverTransport, SendDriverClientEnd) {
   void* driver = reinterpret_cast<void*>(uintptr_t(1));
   fdf_internal_push_driver(driver);
   auto deferred = fit::defer([]() { fdf_internal_pop_driver(); });
