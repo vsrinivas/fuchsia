@@ -7,6 +7,8 @@ import("//build/images/vboot/vboot.gni")
 import("//build/security.gni")
 
 assert(current_toolchain == target_toolchain)
+import("//build/security/policies.gni")
+import("//build/security/policies_swd.gni")
 import("//src/sys/core/build/core.gni")
 
 ##################################################
@@ -55,6 +57,32 @@ fuchsia_base = {
     "//build/images:config-data",
     "//src/sys/component_index:component_index",
   ]
+
+  if (defined(policy_labels.swd)) {
+    foreach(policy, policies_swd) {
+      if (policy.name == policy_labels.swd) {
+        base_packages += policy.base_package_deps
+      }
+    }
+  }
+
+  # Add the base package labels for the selected SWD policy.
+  extra_core_realm_shards = []
+  if (defined(policy_labels.update_checker)) {
+    foreach(policy, policies_update_checker) {
+      if (policy.name == policy_labels.update_checker) {
+        # TODO(fxbug.dev/93695) Remove the need for
+        # `if_board_supports_update_configurator` and
+        # `board_supports_update_configurator`, replacing them with an
+        # optional capability route when that feature is available.
+        if (board_supports_update_configurator) {
+          inner = policy.if_board_supports_update_configurator
+
+          extra_core_realm_shards += inner.core_realm_shards
+        }
+      }
+    }
+  }
 
   base_driver_packages = [ "//:additional_base_driver_packages" ]
   cache_packages = [ "//:additional_cache_packages" ]
@@ -110,7 +138,8 @@ fuchsia_base = {
 
 core_realm("core_realm") {
   package_name = core_realm_package_name
-  deps = core_realm_shards + board_core_realm_shards
+  deps = core_realm_shards + board_core_realm_shards +
+         fuchsia_base.extra_core_realm_shards
   restrict_persistent_storage = core_realm_restrict_persistent_storage
 }
 

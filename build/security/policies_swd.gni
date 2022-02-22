@@ -26,7 +26,7 @@
 # 4. Remove manually defined SWD targets in product definitions, rely solely
 #    on defined SWD policies to determine product configuration of SWD policy.
 
-# A definition of existing policies is included below:
+# A definition of existing swd policies is included below:
 # ┌──────────────────────┬──────────────────────────────┬─────────────────────┬────────────────────────────────────┐
 # │ POLICY_NAME          │ enable_dynamic_configuration │ persisted_repos_dir │ disable_executability_restrictions │
 # ├──────────────────────┼──────────────────────────────┼─────────────────────┼────────────────────────────────────┤
@@ -57,5 +57,46 @@ policies_swd = [
     ]
     system_image_deps =
         [ "//src/sys/pkg:pkgfs-disable-executability-restrictions" ]
+  },
+]
+
+# Policy names must be either unset, or one of the set of
+# ["omaha_client", "system_update_checker"].
+#
+# Each policy defines the following scopes:
+# * if_board_supports_update_configurator, which will be applied if
+#   board_supports_update_configurator is set to true by a board's config.
+#   This scope defines the following scopes:
+#   * core_realm_shards - a set of labels to add as deps to the core realm's
+#     core_realm target in //build/images/fuchsia:core_realm
+#
+# A definition of existing update_checker policies is included below:
+# ┌───────────────────────┬────────────────────────┐
+# │ POLICY_NAME           │  update checker        │
+# │                       │  implementation        │
+# ├───────────────────────┼────────────────────────┤
+# │                       │  none                  │
+# ├───────────────────────┼────────────────────────┤
+# │ omaha_client          │  omaha_client          │
+# ├───────────────────────┼────────────────────────┤
+# │ system_update_checker │  system_update_checker │
+# └───────────────────────┴────────────────────────┘
+
+policies_update_checker = [
+  {
+    name = "omaha_client"
+    if_board_supports_update_configurator = {
+      core_realm_shards = [
+        # FIXME(fxbug.dev/93695) Replace with an optional capability route when
+        # that feature is available
+        "//src/sys/pkg:system-update-configurator-route-to-omaha-client",
+      ]
+    }
+  },
+  {
+    name = "system_update_checker"
+    if_board_supports_update_configurator = {
+      core_realm_shards = []
+    }
   },
 ]
