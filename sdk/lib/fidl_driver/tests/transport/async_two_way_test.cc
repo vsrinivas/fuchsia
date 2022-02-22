@@ -35,8 +35,7 @@ struct TestServer : public fdf::WireServer<test_transport::TwoWayTest> {
   fdf_arena_t* fdf_response_arena;
 };
 
-// TODO(fxbug.dev/92488): Investigate use-after-free in |driver_runtime::Dispatcher|.
-TEST(DriverTransport, DISABLED_TwoWayAsync) {
+TEST(DriverTransport, TwoWayAsync) {
   void* driver = reinterpret_cast<void*>(uintptr_t(1));
   fdf_internal_push_driver(driver);
   auto deferred = fit::defer([]() { fdf_internal_pop_driver(); });

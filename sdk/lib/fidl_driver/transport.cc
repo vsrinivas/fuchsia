@@ -182,7 +182,10 @@ zx_status_t DriverWaiter::Begin() {
 zx_status_t DriverWaiter::Cancel() {
   fdf_dispatcher_t* dispatcher = fdf_dispatcher_from_async_dispatcher(state_.dispatcher);
   uint32_t options = fdf_dispatcher_get_options(dispatcher);
-  state_.channel_read->Cancel();
+  fdf_status_t status = state_.channel_read->Cancel();
+  if (status != ZX_OK) {
+    return status;
+  }
   // When the dispatcher is synchronized, our |ChannelRead| handler won't be
   // called. When the dispatcher is unsynchronized, our |ChannelRead| handler
   // will always be called (sometimes with a ZX_OK status and othertimes with a

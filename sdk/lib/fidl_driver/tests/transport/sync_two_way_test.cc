@@ -45,32 +45,33 @@ struct TestServer : public fdf::WireServer<test_transport::TwoWayTest> {
   sync::Completion* destroyed_;
 };
 
-TEST(DriverTransport, DISABLED_TwoWaySync) {
+TEST(DriverTransport, TwoWaySync) {
   void* driver = reinterpret_cast<void*>(uintptr_t(1));
   fdf_internal_push_driver(driver);
   auto deferred = fit::defer([]() { fdf_internal_pop_driver(); });
 
-  auto dispatcher = fdf::Dispatcher::Create(FDF_DISPATCHER_OPTION_ALLOW_SYNC_CALLS);
-  ASSERT_OK(dispatcher.status_value());
+  auto client_dispatcher = fdf::Dispatcher::Create(FDF_DISPATCHER_OPTION_ALLOW_SYNC_CALLS);
+  ASSERT_OK(client_dispatcher.status_value());
+
+  auto server_dispatcher = fdf::Dispatcher::Create(FDF_DISPATCHER_OPTION_ALLOW_SYNC_CALLS);
+  ASSERT_OK(server_dispatcher.status_value());
+
+  auto channels = fdf::ChannelPair::Create(0);
+  ASSERT_OK(channels.status_value());
+
+  fdf::ServerEnd<test_transport::TwoWayTest> server_end(std::move(channels->end0));
+  fdf::ClientEnd<test_transport::TwoWayTest> client_end(std::move(channels->end1));
 
   sync::Completion server_destruction;
-  auto do_test = [&] {
-    fdf_internal_push_driver(driver);
-    auto deferred = fit::defer([]() { fdf_internal_pop_driver(); });
+  auto server = std::make_shared<TestServer>(&server_destruction);
+  fdf::ServerBindingRef binding_ref =
+      fdf::BindServer(server_dispatcher->get(), std::move(server_end), server,
+                      fidl_driver_testing::FailTestOnServerError<test_transport::TwoWayTest>());
+  zx::status<fdf::Arena> arena = fdf::Arena::Create(0, "");
+  ASSERT_OK(arena.status_value());
+  server->fdf_request_arena = arena->get();
 
-    auto channels = fdf::ChannelPair::Create(0);
-    ASSERT_OK(channels.status_value());
-
-    fdf::ServerEnd<test_transport::TwoWayTest> server_end(std::move(channels->end0));
-    fdf::ClientEnd<test_transport::TwoWayTest> client_end(std::move(channels->end1));
-
-    auto server = std::make_shared<TestServer>(&server_destruction);
-    fdf::ServerBindingRef binding_ref =
-        fdf::BindServer(dispatcher->get(), std::move(server_end), server,
-                        fidl_driver_testing::FailTestOnServerError<test_transport::TwoWayTest>());
-    zx::status<fdf::Arena> arena = fdf::Arena::Create(0, "");
-    ASSERT_OK(arena.status_value());
-    server->fdf_request_arena = arena->get();
+  auto run_on_dispatcher_thread = [&] {
     fdf::WireSyncClient<test_transport::TwoWayTest> client(std::move(client_end));
     fdf::WireUnownedResult<test_transport::TwoWayTest::TwoWay> result =
         client.buffer(*arena)->TwoWay(kRequestPayload);
@@ -83,8 +84,7 @@ TEST(DriverTransport, DISABLED_TwoWaySync) {
     binding_ref.Unbind();
     server.reset();
   };
-  // TODO(fxbug.dev/92600): Run this test without posting task when supported.
-  async::PostTask(dispatcher->async_dispatcher(), do_test);
+  async::PostTask(client_dispatcher->async_dispatcher(), run_on_dispatcher_thread);
   ASSERT_OK(server_destruction.Wait());
 }
 

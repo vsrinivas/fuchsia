@@ -19,6 +19,8 @@ template <typename FidlProtocol>
 auto FailTestOnServerError() {
   return [](fdf::WireServer<FidlProtocol>*, fidl::UnbindInfo info,
             fdf::ServerEnd<FidlProtocol> server_end) {
+    if (info.is_dispatcher_shutdown())
+      return;
     if (info.is_user_initiated())
       return;
     if (info.is_peer_closed())
