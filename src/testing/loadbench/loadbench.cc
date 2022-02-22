@@ -10,6 +10,7 @@
 #include <zircon/time.h>
 #include <zircon/types.h>
 
+#include <algorithm>
 #include <chrono>
 #include <cstdint>
 #include <cstdio>
