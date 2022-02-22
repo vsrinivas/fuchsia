@@ -332,6 +332,13 @@ template <>
 struct internal::NaturalCodingTraits<::test_emptystruct::Empty> final
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_emptystruct::Empty, 1, 1> {};
+
+template <>
+struct internal::NaturalIsMemcpyCompatible<::test_emptystruct::Empty>
+    : public internal::BoolConstant<
+          !HasPadding<::test_emptystruct::Empty>::value &&
+          internal::NaturalIsMemcpyCompatible<uint8_t>::value> {};
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -355,6 +362,15 @@ struct internal::NaturalCodingTraits<
     ::test_emptystruct::EmptyProtocolSendRequest>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_emptystruct::EmptyProtocolSendRequest, 1, 1> {};
+
+template <>
+struct internal::NaturalIsMemcpyCompatible<
+    ::test_emptystruct::EmptyProtocolSendRequest>
+    : public internal::BoolConstant<
+          !HasPadding<::test_emptystruct::EmptyProtocolSendRequest>::value &&
+          internal::NaturalIsMemcpyCompatible<
+              ::test_emptystruct::Empty>::value> {};
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -380,6 +396,16 @@ struct internal::NaturalCodingTraits<
     final
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse, 1, 1> {};
+
+template <>
+struct internal::NaturalIsMemcpyCompatible<
+    ::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse>
+    : public internal::BoolConstant<
+          !HasPadding<::test_emptystruct::
+                          EmptyProtocolSendAndReceiveTopResponse>::value &&
+          internal::NaturalIsMemcpyCompatible<
+              ::test_emptystruct::Empty>::value> {};
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -405,6 +431,16 @@ struct internal::NaturalCodingTraits<
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_emptystruct::EmptyProtocolSendAndReceiveRequest, 1, 1> {
 };
+
+template <>
+struct internal::NaturalIsMemcpyCompatible<
+    ::test_emptystruct::EmptyProtocolSendAndReceiveRequest>
+    : public internal::BoolConstant<
+          !HasPadding<
+              ::test_emptystruct::EmptyProtocolSendAndReceiveRequest>::value &&
+          internal::NaturalIsMemcpyCompatible<
+              ::test_emptystruct::Empty>::value> {};
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -428,6 +464,15 @@ struct internal::NaturalCodingTraits<
     ::test_emptystruct::EmptyProtocolReceiveRequest>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_emptystruct::EmptyProtocolReceiveRequest, 1, 1> {};
+
+template <>
+struct internal::NaturalIsMemcpyCompatible<
+    ::test_emptystruct::EmptyProtocolReceiveRequest>
+    : public internal::BoolConstant<
+          !HasPadding<::test_emptystruct::EmptyProtocolReceiveRequest>::value &&
+          internal::NaturalIsMemcpyCompatible<
+              ::test_emptystruct::Empty>::value> {};
+
 #endif  // __Fuchsia__
 
 }  // namespace fidl

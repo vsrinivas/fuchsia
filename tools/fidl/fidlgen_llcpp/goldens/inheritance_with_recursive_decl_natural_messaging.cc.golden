@@ -12,7 +12,7 @@ namespace test_inheritancewithrecursivedecl {
     NaturalClientImpl<::test_inheritancewithrecursivedecl::Parent>::First(
         ::test_inheritancewithrecursivedecl::ParentFirstRequest&& payload)
         const {
-  ::fidl::MessageEncoder _encoder{
+  ::fidl::internal::NaturalMessageEncoder _encoder{
       ::test_inheritancewithrecursivedecl::kParent_First_Ordinal};
   ::fidl::Result result = messenger().OneWay(
       &::test_inheritancewithrecursivedecl::
@@ -105,7 +105,7 @@ namespace test_inheritancewithrecursivedecl {
     NaturalClientImpl<::test_inheritancewithrecursivedecl::Child>::First(
         ::test_inheritancewithrecursivedecl::ParentFirstRequest&& payload)
         const {
-  ::fidl::MessageEncoder _encoder{
+  ::fidl::internal::NaturalMessageEncoder _encoder{
       ::test_inheritancewithrecursivedecl::kChild_First_Ordinal};
   ::fidl::Result result = messenger().OneWay(
       &::test_inheritancewithrecursivedecl::
@@ -119,7 +119,7 @@ namespace test_inheritancewithrecursivedecl {
     NaturalClientImpl<::test_inheritancewithrecursivedecl::Child>::Second(
         ::test_inheritancewithrecursivedecl::ChildSecondRequest&& payload)
         const {
-  ::fidl::MessageEncoder _encoder{
+  ::fidl::internal::NaturalMessageEncoder _encoder{
       ::test_inheritancewithrecursivedecl::kChild_Second_Ordinal};
   ::fidl::Result result = messenger().OneWay(
       &::test_inheritancewithrecursivedecl::

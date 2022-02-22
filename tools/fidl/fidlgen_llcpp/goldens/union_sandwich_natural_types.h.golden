@@ -766,6 +766,21 @@ struct internal::NaturalCodingTraits<
     ::test_unionsandwich::SandwichUnionSize8Alignment4>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_unionsandwich::SandwichUnionSize8Alignment4, 40, 32> {};
+
+template <>
+struct HasPadding<::test_unionsandwich::SandwichUnionSize8Alignment4>
+    : public std::true_type {};
+
+template <>
+struct internal::NaturalIsMemcpyCompatible<
+    ::test_unionsandwich::SandwichUnionSize8Alignment4>
+    : public internal::BoolConstant<
+          !HasPadding<
+              ::test_unionsandwich::SandwichUnionSize8Alignment4>::value &&
+          internal::NaturalIsMemcpyCompatible<uint32_t>::value &&
+          internal::NaturalIsMemcpyCompatible<
+              ::test_unionsandwich::UnionSize8Alignment4>::value> {};
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -790,6 +805,21 @@ struct internal::NaturalCodingTraits<
     ::test_unionsandwich::SandwichUnionSize36Alignment4>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_unionsandwich::SandwichUnionSize36Alignment4, 40, 32> {};
+
+template <>
+struct HasPadding<::test_unionsandwich::SandwichUnionSize36Alignment4>
+    : public std::true_type {};
+
+template <>
+struct internal::NaturalIsMemcpyCompatible<
+    ::test_unionsandwich::SandwichUnionSize36Alignment4>
+    : public internal::BoolConstant<
+          !HasPadding<
+              ::test_unionsandwich::SandwichUnionSize36Alignment4>::value &&
+          internal::NaturalIsMemcpyCompatible<uint32_t>::value &&
+          internal::NaturalIsMemcpyCompatible<
+              ::test_unionsandwich::UnionSize36Alignment4>::value> {};
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -814,6 +844,22 @@ struct internal::NaturalCodingTraits<
     ::test_unionsandwich::SandwichUnionSize12Alignment4>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_unionsandwich::SandwichUnionSize12Alignment4, 40, 32> {};
+
+template <>
+struct HasPadding<::test_unionsandwich::SandwichUnionSize12Alignment4>
+    : public std::true_type {};
+
+template <>
+struct internal::NaturalIsMemcpyCompatible<
+    ::test_unionsandwich::SandwichUnionSize12Alignment4>
+    : public internal::BoolConstant<
+          !HasPadding<
+              ::test_unionsandwich::SandwichUnionSize12Alignment4>::value &&
+          internal::NaturalIsMemcpyCompatible<uint32_t>::value &&
+          internal::NaturalIsMemcpyCompatible<
+              ::test_unionsandwich::UnionSize12Alignment4>::value &&
+          internal::NaturalIsMemcpyCompatible<int32_t>::value> {};
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -837,6 +883,14 @@ struct internal::NaturalCodingTraits<
     ::test_unionsandwich::StructSize16Alignment8>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_unionsandwich::StructSize16Alignment8, 16, 16> {};
+
+template <>
+struct internal::NaturalIsMemcpyCompatible<
+    ::test_unionsandwich::StructSize16Alignment8>
+    : public internal::BoolConstant<
+          !HasPadding<::test_unionsandwich::StructSize16Alignment8>::value &&
+          internal::NaturalIsMemcpyCompatible<uint64_t>::value> {};
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -861,6 +915,21 @@ struct internal::NaturalCodingTraits<
     ::test_unionsandwich::SandwichUnionSize24Alignment8>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_unionsandwich::SandwichUnionSize24Alignment8, 40, 32> {};
+
+template <>
+struct HasPadding<::test_unionsandwich::SandwichUnionSize24Alignment8>
+    : public std::true_type {};
+
+template <>
+struct internal::NaturalIsMemcpyCompatible<
+    ::test_unionsandwich::SandwichUnionSize24Alignment8>
+    : public internal::BoolConstant<
+          !HasPadding<
+              ::test_unionsandwich::SandwichUnionSize24Alignment8>::value &&
+          internal::NaturalIsMemcpyCompatible<uint32_t>::value &&
+          internal::NaturalIsMemcpyCompatible<
+              ::test_unionsandwich::UnionSize24Alignment8>::value> {};
+
 #endif  // __Fuchsia__
 
 template <>

@@ -143,6 +143,13 @@ template <>
 struct internal::NaturalCodingTraits<::test_driveroneway::Payload> final
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_driveroneway::Payload, 4, 4> {};
+
+template <>
+struct internal::NaturalIsMemcpyCompatible<::test_driveroneway::Payload>
+    : public internal::BoolConstant<
+          !HasPadding<::test_driveroneway::Payload>::value &&
+          internal::NaturalIsMemcpyCompatible<uint32_t>::value> {};
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -164,6 +171,15 @@ template <>
 struct internal::NaturalCodingTraits<::test_driveroneway::OneWaySendRequest>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_driveroneway::OneWaySendRequest, 4, 4> {};
+
+template <>
+struct internal::NaturalIsMemcpyCompatible<
+    ::test_driveroneway::OneWaySendRequest>
+    : public internal::BoolConstant<
+          !HasPadding<::test_driveroneway::OneWaySendRequest>::value &&
+          internal::NaturalIsMemcpyCompatible<
+              ::test_driveroneway::Payload>::value> {};
+
 #endif  // __Fuchsia__
 
 }  // namespace fidl

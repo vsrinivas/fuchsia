@@ -58,9 +58,9 @@ template <>
 struct IsMemcpyCompatible<::test::byteandbytes::ByteAndBytes>
     : public internal::BoolConstant<
           !HasPadding<::test::byteandbytes::ByteAndBytes>::value &&
-          IsMemcpyCompatible<::fidl::VectorPtr<uint8_t>>::value &&
+          IsMemcpyCompatible<uint8_t>::value &&
           IsMemcpyCompatible<::std::vector<uint8_t>>::value &&
-          IsMemcpyCompatible<uint8_t>::value> {};
+          IsMemcpyCompatible<::fidl::VectorPtr<uint8_t>>::value> {};
 
 inline zx_status_t Clone(const ::test::byteandbytes::ByteAndBytes& value,
                          ::test::byteandbytes::ByteAndBytes* result) {

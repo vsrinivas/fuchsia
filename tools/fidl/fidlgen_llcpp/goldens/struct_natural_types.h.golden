@@ -152,6 +152,14 @@ template <>
 struct internal::NaturalCodingTraits<::test_struct::Simple> final
     : public ::fidl::internal::NaturalStructCodingTraits<::test_struct::Simple,
                                                          2, 2> {};
+
+template <>
+struct internal::NaturalIsMemcpyCompatible<::test_struct::Simple>
+    : public internal::BoolConstant<
+          !HasPadding<::test_struct::Simple>::value &&
+          internal::NaturalIsMemcpyCompatible<uint8_t>::value &&
+          internal::NaturalIsMemcpyCompatible<bool>::value> {};
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -171,6 +179,17 @@ template <>
 struct internal::NaturalCodingTraits<::test_struct::BasicStruct> final
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_struct::BasicStruct, 24, 24> {};
+
+template <>
+struct HasPadding<::test_struct::BasicStruct> : public std::true_type {};
+
+template <>
+struct internal::NaturalIsMemcpyCompatible<::test_struct::BasicStruct>
+    : public internal::BoolConstant<
+          !HasPadding<::test_struct::BasicStruct>::value &&
+          internal::NaturalIsMemcpyCompatible<uint32_t>::value &&
+          internal::NaturalIsMemcpyCompatible<::std::string>::value> {};
+
 #endif  // __Fuchsia__
 
 }  // namespace fidl

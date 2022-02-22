@@ -254,8 +254,8 @@ template <>
 struct IsMemcpyCompatible<::test::encapsulatedstructs::Int8Int32>
     : public internal::BoolConstant<
           !HasPadding<::test::encapsulatedstructs::Int8Int32>::value &&
-          IsMemcpyCompatible<int32_t>::value &&
-          IsMemcpyCompatible<int8_t>::value> {};
+          IsMemcpyCompatible<int8_t>::value &&
+          IsMemcpyCompatible<int32_t>::value> {};
 
 inline zx_status_t Clone(const ::test::encapsulatedstructs::Int8Int32& value,
                          ::test::encapsulatedstructs::Int8Int32* result) {
@@ -357,10 +357,10 @@ struct IsMemcpyCompatible<::test::encapsulatedstructs::StructPaddingTestStruct>
     : public internal::BoolConstant<
           !HasPadding<
               ::test::encapsulatedstructs::StructPaddingTestStruct>::value &&
-          IsMemcpyCompatible<
-              ::test::encapsulatedstructs::ArrayInt16Int8>::value &&
           IsMemcpyCompatible<::test::encapsulatedstructs::Int16Int8>::value &&
-          IsMemcpyCompatible<::test::encapsulatedstructs::Int8Int32>::value> {};
+          IsMemcpyCompatible<::test::encapsulatedstructs::Int8Int32>::value &&
+          IsMemcpyCompatible<
+              ::test::encapsulatedstructs::ArrayInt16Int8>::value> {};
 
 inline zx_status_t Clone(
     const ::test::encapsulatedstructs::StructPaddingTestStruct& value,
@@ -401,9 +401,10 @@ struct IsMemcpyCompatible<::test::encapsulatedstructs::TopLevelStruct>
     : public internal::BoolConstant<
           !HasPadding<::test::encapsulatedstructs::TopLevelStruct>::value &&
           IsMemcpyCompatible<
-              ::test::encapsulatedstructs::NonInlineStructTestStruct>::value &&
+              ::test::encapsulatedstructs::StructPaddingTestStruct>::value &&
           IsMemcpyCompatible<
-              ::test::encapsulatedstructs::StructPaddingTestStruct>::value> {};
+              ::test::encapsulatedstructs::NonInlineStructTestStruct>::value> {
+};
 
 inline zx_status_t Clone(
     const ::test::encapsulatedstructs::TopLevelStruct& value,

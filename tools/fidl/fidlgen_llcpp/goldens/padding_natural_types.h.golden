@@ -1056,6 +1056,18 @@ template <>
 struct internal::NaturalCodingTraits<::test_padding::Padding7ByteMiddle> final
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_padding::Padding7ByteMiddle, 16, 16> {};
+
+template <>
+struct HasPadding<::test_padding::Padding7ByteMiddle> : public std::true_type {
+};
+
+template <>
+struct internal::NaturalIsMemcpyCompatible<::test_padding::Padding7ByteMiddle>
+    : public internal::BoolConstant<
+          !HasPadding<::test_padding::Padding7ByteMiddle>::value &&
+          internal::NaturalIsMemcpyCompatible<uint8_t>::value &&
+          internal::NaturalIsMemcpyCompatible<uint64_t>::value> {};
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1075,6 +1087,17 @@ template <>
 struct internal::NaturalCodingTraits<::test_padding::Padding7ByteEnd> final
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_padding::Padding7ByteEnd, 16, 16> {};
+
+template <>
+struct HasPadding<::test_padding::Padding7ByteEnd> : public std::true_type {};
+
+template <>
+struct internal::NaturalIsMemcpyCompatible<::test_padding::Padding7ByteEnd>
+    : public internal::BoolConstant<
+          !HasPadding<::test_padding::Padding7ByteEnd>::value &&
+          internal::NaturalIsMemcpyCompatible<uint64_t>::value &&
+          internal::NaturalIsMemcpyCompatible<uint8_t>::value> {};
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1095,6 +1118,18 @@ template <>
 struct internal::NaturalCodingTraits<::test_padding::Padding6ByteMiddle> final
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_padding::Padding6ByteMiddle, 16, 16> {};
+
+template <>
+struct HasPadding<::test_padding::Padding6ByteMiddle> : public std::true_type {
+};
+
+template <>
+struct internal::NaturalIsMemcpyCompatible<::test_padding::Padding6ByteMiddle>
+    : public internal::BoolConstant<
+          !HasPadding<::test_padding::Padding6ByteMiddle>::value &&
+          internal::NaturalIsMemcpyCompatible<uint16_t>::value &&
+          internal::NaturalIsMemcpyCompatible<uint64_t>::value> {};
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1114,6 +1149,17 @@ template <>
 struct internal::NaturalCodingTraits<::test_padding::Padding6ByteEnd> final
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_padding::Padding6ByteEnd, 16, 16> {};
+
+template <>
+struct HasPadding<::test_padding::Padding6ByteEnd> : public std::true_type {};
+
+template <>
+struct internal::NaturalIsMemcpyCompatible<::test_padding::Padding6ByteEnd>
+    : public internal::BoolConstant<
+          !HasPadding<::test_padding::Padding6ByteEnd>::value &&
+          internal::NaturalIsMemcpyCompatible<uint64_t>::value &&
+          internal::NaturalIsMemcpyCompatible<uint16_t>::value> {};
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1134,6 +1180,19 @@ template <>
 struct internal::NaturalCodingTraits<::test_padding::Padding5ByteMiddle> final
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_padding::Padding5ByteMiddle, 16, 16> {};
+
+template <>
+struct HasPadding<::test_padding::Padding5ByteMiddle> : public std::true_type {
+};
+
+template <>
+struct internal::NaturalIsMemcpyCompatible<::test_padding::Padding5ByteMiddle>
+    : public internal::BoolConstant<
+          !HasPadding<::test_padding::Padding5ByteMiddle>::value &&
+          internal::NaturalIsMemcpyCompatible<uint16_t>::value &&
+          internal::NaturalIsMemcpyCompatible<uint8_t>::value &&
+          internal::NaturalIsMemcpyCompatible<uint64_t>::value> {};
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1153,6 +1212,18 @@ template <>
 struct internal::NaturalCodingTraits<::test_padding::Padding5ByteEnd> final
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_padding::Padding5ByteEnd, 16, 16> {};
+
+template <>
+struct HasPadding<::test_padding::Padding5ByteEnd> : public std::true_type {};
+
+template <>
+struct internal::NaturalIsMemcpyCompatible<::test_padding::Padding5ByteEnd>
+    : public internal::BoolConstant<
+          !HasPadding<::test_padding::Padding5ByteEnd>::value &&
+          internal::NaturalIsMemcpyCompatible<uint64_t>::value &&
+          internal::NaturalIsMemcpyCompatible<uint16_t>::value &&
+          internal::NaturalIsMemcpyCompatible<uint8_t>::value> {};
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1173,6 +1244,18 @@ template <>
 struct internal::NaturalCodingTraits<::test_padding::Padding4ByteMiddle> final
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_padding::Padding4ByteMiddle, 16, 16> {};
+
+template <>
+struct HasPadding<::test_padding::Padding4ByteMiddle> : public std::true_type {
+};
+
+template <>
+struct internal::NaturalIsMemcpyCompatible<::test_padding::Padding4ByteMiddle>
+    : public internal::BoolConstant<
+          !HasPadding<::test_padding::Padding4ByteMiddle>::value &&
+          internal::NaturalIsMemcpyCompatible<uint32_t>::value &&
+          internal::NaturalIsMemcpyCompatible<uint64_t>::value> {};
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1192,6 +1275,17 @@ template <>
 struct internal::NaturalCodingTraits<::test_padding::Padding4ByteEnd> final
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_padding::Padding4ByteEnd, 16, 16> {};
+
+template <>
+struct HasPadding<::test_padding::Padding4ByteEnd> : public std::true_type {};
+
+template <>
+struct internal::NaturalIsMemcpyCompatible<::test_padding::Padding4ByteEnd>
+    : public internal::BoolConstant<
+          !HasPadding<::test_padding::Padding4ByteEnd>::value &&
+          internal::NaturalIsMemcpyCompatible<uint64_t>::value &&
+          internal::NaturalIsMemcpyCompatible<uint32_t>::value> {};
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1215,6 +1309,20 @@ struct internal::NaturalCodingTraits<
     ::test_padding::Padding4ByteAlignmentLength12>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_padding::Padding4ByteAlignmentLength12, 12, 12> {};
+
+template <>
+struct HasPadding<::test_padding::Padding4ByteAlignmentLength12>
+    : public std::true_type {};
+
+template <>
+struct internal::NaturalIsMemcpyCompatible<
+    ::test_padding::Padding4ByteAlignmentLength12>
+    : public internal::BoolConstant<
+          !HasPadding<::test_padding::Padding4ByteAlignmentLength12>::value &&
+          internal::NaturalIsMemcpyCompatible<uint32_t>::value &&
+          internal::NaturalIsMemcpyCompatible<uint8_t>::value &&
+          internal::NaturalIsMemcpyCompatible<uint16_t>::value> {};
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1235,6 +1343,18 @@ template <>
 struct internal::NaturalCodingTraits<::test_padding::Padding3ByteMiddle> final
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_padding::Padding3ByteMiddle, 8, 8> {};
+
+template <>
+struct HasPadding<::test_padding::Padding3ByteMiddle> : public std::true_type {
+};
+
+template <>
+struct internal::NaturalIsMemcpyCompatible<::test_padding::Padding3ByteMiddle>
+    : public internal::BoolConstant<
+          !HasPadding<::test_padding::Padding3ByteMiddle>::value &&
+          internal::NaturalIsMemcpyCompatible<uint8_t>::value &&
+          internal::NaturalIsMemcpyCompatible<uint32_t>::value> {};
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1254,6 +1374,17 @@ template <>
 struct internal::NaturalCodingTraits<::test_padding::Padding3ByteEnd> final
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_padding::Padding3ByteEnd, 8, 8> {};
+
+template <>
+struct HasPadding<::test_padding::Padding3ByteEnd> : public std::true_type {};
+
+template <>
+struct internal::NaturalIsMemcpyCompatible<::test_padding::Padding3ByteEnd>
+    : public internal::BoolConstant<
+          !HasPadding<::test_padding::Padding3ByteEnd>::value &&
+          internal::NaturalIsMemcpyCompatible<uint32_t>::value &&
+          internal::NaturalIsMemcpyCompatible<uint8_t>::value> {};
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1274,6 +1405,18 @@ template <>
 struct internal::NaturalCodingTraits<::test_padding::Padding2ByteMiddle> final
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_padding::Padding2ByteMiddle, 8, 8> {};
+
+template <>
+struct HasPadding<::test_padding::Padding2ByteMiddle> : public std::true_type {
+};
+
+template <>
+struct internal::NaturalIsMemcpyCompatible<::test_padding::Padding2ByteMiddle>
+    : public internal::BoolConstant<
+          !HasPadding<::test_padding::Padding2ByteMiddle>::value &&
+          internal::NaturalIsMemcpyCompatible<uint16_t>::value &&
+          internal::NaturalIsMemcpyCompatible<uint32_t>::value> {};
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1293,6 +1436,17 @@ template <>
 struct internal::NaturalCodingTraits<::test_padding::Padding2ByteEnd> final
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_padding::Padding2ByteEnd, 8, 8> {};
+
+template <>
+struct HasPadding<::test_padding::Padding2ByteEnd> : public std::true_type {};
+
+template <>
+struct internal::NaturalIsMemcpyCompatible<::test_padding::Padding2ByteEnd>
+    : public internal::BoolConstant<
+          !HasPadding<::test_padding::Padding2ByteEnd>::value &&
+          internal::NaturalIsMemcpyCompatible<uint32_t>::value &&
+          internal::NaturalIsMemcpyCompatible<uint16_t>::value> {};
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1316,6 +1470,19 @@ struct internal::NaturalCodingTraits<
     ::test_padding::Padding2ByteAlignmentLength6>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_padding::Padding2ByteAlignmentLength6, 6, 6> {};
+
+template <>
+struct HasPadding<::test_padding::Padding2ByteAlignmentLength6>
+    : public std::true_type {};
+
+template <>
+struct internal::NaturalIsMemcpyCompatible<
+    ::test_padding::Padding2ByteAlignmentLength6>
+    : public internal::BoolConstant<
+          !HasPadding<::test_padding::Padding2ByteAlignmentLength6>::value &&
+          internal::NaturalIsMemcpyCompatible<uint8_t>::value &&
+          internal::NaturalIsMemcpyCompatible<uint16_t>::value> {};
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1336,6 +1503,18 @@ template <>
 struct internal::NaturalCodingTraits<::test_padding::Padding1ByteMiddle> final
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_padding::Padding1ByteMiddle, 4, 4> {};
+
+template <>
+struct HasPadding<::test_padding::Padding1ByteMiddle> : public std::true_type {
+};
+
+template <>
+struct internal::NaturalIsMemcpyCompatible<::test_padding::Padding1ByteMiddle>
+    : public internal::BoolConstant<
+          !HasPadding<::test_padding::Padding1ByteMiddle>::value &&
+          internal::NaturalIsMemcpyCompatible<uint8_t>::value &&
+          internal::NaturalIsMemcpyCompatible<uint16_t>::value> {};
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1355,6 +1534,17 @@ template <>
 struct internal::NaturalCodingTraits<::test_padding::Padding1ByteEnd> final
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_padding::Padding1ByteEnd, 4, 4> {};
+
+template <>
+struct HasPadding<::test_padding::Padding1ByteEnd> : public std::true_type {};
+
+template <>
+struct internal::NaturalIsMemcpyCompatible<::test_padding::Padding1ByteEnd>
+    : public internal::BoolConstant<
+          !HasPadding<::test_padding::Padding1ByteEnd>::value &&
+          internal::NaturalIsMemcpyCompatible<uint16_t>::value &&
+          internal::NaturalIsMemcpyCompatible<uint8_t>::value> {};
+
 #endif  // __Fuchsia__
 
 }  // namespace fidl

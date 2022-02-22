@@ -331,6 +331,13 @@ template <>
 struct internal::NaturalCodingTraits<::test_doccomments::Struct> final
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_doccomments::Struct, 4, 4> {};
+
+template <>
+struct internal::NaturalIsMemcpyCompatible<::test_doccomments::Struct>
+    : public internal::BoolConstant<
+          !HasPadding<::test_doccomments::Struct>::value &&
+          internal::NaturalIsMemcpyCompatible<int32_t>::value> {};
+
 #endif  // __Fuchsia__
 
 template <>
@@ -366,8 +373,7 @@ struct internal::NaturalCodingTraits<::test_doccomments::MyStrictBits> {
   static constexpr size_t inline_size_v1_no_ee = sizeof(uint32_t);
   static constexpr size_t inline_size_v2 = sizeof(uint32_t);
 
-  template <class EncoderImpl>
-  static void Encode(EncoderImpl* encoder,
+  static void Encode(internal::NaturalEncoder* encoder,
                      ::test_doccomments::MyStrictBits* value, size_t offset,
                      cpp17::optional<NaturalHandleInformation>
                          maybe_handle_info = cpp17::nullopt) {
@@ -375,8 +381,7 @@ struct internal::NaturalCodingTraits<::test_doccomments::MyStrictBits> {
     *encoder->template GetPtr<::test_doccomments::MyStrictBits>(offset) =
         *value;
   }
-  template <typename DecoderImpl>
-  static void Decode(DecoderImpl* decoder,
+  static void Decode(internal::NaturalDecoder* decoder,
                      ::test_doccomments::MyStrictBits* value, size_t offset) {
     *value =
         *decoder->template GetPtr<::test_doccomments::MyStrictBits>(offset);
@@ -387,8 +392,7 @@ struct internal::NaturalCodingTraits<::test_doccomments::MyFlexibleBits> {
   static constexpr size_t inline_size_v1_no_ee = sizeof(uint32_t);
   static constexpr size_t inline_size_v2 = sizeof(uint32_t);
 
-  template <class EncoderImpl>
-  static void Encode(EncoderImpl* encoder,
+  static void Encode(internal::NaturalEncoder* encoder,
                      ::test_doccomments::MyFlexibleBits* value, size_t offset,
                      cpp17::optional<NaturalHandleInformation>
                          maybe_handle_info = cpp17::nullopt) {
@@ -396,8 +400,7 @@ struct internal::NaturalCodingTraits<::test_doccomments::MyFlexibleBits> {
     *encoder->template GetPtr<::test_doccomments::MyFlexibleBits>(offset) =
         *value;
   }
-  template <typename DecoderImpl>
-  static void Decode(DecoderImpl* decoder,
+  static void Decode(internal::NaturalDecoder* decoder,
                      ::test_doccomments::MyFlexibleBits* value, size_t offset) {
     *value =
         *decoder->template GetPtr<::test_doccomments::MyFlexibleBits>(offset);
@@ -409,8 +412,7 @@ struct internal::NaturalCodingTraits<::test_doccomments::MyStrictEnum> {
   static constexpr size_t inline_size_v1_no_ee = sizeof(uint32_t);
   static constexpr size_t inline_size_v2 = sizeof(uint32_t);
 
-  template <class EncoderImpl>
-  static void Encode(EncoderImpl* encoder,
+  static void Encode(internal::NaturalEncoder* encoder,
                      ::test_doccomments::MyStrictEnum* value, size_t offset,
                      cpp17::optional<NaturalHandleInformation>
                          maybe_handle_info = cpp17::nullopt) {
@@ -418,8 +420,7 @@ struct internal::NaturalCodingTraits<::test_doccomments::MyStrictEnum> {
     *encoder->template GetPtr<::test_doccomments::MyStrictEnum>(offset) =
         *value;
   }
-  template <typename DecoderImpl>
-  static void Decode(DecoderImpl* decoder,
+  static void Decode(internal::NaturalDecoder* decoder,
                      ::test_doccomments::MyStrictEnum* value, size_t offset) {
     *value =
         *decoder->template GetPtr<::test_doccomments::MyStrictEnum>(offset);
@@ -430,8 +431,7 @@ struct internal::NaturalCodingTraits<::test_doccomments::MyFlexibleEnum> {
   static constexpr size_t inline_size_v1_no_ee = sizeof(uint32_t);
   static constexpr size_t inline_size_v2 = sizeof(uint32_t);
 
-  template <class EncoderImpl>
-  static void Encode(EncoderImpl* encoder,
+  static void Encode(internal::NaturalEncoder* encoder,
                      ::test_doccomments::MyFlexibleEnum* value, size_t offset,
                      cpp17::optional<NaturalHandleInformation>
                          maybe_handle_info = cpp17::nullopt) {
@@ -439,8 +439,7 @@ struct internal::NaturalCodingTraits<::test_doccomments::MyFlexibleEnum> {
     *encoder->template GetPtr<::test_doccomments::MyFlexibleEnum>(offset) =
         *value;
   }
-  template <typename DecoderImpl>
-  static void Decode(DecoderImpl* decoder,
+  static void Decode(internal::NaturalDecoder* decoder,
                      ::test_doccomments::MyFlexibleEnum* value, size_t offset) {
     *value =
         *decoder->template GetPtr<::test_doccomments::MyFlexibleEnum>(offset);

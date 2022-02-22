@@ -698,6 +698,19 @@ template <>
 struct internal::NaturalCodingTraits<::test_nullable::StructWithNullableVector>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_nullable::StructWithNullableVector, 16, 16> {};
+
+template <>
+struct HasPadding<::test_nullable::StructWithNullableVector>
+    : public std::true_type {};
+
+template <>
+struct internal::NaturalIsMemcpyCompatible<
+    ::test_nullable::StructWithNullableVector>
+    : public internal::BoolConstant<
+          !HasPadding<::test_nullable::StructWithNullableVector>::value &&
+          internal::NaturalIsMemcpyCompatible<
+              ::cpp17::optional<::std::vector<int32_t>>>::value> {};
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -719,6 +732,19 @@ template <>
 struct internal::NaturalCodingTraits<::test_nullable::StructWithNullableUnion>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_nullable::StructWithNullableUnion, 24, 16> {};
+
+template <>
+struct HasPadding<::test_nullable::StructWithNullableUnion>
+    : public std::true_type {};
+
+template <>
+struct internal::NaturalIsMemcpyCompatible<
+    ::test_nullable::StructWithNullableUnion>
+    : public internal::BoolConstant<
+          !HasPadding<::test_nullable::StructWithNullableUnion>::value &&
+          internal::NaturalIsMemcpyCompatible<
+              ::std::unique_ptr<::test_nullable::SimpleUnion>>::value> {};
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -740,6 +766,19 @@ template <>
 struct internal::NaturalCodingTraits<::test_nullable::StructWithNullableStruct>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_nullable::StructWithNullableStruct, 8, 8> {};
+
+template <>
+struct HasPadding<::test_nullable::StructWithNullableStruct>
+    : public std::true_type {};
+
+template <>
+struct internal::NaturalIsMemcpyCompatible<
+    ::test_nullable::StructWithNullableStruct>
+    : public internal::BoolConstant<
+          !HasPadding<::test_nullable::StructWithNullableStruct>::value &&
+          internal::NaturalIsMemcpyCompatible<
+              ::std::unique_ptr<::test_nullable::Int32Wrapper>>::value> {};
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -761,6 +800,19 @@ template <>
 struct internal::NaturalCodingTraits<::test_nullable::StructWithNullableString>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_nullable::StructWithNullableString, 16, 16> {};
+
+template <>
+struct HasPadding<::test_nullable::StructWithNullableString>
+    : public std::true_type {};
+
+template <>
+struct internal::NaturalIsMemcpyCompatible<
+    ::test_nullable::StructWithNullableString>
+    : public internal::BoolConstant<
+          !HasPadding<::test_nullable::StructWithNullableString>::value &&
+          internal::NaturalIsMemcpyCompatible<
+              ::cpp17::optional<::std::string>>::value> {};
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -785,6 +837,15 @@ template <>
 struct internal::NaturalCodingTraits<::test_nullable::StructWithNullableRequest>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_nullable::StructWithNullableRequest, 4, 4> {};
+
+template <>
+struct internal::NaturalIsMemcpyCompatible<
+    ::test_nullable::StructWithNullableRequest>
+    : public internal::BoolConstant<
+          !HasPadding<::test_nullable::StructWithNullableRequest>::value &&
+          internal::NaturalIsMemcpyCompatible<
+              ::fidl::ServerEnd<::test_nullable::SimpleProtocol>>::value> {};
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -810,6 +871,15 @@ struct internal::NaturalCodingTraits<
     ::test_nullable::StructWithNullableProtocol>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_nullable::StructWithNullableProtocol, 4, 4> {};
+
+template <>
+struct internal::NaturalIsMemcpyCompatible<
+    ::test_nullable::StructWithNullableProtocol>
+    : public internal::BoolConstant<
+          !HasPadding<::test_nullable::StructWithNullableProtocol>::value &&
+          internal::NaturalIsMemcpyCompatible<
+              ::fidl::ClientEnd<::test_nullable::SimpleProtocol>>::value> {};
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -834,6 +904,14 @@ template <>
 struct internal::NaturalCodingTraits<::test_nullable::StructWithNullableHandle>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_nullable::StructWithNullableHandle, 4, 4> {};
+
+template <>
+struct internal::NaturalIsMemcpyCompatible<
+    ::test_nullable::StructWithNullableHandle>
+    : public internal::BoolConstant<
+          !HasPadding<::test_nullable::StructWithNullableHandle>::value &&
+          internal::NaturalIsMemcpyCompatible<::zx::vmo>::value> {};
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -857,6 +935,14 @@ struct internal::NaturalCodingTraits<
     ::test_nullable::SimpleProtocolAddTopResponse>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_nullable::SimpleProtocolAddTopResponse, 4, 4> {};
+
+template <>
+struct internal::NaturalIsMemcpyCompatible<
+    ::test_nullable::SimpleProtocolAddTopResponse>
+    : public internal::BoolConstant<
+          !HasPadding<::test_nullable::SimpleProtocolAddTopResponse>::value &&
+          internal::NaturalIsMemcpyCompatible<int32_t>::value> {};
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -878,6 +964,14 @@ template <>
 struct internal::NaturalCodingTraits<::test_nullable::SimpleProtocolAddRequest>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_nullable::SimpleProtocolAddRequest, 8, 8> {};
+
+template <>
+struct internal::NaturalIsMemcpyCompatible<
+    ::test_nullable::SimpleProtocolAddRequest>
+    : public internal::BoolConstant<
+          !HasPadding<::test_nullable::SimpleProtocolAddRequest>::value &&
+          internal::NaturalIsMemcpyCompatible<int32_t>::value> {};
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -897,6 +991,13 @@ template <>
 struct internal::NaturalCodingTraits<::test_nullable::Int32Wrapper> final
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_nullable::Int32Wrapper, 4, 4> {};
+
+template <>
+struct internal::NaturalIsMemcpyCompatible<::test_nullable::Int32Wrapper>
+    : public internal::BoolConstant<
+          !HasPadding<::test_nullable::Int32Wrapper>::value &&
+          internal::NaturalIsMemcpyCompatible<int32_t>::value> {};
+
 #endif  // __Fuchsia__
 
 template <>

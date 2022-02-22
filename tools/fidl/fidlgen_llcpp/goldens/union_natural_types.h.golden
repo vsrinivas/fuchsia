@@ -2602,6 +2602,19 @@ template <>
 struct internal::NaturalCodingTraits<::test_union::StructWithNullableXUnion>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_union::StructWithNullableXUnion, 24, 16> {};
+
+template <>
+struct HasPadding<::test_union::StructWithNullableXUnion>
+    : public std::true_type {};
+
+template <>
+struct internal::NaturalIsMemcpyCompatible<
+    ::test_union::StructWithNullableXUnion>
+    : public internal::BoolConstant<
+          !HasPadding<::test_union::StructWithNullableXUnion>::value &&
+          internal::NaturalIsMemcpyCompatible<
+              ::std::unique_ptr<::test_union::OlderSimpleUnion>>::value> {};
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -2633,6 +2646,25 @@ struct internal::NaturalCodingTraits<
           ::test_union::
               TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse,
           24, 16> {};
+
+template <>
+struct HasPadding<
+    ::test_union::
+        TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse>
+    : public std::true_type {};
+
+template <>
+struct internal::NaturalIsMemcpyCompatible<
+    ::test_union::
+        TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse>
+    : public internal::BoolConstant<
+          !HasPadding<
+              ::test_union::
+                  TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse>::
+              value &&
+          internal::NaturalIsMemcpyCompatible<
+              ::test_union::StrictBoundedXUnion>::value> {};
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -2651,6 +2683,17 @@ template <>
 struct internal::NaturalCodingTraits<::test_union::Pizza> final
     : public ::fidl::internal::NaturalStructCodingTraits<::test_union::Pizza,
                                                          16, 16> {};
+
+template <>
+struct HasPadding<::test_union::Pizza> : public std::true_type {};
+
+template <>
+struct internal::NaturalIsMemcpyCompatible<::test_union::Pizza>
+    : public internal::BoolConstant<!HasPadding<::test_union::Pizza>::value &&
+                                    internal::NaturalIsMemcpyCompatible<
+                                        ::std::vector<::std::string>>::value> {
+};
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -2669,6 +2712,16 @@ template <>
 struct internal::NaturalCodingTraits<::test_union::Pasta> final
     : public ::fidl::internal::NaturalStructCodingTraits<::test_union::Pasta,
                                                          16, 16> {};
+
+template <>
+struct HasPadding<::test_union::Pasta> : public std::true_type {};
+
+template <>
+struct internal::NaturalIsMemcpyCompatible<::test_union::Pasta>
+    : public internal::BoolConstant<
+          !HasPadding<::test_union::Pasta>::value &&
+          internal::NaturalIsMemcpyCompatible<::std::string>::value> {};
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -2700,6 +2753,25 @@ struct internal::NaturalCodingTraits<
           ::test_union::
               TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse,
           24, 16> {};
+
+template <>
+struct HasPadding<
+    ::test_union::
+        TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse>
+    : public std::true_type {};
+
+template <>
+struct internal::NaturalIsMemcpyCompatible<
+    ::test_union::
+        TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse>
+    : public internal::BoolConstant<
+          !HasPadding<
+              ::test_union::
+                  TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse>::
+              value &&
+          internal::NaturalIsMemcpyCompatible<
+              ::test_union::OlderSimpleUnion>::value> {};
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -2719,6 +2791,17 @@ template <>
 struct internal::NaturalCodingTraits<::test_union::NullableUnionStruct> final
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_union::NullableUnionStruct, 24, 16> {};
+
+template <>
+struct HasPadding<::test_union::NullableUnionStruct> : public std::true_type {};
+
+template <>
+struct internal::NaturalIsMemcpyCompatible<::test_union::NullableUnionStruct>
+    : public internal::BoolConstant<
+          !HasPadding<::test_union::NullableUnionStruct>::value &&
+          internal::NaturalIsMemcpyCompatible<
+              ::std::unique_ptr<::test_union::Union>>::value> {};
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -2738,6 +2821,18 @@ template <>
 struct internal::NaturalCodingTraits<::test_union::UnionSandwich> final
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_union::UnionSandwich, 40, 32> {};
+
+template <>
+struct HasPadding<::test_union::UnionSandwich> : public std::true_type {};
+
+template <>
+struct internal::NaturalIsMemcpyCompatible<::test_union::UnionSandwich>
+    : public internal::BoolConstant<
+          !HasPadding<::test_union::UnionSandwich>::value &&
+          internal::NaturalIsMemcpyCompatible<uint32_t>::value &&
+          internal::NaturalIsMemcpyCompatible<
+              ::test_union::ExplicitXUnion>::value> {};
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -2756,6 +2851,13 @@ template <>
 struct internal::NaturalCodingTraits<::test_union::Empty> final
     : public ::fidl::internal::NaturalStructCodingTraits<::test_union::Empty, 1,
                                                          1> {};
+
+template <>
+struct internal::NaturalIsMemcpyCompatible<::test_union::Empty>
+    : public internal::BoolConstant<
+          !HasPadding<::test_union::Empty>::value &&
+          internal::NaturalIsMemcpyCompatible<uint8_t>::value> {};
+
 #endif  // __Fuchsia__
 
 template <>

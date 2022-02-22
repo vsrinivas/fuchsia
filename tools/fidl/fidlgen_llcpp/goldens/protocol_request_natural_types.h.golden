@@ -251,6 +251,16 @@ struct internal::NaturalCodingTraits<
     ::test_protocolrequest::ParentTakeChildRequestRequest>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_protocolrequest::ParentTakeChildRequestRequest, 4, 4> {};
+
+template <>
+struct internal::NaturalIsMemcpyCompatible<
+    ::test_protocolrequest::ParentTakeChildRequestRequest>
+    : public internal::BoolConstant<
+          !HasPadding<
+              ::test_protocolrequest::ParentTakeChildRequestRequest>::value &&
+          internal::NaturalIsMemcpyCompatible<
+              ::fidl::ServerEnd<::test_protocolrequest::Child>>::value> {};
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -277,6 +287,15 @@ struct internal::NaturalCodingTraits<
     ::test_protocolrequest::ParentTakeChildRequest>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_protocolrequest::ParentTakeChildRequest, 4, 4> {};
+
+template <>
+struct internal::NaturalIsMemcpyCompatible<
+    ::test_protocolrequest::ParentTakeChildRequest>
+    : public internal::BoolConstant<
+          !HasPadding<::test_protocolrequest::ParentTakeChildRequest>::value &&
+          internal::NaturalIsMemcpyCompatible<
+              ::fidl::ClientEnd<::test_protocolrequest::Child>>::value> {};
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -304,6 +323,16 @@ struct internal::NaturalCodingTraits<
     ::test_protocolrequest::ParentGetChildTopResponse>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_protocolrequest::ParentGetChildTopResponse, 4, 4> {};
+
+template <>
+struct internal::NaturalIsMemcpyCompatible<
+    ::test_protocolrequest::ParentGetChildTopResponse>
+    : public internal::BoolConstant<
+          !HasPadding<
+              ::test_protocolrequest::ParentGetChildTopResponse>::value &&
+          internal::NaturalIsMemcpyCompatible<
+              ::fidl::ClientEnd<::test_protocolrequest::Child>>::value> {};
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -332,6 +361,16 @@ struct internal::NaturalCodingTraits<
     final
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_protocolrequest::ParentGetChildRequestTopResponse, 4, 4> {};
+
+template <>
+struct internal::NaturalIsMemcpyCompatible<
+    ::test_protocolrequest::ParentGetChildRequestTopResponse>
+    : public internal::BoolConstant<
+          !HasPadding<::test_protocolrequest::
+                          ParentGetChildRequestTopResponse>::value &&
+          internal::NaturalIsMemcpyCompatible<
+              ::fidl::ServerEnd<::test_protocolrequest::Child>>::value> {};
+
 #endif  // __Fuchsia__
 
 }  // namespace fidl

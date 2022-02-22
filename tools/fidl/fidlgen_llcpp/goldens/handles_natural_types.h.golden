@@ -481,6 +481,42 @@ template <>
 struct internal::NaturalCodingTraits<::test_handles::Handles> final
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_handles::Handles, 128, 128> {};
+
+template <>
+struct internal::NaturalIsMemcpyCompatible<::test_handles::Handles>
+    : public internal::BoolConstant<
+          !HasPadding<::test_handles::Handles>::value &&
+          internal::NaturalIsMemcpyCompatible<::zx::handle>::value &&
+          internal::NaturalIsMemcpyCompatible<::zx::bti>::value &&
+          internal::NaturalIsMemcpyCompatible<::zx::channel>::value &&
+          internal::NaturalIsMemcpyCompatible<::zx::clock>::value &&
+          internal::NaturalIsMemcpyCompatible<::zx::debuglog>::value &&
+          internal::NaturalIsMemcpyCompatible<::zx::event>::value &&
+          internal::NaturalIsMemcpyCompatible<::zx::eventpair>::value &&
+          internal::NaturalIsMemcpyCompatible<::zx::exception>::value &&
+          internal::NaturalIsMemcpyCompatible<::zx::fifo>::value &&
+          internal::NaturalIsMemcpyCompatible<::zx::guest>::value &&
+          internal::NaturalIsMemcpyCompatible<::zx::interrupt>::value &&
+          internal::NaturalIsMemcpyCompatible<::zx::iommu>::value &&
+          internal::NaturalIsMemcpyCompatible<::zx::job>::value &&
+          internal::NaturalIsMemcpyCompatible<::zx::pager>::value &&
+          internal::NaturalIsMemcpyCompatible<::zx::pmt>::value &&
+          internal::NaturalIsMemcpyCompatible<::zx::port>::value &&
+          internal::NaturalIsMemcpyCompatible<::zx::process>::value &&
+          internal::NaturalIsMemcpyCompatible<::zx::profile>::value &&
+          internal::NaturalIsMemcpyCompatible<::zx::resource>::value &&
+          internal::NaturalIsMemcpyCompatible<::zx::socket>::value &&
+          internal::NaturalIsMemcpyCompatible<::zx::suspend_token>::value &&
+          internal::NaturalIsMemcpyCompatible<::zx::thread>::value &&
+          internal::NaturalIsMemcpyCompatible<::zx::timer>::value &&
+          internal::NaturalIsMemcpyCompatible<::zx::vcpu>::value &&
+          internal::NaturalIsMemcpyCompatible<::zx::vmar>::value &&
+          internal::NaturalIsMemcpyCompatible<::zx::vmo>::value &&
+          internal::NaturalIsMemcpyCompatible<
+              ::fidl::ClientEnd<::test_handles::SomeProtocol>>::value &&
+          internal::NaturalIsMemcpyCompatible<
+              ::fidl::ServerEnd<::test_handles::SomeProtocol>>::value> {};
+
 #endif  // __Fuchsia__
 
 template <>
@@ -488,17 +524,15 @@ struct internal::NaturalCodingTraits<::test_handles::obj_type> {
   static constexpr size_t inline_size_v1_no_ee = sizeof(uint32_t);
   static constexpr size_t inline_size_v2 = sizeof(uint32_t);
 
-  template <class EncoderImpl>
-  static void Encode(EncoderImpl* encoder, ::test_handles::obj_type* value,
-                     size_t offset,
+  static void Encode(internal::NaturalEncoder* encoder,
+                     ::test_handles::obj_type* value, size_t offset,
                      cpp17::optional<NaturalHandleInformation>
                          maybe_handle_info = cpp17::nullopt) {
     ZX_DEBUG_ASSERT(maybe_handle_info == cpp17::nullopt);
     *encoder->template GetPtr<::test_handles::obj_type>(offset) = *value;
   }
-  template <typename DecoderImpl>
-  static void Decode(DecoderImpl* decoder, ::test_handles::obj_type* value,
-                     size_t offset) {
+  static void Decode(internal::NaturalDecoder* decoder,
+                     ::test_handles::obj_type* value, size_t offset) {
     *value = *decoder->template GetPtr<::test_handles::obj_type>(offset);
   }
 };

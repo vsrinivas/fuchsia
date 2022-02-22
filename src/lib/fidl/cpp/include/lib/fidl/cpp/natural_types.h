@@ -103,7 +103,7 @@ class UnionMemberView final {
 // Success/failure information is stored in |message|.
 class EncodeResult {
  public:
-  EncodeResult(const fidl_type_t* type, ::fidl::BodyEncoder&& storage)
+  EncodeResult(const fidl_type_t* type, ::fidl::internal::NaturalBodyEncoder&& storage)
       : storage_(std::move(storage)),
         message_(ConvertFromHLCPPOutgoingBody(storage.wire_format(), type, storage_.GetBody(),
                                               handles_, handle_metadata_)) {}
@@ -113,7 +113,7 @@ class EncodeResult {
  private:
   zx_handle_t handles_[ZX_CHANNEL_MAX_MSG_HANDLES];
   fidl_channel_handle_metadata_t handle_metadata_[ZX_CHANNEL_MAX_MSG_HANDLES];
-  ::fidl::BodyEncoder storage_;
+  ::fidl::internal::NaturalBodyEncoder storage_;
   ::fidl::OutgoingMessage message_;
 };
 
@@ -136,7 +136,7 @@ template <typename FidlType>
   if (status != ZX_OK) {
     return ::fitx::error(::fidl::Result::DecodeError(status, error_msg));
   }
-  ::fidl::Decoder decoder{std::move(hlcpp_body)};
+  ::fidl::internal::NaturalDecoder decoder{std::move(hlcpp_body)};
   FidlType value{};
   ::fidl::internal::NaturalCodingTraits<FidlType>::Decode(&decoder, &value, 0);
   return ::fitx::ok(std::move(value));
@@ -159,7 +159,7 @@ template <typename FidlType>
   // Since a majority of the domain objects are HLCPP objects, for now
   // the wire format version of the encoded message is the same as the one
   // used in HLCPP.
-  ::fidl::BodyEncoder encoder(DefaultHLCPPEncoderWireFormat());
+  ::fidl::internal::NaturalBodyEncoder encoder(DefaultHLCPPEncoderWireFormat());
   encoder.Alloc(::fidl::internal::NaturalEncodingInlineSize<FidlType>(&encoder));
   ::fidl::internal::NaturalCodingTraits<FidlType>::Encode(&encoder, &value, 0);
   return EncodeResult(coding_table, std::move(encoder));

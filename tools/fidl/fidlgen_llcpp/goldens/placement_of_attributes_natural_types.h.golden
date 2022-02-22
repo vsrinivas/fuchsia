@@ -371,6 +371,14 @@ struct internal::NaturalCodingTraits<
     ::test_placementofattributes::ExampleStruct>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_placementofattributes::ExampleStruct, 4, 4> {};
+
+template <>
+struct internal::NaturalIsMemcpyCompatible<
+    ::test_placementofattributes::ExampleStruct>
+    : public internal::BoolConstant<
+          !HasPadding<::test_placementofattributes::ExampleStruct>::value &&
+          internal::NaturalIsMemcpyCompatible<uint32_t>::value> {};
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -396,6 +404,16 @@ struct internal::NaturalCodingTraits<
     final
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_placementofattributes::ExampleProtocolMethodRequest, 1, 1> {};
+
+template <>
+struct internal::NaturalIsMemcpyCompatible<
+    ::test_placementofattributes::ExampleProtocolMethodRequest>
+    : public internal::BoolConstant<
+          !HasPadding<::test_placementofattributes::
+                          ExampleProtocolMethodRequest>::value &&
+          internal::NaturalIsMemcpyCompatible<
+              ::test_exampleusing::Empty>::value> {};
+
 #endif  // __Fuchsia__
 
 template <>
@@ -438,8 +456,7 @@ struct internal::NaturalCodingTraits<
   static constexpr size_t inline_size_v1_no_ee = sizeof(uint32_t);
   static constexpr size_t inline_size_v2 = sizeof(uint32_t);
 
-  template <class EncoderImpl>
-  static void Encode(EncoderImpl* encoder,
+  static void Encode(internal::NaturalEncoder* encoder,
                      ::test_placementofattributes::ExampleBits* value,
                      size_t offset,
                      cpp17::optional<NaturalHandleInformation>
@@ -448,8 +465,7 @@ struct internal::NaturalCodingTraits<
     *encoder->template GetPtr<::test_placementofattributes::ExampleBits>(
         offset) = *value;
   }
-  template <typename DecoderImpl>
-  static void Decode(DecoderImpl* decoder,
+  static void Decode(internal::NaturalDecoder* decoder,
                      ::test_placementofattributes::ExampleBits* value,
                      size_t offset) {
     *value =
@@ -464,8 +480,7 @@ struct internal::NaturalCodingTraits<
   static constexpr size_t inline_size_v1_no_ee = sizeof(uint32_t);
   static constexpr size_t inline_size_v2 = sizeof(uint32_t);
 
-  template <class EncoderImpl>
-  static void Encode(EncoderImpl* encoder,
+  static void Encode(internal::NaturalEncoder* encoder,
                      ::test_placementofattributes::ExampleEnum* value,
                      size_t offset,
                      cpp17::optional<NaturalHandleInformation>
@@ -474,8 +489,7 @@ struct internal::NaturalCodingTraits<
     *encoder->template GetPtr<::test_placementofattributes::ExampleEnum>(
         offset) = *value;
   }
-  template <typename DecoderImpl>
-  static void Decode(DecoderImpl* decoder,
+  static void Decode(internal::NaturalDecoder* decoder,
                      ::test_placementofattributes::ExampleEnum* value,
                      size_t offset) {
     *value =

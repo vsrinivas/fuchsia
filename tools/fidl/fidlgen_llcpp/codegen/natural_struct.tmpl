@@ -140,6 +140,20 @@ class {{ .Name }} final {
     : public ::fidl::internal::NaturalStructCodingTraits<{{ . }},
         {{ .TypeShapeV1.InlineSize }}, {{ .TypeShapeV2.InlineSize }}> {};
 
+  {{ if .TypeShapeV1.HasPadding }}
+  template<>
+  struct HasPadding<{{ . }}> : public std::true_type {};
+  {{ end }}
+
+  {{ if .FullDeclMemcpyCompatibleDeps }}
+  template<>
+  struct internal::NaturalIsMemcpyCompatible<{{ . }}> : public internal::BoolConstant<
+      !HasPadding<{{ . }}>::value
+  {{- range .FullDeclMemcpyCompatibleDeps }}
+      && internal::NaturalIsMemcpyCompatible<{{ .Unified }}>::value
+    {{- end -}}
+  > {};
+  {{ end }}
   {{- EndifFuchsia -}}
 {{- end }}
 

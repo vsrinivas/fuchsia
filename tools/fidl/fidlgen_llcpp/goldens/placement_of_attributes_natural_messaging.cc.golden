@@ -12,7 +12,7 @@ namespace test_placementofattributes {
     NaturalClientImpl<::test_placementofattributes::ExampleProtocol>::Method(
         ::test_placementofattributes::ExampleProtocolMethodRequest&& payload)
         const {
-  ::fidl::MessageEncoder _encoder{
+  ::fidl::internal::NaturalMessageEncoder _encoder{
       ::test_placementofattributes::kExampleProtocol_Method_Ordinal};
   ::fidl::Result result = messenger().OneWay(
       &::test_placementofattributes::

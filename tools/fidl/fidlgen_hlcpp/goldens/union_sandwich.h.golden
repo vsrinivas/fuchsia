@@ -572,9 +572,9 @@ struct IsMemcpyCompatible<::test::unionsandwich::SandwichUnionSize8Alignment4>
     : public internal::BoolConstant<
           !HasPadding<
               ::test::unionsandwich::SandwichUnionSize8Alignment4>::value &&
+          IsMemcpyCompatible<uint32_t>::value &&
           IsMemcpyCompatible<
-              ::test::unionsandwich::UnionSize8Alignment4>::value &&
-          IsMemcpyCompatible<uint32_t>::value> {};
+              ::test::unionsandwich::UnionSize8Alignment4>::value> {};
 
 inline zx_status_t Clone(
     const ::test::unionsandwich::SandwichUnionSize8Alignment4& value,
@@ -683,9 +683,9 @@ struct IsMemcpyCompatible<::test::unionsandwich::SandwichUnionSize36Alignment4>
     : public internal::BoolConstant<
           !HasPadding<
               ::test::unionsandwich::SandwichUnionSize36Alignment4>::value &&
+          IsMemcpyCompatible<uint32_t>::value &&
           IsMemcpyCompatible<
-              ::test::unionsandwich::UnionSize36Alignment4>::value &&
-          IsMemcpyCompatible<uint32_t>::value> {};
+              ::test::unionsandwich::UnionSize36Alignment4>::value> {};
 
 inline zx_status_t Clone(
     const ::test::unionsandwich::SandwichUnionSize36Alignment4& value,
@@ -794,10 +794,10 @@ struct IsMemcpyCompatible<::test::unionsandwich::SandwichUnionSize12Alignment4>
     : public internal::BoolConstant<
           !HasPadding<
               ::test::unionsandwich::SandwichUnionSize12Alignment4>::value &&
+          IsMemcpyCompatible<uint32_t>::value &&
           IsMemcpyCompatible<
               ::test::unionsandwich::UnionSize12Alignment4>::value &&
-          IsMemcpyCompatible<int32_t>::value &&
-          IsMemcpyCompatible<uint32_t>::value> {};
+          IsMemcpyCompatible<int32_t>::value> {};
 
 inline zx_status_t Clone(
     const ::test::unionsandwich::SandwichUnionSize12Alignment4& value,
@@ -937,9 +937,9 @@ struct IsMemcpyCompatible<::test::unionsandwich::SandwichUnionSize24Alignment8>
     : public internal::BoolConstant<
           !HasPadding<
               ::test::unionsandwich::SandwichUnionSize24Alignment8>::value &&
+          IsMemcpyCompatible<uint32_t>::value &&
           IsMemcpyCompatible<
-              ::test::unionsandwich::UnionSize24Alignment8>::value &&
-          IsMemcpyCompatible<uint32_t>::value> {};
+              ::test::unionsandwich::UnionSize24Alignment8>::value> {};
 
 inline zx_status_t Clone(
     const ::test::unionsandwich::SandwichUnionSize24Alignment8& value,

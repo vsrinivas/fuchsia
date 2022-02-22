@@ -429,13 +429,14 @@ template <>
 struct IsMemcpyCompatible<::test::handlesintypes::HandlesInTypes>
     : public internal::BoolConstant<
           !HasPadding<::test::handlesintypes::HandlesInTypes>::value &&
+          IsMemcpyCompatible<::zx::vmo>::value &&
+          IsMemcpyCompatible<::std::vector<::zx::vmo>>::value &&
           IsMemcpyCompatible<::std::array<::zx::vmo, 5>>::value &&
           IsMemcpyCompatible<
               ::std::vector<::std::array<::zx::vmo, 5>>>::value &&
-          IsMemcpyCompatible<::std::vector<::zx::vmo>>::value &&
           IsMemcpyCompatible<::test::handlesintypes::TableWithHandle>::value &&
-          IsMemcpyCompatible<::test::handlesintypes::UnionWithHandle>::value &&
-          IsMemcpyCompatible<::zx::vmo>::value> {};
+          IsMemcpyCompatible<::test::handlesintypes::UnionWithHandle>::value> {
+};
 
 inline zx_status_t Clone(const ::test::handlesintypes::HandlesInTypes& value,
                          ::test::handlesintypes::HandlesInTypes* result) {

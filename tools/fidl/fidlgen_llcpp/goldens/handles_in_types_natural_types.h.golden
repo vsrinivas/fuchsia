@@ -276,6 +276,28 @@ template <>
 struct internal::NaturalCodingTraits<::test_handlesintypes::HandlesInTypes>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_handlesintypes::HandlesInTypes, 104, 96> {};
+
+template <>
+struct HasPadding<::test_handlesintypes::HandlesInTypes>
+    : public std::true_type {};
+
+template <>
+struct internal::NaturalIsMemcpyCompatible<
+    ::test_handlesintypes::HandlesInTypes>
+    : public internal::BoolConstant<
+          !HasPadding<::test_handlesintypes::HandlesInTypes>::value &&
+          internal::NaturalIsMemcpyCompatible<::zx::vmo>::value &&
+          internal::NaturalIsMemcpyCompatible<
+              ::std::vector<::zx::vmo>>::value &&
+          internal::NaturalIsMemcpyCompatible<
+              ::std::array<::zx::vmo, 5>>::value &&
+          internal::NaturalIsMemcpyCompatible<
+              ::std::vector<::std::array<::zx::vmo, 5>>>::value &&
+          internal::NaturalIsMemcpyCompatible<
+              ::test_handlesintypes::TableWithHandle>::value &&
+          internal::NaturalIsMemcpyCompatible<
+              ::test_handlesintypes::UnionWithHandle>::value> {};
+
 #endif  // __Fuchsia__
 
 template <>
@@ -310,16 +332,14 @@ struct internal::NaturalCodingTraits<::test_handlesintypes::obj_type> {
   static constexpr size_t inline_size_v1_no_ee = sizeof(uint32_t);
   static constexpr size_t inline_size_v2 = sizeof(uint32_t);
 
-  template <class EncoderImpl>
-  static void Encode(EncoderImpl* encoder,
+  static void Encode(internal::NaturalEncoder* encoder,
                      ::test_handlesintypes::obj_type* value, size_t offset,
                      cpp17::optional<NaturalHandleInformation>
                          maybe_handle_info = cpp17::nullopt) {
     ZX_DEBUG_ASSERT(maybe_handle_info == cpp17::nullopt);
     *encoder->template GetPtr<::test_handlesintypes::obj_type>(offset) = *value;
   }
-  template <typename DecoderImpl>
-  static void Decode(DecoderImpl* decoder,
+  static void Decode(internal::NaturalDecoder* decoder,
                      ::test_handlesintypes::obj_type* value, size_t offset) {
     *value = *decoder->template GetPtr<::test_handlesintypes::obj_type>(offset);
   }

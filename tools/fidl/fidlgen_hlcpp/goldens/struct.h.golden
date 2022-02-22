@@ -77,8 +77,8 @@ template <>
 struct IsMemcpyCompatible<::test::struct_::Simple>
     : public internal::BoolConstant<
           !HasPadding<::test::struct_::Simple>::value &&
-          IsMemcpyCompatible<bool>::value &&
-          IsMemcpyCompatible<uint8_t>::value> {};
+          IsMemcpyCompatible<uint8_t>::value &&
+          IsMemcpyCompatible<bool>::value> {};
 
 inline zx_status_t Clone(const ::test::struct_::Simple& value,
                          ::test::struct_::Simple* result) {
@@ -109,8 +109,8 @@ template <>
 struct IsMemcpyCompatible<::test::struct_::BasicStruct>
     : public internal::BoolConstant<
           !HasPadding<::test::struct_::BasicStruct>::value &&
-          IsMemcpyCompatible<::std::string>::value &&
-          IsMemcpyCompatible<uint32_t>::value> {};
+          IsMemcpyCompatible<uint32_t>::value &&
+          IsMemcpyCompatible<::std::string>::value> {};
 
 inline zx_status_t Clone(const ::test::struct_::BasicStruct& value,
                          ::test::struct_::BasicStruct* result) {

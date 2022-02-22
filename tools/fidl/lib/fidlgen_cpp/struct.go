@@ -5,7 +5,6 @@
 package fidlgen_cpp
 
 import (
-	"sort"
 	"strings"
 
 	"go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
@@ -31,7 +30,7 @@ type Struct struct {
 	// Only set if it may be possible for a type to be memcpy compatible,
 	// e.g. has no padding.
 	// See the struct template for usage.
-	FullDeclMemcpyCompatibleDeps []string
+	FullDeclMemcpyCompatibleDeps []nameVariants
 
 	TypeShapeV1 TypeShape
 	TypeShapeV2 TypeShape
@@ -139,22 +138,23 @@ func (c *compiler) compileStruct(val fidlgen.Struct, anonMessageBody bool) *Stru
 	}
 
 	// Construct a deduped list of decls for IsMemcpyCompatible template definitions.
-	memcpyCompatibleDepMap := make(map[string]struct{})
+	seen := make(map[string]struct{})
 	for _, member := range r.Members {
+		if _, ok := seen[member.Type.HLCPP.String()]; ok {
+			continue
+		}
+		seen[member.Type.HLCPP.String()] = struct{}{}
+
 		// The dangerous identifiers test package contains identifiers that won't compile.
 		// e.g. ::fidl::test::dangerous::struct::types::camel::Interface gives an
 		// "expected unqualified-id" error because of "struct".
 		// There isn't an easily accessible dangerous identifiers list to replace identifiers.
 		if strings.Contains(member.Type.HLCPP.String(), "::fidl::test::dangerous::") {
-			memcpyCompatibleDepMap = nil
-			break
+			continue
 		}
-		memcpyCompatibleDepMap[member.Type.HLCPP.String()] = struct{}{}
+
+		r.FullDeclMemcpyCompatibleDeps = append(r.FullDeclMemcpyCompatibleDeps, member.Type.nameVariants)
 	}
-	for decl := range memcpyCompatibleDepMap {
-		r.FullDeclMemcpyCompatibleDeps = append(r.FullDeclMemcpyCompatibleDeps, decl)
-	}
-	sort.Strings(r.FullDeclMemcpyCompatibleDeps)
 
 	return &r
 }
