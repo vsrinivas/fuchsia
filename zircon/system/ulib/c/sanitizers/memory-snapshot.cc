@@ -14,10 +14,45 @@
 #include <algorithm>
 #include <utility>
 
+#include <runtime/thread.h>
+
 #include "dynlink.h"
 #include "threads_impl.h"
 
 namespace {
+
+// TODO(fxbug.dev/93847): ThreadSuspender synchronizes using _dl_wrlock.  If a
+// vDSO entry point used during the snapshot code is interpoosed by a version
+// that calls dlsym, this can deadlock since dlsym takes the write lock too for
+// its own arcane reasons.  The known interposer implementations such as
+// //src/devices/testing/fake-object only call dlsym on first entry to each
+// system call (following standard dlsym-interposer practice).  So just make an
+// early call to each system call entry point used in this file, before taking
+// any locks.  That way any interposers will have done their initialization
+// before we call into them.  If the interposers do other synchronization this
+// could still cause deadlock in other ways.  So probably we'll need to change
+// things eventually so that this uses only real vDSO entry points that can't
+// be interposed upon.
+void PrimeSyscallsBeforeTakingLocks() {
+  struct RanOnce {};
+  [[maybe_unused]] static RanOnce run_once = []() {
+    zx_handle_t invalid;
+    uintptr_t ignored;
+    (void)zx_system_get_page_size();
+    zx_object_get_child(_zx_process_self(), ZX_KOID_INVALID, 0, &invalid);
+    zx_object_get_info(_zx_process_self(), 0, nullptr, 0, nullptr, nullptr);
+    zx_object_wait_one(_zx_process_self(), 0, 0, nullptr);
+    zx_task_suspend_token(_zx_process_self(), &invalid);
+    zx_thread_read_state(zxr_thread_get_handle(&__pthread_self()->zxr_thread), 0, nullptr, 0);
+    zx_handle_t vmo = ZX_HANDLE_INVALID;
+    zx_vmo_create(0, 0, &vmo);
+    zx_vmo_set_size(vmo, 0);
+    zx_vmar_map(_zx_vmar_root_self(), 0, 0, vmo, 0, 0, &ignored);
+    zx_vmar_unmap(_zx_vmar_root_self(), 0, 0);
+    zx_handle_close(vmo);
+    return RanOnce{};
+  }();
+}
 
 // This is a simple container similar to std::vector but using only whole-page
 // allocations in a private VMO to avoid interactions with any normal memory
@@ -140,6 +175,9 @@ struct Thread {
 class ThreadSuspender {
  public:
   ThreadSuspender() {
+    // Avoid reentrancy issues with the system calls used with locks held.
+    PrimeSyscallsBeforeTakingLocks();
+
     // Take important locks before suspending any threads.  These protect data
     // structures that MemorySnapshot needs to scan.  Once all threads are
     // suspended, the locks are released since any potential contenders should
