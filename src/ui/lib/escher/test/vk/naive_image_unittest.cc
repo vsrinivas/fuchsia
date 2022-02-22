@@ -13,6 +13,35 @@ namespace escher {
 
 using NaiveImageTest = escher::test::TestWithVkValidationLayer;
 
+// Make sure that we can create a transient image on all platforms.
+VK_TEST_F(NaiveImageTest, TransientImageTest) {
+  auto escher = test::GetEscher();
+  auto allocator = escher->gpu_allocator();
+  auto recycler = escher->resource_recycler();
+
+  ImageInfo image_info = {
+      .format = vk::Format::eB8G8R8A8Unorm,
+      .width = 1024,
+      .height = 1024,
+      .sample_count = 1,
+      .usage = vk::ImageUsageFlagBits::eTransientAttachment,
+      .memory_flags = vk::MemoryPropertyFlagBits::eLazilyAllocated,
+      .color_space = ColorSpace::kSrgb,
+  };
+
+  vk::Image vk_image =
+      image_utils::CreateVkImage(escher->vk_device(), info, vk::ImageLayout::eUndefined);
+
+  auto mem_requirements = escher->vk_device().getImageMemoryRequirements(vk_image);
+  auto memory =
+      allocator->AllocateMemory(mem_requirements, vk::MemoryPropertyFlagBits::eLazilyAllocated);
+  EXPECT_TRUE(memory);
+
+  auto image = impl::NaiveImage::AdoptVkImage(escher->resource_recycler(), info, vk_image, memory,
+                                              vk::ImageLayout::eUndefined);
+  EXPECT_TRUE(image);
+}
+
 VK_TEST_F(NaiveImageTest, AdoptVkImageInsufficientMemory) {
   auto escher = test::GetEscher();
   auto allocator = escher->gpu_allocator();
