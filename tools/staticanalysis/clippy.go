@@ -100,6 +100,8 @@ func (c *ClippyAnalyzer) Analyze(ctx context.Context, path string) ([]*Finding, 
 			continue
 		}
 
+		var suggestions []Suggestion
+
 		messageLines := []string{result.Message}
 
 		// Clippy output often contains "help" messages providing suggestions
@@ -111,6 +113,35 @@ func (c *ClippyAnalyzer) Analyze(ctx context.Context, path string) ([]*Finding, 
 			}
 			msg := child.Message
 			if span, ok := child.primarySpan(ctx); ok && span.SuggestedReplacement != "" {
+				replacementPath, err := buildPathToCheckoutPath(span.FileName, c.buildDir, c.checkoutDir)
+				if err != nil {
+					return nil, err
+				}
+				if replacementPath != path {
+					continue
+				}
+				suggestions = append(suggestions, Suggestion{
+					Description: child.Message,
+					Replacements: []Replacement{
+						{
+							Path:        replacementPath,
+							Replacement: span.SuggestedReplacement,
+							StartLine:   span.LineStart,
+							EndLine:     span.LineEnd,
+							// Clippy uses one-based column numbers but
+							// staticanalysis finding character indices must be
+							// zero-based.
+							StartChar: span.ColumnStart - 1,
+							EndChar:   span.ColumnEnd - 1,
+						},
+					},
+				})
+				if strings.Contains(span.SuggestedReplacement, "\n") {
+					// If the suggested replacement is multiple lines, it's
+					// likely that it starts in the middle of one line and won't
+					// make much sense when rendered out of context.
+					continue
+				}
 				// If there's a suggested replacement, child.Message will be
 				// some text like "try" that is intended to be followed by the
 				// suggested replacement.
@@ -132,8 +163,9 @@ func (c *ClippyAnalyzer) Analyze(ctx context.Context, path string) ([]*Finding, 
 			EndLine:   primarySpan.LineEnd,
 			// Clippy uses one-based column numbers but staticanalysis finding
 			// character indices must be zero-based.
-			StartChar: primarySpan.ColumnStart - 1,
-			EndChar:   primarySpan.ColumnEnd - 1,
+			StartChar:   primarySpan.ColumnStart - 1,
+			EndChar:     primarySpan.ColumnEnd - 1,
+			Suggestions: suggestions,
 		})
 	}
 

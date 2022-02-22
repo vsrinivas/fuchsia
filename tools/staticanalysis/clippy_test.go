@@ -90,6 +90,28 @@ func TestClippyAnalyzer(t *testing.T) {
 									{
 										Primary:              true,
 										SuggestedReplacement: "123_u64",
+										FileName:             "../../src/foo.rs",
+										LineStart:            5,
+										LineEnd:              5,
+										ColumnStart:          1,
+										ColumnEnd:            11,
+									},
+								},
+							},
+							{
+								// This isn't realistic, but it covers the logic
+								// to ignore multiline suggested replacements.
+								Message: "or try",
+								Level:   "help",
+								Spans: []clippySpan{
+									{
+										Primary:              true,
+										SuggestedReplacement: "multiline\nreplacement",
+										FileName:             "../../src/foo.rs",
+										LineStart:            50,
+										LineEnd:              51,
+										ColumnStart:          7,
+										ColumnEnd:            2,
 									},
 								},
 							},
@@ -117,6 +139,34 @@ func TestClippyAnalyzer(t *testing.T) {
 					// one-based values produced by Clippy.
 					StartChar: 13,
 					EndChar:   23,
+					Suggestions: []Suggestion{
+						{
+							Description: "try",
+							Replacements: []Replacement{
+								{
+									Replacement: "123_u64",
+									Path:        "src/foo.rs",
+									StartLine:   5,
+									EndLine:     5,
+									StartChar:   0,
+									EndChar:     10,
+								},
+							},
+						},
+						{
+							Description: "or try",
+							Replacements: []Replacement{
+								{
+									Replacement: "multiline\nreplacement",
+									Path:        "src/foo.rs",
+									StartLine:   50,
+									EndLine:     51,
+									StartChar:   6,
+									EndChar:     1,
+								},
+							},
+						},
+					},
 				},
 			},
 		},
