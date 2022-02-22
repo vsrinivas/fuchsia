@@ -15,7 +15,7 @@
 # fail.
 #
 # More information is available in
-# docs/development/languages/rust/third_party.md.
+# https://fuchsia.dev/fuchsia-src/development/languages/rust/external_crates .
 
 [package]
 name = "fuchsia-third-party"
