@@ -35,8 +35,9 @@ class MdnsServiceImpl : public fuchsia::net::mdns::ServiceInstanceResolver {
   // Publisher for PublishServiceInstance.
   class SimplePublisher : public Mdns::Publisher {
    public:
-    SimplePublisher(std::unique_ptr<Mdns::Publication> publication,
-                    fit::function<void(fit::result<void, fuchsia::net::mdns::Error>)> callback);
+    SimplePublisher(
+        std::unique_ptr<Mdns::Publication> publication,
+        fit::function<void(fpromise::result<void, fuchsia::net::mdns::Error>)> callback);
 
    private:
     // Mdns::Publisher implementation.
@@ -47,7 +48,7 @@ class MdnsServiceImpl : public fuchsia::net::mdns::ServiceInstanceResolver {
                         GetPublicationCallback callback) override;
 
     std::unique_ptr<Mdns::Publication> publication_;
-    fit::function<void(fit::result<void, fuchsia::net::mdns::Error>)> callback_;
+    fit::function<void(fpromise::result<void, fuchsia::net::mdns::Error>)> callback_;
 
     // Disallow copy, assign and move.
     SimplePublisher(const SimplePublisher&) = delete;
@@ -100,7 +101,7 @@ class MdnsServiceImpl : public fuchsia::net::mdns::ServiceInstanceResolver {
   bool PublishServiceInstance(
       std::string service_name, std::string instance_name,
       std::unique_ptr<Mdns::Publication> publication, bool perform_probe, Media media,
-      fit::function<void(fit::result<void, fuchsia::net::mdns::Error>)> callback);
+      fit::function<void(fpromise::result<void, fuchsia::net::mdns::Error>)> callback);
 
   sys::ComponentContext* component_context_;
   Config config_;

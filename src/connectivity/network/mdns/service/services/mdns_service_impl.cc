@@ -121,7 +121,7 @@ void MdnsServiceImpl::OnReady() {
     PublishServiceInstance(
         publication.service_, publication.instance_, publication.publication_->Clone(),
         publication.perform_probe_, publication.media_,
-        [service = publication.service_](fit::result<void, fuchsia::net::mdns::Error> result) {
+        [service = publication.service_](fpromise::result<void, fuchsia::net::mdns::Error> result) {
           if (result.is_error()) {
             FX_LOGS(ERROR) << "Failed to publish as " << service << ", result "
                            << static_cast<uint32_t>(result.error());
@@ -135,7 +135,7 @@ void MdnsServiceImpl::OnReady() {
 bool MdnsServiceImpl::PublishServiceInstance(
     std::string service_name, std::string instance_name,
     std::unique_ptr<Mdns::Publication> publication, bool perform_probe, Media media,
-    fit::function<void(fit::result<void, fuchsia::net::mdns::Error>)> callback) {
+    fit::function<void(fpromise::result<void, fuchsia::net::mdns::Error>)> callback) {
   auto publisher = std::make_unique<SimplePublisher>(std::move(publication), callback.share());
 
   if (!mdns_.PublishServiceInstance(service_name, instance_name, perform_probe, media,
@@ -190,14 +190,14 @@ void MdnsServiceImpl::ResolveServiceInstance(std::string service, std::string in
 
 MdnsServiceImpl::SimplePublisher::SimplePublisher(
     std::unique_ptr<Mdns::Publication> publication,
-    fit::function<void(fit::result<void, fuchsia::net::mdns::Error>)> callback)
+    fit::function<void(fpromise::result<void, fuchsia::net::mdns::Error>)> callback)
     : publication_(std::move(publication)), callback_(std::move(callback)) {}
 
 void MdnsServiceImpl::SimplePublisher::ReportSuccess(bool success) {
   if (success) {
-    callback_(fit::ok());
+    callback_(fpromise::ok());
   } else {
-    callback_(fit::error(fuchsia::net::mdns::Error::ALREADY_PUBLISHED_ON_SUBNET));
+    callback_(fpromise::error(fuchsia::net::mdns::Error::ALREADY_PUBLISHED_ON_SUBNET));
   }
 }
 
