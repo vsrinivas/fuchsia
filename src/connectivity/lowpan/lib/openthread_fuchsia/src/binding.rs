@@ -16,4 +16,6 @@ extern "C" {
     pub fn otSysDeinit();
     pub fn platformAlarmProcess(instance: *mut otsys::otInstance);
     pub fn platformRadioProcess(instance: *mut otsys::otInstance);
+    pub fn platformInfraIfInit(infra_if_idx: ot::NetifIndex) -> i32;
+    pub fn platformInfraIfOnReceiveIcmp6Msg(instance: *mut otsys::otInstance);
 }

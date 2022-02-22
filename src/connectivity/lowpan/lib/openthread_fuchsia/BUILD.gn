@@ -31,6 +31,7 @@ rustc_library("openthread_fuchsia") {
 
   sources = [
     "src/backing/alarm.rs",
+    "src/backing/infra_if.rs",
     "src/backing/mod.rs",
     "src/backing/radio.rs",
     "src/backing/reset.rs",

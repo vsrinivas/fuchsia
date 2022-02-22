@@ -749,5 +749,4 @@ extern "C" void otPlatTrelRegisterService(otInstance* aInstance, uint16_t aPort,
 
 extern "C" void otPlatTrelSend(otInstance* aInstance, const uint8_t* aUdpPayload,
                                uint16_t aUdpPayloadLen, const otSockAddr* aDestSockAddr) {}
-
 }  // namespace otstack

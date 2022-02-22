@@ -177,6 +177,7 @@ impl Platform {
                 netif_index_thread: builder.thread_netif_index,
                 netif_index_backbone: builder.backbone_netif_index,
                 trel: RefCell::new(None),
+                infra_if: InfraIfInstance::new(builder.backbone_netif_index.unwrap_or(0)),
             });
 
             // Initialize the lower-level platform implementation
@@ -205,6 +206,7 @@ impl ot::Platform for Platform {
         self.process_poll_radio(instance, cx);
         self.process_poll_udp(instance, cx);
         self.process_poll_trel(instance, cx);
+        self.process_poll_infra_if(instance, cx);
         self.process_poll_tasks(cx);
     }
 }
@@ -255,6 +257,14 @@ impl Platform {
         let mut trel = unsafe { PlatformBacking::as_ref() }.trel.borrow_mut();
         if let Some(trel) = trel.as_mut() {
             trel.poll(instance, cx);
+        }
+    }
+
+    fn process_poll_infra_if(&mut self, instance: &ot::Instance, cx: &mut Context<'_>) {
+        // SAFETY: Guaranteed to only be called from the OpenThread thread.
+        let infra_if = unsafe { PlatformBacking::as_ref() }.infra_if.as_ref();
+        if let Some(infra_if) = infra_if {
+            infra_if.poll(instance, cx);
         }
     }
 

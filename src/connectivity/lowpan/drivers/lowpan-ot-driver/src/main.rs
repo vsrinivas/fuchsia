@@ -155,8 +155,23 @@ impl Config {
                 .expect("Network interface index is too large for OpenThread"),
         );
 
-        if let Some(index) = self.get_backbone_netif_index() {
+        // TODO (fxbug.dev/94129): Handle removal/re-add of backbone interface device
+        // This is needed for now due to the removal of backbone when its region code is set.
+        info!("Wait for 20s before getting backbone interface {:?}", self.backbone_name);
+        std::thread::sleep(std::time::Duration::from_secs(20));
+
+        let backbone_netif_index = self.get_backbone_netif_index();
+
+        if let Some(index) = backbone_netif_index {
             builder = builder.backbone_netif_index(index);
+        }
+
+        let ot_instance = ot::Instance::new(builder.init(spinel_sink, spinel_stream));
+
+        if let Some(index) = backbone_netif_index {
+            ot_instance
+                .border_routing_init(index, true)
+                .context("Unable to initialize OpenThread border routing")?;
         }
 
         let driver_future = run_driver(
@@ -164,7 +179,7 @@ impl Config {
             connect_to_protocol_at::<RegisterMarker>(self.service_prefix.as_str())
                 .context("Failed to connect to Lowpan Registry service")?,
             connect_to_protocol_at::<FactoryRegisterMarker>(self.service_prefix.as_str()).ok(),
-            ot::Instance::new(builder.init(spinel_sink, spinel_stream)),
+            ot_instance,
             netif,
         );
 

@@ -31,6 +31,12 @@ source_set("platform") {
 
   public_deps = [
     "//sdk/fidl/fuchsia.lowpan.bootstrap:fuchsia.lowpan.bootstrap_llcpp",
+    "//sdk/fidl/fuchsia.net",
+    "//sdk/fidl/fuchsia.net.interfaces",
+    "//sdk/fidl/fuchsia.net.routes",
+    "//sdk/fidl/fuchsia.netstack",
+    "//sdk/lib/fdio",
+    "//sdk/lib/sys/cpp",
     "//src/connectivity/openthread/lib/ot-stack:ot-stack-callback",
     "//src/lib/files",
     "//src/lib/fsl",
