@@ -110,7 +110,7 @@ itertools = "0.10"
 itoa = "0.4"
 json5format = "0.2.4"
 lazy_static = "1.4"
-libc = "0.2.116"
+libc = { version = "0.2.116", features = ["extra_traits"] }
 libm = "0.2.1"
 linked-hash-map = "0.5.3"
 log = { version = "0.4.11", features = ["std"] }
