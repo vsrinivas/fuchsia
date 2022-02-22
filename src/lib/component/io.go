@@ -599,7 +599,7 @@ func (fState *fileState) read(count uint64) (int32, []uint8, error) {
 	return int32(zx.ErrOk), b, nil
 }
 
-func (fState *fileState) Read(_ fidl.Context, count uint64) (int32, []uint8, error) {
+func (fState *fileState) ReadDeprecated(_ fidl.Context, count uint64) (int32, []uint8, error) {
 	return fState.read(count)
 }
 

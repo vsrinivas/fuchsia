@@ -257,7 +257,7 @@ impl<T: 'static + File> FileConnection<T> {
                 let status = self.handle_set_attr(flags, attributes).await;
                 responder.send(status.into_raw())?;
             }
-            FileRequest::Read { count, responder } => {
+            FileRequest::ReadDeprecated { count, responder } => {
                 fuchsia_trace::duration!("storage", "File::Read", "bytes" => count);
                 let advance = match self.handle_read_at(self.seek, count).await {
                     Ok((buffer, bytes_read)) => {

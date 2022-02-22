@@ -67,7 +67,8 @@ void NullPtyDeviceImpl::SetWindowSize(SetWindowSizeRequestView request,
 // We need to provide these methods because |fuchsia.hardware.pty.Device| composes |fuchsia.io|.
 // Assert in all of these, since these should be handled by fs::Connection before our
 // HandleFsSpecificMessage() is called.
-void NullPtyDeviceImpl::Read(ReadRequestView request, ReadCompleter::Sync& completer) {
+void NullPtyDeviceImpl::ReadDeprecated(ReadDeprecatedRequestView request,
+                                       ReadDeprecatedCompleter::Sync& completer) {
   ZX_ASSERT(false);
 }
 

@@ -421,7 +421,7 @@ impl VmoFileConnection {
                 // it is not supported at the moment.
                 responder.send(ZX_ERR_NOT_SUPPORTED)?;
             }
-            FileRequest::Read { count, responder } => {
+            FileRequest::ReadDeprecated { count, responder } => {
                 self.handle_read(count, |status, content| {
                     responder.send(status.into_raw(), content)
                 })

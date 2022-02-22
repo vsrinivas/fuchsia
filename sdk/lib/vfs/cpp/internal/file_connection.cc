@@ -66,7 +66,7 @@ void FileConnection::SetAttr(uint32_t flags, fuchsia::io::NodeAttributes attribu
   Connection::SetAttr(vn_, flags, attributes, std::move(callback));
 }
 
-void FileConnection::Read(uint64_t count, ReadCallback callback) {
+void FileConnection::ReadDeprecated(uint64_t count, ReadDeprecatedCallback callback) {
   std::vector<uint8_t> data;
   if (!Flags::IsReadable(flags())) {
     callback(ZX_ERR_BAD_HANDLE, std::move(data));
@@ -80,14 +80,15 @@ void FileConnection::Read(uint64_t count, ReadCallback callback) {
 }
 
 void FileConnection::Read2(uint64_t count, Read2Callback callback) {
-  Read(count, [callback = std::move(callback)](zx_status_t status, std::vector<uint8_t> data) {
-    if (status != ZX_OK) {
-      callback(fpromise::error(status));
-    } else {
-      callback(fuchsia::io::File2_Read2_Result::WithResponse(
-          fuchsia::io::File2_Read2_Response(std::move(data))));
-    }
-  });
+  ReadDeprecated(count,
+                 [callback = std::move(callback)](zx_status_t status, std::vector<uint8_t> data) {
+                   if (status != ZX_OK) {
+                     callback(fpromise::error(status));
+                   } else {
+                     callback(fuchsia::io::File2_Read2_Result::WithResponse(
+                         fuchsia::io::File2_Read2_Response(std::move(data))));
+                   }
+                 });
 }
 
 void FileConnection::ReadAtDeprecated(uint64_t count, uint64_t offset,

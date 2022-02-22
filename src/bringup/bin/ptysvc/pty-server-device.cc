@@ -49,7 +49,8 @@ void PtyServerDevice::ReadEvents(ReadEventsRequestView request,
 
 // Assert in all of these, since these should be handled by fs::Connection before our
 // HandleFsSpecificMessage() is called.
-void PtyServerDevice::Read(ReadRequestView request, ReadCompleter::Sync& completer) {
+void PtyServerDevice::ReadDeprecated(ReadDeprecatedRequestView request,
+                                     ReadDeprecatedCompleter::Sync& completer) {
   ZX_ASSERT(false);
 }
 

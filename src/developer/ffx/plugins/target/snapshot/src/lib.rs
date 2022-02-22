@@ -243,7 +243,7 @@ mod test {
             let mut cc: u32 = 0;
             while let Ok(Some(req)) = stream.try_next().await {
                 match req {
-                    FileRequest::Read { count: _, responder } => {
+                    FileRequest::ReadDeprecated { count: _, responder } => {
                         cc = cc + 1;
                         if cc == 1 {
                             responder

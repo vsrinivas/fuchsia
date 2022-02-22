@@ -508,7 +508,7 @@ async fn assert_read<'a>(
 // close the file and check that further reads fail.
 async fn assert_close(file_proxy: &FileProxy) -> Result<(), Error> {
     let () = file_proxy.close().await?.map_err(zx::Status::from_raw)?;
-    assert!(file_proxy.read(0).await.is_err());
+    assert_matches!(file_proxy.read2(0).await, Err(e) if e.is_closed());
     Ok(())
 }
 

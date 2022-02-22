@@ -562,7 +562,7 @@ func (f *fileWrapper) SetAttr(_ fidl.Context, flags uint32, attr io.NodeAttribut
 	return int32(errorToZx(f.file.Touch(t, t))), nil
 }
 
-func (f *fileWrapper) Read(_ fidl.Context, count uint64) (int32, []uint8, error) {
+func (f *fileWrapper) ReadDeprecated(_ fidl.Context, count uint64) (int32, []uint8, error) {
 	buf := make([]byte, count)
 	r, err := f.file.Read(buf, 0, fs.WhenceFromCurrent)
 	if zxErr := errorToZx(err); zxErr != zx.ErrOk {

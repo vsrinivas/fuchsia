@@ -94,10 +94,11 @@ void main() {
       composedDir.open(io.openRightReadable, io.modeTypeFile, 'foo.txt',
           InterfaceRequest<io.Node>(fileProxy.ctrl.request().passChannel()));
 
-      expect(() => fileProxy.read(io.maxBuf), throwsException);
+      await expectLater(
+          fileProxy.read2(io.maxBuf), throwsA(isA<FidlStateException>()));
     });
 
-    test('cannot change list of inherited nodes after creation', () {
+    test('cannot change list of inherited nodes after creation', () async {
       final inheritedNodes = <String>[];
       pseudoDir.addNode('foo.txt', PseudoFile.readOnlyStr(() => ''));
 
@@ -111,7 +112,8 @@ void main() {
       composedDir.open(io.openRightReadable, io.modeTypeFile, 'foo.txt',
           InterfaceRequest<io.Node>(fileProxy.ctrl.request().passChannel()));
 
-      expect(() => fileProxy.read(io.maxBuf), throwsException);
+      await expectLater(
+          fileProxy.read2(io.maxBuf), throwsA(isA<FidlStateException>()));
     });
   });
 }
