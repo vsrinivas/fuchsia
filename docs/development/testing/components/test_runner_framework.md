@@ -456,7 +456,7 @@ The framework also provides some [capabilities][framework-capabilities] to all
 the components and can be used by test components if required.
 
 
-### Hermetic component resolution
+### Hermetic component resolution {#hermetic-resolver}
 
 Hermetic test components are launched in a realm that utilizes the hermetic
 component resolver. This resolver disallows resolving URLs outside of the
@@ -474,6 +474,46 @@ failed to resolve component fuchsia-pkg://fuchsia.com/[package_name]#meta/[compo
 You can avoid this error by including any components your test relies on
 to the test package - see [this CL](https://fxrev.dev/608222) for an example of
 how to do this.
+
+### Tier 2 Hermetic tests
+
+These kind of tests are hermetic with respect to capabilities (i.e they don't
+have access to capabilities which can affect system state outside of the test),
+but they are *allowed* to resolve URLs from outside the test package.
+
+These kind of tests are useful when it is not trivial to package all dependent
+components inside test's own package, for example when the component under test
+has a deep hierarchy and it is not possible to package all dependent
+components hermetically without re-writing corresponding manifest files.
+
+*Whenever possible it is preferred to hermetically packages the test and its
+dependencies. See [Hermetic component resolution](#hermetic-resolver).*
+
+A test must explicitly mark itself to run as a **tier-2 hermetic** test.
+
+```json5
+// my_component_test.cml
+
+{
+    include: [
+        // Select the appropriate test runner shard here:
+        // rust, gtest, go, etc.
+        "//src/sys/test_runners/rust/default.shard.cml",
+
+        // This includes the facet which marks the test type as "hermetic-tier-2".
+        {{ '<strong>' }}"//src/sys/test_manager/hermetic-tier-2-test.shard.cml",{{ '</strong>' }}
+    ],
+    program: {
+        binary: "bin/my_component_test",
+    },
+}
+```
+
+The shard includes following facet in the manifest file:
+
+```json5
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/sys/test_manager/hermetic-tier-2-test.shard.cml" %}
+```
 
 ### Legacy non-hermetic tests
 
@@ -520,7 +560,8 @@ Possible values of `fuchsia.test.type`:
 | Value | Description |
 | ----- | ----------- |
 | `hermetic` | Hermetic realm |
-| `system` | Legacy non hermetic realm |
+| `hermetic-tier-2` | Hermetic realm with non-hermetic resolver |
+| `system` | Legacy non hermetic realm with access to some system capabilities. |
 | `cts` | [CTS test realm] |
 
 Below is the list of system capabilities provided to legacy non-hermetic tests:
@@ -562,8 +603,6 @@ dev-goldfish-sync
 dev-gpu
 dev-mediacodec
 ```
-
-
 ## Performance
 
 When writing a test runner that launches processes, the runner needs to
