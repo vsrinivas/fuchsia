@@ -58,7 +58,9 @@ rustc_binary("bin") {
 
   sources = [
     "src/main.rs",
+    "src/match_common.rs",
     "src/package_resolver.rs",
+    "src/resolved_driver.rs",
   ]
 }
 

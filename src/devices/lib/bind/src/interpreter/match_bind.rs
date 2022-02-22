@@ -21,7 +21,7 @@ enum Condition {
 // TODO(fxb/71834): Currently, the driver manager only supports number-based
 // device properties. It will support string-based properties soon. We should
 // support other device property types in the future.
-#[derive(Clone, Hash, Eq, PartialEq)]
+#[derive(Clone, Debug, Hash, Eq, PartialEq)]
 pub enum PropertyKey {
     NumberKey(u64),
     StringKey(String),
