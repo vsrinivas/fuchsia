@@ -331,3 +331,132 @@ template("pm_publish") {
     ]
   }
 }
+
+# Generate TUF repository metadata and data in a zip fie.
+#
+# Globals
+#
+#   amber_keys_dir
+#     [path] Directory where TUF keys for signing metadata are stored.
+#
+#   amber_metadata_dir
+#     [path] Directory where TUF root metadata is stored.
+#
+# Parameters
+#
+#   inputs (required)
+#     [list of labels] A list of exactly one input: A list of package metadata
+#     from the set of packages to be published in the TUF repository. For
+#     example, the output from a generate_package_metadata() target.
+#
+#   deps (optional)
+#   data_deps (optional)
+#   testonly (optional)
+#   visibility (optional)
+#     Same as for any GN `action()` target.
+template("pm_publish_archive") {
+  action(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "data_deps",
+                             "inputs",
+                             "testonly",
+                             "visibility",
+                           ])
+    gendir = "${target_out_dir}/${target_name}/gen"
+    output = "${target_out_dir}/${target_name}.zip"
+
+    # TODO(fxbug.dev/94229): Action tracer does not observe `pm` writes because
+    # golang binaries are statically linked and invoke syscalls directly and
+    # action tracer relies on dynamically linking its own tracing library.
+    hermetic_action_ignored_prefixes = [ gendir ]
+
+    if (!defined(deps)) {
+      deps = []
+    }
+    deps += [ "//src/sys/pkg/bin/pm:pm_bin($host_toolchain)" ]
+
+    sources = [
+      # Injected key files read by `pm publish`.
+      "${amber_keys_dir}/snapshot.json",
+      "${amber_keys_dir}/targets.json",
+      "${amber_keys_dir}/timestamp.json",
+
+      # Injected root metadata for TUF repository.
+      "${amber_metadata_dir}/1.root.json",
+      "${amber_metadata_dir}/2.root.json",
+      "${amber_metadata_dir}/3.root.json",
+      "${amber_metadata_dir}/4.root.json",
+      "${amber_metadata_dir}/5.root.json",
+      "${amber_metadata_dir}/6.root.json",
+      "${amber_metadata_dir}/7.root.json",
+    ]
+
+    assert(inputs == [ inputs[0] ],
+           "pm_publish_archive(\"$target_name\") requires exactly one input")
+
+    # inputs[0] is input to `pm publish`; the action's other input is the `pm`
+    # binary itself.
+    inputs += [ "${host_out_dir}/pm" ]
+
+    script = "//src/sys/pkg/bin/pm/pm_publish_archive.py"
+    args = [
+      "--pm",
+      rebase_path("${host_out_dir}/pm", root_build_dir),
+
+      "--key",
+      rebase_path("${amber_keys_dir}/snapshot.json", root_build_dir),
+      "--key",
+      rebase_path("${amber_keys_dir}/targets.json", root_build_dir),
+      "--key",
+      rebase_path("${amber_keys_dir}/timestamp.json", root_build_dir),
+
+      "--root-metadata",
+      rebase_path("${amber_metadata_dir}/1.root.json", root_build_dir),
+      "--root-metadata",
+      rebase_path("${amber_metadata_dir}/2.root.json", root_build_dir),
+      "--root-metadata",
+      rebase_path("${amber_metadata_dir}/3.root.json", root_build_dir),
+      "--root-metadata",
+      rebase_path("${amber_metadata_dir}/4.root.json", root_build_dir),
+      "--root-metadata",
+      rebase_path("${amber_metadata_dir}/5.root.json", root_build_dir),
+      "--root-metadata",
+      rebase_path("${amber_metadata_dir}/6.root.json", root_build_dir),
+      "--root-metadata",
+      rebase_path("${amber_metadata_dir}/7.root.json", root_build_dir),
+
+      "--default-root-metadata",
+      rebase_path("${amber_metadata_dir}/7.root.json", root_build_dir),
+
+      "--gendir",
+      rebase_path(gendir, root_build_dir),
+      "--input",
+      rebase_path(inputs[0], root_build_dir),
+      "--output",
+      rebase_path(output, root_build_dir),
+    ]
+    outputs = [
+      # `outputs[0]` must be final output described by depfile.
+      output,
+
+      # Intermediate files copied from source locations:
+
+      # Key files read by `pm publish`.
+      "${gendir}/keys/snapshot.json",
+      "${gendir}/keys/targets.json",
+      "${gendir}/keys/timestamp.json",
+
+      # Root metadata for TUF repository.
+      "${gendir}/repository/1.root.json",
+      "${gendir}/repository/2.root.json",
+      "${gendir}/repository/3.root.json",
+      "${gendir}/repository/4.root.json",
+      "${gendir}/repository/5.root.json",
+      "${gendir}/repository/6.root.json",
+      "${gendir}/repository/7.root.json",
+      "${gendir}/repository/root.json",
+    ]
+  }
+}

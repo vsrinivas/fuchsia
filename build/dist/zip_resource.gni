@@ -35,6 +35,13 @@ template("zip_resource") {
   # Extract the runfiles bundled inside the zip.
   unzip_target = "${target_name}.unzip"
   python_action(unzip_target) {
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visibility",
+                             "deps",
+                           ])
+
     binary_label = "//build/dist:zip_helper"
     sources = [ invoker.file ]
 
