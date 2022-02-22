@@ -99,6 +99,88 @@ func TestFindingNormalize(t *testing.T) {
 			wantErr: true,
 		},
 		{
+			name: "unclosed span with suggestions",
+			finding: Finding{
+				Category: "somelint/warning/not_defined",
+				Message:  "variable foo is not defined",
+				Path:     "src/foo/bar.cc",
+				// Span is not fully specified so suggestions should not be
+				// allowed.
+				StartLine: 1,
+				EndLine:   1,
+				Suggestions: []Suggestion{
+					{
+						Description: "try this instead",
+						Replacements: []Replacement{
+							{
+								Replacement: "foo",
+								StartLine:   1,
+								EndLine:     1,
+								StartChar:   5,
+								EndChar:     8,
+							},
+						},
+					},
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "suggested replacement without full span",
+			finding: Finding{
+				Category:  "somelint/warning/not_defined",
+				Message:   "variable foo is not defined",
+				Path:      "src/foo/bar.cc",
+				StartLine: 1,
+				EndLine:   1,
+				StartChar: 5,
+				EndChar:   8,
+				Suggestions: []Suggestion{
+					{
+						Description: "try this instead",
+						Replacements: []Replacement{
+							{
+								Replacement: "foo",
+								// Replacement span is not fully specified and
+								// should be rejected.
+								StartLine: 1,
+								EndLine:   1,
+							},
+						},
+					},
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "invalid replacement span",
+			finding: Finding{
+				Category:  "somelint/warning/not_defined",
+				Message:   "variable foo is not defined",
+				Path:      "src/foo/bar.cc",
+				StartLine: 1,
+				EndLine:   1,
+				StartChar: 5,
+				EndChar:   8,
+				Suggestions: []Suggestion{
+					{
+						Description: "try this instead",
+						Replacements: []Replacement{
+							{
+								Replacement: "foo",
+								// Span is not valid and should be rejected.
+								StartLine: 1,
+								EndLine:   1,
+								StartChar: 100,
+								EndChar:   15,
+							},
+						},
+					},
+				},
+			},
+			wantErr: true,
+		},
+		{
 			name: "sets end_line if unset",
 			finding: Finding{
 				Category:  "somelint/warning/not_defined",
@@ -139,7 +221,7 @@ func TestFindingNormalize(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			if test.expected == (Finding{}) {
+			if diff := cmp.Diff(test.expected, Finding{}); diff == "" {
 				// By default, expect no modifications.
 				test.expected = test.finding
 			}

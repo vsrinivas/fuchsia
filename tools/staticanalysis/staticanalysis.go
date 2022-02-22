@@ -21,6 +21,34 @@ type Analyzer interface {
 	Analyze(ctx context.Context, path string) ([]*Finding, error)
 }
 
+// A suggested replacement.
+//
+// The replacement should be for one continuous section of a file.
+type Replacement struct {
+
+	// Path to the file for this replacement.
+	//
+	// An empty string indicates the commit message.
+	Path string `json:"path"`
+
+	// A replacement string.
+	Replacement string `json:"replacement"`
+
+	// A continuous section of the file to replace. Required.
+	StartLine int `json:"start_line"` // 1-based, inclusive.
+	EndLine   int `json:"end_line"`   // 1-based, inclusive.
+	StartChar int `json:"start_char"` // 0-based, inclusive.
+	EndChar   int `json:"end_char"`   // 0-based, exclusive.
+}
+
+// A suggestion is associated with a single finding and contains a list of
+// possible replacement texts for the text that the finding covers.
+type Suggestion struct {
+	Description string `json:"description"`
+
+	Replacements []Replacement `json:"replacements"`
+}
+
 // Finding is the common schema that all linters' and formatters' outputs must
 // be converted to in order to be compatible with this tool. Each Finding that
 // applies to lines that are affected by the change under test may be posted as
@@ -51,7 +79,7 @@ type Finding struct {
 	// Path is the path to the file within a fuchsia checkout, using forward
 	// slashes as delimiters, e.g. "src/foo/bar.cc"
 	//
-	// If omitted, the finding will apply to the entire change.
+	// If omitted, the finding will apply to the change's commit message.
 	Path string `json:"path"`
 
 	// StartLine is the starting line of the chunk of the file that the finding
@@ -81,6 +109,13 @@ type Finding struct {
 	// Required if StartChar is specified. If StartLine==EndLine, EndChar must
 	// be greater than StartChar.
 	EndChar int `json:"end_char,omitempty"`
+
+	// Suggestions is a list of possible strings that could replace the text
+	// highlighted by the finding.
+	//
+	// If set, all of StartLine, EndLine, StartChar, and EndChar must be
+	// specified.
+	Suggestions []Suggestion `json:"suggestions,omitempty"`
 }
 
 // Normalize makes a best effort at updating invalid/inconsistent fields to be
@@ -125,6 +160,21 @@ func (f *Finding) Normalize() error {
 		}
 	} else if f.EndLine > 0 || f.StartChar > 0 || f.EndChar > 0 {
 		return fmt.Errorf("start_line is unexpectedly unset for finding: %#+v", f)
+	}
+
+	if len(f.Suggestions) > 0 && (f.StartLine < 1 || f.EndLine < 1 || f.StartChar < 0 || f.EndChar <= 0) {
+		return fmt.Errorf("a finding with suggestions must have a fully specified span: %#+v", f)
+	}
+
+	for _, suggestion := range f.Suggestions {
+		for _, r := range suggestion.Replacements {
+			if r.StartLine < 1 || r.EndLine < 1 || r.StartChar < 0 || r.EndChar <= 0 {
+				return fmt.Errorf("a suggested replacement must have a fully specified span: %#+v", r)
+			}
+			if r.StartLine > r.EndLine || (r.StartLine == r.EndLine && r.StartChar > 0 && r.StartChar >= r.EndChar) {
+				return fmt.Errorf("(start_line, start_char) must be before (end_line, end_char) for replacement in finding: %#+v", f)
+			}
+		}
 	}
 
 	return nil
