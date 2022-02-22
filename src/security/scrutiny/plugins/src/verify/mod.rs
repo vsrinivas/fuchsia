@@ -56,7 +56,7 @@ pub struct CapabilityRouteResults {
 }
 
 /// `CapabilityRouteController` query results grouped by severity.
-#[derive(Deserialize, Serialize)]
+#[derive(Clone, Deserialize, Serialize)]
 pub struct ResultsForCapabilityType {
     pub capability_type: CapabilityTypeName,
     pub results: ResultsBySeverity,
@@ -64,7 +64,7 @@ pub struct ResultsForCapabilityType {
 
 /// Results from `CapabilityRouteController` grouped by severity (error,
 /// warning, ok).
-#[derive(Default, Deserialize, Serialize)]
+#[derive(Clone, Default, Deserialize, Serialize)]
 pub struct ResultsBySeverity {
     #[serde(skip_serializing_if = "Vec::is_empty", default)]
     pub errors: Vec<ErrorResult>,
@@ -83,7 +83,7 @@ pub struct ErrorResult {
 }
 
 /// Warning-severity results from `CapabilityRouteController`.
-#[derive(Deserialize, Serialize)]
+#[derive(Clone, Deserialize, Serialize)]
 pub struct WarningResult {
     pub using_node: NodePath,
     pub capability: CapabilityName,
@@ -91,7 +91,7 @@ pub struct WarningResult {
 }
 
 /// Ok-severity results from `CapabilityRouteController`.
-#[derive(Deserialize, Serialize)]
+#[derive(Clone, Deserialize, Serialize)]
 pub struct OkResult {
     pub using_node: NodePath,
     pub capability: CapabilityName,

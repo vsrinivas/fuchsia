@@ -2,18 +2,43 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+mod allowlist;
+
 use {
+    crate::allowlist::{AllowlistFilter, UnversionedAllowlist, V0Allowlist, V1Allowlist},
     anyhow::{anyhow, bail, Context, Error, Result},
     ffx_core::ffx_plugin,
     ffx_scrutiny_routes_args::{default_capability_types, ScrutinyRoutesCommand},
     scrutiny_config::Config,
     scrutiny_frontend::{command_builder::CommandBuilder, launcher},
-    scrutiny_plugins::verify::{
-        CapabilityRouteResults, ResultsBySeverity, ResultsForCapabilityType,
-    },
+    scrutiny_plugins::verify::CapabilityRouteResults,
     serde_json,
-    std::{fs, io::Write},
+    std::{
+        fs,
+        io::{Read, Write},
+    },
 };
+
+fn load_allowlist(allowlist_paths: &Vec<String>) -> Result<Box<dyn AllowlistFilter>> {
+    let builders = vec![UnversionedAllowlist::new(), V0Allowlist::new(), V1Allowlist::new()];
+    let mut err = None;
+
+    for mut builder in builders.into_iter() {
+        for path in allowlist_paths.iter() {
+            let reader: Box<dyn Read> =
+                Box::new(fs::File::open(path).context("Failed to open allowlist fragment")?);
+            if let Err(load_err) = builder.load(reader) {
+                err = Some(load_err);
+                break;
+            }
+        }
+        if err.is_none() {
+            return Ok(builder.build());
+        }
+    }
+
+    Err(err.unwrap())
+}
 
 pub struct VerifyRoutes {
     build_path: String,
@@ -23,30 +48,6 @@ pub struct VerifyRoutes {
     stamp_path: Option<String>,
     depfile_path: Option<String>,
     allowlist_paths: Vec<String>,
-}
-
-fn merge_allowlists(
-    allowlist: &mut Vec<ResultsForCapabilityType>,
-    fragment: Vec<ResultsForCapabilityType>,
-) -> Result<()> {
-    for mut fragment_type_group in fragment {
-        let mut merged = false;
-        for type_group in allowlist.iter_mut() {
-            if type_group.capability_type == fragment_type_group.capability_type {
-                merged = true;
-                type_group.results.errors.append(&mut fragment_type_group.results.errors);
-                type_group.results.warnings.append(&mut fragment_type_group.results.warnings);
-                type_group.results.ok.append(&mut fragment_type_group.results.ok);
-            }
-        }
-        if !merged {
-            // We didn't find another set for this capability type. Just append this set to the
-            // main list.
-            allowlist.push(fragment_type_group);
-        }
-    }
-
-    Ok(())
 }
 
 impl VerifyRoutes {
@@ -93,16 +94,11 @@ impl VerifyRoutes {
         let results = launcher::launch_from_config(config).context("Failed to launch scrutiny")?;
         let route_analysis: CapabilityRouteResults = serde_json5::from_str(&results)
             .context(format!("Failed to deserialize verify routes results: {}", results))?;
-        let mut allowlist = vec![];
-        for allowlist_path in &self.allowlist_paths {
-            let allowlist_fragment = serde_json5::from_str(
-                &fs::read_to_string(allowlist_path).context("Failed to read allowlist")?,
-            )
-            .context("Failed to deserialize allowlist")?;
-            merge_allowlists(&mut allowlist, allowlist_fragment)
-                .context("failed to merge allowlists")?;
-        }
-        let filtered_analysis = VerifyRoutes::filter_analysis(route_analysis.results, allowlist);
+
+        let allowlist_filter = load_allowlist(&self.allowlist_paths)
+            .context("Failed to parse all allowlist fragments from supported format")?;
+
+        let filtered_analysis = allowlist_filter.filter_analysis(route_analysis.results);
         for entry in filtered_analysis.iter() {
             if !entry.results.errors.is_empty() {
                 bail!(
@@ -139,59 +135,6 @@ Verification Errors:
             fs::write(stamp_path, "Verified\n").context("Failed to write stamp file")?;
         }
         Ok(())
-    }
-
-    /// Removes entries defined in the file located at the `allowlist_path`
-    /// from the route analysis.
-    fn filter_analysis(
-        route_analysis: Vec<ResultsForCapabilityType>,
-        allowlist: Vec<ResultsForCapabilityType>,
-    ) -> Vec<ResultsForCapabilityType> {
-        route_analysis
-            .iter()
-            .map(|analysis_item| {
-                // Entry for every `capability_type` in `route_analysis`.
-                ResultsForCapabilityType {
-                    capability_type: analysis_item.capability_type.clone(),
-                    // Retain error when:
-                    // 1. `allowlist` does not have results for
-                    //    `capability_type` (i.e., nothing allowed for
-                    //    `capability_type`), OR
-                    // 2. `allowlist` does not have an identical `allow_error`
-                    //    in its `capability_type` results.
-                    results: ResultsBySeverity {
-                        errors: analysis_item
-                            .results
-                            .errors
-                            .iter()
-                            .filter_map(|analysis_error| {
-                                match allowlist.iter().find(|&allow_item| {
-                                    allow_item.capability_type == analysis_item.capability_type
-                                }) {
-                                    Some(allow_item) => {
-                                        match allow_item
-                                            .results
-                                            .errors
-                                            .iter()
-                                            .find(|&allow_error| analysis_error == allow_error)
-                                        {
-                                            Some(_matching_allowlist_error) => None,
-                                            // No allowlist error match; report
-                                            // error from within `filter_map`.
-                                            None => Some(analysis_error.clone()),
-                                        }
-                                    }
-                                    // No allowlist defined for capability type;
-                                    // report error from within `filter_map`.
-                                    None => Some(analysis_error.clone()),
-                                }
-                            })
-                            .collect(),
-                        ..Default::default()
-                    },
-                }
-            })
-            .collect()
     }
 }
 
