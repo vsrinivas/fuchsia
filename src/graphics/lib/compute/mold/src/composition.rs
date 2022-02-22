@@ -154,15 +154,14 @@ impl Composition {
         })
     }
 
-    pub fn render<'b, 'l, L>(
+    pub fn render<L>(
         &mut self,
-        buffer: &'b mut Buffer<'b, 'l, L>,
+        buffer: &mut Buffer<'_, '_, L>,
         channels: [Channel; 4],
         background_color: Color,
         crop: Option<Rect>,
     ) where
-        'b: 'l,
-        L: Layout<'l, 'b>,
+        L: Layout,
     {
         if let Some(buffer_layer_cache) = buffer.layer_cache.as_ref() {
             let tiles_len = buffer.layout.width_in_tiles() * buffer.layout.height_in_tiles();

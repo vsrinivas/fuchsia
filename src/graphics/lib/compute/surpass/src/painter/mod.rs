@@ -14,7 +14,7 @@ use std::{
 use rayon::prelude::*;
 
 use crate::{
-    layout::{Flusher, Layout, TileFill, TileWriter},
+    layout::{Flusher, Layout, Slice, TileFill},
     painter::layer_workbench::TileWriteOp,
     rasterizer::{search_last_by_key, PixelSegment},
     simd::{f32x4, f32x8, i16x16, i32x8, i8x16, u32x4, u32x8, u8x32, Simd},
@@ -470,7 +470,7 @@ impl Painter {
     }
 
     #[allow(clippy::too_many_arguments)]
-    pub fn paint_tile_row<'l, 'b: 'l, S: LayerProps, L: Layout<'l, 'b>>(
+    pub fn paint_tile_row<S: LayerProps, L: Layout>(
         &mut self,
         workbench: &mut LayerWorkbench,
         tile_y: usize,
@@ -479,9 +479,9 @@ impl Painter {
         channels: [Channel; 4],
         clear_color: Color,
         mut previous_layers: Option<&mut [Option<u32>]>,
-        row: ChunksExactMut<'l, &'b mut [u8]>,
+        row: ChunksExactMut<'_, Slice<'_, u8>>,
         crop: Option<Rect>,
-        flusher: Option<&'b dyn Flusher>,
+        flusher: Option<&dyn Flusher>,
     ) {
         fn acc_covers(segments: &[PixelSegment], covers: &mut BTreeMap<u32, Cover>) {
             for segment in segments {
@@ -561,17 +561,17 @@ impl Painter {
                 TileWriteOp::None => (),
                 TileWriteOp::Solid(color) => {
                     let color = channels.map(|c| c.select_from_color(color));
-                    L::writer(slices, flusher).write(TileFill::Solid(to_srgb_bytes(color)))
+                    L::write(slices, flusher, TileFill::Solid(to_srgb_bytes(color)))
                 }
                 TileWriteOp::ColorBuffer => {
                     self.compute_srgb(channels);
                     let colors: &[[u8; 4]] = unsafe {
                         std::slice::from_raw_parts(
-                            mem::transmute(self.srgb.as_ptr()),
-                            self.srgb.len() * 16,
+                            self.srgb.as_ptr() as *const _,
+                            self.srgb.len() * mem::size_of::<u8x32>() / mem::size_of::<[u8; 4]>(),
                         )
                     };
-                    L::writer(slices, flusher).write(TileFill::Full(colors));
+                    L::write(slices, flusher, TileFill::Full(colors));
                 }
             }
         }
@@ -584,16 +584,16 @@ thread_local!(static PAINTER_WORKBENCH: RefCell<(Painter, LayerWorkbench)> = Ref
 )));
 
 #[allow(clippy::too_many_arguments)]
-fn print_row<'l, 'b: 'l, S: LayerProps, L: Layout<'l, 'b>>(
+fn print_row<S: LayerProps, L: Layout>(
     segments: &[PixelSegment],
     channels: [Channel; 4],
     clear_color: Color,
     crop: &Option<Rect>,
     styles: &S,
     j: usize,
-    row: ChunksExactMut<'l, &'b mut [u8]>,
+    row: ChunksExactMut<'_, Slice<'_, u8>>,
     layers_per_tile: Option<&mut [Option<u32>]>,
-    flusher: Option<&'b dyn Flusher>,
+    flusher: Option<&dyn Flusher>,
 ) {
     if let Some(rect) = crop {
         if !rect.vert.contains(&j) {
@@ -634,11 +634,11 @@ fn print_row<'l, 'b: 'l, S: LayerProps, L: Layout<'l, 'b>>(
 
 #[allow(clippy::too_many_arguments)]
 #[inline]
-pub fn for_each_row<'l, 'b: 'l, L: Layout<'l, 'b>, S: LayerProps>(
-    layout: &'l mut L,
-    buffer: &'b mut [u8],
+pub fn for_each_row<L: Layout, S: LayerProps>(
+    layout: &mut L,
+    buffer: &mut [u8],
     channels: [Channel; 4],
-    flusher: Option<&'b dyn Flusher>,
+    flusher: Option<&dyn Flusher>,
     layers_per_tile: Option<RefMut<'_, Vec<Option<u32>>>>,
     mut segments: &[PixelSegment],
     clear_color: Color,
@@ -651,10 +651,10 @@ pub fn for_each_row<'l, 'b: 'l, L: Layout<'l, 'b>, S: LayerProps>(
 
     let width_in_tiles = layout.width_in_tiles();
     let row_of_tiles_len = width_in_tiles * layout.slices_per_tile();
-    let splits = layout.splits(buffer);
+    let mut slices = layout.slices(buffer);
 
     if let Some(mut layers_per_tile) = layers_per_tile {
-        splits
+        slices
             .par_chunks_mut(row_of_tiles_len)
             .zip_eq(layers_per_tile.par_chunks_mut(width_in_tiles))
             .enumerate()
@@ -672,7 +672,7 @@ pub fn for_each_row<'l, 'b: 'l, L: Layout<'l, 'b>, S: LayerProps>(
                 );
             });
     } else {
-        splits.par_chunks_mut(row_of_tiles_len).enumerate().for_each(|(j, row_of_tiles)| {
+        slices.par_chunks_mut(row_of_tiles_len).enumerate().for_each(|(j, row_of_tiles)| {
             print_row::<S, L>(
                 segments,
                 channels,
@@ -1065,7 +1065,7 @@ mod tests {
 
         let size = TILE_SIZE + TILE_SIZE / 2;
         let mut buffer = vec![0u8; size * size * 4];
-        let mut buffer_layout = LinearLayout::new(size, size * 4, TILE_SIZE);
+        let mut buffer_layout = LinearLayout::new(size, size * 4, size);
 
         let segments = &[seg!(0, 0), seg!(0, 1), seg!(1, 0), seg!(1, 1)];
 
@@ -1180,10 +1180,10 @@ mod tests {
             &|layer| styles[&layer].clone(),
         );
 
-        let tiles = buffer_layout.splits(&mut buffer);
+        let tiles = buffer_layout.slices(&mut buffer);
 
         assert_eq!(
-            tiles,
+            tiles.iter().map(|slice| slice.to_vec()).collect::<Vec<_>>(),
             // First two tiles need to be completely red.
             iter::repeat(vec![RED_RGBA; TILE_SIZE].concat())
                 .take(TILE_SIZE)
@@ -1205,7 +1205,7 @@ mod tests {
     fn crop() {
         let mut buffer = vec![0u8; TILE_SIZE * TILE_SIZE * 9 * 4];
 
-        let mut buffer_layout = LinearLayout::new(TILE_SIZE * 3, TILE_SIZE * 3 * 4, TILE_SIZE);
+        let mut buffer_layout = LinearLayout::new(TILE_SIZE * 3, TILE_SIZE * 3 * 4, TILE_SIZE * 3);
 
         let mut segments = vec![];
         for j in 0..3 {
@@ -1241,10 +1241,10 @@ mod tests {
             &|layer| styles[&layer].clone(),
         );
 
-        let tiles = buffer_layout.splits(&mut buffer);
+        let tiles = buffer_layout.slices(&mut buffer);
 
         assert_eq!(
-            tiles,
+            tiles.iter().map(|slice| slice.to_vec()).collect::<Vec<_>>(),
             // First row of tiles needs to be completely black.
             iter::repeat(vec![0u8; TILE_SIZE * 4])
                 .take(TILE_SIZE * 3)

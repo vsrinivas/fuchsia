@@ -1203,6 +1203,7 @@ dependencies = [
  "crc",
  "criterion",
  "crossbeam",
+ "crossbeam-utils 0.8.4",
  "crossterm",
  "csv",
  "cxx",

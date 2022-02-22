@@ -14,7 +14,7 @@ use crate::layer::SmallBitSet;
 use layout::{Flusher, Layout};
 
 #[derive(Debug)]
-pub struct Buffer<'b, 'l, L: Layout<'l, 'b>> {
+pub struct Buffer<'b, 'l, L: Layout> {
     pub(crate) buffer: &'b mut [u8],
     pub(crate) layout: &'l mut L,
     pub(crate) layer_cache: Option<BufferLayerCache>,
@@ -22,11 +22,11 @@ pub struct Buffer<'b, 'l, L: Layout<'l, 'b>> {
 }
 
 #[derive(Debug)]
-pub struct BufferBuilder<'b, 'l, L: Layout<'l, 'b>> {
+pub struct BufferBuilder<'b, 'l, L: Layout> {
     buffer: Buffer<'b, 'l, L>,
 }
 
-impl<'b: 'l, 'l, L: Layout<'l, 'b>> BufferBuilder<'b, 'l, L> {
+impl<'b, 'l, L: Layout> BufferBuilder<'b, 'l, L> {
     #[inline]
     pub fn new(buffer: &'b mut [u8], layout: &'l mut L) -> Self {
         Self { buffer: Buffer { buffer, layout, layer_cache: None, flusher: None } }

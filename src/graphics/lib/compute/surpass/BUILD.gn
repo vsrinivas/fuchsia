@@ -11,6 +11,7 @@ rustc_library("surpass") {
   version = "0.1.0"
   edition = "2018"
   deps = [
+    "//third_party/rust_crates:crossbeam-utils",
     "//third_party/rust_crates:rayon",
     "//third_party/rust_crates:rustc-hash",
   ]
@@ -25,7 +26,7 @@ rustc_library("surpass") {
     "src/extend.rs",
     "src/layer.rs",
     "src/layout/mod.rs",
-    "src/layout/splits_cache.rs",
+    "src/layout/slice_cache.rs",
     "src/lib.rs",
     "src/painter/layer_workbench.rs",
     "src/painter/mod.rs",

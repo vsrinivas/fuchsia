@@ -15,9 +15,8 @@ use rayon::prelude::*;
 
 use crate::{TILE_SHIFT, TILE_SIZE};
 
-mod splits_cache;
-
-pub use splits_cache::{Sealed, SplitsCache};
+mod slice_cache;
+pub use slice_cache::{Ref, Slice, SliceCache, Span};
 
 /// Listener that gets called after every write to the buffer. Its main use is to flush freshly
 /// written memory slices.
@@ -26,16 +25,22 @@ pub trait Flusher: fmt::Debug + Send + Sync {
     fn flush(&self, slice: &mut [u8]);
 }
 
+/// A fill that the [`Layout`] uses to write to tiles.
+pub enum TileFill<'c> {
+    /// Fill tile with a solid color.
+    Solid([u8; 4]),
+    /// Fill tile with provided colors buffer. They are provided in [column-major] order.
+    ///
+    /// [column-major]: https://en.wikipedia.org/wiki/Row-_and_column-major_order
+    Full(&'c [[u8; 4]]),
+}
+
 /// A buffer's layout description.
 ///
 /// Implementors are supposed to cache sub-slices between uses provided they are being used with
-/// exactly the same buffer. The recommended way to do this is to store a [`SplitsCache`] in every
-/// layout implementation.
-pub trait Layout<'l, 'b> {
-    /// A per-tile writer type that should be able to write colors to the buffer independently of
-    /// all other writers.
-    type Writer: TileWriter;
-
+/// exactly the same buffer. This is achieved by storing a [`SliceCache`] in every layout
+/// implementation.
+pub trait Layout {
     /// Width in pixels.
     ///
     /// # Examples
@@ -72,30 +77,7 @@ pub trait Layout<'l, 'b> {
     /// ```
     fn slices_per_tile(&self) -> usize;
 
-    /// Produces a new [`Layout::Writer`] from `slices` buffer sub-slices and `flusher`.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// # use surpass::layout::{Layout, LinearLayout, TileFill, TileWriter};
-    /// let mut buffer = [
-    ///     [1; 4], [2; 4], [3; 4],
-    ///     [4; 4], [5; 4], [6; 4],
-    /// ].concat();
-    /// let mut layout = LinearLayout::new(2, 3 * 4, 4);
-    /// let splits = layout.splits(&mut buffer);
-    /// let mut writer = LinearLayout::writer(splits, None);
-    ///
-    /// writer.write(TileFill::Solid([0; 4]));
-    ///
-    /// assert_eq!(buffer, [
-    ///     [0; 4], [0; 4], [3; 4],
-    ///     [0; 4], [0; 4], [6; 4],
-    /// ].concat());
-    /// ```
-    fn writer(slices: &'l mut [&'b mut [u8]], flusher: Option<&'b dyn Flusher>) -> Self::Writer;
-
-    /// Returns self-stored sub-slices of `buffer`, commonly stored in a [`SplitsCache`].
+    /// Returns self-stored sub-slices of `buffer` which are stored in a [`SliceCache`].
     ///
     /// # Examples
     ///
@@ -106,12 +88,32 @@ pub trait Layout<'l, 'b> {
     ///     [4; 4], [5; 4], [6; 4],
     /// ].concat();
     /// let mut layout = LinearLayout::new(2, 3 * 4, 2);
-    /// let splits = layout.splits(&mut buffer);
+    /// let slices = layout.slices(&mut buffer);
     ///
-    /// assert_eq!(splits[0], &[[1; 4], [2; 4]].concat());
-    /// assert_eq!(splits[1], &[[4; 4], [5; 4]].concat());
+    /// assert_eq!(&*slices[0], &[[1; 4], [2; 4]].concat());
+    /// assert_eq!(&*slices[1], &[[4; 4], [5; 4]].concat());
     /// ```
-    fn splits(&'l mut self, buffer: &'b mut [u8]) -> &'l mut [&'b mut [u8]];
+    fn slices<'l, 'b>(&'l mut self, buffer: &'b mut [u8]) -> Ref<'l, [Slice<'b, u8>]>;
+
+    /// Writes `fill` to `slices`, optionally calling the `flusher`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use surpass::layout::{Layout, LinearLayout, TileFill};
+    /// let mut buffer = [
+    ///     [1; 4], [2; 4], [3; 4],
+    ///     [4; 4], [5; 4], [6; 4],
+    /// ].concat();
+    /// let mut layout = LinearLayout::new(2, 3 * 4, 2);
+    ///
+    /// LinearLayout::write(&mut *layout.slices(&mut buffer), None, TileFill::Solid([0; 4]));
+    ///
+    /// assert_eq!(buffer, [
+    ///     [0; 4], [0; 4], [3; 4],
+    ///     [0; 4], [0; 4], [6; 4],
+    /// ].concat());
+    fn write(slices: &mut [Slice<'_, u8>], flusher: Option<&dyn Flusher>, fill: TileFill<'_>);
 
     /// Width in tiles.
     ///
@@ -119,7 +121,7 @@ pub trait Layout<'l, 'b> {
     ///
     /// ```
     /// # use surpass::{layout::{Layout, LinearLayout}, TILE_SIZE};
-    /// let layout = LinearLayout::new(2 * TILE_SIZE, 3 * TILE_SIZE, 4 * TILE_SIZE);
+    /// let layout = LinearLayout::new(2 * TILE_SIZE, 3 * TILE_SIZE * 4, 4 * TILE_SIZE);
     ///
     /// assert_eq!(layout.width_in_tiles(), 2);
     /// ```
@@ -134,7 +136,7 @@ pub trait Layout<'l, 'b> {
     ///
     /// ```
     /// # use surpass::{layout::{Layout, LinearLayout}, TILE_SIZE};
-    /// let layout = LinearLayout::new(2 * TILE_SIZE, 3 * TILE_SIZE, 4 * TILE_SIZE);
+    /// let layout = LinearLayout::new(2 * TILE_SIZE, 3 * TILE_SIZE * 4, 4 * TILE_SIZE);
     ///
     /// assert_eq!(layout.height_in_tiles(), 4);
     /// ```
@@ -148,7 +150,7 @@ pub trait Layout<'l, 'b> {
 /// sequentially into the buffer.
 #[derive(Debug)]
 pub struct LinearLayout {
-    splits: SplitsCache<u8>,
+    cache: SliceCache,
     width: usize,
     width_stride: usize,
     height: usize,
@@ -161,21 +163,30 @@ impl LinearLayout {
     ///
     /// ```
     /// # use surpass::layout::{Layout, LinearLayout};
-    /// let layout = LinearLayout::new(2, 3, 4);
+    /// let layout = LinearLayout::new(2, 3 * 4, 4);
     ///
     /// assert_eq!(layout.width(), 2);
     /// ```
     #[inline]
     pub fn new(width: usize, width_stride: usize, height: usize) -> Self {
-        let splits = SplitsCache::new(move |buffer| {
+        assert!(
+            width * 4 <= width_stride,
+            "width exceeds width stride: {} * 4 > {}",
+            width,
+            width_stride
+        );
+
+        let cache = SliceCache::new(width_stride * height, move |buffer| {
             let mut layout: Vec<_> = buffer
-                .chunks_exact_mut(width_stride)
+                .chunks(width_stride)
                 .enumerate()
                 .map(|(j, row)| {
-                    row[..width * 4].chunks_mut(TILE_SIZE * 4).enumerate().map(move |(i, slice)| {
-                        let j = j >> TILE_SHIFT;
-                        (i, j, slice)
-                    })
+                    row.slice(..width * 4).unwrap().chunks(TILE_SIZE * 4).enumerate().map(
+                        move |(i, slice)| {
+                            let j = j >> TILE_SHIFT;
+                            (i, j, slice)
+                        },
+                    )
                 })
                 .flatten()
                 .collect();
@@ -184,13 +195,11 @@ impl LinearLayout {
             layout.into_iter().map(|(_, _, slice)| slice).collect()
         });
 
-        LinearLayout { splits, width, width_stride, height }
+        LinearLayout { cache, width, width_stride, height }
     }
 }
 
-impl<'l, 'b: 'l> Layout<'l, 'b> for LinearLayout {
-    type Writer = LinearTileWriter<'l, 'b>;
-
+impl Layout for LinearLayout {
     #[inline]
     fn width(&self) -> usize {
         self.width
@@ -207,86 +216,42 @@ impl<'l, 'b: 'l> Layout<'l, 'b> for LinearLayout {
     }
 
     #[inline]
-    fn splits(&'l mut self, buffer: &'b mut [u8]) -> &'l mut [&'b mut [u8]] {
-        let width = self.width;
-        let width_stride = self.width_stride;
-
-        assert!(width <= buffer.len(), "width exceeds buffer length: {} > {}", width, buffer.len());
+    fn slices<'l, 'b>(&'l mut self, buffer: &'b mut [u8]) -> Ref<'l, [Slice<'b, u8>]> {
         assert!(
-            width_stride <= buffer.len(),
+            self.width <= buffer.len(),
+            "width exceeds buffer length: {} > {}",
+            self.width,
+            buffer.len()
+        );
+        assert!(
+            self.width_stride <= buffer.len(),
             "width_stride exceeds buffer length: {} > {}",
-            width_stride,
+            self.width_stride,
+            buffer.len(),
+        );
+        assert!(
+            self.height * self.width_stride <= buffer.len(),
+            "height * width_stride exceeds buffer length: {} > {}",
+            self.height * self.width_stride,
             buffer.len(),
         );
 
-        self.splits.access(buffer)
+        self.cache.access(buffer).unwrap()
     }
 
     #[inline]
-    fn writer(slices: &'l mut [&'b mut [u8]], flusher: Option<&'b dyn Flusher>) -> Self::Writer {
-        LinearTileWriter { rows: slices, flusher }
-    }
-}
-
-/// A fill that the [`TileWriter`] uses to write to tiles.
-/// The content of the color depends on the channels argument passed to [`Composition::render`].
-///
-/// [`Composition::render`]: ../../../mold/struct.Composition.html#method.render
-pub enum TileFill<'c> {
-    /// Fill tile with a solid color.
-    Solid([u8; 4]),
-    /// Fill tile with provided colors buffer. They are provided in [column-major] order.
-    ///
-    /// [column-major]: https://en.wikipedia.org/wiki/Row-_and_column-major_order
-    Full(&'c [[u8; 4]]),
-}
-
-/// A per-tile writer produced by [`Layout`].
-pub trait TileWriter {
-    /// Writes a `fill` to the part of the buffer that corresponds to this tile.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// # use surpass::layout::{Layout, LinearLayout, TileFill, TileWriter};
-    /// let mut buffer = [
-    ///     [1; 4], [2; 4], [3; 4],
-    ///     [4; 4], [5; 4], [6; 4],
-    /// ].concat();
-    /// let mut layout = LinearLayout::new(2, 3 * 4, 4);
-    /// let splits = layout.splits(&mut buffer);
-    /// let mut writer = LinearLayout::writer(splits, None);
-    ///
-    /// writer.write(TileFill::Solid([0; 4]));
-    ///
-    /// assert_eq!(buffer, [
-    ///     [0; 4], [0; 4], [3; 4],
-    ///     [0; 4], [0; 4], [6; 4],
-    /// ].concat());
-    fn write(&mut self, fill: TileFill<'_>);
-}
-
-/// [`LinearLayout`]'s [`Layout::Writer`].
-#[derive(Debug)]
-pub struct LinearTileWriter<'l, 'b> {
-    rows: &'l mut [&'b mut [u8]],
-    flusher: Option<&'b dyn Flusher>,
-}
-
-impl<'l, 'b> TileWriter for LinearTileWriter<'l, 'b> {
-    #[inline]
-    fn write(&mut self, fill: TileFill<'_>) {
-        let tiles_len = self.rows.len();
+    fn write(slices: &mut [Slice<'_, u8>], flusher: Option<&dyn Flusher>, fill: TileFill<'_>) {
+        let tiles_len = slices.len();
         match fill {
             TileFill::Solid(solid) => {
-                for row in self.rows.iter_mut().take(tiles_len) {
+                for row in slices.iter_mut().take(tiles_len) {
                     for color in row.chunks_exact_mut(4) {
                         color.copy_from_slice(&solid);
                     }
                 }
             }
             TileFill::Full(colors) => {
-                for (y, row) in self.rows.iter_mut().enumerate().take(tiles_len) {
+                for (y, row) in slices.iter_mut().enumerate().take(tiles_len) {
                     for (x, color) in row.chunks_exact_mut(4).enumerate() {
                         color.copy_from_slice(&colors[x * TILE_SIZE + y]);
                     }
@@ -294,12 +259,12 @@ impl<'l, 'b> TileWriter for LinearTileWriter<'l, 'b> {
             }
         }
 
-        if let Some(flusher) = self.flusher {
-            for row in self.rows.iter_mut().take(tiles_len) {
+        if let Some(flusher) = flusher {
+            for row in slices.iter_mut().take(tiles_len) {
                 flusher.flush(if let Some(subslice) = row.get_mut(..TILE_SIZE * 4) {
                     subslice
                 } else {
-                    *row
+                    &mut **row
                 });
             }
         }

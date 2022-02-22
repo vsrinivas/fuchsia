@@ -166,6 +166,10 @@ group("crossbeam") {
   deps = [ ":crossbeam-v0_8_0" ]
 }
 
+group("crossbeam-utils") {
+  deps = [ ":crossbeam-utils-v0_8_4" ]
+}
+
 if (!(current_os == "fuchsia")) {
   group("crossterm") {
     deps = [ ":crossterm-v0_19_0" ]
@@ -3037,6 +3041,7 @@ rust_library("crossbeam-utils-v0_8_4") {
     "--edition=2018",
     "-Cmetadata=ce7b66cf33ed05e6",
     "-Cextra-filename=-ce7b66cf33ed05e6",
+    "--cfg=feature=\"default\"",
     "--cfg=feature=\"lazy_static\"",
     "--cfg=feature=\"std\"",
     "--cfg=has_min_const_fn",
