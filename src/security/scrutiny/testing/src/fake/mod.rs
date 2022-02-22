@@ -22,6 +22,7 @@ pub fn fake_model_config() -> ModelConfig {
         config_data_package_url: "fuchsia-pkg://fuchsia.com/config-data".to_string(),
         zbi_path: "fuchsia.zbi".to_string(),
         devmgr_config_path: "config/devmgr".to_string(),
+        component_tree_config_path: None,
     }
 }
 

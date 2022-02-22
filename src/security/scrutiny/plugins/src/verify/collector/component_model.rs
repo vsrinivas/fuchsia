@@ -11,18 +11,20 @@ use {
         verify::collection::V2ComponentModel,
     },
     anyhow::{anyhow, Context, Result},
-    cm_fidl_analyzer::component_model::ModelBuilderForAnalyzer,
+    cm_fidl_analyzer::{component_model::ModelBuilderForAnalyzer, node_path::NodePath},
     cm_rust::{ComponentDecl, FidlIntoNative, RegistrationSource, RunnerRegistration},
     fidl::encoding::decode_persistent,
     fidl_fuchsia_component_decl as fdecl, fidl_fuchsia_component_internal as component_internal,
-    fuchsia_url::boot_url::BootUrl,
+    fuchsia_url::{boot_url::BootUrl, pkg_url::PkgUrl},
     lazy_static::lazy_static,
     log::{error, info, warn},
     routing::{
         component_id_index::ComponentIdIndex, config::RuntimeConfig, environment::RunnerRegistry,
     },
     scrutiny::model::{collector::DataCollector, model::DataModel},
-    std::{collections::HashMap, convert::TryFrom, sync::Arc},
+    serde::{Deserialize, Serialize},
+    serde_json5::from_reader,
+    std::{collections::HashMap, convert::TryFrom, fs::File, path::PathBuf, sync::Arc},
 };
 
 lazy_static! {
@@ -39,6 +41,17 @@ pub const DEFAULT_CONFIG_PATH: &str = "config/component_manager";
 pub const ELF_RUNNER_NAME: &str = "elf";
 // The name of the RealmBuilder runner.
 pub const REALM_BUILDER_RUNNER_NAME: &str = "realm_builder";
+
+#[derive(Deserialize, Serialize)]
+pub struct DynamicComponent {
+    pub url: PkgUrl,
+    pub environment: Option<String>,
+}
+
+#[derive(Deserialize, Serialize)]
+pub struct ComponentTreeConfig {
+    pub dynamic_components: HashMap<NodePath, DynamicComponent>,
+}
 
 pub struct V2ComponentModelDataCollector {}
 
@@ -158,6 +171,28 @@ impl V2ComponentModelDataCollector {
         }
         RunnerRegistry::from_decl(&runners)
     }
+
+    fn load_dynamic_components(
+        component_tree_config_path: &Option<PathBuf>,
+    ) -> Result<HashMap<NodePath, (PkgUrl, Option<String>)>> {
+        if component_tree_config_path.is_none() {
+            return Ok(HashMap::new());
+        }
+        let component_tree_config_path = component_tree_config_path.as_ref().unwrap();
+
+        let mut component_tree_config_file = File::open(component_tree_config_path)
+            .context("Failed to open component tree configuration file")?;
+        let component_tree_config: ComponentTreeConfig =
+            from_reader(&mut component_tree_config_file)
+                .context("Failed to parse component tree configuration file")?;
+
+        let mut dynamic_components = HashMap::new();
+        for (node_path, dynamic_component) in component_tree_config.dynamic_components.into_iter() {
+            dynamic_components
+                .insert(node_path, (dynamic_component.url, dynamic_component.environment));
+        }
+        Ok(dynamic_components)
+    }
 }
 
 impl DataCollector for V2ComponentModelDataCollector {
@@ -178,8 +213,11 @@ impl DataCollector for V2ComponentModelDataCollector {
             decls_by_url.len(),
         );
 
+        let dynamic_components =
+            Self::load_dynamic_components(&model.config().component_tree_config_path)?;
         let runner_registry = self.make_builtin_runner_registry(&runtime_config);
-        let build_result = builder.build(
+        let build_result = builder.build_with_dynamic_components(
+            dynamic_components,
             decls_by_url,
             Arc::new(runtime_config),
             Arc::new(component_id_index),

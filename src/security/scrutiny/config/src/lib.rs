@@ -231,6 +231,9 @@ pub struct ModelConfig {
     /// The path to the device manager configuration inside bootfs inside the
     /// ZBI.
     pub devmgr_config_path: String,
+    /// Optional path to a component tree configuration used for customizing
+    /// component tree data collection.
+    pub component_tree_config_path: Option<PathBuf>,
 }
 
 impl ModelConfig {
@@ -255,6 +258,7 @@ impl ModelConfig {
             config_data_package_url: "fuchsia-pkg://fuchsia.com/config-data".to_string(),
             zbi_path: "fuchsia.zbi".to_string(),
             devmgr_config_path: "config/devmgr".to_string(),
+            component_tree_config_path: None,
         }
     }
     pub fn minimal() -> ModelConfig {

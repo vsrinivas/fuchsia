@@ -48,6 +48,7 @@ pub struct VerifyRoutes {
     stamp_path: Option<String>,
     depfile_path: Option<String>,
     allowlist_paths: Vec<String>,
+    component_tree_config_path: Option<String>,
 }
 
 impl VerifyRoutes {
@@ -63,6 +64,7 @@ impl VerifyRoutes {
         stamp_path: Option<S>,
         depfile_path: Option<S>,
         allowlist_paths: Vec<S>,
+        component_tree_config_path: Option<S>,
     ) -> Self {
         Self {
             build_path: build_path.into(),
@@ -72,6 +74,8 @@ impl VerifyRoutes {
             stamp_path: stamp_path.map(|stamp_path| stamp_path.into()),
             depfile_path: depfile_path.map(|depfile_path| depfile_path.into()),
             allowlist_paths: allowlist_paths.into_iter().map(|s| s.into()).collect(),
+            component_tree_config_path: component_tree_config_path
+                .map(|component_tree_config_path| component_tree_config_path.into()),
         }
     }
 
@@ -89,6 +93,10 @@ impl VerifyRoutes {
         );
         config.runtime.model.build_path = self.build_path.clone().into();
         config.runtime.model.repository_path = self.repository_path.clone().into();
+        config.runtime.model.component_tree_config_path = self
+            .component_tree_config_path
+            .clone()
+            .map(|component_tree_config_path| component_tree_config_path.into());
         config.runtime.logging.silent_mode = true;
 
         let results = launcher::launch_from_config(config).context("Failed to launch scrutiny")?;
@@ -163,6 +171,7 @@ pub async fn scrutiny_routes(cmd: ScrutinyRoutesCommand) -> Result<(), Error> {
         cmd.stamp,
         cmd.depfile,
         cmd.allowlist,
+        cmd.component_tree_config,
     );
     verify_routes.verify()?;
 

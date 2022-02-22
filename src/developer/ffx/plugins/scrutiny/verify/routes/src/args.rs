@@ -93,6 +93,10 @@ pub struct ScrutinyRoutesCommand {
     /// path(s) to allowlist(s) used to verify routes.
     #[argh(option)]
     pub allowlist: Vec<String>,
+    /// path to component tree configuration file that affects how component
+    /// tree data is gathered.
+    #[argh(option)]
+    pub component_tree_config: Option<String>,
     /// path to depfile that gathers dependencies during execution.
     #[argh(option)]
     pub depfile: Option<String>,

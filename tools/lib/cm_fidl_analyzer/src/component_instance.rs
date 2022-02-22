@@ -4,14 +4,14 @@
 
 use {
     crate::{
-        component_model::BuildAnalyzerModelError, environment::EnvironmentForAnalyzer,
-        node_path::NodePath, route::RouteMapper,
+        component_model::{BuildAnalyzerModelError, Child},
+        environment::EnvironmentForAnalyzer,
+        node_path::NodePath,
+        route::RouteMapper,
     },
     async_trait::async_trait,
     cm_moniker::{InstancedAbsoluteMoniker, InstancedChildMoniker},
-    cm_rust::{
-        CapabilityDecl, ChildDecl, CollectionDecl, ComponentDecl, ExposeDecl, OfferDecl, UseDecl,
-    },
+    cm_rust::{CapabilityDecl, CollectionDecl, ComponentDecl, ExposeDecl, OfferDecl, UseDecl},
     moniker::{AbsoluteMoniker, AbsoluteMonikerBase, ChildMoniker, ChildMonikerBase},
     routing::{
         capability_source::{BuiltinCapabilities, NamespaceCapabilities},
@@ -89,21 +89,24 @@ impl ComponentInstanceForAnalyzer {
 
     // Creates a new non-root component instance as a child of `parent`.
     pub(crate) fn new_for_child(
-        child: &ChildDecl,
+        child: &Child,
         absolute_url: String,
-        decl: ComponentDecl,
+        child_component_decl: ComponentDecl,
         parent: Arc<Self>,
         policy_checker: GlobalPolicyChecker,
         component_id_index: Arc<ComponentIdIndex>,
     ) -> Result<Arc<Self>, BuildAnalyzerModelError> {
         let environment = EnvironmentForAnalyzer::new_for_child(&parent, child)?;
-        let instanced_moniker =
-            parent.instanced_moniker.child(InstancedChildMoniker::new(child.name.clone(), None, 0));
+        let instanced_moniker = parent.instanced_moniker.child(InstancedChildMoniker::new(
+            child.child_moniker.name.clone(),
+            child.child_moniker.collection.clone(),
+            0,
+        ));
         let abs_moniker = instanced_moniker.clone().to_absolute_moniker();
         Ok(Arc::new(Self {
             instanced_moniker,
             abs_moniker,
-            decl,
+            decl: child_component_decl,
             url: absolute_url,
             parent: WeakExtendedInstanceInterface::from(&ExtendedInstanceInterface::Component(
                 parent,

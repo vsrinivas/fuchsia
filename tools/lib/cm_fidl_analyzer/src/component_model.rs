@@ -15,7 +15,9 @@ use {
         ExposeDeclCommon, ProgramDecl, ResolverRegistration, UseDecl, UseStorageDecl,
     },
     fidl::endpoints::ProtocolMarker,
-    fidl_fuchsia_sys2 as fsys, fuchsia_zircon_status as zx_status,
+    fidl_fuchsia_sys2 as fsys,
+    fuchsia_url::pkg_url::PkgUrl,
+    fuchsia_zircon_status as zx_status,
     futures::FutureExt,
     moniker::{AbsoluteMoniker, AbsoluteMonikerBase, ChildMoniker},
     routing::{
@@ -66,6 +68,12 @@ pub enum BuildAnalyzerModelError {
 
     #[error("malformed url {0} for component instance {1}")]
     MalformedUrl(String, String),
+
+    #[error("dynamic component with url {0} an invalid moniker")]
+    DynamicComponentInvalidMoniker(String),
+
+    #[error("dynamic component at {0} with url {1} is not part of a collection")]
+    DynamicComponentWithoutCollection(String, String),
 }
 
 /// Errors that a `ComponentModelForAnalyzer` may detect in the component graph.
@@ -127,6 +135,55 @@ impl ModelBuilderForAnalyzer {
         Self { default_root_url: default_root_url.into() }
     }
 
+    fn load_dynamic_components(
+        input: HashMap<NodePath, (PkgUrl, Option<String>)>,
+    ) -> (HashMap<AbsoluteMoniker, Vec<Child>>, Vec<anyhow::Error>) {
+        let mut errors: Vec<anyhow::Error> = vec![];
+        let mut dynamic_components: HashMap<AbsoluteMoniker, Vec<Child>> = HashMap::new();
+        for (node_path, (url, environment)) in input.into_iter() {
+            let mut moniker_vec = node_path.as_vec();
+            let child_moniker_str = moniker_vec.pop();
+            if child_moniker_str.is_none() {
+                errors.push(
+                    BuildAnalyzerModelError::DynamicComponentInvalidMoniker(url.to_string()).into(),
+                );
+                continue;
+            }
+            let child_moniker_str = child_moniker_str.unwrap();
+
+            let abs_moniker: AbsoluteMoniker = moniker_vec.into();
+            let child_moniker: ChildMoniker = child_moniker_str.into();
+            if child_moniker.collection.is_none() {
+                errors.push(
+                    BuildAnalyzerModelError::DynamicComponentWithoutCollection(
+                        node_path.to_string(),
+                        url.to_string(),
+                    )
+                    .into(),
+                );
+                continue;
+            }
+
+            let children = dynamic_components.entry(abs_moniker.clone()).or_insert_with(|| vec![]);
+            match Url::parse(&url.to_string()) {
+                Ok(url) => {
+                    children.push(Child { child_moniker, url, environment });
+                }
+                Err(_) => {
+                    let node_path: NodePath = abs_moniker.into();
+                    errors.push(
+                        BuildAnalyzerModelError::MalformedUrl(
+                            url.to_string(),
+                            node_path.to_string(),
+                        )
+                        .into(),
+                    );
+                }
+            }
+        }
+        (dynamic_components, errors)
+    }
+
     pub fn build(
         self,
         decls_by_url: HashMap<String, ComponentDecl>,
@@ -134,7 +191,28 @@ impl ModelBuilderForAnalyzer {
         component_id_index: Arc<ComponentIdIndex>,
         runner_registry: RunnerRegistry,
     ) -> BuildModelResult {
+        self.build_with_dynamic_components(
+            HashMap::new(),
+            decls_by_url,
+            runtime_config,
+            component_id_index,
+            runner_registry,
+        )
+    }
+
+    pub fn build_with_dynamic_components(
+        self,
+        dynamic_components: HashMap<NodePath, (PkgUrl, Option<String>)>,
+        decls_by_url: HashMap<String, ComponentDecl>,
+        runtime_config: Arc<RuntimeConfig>,
+        component_id_index: Arc<ComponentIdIndex>,
+        runner_registry: RunnerRegistry,
+    ) -> BuildModelResult {
         let mut result = BuildModelResult::new();
+
+        let (dynamic_components, mut dynamic_component_errors) =
+            Self::load_dynamic_components(dynamic_components);
+        result.errors.append(&mut dynamic_component_errors);
 
         // Initialize the model with an empty `instances` map.
         let mut model = ComponentModelForAnalyzer {
@@ -166,7 +244,13 @@ impl ModelBuilderForAnalyzer {
                     runner_registry,
                 );
 
-                Self::add_descendants(&root_instance, &decls_by_url, &mut model, &mut result);
+                Self::add_descendants(
+                    &root_instance,
+                    &decls_by_url,
+                    &dynamic_components,
+                    &mut model,
+                    &mut result,
+                );
 
                 model
                     .instances
@@ -186,18 +270,44 @@ impl ModelBuilderForAnalyzer {
     }
 
     // Adds all descendants of `instance` to `model`, also inserting each new instance
-    // in the `children` map of its parent.
+    // in the `children` map of its parent, including children denoted in
+    // `dynamic_components`.
     fn add_descendants(
         instance: &Arc<ComponentInstanceForAnalyzer>,
         decls_by_url: &HashMap<String, ComponentDecl>,
+        dynamic_components: &HashMap<AbsoluteMoniker, Vec<Child>>,
         model: &mut ComponentModelForAnalyzer,
         result: &mut BuildModelResult,
     ) {
-        for child in instance.decl.children.iter() {
-            match Self::get_absolute_child_url(&child.url, instance) {
+        let mut children = vec![];
+        for child_decl in instance.decl.children.iter() {
+            match Self::get_absolute_child_url(&child_decl.url, instance) {
+                Ok(url) => {
+                    children.push(Child {
+                        child_moniker: ChildMoniker::new(child_decl.name.clone(), None),
+                        url,
+                        environment: child_decl.environment.clone(),
+                    });
+                }
+                Err(err) => {
+                    result.errors.push(anyhow!(err));
+                }
+            }
+        }
+        if let Some(dynamic_children) = dynamic_components.get(instance.abs_moniker()) {
+            children.append(
+                &mut dynamic_children
+                    .into_iter()
+                    .map(|dynamic_child| dynamic_child.clone())
+                    .collect(),
+            )
+        }
+
+        for child in children.iter() {
+            match Self::get_absolute_child_url(&child.url.to_string(), instance) {
                 Ok(url) => {
                     let absolute_url = url.to_string();
-                    if child.name.is_empty() {
+                    if child.child_moniker.name.is_empty() {
                         result.errors.push(anyhow!(BuildAnalyzerModelError::InvalidChildDecl(
                             absolute_url.to_string(),
                             NodePath::from(instance.abs_moniker().clone()).to_string(),
@@ -206,31 +316,39 @@ impl ModelBuilderForAnalyzer {
                     }
 
                     match decls_by_url.get(&absolute_url) {
-                        Some(child_decl) => match ComponentInstanceForAnalyzer::new_for_child(
-                            child,
-                            absolute_url,
-                            child_decl.clone(),
-                            Arc::clone(instance),
-                            model.policy_checker.clone(),
-                            Arc::clone(&model.component_id_index),
-                        ) {
-                            Ok(child_instance) => {
-                                Self::add_descendants(&child_instance, decls_by_url, model, result);
+                        Some(child_component_decl) => {
+                            match ComponentInstanceForAnalyzer::new_for_child(
+                                child,
+                                absolute_url,
+                                child_component_decl.clone(),
+                                Arc::clone(instance),
+                                model.policy_checker.clone(),
+                                Arc::clone(&model.component_id_index),
+                            ) {
+                                Ok(child_instance) => {
+                                    Self::add_descendants(
+                                        &child_instance,
+                                        decls_by_url,
+                                        dynamic_components,
+                                        model,
+                                        result,
+                                    );
 
-                                instance.add_child(
-                                    ChildMoniker::new(child.name.clone(), None),
-                                    Arc::clone(&child_instance),
-                                );
+                                    instance.add_child(
+                                        child.child_moniker.clone(),
+                                        Arc::clone(&child_instance),
+                                    );
 
-                                model.instances.insert(
-                                    NodePath::from(child_instance.abs_moniker().clone()),
-                                    child_instance,
-                                );
+                                    model.instances.insert(
+                                        NodePath::from(child_instance.abs_moniker().clone()),
+                                        child_instance,
+                                    );
+                                }
+                                Err(err) => {
+                                    result.errors.push(anyhow!(err));
+                                }
                             }
-                            Err(err) => {
-                                result.errors.push(anyhow!(err));
-                            }
-                        },
+                        }
                         None => result.errors.push(anyhow!(
                             BuildAnalyzerModelError::ComponentDeclNotFound(
                                 absolute_url.to_string(),
@@ -257,7 +375,7 @@ impl ModelBuilderForAnalyzer {
             instance.node_path().to_string(),
         );
 
-        match Url::parse(&child_url) {
+        match Url::parse(child_url) {
             Ok(url) => Ok(url),
             Err(url::ParseError::RelativeUrlWithoutBase) => {
                 let absolute_prefix = match component_has_relative_url(instance) {
@@ -814,6 +932,13 @@ impl ComponentModelForAnalyzer {
             .now_or_never()
             .expect("future was not ready immediately")
     }
+}
+
+#[derive(Clone)]
+pub struct Child {
+    pub child_moniker: ChildMoniker,
+    pub url: Url,
+    pub environment: Option<String>,
 }
 
 #[cfg(test)]

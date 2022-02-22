@@ -5,10 +5,10 @@
 use {
     crate::{
         component_instance::{ComponentInstanceForAnalyzer, TopInstanceForAnalyzer},
-        component_model::BuildAnalyzerModelError,
+        component_model::{BuildAnalyzerModelError, Child},
         node_path::NodePath,
     },
-    cm_rust::{ChildDecl, EnvironmentDecl, RegistrationSource, ResolverRegistration},
+    cm_rust::{EnvironmentDecl, RegistrationSource, ResolverRegistration},
     fidl_fuchsia_component_internal as component_internal,
     routing::{
         component_instance::{
@@ -152,9 +152,9 @@ impl EnvironmentForAnalyzer {
 
     pub fn new_for_child(
         parent: &Arc<ComponentInstanceForAnalyzer>,
-        child_decl: &ChildDecl,
+        child: &Child,
     ) -> Result<Arc<Self>, BuildAnalyzerModelError> {
-        match child_decl.environment.as_ref() {
+        match child.environment.as_ref() {
             Some(child_env_name) => {
                 let env_decl = parent
                     .decl_for_testing()
@@ -163,7 +163,7 @@ impl EnvironmentForAnalyzer {
                     .find(|&env| &env.name == child_env_name)
                     .ok_or(BuildAnalyzerModelError::EnvironmentNotFound(
                         child_env_name.clone(),
-                        child_decl.name.clone(),
+                        child.child_moniker.name.clone(),
                         NodePath::from(parent.abs_moniker().clone()).to_string(),
                     ))?;
                 Self::new_from_decl(parent, env_decl)
