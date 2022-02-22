@@ -347,8 +347,9 @@ pub trait HandleBased: AsHandleRef + From<Handle> + Into<Handle> {
 /// A trait implemented by all handles for objects which have a peer.
 pub trait Peered: HandleBased {
     /// Set and clear userspace-accessible signal bits on the object's peer. Wraps the
-    /// [zx_object_signal_peer](https://fuchsia.dev/fuchsia-src/reference/syscalls/object_signal.md)
-    /// syscall.
+    /// [zx_object_signal_peer][osp] syscall.
+    ///
+    /// [osp]: https://fuchsia.dev/fuchsia-src/reference/syscalls/object_signal_peer.md
     fn signal_peer(&self, clear_mask: Signals, set_mask: Signals) -> Result<(), Status> {
         let handle = self.raw_handle();
         let status =
