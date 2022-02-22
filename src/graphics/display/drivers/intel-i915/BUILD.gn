@@ -14,6 +14,12 @@ driver_bind_rules("intel-i915-bind") {
   deps = [ "//src/devices/bind/fuchsia.pci" ]
 }
 
+driver_bind_rules("intel-i915-bind-v2") {
+  rules = "intel-i915-dfv2.bind"
+  header_output = "intel-i915-dfv2-bind.h"
+  deps = [ "//src/devices/bind/fuchsia.pci" ]
+}
+
 source_set("common_srcs") {
   configs += [
     "//build/config:all_source",
@@ -31,7 +37,7 @@ source_set("common_srcs") {
     "power.cc",
   ]
   public_deps = [
-    ":intel-i915-bind",
+    ":intel-i915-bind_header",
     "//sdk/banjo/fuchsia.hardware.display.controller:fuchsia.hardware.display.controller_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.i2cimpl:fuchsia.hardware.i2cimpl_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.intelgpucore:fuchsia.hardware.intelgpucore_banjo_cpp",
@@ -70,11 +76,28 @@ fuchsia_driver("intel-i915-driver") {
 
 fuchsia_driver_component("intel-i915") {
   component_name = "intel-i915"
-  deps = [ ":intel-i915-driver" ]
+  deps = [
+    ":intel-i915-bind",
+    ":intel-i915-driver",
+  ]
   info = "intel-i915-info.json"
   colocate = true
   root_resource = true
   uses_profiles = true
+  uses_sysmem = true
+}
+
+fuchsia_driver_component("intel-i915-dfv2") {
+  component_name = "intel-i915"
+  deps = [
+    ":intel-i915-bind-v2",
+    ":intel-i915-driver",
+  ]
+  colocate = true
+  root_resource = true
+  uses_profiles = true
+  uses_sysmem = true
+  info = "intel-i915-info.json"
 }
 
 test("intel-i915-test") {

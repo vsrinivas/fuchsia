@@ -1759,7 +1759,7 @@ void Controller::DisplayControllerImplApplyConfiguration(const display_config_t*
 zx_status_t Controller::DisplayControllerImplGetSysmemConnection(zx::channel connection) {
   zx_status_t status = sysmem_connect(&sysmem_, connection.release());
   if (status != ZX_OK) {
-    zxlogf(ERROR, "Could not connect to sysmem");
+    zxlogf(ERROR, "Could not connect to sysmem: %s", zx_status_get_string(status));
     return status;
   }
 
@@ -2210,7 +2210,12 @@ zx_status_t Controller::Init() {
   }
 
   status = ZX_ERR_NOT_FOUND;
+#ifdef ENABLE_DFV2
+  // TODO(fxbug.dev/93333): Remove this when DFv2 is stabilised.
+  if ((status = device_get_protocol(parent(), ZX_PROTOCOL_PCI, &pci_)) != ZX_OK) {
+#else
   if ((status = device_get_fragment_protocol(parent(), "pci", ZX_PROTOCOL_PCI, &pci_)) != ZX_OK) {
+#endif  // ENABLE_DFV2
     zxlogf(ERROR, "Could not get Display PCI protocol: %s", zx_status_get_string(status));
     return status;
   }
