@@ -4,7 +4,6 @@
 
 use fuchsia_zircon::{self as zx, sys::zx_thread_state_general_regs_t, AsHandleRef, HandleBased};
 use process_builder::{elf_load, elf_parse};
-use std::convert::TryInto;
 use std::ffi::{CStr, CString};
 use std::sync::Arc;
 use zerocopy::AsBytes;
@@ -389,6 +388,11 @@ pub fn load_executable(
     let stack = stack_base + (stack_size - 8);
 
     let creds = current_task.creds.read();
+
+    // Fuchsia does not have a quantity that corresposnds to AT_CLKTCK,
+    // but we provide a typical value expected in *nix here.
+    const STARNIX_CLOCK_TICKS_PER_SEC: u64 = 100;
+
     let auxv = vec![
         (AT_UID, creds.uid as u64),
         (AT_EUID, creds.euid as u64),
@@ -399,7 +403,7 @@ pub fn load_executable(
         (AT_PHDR, main_elf.file_base.wrapping_add(main_elf.headers.file_header().phoff) as u64),
         (AT_PHNUM, main_elf.headers.file_header().phnum as u64),
         (AT_ENTRY, main_elf.vaddr_bias.wrapping_add(main_elf.headers.file_header().entry) as u64),
-        (AT_CLKTCK, zx::ticks_per_second().try_into().unwrap()),
+        (AT_CLKTCK, STARNIX_CLOCK_TICKS_PER_SEC),
         (AT_SECURE, 0),
     ];
     let stack = populate_initial_stack(
