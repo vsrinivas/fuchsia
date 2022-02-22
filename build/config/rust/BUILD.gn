@@ -211,3 +211,8 @@ config("allow_unused_results") {
 config("coverage") {
   rustflags = [ "-Cinstrument-coverage" ]
 }
+
+# TODO(fxbug.dev/94237): Consider moving this to platform and board configs, respectively.
+config("allow_simd") {
+  rustflags = [ "-Zallow-features=stdsimd,aarch64_target_feature" ]
+}
