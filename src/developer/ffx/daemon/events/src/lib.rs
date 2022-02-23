@@ -59,6 +59,9 @@ pub enum DaemonEvent {
     /// Overnet mesh (there are no remaining known routes to this peer).
     OvernetPeerLost(u64),
     NewTarget(TargetInfo),
+    /// An event when a target (which is not necessarily new) has been
+    /// updated with more information.
+    UpdatedTarget(TargetInfo),
     // TODO(awdavies): Stale target event, target shutdown event, etc.
 }
 

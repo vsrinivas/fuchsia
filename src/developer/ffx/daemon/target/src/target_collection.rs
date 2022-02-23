@@ -156,6 +156,11 @@ impl TargetCollection {
             to_update.events.push(TargetEvent::Rediscovered).unwrap_or_else(|err| {
                 log::warn!("unable to enqueue rediscovered event: {:#}", err)
             });
+            if let Some(event_queue) = self.events.borrow().as_ref() {
+                event_queue
+                    .push(DaemonEvent::UpdatedTarget(new_target.target_info()))
+                    .unwrap_or_else(|e| log::warn!("unalbe to push target update event: {}", e));
+            }
             to_update.clone()
         } else {
             self.targets.borrow_mut().insert(new_target.id(), new_target.clone());
@@ -204,12 +209,12 @@ impl TargetCollection {
             .borrow()
             .as_ref()
             .expect("target event queue must be initialized by now")
-            .wait_for(None, move |e| {
-                if let DaemonEvent::NewTarget(ref target_info) = e {
+            .wait_for(None, move |e| match e {
+                DaemonEvent::NewTarget(ref target_info)
+                | DaemonEvent::UpdatedTarget(ref target_info) => {
                     target_query.match_info(target_info)
-                } else {
-                    false
                 }
+                _ => false,
             })
             .await
             .map_err(|e| {
@@ -377,6 +382,8 @@ mod tests {
         futures::prelude::*,
         std::collections::BTreeSet,
         std::net::{Ipv4Addr, Ipv6Addr},
+        std::pin::Pin,
+        std::task::{Context, Poll},
         std::time::Instant,
     };
 
@@ -640,6 +647,98 @@ mod tests {
         assert_eq!(tc.wait_for_match(Some(default.to_string())).await.unwrap(), t);
         assert!(tc.wait_for_match(None).await.is_err());
         assert_eq!(tc.wait_for_match(Some("clam".to_string())).await.unwrap(), t);
+    }
+
+    struct TargetUpdatedFut<F> {
+        target_wait_fut: F,
+        target_to_add: Rc<Target>,
+        collection: Rc<TargetCollection>,
+        target_wait_pending: bool,
+    }
+
+    /// This is a very specific future that does some things to force a specific state in the
+    /// target collection.
+    ///
+    /// See the test below for the setup as an example.
+    ///
+    /// The preconditions are:
+    /// 1. There is a target with a given address but no nodename in the target collection.
+    /// 2. There is a future awaiting a target whose nodename will be added to the collection at a
+    ///    later time.
+    /// 3. The target we're going to add has the same address as the target already in the target
+    ///    collection.
+    ///
+    /// The execution details are as follows when awaiting this future.
+    /// 1. We poll the waiting for the target future until it is pending (flushing the NewTarget
+    ///    events out of the event queue).
+    /// 2. We add the new target with the matching addresses and nodename.
+    /// 3. We await the future passed to this struct which was awaiting said nodename.
+    ///
+    /// This will succeed iff an UpdatedTarget event is pushed. Without this event this will hang
+    /// indefinitely, because when we await a target by its nodename and we encounter the
+    /// out-of-date target, we assume the match will never happen, and we wait for a new target
+    /// event. The UpdatedTarget event forces the wait_for_target future to re-examine this updated
+    /// target to see if it matches.
+    impl<F> TargetUpdatedFut<F>
+    where
+        F: Future<Output = Rc<Target>> + std::marker::Unpin,
+    {
+        fn new(target_to_add: Rc<Target>, collection: Rc<TargetCollection>, fut: F) -> Self {
+            Self { target_wait_fut: fut, target_to_add, collection, target_wait_pending: false }
+        }
+    }
+
+    impl<F> Future for TargetUpdatedFut<F>
+    where
+        F: Future<Output = Rc<Target>> + std::marker::Unpin,
+    {
+        type Output = Rc<Target>;
+
+        fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
+            let target_wait_pending = self.target_wait_pending;
+            let target_wait_fut = Pin::new(&mut self.target_wait_fut);
+            if !target_wait_pending {
+                // Flushes the NewTarget event here. Should panic if the target is found.
+                match target_wait_fut.poll(cx) {
+                    Poll::Ready(target) => {
+                        panic!("Found named target when no nodename was included. This should not happen: {:?}", target);
+                    }
+                    Poll::Pending => {
+                        // Once the event has been flushed, inserting a new target will queue up
+                        // the UpdatedTarget event.
+                        self.target_wait_pending = true;
+                        self.collection.merge_insert(self.target_to_add.clone());
+                    }
+                }
+                Poll::Pending
+            } else {
+                target_wait_fut.poll(cx)
+            }
+        }
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_target_wait_for_match_updated_target() {
+        let address = "f111::1";
+        let ip = address.parse().unwrap();
+        let mut addr_set = BTreeSet::new();
+        addr_set.replace(TargetAddr::from((ip, 0)));
+        let t = Target::new_with_addrs(Option::<String>::None, addr_set);
+        let tc = TargetCollection::new_with_queue();
+        tc.merge_insert(t);
+        let target_name = "fesenjoon-is-my-jam";
+        let wait_fut =
+            Box::pin(async { tc.wait_for_match(Some(target_name.to_string())).await.unwrap() });
+        // Now we will update the target with a nodename. This should merge into
+        // the collection and create an updated target event.
+        let t2 = Target::new_autoconnected(target_name);
+        t2.addrs.borrow_mut().replace(TargetAddrEntry::new(
+            TargetAddr::from((ip, 0)),
+            Utc::now(),
+            TargetAddrType::Ssh,
+        ));
+        let fut = TargetUpdatedFut::new(clone_target(&t2), tc.clone(), wait_fut);
+        assert_eq!(fut.await, t2);
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
