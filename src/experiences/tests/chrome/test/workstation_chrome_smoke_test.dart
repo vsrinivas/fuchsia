@@ -3,8 +3,6 @@
 // found in the LICENSE file.
 
 // ignore_for_file: import_of_legacy_library_into_null_safe
-@Timeout(Duration(minutes: 2))
-
 import 'dart:math';
 
 import 'package:ermine_driver/ermine_driver.dart';
@@ -71,5 +69,5 @@ void main() {
     print('Verified that Ermine took CLOSE action');
     expect(await ermine.waitForViewAbsent(chromiumUrl), true);
     print('Closed Chromium');
-  });
+  }, timeout: Timeout(Duration(minutes: 2)));
 }

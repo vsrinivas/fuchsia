@@ -3,8 +3,6 @@
 // found in the LICENSE file.
 
 // ignore_for_file: import_of_legacy_library_into_null_safe
-@Timeout(Duration(minutes: 2))
-
 import 'dart:math';
 
 import 'package:ermine_driver/ermine_driver.dart';
