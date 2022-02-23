@@ -41,7 +41,7 @@ use {
 type Directory = Arc<pfs::Simple>;
 
 pub struct IncomingNamespace {
-    pub package_dir: Option<Arc<DirectoryProxy>>,
+    pub package_dir: Option<DirectoryProxy>,
     dir_abort_handles: Vec<AbortHandle>,
     logger: Option<ScopedLogger>,
 }
@@ -89,7 +89,7 @@ impl IncomingNamespace {
         let mut ns: Vec<fcrunner::ComponentNamespaceEntry> = vec![];
 
         // Populate the /pkg namespace.
-        if let Some(package_dir) = self.package_dir.as_ref() {
+        if let Some(package_dir) = &self.package_dir {
             Self::add_pkg_directory(&mut ns, package_dir)?;
         }
 

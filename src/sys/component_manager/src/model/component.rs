@@ -137,8 +137,8 @@ pub struct Component {
 pub struct Package {
     /// The URL of the package itself.
     pub package_url: String,
-    /// The package that this resolved component belongs to. Wrapped in Arc so it's cloneable.
-    pub package_dir: Arc<DirectoryProxy>,
+    /// The package that this resolved component belongs to
+    pub package_dir: DirectoryProxy,
 }
 
 impl TryFrom<ResolvedComponent> for Component {
@@ -168,13 +168,11 @@ impl TryFrom<fsys::Package> for Package {
     fn try_from(package: fsys::Package) -> Result<Self, Self::Error> {
         Ok(Self {
             package_url: package.package_url.ok_or(ModelError::PackageUrlMissing)?,
-            package_dir: Arc::new(
-                package
-                    .package_dir
-                    .ok_or(ModelError::PackageDirectoryMissing)?
-                    .into_proxy()
-                    .expect("could not convert package dir to proxy"),
-            ),
+            package_dir: package
+                .package_dir
+                .ok_or(ModelError::PackageDirectoryMissing)?
+                .into_proxy()
+                .expect("could not convert package dir to proxy"),
         })
     }
 }
