@@ -4,25 +4,27 @@
 
 use super::{Procedure, ProcedureError, ProcedureMarker, ProcedureRequest};
 
-use crate::peer::{service_level_connection::SlcState, update::AgUpdate};
+use crate::peer::{service_level_connection::SlcState, slc_request::SlcRequest, update::AgUpdate};
 use at_commands as at;
 use core::convert::TryFrom;
+use std::mem;
 
 /// The HF communicates supported codecs via this procedure. See HFP v1.8, Section 4.2.1.2.
 ///
 /// This procedure is implemented from the perspective of the AG. Namely, outgoing `requests`
 /// typically request information about the current state of the AG, to be sent to the remote
 /// peer acting as the HF.
-#[derive(Debug, Default)]
-pub struct CodecSupportProcedure {
-    /// The current state of the procedure
-    terminated: bool,
+#[derive(Debug)]
+pub enum CodecSupportProcedure {
+    Start,
+    RestartingCodecConnection,
+    Terminated,
 }
 
 impl CodecSupportProcedure {
     /// Create a new CodecSupport procedure in the Start state.
     pub fn new() -> Self {
-        Self::default()
+        Self::Start
     }
 }
 
@@ -31,24 +33,44 @@ impl Procedure for CodecSupportProcedure {
         ProcedureMarker::CodecSupport
     }
 
-    fn hf_update(&mut self, update: at::Command, state: &mut SlcState) -> ProcedureRequest {
-        match (self.terminated, update) {
-            (false, at::Command::Bac { codecs }) => {
-                self.terminated = true;
-                state.hf_supported_codecs = Some(
+    fn hf_update(&mut self, update: at::Command, slc_state: &mut SlcState) -> ProcedureRequest {
+        let state = mem::replace(self, Self::Terminated);
+        match (state, update) {
+            (Self::Start, at::Command::Bac { codecs }) => {
+                slc_state.hf_supported_codecs = Some(
                     codecs
                         .into_iter()
                         .filter_map(|x| u8::try_from(x).ok().map(Into::into))
                         .collect(),
                 );
-                AgUpdate::Ok.into()
+                if slc_state.codec_connection_setup_in_progress {
+                    *self = Self::RestartingCodecConnection;
+                    // Force codec connection setup to send a +BCS even if the codec hasn't changed.
+                    slc_state.selected_codec = None;
+                    SlcRequest::RestartCodecConnectionSetup { response: Box::new(|| AgUpdate::Ok) }
+                        .into()
+                } else {
+                    *self = Self::Terminated;
+                    AgUpdate::Ok.into()
+                }
             }
             (_, update) => ProcedureRequest::Error(ProcedureError::UnexpectedHf(update)),
         }
     }
 
+    fn ag_update(&mut self, update: AgUpdate, _slc_state: &mut SlcState) -> ProcedureRequest {
+        let state = mem::replace(self, Self::Terminated);
+        match (state, update) {
+            (Self::RestartingCodecConnection, AgUpdate::Ok) => {
+                *self = Self::Terminated;
+                AgUpdate::Ok.into()
+            }
+            (_, update) => ProcedureRequest::Error(ProcedureError::UnexpectedAg(update)),
+        }
+    }
+
     fn is_terminated(&self) -> bool {
-        self.terminated
+        matches!(self, Self::Terminated)
     }
 }
 

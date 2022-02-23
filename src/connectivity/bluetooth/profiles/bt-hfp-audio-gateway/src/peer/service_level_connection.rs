@@ -87,6 +87,11 @@ pub struct SlcState {
     pub call_waiting_notifications: bool,
     /// Enable call line identification notifications during incoming calls.
     pub call_line_ident_notifications: bool,
+    /// Is there currently an ongoing Codec Connection Setup procedure which will need to be
+    /// restarted if a Codec Support procedure occurs.
+    ///  Codec Connection Setup procedure which will need to be
+    /// restarted if a Codec Support procedure occurs.
+    pub codec_connection_setup_in_progress: bool,
 }
 
 impl SlcState {
@@ -311,11 +316,6 @@ impl ServiceLevelConnection {
     /// been completed for the connected channel.
     pub fn initialized(&self) -> bool {
         self.connected() && self.state.initialized
-    }
-
-    pub fn set_selected_codec(&mut self, codec: Option<CodecId>) {
-        self.state.selected_codec = codec;
-        self.inspect.set_selected_codec(&self.state.selected_codec);
     }
 
     pub fn get_selected_codec(&self) -> Option<CodecId> {

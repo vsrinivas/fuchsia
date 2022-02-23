@@ -473,32 +473,31 @@ impl PeerTask {
                 let result = self.handle_initiate_call(call_action).await;
                 self.connection.receive_ag_request(marker, response(result)).await;
             }
-            SlcRequest::SynchronousConnectionSetup { selected, response } => {
-                self.connection.set_selected_codec(selected);
-                // TODO(fxbug.dev/72681): Because we must send an OK response to the HF just before
-                // setting up the synchronous connection, we send it here by routing through the
-                // procedure.
-                if self.connection.get_selected_codec().is_some() {
-                    self.connection.receive_ag_request(marker, AgUpdate::Ok).await;
+            SlcRequest::SynchronousConnectionSetup { response } => {
+                if self.sco_state.is_active() {
+                    info!("Got SCO setup request when SCO state was active");
+                    // Drop existing SCO connection.
+                    self.sco_state.iset(ScoState::SettingUp);
                 }
-                if let ScoState::SettingUp = *self.sco_state {
-                    let codecs = self.get_codecs();
-                    info!("About to connect SCO for peer {:}.", self.id);
-                    let setup_result = self.sco_connector.connect(self.id.clone(), codecs).await;
-                    info!("About to finish connecting SCO for peer {:}.", self.id);
-                    let finish_result = match setup_result {
-                        Ok(conn) => self.finish_sco_connection(conn).await,
-                        Err(err) => Err(err.into()),
-                    };
-                    info!("SCO set up for peer {:} with result {:?}", self.id, finish_result);
-                    let result = finish_result
-                        .map_err(|e| warn!("Error setting up audio connection: {:?}", e));
-                    self.connection.receive_ag_request(marker, response(result)).await;
-                } else {
-                    // This isn't necessarily an error; if the call was hung up or transferred to the AG during codec negotiation this can happen.
-                    info!("Got Synchronous Connection Setup request when not expecting it for peer {}, state {:?}.", self.id, self.sco_state);
-                    return;
-                }
+                // TODO(fxbug.dev/72681): Because we may need to send an OK response to the HF
+                // just before  setting up the synchronous connection, we send it here by routing
+                // through the procedure.
+                self.connection.receive_ag_request(marker, AgUpdate::Ok).await;
+
+                let codecs = self.get_codecs();
+                let setup_result = self.sco_connector.connect(self.id.clone(), codecs).await;
+                let finish_result = match setup_result {
+                    Ok(conn) => self.finish_sco_connection(conn).await,
+                    Err(err) => Err(err.into()),
+                };
+                let result =
+                    finish_result.map_err(|e| warn!("Error setting up audio connection: {:?}", e));
+                self.connection.receive_ag_request(marker, response(result)).await;
+            }
+            SlcRequest::RestartCodecConnectionSetup { response } => {
+                self.connection.receive_ag_request(marker, response()).await;
+                // Start CodecConnectionSetup running again.
+                self.initiate_codec_negotiation().await;
             }
         };
     }
@@ -555,7 +554,10 @@ impl PeerTask {
                         },
                         // This can occur if the HF opens and closes a SCO connection immediately.
                         Ok(_) => warn!("Got already closed SCO connection for peer {}.", self.id),
-                        Err(err) => warn!("Got error waiting for SCO connection {:} for peer {}", err, self.id)
+                        Err(err) => {
+                            warn!("Got error waiting for SCO connection {:} for peer {}", err, self.id);
+                            break;
+                        }
                     }
                 }
                 // New request coming from elsewhere in the component

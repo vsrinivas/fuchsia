@@ -5,7 +5,7 @@
 use std::fmt;
 
 use crate::{
-    features::{AgFeatures, CodecId},
+    features::AgFeatures,
     peer::{
         calls::{Call, CallAction},
         gain_control::Gain,
@@ -84,8 +84,11 @@ pub enum SlcRequest {
 
     /// Setup the Sco connection, as requested by the CodecConnectionSetup
     SynchronousConnectionSetup {
-        selected: Option<CodecId>,
         response: Box<dyn FnOnce(Result<(), ()>) -> AgUpdate>,
+    },
+
+    RestartCodecConnectionSetup {
+        response: Box<dyn FnOnce() -> AgUpdate>,
     },
 }
 
@@ -108,6 +111,7 @@ impl From<&SlcRequest> for ProcedureMarker {
             Hold { .. } => Self::Hold,
             InitiateCall { .. } => Self::InitiateCall,
             SynchronousConnectionSetup { .. } => Self::CodecConnectionSetup,
+            RestartCodecConnectionSetup { .. } => Self::CodecSupport,
         }
     }
 }
@@ -145,6 +149,7 @@ impl fmt::Debug for SlcRequest {
                 &s
             }
             Self::SynchronousConnectionSetup { .. } => "SynchronousConnectionSetup",
+            Self::RestartCodecConnectionSetup { .. } => "RestartCodecConnectionSetup",
         }
         .to_string();
         write!(f, "{}", output)
