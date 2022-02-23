@@ -34,8 +34,12 @@ This section describes the design of the RFC process.
 
 ### When to use the process {#when-to-use-the-process}
 
-The vast majority of changes to Fuchsia do not require an RFC. Instead, these
-changes can be made using the [code review
+The RFC process can be used for any change to Fuchsia that would benefit from
+its structured approach to decision making and its durable record of the
+decision.
+
+The vast majority of changes do not _require_ an RFC. Instead, these changes can
+be made using the [code review
 process](/docs/development/source_code/contribute_changes.md). However,
 technical decisions that have broad impact across the project require broader
 agreement and must be socialized with the project using the RFC process.
@@ -90,10 +94,6 @@ or automated large scale changes of the codebase. For example how logs are
 written or how error paths are handled. Rather than live with islands of
 consistency, the aspiration is to find the best patterns and uniformly apply
 them to the entire codebase.
-
-The RFC process may also be used for other kinds of changes that would benefit
-from its structured approach to decision making and its durable record of the
-decision.
 
 ### Roles and responsibilities {#roles-and-responsibilities}
 
