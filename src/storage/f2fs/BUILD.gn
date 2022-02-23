@@ -26,6 +26,7 @@ static_library("f2fs") {
     "fsck.cc",
     "gc.cc",
     "inline.cc",
+    "inspect.cc",
     "mkfs.cc",
     "mount.cc",
     "namei.cc",
@@ -53,6 +54,7 @@ static_library("f2fs") {
     "file.h",
     "file_cache.h",
     "fsck.h",
+    "inspect.h",
     "mkfs.h",
     "mount.h",
     "node.h",
@@ -64,6 +66,8 @@ static_library("f2fs") {
 
   public_deps = [
     "//src/lib/storage/vfs/cpp",
+    "//src/lib/storage/vfs/cpp/inspect",
+    "//src/lib/storage/vfs/cpp/journal",
     "//src/lib/storage/vfs/cpp/journal",
     "//src/lib/storage/vfs/cpp/transaction",
     "//src/lib/uuid",
@@ -73,6 +77,7 @@ static_library("f2fs") {
 
   deps = [
     "//sdk/lib/syslog/cpp",
+    "//zircon/system/ulib/inspect",
     "//zircon/system/ulib/zxc",
     "//zircon/third_party/ulib/safemath",
   ]

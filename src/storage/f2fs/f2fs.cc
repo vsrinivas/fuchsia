@@ -36,7 +36,8 @@ F2fs::F2fs(async_dispatcher_t* dispatcher, std::unique_ptr<f2fs::Bcache> bc,
     : fs::PagedVfs(dispatcher),
       bc_(std::move(bc)),
       mount_options_(mount_options),
-      raw_sb_(std::move(sb)) {
+      raw_sb_(std::move(sb)),
+      inspect_tree_(this) {
   zx::event::create(0, &fs_id_);
 }
 #else   // __Fuchsia__
@@ -165,6 +166,23 @@ zx::status<std::unique_ptr<F2fs>> CreateFsAndRoot(const MountOptions& mount_opti
       svc_dir->AddEntry(fidl::DiscoverableProtocolName<fuchsia_fs::Admin>, admin_svc);
       fs->SetAdminService(std::move(admin_svc));
 
+      fs->GetInspectTree().Initialize();
+
+      inspect::TreeHandlerSettings settings{
+          .snapshot_behavior = inspect::TreeServerSendPreference::Frozen(
+              inspect::TreeServerSendPreference::Type::DeepCopy)};
+
+      auto inspect_tree = fbl::MakeRefCounted<fs::Service>(
+          [connector = inspect::MakeTreeHandler(&fs->GetInspectTree().GetInspector(), dispatcher,
+                                                settings)](zx::channel chan) mutable {
+            connector(fidl::InterfaceRequest<fuchsia::inspect::Tree>(std::move(chan)));
+            return ZX_OK;
+          });
+
+      auto diagnostics_dir = fbl::MakeRefCounted<fs::PseudoDir>(fs.get());
+      outgoing->AddEntry("diagnostics", diagnostics_dir);
+      diagnostics_dir->AddEntry(fuchsia::inspect::Tree::Name_, inspect_tree);
+
       export_root = std::move(outgoing);
       break;
   }
@@ -228,6 +246,7 @@ zx_status_t F2fs::IncValidBlockCount(VnodeF2fs* vnode, block_t count) {
   std::lock_guard lock(superblock_info_->GetStatLock());
   valid_block_count = superblock_info_->GetTotalValidBlockCount() + count;
   if (valid_block_count > superblock_info_->GetUserBlockCount()) {
+    inspect_tree_.OnOutOfSpace();
     return ZX_ERR_NO_SPACE;
   }
   vnode->IncBlocks(count);

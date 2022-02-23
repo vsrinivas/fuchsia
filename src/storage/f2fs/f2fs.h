@@ -50,6 +50,11 @@
 #include "src/lib/storage/vfs/cpp/watcher.h"
 #include "src/lib/storage/vfs/cpp/shared_mutex.h"
 #include "src/lib/storage/vfs/cpp/service.h"
+
+#include "lib/inspect/cpp/inspect.h"
+#include "lib/inspect/service/cpp/service.h"
+#include "src/lib/storage/vfs/cpp/fuchsia_vfs.h"
+#include "src/lib/storage/vfs/cpp/inspect/inspect_tree.h"
 #endif  // __Fuchsia__
 
 #include "src/lib/storage/vfs/cpp/vfs.h"
@@ -75,6 +80,7 @@
 #include "src/storage/f2fs/fsck.h"
 #include "src/storage/f2fs/admin.h"
 #include "src/storage/f2fs/dir_entry_cache.h"
+#include "src/storage/f2fs/inspect.h"
 // clang-format on
 
 namespace f2fs {
@@ -269,6 +275,8 @@ class F2fs : public fs::Vfs {
   VnodeF2fs &GetNodeVnode() { return *node_vnode_; }
   VnodeF2fs &GetMetaVnode() { return *meta_vnode_; }
 
+  InspectTree &GetInspectTree() { return inspect_tree_; }
+
   // Flush all dirty Pages for the meta vnode that meet |operation|.if_page.
   pgoff_t SyncMetaPages(WritebackOperation &operation);
   // Flush all dirty data Pages for dirty vnodes that meet |operation|.if_vnode and if_page.
@@ -310,6 +318,8 @@ class F2fs : public fs::Vfs {
 
   zx::event fs_id_;
 #endif  // __Fuchsia__
+
+  InspectTree inspect_tree_;
 };
 
 f2fs_hash_t DentryHash(std::string_view name);

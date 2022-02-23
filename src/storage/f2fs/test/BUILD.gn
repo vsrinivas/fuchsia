@@ -77,6 +77,7 @@ fs_test_config("f2fs") {
   max_file_size = 4329690886144
   is_journaled = false
   supports_fsck_after_every_transaction = false
+  supports_inspect = true
 
   options = [
     {

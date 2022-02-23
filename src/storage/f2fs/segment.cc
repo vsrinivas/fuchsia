@@ -590,6 +590,8 @@ void SegmentManager::WriteSumPage(SummaryBlock *sum_blk, block_t blk_addr) {
 
 // Find a new segment from the free segments bitmap to right order
 // This function should be returned with success, otherwise BUG
+// TODO: after LFS allocation available, raise out of space event of inspect tree when new segment
+// cannot be allocated.
 void SegmentManager::GetNewSegment(uint32_t *newseg, bool new_sec, int dir) {
   SuperblockInfo &superblock_info = fs_->GetSuperblockInfo();
   uint32_t total_secs = superblock_info.GetTotalSections();
