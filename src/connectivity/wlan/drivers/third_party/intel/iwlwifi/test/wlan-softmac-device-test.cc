@@ -138,8 +138,9 @@ TEST_F(WlanSoftmacDeviceTest, FillBandCapabilityList) {
   EXPECT_EQ(12, band_cap->basic_rate_count);
   EXPECT_EQ(expected_rate(0), band_cap->basic_rate_list[0]);    // 1Mbps
   EXPECT_EQ(expected_rate(11), band_cap->basic_rate_list[11]);  // 54Mbps
-  EXPECT_EQ(1, band_cap->supported_channels.channels[0]);
-  EXPECT_EQ(13, band_cap->supported_channels.channels[12]);
+  EXPECT_EQ(13, band_cap->operating_channel_count);
+  EXPECT_EQ(1, band_cap->operating_channel_list[0]);
+  EXPECT_EQ(13, band_cap->operating_channel_list[12]);
   // 5GHz
   band_cap = &band_cap_list[1];
   EXPECT_EQ(WLAN_BAND_FIVE_GHZ, band_cap->band);
@@ -147,8 +148,9 @@ TEST_F(WlanSoftmacDeviceTest, FillBandCapabilityList) {
   EXPECT_EQ(8, band_cap->basic_rate_count);
   EXPECT_EQ(expected_rate(4), band_cap->basic_rate_list[0]);   // 6Mbps
   EXPECT_EQ(expected_rate(11), band_cap->basic_rate_list[7]);  // 54Mbps
-  EXPECT_EQ(36, band_cap->supported_channels.channels[0]);
-  EXPECT_EQ(165, band_cap->supported_channels.channels[24]);
+  EXPECT_EQ(25, band_cap->operating_channel_count);
+  EXPECT_EQ(36, band_cap->operating_channel_list[0]);
+  EXPECT_EQ(165, band_cap->operating_channel_list[24]);
 }
 
 TEST_F(WlanSoftmacDeviceTest, FillBandCapabilityListOnly5GHz) {
@@ -168,13 +170,14 @@ TEST_F(WlanSoftmacDeviceTest, FillBandCapabilityListOnly5GHz) {
   EXPECT_EQ(8, band_cap->basic_rate_count);
   EXPECT_EQ(expected_rate(4), band_cap->basic_rate_list[0]);   // 6Mbps
   EXPECT_EQ(expected_rate(11), band_cap->basic_rate_list[7]);  // 54Mbps
-  EXPECT_EQ(36, band_cap->supported_channels.channels[0]);
-  EXPECT_EQ(165, band_cap->supported_channels.channels[24]);
+  EXPECT_EQ(25, band_cap->operating_channel_count);
+  EXPECT_EQ(36, band_cap->operating_channel_list[0]);
+  EXPECT_EQ(165, band_cap->operating_channel_list[24]);
   // index 1 should be empty.
   band_cap = &band_cap_list[1];
   EXPECT_EQ(false, band_cap->ht_supported);
   EXPECT_EQ(0, band_cap->basic_rate_count);
-  EXPECT_EQ(0, band_cap->supported_channels.channels[0]);
+  EXPECT_EQ(0, band_cap->operating_channel_count);
 }
 
 TEST_F(WlanSoftmacDeviceTest, Query) {
@@ -198,7 +201,7 @@ TEST_F(WlanSoftmacDeviceTest, Query) {
   EXPECT_EQ(expected_rate(11), info.band_cap_list[0].basic_rate_list[11]);  // 54 Mbps
   EXPECT_EQ(8, info.band_cap_list[1].basic_rate_count);
   EXPECT_EQ(expected_rate(4), info.band_cap_list[1].basic_rate_list[0]);  // 6 Mbps
-  EXPECT_EQ(165, info.band_cap_list[1].supported_channels.channels[24]);
+  EXPECT_EQ(165, info.band_cap_list[1].operating_channel_list[24]);
   EXPECT_EQ(info.driver_features & WLAN_INFO_DRIVER_FEATURE_SCAN_OFFLOAD,
             WLAN_INFO_DRIVER_FEATURE_SCAN_OFFLOAD);
   EXPECT_EQ(info.driver_features & WLAN_INFO_DRIVER_FEATURE_MFP, WLAN_INFO_DRIVER_FEATURE_MFP);

@@ -131,19 +131,12 @@ void fill_band_cap_list(const struct iwl_nvm_data* nvm_data, const wlan_band_t* 
     band_cap->basic_rate_count = sband->n_bitrates;
 
     // Fill the channel list of this band.
-    wlan_info_channel_list_t* ch_list = &band_cap->supported_channels;
-    switch (band_cap->band) {
-      case WLAN_BAND_TWO_GHZ:
-      case WLAN_BAND_FIVE_GHZ:
-        break;
-      default:
-        ZX_ASSERT(0);  // Unknown band ID.
-        break;
-    }
-    ZX_ASSERT(sband->n_channels <= std::size(ch_list->channels));
+    ZX_ASSERT(sband->n_channels <= std::size(band_cap->operating_channel_list));
+    uint8_t* ch_list = band_cap->operating_channel_list;
     for (size_t ch_idx = 0; ch_idx < sband->n_channels; ++ch_idx) {
-      ch_list->channels[ch_idx] = sband->channels[ch_idx].ch_num;
+      ch_list[ch_idx] = sband->channels[ch_idx].ch_num;
     }
+    band_cap->operating_channel_count = static_cast<uint8_t>(sband->n_channels);
   }
 }
 

@@ -132,10 +132,8 @@ zx_status_t IfaceDevice::Query(wlan_softmac_info_t* info) {
         .vht_caps = {},
         .basic_rate_count = 12,
         .basic_rate_list = {2, 4, 11, 22, 12, 18, 24, 36, 48, 72, 96, 108},
-        .supported_channels =
-            {
-                .channels = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11},
-           },
+        .operating_channel_count = 11,
+        .operating_channel_list = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11},
     };
     info->band_cap_list[1] = {
         .band = WLAN_BAND_FIVE_GHZ,
@@ -145,10 +143,8 @@ zx_status_t IfaceDevice::Query(wlan_softmac_info_t* info) {
         .vht_caps = {},
         .basic_rate_count = 8,
         .basic_rate_list = {12, 18, 24, 36, 48, 72, 96, 108},
-        .supported_channels =
-            {
-                .channels = {36, 40, 44, 48, 52, 56, 60, 64, 149, 153, 157, 161, 165},
-            },
+        .operating_channel_count = 13,
+        .operating_channel_list = {36, 40, 44, 48, 52, 56, 60, 64, 149, 153, 157, 161, 165},
     };
   // clang-format on
 

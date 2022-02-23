@@ -608,7 +608,7 @@ impl DeviceInterface {
 
 #[cfg(test)]
 macro_rules! arr {
-    ($slice:expr, $size:expr) => {{
+    ($slice:expr, $size:expr $(,)?) => {{
         assert!($slice.len() <= $size);
         let mut a = [0; $size];
         a[..$slice.len()].clone_from_slice(&$slice);
@@ -1027,12 +1027,11 @@ pub(crate) mod test_utils {
             band: banjo_common::WlanBand::TWO_GHZ,
             basic_rate_list,
             basic_rate_count,
-            supported_channels: WlanInfoChannelList {
-                channels: arr!(
-                    [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14],
-                    WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS as usize
-                ),
-            },
+            operating_channel_list: arr!(
+                [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14],
+                banjo_ieee80211::MAX_UNIQUE_CHANNEL_NUMBERS as usize,
+            ),
+            operating_channel_count: 14,
             ht_supported: true,
             ht_caps: ht_cap(),
             vht_supported: false,
@@ -1048,12 +1047,11 @@ pub(crate) mod test_utils {
                 banjo_wlan_internal::MAX_SUPPORTED_BASIC_RATES as usize
             ),
             basic_rate_count: 2,
-            supported_channels: WlanInfoChannelList {
-                channels: arr!(
-                    [36, 40, 44, 48, 149, 153, 157, 161],
-                    WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS as usize
-                ),
-            },
+            operating_channel_list: arr!(
+                [36, 40, 44, 48, 149, 153, 157, 161],
+                banjo_ieee80211::MAX_UNIQUE_CHANNEL_NUMBERS as usize,
+            ),
+            operating_channel_count: 8,
             ht_supported: true,
             ht_caps: ht_cap(),
             vht_supported: false,
@@ -1176,9 +1174,8 @@ pub(crate) mod test_utils {
             },
             basic_rate_list: [0; banjo_wlan_internal::MAX_SUPPORTED_BASIC_RATES as usize],
             basic_rate_count: 0,
-            supported_channels: WlanInfoChannelList {
-                channels: [0; WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS as usize],
-            },
+            operating_channel_list: [0; banjo_ieee80211::MAX_UNIQUE_CHANNEL_NUMBERS as usize],
+            operating_channel_count: 0,
         }
     }
 }

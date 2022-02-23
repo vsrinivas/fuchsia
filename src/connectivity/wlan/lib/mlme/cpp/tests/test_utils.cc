@@ -96,21 +96,19 @@ wlan_softmac_band_capability_t FakeBandCapability(wlan_band_t band) {
           },
       .basic_rate_count = 6,
       .basic_rate_list = {12, 24, 48, 54, 96, 108},
-      .supported_channels =
-          {
-              .channels = {0},
-          },
+      .operating_channel_count = 0,
+      .operating_channel_list = {},
   };
 
   if (band == WLAN_BAND_FIVE_GHZ) {
     uint8_t fake[WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS] = {36, 40, 44, 48, 149, 153, 157, 161};
-    memcpy(bc.supported_channels.channels, fake,
-           WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS * sizeof(uint8_t));
+    memcpy(bc.operating_channel_list, fake, WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS * sizeof(uint8_t));
+    bc.operating_channel_count = 8;
   } else {
     uint8_t fake[WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS] = {1, 2, 3,  4,  5,  6,  7,
                                                          8, 9, 10, 11, 12, 13, 14};
-    memcpy(bc.supported_channels.channels, fake,
-           WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS * sizeof(uint8_t));
+    memcpy(bc.operating_channel_list, fake, WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS * sizeof(uint8_t));
+    bc.operating_channel_count = 14;
 
     bc.vht_supported = false;
     bc.vht_caps = {};

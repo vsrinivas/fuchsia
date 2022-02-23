@@ -22,9 +22,6 @@ type Capability = strict enum : uint32 {
     SIMULTANEOUS_CLIENT_AP = 0x10000;
 };
 
-type ChannelList = struct {
-    channels vector<uint8>:200;
-};
 
 // IEEE Std 802.11-2016 defines 12 values in dot11SupportedDataRatesRxTable
 const MAX_NUM_RATES uint8 = 12;
@@ -36,7 +33,7 @@ type BandInfo = struct {
     ht_caps box<fuchsia.wlan.internal.HtCapabilities>;
     vht_caps box<fuchsia.wlan.internal.VhtCapabilities>;
     rates vector<uint8>:MAX_NUM_RATES;
-    supported_channels ChannelList;
+    operating_channels vector<uint8>:ieee80211.MAX_UNIQUE_CHANNEL_NUMBERS;
 };
 
 type CreateIfaceRequest = resource struct {

@@ -59,7 +59,6 @@ std::string Describe(const BasicVhtMcsNss& bvmn);
 std::string Describe(const VhtOperation& vht_op);
 
 std::string Describe(const ieee80211_ht_capabilities& ht_caps);
-std::string Describe(const wlan_info_channel_list& wl);
 std::string Describe(const wlan_softmac_band_capability& bi);
 std::string Describe(const wlan_softmac_info& wi);
 std::string Describe(const CapabilityInfo& cap);

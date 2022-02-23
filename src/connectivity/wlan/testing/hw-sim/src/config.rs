@@ -76,8 +76,6 @@ fn create_2_4_ghz_band_info() -> fidl_device::BandInfo {
         })),
         vht_caps: None,
         rates: vec![2, 4, 11, 22, 12, 18, 24, 36, 48, 72, 96, 108],
-        supported_channels: fidl_device::ChannelList {
-            channels: vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14],
-        },
+        operating_channels: vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14],
     }
 }

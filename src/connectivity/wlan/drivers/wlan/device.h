@@ -125,8 +125,6 @@ class Device : public DeviceInterface {
   std::unique_ptr<Mlme> mlme_;
 };
 
-zx_status_t ValidateWlanSoftmacInfo(const wlan_softmac_info& wlan_softmac_info);
-
 }  // namespace wlan
 
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_WLAN_DEVICE_H_

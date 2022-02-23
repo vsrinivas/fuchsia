@@ -67,7 +67,8 @@ struct/member fuchsia.hardware.wlan.softmac/WlanSoftmacBandCapability.basic_rate
 struct/member fuchsia.hardware.wlan.softmac/WlanSoftmacBandCapability.basic_rate_list array<uint8,12>
 struct/member fuchsia.hardware.wlan.softmac/WlanSoftmacBandCapability.ht_caps ddk.hw.wlan.ieee80211/Ieee80211HtCapabilities
 struct/member fuchsia.hardware.wlan.softmac/WlanSoftmacBandCapability.ht_supported bool
-struct/member fuchsia.hardware.wlan.softmac/WlanSoftmacBandCapability.supported_channels fuchsia.hardware.wlan.phyinfo/WlanInfoChannelList
+struct/member fuchsia.hardware.wlan.softmac/WlanSoftmacBandCapability.operating_channel_count uint8
+struct/member fuchsia.hardware.wlan.softmac/WlanSoftmacBandCapability.operating_channel_list array<uint8,255>
 struct/member fuchsia.hardware.wlan.softmac/WlanSoftmacBandCapability.vht_caps ddk.hw.wlan.ieee80211/Ieee80211VhtCapabilities
 struct/member fuchsia.hardware.wlan.softmac/WlanSoftmacBandCapability.vht_supported bool
 struct fuchsia.hardware.wlan.softmac/WlanSoftmacBandCapability

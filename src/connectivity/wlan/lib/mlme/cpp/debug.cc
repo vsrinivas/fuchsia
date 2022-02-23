@@ -634,13 +634,6 @@ std::string Describe(const VhtOperation& vht_op) {
   return oss.str();
 }
 
-std::string Describe(const wlan_info_channel_list& wl) {
-  char buf[512];
-  size_t offset = 0;
-  BUFFER("channels:[%s]", DescribeChannel(wl.channels, 64).c_str());
-  return std::string(buf);
-}
-
 std::string Describe(const wlan_softmac_band_capability& bc) {
   char buf[1024];
   size_t offset = 0;
@@ -649,7 +642,8 @@ std::string Describe(const wlan_softmac_band_capability& bc) {
   BUFFER("vht_supported:%u", bc.vht_supported);
   BUFFER("vht_caps:[to implement]");
   BUFFER("rates:[%s]", DescribeArray(bc.basic_rate_list, bc.basic_rate_count).c_str());
-  BUFFER("supported_channels:[%s]", Describe(bc.supported_channels).c_str());
+  BUFFER("operating_channels:[%s]",
+         DescribeArray(bc.operating_channel_list, bc.operating_channel_count).c_str());
   return std::string(buf);
 }
 

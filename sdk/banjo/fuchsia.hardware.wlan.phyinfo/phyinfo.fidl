@@ -68,12 +68,6 @@ type WlanInfoHardwareCapability = strict enum : uint32 {
 /// The maximum number of supported channels in a WlanInfoChannelList.
 const WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS uint32 = 64;
 
-/// A list of channels in a band.
-type WlanInfoChannelList = struct {
-    /// A list of channel center frequencies, as multiples of 5 MHz above base_freq.
-    channels array<uint8, WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS>;
-};
-
 /// The maximum number of bands supported in a WlanInfo struct. For now this is 2
 /// to keep the struct a small, fixed size.
 const WLAN_INFO_MAX_BANDS uint32 = 2;

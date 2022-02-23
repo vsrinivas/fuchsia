@@ -136,14 +136,8 @@ fn convert_ddk_band_cap(
         _ => return Err(format_err!("Unexpected banjo_comon::WlanBand value {}", band_cap.band.0)),
     };
     let basic_rates = band_cap.basic_rate_list[..band_cap.basic_rate_count as usize].to_vec();
-    let channels = band_cap
-        .supported_channels
-        .channels
-        .to_vec()
-        .into_iter()
-        .filter(|channel| *channel != 0)
-        .collect();
-
+    let channels =
+        band_cap.operating_channel_list[..band_cap.operating_channel_count as usize].to_vec();
     let ht_cap = if band_cap.ht_supported {
         let caps = wlan_common::ie::HtCapabilities::from(band_cap.ht_caps);
         let mut bytes = [0u8; 26];

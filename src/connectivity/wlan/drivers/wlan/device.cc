@@ -86,12 +86,6 @@ zx_status_t Device::Bind() __TA_NO_THREAD_SAFETY_ANALYSIS {
     return status;
   }
 
-  status = ValidateWlanSoftmacInfo(wlan_softmac_info_);
-  if (status != ZX_OK) {
-    errorf("could not bind wlan-softmac device with invalid wlan-softmac info\n");
-    return status;
-  }
-
   wlan_softmac_proxy_.QueryDiscoverySupport(&discovery_support_);
   wlan_softmac_proxy_.QueryMacSublayerSupport(&mac_sublayer_support_);
   wlan_softmac_proxy_.QuerySecuritySupport(&security_support_);
@@ -414,45 +408,5 @@ const security_support_t& Device::GetSecuritySupport() const { return security_s
 
 const spectrum_management_support_t& Device::GetSpectrumManagementSupport() const {
   return spectrum_management_support_;
-}
-
-zx_status_t ValidateWlanSoftmacInfo(const wlan_softmac_info& wlan_softmac_info) {
-  for (uint8_t i = 0; i < wlan_softmac_info.band_cap_count; i++) {
-    auto band_cap = wlan_softmac_info.band_cap_list[i];
-
-    // Validate channels
-    auto& supported_channels = band_cap.supported_channels;
-    switch (band_cap.band) {
-      case WLAN_BAND_FIVE_GHZ:
-        for (auto c : supported_channels.channels) {
-          if (c == 0) {  // End of the valid channel
-            break;
-          }
-          auto channel = wlan_channel_t{.primary = c, .cbw = CHANNEL_BANDWIDTH_CBW20};
-          if (!common::IsValidChan5Ghz(channel)) {
-            errorf("2.4 GHz band has invalid channel %u\n", c);
-            return ZX_ERR_NOT_SUPPORTED;
-          }
-        }
-        break;
-      case WLAN_BAND_TWO_GHZ:
-        for (auto c : supported_channels.channels) {
-          if (c == 0) {  // End of the valid channel
-            break;
-          }
-          auto channel = wlan_channel_t{.primary = c, .cbw = CHANNEL_BANDWIDTH_CBW20};
-          if (!common::IsValidChan2Ghz(channel)) {
-            errorf("5 GHz has invalid cahnnel %u\n", c);
-            return ZX_ERR_NOT_SUPPORTED;
-          }
-        }
-        break;
-      default:
-        errorf("band not supported: %u\n", band_cap.band);
-        return ZX_ERR_NOT_SUPPORTED;
-    }
-  }
-
-  return ZX_OK;
 }
 }  // namespace wlan

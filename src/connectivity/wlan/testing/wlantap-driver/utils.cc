@@ -150,10 +150,10 @@ void ConvertBandInfoToCapability(const wlan_device::BandInfo& in,
       std::min<size_t>(in.rates.size(), wlan_internal::MAX_SUPPORTED_BASIC_RATES);
   std::copy_n(in.rates.data(), out->basic_rate_count, out->basic_rate_list);
 
-  std::copy_n(
-      in.supported_channels.channels.data(),
-      std::min<size_t>(in.supported_channels.channels.size(), WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS),
-      out->supported_channels.channels);
+  out->operating_channel_count = std::min<size_t>(
+      in.operating_channels.size(), fuchsia_wlan_ieee80211_MAX_UNIQUE_CHANNEL_NUMBERS);
+  std::copy_n(in.operating_channels.data(), out->operating_channel_count,
+              out->operating_channel_list);
 }
 
 zx_status_t ConvertTapPhyConfig(wlan_softmac_info_t* mac_info,
