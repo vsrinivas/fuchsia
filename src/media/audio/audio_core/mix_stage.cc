@@ -511,7 +511,7 @@ bool MixStage::ProcessMix(Mixer& mixer, ReadableStream& stream,
     float local_gain_db;
     bool ramping = bookkeeping.gain.IsRamping();
     if (ramping) {
-      auto scale_arr_max = bookkeeping.gain.GetScaleArray(
+      auto scale_arr_max = bookkeeping.gain.CalculateScaleArray(
           bookkeeping.scale_arr.get(),
           std::min(dest_frames_left - dest_offset, Mixer::Bookkeeping::kScaleArrLen),
           dest_ref_clock_to_integral_dest_frame.rate());

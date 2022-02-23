@@ -195,9 +195,9 @@ void Gain::Advance(int64_t num_frames, const TimelineRate& destination_frames_pe
 
 // Populate an array of gain scales, returning the max gain-scale value in the array.
 // Currently we handle only SCALE_LINEAR ramps
-Gain::AScale Gain::GetScaleArray(AScale* scale_arr, int64_t num_frames,
-                                 const TimelineRate& destination_frames_per_reference_tick) {
-  TRACE_DURATION("audio", "Gain::GetScaleArray");
+Gain::AScale Gain::CalculateScaleArray(AScale* scale_arr, int64_t num_frames,
+                                       const TimelineRate& destination_frames_per_reference_tick) {
+  TRACE_DURATION("audio", "Gain::CalculateScaleArray");
   if (num_frames == 0) {
     return GetGainScale();
   }
@@ -212,6 +212,8 @@ Gain::AScale Gain::GetScaleArray(AScale* scale_arr, int64_t num_frames,
     }
     return scale;
   }
+
+  // At least one gain stage is ramping, and we are not muted.
 
   // If the output device's clock is not running, then it isn't possible to
   // convert from output frames to wallclock (local) time.
