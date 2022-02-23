@@ -9,8 +9,10 @@
 #include <lib/fidl/internal.h>
 
 #ifdef __Fuchsia__
-#include <lib/zx/object.h>
-#endif
+#include <lib/fidl/llcpp/internal/transport_channel.h>
+#else
+#include <lib/fidl/llcpp/internal/transport_channel_host.h>
+#endif  // __Fuchsia__
 
 #include <zircon/fidl.h>
 
@@ -21,8 +23,10 @@ namespace fidl::internal {
 
 class NaturalEncoder {
  public:
-  NaturalEncoder(zx_handle_disposition_t* handles, uint32_t handle_capacity);
-  NaturalEncoder(zx_handle_disposition_t* handles, uint32_t handle_capacity,
+  NaturalEncoder(const CodingConfig* coding_config, fidl_handle_t* handles,
+                 fidl_handle_metadata_t* handle_metadata, uint32_t handle_capacity);
+  NaturalEncoder(const CodingConfig* coding_config, fidl_handle_t* handles,
+                 fidl_handle_metadata_t* handle_metadata, uint32_t handle_capacity,
                  internal::WireFormatVersion wire_format);
 
   NaturalEncoder(NaturalEncoder&&) noexcept = default;
@@ -42,10 +46,7 @@ class NaturalEncoder {
     return reinterpret_cast<const T*>(bytes_.data() + offset);
   }
 
-#ifdef __Fuchsia__
-  void EncodeHandle(zx::object_base* value, zx_obj_type_t obj_type, zx_rights_t rights,
-                    size_t offset);
-#endif
+  void EncodeHandle(fidl_handle_t handle, HandleAttributes attr, size_t offset);
 
   size_t CurrentLength() const { return bytes_.size(); }
 
@@ -56,8 +57,10 @@ class NaturalEncoder {
   internal::WireFormatVersion wire_format() { return wire_format_; }
 
  protected:
+  const CodingConfig* coding_config_;
   std::vector<uint8_t> bytes_;
-  zx_handle_disposition_t* handles_;
+  fidl_handle_t* handles_;
+  fidl_handle_metadata_t* handle_metadata_;
   uint32_t handle_capacity_;
   uint32_t handle_actual_ = 0;
   internal::WireFormatVersion wire_format_ = internal::WireFormatVersion::kV2;
@@ -69,7 +72,9 @@ template <typename Transport>
 class NaturalMessageEncoder final : public NaturalEncoder {
  public:
   explicit NaturalMessageEncoder(uint64_t ordinal)
-      : NaturalEncoder(handles_, ZX_CHANNEL_MAX_MSG_HANDLES) {
+      : NaturalEncoder(&Transport::EncodingConfiguration, handles_,
+                       reinterpret_cast<fidl_handle_metadata_t*>(handle_metadata_),
+                       ZX_CHANNEL_MAX_MSG_HANDLES) {
     EncodeMessageHeader(ordinal);
   }
 
@@ -79,10 +84,19 @@ class NaturalMessageEncoder final : public NaturalEncoder {
   ~NaturalMessageEncoder() = default;
 
   HLCPPOutgoingMessage GetMessage() {
+    for (uint32_t i = 0; i < handle_actual_; i++) {
+      handle_dispositions_[i] = zx_handle_disposition_t{
+          .operation = ZX_HANDLE_OP_MOVE,
+          .handle = handles_[i],
+          .type = handle_metadata_[i].obj_type,
+          .rights = handle_metadata_[i].rights,
+          .result = ZX_OK,
+      };
+    }
     return HLCPPOutgoingMessage(
         BytePart(bytes_.data(), static_cast<uint32_t>(bytes_.size()),
                  static_cast<uint32_t>(bytes_.size())),
-        HandleDispositionPart(handles_, static_cast<uint32_t>(handle_actual_),
+        HandleDispositionPart(handle_dispositions_, static_cast<uint32_t>(handle_actual_),
                               static_cast<uint32_t>(handle_actual_)));
   }
 
@@ -93,7 +107,10 @@ class NaturalMessageEncoder final : public NaturalEncoder {
   }
 
  private:
-  zx_handle_disposition_t handles_[ZX_CHANNEL_MAX_MSG_HANDLES];
+  fidl_handle_t handles_[ZX_CHANNEL_MAX_MSG_HANDLES];
+  typename Transport::HandleMetadata handle_metadata_[ZX_CHANNEL_MAX_MSG_HANDLES];
+  zx_handle_disposition_t handle_dispositions_[ZX_CHANNEL_MAX_MSG_HANDLES];
+
   void EncodeMessageHeader(uint64_t ordinal) {
     size_t offset = Alloc(sizeof(fidl_message_header_t));
     fidl_message_header_t* header = GetPtr<fidl_message_header_t>(offset);
@@ -109,7 +126,9 @@ class NaturalMessageEncoder final : public NaturalEncoder {
 class NaturalBodyEncoder final : public NaturalEncoder {
  public:
   explicit NaturalBodyEncoder(internal::WireFormatVersion wire_format)
-      : NaturalEncoder(handles_, ZX_CHANNEL_MAX_MSG_HANDLES, wire_format) {}
+      : NaturalEncoder(&fidl::internal::ChannelTransport::EncodingConfiguration, handles_,
+                       reinterpret_cast<fidl_handle_metadata_t*>(handle_metadata_),
+                       ZX_CHANNEL_MAX_MSG_HANDLES, wire_format) {}
 
   NaturalBodyEncoder(NaturalBodyEncoder&&) noexcept = default;
   NaturalBodyEncoder& operator=(NaturalBodyEncoder&&) noexcept = default;
@@ -120,7 +139,9 @@ class NaturalBodyEncoder final : public NaturalEncoder {
   void Reset();
 
  private:
-  zx_handle_disposition_t handles_[ZX_CHANNEL_MAX_MSG_HANDLES];
+  fidl_handle_t handles_[ZX_CHANNEL_MAX_MSG_HANDLES];
+  fidl_channel_handle_metadata_t handle_metadata_[ZX_CHANNEL_MAX_MSG_HANDLES];
+  zx_handle_disposition_t handle_dispositions_[ZX_CHANNEL_MAX_MSG_HANDLES];
 };
 
 }  // namespace fidl::internal

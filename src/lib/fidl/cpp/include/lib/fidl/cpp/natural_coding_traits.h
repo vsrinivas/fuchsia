@@ -187,7 +187,12 @@ struct NaturalCodingTraits<
   static void Encode(NaturalEncoder* encoder, zx::object_base* value, size_t offset,
                      cpp17::optional<NaturalHandleInformation> maybe_handle_info = cpp17::nullopt) {
     ZX_ASSERT(maybe_handle_info);
-    encoder->EncodeHandle(value, maybe_handle_info->object_type, maybe_handle_info->rights, offset);
+    encoder->EncodeHandle(value->release(),
+                          {
+                              .obj_type = maybe_handle_info->object_type,
+                              .rights = maybe_handle_info->rights,
+                          },
+                          offset);
   }
   static void Decode(NaturalDecoder* decoder, zx::object_base* value, size_t offset) {
     decoder->DecodeHandle(value, offset);
@@ -333,8 +338,11 @@ struct NaturalCodingTraits<ClientEnd<T>> {
   static void Encode(NaturalEncoder* encoder, ClientEnd<T>* value, size_t offset,
                      cpp17::optional<NaturalHandleInformation> maybe_handle_info = cpp17::nullopt) {
     ZX_DEBUG_ASSERT(maybe_handle_info);
-    zx::channel channel = value->TakeChannel();
-    encoder->EncodeHandle(&channel, maybe_handle_info->object_type, maybe_handle_info->rights,
+    encoder->EncodeHandle(value->TakeChannel().release(),
+                          {
+                              .obj_type = maybe_handle_info->object_type,
+                              .rights = maybe_handle_info->rights,
+                          },
                           offset);
   }
 
@@ -350,8 +358,11 @@ struct NaturalCodingTraits<ServerEnd<T>> {
   static void Encode(NaturalEncoder* encoder, ServerEnd<T>* value, size_t offset,
                      cpp17::optional<NaturalHandleInformation> maybe_handle_info = cpp17::nullopt) {
     ZX_DEBUG_ASSERT(maybe_handle_info);
-    zx::channel channel = value->TakeChannel();
-    encoder->EncodeHandle(&channel, maybe_handle_info->object_type, maybe_handle_info->rights,
+    encoder->EncodeHandle(value->TakeChannel().release(),
+                          {
+                              .obj_type = maybe_handle_info->object_type,
+                              .rights = maybe_handle_info->rights,
+                          },
                           offset);
   }
 

@@ -20,11 +20,20 @@ size_t Align(size_t size) {
 
 }  // namespace
 
-NaturalEncoder::NaturalEncoder(zx_handle_disposition_t* handles, uint32_t handle_capacity)
-    : handles_(handles), handle_capacity_(handle_capacity) {}
-NaturalEncoder::NaturalEncoder(zx_handle_disposition_t* handles, uint32_t handle_capacity,
+NaturalEncoder::NaturalEncoder(const CodingConfig* coding_config, fidl_handle_t* handles,
+                               fidl_handle_metadata_t* handle_metadata, uint32_t handle_capacity)
+    : coding_config_(coding_config),
+      handles_(handles),
+      handle_metadata_(handle_metadata),
+      handle_capacity_(handle_capacity) {}
+NaturalEncoder::NaturalEncoder(const CodingConfig* coding_config, fidl_handle_t* handles,
+                               fidl_handle_metadata_t* handle_metadata, uint32_t handle_capacity,
                                internal::WireFormatVersion wire_format)
-    : handles_(handles), handle_capacity_(handle_capacity), wire_format_(wire_format) {}
+    : coding_config_(coding_config),
+      handles_(handles),
+      handle_metadata_(handle_metadata),
+      handle_capacity_(handle_capacity),
+      wire_format_(wire_format) {}
 
 size_t NaturalEncoder::Alloc(size_t size) {
   size_t offset = bytes_.size();
@@ -42,31 +51,41 @@ size_t NaturalEncoder::Alloc(size_t size) {
   return offset;
 }
 
-#ifdef __Fuchsia__
-void NaturalEncoder::EncodeHandle(zx::object_base* value, zx_obj_type_t obj_type,
-                                  zx_rights_t rights, size_t offset) {
-  if (value->is_valid()) {
+void NaturalEncoder::EncodeHandle(fidl_handle_t handle, HandleAttributes attr, size_t offset) {
+  if (handle) {
     *GetPtr<zx_handle_t>(offset) = FIDL_HANDLE_PRESENT;
-    ZX_ASSERT(handle_actual_ <= handle_capacity_);
-    handles_[handle_actual_] = zx_handle_disposition_t{
-        .operation = ZX_HANDLE_OP_MOVE,
-        .handle = value->release(),
-        .type = obj_type,
-        .rights = rights,
-        .result = ZX_OK,
-    };
+
+    ZX_ASSERT(handle_actual_ < handle_capacity_);
+    handles_[handle_actual_] = handle;
+
+    if (coding_config_->encode_process_handle) {
+      const char* error;
+      zx_status_t status =
+          coding_config_->encode_process_handle(attr, handle_actual_, handle_metadata_, &error);
+      ZX_ASSERT_MSG(ZX_OK == status, "error in encode_process_handle: %s", error);
+    }
+
     handle_actual_++;
   } else {
     *GetPtr<zx_handle_t>(offset) = FIDL_HANDLE_ABSENT;
   }
 }
-#endif
 
 HLCPPOutgoingBody NaturalBodyEncoder::GetBody() {
-  return HLCPPOutgoingBody(BytePart(bytes_.data(), static_cast<uint32_t>(bytes_.size()),
-                                    static_cast<uint32_t>(bytes_.size())),
-                           HandleDispositionPart(handles_, static_cast<uint32_t>(handle_actual_),
-                                                 static_cast<uint32_t>(handle_actual_)));
+  for (uint32_t i = 0; i < handle_actual_; i++) {
+    handle_dispositions_[i] = zx_handle_disposition_t{
+        .operation = ZX_HANDLE_OP_MOVE,
+        .handle = handles_[i],
+        .type = handle_metadata_[i].obj_type,
+        .rights = handle_metadata_[i].rights,
+        .result = ZX_OK,
+    };
+  }
+  return HLCPPOutgoingBody(
+      BytePart(bytes_.data(), static_cast<uint32_t>(bytes_.size()),
+               static_cast<uint32_t>(bytes_.size())),
+      HandleDispositionPart(handle_dispositions_, static_cast<uint32_t>(handle_actual_),
+                            static_cast<uint32_t>(handle_actual_)));
 }
 
 void NaturalBodyEncoder::Reset() {
