@@ -17,9 +17,19 @@ template("access_ota_blob_as_executable") {
          "test_component_manifest must be defined for $target_name")
   assert(defined(invoker.test_config),
          "test_config must be defined for $target_name")
+  assert(defined(invoker.root_ssl_cert),
+         "root_ssl_cert must be defined for $target_name")
+  assert(defined(invoker.pkg_server_certchain),
+         "pkg_server_certchain must be defined for $target_name")
+  assert(defined(invoker.pkg_server_key),
+         "pkg_server_key must be defined for $target_name")
+
   assembly_base_packages = invoker.base_packages
   test_binary_name = invoker.test_binary_name
   test_component_manifest = invoker.test_component_manifest
+  root_ssl_cert = invoker.root_ssl_cert
+  pkg_server_certchain = invoker.pkg_server_certchain
+  pkg_server_key = invoker.pkg_server_key
 
   test_name = target_name
 
@@ -27,6 +37,7 @@ template("access_ota_blob_as_executable") {
   assemble_security_pkg_test_system("${test_name}_v0") {
     test_config = invoker.test_config
     board_name = board_name
+    root_ssl_cert = root_ssl_cert
     base_packages = [ "//src/security/pkg_test/assemblies/hello_world_v0:hello_world-package" ] + assembly_base_packages
     packaged_assembly_directory = "access_ota_blob_as_executable_v0"
     system_version_file = "//src/security/pkg_test/assemblies/v0_version.txt"
@@ -36,6 +47,7 @@ template("access_ota_blob_as_executable") {
   assemble_security_pkg_test_system("${test_name}_v1") {
     test_config = invoker.test_config
     board_name = board_name
+    root_ssl_cert = root_ssl_cert
     base_packages = [ "//src/security/pkg_test/assemblies/hello_world_v1:hello_world-package" ] + assembly_base_packages
     packaged_assembly_directory = "access_ota_blob_as_executable_v1"
     system_version_file = "//src/security/pkg_test/assemblies/v1_version.txt"
@@ -72,14 +84,30 @@ template("access_ota_blob_as_executable") {
     ]
   }
 
-  # Component for package server configured to serve "v1" OTA.
+  # Resources and component for package server configured to serve "v1" OTA.
+  resource_group("${test_name}_v1-pkg_server-tls_resources") {
+    testonly = true
+    files = [
+      {
+        source = pkg_server_certchain
+        dest = "data/pkg_server/tls/pkg_server.certchain"
+      },
+      {
+        source = pkg_server_key
+        dest = "data/pkg_server/tls/pkg_server.rsa"
+      },
+    ]
+  }
   fuchsia_test_component("${test_name}_v1-pkg_server-component") {
     component_name = "pkg_server"
     manifest = "//src/security/pkg_test/tests/access_ota_blob_as_executable/meta/pkg_server.cml"
     deps = [
-      ":${test_name}_v1_system_resources",
-      ":${test_name}_v1_update_resources",
+      ":${test_name}_v1-pkg_server-tls_resources",
       "//src/security/pkg_test/pkg_server:pkg_server-binary",
+
+      # Defined by assemble_security_pkg_test_system("${test_name}_v1").
+      ":${test_name}_v1_tuf_repo_resources",
+      ":${test_name}_v1_update_package_resource",
     ]
   }
 

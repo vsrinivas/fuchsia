@@ -7,6 +7,7 @@ import("//build/components/fuchsia_package.gni")
 import("//build/components/fuchsia_test_component.gni")
 import("//build/config.gni")
 import("//build/dist/resource.gni")
+import("//build/dist/zip_resource.gni")
 import("//build/images/assemble_system.gni")
 import("//build/images/assembly/update_package.gni")
 import("//build/rust/rustc_binary.gni")
@@ -15,6 +16,9 @@ import("//src/security/pkg_test/assemblies/build_info.gni")
 # Construct a system assembly for use in product security tests.
 #
 # Parameters:
+#
+#
+#   Assembly parameters:
 #
 #   board_name (required):
 #     [string] board_name forwarded to assemble_system(target_name).
@@ -26,6 +30,8 @@ import("//src/security/pkg_test/assemblies/build_info.gni")
 #     [string] The file used to designate system version in the assembly's
 #     update package and build-info package.
 #
+#   Test asset packaging parameters:
+#
 #   packaged_assembly_directory (required):
 #     [string] The subdirectory in data/assemblies where the
 #     packaged-in-a-fuchsia-package copy of assembled artifacts will be stored.
@@ -34,6 +40,14 @@ import("//src/security/pkg_test/assemblies/build_info.gni")
 #     [string] Path to shared test configuration file that is used by host tools
 #     to generate consistent inputs. For example, host tools need to access the
 #     domain that should be used for package URLs in the update package.
+#
+#   SSL/TLS asset packaging parameters:
+#
+#   root_ssl_cert (required):
+#     [string] The gn-style path to a root SSL certificate that is compatible
+#     with SSL/TLS connections needed in the test environment. This must be
+#     configured to be compatible with certchain/server key pairs used by
+#     network-connected test components such as pkg_server.
 #
 # Public targets:
 #
@@ -49,10 +63,15 @@ import("//src/security/pkg_test/assemblies/build_info.gni")
 #     device. Resources reside in package's
 #     data/assemblies/${packaged_assembly_directory} directory.
 #
-#   ${target_name}_update_resources:
-#     The resources required for serving the update package associated with the
-#     assembled system. Resources reside in package's
-#     data/assemblies/${packaged_assembly_directory} directory.
+#   ${target_name}_update_package_resource:
+#     The update package as a resource stored in package's
+#     data/assemblies/${packaged_assembly_directory}/update/update.far.
+#
+#   ${target_name}_tuf_repo_resources:
+#     The resources required for a static assets package server that can serve
+#     the assembled system (including the update package). Resources reside in
+#     package's data/assemblies/${packaged_assembly_directory}/repository
+#     directory.
 
 template("assemble_security_pkg_test_system") {
   assert(defined(invoker.board_name),
@@ -65,6 +84,8 @@ template("assemble_security_pkg_test_system") {
          "packaged_assembly_directory must be defined for $target_name")
   assert(defined(invoker.test_config),
          "test_config must be defined for $target_name")
+  assert(defined(invoker.root_ssl_cert),
+         "root_ssl_cert must be defined for $target_name")
 
   assembly_name = target_name
   if (current_toolchain == target_toolchain) {
@@ -77,17 +98,21 @@ template("assemble_security_pkg_test_system") {
     assembly = assembly_name
     assembly_image_assembler = "${assembly_name}_image_assembler"
     assembly_partitions_config = "${assembly_name}_partitions_config"
+    base_packages = "${assembly_name}_base_packages"
     empty_pkgfs = "${assembly_name}_empty_pkgfs"
     build_info = "${assembly_name}_build_info"
     repository_config = "${assembly_name}_repository_config"
     packages_json = "${assembly_name}_packages_json"
     update_package = "${assembly_name}_update_package"
+    meta_packages = "${assembly_name}_meta_packages"
+    root_ssl_certificates = "${assembly_name}_root_ssl_certificates"
+    root_ssl_certificates_resource_group =
+        "${assembly_name}_root_ssl_certificates_resource_group"
     system_resources = "${assembly_name}_system_resources"
-    update_resources_group = "${assembly_name}_update_resources_group"
-    update_resources_package = "${assembly_name}_update_resources_package"
-    verify_update_package_resources =
-        "${assembly_name}_verify_update_package_resources"
-    update_resources = "${assembly_name}_update_resources"
+    update_package_resource = "${assembly_name}_update_package_resource"
+    tuf_repo_resources = "${assembly_name}_tuf_repo_resources"
+    all_package_manifests_list = "${assembly_name}_all_package_manifests_list"
+    pm_publish_archive = "${assembly_name}_pm_publish_archive"
   }
 
   directories = {
@@ -97,12 +122,13 @@ template("assemble_security_pkg_test_system") {
                      "/${assembly_name}/build_info"
     update_out = get_label_info(":${labels.assembly}", "target_out_dir") +
                  "/${labels.update_package}"
-    update_resources_package_out =
-        get_label_info(":${labels.update_resources_package}",
-                       "target_out_dir") + "/${labels.update_resources_package}"
+    all_package_manifests_list_out =
+        get_label_info(":${labels.assembly}", "target_out_dir") +
+        "/${assembly_name}/all_package_manifests_list"
   }
   if (current_toolchain == target_toolchain) {
-    directories.update_gen = "${directories.update_out}/gen"
+    directories.packaged_repository =
+        "data/assemblies/${packaged_assembly_directory}/repository"
   }
 
   files = {
@@ -111,12 +137,6 @@ template("assemble_security_pkg_test_system") {
         "${directories.assembly_out}/security_pkg_test_packages.json"
     partitions_json = "${directories.assembly_out}_partitions.json"
     images_json = "${directories.assembly_out}/images.json"
-    package_manifest_json =
-        "${directories.update_resources_package_out}/package_manifest.json"
-    update_package_manifest_json =
-        "${directories.update_out}/update_package_manifest.json"
-    verify_update_package_resources =
-        "${target_out_dir}/${labels.verify_update_package_resources}.ok"
     build_info_version = invoker.system_version_file
     test_config = invoker.test_config
 
@@ -131,9 +151,7 @@ template("assemble_security_pkg_test_system") {
         "${directories.build_info_out}/latest-commit-date.txt"
     build_info_minimum_utc_stamp =
         "${directories.build_info_out}/minimum-utc-stamp.txt"
-  }
-  if (current_toolchain == target_toolchain) {
-    files.update_board = "${directories.update_gen}/board"
+    all_package_manifests_list = "${directories.all_package_manifests_list_out}/all_package_manifests.list"
   }
 
   # Resource files with both `local` and `packaged` paths.
@@ -146,51 +164,18 @@ template("assemble_security_pkg_test_system") {
       local = "${directories.assembly_out}/base.far"
       packaged = "data/assemblies/${packaged_assembly_directory}/base.far"
     }
-    zbi_resource = {
-      local = "${directories.assembly_out}/${assembly_name}.zbi"
-      packaged = "data/assemblies/${packaged_assembly_directory}/update/zbi"
-    }
     update_far_resource = {
       local = "${directories.update_out}/update.far"
       packaged =
           "data/assemblies/${packaged_assembly_directory}/update/update.far"
     }
-    version_resource = {
-      local = files.build_info_version
-      packaged = "data/assemblies/${packaged_assembly_directory}/update/version"
+    root_ssl_certificates_resource = {
+      local = invoker.root_ssl_cert
+      packaged = "data/cert.pem"
     }
-    board_resource = {
-      local = files.update_board
-      packaged = "data/assemblies/${packaged_assembly_directory}/update/board"
-    }
-    packages_json_resource = {
-      local = "${directories.update_gen}/packages.json"
-      packaged =
-          "data/assemblies/${packaged_assembly_directory}/update/packages.json"
-    }
-    epoch_json_resource = {
-      local = "${directories.update_gen}/epoch.json"
-      packaged =
-          "data/assemblies/${packaged_assembly_directory}/update/epoch.json"
-    }
-    if (use_vbmeta) {
-      vbmeta_resource = {
-        local = "${directories.assembly_out}/${assembly_name}.vbmeta"
-        packaged = "data/assemblies/${packaged_assembly_directory}/update/fuchsia.vbmeta"
-      }
-    }
-    firmware_resources = []
-    foreach(firmware, firmware_prebuilts) {
-      assert(defined(firmware.path), "Firmware path must be specified")
-      _firmware_path = "${firmware.path}${firmware_prebuilts_path_suffix}"
-      _firmware_file = get_path_info(_firmware_path, "file")
-      firmware_resources += [
-        {
-          local = _firmware_path
-          packaged = "data/assemblies/${packaged_assembly_directory}/update/${_firmware_file}"
-        },
-      ]
-    }
+  } else {
+    # `invoker.root_ssl_cert` designates input only used for `target_toolchain`.
+    not_needed(invoker, [ "root_ssl_cert" ])
   }
 
   # `assemble_system(...) { base_packages }` requires a package with the name
@@ -198,6 +183,13 @@ template("assemble_security_pkg_test_system") {
   fuchsia_package(labels.empty_pkgfs) {
     testonly = true
     package_name = "pkgfs"
+  }
+
+  # Test-only root SSL certificates for domain names that may be used in tests.
+  fuchsia_package(labels.root_ssl_certificates) {
+    testonly = true
+    package_name = "root_ssl_certificates"
+    deps = [ ":${labels.root_ssl_certificates_resource_group}" ]
   }
 
   # Build info to be included in base packages.
@@ -212,20 +204,28 @@ template("assemble_security_pkg_test_system") {
     minimum_utc_stamp = files.build_info_minimum_utc_stamp
   }
 
+  packages_for_assembly = [
+                            ":${labels.build_info}",
+                            ":${labels.root_ssl_certificates}",
+
+                            # TODO(fxbug.dev/88453): There should be a contract for
+                            # determining the correct configuration for every product.
+                            # For now, this appears to be the only configuration in
+                            # use.
+                            "//src/sys/pkg/bin/system-update-committer:enable_reboot_on_verification_failure",
+                          ] + invoker.base_packages
+  all_base_packages = packages_for_assembly + [ ":${labels.empty_pkgfs}" ]
+  packages_for_update = all_base_packages + [
+                          ":${labels.update_package}",
+                          ":${labels.meta_packages}",
+                        ]
+
   # Main system assembly.
   assemble_system(labels.assembly) {
     testonly = true
     board_name = invoker.board_name
     bootfs_labels = []
-    base_packages = [
-                      ":${labels.build_info}",
-
-                      # TODO(fxbug.dev/88453): There should be a contract for
-                      # determining the correct configuration for every product.
-                      # For now, this appears to be the only configuration in
-                      # use.
-                      "//src/sys/pkg/bin/system-update-committer:enable_reboot_on_verification_failure",
-                    ] + invoker.base_packages
+    base_packages = packages_for_assembly
     pkgfs_package_label = ":${labels.empty_pkgfs}"
   }
 
@@ -271,10 +271,35 @@ template("assemble_security_pkg_test_system") {
   # TODO(fxbug.dev/88453): Verify that contents of `files.build_info_board` and
   # `files.update_board` are identical.
 
-  # `resource_group` targets should be built on the `target_toolchain`.
-  # Other toolchains should depend on the `target_toolchain` outputs.
+  # Publish TUF repository that corresponds to system update.
+  generate_package_metadata(labels.all_package_manifests_list) {
+    testonly = true
+    outputs = [ files.all_package_manifests_list ]
+    data_keys = [ "package_output_manifests" ]
+    rebase = root_build_dir
+    deps = packages_for_update
+  }
+  pm_publish_archive(labels.pm_publish_archive) {
+    testonly = true
+    deps = [ ":${labels.all_package_manifests_list}" ]
+    inputs = [ files.all_package_manifests_list ]
+  }
+
+  # `resource`/`resource_group` targets should be built on the
+  # `target_toolchain`. Other toolchains should depend on the `target_toolchain`
+  # outputs.
   if (current_toolchain == target_toolchain) {
-    # Resources needed to host a system image.
+    resource_group(labels.root_ssl_certificates_resource_group) {
+      testonly = true
+      files = [
+        {
+          source = root_ssl_certificates_resource.local
+          dest = root_ssl_certificates_resource.packaged
+        },
+      ]
+    }
+
+    # Resources needed to host a system image of this assembly.
     resource_group(labels.system_resources) {
       testonly = true
       deps = [ ":${labels.assembly}" ]
@@ -290,112 +315,43 @@ template("assemble_security_pkg_test_system") {
       ]
     }
 
-    # Resources needed for update package. The bespoke subset of files from
-    # system assembly that is included here is checked below.
-    resource_group(labels.update_resources_group) {
+    # Resource for update package far at a known path name.
+    resource_group(labels.update_package_resource) {
       testonly = true
-      deps = [
-        ":${labels.update_package}",
-
-        # Image assembler step in `assemble_system(...)` produces
-        # `packages.json`.
-        ":${labels.assembly_image_assembler}",
-      ]
+      deps = [ ":${labels.update_package}" ]
       files = [
-        {
-          source = zbi_resource.local
-          dest = zbi_resource.packaged
-        },
-        {
-          source = board_resource.local
-          dest = board_resource.packaged
-        },
-        {
-          source = packages_json_resource.local
-          dest = packages_json_resource.packaged
-        },
         {
           source = update_far_resource.local
           dest = update_far_resource.packaged
         },
-        {
-          source = epoch_json_resource.local
-          dest = epoch_json_resource.packaged
-        },
-        {
-          source = version_resource.local
-          dest = version_resource.packaged
-        },
       ]
-      if (use_vbmeta) {
-        files += [
-          {
-            source = vbmeta_resource.local
-            dest = vbmeta_resource.packaged
-          },
-        ]
-      }
-      foreach(firmware, firmware_resources) {
-        files += [
-          {
-            source = firmware.local
-            dest = firmware.packaged
-          },
-        ]
-      }
+    }
+
+    # Resources needed for serving an OTA update of this assembly.
+    zip_resource(labels.tuf_repo_resources) {
+      testonly = true
+      deps = [ ":${labels.pm_publish_archive}" ]
+      pm_publish_archive_outputs =
+          get_target_outputs(":${labels.pm_publish_archive}")
+      file = pm_publish_archive_outputs[0]
+      dest_prefix = directories.packaged_repository
     }
   } else {
+    group(labels.root_ssl_certificates_resource_group) {
+      testonly = true
+      public_deps = [ ":${labels.root_ssl_certificates}($target_toolchain)" ]
+    }
     group(labels.system_resources) {
       testonly = true
       public_deps = [ ":${labels.system_resources}($target_toolchain)" ]
     }
-
-    group(labels.update_resources_group) {
+    group(labels.tuf_repo_resources) {
       testonly = true
-      public_deps = [ ":${labels.update_resources_group}($target_toolchain)" ]
+      public_deps = [ ":${labels.tuf_repo_resources}($target_toolchain)" ]
     }
-  }
-
-  # Check update package resources: Step 1:
-  # Construct a package that contains update resources.
-  fuchsia_package(labels.update_resources_package) {
-    testonly = true
-    deps = [ ":${labels.update_resources_group}" ]
-  }
-
-  # Check update package resources: Step 2:
-  # Run script that compares blob hashes in the update resources package
-  # (directly above), and the actual update package. The script succeeds when
-  # update resources package contains *at least* the blobs in the update
-  # package.
-  action(labels.verify_update_package_resources) {
-    testonly = true
-    script =
-        "//src/security/pkg_test/assemblies/verify_update_package_resources.py"
-    sources = [
-      files.package_manifest_json,
-      files.update_package_manifest_json,
-    ]
-    deps = [
-      ":${labels.update_package}",
-      ":${labels.update_resources_package}",
-    ]
-    outputs = [ files.verify_update_package_resources ]
-    args = [
-      "--package-manifest-path",
-      rebase_path(files.package_manifest_json, root_build_dir),
-      "--update-package-manifest-path",
-      rebase_path(files.update_package_manifest_json, root_build_dir),
-      "--output",
-      rebase_path(files.verify_update_package_resources, root_build_dir),
-    ]
-  }
-
-  # Public update resources gn target: depends on the update resources and their
-  # verification step.
-  group(labels.update_resources) {
-    testonly = true
-    public_deps = [ ":${labels.update_resources_group}" ]
-    deps = [ ":${labels.verify_update_package_resources}" ]
+    group(labels.update_package_resource) {
+      testonly = true
+      public_deps = [ "${labels.update_package_resource}($target_toolchain)" ]
+    }
   }
 }

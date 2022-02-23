@@ -5,50 +5,27 @@
     include: [
         "//sdk/lib/syslog/client.shard.cml",
         "//sdk/lib/syslog/elf_stdio.shard.cml",
-        "//src/sys/test_runners/tmp_storage.shard.cml",
     ],
     program: {
         binary: "bin/pkg_server",
 
         // Note: Manifests including this shard must provide args:
-        //   --update-package-resource-directory
+        //   --tls-certificate-chain-path
+        //   --tls-private-key-path
+        //   --repository-path
     },
-    children: [
-        // Note: Manifests including this shard must provide children:
-        //   fshost
-    ],
     capabilities: [
         { protocol: "test.security.pkg.PackageServer" },
     ],
     use: [
+        // TODO: Needed anymore?
         {
-            directory: "blob",
-            from: "#fshost",
-            rights: [ "rw*" ],
-            path: "/blob",
-        },
-        {
-            protocol: "fuchsia.process.Launcher",
+            protocol: "fuchsia.net.name.Lookup",
             from: "parent",
         },
         {
             protocol: "fuchsia.posix.socket.Provider",
             from: "parent",
-        },
-        {
-            protocol: "fuchsia.net.name.Lookup",
-            from: "parent",
-        },
-    ],
-    offer: [
-        {
-            protocol: [
-                "fuchsia.kernel.VmexResource",
-                "fuchsia.logger.LogSink",
-                "fuchsia.process.Launcher",
-            ],
-            from: "parent",
-            to: "#fshost",
         },
     ],
     expose: [

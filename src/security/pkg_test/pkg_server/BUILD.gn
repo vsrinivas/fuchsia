@@ -15,24 +15,20 @@ rustc_binary("pkg_server-binary") {
   sources = [ "src/main.rs" ]
   deps = [
     ":test.security.pkg-rustc",
-    "//garnet/lib/rust/files_async",
     "//garnet/lib/rust/io_util",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
+    "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
-    "//src/lib/fuchsia-url",
+    "//src/lib/fuchsia-hyper",
     "//src/lib/syslog/rust:syslog",
-    "//src/sys/pkg/lib/blobfs",
-    "//src/sys/pkg/lib/far/rust:fuchsia-archive",
-    "//src/sys/pkg/lib/fuchsia-merkle",
-    "//src/sys/pkg/lib/fuchsia-pkg-testing",
-    "//src/sys/pkg/lib/update-package",
+    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:argh",
-    "//third_party/rust_crates:async-trait",
     "//third_party/rust_crates:futures",
-
-    # Required for using fuchsia-pkg-testing's PackageBuilder.
-    "//src/sys/pkg/bin/pm:pm_bin",
+    "//third_party/rust_crates:hyper",
+    "//third_party/rust_crates:rustls",
+    "//third_party/rust_crates:tokio",
+    "//third_party/rust_crates:tokio-rustls",
   ]
 }
 

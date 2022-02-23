@@ -5,10 +5,12 @@
     include: [ "//src/security/pkg_test/pkg_server/meta/pkg_server.shard.cml" ],
     program: {
         args: [
-            // Package server is serving update built via
-            // assemble_security_pkg_test_system("access_ota_blob_as_executable_v1").
-            "--update-package-resource-directory",
-            "/pkg/data/assemblies/access_ota_blob_as_executable_v1/update",
+            "--tls-certificate-chain-path",
+            "/pkg/data/pkg_server/tls/pkg_server.certchain",
+            "--tls-private-key-path",
+            "/pkg/data/pkg_server/tls/pkg_server.rsa",
+            "--repository-path",
+            "/pkg/data/assemblies/access_ota_blob_as_executable_v1/repository",
         ],
     },
     children: [

@@ -159,7 +159,7 @@ async fn access_ota_blob_as_executable() {
 
     // Placeholder assertion for well-formed local URL. Test will eventually use
     // URL to configure network connection for `pkg-resolver`.
-    assert!(package_server_url.starts_with("http://localhost"));
+    assert!(package_server_url.starts_with("https://localhost"));
 
     let update_url =
         format!("fuchsia-pkg://{}/update/0?hash={}", config.update_domain, update_merkle);
