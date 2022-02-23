@@ -22,7 +22,7 @@ use {
     fidl_fuchsia_bluetooth_test::{EmulatorSettings, HciError, PeerProxy},
     fidl_fuchsia_io as fio, fuchsia_async as fasync,
     fuchsia_bluetooth::{
-        constants::{integration_timeout_duration, HOST_DEVICE_DIR},
+        constants::{HOST_DEVICE_DIR, INTEGRATION_TIMEOUT},
         expect_eq,
         expectation::{
             self,
@@ -67,7 +67,7 @@ async fn test_lifecycle(_: ()) -> Result<(), Error> {
     )
     .await?;
     let mut watcher =
-        DeviceWatcher::new(HOST_DEVICE_DIR, dir_to_watch, integration_timeout_duration()).await?;
+        DeviceWatcher::new(HOST_DEVICE_DIR, dir_to_watch, INTEGRATION_TIMEOUT).await?;
     let _ = emulator.publish(settings).await?;
     let bthost = watcher.watch_new(&hci_topo, WatchFilter::AddedOnly).await?;
 
@@ -95,7 +95,7 @@ async fn test_lifecycle(_: ()) -> Result<(), Error> {
 async fn test_default_local_name(harness: HostDriverHarness) -> Result<(), Error> {
     const NAME: &str = "fuchsia";
     let _ = harness
-        .when_satisfied(emulator::expectation::local_name_is(NAME), integration_timeout_duration())
+        .when_satisfied(emulator::expectation::local_name_is(NAME), INTEGRATION_TIMEOUT)
         .await?;
     let _ = host_expectation::host_state(&harness, expectation::host_driver::name(NAME)).await?;
     Ok(())
@@ -111,7 +111,7 @@ async fn test_set_local_name(harness: HostDriverHarness) -> Result<(), Error> {
     expect_eq!(Ok(()), result)?;
 
     let _ = harness
-        .when_satisfied(emulator::expectation::local_name_is(NAME), integration_timeout_duration())
+        .when_satisfied(emulator::expectation::local_name_is(NAME), INTEGRATION_TIMEOUT)
         .await?;
     let _ = host_expectation::host_state(&harness, expectation::host_driver::name(NAME)).await?;
 
@@ -127,10 +127,7 @@ async fn test_set_device_class(harness: HostDriverHarness) -> Result<(), Error> 
     expect_eq!(Ok(()), result)?;
 
     let _ = harness
-        .when_satisfied(
-            emulator::expectation::device_class_is(device_class),
-            integration_timeout_duration(),
-        )
+        .when_satisfied(emulator::expectation::device_class_is(device_class), INTEGRATION_TIMEOUT)
         .await?;
     Ok(())
 }

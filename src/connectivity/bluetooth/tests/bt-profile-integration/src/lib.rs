@@ -21,7 +21,7 @@ use {
     fidl_fuchsia_bluetooth_test::{BredrPeerParameters, HciEmulatorProxy, PeerProxy},
     fuchsia_async::{DurationExt, TimeoutExt},
     fuchsia_bluetooth::{
-        constants::integration_timeout_duration,
+        constants::INTEGRATION_TIMEOUT,
         expectation::asynchronous::{ExpectableExt, ExpectableStateExt},
         types::{Address, PeerId, Uuid},
     },
@@ -131,7 +131,7 @@ async fn test_same_psm_twice_fails(profile: ProfileHarness) -> Result<(), Error>
     // Second request should have a closed stream
     match second_request_stream
         .next()
-        .on_timeout(integration_timeout_duration().after_now(), || {
+        .on_timeout(INTEGRATION_TIMEOUT.after_now(), || {
             Some(Err(fidl::Error::UnexpectedSyncResponse))
         })
         .await
@@ -185,10 +185,7 @@ async fn test_add_search((access, profile): (AccessHarness, ProfileHarness)) -> 
     let _discovery_result = start_discovery(&access).await?;
 
     let state = access
-        .when_satisfied(
-            expectation::peer_with_address(peer_address),
-            integration_timeout_duration(),
-        )
+        .when_satisfied(expectation::peer_with_address(peer_address), INTEGRATION_TIMEOUT)
         .await?;
 
     let connected_peer_id = state.peers.values().find(|p| p.address == peer_address).unwrap().id;
@@ -198,10 +195,7 @@ async fn test_add_search((access, profile): (AccessHarness, ProfileHarness)) -> 
         .await?
         .map_err(|sys_err| format_err!("Error calling Connect(): {:?}", sys_err))?;
     let _ = access
-        .when_satisfied(
-            expectation::peer_connected(connected_peer_id, true),
-            integration_timeout_duration(),
-        )
+        .when_satisfied(expectation::peer_connected(connected_peer_id, true), INTEGRATION_TIMEOUT)
         .await?;
 
     // The SDP search result conducted following connection should contain the
@@ -217,7 +211,7 @@ async fn test_add_search((access, profile): (AccessHarness, ProfileHarness)) -> 
                 connected_peer_id,
                 Uuid::new16(profile_id.into_primitive()),
             ),
-            integration_timeout_duration(),
+            INTEGRATION_TIMEOUT,
         )
         .await?;
 

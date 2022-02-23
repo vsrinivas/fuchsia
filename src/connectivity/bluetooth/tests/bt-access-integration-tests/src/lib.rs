@@ -12,7 +12,7 @@ use {
     fidl_fuchsia_bluetooth_sys::ProcedureTokenProxy,
     fidl_fuchsia_bluetooth_test::{AdvertisingData, LowEnergyPeerParameters, PeerProxy},
     fuchsia_bluetooth::{
-        constants::integration_timeout_duration as timeout_duration,
+        constants::INTEGRATION_TIMEOUT,
         expectation::asynchronous::{ExpectableExt, ExpectableStateExt},
         types::Address,
     },
@@ -79,7 +79,7 @@ async fn test_watch_peers(
 
     // We should be notified of the first peer
     let state = access
-        .when_satisfied(expectation::peer_with_address(first_address), timeout_duration())
+        .when_satisfied(expectation::peer_with_address(first_address), INTEGRATION_TIMEOUT)
         .await?;
 
     // We should not have seen the second peer yet
@@ -88,7 +88,7 @@ async fn test_watch_peers(
     // Once the second peer is added, we should see it
     let _second_peer = create_le_peer(&hci, second_address).await?;
     let _state = access
-        .when_satisfied(expectation::peer_with_address(second_address), timeout_duration())
+        .when_satisfied(expectation::peer_with_address(second_address), INTEGRATION_TIMEOUT)
         .await?;
 
     hci.destroy_and_wait().await?;
@@ -107,7 +107,7 @@ async fn test_disconnect(
     let _discovery = start_discovery(&access).await?;
 
     let state = access
-        .when_satisfied(expectation::peer_with_address(peer_address), timeout_duration())
+        .when_satisfied(expectation::peer_with_address(peer_address), INTEGRATION_TIMEOUT)
         .await?;
 
     // We can safely unwrap here as this is guarded by the previous expectation
@@ -119,7 +119,7 @@ async fn test_disconnect(
         .map_err(|sys_err| format_err!("Error calling Connect(): {:?}", sys_err))?;
 
     let _ = access
-        .when_satisfied(expectation::peer_connected(peer_id, true), timeout_duration())
+        .when_satisfied(expectation::peer_connected(peer_id, true), INTEGRATION_TIMEOUT)
         .await?;
 
     let fidl_response = access.aux().disconnect(&mut peer_id.into());
@@ -128,7 +128,7 @@ async fn test_disconnect(
         .map_err(|sys_err| format_err!("Error calling Disconnect(): {:?}", sys_err))?;
 
     let _ = access
-        .when_satisfied(expectation::peer_connected(peer_id, false), timeout_duration())
+        .when_satisfied(expectation::peer_connected(peer_id, false), INTEGRATION_TIMEOUT)
         .await?;
 
     hci.destroy_and_wait().await?;
@@ -145,14 +145,14 @@ async fn test_set_local_name(
     let (_host, mut hci) = activate_fake_host(host_watcher.clone()).await?;
 
     let _ = host_watcher
-        .when_satisfied(expectation::host_with_name(DEFAULT_TEST_DEVICE_NAME), timeout_duration())
+        .when_satisfied(expectation::host_with_name(DEFAULT_TEST_DEVICE_NAME), INTEGRATION_TIMEOUT)
         .await?;
 
     let expected_name = "bt-integration-test";
     access.aux().set_local_name(expected_name)?;
 
     let _ = host_watcher
-        .when_satisfied(expectation::host_with_name(expected_name), timeout_duration())
+        .when_satisfied(expectation::host_with_name(expected_name), INTEGRATION_TIMEOUT)
         .await?;
 
     hci.destroy_and_wait().await?;
@@ -171,7 +171,7 @@ async fn test_discovery(
 
     // We should now be discovering
     let _ = host_watcher
-        .when_satisfied(expectation::host_discovering(host, true), timeout_duration())
+        .when_satisfied(expectation::host_discovering(host, true), INTEGRATION_TIMEOUT)
         .await?;
 
     // Drop our end of the token channel
@@ -179,7 +179,7 @@ async fn test_discovery(
 
     // Since no-one else has requested discovery, we should cease discovery
     let _ = host_watcher
-        .when_satisfied(expectation::host_discovering(host, false), timeout_duration())
+        .when_satisfied(expectation::host_discovering(host, false), INTEGRATION_TIMEOUT)
         .await?;
 
     hci.destroy_and_wait().await?;
@@ -198,7 +198,7 @@ async fn test_discoverable(
 
     // We should now be discoverable
     let _ = host_watcher
-        .when_satisfied(expectation::host_discoverable(host, true), timeout_duration())
+        .when_satisfied(expectation::host_discoverable(host, true), INTEGRATION_TIMEOUT)
         .await?;
 
     // Drop our end of the token channel
@@ -206,7 +206,7 @@ async fn test_discoverable(
 
     // Since no-one else has requested discoverable, we should cease discoverable
     let _ = host_watcher
-        .when_satisfied(expectation::host_discoverable(host, false), timeout_duration())
+        .when_satisfied(expectation::host_discoverable(host, false), INTEGRATION_TIMEOUT)
         .await?;
 
     hci.destroy_and_wait().await?;

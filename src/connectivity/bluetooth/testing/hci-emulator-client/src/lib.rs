@@ -13,7 +13,7 @@ use {
     fidl_fuchsia_io::{self as fio, DirectoryProxy},
     fuchsia_async::{self as fasync, DurationExt, TimeoutExt},
     fuchsia_bluetooth::{
-        constants::{integration_timeout_duration as watch_timeout, HOST_DEVICE_DIR},
+        constants::{HOST_DEVICE_DIR, INTEGRATION_TIMEOUT as WATCH_TIMEOUT},
         util::open_rdwr,
     },
     fuchsia_component_test::ScopedInstance,
@@ -188,7 +188,7 @@ impl TestDevice {
         let name = controller
             .create()
             .map_err(Error::from)
-            .on_timeout(watch_timeout().after_now(), || {
+            .on_timeout(WATCH_TIMEOUT.after_now(), || {
                 Err(format_err!("timed out waiting for emulator to create test device"))
             })
             .await?
@@ -255,9 +255,9 @@ async fn dev_watcher_maybe_in_namespace(
             fio::OPEN_RIGHT_READABLE,
         )
         .await?;
-        DeviceWatcher::new(path, open_dir, watch_timeout()).await
+        DeviceWatcher::new(path, open_dir, WATCH_TIMEOUT).await
     } else {
-        DeviceWatcher::new_in_namespace(path, watch_timeout()).await
+        DeviceWatcher::new_in_namespace(path, WATCH_TIMEOUT).await
     }
 }
 
@@ -299,7 +299,7 @@ mod tests {
             let topo_path = PathBuf::from(topo_path);
 
             // A bt-emulator device should already exist by now.
-            emul_watcher = DeviceWatcher::new_in_namespace(EMULATOR_DEVICE_DIR, watch_timeout())
+            emul_watcher = DeviceWatcher::new_in_namespace(EMULATOR_DEVICE_DIR, WATCH_TIMEOUT)
                 .await
                 .expect("Failed to create bt-emulator device watcher");
             emul_dev = emul_watcher
@@ -310,7 +310,7 @@ mod tests {
             // Send a publish message to the device. This call should succeed and result in a new
             // bt-hci device. (Note: it is important for `hci_watcher` to get constructed here since
             // our expectation is based on the `ADD_FILE` event).
-            hci_watcher = DeviceWatcher::new_in_namespace(HCI_DEVICE_DIR, watch_timeout())
+            hci_watcher = DeviceWatcher::new_in_namespace(HCI_DEVICE_DIR, WATCH_TIMEOUT)
                 .await
                 .expect("Failed to create bt-hci device watcher");
             let _ = fake_dev

@@ -14,7 +14,7 @@ use {
         Predicate as P,
     },
     fuchsia_bluetooth::{
-        constants::integration_timeout_duration,
+        constants::INTEGRATION_TIMEOUT,
         types::{Address, BondingData, HostData, Identity, LeBondData, OneOrBoth, PeerId},
     },
     std::collections::HashSet,
@@ -89,7 +89,7 @@ async fn test_add_and_commit_identities(
         move |access| expected_peers == access.peers.keys().cloned().collect(),
         "known device identifiers == expected device identifiers",
     );
-    let _ = access.when_satisfied(pred, integration_timeout_duration()).await?;
+    let _ = access.when_satisfied(pred, INTEGRATION_TIMEOUT).await?;
 
     Ok(())
 }
