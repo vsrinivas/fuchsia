@@ -44,7 +44,7 @@ def is_dart_package_dir(package_dir):
         return False
 
     with open(pubspec_file) as f:
-        pubspec = yaml.load(f, Loader=yaml.Loader)
+        pubspec = yaml.load(f, Loader=yaml.SafeLoader)
         if not pubspec or pubspec['name'] != os.path.basename(package_dir):
             # Implies an invalid pubspec and the package will be ignored in dartdocs
             return False
