@@ -16,6 +16,7 @@ group("tests") {
 
 test("fasync-test") {
   sources = [
+    "barrier_tests.cc",
     "bridge_tests.cc",
     "compiler_tests.cc",
     "future_example.cc",
