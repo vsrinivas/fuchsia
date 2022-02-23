@@ -39,9 +39,8 @@ zx::status<std::vector<uint8_t>> TeeMetadataToFidl(
 
   metadata.set_custom_threads(allocator, thr_config);
 
-  // TODO(fxbug.dev/45252): Use FIDL at rest.
   fidl::unstable::OwnedEncodedMessage<fuchsia_hardware_tee::wire::TeeMetadata> encoded(
-      fidl::internal::WireFormatVersion::kV1, &metadata);
+      fidl::internal::WireFormatVersion::kV2, &metadata);
   if (!encoded.ok()) {
     return zx::error(encoded.status());
   }

@@ -138,9 +138,8 @@ zx_status_t Sherlock::RegistersInit() {
 
   auto metadata =
       registers::BuildMetadata(allocator, std::move(mmio_entries), std::move(register_entries));
-  // TODO(fxbug.dev/45252): Use FIDL at rest.
   fidl::unstable::OwnedEncodedMessage<registers::Metadata> encoded_metadata(
-      fidl::internal::WireFormatVersion::kV1, &metadata);
+      fidl::internal::WireFormatVersion::kV2, &metadata);
   if (!encoded_metadata.ok()) {
     zxlogf(ERROR, "%s: Could not build metadata %s\n", __func__,
            encoded_metadata.FormatDescription().c_str());

@@ -27,9 +27,8 @@ zx::status<std::vector<uint8_t>> I2CChannelsToFidl(const cpp20::span<const Chann
   fuchsia_hardware_i2c::wire::I2CBusMetadata metadata(allocator);
   metadata.set_channels(allocator, i2c_channels);
 
-  // TODO(fxbug.dev/45252): Use FIDL at rest.
   fidl::unstable::OwnedEncodedMessage<fuchsia_hardware_i2c::wire::I2CBusMetadata> encoded(
-      fidl::internal::WireFormatVersion::kV1, &metadata);
+      fidl::internal::WireFormatVersion::kV2, &metadata);
   if (!encoded.ok()) {
     return zx::error(encoded.status());
   }

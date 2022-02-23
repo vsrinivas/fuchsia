@@ -19,8 +19,8 @@ static void check_encodes(
   std::vector<uint8_t>& data = result.value();
 
   // Decode.
-  fidl::unstable::DecodedMessage<fuchsia_hardware_tee::wire::TeeMetadata> decoded(data.data(),
-                                                                                  data.size());
+  fidl::unstable::DecodedMessage<fuchsia_hardware_tee::wire::TeeMetadata> decoded(
+      fidl::internal::WireFormatVersion::kV2, data.data(), data.size());
   ASSERT_OK(decoded.status());
 
   auto metadata = decoded.PrimaryObject();

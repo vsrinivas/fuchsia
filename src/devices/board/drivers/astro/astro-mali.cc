@@ -66,7 +66,6 @@ zx_status_t Astro::MaliInit() {
   fidl::Arena allocator;
   Metadata metadata(allocator);
   metadata.set_supports_protected_mode(true);
-  // TODO(fxbug.dev/45252): Use FIDL at rest.
   fidl::unstable::OwnedEncodedMessage<Metadata> encoded_metadata(
       fidl::internal::WireFormatVersion::kV2, &metadata);
   if (!encoded_metadata.ok()) {

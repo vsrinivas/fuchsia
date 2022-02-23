@@ -15,9 +15,8 @@ static void check_encodes(cpp20::span<const fidl_metadata::spi::Channel> spi_cha
   std::vector<uint8_t>& data = result.value();
 
   // Decode.
-  // TODO(fxbug.dev/45252): Use FIDL at rest.
   fidl::unstable::DecodedMessage<fuchsia_hardware_spi::wire::SpiBusMetadata> decoded(
-      fidl::internal::WireFormatVersion::kV1, data.data(), data.size());
+      fidl::internal::WireFormatVersion::kV2, data.data(), data.size());
   ASSERT_OK(decoded.status());
 
   auto metadata = decoded.PrimaryObject();
