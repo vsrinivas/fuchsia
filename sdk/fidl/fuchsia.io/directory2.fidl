@@ -172,29 +172,29 @@ protocol Directory2 {
         dst Name;
     }) -> (struct {}) error zx.status;
 
-    /// Creates a link to a node named `src` by the name `dst`,
-    /// in a directory represented by `dst_parent_token`.
-    ///
-    /// Directories cannot be linked, to prevent reference cycles.
-    ///
-    /// `src` and `dst` must be valid node names.
-    /// See [`Name`] for what constitutes a valid name.
-    ///
-    /// This method requires the following rights on both the current
-    /// connection, and the connection identified by `dst_parent_token`:
-    ///
-    /// * [`Rights.ENUMERATE`]
-    /// * [`Rights.MODIFY_DIRECTORY`]
-    ///
-    /// * error `ZX_ERR_INVALID_ARGS` if `src` or `dst` is invalid.
-    /// * error `ZX_ERR_INVALID_ARGS` if `src` is a directory.
-    @transitional
-    @selector("fuchsia.io/Directory.Link")
-    Link2(resource struct {
-        src Name;
-        dst_parent_token Token;
-        dst Name;
-    }) -> (struct {}) error zx.status;
+    // TODO(https://fxbug.dev/77623): uncomment and implement.
+    // /// Creates a link to a node named `src` by the name `dst`,
+    // /// in a directory represented by `dst_parent_token`.
+    // ///
+    // /// Directories cannot be linked, to prevent reference cycles.
+    // ///
+    // /// `src` and `dst` must be valid node names.
+    // /// See [`Name`] for what constitutes a valid name.
+    // ///
+    // /// This method requires the following rights on both the current
+    // /// connection, and the connection identified by `dst_parent_token`:
+    // ///
+    // /// * [`Rights.ENUMERATE`]
+    // /// * [`Rights.MODIFY_DIRECTORY`]
+    // ///
+    // /// * error `ZX_ERR_INVALID_ARGS` if `src` or `dst` is invalid.
+    // /// * error `ZX_ERR_INVALID_ARGS` if `src` is a directory.
+    // @selector("fuchsia.io/Directory.Link")
+    // Link2(resource struct {
+    //     src Name;
+    //     dst_parent_token Token;
+    //     dst Name;
+    // }) -> (struct {}) error zx.status;
 };
 
 /// Options related to node creation during [`Directory.Open`].

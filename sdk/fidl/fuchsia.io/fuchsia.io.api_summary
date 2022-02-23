@@ -75,7 +75,6 @@ protocol/member fuchsia.io/Directory.GetFlags() -> (int32 s,uint32 flags)
 protocol/member fuchsia.io/Directory.GetToken() -> (int32 s,zx/handle:optional token)
 protocol/member fuchsia.io/Directory.IoToIo2Placeholder()
 protocol/member fuchsia.io/Directory.Link(string:255 src,zx/handle dst_parent_token,string:255 dst) -> (int32 s)
-protocol/member fuchsia.io/Directory.Link2(string:255 src,zx/handle:EVENT dst_parent_token,string:255 dst) -> (fuchsia.io/Directory2_Link2_Result result)
 protocol/member fuchsia.io/Directory.OnConnectionInfo -> (fuchsia.io/ConnectionInfo info)
 protocol/member fuchsia.io/Directory.OnOpen -> (int32 s,fuchsia.io/NodeInfo:optional info)
 protocol/member fuchsia.io/Directory.Open(uint32 flags,uint32 mode,string:4096 path,server_end:fuchsia.io/Node object)
@@ -124,7 +123,6 @@ protocol/member fuchsia.io/Directory2.Close() -> (fuchsia.io/Node2_Close_Result 
 protocol/member fuchsia.io/Directory2.Describe2(fuchsia.io/ConnectionInfoQuery query) -> (fuchsia.io/ConnectionInfo info)
 protocol/member fuchsia.io/Directory2.Enumerate(fuchsia.io/DirectoryEnumerateOptions options,server_end:fuchsia.io/DirectoryIterator iterator)
 protocol/member fuchsia.io/Directory2.GetAttributes(fuchsia.io/NodeAttributesQuery query) -> (fuchsia.io/Node2_GetAttributes_Result result)
-protocol/member fuchsia.io/Directory2.Link2(string:255 src,zx/handle:EVENT dst_parent_token,string:255 dst) -> (fuchsia.io/Directory2_Link2_Result result)
 protocol/member fuchsia.io/Directory2.OnConnectionInfo -> (fuchsia.io/ConnectionInfo info)
 protocol/member fuchsia.io/Directory2.Open2(string:4095 path,fuchsia.io/OpenMode mode,fuchsia.io/ConnectionOptions options,zx/handle:CHANNEL object_request)
 protocol/member fuchsia.io/Directory2.Rename(string:255 src,zx/handle:EVENT dst_parent_token,string:255 dst) -> (fuchsia.io/Directory2_Rename_Result result)
@@ -133,10 +131,6 @@ protocol/member fuchsia.io/Directory2.Sync() -> (fuchsia.io/Node2_Sync_Result re
 protocol/member fuchsia.io/Directory2.Unlink(string:255 name,fuchsia.io/UnlinkOptions options) -> (fuchsia.io/Directory2_Unlink_Result result)
 protocol/member fuchsia.io/Directory2.UpdateAttributes(fuchsia.io/NodeAttributes2 attributes) -> (fuchsia.io/Node2_UpdateAttributes_Result result)
 protocol fuchsia.io/Directory2
-struct fuchsia.io/Directory2_Link2_Response
-union/member fuchsia.io/Directory2_Link2_Result.err int32
-union/member fuchsia.io/Directory2_Link2_Result.response fuchsia.io/Directory2_Link2_Response
-strict union fuchsia.io/Directory2_Link2_Result
 struct fuchsia.io/Directory2_Rename_Response
 union/member fuchsia.io/Directory2_Rename_Result.err int32
 union/member fuchsia.io/Directory2_Rename_Result.response fuchsia.io/Directory2_Rename_Response
