@@ -34,8 +34,7 @@ except ImportError as e:
 if sys.hexversion < 0x030700F0:
   logging.critical(
       'This script requires Python >= 3.7 to run (you have %s), please upgrade!'
-      % (platform.python_version()),
-      file=sys.stderr)
+      % (platform.python_version()))
   sys.exit(1)
 
 WORKSTATION_INSTALLER_GPT_GUID = '4dce98ce-e77e-45c1-a863-caf92f1330c1'
@@ -382,7 +381,7 @@ def GetUsbDisks():
   res = subprocess.run(['fx', 'list-usb-disks'], capture_output=True)
   res.check_returncode()
 
-  disks = res.stdout.decode('utf-8').split('\n')
+  disks = [d for d in res.stdout.decode('utf-8').split('\n') if d]
   return disks
 
 
@@ -427,8 +426,7 @@ def Main(args):
       logging.critical(
           ('Path {} is not a USB device. Use -f to force.\n'
            'Detected USB devices:\n'
-           '{}').format(path, '\n'.join(GetUsbDisks())),
-          file=sys.stderr)
+           '{}').format(path, '\n'.join(GetUsbDisks())))
       return 1
 
     if not os.access(path, os.W_OK) and sys.stdin.isatty():
