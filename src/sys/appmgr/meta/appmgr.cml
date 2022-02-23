@@ -44,8 +44,8 @@
         // these directories.
         //
         // For more information on how to route protocols between v1 and v2, read:
-        // https://fuchsia.dev/fuchsia-src/development/components/v2/migration#v1-component-provides-service
-        // https://fuchsia.dev/fuchsia-src/development/components/v2/migration#route-to-v1
+        // https://fuchsia.dev/fuchsia-src/development/components/v2/migration/components#v1-component-provides-service
+        // https://fuchsia.dev/fuchsia-src/development/components/v2/migration/components#route-to-v1
         {
             directory: "svc_from_sys",
             rights: [ "rw*" ],
