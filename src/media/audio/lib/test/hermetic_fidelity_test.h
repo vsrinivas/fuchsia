@@ -98,6 +98,8 @@ class HermeticFidelityTest : public HermeticPipelineTest {
     std::vector<EffectConfig> effect_configs;
   };
 
+  static const std::array<double, HermeticFidelityTest::kNumReferenceFreqs> FillArray(double val);
+
   void SetUp() override;
 
   template <fuchsia::media::AudioSampleFormat InputFormat,
@@ -116,6 +118,13 @@ class HermeticFidelityTest : public HermeticPipelineTest {
     int32_t display_val;
     int32_t periods;
     size_t idx;
+  };
+
+  struct SignalSectionIndices {
+    int64_t stabilization_start;
+    int64_t analysis_start;
+    int64_t analysis_end;
+    int64_t stabilization_end;
   };
 
   void TearDown() override {
@@ -141,6 +150,18 @@ class HermeticFidelityTest : public HermeticPipelineTest {
                                               AudioBuffer<InputFormat> input,
                                               VirtualOutput<OutputFormat>* device,
                                               ClockMode clock_mode);
+
+  // Display specific locations of interest in the generated input signal, for debugging.
+  template <fuchsia::media::AudioSampleFormat InputFormat>
+  static void DisplayInputBufferSections(const AudioBuffer<InputFormat>& buffer,
+                                         const std::string& initial_tag,
+                                         const SignalSectionIndices& input_indices);
+
+  // Display specific locations of interest in the received output signal, for debugging.
+  template <fuchsia::media::AudioSampleFormat OutputFormat>
+  static void DisplayOutputBufferSections(const AudioBuffer<OutputFormat>& buffer,
+                                          const std::string& initial_tag,
+                                          const SignalSectionIndices& output_indices);
 
   // Display results for this path, in tabular form for each compare/copy to existing limits.
   template <fuchsia::media::AudioSampleFormat InputFormat,

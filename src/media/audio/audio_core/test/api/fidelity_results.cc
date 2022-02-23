@@ -10,12 +10,6 @@
 
 namespace media::audio::test {
 
-const std::array<double, HermeticFidelityTest::kNumReferenceFreqs> FillArray(double val) {
-  std::array<double, HermeticFidelityTest::kNumReferenceFreqs> arr;
-  arr.fill(val);
-  return arr;
-}
-
 // SiNAD (Signal-to-Noise and Distortion) is an indicator of audio quality, measured in decibels.
 // Given a recognizable input signal that produces a given output, SiNAD is the ratio between the
 // strength of the recognized signal in that output, versus the combined strengths of all other
@@ -30,36 +24,36 @@ const std::array<double, HermeticFidelityTest::kNumReferenceFreqs> FillArray(dou
 //
 // For source channels with >13 bits of precision, where we expect theoretical best-case response.
 const std::array<double, HermeticFidelityTest::kNumReferenceFreqs>
-    FidelityResults::kFullScaleLimitsDb = FillArray(-0.001);
+    FidelityResults::kFullScaleLimitsDb = HermeticFidelityTest::FillArray(-0.001);
 
 // Channels fed no input should generate no output. Without effects, we should have no inter-channel
 // crosstalk/bleed-through/distortion. Used for frequency response.
 const std::array<double, HermeticFidelityTest::kNumReferenceFreqs> FidelityResults::kSilenceDb =
-    FillArray(-INFINITY);
+    HermeticFidelityTest::FillArray(-INFINITY);
 
 /////////////////////////////////////////////////
 // Format-specific (but not rate-specific) limits
 //
 // (1) uint8 source: theoretical best-case output is 127/128, or -0.0681 dB
 const std::array<double, HermeticFidelityTest::kNumReferenceFreqs> FidelityResults::kUint8LimitsDb =
-    FillArray(-0.069);
+    HermeticFidelityTest::FillArray(-0.069);
 // uint8 SiNAD reflects 8 bits of precision (8 * 6.0206db == 48.165 db, plus ~ 1.76 db).
 const std::array<double, HermeticFidelityTest::kNumReferenceFreqs>
-    FidelityResults::kUint8SinadLimitsDb = FillArray(49.952);
+    FidelityResults::kUint8SinadLimitsDb = HermeticFidelityTest::FillArray(49.952);
 
 // (2) int16 source: theoretical best-case output is 32767/32768, or -0.000265 dB. We measure at
 // .001 precision, so instead of a specific kInt16LimitsDb we use kFullScaleLimitsDb.
 //
 // int16 SiNAD reflects 16 bits of precision (16 * 6.0206 == 96.330 db, plus ~ 1.76 db).
 const std::array<double, HermeticFidelityTest::kNumReferenceFreqs>
-    FidelityResults::kInt16SinadLimitsDb = FillArray(98.104);
+    FidelityResults::kInt16SinadLimitsDb = HermeticFidelityTest::FillArray(98.104);
 
 // (3) int24 source: theoretical best-case output is 8388607/8388608, or -0.000001 dB. We measure at
 // .001 precision, so instead of a specific kInt24LimitsDb we use kFullScaleLimitsDb.
 //
 // int24 SiNAD reflects 24 bits of precision (24 * 6.0206 == 144.494 db, plus ~ 1.76 db).
 const std::array<double, HermeticFidelityTest::kNumReferenceFreqs>
-    FidelityResults::kInt24SinadLimitsDb = FillArray(146.309);
+    FidelityResults::kInt24SinadLimitsDb = HermeticFidelityTest::FillArray(146.309);
 
 // (4) float32 source: max output is 1.0. kFullScaleLimitsDb instead of a specific kFloat32LimitsDb.
 //
@@ -67,7 +61,7 @@ const std::array<double, HermeticFidelityTest::kNumReferenceFreqs>
 // point that increases the usual 1.76 db quantization factor to > 3 db).
 // (Why 25 bits, with 8 bits of exponent?  sign + implicit "1." + 23 bits of fractional mantissa)
 const std::array<double, HermeticFidelityTest::kNumReferenceFreqs>
-    FidelityResults::kFloat32SinadLimitsDb = FillArray(153.745);
+    FidelityResults::kFloat32SinadLimitsDb = HermeticFidelityTest::FillArray(153.745);
 
 ////////////////////////////////////////////////////
 // Rate-specific frequency response and sinad limits

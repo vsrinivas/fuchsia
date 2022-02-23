@@ -32,61 +32,55 @@ namespace media::audio::test {
 
 // Value related to cmdline flags
 //
-// Saving all input|output files (if --save-input-and-output specified) consumes too much
-// on-device storage. These tests save only the input|output files for this specified frequency.
-//
-// We favor 1 khz tones in single-frequency tests because it activates both low-frequency and
-// high-frequency outputs ("woofers" and "tweeters"), for dual-amp output devices.
+// If --save-input-and-output is specified, saving input|output files for every test frequency
+// consumes too much on-device storage. Just save the files for this specified frequency.
 static constexpr int32_t kFrequencyForSavedWavFiles = 1000;
 
+//
 // Custom build-time flags
 //
 // For normal CQ operation, the below should be FALSE.
 //
 // Debug positioning and values of the renderer's input buffer, by showing certain sections.
-//
-// When debugging an input buffer of floats, we expect full-scale values for both first frame
-// "post-ramp-in", and first "ramp-out" frame (i.e., indices that become the first-frame and
-// one-after-final-frame locations in the output analysis section).
 static constexpr bool kDebugInputBuffer = false;
-
 // Debug positioning and values of the output ring buffer snapshot, by showing certain sections.
-//
-// If output pipeline has no phase shift, then (like input buffers) we expect full-scale values in
-// both the first frame of the analysis section, and the first frame after the analysis section.
 static constexpr bool kDebugOutputBuffer = false;
-// How many output frames on either side of "positions of interest" should we display
-static constexpr int64_t kOutputDisplayWindow = 128;
-static constexpr int64_t kOutputAdditionalSignalStartDisplayWindow = 128;
-
-// If debugging input/output ring buffer contents, display buffer sections for ALL frequencies.
-// Otherwise, kDebugInputBuffer|kDebugOutputBuffer only display buffers for the below frequency.
+// If debugging input or output ring buffers (above), display buffers for all test frequencies?
 static constexpr bool kDebugBuffersAtAllFrequencies = false;
-static constexpr int32_t kFrequencyForBufferDebugging = 1000;
-
 // Retain/display worst-case single-test-case results in a looped run. Used to update limits.
 static constexpr bool kRetainWorstCaseResults = false;
-
 // Show results at test-end in tabular form, for copy/compare to hermetic_fidelity_result.cc.
 static constexpr bool kDisplaySummaryResults = false;
-
 //
-// For normal CQ operation, the below should be TRUE.
-// These aid in debugging sporadic failures encountered in CQ.
+// For normal CQ operation, the below should be TRUE.  (They aid in debugging sporadic CQ issues.)
 //
 // Displaying results on-the-fly helps correlate an UNDERFLOW with the affected frequency.
 static constexpr bool kDisplayInProgressResults = true;
+// On significant FR/SiNAD failure (-20db), display relevant output buffer sections while we can.
+static constexpr bool kDebugOutputBufferOnFailure = true;
 
-// On significant SINAD failure (-20db), display relevant output buffer sections before moving on.
-static constexpr bool kDebugOutputBufferOnSinadFailure = true;
-static constexpr double kDebugOutputBufferOnSinadFailureDbTolerance = 20.0;
+// Additional related configuration
+//
+// How many input frames on either side of "positions of interest" to display
+static constexpr int64_t kInputDisplayWindow = 16;
+// How many output frames on either side of "positions of interest" to display
+static constexpr int64_t kOutputDisplayWindow = 48;
+// Displaying a larger set of "beginning of signal" and "end of signal" frames helps us diagnose
+// output delays and incorrect pipeline widths.
+static constexpr int64_t kOutputAdditionalSignalStartDisplayWindow = 80;
+static constexpr int64_t kOutputAdditionalSignalEndDisplayWindow = 80;
+// If not displaying buffers at all frequencies, only show this one (applies to input and output).
+// 1 khz is a reasonable mid-range input for saved files, debugging, and single-frequency tests.
+static constexpr int32_t kFrequencyForBufferDebugging = 1000;
+// Dumping buffers for every failure may be too verbose. Only dump ones worse than these limits.
+static constexpr double kDebugOutputBufferOnFailureFreqRespDbTolerance = 20.0;
+static constexpr double kDebugOutputBufferOnFailureSinadDbTolerance = 20.0;
 
 //
 // Consts related to fidelity testing thresholds
 //
 // The power-of-two size of our spectrum analysis buffer, and our frequency spectrum set.
 static constexpr int64_t kFreqTestBufSize = 65536;
-
 // When testing fidelity, we compare actual measured dB to expected dB. These tests are designed
 // to pass if 'actual >= expected', OR less but within the following tolerance. This tolerance
 // also sets the digits of precision for 'expected' values, when stored or displayed.
@@ -106,6 +100,14 @@ struct ResultsIndex {
     return std::tie(test_name, channel) < std::tie(rhs.test_name, rhs.channel);
   }
 };
+
+// static
+const std::array<double, HermeticFidelityTest::kNumReferenceFreqs> HermeticFidelityTest::FillArray(
+    double val) {
+  std::array<double, HermeticFidelityTest::kNumReferenceFreqs> arr;
+  arr.fill(val);
+  return arr;
+}
 
 // static
 // Retrieve (initially allocating, if necessary) the array of level results for this path|channel.
@@ -327,6 +329,130 @@ AudioBuffer<OutputFormat> HermeticFidelityTest::GetRendererOutput(
   return device->SnapshotRingBuffer();
 }
 
+// Measuring system response requires providing enough input for a full output response.
+//
+// Our input buffer contains initial silence, (more-than-enough) signal, then final silence.
+// The [silence+signal+silence] must include adequate length for OUTPUT ramp-up and stabilization,
+// a sufficient section of fully stabilized signal for analysis, and ultimately ramp-down/ring-out.
+//
+// Output ramping may occur before AND after input transitions, so we refer to 5 output sections:
+//   ramp-in,         initial stabilization, analysis section, final stabilization, ramp-out.
+// The input signal contains these directly-corresponding sections:
+//   initial silence, initial stabilization, analysis section, final stabilization, final silence.
+//
+// For this source                              ___________________________                       .
+// input signal, with             _____________|                           |____________________  .
+// Initial and Final                                                                              .
+// frames I and F:                             I                          F                       .
+//                                                                                                .
+// A system may produce                        /\_^=~_~_--------------^-_~/\_                     .
+// this output signal:            -------_~_^_/                              \/~_=_~-/\~_-_-----  .
+//                                                      ^            ^                            .
+// "Ramp-in" (pre I):                    RRRRRR         .            .                            .
+// "initial Stabilization" (at/post I):        SSSSSSSSS.            .                            .
+// "final (De)stabilization" (pre/at F):                .            .DDDDD                       .
+// "ramp-Out"/"ring-Out" (post F):                      .            .     OOOOOOOOOOOOOOOO       .
+// stable "Analysis section":                           AAAAAAAAAAAAAA                            .
+//                                                                                                .
+// Thus, our source signals                     ___________________________                       .
+// conceptually include the       _____________|                           |____________________  .
+// corresponding sections:                                                                        .
+// 1: initial silence             1111111111111                                                   .
+// 2: initial stabilization                    222222222                                          .
+// 3: analysis section                                  33333333333333                            .
+// 4: final stabilization                                             44444                       .
+// 5: final silence                                                        555555555555555555555  .
+//
+// Test writers use HermeticPipelineTest::PipelineConstants to convey these transition widths
+// (pos_filter_width and neg_filter_width). For now we use pos_filter_width for initial-silence /
+// ramp-in AND final-stabilization, and neg_filter_width for initial-stabilization AND ramp-out.
+// TODO(fxbug.dev/89247): Refactor pos_filter_width and neg_filter_width into four pipeline widths.
+
+// static
+// Input buffer should contain exact silence for first/last sections and immediate continuous signal
+// across the three middle sections, with a full-scale value at start of analysis section (this
+// becomes the OUTPUT analysis section's first frame). Depending on input signal frequency, there
+// will be an identical full-scale value at either start of final stabilization (periods-per-buffer
+// is integral), or earlier by less than a frame (if non-integral). Conceptually, these values must
+// be identical so that the resulting (guaranteed-integral) output analysis section can be perfectly
+// "infinitely looped" (which is how spectral-analysis FFT essentially treats it).
+template <ASF InputFormat>
+void HermeticFidelityTest::DisplayInputBufferSections(const AudioBuffer<InputFormat>& buffer,
+                                                      const std::string& initial_tag,
+                                                      const SignalSectionIndices& input_indices) {
+  buffer.Display(0, kInputDisplayWindow, initial_tag);
+  buffer.Display(input_indices.stabilization_start - kInputDisplayWindow,
+                 input_indices.stabilization_start,
+                 "End of initial silence (should be entirely silent)");
+
+  buffer.Display(input_indices.stabilization_start,
+                 input_indices.stabilization_start + kInputDisplayWindow,
+                 "Start of initial stabilization (should start immediately)");
+  buffer.Display(input_indices.analysis_start - kInputDisplayWindow, input_indices.analysis_start,
+                 "End of initial stabilization (should lead toward a full-scale value)");
+
+  buffer.Display(input_indices.analysis_start, input_indices.analysis_start + kInputDisplayWindow,
+                 "Start of signal-to-be-analyzed (should start at a full-scale value)");
+  buffer.Display(input_indices.analysis_end - kInputDisplayWindow, input_indices.analysis_end,
+                 "End of signal-to-be-analyzed (should lead toward a full-scale value)");
+
+  buffer.Display(input_indices.analysis_end, input_indices.analysis_end + kInputDisplayWindow,
+                 "Start of final stabilization (should start at/after a full-scale value)");
+  buffer.Display(input_indices.stabilization_end - kInputDisplayWindow,
+                 input_indices.stabilization_end,
+                 "End of final stabilization (should continue without attenuation)");
+
+  buffer.Display(input_indices.stabilization_end,
+                 input_indices.stabilization_end + kInputDisplayWindow,
+                 "Start of final_silence (should be immediately silent)");
+  buffer.Display(buffer.NumFrames() - kInputDisplayWindow, buffer.NumFrames(),
+                 "End of final silence (and end of input buffer)");
+}
+
+// static
+// If output pipeline has no phase shift, then we expect full-scale values in both first frame of
+// analysis section, and first frame after analysis section. If pipeline has phase shift, they
+// should still be identical but may not be full-scale (analysis section should still be loopable).
+template <ASF OutputFormat>
+void HermeticFidelityTest::DisplayOutputBufferSections(const AudioBuffer<OutputFormat>& buffer,
+                                                       const std::string& initial_tag,
+                                                       const SignalSectionIndices& output_indices) {
+  buffer.Display(0, kOutputDisplayWindow, initial_tag);
+  buffer.Display(output_indices.stabilization_start - kOutputDisplayWindow,
+                 output_indices.stabilization_start,
+                 "End of ramp-in (may end in destabilization, then sudden rise)");
+
+  buffer.Display(output_indices.stabilization_start,
+                 output_indices.stabilization_start + kOutputDisplayWindow,
+                 "Start of initial stabilization (may start with overshoot; should stabilize)");
+  buffer.Display(output_indices.analysis_start - kOutputDisplayWindow -
+                     kOutputAdditionalSignalStartDisplayWindow,
+                 output_indices.analysis_start,
+                 "End of initial stabilization (should be fully stable by end of section)");
+
+  buffer.Display(output_indices.analysis_start,
+                 output_indices.analysis_start + kOutputDisplayWindow +
+                     kOutputAdditionalSignalStartDisplayWindow,
+                 "Start of analysis section (should start with max value for this channel)");
+  buffer.Display(
+      output_indices.analysis_end - kOutputDisplayWindow - kOutputAdditionalSignalEndDisplayWindow,
+      output_indices.analysis_end,
+      "End of analysis section (should resemble end of initial stabilization)");
+
+  buffer.Display(
+      output_indices.analysis_end,
+      output_indices.analysis_end + kOutputDisplayWindow + kOutputAdditionalSignalEndDisplayWindow,
+      "Start of final stabilization (should resemble start of analysis section)");
+  buffer.Display(output_indices.stabilization_end - kOutputDisplayWindow,
+                 output_indices.stabilization_end, "End of final stabilization (may destabilize)");
+
+  buffer.Display(output_indices.stabilization_end,
+                 output_indices.stabilization_end + kOutputDisplayWindow,
+                 "Start of final ramp-out (should start to ramp out; may be unstable)");
+  buffer.Display(buffer.NumFrames() - kOutputDisplayWindow, buffer.NumFrames(),
+                 "End of output buffer (should be silent)");
+}
+
 template <ASF InputFormat, ASF OutputFormat>
 void HermeticFidelityTest::DisplaySummaryResults(
     const TestCase<InputFormat, OutputFormat>& test_case,
@@ -455,13 +581,23 @@ void HermeticFidelityTest::Run(
   //     section until after the analysis section.
   // (5) for now, we also include final silence, as this seems to make results more stable. This
   //     SHOULD not be needed and thus needs to be investigated and more fully understood.
-  auto init_silence_len = tc.pipeline.pos_filter_width;
-  auto init_stabilization_len = tc.pipeline.neg_filter_width;
-  auto final_stabilization_len = tc.pipeline.pos_filter_width;
-  auto final_silence_len = tc.pipeline.neg_filter_width;
+  auto init_silence_len = static_cast<int64_t>(tc.pipeline.pos_filter_width);
+  auto init_stabilization_len = static_cast<int64_t>(tc.pipeline.neg_filter_width);
+  auto final_stabilization_len = static_cast<int64_t>(tc.pipeline.pos_filter_width);
+  auto final_silence_len = static_cast<int64_t>(tc.pipeline.neg_filter_width);
+
+  auto input_type_mono =
+      Format::Create<InputFormat>(1, tc.input_format.frames_per_second()).take_value();
+  auto init_silence = GenerateSilentAudio(input_type_mono, init_silence_len);
+  auto final_silence = GenerateSilentAudio(input_type_mono, final_silence_len);
+
+  auto input_stabilization_start = init_silence_len;
+  auto input_analysis_start = input_stabilization_start + init_stabilization_len;
+  auto input_analysis_end = input_analysis_start + input_signal_frames_to_measure;
+  auto input_stabilization_end = input_analysis_end + final_stabilization_len;
+
   auto input_signal_len =
       init_stabilization_len + input_signal_frames_to_measure + final_stabilization_len;
-
   auto total_input_buffer_len = init_silence_len + input_signal_len + final_silence_len;
   if constexpr (kDebugInputBuffer) {
     FX_LOGS(INFO) << "init_silence_len " << init_silence_len << " + pre-stabilization "
@@ -470,11 +606,6 @@ void HermeticFidelityTest::Run(
                   << final_stabilization_len << " + final_silence_len " << final_silence_len
                   << " = total buffer " << total_input_buffer_len;
   }
-
-  auto input_type_mono =
-      Format::Create<InputFormat>(1, tc.input_format.frames_per_second()).take_value();
-  auto init_silence = GenerateSilentAudio(input_type_mono, init_silence_len);
-  auto final_silence = GenerateSilentAudio(input_type_mono, final_silence_len);
 
   // We create the AudioBuffer later. Ensure no out-of-range channels are requested to play.
   for (const auto& channel : tc.channels_to_play) {
@@ -604,30 +735,12 @@ void HermeticFidelityTest::Run(
         // distortion. For debugging, show these "seam" locations in the input buffer we created.
         std::string tag = "\nInput buffer for " + std::to_string(freq.display_val) + " Hz [" +
                           std::to_string(freq.idx) + "]";
-        input.Display(0, 16, tag);
-        input.Display(init_silence_len - 16, init_silence_len,
-                      "Final init_silence_len (should be silent)");
-        input.Display(init_silence_len, init_silence_len + 16, "Start of init_stabilization_len");
-        input.Display(init_silence_len + init_stabilization_len - 16,
-                      init_silence_len + init_stabilization_len,
-                      "Final init_stabilization_len (should lead to full-scale)");
-        input.Display(init_silence_len + init_stabilization_len,
-                      init_silence_len + init_stabilization_len + 16,
-                      "Start of input_signal_frames_to_measure (should start with full-scale)");
-        input.Display(
-            init_silence_len + init_stabilization_len + input_signal_frames_to_measure - 16,
-            init_silence_len + init_stabilization_len + input_signal_frames_to_measure,
-            "Final input_signal_frames_to_measure (should lead to roughly full-scale)");
-        input.Display(
-            init_silence_len + init_stabilization_len + input_signal_frames_to_measure,
-            init_silence_len + init_stabilization_len + input_signal_frames_to_measure + 16,
-            "Start of final_stabilization (should start at, or fall from, roughly full-scale)");
-        input.Display(init_silence_len + input_signal_len - 16, init_silence_len + input_signal_len,
-                      "End of final_stabilization");
-        input.Display(init_silence_len + input_signal_len, init_silence_len + input_signal_len + 16,
-                      "Start of final_silence");
-        input.Display(total_input_buffer_len - 16, total_input_buffer_len,
-                      "End of final_silence and end of input buffer");
+
+        DisplayInputBufferSections(input, tag,
+                                   {.stabilization_start = input_stabilization_start,
+                                    .analysis_start = input_analysis_start,
+                                    .analysis_end = input_analysis_end,
+                                    .stabilization_end = input_stabilization_end});
       }
     }
 
@@ -645,7 +758,8 @@ void HermeticFidelityTest::Run(
     auto ring_buffer = GetRendererOutput(tc.input_format, total_input_buffer_len, tc.path, input,
                                          device, tc.renderer_clock_mode);
 
-    // Loop here on each channel to measure...
+    // For each channel: 1. analyze output, 2) display in-progress results if configured, 3) display
+    // output buffer sections if applicable, 4) exit if underflows, 5) save results for later.
     for (const auto& channel_spec : tc.channels_to_measure) {
       auto ring_buffer_chan = AudioBufferSlice(&ring_buffer).GetChannel(channel_spec.channel);
 
@@ -655,57 +769,14 @@ void HermeticFidelityTest::Run(
       // data (i.e. the analysis section's first value is repeated immediately after the section
       // ends; conversely its final value is "pre-repeated" immediately prior to section start).
       auto output_stabilization_start =
-          static_cast<int64_t>(std::round(input_frame_to_output_frame(init_silence_len)));
-      auto output_analysis_start = static_cast<int64_t>(
-          std::round(input_frame_to_output_frame(init_silence_len + init_stabilization_len)));
+          static_cast<int64_t>(std::round(input_frame_to_output_frame(input_stabilization_start)));
+      auto output_analysis_start =
+          static_cast<int64_t>(std::round(input_frame_to_output_frame(input_analysis_start)));
       auto output_analysis_end = output_analysis_start + kFreqTestBufSize;
       auto output_stabilization_end =
           output_analysis_end +
           static_cast<int64_t>(std::round(input_frame_to_output_frame(final_stabilization_len)));
       auto output = AudioBufferSlice(&ring_buffer_chan, output_analysis_start, output_analysis_end);
-
-      if constexpr (kDebugOutputBuffer) {
-        if (kDebugBuffersAtAllFrequencies || freq.display_val == kFrequencyForBufferDebugging) {
-          // For debugging, show critical locations in the output buffer we retrieved.
-          std::string tag = "\nOutput buffer for " + std::to_string(freq.display_val) + " Hz [" +
-                            std::to_string(freq.idx) + "] (" + std::to_string(freq.periods) +
-                            "-periods-in-" + std::to_string(kFreqTestBufSize) + ", adjusted-freq " +
-                            std::to_string(adjusted_periods) + "; channel " +
-                            std::to_string(channel_spec.channel);
-          ring_buffer_chan.Display(0, std::min(kOutputDisplayWindow, output_stabilization_start),
-                                   tag);
-          ring_buffer_chan.Display(output_stabilization_start - kOutputDisplayWindow,
-                                   output_stabilization_start,
-                                   "Final ramp-in (may lead to local overshoot value)");
-          ring_buffer_chan.Display(
-              output_stabilization_start,
-              std::min(output_stabilization_start + kOutputDisplayWindow, output_analysis_start),
-              "Start of initial stabilization (may start with max local overshoot)");
-          ring_buffer_chan.Display(
-              std::max(output_analysis_start - kOutputDisplayWindow, output_stabilization_start),
-              output_analysis_start,
-              "End of initial stabilization (should lead to local max value)");
-          ring_buffer_chan.Display(
-              output_analysis_start,
-              output_analysis_start + kOutputDisplayWindow +
-                  kOutputAdditionalSignalStartDisplayWindow,
-              "Start of Analysis Section (should start with max value received on this channel)");
-          ring_buffer_chan.Display(
-              output_analysis_end - kOutputDisplayWindow, output_analysis_end,
-              "Final Analysis Section (should resemble end of initial stabilization)");
-          ring_buffer_chan.Display(
-              output_analysis_end, output_analysis_end + kOutputDisplayWindow,
-              "Start of final stabilization (should resemble Start of Analysis Section)");
-          ring_buffer_chan.Display(output_stabilization_end - kOutputDisplayWindow,
-                                   output_stabilization_end,
-                                   "End of final stabilization (should destabilize)");
-          ring_buffer_chan.Display(output_stabilization_end,
-                                   output_stabilization_end + kOutputDisplayWindow,
-                                   "Start of final ramp-out (should ramp out)");
-          ring_buffer_chan.Display(ring_buffer_chan.NumFrames() - kOutputDisplayWindow,
-                                   ring_buffer_chan.NumFrames(), "End of output buffer");
-        }
-      }
 
       auto channel_is_out_of_band = (channel_spec.freq_resp_lower_limits_db[0] == -INFINITY);
       auto out_of_band = (freq.display_val < tc.low_cut_frequency ||
@@ -751,33 +822,49 @@ void HermeticFidelityTest::Run(
         }
       }
 
-      if constexpr (kDebugOutputBufferOnSinadFailure) {
-        if (!out_of_band) {
-          // If sinad fails by a very large amount, display important sections of the output
-          // analysis section before we destroy the buffer and move on.
-          double required_sinad =
-              channel_spec.sinad_lower_limits_db[freq.idx] - kFidelityDbTolerance;
-          if (!isinf(sinad_db) &&
-              sinad_db + kDebugOutputBufferOnSinadFailureDbTolerance < required_sinad) {
-            std::string tag =
-                "\nFAILURE (sinad " + std::to_string(sinad_db) + "dB, should have been " +
-                std::to_string(required_sinad) + "dB): \nOutput buffer for " +
-                std::to_string(freq.display_val) + " Hz [" + std::to_string(freq.idx) + "] (" +
-                std::to_string(freq.periods) + "-periods-in-" + std::to_string(kFreqTestBufSize) +
-                ", adjusted-freq " + std::to_string(adjusted_periods) + "; channel " +
+      if constexpr (kDebugOutputBuffer || kDebugOutputBufferOnFailure) {
+        double required_level =
+            channel_spec.freq_resp_lower_limits_db[freq.idx] - kFidelityDbTolerance;
+        double required_sinad = channel_spec.sinad_lower_limits_db[freq.idx] - kFidelityDbTolerance;
+        std::string tag;
+        // Display output buffer on failure, if all of 1) 'debug output failures' config flag is
+        // set, 2) frequency is not out-of-band, 3) buffer is NOT entirely silent (SiNAD ==
+        // -infinity), and 4) Frequency Response and/or SiNAD failure exceeds the tolerance.
+        bool display_output_buffer_for_failure =
+            kDebugOutputBufferOnFailure && !out_of_band && !isinf(sinad_db) &&
+            (level_db + kDebugOutputBufferOnFailureFreqRespDbTolerance < required_level ||
+             sinad_db + kDebugOutputBufferOnFailureSinadDbTolerance < required_sinad);
+        if (display_output_buffer_for_failure) {
+          tag = "\nFAILURE (freq resp " + std::to_string(level_db) + "dB, should have been " +
+                std::to_string(required_level) + "dB; sinad " + std::to_string(sinad_db) +
+                "dB, should have been " + std::to_string(required_sinad) +
+                "dB): \nOutput buffer for " + std::to_string(freq.display_val) + " Hz [" +
+                std::to_string(freq.idx) + "] (" + std::to_string(freq.periods) + "-periods-in-" +
+                std::to_string(kFreqTestBufSize) + ", adjusted-freq " +
+                std::to_string(adjusted_periods) + "; channel " +
                 std::to_string(channel_spec.channel);
-            ring_buffer_chan.Display(output_analysis_start - kOutputDisplayWindow,
-                                     output_analysis_start, tag);
-            ring_buffer_chan.Display(output_analysis_start,
-                                     output_analysis_start + kOutputDisplayWindow +
-                                         kOutputAdditionalSignalStartDisplayWindow,
-                                     "Start of analysis section (should start with max value)");
-            ring_buffer_chan.Display(output_analysis_end - kOutputDisplayWindow,
-                                     output_analysis_end, "Final rows of analysis section");
-            ring_buffer_chan.Display(output_analysis_end,
-                                     output_analysis_end + kOutputDisplayWindow,
-                                     "Post-analysis destabilization (should start with max value)");
-          }
+        }
+
+        // Display output buffer anyway, if 1) 'debug output buffer' config flag is set, and 2) we
+        // are configured to display either all frequencies or this specific frequency.
+        bool display_output_buffer_for_success =
+            kDebugOutputBuffer &&
+            (kDebugBuffersAtAllFrequencies || freq.display_val == kFrequencyForBufferDebugging);
+        // If we will display it for failure reasons, then use the failure tag instead.
+        if (!display_output_buffer_for_failure && display_output_buffer_for_success) {
+          tag = "\nOutput buffer for " + std::to_string(freq.display_val) + " Hz [" +
+                std::to_string(freq.idx) + "] (" + std::to_string(freq.periods) + "-periods-in-" +
+                std::to_string(kFreqTestBufSize) + ", adjusted-freq " +
+                std::to_string(adjusted_periods) + "; channel " +
+                std::to_string(channel_spec.channel);
+        }
+
+        if (display_output_buffer_for_failure || display_output_buffer_for_success) {
+          DisplayOutputBufferSections(ring_buffer_chan, tag,
+                                      {.stabilization_start = output_stabilization_start,
+                                       .analysis_start = output_analysis_start,
+                                       .analysis_end = output_analysis_end,
+                                       .stabilization_end = output_stabilization_end});
         }
       }
 
