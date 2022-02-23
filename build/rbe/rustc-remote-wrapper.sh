@@ -776,9 +776,7 @@ remote_inputs=(
 # List inputs in a file to avoid exceeding shell limit.
 inputs_file_list="$output".inputs
 mkdir -p "$(dirname "$inputs_file_list")"
-for f in "${remote_inputs[@]}"
-do echo "$f"
-done > "$inputs_file_list"
+(IFS=$'\n' ; echo "${remote_inputs[*]}") > "$inputs_file_list"
 cleanup_files+=("$inputs_file_list")
 
 # Outputs include the declared output file and a depfile.
@@ -787,10 +785,11 @@ test -z "$depfile" || relative_outputs+=( "$depfile" )
 relative_outputs+=( "${extra_outputs[@]}" )
 
 remote_outputs=()
-for f in "${relative_outputs[@]}"
-do remote_outputs+=( "$build_subdir/$f" )
-done
-remote_outputs_joined="$(IFS=, ; echo "${remote_outputs[*]}")"
+remote_outputs_joined=
+test "${#relative_outputs[@]}" = 0 || {
+  _remote_outputs_comma="$(printf "${build_subdir}/%s," "${relative_outputs[@]}")"
+  remote_outputs_joined="${_remote_outputs_comma%,}"  # get rid of last trailing comma
+}
 
 dump_vars() {
   debug_var "build subdir" "$build_subdir"
