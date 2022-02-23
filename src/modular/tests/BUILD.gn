@@ -9,6 +9,7 @@ import("//build/rust/rustc_test.gni")
 group("tests") {
   testonly = true
   deps = [
+    ":basemgr_v2_test",
     ":modular_integration_tests",
     ":module_with_fake_runner",
     "modular_config",
@@ -467,6 +468,31 @@ fuchsia_package_with_single_component("module_with_fake_runner") {
   deps = [ ":module_with_fake_runner_bin" ]
 }
 
+fuchsia_test_package("basemgr_v2_test") {
+  test_components = [ ":basemgr-v2-test" ]
+
+  deps = [
+    ":basemgr-with-children",
+    "//src/cobalt/bin/testing/mock_cobalt:component_v2",
+    "//src/modular/bin/basemgr:component_v2",
+  ]
+
+  test_specs = {
+    log_settings = {
+      # This test exercises child crash recovery which logs errors in basemgr.
+      max_severity = "ERROR"
+    }
+    environments = [
+      {
+        dimensions = {
+          device_type = "AEMU"
+        }
+        tags = [ "flaky" ]  # fxbug.dev/92821
+      },
+    ]
+  }
+}
+
 fuchsia_test_package("modular_integration_tests") {
   package_deps_for_infra_only = [
     "//sdk/lib/sys/cpp/testing/environment_delegating_runner:environment_delegating_runner",
@@ -482,7 +508,6 @@ fuchsia_test_package("modular_integration_tests") {
     ":agent-session-restart-test",
     ":annotations-test",
     ":basemgr-test",
-    ":basemgr-v2-test",
     ":component-context-test",
     ":element-manager-test",
     ":inspect-basemgr-test",
@@ -495,11 +520,6 @@ fuchsia_test_package("modular_integration_tests") {
     ":stories-share-session-runners-test",
     ":story-shell-factory-test",
     ":story-shell-test",
-  ]
-  deps = [
-    ":basemgr-with-children",
-    "//src/cobalt/bin/testing/mock_cobalt:component_v2",
-    "//src/modular/bin/basemgr:component_v2",
   ]
   test_specs = {
     log_settings = {
