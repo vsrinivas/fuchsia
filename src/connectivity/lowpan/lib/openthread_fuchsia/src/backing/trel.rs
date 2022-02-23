@@ -4,6 +4,7 @@
 
 use super::*;
 use crate::to_escaped_string::*;
+use anyhow::Context as _;
 use fidl::endpoints::create_endpoints;
 use fidl_fuchsia_net_mdns::*;
 use fuchsia_async::Task;
@@ -26,20 +27,20 @@ pub(crate) struct TrelInstance {
 }
 
 impl TrelInstance {
-    fn new(instance_name: String) -> TrelInstance {
-        TrelInstance {
+    fn new(instance_name: String) -> Result<TrelInstance, anyhow::Error> {
+        Ok(TrelInstance {
             socket: fasync::net::UdpSocket::bind(&SocketAddr::V6(SocketAddrV6::new(
                 Ipv6Addr::UNSPECIFIED,
                 0,
                 0,
                 0,
             )))
-            .expect("Unable to open TREL UDP socket"),
+            .context("Unable to open TREL UDP socket")?,
             publication_responder: None,
             instance_name,
             peer_instance_sockaddr_map: HashMap::default(),
             subscriber_request_stream: Self::make_subscriber_request_stream(),
-        }
+        })
     }
 
     fn make_subscriber_request_stream() -> ServiceSubscriberRequestStream {
@@ -256,40 +257,37 @@ impl TrelInstance {
 }
 
 impl PlatformBacking {
-    fn on_trel_enable(&self, instance: &ot::Instance) -> u16 {
+    fn on_trel_enable(&self, instance: &ot::Instance) -> Result<u16, anyhow::Error> {
         let mut trel = self.trel.borrow_mut();
         if let Some(trel) = trel.as_ref() {
-            trel.port()
+            Ok(trel.port())
         } else {
             let instance_name = hex::encode(instance.get_extended_address().as_slice());
-            let trel_instance = TrelInstance::new(instance_name);
+            let trel_instance = TrelInstance::new(instance_name)?;
             let port = trel_instance.port();
             trel.replace(trel_instance);
-            info!("otPlatTrelEnable: Ready on port {}", port);
-            port
+            Ok(port)
         }
     }
 
     fn on_trel_disable(&self, _instance: &ot::Instance) {
         self.trel.replace(None);
-        info!("otPlatTrelDisable: Closed.");
     }
 
     fn on_trel_register_service(&self, _instance: &ot::Instance, port: u16, txt: &[u8]) {
-        info!("otPlatTrelRegisterService: port:{} txt:{:?}", port, txt.to_escaped_string());
         let mut trel = self.trel.borrow_mut();
         if let Some(trel) = trel.as_mut() {
+            info!("otPlatTrelRegisterService: port:{} txt:{:?}", port, txt.to_escaped_string());
             trel.register_service(port, txt);
         } else {
-            error!("otPlatTrelRegisterService: TREL is disabled.");
+            debug!("otPlatTrelRegisterService: TREL is disabled, cannot register.");
         }
     }
 
     fn on_trel_send(&self, _instance: &ot::Instance, payload: &[u8], sockaddr: &ot::SockAddr) {
-        info!("otPlatTrelSend: {:?} -> {}", sockaddr, hex::encode(payload));
-
         let trel = self.trel.borrow();
         if let Some(trel) = trel.as_ref() {
+            info!("otPlatTrelSend: {:?} -> {}", sockaddr, hex::encode(payload));
             match trel.socket.send_to(payload, (*sockaddr).into()).now_or_never() {
                 Some(Ok(_)) => {}
                 Some(Err(err)) => {
@@ -300,20 +298,28 @@ impl PlatformBacking {
                 }
             }
         } else {
-            error!("otPlatTrelSend: TREL is disabled.");
+            debug!("otPlatTrelSend: TREL is disabled, cannot send.");
         }
     }
 }
 
 #[no_mangle]
-unsafe extern "C" fn otPlatTrelEnable(instance: *mut otInstance, port: *mut u16) {
-    *port = PlatformBacking::on_trel_enable(
+unsafe extern "C" fn otPlatTrelEnable(instance: *mut otInstance, port_ptr: *mut u16) {
+    match PlatformBacking::on_trel_enable(
         // SAFETY: Must only be called from OpenThread thread,
         PlatformBacking::as_ref(),
         // SAFETY: `instance` must be a pointer to a valid `otInstance`,
         //         which is guaranteed by the caller.
         ot::Instance::ref_from_ot_ptr(instance).unwrap(),
-    );
+    ) {
+        Ok(port) => {
+            info!("otPlatTrelEnable: Ready on port {}", port);
+            *port_ptr = port;
+        }
+        Err(err) => {
+            warn!("otPlatTrelEnable: Unable to start TREL: {:?}", err);
+        }
+    }
 }
 
 #[no_mangle]
@@ -325,6 +331,7 @@ unsafe extern "C" fn otPlatTrelDisable(instance: *mut otInstance) {
         //         which is guaranteed by the caller.
         ot::Instance::ref_from_ot_ptr(instance).unwrap(),
     );
+    info!("otPlatTrelDisable: Closed.");
 }
 
 #[no_mangle]

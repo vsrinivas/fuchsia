@@ -171,7 +171,7 @@ impl UdpSocketHelpers for ot::UdpSocket<'_> {
     fn bind(&mut self) -> ot::Result {
         debug!("otPlatUdp:{:?}: Bind to {:?}", self.as_ot_ptr(), self.sock_name());
 
-        let socket = self.get_async_udp_socket().expect("socket not initialized");
+        let socket = self.get_async_udp_socket().ok_or(ot::Error::Failed)?;
         let sockaddr: std::net::SocketAddr = self.sock_name().into();
 
         socket.as_ref().bind(&sockaddr.into()).map_err(move |err| {
@@ -199,7 +199,7 @@ impl UdpSocketHelpers for ot::UdpSocket<'_> {
             net_if_id
         );
 
-        let _socket = self.get_async_udp_socket().expect("socket not initialized");
+        let _socket = self.get_async_udp_socket().ok_or(ot::Error::Failed)?;
 
         // TODO(fxbug.dev/93438): Actually bind to netif! IPV6_BOUND_IF, SO_BINDTODEVICE, etc..
         //       Would be nice if we could just set the scope id, but this gets
@@ -233,7 +233,7 @@ impl UdpSocketHelpers for ot::UdpSocket<'_> {
             info
         );
 
-        let socket = self.get_async_udp_socket().expect("socket not initialized");
+        let socket = self.get_async_udp_socket().ok_or(ot::Error::Failed)?;
 
         // Set the multicast loop flag.
         if info.multicast_loop() {
@@ -311,7 +311,7 @@ impl UdpSocketHelpers for ot::UdpSocket<'_> {
             netif
         );
 
-        let socket = self.get_async_udp_socket().expect("socket not initialized");
+        let socket = self.get_async_udp_socket().ok_or(ot::Error::Failed)?;
 
         // SAFETY: Must only be called from the same thread that OpenThread is running on.
         //         This is guaranteed by the only caller of this method.
@@ -338,7 +338,7 @@ impl UdpSocketHelpers for ot::UdpSocket<'_> {
             addr,
             netif
         );
-        let socket = self.get_async_udp_socket().expect("socket not initialized");
+        let socket = self.get_async_udp_socket().ok_or(ot::Error::Failed)?;
 
         // SAFETY: Must only be called from the same thread that OpenThread is running on.
         //         This is guaranteed by the only caller of this method.
