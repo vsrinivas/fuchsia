@@ -131,9 +131,9 @@ if (is_host) {
 
   host_test_data("rust_coverage_test_deps") {
     sources = [
+      "$rust_sysroot/lib",
+      "$rustc_prefix/llvm-profdata",
       "//prebuilt/third_party/clang/${host_platform}/bin/llvm-cov",
-      "//prebuilt/third_party/rust/${host_platform}/bin/llvm-profdata",
-      "//prebuilt/third_party/rust/${host_platform}/lib",
       "rust_golden_coverage.json",
       rust_coverage_test_binary_path,
     ]
@@ -195,9 +195,7 @@ go_test("rust_coverage_tests") {
       rebase_path("//prebuilt/third_party/clang/${host_platform}/bin/llvm-cov",
                   root_build_dir),
       "--llvm-profdata",
-      rebase_path(
-          "//prebuilt/third_party/rust/${host_platform}/bin/llvm-profdata",
-          root_build_dir),
+      "$rebased_rustc_prefix/llvm-profdata",
     ]
   }
 }

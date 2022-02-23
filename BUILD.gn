@@ -762,6 +762,7 @@ group("tool_paths.metadata") {
     "$rustc_prefix/cargo",
     "$rustc_prefix/rustc",
     "$rustc_prefix/rustdoc",
+    "$rustc_prefix/rustfmt",
     "//src/testing/perfcompare",
 
     # reclient is using fairly generic names (bootstrap, dumpstats). We may
@@ -781,7 +782,6 @@ group("tool_paths.metadata") {
     "//prebuilt/third_party/goma/$host_platform/goma_ctl.py",
     "//prebuilt/third_party/ninja/$host_platform/ninja",
     "//prebuilt/third_party/python3/$host_platform/bin/python3",
-    "//prebuilt/third_party/rust/$host_platform/bin/rustfmt",
     "//prebuilt/third_party/yapf/yapf",
     "//third_party/catapult/tracing/bin/trace2html",
   ]

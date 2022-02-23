@@ -70,9 +70,10 @@ if (rustc_prefix == default_rustc_prefix &&
       "WARNING: Using prebuilt toolchain, but rustc_version_string is set! Toolchain updates won't be detected.")
 }
 
-# rust_prefix path rebased to root_build_dir, useful in string expansions
-# that go into command arguments.
+# rustc_prefix/rust_sysroot paths rebased to root_build_dir, useful in string
+# expansions that go into command arguments.
 rebased_rustc_prefix = rebase_path(rustc_prefix, root_build_dir)
+rebased_rust_sysroot = rebase_path(rust_sysroot, root_build_dir)
 
 if (is_fuchsia) {
   rust_panic = "abort"

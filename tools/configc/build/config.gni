@@ -5,6 +5,7 @@
 import("//build/compiled_action.gni")
 import("//build/config/clang/clang.gni")
 import("//build/host.gni")
+import("//build/rust/config.gni")
 
 # Compile a configuration value file.
 #
@@ -69,8 +70,6 @@ template("cvf") {
     deps += [ "//tools/cmc/build/restricted_features:structured_config" ]
   }
 }
-
-rust_dir = "//prebuilt/third_party/rust/$host_platform"
 
 # Generate the FIDL client library source files for a configuration declaration.
 #
@@ -185,10 +184,10 @@ template("rust_config_client_lib_source") {
     inputs = [
       compiled_manifest,
       "//rustfmt.toml",
-      "$rust_dir/bin/rustfmt",
+      "$rustc_prefix/rustfmt",
 
       # Ensure bindings are regenerated after Rust toolchain rolls.
-      "$rust_dir/.versions/rust.cipd_version",
+      "$rust_sysroot/.versions/rust.cipd_version",
     ]
 
     source_file_path = "${target_out_dir}/${target_name}.rs"
@@ -202,7 +201,7 @@ template("rust_config_client_lib_source") {
       "--fidl-library-name",
       invoker.fidl_library_name,
       "--rustfmt",
-      rebase_path("$rust_dir/bin/rustfmt", root_build_dir),
+      "$rebased_rustc_prefix/rustfmt",
       "--rustfmt-config",
       rebase_path("//rustfmt.toml", root_build_dir),
     ]
