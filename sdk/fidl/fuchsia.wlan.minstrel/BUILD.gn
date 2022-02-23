@@ -11,8 +11,6 @@ fidl("fuchsia.wlan.minstrel") {
     "vector-bounds-not-specified",
   ]
 
-  sdk_category = "partner"
-
   sources = [ "wlan_minstrel.fidl" ]
 
   public_deps = [ "//sdk/fidl/fuchsia.wlan.ieee80211" ]

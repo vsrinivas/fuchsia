@@ -691,7 +691,6 @@ sdk_molecule("ddk_fidl") {
     "//sdk/fidl/fuchsia.wlan.common:fuchsia.wlan.common_sdk($fidl_toolchain)",
     "//sdk/fidl/fuchsia.wlan.ieee80211:fuchsia.wlan.ieee80211_sdk($fidl_toolchain)",
     "//sdk/fidl/fuchsia.wlan.internal:fuchsia.wlan.internal_sdk($fidl_toolchain)",
-    "//sdk/fidl/fuchsia.wlan.mlme:fuchsia.wlan.mlme_sdk($fidl_toolchain)",
   ]
 }
 

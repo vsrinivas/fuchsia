@@ -8,8 +8,6 @@ fidl("fuchsia.wlan.mesh") {
   # TODO(fxbug.dev/35879): Remove lint exclusions by fixing known FIDL lint violations in this target
   excluded_checks = [ "vector-bounds-not-specified" ]
 
-  sdk_category = "partner"
-
   sources = [ "wlan_mesh.fidl" ]
 
   public_deps = [ "//sdk/fidl/fuchsia.wlan.ieee80211" ]
