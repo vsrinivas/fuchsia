@@ -987,6 +987,7 @@ mod tests {
                 fidl_common::DriverFeature::ScanOffload,
                 fidl_common::DriverFeature::SaeSmeAuth,
             ],
+            softmac_hardware_capability: 0,
             qos_capable: false,
         }
     }

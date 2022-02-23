@@ -100,33 +100,6 @@ wlan_common::WlanMacRole ConvertMacRole(uint16_t role) {
   ZX_ASSERT(0);
 }
 
-uint32_t ConvertCaps(const ::std::vector<wlan_device::Capability>& caps) {
-  uint32_t ret = 0;
-  for (auto cap : caps) {
-    switch (cap) {
-      case wlan_device::Capability::SHORT_PREAMBLE:
-        ret |= WLAN_INFO_HARDWARE_CAPABILITY_SHORT_PREAMBLE;
-        break;
-      case wlan_device::Capability::SPECTRUM_MGMT:
-        ret |= WLAN_INFO_HARDWARE_CAPABILITY_SPECTRUM_MGMT;
-        break;
-      case wlan_device::Capability::QOS:
-        ret |= WLAN_INFO_HARDWARE_CAPABILITY_QOS;
-        break;
-      case wlan_device::Capability::SHORT_SLOT_TIME:
-        ret |= WLAN_INFO_HARDWARE_CAPABILITY_SHORT_SLOT_TIME;
-        break;
-      case wlan_device::Capability::RADIO_MSMT:
-        ret |= WLAN_INFO_HARDWARE_CAPABILITY_RADIO_MSMT;
-        break;
-      case wlan_device::Capability::SIMULTANEOUS_CLIENT_AP:
-        ret |= WLAN_INFO_HARDWARE_CAPABILITY_SIMULTANEOUS_CLIENT_AP;
-        break;
-    }
-  }
-  return ret;
-}
-
 void ConvertBandInfoToCapability(const wlan_device::BandInfo& in,
                                  wlan_softmac_band_capability_t* out) {
   memset(out, 0, sizeof(*out));
@@ -165,7 +138,7 @@ zx_status_t ConvertTapPhyConfig(wlan_softmac_info_t* mac_info,
                     tap_phy_config.supported_phys);
   mac_info->driver_features = ConvertDriverFeatures(tap_phy_config.driver_features);
   mac_info->mac_role = ConvertMacRole(tap_phy_config.mac_role);
-  mac_info->caps = ConvertCaps(tap_phy_config.caps);
+  mac_info->hardware_capability = tap_phy_config.hardware_capability;
   mac_info->band_cap_count =
       std::min(tap_phy_config.bands.size(), static_cast<size_t>(WLAN_INFO_MAX_BANDS));
 

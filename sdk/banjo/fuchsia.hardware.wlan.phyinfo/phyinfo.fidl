@@ -41,30 +41,6 @@ type WlanInfoDriverFeature = strict enum : uint32 {
     SEPARATE_DATA_PLANE = 0x00000200;
 };
 
-/// IEEE Std 802.11-206 Section 9.4.1.4 Capability Information Field
-type WlanInfoHardwareCapability = strict enum : uint32 {
-    /// Short packet preamble.
-    SHORT_PREAMBLE = 0x0020;
-
-    /// Spectrum management.
-    SPECTRUM_MGMT = 0x0100;
-
-    // QoS capable.
-    QOS = 0x0200;
-
-    /// Short slot times after packet collision.
-    SHORT_SLOT_TIME = 0x0400;
-
-    /// Radio measurement.
-    RADIO_MSMT = 0x1000;
-
-    // Supports simutaneous client-ap use
-    // TODO(fxbug.dev/54923): Move SIMULTANEOUS_CLIENT_AP to a different Fuchsia specific capability enum.
-    // This enum should only be used for IEEE 802.11 fields. This type should also be reduced
-    // to uint16_t once this is done.
-    SIMULTANEOUS_CLIENT_AP = 0x10000;
-};
-
 /// The maximum number of supported channels in a WlanInfoChannelList.
 const WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS uint32 = 64;
 

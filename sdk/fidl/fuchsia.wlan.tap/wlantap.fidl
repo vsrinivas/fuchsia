@@ -17,7 +17,7 @@ type WlantapPhyConfig = struct {
     supported_phys
             vector<fuchsia.wlan.common.WlanPhyType>:fuchsia.wlan.common.MAX_SUPPORTED_PHY_TYPES;
     driver_features vector<fuchsia.wlan.common.DriverFeature>:8;
-    caps vector<fuchsia.wlan.device.Capability>:8;
+    hardware_capability fuchsia.wlan.common.WlanSoftmacHardwareCapability;
     bands vector<fuchsia.wlan.device.BandInfo>:8;
     name string:32; // Arbitrary maximum size of 32 chosen to satisfy FidlLint
     quiet bool;

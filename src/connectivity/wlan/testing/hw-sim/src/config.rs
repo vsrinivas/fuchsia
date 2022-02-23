@@ -36,7 +36,7 @@ pub(crate) fn create_wlantap_config(
             DriverFeature::TempSoftmac,
         ],
         mac_role: mac_role,
-        caps: vec![],
+        hardware_capability: 0,
         bands: vec![create_2_4_ghz_band_info()],
         name,
         quiet: false,

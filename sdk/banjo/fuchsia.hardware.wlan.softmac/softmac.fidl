@@ -57,7 +57,7 @@ type WlanSoftmacInfo = struct {
     driver_features fuchsia.hardware.wlan.phyinfo.WlanInfoDriverFeature;
 
     /// Bitmask indicating enabled WlanInfoHardwareCapability values.
-    caps fuchsia.hardware.wlan.phyinfo.WlanInfoHardwareCapability;
+    hardware_capability fuchsia.wlan.common.WlanSoftmacHardwareCapability;
 
     /// Supported bands.
     band_cap_list

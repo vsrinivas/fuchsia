@@ -76,7 +76,10 @@ pub fn derive_join_capabilities(
         .ok_or_else(|| format_err!("iface does not support BSS channel {}", bss_channel.primary))?;
 
     // Step 2.1 - Override CapabilityInfo
-    let capability_info = override_capability_info(CapabilityInfo(band_cap.capability_info));
+    // TODO(fxbug.dev/54923): The WlanSoftmacHardwareCapability type is u32 and used here to override
+    // the capability info for joining a BSS. The upper bits are removed but shouldn't have to be.
+    let capability_info =
+        override_capability_info(CapabilityInfo(device_info.softmac_hardware_capability as u16));
 
     // Step 2.2 - Derive data rates
     // Both are safe to unwrap because SupportedRate is one byte and will not cause alignment issue.
@@ -329,6 +332,7 @@ mod tests {
             role: fidl_common::WlanMacRole::Client,
             bands: vec![fake_5ghz_band_capabilities_ht_cbw(ie::ChanWidthSet::TWENTY_FORTY)],
             driver_features: vec![],
+            softmac_hardware_capability: 0,
             qos_capable: true,
         };
         assert_eq!(

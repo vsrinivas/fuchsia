@@ -11,11 +11,4 @@ enum/member fuchsia.hardware.wlan.phyinfo/WlanInfoDriverFeature.SEPARATE_DATA_PL
 enum/member fuchsia.hardware.wlan.phyinfo/WlanInfoDriverFeature.SYNTH 4
 enum/member fuchsia.hardware.wlan.phyinfo/WlanInfoDriverFeature.TX_STATUS_REPORT 8
 strict enum fuchsia.hardware.wlan.phyinfo/WlanInfoDriverFeature uint32
-enum/member fuchsia.hardware.wlan.phyinfo/WlanInfoHardwareCapability.QOS 512
-enum/member fuchsia.hardware.wlan.phyinfo/WlanInfoHardwareCapability.RADIO_MSMT 4096
-enum/member fuchsia.hardware.wlan.phyinfo/WlanInfoHardwareCapability.SHORT_PREAMBLE 32
-enum/member fuchsia.hardware.wlan.phyinfo/WlanInfoHardwareCapability.SHORT_SLOT_TIME 1024
-enum/member fuchsia.hardware.wlan.phyinfo/WlanInfoHardwareCapability.SIMULTANEOUS_CLIENT_AP 65536
-enum/member fuchsia.hardware.wlan.phyinfo/WlanInfoHardwareCapability.SPECTRUM_MGMT 256
-strict enum fuchsia.hardware.wlan.phyinfo/WlanInfoHardwareCapability uint32
 library fuchsia.hardware.wlan.phyinfo

@@ -117,18 +117,24 @@ pub fn device_info_from_wlan_softmac_info(
     let sta_addr = info.sta_addr;
     let role = fidl_common::WlanMacRole::from_primitive(info.mac_role.0)
         .ok_or(format_err!("Unknown WlanWlanMacRole: {}", info.mac_role.0))?;
-    let cap = wlan_common::mac::CapabilityInfo::from(info.caps).0;
+    let softmac_hardware_capability = info.hardware_capability;
     let mut bands = vec![];
     for band_cap in &info.band_cap_list[0..info.band_cap_count as usize] {
-        bands.push(convert_ddk_band_cap(band_cap, cap)?);
+        bands.push(convert_ddk_band_cap(band_cap)?);
     }
     let driver_features = convert_driver_features(&info.driver_features);
-    Ok(fidl_mlme::DeviceInfo { sta_addr, role, bands, driver_features, qos_capable: false })
+    Ok(fidl_mlme::DeviceInfo {
+        sta_addr,
+        role,
+        bands,
+        driver_features,
+        qos_capable: false,
+        softmac_hardware_capability,
+    })
 }
 
 fn convert_ddk_band_cap(
     band_cap: &banjo_wlan_softmac::WlanSoftmacBandCapability,
-    capability_info: u16,
 ) -> Result<fidl_mlme::BandCapabilities, Error> {
     let band = match band_cap.band {
         banjo_common::WlanBand::TWO_GHZ => fidl_common::WlanBand::TwoGhz,
@@ -154,14 +160,7 @@ fn convert_ddk_band_cap(
     } else {
         None
     };
-    Ok(fidl_mlme::BandCapabilities {
-        band,
-        basic_rates,
-        channels,
-        capability_info,
-        ht_cap,
-        vht_cap,
-    })
+    Ok(fidl_mlme::BandCapabilities { band, basic_rates, channels, ht_cap, vht_cap })
 }
 
 fn convert_driver_features(
@@ -343,7 +342,7 @@ mod tests {
     #[test]
     fn test_convert_band_cap() {
         let wlan_softmac_info = fake_wlan_softmac_info();
-        let band0 = convert_ddk_band_cap(&wlan_softmac_info.band_cap_list[0], 10)
+        let band0 = convert_ddk_band_cap(&wlan_softmac_info.band_cap_list[0])
             .expect("failed to convert band capability");
         assert_eq!(band0.band, fidl_common::WlanBand::TwoGhz);
         assert_eq!(
@@ -351,7 +350,6 @@ mod tests {
             vec![0x02, 0x04, 0x0b, 0x16, 0x0c, 0x12, 0x18, 0x24, 0x30, 0x48, 0x60, 0x6c]
         );
         assert_eq!(band0.channels, vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]);
-        assert_eq!(band0.capability_info, 10);
         assert!(band0.ht_cap.is_some());
         assert!(band0.vht_cap.is_none());
     }

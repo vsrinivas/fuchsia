@@ -116,7 +116,7 @@ struct MockDevice : public DeviceInterface {
     wlan_softmac_info.band_cap_count = 2;
     wlan_softmac_info.band_cap_list[0] = test_utils::FakeBandCapability(WLAN_BAND_TWO_GHZ);
     wlan_softmac_info.band_cap_list[1] = test_utils::FakeBandCapability(WLAN_BAND_FIVE_GHZ);
-    wlan_softmac_info.caps = 0;
+    wlan_softmac_info.hardware_capability = 0;
 
     mac_sublayer_support.data_plane.data_plane_type = DATA_PLANE_TYPE_ETHERNET_DEVICE;
     mac_sublayer_support.device.mac_implementation_type = MAC_IMPLEMENTATION_TYPE_SOFTMAC;

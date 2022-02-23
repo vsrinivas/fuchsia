@@ -3206,9 +3206,9 @@ void ath10k_pci_fill_wlan_softmac_info(struct ath10k* ar, wlan_softmac_info_t* m
   }
 
   // caps
-  mac_info->caps = WLAN_INFO_HARDWARE_CAPABILITY_SHORT_PREAMBLE |
-                   WLAN_INFO_HARDWARE_CAPABILITY_SPECTRUM_MGMT |
-                   WLAN_INFO_HARDWARE_CAPABILITY_SHORT_SLOT_TIME;
+  mac_info->hardware_capability = WLAN_SOFTMAC_HARDWARE_CAPABILITY_BIT_SHORT_PREAMBLE |
+                                  WLAN_SOFTMAC_HARDWARE_CAPABILITY_BIT_SPECTRUM_MGMT |
+                                  WLAN_SOFTMAC_HARDWARE_CAPABILITY_BIT_SHORT_SLOT_TIME;
 
   // bands
   ath10k_foreach_band(ar, ath10k_wlan_softmac_band_query_capability, mac_info);

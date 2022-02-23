@@ -121,7 +121,7 @@ zx_status_t IfaceDevice::Query(wlan_softmac_info_t* info) {
     info->driver_features |= WLAN_INFO_DRIVER_FEATURE_SYNTH;
   }
   info->mac_role = role_;
-  info->caps = 0;
+  info->hardware_capability = 0;
   info->band_cap_count = 2;
   // clang-format off
     info->band_cap_list[0] = {

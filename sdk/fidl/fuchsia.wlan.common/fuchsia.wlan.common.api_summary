@@ -100,6 +100,13 @@ enum/member fuchsia.wlan.common/WlanPhyType.S1G 9
 enum/member fuchsia.wlan.common/WlanPhyType.TVHT 8
 enum/member fuchsia.wlan.common/WlanPhyType.VHT 7
 strict enum fuchsia.wlan.common/WlanPhyType uint32
+enum/member fuchsia.wlan.common/WlanSoftmacHardwareCapabilityBit.QOS 512
+enum/member fuchsia.wlan.common/WlanSoftmacHardwareCapabilityBit.RADIO_MSMT 4096
+enum/member fuchsia.wlan.common/WlanSoftmacHardwareCapabilityBit.SHORT_PREAMBLE 32
+enum/member fuchsia.wlan.common/WlanSoftmacHardwareCapabilityBit.SHORT_SLOT_TIME 1024
+enum/member fuchsia.wlan.common/WlanSoftmacHardwareCapabilityBit.SIMULTANEOUS_CLIENT_AP 65536
+enum/member fuchsia.wlan.common/WlanSoftmacHardwareCapabilityBit.SPECTRUM_MGMT 256
+strict enum fuchsia.wlan.common/WlanSoftmacHardwareCapabilityBit uint32
 enum/member fuchsia.wlan.common/WlanTxResult.FAILED 0
 enum/member fuchsia.wlan.common/WlanTxResult.SUCCESS 1
 strict enum fuchsia.wlan.common/WlanTxResult uint8

@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fuchsia/hardware/wlan/phyinfo/c/banjo.h>
+#include <fuchsia/wlan/common/c/banjo.h>
 
 #include <map>
 #include <string>
@@ -18,12 +19,13 @@ static std::map<wlan_info_driver_feature_t, std::string> driver_feature_flags_st
     {WLAN_INFO_DRIVER_FEATURE_PROBE_RESP_OFFLOAD, "Probe Response Offload"},
 };
 
-static std::map<wlan_info_hardware_capability_t, std::string> hardware_capability_flags_string_map =
-    {{WLAN_INFO_HARDWARE_CAPABILITY_SHORT_PREAMBLE, "Short Preamble"},
-     {WLAN_INFO_HARDWARE_CAPABILITY_SPECTRUM_MGMT, "Spectrum Management"},
-     {WLAN_INFO_HARDWARE_CAPABILITY_QOS, "QoS"},
-     {WLAN_INFO_HARDWARE_CAPABILITY_SHORT_SLOT_TIME, "Short Slot Time"},
-     {WLAN_INFO_HARDWARE_CAPABILITY_RADIO_MSMT, "Radio Measurement"}};
+static std::map<wlan_softmac_hardware_capability_t, std::string>
+    softmac_hardware_capability_flags_string_map = {
+        {WLAN_SOFTMAC_HARDWARE_CAPABILITY_BIT_SHORT_PREAMBLE, "Short Preamble"},
+        {WLAN_SOFTMAC_HARDWARE_CAPABILITY_BIT_SPECTRUM_MGMT, "Spectrum Management"},
+        {WLAN_SOFTMAC_HARDWARE_CAPABILITY_BIT_QOS, "QoS"},
+        {WLAN_SOFTMAC_HARDWARE_CAPABILITY_BIT_SHORT_SLOT_TIME, "Short Slot Time"},
+        {WLAN_SOFTMAC_HARDWARE_CAPABILITY_BIT_RADIO_MSMT, "Radio Measurement"}};
 
 template <typename flags_t>
 static void DebugFlags(flags_t flags, std::map<flags_t, std::string> flags_string_map,
@@ -48,7 +50,7 @@ void wlan::DebugDriverFeatureFlags(wlan_info_driver_feature_t flags) {
              "NOT Available");
 }
 
-void wlan::DebugHardwareCapabilityFlags(wlan_info_hardware_capability_t flags) {
-  DebugFlags(flags, hardware_capability_flags_string_map, "Hardware Capabilities", "Available",
-             "NOT Available");
+void wlan::DebugSoftmacHardwareCapabilityFlags(wlan_softmac_hardware_capability_t flags) {
+  DebugFlags(flags, softmac_hardware_capability_flags_string_map, "Hardware Capabilities",
+             "Available", "NOT Available");
 }

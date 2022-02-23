@@ -658,7 +658,7 @@ std::string Describe(const wlan_softmac_info& wi) {
     BUFFER("[phy %u]%s", i, Describe(wi.supported_phys_list[i]));
   }
   BUFFER("feat:0x%08x", wi.driver_features);
-  BUFFER("capability_info:0x%08x", wi.caps);
+  BUFFER("hardware_capability:0x%08x", wi.hardware_capability);
   BUFFER("#bands:%du", wi.band_cap_count);
   for (uint8_t i = 0; i < wi.band_cap_count; i++) {
     BUFFER("[band %u]%s", i, Describe(wi.band_cap_list[i]).c_str());

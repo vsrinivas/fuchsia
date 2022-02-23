@@ -1088,7 +1088,7 @@ pub(crate) mod test_utils {
             supported_phys_list,
             supported_phys_count,
             driver_features: WlanInfoDriverFeature(0),
-            caps: WlanInfoHardwareCapability(0),
+            hardware_capability: 0,
             band_cap_list,
             band_cap_count,
         }
@@ -1396,7 +1396,7 @@ mod tests {
         assert_eq!(info.sta_addr, [7u8; 6]);
         assert_eq!(info.mac_role, banjo_common::WlanMacRole::CLIENT);
         assert_eq!(info.driver_features, WlanInfoDriverFeature(0));
-        assert_eq!(info.caps, WlanInfoHardwareCapability(0));
+        assert_eq!(info.hardware_capability, 0);
         assert_eq!(info.band_cap_count, 2);
     }
 

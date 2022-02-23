@@ -151,6 +151,7 @@ mod tests {
             bands: vec![],
             sta_addr: [0xAC; 6],
             driver_features: vec![],
+            softmac_hardware_capability: 0,
             qos_capable: false,
         }
     }

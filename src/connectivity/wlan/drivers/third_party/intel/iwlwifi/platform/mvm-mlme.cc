@@ -177,9 +177,9 @@ zx_status_t mac_query(void* ctx, wlan_softmac_info_t* info) {
   }
   info->supported_phys_count = count;
 
-  info->caps = WLAN_INFO_HARDWARE_CAPABILITY_SHORT_PREAMBLE |
-               WLAN_INFO_HARDWARE_CAPABILITY_SPECTRUM_MGMT |
-               WLAN_INFO_HARDWARE_CAPABILITY_SHORT_SLOT_TIME;
+  info->hardware_capability = WLAN_SOFTMAC_HARDWARE_CAPABILITY_BIT_SHORT_PREAMBLE |
+                              WLAN_SOFTMAC_HARDWARE_CAPABILITY_BIT_SPECTRUM_MGMT |
+                              WLAN_SOFTMAC_HARDWARE_CAPABILITY_BIT_SHORT_SLOT_TIME;
 
   // Determine how many bands this adapter supports.
   wlan_band_t bands[WLAN_INFO_MAX_BANDS];

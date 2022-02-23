@@ -126,6 +126,8 @@ pub fn fake_device_info(sta_addr: MacAddr) -> fidl_mlme::DeviceInfo {
             fidl_common::DriverFeature::SaeSmeAuth,
             fidl_common::DriverFeature::TempSoftmac,
         ],
+        softmac_hardware_capability: fidl_common::WlanSoftmacHardwareCapabilityBit::ShortPreamble
+            .into_primitive(),
         qos_capable: true,
     }
 }

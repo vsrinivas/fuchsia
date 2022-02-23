@@ -185,21 +185,6 @@ class CapabilityInfo : public common::BitField<uint16_t> {
   // bit 13 reserved
   WLAN_BIT_FIELD(delayed_block_ack, 14, 1)
   WLAN_BIT_FIELD(immediate_block_ack, 15, 1)
-
-  static CapabilityInfo FromDdk(uint32_t ddk_caps) {
-    CapabilityInfo capability_info{};
-#define BITFLAG_TO_BIT(x, y) ((x & y) > 0 ? 1 : 0)
-    capability_info.set_short_preamble(
-        BITFLAG_TO_BIT(ddk_caps, WLAN_INFO_HARDWARE_CAPABILITY_SHORT_PREAMBLE));
-    capability_info.set_spectrum_mgmt(
-        BITFLAG_TO_BIT(ddk_caps, WLAN_INFO_HARDWARE_CAPABILITY_SPECTRUM_MGMT));
-    capability_info.set_short_slot_time(
-        BITFLAG_TO_BIT(ddk_caps, WLAN_INFO_HARDWARE_CAPABILITY_SHORT_SLOT_TIME));
-    capability_info.set_radio_msmt(
-        BITFLAG_TO_BIT(ddk_caps, WLAN_INFO_HARDWARE_CAPABILITY_RADIO_MSMT));
-#undef BITFLAG_TO_BIT
-    return capability_info;
-  }
 };
 
 // IEEE Std 802.11-2016 9.2.3

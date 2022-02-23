@@ -29,7 +29,6 @@ type BandCapabilities = struct {
     basic_rates vector<uint8>:internal.MAX_SUPPORTED_BASIC_RATES;
     channels bytes;
 
-    capability_info internal.CapabilityInfo;
     ht_cap box<internal.HtCapabilities>;
     vht_cap box<internal.VhtCapabilities>;
 };
@@ -39,6 +38,8 @@ type DeviceInfo = struct {
     role fuchsia.wlan.common.WlanMacRole;
     bands vector<BandCapabilities>;
     driver_features vector<fuchsia.wlan.common.DriverFeature>:32;
+    softmac_hardware_capability fuchsia.wlan.common.WlanSoftmacHardwareCapability;
+
     qos_capable bool;
 };
 

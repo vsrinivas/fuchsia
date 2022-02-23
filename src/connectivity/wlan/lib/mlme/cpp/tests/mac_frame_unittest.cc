@@ -352,30 +352,6 @@ TEST(Frame, PopulatedBodyData) {
   ASSERT_EQ(frame.body_data().size_bytes(), 10lu);
 }
 
-TEST(Frame, DdkConversion) {
-  // DDK uint32_t to class CapabilityInfo
-  uint32_t ddk_caps = 0;
-  auto ieee_caps = CapabilityInfo::FromDdk(ddk_caps);
-  EXPECT_EQ(0, ieee_caps.val());
-
-  ddk_caps |= WLAN_INFO_HARDWARE_CAPABILITY_SHORT_PREAMBLE;
-  ieee_caps = CapabilityInfo::FromDdk(ddk_caps);
-  EXPECT_EQ(1, ieee_caps.short_preamble());
-  EXPECT_EQ(0, ieee_caps.spectrum_mgmt());
-  EXPECT_EQ(0, ieee_caps.short_slot_time());
-  EXPECT_EQ(0, ieee_caps.radio_msmt());
-  EXPECT_EQ(0x0020, ieee_caps.val());
-
-  ddk_caps =
-      WLAN_INFO_HARDWARE_CAPABILITY_SHORT_PREAMBLE | WLAN_INFO_HARDWARE_CAPABILITY_SHORT_SLOT_TIME;
-  ieee_caps = CapabilityInfo::FromDdk(ddk_caps);
-  EXPECT_EQ(1, ieee_caps.short_preamble());
-  EXPECT_EQ(0, ieee_caps.spectrum_mgmt());
-  EXPECT_EQ(1, ieee_caps.short_slot_time());
-  EXPECT_EQ(0, ieee_caps.radio_msmt());
-  EXPECT_EQ(0x420, ieee_caps.val());
-}
-
 TEST(Frame, ParseProbeRequests) {
   auto frame_data = test_data::kProbeRequestFrame;
   auto pkt = GetPacket(frame_data.size());

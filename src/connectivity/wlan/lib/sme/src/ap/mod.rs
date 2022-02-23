@@ -161,15 +161,16 @@ impl ApSme {
                     Ok(rsn_cfg) => rsn_cfg,
                 };
 
-                let capabilities = mac::CapabilityInfo(band_cap.capability_info)
-                    // IEEE Std 802.11-2016, 9.4.1.4: An AP sets the ESS subfield to 1 and the IBSS
-                    // subfield to 0 within transmitted Beacon or Probe Response frames.
-                    .with_ess(true)
-                    .with_ibss(false)
-                    // IEEE Std 802.11-2016, 9.4.1.4: An AP sets the Privacy subfield to 1 within
-                    // transmitted Beacon, Probe Response, (Re)Association Response frames if data
-                    // confidentiality is required for all Data frames exchanged within the BSS.
-                    .with_privacy(rsn_cfg.is_some());
+                let capabilities =
+                    mac::CapabilityInfo(ctx.device_info.softmac_hardware_capability as u16)
+                        // IEEE Std 802.11-2016, 9.4.1.4: An AP sets the ESS subfield to 1 and the IBSS
+                        // subfield to 0 within transmitted Beacon or Probe Response frames.
+                        .with_ess(true)
+                        .with_ibss(false)
+                        // IEEE Std 802.11-2016, 9.4.1.4: An AP sets the Privacy subfield to 1 within
+                        // transmitted Beacon, Probe Response, (Re)Association Response frames if data
+                        // confidentiality is required for all Data frames exchanged within the BSS.
+                        .with_privacy(rsn_cfg.is_some());
 
                 let req = match create_start_request(
                     &op_radio_cfg,
@@ -187,6 +188,7 @@ impl ApSme {
                     }
                 };
 
+                // TODO(fxbug.dev/28891): Select which rates are mandatory here.
                 let rates = band_cap.basic_rates.iter().map(|r| SupportedRate(*r)).collect();
 
                 ctx.mlme_sink.send(MlmeRequest::Start(req));
