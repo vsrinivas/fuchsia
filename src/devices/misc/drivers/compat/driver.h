@@ -10,6 +10,8 @@
 #include <lib/fpromise/scope.h>
 #include <lib/service/llcpp/outgoing_directory.h>
 
+#include <unordered_set>
+
 #include "src/devices/lib/compat/symbols.h"
 #include "src/devices/lib/driver2/devfs_exporter.h"
 #include "src/devices/lib/driver2/logger.h"
@@ -27,8 +29,6 @@ class Driver {
          driver::Logger logger, std::string_view url, std::string_view name, void* context,
          const compat_device_proto_ops_t& proto_ops, const zx_protocol_device_t* ops);
   ~Driver();
-
-  zx_driver_t* ZxDriver();
 
   static constexpr const char* Name() { return "compat"; }
 
@@ -113,9 +113,30 @@ class Driver {
   fpromise::scope scope_;
 };
 
+class DriverList {
+ public:
+  zx_driver_t* ZxDriver();
+
+  // Add a driver to the list. `driver` is unowned, and needs
+  // to be removed before the driver goes out of scope.
+  void AddDriver(Driver* driver);
+  void RemoveDriver(Driver* driver);
+
+  // Logs a message for the DFv1 driver.
+  void Log(FuchsiaLogSeverity severity, const char* tag, const char* file, int line,
+           const char* msg, va_list args);
+
+ private:
+  std::unordered_set<Driver*> drivers_;
+};
+
+// This is the list of all of the compat drivers loaded in the same
+// driver host.
+extern DriverList global_driver_list;
+
 }  // namespace compat
 
-struct zx_driver : public compat::Driver {
+struct zx_driver : public compat::DriverList {
   // NOTE: Intentionally empty, do not add to this.
 };
 

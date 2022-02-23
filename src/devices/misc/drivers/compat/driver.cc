@@ -54,6 +54,22 @@ T GetSymbol(const fidl::VectorView<fdf::wire::NodeSymbol>& symbols, std::string_
 
 namespace compat {
 
+DriverList global_driver_list;
+
+zx_driver_t* DriverList::ZxDriver() { return static_cast<zx_driver_t*>(this); }
+
+void DriverList::AddDriver(Driver* driver) { drivers_.insert(driver); }
+
+void DriverList::RemoveDriver(Driver* driver) { drivers_.erase(driver); }
+
+void DriverList::Log(FuchsiaLogSeverity severity, const char* tag, const char* file, int line,
+                     const char* msg, va_list args) {
+  if (drivers_.empty()) {
+    return;
+  }
+  (*drivers_.begin())->Log(severity, tag, file, line, msg, args);
+}
+
 Driver::Driver(async_dispatcher_t* dispatcher, fidl::WireSharedClient<fdf::Node> node,
                driver::Namespace ns, driver::Logger logger, std::string_view url,
                std::string_view name, void* context, const compat_device_proto_ops_t& proto_ops,
@@ -66,6 +82,7 @@ Driver::Driver(async_dispatcher_t* dispatcher, fidl::WireSharedClient<fdf::Node>
       url_(url),
       device_(name, context, proto_ops, ops, this, std::nullopt, inner_logger_, dispatcher) {
   device_.Bind(std::move(node));
+  global_driver_list.AddDriver(this);
 }
 
 Driver::~Driver() {
@@ -73,9 +90,8 @@ Driver::~Driver() {
     record_->ops->release(context_);
   }
   dlclose(library_);
+  global_driver_list.RemoveDriver(this);
 }
-
-zx_driver_t* Driver::ZxDriver() { return static_cast<zx_driver_t*>(this); }
 
 zx::status<std::unique_ptr<Driver>> Driver::Start(fdf::wire::DriverStartArgs& start_args,
                                                   async_dispatcher_t* dispatcher,
@@ -315,7 +331,7 @@ result<void, zx_status_t> Driver::LoadDriver(std::tuple<zx::vmo, zx::vmo>& vmos)
     FDF_LOG(ERROR, "Failed to load driver '%s', both 'bind' and 'create' are defined", url_.data());
     return error(ZX_ERR_INVALID_ARGS);
   }
-  record_->driver = ZxDriver();
+  record_->driver = global_driver_list.ZxDriver();
 
   // Create logger.
   auto inner_logger = driver::Logger::Create(ns_, dispatcher_, note->payload.name);
