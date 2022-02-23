@@ -60,7 +60,7 @@ impl ConfigDataBuilder {
             }
         }
 
-        let metafar_path = outdir.as_ref().join("config_data.far");
+        let metafar_path = outdir.as_ref().join("meta.far");
         let manifest_path = outdir.as_ref().join("config_data.package_manifest.json");
 
         package_builder.manifest_path(&manifest_path);
@@ -84,7 +84,7 @@ mod tests {
     #[test]
     fn test_builder() {
         let outdir = TempDir::new().unwrap();
-        let config_data_metafar_path = outdir.path().join("config_data.far");
+        let config_data_metafar_path = outdir.path().join("meta.far");
 
         // Create a file to write to the package.
         let source_file_path = NamedTempFile::new().unwrap();
