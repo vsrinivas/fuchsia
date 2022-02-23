@@ -127,12 +127,16 @@ func TestCoverage(t *testing.T) {
 	// Read the raw profile using llvm-profdata show command to ensure that it's valid.
 	args := []string{
 		"show",
-		"--binary-ids",
+		"-binary-ids",
 		rawProfile,
 	}
 	showCmd := exec.Command(*llvmProfData, args...)
-	if err := showCmd.Run(); err != nil {
-		t.Fatalf("profile is malformed: %s: %s", rawProfile, err)
+	if showCmdOutput, err := showCmd.CombinedOutput(); err != nil {
+		if _, ok := err.(*exec.ExitError); ok {
+			t.Fatalf("cannot read raw profile %s: %s", rawProfile, string(showCmdOutput))
+		} else {
+			t.Fatalf("cannot execute %s: %s", showCmd, err)
+		}
 	}
 
 	// Generate an indexed profile using llvm-profdata merge command.
@@ -144,8 +148,12 @@ func TestCoverage(t *testing.T) {
 		indexedProfile,
 	}
 	mergeCmd := exec.Command(*llvmProfData, args...)
-	if err := mergeCmd.Run(); err != nil {
-		t.Fatalf("cannot create an indexed profile: %s", err)
+	if mergeCmdOutput, err := mergeCmd.CombinedOutput(); err != nil {
+		if _, ok := err.(*exec.ExitError); ok {
+			t.Fatalf("cannot create an indexed profile: %s", string(mergeCmdOutput))
+		} else {
+			t.Fatalf("cannot execute %s: %s", mergeCmd, err)
+		}
 	}
 
 	// Generate a coverage report via using llvm-cov export command.
@@ -157,12 +165,16 @@ func TestCoverage(t *testing.T) {
 		*coverageTestBinary,
 	}
 	exportCmd := exec.Command(*llvmCov, args...)
-	generatedCoverage, err := exportCmd.CombinedOutput()
+	generatedCoverageOutput, err := exportCmd.CombinedOutput()
 	if err != nil {
-		t.Fatalf("cannot export coverage: %s", err)
+		if _, ok := err.(*exec.ExitError); ok {
+			t.Fatalf("cannot export coverage: %s", string(generatedCoverageOutput))
+		} else {
+			t.Fatalf("cannot execute %s: %s", exportCmd, err)
+		}
 	}
 	var generatedCoverageExport llvm.Export
-	if err := json.Unmarshal(generatedCoverage, &generatedCoverageExport); err != nil {
+	if err := json.Unmarshal(generatedCoverageOutput, &generatedCoverageExport); err != nil {
 		t.Fatalf("cannot unmarshal generated coverage: %s", err)
 	}
 
