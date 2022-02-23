@@ -61,7 +61,6 @@ type Node interface {
 }
 
 type Service struct {
-	*io.NodeWithCtxTransitionalBase // TODO(https://fxbug.dev/77623): Remove once transitions are complete.
 	// AddFn is called serially with an incoming request. It must not block, and
 	// is expected to handle incoming calls on the request.
 	AddFn func(context.Context, zx.Channel) error
@@ -89,6 +88,12 @@ func (s *Service) addConnection(ctx fidl.Context, flags, mode uint32, req io.Nod
 
 func (s *Service) Clone(ctx fidl.Context, flags uint32, req io.NodeWithCtxInterfaceRequest) error {
 	return s.addConnection(ctx, flags, 0, req)
+}
+
+func (s *Service) Reopen(ctx fidl.Context, options io.ConnectionOptions, channel zx.Channel) error {
+	// TODO(https://fxbug.dev/77623): implement.
+	_ = channel.Close()
+	return nil
 }
 
 func (*Service) CloseDeprecated(fidl.Context) (int32, error) {
@@ -140,6 +145,16 @@ func (*Service) GetAttr(fidl.Context) (int32, io.NodeAttributes, error) {
 
 func (*Service) SetAttr(_ fidl.Context, flags uint32, attributes io.NodeAttributes) (int32, error) {
 	return int32(zx.ErrNotSupported), nil
+}
+
+func (*Service) GetAttributes(fidl.Context, io.NodeAttributesQuery) (io.Node2GetAttributesResult, error) {
+	// TODO(https://fxbug.dev/77623): implement.
+	return io.Node2GetAttributesResultWithErr(int32(zx.ErrNotSupported)), nil
+}
+
+func (*Service) UpdateAttributes(fidl.Context, io.NodeAttributes2) (io.Node2UpdateAttributesResult, error) {
+	// TODO(https://fxbug.dev/77623): implement.
+	return io.Node2UpdateAttributesResultWithErr(int32(zx.ErrNotSupported)), nil
 }
 
 func (*Service) GetFlags(fidl.Context) (int32, uint32, error) {
@@ -225,7 +240,6 @@ func (dir *DirectoryWrapper) addConnection(ctx fidl.Context, flags, mode uint32,
 var _ io.DirectoryWithCtx = (*directoryState)(nil)
 
 type directoryState struct {
-	*io.DirectoryWithCtxTransitionalBase // TODO(https://fxbug.dev/77623): Remove once transitions are complete.
 	*DirectoryWrapper
 
 	reading bool
@@ -234,6 +248,12 @@ type directoryState struct {
 
 func (dirState *directoryState) Clone(ctx fidl.Context, flags uint32, req io.NodeWithCtxInterfaceRequest) error {
 	return dirState.addConnection(ctx, flags, 0, req)
+}
+
+func (dirState *directoryState) Reopen(ctx fidl.Context, options io.ConnectionOptions, channel zx.Channel) error {
+	// TODO(https://fxbug.dev/77623): implement.
+	_ = channel.Close()
+	return nil
 }
 
 func (*directoryState) CloseDeprecated(fidl.Context) (int32, error) {
@@ -287,6 +307,16 @@ func (*directoryState) SetAttr(_ fidl.Context, flags uint32, attributes io.NodeA
 	return int32(zx.ErrNotSupported), nil
 }
 
+func (*directoryState) GetAttributes(fidl.Context, io.NodeAttributesQuery) (io.Node2GetAttributesResult, error) {
+	// TODO(https://fxbug.dev/77623): implement.
+	return io.Node2GetAttributesResultWithErr(int32(zx.ErrNotSupported)), nil
+}
+
+func (*directoryState) UpdateAttributes(fidl.Context, io.NodeAttributes2) (io.Node2UpdateAttributesResult, error) {
+	// TODO(https://fxbug.dev/77623): implement.
+	return io.Node2UpdateAttributesResultWithErr(int32(zx.ErrNotSupported)), nil
+}
+
 const dot = "."
 
 func (dirState *directoryState) Open(ctx fidl.Context, flags, mode uint32, path string, req io.NodeWithCtxInterfaceRequest) error {
@@ -314,12 +344,24 @@ func (dirState *directoryState) Open(ctx fidl.Context, flags, mode uint32, path 
 	return respond(ctx, flags, req, &zx.Error{Status: zx.ErrNotFound}, dirState)
 }
 
+func (dirState *directoryState) Open2(ctx fidl.Context, path string, mode io.OpenMode, options io.ConnectionOptions, channel zx.Channel) error {
+	// TODO(https://fxbug.dev/77623): implement.
+	_ = channel.Close()
+	return nil
+}
+
 func (*directoryState) AddInotifyFilter(ctx fidl.Context, path string, filters io.InotifyWatchMask, wd uint32, socket zx.Socket) error {
 	return nil
 }
 
 func (*directoryState) Unlink(_ fidl.Context, name string, _ io.UnlinkOptions) (io.Directory2UnlinkResult, error) {
 	return io.Directory2UnlinkResultWithErr(int32(zx.ErrNotSupported)), nil
+}
+
+func (dirState *directoryState) Enumerate(ctx fidl.Context, options io.DirectoryEnumerateOptions, req io.DirectoryIteratorWithCtxInterfaceRequest) error {
+	// TODO(https://fxbug.dev/77623): implement.
+	_ = req.Close()
+	return nil
 }
 
 func (dirState *directoryState) ReadDirents(ctx fidl.Context, maxOut uint64) (int32, []uint8, error) {
@@ -493,7 +535,6 @@ type Reader interface {
 }
 
 type fileState struct {
-	*io.FileWithCtxTransitionalBase // TODO(https://fxbug.dev/77623): Remove once transitions are complete.
 	*FileWrapper
 	reader Reader
 	size   uint64
@@ -502,6 +543,12 @@ type fileState struct {
 
 func (fState *fileState) Clone(ctx fidl.Context, flags uint32, req io.NodeWithCtxInterfaceRequest) error {
 	return fState.addConnection(ctx, flags, 0, req)
+}
+
+func (fState *fileState) Reopen(ctx fidl.Context, options io.ConnectionOptions, channel zx.Channel) error {
+	// TODO(https://fxbug.dev/77623): implement.
+	_ = channel.Close()
+	return nil
 }
 
 func (*fileState) CloseDeprecated(fidl.Context) (int32, error) {
@@ -584,6 +631,16 @@ func (fState *fileState) GetAttr(fidl.Context) (int32, io.NodeAttributes, error)
 
 func (*fileState) SetAttr(_ fidl.Context, flags uint32, attributes io.NodeAttributes) (int32, error) {
 	return int32(zx.ErrNotSupported), nil
+}
+
+func (*fileState) GetAttributes(fidl.Context, io.NodeAttributesQuery) (io.Node2GetAttributesResult, error) {
+	// TODO(https://fxbug.dev/77623): implement.
+	return io.Node2GetAttributesResultWithErr(int32(zx.ErrNotSupported)), nil
+}
+
+func (*fileState) UpdateAttributes(fidl.Context, io.NodeAttributes2) (io.Node2UpdateAttributesResult, error) {
+	// TODO(https://fxbug.dev/77623): implement.
+	return io.Node2UpdateAttributesResultWithErr(int32(zx.ErrNotSupported)), nil
 }
 
 func (fState *fileState) read(count uint64) (int32, []uint8, error) {

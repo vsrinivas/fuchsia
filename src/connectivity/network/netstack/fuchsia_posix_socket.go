@@ -313,8 +313,6 @@ func (t *terminalError) setConsumedLockedInner(err tcpip.Error) <-chan tcpip.Err
 
 // endpoint is the base structure that models all network sockets.
 type endpoint struct {
-	*fidlio.NodeWithCtxTransitionalBase // TODO(https://fxbug.dev/77623): Remove once transitions are complete.
-
 	wq *waiter.Queue
 	ep tcpip.Endpoint
 
@@ -372,10 +370,20 @@ func (ep *endpoint) GetAttr(fidl.Context) (int32, fidlio.NodeAttributes, error) 
 	return 0, fidlio.NodeAttributes{}, &zx.Error{Status: zx.ErrNotSupported, Text: fmt.Sprintf("%T", ep)}
 }
 
+func (ep *endpoint) GetAttributes(_ fidl.Context, query fidlio.NodeAttributesQuery) (fidlio.Node2GetAttributesResult, error) {
+	_ = syslog.DebugTf("GetAttributes", "%p: query=%#v", ep, query)
+	return fidlio.Node2GetAttributesResultWithErr(int32(zx.ErrNotSupported)), nil
+}
+
 func (ep *endpoint) SetAttr(fidl.Context, uint32, fidlio.NodeAttributes) (int32, error) {
 	_ = syslog.DebugTf("SetAttr", "%p", ep)
 
 	return 0, &zx.Error{Status: zx.ErrNotSupported, Text: fmt.Sprintf("%T", ep)}
+}
+
+func (ep *endpoint) UpdateAttributes(_ fidl.Context, attributes fidlio.NodeAttributes2) (fidlio.Node2UpdateAttributesResult, error) {
+	_ = syslog.DebugTf("UpdateAttributes", "%p: attributes=%#v", ep, attributes)
+	return fidlio.Node2UpdateAttributesResultWithErr(int32(zx.ErrNotSupported)), nil
 }
 
 func (ep *endpoint) GetFlags(fidl.Context) (int32, uint32, error) {
@@ -1896,6 +1904,15 @@ func (s *datagramSocketImpl) Clone(ctx fidl.Context, flags uint32, object fidlio
 	return nil
 }
 
+func (s *datagramSocketImpl) Reopen(ctx fidl.Context, options fidlio.ConnectionOptions, channel zx.Channel) error {
+	// TODO(https://fxbug.dev/77623): Implement.
+	_ = channel.Close()
+
+	_ = syslog.DebugTf("Clone", "%p: options=%#v", s.endpointWithEvent, options)
+
+	return nil
+}
+
 func (s *datagramSocket) recvMsg(opts tcpip.ReadOptions, dataLen uint32) ([]byte, tcpip.ReadResult, tcpip.Error) {
 	var b bytes.Buffer
 	dst := tcpip.LimitedWriter{
@@ -2147,6 +2164,15 @@ func (s *streamSocketImpl) Clone(ctx fidl.Context, flags uint32, object fidlio.N
 	s.addConnection(ctx, object)
 
 	_ = syslog.DebugTf("Clone", "%p: flags=%b", s.endpointWithSocket, flags)
+
+	return nil
+}
+
+func (s *streamSocketImpl) Reopen(ctx fidl.Context, options fidlio.ConnectionOptions, channel zx.Channel) error {
+	// TODO(https://fxbug.dev/77623): Implement.
+	_ = channel.Close()
+
+	_ = syslog.DebugTf("Clone", "%p: options=%#v", s.endpointWithSocket, options)
 
 	return nil
 }
@@ -2864,6 +2890,15 @@ func (s *rawSocketImpl) Clone(ctx fidl.Context, flags uint32, object fidlio.Node
 	return nil
 }
 
+func (s *rawSocketImpl) Reopen(ctx fidl.Context, options fidlio.ConnectionOptions, channel zx.Channel) error {
+	// TODO(https://fxbug.dev/77623): Implement.
+	_ = channel.Close()
+
+	_ = syslog.DebugTf("Clone", "%p: options=%#v", s.endpointWithEvent, options)
+
+	return nil
+}
+
 func (s *rawSocketImpl) RecvMsg(_ fidl.Context, wantAddr bool, dataLen uint32, wantControl bool, flags socket.RecvMsgFlags) (rawsocket.SocketRecvMsgResult, error) {
 	addr, data, truncated, cmsg, err := s.recvMsg(wantAddr, dataLen, flags&socket.RecvMsgFlagsPeek != 0)
 	if err != nil {
@@ -3196,6 +3231,15 @@ func (s *packetSocketImpl) Clone(ctx fidl.Context, flags uint32, object fidlio.N
 	s.addConnection(ctx, object)
 
 	_ = syslog.DebugTf("Clone", "%p: flags=%b", s.endpointWithEvent, flags)
+
+	return nil
+}
+
+func (s *packetSocketImpl) Reopen(ctx fidl.Context, options fidlio.ConnectionOptions, channel zx.Channel) error {
+	// TODO(https://fxbug.dev/77623): Implement.
+	_ = channel.Close()
+
+	_ = syslog.DebugTf("Clone", "%p: options=%#v", s.endpointWithEvent, options)
 
 	return nil
 }

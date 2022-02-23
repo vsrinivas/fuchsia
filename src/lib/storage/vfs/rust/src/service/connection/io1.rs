@@ -137,6 +137,10 @@ impl Connection {
             FileRequest::Clone { flags, object, control_handle: _ } => {
                 self.handle_clone(flags, object);
             }
+            FileRequest::Reopen { options, object_request, control_handle: _ } => {
+                let _ = object_request;
+                todo!("https://fxbug.dev/77623: options={:?}", options);
+            }
             FileRequest::CloseDeprecated { responder } => {
                 responder.send(ZX_OK)?;
                 return Ok(ConnectionState::Closed);
@@ -179,6 +183,14 @@ impl Connection {
                 // the only flag that might be modified through this call is OPEN_FLAG_APPEND, and
                 // it is not supported by the PseudoFile.
                 responder.send(ZX_ERR_NOT_SUPPORTED)?;
+            }
+            FileRequest::GetAttributes { query, responder } => {
+                let _ = responder;
+                todo!("https://fxbug.dev/77623: query={:?}", query);
+            }
+            FileRequest::UpdateAttributes { attributes, responder } => {
+                let _ = responder;
+                todo!("https://fxbug.dev/77623: attributes={:?}", attributes);
             }
             FileRequest::GetFlags { responder } => {
                 responder.send(ZX_OK, OPEN_FLAG_NODE_REFERENCE)?;
@@ -239,8 +251,9 @@ impl Connection {
                 // There is no backing VMO.
                 responder.send(&mut Err(ZX_ERR_NOT_SUPPORTED))?;
             }
-            // TODO(https://fxbug.dev/77623): Remove when the io1 -> io2 transition is complete.
-            _ => panic!("Unhandled request!"),
+            FileRequest::QueryFilesystem { responder } => {
+                responder.send(ZX_ERR_NOT_SUPPORTED, None)?;
+            }
         }
         Ok(ConnectionState::Alive)
     }

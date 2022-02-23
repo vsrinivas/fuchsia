@@ -7,7 +7,7 @@ use {
         round::{round_down, round_up},
         server::{errors::map_to_status, file::FxFile, node::OpenedNode},
     },
-    anyhow::{bail, Error},
+    anyhow::Error,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_hardware_block as block,
     fidl_fuchsia_hardware_block_volume::{
@@ -455,8 +455,6 @@ impl BlockServer {
             VolumeAndNodeRequest::Destroy { responder } => {
                 responder.send(zx::sys::ZX_OK)?;
             }
-            // TODO(fxbug.dev/89873)
-            VolumeAndNodeRequest::IoToIo2Placeholder { control_handle: _ } => {}
             VolumeAndNodeRequest::Clone { flags: _, object, control_handle: _ } => {
                 // Have to move this into a non-async function to avoid Rust compiler's
                 // complaint about recursive async functions
@@ -519,6 +517,9 @@ impl BlockServer {
                 responder.send(zx::sys::ZX_ERR_NOT_SUPPORTED)?;
             }
             // TODO(fxbug.dev/89873)
+            VolumeAndNodeRequest::GetAttributes { query: _, responder } => {
+                responder.send(&mut Err(zx::sys::ZX_ERR_NOT_SUPPORTED))?;
+            }
             VolumeAndNodeRequest::UpdateAttributes { attributes: _, responder } => {
                 responder.send(&mut Err(zx::sys::ZX_ERR_NOT_SUPPORTED))?;
             }
@@ -536,7 +537,6 @@ impl BlockServer {
                     Err(e) => responder.send(e.into_raw(), None)?,
                 }
             }
-            _ => bail!("Unexpected message"),
         }
         Ok(())
     }

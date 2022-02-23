@@ -18,7 +18,6 @@ protocol/member fuchsia.hardware.block/BlockAndNode.GetFifo() -> (int32 status,z
 protocol/member fuchsia.hardware.block/BlockAndNode.GetFlags() -> (int32 s,uint32 flags)
 protocol/member fuchsia.hardware.block/BlockAndNode.GetInfo() -> (int32 status,box<fuchsia.hardware.block/BlockInfo> info)
 protocol/member fuchsia.hardware.block/BlockAndNode.GetStats(bool clear) -> (int32 status,box<fuchsia.hardware.block/BlockStats> stats)
-protocol/member fuchsia.hardware.block/BlockAndNode.IoToIo2Placeholder()
 protocol/member fuchsia.hardware.block/BlockAndNode.OnConnectionInfo -> (fuchsia.io/ConnectionInfo info)
 protocol/member fuchsia.hardware.block/BlockAndNode.OnOpen -> (int32 s,fuchsia.io/NodeInfo:optional info)
 protocol/member fuchsia.hardware.block/BlockAndNode.QueryFilesystem() -> (int32 s,fuchsia.io/FilesystemInfo:optional info)

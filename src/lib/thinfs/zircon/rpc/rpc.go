@@ -104,15 +104,14 @@ func (vfs *ThinVFS) addFile(file fs.File, node io.NodeWithCtxInterfaceRequest) {
 }
 
 type directoryWrapper struct {
-	io.DirectoryWithCtxTransitionalBase // TODO(https://fxbug.dev/77623): Remove once transitions are complete.
-	vfs                                 *ThinVFS
-	token                               key
-	cancel                              context.CancelFunc
-	dir                                 fs.Directory
-	dirents                             []fs.Dirent
-	reading                             bool
-	e                                   zx.Event
-	cookies                             map[uint64]uint64
+	vfs     *ThinVFS
+	token   key
+	cancel  context.CancelFunc
+	dir     fs.Directory
+	dirents []fs.Dirent
+	reading bool
+	e       zx.Event
+	cookies map[uint64]uint64
 }
 
 func getKoid(h zx.Handle) uint64 {
@@ -151,6 +150,12 @@ func (d *directoryWrapper) Clone(_ fidl.Context, flags uint32, node io.NodeWithC
 		info.SetDirectory(io.DirectoryObject{})
 		return pxy.OnOpen(int32(zxErr), &info)
 	}
+	return nil
+}
+
+func (d *directoryWrapper) Reopen(ctx fidl.Context, options io.ConnectionOptions, channel zx.Channel) error {
+	// TODO(https://fxbug.dev/77623): Implement.
+	_ = channel.Close()
 	return nil
 }
 
@@ -236,9 +241,19 @@ func (d *directoryWrapper) GetAttr(fidl.Context) (int32, io.NodeAttributes, erro
 	}, nil
 }
 
+func (d *directoryWrapper) GetAttributes(_ fidl.Context, query io.NodeAttributesQuery) (io.Node2GetAttributesResult, error) {
+	// TODO(https://fxbug.dev/77623): Implement.
+	return io.Node2GetAttributesResultWithErr(int32(zx.ErrNotSupported)), nil
+}
+
 func (d *directoryWrapper) SetAttr(_ fidl.Context, flags uint32, attr io.NodeAttributes) (int32, error) {
 	t := time.Unix(0, int64(attr.ModificationTime))
 	return int32(errorToZx(d.dir.Touch(t, t))), nil
+}
+
+func (d *directoryWrapper) UpdateAttributes(_ fidl.Context, attributes io.NodeAttributes2) (io.Node2UpdateAttributesResult, error) {
+	// TODO(https://fxbug.dev/77623): Implement.
+	return io.Node2UpdateAttributesResultWithErr(int32(zx.ErrNotSupported)), nil
 }
 
 func (d *directoryWrapper) AddInotifyFilter(_ fidl.Context, path string, filters io.InotifyWatchMask, wd uint32, socket zx.Socket) error {
@@ -300,6 +315,12 @@ func (d *directoryWrapper) Open(_ fidl.Context, inFlags, inMode uint32, path str
 	return nil
 }
 
+func (d *directoryWrapper) Open2(ctx fidl.Context, path string, mode io.OpenMode, options io.ConnectionOptions, channel zx.Channel) error {
+	// TODO(https://fxbug.dev/77623): Implement.
+	_ = channel.Close()
+	return nil
+}
+
 func (d *directoryWrapper) Unlink(_ fidl.Context, name string, _ io.UnlinkOptions) (io.Directory2UnlinkResult, error) {
 	status := int32(errorToZx(d.dir.Unlink(name)))
 	if status == 0 {
@@ -347,6 +368,12 @@ func (d *directoryWrapper) ReadDirents(_ fidl.Context, maxOut uint64) (int32, []
 	}
 	d.reading = true
 	return int32(zx.ErrOk), bytes[:written], nil
+}
+
+func (d *directoryWrapper) Enumerate(ctx fidl.Context, options io.DirectoryEnumerateOptions, req io.DirectoryIteratorWithCtxInterfaceRequest) error {
+	// TODO(https://fxbug.dev/77623): Implement.
+	_ = req.Close()
+	return nil
 }
 
 func (d *directoryWrapper) Rewind(fidl.Context) (int32, error) {
@@ -451,10 +478,9 @@ func (d *directoryWrapper) SetFlags(fidl.Context, uint32) (int32, error) {
 }
 
 type fileWrapper struct {
-	io.FileWithCtxTransitionalBase // TODO(https://fxbug.dev/77623): Remove once transitions are complete.
-	vfs                            *ThinVFS
-	cancel                         context.CancelFunc
-	file                           fs.File
+	vfs    *ThinVFS
+	cancel context.CancelFunc
+	file   fs.File
 }
 
 func (f *fileWrapper) Clone(_ fidl.Context, flags uint32, node io.NodeWithCtxInterfaceRequest) error {
@@ -473,6 +499,12 @@ func (f *fileWrapper) Clone(_ fidl.Context, flags uint32, node io.NodeWithCtxInt
 		})
 		return pxy.OnOpen(int32(zx.ErrOk), &info)
 	}
+	return nil
+}
+
+func (f *fileWrapper) Reopen(ctx fidl.Context, options io.ConnectionOptions, channel zx.Channel) error {
+	// TODO(https://fxbug.dev/77623): Implement.
+	_ = channel.Close()
 	return nil
 }
 
@@ -554,12 +586,22 @@ func (f *fileWrapper) GetAttr(fidl.Context) (int32, io.NodeAttributes, error) {
 	}, nil
 }
 
+func (f *fileWrapper) GetAttributes(_ fidl.Context, query io.NodeAttributesQuery) (io.Node2GetAttributesResult, error) {
+	// TODO(https://fxbug.dev/77623): Implement.
+	return io.Node2GetAttributesResultWithErr(int32(zx.ErrNotSupported)), nil
+}
+
 func (f *fileWrapper) SetAttr(_ fidl.Context, flags uint32, attr io.NodeAttributes) (int32, error) {
 	if f.file.GetOpenFlags().Path() {
 		return int32(zx.ErrBadHandle), nil
 	}
 	t := time.Unix(0, int64(attr.ModificationTime))
 	return int32(errorToZx(f.file.Touch(t, t))), nil
+}
+
+func (f *fileWrapper) UpdateAttributes(_ fidl.Context, attributes io.NodeAttributes2) (io.Node2UpdateAttributesResult, error) {
+	// TODO(https://fxbug.dev/77623): Implement.
+	return io.Node2UpdateAttributesResultWithErr(int32(zx.ErrNotSupported)), nil
 }
 
 func (f *fileWrapper) ReadDeprecated(_ fidl.Context, count uint64) (int32, []uint8, error) {

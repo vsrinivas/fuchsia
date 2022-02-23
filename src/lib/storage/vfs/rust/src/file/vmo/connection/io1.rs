@@ -377,6 +377,10 @@ impl VmoFileConnection {
             FileRequest::Clone { flags, object, control_handle: _ } => {
                 self.handle_clone(self.flags, flags, object);
             }
+            FileRequest::Reopen { options, object_request, control_handle: _ } => {
+                let _ = object_request;
+                todo!("https://fxbug.dev/77623: options={:?}", options);
+            }
             FileRequest::CloseDeprecated { responder } => {
                 // We are going to close the connection anyways, so there is no way to handle this
                 // error.  TODO We may want to send it in an epitaph.
@@ -401,6 +405,10 @@ impl VmoFileConnection {
                     responder.control_handle().shutdown_with_epitaph(status);
                 }
             },
+            FileRequest::Describe2 { query, responder } => {
+                let _ = responder;
+                todo!("https://fxbug.dev/77623: query={:?}", query);
+            }
             FileRequest::SyncDeprecated { responder } => {
                 // VMOs are always in sync.
                 responder.send(ZX_OK)?;
@@ -420,6 +428,14 @@ impl VmoFileConnection {
                 // the only flag that might be modified through this call is OPEN_FLAG_APPEND, and
                 // it is not supported at the moment.
                 responder.send(ZX_ERR_NOT_SUPPORTED)?;
+            }
+            FileRequest::GetAttributes { query, responder } => {
+                let _ = responder;
+                todo!("https://fxbug.dev/77623: query={:?}", query);
+            }
+            FileRequest::UpdateAttributes { attributes, responder } => {
+                let _ = responder;
+                todo!("https://fxbug.dev/77623: attributes={:?}", attributes);
             }
             FileRequest::ReadDeprecated { count, responder } => {
                 self.handle_read(count, |status, content| {
@@ -552,8 +568,9 @@ impl VmoFileConnection {
             FileRequest::AdvisoryLock { request: _, responder } => {
                 responder.send(&mut Err(ZX_ERR_NOT_SUPPORTED))?;
             }
-            // TODO(https://fxbug.dev/77623): Remove when the io1 -> io2 transition is complete.
-            _ => panic!("Unhandled request!"),
+            FileRequest::QueryFilesystem { responder } => {
+                responder.send(ZX_ERR_NOT_SUPPORTED, None)?;
+            }
         }
         Ok(ConnectionState::Alive)
     }

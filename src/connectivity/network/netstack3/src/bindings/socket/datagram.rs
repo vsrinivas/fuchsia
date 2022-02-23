@@ -1028,6 +1028,10 @@ where
                                 responder_send!(responder, &mut info);
                             }
                         }
+                        fposix_socket::DatagramSocketRequest::Describe2 { query, responder } => {
+                            let _ = responder;
+                            todo!("https://fxbug.dev/77623: query={:?}", query);
+                        }
                         fposix_socket::DatagramSocketRequest::Connect { addr, responder } => {
                             responder_send!(
                                 responder,
@@ -1040,6 +1044,14 @@ where
                         fposix_socket::DatagramSocketRequest::Clone { flags, object, .. } => {
                             let cloned_worker = self.clone().await;
                             self.clone_spawn(flags, object, cloned_worker);
+                        }
+                        fposix_socket::DatagramSocketRequest::Reopen {
+                            options,
+                            object_request,
+                            control_handle: _,
+                        } => {
+                            let _ = object_request;
+                            todo!("https://fxbug.dev/77623: options={:?}", options);
                         }
                         fposix_socket::DatagramSocketRequest::CloseDeprecated { responder } => {
                             let () = self.make_handler().await.close();
@@ -1082,8 +1094,25 @@ where
                         } => {
                             responder_send!(responder, zx::Status::NOT_SUPPORTED.into_raw());
                         }
+                        fposix_socket::DatagramSocketRequest::GetAttributes {
+                            query,
+                            responder,
+                        } => {
+                            let _ = responder;
+                            todo!("https://fxbug.dev/77623: query={:?}", query);
+                        }
+                        fposix_socket::DatagramSocketRequest::UpdateAttributes {
+                            attributes,
+                            responder,
+                        } => {
+                            let _ = responder;
+                            todo!("https://fxbug.dev/77623: attributes={:?}", attributes);
+                        }
                         fposix_socket::DatagramSocketRequest::Bind { addr, responder } => {
                             responder_send!(responder, &mut self.make_handler().await.bind(addr));
+                        }
+                        fposix_socket::DatagramSocketRequest::QueryFilesystem { responder } => {
+                            responder_send!(responder, zx::Status::NOT_SUPPORTED.into_raw(), None);
                         }
                         fposix_socket::DatagramSocketRequest::GetSockName { responder } => {
                             responder_send!(
@@ -1147,7 +1176,16 @@ where
                         fposix_socket::DatagramSocketRequest::GetTimestamp { responder } => {
                             responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
                         }
+                        fposix_socket::DatagramSocketRequest::GetTimestamp2 { responder } => {
+                            responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
+                        }
                         fposix_socket::DatagramSocketRequest::SetTimestamp {
+                            value: _,
+                            responder,
+                        } => {
+                            responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
+                        }
+                        fposix_socket::DatagramSocketRequest::SetTimestamp2 {
                             value: _,
                             responder,
                         } => {
@@ -1279,6 +1317,15 @@ where
                         } => {
                             responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
                         }
+                        fposix_socket::DatagramSocketRequest::SetIpv6UnicastHops {
+                            value: _,
+                            responder,
+                        } => {
+                            responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
+                        }
+                        fposix_socket::DatagramSocketRequest::GetIpv6UnicastHops { responder } => {
+                            responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
+                        }
                         fposix_socket::DatagramSocketRequest::SetIpv6MulticastHops {
                             value: _,
                             responder,
@@ -1403,8 +1450,6 @@ where
                         fposix_socket::DatagramSocketRequest::GetIpPacketInfo { responder } => {
                             responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
                         }
-                        // TODO(https://fxbug.dev/77623): Remove when the io1 -> io2 transition is complete.
-                        _ => panic!("Unhandled request!"),
                     }
                 }
                 Err(err) => {

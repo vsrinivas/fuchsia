@@ -1197,6 +1197,10 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
                     None => {}
                 }
             }
+            DirectoryRequest::Reopen { options, object_request, control_handle: _ } => {
+                let _ = object_request;
+                todo!("https://fxbug.dev/77623: options={:?}", options);
+            }
             DirectoryRequest::CloseDeprecated { responder } => {
                 responder.send(zx::sys::ZX_OK)?;
                 return Ok((None, ConnectionState::Closed));
@@ -1276,19 +1280,42 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
                     }
                 }
             }
+            DirectoryRequest::Open2 { path, mode, options, object_request, control_handle: _ } => {
+                let _ = object_request;
+                todo!(
+                    "https://fxbug.dev/77623: path={} mode={:?} options={:?}",
+                    path,
+                    mode,
+                    options
+                );
+            }
             DirectoryRequest::Describe { responder } => {
                 let mut info = self.describe_node(connection.position)?;
                 responder.send(&mut info)?;
+            }
+            DirectoryRequest::Describe2 { query, responder } => {
+                let _ = responder;
+                todo!("https://fxbug.dev/77623: query={:?}", query);
             }
             DirectoryRequest::GetAttr { responder } => {
                 let mut attrs = self.node_attrs(connection.position);
                 responder.send(zx::sys::ZX_OK, &mut attrs)?
             }
-            DirectoryRequest::SetAttr { responder, .. } => unsupported!(responder)?,
+            DirectoryRequest::SetAttr { flags: _, attributes: _, responder } => {
+                unsupported!(responder)?
+            }
+            DirectoryRequest::GetAttributes { query, responder } => {
+                let _ = responder;
+                todo!("https://fxbug.dev/77623: query={:?}", query);
+            }
+            DirectoryRequest::UpdateAttributes { attributes, responder } => {
+                let _ = responder;
+                todo!("https://fxbug.dev/77623: attributes={:?}", attributes);
+            }
             DirectoryRequest::SyncDeprecated { responder } => unsupported!(responder)?,
             DirectoryRequest::Sync { responder } => unsupported2!(responder)?,
-            DirectoryRequest::Unlink { responder, .. } => {
-                responder.send(&mut Err(zx::sys::ZX_ERR_NOT_SUPPORTED))?
+            DirectoryRequest::Unlink { name: _, options: _, responder } => {
+                unsupported2!(responder)?
             }
             DirectoryRequest::ReadDirents { max_bytes, responder } => {
                 let children = self.children_for_dir(connection.position)?;
@@ -1305,31 +1332,42 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
                     *offset = new_offset;
                 }
             }
+            DirectoryRequest::Enumerate { options, iterator, control_handle: _ } => {
+                let _ = iterator;
+                todo!("https://fxbug.dev/77623: options={:?}", options);
+            }
             DirectoryRequest::Rewind { responder } => {
                 connection.dirents_buf = None;
                 responder.send(zx::sys::ZX_OK)?;
             }
             DirectoryRequest::GetToken { responder } => unsupported!(responder, None)?,
-            DirectoryRequest::Rename { responder, .. } => {
-                responder.send(&mut Err(zx::sys::ZX_ERR_NOT_SUPPORTED))?
+            DirectoryRequest::Rename { src: _, dst_parent_token: _, dst: _, responder } => {
+                unsupported2!(responder)?
             }
-            DirectoryRequest::Link { responder, .. } => unsupported!(responder)?,
-            DirectoryRequest::Watch { responder, .. } => unsupported!(responder)?,
+            DirectoryRequest::Link { src: _, dst_parent_token: _, dst: _, responder } => {
+                unsupported!(responder)?
+            }
+            DirectoryRequest::Watch { mask: _, options: _, watcher: _, responder } => {
+                unsupported!(responder)?
+            }
             DirectoryRequest::GetFlags { responder } => unsupported!(responder, 0)?,
             DirectoryRequest::SetFlags { flags: _, responder } => unsupported!(responder)?,
-            DirectoryRequest::AdvisoryLock { request: _, responder } => {
-                responder.send(&mut Err(zx::Status::NOT_SUPPORTED.into_raw()))?
-            }
-
-            DirectoryRequest::AddInotifyFilter { path, filter, watch_descriptor, .. } => {
-                panic!(
-                    "AddInotifyFilter not supported: path = {:?}, mask = {:?}, descriptor = {:?}",
-                    path, filter, watch_descriptor
+            DirectoryRequest::AdvisoryLock { request: _, responder } => unsupported2!(responder)?,
+            DirectoryRequest::AddInotifyFilter {
+                path,
+                filter,
+                watch_descriptor,
+                socket: _,
+                responder: _,
+            } => {
+                todo!(
+                    "https://fxbug.dev/77623: path={} filter={:?} watch_descriptor={}",
+                    path,
+                    filter,
+                    watch_descriptor
                 );
             }
-
-            // TODO(https://fxbug.dev/77623): Remove when the io1 -> io2 transition is complete.
-            _ => panic!("Unhandled request!"),
+            DirectoryRequest::QueryFilesystem { responder } => unsupported!(responder, None)?,
         }
         Ok((None, ConnectionState::Open))
     }
@@ -1414,6 +1452,10 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
                     None => {}
                 }
             }
+            FileRequest::Reopen { options, object_request, control_handle: _ } => {
+                let _ = object_request;
+                todo!("https://fxbug.dev/77623: options={:?}", options);
+            }
             FileRequest::CloseDeprecated { responder } => {
                 responder.send(zx::sys::ZX_OK)?;
                 return Ok(ConnectionState::Closed);
@@ -1426,13 +1468,25 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
                 let mut info = self.describe_node(connection.position)?;
                 responder.send(&mut info)?;
             }
+            FileRequest::Describe2 { query, responder } => {
+                let _ = responder;
+                todo!("https://fxbug.dev/77623: query={:?}", query);
+            }
             FileRequest::SyncDeprecated { responder } => unsupported!(responder)?,
             FileRequest::Sync { responder } => unsupported2!(responder)?,
             FileRequest::GetAttr { responder } => {
                 let mut attrs = self.node_attrs(connection.position);
                 responder.send(zx::sys::ZX_OK, &mut attrs)?
             }
-            FileRequest::SetAttr { responder, .. } => unsupported!(responder)?,
+            FileRequest::SetAttr { flags: _, attributes: _, responder } => unsupported!(responder)?,
+            FileRequest::GetAttributes { query, responder } => {
+                let _ = responder;
+                todo!("https://fxbug.dev/77623: query={:?}", query);
+            }
+            FileRequest::UpdateAttributes { attributes, responder } => {
+                let _ = responder;
+                todo!("https://fxbug.dev/77623: attributes={:?}", attributes);
+            }
             // FIXME(cramertj) enforce READ rights
             FileRequest::ReadDeprecated { count, responder } => {
                 let result = self.handle_read_request(connection, count);
@@ -1462,10 +1516,12 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
                         .map_err(zx::Status::into_raw),
                 )?;
             }
-            FileRequest::WriteDeprecated { responder, .. } => unsupported!(responder, 0)?,
-            FileRequest::Write { responder, .. } => unsupported2!(responder)?,
-            FileRequest::WriteAtDeprecated { responder, .. } => unsupported!(responder, 0)?,
-            FileRequest::WriteAt { responder, .. } => unsupported2!(responder)?,
+            FileRequest::WriteDeprecated { data: _, responder } => unsupported!(responder, 0)?,
+            FileRequest::Write { data: _, responder } => unsupported2!(responder)?,
+            FileRequest::WriteAtDeprecated { data: _, offset: _, responder } => {
+                unsupported!(responder, 0)?
+            }
+            FileRequest::WriteAt { data: _, offset: _, responder } => unsupported2!(responder)?,
             FileRequest::SeekDeprecated { offset, start, responder } => {
                 let new_offset = self.handle_seek_request(connection, start, offset);
                 responder.send(zx::sys::ZX_OK, new_offset)?;
@@ -1474,21 +1530,18 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
                 let new_offset = self.handle_seek_request(connection, origin, offset);
                 responder.send(&mut Ok(new_offset))?;
             }
-            FileRequest::Truncate { responder, .. } => unsupported!(responder)?,
-            FileRequest::Resize { responder, .. } => unsupported2!(responder)?,
+            FileRequest::Truncate { length: _, responder } => unsupported!(responder)?,
+            FileRequest::Resize { length: _, responder } => unsupported2!(responder)?,
             FileRequest::GetFlags { responder } => unsupported!(responder, 0)?,
             FileRequest::SetFlags { flags: _, responder } => unsupported!(responder)?,
-            FileRequest::GetBuffer { responder, .. } => unsupported!(responder, None)?,
-            FileRequest::GetBackingMemory { responder, .. } => unsupported2!(responder)?,
+            FileRequest::GetBuffer { flags: _, responder } => unsupported!(responder, None)?,
+            FileRequest::GetBackingMemory { flags: _, responder } => unsupported2!(responder)?,
             FileRequest::GetFlagsDeprecatedUseNode { responder } => unsupported!(responder, 0)?,
             FileRequest::SetFlagsDeprecatedUseNode { flags: _, responder } => {
                 unsupported!(responder)?
             }
-            FileRequest::AdvisoryLock { request: _, responder } => {
-                responder.send(&mut Err(zx::Status::NOT_SUPPORTED.into_raw()))?
-            }
-            // TODO(https://fxbug.dev/77623): Remove when the io1 -> io2 transition is complete.
-            _ => panic!("Unhandled request!"),
+            FileRequest::AdvisoryLock { request: _, responder } => unsupported2!(responder)?,
+            FileRequest::QueryFilesystem { responder } => unsupported!(responder, None)?,
         }
         Ok(ConnectionState::Open)
     }
@@ -1510,6 +1563,10 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
                     None => {}
                 }
             }
+            NodeRequest::Reopen { options, object_request, control_handle: _ } => {
+                let _ = object_request;
+                todo!("https://fxbug.dev/77623: options={:?}", options);
+            }
             NodeRequest::CloseDeprecated { responder } => {
                 responder.send(zx::sys::ZX_OK)?;
                 return Ok(ConnectionState::Closed);
@@ -1522,17 +1579,28 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
                 let mut info = self.describe_node(connection.position)?;
                 responder.send(&mut info)?;
             }
+            NodeRequest::Describe2 { query, responder } => {
+                let _ = responder;
+                todo!("https://fxbug.dev/77623: query={:?}", query);
+            }
             NodeRequest::SyncDeprecated { responder } => unsupported!(responder)?,
             NodeRequest::Sync { responder } => unsupported2!(responder)?,
             NodeRequest::GetAttr { responder } => {
                 let mut attrs = self.node_attrs(connection.position);
                 responder.send(zx::sys::ZX_OK, &mut attrs)?
             }
-            NodeRequest::SetAttr { responder, .. } => unsupported!(responder)?,
+            NodeRequest::SetAttr { flags: _, attributes: _, responder } => unsupported!(responder)?,
+            NodeRequest::GetAttributes { query, responder } => {
+                let _ = responder;
+                todo!("https://fxbug.dev/77623: query={:?}", query);
+            }
+            NodeRequest::UpdateAttributes { attributes, responder } => {
+                let _ = responder;
+                todo!("https://fxbug.dev/77623: attributes={:?}", attributes);
+            }
             NodeRequest::GetFlags { responder } => unsupported!(responder, 0)?,
             NodeRequest::SetFlags { flags: _, responder } => unsupported!(responder)?,
-            // TODO(https://fxbug.dev/77623): Remove when the io1 -> io2 transition is complete.
-            _ => panic!("Unhandled request!"),
+            NodeRequest::QueryFilesystem { responder } => unsupported!(responder, None)?,
         }
         Ok(ConnectionState::Open)
     }

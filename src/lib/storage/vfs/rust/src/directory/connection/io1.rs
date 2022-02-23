@@ -178,6 +178,11 @@ where
                 fuchsia_trace::duration!("storage", "Directory::Clone");
                 self.handle_clone(flags, 0, object);
             }
+            DirectoryRequest::Reopen { options, object_request, control_handle: _ } => {
+                fuchsia_trace::duration!("storage", "Directory::Reopen");
+                let _ = object_request;
+                todo!("https://fxbug.dev/77623: options={:?}", options);
+            }
             DirectoryRequest::CloseDeprecated { responder } => {
                 fuchsia_trace::duration!("storage", "Directory::CloseDeprecated");
                 let status = match self.directory.close() {
@@ -196,6 +201,11 @@ where
                 fuchsia_trace::duration!("storage", "Directory::Describe");
                 let mut info = NodeInfo::Directory(DirectoryObject);
                 responder.send(&mut info)?;
+            }
+            DirectoryRequest::Describe2 { query, responder } => {
+                fuchsia_trace::duration!("storage", "Directory::Describe2");
+                let _ = responder;
+                todo!("https://fxbug.dev/77623: query={:?}", query);
             }
             DirectoryRequest::GetAttr { responder } => {
                 fuchsia_trace::duration!("storage", "Directory::GetAttr");
@@ -216,6 +226,16 @@ where
                 };
                 responder.send(status, &mut attrs)?;
             }
+            DirectoryRequest::GetAttributes { query, responder } => {
+                fuchsia_trace::duration!("storage", "Directory::GetAttributes");
+                let _ = responder;
+                todo!("https://fxbug.dev/77623: query={:?}", query);
+            }
+            DirectoryRequest::UpdateAttributes { attributes, responder } => {
+                fuchsia_trace::duration!("storage", "Directory::UpdateAttributes");
+                let _ = responder;
+                todo!("https://fxbug.dev/77623: attributes={:?}", attributes);
+            }
             DirectoryRequest::GetFlags { responder } => {
                 fuchsia_trace::duration!("storage", "Directory::GetFlags");
                 responder.send(ZX_OK, self.flags & GET_FLAGS_VISIBLE)?;
@@ -228,8 +248,30 @@ where
                 fuchsia_trace::duration!("storage", "Directory::Open");
                 self.handle_open(flags, mode, path, object);
             }
-            DirectoryRequest::AddInotifyFilter { .. } => {
+            DirectoryRequest::Open2 { path, mode, options, object_request, control_handle: _ } => {
+                fuchsia_trace::duration!("storage", "Directory::Open2");
+                let _ = object_request;
+                todo!(
+                    "https://fxbug.dev/77623: path={} mode={:?} options={:?}",
+                    path,
+                    mode,
+                    options
+                );
+            }
+            DirectoryRequest::AddInotifyFilter {
+                path,
+                filter,
+                watch_descriptor,
+                socket: _,
+                responder: _,
+            } => {
                 fuchsia_trace::duration!("storage", "Directory::AddInotifyFilter");
+                todo!(
+                    "https://fxbug.dev/77623: path={} filter={:?} watch_descriptor={}",
+                    path,
+                    filter,
+                    watch_descriptor
+                );
             }
             DirectoryRequest::AdvisoryLock { request: _, responder } => {
                 fuchsia_trace::duration!("storage", "Directory::AdvisoryLock");
@@ -241,6 +283,11 @@ where
                     responder.send(status.into_raw(), entries)
                 })
                 .await?;
+            }
+            DirectoryRequest::Enumerate { options, iterator, control_handle: _ } => {
+                fuchsia_trace::duration!("storage", "Directory::Enumerate");
+                let _ = iterator;
+                todo!("https://fxbug.dev/77623: options={:?}", options);
             }
             DirectoryRequest::Rewind { responder } => {
                 fuchsia_trace::duration!("storage", "Directory::Rewind");
@@ -270,7 +317,7 @@ where
                     Ok(mut info) => responder.send(0, Some(&mut info))?,
                 }
             }
-            DirectoryRequest::Unlink { responder, .. } => {
+            DirectoryRequest::Unlink { name: _, options: _, responder } => {
                 responder.send(&mut Err(ZX_ERR_NOT_SUPPORTED))?;
             }
             DirectoryRequest::GetToken { responder } => {
@@ -279,7 +326,7 @@ where
             DirectoryRequest::Rename { src: _, dst_parent_token: _, dst: _, responder } => {
                 responder.send(&mut Err(ZX_ERR_NOT_SUPPORTED))?;
             }
-            DirectoryRequest::SetAttr { responder, .. } => {
+            DirectoryRequest::SetAttr { flags: _, attributes: _, responder } => {
                 responder.send(ZX_ERR_NOT_SUPPORTED)?;
             }
             DirectoryRequest::SyncDeprecated { responder } => {
@@ -288,8 +335,6 @@ where
             DirectoryRequest::Sync { responder } => {
                 responder.send(&mut Err(ZX_ERR_NOT_SUPPORTED))?;
             }
-            // TODO(https://fxbug.dev/77623): Remove when the io1 -> io2 transition is complete.
-            _ => panic!("Unhandled request!"),
         }
         Ok(ConnectionState::Alive)
     }

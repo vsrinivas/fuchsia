@@ -518,8 +518,12 @@ async fn serve_failing_blobfs(
     }
     while let Some(req) = stream.try_next().await? {
         match req {
-            DirectoryRequest::Clone { object, flags, .. } => {
+            DirectoryRequest::Clone { flags, object, control_handle: _ } => {
                 launch_cloned_blobfs(object, flags, open_flags)
+            }
+            DirectoryRequest::Reopen { options, object_request, control_handle: _ } => {
+                let _ = object_request;
+                todo!("https://fxbug.dev/77623: options={:?}", options);
             }
             DirectoryRequest::CloseDeprecated { responder } => {
                 responder.send(zx::Status::IO.into_raw()).context("failing close")?
@@ -530,10 +534,17 @@ async fn serve_failing_blobfs(
             DirectoryRequest::Describe { responder } => {
                 responder.send(&mut NodeInfo::Directory(DirectoryObject)).context("describing")?
             }
+            DirectoryRequest::Describe2 { query, responder } => {
+                let _ = responder;
+                todo!("https://fxbug.dev/77623: query={:?}", query);
+            }
+            DirectoryRequest::SyncDeprecated { responder } => {
+                responder.send(zx::Status::IO.into_raw()).context("failing sync")?
+            }
             DirectoryRequest::Sync { responder } => {
                 responder.send(&mut Err(zx::Status::IO.into_raw())).context("failing sync")?
             }
-            DirectoryRequest::AdvisoryLock { responder, .. } => {
+            DirectoryRequest::AdvisoryLock { request: _, responder } => {
                 responder.send(&mut Err(zx::sys::ZX_ERR_NOT_SUPPORTED))?
             }
             DirectoryRequest::GetAttr { responder } => responder
@@ -550,30 +561,62 @@ async fn serve_failing_blobfs(
                     },
                 )
                 .context("failing getattr")?,
-            DirectoryRequest::SetAttr { responder, .. } => {
+            DirectoryRequest::SetAttr { flags: _, attributes: _, responder } => {
                 responder.send(zx::Status::IO.into_raw()).context("failing setattr")?
+            }
+            DirectoryRequest::GetAttributes { query, responder } => {
+                let _ = responder;
+                todo!("https://fxbug.dev/77623: query={:?}", query);
+            }
+            DirectoryRequest::UpdateAttributes { attributes, responder } => {
+                let _ = responder;
+                todo!("https://fxbug.dev/77623: attributes={:?}", attributes);
             }
             DirectoryRequest::GetFlags { responder } => {
                 responder.send(zx::Status::IO.into_raw(), 0).context("failing getflags")?
             }
-            DirectoryRequest::SetFlags { responder, .. } => {
+            DirectoryRequest::SetFlags { flags: _, responder } => {
                 responder.send(zx::Status::IO.into_raw()).context("failing setflags")?
             }
-            DirectoryRequest::Open { object, flags, path, .. } => {
+            DirectoryRequest::Open { flags, mode: _, path, object, control_handle: _ } => {
                 if &path == "." {
                     launch_cloned_blobfs(object, flags, open_flags);
                 } else {
                     object.close_with_epitaph(zx::Status::IO).context("failing open")?;
                 }
             }
-            DirectoryRequest::AddInotifyFilter { responder, .. } => {
-                responder.send().context("failing addinotifyfilter")?
+            DirectoryRequest::Open2 { path, mode, options, object_request, control_handle: _ } => {
+                let _ = object_request;
+                todo!(
+                    "https://fxbug.dev/77623: path={} mode={:?} options={:?}",
+                    path,
+                    mode,
+                    options
+                );
             }
-            DirectoryRequest::Unlink { responder, .. } => {
+            DirectoryRequest::AddInotifyFilter {
+                path,
+                filter,
+                watch_descriptor,
+                socket: _,
+                responder: _,
+            } => {
+                todo!(
+                    "https://fxbug.dev/77623: path={} filter={:?} watch_descriptor={}",
+                    path,
+                    filter,
+                    watch_descriptor
+                );
+            }
+            DirectoryRequest::Unlink { name: _, options: _, responder } => {
                 responder.send(&mut Err(zx::Status::IO.into_raw())).context("failing unlink")?
             }
-            DirectoryRequest::ReadDirents { responder, .. } => {
+            DirectoryRequest::ReadDirents { max_bytes: _, responder } => {
                 responder.send(zx::Status::IO.into_raw(), &[]).context("failing readdirents")?
+            }
+            DirectoryRequest::Enumerate { options, iterator, control_handle: _ } => {
+                let _ = iterator;
+                todo!("https://fxbug.dev/77623: options={:?}", options);
             }
             DirectoryRequest::Rewind { responder } => {
                 responder.send(zx::Status::IO.into_raw()).context("failing rewind")?
@@ -581,20 +624,18 @@ async fn serve_failing_blobfs(
             DirectoryRequest::GetToken { responder } => {
                 responder.send(zx::Status::IO.into_raw(), None).context("failing gettoken")?
             }
-            DirectoryRequest::Rename { responder, .. } => {
+            DirectoryRequest::Rename { src: _, dst_parent_token: _, dst: _, responder } => {
                 responder.send(&mut Err(zx::Status::IO.into_raw())).context("failing rename")?
             }
-            DirectoryRequest::Link { responder, .. } => {
+            DirectoryRequest::Link { src: _, dst_parent_token: _, dst: _, responder } => {
                 responder.send(zx::Status::IO.into_raw()).context("failing link")?
             }
-            DirectoryRequest::Watch { responder, .. } => {
+            DirectoryRequest::Watch { mask: _, options: _, watcher: _, responder } => {
                 responder.send(zx::Status::IO.into_raw()).context("failing watch")?
             }
-            DirectoryRequest::QueryFilesystem { responder, .. } => responder
+            DirectoryRequest::QueryFilesystem { responder } => responder
                 .send(zx::Status::IO.into_raw(), None)
                 .context("failing queryfilesystem")?,
-            // TODO(https://fxbug.dev/77623): Remove when the io1 -> io2 transition is complete.
-            _ => panic!("Unhandled request!"),
         };
     }
 

@@ -185,6 +185,7 @@ impl MutableConnection {
             DirectoryRequest::Sync { responder } => {
                 responder.send(&mut self.base.directory.sync().await.map_err(Status::into_raw))?;
             }
+            // TODO(https:/fxbug.dev/77623): which other io2 methods need to be implemented here?
             _ => {
                 // Since we haven't handled the request, we return the original request so that
                 // it can be consumed by the base handler instead.

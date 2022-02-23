@@ -221,6 +221,11 @@ impl<T: 'static + File> FileConnection<T> {
                 fuchsia_trace::duration!("storage", "File::Clone");
                 self.handle_clone(self.flags, flags, object);
             }
+            FileRequest::Reopen { options, object_request, control_handle: _ } => {
+                fuchsia_trace::duration!("storage", "File::Reopen");
+                let _ = object_request;
+                todo!("https://fxbug.dev/77623: options={:?}", options);
+            }
             FileRequest::CloseDeprecated { responder } => {
                 fuchsia_trace::duration!("storage", "File::CloseDeprecated");
                 let status = self.file.close().await.err().unwrap_or(zx::Status::OK);
@@ -237,6 +242,11 @@ impl<T: 'static + File> FileConnection<T> {
             FileRequest::Describe { responder } => {
                 fuchsia_trace::duration!("storage", "File::Describe");
                 responder.send(&mut self.file.describe(self.flags)?)?;
+            }
+            FileRequest::Describe2 { query, responder } => {
+                fuchsia_trace::duration!("storage", "File::Describe2");
+                let _ = responder;
+                todo!("https://fxbug.dev/77623: query={:?}", query);
             }
             FileRequest::SyncDeprecated { responder } => {
                 fuchsia_trace::duration!("storage", "File::SyncDeprecated");
@@ -256,6 +266,16 @@ impl<T: 'static + File> FileConnection<T> {
                 fuchsia_trace::duration!("storage", "File::SetAttr");
                 let status = self.handle_set_attr(flags, attributes).await;
                 responder.send(status.into_raw())?;
+            }
+            FileRequest::GetAttributes { query, responder } => {
+                fuchsia_trace::duration!("storage", "File::GetAttributes");
+                let _ = responder;
+                todo!("https://fxbug.dev/77623: query={:?}", query);
+            }
+            FileRequest::UpdateAttributes { attributes, responder } => {
+                fuchsia_trace::duration!("storage", "File::UpdateAttributes");
+                let _ = responder;
+                todo!("https://fxbug.dev/77623: attributes={:?}", attributes);
             }
             FileRequest::ReadDeprecated { count, responder } => {
                 fuchsia_trace::duration!("storage", "File::Read", "bytes" => count);
@@ -429,8 +449,6 @@ impl<T: 'static + File> FileConnection<T> {
                     Ok(mut info) => responder.send(0, Some(&mut info))?,
                 }
             }
-            // TODO(https://fxbug.dev/77623): Remove when the io1 -> io2 transition is complete.
-            _ => panic!("Unhandled request!"),
         }
         Ok(ConnectionState::Alive)
     }
