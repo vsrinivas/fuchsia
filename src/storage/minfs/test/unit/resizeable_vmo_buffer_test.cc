@@ -63,7 +63,7 @@ TEST(ResizeableVmoBufferTest, Zero) {
   memset(buffer.Data(0), kFill, kBlocks * kBlockSize);
   constexpr int kStart = 5;
   constexpr int kLength = 3;
-  buffer.Zero(kStart, kLength);
+  ASSERT_EQ(buffer.Zero(kStart, kLength), ZX_OK);
   uint8_t* p = reinterpret_cast<uint8_t*>(buffer.Data(0));
   for (int i = 0; i < kBlocks * kBlockSize; ++i) {
     if (i < kStart * kBlockSize || i >= (kStart + kLength) * kBlockSize) {

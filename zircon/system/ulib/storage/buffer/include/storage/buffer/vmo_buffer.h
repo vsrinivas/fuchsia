@@ -64,7 +64,7 @@ class VmoBuffer final : public BlockBuffer {
 
   const void* Data(size_t index) const final;
 
-  void Zero(size_t index, size_t count) final;
+  zx_status_t Zero(size_t index, size_t count) final;
 
  private:
   void Reset();

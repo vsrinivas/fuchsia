@@ -220,11 +220,8 @@ zx_status_t Page::VmoRead(void *buffer, uint64_t offset, size_t buffer_size) {
   return vmo_.read(buffer, offset, buffer_size);
 }
 
-void Page::Zero(size_t index, size_t count) {
-  if (index < capacity() && index + count <= capacity()) {
-    ZX_ASSERT(vmo_.op_range(ZX_VMO_OP_ZERO, index * BlockSize(), count * BlockSize(), nullptr, 0) ==
-              ZX_OK);
-  }
+zx_status_t Page::Zero(size_t index, size_t count) {
+  return vmo_.op_range(ZX_VMO_OP_ZERO, index * BlockSize(), count * BlockSize(), nullptr, 0);
 }
 
 FileCache::FileCache(VnodeF2fs *vnode) : vnode_(vnode) {}

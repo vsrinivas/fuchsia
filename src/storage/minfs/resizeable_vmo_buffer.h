@@ -49,7 +49,7 @@ class ResizeableVmoBuffer : public storage::BlockBuffer {
   [[nodiscard]] zx::status<> Attach(const char* name, storage::VmoidRegistry* device);
   zx::status<> Detach(storage::VmoidRegistry* device);
 
-  void Zero(size_t index, size_t count) override;
+  zx_status_t Zero(size_t index, size_t count) override;
 
  private:
   ResizeableVmoBuffer();

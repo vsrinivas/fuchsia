@@ -20,6 +20,7 @@ zx_library("buffer") {
     "array_buffer.cc",
     "block_buffer.cc",
   ]
+  deps = [ "//zircon/third_party/ulib/safemath" ]
 
   if (is_fuchsia) {
     sources += [
@@ -35,7 +36,7 @@ zx_library("buffer") {
       "//zircon/system/ulib/zx",
       "//zircon/system/ulib/zxc",
     ]
-    deps = [
+    deps += [
       "//sdk/lib/fdio",
       "//zircon/system/ulib/fbl",
 
@@ -45,7 +46,6 @@ zx_library("buffer") {
       "//zircon/system/ulib/fzl",
       "//zircon/system/ulib/storage/operation",
       "//zircon/system/ulib/zx",
-      "//zircon/third_party/ulib/safemath",
     ]
   } else {
     public_deps = [ "//zircon/system/public" ]

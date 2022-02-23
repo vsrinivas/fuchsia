@@ -39,7 +39,7 @@ class BlockBuffer {
 
   // Zero |count| blocks from |index|. Subclasses might override to provide a more efficient
   // implementation.
-  virtual void Zero(size_t index, size_t count);
+  virtual zx_status_t Zero(size_t index, size_t count);
 };
 
 }  // namespace storage

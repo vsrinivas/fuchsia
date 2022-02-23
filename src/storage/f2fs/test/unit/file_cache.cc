@@ -285,7 +285,7 @@ TEST_F(FileCacheTest, Basic) {
     ASSERT_EQ(page->VmoWrite(w_buf, 0, kPageSize), ZX_OK);
     ASSERT_EQ(page->VmoRead(r_buf, 0, kPageSize), ZX_OK);
     ASSERT_EQ(memcmp(r_buf, w_buf, kPageSize), 0);
-    page->Zero(0, 1);
+    ASSERT_EQ(page->Zero(0, 1), ZX_OK);
     ASSERT_EQ(page->VmoRead(r_buf, 0, kPageSize), ZX_OK);
     memset(w_buf, 0, kPageSize);
     ASSERT_EQ(memcmp(r_buf, w_buf, kPageSize), 0);

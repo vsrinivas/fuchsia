@@ -18,9 +18,8 @@ zx::status<> ResizeableVmoBuffer::Detach(storage::VmoidRegistry* device) {
   return zx::make_status(device->BlockDetachVmo(std::move(vmoid_)));
 }
 
-void ResizeableVmoBuffer::Zero(size_t index, size_t count) {
-  ZX_ASSERT(vmo_.vmo().op_range(ZX_VMO_OP_ZERO, index * BlockSize(), count * BlockSize(), nullptr,
-                                0) == ZX_OK);
+zx_status_t ResizeableVmoBuffer::Zero(size_t index, size_t count) {
+  return vmo_.vmo().op_range(ZX_VMO_OP_ZERO, index * BlockSize(), count * BlockSize(), nullptr, 0);
 }
 
 }  // namespace minfs

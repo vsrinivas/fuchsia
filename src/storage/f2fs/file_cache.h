@@ -164,7 +164,7 @@ class Page : public storage::BlockBuffer,
   }
 
   // for storage::BlockBuffer
-  void Zero(size_t index, size_t count) final;
+  zx_status_t Zero(size_t index, size_t count) final;
   size_t capacity() const final { return 1; }
   uint32_t BlockSize() const final { return kPageSize; }
   zx_handle_t Vmo() const final { return ZX_HANDLE_INVALID; }

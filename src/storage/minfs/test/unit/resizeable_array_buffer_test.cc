@@ -41,7 +41,7 @@ TEST(ResizeableArrayBufferTest, Zero) {
   constexpr int kBlocks = 5;
   ResizeableArrayBuffer buffer(kBlocks, kBlockSize);
   memset(buffer.Data(0), 'a', kBlocks * kBlockSize);
-  buffer.Zero(1, 2);
+  ASSERT_EQ(buffer.Zero(1, 2), ZX_OK);
   const char* p = reinterpret_cast<const char*>(buffer.Data(0));
   for (unsigned i = 0; i < kBlocks * kBlockSize; ++i) {
     if (i < 1 * kBlockSize || i >= 3 * kBlockSize) {

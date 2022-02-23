@@ -61,7 +61,9 @@ zx::status<uint64_t> MappedFileReader::Enqueue(BlockRange range) {
         &buffer_);
   } else {
     // This probably isn't necessary because the blocks should already be clean, but it's safe.
-    buffer_.Zero(range.Start(), device_range.count());
+    if (zx_status_t ret = buffer_.Zero(range.Start(), device_range.count()); ret != ZX_OK) {
+      return zx::error(ret);
+    }
   }
   return zx::ok(device_range.count());
 }
