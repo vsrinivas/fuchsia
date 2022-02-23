@@ -11,10 +11,7 @@ use utils::{self, Either, WatchOrSetResult};
 
 #[ffx_plugin("setui", IntlProxy = "core/setui_service:expose:fuchsia.settings.Intl")]
 pub async fn run_command(intl_proxy: IntlProxy, intl: Intl) -> Result<()> {
-    let settings = IntlSettings::from(intl);
-    handle_mixed_result("Intl", command(intl_proxy, settings).await).await?;
-
-    Ok(())
+    handle_mixed_result("Intl", command(intl_proxy, IntlSettings::from(intl)).await).await
 }
 
 async fn command(proxy: IntlProxy, settings: IntlSettings) -> WatchOrSetResult {
@@ -40,10 +37,10 @@ mod test {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_run_command() {
         let proxy = setup_fake_intl_proxy(move |req| match req {
-            IntlRequest::Set { settings: _, responder } => {
+            IntlRequest::Set { responder, .. } => {
                 let _ = responder.send(&mut Ok(()));
             }
-            IntlRequest::Watch { responder: _ } => {
+            IntlRequest::Watch { .. } => {
                 panic!("Unexpected call to watch");
             }
         });
@@ -82,10 +79,10 @@ mod test {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn validate_intl_set_output(expected_intl: Intl) -> Result<()> {
         let proxy = setup_fake_intl_proxy(move |req| match req {
-            IntlRequest::Set { settings: _, responder } => {
+            IntlRequest::Set { responder, .. } => {
                 let _ = responder.send(&mut Ok(()));
             }
-            IntlRequest::Watch { responder: _ } => {
+            IntlRequest::Watch { .. } => {
                 panic!("Unexpected call to watch");
             }
         });
@@ -119,7 +116,7 @@ mod test {
     async fn validate_intl_watch_output(expected_intl: Intl) -> Result<()> {
         let expected_intl_clone = expected_intl.clone();
         let proxy = setup_fake_intl_proxy(move |req| match req {
-            IntlRequest::Set { settings: _, responder: _ } => {
+            IntlRequest::Set { .. } => {
                 panic!("Unexpected call to set");
             }
             IntlRequest::Watch { responder } => {

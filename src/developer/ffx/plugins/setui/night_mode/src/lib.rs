@@ -11,13 +11,8 @@ use utils::{self, Either, WatchOrSetResult};
 
 #[ffx_plugin("setui", NightModeProxy = "core/setui_service:expose:fuchsia.settings.NightMode")]
 pub async fn run_command(night_mode_proxy: NightModeProxy, night_mode: NightMode) -> Result<()> {
-    handle_mixed_result(
-        "NightMode",
-        command(night_mode_proxy, night_mode.night_mode_enabled).await,
-    )
-    .await?;
-
-    Ok(())
+    handle_mixed_result("NightMode", command(night_mode_proxy, night_mode.night_mode_enabled).await)
+        .await
 }
 
 async fn command(proxy: NightModeProxy, night_mode_enabled: Option<bool>) -> WatchOrSetResult {
@@ -47,10 +42,10 @@ mod test {
         const ENABLED: bool = true;
 
         let proxy = setup_fake_night_mode_proxy(move |req| match req {
-            NightModeRequest::Set { settings: _, responder } => {
+            NightModeRequest::Set { responder, .. } => {
                 let _ = responder.send(&mut Ok(()));
             }
-            NightModeRequest::Watch { responder: _ } => {
+            NightModeRequest::Watch { .. } => {
                 panic!("Unexpected call to watch");
             }
         });
@@ -71,10 +66,10 @@ mod test {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn validate_night_mode_set_output(expected_night_mode_enabled: bool) -> Result<()> {
         let proxy = setup_fake_night_mode_proxy(move |req| match req {
-            NightModeRequest::Set { settings: _, responder } => {
+            NightModeRequest::Set { responder, .. } => {
                 let _ = responder.send(&mut Ok(()));
             }
-            NightModeRequest::Watch { responder: _ } => {
+            NightModeRequest::Watch { .. } => {
                 panic!("Unexpected call to watch");
             }
         });
@@ -107,7 +102,7 @@ mod test {
         expected_night_mode_enabled: Option<bool>,
     ) -> Result<()> {
         let proxy = setup_fake_night_mode_proxy(move |req| match req {
-            NightModeRequest::Set { settings: _, responder: _ } => {
+            NightModeRequest::Set { .. } => {
                 panic!("Unexpected call to set");
             }
             NightModeRequest::Watch { responder } => {

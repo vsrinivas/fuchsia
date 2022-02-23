@@ -12,9 +12,7 @@ use utils::{self, Either, WatchOrSetResult};
 #[ffx_plugin("setui", PrivacyProxy = "core/setui_service:expose:fuchsia.settings.Privacy")]
 pub async fn run_command(privacy_proxy: PrivacyProxy, privacy: Privacy) -> Result<()> {
     handle_mixed_result("Privacy", command(privacy_proxy, privacy.user_data_sharing_consent).await)
-        .await?;
-
-    Ok(())
+        .await
 }
 
 async fn command(proxy: PrivacyProxy, user_data_sharing_consent: Option<bool>) -> WatchOrSetResult {
@@ -44,10 +42,10 @@ mod test {
         const CONSENT: bool = true;
 
         let proxy = setup_fake_privacy_proxy(move |req| match req {
-            PrivacyRequest::Set { settings: _, responder } => {
+            PrivacyRequest::Set { responder, .. } => {
                 let _ = responder.send(&mut Ok(()));
             }
-            PrivacyRequest::Watch { responder: _ } => {
+            PrivacyRequest::Watch { .. } => {
                 panic!("Unexpected call to watch");
             }
         });
@@ -68,10 +66,10 @@ mod test {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn validate_privacy_set_output(expected_user_data_sharing_consent: bool) -> Result<()> {
         let proxy = setup_fake_privacy_proxy(move |req| match req {
-            PrivacyRequest::Set { settings: _, responder } => {
+            PrivacyRequest::Set { responder, .. } => {
                 let _ = responder.send(&mut Ok(()));
             }
-            PrivacyRequest::Watch { responder: _ } => {
+            PrivacyRequest::Watch { .. } => {
                 panic!("Unexpected call to watch");
             }
         });
@@ -104,7 +102,7 @@ mod test {
         expected_user_data_sharing_consent: Option<bool>,
     ) -> Result<()> {
         let proxy = setup_fake_privacy_proxy(move |req| match req {
-            PrivacyRequest::Set { settings: _, responder: _ } => {
+            PrivacyRequest::Set { .. } => {
                 panic!("Unexpected call to set");
             }
             PrivacyRequest::Watch { responder } => {

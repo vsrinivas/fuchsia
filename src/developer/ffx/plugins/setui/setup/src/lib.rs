@@ -11,10 +11,7 @@ use utils::{self, Either, WatchOrSetResult};
 
 #[ffx_plugin("setui", SetupProxy = "core/setui_service:expose:fuchsia.settings.Setup")]
 pub async fn run_command(setup_proxy: SetupProxy, setup: Setup) -> Result<()> {
-    handle_mixed_result("Setup", command(setup_proxy, setup.configuration_interfaces).await)
-        .await?;
-
-    Ok(())
+    handle_mixed_result("Setup", command(setup_proxy, setup.configuration_interfaces).await).await
 }
 
 async fn command(
@@ -48,7 +45,7 @@ mod test {
         const INTERFACE: ConfigurationInterfaces = ConfigurationInterfaces::ETHERNET;
 
         let proxy = setup_fake_setup_proxy(move |req| match req {
-            SetupRequest::Set { settings, reboot_device: _, responder } => {
+            SetupRequest::Set { settings, responder, .. } => {
                 if let Some(val) = settings.enabled_configuration_interfaces {
                     assert_eq!(val, INTERFACE);
                     let _ = responder.send(&mut Ok(()));
@@ -56,7 +53,7 @@ mod test {
                     panic!("Unexpected call to set");
                 }
             }
-            SetupRequest::Watch { responder: _ } => {
+            SetupRequest::Watch { .. } => {
                 panic!("Unexpected call to watch");
             }
         });
@@ -77,7 +74,7 @@ mod test {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn validate_setup_output(expected_interface: ConfigurationInterfaces) -> Result<()> {
         let proxy = setup_fake_setup_proxy(move |req| match req {
-            SetupRequest::Set { settings, reboot_device: _, responder } => {
+            SetupRequest::Set { settings, responder, .. } => {
                 if let Some(val) = settings.enabled_configuration_interfaces {
                     assert_eq!(val, expected_interface);
                     let _ = responder.send(&mut Ok(()));
@@ -85,7 +82,7 @@ mod test {
                     panic!("Unexpected call to set");
                 }
             }
-            SetupRequest::Watch { responder: _ } => {
+            SetupRequest::Watch { .. } => {
                 panic!("Unexpected call to watch");
             }
         });
@@ -111,7 +108,7 @@ mod test {
         expected_interface: Option<ConfigurationInterfaces>,
     ) -> Result<()> {
         let proxy = setup_fake_setup_proxy(move |req| match req {
-            SetupRequest::Set { settings: _, reboot_device: _, responder: _ } => {
+            SetupRequest::Set { .. } => {
                 panic!("Unexpected call to set");
             }
             SetupRequest::Watch { responder } => {

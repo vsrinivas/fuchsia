@@ -12,9 +12,7 @@ use utils::{self, Either, WatchOrSetResult};
 
 #[ffx_plugin("setui", LightProxy = "core/setui_service:expose:fuchsia.settings.Light")]
 pub async fn run_command(light_proxy: LightProxy, light_group: LightGroup) -> Result<()> {
-    handle_mixed_result("Light", command(light_proxy, light_group).await).await?;
-
-    Ok(())
+    handle_mixed_result("Light", command(light_proxy, light_group).await).await
 }
 
 async fn command(proxy: LightProxy, light_group: LightGroup) -> WatchOrSetResult {
@@ -72,13 +70,13 @@ mod test {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_run_command() {
         let proxy = setup_fake_light_proxy(move |req| match req {
-            LightRequest::SetLightGroupValues { name: _, state: _, responder } => {
+            LightRequest::SetLightGroupValues { responder, .. } => {
                 let _ = responder.send(&mut Ok(()));
             }
-            LightRequest::WatchLightGroups { responder: _ } => {
+            LightRequest::WatchLightGroups { .. } => {
                 panic!("Unexpected call to watch light groups");
             }
-            LightRequest::WatchLightGroup { name: _, responder: _ } => {
+            LightRequest::WatchLightGroup { .. } => {
                 panic!("Unexpected call to watch a light group");
             }
         });
@@ -114,13 +112,13 @@ mod test {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn validate_light_set_output(expected_light: LightGroup) -> Result<()> {
         let proxy = setup_fake_light_proxy(move |req| match req {
-            LightRequest::SetLightGroupValues { name: _, state: _, responder } => {
+            LightRequest::SetLightGroupValues { responder, .. } => {
                 let _ = responder.send(&mut Ok(()));
             }
-            LightRequest::WatchLightGroups { responder: _ } => {
+            LightRequest::WatchLightGroups { .. } => {
                 panic!("Unexpected call to watch light groups");
             }
-            LightRequest::WatchLightGroup { name: _, responder: _ } => {
+            LightRequest::WatchLightGroup { .. } => {
                 panic!("Unexpected call to watch a light group");
             }
         });
@@ -171,13 +169,13 @@ mod test {
     ) -> Result<()> {
         let val_clone = expected_light_settings.clone();
         let proxy = setup_fake_light_proxy(move |req| match req {
-            LightRequest::SetLightGroupValues { name: _, state: _, responder: _ } => {
+            LightRequest::SetLightGroupValues { .. } => {
                 panic!("Unexpected call to set");
             }
             LightRequest::WatchLightGroups { responder } => {
                 let _ = responder.send(&mut vec![expected_light_settings.clone()].into_iter());
             }
-            LightRequest::WatchLightGroup { name: _, responder: _ } => {
+            LightRequest::WatchLightGroup { .. } => {
                 panic!("Unexpected call to watch a light group");
             }
         });
@@ -221,13 +219,13 @@ mod test {
     ) -> Result<()> {
         let val_clone = expected_light_settings.clone();
         let proxy = setup_fake_light_proxy(move |req| match req {
-            LightRequest::SetLightGroupValues { name: _, state: _, responder: _ } => {
+            LightRequest::SetLightGroupValues { .. } => {
                 panic!("Unexpected call to set");
             }
-            LightRequest::WatchLightGroups { responder: _ } => {
+            LightRequest::WatchLightGroups { .. } => {
                 panic!("Unexpected call to watch light groups");
             }
-            LightRequest::WatchLightGroup { name: _, responder } => {
+            LightRequest::WatchLightGroup { responder, .. } => {
                 let _ = responder.send(expected_light_settings.clone());
             }
         });

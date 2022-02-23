@@ -19,6 +19,7 @@ ffx_plugin("ffx_setui") {
     "night_mode:ffx_setui_night_mode",
     "privacy:ffx_setui_privacy",
     "setup:ffx_setui_setup",
+    "volume_policy:ffx_setui_volume_policy",
   ]
 
   args_sources = [ "src/args.rs" ]

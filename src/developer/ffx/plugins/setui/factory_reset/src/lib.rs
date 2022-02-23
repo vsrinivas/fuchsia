@@ -21,9 +21,7 @@ pub async fn run_command(
         "FactoryReset",
         command(factory_reset_proxy, factory_reset.is_local_reset_allowed).await,
     )
-    .await?;
-
-    Ok(())
+    .await
 }
 
 async fn command(
@@ -56,10 +54,10 @@ mod test {
         const ALLOWED: bool = true;
 
         let proxy = setup_fake_factory_reset_proxy(move |req| match req {
-            FactoryResetRequest::Set { settings: _, responder } => {
+            FactoryResetRequest::Set { responder, .. } => {
                 let _ = responder.send(&mut Ok(()));
             }
-            FactoryResetRequest::Watch { responder: _ } => {
+            FactoryResetRequest::Watch { .. } => {
                 panic!("Unexpected call to watch");
             }
         });
@@ -82,10 +80,10 @@ mod test {
         expected_is_local_reset_allowed: bool,
     ) -> Result<()> {
         let proxy = setup_fake_factory_reset_proxy(move |req| match req {
-            FactoryResetRequest::Set { settings: _, responder } => {
+            FactoryResetRequest::Set { responder, .. } => {
                 let _ = responder.send(&mut Ok(()));
             }
-            FactoryResetRequest::Watch { responder: _ } => {
+            FactoryResetRequest::Watch { .. } => {
                 panic!("Unexpected call to watch");
             }
         });
@@ -121,7 +119,7 @@ mod test {
         expected_is_local_reset_allowed: Option<bool>,
     ) -> Result<()> {
         let proxy = setup_fake_factory_reset_proxy(move |req| match req {
-            FactoryResetRequest::Set { settings: _, responder: _ } => {
+            FactoryResetRequest::Set { .. } => {
                 panic!("Unexpected call to set");
             }
             FactoryResetRequest::Watch { responder } => {

@@ -12,9 +12,7 @@ use utils::{self, Either, WatchOrSetResult};
 
 #[ffx_plugin("setui", KeyboardProxy = "core/setui_service:expose:fuchsia.settings.Keyboard")]
 pub async fn run_command(keyboard_proxy: KeyboardProxy, keyboard: Keyboard) -> Result<()> {
-    handle_mixed_result("Keyboard", command(keyboard_proxy, keyboard).await).await?;
-
-    Ok(())
+    handle_mixed_result("Keyboard", command(keyboard_proxy, keyboard).await).await
 }
 
 async fn command(proxy: KeyboardProxy, keyboard: Keyboard) -> WatchOrSetResult {
@@ -46,10 +44,10 @@ mod test {
         const NUM: i64 = 7;
 
         let proxy = setup_fake_keyboard_proxy(move |req| match req {
-            KeyboardRequest::Set { settings: _, responder } => {
+            KeyboardRequest::Set { responder, .. } => {
                 let _ = responder.send(&mut Ok(()));
             }
-            KeyboardRequest::Watch { responder: _ } => {
+            KeyboardRequest::Watch { .. } => {
                 panic!("Unexpected call to watch");
             }
         });
@@ -70,7 +68,7 @@ mod test {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn validate_keyboard_failure(expected_keyboard: Keyboard) -> Result<()> {
         let proxy = setup_fake_keyboard_proxy(move |req| match req {
-            KeyboardRequest::Set { settings: _, responder } => {
+            KeyboardRequest::Set { responder, .. } => {
                 let _ = responder.send(&mut Ok(()));
             }
             KeyboardRequest::Watch { responder } => {
@@ -106,10 +104,10 @@ mod test {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn validate_keyboard_set_output(expected_keyboard: Keyboard) -> Result<()> {
         let proxy = setup_fake_keyboard_proxy(move |req| match req {
-            KeyboardRequest::Set { settings: _, responder } => {
+            KeyboardRequest::Set { responder, .. } => {
                 let _ = responder.send(&mut Ok(()));
             }
-            KeyboardRequest::Watch { responder: _ } => {
+            KeyboardRequest::Watch { .. } => {
                 panic!("Unexpected call to watch");
             }
         });
@@ -136,7 +134,7 @@ mod test {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn validate_keyboard_watch_output(expected_keyboard: Keyboard) -> Result<()> {
         let proxy = setup_fake_keyboard_proxy(move |req| match req {
-            KeyboardRequest::Set { settings: _, responder: _ } => {
+            KeyboardRequest::Set { .. } => {
                 panic!("Unexpected call to set");
             }
             KeyboardRequest::Watch { responder } => {

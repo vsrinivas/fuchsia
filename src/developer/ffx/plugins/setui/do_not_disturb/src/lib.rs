@@ -17,10 +17,7 @@ pub async fn run_command(
     do_not_disturb_proxy: DoNotDisturbProxy,
     do_not_disturb: DoNotDisturb,
 ) -> Result<()> {
-    handle_mixed_result("DoNotDisturb", command(do_not_disturb_proxy, do_not_disturb).await)
-        .await?;
-
-    Ok(())
+    handle_mixed_result("DoNotDisturb", command(do_not_disturb_proxy, do_not_disturb).await).await
 }
 
 async fn command(proxy: DoNotDisturbProxy, do_not_disturb: DoNotDisturb) -> WatchOrSetResult {
@@ -50,10 +47,10 @@ mod test {
         const NIGHT_MODE: bool = false;
 
         let proxy = setup_fake_do_not_disturb_proxy(move |req| match req {
-            DoNotDisturbRequest::Set { settings: _, responder } => {
+            DoNotDisturbRequest::Set { responder, .. } => {
                 let _ = responder.send(&mut Ok(()));
             }
-            DoNotDisturbRequest::Watch { responder: _ } => {
+            DoNotDisturbRequest::Watch { .. } => {
                 panic!("Unexpected call to watch");
             }
         });
@@ -89,10 +86,10 @@ mod test {
         expected_do_not_disturb: DoNotDisturb,
     ) -> Result<()> {
         let proxy = setup_fake_do_not_disturb_proxy(move |req| match req {
-            DoNotDisturbRequest::Set { settings: _, responder } => {
+            DoNotDisturbRequest::Set { responder, .. } => {
                 let _ = responder.send(&mut Ok(()));
             }
-            DoNotDisturbRequest::Watch { responder: _ } => {
+            DoNotDisturbRequest::Watch { .. } => {
                 panic!("Unexpected call to watch");
             }
         });
@@ -124,7 +121,7 @@ mod test {
         expected_do_not_disturb: DoNotDisturb,
     ) -> Result<()> {
         let proxy = setup_fake_do_not_disturb_proxy(move |req| match req {
-            DoNotDisturbRequest::Set { settings: _, responder: _ } => {
+            DoNotDisturbRequest::Set { .. } => {
                 panic!("Unexpected call to set");
             }
             DoNotDisturbRequest::Watch { responder } => {

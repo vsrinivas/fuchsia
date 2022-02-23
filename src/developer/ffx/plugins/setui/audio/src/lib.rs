@@ -11,9 +11,7 @@ use utils::{self, Either, WatchOrSetResult};
 
 #[ffx_plugin("setui", AudioProxy = "core/setui_service:expose:fuchsia.settings.Audio")]
 pub async fn run_command(audio_proxy: AudioProxy, audio: Audio) -> Result<()> {
-    handle_mixed_result("Audio", command(audio_proxy, audio).await).await?;
-
-    Ok(())
+    handle_mixed_result("Audio", command(audio_proxy, audio).await).await
 }
 
 async fn command(proxy: AudioProxy, audio: Audio) -> WatchOrSetResult {
@@ -41,10 +39,10 @@ mod test {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_run_command() {
         let proxy = setup_fake_audio_proxy(move |req| match req {
-            AudioRequest::Set { settings: _, responder } => {
+            AudioRequest::Set { responder, .. } => {
                 let _ = responder.send(&mut Ok(()));
             }
-            AudioRequest::Watch { responder: _ } => {
+            AudioRequest::Watch { .. } => {
                 panic!("Unexpected call to watch");
             }
         });
@@ -83,10 +81,10 @@ mod test {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn validate_do_not_disturb_set_output(expected_audio: Audio) -> Result<()> {
         let proxy = setup_fake_audio_proxy(move |req| match req {
-            AudioRequest::Set { settings: _, responder } => {
+            AudioRequest::Set { responder, .. } => {
                 let _ = responder.send(&mut Ok(()));
             }
-            AudioRequest::Watch { responder: _ } => {
+            AudioRequest::Watch { .. } => {
                 panic!("Unexpected call to watch");
             }
         });
@@ -119,7 +117,7 @@ mod test {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn validate_do_not_disturb_watch_output(expected_audio: Audio) -> Result<()> {
         let proxy = setup_fake_audio_proxy(move |req| match req {
-            AudioRequest::Set { settings: _, responder: _ } => {
+            AudioRequest::Set { .. } => {
                 panic!("Unexpected call to set");
             }
             AudioRequest::Watch { responder } => {

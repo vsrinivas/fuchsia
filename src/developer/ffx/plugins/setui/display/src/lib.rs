@@ -11,10 +11,8 @@ use utils::{self, Either, WatchOrSetResult};
 
 #[ffx_plugin("setui", DisplayProxy = "core/setui_service:expose:fuchsia.settings.Display")]
 pub async fn run_command(display_proxy: DisplayProxy, display: Display) -> Result<()> {
-    let settings = DisplaySettings::from(display);
-    handle_mixed_result("Display", command(display_proxy, settings).await).await?;
-
-    Ok(())
+    handle_mixed_result("Display", command(display_proxy, DisplaySettings::from(display)).await)
+        .await
 }
 
 async fn command(proxy: DisplayProxy, settings: DisplaySettings) -> WatchOrSetResult {
@@ -39,13 +37,13 @@ mod test {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_run_command() {
         let proxy = setup_fake_display_proxy(move |req| match req {
-            DisplayRequest::Set { settings: _, responder } => {
+            DisplayRequest::Set { responder, .. } => {
                 let _ = responder.send(&mut Ok(()));
             }
-            DisplayRequest::Watch { responder: _ } => {
+            DisplayRequest::Watch { .. } => {
                 panic!("Unexpected call to watch");
             }
-            DisplayRequest::WatchLightSensor { delta: _, responder: _ } => {
+            DisplayRequest::WatchLightSensor { .. } => {
                 panic!("Unexpected call to watch light sensor");
             }
         });
@@ -91,13 +89,13 @@ mod test {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn validate_display_set_output(expected_display: Display) -> Result<()> {
         let proxy = setup_fake_display_proxy(move |req| match req {
-            DisplayRequest::Set { settings: _, responder } => {
+            DisplayRequest::Set { responder, .. } => {
                 let _ = responder.send(&mut Ok(()));
             }
-            DisplayRequest::Watch { responder: _ } => {
+            DisplayRequest::Watch { .. } => {
                 panic!("Unexpected call to watch");
             }
-            DisplayRequest::WatchLightSensor { delta: _, responder: _ } => {
+            DisplayRequest::WatchLightSensor { .. } => {
                 panic!("Unexpected call to watch light sensor");
             }
         });
@@ -134,13 +132,13 @@ mod test {
     async fn validate_display_watch_output(expected_display: Display) -> Result<()> {
         let expected_display_clone = expected_display.clone();
         let proxy = setup_fake_display_proxy(move |req| match req {
-            DisplayRequest::Set { settings: _, responder: _ } => {
+            DisplayRequest::Set { .. } => {
                 panic!("Unexpected call to set");
             }
             DisplayRequest::Watch { responder } => {
                 let _ = responder.send(DisplaySettings::from(expected_display.clone()));
             }
-            DisplayRequest::WatchLightSensor { delta: _, responder: _ } => {
+            DisplayRequest::WatchLightSensor { .. } => {
                 panic!("Unexpected call to watch light sensor");
             }
         });
