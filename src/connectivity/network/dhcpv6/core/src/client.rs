@@ -5227,6 +5227,27 @@ mod tests {
         let _actions = client.handle_timeout(timeout);
     }
 
+    #[test]
+    #[should_panic(expected = "received unexpected refresh timeout")]
+    fn renewing_refresh_timeout_is_unreachable() {
+        let t1 = v6::NonZeroOrMaxU32::new(40).expect("40 is non-zero or u32::MAX");
+        let mut client = testutil::send_renew_and_assert(
+            v6::duid_uuid(),
+            vec![TestIdentityAssociation::new_nonzero_finite(
+                std_ip_v6!("::ffff:c00a:111"),
+                v6::NonZeroOrMaxU32::new(50).expect("50 is non-zero or u32::MAX"),
+                v6::NonZeroOrMaxU32::new(80).expect("80 is non-zero or u32::MAX"),
+                t1,
+                v6::NonZeroOrMaxU32::new(60).expect("60 is non-zero or u32::MAX"),
+            )],
+            v6::NonZeroTimeValue::Finite(t1),
+            StepRng::new(std::u64::MAX / 2, 0),
+        );
+
+        // Should panic if Refresh is received while in Renewing state.
+        let _actions = client.handle_timeout(ClientTimerType::Refresh);
+    }
+
     // NOTE: All comparisons are done on millisecond, so this test is not affected by precision
     // loss from floating point arithmetic.
     #[test]
