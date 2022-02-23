@@ -100,6 +100,7 @@ struct dso {
     size_t* got;
   } * funcdescs;
   size_t* got;
+  bool in_dlsym;
   struct dso* buf[];
 };
 
@@ -2328,6 +2329,10 @@ void* __tls_get_addr(size_t*);
 
 static bool find_sym_for_dlsym(struct dso* p, const char* name, uint32_t* name_gnu_hash,
                                uint32_t* name_sysv_hash, void** result) {
+  // Check if we already have seen this DSO before.
+  if (p->in_dlsym)
+    return false;
+
   const Sym* sym;
   if (p->ghashtab != NULL) {
     if (*name_gnu_hash == 0)
@@ -2347,10 +2352,14 @@ static bool find_sym_for_dlsym(struct dso* p, const char* name, uint32_t* name_g
     return true;
   }
   if (p->deps) {
+    p->in_dlsym = true;
     for (struct dso** dep = p->deps; *dep != NULL; ++dep) {
-      if (find_sym_for_dlsym(*dep, name, name_gnu_hash, name_sysv_hash, result))
+      if (find_sym_for_dlsym(*dep, name, name_gnu_hash, name_sysv_hash, result)) {
+        p->in_dlsym = false;
         return true;
+      }
     }
+    p->in_dlsym = false;
   }
   return false;
 }
@@ -2421,7 +2430,7 @@ int dladdr(const void* addr, Dl_info* info) {
 
 void* dlsym(void* restrict p, const char* restrict s) {
   void* res;
-  _dl_rdlock();
+  _dl_wrlock();
   res = do_dlsym(p, s, __builtin_return_address(0));
   _dl_unlock();
   return res;

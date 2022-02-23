@@ -155,6 +155,7 @@ group("test") {
     ":libc-unittests-pkg",
     ":posix-clocks-test-pkg",
     ":pthread-detach-idempotent-test-pkg",
+    "dlsym-circular-deps",
     "noop:tests",
   ]
   foreach(case, default_stack_size_cases) {

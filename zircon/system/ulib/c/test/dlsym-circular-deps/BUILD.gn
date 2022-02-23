@@ -1,0 +1,59 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/test.gni")
+import("//build/toolchain/ifs_shared_library.gni")
+
+# This test is mainly for ensuring we don't hit infinite recursion when calling
+# dlsym on DSOs that have a circular dependency. In the scenario we encountered,
+# (fxbug.dev/93847), we check for a symbol in DSO 1, which depends on 2, which
+# depends on 3, which depends on 2 again (so the cycle is 1->2->3->2->3->...).
+
+# These IFS libraries are needed to prevent hitting the circular dependency in
+# GN. Rather than having shared_lib2 depend on shared_lib3 depend on
+# shared_lib2, we can have the shared_libs depend on each other's IFS files.
+ifs_shared_library("shared_lib2_ifs") {
+  testonly = true
+  abi = "shared_lib2.ifs"
+}
+
+loadable_module("shared_lib1") {
+  testonly = true
+  sources = [ "shared_lib1.c" ]
+  deps = [ ":shared_lib2" ]
+}
+
+shared_library("shared_lib2") {
+  testonly = true
+  sources = [ "shared_lib2.c" ]
+  deps = [ ":shared_lib3" ]
+}
+
+shared_library("shared_lib3") {
+  testonly = true
+  sources = [ "shared_lib3.c" ]
+
+  # This should in theory have  data_deps = [ ":shared_lib2" ]  but doesn't to avoid the circularity.
+  deps = [ ":shared_lib2_ifs" ]
+}
+
+test("dlsym-circular-deps-test") {
+  sources = [ "dlsym-circular-deps.c" ]
+  deps = [
+    "//sdk/lib/fdio",
+    "//zircon/system/ulib/zxtest",
+  ]
+  data_deps = [ ":shared_lib1" ]
+}
+
+fuchsia_unittest_package("dlsym-circular-deps-test-pkg") {
+  package_name = "dlsym-circular-deps-test"
+  deps = [ ":dlsym-circular-deps-test" ]
+}
+
+group("dlsym-circular-deps") {
+  testonly = true
+  deps = [ ":dlsym-circular-deps-test-pkg" ]
+}

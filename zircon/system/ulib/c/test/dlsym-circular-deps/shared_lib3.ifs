@@ -1,0 +1,8 @@
+--- !ifs-v1
+IfsVersion:      3.0
+SoName:          libshared_lib3.so
+NeededLibs:
+  - libshared_lib2.so
+Symbols:
+  - { Name: test_func3, Type: Func }
+...
