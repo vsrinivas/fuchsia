@@ -14,4 +14,7 @@
 typedef __kernel_pid_t pid_t;
 typedef __kernel_uid_t uid_t;
 
+// Binder uses this to declare packed structs.
+#define __packed __attribute__((__packed__))
+
 #endif  // SRC_PROC_LIB_LINUX_UAPI_STUB_TYPEDEFS_H_

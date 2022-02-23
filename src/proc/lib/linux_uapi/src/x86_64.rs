@@ -1866,6 +1866,15 @@ pub const XATTR_POSIX_ACL_ACCESS: &'static [u8; 17usize] = b"posix_acl_access\0"
 pub const XATTR_NAME_POSIX_ACL_ACCESS: &'static [u8; 24usize] = b"system.posix_acl_access\0";
 pub const XATTR_POSIX_ACL_DEFAULT: &'static [u8; 18usize] = b"posix_acl_default\0";
 pub const XATTR_NAME_POSIX_ACL_DEFAULT: &'static [u8; 25usize] = b"system.posix_acl_default\0";
+pub type wchar_t = crate::x86_64_types::c_int;
+#[repr(C)]
+#[repr(align(16))]
+#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
+pub struct max_align_t {
+    pub __clang_max_align_nonce1: crate::x86_64_types::c_longlong,
+    pub __bindgen_padding_0: [u8; 8usize],
+    pub __clang_max_align_nonce2: u128,
+}
 pub type __s8 = crate::x86_64_types::c_schar;
 pub type __u8 = crate::x86_64_types::c_uchar;
 pub type __s16 = crate::x86_64_types::c_short;
@@ -1928,15 +1937,6 @@ pub type __wsum = __u32;
 pub type __poll_t = crate::x86_64_types::c_uint;
 pub type pid_t = __kernel_pid_t;
 pub type uid_t = __kernel_uid_t;
-pub type wchar_t = crate::x86_64_types::c_int;
-#[repr(C)]
-#[repr(align(16))]
-#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
-pub struct max_align_t {
-    pub __clang_max_align_nonce1: crate::x86_64_types::c_longlong,
-    pub __bindgen_padding_0: [u8; 8usize],
-    pub __clang_max_align_nonce2: u128,
-}
 #[repr(C)]
 #[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
 pub struct pollfd {
@@ -2575,15 +2575,11 @@ pub struct binder_ptr_cookie {
     pub ptr: binder_uintptr_t,
     pub cookie: binder_uintptr_t,
 }
-#[repr(C)]
+#[repr(C, packed)]
 #[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
 pub struct binder_handle_cookie {
     pub handle: __u32,
-    pub __bindgen_padding_0: [u8; 4usize],
     pub cookie: binder_uintptr_t,
-}
-extern "C" {
-    pub static mut __packed: binder_handle_cookie;
 }
 #[repr(C)]
 #[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
@@ -2645,9 +2641,9 @@ pub const binder_driver_command_protocol_BC_REGISTER_LOOPER: binder_driver_comma
 pub const binder_driver_command_protocol_BC_ENTER_LOOPER: binder_driver_command_protocol = 25356;
 pub const binder_driver_command_protocol_BC_EXIT_LOOPER: binder_driver_command_protocol = 25357;
 pub const binder_driver_command_protocol_BC_REQUEST_DEATH_NOTIFICATION:
-    binder_driver_command_protocol = 1074815758;
+    binder_driver_command_protocol = 1074553614;
 pub const binder_driver_command_protocol_BC_CLEAR_DEATH_NOTIFICATION:
-    binder_driver_command_protocol = 1074815759;
+    binder_driver_command_protocol = 1074553615;
 pub const binder_driver_command_protocol_BC_DEAD_BINDER_DONE: binder_driver_command_protocol =
     1074291472;
 pub const binder_driver_command_protocol_BC_TRANSACTION_SG: binder_driver_command_protocol =
