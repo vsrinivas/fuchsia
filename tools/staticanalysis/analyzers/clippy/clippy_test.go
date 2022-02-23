@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-package staticanalysis
+package clippy
 
 import (
 	"context"
@@ -16,15 +16,16 @@ import (
 	"github.com/google/go-cmp/cmp/cmpopts"
 
 	"go.fuchsia.dev/fuchsia/tools/build"
+	"go.fuchsia.dev/fuchsia/tools/staticanalysis"
 )
 
-func TestClippyAnalyzer(t *testing.T) {
+func TestAnalyzer(t *testing.T) {
 	tests := []struct {
 		name          string
 		path          string
 		clippyTargets []build.ClippyTarget
 		clippyOutputs map[string][]clippyResult
-		expected      []*Finding
+		expected      []*staticanalysis.Finding
 	}{
 		{
 			name: "file with no clippy target",
@@ -123,7 +124,7 @@ func TestClippyAnalyzer(t *testing.T) {
 					},
 				},
 			},
-			expected: []*Finding{
+			expected: []*staticanalysis.Finding{
 				{
 					Message: strings.Join([]string{
 						"casting integer literal to `u64` is unnecessary",
@@ -139,10 +140,10 @@ func TestClippyAnalyzer(t *testing.T) {
 					// one-based values produced by Clippy.
 					StartChar: 13,
 					EndChar:   23,
-					Suggestions: []Suggestion{
+					Suggestions: []staticanalysis.Suggestion{
 						{
 							Description: "try",
-							Replacements: []Replacement{
+							Replacements: []staticanalysis.Replacement{
 								{
 									Replacement: "123_u64",
 									Path:        "src/foo.rs",
@@ -155,7 +156,7 @@ func TestClippyAnalyzer(t *testing.T) {
 						},
 						{
 							Description: "or try",
-							Replacements: []Replacement{
+							Replacements: []staticanalysis.Replacement{
 								{
 									Replacement: "multiline\nreplacement",
 									Path:        "src/foo.rs",

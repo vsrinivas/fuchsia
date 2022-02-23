@@ -16,8 +16,11 @@ if (is_host) {
     deps = [
       "//tools/build",
       "//tools/lib/color",
+      "//tools/lib/jsonutil",
       "//tools/lib/logger",
+      "//tools/lib/streams",
       "//tools/staticanalysis",
+      "//tools/staticanalysis/analyzers:clippy",
     ]
   }
 

@@ -8,21 +8,11 @@ import("//build/go/go_test.gni")
 if (is_host) {
   go_library("staticanalysis") {
     sources = [
-      "clippy.go",
-      "clippy_test.go",
       "staticanalysis.go",
       "staticanalysis_test.go",
     ]
 
-    deps = [
-      "//third_party/golibs:github.com/google/go-cmp",
-      "//tools/build",
-      "//tools/lib/hostplatform",
-      "//tools/lib/jsonutil",
-      "//tools/lib/logger",
-      "//tools/lib/streams",
-      "//tools/lib/subprocess",
-    ]
+    deps = [ "//third_party/golibs:github.com/google/go-cmp" ]
   }
 
   go_test("staticanalysis_tests") {
@@ -35,6 +25,7 @@ group("tests") {
   testonly = true
   deps = [
     ":staticanalysis_tests($host_toolchain)",
+    "analyzers:tests",
     "cmd/staticlints:tests",
   ]
 }

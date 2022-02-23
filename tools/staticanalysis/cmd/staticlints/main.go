@@ -21,6 +21,7 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 	"go.fuchsia.dev/fuchsia/tools/lib/streams"
 	"go.fuchsia.dev/fuchsia/tools/staticanalysis"
+	"go.fuchsia.dev/fuchsia/tools/staticanalysis/analyzers/clippy"
 )
 
 // fileToAnalyze is the expected schema of each element in the file specified by
@@ -37,7 +38,7 @@ func getAnalyzers(checkoutDir, buildDir string) ([]staticanalysis.Analyzer, erro
 	}
 
 	var res []staticanalysis.Analyzer
-	clippy, err := staticanalysis.NewClippyAnalyzer(checkoutDir, modules)
+	clippy, err := clippy.New(checkoutDir, modules)
 	if err != nil {
 		return nil, err
 	}

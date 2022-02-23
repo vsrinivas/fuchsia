@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-package staticanalysis
+package clippy
 
 import (
 	"bytes"
@@ -17,9 +17,10 @@ import (
 
 	"go.fuchsia.dev/fuchsia/tools/build"
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
+	"go.fuchsia.dev/fuchsia/tools/staticanalysis"
 )
 
-// ClippyAnalyzer implements the Analyzer interface for Clippy, a Rust linter.
+// ClippyAnalyzer implements the ClippyAnalyzer interface for Clippy, a Rust linter.
 //
 // Clippy runs within the build system because it needs access to each Rust
 // library's full dependency tree, and it outputs files within the build
@@ -33,9 +34,9 @@ type ClippyAnalyzer struct {
 	clippyTargets []build.ClippyTarget
 }
 
-var _ Analyzer = &ClippyAnalyzer{}
+var _ staticanalysis.Analyzer = &ClippyAnalyzer{}
 
-func NewClippyAnalyzer(checkoutDir string, modules *build.Modules) (*ClippyAnalyzer, error) {
+func New(checkoutDir string, modules *build.Modules) (*ClippyAnalyzer, error) {
 	return &ClippyAnalyzer{
 		buildDir:      modules.BuildDir(),
 		checkoutDir:   checkoutDir,
@@ -43,7 +44,7 @@ func NewClippyAnalyzer(checkoutDir string, modules *build.Modules) (*ClippyAnaly
 	}, nil
 }
 
-func (c *ClippyAnalyzer) Analyze(ctx context.Context, path string) ([]*Finding, error) {
+func (c *ClippyAnalyzer) Analyze(ctx context.Context, path string) ([]*staticanalysis.Finding, error) {
 	buildRelPath, err := filepath.Rel(c.buildDir, filepath.Join(c.checkoutDir, path))
 	if err != nil {
 		return nil, err
@@ -73,7 +74,7 @@ func (c *ClippyAnalyzer) Analyze(ctx context.Context, path string) ([]*Finding, 
 		return nil, nil
 	}
 
-	var findings []*Finding
+	var findings []*staticanalysis.Finding
 	// The clippy file is in JSON lines format.
 	for _, line := range bytes.Split(contents, []byte("\n")) {
 		var result clippyResult
@@ -89,7 +90,7 @@ func (c *ClippyAnalyzer) Analyze(ctx context.Context, path string) ([]*Finding, 
 			continue
 		}
 
-		spanPath, err := buildPathToCheckoutPath(primarySpan.FileName, c.buildDir, c.checkoutDir)
+		spanPath, err := staticanalysis.BuildPathToCheckoutPath(primarySpan.FileName, c.buildDir, c.checkoutDir)
 		if err != nil {
 			return nil, err
 		}
@@ -100,7 +101,7 @@ func (c *ClippyAnalyzer) Analyze(ctx context.Context, path string) ([]*Finding, 
 			continue
 		}
 
-		var suggestions []Suggestion
+		var suggestions []staticanalysis.Suggestion
 
 		messageLines := []string{result.Message}
 
@@ -113,16 +114,16 @@ func (c *ClippyAnalyzer) Analyze(ctx context.Context, path string) ([]*Finding, 
 			}
 			msg := child.Message
 			if span, ok := child.primarySpan(ctx); ok && span.SuggestedReplacement != "" {
-				replacementPath, err := buildPathToCheckoutPath(span.FileName, c.buildDir, c.checkoutDir)
+				replacementPath, err := staticanalysis.BuildPathToCheckoutPath(span.FileName, c.buildDir, c.checkoutDir)
 				if err != nil {
 					return nil, err
 				}
 				if replacementPath != path {
 					continue
 				}
-				suggestions = append(suggestions, Suggestion{
+				suggestions = append(suggestions, staticanalysis.Suggestion{
 					Description: child.Message,
-					Replacements: []Replacement{
+					Replacements: []staticanalysis.Replacement{
 						{
 							Path:        replacementPath,
 							Replacement: span.SuggestedReplacement,
@@ -155,7 +156,7 @@ func (c *ClippyAnalyzer) Analyze(ctx context.Context, path string) ([]*Finding, 
 		lintID := strings.TrimPrefix(result.Code.Code, "clippy::")
 		category := fmt.Sprintf("Clippy/%s/%s", result.Level, lintID)
 
-		findings = append(findings, &Finding{
+		findings = append(findings, &staticanalysis.Finding{
 			Category:  category,
 			Message:   strings.Join(messageLines, "\n\n"),
 			Path:      path,

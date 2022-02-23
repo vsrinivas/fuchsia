@@ -180,11 +180,11 @@ func (f *Finding) Normalize() error {
 	return nil
 }
 
-// buildPathToCheckoutPath converts a path relative to the build directory into
+// BuildPathToCheckoutPath converts a path relative to the build directory into
 // a source-relative path with platform-agnostic separators.
 //
 // E.g. "../../src/foo/bar.py" -> "src/foo/bar.py".
-func buildPathToCheckoutPath(path, buildDir, checkoutDir string) (string, error) {
+func BuildPathToCheckoutPath(path, buildDir, checkoutDir string) (string, error) {
 	absPath := filepath.Clean(filepath.Join(buildDir, path))
 	path, err := filepath.Rel(checkoutDir, absPath)
 	if err != nil {
