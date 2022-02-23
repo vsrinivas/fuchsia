@@ -460,6 +460,7 @@ pub struct Client {
     pub bssid: Bssid,
     pub iface_mac: MacAddr,
     beacon_period: u16,
+    pub client_capabilities: ClientCapabilities,
     pub eapol_required: bool,
 }
 
@@ -473,11 +474,12 @@ impl Client {
         eapol_required: bool,
     ) -> Self {
         Self {
-            state: Some(States::new_initial(client_capabilities)),
+            state: Some(States::new_initial()),
             ssid,
             bssid,
             iface_mac,
             beacon_period,
+            client_capabilities,
             eapol_required,
         }
     }
@@ -1366,7 +1368,6 @@ mod tests {
                 States::from(wlan_statemachine::testing::new_state(Associated(Association {
                     aid: 42,
                     controlled_port_open: true,
-                    client_capabilities: fake_client_capabilities(),
                     ap_ht_op: None,
                     ap_vht_op: None,
                     qos: Qos::Disabled,
