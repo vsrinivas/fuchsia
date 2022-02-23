@@ -53,6 +53,7 @@ group("non_hermetic_deps") {
     "//scripts/sdk/gn/*",
     "//third_party/crashpad/*",
     "//vendor/google/*",
+    "//zircon/kernel/lib/version/*",
   ]
 
   # See: fxrev.dev/528291
