@@ -56,9 +56,9 @@ function check-if-we-can-start-package-server {
 
   # Checks if a pm package server process appears to be running.
   if [[ -z "$(pgrep -f 'pm serve')" ]]; then
-    local is_pm_running=0
+    local is_pm_running=1 # 1 means that pm is not running
   else
-    local is_pm_running=1
+    local is_pm_running=0 # 0 means that pm is running
   fi
 
   # Check that the server mode is known, and that we have the ability to use this server mode.
