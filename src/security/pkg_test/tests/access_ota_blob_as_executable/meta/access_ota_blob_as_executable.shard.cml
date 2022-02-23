@@ -89,6 +89,14 @@
             from: "#data",
         },
 
+        // Attempt to access packages via the `pkgfs` APIs.
+        {
+            directory: "pkgfs",
+            from: "#fshost",
+            rights: [ "rx*" ],
+            path: "/pkgfs",
+        },
+
         // Attempt to access packages via the `pkg-cache` APIs.
         {
             protocol: "fuchsia.pkg.PackageCache",

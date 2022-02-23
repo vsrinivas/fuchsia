@@ -41,6 +41,20 @@ template("access_ota_blob_as_executable") {
     base_packages = [ "//src/security/pkg_test/assemblies/hello_world_v0:hello_world-package" ] + assembly_base_packages
     packaged_assembly_directory = "access_ota_blob_as_executable_v0"
     system_version_file = "//src/security/pkg_test/assemblies/v0_version.txt"
+
+    # Calculated on local build from 2022-02-08:
+    #
+    #   v0 blobs:
+    #     $ wc --bytes $(fx get-build-dir)/obj/src/security/pkg_test/tests/core_access_ota_blob_as_executable_v0/blob.blk
+    #     3063808 [build-dir]/obj/src/security/pkg_test/tests/core_access_ota_blob_as_executable_v0/blob.blk
+    #
+    #   v1 TUF repo assets:
+    #     $ wc --bytes $(find $(fx get-build-dir)/gen/src/security/pkg_test/tests/core_access_ota_blob_as_executable_v1_tuf_repo_resources.unzipped -type f | grep '/\(targets\|blobs\)/')
+    #     [...]
+    #     46365598 total
+    #
+    #   Total: 3063808 + 46365598 = 49429406
+    fvm_truncate_to_length = 49429406
   }
 
   # System assembly for system version to OTA from package server.
@@ -51,6 +65,9 @@ template("access_ota_blob_as_executable") {
     base_packages = [ "//src/security/pkg_test/assemblies/hello_world_v1:hello_world-package" ] + assembly_base_packages
     packaged_assembly_directory = "access_ota_blob_as_executable_v1"
     system_version_file = "//src/security/pkg_test/assemblies/v1_version.txt"
+
+    # Note: v1 never instantiated as base system from FVM, hence no need to
+    # specify `fvm_truncate_to_length`.
   }
 
   # Filesystem host for base system.
@@ -132,6 +149,7 @@ template("access_ota_blob_as_executable") {
       ":${test_name}_test-resources",
       ":${test_name}_v0_system_resources",
       "//src/security/pkg_test/assemblies/hello_world_v0:meta_far",
+      "//src/security/pkg_test/assemblies/hello_world_v1:meta_far",
     ]
     deps = [
       "//garnet/lib/rust/files_async",
@@ -200,8 +218,8 @@ template("access_ota_blob_as_executable") {
 
     # TODO(fxbug.dev/88453): Complete test dependency composition to eliminate
     # error logs:
-    # - Route `fuchsia.space.Manager` to `pkg-cache`;
-    # - Route name lookup and network services to `pkg-resolver`.
+    # - system-updater: "Failed to read vbmeta hash: while opening the file:
+    #   open failed with status: NOT_FOUND: NOT_FOUND".
     test_specs = {
       log_settings = {
         max_severity = "FATAL"

@@ -30,6 +30,11 @@ import("//src/security/pkg_test/assemblies/build_info.gni")
 #     [string] The file used to designate system version in the assembly's
 #     update package and build-info package.
 #
+#   fvm_truncate_to_length (optional)
+#     [int] The precise size to make the (non-sparse) FVM image. See
+#     documentation of the `--length` parameter of the `fvm` binary host tool
+#     for details.
+#
 #   Test asset packaging parameters:
 #
 #   packaged_assembly_directory (required):
@@ -222,6 +227,7 @@ template("assemble_security_pkg_test_system") {
 
   # Main system assembly.
   assemble_system(labels.assembly) {
+    forward_variables_from(invoker, [ "fvm_truncate_to_length" ])
     testonly = true
     board_name = invoker.board_name
     bootfs_labels = []
