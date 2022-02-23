@@ -18,49 +18,18 @@ use {
 };
 
 /// The contents of a single Metric. Metrics produce a value for use in Actions or other Metrics.
-#[derive(Clone, Debug)]
-pub enum Metric {
+#[derive(Clone, Debug, PartialEq)]
+pub(crate) enum Metric {
     /// Selector tells where to find a value in the Inspect data. The
     /// first non-empty option is returned.
     // Note: This can't be a fidl_fuchsia_diagnostics::Selector because it's not deserializable or
     // cloneable.
     Selector(Vec<SelectorString>),
     /// Eval contains an arithmetic expression,
-    // TODO(cphoenix): Parse and validate this at load-time.
-    Eval(String),
+    Eval(ExpressionContext),
     // Directly specify a value that's hard to generate, for example Problem::UnhandledType.
     #[cfg(test)]
     Hardcoded(MetricValue),
-}
-
-/// Contains a Metric and the resulting MetricValue if the Metric has been evaluated at least once.
-/// If the Metric has not been evaluated at least once the metric_value contains None.
-#[derive(Clone, Debug)]
-pub struct ValueSource {
-    pub metric: Metric,
-    pub cached_value: RefCell<Option<MetricValue>>,
-}
-
-impl ValueSource {
-    pub fn new(metric: Metric) -> Self {
-        Self { metric, cached_value: RefCell::new(None) }
-    }
-}
-
-impl<'de> Deserialize<'de> for Metric {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        let value = String::deserialize(deserializer)?;
-        if SelectorString::is_selector(&value) {
-            Ok(Metric::Selector(vec![
-                SelectorString::try_from(value).map_err(serde::de::Error::custom)?
-            ]))
-        } else {
-            Ok(Metric::Eval(value))
-        }
-    }
 }
 
 impl std::fmt::Display for Metric {
@@ -71,6 +40,30 @@ impl std::fmt::Display for Metric {
             #[cfg(test)]
             Metric::Hardcoded(value) => write!(f, "{:?}", value),
         }
+    }
+}
+
+/// Contains a Metric and the resulting MetricValue if the Metric has been evaluated at least once.
+/// If the Metric has not been evaluated at least once the metric_value contains None.
+#[derive(Clone, Debug, PartialEq)]
+pub struct ValueSource {
+    pub(crate) metric: Metric,
+    pub cached_value: RefCell<Option<MetricValue>>,
+}
+
+impl ValueSource {
+    pub(crate) fn new(metric: Metric) -> Self {
+        Self { metric, cached_value: RefCell::new(None) }
+    }
+
+    pub(crate) fn try_from_expression(expr: &str) -> Result<Self, anyhow::Error> {
+        Ok(ValueSource::new(Metric::Eval(ExpressionContext::try_from(expr.to_string())?)))
+    }
+}
+
+impl std::fmt::Display for ValueSource {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}", self.metric)
     }
 }
 
@@ -203,6 +196,39 @@ pub(crate) enum ExpressionTree {
     Value(MetricValue),
 }
 
+/// ExpressionContext represents a wrapper class which contains a DSL string
+/// representing an expression and the resulting parsed ExpressionTree
+#[derive(Debug, Clone, PartialEq)]
+pub(crate) struct ExpressionContext {
+    pub(crate) raw_expression: String,
+    pub(crate) parsed_expression: ExpressionTree,
+}
+
+impl TryFrom<String> for ExpressionContext {
+    type Error = anyhow::Error;
+
+    fn try_from(raw_expression: String) -> Result<Self, Self::Error> {
+        let parsed_expression = parse::parse_expression(&raw_expression)?;
+        Ok(Self { raw_expression, parsed_expression })
+    }
+}
+
+impl<'de> Deserialize<'de> for ExpressionContext {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let value = String::deserialize(deserializer)?;
+        Ok(ExpressionContext::try_from(value).map_err(serde::de::Error::custom)?)
+    }
+}
+
+impl std::fmt::Display for ExpressionContext {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}", self.raw_expression)
+    }
+}
+
 // Selectors return a vec of values. Typically they will select a single
 // value which we want to use for math without lots of boilerplate.
 // So we "promote" a 1-entry vector into the value it contains.
@@ -326,7 +352,7 @@ impl<'a> MetricState<'a> {
                                         name
                                     )),
                                     Metric::Eval(expression) => {
-                                        self.evaluate_value(namespace, &expression)
+                                        self.evaluate(namespace, &expression.parsed_expression)
                                     }
                                     #[cfg(test)]
                                     Metric::Hardcoded(value) => value.clone(),
@@ -373,9 +399,10 @@ impl<'a> MetricState<'a> {
                                                 .iter()
                                                 .map(|selector| fetcher.fetch(selector)),
                                         ),
-                                        Metric::Eval(expression) => {
-                                            self.evaluate_value(real_namespace, &expression)
-                                        }
+                                        Metric::Eval(expression) => self.evaluate(
+                                            real_namespace,
+                                            &expression.parsed_expression,
+                                        ),
                                         #[cfg(test)]
                                         Metric::Hardcoded(value) => value.clone(),
                                     };
@@ -408,19 +435,32 @@ impl<'a> MetricState<'a> {
     }
 
     /// Fetch or compute the value of a Metric expression from an action.
-    pub(crate) fn eval_action_metric(&self, namespace: &str, metric: &Metric) -> MetricValue {
-        match metric {
+    pub(crate) fn eval_action_metric(
+        &self,
+        namespace: &str,
+        value_source: &ValueSource,
+    ) -> MetricValue {
+        if let Some(cached_value) = &*value_source.cached_value.borrow() {
+            return cached_value.clone();
+        }
+
+        let resolved_value = match &value_source.metric {
             Metric::Selector(_) => {
                 syntax_error("Selectors aren't allowed in action triggers".to_owned())
             }
-            Metric::Eval(string) => {
-                unwrap_for_math(&self.evaluate_value(namespace, string)).clone()
+            Metric::Eval(expression) => {
+                unwrap_for_math(&self.evaluate(namespace, &expression.parsed_expression)).clone()
             }
             #[cfg(test)]
             Metric::Hardcoded(value) => value.clone(),
-        }
+        };
+
+        let mut cached_value_cell = value_source.cached_value.borrow_mut();
+        *cached_value_cell = Some(resolved_value.clone());
+        return resolved_value;
     }
 
+    #[cfg(test)]
     fn evaluate_value(&self, namespace: &str, expression: &str) -> MetricValue {
         match parse::parse_expression(expression) {
             Ok(expr) => self.evaluate(namespace, &expr),
@@ -429,9 +469,9 @@ impl<'a> MetricState<'a> {
     }
 
     /// Evaluate an Expression which contains only base values, not referring to other Metrics.
-    pub fn evaluate_math(expr: &str) -> MetricValue {
-        let parsed = match parse::parse_expression(expr) {
-            Ok(p) => p,
+    pub(crate) fn evaluate_math(expr: &str) -> MetricValue {
+        let parsed = match ExpressionContext::try_from(expr.to_string()) {
+            Ok(expr_context) => expr_context.parsed_expression,
             Err(err) => return syntax_error(format!("Failed to parse '{}': {}", expr, err)),
         };
         let values = HashMap::new();
@@ -1155,8 +1195,8 @@ pub(crate) mod test {
         let metrics: Metrics = [(
             "root".to_string(),
             [
-                ("is42".to_string(), ValueSource::new(Metric::Eval("42".to_string()))),
-                ("isOk".to_string(), ValueSource::new(Metric::Eval("'OK'".to_string()))),
+                ("is42".to_string(), ValueSource::try_from_expression("42").unwrap()),
+                ("isOk".to_string(), ValueSource::try_from_expression("'OK'").unwrap()),
                 (
                     "unhandled".to_string(),
                     ValueSource::new(Metric::Hardcoded(unhandled_type("Unhandled"))),
@@ -1313,7 +1353,7 @@ pub(crate) mod test {
             MetricValue::Vector(vec![MetricValue::Bool(true)])
         );
         assert_eq!(
-            state.eval_action_metric("root", &Metric::Eval("[0==0]".to_string())),
+            state.eval_action_metric("root", &ValueSource::try_from_expression("[0==0]").unwrap()),
             MetricValue::Bool(true)
         );
 
@@ -1322,7 +1362,10 @@ pub(crate) mod test {
             MetricValue::Vector(vec![MetricValue::Bool(true), MetricValue::Bool(true)])
         );
         assert_eq!(
-            state.eval_action_metric("root", &Metric::Eval("[0==0, 0==0]".to_string())),
+            state.eval_action_metric(
+                "root",
+                &ValueSource::try_from_expression("[0==0, 0==0]").unwrap()
+            ),
             MetricValue::Vector(vec![MetricValue::Bool(true), MetricValue::Bool(true)])
         );
 
@@ -1330,21 +1373,21 @@ pub(crate) mod test {
         assert_eq!(
             state.eval_action_metric(
                 "root",
-                &Metric::Eval("StringMatches('abcd', '^a.c')".to_string())
+                &ValueSource::try_from_expression("StringMatches('abcd', '^a.c')").unwrap()
             ),
             MetricValue::Bool(true)
         );
         assert_eq!(
             state.eval_action_metric(
                 "root",
-                &Metric::Eval("StringMatches('abcd', 'a.c$')".to_string())
+                &ValueSource::try_from_expression("StringMatches('abcd', 'a.c$')").unwrap()
             ),
             MetricValue::Bool(false)
         );
         assert_problem!(
             state.eval_action_metric(
                 "root",
-                &Metric::Eval("StringMatches('abcd', '[[')".to_string())
+                &ValueSource::try_from_expression("StringMatches('abcd', '[[')").unwrap()
             ),
             "SyntaxError: Could not parse `[[` as regex"
         );
@@ -1356,8 +1399,8 @@ pub(crate) mod test {
         let metrics: Metrics = [(
             "root".to_string(),
             [
-                ("is42".to_string(), ValueSource::new(Metric::Eval("42".to_string()))),
-                ("is43".to_string(), ValueSource::new(Metric::Eval("is42 + 1".to_string()))),
+                ("is42".to_string(), ValueSource::try_from_expression("42").unwrap()),
+                ("is43".to_string(), ValueSource::try_from_expression("is42 + 1").unwrap()),
                 (
                     "unhandled".to_string(),
                     ValueSource::new(Metric::Hardcoded(unhandled_type("Unhandled"))),
@@ -1443,7 +1486,7 @@ pub(crate) mod test {
             Some(MetricValue::Int(43))
         );
 
-        // Evaluating Hardcoded Metric and ensuring correct caching behaviour
+        // Evaluating Hardcoded Metric and ensuring correct caching behavior
         state.evaluate_value("root", "unhandled");
         assert_problem!(
             (*state.metrics.get("root").unwrap().get("unhandled").unwrap().cached_value.borrow())
@@ -1500,6 +1543,35 @@ pub(crate) mod test {
             "Missing: No valid time available"
         );
         Ok(())
+    }
+
+    #[fuchsia::test]
+    fn test_expression_context() {
+        // Check correct error behavior when building expression from selector string
+        let selector_expr = "INSPECT:foo:bar:baz".to_string();
+        assert_eq!(
+            format!("{:?}", ExpressionContext::try_from(selector_expr).err().unwrap()),
+            "Expression Error: \n0: at line 0, in Eof:\nINSPECT:foo:bar:baz\n       ^\n\n"
+        );
+
+        // Check correct error behavior when building expression from invalid expression string
+        let invalid_expr = "1 *".to_string();
+        assert_eq!(
+            format!("{:?}", ExpressionContext::try_from(invalid_expr).err().unwrap()),
+            concat!(
+                "Expression Error: \n0: at line 0, in Tag:\n1 *\n   ^\n\n1: at line 0, in Alt:",
+                "\n1 *\n   ^\n\n2: at line 0, in Alt:\n1 *\n   ^\n\n3: at line 0, in Alt:\n1 *\n",
+                "   ^\n\n4: at line 0, in Alt:\n1 *\n^\n\n"
+            )
+        );
+
+        // Check expression correctly built from valid expression
+        let valid_expr = "42 + 1";
+        let parsed_expression = parse::parse_expression(&valid_expr).unwrap();
+        assert_eq!(
+            ExpressionContext::try_from(valid_expr.to_string()).unwrap(),
+            ExpressionContext { raw_expression: valid_expr.to_string(), parsed_expression }
+        );
     }
 
     // Correct operation of annotations is tested via annotation_tests.triage.

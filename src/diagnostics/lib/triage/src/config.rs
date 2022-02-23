@@ -4,7 +4,11 @@
 
 use {
     crate::{
-        act::{self, Actions, ActionsSchema},
+        act::{
+            self,
+            Action::{Gauge, Snapshot, Warning},
+            Actions, ActionsSchema,
+        },
         metrics::{
             fetch::{InspectFetcher, KeyValueFetcher, SelectorString, TextFetcher},
             Metric, Metrics, ValueSource,
@@ -42,7 +46,7 @@ pub struct ConfigFileSchema {
     pub file_evals: Option<HashMap<String, String>>,
     /// Map of named Actions. Each Action uses a boolean value to trigger a warning.
     #[serde(rename = "act")]
-    pub file_actions: Option<ActionsSchema>,
+    pub(crate) file_actions: Option<ActionsSchema>,
     /// Map of named Tests. Each test applies sample data to lists of actions that should or
     /// should not trigger.
     #[serde(rename = "test")]
@@ -152,7 +156,7 @@ impl DiagnosticData {
 
 pub struct ParseResult {
     pub metrics: Metrics,
-    pub actions: Actions,
+    pub(crate) actions: Actions,
     pub tests: Trials,
 }
 
@@ -190,7 +194,7 @@ impl ParseResult {
                 if file_metrics.contains_key(&key) {
                     bail!("Duplicate metric name {} in file {}", key, namespace);
                 }
-                file_metrics.insert(key, ValueSource::new(Metric::Eval(value)));
+                file_metrics.insert(key, ValueSource::try_from_expression(&value)?);
             }
             metrics.insert(namespace.clone(), file_metrics);
             actions.insert(namespace.clone(), file_actions);
@@ -222,6 +226,23 @@ impl ParseResult {
         for (_, metric_set) in self.metrics.iter() {
             for (_, value_source) in metric_set.iter() {
                 *value_source.cached_value.borrow_mut() = None;
+            }
+        }
+
+        for (_, action_set) in self.actions.iter() {
+            for (_, action) in action_set.iter() {
+                match action {
+                    Warning(warning) => {
+                        *warning.trigger.cached_value.borrow_mut() = None;
+                    }
+                    Gauge(gauge) => {
+                        *gauge.value.cached_value.borrow_mut() = None;
+                    }
+                    Snapshot(snapshot) => {
+                        *snapshot.trigger.cached_value.borrow_mut() = None;
+                        *snapshot.repeat.cached_value.borrow_mut() = None;
+                    }
+                }
             }
         }
     }
@@ -266,7 +287,7 @@ impl ActionTagDirective {
 /// single tag so an Include directive implies that all other tags should be
 /// excluded and an Exclude directive implies that all other tags should be
 /// included.
-pub fn filter_actions(
+pub(crate) fn filter_actions(
     actions: ActionsSchema,
     action_directive: &ActionTagDirective,
 ) -> ActionsSchema {
@@ -297,6 +318,7 @@ mod test {
         anyhow::Error,
         fidl_fuchsia_feedback::MAX_CRASH_SIGNATURE_LENGTH,
         maplit::hashmap,
+        std::convert::TryFrom,
     };
 
     // initialize() will be tested in the integration test: "fx test triage_lib_test"
@@ -359,13 +381,15 @@ mod test {
 
     // helper macro to create an ActionsSchema
     macro_rules! actions_schema {
-        ( $($key:expr => $trigger:expr, $print:expr, $tag:expr),+ ) => {
+        ( $($key:expr => $contents:expr, $tag:expr),+ ) => {
             {
                 let mut m =  ActionsSchema::new();
+                let trigger =  ValueSource::try_from_expression("a_trigger").unwrap();
+
                 $(
                     let action = Action::Warning(Warning {
-                        trigger: Metric::Eval($trigger.to_string()),
-                        print: $print.to_string(),
+                        trigger: trigger.clone(),
+                        print: $contents.to_string(),
                         tag: $tag,
                         file_bug: None,
                     });
@@ -378,18 +402,10 @@ mod test {
 
     // helper macro to create an ActionsSchema
     macro_rules! assert_has_action {
-        ($result:expr, $key:expr, $trigger:expr, $print:expr) => {
-            let a = $result.get(&$key.to_string());
-            assert!(a.is_some());
-            let a = a.unwrap();
-            match a {
-                Action::Warning(a) => {
-                    if let Metric::Eval(trigger_eval) = &a.trigger {
-                        assert_eq!(trigger_eval, $trigger);
-                    } else {
-                        assert!(false, "Trigger {:?} was not an expression to Eval", a.trigger);
-                    }
-                    assert_eq!(a.print, $print.to_string());
+        ($result:expr, $key:expr, $contents:expr) => {
+            match $result.get(&$key.to_string()) {
+                Some(Action::Warning(a)) => {
+                    assert_eq!(a.print, $contents.to_string());
                 }
                 _ => {
                     assert!(false);
@@ -402,8 +418,8 @@ mod test {
     fn filter_actions_allow_all() {
         let result = filter_actions(
             actions_schema! {
-                "no_tag" => "t1", "foo", None,
-                "tagged" => "t2", "bar", Some("tag".to_string())
+                "no_tag" => "foo", None,
+                "tagged" => "bar", Some("tag".to_string())
             },
             &ActionTagDirective::AllowAll,
         );
@@ -414,87 +430,87 @@ mod test {
     fn filter_actions_include_one_tag() {
         let result = filter_actions(
             actions_schema! {
-                "1" => "t1", "p1", Some("ignore".to_string()),
-                "2" => "t2", "p2", Some("tag".to_string()),
-                "3" => "t3", "p3", Some("tag".to_string())
+                "1" => "p1", Some("ignore".to_string()),
+                "2" => "p2", Some("tag".to_string()),
+                "3" => "p3", Some("tag".to_string())
             },
             &ActionTagDirective::Include(vec!["tag".to_string()]),
         );
         assert_eq!(result.len(), 2);
-        assert_has_action!(result, "2", "t2", "p2");
-        assert_has_action!(result, "3", "t3", "p3");
+        assert_has_action!(result, "2", "p2");
+        assert_has_action!(result, "3", "p3");
     }
 
     #[fuchsia::test]
     fn filter_actions_include_many_tags() {
         let result = filter_actions(
             actions_schema! {
-                "1" => "t1", "p1", Some("ignore".to_string()),
-                "2" => "t2", "p2", Some("tag1".to_string()),
-                "3" => "t3", "p3", Some("tag2".to_string()),
-                "4" => "t4", "p4", Some("tag2".to_string())
+                "1" => "p1", Some("ignore".to_string()),
+                "2" => "p2", Some("tag1".to_string()),
+                "3" => "p3", Some("tag2".to_string()),
+                "4" => "p4", Some("tag2".to_string())
             },
             &ActionTagDirective::Include(vec!["tag1".to_string(), "tag2".to_string()]),
         );
         assert_eq!(result.len(), 3);
-        assert_has_action!(result, "2", "t2", "p2");
-        assert_has_action!(result, "3", "t3", "p3");
-        assert_has_action!(result, "4", "t4", "p4");
+        assert_has_action!(result, "2", "p2");
+        assert_has_action!(result, "3", "p3");
+        assert_has_action!(result, "4", "p4");
     }
 
     #[fuchsia::test]
     fn filter_actions_exclude_one_tag() {
         let result = filter_actions(
             actions_schema! {
-                "1" => "t1", "p1", Some("ignore".to_string()),
-                "2" => "t2", "p2", Some("tag".to_string()),
-                "3" => "t3", "p3", Some("tag".to_string())
+                "1" => "p1", Some("ignore".to_string()),
+                "2" => "p2", Some("tag".to_string()),
+                "3" => "p3", Some("tag".to_string())
             },
             &ActionTagDirective::Exclude(vec!["tag".to_string()]),
         );
         assert_eq!(result.len(), 1);
-        assert_has_action!(result, "1", "t1", "p1");
+        assert_has_action!(result, "1", "p1");
     }
 
     #[fuchsia::test]
     fn filter_actions_exclude_many() {
         let result = filter_actions(
             actions_schema! {
-                "1" => "t1", "p1", Some("ignore".to_string()),
-                "2" => "t2", "p2", Some("tag1".to_string()),
-                "3" => "t3", "p3", Some("tag2".to_string()),
-                "4" => "t4", "p4", Some("tag2".to_string())
+                "1" => "p1", Some("ignore".to_string()),
+                "2" => "p2", Some("tag1".to_string()),
+                "3" => "p3", Some("tag2".to_string()),
+                "4" => "p4", Some("tag2".to_string())
             },
             &ActionTagDirective::Exclude(vec!["tag1".to_string(), "tag2".to_string()]),
         );
         assert_eq!(result.len(), 1);
-        assert_has_action!(result, "1", "t1", "p1");
+        assert_has_action!(result, "1", "p1");
     }
 
     #[fuchsia::test]
     fn filter_actions_include_does_not_include_empty_tag() {
         let result = filter_actions(
             actions_schema! {
-                "1" => "t1", "p1", None,
-                "2" => "t2", "p2", Some("tag".to_string())
+                "1" => "p1", None,
+                "2" => "p2", Some("tag".to_string())
             },
             &ActionTagDirective::Include(vec!["tag".to_string()]),
         );
         assert_eq!(result.len(), 1);
-        assert_has_action!(result, "2", "t2", "p2");
+        assert_has_action!(result, "2", "p2");
     }
 
     #[fuchsia::test]
     fn filter_actions_exclude_does_include_empty_tag() {
         let result = filter_actions(
             actions_schema! {
-                "1" => "t1", "p1", None,
-                "2" => "t2", "p2", Some("tag".to_string())
+                "1" => "p1", None,
+                "2" => "p2", Some("tag".to_string())
             },
             &ActionTagDirective::Exclude(vec!["tag".to_string()]),
         );
         assert_eq!(result.len(), 1);
-        assert_has_action!(result, "1", "t1", "p1");
+        assert_has_action!(result, "1", "p1");
     }
 
     #[fuchsia::test]

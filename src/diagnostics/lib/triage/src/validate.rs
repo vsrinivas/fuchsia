@@ -85,19 +85,31 @@ pub fn validate(parse_result: &ParseResult) -> Result<(), Error> {
             if let Some(action_names) = &trial.yes {
                 for action_name in action_names.iter() {
                     let original_metrics = &(metrics.clone());
+                    let original_actions = &(actions.clone());
                     let state = MetricState::new(original_metrics, fetcher.clone(), now);
-                    failed =
-                        check_failure(namespace, trial_name, action_name, actions, &state, true)
-                            || failed;
+                    failed = check_failure(
+                        namespace,
+                        trial_name,
+                        action_name,
+                        original_actions,
+                        &state,
+                        true,
+                    ) || failed;
                 }
             }
             if let Some(action_names) = &trial.no {
                 for action_name in action_names.iter() {
                     let original_metrics = &(metrics.clone());
+                    let original_actions = &(actions.clone());
                     let state = MetricState::new(original_metrics, fetcher.clone(), now);
-                    failed =
-                        check_failure(namespace, trial_name, action_name, actions, &state, false)
-                            || failed;
+                    failed = check_failure(
+                        namespace,
+                        trial_name,
+                        action_name,
+                        original_actions,
+                        &state,
+                        false,
+                    ) || failed;
                 }
             }
         }
@@ -137,7 +149,7 @@ fn check_failure(
                         return true;
                     }
                 };
-                match metric_state.eval_action_metric(namespace, trigger) {
+                match metric_state.eval_action_metric(namespace, &trigger) {
                     MetricValue::Bool(actual) if actual == expected => return false,
                     other => {
                         println!(
@@ -157,7 +169,7 @@ mod test {
     use {
         super::*,
         crate::act::{Action, Warning},
-        crate::metrics::{Metric, ValueSource},
+        crate::metrics::ValueSource,
         anyhow::Error,
     };
 
@@ -188,8 +200,8 @@ mod test {
         let metrics = build_map!((
             "foo",
             build_map!(
-                ("true", ValueSource::new(Metric::Eval("1==1".to_string()))),
-                ("false", ValueSource::new(Metric::Eval("1==0".to_string())))
+                ("true", ValueSource::try_from_expression("1==1")?),
+                ("false", ValueSource::try_from_expression("1==0")?)
             )
         ));
         let actions = build_map!((
@@ -198,7 +210,7 @@ mod test {
                 (
                     "fires",
                     Action::Warning(Warning {
-                        trigger: Metric::Eval("true".to_string()),
+                        trigger: ValueSource::try_from_expression("true")?,
                         print: "good".to_string(),
                         tag: None,
                         file_bug: None,
@@ -207,7 +219,7 @@ mod test {
                 (
                     "no_fire",
                     Action::Warning(Warning {
-                        trigger: Metric::Eval("false".to_string()),
+                        trigger: ValueSource::try_from_expression("false")?,
                         print: "what?!?".to_string(),
                         tag: None,
                         file_bug: None,
@@ -288,7 +300,7 @@ mod test {
                 (
                     "time_quarter",
                     Action::Warning(Warning {
-                        trigger: Metric::Eval("Now()==250000000".to_string()),
+                        trigger: ValueSource::try_from_expression("Now()==250000000")?,
                         print: "time_billion".to_string(),
                         tag: None,
                         file_bug: None,
@@ -297,7 +309,7 @@ mod test {
                 (
                     "time_missing",
                     Action::Warning(Warning {
-                        trigger: Metric::Eval("Missing(Now())".to_string()),
+                        trigger: ValueSource::try_from_expression("Missing(Now())")?,
                         print: "time_missing".to_string(),
                         tag: None,
                         file_bug: None,
