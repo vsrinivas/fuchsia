@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 use crate::accessibility::types::{AccessibilityInfo, ColorBlindnessType};
+use crate::agent::storage::device_storage::testing::InMemoryStorageFactory;
 use crate::base::SettingType;
-use crate::handler::device_storage::testing::InMemoryStorageFactory;
 use crate::ingress::fidl::Interface;
 use crate::tests::test_failure_utils::create_test_env_with_failures;
 use crate::EnvironmentBuilder;

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::agent::storage::device_storage::testing::InMemoryStorageFactory;
 use crate::do_not_disturb::types::DoNotDisturbInfo;
-use crate::handler::device_storage::testing::InMemoryStorageFactory;
 use crate::ingress::fidl::Interface;
 use crate::EnvironmentBuilder;
 use fidl_fuchsia_settings::{DoNotDisturbMarker, DoNotDisturbProxy, DoNotDisturbSettings};

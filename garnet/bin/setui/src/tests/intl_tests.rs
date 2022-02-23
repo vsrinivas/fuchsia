@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::agent::storage::device_storage::testing::InMemoryStorageFactory;
 use crate::base::SettingType;
 use crate::handler::base::Request;
-use crate::handler::device_storage::testing::InMemoryStorageFactory;
 use crate::handler::setting_handler::ControllerError;
 use crate::ingress::fidl::Interface;
 use crate::tests::fakes::base::create_setting_handler;

@@ -8,7 +8,7 @@ use crate::agent::earcons::sound_ids::{
     BLUETOOTH_CONNECTED_SOUND_ID, BLUETOOTH_DISCONNECTED_SOUND_ID,
 };
 use crate::agent::restore_agent;
-use crate::handler::device_storage::testing::InMemoryStorageFactory;
+use crate::agent::storage::device_storage::testing::InMemoryStorageFactory;
 use crate::tests::fakes::discovery_service::{DiscoveryService, SessionId};
 use crate::tests::fakes::service_registry::ServiceRegistry;
 use crate::tests::fakes::sound_player_service::{SoundEventReceiver, SoundPlayerService};

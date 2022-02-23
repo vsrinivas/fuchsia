@@ -3,6 +3,10 @@
 // found in the LICENSE file.
 
 use crate::agent::authority::Authority;
+use crate::agent::storage::device_storage::testing::InMemoryStorageFactory;
+use crate::agent::storage::device_storage::{
+    DeviceStorage, DeviceStorageCompatible, DeviceStorageFactory,
+};
 use crate::agent::Lifespan;
 use crate::audio::default_audio_info;
 use crate::audio::policy::audio_policy_handler::{AudioPolicyHandler, ARG_POLICY_ID};
@@ -15,10 +19,6 @@ use crate::audio::types::{AudioInfo, AudioSettingSource, AudioStream, SetAudioSt
 use crate::audio::utils::round_volume_level;
 use crate::base::SettingType;
 use crate::handler::base::{Payload as SettingPayload, Request as SettingRequest};
-use crate::handler::device_storage::testing::InMemoryStorageFactory;
-use crate::handler::device_storage::{
-    DeviceStorage, DeviceStorageCompatible, DeviceStorageFactory,
-};
 use crate::message::base::{filter, Audience, MessageEvent, MessengerType, Status};
 use crate::message::{MessageHubDefinition, MessageHubUtil};
 use crate::policy::policy_handler::{ClientProxy, Create, PolicyHandler, RequestTransform};
@@ -100,7 +100,9 @@ impl TestEnvironment {
             .expect("failed to create agent authority");
 
         agent_authority
-            .register(Arc::new(crate::agent::storage_agent::Blueprint::new(storage_factory)))
+            .register(Arc::new(crate::agent::storage::storage_agent::Blueprint::new(
+                storage_factory,
+            )))
             .await;
         agent_authority
             .execute_lifespan(

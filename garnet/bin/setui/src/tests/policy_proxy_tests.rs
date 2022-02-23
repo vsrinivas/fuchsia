@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::agent::storage::device_storage::testing::InMemoryStorageFactory;
 use crate::base::{SettingInfo, SettingType, UnknownInfo as SettingUnknownInfo};
 use crate::handler::base::{Payload, Request, Response as SettingResponse};
-use crate::handler::device_storage::testing::InMemoryStorageFactory;
 use crate::handler::setting_handler::SettingHandlerResult;
 use crate::message::base::{Audience, MessengerType};
 use crate::message::MessageHubUtil;

@@ -1,6 +1,7 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+use crate::agent::storage::device_storage::{DeviceStorageAccess, DeviceStorageCompatible};
 use crate::audio::types::{
     AudioInfo, AudioInputInfo, AudioStream, AudioStreamType, SetAudioStream,
 };
@@ -9,7 +10,6 @@ use crate::audio::{
 };
 use crate::base::SettingType;
 use crate::handler::base::Request;
-use crate::handler::device_storage::{DeviceStorageAccess, DeviceStorageCompatible};
 use crate::handler::setting_handler::persist::{
     controller as data_controller, ClientProxy, WriteResult,
 };

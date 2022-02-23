@@ -4,6 +4,7 @@
 
 use serde::{Deserialize, Serialize};
 
+use crate::agent::storage::device_storage::{DeviceStorageAccess, DeviceStorageCompatible};
 use crate::base::{Merge, SettingInfo, SettingType};
 use crate::call;
 use crate::config::default_settings::DefaultSetting;
@@ -12,14 +13,12 @@ use crate::display::display_configuration::{
 };
 use crate::display::types::{DisplayInfo, LowLightMode, Theme, ThemeBuilder, ThemeMode, ThemeType};
 use crate::handler::base::Request;
-use crate::handler::device_storage::{DeviceStorageAccess, DeviceStorageCompatible};
-use crate::handler::setting_handler::persist::{
-    controller as data_controller, ClientProxy, UpdateState,
-};
+use crate::handler::setting_handler::persist::{controller as data_controller, ClientProxy};
 use crate::handler::setting_handler::{
     controller, ControllerError, IntoHandlerResult, SettingHandlerResult,
 };
 use crate::service_context::ExternalServiceProxy;
+use crate::storage::UpdateState;
 use async_trait::async_trait;
 use fidl_fuchsia_ui_brightness::{
     ControlMarker as BrightnessControlMarker, ControlProxy as BrightnessControlProxy,

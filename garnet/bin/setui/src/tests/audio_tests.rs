@@ -3,13 +3,13 @@
 // found in the LICENSE file.
 
 use crate::agent::restore_agent;
+use crate::agent::storage::device_storage::testing::InMemoryStorageFactory;
+use crate::agent::storage::device_storage::DeviceStorage;
 use crate::audio::types::{
     AudioInfo, AudioInputInfo, AudioSettingSource, AudioStream, AudioStreamType,
 };
 use crate::audio::{create_default_modified_counters, default_audio_info};
 use crate::base::SettingType;
-use crate::handler::device_storage::testing::InMemoryStorageFactory;
-use crate::handler::device_storage::DeviceStorage;
 use crate::ingress::fidl::Interface;
 use crate::input::common::MediaButtonsEventBuilder;
 use crate::tests::fakes::audio_core_service::{self, AudioCoreService};

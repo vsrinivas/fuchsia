@@ -1,9 +1,9 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+use crate::agent::storage::device_storage::DeviceStorageFactory;
 use crate::base::{HasSettingType, SettingInfo, SettingType};
 use crate::handler::base::{Context, ControllerGenerateResult, Request};
-use crate::handler::device_storage::DeviceStorageFactory;
 use crate::message::base::Audience;
 use crate::payload_convert;
 use crate::service::message::{MessageClient, Messenger, Signature};
@@ -342,24 +342,17 @@ impl IntoHandlerResult for SettingInfo {
 pub mod persist {
     use super::ClientImpl as BaseProxy;
     use super::*;
+    use crate::agent::storage::device_storage::DeviceStorageConvertible;
     use crate::base::SettingInfo;
-    use crate::handler::device_storage::DeviceStorageConvertible;
     use crate::message::base::{Audience, MessageEvent};
     use crate::service;
-    use crate::storage;
+    use crate::storage::{self, UpdateState};
     use crate::trace;
     use crate::trace::TracingNonce;
     use futures::StreamExt;
 
     pub trait Storage: DeviceStorageConvertible + Into<SettingInfo> + Send + Sync {}
     impl<T: DeviceStorageConvertible + Into<SettingInfo> + Send + Sync> Storage for T {}
-
-    #[derive(PartialEq, Clone, Debug)]
-    /// Enum for describing whether writing affected persistent value.
-    pub enum UpdateState {
-        Unchanged,
-        Updated,
-    }
 
     pub(crate) mod controller {
         use super::ClientProxy;

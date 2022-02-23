@@ -31,7 +31,7 @@ pub(crate) mod authority;
 pub(crate) mod restore_agent;
 
 /// Agent for managing access to storage.
-pub(crate) mod storage_agent;
+pub mod storage;
 
 /// Earcons.
 pub(crate) mod earcons;

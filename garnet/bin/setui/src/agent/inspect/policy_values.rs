@@ -6,10 +6,10 @@ use std::collections::HashMap;
 use std::convert::TryFrom;
 use std::sync::Arc;
 
+use crate::agent::storage::device_storage::DeviceStorageAccess;
 use crate::agent::{Context, Payload};
 use crate::blueprint_definition;
 use crate::clock;
-use crate::handler::device_storage::DeviceStorageAccess;
 use crate::message::base::{filter, role, MessageEvent, MessengerType};
 use crate::policy::{self as policy_base, Payload as PolicyPayload, Request, Role};
 use crate::service::message::{Audience, MessageClient, Messenger, Signature};

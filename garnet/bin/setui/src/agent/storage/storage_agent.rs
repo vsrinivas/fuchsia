@@ -13,6 +13,7 @@ use futures::future::BoxFuture;
 use futures::stream::{FuturesUnordered, StreamFuture};
 use futures::StreamExt;
 
+use super::device_storage::{DeviceStorageConvertible, DeviceStorageFactory};
 use crate::accessibility::types::AccessibilityInfo;
 use crate::agent::{self, Context, Lifespan};
 use crate::audio::policy as audio_policy;
@@ -23,8 +24,6 @@ use crate::base::{SettingInfo, SettingType};
 use crate::display::types::DisplayInfo;
 use crate::do_not_disturb::types::DoNotDisturbInfo;
 use crate::factory_reset::types::FactoryResetInfo;
-use crate::handler::device_storage::{DeviceStorageConvertible, DeviceStorageFactory};
-use crate::handler::setting_handler::persist::UpdateState;
 use crate::input::types::InputInfoSources;
 use crate::intl::types::IntlInfo;
 use crate::keyboard::types::KeyboardInfo;
@@ -39,7 +38,9 @@ use crate::policy::{PolicyInfo, PolicyType};
 use crate::privacy::types::PrivacyInfo;
 use crate::service::{self, Address};
 use crate::setup::types::SetupInfo;
-use crate::storage::{Error, Payload, StorageInfo, StorageRequest, StorageResponse, StorageType};
+use crate::storage::{
+    Error, Payload, StorageInfo, StorageRequest, StorageResponse, StorageType, UpdateState,
+};
 use crate::trace::TracingNonce;
 use crate::Role;
 use crate::{trace, trace_guard};
@@ -326,9 +327,9 @@ where
 payload_convert!(Storage, Payload);
 #[cfg(test)]
 mod tests {
+    use crate::agent::storage::device_storage::testing::InMemoryStorageFactory;
     use crate::async_property_test;
     use crate::display::types::LightData;
-    use crate::handler::device_storage::testing::InMemoryStorageFactory;
     use crate::message::base::Audience;
     use crate::message::MessageHubUtil;
 

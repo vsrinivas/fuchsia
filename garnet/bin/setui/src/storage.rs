@@ -6,7 +6,6 @@
 //! agent.
 
 use crate::base::{SettingInfo, SettingType};
-use crate::handler::setting_handler::persist::UpdateState;
 use crate::policy::{PolicyInfo, PolicyType};
 use crate::trace::TracingNonce;
 
@@ -71,6 +70,13 @@ pub enum StorageResponse {
     /// The result of a write request with either the [`UpdateState`] after a successful write
     /// or a formatted error describing why the write could not occur.
     Write(Result<UpdateState, Error>),
+}
+
+#[derive(PartialEq, Clone, Debug)]
+/// Enum for describing whether writing affected persistent value.
+pub enum UpdateState {
+    Unchanged,
+    Updated,
 }
 
 /// `Error` encapsulates a formatted error the occurs due to write failures.

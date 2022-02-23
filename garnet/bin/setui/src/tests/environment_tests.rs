@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::agent::storage::device_storage::testing::InMemoryStorageFactory;
 use crate::agent::{
     AgentError, Context, Invocation, InvocationResult, Lifespan, Payload as AgentPayload,
 };
@@ -10,7 +11,6 @@ use crate::blueprint_definition;
 use crate::event::{Event, Payload as EventPayload};
 use crate::handler::base::Payload as HandlerPayload;
 use crate::handler::base::Request;
-use crate::handler::device_storage::testing::InMemoryStorageFactory;
 use crate::ingress::fidl;
 use crate::ingress::registration;
 use crate::job::source::Error;

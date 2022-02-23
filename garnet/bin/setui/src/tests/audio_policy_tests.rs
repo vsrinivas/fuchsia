@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::agent::storage::device_storage::testing::InMemoryStorageFactory;
 use crate::audio::default_audio_info;
 use crate::audio::policy::{
     PolicyId, PropertyTarget, State, StateBuilder, Transform, TransformFlags,
@@ -9,7 +10,6 @@ use crate::audio::policy::{
 use crate::audio::types::{AudioSettingSource, AudioStream, AudioStreamType};
 use crate::audio::utils::round_volume_level;
 use crate::config::base::AgentType;
-use crate::handler::device_storage::testing::InMemoryStorageFactory;
 use crate::ingress::fidl::Interface;
 use crate::message::base::{Audience, MessengerType};
 use crate::message::MessageHubUtil;

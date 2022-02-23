@@ -3,10 +3,10 @@
 // found in the LICENSE file.
 
 use crate::agent::authority::Authority;
+use crate::agent::storage::device_storage::testing::InMemoryStorageFactory;
 use crate::agent::{
     AgentError, BlueprintHandle, Context, Invocation, InvocationResult, Lifespan, Payload,
 };
-use crate::handler::device_storage::testing::InMemoryStorageFactory;
 use crate::message::MessageHubUtil;
 use crate::service;
 use crate::service_context::ServiceContext;

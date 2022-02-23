@@ -4,7 +4,6 @@
 
 use crate::base::SettingType;
 use crate::handler::base::{Payload as HandlerPayload, Request, Response as SettingResponse};
-use crate::handler::setting_handler::persist::UpdateState;
 use crate::handler::setting_handler::{SettingHandlerResult, StorageFactory};
 use crate::message::base::Audience;
 use crate::policy::response::{Error as PolicyError, Response};
@@ -13,7 +12,7 @@ use crate::policy::{
     Request as PolicyRequest,
 };
 use crate::service;
-use crate::storage::{self, StorageInfo};
+use crate::storage::{self, StorageInfo, UpdateState};
 use crate::trace::TracingNonce;
 use anyhow::Error;
 use async_trait::async_trait;

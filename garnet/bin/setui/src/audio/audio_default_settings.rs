@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::agent::storage::device_storage::DeviceStorageCompatible;
 use crate::audio::types::{
     AudioInfo, AudioInputInfo, AudioSettingSource, AudioStream, AudioStreamType,
 };
 use crate::base::SettingInfo;
 use crate::config::default_settings::DefaultSetting;
-use crate::handler::device_storage::DeviceStorageCompatible;
 use lazy_static::lazy_static;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;

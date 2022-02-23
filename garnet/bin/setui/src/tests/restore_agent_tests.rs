@@ -3,10 +3,10 @@
 // found in the LICENSE file.
 
 use crate::agent::restore_agent;
+use crate::agent::storage::device_storage::testing::InMemoryStorageFactory;
 use crate::base::SettingType;
 use crate::event::{self as event, restore, Event};
 use crate::handler::base::Request;
-use crate::handler::device_storage::testing::InMemoryStorageFactory;
 use crate::handler::setting_handler::{ControllerError, SettingHandlerResult};
 use crate::ingress::fidl::Interface;
 use crate::service;

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::agent::storage::device_storage::DeviceStorageConvertible;
 use crate::base::SettingInfo;
-use crate::handler::device_storage::DeviceStorageConvertible;
 use crate::handler::setting_handler::ControllerError;
 use crate::input::input_device_configuration::InputConfiguration;
 

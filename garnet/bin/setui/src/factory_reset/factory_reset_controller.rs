@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::agent::storage::device_storage::{DeviceStorageAccess, DeviceStorageCompatible};
 use crate::base::{SettingInfo, SettingType};
 use crate::call;
 use crate::factory_reset::types::FactoryResetInfo;
 use crate::handler::base::Request;
-use crate::handler::device_storage::{DeviceStorageAccess, DeviceStorageCompatible};
 use crate::handler::setting_handler::controller::Handle;
 use crate::handler::setting_handler::persist::{controller, ClientProxy};
 use crate::handler::setting_handler::{

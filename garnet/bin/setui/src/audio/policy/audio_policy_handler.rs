@@ -63,6 +63,7 @@
 //! [Response]: crate::handler::base::Payload::Response
 //! [Rebroadcast]: crate::handler::base::Request::Rebroadcast
 
+use crate::agent::storage::device_storage::{DeviceStorageAccess, DeviceStorageCompatible};
 use crate::audio::default_audio_info;
 use crate::audio::policy::{
     self as audio_policy, AudioPolicyConfig, PolicyId, PropertyTarget, Request as PolicyRequest,
@@ -75,7 +76,6 @@ use crate::config::default_settings::DefaultSetting;
 use crate::handler::base::{
     Payload as HandlerPayload, Request as SettingRequest, Response as SettingResponse,
 };
-use crate::handler::device_storage::{DeviceStorageAccess, DeviceStorageCompatible};
 use crate::policy::policy_handler::{
     ClientProxy, Create, PolicyHandler, RequestTransform, ResponseTransform,
 };

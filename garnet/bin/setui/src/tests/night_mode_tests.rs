@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::handler::device_storage::testing::InMemoryStorageFactory;
+use crate::agent::storage::device_storage::testing::InMemoryStorageFactory;
 use crate::ingress::fidl::Interface;
 use crate::night_mode::types::NightModeInfo;
 use crate::EnvironmentBuilder;

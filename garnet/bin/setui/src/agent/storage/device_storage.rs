@@ -2,13 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use std::any::Any;
-use std::borrow::Cow;
-use std::collections::{HashMap, HashSet};
-use std::ops::{Add, Sub};
-use std::sync::Arc;
-use std::time::{Duration, Instant};
-
+use crate::inspect::stash_logger::StashInspectLogger;
+use crate::storage::UpdateState;
 use anyhow::{format_err, Context, Error};
 use fidl::endpoints::create_proxy;
 use fidl_fuchsia_stash::{StoreAccessorProxy, StoreProxy, Value};
@@ -20,9 +15,11 @@ use futures::lock::Mutex;
 use futures::{FutureExt, StreamExt};
 use serde::de::DeserializeOwned;
 use serde::Serialize;
-
-use crate::handler::setting_handler::persist::UpdateState;
-use crate::inspect::stash_logger::StashInspectLogger;
+use std::any::Any;
+use std::borrow::Cow;
+use std::collections::{HashMap, HashSet};
+use std::sync::Arc;
+use std::time::{Duration, Instant};
 
 const SETTINGS_PREFIX: &str = "settings";
 
@@ -248,7 +245,7 @@ impl DeviceStorage {
                         // The time of the last flush. Initialized to MIN_FLUSH_INTERVAL_MS before the
                         // current time so that the first flush always goes through, no matter the
                         // timing.
-                        let mut last_flush: Instant = Instant::now().sub(MIN_FLUSH_DURATION);
+                        let mut last_flush: Instant = Instant::now() - MIN_FLUSH_DURATION;
 
                         // Timer for flush cooldown. OptionFuture allows us to wait on the future even
                         // if it's None.
@@ -271,7 +268,7 @@ impl DeviceStorage {
                                         // Last flush was less than MIN_FLUSH_INTERVAL_MS ago, schedule
                                         // it accordingly. It's okay if the time is in the past, Timer
                                         // will still trigger on the next loop iteration.
-                                        last_flush.add(MIN_FLUSH_DURATION)
+                                        last_flush + MIN_FLUSH_DURATION
                                     };
                                     has_pending_flush = true;
                                     next_flush_timer = Some(Timer::new(next_flush_time.into_time()))
@@ -1306,9 +1303,8 @@ mod tests {
     // This mod includes structs to only be used by
     // test_device_compatible_migration tests.
     mod test_device_compatible_migration {
+        use super::super::DeviceStorageCompatible;
         use serde::{Deserialize, Serialize};
-
-        use crate::handler::device_storage::DeviceStorageCompatible;
 
         pub(crate) const DEFAULT_V1_VALUE: i32 = 1;
         pub(crate) const DEFAULT_CURRENT_VALUE: i32 = 2;

@@ -10,13 +10,13 @@
 //!
 //! [SettingProxyInspectAgent]: inspect::SettingProxyInspectAgent
 
+use crate::agent::storage::device_storage::DeviceStorageAccess;
 use crate::agent::Context;
 use crate::agent::Payload;
 use crate::base::SettingType;
 use crate::blueprint_definition;
 use crate::clock;
 use crate::handler::base::{Payload as HandlerPayload, Request};
-use crate::handler::device_storage::DeviceStorageAccess;
 use crate::message::base::{filter, MessageEvent, MessengerType};
 use crate::service::TryFromWithClient;
 use crate::{service, trace};

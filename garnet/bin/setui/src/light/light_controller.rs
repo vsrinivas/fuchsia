@@ -5,10 +5,10 @@
 use async_trait::async_trait;
 use fidl_fuchsia_hardware_light::{Info, LightMarker, LightProxy};
 
+use crate::agent::storage::device_storage::{DeviceStorageAccess, DeviceStorageCompatible};
 use crate::base::{SettingInfo, SettingType};
 use crate::config::default_settings::DefaultSetting;
 use crate::handler::base::Request;
-use crate::handler::device_storage::{DeviceStorageAccess, DeviceStorageCompatible};
 use crate::handler::setting_handler::persist::{controller as data_controller, ClientProxy};
 use crate::handler::setting_handler::{
     controller, ControllerError, ControllerStateResult, IntoHandlerResult, SettingHandlerResult,

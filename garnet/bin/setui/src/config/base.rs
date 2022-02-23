@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::agent::storage::device_storage::DeviceStorageFactory;
 use crate::agent::BlueprintHandle;
-use crate::handler::device_storage::DeviceStorageFactory;
 use anyhow::Error;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;

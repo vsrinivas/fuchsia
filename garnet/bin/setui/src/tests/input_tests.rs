@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::agent::storage::device_storage::testing::InMemoryStorageFactory;
 use crate::base::SettingType;
 use crate::handler::base::{Payload as HandlerPayload, Request};
-use crate::handler::device_storage::testing::InMemoryStorageFactory;
 use crate::ingress::fidl::Interface;
 use crate::input::common::MediaButtonsEventBuilder;
 use crate::input::input_device_configuration::{

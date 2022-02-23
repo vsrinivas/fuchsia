@@ -11,9 +11,9 @@ use fidl_fuchsia_settings_policy::{PolicyParameters, Volume};
 
 use bitflags::bitflags;
 
+use crate::agent::storage::device_storage::DeviceStorageCompatible;
 use crate::audio::types::AudioStreamType;
 use crate::audio::utils::round_volume_level;
-use crate::handler::device_storage::DeviceStorageCompatible;
 
 pub mod audio_policy_handler;
 pub mod volume_policy_fidl_handler;

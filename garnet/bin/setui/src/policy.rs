@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::agent::storage::device_storage::DeviceStorageFactory;
 use crate::audio::policy::{self as audio, State};
 use crate::base::SettingType;
 use crate::generate_inspect_with_info;
-use crate::handler::device_storage::DeviceStorageFactory;
 use crate::payload_convert;
 use crate::policy::policy_handler::PolicyHandler;
 use crate::policy::response::Response;
@@ -114,7 +114,7 @@ conversion_impls! {
 #[cfg(test)]
 mod testing {
     use super::{PolicyInfo, UnknownInfo};
-    use crate::handler::device_storage::DeviceStorageCompatible;
+    use crate::agent::storage::device_storage::DeviceStorageCompatible;
 
     impl DeviceStorageCompatible for UnknownInfo {
         const KEY: &'static str = "unknown_info";

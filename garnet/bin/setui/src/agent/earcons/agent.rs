@@ -4,13 +4,13 @@
 
 use crate::agent::earcons::bluetooth_handler::BluetoothHandler;
 use crate::agent::earcons::volume_change_handler::VolumeChangeHandler;
+use crate::agent::storage::device_storage::DeviceStorageAccess;
 use crate::agent::Context as AgentContext;
 use crate::agent::Lifespan;
 use crate::agent::Payload;
 use crate::agent::{AgentError, Invocation, InvocationResult};
 use crate::blueprint_definition;
 use crate::event::Publisher;
-use crate::handler::device_storage::DeviceStorageAccess;
 use crate::service;
 use crate::service_context::{ExternalServiceProxy, ServiceContext};
 use fidl_fuchsia_media_sounds::PlayerProxy;

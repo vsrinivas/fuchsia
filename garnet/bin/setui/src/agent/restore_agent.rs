@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::agent::storage::device_storage::DeviceStorageAccess;
 use crate::agent::Payload;
 use crate::agent::{AgentError, Context, Invocation, InvocationResult, Lifespan};
 use crate::base::SettingType;
 use crate::blueprint_definition;
 use crate::event::{restore, Event, Publisher};
 use crate::handler::base::{Error, Payload as HandlerPayload, Request};
-use crate::handler::device_storage::DeviceStorageAccess;
 use crate::message::base::Audience;
 use crate::policy::{Payload as PolicyPayload, PolicyType, Request as PolicyRequest};
 use crate::service;

@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::agent::storage::device_storage::testing::InMemoryStorageFactory;
 use crate::agent::BlueprintHandle;
 use crate::base::SettingType;
 use crate::config::base::AgentType;
 use crate::handler::base::{Context, GenerateHandler};
-use crate::handler::device_storage::testing::InMemoryStorageFactory;
 use crate::handler::setting_handler::persist::ClientProxy;
 use crate::handler::setting_handler::{BoxedController, ClientImpl};
 use crate::ingress::fidl::Interface;

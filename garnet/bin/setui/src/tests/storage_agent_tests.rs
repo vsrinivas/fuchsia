@@ -2,15 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::base::{SettingInfo, SettingType, UnknownInfo};
-use crate::handler::device_storage::testing::InMemoryStorageFactory;
-use crate::handler::device_storage::{
+use crate::agent::storage::device_storage::testing::InMemoryStorageFactory;
+use crate::agent::storage::device_storage::{
     DeviceStorage, DeviceStorageAccess, DeviceStorageCompatible, DeviceStorageFactory,
 };
-use crate::handler::setting_handler::persist::UpdateState;
+use crate::base::{SettingInfo, SettingType, UnknownInfo};
 use crate::message::base::{Audience, MessengerType};
 use crate::service::{self, Address};
-use crate::storage::{Payload, StorageInfo, StorageRequest, StorageResponse};
+use crate::storage::{Payload, StorageInfo, StorageRequest, StorageResponse, UpdateState};
 use crate::EnvironmentBuilder;
 use assert_matches::assert_matches;
 use std::sync::Arc;

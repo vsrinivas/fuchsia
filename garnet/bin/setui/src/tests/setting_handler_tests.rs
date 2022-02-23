@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 use crate::accessibility::types::AccessibilityInfo;
+use crate::agent::storage::device_storage::testing::InMemoryStorageFactory;
+use crate::agent::storage::device_storage::DeviceStorageCompatible;
 use crate::agent::{restore_agent, Blueprint};
 use crate::base::{get_all_setting_types, SettingInfo, SettingType, UnknownInfo};
 use crate::handler::base::{ContextBuilder, Request};
-use crate::handler::device_storage::testing::InMemoryStorageFactory;
-use crate::handler::device_storage::DeviceStorageCompatible;
 use crate::handler::setting_handler::persist::WriteResult;
 use crate::handler::setting_handler::{
     controller, persist, persist::controller as data_controller,
@@ -146,7 +146,8 @@ async fn test_write_notify() {
     )
     .await;
 
-    let blueprint = crate::agent::storage_agent::Blueprint::new(Arc::clone(&storage_factory));
+    let blueprint =
+        crate::agent::storage::storage_agent::Blueprint::new(Arc::clone(&storage_factory));
     blueprint.create(agent_context).await;
     let mut invocation_receptor = invocation_messenger
         .message(

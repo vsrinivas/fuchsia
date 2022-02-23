@@ -1,11 +1,11 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+use crate::agent::storage::device_storage::DeviceStorageAccess;
 use crate::base::SettingInfo;
 use crate::display::light_sensor::{open_sensor, read_sensor, Sensor};
 use crate::display::types::LightData;
 use crate::handler::base::Request;
-use crate::handler::device_storage::DeviceStorageAccess;
 use crate::handler::setting_handler::{
     controller, ClientImpl, ControllerError, ControllerStateResult, Event, SettingHandlerResult,
     State,

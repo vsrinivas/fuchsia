@@ -7,6 +7,7 @@
 
 use crate::accessibility::accessibility_controller::AccessibilityController;
 use crate::agent::authority::Authority;
+use crate::agent::storage::device_storage::DeviceStorageFactory;
 use crate::agent::{BlueprintHandle as AgentBlueprintHandle, Lifespan};
 use crate::audio::audio_controller::AudioController;
 use crate::audio::policy::audio_policy_handler::AudioPolicyHandler;
@@ -17,7 +18,6 @@ use crate::display::light_sensor_controller::LightSensorController;
 use crate::do_not_disturb::do_not_disturb_controller::DoNotDisturbController;
 use crate::factory_reset::factory_reset_controller::FactoryResetController;
 use crate::handler::base::GenerateHandler;
-use crate::handler::device_storage::DeviceStorageFactory;
 use crate::handler::setting_handler::persist::Handler as DataHandler;
 use crate::handler::setting_handler_factory_impl::SettingHandlerFactoryImpl;
 use crate::handler::setting_proxy::SettingProxy;
@@ -761,7 +761,7 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
 
     // The service does not work without storage, so ensure it is always included first.
     agent_authority
-        .register(Arc::new(crate::agent::storage_agent::Blueprint::new(storage_factory)))
+        .register(Arc::new(crate::agent::storage::storage_agent::Blueprint::new(storage_factory)))
         .await;
 
     for blueprint in agent_blueprints {

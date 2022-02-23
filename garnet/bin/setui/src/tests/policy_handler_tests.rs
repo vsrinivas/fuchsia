@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::agent::storage::device_storage::testing::InMemoryStorageFactory;
+use crate::agent::storage::device_storage::DeviceStorageFactory;
 use crate::handler::base::{Request, Response as SettingResponse};
-use crate::handler::device_storage::testing::InMemoryStorageFactory;
-use crate::handler::device_storage::DeviceStorageFactory;
 use crate::message::base::MessengerType;
 use crate::policy::policy_handler::{
     ClientProxy, Create, PolicyHandler, RequestTransform, ResponseTransform,

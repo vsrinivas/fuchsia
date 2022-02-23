@@ -10,12 +10,12 @@ use fuchsia_inspect::{self as inspect, component, Property};
 use fuchsia_syslog::fx_log_err;
 use futures::StreamExt;
 
+use crate::agent::storage::device_storage::DeviceStorageAccess;
 use crate::agent::{Context, Lifespan, Payload};
 use crate::base::{SettingInfo, SettingType};
 use crate::blueprint_definition;
 use crate::clock;
 use crate::handler::base::{Payload as SettingPayload, Request};
-use crate::handler::device_storage::DeviceStorageAccess;
 use crate::handler::setting_handler::{Event, Payload as HandlerPayload};
 use crate::message::base::{filter, Audience, MessageEvent, MessengerType};
 use crate::service;
