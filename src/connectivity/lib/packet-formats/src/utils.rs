@@ -87,6 +87,23 @@ impl From<NonZeroDuration> for Duration {
     }
 }
 
+impl core::ops::Add<Duration> for NonZeroDuration {
+    type Output = Self;
+
+    fn add(self, rhs: Duration) -> Self::Output {
+        let Self(d) = self;
+        Self(d + rhs)
+    }
+}
+
+impl core::ops::Add<NonZeroDuration> for NonZeroDuration {
+    type Output = Self;
+
+    fn add(self, rhs: NonZeroDuration) -> Self::Output {
+        self + rhs.get()
+    }
+}
+
 /// Rounds `x` up to the next multiple of 4 unless `x` is already a multiple of
 /// 4.
 pub(crate) fn round_to_next_multiple_of_four(x: usize) -> usize {
@@ -150,5 +167,21 @@ mod tests {
                 assert_eq!(x + (4 - x % 4), y);
             }
         }
+    }
+
+    #[test]
+    fn add_duration() {
+        let a = NonZeroDuration::new(Duration::from_secs(48291)).unwrap();
+        let b = Duration::from_secs(195811);
+        assert_eq!(Some(a + b), NonZeroDuration::new(a.get() + b));
+
+        assert_eq!(a + ZERO_DURATION, a);
+    }
+
+    #[test]
+    fn add_nonzero_duration() {
+        let a = NonZeroDuration::new(Duration::from_secs(48291)).unwrap();
+        let b = NonZeroDuration::new(Duration::from_secs(195811)).unwrap();
+        assert_eq!(Some(a + b), NonZeroDuration::new(a.get() + b.get()));
     }
 }
