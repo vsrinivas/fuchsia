@@ -12,7 +12,6 @@ core_realm_shards += [
   "//src/media/audio/drivers/configurator:configurator_provider_shard",
   "//src/power/battery-manager:battery-manager-core-shard",
   "//src/session/bin/session_manager:workstation_core_shard",
-  "//src/connectivity/bluetooth/profiles/bt-a2dp:eager_core_shard",
   "//src/ui:ui-core-shard",
 ]
 
@@ -93,7 +92,7 @@ core_realm_shards +=
 
 # To use the eager shard, cache the packages so they are available before network.
 cache_package_labels += [
-  "//src/connectivity/bluetooth/profiles/bt-a2dp",
+  "//src/connectivity/bluetooth/profiles/bt-a2dp:source-only",
   "//src/connectivity/bluetooth/profiles/bt-avrcp-target",
 
   # TODO(fxbug.dev/79542): Demote to universe when sysui handles pairing+connecting

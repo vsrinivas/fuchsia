@@ -13,7 +13,7 @@ use {
 
 use crate::sources::AudioSourceType;
 
-pub const DEFAULT_CONFIG_FILE_PATH: &str = "/config/data/a2dp.config";
+pub const DEFAULT_CONFIG_FILE_PATH: &str = "/pkg/data/a2dp.config";
 
 pub(crate) const DEFAULT_DOMAIN: &str = "Bluetooth";
 pub(crate) const DEFAULT_INITIATOR_DELAY: zx::Duration = zx::Duration::from_millis(500);

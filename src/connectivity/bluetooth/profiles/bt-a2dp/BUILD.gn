@@ -115,6 +115,20 @@ fuchsia_package("bt-a2dp") {
   ]
 }
 
+# A configuration for bt-a2dp which disables sink.
+resource("source_only_config") {
+  sources = [ "config/source_only.config" ]
+  outputs = [ "data/a2dp.config" ]
+}
+
+fuchsia_package("source-only") {
+  package_name = "bt-a2dp"
+  deps = [
+    ":component-v2",
+    ":source_only_config",
+  ]
+}
+
 # The core realm shards to be used by product integrators.
 # The "lazy_core_shard" should be used when it is desired for A2DP to be started
 # via the fuchsia.bluetooth.a2dp.AudioMode API.
