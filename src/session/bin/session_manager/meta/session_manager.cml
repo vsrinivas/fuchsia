@@ -133,6 +133,8 @@
                 "fuchsia.ultrasound.Factory",
                 "fuchsia.update.channel.Provider",
                 "fuchsia.update.channelcontrol.ChannelControl",
+                "fuchsia.update.config.OptOut",
+                "fuchsia.update.config.OptOutAdmin",
                 "fuchsia.update.Manager",
                 "fuchsia.weave.Bootstrap",
                 "fuchsia.weave.FactoryDataManager",
