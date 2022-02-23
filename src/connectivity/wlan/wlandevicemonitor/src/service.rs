@@ -973,7 +973,7 @@ mod tests {
         // Issue service.fidl::SetPsModeRequest()
         let req_msg = fidl_svc::SetPsModeRequest {
             phy_id,
-            ps_mode: fidl_wlan_common::PowerSaveType::FastPsMode,
+            ps_mode: fidl_wlan_common::PowerSaveType::PsModeBalanced,
         };
         let req_fut = super::set_ps_mode(&test_values.phys, req_msg);
         pin_mut!(req_fut);
@@ -981,7 +981,7 @@ mod tests {
 
         assert_variant!(exec.run_until_stalled(&mut phy_stream.next()),
             Poll::Ready(Some(Ok(fidl_dev::PhyRequest::SetPsMode { req, responder }))) => {
-                assert_eq!(req, fidl_wlan_common::PowerSaveType::FastPsMode);
+                assert_eq!(req, fidl_wlan_common::PowerSaveType::PsModeBalanced);
                 // Pretend to be a WLAN PHY to return the result.
                 responder.send(zx::Status::OK.into_raw())
                     .expect("failed to send the response to SetPsModeRequest");
@@ -1006,7 +1006,7 @@ mod tests {
         // Issue service.fidl::SetPsModeRequest()
         let req_msg = fidl_svc::SetPsModeRequest {
             phy_id,
-            ps_mode: fidl_wlan_common::PowerSaveType::PsPollMode,
+            ps_mode: fidl_wlan_common::PowerSaveType::PsModeLowPower,
         };
         let req_fut = super::set_ps_mode(&test_values.phys, req_msg);
         pin_mut!(req_fut);
@@ -1015,7 +1015,7 @@ mod tests {
         let (req, responder) = assert_variant!(exec.run_until_stalled(&mut phy_stream.next()),
             Poll::Ready(Some(Ok(fidl_dev::PhyRequest::SetPsMode { req, responder }))) => (req, responder)
         );
-        assert_eq!(req, fidl_wlan_common::PowerSaveType::PsPollMode);
+        assert_eq!(req, fidl_wlan_common::PowerSaveType::PsModeLowPower);
 
         // Failure case #1: WLAN PHY not responding
         assert_eq!(Poll::Pending, exec.run_until_stalled(&mut req_fut));
@@ -1048,7 +1048,7 @@ mod tests {
             Poll::Ready(Some(Ok(fidl_dev::PhyRequest::GetPsMode { responder }))) => {
                 // Pretend to be a WLAN PHY to return the result.
                 responder.send(
-                    &mut Ok(fidl_wlan_common::PowerSaveType::PsModeOff)
+                    &mut Ok(fidl_wlan_common::PowerSaveType::PsModePerformance)
                 ).expect("failed to send the response to SetPsMode");
             }
         );
@@ -1056,7 +1056,7 @@ mod tests {
         assert_eq!(
             exec.run_until_stalled(&mut req_fut),
             Poll::Ready(Ok(fidl_svc::GetPsModeResponse {
-                ps_mode: fidl_wlan_common::PowerSaveType::PsModeOff
+                ps_mode: fidl_wlan_common::PowerSaveType::PsModePerformance
             }))
         );
     }

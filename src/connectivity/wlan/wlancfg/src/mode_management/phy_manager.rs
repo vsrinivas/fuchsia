@@ -181,7 +181,7 @@ impl PhyManager {
             device_service,
             device_monitor,
             client_connections_enabled: false,
-            power_state: fidl_common::PowerSaveType::PsModeOff,
+            power_state: fidl_common::PowerSaveType::PsModePerformance,
             suggested_ap_mac: None,
             saved_country_code: None,
             _node: node,
@@ -298,7 +298,7 @@ impl PhyManagerApi for PhyManager {
             };
         }
 
-        if self.power_state != fidl_common::PowerSaveType::PsModeOff {
+        if self.power_state != fidl_common::PowerSaveType::PsModePerformance {
             let ps_result = set_ps_mode(&self.device_monitor, phy_id, self.power_state)
                 .await
                 .map_err(|_| PhyManagerError::PhySetLowPowerFailure)?;
@@ -2674,7 +2674,7 @@ mod tests {
         let mut phy_manager =
             PhyManager::new(test_values.dev_svc_proxy, test_values.monitor_proxy, test_values.node);
 
-        assert_eq!(phy_manager.power_state, fidl_common::PowerSaveType::PsModeOff);
+        assert_eq!(phy_manager.power_state, fidl_common::PowerSaveType::PsModePerformance);
 
         // Add a couple of PHYs.
         let mut phy_ids = HashSet::<u16>::new();
@@ -2687,7 +2687,7 @@ mod tests {
 
         {
             // Set low power state on the PHYs.
-            let fut = phy_manager.set_power_state(fidl_common::PowerSaveType::PsPollMode);
+            let fut = phy_manager.set_power_state(fidl_common::PowerSaveType::PsModeLowPower);
 
             // The future should run until it stalls out requesting that one of the PHYs set its low
             // power mode.
@@ -2704,7 +2704,7 @@ mod tests {
                         }
                     ))) => {
                         assert!(phy_ids.remove(&phy_id));
-                        assert_eq!(ps_mode, fidl_common::PowerSaveType::PsPollMode);
+                        assert_eq!(ps_mode, fidl_common::PowerSaveType::PsModeLowPower);
                         responder.send(ZX_OK).expect("sending fake set PS mode response");
                     }
                 )
@@ -2715,7 +2715,7 @@ mod tests {
                 Poll::Ready(Ok(fuchsia_zircon::Status::OK))
             );
         }
-        assert_eq!(phy_manager.power_state, fidl_common::PowerSaveType::PsPollMode);
+        assert_eq!(phy_manager.power_state, fidl_common::PowerSaveType::PsModeLowPower);
     }
 
     /// Tests the case where setting low power state fails.
@@ -2726,7 +2726,7 @@ mod tests {
         let mut phy_manager =
             PhyManager::new(test_values.dev_svc_proxy, test_values.monitor_proxy, test_values.node);
 
-        assert_eq!(phy_manager.power_state, fidl_common::PowerSaveType::PsModeOff);
+        assert_eq!(phy_manager.power_state, fidl_common::PowerSaveType::PsModePerformance);
 
         // Add a couple of PHYs.
         let mut phy_ids = HashSet::<u16>::new();
@@ -2739,7 +2739,7 @@ mod tests {
 
         {
             // Set low power state on the PHYs.
-            let fut = phy_manager.set_power_state(fidl_common::PowerSaveType::PsPollMode);
+            let fut = phy_manager.set_power_state(fidl_common::PowerSaveType::PsModeLowPower);
 
             // The future should run until it stalls out requesting that one of the PHYs set its low
             // power mode.
@@ -2756,7 +2756,7 @@ mod tests {
                         }
                     ))) => {
                         assert!(phy_ids.remove(&phy_id));
-                        assert_eq!(ps_mode, fidl_common::PowerSaveType::PsPollMode);
+                        assert_eq!(ps_mode, fidl_common::PowerSaveType::PsModeLowPower);
 
                         // Send back a failure for one of the PHYs
                         if phy_id == 0 {
@@ -2777,7 +2777,7 @@ mod tests {
                 Poll::Ready(Ok(fuchsia_zircon::Status::NOT_FOUND))
             );
         }
-        assert_eq!(phy_manager.power_state, fidl_common::PowerSaveType::PsPollMode);
+        assert_eq!(phy_manager.power_state, fidl_common::PowerSaveType::PsModeLowPower);
     }
 
     /// Tests the case where the request cannot be made to configure low power mode for a PHY.
@@ -2801,7 +2801,7 @@ mod tests {
         }
 
         // Set low power state on the PHYs.
-        let fut = phy_manager.set_power_state(fidl_common::PowerSaveType::PsModeOff);
+        let fut = phy_manager.set_power_state(fidl_common::PowerSaveType::PsModePerformance);
 
         // The future should run until it stalls out requesting that one of the PHYs set its low
         // power mode.
@@ -2817,11 +2817,11 @@ mod tests {
         let mut phy_manager =
             PhyManager::new(test_values.dev_svc_proxy, test_values.monitor_proxy, test_values.node);
 
-        assert_eq!(phy_manager.power_state, fidl_common::PowerSaveType::PsModeOff);
+        assert_eq!(phy_manager.power_state, fidl_common::PowerSaveType::PsModePerformance);
 
         // Enable low power mode which should complete immediately.
         {
-            let fut = phy_manager.set_power_state(fidl_common::PowerSaveType::FastPsMode);
+            let fut = phy_manager.set_power_state(fidl_common::PowerSaveType::PsModeBalanced);
             pin_mut!(fut);
             assert_variant!(
                 exec.run_until_stalled(&mut fut),
@@ -2829,7 +2829,7 @@ mod tests {
             );
         }
 
-        assert_eq!(phy_manager.power_state, fidl_common::PowerSaveType::FastPsMode);
+        assert_eq!(phy_manager.power_state, fidl_common::PowerSaveType::PsModeBalanced);
 
         // Add a new PHY and ensure that the low power mode is set
         {
@@ -2853,7 +2853,7 @@ mod tests {
                         responder,
                     }
                 ))) => {
-                    assert_eq!(ps_mode, fidl_common::PowerSaveType::FastPsMode);
+                    assert_eq!(ps_mode, fidl_common::PowerSaveType::PsModeBalanced);
 
                     // Send back a failure for one of the PHYs
                     if phy_id == 0 {

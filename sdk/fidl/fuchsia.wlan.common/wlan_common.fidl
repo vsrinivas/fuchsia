@@ -149,12 +149,14 @@ type GuardInterval = strict enum : uint8 {
 // greatly, this is an attempt to generalize the setting and indicated
 // as an enum (bitfield).
 type PowerSaveType = strict enum : uint32 {
-    // Powersave mode is off
-    PS_MODE_OFF = 0x0;
-    // STA sets PM bit in Mac Header on/off to indicate PS mode to AP
-    FAST_PS_MODE = 0x1;
-    // STA uses PS Poll frames to retrieve packets from AP as needed.
-    PS_POLL_MODE = 0x2;
+    // Close to power off state.
+    PS_MODE_ULTRA_LOW_POWER = 0x0;
+    // Tuned for power over performance
+    PS_MODE_LOW_POWER = 0x1;
+    // Tuned for a balance between power and performance
+    PS_MODE_BALANCED = 0x2;
+    // Tuned for best performance
+    PS_MODE_PERFORMANCE = 0x3;
 };
 
 @namespaced

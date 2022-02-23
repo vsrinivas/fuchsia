@@ -99,7 +99,7 @@ wlanphy_impl_protocol_ops_t make_ops_for_get_ps_mode(
 
 TEST(WlanphyTest, GetPsModeReturnsSuccess) {
   auto ops = make_ops_for_get_ps_mode([](void* ctx, wlanphy_ps_mode_t* ps_mode) {
-    ps_mode->ps_mode = POWER_SAVE_TYPE_FAST_PS_MODE;
+    ps_mode->ps_mode = POWER_SAVE_TYPE_PS_MODE_BALANCED;
     return ZX_OK;
   });
   void* ctx = nullptr;
@@ -108,7 +108,7 @@ TEST(WlanphyTest, GetPsModeReturnsSuccess) {
   Device dev(nullptr, wlanphy_impl_protocol_t{.ops = &ops, .ctx = ctx});
   bool invoked_callback = false;
   dev.GetPsMode([&invoked_callback](fuchsia::wlan::device::Phy_GetPsMode_Result result) {
-    constexpr power_save_type_t exp_ps_mode = POWER_SAVE_TYPE_FAST_PS_MODE;
+    constexpr power_save_type_t exp_ps_mode = POWER_SAVE_TYPE_PS_MODE_BALANCED;
     EXPECT_EQ((power_save_type_t)result.response().resp, exp_ps_mode);
     invoked_callback = true;
   });

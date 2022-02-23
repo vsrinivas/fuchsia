@@ -46,9 +46,10 @@ arg_enum! {
 arg_enum! {
     #[derive(PartialEq, Copy, Clone, Debug)]
     pub enum PsModeArg {
-        PsModeOff,
-        PsModeFast,
-        PsModePsPoll,
+        PsModeUltraLowPower,
+        PsModeLowPower,
+        PsModeBalanced,
+        PsModePerformance,
     }
 }
 
@@ -93,9 +94,10 @@ impl ::std::convert::From<ScanTypeArg> for wlan_common::ScanType {
 impl ::std::convert::From<PsModeArg> for PowerSaveType {
     fn from(arg: PsModeArg) -> Self {
         match arg {
-            PsModeArg::PsModeOff => PowerSaveType::PsModeOff,
-            PsModeArg::PsModeFast => PowerSaveType::FastPsMode,
-            PsModeArg::PsModePsPoll => PowerSaveType::PsPollMode,
+            PsModeArg::PsModePerformance => PowerSaveType::PsModePerformance,
+            PsModeArg::PsModeBalanced => PowerSaveType::PsModeBalanced,
+            PsModeArg::PsModeLowPower => PowerSaveType::PsModeLowPower,
+            PsModeArg::PsModeUltraLowPower => PowerSaveType::PsModeUltraLowPower,
         }
     }
 }

@@ -205,9 +205,10 @@ impl From<ClearCountry> for wlan_dev::opts::PhyCmd {
 
 #[derive(PartialEq, Debug)]
 pub enum PsModeArg {
-    PsModeOff,
-    PsModeFast,
-    PsModePsPoll,
+    PsModeUltraLowPower,
+    PsModeLowPower,
+    PsModeBalanced,
+    PsModePerformance,
 }
 
 impl std::str::FromStr for PsModeArg {
@@ -215,9 +216,10 @@ impl std::str::FromStr for PsModeArg {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s.to_lowercase().as_str() {
-            "psmodeoff" => Ok(PsModeArg::PsModeOff),
-            "psmodefast" => Ok(PsModeArg::PsModeFast),
-            "psmodepspoll" => Ok(PsModeArg::PsModePsPoll),
+            "performance" => Ok(PsModeArg::PsModePerformance),
+            "balanced" => Ok(PsModeArg::PsModeBalanced),
+            "low" => Ok(PsModeArg::PsModeLowPower),
+            "ultralow" => Ok(PsModeArg::PsModeUltraLowPower),
             other => Err(anyhow::format_err!("could not parse PsModeArg: {}", other)),
         }
     }
@@ -226,9 +228,10 @@ impl std::str::FromStr for PsModeArg {
 impl From<PsModeArg> for wlan_dev::opts::PsModeArg {
     fn from(arg: PsModeArg) -> Self {
         match arg {
-            PsModeArg::PsModeOff => wlan_dev::opts::PsModeArg::PsModeOff,
-            PsModeArg::PsModeFast => wlan_dev::opts::PsModeArg::PsModeFast,
-            PsModeArg::PsModePsPoll => wlan_dev::opts::PsModeArg::PsModePsPoll,
+            PsModeArg::PsModePerformance => wlan_dev::opts::PsModeArg::PsModePerformance,
+            PsModeArg::PsModeBalanced => wlan_dev::opts::PsModeArg::PsModeBalanced,
+            PsModeArg::PsModeLowPower => wlan_dev::opts::PsModeArg::PsModeLowPower,
+            PsModeArg::PsModeUltraLowPower => wlan_dev::opts::PsModeArg::PsModeUltraLowPower,
         }
     }
 }
@@ -870,10 +873,13 @@ mod tests {
     #[test]
     fn test_set_ps_mode_conversion() {
         assert_eq!(
-            wlan_dev::opts::PhyCmd::from(SetPsMode { phy_id: 123, mode: PsModeArg::PsModeOff }),
+            wlan_dev::opts::PhyCmd::from(SetPsMode {
+                phy_id: 123,
+                mode: PsModeArg::PsModePerformance
+            }),
             wlan_dev::opts::PhyCmd::SetPsMode {
                 phy_id: 123,
-                mode: wlan_dev::opts::PsModeArg::PsModeOff
+                mode: wlan_dev::opts::PsModeArg::PsModePerformance
             }
         );
     }

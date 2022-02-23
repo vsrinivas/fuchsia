@@ -65,7 +65,7 @@ void PhyPsModeTest::GetPsModeFromFirmware(uint32_t* ps_mode) {
 
 // Test setting PS Mode to invalid and valid values.
 TEST_F(PhyPsModeTest, SetPsMode) {
-  const wlanphy_ps_mode_t valid_ps_mode = {.ps_mode = POWER_SAVE_TYPE_FAST_PS_MODE};
+  const wlanphy_ps_mode_t valid_ps_mode = {.ps_mode = POWER_SAVE_TYPE_PS_MODE_BALANCED};
   const wlanphy_ps_mode_t invalid_ps_mode = {.ps_mode = 0xFF};
   zx_status_t status;
   uint32_t fw_ps_mode;
@@ -99,7 +99,7 @@ TEST_F(PhyPsModeTest, GetPsMode) {
   CreateInterface();
 
   {
-    const wlanphy_ps_mode_t valid_ps_mode = {.ps_mode = POWER_SAVE_TYPE_FAST_PS_MODE};
+    const wlanphy_ps_mode_t valid_ps_mode = {.ps_mode = POWER_SAVE_TYPE_PS_MODE_BALANCED};
     wlanphy_ps_mode_t get_ps_mode;
     ASSERT_EQ(ZX_OK, SetPsMode(&valid_ps_mode));
     ASSERT_EQ(ZX_OK, device_->WlanphyImplGetPsMode(&get_ps_mode));
@@ -108,7 +108,7 @@ TEST_F(PhyPsModeTest, GetPsMode) {
 
   // Try again, just in case the first one was a default value.
   {
-    const wlanphy_ps_mode_t valid_ps_mode = {.ps_mode = POWER_SAVE_TYPE_PS_MODE_OFF};
+    const wlanphy_ps_mode_t valid_ps_mode = {.ps_mode = POWER_SAVE_TYPE_PS_MODE_PERFORMANCE};
     wlanphy_ps_mode_t get_ps_mode;
     ASSERT_EQ(ZX_OK, SetPsMode(&valid_ps_mode));
     ASSERT_EQ(ZX_OK, device_->WlanphyImplGetPsMode(&get_ps_mode));

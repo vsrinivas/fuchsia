@@ -338,13 +338,14 @@ zx_status_t brcmf_set_ps_mode(brcmf_pub* drvr, const wlanphy_ps_mode_t* ps_mode)
   uint32_t fw_ps_mode;
 
   switch (ps_mode->ps_mode) {
-    case POWER_SAVE_TYPE_FAST_PS_MODE:
-      fw_ps_mode = PM_FAST;
-      break;
-    case POWER_SAVE_TYPE_PS_POLL_MODE:
+    case POWER_SAVE_TYPE_PS_MODE_ULTRA_LOW_POWER:
+    case POWER_SAVE_TYPE_PS_MODE_LOW_POWER:
       fw_ps_mode = PM_MAX;
       break;
-    case POWER_SAVE_TYPE_PS_MODE_OFF:
+    case POWER_SAVE_TYPE_PS_MODE_BALANCED:
+      fw_ps_mode = PM_FAST;
+      break;
+    case POWER_SAVE_TYPE_PS_MODE_PERFORMANCE:
       fw_ps_mode = PM_OFF;
       break;
     default:
@@ -376,13 +377,13 @@ zx_status_t brcmf_get_ps_mode(brcmf_pub* drvr, wlanphy_ps_mode_t* out_ps_mode) {
   }
   switch (fw_ps_mode) {
     case PM_OFF:
-      out_ps_mode->ps_mode = POWER_SAVE_TYPE_PS_MODE_OFF;
+      out_ps_mode->ps_mode = POWER_SAVE_TYPE_PS_MODE_PERFORMANCE;
       break;
     case PM_FAST:
-      out_ps_mode->ps_mode = POWER_SAVE_TYPE_FAST_PS_MODE;
+      out_ps_mode->ps_mode = POWER_SAVE_TYPE_PS_MODE_BALANCED;
       break;
     case PM_MAX:
-      out_ps_mode->ps_mode = POWER_SAVE_TYPE_PS_POLL_MODE;
+      out_ps_mode->ps_mode = POWER_SAVE_TYPE_PS_MODE_LOW_POWER;
       break;
     default:
       return ZX_ERR_NOT_SUPPORTED;

@@ -43,9 +43,10 @@ struct/member fuchsia.wlan.common/MacSublayerSupport.rate_selection_offload fuch
 struct fuchsia.wlan.common/MacSublayerSupport
 struct/member fuchsia.wlan.common/MfpFeature.supported bool
 struct fuchsia.wlan.common/MfpFeature
-enum/member fuchsia.wlan.common/PowerSaveType.FAST_PS_MODE 1
-enum/member fuchsia.wlan.common/PowerSaveType.PS_MODE_OFF 0
-enum/member fuchsia.wlan.common/PowerSaveType.PS_POLL_MODE 2
+enum/member fuchsia.wlan.common/PowerSaveType.PS_MODE_BALANCED 2
+enum/member fuchsia.wlan.common/PowerSaveType.PS_MODE_LOW_POWER 1
+enum/member fuchsia.wlan.common/PowerSaveType.PS_MODE_PERFORMANCE 3
+enum/member fuchsia.wlan.common/PowerSaveType.PS_MODE_ULTRA_LOW_POWER 0
 strict enum fuchsia.wlan.common/PowerSaveType uint32
 struct/member fuchsia.wlan.common/ProbeResponseOffloadExtension.supported bool
 struct fuchsia.wlan.common/ProbeResponseOffloadExtension

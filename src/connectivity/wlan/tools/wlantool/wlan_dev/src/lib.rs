@@ -129,14 +129,17 @@ async fn do_phy(cmd: opts::PhyCmd, monitor_proxy: DeviceMonitor) -> Result<(), E
                 monitor_proxy.get_ps_mode(phy_id).await.context("error getting ps mode")?;
             match result {
                 Ok(resp) => match resp.ps_mode {
-                    PowerSaveType::PsModeOff => {
+                    PowerSaveType::PsModePerformance => {
                         println!("PS Mode Off");
                     }
-                    PowerSaveType::FastPsMode => {
-                        println!("Fast PS Mode");
+                    PowerSaveType::PsModeBalanced => {
+                        println!("Medium PS Mode");
                     }
-                    PowerSaveType::PsPollMode => {
-                        println!("PS Poll Mode");
+                    PowerSaveType::PsModeLowPower => {
+                        println!("Low Ps Mode");
+                    }
+                    PowerSaveType::PsModeUltraLowPower => {
+                        println!("Ultra low Ps Mode");
                     }
                 },
                 Err(status) => {
@@ -1091,7 +1094,7 @@ mod tests {
                 assert_eq!(phy_id, 45);
                 responder.send(
                     &mut Ok(fidl_fuchsia_wlan_device_service::GetPsModeResponse {
-                        ps_mode: PowerSaveType::PsModeOff,
+                        ps_mode: PowerSaveType::PsModePerformance,
                     })).expect("failed to send response");
             }
         );
@@ -1107,7 +1110,7 @@ mod tests {
         let mut monitor_svc_stream =
             monitor_svc_remote.into_stream().expect("failed to create stream");
         let fut = do_phy(
-            PhyCmd::SetPsMode { phy_id: 45, mode: PsModeArg::PsModeFast },
+            PhyCmd::SetPsMode { phy_id: 45, mode: PsModeArg::PsModeBalanced },
             monitor_svc_local,
         );
         pin_mut!(fut);
@@ -1119,7 +1122,7 @@ mod tests {
                 req, responder,
             }))) => {
                 assert_eq!(req.phy_id, 45);
-                assert_eq!(req.ps_mode, PowerSaveType::FastPsMode);
+                assert_eq!(req.ps_mode, PowerSaveType::PsModeBalanced);
                 responder.send(zx_status::Status::OK.into_raw()).expect("failed to send response");
             }
         );
