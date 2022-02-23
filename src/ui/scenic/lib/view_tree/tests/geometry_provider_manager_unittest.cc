@@ -339,25 +339,22 @@ TEST_F(GeometryProviderManagerTest, ExtractObservationSnapshotTest) {
   // Set up node_a.
   {
     const uint32_t width = 10, height = 10;
-    fuc_ViewportProperties properties;
-    properties.set_logical_size({width, height});
-    node_a.viewport_properties = std::move(properties);
+    view_tree::BoundingBox bounding_box = {.min = {0, 0}, .max = {width, height}};
+    node_a.bounding_box = std::move(bounding_box);
   }
 
   // Set up node_b.
   {
     const uint32_t width = 5, height = 5;
-    fuc_ViewportProperties properties;
-    properties.set_logical_size({width, height});
-    node_b.viewport_properties = std::move(properties);
+    view_tree::BoundingBox bounding_box = {.min = {0, 0}, .max = {width, height}};
+    node_b.bounding_box = std::move(bounding_box);
   }
 
   // Set up node_c.
   {
     const uint32_t width = 1, height = 1;
-    fuc_ViewportProperties properties;
-    properties.set_logical_size({width, height});
-    node_c.viewport_properties = std::move(properties);
+    view_tree::BoundingBox bounding_box = {.min = {0, 0}, .max = {width, height}};
+    node_c.bounding_box = std::move(bounding_box);
   }
 
   snapshot->root = node_a_koid;
@@ -384,10 +381,10 @@ TEST_F(GeometryProviderManagerTest, ExtractObservationSnapshotTest) {
 
       ASSERT_TRUE(vd.has_layout());
       auto& layout = vd.layout();
-      auto node_logical_width = static_cast<float>(
-          snapshot->view_tree[node_a_koid].viewport_properties.logical_size().width);
-      auto node_logical_height = static_cast<float>(
-          snapshot->view_tree[node_a_koid].viewport_properties.logical_size().height);
+      auto node_logical_width =
+          static_cast<float>(snapshot->view_tree[node_a_koid].bounding_box.max[0]);
+      auto node_logical_height =
+          static_cast<float>(snapshot->view_tree[node_a_koid].bounding_box.max[1]);
 
       // Minimum coordinates for a layout should be its origin and maximum coordinates should be
       // equal to the node's logical size.
@@ -430,10 +427,10 @@ TEST_F(GeometryProviderManagerTest, ExtractObservationSnapshotTest) {
 
       ASSERT_TRUE(vd.has_layout());
       auto& layout = vd.layout();
-      auto node_logical_width = static_cast<float>(
-          snapshot->view_tree[node_b_koid].viewport_properties.logical_size().width);
-      auto node_logical_height = static_cast<float>(
-          snapshot->view_tree[node_b_koid].viewport_properties.logical_size().height);
+      auto node_logical_width =
+          static_cast<float>(snapshot->view_tree[node_b_koid].bounding_box.max[0]);
+      auto node_logical_height =
+          static_cast<float>(snapshot->view_tree[node_b_koid].bounding_box.max[1]);
 
       EXPECT_FLOAT_EQ(layout.extent.min.x, 0.);
       EXPECT_FLOAT_EQ(layout.extent.min.y, 0.);
@@ -474,10 +471,10 @@ TEST_F(GeometryProviderManagerTest, ExtractObservationSnapshotTest) {
 
       ASSERT_TRUE(vd.has_layout());
       auto& layout = vd.layout();
-      auto node_logical_width = static_cast<float>(
-          snapshot->view_tree[node_c_koid].viewport_properties.logical_size().width);
-      auto node_logical_height = static_cast<float>(
-          snapshot->view_tree[node_c_koid].viewport_properties.logical_size().height);
+      auto node_logical_width =
+          static_cast<float>(snapshot->view_tree[node_c_koid].bounding_box.max[0]);
+      auto node_logical_height =
+          static_cast<float>(snapshot->view_tree[node_c_koid].bounding_box.max[1]);
 
       EXPECT_FLOAT_EQ(layout.extent.min.x, 0.);
       EXPECT_FLOAT_EQ(layout.extent.min.y, 0.);

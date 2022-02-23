@@ -39,7 +39,6 @@ bool RectFContainsPoint(const fuchsia::math::RectF& rect, float x, float y) {
 }  // namespace
 
 namespace flatland {
-using fuc_ViewportProperties = fuchsia::ui::composition::ViewportProperties;
 
 // static
 GlobalTopologyData GlobalTopologyData::ComputeGlobalTopologyData(
@@ -78,7 +77,7 @@ GlobalTopologyData GlobalTopologyData::ComputeGlobalTopologyData(
   std::unordered_map<TransformHandle, std::shared_ptr<const fuchsia::ui::views::ViewRef>> view_refs;
   std::unordered_map<TransformHandle, TransformHandle> root_transforms;
   std::unordered_map<TransformHandle, std::string> debug_names;
-  std::unordered_map<TransformHandle, fuc_ViewportProperties> viewport_properties;
+  std::unordered_map<TransformHandle, TransformClipRegion> clip_regions;
 
   // If we don't have the root in the map, the topology will be empty.
   const auto root_uber_struct_kv = uber_structs.find(root.GetInstanceId());
@@ -210,12 +209,12 @@ GlobalTopologyData GlobalTopologyData::ComputeGlobalTopologyData(
                           uber_structs.at(current_entry.handle.GetInstanceId())->debug_name);
     }
 
-    // For each node in the local topology, save the ViewportProperties of its child instances.
-    for (auto& [child_handle, child_properties] :
-         uber_structs.at(current_entry.handle.GetInstanceId())->link_properties) {
-      fuc_ViewportProperties properties;
-      fidl::Clone(child_properties, &properties);
-      viewport_properties.try_emplace(child_handle, std::move(properties));
+    // For each node in the local topology, save the TransformClipRegion of its child instances.
+    for (auto& [child_handle, child_clip_region] :
+         uber_structs.at(current_entry.handle.GetInstanceId())->local_clip_regions) {
+      TransformClipRegion clip_region;
+      fidl::Clone(child_clip_region, &clip_region);
+      clip_regions.try_emplace(child_handle, std::move(clip_region));
     }
 
     // If this entry was the last child for the previous parent, pop that off the stack.
@@ -256,12 +255,11 @@ GlobalTopologyData GlobalTopologyData::ComputeGlobalTopologyData(
           .view_refs = std::move(view_refs),
           .root_transforms = std::move(root_transforms),
           .debug_names = std::move(debug_names),
-          .viewport_properties = std::move(viewport_properties)};
+          .clip_regions = std::move(clip_regions)};
 }
 
 view_tree::SubtreeSnapshot GlobalTopologyData::GenerateViewTreeSnapshot(
-    float display_width, float display_height, const GlobalTopologyData& data,
-    const std::unordered_set<zx_koid_t>& unconnected_view_refs,
+    const GlobalTopologyData& data, const std::unordered_set<zx_koid_t>& unconnected_view_refs,
     const std::unordered_map<TransformHandle, TransformHandle>& child_view_watcher_mapping) {
   // Find the first node with a ViewRef set. This is the root of the ViewTree.
   size_t root_index = 0;
@@ -279,13 +277,6 @@ view_tree::SubtreeSnapshot GlobalTopologyData::GenerateViewTreeSnapshot(
                                       .tree_boundaries = {}};
   auto& [root, view_tree, unconnected_views, hit_tester, tree_boundaries] = snapshot;
 
-  // TODO(fxbug.dev/82677): Get real bounding boxes instead of using the full display size for each
-  // one.
-  const auto full_screen_bounding_box = view_tree::BoundingBox{
-      .min = {0, 0},
-      .max = {display_width, display_height},
-  };
-
   // Add all Views to |view_tree|.
   root = GetViewRefKoid(data.topology_vector[root_index], data.view_refs).value();
   for (size_t i = root_index; i < data.topology_vector.size(); ++i) {
@@ -302,15 +293,6 @@ view_tree::SubtreeSnapshot GlobalTopologyData::GenerateViewTreeSnapshot(
     if (data.debug_names.count(transform_handle) != 0)
       debug_name = data.debug_names.at(transform_handle);
 
-    // Get the viewport_properties of a handle through its parent_viewport_watcher_handle.
-    fuc_ViewportProperties properties;
-    if (child_view_watcher_mapping.count(transform_handle) != 0) {
-      auto& parent_viewport_watcher_handle = child_view_watcher_mapping.at(transform_handle);
-      if (data.viewport_properties.count(parent_viewport_watcher_handle) != 0) {
-        fidl::Clone(data.viewport_properties.at(parent_viewport_watcher_handle), &properties);
-      }
-    }
-
     // Find the parent by looking upwards until a View is found. The root has no parent.
     // TODO(fxbug.dev/84196): Disallow anonymous views from having parents?
     zx_koid_t parent_koid = ZX_KOID_INVALID;
@@ -323,13 +305,29 @@ view_tree::SubtreeSnapshot GlobalTopologyData::GenerateViewTreeSnapshot(
       parent_koid = GetViewRefKoid(data.topology_vector[parent_index], data.view_refs).value();
     }
 
+    // Set the coordinates of a view node's bounding box using the clip region coordinates stored
+    // in a view's parent uberstruct. The local clip region for a viewport is always identical to
+    // the local view boundary.
+    float max_width = 0, max_height = 0;
+    if (child_view_watcher_mapping.count(transform_handle) != 0) {
+      if (auto& parent_viewport_watcher_handle = child_view_watcher_mapping.at(transform_handle);
+          data.clip_regions.count(parent_viewport_watcher_handle) != 0) {
+        // Fetch the clip region coordinates for a view using its parent viewport watcher
+        // handle.
+        auto& clip_region = data.clip_regions.at(parent_viewport_watcher_handle);
+
+        max_width = clip_region.width;
+        max_height = clip_region.height;
+      }
+    }
+
     // TODO(fxbug.dev/82678): Add local_from_world_transform to the ViewNode.
-    view_tree.emplace(view_ref_koid,
-                      view_tree::ViewNode{.parent = parent_koid,
-                                          .bounding_box = full_screen_bounding_box,
-                                          .view_ref = view_ref,
-                                          .debug_name = debug_name,
-                                          .viewport_properties = std::move(properties)});
+    view_tree.emplace(
+        view_ref_koid,
+        view_tree::ViewNode{.parent = parent_koid,
+                            .bounding_box = {.min = {0, 0}, .max = {max_width, max_height}},
+                            .view_ref = view_ref,
+                            .debug_name = debug_name});
   }
 
   // Fill in the children by deriving it from the parents of each node.

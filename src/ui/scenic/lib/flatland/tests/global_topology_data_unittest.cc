@@ -34,7 +34,6 @@ void MakeLink(flatland::GlobalTopologyData::LinkTopologyMap& links, uint64_t ins
 
 namespace flatland {
 namespace test {
-using fuc_ViewportProperties = fuchsia::ui::composition::ViewportProperties;
 
 // This is a macro so that, if the various test macros fail, we get a line number associated with a
 // particular call in a unit test.
@@ -280,7 +279,7 @@ TEST(GlobalTopologyDataTest, ViewTreeSnapshot) {
   auto [control_ref2, view_ref2] = scenic::ViewRefPair::New();
   const zx_koid_t view_ref1_koid = utils::ExtractKoid(view_ref1);
   const zx_koid_t view_ref2_koid = utils::ExtractKoid(view_ref2);
-  const uint32_t logical_size_width = 1, logical_size_height = 1;
+  const uint32_t kWidth = 1, kHeight = 1;
 
   // Recreate the GlobalTopologyData from GlobalTopologyDataTest.GlobalTopologyIncompleteLink and
   // confirm that the correct ViewTreeSnapshot is generated.
@@ -303,9 +302,9 @@ TEST(GlobalTopologyDataTest, ViewTreeSnapshot) {
     uber_struct->local_topology = vectors[0];
     uber_struct->view_ref = std::make_shared<fuchsia::ui::views::ViewRef>(std::move(view_ref1));
     uber_struct->debug_name = "test_instance_1";
-    fuc_ViewportProperties properties;
-    properties.set_logical_size({logical_size_width, logical_size_height});
-    uber_struct->link_properties.try_emplace(parent_viewport_watcher_handle, std::move(properties));
+    TransformClipRegion clip_region = {.x = 0, .y = 0, .width = kWidth, .height = kHeight};
+    uber_struct->local_clip_regions.try_emplace(parent_viewport_watcher_handle,
+                                                std::move(clip_region));
     uber_structs[vectors[0][0].handle.GetInstanceId()] = std::move(uber_struct);
   }
   {
@@ -338,10 +337,8 @@ TEST(GlobalTopologyDataTest, ViewTreeSnapshot) {
   // Since the global topology is only 2 instances, we should only see two views: the root and the
   // child, one a child of the other.
   {
-    const float kWidth = 10;
-    const float kHeight = 5;
     auto snapshot = GlobalTopologyData::GenerateViewTreeSnapshot(
-        kWidth, kHeight, gtd, UberStructSystem::ExtractViewRefKoids(uber_structs),
+        gtd, UberStructSystem::ExtractViewRefKoids(uber_structs),
         child_parent_viewport_watcher_mapping);
     auto& [root, view_tree, unconnected_views, hit_tester, tree_boundaries] = snapshot;
     EXPECT_EQ(root, view_ref1_koid);
@@ -352,8 +349,6 @@ TEST(GlobalTopologyDataTest, ViewTreeSnapshot) {
       const auto& node1 = view_tree.at(view_ref1_koid);
       EXPECT_EQ(node1.parent, ZX_KOID_INVALID);
       EXPECT_THAT(node1.children, testing::UnorderedElementsAre(view_ref2_koid));
-      EXPECT_THAT(node1.bounding_box.min, testing::ElementsAre(0, 0));
-      EXPECT_THAT(node1.bounding_box.max, testing::ElementsAre(kWidth, kHeight));
       EXPECT_EQ(node1.debug_name, "test_instance_1");
     }
 
@@ -365,8 +360,6 @@ TEST(GlobalTopologyDataTest, ViewTreeSnapshot) {
       EXPECT_THAT(node2.bounding_box.min, testing::ElementsAre(0, 0));
       EXPECT_THAT(node2.bounding_box.max, testing::ElementsAre(kWidth, kHeight));
       EXPECT_EQ(node2.debug_name, "test_instance_2");
-      EXPECT_EQ(node2.viewport_properties.logical_size().width, logical_size_width);
-      EXPECT_EQ(node2.viewport_properties.logical_size().height, logical_size_height);
     }
 
     EXPECT_TRUE(unconnected_views.empty());

@@ -597,7 +597,7 @@ void App::InitializeHeartbeat() {
         [this] { return engine_->scene_graph()->view_tree().Snapshot(); });
     subtrees_generator_callbacks.emplace_back([this] {
       if (auto display = flatland_manager_->GetPrimaryFlatlandDisplayForRendering()) {
-        return flatland_engine_->GenerateViewTreeSnapshot(*display);
+        return flatland_engine_->GenerateViewTreeSnapshot(display->root_transform());
       } else {
         return view_tree::SubtreeSnapshot{};  // Empty snapshot.
       }
