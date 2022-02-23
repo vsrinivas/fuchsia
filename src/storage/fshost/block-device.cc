@@ -1027,23 +1027,32 @@ zx_status_t BlockDevice::FormatCustomFilesystem(const std::string& binary_path) 
     if (response->status != ZX_OK)
       return response->status;
     // If a size is not specified, limit the size of the data partition so as not to use up all
-    // FVM's space (thus limiting blobfs growth).  24 MiB should be enough except f2fs.
+    // FVM's space (thus limiting blobfs growth).  10% or 24MiB (whichever is larger) should be
+    // enough.
     // Due to reserved and over-provisoned area of f2fs, it needs volume size at least 100 MiB.
     const uint64_t slices_available =
         response->manager->slice_count - response->manager->assigned_slice_count;
-    if (binary_path == kF2fsPath) {
-      if (slices_available < kDefaultF2fsMinBytes / slice_size) {
-        FX_LOGS(ERROR) << "Not enough space for f2fs partition";
-        return ZX_ERR_NO_SPACE;
-      }
-      slice_count = kDefaultF2fsMinBytes / slice_size - 1;
-    } else {
-      slice_count = std::min<uint64_t>(kDefaultMinfsMaxBytes / slice_size - 1, slices_available);
+    const uint64_t min_slices =
+        binary_path == kF2fsPath ? fbl::round_up(kDefaultF2fsMinBytes, slice_size) / slice_size : 2;
+    if (slices_available < min_slices) {
+      FX_LOGS(ERROR) << "Not enough space for " << binary_path << " partition";
+      return ZX_ERR_NO_SPACE;
     }
-  } else {
-    // Account for the slice zxcrypt uses.
-    slice_count--;
+    uint64_t slice_target = kDefaultMinfsMaxBytes;
+    if (binary_path == kF2fsPath) {
+      slice_target = kDefaultF2fsMinBytes;
+    }
+    if (slices_available < slice_target) {
+      FX_LOGS(WARNING) << "Only " << slices_available << " slices available for " << binary_path
+                       << " partition; some functionality may be missing.";
+    }
+    slice_count = std::min(slices_available, std::max<uint64_t>(response->manager->slice_count / 10,
+                                                                slice_target / slice_size));
   }
+  // Account for the slice zxcrypt uses.
+  --slice_count;
+  FX_LOGS(INFO) << "Allocating " << slice_count << " slices (" << slice_count * slice_size
+                << " bytes) for " << binary_path << " partition";
 
   auto extend_result =
       fidl::WireCall(volume_client)
