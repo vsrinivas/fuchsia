@@ -8,15 +8,15 @@
 # https://opensource.org/licenses/MIT
 
 readonly OUTFILE="$1"
-readonly CHECKOUT_DIR="$2"
+readonly GIT_DIR="$2"
 
 set -e
 
 # The --no-optional-locks option ensures git read-only operations do
 # not refresh the index (https://fxbug.dev/93875)
-GIT_REV="git-$(git --no-optional-locks -C "$CHECKOUT_DIR" rev-parse HEAD 2>/dev/null)"
+GIT_REV="git-$(git --no-optional-locks --git-dir="$GIT_DIR" rev-parse HEAD 2>/dev/null)"
 
-if [ -n "$(git --no-optional-locks -C "$CHECKOUT_DIR" status --porcelain --untracked-files=no 2>/dev/null)" ]; then
+if [ -n "$(git --no-optional-locks --git-dir="$GIT_DIR" status --porcelain --untracked-files=no 2>/dev/null)" ]; then
   GIT_REV+="-dirty"
 fi
 
