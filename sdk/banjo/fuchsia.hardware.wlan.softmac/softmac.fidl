@@ -12,21 +12,27 @@ using fuchsia.wlan.ieee80211 as ieee80211;
 using zx;
 
 type WlanSoftmacBandCapability = struct {
-    /// The supported band.
+    /// The values of this struct apply to the band indicated in this field.
     band fuchsia.wlan.common.WlanBand;
 
-    /// HT PHY capabilities, if supported.
+    /// Basic rates supported in units of 500 kbit/s (as defined in
+    /// IEEE Std 802.11-2016, 9.4.2.3), e.g., 0x02 represents 1 Mbps.
+    /// The value returned by this type indicates all the non-HT rates
+    /// the device supports transmitting and receiving.
+    basic_rate_count uint8;
+    basic_rate_list array<uint8, fuchsia.wlan.internal.MAX_SUPPORTED_BASIC_RATES>;
+
+    /// If the device supports the HT PHY mode in this band, then ht_supported is
+    /// set to true, and the value in ht_caps indicates the capabilities. Otherwise,
+    /// ht_supported is set to false.
     ht_supported bool;
     ht_caps ddk.hw.wlan.ieee80211.Ieee80211HtCapabilities;
 
-    /// VHT PHY capabilities, if supported.
+    /// If the device supports the VHT PHY mode in this band, then vht_supported is
+    /// set to true, and the value in vht_caps indicates the capabilities. Otherwise,
+    /// vht_supported is set to false.
     vht_supported bool;
     vht_caps ddk.hw.wlan.ieee80211.Ieee80211VhtCapabilities;
-
-    /// Rates supported in this band, in units of 500 kbit/s (as defined in
-    /// IEEE Std 802.11-2016, 9.4.2.3). For example, 1 Mbit/s is represented as 0x02.
-    basic_rate_count uint8;
-    basic_rate_list array<uint8, fuchsia.wlan.internal.MAX_SUPPORTED_BASIC_RATES>;
 
     /// A list of operating channels considered valid by hardware, in the context of
     /// regulatory information known to the device driver, at the time of its
@@ -60,8 +66,7 @@ type WlanSoftmacInfo = struct {
     hardware_capability fuchsia.wlan.common.WlanSoftmacHardwareCapability;
 
     /// Supported bands.
-    band_cap_list
-            array<WlanSoftmacBandCapability, fuchsia.hardware.wlan.phyinfo.WLAN_INFO_MAX_BANDS>;
+    band_cap_list array<WlanSoftmacBandCapability, fuchsia.wlan.common.MAX_BANDS>;
     band_cap_count uint8;
 };
 

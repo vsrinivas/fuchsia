@@ -17,8 +17,8 @@ use {
         },
         organization::Oui,
         test_utils::fake_capabilities::{
-            fake_2ghz_band_capabilities_vht, fake_5ghz_band_capabilities_ht_cbw,
-            fake_band_capabilities_5ghz_vht,
+            fake_2ghz_band_capability_vht, fake_5ghz_band_capability_ht_cbw,
+            fake_5ghz_band_capability_vht,
         },
     },
     wlan_rsn::key::{gtk::Gtk, ptk::Ptk},
@@ -118,8 +118,8 @@ pub fn fake_device_info(sta_addr: MacAddr) -> fidl_mlme::DeviceInfo {
         sta_addr,
         role: fidl_common::WlanMacRole::Client,
         bands: vec![
-            fake_2ghz_band_capabilities_vht(),
-            fake_band_capabilities_5ghz_vht(ChanWidthSet::TWENTY_FORTY),
+            fake_2ghz_band_capability_vht(),
+            fake_5ghz_band_capability_vht(ChanWidthSet::TWENTY_FORTY),
         ],
         driver_features: vec![
             fidl_common::DriverFeature::Mfp,
@@ -134,14 +134,14 @@ pub fn fake_device_info(sta_addr: MacAddr) -> fidl_mlme::DeviceInfo {
 
 pub fn fake_device_info_ht(chanwidth: ChanWidthSet) -> fidl_mlme::DeviceInfo {
     fidl_mlme::DeviceInfo {
-        bands: vec![fake_5ghz_band_capabilities_ht_cbw(chanwidth)],
+        bands: vec![fake_5ghz_band_capability_ht_cbw(chanwidth)],
         ..fake_device_info([0; 6])
     }
 }
 
 pub fn fake_device_info_vht(chanwidth: ChanWidthSet) -> fidl_mlme::DeviceInfo {
     fidl_mlme::DeviceInfo {
-        bands: vec![fake_band_capabilities_5ghz_vht(chanwidth)],
+        bands: vec![fake_5ghz_band_capability_vht(chanwidth)],
         ..fake_device_info([0; 6])
     }
 }

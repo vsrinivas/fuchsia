@@ -222,12 +222,15 @@ static const uint32_t mac80211_idx_to_data_rate_[] = {
 zx_status_t mac80211_idx_to_data_rate(wlan_band_t band, int mac_idx, uint32_t* data_rate) {
   int band_offset;
 
-  if (band == WLAN_BAND_TWO_GHZ) {
-    band_offset = 0;
-  } else if (band == WLAN_BAND_FIVE_GHZ) {
-    band_offset = IWL_FIRST_OFDM_RATE;
-  } else {
-    return ZX_ERR_NOT_SUPPORTED;
+  switch (band) {
+    case WLAN_BAND_TWO_GHZ:
+      band_offset = 0;
+      break;
+    case WLAN_BAND_FIVE_GHZ:
+      band_offset = IWL_FIRST_OFDM_RATE;
+      break;
+    default:
+      return ZX_ERR_NOT_SUPPORTED;
   }
 
   size_t idx = band_offset + mac_idx;
@@ -269,9 +272,12 @@ zx_status_t iwl_mvm_legacy_rate_to_mac80211_idx(uint32_t rate_n_flags, wlan_band
   int rate = rate_n_flags & RATE_LEGACY_RATE_MSK;
   int band_offset = 0;
 
-  // Sanity-check
-  if (band >= WLAN_INFO_MAX_BANDS) {
-    return ZX_ERR_OUT_OF_RANGE;
+  switch (band) {
+    case WLAN_BAND_TWO_GHZ:
+    case WLAN_BAND_FIVE_GHZ:
+      break;
+    default:
+      return ZX_ERR_OUT_OF_RANGE;
   }
   if (!ptr_chan_idx) {
     return ZX_ERR_INVALID_ARGS;
@@ -878,7 +884,7 @@ int iwl_mvm_update_low_latency(struct iwl_mvm* mvm, struct ieee80211_vif* vif, b
 
 struct iwl_mvm_low_latency_iter {
   bool result;
-  bool result_per_band[WLAN_INFO_MAX_BANDS];
+  bool result_per_band[fuchsia_wlan_common_MAX_BANDS];
 };
 
 // How iwl_mvm_ll_iter() work with ieee80211_iterate_active_interfaces_atomic:

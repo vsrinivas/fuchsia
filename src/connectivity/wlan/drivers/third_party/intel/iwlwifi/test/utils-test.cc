@@ -35,7 +35,8 @@ TEST_F(UtilsTest, LegacyToDot11) {
   int idx;  // 802.11 index
 
   // The band is out of range
-  EXPECT_EQ(iwl_mvm_legacy_rate_to_mac80211_idx(0, WLAN_INFO_MAX_BANDS, &idx), ZX_ERR_OUT_OF_RANGE);
+  EXPECT_EQ(iwl_mvm_legacy_rate_to_mac80211_idx(0, WLAN_BAND_FIVE_GHZ + 1, &idx),
+            ZX_ERR_OUT_OF_RANGE);
 
   // Invalid pointer
   EXPECT_EQ(iwl_mvm_legacy_rate_to_mac80211_idx(0, WLAN_BAND_FIVE_GHZ, nullptr),
@@ -88,7 +89,7 @@ TEST_F(UtilsTest, Dot11ToDataRate) {
   EXPECT_EQ(ZX_ERR_INVALID_ARGS, mac80211_idx_to_data_rate(WLAN_BAND_FIVE_GHZ, 8, &data_rate));
 
   // For future 60 GHz
-  EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, mac80211_idx_to_data_rate(WLAN_INFO_MAX_BANDS, 0, &data_rate));
+  EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, mac80211_idx_to_data_rate(WLAN_BAND_FIVE_GHZ + 1, 0, &data_rate));
 }
 
 struct iter_data {

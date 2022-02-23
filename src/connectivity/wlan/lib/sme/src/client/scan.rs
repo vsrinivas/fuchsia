@@ -275,15 +275,15 @@ fn get_channels_to_scan(
     device_info: &fidl_mlme::DeviceInfo,
     scan_request: &fidl_sme::ScanRequest,
 ) -> Vec<u8> {
-    let mut device_supported_channels: HashSet<u8> = HashSet::new();
+    let mut operating_channels: HashSet<u8> = HashSet::new();
     for band in &device_info.bands {
-        device_supported_channels.extend(&band.channels);
+        operating_channels.extend(&band.operating_channels);
     }
     let supports_dfs = device_info.driver_features.contains(&fidl_common::DriverFeature::Dfs);
 
-    SUPPORTED_CHANNELS
+    SUPPORTED_20_MHZ_CHANNELS
         .iter()
-        .filter(|channel| device_supported_channels.contains(channel))
+        .filter(|channel| operating_channels.contains(channel))
         .filter(|channel| {
             if let &fidl_sme::ScanRequest::Passive(_) = scan_request {
                 return true;
@@ -309,7 +309,7 @@ fn get_channels_to_scan(
 
 // TODO(65792): Evaluate options for where and how we select what channels to scan.
 // Firmware will reject channels if they are not allowed by the current regulatory region.
-const SUPPORTED_CHANNELS: &[u8] = &[
+const SUPPORTED_20_MHZ_CHANNELS: &[u8] = &[
     // 5GHz UNII-1
     36, 40, 44, 48, // 5GHz UNII-2 Middle
     52, 56, 60, 64, // 5GHz UNII-2 Extended
@@ -329,7 +329,7 @@ mod tests {
     use std::convert::TryFrom;
     use wlan_common::{
         assert_variant, fake_fidl_bss_description, hasher::WlanHasher,
-        test_utils::fake_capabilities::fake_5ghz_band_capabilities,
+        test_utils::fake_capabilities::fake_5ghz_band_capability,
     };
 
     const CLIENT_ADDR: MacAddr = [0x7A, 0xE7, 0x76, 0xD9, 0xF2, 0x67];
@@ -865,9 +865,12 @@ mod tests {
         ScanScheduler::new(Arc::new(test_utils::fake_device_info(CLIENT_ADDR)))
     }
 
-    fn device_info_with_channel(channels: Vec<u8>) -> fidl_mlme::DeviceInfo {
+    fn device_info_with_channel(operating_channels: Vec<u8>) -> fidl_mlme::DeviceInfo {
         fidl_mlme::DeviceInfo {
-            bands: vec![fidl_mlme::BandCapabilities { channels, ..fake_5ghz_band_capabilities() }],
+            bands: vec![fidl_mlme::BandCapability {
+                operating_channels,
+                ..fake_5ghz_band_capability()
+            }],
             ..test_utils::fake_device_info(CLIENT_ADDR)
         }
     }

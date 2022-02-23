@@ -1,5 +1,3 @@
-const fuchsia.hardware.wlan.phyinfo/WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS uint32 64
-const fuchsia.hardware.wlan.phyinfo/WLAN_INFO_MAX_BANDS uint32 2
 enum/member fuchsia.hardware.wlan.phyinfo/WlanInfoDriverFeature.DFS 16
 enum/member fuchsia.hardware.wlan.phyinfo/WlanInfoDriverFeature.MFP 256
 enum/member fuchsia.hardware.wlan.phyinfo/WlanInfoDriverFeature.PROBE_RESP_OFFLOAD 32

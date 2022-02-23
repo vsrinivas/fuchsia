@@ -670,7 +670,7 @@ struct iwl_mvm_tcm {
     uint32_t elapsed; /* milliseconds for this TCM period */
     uint32_t airtime[NUM_MAC_INDEX_DRIVER];
     enum iwl_mvm_traffic_load load[NUM_MAC_INDEX_DRIVER];
-    enum iwl_mvm_traffic_load band_load[WLAN_INFO_MAX_BANDS];
+    enum iwl_mvm_traffic_load band_load[fuchsia_wlan_common_MAX_BANDS];
     enum iwl_mvm_traffic_load global_load;
     bool low_latency[NUM_MAC_INDEX_DRIVER];
     bool change[NUM_MAC_INDEX_DRIVER];
@@ -1297,7 +1297,7 @@ struct iwl_mvm_scan_params {
   enum iwl_mvm_scan_type type;
   enum iwl_mvm_scan_type hb_type;
   uint32_t n_channels;
-  uint8_t channels[WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS];  // ch_num. e.g. 1..14, 36..
+  uint8_t channels[fuchsia_wlan_ieee80211_MAX_UNIQUE_CHANNEL_NUMBERS];  // ch_num. e.g. 1..14, 36..
   uint16_t delay;
   int n_ssids;
   struct cfg80211_ssid* ssids;

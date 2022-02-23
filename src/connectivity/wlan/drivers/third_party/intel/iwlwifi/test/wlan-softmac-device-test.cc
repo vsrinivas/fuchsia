@@ -85,7 +85,7 @@ class WlanSoftmacDeviceTest : public SingleApTest {
 
 TEST_F(WlanSoftmacDeviceTest, ComposeBandList) {
   struct iwl_nvm_data nvm_data;
-  wlan_band_t bands[WLAN_INFO_MAX_BANDS];
+  wlan_band_t bands[fuchsia_wlan_common_MAX_BANDS];
 
   // nothing enabled
   memset(&nvm_data, 0, sizeof(nvm_data));
@@ -123,14 +123,14 @@ TEST_F(WlanSoftmacDeviceTest, ComposeBandList) {
 TEST_F(WlanSoftmacDeviceTest, FillBandCapabilityList) {
   // The default 'nvm_data' is loaded from test/sim-default-nvm.cc.
 
-  wlan_band_t bands[WLAN_INFO_MAX_BANDS] = {
-      WLAN_BAND_TWO_GHZ,
-      WLAN_BAND_FIVE_GHZ,
-  };
-  wlan_softmac_band_capability_t band_cap_list[WLAN_INFO_MAX_BANDS] = {};
+  const struct iwl_nvm_data* nvm_data = iwl_trans_get_mvm(sim_trans_.iwl_trans())->nvm_data;
+  wlan_band_t bands[fuchsia_wlan_common_MAX_BANDS];
+  size_t band_cap_count = compose_band_list(nvm_data, bands);
+  ASSERT_LE(band_cap_count, fuchsia_wlan_common_MAX_BANDS);
 
-  fill_band_cap_list(iwl_trans_get_mvm(sim_trans_.iwl_trans())->nvm_data, bands, std::size(bands),
-                     band_cap_list);
+  wlan_softmac_band_capability_t band_cap_list[fuchsia_wlan_common_MAX_BANDS] = {};
+  fill_band_cap_list(nvm_data, bands, band_cap_count, band_cap_list);
+
   // 2.4Ghz
   wlan_softmac_band_capability_t* band_cap = &band_cap_list[0];
   EXPECT_EQ(WLAN_BAND_TWO_GHZ, band_cap->band);
@@ -156,11 +156,10 @@ TEST_F(WlanSoftmacDeviceTest, FillBandCapabilityList) {
 TEST_F(WlanSoftmacDeviceTest, FillBandCapabilityListOnly5GHz) {
   // The default 'nvm_data' is loaded from test/sim-default-nvm.cc.
 
-  wlan_band_t bands[WLAN_INFO_MAX_BANDS] = {
+  wlan_band_t bands[fuchsia_wlan_common_MAX_BANDS] = {
       WLAN_BAND_FIVE_GHZ,
-      0,
   };
-  wlan_softmac_band_capability_t band_cap_list[WLAN_INFO_MAX_BANDS] = {};
+  wlan_softmac_band_capability_t band_cap_list[fuchsia_wlan_common_MAX_BANDS] = {};
 
   fill_band_cap_list(iwl_trans_get_mvm(sim_trans_.iwl_trans())->nvm_data, bands, 1, band_cap_list);
   // 5GHz

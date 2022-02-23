@@ -24,19 +24,35 @@ type EapolIndication = struct {
 
 // BandInfo groups capabilities defined per band.
 // This grouping is the industry's de factor standard.
-type BandCapabilities = struct {
+type BandCapability = struct {
+    /// The values of this struct apply to the band indicated in this field.
     band fuchsia.wlan.common.WlanBand;
-    basic_rates vector<uint8>:internal.MAX_SUPPORTED_BASIC_RATES;
-    channels bytes;
 
-    ht_cap box<internal.HtCapabilities>;
-    vht_cap box<internal.VhtCapabilities>;
+    /// Basic rates supported in units of 500 kbit/s (as defined in
+    /// IEEE Std 802.11-2016, 9.4.2.3), e.g., 0x02 represents 1 Mbps.
+    /// The value returned by this type indicates all the non-HT rates
+    /// the device supports transmitting and receiving.
+    basic_rates vector<uint8>:internal.MAX_SUPPORTED_BASIC_RATES;
+
+    ht_cap internal.HtCapabilities:optional;
+    vht_cap internal.VhtCapabilities:optional;
+
+    /// A list of operating channels considered valid by hardware, in the context of
+    /// regulatory information known to the device driver, at the time of its
+    /// construction during iface creation. In this context, an operating channel
+    /// means a channel which APs may transmit Beacon frames on in the current
+    /// regulatory domain.
+    ///
+    /// This list should be used to determine efficacy of subsequent requests to
+    /// scan a subset of channels using the iface, or to determine which operating
+    /// channel to use when starting an AP.
+    operating_channels vector<uint8>:ieee80211.MAX_UNIQUE_CHANNEL_NUMBERS;
 };
 
 type DeviceInfo = struct {
     sta_addr ieee80211.MacAddr;
     role fuchsia.wlan.common.WlanMacRole;
-    bands vector<BandCapabilities>;
+    bands vector<BandCapability>:fuchsia.wlan.common.MAX_BANDS;
     driver_features vector<fuchsia.wlan.common.DriverFeature>:32;
     softmac_hardware_capability fuchsia.wlan.common.WlanSoftmacHardwareCapability;
 

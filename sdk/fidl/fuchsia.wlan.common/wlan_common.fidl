@@ -95,6 +95,11 @@ type WlanMacRole = strict enum {
 @namespaced
 const MAX_SUPPORTED_MAC_ROLES uint8 = 16;
 
+/// This constant defined the fixed length for arrays containing the capabilities
+/// for each band supported by a device driver.
+@namespaced
+const MAX_BANDS uint8 = 16;
+
 type ChannelBandwidth = strict enum { // Channel Bandwidth
     CBW20 = 0;
     CBW40 = 1;

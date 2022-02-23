@@ -14,11 +14,9 @@ use {
     zerocopy::AsBytes,
 };
 
-pub fn fake_5ghz_band_capabilities_ht_cbw(
-    chanwidth: ie::ChanWidthSet,
-) -> fidl_mlme::BandCapabilities {
-    let bc = fake_5ghz_band_capabilities();
-    fidl_mlme::BandCapabilities {
+pub fn fake_5ghz_band_capability_ht_cbw(chanwidth: ie::ChanWidthSet) -> fidl_mlme::BandCapability {
+    let bc = fake_5ghz_band_capability();
+    fidl_mlme::BandCapability {
         ht_cap: Some(Box::new(fidl_internal::HtCapabilities {
             bytes: fake_ht_capabilities_cbw(chanwidth).as_bytes().try_into().unwrap(),
         })),
@@ -26,9 +24,9 @@ pub fn fake_5ghz_band_capabilities_ht_cbw(
     }
 }
 
-pub fn fake_band_capabilities_5ghz_vht(chanwidth: ie::ChanWidthSet) -> fidl_mlme::BandCapabilities {
-    let bc = fake_5ghz_band_capabilities();
-    fidl_mlme::BandCapabilities {
+pub fn fake_5ghz_band_capability_vht(chanwidth: ie::ChanWidthSet) -> fidl_mlme::BandCapability {
+    let bc = fake_5ghz_band_capability();
+    fidl_mlme::BandCapability {
         ht_cap: Some(Box::new(fidl_internal::HtCapabilities {
             bytes: fake_ht_capabilities_cbw(chanwidth).as_bytes().try_into().unwrap(),
         })),
@@ -62,18 +60,18 @@ pub fn fake_capability_info() -> CapabilityInfo {
         .with_immediate_block_ack(false)
 }
 
-pub fn fake_5ghz_band_capabilities() -> fidl_mlme::BandCapabilities {
-    fidl_mlme::BandCapabilities {
+pub fn fake_5ghz_band_capability() -> fidl_mlme::BandCapability {
+    fidl_mlme::BandCapability {
         band: fidl_common::WlanBand::FiveGhz,
         basic_rates: vec![0x0c, 0x12, 0x18, 0x24, 0x30, 0x48, 0x60, 0x6c],
-        channels: vec![],
+        operating_channels: vec![],
         ht_cap: None,
         vht_cap: None,
     }
 }
 
-pub fn fake_2ghz_band_capabilities_vht() -> fidl_mlme::BandCapabilities {
-    fidl_mlme::BandCapabilities {
+pub fn fake_2ghz_band_capability_vht() -> fidl_mlme::BandCapability {
+    fidl_mlme::BandCapability {
         ht_cap: Some(Box::new(fidl_internal::HtCapabilities {
             bytes: fake_ht_capabilities_cbw(ie::ChanWidthSet::TWENTY_FORTY)
                 .as_bytes()
@@ -83,15 +81,15 @@ pub fn fake_2ghz_band_capabilities_vht() -> fidl_mlme::BandCapabilities {
         vht_cap: Some(Box::new(fidl_internal::VhtCapabilities {
             bytes: ie::fake_vht_capabilities().as_bytes().try_into().unwrap(),
         })),
-        ..fake_2ghz_band_capabilities()
+        ..fake_2ghz_band_capability()
     }
 }
 
-pub fn fake_2ghz_band_capabilities() -> fidl_mlme::BandCapabilities {
-    fidl_mlme::BandCapabilities {
+pub fn fake_2ghz_band_capability() -> fidl_mlme::BandCapability {
+    fidl_mlme::BandCapability {
         band: fidl_common::WlanBand::TwoGhz,
         basic_rates: vec![0x02, 0x04, 0x0b, 0x16, 0x0c, 0x12, 0x18, 0x24, 0x30, 0x48, 0x60, 0x6c],
-        channels: vec![],
+        operating_channels: vec![],
         ht_cap: None,
         vht_cap: None,
     }

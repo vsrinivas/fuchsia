@@ -22,6 +22,7 @@
 #include <fuchsia/wlan/common/c/banjo.h>
 #include <fuchsia/wlan/internal/c/banjo.h>
 #include <stdlib.h>
+#include <zircon/errors.h>
 #include <zircon/status.h>
 
 #include <wlan/common/ieee80211.h>
@@ -178,21 +179,20 @@ static const struct ath10k_band ath10k_supported_bands[] = {
 };
 
 // Gets the band ID from |channel| number.
-//
-// Returns: WLAN_INFO_MAX_BANDS if |channel| is not found in the band info.
-static wlan_band_t chan_to_band(uint8_t channel) {
+static zx_status_t chan_to_band(uint8_t channel, wlan_band_t* out_band) {
   for (size_t band_idx = 0; band_idx < countof(ath10k_supported_bands); band_idx++) {
     const struct ath10k_band* band = &ath10k_supported_bands[band_idx];
 
     for (size_t chan_idx = 0; chan_idx < band->n_channels; chan_idx++) {
       if (channel == band->channels[chan_idx].hw_value) {
-        return band->band_id;
+        *out_band = band->band_id;
+        return ZX_OK;
       }
     }
   }
 
   ZX_DEBUG_ASSERT(false);  // This should not happen since MLME should honor what ath10k reports.
-  return WLAN_INFO_MAX_BANDS;  // Not found
+  return ZX_ERR_NOT_FOUND;
 }
 
 static zx_status_t ath10k_add_interface(struct ath10k* ar, uint32_t vif_role);
@@ -1421,10 +1421,16 @@ static inline zx_status_t set_center_freq_and_phymode(const wlan_channel_t* chan
                                                       uint32_t* ptr_center_freq,
                                                       enum wmi_phy_mode* ptr_phymode) {
   uint8_t primary_chan = chandef->primary;
-  wlan_band_t band = chan_to_band(primary_chan);
   channel_bandwidth_t cbw = chandef->cbw;
   uint16_t new_center_freq = 0;
   enum wmi_phy_mode phymode = MODE_UNKNOWN;
+
+  wlan_band_t band;
+  zx_status_t status = chan_to_band(primary_chan, &band);
+  if (status != ZX_OK) {
+    ath10k_err("Unknown band for channel: %d", primary_chan);
+    return ZX_ERR_INVALID_ARGS;
+  }
 
   switch (band) {
     case WLAN_BAND_TWO_GHZ:
@@ -2587,7 +2593,11 @@ static void ath10k_peer_assoc_h_vht(struct ath10k* ar, const wlan_assoc_ctx_t* a
 
   arg->peer_flags |= ar->wmi.peer_flags->vht;
 
-  wlan_band_t band = chan_to_band(assoc->channel.primary);
+  wlan_band_t band;
+  zx_status_t status = chan_to_band(assoc->channel.primary, &band);
+  if (status != ZX_OK) {
+    ath10k_err("Unknown band for channel: %d", assoc->channel.primary);
+  }
   if (band == WLAN_BAND_TWO_GHZ) {
     arg->peer_flags |= ar->wmi.peer_flags->vht_2g;
   }
@@ -2695,8 +2705,13 @@ static enum wmi_phy_mode ath10k_mac_get_phymode_vht(channel_bandwidth_t cbw) {
 
 static enum wmi_phy_mode ath10k_peer_assoc_h_phymode(const wlan_assoc_ctx_t* assoc) {
   enum wmi_phy_mode phymode = MODE_UNKNOWN;
-  wlan_band_t band = chan_to_band(assoc->channel.primary);
   channel_bandwidth_t cbw = assoc->channel.cbw;
+  wlan_band_t band;
+
+  zx_status_t status = chan_to_band(assoc->channel.primary, &band);
+  if (status != ZX_OK) {
+    ath10k_err("Unknown band for channel: %d", assoc->channel.primary);
+  }
 
   switch (band) {
     case WLAN_BAND_TWO_GHZ:

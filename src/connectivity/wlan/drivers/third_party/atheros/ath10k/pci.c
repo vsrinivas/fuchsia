@@ -3119,7 +3119,7 @@ static void ath10k_wlan_softmac_band_query_capability(struct ath10k* ar,
                                                       void* cookie) {
   wlan_softmac_info_t* mac_info = cookie;
 
-  ZX_DEBUG_ASSERT(mac_info->band_cap_count < WLAN_INFO_MAX_BANDS);
+  ZX_DEBUG_ASSERT(mac_info->band_cap_count < fuchsia_wlan_common_MAX_BANDS);
   ath10k_band_query_capability(ar, dev_band, &mac_info->band_cap_list[mac_info->band_cap_count++]);
 }
 

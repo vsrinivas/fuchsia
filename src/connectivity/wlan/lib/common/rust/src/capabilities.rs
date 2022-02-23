@@ -167,7 +167,7 @@ fn get_band(primary_channel: u8) -> fidl_common::WlanBand {
 pub fn get_device_band_cap(
     device_info: &fidl_mlme::DeviceInfo,
     channel: u8,
-) -> Option<&fidl_mlme::BandCapabilities> {
+) -> Option<&fidl_mlme::BandCapability> {
     let target = get_band(channel);
     device_info.bands.iter().find(|b| b.band == target)
 }
@@ -239,7 +239,7 @@ mod tests {
         super::*,
         crate::{
             assert_variant, ie, mac,
-            test_utils::fake_capabilities::fake_5ghz_band_capabilities_ht_cbw,
+            test_utils::fake_capabilities::fake_5ghz_band_capability_ht_cbw,
         },
     };
 
@@ -330,7 +330,7 @@ mod tests {
         let device_info = fidl_mlme::DeviceInfo {
             sta_addr: [0; 6],
             role: fidl_common::WlanMacRole::Client,
-            bands: vec![fake_5ghz_band_capabilities_ht_cbw(ie::ChanWidthSet::TWENTY_FORTY)],
+            bands: vec![fake_5ghz_band_capability_ht_cbw(ie::ChanWidthSet::TWENTY_FORTY)],
             driver_features: vec![],
             softmac_hardware_capability: 0,
             qos_capable: true,

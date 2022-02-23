@@ -177,7 +177,7 @@ impl ApSme {
                     &config.ssid,
                     rsn_cfg.as_ref(),
                     capabilities,
-                    // The max length of fuchsia.wlan.mlme/BandCapabilities.basic_rates is
+                    // The max length of fuchsia.wlan.mlme/BandCapability.basic_rates is
                     // less than fuchsia.wlan.mlme/StartRequest.rates.
                     &band_cap.basic_rates,
                 ) {
@@ -487,7 +487,7 @@ impl super::Station for ApSme {
 
 /// Validate the channel, PHY type, bandwidth, and band capabilities, in that order.
 fn validate_radio_cfg(
-    band_cap: &fidl_mlme::BandCapabilities,
+    band_cap: &fidl_mlme::BandCapability,
     radio_cfg: &RadioConfig,
 ) -> Result<OpRadioConfig, StartResult> {
     let channel = radio_cfg.channel;
@@ -880,8 +880,8 @@ mod tests {
             channel::Cbw,
             mac::Aid,
             test_utils::fake_capabilities::{
-                fake_2ghz_band_capabilities_vht, fake_5ghz_band_capabilities,
-                fake_5ghz_band_capabilities_ht_cbw,
+                fake_2ghz_band_capability_vht, fake_5ghz_band_capability,
+                fake_5ghz_band_capability_ht_cbw,
             },
             RadioConfig,
         },
@@ -942,18 +942,18 @@ mod tests {
     #[test_case(false, None, fidl_common::WlanPhyType::Ht, 36, Cbw::Cbw80; "invalid HT width")]
     #[test_case(false, None, fidl_common::WlanPhyType::Erp, 1, Cbw::Cbw40; "non-HT greater than 20 MHz")]
     #[test_case(false, None, fidl_common::WlanPhyType::Ht, 36, Cbw::Cbw80; "HT greater than 40 MHz")]
-    #[test_case(false, Some(fake_5ghz_band_capabilities_ht_cbw(ChanWidthSet::TWENTY_ONLY)),
+    #[test_case(false, Some(fake_5ghz_band_capability_ht_cbw(ChanWidthSet::TWENTY_ONLY)),
                 fidl_common::WlanPhyType::Ht, 44, Cbw::Cbw40; "HT 20 MHz only")]
-    #[test_case(false, Some(fidl_mlme::BandCapabilities {
-                    ht_cap: None, ..fake_5ghz_band_capabilities()
+    #[test_case(false, Some(fidl_mlme::BandCapability {
+                    ht_cap: None, ..fake_5ghz_band_capability()
                 }),
                 fidl_common::WlanPhyType::Ht, 48, Cbw::Cbw40; "No HT capabilities")]
     #[test_case(false, None, fidl_common::WlanPhyType::Vht, 36, Cbw::Cbw160; "160 MHz not supported")]
     #[test_case(false, None, fidl_common::WlanPhyType::Vht, 36, Cbw::Cbw80P80 { secondary80: 106 }; "80+80 MHz not supported")]
     #[test_case(false, None, fidl_common::WlanPhyType::Vht, 1, Cbw::Cbw20; "VHT 2.4 GHz not supported")]
-    #[test_case(false, Some(fidl_mlme::BandCapabilities {
+    #[test_case(false, Some(fidl_mlme::BandCapability {
                     vht_cap: None,
-                    ..fake_5ghz_band_capabilities()
+                    ..fake_5ghz_band_capability()
                 }),
                 fidl_common::WlanPhyType::Vht, 149, Cbw::Cbw40; "no VHT capabilities")]
     #[test_case(true, None, fidl_common::WlanPhyType::Hr, 1, Cbw::Cbw20)]
@@ -970,7 +970,7 @@ mod tests {
     #[test_case(true, None, fidl_common::WlanPhyType::Vht, 36, Cbw::Cbw80)]
     fn test_validate_radio_cfg(
         valid: bool,
-        band_cap: Option<fidl_mlme::BandCapabilities>,
+        band_cap: Option<fidl_mlme::BandCapability>,
         phy: fidl_common::WlanPhyType,
         primary: u8,
         cbw: Cbw,
@@ -980,7 +980,7 @@ mod tests {
         let expected_op_radio_cfg = OpRadioConfig { phy: phy.clone(), channel: channel.clone() };
         let band_cap = match band_cap {
             Some(band_cap) => band_cap,
-            None => fake_2ghz_band_capabilities_vht(),
+            None => fake_2ghz_band_capability_vht(),
         };
 
         match validate_radio_cfg(&band_cap, &radio_cfg) {

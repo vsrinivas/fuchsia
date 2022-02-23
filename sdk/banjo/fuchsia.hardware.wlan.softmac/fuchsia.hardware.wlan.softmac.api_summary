@@ -79,7 +79,7 @@ protocol/member fuchsia.hardware.wlan.softmac/WlanSoftmacIfc.ScanComplete(int32 
 protocol/member fuchsia.hardware.wlan.softmac/WlanSoftmacIfc.Status(uint32 status) -> ()
 protocol fuchsia.hardware.wlan.softmac/WlanSoftmacIfc
 struct/member fuchsia.hardware.wlan.softmac/WlanSoftmacInfo.band_cap_count uint8
-struct/member fuchsia.hardware.wlan.softmac/WlanSoftmacInfo.band_cap_list array<fuchsia.hardware.wlan.softmac/WlanSoftmacBandCapability,2>
+struct/member fuchsia.hardware.wlan.softmac/WlanSoftmacInfo.band_cap_list array<fuchsia.hardware.wlan.softmac/WlanSoftmacBandCapability,16>
 struct/member fuchsia.hardware.wlan.softmac/WlanSoftmacInfo.driver_features fuchsia.hardware.wlan.phyinfo/WlanInfoDriverFeature
 struct/member fuchsia.hardware.wlan.softmac/WlanSoftmacInfo.hardware_capability uint32
 struct/member fuchsia.hardware.wlan.softmac/WlanSoftmacInfo.mac_role fuchsia.wlan.common/WlanMacRole

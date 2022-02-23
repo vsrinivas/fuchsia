@@ -4104,15 +4104,16 @@ static void brcmf_dump_if_band_cap(wlan_fullmac_band_capability_t* band_cap) {
   }
   BRCMF_DBG_UNFILTERED("     basic_rates: %s", rates_str);
 
-  if (band_cap->num_channels > WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS) {
-    BRCMF_DBG_UNFILTERED("Number of channels reported (%zu) exceeds limit (%du), truncating",
-                         band_cap->num_channels, WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS);
-    band_cap->num_channels = WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS;
+  if (band_cap->operating_channel_count > fuchsia_wlan_ieee80211_MAX_UNIQUE_CHANNEL_NUMBERS) {
+    BRCMF_DBG_UNFILTERED("Number of channels reported (%u) exceeds limit (%du), truncating",
+                         band_cap->operating_channel_count,
+                         fuchsia_wlan_ieee80211_MAX_UNIQUE_CHANNEL_NUMBERS);
+    band_cap->operating_channel_count = fuchsia_wlan_ieee80211_MAX_UNIQUE_CHANNEL_NUMBERS;
   }
-  char channels_str[WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS * 4 + 1];
+  char channels_str[fuchsia_wlan_ieee80211_MAX_UNIQUE_CHANNEL_NUMBERS * 4 + 1];
   str = channels_str;
-  for (unsigned i = 0; i < band_cap->num_channels; i++) {
-    str += sprintf(str, "%s%d", i > 0 ? " " : "", band_cap->channels[i]);
+  for (unsigned i = 0; i < band_cap->operating_channel_count; i++) {
+    str += sprintf(str, "%s%d", i > 0 ? " " : "", band_cap->operating_channel_list[i]);
   }
   BRCMF_DBG_UNFILTERED("     channels: %s", channels_str);
 
@@ -4255,20 +4256,20 @@ void brcmf_if_query(net_device* ndev, wlan_fullmac_query_info_t* info) {
     // brcm specifies each channel + bw + sb configuration individually. Until we
     // offer that level of resolution, just filter out duplicates.
     uint32_t j;
-    for (j = 0; j < band_cap->num_channels; j++) {
-      if (band_cap->channels[j] == ch.control_ch_num) {
+    for (j = 0; j < band_cap->operating_channel_count; j++) {
+      if (band_cap->operating_channel_list[j] == ch.control_ch_num) {
         break;
       }
     }
-    if (j != band_cap->num_channels) {
+    if (j != band_cap->operating_channel_count) {
       continue;
     }
 
-    if (band_cap->num_channels + 1 >= sizeof(band_cap->channels)) {
+    if (band_cap->operating_channel_count + 1 >= sizeof(band_cap->operating_channel_list)) {
       BRCMF_ERR("insufficient space for channel %d, skipping", ch.control_ch_num);
       continue;
     }
-    band_cap->channels[band_cap->num_channels++] = ch.control_ch_num;
+    band_cap->operating_channel_list[band_cap->operating_channel_count++] = ch.control_ch_num;
   }
 
   // Parse HT/VHT information

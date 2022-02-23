@@ -84,7 +84,7 @@ extern "C" {
 //   bands[]: contains the list of enabled bands.
 //
 size_t compose_band_list(const struct iwl_nvm_data* nvm_data,
-                         wlan_band_t bands[WLAN_INFO_MAX_BANDS]) {
+                         wlan_band_t bands[fuchsia_wlan_common_MAX_BANDS]) {
   size_t bands_count = 0;
 
   if (nvm_data->sku_cap_band_24ghz_enable) {
@@ -93,7 +93,7 @@ size_t compose_band_list(const struct iwl_nvm_data* nvm_data,
   if (nvm_data->sku_cap_band_52ghz_enable) {
     bands[bands_count++] = WLAN_BAND_FIVE_GHZ;
   }
-  ZX_ASSERT(bands_count <= WLAN_INFO_MAX_BANDS);
+  ZX_ASSERT(bands_count <= fuchsia_wlan_common_MAX_BANDS);
 
   return bands_count;
 }
@@ -182,7 +182,7 @@ zx_status_t mac_query(void* ctx, wlan_softmac_info_t* info) {
                               WLAN_SOFTMAC_HARDWARE_CAPABILITY_BIT_SHORT_SLOT_TIME;
 
   // Determine how many bands this adapter supports.
-  wlan_band_t bands[WLAN_INFO_MAX_BANDS];
+  wlan_band_t bands[fuchsia_wlan_common_MAX_BANDS];
   info->band_cap_count = compose_band_list(nvm_data, bands);
 
   fill_band_cap_list(nvm_data, bands, info->band_cap_count, info->band_cap_list);

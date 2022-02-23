@@ -4,7 +4,6 @@
 library fuchsia.hardware.wlan.fullmac;
 
 using ddk.hw.wlan.ieee80211;
-using fuchsia.hardware.wlan.phyinfo;
 using fuchsia.hardware.ethernet;
 using fuchsia.hardware.wlan.associnfo;
 using fuchsia.wlan.common;
@@ -393,15 +392,39 @@ type WlanFullmacSaeHandshakeInd = struct {
 };
 
 type WlanFullmacBandCapability = struct {
+    /// The values of this struct apply to the band indicated in this field.
     band fuchsia.wlan.common.WlanBand;
+
+    /// Basic rates supported in units of 500 kbit/s (as defined in
+    /// IEEE Std 802.11-2016, 9.4.2.3), e.g., 0x02 represents 1 Mbps.
+    /// The value returned by this type indicates all the non-HT rates
+    /// the device supports transmitting and receiving.
     basic_rate_count uint8;
     basic_rate_list array<uint8, fuchsia.wlan.internal.MAX_SUPPORTED_BASIC_RATES>;
-    num_channels uint64;
-    channels array<uint8, fuchsia.hardware.wlan.phyinfo.WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS>;
+
+    /// If the device supports the HT PHY mode in this band, then ht_supported is
+    /// set to true, and the value in ht_caps indicates the capabilities. Otherwise,
+    /// ht_supported is set to false.
     ht_supported bool;
     ht_caps ddk.hw.wlan.ieee80211.Ieee80211HtCapabilities;
+
+    /// If the device supports the VHT PHY mode in this band, then vht_supported is
+    /// set to true, and the value in vht_caps indicates the capabilities. Otherwise,
+    /// vht_supported is set to false.
     vht_supported bool;
     vht_caps ddk.hw.wlan.ieee80211.Ieee80211VhtCapabilities;
+
+    /// A list of operating channels considered valid by hardware, in the context of
+    /// regulatory information known to the device driver, at the time of its
+    /// construction during iface creation. In this context, an operating channel
+    /// means a channel which APs may transmit Beacon frames on in the current
+    /// regulatory domain.
+    ///
+    /// This list should be used to determine efficacy of subsequent requests to
+    /// scan a subset of channels using the iface, or to determine which operating
+    /// channel to use when starting an AP.
+    operating_channel_count uint8;
+    operating_channel_list array<uint8, ieee80211.MAX_UNIQUE_CHANNEL_NUMBERS>;
 };
 
 type WlanFullmacFeature = strict enum : uint32 {
@@ -417,8 +440,7 @@ type WlanFullmacQueryInfo = struct {
     role fuchsia.wlan.common.WlanMacRole;
     /// WLAN_FULLMAC_FEATURE_*
     features uint32;
-    band_cap_list
-            array<WlanFullmacBandCapability, fuchsia.hardware.wlan.phyinfo.WLAN_INFO_MAX_BANDS>;
+    band_cap_list array<WlanFullmacBandCapability, fuchsia.wlan.common.MAX_BANDS>;
     band_cap_count uint8;
     /// WLAN_DRIVER_FEATURE_*
     driver_features uint32;

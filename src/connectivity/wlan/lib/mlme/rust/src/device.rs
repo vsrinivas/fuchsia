@@ -1017,7 +1017,7 @@ pub(crate) mod test_utils {
 
     pub fn fake_wlan_softmac_info() -> WlanSoftmacInfo {
         let band_cap_count = 2;
-        let mut band_cap_list = [default_band_capability(); WLAN_INFO_MAX_BANDS as usize];
+        let mut band_cap_list = [default_band_capability(); banjo_common::MAX_BANDS as usize];
         let basic_rate_list = arr!(
             [0x02, 0x04, 0x0b, 0x16, 0x0c, 0x12, 0x18, 0x24, 0x30, 0x48, 0x60, 0x6c],
             banjo_wlan_internal::MAX_SUPPORTED_BASIC_RATES as usize

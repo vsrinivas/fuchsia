@@ -40,16 +40,17 @@ TEST_F(SimTest, ClientIfcQuery) {
   EXPECT_EQ(ifc_query_result.role, WLAN_MAC_ROLE_CLIENT);
 
   // Number of bands shouldn't exceed the maximum allowable
-  ASSERT_LE(ifc_query_result.band_cap_count, (size_t)WLAN_INFO_MAX_BANDS);
+  ASSERT_LE(ifc_query_result.band_cap_count, (size_t)fuchsia_wlan_common_MAX_BANDS);
 
   for (size_t band = 0; band < ifc_query_result.band_cap_count; band++) {
     wlan_fullmac_band_capability* band_cap = &ifc_query_result.band_cap_list[band];
 
     // Band id should be in valid range
-    EXPECT_LE(band_cap->band, WLAN_INFO_MAX_BANDS);
+    EXPECT_LE(band_cap->band, fuchsia_wlan_common_MAX_BANDS);
 
     // Number of channels shouldn't exceed the maximum allowable
-    ASSERT_LE(band_cap->num_channels, (size_t)WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS);
+    ASSERT_LE(band_cap->operating_channel_count,
+              (size_t)fuchsia_wlan_ieee80211_MAX_UNIQUE_CHANNEL_NUMBERS);
   }
 
   // Verify driver features from if query.

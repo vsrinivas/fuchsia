@@ -135,14 +135,14 @@ pub fn device_info_from_wlan_softmac_info(
 
 fn convert_ddk_band_cap(
     band_cap: &banjo_wlan_softmac::WlanSoftmacBandCapability,
-) -> Result<fidl_mlme::BandCapabilities, Error> {
+) -> Result<fidl_mlme::BandCapability, Error> {
     let band = match band_cap.band {
         banjo_common::WlanBand::TWO_GHZ => fidl_common::WlanBand::TwoGhz,
         banjo_common::WlanBand::FIVE_GHZ => fidl_common::WlanBand::FiveGhz,
         _ => return Err(format_err!("Unexpected banjo_comon::WlanBand value {}", band_cap.band.0)),
     };
     let basic_rates = band_cap.basic_rate_list[..band_cap.basic_rate_count as usize].to_vec();
-    let channels =
+    let operating_channels =
         band_cap.operating_channel_list[..band_cap.operating_channel_count as usize].to_vec();
     let ht_cap = if band_cap.ht_supported {
         let caps = wlan_common::ie::HtCapabilities::from(band_cap.ht_caps);
@@ -160,7 +160,7 @@ fn convert_ddk_band_cap(
     } else {
         None
     };
-    Ok(fidl_mlme::BandCapabilities { band, basic_rates, channels, ht_cap, vht_cap })
+    Ok(fidl_mlme::BandCapability { band, basic_rates, operating_channels, ht_cap, vht_cap })
 }
 
 fn convert_driver_features(
@@ -349,7 +349,7 @@ mod tests {
             band0.basic_rates,
             vec![0x02, 0x04, 0x0b, 0x16, 0x0c, 0x12, 0x18, 0x24, 0x30, 0x48, 0x60, 0x6c]
         );
-        assert_eq!(band0.channels, vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]);
+        assert_eq!(band0.operating_channels, vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]);
         assert!(band0.ht_cap.is_some());
         assert!(band0.vht_cap.is_none());
     }

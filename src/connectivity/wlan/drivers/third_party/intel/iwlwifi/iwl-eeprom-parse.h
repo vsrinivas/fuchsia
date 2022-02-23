@@ -35,6 +35,7 @@
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_IWL_EEPROM_PARSE_H_
 
 #include <fuchsia/hardware/wlan/phyinfo/c/banjo.h>
+#include <fuchsia/wlan/common/c/banjo.h>
 
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-trans.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/compiler.h"
@@ -72,7 +73,7 @@ struct iwl_nvm_data {
 
   bool lar_enabled;
   bool vht160_supported;
-  struct ieee80211_supported_band bands[WLAN_INFO_MAX_BANDS];
+  struct ieee80211_supported_band bands[fuchsia_wlan_common_MAX_BANDS];
   struct ieee80211_channel channels[];
 };
 

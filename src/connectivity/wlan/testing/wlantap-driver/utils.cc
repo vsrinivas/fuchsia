@@ -140,7 +140,7 @@ zx_status_t ConvertTapPhyConfig(wlan_softmac_info_t* mac_info,
   mac_info->mac_role = ConvertMacRole(tap_phy_config.mac_role);
   mac_info->hardware_capability = tap_phy_config.hardware_capability;
   mac_info->band_cap_count =
-      std::min(tap_phy_config.bands.size(), static_cast<size_t>(WLAN_INFO_MAX_BANDS));
+      std::min(tap_phy_config.bands.size(), static_cast<size_t>(fuchsia_wlan_common_MAX_BANDS));
 
   for (size_t i = 0; i < mac_info->band_cap_count; ++i) {
     ConvertBandInfoToCapability((tap_phy_config.bands)[i], &mac_info->band_cap_list[i]);

@@ -523,7 +523,7 @@ wlan_common::WlanMacRole ConvertMacRole(wlan_mac_role_t role) {
   }
 }
 
-void ConvertBandCapability(wlan_mlme::BandCapabilities* fidl_band,
+void ConvertBandCapability(wlan_mlme::BandCapability* fidl_band,
                            const wlan_fullmac_band_capability_t& band) {
   zx_status_t status = ::wlan::common::ToFidl(&fidl_band->band, band.band);
   if (status != ZX_OK) {
@@ -535,7 +535,8 @@ void ConvertBandCapability(wlan_mlme::BandCapabilities* fidl_band,
   fidl_band->basic_rates.assign(band.basic_rate_list, band.basic_rate_list + band.basic_rate_count);
 
   // channels
-  fidl_band->channels.assign(band.channels, band.channels + band.num_channels);
+  fidl_band->operating_channels.assign(band.operating_channel_list,
+                                       band.operating_channel_list + band.operating_channel_count);
 
   if (band.ht_supported) {
     fidl_band->ht_cap = std::make_unique<wlan_internal::HtCapabilities>();
