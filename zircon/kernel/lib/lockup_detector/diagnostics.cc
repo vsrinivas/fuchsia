@@ -141,10 +141,10 @@ void DumpRegistersAndBacktrace(cpu_num_t cpu, FILE* output_target) {
     if (status != ZX_OK) {
       fprintf(output_target, "failed to get context of CPU-%u: %d\n", target_cpu, status);
     } else {
-      printf("CPU-%u context follows\n", target_cpu);
+      fprintf(output_target, "CPU-%u context follows\n", target_cpu);
       context.backtrace.PrintWithoutVersion(output_target);
       PrintFrame(output_target, context.frame);
-      printf("end of CPU-%u context\n", target_cpu);
+      fprintf(output_target, "end of CPU-%u context\n", target_cpu);
     }
   } while ((target_cpu = remove_cpu_from_mask(remaining_cpus)) != INVALID_CPU);
 }
