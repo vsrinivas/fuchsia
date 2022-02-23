@@ -187,7 +187,7 @@ class {{ .NaturalEventSender }}
 
 ::fitx::result<::fidl::Error> {{ $.NaturalWeakEventSender.NoLeading }}::{{ .Name }}(
     {{- if .HasResponsePayload }}{{ .ResponsePayload }} payload{{ end }}) {
-  ::fidl::internal::NaturalMessageEncoder _encoder{ {{ .OrdinalName }} };
+  ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport> _encoder{ {{ .OrdinalName }} };
   ::fidl::Result result = ::fidl::internal::ConvertFromHLCPPOutgoingMessageThen(
       {{- if .HasResponsePayload -}}
         &{{ .Response.WireCodingTable }}
@@ -204,7 +204,7 @@ class {{ .NaturalEventSender }}
 
 ::fitx::result<::fidl::Error> {{ $.NaturalEventSender.NoLeading }}::{{ .Name }}(
     {{- if .HasResponsePayload }}{{ .ResponsePayload }} payload{{ end }}) {
-  ::fidl::internal::NaturalMessageEncoder _encoder{ {{ .OrdinalName }} };
+  ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport> _encoder{ {{ .OrdinalName }} };
   ::fidl::Result result = ::fidl::internal::ConvertFromHLCPPOutgoingMessageThen(
       {{- if .HasResponsePayload -}}
         &{{ .Response.WireCodingTable }}

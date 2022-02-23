@@ -19,9 +19,9 @@ void fidl::internal::NaturalClientImpl<
         ::fidl::ClientCallback<::test_errorsyntax::ExampleUseOfErrorSyntax::
                                    ComposedCallWhichMayFail>&& _callback)
         const {
-  ::fidl::internal::NaturalMessageEncoder _encoder{
-      ::test_errorsyntax::
-          kExampleUseOfErrorSyntax_ComposedCallWhichMayFail_Ordinal};
+  ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
+      _encoder{::test_errorsyntax::
+                   kExampleUseOfErrorSyntax_ComposedCallWhichMayFail_Ordinal};
   return messenger().TwoWay(
       &::test_errorsyntax::
           test_errorsyntax_parent_ParentUsesErrorSyntaxComposedCallWhichMayFailRequestTable,
@@ -44,9 +44,9 @@ void fidl::internal::NaturalClientImpl<
         ::fidl::ClientResponseCallback<
             ::test_errorsyntax::ExampleUseOfErrorSyntax::
                 ComposedCallWhichMayFail>&& _callback) const {
-  ::fidl::internal::NaturalMessageEncoder _encoder{
-      ::test_errorsyntax::
-          kExampleUseOfErrorSyntax_ComposedCallWhichMayFail_Ordinal};
+  ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
+      _encoder{::test_errorsyntax::
+                   kExampleUseOfErrorSyntax_ComposedCallWhichMayFail_Ordinal};
   return messenger().TwoWay(
       &::test_errorsyntax::
           test_errorsyntax_parent_ParentUsesErrorSyntaxComposedCallWhichMayFailRequestTable,
@@ -71,8 +71,9 @@ void fidl::internal::NaturalClientImpl<
         ::fidl::ClientCallback<
             ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>&&
             _callback) const {
-  ::fidl::internal::NaturalMessageEncoder _encoder{
-      ::test_errorsyntax::kExampleUseOfErrorSyntax_CallWhichMayFail_Ordinal};
+  ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
+      _encoder{::test_errorsyntax::
+                   kExampleUseOfErrorSyntax_CallWhichMayFail_Ordinal};
   return messenger().TwoWay(
       &::test_errorsyntax::
           test_errorsyntax_ExampleUseOfErrorSyntaxCallWhichMayFailRequestTable,
@@ -94,8 +95,9 @@ void fidl::internal::NaturalClientImpl<
         ::fidl::ClientResponseCallback<
             ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>&&
             _callback) const {
-  ::fidl::internal::NaturalMessageEncoder _encoder{
-      ::test_errorsyntax::kExampleUseOfErrorSyntax_CallWhichMayFail_Ordinal};
+  ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
+      _encoder{::test_errorsyntax::
+                   kExampleUseOfErrorSyntax_CallWhichMayFail_Ordinal};
   return messenger().TwoWay(
       &::test_errorsyntax::
           test_errorsyntax_ExampleUseOfErrorSyntaxCallWhichMayFailRequestTable,
@@ -134,9 +136,9 @@ void fidl::internal::NaturalCompleterBase<
               ParentUsesErrorSyntaxComposedCallWhichMayFailTopResponse&&
                   payload) {
   ::fidl::internal::NaturalServerMessenger _messenger{this};
-  ::fidl::internal::NaturalMessageEncoder _encoder{
-      ::test_errorsyntax::
-          kExampleUseOfErrorSyntax_ComposedCallWhichMayFail_Ordinal};
+  ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
+      _encoder{::test_errorsyntax::
+                   kExampleUseOfErrorSyntax_ComposedCallWhichMayFail_Ordinal};
   _messenger.SendReply(
       &::test_errorsyntax::
           test_errorsyntax_parent_ParentUsesErrorSyntaxComposedCallWhichMayFailTopResponseTable,
@@ -150,8 +152,9 @@ void fidl::internal::NaturalCompleterBase<
         ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse&&
             payload) {
   ::fidl::internal::NaturalServerMessenger _messenger{this};
-  ::fidl::internal::NaturalMessageEncoder _encoder{
-      ::test_errorsyntax::kExampleUseOfErrorSyntax_CallWhichMayFail_Ordinal};
+  ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
+      _encoder{::test_errorsyntax::
+                   kExampleUseOfErrorSyntax_CallWhichMayFail_Ordinal};
   _messenger.SendReply(
       &::test_errorsyntax::
           test_errorsyntax_ExampleUseOfErrorSyntaxCallWhichMayFailTopResponseTable,

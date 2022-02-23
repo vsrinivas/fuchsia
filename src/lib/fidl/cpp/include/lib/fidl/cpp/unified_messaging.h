@@ -79,7 +79,8 @@ class MessageBase {
 // encoding API of the domain object instead of |EncodeWithoutValidating|.
 template <typename Payload = const cpp17::nullopt_t&>
 ::fidl::HLCPPOutgoingMessage EncodeTransactionalMessageWithoutValidating(
-    ::fidl::internal::NaturalMessageEncoder& encoder, Payload&& payload = cpp17::nullopt) {
+    ::fidl::internal::NaturalMessageEncoder<fidl::internal::ChannelTransport>& encoder,
+    Payload&& payload = cpp17::nullopt) {
   // When the caller omits the |payload| argument, it will default to
   // |cpp17::nullopt|, which is of type |cpp17::nullopt_t|.
   constexpr bool kHasPayload = !std::is_same_v<cpp20::remove_cvref_t<Payload>, cpp17::nullopt_t>;
