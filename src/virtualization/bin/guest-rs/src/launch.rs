@@ -2,15 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 use {
+    crate::services,
     anyhow::{Context, Error},
-    blocking::Unblock,
     fidl_fuchsia_virtualization::{
         GuestConfig, GuestMarker, GuestProxy, ManagerMarker, RealmMarker, RealmProxy,
     },
     fuchsia_async::{self as fasync, futures::TryFutureExt, futures::TryStreamExt},
     fuchsia_component::client::connect_to_protocol,
     fuchsia_url::pkg_url::PkgUrl,
-    fuchsia_zircon::{self as zx, HandleBased},
     fuchsia_zircon_status as zx_status,
     std::io::{self, Write},
 };
@@ -75,11 +74,8 @@ impl GuestLaunch {
         // Turn this stream socket into a a rust stream of data
         let guest_serial_stream =
             fasync::Socket::from_socket(guest_serial_response)?.into_datagram_stream();
-        let guest_console_read = fasync::Socket::from_socket(
-            guest_console_response.duplicate_handle(zx::Rights::SAME_RIGHTS)?,
-        )?
-        .into_datagram_stream();
-        let mut guest_console_write = fasync::Socket::from_socket(guest_console_response)?;
+
+        let mut console = services::GuestConsole::new(guest_console_response)?;
 
         let serial_output = guest_serial_stream.try_for_each(|message| {
             match io::stdout().write_all(&message) {
@@ -89,31 +85,22 @@ impl GuestLaunch {
             futures::future::ready(io::stdout().flush().map_err(From::from))
         });
 
-        let console_output = guest_console_read.try_for_each(|message| {
-            match io::stdout().write_all(&message) {
-                Ok(()) => (),
-                Err(err) => return futures::future::ready(Err(From::from(err))),
-            }
-            futures::future::ready(io::stdout().flush().map_err(From::from))
-        });
-
-        futures::future::try_join3(
-            serial_output,
-            console_output,
-            futures::io::copy(Unblock::new(std::io::stdin()), &mut guest_console_write)
-                .err_into::<zx_status::Status>(),
-        )
-        .await
-        .map(|_| ())
-        .map_err(From::from)
+        futures::future::try_join(serial_output, console.run())
+            .await
+            .map(|_| ())
+            .map_err(From::from)
     }
 }
 
 #[cfg(test)]
 mod test {
     use {
-        super::*, assert_matches::assert_matches, fidl::endpoints::create_proxy_and_stream,
-        fuchsia_async::futures::StreamExt, futures::future::join,
+        super::*,
+        assert_matches::assert_matches,
+        fidl::endpoints::create_proxy_and_stream,
+        fuchsia_async::futures::StreamExt,
+        fuchsia_zircon::{self as zx},
+        futures::future::join,
     };
 
     // TODO(fxbug.dev/93808): add success tests for launch

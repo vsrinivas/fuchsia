@@ -7,6 +7,7 @@ mod balloon;
 mod launch;
 mod list;
 mod services;
+mod socat;
 
 #[derive(FromArgs, PartialEq, Debug)]
 /// Top-level command.
@@ -136,7 +137,7 @@ async fn main() -> Result<(), Error> {
     match options.nested {
         SubCommands::One(launch_args) => {
             let guest = launch::GuestLaunch::new(launch_args.package, launch_args.vmm_args).await?;
-            guest.run().await?;
+            guest.run().await
         }
         SubCommands::Two(balloon_args) => {
             let balloon_controller =
@@ -145,6 +146,7 @@ async fn main() -> Result<(), Error> {
             let output =
                 balloon::handle_balloon(balloon_controller, balloon_args.num_pages).await?;
             println!("{}", output);
+            Ok(())
         }
         SubCommands::Three(balloon_stat_args) => {
             let balloon_controller = balloon::connect_to_balloon_controller(
@@ -154,13 +156,22 @@ async fn main() -> Result<(), Error> {
             .await?;
             let output = balloon::handle_balloon_stats(balloon_controller).await?;
             println!("{}", output);
+            Ok(())
         }
         SubCommands::Five(..) => {
             let manager = services::connect_to_manager()?;
             let output = list::handle_list(manager).await?;
             println!("{}", output);
+            Ok(())
+        }
+        SubCommands::Six(socat_args) => {
+            let vsock_endpoint = socat::connect_to_vsock_endpoint(socat_args.env_id).await?;
+            socat::handle_socat(vsock_endpoint, socat_args.cid, socat_args.port).await
+        }
+        SubCommands::Seven(socat_listen_args) => {
+            let vsock_endpoint = socat::connect_to_vsock_endpoint(socat_listen_args.env_id).await?;
+            socat::handle_socat_listen(vsock_endpoint, socat_listen_args.host_port).await
         }
         _ => unimplemented!(), // TODO(fxbug.dev/89427): Implement guest tool
     }
-    Ok(())
 }

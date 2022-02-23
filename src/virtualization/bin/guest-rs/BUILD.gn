@@ -41,6 +41,7 @@ rustc_binary("bin") {
     "src/list.rs",
     "src/main.rs",
     "src/services.rs",
+    "src/socat.rs",
   ]
 }
 
