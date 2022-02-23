@@ -32,7 +32,6 @@ triage_files = [
   "stash_secure.triage",
   "sysmem.triage",
   "timekeeper.triage",
-  "timezone.triage",
   "wlan.triage",
 ]
 
