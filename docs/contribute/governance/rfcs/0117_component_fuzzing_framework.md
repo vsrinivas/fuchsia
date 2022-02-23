@@ -805,7 +805,7 @@ Additionally, there have been a few projects that combine AFL with qemu:
 [219]: /docs/development/testing/fuzzing/fidl-fuzzing.md
 [220]: /docs/development/testing/fuzzing/run-a-fuzzer.md
 [221]: /docs/development/testing/fuzzing/write-a-fuzzer.md
-[222]: /docs/development/tools/ffx/development/proxy-plugin.md
+[222]: /docs/development/tools/ffx/development/plugins.md
 [223]: /docs/development/tools/ffx/overview.md
 
 [3xx]: # "3xx links refer to external documentation."

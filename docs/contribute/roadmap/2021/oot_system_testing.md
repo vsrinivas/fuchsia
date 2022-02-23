@@ -477,7 +477,7 @@ additional justification or otherwise be discouraged by the platform team.
 [e2e-not-black-screen]: /src/tests/end_to_end/screen_is_not_black/
 [ffx-components]: /docs/development/tools/ffx/getting-started.md#interacting_with_components
 [ffx-plugins]: /docs/development/tools/ffx/development/plugins.md
-[ffx-proxy-plugin]: /docs/development/tools/ffx/development/proxy-plugin.md
+[ffx-proxy-plugin]: /docs/development/tools/ffx/development/plugins.md#fidl-proxy
 [fidl-abi-compatibility]: /docs/development/languages/fidl/guides/compatibility/README.md
 [fsi]: /docs/concepts/packages/system.md
 [fuchsia-updatable]: /docs/concepts/principles/updatable.md

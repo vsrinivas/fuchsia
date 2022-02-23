@@ -210,6 +210,44 @@ Note: For a complete lifecycle example, see
 More information about the Lifecycle protocol is available in the
 [ELF runner documentation][elf-runner-docs].
 
+## Developer tools plugins {#ffx}
+
+Many [`ffx`][ffx-overview] plugins depend on FIDL protocols provided by
+components. This dependency is expressed by declaring a
+[component selector][component-select] in the plugin's `ffx_plugin` macro,
+such as `core/appmgr:out:fuchsia.update.channelcontrol.ChannelControl`.
+
+Selectors are dependent on the component's [moniker][moniker], which describes
+its place in the [component instance tree][glossary.component-instance-tree].
+If there are `ffx` plugins that depend on capabilities provided by your component,
+you need to migrate those selectors using Remote Control Service (RCS)
+[proxy selector maps][rcs-selector-maps].
+
+To migrate the `ffx` plugin selectors for your component, do the following:
+
+Add an entry to `//src/developer/remote-control/data/selector-maps.json` mapping
+the v1 component's moniker under `appmgr` to the new v2 component's moniker:
+
+```json
+{
+  ...
+  "core/appmgr:out:fuchsia.fonts.Provider": "core/font_provider:expose:fuchsia.fonts.Provider"
+}
+```
+
+Note: If you added your component to `core.cml`, you can infer your
+component's moniker to be `core/component_name` where `component_name` is
+the name of the child you added to `core.cml` or your core shard.
+
+This mapping overrides the code written in the `ffx_plugin` macro declarations,
+and it should only remain in place long enough to verify that the component
+migration has successfully landed. Otherwise, it may cause confusion for future
+contributors.
+
+Once the migration is complete and the v1 component is no longer present in any
+release branches, consider removing the mapping from RCS, and updating the
+`ffx` plugin selectors to reference the v2 component directly.
+
 ## What's next {#next}
 
 Explore the following sections for additional migration guidance on
@@ -219,10 +257,13 @@ specific features your components may support:
 -   [Diagnostics capabilities](diagnostics.md)
 
 [cf-dev-list]: https://groups.google.com/a/fuchsia.dev/g/component-framework-dev
+[component-select]: /docs/development/tools/ffx/commands/component-select.md
 [cs-appmgr-allowlist]: https://cs.opensource.google/fuchsia/fuchsia/+/main:src/sys/appmgr/main.cc;l=125;drc=ddf6d10ce8cf63268e21620638ea02e9b2b7cd20
 [eager-lifecycle]: /docs/concepts/components/v2/lifecycle.md#eager
 [eager-manifest]: https://fuchsia.dev/reference/cml#children
 [elf-runner-docs]: /docs/concepts/components/v2/elf_runner.md#lifecycle
+[ffx-overview]: /docs/development/tools/ffx/overview.md
+[glossary.component-instance-tree]: /docs/glossary/README.md#component-instance-tree
 [glossary.environment]: /docs/glossary/README.md#environment
 [migrate-add-core]: /docs/development/components/v2/migration/components.md#add-core-direct
 [migrate-add-shard]: /docs/development/components/v2/migration/components.md#add-core-shard
@@ -230,6 +271,8 @@ specific features your components may support:
 [migrate-components-add]: /docs/development/components/v2/migration/components.md#add-component-to-topology
 [migrate-components-v1]: /docs/development/components/v2/migration/components.md#route-to-v1
 [migrate-features-directory]: /docs/development/components/v2/migration/features.md#directory-features
+[moniker]: /docs/concepts/components/v2/monikers.md
 [lifecycle-example]: /examples/components/lifecycle
 [src-security-policy]: /src/security/policy/component_manager_policy.json5
 [sysmgr-critical-components]: /docs/concepts/components/v1/sysmgr.md#critical_components
+[rcs-selector-maps]: /docs/development/tools/ffx/development/plugins.md#selector-maps
