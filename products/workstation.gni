@@ -203,3 +203,6 @@ product_bootfs_labels += [
 
 # Use Flatland as the default graphics protocol in Scenic.
 use_flatland_by_default = true
+
+# Use Fxfs for the data partition.
+data_filesystem_format = "fxfs"
