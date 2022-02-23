@@ -111,7 +111,12 @@ zx_status_t VirtioQueue::Notify() {
 
 zx_status_t VirtioQueue::ReadDesc(uint16_t desc_index, VirtioDescriptor* out) {
   std::lock_guard<std::mutex> lock(mutex_);
-  auto& desc = ring_.desc[desc_index];
+
+  if (desc_index >= ring_.size) {
+    return ZX_ERR_OUT_OF_RANGE;
+  }
+
+  auto desc = ring_.desc[desc_index];
 
   const uint64_t end = desc.addr + desc.len;
   if (end < desc.addr || end > phys_mem_->size()) {

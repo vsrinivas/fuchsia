@@ -43,4 +43,20 @@ TEST(VirtioQueueTest, VirtioChainMove) {
   chain4.Return();
 }
 
+TEST(VirtioQueueTest, VirtioReadDesc) {
+  zx::vmo vmo;
+  ASSERT_EQ(zx::vmo::create(4 * PAGE_SIZE, 0, &vmo), ZX_OK);
+
+  PhysMem phys_mem;
+  ASSERT_EQ(phys_mem.Init(std::move(vmo)), ZX_OK);
+  VirtioQueue queue;
+  queue.set_phys_mem(&phys_mem);
+  queue.Configure(1, 0, PAGE_SIZE, 2 * PAGE_SIZE);
+
+  VirtioDescriptor desc;
+
+  ASSERT_EQ(queue.ReadDesc(0, &desc), ZX_OK);
+  ASSERT_EQ(queue.ReadDesc(2, &desc), ZX_ERR_OUT_OF_RANGE);
+}
+
 }  // namespace
