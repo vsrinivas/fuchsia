@@ -15,6 +15,7 @@ source_set("fasync-source-set") {
     "include/lib/fasync/internal/type_traits.h",
     "include/lib/fasync/poll.h",
     "include/lib/fasync/scheduler.h",
+    "include/lib/fasync/scope.h",
     "include/lib/fasync/single_threaded_executor.h",
     "include/lib/fasync/type_traits.h",
   ]
@@ -39,6 +40,7 @@ zx_library("fasync") {
     "lib/fasync/future.h",
     "lib/fasync/poll.h",
     "lib/fasync/scheduler.h",
+    "lib/fasync/scope.h",
     "lib/fasync/single_threaded_executor.h",
     "lib/fasync/type_traits.h",
   ]
