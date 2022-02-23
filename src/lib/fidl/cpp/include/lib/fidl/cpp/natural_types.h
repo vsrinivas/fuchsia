@@ -104,15 +104,13 @@ class UnionMemberView final {
 class EncodeResult {
  public:
   EncodeResult(const fidl_type_t* type, ::fidl::internal::NaturalBodyEncoder&& storage)
-      : storage_(std::move(storage)),
-        message_(ConvertFromHLCPPOutgoingBody(storage.wire_format(), type, storage_.GetBody(),
-                                              handles_, handle_metadata_)) {}
+      : storage_(std::move(storage)), message_(storage_.GetBody()) {
+    message_.Validate__InternalMayBreak(storage_.wire_format(), type);
+  }
 
   ::fidl::OutgoingMessage& message() { return message_; }
 
  private:
-  zx_handle_t handles_[ZX_CHANNEL_MAX_MSG_HANDLES];
-  fidl_channel_handle_metadata_t handle_metadata_[ZX_CHANNEL_MAX_MSG_HANDLES];
   ::fidl::internal::NaturalBodyEncoder storage_;
   ::fidl::OutgoingMessage message_;
 };
@@ -159,7 +157,7 @@ template <typename FidlType>
   // Since a majority of the domain objects are HLCPP objects, for now
   // the wire format version of the encoded message is the same as the one
   // used in HLCPP.
-  ::fidl::internal::NaturalBodyEncoder encoder(DefaultHLCPPEncoderWireFormat());
+  ::fidl::internal::NaturalBodyEncoder encoder(fidl::internal::WireFormatVersion::kV2);
   encoder.Alloc(::fidl::internal::NaturalEncodingInlineSize<FidlType>(&encoder));
   ::fidl::internal::NaturalCodingTraits<FidlType>::Encode(&encoder, &value, 0);
   return EncodeResult(coding_table, std::move(encoder));

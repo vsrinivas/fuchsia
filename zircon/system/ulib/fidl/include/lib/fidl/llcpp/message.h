@@ -187,6 +187,9 @@ class OutgoingMessage : public ::fidl::Result {
     EncodeImpl(wire_format_version, fidl::TypeTraits<FidlType>::kType, data);
   }
 
+  void Validate__InternalMayBreak(fidl::internal::WireFormatVersion wire_format_version,
+                                  const fidl_type_t* type);
+
   // Various helper functions for writing to other channel-like types.
 
   void Write(internal::AnyUnownedTransport transport, WriteOptions options = {});
@@ -551,7 +554,7 @@ class IncomingMessage : public ::fidl::Result {
 
   // Performs basic transactional message header validation and sets the |fidl::Result| fields
   // accordingly.
-  void Validate();
+  void ValidateHeader();
 
   const internal::TransportVTable* transport_vtable_ = nullptr;
   fidl_incoming_msg_t message_;

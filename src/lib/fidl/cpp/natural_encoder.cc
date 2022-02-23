@@ -71,21 +71,19 @@ void NaturalEncoder::EncodeHandle(fidl_handle_t handle, HandleAttributes attr, s
   }
 }
 
-HLCPPOutgoingBody NaturalBodyEncoder::GetBody() {
-  for (uint32_t i = 0; i < handle_actual_; i++) {
-    handle_dispositions_[i] = zx_handle_disposition_t{
-        .operation = ZX_HANDLE_OP_MOVE,
-        .handle = handles_[i],
-        .type = handle_metadata_[i].obj_type,
-        .rights = handle_metadata_[i].rights,
-        .result = ZX_OK,
-    };
-  }
-  return HLCPPOutgoingBody(
-      BytePart(bytes_.data(), static_cast<uint32_t>(bytes_.size()),
-               static_cast<uint32_t>(bytes_.size())),
-      HandleDispositionPart(handle_dispositions_, static_cast<uint32_t>(handle_actual_),
-                            static_cast<uint32_t>(handle_actual_)));
+fidl::OutgoingMessage NaturalBodyEncoder::GetBody() {
+  fidl_outgoing_msg_t c_msg = {
+      .type = FIDL_OUTGOING_MSG_TYPE_BYTE,
+      .byte =
+          {
+              .bytes = bytes_.data(),
+              .handles = handles_,
+              .handle_metadata = reinterpret_cast<fidl_handle_metadata_t*>(handle_metadata_),
+              .num_bytes = static_cast<uint32_t>(bytes_.size()),
+              .num_handles = handle_actual_,
+          },
+  };
+  return fidl::OutgoingMessage::FromEncodedCValue(&c_msg);
 }
 
 void NaturalBodyEncoder::Reset() {

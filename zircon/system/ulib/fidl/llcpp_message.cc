@@ -204,6 +204,29 @@ void OutgoingMessage::EncodeImpl(fidl::internal::WireFormatVersion wire_format_v
   message_.iovec.num_iovecs = 1;
 }
 
+void OutgoingMessage::Validate__InternalMayBreak(
+    fidl::internal::WireFormatVersion wire_format_version, const fidl_type_t* type) {
+  zx_status_t status;
+  auto copied_bytes = CopyBytes();
+  const char* error_msg_out;
+  switch (wire_format_version) {
+    case internal::WireFormatVersion::kV1:
+      status = internal__fidl_validate__v1__may_break(type, copied_bytes.data(),
+                                                      static_cast<uint32_t>(copied_bytes.size()),
+                                                      handle_actual(), &error_msg_out);
+      break;
+    case internal::WireFormatVersion::kV2:
+      status = internal__fidl_validate__v2__may_break(type, copied_bytes.data(),
+                                                      static_cast<uint32_t>(copied_bytes.size()),
+                                                      handle_actual(), &error_msg_out);
+      break;
+    default:
+      __builtin_unreachable();
+  }
+  if (status != ZX_OK)
+    SetResult(Result::EncodeError(status, error_msg_out));
+}
+
 void OutgoingMessage::Write(internal::AnyUnownedTransport transport, WriteOptions options) {
   if (!ok()) {
     return;
@@ -363,7 +386,7 @@ IncomingMessage::IncomingMessage(const internal::TransportVTable* transport_vtab
                                  fidl_handle_metadata_t* handle_metadata, uint32_t handle_actual)
     : IncomingMessage(transport_vtable, bytes, byte_actual, handles, handle_metadata, handle_actual,
                       kSkipMessageHeaderValidation) {
-  Validate();
+  ValidateHeader();
   is_transactional_ = true;
 }
 
@@ -488,7 +511,7 @@ void IncomingMessage::Decode(internal::WireFormatVersion wire_format_version,
   }
 }
 
-void IncomingMessage::Validate() {
+void IncomingMessage::ValidateHeader() {
   if (byte_actual() < sizeof(fidl_message_header_t)) {
     return SetResult(fidl::Result::UnexpectedMessage(ZX_ERR_INVALID_ARGS,
                                                      ::fidl::internal::kErrorInvalidHeader));

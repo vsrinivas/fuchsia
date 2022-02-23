@@ -7,6 +7,7 @@
 
 #include <lib/fidl/cpp/message.h>
 #include <lib/fidl/internal.h>
+#include <lib/fidl/llcpp/message.h>
 
 #ifdef __Fuchsia__
 #include <lib/fidl/llcpp/internal/transport_channel.h>
@@ -135,13 +136,12 @@ class NaturalBodyEncoder final : public NaturalEncoder {
 
   ~NaturalBodyEncoder() = default;
 
-  HLCPPOutgoingBody GetBody();
+  fidl::OutgoingMessage GetBody();
   void Reset();
 
  private:
   fidl_handle_t handles_[ZX_CHANNEL_MAX_MSG_HANDLES];
   fidl_channel_handle_metadata_t handle_metadata_[ZX_CHANNEL_MAX_MSG_HANDLES];
-  zx_handle_disposition_t handle_dispositions_[ZX_CHANNEL_MAX_MSG_HANDLES];
 };
 
 }  // namespace fidl::internal
