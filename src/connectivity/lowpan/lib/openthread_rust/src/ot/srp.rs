@@ -7,7 +7,6 @@
 #![allow(missing_docs)]
 
 use crate::prelude_internal::*;
-use std::borrow::Borrow;
 use std::ffi::CStr;
 use std::ptr::null;
 
@@ -19,7 +18,78 @@ pub struct SrpServerServiceFlags : u8 {
     const SUB_TYPE = OT_SRP_SERVER_SERVICE_FLAG_SUB_TYPE as u8;
     const ACTIVE = OT_SRP_SERVER_SERVICE_FLAG_ACTIVE as u8;
     const DELETED = OT_SRP_SERVER_SERVICE_FLAG_DELETED as u8;
+
+    const ANY_SERVICE =
+        Self::BASE_TYPE.bits | Self::SUB_TYPE.bits | Self::ACTIVE.bits | Self::DELETED.bits;
+    const BASE_TYPE_SERVICE_ONLY =
+        Self::BASE_TYPE.bits | Self::ACTIVE.bits | Self::DELETED.bits;
+    const SUB_TYPE_SERVICE_ONLY =
+        Self::SUB_TYPE.bits | Self::ACTIVE.bits | Self::DELETED.bits;
+    const ANY_TYPE_ACTIVE_SERVICE =
+        Self::BASE_TYPE.bits | Self::SUB_TYPE.bits | Self::ACTIVE.bits;
+    const ANY_TYPE_DELETED_SERVICE =
+        Self::BASE_TYPE.bits | Self::SUB_TYPE.bits | Self::ACTIVE.bits;
 }
+}
+
+/// Iterates over the available SRP server hosts. See [`SrpServer::srp_server_get_hosts`].
+#[derive(Debug, Clone)]
+pub struct SrpServerHostIterator<'a, T: SrpServer> {
+    prev: Option<&'a SrpServerHost>,
+    ot_instance: &'a T,
+}
+
+impl<'a, T: SrpServer> Iterator for SrpServerHostIterator<'a, T> {
+    type Item = &'a SrpServerHost;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.prev = self.ot_instance.srp_server_next_host(self.prev);
+        self.prev
+    }
+}
+
+/// Iterates over all the available SRP services.
+#[derive(Debug, Clone)]
+pub struct SrpServerServiceIterator<'a> {
+    prev: Option<&'a SrpServerService>,
+    host: &'a SrpServerHost,
+}
+
+impl<'a> Iterator for SrpServerServiceIterator<'a> {
+    type Item = &'a SrpServerService;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.prev = self.host.next_service(self.prev);
+        self.prev
+    }
+}
+
+/// Iterates over selected SRP services.
+#[derive(Debug, Clone)]
+pub struct SrpServerServiceFindIterator<'a, A, B> {
+    prev: Option<&'a SrpServerService>,
+    host: &'a SrpServerHost,
+    flags: SrpServerServiceFlags,
+    service_name: Option<A>,
+    instance_name: Option<B>,
+}
+
+impl<'a, A, B> Iterator for SrpServerServiceFindIterator<'a, A, B>
+where
+    A: AsRef<CStr>,
+    B: AsRef<CStr>,
+{
+    type Item = &'a SrpServerService;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.prev = self.host.find_next_service(
+            self.prev,
+            self.flags,
+            self.service_name.as_ref(),
+            self.instance_name.as_ref(),
+        );
+        self.prev
+    }
 }
 
 /// This opaque type (only used by reference) represents a SRP host.
@@ -67,6 +137,11 @@ impl SrpServerHost {
         }
     }
 
+    /// Returns an iterator over all of the services for this host.
+    pub fn services(&self) -> SrpServerServiceIterator<'_> {
+        SrpServerServiceIterator { prev: None, host: self }
+    }
+
     /// Functional equivalent of
     /// [`otsys::otSrpServerHostFindNextService`](crate::otsys::otSrpServerHostFindNextService).
     pub fn find_next_service<'a, A, B>(
@@ -77,8 +152,8 @@ impl SrpServerHost {
         instance_name: Option<B>,
     ) -> Option<&'a SrpServerService>
     where
-        A: Borrow<CStr>,
-        B: Borrow<CStr>,
+        A: AsRef<CStr>,
+        B: AsRef<CStr>,
     {
         let prev = prev.map(|x| x.as_ot_ptr()).unwrap_or(null());
         unsafe {
@@ -86,10 +161,24 @@ impl SrpServerHost {
                 self.as_ot_ptr(),
                 prev,
                 flags.bits(),
-                service_name.map(|x| x.borrow().as_ptr()).unwrap_or(null()),
-                instance_name.map(|x| x.borrow().as_ptr()).unwrap_or(null()),
+                service_name.map(|x| x.as_ref().as_ptr()).unwrap_or(null()),
+                instance_name.map(|x| x.as_ref().as_ptr()).unwrap_or(null()),
             ))
         }
+    }
+
+    /// Returns an iterator over all of the services matching the given criteria.
+    pub fn find_services<A, B>(
+        &self,
+        flags: SrpServerServiceFlags,
+        service_name: Option<A>,
+        instance_name: Option<B>,
+    ) -> SrpServerServiceFindIterator<'_, A, B>
+    where
+        A: AsRef<CStr>,
+        B: AsRef<CStr>,
+    {
+        SrpServerServiceFindIterator { prev: None, host: self, flags, service_name, instance_name }
     }
 }
 
@@ -165,41 +254,29 @@ impl SrpServerService {
 
 /// The ID of a SRP service update transaction on the SRP Server.
 ///
+/// This type will panic if dropped without being fed
+/// to [`SrpServer::srp_server_handle_service_update_result`].
+///
 /// Functional equivalent of
 /// [`otsys::otSrpServerServiceUpdateId`](crate::otsys::otSrpServerServiceUpdateId).
-pub type SrpServerServiceUpdateId = otSrpServerServiceUpdateId;
-
-/// Helper type that holds onto a `SrpServerServiceUpdateId` and automatically closes
-/// it out if it goes out of scope.
 #[derive(Debug)]
-pub struct SrpServerServiceUpdateResponder<'a, OT: SrpServer + ?Sized> {
-    id: SrpServerServiceUpdateId,
-    instance: &'a OT,
-}
+pub struct SrpServerServiceUpdateId(otSrpServerServiceUpdateId);
 
-impl<'a, OT: SrpServer + ?Sized> SrpServerServiceUpdateResponder<'a, OT> {
-    /// Takes ownership of a `SrpServerServiceUpdateId`.
-    pub fn new(instance: &'a OT, id: SrpServerServiceUpdateId) -> Self {
-        Self { id, instance }
+impl SrpServerServiceUpdateId {
+    fn new(x: otSrpServerServiceUpdateId) -> Self {
+        Self(x)
     }
 
-    /// Converts this instance into the underlying ID value.
-    pub fn into_inner(self) -> SrpServerServiceUpdateId {
-        let ret = self.id;
+    fn take(self) -> otSrpServerServiceUpdateId {
+        let ret = self.0;
         core::mem::forget(self);
         ret
     }
-
-    /// Responds to the service update.
-    pub fn respond(self, result: Result) {
-        self.instance.srp_server_handle_service_update_result(self.id, result);
-        core::mem::forget(self)
-    }
 }
 
-impl<'a, OT: SrpServer + ?Sized> Drop for SrpServerServiceUpdateResponder<'a, OT> {
+impl Drop for SrpServerServiceUpdateId {
     fn drop(&mut self) {
-        self.instance.srp_server_handle_service_update_result(self.id, Ok(()));
+        panic!("SrpServerServiceUpdateId dropped without being passed to SrpServer::srp_server_handle_service_update_result");
     }
 }
 
@@ -232,6 +309,14 @@ pub trait SrpServer {
         prev: Option<&'a SrpServerHost>,
     ) -> Option<&'a SrpServerHost>;
 
+    /// Returns an iterator over the SRP hosts.
+    fn srp_server_hosts(&self) -> SrpServerHostIterator<'_, Self>
+    where
+        Self: Sized,
+    {
+        SrpServerHostIterator { prev: None, ot_instance: self }
+    }
+
     /// Functional equivalent of
     /// [`otsys::otSrpServerHandleServiceUpdateResult`](crate::otsys::otSrpServerHandleServiceUpdateResult).
     fn srp_server_handle_service_update_result(&self, id: SrpServerServiceUpdateId, result: Result);
@@ -240,7 +325,7 @@ pub trait SrpServer {
     /// [`otsys::otSrpServerSetServiceUpdateHandler`](crate::otsys::otSrpServerSetServiceUpdateHandler).
     fn srp_server_set_service_update_fn<'a, F>(&'a self, f: Option<F>)
     where
-        F: FnMut(SrpServerServiceUpdateId, &'a SrpServerHost, u32) + 'a;
+        F: FnMut(&'a ot::Instance, SrpServerServiceUpdateId, &'a SrpServerHost, u32) + 'a;
 }
 
 impl<T: SrpServer + Boxable> SrpServer for ot::Box<T> {
@@ -281,7 +366,7 @@ impl<T: SrpServer + Boxable> SrpServer for ot::Box<T> {
 
     fn srp_server_set_service_update_fn<'a, F>(&'a self, f: Option<F>)
     where
-        F: FnMut(SrpServerServiceUpdateId, &'a SrpServerHost, u32) + 'a,
+        F: FnMut(&'a ot::Instance, SrpServerServiceUpdateId, &'a SrpServerHost, u32) + 'a,
     {
         self.as_ref().srp_server_set_service_update_fn(f)
     }
@@ -334,13 +419,17 @@ impl SrpServer for Instance {
         result: Result,
     ) {
         unsafe {
-            otSrpServerHandleServiceUpdateResult(self.as_ot_ptr(), id, Error::from(result).into())
+            otSrpServerHandleServiceUpdateResult(
+                self.as_ot_ptr(),
+                id.take(),
+                Error::from(result).into(),
+            )
         }
     }
 
     fn srp_server_set_service_update_fn<'a, F>(&'a self, f: Option<F>)
     where
-        F: FnMut(SrpServerServiceUpdateId, &'a SrpServerHost, u32) + 'a,
+        F: FnMut(&'a ot::Instance, SrpServerServiceUpdateId, &'a SrpServerHost, u32) + 'a,
     {
         unsafe extern "C" fn _ot_srp_server_service_update_handler<'a, F>(
             id: otSrpServerServiceUpdateId,
@@ -348,16 +437,52 @@ impl SrpServer for Instance {
             timeout: u32,
             context: *mut ::std::os::raw::c_void,
         ) where
-            F: FnMut(otSrpServerServiceUpdateId, &'a SrpServerHost, u32) + 'a,
+            F: FnMut(SrpServerServiceUpdateId, &'a SrpServerHost, u32) + 'a,
         {
             // Reconstitute a reference to our closure.
             let sender = &mut *(context as *mut F);
 
-            sender(id, SrpServerHost::ref_from_ot_ptr(host).unwrap(), timeout)
+            sender(
+                SrpServerServiceUpdateId::new(id),
+                SrpServerHost::ref_from_ot_ptr(host).unwrap(),
+                timeout,
+            )
         }
 
-        let (fn_ptr, fn_box, cb): (_, _, otSrpServerServiceUpdateHandler) = if let Some(f) = f {
-            let mut x = Box::new(f);
+        // This helper func is just to allow us to get the type of the
+        // wrapper closure (`f_wrapped`) so we can pass that type
+        // as a type argument to `_ot_srp_server_service_update_handler`.
+        fn get_service_update_handler<'a, X: 'a>(_: &X) -> otSrpServerServiceUpdateHandler
+        where
+            X: FnMut(SrpServerServiceUpdateId, &'a SrpServerHost, u32) + 'a,
+        {
+            Some(_ot_srp_server_service_update_handler::<X>)
+        }
+
+        let (fn_ptr, fn_box, cb): (_, _, otSrpServerServiceUpdateHandler) = if let Some(mut f) = f {
+            // Grab a pointer to our ot::Instance for use below in the wrapper closure.
+            let ot_instance_ptr = self.as_ot_ptr();
+
+            // Wrap around `f` with a closure that fills in the `ot_instance` field, which we
+            // won't have access to inside of `_ot_srp_server_service_update_handler::<_>`.
+            let f_wrapped =
+                move |id: SrpServerServiceUpdateId, host: &'a SrpServerHost, timeout: u32| {
+                    // SAFETY: This ot::Instance will be passed to the original closure as
+                    //         an argument. We know that it is valid because:
+                    //         1. It is being called by the instance, so it must still be around.
+                    //         2. By design there are no mutable references to the `ot::Instance`
+                    //            in existence.
+                    let ot_instance =
+                        unsafe { ot::Instance::ref_from_ot_ptr(ot_instance_ptr) }.unwrap();
+                    f(ot_instance, id, host, timeout)
+                };
+
+            // Since we don't have a way to directly refer to the type of the closure `f_wrapped`,
+            // we need to use a helper function that can pass the type as a generic argument to
+            // `_ot_srp_server_service_update_handler::<X>` as `X`.
+            let service_update_handler = get_service_update_handler(&f_wrapped);
+
+            let mut x = Box::new(f_wrapped);
 
             (
                 x.as_mut() as *mut _ as *mut ::std::os::raw::c_void,
@@ -366,7 +491,7 @@ impl SrpServer for Instance {
                         dyn FnMut(ot::SrpServerServiceUpdateId, &'a ot::SrpServerHost, u32) + 'a,
                     >,
                 ),
-                Some(_ot_srp_server_service_update_handler::<F>),
+                service_update_handler,
             )
         } else {
             (std::ptr::null_mut() as *mut ::std::os::raw::c_void, None, None)

@@ -4,6 +4,26 @@
 
 use crate::prelude_internal::*;
 
+/// Value of the separator byte between TXT entries.
+pub const DNSSD_TXT_SEPARATOR_BYTE: u8 = 0x13;
+
+/// Value of the separator character between TXT entries.
+pub const DNSSD_TXT_SEPARATOR_CHAR: char = '\x13';
+
+/// String containing the separator character used between TXT entries.
+pub const DNSSD_TXT_SEPARATOR_STR: &str = "\x13";
+
+/// Converts a iterator of strings into a single string separated with
+/// [`DNSSD_TXT_SEPARATOR_STR`].
+pub fn dnssd_flatten_txt<I: IntoIterator<Item = String>>(txt: I) -> String {
+    txt.into_iter().collect::<Vec<_>>().join(ot::DNSSD_TXT_SEPARATOR_STR)
+}
+
+/// Splits a TXT record from OpenThread into individual values.
+pub fn dnssd_split_txt(txt: &str) -> impl Iterator<Item = &'_ str> {
+    txt.split(|x| x == ot::DNSSD_TXT_SEPARATOR_CHAR).filter(|x| !x.is_empty())
+}
+
 /// Represents the type of a DNS query
 ///
 /// Functional equivalent of [`otsys::otDnsQueryType`](crate::otsys::otDnsQueryType).
@@ -17,10 +37,10 @@ pub enum DnssdQueryType {
     Browse = otDnssdQueryType_OT_DNSSD_QUERY_TYPE_BROWSE as isize,
 
     /// Functional equivalent of [`otsys::otDnsQueryType_OT_DNSSD_QUERY_TYPE_RESOLVE`](crate::otsys::otDnsQueryType_OT_DNSSD_QUERY_TYPE_RESOLVE).
-    Resolve = otDnssdQueryType_OT_DNSSD_QUERY_TYPE_RESOLVE as isize,
+    ResolveService = otDnssdQueryType_OT_DNSSD_QUERY_TYPE_RESOLVE as isize,
 
     /// Functional equivalent of [`otsys::otDnsQueryType_OT_DNSSD_QUERY_TYPE_RESOLVE_HOST`](crate::otsys::otDnsQueryType_OT_DNSSD_QUERY_TYPE_RESOLVE_HOST).
-    Host = otDnssdQueryType_OT_DNSSD_QUERY_TYPE_RESOLVE_HOST as isize,
+    ResolveHost = otDnssdQueryType_OT_DNSSD_QUERY_TYPE_RESOLVE_HOST as isize,
 }
 
 /// Functional equivalent of `otDnssdQuery`
@@ -58,6 +78,10 @@ impl DnssdQuery {
 /// [1]: https://openthread.io/reference/group/api-dnssd-server
 pub trait Dnssd {
     /// Functional equivalent to `otDnssdGetNextQuery`.
+    ///
+    /// Arguments:
+    ///
+    /// * `prev`: Reference to the previous `DnssdQuery`, or `None` to get the first DnssdQuery.
     fn dnssd_get_next_query(&self, prev: Option<&DnssdQuery>) -> Option<&DnssdQuery>;
 
     /// Functional equivalent to `otDnssdQueryHandleDiscoveredHost`.
@@ -69,6 +93,20 @@ pub trait Dnssd {
     );
 
     /// Functional equivalent to `otDnssdQueryHandleDiscoveredServiceInstance`.
+    ///
+    /// Arguments:
+    ///
+    /// * `service_full_name`: Full service name (e.g.`_ipps._tcp.default.service.arpa.`)
+    ///                        Must end with `.`.
+    /// * `addresses`: Reference to array of addresses for service.
+    /// * `full_name`: Full instance name (e.g.`OpenThread._ipps._tcp.default.service.arpa.`).
+    ///                Must end with `.`.
+    /// * `host_name`: Host name (e.g. `ot-host.default.service.arpa.`). Must end with `.`.
+    /// * `port`: Service port.
+    /// * `priority`: Service priority.
+    /// * `ttl`: Service TTL (in seconds).
+    /// * `txt_data`: Array of bytes representing the TXT record.
+    /// * `weight`: Service weight.
     fn dnssd_query_handle_discovered_service_instance(
         &self,
         service_full_name: &CStr,
@@ -273,26 +311,83 @@ impl Dnssd for Instance {
 }
 
 /// Iterator type for DNS-SD Queries
-#[allow(missing_debug_implementations)]
-pub struct DnssdQueryIterator<'a, T: ?Sized> {
+#[derive(Debug, Clone)]
+pub struct DnssdQueryIterator<'a, T: Dnssd> {
+    prev: Option<&'a DnssdQuery>,
     ot_instance: &'a T,
-    current: Option<&'a DnssdQuery>,
 }
 
-impl<'a, T: ?Sized + Dnssd> Iterator for DnssdQueryIterator<'a, T> {
-    type Item = (DnssdQueryType, CString);
+impl<'a, T: Dnssd> Iterator for DnssdQueryIterator<'a, T> {
+    type Item = &'a DnssdQuery;
+
     fn next(&mut self) -> Option<Self::Item> {
-        self.current = self.ot_instance.dnssd_get_next_query(self.current);
-        self.current.map(|x| x.query_type_and_name())
+        self.prev = self.ot_instance.dnssd_get_next_query(self.prev);
+        self.prev
     }
 }
 
 /// Extension trait for the trait [`Dnssd`].
-pub trait DnssdExt {
+pub trait DnssdExt: Dnssd {
     /// Iterator for easily iterating over all of the DNS-SD queries.
-    fn dnssd_query_iter(&self) -> DnssdQueryIterator<'_, Self> {
-        DnssdQueryIterator { ot_instance: self, current: None }
+    fn dnssd_queries(&self) -> DnssdQueryIterator<'_, Self>
+    where
+        Self: Sized,
+    {
+        DnssdQueryIterator { prev: None, ot_instance: self }
     }
 }
 
 impl<T: Dnssd> DnssdExt for T {}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_split_txt() {
+        assert_eq!(
+            ot::dnssd_split_txt("").map(ToString::to_string).collect::<Vec<_>>(),
+            Vec::<String>::new()
+        );
+        assert_eq!(
+            ot::dnssd_split_txt("\x13\x13\x13\x13").map(ToString::to_string).collect::<Vec<_>>(),
+            Vec::<String>::new()
+        );
+        assert_eq!(
+            ot::dnssd_split_txt("\x13xa=a7bfc4981f4e4d22\x13xp=029c6f4dbae059cb")
+                .map(ToString::to_string)
+                .collect::<Vec<_>>(),
+            vec!["xa=a7bfc4981f4e4d22".to_string(), "xp=029c6f4dbae059cb".to_string()]
+        );
+        assert_eq!(
+            ot::dnssd_split_txt("xa=a7bfc4981f4e4d22\x13xp=029c6f4dbae059cb")
+                .map(ToString::to_string)
+                .collect::<Vec<_>>(),
+            vec!["xa=a7bfc4981f4e4d22".to_string(), "xp=029c6f4dbae059cb".to_string()]
+        );
+    }
+
+    #[test]
+    fn test_flatten_txt() {
+        assert_eq!(ot::dnssd_flatten_txt(None), String::default());
+        assert_eq!(ot::dnssd_flatten_txt(vec![]), String::default());
+        assert_eq!(
+            ot::dnssd_flatten_txt(vec!["xa=a7bfc4981f4e4d22".to_string()]),
+            "xa=a7bfc4981f4e4d22".to_string()
+        );
+        assert_eq!(
+            ot::dnssd_flatten_txt(
+                Some(vec!["xa=a7bfc4981f4e4d22".to_string()]).into_iter().flatten()
+            ),
+            "xa=a7bfc4981f4e4d22".to_string()
+        );
+        assert_eq!(
+            ot::dnssd_flatten_txt(
+                Some(vec!["xa=a7bfc4981f4e4d22".to_string(), "xp=029c6f4dbae059cb".to_string()])
+                    .into_iter()
+                    .flatten()
+            ),
+            "xa=a7bfc4981f4e4d22\x13xp=029c6f4dbae059cb".to_string()
+        );
+    }
+}
