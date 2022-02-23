@@ -6,17 +6,22 @@ of the image, which is part of the
 [Verified Boot](https://android.googlesource.com/platform/external/avb/+/master/README.md)
 process.
 
+It further defines the `vbmeta` tool, which is a thin wrapper around the main
+functionality of the library. It serves as a means of creating one-off VBMeta
+images from ZBIs - and its source further serves as example usage of the
+crate.
+
 **Usage**
 
 ```
 use vbmeta::{Key, HashDescriptor, Salt, VBMeta};
 
 let key = Key::try_new(PRIVATE_KEY_PEM, PUBLIC_KEY_METADATA).unwrap();
-let salt = Salt::random();
+let salt = Salt::random().unwrap();
 let descriptor = HashDescriptor::new("zircon", ZBI_BYTES, salt);
-let descriptors = !vec[descriptor];
+let descriptors = vec![descriptor];
 
-let mut vbmeta = VBMeta::try_new(descriptors, key).unwrap();
+let mut vbmeta = VBMeta::sign(descriptors, key).unwrap();
 let vbmeta_bytes = vbmeta.bytes;
 ```
 
@@ -25,7 +30,7 @@ let vbmeta_bytes = vbmeta.bytes;
 The layout of the VBMeta struct consists of a header, authentication data,
 and auxiliary data. The header is required and is always 0x100 bytes in length.
 Both the authentication and auxiliary data are generally optional, but in this
-API must be explicitly specified in `VBMeta::try_new(descriptors, key)`, because
+API must be explicitly specified in `VBMeta::sign(descriptors, key)`, because
 a VBMeta block without a descriptor and key is not useful on Fuchsia.
 
 ![drawing](doc/vbmeta_layout.png)
