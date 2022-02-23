@@ -404,17 +404,16 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
     {
         let mut fs = ServiceFs::new();
 
-        let service_dir;
-        if runtime == Runtime::Service {
+        let service_dir = if runtime == Runtime::Service {
             // Initialize inspect.
             if let Err(e) = inspect_runtime::serve(component::inspector(), &mut fs) {
                 fx_log_warn!("Unable to serve inspect runtime: {:?}", e);
             }
 
-            service_dir = fs.dir("svc");
+            fs.dir("svc")
         } else {
-            service_dir = fs.root_dir();
-        }
+            fs.root_dir()
+        };
 
         // Define top level MessageHub for service communication.
         let delegate = service::MessageHub::create_hub();
@@ -496,9 +495,7 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
 
         let agent_blueprints = self
             .agent_mapping_func
-            .map(|agent_mapping_func| {
-                agent_types.into_iter().map(|agent_type| (agent_mapping_func)(agent_type)).collect()
-            })
+            .map(|agent_mapping_func| agent_types.into_iter().map(agent_mapping_func).collect())
             .unwrap_or(self.agent_blueprints);
 
         let job_manager_signature = Manager::spawn(&delegate).await;
@@ -538,7 +535,7 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
     pub async fn spawn_nested(self, env_name: &'static str) -> Result<Environment, Error> {
         let (mut fs, delegate, job_seeder, entities) =
             self.prepare_env(Runtime::Nested(env_name)).await.context("Failed to prepare env")?;
-        let nested_environment = Some(fs.create_salted_nested_environment(&env_name)?);
+        let nested_environment = Some(fs.create_salted_nested_environment(env_name)?);
         fasync::Task::spawn(fs.collect()).detach();
 
         Ok(Environment::new(nested_environment, delegate, job_seeder, entities))
