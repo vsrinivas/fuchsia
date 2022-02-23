@@ -139,7 +139,7 @@ mod test {
         let test_addr = current_task
             .mm
             .map(
-                UserAddress::default(),
+                DesiredAddress::Hint(UserAddress::default()),
                 test_vmo,
                 0,
                 test_mem_size as usize,
@@ -185,7 +185,7 @@ mod test {
         let test_addr = current_task
             .mm
             .map(
-                UserAddress::default(),
+                DesiredAddress::Hint(UserAddress::default()),
                 test_vmo,
                 0,
                 test_mem_size as usize,

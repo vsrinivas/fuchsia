@@ -90,9 +90,23 @@ pub fn sys_mmap(
             zx::VmarFlags::from_bits_unchecked(zx::VmarFlagsExtended::SPECIFIC_OVERWRITE.bits())
         };
     }
+    let addr = if flags & MAP_FIXED != 0 || flags & MAP_FIXED_NOREPLACE != 0 {
+        DesiredAddress::Fixed(addr)
+    } else {
+        DesiredAddress::Hint(addr)
+    };
 
-    let mut filename = None;
-    let vmo = if flags & MAP_ANONYMOUS != 0 {
+    let vmo_offset = if flags & MAP_ANONYMOUS != 0 { 0 } else { offset };
+
+    let mut options = MappingOptions::empty();
+    if flags & MAP_SHARED != 0 {
+        options |= MappingOptions::SHARED;
+    }
+    if flags & MAP_ANONYMOUS != 0 {
+        options |= MappingOptions::ANONYMOUS;
+    }
+
+    let MappedVmo { vmo, user_address } = if flags & MAP_ANONYMOUS != 0 {
         // mremap can grow memory regions, so make sure the VMO is resizable.
         let mut vmo = zx::Vmo::create_with_opts(zx::VmoOptions::RESIZABLE, length as u64).map_err(
             |s| match s {
@@ -106,67 +120,21 @@ pub fn sys_mmap(
         if zx_flags.contains(zx::VmarFlags::PERM_EXECUTE) {
             vmo = vmo.replace_as_executable(&VMEX_RESOURCE).map_err(impossible_error)?;
         }
-        vmo
+        let vmo = Arc::new(vmo);
+        let user_address =
+            current_task.mm.map(addr, vmo.clone(), vmo_offset, length, zx_flags, options, None)?;
+        MappedVmo::new(vmo, user_address)
     } else {
         // TODO(tbodt): maximize protection flags so that mprotect works
         let file = current_task.files.get(fd)?;
-        filename = Some(file.name.clone());
-        let zx_prot = mmap_prot_to_vm_opt(prot);
-        if flags & MAP_PRIVATE != 0 {
-            // TODO(tbodt): Use VMO_FLAG_PRIVATE to have the filesystem server do the clone for us.
-            let vmo = file.get_vmo(&current_task, zx_prot - zx::VmarFlags::PERM_WRITE)?;
-            let mut clone_flags = zx::VmoChildOptions::SNAPSHOT_AT_LEAST_ON_WRITE;
-            if !zx_prot.contains(zx::VmarFlags::PERM_WRITE) {
-                clone_flags |= zx::VmoChildOptions::NO_WRITE;
-            }
-            vmo.create_child(clone_flags, 0, vmo.get_size().map_err(impossible_error)?)
-                .map_err(impossible_error)?
-        } else {
-            file.get_vmo(&current_task, zx_prot)?
-        }
+        file.mmap(&current_task, addr, vmo_offset, length, zx_flags, options, file.name.clone())?
     };
-
-    let vmo = Arc::new(vmo);
-    let vmo_offset = if flags & MAP_ANONYMOUS != 0 { 0 } else { offset };
-
-    let mut options = MappingOptions::empty();
-    if flags & MAP_SHARED != 0 {
-        options |= MappingOptions::SHARED;
-    }
-    if flags & MAP_ANONYMOUS != 0 {
-        options |= MappingOptions::ANONYMOUS;
-    }
-
-    let try_map = |addr, flags| {
-        current_task.mm.map(
-            addr,
-            Arc::clone(&vmo),
-            vmo_offset,
-            length,
-            flags,
-            options,
-            filename.clone(),
-        )
-    };
-    let addr = match try_map(addr, zx_flags) {
-        Err(errno) if zx_flags.contains(zx::VmarFlags::SPECIFIC) => {
-            if flags & MAP_FIXED_NOREPLACE != 0 {
-                return Err(errno);
-            }
-            if flags & MAP_FIXED != 0 {
-                return Err(errno);
-            }
-            try_map(UserAddress::default(), zx_flags - zx::VmarFlags::SPECIFIC)
-        }
-        result => result,
-    }?;
 
     if flags & MAP_POPULATE != 0 {
         let _result = vmo.op_range(zx::VmoOp::COMMIT, vmo_offset, length as u64);
         // "The mmap() call doesn't fail if the mapping cannot be populated."
     }
-
-    Ok(addr.into())
+    Ok(user_address.into())
 }
 
 pub fn sys_mprotect(

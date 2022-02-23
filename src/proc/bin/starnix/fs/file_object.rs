@@ -10,6 +10,8 @@ use std::sync::Arc;
 use crate::errno;
 use crate::error;
 use crate::fs::*;
+use crate::logging::impossible_error;
+use crate::mm::{DesiredAddress, MappedVmo, MappingOptions};
 use crate::not_implemented;
 use crate::syscalls::SyscallResult;
 use crate::task::*;
@@ -84,16 +86,68 @@ pub trait FileOps: Send + Sync + AsAny {
         whence: SeekOrigin,
     ) -> Result<off_t, Errno>;
 
-    /// Responds to an mmap call by returning a VMO. At least the requested protection flags must
+    /// Returns a VMO representing this file. At least the requested protection flags must
     /// be set on the VMO. Reading or writing the VMO must read or write the file. If this is not
     /// possible given the requested protection, an error must be returned.
+    /// The `length` is a hint for the desired size of the VMO. The returned VMO may be larger or
+    /// smaller than the requested length.
+    /// This method is typically called by [`Self::mmap`].
     fn get_vmo(
         &self,
         _file: &FileObject,
         _current_task: &CurrentTask,
+        _length: Option<usize>,
         _prot: zx::VmarFlags,
     ) -> Result<zx::Vmo, Errno> {
         error!(ENODEV)
+    }
+
+    /// Responds to an mmap call. The default implementation calls [`Self::get_vmo`] to get a VMO
+    /// and then maps it with [`crate::mm::MemoryManager::map`].
+    /// Only implement this trait method if your file needs to control mapping, or record where
+    /// a VMO gets mapped.
+    fn mmap(
+        &self,
+        file: &FileObject,
+        current_task: &CurrentTask,
+        addr: DesiredAddress,
+        vmo_offset: u64,
+        length: usize,
+        flags: zx::VmarFlags,
+        options: MappingOptions,
+        filename: NamespaceNode,
+    ) -> Result<MappedVmo, Errno> {
+        // Sanitize the protection flags to only include PERM_READ, PERM_WRITE, and PERM_EXECUTE.
+        let zx_prot_flags = flags
+            & (zx::VmarFlags::PERM_READ | zx::VmarFlags::PERM_WRITE | zx::VmarFlags::PERM_EXECUTE);
+
+        let vmo = Arc::new(if options.contains(MappingOptions::SHARED) {
+            self.get_vmo(file, current_task, Some(length), zx_prot_flags)?
+        } else {
+            // TODO(tbodt): Use VMO_FLAG_PRIVATE to have the filesystem server do the clone for us.
+            let vmo = self.get_vmo(
+                file,
+                current_task,
+                Some(length),
+                zx_prot_flags - zx::VmarFlags::PERM_WRITE,
+            )?;
+            let mut clone_flags = zx::VmoChildOptions::SNAPSHOT_AT_LEAST_ON_WRITE;
+            if !zx_prot_flags.contains(zx::VmarFlags::PERM_WRITE) {
+                clone_flags |= zx::VmoChildOptions::NO_WRITE;
+            }
+            vmo.create_child(clone_flags, 0, vmo.get_size().map_err(impossible_error)?)
+                .map_err(impossible_error)?
+        });
+        let addr = current_task.mm.map(
+            addr,
+            vmo.clone(),
+            vmo_offset,
+            length,
+            flags,
+            options,
+            Some(filename),
+        )?;
+        Ok(MappedVmo::new(vmo, addr))
     }
 
     fn readdir(
@@ -367,6 +421,7 @@ impl FileOps for OPathOps {
         &self,
         _file: &FileObject,
         _current_task: &CurrentTask,
+        _length: Option<usize>,
         _prot: zx::VmarFlags,
     ) -> Result<zx::Vmo, Errno> {
         error!(EBADF)
@@ -595,6 +650,7 @@ impl FileObject {
     pub fn get_vmo(
         &self,
         current_task: &CurrentTask,
+        length: Option<usize>,
         prot: zx::VmarFlags,
     ) -> Result<zx::Vmo, Errno> {
         if prot.contains(zx::VmarFlags::PERM_READ) && !self.can_read() {
@@ -604,7 +660,30 @@ impl FileObject {
             return error!(EACCES);
         }
         // TODO: Check for PERM_EXECUTE by checking whether the filesystem is mounted as noexec.
-        self.ops().get_vmo(self, current_task, prot)
+        self.ops().get_vmo(self, current_task, length, prot)
+    }
+
+    pub fn mmap(
+        &self,
+        current_task: &CurrentTask,
+        addr: DesiredAddress,
+        vmo_offset: u64,
+        length: usize,
+        flags: zx::VmarFlags,
+        options: MappingOptions,
+        filename: NamespaceNode,
+    ) -> Result<MappedVmo, Errno> {
+        if flags.contains(zx::VmarFlags::PERM_READ) && !self.can_read() {
+            return error!(EACCES);
+        }
+        if flags.contains(zx::VmarFlags::PERM_WRITE)
+            && !self.can_write()
+            && options.contains(MappingOptions::SHARED)
+        {
+            return error!(EACCES);
+        }
+        // TODO: Check for PERM_EXECUTE by checking whether the filesystem is mounted as noexec.
+        self.ops().mmap(self, current_task, addr, vmo_offset, length, flags, options, filename)
     }
 
     pub fn readdir(

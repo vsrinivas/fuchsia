@@ -130,7 +130,7 @@ impl elf_load::Mapper for Mapper<'_> {
         let vmo = Arc::new(vmo.duplicate_handle(zx::Rights::SAME_RIGHTS)?);
         self.mm
             .map(
-                self.mm.base_addr + vmar_offset,
+                DesiredAddress::Fixed(self.mm.base_addr + vmar_offset),
                 vmo,
                 vmo_offset,
                 length,
@@ -232,7 +232,8 @@ fn resolve_executable_impl(
     if recursion_depth >= MAX_RECURSION_DEPTH {
         return error!(ELOOP);
     }
-    let vmo = file.get_vmo(current_task, zx::VmarFlags::PERM_READ | zx::VmarFlags::PERM_EXECUTE)?;
+    let vmo =
+        file.get_vmo(current_task, None, zx::VmarFlags::PERM_READ | zx::VmarFlags::PERM_EXECUTE)?;
     let mut header = [0u8; 2];
     match vmo.read(&mut header, 0) {
         Ok(()) => {}
@@ -339,8 +340,11 @@ fn resolve_elf(
             .map_err(|status| from_status_like_fdio!(status))?;
         let interp = CStr::from_bytes_with_nul(&interp).map_err(|_| errno!(EINVAL))?;
         let interp_file = current_task.open_file(interp.to_bytes(), OpenFlags::RDONLY)?;
-        let interp_vmo = interp_file
-            .get_vmo(current_task, zx::VmarFlags::PERM_READ | zx::VmarFlags::PERM_EXECUTE)?;
+        let interp_vmo = interp_file.get_vmo(
+            current_task,
+            None,
+            zx::VmarFlags::PERM_READ | zx::VmarFlags::PERM_EXECUTE,
+        )?;
         Some(ResolvedInterpElf { file: interp_file, vmo: interp_vmo })
     } else {
         None
@@ -377,7 +381,7 @@ pub fn load_executable(
         .set_name(CStr::from_bytes_with_nul(b"[stack]\0").unwrap())
         .map_err(impossible_error)?;
     let stack_base = current_task.mm.map(
-        UserAddress::default(),
+        DesiredAddress::Hint(UserAddress::default()),
         Arc::clone(&stack_vmo),
         0,
         stack_size,

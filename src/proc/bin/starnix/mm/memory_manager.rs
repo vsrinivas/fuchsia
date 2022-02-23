@@ -947,7 +947,7 @@ impl MemoryManager {
 
     pub fn map(
         &self,
-        addr: UserAddress,
+        addr: DesiredAddress,
         vmo: Arc<zx::Vmo>,
         vmo_offset: u64,
         length: usize,
@@ -955,9 +955,31 @@ impl MemoryManager {
         options: MappingOptions,
         filename: Option<NamespaceNode>,
     ) -> Result<UserAddress, Errno> {
-        let vmar_offset = if addr.is_null() { 0 } else { addr - self.base_addr };
+        let vmar_offset = match addr.address() {
+            a if a.is_null() => 0,
+            a => a - self.base_addr,
+        };
+
         let mut state = self.state.write();
-        state.map(vmar_offset, vmo, vmo_offset, length, flags, options, filename)
+        let mut try_map = |vmar_offset, flags| {
+            state.map(
+                vmar_offset,
+                Arc::clone(&vmo),
+                vmo_offset,
+                length,
+                flags,
+                options,
+                filename.clone(),
+            )
+        };
+        let addr = match try_map(vmar_offset, flags) {
+            Err(errno) if flags.contains(zx::VmarFlags::SPECIFIC) => match addr {
+                DesiredAddress::Fixed(_) => return Err(errno),
+                DesiredAddress::Hint(_) => try_map(0, flags - zx::VmarFlags::SPECIFIC),
+            },
+            result => result,
+        }?;
+        Ok(addr)
     }
 
     pub fn remap(
@@ -1200,6 +1222,38 @@ impl MemoryManager {
             }
         }
         Ok(offset)
+    }
+}
+
+/// A VMO and the userspace address at which it was mapped.
+#[derive(Debug, Clone)]
+pub struct MappedVmo {
+    pub vmo: Arc<zx::Vmo>,
+    pub user_address: UserAddress,
+}
+
+impl MappedVmo {
+    pub fn new(vmo: Arc<zx::Vmo>, user_address: UserAddress) -> Self {
+        Self { vmo, user_address }
+    }
+}
+
+/// The user-space address at which a mapping should be placed. Used by [`MemoryManager::map`].
+#[derive(Debug, Clone, Copy)]
+pub enum DesiredAddress {
+    /// The address is a hint. If the address is 0 or overlaps an existing mapping, it may be mapped
+    /// to a location chosen by the kernel.
+    Hint(UserAddress),
+    /// The address is a requirement. If the address overlaps an existing mapping (and cannot
+    /// overwrite it), mapping fails.
+    Fixed(UserAddress),
+}
+
+impl DesiredAddress {
+    pub fn address(&self) -> UserAddress {
+        match self {
+            DesiredAddress::Hint(addr) | DesiredAddress::Fixed(addr) => *addr,
+        }
     }
 }
 

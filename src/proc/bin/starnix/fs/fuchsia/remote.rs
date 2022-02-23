@@ -424,6 +424,7 @@ impl FileOps for RemoteFileObject {
         &self,
         _file: &FileObject,
         _current_task: &CurrentTask,
+        _length: Option<usize>,
         mut prot: zx::VmarFlags,
     ) -> Result<zx::Vmo, Errno> {
         let has_execute = prot.contains(zx::VmarFlags::PERM_EXECUTE);

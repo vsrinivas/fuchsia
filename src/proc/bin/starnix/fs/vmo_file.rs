@@ -196,6 +196,7 @@ impl FileOps for VmoFileObject {
         &self,
         file: &FileObject,
         current_task: &CurrentTask,
+        _length: Option<usize>,
         prot: zx::VmarFlags,
     ) -> Result<zx::Vmo, Errno> {
         VmoFileObject::get_vmo(&self.vmo, file, current_task, prot)

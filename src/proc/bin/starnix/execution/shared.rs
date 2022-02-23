@@ -19,7 +19,7 @@ use crate::from_status_like_fdio;
 use crate::fs::ext4::ExtFilesystem;
 use crate::fs::fuchsia::{create_file_from_handle, RemoteFs, SyslogFile};
 use crate::fs::*;
-use crate::mm::{MappingOptions, PAGE_SIZE};
+use crate::mm::{DesiredAddress, MappingOptions, PAGE_SIZE};
 use crate::task::*;
 use crate::types::*;
 use crate::vmex_resource::VMEX_RESOURCE;
@@ -95,7 +95,7 @@ pub fn set_process_debug_addr(current_task: &mut CurrentTask) -> Result<(), Errn
     vmo.write(&instructions, 0).map_err(|e| from_status_like_fdio!(e))?;
 
     let instruction_pointer = current_task.mm.map(
-        UserAddress::default(),
+        DesiredAddress::Hint(UserAddress::default()),
         vmo,
         0,
         instructions.len(),
