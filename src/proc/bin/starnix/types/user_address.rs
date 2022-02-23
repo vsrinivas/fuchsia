@@ -136,12 +136,12 @@ impl fmt::Debug for UserAddress {
 
 #[derive(Debug, Default, Clone, Copy, Eq, PartialEq, Hash, Ord, PartialOrd)]
 #[repr(transparent)]
-pub struct UserRef<T: AsBytes + FromBytes> {
+pub struct UserRef<T> {
     addr: UserAddress,
     phatom: PhantomData<T>,
 }
 
-impl<T: AsBytes + FromBytes> UserRef<T> {
+impl<T> UserRef<T> {
     pub fn new(addr: UserAddress) -> UserRef<T> {
         UserRef::<T> { addr, phatom: PhantomData::<T>::default() }
     }
@@ -162,12 +162,12 @@ impl<T: AsBytes + FromBytes> UserRef<T> {
         UserRef::<T>::new(self.addr() + index * mem::size_of::<T>())
     }
 
-    pub fn cast<S: AsBytes + FromBytes>(&self) -> UserRef<S> {
+    pub fn cast<S>(&self) -> UserRef<S> {
         UserRef::<S>::new(self.addr)
     }
 }
 
-impl<T: AsBytes + FromBytes> ops::Deref for UserRef<T> {
+impl<T> ops::Deref for UserRef<T> {
     type Target = UserAddress;
 
     fn deref(&self) -> &UserAddress {
@@ -175,7 +175,7 @@ impl<T: AsBytes + FromBytes> ops::Deref for UserRef<T> {
     }
 }
 
-impl<T: AsBytes + FromBytes> fmt::Display for UserRef<T> {
+impl<T> fmt::Display for UserRef<T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.addr().fmt(f)
     }

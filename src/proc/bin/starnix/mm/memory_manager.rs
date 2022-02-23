@@ -1089,15 +1089,16 @@ impl MemoryManager {
         state.read_memory(addr, bytes)
     }
 
-    pub fn read_object<T: AsBytes + FromBytes>(
-        &self,
-        user: UserRef<T>,
-        object: &mut T,
-    ) -> Result<(), Errno> {
-        self.read_memory(user.addr(), object.as_bytes_mut())
+    pub fn read_object<T: FromBytes>(&self, user: UserRef<T>, object: &mut T) -> Result<(), Errno> {
+        // SAFETY: T is FromBytes, which means that any bit pattern is valid. Interpreting T as u8
+        // is safe because T's alignment requirements are larger than u8.
+        let buffer = unsafe {
+            std::slice::from_raw_parts_mut(object as *mut T as *mut u8, std::mem::size_of::<T>())
+        };
+        self.read_memory(user.addr(), buffer)
     }
 
-    pub fn read_objects<T: AsBytes + FromBytes>(
+    pub fn read_objects<T: FromBytes>(
         &self,
         user: UserRef<T>,
         objects: &mut [T],
@@ -1171,19 +1172,11 @@ impl MemoryManager {
         self.state.read().write_memory(addr, bytes)
     }
 
-    pub fn write_object<T: AsBytes + FromBytes>(
-        &self,
-        user: UserRef<T>,
-        object: &T,
-    ) -> Result<(), Errno> {
+    pub fn write_object<T: AsBytes>(&self, user: UserRef<T>, object: &T) -> Result<(), Errno> {
         self.write_memory(user.addr(), &object.as_bytes())
     }
 
-    pub fn write_objects<T: AsBytes + FromBytes>(
-        &self,
-        user: UserRef<T>,
-        objects: &[T],
-    ) -> Result<(), Errno> {
+    pub fn write_objects<T: AsBytes>(&self, user: UserRef<T>, objects: &[T]) -> Result<(), Errno> {
         for (index, object) in objects.iter().enumerate() {
             self.write_object(user.at(index), object)?;
         }
