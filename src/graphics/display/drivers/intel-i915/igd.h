@@ -131,7 +131,7 @@ class DdiFlags : public hwreg::RegisterBase<DdiFlags, uint16_t> {
   static auto Get() { return hwreg::RegisterAddr<DdiFlags>(0); }
 };
 
-typedef struct ddi_config {
+typedef struct __attribute__((packed)) ddi_config {
   uint8_t unused1[2];
   // See DdiFlags class
   uint16_t ddi_flags;
