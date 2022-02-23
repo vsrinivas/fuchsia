@@ -738,7 +738,7 @@ template("assemble_system") {
       "assembly",
       "image",
       "--product",
-      rebase_path(files.regenerated_image_assembly_config, root_build_dir),
+      rebase_path(files.image_assembly_config, root_build_dir),
       "--board",
       rebase_path(files.board_config, root_build_dir),
       "--log-commands",
@@ -755,12 +755,12 @@ template("assemble_system") {
     }
     deps += [
       ":${labels.board_config}",
-      ":${labels.product_assembler}",
+      ":${labels.image_assembly_config}",
     ]
 
     inputs = [
       files.board_config,
-      files.regenerated_image_assembly_config,
+      files.image_assembly_config,
     ]
 
     outputs = [
