@@ -45,7 +45,13 @@ def main():
         cmd_args = [sys.executable, '-S'] + cmd_args
 
     # Run the command.
-    subprocess.check_call(cmd_args)
+    try:
+        subprocess.check_call(cmd_args)
+    except subprocess.CalledProcessError as exc:
+        # Simply forward the exit code instead of raising an exception to avoid
+        # polluting every build error message with a generic stack trace from
+        # this script.
+        return exc.returncode
 
     # Generate the depfile.
     with open(args.depfile, 'w') as f:
