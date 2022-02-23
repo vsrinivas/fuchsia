@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::object_store::crypt::{Crypt, UnwrappedKey, UnwrappedKeys, WrappedKeys},
+    crate::crypt::{Crypt, UnwrappedKey, UnwrappedKeys, WrappedKeys},
     anyhow::{anyhow, bail, Error},
     async_trait::async_trait,
     fidl_fuchsia_fxfs::CryptProxy,

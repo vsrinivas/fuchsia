@@ -6,9 +6,9 @@ use {
     anyhow::{bail, Error},
     chrono::{TimeZone, Utc},
     fxfs::{
+        crypt::Crypt,
         object_handle::{GetProperties, ObjectHandle, ReadObjectHandle, WriteObjectHandle},
         object_store::{
-            crypt::Crypt,
             directory::replace_child,
             filesystem::OpenFxFilesystem,
             fsck::{self},

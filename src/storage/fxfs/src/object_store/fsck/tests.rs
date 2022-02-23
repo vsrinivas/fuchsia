@@ -4,6 +4,7 @@
 
 use {
     crate::{
+        crypt::{Crypt, InsecureCrypt},
         lsm_tree::{
             simple_persistent_layer::SimplePersistentLayerWriter,
             types::{Item, ItemRef, Key, LayerIterator, LayerWriter, Value},
@@ -13,7 +14,6 @@ use {
             allocator::{
                 Allocator, AllocatorKey, AllocatorValue, CoalescingIterator, SimpleAllocator,
             },
-            crypt::{Crypt, InsecureCrypt},
             directory::Directory,
             extent_record::{ExtentKey, ExtentValue},
             filesystem::{Filesystem, FxFilesystem, Mutations, OpenFxFilesystem, OpenOptions},

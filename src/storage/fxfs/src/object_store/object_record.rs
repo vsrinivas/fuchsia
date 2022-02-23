@@ -6,6 +6,7 @@
 
 use {
     crate::{
+        crypt::WrappedKeys,
         lsm_tree::types::{Item, NextKey, OrdLowerBound, OrdUpperBound},
         serialized_types::Versioned,
     },
@@ -155,28 +156,6 @@ pub enum ObjectKind {
 pub enum EncryptionKeys {
     None,
     AES256XTS(WrappedKeys),
-}
-
-#[derive(Clone, Serialize, Deserialize, PartialEq)]
-pub struct WrappedKeys {
-    /// The identifier of the wrapping key.  The identifier has meaning to whatever is doing the
-    /// unwrapping.
-    pub wrapping_key_id: u64,
-
-    /// The keys (wrapped).  To support key rolling and clones, there can be more than one key.
-    /// Each of the keys is given an identifier.  The identifier is unique to the object.  AES 256
-    /// requires a 512 bit key, which is made of two 256 bit keys, one for the data and one for the
-    /// tweak.  Both those keys are derived from the single 256 bit key we have here.
-    pub keys: Vec<(/* id= */ u64, [u8; 32])>,
-}
-
-impl std::fmt::Debug for WrappedKeys {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("WrappedKeys")
-            .field("wrapping_key_id", &self.wrapping_key_id)
-            .field("keys", &self.keys.iter().map(|k| k.0).collect::<Vec<_>>())
-            .finish()
-    }
 }
 
 /// Object-level attributes.  Note that these are not the same as "attributes" in the

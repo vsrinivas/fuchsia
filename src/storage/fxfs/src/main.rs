@@ -11,9 +11,9 @@ use {
     fuchsia_runtime::HandleType,
     fuchsia_syslog, fuchsia_zircon as zx,
     fxfs::{
+        crypt::{Crypt, InsecureCrypt},
         mkfs, mount,
         object_store::{
-            crypt::{Crypt, InsecureCrypt},
             filesystem::OpenOptions,
             fsck::{self},
         },

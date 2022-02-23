@@ -4,6 +4,7 @@
 
 use {
     crate::{
+        crypt::{UnwrappedKeys, XtsCipherSet},
         errors::FxfsError,
         lsm_tree::types::{ItemRef, LayerIterator},
         object_handle::{
@@ -11,7 +12,6 @@ use {
             WriteObjectHandle,
         },
         object_store::{
-            crypt::{UnwrappedKeys, XtsCipherSet},
             extent_record::{Checksums, ExtentKey, ExtentValue},
             journal::fletcher64,
             object_manager::ObjectManager,
@@ -1160,12 +1160,12 @@ impl<'a, S: AsRef<ObjectStore> + Send + Sync + 'static> WriteBytes for DirectWri
 mod tests {
     use {
         crate::{
+            crypt::{Crypt, InsecureCrypt},
             lsm_tree::types::{ItemRef, LayerIterator},
             object_handle::{
                 GetProperties, ObjectHandle, ObjectProperties, ReadObjectHandle, WriteObjectHandle,
             },
             object_store::{
-                crypt::{Crypt, InsecureCrypt},
                 extent_record::ExtentKey,
                 filesystem::{Filesystem, FxFilesystem, Mutations, OpenFxFilesystem},
                 object_record::{ObjectKey, ObjectKeyData, ObjectValue, Timestamp},

@@ -7,11 +7,9 @@ use {
     argh::FromArgs,
     fuchsia_async as fasync,
     fxfs::{
+        crypt::{Crypt, InsecureCrypt},
         mkfs, mount,
-        object_store::{
-            crypt::{Crypt, InsecureCrypt},
-            fsck::{self},
-        },
+        object_store::fsck::{self},
     },
     std::{io::Read, path::Path, sync::Arc},
     storage_device::{file_backed_device::FileBackedDevice, DeviceHolder},

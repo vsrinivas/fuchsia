@@ -10,6 +10,7 @@
 //! Where possible, Fxfs code tries to be target agnostic.
 //! Fuchsia specific bindings are primarily found under [server].
 
+pub mod crypt;
 pub mod errors;
 pub mod lsm_tree;
 pub mod mkfs;

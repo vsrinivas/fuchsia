@@ -4,8 +4,8 @@
 
 use {
     crate::{
+        crypt::Crypt,
         object_store::{
-            crypt::Crypt,
             filesystem::{Filesystem, Info, OpenFxFilesystem},
             volume::root_volume,
         },
@@ -264,10 +264,7 @@ impl FsInspect for FxfsServer {
 #[cfg(test)]
 mod tests {
     use {
-        crate::{
-            object_store::{crypt::InsecureCrypt, FxFilesystem},
-            server::FxfsServer,
-        },
+        crate::{crypt::InsecureCrypt, object_store::FxFilesystem, server::FxfsServer},
         anyhow::Error,
         fidl_fuchsia_fs::AdminMarker,
         fidl_fuchsia_io::DirectoryMarker,

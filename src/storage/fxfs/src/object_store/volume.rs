@@ -4,9 +4,9 @@
 
 use {
     crate::{
+        crypt::Crypt,
         errors::FxfsError,
         object_store::{
-            crypt::Crypt,
             directory::Directory,
             filesystem::{Filesystem, FxFilesystem},
             graveyard::Graveyard,
@@ -157,11 +157,13 @@ pub async fn list_volumes(volume_directory: &Directory<ObjectStore>) -> Result<V
 mod tests {
     use {
         super::root_volume,
-        crate::object_store::{
+        crate::{
             crypt::InsecureCrypt,
-            directory::Directory,
-            filesystem::{Filesystem, FxFilesystem, SyncOptions},
-            transaction::{Options, TransactionHandler},
+            object_store::{
+                directory::Directory,
+                filesystem::{Filesystem, FxFilesystem, SyncOptions},
+                transaction::{Options, TransactionHandler},
+            },
         },
         fuchsia_async as fasync,
         std::sync::Arc,

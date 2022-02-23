@@ -4,6 +4,7 @@
 
 use {
     crate::{
+        crypt::Crypt,
         lsm_tree::{
             simple_persistent_layer::SimplePersistentLayer,
             skip_list_layer::SkipListLayer,
@@ -17,7 +18,6 @@ use {
                 Allocator, AllocatorKey, AllocatorValue, CoalescingIterator, SimpleAllocator,
             },
             constants::{SUPER_BLOCK_A_OBJECT_ID, SUPER_BLOCK_B_OBJECT_ID},
-            crypt::Crypt,
             extent_record::{ExtentKey, ExtentValue},
             filesystem::{Filesystem, FxFilesystem},
             fsck::errors::{FsckError, FsckFatal, FsckIssue, FsckWarning},

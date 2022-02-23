@@ -4,11 +4,11 @@
 
 use {
     crate::{
+        crypt::Crypt,
         errors::FxfsError,
         object_handle::INVALID_OBJECT_ID,
         object_store::{
             allocator::{Allocator, Reservation},
-            crypt::Crypt,
             directory::Directory,
             filesystem::{ApplyContext, ApplyMode, Mutations},
             journal::{self, checksum_list::ChecksumList, JournalCheckpoint},

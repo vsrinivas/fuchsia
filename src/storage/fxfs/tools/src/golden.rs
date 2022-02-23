@@ -7,9 +7,9 @@ use {
     anyhow::{bail, Error},
     chrono::Local,
     fxfs::{
+        crypt::{Crypt, InsecureCrypt},
         mkfs,
         mount::mount,
-        object_store::crypt::{Crypt, InsecureCrypt},
         serialized_types::LATEST_VERSION,
     },
     std::{

@@ -2,11 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-/// The allocator code is responsible for handing out extents of a requested size when asked.
 mod allocator;
 pub mod caching_object_handle;
 mod constants;
-pub mod crypt;
 pub mod data_buffer;
 pub mod directory;
 mod extent_record;
@@ -35,6 +33,7 @@ pub use store_object_handle::StoreObjectHandle;
 
 use {
     crate::{
+        crypt::{Crypt, StreamCipher, WrappedKeys},
         debug_assert_not_too_long,
         errors::FxfsError,
         lsm_tree::{
@@ -44,13 +43,12 @@ use {
         },
         object_handle::{ObjectHandle, ObjectHandleExt, WriteObjectHandle, INVALID_OBJECT_ID},
         object_store::{
-            crypt::{Crypt, StreamCipher},
             data_buffer::{DataBuffer, MemDataBuffer},
             extent_record::{Checksums, DEFAULT_DATA_ATTRIBUTE_ID},
             filesystem::{ApplyContext, ApplyMode, Filesystem, Mutations},
             journal::{checksum_list::ChecksumList, JournalCheckpoint},
             object_manager::{ObjectManager, ReservationUpdate},
-            object_record::{EncryptionKeys, ObjectKind, WrappedKeys},
+            object_record::{EncryptionKeys, ObjectKind},
             store_object_handle::DirectWriter,
             transaction::{
                 AssocObj, AssociatedObject, ExtentMutation, LockKey, Mutation, NoOrd,
@@ -1620,11 +1618,11 @@ impl AssociatedObject for ObjectStore {}
 mod tests {
     use {
         crate::{
+            crypt::{Crypt, InsecureCrypt},
             errors::FxfsError,
             lsm_tree::types::{Item, ItemRef, LayerIterator},
             object_handle::{ObjectHandle, ReadObjectHandle, WriteObjectHandle},
             object_store::{
-                crypt::{Crypt, InsecureCrypt},
                 directory::Directory,
                 extent_record::{ExtentKey, ExtentValue},
                 filesystem::{Filesystem, FxFilesystem, Mutations, OpenFxFilesystem, SyncOptions},

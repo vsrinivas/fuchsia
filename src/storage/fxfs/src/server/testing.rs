@@ -4,8 +4,8 @@
 
 use {
     crate::{
+        crypt::InsecureCrypt,
         object_store::{
-            crypt::InsecureCrypt,
             filesystem::{FxFilesystem, OpenFxFilesystem},
             fsck::{errors::FsckIssue, fsck_with_options, FsckOptions},
             volume::root_volume,
