@@ -128,3 +128,20 @@ class TestEagerPackageConfig(unittest.TestCase):
                         },
                     ]
             })
+
+    def test_reject_pinned_url(self):
+        configs = [
+            {
+                "url":
+                    "fuchsia-pkg://example.com/package?hash=deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
+                "realms":
+                    [
+                        {
+                            "app_id": "1a2b3c4d",
+                            "channels": ["stable", "beta", "alpha"]
+                        }
+                    ]
+            }
+        ]
+        with self.assertRaises(ValueError):
+            generate_omaha_client_config(configs)

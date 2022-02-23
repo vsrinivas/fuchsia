@@ -5,6 +5,7 @@
 
 import argparse
 import json
+import urllib.parse
 
 
 def generate_omaha_client_config(configs):
@@ -13,7 +14,12 @@ def generate_omaha_client_config(configs):
     for config in configs:
         package = {}
 
-        package['url'] = config['url']
+        url = config['url']
+        query = urllib.parse.urlparse(url).query
+        if 'hash' in urllib.parse.parse_qs(query):
+            raise ValueError(f"pinned URL not allowed: {url}")
+
+        package['url'] = url
         if 'flavor' in config:
             package['flavor'] = config['flavor']
 
