@@ -11,7 +11,7 @@ use {
         fmt,
         fs::File,
         io::{BufReader, Write},
-        path::{Path, PathBuf},
+        path::Path,
         sync::Mutex,
     },
 };
@@ -114,7 +114,7 @@ impl Environment {
         )
     }
 
-    pub fn init_env_file(path: &PathBuf) -> Result<()> {
+    pub fn init_env_file(path: &Path) -> Result<()> {
         let _e = ENV_MUTEX.lock().unwrap();
         let mut f = File::create(path)?;
         f.write_all(b"{}")?;

@@ -44,10 +44,17 @@ pub fn env_file() -> Option<PathBuf> {
 pub fn test_env_file() -> PathBuf {
     use tempfile::NamedTempFile;
     lazy_static::lazy_static! {
-        static ref FILE: NamedTempFile = NamedTempFile::new().expect("tmp access failed");
+        static ref ENV_FILE: NamedTempFile = NamedTempFile::new().expect("tmp access failed");
+        static ref USER_FILE: NamedTempFile = NamedTempFile::new().expect("tmp access failed");
     }
-    Environment::init_env_file(&FILE.path().to_path_buf()).expect("initializing env file");
-    FILE.path().to_path_buf()
+    Environment::init_env_file(ENV_FILE.path()).expect("initializing env file");
+
+    // Point the user config at a temporary file.
+    let mut env = Environment::load(ENV_FILE.path()).expect("opening env file");
+    env.user = Some(USER_FILE.path().to_str().expect("path to be UTF-8").to_string());
+    env.save(ENV_FILE.path()).expect("saving env file");
+
+    ENV_FILE.path().to_path_buf()
 }
 
 #[cfg(test)]
