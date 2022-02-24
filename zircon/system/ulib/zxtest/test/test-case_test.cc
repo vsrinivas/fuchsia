@@ -157,9 +157,9 @@ void TestCaseRun() {
   ZX_ASSERT_MSG(order == 7, "Number of operations exceeds value");
 
   ZX_ASSERT_MSG(operations.set_up_test_case < operations.constructor,
-                "Test::Test() executed before Test::SetUpTestCase\n");
+                "Test::Test() executed before Test::SetUpTestSuite\n");
   ZX_ASSERT_MSG(operations.constructor < operations.set_up,
-                "Test::SetUp executed before Test::SetUpTestCase\n");
+                "Test::SetUp executed before Test::SetUpTestSuite\n");
   ZX_ASSERT_MSG(operations.set_up < operations.body,
                 "Test::TestBody executed before Test::SetUp\n");
   ZX_ASSERT_MSG(operations.body < operations.tear_down,
@@ -167,7 +167,7 @@ void TestCaseRun() {
   ZX_ASSERT_MSG(operations.tear_down < operations.destructor,
                 "Test::~Test executed before Test::TearDown\n");
   ZX_ASSERT_MSG(operations.destructor < operations.tear_down_test_case,
-                "Test::TearDownTestCase executed before Test::~Test\n");
+                "Test::TearDownTestSuite executed before Test::~Test\n");
 }
 
 void TestCaseRegisterDuplicatedTestFails() {

@@ -61,7 +61,7 @@ struct MappingInfo {
 
 class ProcessFixture : public zxtest::Test {
  public:
-  static void SetUpTestCase() {
+  static void SetUpTestSuite() {
     // Create a VMO whose handle we'll give to the test process.
     // It will not be mapped into the test process's VMAR.
     zx::vmo unmapped_vmo;
@@ -169,7 +169,7 @@ class ProcessFixture : public zxtest::Test {
     ASSERT_TRUE(process_.is_valid());
   }
 
-  static void TearDownTestCase() {
+  static void TearDownTestSuite() {
     if (vmar_.is_valid()) {
       vmar_.destroy();
       vmar_.reset();
@@ -384,7 +384,7 @@ TEST_F(ProcessGetInfoTest, InfoProcessHandleTable) {
   size_t avail = 0;
   ASSERT_OK(
       process.get_info(ZX_INFO_HANDLE_TABLE, &handle_info, sizeof(handle_info), &actual, &avail));
-  // Since the process is a mini-process we fully control the handles in SetUpTestCase() above.
+  // Since the process is a mini-process we fully control the handles in SetUpTestSuite() above.
   // Although the order of handles is a detail that is not guaranteed by the ABI. The handles are
   // instanciated in the order they are written (then ready) into the channel; if we ever change
   // that we need to change this test.

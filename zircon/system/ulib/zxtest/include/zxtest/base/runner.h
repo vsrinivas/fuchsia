@@ -188,7 +188,8 @@ class Runner {
     static_assert(std::is_base_of<Test, TestImpl>::value, "Must inherit from Test");
     SourceLocation location = {.filename = filename, .line_number = line};
     return RegisterTest(test_case_name, test_name, location, std::move(factory),
-                        &TestBase::SetUpTestCase, &TestBase::TearDownTestCase);
+                        internal::Accessor<TestBase>::SetUpTestSuite(),
+                        internal::Accessor<TestBase>::TearDownTestSuite());
   }
 
   template <typename SuiteClass>

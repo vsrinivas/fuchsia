@@ -31,7 +31,7 @@ using VolumeManager = fuchsia_hardware_block_volume::VolumeManager;
 
 class FvmVolumeManagerApiTest : public zxtest::Test {
  public:
-  static void SetUpTestCase() {
+  static void SetUpTestSuite() {
     IsolatedDevmgr::Args args;
     args.disable_block_watcher = true;
 
@@ -39,7 +39,7 @@ class FvmVolumeManagerApiTest : public zxtest::Test {
     ASSERT_OK(IsolatedDevmgr::Create(&args, devmgr_.get()));
   }
 
-  static void TearDownTestCase() { devmgr_.reset(); }
+  static void TearDownTestSuite() { devmgr_.reset(); }
 
  protected:
   static std::unique_ptr<IsolatedDevmgr> devmgr_;

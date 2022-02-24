@@ -615,7 +615,7 @@ void TestDriverImplResetOnTestCompletion() {
 
   TestInfo test_info(kTestName, {.filename = kFileName, .line_number = kLineNumber},
                      &Test::Create<FakeTest>);
-  TestCase test_case(kTestCaseName, Test::SetUpTestCase, Test::TearDownTestCase);
+  TestCase test_case(kTestCaseName, Test::SetUpTestSuite, Test::TearDownTestSuite);
   struct CompleteFn {
     const char* name;
     void (TestDriverImpl::*complete)(const TestCase&, const TestInfo&);

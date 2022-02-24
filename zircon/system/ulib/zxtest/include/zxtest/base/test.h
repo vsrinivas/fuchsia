@@ -13,6 +13,19 @@
 
 namespace zxtest {
 
+namespace internal {
+// Access `SetUpTestSuite` and `TearDownTestSuite` regardless of scope.
+//
+// Gtest allows `SetUpTestSuite` and `TearDownTestSuite` to be protected functions.
+// The architecture of zxtest prevents it from running these functions if they're protected. So
+// to ease porting tests to zxtest, we are wrapping the functions into a getter.
+template <typename T>
+struct Accessor : T {
+  static constexpr auto SetUpTestSuite() { return &T::SetUpTestSuite; }
+  static constexpr auto TearDownTestSuite() { return &T::TearDownTestSuite; }
+};
+}  // namespace internal
+
 // Instance of a test to be executed.
 class Test : private internal::TestInternal {
  public:
@@ -27,11 +40,17 @@ class Test : private internal::TestInternal {
 
   virtual ~Test() = default;
 
+  // Blocking use of SetUpTestCase. Use SetUpTestSuite instead.
+  virtual void SetUpTestCase() final {}
+
+  // Blocking use of TearDownTestCase. Use TearDownTestSuite instead.
+  virtual void TearDownTestCase() final {}
+
   // Dummy implementation for TestCase SetUp functions.
-  static void SetUpTestCase() {}
+  static void SetUpTestSuite() {}
 
   // Dummy implementation for TestCase TearDown functions.
-  static void TearDownTestCase() {}
+  static void TearDownTestSuite() {}
 
   // Dummy SetUp method.
   virtual void SetUp() {}

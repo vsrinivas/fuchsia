@@ -29,10 +29,10 @@ class TestDriver;
 // Function for instantiating a TestInstance.
 using TestFactory = fit::function<std::unique_ptr<Test>(TestDriver*)>;
 
-// Function that definest a SetUp for a TestCase.
+// Function that defines a SetUp for a TestCase.
 using SetUpTestCaseFn = fit::function<void()>;
 
-// Function that definest a TearDown for a TestCase.
+// Function that defines a TearDown for a TestCase.
 using TearDownTestCaseFn = fit::function<void()>;
 
 }  // namespace internal

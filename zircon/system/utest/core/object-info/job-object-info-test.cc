@@ -41,7 +41,7 @@ constexpr std::string_view kGrandChildrenName = "grandchild";
 //     - grandchild job 2.1
 class JobFixutre : public zxtest::Test {
  public:
-  static void SetUpTestCase() {
+  static void SetUpTestSuite() {
     ASSERT_OK(zx::job::create(*zx::job::default_job(), 0, &root_), "Failed to create job.");
 
     for (size_t i = 0; i < kChildProcs; ++i) {
@@ -76,7 +76,7 @@ class JobFixutre : public zxtest::Test {
   }
 
   // Clean up job handles.
-  static void TearDownTestCase() {
+  static void TearDownTestSuite() {
     vmar_.reset();
     for (auto& vmar : vmar_) {
       vmar.destroy();

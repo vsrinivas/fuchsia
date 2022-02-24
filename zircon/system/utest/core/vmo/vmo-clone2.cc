@@ -33,7 +33,7 @@ namespace vmo_test {
 // faulting in all the static data pages beforehand.
 class VmoClone2TestCase : public zxtest::Test {
  public:
-  static void SetUpTestCase() {
+  static void SetUpTestSuite() {
     if (get_root_resource) {
       root_resource_ = zx::unowned_resource{get_root_resource()};
       ASSERT_TRUE(root_resource_->is_valid());

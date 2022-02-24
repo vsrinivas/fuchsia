@@ -16,8 +16,8 @@ class TestFixture : public zxtest::Test {
  public:
   ~TestFixture() override {}
 
-  static void SetUpTestCase() {}
-  static void TearDownTestCase() {}
+  static void SetUpTestSuite() {}
+  static void TearDownTestSuite() {}
 
  protected:
   void SetUp() override {}

@@ -22,11 +22,11 @@ zx::resource root_resource;
 
 class FakeResource : public zxtest::Test {
  public:
-  static void SetUpTestCase() {
+  static void SetUpTestSuite() {
     ASSERT_OK(fake_root_resource_create(root_resource.reset_and_get_address()));
   }
 
-  static void TearDownTestCase() { root_resource.reset(); }
+  static void TearDownTestSuite() { root_resource.reset(); }
 
  private:
   zx::resource root_;

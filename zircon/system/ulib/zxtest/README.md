@@ -155,11 +155,11 @@ public:
 
     // Called before this test case's first test runs.
     // Optional: Defaults to nothing.
-    static void SetUpTestCase() {}
+    static void SetUpTestSuite() {}
 
     // Called after all tests of this test case runs.
     // Optional: Defaults to nothing.
-    static void TearDownTestCase() {}
+    static void TearDownTestSuite() {}
 
 protected:
     // Called before every test of this test case.
@@ -196,8 +196,8 @@ TEST_F(FooTestCase, FooUsesRamdisk) {
     ASSERT_TRUE(foo.IsBar());
 }
 ```
-* Assertions are permitted in SetUpTestCase/TearDownTestCase and SetUp/TearDown methods.
-* Fatal errors during test case initialization (SetUpTestCase) will skip execution of all tests in that test case, but will still run TearDownTestCase.
+* Assertions are permitted in SetUpTestSuite/TearDownTestSuite and SetUp/TearDown methods.
+* Fatal errors during test case initialization (SetUpTestSuite) will skip execution of all tests in that test case, but will still run TearDownTestSuite.
 * Fatal errors during test initialization(SetUp) will skip that test, but will still run TearDown.
 
 ## Environment - Cpp only

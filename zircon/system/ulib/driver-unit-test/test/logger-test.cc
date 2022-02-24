@@ -18,7 +18,7 @@ constexpr char kLogMessage[] = "test log message";
 
 const char* kFakeTestCaseName = "test_case";
 const zxtest::TestCase kFakeTestCase = zxtest::TestCase{
-    kFakeTestCaseName, zxtest::Test::SetUpTestCase, zxtest::Test::TearDownTestCase};
+    kFakeTestCaseName, zxtest::Test::SetUpTestSuite, zxtest::Test::TearDownTestSuite};
 const zxtest::TestInfo kFakeTestInfo = zxtest::TestInfo("test", zxtest::SourceLocation{}, nullptr);
 
 class LoggerTest : public zxtest::Test {

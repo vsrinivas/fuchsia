@@ -162,7 +162,7 @@ class PthreadTest : public zxtest::Test {
  public:
   static constexpr int64_t kBackstopTime = 123456789;
 
-  static void SetUpTestCase() {
+  static void SetUpTestSuite() {
     // pthread_cond_timedwait relies on the system UTC clock which might not have been set or might
     // not have been started when these tests are run. Install a new test clock for the duration of
     // the test case.
@@ -174,7 +174,7 @@ class PthreadTest : public zxtest::Test {
     clock_installed_ = true;
   }
 
-  static void TearDownTestCase() {
+  static void TearDownTestSuite() {
     // If we replaced the UTC clock reference, restore it back to the original.
     if (clock_installed_) {
       zx::clock release_me;
