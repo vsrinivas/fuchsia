@@ -29,10 +29,12 @@ source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/../lib/va
 fx-config-read
 
 readonly BINARIES_JSON="$FUCHSIA_BUILD_DIR/binaries.json"
+readonly LLVM_OBJDUMP="$PREBUILT_CLANG_DIR/bin/llvm-objdump"
+readonly GNU_OBJDUMP="$PREBUILT_BINUTILS_DIR/bin/objdump"
 
 DEMANGLE=true
 USE_LLVM=false
-OBJDUMP_ARGS=()
+OBJDUMP_ARGS=(-d)
 
 while getopts lSrLn OPT; do
   case $OPT in
@@ -50,6 +52,12 @@ fi
 if [[ $# -eq 0 ]]; then
   fx-command-help
   exit 1
+fi
+
+if $USE_LLVM; then
+  readonly OBJDUMP="$LLVM_OBJDUMP"
+else
+  readonly OBJDUMP="$GNU_OBJDUMP"
 fi
 
 run_jq() {
@@ -120,7 +128,7 @@ for BINARY in "$@"; do
   fi
 done
 
-FILTER+=') | "\(.cpu) \(.debug) \(.label)"'
+FILTER+=') | "\(.debug) \(.label)"'
 
 PATHS=($($RUN_FILTER "$FILTER"))
 
@@ -130,30 +138,15 @@ if (( ${#PATHS[@]} == 0 )); then
 fi
 
 disassemble() {
-  local BINARY_CPU="$1" BINARY_PATH="$2" BINARY_LABEL="$3"
-  local -a CMD
+  local BINARY_PATH="$1" BINARY_LABEL="$2"
 
-  if $USE_LLVM; then
-    CMD=("$PREBUILT_CLANG_DIR/bin/llvm-objdump")
-  else
-    case "$BINARY_CPU" in
-    arm64) CMD=("$PREBUILT_GCC_DIR/bin/aarch64-elf-objdump" -m aarch64) ;;
-    x64) CMD=("$PREBUILT_GCC_DIR/bin/x86_64-elf-objdump" -m i386:x86-64) ;;
-    *)
-      fx-error "Can't handle binary $BINARY_PATH with CPU type $BINARY_CPU"
-      exit 1
-      ;;
-    esac
-  fi
+  "$OBJDUMP" "${OBJDUMP_ARGS[@]}" "$FUCHSIA_BUILD_DIR/$BINARY_PATH" > "$FUCHSIA_BUILD_DIR/${BINARY_PATH}.lst"
 
-  CMD+=(-d)
-
-  "${CMD[@]}" "${OBJDUMP_ARGS[@]}" "$FUCHSIA_BUILD_DIR/$BINARY_PATH" > "$FUCHSIA_BUILD_DIR/${BINARY_PATH}.lst"
   fx-info Wrote "${BINARY_PATH}.lst" for "$BINARY_LABEL"
 }
 
 i=0
 while (( i < ${#PATHS[@]} )); do
-  disassemble "${PATHS[$i]}" "${PATHS[$((i+1))]}" "${PATHS[$((i+2))]}"
-  ((i+=3))
+  disassemble "${PATHS[$i]}" "${PATHS[$((i+1))]}"
+  ((i+=2))
 done
