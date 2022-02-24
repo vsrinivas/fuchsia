@@ -194,8 +194,6 @@ class VnodeF2fs : public fs::Vnode,
     return (name_.GetStringView().compare(name) == 0);
   }
   std::string_view GetNameView() const { return name_.GetStringView(); }
-  uint32_t GetNameLen() const { return name_.GetLen(); }
-  const char *GetName() { return name_.GetData(); }
 
   // stat_lock
   uint64_t GetBlockCount() const { return (size_ + kBlockSize - 1) / kBlockSize; }

@@ -133,7 +133,7 @@ void FileTester::DeleteChildren(std::vector<fbl::RefPtr<VnodeF2fs>> &vnodes,
                                 fbl::RefPtr<Dir> &parent, uint32_t inode_cnt) {
   uint32_t deleted_file_cnt = 0;
   for (const auto &iter : vnodes) {
-    ASSERT_EQ(parent->Unlink(iter->GetName(), false), ZX_OK);
+    ASSERT_EQ(parent->Unlink(iter->GetNameView(), false), ZX_OK);
     ++deleted_file_cnt;
   }
   ASSERT_EQ(deleted_file_cnt, inode_cnt);

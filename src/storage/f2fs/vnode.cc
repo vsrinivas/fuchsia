@@ -161,8 +161,8 @@ zx_status_t VnodeF2fs::CloseNode() { return ZX_OK; }
 void VnodeF2fs::RecycleNode() {
   {
     std::lock_guard lock(mutex_);
-    ZX_ASSERT_MSG(open_count() == 0, "RecycleNode[%s:%u]: open_count must be zero (%lu)", GetName(),
-                  GetKey(), open_count());
+    ZX_ASSERT_MSG(open_count() == 0, "RecycleNode[%s:%u]: open_count must be zero (%lu)",
+                  GetNameView().data(), GetKey(), open_count());
   }
   if (GetNlink()) {
     // f2fs removes the last reference to a dirty vnode from the dirty vnode list
@@ -342,8 +342,12 @@ void VnodeF2fs::UpdateInode(Page *node_page) {
   ri->i_generation = CpuToLe(GetGeneration());
   ri->i_dir_level = GetDirLevel();
 
-  ri->i_namelen = CpuToLe(GetNameLen());
-  memcpy(ri->i_name, GetName(), GetNameLen());
+  std::string_view name = GetNameView();
+  // double check |name|
+  ZX_DEBUG_ASSERT(IsValidNameLength(name));
+  auto size = safemath::checked_cast<uint32_t>(name.size());
+  ri->i_namelen = CpuToLe(size);
+  name.copy(reinterpret_cast<char *>(&ri->i_name[0]), size);
 
   if (TestFlag(InodeInfoFlag::kInlineDentry)) {
     ri->i_inline |= kInlineDentry;

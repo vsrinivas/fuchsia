@@ -91,7 +91,7 @@ void F2fs::AddOrphanInode(VnodeF2fs *vnode) {
   AddOrphanInode(vnode->GetKey());
 #ifdef __Fuchsia__
   if (vnode->IsDir()) {
-    vnode->Notify(vnode->GetName(), fuchsia_io::wire::kWatchEventDeleted);
+    vnode->Notify(vnode->GetNameView(), fuchsia_io::wire::kWatchEventDeleted);
   }
 #endif  // __Fuchsia__
   if (vnode->ClearDirty()) {

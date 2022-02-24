@@ -282,7 +282,7 @@ void Dir::SetLink(DirEntry *de, Page *page, VnodeF2fs *vnode) {
 #endif
 
 #ifdef __Fuchsia__
-  Vfs()->GetDirEntryCache().UpdateDirEntry(Ino(), vnode->GetName(), *de, page->GetIndex());
+  Vfs()->GetDirEntryCache().UpdateDirEntry(Ino(), vnode->GetNameView(), *de, page->GetIndex());
 #endif  // __Fuchsia__
 
   timespec cur_time;
@@ -300,10 +300,14 @@ void Dir::InitDentInode(VnodeF2fs *vnode, Page *ipage) {
 
   ipage->WaitOnWriteback();
 
-  // copy dentry info. to this inode page
+  // copy name info. to this inode page
   Node *rn = static_cast<Node *>(ipage->GetAddress());
-  rn->i.i_namelen = CpuToLe(vnode->GetNameLen());
-  memcpy(rn->i.i_name, vnode->GetName(), vnode->GetNameLen());
+  std::string_view name = vnode->GetNameView();
+  // double check |name|
+  ZX_DEBUG_ASSERT(IsValidNameLength(name));
+  auto size = safemath::checked_cast<uint32_t>(name.size());
+  rn->i.i_namelen = CpuToLe(size);
+  name.copy(reinterpret_cast<char *>(&rn->i.i_name[0]), size);
   ipage->SetDirty();
 }
 

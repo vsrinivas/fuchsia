@@ -6,26 +6,29 @@
 #define SRC_STORAGE_F2FS_NAMESTRING_H_
 
 namespace f2fs {
+
+inline bool IsValidNameLength(std::string_view name) {
+  return name.length() <= kMaxNameLen;
+}
+
 class NameString final {
  public:
-  NameString() : len_(0) {}
+  NameString() = default;
   NameString(const NameString &) = default;
+  NameString(const NameString &&) = delete;
+  NameString &operator=(const NameString &&) = delete;
 
-  std::string_view GetStringView() const { return std::string_view(name_, len_); }
-  char *GetData() { return name_; }
-  uint16_t GetLen() const { return len_; }
+  std::string_view GetStringView() const { return std::string_view(name_); }
 
   NameString &operator=(std::string_view name) {
-    ZX_ASSERT(name.length() <= kMaxNameLen);
-    len_ = static_cast<uint16_t>(name.length());
-    memcpy(name_, name.data(), len_);
-    name_[len_] = 0;
+    ZX_DEBUG_ASSERT(IsValidNameLength(name));
+    name_ = name;
+    name_.shrink_to_fit();
     return *this;
   }
 
  private:
-  char name_[kMaxNameLen + 1];
-  uint16_t len_;
+  std::string name_;
 };
 
 }  // namespace f2fs

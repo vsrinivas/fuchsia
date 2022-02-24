@@ -32,7 +32,7 @@ class Dir : public VnodeF2fs, public fbl::Recyclable<Dir> {
 
   // delete & set link
   zx_status_t Rename(fbl::RefPtr<fs::Vnode> _newdir, std::string_view oldname,
-                     std::string_view newname, bool src_must_be_dir, bool dst_must_be_dir);
+                     std::string_view newname, bool src_must_be_dir, bool dst_must_be_dir) final;
   void SetLink(DirEntry *de, Page *page, VnodeF2fs *inode);
   DirEntry *ParentDir(fbl::RefPtr<Page> *out);
   DirEntry *ParentInlineDir(fbl::RefPtr<Page> *out);

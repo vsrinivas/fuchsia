@@ -131,7 +131,9 @@ zx_status_t Dir::DoCreate(std::string_view name, uint32_t mode, fbl::RefPtr<fs::
 zx_status_t Dir::Link(std::string_view name, fbl::RefPtr<fs::Vnode> new_child) {
   VnodeF2fs *target = static_cast<VnodeF2fs *>(new_child.get());
 
-  ZX_DEBUG_ASSERT(fs::IsValidName(name));
+  if (!fs::IsValidName(name)) {
+    return ZX_ERR_INVALID_ARGS;
+  }
 
   if (target->IsDir())
     return ZX_ERR_NOT_FILE;
@@ -389,8 +391,9 @@ zx_status_t Dir::Rename(fbl::RefPtr<fs::Vnode> _newdir, std::string_view oldname
     }
   };
 
-  ZX_DEBUG_ASSERT(fs::IsValidName(oldname));
-  ZX_DEBUG_ASSERT(fs::IsValidName(newname));
+  if (!fs::IsValidName(oldname) || !fs::IsValidName(newname)) {
+    return ZX_ERR_INVALID_ARGS;
+  }
 
   clock_gettime(CLOCK_REALTIME, &cur_time);
 
