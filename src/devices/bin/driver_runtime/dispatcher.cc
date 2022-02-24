@@ -77,8 +77,8 @@ const async_ops_t g_dispatcher_ops = {
 
 }  // namespace
 
-ProcessSharedLoop& GetProcessSharedLoop() {
-  static ProcessSharedLoop shared_loop;
+DispatcherCoordinator& GetDispatcherCoordinator() {
+  static DispatcherCoordinator shared_loop;
   return shared_loop;
 }
 
@@ -136,6 +136,9 @@ fdf_status_t Dispatcher::CreateWithLoop(uint32_t options, const char* scheduler_
     dispatcher->event_waiter_ = nullptr;
     return status;
   }
+
+  GetDispatcherCoordinator().AddDispatcher(dispatcher);
+
   // This reference will be recovered in |Destroy|.
   *out_dispatcher = fbl::ExportToRawPtr(&dispatcher);
   return ZX_OK;
@@ -149,8 +152,8 @@ fdf_status_t Dispatcher::Create(uint32_t options, const char* scheduler_role,
                                 fdf_dispatcher_destructed_observer_t* observer,
                                 Dispatcher** out_dispatcher) {
   return CreateWithLoop(options, scheduler_role, scheduler_role_len,
-                        driver_context::GetCurrentDriver(), GetProcessSharedLoop().loop(), observer,
-                        out_dispatcher);
+                        driver_context::GetCurrentDriver(), GetDispatcherCoordinator().loop(),
+                        observer, out_dispatcher);
 }
 
 // static
@@ -234,6 +237,7 @@ void Dispatcher::CompleteDestroy(
   if (destructed_observer_) {
     destructed_observer_->handler(destructed_observer_);
   }
+  GetDispatcherCoordinator().RemoveDispatcher(*this);
 }
 
 // async_dispatcher_t implementation
@@ -578,6 +582,34 @@ zx_status_t Dispatcher::IdleEventManager::Signal() {
   zx_status_t status = event_.signal(0u, ZX_EVENT_SIGNALED);
   event_.reset();
   return status;
+}
+
+// static
+fdf_status_t DispatcherCoordinator::WaitUntilDispatchersIdle() {
+  std::vector<fbl::RefPtr<Dispatcher>> copy;
+  {
+    fbl::AutoLock lock(&(GetDispatcherCoordinator().lock_));
+    auto& dispatchers = GetDispatcherCoordinator().dispatchers_;
+    for (auto& dispatcher : dispatchers) {
+      copy.push_back(fbl::RefPtr<Dispatcher>(&dispatcher));
+    }
+  }
+  for (auto& d : copy) {
+    fdf_status_t status = d->WaitUntilIdle();
+    if (status != ZX_OK) {
+      return status;
+    }
+  }
+  return ZX_OK;
+}
+
+void DispatcherCoordinator::AddDispatcher(fbl::RefPtr<Dispatcher> dispatcher) {
+  fbl::AutoLock lock(&lock_);
+  dispatchers_.push_back(dispatcher);
+}
+void DispatcherCoordinator::RemoveDispatcher(Dispatcher& dispatcher) {
+  fbl::AutoLock lock(&lock_);
+  dispatchers_.erase(dispatcher);
 }
 
 }  // namespace driver_runtime

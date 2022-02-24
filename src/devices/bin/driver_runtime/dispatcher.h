@@ -23,21 +23,11 @@
 #include "src/devices/bin/driver_runtime/callback_request.h"
 #include "src/devices/bin/driver_runtime/driver_context.h"
 
-// Loop shared across all dispatchers in a process.
-class ProcessSharedLoop {
- public:
-  // We default to one thread, and start additional threads when blocking dispatchers are created.
-  ProcessSharedLoop() : loop_(&kAsyncLoopConfigNoAttachToCurrentThread) { loop_.StartThread(); }
-
-  async::Loop* loop() { return &loop_; }
-
- private:
-  async::Loop loop_;
-};
-
 namespace driver_runtime {
 
-class Dispatcher : public async_dispatcher_t, public fbl::RefCounted<Dispatcher> {
+class Dispatcher : public async_dispatcher_t,
+                   public fbl::RefCounted<Dispatcher>,
+                   public fbl::DoublyLinkedListable<fbl::RefPtr<Dispatcher>> {
  public:
   // Public for std::make_unique.
   // Use |Create| or |CreateWithLoop| instead of calling directly.
@@ -269,6 +259,28 @@ class Dispatcher : public async_dispatcher_t, public fbl::RefCounted<Dispatcher>
   fdf_dispatcher_destructed_observer_t* destructed_observer_ = nullptr;
 
   fbl::Canary<fbl::magic("FDFD")> canary_;
+};
+
+// Coordinator for all dispatchers in a process.
+class DispatcherCoordinator {
+ public:
+  // We default to one thread, and start additional threads when blocking dispatchers are created.
+  DispatcherCoordinator() : loop_(&kAsyncLoopConfigNoAttachToCurrentThread) { loop_.StartThread(); }
+
+  static fdf_status_t WaitUntilDispatchersIdle();
+
+  void AddDispatcher(fbl::RefPtr<Dispatcher> dispatcher);
+  void RemoveDispatcher(Dispatcher& dispatcher);
+
+  async::Loop* loop() { return &loop_; }
+
+ private:
+  // Make sure this destructs after |loop_|. This is as dispatchers will remove themselves
+  // from this list on shutdown.
+  fbl::Mutex lock_;
+  fbl::DoublyLinkedList<fbl::RefPtr<driver_runtime::Dispatcher>> dispatchers_ __TA_GUARDED(&lock_);
+
+  async::Loop loop_;
 };
 
 }  // namespace driver_runtime

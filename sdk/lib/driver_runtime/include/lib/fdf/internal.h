@@ -40,6 +40,17 @@ void fdf_internal_pop_driver();
 // such as from tasks or ChannelRead callbacks.
 fdf_status_t fdf_internal_wait_until_dispatcher_idle(fdf_dispatcher_t* dispatcher);
 
+// Blocks the current thread until each runtime dispatcher in the process
+// is observed to enter an idle state. This does not guarantee that all the
+// dispatchers will be idle when this function returns. This will only wait
+// on dispatchers that existed when this function was called. This does not
+// include any new dispatchers that might have been created while the waiting
+// was happening.
+// This is useful for testing.
+// This should not be called from a thread managed by the driver runtime,
+// such as from tasks or ChannelRead callbacks.
+fdf_status_t fdf_internal_wait_until_all_dispatchers_idle();
+
 __END_CDECLS
 
 #endif  // LIB_DRIVER_RUNTIME_INCLUDE_LIB_FDF_INTERNAL_H_
