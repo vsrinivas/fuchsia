@@ -27,7 +27,7 @@ func init() {
 				},
 				EnableSendEventBenchmark: true,
 				EnableEchoCallBenchmark:  true,
-				Allowlist:                []config.Binding{config.LLCPP, config.HLCPP, config.CPP, config.Rust, config.Go, config.Walker, config.Reference, config.Dart},
+				Allowlist:                []config.Binding{config.LLCPP, config.DriverCPP, config.HLCPP, config.CPP, config.Rust, config.Go, config.Walker, config.Reference, config.Dart},
 			},
 			{
 				Name:    "ByteVector/256",
@@ -37,7 +37,7 @@ func init() {
 				},
 				EnableSendEventBenchmark: true,
 				EnableEchoCallBenchmark:  true,
-				Allowlist:                []config.Binding{config.LLCPP, config.HLCPP, config.CPP, config.Rust, config.Go, config.Walker, config.Reference, config.Dart},
+				Allowlist:                []config.Binding{config.LLCPP, config.DriverCPP, config.HLCPP, config.CPP, config.Rust, config.Go, config.Walker, config.Reference, config.Dart},
 			},
 			{
 				Name:    "ByteVector/4096",
@@ -47,7 +47,7 @@ func init() {
 				},
 				EnableSendEventBenchmark: true,
 				EnableEchoCallBenchmark:  true,
-				Allowlist:                []config.Binding{config.LLCPP, config.HLCPP, config.CPP, config.Rust, config.Go, config.Walker, config.Reference, config.Dart},
+				Allowlist:                []config.Binding{config.LLCPP, config.DriverCPP, config.HLCPP, config.CPP, config.Rust, config.Go, config.Walker, config.Reference, config.Dart},
 			},
 			{
 				Name: "ByteVector/65280",

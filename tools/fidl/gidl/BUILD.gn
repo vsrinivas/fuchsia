@@ -31,6 +31,7 @@ if (is_host) {
       "dart/benchmarks.go",
       "dart/common.go",
       "dart/conformance.go",
+      "driver_cpp/benchmarks.go",
       "dynfidl/conformance.go",
       "fuzzer_corpus/conformance.go",
       "golang/benchmarks.go",

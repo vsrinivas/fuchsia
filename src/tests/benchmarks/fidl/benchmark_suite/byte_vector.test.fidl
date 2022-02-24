@@ -20,3 +20,12 @@ protocol ByteVectorEchoCall {
         val ByteVector;
     });
 };
+
+@transport("Driver")
+protocol ByteVectorEchoCallDriver {
+    Echo(struct {
+        val ByteVector;
+    }) -> (struct {
+        val ByteVector;
+    });
+};

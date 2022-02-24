@@ -18,6 +18,7 @@ import (
 	gidlconfig "go.fuchsia.dev/fuchsia/tools/fidl/gidl/config"
 	gidlcpp "go.fuchsia.dev/fuchsia/tools/fidl/gidl/cpp"
 	gidldart "go.fuchsia.dev/fuchsia/tools/fidl/gidl/dart"
+	gidldrivercpp "go.fuchsia.dev/fuchsia/tools/fidl/gidl/driver_cpp"
 	gidldynfidl "go.fuchsia.dev/fuchsia/tools/fidl/gidl/dynfidl"
 	gidlcorpus "go.fuchsia.dev/fuchsia/tools/fidl/gidl/fuzzer_corpus"
 	gidlgolang "go.fuchsia.dev/fuchsia/tools/fidl/gidl/golang"
@@ -53,14 +54,15 @@ var conformanceGenerators = map[string]Generator{
 }
 
 var benchmarkGenerators = map[string]Generator{
-	"go":        gidlgolang.GenerateBenchmarks,
-	"cpp":       gidlcpp.GenerateBenchmarks,
-	"llcpp":     gidlllcpp.GenerateBenchmarks,
-	"hlcpp":     gidlhlcpp.GenerateBenchmarks,
-	"rust":      gidlrust.GenerateBenchmarks,
-	"dart":      gidldart.GenerateBenchmarks,
-	"reference": gidlreference.GenerateBenchmarks,
-	"walker":    gidlwalker.GenerateBenchmarks,
+	"go":         gidlgolang.GenerateBenchmarks,
+	"cpp":        gidlcpp.GenerateBenchmarks,
+	"llcpp":      gidlllcpp.GenerateBenchmarks,
+	"hlcpp":      gidlhlcpp.GenerateBenchmarks,
+	"rust":       gidlrust.GenerateBenchmarks,
+	"dart":       gidldart.GenerateBenchmarks,
+	"reference":  gidlreference.GenerateBenchmarks,
+	"walker":     gidlwalker.GenerateBenchmarks,
+	"driver_cpp": gidldrivercpp.GenerateBenchmarks,
 }
 
 var allGenerators = map[string]map[string]Generator{

@@ -1,0 +1,56 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/fidl/fidl.gni")
+import("//build/testing/environments.gni")
+import("//src/tests/benchmarks/fidl/benchmark_suite/benchmark_suite.gni")
+import("//tools/fidl/gidl/gidl.gni")
+
+gidl_deps = []
+foreach(suite, benchmark_suites) {
+  suite_target = "benchmark_suite__${suite.name}"
+  gidl_deps += [ ":" + suite_target ]
+
+  gidl_driver_cpp_benchmarks(suite_target) {
+    testonly = true
+    inputs = suite.gidl
+    fidl = suite.fidl_target
+    deps = [
+      "//sdk/cts/tests/pkg/fidl/cpp:handle_util",
+      "//sdk/lib/driver_runtime:driver_runtime_internal",
+      "//sdk/lib/fidl/cpp",
+      "//sdk/lib/fidl_driver",
+      "//src/devices/bin/driver_runtime:driver_runtime_impl",
+      "//zircon/system/ulib/async:async-cpp",
+      "//zircon/system/ulib/fidl",
+      "//zircon/system/ulib/perftest",
+      "//zircon/system/ulib/sync:sync-cpp",
+    ]
+    extra_args = [
+      "-cpp-benchmarks-fidl-library",
+      suite.fidl_library_suffix,
+    ]
+  }
+}
+
+executable("bin") {
+  output_name = "driver_cpp_fidl_microbenchmarks"
+  testonly = true
+  sources = [ "main.cc" ]
+  deps = [
+           "//src/zircon/lib/zircon",
+           "//sdk/lib/driver_runtime:driver_runtime_internal",
+           "//sdk/lib/fidl_driver",
+           "//src/devices/bin/driver_runtime:driver_runtime_impl",
+           "//zircon/system/ulib/async:async-cpp",
+           "//zircon/system/ulib/sync:sync-cpp",
+           "//zircon/system/ulib/perftest",
+         ] + gidl_deps
+}
+
+fuchsia_shell_package("driver_cpp") {
+  testonly = true
+  deps = [ ":bin" ]
+}

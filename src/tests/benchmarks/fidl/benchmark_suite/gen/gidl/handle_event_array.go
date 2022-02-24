@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+//go:build !build_with_native_toolchain
 // +build !build_with_native_toolchain
 
 package gidl
@@ -44,7 +45,7 @@ func init() {
 				EnableSendEventBenchmark: true,
 				EnableEchoCallBenchmark:  true,
 				HandleDefs:               util.RepeatHandleDef(config.HandleDef{Subtype: config.Event}, 64),
-				Denylist:                 []config.Binding{config.Go},
+				Denylist:                 []config.Binding{config.Go, config.DriverCPP},
 			},
 		},
 	})

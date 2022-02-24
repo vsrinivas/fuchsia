@@ -16,3 +16,12 @@ protocol HandleArrayEvent64EchoCall {
         val HandleArrayEvent64;
     });
 };
+
+@transport("Driver")
+protocol HandleArrayEvent64EchoCallDriver {
+    Echo(resource struct {
+        val HandleArrayEvent64;
+    }) -> (resource struct {
+        val HandleArrayEvent64;
+    });
+};

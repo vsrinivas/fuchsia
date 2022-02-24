@@ -9,12 +9,13 @@ import "fmt"
 type Binding string
 
 const (
-	CPP   Binding = "cpp"
-	HLCPP Binding = "hlcpp"
-	LLCPP Binding = "llcpp"
-	Dart  Binding = "dart"
-	Rust  Binding = "rust"
-	Go    Binding = "go"
+	CPP       Binding = "cpp"
+	HLCPP     Binding = "hlcpp"
+	LLCPP     Binding = "llcpp"
+	DriverCPP Binding = "driver_cpp"
+	Dart      Binding = "dart"
+	Rust      Binding = "rust"
+	Go        Binding = "go"
 	// GIDL only. Uses "LLCPP" for FIDL inputs.
 	Walker    Binding = "walker"
 	Reference Binding = "reference"

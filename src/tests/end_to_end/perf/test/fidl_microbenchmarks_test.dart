@@ -51,6 +51,7 @@ void main(List<String> args) {
   runPerftestFidlBenchmark('hlcpp_fidl_microbenchmarks');
   runPerftestFidlBenchmark('lib_fidl_microbenchmarks');
   runPerftestFidlBenchmark('llcpp_fidl_microbenchmarks');
+  runPerftestFidlBenchmark('driver_cpp_fidl_microbenchmarks');
   runPerftestFidlBenchmark('walker_fidl_microbenchmarks');
   runPerftestFidlBenchmark('reference_fidl_microbenchmarks');
 

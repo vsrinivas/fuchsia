@@ -75,6 +75,7 @@ sdk_source_set("driver_runtime_internal") {
     "//sdk/lib/fidl_driver/tests/transport/*",
     "//src/devices/bin/driver_host/*",
     "//src/devices/bin/driver_runtime/*",
+    "//src/tests/benchmarks/fidl/driver_cpp/*",
   ]
   public_configs = [ ":include" ]
   deps = [

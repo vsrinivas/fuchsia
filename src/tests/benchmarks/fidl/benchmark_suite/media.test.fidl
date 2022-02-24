@@ -28,3 +28,12 @@ protocol StreamPacketEchoCall {
         val StreamPacket;
     });
 };
+
+@transport("Driver")
+protocol StreamPacketEchoCallDriver {
+    Echo(struct {
+        val StreamPacket;
+    }) -> (struct {
+        val StreamPacket;
+    });
+};
