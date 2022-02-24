@@ -129,6 +129,24 @@ impl Writer {
     }
 }
 
+impl std::io::Write for Writer {
+    fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+        if self.is_machine() {
+            Ok(buf.len())
+        } else {
+            self.inner().write(buf)
+        }
+    }
+
+    fn flush(&mut self) -> std::io::Result<()> {
+        if self.is_machine() {
+            Ok(())
+        } else {
+            self.inner().flush()
+        }
+    }
+}
+
 // This uses an Arc<Mutex<_>> to allow for this type to be shared across threads. It is not
 // expected that this object is running in a multithreaded executor, but some plugins spawn
 // explicit threads. Moreover, this should only be used in test environments so there should be

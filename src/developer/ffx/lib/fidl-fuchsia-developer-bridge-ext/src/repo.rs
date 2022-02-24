@@ -10,7 +10,7 @@ use {
     thiserror::Error,
 };
 
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum RepositorySpec {
     FileSystem { metadata_repo_path: Utf8PathBuf, blob_repo_path: Utf8PathBuf },
@@ -112,7 +112,7 @@ impl From<RepositoryStorageType> for fidl::RepositoryStorageType {
 /// The below types exist to provide definitions with Serialize.
 /// TODO(fxbug.dev/76041) They should be removed in favor of the
 /// corresponding fidl-fuchsia-pkg-ext types.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct RepositoryConfig {
     pub name: String,
     pub spec: RepositorySpec,

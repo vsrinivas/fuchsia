@@ -11,12 +11,15 @@ ffx_plugin("ffx_repository_list") {
   deps = [
     "//sdk/fidl/fuchsia.developer.bridge:fuchsia.developer.bridge-rustc",
     "//sdk/fidl/fuchsia.pkg:fuchsia.pkg-rustc",
+    "//src/developer/ffx/lib/fidl-fuchsia-developer-bridge-ext",
     "//src/developer/ffx/lib/pkg",
+    "//src/developer/ffx/lib/writer:lib",
     "//src/lib/fidl/rust/fidl",
     "//third_party/rust_crates:async-trait",
     "//third_party/rust_crates:prettytable-rs",
     "//third_party/rust_crates:tuf",
   ]
+  test_deps = [ "//third_party/rust_crates:serde_json" ]
 
   args_sources = [ "src/args.rs" ]
 
