@@ -377,7 +377,7 @@ impl MemoryManagerState {
             // The mapping is being moved to a specific address.
             let dst_range =
                 *dst_addr..(dst_addr.checked_add(dst_length).ok_or_else(|| errno!(EINVAL))?);
-            if src_range.intersects(&dst_range) {
+            if !src_range.intersect(&dst_range).is_empty() {
                 return error!(EINVAL);
             }
 
@@ -589,6 +589,48 @@ impl MemoryManagerState {
 
         let end = (addr + length).round_up(*PAGE_SIZE)?;
         self.mappings.insert(addr..end, mapping);
+        Ok(())
+    }
+
+    fn madvise(&self, addr: UserAddress, length: usize, advice: u32) -> Result<(), Errno> {
+        if !addr.is_aligned(*PAGE_SIZE) {
+            return error!(EINVAL);
+        }
+
+        let end_addr = addr.checked_add(length).ok_or_else(|| errno!(EFAULT))?;
+        if end_addr > self.max_address() {
+            return error!(EFAULT);
+        }
+        let end_addr = end_addr.round_up(*PAGE_SIZE)?;
+
+        let range_for_op = addr..end_addr;
+        for (range, mapping) in self.mappings.intersection(&range_for_op) {
+            if mapping.options.contains(MappingOptions::SHARED) {
+                continue;
+            }
+            let range_to_zero = range.intersect(&range_for_op);
+            if range_to_zero.is_empty() {
+                continue;
+            }
+            let start = mapping.address_to_offset(range_to_zero.start);
+            let end = mapping.address_to_offset(range_to_zero.end);
+            let op = match advice {
+                MADV_DONTNEED if mapping.filename.is_some() => zx::VmoOp::DONT_NEED,
+                MADV_DONTNEED => zx::VmoOp::ZERO,
+                MADV_WILLNEED => zx::VmoOp::COMMIT,
+                advice => {
+                    not_implemented!("madvise advice {} not implemented", advice);
+                    return error!(EINVAL);
+                }
+            };
+
+            mapping.vmo.op_range(op, start, end - start).map_err(|s| match s {
+                zx::Status::OUT_OF_RANGE => errno!(EINVAL),
+                zx::Status::NO_MEMORY => errno!(ENOMEM),
+                zx::Status::INVALID_ARGS => errno!(EINVAL),
+                _ => impossible_error(s),
+            })?;
+        }
         Ok(())
     }
 
@@ -1007,6 +1049,10 @@ impl MemoryManager {
     ) -> Result<(), Errno> {
         let mut state = self.state.write();
         state.protect(addr, length, flags)
+    }
+
+    pub fn madvise(&self, addr: UserAddress, length: usize, advice: u32) -> Result<(), Errno> {
+        self.state.read().madvise(addr, length, advice)
     }
 
     pub fn set_mapping_name(

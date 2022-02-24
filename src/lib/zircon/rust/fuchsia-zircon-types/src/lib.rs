@@ -134,6 +134,7 @@ multiconst!(u32, [
     ZX_VMO_OP_CACHE_CLEAN_INVALIDATE = 9;
     ZX_VMO_OP_ZERO = 10;
     ZX_VMO_OP_TRY_LOCK = 11;
+    ZX_VMO_OP_DONT_NEED = 12;
 ]);
 
 // TODO: add an alias for this type in the C headers.

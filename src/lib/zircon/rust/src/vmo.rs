@@ -261,6 +261,7 @@ assoc_values!(VmoOp, [
     CACHE_CLEAN_INVALIDATE = sys::ZX_VMO_OP_CACHE_CLEAN_INVALIDATE;
     ZERO =             sys::ZX_VMO_OP_ZERO;
     TRY_LOCK =         sys::ZX_VMO_OP_TRY_LOCK;
+    DONT_NEED =        sys::ZX_VMO_OP_DONT_NEED;
 ]);
 
 unsafe_handle_properties!(object: Vmo,

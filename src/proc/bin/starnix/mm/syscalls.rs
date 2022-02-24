@@ -183,12 +183,12 @@ pub fn sys_msync(
 }
 
 pub fn sys_madvise(
-    _current_task: &CurrentTask,
-    _addr: UserAddress,
-    _length: usize,
-    _advice: u32,
+    current_task: &CurrentTask,
+    addr: UserAddress,
+    length: usize,
+    advice: u32,
 ) -> Result<SyscallResult, Errno> {
-    not_implemented!("madvise not implemented");
+    current_task.mm.madvise(addr, length, advice)?;
     Ok(SUCCESS)
 }
 
