@@ -184,7 +184,6 @@ group("debug_agent") {
 group("drivers-system") {
   public_deps = [
     "//garnet/packages/prod:bluetooth_drivers",
-    "//src/camera/drivers:prod_drivers",
     "//src/connectivity/ppp/drivers",
     "//src/connectivity/telephony/drivers:prod-drivers",
     "//src/media/drivers",
