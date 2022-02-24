@@ -10,8 +10,17 @@ import("//src/developer/ffx/build/ffx_action.gni")
 # rights are provided.
 #
 # Parameters
-#   deps, public_deps, data_deps (optional)
-#       Usual GN meaning.
+#
+#   allowlist (required)
+#     [list of strings] paths to allowlist files to be passed to
+#     `ffx scrutiny verify routes`.
+#
+#   component_tree_config (optional)
+#     [string] paths to component tree configuration file to be passed to
+#     `ffx scrutiny verify routes`.
+#
+#   testonly, deps, public_deps, data_deps, visibility (optional)
+#     Usual GN meaning.
 #
 template("verify_routes") {
   ffx_action(target_name) {
@@ -44,6 +53,12 @@ template("verify_routes") {
       "--depfile",
       rebase_path(depfile, root_build_dir),
     ]
+    if (defined(invoker.component_tree_config)) {
+      args += [
+        "--component-tree-config",
+        rebase_path(invoker.component_tree_config, root_build_dir),
+      ]
+    }
     foreach(allowlist, invoker.allowlist) {
       args += [
         "--allowlist",
