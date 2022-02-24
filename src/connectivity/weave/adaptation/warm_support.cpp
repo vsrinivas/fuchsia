@@ -42,8 +42,10 @@ constexpr uint32_t kRouteMetric_LowPriority = 999;
 // Unsupported interface types will not populate the optional.
 std::optional<std::string> GetInterfaceName(InterfaceType interface_type) {
   switch (interface_type) {
+#if WARM_CONFIG_SUPPORT_THREAD
     case kInterfaceTypeThread:
       return ThreadStackMgrImpl().GetInterfaceName();
+#endif  // WARM_CONFIG_SUPPORT_THREAD
     case kInterfaceTypeTunnel:
       return kTunInterfaceName;
     case kInterfaceTypeWiFi:
@@ -214,55 +216,6 @@ PlatformResult AddRemoveAddressInternal(InterfaceType interface_type,
 
   FX_LOGS(INFO) << (add ? "Added" : "Removed") << " address from interface id "
                 << interface_id.value();
-
-  // If this is not a Thread interface, adding the host address is sufficient.
-  // Otherwise, move onto register the on-mesh prefix.
-  if (interface_type != InterfaceType::kInterfaceTypeThread) {
-    return kPlatformResultSuccess;
-  }
-
-  fuchsia::lowpan::device::LookupSyncPtr device_lookup;
-  fuchsia::lowpan::device::Lookup_LookupDevice_Result device_lookup_result;
-  fuchsia::lowpan::device::Protocols device_protocols;
-  fuchsia::lowpan::device::DeviceRouteSyncPtr route_sync_ptr;
-
-  status = svc->Connect(device_lookup.NewRequest());
-  if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Failed to connect to lowpan service: " << zx_status_get_string(status);
-    return kPlatformResultFailure;
-  }
-
-  device_protocols.set_device_route(route_sync_ptr.NewRequest());
-  status = device_lookup->LookupDevice(interface_name.value(), std::move(device_protocols),
-                                       &device_lookup_result);
-  if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Failed to lookup device: " << zx_status_get_string(status);
-    return kPlatformResultFailure;
-  } else if (device_lookup_result.is_err()) {
-    FX_LOGS(ERROR) << "Failed during lookup: " << static_cast<uint32_t>(device_lookup_result.err());
-    return kPlatformResultFailure;
-  }
-
-  fuchsia::lowpan::Ipv6Subnet mesh_prefix_subnet;
-  std::memcpy(mesh_prefix_subnet.addr.addr.data(), (uint8_t *)(address.Addr),
-              mesh_prefix_subnet.addr.addr.size());
-  mesh_prefix_subnet.prefix_len = prefix_length;
-
-  fuchsia::lowpan::device::OnMeshPrefix mesh_prefix;
-  mesh_prefix.set_subnet(mesh_prefix_subnet);
-  mesh_prefix.set_default_route_preference(fuchsia::lowpan::device::RoutePreference::MEDIUM);
-  mesh_prefix.set_stable(true);
-  mesh_prefix.set_slaac_preferred(true);
-  mesh_prefix.set_slaac_valid(true);
-
-  status = add ? route_sync_ptr->RegisterOnMeshPrefix(std::move(mesh_prefix))
-               : route_sync_ptr->UnregisterOnMeshPrefix(mesh_prefix.subnet());
-  if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Failed to " << (add ? "register" : "unregister") << " on-mesh prefix.";
-    return kPlatformResultFailure;
-  }
-
-  FX_LOGS(INFO) << (add ? "Registered" : "Unregistered") << " on-mesh prefix for Thread.";
   return kPlatformResultSuccess;
 }
 

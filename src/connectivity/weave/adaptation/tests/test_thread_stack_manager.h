@@ -7,16 +7,16 @@
 
 #include <gtest/gtest.h>
 
-#include "thread_stack_manager_delegate_impl.h"
+#include "thread_stack_manager_stub_impl.h"
 
 namespace weave::adaptation::testing {
 
-class TestThreadStackManager final : public nl::Weave::DeviceLayer::ThreadStackManagerDelegateImpl {
+class TestThreadStackManager final : public nl::Weave::DeviceLayer::ThreadStackManagerStubImpl {
  public:
   static constexpr char kThreadInterfaceName[] = "lowpan0";
 
   // Access underlying delegate implementation.
-  using Impl = nl::Weave::DeviceLayer::ThreadStackManagerDelegateImpl;
+  using Impl = nl::Weave::DeviceLayer::ThreadStackManagerStubImpl;
 
   // Returns whether thread is provisioned.
   bool IsThreadProvisioned() override {

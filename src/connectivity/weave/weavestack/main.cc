@@ -11,7 +11,7 @@
 #include "src/connectivity/weave/adaptation/configuration_manager_delegate_impl.h"
 #include "src/connectivity/weave/adaptation/connectivity_manager_delegate_impl.h"
 #include "src/connectivity/weave/adaptation/network_provisioning_server_delegate_impl.h"
-#include "src/connectivity/weave/adaptation/thread_stack_manager_delegate_impl.h"
+#include "src/connectivity/weave/adaptation/thread_stack_manager_stub_impl.h"
 #include "src/connectivity/weave/lib/core/trait_updater_delegate_impl.h"
 // clang-format on
 
@@ -21,7 +21,7 @@ using nl::Weave::DeviceLayer::ConfigurationManagerDelegateImpl;
 using nl::Weave::DeviceLayer::ConfigurationMgrImpl;
 using nl::Weave::DeviceLayer::ConnectivityManagerDelegateImpl;
 using nl::Weave::DeviceLayer::ConnectivityMgrImpl;
-using nl::Weave::DeviceLayer::ThreadStackManagerDelegateImpl;
+using nl::Weave::DeviceLayer::ThreadStackManagerStubImpl;
 using nl::Weave::DeviceLayer::ThreadStackMgrImpl;
 using nl::Weave::DeviceLayer::TraitUpdater;
 using nl::Weave::DeviceLayer::TraitUpdaterDelegateImpl;
@@ -36,7 +36,7 @@ int main() {
   ConnectivityMgrImpl().SetDelegate(std::make_unique<ConnectivityManagerDelegateImpl>());
   NetworkProvisioningSvrImpl().SetDelegate(
       std::make_unique<NetworkProvisioningServerDelegateImpl>());
-  ThreadStackMgrImpl().SetDelegate(std::make_unique<ThreadStackManagerDelegateImpl>());
+  ThreadStackMgrImpl().SetDelegate(std::make_unique<ThreadStackManagerStubImpl>());
   TraitUpdater().SetDelegate(std::make_unique<TraitUpdaterDelegateImpl>());
 
   status = app.Init();

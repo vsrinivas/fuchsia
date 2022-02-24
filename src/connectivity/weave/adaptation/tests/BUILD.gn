@@ -42,10 +42,6 @@ fuchsia_unittest_component("platform-manager-test") {
   deps = [ ":platform_manager_unittests" ]
 }
 
-fuchsia_unittest_component("thread-stack-manager-test") {
-  deps = [ ":thread_stack_manager_unittests" ]
-}
-
 fuchsia_unittest_component("warm-platform-support-test") {
   deps = [ ":warm_platform_support_unittests" ]
 }
@@ -92,12 +88,6 @@ test("platform_auth_delegate_unittests") {
 test("platform_manager_unittests") {
   output_name = "platform_manager_unittests"
   sources = [ "platform_manager_unittests.cpp" ]
-  deps = [ ":common_test_deps" ]
-}
-
-test("thread_stack_manager_unittests") {
-  output_name = "thread_stack_manager_unittests"
-  sources = [ "thread_stack_manager_unittests.cpp" ]
   deps = [ ":common_test_deps" ]
 }
 
@@ -168,7 +158,6 @@ fuchsia_test_package("weavestack-adaptation-unittests") {
     ":group-key-store-test",
     ":platform-auth-delegate-test",
     ":platform-manager-test",
-    ":thread-stack-manager-test",
     ":warm-platform-support-test",
     ":weave-config-manager-test",
     ":weave-inspector-test",

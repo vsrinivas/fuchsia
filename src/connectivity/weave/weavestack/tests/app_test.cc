@@ -20,7 +20,7 @@
 #include "src/connectivity/weave/adaptation/configuration_manager_delegate_impl.h"
 #include "src/connectivity/weave/adaptation/connectivity_manager_delegate_impl.h"
 #include "src/connectivity/weave/adaptation/network_provisioning_server_delegate_impl.h"
-#include "src/connectivity/weave/adaptation/thread_stack_manager_delegate_impl.h"
+#include "src/connectivity/weave/adaptation/thread_stack_manager_stub_impl.h"
 #include "src/connectivity/weave/lib/core/trait_updater_delegate_impl.h"
 // clang-format on
 
@@ -36,7 +36,7 @@ using nl::Weave::DeviceLayer::ConnectivityManagerImpl;
 using nl::Weave::DeviceLayer::ConnectivityMgrImpl;
 using nl::Weave::DeviceLayer::PlatformMgr;
 using nl::Weave::DeviceLayer::PlatformMgrImpl;
-using nl::Weave::DeviceLayer::ThreadStackManagerDelegateImpl;
+using nl::Weave::DeviceLayer::ThreadStackManagerStubImpl;
 using nl::Weave::DeviceLayer::ThreadStackMgrImpl;
 using nl::Weave::DeviceLayer::TraitUpdater;
 using nl::Weave::DeviceLayer::TraitUpdaterDelegateImpl;
@@ -60,16 +60,6 @@ class ConnectivityManagerTestDelegate : public ConnectivityManagerImpl::Delegate
   }
 };
 
-// Provide a TSM delegate that overrides InitThreadStack to be an no-op. This is because TSM
-// connects to fuchsia.lowpan, which isn't provided in this test. It is unneccessary to fake out
-// fuchsia.lowpan here since that should be tested in TSM tests.
-class TestThreadStackManagerDelegate : public ThreadStackManagerDelegateImpl {
-  WEAVE_ERROR InitThreadStack() override {
-    // Simulate successful init.
-    return WEAVE_NO_ERROR;
-  }
-};
-
 class TestTraitUpdaterDelegate : public TraitUpdaterDelegateImpl {
  public:
   WEAVE_ERROR Init() override { return WEAVE_NO_ERROR; }
@@ -86,7 +76,7 @@ void SetDefaultDelegates() {
   ConnectivityMgrImpl().SetDelegate(std::make_unique<ConnectivityManagerTestDelegate>());
   // Similarly, the ThreadStackManager delegate is replaced with a delegate that
   // does not initialize.
-  ThreadStackMgrImpl().SetDelegate(std::make_unique<TestThreadStackManagerDelegate>());
+  ThreadStackMgrImpl().SetDelegate(std::make_unique<ThreadStackManagerStubImpl>());
   // TraitUpdaterImpl delegate is replaced with a dummy delegate.
   TraitUpdater().SetDelegate(std::make_unique<TestTraitUpdaterDelegate>());
 }

@@ -264,7 +264,7 @@ TEST_F(ConfigurationManagerTest, GetSerialNumber) {
 
 TEST_F(ConfigurationManagerTest, GetDeviceDescriptor) {
   constexpr uint8_t expected_wifi_mac[kWiFiMACAddressBufSize] = {0xFF};
-  constexpr uint8_t expected_802154_mac[k802154MACAddressBufSize] = {0xFF};
+  constexpr uint8_t expected_802154_mac[k802154MACAddressBufSize] = {0x00};
 
   ::nl::Weave::Profiles::DeviceDescription::WeaveDeviceDescriptor device_desc;
   EXPECT_EQ(ConfigurationMgr().GetDeviceDescriptor(device_desc), WEAVE_NO_ERROR);

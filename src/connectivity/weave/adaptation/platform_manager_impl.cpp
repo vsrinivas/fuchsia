@@ -10,7 +10,7 @@
 #include "configuration_manager_delegate_impl.h"
 #include "connectivity_manager_delegate_impl.h"
 #include "network_provisioning_server_delegate_impl.h"
-#include "thread_stack_manager_delegate_impl.h"
+#include "thread_stack_manager_stub_impl.h"
 // clang-format on
 
 #include <lib/async/cpp/task.h>
