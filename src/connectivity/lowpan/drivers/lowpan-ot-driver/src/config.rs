@@ -68,7 +68,7 @@ pub(crate) struct Config {
     pub name: String,
 
     #[serde(default = "Config::default_backbone_name")]
-    pub backbone_name: String,
+    pub backbone_name: Option<String>,
 
     #[serde(default = "Config::default_log_level")]
     pub log_level: LogLevel,
@@ -108,8 +108,8 @@ impl Config {
         "lowpan0".to_string()
     }
 
-    fn default_backbone_name() -> String {
-        "wlanx95".to_string()
+    fn default_backbone_name() -> Option<String> {
+        None
     }
 
     fn default_ot_radio_path() -> Option<String> {
@@ -182,7 +182,7 @@ impl Config {
                 self.backbone_name,
                 tmp
             );
-            self.backbone_name = tmp;
+            self.backbone_name = Some(tmp);
         }
 
         if let Some(x) = args.verbosity {

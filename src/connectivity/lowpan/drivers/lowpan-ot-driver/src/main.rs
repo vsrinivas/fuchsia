@@ -13,7 +13,7 @@ use fidl_fuchsia_lowpan_spinel::{
     DeviceMarker as SpinelDeviceMarker, DeviceProxy as SpinelDeviceProxy,
     DeviceSetupProxy as SpinelDeviceSetupProxy,
 };
-use fuchsia_component::client::connect_to_protocol_at;
+use fuchsia_component::client::{connect_to_protocol, connect_to_protocol_at};
 
 use lowpan_driver_common::net::*;
 use lowpan_driver_common::spinel::SpinelDeviceSink;
@@ -21,6 +21,7 @@ use lowpan_driver_common::{register_and_serve_driver, register_and_serve_driver_
 use openthread_fuchsia::Platform as OtPlatform;
 
 use config::Config;
+use fidl::endpoints::create_proxy;
 
 use crate::driver::OtDriver;
 use crate::prelude::*;
@@ -116,13 +117,13 @@ impl Config {
         Ok(client_side.into_proxy()?)
     }
 
-    fn get_backbone_netif_index(&self) -> Option<ot::NetifIndex> {
-        if self.backbone_name.is_empty() {
+    fn get_backbone_netif_index_by_config(&self) -> Option<ot::NetifIndex> {
+        if self.backbone_name.as_ref().unwrap().is_empty() {
             info!("Backbone interface is disabled");
             return None;
         }
 
-        let c_name = CString::new(self.backbone_name.as_bytes().to_vec())
+        let c_name = CString::new(self.backbone_name.as_ref().unwrap().as_bytes().to_vec())
             .expect("Invalid backbone interface name");
 
         // SAFETY: Calling `if_name_toindex` is safe assuming that the C-string pointer
@@ -137,6 +138,61 @@ impl Config {
         info!("Backbone interface is {:?} (index {})", self.backbone_name, index);
 
         Some(index)
+    }
+
+    fn get_backbone_netif_index_by_default_route(&self) -> Option<ot::NetifIndex> {
+        let state = connect_to_protocol::<fidl_fuchsia_net_interfaces::StateMarker>()
+            .expect("error connecting to StateMarker");
+        let (watcher_client, watcher_server) =
+            create_proxy::<fidl_fuchsia_net_interfaces::WatcherMarker>()
+                .expect("error connecting to WatcherMarker");
+        state
+            .get_watcher(fidl_fuchsia_net_interfaces::WatcherOptions::EMPTY, watcher_server)
+            .expect("error getting interface watcher");
+
+        let get_nicid_fut = async move {
+            loop {
+                match watcher_client.watch().await.expect("") {
+                    fidl_fuchsia_net_interfaces::Event::Existing(
+                        fidl_fuchsia_net_interfaces::Properties {
+                            id,
+                            name,
+                            has_default_ipv4_route,
+                            has_default_ipv6_route,
+                            ..
+                        },
+                    ) => {
+                        info!(
+                            "NICID: {:?}, name: {:?}, DRv4: {:?}, DRv6: {:?}",
+                            id, name, has_default_ipv4_route, has_default_ipv6_route
+                        );
+                        if let Some(has_route) = has_default_ipv4_route {
+                            // wlan router may disabled ipv6
+                            if has_route && name.unwrap().contains("wlan") {
+                                return Some(id.unwrap_or(0) as ot::NetifIndex);
+                            }
+                        }
+                    }
+                    fidl_fuchsia_net_interfaces::Event::Idle(
+                        fidl_fuchsia_net_interfaces::Empty {},
+                    ) => {
+                        break;
+                    }
+                    _ => {}
+                }
+            }
+            None
+        };
+
+        futures::executor::block_on(get_nicid_fut)
+    }
+
+    fn get_backbone_netif_index(&self) -> Option<ot::NetifIndex> {
+        if self.backbone_name.is_none() {
+            self.get_backbone_netif_index_by_default_route()
+        } else {
+            self.get_backbone_netif_index_by_config()
+        }
     }
 
     /// Async method which returns the future that runs the driver.
