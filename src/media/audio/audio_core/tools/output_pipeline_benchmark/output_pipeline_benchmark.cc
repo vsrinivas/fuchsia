@@ -212,31 +212,22 @@ OutputPipelineBenchmark::Scenario OutputPipelineBenchmark::Scenario::FromString(
 }
 
 std::shared_ptr<OutputPipeline> OutputPipelineBenchmark::CreateOutputPipeline(
-    std::unique_ptr<EffectsLoaderV2> effects_loader_v2) {
-  constexpr char kProcessConfigPath[] = "/config/data/audio_core_config.json";
-  auto process_config = ProcessConfigLoader::LoadProcessConfig(kProcessConfigPath);
-  FX_CHECK(!process_config.is_error())
-      << "Failed to load " << kProcessConfigPath << ": " << process_config.error();
-  process_config_ = process_config.take_value();
+    const ProcessConfig& process_config, AudioClock& device_clock,
+    EffectsLoaderV2* effects_loader_v2) {
+  auto device_profile =
+      process_config.device_config().output_device_profile(AUDIO_STREAM_UNIQUE_ID_BUILTIN_SPEAKERS);
 
-  effects_loader_v2_ = std::move(effects_loader_v2);
-
-  auto device_profile = process_config_->device_config().output_device_profile(
-      AUDIO_STREAM_UNIQUE_ID_BUILTIN_SPEAKERS);
-
-  const Format pipeline_format =
-      device_profile.pipeline_config().OutputFormat(effects_loader_v2_.get());
-
+  const Format pipeline_format = device_profile.pipeline_config().OutputFormat(effects_loader_v2);
   uint32_t fps = pipeline_format.frames_per_second();
 
   // zx::time(0) == frame 0
   auto ref_time_to_frac_presentation_frame =
       TimelineFunction(TimelineRate(Fixed(fps).raw_value(), zx::sec(1).to_nsecs()));
 
-  return std::make_shared<OutputPipelineImpl>(
-      device_profile.pipeline_config(), process_config_->mix_profile_config(),
-      device_profile.volume_curve(), effects_loader_v2_.get(), 960,
-      ref_time_to_frac_presentation_frame, *device_clock_);
+  return std::make_shared<OutputPipelineImpl>(device_profile.pipeline_config(),
+                                              process_config.mix_profile_config(),
+                                              device_profile.volume_curve(), effects_loader_v2, 960,
+                                              ref_time_to_frac_presentation_frame, device_clock);
 }
 
 std::unique_ptr<EffectsLoaderV2> OutputPipelineBenchmark::CreateEffectsLoaderV2(
@@ -249,6 +240,14 @@ std::unique_ptr<EffectsLoaderV2> OutputPipelineBenchmark::CreateEffectsLoaderV2(
   FX_PLOGS(WARNING, result.error())
       << "Failed to connect to V2 effects factory: V2 effects are not available";
   return nullptr;
+}
+
+ProcessConfig OutputPipelineBenchmark::LoadProcessConfigOrDie() {
+  constexpr char kProcessConfigPath[] = "/config/data/audio_core_config.json";
+  auto process_config = ProcessConfigLoader::LoadProcessConfig(kProcessConfigPath);
+  FX_CHECK(!process_config.is_error())
+      << "Failed to load " << kProcessConfigPath << ": " << process_config.error();
+  return process_config.take_value();
 }
 
 std::shared_ptr<ReadableStream> OutputPipelineBenchmark::CreateInput(const Input& input) {
