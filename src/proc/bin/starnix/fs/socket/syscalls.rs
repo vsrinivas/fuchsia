@@ -373,37 +373,29 @@ fn recvmsg_internal(
 
     message_header.msg_flags = 0;
 
-    if let Some(ancillary_data) = info.ancillary_data {
-        let mut num_bytes_to_write = message_header.msg_controllen as usize;
-        if !ancillary_data.can_fit_all_data(num_bytes_to_write) {
-            // If not all data can fit, set the MSG_CTRUNC flag.
+    let cmsg_buffer_size = message_header.msg_controllen as usize;
+    let mut cmsg_bytes_written = 0;
+    let header_size = std::mem::size_of::<cmsghdr>();
+    for ancilliary_data in info.ancillary_data {
+        let expected_size = header_size + ancilliary_data.total_size();
+        let message_bytes =
+            ancilliary_data.into_bytes(current_task, cmsg_buffer_size - cmsg_bytes_written)?;
+        // If the message is smaller than expected, set
+        // the MSG_CTRUNC flag, so the caller can tell
+        // some of the message is missing.
+        if message_bytes.len() < expected_size {
             message_header.msg_flags |= MSG_CTRUNC as u64;
-            if !ancillary_data.can_fit_any_data(num_bytes_to_write) {
-                // If the length is not large enough to fit any real data, set the number of bytes
-                // to write to 0.
-                num_bytes_to_write = 0;
-            }
         }
-
-        let mut control_message_header = ancillary_data.into_cmsghdr(current_task)?;
-
-        // Cap the number of bytes to write at the actual length of the control message.
-        num_bytes_to_write = std::cmp::min(num_bytes_to_write, control_message_header.cmsg_len);
-        // Set the cmsg_len to the actual number of bytes written.
-        control_message_header.cmsg_len = num_bytes_to_write;
-
-        current_task.mm.write_memory(
-            message_header.msg_control,
-            &control_message_header.as_bytes()[..num_bytes_to_write],
-        )?;
-
-        // TODO(fxb/79405): This length is not correct according to gVisor's socket_test. The
-        // expected length is calculated by a CMSG_SPACE macro, which seems to do some alignment.
-        message_header.msg_controllen = num_bytes_to_write;
-    } else {
-        // If there is no control message, make sure to clear the length.
-        message_header.msg_controllen = 0;
+        if message_bytes.len() > 0 {
+            current_task
+                .mm
+                .write_memory(message_header.msg_control + cmsg_bytes_written, &message_bytes)?;
+            cmsg_bytes_written += message_bytes.len();
+        }
     }
+    // TODO(fxb/79405): This length is not correct according to gVisor's socket_test. The
+    // expected length is calculated by a CMSG_SPACE macro, which seems to do some alignment.
+    message_header.msg_controllen = cmsg_bytes_written;
 
     // TODO: Handle info.address.
 
@@ -544,15 +536,41 @@ fn sendmsg_internal(
     )?;
     let iovec =
         current_task.mm.read_iovec(message_header.msg_iov, message_header.msg_iovlen as i32)?;
-    let ancillary_data = if message_header.msg_controllen > 0 {
-        let mut control_message_header = cmsghdr::default();
+
+    let mut control_bytes_read = 0;
+    let mut ancillary_data = Vec::new();
+    let header_size = std::mem::size_of::<cmsghdr>();
+    loop {
+        let space = message_header.msg_controllen - control_bytes_read;
+        if space < header_size {
+            break;
+        }
+        let mut cmsg = cmsghdr::default();
         current_task
             .mm
-            .read_object(UserRef::new(message_header.msg_control), &mut control_message_header)?;
-        Some(AncillaryData::new(current_task, control_message_header)?)
-    } else {
-        None
-    };
+            .read_memory(message_header.msg_control + control_bytes_read, cmsg.as_bytes_mut())?;
+        // If the message header is not long enough to fit the required fields of the
+        // control data, return EINVAL.
+        if cmsg.cmsg_len < header_size {
+            return error!(EINVAL);
+        }
+        // If the message length is greater than the number of bytes that are left in the array,
+        // return EINVAL.
+        if cmsg.cmsg_len > space {
+            return error!(EINVAL);
+        }
+        let data_size = cmsg.cmsg_len - header_size;
+        let mut data = vec![0u8; data_size];
+        current_task.mm.read_memory(
+            message_header.msg_control + control_bytes_read + header_size,
+            &mut data,
+        )?;
+        control_bytes_read += header_size + data.len();
+        ancillary_data.push(AncillaryData::from_cmsg(
+            current_task,
+            ControlMsg::new(cmsg.cmsg_level, cmsg.cmsg_type, data),
+        )?);
+    }
 
     let flags = SocketMessageFlags::from_bits_truncate(flags);
     let socket_ops = file.downcast_file::<SocketFile>().unwrap();
@@ -631,7 +649,7 @@ pub fn sys_sendto(
 
     let flags = SocketMessageFlags::from_bits_truncate(flags);
     let socket_ops = file.downcast_file::<SocketFile>().unwrap();
-    socket_ops.sendmsg(&current_task, &file, data, dest_address, None, flags)
+    socket_ops.sendmsg(&current_task, &file, data, dest_address, vec![], flags)
 }
 
 pub fn sys_getsockopt(
@@ -713,6 +731,9 @@ pub fn sys_setsockopt(
     };
 
     match level {
+        // TODO(tbodt): When unix domain sockets are separated from internet sockets, most if not
+        // all of these should be pushed down into the unix-specific or inet-specific code.
+        // E.g. SO_PASSCRED is only applicable to unix domain sockets.
         SOL_SOCKET => match optname {
             SO_RCVTIMEO => {
                 socket.set_receive_timeout(read_timeval()?);
@@ -737,6 +758,10 @@ pub fn sys_setsockopt(
                     linger.l_onoff = 1;
                 }
                 socket.lock().linger = linger;
+            }
+            SO_PASSCRED => {
+                let passcred = read::<u32>(current_task, user_optval, optlen)?;
+                socket.lock().passcred = passcred != 0;
             }
             _ => return error!(ENOPROTOOPT),
         },

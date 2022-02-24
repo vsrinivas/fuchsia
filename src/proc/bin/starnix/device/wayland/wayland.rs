@@ -187,7 +187,7 @@ fn handle_client_data(
 
     for message in messages {
         let mut handles = vec![];
-        if let Some(ancillary_data) = message.ancillary_data {
+        for ancillary_data in message.ancillary_data {
             match ancillary_data {
                 AncillaryData::Unix(UnixControlData::Rights(files)) => {
                     for file in files {
@@ -266,9 +266,9 @@ async fn handle_server_data(
             }
 
             let ancillary_data = if !files.is_empty() {
-                Some(AncillaryData::Unix(UnixControlData::Rights(files)))
+                vec![AncillaryData::Unix(UnixControlData::Rights(files))]
             } else {
-                None
+                vec![]
             };
 
             let message = Message::new(buffer.bytes().to_vec().into(), None, ancillary_data);

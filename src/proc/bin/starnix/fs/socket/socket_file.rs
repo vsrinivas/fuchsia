@@ -36,7 +36,7 @@ impl FileOps for SocketFile {
         current_task: &CurrentTask,
         data: &[UserBuffer],
     ) -> Result<usize, Errno> {
-        self.sendmsg(current_task, file, data, None, None, SocketMessageFlags::empty())
+        self.sendmsg(current_task, file, data, None, vec![], SocketMessageFlags::empty())
     }
 
     fn wait_async(
@@ -79,7 +79,7 @@ impl SocketFile {
         file: &FileObject,
         data: &[UserBuffer],
         mut dest_address: Option<SocketAddress>,
-        mut ancillary_data: Option<AncillaryData>,
+        mut ancillary_data: Vec<AncillaryData>,
         flags: SocketMessageFlags,
     ) -> Result<usize, Errno> {
         // TODO: Implement more `flags`.

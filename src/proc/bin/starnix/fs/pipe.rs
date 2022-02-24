@@ -164,7 +164,7 @@ impl Pipe {
             return error!(EAGAIN);
         }
 
-        self.messages.write_stream(&current_task, user_buffers, None, &mut None)
+        self.messages.write_stream(&current_task, user_buffers, None, &mut vec![])
     }
 
     fn query_events(&self) -> FdEvents {

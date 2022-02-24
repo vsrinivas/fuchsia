@@ -185,13 +185,12 @@ pub struct msghdr {
     pub msg_flags: u64,
 }
 
-#[derive(AsBytes, FromBytes)]
+#[derive(AsBytes, FromBytes, Default)]
 #[repr(packed)]
 pub struct cmsghdr {
     pub cmsg_len: usize,
     pub cmsg_level: u32,
     pub cmsg_type: u32,
-    pub cmsg_data: [u8; SCM_MAX_FD * 4],
 }
 
 #[derive(Debug, Default, Clone, AsBytes, FromBytes)]
@@ -200,24 +199,6 @@ pub struct mmsghdr {
     pub msg_hdr: msghdr,
     pub msg_len: u32,
     pub __reserved: [u8; 4usize],
-}
-
-impl cmsghdr {
-    /// The header length (i.e., the length of the fixed fields in the struct).
-    pub fn header_length() -> usize {
-        std::mem::size_of::<u32>() * 2 + std::mem::size_of::<usize>()
-    }
-
-    /// Returns the length of the data contained in this control message (excluding header length).
-    pub fn data_length(&self) -> usize {
-        self.cmsg_len - cmsghdr::header_length()
-    }
-}
-
-impl Default for cmsghdr {
-    fn default() -> Self {
-        cmsghdr { cmsg_len: 0, cmsg_level: 0, cmsg_type: 0, cmsg_data: [0u8; SCM_MAX_FD * 4] }
-    }
 }
 
 #[derive(Debug, Default, Clone, AsBytes, FromBytes)]

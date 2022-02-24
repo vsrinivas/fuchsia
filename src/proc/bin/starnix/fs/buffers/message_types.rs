@@ -9,7 +9,7 @@ use crate::errno;
 use crate::error;
 use crate::fs::socket::SocketAddress;
 use crate::fs::*;
-use crate::task::Task;
+use crate::task::{CurrentTask, Task};
 use crate::types::*;
 
 /// A `Message` represents a typed segment of bytes within a `MessageQueue`.
@@ -23,7 +23,7 @@ pub struct Message {
     pub address: Option<SocketAddress>,
 
     /// The ancillary data that is associated with this message.
-    pub ancillary_data: Option<AncillaryData>,
+    pub ancillary_data: Vec<AncillaryData>,
 }
 
 impl Message {
@@ -31,7 +31,7 @@ impl Message {
     pub fn new(
         data: MessageData,
         address: Option<SocketAddress>,
-        ancillary_data: Option<AncillaryData>,
+        ancillary_data: Vec<AncillaryData>,
     ) -> Self {
         Message { data, address, ancillary_data }
     }
@@ -46,13 +46,26 @@ impl Message {
 
 impl From<MessageData> for Message {
     fn from(data: MessageData) -> Self {
-        Message { data, address: None, ancillary_data: None }
+        Message { data, address: None, ancillary_data: Vec::new() }
     }
 }
 
 impl From<Vec<u8>> for Message {
     fn from(data: Vec<u8>) -> Self {
-        Self { data: data.into(), address: None, ancillary_data: None }
+        Self { data: data.into(), address: None, ancillary_data: Vec::new() }
+    }
+}
+
+pub struct ControlMsg {
+    pub header: cmsghdr,
+    pub data: Vec<u8>,
+}
+
+impl ControlMsg {
+    pub fn new(cmsg_level: u32, cmsg_type: u32, data: Vec<u8>) -> ControlMsg {
+        let cmsg_len = std::mem::size_of::<cmsghdr>() + data.len();
+        let header = cmsghdr { cmsg_len, cmsg_level, cmsg_type };
+        ControlMsg { header, data }
     }
 }
 
@@ -71,61 +84,69 @@ pub enum AncillaryData {
 }
 
 impl AncillaryData {
-    /// Creates a new `AncillaryData` instance representing the data in `cmsghdr`.
+    /// Creates a new `AncillaryData` instance representing the data in `message`.
     ///
     /// # Parameters
-    /// - `task`: The task that is used to read the data from the `cmsghdr`.
-    /// - `message_header`: The message header struct that this `AncillaryData` represents.
-    pub fn new(task: &Task, message_header: cmsghdr) -> Result<Self, Errno> {
-        if message_header.cmsg_level != SOL_SOCKET {
-            return error!(EINVAL);
-        }
-        if message_header.cmsg_type != AF_UNIX as u32 {
-            return error!(EINVAL);
-        }
-        // If the message header is not long enough to fit the required fields of the
-        // control data, return EINVAL.
-        if message_header.cmsg_len < cmsghdr::header_length() {
-            return error!(EINVAL);
-        }
-        // If the message data length is greater than the number of bytes that can fit in the array,
-        // return EINVAL.
-        if message_header.data_length() > message_header.cmsg_data.len() {
+    /// - `current_task`: The current task. Used to interpret SCM_RIGHTS messages.
+    /// - `message`: The message header to parse.
+    pub fn from_cmsg(current_task: &CurrentTask, message: ControlMsg) -> Result<Self, Errno> {
+        if message.header.cmsg_level != SOL_SOCKET {
             return error!(EINVAL);
         }
 
-        Ok(AncillaryData::Unix(UnixControlData::new(task, message_header)?))
+        if message.header.cmsg_type != SCM_RIGHTS && message.header.cmsg_type != SCM_CREDENTIALS {
+            return error!(EINVAL);
+        }
+
+        Ok(AncillaryData::Unix(UnixControlData::new(current_task, message)?))
     }
 
-    /// Returns a `cmsghdr` representation of this `AncillaryData`. This includes creating any
-    /// objects (e.g., file descriptors) in `task`.
-    pub fn into_cmsghdr(self, task: &Task) -> Result<cmsghdr, Errno> {
+    /// Returns a `ControlMsg` representation of this `AncillaryData`. This includes
+    /// creating any objects (e.g., file descriptors) in `task`.
+    pub fn into_controlmsg(self, current_task: &CurrentTask) -> Result<ControlMsg, Errno> {
         match self {
-            AncillaryData::Unix(control) => control.into_cmsghdr(task),
+            AncillaryData::Unix(control) => control.into_controlmsg(current_task),
         }
     }
 
-    /// Returns true iff the `size` is large enough to fit the message's header as well as all of
-    /// its data.
-    pub fn can_fit_all_data(&self, size: usize) -> bool {
+    /// Returns the total size of all data in this message.
+    pub fn total_size(&self) -> usize {
         match self {
-            AncillaryData::Unix(control) => control.can_fit_all_data(size),
+            AncillaryData::Unix(control) => control.total_size(),
         }
     }
 
-    /// Returns true iff the `size` is large enough to fit the message's header as well as *any*
-    /// amount of its data.
-    pub fn can_fit_any_data(&self, size: usize) -> bool {
+    /// Returns the minimum size that can fit some amount of this message's data.
+    pub fn minimum_size(&self) -> usize {
         match self {
-            AncillaryData::Unix(control) => control.can_fit_any_data(size),
+            AncillaryData::Unix(control) => control.minimum_size(),
         }
     }
-}
 
-impl From<Vec<u8>> for AncillaryData {
-    /// This is mainly used for testing purposes.
-    fn from(data: Vec<u8>) -> Self {
-        AncillaryData::Unix(UnixControlData::Security(data))
+    /// Convert the message into bytes, truncating it, if
+    /// it exceeds the space available.
+    pub fn into_bytes(
+        self,
+        current_task: &CurrentTask,
+        space_available: usize,
+    ) -> Result<Vec<u8>, Errno> {
+        let minimum_size = self.minimum_size();
+        let mut cmsg = self.into_controlmsg(current_task)?;
+        let header_size = std::mem::size_of::<cmsghdr>();
+        let mut to_write = header_size + cmsg.data.len();
+        if space_available < to_write {
+            // MSG_CTRUNC will be set
+            // If we cannot write the minimum, we cannot write anything
+            if space_available < header_size + minimum_size {
+                return Ok(vec![]);
+            }
+            to_write = space_available;
+        }
+        cmsg.header.cmsg_len = to_write;
+        let mut vec = Vec::<u8>::with_capacity(to_write);
+        vec.extend_from_slice(cmsg.header.as_bytes());
+        vec.extend_from_slice(&cmsg.data[..to_write - header_size]);
+        Ok(vec)
     }
 }
 
@@ -178,103 +199,76 @@ impl PartialEq for UnixControlData {
 impl UnixControlData {
     /// Creates a new `UnixControlData` instance for the provided `message_header`. This includes
     /// reading the associated data from the `task` (e.g., files from file descriptors).
-    pub fn new(task: &Task, message_header: cmsghdr) -> Result<Self, Errno> {
-        match message_header.cmsg_type {
+    pub fn new(current_task: &CurrentTask, message: ControlMsg) -> Result<Self, Errno> {
+        match message.header.cmsg_type {
             SCM_RIGHTS => {
                 // Compute the number of file descriptors that fit in the provided bytes.
                 let bytes_per_file_descriptor = std::mem::size_of::<FdNumber>();
-                let num_file_descriptors = message_header.data_length() / bytes_per_file_descriptor;
+                let num_file_descriptors = message.data.len() / bytes_per_file_descriptor;
 
                 // Get the files associated with the provided file descriptors.
                 let files = (0..num_file_descriptors * bytes_per_file_descriptor)
                     .step_by(bytes_per_file_descriptor)
-                    .map(|index| NativeEndian::read_i32(&message_header.cmsg_data[index..]))
-                    .map(|fd| task.files.get(FdNumber::from_raw(fd)))
+                    .map(|index| NativeEndian::read_i32(&message.data[index..]))
+                    .map(|fd| current_task.files.get(FdNumber::from_raw(fd)))
                     .collect::<Result<Vec<FileHandle>, Errno>>()?;
 
                 Ok(UnixControlData::Rights(files))
             }
             SCM_CREDENTIALS => {
-                if message_header.data_length() < std::mem::size_of::<ucred>() {
+                if message.data.len() < std::mem::size_of::<ucred>() {
                     return error!(EINVAL);
                 }
 
-                let credentials =
-                    ucred::read_from(&message_header.cmsg_data[..std::mem::size_of::<ucred>()])
-                        .ok_or(errno!(EINVAL))?;
+                let credentials = ucred::read_from(&message.data[..std::mem::size_of::<ucred>()])
+                    .ok_or(errno!(EINVAL))?;
                 Ok(UnixControlData::Credentials(credentials))
             }
-            SCM_SECURITY => Ok(UnixControlData::Security(
-                message_header.cmsg_data[..message_header.cmsg_len].to_owned(),
-            )),
+            SCM_SECURITY => Ok(UnixControlData::Security(message.data)),
             _ => return error!(EINVAL),
         }
     }
 
-    /// Constructs a cmsghdr for this control data, with a destination of `task`.
+    /// Constructs a ControlMsg for this control data, with a destination of `task`.
     ///
     /// The provided `task` is used to create any required file descriptors, etc.
-    pub fn into_cmsghdr(self, task: &Task) -> Result<cmsghdr, Errno> {
-        let mut cmsg_data = [0u8; SCM_MAX_FD * 4];
-        let (cmsg_type, cmsg_len) = match self {
+    pub fn into_controlmsg(self, current_task: &CurrentTask) -> Result<ControlMsg, Errno> {
+        let (msg_type, data) = match self {
             UnixControlData::Rights(files) => {
                 let fds: Vec<FdNumber> = files
                     .iter()
-                    .map(|file| task.files.add_with_flags(file.clone(), FdFlags::empty()))
+                    .map(|file| current_task.files.add_with_flags(file.clone(), FdFlags::empty()))
                     .collect::<Result<Vec<FdNumber>, Errno>>()?;
-                let fd_bytes = fds.as_bytes();
-
-                for (index, byte) in fd_bytes.iter().enumerate() {
-                    cmsg_data[index] = *byte;
-                }
-                (SCM_RIGHTS, fd_bytes.len())
+                (SCM_RIGHTS, fds.as_bytes().to_owned())
             }
             UnixControlData::Credentials(credentials) => {
-                let bytes = credentials.as_bytes();
-                for (index, byte) in bytes.iter().enumerate() {
-                    cmsg_data[index] = *byte;
-                }
-                (SCM_CREDENTIALS, bytes.len())
+                (SCM_CREDENTIALS, credentials.as_bytes().to_owned())
             }
-            UnixControlData::Security(string) => {
-                for (index, byte) in string.iter().enumerate() {
-                    cmsg_data[index] = *byte;
-                }
-                (SCM_SECURITY, string.len())
-            }
+            UnixControlData::Security(string) => (SCM_SECURITY, string.as_bytes().to_owned()),
         };
 
-        Ok(cmsghdr {
-            cmsg_len: cmsg_len + cmsghdr::header_length(),
-            cmsg_level: SOL_SOCKET,
-            cmsg_type,
-            cmsg_data,
-        })
+        Ok(ControlMsg::new(SOL_SOCKET, msg_type, data))
     }
 
-    /// Returns true iff the `size` is large enough to fit the message's header as well as all of
-    /// its data.
-    pub fn can_fit_all_data(&self, size: usize) -> bool {
-        let data_length = match self {
+    /// Returns the total size of all data in this message.
+    pub fn total_size(&self) -> usize {
+        match self {
             UnixControlData::Rights(files) => files.len() * std::mem::size_of::<FdNumber>(),
             UnixControlData::Credentials(_credentials) => std::mem::size_of::<ucred>(),
             UnixControlData::Security(string) => string.len(),
-        };
-        data_length + cmsghdr::header_length() <= size
+        }
     }
 
-    /// Returns true iff the `size` is large enough to fit the message's header as well as *any*
-    /// amount of its data.
-    ///
-    /// For example, when this message contains file descriptors, this will return true as long as
-    /// `size` can fit both the header and at least one file descriptor.
-    pub fn can_fit_any_data(&self, size: usize) -> bool {
-        let data_length = match self {
+    /// Returns the minimum size that can fit some amount of this message's data. For example, the
+    /// minimum size for an SCM_RIGHTS message is the size of a single FD. If the buffer is large
+    /// enough for the minimum size but too small for the total size, the message is truncated and
+    /// the MSG_CTRUNC flag is set.
+    pub fn minimum_size(&self) -> usize {
+        match self {
             UnixControlData::Rights(_files) => std::mem::size_of::<FdNumber>(),
             UnixControlData::Credentials(_credentials) => std::mem::size_of::<ucred>(),
             UnixControlData::Security(string) => string.len(),
-        };
-        data_length + cmsghdr::header_length() <= size
+        }
     }
 }
 

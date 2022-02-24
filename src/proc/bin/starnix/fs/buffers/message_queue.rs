@@ -16,7 +16,7 @@ pub struct MessageReadInfo {
     pub bytes_read: usize,
     pub message_length: usize,
     pub address: Option<SocketAddress>,
-    pub ancillary_data: Option<AncillaryData>,
+    pub ancillary_data: Vec<AncillaryData>,
 }
 
 /// A `MessageQueue` stores a FIFO sequence of messages.
@@ -141,7 +141,7 @@ impl MessageQueue {
 
         let mut total_bytes_read = 0;
         let mut address = None;
-        let mut ancillary_data = None;
+        let mut ancillary_data = vec![];
 
         while let Some(mut message) = self.read_message() {
             if !Self::update_address(&message, &mut address) {
@@ -161,12 +161,12 @@ impl MessageQueue {
                 self.write_front(Message::new(
                     remaining_data,
                     message.address.clone(),
-                    message.ancillary_data.take(),
+                    message.ancillary_data,
                 ));
                 break;
             }
 
-            if message.ancillary_data.is_some() {
+            if message.ancillary_data.len() > 0 {
                 ancillary_data = message.ancillary_data;
                 break;
             }
@@ -204,7 +204,7 @@ impl MessageQueue {
 
         let mut total_bytes_read = 0;
         let mut address = None;
-        let mut ancillary_data = None;
+        let mut ancillary_data = vec![];
 
         for message in self.messages.iter() {
             if !Self::update_address(message, &mut address) {
@@ -218,7 +218,7 @@ impl MessageQueue {
                 break;
             }
 
-            if message.ancillary_data.is_some() {
+            if message.ancillary_data.len() > 0 {
                 ancillary_data = message.ancillary_data.clone();
                 break;
             }
@@ -297,14 +297,14 @@ impl MessageQueue {
         task: &Task,
         user_buffers: &mut UserBufferIterator<'_>,
         address: Option<SocketAddress>,
-        ancillary_data: &mut Option<AncillaryData>,
+        ancillary_data: &mut Vec<AncillaryData>,
     ) -> Result<usize, Errno> {
         if self.closed {
             return error!(EPIPE);
         }
         let actual = std::cmp::min(self.available_capacity(), user_buffers.remaining());
         let data = MessageData::copy_from_user(task, user_buffers, actual)?;
-        self.write_message(Message::new(data, address, ancillary_data.take()));
+        self.write_message(Message::new(data, address, std::mem::take(ancillary_data)));
         Ok(actual)
     }
 
@@ -321,7 +321,7 @@ impl MessageQueue {
         task: &Task,
         user_buffers: &mut UserBufferIterator<'_>,
         address: Option<SocketAddress>,
-        ancillary_data: &mut Option<AncillaryData>,
+        ancillary_data: &mut Vec<AncillaryData>,
     ) -> Result<usize, Errno> {
         if self.closed {
             return error!(EPIPE);
@@ -334,7 +334,7 @@ impl MessageQueue {
             return error!(EAGAIN);
         }
         let data = MessageData::copy_from_user(task, user_buffers, actual)?;
-        self.write_message(Message::new(data, address, ancillary_data.take()));
+        self.write_message(Message::new(data, address, std::mem::take(ancillary_data)));
         Ok(actual)
     }
 
@@ -390,7 +390,8 @@ mod tests {
     fn test_control_len() {
         let mut message_queue = MessageQueue::new(usize::MAX);
         let bytes: Vec<u8> = vec![1, 2, 3];
-        let message = Message::new(vec![].into(), None, Some(bytes.clone().into()));
+        let ancilliary_data = vec![AncillaryData::Unix(UnixControlData::Security(bytes.clone()))];
+        let message = Message::new(vec![].into(), None, ancilliary_data);
         message_queue.write_message(message.clone());
         assert_eq!(message_queue.len(), 0);
         message_queue.write_message(bytes.clone().into());

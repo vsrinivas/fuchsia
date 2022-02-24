@@ -75,6 +75,9 @@ pub struct SocketInner {
     /// See SO_LINGER.
     pub linger: uapi::linger,
 
+    /// See SO_PASSCRED.
+    pub passcred: bool,
+
     /// Unix credentials of the owner of this socket, for SO_PEERCRED.
     credentials: Option<ucred>,
 
@@ -115,6 +118,7 @@ impl Socket {
                 receive_timeout: None,
                 send_timeout: None,
                 linger: uapi::linger::default(),
+                passcred: false,
                 credentials: None,
                 state: SocketState::Disconnected,
             }),
@@ -319,17 +323,33 @@ impl Socket {
         task: &Task,
         user_buffers: &mut UserBufferIterator<'_>,
         dest_address: &mut Option<SocketAddress>,
-        ancillary_data: &mut Option<AncillaryData>,
+        ancillary_data: &mut Vec<AncillaryData>,
     ) -> Result<usize, Errno> {
-        let (peer, local_address) = {
+        let (peer, local_address, creds) = {
             let inner = self.lock();
-            (inner.peer().ok_or_else(|| errno!(EPIPE))?.clone(), inner.address.clone())
+            (
+                inner.peer().ok_or_else(|| errno!(EPIPE))?.clone(),
+                inner.address.clone(),
+                inner.credentials.clone(),
+            )
         };
 
+        // TODO allow non-connected datagrams
         if dest_address.is_some() {
             return error!(EISCONN);
         }
         let mut peer = peer.lock();
+        if peer.passcred {
+            if let Some(creds) = creds {
+                ancillary_data
+                    .push(AncillaryData::Unix(UnixControlData::Credentials(creds.clone())));
+            } else {
+                let credentials = task.creds.read();
+                let creds =
+                    ucred { pid: task.get_pid(), uid: credentials.uid, gid: credentials.gid };
+                ancillary_data.push(AncillaryData::Unix(UnixControlData::Credentials(creds)));
+            }
+        }
         peer.write(task, user_buffers, local_address, ancillary_data, self.socket_type)
     }
 
@@ -523,7 +543,7 @@ impl SocketInner {
         task: &Task,
         user_buffers: &mut UserBufferIterator<'_>,
         address: Option<SocketAddress>,
-        ancillary_data: &mut Option<AncillaryData>,
+        ancillary_data: &mut Vec<AncillaryData>,
         socket_type: SocketType,
     ) -> Result<usize, Errno> {
         let bytes_written = if socket_type == SocketType::Stream {
@@ -768,7 +788,7 @@ mod tests {
         assert_eq!(FdEvents::POLLIN, socket.query_events());
         let server_socket = socket.accept(current_task.as_ucred()).unwrap();
 
-        let message = Message::new(vec![1, 2, 3].into(), None, None);
+        let message = Message::new(vec![1, 2, 3].into(), None, vec![]);
         server_socket.write_kernel(message.clone()).expect("Failed to write.");
 
         server_socket.close();
@@ -782,6 +802,7 @@ mod tests {
         let (_kernel, current_task) = create_kernel_and_task();
         let bind_address = SocketAddress::Unix(b"dgram_test".to_vec());
         let rec_dgram = Socket::new(SocketDomain::Unix, SocketType::Datagram);
+        rec_dgram.lock().passcred = true;
         rec_dgram.bind(bind_address).expect("failed to bind datagram socket");
 
         let xfer_value: u64 = 1234567819;
@@ -792,9 +813,10 @@ mod tests {
         let send = Socket::new(SocketDomain::Unix, SocketType::Datagram);
         let source_buf = [UserBuffer { address: source_mem, length: xfer_bytes.len() }];
         let mut source_iter = UserBufferIterator::new(&source_buf);
-        let credentials = ucred { pid: current_task.get_pid(), uid: 0, gid: 0 };
-        send.connect(&rec_dgram, credentials).unwrap();
-        let no_write = send.write(&current_task, &mut source_iter, &mut None, &mut None).unwrap();
+        let task_pid = current_task.get_pid();
+        let credentials = ucred { pid: task_pid, uid: 0, gid: 0 };
+        send.connect(&rec_dgram, credentials.clone()).unwrap();
+        let no_write = send.write(&current_task, &mut source_iter, &mut None, &mut vec![]).unwrap();
         assert_eq!(no_write, xfer_bytes.len());
         // Previously, this would cause the test to fail,
         // because rec_dgram was shut down.
@@ -810,6 +832,11 @@ mod tests {
         assert_eq!(read_info.bytes_read, xfer_bytes.len());
         current_task.mm.read_memory(rec_mem, &mut recv_mem).unwrap();
         assert_eq!(recv_mem, xfer_bytes);
+        assert_eq!(1, read_info.ancillary_data.len());
+        assert_eq!(
+            read_info.ancillary_data[0],
+            AncillaryData::Unix(UnixControlData::Credentials(credentials))
+        );
 
         rec_dgram.close();
     }
