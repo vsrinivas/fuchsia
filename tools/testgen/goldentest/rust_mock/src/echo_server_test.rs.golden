@@ -1,30 +1,37 @@
 use anyhow::Error;
 use fidl_fidl_examples_routing_echo::*;
-use fuchsia_component_test::{builder::*, mock::*, RealmInstance};
+use fuchsia_component_test::new::{
+            Capability, ChildOptions, LocalComponentHandles, RealmBuilder, RealmInstance, Ref, Route,
+};
 
 const COMPONENT_URL: &str = "fuchsia-pkg://fuchsia.com/echo_server_test#meta/echo_server.cm";
 
 pub async fn create_realm() -> Result<RealmInstance, Error> {
-    let mut builder = RealmBuilder::new().await?;
+    let builder = RealmBuilder::new().await?;
+    let echo_server = builder.add_child(
+        "echo_server",
+        COMPONENT_URL,
+        ChildOptions::new()
+    )
+    .await?;
     builder
-        .add_component("echo_server", ComponentSource::url(COMPONENT_URL)).await?
-        .add_route(CapabilityRoute {
-            capability: Capability::protocol("fuchsia.logger.LogSink"),
-            source: RouteEndpoint::above_root(),
-            targets: vec![
-                RouteEndpoint::component("echo_server"),
-            ],
-        })?
-        .add_route(CapabilityRoute {
-            capability: Capability::protocol("fidl.examples.routing.echo.Echo"),
-            source: RouteEndpoint::component("echo_server"),
-            targets: vec![
-                RouteEndpoint::above_root(),
-            ],
-        })?;
+        .add_route(
+            Route::new()
+                .capability(Capability::protocol_by_name("fuchsia.logger.LogSink"))
+                .from(Ref::parent())
+                .to(&echo_server),
+        )
+        .await?;
+    builder
+        .add_route(
+            Route::new()
+                .capability(Capability::protocol_by_name("fidl.examples.routing.echo.Echo"))
+                .from(&echo_server)
+                .to(Ref::parent()),
+        )
+        .await?;
 
-
-    let instance = builder.build().create().await?;
+    let instance = builder.build().await?;
     Ok(instance)
 }
 

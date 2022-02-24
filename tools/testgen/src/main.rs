@@ -148,13 +148,18 @@ fn write_rust(
     output_file_name: &str,
     input: &AutoTestGeneratorCommand,
 ) -> Result<()> {
-    let code = &mut RustTestCode::new(&component_name);
-
-    code.add_component(component_name, component_url, "COMPONENT_URL", false);
+    // variable name used to refer to the component-under-test in the generated rust code.
+    let component_var_name = component_name.replace("-", "_");
+    let code = &mut RustTestCode::new(&component_var_name);
+    code.add_component(&component_var_name, component_url, "COMPONENT_URL", false);
 
     match input.generate_mocks {
-        true => code.add_import("fuchsia_component_test::{builder::*, mock::*, RealmInstance}"),
-        false => code.add_import("fuchsia_component_test::{builder::*, RealmInstance}"),
+        true => code.add_import(r#"fuchsia_component_test::new::{
+            Capability, ChildOptions, LocalComponentHandles, RealmBuilder, RealmInstance, Ref, Route,
+}"#),
+        false => code.add_import(r#"fuchsia_component_test::new::{
+            Capability, ChildOptions, RealmBuilder, RealmInstance, Ref, Route,
+}"#),
     };
 
     code.add_import("anyhow::Error");
@@ -573,42 +578,44 @@ mod test {
             false, /* cpp */
         )?;
         let create_realm_impl = code.realm_builder_snippets.join("\n");
-        let expect_realm_snippets = r#"        .add_component("service_1",
-                ComponentSource::Mock(Mock::new(move |mock_handles: MockHandles| {
-                    Box::pin(service_1_impl(mock_handles))
-                })),
-            )
-            .await?
-        .add_route(CapabilityRoute {
-            capability: Capability::protocol("fuchsia.diagnostics.ArchiveAccessor"),
-            source: RouteEndpoint::component("service_1"),
-            targets: vec![
-                RouteEndpoint::above_root(), RouteEndpoint::component("foo_bar"),
-            ],
-        })?
-        .add_component("service_2",
-                ComponentSource::Mock(Mock::new(move |mock_handles: MockHandles| {
-                    Box::pin(service_2_impl(mock_handles))
-                })),
-            )
-            .await?
-        .add_route(CapabilityRoute {
-            capability: Capability::protocol("fuchsia.metrics.MetricEventLoggerFactory"),
-            source: RouteEndpoint::component("service_2"),
-            targets: vec![
-                RouteEndpoint::above_root(), RouteEndpoint::component("foo_bar"),
-            ],
-        })?
-        .add_route(CapabilityRoute {
-            capability: Capability::directory(
-                "config-data",
-                "/config/data",
-                fio::RW_STAR_DIR),
-            source: RouteEndpoint::above_root(),
-            targets: vec![
-                RouteEndpoint::component("foo_bar"),
-            ],
-        })?"#;
+        let expect_realm_snippets = r#"    let service_1 = builder.add_local_child(
+        "service_1",
+        move |handles: LocalComponentHandles| Box::pin(service_1_impl(handles)), 
+        ChildOptions::new()
+    )
+    .await?;
+    builder
+        .add_route(
+            Route::new()
+                .capability(Capability::protocol_by_name("fuchsia.diagnostics.ArchiveAccessor"))
+                .from(&service_1)
+                .to(Ref::parent())
+                .to(&foo_bar),
+        )
+        .await?;
+    let service_2 = builder.add_local_child(
+        "service_2",
+        move |handles: LocalComponentHandles| Box::pin(service_2_impl(handles)), 
+        ChildOptions::new()
+    )
+    .await?;
+    builder
+        .add_route(
+            Route::new()
+                .capability(Capability::protocol_by_name("fuchsia.metrics.MetricEventLoggerFactory"))
+                .from(&service_2)
+                .to(Ref::parent())
+                .to(&foo_bar),
+        )
+        .await?;
+    builder
+        .add_route(
+            Route::new()
+                .capability(Capability::directory("config-data").path("/config/data").rights("fio::RW_STAR_DIR"))
+                .from(Ref::parent())
+                .to(&foo_bar),
+        )
+        .await?;"#;
         assert_eq!(create_realm_impl, expect_realm_snippets);
 
         let all_imports = code.imports.clone().into_iter().collect::<Vec<_>>();

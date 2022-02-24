@@ -24,13 +24,13 @@ group("tests") {
 # To generate new golden ex: cpp_mock
 # fx set core.qemu-x64 --with //examples/components/echo:echo-example --with //tools/testgen/goldentest:tests
 # fx build
-# ./out/default/host_x64/testgen -l ./out/default/obj/examples/components/routing/echo_server/cml/echo_server_component/echo_server.cm -o tools/testgen/goldentest/cpp_mock -c -m
+# ./out/default/host_x64/testgen -l ./out/default/obj/examples/components/routing/echo_server/cml/echo_server_component_manifest_compile/echo_server.cm -o tools/testgen/goldentest/cpp_mock -c -m
 if (is_host) {
   _tools_out = "${target_gen_dir}/goldentest/host_tools"
   host_test_data("copy_testgen") {
     sources = [ "${host_tools_dir}/testgen" ]
-    deps = [ "//tools/testgen:host($host_toolchain)" ]
     outputs = [ "${_tools_out}/{{source_file_part}}" ]
+    deps = [ "//tools/testgen:host($host_toolchain)" ]
   }
 
   _example_out = "${target_gen_dir}/goldentest/echo"

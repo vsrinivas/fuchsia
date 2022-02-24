@@ -56,6 +56,9 @@ group("tests") {
   # coverage builders injects extra capabilities to the components-under-test,
   # see fxbug.dev/84878, this causes the generated code to be different.
   if (!is_coverage) {
-    deps += [ "//tools/testgen/goldentest:tests" ]
+    deps += [
+      "//tools/testgen/compiletest:tests",
+      "//tools/testgen/goldentest:tests",
+    ]
   }
 }

@@ -1,4 +1,4 @@
-async fn FUNCTION_NAME(mock_handles: MockHandles) -> Result<(), Error> {
+async fn FUNCTION_NAME(handles: LocalComponentHandles) -> Result<(), Error> {
     let mut fs = ServiceFs::new();
     // Implement mocked component below, ex:
     // fs.dir("svc")
@@ -8,7 +8,7 @@ async fn FUNCTION_NAME(mock_handles: MockHandles) -> Result<(), Error> {
     //    .add_fidl_service(move |stream| {
     //        // mock the fidl service
     //    });
-    fs.serve_connection(mock_handles.outgoing_dir.into_channel()).unwrap();
+    fs.serve_connection(handles.outgoing_dir.into_channel()).unwrap();
     fs.collect::<()>().await;
     Ok(())
 }

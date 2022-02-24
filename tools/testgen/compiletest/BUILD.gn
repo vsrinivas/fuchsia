@@ -1,0 +1,41 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/go/go_library.gni")
+import("//build/go/go_test.gni")
+import("//build/testing/host_test_data.gni")
+
+group("tests") {
+  testonly = true
+  deps = [ ":compiletest_rust($host_toolchain)" ]
+}
+
+go_library("compiletest_lib") {
+  sources = [ "rust_compile_test.go" ]
+}
+
+if (is_host) {
+  _example_out = "${target_gen_dir}/compiletest/echo"
+  host_test_data("copy_compileonly_test") {
+    sources = [ get_label_info(
+                    "//tools/testgen/compiletest/rust:echo_server_test(${target_toolchain})",
+                    "target_out_dir") +
+                "/echo_server_test_manifest/echo_server_test.cm" ]
+    outputs = [ "${_example_out}/{{source_file_part}}" ]
+    deps = [
+      "//tools/testgen/compiletest/rust:echo_server_test(${target_toolchain})",
+    ]
+  }
+
+  go_test("compiletest_rust") {
+    output_name = "compiletest_rust"
+    gopackages = [ "go.fuchsia.dev/fuchsia/tools/testgen/compiletest" ]
+    deps = [ ":compiletest_lib" ]
+    non_go_deps = [ ":copy_compileonly_test" ]
+    args = [
+      "--cm",
+      rebase_path("${_example_out}/echo_server_test.cm", root_build_dir),
+    ]
+  }
+}

@@ -18,13 +18,13 @@ pub struct RustTestCodeGenerator<'a> {
 impl CodeGenerator for RustTestCodeGenerator<'_> {
     fn write_file<W: Write>(&self, writer: &mut W) -> Result<()> {
         let create_realm_func_start = r#"pub async fn create_realm() -> Result<RealmInstance, Error> {
-    let mut builder = RealmBuilder::new().await?;
-    builder
+    let builder = RealmBuilder::new().await?;
 "#;
+
         let mut create_realm_impl = self.code.realm_builder_snippets.join("\n");
-        create_realm_impl.push_str(";\n\n");
+        create_realm_impl.push_str("\n");
         let create_realm_func_end = r#"
-    let instance = builder.build().create().await?;
+    let instance = builder.build().await?;
     Ok(instance)
 }
 
@@ -72,7 +72,8 @@ pub struct RustTestCode {
     test_case: Vec<String>,
     // skeleton functions for implementing mocks
     mock_functions: Vec<String>,
-    /// name used by RealmBuilder for the component-under-test
+    /// var name used in generated RealmBuilder code that refers to the
+    /// component-under-test
     component_under_test: String,
 }
 
@@ -102,20 +103,27 @@ impl TestCodeBuilder for RustTestCode {
         if mock {
             let mock_function_name = format!("{}_impl", component_name);
             self.realm_builder_snippets.push(format!(
-                r#"        .add_component("{}",
-                ComponentSource::Mock(Mock::new(move |mock_handles: MockHandles| {{
-                    Box::pin({}(mock_handles))
-                }})),
-            )
-            .await?"#,
-                component_name, &mock_function_name,
+                r#"    let {child_component} = builder.add_local_child(
+        "{child_component}",
+        move |handles: LocalComponentHandles| Box::pin({mock_function}(handles)), 
+        ChildOptions::new()
+    )
+    .await?;"#,
+                child_component = component_name,
+                mock_function = &mock_function_name
             ));
         } else {
-            self.realm_builder_snippets.push(format!(
-                r#"        .add_component("{}", ComponentSource::url({})).await?"#,
-                component_name, const_var
-            ));
             self.constants.push(format!(r#"const {}: &str = "{}";"#, const_var, url).to_string());
+            self.realm_builder_snippets.push(format!(
+                r#"    let {child_component} = builder.add_child(
+        "{child_component}",
+        {url},
+        ChildOptions::new()
+    )
+    .await?;"#,
+                child_component = component_name,
+                url = const_var
+            ));
         }
         self
     }
@@ -138,36 +146,35 @@ impl TestCodeBuilder for RustTestCode {
         targets: Vec<String>,
     ) -> &'a dyn TestCodeBuilder {
         let source_code = match source {
-            "root" => "RouteEndpoint::above_root()".to_string(),
-            "self" => format!("RouteEndpoint::component(\"{}\")", self.component_under_test),
-            _ => format!("RouteEndpoint::component(\"{}\")", source),
+            "root" => "Ref::parent()".to_string(),
+            "self" => format!("&{}", self.component_under_test),
+            _ => format!("&{}", source),
         };
 
         let mut targets_code: String = "".to_string();
         for i in 0..targets.len() {
             let t = &targets[i];
             if t == "root" {
-                targets_code.push_str("RouteEndpoint::above_root(), ");
+                targets_code.push_str(format!("{:>16}.to(Ref::parent())\n", " ").as_str());
             } else if t == "self" {
-                targets_code.push_str(
-                    format!("RouteEndpoint::component(\"{}\"), ", self.component_under_test)
-                        .as_str(),
-                );
+                targets_code
+                    .push_str(format!("{:>16}.to(&{})\n", " ", self.component_under_test).as_str());
             } else {
-                targets_code.push_str(format!("RouteEndpoint::component(\"{}\"), ", t).as_str());
+                targets_code.push_str(format!("{:>16}.to(&{})\n", " ", source).as_str());
             }
         }
         self.realm_builder_snippets.push(format!(
-            r#"        .add_route(CapabilityRoute {{
-            capability: Capability::protocol("{}"),
-            source: {},
-            targets: vec![
-                {}
-            ],
-        }})?"#,
-            protocol,
-            source_code,
-            targets_code.trim_end()
+            r#"    builder
+        .add_route(
+            Route::new()
+                .capability(Capability::protocol_by_name("{protocol}"))
+                .from({from})
+{to},
+        )
+        .await?;"#,
+            protocol = protocol,
+            from = source_code,
+            to = targets_code.trim_end()
         ));
         self
     }
@@ -182,30 +189,26 @@ impl TestCodeBuilder for RustTestCode {
         for i in 0..targets.len() {
             let t = &targets[i];
             if t == "root" {
-                targets_code.push_str("RouteEndpoint::above_root(), ");
+                targets_code.push_str(format!("{:>16}.to(Ref::parent())\n", " ").as_str());
             } else if t == "self" {
-                targets_code.push_str(
-                    format!("RouteEndpoint::component(\"{}\"), ", self.component_under_test)
-                        .as_str(),
-                );
+                targets_code
+                    .push_str(format!("{:>16}.to(&{})\n", " ", self.component_under_test).as_str());
             } else {
-                targets_code.push_str(format!("RouteEndpoint::component(\"{}\"), ", t).as_str());
+                targets_code.push_str(format!("{:>16}.to(&{})\n", " ", t).as_str());
             }
         }
         self.realm_builder_snippets.push(format!(
-            r#"        .add_route(CapabilityRoute {{
-            capability: Capability::directory(
-                "{}",
-                "{}",
-                fio::RW_STAR_DIR),
-            source: RouteEndpoint::above_root(),
-            targets: vec![
-                {}
-            ],
-        }})?"#,
-            dir_name,
-            dir_path,
-            targets_code.trim_end()
+            r#"    builder
+        .add_route(
+            Route::new()
+                .capability(Capability::directory("{dir}").path("{path}").rights("fio::RW_STAR_DIR"))
+                .from(Ref::parent())
+{to},
+        )
+        .await?;"#,
+            dir = dir_name,
+            path = dir_path,
+            to = targets_code.trim_end()
         ));
         self
     }
@@ -220,30 +223,26 @@ impl TestCodeBuilder for RustTestCode {
         for i in 0..targets.len() {
             let t = &targets[i];
             if t == "root" {
-                targets_code.push_str("RouteEndpoint::above_root(), ");
+                targets_code.push_str(format!("{:>16}.to(Ref::parent())\n", " ").as_str());
             } else if t == "self" {
-                targets_code.push_str(
-                    format!("RouteEndpoint::component(\"{}\"), ", self.component_under_test)
-                        .as_str(),
-                );
+                targets_code
+                    .push_str(format!("{:>16}.to(&{})\n", " ", self.component_under_test).as_str());
             } else {
-                targets_code.push_str(format!("RouteEndpoint::component(\"{}\"), ", t).as_str());
+                targets_code.push_str(format!("{:>16}.to(&{})\n", " ", t).as_str());
             }
         }
         self.realm_builder_snippets.push(format!(
-            r#"        .add_route(CapabilityRoute {{
-            capability: Capability::storage(
-                "{}",
-                "{}",
-            ),
-            source: RouteEndpoint::above_root(),
-            targets: vec![
-                {}
-            ],
-        }})?"#,
-            storage_name,
-            storage_path,
-            targets_code.trim_end()
+            r#"    builder
+        .add_route(
+            Route::new()
+                .capability(Capability::storage("{dir}").path("{path}"))
+                .from(Ref::parent())
+{to},
+        )
+        .await?;"#,
+            dir = storage_name,
+            path = storage_path,
+            to = targets_code.trim_end()
         ));
         self
     }
