@@ -141,7 +141,7 @@ anonymous namespace in `main.cc`:
 To rebuild and rerun the tests, run:
 
 ```
-fx test -vo fidl_example_llcpp_test
+fx test -vo fidl-example-llcpp-test
 ```
 
 <!-- xrefs -->
