@@ -2,77 +2,87 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::fs::FdNumber;
-use crate::types::UserAddress;
+use crate::fs::{FdFlags, FdNumber};
+use crate::task::CurrentTask;
+use crate::types::{FileMode, OpenFlags, UserAddress};
 
-/// The result of executing a syscall.
-///
-/// It would be nice to have this also cover errors, but currently there is no stable way
-/// to implement `std::ops::Try` (for the `?` operator) for custom enums, making it difficult
-/// to work with.
-#[derive(Debug, Eq, PartialEq)]
-pub enum SyscallResult {
-    /// The task exited as a result of the syscall.
-    ///
-    /// The associated `i32` represents the task's exit code.
-    Exit(i32),
+#[derive(PartialEq, Debug)]
+pub struct SyscallResult(u64);
+pub const SUCCESS: SyscallResult = SyscallResult(0);
 
-    /// The syscall completed successfully. The associated `u64` is the return value from the
-    /// syscall.
-    Success(u64),
+impl SyscallResult {
+    /// TODO document
+    pub fn keep_regs(current_task: &CurrentTask) -> Self {
+        SyscallResult(current_task.registers.rax)
+    }
 
-    /// Return from a signal handler.
-    ///
-    /// This result avoids modifying the register state of the thread..
-    SigReturn,
+    pub fn value(&self) -> u64 {
+        self.0
+    }
 }
-
-pub const SUCCESS: SyscallResult = SyscallResult::Success(0);
 
 impl From<UserAddress> for SyscallResult {
     fn from(value: UserAddress) -> Self {
-        SyscallResult::Success(value.ptr() as u64)
+        SyscallResult(value.ptr() as u64)
+    }
+}
+
+impl From<FileMode> for SyscallResult {
+    fn from(value: FileMode) -> Self {
+        SyscallResult(value.bits() as u64)
+    }
+}
+
+impl From<FdFlags> for SyscallResult {
+    fn from(value: FdFlags) -> Self {
+        SyscallResult(value.bits() as u64)
+    }
+}
+
+impl From<OpenFlags> for SyscallResult {
+    fn from(value: OpenFlags) -> Self {
+        SyscallResult(value.bits() as u64)
     }
 }
 
 impl From<FdNumber> for SyscallResult {
     fn from(value: FdNumber) -> Self {
-        SyscallResult::Success(value.raw() as u64)
+        SyscallResult(value.raw() as u64)
     }
 }
 
 impl From<bool> for SyscallResult {
     fn from(value: bool) -> Self {
-        SyscallResult::Success(if value { 1 } else { 0 })
+        SyscallResult(if value { 1 } else { 0 })
     }
 }
 
 impl From<i32> for SyscallResult {
     fn from(value: i32) -> Self {
-        SyscallResult::Success(value as u64)
+        SyscallResult(value as u64)
     }
 }
 
 impl From<u32> for SyscallResult {
     fn from(value: u32) -> Self {
-        SyscallResult::Success(value as u64)
+        SyscallResult(value as u64)
     }
 }
 
 impl From<i64> for SyscallResult {
     fn from(value: i64) -> Self {
-        SyscallResult::Success(value as u64)
+        SyscallResult(value as u64)
     }
 }
 
 impl From<u64> for SyscallResult {
     fn from(value: u64) -> Self {
-        SyscallResult::Success(value)
+        SyscallResult(value)
     }
 }
 
 impl From<usize> for SyscallResult {
     fn from(value: usize) -> Self {
-        SyscallResult::Success(value as u64)
+        SyscallResult(value as u64)
     }
 }

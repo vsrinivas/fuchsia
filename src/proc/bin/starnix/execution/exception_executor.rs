@@ -23,7 +23,6 @@ use crate::signals::signal_handling::*;
 use crate::strace;
 use crate::syscalls::decls::SyscallDecl;
 use crate::syscalls::table::dispatch_syscall;
-use crate::syscalls::*;
 use crate::task::*;
 use crate::types::*;
 
@@ -141,19 +140,9 @@ fn run_exception_loop(
             args.5
         );
         match dispatch_syscall(current_task, syscall_number, args) {
-            Ok(SyscallResult::Exit(error_code)) => {
-                strace!(current_task, "-> exit {:#x}", error_code);
-                exception.set_exception_state(&ZX_EXCEPTION_STATE_THREAD_EXIT)?;
-                return Ok(error_code);
-            }
-            Ok(SyscallResult::Success(return_value)) => {
-                strace!(current_task, "-> {:#x}", return_value);
-                current_task.registers.rax = return_value;
-            }
-            Ok(SyscallResult::SigReturn) => {
-                // Do not modify the register state of the thread. The sigreturn syscall has
-                // restored the proper register state for the thread to continue with.
-                strace!(current_task, "-> sigreturn");
+            Ok(return_value) => {
+                strace!(current_task, "-> {:#x}", return_value.value());
+                current_task.registers.rax = return_value.value();
             }
             Err(errno) => {
                 strace!(current_task, "!-> {}", errno);
@@ -162,6 +151,12 @@ fn run_exception_loop(
         }
 
         dequeue_signal(current_task);
+
+        if let Some(exit_code) = *current_task.exit_code.lock() {
+            strace!(current_task, "exiting with status {:#x}", exit_code);
+            exception.set_exception_state(&ZX_EXCEPTION_STATE_THREAD_EXIT)?;
+            return Ok(exit_code);
+        }
 
         // Handle the debug address after the thread is set up to continue, because
         // `set_process_debug_addr` expects the register state to be in a post-syscall state (most

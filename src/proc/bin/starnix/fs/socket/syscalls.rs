@@ -23,7 +23,7 @@ pub fn sys_socket(
     domain: u32,
     socket_type: u32,
     _protocol: u32,
-) -> Result<SyscallResult, Errno> {
+) -> Result<FdNumber, Errno> {
     let flags = socket_type & (SOCK_NONBLOCK | SOCK_CLOEXEC);
     let domain = parse_socket_domain(domain)?;
     let socket_type = parse_socket_type(domain, socket_type)?;
@@ -34,7 +34,7 @@ pub fn sys_socket(
     let fd_flags = socket_flags_to_fd_flags(flags);
     let fd = current_task.files.add_with_flags(socket_file, fd_flags)?;
 
-    Ok(fd.into())
+    Ok(fd)
 }
 
 fn socket_flags_to_open_flags(flags: u32) -> OpenFlags {
@@ -197,7 +197,7 @@ pub fn sys_accept(
     fd: FdNumber,
     user_socket_address: UserAddress,
     user_address_length: UserRef<socklen_t>,
-) -> Result<SyscallResult, Errno> {
+) -> Result<FdNumber, Errno> {
     sys_accept4(current_task, fd, user_socket_address, user_address_length, 0)
 }
 
@@ -207,7 +207,7 @@ pub fn sys_accept4(
     user_socket_address: UserAddress,
     user_address_length: UserRef<socklen_t>,
     flags: u32,
-) -> Result<SyscallResult, Errno> {
+) -> Result<FdNumber, Errno> {
     let file = current_task.files.get(fd)?;
     let socket = file.node().socket().ok_or_else(|| errno!(ENOTSOCK))?;
     let accepted_socket = file.blocking_op(
@@ -231,7 +231,7 @@ pub fn sys_accept4(
     let accepted_socket_file = Socket::new_file(current_task.kernel(), accepted_socket, open_flags);
     let fd_flags = if flags & SOCK_CLOEXEC != 0 { FdFlags::CLOEXEC } else { FdFlags::empty() };
     let accepted_fd = current_task.files.add_with_flags(accepted_socket_file, fd_flags)?;
-    Ok(accepted_fd.into())
+    Ok(accepted_fd)
 }
 
 pub fn sys_connect(
@@ -425,12 +425,12 @@ pub fn sys_recvmsg(
     fd: FdNumber,
     user_message_header: UserRef<msghdr>,
     flags: u32,
-) -> Result<SyscallResult, Errno> {
+) -> Result<usize, Errno> {
     let file = current_task.files.get(fd)?;
     if !file.node().is_sock() {
         return error!(ENOTSOCK);
     }
-    Ok(recvmsg_internal(current_task, &file, user_message_header, flags, None)?.into())
+    recvmsg_internal(current_task, &file, user_message_header, flags, None)
 }
 
 pub fn sys_recvmmsg(
@@ -440,7 +440,7 @@ pub fn sys_recvmmsg(
     vlen: u32,
     mut flags: u32,
     user_timeout: UserRef<timespec>,
-) -> Result<SyscallResult, Errno> {
+) -> Result<usize, Errno> {
     let file = current_task.files.get(fd)?;
     if !file.node().is_sock() {
         return error!(ENOTSOCK);
@@ -481,7 +481,7 @@ pub fn sys_recvmmsg(
             flags |= MSG_DONTWAIT;
         }
     }
-    Ok(index.into())
+    Ok(index)
 }
 
 pub fn sys_recvfrom(
@@ -492,7 +492,7 @@ pub fn sys_recvfrom(
     flags: u32,
     user_src_address: UserAddress,
     user_src_address_length: UserRef<socklen_t>,
-) -> Result<SyscallResult, Errno> {
+) -> Result<usize, Errno> {
     let file = current_task.files.get(fd)?;
     if !file.node().is_sock() {
         return error!(ENOTSOCK);
@@ -522,9 +522,9 @@ pub fn sys_recvfrom(
     }
 
     if flags.contains(SocketMessageFlags::TRUNC) {
-        Ok(into.message_length.into())
+        Ok(into.message_length)
     } else {
-        Ok(into.bytes_read.into())
+        Ok(into.bytes_read)
     }
 }
 
@@ -564,12 +564,12 @@ pub fn sys_sendmsg(
     fd: FdNumber,
     user_message_header: UserRef<msghdr>,
     flags: u32,
-) -> Result<SyscallResult, Errno> {
+) -> Result<usize, Errno> {
     let file = current_task.files.get(fd)?;
     if !file.node().is_sock() {
         return error!(ENOTSOCK);
     }
-    Ok(sendmsg_internal(current_task, &file, user_message_header, flags)?.into())
+    sendmsg_internal(current_task, &file, user_message_header, flags)
 }
 
 pub fn sys_sendmmsg(
@@ -578,7 +578,7 @@ pub fn sys_sendmmsg(
     user_mmsgvec: UserRef<mmsghdr>,
     vlen: u32,
     flags: u32,
-) -> Result<SyscallResult, Errno> {
+) -> Result<usize, Errno> {
     let file = current_task.files.get(fd)?;
     if !file.node().is_sock() {
         return error!(ENOTSOCK);
@@ -608,7 +608,7 @@ pub fn sys_sendmmsg(
         }
         index += 1;
     }
-    Ok(index.into())
+    Ok(index)
 }
 
 pub fn sys_sendto(
@@ -619,7 +619,7 @@ pub fn sys_sendto(
     flags: u32,
     user_dest_address: UserAddress,
     dest_address_length: socklen_t,
-) -> Result<SyscallResult, Errno> {
+) -> Result<usize, Errno> {
     let file = current_task.files.get(fd)?;
     if !file.node().is_sock() {
         return error!(ENOTSOCK);
@@ -631,7 +631,7 @@ pub fn sys_sendto(
 
     let flags = SocketMessageFlags::from_bits_truncate(flags);
     let socket_ops = file.downcast_file::<SocketFile>().unwrap();
-    Ok(socket_ops.sendmsg(&current_task, &file, data, dest_address, None, flags)?.into())
+    socket_ops.sendmsg(&current_task, &file, data, dest_address, None, flags)
 }
 
 pub fn sys_getsockopt(

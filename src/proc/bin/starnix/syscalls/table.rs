@@ -22,7 +22,14 @@ macro_rules! syscall_match {
     } => {
         paste! {
             match $syscall_number as u32 {
-                $(crate::types::[<__NR_ $call>] => syscall_match!(@call $current_task; $args; [<sys_ $call>][$num_args]),)*
+                $(
+                    crate::types::[<__NR_ $call>] => {
+                        match syscall_match!(@call $current_task; $args; [<sys_ $call>][$num_args]) {
+                            Ok(x) => Ok(SyscallResult::from(x)),
+                            Err(err) => Err(err),
+                        }
+                    },
+                )*
                 _ => sys_unknown($current_task, $syscall_number),
             }
         }

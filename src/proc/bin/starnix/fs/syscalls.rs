@@ -24,9 +24,9 @@ pub fn sys_read(
     fd: FdNumber,
     address: UserAddress,
     length: usize,
-) -> Result<SyscallResult, Errno> {
+) -> Result<usize, Errno> {
     let file = current_task.files.get(fd)?;
-    Ok(file.read(&current_task, &[UserBuffer { address, length }])?.into())
+    file.read(&current_task, &[UserBuffer { address, length }])
 }
 
 pub fn sys_write(
@@ -34,9 +34,9 @@ pub fn sys_write(
     fd: FdNumber,
     address: UserAddress,
     length: usize,
-) -> Result<SyscallResult, Errno> {
+) -> Result<usize, Errno> {
     let file = current_task.files.get(fd)?;
-    Ok(file.write(&current_task, &[UserBuffer { address, length }])?.into())
+    file.write(&current_task, &[UserBuffer { address, length }])
 }
 
 pub fn sys_close(current_task: &CurrentTask, fd: FdNumber) -> Result<SyscallResult, Errno> {
@@ -49,9 +49,9 @@ pub fn sys_lseek(
     fd: FdNumber,
     offset: off_t,
     whence: u32,
-) -> Result<SyscallResult, Errno> {
+) -> Result<off_t, Errno> {
     let file = current_task.files.get(fd)?;
-    Ok(file.seek(&current_task, offset, SeekOrigin::from_raw(whence)?)?.into())
+    file.seek(&current_task, offset, SeekOrigin::from_raw(whence)?)
 }
 
 pub fn sys_fcntl(
@@ -84,14 +84,14 @@ pub fn sys_fcntl(
             file.set_async_owner(task.map_or(0, |task| task.id));
             Ok(SUCCESS)
         }
-        F_GETFD => Ok(current_task.files.get_fd_flags(fd)?.bits().into()),
+        F_GETFD => Ok(current_task.files.get_fd_flags(fd)?.into()),
         F_SETFD => {
             current_task.files.set_fd_flags(fd, FdFlags::from_bits_truncate(arg as u32))?;
             Ok(SUCCESS)
         }
         F_GETFL => {
             let file = current_task.files.get(fd)?;
-            Ok(file.flags().bits().into())
+            Ok(file.flags().into())
         }
         F_SETFL => {
             // TODO: Add O_ASYNC once we have a decl for it.
@@ -120,10 +120,10 @@ pub fn sys_pread64(
     address: UserAddress,
     length: usize,
     offset: off_t,
-) -> Result<SyscallResult, Errno> {
+) -> Result<usize, Errno> {
     let file = current_task.files.get(fd)?;
     let offset = offset.try_into().map_err(|_| errno!(EINVAL))?;
-    Ok(file.read_at(&current_task, offset, &[UserBuffer { address, length }])?.into())
+    Ok(file.read_at(&current_task, offset, &[UserBuffer { address, length }])?)
 }
 
 pub fn sys_pwrite64(
@@ -132,10 +132,10 @@ pub fn sys_pwrite64(
     address: UserAddress,
     length: usize,
     offset: off_t,
-) -> Result<SyscallResult, Errno> {
+) -> Result<usize, Errno> {
     let file = current_task.files.get(fd)?;
     let offset = offset.try_into().map_err(|_| errno!(EINVAL))?;
-    Ok(file.write_at(&current_task, offset, &[UserBuffer { address, length }])?.into())
+    Ok(file.write_at(&current_task, offset, &[UserBuffer { address, length }])?)
 }
 
 pub fn sys_readv(
@@ -143,10 +143,10 @@ pub fn sys_readv(
     fd: FdNumber,
     iovec_addr: UserAddress,
     iovec_count: i32,
-) -> Result<SyscallResult, Errno> {
+) -> Result<usize, Errno> {
     let file = current_task.files.get(fd)?;
     let iovec = current_task.mm.read_iovec(iovec_addr, iovec_count)?;
-    Ok(file.read(&current_task, &iovec)?.into())
+    Ok(file.read(&current_task, &iovec)?)
 }
 
 pub fn sys_writev(
@@ -154,10 +154,10 @@ pub fn sys_writev(
     fd: FdNumber,
     iovec_addr: UserAddress,
     iovec_count: i32,
-) -> Result<SyscallResult, Errno> {
+) -> Result<usize, Errno> {
     let iovec = current_task.mm.read_iovec(iovec_addr, iovec_count)?;
     let file = current_task.files.get(fd)?;
-    Ok(file.write(&current_task, &iovec)?.into())
+    Ok(file.write(&current_task, &iovec)?)
 }
 
 pub fn sys_fstatfs(
@@ -287,7 +287,7 @@ pub fn sys_open(
     user_path: UserCString,
     flags: u32,
     mode: FileMode,
-) -> Result<SyscallResult, Errno> {
+) -> Result<FdNumber, Errno> {
     sys_openat(current_task, FdNumber::AT_FDCWD, user_path, flags, mode)
 }
 
@@ -297,10 +297,10 @@ pub fn sys_openat(
     user_path: UserCString,
     flags: u32,
     mode: FileMode,
-) -> Result<SyscallResult, Errno> {
+) -> Result<FdNumber, Errno> {
     let file = open_file_at(&current_task, dir_fd, user_path, flags, mode)?;
     let fd_flags = get_fd_flags(flags);
-    Ok(current_task.files.add_with_flags(file, fd_flags)?.into())
+    current_task.files.add_with_flags(file, fd_flags)
 }
 
 pub fn sys_faccessat(
@@ -354,11 +354,11 @@ pub fn sys_getdents(
     fd: FdNumber,
     user_buffer: UserAddress,
     user_capacity: usize,
-) -> Result<SyscallResult, Errno> {
+) -> Result<usize, Errno> {
     let file = current_task.files.get(fd)?;
     let mut sink = DirentSink32::new(current_task, user_buffer, user_capacity);
     file.readdir(&current_task, &mut sink)?;
-    Ok(sink.actual().into())
+    Ok(sink.actual())
 }
 
 pub fn sys_getdents64(
@@ -366,11 +366,11 @@ pub fn sys_getdents64(
     fd: FdNumber,
     user_buffer: UserAddress,
     user_capacity: usize,
-) -> Result<SyscallResult, Errno> {
+) -> Result<usize, Errno> {
     let file = current_task.files.get(fd)?;
     let mut sink = DirentSink64::new(current_task, user_buffer, user_capacity);
     file.readdir(&current_task, &mut sink)?;
-    Ok(sink.actual().into())
+    Ok(sink.actual())
 }
 
 pub fn sys_chdir(
@@ -458,7 +458,7 @@ pub fn sys_readlinkat(
     user_path: UserCString,
     buffer: UserAddress,
     buffer_size: usize,
-) -> Result<SyscallResult, Errno> {
+) -> Result<usize, Errno> {
     let entry = lookup_parent_at(current_task, dir_fd, user_path, |parent, basename| {
         let stat = parent.entry.node.stat()?;
         // TODO(security): This check is obviously not correct, and should be updated once
@@ -478,7 +478,7 @@ pub fn sys_readlinkat(
     // Cap the returned length at buffer_size.
     let length = std::cmp::min(buffer_size, target.len());
     current_task.mm.write_memory(buffer, &target[..length])?;
-    Ok(length.into())
+    Ok(length)
 }
 
 pub fn sys_readlink(
@@ -486,7 +486,7 @@ pub fn sys_readlink(
     user_path: UserCString,
     buffer: UserAddress,
     buffer_size: usize,
-) -> Result<SyscallResult, Errno> {
+) -> Result<usize, Errno> {
     sys_readlinkat(current_task, FdNumber::AT_FDCWD, user_path, buffer, buffer_size)
 }
 
@@ -755,18 +755,18 @@ pub fn sys_getcwd(
     current_task: &CurrentTask,
     buf: UserAddress,
     size: usize,
-) -> Result<SyscallResult, Errno> {
+) -> Result<usize, Errno> {
     let mut bytes = current_task.fs.cwd().path();
     bytes.push(b'\0');
     if bytes.len() > size {
         return error!(ERANGE);
     }
     current_task.mm.write_memory(buf, &bytes)?;
-    return Ok(bytes.len().into());
+    Ok(bytes.len())
 }
 
-pub fn sys_umask(current_task: &CurrentTask, umask: FileMode) -> Result<SyscallResult, Errno> {
-    Ok(current_task.fs.set_umask(umask).bits().into())
+pub fn sys_umask(current_task: &CurrentTask, umask: FileMode) -> Result<FileMode, Errno> {
+    Ok(current_task.fs.set_umask(umask))
 }
 
 fn get_fd_flags(flags: u32) -> FdFlags {
@@ -850,9 +850,8 @@ pub fn sys_symlinkat(
     Ok(SUCCESS)
 }
 
-pub fn sys_dup(current_task: &CurrentTask, oldfd: FdNumber) -> Result<SyscallResult, Errno> {
-    let newfd = current_task.files.duplicate(oldfd, None, FdFlags::empty())?;
-    Ok(newfd.into())
+pub fn sys_dup(current_task: &CurrentTask, oldfd: FdNumber) -> Result<FdNumber, Errno> {
+    current_task.files.duplicate(oldfd, None, FdFlags::empty())
 }
 
 pub fn sys_dup3(
@@ -860,7 +859,7 @@ pub fn sys_dup3(
     oldfd: FdNumber,
     newfd: FdNumber,
     flags: u32,
-) -> Result<SyscallResult, Errno> {
+) -> Result<FdNumber, Errno> {
     if oldfd == newfd {
         return error!(EINVAL);
     }
@@ -869,14 +868,14 @@ pub fn sys_dup3(
     }
     let fd_flags = get_fd_flags(flags);
     current_task.files.duplicate(oldfd, Some(newfd), fd_flags)?;
-    Ok(newfd.into())
+    Ok(newfd)
 }
 
 pub fn sys_memfd_create(
     current_task: &CurrentTask,
     _user_name: UserCString,
     flags: u32,
-) -> Result<SyscallResult, Errno> {
+) -> Result<FdNumber, Errno> {
     if flags & !MFD_CLOEXEC != 0 {
         not_implemented!("memfd_create: flags: {}", flags);
     }
@@ -886,7 +885,7 @@ pub fn sys_memfd_create(
         fd_flags |= FdFlags::CLOEXEC;
     }
     let fd = current_task.files.add_with_flags(file, fd_flags)?;
-    Ok(fd.into())
+    Ok(fd)
 }
 
 // If the lookup ends up at the root of a mount, return its mountpoint instead. This is to make
@@ -945,15 +944,11 @@ pub fn sys_mount(
     Ok(SUCCESS)
 }
 
-pub fn sys_eventfd(current_task: &CurrentTask, value: u32) -> Result<SyscallResult, Errno> {
+pub fn sys_eventfd(current_task: &CurrentTask, value: u32) -> Result<FdNumber, Errno> {
     sys_eventfd2(current_task, value, 0)
 }
 
-pub fn sys_eventfd2(
-    current_task: &CurrentTask,
-    value: u32,
-    flags: u32,
-) -> Result<SyscallResult, Errno> {
+pub fn sys_eventfd2(current_task: &CurrentTask, value: u32, flags: u32) -> Result<FdNumber, Errno> {
     if flags & !(EFD_CLOEXEC | EFD_NONBLOCK | EFD_SEMAPHORE) != 0 {
         return error!(EINVAL);
     }
@@ -963,14 +958,14 @@ pub fn sys_eventfd2(
     let file = new_eventfd(current_task.kernel(), value, eventfd_type, blocking);
     let fd_flags = if flags & EFD_CLOEXEC != 0 { FdFlags::CLOEXEC } else { FdFlags::empty() };
     let fd = current_task.files.add_with_flags(file, fd_flags)?;
-    Ok(fd.into())
+    Ok(fd)
 }
 
 pub fn sys_timerfd_create(
     current_task: &CurrentTask,
     clock_id: u32,
     flags: u32,
-) -> Result<SyscallResult, Errno> {
+) -> Result<FdNumber, Errno> {
     match clock_id {
         CLOCK_MONOTONIC | CLOCK_BOOTTIME => {}
         CLOCK_REALTIME => return error!(ENOSYS),
@@ -993,7 +988,7 @@ pub fn sys_timerfd_create(
 
     let timer = TimerFile::new(current_task.kernel(), open_flags)?;
     let fd = current_task.files.add_with_flags(timer, fd_flags)?;
-    Ok(fd.into())
+    Ok(fd)
 }
 
 pub fn sys_timerfd_gettime<'a>(
@@ -1035,21 +1030,21 @@ pub fn sys_timerfd_settime(
     Ok(SUCCESS)
 }
 
-pub fn sys_epoll_create(current_task: &CurrentTask, size: i32) -> Result<SyscallResult, Errno> {
+pub fn sys_epoll_create(current_task: &CurrentTask, size: i32) -> Result<FdNumber, Errno> {
     if size < 1 {
         return error!(EINVAL);
     }
     sys_epoll_create1(current_task, 0)
 }
 
-pub fn sys_epoll_create1(current_task: &CurrentTask, flags: u32) -> Result<SyscallResult, Errno> {
+pub fn sys_epoll_create1(current_task: &CurrentTask, flags: u32) -> Result<FdNumber, Errno> {
     if flags & !EPOLL_CLOEXEC != 0 {
         return Err(EINVAL);
     }
     let ep_file = EpollFileObject::new(current_task.kernel());
     let fd_flags = if flags & EPOLL_CLOEXEC != 0 { FdFlags::CLOEXEC } else { FdFlags::empty() };
     let fd = current_task.files.add_with_flags(ep_file, fd_flags)?;
-    Ok(fd.into())
+    Ok(fd)
 }
 
 pub fn sys_epoll_ctl(
@@ -1094,7 +1089,7 @@ pub fn sys_epoll_wait(
     events: UserRef<EpollEvent>,
     max_events: i32,
     timeout: i32,
-) -> Result<SyscallResult, Errno> {
+) -> Result<usize, Errno> {
     sys_epoll_pwait(current_task, epfd, events, max_events, timeout, UserRef::<sigset_t>::default())
 }
 
@@ -1105,7 +1100,7 @@ pub fn sys_epoll_pwait(
     max_events: i32,
     timeout: i32,
     user_sigmask: UserRef<sigset_t>,
-) -> Result<SyscallResult, Errno> {
+) -> Result<usize, Errno> {
     if max_events < 1 {
         return error!(EINVAL);
     }
@@ -1129,7 +1124,7 @@ pub fn sys_epoll_pwait(
         event_ref = event_ref.next();
     }
 
-    Ok(active_events.len().into())
+    Ok(active_events.len())
 }
 
 fn poll(
@@ -1138,7 +1133,7 @@ fn poll(
     num_fds: i32,
     mask: Option<sigset_t>,
     timeout: i32,
-) -> Result<SyscallResult, Errno> {
+) -> Result<usize, Errno> {
     // TODO: Update this to use a dynamic limit (that can be set by setrlimit).
     if num_fds > RLIMIT_NOFILE_MAX as i32 || num_fds < 0 {
         return error!(EINVAL);
@@ -1171,7 +1166,7 @@ fn poll(
         current_task.mm.write_object(user_pollfds.at(index), poll_descriptor)?;
     }
 
-    Ok(ready_fds.len().into())
+    Ok(ready_fds.len())
 }
 
 pub fn sys_ppoll(
@@ -1180,7 +1175,7 @@ pub fn sys_ppoll(
     num_fds: i32,
     user_timespec: UserRef<timespec>,
     user_mask: UserRef<sigset_t>,
-) -> Result<SyscallResult, Errno> {
+) -> Result<usize, Errno> {
     let timeout = if user_timespec.is_null() {
         // Passing -1 to poll is equivalent to an infinite timeout.
         -1
@@ -1232,7 +1227,7 @@ pub fn sys_poll(
     user_fds: UserRef<pollfd>,
     num_fds: i32,
     timeout: i32,
-) -> Result<SyscallResult, Errno> {
+) -> Result<usize, Errno> {
     poll(current_task, user_fds, num_fds, None, timeout)
 }
 
@@ -1263,39 +1258,18 @@ mod tests {
         let file_size = file_handle.node().stat().unwrap().st_size;
         current_task.files.insert(fd, file_handle);
 
-        assert_eq!(
-            sys_lseek(&current_task, fd, 0, SeekOrigin::CUR as u32)?,
-            SyscallResult::Success(0)
-        );
-        assert_eq!(
-            sys_lseek(&current_task, fd, 1, SeekOrigin::CUR as u32)?,
-            SyscallResult::Success(1)
-        );
-        assert_eq!(
-            sys_lseek(&current_task, fd, 3, SeekOrigin::SET as u32)?,
-            SyscallResult::Success(3)
-        );
-        assert_eq!(
-            sys_lseek(&current_task, fd, -3, SeekOrigin::CUR as u32)?,
-            SyscallResult::Success(0)
-        );
-        assert_eq!(
-            sys_lseek(&current_task, fd, 0, SeekOrigin::END as u32)?,
-            SyscallResult::Success(file_size as u64)
-        );
+        assert_eq!(sys_lseek(&current_task, fd, 0, SeekOrigin::CUR as u32)?, 0);
+        assert_eq!(sys_lseek(&current_task, fd, 1, SeekOrigin::CUR as u32)?, 1);
+        assert_eq!(sys_lseek(&current_task, fd, 3, SeekOrigin::SET as u32)?, 3);
+        assert_eq!(sys_lseek(&current_task, fd, -3, SeekOrigin::CUR as u32)?, 0);
+        assert_eq!(sys_lseek(&current_task, fd, 0, SeekOrigin::END as u32)?, file_size);
         assert_eq!(sys_lseek(&current_task, fd, -5, SeekOrigin::SET as u32), error!(EINVAL));
 
         // Make sure that the failed call above did not change the offset.
-        assert_eq!(
-            sys_lseek(&current_task, fd, 0, SeekOrigin::CUR as u32)?,
-            SyscallResult::Success(file_size as u64)
-        );
+        assert_eq!(sys_lseek(&current_task, fd, 0, SeekOrigin::CUR as u32)?, file_size);
 
         // Prepare for an overflow.
-        assert_eq!(
-            sys_lseek(&current_task, fd, 3, SeekOrigin::SET as u32)?,
-            SyscallResult::Success(3)
-        );
+        assert_eq!(sys_lseek(&current_task, fd, 3, SeekOrigin::SET as u32)?, 3);
 
         // Check for overflow.
         assert_eq!(sys_lseek(&current_task, fd, i64::MAX, SeekOrigin::CUR as u32), error!(EINVAL));
@@ -1309,13 +1283,7 @@ mod tests {
         let file_handle = current_task.open_file(b"data/testfile.txt", OpenFlags::RDONLY)?;
         let files = &current_task.files;
         let oldfd = files.add(file_handle)?;
-        let syscall_result = sys_dup(&current_task, oldfd)?;
-        let newfd;
-        if let SyscallResult::Success(value) = syscall_result {
-            newfd = FdNumber::from_raw(value as i32);
-        } else {
-            return error!(EBADF);
-        }
+        let newfd = sys_dup(&current_task, oldfd)?;
 
         assert_ne!(oldfd, newfd);
         assert!(Arc::ptr_eq(&files.get(oldfd).unwrap(), &files.get(newfd).unwrap()));
@@ -1362,21 +1330,14 @@ mod tests {
         let path_addr = map_memory(&current_task, UserAddress::default(), *PAGE_SIZE);
         let path = b"data/testfile.txt\0";
         current_task.mm.write_memory(path_addr, path)?;
-        match sys_openat(
+        let fd = sys_openat(
             &current_task,
             FdNumber::AT_FDCWD,
             UserCString::new(path_addr),
             O_RDONLY | O_CLOEXEC,
             FileMode::default(),
-        )? {
-            SyscallResult::Success(raw_fd) => {
-                let fd = FdNumber::from_raw(raw_fd as i32);
-                assert!(current_task.files.get_fd_flags(fd)?.contains(FdFlags::CLOEXEC));
-            }
-            _ => {
-                assert!(false);
-            }
-        }
+        )?;
+        assert!(current_task.files.get_fd_flags(fd)?.contains(FdFlags::CLOEXEC));
         Ok(())
     }
 
@@ -1384,14 +1345,8 @@ mod tests {
     async fn test_sys_epoll() -> Result<(), Errno> {
         let (_kernel, current_task) = create_kernel_and_task_with_pkgfs();
 
-        if let SyscallResult::Success(epoll_fd) =
-            sys_epoll_create1(&current_task, 0).expect("sys_epoll_create1 failed")
-        {
-            sys_close(&current_task, FdNumber::from_raw(epoll_fd as i32))
-                .expect("sys_close failed");
-        } else {
-            panic!("unexpected result from sys_epoll_create1");
-        }
+        let epoll_fd = sys_epoll_create1(&current_task, 0).expect("sys_epoll_create1 failed");
+        sys_close(&current_task, epoll_fd).expect("sys_close failed");
 
         Ok(())
     }

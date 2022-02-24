@@ -15,7 +15,6 @@ use crate::mm::{
     syscalls::{sys_mmap, sys_mremap},
     PAGE_SIZE,
 };
-use crate::syscalls::SyscallResult;
 use crate::task::*;
 use crate::types::*;
 
@@ -78,7 +77,7 @@ pub fn create_task(kernel: &Arc<Kernel>, task_name: &str) -> CurrentTask {
 ///
 /// Returns the address returned by `sys_mmap`.
 pub fn map_memory(current_task: &CurrentTask, address: UserAddress, length: u64) -> UserAddress {
-    match sys_mmap(
+    sys_mmap(
         &current_task,
         address,
         length as usize,
@@ -87,14 +86,7 @@ pub fn map_memory(current_task: &CurrentTask, address: UserAddress, length: u64)
         FdNumber::from_raw(-1),
         0,
     )
-    .unwrap()
-    {
-        SyscallResult::Success(address) => UserAddress::from(address),
-        _ => {
-            assert!(false, "Could not map memory");
-            UserAddress::default()
-        }
-    }
+    .expect("Could not map memory")
 }
 
 /// Convenience wrapper around [`sys_mremap`] which extracts the returned [`UserAddress`] from
@@ -107,18 +99,7 @@ pub fn remap_memory(
     flags: u32,
     new_addr: UserAddress,
 ) -> Result<UserAddress, Errno> {
-    let result = sys_mremap(
-        current_task,
-        old_addr,
-        old_length as usize,
-        new_length as usize,
-        flags,
-        new_addr,
-    )?;
-    match result {
-        SyscallResult::Success(address) => Ok(UserAddress::from(address)),
-        _ => panic!("unexpected result"),
-    }
+    sys_mremap(current_task, old_addr, old_length as usize, new_length as usize, flags, new_addr)
 }
 
 /// Fills one page in the `current_task`'s address space starting at `addr` with the ASCII character

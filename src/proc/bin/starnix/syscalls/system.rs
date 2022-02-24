@@ -46,11 +46,11 @@ pub fn sys_getrandom(
     buf_addr: UserAddress,
     size: usize,
     _flags: i32,
-) -> Result<SyscallResult, Errno> {
+) -> Result<usize, Errno> {
     let mut buf = vec![0; size];
     zx::cprng_draw(&mut buf);
     current_task.mm.write_memory(buf_addr, &buf[0..size])?;
-    Ok(size.into())
+    Ok(size)
 }
 
 pub fn sys_clock_getres(

@@ -23,7 +23,7 @@ pub fn sys_clone(
     user_parent_tid: UserRef<pid_t>,
     user_child_tid: UserRef<pid_t>,
     user_tls: UserAddress,
-) -> Result<SyscallResult, Errno> {
+) -> Result<pid_t, Errno> {
     let mut new_task = current_task.clone_task(flags, user_parent_tid, user_child_tid)?;
     let tid = new_task.id;
 
@@ -37,7 +37,7 @@ pub fn sys_clone(
     }
 
     execute_task(new_task, |_| {});
-    Ok(tid.into())
+    Ok(tid)
 }
 
 fn read_c_string_vector(
@@ -85,50 +85,50 @@ pub fn sys_execve(
     Ok(SUCCESS)
 }
 
-pub fn sys_getpid(current_task: &CurrentTask) -> Result<SyscallResult, Errno> {
-    Ok(current_task.get_pid().into())
+pub fn sys_getpid(current_task: &CurrentTask) -> Result<pid_t, Errno> {
+    Ok(current_task.get_pid())
 }
 
-pub fn sys_getsid(current_task: &CurrentTask, pid: pid_t) -> Result<SyscallResult, Errno> {
+pub fn sys_getsid(current_task: &CurrentTask, pid: pid_t) -> Result<pid_t, Errno> {
     if pid == 0 {
-        return Ok(current_task.get_sid().into());
+        return Ok(current_task.get_sid());
     }
-    Ok(current_task.get_task(pid).ok_or(errno!(ESRCH))?.get_sid().into())
+    Ok(current_task.get_task(pid).ok_or(errno!(ESRCH))?.get_sid())
 }
 
-pub fn sys_gettid(current_task: &CurrentTask) -> Result<SyscallResult, Errno> {
-    Ok(current_task.get_tid().into())
+pub fn sys_gettid(current_task: &CurrentTask) -> Result<pid_t, Errno> {
+    Ok(current_task.get_tid())
 }
 
-pub fn sys_getppid(current_task: &CurrentTask) -> Result<SyscallResult, Errno> {
-    Ok(current_task.parent.into())
+pub fn sys_getppid(current_task: &CurrentTask) -> Result<pid_t, Errno> {
+    Ok(current_task.parent)
 }
 
-pub fn sys_getpgrp(current_task: &CurrentTask) -> Result<SyscallResult, Errno> {
-    Ok(current_task.get_pgrp().into())
+pub fn sys_getpgrp(current_task: &CurrentTask) -> Result<pid_t, Errno> {
+    Ok(current_task.get_pgrp())
 }
 
-pub fn sys_getpgid(current_task: &CurrentTask, pid: pid_t) -> Result<SyscallResult, Errno> {
+pub fn sys_getpgid(current_task: &CurrentTask, pid: pid_t) -> Result<pid_t, Errno> {
     if pid == 0 {
-        return Ok(current_task.get_pgrp().into());
+        return Ok(current_task.get_pgrp());
     }
-    Ok(current_task.get_task(pid).ok_or(errno!(ESRCH))?.get_pgrp().into())
+    Ok(current_task.get_task(pid).ok_or(errno!(ESRCH))?.get_pgrp())
 }
 
-pub fn sys_getuid(current_task: &CurrentTask) -> Result<SyscallResult, Errno> {
-    Ok(current_task.creds.read().uid.into())
+pub fn sys_getuid(current_task: &CurrentTask) -> Result<uid_t, Errno> {
+    Ok(current_task.creds.read().uid)
 }
 
-pub fn sys_getgid(current_task: &CurrentTask) -> Result<SyscallResult, Errno> {
-    Ok(current_task.creds.read().gid.into())
+pub fn sys_getgid(current_task: &CurrentTask) -> Result<gid_t, Errno> {
+    Ok(current_task.creds.read().gid)
 }
 
-pub fn sys_geteuid(current_task: &CurrentTask) -> Result<SyscallResult, Errno> {
-    Ok(current_task.creds.read().euid.into())
+pub fn sys_geteuid(current_task: &CurrentTask) -> Result<uid_t, Errno> {
+    Ok(current_task.creds.read().euid)
 }
 
-pub fn sys_getegid(current_task: &CurrentTask) -> Result<SyscallResult, Errno> {
-    Ok(current_task.creds.read().egid.into())
+pub fn sys_getegid(current_task: &CurrentTask) -> Result<gid_t, Errno> {
+    Ok(current_task.creds.read().egid)
 }
 
 pub fn sys_getresuid(
@@ -160,18 +160,18 @@ pub fn sys_getresgid(
 pub fn sys_exit(current_task: &CurrentTask, exit_code: i32) -> Result<SyscallResult, Errno> {
     info!(target: "exit", "{:?} exit({})", current_task, exit_code);
     *current_task.exit_code.lock() = Some(exit_code);
-    Ok(SyscallResult::Exit(exit_code))
+    Ok(SUCCESS)
 }
 
 pub fn sys_exit_group(current_task: &CurrentTask, exit_code: i32) -> Result<SyscallResult, Errno> {
     info!(target: "exit", "{:?} exit_group({})", current_task, exit_code);
     *current_task.exit_code.lock() = Some(exit_code);
     current_task.thread_group.exit();
-    Ok(SyscallResult::Exit(exit_code))
+    Ok(SUCCESS)
 }
 
-pub fn sys_sched_getscheduler(_ctx: &CurrentTask, _pid: i32) -> Result<SyscallResult, Errno> {
-    Ok(SCHED_NORMAL.into())
+pub fn sys_sched_getscheduler(_ctx: &CurrentTask, _pid: i32) -> Result<u32, Errno> {
+    Ok(SCHED_NORMAL)
 }
 
 pub fn sys_sched_getaffinity(
@@ -269,10 +269,9 @@ pub fn sys_prctl(
         PR_GET_DUMPABLE => {
             let dumpable = current_task.mm.dumpable.lock();
             Ok(match *dumpable {
-                DumpPolicy::DISABLE => 0,
-                DumpPolicy::USER => 1,
-            }
-            .into())
+                DumpPolicy::DISABLE => 0.into(),
+                DumpPolicy::USER => 1.into(),
+            })
         }
         PR_SET_PDEATHSIG => {
             not_implemented!("PR_SET_PDEATHSIG");
@@ -315,9 +314,9 @@ pub fn sys_arch_prctl(
 pub fn sys_set_tid_address(
     current_task: &CurrentTask,
     user_tid: UserRef<pid_t>,
-) -> Result<SyscallResult, Errno> {
+) -> Result<pid_t, Errno> {
     *current_task.clear_child_tid.lock() = user_tid;
-    Ok(current_task.get_tid().into())
+    Ok(current_task.get_tid())
 }
 
 pub fn sys_getrusage(
@@ -457,7 +456,7 @@ pub fn sys_getgroups(
     current_task: &CurrentTask,
     size: usize,
     groups_addr: UserAddress,
-) -> Result<SyscallResult, Errno> {
+) -> Result<usize, Errno> {
     let creds = current_task.creds.read();
     let groups = &creds.groups;
     if size != 0 {
@@ -466,7 +465,7 @@ pub fn sys_getgroups(
         }
         current_task.mm.write_memory(groups_addr, groups.as_slice().as_bytes())?;
     }
-    Ok(groups.len().into())
+    Ok(groups.len())
 }
 
 #[cfg(test)]
@@ -514,21 +513,21 @@ mod tests {
         let (_kernel, current_task) = create_kernel_and_task();
 
         assert_eq!(
-            SyscallResult::Success(0),
-            sys_prctl(&current_task, PR_GET_DUMPABLE, 0, 0, 0, 0).expect("failed to get dumpable")
+            SyscallResult::from(0),
+            sys_prctl(&current_task, PR_GET_DUMPABLE, 0, 0, 0, 0).expect("failed to get dumpable"),
         );
 
         sys_prctl(&current_task, PR_SET_DUMPABLE, 1, 0, 0, 0).expect("failed to set dumpable");
         assert_eq!(
-            SyscallResult::Success(1),
-            sys_prctl(&current_task, PR_GET_DUMPABLE, 0, 0, 0, 0).expect("failed to get dumpable")
+            SyscallResult::from(1),
+            sys_prctl(&current_task, PR_GET_DUMPABLE, 0, 0, 0, 0).expect("failed to get dumpable"),
         );
 
         // SUID_DUMP_ROOT not supported.
         sys_prctl(&current_task, PR_SET_DUMPABLE, 2, 0, 0, 0).expect("failed to set dumpable");
         assert_eq!(
-            SyscallResult::Success(0),
-            sys_prctl(&current_task, PR_GET_DUMPABLE, 0, 0, 0, 0).expect("failed to get dumpable")
+            SyscallResult::from(0),
+            sys_prctl(&current_task, PR_GET_DUMPABLE, 0, 0, 0, 0).expect("failed to get dumpable"),
         );
     }
 
@@ -537,14 +536,14 @@ mod tests {
         let (kernel, current_task) = create_kernel_and_task();
 
         assert_eq!(
-            SyscallResult::Success(current_task.get_tid() as u64),
+            current_task.get_tid(),
             sys_getsid(&current_task, 0).expect("failed to get sid")
         );
 
         let second_current = create_task(&kernel, "second task");
 
         assert_eq!(
-            SyscallResult::Success(second_current.get_tid() as u64),
+            second_current.get_tid(),
             sys_getsid(&current_task, second_current.get_tid().into()).expect("failed to get sid")
         );
     }

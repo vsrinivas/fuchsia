@@ -36,7 +36,7 @@ pub fn sys_mmap(
     flags: u32,
     fd: FdNumber,
     offset: u64,
-) -> Result<SyscallResult, Errno> {
+) -> Result<UserAddress, Errno> {
     // These are the flags that are currently supported.
     if prot & !(PROT_READ | PROT_WRITE | PROT_EXEC) != 0 {
         not_implemented!("mmap: prot: 0x{:x}", prot);
@@ -134,7 +134,7 @@ pub fn sys_mmap(
         let _result = vmo.op_range(zx::VmoOp::COMMIT, vmo_offset, length as u64);
         // "The mmap() call doesn't fail if the mapping cannot be populated."
     }
-    Ok(user_address.into())
+    Ok(user_address)
 }
 
 pub fn sys_mprotect(
@@ -154,10 +154,10 @@ pub fn sys_mremap(
     new_length: usize,
     flags: u32,
     new_addr: UserAddress,
-) -> Result<SyscallResult, Errno> {
+) -> Result<UserAddress, Errno> {
     let flags = MremapFlags::from_bits(flags).ok_or_else(|| errno!(EINVAL))?;
     let addr = current_task.mm.remap(addr, old_length, new_length, flags, new_addr)?;
-    Ok(addr.into())
+    Ok(addr)
 }
 
 pub fn sys_munmap(
@@ -192,8 +192,8 @@ pub fn sys_madvise(
     Ok(SUCCESS)
 }
 
-pub fn sys_brk(current_task: &CurrentTask, addr: UserAddress) -> Result<SyscallResult, Errno> {
-    Ok(current_task.mm.set_brk(addr)?.into())
+pub fn sys_brk(current_task: &CurrentTask, addr: UserAddress) -> Result<UserAddress, Errno> {
+    Ok(current_task.mm.set_brk(addr)?)
 }
 
 pub fn sys_process_vm_readv(
@@ -204,7 +204,7 @@ pub fn sys_process_vm_readv(
     remote_iov_addr: UserAddress,
     remote_iov_count: i32,
     _flags: usize,
-) -> Result<SyscallResult, Errno> {
+) -> Result<usize, Errno> {
     let task = current_task.get_task(pid).ok_or(errno!(ESRCH))?;
     // When this check is loosened to allow reading memory from other processes, the check should
     // be like checking if the current process is allowed to debug the other process.
@@ -230,7 +230,7 @@ pub fn sys_process_vm_readv(
     let mut buf = vec![0u8; len];
     let len = task.mm.read_all(&remote_iov, &mut buf)?;
     let len = task.mm.write_all(&local_iov, &buf[..len])?;
-    Ok(len.into())
+    Ok(len)
 }
 
 #[cfg(test)]
@@ -255,11 +255,11 @@ mod tests {
             FdNumber::from_raw(-1),
             0,
         ) {
-            Ok(SyscallResult::Success(address)) => {
-                assert_ne!(UserAddress::from(address), mapped_address);
+            Ok(address) => {
+                assert_ne!(address, mapped_address);
             }
-            result => {
-                assert!(false, "mmap with colliding hint failed: {:?}", result);
+            error => {
+                assert!(false, "mmap with colliding hint failed: {:?}", error);
             }
         }
     }
@@ -279,11 +279,11 @@ mod tests {
             FdNumber::from_raw(-1),
             0,
         ) {
-            Ok(SyscallResult::Success(address)) => {
-                assert_eq!(UserAddress::from(address), mapped_address);
+            Ok(address) => {
+                assert_eq!(address, mapped_address);
             }
-            result => {
-                assert!(false, "mmap with fixed collision failed: {:?}", result);
+            error => {
+                assert!(false, "mmap with fixed collision failed: {:?}", error);
             }
         }
     }

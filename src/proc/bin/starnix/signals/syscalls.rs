@@ -274,7 +274,7 @@ pub fn sys_tgkill(
 
 pub fn sys_rt_sigreturn(current_task: &mut CurrentTask) -> Result<SyscallResult, Errno> {
     restore_from_signal_handler(current_task)?;
-    Ok(SyscallResult::SigReturn)
+    Ok(SyscallResult::keep_regs(current_task))
 }
 
 /// Sends a signal to all thread groups in `thread_groups`.
@@ -404,7 +404,7 @@ pub fn sys_wait4(
     user_wstatus: UserRef<i32>,
     options: u32,
     user_rusage: UserRef<rusage>,
-) -> Result<SyscallResult, Errno> {
+) -> Result<pid_t, Errno> {
     let selector = if pid == -1 {
         TaskSelector::Any
     } else if pid > 0 {
@@ -430,9 +430,9 @@ pub fn sys_wait4(
             current_task.mm.write_object(user_wstatus, &status)?;
         }
 
-        Ok(zombie_task.id.into())
+        Ok(zombie_task.id)
     } else {
-        Ok(SUCCESS)
+        Ok(0)
     }
 }
 
@@ -442,7 +442,7 @@ pub fn sys_signalfd4(
     mask_addr: UserRef<sigset_t>,
     mask_size: usize,
     flags: u32,
-) -> Result<SyscallResult, Errno> {
+) -> Result<FdNumber, Errno> {
     if fd.raw() != -1 {
         not_implemented!("changing mask of a signalfd");
         return error!(EINVAL);
@@ -459,7 +459,7 @@ pub fn sys_signalfd4(
     let signalfd = SignalFd::new(current_task.kernel(), mask);
     let flags = if flags & SFD_CLOEXEC != 0 { FdFlags::CLOEXEC } else { FdFlags::empty() };
     let fd = current_task.files.add_with_flags(signalfd, flags)?;
-    Ok(fd.into())
+    Ok(fd)
 }
 
 #[cfg(test)]
