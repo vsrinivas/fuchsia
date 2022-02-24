@@ -30,6 +30,10 @@ sdk_host_tools_manifest = get_label_info(sdk_host_tools_label, "root_out_dir") +
 #       [list of files] Like the outputs of action().
 #
 #   inputs (optional)
+#
+#   hermetic_inputs_file (optional)
+#       Implicit inputs to the ffx plugin.
+#
 #   sources (optional)
 #       Files the plugin takes as input. The step will be re-run whenever any
 #       of these change. If inputs is empty, the step will run only when the
@@ -71,6 +75,45 @@ sdk_host_tools_manifest = get_label_info(sdk_host_tools_label, "root_out_dir") +
 template("ffx_action") {
   assert(defined(invoker.args), "args must be defined for $target_name")
   assert(defined(invoker.outputs), "outputs must be defined for $target_name")
+
+  # Generate a list of hermetic inputs based on the files in the SDK manifest.
+  # Also, merge in any additional inputs if necessary.
+  hermetic_inputs_label = "${target_name}_all_inputs"
+  hermetic_inputs_path = "${target_out_dir}/${target_name}_all_inputs"
+  hermetic_inputs_action(hermetic_inputs_label) {
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visibility",
+                           ])
+
+    deps = [ sdk_host_tools_label ]
+    if (defined(invoker.deps)) {
+      deps += invoker.deps
+    }
+
+    script = "//src/developer/ffx/build/hermetic_inputs_for_ffx.py"
+    inputs = [ sdk_host_tools_manifest ]
+    outputs = [ hermetic_inputs_path ]
+    args = [
+      "--sdk-manifest",
+      rebase_path(sdk_host_tools_manifest, root_build_dir),
+      "--output",
+      rebase_path(hermetic_inputs_path, root_build_dir),
+    ]
+
+    if (defined(invoker.hermetic_inputs_file)) {
+      inputs += [ invoker.hermetic_inputs_file ]
+      args += [
+        "--additional-hermetic-inputs",
+        rebase_path(invoker.hermetic_inputs_file, root_build_dir),
+      ]
+    }
+
+    if (defined(invoker.hermetic_inputs_target)) {
+      deps += [ invoker.hermetic_inputs_target ]
+    }
+  }
 
   # Invoke the compiled_action template for the call to the ffx plugin.
   #
@@ -114,6 +157,13 @@ template("ffx_action") {
       ffx_env_build_config,
       sdk_host_tools_manifest,
     ]
+
+    # Only generate our own hermetic inputs file if a depfile is not specified
+    # OR hermetic_deps is not turned off.
+    if (!defined(depfile) && (!defined(hermetic_deps) || hermetic_deps)) {
+      hermetic_inputs_target = ":${hermetic_inputs_label}"
+      hermetic_inputs_file = hermetic_inputs_path
+    }
 
     tool = "//src/developer/ffx:ffx_bin"
     tool_output_name = "ffx"

@@ -1487,6 +1487,6 @@ generated_file("image_paths") {
 }
 
 group("tests") {
-  deps = [ "assembly:tests" ]
+  deps = [ "assembly:tests($host_toolchain)" ]
   testonly = true
 }

@@ -1,0 +1,75 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/python/python_action.gni")
+
+# Generates a list of the implicit inputs to image assembly.
+# This target can be used as a `hermetic_inputs_target` and the output
+# can be passed as a `hermetic_inputs_file`.
+#
+# Example:
+#   image_assembly_config = "image_assembly_config.json"
+#   board_config = "board_config.json"
+#   inputs_file = "${target_out_dir}/hermetic_inputs"
+#
+#   hermetic_inputs_for_image_assembly("assembly_inputs") {
+#     image_assembly_config = image_assembly_config
+#     board_config = board_config
+#     output = inputs_file
+#   }
+#
+#   ffx_action("image_assembly") {
+#     hermetic_inputs_target = ":assembly_inputs"
+#     hermetic_inputs_file = inputs_file
+#     ...
+#   }
+#
+# Arguments
+#   image_assembly_config (required)
+#     [path] The path to the image assembly config.
+#
+#   board_config (optional)
+#     [path] The path to the board config.
+#
+#   output (required)
+#     [path] Where to write the output hermetic inputs list.
+#
+template("hermetic_inputs_for_image_assembly") {
+  assert(defined(invoker.image_assembly_config),
+         "Need to define image_assembly_config")
+  assert(defined(invoker.output), "Need to define output")
+
+  python_action(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "testonly",
+                             "visibility",
+                           ])
+    binary_label = "//build/images/assembly:hermetic_inputs_for_image_assembly"
+
+    depfile_path = "${target_out_dir}/${target_name}_depfile"
+
+    inputs = [ invoker.image_assembly_config ]
+    outputs = [ invoker.output ]
+    depfile = depfile_path
+
+    args = [
+      "--image-assembly-config",
+      rebase_path(invoker.image_assembly_config, root_build_dir),
+      "--output",
+      rebase_path(invoker.output, root_build_dir),
+      "--depfile",
+      rebase_path(depfile_path, root_build_dir),
+    ]
+
+    if (defined(invoker.board_config)) {
+      args += [
+        "--board-config",
+        rebase_path(invoker.board_config, root_build_dir),
+      ]
+      inputs += [ invoker.board_config ]
+    }
+  }
+}

@@ -4,17 +4,23 @@
 
 import("//build/python/python_host_test.gni")
 
-if (is_host) {
-  python_host_test("convert_size_limits_test") {
-    main_source = "convert_size_limits_test.py"
-    sources = [ "convert_size_limits.py" ]
-    libraries = [ "//third_party/parameterized" ]
-  }
+assert(is_host, "Only include assembly build scripts via the host toolchain")
+
+python_host_test("convert_size_limits_test") {
+  main_source = "convert_size_limits_test.py"
+  sources = [ "convert_size_limits.py" ]
+  libraries = [ "//third_party/parameterized" ]
+}
+
+python_binary("hermetic_inputs_for_image_assembly") {
+  main_source = "hermetic_inputs_for_image_assembly.py"
+  deps = [
+    "//build/python/modules/assembly",
+    "//build/python/modules/depfile",
+  ]
 }
 
 group("tests") {
   testonly = true
-  if (is_host) {
-    deps = [ ":convert_size_limits_test" ]
-  }
+  deps = [ ":convert_size_limits_test" ]
 }

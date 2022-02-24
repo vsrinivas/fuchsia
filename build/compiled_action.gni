@@ -89,6 +89,8 @@ template("_compiled_action_target") {
                              "depfile",
                              "deps",
                              "hermetic_deps",
+                             "hermetic_inputs_file",
+                             "hermetic_inputs_target",
                              "repeatable",
                              "inputs",
                              "metadata",

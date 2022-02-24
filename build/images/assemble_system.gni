@@ -11,6 +11,7 @@ import("//build/images/assembly/generated_board_config.gni")
 import("//build/images/assembly/generated_images_config.gni")
 import("//build/images/assembly/generated_partitions_config.gni")
 import("//build/images/assembly/generated_product_config.gni")
+import("//build/images/assembly/hermetic_inputs_for_image_assembly.gni")
 import("//build/images/fvm.gni")
 import("//build/images/shell_commands.gni")
 import("//build/info/info.gni")
@@ -215,6 +216,7 @@ template("assemble_system") {
     legacy_assembly_input_bundle = "${image_name}_legacy_input_bundle"
     product_assembly_config = "${image_name}_product_assembly_config"
     image_assembly_config = "${image_name}_image_assembly_config"
+    image_assembly_inputs = "${image_name}_image_assembly_inputs"
     compare_image_assembly_configs =
         "${image_name}_compare_image_assembly_configs"
     board_config = "${image_name}_board_config"
@@ -241,6 +243,9 @@ template("assemble_system") {
         "$target_out_dir/${image_name}_product_assembly_config.json"
     image_assembly_config =
         "$target_out_dir/${image_name}_image_assembly_config.json"
+    image_assembly_inputs =
+        "$target_out_dir/${image_name}_image_assembly_inputs"
+
     board_config = "$target_out_dir/${image_name}_board_config.json"
     images_config = "$target_out_dir/${image_name}_images_config.json"
     partitions_config = "$target_out_dir/${image_name}_partitions.json"
@@ -259,6 +264,8 @@ template("assemble_system") {
     compare_image_assembly_configs =
         "${outdir}/compare_image_assembly_configs.verified"
 
+    bootfs_files = "${gendir}/bootfs_files.list"
+    devmgr_config = "${gendir}/devmgr_config.txt"
     zbi = "${outdir}/${image_name}.zbi"
     zbi_signed = "${zbi}.signed"
     vbmeta = "${outdir}/${image_name}.vbmeta"
@@ -270,6 +277,7 @@ template("assemble_system") {
     fvm_blob_sparse = "${outdir}/fvm.blob.sparse.blk"
     fvm_fastboot = "${outdir}/fvm.fastboot.blk"
     base_package_manifest = "${outdir}/base_package_manifest.json"
+    base_package_merkle = "${outdir}/base.merkle"
     packages = "${outdir}/packages.json"
 
     zbi_manifest = "${gendir}/zbi.json"
@@ -283,6 +291,7 @@ template("assemble_system") {
     images_manifest = "${outdir}/images.json"
     assembly_inputs = "${outdir}/assembly_inputs.json"
 
+    image_command_log = "${gendir}/command_log.json"
     create_system_command_log = "${outdir}/new_commands.json"
 
     # Determine which ZBI we are shipping.
@@ -707,6 +716,22 @@ template("assemble_system") {
     ]
   }
 
+  hermetic_inputs_for_image_assembly(labels.image_assembly_inputs) {
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visibility",
+                           ])
+    deps = [
+      ":${labels.board_config}",
+      ":${labels.image_assembly_config}",
+    ]
+
+    image_assembly_config = files.image_assembly_config
+    board_config = files.board_config
+    output = files.image_assembly_inputs
+  }
+
   ffx_action(labels.image_assembler) {
     forward_variables_from(invoker,
                            [
@@ -729,8 +754,8 @@ template("assemble_system") {
       }
     }
 
-    # TODO(fxbug.dev/77290) - Add depfile support and then remove the following
-    hermetic_deps = false
+    hermetic_inputs_target = ":${labels.image_assembly_inputs}"
+    hermetic_inputs_file = files.image_assembly_inputs
 
     args = [
       "--config",
@@ -762,11 +787,17 @@ template("assemble_system") {
       files.board_config,
       files.image_assembly_config,
     ]
+    if (defined(invoker.inputs)) {
+      inputs += invoker.inputs
+    }
 
     outputs = [
+      files.bootfs_files,
+      files.devmgr_config,
       files.zbi,
       files.zbi_manifest,
       files.packages,
+      files.image_command_log,
       files.images_manifest,
     ]
 
@@ -798,6 +829,7 @@ template("assemble_system") {
         # In the outdir.
         files.base_package,
         files.base_package_manifest,
+        files.base_package_merkle,
         files.minfs,
         files.blobfs,
         files.fvm,

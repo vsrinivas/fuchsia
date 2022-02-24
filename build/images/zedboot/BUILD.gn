@@ -96,6 +96,7 @@ assemble_system("zedboot_assembly") {
     zbi_signing_script = vboot_action.script
     zbi_signing_args = vboot_action.args
     deps = vboot_action.deps
+    inputs = vboot_action.inputs
   }
 
   metadata = {

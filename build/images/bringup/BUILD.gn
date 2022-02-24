@@ -47,6 +47,7 @@ assemble_system("bringup_non_fastboot") {
     zbi_signing_script = vboot_action.script
     zbi_signing_args = vboot_action.args
     deps = vboot_action.deps
+    inputs = vboot_action.inputs
   }
 
   metadata = {
@@ -135,6 +136,7 @@ assemble_system("bringup_fastboot") {
     rebased_script = rebase_path(vboot_action.script, root_build_dir)
     zbi_signing_args += [ "-s ${rebased_script}" ] + vboot_action.args
     deps = vboot_action.deps
+    inputs = vboot_action.inputs
   }
 
   metadata = {
