@@ -227,10 +227,17 @@ impl Config {
 
         let ot_instance = ot::Instance::new(builder.init(spinel_sink, spinel_stream));
 
+        // TODO: might switch to check if the infra_if instance is constructed successfully
         if let Some(index) = backbone_netif_index {
-            ot_instance
-                .border_routing_init(index, true)
-                .context("Unable to initialize OpenThread border routing")?;
+            if index > 0 {
+                ot_instance
+                    .border_routing_init(index, true)
+                    .context("Unable to initialize OpenThread border routing")?;
+
+                ot_instance
+                    .border_routing_set_enabled(true)
+                    .context("border_routing_set_enabled")?;
+            }
         }
 
         let driver_future = run_driver(
