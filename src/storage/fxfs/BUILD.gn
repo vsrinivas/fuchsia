@@ -129,7 +129,6 @@ if (is_fuchsia) {
     "//src/sys/pkg/lib/fuchsia-merkle",
   ]
   fxfs_sources += [
-    "src/object_store/vmo_data_buffer.rs",
     "src/pager.rs",
     "src/remote_crypt.rs",
     "src/server.rs",
@@ -140,6 +139,7 @@ if (is_fuchsia) {
     "src/server/inspect.rs",
     "src/server/node.rs",
     "src/server/testing.rs",
+    "src/server/vmo_data_buffer.rs",
     "src/server/volume.rs",
   ]
 }

@@ -38,6 +38,7 @@ pub mod errors;
 pub mod file;
 mod inspect;
 pub mod node;
+pub mod vmo_data_buffer;
 pub mod volume;
 
 #[cfg(test)]

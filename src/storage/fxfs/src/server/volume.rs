@@ -8,7 +8,6 @@ use {
         object_store::{
             directory::{self, Directory, ObjectDescriptor, ReplacedChild},
             transaction::{LockKey, Options},
-            vmo_data_buffer::VmoDataBuffer,
             HandleOptions, HandleOwner, ObjectStore,
         },
         pager::Pager,
@@ -17,6 +16,7 @@ use {
             errors::map_to_status,
             file::FxFile,
             node::{FxNode, GetResult, NodeCache},
+            vmo_data_buffer::VmoDataBuffer,
         },
     },
     anyhow::{bail, Error},

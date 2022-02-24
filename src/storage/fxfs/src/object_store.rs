@@ -20,8 +20,6 @@ pub mod store_object_handle;
 mod testing;
 pub mod transaction;
 mod tree;
-#[cfg(target_os = "fuchsia")]
-pub mod vmo_data_buffer;
 pub mod volume;
 mod writeback_cache;
 
