@@ -6,6 +6,7 @@
 // with #[allow(dead_code)]
 #![allow(dead_code)]
 
+#[cfg(test)]
 mod tests {
     use {
         cml::reference_doc::MarkdownReferenceDocGenerator, cml_macro::ReferenceDoc,

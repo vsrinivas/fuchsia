@@ -4,6 +4,7 @@
 
 import("//build/components.gni")
 import("//build/rust/rustc_test.gni")
+import("//build/testing/golden_file.gni")
 
 rustc_test("derive-reference-doc_test") {
   name = "derive-reference-doc"
@@ -19,7 +20,19 @@ rustc_test("derive-reference-doc_test") {
   sources = [ "src/lib.rs" ]
 }
 
+golden_file("cml-refdoc-golden_test") {
+  testonly = true
+
+  golden = "src/test_data/cml_refdoc.golden.md"
+  current = "$root_build_dir/obj/tools/docsgen/cmldoc_out/index.md"
+
+  deps = [ "//tools/docsgen:invoke_cmldoc($default_toolchain)" ]
+}
+
 group("derive-reference-doc-tests") {
   testonly = true
-  deps = [ ":derive-reference-doc_test" ]
+  deps = [
+    ":cml-refdoc-golden_test",
+    ":derive-reference-doc_test",
+  ]
 }
