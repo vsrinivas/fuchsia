@@ -13,6 +13,7 @@
 #if defined(__Fuchsia__)
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fdio/directory.h>
+#include <lib/fidl/llcpp/channel.h>
 #include <lib/fidl/llcpp/server.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/vmar.h>
@@ -869,12 +870,12 @@ class TestConnection {
     async::Loop loop(&kAsyncLoopConfigNeverAttachToThread);
     ASSERT_EQ(ZX_OK, loop.StartThread("server-loop"));
 
-    zx::channel server_endpoint, client_endpoint;
-    ASSERT_EQ(ZX_OK, zx::channel::create(0, &server_endpoint, &client_endpoint));
-    fidl::BindServer(loop.dispatcher(), std::move(server_endpoint), &server);
+    auto endpoints = fidl::CreateEndpoints<fuchsia_gpu_magma::PerformanceCounterAccess>();
+    ASSERT_TRUE(endpoints.is_ok());
+    fidl::BindServer(loop.dispatcher(), std::move(endpoints->server), &server);
 
     EXPECT_EQ(expected_result, magma_connection_enable_performance_counter_access(
-                                   connection_, client_endpoint.release()));
+                                   connection_, endpoints->client.TakeChannel().release()));
   }
 #endif
 

@@ -4,6 +4,7 @@
 
 #include <fidl/fuchsia.gpu.magma/cpp/wire.h>
 #include <lib/fdio/directory.h>
+#include <lib/fidl/llcpp/channel.h>
 #include <unistd.h>
 
 #include <filesystem>
@@ -62,13 +63,14 @@ class TestMagmaFidl : public gtest::RealLoopFixture {
     for (auto& p : std::filesystem::directory_iterator(kDevicePathFuchsia)) {
       ASSERT_FALSE(device_.is_valid()) << " More than one GPU device found, specify --vendor-id";
 
-      zx::channel server_end, client_end;
-      zx::channel::create(0, &server_end, &client_end);
+      auto endpoints = fidl::CreateEndpoints<fuchsia_gpu_magma::Device>();
+      ASSERT_TRUE(endpoints.is_ok());
 
-      zx_status_t zx_status = fdio_service_connect(p.path().c_str(), server_end.release());
+      zx_status_t zx_status =
+          fdio_service_connect(p.path().c_str(), endpoints->server.TakeChannel().release());
       ASSERT_EQ(ZX_OK, zx_status);
 
-      device_ = DeviceClient(std::move(client_end));
+      device_ = DeviceClient(std::move(endpoints->client));
 
       {
         auto wire_result =
@@ -470,11 +472,11 @@ TEST_F(TestMagmaFidl, EnablePerformanceCounters) {
     fidl::WireSyncClient<fuchsia_gpu_magma::PerformanceCounterAccess> perf_counter_access;
 
     {
-      zx::channel server_end, client_end;
-      ASSERT_EQ(ZX_OK, zx::channel::create(0, &server_end, &client_end));
-      ASSERT_EQ(ZX_OK, fdio_service_connect(p.path().c_str(), server_end.release()));
-      perf_counter_access =
-          fidl::WireSyncClient<fuchsia_gpu_magma::PerformanceCounterAccess>(std::move(client_end));
+      auto endpoints = fidl::CreateEndpoints<fuchsia_gpu_magma::PerformanceCounterAccess>();
+      ASSERT_TRUE(endpoints.is_ok());
+      ASSERT_EQ(ZX_OK,
+                fdio_service_connect(p.path().c_str(), endpoints->server.TakeChannel().release()));
+      perf_counter_access = fidl::WireSyncClient(std::move(endpoints->client));
     }
 
     zx::event access_token;

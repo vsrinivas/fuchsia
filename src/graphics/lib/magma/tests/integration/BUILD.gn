@@ -54,11 +54,6 @@ executable("magma_conformance_tests") {
       "//zircon/system/ulib/fidl:fidl-llcpp",
     ]
   }
-
-  # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
-  # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
-  # See linked bug for details.
-  configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
 executable("virtmagma_conformance_tests") {
@@ -81,11 +76,6 @@ executable("virtmagma_conformance_tests") {
     "//src/lib/fxl",
     "//third_party/googletest:gtest",
   ]
-
-  # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
-  # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
-  # See linked bug for details.
-  configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
 executable("virtmagma_no_cpp_test") {
