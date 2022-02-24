@@ -8,8 +8,8 @@
     use: [
         {
             protocol: [
-                "fuchsia.power.BatteryManager",
-                "fuchsia.power.test.BatterySimulator",
+                "fuchsia.power.battery.BatteryManager",
+                "fuchsia.power.battery.test.BatterySimulator",
             ],
             from: "#battery_manager",
         },

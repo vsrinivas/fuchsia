@@ -1,16 +1,16 @@
 {
-  "include": [
-      "syslog/client.shard.cmx"
-  ],
-  "program": {
-      "binary": "bin/battery_manager"
-  },
-  "sandbox": {
-      "dev": [
-          "class/power"
-      ],
-      "services": [
-          "fuchsia.hardware.power.Source"
-      ]
-  }
+    "include": [
+        "syslog/client.shard.cmx"
+    ],
+    "program": {
+        "binary": "bin/battery_manager"
+    },
+    "sandbox": {
+        "dev": [
+            "class/power"
+        ],
+        "services": [
+            "fuchsia.hardware.power.Source"
+        ]
+    }
 }

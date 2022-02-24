@@ -58,8 +58,8 @@ pub struct Hfp {
     connection_behavior: ConnectionBehavior,
     /// A shared audio controller, to start and route audio devices for peers.
     audio: Arc<Mutex<Box<dyn AudioControl>>>,
-    /// Provides Hfp with battery updates from the `fuchsia.power.BatteryManager` protocol - these
-    /// are battery updates about the local (Fuchsia) device.
+    /// Provides Hfp with battery updates from the `fuchsia.power.battery.BatteryManager` protocol -
+    /// these are battery updates about the local (Fuchsia) device.
     battery_client: MaybeStream<BatteryClient>,
     internal_events_rx: Receiver<Event>,
     internal_events_tx: Sender<Event>,
@@ -330,7 +330,7 @@ mod tests {
     use fidl_fuchsia_bluetooth_hfp::{
         CallManagerMarker, CallManagerRequest, CallManagerRequestStream,
     };
-    use fidl_fuchsia_power as fpower;
+    use fidl_fuchsia_power_battery as fpower;
     use fuchsia_async as fasync;
     use fuchsia_bluetooth::types::Uuid;
     use fuchsia_inspect::assert_data_tree;

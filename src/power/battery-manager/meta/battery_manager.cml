@@ -10,8 +10,8 @@
     capabilities: [
         {
             protocol: [
-                "fuchsia.power.BatteryManager",
-                "fuchsia.power.test.BatterySimulator",
+                "fuchsia.power.battery.BatteryManager",
+                "fuchsia.power.battery.test.BatterySimulator",
             ],
         },
     ],
@@ -27,11 +27,11 @@
     ],
     expose: [
         {
-            protocol: "fuchsia.power.BatteryManager",
+            protocol: "fuchsia.power.battery.BatteryManager",
             from: "self",
         },
         {
-            protocol: "fuchsia.power.test.BatterySimulator",
+            protocol: "fuchsia.power.battery.test.BatterySimulator",
             from: "self",
         },
     ],

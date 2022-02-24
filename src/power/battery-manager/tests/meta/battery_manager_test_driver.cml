@@ -1,15 +1,15 @@
 {
     include: [
-        // Enable system logging
-        "syslog/client.shard.cml",
-
         // Use Go test runner and expose fuchsia.test.Suite capability
         "//src/sys/test_runners/gotests/default.shard.cml",
+
+        // Enable system logging
+        "syslog/client.shard.cml",
     ],
     program: {
         binary: "test/battery_manager_go_test",
     },
     use: [
-        { protocol: "fuchsia.power.BatteryManager" },
+        { protocol: "fuchsia.power.battery.BatteryManager" },
     ],
 }

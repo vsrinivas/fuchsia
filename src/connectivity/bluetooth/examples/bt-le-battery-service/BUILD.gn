@@ -8,7 +8,7 @@ rustc_binary("bt-le-battery-service") {
   output_name = "bt-le-battery-service"
   deps = [
     "//sdk/fidl/fuchsia.bluetooth.gatt:fuchsia.bluetooth.gatt-rustc",
-    "//sdk/fidl/fuchsia.power:fuchsia.power-rustc",
+    "//sdk/fidl/fuchsia.power.battery:fuchsia.power.battery-rustc",
     "//src/connectivity/bluetooth/lib/fuchsia-bluetooth",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",

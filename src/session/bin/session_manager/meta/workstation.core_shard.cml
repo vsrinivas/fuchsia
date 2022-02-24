@@ -47,7 +47,7 @@
             to: "#session-manager",
         },
         {
-            protocol: "fuchsia.power.BatteryManager",
+            protocol: "fuchsia.power.battery.BatteryManager",
             from: "#battery_manager",
             to: "#session-manager",
         },

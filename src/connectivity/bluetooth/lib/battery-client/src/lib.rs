@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-//! A wrapper around the `fuchsia.power.BatteryManager` capability.
+//! A wrapper around the `fuchsia.power.battery.BatteryManager` capability.
 //!
 //! This library provides an API for receiving updates about the current battery information on the
 //! local Fuchsia device.
@@ -31,7 +31,7 @@ use core::{
 };
 use derivative::Derivative;
 use fidl::endpoints::create_request_stream;
-use fidl_fuchsia_power as fpower;
+use fidl_fuchsia_power_battery as fpower;
 use fuchsia_component::client::connect_to_protocol;
 use futures::stream::{FusedStream, Stream, StreamExt};
 use tracing::debug;
@@ -98,7 +98,7 @@ impl TryFrom<fpower::BatteryInfo> for BatteryInfo {
             return Ok(BatteryInfo::NotAvailable);
         }
 
-        // Per the `fidl_fuchsia_power` documentation, if `level_status` is known, then the
+        // Per the `fidl_fuchsia_power_battery` documentation, if `level_status` is known, then the
         // level percentage will also be provided.
         let level = src
             .level_percent

@@ -68,7 +68,7 @@ rustc_binary("bin") {
 
   test_deps = [
     "//sdk/fidl/fuchsia.bluetooth:fuchsia.bluetooth-rustc",
-    "//sdk/fidl/fuchsia.power:fuchsia.power-rustc",
+    "//sdk/fidl/fuchsia.power.battery:fuchsia.power.battery-rustc",
     "//src/connectivity/bluetooth/lib/async-helpers:async-test-helpers",
     "//src/connectivity/bluetooth/testing/test-battery-manager",
     "//src/lib/mundane",
@@ -171,7 +171,7 @@ rustc_test("encoding_integration_bin") {
     "//sdk/fidl/fuchsia.media.sessions2:fuchsia.media.sessions2-rustc",
     "//sdk/fidl/fuchsia.mediacodec:fuchsia.mediacodec-rustc",
     "//sdk/fidl/fuchsia.mem:fuchsia.mem-rustc",
-    "//sdk/fidl/fuchsia.power:fuchsia.power-rustc",
+    "//sdk/fidl/fuchsia.power.battery:fuchsia.power.battery-rustc",
     "//sdk/fidl/fuchsia.settings:fuchsia.settings-rustc",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//src/connectivity/bluetooth/fidl:component-rustc",

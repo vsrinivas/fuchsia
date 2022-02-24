@@ -14,7 +14,7 @@ use {
     fidl_fuchsia_media::{AudioDeviceEnumeratorMarker, SessionAudioConsumerFactoryMarker},
     fidl_fuchsia_media_sessions2::PublisherMarker,
     fidl_fuchsia_mediacodec::CodecFactoryMarker,
-    fidl_fuchsia_power::BatteryManagerMarker,
+    fidl_fuchsia_power_battery::BatteryManagerMarker,
     fidl_fuchsia_settings::AudioMarker,
     fidl_fuchsia_sysmem::AllocatorMarker,
     fidl_fuchsia_tracing_provider::RegistryMarker,

@@ -9,7 +9,7 @@ use {
     fidl_fuchsia_bluetooth_hfp_test::{HfpTestMarker, HfpTestProxy},
     fidl_fuchsia_io as fio,
     fidl_fuchsia_media::{AudioDeviceEnumeratorMarker, AudioDeviceEnumeratorRequestStream},
-    fidl_fuchsia_power::{BatteryManagerMarker, BatteryManagerRequestStream},
+    fidl_fuchsia_power_battery::{BatteryManagerMarker, BatteryManagerRequestStream},
     fuchsia_audio_dai::test::mock_dai_dev_with_io_devices,
     fuchsia_component::server::ServiceFs,
     fuchsia_component_test::new::{

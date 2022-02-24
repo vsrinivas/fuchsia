@@ -7,7 +7,7 @@ use {
     fidl_fuchsia_bluetooth_avrcp::{PeerManagerMarker, PeerManagerRequest, TargetHandlerProxy},
     fidl_fuchsia_bluetooth_component::{LifecycleMarker, LifecycleProxy, LifecycleState},
     fidl_fuchsia_media_sessions2::{DiscoveryMarker, DiscoveryRequest, SessionsWatcherProxy},
-    fidl_fuchsia_power::{BatteryManagerMarker, BatteryManagerRequest},
+    fidl_fuchsia_power_battery::{BatteryManagerMarker, BatteryManagerRequest},
     fuchsia_async as fasync,
     fuchsia_component_test::new::{
         Capability, ChildOptions, LocalComponentHandles, RealmBuilder, Ref, Route,

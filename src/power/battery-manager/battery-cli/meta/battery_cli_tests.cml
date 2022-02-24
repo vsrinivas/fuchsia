@@ -11,7 +11,7 @@
     ],
     offer: [
         {
-            protocol: "fuchsia.power.test.BatterySimulator",
+            protocol: "fuchsia.power.battery.test.BatterySimulator",
             from: "#battery_manager",
             to: "#test_driver",
         },

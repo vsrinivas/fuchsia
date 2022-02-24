@@ -13,7 +13,7 @@ import (
 	"syscall/zx/fidl"
 	"testing"
 
-	"fidl/fuchsia/power"
+	"fidl/fuchsia/power/battery"
 
 	"go.fuchsia.dev/fuchsia/src/lib/component"
 )
@@ -22,7 +22,7 @@ type WatcherMock struct {
 	called chan struct{}
 }
 
-func (pmw *WatcherMock) OnChangeBatteryInfo(fidl.Context, power.BatteryInfo) error {
+func (pmw *WatcherMock) OnChangeBatteryInfo(fidl.Context, battery.BatteryInfo) error {
 	select {
 	case pmw.called <- struct{}{}:
 	default:
@@ -33,7 +33,7 @@ func (pmw *WatcherMock) OnChangeBatteryInfo(fidl.Context, power.BatteryInfo) err
 var ctx = component.NewContextFromStartupInfo()
 
 func TestPowerManager(t *testing.T) {
-	req, iface, err := power.NewBatteryManagerWithCtxInterfaceRequest()
+	req, iface, err := battery.NewBatteryManagerWithCtxInterfaceRequest()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -47,7 +47,7 @@ func TestPowerManager(t *testing.T) {
 }
 
 func TestBatteryInfoWatcher(t *testing.T) {
-	r, p, err := power.NewBatteryManagerWithCtxInterfaceRequest()
+	r, p, err := battery.NewBatteryManagerWithCtxInterfaceRequest()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -59,7 +59,7 @@ func TestBatteryInfoWatcher(t *testing.T) {
 	var wg sync.WaitGroup
 	defer wg.Wait()
 
-	rw, pw, err := power.NewBatteryInfoWatcherWithCtxInterfaceRequest()
+	rw, pw, err := battery.NewBatteryInfoWatcherWithCtxInterfaceRequest()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -76,7 +76,7 @@ func TestBatteryInfoWatcher(t *testing.T) {
 	go func() {
 		defer wg.Done()
 
-		component.Serve(context.Background(), &power.BatteryInfoWatcherWithCtxStub{
+		component.Serve(context.Background(), &battery.BatteryInfoWatcherWithCtxStub{
 			Impl: &pmWatcher,
 		}, rw.Channel, component.ServeOptions{
 			OnError: func(err error) { t.Log(err) },

@@ -352,7 +352,7 @@ mod tests {
     use async_test_helpers::run_while;
     use async_utils::PollExt;
     use fidl::endpoints::{self, RequestStream};
-    use fidl_fuchsia_power as fpower;
+    use fidl_fuchsia_power_battery as fpower;
     use fuchsia_async::pin_mut;
     use futures::{task::Poll, Future};
     use std::{convert::TryInto, pin::Pin};

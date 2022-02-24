@@ -1,15 +1,15 @@
 {
     include: [
-        // Enable system logging
-        "syslog/client.shard.cml",
-
         // Use Rust test runner and expose fuchsia.test.Suite capability
         "//src/sys/test_runners/rust/default.shard.cml",
+
+        // Enable system logging
+        "syslog/client.shard.cml",
     ],
     program: {
         binary: "bin/battery_cli_bin_test",
     },
     use: [
-        { protocol: "fuchsia.power.test.BatterySimulator" },
+        { protocol: "fuchsia.power.battery.test.BatterySimulator" },
     ],
 }

@@ -5,7 +5,7 @@
 use {
     anyhow::{format_err, Context as _, Error},
     argh::FromArgs,
-    fidl_fuchsia_bluetooth_gatt as gatt, fidl_fuchsia_power as fpower,
+    fidl_fuchsia_bluetooth_gatt as gatt, fidl_fuchsia_power_battery as fpower,
     fuchsia_async::{
         self as fasync,
         futures::{try_join, TryStreamExt},

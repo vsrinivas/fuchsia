@@ -21,7 +21,7 @@ action("generate_fidl_json") {
     "//sdk/fidl/fuchsia.boot",
     "//sdk/fidl/fuchsia.device.manager",
     "//sdk/fidl/fuchsia.kernel",
-    "//sdk/fidl/fuchsia.power",
+    "//sdk/fidl/fuchsia.power.battery",
     "//third_party/quickjs:qjs($host_toolchain)",
   ]
   args = [
@@ -34,7 +34,7 @@ action("generate_fidl_json") {
         "$root_build_dir/fidling/gen/sdk/fidl/fuchsia.device.manager/fuchsia.device.manager.fidl.json",
         root_build_dir),
     rebase_path(
-        "$root_build_dir/fidling/gen/sdk/fidl/fuchsia.power/fuchsia.power.fidl.json",
+        "$root_build_dir/fidling/gen/sdk/fidl/fuchsia.power.battery/fuchsia.power.battery.fidl.json",
         root_build_dir),
     rebase_path(
         "$root_build_dir/fidling/gen/sdk/fidl/fuchsia.kernel/fuchsia.kernel.fidl.json",

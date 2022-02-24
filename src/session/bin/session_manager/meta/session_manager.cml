@@ -98,7 +98,7 @@
                 "fuchsia.net.routes.State",
                 "fuchsia.netstack.Netstack",
                 "fuchsia.paver.Paver",
-                "fuchsia.power.BatteryManager",
+                "fuchsia.power.battery.BatteryManager",
                 "fuchsia.power.profile.Watcher",
                 "fuchsia.power.systemmode.ClientConfigurator",
                 "fuchsia.recovery.FactoryReset",

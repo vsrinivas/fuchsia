@@ -948,7 +948,7 @@
                 {
                     // `BatteryManager` is not present in all products.
                     using_node: "/core/bt-a2dp",
-                    capability: "fuchsia.power.BatteryManager",
+                    capability: "fuchsia.power.battery.BatteryManager",
                     error: {
                         error: {
                             analyzer_model_error: {
@@ -968,18 +968,18 @@
                                                 },
                                             ]
                                         },
-                                        "capability_id": "fuchsia.power.BatteryManager"
+                                        "capability_id": "fuchsia.power.battery.BatteryManager"
                                     }
                                 },
                             },
                         },
-                        "message": "A `use from parent` declaration was found at `/core/bt-a2dp` for `fuchsia.power.BatteryManager`, but no matching `offer` declaration was found in the parent"
+                        "message": "A `use from parent` declaration was found at `/core/bt-a2dp` for `fuchsia.power.battery.BatteryManager`, but no matching `offer` declaration was found in the parent"
                     },
                 },
                 {
                     // `BatteryManager` is not present in all products.
                     using_node: "/core/bt-a2dp/bt-avrcp-target",
-                    capability: "fuchsia.power.BatteryManager",
+                    capability: "fuchsia.power.battery.BatteryManager",
                     error: {
                         error: {
                             analyzer_model_error: {
@@ -999,18 +999,18 @@
                                                 },
                                             ]
                                         },
-                                        "capability_id": "fuchsia.power.BatteryManager"
+                                        "capability_id": "fuchsia.power.battery.BatteryManager"
                                     }
                                 },
                             },
                         },
-                        "message": "An `offer from parent` declaration was found at `/core/bt-a2dp` for `fuchsia.power.BatteryManager`, but no matching `offer` declaration was found in the parent"
+                        "message": "An `offer from parent` declaration was found at `/core/bt-a2dp` for `fuchsia.power.battery.BatteryManager`, but no matching `offer` declaration was found in the parent"
                     },
                 },
                 {
                     // `BatteryManager` is not present in all products.
                     using_node: "/core/bt-hfp-audio-gateway",
-                    capability: "fuchsia.power.BatteryManager",
+                    capability: "fuchsia.power.battery.BatteryManager",
                     error: {
                         error: {
                             analyzer_model_error: {
@@ -1030,12 +1030,12 @@
                                                 },
                                             ]
                                         },
-                                        "capability_id": "fuchsia.power.BatteryManager"
+                                        "capability_id": "fuchsia.power.battery.BatteryManager"
                                     }
                                 },
                             },
                         },
-                        "message": "A `use from parent` declaration was found at `/core/bt-hfp-audio-gateway` for `fuchsia.power.BatteryManager`, but no matching `offer` declaration was found in the parent"
+                        "message": "A `use from parent` declaration was found at `/core/bt-hfp-audio-gateway` for `fuchsia.power.battery.BatteryManager`, but no matching `offer` declaration was found in the parent"
                     },
                 },
                 {

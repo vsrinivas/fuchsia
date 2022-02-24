@@ -5,7 +5,7 @@
 use {
     crate::battery_manager::BatterySimulationStateObserver,
     anyhow::{format_err, Error},
-    fidl_fuchsia_power as fpower, fidl_fuchsia_power_test as spower,
+    fidl_fuchsia_power_battery as fpower, fidl_fuchsia_power_battery_test as spower,
     futures::lock::Mutex,
     std::sync::{Arc, Weak},
 };
@@ -162,7 +162,6 @@ mod tests {
     use super::*;
     use crate::battery_manager::BatteryManager;
     use fidl::endpoints::create_request_stream;
-    use fidl_fuchsia_power as fpower;
     use fuchsia_async::futures::TryStreamExt;
     use futures::future::*;
 

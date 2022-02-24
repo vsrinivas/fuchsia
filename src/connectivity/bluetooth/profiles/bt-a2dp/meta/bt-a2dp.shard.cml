@@ -63,7 +63,7 @@
                 "fuchsia.bluetooth.avrcp.PeerManager",
                 "fuchsia.logger.LogSink",
                 "fuchsia.media.sessions2.Discovery",
-                "fuchsia.power.BatteryManager",
+                "fuchsia.power.battery.BatteryManager",
             ],
             from: "parent",
             to: [ "#bt-avrcp-target" ],

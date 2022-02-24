@@ -4,7 +4,7 @@
 
 use battery_client::BatteryClient;
 use fidl::client::QueryResponseFut;
-use fidl_fuchsia_power as fpower;
+use fidl_fuchsia_power_battery as fpower;
 use futures::StreamExt;
 
 pub struct TestBatteryManager {

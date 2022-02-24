@@ -6,7 +6,8 @@ use {
     crate::LOG_VERBOSITY,
     anyhow::Error,
     fidl::endpoints::Proxy,
-    fidl_fuchsia_hardware_power as hpower, fidl_fuchsia_power as fpower, fuchsia_async as fasync,
+    fidl_fuchsia_hardware_power as hpower, fidl_fuchsia_power_battery as fpower,
+    fuchsia_async as fasync,
     fuchsia_syslog::{fx_log_err, fx_vlog},
     fuchsia_zircon as zx,
     futures::{lock::Mutex, TryStreamExt},
@@ -345,7 +346,6 @@ impl BatteryManager {
 mod tests {
     use super::*;
     use fidl::endpoints::create_request_stream;
-    use fidl_fuchsia_power as fpower;
     use fuchsia_async::futures::TryStreamExt;
     use futures::future::*;
 

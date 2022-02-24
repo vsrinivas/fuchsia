@@ -4,7 +4,7 @@
 {
     use: [
         {
-            protocol: [ "fuchsia.power.BatteryManager" ],
+            protocol: [ "fuchsia.power.battery.BatteryManager" ],
             from: "parent",
         },
     ],

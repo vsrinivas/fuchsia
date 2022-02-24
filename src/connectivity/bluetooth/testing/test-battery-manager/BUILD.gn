@@ -9,7 +9,7 @@ rustc_library("test-battery-manager") {
   testonly = true
 
   deps = [
-    "//sdk/fidl/fuchsia.power:fuchsia.power-rustc",
+    "//sdk/fidl/fuchsia.power.battery:fuchsia.power.battery-rustc",
     "//src/connectivity/bluetooth/lib/battery-client",
     "//src/lib/async-utils",
     "//src/lib/fidl/rust/fidl",

@@ -18,7 +18,7 @@ use {
         DiscoveryMarker, DiscoveryRequestStream, PublisherMarker, PublisherRequestStream,
     },
     fidl_fuchsia_mediacodec::{CodecFactoryMarker, CodecFactoryRequestStream},
-    fidl_fuchsia_power::{BatteryManagerMarker, BatteryManagerRequestStream},
+    fidl_fuchsia_power_battery::{BatteryManagerMarker, BatteryManagerRequestStream},
     fidl_fuchsia_settings::{AudioMarker, AudioRequestStream},
     fidl_fuchsia_sysmem::{AllocatorMarker, AllocatorRequestStream},
     fidl_fuchsia_tracing_provider::{RegistryMarker, RegistryRequestStream},

@@ -6,8 +6,8 @@ mod commands;
 use {
     crate::commands::{CmdHelper, Command, ReplControl},
     anyhow::{format_err, Context as _, Error},
-    fidl_fuchsia_power as fpower, fidl_fuchsia_power_test as spower,
-    fidl_fuchsia_power_test::BatterySimulatorProxy,
+    fidl_fuchsia_power_battery as fpower, fidl_fuchsia_power_battery_test as spower,
+    fidl_fuchsia_power_battery_test::BatterySimulatorProxy,
     fuchsia_async as fasync,
     fuchsia_component::client::connect_to_protocol,
     fuchsia_syslog as syslog,
