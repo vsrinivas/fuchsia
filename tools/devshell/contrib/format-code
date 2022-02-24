@@ -247,7 +247,7 @@ git-print-changed-lines() {
 $GET_FILES
 
 if [[ $ARGS_GN == "1" ]]; then
-  FILES+=" $(fx get-build-dir)/args.gn"
+  FILES+=( "${FUCHSIA_BUILD_DIR}/args.gn" )
 fi
 
 # Do not format these files
