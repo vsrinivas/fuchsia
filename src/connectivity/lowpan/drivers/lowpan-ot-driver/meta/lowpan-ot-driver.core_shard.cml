@@ -60,7 +60,10 @@
             to: [ "#lowpan-ot-driver" ],
         },
         {
-            protocol: [ "fuchsia.net.mdns.Subscriber" ],
+            protocol: [
+                "fuchsia.net.mdns.Publisher",
+                "fuchsia.net.mdns.Subscriber",
+            ],
             from: "#mdns",
             to: [ "#lowpan-ot-driver" ],
         },

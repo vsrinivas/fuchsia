@@ -18,6 +18,7 @@
                 "fuchsia.lowpan.device.Register",
                 "fuchsia.net.interfaces.admin.Installer",
                 "fuchsia.net.interfaces.State",
+                "fuchsia.net.mdns.Publisher",
                 "fuchsia.net.mdns.Subscriber",
                 "fuchsia.net.stack.Stack",
                 "fuchsia.net.tun.Control",
