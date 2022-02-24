@@ -6,6 +6,7 @@ import("//build/assembly/legacy.gni")
 import("//build/component/component_id_index.gni")
 import("//build/config.gni")
 import("//build/drivers/driver_manifest.gni")
+import("//build/images/assembly/compare_command_logs.gni")
 import("//build/images/assembly/generated_assembly_inputs.gni")
 import("//build/images/assembly/generated_board_config.gni")
 import("//build/images/assembly/generated_images_config.gni")
@@ -235,6 +236,7 @@ template("assemble_system") {
     assembly_inputs = "${image_name}_assembly_inputs"
     fshost_config = "${image_name}_fshost_config"
     pkgfs_package_label = "//src/sys/pkg/bin/pkgfs"
+    compare_command_logs = "${image_name}_compare_command_logs"
   }
 
   # Intermediate files produced for Image Assembly.
@@ -252,6 +254,9 @@ template("assemble_system") {
 
     outdir = "$target_out_dir/$image_name"
     gendir = "$outdir/gen"
+
+    cs_outdir = "$outdir/cs"
+    cs_gendir = "$cs_outdir/gen"
 
     legacy_assembly_input_bundle_manifest =
         "${outdir}/legacy/assembly_config.json"
@@ -292,7 +297,7 @@ template("assemble_system") {
     assembly_inputs = "${outdir}/assembly_inputs.json"
 
     image_command_log = "${gendir}/command_log.json"
-    create_system_command_log = "${outdir}/new_commands.json"
+    cs_command_log = "${cs_gendir}/command_log.json"
 
     # Determine which ZBI we are shipping.
     zbi_final = zbi
@@ -870,14 +875,30 @@ template("assemble_system") {
       "--images",
       rebase_path(files.images_config, root_build_dir),
       "--gendir",
-      rebase_path(files.gendir, root_build_dir),
+      rebase_path(files.cs_gendir, root_build_dir),
       "--outdir",
-      rebase_path(files.outdir, root_build_dir),
+      rebase_path(files.cs_outdir, root_build_dir),
     ]
 
     deps = [ ":${labels.images_config}" ]
     inputs = [ files.images_config ]
-    outputs = [ files.create_system_command_log ]
+    outputs = [ files.cs_command_log ]
+  }
+
+  compare_command_logs(labels.compare_command_logs) {
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visibility",
+                           ])
+    deps = [
+      ":${labels.create_system}",
+      ":${labels.image_assembler}",
+    ]
+    reference = files.image_command_log
+    comparison = files.cs_command_log
+    reference_outdir = files.outdir
+    comparison_outdir = files.cs_outdir
   }
 
   #######
@@ -1039,6 +1060,7 @@ template("assemble_system") {
     # available to external targets.
     public_deps = [
       ":${labels.assembly_inputs}",
+      ":${labels.compare_command_logs}",
       ":${labels.compare_image_assembly_configs}",
       ":${labels.create_system}",
       ":${labels.image_assembler}",

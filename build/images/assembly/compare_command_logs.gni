@@ -1,0 +1,60 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# Compare two command logs that resulted from image assembly to ensure that
+# every command in the reference also appears in the comparison.
+#
+# Arguments
+#   reference (required)
+#     [path] The path to the reference command log.
+#
+#   comparison (required)
+#     [path] The path to the comparison command log.
+#
+#   reference_outdir (required)
+#     [path] The outdir prefix that is found in file paths in the reference.
+#            This must be known, so that the prefix can be stripped before
+#            comparing.
+#
+#   comparison_outdir (required)
+#     [path] The outdir prefix that is found in file paths in the comparison.
+#            This must be known, so that the prefix can be stripped before
+#            comparing.
+#
+template("compare_command_logs") {
+  assert(defined(invoker.reference), "Need to define a reference")
+  assert(defined(invoker.comparison), "Need to define a comparison")
+  assert(defined(invoker.reference_outdir), "Need to define a reference_outdir")
+  assert(defined(invoker.comparison_outdir),
+         "Need to define a comparison_outdir")
+
+  action(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "testonly",
+                             "visibility",
+                           ])
+    script = "//build/images/assembly/compare_command_logs.py"
+    stamp = "${target_out_dir}/${target_name}/compare_command_logs.stamp"
+    outputs = [ stamp ]
+    inputs = [
+      invoker.reference,
+      invoker.comparison,
+    ]
+
+    args = [
+      "--reference",
+      rebase_path(invoker.reference, root_build_dir),
+      "--comparison",
+      rebase_path(invoker.comparison, root_build_dir),
+      "--reference-outdir",
+      rebase_path(invoker.reference_outdir, root_build_dir),
+      "--comparison-outdir",
+      rebase_path(invoker.comparison_outdir, root_build_dir),
+      "--stamp",
+      rebase_path(stamp, root_build_dir),
+    ]
+  }
+}
