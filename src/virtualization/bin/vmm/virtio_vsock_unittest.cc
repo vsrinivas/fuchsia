@@ -273,6 +273,8 @@ class VirtioVsockTest : public ::gtest::TestLoopFixture,
         .len = static_cast<uint32_t>(len - sizeof(*tx_header)),
         .type = VIRTIO_VSOCK_TYPE_STREAM,
         .op = VIRTIO_VSOCK_OP_RW,
+        .buf_alloc = this->buf_alloc,
+        .fwd_cnt = this->fwd_cnt,
     };
 
     ASSERT_EQ(tx_queue_.BuildDescriptor().AppendReadable(tx_buffer, len).Build(), ZX_OK);
@@ -823,6 +825,16 @@ TEST_F(VirtioVsockTest, MultipleConnections) {
     HostWriteOnPort(kVirtioVsockHostPort + 1000, &a_connection);
     HostWriteOnPort(kVirtioVsockHostPort + 2000, &b_connection);
   }
+}
+
+TEST_F(VirtioVsockTest, InvalidBuffer) {
+  zx::socket mock_socket;
+  ConnectionKey mock_key{0, 0, 0, 0};
+  std::unique_ptr<VirtioVsock::Connection> conn =
+      VirtioVsock::Connection::Create(mock_key, std::move(mock_socket), nullptr, nullptr, nullptr);
+
+  conn.get()->SetCredit(0, 2);
+  ASSERT_EQ(conn.get()->op(), VIRTIO_VSOCK_OP_RST);
 }
 
 TEST_F(VirtioVsockTest, CreditRequest) {

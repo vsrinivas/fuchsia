@@ -295,7 +295,9 @@ void VirtioVsock::Connection::UpdateOp(uint16_t new_op) {
 }
 
 uint32_t VirtioVsock::Connection::PeerFree() const {
-  // See 5.7.6.3 Buffer Space Management, from the Virtio Socket Device spec.
+  // See 5.10.6.3 Buffer Space Management, from the Virtio Socket Device 1.1 spec.
+  FX_DCHECK(tx_cnt_ >= peer_fwd_cnt_);
+  FX_DCHECK(peer_buf_alloc_ >= (tx_cnt_ - peer_fwd_cnt_));
   return peer_buf_alloc_ - (tx_cnt_ - peer_fwd_cnt_);
 }
 
@@ -304,8 +306,12 @@ void VirtioVsock::Connection::ReadCredit(virtio_vsock_hdr_t* header) {
 }
 
 void VirtioVsock::Connection::SetCredit(uint32_t buf_alloc, uint32_t fwd_cnt) {
-  peer_buf_alloc_ = buf_alloc;
-  peer_fwd_cnt_ = fwd_cnt;
+  if (tx_cnt_ < fwd_cnt || buf_alloc < (tx_cnt_ - fwd_cnt)) {
+    UpdateOp(VIRTIO_VSOCK_OP_RST);
+  } else {
+    peer_buf_alloc_ = buf_alloc;
+    peer_fwd_cnt_ = fwd_cnt;
+  }
 }
 
 zx_status_t VirtioVsock::Connection::WaitOnTransmit() {
@@ -447,8 +453,6 @@ zx_status_t VirtioVsock::Connection::Write(VirtioQueue* queue, virtio_vsock_hdr_
     uint32_t len = std::min(next.len, header->len);
     size_t actual;
     status = socket_.write(0, next.addr, len, &actual);
-    rx_cnt_ += actual;
-    header->len -= actual;
     if (status != ZX_OK || actual < len) {
       // If we've failed to write just reset the connection. Note that it
       // should not be possible to receive a ZX_ERR_SHOULD_WAIT here if
@@ -457,7 +461,8 @@ zx_status_t VirtioVsock::Connection::Write(VirtioQueue* queue, virtio_vsock_hdr_
       UpdateOp(VIRTIO_VSOCK_OP_RST);
       return ZX_OK;
     }
-
+    rx_cnt_ += actual;
+    header->len -= actual;
     reported_buf_avail_ -= actual;
     if (reported_buf_avail_ == 0 || !next.has_next || header->len == 0) {
       return ZX_OK;
