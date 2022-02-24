@@ -11,6 +11,7 @@ rustc_test("derive-reference-doc_test") {
   edition = "2018"
 
   deps = [
+    "//third_party/rust_crates:difference",
     "//tools/lib/cml",
     "//tools/lib/cml/macro",
   ]

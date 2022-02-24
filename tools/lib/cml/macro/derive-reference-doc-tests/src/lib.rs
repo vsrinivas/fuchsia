@@ -2,81 +2,90 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-mod tests {
-    use {cml::reference_doc::MarkdownReferenceDocGenerator, cml_macro::ReferenceDoc};
+// Allow dead code to avoid annotating every field in the test structs
+// with #[allow(dead_code)]
+#![allow(dead_code)]
 
-    /// # Top-level heading
+mod tests {
+    use {
+        cml::reference_doc::MarkdownReferenceDocGenerator, cml_macro::ReferenceDoc,
+        difference::assert_diff,
+    };
+
+    /// # Big picture
     ///
-    /// Hello.
+    /// A struct that is parsed to JSON.
     ///
     /// ## Top-level keys
     #[derive(ReferenceDoc)]
     struct ReferenceDocTest {
-        /// A field.
+        /// This content describes str.
         ///
-        /// - A list
-        ///     - A sub-list
-        ///
-        /// # Heading 1
-        ///
-        /// Content 1
-        ///
-        /// ## Heading 1-2
-        #[allow(dead_code)]
-        field: Option<String>,
+        /// # This heading will be indented by default
+        str: Option<String>,
 
-        /// Some more documentation!
-        #[allow(dead_code)]
-        r#another: Vec<String>,
+        /// This is a vector.
+        r#use: Vec<String>,
 
-        /// An optional vector.
-        #[allow(dead_code)]
-        optionvec: Option<Vec<ReferenceDocTestSubtype>>,
+        /// This will appear first when describing `objects`.
+        #[reference_doc(recurse)]
+        objects: Option<Vec<ReferenceDocTestObject>>,
     }
 
-    struct ReferenceDocTestSubtype {
-        #[allow(dead_code)]
-        hello: i32,
+    /// This will appear before describing the fields.
+    #[derive(ReferenceDoc)]
+    struct ReferenceDocTestObject {
+        /// This will appear when documenting this field specifically.
+        ///
+        /// # A super indented header!
+        an_int: i32,
     }
 
     #[test]
     fn test_reference_doc() {
-        assert_eq!(
-            ReferenceDocTest::get_reference_doc_markdown(),
-            r#"# Top-level heading
+        assert_diff!(
+            &ReferenceDocTest::get_reference_doc_markdown(),
+            r#"# Big picture
 
-Hello.
+A struct that is parsed to JSON.
 
 ## Top-level keys
 
-### `field` {#field}
+### `str` {#str}
 
 _`string` (optional)_
 
-A field.
+This content describes str.
 
-- A list
-    - A sub-list
+#### This heading will be indented by default
 
-#### Heading 1
-
-Content 1
-
-##### Heading 1-2
-
-### `another` {#another}
+### `use` {#use}
 
 _array of `strings`_
 
-Some more documentation!
+This is a vector.
 
-### `optionvec` {#optionvec}
+### `objects` {#objects}
 
 _array of `objects` (optional)_
 
-An optional vector.
+This will appear first when describing `objects`.
 
-"#
+This will appear before describing the fields.
+
+#### `an_int` {#an_int}
+
+_`object`_
+
+This will appear when documenting this field specifically.
+
+##### A super indented header!
+
+
+
+"#,
+            "",
+            0
         );
     }
 }
