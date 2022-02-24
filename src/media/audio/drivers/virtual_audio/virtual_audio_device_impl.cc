@@ -24,7 +24,7 @@ std::unique_ptr<VirtualAudioDeviceImpl> VirtualAudioDeviceImpl::Create(
 // Don't initialize here or in ctor; do it all in Init() so ResetConfiguration has same effect.
 VirtualAudioDeviceImpl::VirtualAudioDeviceImpl(VirtualAudioControlImpl* owner, bool is_input)
     : owner_(owner), is_input_(is_input) {
-  ZX_DEBUG_ASSERT(owner_);
+  ZX_ASSERT(owner_);
 
   Init();
 }
@@ -72,10 +72,10 @@ void VirtualAudioDeviceImpl::SetBinding(
     fidl::Binding<fuchsia::virtualaudio::Input,
                   std::unique_ptr<virtual_audio::VirtualAudioDeviceImpl>>* binding) {
   ZX_ASSERT(is_input_);
-  ZX_DEBUG_ASSERT(output_binding_ == nullptr);
+  ZX_ASSERT(output_binding_ == nullptr);
 
   input_binding_ = binding;
-  ZX_DEBUG_ASSERT(input_binding_->is_bound());
+  ZX_ASSERT(input_binding_->is_bound());
 }
 
 // Receive and cache a virtualaudio::Output binding, forwarded from the virtual_audio_service.
@@ -84,10 +84,10 @@ void VirtualAudioDeviceImpl::SetBinding(
     fidl::Binding<fuchsia::virtualaudio::Output,
                   std::unique_ptr<virtual_audio::VirtualAudioDeviceImpl>>* binding) {
   ZX_ASSERT(!is_input_);
-  ZX_DEBUG_ASSERT(input_binding_ == nullptr);
+  ZX_ASSERT(input_binding_ == nullptr);
 
   output_binding_ = binding;
-  ZX_DEBUG_ASSERT(output_binding_->is_bound());
+  ZX_ASSERT(output_binding_->is_bound());
 }
 
 // In response to an Input::Add or Output::Add call, create the stream (activate the device).
@@ -229,9 +229,9 @@ void VirtualAudioDeviceImpl::SetExternalDelay(zx_duration_t external_delay) {
 
 void VirtualAudioDeviceImpl::SetRingBufferRestrictions(uint32_t min_frames, uint32_t max_frames,
                                                        uint32_t modulo_frames) {
-  ZX_DEBUG_ASSERT(min_frames <= max_frames);
-  ZX_DEBUG_ASSERT(min_frames % modulo_frames == 0);
-  ZX_DEBUG_ASSERT(max_frames % modulo_frames == 0);
+  ZX_ASSERT(min_frames <= max_frames);
+  ZX_ASSERT(min_frames % modulo_frames == 0);
+  ZX_ASSERT(max_frames % modulo_frames == 0);
 
   min_buffer_frames_ = min_frames;
   max_buffer_frames_ = max_frames;
@@ -308,7 +308,7 @@ void VirtualAudioDeviceImpl::Add() {
 void VirtualAudioDeviceImpl::Remove() {
   if (!owner_->enabled()) {
     zxlogf(WARNING, "%s: Disabled, no streams for removal", __func__);
-    ZX_DEBUG_ASSERT(stream_ == nullptr);
+    ZX_ASSERT(stream_ == nullptr);
     return;
   }
 

@@ -69,8 +69,6 @@ static constexpr zx_driver_ops_t virtual_audio_bus_driver_ops = []() {
 
 __BEGIN_CDECLS
 
-// clang-format off
 ZIRCON_DRIVER(virtual_audio, virtual_audio_bus_driver_ops, "fuchsia", "0.1");
-// clang-format on
 
 __END_CDECLS

@@ -19,7 +19,7 @@ namespace virtual_audio {
 // Unbind proceeds "down" from parent to child, while Release proceeds "up" (called for parent once
 // all children have been released).
 void VirtualAudioControlImpl::DdkUnbind(void* ctx) {
-  ZX_DEBUG_ASSERT(ctx != nullptr);
+  ZX_ASSERT(ctx);
 
   auto self = static_cast<VirtualAudioControlImpl*>(ctx);
 
@@ -36,7 +36,7 @@ void VirtualAudioControlImpl::DdkUnbind(void* ctx) {
 // logical consistency checks would be done here. By the time this is called, all child devices have
 // already been released.
 void VirtualAudioControlImpl::DdkRelease(void* ctx) {
-  ZX_DEBUG_ASSERT(ctx != nullptr);
+  ZX_ASSERT(ctx);
 
   // DevMgr has returned ownership of whatever we provided as driver ctx (our
   // VirtualAudioControlImpl). When this functions returns, this unique_ptr will go out of scope,
@@ -44,16 +44,16 @@ void VirtualAudioControlImpl::DdkRelease(void* ctx) {
   std::unique_ptr<VirtualAudioControlImpl> control_ptr(static_cast<VirtualAudioControlImpl*>(ctx));
 
   // By now, all our lists should be empty.
-  ZX_DEBUG_ASSERT(control_ptr->bindings_.size() == 0);
-  ZX_DEBUG_ASSERT(control_ptr->input_bindings_.size() == 0);
-  ZX_DEBUG_ASSERT(control_ptr->output_bindings_.size() == 0);
+  ZX_ASSERT(control_ptr->bindings_.size() == 0);
+  ZX_ASSERT(control_ptr->input_bindings_.size() == 0);
+  ZX_ASSERT(control_ptr->output_bindings_.size() == 0);
 }
 
 // static
 //
 zx_status_t VirtualAudioControlImpl::DdkMessage(void* ctx, fidl_incoming_msg_t* msg,
                                                 fidl_txn_t* txn) {
-  ZX_DEBUG_ASSERT(ctx != nullptr);
+  ZX_ASSERT(ctx);
 
   return fuchsia_virtualaudio_Forwarder_dispatch(ctx, txn, msg, &fidl_ops_);
 }
@@ -63,18 +63,18 @@ zx_status_t VirtualAudioControlImpl::DdkMessage(void* ctx, fidl_incoming_msg_t* 
 fuchsia_virtualaudio_Forwarder_ops_t VirtualAudioControlImpl::fidl_ops_ = {
     .SendControl =
         [](void* ctx, zx_handle_t control_request) {
-          ZX_DEBUG_ASSERT(ctx != nullptr);
+          ZX_ASSERT(ctx);
           return static_cast<VirtualAudioControlImpl*>(ctx)->SendControl(
               zx::channel(control_request));
         },
     .SendInput =
         [](void* ctx, zx_handle_t input_request) {
-          ZX_DEBUG_ASSERT(ctx != nullptr);
+          ZX_ASSERT(ctx);
           return static_cast<VirtualAudioControlImpl*>(ctx)->SendInput(zx::channel(input_request));
         },
     .SendOutput =
         [](void* ctx, zx_handle_t output_request) {
-          ZX_DEBUG_ASSERT(ctx != nullptr);
+          ZX_ASSERT(ctx);
           return static_cast<VirtualAudioControlImpl*>(ctx)->SendOutput(
               zx::channel(output_request));
         },

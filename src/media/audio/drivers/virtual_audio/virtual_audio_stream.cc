@@ -6,13 +6,14 @@
 #include <lib/affine/transform.h>
 #include <lib/ddk/debug.h>
 #include <lib/zx/clock.h>
+#include <zircon/assert.h>
+#include <zircon/errors.h>
 
 #include <cmath>
 
 #include "src/media/audio/drivers/virtual_audio/virtual_audio_device_impl.h"
 #include "src/media/audio/drivers/virtual_audio/virtual_audio_stream_in.h"
 #include "src/media/audio/drivers/virtual_audio/virtual_audio_stream_out.h"
-// #include "src/media/audio/lib/clock/utils.h"
 
 namespace virtual_audio {
 
@@ -30,7 +31,7 @@ fbl::RefPtr<VirtualAudioStream> VirtualAudioStream::CreateStream(VirtualAudioDev
 zx::time VirtualAudioStream::MonoTimeFromRefTime(const zx::clock& clock, zx::time ref_time) {
   zx_clock_details_v1_t clock_details;
   zx_status_t status = clock.get_details(&clock_details);
-  ZX_DEBUG_ASSERT(status == ZX_OK);
+  ZX_ASSERT_MSG(status == ZX_OK, "Could not get_details on this clock");
 
   zx_time_t mono_time = affine::Transform::ApplyInverse(
       clock_details.mono_to_synthetic.reference_offset,
@@ -43,17 +44,12 @@ zx::time VirtualAudioStream::MonoTimeFromRefTime(const zx::clock& clock, zx::tim
 }
 
 zx_status_t VirtualAudioStream::Init() {
-  if (!strlcpy(device_name_, parent_->device_name_.c_str(), sizeof(device_name_))) {
-    return ZX_ERR_INTERNAL;
-  }
-
-  if (!strlcpy(mfr_name_, parent_->mfr_name_.c_str(), sizeof(mfr_name_))) {
-    return ZX_ERR_INTERNAL;
-  }
-
-  if (!strlcpy(prod_name_, parent_->prod_name_.c_str(), sizeof(prod_name_))) {
-    return ZX_ERR_INTERNAL;
-  }
+  ZX_ASSERT_MSG(strlcpy(device_name_, parent_->device_name_.c_str(), sizeof(device_name_)),
+                "strlcpy(device_name) failed");
+  ZX_ASSERT_MSG(strlcpy(mfr_name_, parent_->mfr_name_.c_str(), sizeof(mfr_name_)),
+                "strlcpy(mfr_name) failed");
+  ZX_ASSERT_MSG(strlcpy(prod_name_, parent_->prod_name_.c_str(), sizeof(prod_name_)),
+                "strlcpy(prod_name) failed");
 
   memcpy(unique_id_.data, parent_->unique_id_, sizeof(unique_id_.data));
 
@@ -70,11 +66,10 @@ zx_status_t VirtualAudioStream::Init() {
   clock_domain_ = parent_->clock_domain_;
   clock_rate_adjustment_ = parent_->clock_rate_adjustment_;
   zx_status_t status = EstablishReferenceClock();
-  if (status != ZX_OK) {
-    zxlogf(WARNING, "EstablishReferenceClock failed: %d", status);
-    return status;
-  }
-
+  ZX_ASSERT_MSG(status == ZX_OK, "EstablishReferenceClock failed: %d", status);
+  ZX_ASSERT_MSG(parent_->min_buffer_frames_, "parent_->min_buffer_frames_ cannot be zero");
+  ZX_ASSERT_MSG(parent_->min_buffer_frames_ <= parent_->max_buffer_frames_,
+                "parent_->min_buffer_frames_ cannot exceed parent_->max_buffer_frames_");
   max_buffer_frames_ = parent_->max_buffer_frames_;
   min_buffer_frames_ = parent_->min_buffer_frames_;
   modulo_buffer_frames_ = parent_->modulo_buffer_frames_;
@@ -97,7 +92,7 @@ zx_status_t VirtualAudioStream::Init() {
     va_client_notifications_per_ring_ = parent_->notifications_per_ring_;
   }
 
-  return status;
+  return ZX_OK;
 }
 
 // We use this clock to emulate a real hardware time source. It is not exposed outside the driver.
@@ -105,12 +100,12 @@ zx_status_t VirtualAudioStream::EstablishReferenceClock() {
   zx_status_t status =
       zx::clock::create(ZX_CLOCK_OPT_MONOTONIC | ZX_CLOCK_OPT_CONTINUOUS | ZX_CLOCK_OPT_AUTO_START,
                         nullptr, &reference_clock_);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "Could not create driver clock");
-  } else if (clock_rate_adjustment_ != 0) {
+  ZX_ASSERT_MSG(status == ZX_OK, "Could not create driver clock");
+
+  if (clock_rate_adjustment_ != 0) {
     status = AdjustClockRate();
   }
-  return status;
+  return ZX_OK;
 }
 
 // Update the internal clock object that manages our variance from the local system timebase.
@@ -119,12 +114,9 @@ zx_status_t VirtualAudioStream::AdjustClockRate() {
   args.reset().set_rate_adjust(clock_rate_adjustment_);
 
   zx_status_t status = reference_clock_.update(args);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "Could not rate-adjust driver clock");
-    ZX_ASSERT(status == ZX_OK);
-  }
+  ZX_ASSERT_MSG(status == ZX_OK, "Could not rate-adjust driver clock");
 
-  return status;
+  return ZX_OK;
 }
 
 // "UPDATE" actions to enqueue
@@ -246,7 +238,8 @@ void VirtualAudioStream::HandleSetNotifications() {
   if (va_client_notifications_per_ring_.has_value() &&
       (va_client_notifications_per_ring_.value() > 0)) {
     auto status = reference_clock_.read(target_va_client_ref_notification_time_.get_address());
-    ZX_DEBUG_ASSERT(status == ZX_OK);
+    ZX_ASSERT_MSG(status == ZX_OK, "reference_clock::read returned error (%d)", status);
+
     PostForVaClientNotifyAt(target_va_client_ref_notification_time_);
   } else {
     target_va_client_mono_notification_time_ = zx::time(0);
@@ -267,9 +260,7 @@ void VirtualAudioStream::HandleClockRateAdjustments() {
     }
   }
 
-  if (AdjustClockRate() != ZX_OK) {
-    zxlogf(ERROR, "AdjustClockRate failed in %s; continuing with existing clock", __func__);
-  }
+  ZX_ASSERT_MSG(AdjustClockRate() == ZX_OK, "AdjustClockRate failed in %s", __func__);
 }
 
 // Handle "GET" actions
@@ -319,10 +310,7 @@ void VirtualAudioStream::HandleFormatRequests() {
       break;
     }
 
-    if (frames_per_second == 0) {
-      zxlogf(WARNING, "Format is not set - should not be calling GetFormat");
-      return;
-    }
+    ZX_ASSERT_MSG(frames_per_second, "Format is not set - should not be calling GetFormat");
 
     parent_->PostToDispatcher([format_callback = std::move(format_callback), frames_per_second,
                                sample_format, num_channels, external_delay]() {
@@ -342,10 +330,9 @@ void VirtualAudioStream::HandleBufferRequests() {
     fuchsia::virtualaudio::Device::GetBufferCallback buffer_callback;
 
     if (fbl::AutoLock lock(&wakeup_queue_lock_); !buffer_queue_.empty()) {
-      if (!ring_buffer_vmo_.is_valid()) {
-        zxlogf(WARNING, "Buffer is not set - should not be retrieving ring buffer");
-        return;
-      }
+      ZX_ASSERT_MSG(ring_buffer_vmo_.is_valid(),
+                    "Buffer is not set - should not be retrieving ring buffer");
+
       status = ring_buffer_vmo_.duplicate(
           ZX_RIGHT_TRANSFER | ZX_RIGHT_READ | ZX_RIGHT_WRITE | ZX_RIGHT_MAP,
           &duplicate_ring_buffer_vmo);
@@ -358,10 +345,7 @@ void VirtualAudioStream::HandleBufferRequests() {
       break;
     }
 
-    if (status != ZX_OK) {
-      zxlogf(ERROR, "%s failed to duplicate VMO handle - %d", __func__, status);
-      return;
-    }
+    ZX_ASSERT_MSG(status == ZX_OK, "%s failed to duplicate VMO handle - %d", __func__, status);
 
     parent_->PostToDispatcher([buffer_callback = std::move(buffer_callback),
                                rb_vmo = std::move(duplicate_ring_buffer_vmo),
@@ -390,16 +374,13 @@ void VirtualAudioStream::HandlePositionRequests() {
       break;
     }
 
-    if (start_time.get() == 0) {
-      zxlogf(WARNING, "Stream is not started -- should not be calling GetPosition");
-      return;
-    }
+    ZX_ASSERT_MSG(start_time.get(), "Stream is not started -- should not be calling GetPosition");
 
     zx::time ref_now;
     auto status = reference_clock_.read(ref_now.get_address());
-    ZX_DEBUG_ASSERT(status == ZX_OK);
-    auto mono_now = MonoTimeFromRefTime(reference_clock_, ref_now);
+    ZX_ASSERT_MSG(status == ZX_OK, "reference_clock::read returned error (%d)", status);
 
+    auto mono_now = MonoTimeFromRefTime(reference_clock_, ref_now);
     auto frames = ref_time_to_running_frame_.Apply(ref_now.get());
     ZX_ASSERT_MSG(frames >= 0, "running frames should never be negative");
 
@@ -448,14 +429,10 @@ void VirtualAudioStream::PostForVaClientNotifyAt(zx::time va_client_ref_notifica
 // as the return value from a successful SetFormat call.
 zx_status_t VirtualAudioStream::GetBuffer(const audio::audio_proto::RingBufGetBufferReq& req,
                                           uint32_t* out_num_rb_frames, zx::vmo* out_buffer) {
-  if (req.notifications_per_ring > req.min_ring_buffer_frames) {
-    zxlogf(ERROR, "req.notifications_per_ring too big");
-    return ZX_ERR_OUT_OF_RANGE;
-  }
-  if (req.min_ring_buffer_frames > max_buffer_frames_) {
-    zxlogf(ERROR, "req.min_ring_buffer_frames too big");
-    return ZX_ERR_OUT_OF_RANGE;
-  }
+  ZX_ASSERT_MSG(req.notifications_per_ring <= req.min_ring_buffer_frames,
+                "req.notifications_per_ring too big");
+  ZX_ASSERT_MSG(req.min_ring_buffer_frames <= max_buffer_frames_,
+                "req.min_ring_buffer_frames too big");
 
   num_ring_buffer_frames_ = std::max(
       min_buffer_frames_,
@@ -473,16 +450,12 @@ zx_status_t VirtualAudioStream::GetBuffer(const audio::audio_proto::RingBufGetBu
       ring_buffer_size, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, nullptr, &ring_buffer_vmo_,
       ZX_RIGHT_READ | ZX_RIGHT_WRITE | ZX_RIGHT_MAP | ZX_RIGHT_DUPLICATE | ZX_RIGHT_TRANSFER);
 
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s failed to create ring buffer vmo - %d", __func__, status);
-    return status;
-  }
+  ZX_ASSERT_MSG(status == ZX_OK, "%s failed to create ring buffer vmo - %d", __func__, status);
+
   status = ring_buffer_vmo_.duplicate(
       ZX_RIGHT_TRANSFER | ZX_RIGHT_READ | ZX_RIGHT_WRITE | ZX_RIGHT_MAP, out_buffer);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s failed to duplicate VMO handle for out param - %d", __func__, status);
-    return status;
-  }
+  ZX_ASSERT_MSG(status == ZX_OK, "%s failed to duplicate VMO handle for out param - %d", __func__,
+                status);
 
   notifications_per_ring_ = req.notifications_per_ring;
   SetNotificationPeriods();
@@ -492,10 +465,9 @@ zx_status_t VirtualAudioStream::GetBuffer(const audio::audio_proto::RingBufGetBu
   zx::vmo duplicate_vmo;
   status = ring_buffer_vmo_.duplicate(
       ZX_RIGHT_TRANSFER | ZX_RIGHT_READ | ZX_RIGHT_WRITE | ZX_RIGHT_MAP, &duplicate_vmo);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s failed to duplicate VMO handle for VA client - %d", __func__, status);
-    return status;
-  }
+  ZX_ASSERT_MSG(status == ZX_OK, "%s failed to duplicate VMO handle for VA client - %d", __func__,
+                status);
+
   parent_->NotifyBufferCreated(std::move(duplicate_vmo), num_ring_buffer_frames_,
                                notifications_per_ring_);
 
@@ -526,10 +498,10 @@ void VirtualAudioStream::SetVaClientNotificationPeriods() {
 
 zx_status_t VirtualAudioStream::ChangeFormat(const audio::audio_proto::StreamSetFmtReq& req) {
   // frame_size_ is already set, automatically
-  ZX_DEBUG_ASSERT(frame_size_);
+  ZX_ASSERT_MSG(frame_size_, "frame_size canot be zero");
 
   frame_rate_ = req.frames_per_second;
-  ZX_DEBUG_ASSERT(frame_rate_);
+  ZX_ASSERT_MSG(frame_rate_, "frame_rate cannot be zero");
 
   sample_format_ = req.sample_format;
 
@@ -567,7 +539,7 @@ zx_status_t VirtualAudioStream::SetGain(const audio::audio_proto::SetGainReq& re
 // clocked out, not including any external delay.
 zx_status_t VirtualAudioStream::Start(uint64_t* out_start_time) {
   auto status = reference_clock_.read(ref_start_time_.get_address());
-  ZX_DEBUG_ASSERT(status == ZX_OK);
+  ZX_ASSERT_MSG(status == ZX_OK, "reference_clock::read returned error (%d)", status);
 
   // Incorporate delay caused by fifo_depth_
   ref_start_time_ += zx::duration((zx::sec(1) * fifo_depth_) / bytes_per_sec_);
@@ -604,7 +576,7 @@ void VirtualAudioStream::ProcessRingNotification() {
 
   zx::time ref_now;
   auto status = reference_clock_.read(ref_now.get_address());
-  ZX_ASSERT(status == ZX_OK);
+  ZX_ASSERT_MSG(status == ZX_OK, "reference_clock::read returned error (%d)", status);
 
   // We should wake up close to target_ref_notification_time_
   if (target_ref_notification_time_ > ref_now) {
@@ -624,11 +596,7 @@ void VirtualAudioStream::ProcessRingNotification() {
   resp.ring_buffer_pos = ring_buffer_position;
 
   status = NotifyPosition(resp);
-  ZX_DEBUG_ASSERT(status == ZX_OK);
-  if (status != ZX_OK) {
-    notifications_per_ring_ = 0;
-    return;
-  }
+  ZX_ASSERT_MSG(status == ZX_OK, "NotifyPosition returned error (%d)", status);
 
   // If virtual_audio client uses this notification cadence, notify them too
   if (!va_client_notifications_per_ring_.has_value()) {
@@ -644,14 +612,14 @@ void VirtualAudioStream::ProcessRingNotification() {
 // This method receives tasks that have been posted to va_client_notify_timer_
 void VirtualAudioStream::ProcessVaClientRingNotification() {
   audio::ScopedToken t(domain_token());
-  ZX_DEBUG_ASSERT(va_client_ref_notification_period_.get() > 0);
-  ZX_DEBUG_ASSERT(va_client_notifications_per_ring_.has_value());
-  ZX_DEBUG_ASSERT(va_client_notifications_per_ring_.value() > 0);
-  ZX_DEBUG_ASSERT(target_va_client_mono_notification_time_.get() > 0);
+  ZX_ASSERT(va_client_ref_notification_period_.get() > 0);
+  ZX_ASSERT(va_client_notifications_per_ring_.has_value());
+  ZX_ASSERT(va_client_notifications_per_ring_.value() > 0);
+  ZX_ASSERT(target_va_client_mono_notification_time_.get() > 0);
 
   zx::time ref_now;
   auto status = reference_clock_.read(ref_now.get_address());
-  ZX_ASSERT(status == ZX_OK);
+  ZX_ASSERT_MSG(status == ZX_OK, "reference_clock::read returned error (%d)", status);
 
   // We should wake up close to target_ref_notification_time_
   if (target_va_client_ref_notification_time_ > ref_now) {
@@ -675,12 +643,13 @@ void VirtualAudioStream::ProcessVaClientRingNotification() {
 zx_status_t VirtualAudioStream::Stop() {
   zx::time ref_stop_time;
   auto status = reference_clock_.read(ref_stop_time.get_address());
-  ZX_DEBUG_ASSERT(status == ZX_OK);
-  auto mono_stop_time = MonoTimeFromRefTime(reference_clock_, ref_stop_time);
 
   notify_timer_.Cancel();
   va_client_notify_timer_.Cancel();
 
+  ZX_ASSERT_MSG(status == ZX_OK, "reference_clock::read returned error (%d)", status);
+
+  auto mono_stop_time = MonoTimeFromRefTime(reference_clock_, ref_stop_time);
   auto stop_frame = ref_time_to_running_frame_.Apply(ref_stop_time.get());
   ZX_ASSERT_MSG(stop_frame >= 0, "stop_frame should never be negative");
 
@@ -695,6 +664,7 @@ zx_status_t VirtualAudioStream::Stop() {
   va_client_ref_notification_period_ = zx::duration(0);
 
   ref_time_to_running_frame_ = affine::Transform(affine::Ratio(0, 1));
+
   return ZX_OK;
 }
 
