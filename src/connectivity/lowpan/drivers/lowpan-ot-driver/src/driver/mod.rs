@@ -15,6 +15,7 @@ mod driver_state;
 mod error_adapter;
 mod host_to_thread;
 mod joiner;
+mod srp_proxy;
 mod tasks;
 mod thread_to_host;
 
@@ -28,6 +29,7 @@ pub use error_adapter::*;
 pub use host_to_thread::*;
 use lowpan_driver_common::net::NetworkInterface;
 use lowpan_driver_common::AsyncCondition;
+pub use srp_proxy::*;
 pub use thread_to_host::*;
 
 const DEFAULT_SCAN_DWELL_TIME_MS: u32 = 200;

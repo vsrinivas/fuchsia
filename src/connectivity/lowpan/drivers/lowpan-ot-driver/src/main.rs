@@ -36,7 +36,8 @@ mod prelude {
 
     pub use crate::convert_ext::FromExt as _;
     pub use crate::convert_ext::IntoExt as _;
-    pub use anyhow::{format_err, Context as _};
+    pub use crate::Result;
+    pub use anyhow::{bail, format_err, Context as _};
     pub use fasync::TimeoutExt as _;
     pub use fidl_fuchsia_net_ext as fnet_ext;
     pub use fuchsia_async as fasync;
@@ -54,6 +55,8 @@ mod prelude {
     pub use futures::prelude::*;
     pub use openthread::prelude::*;
 }
+
+pub type Result<T = (), E = anyhow::Error> = std::result::Result<T, E>;
 
 const MAX_EXPONENTIAL_BACKOFF_DELAY_SEC: i64 = 60;
 const RESET_EXPONENTIAL_BACKOFF_TIMER_MIN: i64 = 5;

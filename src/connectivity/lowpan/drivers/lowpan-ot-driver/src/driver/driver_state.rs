@@ -17,11 +17,36 @@ pub struct DriverState<OT> {
 
     /// The current set of addresses configured for this interface.
     pub(super) address_table: AddressTable,
+
+    pub srp_discovery_proxy: Option<DiscoveryProxy>,
 }
 
 impl<OT: AsRef<ot::Instance>> AsRef<ot::Instance> for DriverState<OT> {
     fn as_ref(&self) -> &ot::Instance {
         self.ot_instance.as_ref()
+    }
+}
+
+impl<OT> AsRef<Option<DiscoveryProxy>> for DriverState<OT> {
+    fn as_ref(&self) -> &Option<DiscoveryProxy> {
+        &self.srp_discovery_proxy
+    }
+}
+
+impl<OT: AsRef<ot::Instance>> DriverState<OT> {
+    pub fn is_discovery_proxy_enabled(&self) -> bool {
+        self.srp_discovery_proxy.is_some()
+    }
+
+    pub fn set_discovery_proxy_enabled(&mut self, enabled: bool) -> Result {
+        if self.is_discovery_proxy_enabled() != enabled {
+            let _ = self.srp_discovery_proxy.take();
+            if enabled {
+                self.srp_discovery_proxy =
+                    Some(DiscoveryProxy::new(AsRef::<ot::Instance>::as_ref(self))?);
+            }
+        }
+        Ok(())
     }
 }
 
@@ -31,6 +56,7 @@ impl<OT> DriverState<OT> {
             ot_instance,
             connectivity_state: ConnectivityState::Inactive,
             address_table: Default::default(),
+            srp_discovery_proxy: None,
         }
     }
 }

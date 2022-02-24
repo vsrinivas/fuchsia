@@ -8,6 +8,7 @@ use anyhow::{Context as _, Error};
 use fidl_fuchsia_location_namedplace::RegulatoryRegionWatcherMarker;
 use fidl_fuchsia_lowpan::ConnectivityState;
 use fuchsia_component::client::connect_to_protocol;
+use futures::never::Never;
 use futures::prelude::*;
 
 use lowpan_driver_common::spinel::Canceled;
@@ -15,7 +16,7 @@ use lowpan_driver_common::FutureExt;
 
 impl<OT, NI> OtDriver<OT, NI>
 where
-    OT: Send + ot::InstanceInterface,
+    OT: Send + ot::InstanceInterface + AsRef<ot::Instance>,
     NI: NetworkInterface,
 {
     /// Main Loop Stream.
@@ -91,18 +92,22 @@ where
                 .map_err(|x| x.context("single_main_loop"))
         });
 
+        let discovery_proxy_stream =
+            self.driver_state.discovery_proxy_future().into_stream().map(|_: Never| unreachable!());
+
         init_future.into_stream().chain(futures::stream::select_all([
             tasklets_stream.boxed(),
             regulatory_region_stream.boxed(),
             state_change_stream.boxed(),
             net_if_event_stream.boxed(),
             state_machine_stream.boxed(),
+            discovery_proxy_stream.boxed(),
         ]))
     }
 
     /// Initializes OpenThread instance. LOCKS DRIVER STATE.
     fn init_ot(&self) {
-        let driver_state = self.driver_state.lock();
+        let mut driver_state = self.driver_state.lock();
 
         driver_state.ot_instance.ip6_set_address_fn(Some(
             move |info: ot::Ip6AddressInfo<'_>, is_added| {
@@ -115,6 +120,10 @@ where
             // NOTE: DRIVER STATE IS LOCKED WHEN THIS IS CALLED!
             self.on_ot_ip6_receive(msg);
         }));
+
+        if let Err(err) = driver_state.set_discovery_proxy_enabled(true) {
+            warn!("Unable to start SRP discovery proxy: {:?}", err);
+        }
     }
 
     /// A single iteration of the main task loop
