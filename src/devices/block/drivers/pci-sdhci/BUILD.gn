@@ -12,6 +12,13 @@ driver_bind_rules("pci-sdhci-bind") {
   deps = [ "//src/devices/bind/fuchsia.pci" ]
 }
 
+# TODO(fxbug.dev/93333): Remove this once DFv2 has stabilised.
+driver_bind_rules("pci-sdhci-bind-dfv2") {
+  rules = "pci-sdhci-dfv2.bind"
+  header_output = "pci-sdhci-dfv2-bind.h"
+  deps = [ "//src/devices/bind/fuchsia.pci" ]
+}
+
 fuchsia_driver("pci-sdhci-driver") {
   output_name = "pci-sdhci"
   configs += [
@@ -20,7 +27,8 @@ fuchsia_driver("pci-sdhci-driver") {
   ]
   sources = [ "pci-sdhci.c" ]
   deps = [
-    ":pci-sdhci-bind",
+    ":pci-sdhci-bind-dfv2_header",
+    ":pci-sdhci-bind_header",
     "//sdk/banjo/fuchsia.hardware.block:fuchsia.hardware.block_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.pci:fuchsia.hardware.pci_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.sdhci:fuchsia.hardware.sdhci_banjo_cpp",
@@ -33,7 +41,21 @@ fuchsia_driver("pci-sdhci-driver") {
 
 fuchsia_driver_component("pci-sdhci") {
   component_name = "pci-sdhci"
-  deps = [ ":pci-sdhci-driver" ]
+  deps = [
+    ":pci-sdhci-bind",
+    ":pci-sdhci-driver",
+  ]
+  info = "pci-sdhci-info.json"
+  colocate = true
+}
+
+# TODO(fxbug.dev/93333): Remove this once DFv2 has stabilised.
+fuchsia_driver_component("pci-sdhci-dfv2") {
+  component_name = "pci-sdhci"
+  deps = [
+    ":pci-sdhci-bind-dfv2",
+    ":pci-sdhci-driver",
+  ]
   info = "pci-sdhci-info.json"
   colocate = true
 }

@@ -7,9 +7,15 @@ import("chromebook-x64.gni")
 # Enable DFv2.
 board_configs += [ "//build/drivers:enable_dfv2" ]
 
-board_bootfs_labels -= [ "//src/devices/usb/drivers/xhci" ]
+board_bootfs_labels -= [
+  "//src/devices/usb/drivers/xhci",
+  "//src/devices/block/drivers/pci-sdhci",
+]
 
-board_bootfs_labels += [ "//src/devices/usb/drivers/xhci:xhci-dfv2" ]
+board_bootfs_labels += [
+  "//src/devices/usb/drivers/xhci:xhci-dfv2",
+  "//src/devices/block/drivers/pci-sdhci:pci-sdhci-dfv2",
+]
 
 board_bootfs_labels += [
   "//bundles/drivers:bootstrap-dfv2",

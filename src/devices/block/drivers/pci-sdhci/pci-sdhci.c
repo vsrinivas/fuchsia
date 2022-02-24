@@ -135,8 +135,13 @@ static zx_status_t pci_sdhci_bind(void* ctx, zx_device_t* parent) {
     return ZX_ERR_NO_MEMORY;
   }
 
-  zx_status_t status = ZX_OK;
-  if ((status = device_get_fragment_protocol(parent, "pci", ZX_PROTOCOL_PCI, &dev->pci)) != ZX_OK) {
+#ifdef ENABLE_DFV2
+  // TODO(fxbug.dev/93333): Remove this once DFv2 has stabilised.
+  zx_status_t status = device_get_protocol(parent, ZX_PROTOCOL_PCI, &dev->pci);
+#else
+  zx_status_t status = device_get_fragment_protocol(parent, "pci", ZX_PROTOCOL_PCI, &dev->pci);
+#endif  // ENABLE_DFV2
+  if (status != ZX_OK) {
     goto fail;
   }
 
