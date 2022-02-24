@@ -6,6 +6,7 @@ library zx;
 @transport("Syscall")
 protocol eventpair {
     /// Create an event pair.
+    /// Rights: Caller job policy must allow ZX_POL_NEW_EVENTPAIR.
     eventpair_create(struct {
         options uint32;
     }) -> (resource struct {

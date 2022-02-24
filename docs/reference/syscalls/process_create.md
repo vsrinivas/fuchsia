@@ -45,6 +45,8 @@ process, which will become a child of that job.
 
 *job* must be of type **ZX_OBJ_TYPE_JOB** and have **ZX_RIGHT_MANAGE_PROCESS**.
 
+Caller job policy must allow **ZX_POL_NEW_PROCESS**.
+
 ## RETURN VALUE
 
 On success, `zx_process_create()` returns **ZX_OK**, a handle to the new process

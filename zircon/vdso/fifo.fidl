@@ -6,6 +6,7 @@ library zx;
 @transport("Syscall")
 protocol fifo {
     /// Create a fifo.
+    /// Rights: Caller job policy must allow ZX_POL_NEW_FIFO.
     fifo_create(struct {
         elem_count usize;
         elem_size usize;

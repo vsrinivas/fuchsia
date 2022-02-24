@@ -127,6 +127,7 @@ type PortPacket = struct {
 @transport("Syscall")
 protocol port {
     /// Create an IO port.
+    /// Rights: Caller job policy must allow ZX_POL_NEW_PORT.
     port_create(struct {
         options uint32;
     }) -> (resource struct {

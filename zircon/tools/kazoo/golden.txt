@@ -12391,6 +12391,7 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "Create", "a", "channel", "."
       ],
       "requirements": [
+        "Caller", "job", "policy", "must", "allow", "ZX_POL_NEW_CHANNEL", "."
       ],
       "arguments": [
         {
@@ -13497,6 +13498,7 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "Create", "an", "event", "."
       ],
       "requirements": [
+        "Caller", "job", "policy", "must", "allow", "ZX_POL_NEW_EVENT", "."
       ],
       "arguments": [
         {
@@ -13525,6 +13527,7 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "Create", "an", "event", "pair", "."
       ],
       "requirements": [
+        "Caller", "job", "policy", "must", "allow", "ZX_POL_NEW_EVENTPAIR", "."
       ],
       "arguments": [
         {
@@ -13618,6 +13621,7 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "Create", "a", "fifo", "."
       ],
       "requirements": [
+        "Caller", "job", "policy", "must", "allow", "ZX_POL_NEW_FIFO", "."
       ],
       "arguments": [
         {
@@ -16585,6 +16589,7 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "Create", "an", "IO", "port", "."
       ],
       "requirements": [
+        "Caller", "job", "policy", "must", "allow", "ZX_POL_NEW_PORT", "."
       ],
       "arguments": [
         {
@@ -16739,7 +16744,8 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "Create", "a", "new", "process", "."
       ],
       "requirements": [
-        "job", "must", "be", "of", "type", "ZX_OBJ_TYPE_JOB", "and", "have", "ZX_RIGHT_MANAGE_PROCESS", "."
+        "job", "must", "be", "of", "type", "ZX_OBJ_TYPE_JOB", "and", "have", "ZX_RIGHT_MANAGE_PROCESS", ".",
+        "Caller", "job", "policy", "must", "allow", "ZX_POL_NEW_PROCESS", "."
       ],
       "arguments": [
         {
@@ -16957,7 +16963,8 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "Create", "a", "scheduler", "profile", "."
       ],
       "requirements": [
-        "root_job", "must", "be", "of", "type", "ZX_OBJ_TYPE_JOB", "and", "have", "ZX_RIGHT_MANAGE_PROCESS", "."
+        "root_job", "must", "be", "of", "type", "ZX_OBJ_TYPE_JOB", "and", "have", "ZX_RIGHT_MANAGE_PROCESS", ".",
+        "Caller", "job", "policy", "must", "allow", "ZX_POL_NEW_PROFILE", "."
       ],
       "arguments": [
         {
@@ -17102,6 +17109,7 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "Create", "a", "socket", "."
       ],
       "requirements": [
+        "Caller", "job", "policy", "must", "allow", "ZX_POL_NEW_SOCKET", "."
       ],
       "arguments": [
         {
@@ -18900,6 +18908,7 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "Create", "a", "timer", "."
       ],
       "requirements": [
+        "Caller", "job", "policy", "must", "allow", "ZX_POL_NEW_TIMER", "."
       ],
       "arguments": [
         {
@@ -19487,6 +19496,7 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "Create", "a", "VM", "object", "."
       ],
       "requirements": [
+        "Caller", "job", "policy", "must", "allow", "ZX_POL_NEW_VMO", "."
       ],
       "arguments": [
         {

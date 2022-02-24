@@ -6,6 +6,7 @@ library zx;
 @transport("Syscall")
 protocol event {
     /// Create an event.
+    /// Rights: Caller job policy must allow ZX_POL_NEW_EVENT.
     event_create(struct {
         options uint32;
     }) -> (resource struct {

@@ -6,6 +6,7 @@ library zx;
 @transport("Syscall")
 protocol vmo {
     /// Create a VM object.
+    /// Rights: Caller job policy must allow ZX_POL_NEW_VMO.
     vmo_create(struct {
         size uint64;
         options uint32;

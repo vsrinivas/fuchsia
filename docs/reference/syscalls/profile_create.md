@@ -58,6 +58,8 @@ Upon success a handle for the new profile is returned.
 
 *root_job* must be of type **ZX_OBJ_TYPE_JOB** and have **ZX_RIGHT_MANAGE_PROCESS**.
 
+Caller job policy must allow **ZX_POL_NEW_PROFILE**.
+
 ## RETURN VALUE
 
 Returns **ZX_OK** and a handle to the new profile (via *out*) on success. In the

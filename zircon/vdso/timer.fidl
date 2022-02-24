@@ -6,6 +6,7 @@ library zx;
 @transport("Syscall")
 protocol timer {
     /// Create a timer.
+    /// Rights: Caller job policy must allow ZX_POL_NEW_TIMER.
     timer_create(struct {
         options uint32;
         clock_id clock;

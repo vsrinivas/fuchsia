@@ -87,6 +87,7 @@ def match_sentence_form(sentence, arg_names):
     - RIGHT must be a valid ZX_RIGHT_
     - TYPE must be a valid ZX_OBJ_TYPE_
     - RSRC must be a valid ZX_RSRC_KIND_
+    - POLCOND must be a valid ZX_POL_
 
     VALUE is a generic unchecked value type, used for masks, options, etc.
     """
@@ -174,6 +175,7 @@ def match_sentence_form(sentence, arg_names):
             'ARG', 'must', 'have', 'resource', 'kind', 'RSRC', 'with', 'base',
             'VALUE', '.'
         ],
+        [ 'Caller', 'job', 'policy', 'must', 'allow', 'POLCOND', '.'],
         # TODO(fxbug.dev/32253) TODO(scottmg): This is a hack specifically for
         # zx_channel_call_args_t. Trying to make a pseudo-generic case (that
         # handles the length from wr_num_handles, etc.) for this doesn't seem
@@ -250,6 +252,19 @@ def match_sentence_form(sentence, arg_names):
         'ZX_RSRC_KIND_SYSTEM',
     ])
 
+    all_new_obj_polcond = set([
+        'ZX_POL_NEW_VMO',
+        'ZX_POL_NEW_CHANNEL',
+        'ZX_POL_NEW_EVENT',
+        'ZX_POL_NEW_EVENTPAIR',
+        'ZX_POL_NEW_PORT',
+        'ZX_POL_NEW_SOCKET',
+        'ZX_POL_NEW_FIFO',
+        'ZX_POL_NEW_TIMER',
+        'ZX_POL_NEW_PROCESS',
+        'ZX_POL_NEW_PROFILE',
+    ])
+
     # There's only two structs in zircon/types.h, so hardcoding this here is
     # a bit stinky, but probably OK.
     members_of_zx_wait_item_t = set([
@@ -300,6 +315,11 @@ def match_sentence_form(sentence, arg_names):
                     break
                 result_fmt += ' %(' + f + ')s'
                 result_values[f] = '*' + s + '*'
+            elif f.startswith('POLCOND'):
+                if s not in all_new_obj_polcond:
+                    break
+                result_fmt += ' %(' + f + ')s'
+                result_values[f] = '**' + s + '**'
             else:
                 break
         else:

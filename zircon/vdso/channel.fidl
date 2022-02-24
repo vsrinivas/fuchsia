@@ -41,6 +41,7 @@ type ChannelCallEtcArgs = resource struct {
 @transport("Syscall")
 protocol channel {
     /// Create a channel.
+    /// Rights: Caller job policy must allow ZX_POL_NEW_CHANNEL.
     channel_create(struct {
         options uint32;
     }) -> (resource struct {

@@ -15,6 +15,7 @@ protocol process {
     // TODO(fxbug.dev/32803): job with ZX_RIGHT_WRITE is also accepted.
     /// Create a new process.
     /// Rights: job must be of type ZX_OBJ_TYPE_JOB and have ZX_RIGHT_MANAGE_PROCESS.
+    /// Rights: Caller job policy must allow ZX_POL_NEW_PROCESS.
     process_create(resource struct {
         job handle:JOB;
         name string;
