@@ -67,7 +67,7 @@ use {
         config::RuntimeConfig,
         environment::{DebugRegistry, RunnerRegistry},
     },
-    anyhow::{bail, format_err, Context as _, Error},
+    anyhow::{anyhow, bail, format_err, Context as _, Error},
     cm_rust::{CapabilityName, RunnerRegistration},
     cm_types::Url,
     fidl::endpoints::{create_endpoints, create_proxy, ProtocolMarker, ServerEnd},
@@ -81,17 +81,36 @@ use {
     fuchsia_async as fasync,
     fuchsia_component::{client, server::*},
     fuchsia_inspect::{self as inspect, component, health::Reporter, Inspector},
-    fuchsia_runtime::{take_startup_handle, HandleType},
+    fuchsia_runtime::{take_startup_handle, HandleInfo, HandleType},
     fuchsia_zbi::{ZbiParser, ZbiType},
     fuchsia_zircon::{self as zx, Clock, HandleBased, Resource},
     futures::lock::Mutex,
     futures::prelude::*,
+    lazy_static::lazy_static,
     log::*,
     std::{path::PathBuf, sync::Arc},
 };
 
 // Allow shutdown to take up to an hour.
 pub static SHUTDOWN_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(60 * 60);
+
+/// Returns an owned VMO handle to the system default vDSO, duplicated from the handle provided
+/// to this process through its processargs bootstrap message.
+pub fn get_system_vdso_vmo() -> Result<zx::Vmo, Error> {
+    lazy_static! {
+        static ref DEFAULT_VDSO_VMO: zx::Vmo = {
+            zx::Vmo::from(
+                fuchsia_runtime::take_startup_handle(HandleInfo::new(HandleType::VdsoVmo, 0))
+                    .expect("Failed to take vDSO VMO startup handle"),
+            )
+        };
+    }
+
+    let vdso_dup = DEFAULT_VDSO_VMO
+        .duplicate_handle(zx::Rights::SAME_RIGHTS)
+        .map_err(|e| anyhow!("Failed to duplicate default vDSO: {}", e))?;
+    Ok(vdso_dup)
+}
 
 pub struct BuiltinEnvironmentBuilder {
     // TODO(60804): Make component manager's namespace injectable here.
@@ -230,8 +249,9 @@ impl BuiltinEnvironmentBuilder {
             self.bootfs_svc
                 .unwrap()
                 .ingest_bootfs_vmo(&system_resource_handle)?
-                .publish_kernel_vmo(HandleType::VdsoVmo)?
-                .publish_kernel_vmo(HandleType::KernelFileVmo)?
+                .publish_kernel_vmo(get_system_vdso_vmo()?)?
+                .publish_kernel_vmos(HandleType::VdsoVmo, 1)?
+                .publish_kernel_vmos(HandleType::KernelFileVmo, 0)?
                 .create_and_bind_vfs()?;
         }
 

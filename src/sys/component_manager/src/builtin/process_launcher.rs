@@ -4,6 +4,7 @@
 
 use {
     crate::{
+        builtin_environment::get_system_vdso_vmo,
         capability::{CapabilityProvider, CapabilitySource},
         model::{
             error::ModelError,
@@ -267,7 +268,10 @@ impl ProcessLauncher {
     ) -> Result<ProcessBuilder, LauncherError> {
         let proc_name = CString::new(info.name)
             .map_err(|_| LauncherError::InvalidArg("Process name contained null byte"))?;
-        let mut b = ProcessBuilder::new(&proc_name, &info.job, info.executable)?;
+        let system_vdso_vmo = get_system_vdso_vmo().map_err(|_| {
+            LauncherError::BuilderError(ProcessBuilderError::BadHandle("Failed to get system vDSO"))
+        })?;
+        let mut b = ProcessBuilder::new(&proc_name, &info.job, info.executable, system_vdso_vmo)?;
 
         let arg_cstr = state
             .args

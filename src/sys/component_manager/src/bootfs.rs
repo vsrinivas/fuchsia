@@ -35,13 +35,6 @@ const LAST_PANIC_FILEPATH: &str = "log/last-panic.txt";
 // to '/boot', so we only need to prepend paths under that.
 const KERNEL_VMO_SUBDIRECTORY: &str = "kernel/";
 
-// Bootfs shouldn't take ownership of the true default VDSO which is used downstream
-// during process creation. Temporarily bootsvc is duplicating the default VDSO and
-// shifting other entries down by one, and once bootsvc is gone userboot will
-// do the same.
-// TODO(fxb/91230): Move duplicating the vdso handle from bootsvc to userboot.
-const DEFAULT_VDSO_INDEX: u16 = 0;
-
 // Bootfs will sequentially number files and directories starting with this value.
 // This is a self contained immutable filesystem, so we only need to ensure that
 // there are no internal collisions.
@@ -254,63 +247,80 @@ impl BootfsSvc {
         Ok(self)
     }
 
-    pub fn publish_kernel_vmo(mut self, handle_type: HandleType) -> Result<Self, Error> {
-        println!("[BootfsSvc] Adding kernel VMOs of type {:?}.", handle_type);
-        let mut index = if handle_type == HandleType::VdsoVmo { DEFAULT_VDSO_INDEX + 1 } else { 0 };
+    // Publish a VMO beneath '/boot/kernel'. Used to publish VDSOs and kernel files.
+    pub fn publish_kernel_vmo(mut self, vmo: zx::Vmo) -> Result<Self, Error> {
+        let name = vmo.get_name()?.into_string()?;
+        if name.is_empty() {
+            // Skip VMOs without names.
+            return Ok(self);
+        }
+
+        let path = format!("{}{}", KERNEL_VMO_SUBDIRECTORY, name);
+        let mut path_parts: Vec<&str> = path.split("/").filter(|&x| !x.is_empty()).collect();
+
+        // There is special handling for the crashlog.
+        if path_parts.len() > 1 && path_parts[path_parts.len() - 1] == KERNEL_CRASHLOG_NAME {
+            path_parts = LAST_PANIC_FILEPATH.split("/").filter(|&x| !x.is_empty()).collect();
+        }
+
+        let vmo_size = vmo.get_size()?;
+        if vmo_size == 0 {
+            // Skip empty VMOs.
+            return Ok(self);
+        }
+
+        // If content size is set (non-zero), it's the exact size of the file backed
+        // by the VMO, and is the file size the VFS should report.
+        let content_size = vmo.get_content_size()?;
+        let size = if content_size != 0 { content_size } else { vmo_size };
+
+        let info = vmo.basic_info()?;
+        let is_exec = info.rights.contains(zx::Rights::EXECUTE);
+
+        match BootfsSvc::create_dir_entry(
+            vmo,
+            size,
+            is_exec,
+            BootfsSvc::get_next_inode(&mut self.next_inode),
+        ) {
+            Ok(dir_entry) => {
+                self.tree_builder.add_entry(&path_parts, dir_entry).unwrap_or_else(|error| {
+                    println!(
+                        "[BootfsSvc] Failed to publish kernel VMO {} to directory: {}.",
+                        path, error
+                    );
+                });
+            }
+            Err(error) => {
+                return Err(anyhow!("Unable to create VMO for binary {}: {}", path, error));
+            }
+        }
+
+        Ok(self)
+    }
+
+    /// Publish all VMOs of a given type provided to this process through its processargs
+    /// bootstrap message. An initial index can be provided to skip handles that were already
+    /// taken.
+    pub fn publish_kernel_vmos(
+        mut self,
+        handle_type: HandleType,
+        first_index: u16,
+    ) -> Result<Self, Error> {
+        println!(
+            "[BootfsSvc] Adding kernel VMOs of type {:?} starting at index {}.",
+            handle_type, first_index
+        );
+        // The first handle may not be at index 0 if we have already taken it previously.
+        let mut index = first_index;
         loop {
-            let vmo: zx::Vmo = match take_startup_handle(HandleInfo::new(handle_type, index)) {
+            let vmo = take_startup_handle(HandleInfo::new(handle_type, index)).map(zx::Vmo::from);
+            match vmo {
                 Some(vmo) => {
                     index += 1;
-                    vmo.into()
+                    self = self.publish_kernel_vmo(vmo)?;
                 }
                 None => break,
-            };
-
-            let name = vmo.get_name()?.into_string()?;
-            if name.is_empty() {
-                // Skip VMOs without names.
-                continue;
-            }
-
-            let path = format!("{}{}", KERNEL_VMO_SUBDIRECTORY, name);
-            let mut path_parts: Vec<&str> = path.split("/").filter(|&x| !x.is_empty()).collect();
-
-            // There is special handling for the crashlog.
-            if path_parts.len() > 1 && path_parts[path_parts.len() - 1] == KERNEL_CRASHLOG_NAME {
-                path_parts = LAST_PANIC_FILEPATH.split("/").filter(|&x| !x.is_empty()).collect();
-            }
-
-            let vmo_size = vmo.get_size()?;
-            if vmo_size == 0 {
-                // Skip empty VMOs.
-                continue;
-            }
-
-            // If content size is set (non-zero), it's the exact size of the file backed
-            // by the VMO, and is the file size the VFS should report.
-            let content_size = vmo.get_content_size()?;
-            let size = if content_size != 0 { content_size } else { vmo_size };
-
-            let info = vmo.basic_info()?;
-            let is_exec = info.rights.contains(zx::Rights::EXECUTE);
-
-            match BootfsSvc::create_dir_entry(
-                vmo,
-                size,
-                is_exec,
-                BootfsSvc::get_next_inode(&mut self.next_inode),
-            ) {
-                Ok(dir_entry) => {
-                    self.tree_builder.add_entry(&path_parts, dir_entry).unwrap_or_else(|error| {
-                        println!(
-                            "[BootfsSvc] Failed to publish kernel VMO {} to directory: {}.",
-                            path, error
-                        );
-                    });
-                }
-                Err(error) => {
-                    return Err(anyhow!("Unable to create VMO for binary {}: {}", path, error));
-                }
             }
         }
 

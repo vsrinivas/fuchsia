@@ -80,7 +80,6 @@ use {
     fuchsia_runtime::{HandleInfo, HandleType},
     fuchsia_zircon::{self as zx, AsHandleRef, DurationNum, HandleBased},
     futures::prelude::*,
-    lazy_static::lazy_static,
     log::warn,
     std::convert::TryFrom,
     std::default::Default,
@@ -117,6 +116,8 @@ pub struct ProcessBuilder {
     common: CommonMessageHandles,
     /// Minimum size of the stack for the new process, in bytes.
     min_stack_size: usize,
+    /// The default system vDSO.
+    system_vdso_vmo: zx::Vmo,
 }
 
 struct CommonMessageHandles {
@@ -202,6 +203,7 @@ impl ProcessBuilder {
         name: &CStr,
         job: &zx::Job,
         executable: zx::Vmo,
+        system_vdso_vmo: zx::Vmo,
     ) -> Result<ProcessBuilder, ProcessBuilderError> {
         if job.is_invalid_handle() {
             return Err(ProcessBuilderError::BadHandle("Invalid job handle"));
@@ -229,6 +231,7 @@ impl ProcessBuilder {
             msg_contents,
             common: CommonMessageHandles { process, thread, root_vmar },
             min_stack_size: 0,
+            system_vdso_vmo,
         };
         pb.common.add_to_message(&mut pb.msg_contents)?;
         Ok(pb)
@@ -610,12 +613,13 @@ impl ProcessBuilder {
 
     /// Load the vDSO VMO into the process's address space and a handle to it to the bootstrap
     /// message. If a vDSO VMO is provided, loads that one, otherwise loads the default system
-    /// vDSO. Returns the base address that the vDSO was mapped into.
+    /// vDSO, invaliding the duplicate default system vDSO handle stored in this object.
+    /// Returns the base address that the vDSO was mapped into.
     fn load_vdso(&mut self) -> Result<usize, ProcessBuilderError> {
         let vdso = match self.non_default_vdso.take() {
-            Some(vmo) => Ok(vmo),
-            None => get_system_vdso_vmo(),
-        }?;
+            Some(vmo) => vmo,
+            None => mem::replace(&mut self.system_vdso_vmo, zx::Handle::invalid().into()),
+        };
         let vdso_headers = elf_parse::Elf64Headers::from_vmo(&vdso)?;
         let loaded_vdso = elf_load::load_elf(&vdso, &vdso_headers, &self.common.root_vmar)?;
 
@@ -759,24 +763,6 @@ impl CommonMessageHandles {
         }
         Ok(())
     }
-}
-
-/// Returns an owned VMO handle to the system vDSO ELF image, duplicated from the handle provided
-/// to this process through its own processargs bootstrap message.
-fn get_system_vdso_vmo() -> Result<zx::Vmo, ProcessBuilderError> {
-    lazy_static! {
-        static ref VDSO_VMO: zx::Vmo = {
-            zx::Vmo::from(
-                fuchsia_runtime::take_startup_handle(HandleInfo::new(HandleType::VdsoVmo, 0))
-                    .expect("Failed to take VDSO VMO startup handle"),
-            )
-        };
-    }
-
-    let vdso_dup = VDSO_VMO
-        .duplicate_handle(zx::Rights::SAME_RIGHTS)
-        .map_err(|s| ProcessBuilderError::GenericStatus("Failed to dup vDSO VMO handle", s))?;
-    Ok(vdso_dup)
 }
 
 // Copied from //zircon/system/ulib/elf-psabi/include/lib/elf-psabi/sp.h, must be kept in sync with
@@ -994,6 +980,7 @@ mod tests {
         fidl_fuchsia_io as fio,
         fidl_test_processbuilder::{UtilMarker, UtilProxy},
         fuchsia_async as fasync,
+        lazy_static::lazy_static,
         std::mem,
         vfs::{
             directory::entry::DirectoryEntry, execution_scope::ExecutionScope,
@@ -1004,6 +991,22 @@ mod tests {
 
     extern "C" {
         fn dl_clone_loader_service(handle: *mut zx::sys::zx_handle_t) -> zx::sys::zx_status_t;
+    }
+
+    fn get_system_vdso_vmo() -> Result<zx::Vmo, ProcessBuilderError> {
+        lazy_static! {
+            static ref VDSO_VMO: zx::Vmo = {
+                zx::Vmo::from(
+                    fuchsia_runtime::take_startup_handle(HandleInfo::new(HandleType::VdsoVmo, 0))
+                        .expect("Failed to take VDSO VMO startup handle"),
+                )
+            };
+        }
+
+        let vdso_dup = VDSO_VMO
+            .duplicate_handle(zx::Rights::SAME_RIGHTS)
+            .map_err(|s| ProcessBuilderError::GenericStatus("Failed to dup vDSO VMO handle", s))?;
+        Ok(vdso_dup)
     }
 
     // Clone the current loader service to provide to the new test processes.
@@ -1031,7 +1034,7 @@ mod tests {
         let job = fuchsia_runtime::job_default();
 
         let procname = CString::new(TEST_UTIL_BIN.to_owned())?;
-        Ok(ProcessBuilder::new(&procname, &job, vmo)?)
+        Ok(ProcessBuilder::new(&procname, &job, vmo, get_system_vdso_vmo().unwrap())?)
     }
 
     // Common builder setup for all tests that start a test util process.
@@ -1543,7 +1546,8 @@ mod tests {
         let vmo = zx::Vmo::create(1)?;
         let job = fuchsia_runtime::job_default();
         let procname = CString::new("dummy_name")?;
-        let mut builder = ProcessBuilder::new(&procname, &job, vmo)?;
+        let mut builder =
+            ProcessBuilder::new(&procname, &job, vmo, get_system_vdso_vmo().unwrap())?;
 
         // There's some duplicates between these slices but just checking twice is easier than
         // deduping these.
@@ -1597,8 +1601,14 @@ mod tests {
         let job = fuchsia_runtime::job_default();
         let procname = CString::new("dummy_name")?;
 
-        assert_invalid_arg(ProcessBuilder::new(&procname, &invalid().into(), vmo).map(|_| ()));
-        assert_invalid_arg(ProcessBuilder::new(&procname, &job, invalid().into()).map(|_| ()));
+        assert_invalid_arg(
+            ProcessBuilder::new(&procname, &invalid().into(), vmo, get_system_vdso_vmo().unwrap())
+                .map(|_| ()),
+        );
+        assert_invalid_arg(
+            ProcessBuilder::new(&procname, &job, invalid().into(), get_system_vdso_vmo().unwrap())
+                .map(|_| ()),
+        );
 
         let (mut builder, _) = setup_test_util_builder(true)?;
 
@@ -1628,7 +1638,8 @@ mod tests {
         let job = fuchsia_runtime::job_default();
 
         let procname = CString::new(TEST_BIN.to_owned())?;
-        let mut builder = ProcessBuilder::new(&procname, &job, vmo)?;
+        let mut builder =
+            ProcessBuilder::new(&procname, &job, vmo, get_system_vdso_vmo().unwrap())?;
 
         // We pass the program a channel with handle type User0 which we send a message on and
         // expect it to echo back the message on the same channel.
