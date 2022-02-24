@@ -131,6 +131,9 @@ class ViewStateImpl with Disposable implements ViewState {
     int retry = _kMaxRetries,
     Duration backOff = _kBackoffDuration,
   }) {
+    // Flatland does not send viewStateChanged events per frame, so setting
+    // _connected to false would be a one way transition and would prevent
+    // this view from ever becoming focusable again.
     if (!viewConnection.useFlatland && (loaded && !visible)) {
       // Reset connected flag to retry setFocus on next viewStateChanged.
       _connected.value = false;
