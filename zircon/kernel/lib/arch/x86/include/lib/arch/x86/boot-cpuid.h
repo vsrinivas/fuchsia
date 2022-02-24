@@ -33,10 +33,7 @@
 // populate the data.  That function requires only the basic machine stack for
 // its call and return, and doesn't need the full C++ ABI to be available yet.
 
-// TODO(fxbug.dev/64109): <cpuid.h> lacks a proper multiple inclusion guard!
-#ifndef __cpuid
 #include <cpuid.h>
-#endif
 
 #include <type_traits>
 
