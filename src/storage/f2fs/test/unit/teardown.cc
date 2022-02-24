@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/io/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
-#include <lib/fidl/llcpp/wire_messaging_declarations.h>
 
 #include <gtest/gtest.h>
 
@@ -50,19 +50,6 @@ class AsyncTearDownVnode : public VnodeF2fs {
   sync_completion_t* completions_;
 };
 
-// TODO(fxbug.dev/94157): Stop relying on FIDL internals like TransactionalRequest.header.
-void SendDirSync(fidl::UnownedClientEnd<fuchsia_io::Directory> client) {
-  FIDL_ALIGNDECL
-  fidl::internal::TransactionalRequest<fuchsia_io::Directory::Sync> request;
-  fidl::unstable::OwnedEncodedMessage<
-      fidl::internal::TransactionalRequest<fuchsia_io::Directory::Sync>>
-      encoded(&request);
-  ASSERT_EQ(encoded.status(), ZX_OK);
-  encoded.GetOutgoingMessage().set_txid(5);
-  encoded.Write(zx::unowned_channel(client.handle()));
-  ASSERT_EQ(encoded.status(), ZX_OK);
-}
-
 TEST(Teardown, ShutdownOnNoConnections) {
   std::unique_ptr<f2fs::Bcache> bc;
   FileTester::MkfsOnFakeDev(&bc);
@@ -84,15 +71,16 @@ TEST(Teardown, ShutdownOnNoConnections) {
   fs->GetNodeManager().AllocNidDone(root_nid);
   root_dir->SetMode(S_IFDIR);
 
-  zx::status root_endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
-  ASSERT_EQ(root_endpoints.status_value(), ZX_OK);
-  auto [root_client, root_server] = std::move(*root_endpoints);
+  async::Loop clients_loop(&kAsyncLoopConfigAttachToCurrentThread);
+  fuchsia::io::DirectoryPtr root_client;
+  auto root_server = root_client.NewRequest();
+  ASSERT_TRUE(root_client.is_bound());
   ASSERT_EQ(fs->ServeDirectory(std::move(root_dir),
                                fidl::ServerEnd<fuchsia_io::Directory>(root_server.TakeChannel())),
             ZX_OK);
 
   // A) Wait for root directory sync to begin.
-  SendDirSync(root_client);
+  root_client->Sync([](fuchsia::io::Node2_Sync_Result) {});
   sync_completion_wait(&root_completions[0], ZX_TIME_INFINITE);
 
   // Create child vnode connection.
@@ -102,9 +90,13 @@ TEST(Teardown, ShutdownOnNoConnections) {
   fs->GetNodeManager().AllocNidDone(child_nid);
   child_dir->SetMode(S_IFDIR);
 
-  zx::status child_endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
-  ASSERT_EQ(child_endpoints.status_value(), ZX_OK);
-  auto [child_client, child_server] = std::move(*child_endpoints);
+  fuchsia::io::DirectoryPtr child_client;
+  child_client.set_error_handler([&clients_loop](zx_status_t status) {
+    ASSERT_EQ(status, ZX_OK);
+    clients_loop.Quit();
+  });
+  auto child_server = child_client.NewRequest();
+  ASSERT_TRUE(child_client.is_bound());
   auto validated_options = child_dir->ValidateOptions(fs::VnodeConnectionOptions());
   ASSERT_TRUE(validated_options.is_ok());
   ASSERT_EQ(child_dir->Open(validated_options.value(), nullptr), ZX_OK);
@@ -112,11 +104,11 @@ TEST(Teardown, ShutdownOnNoConnections) {
             ZX_OK);
 
   // A) Wait for child vnode sync to begin.
-  SendDirSync(child_client);
+  child_client->Sync([](fuchsia::io::Node2_Sync_Result) {});
   sync_completion_wait(&child_completions[0], ZX_TIME_INFINITE);
 
   // Terminate root directory connection.
-  root_client.reset();
+  root_client.Unbind();
 
   // B) Let complete sync.
   sync_completion_signal(&root_completions[1]);
@@ -129,7 +121,7 @@ TEST(Teardown, ShutdownOnNoConnections) {
   ASSERT_FALSE(fs->IsTerminating());
 
   // Terminate child vnode connection.
-  child_client.reset();
+  child_client.Unbind();
 
   // B) Let complete sync.
   sync_completion_signal(&child_completions[1]);
