@@ -181,6 +181,36 @@ func TestFindingNormalize(t *testing.T) {
 			wantErr: true,
 		},
 		{
+			name: "valid replacement span with equal start and end chars",
+			finding: Finding{
+				Category:  "somelint/warning/not_defined",
+				Message:   "variable foo is not defined",
+				Path:      "src/foo/bar.cc",
+				StartLine: 1,
+				EndLine:   1,
+				StartChar: 5,
+				EndChar:   8,
+				Suggestions: []Suggestion{
+					{
+						Description: "try this instead",
+						Replacements: []Replacement{
+							{
+								Replacement: "foo",
+								// This should be allowed - the suggestion is to
+								// replace an empty span with a non-empty
+								// string, i.e. just insert text without
+								// deleting anything.
+								StartLine: 1,
+								EndLine:   1,
+								StartChar: 15,
+								EndChar:   15,
+							},
+						},
+					},
+				},
+			},
+		},
+		{
 			name: "sets end_line if unset",
 			finding: Finding{
 				Category:  "somelint/warning/not_defined",

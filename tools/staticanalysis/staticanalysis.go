@@ -171,7 +171,10 @@ func (f *Finding) Normalize() error {
 			if r.StartLine < 1 || r.EndLine < 1 || r.StartChar < 0 || r.EndChar <= 0 {
 				return fmt.Errorf("a suggested replacement must have a fully specified span: %#+v", r)
 			}
-			if r.StartLine > r.EndLine || (r.StartLine == r.EndLine && r.StartChar > 0 && r.StartChar >= r.EndChar) {
+			// StartChar==EndChar is allowed for a replacement span because a
+			// replacement might just insert text without replacing any
+			// pre-existing text.
+			if r.StartLine > r.EndLine || (r.StartLine == r.EndLine && r.StartChar > r.EndChar) {
 				return fmt.Errorf("(start_line, start_char) must be before (end_line, end_char) for replacement in finding: %#+v", f)
 			}
 		}
