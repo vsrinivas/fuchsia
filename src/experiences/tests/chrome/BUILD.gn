@@ -26,7 +26,16 @@ dart_test("workstation_chrome_smoke_test") {
     "//third_party/dart-pkg/pub/test",
   ]
 
-  environments = [ atlas_env ]
+  environments = [
+    # TODO(fxbug.dev/91950): Reenable on AEMU after Screenshots on Flatland is not flaky.
+    {
+      dimensions = {
+        device_type = "Intel NUC Kit NUC7i5DNHE"
+      }
+      tags = [ "e2e-fyi" ]
+    },
+    atlas_env,
+  ]
 }
 
 dart_test("workstation_chrome_advanced_smoke_test") {
@@ -41,7 +50,16 @@ dart_test("workstation_chrome_advanced_smoke_test") {
     "//third_party/dart-pkg/pub/test",
   ]
 
-  environments = [ atlas_env ]
+  environments = [
+    # TODO(fxbug.dev/91950): Reenable on AEMU after Screenshots on Flatland is not flaky.
+    {
+      dimensions = {
+        device_type = "Intel NUC Kit NUC7i5DNHE"
+      }
+      tags = [ "e2e-fyi" ]
+    },
+    atlas_env,
+  ]
 }
 
 group("test") {
