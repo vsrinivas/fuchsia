@@ -31,5 +31,13 @@
             to: [ "#system-update-configurator" ],
             dependency: "weak_for_migration",
         },
+        {
+            protocol: [
+                "fuchsia.update.config.OptOut",
+                "fuchsia.update.config.OptOutAdmin",
+            ],
+            from: "#system-update-configurator",
+            to: "#session-manager",
+        },
     ],
 }
