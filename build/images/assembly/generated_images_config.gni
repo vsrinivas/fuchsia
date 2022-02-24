@@ -36,6 +36,9 @@ import("//build/images/vbmeta.gni")
 #   fvm_reserved_slices (optional)
 #     [int] The number of slices to reserve in the FVM.
 #
+#   empty_account_partition (optional; default=false)
+#     [bool] Whether to add an empty account partition to each FVM.
+#
 # MinFS parameters:
 #
 #   minfs_minimum_data_bytes, minfs_maximum_bytes (optional)
@@ -202,6 +205,22 @@ template("generated_images_config") {
     name = "empty-data"
   }
   fvm_filesystems += [ empty_minfs ]
+
+  if (defined(invoker.empty_account_partition) &&
+      invoker.empty_account_partition) {
+    empty_account = {
+      type = "empty-account"
+      name = "account"
+    }
+    fvm_filesystems += [ empty_account ]
+
+    # Add the empty account to every FVM.
+    standard_fvm.filesystems += [ "account" ]
+    sparse_fvm.filesystems += [ "account" ]
+    blob_sparse_fvm.filesystems += [ "account" ]
+    emmc_fvm.filesystems += [ "account" ]
+    nand_fvm.filesystems += [ "account" ]
+  }
 
   # Optionally, reserve some slices in the FVM.
   if (defined(invoker.fvm_reserved_slices)) {

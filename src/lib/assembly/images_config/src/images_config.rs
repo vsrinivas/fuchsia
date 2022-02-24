@@ -196,6 +196,11 @@ pub enum FvmFilesystem {
     #[serde(rename = "empty-minfs")]
     EmptyMinFS(EmptyMinFS),
 
+    /// An empty account volume.
+    /// This volume is used to hold user data.
+    #[serde(rename = "empty-account")]
+    EmptyAccount(EmptyAccount),
+
     /// Reserved slices in the FVM.
     #[serde(rename = "reserved")]
     Reserved(Reserved),
@@ -272,6 +277,18 @@ fn default_minfs_name() -> String {
 pub struct EmptyMinFS {
     /// The name of the volume in the FVM.
     #[serde(default = "default_minfs_name")]
+    pub name: String,
+}
+
+fn default_account_name() -> String {
+    "account".into()
+}
+
+/// Configuration for building a EmptyAccount volume.
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct EmptyAccount {
+    /// The name of the volume in the FVM.
+    #[serde(default = "default_account_name")]
     pub name: String,
 }
 

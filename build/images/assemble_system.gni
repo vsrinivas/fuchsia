@@ -594,6 +594,10 @@ template("assemble_system") {
     fvm_slice_size = fvm_slice_size
     fvm_reserved_slices = fvm_reserved_slices
     generate_fvm = generate_fvm
+
+    if (defined(invoker.assembly_include_account_in_fvm)) {
+      empty_account_partition = invoker.assembly_include_account_in_fvm
+    }
   }
 
   generated_partitions_config(labels.partitions_config) {
