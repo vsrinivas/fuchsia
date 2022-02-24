@@ -72,7 +72,7 @@ static escher::TexturePtr CreateDepthTexture(escher::Escher* escher,
 namespace flatland {
 
 VkRenderer::VkRenderer(escher::EscherWeakPtr escher)
-    : escher_(std::move(escher)), compositor_(escher::RectangleCompositor(escher_.get())) {
+    : escher_(std::move(escher)), compositor_(escher::RectangleCompositor(escher_)) {
   auto gpu_uploader = escher::BatchGpuUploader::New(escher_, /*frame_trace_number*/ 0);
   FX_DCHECK(gpu_uploader);
 

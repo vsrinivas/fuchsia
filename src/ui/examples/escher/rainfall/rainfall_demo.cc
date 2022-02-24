@@ -55,7 +55,7 @@ RainfallDemo::RainfallDemo(escher::EscherWeakPtr escher_in, int argc, char** arg
   // Initialize filesystem with files before creating renderer; it will
   // use them to generate the necessary ShaderPrograms.
   escher()->shader_program_factory()->filesystem()->InitializeWithRealFiles(kFlatlandShaderPaths);
-  renderer_ = std::make_unique<escher::RectangleCompositor>(escher());
+  renderer_ = std::make_unique<escher::RectangleCompositor>(escher()->GetWeakPtr());
 }
 
 RainfallDemo::~RainfallDemo() = default;

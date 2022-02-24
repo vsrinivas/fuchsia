@@ -30,7 +30,7 @@ class RectangleCompositor {
     const bool is_opaque = false;
   };
 
-  explicit RectangleCompositor(Escher* escher);
+  explicit RectangleCompositor(EscherWeakPtr escher);
   ~RectangleCompositor() = default;
 
   // Draws a single batch of renderables into the provided output image.

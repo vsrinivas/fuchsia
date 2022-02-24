@@ -117,7 +117,7 @@ void TraverseBatch(CommandBuffer* cmd_buf, vec3 bounds, ShaderProgramPtr program
 
 // RectangleCompositor constructor. Initializes the shader program and allocates
 // GPU buffers to store mesh data.
-RectangleCompositor::RectangleCompositor(Escher* escher)
+RectangleCompositor::RectangleCompositor(EscherWeakPtr escher)
     : standard_program_(escher->GetProgram(kFlatlandStandardProgram)) {}
 
 // DrawBatch generates the Vulkan data needed to render the batch (e.g. renderpass,
