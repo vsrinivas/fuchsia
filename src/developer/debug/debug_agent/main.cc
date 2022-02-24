@@ -124,6 +124,9 @@ int main(int argc, const char* argv[]) {
     syslog::SetLogSettings(settings);
     debug::SetDebugMode(true);
     FX_LOGS(DEBUG) << "Running the debug agent in debug mode.";
+  } else {
+    syslog::LogSettings settings = {};
+    syslog::SetLogSettings(settings);
   }
 
   if (options.channel_mode || options.port) {
