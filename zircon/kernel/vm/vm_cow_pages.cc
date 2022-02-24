@@ -425,6 +425,13 @@ uint32_t VmCowPages::ScanForZeroPagesLocked(bool reclaim) {
       0, VmPageList::MAX_SIZE);
 
   FreePages(&freed_list);
+
+  if (reclaim && count > 0) {
+    IncrementHierarchyGenerationCountLocked();
+    // A batch free is counted as a single eviction event.
+    eviction_event_count_++;
+  }
+
   return count;
 }
 

@@ -178,13 +178,7 @@ uint32_t VmObjectPaged::ScanForZeroPages(bool reclaim) {
     m.AspaceRemoveWriteVmoRangeLocked(0, size_locked());
   }
 
-  uint32_t count = cow_pages_locked()->ScanForZeroPagesLocked(reclaim);
-
-  if (reclaim && count > 0) {
-    IncrementHierarchyGenerationCountLocked();
-  }
-
-  return count;
+  return cow_pages_locked()->ScanForZeroPagesLocked(reclaim);
 }
 
 zx_status_t VmObjectPaged::CreateCommon(uint32_t pmm_alloc_flags, uint32_t options, uint64_t size,

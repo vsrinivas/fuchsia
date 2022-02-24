@@ -1333,6 +1333,14 @@ static bool vmo_zero_scan_test() {
   kernel_aspace->FreeRegion(reinterpret_cast<vaddr_t>(ptr));
   EXPECT_EQ(1u, mem->vmo()->ScanForZeroPages(false));
 
+  // Actually evict the page now and check that the attribution count goes down and the eviction
+  // event count goes up.
+  EXPECT_EQ(1u, mem->vmo()->AttributedPages());
+  EXPECT_EQ(0u, mem->vmo()->EvictionEventCount());
+  EXPECT_EQ(1u, mem->vmo()->ScanForZeroPages(true));
+  EXPECT_EQ(0u, mem->vmo()->AttributedPages());
+  EXPECT_EQ(1u, mem->vmo()->EvictionEventCount());
+
   END_TEST;
 }
 
