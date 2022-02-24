@@ -867,7 +867,7 @@ Tells openweave to include files that require heap access.
 
 **Current value (from the default):** `true`
 
-From [//third_party/openweave-core/config.gni:32](https://fuchsia.googlesource.com/third_party/openweave-core/+/5f55423c8945849a698bc3ec817e4c7fef28d411/config.gni#32)
+From [//third_party/openweave-core/config.gni:32](https://fuchsia.googlesource.com/third_party/openweave-core/+/46e560622906834c111bfea1186755a729ac31e4/config.gni#32)
 
 ### core_realm_package_name
 The following arguments are all used to configure the contents of the core
@@ -1214,6 +1214,19 @@ Explicitly specify DWARF version used.
 **Current value (from the default):** `5`
 
 From //build/config/compiler.gni:66
+
+### emu_window_size_height
+
+**Current value (from the default):** `false`
+
+From //build/product.gni:36
+
+### emu_window_size_width
+Configuration to override the default window size for the virtual device in pixels.
+
+**Current value (from the default):** `false`
+
+From //build/product.gni:35
 
 ### enable_api_diff
 Detect dart API changes
@@ -2158,38 +2171,38 @@ Tells inet to support additionally support async dns sockets.
 
 **Current value (from the default):** `true`
 
-From [//third_party/openweave-core/config.gni:17](https://fuchsia.googlesource.com/third_party/openweave-core/+/5f55423c8945849a698bc3ec817e4c7fef28d411/config.gni#17)
+From [//third_party/openweave-core/config.gni:17](https://fuchsia.googlesource.com/third_party/openweave-core/+/46e560622906834c111bfea1186755a729ac31e4/config.gni#17)
 
 ### inet_want_endpoint_dns
 Tells inet to include support for the corresponding protocol.
 
 **Current value (from the default):** `true`
 
-From [//third_party/openweave-core/config.gni:10](https://fuchsia.googlesource.com/third_party/openweave-core/+/5f55423c8945849a698bc3ec817e4c7fef28d411/config.gni#10)
+From [//third_party/openweave-core/config.gni:10](https://fuchsia.googlesource.com/third_party/openweave-core/+/46e560622906834c111bfea1186755a729ac31e4/config.gni#10)
 
 ### inet_want_endpoint_raw
 
 **Current value (from the default):** `true`
 
-From [//third_party/openweave-core/config.gni:11](https://fuchsia.googlesource.com/third_party/openweave-core/+/5f55423c8945849a698bc3ec817e4c7fef28d411/config.gni#11)
+From [//third_party/openweave-core/config.gni:11](https://fuchsia.googlesource.com/third_party/openweave-core/+/46e560622906834c111bfea1186755a729ac31e4/config.gni#11)
 
 ### inet_want_endpoint_tcp
 
 **Current value (from the default):** `true`
 
-From [//third_party/openweave-core/config.gni:12](https://fuchsia.googlesource.com/third_party/openweave-core/+/5f55423c8945849a698bc3ec817e4c7fef28d411/config.gni#12)
+From [//third_party/openweave-core/config.gni:12](https://fuchsia.googlesource.com/third_party/openweave-core/+/46e560622906834c111bfea1186755a729ac31e4/config.gni#12)
 
 ### inet_want_endpoint_tun
 
 **Current value (from the default):** `true`
 
-From [//third_party/openweave-core/config.gni:14](https://fuchsia.googlesource.com/third_party/openweave-core/+/5f55423c8945849a698bc3ec817e4c7fef28d411/config.gni#14)
+From [//third_party/openweave-core/config.gni:14](https://fuchsia.googlesource.com/third_party/openweave-core/+/46e560622906834c111bfea1186755a729ac31e4/config.gni#14)
 
 ### inet_want_endpoint_udp
 
 **Current value (from the default):** `true`
 
-From [//third_party/openweave-core/config.gni:13](https://fuchsia.googlesource.com/third_party/openweave-core/+/5f55423c8945849a698bc3ec817e4c7fef28d411/config.gni#13)
+From [//third_party/openweave-core/config.gni:13](https://fuchsia.googlesource.com/third_party/openweave-core/+/46e560622906834c111bfea1186755a729ac31e4/config.gni#13)
 
 ### is_analysis
 If set, the build will produce compilation analysis dumps, used for code
@@ -4524,6 +4537,16 @@ not much the actual host page size then a run time error will occur.
 
 From //zircon/kernel/lib/virtual_alloc/BUILD.gn:13
 
+### virtual_device_name_prefix
+TODO(fxbug.dev/94051): move to board definitions.
+Adds a prefix to the start of the virtual device name. Used to distinguish
+between similar virtual device's using different configuration's such as
+`emu_window_size`.
+
+**Current value (from the default):** `""`
+
+From //build/product.gni:32
+
 ### vm_tracing_level
 The level of detail for traces emitted by the VM system. Values greater than
 zero add increasing details at the cost of increased trace buffer use.
@@ -4600,35 +4623,35 @@ Tells openweave to support legacy WDM mode.
 
 **Current value (from the default):** `false`
 
-From [//third_party/openweave-core/config.gni:29](https://fuchsia.googlesource.com/third_party/openweave-core/+/5f55423c8945849a698bc3ec817e4c7fef28d411/config.gni#29)
+From [//third_party/openweave-core/config.gni:29](https://fuchsia.googlesource.com/third_party/openweave-core/+/46e560622906834c111bfea1186755a729ac31e4/config.gni#29)
 
 ### weave_build_warm
 Tells openweave to build WARM libraries.
 
 **Current value (from the default):** `true`
 
-From [//third_party/openweave-core/config.gni:26](https://fuchsia.googlesource.com/third_party/openweave-core/+/5f55423c8945849a698bc3ec817e4c7fef28d411/config.gni#26)
+From [//third_party/openweave-core/config.gni:26](https://fuchsia.googlesource.com/third_party/openweave-core/+/46e560622906834c111bfea1186755a729ac31e4/config.gni#26)
 
 ### weave_system_config_use_sockets
 Tells openweave components to use bsd-like sockets.
 
 **Current value (from the default):** `true`
 
-From [//third_party/openweave-core/config.gni:7](https://fuchsia.googlesource.com/third_party/openweave-core/+/5f55423c8945849a698bc3ec817e4c7fef28d411/config.gni#7)
+From [//third_party/openweave-core/config.gni:7](https://fuchsia.googlesource.com/third_party/openweave-core/+/46e560622906834c111bfea1186755a729ac31e4/config.gni#7)
 
 ### weave_with_nlfaultinjection
 Tells openweave components to support fault injection.
 
 **Current value (from the default):** `false`
 
-From [//third_party/openweave-core/config.gni:20](https://fuchsia.googlesource.com/third_party/openweave-core/+/5f55423c8945849a698bc3ec817e4c7fef28d411/config.gni#20)
+From [//third_party/openweave-core/config.gni:20](https://fuchsia.googlesource.com/third_party/openweave-core/+/46e560622906834c111bfea1186755a729ac31e4/config.gni#20)
 
 ### weave_with_verhoeff
 Tells openweave to support Verhoeff checksum.
 
 **Current value (from the default):** `true`
 
-From [//third_party/openweave-core/config.gni:23](https://fuchsia.googlesource.com/third_party/openweave-core/+/5f55423c8945849a698bc3ec817e4c7fef28d411/config.gni#23)
+From [//third_party/openweave-core/config.gni:23](https://fuchsia.googlesource.com/third_party/openweave-core/+/46e560622906834c111bfea1186755a729ac31e4/config.gni#23)
 
 ### with_live_usb
 Whether or not to include the live_usb component in the build.
