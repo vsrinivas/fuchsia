@@ -7,10 +7,11 @@ import 'dart:math';
 
 import 'package:ermine_driver/ermine_driver.dart';
 import 'package:fidl_fuchsia_input/fidl_async.dart';
+import 'package:flutter_driver/flutter_driver.dart';
 import 'package:sl4f/sl4f.dart';
 import 'package:test/test.dart';
 
-const chromiumUrl = 'fuchsia-pkg://fuchsia.com/chrome#meta/chrome_v1.cmx';
+const chromiumUrl = 'fuchsia-pkg://fuchsia.com/chrome#meta/chrome.cm';
 
 void main() {
   late Sl4f sl4f;
@@ -34,13 +35,19 @@ void main() {
   });
 
   test('Should be able to launch Chrome browser.', () async {
-    await ermine.launch(chromiumUrl);
+    // Launches Chromium app
+    // TODO(fxb/94441): Launch Chromium using [ErmineDriver.launch] once the blocker is fixed.
+    final chromiumEntry = find.text('Chromium');
+    await ermine.driver.waitFor(chromiumEntry);
+    print('Found Chromium app entry');
+    await ermine.driver.tap(chromiumEntry);
+    print('Tapped Chromium app entry');
     await ermine.driver.waitUntilNoTransientCallbacks();
-    print('Launched Chrome');
+    print('Launched Chromium');
 
     final snapshot = await ermine.waitForView(chromiumUrl, testForFocus: true);
     expect(snapshot.url, chromiumUrl);
-    print('A Chrome view is presented');
+    print('A Chromium view is presented');
 
     // Takes a screenshot and checks the color
     const white = 0xffffffff; // (0xAABBGGRR)
