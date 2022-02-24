@@ -367,7 +367,7 @@ zx_status_t VnodeF2fs::WriteDataPage(fbl::RefPtr<Page> page, bool is_reclaim) {
       return ZX_ERR_OUT_OF_RANGE;
     }
     // Writeback Pages for dir/vnode do not have mappings.
-    page->Map();
+    ZX_ASSERT(page->Map() == ZX_OK);
     page->ZeroUserSegment(offset, kPageSize);
   }
 

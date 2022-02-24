@@ -5,6 +5,7 @@
 #ifndef SRC_STORAGE_F2FS_FILE_CACHE_H_
 #define SRC_STORAGE_F2FS_FILE_CACHE_H_
 
+#include <safemath/checked_math.h>
 #include <storage/buffer/block_buffer.h>
 
 namespace f2fs {
@@ -99,7 +100,7 @@ class Page : public storage::BlockBuffer,
   zx_status_t VmoOpUnlock();
   void *GetAddress() const {
     // TODO: |address_| needs to be atomically mapped in a on-demand manner.
-    ZX_ASSERT(IsMapped());
+    ZX_DEBUG_ASSERT(IsMapped());
     return reinterpret_cast<void *>(address_);
   }
 
@@ -113,13 +114,16 @@ class Page : public storage::BlockBuffer,
   bool IsActive() const { return TestFlag(PageFlag::kPageActive); }
 
   void ClearMapped() { ClearFlag(PageFlag::kPageMapped); }
-  void Unmap();
-  void Map();
-  void StorageUnmap();
-  void StorageMap();
+  zx_status_t Unmap();
+  zx_status_t Map();
+  zx_status_t StorageUnmap();
+  zx_status_t StorageMap();
   void ClearStorageMapped() { ClearFlag(PageFlag::kPageStorageMapped); }
 
-  void SetActive() { SetFlag(PageFlag::kPageActive); }
+  // Each Setxxx() method atomically sets a flag and returns the previous value.
+  // It should be called when the first reference is made in FileCache::GetPageUnsafe().
+  bool SetActive() { return SetFlag(PageFlag::kPageActive); }
+  // It should be called after the last reference is destroyed in FileCache::Downgrade().
   void ClearActive() { ClearFlag(PageFlag::kPageActive); }
 
   void Lock() {
@@ -136,15 +140,17 @@ class Page : public storage::BlockBuffer,
     return true;
   }
   void Unlock() {
-    ClearFlag(PageFlag::kPageLocked);
-    WakeupFlag(PageFlag::kPageLocked);
+    if (IsLocked()) {
+      ClearFlag(PageFlag::kPageLocked);
+      WakeupFlag(PageFlag::kPageLocked);
+    }
   }
 
   void WaitOnWriteback();
-  void SetWriteback();
+  bool SetWriteback();
   void ClearWriteback();
 
-  void SetUptodate();
+  bool SetUptodate();
   void ClearUptodate();
 
   bool SetDirty();
@@ -156,10 +162,10 @@ class Page : public storage::BlockBuffer,
   // and unmaps |address_|.
   void Invalidate();
 
-  void ZeroUserSegment(uint32_t start, uint32_t end) {
-    ZX_ASSERT(end <= kPageSize && start < end);
-    if (end > start) {
-      memset(reinterpret_cast<uint8_t *>(GetAddress()) + start, 0, end - start);
+  void ZeroUserSegment(uint64_t start, uint64_t end) {
+    auto end_offset = safemath::CheckMul(capacity(), static_cast<size_t>(BlockSize()));
+    if (end_offset.IsValid() && start < end && end <= end_offset.ValueOrDie()) {
+      std::memset(reinterpret_cast<uint8_t *>(GetAddress()) + start, 0, end - start);
     }
   }
 

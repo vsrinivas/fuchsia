@@ -334,7 +334,7 @@ void SegmentManager::BalanceFs() {
   block_t hard_limit = kMaxDirtyDataPages;
   // Without GC, it triggers checkpoint aggressively to secure free segments from pre-free ones.
   if (NeedToCheckpoint()) {
-    FX_LOGS(INFO) << "[f2fs] High prefree segments: " << PrefreeSegments();
+    FX_LOGS(DEBUG) << "[f2fs] High prefree segments: " << PrefreeSegments();
     fs_->WriteCheckpoint(false, false);
   }
 #if 0  // porting needed
@@ -363,8 +363,8 @@ void SegmentManager::BalanceFs() {
       FX_LOGS(WARNING) << "[f2fs] High committed pages: " << dirty_data_pages << " / "
                        << hard_limit;
     } else {
-      FX_LOGS(INFO) << "[f2fs] Moderate committed pages: " << dirty_data_pages << " / "
-                    << hard_limit;
+      FX_LOGS(DEBUG) << "[f2fs] Moderate committed pages: " << dirty_data_pages << " / "
+                     << hard_limit;
     }
 
     // Allocate blocks for dirty pages of dirty vnodes

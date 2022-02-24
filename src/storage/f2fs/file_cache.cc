@@ -15,24 +15,24 @@ VnodeF2fs &Page::GetVnode() const { return file_cache_->GetVnode(); }
 FileCache &Page::GetFileCache() const { return *file_cache_; }
 
 Page::~Page() {
-  ZX_ASSERT(IsAllocated() == true);
-  ZX_ASSERT(IsWriteback() == false);
-  ZX_ASSERT(InContainer() == false);
-  ZX_ASSERT(IsDirty() == false);
-  ZX_ASSERT(IsMapped() == false);
-  ZX_ASSERT(IsStorageMapped() == false);
-  ZX_ASSERT(IsLocked() == false);
+  ZX_DEBUG_ASSERT(IsAllocated() == true);
+  ZX_DEBUG_ASSERT(IsWriteback() == false);
+  ZX_DEBUG_ASSERT(InContainer() == false);
+  ZX_DEBUG_ASSERT(IsDirty() == false);
+  ZX_DEBUG_ASSERT(IsMapped() == false);
+  ZX_DEBUG_ASSERT(IsStorageMapped() == false);
+  ZX_DEBUG_ASSERT(IsLocked() == false);
 }
 
 void Page::fbl_recycle() {
   if (IsStorageMapped()) {
     // It failed to be uptodate due to invalid index.
     // In other cases, StorageUnmap() should be called in ClearWriteback().
-    ZX_ASSERT(!IsUptodate());
-    StorageUnmap();
+    ZX_DEBUG_ASSERT(!IsUptodate());
+    ZX_ASSERT(StorageUnmap() == ZX_OK);
   }
-  Unmap();
-  VmoOpUnlock();
+  ZX_ASSERT(Unmap() == ZX_OK);
+  ZX_ASSERT(VmoOpUnlock() == ZX_OK);
   // For active Pages, we evict them with strong references, so it is safe to call InContainer()
   // without the tree lock.
   if (InContainer()) {
@@ -68,15 +68,15 @@ bool Page::SetDirty() {
 }
 
 bool Page::ClearDirtyForIo(bool for_writeback) {
-  ZX_ASSERT(IsLocked());
+  ZX_DEBUG_ASSERT(IsLocked());
   VnodeF2fs &vnode = GetVnode();
   SuperblockInfo &superblock_info = vnode.Vfs()->GetSuperblockInfo();
   if (IsDirty()) {
     ClearFlag(PageFlag::kPageDirty);
     if (!for_writeback) {
-      VmoOpUnlock();
+      ZX_ASSERT(VmoOpUnlock() == ZX_OK);
     } else {
-      StorageMap();
+      ZX_ASSERT(StorageMap() == ZX_OK);
     }
     if (vnode.IsNode()) {
       superblock_info.DecreasePageCount(CountType::kDirtyNodes);
@@ -100,8 +100,8 @@ zx_status_t Page::GetPage(bool need_vmo_lock) {
   auto clear_flag = fit::defer([&] { ClearFlag(PageFlag::kPageAlloc); });
 
   if (!flags_[static_cast<uint8_t>(PageFlag::kPageAlloc)].test_and_set(std::memory_order_acquire)) {
-    ZX_ASSERT(IsDirty() == false);
-    ZX_ASSERT(IsWriteback() == false);
+    ZX_DEBUG_ASSERT(!IsDirty());
+    ZX_DEBUG_ASSERT(!IsWriteback());
     ClearFlag(PageFlag::kPageUptodate);
     if (ret = vmo_.create(BlockSize(), ZX_VMO_DISCARDABLE, &vmo_); ret != ZX_OK) {
       return ret;
@@ -112,9 +112,9 @@ zx_status_t Page::GetPage(bool need_vmo_lock) {
     }
   } else if (need_vmo_lock) {
     if (ret = vmo_.op_range(ZX_VMO_OP_TRY_LOCK, 0, BlockSize(), nullptr, 0); ret != ZX_OK) {
-      ZX_ASSERT(ret == ZX_ERR_UNAVAILABLE);
-      ZX_ASSERT(IsDirty() == false);
-      ZX_ASSERT(IsWriteback() == false);
+      ZX_DEBUG_ASSERT(ret == ZX_ERR_UNAVAILABLE);
+      ZX_DEBUG_ASSERT(!IsDirty());
+      ZX_DEBUG_ASSERT(!IsWriteback());
       ClearFlag(PageFlag::kPageUptodate);
       if (ret = vmo_.op_range(ZX_VMO_OP_COMMIT | ZX_VMO_OP_TRY_LOCK, 0, BlockSize(), nullptr, 0);
           ret != ZX_OK) {
@@ -123,52 +123,59 @@ zx_status_t Page::GetPage(bool need_vmo_lock) {
     }
   }
   if (!IsUptodate()) {
-    ZX_ASSERT(!IsWriteback());
-    StorageMap();
+    ZX_DEBUG_ASSERT(!IsWriteback());
+    ZX_ASSERT(StorageMap() == ZX_OK);
   }
-  Map();
+  ZX_ASSERT(Map() == ZX_OK);
   clear_flag.cancel();
   return ret;
 }
 
 zx_status_t Page::VmoOpUnlock() {
-  ZX_ASSERT(IsAllocated() == true);
-  ZX_ASSERT(vmo_.op_range(ZX_VMO_OP_UNLOCK, 0, BlockSize(), nullptr, 0) == ZX_OK);
-  return ZX_OK;
+  ZX_DEBUG_ASSERT(IsAllocated());
+  return vmo_.op_range(ZX_VMO_OP_UNLOCK, 0, BlockSize(), nullptr, 0);
 }
 
 void Page::PutPage(fbl::RefPtr<Page> &&page, bool unlock) {
-  ZX_ASSERT(page != nullptr);
+  ZX_DEBUG_ASSERT(page != nullptr);
   if (unlock) {
     page->Unlock();
   }
   page.reset();
 }
 
-void Page::StorageUnmap() {
+zx_status_t Page::StorageUnmap() {
+  zx_status_t ret = ZX_OK;
   if (IsStorageMapped()) {
-    ZX_ASSERT(GetVnode().Vfs()->GetBc().BlockDetachVmo(std::move(vmoid_)) == ZX_OK);
     ClearStorageMapped();
+    ret = GetVnode().Vfs()->GetBc().BlockDetachVmo(std::move(vmoid_));
   }
+  return ret;
 }
 
-void Page::StorageMap() {
+zx_status_t Page::StorageMap() {
+  zx_status_t ret = ZX_OK;
   if (!SetFlag(PageFlag::kPageStorageMapped)) {
-    ZX_ASSERT(GetVnode().Vfs()->GetBc().BlockAttachVmo(vmo_, &vmoid_) == ZX_OK);
+    ret = GetVnode().Vfs()->GetBc().BlockAttachVmo(vmo_, &vmoid_);
   }
+  return ret;
 }
-void Page::Unmap() {
+zx_status_t Page::Unmap() {
+  zx_status_t ret = ZX_OK;
   if (IsMapped()) {
     ClearMapped();
-    ZX_ASSERT(zx::vmar::root_self()->unmap(address_, BlockSize()) == ZX_OK);
+    ret = zx::vmar::root_self()->unmap(address_, BlockSize());
   }
+  return ret;
 }
 
-void Page::Map() {
+zx_status_t Page::Map() {
+  zx_status_t ret = ZX_OK;
   if (!SetFlag(PageFlag::kPageMapped)) {
-    ZX_ASSERT(zx::vmar::root_self()->map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, vmo_, 0,
-                                         BlockSize(), &address_) == ZX_OK);
+    ret = zx::vmar::root_self()->map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, vmo_, 0, BlockSize(),
+                                     &address_);
   }
+  return ret;
 }
 
 void Page::Invalidate() {
@@ -181,11 +188,13 @@ void Page::Invalidate() {
   }
 }
 
-void Page::SetUptodate() {
-  ZX_ASSERT(IsLocked());
-  if (!SetFlag(PageFlag::kPageUptodate)) {
-    StorageUnmap();
+bool Page::SetUptodate() {
+  ZX_DEBUG_ASSERT(IsLocked());
+  bool ret = SetFlag(PageFlag::kPageUptodate);
+  if (!ret) {
+    ZX_ASSERT(StorageUnmap() == ZX_OK);
   }
+  return ret;
 }
 
 void Page::ClearUptodate() { ClearFlag(PageFlag::kPageUptodate); }
@@ -197,15 +206,17 @@ void Page::WaitOnWriteback() {
   WaitOnFlag(PageFlag::kPageWriteback);
 }
 
-void Page::SetWriteback() {
-  if (!SetFlag(PageFlag::kPageWriteback)) {
+bool Page::SetWriteback() {
+  bool ret = SetFlag(PageFlag::kPageWriteback);
+  if (!ret) {
     GetVnode().Vfs()->GetSuperblockInfo().IncreasePageCount(CountType::kWriteback);
   }
+  return ret;
 }
 
 void Page::ClearWriteback() {
   if (IsWriteback()) {
-    StorageUnmap();
+    ZX_ASSERT(StorageUnmap() == ZX_OK);
     GetVnode().Vfs()->GetSuperblockInfo().DecreasePageCount(CountType::kWriteback);
     ClearFlag(PageFlag::kPageWriteback);
     WakeupFlag(PageFlag::kPageWriteback);
@@ -229,7 +240,7 @@ FileCache::~FileCache() {
   {
     std::lock_guard tree_lock(tree_lock_);
     CleanupPagesUnsafe();
-    ZX_ASSERT(page_tree_.is_empty());
+    ZX_DEBUG_ASSERT(page_tree_.is_empty());
   }
 }
 
@@ -302,7 +313,7 @@ zx::status<bool> FileCache::GetPageUnsafe(const pgoff_t index, fbl::RefPtr<Page>
       }
       *out = fbl::ImportFromRawPtr(raw_ptr);
       (*out)->SetActive();
-      ZX_ASSERT((*out)->IsLastReference());
+      ZX_DEBUG_ASSERT((*out)->IsLastReference());
       return zx::ok(true);
     }
     break;
@@ -397,9 +408,9 @@ std::vector<fbl::RefPtr<Page>> FileCache::GetLockedDirtyPagesUnsafe(
     ZX_ASSERT(!raw_page->TryLock());
     if (raw_page->IsDirty()) {
       fbl::RefPtr<Page> page = fbl::ImportFromRawPtr(raw_page);
-      ZX_ASSERT(page->IsLastReference());
+      ZX_DEBUG_ASSERT(page->IsLastReference());
       if (!operation.if_page || operation.if_page(page) == ZX_OK) {
-        ZX_ASSERT(page->IsUptodate());
+        ZX_DEBUG_ASSERT(page->IsUptodate());
         page->SetActive();
         pages.push_back(std::move(page));
         ++nwritten;
@@ -438,14 +449,14 @@ pgoff_t FileCache::Writeback(WritebackOperation &operation) {
   for (size_t i = 0; i < pages.size(); ++i) {
     fbl::RefPtr<Page> page = std::move(pages[i]);
     pages[i] = nullptr;
-    ZX_ASSERT(page->IsUptodate());
-    ZX_ASSERT(page->IsLocked());
+    ZX_DEBUG_ASSERT(page->IsUptodate());
+    ZX_DEBUG_ASSERT(page->IsLocked());
     // All node pages require mappings to log the next address in their footer.
     if (vnode_->IsNode()) {
-      page->Map();
+      ZX_ASSERT(page->Map() == ZX_OK);
     }
     zx_status_t ret = page->GetVnode().WriteDirtyPage(page, false);
-    ZX_ASSERT(!page->IsDirty());
+    ZX_DEBUG_ASSERT(!page->IsDirty());
     if (ret != ZX_OK) {
       if (ret != ZX_ERR_NOT_FOUND && ret != ZX_ERR_OUT_OF_RANGE) {
         // TODO: In case of failure, we just redirty it.
@@ -457,13 +468,13 @@ pgoff_t FileCache::Writeback(WritebackOperation &operation) {
       ++nwritten;
       --operation.to_write;
     }
-    page->Unmap();
+    ZX_ASSERT(page->Unmap() == ZX_OK);
     page->Unlock();
   }
   if (operation.bSync) {
     sync_completion_t completion;
     vnode_->Vfs()->ScheduleWriterSubmitPages(&completion);
-    ZX_ASSERT(sync_completion_wait(&completion, ZX_TIME_INFINITE) == ZX_OK);
+    sync_completion_wait(&completion, ZX_TIME_INFINITE);
   }
   return nwritten;
 }

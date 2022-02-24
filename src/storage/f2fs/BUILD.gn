@@ -73,13 +73,13 @@ static_library("f2fs") {
     "//src/lib/uuid",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/storage/buffer",
+    "//zircon/third_party/ulib/safemath",
   ]
 
   deps = [
     "//sdk/lib/syslog/cpp",
     "//zircon/system/ulib/inspect",
     "//zircon/system/ulib/zxc",
-    "//zircon/third_party/ulib/safemath",
   ]
 
   defines = []
