@@ -3,13 +3,16 @@
 // found in the LICENSE file.
 
 #include <fuchsia/input/injection/cpp/fidl.h>
+#include <fuchsia/logger/cpp/fidl.h>
+#include <fuchsia/scheduler/cpp/fidl.h>
+#include <fuchsia/sysmem/cpp/fidl.h>
+#include <fuchsia/tracing/provider/cpp/fidl.h>
 #include <fuchsia/ui/policy/cpp/fidl.h>
-#include <lib/async-loop/cpp/loop.h>
-#include <lib/async-loop/default.h>
+#include <fuchsia/vulkan/loader/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
-#include <lib/fit/function.h>
-#include <lib/sys/cpp/testing/enclosing_environment.h>
-#include <lib/sys/cpp/testing/test_with_environment_fixture.h>
+#include <lib/gtest/real_loop_fixture.h>
+#include <lib/sys/component/cpp/testing/realm_builder.h>
+#include <lib/sys/component/cpp/testing/realm_builder_types.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/clock.h>
 #include <zircon/status.h>
@@ -24,39 +27,19 @@
 #include "src/ui/input/testing/fake_input_report_device/reports_reader.h"
 
 namespace {
+// Types imported for the realm_builder library.
+using component_testing::ChildRef;
+using component_testing::ParentRef;
+using component_testing::Protocol;
+using component_testing::RealmRoot;
+using component_testing::Route;
+using RealmBuilder = component_testing::RealmBuilder;
 
 // Max timeout in failure cases.
 // Set this as low as you can that still works across all test platforms.
 constexpr zx::duration kTimeout = zx::min(5);
 
-// Common services for each test.
-const std::map<std::string, std::string> LocalServices() {
-  return {
-      // Test-only variants of the input pipeline and root presenter are included in this tests's
-      // package for component hermeticity, and to avoid reading /dev/class/input-report. Reading
-      // the input device driver in a test can cause conflicts with real input devices.
-      {"fuchsia.input.injection.InputDeviceRegistry",
-       "fuchsia-pkg://fuchsia.com/mediabuttons-integration-tests-ip#meta/input-pipeline.cmx"},
-      {"fuchsia.ui.policy.DeviceListenerRegistry",
-       "fuchsia-pkg://fuchsia.com/mediabuttons-integration-tests-ip#meta/input-pipeline.cmx"},
-      {"fuchsia.ui.pointerinjector.configuration.Setup",
-       "fuchsia-pkg://fuchsia.com/mediabuttons-integration-tests-ip#meta/root_presenter.cmx"},
-      // Scenic protocols.
-      {"fuchsia.ui.scenic.Scenic",
-       "fuchsia-pkg://fuchsia.com/mediabuttons-integration-tests-ip#meta/scenic.cmx"},
-      // Misc protocols.
-      {"fuchsia.cobalt.LoggerFactory",
-       "fuchsia-pkg://fuchsia.com/mock_cobalt#meta/mock_cobalt.cmx"},
-      {"fuchsia.hardware.display.Provider",
-       "fuchsia-pkg://fuchsia.com/fake-hardware-display-controller-provider#meta/hdcp.cmx"},
-  };
-}
-
-// Allow these global services from outside the test environment.
-const std::vector<std::string> GlobalServices() {
-  return {"fuchsia.vulkan.loader.Loader", "fuchsia.sysmem.Allocator",
-          "fuchsia.tracing.provider.Registry", "fuchsia.scheduler.ProfileProvider"};
-}
+constexpr auto kInputTestRealm = "input-pipeline-test-realm";
 
 // This implements the MediaButtonsListener class. Its purpose is to test that MediaButton Events
 // are actually sent out to the Listeners.
@@ -83,45 +66,51 @@ class ButtonsListenerImpl : public fuchsia::ui::policy::MediaButtonsListener {
   fit::function<void(const fuchsia::ui::input::MediaButtonsEvent&)> on_event_;
 };
 
-class MediaButtonsListenerTest : public gtest::TestWithEnvironmentFixture {
+class MediaButtonsListenerTest : public gtest::RealLoopFixture {
  protected:
-  explicit MediaButtonsListenerTest() {
-    auto services = sys::testing::EnvironmentServices::Create(real_env());
-    zx_status_t is_ok = ZX_OK;
-
-    // Add common services.
-    for (const auto& [name, url] : LocalServices()) {
-      is_ok = services->AddServiceWithLaunchInfo({.url = url}, name);
-      FX_CHECK(is_ok == ZX_OK) << "Failed to add service " << name;
-    }
-
-    // Enable services from outside this test.
-    for (const auto& service : GlobalServices()) {
-      is_ok = services->AllowParentService(service);
-      FX_CHECK(is_ok == ZX_OK) << "Failed to add service " << service;
-    }
-
-    test_env_ = CreateNewEnclosingEnvironment("media-buttons-test-ip", std::move(services));
-
-    WaitForEnclosingEnvToStart(test_env_.get());
-
-    FX_VLOGS(1) << "Created test environment.";
-
-    // Post a "just in case" quit task, if the test hangs.
-    async::PostDelayedTask(
-        dispatcher(),
-        [] { FX_LOGS(FATAL) << "\n\n>> Test did not complete in time, terminating.  <<\n\n"; },
-        kTimeout);
-  }
+  MediaButtonsListenerTest()
+      : realm_builder_(std::make_unique<RealmBuilder>(RealmBuilder::Create())), realm_() {}
 
   ~MediaButtonsListenerTest() override {
     FX_CHECK(injection_count_ > 0) << "injection expected but didn't happen.";
   }
 
-  sys::testing::EnclosingEnvironment* test_env() { return test_env_.get(); }
+  void SetUp() override {
+    // Post a "just in case" quit task, if the test hangs.
+    async::PostDelayedTask(
+        dispatcher(),
+        [] { FX_LOGS(FATAL) << "\n\n>> Test did not complete in time, terminating.  <<\n\n"; },
+        kTimeout);
+
+    // Add static test realm as a component to the realm.
+    builder()->AddChild(kInputTestRealm, "#meta/input-pipeline-test-realm.cm");
+
+    // Capabilities routed from test_manager to components in static test realm.
+    builder()->AddRoute(
+        Route{.capabilities = {Protocol{fuchsia::logger::LogSink::Name_},
+                               Protocol{fuchsia::vulkan::loader::Loader::Name_},
+                               Protocol{fuchsia::scheduler::ProfileProvider::Name_},
+                               Protocol{fuchsia::sysmem::Allocator::Name_},
+                               Protocol{fuchsia::tracing::provider::Registry::Name_}},
+              .source = ParentRef(),
+              .targets = {ChildRef{kInputTestRealm}}});
+
+    // Capabilities routed from static test realm up to test driver (this component).
+    builder()->AddRoute(
+        Route{.capabilities =
+                  {
+                      Protocol{fuchsia::input::injection::InputDeviceRegistry::Name_},
+                      Protocol{fuchsia::ui::policy::DeviceListenerRegistry::Name_},
+                  },
+              .source = ChildRef{kInputTestRealm},
+              .targets = {ParentRef()}});
+
+    // Finally, build the realm using the provided components and routes.
+    realm_ = std::make_unique<RealmRoot>(builder()->Build());
+  }
 
   void RegisterInjectionDevice() {
-    registry_ = test_env()->ConnectToService<fuchsia::input::injection::InputDeviceRegistry>();
+    registry_ = realm()->Connect<fuchsia::input::injection::InputDeviceRegistry>();
 
     // Create a FakeInputDevice
     fake_input_device_ = std::make_unique<fake_input_report_device::FakeInputDevice>(
@@ -156,8 +145,13 @@ class MediaButtonsListenerTest : public gtest::TestWithEnvironmentFixture {
     ++injection_count_;
   }
 
+  RealmBuilder* builder() { return realm_builder_.get(); }
+  RealmRoot* realm() { return realm_.get(); }
+
  private:
-  std::unique_ptr<sys::testing::EnclosingEnvironment> test_env_;
+  std::unique_ptr<RealmBuilder> realm_builder_;
+  std::unique_ptr<RealmRoot> realm_;
+
   fuchsia::input::injection::InputDeviceRegistryPtr registry_;
   std::unique_ptr<fake_input_report_device::FakeInputDevice> fake_input_device_;
   fuchsia::input::report::InputDevicePtr input_device_ptr_;
@@ -180,9 +174,9 @@ TEST_F(MediaButtonsListenerTest, MediaButtonsWithCallback) {
   auto button_listener_impl =
       std::make_unique<ButtonsListenerImpl>(listener_handle.NewRequest(), std::move(on_event));
 
-  auto input_pipeline = test_env()->ConnectToService<fuchsia::ui::policy::DeviceListenerRegistry>();
-  input_pipeline.set_error_handler([](zx_status_t status) {
-    FX_LOGS(FATAL) << "Lost connection to Input Pipeline: " << zx_status_get_string(status);
+  auto listener_registry = realm()->Connect<fuchsia::ui::policy::DeviceListenerRegistry>();
+  listener_registry.set_error_handler([](zx_status_t status) {
+    FX_LOGS(FATAL) << "Lost connection to DeviceListenerRegistry: " << zx_status_get_string(status);
   });
   fuchsia::input::report::ConsumerControlInputReport first_report;
   first_report.set_pressed_buttons({
@@ -191,8 +185,8 @@ TEST_F(MediaButtonsListenerTest, MediaButtonsWithCallback) {
       fuchsia::input::report::ConsumerControlButton::PAUSE,
       fuchsia::input::report::ConsumerControlButton::VOLUME_UP,
   });
-  input_pipeline->RegisterListener(std::move(listener_handle),
-                                   [this, &first_report] { InjectInput(std::move(first_report)); });
+  listener_registry->RegisterListener(
+      std::move(listener_handle), [this, &first_report] { InjectInput(std::move(first_report)); });
 
   RunLoopUntil([&observed_event] { return observed_event.has_value(); });
 

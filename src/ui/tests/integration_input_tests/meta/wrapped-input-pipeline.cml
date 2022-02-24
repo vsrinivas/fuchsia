@@ -11,7 +11,10 @@
     },
     capabilities: [
         {
-            protocol: [ "fuchsia.input.injection.InputDeviceRegistry" ],
+            protocol: [
+                "fuchsia.input.injection.InputDeviceRegistry",
+                "fuchsia.ui.policy.DeviceListenerRegistry",
+            ],
         },
     ],
     use: [
@@ -25,7 +28,10 @@
     ],
     expose: [
         {
-            protocol: [ "fuchsia.input.injection.InputDeviceRegistry" ],
+            protocol: [
+                "fuchsia.input.injection.InputDeviceRegistry",
+                "fuchsia.ui.policy.DeviceListenerRegistry",
+            ],
             from: "self",
         },
     ],

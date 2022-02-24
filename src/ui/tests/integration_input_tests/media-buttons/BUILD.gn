@@ -75,15 +75,20 @@ executable("mediabuttons_listener_test_ip") {
   sources = [ "mediabuttons_listener_test_ip.cc" ]
   deps = [
     "//sdk/fidl/fuchsia.input.injection",
+    "//sdk/fidl/fuchsia.logger",
+    "//sdk/fidl/fuchsia.scheduler",
+    "//sdk/fidl/fuchsia.sysmem",
+    "//sdk/fidl/fuchsia.tracing.provider",
+    "//sdk/fidl/fuchsia.ui.input",
+    "//sdk/fidl/fuchsia.ui.pointerinjector.configuration",
     "//sdk/fidl/fuchsia.ui.policy",
+    "//sdk/fidl/fuchsia.vulkan.loader",
+    "//sdk/lib/sys/component/cpp/testing:cpp",
     "//sdk/lib/sys/cpp/testing:integration_fixture",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/loop_fixture",
     "//src/ui/input/testing/fake_input_report_device",
-    "//third_party/googletest:gtest",
-    "//zircon/system/ulib/async-loop:async-loop-cpp",
-    "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/zx",
   ]
 }
@@ -91,12 +96,12 @@ executable("mediabuttons_listener_test_ip") {
 fuchsia_unittest_package("mediabuttons-integration-tests-ip") {
   package_deps_for_infra_only =
       [ "//src/cobalt/bin/testing/mock_cobalt:mock_cobalt" ]
-  manifest = "meta/mediabuttons_listener_test_ip.cmx"
+  manifest = "meta/mediabuttons_listener_test_ip.cml"
   deps = [
     ":mediabuttons_listener_test_ip",
     "//src/ui/bin/input-pipeline:component-for-test",
     "//src/ui/bin/root_presenter:component_v1_for_test",
-    "//src/ui/scenic:component",
+    "//src/ui/tests/integration_input_tests:input-pipeline-test-realm",
   ]
 
   test_specs = {
