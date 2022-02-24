@@ -112,11 +112,8 @@ template("generated_images_config") {
 
   blob_sparse_fvm = {
     type = "sparse"
-    name = "fvm.sparse.blob"
-    filesystems = [
-      "empty-data",
-      "blob",
-    ]
+    name = "fvm.blob.sparse"
+    filesystems = [ "blob" ]
   }
 
   emmc_fvm = {
@@ -242,6 +239,11 @@ template("generated_images_config") {
     emmc_fvm.filesystems += [ "internal" ]
     nand_fvm.filesystems += [ "internal" ]
   }
+
+  # Note that the order of the filesystems must match how the filesystems are
+  # added in ffx assembly image so that we can diff the command logs.
+  # Once ffx assembly image is removed, we can cleanup this file.
+  blob_sparse_fvm.filesystems += [ "empty-data" ]
 
   # Collect the fvms to generate.
   fvm_outputs = [
