@@ -76,11 +76,9 @@ struct ConfigValues {
 
 class App {
  public:
-  // * `force_flatland_use`: if set, flatland protocol use will be turned on,
-  //   regardless of what the configurations say.
   App(std::unique_ptr<sys::ComponentContext> app_context, inspect::Node inspect_node,
       fpromise::promise<ui_display::DisplayControllerHandles> dc_handles_promise,
-      fit::closure quit_callback, bool force_flatland_use);
+      fit::closure quit_callback);
 
   ~App();
 

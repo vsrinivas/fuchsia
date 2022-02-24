@@ -25,10 +25,6 @@ int main(int argc, const char** argv) {
   if (!fxl::SetLogSettingsFromCommandLine(command_line, {"scenic"}))
     return 1;
 
-  // TODO(fxbug.dev/92839): Remove this when it becomes easy to add the configs
-  // in test realms via the configuration files.
-  const bool force_flatland_use = command_line.HasOption("force-flatland-for-test");
-
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   trace::TraceProviderWithFdio trace_provider(loop.dispatcher());
   // This call creates ComponentContext, but does not start serving immediately. Outgoing directory
@@ -46,9 +42,8 @@ int main(int argc, const char** argv) {
   auto display_controller_promise = ui_display::GetHardwareDisplayController(&hdcp_service_impl);
 
   // Instantiate Scenic app.
-  scenic_impl::App app(
-      std::move(app_context), inspector.root().CreateChild("scenic"),
-      std::move(display_controller_promise), [&loop] { loop.Quit(); }, force_flatland_use);
+  scenic_impl::App app(std::move(app_context), inspector.root().CreateChild("scenic"),
+                       std::move(display_controller_promise), [&loop] { loop.Quit(); });
 
   // TODO(fxbug.dev/40858): Migrate to the role-based scheduler API when available,
   // instead of hard coding parameters.
