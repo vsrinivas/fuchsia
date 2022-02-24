@@ -9,13 +9,15 @@
 #include <fuchsia/hardware/goldfish/pipe/c/banjo.h>
 #include <fuchsia/hardware/goldfish/pipe/cpp/banjo-mock.h>
 #include <lib/fake-bti/bti.h>
-#include <lib/fake_ddk/fake_ddk.h>
 #include <lib/fidl-async/cpp/bind.h>
 #include <lib/fidl/llcpp/wire_messaging.h>
 
 #include <tuple>
 
 #include <zxtest/zxtest.h>
+
+#include "src/devices/testing/mock-ddk/mock-device.h"
+
 namespace goldfish {
 
 class FakeInstance : public Instance {
@@ -31,7 +33,10 @@ class FakeInstance : public Instance {
 // Test suite creating fake Instance on a mock Pipe device.
 class InstanceDeviceTest : public zxtest::Test {
  public:
-  InstanceDeviceTest() : zxtest::Test(), loop_(&kAsyncLoopConfigAttachToCurrentThread) {}
+  InstanceDeviceTest()
+      : zxtest::Test(),
+        fake_root_(MockDevice::FakeRootParent()),
+        loop_(&kAsyncLoopConfigAttachToCurrentThread) {}
 
   // |zxtest::Test|
   void SetUp() override {
@@ -57,8 +62,13 @@ class InstanceDeviceTest : public zxtest::Test {
       zx::vmo::create(16 * 1024, 0u, &out_vmo);
       return std::make_tuple(ZX_OK, ++id_, std::move(out_vmo));
     });
-    ddk_.SetProtocol(ZX_PROTOCOL_GOLDFISH_PIPE, mock_pipe_.GetProto());
-    dut_ = std::make_unique<FakeInstance>(fake_ddk::FakeParent());
+
+    fake_root_->AddProtocol(ZX_PROTOCOL_GOLDFISH_PIPE, mock_pipe_.GetProto()->ops,
+                            mock_pipe_.GetProto()->ctx);
+
+    auto dut = std::make_unique<FakeInstance>(fake_root_.get());
+    ASSERT_OK(dut->Bind());
+    dut_ = dut.release();
 
     zx::status endpoints = fidl::CreateEndpoints<fuchsia_hardware_goldfish::PipeDevice>();
     ASSERT_OK(endpoints.status_value());
@@ -76,8 +86,9 @@ class InstanceDeviceTest : public zxtest::Test {
  protected:
   ddk::MockGoldfishPipe mock_pipe_;
 
-  fake_ddk::Bind ddk_;
-  std::unique_ptr<FakeInstance> dut_;
+  FakeInstance* dut_;
+  std::shared_ptr<MockDevice> fake_root_;
+
   fidl::WireSyncClient<fuchsia_hardware_goldfish::PipeDevice> fidl_client_;
   async::Loop loop_;
 
@@ -87,8 +98,6 @@ class InstanceDeviceTest : public zxtest::Test {
 };
 
 TEST_F(InstanceDeviceTest, OpenPipe) {
-  dut_->Bind();
-
   auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_goldfish::Pipe>();
   ASSERT_TRUE(endpoints.is_ok());
 
@@ -97,15 +106,12 @@ TEST_F(InstanceDeviceTest, OpenPipe) {
 }
 
 TEST_F(InstanceDeviceTest, OpenPipeCloseDutFirst) {
-  dut_->Bind();
-
   auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_goldfish::Pipe>();
   ASSERT_TRUE(endpoints.is_ok());
 
   ASSERT_TRUE(fidl_client_->OpenPipe(std::move(endpoints->server)).ok());
   loop_.RunUntilIdle();
 
-  dut_.reset();
   endpoints->client.reset();
 }
 
