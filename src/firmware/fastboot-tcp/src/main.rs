@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 use anyhow::{self, Context};
-use byteorder::BigEndian;
 use fuchsia_syslog::{self, fx_log_info};
 use std::{
     convert::TryInto,
@@ -11,15 +10,17 @@ use std::{
     net::{Ipv4Addr, Ipv6Addr, SocketAddr, TcpListener},
 };
 
+pub mod fastboot;
+use self::fastboot::*;
+
 const HANDSHAKE_LENGTH: usize = 4;
-const MESSAGE_LENGTH_PREFIX_BYTES: usize = 8;
 const FASTBOOT_PORT: u16 = 5554;
 
 // For simplicity, we only support version 01.
 static HANDSHAKE_MESSAGE: &'static [u8; HANDSHAKE_LENGTH] = b"FB01";
 
-// A process_packet() implementation only for test. It simply echoes back the
-// packet.
+/// A process_packet() implementation only for test. It simply echoes back the
+/// packet.
 #[cfg(test)]
 async fn process_packet<T: Read + Write>(
     stream: &mut T,
@@ -33,11 +34,11 @@ async fn process_packet<T: Read + Write>(
 
 #[cfg(not(test))]
 async fn process_packet<T: Read + Write>(
-    _stream: &mut T,
-    _packet_size: usize,
+    stream: &mut T,
+    packet_size: usize,
 ) -> Result<(), anyhow::Error> {
-    // TODO(b/217597389): Calls into the fastboot library to process the incoming packet.
-    return Err(anyhow::format_err!("Not implemented"));
+    // Process the new packet
+    return fastboot_process_safe(stream, packet_size);
 }
 
 /// Start a fastboot session.
@@ -89,56 +90,14 @@ async fn main() -> Result<(), anyhow::Error> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use byteorder::ByteOrder;
-    use std::cmp::min;
-    use std::io::{Error, ErrorKind};
-
-    struct TestTransport {
-        data_stream: Vec<u8>,
-        sent_packets: Vec<Vec<u8>>,
-    }
-
-    impl TestTransport {
-        pub fn add_data_to_stream(&mut self, buf: &[u8]) {
-            self.data_stream.extend(buf.to_vec());
-        }
-
-        pub fn add_packet_to_stream(&mut self, buf: &[u8]) {
-            let mut packet = vec![0u8; MESSAGE_LENGTH_PREFIX_BYTES];
-            BigEndian::write_u64(&mut packet, buf.len().try_into().unwrap());
-            self.data_stream.extend(&packet);
-            self.data_stream.extend(buf.to_vec());
-        }
-    }
-
-    impl Read for TestTransport {
-        fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
-            if self.data_stream.len() == 0 {
-                return Err(Error::new(ErrorKind::Other, "no more test data"));
-            }
-            let to_read = min(self.data_stream.len(), buf.len());
-            buf.clone_from_slice(&self.data_stream[..to_read]);
-            self.data_stream = self.data_stream[to_read..].to_vec();
-            return Ok(to_read as usize);
-        }
-    }
-
-    impl Write for TestTransport {
-        fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
-            self.sent_packets.push(buf.to_vec());
-            return Ok(buf.len());
-        }
-
-        fn flush(&mut self) -> std::io::Result<()> {
-            // Irrelevant
-            Ok(())
-        }
-    }
 
     #[fuchsia::test]
     async fn fastboot_session_test() {
-        let mut test_transport =
-            TestTransport { data_stream: Vec::<u8>::new(), sent_packets: Vec::<Vec<u8>>::new() };
+        let mut test_transport = fastboot::tests::TestTransport {
+            data_stream: Vec::<u8>::new(),
+            sent_packets: Vec::<Vec<u8>>::new(),
+            fail_write: false,
+        };
         test_transport.add_data_to_stream(b"FB01");
         test_transport.add_packet_to_stream(b"getvar:all");
         test_transport.add_packet_to_stream(b"flash:bootloader");

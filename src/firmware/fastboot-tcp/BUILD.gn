@@ -47,7 +47,11 @@ rustc_binary("bin") {
     "//third_party/rust_crates:tracing",
   ]
 
-  sources = [ "src/main.rs" ]
+  sources = [
+    "src/fastboot.rs",
+    "src/fastboot/fastboot_c.rs",
+    "src/main.rs",
+  ]
   configs -= [ "//build/config/rust:allow_unused_results" ]
 }
 
