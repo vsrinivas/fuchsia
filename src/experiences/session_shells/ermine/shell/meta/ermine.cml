@@ -52,7 +52,7 @@
                 "fuchsia.media.AudioCore",
                 "fuchsia.memory.Monitor",
                 "fuchsia.net.interfaces.State",
-                "fuchsia.power.BatteryManager",
+                "fuchsia.power.battery.BatteryManager",
                 "fuchsia.settings.Intl",
                 "fuchsia.settings.Privacy",
                 "fuchsia.ssh.AuthorizedKeys",

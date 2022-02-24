@@ -85,7 +85,7 @@
                 "fuchsia.net.interfaces.State",
                 "fuchsia.net.name.Lookup",
                 "fuchsia.posix.socket.Provider",
-                "fuchsia.power.BatteryManager",
+                "fuchsia.power.battery.BatteryManager",
                 "fuchsia.process.Launcher",
                 "fuchsia.settings.Intl",
                 "fuchsia.settings.Keyboard",
