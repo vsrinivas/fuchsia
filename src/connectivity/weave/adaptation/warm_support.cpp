@@ -32,9 +32,6 @@ using DeviceLayer::ThreadStackMgrImpl;
 // Fixed name for tunnel interface.
 constexpr char kTunInterfaceName[] = "weav-tun0";
 
-// Prefix length for Thread addresses.
-constexpr uint8_t kThreadPrefixLength = 64;
-
 // Route metric values for primary and backup tunnels. Higher priority tunnels
 // have lower metric values so that they are prioritized in the routing table.
 constexpr uint32_t kRouteMetric_HighPriority = 0;
@@ -419,6 +416,8 @@ void RequestInvokeActions(void) { ::nl::Weave::Warm::InvokeActions(); }
 #if WARM_CONFIG_SUPPORT_THREAD
 PlatformResult AddRemoveThreadAddress(InterfaceType interface_type, const Inet::IPAddress &address,
                                       bool add) {
+  // Prefix length for Thread addresses.
+  static constexpr uint8_t kThreadPrefixLength = 64;
   return AddRemoveAddressInternal(interface_type, address, kThreadPrefixLength, add);
 }
 #endif  // WARM_CONFIG_SUPPORT_THREAD

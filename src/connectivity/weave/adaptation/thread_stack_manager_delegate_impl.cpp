@@ -90,6 +90,14 @@ constexpr size_t kJoinInfoBufferSize{
 constexpr zx::duration kJoinAtStartupTimeout{zx_duration_from_sec(120)};
 // The duration of delay that should occur between join attempts.
 constexpr zx::duration kJoinAtStartupRetryDelay{zx_duration_from_sec(10)};
+
+// Notify WARM of the Thread interface state change, if WARM supports Thread.
+void NotifyThreadInterfaceStateChange(Warm::InterfaceState state) {
+#if WARM_CONFIG_SUPPORT_THREAD
+  return Warm::ThreadInterfaceStateChange(state);
+#endif
+}
+
 }  // namespace
 
 // Note: Since the functions within this class are intended to function
@@ -225,11 +233,11 @@ void ThreadStackManagerDelegateImpl::OnLowpanDeviceChange(
   if (added) {
     FX_LOGS(INFO) << "LoWPAN device added, notifying WARM.";
     PlatformMgr().ScheduleWork(
-        [](intptr_t) { Warm::ThreadInterfaceStateChange(Warm::kInterfaceStateUp); });
+        [](intptr_t) { NotifyThreadInterfaceStateChange(Warm::kInterfaceStateUp); });
   } else if (removed) {
     FX_LOGS(INFO) << "LoWPAN device removed, notifying WARM.";
     PlatformMgr().ScheduleWork(
-        [](intptr_t) { Warm::ThreadInterfaceStateChange(Warm::kInterfaceStateDown); });
+        [](intptr_t) { NotifyThreadInterfaceStateChange(Warm::kInterfaceStateDown); });
   }
 
   lookup_watcher_->WatchDevices(
