@@ -1202,6 +1202,7 @@ mod tests {
         protocols::testing::FakeDaemonBuilder,
         std::{
             cell::RefCell,
+            convert::TryInto,
             fs,
             future::Future,
             net::{Ipv4Addr, Ipv6Addr, SocketAddr},
@@ -1497,14 +1498,17 @@ mod tests {
 
     fn pm_repo_spec() -> RepositorySpec {
         let path = fs::canonicalize(EMPTY_REPO_PATH).unwrap();
-        RepositorySpec::Pm { path }
+        RepositorySpec::Pm { path: path.try_into().unwrap() }
     }
 
     fn filesystem_repo_spec() -> RepositorySpec {
         let repo = fs::canonicalize(EMPTY_REPO_PATH).unwrap();
         let metadata_repo_path = repo.join("repository");
         let blob_repo_path = metadata_repo_path.join("blobs");
-        RepositorySpec::FileSystem { metadata_repo_path, blob_repo_path }
+        RepositorySpec::FileSystem {
+            metadata_repo_path: metadata_repo_path.try_into().unwrap(),
+            blob_repo_path: blob_repo_path.try_into().unwrap(),
+        }
     }
 
     async fn add_repo(proxy: &bridge::RepositoryRegistryProxy, repo_name: &str) {
@@ -2743,7 +2747,8 @@ mod tests {
         run_test(async {
             // Serve the empty repository
             let repo_path = fs::canonicalize(EMPTY_REPO_PATH).unwrap();
-            let pm_backend = PmRepository::new(repo_path);
+            let pm_backend = PmRepository::new(repo_path.try_into().unwrap());
+
             let pm_repo = Repository::new("tuf", Box::new(pm_backend)).await.unwrap();
             let manager = RepositoryManager::new();
             manager.add(Arc::new(pm_repo));

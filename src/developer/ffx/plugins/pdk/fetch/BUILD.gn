@@ -25,6 +25,7 @@ ffx_plugin("ffx_pdk_fetch") {
     "//src/developer/ffx/lib/pkg:empty-repo",
     "//src/developer/ffx/lib/pkg:pkg",
     "//src/sys/pkg/lib/fuchsia-pkg",
+    "//third_party/rust_crates:camino",
     "//third_party/rust_crates:maplit",
     "//third_party/rust_crates:tempfile",
   ]

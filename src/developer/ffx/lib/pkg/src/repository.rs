@@ -6,6 +6,7 @@ use {
     anyhow::{anyhow, Context, Result},
     async_lock::Mutex as AsyncMutex,
     bytes::Bytes,
+    camino::Utf8PathBuf,
     fidl_fuchsia_developer_bridge::{ListFields, PackageEntry, RepositoryPackage},
     fidl_fuchsia_developer_bridge_ext::{RepositorySpec, RepositoryStorageType},
     fidl_fuchsia_pkg as pkg,
@@ -23,7 +24,6 @@ use {
     std::{
         convert::TryFrom,
         io,
-        path::PathBuf,
         sync::{
             atomic::{AtomicUsize, Ordering},
             Arc,
@@ -132,7 +132,7 @@ pub enum Error {
     #[error("not found")]
     NotFound,
     #[error("invalid path '{0}'")]
-    InvalidPath(PathBuf),
+    InvalidPath(Utf8PathBuf),
     #[error("I/O error")]
     Io(#[source] io::Error),
     #[error("URL Parsing Error")]

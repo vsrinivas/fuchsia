@@ -24,7 +24,7 @@ use {
     std::{
         fmt::Debug,
         fs::{metadata, File},
-        path::PathBuf,
+        path::{Path, PathBuf},
         sync::Arc,
         time::SystemTime,
     },
@@ -160,11 +160,13 @@ pub async fn package_download<C>(
     tuf_url: String,
     blob_url: String,
     target_path: String,
-    output_path: PathBuf,
+    output_path: impl AsRef<Path>,
 ) -> Result<()>
 where
     C: Connect + Clone + Debug + Send + Sync + 'static,
 {
+    let output_path = output_path.as_ref();
+
     let backend =
         Box::new(HttpRepository::new(client, Url::parse(&tuf_url)?, Url::parse(&blob_url)?));
     let repo = Repository::new("repo", backend).await?;
@@ -184,7 +186,7 @@ where
     };
 
     if !output_path.exists() {
-        async_fs::create_dir_all(&output_path).await?;
+        async_fs::create_dir_all(output_path).await?;
     }
 
     if output_path.is_file() {
@@ -271,6 +273,7 @@ mod test {
             repository::{PmRepository, RepositoryManager, RepositoryServer},
             test_utils::repo_private_key,
         },
+        camino::Utf8Path,
         fuchsia_async as fasync,
         fuchsia_hyper::new_https_client,
         fuchsia_pkg::PackageBuilder,
@@ -287,19 +290,20 @@ mod test {
     async fn test_download_package() {
         let manager = RepositoryManager::new();
 
-        let tempdir = tempfile::tempdir().unwrap();
+        let tmp = tempfile::tempdir().unwrap();
+        let dir = Utf8Path::from_path(tmp.path()).unwrap();
 
-        let metadata_dir = tempdir.path().join("repository");
+        let metadata_dir = dir.join("repository");
         create_dir(&metadata_dir).unwrap();
 
-        let build_path = tempdir.path().join("build");
+        let build_path = dir.join("build");
         let mut builder = PackageBuilder::new("my-package-name");
         builder.add_contents_as_blob("lib/mylib.so", b"", &build_path).unwrap();
         builder
             .add_contents_to_far("meta/my_component.cmx", b"my_component.cmx contents", &build_path)
             .unwrap();
 
-        let meta_far_path = tempdir.path().join("meta.far");
+        let meta_far_path = dir.join("meta.far");
         let manifest = builder.build(&build_path, &meta_far_path).unwrap();
 
         // Copy the package blobs into the blobs directory.
@@ -341,7 +345,7 @@ mod test {
             .unwrap();
 
         // Create the repository.
-        let backend = PmRepository::new(tempdir.path().to_path_buf());
+        let backend = PmRepository::new(dir.to_path_buf());
         let repo = Repository::new("tuf", Box::new(backend)).await.unwrap();
         manager.add(Arc::new(repo));
 
@@ -355,7 +359,7 @@ mod test {
         let tuf_url = server.local_url() + "/tuf";
         let blob_url = server.local_url() + "/tuf/blobs";
 
-        let result_dir = tempdir.path().join("results");
+        let result_dir = dir.join("results");
         create_dir(&result_dir).unwrap();
         let client = new_https_client();
         let result = package_download(

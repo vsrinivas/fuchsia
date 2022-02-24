@@ -7,21 +7,22 @@ use {
         Error, FileSystemRepository, RepositoryBackend, RepositorySpec, Resource, ResourceRange,
     },
     anyhow::Result,
+    camino::Utf8PathBuf,
     futures::stream::BoxStream,
-    std::{path::PathBuf, time::SystemTime},
+    std::time::SystemTime,
     tuf::{interchange::Json, repository::RepositoryProvider},
 };
 
 /// Serve a repository from a local pm repository.
 #[derive(Debug)]
 pub struct PmRepository {
-    pm_repo_path: PathBuf,
+    pm_repo_path: Utf8PathBuf,
     repo: FileSystemRepository,
 }
 
 impl PmRepository {
     /// Construct a [PmRepository].
-    pub fn new(pm_repo_path: PathBuf) -> Self {
+    pub fn new(pm_repo_path: Utf8PathBuf) -> Self {
         let metadata_repo_path = pm_repo_path.join("repository");
         let blob_repo_path = metadata_repo_path.join("blobs");
         let repo = FileSystemRepository::new(metadata_repo_path, blob_repo_path);

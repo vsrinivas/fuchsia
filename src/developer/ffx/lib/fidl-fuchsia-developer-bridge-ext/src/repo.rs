@@ -3,21 +3,19 @@
 // found in the LICENSE file.
 
 use {
+    camino::Utf8PathBuf,
     fidl_fuchsia_developer_bridge as fidl,
     serde::{Deserialize, Serialize},
-    std::{
-        convert::{TryFrom, TryInto},
-        path::PathBuf,
-    },
+    std::convert::{TryFrom, TryInto},
     thiserror::Error,
 };
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum RepositorySpec {
-    FileSystem { metadata_repo_path: PathBuf, blob_repo_path: PathBuf },
+    FileSystem { metadata_repo_path: Utf8PathBuf, blob_repo_path: Utf8PathBuf },
 
-    Pm { path: PathBuf },
+    Pm { path: Utf8PathBuf },
 
     Http { metadata_repo_url: String, blob_repo_url: String },
 }
@@ -60,9 +58,8 @@ impl From<RepositorySpec> for fidl::RepositorySpec {
     fn from(repo: RepositorySpec) -> Self {
         match repo {
             RepositorySpec::FileSystem { metadata_repo_path, blob_repo_path } => {
-                let metadata_repo_path =
-                    metadata_repo_path.to_str().expect("paths must be UTF-8").clone();
-                let blob_repo_path = blob_repo_path.to_str().expect("paths must be UTF-8").clone();
+                let metadata_repo_path = metadata_repo_path.into_string();
+                let blob_repo_path = blob_repo_path.into_string();
                 fidl::RepositorySpec::FileSystem(fidl::FileSystemRepositorySpec {
                     metadata_repo_path: Some(metadata_repo_path.into()),
                     blob_repo_path: Some(blob_repo_path.into()),
@@ -70,7 +67,7 @@ impl From<RepositorySpec> for fidl::RepositorySpec {
                 })
             }
             RepositorySpec::Pm { path } => {
-                let path = path.to_str().expect("paths must be UTF-8").clone();
+                let path = path.into_string();
                 fidl::RepositorySpec::Pm(fidl::PmRepositorySpec {
                     path: Some(path.into()),
                     ..fidl::PmRepositorySpec::EMPTY

@@ -6,6 +6,7 @@ use {
     super::{Error, RepositoryBackend, Resource, ResourceRange},
     anyhow::Result,
     bytes::{Bytes, BytesMut},
+    camino::{Utf8Component, Utf8Path, Utf8PathBuf},
     fidl_fuchsia_developer_bridge_ext::RepositorySpec,
     futures::{
         io::SeekFrom,
@@ -20,7 +21,6 @@ use {
         cmp::min,
         ffi::OsStr,
         io,
-        path::{Component, Path, PathBuf},
         pin::Pin,
         sync::Arc,
         task::{Context, Poll},
@@ -39,19 +39,19 @@ const CHUNK_SIZE: usize = 8_192;
 /// Serve a repository from the file system.
 #[derive(Debug)]
 pub struct FileSystemRepository {
-    metadata_repo_path: PathBuf,
-    blob_repo_path: PathBuf,
+    metadata_repo_path: Utf8PathBuf,
+    blob_repo_path: Utf8PathBuf,
 }
 
 impl FileSystemRepository {
     /// Construct a [FileSystemRepository].
-    pub fn new(metadata_repo_path: PathBuf, blob_repo_path: PathBuf) -> Self {
+    pub fn new(metadata_repo_path: Utf8PathBuf, blob_repo_path: Utf8PathBuf) -> Self {
         Self { metadata_repo_path, blob_repo_path }
     }
 
     async fn fetch(
         &self,
-        repo_path: &Path,
+        repo_path: &Utf8Path,
         resource_path: &str,
         range: ResourceRange,
     ) -> Result<Resource, Error> {
@@ -192,29 +192,29 @@ impl Stream for WatchStream {
 }
 
 /// Make sure the resource is inside the repo_path.
-fn sanitize_path(repo_path: &Path, resource_path: &str) -> Result<PathBuf, Error> {
-    let resource_path = Path::new(resource_path);
+fn sanitize_path(repo_path: &Utf8Path, resource_path: &str) -> Result<Utf8PathBuf, Error> {
+    let resource_path = Utf8Path::new(resource_path);
 
     let mut parts = vec![];
     for component in resource_path.components() {
         match component {
-            Component::Normal(part) => {
+            Utf8Component::Normal(part) => {
                 parts.push(part);
             }
             _ => {
-                warn!("invalid resource_path: {}", resource_path.display());
+                warn!("invalid resource_path: {}", resource_path);
                 return Err(Error::InvalidPath(resource_path.into()));
             }
         }
     }
 
-    let path = parts.into_iter().collect::<PathBuf>();
+    let path = parts.into_iter().collect::<Utf8PathBuf>();
     Ok(repo_path.join(path))
 }
 
 /// Read a file and return a stream of [Bytes].
 fn file_stream(
-    path: PathBuf,
+    path: Utf8PathBuf,
     mut len: usize,
     mut file: async_fs::File,
 ) -> impl Stream<Item = io::Result<Bytes>> {
@@ -237,7 +237,7 @@ fn file_stream(
 
         // If we read zero bytes, then the file changed size while we were streaming it.
         if n == 0 {
-            error!("file ended before expected: {}", path.display());
+            error!("file ended before expected: {}", path);
             return Poll::Ready(None);
         }
 
@@ -266,22 +266,23 @@ mod tests {
         std::{fs::File, io::Write as _, time::Duration},
     };
     struct TestEnv {
-        _dir: tempfile::TempDir,
-        metadata_path: PathBuf,
-        blob_path: PathBuf,
+        _tmp: tempfile::TempDir,
+        metadata_path: Utf8PathBuf,
+        blob_path: Utf8PathBuf,
         repo: FileSystemRepository,
     }
 
     impl TestEnv {
         fn new() -> Self {
-            let dir = tempfile::tempdir().unwrap();
-            let metadata_path = dir.path().join("metadata");
-            let blob_path = dir.path().join("blobs");
+            let tmp = tempfile::tempdir().unwrap();
+            let dir = Utf8Path::from_path(tmp.path()).unwrap();
+            let metadata_path = dir.join("metadata");
+            let blob_path = dir.join("blobs");
             std::fs::create_dir(&metadata_path).unwrap();
             std::fs::create_dir(&blob_path).unwrap();
 
             Self {
-                _dir: dir,
+                _tmp: tmp,
                 metadata_path: metadata_path.clone(),
                 blob_path: blob_path.clone(),
                 repo: FileSystemRepository::new(metadata_path, blob_path),
@@ -468,7 +469,7 @@ mod tests {
         assert_matches!(env.read_metadata("empty", ResourceRange::RangeFull).await, Ok(body) if body == b"");
         assert_matches!(
             env.read_metadata("subdir/../empty", ResourceRange::RangeFull).await,
-            Err(Error::InvalidPath(path)) if path == Path::new("subdir/../empty")
+            Err(Error::InvalidPath(path)) if path == Utf8Path::new("subdir/../empty")
         );
     }
 

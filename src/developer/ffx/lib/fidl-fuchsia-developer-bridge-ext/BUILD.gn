@@ -13,6 +13,7 @@ rustc_library("fidl-fuchsia-developer-bridge-ext") {
 
   deps = [
     "//sdk/fidl/fuchsia.developer.bridge:fuchsia.developer.bridge-rustc",
+    "//third_party/rust_crates:camino",
     "//third_party/rust_crates:serde",
     "//third_party/rust_crates:thiserror",
   ]

@@ -9,6 +9,7 @@ use {
     ffx_repository_add_from_pm_args::AddFromPmCommand,
     fidl_fuchsia_developer_bridge::RepositoryRegistryProxy,
     fidl_fuchsia_developer_bridge_ext::{RepositoryError, RepositorySpec},
+    std::convert::TryInto,
 };
 
 #[ffx_plugin("ffx_repository", RepositoryRegistryProxy = "daemon::protocol")]
@@ -17,7 +18,8 @@ pub async fn add_from_pm(cmd: AddFromPmCommand, repos: RepositoryRegistryProxy) 
         .pm_repo_path
         .canonicalize()
         .with_context(|| format!("failed to canonicalize {:?}", cmd.pm_repo_path))?;
-    let repo_spec = RepositorySpec::Pm { path: full_path };
+
+    let repo_spec = RepositorySpec::Pm { path: full_path.try_into()? };
 
     match repos.add_repository(&cmd.repository, &mut repo_spec.into()).await? {
         Ok(()) => Ok(()),

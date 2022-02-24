@@ -5,9 +5,10 @@
 use {
     crate::repository::{PmRepository, Repository, RepositoryKeyConfig},
     anyhow::{anyhow, Context, Result},
+    camino::Utf8PathBuf,
     std::{
         fs::{copy, create_dir},
-        path::PathBuf,
+        path::{Path, PathBuf},
     },
     tuf::crypto::Ed25519PrivateKey,
     walkdir::WalkDir,
@@ -35,15 +36,15 @@ pub fn repo_private_key() -> Ed25519PrivateKey {
     .unwrap()
 }
 
-fn copy_dir(from: PathBuf, to: PathBuf) -> Result<()> {
-    let walker = WalkDir::new(from.clone());
+fn copy_dir(from: &Path, to: &Path) -> Result<()> {
+    let walker = WalkDir::new(from);
     for entry in walker.into_iter() {
         let entry = entry?;
-        let to_path = to.join(entry.path().strip_prefix(from.clone())?);
+        let to_path = to.join(entry.path().strip_prefix(from)?);
         if entry.metadata()?.is_dir() {
-            create_dir(to_path.clone()).context(format!("creating {:?}", to_path))?;
+            create_dir(&to_path).context(format!("creating {:?}", to_path))?;
         } else {
-            copy(entry.path(), to_path.clone()).context(format!(
+            copy(entry.path(), &to_path).context(format!(
                 "copying {:?} to {:?}",
                 entry.path(),
                 to_path
@@ -55,12 +56,13 @@ fn copy_dir(from: PathBuf, to: PathBuf) -> Result<()> {
 }
 
 pub async fn make_readonly_empty_repository(name: &str) -> Result<Repository> {
-    let backend = PmRepository::new(PathBuf::from(EMPTY_REPO_PATH));
+    let backend = PmRepository::new(Utf8PathBuf::from(EMPTY_REPO_PATH));
     Repository::new(name, Box::new(backend)).await.map_err(|e| anyhow!(e))
 }
 
-pub async fn make_writable_empty_repository(name: &str, root: PathBuf) -> Result<Repository> {
-    copy_dir(PathBuf::from(EMPTY_REPO_PATH).canonicalize()?, root.clone())?;
+pub async fn make_writable_empty_repository(name: &str, root: Utf8PathBuf) -> Result<Repository> {
+    let src = PathBuf::from(EMPTY_REPO_PATH).canonicalize()?;
+    copy_dir(&src, root.as_std_path())?;
     let backend = PmRepository::new(root);
     Ok(Repository::new(name, Box::new(backend)).await?)
 }

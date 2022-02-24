@@ -243,7 +243,7 @@ async fn handle_request(
                     return status_response(StatusCode::NOT_FOUND);
                 }
                 Err(Error::InvalidPath(path)) => {
-                    warn!("invalid path: {}", path.display());
+                    warn!("invalid path: {}", path);
                     return status_response(StatusCode::BAD_REQUEST);
                 }
                 Err(Error::RangeNotSatisfiable) => {
@@ -517,10 +517,11 @@ mod tests {
         anyhow::Result,
         assert_matches::assert_matches,
         bytes::Bytes,
+        camino::Utf8Path,
         fuchsia_async as fasync,
         http_sse::Client as SseClient,
         std::convert::TryInto,
-        std::{fs::remove_file, io::Write as _, net::Ipv4Addr, path::Path},
+        std::{fs::remove_file, io::Write as _, net::Ipv4Addr},
         timeout::timeout,
     };
 
@@ -579,7 +580,7 @@ mod tests {
         Ok(hyper::body::to_bytes(response).await?)
     }
 
-    fn write_file(path: &Path, body: &[u8]) {
+    fn write_file(path: &Utf8Path, body: &[u8]) {
         let mut tmp = tempfile::NamedTempFile::new().unwrap();
         tmp.write(body).unwrap();
         tmp.persist(path).unwrap();
@@ -638,12 +639,13 @@ mod tests {
     async fn test_get_files_from_repositories() {
         let manager = RepositoryManager::new();
 
-        let d = tempfile::tempdir().unwrap();
+        let tmp = tempfile::tempdir().unwrap();
+        let dir = Utf8Path::from_path(tmp.path()).unwrap();
 
         let test_cases = [("devhost-0", ["0-0", "0-1"]), ("devhost-1", ["1-0", "1-1"])];
 
         for (devhost, bodies) in &test_cases {
-            let dir = d.path().to_path_buf().join(devhost);
+            let dir = dir.join(devhost);
             let repo = make_writable_empty_repository(*devhost, dir.clone()).await.unwrap();
 
             for body in &bodies[..] {
@@ -668,12 +670,13 @@ mod tests {
     async fn test_get_files_with_close_range_from_repositories() {
         let manager = RepositoryManager::new();
 
-        let d = tempfile::tempdir().unwrap();
+        let tmp = tempfile::tempdir().unwrap();
+        let dir = Utf8Path::from_path(tmp.path()).unwrap();
 
         let test_cases = [("devhost-0", ["0-0", "0-1"]), ("devhost-1", ["1-0", "1-1"])];
 
         for (devhost, bodies) in &test_cases {
-            let dir = d.path().to_path_buf().join(devhost);
+            let dir = dir.join(devhost);
             let repo = make_writable_empty_repository(*devhost, dir.clone()).await.unwrap();
 
             for body in &bodies[..] {
@@ -698,12 +701,13 @@ mod tests {
     async fn test_get_files_with_get_416_when_range_too_big() {
         let manager = RepositoryManager::new();
 
-        let d = tempfile::tempdir().unwrap();
+        let tmp = tempfile::tempdir().unwrap();
+        let dir = Utf8Path::from_path(tmp.path()).unwrap();
 
         let test_cases = [("devhost-0", ["0-0", "0-1"]), ("devhost-1", ["1-0", "1-1"])];
 
         for (devhost, bodies) in &test_cases {
-            let dir = d.path().to_path_buf().join(devhost);
+            let dir = dir.join(devhost);
             let repo = make_writable_empty_repository(*devhost, dir.clone()).await.unwrap();
 
             for body in &bodies[..] {
@@ -729,12 +733,12 @@ mod tests {
     async fn test_auto_inner() {
         let manager = RepositoryManager::new();
 
-        let d = tempfile::tempdir().unwrap();
-        let d = d.path().join("devhost");
+        let tmp = tempfile::tempdir().unwrap();
+        let dir = Utf8Path::from_path(tmp.path()).unwrap().join("devhost");
 
-        let repo = make_writable_empty_repository("devhost", d.clone()).await.unwrap();
+        let repo = make_writable_empty_repository("devhost", dir.clone()).await.unwrap();
 
-        let timestamp_file = d.join("repository").join("timestamp.json");
+        let timestamp_file = dir.join("repository").join("timestamp.json");
         write_file(
             &timestamp_file,
             serde_json::to_string(&SignedTimestamp { signed: TimestampFile { version: 1 } })

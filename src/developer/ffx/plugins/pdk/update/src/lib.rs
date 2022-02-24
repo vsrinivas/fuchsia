@@ -406,6 +406,7 @@ mod test {
     use serde_json::json;
     use serde_json5;
     use std::collections::HashMap;
+    use std::convert::TryInto;
     use std::fs;
     use std::io;
     use std::io::Write;
@@ -632,7 +633,10 @@ mod test {
         let manager = RepositoryManager::new();
         let tempdir = tempfile::tempdir().unwrap();
         let root = tempdir.path().join("artifact_store");
-        let repo = make_writable_empty_repository("artifact_store", root.clone()).await.unwrap();
+        let repo =
+            make_writable_empty_repository("artifact_store", root.clone().try_into().unwrap())
+                .await
+                .unwrap();
         let out_filename = tempdir.path().join("artifact_lock.json");
 
         let meta_far_path = root

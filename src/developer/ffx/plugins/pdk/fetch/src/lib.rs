@@ -222,6 +222,7 @@ mod test {
     use pkg::repository::{RepositoryManager, RepositoryServer};
     use pkg::test_utils::make_writable_empty_repository;
     use std::collections::HashMap;
+    use std::convert::TryInto;
     use std::fs::create_dir;
     use std::io;
     use std::io::Write;
@@ -325,7 +326,10 @@ mod test {
 
         let tempdir = tempfile::tempdir().unwrap();
         let root = tempdir.path().join("artifact_store");
-        let repo = make_writable_empty_repository("artifact_store", root.clone()).await.unwrap();
+        let repo =
+            make_writable_empty_repository("artifact_store", root.clone().try_into().unwrap())
+                .await
+                .unwrap();
 
         let blob_dir = root.join("repository").join("blobs");
         create_dir(&blob_dir).unwrap();
@@ -381,7 +385,10 @@ mod test {
 
         let tempdir = tempfile::tempdir().unwrap();
         let root = tempdir.path().join("artifact_store");
-        let repo = make_writable_empty_repository("artifact_store", root.clone()).await.unwrap();
+        let repo =
+            make_writable_empty_repository("artifact_store", root.clone().try_into().unwrap())
+                .await
+                .unwrap();
 
         let blob_dir = root.join("repository").join("blobs");
         create_dir(&blob_dir).unwrap();
@@ -434,7 +441,10 @@ mod test {
 
         let tempdir = tempfile::tempdir().unwrap();
         let root = tempdir.path().join("artifact_store");
-        let repo = make_writable_empty_repository("artifact_store", root.clone()).await.unwrap();
+        let repo =
+            make_writable_empty_repository("artifact_store", root.clone().try_into().unwrap())
+                .await
+                .unwrap();
 
         let blob_dir = root.join("repository").join("blobs");
         create_dir(&blob_dir).unwrap();
