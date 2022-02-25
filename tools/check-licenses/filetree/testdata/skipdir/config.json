@@ -1,0 +1,12 @@
+{
+    "skips": [
+        {
+            "paths": [
+                "{root}/skipMe",
+                "{root}/skipMeCompletely",
+                "{root}/dontSkip/skipMe"
+            ],
+            "notes": []
+        }
+    ]
+}
