@@ -25,7 +25,7 @@ type ProjectConfig struct {
 	// (e.g. "third_party")
 	Barriers []Barrier `json:"barriers"`
 
-	ContinueOnError bool
+	ContinueOnError bool `json:"continueOnError"`
 }
 
 type Readme struct {

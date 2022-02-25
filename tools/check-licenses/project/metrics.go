@@ -4,14 +4,10 @@
 
 package project
 
-import (
-	"fmt"
-)
-
-var (
-	_counts map[string]int
-	_values map[string][]string
-)
+type ProjectMetrics struct {
+	counts map[string]int      `json:"counts"`
+	values map[string][]string `json:"values"`
+}
 
 const (
 	NumProjects = "Project Count"
@@ -20,29 +16,28 @@ const (
 	MissingLicenseFile = "Projects Missing License Files"
 )
 
+var Metrics *ProjectMetrics
+
 func init() {
-	_counts = map[string]int{}
-	_values = map[string][]string{}
+	Metrics = &ProjectMetrics{
+		counts: make(map[string]int),
+		values: make(map[string][]string),
+	}
 }
 
 func plus1(key string) {
-	_counts[key] = _counts[key] + 1
+	Metrics.counts[key] = Metrics.counts[key] + 1
 }
 
 func plusVal(key string, val string) {
-	_values[key] = append(_values[key], val)
+	plus1(key)
+	Metrics.values[key] = append(Metrics.values[key], val)
 }
 
-func GetMetrics(indent string) string {
-	metrics := ""
-	for k, v := range _counts {
-		metrics += fmt.Sprintf("%s%v: %v\n", indent, k, v)
-	}
-	for k, v := range _values {
-		metrics += fmt.Sprintf("%s%v:\n", indent, k)
-		for _, s := range v {
-			metrics += fmt.Sprintf("%s  %v\n", indent, s)
-		}
-	}
-	return metrics
+func (m *ProjectMetrics) Counts() map[string]int {
+	return m.counts
+}
+
+func (m *ProjectMetrics) Values() map[string][]string {
+	return m.values
 }
