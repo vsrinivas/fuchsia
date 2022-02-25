@@ -1,0 +1,35 @@
+{
+  "facets": {
+    "fuchsia.test": {
+      "system-services": [
+        "fuchsia.kernel.HypervisorResource",
+        "fuchsia.kernel.VmexResource",
+        "fuchsia.scheduler.ProfileProvider",
+        "fuchsia.sysinfo.SysInfo",
+        "fuchsia.tracing.provider.Registry"
+      ]
+    }
+  },
+  "include": [
+    "syslog/client.shard.cmx"
+  ],
+  "program": {
+    "binary": "bin/virtualization_sound_tests"
+  },
+  "sandbox": {
+    "features": [
+      "hub"
+    ],
+    "services": [
+      "fuchsia.kernel.HypervisorResource",
+      "fuchsia.kernel.VmexResource",
+      "fuchsia.media.AudioCore",
+      "fuchsia.media.AudioTestDevmgr",
+      "fuchsia.scheduler.ProfileProvider",
+      "fuchsia.sys.Environment",
+      "fuchsia.sys.Loader",
+      "fuchsia.sysinfo.SysInfo",
+      "fuchsia.tracing.provider.Registry"
+    ]
+  }
+}

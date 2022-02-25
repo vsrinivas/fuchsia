@@ -33,6 +33,7 @@ fuchsia-pkg://fuchsia.com/virtualization-core-tests#meta/virtualization_core_tes
 fuchsia-pkg://fuchsia.com/virtualization-gpu-tests#meta/virtualization_gpu_tests.cmx
 fuchsia-pkg://fuchsia.com/virtualization-input-tests#meta/virtualization_input_tests.cmx
 fuchsia-pkg://fuchsia.com/virtualization-net-tests#meta/virtualization_net_tests.cmx
+fuchsia-pkg://fuchsia.com/virtualization-sound-tests#meta/virtualization_sound_tests.cmx
 fuchsia-pkg://fuchsia.com/virtualization-vsock-tests#meta/virtualization_vsock_tests.cmx
 
 # Non-virtualization tests
