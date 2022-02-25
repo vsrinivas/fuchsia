@@ -21,6 +21,8 @@
 #include <filesystem>
 
 #include "fidl/fuchsia.gpu.magma/cpp/wire.h"
+#include "fidl/fuchsia.logger/cpp/wire.h"
+#include "fidl/fuchsia.tracing.provider/cpp/wire.h"
 #include "fuchsia/sysmem/cpp/fidl.h"
 #include "magma_sysmem.h"
 #include "platform_logger.h"
@@ -75,6 +77,43 @@ class FakePerfCountAccessServer
     zx::event::create(0, &event);
     completer.Reply(std::move(event));
   }
+};
+
+class FakeTraceRegistry : public fidl::WireServer<fuchsia_tracing_provider::Registry> {
+ public:
+  explicit FakeTraceRegistry(async::Loop& loop) : loop_(loop) {}
+  void RegisterProvider(RegisterProviderRequestView request,
+                        RegisterProviderCompleter::Sync& _completer) override {
+    loop_.Quit();
+  }
+  void RegisterProviderSynchronously(
+      RegisterProviderSynchronouslyRequestView request,
+      RegisterProviderSynchronouslyCompleter::Sync& _completer) override {}
+
+ private:
+  async::Loop& loop_;
+};
+
+class FakeLogSink : public fidl::WireServer<fuchsia_logger::LogSink> {
+ public:
+  explicit FakeLogSink(async::Loop& loop) : loop_(loop) {}
+
+  void Connect(ConnectRequestView request, ConnectCompleter::Sync& _completer) override {
+    loop_.Quit();
+  }
+  void WaitForInterestChange(WaitForInterestChangeRequestView request,
+                             WaitForInterestChangeCompleter::Sync& completer) override {
+    fprintf(stderr, "Unexpected WaitForInterestChange\n");
+    completer.Close(ZX_ERR_NOT_SUPPORTED);
+  }
+  void ConnectStructured(ConnectStructuredRequestView request,
+                         ConnectStructuredCompleter::Sync& completer) override {
+    fprintf(stderr, "Unexpected ConnectStructured\n");
+    completer.Close(ZX_ERR_NOT_SUPPORTED);
+  }
+
+ private:
+  async::Loop& loop_;
 };
 #endif
 
@@ -737,6 +776,21 @@ class TestConnection {
 #endif
   }
 
+  void TracingInitFake() {
+#if defined(__Fuchsia__)
+    auto endpoints = fidl::CreateEndpoints<fuchsia_tracing_provider::Registry>();
+    ASSERT_TRUE(endpoints.is_ok());
+    async::Loop loop(&kAsyncLoopConfigNeverAttachToThread);
+    FakeTraceRegistry registry(loop);
+
+    fidl::BindServer(loop.dispatcher(), std::move(endpoints->server), &registry);
+
+    EXPECT_EQ(MAGMA_STATUS_OK, magma_initialize_tracing(endpoints->client.TakeChannel().release()));
+    // The loop runs until RegisterProvider is received.
+    loop.Run();
+#endif
+  }
+
   void LoggingInit() {
 #if !defined(__Fuchsia__)
     GTEST_SKIP();
@@ -744,6 +798,21 @@ class TestConnection {
     // Logging should be set up by the test fixture, so just add more logs here to help manually
     // verify that the fixture is working correctly.
     MAGMA_LOG(INFO, "LoggingInit test complete");
+#endif
+  }
+
+  void LoggingInitFake() {
+#if defined(__Fuchsia__)
+    auto endpoints = fidl::CreateEndpoints<fuchsia_logger::LogSink>();
+    ASSERT_TRUE(endpoints.is_ok());
+    async::Loop loop(&kAsyncLoopConfigNeverAttachToThread);
+    FakeLogSink logsink(loop);
+
+    fidl::BindServer(loop.dispatcher(), std::move(endpoints->server), &logsink);
+
+    EXPECT_EQ(MAGMA_STATUS_OK, magma_initialize_logging(endpoints->client.TakeChannel().release()));
+    // The loop runs until Connect is received.
+    loop.Run();
 #endif
   }
 
@@ -1051,6 +1120,11 @@ TEST_F(Magma, LoggingInit) {
   test.LoggingInit();
 }
 
+TEST(MagmaNoDefaultLogging, LoggingInitFake) {
+  TestConnection test;
+  test.LoggingInitFake();
+}
+
 TEST_F(Magma, DeviceId) {
   TestConnection test;
   test.GetDeviceIdImported();
@@ -1088,6 +1162,11 @@ TEST_F(Magma, QueryTestRestartSupported) {
 TEST_F(Magma, TracingInit) {
   TestConnection test;
   test.TracingInit();
+}
+
+TEST_F(Magma, TracingInitFake) {
+  TestConnection test;
+  test.TracingInitFake();
 }
 
 TEST_F(Magma, Buffer) {
