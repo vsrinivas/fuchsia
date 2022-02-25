@@ -1,0 +1,6 @@
+include /src/sys/pkg/OWNERS
+lijiaming@google.com
+raggi@google.com
+sadmac@google.com
+
+# COMPONENT: Packages
