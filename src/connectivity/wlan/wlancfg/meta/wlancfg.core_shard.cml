@@ -60,6 +60,11 @@
             to: "#wlancfg",
         },
         {
+            protocol: "fuchsia.power.clientlevel.Connector",
+            from: "parent",
+            to: "#wlancfg",
+        },
+        {
             directory: "config-data",
             from: "parent",
             to: "#wlancfg",

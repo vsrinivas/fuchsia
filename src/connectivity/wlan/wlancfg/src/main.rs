@@ -7,6 +7,7 @@
 use {
     anyhow::{format_err, Context as _, Error},
     fidl_fuchsia_location_namedplace::RegulatoryRegionWatcherMarker,
+    fidl_fuchsia_power_clientlevel as fidl_lp,
     fidl_fuchsia_wlan_device_service::{DeviceMonitorMarker, DeviceServiceMarker},
     fidl_fuchsia_wlan_policy as fidl_policy, fuchsia_async as fasync,
     fuchsia_async::DurationExt,
@@ -37,7 +38,8 @@ use {
         config_management::{SavedNetworksManager, SavedNetworksManagerApi},
         legacy::{self, device, IfaceRef},
         mode_management::{
-            create_iface_manager, iface_manager_api::IfaceManagerApi, phy_manager::PhyManager,
+            create_iface_manager, iface_manager_api::IfaceManagerApi,
+            low_power_manager::PowerModeManager, phy_manager::PhyManager,
         },
         regulatory_manager::RegulatoryManager,
         telemetry::serve_telemetry,
@@ -215,6 +217,44 @@ async fn run_regulatory_manager(
     regulatory_manager.run(regulatory_sender).await
 }
 
+// wlancfg can respond to low power services updates provided the service is available.  If the
+// service is not available, wlancfg will simply disable power save.  If the service is available,
+// wlancfg will listen for updates to WLAN power level and apply the desired power configuration
+// to all PHYs.
+async fn run_low_power_manager(phy_manager: Arc<Mutex<PhyManager>>) -> Result<(), Error> {
+    // Check if the low power service is offered to wlancfg.
+    let req = match fuchsia_component::client::new_protocol_connector::<fidl_lp::ConnectorMarker>()
+    {
+        Ok(req) => req,
+        Err(e) => {
+            warn!("error probing low power client connector service: {:?}", e);
+            return Ok(());
+        }
+    };
+
+    // Only proceed with monitoring for updates if the Connector service exists and if we can
+    // connect to it.
+    if !req.exists().await.context("error checking for low power Connector existence")? {
+        warn!("Low power Connector is not available");
+        return Ok(());
+    }
+
+    // At this point, the low power service is known to exist and wlancfg will attempt to monitor
+    // for low power updates and to apply the low power settings to all PHYs as new updates and
+    // new PHYs are discovered.  Any error in this process should be considered fatal.
+    let lp_connector = req.connect().context("Unable to connect to low power Connector service")?;
+    let (watcher_proxy, watcher_service) =
+        fidl::endpoints::create_proxy::<fidl_lp::WatcherMarker>()?;
+    if let Err(e) = lp_connector.connect(fidl_lp::ClientType::Wlan, watcher_service) {
+        warn!("Client level connector is unavailable: {:?}", e);
+        return Ok(());
+    }
+
+    let lp_manager = PowerModeManager::new(watcher_proxy, phy_manager);
+    lp_manager.run().await;
+    Ok(())
+}
+
 async fn run_all_futures() -> Result<(), Error> {
     let wlan_svc = fuchsia_component::client::connect_to_protocol::<DeviceServiceMarker>()
         .context("failed to connect to device service")?;
@@ -351,6 +391,7 @@ async fn run_all_futures() -> Result<(), Error> {
 
     let metrics_fut = serve_metrics(saved_networks.clone(), cobalt_fut);
     let regulatory_fut = run_regulatory_manager(iface_manager.clone(), regulatory_sender);
+    let low_power_fut = run_low_power_manager(phy_manager.clone());
 
     let _ = futures::try_join!(
         fidl_fut,
@@ -358,6 +399,7 @@ async fn run_all_futures() -> Result<(), Error> {
         iface_manager_service,
         metrics_fut,
         regulatory_fut,
+        low_power_fut,
         telemetry_fut.map(Ok),
         persistence_req_forwarder_fut.map(Ok),
     )?;

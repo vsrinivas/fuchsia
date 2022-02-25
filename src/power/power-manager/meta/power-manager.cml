@@ -13,7 +13,7 @@
             protocol: [
                 "fuchsia.hardware.power.statecontrol.Admin",
                 "fuchsia.hardware.power.statecontrol.RebootMethodsWatcherRegister",
-                "fuchsia.power.clientlevel.Watcher",
+                "fuchsia.power.clientlevel.Connector",
                 "fuchsia.power.manager.DriverManagerRegistration",
                 "fuchsia.power.profile.Watcher",
                 "fuchsia.power.systemmode.ClientConfigurator",
@@ -43,7 +43,7 @@
             protocol: [
                 "fuchsia.hardware.power.statecontrol.Admin",
                 "fuchsia.hardware.power.statecontrol.RebootMethodsWatcherRegister",
-                "fuchsia.power.clientlevel.Watcher",
+                "fuchsia.power.clientlevel.Connector",
                 "fuchsia.power.manager.DriverManagerRegistration",
                 "fuchsia.power.profile.Watcher",
                 "fuchsia.power.systemmode.ClientConfigurator",

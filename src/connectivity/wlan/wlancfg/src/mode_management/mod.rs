@@ -17,6 +17,7 @@ use {
 mod iface_manager;
 pub mod iface_manager_api;
 mod iface_manager_types;
+pub mod low_power_manager;
 pub mod phy_manager;
 
 pub fn create_iface_manager(

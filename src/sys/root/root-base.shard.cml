@@ -127,6 +127,7 @@
                 "fuchsia.logger.Log",
                 "fuchsia.logger.LogSink",
                 "fuchsia.paver.Paver",
+                "fuchsia.power.clientlevel.Connector",
                 "fuchsia.power.profile.Watcher",
                 "fuchsia.power.systemmode.ClientConfigurator",
                 "fuchsia.power.systemmode.Requester",

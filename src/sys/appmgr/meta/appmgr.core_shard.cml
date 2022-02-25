@@ -133,6 +133,7 @@
                 "fuchsia.kernel.VmexResource",
                 "fuchsia.logger.Log",
                 "fuchsia.paver.Paver",
+                "fuchsia.power.clientlevel.Connector",
                 "fuchsia.power.profile.Watcher",
                 "fuchsia.power.systemmode.ClientConfigurator",
                 "fuchsia.power.systemmode.Requester",
