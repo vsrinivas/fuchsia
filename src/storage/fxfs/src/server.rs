@@ -9,7 +9,6 @@ use {
             filesystem::{Filesystem, Info, OpenFxFilesystem},
             volume::root_volume,
         },
-        server::inspect::{FsInspect, FsInspectTree, InfoData, UsageData, VolumeData},
         server::volume::FxVolumeAndRoot,
     },
     anyhow::{Context, Error},
@@ -27,7 +26,10 @@ use {
         },
     },
     vfs::{
-        directory::entry::DirectoryEntry, execution_scope::ExecutionScope, path::Path,
+        directory::entry::DirectoryEntry,
+        execution_scope::ExecutionScope,
+        inspect::{FsInspect, FsInspectTree, InfoData, UsageData, VolumeData},
+        path::Path,
         registry::token_registry,
     },
 };
@@ -36,7 +38,6 @@ mod device;
 mod directory;
 mod errors;
 pub mod file;
-mod inspect;
 pub mod node;
 pub mod vmo_data_buffer;
 mod volume;
@@ -217,8 +218,6 @@ impl Info {
             max_filename_size: MAX_FILENAME as u32,
             fs_type: VFS_TYPE_FXFS,
             padding: 0,
-
-            // Convert filesystem name into it's resulting FIDL wire type (fixed-size array of i8).
             name: FXFS_INFO_NAME_FIDL,
         }
     }
@@ -256,7 +255,6 @@ impl FsInspect for FxfsServer {
             size_limit_bytes: 0,
             available_space_bytes: 0,
             // TODO(fxbug.dev/93770): Handle out of space events.
-            // TODO(fxbug.dev/85419): Move out_of_space_events to fs.usage.
             out_of_space_events: 0,
         }
     }

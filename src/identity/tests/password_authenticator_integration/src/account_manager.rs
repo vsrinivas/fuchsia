@@ -288,7 +288,7 @@ async fn wait_for_account_close(account: &AccountProxy) -> Result<(), Error> {
 async fn get_account_ids_unprovisioned() {
     let env = TestEnv::build().await;
     let account_ids = env.account_manager().get_account_ids().await.expect("get account ids");
-    assert_eq!(account_ids, vec![]);
+    assert_eq!(account_ids, Vec::<u64>::new());
 }
 
 #[fuchsia::test]
@@ -298,7 +298,7 @@ async fn deprecated_provision_new_null_password_account_on_unformatted_partition
     let account_manager = env.account_manager();
 
     let account_ids = account_manager.get_account_ids().await.expect("get account ids");
-    assert_eq!(account_ids, vec![]);
+    assert_eq!(account_ids, Vec::<u64>::new());
 
     let (_account_proxy, server_end) = fidl::endpoints::create_proxy().unwrap();
     account_manager
@@ -322,7 +322,7 @@ async fn deprecated_provision_new_real_password_account_on_unformatted_partition
     let account_manager = env.account_manager();
 
     let account_ids = account_manager.get_account_ids().await.expect("get account ids");
-    assert_eq!(account_ids, vec![]);
+    assert_eq!(account_ids, Vec::<u64>::new());
 
     let (_account_proxy, server_end) = fidl::endpoints::create_proxy().unwrap();
     account_manager
@@ -415,7 +415,7 @@ async fn deprecated_provision_new_account_formats_directory() {
     let account_manager = env.account_manager();
 
     let account_ids = account_manager.get_account_ids().await.expect("get account ids");
-    assert_eq!(account_ids, vec![]);
+    assert_eq!(account_ids, Vec::<u64>::new());
 
     let expected_content = b"some data";
     {
@@ -605,7 +605,7 @@ async fn null_provision_and_unlock_with_real_password_fails_with_failed_authenti
     let account_manager = env.account_manager();
 
     let account_ids = account_manager.get_account_ids().await.expect("get account ids");
-    assert_eq!(account_ids, vec![]);
+    assert_eq!(account_ids, Vec::<u64>::new());
 
     let (account_proxy, server_end) = fidl::endpoints::create_proxy().unwrap();
     account_manager

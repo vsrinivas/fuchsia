@@ -2,19 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-//
-// TODO(bcastell): For fxfs though we need a metric collection system that can be compiled cross
-// platform and is unintrusive to use, similar to how tracing is done. These metrics should be added
-// to the "fs.detail" node since they will be filesystem specific, and not require any knowledge of
-// how those metrics are exposed (unlike the ones defined in this file and in fs_test).
-//
-// TODO(bcastell): Move this file into the Rust VFS, and add a new metrics module to fxfs.
-//
+//! This module contains the `FsInspect` trait which filesystems can implement in order to expose
+//! Inspect metrics in a standardized hierarchy. Once `FsInspect` has been implemented, a
+//! filesystem can attach itself to a root node via `FsInspectTree::new`.
+//!
+//! A filesystem's inspect tree can be tested via `fs_test` by enabling the `supports_inspect`
+//! option. This will validate that the inspect tree hierarchy is consistent and that basic
+//! information is reported correctly. See `src/storage/fs_test/inspect.cc` for details.
 
 use {
     fuchsia_inspect::{LazyNode, Node},
     futures::FutureExt,
-    std::sync::Weak,
+    std::{string::String, sync::Weak},
 };
 
 const INFO_NODE_NAME: &'static str = "fs.info";
@@ -28,6 +27,7 @@ const VOLUME_NODE_NAME: &'static str = "fs.volume";
 pub trait FsInspect {
     fn get_info_data(&self) -> InfoData;
     fn get_usage_data(&self) -> UsageData;
+    // TODO(fxbug.dev/85419): Provide default impl for non-FVM based filesystems.
     fn get_volume_data(&self) -> VolumeData;
 }
 
@@ -49,7 +49,7 @@ impl FsInspectTree {
             async move {
                 let inspector = fuchsia_inspect::Inspector::new();
                 if let Some(fs) = fs_clone.upgrade() {
-                    fs.get_info_data().record(inspector.root());
+                    fs.get_info_data().record_into(inspector.root());
                 }
                 Ok(inspector)
             }
@@ -62,7 +62,7 @@ impl FsInspectTree {
             async move {
                 let inspector = fuchsia_inspect::Inspector::new();
                 if let Some(fs) = fs_clone.upgrade() {
-                    fs.get_usage_data().record(inspector.root());
+                    fs.get_usage_data().record_into(inspector.root());
                 }
                 Ok(inspector)
             }
@@ -75,7 +75,7 @@ impl FsInspectTree {
             async move {
                 let inspector = fuchsia_inspect::Inspector::new();
                 if let Some(fs) = fs_clone.upgrade() {
-                    fs.get_volume_data().record(inspector.root());
+                    fs.get_volume_data().record_into(inspector.root());
                 }
                 Ok(inspector)
             }
@@ -90,7 +90,7 @@ impl FsInspectTree {
 pub struct InfoData {
     pub id: u64,
     pub fs_type: u64,
-    pub name: &'static str,
+    pub name: String,
     pub version_major: u64,
     pub version_minor: u64,
     pub oldest_minor_version: u64,
@@ -108,7 +108,7 @@ impl InfoData {
     const BLOCK_SIZE: &'static str = "block_size";
     const MAX_FILENAME_LENGTH: &'static str = "max_filename_length";
 
-    fn record(self, node: &Node) {
+    fn record_into(self, node: &Node) {
         node.record_uint(Self::ID_KEY, self.id);
         node.record_uint(Self::FS_TYPE_KEY, self.fs_type);
         node.record_string(Self::NAME_KEY, self.name);
@@ -134,7 +134,7 @@ impl UsageData {
     const TOTAL_NODES_KEY: &'static str = "total_nodes";
     const USED_NODES_KEY: &'static str = "used_nodes";
 
-    fn record(self, node: &Node) {
+    fn record_into(self, node: &Node) {
         node.record_uint(Self::TOTAL_BYTES_KEY, self.total_bytes);
         node.record_uint(Self::USED_BYTES_KEY, self.used_bytes);
         node.record_uint(Self::TOTAL_NODES_KEY, self.total_nodes);
@@ -147,6 +147,7 @@ pub struct VolumeData {
     pub size_bytes: u64,
     pub size_limit_bytes: u64,
     pub available_space_bytes: u64,
+    // TODO(fxbug.dev/85419): Move out_of_space_events to fs.usage, and rename node to fs.fvm_stats.
     pub out_of_space_events: u64,
 }
 
@@ -156,7 +157,7 @@ impl VolumeData {
     const AVAILABLE_SPACE_BYTES_KEY: &'static str = "available_space_bytes";
     const OUT_OF_SPACE_EVENTS_KEY: &'static str = "out_of_space_events";
 
-    fn record(self, node: &Node) {
+    fn record_into(self, node: &Node) {
         node.record_uint(Self::SIZE_BYTES_KEY, self.size_bytes);
         node.record_uint(Self::SIZE_LIMIT_BYTES_KEY, self.size_limit_bytes);
         node.record_uint(Self::AVAILABLE_SPACE_BYTES_KEY, self.available_space_bytes);

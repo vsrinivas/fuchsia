@@ -80,7 +80,7 @@ mod tests {
 
     #[test]
     fn test_split_flags() {
-        assert_eq!(split_flags(0), vec![]);
+        assert_eq!(split_flags(0), Vec::<u32>::new());
         assert_eq!(split_flags(0b001), vec![0b001]);
         assert_eq!(split_flags(0b101), vec![0b001, 0b100]);
         assert_eq!(split_flags(0b111), vec![0b001, 0b010, 0b100]);

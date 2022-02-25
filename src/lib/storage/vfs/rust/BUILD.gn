@@ -11,6 +11,7 @@ rustc_library("vfs") {
   deps = [
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//sdk/fidl/fuchsia.mem:fuchsia.mem-rustc",
+    "//src/lib/diagnostics/inspect/rust",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-runtime",
@@ -82,6 +83,7 @@ rustc_library("vfs") {
     "src/file/vmo/connection/io1.rs",
     "src/filesystem.rs",
     "src/filesystem/simple.rs",
+    "src/inspect.rs",
     "src/lib.rs",
     "src/path.rs",
     "src/pseudo_directory.rs",

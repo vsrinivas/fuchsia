@@ -136,7 +136,6 @@ if (is_fuchsia) {
     "src/server/directory.rs",
     "src/server/errors.rs",
     "src/server/file.rs",
-    "src/server/inspect.rs",
     "src/server/node.rs",
     "src/server/testing.rs",
     "src/server/vmo_data_buffer.rs",

@@ -141,6 +141,7 @@ mod tests {
         futures::{
             future::poll_fn, io::AsyncReadExt as _, join, StreamExt as _, TryStreamExt as _,
         },
+        std::convert::TryFrom as _,
         tempfile::TempDir,
     };
 
@@ -453,7 +454,7 @@ mod tests {
                     // requested.
                     match stream.next().await.unwrap().unwrap() {
                         FileRequest::Read { count, responder } => {
-                            assert_eq!(count, first_poll_read_len.try_into().unwrap());
+                            assert_eq!(count, u64::try_from(first_poll_read_len).unwrap());
                             let resp = vec![7u8; min(file_size, first_poll_read_len)];
                             responder.send(&mut Ok(resp)).unwrap();
                         }
@@ -470,7 +471,7 @@ mod tests {
                         if first_poll_read_len == 0 && second_poll_read_len != 0 {
                             match stream.next().await.unwrap().unwrap() {
                                 FileRequest::Read { count, responder } => {
-                                    assert_eq!(count, second_poll_read_len.try_into().unwrap());
+                                    assert_eq!(count, u64::try_from(second_poll_read_len).unwrap());
                                     let resp = vec![7u8; min(file_size, second_poll_read_len)];
                                     responder.send(&mut Ok(resp)).unwrap();
                                 }
