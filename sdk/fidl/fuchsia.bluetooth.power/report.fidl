@@ -1,0 +1,69 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.bluetooth.power;
+
+using fuchsia.bluetooth;
+using fuchsia.power.battery;
+using zx;
+
+/// An identifier of a peripheral that is assigned by the system.
+type Identifier = flexible union {
+    // Identifier reserved for the local device.
+    1: local_device struct {};
+
+    // Unique identifier for peripherals connected via Bluetooth - assigned by the Bluetooth stack.
+    2: peer_id fuchsia.bluetooth.PeerId;
+};
+
+/// Information about a peripheral.
+type Information = table {
+    /// Mandatory - unique identifier assigned by the system for the peripheral.
+    1: identifier Identifier;
+
+    /// Mandatory - Describes the current battery information of the peripheral.
+    ///
+    /// `level_percent` will always be present.
+    /// `level_status` is optional.
+    ///
+    /// The remaining fields in `BatteryInfo` are ignored.
+    2: battery_info fuchsia.power.battery.BatteryInfo;
+};
+
+/// Protocol used to observe peripherals owned & discovered by the system.
+@discoverable
+protocol Watcher {
+    /// A hanging get to obtain a list of discovered peripherals and their information.
+    ///
+    /// A response is sent only if this list has changed since the last time the client has sent
+    /// this message. The first call to `Watch` will resolve immediately with the initial set of
+    /// peripheral information.
+    ///
+    ///
+    /// + request `ids` is a list of identifiers to filter the peripheral information on. Use an
+    ///          empty list to receive updates about all peripherals.
+    /// - response `peripherals` is a list of information about the requested peripherals.
+    Watch(struct {
+        ids vector<Identifier>:MAX;
+    }) -> (struct {
+        peripherals vector<Information>:MAX;
+    });
+};
+
+
+/// A protocol used to report information about a peripheral to the system.
+@discoverable
+protocol Reporter {
+    /// Report information about a connected peripheral.
+    ///
+    /// Each `Report` request will be acknowledged. The client shall wait for the acknowledgement
+    /// before sending a subsequent request.
+    ///
+    /// + request `info` is the current information associated with the peripheral.
+    /// - response An empty response will be sent when the server has processed the request.
+    /// * error Returns `ZX_ERR_INVALID_ARGS` if the provided `info` is invalidly formatted.
+    Report(resource struct {
+        info Information;
+    }) -> (struct {}) error zx.status;
+};
