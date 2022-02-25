@@ -33,7 +33,7 @@ rustc_binary("trigger_bin") {
 
 fuchsia_component("echo-server-v1") {
   testonly = true
-  deps = [ "//examples/components/routing/echo_server" ]
+  deps = [ "//src/sys/component_manager/testing/echo_server" ]
   manifest = "meta/echo_server.cmx"
 }
 

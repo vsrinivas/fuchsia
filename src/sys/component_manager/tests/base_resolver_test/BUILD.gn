@@ -76,19 +76,13 @@ fuchsia_component("root") {
   manifest = "meta/root.cml"
 }
 
-fuchsia_component("echo_server") {
-  testonly = true
-  deps = [ "//examples/components/routing/echo_server" ]
-  manifest = "meta/echo_server.cml"
-}
-
 fuchsia_unittest_package("base_resolver_test") {
   manifest = "meta/base_resolver_test.cml"
   deps = [
     ":base_resolver_test_bin",
     ":cm_appmgr_loader",
     ":cm_disabled_resolver",
-    ":echo_server",
     ":root",
+    "//src/sys/component_manager/testing/echo_server",
   ]
 }

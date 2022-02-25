@@ -41,6 +41,6 @@ fuchsia_unittest_package("routing_integration_test") {
   deps = [
     ":routing_integration_test_bin",
     ":trigger",
-    "//examples/components/routing/echo_server:echo_server_component",
+    "//src/sys/component_manager/testing/echo_server",
   ]
 }

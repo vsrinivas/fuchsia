@@ -35,11 +35,11 @@ ALLOWED_RUST_DEPS = [
   "//third_party/rust_crates:tracing",
 
   # Needed by the reboot_on_terminate test.
-  "//examples/components/routing/echo_server:echo_server_component",
   "//examples/components/routing/fidl:echo-rustc",
   "//examples/hello_world/rust:hello-world-rust-component",
   "//sdk/fidl/fuchsia.device.manager:fuchsia.device.manager-rustc",
   "//src/power/shutdown-shim/tests:shutdown_shim_component",
+  "//src/sys/component_manager/testing/echo_server:echo_server",
   "//src/sys/component_manager/tests/fidl:components-rustc",
   "//src/sys/component_manager/tests/reboot_on_terminate:config",
   "//src/sys/component_manager:bin",

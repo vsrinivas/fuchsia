@@ -13,18 +13,17 @@ async fn main() {
 
     expect_dir_listing(
         "/parent_hub/children/echo_server/exec/expose",
-        vec!["diagnostics", "fidl.examples.routing.echo.Echo", "hub"],
+        vec!["fidl.examples.routing.echo.Echo", "fuchsia.component.Binder", "hub"],
     )
     .await;
 
     expect_dir_listing(
         "/parent_hub/children/echo_server/resolved/expose",
-        vec!["diagnostics", "fidl.examples.routing.echo.Echo", "hub"],
+        vec!["fidl.examples.routing.echo.Echo", "fuchsia.component.Binder", "hub"],
     )
     .await;
 
-    expect_dir_listing("/parent_hub/children/echo_server/exec/out", vec!["diagnostics", "svc"])
-        .await;
+    expect_dir_listing("/parent_hub/children/echo_server/exec/out", vec!["svc"]).await;
 
     expect_dir_listing(
         "/parent_hub/children/echo_server/exec/out/svc",

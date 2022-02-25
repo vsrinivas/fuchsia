@@ -104,7 +104,7 @@ fuchsia_unittest_package("hub_integration_test") {
     ":structured_config_reporter",
     ":structured_config_reporter_values",
     ":visibility_reporter",
-    "//examples/components/routing/echo_server:echo_server_component",
     "//src/sys/component_manager:component-manager-realm-builder-debug-cmp",
+    "//src/sys/component_manager/testing/echo_server",
   ]
 }

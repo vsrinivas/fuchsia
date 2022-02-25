@@ -1,0 +1,25 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/rust/rustc_binary.gni")
+
+rustc_binary("echo_placeholder") {
+  deps = [
+    "//examples/components/routing/fidl:echo-rustc",
+    "//src/lib/fuchsia",
+    "//src/lib/fuchsia-component",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
+  ]
+
+  sources = [ "src/main.rs" ]
+}
+
+fuchsia_component("echo_server") {
+  testonly = true
+  component_name = "echo_server"
+  manifest = "meta/echo_server.cml"
+  deps = [ ":echo_placeholder" ]
+}

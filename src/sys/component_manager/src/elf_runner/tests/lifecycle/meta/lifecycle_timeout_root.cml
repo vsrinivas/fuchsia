@@ -2,13 +2,13 @@
     children: [
         {
             name: "custom-timeout-child",
-            url: "fuchsia-pkg://fuchsia.com/elf_runner_lifecycle_test#meta/lifecycle_timeout_node.cm",
+            url: "fuchsia-pkg://fuchsia.com/elf_runner_lifecycle_test#meta/lifecycle.cm",
             startup: "eager",
             environment: "#custom-timeout",
         },
         {
             name: "inherited-timeout-child",
-            url: "fuchsia-pkg://fuchsia.com/elf_runner_lifecycle_test#meta/lifecycle_timeout_node.cm",
+            url: "fuchsia-pkg://fuchsia.com/elf_runner_lifecycle_test#meta/lifecycle.cm",
             startup: "eager",
         },
     ],
