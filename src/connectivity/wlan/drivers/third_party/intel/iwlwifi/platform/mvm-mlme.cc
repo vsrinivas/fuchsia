@@ -452,7 +452,7 @@ zx_status_t mac_configure_assoc(struct iwl_mvm_vif* mvmvif, const wlan_assoc_ctx
   // Copy HT related fields from wlan_assoc_ctx_t.
   mvm_sta->support_ht = assoc_ctx->has_ht_cap;
   if (assoc_ctx->has_ht_cap) {
-    memcpy(&mvm_sta->ht_cap, &assoc_ctx->ht_cap, sizeof(struct ieee80211_ht_capabilities));
+    memcpy(&mvm_sta->ht_cap, &assoc_ctx->ht_cap, sizeof(ht_capabilities_fields_t));
   }
 
   // Change the station states step by step.

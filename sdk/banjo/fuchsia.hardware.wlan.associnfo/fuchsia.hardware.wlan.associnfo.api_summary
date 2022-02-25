@@ -19,13 +19,13 @@ struct/member fuchsia.hardware.wlan.associnfo/WlanAssocCtx.has_ht_cap bool
 struct/member fuchsia.hardware.wlan.associnfo/WlanAssocCtx.has_ht_op bool
 struct/member fuchsia.hardware.wlan.associnfo/WlanAssocCtx.has_vht_cap bool
 struct/member fuchsia.hardware.wlan.associnfo/WlanAssocCtx.has_vht_op bool
-struct/member fuchsia.hardware.wlan.associnfo/WlanAssocCtx.ht_cap ddk.hw.wlan.ieee80211/Ieee80211HtCapabilities
+struct/member fuchsia.hardware.wlan.associnfo/WlanAssocCtx.ht_cap fuchsia.wlan.ieee80211/HtCapabilitiesFields
 struct/member fuchsia.hardware.wlan.associnfo/WlanAssocCtx.ht_op fuchsia.hardware.wlan.associnfo/WlanHtOp
 struct/member fuchsia.hardware.wlan.associnfo/WlanAssocCtx.listen_interval uint16
 struct/member fuchsia.hardware.wlan.associnfo/WlanAssocCtx.qos bool
 struct/member fuchsia.hardware.wlan.associnfo/WlanAssocCtx.rates array<uint8,263>
 struct/member fuchsia.hardware.wlan.associnfo/WlanAssocCtx.rates_cnt uint16
-struct/member fuchsia.hardware.wlan.associnfo/WlanAssocCtx.vht_cap ddk.hw.wlan.ieee80211/Ieee80211VhtCapabilities
+struct/member fuchsia.hardware.wlan.associnfo/WlanAssocCtx.vht_cap fuchsia.wlan.ieee80211/VhtCapabilitiesFields
 struct/member fuchsia.hardware.wlan.associnfo/WlanAssocCtx.vht_op fuchsia.hardware.wlan.associnfo/WlanVhtOp
 struct/member fuchsia.hardware.wlan.associnfo/WlanAssocCtx.wmm_params fuchsia.hardware.wlan.associnfo/WlanWmmParams
 struct fuchsia.hardware.wlan.associnfo/WlanAssocCtx

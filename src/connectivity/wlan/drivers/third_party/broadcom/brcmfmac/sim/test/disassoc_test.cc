@@ -8,7 +8,6 @@
 #include <fuchsia/wlan/ieee80211/cpp/fidl.h>
 #include <zircon/errors.h>
 
-#include <ddk/hw/wlan/ieee80211/c/banjo.h>
 #include <gtest/gtest.h>
 
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sim/test/sim_test.h"

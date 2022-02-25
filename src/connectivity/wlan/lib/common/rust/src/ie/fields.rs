@@ -7,8 +7,8 @@ use {
         buffer_reader::BufferReader, mac::ReasonCode, organization::Oui,
         unaligned_view::UnalignedView,
     },
-    banjo_ddk_hw_wlan_ieee80211 as banjo_80211,
     banjo_fuchsia_hardware_wlan_associnfo as banjo_wlan_associnfo,
+    banjo_fuchsia_wlan_ieee80211 as banjo_80211,
     ieee80211::MacAddr,
     std::mem::size_of,
     wlan_bitfield::bitfield,
@@ -168,13 +168,9 @@ pub struct HtCapabilities {
     pub asel_cap: AselCapability,      // u8
 }
 
-impl From<banjo_80211::Ieee80211HtCapabilities> for HtCapabilities {
-    fn from(cap: banjo_80211::Ieee80211HtCapabilities) -> Self {
-        // Safe to access `fields` because its value is read as raw bytes
-        let sms = unsafe { cap.supported_mcs_set.fields };
-        let mcs_set = (sms.rx_mcs_head as u128)
-            | (sms.rx_mcs_tail as u128) << 64
-            | (sms.tx_mcs as u128) << 96;
+impl From<banjo_80211::HtCapabilitiesFields> for HtCapabilities {
+    fn from(cap: banjo_80211::HtCapabilitiesFields) -> Self {
+        let mcs_set = u128::from_le_bytes(cap.supported_mcs_set);
         Self {
             ht_cap_info: HtCapabilityInfo(cap.ht_capability_info),
             ampdu_params: AmpduParams(cap.ampdu_params),
@@ -186,27 +182,15 @@ impl From<banjo_80211::Ieee80211HtCapabilities> for HtCapabilities {
     }
 }
 
-impl From<HtCapabilities> for banjo_80211::Ieee80211HtCapabilities {
+impl From<HtCapabilities> for banjo_80211::HtCapabilitiesFields {
     fn from(cap: HtCapabilities) -> Self {
         Self {
             ht_capability_info: *&{ cap.ht_cap_info }.raw(),
             ampdu_params: *&{ cap.ampdu_params }.raw(),
-            supported_mcs_set: cap.mcs_set.into(),
+            supported_mcs_set: cap.mcs_set.0.to_le_bytes(),
             ht_ext_capabilities: *&{ cap.ht_ext_cap }.raw(),
             tx_beamforming_capabilities: *&{ cap.txbf_cap }.raw(),
             asel_capabilities: *&{ cap.asel_cap }.raw(),
-        }
-    }
-}
-
-impl From<SupportedMcsSet> for banjo_80211::Ieee80211HtCapabilitiesSupportedMcsSet {
-    fn from(mcs: SupportedMcsSet) -> Self {
-        Self {
-            fields: banjo_80211::Ieee80211HtCapabilitiesSupportedMcsSetFields {
-                rx_mcs_head: (mcs.raw() & ((1 << 64) - 1)) as u64,
-                rx_mcs_tail: ((mcs.raw() >> 64) & ((1 << 32) - 1)) as u32,
-                tx_mcs: ((mcs.raw() >> 96) & ((1 << 32) - 1)) as u32,
-            },
         }
     }
 }
@@ -516,14 +500,17 @@ pub struct HtOperation {
 
 impl From<HtOperation> for banjo_wlan_associnfo::WlanHtOp {
     fn from(op: HtOperation) -> Self {
-        let mcs = banjo_80211::Ieee80211HtCapabilitiesSupportedMcsSet::from(op.basic_ht_mcs_set);
+        // TODO(fxbug.dev/82503): Keep these values as a byte array when supported by our bitfields.
+        let rx_mcs_head = op.basic_ht_mcs_set.0 as u64;
+        let rx_mcs_tail = (op.basic_ht_mcs_set.0 >> 64 & 0xFFFF_FFFF_FFFF_FFFF) as u32;
+        let tx_mcs = (op.basic_ht_mcs_set.0 >> 96 & 0xFFFF_FFFF_FFFF_FFFF) as u32;
         Self {
             primary_channel: op.primary_channel,
             head: *&{ op.ht_op_info_head }.raw(),
             tail: *&{ op.ht_op_info_tail }.raw(),
-            rx_mcs_head: unsafe { mcs.fields.rx_mcs_head },
-            rx_mcs_tail: unsafe { mcs.fields.rx_mcs_tail },
-            tx_mcs: unsafe { mcs.fields.tx_mcs },
+            rx_mcs_head,
+            rx_mcs_tail,
+            tx_mcs,
         }
     }
 }
@@ -984,8 +971,8 @@ pub struct VhtCapabilities {
     pub vht_mcs_nss: VhtMcsNssSet,         // u64
 }
 
-impl From<banjo_80211::Ieee80211VhtCapabilities> for VhtCapabilities {
-    fn from(cap: banjo_80211::Ieee80211VhtCapabilities) -> Self {
+impl From<banjo_80211::VhtCapabilitiesFields> for VhtCapabilities {
+    fn from(cap: banjo_80211::VhtCapabilitiesFields) -> Self {
         Self {
             vht_cap_info: VhtCapabilitiesInfo(cap.vht_capability_info),
             vht_mcs_nss: VhtMcsNssSet(cap.supported_vht_mcs_and_nss_set),
@@ -993,7 +980,7 @@ impl From<banjo_80211::Ieee80211VhtCapabilities> for VhtCapabilities {
     }
 }
 
-impl From<VhtCapabilities> for banjo_80211::Ieee80211VhtCapabilities {
+impl From<VhtCapabilities> for banjo_80211::VhtCapabilitiesFields {
     fn from(cap: VhtCapabilities) -> Self {
         Self {
             vht_capability_info: *&{ cap.vht_cap_info }.raw(),
@@ -1182,12 +1169,12 @@ mod tests {
 
     #[test]
     fn ht_cap_mcs_set_conversion() {
-        let from = banjo_80211::Ieee80211HtCapabilities {
+        let from = banjo_80211::HtCapabilitiesFields {
             ht_capability_info: 1,
             ampdu_params: 2,
-            supported_mcs_set: banjo_80211::Ieee80211HtCapabilitiesSupportedMcsSet {
-                bytes: [3, 4, 5, 6, 7, 8, 9, 0xa, 0xb, 0xc, 0xd, 0xe, 0xf, 0x10, 0x11, 0x12],
-            },
+            supported_mcs_set: [
+                3, 4, 5, 6, 7, 8, 9, 0xa, 0xb, 0xc, 0xd, 0xe, 0xf, 0x10, 0x11, 0x12,
+            ],
             ht_ext_capabilities: 0x13,
             tx_beamforming_capabilities: 0x14,
             asel_capabilities: 0x15,
@@ -1339,7 +1326,7 @@ mod tests {
     #[test]
     fn ddk_conversion_ht_capabilities() {
         let ht_cap = crate::ie::fake_ies::fake_ht_capabilities();
-        let ddk: banjo_80211::Ieee80211HtCapabilities = ht_cap.into();
+        let ddk: banjo_80211::HtCapabilitiesFields = ht_cap.into();
         assert_eq!(ht_cap.as_bytes(), unsafe { as_bytes(&ddk) });
 
         let ht_cap: HtCapabilities = ddk.into();
@@ -1349,7 +1336,7 @@ mod tests {
     #[test]
     fn ddk_conversion_vht_capabilities() {
         let vht_cap = crate::ie::fake_ies::fake_vht_capabilities();
-        let ddk: banjo_80211::Ieee80211VhtCapabilities = vht_cap.into();
+        let ddk: banjo_80211::VhtCapabilitiesFields = vht_cap.into();
         assert_eq!(vht_cap.as_bytes(), unsafe { as_bytes(&ddk) });
 
         let vht_cap: VhtCapabilities = ddk.into();

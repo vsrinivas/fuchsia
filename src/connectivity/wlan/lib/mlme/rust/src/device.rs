@@ -624,9 +624,9 @@ pub(crate) mod test_utils {
             buffer::{BufferProvider, FakeBufferProvider},
             error::Error,
         },
-        banjo_ddk_hw_wlan_ieee80211::*,
         banjo_fuchsia_hardware_wlan_phyinfo::*,
         banjo_fuchsia_wlan_common as banjo_common,
+        banjo_fuchsia_wlan_ieee80211::*,
         banjo_fuchsia_wlan_internal as banjo_wlan_internal,
         fidl::endpoints::RequestStream,
         fuchsia_async as fasync,
@@ -1035,7 +1035,7 @@ pub(crate) mod test_utils {
             ht_supported: true,
             ht_caps: ht_cap(),
             vht_supported: false,
-            vht_caps: Ieee80211VhtCapabilities {
+            vht_caps: VhtCapabilitiesFields {
                 vht_capability_info: 0,
                 supported_vht_mcs_and_nss_set: 0,
             },
@@ -1055,7 +1055,7 @@ pub(crate) mod test_utils {
             ht_supported: true,
             ht_caps: ht_cap(),
             vht_supported: false,
-            vht_caps: Ieee80211VhtCapabilities {
+            vht_caps: VhtCapabilitiesFields {
                 vht_capability_info: 0x0f805032,
                 supported_vht_mcs_and_nss_set: 0x0000fffe0000fffe,
             },
@@ -1135,18 +1135,16 @@ pub(crate) mod test_utils {
         }
     }
 
-    fn ht_cap() -> Ieee80211HtCapabilities {
-        Ieee80211HtCapabilities {
+    fn ht_cap() -> HtCapabilitiesFields {
+        HtCapabilitiesFields {
             ht_capability_info: 0x0063,
             ampdu_params: 0x17,
-            supported_mcs_set: Ieee80211HtCapabilitiesSupportedMcsSet {
-                bytes: [
-                    // Rx MCS bitmask, Supported MCS values: 0-7
-                    0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-                    // Tx parameters
-                    0x01, 0x00, 0x00, 0x00,
-                ],
-            },
+            supported_mcs_set: [
+                // Rx MCS bitmask, Supported MCS values: 0-7
+                0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                // Tx parameters
+                0x01, 0x00, 0x00, 0x00,
+            ],
             ht_ext_capabilities: 0,
             tx_beamforming_capabilities: 0,
             asel_capabilities: 0,
@@ -1159,16 +1157,16 @@ pub(crate) mod test_utils {
         banjo_wlan_softmac::WlanSoftmacBandCapability {
             band: banjo_common::WlanBand::TWO_GHZ,
             ht_supported: false,
-            ht_caps: Ieee80211HtCapabilities {
+            ht_caps: HtCapabilitiesFields {
                 ht_capability_info: 0,
                 ampdu_params: 0,
-                supported_mcs_set: Ieee80211HtCapabilitiesSupportedMcsSet { bytes: [0; 16] },
+                supported_mcs_set: [0; 16],
                 ht_ext_capabilities: 0,
                 tx_beamforming_capabilities: 0,
                 asel_capabilities: 0,
             },
             vht_supported: false,
-            vht_caps: Ieee80211VhtCapabilities {
+            vht_caps: VhtCapabilitiesFields {
                 vht_capability_info: 0,
                 supported_vht_mcs_and_nss_set: 0,
             },
@@ -1185,8 +1183,8 @@ mod tests {
     use {
         super::*,
         crate::ddk_converter::{self, cssid_from_ssid_unchecked},
-        banjo_ddk_hw_wlan_ieee80211::*,
         banjo_fuchsia_hardware_wlan_phyinfo::*,
+        banjo_fuchsia_wlan_ieee80211::*,
         banjo_fuchsia_wlan_internal as banjo_internal,
         fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211, fuchsia_async as fasync,
         ieee80211::Bssid,
@@ -1500,14 +1498,14 @@ mod tests {
 
             has_ht_cap: false,
             // Safe: This is not read by the driver.
-            ht_cap: unsafe { std::mem::zeroed::<Ieee80211HtCapabilities>() },
+            ht_cap: unsafe { std::mem::zeroed::<HtCapabilitiesFields>() },
             has_ht_op: false,
             // Safe: This is not read by the driver.
             ht_op: unsafe { std::mem::zeroed::<WlanHtOp>() },
 
             has_vht_cap: false,
             // Safe: This is not read by the driver.
-            vht_cap: unsafe { std::mem::zeroed::<Ieee80211VhtCapabilities>() },
+            vht_cap: unsafe { std::mem::zeroed::<VhtCapabilitiesFields>() },
             has_vht_op: false,
             // Safe: This is not read by the driver.
             vht_op: unsafe { std::mem::zeroed::<WlanVhtOp>() },

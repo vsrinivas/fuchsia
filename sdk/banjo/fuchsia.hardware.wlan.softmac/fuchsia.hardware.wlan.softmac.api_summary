@@ -65,11 +65,11 @@ struct fuchsia.hardware.wlan.softmac/WlanSoftmacActiveScanArgs
 struct/member fuchsia.hardware.wlan.softmac/WlanSoftmacBandCapability.band fuchsia.wlan.common/WlanBand
 struct/member fuchsia.hardware.wlan.softmac/WlanSoftmacBandCapability.basic_rate_count uint8
 struct/member fuchsia.hardware.wlan.softmac/WlanSoftmacBandCapability.basic_rate_list array<uint8,12>
-struct/member fuchsia.hardware.wlan.softmac/WlanSoftmacBandCapability.ht_caps ddk.hw.wlan.ieee80211/Ieee80211HtCapabilities
+struct/member fuchsia.hardware.wlan.softmac/WlanSoftmacBandCapability.ht_caps fuchsia.wlan.ieee80211/HtCapabilitiesFields
 struct/member fuchsia.hardware.wlan.softmac/WlanSoftmacBandCapability.ht_supported bool
 struct/member fuchsia.hardware.wlan.softmac/WlanSoftmacBandCapability.operating_channel_count uint8
 struct/member fuchsia.hardware.wlan.softmac/WlanSoftmacBandCapability.operating_channel_list array<uint8,255>
-struct/member fuchsia.hardware.wlan.softmac/WlanSoftmacBandCapability.vht_caps ddk.hw.wlan.ieee80211/Ieee80211VhtCapabilities
+struct/member fuchsia.hardware.wlan.softmac/WlanSoftmacBandCapability.vht_caps fuchsia.wlan.ieee80211/VhtCapabilitiesFields
 struct/member fuchsia.hardware.wlan.softmac/WlanSoftmacBandCapability.vht_supported bool
 struct fuchsia.hardware.wlan.softmac/WlanSoftmacBandCapability
 protocol/member fuchsia.hardware.wlan.softmac/WlanSoftmacIfc.CompleteTx(fuchsia.hardware.wlan.softmac/WlanTxPacket packet,int32 status) -> ()

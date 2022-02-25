@@ -38,7 +38,6 @@
 #include <optional>
 #include <vector>
 
-#include <ddk/hw/wlan/ieee80211/c/banjo.h>
 #include <wifi/wifi-config.h>
 #include <wlan/common/ieee80211.h>
 #include <wlan/common/ieee80211_codes.h>
@@ -3960,12 +3959,12 @@ static void brcmf_update_ht_cap(struct brcmf_if* ifp, wlan_fullmac_band_capabili
   band_cap->ht_caps.ampdu_params |= (max_ampdu_len_exp << IEEE80211_AMPDU_RX_LEN_SHIFT);
 
   // Supported MCS Set
-  size_t mcs_set_size = sizeof(band_cap->ht_caps.supported_mcs_set.bytes);
+  size_t mcs_set_size = sizeof(band_cap->ht_caps.supported_mcs_set);
   if (nchain > mcs_set_size) {
     BRCMF_ERR("Supported MCS set too small for nchain (%u), truncating", nchain);
     nchain = mcs_set_size;
   }
-  memset(&band_cap->ht_caps.supported_mcs_set.bytes[0], 0xff, nchain);
+  memset(&band_cap->ht_caps.supported_mcs_set[0], 0xff, nchain);
 }
 
 static void brcmf_update_vht_cap(struct brcmf_if* ifp, wlan_fullmac_band_capability* band_cap,
@@ -4055,14 +4054,14 @@ static void brcmf_update_vht_cap(struct brcmf_if* ifp, wlan_fullmac_band_capabil
       ((max_ampdu_len_exp & 0x7) << IEEE80211_VHT_CAPS_MAX_AMPDU_LEN_SHIFT);
 }
 
-static void brcmf_dump_80211_ht_caps(ieee80211_ht_capabilities_t* caps) {
+static void brcmf_dump_80211_ht_caps(ht_capabilities_fields_t* caps) {
   BRCMF_DBG_UNFILTERED("     ht_capability_info: %#x", caps->ht_capability_info);
   BRCMF_DBG_UNFILTERED("     ampdu_params: %#x", caps->ampdu_params);
 
-  char mcs_set_str[std::size(caps->supported_mcs_set.bytes) * 5 + 1];
+  char mcs_set_str[std::size(caps->supported_mcs_set) * 5 + 1];
   char* str = mcs_set_str;
-  for (unsigned i = 0; i < std::size(caps->supported_mcs_set.bytes); i++) {
-    str += sprintf(str, "%s0x%02hhx", i > 0 ? " " : "", caps->supported_mcs_set.bytes[i]);
+  for (unsigned i = 0; i < std::size(caps->supported_mcs_set); i++) {
+    str += sprintf(str, "%s0x%02hhx", i > 0 ? " " : "", caps->supported_mcs_set[i]);
   }
 
   BRCMF_DBG_UNFILTERED("     mcs_set: %s", mcs_set_str);
@@ -4070,7 +4069,7 @@ static void brcmf_dump_80211_ht_caps(ieee80211_ht_capabilities_t* caps) {
   BRCMF_DBG_UNFILTERED("     asel_capabilities: %#x", caps->asel_capabilities);
 }
 
-static void brcmf_dump_80211_vht_caps(ieee80211_vht_capabilities_t* caps) {
+static void brcmf_dump_80211_vht_caps(vht_capabilities_fields_t* caps) {
   BRCMF_DBG_UNFILTERED("     vht_capability_info: %#x", caps->vht_capability_info);
   BRCMF_DBG_UNFILTERED("     supported_vht_mcs_and_nss_set: %#" PRIx64 "",
                        caps->supported_vht_mcs_and_nss_set);

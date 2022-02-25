@@ -212,7 +212,7 @@ mod tests {
     use {
         super::*,
         crate::device::fake_wlan_softmac_info,
-        banjo_ddk_hw_wlan_ieee80211 as banjo_80211,
+        banjo_fuchsia_wlan_ieee80211 as banjo_80211,
         std::convert::TryInto,
         wlan_common::{ie, mac},
         zerocopy::AsBytes,
@@ -260,21 +260,13 @@ mod tests {
         assert_eq!(0x1234, ddk.capability_info);
 
         assert_eq!(true, ddk.has_ht_cap);
-        let expected_ht_cap: banjo_80211::Ieee80211HtCapabilities =
-            ie::fake_ht_capabilities().into();
+        let expected_ht_cap: banjo_80211::HtCapabilitiesFields = ie::fake_ht_capabilities().into();
 
         // PartialEq not derived because supported_mcs_set is a union. Compare fields individually.
         assert_eq!({ expected_ht_cap.ht_capability_info }, { ddk.ht_cap.ht_capability_info });
         assert_eq!({ expected_ht_cap.ampdu_params }, { ddk.ht_cap.ampdu_params });
 
-        // A union. Compare both variants.
-        unsafe {
-            assert_eq!(expected_ht_cap.supported_mcs_set.bytes, ddk.ht_cap.supported_mcs_set.bytes);
-            assert_eq!(
-                expected_ht_cap.supported_mcs_set.fields,
-                ddk.ht_cap.supported_mcs_set.fields
-            );
-        }
+        assert_eq!(expected_ht_cap.supported_mcs_set, ddk.ht_cap.supported_mcs_set);
 
         assert_eq!({ expected_ht_cap.tx_beamforming_capabilities }, {
             ddk.ht_cap.tx_beamforming_capabilities
@@ -286,7 +278,7 @@ mod tests {
         assert_eq!(expected_ht_op, ddk.ht_op);
 
         assert_eq!(true, ddk.has_vht_cap);
-        let expected_vht_cap: banjo_80211::Ieee80211VhtCapabilities =
+        let expected_vht_cap: banjo_80211::VhtCapabilitiesFields =
             ie::fake_vht_capabilities().into();
         assert_eq!(expected_vht_cap, ddk.vht_cap);
 

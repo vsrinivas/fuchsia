@@ -35,10 +35,9 @@
  *****************************************************************************/
 
 #include <fuchsia/hardware/wlan/associnfo/c/banjo.h>
+#include <fuchsia/wlan/ieee80211/c/banjo.h>
 #include <string.h>
 #include <zircon/status.h>
-
-#include <ddk/hw/wlan/ieee80211/c/banjo.h>
 
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/api/nan.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/error-dump.h"

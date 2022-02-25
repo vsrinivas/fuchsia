@@ -9,7 +9,6 @@
 
 #include <vector>
 
-#include <ddk/hw/wlan/ieee80211/c/banjo.h>
 #include <gtest/gtest.h>
 
 #include "src/connectivity/wlan/lib/mlme/cpp/include/wlan/mlme/mac_frame.h"

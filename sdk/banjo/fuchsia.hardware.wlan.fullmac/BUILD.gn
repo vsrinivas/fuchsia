@@ -7,7 +7,6 @@ import("//build/fidl/fidl.gni")
 fidl("fuchsia.hardware.wlan.fullmac") {
   sources = [ "fullmac.fidl" ]
   public_deps = [
-    "//sdk/banjo/ddk.hw.wlan.ieee80211",
     "//sdk/banjo/fuchsia.hardware.ethernet",
     "//sdk/banjo/fuchsia.hardware.wlan.associnfo",
     "//sdk/fidl/fuchsia.wlan.common",

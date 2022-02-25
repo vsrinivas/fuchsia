@@ -11,14 +11,6 @@ library fuchsia.wlan.ieee80211;
 /// to the length of a UTF-8 encoded string.
 @namespaced
 const MAX_SSID_BYTE_LEN uint8 = 32;
-alias Ssid = bytes:MAX_SSID_BYTE_LEN;
-
-// CSsid is intended for use only in source code using C bindings where
-// the Ssid alias does not exist.
-type CSsid = struct {
-    len uint8;
-    data array<uint8, MAX_SSID_BYTE_LEN>;
-};
 
 /// The limit on the number of SSIDs is 84 because an SSID List IE can contain no
 /// more than 84 one byte SSIDs. (Specifying a zero byte SSID in an SSID List with

@@ -6,6 +6,7 @@
 #define SRC_CONNECTIVITY_WLAN_LIB_COMMON_CPP_INCLUDE_WLAN_COMMON_ELEMENT_H_
 
 #include <fuchsia/hardware/wlan/associnfo/c/banjo.h>
+#include <fuchsia/wlan/ieee80211/c/banjo.h>
 #include <fuchsia/wlan/mlme/cpp/fidl.h>
 #include <zircon/assert.h>
 #include <zircon/compiler.h>
@@ -15,8 +16,8 @@
 #include <unordered_map>
 #include <utility>
 #include <vector>
+#include <endian.h>
 
-#include <ddk/hw/wlan/ieee80211/c/banjo.h>
 #include <wlan/common/bitfield.h>
 #include <wlan/common/element_id.h>
 #include <wlan/common/logging.h>
@@ -573,11 +574,12 @@ class SupportedMcsTxMcs : public common::BitField<uint32_t> {
 
 // IEEE Std 802.11-2016, 9.4.2.56.4
 struct SupportedMcsSet {
+  // TODO(fxbug.dev/82503): We represent a 128 bit field as several int types
+  //    because our bitset implementation depends on integer-size fields.
+  //    Switch to an array when supported.
   SupportedMcsRxMcsHead rx_mcs_head;
   SupportedMcsRxMcsTail rx_mcs_tail;
   SupportedMcsTxMcs tx_mcs;
-
-  // TODO(porce): Implement accessors
 } __PACKED;
 
 // IEEE Std 802.11-2016, 9.4.2.56.5
@@ -745,26 +747,26 @@ struct HtCapabilities {
   TxBfCapability txbf_cap;
   AselCapability asel_cap;
 
-  static HtCapabilities FromDdk(const ieee80211_ht_capabilities_t& ddk) {
+  static HtCapabilities FromDdk(const ht_capabilities_fields_t& ddk) {
     HtCapabilities dst{};
     dst.ht_cap_info.set_val(ddk.ht_capability_info);
     dst.ampdu_params.set_val(ddk.ampdu_params);
-    dst.mcs_set.rx_mcs_head.set_val(ddk.supported_mcs_set.fields.rx_mcs_head);
-    dst.mcs_set.rx_mcs_tail.set_val(ddk.supported_mcs_set.fields.rx_mcs_tail);
-    dst.mcs_set.tx_mcs.set_val(ddk.supported_mcs_set.fields.tx_mcs);
+    dst.mcs_set.rx_mcs_head.set_val(betoh64(*reinterpret_cast<const uint64_t*>(ddk.supported_mcs_set)));
+    dst.mcs_set.rx_mcs_tail.set_val(betoh32(*reinterpret_cast<const uint32_t*>(ddk.supported_mcs_set + 8)));
+    dst.mcs_set.tx_mcs.set_val(betoh32(*reinterpret_cast<const uint32_t*>(ddk.supported_mcs_set + 12)));
     dst.ht_ext_cap.set_val(ddk.ht_ext_capabilities);
     dst.txbf_cap.set_val(ddk.tx_beamforming_capabilities);
     dst.asel_cap.set_val(ddk.asel_capabilities);
     return dst;
   }
 
-  ieee80211_ht_capabilities_t ToDdk() const {
-    ieee80211_ht_capabilities_t ddk{};
+  ht_capabilities_fields_t ToDdk() const {
+    ht_capabilities_fields_t ddk{};
     ddk.ht_capability_info = ht_cap_info.val();
     ddk.ampdu_params = ampdu_params.val();
-    ddk.supported_mcs_set.fields.rx_mcs_head = mcs_set.rx_mcs_head.val();
-    ddk.supported_mcs_set.fields.rx_mcs_tail = mcs_set.rx_mcs_tail.val();
-    ddk.supported_mcs_set.fields.tx_mcs = mcs_set.tx_mcs.val();
+    *reinterpret_cast<uint64_t*>(ddk.supported_mcs_set) = htobe64(mcs_set.rx_mcs_head.val());
+    *reinterpret_cast<uint32_t*>(ddk.supported_mcs_set + 8) = htobe32(mcs_set.rx_mcs_tail.val());
+    *reinterpret_cast<uint32_t*>(ddk.supported_mcs_set + 12) = htobe32(mcs_set.tx_mcs.val());
     ddk.ht_ext_capabilities = ht_ext_cap.val();
     ddk.tx_beamforming_capabilities = txbf_cap.val();
     ddk.asel_capabilities = asel_cap.val();
@@ -1002,15 +1004,15 @@ struct VhtCapabilities {
   VhtCapabilitiesInfo vht_cap_info;
   VhtMcsNss vht_mcs_nss;
 
-  static VhtCapabilities FromDdk(const ieee80211_vht_capabilities_t& ddk) {
+  static VhtCapabilities FromDdk(const vht_capabilities_fields_t& ddk) {
     VhtCapabilities dst{};
     dst.vht_cap_info.set_val(ddk.vht_capability_info);
     dst.vht_mcs_nss.set_val(ddk.supported_vht_mcs_and_nss_set);
     return dst;
   }
 
-  ieee80211_vht_capabilities_t ToDdk() const {
-    ieee80211_vht_capabilities_t ddk{};
+  vht_capabilities_fields_t ToDdk() const {
+    vht_capabilities_fields_t ddk{};
     ddk.vht_capability_info = vht_cap_info.val();
     ddk.supported_vht_mcs_and_nss_set = vht_mcs_nss.val();
     return ddk;

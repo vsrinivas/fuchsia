@@ -2,12 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/wlan/ieee80211/c/banjo.h>
+
 #include <algorithm>
 #include <cstring>
 #include <memory>
 #include <utility>
 
-#include <ddk/hw/wlan/ieee80211/c/banjo.h>
 #include <gtest/gtest.h>
 #include <wlan/common/buffer_writer.h>
 #include <wlan/common/write_element.h>
@@ -117,18 +118,11 @@ TEST_F(Elements, TsInfoScheduleSetting) {
 }
 
 TEST(HtCapabilities, DdkConversion) {
-  ieee80211_ht_capabilities_t ddk{
+  ht_capabilities_fields_t ddk{
       .ht_capability_info = 0x016e,
       .ampdu_params = 0x17,
-      .supported_mcs_set =
-          {
-              .fields =
-                  {
-                      .rx_mcs_head = 0x00000001000000ff,
-                      .rx_mcs_tail = 0x01000000,
-                      .tx_mcs = 0x00000000,
-                  },
-          },
+      .supported_mcs_set = {0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0xff, 0x01, 0x00, 0x00, 0x00,
+                            0x00, 0x00, 0x00, 0x00},
       .ht_ext_capabilities = 0x1234,
       .tx_beamforming_capabilities = 0x12345678,
       .asel_capabilities = 0xff,
@@ -147,9 +141,9 @@ TEST(HtCapabilities, DdkConversion) {
   auto ddk2 = ieee.ToDdk();
   EXPECT_EQ(ddk.ht_capability_info, ddk2.ht_capability_info);
   EXPECT_EQ(ddk.ampdu_params, ddk2.ampdu_params);
-  EXPECT_EQ(ddk.supported_mcs_set.fields.rx_mcs_head, ddk2.supported_mcs_set.fields.rx_mcs_head);
-  EXPECT_EQ(ddk.supported_mcs_set.fields.rx_mcs_tail, ddk2.supported_mcs_set.fields.rx_mcs_tail);
-  EXPECT_EQ(ddk.supported_mcs_set.fields.tx_mcs, ddk2.supported_mcs_set.fields.tx_mcs);
+  for (size_t i = 0; i < 16; i++) {
+    EXPECT_EQ(ddk.supported_mcs_set[i], ddk2.supported_mcs_set[i]);
+  }
   EXPECT_EQ(ddk.ht_ext_capabilities, ddk2.ht_ext_capabilities);
   EXPECT_EQ(ddk.tx_beamforming_capabilities, ddk2.tx_beamforming_capabilities);
   EXPECT_EQ(ddk.asel_capabilities, ddk2.asel_capabilities);
@@ -183,7 +177,7 @@ TEST(HtOperation, DdkConversion) {
 }
 
 TEST(VhtCapabilities, DdkConversion) {
-  ieee80211_vht_capabilities_t ddk{
+  vht_capabilities_fields_t ddk{
       .vht_capability_info = 0xaabbccdd,
       .supported_vht_mcs_and_nss_set = 0x0011223344556677,
   };

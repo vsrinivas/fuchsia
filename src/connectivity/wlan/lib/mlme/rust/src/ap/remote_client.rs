@@ -11,10 +11,11 @@ use {
         disconnect::LocallyInitiated,
         error::Error,
     },
-    banjo_ddk_hw_wlan_ieee80211::*,
     banjo_fuchsia_hardware_wlan_associnfo::*,
-    banjo_fuchsia_wlan_common as banjo_common, fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211,
-    fidl_fuchsia_wlan_mlme as fidl_mlme, fuchsia_zircon as zx,
+    banjo_fuchsia_wlan_common as banjo_common,
+    banjo_fuchsia_wlan_ieee80211::*,
+    fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211, fidl_fuchsia_wlan_mlme as fidl_mlme,
+    fuchsia_zircon as zx,
     ieee80211::{MacAddr, Ssid},
     log::warn,
     std::collections::VecDeque,
@@ -459,14 +460,14 @@ impl RemoteClient {
                     // TODO(fxbug.dev/40917): Correctly support all of this.
                     has_ht_cap: false,
                     // Safe: This is not read by the driver.
-                    ht_cap: unsafe { std::mem::zeroed::<Ieee80211HtCapabilities>() },
+                    ht_cap: unsafe { std::mem::zeroed::<HtCapabilitiesFields>() },
                     has_ht_op: false,
                     // Safe: This is not read by the driver.
                     ht_op: unsafe { std::mem::zeroed::<WlanHtOp>() },
 
                     has_vht_cap: false,
                     // Safe: This is not read by the driver.
-                    vht_cap: unsafe { std::mem::zeroed::<Ieee80211VhtCapabilities>() },
+                    vht_cap: unsafe { std::mem::zeroed::<VhtCapabilitiesFields>() },
                     has_vht_op: false,
                     // Safe: This is not read by the driver.
                     vht_op: unsafe { std::mem::zeroed::<WlanVhtOp>() },

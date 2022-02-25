@@ -13,7 +13,6 @@
 #include <gtest/gtest.h>
 #include <wifi/wifi-config.h>
 
-#include "ddk/hw/wlan/ieee80211/c/banjo.h"
 #include "src/connectivity/wlan/drivers/testing/lib/sim-fake-ap/sim-fake-ap.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/cfg80211.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/common.h"

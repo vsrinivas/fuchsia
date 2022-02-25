@@ -1,0 +1,31 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library fuchsia.wlan.ieee80211;
+
+alias Ssid = bytes:MAX_SSID_BYTE_LEN;
+
+// CSsid is intended for use only in source code using C bindings where
+// the Ssid alias does not exist.
+type CSsid = struct {
+    len uint8;
+    data array<uint8, MAX_SSID_BYTE_LEN>;
+};
+
+/// The HT capabilities element, as defined in 9.4.2.56.
+@packed
+type HtCapabilitiesFields = struct {
+    ht_capability_info uint16;
+    ampdu_params uint8;
+    supported_mcs_set array<uint8, 16>;
+    ht_ext_capabilities uint16;
+    tx_beamforming_capabilities uint32;
+    asel_capabilities uint8;
+};
+
+/// The VHT capabilities element, as defined in 9.4.2.158.
+@packed
+type VhtCapabilitiesFields = struct {
+    vht_capability_info uint32;
+    supported_vht_mcs_and_nss_set uint64;
+};

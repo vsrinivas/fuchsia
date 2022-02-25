@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 library fuchsia.hardware.wlan.softmac;
 
-using ddk.hw.wlan.ieee80211;
 using fuchsia.hardware.wlan.phyinfo;
 using fuchsia.hardware.wlan.associnfo;
 using fuchsia.wlan.common;
@@ -26,13 +25,13 @@ type WlanSoftmacBandCapability = struct {
     /// set to true, and the value in ht_caps indicates the capabilities. Otherwise,
     /// ht_supported is set to false.
     ht_supported bool;
-    ht_caps ddk.hw.wlan.ieee80211.Ieee80211HtCapabilities;
+    ht_caps ieee80211.HtCapabilitiesFields;
 
     /// If the device supports the VHT PHY mode in this band, then vht_supported is
     /// set to true, and the value in vht_caps indicates the capabilities. Otherwise,
     /// vht_supported is set to false.
     vht_supported bool;
-    vht_caps ddk.hw.wlan.ieee80211.Ieee80211VhtCapabilities;
+    vht_caps ieee80211.VhtCapabilitiesFields;
 
     /// A list of operating channels considered valid by hardware, in the context of
     /// regulatory information known to the device driver, at the time of its
@@ -75,7 +74,7 @@ type WlanRxInfoFlags = strict enum : uint32 {
     FCS_INVALID = 0x1;
     /// Padding was added after the MAC header to align the frame body to 4 bytes.
     FRAME_BODY_PADDING_4 = 0x2;
-    // Bits 2-31 reserved
+// Bits 2-31 reserved
 };
 
 type WlanRxInfo = struct {

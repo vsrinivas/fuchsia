@@ -541,7 +541,7 @@ std::string Describe(const HtCapabilities& ht_cap) {
   return std::string(buf);
 }
 
-std::string Describe(const ieee80211_ht_capabilities& ht_caps) {
+std::string Describe(const ht_capabilities_fields_t& ht_caps) {
   return Describe(HtCapabilities::FromDdk(ht_caps));
 }
 

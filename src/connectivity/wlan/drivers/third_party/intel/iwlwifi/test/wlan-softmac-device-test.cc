@@ -507,25 +507,24 @@ class MacInterfaceTest : public WlanSoftmacDeviceTest, public MockTrans {
           {
               .supported_mcs_set =
                   {
-                      .bytes =
-                          {
-                              255,
-                              255,
-                              0,
-                              0,
-                              0,
-                              0,
-                              0,
-                              0,
-                              0,
-                              0,
-                              0,
-                              0,
-                              1,
-                              0,
-                              0,
-                              0,
-                          },
+
+                      255,
+                      255,
+                      0,
+                      0,
+                      0,
+                      0,
+                      0,
+                      0,
+                      0,
+                      0,
+                      0,
+                      0,
+                      1,
+                      0,
+                      0,
+                      0,
+
                   },
           },
   };

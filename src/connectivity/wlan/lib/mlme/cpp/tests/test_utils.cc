@@ -6,6 +6,7 @@
 
 #include <fuchsia/hardware/wlan/associnfo/c/banjo.h>
 #include <fuchsia/hardware/wlan/phyinfo/c/banjo.h>
+#include <fuchsia/wlan/ieee80211/c/banjo.h>
 
 #include <wlan/common/channel.h>
 
@@ -16,18 +17,11 @@ wlan_assoc_ctx_t FakeDdkAssocCtx() {
   return wlan_assoc_ctx_t{
       .has_ht_cap = true,
       .ht_cap =
-          ieee80211_ht_capabilities{
+          ht_capabilities_fields_t{
               .ht_capability_info = 0x0162,
               .ampdu_params = 0x17,
-              .supported_mcs_set =
-                  ieee80211_ht_capabilities_supported_mcs_set_t{
-                      .fields =
-                          ieee80211_ht_capabilities_supported_mcs_set_fields{
-                              .rx_mcs_head = 0x00000001000000ff,
-                              .rx_mcs_tail = 0x01000000,
-                              .tx_mcs = 0x00000000,
-                          },
-                  },
+              .supported_mcs_set = {0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0xff, 0x01, 0x00,
+                                    0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
               .ht_ext_capabilities = 0x1234,
               .tx_beamforming_capabilities = 0x12345678,
               .asel_capabilities = 0xff,
@@ -44,7 +38,7 @@ wlan_assoc_ctx_t FakeDdkAssocCtx() {
           },
       .has_vht_cap = true,
       .vht_cap =
-          ieee80211_vht_capabilities_t{
+          vht_capabilities_fields_t{
               .vht_capability_info = 0x0f805032,
               .supported_vht_mcs_and_nss_set = 0x0000fffe0000fffe,
           },
@@ -74,17 +68,15 @@ wlan_softmac_band_capability_t FakeBandCapability(wlan_band_t band) {
               .ampdu_params = 0x17,
               .supported_mcs_set =
                   {
-                      .bytes =
-                          {
-                              // Rx MCS bitmask
-                              // Supported MCS values: 0-7
-                              // clang-format off
-                        0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-                        0x00, 0x00, 0x00, 0x00,
-                        // Tx parameters
-                        0x01, 0x00, 0x00, 0x00,
-                              // clang-format on
-                          },
+                      // clang-format off
+                    // Rx MCS bitmask
+                    // Supported MCS values: 0-7
+                    // clang-format off
+                    0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                    0x00, 0x00, 0x00, 0x00,
+                    // Tx parameters
+                    0x01, 0x00, 0x00, 0x00,
+                      // clang-format on
                   },
               .ht_ext_capabilities = 0x0000,
               .tx_beamforming_capabilities = 0x00000000,

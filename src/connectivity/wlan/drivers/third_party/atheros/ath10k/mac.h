@@ -21,9 +21,8 @@
 #include <fuchsia/hardware/wlan/associnfo/c/banjo.h>
 #include <fuchsia/hardware/wlan/softmac/c/banjo.h>
 #include <fuchsia/wlan/common/c/banjo.h>
+#include <fuchsia/wlan/ieee80211/c/banjo.h>
 #include <fuchsia/wlan/internal/c/banjo.h>
-
-#include <ddk/hw/wlan/ieee80211/c/banjo.h>
 
 #include "core.h"
 
@@ -79,7 +78,7 @@ struct ath10k_band {
 
   bool ht_supported;
   bool vht_supported;
-  ieee80211_vht_capabilities_t vht_caps;
+  vht_capabilities_fields_t vht_caps;
   uint8_t basic_rate_list[12];
   uint8_t basic_rate_count;
   size_t n_channels;

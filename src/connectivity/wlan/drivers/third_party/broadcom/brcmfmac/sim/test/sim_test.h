@@ -11,7 +11,6 @@
 
 #include <map>
 
-#include <ddk/hw/wlan/ieee80211/c/banjo.h>
 #include <gtest/gtest.h>
 
 #include "src/connectivity/wlan/drivers/testing/lib/sim-device/device.h"

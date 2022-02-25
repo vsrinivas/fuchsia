@@ -34,12 +34,11 @@
  *
  *****************************************************************************/
 
+#include <fuchsia/wlan/ieee80211/c/banjo.h>
 #include <stdbool.h>
 #include <threads.h>
 #include <zircon/compiler.h>
 #include <zircon/syscalls.h>
-
-#include <ddk/hw/wlan/ieee80211/c/banjo.h>
 
 #if 0  // NEEDS_PORTING
 #include "fw-api.h"

@@ -2377,7 +2377,7 @@ static void ath10k_peer_assoc_h_rates(struct ath10k* ar, const wlan_assoc_ctx_t*
 
 static void ath10k_peer_assoc_h_ht(struct ath10k* ar, const wlan_assoc_ctx_t* assoc,
                                    struct wmi_peer_assoc_complete_arg* arg) {
-  const ieee80211_ht_capabilities_t* ht_cap = &assoc->ht_cap;
+  const ht_capabilities_fields_t* ht_cap = &assoc->ht_cap;
   size_t i, n;
   uint8_t max_nss;
   uint32_t stbc;
@@ -2426,14 +2426,14 @@ static void ath10k_peer_assoc_h_ht(struct ath10k* ar, const wlan_assoc_ctx_t* as
     arg->peer_flags |= ar->wmi.peer_flags->stbc;
   }
 
-  if (ht_cap->supported_mcs_set.bytes[1] && ht_cap->supported_mcs_set.bytes[2]) {
+  if (ht_cap->supported_mcs_set[1] && ht_cap->supported_mcs_set[2]) {
     arg->peer_rate_caps |= WMI_RC_TS_FLAG;
-  } else if (ht_cap->supported_mcs_set.bytes[1]) {
+  } else if (ht_cap->supported_mcs_set[1]) {
     arg->peer_rate_caps |= WMI_RC_DS_FLAG;
   }
 
   for (i = 0, n = 0, max_nss = 0; i < IEEE80211_HT_MCS_MASK_LEN * 8; i++) {
-    if (ht_cap->supported_mcs_set.bytes[i / 8] & BIT(i % 8)) {
+    if (ht_cap->supported_mcs_set[i / 8] & BIT(i % 8)) {
       max_nss = (i / 8) + 1;
       arg->peer_ht_rates.rates[n++] = i;
     }

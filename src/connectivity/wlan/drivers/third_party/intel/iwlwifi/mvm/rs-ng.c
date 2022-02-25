@@ -88,7 +88,7 @@ static uint8_t rs_fw_set_active_chains(uint8_t chains) {
 }
 
 static uint8_t rs_fw_sgi_cw_support(struct iwl_mvm_sta* mvm_sta) {
-  struct ieee80211_ht_capabilities* ht_cap = &mvm_sta->ht_cap;
+  ht_capabilities_fields_t* ht_cap = &mvm_sta->ht_cap;
   uint8_t supp = 0;
 
 #if 0  // TODO(fxbug.dev/84773): Support HE (802.11ax)
@@ -121,7 +121,7 @@ static uint8_t rs_fw_sgi_cw_support(struct iwl_mvm_sta* mvm_sta) {
 }
 
 static uint16_t rs_fw_set_config_flags(struct iwl_mvm* mvm, struct iwl_mvm_sta* sta) {
-  struct ieee80211_ht_capabilities* ht_cap = &sta->ht_cap;
+  ht_capabilities_fields_t* ht_cap = &sta->ht_cap;
 
   uint16_t flags = 0;
 
@@ -256,7 +256,7 @@ static void rs_fw_set_supp_rates(struct iwl_mvm_sta* mvm_sta,
   uint16_t i;
   uint64_t nonht_rates = 0;
   uint8_t* supported_rates = mvm_sta->supp_rates;
-  const struct ieee80211_ht_capabilities* ht_cap = &mvm_sta->ht_cap;
+  const ht_capabilities_fields_t* ht_cap = &mvm_sta->ht_cap;
 
 #if 0   // NEEDS_PORTING
   // TODO(fxbug.dev/84773): Support HE (802.11ax)
@@ -282,7 +282,7 @@ static void rs_fw_set_supp_rates(struct iwl_mvm_sta* mvm_sta,
   } else
 
   // TODO(fxbug.dev/36684): Support VHT (802.11ac)
-  const struct ieee80211_vht_capabilities* vht_cap = &sta->vht_cap;
+  const vht_capabilities_fields_t* vht_cap = &sta->vht_cap;
 
   if (vht_cap) {
     cmd->bestSuppMode = IWL_TLC_MNG_MODE_VHT;
@@ -291,8 +291,8 @@ static void rs_fw_set_supp_rates(struct iwl_mvm_sta* mvm_sta,
 #endif  // NEEDS_PORTING
   if (ht_cap) {
     cmd->bestSuppMode = IWL_TLC_MNG_MODE_HT;
-    cmd->mcs[0][0] = (ht_cap->supported_mcs_set.bytes[0]);
-    cmd->mcs[1][0] = (ht_cap->supported_mcs_set.bytes[1]);
+    cmd->mcs[0][0] = (ht_cap->supported_mcs_set[0]);
+    cmd->mcs[1][0] = (ht_cap->supported_mcs_set[1]);
   }
 }
 

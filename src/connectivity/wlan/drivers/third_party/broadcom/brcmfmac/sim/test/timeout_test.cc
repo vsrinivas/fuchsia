@@ -7,7 +7,6 @@
 #include <fuchsia/wlan/common/c/banjo.h>
 #include <zircon/errors.h>
 
-#include <ddk/hw/wlan/ieee80211/c/banjo.h>
 #include <wifi/wifi-config.h>
 
 #include "src/connectivity/wlan/drivers/testing/lib/sim-fake-ap/sim-fake-ap.h"

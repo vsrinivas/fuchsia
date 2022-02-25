@@ -6,8 +6,8 @@
 #define SRC_CONNECTIVITY_WLAN_LIB_MLME_CPP_INCLUDE_WLAN_MLME_DEBUG_H_
 
 #include <fuchsia/hardware/wlan/phyinfo/c/banjo.h>
+#include <fuchsia/wlan/ieee80211/c/banjo.h>
 
-#include <ddk/hw/wlan/ieee80211/c/banjo.h>
 #include <wlan/common/tx_vector.h>
 #include <wlan/mlme/mac_frame.h>
 #include <wlan/mlme/packet.h>
@@ -58,7 +58,7 @@ std::string Describe(const VhtCapabilities& vht_cap);
 std::string Describe(const BasicVhtMcsNss& bvmn);
 std::string Describe(const VhtOperation& vht_op);
 
-std::string Describe(const ieee80211_ht_capabilities& ht_caps);
+std::string Describe(const ht_capabilities_fields_t& ht_caps);
 std::string Describe(const wlan_softmac_band_capability& bi);
 std::string Describe(const wlan_softmac_info& wi);
 std::string Describe(const CapabilityInfo& cap);

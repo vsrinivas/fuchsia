@@ -4,6 +4,7 @@
 
 #include "src/connectivity/wlan/drivers/wlanif/device.h"
 
+#include <fuchsia/wlan/ieee80211/cpp/fidl.h>
 #include <fuchsia/wlan/internal/c/banjo.h>
 #include <fuchsia/wlan/internal/cpp/fidl.h>
 #include <fuchsia/wlan/mlme/cpp/fidl.h>
@@ -22,7 +23,6 @@
 #include <tuple>
 #include <vector>
 
-#include <ddk/hw/wlan/ieee80211/c/banjo.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
