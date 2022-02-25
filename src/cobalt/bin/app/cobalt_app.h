@@ -67,6 +67,8 @@ class CobaltApp {
   // |max_bytes_per_observation_store| The maximum number of bytes to store for each of the
   //                                   observation_stores.
   //
+  // |storage_quotas| The storage quotas used by Cobalt 1.1 local aggregation.
+  //
   // |product_name| A product name included in the SystemProfile that is implicitly part of every
   //                Cobalt metric.
   //
@@ -87,8 +89,8 @@ class CobaltApp {
       fit::callback<void()> shutdown, inspect::Node inspect_node,
       UploadScheduleConfig upload_schedule_cfg, size_t event_aggregator_backfill_days,
       bool start_event_aggregator_worker, bool use_memory_observation_store,
-      size_t max_bytes_per_observation_store, const std::string& product_name,
-      const std::string& board_name, const std::string& version);
+      size_t max_bytes_per_observation_store, StorageQuotas storage_quotas,
+      const std::string& product_name, const std::string& board_name, const std::string& version);
 
  private:
   friend class CobaltAppTest;
@@ -101,8 +103,9 @@ class CobaltApp {
       utils::FuchsiaHTTPClient::LoaderFactory http_loader_factory,
       UploadScheduleConfig upload_schedule_cfg, size_t event_aggregator_backfill_days,
       bool use_memory_observation_store, size_t max_bytes_per_observation_store,
-      const std::string& product_name, const std::string& board_name, const std::string& version,
-      std::unique_ptr<ActivityListenerImpl> listener, std::unique_ptr<DiagnosticsImpl> diagnostics);
+      StorageQuotas storage_quotas, const std::string& product_name, const std::string& board_name,
+      const std::string& version, std::unique_ptr<ActivityListenerImpl> listener,
+      std::unique_ptr<DiagnosticsImpl> diagnostics);
 
   CobaltApp(std::unique_ptr<sys::ComponentContext> context, async_dispatcher_t* dispatcher,
             fidl::InterfaceRequest<fuchsia::process::lifecycle::Lifecycle> lifecycle_handle,

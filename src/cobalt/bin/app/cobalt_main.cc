@@ -63,6 +63,9 @@ constexpr std::string_view kUseMemoryObservationStore = "use_memory_observation_
 
 constexpr std::string_view kMaxBytesTotalFlagName = "max_bytes_per_observation_store";
 
+constexpr std::string_view kPerProjectReservedBytes = "per_project_reserved_bytes";
+constexpr std::string_view kTotalCapacityBytes = "local_storage_max_bytes_total";
+
 constexpr std::string_view kTestOnlyFakeClockFlagName = "test_only_use_fake_clock";
 
 constexpr std::string_view kRequireLifecycleService = "require_lifecycle_service";
@@ -210,13 +213,34 @@ int main(int argc, const char** argv) {
 
   bool use_memory_observation_store = command_line.HasOption(kUseMemoryObservationStore);
 
+  // TODO(fxbug.dev/94259): Update disk usage quotas post F7 cut.
   // Parse the max_bytes_per_observation_store
-  size_t max_bytes_per_observation_store = 1024 * 1024;  // 1 MiB
+  size_t max_bytes_per_observation_store = size_t{460} * 1024;  // 460 KiB (~45% of 1MiB)
   flag_value.clear();
   if (command_line.GetOptionValue(kMaxBytesTotalFlagName, &flag_value)) {
     int num_bytes = std::stoi(flag_value);
     if (num_bytes > 0) {
       max_bytes_per_observation_store = num_bytes;
+    }
+  }
+
+  // Parse StorageQuotas
+  cobalt::StorageQuotas storage_quotas = {
+      .per_project_reserved_bytes = 1024,          // 1KiB per project (enough for 460 projects)
+      .total_capacity_bytes = int64_t{460} * 1024  // 460KiB for local aggregation (~45% of 1MiB)
+  };
+  flag_value.clear();
+  if (command_line.GetOptionValue(kPerProjectReservedBytes, &flag_value)) {
+    int num_bytes = std::stoi(flag_value);
+    if (num_bytes > 0) {
+      storage_quotas.per_project_reserved_bytes = num_bytes;
+    }
+  }
+  flag_value.clear();
+  if (command_line.GetOptionValue(kTotalCapacityBytes, &flag_value)) {
+    int num_bytes = std::stoi(flag_value);
+    if (num_bytes > 0) {
+      storage_quotas.total_capacity_bytes = num_bytes;
     }
   }
 
@@ -228,6 +252,9 @@ int main(int argc, const char** argv) {
                 << " seconds, initial_interval=" << initial_interval.count()
                 << " seconds, upload_jitter=" << (upload_jitter * 100) << "%"
                 << ", max_bytes_per_observation_store=" << max_bytes_per_observation_store
+                << ", storage_quotas.per_project_reserved_bytes="
+                << storage_quotas.per_project_reserved_bytes
+                << ", storage_quotas.total_capacity_bytes=" << storage_quotas.total_capacity_bytes
                 << ", event_aggregator_backfill_days=" << event_aggregator_backfill_days
                 << ", start_event_aggregator_worker=" << start_event_aggregator_worker
                 << ", test_only_use_fake_clock=" << use_fake_clock << ".";
@@ -313,7 +340,8 @@ int main(int argc, const char** argv) {
       std::move(context), loop.dispatcher(), std::move(lifecycle_handle),
       [loop = &loop]() { loop->Quit(); }, inspector.root().CreateChild("cobalt_app"),
       upload_schedule, event_aggregator_backfill_days, start_event_aggregator_worker,
-      use_memory_observation_store, max_bytes_per_observation_store, product, boardname, version);
+      use_memory_observation_store, max_bytes_per_observation_store, storage_quotas, product,
+      boardname, version);
   inspector.Health().Ok();
   loop.Run();
   FX_LOGS(INFO) << "Cobalt will now shut down.";
