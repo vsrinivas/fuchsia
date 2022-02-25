@@ -31,9 +31,20 @@ static zx_status_t lock_slow_path(sync_mutex_t* mutex, zx_time_t deadline,
     // it to indicate this, then wait.  Make sure that we tell the kernel
     // who we think is holding the mutex (and therefore "owns" the futex) as
     // we do so.
+    //
+    // On memory ordering, here and below:
+    //
+    // The contract of locks requires:
+    // - acquire ordering on the lock() path
+    // - release ordering on the unlock() path
+    //
+    // Thus these are the ordering used throughout this file.
     const zx_futex_storage_t contested_state = libsync_mutex_make_contested(old_state);
     if ((contested_state == old_state) ||
-        atomic_compare_exchange_strong(&mutex->futex, &old_state, contested_state)) {
+        atomic_compare_exchange_strong_explicit(&mutex->futex, &old_state,
+                                                contested_state,
+                                                memory_order_acquire,
+                                                memory_order_relaxed)) {
       zx_status_t status = _zx_futex_wait(&mutex->futex, contested_state,
                                           libsync_mutex_make_owner_from_state(old_state), deadline);
 
@@ -77,7 +88,10 @@ static zx_status_t lock_slow_path(sync_mutex_t* mutex, zx_time_t deadline,
     // the futex or not.  When we get around to unlocking, we will need to
     // try to release a waiter, just in case.
     old_state = LIB_SYNC_MUTEX_UNLOCKED;
-    if (atomic_compare_exchange_strong(&mutex->futex, &old_state, owned_and_contested_val)) {
+    if (atomic_compare_exchange_strong_explicit(&mutex->futex, &old_state,
+                                                owned_and_contested_val,
+                                                memory_order_acquire,
+                                                memory_order_relaxed)) {
       return ZX_OK;
     }
   }
@@ -85,8 +99,10 @@ static zx_status_t lock_slow_path(sync_mutex_t* mutex, zx_time_t deadline,
 
 zx_status_t sync_mutex_trylock(sync_mutex_t* mutex) {
   zx_futex_storage_t old_state = LIB_SYNC_MUTEX_UNLOCKED;
-  if (atomic_compare_exchange_strong(&mutex->futex, &old_state,
-                                     libsync_mutex_locked_and_uncontested())) {
+  if (atomic_compare_exchange_strong_explicit(&mutex->futex, &old_state,
+                                              libsync_mutex_locked_and_uncontested(),
+                                              memory_order_acquire,
+                                              memory_order_relaxed)) {
     return ZX_OK;
   }
   return ZX_ERR_BAD_STATE;
@@ -97,7 +113,10 @@ zx_status_t sync_mutex_timedlock(sync_mutex_t* mutex, zx_time_t deadline) {
   // memory barrier that locking a mutex is required to execute.
   zx_futex_storage_t old_state = LIB_SYNC_MUTEX_UNLOCKED;
   zx_futex_storage_t uncontested = libsync_mutex_locked_and_uncontested();
-  if (atomic_compare_exchange_strong(&mutex->futex, &old_state, uncontested)) {
+  if (atomic_compare_exchange_strong_explicit(&mutex->futex, &old_state,
+                                              uncontested,
+                                              memory_order_acquire,
+                                              memory_order_relaxed)) {
     return ZX_OK;
   }
   return lock_slow_path(mutex, deadline, libsync_mutex_make_contested(uncontested), old_state);
@@ -115,7 +134,10 @@ void sync_mutex_lock_with_waiter(sync_mutex_t* mutex) __TA_NO_THREAD_SAFETY_ANAL
   zx_futex_storage_t contested =
       libsync_mutex_make_contested(libsync_mutex_locked_and_uncontested());
 
-  if (atomic_compare_exchange_strong(&mutex->futex, &old_state, contested)) {
+  if (atomic_compare_exchange_strong_explicit(&mutex->futex, &old_state,
+                                              contested,
+                                              memory_order_acquire,
+                                              memory_order_relaxed)) {
     return;
   }
 
@@ -128,7 +150,9 @@ void sync_mutex_lock_with_waiter(sync_mutex_t* mutex) __TA_NO_THREAD_SAFETY_ANAL
 void sync_mutex_unlock(sync_mutex_t* mutex) __TA_NO_THREAD_SAFETY_ANALYSIS {
   // Attempt to release the mutex.  This atomic swap executes the full
   // memory barrier that unlocking a mutex is required to execute.
-  zx_futex_storage_t old_state = atomic_exchange(&mutex->futex, LIB_SYNC_MUTEX_UNLOCKED);
+  zx_futex_storage_t old_state = atomic_exchange_explicit(&mutex->futex,
+                                                          LIB_SYNC_MUTEX_UNLOCKED,
+                                                          memory_order_release);
 
   // At this point, the mutex is unlocked.  In some usage patterns (e.g. for
   // reference counting), another thread might now acquire the mutex and free
