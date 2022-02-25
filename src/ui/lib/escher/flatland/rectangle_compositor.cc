@@ -5,9 +5,11 @@
 #include "src/ui/lib/escher/flatland/rectangle_compositor.h"
 
 #include "src/ui/lib/escher/flatland/flatland_static_config.h"
+#include "src/ui/lib/escher/impl/naive_image.h"
 #include "src/ui/lib/escher/mesh/indexed_triangle_mesh_upload.h"
 #include "src/ui/lib/escher/mesh/tessellation.h"
 #include "src/ui/lib/escher/renderer/render_funcs.h"
+#include "src/ui/lib/escher/util/image_utils.h"
 #include "src/ui/lib/escher/vk/shader_program.h"
 #include "src/ui/lib/escher/vk/texture.h"
 
@@ -18,6 +20,110 @@ const vk::ImageUsageFlags RectangleCompositor::kTextureUsageFlags =
     vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eSampled;
 
 namespace {
+
+static constexpr uint32_t kTransientTargetAttachmentIndex = 0;
+static constexpr uint32_t kOutputTargetAttachmentIndex = 1;
+
+// Helper function which factors out common code from the two InitRenderPassInfo() variants.
+static void InitRenderPassInfoHelper(RenderPassInfo* rp,
+                                     const RenderPassInfo::AttachmentInfo& transient_info,
+                                     const RenderPassInfo::AttachmentInfo& output_info,
+                                     const RenderPassInfo::AttachmentInfo& depth_stencil_info) {
+  FX_DCHECK(output_info.sample_count == 1);
+
+  rp->color_attachment_infos[kTransientTargetAttachmentIndex] = transient_info;
+  rp->color_attachment_infos[kOutputTargetAttachmentIndex] = output_info;
+  rp->depth_stencil_attachment_info = depth_stencil_info;
+
+  {
+    // We have one transient attachment, and one output attachment.
+    rp->num_color_attachments = 2;
+
+    // Clear the intermediate attachment. We don't need to store it.
+    rp->clear_attachments = 1u << kTransientTargetAttachmentIndex;
+
+    // Clear and store the output color attachment 1.
+    rp->clear_attachments |= 1u << kOutputTargetAttachmentIndex;
+    rp->store_attachments |= 1u << kOutputTargetAttachmentIndex;
+
+    // Standard flags for a depth-testing render-pass that needs to first clear
+    // the depth image.
+    rp->op_flags = RenderPassInfo::kClearDepthStencilOp | RenderPassInfo::kOptimalColorLayoutOp |
+                   RenderPassInfo::kOptimalDepthStencilLayoutOp;
+    FX_DCHECK(depth_stencil_info.format != vk::Format::eUndefined);
+
+    rp->clear_color[kTransientTargetAttachmentIndex].setFloat32({0.f, 0.f, 0.f, 0.f});
+    rp->clear_color[kOutputTargetAttachmentIndex].setFloat32({0.f, 0.f, 0.f, 0.f});
+  }
+
+  // This is the subpass used to render the renderables. They render to a
+  // transient image.
+  RenderPassInfo::Subpass subpass = {.color_attachments = {kTransientTargetAttachmentIndex},
+                                     .input_attachments = {},
+                                     .resolve_attachments = {},
+                                     .num_color_attachments = 1,
+                                     .num_input_attachments = 0,
+                                     .num_resolve_attachments = 0};
+
+  // This is the subpass used to perform color conversion. The transient attachment
+  // from subpass1 becomes the input attachment here, and then this subpass renders
+  // out to the render target.
+  RenderPassInfo::Subpass subpass2 = {.color_attachments = {kOutputTargetAttachmentIndex},
+                                      .input_attachments = {kTransientTargetAttachmentIndex},
+                                      .resolve_attachments = {},
+                                      .num_color_attachments = 1,
+                                      .num_input_attachments = 1,
+                                      .num_resolve_attachments = 0};
+
+  rp->subpasses.push_back(subpass);
+  rp->subpasses.push_back(subpass2);
+
+  // Make null the remaining color attachment slots we are not using.
+  for (size_t i = rp->num_color_attachments; i < VulkanLimits::kNumColorAttachments; ++i) {
+    rp->color_attachment_infos[i] = {};
+    rp->color_attachments[i] = nullptr;
+  }
+}
+
+// We need a render pass with two subpasses. The first pass renders each of the
+// renderables to a transient framebuffer, and the second pass reads in those
+// transient values as input, and is used to compute color conversion as a post
+// processing effect over the entire output framebuffer. Since color-conversion
+// doesn't require knowledge of adjacent pixels, subpasses are a relatively
+// straightforward way to handle it.
+bool SetupRenderPass(RenderPassInfo* rp, vk::Rect2D render_area, const ImagePtr& transient_image,
+                     const ImagePtr& output_image, const TexturePtr& depth_texture) {
+  FX_DCHECK(output_image->info().sample_count == 1);
+  rp->render_area = render_area;
+
+  RenderPassInfo::AttachmentInfo transient_info, output_info;
+  RenderPassInfo::AttachmentInfo depth_stencil_info;
+  if (output_image) {
+    if (!output_image->is_swapchain_image()) {
+      FX_LOGS(ERROR) << "RenderPassInfo::InitRenderPassInfo(): Output image doesn't have valid "
+                        "swapchain layout.";
+      return false;
+    }
+    if (output_image->swapchain_layout() != output_image->layout()) {
+      FX_LOGS(ERROR) << "RenderPassInfo::InitRenderPassInfo(): Current layout of output image "
+                        "does not match its swapchain layout.";
+      return false;
+    }
+    transient_info.InitFromImage(transient_image);
+    output_info.InitFromImage(output_image);
+  }
+
+  depth_stencil_info.InitFromImage(depth_texture->image());
+
+  InitRenderPassInfoHelper(rp, transient_info, output_info, depth_stencil_info);
+
+  ImageViewPtr transient_image_view = ImageView::New(transient_image);
+  ImageViewPtr output_image_view = ImageView::New(output_image);
+  rp->color_attachments[kTransientTargetAttachmentIndex] = std::move(transient_image_view);
+  rp->color_attachments[kOutputTargetAttachmentIndex] = std::move(output_image_view);
+  rp->depth_stencil_attachment = depth_texture;
+  return true;
+}
 
 vec4 GetPremultipliedRgba(vec4 rgba) { return vec4(vec3(rgba) * rgba.a, rgba.a); }
 
@@ -113,12 +219,43 @@ void TraverseBatch(CommandBuffer* cmd_buf, vec3 bounds, ShaderProgramPtr program
   }
 }
 
+void ApplyColorConversion(CommandBuffer* cmd_buf, ShaderProgramPtr program,
+                          ImageViewPtr input_attachment, glm::mat4 matrix, glm::vec4 preoffsets,
+                          glm::vec4 postoffsets) {
+  TRACE_DURATION("gfx", "RectangleCompositor::ApplyColorConversion");
+  cmd_buf->SetToDefaultState(CommandBuffer::DefaultState::kOpaque);
+  cmd_buf->SetDepthTestAndWrite(false, false);
+
+  cmd_buf->SetShaderProgram(program, nullptr);
+
+  cmd_buf->BindInputAttachment(/*set*/ 0, /*binding*/ 0, input_attachment);
+
+  // Struct to store all the push constant data in the fragment shader
+  // so we only need to make a single call to PushConstants().
+  struct FragmentShaderPushConstants {
+    alignas(16) mat4 matrix;
+    alignas(16) vec4 preoffsets;
+    alignas(16) vec4 postoffsets;
+  };
+
+  FragmentShaderPushConstants constants = {
+      .matrix = matrix, .preoffsets = preoffsets, .postoffsets = postoffsets};
+
+  cmd_buf->PushConstants(constants);
+
+  // Draw one triangle. The vertex shader knows how to use the gl_VertexIndex
+  // of each vertex to compute the appropriate position.
+  cmd_buf->Draw(/*vertex_count*/ 3);
+}
+
 }  // anonymous namespace
 
 // RectangleCompositor constructor. Initializes the shader program and allocates
 // GPU buffers to store mesh data.
 RectangleCompositor::RectangleCompositor(EscherWeakPtr escher)
-    : standard_program_(escher->GetProgram(kFlatlandStandardProgram)) {}
+    : escher_(escher),
+      standard_program_(escher->GetProgram(kFlatlandStandardProgram)),
+      color_conversion_program_(escher->GetProgram(kFlatlandColorConversionProgram)) {}
 
 // DrawBatch generates the Vulkan data needed to render the batch (e.g. renderpass,
 // bounds, etc) and calls |TraverseBatch| which iterates over the renderables and
@@ -142,7 +279,9 @@ void RectangleCompositor::DrawBatch(CommandBuffer* cmd_buf,
   RenderPassInfo render_pass;
   vk::Rect2D render_area = {{0, 0}, {output_image->width(), output_image->height()}};
 
-  if (!RenderPassInfo::InitRenderPassInfo(&render_pass, render_area, output_image, depth_buffer)) {
+  auto transient_image = CreateOrFindTransientImage(output_image);
+
+  if (!SetupRenderPass(&render_pass, render_area, transient_image, output_image, depth_buffer)) {
     FX_LOGS(ERROR) << "RectangleCompositor::DrawBatch(): RenderPassInfo initialization failed. "
                       "Exiting.";
     return;
@@ -156,14 +295,59 @@ void RectangleCompositor::DrawBatch(CommandBuffer* cmd_buf,
   vec3 bounds(static_cast<float>(output_image->width() * 0.5),
               static_cast<float>(output_image->height() * 0.5), rectangles.size());
 
+  if (transient_image->layout() != vk::ImageLayout::eColorAttachmentOptimal) {
+    cmd_buf->impl()->TransitionImageLayout(transient_image, vk::ImageLayout::eUndefined,
+                                           vk::ImageLayout::eColorAttachmentOptimal);
+  }
+
   // Start the render pass.
   cmd_buf->BeginRenderPass(render_pass);
 
   // Iterate over all the renderables and draw them.
   TraverseBatch(cmd_buf, bounds, standard_program_, rectangles, textures, color_data);
 
+  cmd_buf->NextSubpass();
+
+  ApplyColorConversion(cmd_buf, color_conversion_program_,
+                       render_pass.color_attachments[kTransientTargetAttachmentIndex],
+                       color_conversion_matrix_, color_conversion_preoffsets_,
+                       color_conversion_postoffsets_);
+
   // End the render pass.
   cmd_buf->EndRenderPass();
+}
+
+// TODO(fxbug.dev/94252): It doesn't seem like all platforms actually support transient images.
+// So this is going to be a regular image for now.
+ImagePtr RectangleCompositor::CreateOrFindTransientImage(const ImagePtr& image) {
+  auto itr = transient_image_map_.find(image->info());
+  if (itr != transient_image_map_.end()) {
+    return itr->second;
+  }
+
+  ImageInfo info;
+  info.format = image->info().format;
+  info.width = image->info().width;
+  info.height = image->info().height;
+  info.sample_count = 1;
+  info.usage = vk::ImageUsageFlagBits::eInputAttachment | vk::ImageUsageFlagBits::eColorAttachment;
+  info.color_space = image->info().color_space;
+  info.memory_flags = vk::MemoryPropertyFlagBits::eDeviceLocal;
+  if (image->use_protected_memory()) {
+    info.memory_flags |= vk::MemoryPropertyFlagBits::eProtected;
+  }
+
+  vk::Image vk_image =
+      image_utils::CreateVkImage(escher_->vk_device(), info, vk::ImageLayout::eUndefined);
+
+  auto allocator = escher_->gpu_allocator();
+  auto mem_requirements = escher_->vk_device().getImageMemoryRequirements(vk_image);
+  auto memory = allocator->AllocateMemory(mem_requirements, info.memory_flags);
+  auto result = impl::NaiveImage::AdoptVkImage(escher_->resource_recycler(), info, vk_image, memory,
+                                               vk::ImageLayout::eUndefined);
+
+  transient_image_map_[image->info()] = result;
+  return result;
 }
 
 vk::ImageCreateInfo RectangleCompositor::GetDefaultImageConstraints(const vk::Format& vk_format,

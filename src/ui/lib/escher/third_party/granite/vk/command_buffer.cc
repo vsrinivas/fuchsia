@@ -231,7 +231,7 @@ bool CommandBuffer::IsInRenderPass() {
 
 void CommandBuffer::NextSubpass() {
   FX_DCHECK(IsInRenderPass());
-  SetDirty(kDirtyPipelineBit);
+  SetDirty(kDirtyPipelineBit | kDirtyPushConstantsBit);
   pipeline_state_.IncrementSubpass();
   vk().nextSubpass(vk::SubpassContents::eInline);
 }
@@ -348,6 +348,46 @@ void CommandBuffer::BindTexture(unsigned set_index, unsigned binding, const Text
   // TODO(fxbug.dev/7174): if we reify Samplers as a separate resource type,
   // then use the sampler's uid instead of the texture.
   set->secondary_uids[binding] = texture->uid();
+  dirty_descriptor_sets_ |= 1u << set_index;
+}
+
+void CommandBuffer::BindInputAttachment(unsigned set_index, unsigned binding,
+                                        const ImageView* view) {
+  auto set = GetDescriptorSetBindings(set_index);
+  auto b = GetDescriptorBindingInfo(set, binding);
+
+  auto& image = view->image();
+  impl_->KeepAlive(view);
+
+  vk::ImageLayout vk_layout = image->layout();
+  if (view->uid() == set->uids[binding] && b->image.fp.imageLayout == vk_layout &&
+      // TODO(fxbug.dev/7174): if we reify Samplers as a separate resource type, then use
+      // the sampler's uid instead of the texture.
+      view->uid() == set->secondary_uids[binding]) {
+    // The image, layout, and sampler are all unchanged, so we do not need to
+    // update any bindings, nor mark the descriptor set as dirty.
+    return;
+  }
+
+  b->image.fp.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
+  b->image.fp.imageView = view->vk_float_view();
+  b->image.fp.sampler = VK_NULL_HANDLE;
+
+  // According to the Vulkan Spec:
+  //    VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL specifies a layout allowing
+  //    read-only access in a shader as a sampled image, combined image/sampler,
+  //    or input attachment. This layout is valid only for image subresources of
+  //    images created with the VK_IMAGE_USAGE_SAMPLED_BIT or
+  //    VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT usage bits enabled.
+  // So we set the layout as eShaderReadOnlyoptimal here.
+  b->image.integer.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
+  b->image.integer.imageView = view->vk_integer_view();
+  b->image.integer.sampler = VK_NULL_HANDLE;
+
+  set->uids[binding] = view->uid();
+  // TODO(fxbug.dev/7174): if we reify Samplers as a separate resource type,
+  // then use the sampler's uid instead of the texture.
+  set->secondary_uids[binding] = view->uid();
   dirty_descriptor_sets_ |= 1u << set_index;
 }
 

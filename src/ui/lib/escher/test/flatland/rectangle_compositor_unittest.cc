@@ -164,6 +164,54 @@ VK_TEST_F(RectangleCompositorTest, SimpleTextureTest) {
   EXPECT_EQ(histogram[kBlue], num_pixels);
 }
 
+// Render with color conversion applied.
+VK_TEST_F(RectangleCompositorTest, ColorConversionTest) {
+  frame_setup();
+
+  auto gpu_uploader =
+      std::make_shared<escher::BatchGpuUploader>(escher(), frame_data_.frame->frame_number());
+  EXPECT_TRUE(gpu_uploader);
+  EXPECT_TRUE(ren_);
+
+  auto texture = CreateWhiteTexture(escher(), gpu_uploader.get());
+  gpu_uploader->Submit();
+
+  // Set the color conversion parameters.
+  const glm::mat4 conversion_matrix(.288299, 0.052709, -0.257912, 0.00000, 0.711701, 0.947291,
+                                    0.257912, 0.00000, 0.000000, -0.000000, 1.000000, 0.00000,
+                                    0.000000, 0.000000, 0.00000, 1.00000);
+  const glm::vec4 offsets(0);
+  ren_->SetColorConversionParams(conversion_matrix, offsets, offsets);
+
+  Rectangle2D rectangle(vec2(0, 0), vec2(512, 512));
+  RectangleCompositor::ColorData color_data(vec4(1), /*is_opaque*/ true);
+
+  auto cmd_buf = frame_data_.frame->cmds();
+  auto depth_texture = CreateDepthBuffer(escher().get(), frame_data_.color_attachment);
+  ren_->DrawBatch(cmd_buf, {rectangle}, {texture}, {color_data}, frame_data_.color_attachment,
+                  depth_texture);
+
+  auto bytes = ReadbackFromColorAttachment(frame_data_.frame,
+                                           frame_data_.color_attachment->swapchain_layout(),
+                                           vk::ImageLayout::eColorAttachmentOptimal);
+
+  const ColorHistogram<ColorBgra> histogram(bytes.data(), kFramebufferWidth * kFramebufferHeight);
+
+  // Calculate expected color.
+  auto expected_color_float = conversion_matrix * glm::vec4(1, 1, 1, 1);
+  ColorBgra expected_color = {static_cast<uint8_t>(std::max(expected_color_float.x * 255, 0.f)),
+                              static_cast<uint8_t>(std::max(expected_color_float.y * 255, 0.f)),
+                              static_cast<uint8_t>(std::max(expected_color_float.z * 255, 0.f)),
+                              static_cast<uint8_t>(std::max(expected_color_float.w * 255, 0.f))};
+
+  constexpr uint32_t num_pixels = 512 * 512;
+  EXPECT_EQ(1U, histogram.size());
+  EXPECT_EQ(histogram[expected_color], num_pixels);
+
+  // Reset compositor.
+  ren_->SetColorConversionParams(glm::mat4(1), glm::vec4(0), glm::vec4(0));
+}
+
 // Render a single full-screen renderable with a texture that has 4 colors but
 // with uv coordinates that make it so only one pixel is covering the renderable
 // at a time, and test each one.
@@ -235,7 +283,7 @@ VK_TEST_F(RectangleCompositorTest, RotatedTextureTest) {
   auto texture = CreateFourColorTexture(escher(), gpu_uploader.get());
   gpu_uploader->Submit();
 
-  Rectangle2D rectangle(vec2(256, 0), vec2(512, 512),
+  Rectangle2D rectangle(vec2(kFramebufferWidth / 2, 0), vec2(kFramebufferWidth, kFramebufferHeight),
                         {vec2(0, 1), vec2(0, 0), vec2(1, 0), vec2(1, 1)});
   RectangleCompositor::ColorData color_data(vec4(1), /*is_opaque*/ true);
 
@@ -250,14 +298,14 @@ VK_TEST_F(RectangleCompositorTest, RotatedTextureTest) {
 
   const ColorHistogram<ColorBgra> histogram(bytes.data(), kFramebufferWidth * kFramebufferHeight);
 
-  constexpr uint32_t num_pixels = 512 * 512 / 4;
+  constexpr uint32_t num_pixels_per_color = kFramebufferWidth * kFramebufferHeight / 4;
 
   // The three colors that should show are black (background), green and blue.
   EXPECT_EQ(3U, histogram.size());
   EXPECT_EQ(histogram[kWhite], 0U);
   EXPECT_EQ(histogram[kRed], 0U);
-  EXPECT_EQ(histogram[kGreen], num_pixels);
-  EXPECT_EQ(histogram[kBlue], num_pixels);
+  EXPECT_EQ(histogram[kGreen], num_pixels_per_color);
+  EXPECT_EQ(histogram[kBlue], num_pixels_per_color);
 }
 
 // Render 4 rectangles side by side, each one taking up

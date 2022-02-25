@@ -10,6 +10,10 @@ shader_files = [
   "flatland/flat_main.frag",
   "flatland/flat_main.vert",
 
+  # Flatland Color Correction.
+  "flatland/flat_color_correction.frag",
+  "flatland/flat_color_correction.vert",
+
   # Paper renderer.
   "model_renderer/main.vert",
   "paper/common/use.glsl",
@@ -30,6 +34,10 @@ spirv_files = [
   # Flatland renderer.
   "shaders_flatland_flat_main_frag14695981039346656037.spirv",
   "shaders_flatland_flat_main_vert14695981039346656037.spirv",
+
+  # Flatland Color Correction
+  "shaders_flatland_flat_color_correction_frag14695981039346656037.spirv",
+  "shaders_flatland_flat_color_correction_vert14695981039346656037.spirv",
 
   # Paper renderer.
   "shaders_model_renderer_main_vert15064700897732225279.spirv",

@@ -22,6 +22,7 @@ executable("unittests") {
   output_name = "flatland_renderer_unittests"
   testonly = true
   sources = [
+    "//src/ui/lib/escher/test/flatland/rectangle_compositor_unittest.cc",
     "display_unittest.cc",
     "renderer_unittest.cc",
 
@@ -41,6 +42,7 @@ executable("unittests") {
     "//src/lib/testing/loop_fixture:gtest",
     "//src/ui/lib/display:hdcp_client",
     "//src/ui/lib/escher/test/common:gtest_escher",
+    "//src/ui/lib/escher/test/common:readback_fixtures",
     "//src/ui/scenic/lib/display:display",
     "//src/ui/scenic/lib/flatland/renderer",
     "//src/ui/scenic/lib/screenshot",

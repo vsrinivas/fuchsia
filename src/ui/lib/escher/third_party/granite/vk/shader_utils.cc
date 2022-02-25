@@ -225,11 +225,13 @@ PipelineLayoutSpec GeneratePipelineLayoutSpec(
       pipe_dsl.fp_mask |= mod_dsl.fp_mask;
       pipe_dsl.stages |= mod_dsl.stages;
     }
-    vk::PushConstantRange range;
-    range.stageFlags = ShaderStageToFlags(ShaderStage(i));
-    range.offset = module_layout.push_constant_offset;
-    range.size = module_layout.push_constant_range;
-    raw_ranges.push_back(range);
+    if (module_layout.push_constant_range > 0) {
+      vk::PushConstantRange range;
+      range.stageFlags = ShaderStageToFlags(ShaderStage(i));
+      range.offset = module_layout.push_constant_offset;
+      range.size = module_layout.push_constant_range;
+      raw_ranges.push_back(range);
+    }
   }
 
   auto push_constant_ranges = ConsolidatePushConstantRanges(raw_ranges);

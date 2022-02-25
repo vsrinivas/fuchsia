@@ -22,6 +22,10 @@ static void LoadShadersFromDisk(HackFilesystemPtr fs) {
       "shaders/shaders_flatland_flat_main_frag14695981039346656037.spirv",
       "shaders/shaders_flatland_flat_main_vert14695981039346656037.spirv",
 
+      // Flatland Color Correction
+      "shaders/shaders_flatland_flat_color_correction_frag14695981039346656037.spirv",
+      "shaders/shaders_flatland_flat_color_correction_vert14695981039346656037.spirv",
+
       // Paper renderer.
       "shaders/shaders_model_renderer_main_vert15064700897732225279.spirv",
       "shaders/shaders_model_renderer_main_vert4304586084079301274.spirv",
@@ -40,6 +44,20 @@ static void LoadShadersFromDisk(HackFilesystemPtr fs) {
       "shaders/shaders_model_renderer_main_vert12890958529260787213.spirv",
       "shaders/shaders_test_main_frag12890958529260787213.spirv",
       "shaders/shaders_test_main_frag4304586084079301274.spirv",
+  };
+  FX_CHECK(fs->InitializeWithRealFiles(paths));
+}
+#else
+static void LoadShadersFromDisk(HackFilesystemPtr fs) {
+  // NOTE: this and ../shaders/BUILD.gn must be kept in sync.
+  const std::vector<HackFilePath> paths = {
+      // Flatland renderer.
+      "shaders/flatland/flat_main.frag",
+      "shaders/flatland/flat_main.vert",
+
+      // Flatland Color Correction
+      "shaders/flatland/flat_color_correction.frag",
+      "shaders/flatland/flat_color_correction.vert",
   };
   FX_CHECK(fs->InitializeWithRealFiles(paths));
 }
@@ -95,6 +113,7 @@ std::unique_ptr<Escher> CreateEscherWithProtectedMemoryEnabled() {
       VulkanDeviceQueues::New(vulkan_instance, GetDefaultVulkanDeviceQueuesParams(true));
   auto hack_filesystem =
       escher::test::EscherEnvironment::GetGlobalTestEnvironment()->GetFilesystem();
+
   auto escher = std::make_unique<Escher>(vulkan_device, hack_filesystem, /*gpu_allocator*/ nullptr);
   if (!escher->allow_protected_memory()) {
     return nullptr;
@@ -132,9 +151,7 @@ void EscherEnvironment::SetUp() {
     vulkan_device_ =
         VulkanDeviceQueues::New(vulkan_instance_, GetDefaultVulkanDeviceQueuesParams(false));
     hack_filesystem_ = HackFilesystem::New();
-#if !ESCHER_USE_RUNTIME_GLSL
     LoadShadersFromDisk(hack_filesystem_);
-#endif
     escher_ = std::make_unique<Escher>(vulkan_device_, hack_filesystem_, /*gpu_allocator*/ nullptr);
     FX_CHECK(escher_);
 

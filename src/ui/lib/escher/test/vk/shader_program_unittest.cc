@@ -156,6 +156,7 @@ VK_TEST_F(ShaderProgramTest, TimingTest) {
   auto program4 = escher->GetProgram(kShadowVolumeGeometryProgramData);
   auto program5 = escher->GetProgram(kShadowVolumeGeometryDebugProgramData);
   auto program6 = escher->GetProgram(kFlatlandStandardProgram);
+  auto program7 = escher->GetProgram(kFlatlandColorConversionProgram);
   auto stop = std::chrono::high_resolution_clock::now();
   auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
   FX_LOGS(INFO) << "Time taken to load shaders: " << duration.count() << " microseconds.";
@@ -184,6 +185,7 @@ VK_TEST_F(ShaderProgramTest, SpirVReadFileTest) {
   load_and_check_program(kShadowVolumeGeometryProgramData);
   load_and_check_program(kShadowVolumeGeometryDebugProgramData);
   load_and_check_program(kFlatlandStandardProgram);
+  load_and_check_program(kFlatlandColorConversionProgram);
 }
 
 // Test to check to the "SpirvExistsOnDisk" function, which determines
@@ -240,6 +242,7 @@ VK_TEST_F(ShaderProgramTest, SpirvNotChangedTest) {
   check_spirv_change(kShadowVolumeGeometryProgramData);
   check_spirv_change(kShadowVolumeGeometryDebugProgramData);
   check_spirv_change(kFlatlandStandardProgram);
+  check_spirv_change(kFlatlandColorConversionProgram);
 }
 #endif  // ESCHER_TEST_FOR_GLSL_SPIRV_MISMATCH
 

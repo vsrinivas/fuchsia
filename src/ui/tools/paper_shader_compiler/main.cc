@@ -106,6 +106,11 @@ int main(int argc, const char** argv) {
     return EXIT_FAILURE;
   }
 
+  // Flatland Color Conversion.
+  if (!CompileAndWriteShader(filesystem, escher::kFlatlandColorConversionProgram)) {
+    return EXIT_FAILURE;
+  }
+
   // Test shaders from escher/test/vk/shader_program_unittest.cc
   const escher::ShaderProgramData test_variant1 = {
       .source_files = {{escher::ShaderStage::kVertex, "shaders/model_renderer/main.vert"},

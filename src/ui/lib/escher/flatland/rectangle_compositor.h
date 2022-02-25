@@ -7,6 +7,7 @@
 
 #include "src/ui/lib/escher/forward_declarations.h"
 #include "src/ui/lib/escher/geometry/types.h"
+#include "src/ui/lib/escher/util/hash_map.h"
 #include "src/ui/lib/escher/vk/shader_program.h"
 #include "src/ui/lib/escher/vk/texture.h"
 
@@ -51,15 +52,41 @@ class RectangleCompositor {
                  const std::vector<ColorData>& color_data, const ImagePtr& output_image,
                  const TexturePtr& depth_buffer);
 
+  // This data is used to apply a color-conversion post processing effect over the entire
+  // rendered output, when making a call to |DrawBatch|. The color conversion formula
+  // used is matrix * (color + preoffsets) + postoffsets.
+  void SetColorConversionParams(const glm::mat4& matrix, const glm::vec4& preoffsets,
+                                const glm::vec4& postoffsets) {
+    color_conversion_matrix_ = matrix;
+    color_conversion_preoffsets_ = preoffsets;
+    color_conversion_postoffsets_ = postoffsets;
+  }
+
   // Minimal image constraints to be set on textures passed into DrawBatch.
   static vk::ImageCreateInfo GetDefaultImageConstraints(const vk::Format& vk_format,
                                                         vk::ImageUsageFlags usage);
 
  private:
   RectangleCompositor(const RectangleCompositor&) = delete;
+  ImagePtr CreateOrFindTransientImage(const ImagePtr& image);
+
+  // Hold onto escher pointer.
+  EscherWeakPtr escher_ = nullptr;
 
   // Default shader program that all renderables use.
   ShaderProgramPtr standard_program_ = nullptr;
+
+  // Color conversion shader program used for post processing.
+  ShaderProgramPtr color_conversion_program_ = nullptr;
+
+  // Mapping of targets for the first subpass, to act as a cache.
+  // TODO(fxbug.dev/94242): Make sure this doesn't bloat.
+  HashMap<ImageInfo, ImagePtr> transient_image_map_;
+
+  // Color conversion values.
+  glm::mat4 color_conversion_matrix_ = glm::mat4(1.0);
+  glm::vec4 color_conversion_preoffsets_ = glm::vec4(0.f);
+  glm::vec4 color_conversion_postoffsets_ = glm::vec4(0.f);
 };
 
 }  // namespace escher

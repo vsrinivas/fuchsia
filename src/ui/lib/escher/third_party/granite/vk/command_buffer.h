@@ -193,6 +193,12 @@ class CommandBuffer : public Reffable {
     BindTexture(set, binding, texture.get());
   }
 
+  // Set/dirty an input attachment binding, for use with subpasses.
+  void BindInputAttachment(unsigned set_index, unsigned binding, const ImageView* view);
+  void BindInputAttachment(unsigned set, unsigned binding, const ImageViewPtr& view) {
+    BindInputAttachment(set, binding, view.get());
+  }
+
   // Set/dirty a vertex buffer binding that will later be flushed, causing
   // descriptor sets to be written/bound as necessary.
   void BindVertices(uint32_t binding, vk::Buffer buffer, vk::DeviceSize offset,
@@ -324,6 +330,9 @@ class CommandBuffer : public Reffable {
   void SetPrimitiveRestart(bool primitive_restart);
   void SetPrimitiveTopology(vk::PrimitiveTopology primitive_topology);
   void SetWireframe(bool wireframe);
+
+  // Sets the next subpass for the render pass we are currently in.
+  void NextSubpass();
 
   // State.  Clients don't need to worry about this; these are only used
   // internally.  The only reason that they're not private is that they are
@@ -462,9 +471,6 @@ class CommandBuffer : public Reffable {
   // Return true if BeginRenderPass() has been called more recently than
   // EndRenderPass().
   bool IsInRenderPass();
-
-  // Sets the next subpass for the render pass we are currently in.
-  void NextSubpass();
 
   // Called immediately before compute dispatch calls are made, e.g. Dispatch().
   void FlushComputeState();

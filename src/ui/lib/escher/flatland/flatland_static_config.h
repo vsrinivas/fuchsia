@@ -15,6 +15,9 @@ extern const std::vector<std::string> kFlatlandShaderPaths;
 // List of flatland renderer shader program data.
 extern const ShaderProgramData kFlatlandStandardProgram;
 
+// List of flatland renderer shader program data.
+extern const ShaderProgramData kFlatlandColorConversionProgram;
+
 }  // namespace escher
 
 #endif  // SRC_UI_LIB_ESCHER_FLATLAND_FLATLAND_STATIC_CONFIG_H_
