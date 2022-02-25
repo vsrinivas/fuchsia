@@ -12,8 +12,10 @@ pub struct ResetCommand {}
 
 impl ResetCommand {
     pub async fn exec(&self, context: &mut LowpanCtlContext) -> Result<(), Error> {
-        let (_, _, device_test) =
-            context.get_default_device_proxies().await.context("Unable to get device instance")?;
+        let device_test = context
+            .get_default_device_test_proxy()
+            .await
+            .context("Unable to get device instance")?;
 
         device_test.reset().await.context("Unable to send reset command")?;
 

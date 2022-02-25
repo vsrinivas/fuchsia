@@ -6,7 +6,7 @@
 
 use anyhow::{Context as _, Error};
 use fidl_fuchsia_factory_lowpan::{FactoryRegisterMarker, FactoryRegisterProxyInterface};
-use fidl_fuchsia_lowpan_device::{RegisterMarker, RegisterProxyInterface};
+use fidl_fuchsia_lowpan_driver::{RegisterMarker, RegisterProxyInterface};
 use fuchsia_async as fasync;
 use fuchsia_component::client::connect_to_protocol;
 use fuchsia_syslog::macros::*;

@@ -15,7 +15,7 @@
             protocol: [
                 "fuchsia.factory.lowpan.FactoryRegister",
                 "fuchsia.location.namedplace.RegulatoryRegionWatcher",
-                "fuchsia.lowpan.device.Register",
+                "fuchsia.lowpan.driver.Register",
                 "fuchsia.net.interfaces.admin.Installer",
                 "fuchsia.net.interfaces.State",
                 "fuchsia.net.mdns.Publisher",

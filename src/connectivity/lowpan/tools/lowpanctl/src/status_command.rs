@@ -7,9 +7,10 @@ use crate::prelude::*;
 use fidl::endpoints::create_endpoints;
 use fidl_fuchsia_lowpan::ConnectivityState;
 use fidl_fuchsia_lowpan_device::{
-    DeviceExtraMarker, DeviceExtraProxy, DeviceMarker, DeviceProxy, Protocols,
+    DeviceConnectorMarker, DeviceExtraConnectorMarker, DeviceExtraMarker, DeviceExtraProxy,
+    DeviceMarker, DeviceProxy,
 };
-use fidl_fuchsia_lowpan_test::{DeviceTestMarker, DeviceTestProxy};
+use fidl_fuchsia_lowpan_test::{DeviceTestConnectorMarker, DeviceTestMarker, DeviceTestProxy};
 use std::fmt;
 
 #[derive(PartialEq, Debug, Eq)]
@@ -249,68 +250,70 @@ impl StatusCommand {
                 let (client_extra, server_extra) = create_endpoints::<DeviceExtraMarker>()?;
                 let (client_test, server_test) = create_endpoints::<DeviceTestMarker>()?;
 
-                if let Some(e) = lookup
-                    .lookup_device(
-                        &name,
-                        Protocols {
-                            device: Some(server),
-                            device_extra: Some(server_extra),
-                            device_test: Some(server_test),
-                            ..Protocols::EMPTY
-                        },
-                    )
-                    .await
-                    .err()
+                let name = &name;
+
+                if let Err(e) = connect_to_protocol::<DeviceConnectorMarker>()
+                    .and_then(|x| x.connect(name, server).map_err(Error::from))
+                    .context("Failed to connect to DeviceConnector")
                 {
-                    self.report_interface_error(&name, e);
-                } else {
-                    let device = client.into_proxy();
+                    self.report_interface_error(name, e);
+                }
 
-                    if device.is_err() {
-                        self.report_interface_error(&name, device.unwrap_err());
+                if let Err(e) = connect_to_protocol::<DeviceExtraConnectorMarker>()
+                    .and_then(|x| x.connect(name, server_extra).map_err(Error::from))
+                    .context("Failed to connect to DeviceExtraConnector")
+                {
+                    self.report_interface_error(name, e);
+                }
+
+                if let Err(e) = connect_to_protocol::<DeviceTestConnectorMarker>()
+                    .and_then(|x| x.connect(name, server_test).map_err(Error::from))
+                    .context("Failed to connect to DeviceTestConnector")
+                {
+                    self.report_interface_error(name, e);
+                }
+
+                let device = match client.into_proxy() {
+                    Ok(x) => x,
+                    Err(err) => {
+                        self.report_interface_error(name, err);
                         continue;
                     }
+                };
 
-                    let device_extra = client_extra.into_proxy();
-
-                    if device_extra.is_err() {
-                        self.report_interface_error(&name, device_extra.unwrap_err());
+                let device_extra = match client_extra.into_proxy() {
+                    Ok(x) => x,
+                    Err(err) => {
+                        self.report_interface_error(name, err);
                         continue;
                     }
+                };
 
-                    let device_diags = client_test.into_proxy();
-
-                    if device_diags.is_err() {
-                        self.report_interface_error(&name, device_diags.unwrap_err());
+                let device_diags = match client_test.into_proxy() {
+                    Ok(x) => x,
+                    Err(err) => {
+                        self.report_interface_error(name, err);
                         continue;
                     }
+                };
 
-                    match self.format {
-                        StatusFormat::Standard => {
-                            if let Some(e) = print_device_status(
-                                &name,
-                                &device.unwrap(),
-                                &device_extra.unwrap(),
-                                &device_diags.unwrap(),
-                            )
-                            .await
-                            .err()
-                            {
-                                println!("\terror: {}", e);
-                            }
+                match self.format {
+                    StatusFormat::Standard => {
+                        if let Some(e) =
+                            print_device_status(name, &device, &device_extra, &device_diags)
+                                .await
+                                .err()
+                        {
+                            println!("\terror: {}", e);
                         }
-                        StatusFormat::CSV => {
-                            if let Some(e) = print_device_status_csv(
-                                &name,
-                                &device.unwrap(),
-                                &device_extra.unwrap(),
-                                &device_diags.unwrap(),
-                            )
-                            .await
-                            .err()
-                            {
-                                self.report_interface_error(&name, e);
-                            }
+                    }
+                    StatusFormat::CSV => {
+                        if let Some(e) =
+                            print_device_status_csv(name, &device, &device_extra, &device_diags)
+                                .await
+                                .err()
+                        {
+                            self.report_interface_error(&name, e);
                         }
                     }
                 }

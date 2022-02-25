@@ -5,7 +5,7 @@
 use super::prelude_internal::*;
 use crate::DummyDevice;
 use fidl::endpoints::create_endpoints;
-use fidl_fuchsia_lowpan_device::DriverMarker;
+use fidl_fuchsia_lowpan_driver::{DriverMarker, Protocols};
 use fidl_fuchsia_lowpan_thread::LegacyJoiningMarker;
 use fuchsia_async as fasync;
 use futures::task::{Context, Poll};
@@ -40,9 +40,9 @@ async fn test_legacy_joining_mutual_exclusion() {
         let (client1_ep, server1_ep) = create_endpoints::<LegacyJoiningMarker>().unwrap();
 
         driver_proxy
-            .get_protocols(fidl_fuchsia_lowpan_device::Protocols {
+            .get_protocols(Protocols {
                 thread_legacy_joining: Some(server1_ep),
-                ..fidl_fuchsia_lowpan_device::Protocols::EMPTY
+                ..Protocols::EMPTY
             })
             .unwrap();
 
@@ -53,9 +53,9 @@ async fn test_legacy_joining_mutual_exclusion() {
         let (client2_ep, server2_ep) = create_endpoints::<LegacyJoiningMarker>().unwrap();
 
         driver_proxy
-            .get_protocols(fidl_fuchsia_lowpan_device::Protocols {
+            .get_protocols(Protocols {
                 thread_legacy_joining: Some(server2_ep),
-                ..fidl_fuchsia_lowpan_device::Protocols::EMPTY
+                ..Protocols::EMPTY
             })
             .unwrap();
 
@@ -76,9 +76,9 @@ async fn test_legacy_joining_mutual_exclusion() {
         let (client3_ep, server3_ep) = create_endpoints::<LegacyJoiningMarker>().unwrap();
 
         driver_proxy
-            .get_protocols(fidl_fuchsia_lowpan_device::Protocols {
+            .get_protocols(Protocols {
                 thread_legacy_joining: Some(server3_ep),
-                ..fidl_fuchsia_lowpan_device::Protocols::EMPTY
+                ..Protocols::EMPTY
             })
             .unwrap();
 

@@ -3,11 +3,13 @@
 // found in the LICENSE file.
 
 use anyhow::{format_err, Context as _, Error};
-use assert_matches::assert_matches;
 use fasync::Time;
 use fidl::endpoints::create_endpoints;
-use fidl_fuchsia_lowpan_device::{DeviceExtraMarker, DeviceMarker, LookupMarker, Protocols};
-use fidl_fuchsia_lowpan_test::DeviceTestMarker;
+use fidl_fuchsia_lowpan::LookupMarker;
+use fidl_fuchsia_lowpan_device::{
+    DeviceConnectorMarker, DeviceExtraConnectorMarker, DeviceExtraMarker, DeviceMarker,
+};
+use fidl_fuchsia_lowpan_test::{DeviceTestConnectorMarker, DeviceTestMarker};
 use fuchsia_async as fasync;
 use fuchsia_async::TimeoutExt;
 use fuchsia_component::client::{connect_to_protocol, launch, launcher};
@@ -17,6 +19,8 @@ const DEFAULT_TIMEOUT: fuchsia_zircon::Duration = fuchsia_zircon::Duration::from
 
 #[fasync::run_singlethreaded(test)]
 async fn test_service_driver_interaction() -> Result<(), Error> {
+    const IFACE_NAME: &str = "lowpan0";
+
     // Step 1: Get an instance of the Lookup API and make sure there are no devices registered.
     let lookup = connect_to_protocol::<LookupMarker>()
         .context("Failed to connect to Lowpan Lookup service")?;
@@ -61,7 +65,7 @@ async fn test_service_driver_interaction() -> Result<(), Error> {
         .await
         .context("Second call to lookup.watch_devices() failed")?;
 
-    assert_eq!(device_changes.added, vec!["lowpan0".to_string()]);
+    assert_eq!(device_changes.added, vec![IFACE_NAME.to_string()]);
     assert_eq!(device_changes.removed, Vec::<String>::new());
 
     // Step 4: Try to lookup the dummy device via the Lookup API
@@ -69,22 +73,17 @@ async fn test_service_driver_interaction() -> Result<(), Error> {
     let (client_extra, server_extra) = create_endpoints::<DeviceExtraMarker>()?;
     let (client_test, server_test) = create_endpoints::<DeviceTestMarker>()?;
 
-    let lookup_result = lookup
-        .lookup_device(
-            "lowpan0",
-            Protocols {
-                device: Some(server),
-                device_extra: Some(server_extra),
-                device_test: Some(server_test),
-                ..Protocols::EMPTY
-            },
-        )
-        .err_into::<Error>()
-        .on_timeout(Time::after(DEFAULT_TIMEOUT), || Err(format_err!("Timeout")))
-        .await
-        .context("Call to lookup_extra failed");
+    connect_to_protocol::<DeviceConnectorMarker>()
+        .context("Failed to connect to DeviceConnector")?
+        .connect(IFACE_NAME, server)?;
 
-    assert_matches!(lookup_result, Ok(Ok(())));
+    connect_to_protocol::<DeviceExtraConnectorMarker>()
+        .context("Failed to connect to DeviceExtraConnector")?
+        .connect(IFACE_NAME, server_extra)?;
+
+    connect_to_protocol::<DeviceTestConnectorMarker>()
+        .context("Failed to connect to DeviceTestConnector")?
+        .connect(IFACE_NAME, server_test)?;
 
     let device = client.into_proxy()?;
     let device_extra = client_extra.into_proxy()?;
@@ -119,7 +118,7 @@ async fn test_service_driver_interaction() -> Result<(), Error> {
         .context("Second call to lookup.watch_devices() failed")?;
 
     assert_eq!(device_changes.added, Vec::<String>::new());
-    assert_eq!(device_changes.removed, vec!["lowpan0".to_string()]);
+    assert_eq!(device_changes.removed, vec![IFACE_NAME.to_string()]);
 
     // Step 8: Make sure that the endpoints are dead.
     assert!(

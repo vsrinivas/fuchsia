@@ -3,6 +3,8 @@
 // found in the LICENSE file.
 library fuchsia.lowpan.thread;
 
+using fuchsia.lowpan;
+
 // FYI: The source for this 254 length is the Thread Specification.
 const MAX_DATASET_TLV_LEN uint8 = 254;
 
@@ -14,6 +16,32 @@ const MAX_DATASET_TLV_LEN uint8 = 254;
 ///
 /// [1]: https://openthread.io/reference/struct/ot-operational-dataset-tlvs#structot_operational_dataset_tlvs
 alias OperationalDatasetTlvs = bytes:MAX_DATASET_TLV_LEN;
+
+/// Protocol for connecting to [`Dataset`] on a LoWPAN
+/// interface.
+@discoverable
+protocol DatasetConnector {
+    /// Connects to the [`Dataset`] protocol on the
+    /// named LoWPAN interface.
+    ///
+    /// The name of the interface can be learned by calling
+    /// [`fuchsia.lowpan/Lookup.GetDevices`].
+    ///
+    /// If there is an error in processing this request
+    /// the given channel is closed and an epitaph code used
+    /// to describe the reason for the failure:
+    ///
+    /// * `ZX_ERR_INVALID_ARGUMENT`: The given interface name
+    ///   was not formatted correctly or otherwise invalid.
+    /// * `ZX_ERR_NOT_FOUND`: No interface was found with the
+    ///   given name.
+    /// * `ZX_ERR_NOT_SUPPORTED`: The interface exists but
+    ///   does not support this protocol.
+    Connect(resource struct {
+        name fuchsia.lowpan.InterfaceName;
+        server_end server_end:Dataset;
+    });
+};
 
 /// Thread Operational Dataset Protocol.
 ///

@@ -31,3 +31,11 @@ type Ipv6Subnet = struct {
     /// Must be between 0 and 128, inclusive.
     prefix_len uint8;
 };
+
+/// Type describing the name of the network interface.
+///
+/// Interface names must satisfy the following regular expression:
+///
+///     ^[a-z_][-_.+0-9a-z]{1,31}$
+///
+alias InterfaceName = string:32;

@@ -101,8 +101,10 @@ impl FormCommand {
 
     pub async fn exec(&self, context: &mut LowpanCtlContext) -> Result<(), Error> {
         let mut provision_args = self.get_provisioning_params()?;
-        let (_, device_extra, _) =
-            context.get_default_device_proxies().await.context("Unable to get device instance")?;
+        let device_extra = context
+            .get_default_device_extra_proxy()
+            .await
+            .context("Unable to get device instance")?;
         let (client_end, server_end) = create_endpoints::<ProvisioningMonitorMarker>()?;
         let monitor = client_end.into_proxy()?;
         device_extra
@@ -116,6 +118,9 @@ impl FormCommand {
                 Ok(ProvisioningProgress::Identity(x)) => {
                     println!("Completed.\nIdentity: {:?}", x);
                     break;
+                }
+                Ok(_) => {
+                    // Don't care about other progress updates.
                 }
                 Err(e) => {
                     return Err(format_err!("error monitoring progress: {:?}", e));

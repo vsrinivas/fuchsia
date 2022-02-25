@@ -3,7 +3,34 @@
 // found in the LICENSE file.
 library fuchsia.lowpan.thread;
 
+using fuchsia.lowpan;
 using zx;
+
+/// Protocol for connecting to [`LegacyJoining`] on a LoWPAN
+/// interface.
+@discoverable
+protocol LegacyJoiningConnector {
+    /// Connects to the [`LegacyJoining`] protocol on the
+    /// named LoWPAN interface.
+    ///
+    /// The name of the interface can be learned by calling
+    /// [`fuchsia.lowpan/Lookup.GetDevices`].
+    ///
+    /// If there is an error in processing this request
+    /// the given channel is closed and an epitaph code used
+    /// to describe the reason for the failure:
+    ///
+    /// * `ZX_ERR_INVALID_ARGUMENT`: The given interface name
+    ///   was not formatted correctly or otherwise invalid.
+    /// * `ZX_ERR_NOT_FOUND`: No interface was found with the
+    ///   given name.
+    /// * `ZX_ERR_NOT_SUPPORTED`: The interface exists but
+    ///   does not support this protocol.
+    Connect(resource struct {
+        name fuchsia.lowpan.InterfaceName;
+        server_end server_end:LegacyJoining;
+    });
+};
 
 /// Protocol for supporting non-standard in-band commissioning protocols.
 /// Only one instance of this protocol may be valid at a time: after the

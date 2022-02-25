@@ -9,7 +9,16 @@ pub mod service;
 
 use anyhow::{format_err, Context as _, Error};
 use fidl_fuchsia_factory_lowpan::{FactoryLookupRequestStream, FactoryRegisterRequestStream};
-use fidl_fuchsia_lowpan_device::{LookupRequestStream, RegisterRequestStream};
+use fidl_fuchsia_lowpan::LookupRequestStream;
+use fidl_fuchsia_lowpan_device::{
+    CountersConnectorRequestStream, DeviceConnectorRequestStream,
+    DeviceExtraConnectorRequestStream, DeviceRouteConnectorRequestStream,
+    DeviceRouteExtraConnectorRequestStream,
+};
+use fidl_fuchsia_lowpan_driver::RegisterRequestStream;
+use fidl_fuchsia_lowpan_test::DeviceTestConnectorRequestStream;
+use fidl_fuchsia_lowpan_thread::DatasetConnectorRequestStream;
+use fidl_fuchsia_lowpan_thread::LegacyJoiningConnectorRequestStream;
 use fuchsia_async as fasync;
 use fuchsia_component::server::ServiceFs;
 use fuchsia_inspect::Inspector;
@@ -26,6 +35,14 @@ enum IncomingService {
     Register(RegisterRequestStream),
     FactoryLookup(FactoryLookupRequestStream),
     FactoryRegister(FactoryRegisterRequestStream),
+    DeviceConnector(DeviceConnectorRequestStream),
+    DeviceExtraConnector(DeviceExtraConnectorRequestStream),
+    DeviceRouteConnector(DeviceRouteConnectorRequestStream),
+    DeviceRouteExtraConnector(DeviceRouteExtraConnectorRequestStream),
+    CountersConnector(CountersConnectorRequestStream),
+    DeviceTestConnector(DeviceTestConnectorRequestStream),
+    LegacyJoiningConnector(LegacyJoiningConnectorRequestStream),
+    DatasetConnector(DatasetConnectorRequestStream),
 }
 
 const MAX_CONCURRENT: usize = 100;
@@ -62,11 +79,17 @@ async fn main() -> Result<(), Error> {
 
     fs.dir("svc")
         .add_fidl_service(IncomingService::Lookup)
-        .add_fidl_service(IncomingService::Register);
-
-    fs.dir("svc")
+        .add_fidl_service(IncomingService::Register)
         .add_fidl_service(IncomingService::FactoryLookup)
-        .add_fidl_service(IncomingService::FactoryRegister);
+        .add_fidl_service(IncomingService::FactoryRegister)
+        .add_fidl_service(IncomingService::DeviceConnector)
+        .add_fidl_service(IncomingService::DeviceExtraConnector)
+        .add_fidl_service(IncomingService::DeviceRouteConnector)
+        .add_fidl_service(IncomingService::DeviceRouteExtraConnector)
+        .add_fidl_service(IncomingService::CountersConnector)
+        .add_fidl_service(IncomingService::DeviceTestConnector)
+        .add_fidl_service(IncomingService::LegacyJoiningConnector)
+        .add_fidl_service(IncomingService::DatasetConnector);
 
     fs.take_and_serve_directory_handle()?;
 
@@ -76,6 +99,14 @@ async fn main() -> Result<(), Error> {
             IncomingService::Register(stream) => service.serve_to(stream).await,
             IncomingService::FactoryLookup(stream) => service.serve_to(stream).await,
             IncomingService::FactoryRegister(stream) => service.serve_to(stream).await,
+            IncomingService::DeviceConnector(stream) => service.serve_to(stream).await,
+            IncomingService::DeviceExtraConnector(stream) => service.serve_to(stream).await,
+            IncomingService::DeviceRouteConnector(stream) => service.serve_to(stream).await,
+            IncomingService::DeviceRouteExtraConnector(stream) => service.serve_to(stream).await,
+            IncomingService::CountersConnector(stream) => service.serve_to(stream).await,
+            IncomingService::DeviceTestConnector(stream) => service.serve_to(stream).await,
+            IncomingService::LegacyJoiningConnector(stream) => service.serve_to(stream).await,
+            IncomingService::DatasetConnector(stream) => service.serve_to(stream).await,
         } {
             fx_log_err!("{:?}", err);
         }

@@ -51,8 +51,10 @@ impl ReplaceMacFilterSettingsCommand {
     }
 
     pub async fn exec(&self, context: &mut LowpanCtlContext) -> Result<(), Error> {
-        let (_, _, device_test_proxy) =
-            context.get_default_device_proxies().await.context("Unable to get device instance")?;
+        let device_test_proxy = context
+            .get_default_device_test_proxy()
+            .await
+            .context("Unable to get device instance")?;
 
         let mode = match self.mode.as_ref().unwrap().to_lowercase().as_str() {
             "allow" => MacAddressFilterMode::Allow,

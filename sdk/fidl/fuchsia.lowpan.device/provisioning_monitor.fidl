@@ -8,7 +8,7 @@ using fuchsia.lowpan;
 /// LoWPAN Provisioning Error
 ///
 /// Returned by `ProvisioningMonitor.WatchProgress()`.
-type ProvisionError = strict enum : int32 {
+type ProvisionError = flexible enum : int32 {
     /// Provisioning did not successfully complete because the
     /// credential was rejected. For example, the key was incorrect.
     ///
@@ -31,7 +31,7 @@ type ProvisionError = strict enum : int32 {
 /// Indicates the current status of the form/join operation.
 ///
 /// Returned by `ProvisioningMonitor.WatchProgress()`.
-type ProvisioningProgress = strict union {
+type ProvisioningProgress = flexible union {
     /// Approximate percent complete indication for a user interface.
     1: progress float32;
 

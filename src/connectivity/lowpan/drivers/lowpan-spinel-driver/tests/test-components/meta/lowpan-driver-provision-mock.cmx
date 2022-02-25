@@ -10,8 +10,8 @@
                 "fuchsia.location.namedplace.RegulatoryRegionWatcher": [
                     "fuchsia-pkg://fuchsia.com/regulatory_region#meta/regulatory_region_v1.cmx"
                 ],
-                "fuchsia.lowpan.device.Lookup": "fuchsia-pkg://fuchsia.com/lowpanservice#meta/lowpanservice.cmx",
-                "fuchsia.lowpan.device.Register": "fuchsia-pkg://fuchsia.com/lowpanservice#meta/lowpanservice.cmx",
+                "fuchsia.lowpan.Lookup": "fuchsia-pkg://fuchsia.com/lowpanservice#meta/lowpanservice.cmx",
+                "fuchsia.lowpan.driver.Register": "fuchsia-pkg://fuchsia.com/lowpanservice#meta/lowpanservice.cmx",
                 "fuchsia.lowpan.spinel.Device": [
                     "fuchsia-pkg://fuchsia.com/ot-radio-component-tests#meta/ot-stack.cmx",
                     "-t",
@@ -22,7 +22,15 @@
                 "fuchsia.net.tun.Control": "fuchsia-pkg://fuchsia.com/lowpan-driver-provision-mock#meta/network-tun.cmx",
                 "fuchsia.openthread.devmgr.IsolatedDevmgr": [
                     "fuchsia-pkg://fuchsia.com/ot-radio-component-tests#meta/ot-devmgr-component-integration.cmx"
-                ]
+                ],
+                "fuchsia.lowpan.device.DeviceConnector": "fuchsia-pkg://fuchsia.com/lowpanservice#meta/lowpanservice.cmx",
+                "fuchsia.lowpan.device.DeviceExtraConnector": "fuchsia-pkg://fuchsia.com/lowpanservice#meta/lowpanservice.cmx",
+                "fuchsia.lowpan.device.DeviceRouterConnector": "fuchsia-pkg://fuchsia.com/lowpanservice#meta/lowpanservice.cmx",
+                "fuchsia.lowpan.device.DeviceRouterExtraConnector": "fuchsia-pkg://fuchsia.com/lowpanservice#meta/lowpanservice.cmx",
+                "fuchsia.lowpan.device.CountersConnector": "fuchsia-pkg://fuchsia.com/lowpanservice#meta/lowpanservice.cmx",
+                "fuchsia.lowpan.test.DeviceTestConnector": "fuchsia-pkg://fuchsia.com/lowpanservice#meta/lowpanservice.cmx",
+                "fuchsia.lowpan.thread.DatasetConnector": "fuchsia-pkg://fuchsia.com/lowpanservice#meta/lowpanservice.cmx",
+                "fuchsia.lowpan.thread.LegacyJoiningConnector": "fuchsia-pkg://fuchsia.com/lowpanservice#meta/lowpanservice.cmx"
             }
         }
     },
@@ -38,9 +46,17 @@
             "fuchsia.factory.lowpan.FactoryRegister",
             "fuchsia.location.namedplace.RegulatoryRegionConfigurator",
             "fuchsia.location.namedplace.RegulatoryRegionWatcher",
-            "fuchsia.lowpan.device.Lookup",
-            "fuchsia.lowpan.device.Register",
+            "fuchsia.lowpan.Lookup",
+            "fuchsia.lowpan.device.CountersConnector",
+            "fuchsia.lowpan.device.DeviceConnector",
+            "fuchsia.lowpan.device.DeviceExtraConnector",
+            "fuchsia.lowpan.device.DeviceRouterConnector",
+            "fuchsia.lowpan.device.DeviceRouterExtraConnector",
+            "fuchsia.lowpan.driver.Register",
             "fuchsia.lowpan.spinel.Device",
+            "fuchsia.lowpan.test.DeviceTestConnector",
+            "fuchsia.lowpan.thread.DatasetConnector",
+            "fuchsia.lowpan.thread.LegacyJoiningConnector",
             "fuchsia.net.interfaces.State",
             "fuchsia.net.stack.Stack",
             "fuchsia.net.tun.Control",

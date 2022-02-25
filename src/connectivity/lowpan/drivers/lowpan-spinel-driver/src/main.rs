@@ -42,7 +42,7 @@ use spinel::SpinelDeviceSink;
 
 use anyhow::Error;
 use fidl_fuchsia_factory_lowpan::{FactoryRegisterMarker, FactoryRegisterProxyInterface};
-use fidl_fuchsia_lowpan_device::{RegisterMarker, RegisterProxyInterface};
+use fidl_fuchsia_lowpan_driver::{RegisterMarker, RegisterProxyInterface};
 use fidl_fuchsia_lowpan_spinel::{
     DeviceMarker as SpinelDeviceMarker, DeviceProxy as SpinelDeviceProxy,
     DeviceSetupProxy as SpinelDeviceSetupProxy,

@@ -8,7 +8,15 @@
     "sandbox": {
         "services": [
             "fuchsia.factory.lowpan.FactoryLookup",
-            "fuchsia.lowpan.device.Lookup"
+            "fuchsia.lowpan.Lookup",
+            "fuchsia.lowpan.device.CountersConnector",
+            "fuchsia.lowpan.device.DeviceConnector",
+            "fuchsia.lowpan.device.DeviceExtraConnector",
+            "fuchsia.lowpan.device.DeviceRouterConnector",
+            "fuchsia.lowpan.device.DeviceRouterExtraConnector",
+            "fuchsia.lowpan.test.DeviceTestConnector",
+            "fuchsia.lowpan.thread.DatasetConnector",
+            "fuchsia.lowpan.thread.LegacyJoiningConnector"
         ]
     }
 }

@@ -2,16 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use anyhow::{format_err, Context as _, Error};
+use anyhow::{Context as _, Error};
 use fidl::endpoints::create_endpoints;
 use fidl_fuchsia_factory_lowpan::{FactoryDeviceMarker, FactoryDeviceProxy, FactoryLookupMarker};
+use fidl_fuchsia_lowpan::{LookupMarker, LookupProxy};
 use fidl_fuchsia_lowpan_device::{
-    DeviceExtraMarker, DeviceExtraProxy, DeviceMarker, DeviceProxy, LookupMarker, LookupProxy,
-    Protocols,
+    DeviceConnectorMarker, DeviceExtraConnectorMarker, DeviceExtraMarker, DeviceExtraProxy,
+    DeviceMarker, DeviceProxy,
 };
-use fidl_fuchsia_lowpan_test::{DeviceTestMarker, DeviceTestProxy};
+use fidl_fuchsia_lowpan_test::{DeviceTestConnectorMarker, DeviceTestMarker, DeviceTestProxy};
 use fuchsia_component::client::connect_to_protocol;
-use futures::FutureExt;
 
 /// This struct contains all of the transient state that can
 /// be kept between invocations of commands when `lowpanctl` is
@@ -39,26 +39,11 @@ impl LowpanContext {
 
     /// Returns the default DeviceProxy.
     pub async fn get_default_device(&self) -> Result<DeviceProxy, Error> {
-        let lookup = &self.lookup;
-
         let (client, server) = create_endpoints::<DeviceMarker>()?;
 
-        lookup
-            .lookup_device(
-                &self.device_name,
-                Protocols {
-                    device: Some(server),
-                    device_extra: None,
-                    device_test: None,
-                    ..Protocols::EMPTY
-                },
-            )
-            .map(|x| match x {
-                Ok(Ok(())) => Ok(()),
-                Ok(Err(x)) => Err(format_err!("Service Error: {:?}", x)),
-                Err(x) => Err(x.into()),
-            })
-            .await?;
+        connect_to_protocol::<DeviceConnectorMarker>()
+            .context("Failed to connect to DeviceConnector")?
+            .connect(&self.device_name, server)?;
 
         client.into_proxy().context("into_proxy() failed")
     }
@@ -70,15 +55,7 @@ impl LowpanContext {
 
         let (client, server) = create_endpoints::<FactoryDeviceMarker>()?;
 
-        lookup
-            .lookup(&self.device_name, server)
-            .map(|x| match x {
-                Ok(Ok(())) => Ok(()),
-                Ok(Err(x)) => Err(format_err!("Service Error: {:?}", x)),
-                Err(x) => Err(x.into()),
-            })
-            .await
-            .context(format!("Unable to find {:?}", &self.device_name))?;
+        lookup.lookup(&self.device_name, server)?;
 
         client.into_proxy().context("into_proxy() failed")
     }
@@ -87,29 +64,21 @@ impl LowpanContext {
     pub async fn get_default_device_proxies(
         &self,
     ) -> Result<(DeviceProxy, DeviceExtraProxy, DeviceTestProxy), Error> {
-        let lookup = &self.lookup;
-
         let (client, server) = create_endpoints::<DeviceMarker>()?;
         let (client_extra, server_extra) = create_endpoints::<DeviceExtraMarker>()?;
         let (client_test, server_test) = create_endpoints::<DeviceTestMarker>()?;
 
-        lookup
-            .lookup_device(
-                &self.device_name,
-                Protocols {
-                    device: Some(server),
-                    device_extra: Some(server_extra),
-                    device_test: Some(server_test),
-                    ..Protocols::EMPTY
-                },
-            )
-            .map(|x| match x {
-                Ok(Ok(())) => Ok(()),
-                Ok(Err(x)) => Err(format_err!("Service Error: {:?}", x)),
-                Err(x) => Err(x.into()),
-            })
-            .await?;
-        //.context(format!("Unable to find {:?}", &self.device_name))?;
+        connect_to_protocol::<DeviceConnectorMarker>()
+            .context("Failed to connect to DeviceConnector")?
+            .connect(&self.device_name, server)?;
+
+        connect_to_protocol::<DeviceExtraConnectorMarker>()
+            .context("Failed to connect to DeviceExtraConnector")?
+            .connect(&self.device_name, server_extra)?;
+
+        connect_to_protocol::<DeviceTestConnectorMarker>()
+            .context("Failed to connect to DeviceTestConnector")?
+            .connect(&self.device_name, server_test)?;
 
         Ok((
             client.into_proxy().context("into_proxy() failed")?,

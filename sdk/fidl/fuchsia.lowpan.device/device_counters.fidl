@@ -3,6 +3,34 @@
 // found in the LICENSE file.
 library fuchsia.lowpan.device;
 
+using fuchsia.lowpan;
+
+/// Protocol for connecting to [`Counters`] on a LoWPAN
+/// interface.
+@discoverable
+protocol CountersConnector {
+    /// Connects to the [`DeviceCounters`] protocol on the
+    /// named LoWPAN interface.
+    ///
+    /// The name of the interface can be learned by calling
+    /// [`fuchsia.lowpan/Lookup.GetDevices].
+    ///
+    /// If there is an error in processing this request
+    /// the given channel is closed and an epitaph code used
+    /// to describe the reason for the failure:
+    ///
+    /// * `ZX_ERR_INVALID_ARGUMENT`: The given interface name
+    ///   was not formatted correctly or otherwise invalid.
+    /// * `ZX_ERR_NOT_FOUND`: No interface was found with the
+    ///   given name.
+    /// * `ZX_ERR_NOT_SUPPORTED`: The interface exists but
+    ///   does not support this protocol.
+    Connect(resource struct {
+        name fuchsia.lowpan.InterfaceName;
+        server_end server_end:Counters;
+    });
+};
+
 protocol Counters {
     /// Returns a snapshot of the counters without resetting the counters.
     Get() -> (struct {

@@ -5,6 +5,7 @@
 use crate::invocation::*;
 use crate::prelude::*;
 use fidl_fuchsia_factory_lowpan::*;
+use fidl_fuchsia_lowpan::*;
 use fidl_fuchsia_lowpan_device::*;
 use fidl_fuchsia_lowpan_test::*;
 use fidl_fuchsia_lowpan_thread::*;
@@ -18,6 +19,22 @@ pub struct LowpanCtlContext {
     pub device_name: String,
 }
 
+macro_rules! impl_get_protocol_method {
+    ($connector_marker:ty, $marker:ty, $method:ident) => {
+        pub async fn $method(
+            &self,
+        ) -> Result<<$marker as fidl::endpoints::ProtocolMarker>::Proxy, Error> {
+            let (client, server) = create_endpoints::<$marker>()?;
+
+            connect_to_protocol::<$connector_marker>()
+                .context("Failed to connect")?
+                .connect(&self.device_name, server)?;
+
+            client.into_proxy().context("into_proxy() failed")
+        }
+    };
+}
+
 impl LowpanCtlContext {
     pub fn from_invocation(args: &LowpanCtlInvocation) -> Result<LowpanCtlContext, Error> {
         let lookup = connect_to_protocol::<LookupMarker>()
@@ -29,31 +46,38 @@ impl LowpanCtlContext {
         })
     }
 
-    pub async fn get_default_device(&self) -> Result<DeviceProxy, Error> {
-        let lookup = &self.lookup;
-
-        let (client, server) = create_endpoints::<DeviceMarker>()?;
-
-        lookup
-            .lookup_device(
-                &self.device_name,
-                Protocols {
-                    device: Some(server),
-                    device_extra: None,
-                    device_test: None,
-                    ..Protocols::EMPTY
-                },
-            )
-            .map(|x| match x {
-                Ok(Ok(())) => Ok(()),
-                Ok(Err(x)) => Err(format_err!("Service Error: {:?}", x)),
-                Err(x) => Err(x.into()),
-            })
-            .await
-            .context(format!("Unable to find {:?}", &self.device_name))?;
-
-        client.into_proxy().context("into_proxy() failed")
-    }
+    impl_get_protocol_method!(DeviceConnectorMarker, DeviceMarker, get_default_device);
+    impl_get_protocol_method!(
+        DeviceExtraConnectorMarker,
+        DeviceExtraMarker,
+        get_default_device_extra_proxy
+    );
+    impl_get_protocol_method!(
+        DeviceRouteConnectorMarker,
+        DeviceRouteMarker,
+        get_default_device_route_proxy
+    );
+    impl_get_protocol_method!(
+        DeviceRouteExtraConnectorMarker,
+        DeviceRouteExtraMarker,
+        get_default_device_route_extra_proxy
+    );
+    impl_get_protocol_method!(
+        DeviceTestConnectorMarker,
+        DeviceTestMarker,
+        get_default_device_test_proxy
+    );
+    impl_get_protocol_method!(
+        DatasetConnectorMarker,
+        DatasetMarker,
+        get_default_thread_dataset_proxy
+    );
+    impl_get_protocol_method!(
+        LegacyJoiningConnectorMarker,
+        LegacyJoiningMarker,
+        get_default_legacy_joining_proxy
+    );
+    impl_get_protocol_method!(CountersConnectorMarker, CountersMarker, get_default_device_counters);
 
     pub async fn get_default_device_factory(&self) -> Result<FactoryDeviceProxy, Error> {
         let lookup = connect_to_protocol::<FactoryLookupMarker>()
@@ -61,173 +85,7 @@ impl LowpanCtlContext {
 
         let (client, server) = create_endpoints::<FactoryDeviceMarker>()?;
 
-        lookup
-            .lookup(&self.device_name, server)
-            .map(|x| match x {
-                Ok(Ok(())) => Ok(()),
-                Ok(Err(x)) => Err(format_err!("Service Error: {:?}", x)),
-                Err(x) => Err(x.into()),
-            })
-            .await
-            .context(format!("Unable to find {:?}", &self.device_name))?;
-
-        client.into_proxy().context("into_proxy() failed")
-    }
-
-    pub async fn get_default_device_proxies(
-        &self,
-    ) -> Result<(DeviceProxy, DeviceExtraProxy, DeviceTestProxy), Error> {
-        let lookup = &self.lookup;
-
-        let (client, server) = create_endpoints::<DeviceMarker>()?;
-        let (client_extra, server_extra) = create_endpoints::<DeviceExtraMarker>()?;
-        let (client_test, server_test) = create_endpoints::<DeviceTestMarker>()?;
-
-        lookup
-            .lookup_device(
-                &self.device_name,
-                Protocols {
-                    device: Some(server),
-                    device_extra: Some(server_extra),
-                    device_test: Some(server_test),
-                    ..Protocols::EMPTY
-                },
-            )
-            .map(|x| match x {
-                Ok(Ok(())) => Ok(()),
-                Ok(Err(x)) => Err(format_err!("Service Error: {:?}", x)),
-                Err(x) => Err(x.into()),
-            })
-            .await
-            .context(format!("Unable to find {:?}", &self.device_name))?;
-
-        Ok((
-            client.into_proxy().context("into_proxy() failed")?,
-            client_extra.into_proxy().context("into_proxy() failed")?,
-            client_test.into_proxy().context("into_proxy() failed")?,
-        ))
-    }
-
-    pub async fn get_default_device_route_proxy(&self) -> Result<DeviceRouteProxy, Error> {
-        let lookup = &self.lookup;
-
-        let (client, server) = create_endpoints::<DeviceRouteMarker>()?;
-
-        lookup
-            .lookup_device(
-                &self.device_name,
-                Protocols { device_route: Some(server), ..Protocols::EMPTY },
-            )
-            .map(|x| match x {
-                Ok(Ok(())) => Ok(()),
-                Ok(Err(x)) => Err(format_err!("Service Error: {:?}", x)),
-                Err(x) => Err(x.into()),
-            })
-            .await
-            .context(format!("Unable to get device route interface for {:?}", &self.device_name))?;
-
-        client.into_proxy().context("into_proxy() failed")
-    }
-
-    pub async fn get_default_thread_dataset_proxy(&self) -> Result<DatasetProxy, Error> {
-        let lookup = &self.lookup;
-
-        let (client, server) = create_endpoints::<DatasetMarker>()?;
-
-        lookup
-            .lookup_device(
-                &self.device_name,
-                Protocols { thread_dataset: Some(server), ..Protocols::EMPTY },
-            )
-            .map(|x| match x {
-                Ok(Ok(())) => Ok(()),
-                Ok(Err(x)) => Err(format_err!("Service Error: {:?}", x)),
-                Err(x) => Err(x.into()),
-            })
-            .await
-            .context(format!(
-                "Unable to get thread_dataset interface for {:?}",
-                &self.device_name
-            ))?;
-
-        client.into_proxy().context("into_proxy() failed")
-    }
-
-    pub async fn get_default_device_route_extra_proxy(
-        &self,
-    ) -> Result<DeviceRouteExtraProxy, Error> {
-        let lookup = &self.lookup;
-
-        let (client, server) = create_endpoints::<DeviceRouteExtraMarker>()?;
-
-        lookup
-            .lookup_device(
-                &self.device_name,
-                Protocols { device_route_extra: Some(server), ..Protocols::EMPTY },
-            )
-            .map(|x| match x {
-                Ok(Ok(())) => Ok(()),
-                Ok(Err(x)) => Err(format_err!("Service Error: {:?}", x)),
-                Err(x) => Err(x.into()),
-            })
-            .await
-            .context(format!(
-                "Unable to get device route extra interface for {:?}",
-                &self.device_name
-            ))?;
-
-        client.into_proxy().context("into_proxy() failed")
-    }
-
-    pub async fn get_default_legacy_joining_proxy(&self) -> Result<LegacyJoiningProxy, Error> {
-        let lookup = &self.lookup;
-
-        let (client, server) = create_endpoints::<LegacyJoiningMarker>()?;
-
-        lookup
-            .lookup_device(
-                &self.device_name,
-                Protocols { thread_legacy_joining: Some(server), ..Protocols::EMPTY },
-            )
-            .map(|x| match x {
-                Ok(Ok(())) => Ok(()),
-                Ok(Err(x)) => Err(format_err!("Service Error: {:?}", x)),
-                Err(x) => Err(x.into()),
-            })
-            .await
-            .context(format!(
-                "Unable to get legacy joining interface for {:?}",
-                &self.device_name
-            ))?;
-
-        client.into_proxy().context("into_proxy() failed")
-    }
-
-    pub async fn get_default_device_counters(&self) -> Result<CountersProxy, Error> {
-        let lookup = &self.lookup;
-
-        let (client, server) = create_endpoints::<CountersMarker>()?;
-
-        lookup
-            .lookup_device(
-                &self.device_name,
-                Protocols {
-                    device: None,
-                    device_extra: None,
-                    device_test: None,
-                    device_route: None,
-                    device_route_extra: None,
-                    counters: Some(server),
-                    ..Protocols::EMPTY
-                },
-            )
-            .map(|x| match x {
-                Ok(Ok(())) => Ok(()),
-                Ok(Err(x)) => Err(format_err!("Service Error: {:?}", x)),
-                Err(x) => Err(x.into()),
-            })
-            .await
-            .context(format!("Unable to find {:?}", &self.device_name))?;
+        lookup.lookup(&self.device_name, server)?;
 
         client.into_proxy().context("into_proxy() failed")
     }

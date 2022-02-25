@@ -27,13 +27,39 @@ type DeviceState = table {
     2: role fuchsia.lowpan.Role;
 };
 
+/// Protocol for connecting to [`Device`] on a LoWPAN
+/// interface.
+@discoverable
+protocol DeviceConnector {
+    /// Connects to the [`Device`] protocol on the
+    /// named LoWPAN interface.
+    ///
+    /// The name of the interface can be learned by calling
+    /// [`fuchsia.lowpan/Lookup.GetDevices()`].
+    ///
+    /// If there is an error in processing this request
+    /// the given channel is closed and an epitaph code used
+    /// to describe the reason for the failure:
+    ///
+    /// * `ZX_ERR_INVALID_ARGUMENT`: The given interface name
+    ///   was not formatted correctly or otherwise invalid.
+    /// * `ZX_ERR_NOT_FOUND`: No interface was found with the
+    ///   given name.
+    /// * `ZX_ERR_NOT_SUPPORTED`: The interface exists but
+    ///   does not support this protocol.
+    Connect(resource struct {
+        name fuchsia.lowpan.InterfaceName;
+        server_end server_end:Device;
+    });
+};
+
 /// LoWPAN Device Protocol.
 ///
 /// This protocol provides clients with a way to control and
 /// monitor the device.
 ///
 /// Note that aspects of the device that deal with PII must
-/// be monitored and controlled via the `DeviceExtra` protocol.
+/// be monitored and controlled via the [`DeviceExtra`] protocol.
 protocol Device {
     /// Provision the interface for the network described by identity
     /// and credential. This is similar to `JoinNetwork`, except that
@@ -126,6 +152,32 @@ protocol Device {
     /// had happened in-between calls.
     WatchDeviceState() -> (struct {
         device_combined_state DeviceState;
+    });
+};
+
+/// Protocol for connecting to [`DeviceExtra`] on a LoWPAN
+/// interface.
+@discoverable
+protocol DeviceExtraConnector {
+    /// Connects to the [`DeviceExtra`] protocol on the
+    /// named LoWPAN interface.
+    ///
+    /// The name of the interface can be learned by calling
+    /// [`fuchsia.lowpan/Lookup.GetDevices`].
+    ///
+    /// If there is an error in processing this request
+    /// the given channel is closed and an epitaph code used
+    /// to describe the reason for the failure:
+    ///
+    /// * `ZX_ERR_INVALID_ARGUMENT`: The given interface name
+    ///   was not formatted correctly or otherwise invalid.
+    /// * `ZX_ERR_NOT_FOUND`: No interface was found with the
+    ///   given name.
+    /// * `ZX_ERR_NOT_SUPPORTED`: The interface exists but
+    ///   does not support this protocol.
+    Connect(resource struct {
+        name fuchsia.lowpan.InterfaceName;
+        server_end server_end:DeviceExtra;
     });
 };
 

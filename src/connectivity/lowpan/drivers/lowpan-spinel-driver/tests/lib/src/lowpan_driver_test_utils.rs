@@ -5,7 +5,7 @@
 use {
     anyhow::{format_err, Error},
     fasync::Time,
-    fidl_fuchsia_lowpan_device::LookupMarker,
+    fidl_fuchsia_lowpan::LookupMarker,
     fidl_fuchsia_net_interfaces_ext as fnet_interfaces_ext, fuchsia_async as fasync,
     fuchsia_async::TimeoutExt,
     fuchsia_component::client::{connect_to_protocol, launch, launcher, App},

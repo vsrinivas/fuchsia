@@ -93,6 +93,32 @@ type ExternalRoute = table {
     3: stable bool;
 };
 
+/// Protocol for connecting to `fuchsia.lowpan.device.DeviceRoute` on a LoWPAN
+/// interface.
+@discoverable
+protocol DeviceRouteConnector {
+    /// Connects to the `fuchsia.lowpan.device.DeviceRoute` protocol on the
+    /// named LoWPAN interface.
+    ///
+    /// The name of the interface can be learned by calling
+    /// `fuchsia.lowpan.Lookup.GetDevices()`.
+    ///
+    /// If there is an error in processing this request
+    /// the given channel is closed and an epitaph code used
+    /// to describe the reason for the failure:
+    ///
+    /// * `ZX_ERR_INVALID_ARGUMENT`: The given interface name
+    ///   was not formatted correctly or otherwise invalid.
+    /// * `ZX_ERR_NOT_FOUND`: No interface was found with the
+    ///   given name.
+    /// * `ZX_ERR_NOT_SUPPORTED`: The interface exists but
+    ///   does not support this protocol.
+    Connect(resource struct {
+        name fuchsia.lowpan.InterfaceName;
+        server_end server_end:DeviceRoute;
+    });
+};
+
 /// LoWPAN protocol for IPv6 route and prefix management methods that
 /// do not expose PII.
 ///
@@ -160,6 +186,32 @@ protocol DeviceRoute {
     UnregisterExternalRoute(struct {
         subnet fuchsia.lowpan.Ipv6Subnet;
     }) -> ();
+};
+
+/// Protocol for connecting to [`DeviceRouteExtra`] on a LoWPAN
+/// interface.
+@discoverable
+protocol DeviceRouteExtraConnector {
+    /// Connects to the [`DeviceRouteExtra`] protocol on the
+    /// named LoWPAN interface.
+    ///
+    /// The name of the interface can be learned by calling
+    /// [`fuchsia.lowpan/Lookup.GetDevices`].
+    ///
+    /// If there is an error in processing this request
+    /// the given channel is closed and an epitaph code used
+    /// to describe the reason for the failure:
+    ///
+    /// * `ZX_ERR_INVALID_ARGUMENT`: The given interface name
+    ///   was not formatted correctly or otherwise invalid.
+    /// * `ZX_ERR_NOT_FOUND`: No interface was found with the
+    ///   given name.
+    /// * `ZX_ERR_NOT_SUPPORTED`: The interface exists but
+    ///   does not support this protocol.
+    Connect(resource struct {
+        name fuchsia.lowpan.InterfaceName;
+        server_end server_end:DeviceRouteExtra;
+    });
 };
 
 /// LoWPAN protocol for IPv6 route and prefix management methods that

@@ -6,7 +6,9 @@ use crate::prelude_internal::*;
 
 use crate::{Driver, ServeTo, MAX_CONCURRENT};
 use fidl::endpoints::create_endpoints;
-use fidl_fuchsia_lowpan_device::{DriverMarker, DriverRequest, DriverRequestStream};
+use fidl_fuchsia_lowpan_driver::{
+    DriverMarker, DriverRequest, DriverRequestStream, RegisterProxyInterface,
+};
 use futures::future::join_all;
 
 /// Registers a driver instance with the given LoWPAN service and returns
@@ -17,21 +19,13 @@ pub async fn register_and_serve_driver<'a, R, D>(
     driver: &'a D,
 ) -> anyhow::Result<()>
 where
-    R: fidl_fuchsia_lowpan_device::RegisterProxyInterface,
+    R: RegisterProxyInterface,
     D: Driver + 'a,
 {
     let (client_ep, server_ep) =
         create_endpoints::<DriverMarker>().context("Failed to create FIDL endpoints")?;
 
-    registry
-        .register_device(name, client_ep)
-        .map(|x| match x {
-            Ok(Ok(x)) => Ok(x),
-            Ok(Err(err)) => Err(format_err!("Service Error: {:?}", err)),
-            Err(err) => Err(err.into()),
-        })
-        .await
-        .context("Failed to register LoWPAN device driver")?;
+    registry.register_device(name, client_ep)?;
 
     driver.serve_to(server_ep.into_stream()?).await?;
 
@@ -137,15 +131,7 @@ where
     let (client_ep, server_ep) =
         create_endpoints::<FactoryDriverMarker>().context("Failed to create FIDL endpoints")?;
 
-    registry
-        .register(name, client_ep)
-        .map(|x| match x {
-            Ok(Ok(x)) => Ok(x),
-            Ok(Err(err)) => Err(format_err!("Service Error: {:?}", err)),
-            Err(err) => Err(err.into()),
-        })
-        .await
-        .context("Failed to register LoWPAN factory driver")?;
+    registry.register(name, client_ep)?;
 
     server_ep
         .into_stream()?

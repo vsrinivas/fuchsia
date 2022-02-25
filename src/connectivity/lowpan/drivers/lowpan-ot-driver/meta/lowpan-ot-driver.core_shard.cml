@@ -18,8 +18,8 @@
             protocol: [
                 "fuchsia.factory.lowpan.FactoryLookup",
                 "fuchsia.factory.lowpan.FactoryRegister",
-                "fuchsia.lowpan.device.Lookup",
-                "fuchsia.lowpan.device.Register",
+                "fuchsia.lowpan.driver.Register",
+                "fuchsia.lowpan.Lookup",
             ],
             from: "#lowpanservice",
             to: "#lowpan-ot-driver",

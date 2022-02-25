@@ -17,6 +17,7 @@ fidl("fuchsia.lowpan") {
     "misc.fidl",
     "provisioning_params.fidl",
     "role.fidl",
+    "service.fidl",
     "state.fidl",
   ]
 

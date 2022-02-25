@@ -4,7 +4,7 @@
 
 use anyhow::{format_err, Context as _, Error};
 use fasync::Time;
-use fidl_fuchsia_lowpan_device::LookupMarker;
+use fidl_fuchsia_lowpan::LookupMarker;
 use fuchsia_async as fasync;
 use fuchsia_async::TimeoutExt;
 use fuchsia_component::client::{connect_to_protocol, launch, launcher};

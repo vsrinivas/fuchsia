@@ -9,5 +9,5 @@ fidl("fuchsia.factory.lowpan") {
 
   sources = [ "factory.fidl" ]
 
-  public_deps = [ "//sdk/fidl/fuchsia.lowpan.device" ]
+  public_deps = [ "//sdk/fidl/fuchsia.lowpan" ]
 }

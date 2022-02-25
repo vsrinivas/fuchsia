@@ -14,6 +14,7 @@ rustc_library("lowpan_driver_common") {
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//sdk/fidl/fuchsia.lowpan:fuchsia.lowpan-rustc",
     "//sdk/fidl/fuchsia.lowpan.device:fuchsia.lowpan.device-rustc",
+    "//sdk/fidl/fuchsia.lowpan.driver:fuchsia.lowpan.driver-rustc",
     "//sdk/fidl/fuchsia.lowpan.spinel:fuchsia.lowpan.spinel-rustc",
     "//sdk/fidl/fuchsia.lowpan.test:fuchsia.lowpan.test-rustc",
     "//sdk/fidl/fuchsia.lowpan.thread:fuchsia.lowpan.thread-rustc",

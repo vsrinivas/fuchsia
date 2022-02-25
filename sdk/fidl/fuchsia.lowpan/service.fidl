@@ -1,0 +1,51 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library fuchsia.lowpan;
+
+// Arbitrarily chosen at an expected maximum number of radio interfaces on
+// a single device.
+const MAX_LOWPAN_DEVICES uint32 = 8;
+
+/// Describes changes to the devices being managed
+/// by the LoWPAN service.
+type DeviceChanges = struct {
+    removed vector<InterfaceName>:MAX_LOWPAN_DEVICES;
+    added vector<InterfaceName>:MAX_LOWPAN_DEVICES;
+};
+
+/// Protocol for discovering and resolving LoWPAN interfaces and their
+/// associated control protocol instances.
+@discoverable
+protocol Lookup {
+    /// Returns the list of all registered LoWPAN device interface names.
+    GetDevices() -> (struct {
+        device_names vector<InterfaceName>:MAX_LOWPAN_DEVICES;
+    });
+
+    /// Observes when devices are added or removed.
+    ///
+    /// The first call to this method returns immediately with a
+    /// `DeviceChanges` struct containing only items in the `added` field with
+    /// the names of all of the current devices. Subsequent calls
+    /// will block until a device has been added or removed, at which
+    /// point it will return with the `added` and/or `removed` fields
+    /// filled out accordingly. The changes are reported since the
+    /// time that the method returned.
+    ///
+    /// If both the `added` and `removed` fields have names in the returned
+    /// table, then the `removed` field MUST be processed BEFORE `added` field.
+    ///
+    /// If a device was added and then removed in-between calls to this
+    /// method, the device will be absent from both the `added` and `removed`
+    /// lists.
+    ///
+    /// If the same device name is listed on both the `added` and `removed`
+    /// fields, then the client should assume that the original device was
+    /// removed and a new device instance started in its place. However, while
+    /// the client should be able to handle this condition, it should not depend
+    /// on the server will always have this behavior.
+    WatchDevices() -> (struct {
+        device_changes DeviceChanges;
+    });
+};

@@ -1,0 +1,18 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/fidl/fidl.gni")
+
+fidl("fuchsia.lowpan.driver") {
+  sdk_category = "internal"
+
+  sources = [ "driver.fidl" ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.lowpan",
+    "//sdk/fidl/fuchsia.lowpan.device",
+    "//sdk/fidl/fuchsia.lowpan.test",
+    "//sdk/fidl/fuchsia.lowpan.thread",
+  ]
+}

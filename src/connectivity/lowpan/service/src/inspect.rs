@@ -8,11 +8,12 @@ use anyhow::Error;
 use async_utils::hanging_get::client::HangingGetStream;
 use fidl::endpoints::create_endpoints;
 use fidl_fuchsia_lowpan::Identity;
+use fidl_fuchsia_lowpan::{DeviceChanges, LookupMarker, LookupProxyInterface};
 use fidl_fuchsia_lowpan_device::{
-    CountersMarker, DeviceChanges, DeviceExtraMarker, DeviceMarker, DeviceState, LookupMarker,
-    LookupProxyInterface, Protocols,
+    CountersConnectorMarker, CountersMarker, DeviceConnectorMarker, DeviceExtraConnectorMarker,
+    DeviceExtraMarker, DeviceMarker, DeviceState,
 };
-use fidl_fuchsia_lowpan_test::DeviceTestMarker;
+use fidl_fuchsia_lowpan_test::{DeviceTestConnectorMarker, DeviceTestMarker};
 use fuchsia_async::Task;
 use fuchsia_component::client::connect_to_protocol;
 use fuchsia_inspect::{LazyNode, Node, StringProperty};
@@ -229,13 +230,13 @@ pub async fn watch_device_changes<
                         msg: format!("{}:available", available_device)
                     );
                     let future = monitor_device(
-                        lookup.clone(),
                         available_device.clone().to_string(),
                         inspect_tree.create_iface_child(available_device.clone()),
                     )
-                    .map(|x| {
-                        if x.is_err() {
-                            fx_log_warn!("Failed to monitor LoWPAN device.");
+                    .map(|x| match x {
+                        Ok(()) => {}
+                        Err(err) => {
+                            fx_log_warn!("Failed to monitor LoWPAN device: {:?}", err);
                         }
                     });
 
@@ -265,35 +266,17 @@ pub async fn start_inspect_process(inspect_tree: Arc<LowpanServiceTree>) -> Resu
     Ok::<(), Error>(())
 }
 
-async fn monitor_device<LP: 'static + LookupProxyInterface>(
-    lookup: Arc<LP>,
-    name: String,
-    iface_tree: Arc<IfaceTreeHolder>,
-) -> Result<(), Error> {
+async fn monitor_device(name: String, iface_tree: Arc<IfaceTreeHolder>) -> Result<(), Error> {
     let (device_client, device_server) = create_endpoints::<DeviceMarker>()?;
     let (device_extra_client, device_extra_server) = create_endpoints::<DeviceExtraMarker>()?;
     let (device_test_client, device_test_server) = create_endpoints::<DeviceTestMarker>()?;
     let (counters_client, counters_server) = create_endpoints::<CountersMarker>()?;
-    lookup
-        .lookup_device(
-            &name,
-            Protocols {
-                device: Some(device_server),
-                device_extra: Some(device_extra_server),
-                device_test: Some(device_test_server),
-                device_route: None,
-                device_route_extra: None,
-                counters: Some(counters_server),
-                ..Protocols::EMPTY
-            },
-        )
-        .map(|x| match x {
-            Ok(Ok(())) => Ok(()),
-            Ok(Err(x)) => Err(format_err!("Service Error: {:?}", x)),
-            Err(x) => Err(x.into()),
-        })
-        .await
-        .context(format!("Unable to find {:?}", name))?;
+
+    connect_to_protocol::<DeviceConnectorMarker>()?.connect(&name, device_server)?;
+    connect_to_protocol::<DeviceExtraConnectorMarker>()?.connect(&name, device_extra_server)?;
+    connect_to_protocol::<DeviceTestConnectorMarker>()?.connect(&name, device_test_server)?;
+    connect_to_protocol::<CountersConnectorMarker>()?.connect(&name, counters_server)?;
+
     let device = device_client.into_proxy().context("into_proxy() failed")?;
     let device_extra = device_extra_client.into_proxy().context("into_proxy() failed")?;
     let device_test = device_test_client.into_proxy().context("into_proxy() failed")?;

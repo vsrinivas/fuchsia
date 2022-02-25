@@ -3,10 +3,9 @@
 // found in the LICENSE file.
 library fuchsia.factory.lowpan;
 
-using fuchsia.lowpan.device;
+using fuchsia.lowpan;
 
-alias InterfaceName = fuchsia.lowpan.device.InterfaceName;
-alias ServiceError = fuchsia.lowpan.device.ServiceError;
+alias InterfaceName = fuchsia.lowpan.InterfaceName;
 
 /// Protocol for sending factory commands to a LoWPAN device.
 ///
@@ -42,7 +41,7 @@ protocol FactoryLookup {
     Lookup(resource struct {
         name InterfaceName;
         device_factory server_end:FactoryDevice;
-    }) -> (struct {}) error ServiceError;
+    });
 };
 
 /// Protocol representing a LoWPAN driver instance that can serve `FactoryDevice` instances.
@@ -72,5 +71,5 @@ protocol FactoryRegister {
     Register(resource struct {
         name InterfaceName;
         driver client_end:FactoryDriver;
-    }) -> (struct {}) error ServiceError;
+    });
 };

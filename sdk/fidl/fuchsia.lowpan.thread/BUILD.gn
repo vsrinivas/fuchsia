@@ -12,5 +12,8 @@ fidl("fuchsia.lowpan.thread") {
     "legacy.fidl",
   ]
 
-  public_deps = [ "//zircon/vdso/zx" ]
+  public_deps = [
+    "//sdk/fidl/fuchsia.lowpan",
+    "//zircon/vdso/zx",
+  ]
 }

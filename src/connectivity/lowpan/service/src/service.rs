@@ -5,18 +5,30 @@
 use super::*;
 
 use anyhow::Context as _;
+use fidl::endpoints::{ControlHandle as _, RequestStream as _};
 use fidl_fuchsia_factory_lowpan::{
     FactoryDriverMarker, FactoryDriverProxy, FactoryLookupRequest, FactoryLookupRequestStream,
     FactoryRegisterRequest, FactoryRegisterRequestStream,
 };
+use fidl_fuchsia_lowpan::{DeviceChanges, LookupRequest, LookupRequestStream, MAX_LOWPAN_DEVICES};
 use fidl_fuchsia_lowpan_device::{
-    DeviceChanges, DriverMarker, DriverProxy, LookupRequest, LookupRequestStream, RegisterRequest,
-    RegisterRequestStream, ServiceError, MAX_LOWPAN_DEVICES,
+    CountersConnectorRequest, CountersConnectorRequestStream, DeviceConnectorRequest,
+    DeviceConnectorRequestStream, DeviceExtraConnectorRequest, DeviceExtraConnectorRequestStream,
+    DeviceRouteConnectorRequest, DeviceRouteConnectorRequestStream,
+    DeviceRouteExtraConnectorRequest, DeviceRouteExtraConnectorRequestStream,
+};
+use fidl_fuchsia_lowpan_driver::{
+    DriverMarker, DriverProxy, Protocols, RegisterRequest, RegisterRequestStream,
+};
+use fidl_fuchsia_lowpan_test::{DeviceTestConnectorRequest, DeviceTestConnectorRequestStream};
+use fidl_fuchsia_lowpan_thread::{
+    DatasetConnectorRequest, DatasetConnectorRequestStream, LegacyJoiningConnectorRequest,
+    LegacyJoiningConnectorRequestStream,
 };
 use fuchsia_syslog::macros::*;
 use futures::prelude::*;
 use futures::task::{Spawn, SpawnExt};
-use lowpan_driver_common::AsyncCondition;
+use lowpan_driver_common::{AsyncCondition, ZxStatus};
 use parking_lot::Mutex;
 use regex::Regex;
 use std::collections::HashMap;
@@ -46,12 +58,12 @@ impl<S: Spawn> LowpanService<S> {
 }
 
 impl<S> LowpanService<S> {
-    pub fn lookup(&self, name: &str) -> Result<DriverProxy, ServiceError> {
+    pub fn lookup(&self, name: &str) -> Result<DriverProxy, ZxStatus> {
         let devices = self.devices.lock();
         if let Some(device) = devices.get(name) {
             Ok(device.clone())
         } else {
-            Err(ServiceError::DeviceNotFound)
+            Err(ZxStatus::NOT_FOUND)
         }
     }
 
@@ -66,12 +78,12 @@ impl<S: Spawn> LowpanService<S> {
         &self,
         name: &str,
         driver: fidl::endpoints::ClientEnd<DriverMarker>,
-    ) -> Result<(), ServiceError> {
-        let driver = driver.into_proxy().map_err(|_| ServiceError::InvalidArgument)?;
+    ) -> Result<(), ZxStatus> {
+        let driver = driver.into_proxy().map_err(|_| ZxStatus::INVALID_ARGS)?;
 
         if !DEVICE_NAME_REGEX.is_match(name) {
             fx_log_err!("Attempted to register LoWPAN device with invalid name {:?}", name);
-            return Err(ServiceError::InvalidInterfaceName);
+            return Err(ZxStatus::INVALID_ARGS);
         }
 
         let name = name.to_string();
@@ -82,12 +94,12 @@ impl<S: Spawn> LowpanService<S> {
 
             // Check to make sure there already aren't too many devices.
             if devices.len() >= MAX_LOWPAN_DEVICES as usize {
-                return Err(ServiceError::TooManyDevices);
+                return Err(ZxStatus::NO_RESOURCES);
             }
 
             // Check for existing devices with the same name.
             if devices.contains_key(&name) {
-                return Err(ServiceError::DeviceAlreadyExists);
+                return Err(ZxStatus::ALREADY_EXISTS);
             }
 
             // Insert the new device into the list.
@@ -123,6 +135,53 @@ impl<S: Spawn> LowpanService<S> {
     }
 }
 
+macro_rules! impl_serve_to_driver {
+    ($request_stream:ty, $request:ident, $protocol_member:ident) => {
+        #[async_trait::async_trait()]
+        impl<S: Sync> ServeTo<$request_stream> for LowpanService<S> {
+            async fn serve_to(&self, request_stream: $request_stream) -> anyhow::Result<()> {
+                request_stream
+                    .err_into::<Error>()
+                    .try_for_each_concurrent(MAX_CONCURRENT, |command| async {
+                        match command {
+                            $request::Connect { name, server_end, .. } => {
+                                if let Err(err) = match self.lookup(&name) {
+                                    Ok(dev) => dev.get_protocols(Protocols {
+                                        $protocol_member: Some(server_end),
+                                        ..Protocols::EMPTY
+                                    }),
+                                    Err(err) => server_end.close_with_epitaph(err.into()),
+                                } {
+                                    fx_log_err!("{:?}", err);
+                                }
+                            }
+                        }
+                        Result::<(), anyhow::Error>::Ok(())
+                    })
+                    .inspect_err(|e| fx_log_err!("{:?}", e))
+                    .await
+            }
+        }
+    };
+}
+
+impl_serve_to_driver!(DeviceConnectorRequestStream, DeviceConnectorRequest, device);
+impl_serve_to_driver!(DeviceExtraConnectorRequestStream, DeviceExtraConnectorRequest, device_extra);
+impl_serve_to_driver!(DeviceRouteConnectorRequestStream, DeviceRouteConnectorRequest, device_route);
+impl_serve_to_driver!(
+    DeviceRouteExtraConnectorRequestStream,
+    DeviceRouteExtraConnectorRequest,
+    device_route_extra
+);
+impl_serve_to_driver!(CountersConnectorRequestStream, CountersConnectorRequest, counters);
+impl_serve_to_driver!(DeviceTestConnectorRequestStream, DeviceTestConnectorRequest, device_test);
+impl_serve_to_driver!(DatasetConnectorRequestStream, DatasetConnectorRequest, thread_dataset);
+impl_serve_to_driver!(
+    LegacyJoiningConnectorRequestStream,
+    LegacyJoiningConnectorRequest,
+    thread_legacy_joining
+);
+
 #[async_trait::async_trait()]
 impl<S: Sync> ServeTo<LookupRequestStream> for LowpanService<S> {
     async fn serve_to(&self, request_stream: LookupRequestStream) -> anyhow::Result<()> {
@@ -133,18 +192,6 @@ impl<S: Sync> ServeTo<LookupRequestStream> for LowpanService<S> {
             .err_into::<Error>()
             .try_for_each_concurrent(MAX_CONCURRENT, |command| async {
                 match command {
-                    LookupRequest::LookupDevice { name, protocols, responder } => {
-                        fx_log_info!("Received lookup request for {:?}", name);
-
-                        let mut ret = self.lookup(&name).and_then(|dev| {
-                            dev.get_protocols(protocols).map_err(|_| ServiceError::DeviceNotFound)
-                        });
-
-                        responder.send(&mut ret)?;
-
-                        fx_log_info!("Responded to lookup request {:?}", name);
-                    }
-
                     LookupRequest::GetDevices { responder } => {
                         fx_log_info!("Received get devices request");
                         responder
@@ -249,20 +296,17 @@ impl<S: Sync> ServeTo<LookupRequestStream> for LowpanService<S> {
 #[async_trait::async_trait()]
 impl<S: Spawn + Sync> ServeTo<RegisterRequestStream> for LowpanService<S> {
     async fn serve_to(&self, request_stream: RegisterRequestStream) -> anyhow::Result<()> {
+        let control_handle = request_stream.control_handle();
         request_stream
             .err_into::<Error>()
             .try_for_each_concurrent(MAX_CONCURRENT, |command| async {
                 match command {
-                    RegisterRequest::RegisterDevice { name, driver, responder } => {
+                    RegisterRequest::RegisterDevice { name, driver, .. } => {
                         fx_log_info!("Received register request for {:?}", name);
 
-                        let mut response = self.register(&name, driver);
-
-                        responder
-                            .send(&mut response)
-                            .context("error sending response to register request")?;
-
-                        fx_log_info!("Responded to register request {:?}", name);
+                        if let Err(err) = self.register(&name, driver) {
+                            control_handle.shutdown_with_epitaph(err);
+                        }
                     }
                 }
                 Result::<(), anyhow::Error>::Ok(())
@@ -276,12 +320,12 @@ mod factory {
     use super::*;
 
     impl<S: Spawn + Sync> LowpanService<S> {
-        pub fn lookup_factory(&self, name: &str) -> Result<FactoryDriverProxy, ServiceError> {
+        pub fn lookup_factory(&self, name: &str) -> Result<FactoryDriverProxy, ZxStatus> {
             let devices = self.devices_factory.lock();
             if let Some(device) = devices.get(name) {
                 Ok(device.clone())
             } else {
-                Err(ServiceError::DeviceNotFound)
+                Err(ZxStatus::NOT_FOUND)
             }
         }
 
@@ -289,12 +333,12 @@ mod factory {
             &self,
             name: &str,
             driver: fidl::endpoints::ClientEnd<FactoryDriverMarker>,
-        ) -> Result<(), ServiceError> {
-            let driver = driver.into_proxy().map_err(|_| ServiceError::InvalidArgument)?;
+        ) -> Result<(), ZxStatus> {
+            let driver = driver.into_proxy().map_err(|_| ZxStatus::INVALID_ARGS)?;
 
             if !DEVICE_NAME_REGEX.is_match(name) {
                 fx_log_err!("Attempted to register LoWPAN device with invalid name {:?}", name);
-                return Err(ServiceError::InvalidInterfaceName);
+                return Err(ZxStatus::INVALID_ARGS);
             }
 
             let name = name.to_string();
@@ -304,12 +348,12 @@ mod factory {
 
             // Check to make sure there already aren't too many devices.
             if devices.len() >= MAX_LOWPAN_DEVICES as usize {
-                return Err(ServiceError::TooManyDevices);
+                return Err(ZxStatus::NO_RESOURCES);
             }
 
             // Check for existing devices with the same name.
             if devices.contains_key(&name) {
-                return Err(ServiceError::DeviceAlreadyExists);
+                return Err(ZxStatus::ALREADY_EXISTS);
             }
 
             // Insert the new device into the list.
@@ -326,17 +370,15 @@ mod factory {
                 .err_into::<Error>()
                 .try_for_each_concurrent(MAX_CONCURRENT, |command| async {
                     match command {
-                        FactoryLookupRequest::Lookup { name, device_factory, responder } => {
+                        FactoryLookupRequest::Lookup { name, device_factory, .. } => {
                             fx_log_info!("Received lookup factory request for {:?}", name);
 
-                            let mut ret = self.lookup_factory(&name).and_then(|dev| {
-                                dev.get_factory_device(device_factory)
-                                    .map_err(|_| ServiceError::DeviceNotFound)
-                            });
-
-                            responder.send(&mut ret)?;
-
-                            fx_log_info!("Responded to lookup factory request {:?}", name);
+                            if let Err(err) = match self.lookup_factory(&name) {
+                                Ok(dev) => dev.get_factory_device(device_factory),
+                                Err(err) => device_factory.close_with_epitaph(err.into()),
+                            } {
+                                fx_log_err!("{:?}", err);
+                            }
                         }
                     }
                     Result::<(), anyhow::Error>::Ok(())
@@ -352,20 +394,17 @@ mod factory {
             &self,
             request_stream: FactoryRegisterRequestStream,
         ) -> anyhow::Result<()> {
+            let control_handle = request_stream.control_handle();
             request_stream
                 .err_into::<Error>()
                 .try_for_each_concurrent(MAX_CONCURRENT, |command| async {
                     match command {
-                        FactoryRegisterRequest::Register { name, driver, responder } => {
+                        FactoryRegisterRequest::Register { name, driver, .. } => {
                             fx_log_info!("Received register factory request for {:?}", name);
 
-                            let mut response = self.register_factory(&name, driver);
-
-                            responder
-                                .send(&mut response)
-                                .context("error sending response to register factory request")?;
-
-                            fx_log_info!("Responded to register factory request {:?}", name);
+                            if let Err(err) = self.register_factory(&name, driver) {
+                                control_handle.shutdown_with_epitaph(err);
+                            }
                         }
                     }
                     Result::<(), anyhow::Error>::Ok(())
@@ -390,16 +429,13 @@ mod tests {
         assert_eq!(service.register("lowpan0", client_ep), Ok(()));
 
         let (client_ep, _) = create_endpoints::<DriverMarker>().unwrap();
-        assert_eq!(
-            service.register("low pan 0", client_ep),
-            Err(ServiceError::InvalidInterfaceName)
-        );
+        assert_eq!(service.register("low pan 0", client_ep), Err(ZxStatus::INVALID_ARGS));
 
         let (client_ep, _) = create_endpoints::<DriverMarker>().unwrap();
-        assert_eq!(service.register("0lowpan", client_ep), Err(ServiceError::InvalidInterfaceName));
+        assert_eq!(service.register("0lowpan", client_ep), Err(ZxStatus::INVALID_ARGS));
 
         let (client_ep, _) = create_endpoints::<DriverMarker>().unwrap();
-        assert_eq!(service.register("l", client_ep), Err(ServiceError::InvalidInterfaceName));
+        assert_eq!(service.register("l", client_ep), Err(ZxStatus::INVALID_ARGS));
     }
 
     #[fasync::run_until_stalled(test)]

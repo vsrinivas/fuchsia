@@ -20,8 +20,10 @@ impl GetCredentialCommand {
     }
 
     pub async fn exec(&self, context: &mut LowpanCtlContext) -> Result<(), Error> {
-        let (_, device_extra, _) =
-            context.get_default_device_proxies().await.context("Unable to get device instance")?;
+        let device_extra = context
+            .get_default_device_extra_proxy()
+            .await
+            .context("Unable to get device instance")?;
 
         let credential =
             device_extra.get_credential().await.context("unable to send get_credential command")?;

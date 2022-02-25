@@ -8,6 +8,32 @@ using zx;
 
 const MAX_NEIGHBORS uint32 = 1024;
 
+/// Protocol for connecting to [`DeviceTest`] on a LoWPAN
+/// interface.
+@discoverable
+protocol DeviceTestConnector {
+    /// Connects to the [`DeviceTest`] protocol on the
+    /// named LoWPAN interface.
+    ///
+    /// The name of the interface can be learned by calling
+    /// [`fuchsia.lowpan/Lookup.GetDevices`].
+    ///
+    /// If there is an error in processing this request
+    /// the given channel is closed and an epitaph code used
+    /// to describe the reason for the failure:
+    ///
+    /// * `ZX_ERR_INVALID_ARGUMENT`: The given interface name
+    ///   was not formatted correctly or otherwise invalid.
+    /// * `ZX_ERR_NOT_FOUND`: No interface was found with the
+    ///   given name.
+    /// * `ZX_ERR_NOT_SUPPORTED`: The interface exists but
+    ///   does not support this protocol.
+    Connect(resource struct {
+        name fuchsia.lowpan.InterfaceName;
+        server_end server_end:DeviceTest;
+    });
+};
+
 protocol DeviceTest {
     /// Resets this network interface, returning
     /// all volatile state to default values. Any
