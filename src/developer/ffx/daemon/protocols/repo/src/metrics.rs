@@ -11,9 +11,11 @@ use {
 
 const CATEGORY: &str = "ffx_daemon_repo";
 
-async fn add_event(action: &'static str, custom_dimensions: BTreeMap<&'static str, String>) {
+async fn add_event(action: &'static str, label: Option<String>) {
     let analytics_task = fuchsia_async::Task::local(async move {
-        match add_custom_event(Some(CATEGORY), Some(&action), None, custom_dimensions).await {
+        match add_custom_event(Some(CATEGORY), Some(&action), label.as_deref(), BTreeMap::new())
+            .await
+        {
             Ok(_) => {}
             Err(err) => {
                 log::error!("metrics submission failed: {}", err);
@@ -29,28 +31,19 @@ async fn add_event(action: &'static str, custom_dimensions: BTreeMap<&'static st
 }
 
 pub(crate) async fn server_mode_event(mode: &str) {
-    let mut custom_dimensions = BTreeMap::new();
-    custom_dimensions.insert("mode", mode.into());
-    add_event("server.mode", custom_dimensions).await;
+    add_event("server.mode", Some(mode.into())).await
 }
 
 pub(crate) async fn server_started_event() {
-    let mut custom_dimensions = BTreeMap::new();
-    custom_dimensions.insert("result", "started".into());
-    add_event("server.state", custom_dimensions).await;
+    add_event("server.state", Some("started".into())).await
 }
 
 pub(crate) async fn server_failed_to_start_event(msg: &str) {
-    let mut custom_dimensions = BTreeMap::new();
-    custom_dimensions.insert("result", "failed".into());
-    custom_dimensions.insert("failure", msg.into());
-    add_event("server.state", custom_dimensions).await;
+    add_event("server.state", Some(msg.into())).await
 }
 
 pub(crate) async fn server_disabled_event() {
-    let mut custom_dimensions = BTreeMap::new();
-    custom_dimensions.insert("result", "disabled".into());
-    add_event("server.state", custom_dimensions).await;
+    add_event("server.state", Some("disabled".into())).await
 }
 
 pub(crate) async fn add_repository_event(repo_spec: &RepositorySpec) {
@@ -60,20 +53,17 @@ pub(crate) async fn add_repository_event(repo_spec: &RepositorySpec) {
         RepositorySpec::Http { .. } => "http",
     };
 
-    let mut custom_dimensions = BTreeMap::new();
-    custom_dimensions.insert("type", repo_type.into());
-
-    add_event("protocol.add-repository", custom_dimensions).await
+    add_event("protocol.add-repository", Some(repo_type.into())).await
 }
 
 pub(crate) async fn remove_repository_event() {
-    add_event("protocol.remove-repository", BTreeMap::new()).await
+    add_event("protocol.remove-repository", None).await
 }
 
 pub(crate) async fn register_repository_event() {
-    add_event("protocol.register-repository-to-target", BTreeMap::new()).await
+    add_event("protocol.register-repository-to-target", None).await
 }
 
 pub(crate) async fn deregister_repository_event() {
-    add_event("protocol.deregister-repository-from-target", BTreeMap::new()).await
+    add_event("protocol.deregister-repository-from-target", None).await
 }
