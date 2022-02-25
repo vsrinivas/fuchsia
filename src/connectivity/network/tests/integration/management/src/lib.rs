@@ -10,7 +10,6 @@ use std::collections::HashMap;
 
 use fidl_fuchsia_net as net;
 use fidl_fuchsia_net_dhcp as dhcp;
-use fidl_fuchsia_net_ext::IntoExt as _;
 use fidl_fuchsia_net_interfaces as net_interfaces;
 use fidl_fuchsia_netemul_network as netemul_network;
 use fidl_fuchsia_netstack as netstack;
@@ -331,10 +330,17 @@ async fn test_wlan_ap_dhcp_server<E: netemul::Endpoint, M: Manager>(name: &str) 
                         (*online
                             && addresses.iter().any(
                                 |&fidl_fuchsia_net_interfaces_ext::Address {
-                                     addr: fidl_fuchsia_net::Subnet { addr, prefix_len: _ },
+                                     value,
                                      valid_until: _,
                                  }| {
-                                    addr == INTERFACE_ADDR.into_ext()
+                                    match value {
+                                        net::InterfaceAddress::Ipv4(
+                                            net::Ipv4AddressWithPrefix { addr, prefix_len: _ },
+                                        ) => addr == INTERFACE_ADDR,
+                                        net::InterfaceAddress::Ipv6(net::Ipv6Address {
+                                            addr: _,
+                                        }) => false,
+                                    }
                                 },
                             ))
                         .then(|| (*id, name.clone()))
@@ -434,14 +440,17 @@ async fn test_wlan_ap_dhcp_server<E: netemul::Endpoint, M: Manager>(name: &str) 
                             && *online
                             && addresses.iter().any(
                                 |&fidl_fuchsia_net_interfaces_ext::Address {
-                                     addr: fidl_fuchsia_net::Subnet { addr, prefix_len: _ },
+                                     value,
                                      valid_until: _,
-                                 }| match addr {
-                                    net::IpAddress::Ipv4(net::Ipv4Address { addr }) => {
-                                        NETWORK_ADDR_SUBNET
-                                            .contains(&net_types_ip::Ipv4Addr::new(addr))
+                                 }| match value {
+                                    net::InterfaceAddress::Ipv4(net::Ipv4AddressWithPrefix {
+                                        addr: net::Ipv4Address { addr },
+                                        prefix_len: _,
+                                    }) => NETWORK_ADDR_SUBNET
+                                        .contains(&net_types_ip::Ipv4Addr::new(addr)),
+                                    net::InterfaceAddress::Ipv6(net::Ipv6Address { addr: _ }) => {
+                                        false
                                     }
-                                    net::IpAddress::Ipv6(net::Ipv6Address { addr: _ }) => false,
                                 },
                             ))
                         .then(|| ())

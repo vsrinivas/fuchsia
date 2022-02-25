@@ -70,13 +70,10 @@ async fn create_realm<'a>(
         &mut std::collections::HashMap::new(),
         |interfaces| {
             let addr = interfaces.get(&ep.id())?.addresses.iter().find_map(
-                |&fidl_fuchsia_net_interfaces_ext::Address {
-                     addr: fidl_fuchsia_net::Subnet { addr, prefix_len: _ },
-                     valid_until: _,
-                 }| {
-                    match addr {
-                        a @ fidl_fuchsia_net::IpAddress::Ipv6(_) => Some(a.clone()),
-                        fidl_fuchsia_net::IpAddress::Ipv4(_) => None,
+                |&fidl_fuchsia_net_interfaces_ext::Address { value, valid_until: _ }| match value {
+                    fidl_fuchsia_net::InterfaceAddress::Ipv4(_) => None,
+                    fidl_fuchsia_net::InterfaceAddress::Ipv6(addr) => {
+                        Some(fidl_fuchsia_net::IpAddress::Ipv6(addr))
                     }
                 },
             )?;

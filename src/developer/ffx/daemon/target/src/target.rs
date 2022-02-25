@@ -17,7 +17,7 @@ use {
     fidl_fuchsia_developer_bridge as bridge,
     fidl_fuchsia_developer_bridge::TargetState,
     fidl_fuchsia_developer_remotecontrol::{IdentifyHostResponse, RemoteControlProxy},
-    fidl_fuchsia_net::{IpAddress, Ipv4Address, Ipv6Address},
+    fidl_fuchsia_net::{IpAddress, Ipv4Address, Ipv6Address, Subnet},
     fuchsia_async::Task,
     netext::IsLocalAddr,
     rand::random,
@@ -764,12 +764,12 @@ impl Target {
         if let Some(addrs) = identify.addresses {
             let mut taddrs = target.addrs.borrow_mut();
             let now = Utc::now();
-            for addr in addrs.iter().map(|addr| {
-                TargetAddrEntry::new(
-                    TargetAddr::from(addr.clone()),
-                    now.clone(),
-                    TargetAddrType::Ssh,
-                )
+            for addr in addrs.iter().copied().map(|Subnet { addr, prefix_len: _ }| {
+                let addr = match addr {
+                    IpAddress::Ipv4(Ipv4Address { addr }) => addr.into(),
+                    IpAddress::Ipv6(Ipv6Address { addr }) => addr.into(),
+                };
+                TargetAddrEntry::new((addr, 0).into(), now.clone(), TargetAddrType::Ssh)
             }) {
                 taddrs.insert(addr);
             }
@@ -1015,7 +1015,6 @@ mod test {
         chrono::TimeZone,
         fidl, fidl_fuchsia_developer_remotecontrol as rcs,
         fidl_fuchsia_developer_remotecontrol::RemoteControlMarker,
-        fidl_fuchsia_net::Subnet,
         fidl_fuchsia_overnet_protocol::NodeId,
         futures::prelude::*,
         std::net::{Ipv4Addr, Ipv6Addr, SocketAddr, SocketAddrV4, SocketAddrV6},
@@ -1042,7 +1041,7 @@ mod test {
                                 .context("sending testing error response")
                                 .unwrap();
                         } else {
-                            let result: Vec<Subnet> = vec![Subnet {
+                            let result = vec![Subnet {
                                 addr: IpAddress::Ipv4(Ipv4Address { addr: [192, 168, 0, 1] }),
                                 prefix_len: 24,
                             }];

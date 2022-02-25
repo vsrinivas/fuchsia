@@ -47,8 +47,8 @@ pub struct Properties {
 #[fidl_table_src(fnet_interfaces::Address)]
 #[fidl_table_validator(AddressValidator)]
 pub struct Address {
-    /// The address and prefix length.
-    pub addr: fidl_fuchsia_net::Subnet,
+    /// The interface address.
+    pub value: fidl_fuchsia_net::InterfaceAddress,
     /// The time after which the address will no longer be valid.
     ///
     /// Its value must be greater than 0. A value of zx.time.INFINITE indicates
@@ -63,7 +63,7 @@ pub struct AddressValidator;
 
 impl Validate<Address> for AddressValidator {
     type Error = String;
-    fn validate(Address { addr: _, valid_until }: &Address) -> Result<(), Self::Error> {
+    fn validate(Address { value: _, valid_until }: &Address) -> Result<(), Self::Error> {
         if *valid_until <= 0 {
             return Err(format!("non-positive value for valid_until={}", *valid_until));
         }
@@ -498,7 +498,7 @@ mod tests {
     use assert_matches::assert_matches;
     use fidl_fuchsia_net as fnet;
     use futures::{task::Poll, FutureExt as _};
-    use net_declare::fidl_subnet;
+    use net_declare::fidl_if_addr;
     use std::{cell::RefCell, convert::TryInto as _, pin::Pin, rc::Rc};
     use test_case::test_case;
 
@@ -510,7 +510,7 @@ mod tests {
             online: Some(false),
             has_default_ipv4_route: Some(false),
             has_default_ipv6_route: Some(false),
-            addresses: Some(vec![fidl_address(ADDR, zx::ZX_TIME_INFINITE)]),
+            addresses: Some(vec![fidl_address(ADDR1, zx::ZX_TIME_INFINITE)]),
             ..fnet_interfaces::Properties::EMPTY
         }
     }
@@ -549,9 +549,12 @@ mod tests {
         fidl_properties_after_change(id).try_into().expect("failed to validate FIDL Properties")
     }
 
-    fn fidl_address(addr: fnet::Subnet, valid_until: zx::zx_time_t) -> fnet_interfaces::Address {
+    fn fidl_address(
+        addr: fnet::InterfaceAddress,
+        valid_until: zx::zx_time_t,
+    ) -> fnet_interfaces::Address {
         fnet_interfaces::Address {
-            addr: Some(addr),
+            value: Some(addr),
             valid_until: Some(valid_until),
             ..fnet_interfaces::Address::EMPTY
         }
@@ -559,8 +562,8 @@ mod tests {
 
     const ID: u64 = 1;
     const ID2: u64 = 2;
-    const ADDR: fnet::Subnet = fidl_subnet!("1.2.3.4/24");
-    const ADDR2: fnet::Subnet = fidl_subnet!("5.6.7.8/24");
+    const ADDR1: fnet::InterfaceAddress = fidl_if_addr!("1.2.3.4/24");
+    const ADDR2: fnet::InterfaceAddress = fidl_if_addr!("5.6.7.8/24");
 
     #[test_case(
         &mut std::iter::once((ID, validated_properties(ID))).collect::<HashMap<_, _>>();
@@ -653,7 +656,7 @@ mod tests {
             online: Some(false),
             has_default_ipv4_route: Some(false),
             has_default_ipv6_route: Some(false),
-            addresses: Some(vec![fidl_address(ADDR, zx::ZX_TIME_INFINITE)]),
+            addresses: Some(vec![fidl_address(ADDR1, zx::ZX_TIME_INFINITE)]),
             ..fnet_interfaces::Properties::EMPTY
         };
         assert_matches::assert_matches!(
@@ -805,16 +808,16 @@ mod tests {
 
     #[test]
     fn test_address_validator() {
-        let valid = fidl_address(ADDR, 42);
-        let fidl_fuchsia_net_interfaces::Address { addr, valid_until, .. } = valid.clone();
+        let valid = fidl_address(ADDR1, 42);
+        let fidl_fuchsia_net_interfaces::Address { value, valid_until, .. } = valid.clone();
         assert_eq!(
             Address::try_from(valid).expect("failed to create address from valid fidl table"),
             Address {
-                addr: addr.expect("addr field missing from valid address"),
+                value: value.expect("addr field missing from valid address"),
                 valid_until: valid_until.expect("valid_until field missing from valid address")
             }
         );
-        let invalid = fidl_address(ADDR, 0);
+        let invalid = fidl_address(ADDR1, 0);
         assert_matches!(
             Address::try_from(invalid),
             Err(AddressValidationError::Logical(e @ String { .. }))

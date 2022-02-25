@@ -20,7 +20,6 @@ constexpr std::array<uint8_t, 4> kIPv4Address = {1, 2, 3, 1};
 constexpr std::array<uint8_t, 16> kIPv6Address = {0x01, 0x23, 0x45, 0x67, 0, 0, 0, 0,
                                                   0,    0,    0,    0,    0, 0, 0, 1};
 constexpr uint8_t kIPv4PrefixLength = 24;
-constexpr uint8_t kIPv6PrefixLength = 64;
 
 class NetworkReachabilityProvider
     : public SINGLE_BINDING_STUB_FIDL_SERVER(fuchsia::net::interfaces, State) {

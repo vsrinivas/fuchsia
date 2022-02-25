@@ -341,10 +341,9 @@ impl NetworkInterface for TunNetworkInterface {
                                     state.prev_prop.addresses.as_ref().unwrap_or(&empty_addrs);
                                 state.next_events.extend(
                                     addrs.iter().filter(|x| !prev_addrs.contains(x)).filter_map(
-                                        |x| {
-                                            x.clone()
-                                                .addr
-                                                .unwrap()
+                                        |Address { addr, value: _, valid_until: _, .. }| {
+                                            // TODO(https://fxbug.dev/92368): migrate to `value`.
+                                            addr.unwrap()
                                                 .try_into()
                                                 .ok()
                                                 .map(NetworkInterfaceEvent::AddressWasAdded)
@@ -353,10 +352,9 @@ impl NetworkInterface for TunNetworkInterface {
                                 );
                                 state.next_events.extend(
                                     prev_addrs.iter().filter(|x| !addrs.contains(x)).filter_map(
-                                        |x| {
-                                            x.clone()
-                                                .addr
-                                                .unwrap()
+                                        |Address { addr, value: _, valid_until: _, .. }| {
+                                            // TODO(https://fxbug.dev/92368): migrate to `value`.
+                                            addr.unwrap()
                                                 .try_into()
                                                 .ok()
                                                 .map(NetworkInterfaceEvent::AddressWasRemoved)

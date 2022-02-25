@@ -42,7 +42,7 @@ pub async fn configure_dhcp_server(guest_name: &str, command_to_run: &str) -> Re
 ///
 /// * `want_addr` - IpAddress that should appear on a Netstack interface.
 /// * `timeout` - Duration to wait for the address to appear in Netstack.
-pub async fn verify_v4_addr_present(want_addr: fnet::IpAddress) -> Result<(), Error> {
+pub async fn verify_v4_addr_present(want_addr: fnet::Ipv4Address) -> Result<(), Error> {
     let interface_state = client::connect_to_protocol::<finterfaces::StateMarker>()?;
     let mut if_map = std::collections::HashMap::new();
     fidl_fuchsia_net_interfaces_ext::wait_interface(
@@ -54,10 +54,15 @@ pub async fn verify_v4_addr_present(want_addr: fnet::IpAddress) -> Result<(), Er
                 .values()
                 .any(|fidl_fuchsia_net_interfaces_ext::Properties { addresses, .. }| {
                     addresses.iter().any(
-                        |fidl_fuchsia_net_interfaces_ext::Address {
-                             addr: fnet::Subnet { addr, prefix_len: _ },
-                             valid_until: _,
-                         }| { *addr == want_addr },
+                        |fidl_fuchsia_net_interfaces_ext::Address { value, valid_until: _ }| {
+                            match value {
+                                fnet::InterfaceAddress::Ipv4(fnet::Ipv4AddressWithPrefix {
+                                    addr,
+                                    prefix_len: _,
+                                }) => *addr == want_addr,
+                                fnet::InterfaceAddress::Ipv6(_) => false,
+                            }
+                        },
                     )
                 })
                 .then(|| ())
@@ -104,12 +109,11 @@ pub async fn verify_v6_dns_servers(
              has_default_ipv6_route: _,
          }| {
             addresses.into_iter().find_map(
-                |fidl_fuchsia_net_interfaces_ext::Address {
-                     addr: fnet::Subnet { addr, prefix_len: _ },
-                     valid_until: _,
-                 }| match addr {
-                    fnet::IpAddress::Ipv4(fnet::Ipv4Address { addr: _ }) => None,
-                    fnet::IpAddress::Ipv6(addr) => addr.is_unicast_link_local().then(|| *addr),
+                |fidl_fuchsia_net_interfaces_ext::Address { value, valid_until: _ }| match value {
+                    fnet::InterfaceAddress::Ipv4(_) => None,
+                    fnet::InterfaceAddress::Ipv6(addr) => {
+                        addr.is_unicast_link_local().then(|| *addr)
+                    }
                 },
             )
         },

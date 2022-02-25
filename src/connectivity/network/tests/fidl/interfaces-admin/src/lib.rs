@@ -8,9 +8,7 @@ use fidl_fuchsia_net_stack_ext::FidlReturn as _;
 use fuchsia_async::TimeoutExt as _;
 use fuchsia_zircon as zx;
 use futures::{FutureExt as _, StreamExt as _, TryFutureExt as _, TryStreamExt as _};
-use net_declare::{
-    fidl_if_addr, fidl_ip_v4, fidl_ip_v4_with_prefix, fidl_ip_v6, fidl_subnet, std_socket_addr,
-};
+use net_declare::{fidl_if_addr, fidl_ip_v4, fidl_ip_v4_with_prefix, fidl_subnet, std_socket_addr};
 use net_types::ip::IpAddress as _;
 use netemul::RealmUdpSocket as _;
 use netstack_testing_common::{
@@ -100,25 +98,30 @@ async fn add_address_errors() {
     }
 
     let (control, v4_addr, v6_addr) = futures::stream::iter(addresses).fold((control, None, None), |(control, v4, v6), fidl_fuchsia_net_interfaces_ext::Address {
-        addr: fidl_fuchsia_net::Subnet { addr, prefix_len },
+        value,
         valid_until: _,
     }| {
-        let (addr, v4, v6) = match addr {
-            fidl_fuchsia_net::IpAddress::Ipv4(addr) => {
-                let nt_addr = net_types::ip::Ipv4Addr::new(addr.addr);
-                assert!(nt_addr.is_loopback(), "{} is not a loopback address", nt_addr);
-                let addr = fidl_fuchsia_net::Ipv4AddressWithPrefix {
-                    addr: *addr,
-                    prefix_len: *prefix_len,
-                };
+        let (addr, v4, v6) = match value {
+            fidl_fuchsia_net::InterfaceAddress::Ipv4(addr) => {
+                {
+                    let fidl_fuchsia_net::Ipv4AddressWithPrefix {
+                        addr: fidl_fuchsia_net::Ipv4Address { addr },
+                        prefix_len: _,
+                    } = addr;
+                    let nt_addr = net_types::ip::Ipv4Addr::new(*addr);
+                    assert!(nt_addr.is_loopback(), "{} is not a loopback address", nt_addr);
+                }
                 assert_eq!(v4, None, "v4 address already present, found {:?}", addr);
-                (fidl_fuchsia_net::InterfaceAddress::Ipv4(addr), Some(addr), v6)
+                (value, Some(addr), v6)
             }
-            fidl_fuchsia_net::IpAddress::Ipv6(addr) => {
-                let nt_addr = net_types::ip::Ipv6Addr::from_bytes(addr.addr);
-                assert!(nt_addr.is_loopback(), "{} is not a loopback address", nt_addr);
+            fidl_fuchsia_net::InterfaceAddress::Ipv6(addr) => {
+                {
+                    let fidl_fuchsia_net::Ipv6Address { addr } = addr;
+                    let nt_addr = net_types::ip::Ipv6Addr::from_bytes(*addr);
+                    assert!(nt_addr.is_loopback(), "{} is not a loopback address", nt_addr);
+                }
                 assert_eq!(v6, None, "v6 address already present, found {:?}", addr);
-                (fidl_fuchsia_net::InterfaceAddress::Ipv6(*addr), v4, Some(*addr))
+                (value, v4, Some(*addr))
             }
         };
         async move {
@@ -130,8 +133,8 @@ async fn add_address_errors() {
             (control, v4, v6)
         }
     }).await;
-    let _: fidl_fuchsia_net::Ipv4AddressWithPrefix = v4_addr.expect("expected v4 address");
-    let _: fidl_fuchsia_net::Ipv6Address = v6_addr.expect("expected v6 address");
+    assert_ne!(v4_addr, None, "expected v4 address");
+    assert_ne!(v6_addr, None, "expected v6 address");
 
     // Adding an invalid address returns error.
     {
@@ -398,9 +401,9 @@ async fn add_address_success() {
     // Adding a valid address succeeds.
     {
         let v4_with_prefix = fidl_ip_v4_with_prefix!("1.1.1.1/32");
-        let subnet = fidl_fuchsia_net::Subnet {
-            addr: fidl_fuchsia_net::IpAddress::Ipv4(v4_with_prefix.addr),
-            prefix_len: v4_with_prefix.prefix_len,
+        let subnet = {
+            let fidl_fuchsia_net::Ipv4AddressWithPrefix { addr, prefix_len } = v4_with_prefix;
+            fidl_fuchsia_net::Subnet { addr: fidl_fuchsia_net::IpAddress::Ipv4(addr), prefix_len }
         };
         let address = fidl_fuchsia_net::InterfaceAddress::Ipv4(v4_with_prefix);
 
@@ -438,8 +441,8 @@ async fn add_address_success() {
              }| {
                 addresses
                     .iter()
-                    .any(|&fidl_fuchsia_net_interfaces_ext::Address { addr, valid_until: _ }| {
-                        addr == subnet
+                    .any(|&fidl_fuchsia_net_interfaces_ext::Address { value, valid_until: _ }| {
+                        value == address
                     })
                     .then(|| ())
             },
@@ -464,8 +467,8 @@ async fn add_address_success() {
              }| {
                 addresses
                     .iter()
-                    .all(|&fidl_fuchsia_net_interfaces_ext::Address { addr, valid_until: _ }| {
-                        addr != subnet
+                    .all(|&fidl_fuchsia_net_interfaces_ext::Address { value, valid_until: _ }| {
+                        value != address
                     })
                     .then(|| ())
             },
@@ -474,62 +477,10 @@ async fn add_address_success() {
         .expect("wait for address absence");
     }
 
-    // TODO(https://fxbug.dev/81929): This test case currently tests that when
-    // adding an IPv6 address, a prefix length of 128 is observed on the
-    // interface watcher, but once the aforementioned bug is closed, this test
-    // can be removed.
-    {
-        let addr = fidl_ip_v6!("11:11::1");
-        let interface_addr = fidl_fuchsia_net::InterfaceAddress::Ipv6(addr);
-        let subnet = fidl_fuchsia_net::Subnet {
-            addr: fidl_fuchsia_net::IpAddress::Ipv6(addr),
-            prefix_len: 128,
-        };
-
-        // Must hold onto AddressStateProvider since dropping the channel
-        // removes the address.
-        let _address_state_provider = interfaces::add_address_wait_assigned(
-            &control,
-            interface_addr,
-            VALID_ADDRESS_PARAMETERS,
-        )
-        .await
-        .expect("add address failed unexpectedly");
-
-        let mut properties = fidl_fuchsia_net_interfaces_ext::InterfaceState::Unknown(*id);
-        let () = fidl_fuchsia_net_interfaces_ext::wait_interface_with_id(
-            fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&interface_state)
-                .expect("create interface event stream"),
-            &mut properties,
-            |fidl_fuchsia_net_interfaces_ext::Properties {
-                 id: _,
-                 name: _,
-                 device_class: _,
-                 online: _,
-                 addresses,
-                 has_default_ipv4_route: _,
-                 has_default_ipv6_route: _,
-             }| {
-                addresses
-                    .iter()
-                    .any(|&fidl_fuchsia_net_interfaces_ext::Address { addr, valid_until: _ }| {
-                        addr == subnet
-                    })
-                    .then(|| ())
-            },
-        )
-        .await
-        .expect("wait for address presence");
-    }
-
     // Adding a valid address and detaching does not cause the address to be removed.
     {
         let addr = fidl_ip_v4_with_prefix!("2.2.2.2/32");
         let address = fidl_fuchsia_net::InterfaceAddress::Ipv4(addr);
-        let subnet = fidl_fuchsia_net::Subnet {
-            addr: fidl_fuchsia_net::IpAddress::Ipv4(addr.addr),
-            prefix_len: addr.prefix_len,
-        };
 
         let address_state_provider =
             interfaces::add_address_wait_assigned(&control, address, VALID_ADDRESS_PARAMETERS)
@@ -558,8 +509,8 @@ async fn add_address_success() {
              }| {
                 addresses
                     .iter()
-                    .all(|&fidl_fuchsia_net_interfaces_ext::Address { addr, valid_until: _ }| {
-                        addr != subnet
+                    .all(|&fidl_fuchsia_net_interfaces_ext::Address { value, valid_until: _ }| {
+                        value != address
                     })
                     .then(|| ())
             },

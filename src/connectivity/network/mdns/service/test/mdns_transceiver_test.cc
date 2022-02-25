@@ -22,7 +22,6 @@ constexpr std::array<uint8_t, 16> kIPv6Address1 = {0x01, 0x23, 0x45, 0x67, 0, 0,
 constexpr std::array<uint8_t, 16> kIPv6Address2 = {0x89, 0xAB, 0xCD, 0xEF, 0, 0, 0, 0,
                                                    0,    0,    0,    0,    0, 0, 0, 1};
 constexpr uint8_t kIPv4PrefixLength = 24;
-constexpr uint8_t kIPv6PrefixLength = 64;
 constexpr uint8_t kID = 1;
 constexpr const char kName[] = "test01";
 
@@ -41,19 +40,14 @@ fuchsia::net::Ipv6Address ToFIDL(const std::array<uint8_t, 16>& bytes) {
 }
 
 void InitAddress(fuchsia::net::interfaces::Address& addr, const std::array<uint8_t, 4>& bytes) {
-  fuchsia::net::Subnet subnet{
+  addr.set_value(fuchsia::net::InterfaceAddress::WithIpv4({
+      .addr = ToFIDL(bytes),
       .prefix_len = kIPv4PrefixLength,
-  };
-  subnet.addr.set_ipv4(ToFIDL(bytes));
-  addr.set_addr(std::move(subnet));
+  }));
 }
 
 void InitAddress(fuchsia::net::interfaces::Address& addr, const std::array<uint8_t, 16>& bytes) {
-  fuchsia::net::Subnet subnet{
-      .prefix_len = kIPv6PrefixLength,
-  };
-  subnet.addr.set_ipv6(ToFIDL(bytes));
-  addr.set_addr(std::move(subnet));
+  addr.set_value(fuchsia::net::InterfaceAddress::WithIpv6(ToFIDL(bytes)));
 }
 
 std::vector<fuchsia::net::interfaces::Address> Addresses1() {

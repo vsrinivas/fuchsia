@@ -602,7 +602,7 @@ mod tests {
         super::*,
         async_trait::async_trait,
         fidl_fuchsia_net as fnet, fuchsia_async as fasync,
-        net_declare::{fidl_ip, fidl_subnet, std_ip},
+        net_declare::{fidl_if_addr, fidl_ip, fidl_subnet, std_ip},
         std::task::Poll,
     };
 
@@ -868,11 +868,11 @@ mod tests {
             online: true,
             addresses: vec![
                 fnet_interfaces_ext::Address {
-                    addr: fidl_subnet!("1.2.3.4/24"),
+                    value: fidl_if_addr!("1.2.3.4/24"),
                     valid_until: fuchsia_zircon::Time::INFINITE.into_nanos(),
                 },
                 fnet_interfaces_ext::Address {
-                    addr: fidl_subnet!("123::4/64"),
+                    value: fidl_if_addr!("123::4"),
                     valid_until: fuchsia_zircon::Time::INFINITE.into_nanos(),
                 },
             ],

@@ -210,7 +210,7 @@ async fn config_netstack(opt: Opt) -> Result<(), Error> {
         .await
         .context("error listening for link-local IPv6 address generation events")?;
 
-        let autogen_link_local_addrs = match state {
+        let mut autogen_link_local_addrs = match state {
             fidl_fuchsia_net_interfaces_ext::InterfaceState::Unknown(nicid) => {
                 return Err(anyhow::anyhow!("Interface with id {} state unknown", nicid))
             }
@@ -219,31 +219,18 @@ async fn config_netstack(opt: Opt) -> Result<(), Error> {
             ) => addresses,
         };
 
-        match autogen_link_local_addrs.as_slice() {
+        match autogen_link_local_addrs.as_mut_slice() {
             [address] => {
-                let fidl_fuchsia_net_interfaces_ext::Address {
-                    addr: fidl_fuchsia_net::Subnet { addr, prefix_len },
-                    valid_until: _,
-                } = *address;
-                let mut interface_address = match addr {
-                    fidl_fuchsia_net::IpAddress::Ipv4(addr) => {
-                        fidl_fuchsia_net::InterfaceAddress::Ipv4(
-                            fidl_fuchsia_net::Ipv4AddressWithPrefix { addr, prefix_len },
-                        )
-                    }
-                    fidl_fuchsia_net::IpAddress::Ipv6(addr) => {
-                        fidl_fuchsia_net::InterfaceAddress::Ipv6(addr)
-                    }
-                };
+                let fidl_fuchsia_net_interfaces_ext::Address { value, valid_until: _ } = address;
                 let _: bool = control
-                    .remove_address(&mut interface_address)
+                    .remove_address(value)
                     .await
                     .context("send remove address request")?
                     .map_err(
                         |e: fidl_fuchsia_net_interfaces_admin::ControlRemoveAddressError| {
                             anyhow::anyhow!(
                             "failed to remove interface address {:?} to interface (id={}): {:?}",
-                            addr,
+                            value,
                             nicid,
                             e
                         )

@@ -17,7 +17,6 @@ import (
 	"testing"
 
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/dhcp"
-	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/fidlconv"
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/sync"
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/time"
 
@@ -30,21 +29,17 @@ import (
 	"gvisor.dev/gvisor/pkg/tcpip/header"
 )
 
-func toIpAddress(addr net.IP) fidlnet.IpAddress {
-	return fidlconv.ToNetIpAddress(tcpip.Address(addr))
-}
-
 func TestDiffInterfaceProperties(t *testing.T) {
 	var addr1 interfaces.Address
-	addr1.SetAddr(fidlnet.Subnet{
-		Addr:      toIpAddress(net.IPv4(192, 168, 0, 1).To4()),
+	addr1.SetValue(fidlnet.InterfaceAddressWithIpv4(fidlnet.Ipv4AddressWithPrefix{
+		Addr:      fidlnet.Ipv4Address{Addr: [4]uint8{192, 168, 0, 1}},
 		PrefixLen: 16,
-	})
+	}))
 	var addr2 interfaces.Address
-	addr2.SetAddr(fidlnet.Subnet{
-		Addr:      toIpAddress(net.IPv4(192, 168, 0, 2).To4()),
+	addr1.SetValue(fidlnet.InterfaceAddressWithIpv4(fidlnet.Ipv4AddressWithPrefix{
+		Addr:      fidlnet.Ipv4Address{Addr: [4]uint8{192, 168, 0, 2}},
 		PrefixLen: 16,
-	})
+	}))
 
 	var p interfaces.Properties
 	p.SetId(1)
@@ -262,7 +257,8 @@ func TestInterfacesWatcher(t *testing.T) {
 	// Add an interface.
 	ifs := addNoopEndpoint(t, ns, "")
 
-	verifyWatchResults := func(wantEvent interfaces.Event) {
+	verifyWatchResults := func(t *testing.T, wantEvent interfaces.Event) {
+		t.Helper()
 		got := <-ch
 		event, err := nonBlockingWatcher.Watch(context.Background())
 		if err := assertWatchResult(got.event, got.err, wantEvent); err != nil {
@@ -272,7 +268,7 @@ func TestInterfacesWatcher(t *testing.T) {
 			t.Fatalf("non-blocked watch failed: %s", err)
 		}
 	}
-	verifyWatchResults(interfaces.EventWithAdded(wantInterfaceProperties(ns, ifs.nicid)))
+	verifyWatchResults(t, interfaces.EventWithAdded(wantInterfaceProperties(ns, ifs.nicid)))
 
 	// Set interface up.
 	blockingWatch()
@@ -283,7 +279,7 @@ func TestInterfacesWatcher(t *testing.T) {
 	id.SetId(uint64(ifs.nicid))
 	online := id
 	online.SetOnline(true)
-	verifyWatchResults(interfaces.EventWithChanged(online))
+	verifyWatchResults(t, interfaces.EventWithChanged(online))
 
 	// Add an address.
 	blockingWatch()
@@ -300,7 +296,7 @@ func TestInterfacesWatcher(t *testing.T) {
 	addressAdded := id
 	properties := wantInterfaceProperties(ns, ifs.nicid)
 	addressAdded.SetAddresses(properties.GetAddresses())
-	verifyWatchResults(interfaces.EventWithChanged(addressAdded))
+	verifyWatchResults(t, interfaces.EventWithChanged(addressAdded))
 
 	// Add a default route.
 	blockingWatch()
@@ -310,7 +306,7 @@ func TestInterfacesWatcher(t *testing.T) {
 	}
 	defaultIpv4RouteAdded := id
 	defaultIpv4RouteAdded.SetHasDefaultIpv4Route(true)
-	verifyWatchResults(interfaces.EventWithChanged(defaultIpv4RouteAdded))
+	verifyWatchResults(t, interfaces.EventWithChanged(defaultIpv4RouteAdded))
 
 	// Remove the default route.
 	blockingWatch()
@@ -319,7 +315,7 @@ func TestInterfacesWatcher(t *testing.T) {
 	}
 	defaultIpv4RouteRemoved := id
 	defaultIpv4RouteRemoved.SetHasDefaultIpv4Route(false)
-	verifyWatchResults(interfaces.EventWithChanged(defaultIpv4RouteRemoved))
+	verifyWatchResults(t, interfaces.EventWithChanged(defaultIpv4RouteRemoved))
 
 	// Remove an address.
 	blockingWatch()
@@ -329,23 +325,28 @@ func TestInterfacesWatcher(t *testing.T) {
 	addressRemoved := id
 	properties = wantInterfaceProperties(ns, ifs.nicid)
 	addressRemoved.SetAddresses(properties.GetAddresses())
-	verifyWatchResults(interfaces.EventWithChanged(addressRemoved))
+	verifyWatchResults(t, interfaces.EventWithChanged(addressRemoved))
 
 	// DHCP Acquired on the interface.
 	blockingWatch()
-	acquiredAddr := tcpip.AddressWithPrefix{Address: "\xc0\xa8\x00\x04", PrefixLen: 24}
+	addr := fidlnet.Ipv4Address{Addr: [4]uint8{192, 168, 0, 4}}
+	acquiredAddr := tcpip.AddressWithPrefix{Address: tcpip.Address(addr.Addr[:]), PrefixLen: 24}
 	leaseLength := dhcp.Seconds(10)
 	initUpdatedAt := time.Monotonic(42)
 	ifs.dhcpAcquired(tcpip.AddressWithPrefix{}, acquiredAddr, dhcp.Config{UpdatedAt: initUpdatedAt, LeaseLength: leaseLength})
 	dhcpAddressAdded := id
 	var address interfaces.Address
+	address.SetValue(fidlnet.InterfaceAddressWithIpv4(fidlnet.Ipv4AddressWithPrefix{
+		Addr:      addr,
+		PrefixLen: uint8(acquiredAddr.PrefixLen),
+	}))
 	address.SetAddr(fidlnet.Subnet{
-		Addr:      toIpAddress(net.ParseIP(acquiredAddr.Address.String()).To4()),
+		Addr:      fidlnet.IpAddressWithIpv4(addr),
 		PrefixLen: uint8(acquiredAddr.PrefixLen),
 	})
 	address.SetValidUntil(initUpdatedAt.Add(leaseLength.Duration()).MonotonicNano())
 	dhcpAddressAdded.SetAddresses([]interfaces.Address{address})
-	verifyWatchResults(interfaces.EventWithChanged(dhcpAddressAdded))
+	verifyWatchResults(t, interfaces.EventWithChanged(dhcpAddressAdded))
 
 	// DHCP Acquired with same valid_until does not produce event.
 	ifs.dhcpAcquired(acquiredAddr, acquiredAddr, dhcp.Config{UpdatedAt: initUpdatedAt, LeaseLength: leaseLength})
@@ -362,14 +363,14 @@ func TestInterfacesWatcher(t *testing.T) {
 	dhcpAddressRenewed := id
 	address.SetValidUntil(updatedAt.Add(leaseLength.Duration()).MonotonicNano())
 	dhcpAddressRenewed.SetAddresses([]interfaces.Address{address})
-	verifyWatchResults(interfaces.EventWithChanged(dhcpAddressRenewed))
+	verifyWatchResults(t, interfaces.EventWithChanged(dhcpAddressRenewed))
 
 	// DHCP Acquired on empty address signaling end of lease.
 	blockingWatch()
 	ifs.dhcpAcquired(acquiredAddr, tcpip.AddressWithPrefix{}, dhcp.Config{})
 	dhcpExpired := id
 	dhcpExpired.SetAddresses([]interfaces.Address{})
-	verifyWatchResults(interfaces.EventWithChanged(dhcpExpired))
+	verifyWatchResults(t, interfaces.EventWithChanged(dhcpExpired))
 
 	// Set interface down.
 	blockingWatch()
@@ -378,10 +379,10 @@ func TestInterfacesWatcher(t *testing.T) {
 	}
 	offline := id
 	offline.SetOnline(false)
-	verifyWatchResults(interfaces.EventWithChanged(offline))
+	verifyWatchResults(t, interfaces.EventWithChanged(offline))
 
 	// Remove the interface.
 	blockingWatch()
 	ifs.RemoveByUser()
-	verifyWatchResults(interfaces.EventWithRemoved(uint64(ifs.nicid)))
+	verifyWatchResults(t, interfaces.EventWithRemoved(uint64(ifs.nicid)))
 }

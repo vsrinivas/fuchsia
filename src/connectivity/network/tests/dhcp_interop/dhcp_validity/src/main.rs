@@ -8,7 +8,7 @@ use {
     dhcp_validity_lib::{configure_dhcp_server, verify_v4_addr_present, verify_v6_dns_servers},
     dns_server_watcher::DEFAULT_DNS_PORT,
     fidl_fuchsia_net as fnet, fidl_fuchsia_net_name as fnetname, fuchsia_async as fasync,
-    net_declare::{fidl_ip, fidl_ip_v6},
+    net_declare::{fidl_ip_v4, fidl_ip_v6},
 };
 
 #[fasync::run_singlethreaded]
@@ -18,7 +18,7 @@ async fn main() -> Result<(), Error> {
         .context("configuring DHCP server on Debian guest")?;
 
     // Configured in dhcpd.conf.
-    let want_v4_address = fidl_ip!("192.168.1.10");
+    let want_v4_address = fidl_ip_v4!("192.168.1.10");
 
     // Configured in dhcpd6.conf.
     let want_v6_dns_servers = vec![

@@ -16,8 +16,6 @@ namespace mdns {
 // mDNS utility functions relating to fidl types.
 class MdnsFidlUtil {
  public:
-  static const std::string kFuchsiaServiceName;
-
   static fuchsia::net::Ipv4Address CreateIpv4Address(const inet::IpAddress& ip_address);
 
   static fuchsia::net::Ipv6Address CreateIpv6Address(const inet::IpAddress& ip_address);
@@ -30,7 +28,7 @@ class MdnsFidlUtil {
   static fuchsia::net::Ipv6SocketAddress CreateSocketAddressV6(
       const inet::SocketAddress& socket_address);
 
-  static inet::IpAddress IpAddressFrom(const fuchsia::net::IpAddress& addr);
+  static inet::IpAddress IpAddressFrom(const fuchsia::net::InterfaceAddress& addr);
 
   static std::unique_ptr<Mdns::Publication> Convert(
       const fuchsia::net::mdns::PublicationPtr& publication_ptr);

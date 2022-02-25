@@ -1,5 +1,6 @@
 table/member fuchsia.net.interfaces/Address.addr fuchsia.net/Subnet
 table/member fuchsia.net.interfaces/Address.valid_until int64
+table/member fuchsia.net.interfaces/Address.value fuchsia.net/InterfaceAddress
 table fuchsia.net.interfaces/Address
 union/member fuchsia.net.interfaces/DeviceClass.device fuchsia.hardware.network/DeviceClass
 union/member fuchsia.net.interfaces/DeviceClass.loopback fuchsia.net.interfaces/Empty

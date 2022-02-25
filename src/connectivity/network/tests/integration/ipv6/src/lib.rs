@@ -72,7 +72,7 @@ async fn install_and_get_ipv6_addrs_for_endpoint<N: Netstack>(
     realm: &netemul::TestRealm<'_>,
     endpoint: &netemul::TestEndpoint<'_>,
     name: String,
-) -> Vec<net::Subnet> {
+) -> Vec<net::Ipv6Address> {
     let (id, control, _device_control) =
         endpoint.add_to_stack(realm, Some(name)).await.expect("installing interface");
     let did_enable = control.enable().await.expect("calling enable").expect("enable failed");
@@ -97,10 +97,14 @@ async fn install_and_get_ipv6_addrs_for_endpoint<N: Netstack>(
          }| {
             let ipv6_addresses = addresses
                 .iter()
-                .map(|fidl_fuchsia_net_interfaces_ext::Address { addr, valid_until: _ }| addr)
-                .filter(|fidl_fuchsia_net::Subnet { addr, prefix_len: _ }| match addr {
-                    net::IpAddress::Ipv4(net::Ipv4Address { addr: _ }) => false,
-                    net::IpAddress::Ipv6(net::Ipv6Address { addr: _ }) => true,
+                .filter_map(|fidl_fuchsia_net_interfaces_ext::Address { value, valid_until: _ }| {
+                    match value {
+                        net::InterfaceAddress::Ipv4(net::Ipv4AddressWithPrefix {
+                            addr: _,
+                            prefix_len: _,
+                        }) => None,
+                        net::InterfaceAddress::Ipv6(addr) => Some(addr),
+                    }
                 })
                 .copied()
                 .collect::<Vec<_>>();
@@ -371,13 +375,13 @@ async fn slaac_with_privacy_extensions<E: netemul::Endpoint>(
             if addresses
                 .iter()
                 .filter_map(
-                    |&fidl_fuchsia_net_interfaces_ext::Address {
-                         addr: fidl_fuchsia_net::Subnet { addr, prefix_len: _ },
-                         valid_until: _,
-                     }| {
-                        match addr {
-                            net::IpAddress::Ipv4(net::Ipv4Address { addr: _ }) => None,
-                            net::IpAddress::Ipv6(net::Ipv6Address { addr }) => {
+                    |&fidl_fuchsia_net_interfaces_ext::Address { value, valid_until: _ }| {
+                        match value {
+                            net::InterfaceAddress::Ipv4(net::Ipv4AddressWithPrefix {
+                                addr: _,
+                                prefix_len: _,
+                            }) => None,
+                            net::InterfaceAddress::Ipv6(net::Ipv6Address { addr }) => {
                                 // TODO(https://github.com/rust-lang/rust/issues/80967): use bool::then_some.
                                 ipv6_consts::PREFIX
                                     .contains(&net_types_ip::Ipv6Addr::from_bytes(addr))
@@ -542,17 +546,15 @@ async fn duplicate_address_detection<E: netemul::Endpoint>(name: &str) {
             // address as added before DAD completes successfully or otherwise.
             assert_eq!(
                 iface.get_addrs().await.expect("failed to get addresses").into_iter().find(
-                    |fidl_fuchsia_net_interfaces_ext::Address {
-                         addr: fidl_fuchsia_net::Subnet { addr, prefix_len: _ },
-                         valid_until: _,
-                     }| {
-                        match addr {
-                            fidl_fuchsia_net::IpAddress::Ipv4(fidl_fuchsia_net::Ipv4Address {
+                    |fidl_fuchsia_net_interfaces_ext::Address { value, valid_until: _ }| {
+                        match value {
+                            net::InterfaceAddress::Ipv4(net::Ipv4AddressWithPrefix {
                                 addr: _,
+                                prefix_len: _,
                             }) => false,
-                            fidl_fuchsia_net::IpAddress::Ipv6(fidl_fuchsia_net::Ipv6Address {
-                                addr,
-                            }) => *addr == ipv6_consts::LINK_LOCAL_ADDR.ipv6_bytes(),
+                            net::InterfaceAddress::Ipv6(net::Ipv6Address { addr }) => {
+                                *addr == ipv6_consts::LINK_LOCAL_ADDR.ipv6_bytes()
+                            }
                         }
                     }
                 ),
@@ -691,13 +693,13 @@ async fn duplicate_address_detection<E: netemul::Endpoint>(name: &str) {
     let addresses = iface.get_addrs().await.expect("addrs");
     assert!(
         addresses.iter().any(
-            |&fidl_fuchsia_net_interfaces_ext::Address {
-                 addr: fidl_fuchsia_net::Subnet { addr, prefix_len: _ },
-                 valid_until: _,
-             }| {
-                match addr {
-                    net::IpAddress::Ipv4(_) => false,
-                    net::IpAddress::Ipv6(net::Ipv6Address { addr }) => {
+            |&fidl_fuchsia_net_interfaces_ext::Address { value, valid_until: _ }| {
+                match value {
+                    net::InterfaceAddress::Ipv4(net::Ipv4AddressWithPrefix {
+                        addr: _,
+                        prefix_len: _,
+                    }) => false,
+                    net::InterfaceAddress::Ipv6(net::Ipv6Address { addr }) => {
                         addr == ipv6_consts::LINK_LOCAL_ADDR.ipv6_bytes()
                     }
                 }
@@ -945,11 +947,15 @@ async fn slaac_regeneration_after_dad_failure<E: netemul::Endpoint>(name: &str) 
                 (0, false),
                 |(mut slaac_addrs, mut has_target_addr),
                  &fidl_fuchsia_net_interfaces_ext::Address {
-                     addr: fidl_fuchsia_net::Subnet { addr, prefix_len: _ },
+                     value,
                      valid_until: _,
                  }| {
-                    match addr {
-                        net::IpAddress::Ipv6(net::Ipv6Address { addr }) => {
+                    match value {
+                        net::InterfaceAddress::Ipv4(net::Ipv4AddressWithPrefix {
+                                                                     addr: _,
+                                                                     prefix_len: _,
+                                                                 }) => {},
+                        net::InterfaceAddress::Ipv6(net::Ipv6Address { addr }) => {
                             let configured_addr = net_types_ip::Ipv6Addr::from_bytes(addr);
                             assert_ne!(
                                 configured_addr, tried_address,
@@ -962,7 +968,6 @@ async fn slaac_regeneration_after_dad_failure<E: netemul::Endpoint>(name: &str) 
                                 has_target_addr = true;
                             }
                         }
-                        net::IpAddress::Ipv4(_) => {}
                     }
                     (slaac_addrs, has_target_addr)
                 },

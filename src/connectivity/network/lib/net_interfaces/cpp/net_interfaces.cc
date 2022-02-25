@@ -24,7 +24,7 @@ bool VerifyCompleteProperties(const fuchsia::net::interfaces::Properties& proper
   }
   const auto& addresses = properties.addresses();
   return std::all_of(addresses.cbegin(), addresses.cend(),
-                     [](const auto& address) { return address.has_addr(); });
+                     [](const auto& address) { return address.has_value(); });
 }
 
 }  // namespace
@@ -62,7 +62,7 @@ bool Properties::Update(fuchsia::net::interfaces::Properties* properties) {
   if (properties->has_addresses()) {
     const auto& addresses = properties->addresses();
     if (!std::all_of(addresses.cbegin(), addresses.cend(),
-                     [](const auto& address) { return address.has_addr(); })) {
+                     [](const auto& address) { return address.has_value(); })) {
       return false;
     }
     if (!fidl::Equals(properties->addresses(), properties_.addresses())) {
@@ -105,21 +105,21 @@ bool Properties::IsGloballyRoutable() const {
     return false;
   }
   for (const auto& address : addresses()) {
-    const auto& addr = address.addr().addr;
+    const auto& addr = address.value();
     switch (addr.Which()) {
-      case fuchsia::net::IpAddress::Tag::kIpv4: {
+      case fuchsia::net::InterfaceAddress::Tag::kIpv4: {
         if (has_default_ipv4_route()) {
           return true;
         }
         break;
       }
-      case fuchsia::net::IpAddress::Tag::kIpv6: {
+      case fuchsia::net::InterfaceAddress::Tag::kIpv6: {
         if (has_default_ipv6_route() && !IN6_IS_ADDR_LINKLOCAL(addr.ipv6().addr.data())) {
           return true;
         }
         break;
       }
-      case fuchsia::net::IpAddress::Tag::Invalid: {
+      case fuchsia::net::InterfaceAddress::Tag::Invalid: {
         break;
       }
     }

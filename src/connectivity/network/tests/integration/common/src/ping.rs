@@ -94,18 +94,17 @@ impl<'a> Node<'a> {
         Self::new_with_wait_addr(realm, interface, |addresses| {
             let (v4, v6) = addresses.into_iter().fold(
                 (None, None),
-                |(v4, v6),
-                 &fidl_fuchsia_net_interfaces_ext::Address {
-                     addr: fidl_fuchsia_net::Subnet { addr, prefix_len: _ },
-                     valid_until: _,
-                 }| {
-                    match addr {
-                        fidl_fuchsia_net::IpAddress::Ipv4(fidl_fuchsia_net::Ipv4Address {
-                            addr,
-                        }) => (Some(net_types::ip::Ipv4Addr::from(addr)), v6),
-                        fidl_fuchsia_net::IpAddress::Ipv6(fidl_fuchsia_net::Ipv6Address {
-                            addr,
-                        }) => {
+                |(v4, v6), &fidl_fuchsia_net_interfaces_ext::Address { value, valid_until: _ }| {
+                    match value {
+                        fidl_fuchsia_net::InterfaceAddress::Ipv4(
+                            fidl_fuchsia_net::Ipv4AddressWithPrefix {
+                                addr: fidl_fuchsia_net::Ipv4Address { addr },
+                                prefix_len: _,
+                            },
+                        ) => (Some(net_types::ip::Ipv4Addr::from(addr)), v6),
+                        fidl_fuchsia_net::InterfaceAddress::Ipv6(
+                            fidl_fuchsia_net::Ipv6Address { addr },
+                        ) => {
                             let v6_candidate = net_types::ip::Ipv6Addr::from_bytes(addr);
                             if v6_candidate.is_unicast_link_local() {
                                 (v4, Some(v6_candidate))

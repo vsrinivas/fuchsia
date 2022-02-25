@@ -11,7 +11,7 @@ use fuchsia_async::TimeoutExt as _;
 use fuchsia_zircon as zx;
 use futures::{FutureExt as _, StreamExt as _, TryStreamExt as _};
 use itertools::Itertools as _;
-use net_declare::{fidl_if_addr, fidl_ip, fidl_subnet, std_ip};
+use net_declare::{fidl_if_addr, fidl_ip, fidl_ip_v4_with_prefix, fidl_subnet, std_ip};
 use netemul::RealmUdpSocket as _;
 use netstack_testing_common::Result;
 use netstack_testing_common::{
@@ -39,7 +39,7 @@ async fn watcher_existing<N: Netstack>(name: &str) {
         Loopback(u64),
         Ethernet {
             id: u64,
-            addr: fidl_fuchsia_net::Subnet,
+            addr: fidl_fuchsia_net::InterfaceAddress,
             has_default_ipv4_route: bool,
             has_default_ipv6_route: bool,
         },
@@ -59,11 +59,11 @@ async fn watcher_existing<N: Netstack>(name: &str) {
                             online: true,
                             addresses: vec![
                                 fidl_fuchsia_net_interfaces_ext::Address {
-                                    addr: fidl_subnet!("127.0.0.1/8"),
+                                    value: fidl_if_addr!("127.0.0.1/8"),
                                     valid_until: zx::sys::ZX_TIME_INFINITE,
                                 },
                                 fidl_fuchsia_net_interfaces_ext::Address {
-                                    addr: fidl_subnet!("::1/128"),
+                                    value: fidl_if_addr!("::1"),
                                     valid_until: zx::sys::ZX_TIME_INFINITE,
                                 },
                             ],
@@ -92,7 +92,7 @@ async fn watcher_existing<N: Netstack>(name: &str) {
                     // We use contains here because netstack can generate
                     // link-local addresses that can't be predicted.
                     addresses.contains(&fidl_fuchsia_net_interfaces_ext::Address {
-                        addr: *addr,
+                        value: *addr,
                         valid_until: zx::sys::ZX_TIME_INFINITE,
                     }) && *online
                         && id == rhs_id
@@ -163,13 +163,12 @@ async fn watcher_existing<N: Netstack>(name: &str) {
                 addr,
                 prefix_len,
             });
-        // TODO(https://fxbug.dev/89901): Replace net/Subnet with net/InterfaceAddress.
-        let mut addr = fidl_fuchsia_net::Subnet {
-            addr: fidl_fuchsia_net::IpAddress::Ipv4(addr),
-            prefix_len: 24,
+        let expected = Expectation::Ethernet {
+            id,
+            addr: if_addr,
+            has_default_ipv4_route,
+            has_default_ipv6_route,
         };
-        let expected =
-            Expectation::Ethernet { id, addr, has_default_ipv4_route, has_default_ipv6_route };
         assert_eq!(expectations.insert(id, expected), None);
         match N::VERSION {
             NetstackVersion::Netstack2 => {
@@ -186,7 +185,13 @@ async fn watcher_existing<N: Netstack>(name: &str) {
             NetstackVersion::Netstack3 => {
                 // TODO(https://fxbug.dev/92767): Remove this when N3 implements Control.
                 let () = stack
-                    .add_interface_address_deprecated(id, &mut addr)
+                    .add_interface_address_deprecated(
+                        id,
+                        &mut fidl_fuchsia_net::Subnet {
+                            addr: fidl_fuchsia_net::IpAddress::Ipv4(addr),
+                            prefix_len,
+                        },
+                    )
                     .await
                     .squash_result()
                     .expect("add interface address");
@@ -278,11 +283,11 @@ async fn watcher_after_state_closed<N: Netstack>(name: &str) {
                 online: true,
                 addresses: vec![
                     fidl_fuchsia_net_interfaces_ext::Address {
-                        addr: fidl_subnet!("127.0.0.1/8"),
+                        value: fidl_if_addr!("127.0.0.1/8"),
                         valid_until: zx::sys::ZX_TIME_INFINITE,
                     },
                     fidl_fuchsia_net_interfaces_ext::Address {
-                        addr: fidl_subnet!("::1/128"),
+                        value: fidl_if_addr!("::1"),
                         valid_until: zx::sys::ZX_TIME_INFINITE,
                     },
                 ],
@@ -610,9 +615,6 @@ async fn test_watcher_race() {
             .await
             .expect("install in realm");
 
-        // TODO(https://fxbug.dev/89901): Delete this once fuchsia.net.interfaces uses
-        // InterfaceAddress.
-        const ADDR: fidl_fuchsia_net::Subnet = fidl_subnet!("192.168.0.1/24");
         const IF_ADDR: fidl_fuchsia_net::InterfaceAddress = fidl_if_addr!("192.168.0.1/24");
 
         // Bring the link up, enable the interface, and add an IP address
@@ -657,7 +659,13 @@ async fn test_watcher_race() {
                                 .addresses
                                 .expect("added/existing event missing addresses property")
                                 .iter()
-                                .any(|a| a.addr == Some(ADDR));
+                                .any(
+                                    |fidl_fuchsia_net_interfaces::Address {
+                                         value,
+                                         valid_until: _,
+                                         ..
+                                     }| value == &Some(IF_ADDR),
+                                );
                         }
                     }
                     fidl_fuchsia_net_interfaces::Event::Changed(properties) => {
@@ -670,7 +678,13 @@ async fn test_watcher_race() {
                                 new_up = online;
                             }
                             if let Some(addresses) = properties.addresses {
-                                new_has_addr = addresses.iter().any(|a| a.addr == Some(ADDR));
+                                new_has_addr = addresses.iter().any(
+                                    |fidl_fuchsia_net_interfaces::Address {
+                                         value,
+                                         valid_until: _,
+                                         ..
+                                     }| value == &Some(IF_ADDR),
+                                );
                             }
                         }
                     }
@@ -874,20 +888,22 @@ async fn test_watcher() {
                         .iter()
                         .filter_map(
                             |&fidl_fuchsia_net_interfaces::Address {
-                                 addr, valid_until, ..
+                                 value, valid_until, ..
                              }| {
                                 assert_eq!(
                                     valid_until,
                                     Some(fuchsia_zircon::sys::ZX_TIME_INFINITE)
                                 );
-                                let subnet = addr?;
-                                match &subnet.addr {
-                                    fidl_fuchsia_net::IpAddress::Ipv4(
-                                        fidl_fuchsia_net::Ipv4Address { addr: _ },
+                                match value? {
+                                    fidl_fuchsia_net::InterfaceAddress::Ipv4(
+                                        fidl_fuchsia_net::Ipv4AddressWithPrefix {
+                                            addr: _,
+                                            prefix_len: _,
+                                        },
                                     ) => None,
-                                    fidl_fuchsia_net::IpAddress::Ipv6(
-                                        fidl_fuchsia_net::Ipv6Address { addr: _ },
-                                    ) => Some(subnet),
+                                    addr @ fidl_fuchsia_net::InterfaceAddress::Ipv6(_) => {
+                                        Some(addr)
+                                    }
                                 }
                             },
                         )
@@ -945,7 +961,11 @@ async fn test_watcher() {
 
     // Add an address and subnet route.
     let () = assert_blocked(&mut blocking_stream).await;
-    let subnet = fidl_subnet!("192.168.0.1/16");
+    let addr_with_prefix = fidl_ip_v4_with_prefix!("192.168.0.1/16");
+    let subnet = {
+        let fidl_fuchsia_net::Ipv4AddressWithPrefix { addr, prefix_len } = addr_with_prefix;
+        fidl_fuchsia_net::Subnet { addr: fidl_fuchsia_net::IpAddress::Ipv4(addr), prefix_len }
+    };
     let _address_state_provider = interfaces::add_subnet_address_and_route_wait_assigned(
         &dev,
         subnet,
@@ -965,14 +985,18 @@ async fn test_watcher() {
             ..
         }) if event_id == id => addresses
             .iter()
-            .filter_map(|&fidl_fuchsia_net_interfaces::Address { addr, valid_until, .. }| {
+            .filter_map(|&fidl_fuchsia_net_interfaces::Address { value, valid_until, .. }| {
                 assert_eq!(valid_until, Some(fuchsia_zircon::sys::ZX_TIME_INFINITE));
-                addr
+                value
             })
             .collect::<HashSet<_>>(),
         event => panic!("got: {:?}, want changed event with added IPv4 address", event),
     };
-    let want = ll_addrs.iter().cloned().chain(std::iter::once(subnet)).collect();
+    let want = ll_addrs
+        .iter()
+        .cloned()
+        .chain(std::iter::once(fidl_fuchsia_net::InterfaceAddress::Ipv4(addr_with_prefix)))
+        .collect();
     assert_eq!(addresses_changed(next(&mut blocking_stream).await), want);
     assert_eq!(addresses_changed(next(&mut stream).await), want);
 

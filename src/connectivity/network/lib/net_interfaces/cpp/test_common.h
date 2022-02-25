@@ -28,7 +28,6 @@ inline constexpr std::array<uint8_t, 16> kIPv6Address2 = {0x89, 0xAB, 0xCD, 0xEF
 inline constexpr std::array<uint8_t, 16> kIPv6LLAddress = {0xfe, 0x80, 0x00, 0x00, 0, 0, 0, 0,
                                                            0,    0,    0,    0,    0, 0, 0, 1};
 inline constexpr uint8_t kIPv4PrefixLength = 24;
-inline constexpr uint8_t kIPv6PrefixLength = 64;
 
 inline constexpr const char kName[] = "test01";
 

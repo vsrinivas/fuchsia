@@ -26,6 +26,7 @@ type Properties = table {
     /// The addresses currently assigned to the interface.
     2: addresses vector<@generated_name("Address") table {
         /// The address and prefix length.
+        @deprecated("incorrectly implies subnet membership; use `value` instead")
         1: addr fuchsia.net.Subnet;
         /// The time after which the address will no longer be valid.
         ///
@@ -38,6 +39,8 @@ type Properties = table {
         /// which implies that it has no meaning outside of the host on which it
         /// was generated and no meaning across host restarts.
         2: valid_until zx.time;
+        /// The interface address.
+        3: value fuchsia.net.InterfaceAddress;
     }>:MAX;
     /// The device is enabled and its physical state is online.
     3: online bool;

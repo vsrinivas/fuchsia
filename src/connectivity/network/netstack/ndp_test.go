@@ -15,7 +15,6 @@ import (
 	"time"
 
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/dns"
-	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/fidlconv"
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/util"
 
 	"fidl/fuchsia/net/interfaces"
@@ -142,8 +141,15 @@ func TestInterfacesChangeEvent(t *testing.T) {
 			}
 			hasAddr := func(addresses []interfaces.Address) bool {
 				for _, a := range addresses {
-					if a.HasAddr() && fidlconv.ToTCPIPSubnet(a.GetAddr()) == test.addr.Subnet() {
-						return true
+					if a.HasValue() {
+						protocolAddr := interfaceAddressToProtocolAddress(a.GetValue())
+						switch protocolAddr.Protocol {
+						case ipv6.ProtocolNumber:
+							// The prefix length can no longer be observed through the watcher.
+							return protocolAddr.AddressWithPrefix.Address == test.addr.Address
+						default:
+							panic(fmt.Sprintf("unexpected protocol number for %#v", protocolAddr))
+						}
 					}
 				}
 				return false

@@ -5,7 +5,7 @@
 use {
     anyhow::*,
     fidl_fuchsia_developer_bridge::{TargetAddrInfo, TargetIp},
-    fidl_fuchsia_net::{IpAddress, Ipv4Address, Ipv6Address, Subnet},
+    fidl_fuchsia_net::{IpAddress, Ipv4Address, Ipv6Address},
     netext::{scope_id_to_name, IsLocalAddr},
     std::cmp::Ordering,
     std::net::{IpAddr, SocketAddr, SocketAddrV4, SocketAddrV6},
@@ -70,17 +70,6 @@ impl From<&TargetAddrInfo> for TargetAddr {
         };
 
         (addr, scope).into()
-    }
-}
-
-impl From<Subnet> for TargetAddr {
-    fn from(i: Subnet) -> Self {
-        // TODO(awdavies): Figure out if it's possible to get the scope_id from
-        // this address.
-        match i.addr {
-            IpAddress::Ipv4(ip4) => SocketAddr::from((ip4.addr, 0)).into(),
-            IpAddress::Ipv6(ip6) => SocketAddr::from((ip6.addr, 0)).into(),
-        }
     }
 }
 

@@ -22,7 +22,7 @@ use netstack3_core::{get_all_ip_addr_subnets, get_all_routes, EntryDest};
 
 use super::{
     devices::{CommonInfo, DeviceSpecificInfo, EthernetInfo, LoopbackInfo},
-    util::IntoFidl as _,
+    util::IntoFidl,
     Devices, LockableContext,
 };
 
@@ -74,10 +74,24 @@ where
         let addrs = info
             .core_id()
             .map(|id| {
+                // TODO(https://fxbug.dev/60923): Don't store addresses as subnets in Core.
                 get_all_ip_addr_subnets(&ctx, id)
-                    .map(|subnet| fidl_interfaces_ext::Address {
-                        addr: subnet.into_fidl(),
-                        valid_until: zx::sys::ZX_TIME_INFINITE,
+                    .map(IntoFidl::into_fidl)
+                    .map(|fidl_fuchsia_net::Subnet { addr, prefix_len }| {
+                        let value = match addr {
+                            fidl_fuchsia_net::IpAddress::Ipv4(addr) => {
+                                fidl_fuchsia_net::InterfaceAddress::Ipv4(
+                                    fidl_fuchsia_net::Ipv4AddressWithPrefix { addr, prefix_len },
+                                )
+                            }
+                            fidl_fuchsia_net::IpAddress::Ipv6(addr) => {
+                                fidl_fuchsia_net::InterfaceAddress::Ipv6(addr)
+                            }
+                        };
+                        fidl_interfaces_ext::Address {
+                            value,
+                            valid_until: zx::sys::ZX_TIME_INFINITE,
+                        }
                     })
                     .collect::<Vec<fidl_interfaces_ext::Address>>()
             })

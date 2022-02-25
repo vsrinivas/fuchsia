@@ -48,14 +48,27 @@ type addressPatch struct {
 }
 
 func makeInterfacesAddress(protocolAddr tcpip.ProtocolAddress, validUntil time.Time) interfaces.Address {
-	switch protocolAddr.Protocol {
-	case ipv4.ProtocolNumber:
-	case ipv6.ProtocolNumber:
-	default:
-		panic(fmt.Sprintf("makeInterfaceAddress(%+v, %s): unknown protocol", protocolAddr, validUntil))
-	}
-
 	var addr interfaces.Address
+	addr.SetValue(func() net.InterfaceAddress {
+		switch protocolAddr.Protocol {
+		case ipv4.ProtocolNumber:
+			if len(protocolAddr.AddressWithPrefix.Address) == header.IPv4AddressSize {
+				var addr net.Ipv4Address
+				copy(addr.Addr[:], protocolAddr.AddressWithPrefix.Address)
+				return net.InterfaceAddressWithIpv4(net.Ipv4AddressWithPrefix{
+					Addr:      addr,
+					PrefixLen: uint8(protocolAddr.AddressWithPrefix.PrefixLen),
+				})
+			}
+		case ipv6.ProtocolNumber:
+			if len(protocolAddr.AddressWithPrefix.Address) == header.IPv6AddressSize {
+				var addr net.Ipv6Address
+				copy(addr.Addr[:], protocolAddr.AddressWithPrefix.Address)
+				return net.InterfaceAddressWithIpv6(addr)
+			}
+		}
+		panic(fmt.Sprintf("cannot convert to %T: %#v", net.InterfaceAddress{}, protocolAddr))
+	}())
 	addr.SetAddr(net.Subnet{
 		Addr:      fidlconv.ToNetIpAddress(protocolAddr.AddressWithPrefix.Address),
 		PrefixLen: uint8(protocolAddr.AddressWithPrefix.PrefixLen),
@@ -96,7 +109,7 @@ func interfaceProperties(nicInfo tcpipstack.NICInfo, hasDefaultIPv4Route, hasDef
 		addrs = append(addrs, addr)
 	}
 	sort.Slice(addrs, func(i, j int) bool {
-		return cmpSubnet(addrs[i].GetAddr(), addrs[j].GetAddr()) <= 0
+		return cmpInterfaceAddress(addrs[i].GetValue(), addrs[j].GetValue()) <= 0
 	})
 	p.SetAddresses(addrs)
 
@@ -137,27 +150,27 @@ func (wi *interfaceWatcherImpl) onEvent(e interfaces.Event) {
 	}
 }
 
-func cmpSubnet(s1 net.Subnet, s2 net.Subnet) int {
-	switch s1.Addr.Which() {
-	case net.IpAddressIpv4:
-		if s2.Addr.Which() == net.IpAddressIpv6 {
+func cmpInterfaceAddress(ifAddr1 net.InterfaceAddress, ifAddr2 net.InterfaceAddress) int {
+	switch ifAddr1.Which() {
+	case net.InterfaceAddressIpv4:
+		if ifAddr2.Which() == net.InterfaceAddressIpv6 {
 			return -1
 		}
-		if diff := bytes.Compare(s1.Addr.Ipv4.Addr[:], s2.Addr.Ipv4.Addr[:]); diff != 0 {
+		if diff := bytes.Compare(ifAddr1.Ipv4.Addr.Addr[:], ifAddr2.Ipv4.Addr.Addr[:]); diff != 0 {
 			return diff
 		}
-	case net.IpAddressIpv6:
-		if s2.Addr.Which() == net.IpAddressIpv4 {
+		if ifAddr1.Ipv4.PrefixLen < ifAddr2.Ipv4.PrefixLen {
+			return -1
+		} else if ifAddr1.Ipv4.PrefixLen > ifAddr2.Ipv4.PrefixLen {
 			return 1
 		}
-		if diff := bytes.Compare(s1.Addr.Ipv6.Addr[:], s2.Addr.Ipv6.Addr[:]); diff != 0 {
+	case net.InterfaceAddressIpv6:
+		if ifAddr2.Which() == net.InterfaceAddressIpv4 {
+			return 1
+		}
+		if diff := bytes.Compare(ifAddr1.Ipv6.Addr[:], ifAddr2.Ipv6.Addr[:]); diff != 0 {
 			return diff
 		}
-	}
-	if s1.PrefixLen < s2.PrefixLen {
-		return -1
-	} else if s1.PrefixLen > s2.PrefixLen {
-		return 1
 	}
 	return 0
 }
@@ -186,7 +199,7 @@ func diffInterfaceProperties(p1, p2 interfaces.Properties) interfaces.Properties
 		}
 		for i, addr := range p1.GetAddresses() {
 			p2Addr := p2.GetAddresses()[i]
-			if cmpSubnet(addr.GetAddr(), p2Addr.GetAddr()) != 0 {
+			if cmpInterfaceAddress(addr.GetValue(), p2Addr.GetValue()) != 0 {
 				return true
 			}
 			if addr.GetValidUntil() != p2Addr.GetValidUntil() {
@@ -279,13 +292,9 @@ func (wc *interfaceWatcherCollection) onAddressAdd(nicid tcpip.NICID, protocolAd
 		} else {
 			addrs := properties.GetAddresses()
 			for _, a := range addrs {
-				subnet := a.GetAddr()
-				foundAddrWithPrefix := tcpip.AddressWithPrefix{
-					Address:   fidlconv.ToTCPIPAddress(subnet.Addr),
-					PrefixLen: int(subnet.PrefixLen),
-				}
-				if foundAddrWithPrefix == protocolAddr.AddressWithPrefix {
-					_ = syslog.Warnf("onAddressAdd(%d, %+v, %s): address %+v already exists", nicid, protocolAddr, validUntil, foundAddrWithPrefix)
+				foundProtocolAddr := interfaceAddressToProtocolAddress(a.GetValue())
+				if foundProtocolAddr == protocolAddr {
+					_ = syslog.Warnf("onAddressAdd(%d, %+v, %s): address %+v already exists", nicid, protocolAddr, validUntil, foundProtocolAddr)
 					return nil, false
 				}
 			}
@@ -294,7 +303,7 @@ func (wc *interfaceWatcherCollection) onAddressAdd(nicid tcpip.NICID, protocolAd
 	}(); changed {
 		addrs = append(addrs, makeInterfacesAddress(protocolAddr, validUntil))
 		sort.Slice(addrs, func(i, j int) bool {
-			return cmpSubnet(addrs[i].GetAddr(), addrs[j].GetAddr()) <= 0
+			return cmpInterfaceAddress(addrs[i].GetValue(), addrs[j].GetValue()) <= 0
 		})
 		properties.SetAddresses(addrs)
 		wc.mu.lastObserved[nicid] = properties

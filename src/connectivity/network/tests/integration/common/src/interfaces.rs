@@ -168,16 +168,17 @@ pub async fn wait_for_v4_and_v6_ll(
     wait_for_addresses(interfaces_state, id, |addresses| {
         let (v4, v6) = addresses.into_iter().fold(
             (None, None),
-            |(v4, v6),
-             &fidl_fuchsia_net_interfaces_ext::Address {
-                 addr: fidl_fuchsia_net::Subnet { addr, prefix_len: _ },
-                 valid_until: _,
-             }| {
-                match addr {
-                    fidl_fuchsia_net::IpAddress::Ipv4(fidl_fuchsia_net::Ipv4Address { addr }) => {
-                        (Some(net_types::ip::Ipv4Addr::from(addr)), v6)
-                    }
-                    fidl_fuchsia_net::IpAddress::Ipv6(fidl_fuchsia_net::Ipv6Address { addr }) => {
+            |(v4, v6), &fidl_fuchsia_net_interfaces_ext::Address { value, valid_until: _ }| {
+                match value {
+                    fidl_fuchsia_net::InterfaceAddress::Ipv4(
+                        fidl_fuchsia_net::Ipv4AddressWithPrefix {
+                            addr: fidl_fuchsia_net::Ipv4Address { addr },
+                            prefix_len: _,
+                        },
+                    ) => (Some(net_types::ip::Ipv4Addr::from(addr)), v6),
+                    fidl_fuchsia_net::InterfaceAddress::Ipv6(fidl_fuchsia_net::Ipv6Address {
+                        addr,
+                    }) => {
                         let v6_addr = net_types::ip::Ipv6Addr::from_bytes(addr);
                         (v4, if v6_addr.is_unicast_link_local() { Some(v6_addr) } else { v6 })
                     }
@@ -208,18 +209,13 @@ pub async fn wait_for_v6_ll(
 ) -> Result<net_types::ip::Ipv6Addr> {
     wait_for_addresses(interfaces_state, id, |addresses| {
         addresses.into_iter().find_map(
-            |&fidl_fuchsia_net_interfaces_ext::Address {
-                 addr: fidl_fuchsia_net::Subnet { addr, prefix_len: _ },
-                 valid_until: _,
-             }| {
-                match addr {
-                    fidl_fuchsia_net::IpAddress::Ipv4(fidl_fuchsia_net::Ipv4Address {
-                        addr: _,
-                    }) => None,
-                    fidl_fuchsia_net::IpAddress::Ipv6(fidl_fuchsia_net::Ipv6Address { addr }) => {
-                        let v6_addr = net_types::ip::Ipv6Addr::from_bytes(addr);
-                        v6_addr.is_unicast_link_local().then(|| v6_addr)
-                    }
+            |&fidl_fuchsia_net_interfaces_ext::Address { value, valid_until: _ }| match value {
+                fidl_fuchsia_net::InterfaceAddress::Ipv4(_) => None,
+                fidl_fuchsia_net::InterfaceAddress::Ipv6(fidl_fuchsia_net::Ipv6Address {
+                    addr,
+                }) => {
+                    let v6_addr = net_types::ip::Ipv6Addr::from_bytes(addr);
+                    v6_addr.is_unicast_link_local().then(|| v6_addr)
                 }
             },
         )

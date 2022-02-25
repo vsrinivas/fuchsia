@@ -13,7 +13,7 @@ use fuchsia_zircon as zx;
 use diagnostics_hierarchy::Property;
 use itertools::Itertools as _;
 use net_declare::{fidl_ip, fidl_mac, fidl_subnet};
-use net_types::ip::Ip as _;
+use net_types::ip::{Ip as _, IpAddress as _};
 use netemul::Endpoint as _;
 use netstack_testing_common::{
     constants, get_inspect_data,
@@ -46,14 +46,33 @@ impl AddressMatcher {
         let set = props
             .addresses
             .iter()
-            .map(|&fidl_fuchsia_net_interfaces_ext::Address { addr: subnet, valid_until: _ }| {
-                let fidl_fuchsia_net::Subnet { addr, prefix_len: _ } = subnet;
-                let prefix = match addr {
-                    fidl_fuchsia_net::IpAddress::Ipv4(_) => "ipv4",
-                    fidl_fuchsia_net::IpAddress::Ipv6(_) => "ipv6",
-                };
-                format!("[{}] {}", prefix, fidl_fuchsia_net_ext::Subnet::from(subnet))
-            })
+            .map(
+                |&fidl_fuchsia_net_interfaces_ext::Address { value, valid_until: _ }| match value {
+                    fidl_fuchsia_net::InterfaceAddress::Ipv4(
+                        fidl_fuchsia_net::Ipv4AddressWithPrefix { addr, prefix_len },
+                    ) => {
+                        let fidl_fuchsia_net_ext::IpAddress(addr) =
+                            fidl_fuchsia_net::IpAddress::Ipv4(addr).into();
+                        format!("[ipv4] {}/{}", addr, prefix_len)
+                    }
+                    fidl_fuchsia_net::InterfaceAddress::Ipv6(addr) => {
+                        // TODO(https://fxbug.dev/81929): remove the bogus prefix length once we no
+                        // longer lie to gVisor about it.
+                        let prefix_len = {
+                            let fidl_fuchsia_net::Ipv6Address { addr } = addr;
+                            let nt_addr = net_types::ip::Ipv6Addr::from_bytes(addr);
+                            if nt_addr.is_loopback() {
+                                128
+                            } else {
+                                64
+                            }
+                        };
+                        let fidl_fuchsia_net_ext::IpAddress(addr) =
+                            fidl_fuchsia_net::IpAddress::Ipv6(addr).into();
+                        format!("[ipv6] {}/{}", addr, prefix_len)
+                    }
+                },
+            )
             .collect::<std::collections::HashSet<_>>();
 
         Self { set: std::rc::Rc::new(std::cell::RefCell::new(set)) }
@@ -162,11 +181,11 @@ async fn inspect_nic() {
                         (0, 0),
                         |(v4_count, v6_count),
                          fidl_fuchsia_net_interfaces_ext::Address {
-                             addr: fidl_fuchsia_net::Subnet { addr, prefix_len: _ },
+                             value,
                              valid_until: _,
-                         }| match addr {
-                            fidl_fuchsia_net::IpAddress::Ipv4(_) => (v4_count + 1, v6_count),
-                            fidl_fuchsia_net::IpAddress::Ipv6(_) => (v4_count, v6_count + 1),
+                         }| match value {
+                            fidl_fuchsia_net::InterfaceAddress::Ipv4(_) => (v4_count + 1, v6_count),
+                            fidl_fuchsia_net::InterfaceAddress::Ipv6(_) => (v4_count, v6_count + 1),
                         },
                     );
                     if v4_count > 0 && v6_count >= EXPECTED_NUM_IPV6_ADDRESSES {

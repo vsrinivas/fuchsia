@@ -9,6 +9,14 @@ using fuchsia.hwinfo;
 using fuchsia.buildinfo;
 
 type IdentifyHostResponse = table {
+    // TODO(https://fxbug.dev/94339): The semantics of this field are not well
+    // defined. Are these addresses intended to be used to connect to the
+    // device, or only identify it? Various comments in the code refer to
+    // needing the scope id of a given address, but such a scope id would
+    // inherently refer to the device side, rather than the host side,
+    // rendering it not helpful for connecting to the device. If this field is
+    // for identification, the scope ID can serve as additional information,
+    // but may tempt its use for connection, which might be incorrect.
     1: addresses vector<fuchsia.net.Subnet>:MAX;
     2: nodename string:fuchsia.device.DEVICE_NAME_MAX;
     // UTC timestamp of the target's time of boot, in nanoseconds.

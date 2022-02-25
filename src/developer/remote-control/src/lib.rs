@@ -579,26 +579,21 @@ mod tests {
                                                 id: Some(1),
                                                 addresses: Some(
                                                     IntoIterator::into_iter([
-                                                        fnet::Subnet {
-                                                            addr: fnet::IpAddress::Ipv4(
-                                                                fnet::Ipv4Address {
+                                                        fnet::InterfaceAddress::Ipv4(
+                                                            fnet::Ipv4AddressWithPrefix {
+                                                                addr: fnet::Ipv4Address {
                                                                     addr: IPV4_ADDR,
                                                                 },
-                                                            ),
-                                                            prefix_len: 4,
-                                                        },
-                                                        fnet::Subnet {
-                                                            addr: fnet::IpAddress::Ipv6(
-                                                                fnet::Ipv6Address {
-                                                                    addr: IPV6_ADDR,
-                                                                },
-                                                            ),
-                                                            prefix_len: 6,
-                                                        },
+                                                                prefix_len: 4,
+                                                            },
+                                                        ),
+                                                        fnet::InterfaceAddress::Ipv6(
+                                                            fnet::Ipv6Address { addr: IPV6_ADDR },
+                                                        ),
                                                     ])
                                                     .map(Some)
-                                                    .map(|addr| fnet_interfaces::Address {
-                                                        addr,
+                                                    .map(|value| fnet_interfaces::Address {
+                                                        value,
                                                         valid_until: Some(1),
                                                         ..fnet_interfaces::Address::EMPTY
                                                     })
@@ -678,15 +673,19 @@ mod tests {
         assert_eq!(resp.nodename.unwrap(), NODENAME);
 
         let addrs = resp.addresses.unwrap();
-        assert_eq!(addrs.len(), 2);
-
-        let v4 = &addrs[0];
-        assert_eq!(v4.prefix_len, 4);
-        assert_eq!(v4.addr, fnet::IpAddress::Ipv4(fnet::Ipv4Address { addr: IPV4_ADDR }));
-
-        let v6 = &addrs[1];
-        assert_eq!(v6.prefix_len, 6);
-        assert_eq!(v6.addr, fnet::IpAddress::Ipv6(fnet::Ipv6Address { addr: IPV6_ADDR }));
+        assert_eq!(
+            addrs[..],
+            [
+                fnet::Subnet {
+                    addr: fnet::IpAddress::Ipv4(fnet::Ipv4Address { addr: IPV4_ADDR }),
+                    prefix_len: 4,
+                },
+                fnet::Subnet {
+                    addr: fnet::IpAddress::Ipv6(fnet::Ipv6Address { addr: IPV6_ADDR }),
+                    prefix_len: 128,
+                },
+            ]
+        );
 
         assert_eq!(resp.boot_timestamp_nanos.unwrap(), BOOT_TIME);
 

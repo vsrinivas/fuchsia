@@ -500,25 +500,19 @@ fn start_dhcpv6_client(
     dhcpv6_client_provider: &fnet_dhcpv6::ClientProviderProxy,
     watchers: &mut DnsServerWatchers<'_>,
 ) -> Result<Option<fnet::Ipv6SocketAddress>, errors::Error> {
-    let sockaddr = addresses.iter().find_map(
-        |&fnet_interfaces_ext::Address {
-             addr: fnet::Subnet { addr, prefix_len: _ },
-             valid_until: _,
-         }| match addr {
-            fnet::IpAddress::Ipv6(address) => {
-                if address.is_unicast_link_local() {
-                    Some(fnet::Ipv6SocketAddress {
+    let sockaddr =
+        addresses.iter().find_map(|&fnet_interfaces_ext::Address { value, valid_until: _ }| {
+            match value {
+                fnet::InterfaceAddress::Ipv4(_) => None,
+                fnet::InterfaceAddress::Ipv6(address) => {
+                    address.is_unicast_link_local().then(|| fnet::Ipv6SocketAddress {
                         address,
                         port: fnet_dhcpv6::DEFAULT_CLIENT_PORT,
                         zone_index: *id,
                     })
-                } else {
-                    None
                 }
             }
-            fnet::IpAddress::Ipv4(_) => None,
-        },
-    );
+        });
 
     if let Some(sockaddr) = sockaddr {
         let () = dhcpv6::start_client(dhcpv6_client_provider, *id, sockaddr, watchers)
@@ -1045,11 +1039,11 @@ impl<'a> NetCfg<'a> {
                             let &mut fnet::Ipv6SocketAddress { address, port: _, zone_index: _ } =
                                 sockaddr;
                             if !addresses.iter().any(
-                                |&fnet_interfaces_ext::Address {
-                                     addr: fnet::Subnet { addr, prefix_len: _ },
-                                     valid_until: _,
-                                 }| {
-                                    addr == fnet::IpAddress::Ipv6(address)
+                                |&fnet_interfaces_ext::Address { value, valid_until: _ }| {
+                                    match value {
+                                        fnet::InterfaceAddress::Ipv4(_) => false,
+                                        fnet::InterfaceAddress::Ipv6(addr) => addr == address,
+                                    }
                                 },
                             ) {
                                 let sockaddr = *sockaddr;
@@ -1883,7 +1877,7 @@ impl Mode for VirtualizationEnabled {
 mod tests {
     use futures::future::{self, FutureExt as _, TryFutureExt as _};
     use futures::stream::TryStreamExt as _;
-    use net_declare::{fidl_ip, fidl_ip_v6};
+    use net_declare::{fidl_if_addr, fidl_ip_v6};
     use test_case::test_case;
 
     use super::*;
@@ -1983,7 +1977,7 @@ mod tests {
         port: fnet_dhcpv6::DEFAULT_CLIENT_PORT,
         zone_index: INTERFACE_ID,
     };
-    const GLOBAL_ADDR: fnet::Subnet = fnet::Subnet { addr: fidl_ip!("2000::1"), prefix_len: 64 };
+    const GLOBAL_ADDR: fnet::InterfaceAddress = fidl_if_addr!("2000::1");
     const DNS_SERVER1: fnet::SocketAddress = fnet::SocketAddress::Ipv6(fnet::Ipv6SocketAddress {
         address: fidl_ip_v6!("2001::1"),
         port: fnet_dhcpv6::DEFAULT_CLIENT_PORT,
@@ -1999,13 +1993,13 @@ mod tests {
         // The DHCPv6 client will only use a link-local address but we include a global address
         // and expect it to not be used.
         std::iter::once(fnet_interfaces::Address {
-            addr: Some(GLOBAL_ADDR),
+            value: Some(GLOBAL_ADDR),
             valid_until: Some(fuchsia_zircon::Time::INFINITE.into_nanos()),
             ..fnet_interfaces::Address::EMPTY
         })
         .chain(a.map(|fnet::Ipv6SocketAddress { address, port: _, zone_index: _ }| {
             fnet_interfaces::Address {
-                addr: Some(fnet::Subnet { addr: fnet::IpAddress::Ipv6(address), prefix_len: 64 }),
+                value: Some(fnet::InterfaceAddress::Ipv6(address)),
                 valid_until: Some(fuchsia_zircon::Time::INFINITE.into_nanos()),
                 ..fnet_interfaces::Address::EMPTY
             }

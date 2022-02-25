@@ -25,28 +25,31 @@ impl From<fidl_fuchsia_net_ext::Subnet> for Subnet<std::net::IpAddr> {
 #[derive(serde::Serialize)]
 pub(crate) struct Addresses {
     pub(crate) ipv4: Vec<Subnet<std::net::Ipv4Addr>>,
-    pub(crate) ipv6: Vec<Subnet<std::net::Ipv6Addr>>,
+    pub(crate) ipv6: Vec<std::net::Ipv6Addr>,
 }
 
-impl<I: Iterator<Item = fidl_fuchsia_net_ext::Subnet>> From<I> for Addresses {
+impl<I: Iterator<Item = fidl_fuchsia_net::InterfaceAddress>> From<I> for Addresses {
     fn from(addresses: I) -> Addresses {
         use itertools::Itertools as _;
 
-        let (ipv4, ipv6): (Vec<_>, Vec<_>) = addresses.into_iter().partition_map(
-            |fidl_fuchsia_net_ext::Subnet {
-                 addr: fidl_fuchsia_net_ext::IpAddress(addr),
-                 prefix_len,
-             }| {
-                match addr {
-                    std::net::IpAddr::V4(addr) => {
-                        itertools::Either::Left(Subnet { addr, prefix_len })
-                    }
-                    std::net::IpAddr::V6(addr) => {
-                        itertools::Either::Right(Subnet { addr, prefix_len })
-                    }
+        let (ipv4, ipv6): (Vec<_>, Vec<_>) =
+            addresses.into_iter().partition_map(|address| match address {
+                fidl_fuchsia_net::InterfaceAddress::Ipv4(
+                    fidl_fuchsia_net::Ipv4AddressWithPrefix {
+                        addr: fidl_fuchsia_net::Ipv4Address { addr },
+                        prefix_len,
+                    },
+                ) => {
+                    let addr = addr.into();
+                    itertools::Either::Left(Subnet { addr, prefix_len })
                 }
-            },
-        );
+                fidl_fuchsia_net::InterfaceAddress::Ipv6(fidl_fuchsia_net::Ipv6Address {
+                    addr,
+                }) => {
+                    let addr: std::net::Ipv6Addr = addr.into();
+                    itertools::Either::Right(addr)
+                }
+            });
         Addresses { ipv4, ipv6 }
     }
 }
@@ -116,9 +119,7 @@ impl From<(fidl_fuchsia_net_interfaces_ext::Properties, Option<fidl_fuchsia_net:
             online,
             addresses: addresses
                 .into_iter()
-                .map(|fidl_fuchsia_net_interfaces_ext::Address { addr, valid_until: _ }| {
-                    addr.into()
-                })
+                .map(|fidl_fuchsia_net_interfaces_ext::Address { value, valid_until: _ }| value)
                 .into(),
             mac: mac.map(Into::into),
         }

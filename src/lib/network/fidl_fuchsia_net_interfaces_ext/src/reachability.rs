@@ -45,18 +45,17 @@ pub fn is_globally_routable(
     if !has_default_ipv4_route && !has_default_ipv6_route {
         return false;
     }
-    addresses.iter().any(
-        |Address { addr: fnet::Subnet { addr, prefix_len: _ }, valid_until: _ }| match addr {
-            fnet::IpAddress::Ipv4(fnet::Ipv4Address { addr }) => {
-                has_default_ipv4_route && !net_types::ip::Ipv4Addr::new(*addr).is_link_local()
-            }
-            fnet::IpAddress::Ipv6(fnet::Ipv6Address { addr }) => {
-                has_default_ipv6_route
-                    && net_types::ip::Ipv6Addr::from_bytes(*addr).scope()
-                        == net_types::ip::Ipv6Scope::Global
-            }
-        },
-    )
+    addresses.iter().any(|Address { value, valid_until: _ }| match value {
+        fnet::InterfaceAddress::Ipv4(fnet::Ipv4AddressWithPrefix {
+            addr: fnet::Ipv4Address { addr },
+            prefix_len: _,
+        }) => has_default_ipv4_route && !net_types::ip::Ipv4Addr::new(*addr).is_link_local(),
+        fnet::InterfaceAddress::Ipv6(fnet::Ipv6Address { addr }) => {
+            has_default_ipv6_route
+                && net_types::ip::Ipv6Addr::from_bytes(*addr).scope()
+                    == net_types::ip::Ipv6Scope::Global
+        }
+    })
 }
 
 /// Wraps `event_stream` and returns a stream which yields the reachability status as a bool (true
@@ -137,13 +136,13 @@ mod tests {
     use fidl_fuchsia_hardware_network as fnetwork;
     use fuchsia_zircon_types as zx;
     use futures::FutureExt as _;
-    use net_declare::fidl_subnet;
+    use net_declare::fidl_if_addr;
     use std::convert::TryInto as _;
 
-    const IPV4_LINK_LOCAL: fnet::Subnet = fidl_subnet!("169.254.0.1/16");
-    const IPV6_LINK_LOCAL: fnet::Subnet = fidl_subnet!("fe80::1/64");
-    const IPV4_GLOBAL: fnet::Subnet = fidl_subnet!("192.168.0.1/16");
-    const IPV6_GLOBAL: fnet::Subnet = fidl_subnet!("100::1/64");
+    const IPV4_LINK_LOCAL: fnet::InterfaceAddress = fidl_if_addr!("169.254.0.1/16");
+    const IPV6_LINK_LOCAL: fnet::InterfaceAddress = fidl_if_addr!("fe80::1");
+    const IPV4_GLOBAL: fnet::InterfaceAddress = fidl_if_addr!("192.168.0.1/16");
+    const IPV6_GLOBAL: fnet::InterfaceAddress = fidl_if_addr!("100::1");
 
     fn valid_interface(id: u64) -> fnet_interfaces::Properties {
         fnet_interfaces::Properties {
@@ -155,22 +154,22 @@ mod tests {
             online: Some(true),
             addresses: Some(vec![
                 fnet_interfaces::Address {
-                    addr: Some(IPV4_GLOBAL),
+                    value: Some(IPV4_GLOBAL),
                     valid_until: Some(zx::ZX_TIME_INFINITE),
                     ..fnet_interfaces::Address::EMPTY
                 },
                 fnet_interfaces::Address {
-                    addr: Some(IPV4_LINK_LOCAL),
+                    value: Some(IPV4_LINK_LOCAL),
                     valid_until: Some(zx::ZX_TIME_INFINITE),
                     ..fnet_interfaces::Address::EMPTY
                 },
                 fnet_interfaces::Address {
-                    addr: Some(IPV6_GLOBAL),
+                    value: Some(IPV6_GLOBAL),
                     valid_until: Some(zx::ZX_TIME_INFINITE),
                     ..fnet_interfaces::Address::EMPTY
                 },
                 fnet_interfaces::Address {
-                    addr: Some(IPV6_LINK_LOCAL),
+                    value: Some(IPV6_LINK_LOCAL),
                     valid_until: Some(zx::ZX_TIME_INFINITE),
                     ..fnet_interfaces::Address::EMPTY
                 },
@@ -203,22 +202,22 @@ mod tests {
             ..valid_interface(ID).try_into()?
         }));
         assert!(!is_globally_routable(&Properties {
-            addresses: vec![Address { addr: IPV4_GLOBAL, valid_until: zx::ZX_TIME_INFINITE }],
+            addresses: vec![Address { value: IPV4_GLOBAL, valid_until: zx::ZX_TIME_INFINITE }],
             has_default_ipv4_route: false,
             ..valid_interface(ID).try_into()?
         }));
         assert!(!is_globally_routable(&Properties {
-            addresses: vec![Address { addr: IPV6_GLOBAL, valid_until: zx::ZX_TIME_INFINITE }],
+            addresses: vec![Address { value: IPV6_GLOBAL, valid_until: zx::ZX_TIME_INFINITE }],
             has_default_ipv6_route: false,
             ..valid_interface(ID).try_into()?
         }));
         assert!(!is_globally_routable(&Properties {
-            addresses: vec![Address { addr: IPV6_LINK_LOCAL, valid_until: zx::ZX_TIME_INFINITE }],
+            addresses: vec![Address { value: IPV6_LINK_LOCAL, valid_until: zx::ZX_TIME_INFINITE }],
             has_default_ipv6_route: true,
             ..valid_interface(ID).try_into()?
         }));
         assert!(!is_globally_routable(&Properties {
-            addresses: vec![Address { addr: IPV4_LINK_LOCAL, valid_until: zx::ZX_TIME_INFINITE }],
+            addresses: vec![Address { value: IPV4_LINK_LOCAL, valid_until: zx::ZX_TIME_INFINITE }],
             has_default_ipv4_route: true,
             ..valid_interface(ID).try_into()?
         }));
@@ -226,13 +225,13 @@ mod tests {
         // These combinations are globally routable.
         assert!(is_globally_routable(&valid_interface(ID).try_into()?));
         assert!(is_globally_routable(&Properties {
-            addresses: vec![Address { addr: IPV4_GLOBAL, valid_until: zx::ZX_TIME_INFINITE }],
+            addresses: vec![Address { value: IPV4_GLOBAL, valid_until: zx::ZX_TIME_INFINITE }],
             has_default_ipv4_route: true,
             has_default_ipv6_route: false,
             ..valid_interface(ID).try_into()?
         }));
         assert!(is_globally_routable(&Properties {
-            addresses: vec![Address { addr: IPV6_GLOBAL, valid_until: zx::ZX_TIME_INFINITE }],
+            addresses: vec![Address { value: IPV6_GLOBAL, valid_until: zx::ZX_TIME_INFINITE }],
             has_default_ipv4_route: false,
             has_default_ipv6_route: true,
             ..valid_interface(ID).try_into()?

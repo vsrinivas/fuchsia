@@ -175,8 +175,8 @@ fn write_tabulated_interfaces_info<
         for ser::Subnet { addr, prefix_len } in ipv4 {
             let () = add_row(&mut t, row!["addr", format!("{}/{}", addr, prefix_len)]);
         }
-        for ser::Subnet { addr, prefix_len } in ipv6 {
-            let () = add_row(&mut t, row!["addr", format!("{}/{}", addr, prefix_len)]);
+        for addr in ipv6 {
+            let () = add_row(&mut t, row!["addr", format!("{}", addr)]);
         }
         match mac {
             None => add_row(&mut t, row!["mac", "-"]),
@@ -1930,9 +1930,9 @@ mac             -
                             addresses: Some(
                                 addresses
                                     .into_iter()
-                                    .map(|finterfaces_ext::Address { addr, valid_until }| {
+                                    .map(|finterfaces_ext::Address { value, valid_until }| {
                                         finterfaces::Address {
-                                            addr: Some(addr),
+                                            value: Some(value),
                                             valid_until: Some(valid_until),
                                             ..finterfaces::Address::EMPTY
                                         }

@@ -70,19 +70,18 @@ fuchsia::net::interfaces::Event NetworkReachabilityProvider::FakeWatcherImpl::Ex
 
   properties.mutable_addresses()->reserve(2);
   auto& v4_interfaces_addr = properties.mutable_addresses()->emplace_back();
-  v4_interfaces_addr.set_addr(fuchsia::net::Subnet{
-      .addr = fuchsia::net::IpAddress::WithIpv4(fuchsia::net::Ipv4Address{
-          .addr = kIPv4Address,
-      }),
-      .prefix_len = kIPv4PrefixLength,
-  });
+  v4_interfaces_addr.set_value(
+      fuchsia::net::InterfaceAddress::WithIpv4(fuchsia::net::Ipv4AddressWithPrefix{
+          .addr =
+              fuchsia::net::Ipv4Address{
+                  .addr = kIPv4Address,
+              },
+          .prefix_len = kIPv4PrefixLength,
+      }));
   auto& v6_interfaces_addr = properties.mutable_addresses()->emplace_back();
-  v6_interfaces_addr.set_addr(fuchsia::net::Subnet{
-      .addr = fuchsia::net::IpAddress::WithIpv6(fuchsia::net::Ipv6Address{
-          .addr = kIPv6Address,
-      }),
-      .prefix_len = kIPv6PrefixLength,
-  });
+  v6_interfaces_addr.set_value(fuchsia::net::InterfaceAddress::WithIpv6(fuchsia::net::Ipv6Address{
+      .addr = kIPv6Address,
+  }));
 
   return event;
 }
