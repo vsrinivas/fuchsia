@@ -6,7 +6,7 @@ a Chip (SoC) board. This concept also extends to logical (or virtual) boards for
 which there is no physical board.
 
 Common boards are based on arm64 or x64 CPUs. For convenience, this directory
-contains an arm64.gni and x64.gni which are imported into other <board>.gni
+contains `arm64.gni` and `x64.gni` which are imported into other `<board>.gni`
 files.
 
 Further details can be found at
