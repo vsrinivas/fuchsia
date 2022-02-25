@@ -17,6 +17,7 @@ use {
     serde_json::json,
     std::{
         convert::Infallible,
+        iter::zip,
         net::{Ipv4Addr, SocketAddr},
         str::FromStr,
         sync::Arc,
@@ -37,12 +38,40 @@ pub struct OmahaServer {
     inner: Arc<Mutex<Inner>>,
 }
 
+#[derive(Clone, Debug)]
+pub struct ResponseAndMetadata {
+    response: OmahaResponse,
+    merkle: Hash,
+    check_assertion: Option<UpdateCheckAssertion>,
+    app_id: String,
+    version: String,
+}
+
+impl Default for ResponseAndMetadata {
+    fn default() -> ResponseAndMetadata {
+        ResponseAndMetadata {
+            response: OmahaResponse::NoUpdate,
+            merkle: Hash::from_str(
+                "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
+            )
+            .unwrap(),
+            check_assertion: None,
+            app_id: "integration-test-appid".to_string(),
+            version: "0.1.2.3".to_string(),
+        }
+    }
+}
+
 /// Shared state.
 #[derive(Clone, Debug)]
 struct Inner {
-    response: OmahaResponse,
-    merkle: Hash,
-    update_check: Option<UpdateCheckAssertion>,
+    responses_and_metadata: Vec<ResponseAndMetadata>,
+}
+
+impl Inner {
+    pub fn num_apps(&self) -> usize {
+        self.responses_and_metadata.len()
+    }
 }
 
 #[derive(Debug)]
@@ -58,20 +87,8 @@ pub enum UpdateCheckAssertion {
 
 impl OmahaServerBuilder {
     /// Sets the server's response to update checks
-    pub fn response(mut self, response: OmahaResponse) -> Self {
-        self.inner.response = response;
-        self
-    }
-
-    /// Sets the merkle of the update package for an Update response
-    pub fn merkle(mut self, merkle: Hash) -> Self {
-        self.inner.merkle = merkle;
-        self
-    }
-
-    /// Sets the special assertion to make on all update check requests
-    pub fn update_check_assertion(mut self, value: Option<UpdateCheckAssertion>) -> Self {
-        self.inner.update_check = value;
+    pub fn set(mut self, responses_and_metadata: Vec<ResponseAndMetadata>) -> Self {
+        self.inner.responses_and_metadata = responses_and_metadata;
         self
     }
 
@@ -83,33 +100,55 @@ impl OmahaServerBuilder {
 
 impl OmahaServer {
     /// Returns an OmahaServer builder with the following defaults:
-    /// * response: NoUpdate
-    /// * merkle: 0xdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef
+    /// * response: [NoUpdate]
+    /// * merkle: [0xdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef]
     /// * no special request assertions beyond the defaults
     pub fn builder() -> OmahaServerBuilder {
         OmahaServerBuilder {
-            inner: Inner {
-                response: OmahaResponse::NoUpdate,
-                merkle: Hash::from_str(
-                    "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
-                )
-                .unwrap(),
-                update_check: None,
-            },
+            inner: Inner { responses_and_metadata: vec![ResponseAndMetadata::default()] },
         }
     }
 
-    pub fn new(response: OmahaResponse) -> Self {
-        Self::builder().response(response).build()
+    pub fn new(responses: Vec<OmahaResponse>) -> Self {
+        Self::builder()
+            .set(
+                responses
+                    .iter()
+                    .map(|response| ResponseAndMetadata {
+                        response: *response,
+                        ..Default::default()
+                    })
+                    .collect(),
+            )
+            .build()
     }
 
-    pub fn new_with_hash(response: OmahaResponse, merkle: Hash) -> Self {
-        Self::builder().response(response).merkle(merkle).build()
+    pub fn new_with_hash(responses: Vec<OmahaResponse>, merkles: Vec<Hash>) -> Self {
+        let num_apps: usize = responses.len();
+        assert_eq!(num_apps, merkles.len());
+        Self::builder()
+            .set(
+                zip(responses, merkles)
+                    .map(|(response, merkle)| ResponseAndMetadata {
+                        response,
+                        merkle,
+                        ..Default::default()
+                    })
+                    .collect(),
+            )
+            .build()
+    }
+
+    #[allow(dead_code)]
+    pub fn new_with_metadata(responses_and_metadata: Vec<ResponseAndMetadata>) -> Self {
+        Self::builder().set(responses_and_metadata).build()
     }
 
     /// Sets the special assertion to make on any future update check requests
-    pub fn set_update_check_assertion(&self, value: Option<UpdateCheckAssertion>) {
-        self.inner.lock().update_check = value;
+    pub fn set_all_update_check_assertions(&self, value: Option<UpdateCheckAssertion>) {
+        for response_and_metadata in self.inner.lock().responses_and_metadata.iter_mut() {
+            response_and_metadata.check_assertion = value;
+        }
     }
 
     /// Spawn the server on the current executor, returning the address of the server.
@@ -169,121 +208,127 @@ async fn handle_omaha_request(
 
     let request = req_json.get("request").unwrap();
     let apps = request.get("app").unwrap().as_array().unwrap();
-    assert_eq!(apps.len(), 1);
-    let app = &apps[0];
-    let appid = app.get("appid").unwrap();
-    assert_eq!(appid, "integration-test-appid");
-    let version = app.get("version").unwrap();
-    assert_eq!(version, "0.1.2.3");
+    assert_eq!(apps.len(), inner.num_apps());
+    let apps: Vec<serde_json::Value> = zip(apps.iter(), inner.responses_and_metadata)
+        .map(|(app, expected)| {
+            let appid = app.get("appid").unwrap();
+            assert_eq!(appid, &expected.app_id);
+            let version = app.get("version").unwrap();
+            assert_eq!(version, &expected.version);
 
-    let package_name = format!("update?hash={}", inner.merkle);
-    let app = if let Some(update_check) = app.get("updatecheck") {
-        let updatedisabled =
-            update_check.get("updatedisabled").map(|v| v.as_bool().unwrap()).unwrap_or(false);
-        match inner.update_check {
-            Some(UpdateCheckAssertion::UpdatesEnabled) => {
-                assert!(!updatedisabled);
-            }
-            Some(UpdateCheckAssertion::UpdatesDisabled) => {
-                assert!(updatedisabled);
-            }
-            None => {}
-        }
+            let package_name = format!("update?hash={}", expected.merkle);
+            let app = if let Some(expected_update_check) = app.get("updatecheck") {
+                let updatedisabled = expected_update_check
+                    .get("updatedisabled")
+                    .map(|v| v.as_bool().unwrap())
+                    .unwrap_or(false);
+                match expected.check_assertion {
+                    Some(UpdateCheckAssertion::UpdatesEnabled) => {
+                        assert!(!updatedisabled);
+                    }
+                    Some(UpdateCheckAssertion::UpdatesDisabled) => {
+                        assert!(updatedisabled);
+                    }
+                    None => {}
+                }
 
-        let updatecheck = match inner.response {
-            OmahaResponse::Update => json!({
-                "status": "ok",
-                "urls": {
-                    "url": [
-                        {
-                            "codebase": "fuchsia-pkg://integration.test.fuchsia.com/"
-                        }
-                    ]
-                },
-                "manifest": {
-                    "version": "0.1.2.3",
-                    "actions": {
-                        "action": [
-                            {
-                                "run": &package_name,
-                                "event": "install"
+                let updatecheck = match expected.response {
+                    OmahaResponse::Update => json!({
+                        "status": "ok",
+                        "urls": {
+                            "url": [
+                                {
+                                    "codebase": "fuchsia-pkg://integration.test.fuchsia.com/"
+                                }
+                            ]
+                        },
+                        "manifest": {
+                            "version": "0.1.2.3",
+                            "actions": {
+                                "action": [
+                                    {
+                                        "run": &package_name,
+                                        "event": "install"
+                                    },
+                                    {
+                                        "event": "postinstall"
+                                    }
+                                ]
                             },
-                            {
-                                "event": "postinstall"
+                            "packages": {
+                                "package": [
+                                    {
+                                        "name": &package_name,
+                                        "fp": "2.0.1.2.3",
+                                        "required": true
+                                    }
+                                ]
                             }
-                        ]
-                    },
-                    "packages": {
-                        "package": [
-                            {
-                                "name": &package_name,
-                                "fp": "2.0.1.2.3",
-                                "required": true
-                            }
-                        ]
-                    }
-                }
-            }),
-            OmahaResponse::NoUpdate => json!({
-                "status": "noupdate",
-            }),
-            OmahaResponse::InvalidResponse => json!({
-                "invalid_status": "invalid",
-            }),
-            OmahaResponse::InvalidURL => json!({
-                "status": "ok",
-                "urls": {
-                    "url": [
-                        {
-                            "codebase": "http://integration.test.fuchsia.com/"
                         }
-                    ]
-                },
-                "manifest": {
-                    "version": "0.1.2.3",
-                    "actions": {
-                        "action": [
-                            {
-                                "run": &package_name,
-                                "event": "install"
+                    }),
+                    OmahaResponse::NoUpdate => json!({
+                        "status": "noupdate",
+                    }),
+                    OmahaResponse::InvalidResponse => json!({
+                        "invalid_status": "invalid",
+                    }),
+                    OmahaResponse::InvalidURL => json!({
+                        "status": "ok",
+                        "urls": {
+                            "url": [
+                                {
+                                    "codebase": "http://integration.test.fuchsia.com/"
+                                }
+                            ]
+                        },
+                        "manifest": {
+                            "version": "0.1.2.3",
+                            "actions": {
+                                "action": [
+                                    {
+                                        "run": &package_name,
+                                        "event": "install"
+                                    },
+                                    {
+                                        "event": "postinstall"
+                                    }
+                                ]
                             },
-                            {
-                                "event": "postinstall"
+                            "packages": {
+                                "package": [
+                                    {
+                                        "name": &package_name,
+                                        "fp": "2.0.1.2.3",
+                                        "required": true
+                                    }
+                                ]
                             }
-                        ]
-                    },
-                    "packages": {
-                        "package": [
-                            {
-                                "name": &package_name,
-                                "fp": "2.0.1.2.3",
-                                "required": true
-                            }
-                        ]
-                    }
-                }
-            }),
-        };
-        json!(
-        {
-            "cohorthint": "integration-test",
-            "appid": appid,
-            "cohort": "1:1:",
-            "status": "ok",
-            "cohortname": "integration-test",
-            "updatecheck": updatecheck,
+                        }
+                    }),
+                };
+                json!(
+                {
+                    "cohorthint": "integration-test",
+                    "appid": appid,
+                    "cohort": "1:1:",
+                    "status": "ok",
+                    "cohortname": "integration-test",
+                    "updatecheck": updatecheck,
+                })
+            } else {
+                assert!(app.get("event").is_some());
+                json!(
+                {
+                    "cohorthint": "integration-test",
+                    "appid": appid,
+                    "cohort": "1:1:",
+                    "status": "ok",
+                    "cohortname": "integration-test",
+                })
+            };
+            app
         })
-    } else {
-        assert!(app.get("event").is_some());
-        json!(
-        {
-            "cohorthint": "integration-test",
-            "appid": appid,
-            "cohort": "1:1:",
-            "status": "ok",
-            "cohortname": "integration-test",
-        })
-    };
+        .collect();
     let response = json!({
         "response": {
             "server": "prod",
@@ -292,9 +337,7 @@ async fn handle_omaha_request(
                 "elapsed_seconds": 48810,
                 "elapsed_days": 4775
             },
-            "app": [
-                app
-            ]
+            "app": apps
         }
     });
 
@@ -316,19 +359,56 @@ mod tests {
     };
 
     #[fasync::run_singlethreaded(test)]
+    #[should_panic(expected = "assertion failed")]
+    // TODO(fxbug.dev/88496): delete the below
+    #[cfg_attr(feature = "variant_asan", ignore)]
+    async fn test_invalid_construction() {
+        // This is invalid because len(responses) == 2, but len(merkles) == 1.
+        let _ = OmahaServer::new_with_hash(
+            vec![OmahaResponse::NoUpdate, OmahaResponse::NoUpdate],
+            vec![Hash::from_str(
+                "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
+            )
+            .unwrap()],
+        )
+        .start()
+        .context("starting server")
+        .expect("start server");
+    }
+
+    #[fasync::run_singlethreaded(test)]
     async fn test_server_replies() -> Result<(), Error> {
-        let server =
-            OmahaServer::new(OmahaResponse::NoUpdate).start().context("starting server")?;
+        let server = OmahaServer::new_with_metadata(vec![
+            ResponseAndMetadata {
+                response: OmahaResponse::NoUpdate,
+                app_id: "integration-test-appid-1".to_string(),
+                version: "0.0.0.1".to_string(),
+                ..Default::default()
+            },
+            ResponseAndMetadata {
+                response: OmahaResponse::NoUpdate,
+                app_id: "integration-test-appid-2".to_string(),
+                version: "0.0.0.2".to_string(),
+                ..Default::default()
+            },
+        ])
+        .start()
+        .context("starting server")?;
 
         let client = fuchsia_hyper::new_client();
         let body = json!({
             "request": {
                 "app": [
                     {
-                        "appid": "integration-test-appid",
-                        "version": "0.1.2.3",
+                        "appid": "integration-test-appid-1",
+                        "version": "0.0.0.1",
                         "updatecheck": { "updatedisabled": false }
-                    }
+                    },
+                    {
+                        "appid": "integration-test-appid-2",
+                        "version": "0.0.0.2",
+                        "updatecheck": { "updatedisabled": false }
+                    },
                 ]
             }
         });
@@ -350,10 +430,11 @@ mod tests {
 
         let response = obj.get("response").unwrap();
         let apps = response.get("app").unwrap().as_array().unwrap();
-        assert_eq!(apps.len(), 1);
-        let app = &apps[0];
-        let status = app.get("updatecheck").unwrap().get("status").unwrap();
-        assert_eq!(status, "noupdate");
+        assert_eq!(apps.len(), 2);
+        for app in apps {
+            let status = app.get("updatecheck").unwrap().get("status").unwrap();
+            assert_eq!(status, "noupdate");
+        }
         Ok(())
     }
 }

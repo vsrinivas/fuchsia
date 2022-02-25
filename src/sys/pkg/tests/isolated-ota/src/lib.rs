@@ -231,7 +231,7 @@ impl TestEnv {
             OmahaState::Disabled => Ok(None),
             OmahaState::Manual(cfg) => Ok(Some(cfg)),
             OmahaState::Auto(response) => {
-                let server = OmahaServer::new_with_hash(response, merkle);
+                let server = OmahaServer::new_with_hash(vec![response], vec![merkle]);
                 let addr = server.start().context("Starting omaha server")?;
                 let config =
                     OmahaConfig { app_id: "integration-test-appid".to_owned(), server_url: addr };

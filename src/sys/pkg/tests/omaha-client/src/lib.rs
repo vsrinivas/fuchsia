@@ -167,7 +167,7 @@ impl TestEnvBuilder {
         fs.dir("config").add_remote("data", config_data);
         fs.dir("config").add_remote("build-info", build_info);
 
-        let server = OmahaServer::new(self.response);
+        let server = OmahaServer::new(vec![self.response]);
         let url = server.clone().start().expect("start server");
         mounts.write_url(url);
         mounts.write_appid("integration-test-appid");
@@ -1467,11 +1467,11 @@ async fn test_update_check_sets_updatedisabled_when_opted_out() {
     let env = TestEnvBuilder::new().response(OmahaResponse::NoUpdate).build().await;
 
     // The default is to enable updates.
-    env.server.set_update_check_assertion(Some(UpdateCheckAssertion::UpdatesEnabled));
+    env.server.set_all_update_check_assertions(Some(UpdateCheckAssertion::UpdatesEnabled));
     do_nop_update_check(&env).await;
 
     // The user preference is read for each update check.
-    env.server.set_update_check_assertion(Some(UpdateCheckAssertion::UpdatesDisabled));
+    env.server.set_all_update_check_assertions(Some(UpdateCheckAssertion::UpdatesDisabled));
     env.proxies
         .config_optout
         .set(fuchsia_update_config_optout::OptOutPreference::AllowOnlySecurityUpdates);
