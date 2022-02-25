@@ -57,6 +57,11 @@ class VkRenderer final : public Renderer {
               const std::vector<zx::event>& release_fences = {}) override;
 
   // |Renderer|.
+  void SetColorConversionValues(const std::array<float, 9>& matrix,
+                                const std::array<float, 3>& preoffsets,
+                                const std::array<float, 3>& postoffsets) override;
+
+  // |Renderer|.
   zx_pixel_format_t ChoosePreferredPixelFormat(
       const std::vector<zx_pixel_format_t>& available_formats) const override;
 

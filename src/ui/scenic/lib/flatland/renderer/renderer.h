@@ -69,6 +69,11 @@ class Renderer : public allocation::BufferCollectionImporter {
                       const std::vector<allocation::ImageMetadata>& images,
                       const std::vector<zx::event>& release_fences = {}) = 0;
 
+  // Values needed to adjust the color of the framebuffer as a postprocessing effect.
+  virtual void SetColorConversionValues(const std::array<float, 9>& matrix,
+                                        const std::array<float, 3>& preoffsets,
+                                        const std::array<float, 3>& postoffsets) = 0;
+
   // Returns the pixel format that the renderer prefers to use for render targets.
   // TODO(fxbug.dev/71410): Remove all references to zx_pixel_format_t
   virtual zx_pixel_format_t ChoosePreferredPixelFormat(

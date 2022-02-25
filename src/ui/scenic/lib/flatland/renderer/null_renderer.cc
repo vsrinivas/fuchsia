@@ -132,6 +132,10 @@ bool NullRenderer::ImportBufferImage(const allocation::ImageMetadata& metadata) 
 
 void NullRenderer::ReleaseBufferImage(allocation::GlobalImageId image_id) {}
 
+void NullRenderer::SetColorConversionValues(const std::array<float, 9>& matrix,
+                                            const std::array<float, 3>& preoffsets,
+                                            const std::array<float, 3>& postoffsets) {}
+
 // Check that the buffer collections for each of the images passed in have been validated.
 // DCHECK if they have not.
 void NullRenderer::Render(const allocation::ImageMetadata& render_target,

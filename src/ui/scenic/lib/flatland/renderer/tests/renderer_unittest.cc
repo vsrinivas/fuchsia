@@ -1139,6 +1139,94 @@ VK_TEST_F(VulkanRendererTest, SolidColorTest) {
                  });
 }
 
+// Test that colors change properly when we apply a color correction matrix.
+VK_TEST_F(VulkanRendererTest, ColorCorrectionTest) {
+  SKIP_TEST_IF_ESCHER_USES_DEVICE(VirtualGpu);
+  auto env = escher::test::EscherEnvironment::GetGlobalTestEnvironment();
+  auto unique_escher = std::make_unique<escher::Escher>(
+      env->GetVulkanDevice(), env->GetFilesystem(), /*gpu_allocator*/ nullptr);
+  VkRenderer renderer(unique_escher->GetWeakPtr());
+
+  // Set the color correction data on the renderer.
+  static const std::array<float, 3> preoffsets = {0, 0, 0};
+  static const std::array<float, 9> matrix = {.288299,  0.052709, -0.257912, 0.711701, 0.947291,
+                                              0.257912, 0.000000, -0.000000, 1.000000};
+  static const std::array<float, 3> postoffsets = {0, 0, 0};
+  renderer.SetColorConversionValues(matrix, preoffsets, postoffsets);
+
+  // Setup the render target collection.
+  fuchsia::sysmem::BufferCollectionInfo_2 client_target_info;
+  fuchsia::sysmem::BufferCollectionSyncPtr target_ptr;
+  auto target_id = SetupBufferCollection(1, 60, 40, true, &renderer, sysmem_allocator_.get(),
+                                         &client_target_info, target_ptr);
+
+  // Create the render_target image metadata.
+  const uint32_t kTargetWidth = 16;
+  const uint32_t kTargetHeight = 8;
+  ImageMetadata render_target = {.collection_id = target_id,
+                                 .identifier = allocation::GenerateUniqueImageId(),
+                                 .vmo_index = 0,
+                                 .width = kTargetWidth,
+                                 .height = kTargetHeight};
+
+  // Create the image meta data for the solid color renderable.
+  ImageMetadata renderable_image_data = {
+      .identifier = allocation::kInvalidImageId,
+      .multiply_color = {1, 0, 0, 1},
+      .blend_mode = fuchsia::ui::composition::BlendMode::SRC_OVER};
+
+  renderer.ImportBufferImage(render_target);
+
+  // Create the two renderables.
+  const uint32_t kRenderableWidth = 4;
+  const uint32_t kRenderableHeight = 2;
+  Rectangle2D renderable(glm::vec2(6, 3), glm::vec2(kRenderableWidth, kRenderableHeight));
+
+  // Render the renderable to the render target.
+  renderer.Render(render_target, {renderable}, {renderable_image_data});
+  renderer.WaitIdle();
+
+  // Calculate expected color.
+  const glm::mat4 glm_matrix(.288299, 0.052709, -0.257912, 0.00000, 0.711701, 0.947291, 0.257912,
+                             0.00000, 0.000000, -0.000000, 1.000000, 0.00000, 0.000000, 0.000000,
+                             0.00000, 1.00000);
+  auto expected_color_float = glm_matrix * glm::vec4(1, 0, 0, 1);
+
+  // Order needs to be BGRA.
+  glm::ivec4 expected_color = {
+      static_cast<uint8_t>(std::max(expected_color_float.z * 255, 0.f)),
+      static_cast<uint8_t>(std::max(expected_color_float.y * 255, 0.f)),
+      static_cast<uint8_t>(std::max(expected_color_float.x * 255, 0.f)),
+      static_cast<uint8_t>(std::max(expected_color_float.w * 255, 0.f)),
+  };
+
+  // Get a raw pointer from the client collection's vmo that represents the render target
+  // and read its values. This should show that the renderable was rendered to the center
+  // of the render target, with its associated texture.
+  MapHostPointer(client_target_info, render_target.vmo_index,
+                 [&](uint8_t* vmo_host, uint32_t num_bytes) mutable {
+                   // Flush the cache before reading back target image.
+                   EXPECT_EQ(ZX_OK,
+                             zx_cache_flush(vmo_host, kTargetWidth * kTargetHeight * 4,
+                                            ZX_CACHE_FLUSH_DATA | ZX_CACHE_FLUSH_INVALIDATE));
+
+                   uint8_t linear_vals[num_bytes];
+                   sRGBtoLinear(vmo_host, linear_vals, num_bytes);
+
+                   // Make sure the pixels are in the right order give that we rotated
+                   // the rectangle. Values are BGRA.
+                   for (uint32_t i = 6; i < 6 + kRenderableWidth; i++) {
+                     for (uint32_t j = 3; j < 3 + kRenderableHeight; j++) {
+                       auto pixel = GetPixel(linear_vals, kTargetWidth, i, j);
+                       EXPECT_TRUE(pixel == expected_color);
+                     }
+                   }
+
+                   // Make sure the remaining pixels are black.
+                   CHECK_BLACK_PIXELS(vmo_host, kTargetWidth, kTargetHeight, 8U);
+                 });
+}
+
 // Tests if the VK renderer can handle rendering 2 solid color images. Since solid
 // color images make use of a shared default 1x1 white texture within the vk renderer,
 // this tests to make sure that there aren't any problems that arise from this sharing.

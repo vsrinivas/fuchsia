@@ -35,6 +35,10 @@ class MockRenderer : public Renderer {
               (const allocation::ImageMetadata&, const std::vector<Rectangle2D>&,
                const std::vector<allocation::ImageMetadata>&, const std::vector<zx::event>&));
 
+  MOCK_METHOD(void, SetColorConversionValues,
+              ((const std::array<float, 9>&), (const std::array<float, 3>&),
+               (const std::array<float, 3>&)));
+
   MOCK_METHOD(zx_pixel_format_t, ChoosePreferredPixelFormat,
               (const std::vector<zx_pixel_format_t>&), (const));
 };

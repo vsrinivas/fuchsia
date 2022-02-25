@@ -17,6 +17,7 @@
 #include "src/ui/lib/escher/util/fuchsia_utils.h"
 #include "src/ui/lib/escher/util/image_utils.h"
 #include "src/ui/lib/escher/util/trace_macros.h"
+#include <glm/gtc/type_ptr.hpp>
 
 namespace {
 
@@ -560,6 +561,17 @@ void VkRenderer::Render(const ImageMetadata& render_target,
 
   // Submit the commands and wait for them to finish.
   frame->EndFrame(semaphores, nullptr);
+}
+
+void VkRenderer::SetColorConversionValues(const std::array<float, 9>& matrix,
+                                          const std::array<float, 3>& preoffsets,
+                                          const std::array<float, 3>& postoffsets) {
+  float values[16] = {matrix[0], matrix[1], matrix[2], 0, matrix[3], matrix[4], matrix[5], 0,
+                      matrix[6], matrix[7], matrix[8], 0, 0,         0,         0,         1};
+  glm::mat4 glm_matrix = glm::make_mat4(values);
+  glm::vec4 glm_preoffsets(preoffsets[0], preoffsets[1], preoffsets[2], 0.0);
+  glm::vec4 glm_postoffsets(postoffsets[0], postoffsets[1], postoffsets[2], 0.0);
+  compositor_.SetColorConversionParams(glm_matrix, glm_preoffsets, glm_postoffsets);
 }
 
 zx_pixel_format_t VkRenderer::ChoosePreferredPixelFormat(
