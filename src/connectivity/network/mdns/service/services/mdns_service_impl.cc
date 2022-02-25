@@ -14,44 +14,9 @@
 #include <lib/zx/time.h>
 #include <unistd.h>
 
-#include "lib/fidl/cpp/type_converter.h"
 #include "src/connectivity/network/mdns/service/common/mdns_fidl_util.h"
 #include "src/connectivity/network/mdns/service/common/mdns_names.h"
-#include "src/lib/fsl/types/type_converters.h"
-
-namespace fidl {
-
-template <>
-struct TypeConverter<mdns::Media, fuchsia::net::mdns::Media> {
-  static mdns::Media Convert(fuchsia::net::mdns::Media value) {
-    switch (value) {
-      case fuchsia::net::mdns::Media::WIRED:
-        return mdns::Media::kWired;
-      case fuchsia::net::mdns::Media::WIRELESS:
-        return mdns::Media::kWireless;
-      default:
-        FX_DCHECK(value ==
-                  (fuchsia::net::mdns::Media::WIRED | fuchsia::net::mdns::Media::WIRELESS));
-        return mdns::Media::kBoth;
-    }
-  }
-};
-
-template <>
-struct TypeConverter<fuchsia::net::mdns::PublicationCause, mdns::Mdns::PublicationCause> {
-  static fuchsia::net::mdns::PublicationCause Convert(mdns::Mdns::PublicationCause value) {
-    switch (value) {
-      case mdns::Mdns::PublicationCause::kAnnouncement:
-        return fuchsia::net::mdns::PublicationCause::ANNOUNCEMENT;
-      case mdns::Mdns::PublicationCause::kQueryMulticastResponse:
-        return fuchsia::net::mdns::PublicationCause::QUERY_MULTICAST_RESPONSE;
-      case mdns::Mdns::PublicationCause::kQueryUnicastResponse:
-        return fuchsia::net::mdns::PublicationCause::QUERY_UNICAST_RESPONSE;
-    }
-  }
-};
-
-}  // namespace fidl
+#include "src/connectivity/network/mdns/service/services/service_instance_resolver_service_impl.h"
 
 namespace mdns {
 namespace {
@@ -78,12 +43,16 @@ std::string GetHostName() {
 
 MdnsServiceImpl::MdnsServiceImpl(sys::ComponentContext* component_context)
     : component_context_(component_context),
-      service_instance_resolver_bindings_(this, "ServiceInstanceResolver"),
       mdns_(transceiver_),
-      deprecated_services_(mdns_, component_context) {
-  component_context_->outgoing()->AddPublicService<fuchsia::net::mdns::ServiceInstanceResolver>(
-      fit::bind_member<&BindingSet<fuchsia::net::mdns::ServiceInstanceResolver>::OnBindRequest>(
-          &service_instance_resolver_bindings_));
+      deprecated_services_(mdns_, component_context),
+      service_instance_resolver_manager_(
+          [this](fidl::InterfaceRequest<fuchsia::net::mdns::ServiceInstanceResolver> request,
+                 fit::closure deleter) {
+            return std::make_unique<ServiceInstanceResolverServiceImpl>(mdns_, std::move(request),
+                                                                        std::move(deleter));
+          }) {
+  service_instance_resolver_manager_.AddOutgoingPublicService(component_context);
+
   Start();
 }
 
@@ -129,7 +98,7 @@ void MdnsServiceImpl::OnReady() {
         });
   }
 
-  service_instance_resolver_bindings_.OnReady();
+  service_instance_resolver_manager_.OnReady();
 }
 
 bool MdnsServiceImpl::PublishServiceInstance(
@@ -153,36 +122,6 @@ bool MdnsServiceImpl::PublishServiceInstance(
   publishers_by_instance_full_name_.emplace(instance_full_name, std::move(publisher));
 
   return true;
-}
-
-void MdnsServiceImpl::ResolveServiceInstance(std::string service, std::string instance,
-                                             int64_t timeout,
-                                             ResolveServiceInstanceCallback callback) {
-  if (!MdnsNames::IsValidServiceName(service)) {
-    FX_LOGS(ERROR) << "ResolveServiceInstance called with invalid service name " << service;
-    fuchsia::net::mdns::ServiceInstanceResolver_ResolveServiceInstance_Result result;
-    result.set_err(fuchsia::net::mdns::Error::INVALID_SERVICE_NAME);
-    callback(std::move(result));
-    return;
-  }
-
-  if (!MdnsNames::IsValidInstanceName(instance)) {
-    FX_LOGS(ERROR) << "ResolveServiceInstance called with invalid instance name " << instance;
-    fuchsia::net::mdns::ServiceInstanceResolver_ResolveServiceInstance_Result result;
-    result.set_err(fuchsia::net::mdns::Error::INVALID_INSTANCE_NAME);
-    callback(std::move(result));
-    return;
-  }
-
-  mdns_.ResolveServiceInstance(
-      service, instance, zx::clock::get_monotonic() + zx::nsec(timeout),
-      [callback = std::move(callback)](fuchsia::net::mdns::ServiceInstance instance) {
-        fuchsia::net::mdns::ServiceInstanceResolver_ResolveServiceInstance_Result result;
-        result.set_response(
-            fuchsia::net::mdns::ServiceInstanceResolver_ResolveServiceInstance_Response(
-                std::move(instance)));
-        callback(std::move(result));
-      });
 }
 
 ////////////////////////////////////////////////////////////////////////////////

@@ -49,13 +49,8 @@ table/member fuchsia.net.mdns/ServiceInstance.srv_weight uint16
 table/member fuchsia.net.mdns/ServiceInstance.target string:255
 table/member fuchsia.net.mdns/ServiceInstance.text vector<string:255>:256
 table fuchsia.net.mdns/ServiceInstance
-protocol/member fuchsia.net.mdns/ServiceInstanceResolver.ResolveServiceInstance(string:22 service,string:63 instance,int64 timeout) -> (fuchsia.net.mdns/ServiceInstanceResolver_ResolveServiceInstance_Result result)
+protocol/member fuchsia.net.mdns/ServiceInstanceResolver.ResolveServiceInstance(string:22 service,string:63 instance,int64 timeout) -> (fuchsia.net.mdns/ServiceInstance instance)
 protocol fuchsia.net.mdns/ServiceInstanceResolver
-struct/member fuchsia.net.mdns/ServiceInstanceResolver_ResolveServiceInstance_Response.instance fuchsia.net.mdns/ServiceInstance
-struct fuchsia.net.mdns/ServiceInstanceResolver_ResolveServiceInstance_Response
-union/member fuchsia.net.mdns/ServiceInstanceResolver_ResolveServiceInstance_Result.err fuchsia.net.mdns/Error
-union/member fuchsia.net.mdns/ServiceInstanceResolver_ResolveServiceInstance_Result.response fuchsia.net.mdns/ServiceInstanceResolver_ResolveServiceInstance_Response
-strict union fuchsia.net.mdns/ServiceInstanceResolver_ResolveServiceInstance_Result
 protocol/member fuchsia.net.mdns/ServiceSubscriber.OnInstanceChanged(fuchsia.net.mdns/ServiceInstance instance) -> ()
 protocol/member fuchsia.net.mdns/ServiceSubscriber.OnInstanceDiscovered(fuchsia.net.mdns/ServiceInstance instance) -> ()
 protocol/member fuchsia.net.mdns/ServiceSubscriber.OnInstanceLost(string:22 service,string:63 instance) -> ()

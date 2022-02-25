@@ -6,8 +6,6 @@
 #define SRC_CONNECTIVITY_NETWORK_MDNS_SERVICE_SERVICES_MDNS_SERVICE_IMPL_H_
 
 #include <fuchsia/net/mdns/cpp/fidl.h>
-#include <lib/fidl/cpp/binding.h>
-#include <lib/fidl/cpp/binding_set.h>
 #include <lib/fit/function.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/syslog/cpp/macros.h>
@@ -17,19 +15,19 @@
 #include "src/connectivity/network/mdns/service/config.h"
 #include "src/connectivity/network/mdns/service/mdns.h"
 #include "src/connectivity/network/mdns/service/services/mdns_deprecated_service_impl.h"
+#include "src/connectivity/network/mdns/service/services/service_impl_manager.h"
 #include "src/connectivity/network/mdns/service/transport/mdns_transceiver.h"
 
 namespace mdns {
 
-class MdnsServiceImpl : public fuchsia::net::mdns::ServiceInstanceResolver {
+// An instance of this class handles all connect requests for discoverable mdns services. None of
+// those services are implemented here, because they all require 'nonce' implementations that each
+// serve just one client. This calls also reads and implements the service configuration file.
+class MdnsServiceImpl {
  public:
   MdnsServiceImpl(sys::ComponentContext* component_context);
 
-  ~MdnsServiceImpl() override;
-
-  // fuchsia::net:mdns::ServiceInstanceResolver implementation.
-  void ResolveServiceInstance(std::string service, std::string instance, int64_t timeout,
-                              ResolveServiceInstanceCallback callback) override;
+  ~MdnsServiceImpl();
 
  private:
   // Publisher for PublishServiceInstance.
@@ -57,40 +55,6 @@ class MdnsServiceImpl : public fuchsia::net::mdns::ServiceInstanceResolver {
     SimplePublisher& operator=(SimplePublisher&&) = delete;
   };
 
-  // Like |fidl::BindingSet| but with the ability to pend requests until ready.
-  template <typename TProtocol>
-  class BindingSet {
-   public:
-    BindingSet(TProtocol* impl, const std::string& label) : impl_(impl), label_(label) {
-      FX_DCHECK(impl_);
-    }
-
-    void OnBindRequest(fidl::InterfaceRequest<TProtocol> request) {
-      FX_DCHECK(request);
-      if (ready_) {
-        bindings_.AddBinding(impl_, std::move(request));
-      } else {
-        pending_requests_.push_back(std::move(request));
-      }
-    }
-
-    void OnReady() {
-      ready_ = true;
-      for (auto& request : pending_requests_) {
-        bindings_.AddBinding(impl_, std::move(request));
-      }
-
-      pending_requests_.clear();
-    }
-
-   private:
-    TProtocol* impl_;
-    std::string label_;
-    bool ready_ = false;
-    std::vector<fidl::InterfaceRequest<TProtocol>> pending_requests_;
-    fidl::BindingSet<TProtocol> bindings_;
-  };
-
   // Starts the service.
   void Start();
 
@@ -106,13 +70,15 @@ class MdnsServiceImpl : public fuchsia::net::mdns::ServiceInstanceResolver {
   sys::ComponentContext* component_context_;
   Config config_;
   bool ready_ = false;
-  BindingSet<fuchsia::net::mdns::ServiceInstanceResolver> service_instance_resolver_bindings_;
   Mdns mdns_;
   MdnsTransceiver transceiver_;
   std::unordered_map<std::string, std::unique_ptr<Mdns::Publisher>>
       publishers_by_instance_full_name_;
 
   MdnsDeprecatedServiceImpl deprecated_services_;
+
+  ServiceImplManager<fuchsia::net::mdns::ServiceInstanceResolver>
+      service_instance_resolver_manager_;
 
  public:
   // Disallow copy, assign and move.

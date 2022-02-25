@@ -82,6 +82,10 @@ source_set("source_set") {
     "services/mdns_deprecated_service_impl.h",
     "services/mdns_service_impl.cc",
     "services/mdns_service_impl.h",
+    "services/service_impl_base.h",
+    "services/service_impl_manager.h",
+    "services/service_instance_resolver_service_impl.cc",
+    "services/service_instance_resolver_service_impl.h",
     "transport/mdns_interface_transceiver.cc",
     "transport/mdns_interface_transceiver.h",
     "transport/mdns_interface_transceiver_v4.cc",
@@ -128,6 +132,7 @@ test("mdns_test") {
     "test/mdns_transceiver_test.cc",
     "test/mdns_unit_tests.cc",
     "test/responder_publisher_test.cc",
+    "test/service_impl_manager_test.cc",
   ]
 
   deps = [

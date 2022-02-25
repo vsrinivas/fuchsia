@@ -104,7 +104,7 @@ protocol ServiceInstanceResolver {
         timeout zx.duration;
     }) -> (struct {
         instance ServiceInstance;
-    }) error Error;
+    });
 };
 
 /// Specifies network media on which a service instance should be published.
