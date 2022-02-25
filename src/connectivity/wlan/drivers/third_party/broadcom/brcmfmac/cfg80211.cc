@@ -1986,10 +1986,16 @@ static void brcmf_log_client_stats(struct brcmf_cfg80211_info* cfg) {
     zxlogf(INFO, "FW Stats: Rx - Good: %d Bad: %d Ocast: %d; Tx - Good: %d Bad: %d",
            fw_pktcnt.rx_good_pkt, fw_pktcnt.rx_bad_pkt, fw_pktcnt.rx_ocast_good_pkt,
            fw_pktcnt.tx_good_pkt, fw_pktcnt.tx_bad_pkt);
-    rx_err_rate =
-        (float)(fw_pktcnt.rx_bad_pkt) / (float)(fw_pktcnt.rx_good_pkt + fw_pktcnt.rx_bad_pkt);
-    tx_err_rate =
-        (float)(fw_pktcnt.tx_bad_pkt) / (float)(fw_pktcnt.tx_good_pkt + fw_pktcnt.tx_bad_pkt);
+
+    float total_rx_pkts = fw_pktcnt.rx_good_pkt + fw_pktcnt.rx_bad_pkt;
+    float total_tx_pkts = fw_pktcnt.tx_good_pkt + fw_pktcnt.tx_bad_pkt;
+    rx_err_rate = tx_err_rate = 0;
+    if (total_rx_pkts > 0) {
+      rx_err_rate = (float)(fw_pktcnt.rx_bad_pkt) / total_rx_pkts;
+    }
+    if (total_tx_pkts > 0) {
+      tx_err_rate = (float)(fw_pktcnt.tx_bad_pkt) / total_tx_pkts;
+    }
   }
 
   if (ndev->stats.rx_packets != ndev->stats.rx_last_log) {
