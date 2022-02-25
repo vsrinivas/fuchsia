@@ -113,6 +113,12 @@ GetCreateColorBuffer2Params(fidl::AnyArena& allocator,
     case PixelFormatType::kR8G8B8A8:
       color_buffer_format = ColorBufferFormatType::kRgba;
       break;
+    case PixelFormatType::kR8:
+      color_buffer_format = ColorBufferFormatType::kLuminance;
+      break;
+    case PixelFormatType::kR8G8:
+      color_buffer_format = ColorBufferFormatType::kRg;
+      break;
     default:
       zxlogf(ERROR, "[%s][%s] pixel_format_type unsupported: type %u", __func__, kTag,
              pixel_format_type);
