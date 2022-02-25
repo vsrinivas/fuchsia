@@ -35,7 +35,6 @@ group("tests") {
     ":virtualization_block_tests_pkg",
     ":virtualization_core_tests_pkg",
     ":virtualization_net_tests_pkg",
-    ":virtualization_sound_tests_pkg",
     ":virtualization_vsock_tests_pkg",
     "hypervisor",
   ]
@@ -422,43 +421,6 @@ fuchsia_test_package("virtualization_net_tests_pkg") {
   }
 }
 
-executable("virtualization_sound_tests") {
-  visibility = [ ":*" ]
-  testonly = true
-
-  sources = [ "virtio_sound_tests.cc" ]
-
-  deps = [
-    ":guest_console",
-    ":lib",
-    ":test_main",
-    "//src/lib/files",
-    "//src/media/audio/lib/format",
-    "//src/media/audio/lib/test:hermetic_audio_test",
-    "//third_party/googletest:gmock",
-  ]
-}
-
-fuchsia_test_component("virtualization_sound_tests_cmp") {
-  component_name = "virtualization_sound_tests"
-  deps = [
-    ":test_images",
-    ":virtualization_sound_tests",
-  ]
-  manifest = "meta/virtualization_sound_tests.cmx"
-}
-
-fuchsia_test_package("virtualization_sound_tests_pkg") {
-  package_name = "virtualization-sound-tests"
-  test_components = [ ":virtualization_sound_tests_cmp" ]
-  test_specs = {
-    environments = guest_envs
-    log_settings = {
-      max_severity = "ERROR"
-    }
-  }
-}
-
 executable("virtualization_vsock_tests") {
   visibility = [ ":*" ]
   testonly = true
@@ -538,7 +500,6 @@ romfs_image("extras") {
   inputs = [
     "${linux_exe_path}/virtmagma_vulkan_unit_tests",
     "${linux_exe_path}/virtmagma_conformance_tests",
-    "//src/virtualization/tests/testdata/stereo_ramp_48khz_16bit.wav",
   ]
 
   output = "$target_out_dir/linux/extras.img"
@@ -551,6 +512,7 @@ executable("termina_integration_tests_bin") {
 
   sources = [
     "virtio_magma_tests.cc",
+    "virtio_sound_tests.cc",
     "virtio_wl_tests.cc",
   ]
 
