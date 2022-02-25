@@ -61,6 +61,12 @@ FlatlandManager::~FlatlandManager() {
     // erased within RemoveFlatlandInstance().
     RemoveFlatlandInstance(it++->first);
   }
+
+  // Destroy the flatland manager only after all flatland instances have been destroyed on their
+  // worker threads.
+  while (alive_sessions_ > 0) {
+    std::this_thread::yield();
+  }
 }
 
 void FlatlandManager::CreateFlatland(
@@ -86,6 +92,8 @@ void FlatlandManager::CreateFlatland(
   const std::string name = "Flatland ID=" + std::to_string(id);
   zx_status_t status = instance->loop->loop().StartThread(name.c_str());
   FX_DCHECK(status == ZX_OK);
+
+  alive_sessions_++;
 }
 
 std::shared_ptr<Flatland> FlatlandManager::NewFlatland(
@@ -175,6 +183,8 @@ void FlatlandManager::CreateFlatlandDisplay(
   const std::string name = "Flatland Display ID=" + std::to_string(id);
   zx_status_t status = instance->loop->loop().StartThread(name.c_str());
   FX_DCHECK(status == ZX_OK);
+
+  alive_sessions_++;
 }
 
 scheduling::SessionUpdater::UpdateResults FlatlandManager::UpdateSessions(
@@ -327,8 +337,17 @@ void FlatlandManager::RemoveFlatlandInstance(scheduling::SessionId session_id) {
       // The Flatland impl must be destroyed on the thread that owns the looper it is bound to.
       // Remove the instance from the map, then push cleanup onto the worker thread. Note that the
       // closure exists only to transfer the cleanup responsibilities to the worker thread.
+      //
+      // Note: Capturing "this" is safe as a flatland manager is guaranteed to outlive any flatland
+      // instance.
       async::PostTask(instance_kv->second->loop->dispatcher(),
-                      [instance = std::move(instance_kv->second)]() {});
+                      [instance = std::move(instance_kv->second), this]() mutable {
+                        // A flatland instance must release all its resources before
+                        // |alive_sessions_| is decremented. This ensures that flatland manager is
+                        // not destroyed before the flatland instance.
+                        instance->impl.reset();
+                        alive_sessions_--;
+                      });
       flatland_instances_.erase(session_id);
     }
   }
@@ -343,8 +362,17 @@ void FlatlandManager::RemoveFlatlandInstance(scheduling::SessionId session_id) {
       // The Flatland impl must be destroyed on the thread that owns the looper it is
       // bound to. Remove the instance from the map, then push cleanup onto the worker thread. Note
       // that the closure exists only to transfer the cleanup responsibilities to the worker thread.
+      //
+      // Note: Capturing "this" is safe as a flatland manager is guaranteed to outlive any flatland
+      // display instance.
       async::PostTask(instance_kv->second->loop->dispatcher(),
-                      [instance = std::move(instance_kv->second)]() {});
+                      [instance = std::move(instance_kv->second), this]() mutable {
+                        // A flatland display instance must release all its resources before
+                        // |alive_sessions_| is decremented. This ensures that flatland manager is
+                        // not destroyed before the flatland display instance.
+                        instance->impl.reset();
+                        alive_sessions_--;
+                      });
       flatland_display_instances_.erase(session_id);
     }
   }

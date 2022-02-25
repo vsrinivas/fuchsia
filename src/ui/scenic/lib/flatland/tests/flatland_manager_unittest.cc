@@ -72,7 +72,7 @@ class FlatlandManagerTest : public gtest::RealLoopFixture {
   void SetUp() override {
     gtest::RealLoopFixture::SetUp();
 
-    mock_flatland_presenter_ = new ::testing::StrictMock<MockFlatlandPresenter>();
+    mock_flatland_presenter_ = std::make_shared<::testing::StrictMock<MockFlatlandPresenter>>();
 
     ON_CALL(*mock_flatland_presenter_, RegisterPresent(_, _))
         .WillByDefault(::testing::Invoke(
@@ -119,14 +119,12 @@ class FlatlandManagerTest : public gtest::RealLoopFixture {
         .WillByDefault(::testing::Invoke(
             [&](scheduling::SessionId session_id) { removed_sessions_.insert(session_id); }));
 
-    flatland_presenter_ = std::shared_ptr<FlatlandPresenter>(mock_flatland_presenter_);
-
     uint64_t kDisplayId = 1;
     uint32_t kDisplayWidth = 640;
     uint32_t kDisplayHeight = 480;
     std::vector<std::shared_ptr<allocation::BufferCollectionImporter>> importers;
     manager_ = std::make_unique<FlatlandManager>(
-        dispatcher(), flatland_presenter_, uber_struct_system_, link_system_,
+        dispatcher(), mock_flatland_presenter_, uber_struct_system_, link_system_,
         std::make_shared<scenic_impl::display::Display>(kDisplayId, kDisplayWidth, kDisplayHeight),
         importers,
         /*register_view_focuser*/ [this](auto...) { view_focuser_registered_ = true; },
@@ -160,13 +158,14 @@ class FlatlandManagerTest : public gtest::RealLoopFixture {
     EXPECT_TRUE(snapshot.empty());
 
     manager_.reset();
+    RunLoopUntilIdle();
 
     EXPECT_EQ(uber_struct_system_->GetSessionCount(), 0ul);
 
     pending_presents_.clear();
     pending_session_updates_.clear();
     removed_sessions_.clear();
-    flatland_presenter_.reset();
+    mock_flatland_presenter_.reset();
 
     gtest::RealLoopFixture::TearDown();
   }
@@ -195,7 +194,7 @@ class FlatlandManagerTest : public gtest::RealLoopFixture {
   }
 
  protected:
-  ::testing::StrictMock<MockFlatlandPresenter>* mock_flatland_presenter_;
+  std::shared_ptr<::testing::StrictMock<MockFlatlandPresenter>> mock_flatland_presenter_;
   const std::shared_ptr<UberStructSystem> uber_struct_system_;
 
   std::unique_ptr<FlatlandManager> manager_;
@@ -212,9 +211,6 @@ class FlatlandManagerTest : public gtest::RealLoopFixture {
   bool view_ref_focused_registered_ = false;
   bool touch_source_registered_ = false;
   bool mouse_source_registered_ = false;
-
- private:
-  std::shared_ptr<FlatlandPresenter> flatland_presenter_;
 };
 
 }  // namespace

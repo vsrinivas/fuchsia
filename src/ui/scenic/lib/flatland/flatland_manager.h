@@ -170,6 +170,11 @@ class FlatlandManager : public scheduling::SessionUpdater {
   // there is a single primary display.
   std::shared_ptr<scenic_impl::display::Display> primary_display_;
 
+  // The number of flatland instances currently alive. Used to ensure that the flatland manager gets
+  // destroyed after all instances in |flatland_instances_| and |flatland_display_instances_| are
+  // destroyed.
+  std::atomic<uint32_t> alive_sessions_ = 0;
+
   // Callbacks for registering View-bound protocols.
   fit::function<void(fidl::InterfaceRequest<fuchsia::ui::views::Focuser>, zx_koid_t)>
       register_view_focuser_;
