@@ -526,7 +526,7 @@ zx_status_t Driver::AddDevice(Device* parent, device_add_args_t* args, zx_device
   next_device_id_++;
 
   // Create a devfs entry for the new device.
-  auto vnode = fbl::MakeRefCounted<DevfsVnode>(child->ZxDevice(), logger_);
+  auto vnode = fbl::MakeRefCounted<DevfsVnode>(child->ZxDevice());
   outgoing_.svc_dir()->AddEntry(child_protocol, vnode);
 
   auto devfs_name = std::string(child->topological_path());

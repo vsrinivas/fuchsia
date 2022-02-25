@@ -108,8 +108,25 @@ zx_status_t DevfsVnode::Write(const void* data, size_t len, size_t off, size_t* 
 }
 
 void DevfsVnode::Bind(BindRequestView request, BindCompleter::Sync& completer) {
-  FDF_LOG(ERROR, "DeviceController::Bind is not supported!");
-  completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
+  if (dev_->HasChildren()) {
+    // A DFv1 driver will add a child device once it's bound. If the device has any children, refuse
+    // the Bind() call.
+    completer.ReplyError(ZX_ERR_ALREADY_BOUND);
+    return;
+  }
+  auto async = completer.ToAsync();
+  auto promise =
+      dev_->RebindToLibname(std::string_view{request->driver.data(), request->driver.size()})
+          .then(
+              [completer = std::move(async)](fpromise::result<void, zx_status_t>& result) mutable {
+                if (result.is_ok()) {
+                  completer.ReplySuccess();
+                } else {
+                  completer.ReplyError(result.take_error());
+                }
+              });
+
+  dev_->executor().schedule_task(std::move(promise));
 }
 
 void DevfsVnode::GetCurrentPerformanceState(GetCurrentPerformanceStateRequestView request,
@@ -118,7 +135,19 @@ void DevfsVnode::GetCurrentPerformanceState(GetCurrentPerformanceStateRequestVie
 }
 
 void DevfsVnode::Rebind(RebindRequestView request, RebindCompleter::Sync& completer) {
-  completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
+  auto async = completer.ToAsync();
+  auto promise =
+      dev_->RebindToLibname(std::string_view{request->driver.data(), request->driver.size()})
+          .then(
+              [completer = std::move(async)](fpromise::result<void, zx_status_t>& result) mutable {
+                if (result.is_ok()) {
+                  completer.ReplySuccess();
+                } else {
+                  completer.ReplyError(result.take_error());
+                }
+              });
+
+  dev_->executor().schedule_task(std::move(promise));
 }
 
 void DevfsVnode::UnbindChildren(UnbindChildrenRequestView request,

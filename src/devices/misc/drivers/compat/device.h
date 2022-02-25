@@ -11,6 +11,7 @@
 #include <lib/async/cpp/executor.h>
 #include <lib/ddk/device.h>
 #include <lib/ddk/driver.h>
+#include <lib/fpromise/bridge.h>
 #include <lib/fpromise/scope.h>
 #include <lib/service/llcpp/outgoing_directory.h>
 
@@ -58,6 +59,8 @@ class Device : public std::enable_shared_from_this<Device>,
   zx_status_t GetMetadataSize(uint32_t type, size_t* out_size);
   zx_status_t MessageOp(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
 
+  fpromise::promise<void, zx_status_t> RebindToLibname(std::string_view libname);
+
   // Set a callback to tear down any Vnodes associated with the Device.
   // This will be called in ~Device, so that the Device will always
   // outlive the Vnode.
@@ -73,6 +76,7 @@ class Device : public std::enable_shared_from_this<Device>,
 
   fpromise::scope& scope() { return scope_; }
   driver::Logger& logger() { return logger_; }
+  async::Executor& executor() { return executor_; }
 
  private:
   using Metadata = std::vector<uint8_t>;
@@ -88,6 +92,8 @@ class Device : public std::enable_shared_from_this<Device>,
   void GetMetadata(GetMetadataRequestView request, GetMetadataCompleter::Sync& completer) override;
 
   void RemoveChild(std::shared_ptr<Device>& child);
+  void InsertOrUpdateProperty(fuchsia_driver_framework::wire::NodePropertyKey key,
+                              fuchsia_driver_framework::wire::NodePropertyValue value);
 
   // This arena backs `properties_`.
   // This should be declared before any objects it backs so it is destructed last.
@@ -106,8 +112,12 @@ class Device : public std::enable_shared_from_this<Device>,
   // is garaunteed to outlive the Device.
   Driver* driver_ = nullptr;
 
+  bool pending_rebind_ = false;
+
   // The default protocol of the device.
   compat_device_proto_ops_t proto_ops_ = {};
+
+  std::optional<fpromise::promise<>> controller_teardown_finished_;
 
   std::optional<fit::callback<void()>> vnode_teardown_callback_;
 

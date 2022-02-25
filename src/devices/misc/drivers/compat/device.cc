@@ -4,10 +4,12 @@
 
 #include "src/devices/misc/drivers/compat/device.h"
 
+#include <fidl/fuchsia.driver.framework/cpp/wire_types.h>
 #include <lib/async/cpp/task.h>
 #include <lib/ddk/binding_priv.h>
 #include <lib/fpromise/bridge.h>
 #include <lib/stdcompat/span.h>
+#include <zircon/compiler.h>
 #include <zircon/errors.h>
 
 #include "src/devices/lib/compat/symbols.h"
@@ -201,30 +203,37 @@ zx_status_t Device::CreateNode() {
   if (controller_ends.is_error()) {
     return controller_ends.status_value();
   }
-  controller_.Bind(std::move(controller_ends->client), dispatcher_,
-                   fidl::ObserveTeardown([device = weak_from_this()] {
-                     // Because the dispatcher can be multi-threaded, we must use a
-                     // `fidl::WireSharedClient`. The `fidl::WireSharedClient` uses a
-                     // two-phase destruction to teardown the client.
-                     //
-                     // Because of this, the teardown might be happening after the
-                     // Device has already been erased. This is likely to occur if the
-                     // Driver is asked to shutdown. If that happens, the Driver will
-                     // free its Devices, the Device will release its NodeController,
-                     // and then this shutdown will occur later. In order to not have a
-                     // Use-After-Free here, only try to remove the Device if the
-                     // weak_ptr still exists.
-                     //
-                     // The weak pointer will be valid here if the NodeController
-                     // representing the Device exits on its own. This represents the
-                     // Device's child Driver exiting, and in that instance we want to
-                     // Remove the Device.
-                     if (auto ptr = device.lock()) {
-                       if (ptr->parent_.has_value()) {
-                         (*ptr->parent_)->RemoveChild(ptr);
-                       }
-                     }
-                   }));
+
+  fpromise::bridge<> teardown_bridge;
+  controller_teardown_finished_.emplace(teardown_bridge.consumer.promise());
+  controller_.Bind(
+      std::move(controller_ends->client), dispatcher_,
+      fidl::ObserveTeardown(
+          [device = weak_from_this(), completer = std::move(teardown_bridge.completer)]() mutable {
+            // Because the dispatcher can be multi-threaded, we must use a
+            // `fidl::WireSharedClient`. The `fidl::WireSharedClient` uses a
+            // two-phase destruction to teardown the client.
+            //
+            // Because of this, the teardown might be happening after the
+            // Device has already been erased. This is likely to occur if the
+            // Driver is asked to shutdown. If that happens, the Driver will
+            // free its Devices, the Device will release its NodeController,
+            // and then this shutdown will occur later. In order to not have a
+            // Use-After-Free here, only try to remove the Device if the
+            // weak_ptr still exists.
+            //
+            // The weak pointer will be valid here if the NodeController
+            // representing the Device exits on its own. This represents the
+            // Device's child Driver exiting, and in that instance we want to
+            // Remove the Device.
+            if (auto ptr = device.lock()) {
+              // If there's a pending rebind, don't remove our parent's reference to us.
+              if (ptr->parent_.has_value() && !ptr->pending_rebind_) {
+                (*ptr->parent_)->RemoveChild(ptr);
+              }
+              completer.complete_ok();
+            }
+          }));
 
   // If the node is not bindable, we own the node.
   fidl::ServerEnd<fdf::Node> node_server;
@@ -288,6 +297,41 @@ void Device::Remove() {
 }
 
 void Device::RemoveChild(std::shared_ptr<Device>& child) { children_.remove(child); }
+
+void Device::InsertOrUpdateProperty(fuchsia_driver_framework::wire::NodePropertyKey key,
+                                    fuchsia_driver_framework::wire::NodePropertyValue value) {
+  bool found = false;
+  for (auto& prop : properties_) {
+    if (!prop.has_key()) {
+      continue;
+    }
+
+    if (prop.key().Which() != key.Which()) {
+      continue;
+    }
+
+    if (key.is_string_value()) {
+      std::string_view prop_key_view(prop.key().string_value().data(),
+                                     prop.key().string_value().size());
+      std::string_view key_view(key.string_value().data(), key.string_value().size());
+      if (key_view == prop_key_view) {
+        found = true;
+      }
+    } else if (key.is_int_value()) {
+      if (key.int_value() == prop.key().int_value()) {
+        found = true;
+      }
+    }
+
+    if (found) {
+      prop.value() = value;
+      break;
+    }
+  }
+  if (!found) {
+    properties_.emplace_back(arena_).set_key(arena_, key).set_value(arena_, value);
+  }
+}
 
 zx_status_t Device::GetProtocol(uint32_t proto_id, void* out) const {
   if (HasOp(ops_, &zx_protocol_device_t::get_protocol)) {
@@ -407,6 +451,47 @@ void Device::GetMetadata(GetMetadataRequestView request, GetMetadataCompleter::S
   }
   completer.ReplySuccess(fidl::VectorView<fuchsia_driver_compat::wire::Metadata>::FromExternal(
       metadata.data(), metadata.size()));
+}
+
+constexpr char kCompatKey[] = "fuchsia.compat.LIBNAME";
+fpromise::promise<void, zx_status_t> Device::RebindToLibname(std::string_view libname) {
+  if (controller_teardown_finished_ == std::nullopt) {
+    FDF_LOG(ERROR, "Calling rebind before device is set up?");
+    return fpromise::make_error_promise(ZX_ERR_BAD_STATE);
+  }
+  InsertOrUpdateProperty(
+      fdf::wire::NodePropertyKey::WithStringValue(arena_,
+                                                  fidl::StringView::FromExternal(kCompatKey)),
+      fdf::wire::NodePropertyValue::WithStringValue(arena_, fidl::StringView(arena_, libname)));
+  // Once the controller teardown is finished (and the device is safely deleted),
+  // we re-create the device.
+  pending_rebind_ = true;
+  auto promise =
+      std::move(controller_teardown_finished_.value())
+          .or_else([]() -> fpromise::result<void, zx_status_t> {
+            ZX_ASSERT_MSG(false, "Unbind should always succeed");
+          })
+          .and_then([weak = weak_from_this()]() mutable -> fpromise::result<void, zx_status_t> {
+            auto ptr = weak.lock();
+            if (!ptr) {
+              return fpromise::error(ZX_ERR_CANCELED);
+            }
+            // Reset FIDL clients so they don't complain when rebound.
+            ptr->controller_ = {};
+            ptr->node_ = {};
+            zx_status_t status = ptr->CreateNode();
+            ptr->pending_rebind_ = false;
+            if (status != ZX_OK) {
+              FDF_LOGL(ERROR, ptr->logger(), "Failed to recreate node: %s",
+                       zx_status_get_string(status));
+              return fpromise::error(status);
+            }
+
+            return fpromise::ok();
+          })
+          .wrap_with(scope_);
+  Remove();
+  return promise;
 }
 
 }  // namespace compat

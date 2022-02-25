@@ -12,7 +12,6 @@
 
 #include <ddktl/fidl.h>
 
-#include "src/devices/lib/driver2/logger.h"
 #include "src/lib/storage/vfs/cpp/vnode.h"
 
 std::variant<fidl::Transaction*, std::unique_ptr<fidl::Transaction>> FromDdkInternalTransaction(
@@ -23,7 +22,7 @@ ddk::internal::Transaction MakeDdkInternalTransaction(std::unique_ptr<fidl::Tran
 class DevfsVnode : public fs::Vnode, public fidl::WireServer<fuchsia_device::Controller> {
  public:
   // Create a DevfsVnode. `dev` is unowned, so the Device must outlive the Vnode.
-  explicit DevfsVnode(zx_device* dev, driver::Logger& logger) : dev_(dev), logger_(logger) {}
+  explicit DevfsVnode(zx_device* dev) : dev_(dev) {}
 
   // fs::Vnode methods
   zx_status_t Read(void* data, size_t len, size_t off, size_t* out_actual) override;
@@ -59,7 +58,6 @@ class DevfsVnode : public fs::Vnode, public fidl::WireServer<fuchsia_device::Con
   // A pointer to the device that this vnode represents. This will be
   // set to nullptr if the device is freed
   zx_device* dev_;
-  driver::Logger& logger_;
 };
 
 #endif  // SRC_DEVICES_MISC_DRIVERS_COMPAT_DEVFS_VNODE_H_

@@ -21,8 +21,31 @@ namespace frunner = fuchsia_component_runner;
 
 namespace {
 
+class TestController : public fidl::testing::WireTestBase<fdf::NodeController> {
+ public:
+  static TestController* Create(async_dispatcher_t* dispatcher,
+                                fidl::ServerEnd<fdf::NodeController> server) {
+    auto controller = std::make_unique<TestController>();
+    TestController* p = controller.get();
+    fidl::BindServer(dispatcher, std::move(server), controller.get(),
+                     [controller = std::move(controller)](
+                         TestController*, fidl::UnbindInfo,
+                         fidl::ServerEnd<fdf::NodeController>) mutable { controller.reset(); });
+    return p;
+  }
+
+  void Remove(RemoveRequestView request, RemoveCompleter::Sync& completer) override {
+    completer.Close(ZX_OK);
+  }
+
+  void NotImplemented_(const std::string& name, fidl::CompleterBase& completer) override {
+    printf("Not implemented: Controller::%s\n", name.data());
+  }
+};
+
 class TestNode : public fidl::testing::WireTestBase<fdf::Node> {
  public:
+  explicit TestNode(async_dispatcher_t* dispatcher) : dispatcher_(dispatcher) {}
   void Clear() {
     controllers_.clear();
     nodes_.clear();
@@ -37,7 +60,7 @@ class TestNode : public fidl::testing::WireTestBase<fdf::Node> {
     if (add_child_hook_) {
       add_child_hook_.value()(request);
     }
-    controllers_.push_back(std::move(request->controller));
+    controllers_.push_back(TestController::Create(dispatcher_, std::move(request->controller)));
     nodes_.push_back(std::move(request->node));
     completer.ReplySuccess();
   }
@@ -47,9 +70,45 @@ class TestNode : public fidl::testing::WireTestBase<fdf::Node> {
   }
 
   std::optional<std::function<void(AddChildRequestView& rv)>> add_child_hook_;
-  std::vector<fidl::ServerEnd<fdf::NodeController>> controllers_;
+  std::vector<TestController*> controllers_;
   std::vector<fidl::ServerEnd<fdf::Node>> nodes_;
+  async_dispatcher_t* dispatcher_;
 };
+
+std::optional<fdf::wire::NodePropertyValue> GetProperty(fdf::wire::NodeAddArgs& args,
+                                                        fdf::wire::NodePropertyKey key) {
+  if (!args.has_properties()) {
+    return std::nullopt;
+  }
+
+  std::optional<fdf::wire::NodePropertyValue> ret;
+
+  for (auto& prop : args.properties()) {
+    if (!prop.has_key() || !prop.has_value()) {
+      continue;
+    }
+    if (prop.key().Which() != key.Which() || prop.key().has_invalid_tag()) {
+      continue;
+    }
+
+    if (key.is_int_value() && prop.key().int_value() != key.int_value()) {
+      continue;
+    }
+    if (key.is_string_value()) {
+      std::string_view prop_view{prop.key().string_value().data(),
+                                 prop.key().string_value().size()};
+      std::string_view key_view{key.string_value().data(), key.string_value().size()};
+      if (prop_view != key_view) {
+        continue;
+      }
+    }
+
+    // We found a match. Keep iterating though, because the last property in the list of
+    // properties takes precedence.
+    ret = prop.value();
+  }
+  return ret;
+}
 
 }  // namespace
 
@@ -70,6 +129,27 @@ class DeviceTest : public gtest::TestLoopFixture {
 
  protected:
   driver::Logger& logger() { return logger_; }
+
+  std::pair<std::unique_ptr<DevfsVnode>, fidl::WireClient<fuchsia_device::Controller>> CreateVnode(
+      zx_device_t* device) {
+    auto vnode = std::make_unique<DevfsVnode>(device);
+    auto dev_endpoints = fidl::CreateEndpoints<fuchsia_device::Controller>();
+    EXPECT_EQ(ZX_OK, dev_endpoints.status_value());
+
+    fidl::BindServer(test_loop().dispatcher(), std::move(dev_endpoints->server), vnode.get());
+    fidl::WireClient<fuchsia_device::Controller> client;
+    client.Bind(std::move(dev_endpoints->client), test_loop().dispatcher());
+
+    return std::make_pair(std::move(vnode), std::move(client));
+  }
+
+  std::pair<std::unique_ptr<TestNode>, fidl::ClientEnd<fdf::Node>> CreateTestNode() {
+    auto endpoints = fidl::CreateEndpoints<fdf::Node>();
+    auto node = std::make_unique<TestNode>(dispatcher());
+
+    fidl::BindServer(dispatcher(), std::move(endpoints->server), node.get());
+    return std::make_pair(std::move(node), std::move(endpoints->client));
+  }
 
  private:
   zx::status<driver::Namespace> CreateNamespace(fidl::ClientEnd<fio::Directory> client_end) {
@@ -98,7 +178,7 @@ TEST_F(DeviceTest, ConstructDevice) {
   EXPECT_FALSE(device.HasChildren());
 
   // Create a node to test device unbind.
-  TestNode node;
+  TestNode node(dispatcher());
   fidl::BindServer(dispatcher(), std::move(endpoints->server), &node,
                    [](auto, fidl::UnbindInfo info, auto) {
                      EXPECT_EQ(fidl::Reason::kPeerClosed, info.reason());
@@ -112,7 +192,7 @@ TEST_F(DeviceTest, AddChildDevice) {
   auto endpoints = fidl::CreateEndpoints<fdf::Node>();
 
   // Create a node.
-  TestNode node;
+  TestNode node(dispatcher());
   auto binding = fidl::BindServer(dispatcher(), std::move(endpoints->server), &node);
 
   // Create a device.
@@ -137,7 +217,7 @@ TEST_F(DeviceTest, AddChildWithProtoPropAndProtoId) {
   auto endpoints = fidl::CreateEndpoints<fdf::Node>();
 
   // Create a node.
-  TestNode node;
+  TestNode node(dispatcher());
   auto binding = fidl::BindServer(dispatcher(), std::move(endpoints->server), &node);
 
   // Create a device.
@@ -172,7 +252,7 @@ TEST_F(DeviceTest, AddChildDeviceWithInit) {
   auto endpoints = fidl::CreateEndpoints<fdf::Node>();
 
   // Create a node.
-  TestNode node;
+  TestNode node(dispatcher());
   auto binding = fidl::BindServer(dispatcher(), std::move(endpoints->server), &node);
 
   // Create a device.
@@ -208,7 +288,7 @@ TEST_F(DeviceTest, AddAndRemoveChildDevice) {
   auto endpoints = fidl::CreateEndpoints<fdf::Node>();
 
   // Create a node.
-  TestNode node;
+  TestNode node(dispatcher());
   auto binding = fidl::BindServer(dispatcher(), std::move(endpoints->server), &node);
 
   // Create a device.
@@ -229,11 +309,7 @@ TEST_F(DeviceTest, AddAndRemoveChildDevice) {
   child->Remove();
   ASSERT_TRUE(RunLoopUntilIdle());
 
-  // Emulate the removal of the node, and check that the related child device is
-  // removed from the parent device.
-  EXPECT_TRUE(parent.HasChildren());
-  node.Clear();
-  ASSERT_TRUE(RunLoopUntilIdle());
+  // Check that the related child device is removed from the parent device.
   EXPECT_FALSE(parent.HasChildren());
 }
 
@@ -342,7 +418,7 @@ TEST_F(DeviceTest, DevfsVnodeGetTopologicalPath) {
   };
   device.Add(&args, &second_device);
 
-  DevfsVnode vnode(second_device, device.logger());
+  DevfsVnode vnode(second_device);
   auto dev_endpoints = fidl::CreateEndpoints<fuchsia_device::Controller>();
   ASSERT_EQ(ZX_OK, endpoints.status_value());
 
@@ -361,6 +437,136 @@ TEST_F(DeviceTest, DevfsVnodeGetTopologicalPath) {
         EXPECT_STREQ("/dev/second-device", path.data());
         callback_called = true;
       });
+
+  ASSERT_TRUE(test_loop().RunUntilIdle());
+  ASSERT_TRUE(callback_called);
+}
+
+TEST_F(DeviceTest, DevfsVnodeTestBind) {
+  auto [node, node_client] = CreateTestNode();
+
+  // Create a device.
+  zx_protocol_device_t ops{};
+  compat::Device device("test-device", nullptr, {}, &ops, nullptr, std::nullopt, logger(),
+                        dispatcher());
+  device.Bind({std::move(node_client), dispatcher()});
+
+  size_t add_count = 0;
+  node->SetAddChildHook([&add_count](TestNode::AddChildRequestView& request) {
+    const char* key = "fuchsia.compat.LIBNAME";
+    fidl::StringView view = fidl::StringView::FromExternal(key);
+    auto object = fidl::ObjectView<fidl::StringView>::FromExternal(&view);
+
+    if (!add_count) {
+      // Check prop is not set.
+      ASSERT_EQ(std::nullopt,
+                GetProperty(request->args, fdf::wire::NodePropertyKey::WithStringValue(object)));
+    } else {
+      // Check prop is set.
+      auto prop = GetProperty(request->args, fdf::wire::NodePropertyKey::WithStringValue(object));
+      ASSERT_NE(std::nullopt, prop);
+      ASSERT_TRUE(prop->is_string_value());
+      std::string_view value{prop->string_value().data(), prop->string_value().size()};
+      ASSERT_EQ("gpt.so", value);
+    }
+
+    add_count++;
+  });
+
+  zx_device_t* second_device;
+  device_add_args_t args{
+      .name = "second-device",
+  };
+  device.Add(&args, &second_device);
+
+  auto [vnode, client] = CreateVnode(second_device);
+  bool callback_called = false;
+  client->Bind("gpt.so",
+               [&callback_called](fidl::WireResponse<fuchsia_device::Controller::Bind>* response) {
+                 ASSERT_TRUE(response->result.is_response());
+                 callback_called = true;
+               });
+
+  ASSERT_TRUE(test_loop().RunUntilIdle());
+  ASSERT_TRUE(callback_called);
+}
+
+TEST_F(DeviceTest, DevfsVnodeTestBindAlreadyBound) {
+  auto [node, node_client] = CreateTestNode();
+  // Create a device.
+  zx_protocol_device_t ops{};
+  compat::Device device("test-device", nullptr, {}, &ops, nullptr, std::nullopt, logger(),
+                        dispatcher());
+  device.Bind({std::move(node_client), dispatcher()});
+
+  zx_device_t* second_device;
+  device_add_args_t args{
+      .name = "second-device",
+  };
+  device.Add(&args, &second_device);
+  auto [node2, node2_client] = CreateTestNode();
+  second_device->Bind({std::move(node2_client), dispatcher()});
+
+  // create another device.
+  zx_device_t* third_device;
+  second_device->Add(&args, &third_device);
+
+  auto [vnode, client] = CreateVnode(second_device);
+  bool callback_called = false;
+  client->Bind("gpt.so",
+               [&callback_called](fidl::WireResponse<fuchsia_device::Controller::Bind>* response) {
+                 ASSERT_TRUE(response->result.is_err());
+                 ASSERT_EQ(ZX_ERR_ALREADY_BOUND, response->result.err());
+                 callback_called = true;
+               });
+
+  ASSERT_TRUE(test_loop().RunUntilIdle());
+  ASSERT_TRUE(callback_called);
+}
+
+TEST_F(DeviceTest, DevfsVnodeTestRebind) {
+  auto [node, node_client] = CreateTestNode();
+  // Create a device.
+  zx_protocol_device_t ops{};
+  compat::Device device("test-device", nullptr, {}, &ops, nullptr, std::nullopt, logger(),
+                        dispatcher());
+  device.Bind({std::move(node_client), dispatcher()});
+
+  size_t add_count = 0;
+  node->SetAddChildHook([&add_count](TestNode::AddChildRequestView& request) {
+    const char* key = "fuchsia.compat.LIBNAME";
+    fidl::StringView view = fidl::StringView::FromExternal(key);
+    auto object = fidl::ObjectView<fidl::StringView>::FromExternal(&view);
+
+    if (!add_count) {
+      // Check prop is not set.
+      ASSERT_EQ(std::nullopt,
+                GetProperty(request->args, fdf::wire::NodePropertyKey::WithStringValue(object)));
+    } else {
+      // Check prop is set.
+      auto prop = GetProperty(request->args, fdf::wire::NodePropertyKey::WithStringValue(object));
+      ASSERT_NE(std::nullopt, prop);
+      ASSERT_TRUE(prop->is_string_value());
+      std::string_view value{prop->string_value().data(), prop->string_value().size()};
+      ASSERT_EQ("gpt.so", value);
+    }
+
+    add_count++;
+  });
+
+  zx_device_t* second_device;
+  device_add_args_t args{
+      .name = "second-device",
+  };
+  device.Add(&args, &second_device);
+
+  bool callback_called = false;
+  auto [vnode, client] = CreateVnode(second_device);
+  client->Rebind("gpt.so", [&callback_called](
+                               fidl::WireResponse<fuchsia_device::Controller::Rebind>* response) {
+    ASSERT_TRUE(response->result.is_response());
+    callback_called = true;
+  });
 
   ASSERT_TRUE(test_loop().RunUntilIdle());
   ASSERT_TRUE(callback_called);
