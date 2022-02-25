@@ -39,9 +39,7 @@ impl<'t> Property<'t> for IntProperty {
     }
 }
 
-impl NumericProperty for IntProperty {
-    type Type = i64;
-
+impl NumericProperty<'_> for IntProperty {
     fn add(&self, value: i64) {
         if let Some(ref inner_ref) = self.inner.inner_ref() {
             inner_ref

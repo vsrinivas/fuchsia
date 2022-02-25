@@ -10,24 +10,21 @@ pub trait Property<'t> {
     type Type;
 
     /// Set the property value to |value|.
-    fn set(&'t self, value: Self::Type);
+    fn set(&self, value: Self::Type);
 }
 
 /// Trait implemented by numeric properties providing common operations.
-pub trait NumericProperty {
-    /// The type the property is handling.
-    type Type;
-
+pub trait NumericProperty<'t>: Property<'t> {
     /// Add the given |value| to the property current value.
-    fn add(&self, value: Self::Type);
+    fn add(&self, value: <Self as Property<'t>>::Type);
 
     /// Subtract the given |value| from the property current value.
-    fn subtract(&self, value: Self::Type);
+    fn subtract(&self, value: <Self as Property<'t>>::Type);
 
     /// Return the current value of the property for testing.
     /// NOTE: This is a temporary feature to aid unit test of Inspect clients.
     /// It will be replaced by a more comprehensive Read API implementation.
-    fn get(&self) -> Result<Self::Type, Error>;
+    fn get(&self) -> Result<<Self as Property<'t>>::Type, Error>;
 }
 
 /// Trait implemented by all array properties providing common operations on arrays.

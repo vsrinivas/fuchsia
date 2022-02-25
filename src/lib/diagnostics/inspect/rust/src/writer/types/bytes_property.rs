@@ -22,7 +22,7 @@ pub struct BytesProperty {
 impl<'t> Property<'t> for BytesProperty {
     type Type = &'t [u8];
 
-    fn set(&'t self, value: &'t [u8]) {
+    fn set(&self, value: &'t [u8]) {
         if let Some(ref inner_ref) = self.inner.inner_ref() {
             inner_ref
                 .state

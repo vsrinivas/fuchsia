@@ -22,7 +22,7 @@ pub struct StringProperty {
 impl<'t> Property<'t> for StringProperty {
     type Type = &'t str;
 
-    fn set(&'t self, value: &'t str) {
+    fn set(&self, value: &'t str) {
         if let Some(ref inner_ref) = self.inner.inner_ref() {
             inner_ref
                 .state
