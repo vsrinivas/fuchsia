@@ -123,7 +123,7 @@ type EnumMember struct {
 
 // Struct represents a golang struct.
 type Struct struct {
-	fidlgen.Attributes
+	fidlgen.Struct
 
 	// Name is the name of the golang struct.
 	Name string
@@ -451,7 +451,7 @@ type compiler struct {
 
 	// messageBodyStructs is a mapping from ECI to Structs for all request/response structs. This
 	// is used to lookup typeshape info when constructing the Methods and their Parameters.
-	messageBodyStructs map[fidlgen.EncodedCompoundIdentifier]Struct
+	messageBodyStructs map[fidlgen.EncodedCompoundIdentifier]*Struct
 
 	// usedLibraryDeps is identical to libraryDeps except it is built up as references
 	// are made into libraryDeps. Thus, after Compile is run, it contains the subset of
@@ -858,9 +858,9 @@ func (c *compiler) compileStruct(val fidlgen.Struct) Struct {
 	}
 
 	r := Struct{
-		Attributes: val.Attributes,
-		Name:       c.compileCompoundIdentifier(val.Name, true, ""),
-		Tags:       tags,
+		Struct: val,
+		Name:   c.compileCompoundIdentifier(val.Name, true, ""),
+		Tags:   tags,
 	}
 
 	for _, v := range val.Members {
@@ -993,16 +993,32 @@ func (c *compiler) compileMethod(protocolName fidlgen.EncodedCompoundIdentifier,
 		if !ok {
 			panic(fmt.Sprintf("unknown request struct: %v", val.RequestPayload))
 		}
-		requestStruct.Name = c.compileCompoundIdentifier(protocolName, false, WithCtxSuffix+methodName+"Request")
-		r.Request = &requestStruct
+
+		// A method could be composed by multiple protocols, resulting in the same anonymous payload
+		// definition being re-used in multiple contexts, identical in all but name. We create a clone
+		// here, to ensure that each generated payload struct name is specific to the owning protocol.
+		if requestStruct.IsAnonymous() {
+			clonedRequestStruct := *requestStruct
+			clonedRequestStruct.Name = c.compileCompoundIdentifier(protocolName, false, WithCtxSuffix+methodName+"Request")
+			requestStruct = &clonedRequestStruct
+		}
+		r.Request = requestStruct
 	}
 	if val.HasResponse && val.ResponsePayload != nil {
 		responseStruct, ok := c.messageBodyStructs[val.ResponsePayload.Identifier]
 		if !ok {
 			panic(fmt.Sprintf("unknown response struct: %v", val.ResponsePayload))
 		}
-		responseStruct.Name = c.compileCompoundIdentifier(protocolName, false, WithCtxSuffix+methodName+"Response")
-		r.Response = &responseStruct
+
+		// A method could be composed by multiple protocols, resulting in the same anonymous payload
+		// definition being re-used in multiple contexts, identical in all but name. We create a clone
+		// here, to ensure that each generated payload struct name is specific to the owning protocol.
+		if responseStruct.IsAnonymous() {
+			clonedResponseStruct := *responseStruct
+			clonedResponseStruct.Name = c.compileCompoundIdentifier(protocolName, false, WithCtxSuffix+methodName+"Response")
+			responseStruct = &clonedResponseStruct
+		}
+		r.Response = responseStruct
 	}
 	return r
 }
@@ -1074,7 +1090,7 @@ func Compile(fidlData fidlgen.Root) Root {
 		decls:              fidlData.DeclsWithDependencies(),
 		library:            libraryName,
 		libraryDeps:        godeps,
-		messageBodyStructs: make(map[fidlgen.EncodedCompoundIdentifier]Struct),
+		messageBodyStructs: make(map[fidlgen.EncodedCompoundIdentifier]*Struct),
 		usedLibraryDeps:    make(map[string]string),
 	}
 
@@ -1101,23 +1117,31 @@ func Compile(fidlData fidlgen.Root) Root {
 		// TODO(fxbug.dev/56727) Consider filtering out structs that are not used because they are
 		// only referenced by channel transports.
 		if _, ok := mbtn[v.Name]; ok {
-			c.messageBodyStructs[v.Name] = c.compileStruct(v)
 			if v.IsAnonymous() {
-				continue
+				s := c.compileStruct(v)
+				c.messageBodyStructs[v.Name] = &s
+			} else {
+				r.Structs = append(r.Structs, c.compileStruct(v))
+				c.messageBodyStructs[v.Name] = &(r.Structs[len(r.Structs)-1])
 			}
+		} else {
+			r.Structs = append(r.Structs, c.compileStruct(v))
 		}
-		r.Structs = append(r.Structs, c.compileStruct(v))
 	}
 	for _, v := range fidlData.ExternalStructs {
 		// TODO(fxbug.dev/56727) Consider filtering out structs that are not used because they are
 		// only referenced by channel transports.
 		if _, ok := mbtn[v.Name]; ok {
-			c.messageBodyStructs[v.Name] = c.compileStruct(v)
 			if v.IsAnonymous() {
-				continue
+				s := c.compileStruct(v)
+				c.messageBodyStructs[v.Name] = &s
+			} else {
+				r.ExternalStructs = append(r.ExternalStructs, c.compileStruct(v))
+				c.messageBodyStructs[v.Name] = &(r.ExternalStructs[len(r.ExternalStructs)-1])
 			}
+		} else {
+			r.ExternalStructs = append(r.ExternalStructs, c.compileStruct(v))
 		}
-		r.ExternalStructs = append(r.ExternalStructs, c.compileStruct(v))
 	}
 	for _, v := range fidlData.Unions {
 		r.Unions = append(r.Unions, c.compileUnion(v))
@@ -1132,10 +1156,10 @@ func Compile(fidlData fidlgen.Root) Root {
 			c.usedLibraryDeps[SyscallZxPackage] = SyscallZxAlias
 		}
 		for _, method := range protocol.Methods {
-			if method.Request != nil {
+			if method.Request != nil && method.Request.IsAnonymous() {
 				r.Structs = append(r.Structs, *method.Request)
 			}
-			if method.Response != nil {
+			if method.Response != nil && method.Response.IsAnonymous() {
 				r.Structs = append(r.Structs, *method.Response)
 			}
 		}
