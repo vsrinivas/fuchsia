@@ -109,8 +109,7 @@ zx_status_t sync_mutex_trylock(sync_mutex_t* mutex) {
 }
 
 zx_status_t sync_mutex_timedlock(sync_mutex_t* mutex, zx_time_t deadline) {
-  // Try to claim the mutex.  This compare-and-swap executes the full
-  // memory barrier that locking a mutex is required to execute.
+  // Try to claim the mutex.
   zx_futex_storage_t old_state = LIB_SYNC_MUTEX_UNLOCKED;
   zx_futex_storage_t uncontested = libsync_mutex_locked_and_uncontested();
   if (atomic_compare_exchange_strong_explicit(&mutex->futex, &old_state,
@@ -148,8 +147,7 @@ void sync_mutex_lock_with_waiter(sync_mutex_t* mutex) __TA_NO_THREAD_SAFETY_ANAL
 }
 
 void sync_mutex_unlock(sync_mutex_t* mutex) __TA_NO_THREAD_SAFETY_ANALYSIS {
-  // Attempt to release the mutex.  This atomic swap executes the full
-  // memory barrier that unlocking a mutex is required to execute.
+  // Attempt to release the mutex.
   zx_futex_storage_t old_state = atomic_exchange_explicit(&mutex->futex,
                                                           LIB_SYNC_MUTEX_UNLOCKED,
                                                           memory_order_release);
