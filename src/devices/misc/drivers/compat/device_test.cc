@@ -332,6 +332,27 @@ TEST_F(DeviceTest, AddAndRemoveChildDevice) {
   EXPECT_FALSE(parent.HasChildren());
 }
 
+TEST_F(DeviceTest, AddChildToBindableDevice) {
+  auto endpoints = fidl::CreateEndpoints<fdf::Node>();
+
+  // Create a node.
+  TestNode node(dispatcher());
+  auto binding = fidl::BindServer(dispatcher(), std::move(endpoints->server), &node);
+
+  // Create a device.
+  zx_protocol_device_t ops{};
+  compat::Device parent("parent", nullptr, {}, &ops, nullptr, std::nullopt, logger(), dispatcher());
+
+  // Try to a child device.
+  device_add_args_t args{.name = "child"};
+  zx_device_t* child = nullptr;
+  zx_status_t status = parent.Add(&args, &child);
+  ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, status);
+
+  // Check that the parent has no children.
+  EXPECT_FALSE(parent.HasChildren());
+}
+
 TEST_F(DeviceTest, GetProtocolFromDevice) {
   // Create a device without a get_protocol hook.
   zx_protocol_device_t ops{};

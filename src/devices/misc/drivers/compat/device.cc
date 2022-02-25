@@ -247,8 +247,13 @@ zx_status_t Device::CreateNode() {
   }
 
   // Add the device node.
-  fpromise::bridge<void, std::variant<zx_status_t, fdf::NodeError>> bridge;
+  if (!(*parent_)->node_.is_valid()) {
+    FDF_LOG(ERROR, "Cannot add device, as parent '%s' is not marked NON_BINDABLE.",
+            (*parent_)->topological_path_.data());
+    return ZX_ERR_NOT_SUPPORTED;
+  }
 
+  fpromise::bridge<void, std::variant<zx_status_t, fdf::NodeError>> bridge;
   auto callback = [completer = std::move(bridge.completer)](
                       fidl::WireUnownedResult<fdf::Node::AddChild>& result) mutable {
     if (!result.ok()) {
@@ -263,6 +268,7 @@ zx_status_t Device::CreateNode() {
   };
   (*parent_)->node_->AddChild(std::move(args), std::move(controller_ends->server),
                               std::move(node_server), std::move(callback));
+
   auto task = bridge.consumer.promise_or(fpromise::error(ZX_ERR_UNAVAILABLE))
                   .and_then([this]() {
                     // Emulate fuchsia.device.manager.DeviceController behaviour, and run the
