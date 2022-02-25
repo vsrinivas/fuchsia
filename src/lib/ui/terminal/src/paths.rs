@@ -4,6 +4,7 @@
 
 use {
     carnelian::{
+        drawing::TextGrid,
         render::{Context as RenderContext, Path},
         Size,
     },
@@ -27,14 +28,50 @@ fn path_for_block(size: &Size, render_context: &mut RenderContext) -> Path {
     path_builder.build()
 }
 
-pub fn path_for_underline(size: &Size, render_context: &mut RenderContext) -> Path {
+pub struct Line {
+    position_y: f32,
+    thickness: f32,
+}
+
+impl Line {
+    pub fn new(line_metrics: ttf_parser::LineMetrics, textgrid: &TextGrid) -> Self {
+        let scale_y = textgrid.scale.y;
+        let offset_y = textgrid.offset.y;
+        let position = line_metrics.position as f32 * scale_y;
+        let thickness = line_metrics.thickness as f32 * scale_y;
+        let position_y = offset_y - position;
+        Self { thickness, position_y }
+    }
+}
+
+fn line_bounds(line: Option<Line>, default_bounds: (f32, f32), cell_height: f32) -> (f32, f32) {
+    line.map_or(default_bounds, |Line { thickness, position_y: line_y }| {
+        let top = line_y - thickness / 2.0;
+        let bottom = line_y + thickness / 2.0;
+        let (_, default_bottom) = default_bounds;
+
+        if bottom > cell_height {
+            return (default_bottom - thickness, default_bottom);
+        }
+        (top, bottom)
+    })
+}
+
+pub fn path_for_underline(
+    size: &Size,
+    render_context: &mut RenderContext,
+    line: Option<Line>,
+) -> Path {
     let mut path_builder = render_context.path_builder().expect("path_builder");
-    let top = size.height - size.height * LINE_THICKNESS_FACTOR;
+    let default_top = size.height - size.height * LINE_THICKNESS_FACTOR;
+    let default_bottom = size.height;
+    let (top, bottom) = line_bounds(line, (default_top, default_bottom), size.height);
+
     path_builder
         .move_to(point2(0.0, top))
         .line_to(point2(size.width, top))
-        .line_to(point2(size.width, size.height))
-        .line_to(point2(0.0, size.height))
+        .line_to(point2(size.width, bottom))
+        .line_to(point2(0.0, bottom))
         .line_to(point2(0.0, top));
     path_builder.build()
 }
@@ -84,11 +121,16 @@ fn path_for_hollow_block(size: &Size, render_context: &mut RenderContext) -> Pat
     path_builder.build()
 }
 
-pub fn path_for_strikeout(size: &Size, render_context: &mut RenderContext) -> Path {
+pub fn path_for_strikeout(
+    size: &Size,
+    render_context: &mut RenderContext,
+    line: Option<Line>,
+) -> Path {
     let mut path_builder = render_context.path_builder().expect("path_builder");
-    let thickness = size.height * LINE_THICKNESS_FACTOR;
-    let top = size.height / 2.0;
-    let bottom = top + thickness;
+    let default_top = size.height / 2.0;
+    let default_bottom = default_top + size.height * LINE_THICKNESS_FACTOR;
+    let (top, bottom) = line_bounds(line, (default_top, default_bottom), size.height);
+
     path_builder
         .move_to(point2(0.0, top))
         .line_to(point2(size.width, top))
@@ -516,7 +558,7 @@ pub fn maybe_path_for_cursor_style(
 ) -> Option<Path> {
     match cursor_style {
         CursorStyle::Block => Some(path_for_block(cell_size, render_context)),
-        CursorStyle::Underline => Some(path_for_underline(cell_size, render_context)),
+        CursorStyle::Underline => Some(path_for_underline(cell_size, render_context, None)),
         CursorStyle::Beam => Some(path_for_beam(cell_size, render_context)),
         CursorStyle::HollowBlock => Some(path_for_hollow_block(cell_size, render_context)),
         CursorStyle::Hidden => None,
@@ -558,11 +600,20 @@ mod tests {
         super::*,
         anyhow::Error,
         carnelian::{
-            drawing::DisplayRotation,
+            drawing::{DisplayRotation, FontFace, TextGrid},
             render::{generic, ContextInner},
         },
         euclid::size2,
+        once_cell::sync::Lazy,
     };
+
+    // This font creation method isn't ideal. The correct method would be to ask the Fuchsia
+    // font service for the font data.
+    static FONT_DATA: &'static [u8] = include_bytes!(
+        "../../../../../prebuilt/third_party/fonts/robotomono/RobotoMono-Regular.ttf"
+    );
+    static FONT_FACE: Lazy<FontFace> =
+        Lazy::new(|| FontFace::new(&FONT_DATA).expect("Failed to create font"));
 
     #[test]
     fn check_cursor_paths() -> Result<(), Error> {
@@ -590,7 +641,33 @@ mod tests {
         let mold_context = generic::Mold::new_context_without_token(size, DisplayRotation::Deg0);
         let mut render_context = RenderContext { inner: ContextInner::Mold(mold_context) };
         let cell_size = Size::new(8.0, 16.0);
-        let _ = path_for_strikeout(&cell_size, &mut render_context);
+        let textgrid = TextGrid::new(&FONT_FACE, &cell_size);
+        let _ = path_for_strikeout(
+            &cell_size,
+            &mut render_context,
+            FONT_FACE
+                .face
+                .strikeout_metrics()
+                .map(|line_metrics| Line::new(line_metrics, &textgrid)),
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn check_underline_path() -> Result<(), Error> {
+        let size = size2(64, 64);
+        let mold_context = generic::Mold::new_context_without_token(size, DisplayRotation::Deg0);
+        let mut render_context = RenderContext { inner: ContextInner::Mold(mold_context) };
+        let cell_size = Size::new(8.0, 16.0);
+        let textgrid = TextGrid::new(&FONT_FACE, &cell_size);
+        let _ = path_for_underline(
+            &cell_size,
+            &mut render_context,
+            FONT_FACE
+                .face
+                .underline_metrics()
+                .map(|line_metrics| Line::new(line_metrics, &textgrid)),
+        );
         Ok(())
     }
 

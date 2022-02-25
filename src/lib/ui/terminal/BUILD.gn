@@ -18,6 +18,7 @@ rustc_library("terminal") {
     "//third_party/rust_crates:euclid",
     "//third_party/rust_crates:once_cell",
     "//third_party/rust_crates:rustc-hash",
+    "//third_party/rust_crates:ttf-parser",
   ]
 
   sources = [

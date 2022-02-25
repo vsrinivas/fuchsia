@@ -5,6 +5,7 @@
 use {
     crate::paths::{
         maybe_path_for_char, maybe_path_for_cursor_style, path_for_strikeout, path_for_underline,
+        Line,
     },
     carnelian::{
         color::Color,
@@ -197,12 +198,27 @@ fn maybe_raster_for_char(
     let maybe_extra_raster = if flags.intersects(Flags::UNDERLINE | Flags::STRIKEOUT) {
         let mut raster_builder = context.raster_builder().expect("raster_builder");
         if flags.contains(Flags::UNDERLINE) {
-            // TODO(fxbug.dev/90967): Avoid glyph overlap and get position/thickness from font.
-            raster_builder.add(&path_for_underline(&textgrid.cell_size, context), None);
+            // TODO(fxbug.dev/90967): Avoid glyph overlap.
+            let line_metrics = font_set.font.face.underline_metrics();
+            raster_builder.add(
+                &path_for_underline(
+                    &textgrid.cell_size,
+                    context,
+                    line_metrics.map(|line_metrics| Line::new(line_metrics, textgrid)),
+                ),
+                None,
+            );
         }
         if flags.contains(Flags::STRIKEOUT) {
-            // TODO(fxbug.dev/90967): Get position/thickness from font.
-            raster_builder.add(&path_for_strikeout(&textgrid.cell_size, context), None);
+            let line_metrics = font_set.font.face.strikeout_metrics();
+            raster_builder.add(
+                &path_for_strikeout(
+                    &textgrid.cell_size,
+                    context,
+                    line_metrics.map(|line_metrics| Line::new(line_metrics, textgrid)),
+                ),
+                None,
+            );
         }
         Some(raster_builder.build())
     } else {
