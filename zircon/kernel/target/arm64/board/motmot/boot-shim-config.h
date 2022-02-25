@@ -31,7 +31,7 @@ static const zbi_mem_range_t mem_config[] = {
     {
         .type = ZBI_MEM_RANGE_RAM,
         .paddr = 0x880000000,
-        .length = 0x180000000,
+        .length = 0x100000000,
     },
     // TODO: find any reserve regions
     {
