@@ -27,12 +27,7 @@ size_checker_input = {
     # Must come before /system so that the config_data package can be attributed separately.
     {
       component = "Config Data"
-      src = [
-        "build/images/fuchsia/fuchsia/config_data",
-
-        # NOTE: delete this once https://fxrev.dev/649784 lands
-        "build/images/fuchsia/fuchsia_config-data",
-      ]
+      src = [ "build/images/fuchsia/fuchsia/config_data" ]
       limit = 98304  # 0.094 MiB
       creep_limit = 19660  # 0.019 MiB
     },
