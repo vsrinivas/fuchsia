@@ -38,13 +38,11 @@ supported methods:
   `$FUCHSIA_DIR/.jiri_root/bin` to your `$PATH` while working in a particular
   Fuchsia directory.
 
-Caution: It is not recommended (though presently works) to copy `fx` to other places,
-such as `~/bin/fx` (as this could one day break), or to add
-`$FUCHSIA_DIR/scripts` to your `$PATH`. Reviewers of code in `//scripts`
-do not block the addition of files in that directory, which could lead to
-unpredictable behaviors (for example, that directory contains binaries with
-generic names like "bootstrap" which may unintentionally override the
-behavior of other systems).
+Caution: Do not copy `fx` outside of `$FUCHSIA_DIR/scripts/` (such as to
+`~/bin/`) since this will prevent future updates of `fx` on your system.
+Additionally, do not add `$FUCHSIA_DIR/scripts` to your `$PATH`. Since the
+`$FUCHSIA_DIR/scripts` directory contains binaries with generic names (e.g.
+`bootstrap`), this may unintentionally override the behavior of other systems.
 
 ## Common daily tools {#common-daily-tools}
 
