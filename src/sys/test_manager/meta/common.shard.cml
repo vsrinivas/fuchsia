@@ -422,6 +422,12 @@
             ],
             rights: [ "rw*" ],
         },
+        {
+            directory: "dev-gpu-performance-counters",
+            from: "parent",
+            to: [ "#system-tests" ],
+            rights: [ "rw*" ],
+        },
 
         // optee_test requires access to /dev/class/tee.
         {

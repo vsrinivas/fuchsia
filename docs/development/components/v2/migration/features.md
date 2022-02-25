@@ -444,6 +444,7 @@ Capability                   | Description
 `dev-goldfish-control`       | Goldfish control device
 `dev-goldfish-pipe`          | Goldfish pipe device
 `dev-gpu`                    | GPU device
+`dev-gpu-performance-counters` | GPU performance counters device
 
 Following the example in [Test uses injected services][migrate-tests-inject],
 add the following to route directory access to your test component:

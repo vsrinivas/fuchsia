@@ -199,6 +199,13 @@
         {
             directory: "dev",
             from: "parent",
+            as: "dev-gpu-performance-counters",
+            to: "#test_manager",
+            subdir: "class/gpu-performance-counters",
+        },
+        {
+            directory: "dev",
+            from: "parent",
             as: "dev-input-report",
             to: "#test_manager",
             subdir: "class/input-report",

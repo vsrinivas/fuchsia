@@ -741,12 +741,8 @@ class TestConnection {
 #if !defined(__Fuchsia__)
     GTEST_SKIP();
 #else
-    zx::channel local_endpoint, server_endpoint;
-    EXPECT_EQ(ZX_OK, zx::channel::create(0u, &local_endpoint, &server_endpoint));
-    EXPECT_EQ(ZX_OK,
-              fdio_service_connect("/svc/fuchsia.logger.LogSink", server_endpoint.release()));
-    EXPECT_EQ(MAGMA_STATUS_OK, magma_initialize_logging(local_endpoint.release()));
-    EXPECT_TRUE(magma::PlatformLogger::IsInitialized());
+    // Logging should be set up by the test fixture, so just add more logs here to help manually
+    // verify that the fixture is working correctly.
     MAGMA_LOG(INFO, "LoggingInit test complete");
 #endif
   }
@@ -1037,103 +1033,115 @@ class TestConnectionWithContext : public TestConnection {
   uint32_t context_id_;
 };
 
-// NOTE: LoggingInit is first so other tests may use logging.
-TEST(Magma, LoggingInit) {
+class Magma : public testing::Test {
+ protected:
+  void SetUp() override {
+#if defined(__Fuchsia__)
+    zx::channel local_endpoint, server_endpoint;
+    EXPECT_EQ(ZX_OK, zx::channel::create(0u, &local_endpoint, &server_endpoint));
+    EXPECT_EQ(ZX_OK,
+              fdio_service_connect("/svc/fuchsia.logger.LogSink", server_endpoint.release()));
+    EXPECT_EQ(MAGMA_STATUS_OK, magma_initialize_logging(local_endpoint.release()));
+#endif
+  }
+};
+
+TEST_F(Magma, LoggingInit) {
   TestConnection test;
   test.LoggingInit();
 }
 
-TEST(Magma, DeviceId) {
+TEST_F(Magma, DeviceId) {
   TestConnection test;
   test.GetDeviceIdImported();
 }
 
-TEST(Magma, VendorId) {
+TEST_F(Magma, VendorId) {
   TestConnection test;
   test.GetVendorIdImported();
 }
 
-TEST(Magma, QueryReturnsBuffer) {
+TEST_F(Magma, QueryReturnsBuffer) {
   TestConnection test;
   test.QueryReturnsBufferImported();
 }
 
 // Test for cleanup of leaked mapping
-TEST(Magma, QueryReturnsBufferLeaky) {
+TEST_F(Magma, QueryReturnsBufferLeaky) {
   constexpr bool kLeaky = true;
   TestConnection test;
   test.QueryReturnsBufferImported(kLeaky);
 }
 
-TEST(Magma, QueryReturnsBufferCalibratedTimestamps) {
+TEST_F(Magma, QueryReturnsBufferCalibratedTimestamps) {
   constexpr bool kLeaky = false;
   constexpr bool kCheckClock = true;
   TestConnection test;
   test.QueryReturnsBufferImported(kLeaky, kCheckClock);
 }
 
-TEST(Magma, QueryTestRestartSupported) {
+TEST_F(Magma, QueryTestRestartSupported) {
   TestConnection test;
   test.QueryTestRestartSupported();
 }
 
-TEST(Magma, TracingInit) {
+TEST_F(Magma, TracingInit) {
   TestConnection test;
   test.TracingInit();
 }
 
-TEST(Magma, Buffer) {
+TEST_F(Magma, Buffer) {
   TestConnection test;
   test.Buffer();
 }
 
-TEST(Magma, Connection) {
+TEST_F(Magma, Connection) {
   TestConnection test;
   test.Connection();
 }
 
-TEST(Magma, Context) {
+TEST_F(Magma, Context) {
   TestConnection test;
   test.Context();
 }
 
-TEST(Magma, NotificationChannelHandle) {
+TEST_F(Magma, NotificationChannelHandle) {
   TestConnection test;
   test.NotificationChannelHandle();
 }
 
-TEST(Magma, ReadNotificationChannel) {
+TEST_F(Magma, ReadNotificationChannel) {
   TestConnection test;
   test.ReadNotificationChannel();
 }
 
-TEST(Magma, BufferMap) {
+TEST_F(Magma, BufferMap) {
   TestConnection test;
   test.BufferMap();
 }
 
-TEST(Magma, BufferImportInvalid) { TestConnection().BufferImportInvalid(); }
+TEST_F(Magma, BufferImportInvalid) { TestConnection().BufferImportInvalid(); }
 
-TEST(Magma, BufferImportExport) {
+TEST_F(Magma, BufferImportExport) {
   TestConnection test1;
   TestConnection test2;
   TestConnection::BufferImportExport(&test1, &test2);
 }
 
-TEST(Magma, Semaphore) {
+TEST_F(Magma, Semaphore) {
   TestConnection test;
   test.Semaphore(1);
   test.Semaphore(2);
   test.Semaphore(3);
 }
 
-TEST(Magma, SemaphoreImportExport) {
+TEST_F(Magma, SemaphoreImportExport) {
   TestConnection test1;
   TestConnection test2;
   TestConnection::SemaphoreImportExport(&test1, &test2);
 }
 
-TEST(Magma, ImmediateCommands) { TestConnection().ImmediateCommands(); }
+TEST_F(Magma, ImmediateCommands) { TestConnection().ImmediateCommands(); }
 
 class MagmaPoll : public testing::TestWithParam<uint32_t> {};
 
@@ -1144,39 +1152,41 @@ TEST_P(MagmaPoll, PollWithNotificationChannel) {
 
 INSTANTIATE_TEST_SUITE_P(MagmaPoll, MagmaPoll, ::testing::Values(0, 1, 2, 3));
 
-TEST(Magma, PollWithTestChannel) { TestConnection().PollWithTestChannel(); }
+TEST_F(Magma, PollWithTestChannel) { TestConnection().PollWithTestChannel(); }
 
-TEST(Magma, PollChannelClosed) { TestConnection().PollChannelClosed(); }
+TEST_F(Magma, PollChannelClosed) { TestConnection().PollChannelClosed(); }
 
-TEST(Magma, Sysmem) {
+TEST_F(Magma, Sysmem) {
   TestConnection test;
   test.Sysmem(false);
 }
 
-TEST(Magma, SysmemLinearFormatModifier) {
+TEST_F(Magma, SysmemLinearFormatModifier) {
   TestConnection test;
   test.Sysmem(true);
 }
 
-TEST(Magma, FromC) { EXPECT_TRUE(test_magma_from_c(TestConnection::device_name().c_str())); }
+TEST_F(Magma, FromC) { EXPECT_TRUE(test_magma_from_c(TestConnection::device_name().c_str())); }
 
-TEST(Magma, ExecuteCommandBufferWithResources2) {
+TEST_F(Magma, ExecuteCommandBufferWithResources2) {
   TestConnectionWithContext().ExecuteCommandBufferWithResources2(5);
 }
 
-TEST(Magma, ExecuteCommandBufferNoResources2) {
+TEST_F(Magma, ExecuteCommandBufferNoResources2) {
   TestConnectionWithContext().ExecuteCommandBufferNoResources2();
 }
 
-TEST(Magma, ExecuteCommand) { TestConnectionWithContext().ExecuteCommand(5); }
+TEST_F(Magma, ExecuteCommand) { TestConnectionWithContext().ExecuteCommand(5); }
 
-TEST(Magma, ExecuteCommandNoResources) { TestConnectionWithContext().ExecuteCommandNoResources(); }
+TEST_F(Magma, ExecuteCommandNoResources) {
+  TestConnectionWithContext().ExecuteCommandNoResources();
+}
 
-TEST(Magma, ExecuteCommandTwoCommandBuffers) {
+TEST_F(Magma, ExecuteCommandTwoCommandBuffers) {
   TestConnectionWithContext().ExecuteCommandTwoCommandBuffers();
 }
 
-TEST(Magma, FlowControl) {
+TEST_F(Magma, FlowControl) {
   if (TestConnection::is_virtmagma())
     GTEST_SKIP();
 
@@ -1191,11 +1201,11 @@ TEST(Magma, FlowControl) {
   }
 }
 
-TEST(Magma, EnablePerformanceCounters) { TestConnection().EnablePerformanceCounters(); }
+TEST_F(Magma, EnablePerformanceCounters) { TestConnection().EnablePerformanceCounters(); }
 
-TEST(Magma, DisabledPerformanceCounters) { TestConnection().DisabledPerformanceCounters(); }
+TEST_F(Magma, DisabledPerformanceCounters) { TestConnection().DisabledPerformanceCounters(); }
 
-TEST(Magma, CommitBuffer) {
+TEST_F(Magma, CommitBuffer) {
 #if !defined(__Fuchsia__)
   // magma_buffer_get_info is only implemented on Fuchsia.
   GTEST_SKIP();
@@ -1244,7 +1254,9 @@ TEST(Magma, CommitBuffer) {
   magma_release_buffer(connection.connection(), buffer);
 }
 
-TEST(MagmaAbi, MapWithBufferHandle2) {
+class MagmaAbi : public Magma {};
+
+TEST_F(MagmaAbi, MapWithBufferHandle2) {
   TestConnection connection;
 
   magma_buffer_t buffer;
@@ -1297,7 +1309,7 @@ TEST(MagmaAbi, MapWithBufferHandle2) {
   magma_release_buffer(connection.connection(), buffer);
 }
 
-TEST(MagmaAbi, MaxBufferHandle2) {
+TEST_F(MagmaAbi, MaxBufferHandle2) {
   TestConnection connection;
 
   magma_buffer_t buffer;
@@ -1336,7 +1348,7 @@ TEST(MagmaAbi, MaxBufferHandle2) {
   magma_release_buffer(connection.connection(), buffer);
 }
 
-TEST(Magma, MaxBufferMappings) {
+TEST_F(Magma, MaxBufferMappings) {
   TestConnection connection;
 
   magma_buffer_t buffer;
@@ -1369,7 +1381,7 @@ TEST(Magma, MaxBufferMappings) {
   magma_release_buffer(connection.connection(), buffer);
 }
 
-TEST(Magma, Flush) {
+TEST_F(Magma, Flush) {
   TestConnection connection;
   EXPECT_EQ(MAGMA_STATUS_OK, magma_flush(connection.connection()));
 }

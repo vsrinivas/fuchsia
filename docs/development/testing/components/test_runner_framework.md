@@ -601,6 +601,7 @@ dev-goldfish-control
 dev-goldfish-pipe
 dev-goldfish-sync
 dev-gpu
+dev-gpu-performance-counters
 dev-mediacodec
 ```
 ## Performance

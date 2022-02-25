@@ -101,7 +101,7 @@ fuchsia_unittest_package("magma_nonhardware_tests") {
 # Runs on any GPU if the only device present; if multiple
 # GPUs are present the vendor must be specified.
 fuchsia_unittest_package("magma-conformance-tests") {
-  manifest = "meta/magma-conformance-tests.cmx"
+  manifest = "meta/magma-conformance-tests.cml"
   deps = [ "integration" ]
   test_specs = {
     environments = magma_hardware_envs - [ arm_gpu_envs ]
@@ -113,7 +113,7 @@ fuchsia_unittest_package("magma-conformance-tests") {
 
 # Runs only on ARM devices
 fuchsia_unittest_package("magma-conformance-tests-arm") {
-  manifest = "meta/magma-conformance-tests-arm.cmx"
+  manifest = "meta/magma-conformance-tests-arm.cml"
   deps = [ "integration" ]
   test_specs = {
     environments = arm_gpu_envs
@@ -125,7 +125,7 @@ fuchsia_unittest_package("magma-conformance-tests-arm") {
 
 # Runs only on VSI devices
 fuchsia_unittest_package("magma-conformance-tests-vsi") {
-  manifest = "meta/magma-conformance-tests-vsi.cmx"
+  manifest = "meta/magma-conformance-tests-vsi.cml"
   deps = [ "integration" ]
   test_specs = {
     environments = [
