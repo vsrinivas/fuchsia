@@ -66,7 +66,6 @@ async fn wait_for_pattern<SO: AsyncBufReadExt + Unpin, SE: AsyncReadExt + Unpin>
             )
         }
 
-        // TODO(https://fxbug.dev/90764): Remove this once the flake is resolved.
         println!("GOT LINE FROM READER: {}", line);
 
         // Trim the trailing new line.
@@ -278,10 +277,10 @@ async fn packet_test() {
     start_tcpdump_and_wait_for_patterns(
         &realm,
         ["-c", "1", "--no-promiscuous-mode"],
-        std_socket_addr!("127.0.0.1:0"),
+        std_socket_addr!("127.0.0.1:9875"),
         SendToAddress::BoundAddress,
         || futures::future::ready(()),
-        vec![Regex::new(r"lo\s+In\s+IP 127\.0\.0\.1\.\d+ > 127\.0\.0\.1\.\d+: UDP, length 4")
+        vec![Regex::new(r"lo\s+In\s+IP 127\.0\.0\.1\.9875 > 127\.0\.0\.1\.9875: UDP, length 4")
             .expect("parse tcpdump packet regex")],
     )
     .await
@@ -387,7 +386,7 @@ async fn bridged_packet_test<E: netemul::Endpoint>(name: &str) {
     start_tcpdump_and_wait_for_patterns(
         &realm,
         ["-i", "any", "-c", "4", "--no-promiscuous-mode", "udp"],
-        std_socket_addr!("0.0.0.0:0"),
+        std_socket_addr!("0.0.0.0:9876"),
         SendToAddress::Specified(std::net::SocketAddr::new(
             std::net::IpAddr::V4(std::net::Ipv4Addr::from(remote_addr.addr)),
             1234,
@@ -426,11 +425,11 @@ async fn bridged_packet_test<E: netemul::Endpoint>(name: &str) {
         },
         vec![
             Regex::new(
-                r"br\d+\s+Out\s+IP 192\.168\.1\.1\.\d+ > 192\.168\.1\.2\.1234: UDP, length 4",
+                r"br\d+\s+Out\s+IP 192\.168\.1\.1\.9876 > 192\.168\.1\.2\.1234: UDP, length 4",
             )
             .expect("parse tcpdump packet regex for packet sent through bridge"),
             Regex::new(
-                r"eth\d+\s+Out\s+IP 192\.168\.1\.1\.\d+ > 192\.168\.1\.2\.1234: UDP, length 4",
+                r"eth\d+\s+Out\s+IP 192\.168\.1\.1\.9876 > 192\.168\.1\.2\.1234: UDP, length 4",
             )
             .expect("parse tcpdump packet regex for packet sent through ethernet interface"),
             Regex::new(
