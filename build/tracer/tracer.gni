@@ -2,6 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+# TODO(http://fxbug.dev/94466): The variables herein are no longer only about
+# tracing, but also cover various validation checks.  Rename or re-org these.
+
 declare_args() {
   # If enabled, all filesystem activity by actions will be traced and checked
   # against their declared inputs and outputs and depfiles (if present).
@@ -11,4 +14,9 @@ declare_args() {
   # If enabled, run each affected action twice (once with renamed outputs)
   # and compare the outputs' contents for reproducibility.
   check_repeatability = false
+
+  # If enabled, check that the output dir path does not leak into
+  # the command or any of its output files.  This is important for
+  # remote build consistency and caching.
+  check_output_dir_leaks = false
 }

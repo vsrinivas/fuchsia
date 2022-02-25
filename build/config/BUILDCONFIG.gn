@@ -747,6 +747,15 @@ foreach(_target_type,
 #      to generate the file is smaller than the ones from the parent
 #      action.
 #
+#   no_output_dir_leaks:
+#     Type: boolean
+#     Required: no
+#     Default: true
+#     Description: If 'no_output_dir_leaks' is true, then the action
+#       will be checked for output dir leaks.
+#       Otherwise, the check will be skipped.
+#       This check is composable with all others in this section.
+#
 foreach(_target_type,
         [
           "action",
@@ -849,6 +858,7 @@ foreach(_target_type,
                                "hermetic_inputs_file",
                                "hermetic_inputs_script",
                                "hermetic_inputs_target",
+                               "no_output_dir_leaks",
                                "repeatable",
                                "script",
                                "testonly",
@@ -1085,6 +1095,25 @@ foreach(_target_type,
                   rebase_path(_invoker_script, root_build_dir),
                 ] + _args
       }
+
+      # To suppress checking for output dir leaks, in the invoker:
+      #   no_output_dir_leaks = false
+      no_output_dir_leaks = true
+      if (defined(invoker.no_output_dir_leaks)) {
+        no_output_dir_leaks = invoker.no_output_dir_leaks
+      }
+
+      if (no_output_dir_leaks && check_output_dir_leaks) {
+        _args = []
+        _args = rebase_path(outputs, root_build_dir) + [
+                  "--",
+                  rebase_path(script, root_build_dir),
+                ] + args
+        args = []
+        args = _args
+        script = "//build/rbe/output-scanner.sh"
+      }
+
       metadata = {
         if (defined(invoker.metadata)) {
           forward_variables_from(invoker.metadata, "*")
