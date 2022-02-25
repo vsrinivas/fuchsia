@@ -91,6 +91,7 @@ template("_compiled_action_target") {
                              "hermetic_deps",
                              "hermetic_inputs_file",
                              "hermetic_inputs_target",
+                             "no_output_dir_leaks",
                              "repeatable",
                              "inputs",
                              "metadata",
