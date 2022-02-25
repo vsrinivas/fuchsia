@@ -181,6 +181,9 @@ dart_test("experiences_ermine_smoke_e2e_test") {
       dimensions = {
         device_type = "Atlas"
       }
+
+      # TODO(fxbug.dev/650923): De-flake and re-enable this test.
+      tags = [ "e2e-fyi" ]
     },
   ]
 }
