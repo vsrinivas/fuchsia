@@ -85,13 +85,13 @@ compiled_action("gen_command_sizing") {
     "--target-types",
     "fuchsia.ui.scenic/Command",
     "--out-h",
-    rebase_path("commands_sizing.h"),
+    rebase_path("commands_sizing.h", root_build_dir),
     "--h-include-path",
     "lib/ui/scenic/cpp/commands_sizing.h",
     "--out-cc",
-    rebase_path("commands_sizing.cc"),
+    rebase_path("commands_sizing.cc", root_build_dir),
     "--only-check-to-file",
-    rebase_path("$check_file"),
+    rebase_path("$check_file", root_build_dir),
   ]
 
   public_deps = [
