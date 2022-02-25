@@ -50,4 +50,6 @@
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/../lib/vars.sh || exit $?
 fx-config-read
 
+fx-info "Consider using \`ffx scrutiny\` instead. \`fx scrutiny\` will soon be deprecated."
+
 "${FUCHSIA_BUILD_DIR}/host-tools/ffx" scrutiny "$@"
