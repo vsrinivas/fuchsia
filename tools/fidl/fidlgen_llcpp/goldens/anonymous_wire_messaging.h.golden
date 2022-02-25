@@ -64,7 +64,6 @@ struct ::fidl::WireRequest<::test_anonymous::SomeProtocol::SomeMethod> final {
   using UnionMember = test_anonymous::wire::UnionMember;
   using TableMember = test_anonymous::wire::TableMember;
 
-  FIDL_ALIGNDECL
   ::test_anonymous::wire::UnionMember union_member;
   ::test_anonymous::wire::TableMember table_member;
 
@@ -103,7 +102,6 @@ template <>
 struct ::fidl::WireResponse<::test_anonymous::SomeProtocol::SomeMethod> final {
   using Result = test_anonymous::wire::SomeProtocolSomeMethodResult;
 
-  FIDL_ALIGNDECL
   ::test_anonymous::wire::SomeProtocolSomeMethodResult result;
 
   explicit WireResponse(
@@ -184,8 +182,8 @@ struct TypeTraits<
   static constexpr const fidl_type_t* kType =
       &::test_anonymous::test_anonymous_SomeProtocolSomeMethodRequestTable;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(32);
-  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(40);
+  static constexpr uint32_t kPrimarySize = 32;
+  static constexpr uint32_t kPrimarySizeV1 = 40;
   static constexpr uint32_t kMaxOutOfLine = 48;
   static constexpr uint32_t kMaxOutOfLineV1 = 72;
   static constexpr bool kHasFlexibleEnvelope = true;
@@ -254,8 +252,8 @@ struct TypeTraits<
   static constexpr const fidl_type_t* kType =
       &::test_anonymous::test_anonymous_SomeProtocolSomeMethodTopResponseTable;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(16);
-  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(24);
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 24;
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 8;
   static constexpr bool kHasFlexibleEnvelope = false;

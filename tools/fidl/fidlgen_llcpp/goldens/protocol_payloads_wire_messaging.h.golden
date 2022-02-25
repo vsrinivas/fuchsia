@@ -218,7 +218,6 @@ template <>
 struct ::fidl::WireRequest<
     ::test_protocolpayloads::MainProtocol::OneWayComposed>
     final {
-  FIDL_ALIGNDECL
   int32_t a;
 
   explicit WireRequest(int32_t a) : a(a) {}
@@ -249,7 +248,6 @@ template <>
 struct ::fidl::WireRequest<
     ::test_protocolpayloads::MainProtocol::TwoWayComposed>
     final {
-  FIDL_ALIGNDECL
   int32_t a;
 
   explicit WireRequest(int32_t a) : a(a) {}
@@ -284,7 +282,6 @@ template <>
 struct ::fidl::WireResponse<
     ::test_protocolpayloads::MainProtocol::TwoWayComposed>
     final {
-  FIDL_ALIGNDECL
   int32_t a;
 
   explicit WireResponse(int32_t a) : a(a) {}
@@ -315,7 +312,6 @@ template <>
 struct ::fidl::WireRequest<
     ::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>
     final {
-  FIDL_ALIGNDECL
   int32_t a;
 
   explicit WireRequest(int32_t a) : a(a) {}
@@ -352,7 +348,6 @@ template <>
 struct ::fidl::WireResponse<
     ::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>
     final {
-  FIDL_ALIGNDECL
   ::test_protocolpayloads_imported::wire::
       ComposedProtocolTwoWayComposedWithErrorResult result;
 
@@ -390,7 +385,6 @@ struct ::fidl::internal::TransactionalResponse<
 template <>
 struct ::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnComposed>
     final {
-  FIDL_ALIGNDECL
   int32_t a;
 
   explicit WireEvent(int32_t a) : a(a) {}
@@ -420,7 +414,6 @@ template <>
 struct ::fidl::WireEvent<
     ::test_protocolpayloads::MainProtocol::OnComposedWithError>
     final {
-  FIDL_ALIGNDECL
   ::test_protocolpayloads_imported::wire::
       ComposedProtocolOnComposedWithErrorResult result;
 
@@ -456,7 +449,6 @@ struct ::fidl::internal::TransactionalEvent<
 template <>
 struct ::fidl::WireRequest<::test_protocolpayloads::MainProtocol::OneWayLocal>
     final {
-  FIDL_ALIGNDECL
   uint32_t a;
   uint32_t b;
 
@@ -486,7 +478,6 @@ struct ::fidl::internal::TransactionalRequest<
 template <>
 struct ::fidl::WireRequest<::test_protocolpayloads::MainProtocol::TwoWayLocal>
     final {
-  FIDL_ALIGNDECL
   uint32_t a;
   uint32_t b;
 
@@ -520,7 +511,6 @@ struct ::fidl::internal::TransactionalRequest<
 template <>
 struct ::fidl::WireResponse<::test_protocolpayloads::MainProtocol::TwoWayLocal>
     final {
-  FIDL_ALIGNDECL
   uint32_t a;
   uint32_t b;
 
@@ -551,7 +541,6 @@ template <>
 struct ::fidl::WireRequest<
     ::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>
     final {
-  FIDL_ALIGNDECL
   uint32_t a;
   uint32_t b;
 
@@ -592,7 +581,6 @@ struct ::fidl::WireResponse<
   using Result =
       test_protocolpayloads::wire::MainProtocolTwoWayLocalWithErrorResult;
 
-  FIDL_ALIGNDECL
   ::test_protocolpayloads::wire::MainProtocolTwoWayLocalWithErrorResult result;
 
   explicit WireResponse(
@@ -628,7 +616,6 @@ struct ::fidl::internal::TransactionalResponse<
 
 template <>
 struct ::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnLocal> final {
-  FIDL_ALIGNDECL
   uint32_t a;
   uint32_t b;
 
@@ -662,7 +649,6 @@ struct ::fidl::WireEvent<
   using Result =
       test_protocolpayloads::wire::MainProtocolOnLocalWithErrorResult;
 
-  FIDL_ALIGNDECL
   ::test_protocolpayloads::wire::MainProtocolOnLocalWithErrorResult result;
 
   explicit WireEvent(
@@ -695,7 +681,6 @@ struct ::fidl::internal::TransactionalEvent<
 template <>
 struct ::fidl::WireRequest<::test_protocolpayloads::MainProtocol::OneWayImport>
     final {
-  FIDL_ALIGNDECL
   int32_t a;
 
   explicit WireRequest(int32_t a) : a(a) {}
@@ -724,7 +709,6 @@ struct ::fidl::internal::TransactionalRequest<
 template <>
 struct ::fidl::WireRequest<::test_protocolpayloads::MainProtocol::TwoWayImport>
     final {
-  FIDL_ALIGNDECL
   int32_t a;
 
   explicit WireRequest(int32_t a) : a(a) {}
@@ -757,7 +741,6 @@ struct ::fidl::internal::TransactionalRequest<
 template <>
 struct ::fidl::WireResponse<::test_protocolpayloads::MainProtocol::TwoWayImport>
     final {
-  FIDL_ALIGNDECL
   int32_t a;
 
   explicit WireResponse(int32_t a) : a(a) {}
@@ -788,7 +771,6 @@ template <>
 struct ::fidl::WireRequest<
     ::test_protocolpayloads::MainProtocol::TwoWayImportWithError>
     final {
-  FIDL_ALIGNDECL
   int32_t a;
 
   explicit WireRequest(int32_t a) : a(a) {}
@@ -827,7 +809,6 @@ struct ::fidl::WireResponse<
   using Result =
       test_protocolpayloads::wire::MainProtocolTwoWayImportWithErrorResult;
 
-  FIDL_ALIGNDECL
   ::test_protocolpayloads::wire::MainProtocolTwoWayImportWithErrorResult result;
 
   explicit WireResponse(
@@ -864,7 +845,6 @@ struct ::fidl::internal::TransactionalResponse<
 template <>
 struct ::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnImport>
     final {
-  FIDL_ALIGNDECL
   int32_t a;
 
   explicit WireEvent(int32_t a) : a(a) {}
@@ -897,7 +877,6 @@ struct ::fidl::WireEvent<
   using Result =
       test_protocolpayloads::wire::MainProtocolOnImportWithErrorResult;
 
-  FIDL_ALIGNDECL
   ::test_protocolpayloads::wire::MainProtocolOnImportWithErrorResult result;
 
   explicit WireEvent(
@@ -931,7 +910,6 @@ struct ::fidl::internal::TransactionalEvent<
 template <>
 struct ::fidl::WireRequest<::test_protocolpayloads::MainProtocol::OneWayAnon>
     final {
-  FIDL_ALIGNDECL
   uint32_t a;
   uint32_t b;
 
@@ -961,7 +939,6 @@ struct ::fidl::internal::TransactionalRequest<
 template <>
 struct ::fidl::WireRequest<::test_protocolpayloads::MainProtocol::TwoWayAnon>
     final {
-  FIDL_ALIGNDECL
   uint32_t a;
   uint32_t b;
 
@@ -995,7 +972,6 @@ struct ::fidl::internal::TransactionalRequest<
 template <>
 struct ::fidl::WireResponse<::test_protocolpayloads::MainProtocol::TwoWayAnon>
     final {
-  FIDL_ALIGNDECL
   uint32_t a;
   uint32_t b;
 
@@ -1026,7 +1002,6 @@ template <>
 struct ::fidl::WireRequest<
     ::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>
     final {
-  FIDL_ALIGNDECL
   uint32_t a;
   uint32_t b;
 
@@ -1067,7 +1042,6 @@ struct ::fidl::WireResponse<
   using Result =
       test_protocolpayloads::wire::MainProtocolTwoWayAnonWithErrorResult;
 
-  FIDL_ALIGNDECL
   ::test_protocolpayloads::wire::MainProtocolTwoWayAnonWithErrorResult result;
 
   explicit WireResponse(
@@ -1103,7 +1077,6 @@ struct ::fidl::internal::TransactionalResponse<
 
 template <>
 struct ::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnAnon> final {
-  FIDL_ALIGNDECL
   uint32_t a;
   uint32_t b;
 
@@ -1135,7 +1108,6 @@ struct ::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnAnonWithError>
     final {
   using Result = test_protocolpayloads::wire::MainProtocolOnAnonWithErrorResult;
 
-  FIDL_ALIGNDECL
   ::test_protocolpayloads::wire::MainProtocolOnAnonWithErrorResult result;
 
   explicit WireEvent(
@@ -1224,8 +1196,8 @@ struct TypeTraits<::fidl::WireRequest<
       &::test_protocolpayloads::
           test_protocolpayloads_imported_ImportStructPayloadTable;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(4);
-  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(4);
+  static constexpr uint32_t kPrimarySize = 4;
+  static constexpr uint32_t kPrimarySizeV1 = 4;
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -1300,8 +1272,8 @@ struct TypeTraits<::fidl::WireRequest<
       &::test_protocolpayloads::
           test_protocolpayloads_imported_ImportStructPayloadTable;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(4);
-  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(4);
+  static constexpr uint32_t kPrimarySize = 4;
+  static constexpr uint32_t kPrimarySizeV1 = 4;
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -1376,8 +1348,8 @@ struct TypeTraits<::fidl::WireResponse<
       &::test_protocolpayloads::
           test_protocolpayloads_imported_ImportStructPayloadTable;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(4);
-  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(4);
+  static constexpr uint32_t kPrimarySize = 4;
+  static constexpr uint32_t kPrimarySizeV1 = 4;
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -1455,8 +1427,8 @@ struct TypeTraits<::fidl::WireRequest<
       &::test_protocolpayloads::
           test_protocolpayloads_imported_ImportStructPayloadTable;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(4);
-  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(4);
+  static constexpr uint32_t kPrimarySize = 4;
+  static constexpr uint32_t kPrimarySizeV1 = 4;
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -1535,8 +1507,8 @@ struct TypeTraits<::fidl::WireResponse<
       &::test_protocolpayloads::
           test_protocolpayloads_imported_ComposedProtocolTwoWayComposedWithErrorTopResponseTable;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(16);
-  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(24);
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 24;
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 8;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -1611,8 +1583,8 @@ struct TypeTraits<
       &::test_protocolpayloads::
           test_protocolpayloads_imported_ImportStructPayloadTable;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(4);
-  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(4);
+  static constexpr uint32_t kPrimarySize = 4;
+  static constexpr uint32_t kPrimarySizeV1 = 4;
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -1688,8 +1660,8 @@ struct TypeTraits<::fidl::WireEvent<
       &::test_protocolpayloads::
           test_protocolpayloads_imported_ComposedProtocolOnComposedWithErrorRequestTable;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(16);
-  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(24);
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 24;
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 8;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -1760,8 +1732,8 @@ struct TypeTraits<
   static constexpr const fidl_type_t* kType =
       &::test_protocolpayloads::test_protocolpayloads_LocalStructPayloadTable;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(8);
-  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(8);
+  static constexpr uint32_t kPrimarySize = 8;
+  static constexpr uint32_t kPrimarySizeV1 = 8;
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -1836,8 +1808,8 @@ struct TypeTraits<
   static constexpr const fidl_type_t* kType =
       &::test_protocolpayloads::test_protocolpayloads_LocalStructPayloadTable;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(8);
-  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(8);
+  static constexpr uint32_t kPrimarySize = 8;
+  static constexpr uint32_t kPrimarySizeV1 = 8;
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -1912,8 +1884,8 @@ struct TypeTraits<
   static constexpr const fidl_type_t* kType =
       &::test_protocolpayloads::test_protocolpayloads_LocalStructPayloadTable;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(8);
-  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(8);
+  static constexpr uint32_t kPrimarySize = 8;
+  static constexpr uint32_t kPrimarySizeV1 = 8;
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -1989,8 +1961,8 @@ struct TypeTraits<::fidl::WireRequest<
   static constexpr const fidl_type_t* kType =
       &::test_protocolpayloads::test_protocolpayloads_LocalStructPayloadTable;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(8);
-  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(8);
+  static constexpr uint32_t kPrimarySize = 8;
+  static constexpr uint32_t kPrimarySizeV1 = 8;
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -2070,8 +2042,8 @@ struct TypeTraits<::fidl::WireResponse<
       &::test_protocolpayloads::
           test_protocolpayloads_MainProtocolTwoWayLocalWithErrorTopResponseTable;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(16);
-  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(24);
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 24;
   static constexpr uint32_t kMaxOutOfLine = 8;
   static constexpr uint32_t kMaxOutOfLineV1 = 8;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -2140,8 +2112,8 @@ struct TypeTraits<
   static constexpr const fidl_type_t* kType =
       &::test_protocolpayloads::test_protocolpayloads_LocalStructPayloadTable;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(8);
-  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(8);
+  static constexpr uint32_t kPrimarySize = 8;
+  static constexpr uint32_t kPrimarySizeV1 = 8;
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -2218,8 +2190,8 @@ struct TypeTraits<::fidl::WireEvent<
       &::test_protocolpayloads::
           test_protocolpayloads_MainProtocolOnLocalWithErrorRequestTable;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(16);
-  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(24);
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 24;
   static constexpr uint32_t kMaxOutOfLine = 8;
   static constexpr uint32_t kMaxOutOfLineV1 = 8;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -2292,8 +2264,8 @@ struct TypeTraits<
       &::test_protocolpayloads::
           test_protocolpayloads_imported_ImportStructPayloadTable;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(4);
-  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(4);
+  static constexpr uint32_t kPrimarySize = 4;
+  static constexpr uint32_t kPrimarySizeV1 = 4;
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -2365,8 +2337,8 @@ struct TypeTraits<
       &::test_protocolpayloads::
           test_protocolpayloads_imported_ImportStructPayloadTable;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(4);
-  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(4);
+  static constexpr uint32_t kPrimarySize = 4;
+  static constexpr uint32_t kPrimarySizeV1 = 4;
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -2438,8 +2410,8 @@ struct TypeTraits<
       &::test_protocolpayloads::
           test_protocolpayloads_imported_ImportStructPayloadTable;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(4);
-  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(4);
+  static constexpr uint32_t kPrimarySize = 4;
+  static constexpr uint32_t kPrimarySizeV1 = 4;
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -2514,8 +2486,8 @@ struct TypeTraits<::fidl::WireRequest<
       &::test_protocolpayloads::
           test_protocolpayloads_imported_ImportStructPayloadTable;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(4);
-  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(4);
+  static constexpr uint32_t kPrimarySize = 4;
+  static constexpr uint32_t kPrimarySizeV1 = 4;
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -2591,8 +2563,8 @@ struct TypeTraits<::fidl::WireResponse<
       &::test_protocolpayloads::
           test_protocolpayloads_MainProtocolTwoWayImportWithErrorTopResponseTable;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(16);
-  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(24);
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 24;
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 8;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -2665,8 +2637,8 @@ struct TypeTraits<
       &::test_protocolpayloads::
           test_protocolpayloads_imported_ImportStructPayloadTable;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(4);
-  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(4);
+  static constexpr uint32_t kPrimarySize = 4;
+  static constexpr uint32_t kPrimarySizeV1 = 4;
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -2741,8 +2713,8 @@ struct TypeTraits<::fidl::WireEvent<
       &::test_protocolpayloads::
           test_protocolpayloads_MainProtocolOnImportWithErrorRequestTable;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(16);
-  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(24);
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 24;
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 8;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -2815,8 +2787,8 @@ struct TypeTraits<
       &::test_protocolpayloads::
           test_protocolpayloads_MainProtocolOneWayAnonRequestTable;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(8);
-  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(8);
+  static constexpr uint32_t kPrimarySize = 8;
+  static constexpr uint32_t kPrimarySizeV1 = 8;
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -2893,8 +2865,8 @@ struct TypeTraits<
       &::test_protocolpayloads::
           test_protocolpayloads_MainProtocolTwoWayAnonRequestTable;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(8);
-  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(8);
+  static constexpr uint32_t kPrimarySize = 8;
+  static constexpr uint32_t kPrimarySizeV1 = 8;
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -2971,8 +2943,8 @@ struct TypeTraits<
       &::test_protocolpayloads::
           test_protocolpayloads_MainProtocolTwoWayAnonTopResponseTable;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(8);
-  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(8);
+  static constexpr uint32_t kPrimarySize = 8;
+  static constexpr uint32_t kPrimarySizeV1 = 8;
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -3052,8 +3024,8 @@ struct TypeTraits<::fidl::WireRequest<
       &::test_protocolpayloads::
           test_protocolpayloads_MainProtocolTwoWayAnonWithErrorRequestTable;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(8);
-  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(8);
+  static constexpr uint32_t kPrimarySize = 8;
+  static constexpr uint32_t kPrimarySizeV1 = 8;
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -3133,8 +3105,8 @@ struct TypeTraits<::fidl::WireResponse<
       &::test_protocolpayloads::
           test_protocolpayloads_MainProtocolTwoWayAnonWithErrorTopResponseTable;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(16);
-  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(24);
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 24;
   static constexpr uint32_t kMaxOutOfLine = 8;
   static constexpr uint32_t kMaxOutOfLineV1 = 8;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -3205,8 +3177,8 @@ struct TypeTraits<
       &::test_protocolpayloads::
           test_protocolpayloads_MainProtocolOnAnonRequestTable;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(8);
-  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(8);
+  static constexpr uint32_t kPrimarySize = 8;
+  static constexpr uint32_t kPrimarySizeV1 = 8;
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -3282,8 +3254,8 @@ struct TypeTraits<
       &::test_protocolpayloads::
           test_protocolpayloads_MainProtocolOnAnonWithErrorRequestTable;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(16);
-  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(24);
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 24;
   static constexpr uint32_t kMaxOutOfLine = 8;
   static constexpr uint32_t kMaxOutOfLineV1 = 8;
   static constexpr bool kHasFlexibleEnvelope = false;

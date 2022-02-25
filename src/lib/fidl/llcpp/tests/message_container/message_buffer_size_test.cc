@@ -34,39 +34,42 @@ TEST(MessageBufferSize, BoxedMessageBuffer) {
 TEST(MessageBufferSize, ResponseStorageAllocationStrategy) {
   // The stack allocation limit of 512 bytes is defined in
   // tools/fidl/lib/fidlgen_cpp/protocol.go
-  static_assert(sizeof(fidl::WireRequest<Protocol::RequestOf512Bytes>) == 496);
-  static_assert(sizeof(fidl::internal::TransactionalRequest<Protocol::RequestOf512Bytes>) == 512);
+  static_assert(sizeof(fidl::WireRequest<Protocol::RequestWith496ByteArray>) == 496);
+  static_assert(sizeof(fidl::internal::TransactionalRequest<Protocol::RequestWith496ByteArray>) ==
+                512);
 
   // Buffers for messages no bigger than 512 bytes are embedded, for this request,
   // OwnedEncodedMessage size is bigger than 512 bytes.
-  static_assert(
-      sizeof(fidl::unstable::OwnedEncodedMessage<fidl::WireRequest<Protocol::RequestOf512Bytes>>) >
-      512);
-
-  static_assert(sizeof(fidl::WireRequest<Protocol::RequestOf513Bytes>) == 504);
-  static_assert(sizeof(fidl::internal::TransactionalRequest<Protocol::RequestOf513Bytes>) == 520);
-
-  // Buffers for messages bigger than 512 bytes are store on the heap, for this request,
-  // OwnedEncodedMessage for the Wirerequest is still stack allocated, but the TransactionalRequest,
-  // which is 16 bytes larger, is stored on the heap.
-  static_assert(
-      sizeof(fidl::unstable::OwnedEncodedMessage<fidl::WireRequest<Protocol::RequestOf513Bytes>>) >
-      512);
   static_assert(sizeof(fidl::unstable::OwnedEncodedMessage<
-                       fidl::internal::TransactionalRequest<Protocol::RequestOf513Bytes>>) < 512);
+                       fidl::WireRequest<Protocol::RequestWith496ByteArray>>) > 512);
+
+  // WireRequests are not aligned, so the WireRequest below is 497 bytes, aligned to 504, with 16
+  // more bytes for the header making 520.
+  static_assert(sizeof(fidl::WireRequest<Protocol::RequestWith497ByteArray>) == 497);
+  static_assert(sizeof(fidl::internal::TransactionalRequest<Protocol::RequestWith497ByteArray>) ==
+                520);
+
+  // Buffers for messages more than 512 bytes are stored on the heap, for this request,
+  // OwnedEncodedMessage for the WireRequest is still stack allocated, but the TransactionalRequest,
+  // which is 16 bytes larger, is stored on the heap.
+  static_assert(sizeof(fidl::unstable::OwnedEncodedMessage<
+                       fidl::WireRequest<Protocol::RequestWith497ByteArray>>) > 512);
+  static_assert(sizeof(fidl::unstable::OwnedEncodedMessage<
+                       fidl::internal::TransactionalRequest<Protocol::RequestWith497ByteArray>>) <
+                512);
 }
 
 TEST(MessageBufferSize, MaxSizeInChannel) {
-  static_assert(fidl::MaxSizeInChannel<fidl::WireRequest<Protocol::RequestOf512Bytes>,
+  static_assert(fidl::MaxSizeInChannel<fidl::WireRequest<Protocol::RequestWith496ByteArray>,
                                        fidl::MessageDirection::kSending>() == 496);
-  static_assert(fidl::MaxSizeInChannel<fidl::WireRequest<Protocol::RequestOf512Bytes>,
+  static_assert(fidl::MaxSizeInChannel<fidl::WireRequest<Protocol::RequestWith496ByteArray>,
                                        fidl::MessageDirection::kReceiving>() == 496);
-  static_assert(
-      fidl::MaxSizeInChannel<fidl::internal::TransactionalRequest<Protocol::RequestOf512Bytes>,
-                             fidl::MessageDirection::kSending>() == 512);
-  static_assert(
-      fidl::MaxSizeInChannel<fidl::internal::TransactionalRequest<Protocol::RequestOf512Bytes>,
-                             fidl::MessageDirection::kReceiving>() == 512);
+  static_assert(fidl::MaxSizeInChannel<
+                    fidl::internal::TransactionalRequest<Protocol::RequestWith496ByteArray>,
+                    fidl::MessageDirection::kSending>() == 512);
+  static_assert(fidl::MaxSizeInChannel<
+                    fidl::internal::TransactionalRequest<Protocol::RequestWith496ByteArray>,
+                    fidl::MessageDirection::kReceiving>() == 512);
 
   static_assert(fidl::MaxSizeInChannel<fidl::WireRequest<Protocol::SmallRequestWithFlexibleType>,
                                        fidl::MessageDirection::kSending>() < 512);
@@ -128,16 +131,17 @@ TEST(MessageBufferSize, MaxSizeInChannel) {
 }
 
 TEST(MessageBufferSize, BufferSizeConstexprFunctions) {
-  static_assert(fidl::SyncClientMethodBufferSizeInChannel<Protocol::RequestOf512Bytes>() == 512);
+  static_assert(fidl::SyncClientMethodBufferSizeInChannel<Protocol::RequestWith496ByteArray>() ==
+                512);
   // 513 bytes becomes 520 bytes after alignment.
-  static_assert(fidl::SyncClientMethodBufferSizeInChannel<Protocol::RequestOf513Bytes>() == 520);
+  static_assert(fidl::SyncClientMethodBufferSizeInChannel<Protocol::RequestWith497ByteArray>() ==
+                520);
   static_assert(fidl::SyncClientMethodBufferSizeInChannel<
-                    Protocol::RequestOf512BytesAndResponseOf256Bytes>() == 512 + 256);
+                    Protocol::RequestWith496ByteArrayAndResponseOf256Bytes>() == 512 + 256);
   static_assert(fidl::AsyncClientMethodBufferSizeInChannel<
-                    Protocol::RequestOf512BytesAndResponseOf256Bytes>() == 512);
-  static_assert(
-      fidl::ServerReplyBufferSizeInChannel<Protocol::RequestOf512BytesAndResponseOf256Bytes>() ==
-      256);
+                    Protocol::RequestWith496ByteArrayAndResponseOf256Bytes>() == 512);
+  static_assert(fidl::ServerReplyBufferSizeInChannel<
+                    Protocol::RequestWith496ByteArrayAndResponseOf256Bytes>() == 256);
   static_assert(fidl::EventReplyBufferSizeInChannel<Protocol::EventOf256Bytes>() == 256);
 
   // Note: the computed value may need to be adjusted when changing the

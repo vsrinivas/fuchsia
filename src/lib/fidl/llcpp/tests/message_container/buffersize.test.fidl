@@ -4,10 +4,10 @@
 library fidl.llcpp.buffersize.test;
 
 protocol Protocol {
-    RequestOf512Bytes(struct {
+    RequestWith496ByteArray(struct {
         value array<byte, 496>;
     });
-    RequestOf513Bytes(struct {
+    RequestWith497ByteArray(struct {
         value array<byte, 497>;
     });
 
@@ -24,7 +24,7 @@ protocol Protocol {
         };
     });
 
-    RequestOf512BytesAndResponseOf256Bytes(struct {
+    RequestWith496ByteArrayAndResponseOf256Bytes(struct {
         value array<byte, 496>;
     }) -> (struct {
         value array<byte, 240>;

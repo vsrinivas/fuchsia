@@ -90,7 +90,6 @@ struct ::fidl::internal::TransactionalRequest<
 template <>
 struct ::fidl::WireResponse<::test_transitivedependenciescompose::Top::GetFoo>
     final {
-  FIDL_ALIGNDECL
   ::test_bottom::wire::Foo foo;
 
   explicit WireResponse(const ::test_bottom::wire::Foo& foo) : foo(foo) {}
@@ -166,8 +165,8 @@ struct TypeTraits<
     ::fidl::WireRequest<::test_transitivedependenciescompose::Top::GetFoo>> {
   static constexpr const fidl_type_t* kType = nullptr;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(0);
-  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(0);
+  static constexpr uint32_t kPrimarySize = 0;
+  static constexpr uint32_t kPrimarySizeV1 = 0;
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -231,8 +230,8 @@ struct TypeTraits<
       &::test_transitivedependenciescompose::
           test_bottom_BottomGetFooTopResponseTable;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(4);
-  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(4);
+  static constexpr uint32_t kPrimarySize = 4;
+  static constexpr uint32_t kPrimarySizeV1 = 4;
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasFlexibleEnvelope = false;

@@ -103,7 +103,6 @@ template <>
 struct ::fidl::WireRequest<
     ::test_protocols::HandleRightsProtocol::NoResponseMethod>
     final {
-  FIDL_ALIGNDECL
   ::zx::socket h;
 
   explicit WireRequest(::zx::socket&& h) : h(std::move(h)) {}
@@ -140,7 +139,6 @@ template <>
 struct ::fidl::WireRequest<
     ::test_protocols::HandleRightsProtocol::ResponseMethod>
     final {
-  FIDL_ALIGNDECL
   ::zx::socket h;
 
   explicit WireRequest(::zx::socket&& h) : h(std::move(h)) {}
@@ -181,7 +179,6 @@ template <>
 struct ::fidl::WireResponse<
     ::test_protocols::HandleRightsProtocol::ResponseMethod>
     final {
-  FIDL_ALIGNDECL
   ::zx::socket h;
 
   explicit WireResponse(::zx::socket&& h) : h(std::move(h)) {}
@@ -217,7 +214,6 @@ struct ::fidl::internal::TransactionalResponse<
 template <>
 struct ::fidl::WireEvent<::test_protocols::HandleRightsProtocol::AnEvent>
     final {
-  FIDL_ALIGNDECL
   ::zx::socket h;
 
   explicit WireEvent(::zx::socket&& h) : h(std::move(h)) {}
@@ -315,8 +311,8 @@ struct TypeTraits<::fidl::WireRequest<
       &::test_protocols::
           test_protocols_HandleRightsProtocolNoResponseMethodRequestTable;
   static constexpr uint32_t kMaxNumHandles = 1;
-  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(4);
-  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(4);
+  static constexpr uint32_t kPrimarySize = 4;
+  static constexpr uint32_t kPrimarySizeV1 = 4;
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -401,8 +397,8 @@ struct TypeTraits<::fidl::WireRequest<
       &::test_protocols::
           test_protocols_HandleRightsProtocolResponseMethodRequestTable;
   static constexpr uint32_t kMaxNumHandles = 1;
-  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(4);
-  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(4);
+  static constexpr uint32_t kPrimarySize = 4;
+  static constexpr uint32_t kPrimarySizeV1 = 4;
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -487,8 +483,8 @@ struct TypeTraits<::fidl::WireResponse<
       &::test_protocols::
           test_protocols_HandleRightsProtocolResponseMethodTopResponseTable;
   static constexpr uint32_t kMaxNumHandles = 1;
-  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(4);
-  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(4);
+  static constexpr uint32_t kPrimarySize = 4;
+  static constexpr uint32_t kPrimarySizeV1 = 4;
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -569,8 +565,8 @@ struct TypeTraits<
   static constexpr const fidl_type_t* kType =
       &::test_protocols::test_protocols_HandleRightsProtocolAnEventRequestTable;
   static constexpr uint32_t kMaxNumHandles = 1;
-  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(4);
-  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(4);
+  static constexpr uint32_t kPrimarySize = 4;
+  static constexpr uint32_t kPrimarySizeV1 = 4;
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -1224,7 +1220,6 @@ template <>
 struct ::fidl::WireResponse<
     ::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>
     final {
-  FIDL_ALIGNDECL
   ::fidl::StringView ret;
 
   explicit WireResponse(::fidl::StringView ret) : ret(ret) {}
@@ -1257,7 +1252,6 @@ template <>
 struct ::fidl::WireRequest<
     ::test_protocols::WithAndWithoutRequestResponse::WithRequestNoResponse>
     final {
-  FIDL_ALIGNDECL
   ::fidl::StringView arg;
 
   explicit WireRequest(::fidl::StringView arg) : arg(arg) {}
@@ -1290,7 +1284,6 @@ template <>
 struct ::fidl::WireRequest<
     ::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse>
     final {
-  FIDL_ALIGNDECL
   ::fidl::StringView arg;
 
   explicit WireRequest(::fidl::StringView arg) : arg(arg) {}
@@ -1343,7 +1336,6 @@ template <>
 struct ::fidl::WireRequest<
     ::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>
     final {
-  FIDL_ALIGNDECL
   ::fidl::StringView arg;
 
   explicit WireRequest(::fidl::StringView arg) : arg(arg) {}
@@ -1380,7 +1372,6 @@ template <>
 struct ::fidl::WireResponse<
     ::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>
     final {
-  FIDL_ALIGNDECL
   ::fidl::StringView ret;
 
   explicit WireResponse(::fidl::StringView ret) : ret(ret) {}
@@ -1433,7 +1424,6 @@ template <>
 struct ::fidl::WireEvent<
     ::test_protocols::WithAndWithoutRequestResponse::OnWithResponse>
     final {
-  FIDL_ALIGNDECL
   ::fidl::StringView ret;
 
   explicit WireEvent(::fidl::StringView ret) : ret(ret) {}
@@ -1515,8 +1505,8 @@ struct TypeTraits<::fidl::WireRequest<
     ::test_protocols::WithAndWithoutRequestResponse::NoRequestNoResponse>> {
   static constexpr const fidl_type_t* kType = nullptr;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(0);
-  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(0);
+  static constexpr uint32_t kPrimarySize = 0;
+  static constexpr uint32_t kPrimarySizeV1 = 0;
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -1575,8 +1565,8 @@ struct TypeTraits<::fidl::WireRequest<
     ::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse>> {
   static constexpr const fidl_type_t* kType = nullptr;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(0);
-  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(0);
+  static constexpr uint32_t kPrimarySize = 0;
+  static constexpr uint32_t kPrimarySizeV1 = 0;
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -1635,8 +1625,8 @@ struct TypeTraits<::fidl::WireResponse<
     ::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse>> {
   static constexpr const fidl_type_t* kType = nullptr;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(0);
-  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(0);
+  static constexpr uint32_t kPrimarySize = 0;
+  static constexpr uint32_t kPrimarySizeV1 = 0;
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -1695,8 +1685,8 @@ struct TypeTraits<::fidl::WireRequest<
     ::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>> {
   static constexpr const fidl_type_t* kType = nullptr;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(0);
-  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(0);
+  static constexpr uint32_t kPrimarySize = 0;
+  static constexpr uint32_t kPrimarySizeV1 = 0;
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -1763,8 +1753,8 @@ struct TypeTraits<::fidl::WireResponse<
       &::test_protocols::
           test_protocols_WithAndWithoutRequestResponseNoRequestWithResponseTopResponseTable;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(16);
-  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(16);
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 16;
   static constexpr uint32_t kMaxOutOfLine = 4294967295;
   static constexpr uint32_t kMaxOutOfLineV1 = 4294967295;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -1843,8 +1833,8 @@ struct TypeTraits<::fidl::WireRequest<
       &::test_protocols::
           test_protocols_WithAndWithoutRequestResponseWithRequestNoResponseRequestTable;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(16);
-  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(16);
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 16;
   static constexpr uint32_t kMaxOutOfLine = 4294967295;
   static constexpr uint32_t kMaxOutOfLineV1 = 4294967295;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -1924,8 +1914,8 @@ struct TypeTraits<
       &::test_protocols::
           test_protocols_WithAndWithoutRequestResponseWithRequestEmptyResponseRequestTable;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(16);
-  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(16);
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 16;
   static constexpr uint32_t kMaxOutOfLine = 4294967295;
   static constexpr uint32_t kMaxOutOfLineV1 = 4294967295;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -1997,8 +1987,8 @@ struct TypeTraits<
                              WithRequestEmptyResponse>> {
   static constexpr const fidl_type_t* kType = nullptr;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(0);
-  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(0);
+  static constexpr uint32_t kPrimarySize = 0;
+  static constexpr uint32_t kPrimarySizeV1 = 0;
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -2065,8 +2055,8 @@ struct TypeTraits<::fidl::WireRequest<
       &::test_protocols::
           test_protocols_WithAndWithoutRequestResponseWithRequestWithResponseRequestTable;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(16);
-  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(16);
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 16;
   static constexpr uint32_t kMaxOutOfLine = 4294967295;
   static constexpr uint32_t kMaxOutOfLineV1 = 4294967295;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -2144,8 +2134,8 @@ struct TypeTraits<::fidl::WireResponse<
       &::test_protocols::
           test_protocols_WithAndWithoutRequestResponseWithRequestWithResponseTopResponseTable;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(16);
-  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(16);
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 16;
   static constexpr uint32_t kMaxOutOfLine = 4294967295;
   static constexpr uint32_t kMaxOutOfLineV1 = 4294967295;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -2217,8 +2207,8 @@ struct TypeTraits<::fidl::WireEvent<
     ::test_protocols::WithAndWithoutRequestResponse::OnEmptyResponse>> {
   static constexpr const fidl_type_t* kType = nullptr;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(0);
-  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(0);
+  static constexpr uint32_t kPrimarySize = 0;
+  static constexpr uint32_t kPrimarySizeV1 = 0;
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -2287,8 +2277,8 @@ struct TypeTraits<::fidl::WireEvent<
       &::test_protocols::
           test_protocols_WithAndWithoutRequestResponseOnWithResponseRequestTable;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(16);
-  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(16);
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 16;
   static constexpr uint32_t kMaxOutOfLine = 4294967295;
   static constexpr uint32_t kMaxOutOfLineV1 = 4294967295;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -3551,7 +3541,6 @@ struct ::fidl::internal::WireServerDispatcher<::test_protocols::Transitional>
 
 template <>
 struct ::fidl::WireRequest<::test_protocols::Transitional::Request> final {
-  FIDL_ALIGNDECL
   int64_t x;
 
   explicit WireRequest(int64_t x) : x(x) {}
@@ -3582,7 +3571,6 @@ struct ::fidl::internal::TransactionalRequest<
 
 template <>
 struct ::fidl::WireResponse<::test_protocols::Transitional::Request> final {
-  FIDL_ALIGNDECL
   int64_t y;
 
   explicit WireResponse(int64_t y) : y(y) {}
@@ -3609,7 +3597,6 @@ struct ::fidl::internal::TransactionalResponse<
 
 template <>
 struct ::fidl::WireRequest<::test_protocols::Transitional::OneWay> final {
-  FIDL_ALIGNDECL
   int64_t x;
 
   explicit WireRequest(int64_t x) : x(x) {}
@@ -3636,7 +3623,6 @@ struct ::fidl::internal::TransactionalRequest<
 
 template <>
 struct ::fidl::WireEvent<::test_protocols::Transitional::Event> final {
-  FIDL_ALIGNDECL
   int64_t x;
 
   explicit WireEvent(int64_t x) : x(x) {}
@@ -3712,8 +3698,8 @@ struct TypeTraits<
   static constexpr const fidl_type_t* kType =
       &::test_protocols::test_protocols_TransitionalRequestRequestTable;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(8);
-  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(8);
+  static constexpr uint32_t kPrimarySize = 8;
+  static constexpr uint32_t kPrimarySizeV1 = 8;
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -3778,8 +3764,8 @@ struct TypeTraits<
   static constexpr const fidl_type_t* kType =
       &::test_protocols::test_protocols_TransitionalRequestTopResponseTable;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(8);
-  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(8);
+  static constexpr uint32_t kPrimarySize = 8;
+  static constexpr uint32_t kPrimarySizeV1 = 8;
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -3843,8 +3829,8 @@ struct TypeTraits<::fidl::WireRequest<::test_protocols::Transitional::OneWay>> {
   static constexpr const fidl_type_t* kType =
       &::test_protocols::test_protocols_TransitionalOneWayRequestTable;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(8);
-  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(8);
+  static constexpr uint32_t kPrimarySize = 8;
+  static constexpr uint32_t kPrimarySizeV1 = 8;
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -3910,8 +3896,8 @@ struct TypeTraits<::fidl::WireEvent<::test_protocols::Transitional::Event>> {
   static constexpr const fidl_type_t* kType =
       &::test_protocols::test_protocols_TransitionalEventRequestTable;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(8);
-  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(8);
+  static constexpr uint32_t kPrimarySize = 8;
+  static constexpr uint32_t kPrimarySizeV1 = 8;
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -4373,7 +4359,6 @@ struct ::fidl::internal::WireServerDispatcher<::test_protocols::MethodWithUnion>
 template <>
 struct ::fidl::WireRequest<::test_protocols::MethodWithUnion::UnionMethod>
     final {
-  FIDL_ALIGNDECL
   ::test_protocols::wire::TheUnion u;
 
   explicit WireRequest(::test_protocols::wire::TheUnion u) : u(u) {}
@@ -4453,8 +4438,8 @@ struct TypeTraits<
   static constexpr const fidl_type_t* kType =
       &::test_protocols::test_protocols_MethodWithUnionUnionMethodRequestTable;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(16);
-  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(24);
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 24;
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 8;
   static constexpr bool kHasFlexibleEnvelope = true;
@@ -4713,7 +4698,6 @@ struct ::fidl::internal::WireServerDispatcher<
 template <>
 struct ::fidl::WireRequest<::test_protocols::WithProtocolEnds::ClientEnds>
     final {
-  FIDL_ALIGNDECL
   ::fidl::ClientEnd<::test_protocols::DiscoverableProtocol> in;
 
   explicit WireRequest(
@@ -4755,7 +4739,6 @@ struct ::fidl::internal::TransactionalRequest<
 template <>
 struct ::fidl::WireResponse<::test_protocols::WithProtocolEnds::ClientEnds>
     final {
-  FIDL_ALIGNDECL
   ::fidl::ClientEnd<::test_protocols::DiscoverableProtocol> out;
 
   explicit WireResponse(
@@ -4792,7 +4775,6 @@ struct ::fidl::internal::TransactionalResponse<
 template <>
 struct ::fidl::WireRequest<::test_protocols::WithProtocolEnds::ServerEnds>
     final {
-  FIDL_ALIGNDECL
   ::fidl::ServerEnd<::test_protocols::DiscoverableProtocol> in;
 
   explicit WireRequest(
@@ -4834,7 +4816,6 @@ struct ::fidl::internal::TransactionalRequest<
 template <>
 struct ::fidl::WireResponse<::test_protocols::WithProtocolEnds::ServerEnds>
     final {
-  FIDL_ALIGNDECL
   ::fidl::ServerEnd<::test_protocols::DiscoverableProtocol> out;
 
   explicit WireResponse(
@@ -4872,7 +4853,6 @@ template <>
 struct ::fidl::WireRequest<
     ::test_protocols::WithProtocolEnds::StructContainingEnds>
     final {
-  FIDL_ALIGNDECL
   ::test_protocols::wire::ProtocolEnds in;
 
   explicit WireRequest(::test_protocols::wire::ProtocolEnds&& in)
@@ -4914,7 +4894,6 @@ template <>
 struct ::fidl::WireResponse<
     ::test_protocols::WithProtocolEnds::StructContainingEnds>
     final {
-  FIDL_ALIGNDECL
   ::test_protocols::wire::ProtocolEnds out;
 
   explicit WireResponse(::test_protocols::wire::ProtocolEnds&& out)
@@ -5007,8 +4986,8 @@ struct TypeTraits<
   static constexpr const fidl_type_t* kType =
       &::test_protocols::test_protocols_WithProtocolEndsClientEndsRequestTable;
   static constexpr uint32_t kMaxNumHandles = 1;
-  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(4);
-  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(4);
+  static constexpr uint32_t kPrimarySize = 4;
+  static constexpr uint32_t kPrimarySizeV1 = 4;
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -5088,8 +5067,8 @@ struct TypeTraits<
       &::test_protocols::
           test_protocols_WithProtocolEndsClientEndsTopResponseTable;
   static constexpr uint32_t kMaxNumHandles = 1;
-  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(4);
-  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(4);
+  static constexpr uint32_t kPrimarySize = 4;
+  static constexpr uint32_t kPrimarySizeV1 = 4;
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -5167,8 +5146,8 @@ struct TypeTraits<
   static constexpr const fidl_type_t* kType =
       &::test_protocols::test_protocols_WithProtocolEndsServerEndsRequestTable;
   static constexpr uint32_t kMaxNumHandles = 1;
-  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(4);
-  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(4);
+  static constexpr uint32_t kPrimarySize = 4;
+  static constexpr uint32_t kPrimarySizeV1 = 4;
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -5248,8 +5227,8 @@ struct TypeTraits<
       &::test_protocols::
           test_protocols_WithProtocolEndsServerEndsTopResponseTable;
   static constexpr uint32_t kMaxNumHandles = 1;
-  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(4);
-  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(4);
+  static constexpr uint32_t kPrimarySize = 4;
+  static constexpr uint32_t kPrimarySizeV1 = 4;
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -5335,8 +5314,8 @@ struct TypeTraits<::fidl::WireRequest<
       &::test_protocols::
           test_protocols_WithProtocolEndsStructContainingEndsRequestTable;
   static constexpr uint32_t kMaxNumHandles = 4;
-  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(16);
-  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(16);
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 16;
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -5422,8 +5401,8 @@ struct TypeTraits<::fidl::WireResponse<
       &::test_protocols::
           test_protocols_WithProtocolEndsStructContainingEndsTopResponseTable;
   static constexpr uint32_t kMaxNumHandles = 4;
-  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(16);
-  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(16);
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 16;
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -6370,7 +6349,6 @@ struct ::fidl::internal::WireServerDispatcher<::test_protocols::ManyParameters>
 
 template <>
 struct ::fidl::WireRequest<::test_protocols::ManyParameters::Fifteen> final {
-  FIDL_ALIGNDECL
   bool p1;
   bool p2;
   bool p3;
@@ -6482,8 +6460,8 @@ struct TypeTraits<
   static constexpr const fidl_type_t* kType =
       &::test_protocols::test_protocols_ManyParametersFifteenRequestTable;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(15);
-  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(15);
+  static constexpr uint32_t kPrimarySize = 15;
+  static constexpr uint32_t kPrimarySizeV1 = 15;
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -6812,7 +6790,6 @@ struct ::fidl::WireResponse<::test_protocols::WithErrorSyntax::ResponseAsStruct>
     final {
   using Result = test_protocols::wire::WithErrorSyntaxResponseAsStructResult;
 
-  FIDL_ALIGNDECL
   ::test_protocols::wire::WithErrorSyntaxResponseAsStructResult result;
 
   explicit WireResponse(
@@ -6870,7 +6847,6 @@ struct ::fidl::WireResponse<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>
     final {
   using Result = test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResult;
 
-  FIDL_ALIGNDECL
   ::test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResult result;
 
   explicit WireResponse(
@@ -6928,7 +6904,6 @@ struct ::fidl::WireResponse<::test_protocols::WithErrorSyntax::ErrorAsEnum>
     final {
   using Result = test_protocols::wire::WithErrorSyntaxErrorAsEnumResult;
 
-  FIDL_ALIGNDECL
   ::test_protocols::wire::WithErrorSyntaxErrorAsEnumResult result;
 
   explicit WireResponse(
@@ -6986,7 +6961,6 @@ struct ::fidl::WireResponse<::test_protocols::WithErrorSyntax::HandleInResult>
     final {
   using Result = test_protocols::wire::WithErrorSyntaxHandleInResultResult;
 
-  FIDL_ALIGNDECL
   ::test_protocols::wire::WithErrorSyntaxHandleInResultResult result;
 
   explicit WireResponse(
@@ -7069,8 +7043,8 @@ struct TypeTraits<
     ::fidl::WireRequest<::test_protocols::WithErrorSyntax::ResponseAsStruct>> {
   static constexpr const fidl_type_t* kType = nullptr;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(0);
-  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(0);
+  static constexpr uint32_t kPrimarySize = 0;
+  static constexpr uint32_t kPrimarySizeV1 = 0;
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -7134,8 +7108,8 @@ struct TypeTraits<
       &::test_protocols::
           test_protocols_WithErrorSyntaxResponseAsStructTopResponseTable;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(16);
-  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(24);
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 24;
   static constexpr uint32_t kMaxOutOfLine = 24;
   static constexpr uint32_t kMaxOutOfLineV1 = 24;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -7200,8 +7174,8 @@ struct TypeTraits<
     ::fidl::WireRequest<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>> {
   static constexpr const fidl_type_t* kType = nullptr;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(0);
-  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(0);
+  static constexpr uint32_t kPrimarySize = 0;
+  static constexpr uint32_t kPrimarySizeV1 = 0;
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -7265,8 +7239,8 @@ struct TypeTraits<
       &::test_protocols::
           test_protocols_WithErrorSyntaxErrorAsPrimitiveTopResponseTable;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(16);
-  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(24);
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 24;
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 8;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -7329,8 +7303,8 @@ struct TypeTraits<
     ::fidl::WireRequest<::test_protocols::WithErrorSyntax::ErrorAsEnum>> {
   static constexpr const fidl_type_t* kType = nullptr;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(0);
-  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(0);
+  static constexpr uint32_t kPrimarySize = 0;
+  static constexpr uint32_t kPrimarySizeV1 = 0;
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -7392,8 +7366,8 @@ struct TypeTraits<
       &::test_protocols::
           test_protocols_WithErrorSyntaxErrorAsEnumTopResponseTable;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(16);
-  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(24);
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 24;
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 8;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -7459,8 +7433,8 @@ struct TypeTraits<
     ::fidl::WireRequest<::test_protocols::WithErrorSyntax::HandleInResult>> {
   static constexpr const fidl_type_t* kType = nullptr;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(0);
-  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(0);
+  static constexpr uint32_t kPrimarySize = 0;
+  static constexpr uint32_t kPrimarySizeV1 = 0;
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -7533,8 +7507,8 @@ struct TypeTraits<
       &::test_protocols::
           test_protocols_WithErrorSyntaxHandleInResultTopResponseTable;
   static constexpr uint32_t kMaxNumHandles = 1;
-  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(16);
-  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(24);
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 24;
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 8;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -8788,8 +8762,8 @@ struct TypeTraits<
     ::fidl::WireRequest<::test_protocols::DiscoverableProtocol::Method>> {
   static constexpr const fidl_type_t* kType = nullptr;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(0);
-  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(0);
+  static constexpr uint32_t kPrimarySize = 0;
+  static constexpr uint32_t kPrimarySizeV1 = 0;
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -9053,7 +9027,6 @@ struct ::fidl::internal::WireServerDispatcher<::test_protocols::ChannelProtocol>
 
 template <>
 struct ::fidl::WireRequest<::test_protocols::ChannelProtocol::MethodA> final {
-  FIDL_ALIGNDECL
   int64_t a;
   int64_t b;
 
@@ -9082,7 +9055,6 @@ struct ::fidl::internal::TransactionalRequest<
 
 template <>
 struct ::fidl::WireEvent<::test_protocols::ChannelProtocol::EventA> final {
-  FIDL_ALIGNDECL
   int64_t a;
   int64_t b;
 
@@ -9111,7 +9083,6 @@ struct ::fidl::internal::TransactionalEvent<
 
 template <>
 struct ::fidl::WireRequest<::test_protocols::ChannelProtocol::MethodB> final {
-  FIDL_ALIGNDECL
   int64_t a;
   int64_t b;
 
@@ -9144,7 +9115,6 @@ struct ::fidl::internal::TransactionalRequest<
 
 template <>
 struct ::fidl::WireResponse<::test_protocols::ChannelProtocol::MethodB> final {
-  FIDL_ALIGNDECL
   int64_t result;
 
   explicit WireResponse(int64_t result) : result(result) {}
@@ -9174,7 +9144,6 @@ struct ::fidl::internal::TransactionalResponse<
 template <>
 struct ::fidl::WireRequest<::test_protocols::ChannelProtocol::TakeHandle>
     final {
-  FIDL_ALIGNDECL
   ::zx::handle h;
 
   explicit WireRequest(::zx::handle&& h) : h(std::move(h)) {}
@@ -9226,7 +9195,6 @@ struct ::fidl::internal::TransactionalResponse<
 template <>
 struct ::fidl::WireRequest<::test_protocols::ChannelProtocol::MutateSocket>
     final {
-  FIDL_ALIGNDECL
   ::zx::socket a;
 
   explicit WireRequest(::zx::socket&& a) : a(std::move(a)) {}
@@ -9264,7 +9232,6 @@ struct ::fidl::internal::TransactionalRequest<
 template <>
 struct ::fidl::WireResponse<::test_protocols::ChannelProtocol::MutateSocket>
     final {
-  FIDL_ALIGNDECL
   ::zx::socket b;
 
   explicit WireResponse(::zx::socket&& b) : b(std::move(b)) {}
@@ -9345,8 +9312,8 @@ struct TypeTraits<
   static constexpr const fidl_type_t* kType =
       &::test_protocols::test_protocols_ChannelProtocolMethodARequestTable;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(16);
-  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(16);
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 16;
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -9414,8 +9381,8 @@ struct TypeTraits<
   static constexpr const fidl_type_t* kType =
       &::test_protocols::test_protocols_ChannelProtocolEventARequestTable;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(16);
-  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(16);
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 16;
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -9484,8 +9451,8 @@ struct TypeTraits<
   static constexpr const fidl_type_t* kType =
       &::test_protocols::test_protocols_ChannelProtocolMethodBRequestTable;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(16);
-  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(16);
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 16;
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -9554,8 +9521,8 @@ struct TypeTraits<
   static constexpr const fidl_type_t* kType =
       &::test_protocols::test_protocols_ChannelProtocolMethodBTopResponseTable;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(8);
-  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(8);
+  static constexpr uint32_t kPrimarySize = 8;
+  static constexpr uint32_t kPrimarySizeV1 = 8;
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -9630,8 +9597,8 @@ struct TypeTraits<
   static constexpr const fidl_type_t* kType =
       &::test_protocols::test_protocols_ChannelProtocolTakeHandleRequestTable;
   static constexpr uint32_t kMaxNumHandles = 1;
-  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(4);
-  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(4);
+  static constexpr uint32_t kPrimarySize = 4;
+  static constexpr uint32_t kPrimarySizeV1 = 4;
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -9695,8 +9662,8 @@ struct TypeTraits<
     ::fidl::WireResponse<::test_protocols::ChannelProtocol::TakeHandle>> {
   static constexpr const fidl_type_t* kType = nullptr;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(0);
-  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(0);
+  static constexpr uint32_t kPrimarySize = 0;
+  static constexpr uint32_t kPrimarySizeV1 = 0;
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -9767,8 +9734,8 @@ struct TypeTraits<
   static constexpr const fidl_type_t* kType =
       &::test_protocols::test_protocols_ChannelProtocolMutateSocketRequestTable;
   static constexpr uint32_t kMaxNumHandles = 1;
-  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(4);
-  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(4);
+  static constexpr uint32_t kPrimarySize = 4;
+  static constexpr uint32_t kPrimarySizeV1 = 4;
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -9851,8 +9818,8 @@ struct TypeTraits<
       &::test_protocols::
           test_protocols_ChannelProtocolMutateSocketTopResponseTable;
   static constexpr uint32_t kMaxNumHandles = 1;
-  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(4);
-  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(4);
+  static constexpr uint32_t kPrimarySize = 4;
+  static constexpr uint32_t kPrimarySizeV1 = 4;
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasFlexibleEnvelope = false;

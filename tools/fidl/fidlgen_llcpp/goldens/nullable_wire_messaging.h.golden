@@ -62,7 +62,6 @@ struct ::fidl::internal::WireServerDispatcher<::test_nullable::SimpleProtocol>
 
 template <>
 struct ::fidl::WireRequest<::test_nullable::SimpleProtocol::Add> final {
-  FIDL_ALIGNDECL
   int32_t a;
   int32_t b;
 
@@ -94,7 +93,6 @@ struct ::fidl::internal::TransactionalRequest<
 
 template <>
 struct ::fidl::WireResponse<::test_nullable::SimpleProtocol::Add> final {
-  FIDL_ALIGNDECL
   int32_t sum;
 
   explicit WireResponse(int32_t sum) : sum(sum) {}
@@ -169,8 +167,8 @@ struct TypeTraits<::fidl::WireRequest<::test_nullable::SimpleProtocol::Add>> {
   static constexpr const fidl_type_t* kType =
       &::test_nullable::test_nullable_SimpleProtocolAddRequestTable;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(8);
-  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(8);
+  static constexpr uint32_t kPrimarySize = 8;
+  static constexpr uint32_t kPrimarySizeV1 = 8;
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -237,8 +235,8 @@ struct TypeTraits<::fidl::WireResponse<::test_nullable::SimpleProtocol::Add>> {
   static constexpr const fidl_type_t* kType =
       &::test_nullable::test_nullable_SimpleProtocolAddTopResponseTable;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(4);
-  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(4);
+  static constexpr uint32_t kPrimarySize = 4;
+  static constexpr uint32_t kPrimarySizeV1 = 4;
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasFlexibleEnvelope = false;

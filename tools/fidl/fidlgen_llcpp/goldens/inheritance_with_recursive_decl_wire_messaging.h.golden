@@ -70,7 +70,6 @@ struct ::fidl::internal::WireServerDispatcher<
 template <>
 struct ::fidl::WireRequest<::test_inheritancewithrecursivedecl::Parent::First>
     final {
-  FIDL_ALIGNDECL
   ::fidl::ServerEnd<::test_inheritancewithrecursivedecl::Parent> request;
 
   explicit WireRequest(
@@ -169,8 +168,8 @@ struct TypeTraits<
       &::test_inheritancewithrecursivedecl::
           test_inheritancewithrecursivedecl_ParentFirstRequestTable;
   static constexpr uint32_t kMaxNumHandles = 1;
-  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(4);
-  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(4);
+  static constexpr uint32_t kPrimarySize = 4;
+  static constexpr uint32_t kPrimarySizeV1 = 4;
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -430,7 +429,6 @@ struct ::fidl::internal::WireServerDispatcher<
 template <>
 struct ::fidl::WireRequest<::test_inheritancewithrecursivedecl::Child::First>
     final {
-  FIDL_ALIGNDECL
   ::fidl::ServerEnd<::test_inheritancewithrecursivedecl::Parent> request;
 
   explicit WireRequest(
@@ -468,7 +466,6 @@ struct ::fidl::internal::TransactionalRequest<
 template <>
 struct ::fidl::WireRequest<::test_inheritancewithrecursivedecl::Child::Second>
     final {
-  FIDL_ALIGNDECL
   ::fidl::ServerEnd<::test_inheritancewithrecursivedecl::Parent> request;
 
   explicit WireRequest(
@@ -567,8 +564,8 @@ struct TypeTraits<
       &::test_inheritancewithrecursivedecl::
           test_inheritancewithrecursivedecl_ParentFirstRequestTable;
   static constexpr uint32_t kMaxNumHandles = 1;
-  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(4);
-  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(4);
+  static constexpr uint32_t kPrimarySize = 4;
+  static constexpr uint32_t kPrimarySizeV1 = 4;
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -651,8 +648,8 @@ struct TypeTraits<
       &::test_inheritancewithrecursivedecl::
           test_inheritancewithrecursivedecl_ChildSecondRequestTable;
   static constexpr uint32_t kMaxNumHandles = 1;
-  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(4);
-  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(4);
+  static constexpr uint32_t kPrimarySize = 4;
+  static constexpr uint32_t kPrimarySizeV1 = 4;
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasFlexibleEnvelope = false;

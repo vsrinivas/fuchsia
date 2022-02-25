@@ -143,8 +143,8 @@ template <>
 struct TypeTraits<::fidl::WireRequest<::test_doccomments::Interface::Method>> {
   static constexpr const fidl_type_t* kType = nullptr;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(0);
-  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(0);
+  static constexpr uint32_t kPrimarySize = 0;
+  static constexpr uint32_t kPrimarySizeV1 = 0;
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -196,8 +196,8 @@ template <>
 struct TypeTraits<::fidl::WireEvent<::test_doccomments::Interface::OnEvent>> {
   static constexpr const fidl_type_t* kType = nullptr;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(0);
-  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(0);
+  static constexpr uint32_t kPrimarySize = 0;
+  static constexpr uint32_t kPrimarySizeV1 = 0;
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasFlexibleEnvelope = false;

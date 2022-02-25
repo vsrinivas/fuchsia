@@ -110,7 +110,6 @@ struct ::fidl::internal::TransactionalRequest<
 
 template <>
 struct ::fidl::WireResponse<::test_protocolrequest::Parent::GetChild> final {
-  FIDL_ALIGNDECL
   ::fidl::ClientEnd<::test_protocolrequest::Child> c;
 
   explicit WireResponse(::fidl::ClientEnd<::test_protocolrequest::Child>&& c)
@@ -168,7 +167,6 @@ struct ::fidl::internal::TransactionalRequest<
 template <>
 struct ::fidl::WireResponse<::test_protocolrequest::Parent::GetChildRequest>
     final {
-  FIDL_ALIGNDECL
   ::fidl::ServerEnd<::test_protocolrequest::Child> r;
 
   explicit WireResponse(::fidl::ServerEnd<::test_protocolrequest::Child>&& r)
@@ -203,7 +201,6 @@ struct ::fidl::internal::TransactionalResponse<
 
 template <>
 struct ::fidl::WireRequest<::test_protocolrequest::Parent::TakeChild> final {
-  FIDL_ALIGNDECL
   ::fidl::ClientEnd<::test_protocolrequest::Child> c;
 
   explicit WireRequest(::fidl::ClientEnd<::test_protocolrequest::Child>&& c)
@@ -239,7 +236,6 @@ struct ::fidl::internal::TransactionalRequest<
 template <>
 struct ::fidl::WireRequest<::test_protocolrequest::Parent::TakeChildRequest>
     final {
-  FIDL_ALIGNDECL
   ::fidl::ServerEnd<::test_protocolrequest::Child> r;
 
   explicit WireRequest(::fidl::ServerEnd<::test_protocolrequest::Child>&& r)
@@ -316,8 +312,8 @@ struct TypeTraits<
     ::fidl::WireRequest<::test_protocolrequest::Parent::GetChild>> {
   static constexpr const fidl_type_t* kType = nullptr;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(0);
-  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(0);
+  static constexpr uint32_t kPrimarySize = 0;
+  static constexpr uint32_t kPrimarySizeV1 = 0;
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -386,8 +382,8 @@ struct TypeTraits<
       &::test_protocolrequest::
           test_protocolrequest_ParentGetChildTopResponseTable;
   static constexpr uint32_t kMaxNumHandles = 1;
-  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(4);
-  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(4);
+  static constexpr uint32_t kPrimarySize = 4;
+  static constexpr uint32_t kPrimarySizeV1 = 4;
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -452,8 +448,8 @@ struct TypeTraits<
     ::fidl::WireRequest<::test_protocolrequest::Parent::GetChildRequest>> {
   static constexpr const fidl_type_t* kType = nullptr;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(0);
-  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(0);
+  static constexpr uint32_t kPrimarySize = 0;
+  static constexpr uint32_t kPrimarySizeV1 = 0;
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -526,8 +522,8 @@ struct TypeTraits<
       &::test_protocolrequest::
           test_protocolrequest_ParentGetChildRequestTopResponseTable;
   static constexpr uint32_t kMaxNumHandles = 1;
-  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(4);
-  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(4);
+  static constexpr uint32_t kPrimarySize = 4;
+  static constexpr uint32_t kPrimarySizeV1 = 4;
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -604,8 +600,8 @@ struct TypeTraits<
   static constexpr const fidl_type_t* kType =
       &::test_protocolrequest::test_protocolrequest_ParentTakeChildRequestTable;
   static constexpr uint32_t kMaxNumHandles = 1;
-  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(4);
-  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(4);
+  static constexpr uint32_t kPrimarySize = 4;
+  static constexpr uint32_t kPrimarySizeV1 = 4;
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -686,8 +682,8 @@ struct TypeTraits<
       &::test_protocolrequest::
           test_protocolrequest_ParentTakeChildRequestRequestTable;
   static constexpr uint32_t kMaxNumHandles = 1;
-  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(4);
-  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(4);
+  static constexpr uint32_t kPrimarySize = 4;
+  static constexpr uint32_t kPrimarySizeV1 = 4;
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasFlexibleEnvelope = false;

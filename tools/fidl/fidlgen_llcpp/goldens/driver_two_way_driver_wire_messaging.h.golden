@@ -60,7 +60,6 @@ struct ::fidl::internal::WireServerDispatcher<::test_drivertwoway::TwoWay>
 
 template <>
 struct ::fidl::WireRequest<::test_drivertwoway::TwoWay::Add> final {
-  FIDL_ALIGNDECL
   uint16_t addend1;
   uint16_t addend2;
 
@@ -92,7 +91,6 @@ struct ::fidl::internal::TransactionalRequest<::test_drivertwoway::TwoWay::Add>
 
 template <>
 struct ::fidl::WireResponse<::test_drivertwoway::TwoWay::Add> final {
-  FIDL_ALIGNDECL
   uint16_t sum;
 
   explicit WireResponse(uint16_t sum) : sum(sum) {}
@@ -168,8 +166,8 @@ struct TypeTraits<::fidl::WireRequest<::test_drivertwoway::TwoWay::Add>> {
   static constexpr const fidl_type_t* kType =
       &::test_drivertwoway::test_drivertwoway_TwoWayAddRequestTable;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(4);
-  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(4);
+  static constexpr uint32_t kPrimarySize = 4;
+  static constexpr uint32_t kPrimarySizeV1 = 4;
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -236,8 +234,8 @@ struct TypeTraits<::fidl::WireResponse<::test_drivertwoway::TwoWay::Add>> {
   static constexpr const fidl_type_t* kType =
       &::test_drivertwoway::test_drivertwoway_TwoWayAddTopResponseTable;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(2);
-  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(2);
+  static constexpr uint32_t kPrimarySize = 2;
+  static constexpr uint32_t kPrimarySizeV1 = 2;
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasFlexibleEnvelope = false;

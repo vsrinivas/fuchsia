@@ -59,7 +59,6 @@ struct ::fidl::internal::WireServerDispatcher<::test_inheritance::Super> final {
 
 template <>
 struct ::fidl::WireRequest<::test_inheritance::Super::Foo> final {
-  FIDL_ALIGNDECL
   ::fidl::StringView s;
 
   explicit WireRequest(::fidl::StringView s) : s(s) {}
@@ -88,7 +87,6 @@ struct ::fidl::internal::TransactionalRequest<::test_inheritance::Super::Foo>
 
 template <>
 struct ::fidl::WireResponse<::test_inheritance::Super::Foo> final {
-  FIDL_ALIGNDECL
   int64_t y;
 
   explicit WireResponse(int64_t y) : y(y) {}
@@ -166,8 +164,8 @@ struct TypeTraits<::fidl::WireRequest<::test_inheritance::Super::Foo>> {
   static constexpr const fidl_type_t* kType =
       &::test_inheritance::test_inheritance_SuperFooRequestTable;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(16);
-  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(16);
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 16;
   static constexpr uint32_t kMaxOutOfLine = 4294967295;
   static constexpr uint32_t kMaxOutOfLineV1 = 4294967295;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -233,8 +231,8 @@ struct TypeTraits<::fidl::WireResponse<::test_inheritance::Super::Foo>> {
   static constexpr const fidl_type_t* kType =
       &::test_inheritance::test_inheritance_SuperFooTopResponseTable;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(8);
-  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(8);
+  static constexpr uint32_t kPrimarySize = 8;
+  static constexpr uint32_t kPrimarySizeV1 = 8;
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -607,7 +605,6 @@ struct ::fidl::internal::WireServerDispatcher<::test_inheritance::Sub> final {
 
 template <>
 struct ::fidl::WireRequest<::test_inheritance::Sub::Foo> final {
-  FIDL_ALIGNDECL
   ::fidl::StringView s;
 
   explicit WireRequest(::fidl::StringView s) : s(s) {}
@@ -636,7 +633,6 @@ struct ::fidl::internal::TransactionalRequest<::test_inheritance::Sub::Foo>
 
 template <>
 struct ::fidl::WireResponse<::test_inheritance::Sub::Foo> final {
-  FIDL_ALIGNDECL
   int64_t y;
 
   explicit WireResponse(int64_t y) : y(y) {}
@@ -715,8 +711,8 @@ struct TypeTraits<::fidl::WireRequest<::test_inheritance::Sub::Foo>> {
   static constexpr const fidl_type_t* kType =
       &::test_inheritance::test_inheritance_SuperFooRequestTable;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(16);
-  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(16);
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 16;
   static constexpr uint32_t kMaxOutOfLine = 4294967295;
   static constexpr uint32_t kMaxOutOfLineV1 = 4294967295;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -782,8 +778,8 @@ struct TypeTraits<::fidl::WireResponse<::test_inheritance::Sub::Foo>> {
   static constexpr const fidl_type_t* kType =
       &::test_inheritance::test_inheritance_SuperFooTopResponseTable;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(8);
-  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(8);
+  static constexpr uint32_t kPrimarySize = 8;
+  static constexpr uint32_t kPrimarySizeV1 = 8;
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasFlexibleEnvelope = false;

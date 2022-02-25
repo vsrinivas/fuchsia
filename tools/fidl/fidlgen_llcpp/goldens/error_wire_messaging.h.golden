@@ -57,7 +57,6 @@ struct ::fidl::internal::WireServerDispatcher<::test_error::Example> final {
 
 template <>
 struct ::fidl::WireRequest<::test_error::Example::Foo> final {
-  FIDL_ALIGNDECL
   ::fidl::StringView s;
 
   explicit WireRequest(::fidl::StringView s) : s(s) {}
@@ -88,7 +87,6 @@ template <>
 struct ::fidl::WireResponse<::test_error::Example::Foo> final {
   using Result = test_error::wire::ExampleFooResult;
 
-  FIDL_ALIGNDECL
   ::test_error::wire::ExampleFooResult result;
 
   explicit WireResponse(::test_error::wire::ExampleFooResult result)
@@ -166,8 +164,8 @@ struct TypeTraits<::fidl::WireRequest<::test_error::Example::Foo>> {
   static constexpr const fidl_type_t* kType =
       &::test_error::test_error_ExampleFooRequestTable;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(16);
-  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(16);
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 16;
   static constexpr uint32_t kMaxOutOfLine = 4294967295;
   static constexpr uint32_t kMaxOutOfLineV1 = 4294967295;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -234,8 +232,8 @@ struct TypeTraits<::fidl::WireResponse<::test_error::Example::Foo>> {
   static constexpr const fidl_type_t* kType =
       &::test_error::test_error_ExampleFooTopResponseTable;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(16);
-  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(24);
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 24;
   static constexpr uint32_t kMaxOutOfLine = 8;
   static constexpr uint32_t kMaxOutOfLineV1 = 8;
   static constexpr bool kHasFlexibleEnvelope = false;

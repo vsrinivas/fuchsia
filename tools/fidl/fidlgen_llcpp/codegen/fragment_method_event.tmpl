@@ -17,7 +17,6 @@
   {{- end }}
 
     {{ if .ResponseArgs }}
-    FIDL_ALIGNDECL
       {{- range $index, $param := .ResponseArgs }}
     {{ $param.Type }} {{ $param.Name }};
       {{- end }}

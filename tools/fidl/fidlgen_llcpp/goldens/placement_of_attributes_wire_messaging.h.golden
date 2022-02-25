@@ -68,7 +68,6 @@ template <>
 struct ::fidl::WireRequest<
     ::test_placementofattributes::ExampleProtocol::Method>
     final {
-  FIDL_ALIGNDECL
   ::test_exampleusing::wire::Empty arg;
 
   explicit WireRequest(const ::test_exampleusing::wire::Empty& arg)
@@ -155,8 +154,8 @@ struct TypeTraits<::fidl::WireRequest<
       &::test_placementofattributes::
           test_placementofattributes_ExampleProtocolMethodRequestTable;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(1);
-  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(1);
+  static constexpr uint32_t kPrimarySize = 1;
+  static constexpr uint32_t kPrimarySizeV1 = 1;
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasFlexibleEnvelope = false;

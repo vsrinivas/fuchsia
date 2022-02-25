@@ -95,7 +95,6 @@ template <>
 struct ::fidl::WireResponse<
     ::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>
     final {
-  FIDL_ALIGNDECL
   ::test_union::wire::StrictBoundedXUnion xu;
 
   explicit WireResponse(::test_union::wire::StrictBoundedXUnion xu) : xu(xu) {}
@@ -154,7 +153,6 @@ template <>
 struct ::fidl::WireResponse<
     ::test_union::TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocated>
     final {
-  FIDL_ALIGNDECL
   ::test_union::wire::OlderSimpleUnion xu;
 
   explicit WireResponse(::test_union::wire::OlderSimpleUnion xu) : xu(xu) {}
@@ -236,8 +234,8 @@ struct TypeTraits<::fidl::WireRequest<
     ::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>> {
   static constexpr const fidl_type_t* kType = nullptr;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(0);
-  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(0);
+  static constexpr uint32_t kPrimarySize = 0;
+  static constexpr uint32_t kPrimarySizeV1 = 0;
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -305,8 +303,8 @@ struct TypeTraits<::fidl::WireResponse<
       &::test_union::
           test_union_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponseTable;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(16);
-  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(24);
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 24;
   static constexpr uint32_t kMaxOutOfLine = 32;
   static constexpr uint32_t kMaxOutOfLineV1 = 32;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -380,8 +378,8 @@ struct TypeTraits<
                             FlexibleXUnionHenceResponseMustBeHeapAllocated>> {
   static constexpr const fidl_type_t* kType = nullptr;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(0);
-  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(0);
+  static constexpr uint32_t kPrimarySize = 0;
+  static constexpr uint32_t kPrimarySizeV1 = 0;
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -451,8 +449,8 @@ struct TypeTraits<
       &::test_union::
           test_union_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponseTable;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(16);
-  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(24);
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 24;
   static constexpr uint32_t kMaxOutOfLine = 8;
   static constexpr uint32_t kMaxOutOfLineV1 = 8;
   static constexpr bool kHasFlexibleEnvelope = true;

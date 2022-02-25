@@ -78,7 +78,6 @@ template <>
 struct ::fidl::WireRequest<
     ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>
     final {
-  FIDL_ALIGNDECL
   ::test_requestflexibleenvelope::wire::StrictFoo s;
 
   explicit WireRequest(::test_requestflexibleenvelope::wire::StrictFoo s)
@@ -116,7 +115,6 @@ template <>
 struct ::fidl::WireResponse<
     ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>
     final {
-  FIDL_ALIGNDECL
   ::test_requestflexibleenvelope::wire::FlexibleFoo f;
 
   explicit WireResponse(::test_requestflexibleenvelope::wire::FlexibleFoo f)
@@ -150,7 +148,6 @@ template <>
 struct ::fidl::WireRequest<
     ::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>
     final {
-  FIDL_ALIGNDECL
   ::test_requestflexibleenvelope::wire::FlexibleFoo s;
 
   explicit WireRequest(::test_requestflexibleenvelope::wire::FlexibleFoo s)
@@ -188,7 +185,6 @@ template <>
 struct ::fidl::WireResponse<
     ::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>
     final {
-  FIDL_ALIGNDECL
   ::test_requestflexibleenvelope::wire::StrictFoo f;
 
   explicit WireResponse(::test_requestflexibleenvelope::wire::StrictFoo f)
@@ -278,8 +274,8 @@ struct TypeTraits<::fidl::WireRequest<
       &::test_requestflexibleenvelope::
           test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleRequestTable;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(16);
-  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(24);
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 24;
   static constexpr uint32_t kMaxOutOfLine = 4294967295;
   static constexpr uint32_t kMaxOutOfLineV1 = 4294967295;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -356,8 +352,8 @@ struct TypeTraits<::fidl::WireResponse<
       &::test_requestflexibleenvelope::
           test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleTopResponseTable;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(16);
-  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(24);
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 24;
   static constexpr uint32_t kMaxOutOfLine = 4294967295;
   static constexpr uint32_t kMaxOutOfLineV1 = 4294967295;
   static constexpr bool kHasFlexibleEnvelope = true;
@@ -434,8 +430,8 @@ struct TypeTraits<::fidl::WireRequest<
       &::test_requestflexibleenvelope::
           test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictRequestTable;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(16);
-  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(24);
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 24;
   static constexpr uint32_t kMaxOutOfLine = 4294967295;
   static constexpr uint32_t kMaxOutOfLineV1 = 4294967295;
   static constexpr bool kHasFlexibleEnvelope = true;
@@ -512,8 +508,8 @@ struct TypeTraits<::fidl::WireResponse<
       &::test_requestflexibleenvelope::
           test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictTopResponseTable;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(16);
-  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(24);
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 24;
   static constexpr uint32_t kMaxOutOfLine = 4294967295;
   static constexpr uint32_t kMaxOutOfLineV1 = 4294967295;
   static constexpr bool kHasFlexibleEnvelope = false;

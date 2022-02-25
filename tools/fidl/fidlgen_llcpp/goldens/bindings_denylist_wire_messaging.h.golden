@@ -307,8 +307,8 @@ struct TypeTraits<
                             LibfuzzerNeedsNonemptyProtocol>> {
   static constexpr const fidl_type_t* kType = nullptr;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(0);
-  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(0);
+  static constexpr uint32_t kPrimarySize = 0;
+  static constexpr uint32_t kPrimarySizeV1 = 0;
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -371,8 +371,8 @@ struct TypeTraits<
                              LibfuzzerNeedsNonemptyProtocol>> {
   static constexpr const fidl_type_t* kType = nullptr;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(0);
-  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(0);
+  static constexpr uint32_t kPrimarySize = 0;
+  static constexpr uint32_t kPrimarySizeV1 = 0;
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -970,8 +970,8 @@ struct TypeTraits<::fidl::WireRequest<
     ::test_bindingsdenylist::ImportsSameNameContext::Unattributed>> {
   static constexpr const fidl_type_t* kType = nullptr;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(0);
-  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(0);
+  static constexpr uint32_t kPrimarySize = 0;
+  static constexpr uint32_t kPrimarySizeV1 = 0;
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -1034,8 +1034,8 @@ struct TypeTraits<
                             AlwaysAppearsInImportingLibrary>> {
   static constexpr const fidl_type_t* kType = nullptr;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(0);
-  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(0);
+  static constexpr uint32_t kPrimarySize = 0;
+  static constexpr uint32_t kPrimarySizeV1 = 0;
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -1406,7 +1406,6 @@ template <>
 struct ::fidl::WireRequest<
     ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>
     final {
-  FIDL_ALIGNDECL
   bool a;
 
   explicit WireRequest(bool a) : a(a) {}
@@ -1443,7 +1442,6 @@ struct ::fidl::WireResponse<
     final {
   using Result = test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartResult;
 
-  FIDL_ALIGNDECL
   ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartResult result;
 
   explicit WireResponse(
@@ -1476,7 +1474,6 @@ struct ::fidl::internal::TransactionalResponse<
 template <>
 struct ::fidl::WireRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>
     final {
-  FIDL_ALIGNDECL
   bool a;
 
   explicit WireRequest(bool a) : a(a) {}
@@ -1513,7 +1510,6 @@ struct ::fidl::WireResponse<
     final {
   using Result = test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResult;
 
-  FIDL_ALIGNDECL
   ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResult result;
 
   explicit WireResponse(
@@ -1547,7 +1543,6 @@ template <>
 struct ::fidl::WireRequest<
     ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>
     final {
-  FIDL_ALIGNDECL
   bool a;
 
   explicit WireRequest(bool a) : a(a) {}
@@ -1586,7 +1581,6 @@ struct ::fidl::WireResponse<
   using Result =
       test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResult;
 
-  FIDL_ALIGNDECL
   ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResult result;
 
   explicit WireResponse(
@@ -1624,7 +1618,6 @@ template <>
 struct ::fidl::WireRequest<
     ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>
     final {
-  FIDL_ALIGNDECL
   bool a;
 
   explicit WireRequest(bool a) : a(a) {}
@@ -1661,7 +1654,6 @@ struct ::fidl::WireResponse<
     final {
   using Result = test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResult;
 
-  FIDL_ALIGNDECL
   ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResult result;
 
   explicit WireResponse(
@@ -1695,7 +1687,6 @@ template <>
 struct ::fidl::WireRequest<
     ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>
     final {
-  FIDL_ALIGNDECL
   bool a;
 
   explicit WireRequest(bool a) : a(a) {}
@@ -1734,7 +1725,6 @@ struct ::fidl::WireResponse<
   using Result =
       test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResult;
 
-  FIDL_ALIGNDECL
   ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResult result;
 
   explicit WireResponse(
@@ -1827,8 +1817,8 @@ struct TypeTraits<::fidl::WireRequest<
       &::test_bindingsdenylist::
           test_bindingsdenylist_DenyEachBindingOnlyDenyDartRequestTable;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(1);
-  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(1);
+  static constexpr uint32_t kPrimarySize = 1;
+  static constexpr uint32_t kPrimarySizeV1 = 1;
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -1903,8 +1893,8 @@ struct TypeTraits<::fidl::WireResponse<
       &::test_bindingsdenylist::
           test_bindingsdenylist_DenyEachBindingOnlyDenyDartTopResponseTable;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(16);
-  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(24);
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 24;
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 8;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -1979,8 +1969,8 @@ struct TypeTraits<
       &::test_bindingsdenylist::
           test_bindingsdenylist_DenyEachBindingOnlyDenyGoRequestTable;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(1);
-  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(1);
+  static constexpr uint32_t kPrimarySize = 1;
+  static constexpr uint32_t kPrimarySizeV1 = 1;
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -2055,8 +2045,8 @@ struct TypeTraits<::fidl::WireResponse<
       &::test_bindingsdenylist::
           test_bindingsdenylist_DenyEachBindingOnlyDenyGoTopResponseTable;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(16);
-  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(24);
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 24;
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 8;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -2132,8 +2122,8 @@ struct TypeTraits<::fidl::WireRequest<
       &::test_bindingsdenylist::
           test_bindingsdenylist_DenyEachBindingOnlyDenyLibfuzzerRequestTable;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(1);
-  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(1);
+  static constexpr uint32_t kPrimarySize = 1;
+  static constexpr uint32_t kPrimarySizeV1 = 1;
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -2209,8 +2199,8 @@ struct TypeTraits<::fidl::WireResponse<
       &::test_bindingsdenylist::
           test_bindingsdenylist_DenyEachBindingOnlyDenyLibfuzzerTopResponseTable;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(16);
-  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(24);
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 24;
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 8;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -2285,8 +2275,8 @@ struct TypeTraits<::fidl::WireRequest<
       &::test_bindingsdenylist::
           test_bindingsdenylist_DenyEachBindingOnlyDenyRustRequestTable;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(1);
-  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(1);
+  static constexpr uint32_t kPrimarySize = 1;
+  static constexpr uint32_t kPrimarySizeV1 = 1;
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -2361,8 +2351,8 @@ struct TypeTraits<::fidl::WireResponse<
       &::test_bindingsdenylist::
           test_bindingsdenylist_DenyEachBindingOnlyDenyRustTopResponseTable;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(16);
-  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(24);
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 24;
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 8;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -2438,8 +2428,8 @@ struct TypeTraits<::fidl::WireRequest<
       &::test_bindingsdenylist::
           test_bindingsdenylist_DenyEachBindingOnlyDenySyzkallerRequestTable;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(1);
-  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(1);
+  static constexpr uint32_t kPrimarySize = 1;
+  static constexpr uint32_t kPrimarySizeV1 = 1;
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -2515,8 +2505,8 @@ struct TypeTraits<::fidl::WireResponse<
       &::test_bindingsdenylist::
           test_bindingsdenylist_DenyEachBindingOnlyDenySyzkallerTopResponseTable;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(16);
-  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(24);
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 24;
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 8;
   static constexpr bool kHasFlexibleEnvelope = false;

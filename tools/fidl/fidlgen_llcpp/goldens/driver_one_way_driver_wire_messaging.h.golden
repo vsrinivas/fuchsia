@@ -59,7 +59,6 @@ struct ::fidl::internal::WireServerDispatcher<::test_driveroneway::OneWay>
 
 template <>
 struct ::fidl::WireRequest<::test_driveroneway::OneWay::Send> final {
-  FIDL_ALIGNDECL
   ::test_driveroneway::wire::Payload payload;
 
   explicit WireRequest(const ::test_driveroneway::wire::Payload& payload)
@@ -137,8 +136,8 @@ struct TypeTraits<::fidl::WireRequest<::test_driveroneway::OneWay::Send>> {
   static constexpr const fidl_type_t* kType =
       &::test_driveroneway::test_driveroneway_OneWaySendRequestTable;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(4);
-  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(4);
+  static constexpr uint32_t kPrimarySize = 4;
+  static constexpr uint32_t kPrimarySizeV1 = 4;
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasFlexibleEnvelope = false;

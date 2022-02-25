@@ -78,7 +78,6 @@ struct ::fidl::internal::WireServerDispatcher<::test_emptystruct::EmptyProtocol>
 
 template <>
 struct ::fidl::WireRequest<::test_emptystruct::EmptyProtocol::Send> final {
-  FIDL_ALIGNDECL
   ::test_emptystruct::wire::Empty e;
 
   explicit WireRequest(const ::test_emptystruct::wire::Empty& e) : e(e) {}
@@ -105,7 +104,6 @@ struct ::fidl::internal::TransactionalRequest<
 
 template <>
 struct ::fidl::WireEvent<::test_emptystruct::EmptyProtocol::Receive> final {
-  FIDL_ALIGNDECL
   ::test_emptystruct::wire::Empty e;
 
   explicit WireEvent(const ::test_emptystruct::wire::Empty& e) : e(e) {}
@@ -133,7 +131,6 @@ struct ::fidl::internal::TransactionalEvent<
 template <>
 struct ::fidl::WireRequest<::test_emptystruct::EmptyProtocol::SendAndReceive>
     final {
-  FIDL_ALIGNDECL
   ::test_emptystruct::wire::Empty e;
 
   explicit WireRequest(const ::test_emptystruct::wire::Empty& e) : e(e) {}
@@ -166,7 +163,6 @@ struct ::fidl::internal::TransactionalRequest<
 template <>
 struct ::fidl::WireResponse<::test_emptystruct::EmptyProtocol::SendAndReceive>
     final {
-  FIDL_ALIGNDECL
   ::test_emptystruct::wire::Empty e;
 
   explicit WireResponse(const ::test_emptystruct::wire::Empty& e) : e(e) {}
@@ -243,8 +239,8 @@ struct TypeTraits<
   static constexpr const fidl_type_t* kType =
       &::test_emptystruct::test_emptystruct_EmptyProtocolSendRequestTable;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(1);
-  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(1);
+  static constexpr uint32_t kPrimarySize = 1;
+  static constexpr uint32_t kPrimarySizeV1 = 1;
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -309,8 +305,8 @@ struct TypeTraits<
   static constexpr const fidl_type_t* kType =
       &::test_emptystruct::test_emptystruct_EmptyProtocolReceiveRequestTable;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(1);
-  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(1);
+  static constexpr uint32_t kPrimarySize = 1;
+  static constexpr uint32_t kPrimarySizeV1 = 1;
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -381,8 +377,8 @@ struct TypeTraits<
       &::test_emptystruct::
           test_emptystruct_EmptyProtocolSendAndReceiveRequestTable;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(1);
-  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(1);
+  static constexpr uint32_t kPrimarySize = 1;
+  static constexpr uint32_t kPrimarySizeV1 = 1;
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasFlexibleEnvelope = false;
@@ -455,8 +451,8 @@ struct TypeTraits<
       &::test_emptystruct::
           test_emptystruct_EmptyProtocolSendAndReceiveTopResponseTable;
   static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kPrimarySize = FIDL_ALIGN(1);
-  static constexpr uint32_t kPrimarySizeV1 = FIDL_ALIGN(1);
+  static constexpr uint32_t kPrimarySize = 1;
+  static constexpr uint32_t kPrimarySizeV1 = 1;
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
   static constexpr bool kHasFlexibleEnvelope = false;

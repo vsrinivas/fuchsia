@@ -17,7 +17,6 @@ struct {{ .WireRequest }} final {
 {{- end }}
 
   {{ if .RequestArgs }}
-  FIDL_ALIGNDECL
     {{- range $index, $param := .RequestArgs }}
   {{ $param.Type }} {{ $param.Name }};
     {{- end }}
