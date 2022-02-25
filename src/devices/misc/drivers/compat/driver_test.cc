@@ -9,6 +9,7 @@
 #include <fidl/fuchsia.driver.framework/cpp/wire_test_base.h>
 #include <fidl/fuchsia.io/cpp/wire_test_base.h>
 #include <fidl/fuchsia.logger/cpp/wire.h>
+#include <fidl/fuchsia.scheduler/cpp/wire_test_base.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fdio/directory.h>
 #include <lib/gtest/test_loop_fixture.h>
@@ -158,6 +159,27 @@ class TestDevice : public fidl::WireServer<fuchsia_driver_compat::Device> {
   }
 };
 
+class TestProfileProvider : public fidl::testing::WireTestBase<fuchsia_scheduler::ProfileProvider> {
+ public:
+  void GetProfile(GetProfileRequestView request, GetProfileCompleter::Sync& completer) override {
+    if (get_profile_callback_) {
+      get_profile_callback_(request->priority,
+                            std::string_view(request->name.data(), request->name.size()));
+    }
+    completer.Reply(ZX_OK, zx::profile());
+  }
+  void SetGetProfileCallback(std::function<void(uint32_t, std::string_view)> cb) {
+    get_profile_callback_ = std::move(cb);
+  }
+
+  void NotImplemented_(const std::string& name, fidl::CompleterBase& completer) override {
+    printf("Not implemented: ProfileProvider::%s", name.data());
+  }
+
+ private:
+  std::function<void(uint32_t, std::string_view)> get_profile_callback_;
+};
+
 }  // namespace
 
 class DriverTest : public gtest::TestLoopFixture {
@@ -233,6 +255,11 @@ class DriverTest : public gtest::TestLoopFixture {
       } else if (request->path.get() ==
                  fidl::DiscoverableProtocolName<fuchsia_device_fs::Exporter>) {
         // TODO: If the unit tests need a working Exporter add it here.
+      } else if (request->path.get() ==
+                 fidl::DiscoverableProtocolName<fuchsia_scheduler::ProfileProvider>) {
+        fidl::ServerEnd<fuchsia_scheduler::ProfileProvider> server_end(
+            request->object.TakeChannel());
+        fidl::BindServer(dispatcher(), std::move(server_end), &profile_provider_);
       } else {
         FAIL() << "Unexpected service: " << request->path.get();
       }
@@ -282,6 +309,8 @@ class DriverTest : public gtest::TestLoopFixture {
     EXPECT_EQ(ZX_OK, result.status_value());
     return std::move(result.value());
   }
+
+  TestProfileProvider profile_provider_;
 
  private:
   TestNode node_;
@@ -490,6 +519,41 @@ TEST_F(DriverTest, LoadFirwmareAsync) {
       &was_called);
   ASSERT_TRUE(RunLoopUntilIdle());
   ASSERT_TRUE(was_called);
+
+  driver.reset();
+  ASSERT_TRUE(RunLoopUntilIdle());
+}
+
+TEST_F(DriverTest, GetProfile) {
+  profile_provider_.SetGetProfileCallback([](uint32_t priority, std::string_view name) {
+    ASSERT_EQ(10u, priority);
+    ASSERT_EQ("test-profile", name);
+  });
+
+  zx_protocol_device_t ops{
+      .get_protocol = [](void*, uint32_t, void*) { return ZX_OK; },
+  };
+  auto driver = StartDriver("/pkg/driver/v1_test.so", &ops);
+  // Verify that v1_test.so has added a child device.
+  EXPECT_FALSE(node().HasChildren());
+  ASSERT_TRUE(RunLoopUntilIdle());
+  EXPECT_TRUE(node().HasChildren());
+
+  // Verify that v1_test.so has set a context.
+  std::unique_ptr<V1Test> v1_test(static_cast<V1Test*>(driver->Context()));
+  ASSERT_NE(nullptr, v1_test.get());
+
+  // device_get_profile blocks, so we have to do it in a separate thread.
+  sync_completion_t finished;
+  auto thread = std::thread([&finished, &v1_test]() {
+    zx_handle_t out_profile;
+    ASSERT_EQ(ZX_OK, device_get_profile(v1_test->zxdev, 10, "test-profile", &out_profile));
+    sync_completion_signal(&finished);
+  });
+  do {
+    RunLoopUntilIdle();
+  } while (sync_completion_wait(&finished, ZX_TIME_INFINITE_PAST) == ZX_ERR_TIMED_OUT);
+  thread.join();
 
   driver.reset();
   ASSERT_TRUE(RunLoopUntilIdle());

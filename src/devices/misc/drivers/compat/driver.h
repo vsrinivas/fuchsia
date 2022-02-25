@@ -6,6 +6,7 @@
 #define SRC_DEVICES_MISC_DRIVERS_COMPAT_DRIVER_H_
 
 #include <fidl/fuchsia.boot/cpp/wire.h>
+#include <fidl/fuchsia.scheduler/cpp/markers.h>
 #include <lib/async/cpp/executor.h>
 #include <lib/fpromise/scope.h>
 #include <lib/service/llcpp/outgoing_directory.h>
@@ -48,6 +49,7 @@ class Driver {
                          void* ctx);
 
   zx_status_t AddDevice(Device* parent, device_add_args_t* args, zx_device_t** out);
+  zx::status<zx::profile> GetSchedulerProfile(uint32_t priority, const char* name);
 
   Device& GetDevice() { return device_; }
   const driver::Namespace& driver_namespace() { return ns_; }
@@ -85,6 +87,7 @@ class Driver {
   fpromise::promise<void, zx_status_t> GetDeviceInfo();
 
   fidl::WireSharedClient<fuchsia_driver_compat::Device> device_client_;
+  fidl::ClientEnd<fuchsia_scheduler::ProfileProvider> profile_client_;
 
   fbl::RefPtr<fs::PseudoDir> compat_service_;
   async_dispatcher_t* dispatcher_;

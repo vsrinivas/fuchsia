@@ -36,6 +36,7 @@ source_set("lib") {
     "fidl:fuchsia.driver.compat_llcpp",
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_llcpp",
     "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
+    "//sdk/fidl/fuchsia.scheduler:fuchsia.scheduler_llcpp",
     "//sdk/lib/stdcompat",
     "//src/devices/lib/driver2:devfs_exporter",
     "//src/devices/lib/driver2:llcpp",

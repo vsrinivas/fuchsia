@@ -30,8 +30,7 @@ zx_status_t v1_test_bind(void* ctx, zx_device_t* dev) {
   device_add_args_t args{
       .name = "v1",
   };
-  zx_device_t* out = nullptr;
-  return device_add(dev, &args, &out);
+  return device_add(dev, &args, &v1_test->zxdev);
 }
 
 void v1_test_release(void* ctx) {

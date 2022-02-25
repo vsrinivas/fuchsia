@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/ddk/debug.h>
+#include <lib/zx/profile.h>
 
 #include <ddktl/fidl.h>
 
@@ -32,7 +33,11 @@ __EXPORT void device_resume_reply(zx_device_t* dev, zx_status_t status, uint8_t 
 
 __EXPORT zx_status_t device_get_profile(zx_device_t* dev, uint32_t priority, const char* name,
                                         zx_handle_t* out_profile) {
-  return ZX_ERR_NOT_SUPPORTED;
+  auto profile = dev->driver()->GetSchedulerProfile(priority, name);
+  if (profile.is_ok()) {
+    *out_profile = profile.value().release();
+  }
+  return profile.status_value();
 }
 
 __EXPORT zx_status_t device_get_deadline_profile(zx_device_t* device, uint64_t capacity,

@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/ddk/driver.h>
 #include <zircon/types.h>
 
 struct V1Test {
@@ -9,4 +10,5 @@ struct V1Test {
   bool did_bind = false;
   bool did_create = false;
   bool did_release = false;
+  zx_device_t* zxdev = nullptr;
 };

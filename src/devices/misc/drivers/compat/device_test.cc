@@ -16,6 +16,7 @@
 #include "lib/ddk/binding_priv.h"
 #include "lib/ddk/device.h"
 #include "lib/fidl/llcpp/connect_service.h"
+#include "lib/fidl/llcpp/transaction.h"
 #include "lib/service/llcpp/outgoing_directory.h"
 #include "src/devices/misc/drivers/compat/devfs_vnode.h"
 #include "src/devices/misc/drivers/compat/driver.h"
