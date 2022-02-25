@@ -19,55 +19,35 @@ use {
 };
 // [END import_statement_rust]
 
+// This test demonstrates constructing a realm with two child components
+// and verifying the `fidl.examples.routing.Echo` protocol.
 #[fuchsia::test]
-async fn make_echo_call() -> Result<(), Error> {
+async fn routes_from_echo() -> Result<(), Error> {
     // [START init_realm_builder_rust]
     let builder = RealmBuilder::new().await?;
     // [END init_realm_builder_rust]
 
     // [START add_component_rust]
-    // Add component `a` to the realm, which is fetched using a URL.
-    let a = builder
+    // Add component to the realm, which is fetched using a URL.
+    let echo_server = builder
         .add_child(
-            "a",
-            "fuchsia-pkg://fuchsia.com/realm-builder-examples#meta/echo_client.cm",
+            "echo_server",
+            "fuchsia-pkg://fuchsia.com/realm-builder-examples#meta/echo_server.cm",
             ChildOptions::new(),
         )
         .await?;
-    // Add component `b` to the realm, which is fetched using a relative URL.
-    let b = builder.add_child("b", "#meta/echo_client.cm", ChildOptions::new()).await?;
+    // Add component to the realm, which is fetched using a relative URL.
+    let echo_client =
+        builder.add_child("echo_client", "#meta/echo_client.cm", ChildOptions::new()).await?;
     // [END add_component_rust]
-
-    // [START add_legacy_component_rust]
-    // Add component `c` to the realm, which is fetched using a legacy URL.
-    let c = builder
-        .add_legacy_child(
-            "c",
-            "fuchsia-pkg://fuchsia.com/realm-builder-examples#meta/echo_client.cmx",
-            ChildOptions::new(),
-        )
-        .await?;
-    // [END add_legacy_component_rust]
-
-    // [START add_mock_component_rust]
-    let d = builder
-        .add_local_child(
-            "d",
-            move |handles: LocalComponentHandles| Box::pin(echo_server_mock(handles)),
-            ChildOptions::new(),
-        )
-        .await?;
-    // [END add_mock_component_rust]
 
     // [START route_between_children_rust]
     builder
         .add_route(
             Route::new()
                 .capability(Capability::protocol_by_name("fidl.examples.routing.echo.Echo"))
-                .from(&d)
-                .to(&a)
-                .to(&b)
-                .to(&c),
+                .from(&echo_server)
+                .to(&echo_client),
         )
         .await?;
     // [END route_between_children_rust]
@@ -77,7 +57,7 @@ async fn make_echo_call() -> Result<(), Error> {
         .add_route(
             Route::new()
                 .capability(Capability::protocol_by_name("fidl.examples.routing.echo.Echo"))
-                .from(&d)
+                .from(&echo_server)
                 .to(Ref::parent()),
         )
         .await?;
@@ -89,24 +69,11 @@ async fn make_echo_call() -> Result<(), Error> {
             Route::new()
                 .capability(Capability::protocol_by_name("fuchsia.logger.LogSink"))
                 .from(Ref::parent())
-                .to(&a)
-                .to(&b)
-                .to(&c)
-                .to(&d),
+                .to(&echo_server)
+                .to(&echo_client),
         )
         .await?;
     // [END route_from_test_rust]
-
-    // [START route_from_test_sibling_rust]
-    builder
-        .add_route(
-            Route::new()
-                .capability(Capability::protocol_by_name("fuchsia.example.Foo"))
-                .from(Ref::parent())
-                .to(&a),
-        )
-        .await?;
-    // [END route_from_test_sibling_rust]
 
     // [START build_realm_rust]
     let realm = builder.build().await?;
@@ -120,6 +87,49 @@ async fn make_echo_call() -> Result<(), Error> {
     let echo = realm.root.connect_to_protocol_at_exposed_dir::<fecho::EchoMarker>()?;
     assert_eq!(echo.echo_string(Some("hello")).await?, Some("hello".to_owned()));
     // [END call_echo_rust]
+
+    Ok(())
+}
+
+// This test demonstrates constructing a realm with a single legacy component
+// implementation of the `fidl.examples.routing.Echo` protocol.
+#[fuchsia::test]
+async fn routes_from_legacy_echo() -> Result<(), Error> {
+    let builder = RealmBuilder::new().await?;
+
+    // [START add_legacy_component_rust]
+    // Add component `c` to the realm, which is fetched using a legacy URL.
+    let echo_server = builder
+        .add_legacy_child(
+            "echo_server",
+            "fuchsia-pkg://fuchsia.com/realm-builder-examples#meta/echo_server.cmx",
+            ChildOptions::new(),
+        )
+        .await?;
+    // [END add_legacy_component_rust]
+
+    builder
+        .add_route(
+            Route::new()
+                .capability(Capability::protocol_by_name("fuchsia.logger.LogSink"))
+                .from(Ref::parent())
+                .to(&echo_server),
+        )
+        .await?;
+
+    builder
+        .add_route(
+            Route::new()
+                .capability(Capability::protocol_by_name("fidl.examples.routing.echo.Echo"))
+                .from(&echo_server)
+                .to(Ref::parent()),
+        )
+        .await?;
+
+    let realm = builder.build().await?;
+
+    let echo = realm.root.connect_to_protocol_at_exposed_dir::<fecho::EchoMarker>()?;
+    assert_eq!(echo.echo_string(Some("hello")).await?, Some("hello".to_owned()));
 
     Ok(())
 }
@@ -148,3 +158,45 @@ async fn echo_server_mock(handles: LocalComponentHandles) -> Result<(), Error> {
     Ok(())
 }
 // [END mock_component_impl_rust]
+
+// This test demonstrates constructing a realm with a mocked LocalComponent
+// implementation of the `fidl.examples.routing.Echo` protocol.
+#[fuchsia::test]
+async fn routes_from_mock_echo() -> Result<(), Error> {
+    let builder = RealmBuilder::new().await?;
+
+    // [START add_mock_component_rust]
+    let echo_server = builder
+        .add_local_child(
+            "echo_server",
+            move |handles: LocalComponentHandles| Box::pin(echo_server_mock(handles)),
+            ChildOptions::new(),
+        )
+        .await?;
+    // [END add_mock_component_rust]
+
+    builder
+        .add_route(
+            Route::new()
+                .capability(Capability::protocol_by_name("fuchsia.logger.LogSink"))
+                .from(Ref::parent())
+                .to(&echo_server),
+        )
+        .await?;
+
+    builder
+        .add_route(
+            Route::new()
+                .capability(Capability::protocol_by_name("fidl.examples.routing.echo.Echo"))
+                .from(&echo_server)
+                .to(Ref::parent()),
+        )
+        .await?;
+
+    let realm = builder.build().await?;
+
+    let echo = realm.root.connect_to_protocol_at_exposed_dir::<fecho::EchoMarker>()?;
+    assert_eq!(echo.echo_string(Some("hello")).await?, Some("hello".to_owned()));
+
+    Ok(())
+}

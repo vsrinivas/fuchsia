@@ -138,8 +138,8 @@ language's add component function. Each child component requires the following:
 
 The example below adds two static child components to the created realm:
 
-*   Component `a` loads from `fuchsia-pkg://fuchsia.com/foo#meta/foo.cm`
-*   Component `b` loads from `#meta/bar.cm`
+*   Component `echo_server` loads from an absolute component URL
+*   Component `echo_client` loads from a relative component URL
 
 * {Rust}
 
@@ -252,8 +252,9 @@ function with the appropriate capability route.
 
 ### Routing between child components {#routing-between-children}
 
-The following example adds a capability route to [offer][offer] components `a`,
-`b`, and `c` the `fidl.examples.routing.echo.Echo` protocol from component `d`.
+The following example adds a capability route to [offer][offer] component
+`echo_client` the `fidl.examples.routing.echo.Echo` protocol from component
+`echo_server`.
 
 * {Rust}
 
@@ -270,7 +271,7 @@ The following example adds a capability route to [offer][offer] components `a`,
 ### Exposing realm capabilities {#routing-from-realm}
 
 To route capabilities provided from inside the created realm to the test component,
-set the target of the capability route using above root endpoint.
+set the target of the capability route to `parent`.
 The created realm automatically [`exposes`][expose] the capability to its
 parent. This allows the Realm Builder instance to access the exposed capability.
 
@@ -292,12 +293,15 @@ the parent test component:
 ### Offering test capabilities {#routing-from-test}
 
 To route capabilities from the test component to components inside the created
-realm, set the source of the capability route using above root endpoint.
-Consider the following example to make the `fuchsia.logger.LogSink` protocol from
-the parent's realm available all the child components of the Realm.
+realm, set the source of the capability route to `parent`. This includes the
+capabilities provided to tests by the [Realm Builder shard][realm-builder-shard]:
 
-The `fuchsia.logger.LogSink` protocol is offered by default to the created realm
-through the [Realm Builder shard][realm-builder-shard].
+```json5
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="sdk/lib/sys/component/realm_builder_base.shard.cml" region_tag="collection_offers" adjust_indentation="auto" %}
+```
+
+Consider the following example to route the `fuchsia.logger.LogSink` protocol
+from the test component to the child components of the realm:
 
 * {Rust}
 
@@ -305,58 +309,10 @@ through the [Realm Builder shard][realm-builder-shard].
     {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/realm_builder/rust/src/lib.rs" region_tag="route_from_test_rust" adjust_indentation="auto" %}
     ```
 
-
 * {C++}
 
     ```cpp
-    {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/realm_builder/cpp/sample.cc" region_tag="route_to_test_cpp" adjust_indentation="auto" %}
-    ```
-
-This shard offers the following capabilities to the test component:
-
-```json5
-{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="sdk/lib/sys/component/realm_builder_base.shard.cml" region_tag="collection_offers" adjust_indentation="auto" %}
-```
-
-To route a capability that isn't in the Realm Builder shard,
-[offer][offer] it directly:
-
-```json5
-{
-    include: [
-        "sys/component/realm_builder.shard.cml",
-    ],
-    children: [
-        {
-            name: "some-child",
-            url: "...",
-        },
-    ],
-    offer: [
-        {
-            protocol: "fuchsia.example.Foo",
-            from: "#some-child",
-            to: [ "#fuchsia_component_test_collection" ],
-        },
-    ],
-    ...
-}
-```
-
-Once routed to the parent component, it can be offered to child components
-in the test realm:
-
-* {Rust}
-
-    ```rust
-    {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/realm_builder/rust/src/lib.rs" region_tag="route_from_test_sibling_rust" adjust_indentation="auto" %}
-    ```
-
-
-* {C++}
-
-    ```cpp
-    {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/realm_builder/cpp/sample.cc" region_tag="route_from_test_sibling_cpp" adjust_indentation="auto" %}
+    {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/realm_builder/cpp/sample.cc" region_tag="route_from_test_cpp" adjust_indentation="auto" %}
     ```
 
 ## Creating the realm {#create-realm}
@@ -381,8 +337,8 @@ Note: The constructed realm instance is immutable. You cannot change components
 or routes after calling the build method.
 
 Use the realm returned by the build method to perform additional tasks.
-Any eager components in the realm execute immediately, and any
-capabilities routed using the above root endpoint are now accessible by the test.
+Any eager components in the realm execute immediately, and any capabilities
+routed using `parent` are now accessible by the test.
 
 * {Rust}
 
@@ -473,18 +429,18 @@ To obtain the child name invoke the following method on the constructed Realm:
 The add route function cannot validate if a capability is properly offered
 to the created realm from the test component.
 
-If you attempt to route capabilities with a source of above root without a
+If you attempt to route capabilities with a source of `parent` without a
 corresponding [offer][offer], requests to open the capability will not resolve
 and you will see error messages similar to the following:
 
-```
+```none {:.devsite-disable-click-to-copy}
 [86842.196][klog][E] [component_manager] ERROR: Failed to route protocol `fidl.examples.routing.echo.Echo` with target component `/core:0/test_manager:0/tests:auto-10238282593681900609:4/test_wrapper:0/test_root:0/fuchsia_component_test_
 [86842.197][klog][I] collection:auto-4046836611955440668:16/echo-client:0`: An `offer from parent` declaration was found at `/core:0/test_manager:0/tests:auto-10238282593681900609:4/test_wrapper:0/test_root:0/fuchsia_component_test_colle
 [86842.197][klog][I] ction:auto-4046836611955440668:16` for `fidl.examples.routing.echo.Echo`, but no matching `offer` declaration was found in the parent
 ```
 
 For more information on how to properly offer capabilities from the test
-controller, see [offering external capabilities](#routes-from-outside).
+controller, see [offering test capabilities](#routing-from-test).
 
 ## Language feature matrix {#language-feature-matrix}
 

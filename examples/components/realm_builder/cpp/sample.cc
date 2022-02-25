@@ -16,109 +16,148 @@
 #include <zircon/status.h>
 
 #include <gtest/gtest.h>
+#include <src/lib/testing/loop_fixture/real_loop_fixture.h>
 
 // [START use_namespace_cpp]
 // NOLINTNEXTLINE
 using namespace component_testing;
 // [END use_namespace_cpp]
 
-// [START mock_component_impl_cpp]
-class LocalEchoServerImpl : public fidl::examples::routing::echo::Echo, public LocalComponent {
- public:
-  explicit LocalEchoServerImpl(async::Loop& loop) : loop_(loop) {}
+class RealmBuilderTest : public ::gtest::RealLoopFixture {};
 
-  // Override `EchoString` from `Echo` protocol.
-  void EchoString(::fidl::StringPtr value, EchoStringCallback callback) override {
-    callback(std::move(value));
-    loop_.Quit();
-  }
-
-  // Override `Start` from `LocalComponent` class.
-  void Start(std::unique_ptr<LocalComponentHandles> handles) override {
-    // Keep reference to `mock_handles` in member variable.
-    // This class contains handles to the component's incoming
-    // and outgoing capabilities.
-    handles_ = std::move(handles);
-
-    ASSERT_EQ(
-        handles_->outgoing()->AddPublicService(bindings_.GetHandler(this, loop_.dispatcher())),
-        ZX_OK);
-  }
-
- private:
-  async::Loop& loop_;
-  fidl::BindingSet<fidl::examples::routing::echo::Echo> bindings_;
-  std::unique_ptr<LocalComponentHandles> handles_;
-};
-// [END mock_component_impl_cpp]
-
-TEST(SampleTest, CallsEcho) {
-  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
-
+// This test demonstrates constructing a realm with two child components
+// and verifying the `fidl.examples.routing.Echo` protocol.
+TEST_F(RealmBuilderTest, RoutesFromEcho) {
   // [START init_realm_builder_cpp]
   auto builder = RealmBuilder::Create();
   // [END init_realm_builder_cpp]
 
   // [START add_component_cpp]
-  // Add component `a` to the realm, which is fetched using a URL.
-  builder.AddChild("a", "fuchsia-pkg://fuchsia.com/realm-builder-examples#meta/echo_client.cm");
-  // Add component `b` to the realm, which is fetched using a relative URL.
-  builder.AddChild("b", "#meta/echo_client.cm");
+  // Add component server to the realm, which is fetched using a URL.
+  builder.AddChild("echo_server",
+                   "fuchsia-pkg://fuchsia.com/realm-builder-examples#meta/echo_server.cm");
+  // Add component client to the realm, which is fetched using a relative URL.
+  builder.AddChild("echo_client", "#meta/echo_client.cm");
   // [END add_component_cpp]
-
-  // [START add_legacy_component_cpp]
-  // Add component `c` to the realm, which is fetched using a legacy URL.
-  builder.AddLegacyChild("c",
-                         "fuchsia-pkg://fuchsia.com/realm-builder-examples#meta/echo_client.cmx");
-  // [END add_legacy_component_cpp]
-
-  // [START add_mock_component_cpp]
-  auto mock_echo_server = LocalEchoServerImpl(loop);
-
-  builder.AddLocalChild("d", &mock_echo_server);
-  // [END add_mock_component_cpp]
 
   // [START route_between_children_cpp]
   builder.AddRoute(Route{.capabilities = {Protocol{"fidl.examples.routing.echo.Echo"}},
-                         .source = ChildRef{"d"},
-                         .targets = {ChildRef{"a"}, ChildRef{"b"}, ChildRef{"c"}}});
+                         .source = ChildRef{"echo_server"},
+                         .targets = {ChildRef{"echo_client"}}});
   // [END route_between_children_cpp]
 
   // [START route_to_test_cpp]
   builder.AddRoute(Route{.capabilities = {Protocol{"fidl.examples.routing.echo.Echo"}},
-                         .source = ChildRef{"d"},
+                         .source = ChildRef{"echo_server"},
                          .targets = {ParentRef()}});
   // [END route_to_test_cpp]
 
   // [START route_from_test_cpp]
   builder.AddRoute(Route{.capabilities = {Protocol{"fuchsia.logger.LogSink"}},
                          .source = ParentRef(),
-                         .targets = {ChildRef{"a"}, ChildRef{"b"}, ChildRef{"c"}, ChildRef{"d"}}});
+                         .targets = {ChildRef{"echo_server"}, ChildRef{"echo_client"}}});
   // [END route_from_test_cpp]
 
-  // [START route_from_test_sibling_cpp]
-  builder.AddRoute(Route{.capabilities = {Protocol{"fuchsia.example.Foo"}},
-                         .source = ParentRef(),
-                         .targets = {ChildRef{"a"}}});
-  // [END route_from_test_sibling_cpp]
-
   // [START build_realm_cpp]
-  auto realm = builder.Build(loop.dispatcher());
+  auto realm = builder.Build(dispatcher());
   // [END build_realm_cpp]
 
   // [START get_child_name_cpp]
-  std::cout << "Child Name: {}" << realm.GetChildName() << std::endl;
+  std::cout << "Child Name: " << realm.GetChildName() << std::endl;
   // [END get_child_name_cpp]
 
   // [START call_echo_cpp]
+  auto echo = realm.ConnectSync<fidl::examples::routing::echo::Echo>();
+  fidl::StringPtr response;
+  echo->EchoString("hello", &response);
+  ASSERT_EQ(response, "hello");
+  // [END call_echo_cpp]
+}
+
+// This test demonstrates constructing a realm with a single legacy component
+// implementation of the `fidl.examples.routing.Echo` protocol.
+TEST_F(RealmBuilderTest, RoutesFromLegacyEcho) {
+  auto builder = RealmBuilder::Create();
+
+  // [START add_legacy_component_cpp]
+  // Add component to the realm, which is fetched using a legacy URL.
+  builder.AddLegacyChild("echo_server",
+                         "fuchsia-pkg://fuchsia.com/realm-builder-examples#meta/echo_server.cmx");
+  // [END add_legacy_component_cpp]
+
+  builder.AddRoute(Route{.capabilities = {Protocol{"fuchsia.logger.LogSink"}},
+                         .source = ParentRef(),
+                         .targets = {ChildRef{"echo_server"}}});
+
+  builder.AddRoute(Route{.capabilities = {Protocol{"fidl.examples.routing.echo.Echo"}},
+                         .source = ChildRef{"echo_server"},
+                         .targets = {ParentRef()}});
+
+  auto realm = builder.Build(dispatcher());
+
+  auto echo = realm.ConnectSync<fidl::examples::routing::echo::Echo>();
+  fidl::StringPtr response;
+  echo->EchoString("hello", &response);
+  ASSERT_EQ(response, "hello");
+}
+
+// [START mock_component_impl_cpp]
+class LocalEchoServerImpl : public fidl::examples::routing::echo::Echo, public LocalComponent {
+ public:
+  explicit LocalEchoServerImpl(async_dispatcher_t* dispatcher) : dispatcher_(dispatcher) {}
+
+  // Override `EchoString` from `Echo` protocol.
+  void EchoString(::fidl::StringPtr value, EchoStringCallback callback) override {
+    callback(std::move(value));
+  }
+
+  // Override `Start` from `LocalComponent` class.
+  void Start(std::unique_ptr<LocalComponentHandles> handles) override {
+    // Keep reference to `handles` in member variable.
+    // This class contains handles to the component's incoming
+    // and outgoing capabilities.
+    handles_ = std::move(handles);
+
+    ASSERT_EQ(handles_->outgoing()->AddPublicService(bindings_.GetHandler(this, dispatcher_)),
+              ZX_OK);
+  }
+
+ private:
+  async_dispatcher_t* dispatcher_;
+  fidl::BindingSet<fidl::examples::routing::echo::Echo> bindings_;
+  std::unique_ptr<LocalComponentHandles> handles_;
+};
+// [END mock_component_impl_cpp]
+
+// This test demonstrates constructing a realm with a mocked LocalComponent
+// implementation of the `fidl.examples.routing.Echo` protocol.
+TEST_F(RealmBuilderTest, RoutesFromMockEcho) {
+  auto builder = RealmBuilder::Create();
+
+  // [START add_mock_component_cpp]
+  auto mock_echo_server = LocalEchoServerImpl(dispatcher());
+  // Add component to the realm, providing a mock implementation
+  builder.AddLocalChild("echo_server", &mock_echo_server);
+  // [END add_mock_component_cpp]
+
+  builder.AddRoute(Route{.capabilities = {Protocol{"fuchsia.logger.LogSink"}},
+                         .source = ParentRef(),
+                         .targets = {ChildRef{"echo_server"}}});
+
+  builder.AddRoute(Route{.capabilities = {Protocol{"fidl.examples.routing.echo.Echo"}},
+                         .source = ChildRef{"echo_server"},
+                         .targets = {ParentRef()}});
+
+  auto realm = builder.Build(dispatcher());
+
   auto echo = realm.Connect<fidl::examples::routing::echo::Echo>();
   fidl::StringPtr response;
   echo->EchoString("hello", [&](fidl::StringPtr response) {
-    ASSERT_EQ(response, "hello");
-
-    loop.Quit();
+    // Use EXPECT here so the loop can still quit if the test fails
+    EXPECT_EQ(response, "hello");
+    QuitLoop();
   });
 
-  loop.Run();
-  // [END call_echo_cpp]
+  // Wait for async callback to complete
+  RunLoop();
 }

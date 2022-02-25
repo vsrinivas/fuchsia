@@ -7,12 +7,11 @@ import("//build/rust/rustc_test.gni")
 rustc_test("bin") {
   name = "rust_sample_realm"
 
+  # [START realm_builder_dep_rust]
   deps = [
-    # [START realm_builder_dep_rust]
     "//src/lib/fuchsia-component-test",
 
-    # [END realm_builder_dep_rust]
-
+    # [START_EXCLUDE]
     "//examples/components/routing/fidl:echo-rustc",
     "//sdk/fidl/fuchsia.logger:fuchsia.logger-rustc",
     "//src/lib/fuchsia",
@@ -20,7 +19,11 @@ rustc_test("bin") {
     "//src/lib/fuchsia-component",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
+
+    # [END_EXCLUDE]
   ]
+
+  # [END realm_builder_dep_rust]
 
   sources = [ "src/lib.rs" ]
 }

@@ -35,6 +35,18 @@ fuchsia_component("echo_client_legacy_component") {
   deps = [ "//examples/components/routing/echo_client" ]
 }
 
+fuchsia_component("echo_server_component") {
+  component_name = "echo_server"
+  manifest = "meta/echo_server.cml"
+  deps = [ "//examples/components/routing/echo_server" ]
+}
+
+fuchsia_component("echo_server_legacy_component") {
+  component_name = "echo_server"
+  manifest = "meta/echo_server.cmx"
+  deps = [ "//examples/components/routing/echo_server" ]
+}
+
 # Run with `fx test realm-builder-examples`.
 fuchsia_test_package("package") {
   package_name = "realm-builder-examples"
@@ -46,5 +58,7 @@ fuchsia_test_package("package") {
   deps = [
     ":echo_client_component",
     ":echo_client_legacy_component",
+    ":echo_server_component",
+    ":echo_server_legacy_component",
   ]
 }

@@ -1,12 +1,11 @@
 # Realm Builder Examples
 
 The following directory hosts example of usages of the Realm Builder library.
-This is primarily for code references used in the official docs (found at
-//docs/development/testing/components/realm_builder.md), though it serves as a useful guide
-on its own. The tests are meant to demonstrate compilable code. This means that
+These examples are also the source code references used in the
+[developer guide](/docs/development/testing/components/realm_builder.md).
+
+The tests are meant to demonstrate compilable code. This means that
 it will always contain the latest API surface of each of the client libraries.
-However, the tests are disabled because they construct invalid realms for demonstration
-purposes.
 
 ## Building
 
@@ -20,8 +19,8 @@ $ fx build
 
 ## Testing
 
-Run the tests for cpp using the `realm-builder-examples` package.
+Run the tests for all languages using the `realm-builder-examples` package.
 
-```
+```bash
 $ fx test realm-builder-examples
 ```
