@@ -39,7 +39,7 @@ class Namespace {
     if (endpoints.is_error()) {
       return endpoints.take_error();
     }
-    auto result = Connect(path, flags, endpoints->server.TakeChannel());
+    auto result = Connect(path, endpoints->server.TakeChannel(), flags);
     if (result.is_error()) {
       return result.take_error();
     }
@@ -59,13 +59,14 @@ class Namespace {
                                                       internal::DirectoryOpenFunc));
   }
 
+  zx::status<> Connect(std::string_view path, zx::channel server_end,
+                       uint32_t flags = ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE) const;
+
  private:
   explicit Namespace(fdio_ns_t* ns);
 
   Namespace(const Namespace& other) = delete;
   Namespace& operator=(const Namespace& other) = delete;
-
-  zx::status<> Connect(std::string_view path, uint32_t flags, zx::channel server_end) const;
 
   fdio_ns_t* ns_ = nullptr;
 };

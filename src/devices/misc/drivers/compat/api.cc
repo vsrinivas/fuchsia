@@ -177,4 +177,11 @@ __EXPORT zx_status_t device_get_variable(zx_device_t* device, const char* name, 
                                          size_t out_size, size_t* size_actual) {
   return ZX_ERR_NOT_SUPPORTED;
 }
+
+__EXPORT zx_status_t device_connect_fidl_protocol(zx_device_t* dev, const char* protocol_name,
+                                                  zx_handle_t request) {
+  auto path = std::string("/svc/") + protocol_name;
+  auto status = dev->driver()->driver_namespace().Connect(path, zx::channel(request));
+  return status.status_value();
+}
 }

@@ -50,6 +50,7 @@ class Driver {
   zx_status_t AddDevice(Device* parent, device_add_args_t* args, zx_device_t** out);
 
   Device& GetDevice() { return device_; }
+  const driver::Namespace& driver_namespace() { return ns_; }
 
  private:
   // Run the driver at `driver_path`.

@@ -4,8 +4,10 @@
 
 #include "src/devices/misc/drivers/compat/device.h"
 
+#include <fidl/fuchsia.component.runner/cpp/wire_types.h>
 #include <fidl/fuchsia.device/cpp/markers.h>
 #include <fidl/fuchsia.driver.framework/cpp/wire_test_base.h>
+#include <fidl/test.placeholders/cpp/wire.h>
 #include <lib/ddk/metadata.h>
 #include <lib/gtest/test_loop_fixture.h>
 
@@ -13,13 +15,29 @@
 
 #include "lib/ddk/binding_priv.h"
 #include "lib/ddk/device.h"
+#include "lib/fidl/llcpp/connect_service.h"
+#include "lib/service/llcpp/outgoing_directory.h"
 #include "src/devices/misc/drivers/compat/devfs_vnode.h"
+#include "src/devices/misc/drivers/compat/driver.h"
 
 namespace fdf = fuchsia_driver_framework;
 namespace fio = fuchsia_io;
 namespace frunner = fuchsia_component_runner;
 
 namespace {
+
+// Simple Echo implementation used to test FIDL functionality.
+class EchoImpl : public fidl::WireServer<test_placeholders::Echo>, public fs::Service {
+ public:
+  explicit EchoImpl(async_dispatcher_t* dispatcher)
+      : fs::Service([dispatcher, this](fidl::ServerEnd<test_placeholders::Echo> server) {
+          fidl::BindServer(dispatcher, std::move(server), this);
+          return ZX_OK;
+        }) {}
+  void EchoString(EchoStringRequestView request, EchoStringCompleter::Sync& completer) override {
+    completer.Reply(request->value);
+  }
+};
 
 class TestController : public fidl::testing::WireTestBase<fdf::NodeController> {
  public:
@@ -328,6 +346,54 @@ TEST_F(DeviceTest, GetProtocolFromDevice) {
   compat::Device with("with-protocol", nullptr, {}, &ops, nullptr, std::nullopt, logger(),
                       dispatcher());
   ASSERT_EQ(ZX_OK, with.GetProtocol(ZX_PROTOCOL_BLOCK, nullptr));
+}
+
+TEST_F(DeviceTest, GetFidlProtocol) {
+  // Set up a fake incoming /svc.
+  auto endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
+  service::OutgoingDirectory outgoing(dispatcher());
+  outgoing.root_dir()->AddEntry(fidl::DiscoverableProtocolName<test_placeholders::Echo>,
+                                fbl::MakeRefCounted<EchoImpl>(dispatcher()));
+  ASSERT_EQ(ZX_OK, outgoing.Serve(std::move(endpoints->server)).status_value());
+
+  // Set up the driver namespace.
+  fidl::Arena arena;
+  fidl::VectorView<fuchsia_component_runner::wire::ComponentNamespaceEntry> entries;
+  entries.Allocate(arena, 1);
+  entries[0].Allocate(arena);
+  entries[0].set_path(arena, "/svc").set_directory(std::move(endpoints->client));
+  auto ret = driver::Namespace::Create(entries);
+  ASSERT_EQ(ZX_OK, ret.status_value());
+  auto ns = std::move(ret.value());
+
+  auto [node, node_client] = CreateTestNode();
+
+  auto drv_logger = driver::Logger::Create(ns, dispatcher(), "test-logger");
+  ASSERT_EQ(ZX_OK, drv_logger.status_value());
+  compat::Driver drv(dispatcher(), {std::move(node_client), dispatcher()}, std::move(ns),
+                     std::move(*drv_logger), "fuchsia-boot:///#meta/fake-driver.cm", "fake-driver",
+                     nullptr, {}, nullptr);
+
+  compat::Device dev("fake-device", nullptr, {}, nullptr, &drv, std::nullopt, logger(),
+                     dispatcher());
+
+  auto echo_endpoints = fidl::CreateEndpoints<test_placeholders::Echo>();
+  ASSERT_EQ(ZX_OK, echo_endpoints.status_value());
+
+  ASSERT_EQ(ZX_OK, device_connect_fidl_protocol(
+                       dev.ZxDevice(), fidl::DiscoverableProtocolName<test_placeholders::Echo>,
+                       echo_endpoints->server.TakeChannel().release()));
+
+  fidl::WireClient client(std::move(echo_endpoints->client), dispatcher());
+  bool done = false;
+  client->EchoString("hello",
+                     [&done](fidl::WireResponse<test_placeholders::Echo::EchoString>* response) {
+                       ASSERT_STREQ("hello", response->response.begin());
+                       done = true;
+                     });
+
+  ASSERT_TRUE(RunLoopUntilIdle());
+  ASSERT_TRUE(done);
 }
 
 TEST_F(DeviceTest, DeviceMetadata) {
