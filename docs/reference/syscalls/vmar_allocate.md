@@ -34,6 +34,11 @@ Creates a new VMAR within the one specified by *parent_vmar*.
   vmar does not have the **ZX_VM_CAN_MAP_SPECIFIC** permission.  *offset*
   is an offset relative to the base address of the parent region.  It is an error
   to specify an address range that overlaps with another VMAR or mapping.
+- **ZX_VM_OFFSET_IS_UPPER_LIMIT**  Interpret the *offset* as an upper limit
+  to constrain the selection of the offset by the kernel, invalid if *handle*
+  does not have the **ZX_VM_CAN_MAP_SPECIFIC** permission. The resulting mapping
+  will have an offset + *size* that is <= *offset*. This option cannot be
+  specified if **ZX_VM_SPECIFIC** is used.
 - **ZX_VM_CAN_MAP_SPECIFIC**  The new VMAR can have subregions/mappings
   created with **ZX_VM_SPECIFIC**.  It is NOT an error if the parent does
   not have **ZX_VM_CAN_MAP_SPECIFIC** permissions.
@@ -44,7 +49,8 @@ Creates a new VMAR within the one specified by *parent_vmar*.
 - **ZX_VM_CAN_MAP_EXECUTE**  The new VMAR can contain executable mappings.
   It is an error if the parent does not have **ZX_VM_CAN_MAP_EXECUTE** permissions.
 
-*offset* must be 0 if *options* does not have **ZX_VM_SPECIFIC** set.
+*offset* must be 0 if *options* does not have **ZX_VM_SPECIFIC** or
+**ZX_VM_OFFSET_IS_UPPER_LIMIT** set.
 
 In addition, the following power-of-two alignment flags can added:
 
@@ -86,10 +92,12 @@ In the event of failure, a negative error value is returned.
 
 **ZX_ERR_BAD_STATE**  *parent_vmar* refers to a destroyed VMAR.
 
-**ZX_ERR_INVALID_ARGS**  *child_vmar* or *child_addr* are not valid, *offset* is
-non-zero when **ZX_VM_SPECIFIC** is not given, *offset* and *size* describe
-an unsatisfiable allocation due to exceeding the region bounds, *offset*
-or *size* is not page-aligned, or *size* is 0.
+**ZX_ERR_INVALID_ARGS**  for any of the following:
+ - *child_vmar* or *child_addr* are not valid,
+ - *offset* is non-zero when **ZX_VM_SPECIFIC** or **ZX_VM_OFFSET_IS_UPPER_LIMIT** is not given.
+ - **ZX_VM_OFFSET_IS_UPPER_LIMIT** is specified together with **ZX_VM_SPECIFIC**.
+ - *offset* and *size* describe an unsatisfiable allocation due to exceeding the region bounds
+ - *offset* or *size* is not page-aligned, or *size* is 0.
 
 **ZX_ERR_NO_MEMORY**  This may be due to the following:
 

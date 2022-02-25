@@ -40,6 +40,11 @@ closing the VMO handle does not remove the mapping added by this function.
   other map/unmap/protect operations) replace existing mappings in the range
   specified by *vmar_offset* and *len*. If that range partially overlaps any
   mappings, then the portions of those mappings outside the range will remain mapped.
+- **ZX_VM_OFFSET_IS_UPPER_LIMIT**  Interpret the *vmar_offset* as an upper limit
+  to constrain the selection of the offset by the kernel, invalid if *handle*
+  does not have the **ZX_VM_CAN_MAP_SPECIFIC** permission. The resulting mapping
+  will have an offset + *len* that is <= *vmar_offset*. This option cannot be
+  specified if **ZX_VM_SPECIFIC** or **ZX_VM_SPECIFIC_OVERWRITE** is used.
 - **ZX_VM_PERM_READ**  Map *vmo* as readable.  It is an error if *handle*
   does not have **ZX_VM_CAN_MAP_READ** permissions, the *handle* does
   not have the **ZX_RIGHT_READ** right, or the *vmo* handle does not have the
@@ -60,10 +65,13 @@ closing the VMO handle does not remove the mapping added by this function.
   if *vmo* is non-resizable but the mapping extends past the end of *vmo*, or if
   *vmo* was created from [`zx_pager_create_vmo()`].
 
-*vmar_offset* must be 0 if *options* does not have **ZX_VM_SPECIFIC** or
-**ZX_VM_SPECIFIC_OVERWRITE** set.  If neither of those are set, then
-the mapping will be assigned an offset at random by the kernel (with an
-allocator determined by policy set on the target VMAR).
+*vmar_offset* must be 0 if *options* does not have **ZX_VM_SPECIFIC**,
+**ZX_VM_SPECIFIC_OVERWRITE** or **ZX_VM_OFFSET_IS_UPPER_LIMIT** set.
+**ZX_VM_OFFSET_IS_UPPER_LIMIT** serves to constrain the selection range, and
+otherwise behaves similarly to the case where neither **ZX_VM_SPECIFIC** nor
+**ZX_VM_SPECIFIC_OVERWRITE** are set, with the mapping being assigned an offset
+at random by the kernel (with an allocator determined by policy set on the
+target VMAR).
 
 *len* must be page-aligned.
 
@@ -104,9 +112,11 @@ and non-zero.  In the event of failure, a negative error value is returned.
 
 **ZX_ERR_INVALID_ARGS** for any of the following:
  - *mapped_addr* or *options* is not valid.
- - *vmar_offset* is non-zero when neither **ZX_VM_SPECIFIC** nor **ZX_VM_SPECIFIC_OVERWRITE** is
-   specified.
+ - *vmar_offset* is non-zero when none of **ZX_VM_SPECIFIC**, **ZX_VM_SPECIFIC_OVERWRITE** or
+   **ZX_VM_OFFSET_IS_UPPER_LIMIT** is specified.
  - **ZX_VM_SPECIFIC_OVERWRITE** and **ZX_VM_MAP_RANGE** are both specified.
+ - **ZX_VM_OFFSET_IS_UPPER_LIMIT** is specified together with either **ZX_VM_SPECIFIC**
+   or **ZX_VM_SPECIFIC_OVERWRITE**.
  - *vmar_offset* and *len* describe an unsatisfiable allocation due to exceeding the region bounds.
  - *vmar_offset* or *vmo_offset* or *len* is not page-aligned.
 
