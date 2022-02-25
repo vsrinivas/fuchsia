@@ -81,7 +81,7 @@ impl FxDirectory {
         self.directory.owner()
     }
 
-    pub fn store(&self) -> &ObjectStore {
+    fn store(&self) -> &ObjectStore {
         self.directory.store()
     }
 

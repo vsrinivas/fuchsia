@@ -12,20 +12,20 @@
 
 pub mod crypt;
 pub mod errors;
-pub mod lsm_tree;
+mod lsm_tree;
 pub mod mkfs;
 pub mod mount;
 pub mod object_handle;
 pub mod object_store;
-pub mod range;
+mod range;
 #[cfg(target_os = "fuchsia")]
 pub mod remote_crypt;
-pub mod round;
+mod round;
 pub mod serialized_types;
 #[cfg(target_os = "fuchsia")]
 pub mod server;
 #[cfg(test)]
-pub mod testing;
+mod testing;
 #[macro_use]
 mod trace;
 #[macro_use]

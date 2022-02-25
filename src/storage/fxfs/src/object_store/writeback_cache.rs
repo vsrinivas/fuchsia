@@ -85,8 +85,8 @@ enum CacheState {
 
 #[derive(Clone, Debug)]
 struct CachedRange {
-    pub range: Range<u64>,
-    pub state: CacheState,
+    range: Range<u64>,
+    state: CacheState,
 }
 
 impl CachedRange {
@@ -194,8 +194,8 @@ pub struct FlushableMetadata {
 }
 
 pub struct FlushableData<'a, 'b> {
-    pub reservation: &'a allocator::Reservation,
-    pub reserver: &'a dyn StorageReservation,
+    reservation: &'a allocator::Reservation,
+    reserver: &'a dyn StorageReservation,
     pub ranges: Vec<Range<u64>>,
     pub buffer: Buffer<'b>,
 }

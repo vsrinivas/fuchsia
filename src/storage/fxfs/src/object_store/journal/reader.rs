@@ -78,7 +78,7 @@ impl<OH: ReadObjectHandle> JournalReader<OH> {
         }
     }
 
-    pub fn last_read_checksum(&self) -> Checksum {
+    fn last_read_checksum(&self) -> Checksum {
         *self.checksums.last().unwrap()
     }
 

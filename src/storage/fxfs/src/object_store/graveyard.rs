@@ -185,7 +185,7 @@ impl Graveyard {
     ///   let mut merger = layer_set.merger();
     ///   let mut iter = graveyard.iter_from(&mut merger, (2, 3)).await?;
     ///
-    pub async fn iter_from<'a, 'b>(
+    async fn iter_from<'a, 'b>(
         merger: &'a mut Merger<'b, ObjectKey, ObjectValue>,
         graveyard_object_id: u64,
         from: u64,

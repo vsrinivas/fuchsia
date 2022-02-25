@@ -47,7 +47,7 @@ const MIN_SUPER_BLOCK_SIZE: u64 = 524_288;
 const SUPER_BLOCK_MAGIC: &[u8; 8] = b"FxfsSupr";
 
 pub const SUPER_BLOCK_MAJOR_VERSION: u32 = 1;
-pub const SUPER_BLOCK_MINOR_VERSION: u32 = 1;
+const SUPER_BLOCK_MINOR_VERSION: u32 = 1;
 
 /// An enum representing one of our [SuperBlock] copies.
 ///
@@ -107,7 +107,7 @@ pub struct SuperBlock {
     /// See //src/storage/docs/versioning.md.
     // TODO(jfsulliv): Actually set this based on the driver version.
     // TODO(jfsulliv): Check this value.
-    pub oldest_minor_version: u32,
+    oldest_minor_version: u32,
 
     /// There are two super-blocks which are used in an A/B configuration. The super-block with the
     /// greatest generation number is what is used when mounting an Fxfs image; the other is

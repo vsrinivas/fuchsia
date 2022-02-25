@@ -31,10 +31,10 @@ use {
 #[derive(Debug, Serialize, Deserialize, Versioned)]
 pub struct LayerInfo {
     /// The version of the key and value structs serialized in this layer.
-    pub key_value_version: Version,
+    key_value_version: Version,
     /// The block size used within this layer file. Each block starts with a 2 byte item count so
     /// there is a 64k item limit per block.
-    pub block_size: u64,
+    block_size: u64,
 }
 
 /// Implements a very primitive persistent layer where items are packed into blocks and searching
@@ -63,7 +63,7 @@ impl std::io::Read for BufferCursor<'_> {
     }
 }
 
-pub struct Iterator<'iter, K: Key, V: Value> {
+struct Iterator<'iter, K: Key, V: Value> {
     // Allocated out of |layer|.
     buffer: BufferCursor<'iter>,
 

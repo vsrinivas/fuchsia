@@ -1102,7 +1102,7 @@ impl<'a, S: AsRef<ObjectStore> + Send + Sync + 'static> DirectWriter<'a, S> {
         }
     }
 
-    pub async fn flush(&mut self) -> Result<(), Error> {
+    async fn flush(&mut self) -> Result<(), Error> {
         let mut transaction = self.handle.new_transaction_with_options(self.options).await?;
         self.handle
             .txn_write(&mut transaction, self.offset, self.buffer.subslice(..self.buf_offset))

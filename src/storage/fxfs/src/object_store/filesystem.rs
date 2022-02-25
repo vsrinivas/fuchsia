@@ -293,7 +293,7 @@ impl FxFilesystem {
         self.objects.root_parent_store()
     }
 
-    pub fn root_store(&self) -> Arc<ObjectStore> {
+    fn root_store(&self) -> Arc<ObjectStore> {
         self.objects.root_store()
     }
 

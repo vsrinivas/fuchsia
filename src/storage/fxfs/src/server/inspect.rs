@@ -17,9 +17,9 @@ use {
     std::sync::Weak,
 };
 
-pub const INFO_NODE_NAME: &'static str = "fs.info";
-pub const USAGE_NODE_NAME: &'static str = "fs.usage";
-pub const VOLUME_NODE_NAME: &'static str = "fs.volume";
+const INFO_NODE_NAME: &'static str = "fs.info";
+const USAGE_NODE_NAME: &'static str = "fs.usage";
+const VOLUME_NODE_NAME: &'static str = "fs.volume";
 
 /// Trait that Rust filesystems should implement to expose required Inspect data.
 ///
@@ -99,14 +99,14 @@ pub struct InfoData {
 }
 
 impl InfoData {
-    pub const ID_KEY: &'static str = "id";
-    pub const FS_TYPE_KEY: &'static str = "type";
-    pub const NAME_KEY: &'static str = "name";
-    pub const VERSION_MAJOR_KEY: &'static str = "version_major";
-    pub const VERSION_MINOR_KEY: &'static str = "version_minor";
-    pub const OLDEST_MINOR_VERSION_KEY: &'static str = "oldest_minor_version";
-    pub const BLOCK_SIZE: &'static str = "block_size";
-    pub const MAX_FILENAME_LENGTH: &'static str = "max_filename_length";
+    const ID_KEY: &'static str = "id";
+    const FS_TYPE_KEY: &'static str = "type";
+    const NAME_KEY: &'static str = "name";
+    const VERSION_MAJOR_KEY: &'static str = "version_major";
+    const VERSION_MINOR_KEY: &'static str = "version_minor";
+    const OLDEST_MINOR_VERSION_KEY: &'static str = "oldest_minor_version";
+    const BLOCK_SIZE: &'static str = "block_size";
+    const MAX_FILENAME_LENGTH: &'static str = "max_filename_length";
 
     fn record(self, node: &Node) {
         node.record_uint(Self::ID_KEY, self.id);
@@ -129,10 +129,10 @@ pub struct UsageData {
 }
 
 impl UsageData {
-    pub const TOTAL_BYTES_KEY: &'static str = "total_bytes";
-    pub const USED_BYTES_KEY: &'static str = "used_bytes";
-    pub const TOTAL_NODES_KEY: &'static str = "total_nodes";
-    pub const USED_NODES_KEY: &'static str = "used_nodes";
+    const TOTAL_BYTES_KEY: &'static str = "total_bytes";
+    const USED_BYTES_KEY: &'static str = "used_bytes";
+    const TOTAL_NODES_KEY: &'static str = "total_nodes";
+    const USED_NODES_KEY: &'static str = "used_nodes";
 
     fn record(self, node: &Node) {
         node.record_uint(Self::TOTAL_BYTES_KEY, self.total_bytes);
@@ -151,10 +151,10 @@ pub struct VolumeData {
 }
 
 impl VolumeData {
-    pub const SIZE_BYTES_KEY: &'static str = "size_bytes";
-    pub const SIZE_LIMIT_BYTES_KEY: &'static str = "size_limit_bytes";
-    pub const AVAILABLE_SPACE_BYTES_KEY: &'static str = "available_space_bytes";
-    pub const OUT_OF_SPACE_EVENTS_KEY: &'static str = "out_of_space_events";
+    const SIZE_BYTES_KEY: &'static str = "size_bytes";
+    const SIZE_LIMIT_BYTES_KEY: &'static str = "size_limit_bytes";
+    const AVAILABLE_SPACE_BYTES_KEY: &'static str = "available_space_bytes";
+    const OUT_OF_SPACE_EVENTS_KEY: &'static str = "out_of_space_events";
 
     fn record(self, node: &Node) {
         node.record_uint(Self::SIZE_BYTES_KEY, self.size_bytes);

@@ -32,14 +32,14 @@ use {
     },
 };
 
-pub mod device;
-pub mod directory;
-pub mod errors;
+mod device;
+mod directory;
+mod errors;
 pub mod file;
 mod inspect;
 pub mod node;
 pub mod vmo_data_buffer;
-pub mod volume;
+mod volume;
 
 #[cfg(test)]
 mod testing;
@@ -47,15 +47,15 @@ mod testing;
 // The correct number here is arguably u64::MAX - 1 (because node 0 is reserved). There's a bug
 // where inspect test cases fail if we try and use that, possibly because of a signed/unsigned bug.
 // See fxbug.dev/87152.  Until that's fixed, we'll have to use i64::MAX.
-pub const TOTAL_NODES: u64 = i64::MAX as u64;
+const TOTAL_NODES: u64 = i64::MAX as u64;
 
-pub const VFS_TYPE_FXFS: u32 = 0x73667866;
+const VFS_TYPE_FXFS: u32 = 0x73667866;
 
-pub const FXFS_INFO_NAME: &'static str = "fxfs";
+const FXFS_INFO_NAME: &'static str = "fxfs";
 
 // An array used to initialize the FilesystemInfo |name| field. This just spells "fxfs" 0-padded to
 // 32 bytes.
-pub const FXFS_INFO_NAME_FIDL: [i8; 32] = [
+const FXFS_INFO_NAME_FIDL: [i8; 32] = [
     0x66, 0x78, 0x66, 0x73, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0,
 ];

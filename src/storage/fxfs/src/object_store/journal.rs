@@ -815,7 +815,7 @@ impl Journal {
         journal_file_checkpoint.file_offset >= offset
     }
 
-    pub async fn write_super_block(&self) -> Result<(), Error> {
+    async fn write_super_block(&self) -> Result<(), Error> {
         let root_parent_store = self.objects.root_parent_store();
 
         // We need to flush previous writes to the device since the new super-block we are writing

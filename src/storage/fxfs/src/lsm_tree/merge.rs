@@ -100,11 +100,11 @@ impl<'a, K, V> MergeLayerIterator<'a, K, V> {
         }
     }
 
-    pub fn new_with_item(layer_index: u16, item: MergeItem<K, V>) -> Self {
+    fn new_with_item(layer_index: u16, item: MergeItem<K, V>) -> Self {
         MergeLayerIterator { layer: None, iter: RawIterator::None, layer_index, item }
     }
 
-    pub fn item(&self) -> ItemRef<'_, K, V> {
+    fn item(&self) -> ItemRef<'_, K, V> {
         match &self.item {
             MergeItem::None => panic!("No item!"),
             MergeItem::Item(ref item) => ItemRef::from(item),
@@ -335,7 +335,7 @@ pub struct MergerIterator<'a, 'b, K, V> {
     trace: bool,
 
     // Holds trace information if trace is true.
-    pub history: String,
+    history: String,
 }
 
 impl<'a, 'b, K: Key + NextKey + OrdLowerBound, V: Value> MergerIterator<'a, 'b, K, V> {

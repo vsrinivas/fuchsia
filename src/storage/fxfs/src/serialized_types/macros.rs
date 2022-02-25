@@ -14,11 +14,11 @@ use syn::{parse_macro_input, Result};
 /// Holds an open-ended version range like `3..` meaning version 3 and up.
 #[derive(Clone)]
 struct PatOpenVersionRange {
-    pub lo: syn::LitInt,
-    pub dots: syn::token::Dot2,
+    lo: syn::LitInt,
+    dots: syn::token::Dot2,
 }
 impl PatOpenVersionRange {
-    pub fn lo_value(&self) -> u32 {
+    fn lo_value(&self) -> u32 {
         self.lo.base10_parse::<u32>().unwrap_or(0)
     }
 }
@@ -46,10 +46,10 @@ impl ToTokens for PatOpenVersionRange {
 
 /// Holds a "fat arrow" mapping from version range to type. e.g. `3.. => FooV3,`
 struct Arm {
-    pub pat: PatOpenVersionRange,
-    pub _fat_arrow_token: syn::token::FatArrow,
-    pub ident: syn::Ident,
-    pub _comma: Option<syn::token::Comma>,
+    pat: PatOpenVersionRange,
+    _fat_arrow_token: syn::token::FatArrow,
+    ident: syn::Ident,
+    _comma: Option<syn::token::Comma>,
 }
 impl Parse for Arm {
     fn parse(input: ParseStream<'_>) -> Result<Self> {

@@ -42,7 +42,7 @@ pub struct Directory<S> {
 }
 
 impl<S: HandleOwner> Directory<S> {
-    pub fn new(owner: Arc<S>, object_id: u64) -> Self {
+    fn new(owner: Arc<S>, object_id: u64) -> Self {
         Directory { owner, object_id, is_deleted: AtomicBool::new(false) }
     }
 
@@ -102,7 +102,7 @@ impl<S: HandleOwner> Directory<S> {
         }
     }
 
-    pub async fn has_children(&self) -> Result<bool, Error> {
+    async fn has_children(&self) -> Result<bool, Error> {
         if self.is_deleted() {
             return Ok(false);
         }
@@ -482,7 +482,7 @@ pub async fn replace_child<'a, S: HandleOwner>(
     Ok(result)
 }
 
-pub fn remove(transaction: &mut Transaction<'_>, store: &ObjectStore, object_id: u64) {
+fn remove(transaction: &mut Transaction<'_>, store: &ObjectStore, object_id: u64) {
     transaction.add(
         store.store_object_id(),
         Mutation::merge_object(ObjectKey::object(object_id), ObjectValue::None),

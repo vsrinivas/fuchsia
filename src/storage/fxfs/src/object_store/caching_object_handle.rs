@@ -30,7 +30,7 @@ use {
 pub use crate::object_store::writeback_cache::CACHE_READ_AHEAD_SIZE;
 
 /// How much data each sync transaction in a given flush will cover.
-pub const FLUSH_BATCH_SIZE: u64 = 524_288;
+const FLUSH_BATCH_SIZE: u64 = 524_288;
 
 pub struct CachingObjectHandle<S: HandleOwner> {
     handle: StoreObjectHandle<S>,

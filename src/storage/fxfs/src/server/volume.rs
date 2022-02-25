@@ -54,7 +54,7 @@ pub struct FxVolume {
 }
 
 impl FxVolume {
-    pub fn new(store: Arc<ObjectStore>, fs_id: u64) -> Result<Self, Error> {
+    fn new(store: Arc<ObjectStore>, fs_id: u64) -> Result<Self, Error> {
         Ok(Self {
             cache: NodeCache::new(),
             store,

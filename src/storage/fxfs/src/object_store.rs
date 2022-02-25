@@ -13,9 +13,9 @@ pub mod fsck;
 mod graveyard;
 mod journal;
 mod merge;
-pub mod object_manager;
+mod object_manager;
 mod object_record;
-pub mod store_object_handle;
+mod store_object_handle;
 #[cfg(test)]
 mod testing;
 pub mod transaction;
@@ -132,7 +132,7 @@ const MAX_ENCRYPTED_MUTATIONS_SIZE: usize = journal::RECLAIM_SIZE as usize;
 #[derive(Default)]
 pub struct HandleOptions {
     /// If true, transactions used by this handle will skip journal space checks.
-    pub skip_journal_checks: bool,
+    skip_journal_checks: bool,
 }
 
 #[derive(Debug, Default, Deserialize, Serialize, Versioned)]
@@ -302,7 +302,7 @@ impl StoreOrReplayInfo {
     }
 }
 
-pub enum LockState {
+enum LockState {
     Locked,
     Unencrypted,
     Unlocked(Arc<dyn Crypt>),
@@ -373,7 +373,7 @@ impl ObjectStore {
         store
     }
 
-    pub fn new_empty(
+    fn new_empty(
         parent_store: Option<Arc<ObjectStore>>,
         store_object_id: u64,
         filesystem: Arc<dyn Filesystem>,
@@ -397,7 +397,7 @@ impl ObjectStore {
     ///
     /// It requires the first three steps to be separate because of lifetime issues when working
     /// with a transaction.
-    pub async fn new_encrypted(
+    async fn new_encrypted(
         parent_store: Arc<ObjectStore>,
         handle: StoreObjectHandle<ObjectStore>,
         crypt: Arc<dyn Crypt>,
@@ -418,7 +418,7 @@ impl ObjectStore {
 
     /// Actually creates the store in a transaction.  This will create a root directory for the
     /// store.  See `new_encrypted` above.
-    pub async fn create<'a>(
+    async fn create<'a>(
         self: &'a Arc<Self>,
         transaction: &mut Transaction<'a>,
     ) -> Result<(), Error> {
@@ -441,7 +441,7 @@ impl ObjectStore {
         self.store_info_handle.get().unwrap().txn_write(transaction, 0u64, buf.as_ref()).await
     }
 
-    pub fn set_trace(&self, trace: bool) {
+    fn set_trace(&self, trace: bool) {
         let old_value = self.trace.swap(trace, Ordering::Relaxed);
         if trace != old_value {
             log::info!(
@@ -452,7 +452,7 @@ impl ObjectStore {
         }
     }
 
-    pub fn is_root(&self) -> bool {
+    fn is_root(&self) -> bool {
         if let Some(parent) = &self.parent_store {
             parent.parent_store.is_none()
         } else {
@@ -461,7 +461,7 @@ impl ObjectStore {
         }
     }
 
-    pub fn device(&self) -> &Arc<dyn Device> {
+    fn device(&self) -> &Arc<dyn Device> {
         &self.device
     }
 
@@ -481,7 +481,7 @@ impl ObjectStore {
         &self.tree
     }
 
-    pub fn extent_tree(&self) -> &LSMTree<ExtentKey, ExtentValue> {
+    fn extent_tree(&self) -> &LSMTree<ExtentKey, ExtentValue> {
         &self.extent_tree
     }
 
@@ -489,15 +489,15 @@ impl ObjectStore {
         self.store_info.lock().unwrap().info().unwrap().root_directory_object_id
     }
 
-    pub fn set_root_directory_object_id<'a>(&'a self, transaction: &mut Transaction<'a>, oid: u64) {
+    fn set_root_directory_object_id<'a>(&'a self, transaction: &mut Transaction<'a>, oid: u64) {
         transaction.add(self.store_object_id, Mutation::root_directory(oid));
     }
 
-    pub fn graveyard_directory_object_id(&self) -> u64 {
+    fn graveyard_directory_object_id(&self) -> u64 {
         self.store_info.lock().unwrap().info().unwrap().graveyard_directory_object_id
     }
 
-    pub fn set_graveyard_directory_object_id<'a>(&'a self, oid: u64) {
+    fn set_graveyard_directory_object_id<'a>(&'a self, oid: u64) {
         self.store_info.lock().unwrap().info_mut().unwrap().graveyard_directory_object_id = oid;
     }
 
@@ -545,7 +545,7 @@ impl ObjectStore {
     }
 
     /// Returns the file size for the object without opening the object.
-    pub async fn get_file_size(&self, object_id: u64) -> Result<u64, Error> {
+    async fn get_file_size(&self, object_id: u64) -> Result<u64, Error> {
         let item = self
             .tree
             .find(&ObjectKey::attribute(object_id, DEFAULT_DATA_ATTRIBUTE_ID))
@@ -793,7 +793,7 @@ impl ObjectStore {
     }
 
     /// Returns all objects that exist in the parent store that pertain to this object store.
-    pub fn parent_objects(&self) -> Vec<u64> {
+    fn parent_objects(&self) -> Vec<u64> {
         assert!(self.store_info_handle.get().is_some());
         let mut objects = Vec::new();
         // We should not include the ID of the store itself, since that should be referred to in the
@@ -809,7 +809,7 @@ impl ObjectStore {
     }
 
     /// Returns root objects for this store.
-    pub fn root_objects(&self) -> Vec<u64> {
+    fn root_objects(&self) -> Vec<u64> {
         let mut objects = Vec::new();
         let store_info = self.store_info.lock().unwrap();
         let info = store_info.info().unwrap();
@@ -822,7 +822,7 @@ impl ObjectStore {
         objects
     }
 
-    pub fn store_info(&self) -> StoreInfo {
+    fn store_info(&self) -> StoreInfo {
         self.store_info.lock().unwrap().info().unwrap().clone()
     }
 
@@ -832,7 +832,7 @@ impl ObjectStore {
     }
 
     /// Called when replay for a store has completed.
-    pub async fn on_replay_complete(&self) -> Result<(), Error> {
+    async fn on_replay_complete(&self) -> Result<(), Error> {
         if self.parent_store.is_none() || self.store_info_handle.get().is_some() {
             return Ok(());
         }
@@ -957,7 +957,7 @@ impl ObjectStore {
 
     /// Unlocks a store so that it is ready to be used.
     /// This is not thread-safe.
-    pub async fn unlock(&self, crypt: Arc<dyn Crypt>) -> Result<(), Error> {
+    async fn unlock(&self, crypt: Arc<dyn Crypt>) -> Result<(), Error> {
         let store_info = self.store_info();
 
         // The store should be locked.
@@ -1036,18 +1036,18 @@ impl ObjectStore {
         Ok(())
     }
 
-    pub fn is_locked(&self) -> bool {
+    fn is_locked(&self) -> bool {
         matches!(*self.lock_state.lock().unwrap(), LockState::Locked)
     }
 
-    pub fn get_next_object_id(&self) -> u64 {
+    fn get_next_object_id(&self) -> u64 {
         let mut store_info = self.store_info.lock().unwrap();
         let last_object_id = store_info.last_object_id();
         *last_object_id += 1;
         *last_object_id
     }
 
-    pub fn allocator(&self) -> Arc<dyn Allocator> {
+    fn allocator(&self) -> Arc<dyn Allocator> {
         self.filesystem().allocator()
     }
 
@@ -1119,7 +1119,7 @@ impl ObjectStore {
     }
 
     /// Adds the specified object to the graveyard.
-    pub fn add_to_graveyard(&self, transaction: &mut Transaction<'_>, object_id: u64) {
+    fn add_to_graveyard(&self, transaction: &mut Transaction<'_>, object_id: u64) {
         let graveyard_id = self.graveyard_directory_object_id();
         assert_ne!(graveyard_id, INVALID_OBJECT_ID);
         transaction.add(
@@ -1132,7 +1132,7 @@ impl ObjectStore {
     }
 
     /// Removes the specified object from the graveyard.
-    pub fn remove_from_graveyard(&self, transaction: &mut Transaction<'_>, object_id: u64) {
+    fn remove_from_graveyard(&self, transaction: &mut Transaction<'_>, object_id: u64) {
         transaction.add(
             self.store_object_id,
             Mutation::replace_or_insert_object(
@@ -1153,7 +1153,7 @@ struct MajorCompactionIterator<'a, K, V, F> {
 }
 
 impl<'a, K, V, F> MajorCompactionIterator<'a, K, V, F> {
-    pub fn new(iter: BoxedLayerIterator<'a, K, V>, can_discard: F) -> Self {
+    fn new(iter: BoxedLayerIterator<'a, K, V>, can_discard: F) -> Self {
         Self { iter, can_discard }
     }
 }

@@ -39,7 +39,7 @@ impl FakeObject {
         FakeObject { buf: Mutex::new(Vec::new()), lock_manager: LockManager::new() }
     }
 
-    pub fn read(&self, offset: u64, mut buf: MutableBufferRef<'_>) -> Result<usize, Error> {
+    fn read(&self, offset: u64, mut buf: MutableBufferRef<'_>) -> Result<usize, Error> {
         let our_buf = self.buf.lock().unwrap();
         let to_do = min(buf.len(), our_buf.len() - offset as usize);
         buf.as_mut_slice()[0..to_do]
@@ -47,7 +47,7 @@ impl FakeObject {
         Ok(to_do)
     }
 
-    pub fn write_or_append(&self, offset: Option<u64>, buf: BufferRef<'_>) -> Result<u64, Error> {
+    fn write_or_append(&self, offset: Option<u64>, buf: BufferRef<'_>) -> Result<u64, Error> {
         let mut our_buf = self.buf.lock().unwrap();
         let offset = offset.unwrap_or(our_buf.len() as u64);
         let required_len = offset as usize + buf.len();
@@ -58,7 +58,7 @@ impl FakeObject {
         Ok(our_buf.len() as u64)
     }
 
-    pub fn truncate(&self, size: u64) {
+    fn truncate(&self, size: u64) {
         self.buf.lock().unwrap().resize(size as usize, 0);
     }
 

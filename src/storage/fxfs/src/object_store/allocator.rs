@@ -198,7 +198,7 @@ impl<T: Borrow<U> + Clone + Send + Sync, U: ReservationOwner + ?Sized> Reservati
 
     /// Returns a partial amount of the reservation.  If the reservation is smaller than |amount|,
     /// returns less than the requested amount, and this can be *zero*.
-    pub fn reserve_at_most(&self, amount: u64) -> ReservationImpl<&Self, Self> {
+    fn reserve_at_most(&self, amount: u64) -> ReservationImpl<&Self, Self> {
         let mut inner = self.inner.lock().unwrap();
         let taken = std::cmp::min(amount, inner.amount - inner.reserved);
         inner.reserved += taken;
