@@ -45,7 +45,7 @@ func init() {
 				EnableSendEventBenchmark: true,
 				EnableEchoCallBenchmark:  true,
 				HandleDefs:               util.RepeatHandleDef(config.HandleDef{Subtype: config.Event}, 64),
-				Denylist:                 []config.Binding{config.Go, config.DriverCPP},
+				Denylist:                 []config.Binding{config.Go},
 			},
 		},
 	})

@@ -8,7 +8,10 @@ namespace fidl {
 namespace internal {
 
 void* TransportContextBase::release(const TransportVTable* vtable) {
-  ZX_ASSERT(vtable && vtable_ && vtable_->type == vtable->type);
+  ZX_DEBUG_ASSERT(vtable);
+  ZX_ASSERT_MSG(vtable_, "context must be assigned a transport");
+  ZX_ASSERT_MSG(vtable_->type == vtable->type,
+                "cannot release context for different transport than used for creation");
 
   void* data = data_;
   vtable_ = nullptr;

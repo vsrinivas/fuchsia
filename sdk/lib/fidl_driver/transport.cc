@@ -84,12 +84,10 @@ zx_status_t driver_call(fidl_handle_t handle, CallOptions call_options, const Ca
   ZX_ASSERT(cargs.wr_data_count == 1);
   const zx_channel_iovec_t& iovec = static_cast<const zx_channel_iovec_t*>(cargs.wr_data)[0];
   fdf_arena_t* arena = call_options.outgoing_transport_context.release<DriverTransport>();
-
   void* arena_handles = fdf_arena_allocate(arena, cargs.wr_handles_count * sizeof(fdf_handle_t));
   memcpy(arena_handles, cargs.wr_handles, cargs.wr_handles_count * sizeof(fdf_handle_t));
 
-  fdf_arena_t* rd_arena;
-  fdf_handle_t* rd_handles;
+  fdf_arena_t* rd_arena = nullptr;
   fdf_channel_call_args args = {
       .wr_arena = arena,
       .wr_data = const_cast<void*>(iovec.buffer),
@@ -104,14 +102,9 @@ zx_status_t driver_call(fidl_handle_t handle, CallOptions call_options, const Ca
       .rd_num_handles = out_handles_actual_count,
   };
   zx_status_t status = fdf_channel_call(handle, 0, ZX_TIME_INFINITE, &args);
-  if (status != ZX_OK) {
-    return status;
-  }
-  memcpy(cargs.rd_handles, rd_handles, *out_handles_actual_count * sizeof(fdf_handle_t));
   *call_options.out_incoming_transport_context =
       IncomingTransportContext::Create<DriverTransport>(rd_arena);
-
-  return ZX_OK;
+  return status;
 }
 
 zx_status_t driver_create_waiter(fidl_handle_t handle, async_dispatcher_t* dispatcher,
