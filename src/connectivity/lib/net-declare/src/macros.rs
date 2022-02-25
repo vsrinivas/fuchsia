@@ -447,10 +447,24 @@ impl Generator<IpAddressWithPrefix<Ipv4Addr>> for FidlGen {
     }
 }
 
+impl Generator<IpAddressWithPrefix<Ipv6Addr>> for FidlGen {
+    fn generate(input: IpAddressWithPrefix<Ipv6Addr>) -> TokenStream {
+        let IpAddressWithPrefix { address, prefix } = input;
+        let addr = Self::generate(address);
+        quote! {
+            fidl_fuchsia_net::Ipv6AddressWithPrefix {
+                addr: #addr,
+                prefix_len: #prefix,
+            }
+        }
+    }
+}
+
 declare_macro!(fidl_ip, FidlGen, IpAddr);
 declare_macro!(fidl_ip_v4, FidlGen, Ipv4Addr);
 declare_macro!(fidl_ip_v4_with_prefix, FidlGen, IpAddressWithPrefix<Ipv4Addr>);
 declare_macro!(fidl_ip_v6, FidlGen, Ipv6Addr);
+declare_macro!(fidl_ip_v6_with_prefix, FidlGen, IpAddressWithPrefix<Ipv6Addr>);
 declare_macro!(fidl_socket_addr, FidlGen, SocketAddr);
 declare_macro!(fidl_socket_addr_v4, FidlGen, SocketAddrV4);
 declare_macro!(fidl_socket_addr_v6, FidlGen, SocketAddrV6);

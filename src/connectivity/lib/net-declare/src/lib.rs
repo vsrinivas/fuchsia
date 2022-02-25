@@ -47,6 +47,9 @@ pub use net_declare_macros::fidl_ip_v4_with_prefix;
 /// Declares a [`fidl_fuchsia_net::Ipv6Address`] from a parsable IPv6 address
 /// string.
 pub use net_declare_macros::fidl_ip_v6;
+/// Declares a [`fidl_fuchsia_net::Ipv6AddressWithPrefix`] from a parsable IPv6
+/// + prefix length string, e.g. `ff08::1/88`.
+pub use net_declare_macros::fidl_ip_v6_with_prefix;
 /// Declares a [`fidl_fuchsia_net::MacAddress`] from a parsable MAC address in
 /// the form `aa:bb:cc:dd:ee:ff`.
 pub use net_declare_macros::fidl_mac;
@@ -296,6 +299,19 @@ mod tests {
                 prefix_len: 24
             },
             fidl_ip_v4_with_prefix!("192.168.0.1/24")
+        );
+    }
+
+    #[test]
+    fn test_fidl_ip_v6_with_prefix() {
+        assert_eq!(
+            fidl::Ipv6AddressWithPrefix {
+                addr: fidl::Ipv6Address {
+                    addr: [0xFF, 0x01, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x01, 0x02]
+                },
+                prefix_len: 64
+            },
+            fidl_ip_v6_with_prefix!("ff01::0102/64")
         );
     }
 
