@@ -7,6 +7,7 @@ import("//build/config.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
 import("//build/rust/rustc_test.gni")
+import("//src/sys/core/build/core_shard.gni")
 
 rustc_binary("bin") {
   name = "ext4_readonly"
@@ -74,6 +75,10 @@ fuchsia_component("ext4_readonly_comp") {
   component_name = "ext4_readonly"
   manifest = "meta/ext4_readonly.cmx"
   deps = [ ":bin" ]
+}
+
+core_shard("ext4_readonly_shard") {
+  shard_file = "meta/ext4_readonly.core_shard.cml"
 }
 
 fuchsia_package("ext4_readonly") {
