@@ -62,7 +62,7 @@ action("normalize_unittest") {
   outputs = [ normalize_test_stamp ]
   args = [
     "--stamp",
-    rebase_path(normalize_test_stamp),
+    rebase_path(normalize_test_stamp, root_build_dir),
   ]
 }
 

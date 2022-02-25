@@ -25,7 +25,7 @@ compiled_action("generate_unicode_blocks_source") {
   tool = ":unicode_block_generator"
   output_path = "$target_gen_dir/unicode_blocks.rs"
   outputs = [ output_path ]
-  args = [ rebase_path(output_path) ]
+  args = [ rebase_path(output_path, root_build_dir) ]
 }
 
 rustc_binary("unicode_block_generator") {

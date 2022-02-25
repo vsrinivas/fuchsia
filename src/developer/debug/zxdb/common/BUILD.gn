@@ -12,7 +12,7 @@ action("version_inc") {
   script = "generate_version_inc.sh"
   inputs = [ build_info_files.version ]
   outputs = [ "$target_gen_dir/version.inc" ]
-  args = rebase_path(inputs + outputs)
+  args = rebase_path(inputs + outputs, root_build_dir)
   deps = [ "//build/info:latest-commit-date" ]
 }
 

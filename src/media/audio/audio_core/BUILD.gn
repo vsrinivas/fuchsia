@@ -16,7 +16,8 @@ action_foreach("json_schema_headers") {
 
   args = [
     "{{source}}",
-    rebase_path("$target_gen_dir") + "/schema/{{source_name_part}}.inl",
+    rebase_path("$target_gen_dir", root_build_dir) +
+        "/schema/{{source_name_part}}.inl",
   ]
 
   sources = [

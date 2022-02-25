@@ -32,7 +32,7 @@ if (current_toolchain == default_toolchain) {
     outputs = [ "$target_out_dir/$target_name.txt" ]
     sources = get_target_outputs(":markdown") +
               [ "//zircon/../docs/gen/boot-options.md" ]
-    args = rebase_path(sources + outputs)
+    args = rebase_path(sources + outputs, root_build_dir)
   }
 }
 

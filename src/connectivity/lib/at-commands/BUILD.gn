@@ -38,11 +38,11 @@ compiled_action("generate_sources") {
   args = [
     "--quiet",
     "--output-types",
-    rebase_path(output_types),
+    rebase_path(output_types, root_build_dir),
     "--output-translate",
-    rebase_path(output_translate),
+    rebase_path(output_translate, root_build_dir),
   ]
-  foreach(input, rebase_path(sources)) {
+  foreach(input, rebase_path(sources, root_build_dir)) {
     args += [ "--input" ] + [ input ]
   }
 }

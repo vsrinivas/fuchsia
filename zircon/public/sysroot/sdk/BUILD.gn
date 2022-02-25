@@ -141,6 +141,9 @@ action("sysroot-meta") {
     "--location=/versions/$target_cpu/debug_libs",
   ]
   deps = [ ":sysroot-meta-json" ] + sysroot_sdk_deps
+
+  # .debug.manifest contains absolute paths to .so.debug files.
+  no_output_dir_leaks = false
 }
 meta_outputs = get_target_outputs(":sysroot-meta")
 

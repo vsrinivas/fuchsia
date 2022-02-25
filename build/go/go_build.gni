@@ -508,6 +508,10 @@ template("go_build") {
       b = metadata_binaries[0]
       outputs += [ root_out_dir + "/" + b.breakpad ]
     }
+
+    # The binaries embed absolute paths to the source file,
+    # which is copied into a subdir of root_build_dir.
+    no_output_dir_leaks = false
   }
 
   if (define_sdk_target) {

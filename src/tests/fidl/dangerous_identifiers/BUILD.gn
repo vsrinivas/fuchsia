@@ -83,7 +83,7 @@ template("generate_dangerous_fidl") {
   assert(defined(invoker.fidl_library))
   assert(defined(invoker.output))
 
-  output = rebase_path(invoker.output)
+  output = rebase_path(invoker.output, root_build_dir)
 
   action(target_name) {
     script = "generate/generate.py"

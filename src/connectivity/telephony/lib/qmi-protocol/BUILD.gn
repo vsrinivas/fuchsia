@@ -20,7 +20,8 @@ compiled_action("gen_qmi_protocol_source") {
     "protocol/wds.json",
   ]
   outputs = [ output ]
-  args = [ "-i" ] + rebase_path(sources) + [ "-o" ] + [ rebase_path(output) ]
+  args = [ "-i" ] + rebase_path(sources, root_build_dir) + [ "-o" ] +
+         [ rebase_path(output, root_build_dir) ]
 }
 
 # Build the library.

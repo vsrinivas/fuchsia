@@ -75,7 +75,7 @@ action("benchmark_suite_rust_lib_gen") {
 
   script = "gen_benchmark_suite_lib.py"
 
-  args = [ rebase_path(benchmark_suite_file) ] + gidl_pkg_names
+  args = [ rebase_path(benchmark_suite_file, root_build_dir) ] + gidl_pkg_names
 }
 
 rustc_library("benchmark_suite_rust_lib") {
