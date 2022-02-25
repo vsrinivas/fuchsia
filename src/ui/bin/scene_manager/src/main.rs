@@ -59,6 +59,8 @@ async fn main() -> Result<(), Error> {
     let scenic = connect_to_protocol::<ScenicMarker>()?;
 
     let use_flatland = scenic.uses_flatland().await.expect("Failed to get flatland info.");
+    let display_ownership =
+        scenic.get_display_ownership_event().await.expect("Failed to get display ownership.");
     fx_log_info!("Instantiating SceneManager, use_flatland: {:?}", use_flatland);
 
     let scene_manager: Arc<Mutex<Box<dyn SceneManager>>> = if use_flatland {
@@ -98,6 +100,7 @@ async fn main() -> Result<(), Error> {
         input_device_registry_request_stream_receiver,
         icu_data_loader,
         &inspect_node.clone(),
+        display_ownership,
     )
     .await
     {

@@ -103,6 +103,19 @@ impl KeyboardEvent {
         self.event_type
     }
 
+    /// Folds the key event type into an active event (Pressed, Released).
+    pub fn into_with_folded_event(self) -> Self {
+        Self { event_type: self.get_event_type_folded(), ..self }
+    }
+
+    /// Gets [KeyEventType], folding `SYNC` into `PRESSED` and `CANCEL` into `RELEASED`.
+    pub fn get_event_type_folded(&self) -> KeyEventType {
+        match self.event_type {
+            KeyEventType::Pressed | KeyEventType::Sync => KeyEventType::Pressed,
+            KeyEventType::Released | KeyEventType::Cancel => KeyEventType::Released,
+        }
+    }
+
     /// Converts [KeyboardEvent] into the same one, but with specified modifiers.
     pub fn into_with_modifiers(self, modifiers: Option<fidl_ui_input3::Modifiers>) -> Self {
         Self { modifiers, ..self }

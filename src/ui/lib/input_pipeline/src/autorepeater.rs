@@ -120,7 +120,7 @@ impl TryInto<InputEvent> for AnyEvent {
         match self {
             AnyEvent::NonKeyboard(ev) => Ok(ev),
             AnyEvent::Keyboard(ev, device_descriptor, event_time, handled) => Ok(InputEvent {
-                device_event: InputDeviceEvent::Keyboard(ev.clone()),
+                device_event: InputDeviceEvent::Keyboard(ev.clone().into_with_folded_event()),
                 device_descriptor: device_descriptor.clone(),
                 event_time,
                 handled,
@@ -312,7 +312,7 @@ impl Autorepeater {
             // This is the initial state.  We wait for a key event with a printable
             // character, since those are autorepeatable.
             (State::Dormant, AnyEvent::Keyboard(ev, descriptor, ..)) => {
-                match (ev.get_event_type(), repeatability(ev.get_key_meaning())) {
+                match (ev.get_event_type_folded(), repeatability(ev.get_key_meaning())) {
                     // Only a printable key is a candidate for repeating.
                     // We start a delay timer and go to waiting.
                     (KeyEventType::Pressed, Repeatability::Yes) => {
@@ -358,7 +358,7 @@ impl Autorepeater {
             // from the event stream.
             (State::Armed { armed_event, .. }, AnyEvent::Keyboard(ev, descriptor, ..)) => {
                 let ev = ev.clone();
-                match (ev.get_event_type(), repeatability(ev.get_key_meaning())) {
+                match (ev.get_event_type_folded(), repeatability(ev.get_key_meaning())) {
                     (KeyEventType::Pressed, Repeatability::Yes) => {
                         let _delay_timer =
                             new_autorepeat_timer(self.event_sink.clone(), self.settings.delay);
@@ -645,6 +645,59 @@ mod tests {
         // Drive both the test fixture task and the handler task in parallel,
         // and both in fake time.  `run_in_fake_time` advances the fake time from
         // zero in increments of about 10ms until all futures complete.
+        let joined_fut = Task::local(async move {
+            let _r = futures::join!(handler_task, main_fut);
+        });
+        pin_mut!(joined_fut);
+        run_in_fake_time(&mut executor, &mut joined_fut, zx::Duration::from_seconds(10));
+    }
+
+    #[test]
+    fn basic_sync_and_cancel_only() {
+        let mut executor = TestExecutor::new_with_fake_time().unwrap();
+        let (input, receiver) = mpsc::unbounded();
+        let handler = Autorepeater::new_with_settings(receiver, default_settings());
+        let (sender, output) = mpsc::unbounded();
+        let handler_task = Task::local(async move { handler.run(sender).await });
+
+        let main_fut = async move {
+            input
+                .unbounded_send(new_event(
+                    Key::A,
+                    KeyEventType::Sync,
+                    Some(KeyMeaning::Codepoint('a' as u32)),
+                    0,
+                ))
+                .unwrap();
+            wait_for_millis(1).await;
+
+            input
+                .unbounded_send(new_event(
+                    Key::A,
+                    KeyEventType::Cancel,
+                    Some(KeyMeaning::Codepoint('a' as u32)),
+                    0,
+                ))
+                .unwrap();
+            assert_events(
+                output,
+                vec![
+                    new_event(
+                        Key::A,
+                        KeyEventType::Pressed,
+                        Some(KeyMeaning::Codepoint('a' as u32)),
+                        0,
+                    ),
+                    new_event(
+                        Key::A,
+                        KeyEventType::Released,
+                        Some(KeyMeaning::Codepoint('a' as u32)),
+                        0,
+                    ),
+                ],
+            )
+            .await;
+        };
         let joined_fut = Task::local(async move {
             let _r = futures::join!(handler_task, main_fut);
         });

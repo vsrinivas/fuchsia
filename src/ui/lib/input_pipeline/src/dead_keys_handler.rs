@@ -176,7 +176,7 @@ impl StoredEvent {
 
     /// Returns the key event type (pressed, released, or something else)
     fn e_type(&self) -> KeyEventType {
-        self.event.get_event_type()
+        self.event.get_event_type_folded()
     }
 
     /// Returns a new [StoredEvent] based on `Self`, but with the combining effect removed.

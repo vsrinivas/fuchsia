@@ -224,7 +224,9 @@ impl ModifierState {
     /// Update the modifier tracker state with this event.
     pub fn update(&mut self, event: KeyEventType, key: Key) {
         match event {
-            KeyEventType::Pressed => match key {
+            // PRESSED event is a regular key press.
+            // SYNC event is an update to key presses after a focus regain.
+            KeyEventType::Pressed | KeyEventType::Sync => match key {
                 Key::CapsLock => self.state.insert(Modifiers::CAPS_LOCK),
                 Key::NumLock => self.state.insert(Modifiers::NUM_LOCK),
                 Key::ScrollLock => self.state.insert(Modifiers::SCROLL_LOCK),
@@ -261,7 +263,9 @@ impl ModifierState {
                 }
                 _ => {}
             },
-            KeyEventType::Released => match key {
+            // PRESSED event is a regular key release.
+            // CANCEL event is an update to key presses after a focus loss.
+            KeyEventType::Released | KeyEventType::Cancel => match key {
                 Key::CapsLock => {
                     self.state.remove(Modifiers::CAPS_LOCK);
                 }
@@ -318,12 +322,6 @@ impl ModifierState {
                 }
                 _ => {}
             },
-            _ => {
-                panic!(
-                    "ModifierState::update: unexpected event: {:?} - this is a programmer error",
-                    event
-                );
-            }
         }
     }
 }
@@ -464,13 +462,14 @@ impl LockStateKeys {
 /// This is repetitive code, so perhaps better handle it here.
 #[derive(Debug, Clone, Default)]
 pub struct KeyState {
-    pressed_keys: collections::HashSet<Key>,
+    // Using BTreeSet for deterministic key iteration ordering.
+    pressed_keys: collections::BTreeSet<Key>,
 }
 
 impl KeyState {
     /// Creates a new [KeyState]
     pub fn new() -> Self {
-        KeyState { pressed_keys: collections::HashSet::new() }
+        KeyState { pressed_keys: collections::BTreeSet::new() }
     }
 
     /// Updates the key tracking state with the given key event pair.
@@ -498,6 +497,11 @@ impl KeyState {
     /// Returns `true` if all keys from `keys` are pressed.
     pub fn pressed_all(&self, keys: &[Key]) -> bool {
         keys.iter().all(|k| self.is_pressed(k))
+    }
+
+    /// Gets all the keys from the set.
+    pub fn get_set(&self) -> collections::BTreeSet<Key> {
+        self.pressed_keys.clone()
     }
 }
 
@@ -881,6 +885,14 @@ mod tests {
         assert_eq!(false, t.pressed_any(&vec![Key::RightShift, Key::LeftShift]));
         assert_eq!(true, t.pressed_all(&vec![Key::Space,]));
         assert_eq!(true, t.pressed_all(&vec![Key::Space, Key::Tab,]));
+
+        let keys = t.get_set();
+        assert_eq!(true, t.pressed_all(&vec![Key::Space, Key::Tab,]));
+
+        let mut expected = collections::BTreeSet::new();
+        expected.insert(Key::Space);
+        expected.insert(Key::Tab);
+        assert_eq!(keys, expected, "want: {:?} was: {:?}", &expected, &keys);
     }
 
     #[test_case(

@@ -336,6 +336,17 @@ impl InputEvent {
     pub(crate) fn into_handled(self) -> Self {
         Self { handled: Handled::Yes, ..self }
     }
+
+    /// Returns the same event, with modified event time.
+    pub fn into_with_event_time(self, event_time: zx::Time) -> Self {
+        Self { event_time, ..self }
+    }
+
+    /// Returns the same event, with modified device descriptor.
+    #[cfg(test)]
+    pub fn into_with_device_descriptor(self, device_descriptor: InputDeviceDescriptor) -> Self {
+        Self { device_descriptor, ..self }
+    }
 }
 
 #[cfg(test)]

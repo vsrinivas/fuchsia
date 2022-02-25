@@ -108,4 +108,10 @@ metrics at multiple places in the input pipeline.  In the example above, the
 input pipeline has been configured with two inspect handlers: one at the entry,
 and one at the pipeline exit.  Normally the latter should see no events.
 
+## Dead keys handler.
 
+See [dead_keys.md] for details.
+
+## Display ownership handler.
+
+See [display_ownership_handler.md] for details.

@@ -12,10 +12,12 @@ use {
     fuchsia_component::client::connect_to_protocol,
     fuchsia_inspect as inspect,
     fuchsia_syslog::{fx_log_err, fx_log_warn},
+    fuchsia_zircon as zx,
     futures::{lock::Mutex, StreamExt},
     icu_data,
     input_pipeline::{
         self, dead_keys_handler,
+        display_ownership_handler::DisplayOwnershipHandler,
         ime_handler::ImeHandler,
         input_device,
         input_pipeline::{InputDeviceBindingHashMap, InputPipeline, InputPipelineAssembly},
@@ -46,6 +48,7 @@ pub async fn handle_input(
     >,
     icu_data_loader: icu_data::Loader,
     node: &inspect::Node,
+    display_ownership_event: zx::Event,
 ) -> Result<InputPipeline, Error> {
     let input_pipeline = InputPipeline::new(
         vec![
@@ -53,7 +56,14 @@ pub async fn handle_input(
             input_device::InputDeviceType::Touch,
             input_device::InputDeviceType::Keyboard,
         ],
-        build_input_pipeline_assembly(use_flatland, scene_manager, icu_data_loader, node).await,
+        build_input_pipeline_assembly(
+            use_flatland,
+            scene_manager,
+            icu_data_loader,
+            node,
+            display_ownership_event,
+        )
+        .await,
     )
     .context("Failed to create InputPipeline.")?;
 
@@ -140,10 +150,12 @@ async fn build_input_pipeline_assembly(
     scene_manager: Arc<Mutex<Box<dyn SceneManager>>>,
     icu_data_loader: icu_data::Loader,
     node: &inspect::Node,
+    display_ownership_event: zx::Event,
 ) -> InputPipelineAssembly {
     let mut assembly = InputPipelineAssembly::new();
     let (sender, mut receiver) = futures::channel::mpsc::channel(0);
     {
+        assembly = add_display_ownership_handler(display_ownership_event, assembly);
         assembly = add_modifier_handler(assembly);
         assembly = add_inspect_handler(node.create_child("input_pipeline_entry"), assembly);
         // Add the text settings handler early in the pipeline to use the
@@ -203,6 +215,13 @@ async fn build_input_pipeline_assembly(
     }
 
     assembly
+}
+
+fn add_display_ownership_handler(
+    display_ownership_event: zx::Event,
+    assembly: InputPipelineAssembly,
+) -> InputPipelineAssembly {
+    assembly.add_handler(DisplayOwnershipHandler::new(display_ownership_event))
 }
 
 /// Hooks up the modifier keys handler.
