@@ -1,0 +1,19 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/fidl/fidl.gni")
+import("//build/fidl/toolchain.gni")
+
+fidl("test_fidl") {
+  name = "fuchsia.tools.bindc.test"
+  sources = [
+    "protocol_one.test.fidl",
+    "protocol_two.test.fidl",
+  ]
+}
+
+# Depend on this target to have the IR generated for the test FIDL library.
+group("fidl") {
+  public_deps = [ ":test_fidl($fidl_toolchain)" ]
+}

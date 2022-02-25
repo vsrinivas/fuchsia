@@ -1,0 +1,5 @@
+enum {enum_name} {{
+  Banjo,
+  ZirconTransport,
+  DriverTransport,
+}};

@@ -9,6 +9,40 @@ import("//build/sdk/sdk_host_tool.gni")
 import("//build/testing/environments.gni")
 
 if (is_host) {
+  # Write a .rs file containing the IR needed by test_bind_lib_generation.
+  ir_content = []
+
+  _fidl_gen_dir = get_label_info("src/tests/fidl:test_fidl($fidl_toolchain)",
+                                 "target_gen_dir")
+  _ir = "$_fidl_gen_dir/test_fidl.fidl.json"
+
+  # For remote-build-ability, paths must be at least relative to test source.
+  # For consistency across different output dirs, paths should be relative
+  # to the root_build_dir, which lives under the test source dir.
+  _path = rebase_path(_ir, target_gen_dir)
+  ir_content += [
+    "pub mod bindc_test {",
+    "  pub static IR: &str = include_str!(\"$_path\");",
+    "}",
+  ]
+  ir_file = "$target_gen_dir/lib.rs"
+  write_file(ir_file, ir_content)
+
+  # Expose the IR in a standard Rust library.
+  rustc_library("ir_importer") {
+    edition = "2018"
+
+    name = "ir_importer"
+
+    source_root = ir_file
+
+    sources = [ ir_file ]
+
+    inputs = [ _ir ]
+
+    deps = [ "src/tests/fidl" ]
+  }
+
   rustc_binary("bin") {
     name = "bindc"
     edition = "2018"
@@ -17,20 +51,26 @@ if (is_host) {
     test_environments = [ host_env ]
 
     deps = [
+      ":ir_importer",
       "//src/devices/lib/bind:lib",
+      "//src/devices/lib/fidl-ir:lib",
       "//third_party/rust_crates:anyhow",
       "//third_party/rust_crates:assert_matches",
+      "//third_party/rust_crates:serde_json",
       "//third_party/rust_crates:structopt",
     ]
 
     sources = [ "src/main.rs" ]
 
     inputs = [
+      "src/templates/bind_lib.template",
+      "src/templates/bind_lib_enum.template",
       "src/templates/bind_v1.h.template",
       "src/templates/bind_v2.h.template",
       "src/templates/composite_bind.h.template",
       "src/templates/fragment.template",
       "src/templates/fidl.template",
+      "src/tests/expected_bind_lib_gen",
       "src/tests/expected_code_gen",
       "src/tests/expected_composite_code",
       "src/tests/expected_composite_code_w_dashes",

@@ -1,0 +1,37 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library fuchsia.tools.bindc.test;
+
+@discoverable
+protocol EchoTwo {
+    EchoString(struct {
+        value string:MAX_STRING_LENGTH;
+    }) -> (struct {
+        response string:MAX_STRING_LENGTH;
+    });
+    SendString(struct {
+        value string:MAX_STRING_LENGTH;
+    });
+    -> OnString(struct {
+        response string:MAX_STRING_LENGTH;
+    });
+};
+
+@discoverable
+protocol EchoLauncher {
+    GetEcho(struct {
+        echo_prefix string:MAX_STRING_LENGTH;
+    }) -> (resource struct {
+        response client_end:Echo;
+    });
+    GetEchoPipelined(resource struct {
+        echo_prefix string:MAX_STRING_LENGTH;
+        request server_end:Echo;
+    });
+};
+
+service EchoService {
+    regular_echo client_end:Echo;
+    reversed_echo client_end:Echo;
+};

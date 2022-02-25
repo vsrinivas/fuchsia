@@ -14,6 +14,7 @@ use bind::compiler::{
 use bind::debugger::offline_debugger;
 use bind::parser::bind_library;
 use bind::{linter, test};
+use fidl_ir_lib::fidl::*;
 use std::collections::HashSet;
 use std::convert::TryFrom;
 use std::fmt::Write;
@@ -100,12 +101,30 @@ enum Command {
         #[structopt(short = "t", long = "test-spec", parse(from_os_str))]
         test_spec: PathBuf,
     },
+    /// Generate a FIDL file based on the input Bind Library file.
     #[structopt(name = "generate")]
     Generate {
-        #[structopt(flatten)]
-        options: SharedOptions,
+        /// The Bind Library input file.
+        #[structopt(parse(from_os_str))]
+        input: Option<PathBuf>,
+
+        /// Check the input for style guide violations.
+        #[structopt(short = "l", long = "lint")]
+        lint: bool,
 
         /// Output FIDL file.
+        #[structopt(short = "o", long = "output", parse(from_os_str))]
+        output: Option<PathBuf>,
+    },
+    /// Generate a Bind Library based on the input FIDL IR file.
+    #[structopt(name = "generate-bind")]
+    GenerateBind {
+        /// The FIDL IR input file. This should be generated from a FIDL library
+        /// by the FIDL compiler at //tools/fidl/fidlc using the $fidl_toolchain suffix.
+        #[structopt(parse(from_os_str))]
+        input: Option<PathBuf>,
+
+        /// Output Bind Library file.
         #[structopt(short = "o", long = "output", parse(from_os_str))]
         output: Option<PathBuf>,
     },
@@ -278,9 +297,8 @@ fn handle_command(command: Command) -> Result<(), Error> {
                 depfile,
             )
         }
-        Command::Generate { options, output } => {
-            handle_generate(options.input, options.lint, output)
-        }
+        Command::Generate { input, lint, output } => handle_generate(input, lint, output),
+        Command::GenerateBind { input, output } => handle_generate_bind(input, output),
     }
 }
 
@@ -504,6 +522,72 @@ fn handle_generate(
     };
 
     // Write FIDL library to output.
+    output_writer
+        .write_all(generated_content.as_bytes())
+        .context("Failed to write to output file")?;
+
+    Ok(())
+}
+
+/// Converts the name of a protocol to a bind library enum for its transport method.
+fn convert_to_bind_library_enum(
+    identifier: &CompoundIdentifier,
+    prefix: &String,
+) -> Result<String, Error> {
+    let enum_name = identifier
+        .0
+        .strip_prefix(format!("{}/", prefix).as_str())
+        .ok_or(anyhow!("Failed to strip library name from CompoundIdentifier."))?;
+    let result = format!(include_str!("templates/bind_lib_enum.template"), enum_name = enum_name,);
+    Ok(result)
+}
+
+fn generate_bind_library(input: &str) -> Result<String, Error> {
+    let in_fidl_ir: FidlIr = serde_json::from_str(input)?;
+
+    // Use the FIDL library name as the bind library name and give it "bind" as a top level
+    // namespace.
+    let bind_name = &in_fidl_ir.get_library_name();
+    let library_name = format!("bind.{}", bind_name);
+
+    let bind_lib_content = in_fidl_ir
+        .declarations
+        .0
+        .iter()
+        .filter(|entry| matches!(entry.1, Declaration::Interface))
+        .map(|entry| convert_to_bind_library_enum(entry.0, bind_name))
+        .collect::<Result<Vec<String>, _>>()?
+        .join("\n");
+
+    // Output result into template.
+    let mut output = String::new();
+    output
+        .write_fmt(format_args!(
+            include_str!("templates/bind_lib.template"),
+            library_name = library_name,
+            bind_lib_content = bind_lib_content,
+        ))
+        .context("Failed to format output")?;
+
+    Ok(output.to_string())
+}
+
+fn handle_generate_bind(input: Option<PathBuf>, output: Option<PathBuf>) -> Result<(), Error> {
+    let input = input.ok_or(anyhow!("An input is required."))?;
+    let input_content = read_file(&input)?;
+
+    // Generate the bind library.
+    let generated_content = generate_bind_library(&input_content)?;
+
+    // Create and open output file.
+    let mut output_writer: Box<dyn io::Write> = if let Some(output) = output {
+        Box::new(File::create(output).context("Failed to create output file.")?)
+    } else {
+        // Output file name was not given. Print result to stdout.
+        Box::new(io::stdout())
+    };
+
+    // Write bind library to output.
     output_writer
         .write_all(generated_content.as_bytes())
         .context("Failed to write to output file")?;
@@ -908,6 +992,14 @@ mod tests {
             include_str!("tests/expected_code_gen"),
             generate_fidl_library(include_str!("tests/test_library.bind").to_string(), false)
                 .unwrap()
+        );
+    }
+
+    #[test]
+    fn test_bind_lib_generation() {
+        assert_eq!(
+            include_str!("tests/expected_bind_lib_gen"),
+            generate_bind_library(ir_importer::bindc_test::IR).unwrap()
         );
     }
 }
