@@ -24,6 +24,18 @@ size_checker_input = {
   core_limit = 8774588  # 8.368 MiB
   core_creep_limit = 153416  # 0.146 MiB
   components = [
+    # Must come before /system so that the config_data package can be attributed separately.
+    {
+      component = "Config Data"
+      src = [
+        "build/images/fuchsia/fuchsia/config_data",
+
+        # NOTE: delete this once https://fxrev.dev/649784 lands
+        "build/images/fuchsia/fuchsia_config-data",
+      ]
+      limit = 98304  # 0.094 MiB
+      creep_limit = 19660  # 0.019 MiB
+    },
     {
       component = "/system (drivers and early boot)"
       src = [ "build/images/fuchsia/fuchsia" ]
@@ -47,12 +59,6 @@ size_checker_input = {
       ]
       limit = 2046836  # 1.952 MiB
       creep_limit = 200648  # 0.191 MiB
-    },
-    {
-      component = "Config Data"
-      src = [ "build/images/fuchsia/fuchsia_config-data" ]
-      limit = 98304  # 0.094 MiB
-      creep_limit = 19660  # 0.019 MiB
     },
     {
       component = "Connectivity/Bluetooth"

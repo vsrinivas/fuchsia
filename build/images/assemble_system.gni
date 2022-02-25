@@ -265,7 +265,7 @@ template("assemble_system") {
     # path that it's expected to be found at, not the path that it's to be
     # written to.
     regenerated_image_assembly_config = "${outdir}/image_assembly.json"
-    config_data_manifest = "${outdir}/config_data.package_manifest.json"
+    config_data_manifest = "${outdir}/config_data/package_manifest.json"
     compare_image_assembly_configs =
         "${outdir}/compare_image_assembly_configs.verified"
 
@@ -657,9 +657,7 @@ template("assemble_system") {
     include_config_data = generate_fvm
   }
 
-  # Run product assembly, but just to verify that the image assembly config
-  # that it generates matches that used to create the legacy input assembly
-  # bundles.
+  # Run product assembly.
   ffx_action(labels.product_assembler) {
     forward_variables_from(invoker,
                            [
@@ -733,10 +731,10 @@ template("assemble_system") {
                            ])
     deps = [
       ":${labels.board_config}",
-      ":${labels.image_assembly_config}",
+      ":${labels.product_assembler}",
     ]
 
-    image_assembly_config = files.image_assembly_config
+    image_assembly_config = files.regenerated_image_assembly_config
     board_config = files.board_config
     output = files.image_assembly_inputs
   }
@@ -772,7 +770,7 @@ template("assemble_system") {
       "assembly",
       "image",
       "--product",
-      rebase_path(files.image_assembly_config, root_build_dir),
+      rebase_path(files.regenerated_image_assembly_config, root_build_dir),
       "--board",
       rebase_path(files.board_config, root_build_dir),
       "--log-commands",
@@ -789,12 +787,12 @@ template("assemble_system") {
     }
     deps += [
       ":${labels.board_config}",
-      ":${labels.image_assembly_config}",
+      ":${labels.product_assembler}",
     ]
 
     inputs = [
       files.board_config,
-      files.image_assembly_config,
+      files.regenerated_image_assembly_config,
     ]
     if (defined(invoker.inputs)) {
       inputs += invoker.inputs

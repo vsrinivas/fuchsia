@@ -308,7 +308,7 @@ mod tests {
 
         // config_data's manifest is in outdir
         let expected_config_data_manifest_path =
-            outdir.path().join("config_data.package_manifest.json");
+            outdir.path().join("config_data").join("package_manifest.json");
 
         // Validate that the base package set contains config_data.
         assert_eq!(result.base.len(), 2);

@@ -49,6 +49,7 @@ impl ConfigDataBuilder {
     /// Build the config_data package, in the specified outdir, and return the
     /// path to the `config_data` package's manifest.
     pub fn build(self, outdir: impl AsRef<Path>) -> Result<PathBuf> {
+        let outdir = outdir.as_ref().join("config_data");
         let mut package_builder = PackageBuilder::new("config-data");
 
         for (package_name, entries) in self.for_packages {
@@ -60,8 +61,8 @@ impl ConfigDataBuilder {
             }
         }
 
-        let metafar_path = outdir.as_ref().join("meta.far");
-        let manifest_path = outdir.as_ref().join("config_data.package_manifest.json");
+        let metafar_path = outdir.join("meta.far");
+        let manifest_path = outdir.join("package_manifest.json");
 
         package_builder.manifest_path(&manifest_path);
 
@@ -84,7 +85,7 @@ mod tests {
     #[test]
     fn test_builder() {
         let outdir = TempDir::new().unwrap();
-        let config_data_metafar_path = outdir.path().join("meta.far");
+        let config_data_metafar_path = outdir.path().join("config_data").join("meta.far");
 
         // Create a file to write to the package.
         let source_file_path = NamedTempFile::new().unwrap();
