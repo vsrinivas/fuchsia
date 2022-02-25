@@ -20,18 +20,25 @@
 
 struct Driver;
 
-struct MatchedCompositeDriver {
+struct MatchedCompositeDevice {
   uint32_t node;
   uint32_t num_nodes;
   std::string name;
   std::vector<std::string> node_names;
 };
 
-struct MatchedDriver {
-  std::optional<MatchedCompositeDriver> composite;
-  bool colocate = false;
+struct MatchedDriverInfo {
   const Driver* driver = nullptr;
+  bool colocate = false;
 };
+
+struct MatchedCompositeDriverInfo {
+  MatchedCompositeDevice composite;
+  MatchedDriverInfo driver_info;
+};
+
+// TODO(fxb/91510): Support device groups.
+typedef std::variant<MatchedDriverInfo, MatchedCompositeDriverInfo> MatchedDriver;
 
 struct Driver : public fbl::DoublyLinkedListable<std::unique_ptr<Driver>> {
   Driver() = default;

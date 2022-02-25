@@ -24,10 +24,25 @@
 
 namespace {
 
-MatchedCompositeDriver CreateMatchedCompositeDriver(
-    fdf::wire::MatchedCompositeInfo composite_info) {
-  MatchedCompositeDriver composite = {};
+zx::status<fdf::wire::MatchedDriverInfo> GetFidlMatchedDriverInfo(fdf::wire::MatchedDriver driver) {
+  if (driver.is_device_group()) {
+    return zx::error(ZX_ERR_NOT_FOUND);
+  }
 
+  if (driver.is_composite_driver()) {
+    if (!driver.composite_driver().has_driver_info()) {
+      return zx::error(ZX_ERR_NOT_FOUND);
+    }
+
+    return zx::ok(driver.composite_driver().driver_info());
+  }
+
+  return zx::ok(driver.driver());
+}
+
+MatchedCompositeDevice CreateMatchedCompositeDevice(
+    fdf::wire::MatchedCompositeInfo composite_info) {
+  MatchedCompositeDevice composite = {};
   if (composite_info.has_num_nodes()) {
     composite.num_nodes = composite_info.num_nodes();
   }
@@ -278,42 +293,42 @@ const std::vector<MatchedDriver> DriverLoader::MatchPropertiesDriverIndex(
       continue;
     }
 
-    if (driver.is_composite_driver() && !driver.composite_driver().has_driver_info()) {
-      LOGF(ERROR,
-           "DriverIndex: MatchDriverV1 response is missing driver info for a"
-           "composite driver");
+    auto fidl_driver_info = GetFidlMatchedDriverInfo(driver);
+    if (fidl_driver_info.is_error()) {
+      LOGF(ERROR, "DriverIndex: MatchedDriversV1 response is missing MatchedDriverInfo");
       continue;
     }
 
-    auto driver_info =
-        driver.is_driver() ? driver.driver() : driver.composite_driver().driver_info();
-
-    if (!driver_info.has_driver_url()) {
+    if (!fidl_driver_info->has_driver_url()) {
       LOGF(ERROR, "DriverIndex: MatchDriverV1 response is missing a driver_url");
       continue;
     }
 
-    std::string driver_url(driver_info.driver_url().get());
-
+    std::string driver_url(fidl_driver_info->driver_url().get());
     auto loaded_driver = LoadDriverUrl(driver_url);
     if (!loaded_driver) {
       continue;
     }
-    MatchedDriver matched_driver = {};
-    matched_driver.driver = loaded_driver;
 
-    if (driver_info.has_colocate()) {
-      matched_driver.colocate = driver_info.colocate();
+    if (!loaded_driver->fallback && config.only_return_base_and_fallback_drivers &&
+        IsFuchsiaBootScheme(driver_url)) {
+      continue;
     }
 
+    MatchedDriverInfo matched_driver_info = {};
+    matched_driver_info.driver = loaded_driver;
+    if (fidl_driver_info->has_colocate()) {
+      matched_driver_info.colocate = fidl_driver_info->colocate();
+    }
+
+    MatchedDriver matched_driver;
     if (driver.is_composite_driver()) {
-      matched_driver.composite = CreateMatchedCompositeDriver(driver.composite_driver());
-    }
-
-    if (config.only_return_base_and_fallback_drivers) {
-      if (IsFuchsiaBootScheme(driver_url) && !loaded_driver->fallback) {
-        continue;
-      }
+      matched_driver = MatchedCompositeDriverInfo{
+          .composite = CreateMatchedCompositeDevice(driver.composite_driver()),
+          .driver_info = matched_driver_info,
+      };
+    } else {
+      matched_driver = matched_driver_info;
     }
 
     if (config.libname.empty() || MatchesLibnameDriverIndex(driver_url, config.libname)) {
@@ -327,8 +342,10 @@ const std::vector<MatchedDriver> DriverLoader::MatchPropertiesDriverIndex(
     }
   }
 
+  // Fallback drivers need to be at the end of the matched drivers.
   matched_drivers.insert(matched_drivers.end(), matched_fallback_drivers.begin(),
                          matched_fallback_drivers.end());
+
   return matched_drivers;
 }
 

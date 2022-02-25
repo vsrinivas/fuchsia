@@ -108,22 +108,21 @@ zx_status_t CompositeDevice::Create(std::string_view name,
   return ZX_OK;
 }
 
-zx_status_t CompositeDevice::CreateFromDriverIndex(MatchedDriver driver,
+zx_status_t CompositeDevice::CreateFromDriverIndex(MatchedCompositeDriverInfo driver,
                                                    std::unique_ptr<CompositeDevice>* out) {
-  ZX_ASSERT_MSG(driver.composite, "DriverIndex Composite driver must have composite set\n");
-  fbl::String name(driver.composite->name);
+  fbl::String name(driver.composite.name);
   auto dev = std::make_unique<CompositeDevice>(
       std::move(name), fbl::Array<const zx_device_prop_t>(), fbl::Array<const StrProperty>(),
-      driver.composite->num_nodes, 0, driver.colocate, fbl::Array<std::unique_ptr<Metadata>>(),
-      true);
+      driver.composite.num_nodes, 0, driver.driver_info.colocate,
+      fbl::Array<std::unique_ptr<Metadata>>(), true);
 
-  for (uint32_t i = 0; i < driver.composite->num_nodes; ++i) {
-    std::string name = driver.composite->node_names[i];
+  for (uint32_t i = 0; i < driver.composite.num_nodes; ++i) {
+    std::string name = driver.composite.node_names[i];
     auto fragment = std::make_unique<CompositeDeviceFragment>(dev.get(), std::string(name), i,
                                                               fbl::Array<const zx_bind_inst_t>());
     dev->unbound_fragments_.push_back(std::move(fragment));
   }
-  dev->driver_index_driver_ = driver.driver;
+  dev->driver_index_driver_ = driver.driver_info.driver;
 
   *out = std::move(dev);
   return ZX_OK;

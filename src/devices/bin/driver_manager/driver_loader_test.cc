@@ -105,7 +105,7 @@ TEST_F(DriverLoaderTest, TestFallbackGetsRemoved) {
   fidl::VectorView<fuchsia_driver_framework::wire::NodeProperty> props{};
   auto drivers = driver_loader.MatchPropertiesDriverIndex(std::move(props), config);
   ASSERT_EQ(drivers.size(), 1);
-  ASSERT_EQ(drivers[0].driver->libname, not_fallback_libname);
+  ASSERT_EQ(std::get<MatchedDriverInfo>(drivers[0]).driver->libname, not_fallback_libname);
 }
 
 TEST_F(DriverLoaderTest, TestFallbackAcceptedAfterBaseLoaded) {
@@ -138,8 +138,8 @@ TEST_F(DriverLoaderTest, TestFallbackAcceptedAfterBaseLoaded) {
 
   ASSERT_EQ(drivers.size(), 2);
   // The non-fallback should always be first.
-  ASSERT_EQ(drivers[0].driver->libname, not_fallback_libname);
-  ASSERT_EQ(drivers[1].driver->libname, fallback_libname);
+  ASSERT_EQ(std::get<MatchedDriverInfo>(drivers[0]).driver->libname, not_fallback_libname);
+  ASSERT_EQ(std::get<MatchedDriverInfo>(drivers[1]).driver->libname, fallback_libname);
 }
 
 TEST_F(DriverLoaderTest, TestFallbackAcceptedWhenSystemNotRequired) {
@@ -167,8 +167,8 @@ TEST_F(DriverLoaderTest, TestFallbackAcceptedWhenSystemNotRequired) {
 
   ASSERT_EQ(drivers.size(), 2);
   // The non-fallback should always be first.
-  ASSERT_EQ(drivers[0].driver->libname, not_fallback_libname);
-  ASSERT_EQ(drivers[1].driver->libname, fallback_libname);
+  ASSERT_EQ(std::get<MatchedDriverInfo>(drivers[0]).driver->libname, not_fallback_libname);
+  ASSERT_EQ(std::get<MatchedDriverInfo>(drivers[1]).driver->libname, fallback_libname);
 }
 
 TEST_F(DriverLoaderTest, TestLibname) {
@@ -195,7 +195,7 @@ TEST_F(DriverLoaderTest, TestLibname) {
   auto drivers = driver_loader.MatchPropertiesDriverIndex(std::move(props), config);
 
   ASSERT_EQ(drivers.size(), 1);
-  ASSERT_EQ(drivers[0].driver->libname, name2);
+  ASSERT_EQ(std::get<MatchedDriverInfo>(drivers[0]).driver->libname, name2);
 }
 
 TEST_F(DriverLoaderTest, TestLibnameConvertToPath) {
@@ -223,7 +223,7 @@ TEST_F(DriverLoaderTest, TestLibnameConvertToPath) {
   auto drivers = driver_loader.MatchPropertiesDriverIndex(std::move(props), config);
 
   ASSERT_EQ(drivers.size(), 1);
-  ASSERT_EQ(drivers[0].driver->libname, name2);
+  ASSERT_EQ(std::get<MatchedDriverInfo>(drivers[0]).driver->libname, name2);
 }
 
 TEST_F(DriverLoaderTest, TestOnlyReturnBaseAndFallback) {
@@ -258,6 +258,6 @@ TEST_F(DriverLoaderTest, TestOnlyReturnBaseAndFallback) {
   auto drivers = driver_loader.MatchPropertiesDriverIndex(std::move(props), config);
 
   ASSERT_EQ(drivers.size(), 2);
-  ASSERT_EQ(drivers[0].driver->libname, name1);
-  ASSERT_EQ(drivers[1].driver->libname, name3);
+  ASSERT_EQ(std::get<MatchedDriverInfo>(drivers[0]).driver->libname, name1);
+  ASSERT_EQ(std::get<MatchedDriverInfo>(drivers[1]).driver->libname, name3);
 }
