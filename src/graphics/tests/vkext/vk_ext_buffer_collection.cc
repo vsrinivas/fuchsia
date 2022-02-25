@@ -628,8 +628,17 @@ void VulkanExtensionTest::CheckLinearImage(vk::DeviceMemory memory, bool is_cohe
     ctx_->device()->invalidateMappedMemoryRanges(1, &range);
   }
 
+  uint32_t error_count = 0;
+  constexpr uint32_t kMaxErrors = 10;
   for (uint32_t i = 0; i < width * height; i++) {
     EXPECT_EQ(fill, reinterpret_cast<uint32_t *>(addr)[i]) << "i " << i;
+    if (reinterpret_cast<uint32_t *>(addr)[i] != fill) {
+      error_count++;
+      if (error_count > kMaxErrors) {
+        printf("Skipping reporting remaining errors\n");
+        break;
+      }
+    }
   }
 
   ctx_->device()->unmapMemory(memory);
@@ -1834,5 +1843,225 @@ TEST_F(VulkanExtensionTest, ImportAliasing) {
 
   CheckLinearImage(dst_memory.get(), dst_is_coherent, kDefaultWidth, kDstHeight, kPattern);
 }
+
+class VulkanFormatTest : public VulkanExtensionTest,
+                         public ::testing::WithParamInterface<VkFormat> {};
+// Test that any fast clears are resolved by a foreign queue transition.
+TEST_P(VulkanFormatTest, FastClear) {
+  ASSERT_TRUE(Initialize());
+
+  constexpr bool kUseProtectedMemory = false;
+  constexpr bool kUseLinear = false;
+  constexpr uint32_t kPattern = 0xaabbccdd;
+
+  const VkFormat format = GetParam();
+
+  vk::UniqueImage image;
+  vk::UniqueDeviceMemory memory;
+
+  fuchsia::sysmem::BufferCollectionInfo_2 sysmem_collection;
+  bool src_is_coherent;
+  {
+    auto [vulkan_token, local_token] = MakeSharedCollection<2>();
+
+    vk::ImageCreateInfo image_create_info = GetDefaultImageCreateInfo(
+        kUseProtectedMemory, format, kDefaultWidth, kDefaultHeight, kUseLinear);
+    image_create_info.setUsage(vk::ImageUsageFlagBits::eColorAttachment |
+                               vk::ImageUsageFlagBits::eTransferDst);
+    image_create_info.setInitialLayout(vk::ImageLayout::ePreinitialized);
+
+    vk::ImageFormatConstraintsInfoFUCHSIA format_constraints =
+        GetDefaultRgbImageFormatConstraintsInfo();
+    format_constraints.imageCreateInfo = image_create_info;
+
+    UniqueBufferCollection collection = CreateVkBufferCollectionForImage(
+        std::move(vulkan_token), format_constraints,
+        vk::ImageConstraintsInfoFlagBitsFUCHSIA::eCpuReadOften |
+            vk::ImageConstraintsInfoFlagBitsFUCHSIA::eCpuWriteOften);
+
+    fuchsia::sysmem::BufferCollectionConstraints constraints;
+    constraints.usage.cpu = fuchsia::sysmem::cpuUsageRead;
+    constraints.image_format_constraints_count = 2;
+    {
+      // Intel needs Y or YF tiling to do a fast clear.
+      auto &image_constraints = constraints.image_format_constraints[0];
+      image_constraints.pixel_format.type = fuchsia::sysmem::PixelFormatType::R8G8B8A8;
+      image_constraints.pixel_format.has_format_modifier = true;
+      image_constraints.pixel_format.format_modifier.value =
+          fuchsia::sysmem::FORMAT_MODIFIER_INTEL_I915_Y_TILED;
+      image_constraints.color_spaces_count = 1;
+      image_constraints.color_space[0].type = fuchsia::sysmem::ColorSpaceType::SRGB;
+    }
+    {
+      auto &image_constraints = constraints.image_format_constraints[1];
+      image_constraints.pixel_format.type = fuchsia::sysmem::PixelFormatType::R8G8B8A8;
+      image_constraints.pixel_format.has_format_modifier = true;
+      image_constraints.pixel_format.format_modifier.value =
+          fuchsia::sysmem::FORMAT_MODIFIER_LINEAR;
+      image_constraints.color_spaces_count = 1;
+      image_constraints.color_space[0].type = fuchsia::sysmem::ColorSpaceType::SRGB;
+    }
+
+    sysmem_collection = AllocateSysmemCollection(constraints, std::move(local_token));
+
+    InitializeDirectImage(*collection, image_create_info);
+
+    uint32_t memoryTypeIndex = InitializeDirectImageMemory(*collection);
+    src_is_coherent = IsMemoryTypeCoherent(memoryTypeIndex);
+
+    image = std::move(vk_image_);
+    memory = std::move(vk_device_memory_);
+
+    WriteLinearImage(memory.get(), src_is_coherent, kDefaultWidth, kDefaultHeight, kPattern);
+  }
+
+  vk::UniqueCommandPool command_pool;
+  {
+    auto info =
+        vk::CommandPoolCreateInfo().setQueueFamilyIndex(vulkan_context().queue_family_index());
+    auto result = vulkan_context().device()->createCommandPoolUnique(info);
+    ASSERT_EQ(vk::Result::eSuccess, result.result);
+    command_pool = std::move(result.value);
+  }
+
+  std::vector<vk::UniqueCommandBuffer> command_buffers;
+  {
+    auto info = vk::CommandBufferAllocateInfo()
+                    .setCommandPool(command_pool.get())
+                    .setLevel(vk::CommandBufferLevel::ePrimary)
+                    .setCommandBufferCount(1);
+    auto result = vulkan_context().device()->allocateCommandBuffersUnique(info);
+    ASSERT_EQ(vk::Result::eSuccess, result.result);
+    command_buffers = std::move(result.value);
+  }
+
+  {
+    auto info = vk::CommandBufferBeginInfo();
+    command_buffers[0]->begin(&info);
+  }
+
+  vk::UniqueRenderPass render_pass;
+  {
+    std::array<vk::AttachmentDescription, 1> attachments;
+    auto &color_attachment = attachments[0];
+    color_attachment.format = static_cast<vk::Format>(format);
+    color_attachment.initialLayout = vk::ImageLayout::ePreinitialized;
+    color_attachment.loadOp = vk::AttachmentLoadOp::eClear;
+    color_attachment.samples = vk::SampleCountFlagBits::e1;
+    color_attachment.stencilLoadOp = vk::AttachmentLoadOp::eDontCare;
+    color_attachment.stencilStoreOp = vk::AttachmentStoreOp::eDontCare;
+    color_attachment.storeOp = vk::AttachmentStoreOp::eStore;
+    color_attachment.finalLayout = vk::ImageLayout::eColorAttachmentOptimal;
+
+    vk::AttachmentReference color_attachment_ref;
+    color_attachment_ref.attachment = 0;
+    color_attachment_ref.layout = vk::ImageLayout::eColorAttachmentOptimal;
+    vk::SubpassDescription subpass;
+    subpass.colorAttachmentCount = 1;
+    subpass.pColorAttachments = &color_attachment_ref;
+    subpass.pipelineBindPoint = vk::PipelineBindPoint::eGraphics;
+
+    vk::RenderPassCreateInfo render_pass_info;
+    render_pass_info.attachmentCount = 1;
+    render_pass_info.pAttachments = &color_attachment;
+    render_pass_info.pSubpasses = &subpass;
+    render_pass_info.subpassCount = 1;
+    auto result = vulkan_context().device()->createRenderPassUnique(render_pass_info);
+    ASSERT_EQ(vk::Result::eSuccess, result.result);
+    render_pass = std::move(result.value);
+  }
+  vk::UniqueImageView image_view;
+  {
+    vk::ImageSubresourceRange range;
+    range.aspectMask = vk::ImageAspectFlagBits::eColor;
+    range.layerCount = 1;
+    range.levelCount = 1;
+    vk::ImageViewCreateInfo info;
+    info.image = *image;
+    info.viewType = vk::ImageViewType::e2D;
+    info.format = static_cast<vk::Format>(format);
+    info.subresourceRange = range;
+
+    auto result = vulkan_context().device()->createImageViewUnique(info);
+    ASSERT_EQ(vk::Result::eSuccess, result.result);
+    image_view = std::move(result.value);
+  }
+  vk::UniqueFramebuffer frame_buffer;
+  {
+    vk::FramebufferCreateInfo create_info;
+    create_info.renderPass = *render_pass;
+    create_info.attachmentCount = 1;
+    std::array<vk::ImageView, 1> attachments{*image_view};
+    create_info.setAttachments(attachments);
+    create_info.width = kDefaultWidth;
+    create_info.height = kDefaultHeight;
+    create_info.layers = 1;
+    auto result = vulkan_context().device()->createFramebufferUnique(create_info);
+    ASSERT_EQ(vk::Result::eSuccess, result.result);
+    frame_buffer = std::move(result.value);
+  }
+
+  vk::RenderPassBeginInfo render_pass_info;
+  vk::ClearValue clear_color;
+  clear_color.color = std::array<float, 4>{1.0f, 1.0f, 1.0f, 1.0f};
+  render_pass_info.renderPass = *render_pass;
+  render_pass_info.renderArea =
+      vk::Rect2D(0 /* offset */, vk::Extent2D(kDefaultWidth, kDefaultHeight));
+  render_pass_info.clearValueCount = 1;
+  render_pass_info.pClearValues = &clear_color;
+  render_pass_info.framebuffer = *frame_buffer;
+
+  // Clears and stores the framebuffer.
+  command_buffers[0]->beginRenderPass(render_pass_info, vk::SubpassContents::eInline);
+  command_buffers[0]->endRenderPass();
+
+  {
+    auto range = vk::ImageSubresourceRange()
+                     .setAspectMask(vk::ImageAspectFlagBits::eColor)
+                     .setLevelCount(1)
+                     .setLayerCount(1);
+    // TODO(fxbug.dev/93236): Test transitioning to
+    // VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL. That's broken with SRGB on the
+    // current version of Mesa.
+    auto barrier = vk::ImageMemoryBarrier()
+                       .setImage(image.get())
+                       .setSrcAccessMask(vk::AccessFlagBits::eColorAttachmentWrite)
+                       .setDstAccessMask(vk::AccessFlagBits::eColorAttachmentRead |
+                                         vk::AccessFlagBits::eColorAttachmentWrite)
+                       .setOldLayout(vk::ImageLayout::eColorAttachmentOptimal)
+                       .setNewLayout(vk::ImageLayout::eGeneral)
+                       .setDstQueueFamilyIndex(VK_QUEUE_FAMILY_FOREIGN_EXT)
+                       .setSubresourceRange(range);
+    command_buffers[0]->pipelineBarrier(
+        vk::PipelineStageFlagBits::eColorAttachmentOutput, /* srcStageMask */
+        vk::PipelineStageFlagBits::eColorAttachmentOutput, /* dstStageMask */
+        vk::DependencyFlagBits::eByRegion, 0 /* memoryBarrierCount */,
+        nullptr /* pMemoryBarriers */, 0 /* bufferMemoryBarrierCount */,
+        nullptr /* pBufferMemoryBarriers */, 1 /* imageMemoryBarrierCount */, &barrier);
+  }
+
+  command_buffers[0]->end();
+
+  {
+    auto command_buffer_temp = command_buffers[0].get();
+    auto info = vk::SubmitInfo().setCommandBufferCount(1).setPCommandBuffers(&command_buffer_temp);
+    vulkan_context().queue().submit(1, &info, vk::Fence());
+  }
+
+  vulkan_context().queue().waitIdle();
+
+  // The image may be linear or y-tiled, but since all pixels are the same and
+  // the dimensions are a multiple of the tile size then pretending it's linear
+  // should be ok.
+  CheckLinearImage(memory.get(), src_is_coherent, kDefaultWidth, kDefaultHeight, 0xffffffff);
+}
+
+// Test on UNORM and SRGB, because on older Intel devices UNORM supports CCS_E, but SRGB only
+// supports CCS_D.
+INSTANTIATE_TEST_SUITE_P(, VulkanFormatTest,
+                         ::testing::Values(VK_FORMAT_R8G8B8A8_UNORM, VK_FORMAT_R8G8B8A8_SRGB),
+                         [](const testing::TestParamInfo<VulkanFormatTest::ParamType> &info) {
+                           return vk::to_string(static_cast<vk::Format>(info.param));
+                         });
 
 }  // namespace
