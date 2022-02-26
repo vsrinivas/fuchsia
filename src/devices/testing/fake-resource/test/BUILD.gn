@@ -25,6 +25,5 @@ test("fake-resource-test-bin") {
 }
 
 fuchsia_unittest_package("fake-resource-test") {
-  manifest = "meta/fake-resource-test.cml"
   deps = [ ":fake-resource-test-bin" ]
 }
