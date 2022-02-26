@@ -500,25 +500,57 @@ where
         //                 Long term we need to have this API connect to the manufacturing
         //                 commands and have the normal CLI commands plumbed via a different
         //                 route.
-        const WAIT_FOR_RESPONSE_TIMEOUT: Duration = Duration::from_millis(500);
+        const WAIT_FOR_RESPONSE_TIMEOUT: Duration = Duration::from_millis(5000);
+
+        info!("CLI command: {:?}", command);
 
         // Locking this receiver also prevents multiple outstanding CLI commands from racing.
         let mut receiver = self.cli_output_receiver.lock().await;
+
+        let mut output = String::new();
+
+        // Flush out any previous response. If we don't do this then we might get
+        // unexpected text at the top of the command output, which would be confusing.
+        while let Some(Some(next)) = receiver.next().now_or_never() {
+            output.push_str(&next);
+        }
+
+        if !output.is_empty() {
+            warn!("Output from previous CLI command collected: {:?}", output);
+            output.clear();
+        }
 
         // Execute the command.
         self.driver_state.lock().ot_instance.cli_input_line(&CString::new(command).unwrap());
 
         // Collect the response, waiting up to WAIT_FOR_RESPONSE_TIMEOUT after the last bit.
-        let mut output = String::new();
         while let Some(Some(next)) = receiver
             .next()
             .map(Option::Some)
             .on_timeout(fasync::Time::after(WAIT_FOR_RESPONSE_TIMEOUT), || None)
             .await
         {
-            output.extend(next.chars());
+            output.push_str(&next);
+            if output.ends_with("Done\r\n")
+                || output.starts_with("Error ")
+                || output.contains("\r\nError ")
+            {
+                // Break early if we are done or there was an error
+                break;
+            }
         }
 
+        // Collect any last bits that might be in the queue without awaiting.
+        while let Some(Some(next)) = receiver.next().now_or_never() {
+            output.push_str(&next);
+        }
+
+        if output.is_empty() {
+            error!("CLI Command Timeout");
+            return Err(ZxStatus::TIMED_OUT);
+        } else {
+            info!("CLI output: {:?}", output);
+        }
         Ok(output)
     }
 
