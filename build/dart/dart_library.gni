@@ -506,6 +506,9 @@ if (current_toolchain == dart_toolchain) {
         rebase_path(_packages_path, root_build_dir),
       ]
       forward_variables_from(invoker, [ "testonly" ])
+
+      # The strict_deps.report contains the output dir name.
+      no_output_dir_leaks = false
     }
 
     # The strict deps tool is excluded from the strict deps check to

@@ -278,6 +278,9 @@ template("dart_tool") {
       rebased_snapshot_path = [ snapshot_path ]
       rebased_snapshot_path_barrier = []
     }
+
+    # snapshot file contains output dir name
+    no_output_dir_leaks = false
   }
 
   # Builds a convenience script to invoke the app.

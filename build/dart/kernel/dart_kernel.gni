@@ -314,6 +314,9 @@ template("dart_kernel") {
     }
 
     deps = _kernel_deps
+
+    # rebased_main_dart includes the output dir name
+    no_output_dir_leaks = false
   }
 
   group(target_name) {

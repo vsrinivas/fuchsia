@@ -293,5 +293,8 @@ template("sdk_element_adapter") {
       "--sdk-category",
       category,
     ]
+
+    # --root-build-dir exposes the output directory name
+    no_output_dir_leaks = false
   }
 }

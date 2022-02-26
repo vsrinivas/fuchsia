@@ -182,7 +182,7 @@ if (toolchain_environment == "user.vdso") {
 
       # This uses absolute paths so the "cp IMPL ABI" message has easily and
       # universally cut&pastable paths.
-      args = rebase_path(sources + outputs)
+      args = rebase_path(sources + outputs, root_build_dir)
 
       metadata = {
         link_output_barrier = []

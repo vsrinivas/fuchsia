@@ -152,9 +152,9 @@ template("target_archive") {
       inputs = [ _struct_objects[0] ]
       outputs = [ _data_binaries[0] ]
       args = [
-        rebase_path(inputs[0]),
+        rebase_path(inputs[0], root_build_dir),
         "/dev/null",
-        _object_dump_section + rebase_path(outputs[0]),
+        _object_dump_section + rebase_path(outputs[0], root_build_dir),
       ]
     }
   }

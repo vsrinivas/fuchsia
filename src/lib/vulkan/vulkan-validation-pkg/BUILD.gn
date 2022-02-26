@@ -87,7 +87,7 @@ if (current_toolchain == target_toolchain) {
 
     outputs = [ "$target_gen_dir/validation-client.cml" ]
     args = [
-      rebase_path(outputs[0]),
+      rebase_path(outputs[0], root_build_dir),
       rebase_path(merkle_file, root_build_dir),
     ]
   }

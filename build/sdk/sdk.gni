@@ -262,6 +262,9 @@ template("sdk") {
     }
 
     public_deps = [ ":$verify_meta_target_name" ]
+
+    # Archive manifest contains output dir name
+    no_output_dir_leaks = false
   }
 
   # Generates the final archive.

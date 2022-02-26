@@ -164,6 +164,9 @@ template("dart_test") {
       ":$_test_grouping_target_name",
     ]
     testonly = true
+
+    # snapshot file contains output dir name
+    no_output_dir_leaks = false
   }
 
   if (is_host) {
