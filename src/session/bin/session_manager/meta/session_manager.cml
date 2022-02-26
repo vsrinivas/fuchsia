@@ -134,12 +134,9 @@
                 "fuchsia.update.config.OptOut",
                 "fuchsia.update.config.OptOutAdmin",
                 "fuchsia.update.Manager",
-                "fuchsia.weave.Bootstrap",
                 "fuchsia.weave.FactoryDataManager",
                 "fuchsia.weave.Provisioner",
                 "fuchsia.weave.Signer",
-                "fuchsia.weave.Stack",
-                "fuchsia.weave.StackProvider",
                 "fuchsia.web.ContextProvider",
                 "fuchsia.wlan.policy.AccessPointProvider",
                 "fuchsia.wlan.policy.ClientProvider",
@@ -162,6 +159,16 @@
         {
             // Routed to session-manager via bt-hfp-audio-gateway.core_shard.cml
             protocol: [ "fuchsia.bluetooth.hfp.Hfp" ],
+            from: "parent",
+            to: "#session",
+        },
+        {
+            // Routed to session-manager via weavestack.core_shard.cml
+            protocol: [
+                "fuchsia.weave.Bootstrap",
+                "fuchsia.weave.Stack",
+                "fuchsia.weave.StackProvider",
+            ],
             from: "parent",
             to: "#session",
         },
