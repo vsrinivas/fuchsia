@@ -1224,19 +1224,6 @@ Explicitly specify DWARF version used.
 
 From //build/config/compiler.gni:66
 
-### emu_window_size_height
-
-**Current value (from the default):** `false`
-
-From //build/product.gni:36
-
-### emu_window_size_width
-Configuration to override the default window size for the virtual device in pixels.
-
-**Current value (from the default):** `false`
-
-From //build/product.gni:35
-
 ### enable_api_diff
 Detect dart API changes
 
@@ -3652,7 +3639,7 @@ toolchain, so that recompilations with the new compiler can be triggered.
 When using the prebuilt, this is ignored and the CIPD instance ID of the
 prebuilt is used.
 
-**Current value (from the default):** `"p_6vC9jNSma-mudTVE4i1JofY2Vx6ZZXC-LQowMTnwYC"`
+**Current value (from the default):** `"RZXWEUQQGgCz2ty2AE-VyfUz-WCERkBYlAacswfZTeoC"`
 
 From //build/rust/config.gni:30
 
@@ -4546,16 +4533,6 @@ not much the actual host page size then a run time error will occur.
 
 From //zircon/kernel/lib/virtual_alloc/BUILD.gn:13
 
-### virtual_device_name_prefix
-TODO(fxbug.dev/94051): move to board definitions.
-Adds a prefix to the start of the virtual device name. Used to distinguish
-between similar virtual device's using different configuration's such as
-`emu_window_size`.
-
-**Current value (from the default):** `""`
-
-From //build/product.gni:32
-
 ### vm_tracing_level
 The level of detail for traces emitted by the VM system. Values greater than
 zero add increasing details at the cost of increased trace buffer use.
@@ -4714,7 +4691,7 @@ From //build/images/args.gni:96
 
 **Current value (from the default):** `false`
 
-From //build/config/fuchsia/BUILD.gn:128
+From //build/config/fuchsia/BUILD.gn:137
 
 ### zircon_b_partition
 
