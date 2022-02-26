@@ -2,118 +2,31 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/board.gni")
 import("//build/json/validate_json.gni")
-import("//build/product.gni")
 
-# Generates a virtual device specification JSON from a product and board
-# definition.
+# Generates a virtual device specification JSON from a board definition.
 #
-# There is normally a single such target in the build graph that generates
-# metadata for the currently active board/product. The resulting metadata is
-# uploaded to the artifact repository.
+#  THIS IS A TEMPORARY IMPLEMENTATION UNTIL fxbug.dev/84738 is done.
 #
-# A release builder subsequently fetches all available device profiles metadata
-# and incorporates them into the single SDK release artifact.
-#
-# Parameters
-#
-#   name(required)
-#     The name or identifier of the device. This name will be referenced from
-#     the product bundle metadata.
-#
-#   testonly (optional)
-#   visibility (optional)
-#     Standard GN meaning.
-#
-# GN args pulled from build environment
-#
-#   emu_window_size_width (optional)
-#     The emulator window size width. Defaults to 1280.
-#     Defined in //build/product.gni.
-#   emu_window_size_height (optional)
-#     The emulator window size height. Defaults to 800.
-#     Defined in //build/product.gni.
-#   board_description (optional)
-#     The human readable board description corresponding to the board name.
-#     Defaults to "". Defined in //build/board.gni.
-#   target_cpu
-#     Standard GN meaning.
 template("virtual_device_specification") {
   assert(defined(invoker.name), "Device name is required.")
 
-  # This is the most recent schema.
-  schema_file = "virtual_device-93A41932.json"
-  schema_target = "//build/sdk/meta/${schema_file}"
+  not_needed(invoker, [ "name" ])
 
-  # Schema ID must match the schema file.
-  schema_id = "http://fuchsia.com/schemas/sdk/${schema_file}"
-
-  template_output = "${target_out_dir}/emulator_flags.json.template"
-  template_target = "${target_name}_copy_template_file"
-
-  emu_window_size = {
-    height = 800
-    width = 1280
-    units = "pixels"
-  }
-
-  if (emu_window_size_width != false) {
-    assert(emu_window_size_width > 0,
-           "The window width must be > 0 in order to be visible")
-    emu_window_size.width = emu_window_size_width
-  }
-  if (emu_window_size_height != false) {
-    assert(emu_window_size_height > 0,
-           "The window height must be > 0 in order to be visible")
-    emu_window_size.height = emu_window_size_height
-  }
-
-  file_contents = {
-    schema_id = schema_id
-    data = {
-      type = "virtual_device"
-      name = invoker.name
-      description = board_description
-      hardware = {
-        cpu = {
-          arch = target_cpu
-        }
-        audio = {
-          model = "hda"
-        }
-        inputs = {
-          pointing_device = "touch"
-        }
-        window_size = emu_window_size
-        memory = {
-          quantity = 8192
-          units = "megabytes"
-        }
-        storage = {
-          quantity = 2
-          units = "gigabytes"
-        }
-      }
-      ports = {
-        ssh = 22
-        mdns = 5353
-        debug = 2345
-      }
-
-      # TODO(fxbug.dev/94125): remove once solution is available.
-      start_up_args_template = rebase_path(template_output, root_build_dir)
-    }
-  }
+  schema_target = "//build/sdk/meta/virtual_device-93A41932.json"
 
   output = "${target_gen_dir}/virtual_device.json"
-  generator_target = "${target_name}_json_generator"
+  template_output = "${target_gen_dir}/emulator_flags.json.template"
 
-  generated_file(generator_target) {
-    visibility = [ ":*" ]
-    forward_variables_from(invoker, [ "testonly" ])
-    contents = file_contents
-    output_conversion = "json"
+  # TODO(fxbug.dev/84738): Generate a virtual device specification.
+  copy_target = "${target_name}_copy_test_file"
+  template_target = "${target_name}_copy_template_file"
+
+  # Copy a sample virtual device specification to unblock finalization of the
+  # spec. Remove this when fxbug.dev/84738 is fixed.
+  copy(copy_target) {
+    sources =
+        [ "//src/developer/ffx/plugins/emulator/testdata/device_spec.json" ]
     outputs = [ output ]
     metadata = {
       images = [
@@ -147,7 +60,7 @@ template("virtual_device_specification") {
     visibility = [ ":*" ]
     forward_variables_from(invoker, [ "testonly" ])
     data = output
-    deps = [ ":${generator_target}" ]
+    deps = [ ":${copy_target}" ]
     schema = schema_target
     sources = [
       # Included schemata.
@@ -165,7 +78,7 @@ template("virtual_device_specification") {
                              "visibility",
                            ])
     deps = [
-      ":${generator_target}",
+      ":${copy_target}",
       ":${template_target}",
       ":${validator_target}",
     ]

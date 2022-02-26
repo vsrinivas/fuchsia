@@ -1,0 +1,38 @@
+{
+    "data": {
+        "description": "A virtual x64 device",
+        "hardware": {
+            "cpu": {
+                "arch": "x64"
+            },
+            "audio": {
+                "model": "hda"
+            },
+            "inputs": {
+                "pointing_device": "touch"
+            },
+            "window_size": {
+                "height": 800,
+                "width": 1280,
+                "units": "pixels"
+            },
+            "memory": {
+                "quantity": 8192,
+                "units": "megabytes"
+            },
+            "storage": {
+                "quantity": 2,
+                "units": "gigabytes"
+            }
+        },
+        "ports": {
+            "ssh": 22,
+            "mdns": 5353,
+            "debug": 2345
+        },
+        "start_up_args_template": "gen/build/images/emulator_flags.json.template",
+        "name": "qemu-x64",
+        "type": "virtual_device"
+    },
+    "schema_id": "http://fuchsia.com/schemas/sdk/virtual_device-93A41932.json"
+}
