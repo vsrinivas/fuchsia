@@ -70,6 +70,10 @@ template("rustc_fuzzer") {
       "--cfg=fuzz",
       "--cfg=fuzz_target=\"$rustfunction\"",
     ]
+
+    # fxbug.dev/94239: rustc multiple codegen units seems incompatible
+    # with fuzzing.
+    configs = [ "//build/config/rust:one_codegen_unit" ]
   }
 
   rustc_staticlib(fuzzer_lib) {
@@ -126,6 +130,10 @@ template("rustc_fuzzer") {
                            ])
     deps = [ ":$fuzzer_lib" ]
     deps += non_rust_deps
+
+    # fxbug.dev/94239: rustc multiple codegen units seems incompatible
+    # with fuzzing.
+    configs += [ "//build/config/rust:one_codegen_unit" ]
   }
 }
 

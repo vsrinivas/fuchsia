@@ -11,6 +11,7 @@ import("//build/config/sanitizers/sanitizer_default_options.gni")
 import("//build/config/sysroot.gni")
 import("//build/rust/config.gni")
 import("//build/toolchain/ccache.gni")
+import("//build/toolchain/rbe.gni")
 import("//zircon/public/sysroot/rust.gni")
 
 # Deprecated.
@@ -44,8 +45,16 @@ config("compiler") {
     ":compiler_sysroot",
     ":compiler_target",
     ":compiler_fuchsia_api_level",
-    "//build/config/rust:one_codegen_unit",
   ]
+
+  if (!is_debug || enable_rbe) {
+    # fxbug.dev/85921#c15: forcing one codegen unit produces
+    # smaller binaries but makes builds slower.
+    # Enforce one codegen unit only when we really care about
+    # size (release builds), or when RBE is enabled (and then
+    # the benefits of parallelized codegen are diminished).
+    configs += [ "//build/config/rust:one_codegen_unit" ]
+  }
 
   if (board_configs != []) {
     configs += board_configs
