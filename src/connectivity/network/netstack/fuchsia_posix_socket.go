@@ -1779,7 +1779,7 @@ func (s *datagramSocketImpl) Describe2(_ fidl.Context, query fidlio.ConnectionIn
 	return connectionInfo, nil
 }
 
-func (s *datagramSocket) socketControlMessagesToFIDL(cmsg tcpip.ControlMessages) socket.SocketRecvControlData {
+func (s *datagramSocket) socketControlMessagesToFIDL(cmsg tcpip.ReceivableControlMessages) socket.SocketRecvControlData {
 	s.mu.RLock()
 	sockOptTimestamp := s.endpoint.mu.sockOptTimestamp
 	s.mu.RUnlock()
@@ -1800,7 +1800,7 @@ func (s *datagramSocket) socketControlMessagesToFIDL(cmsg tcpip.ControlMessages)
 	return controlData
 }
 
-func (s *datagramSocket) ipControlMessagesToFIDL(cmsg tcpip.ControlMessages) socket.IpRecvControlData {
+func (s *datagramSocket) ipControlMessagesToFIDL(cmsg tcpip.ReceivableControlMessages) socket.IpRecvControlData {
 	var controlData socket.IpRecvControlData
 	if s.ep.SocketOptions().GetReceiveTOS() && cmsg.HasTOS {
 		controlData.SetTos(cmsg.TOS)
@@ -1808,7 +1808,7 @@ func (s *datagramSocket) ipControlMessagesToFIDL(cmsg tcpip.ControlMessages) soc
 	return controlData
 }
 
-func (s *datagramSocket) networkSocketControlMessagesToFIDL(cmsg tcpip.ControlMessages) socket.NetworkSocketRecvControlData {
+func (s *datagramSocket) networkSocketControlMessagesToFIDL(cmsg tcpip.ReceivableControlMessages) socket.NetworkSocketRecvControlData {
 	var controlData socket.NetworkSocketRecvControlData
 	if socketControlData := s.socketControlMessagesToFIDL(cmsg); socketControlData != (socket.SocketRecvControlData{}) {
 		controlData.SetSocket(socketControlData)
@@ -1819,7 +1819,7 @@ func (s *datagramSocket) networkSocketControlMessagesToFIDL(cmsg tcpip.ControlMe
 	return controlData
 }
 
-func (s *datagramSocketImpl) controlMessagesToFIDL(cmsg tcpip.ControlMessages) socket.DatagramSocketRecvControlData {
+func (s *datagramSocketImpl) controlMessagesToFIDL(cmsg tcpip.ReceivableControlMessages) socket.DatagramSocketRecvControlData {
 	var controlData socket.DatagramSocketRecvControlData
 	if networkSocketControlData := s.networkSocketControlMessagesToFIDL(cmsg); networkSocketControlData != (socket.NetworkSocketRecvControlData{}) {
 		controlData.SetNetwork(networkSocketControlData)
@@ -1930,13 +1930,13 @@ func (s *datagramSocket) recvMsg(opts tcpip.ReadOptions, dataLen uint32) ([]byte
 	return b.Bytes(), res, err
 }
 
-func (s *networkDatagramSocket) recvMsg(wantAddr bool, dataLen uint32, peek bool) (fidlnet.SocketAddress, []byte, uint32, tcpip.ControlMessages, tcpip.Error) {
+func (s *networkDatagramSocket) recvMsg(wantAddr bool, dataLen uint32, peek bool) (fidlnet.SocketAddress, []byte, uint32, tcpip.ReceivableControlMessages, tcpip.Error) {
 	bytes, res, err := s.datagramSocket.recvMsg(tcpip.ReadOptions{
 		Peek:           peek,
 		NeedRemoteAddr: wantAddr,
 	}, dataLen)
 	if err != nil {
-		return fidlnet.SocketAddress{}, nil, 0, tcpip.ControlMessages{}, err
+		return fidlnet.SocketAddress{}, nil, 0, tcpip.ReceivableControlMessages{}, err
 	}
 
 	var addr fidlnet.SocketAddress
@@ -3370,7 +3370,7 @@ func tcpipLinkAddressToFidlHWAddr(v tcpip.LinkAddress) packetsocket.HardwareAddr
 	}
 }
 
-func (s *packetSocketImpl) controlMessagesToFIDL(cmsg tcpip.ControlMessages) packetsocket.RecvControlData {
+func (s *packetSocketImpl) controlMessagesToFIDL(cmsg tcpip.ReceivableControlMessages) packetsocket.RecvControlData {
 	var controlData packetsocket.RecvControlData
 	if socketControlData := s.socketControlMessagesToFIDL(cmsg); socketControlData != (socket.SocketRecvControlData{}) {
 		controlData.SetSocket(socketControlData)
