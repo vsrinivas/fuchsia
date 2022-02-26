@@ -44,6 +44,7 @@ go_library("lib") {
     "chromium.go",
     "config.go",
     "config_test.go",
+    "driver.go",
     "file.go",
     "file_test.go",
     "file_tree.go",
@@ -58,7 +59,6 @@ go_library("lib") {
     "match.go",
     "metrics.go",
     "metrics_test.go",
-    "project.go",
     "template.go",
     "template_test.go",
     "traverse.go",
@@ -70,6 +70,9 @@ go_library("lib") {
     ":noticetxt",
     ":templates",
     "//third_party/golibs:golang.org/x/sync",
+    "//tools/check-licenses/filetree",
+    "//tools/check-licenses/project",
+    "//tools/check-licenses/results",
     "//tools/lib/logger",
   ]
 }
