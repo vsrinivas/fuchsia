@@ -229,7 +229,7 @@ impl UdpSocketHelpers for ot::UdpSocket<'_> {
             "otPlatUdp:{:?}: Sending {} byte packet to {:?}. {:?}",
             self.as_ot_ptr(),
             data.len(),
-            self.peer_name(),
+            info.peer_name(),
             info
         );
 
@@ -252,7 +252,7 @@ impl UdpSocketHelpers for ot::UdpSocket<'_> {
             })?;
         }
 
-        let mut sockaddr: std::net::SocketAddrV6 = self.peer_name().into();
+        let mut sockaddr: std::net::SocketAddrV6 = info.peer_name().into();
 
         if info.is_host_interface() {
             // SAFETY: Must only be called from the same thread that OpenThread is running on.
@@ -275,7 +275,12 @@ impl UdpSocketHelpers for ot::UdpSocket<'_> {
                 Err(ot::Error::Failed)
             }
             Err(err) => {
-                warn!("otPlatUdpSend:{:?}: send_to failed: {:?}", self.as_ot_ptr(), err);
+                warn!(
+                    "otPlatUdpSend:{:?}: send_to({:?}) failed: {:?}",
+                    self.as_ot_ptr(),
+                    sockaddr,
+                    err
+                );
                 Err(ot::Error::Failed)
             }
         };
