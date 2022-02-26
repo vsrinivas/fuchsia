@@ -33,10 +33,28 @@ pub struct SrpServerServiceFlags : u8 {
 }
 
 /// Iterates over the available SRP server hosts. See [`SrpServer::srp_server_get_hosts`].
-#[derive(Debug, Clone)]
 pub struct SrpServerHostIterator<'a, T: SrpServer> {
     prev: Option<&'a SrpServerHost>,
     ot_instance: &'a T,
+}
+
+// This cannot be easily derived because T doesn't implement `Clone`,
+// so we must implement it manually.
+impl<'a, T: SrpServer> Clone for SrpServerHostIterator<'a, T> {
+    fn clone(&self) -> Self {
+        SrpServerHostIterator { prev: self.prev, ot_instance: self.ot_instance }
+    }
+}
+
+impl<'a, T: SrpServer> std::fmt::Debug for SrpServerHostIterator<'a, T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "[")?;
+        for item in self.clone() {
+            item.fmt(f)?;
+            write!(f, ",")?;
+        }
+        write!(f, "]")
+    }
 }
 
 impl<'a, T: SrpServer> Iterator for SrpServerHostIterator<'a, T> {
@@ -49,10 +67,21 @@ impl<'a, T: SrpServer> Iterator for SrpServerHostIterator<'a, T> {
 }
 
 /// Iterates over all the available SRP services.
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct SrpServerServiceIterator<'a> {
     prev: Option<&'a SrpServerService>,
     host: &'a SrpServerHost,
+}
+
+impl std::fmt::Debug for SrpServerServiceIterator<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "[")?;
+        for item in self.clone() {
+            item.fmt(f)?;
+            write!(f, ",")?;
+        }
+        write!(f, "]")
+    }
 }
 
 impl<'a> Iterator for SrpServerServiceIterator<'a> {
@@ -95,10 +124,20 @@ where
 /// This opaque type (only used by reference) represents a SRP host.
 ///
 /// Functional equivalent of [`otsys::otSrpServerHost`](crate::otsys::otSrpServerHost).
-#[derive(Debug)]
 #[repr(transparent)]
 pub struct SrpServerHost(otSrpServerHost);
 impl_ot_castable!(opaque SrpServerHost, otSrpServerHost);
+
+impl std::fmt::Debug for SrpServerHost {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("otSrpServerHost")
+            .field("full_name", &self.full_name_cstr())
+            .field("addresses", &self.addresses())
+            .field("is_deleted", &self.is_deleted())
+            .field("services", &self.services())
+            .finish()
+    }
+}
 
 impl SrpServerHost {
     /// Functional equivalent of
@@ -185,10 +224,24 @@ impl SrpServerHost {
 /// This opaque type (only used by reference) represents a SRP service.
 ///
 /// Functional equivalent of [`otsys::otSrpServerService`](crate::otsys::otSrpServerService).
-#[derive(Debug)]
 #[repr(transparent)]
 pub struct SrpServerService(otSrpServerService);
 impl_ot_castable!(opaque SrpServerService, otSrpServerService);
+
+impl std::fmt::Debug for SrpServerService {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("otSrpServerService")
+            .field("full_name", &self.full_name_cstr())
+            .field("is_deleted", &self.is_deleted())
+            .field("port", &self.port())
+            .field("priority", &self.priority())
+            .field("weight", &self.weight())
+            .field("is_subtype", &self.is_subtype())
+            .field("service_name", &self.service_name_cstr())
+            .field("instance_name", &self.instance_name_cstr())
+            .finish()
+    }
+}
 
 impl SrpServerService {
     /// Functional equivalent of
