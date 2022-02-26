@@ -74,6 +74,7 @@ rustc_binary("bin") {
     "src/driver/host_to_thread.rs",
     "src/driver/joiner.rs",
     "src/driver/mod.rs",
+    "src/driver/srp_proxy/advertising_proxy.rs",
     "src/driver/srp_proxy/discovery_proxy.rs",
     "src/driver/srp_proxy/mod.rs",
     "src/driver/tasks.rs",

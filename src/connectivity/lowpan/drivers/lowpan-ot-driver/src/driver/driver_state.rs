@@ -19,6 +19,8 @@ pub struct DriverState<OT> {
     pub(super) address_table: AddressTable,
 
     pub srp_discovery_proxy: Option<DiscoveryProxy>,
+
+    pub srp_advertising_proxy: Option<AdvertisingProxy>,
 }
 
 impl<OT: AsRef<ot::Instance>> AsRef<ot::Instance> for DriverState<OT> {
@@ -30,6 +32,12 @@ impl<OT: AsRef<ot::Instance>> AsRef<ot::Instance> for DriverState<OT> {
 impl<OT> AsRef<Option<DiscoveryProxy>> for DriverState<OT> {
     fn as_ref(&self) -> &Option<DiscoveryProxy> {
         &self.srp_discovery_proxy
+    }
+}
+
+impl<OT> AsRef<Option<AdvertisingProxy>> for DriverState<OT> {
+    fn as_ref(&self) -> &Option<AdvertisingProxy> {
+        &self.srp_advertising_proxy
     }
 }
 
@@ -48,6 +56,21 @@ impl<OT: AsRef<ot::Instance>> DriverState<OT> {
         }
         Ok(())
     }
+
+    pub fn is_advertising_proxy_enabled(&self) -> bool {
+        self.srp_advertising_proxy.is_some()
+    }
+
+    pub fn set_advertising_proxy_enabled(&mut self, enabled: bool) -> Result {
+        if self.is_advertising_proxy_enabled() != enabled {
+            let _ = self.srp_advertising_proxy.take();
+            if enabled {
+                self.srp_advertising_proxy =
+                    Some(AdvertisingProxy::new(AsRef::<ot::Instance>::as_ref(self))?);
+            }
+        }
+        Ok(())
+    }
 }
 
 impl<OT> DriverState<OT> {
@@ -57,6 +80,7 @@ impl<OT> DriverState<OT> {
             connectivity_state: ConnectivityState::Inactive,
             address_table: Default::default(),
             srp_discovery_proxy: None,
+            srp_advertising_proxy: None,
         }
     }
 }

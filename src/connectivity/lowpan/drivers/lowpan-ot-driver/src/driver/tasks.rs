@@ -124,6 +124,10 @@ where
         if let Err(err) = driver_state.set_discovery_proxy_enabled(true) {
             warn!("Unable to start SRP discovery proxy: {:?}", err);
         }
+
+        if let Err(err) = driver_state.set_advertising_proxy_enabled(true) {
+            warn!("Unable to start SRP advertising proxy: {:?}", err);
+        }
     }
 
     /// A single iteration of the main task loop
