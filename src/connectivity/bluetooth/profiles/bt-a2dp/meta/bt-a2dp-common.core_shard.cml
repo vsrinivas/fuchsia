@@ -58,5 +58,10 @@
             from: "#codec_factory",
             to: [ "#bt-a2dp" ],
         },
+        {
+            protocol: [ "fuchsia.bluetooth.a2dp.AudioMode" ],
+            from: "#bt-a2dp",
+            to: "#session-manager",
+        },
     ],
 }
