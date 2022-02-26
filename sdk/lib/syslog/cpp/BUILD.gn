@@ -119,6 +119,8 @@ sdk_source_set("backend_legacy") {
 sdk_shared_library("backend_fuchsia_globals") {
   category = "internal"
 
+  libcxx_linkage = "static"
+
   sources = [
     "logging_backend_fuchsia_globals.cc",
     "logging_backend_fuchsia_globals.h",

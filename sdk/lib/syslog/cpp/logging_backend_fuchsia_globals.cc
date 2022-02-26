@@ -9,14 +9,15 @@
 #include <zircon/syscalls.h>
 
 #include <atomic>
+#include <mutex>
 
 #define EXPORT __attribute__((visibility("default")))
 
 namespace {
 
 std::atomic<uint32_t> dropped_count = std::atomic<uint32_t>(0);
-std::atomic<syslog_backend::LogState*> state = nullptr;
-
+syslog_backend::LogState* state = nullptr;
+std::mutex state_lock;
 // This thread's koid.
 // Initialized on first use.
 thread_local zx_koid_t tls_thread_koid{ZX_KOID_INVALID};
@@ -42,12 +43,14 @@ zx_koid_t GetCurrentThreadKoid() {
 }
 
 EXPORT
-syslog_backend::LogState* SetState(syslog_backend::LogState* new_state) {
-  return state.exchange(new_state);
-}
+void SetStateLocked(syslog_backend::LogState* new_state) { state = new_state; }
+
+EXPORT void AcquireState() __TA_NO_THREAD_SAFETY_ANALYSIS { state_lock.lock(); }
+
+EXPORT void ReleaseState() __TA_NO_THREAD_SAFETY_ANALYSIS { state_lock.unlock(); }
 
 EXPORT
-syslog_backend::LogState* GetState() { return state.load(); }
+syslog_backend::LogState* GetStateLocked() { return state; }
 
 EXPORT
 uint32_t GetAndResetDropped() { return dropped_count.exchange(0, std::memory_order_relaxed); }

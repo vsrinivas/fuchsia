@@ -6,8 +6,10 @@
 #include <lib/syslog/cpp/logging_backend.h>
 #include <lib/syslog/cpp/logging_backend_fuchsia_private.h>
 #include <lib/syslog/cpp/macros.h>
+#include <lib/zx/channel.h>
 
 #include <cstring>
+#include <thread>
 #include <vector>
 
 #include <gtest/gtest.h>
@@ -21,6 +23,42 @@ namespace syslog {
 TEST(StructuredLogging, Log) {
   FX_SLOG(WARNING, "test_log", KV("foo", "bar"));
   // TODO(fxbug.dev/57482): Figure out how to verify this appropriately.
+}
+
+// Test to validate that SetLogSettings and log initialization is thread-safe.
+TEST(StructuredLogging, ThreadInitialization) {
+  // TODO(bbosak): Convert to actual stress test.
+  auto start = zx_clock_get_monotonic();
+  std::atomic_bool running = true;
+  std::thread thread_a([&]() {
+    while (running) {
+      zx::channel temp[2];
+      zx::channel::create(0, &temp[0], &temp[1]);
+      syslog_backend::SetLogSettings(
+          syslog::LogSettings{.archivist_channel_override = temp[0].release()});
+    }
+  });
+  std::thread thread_b([&]() {
+    while (running) {
+      FX_SLOG(WARNING, "test_log", KV("foo", "bar"));
+    }
+  });
+  while (true) {
+    auto duration = (zx_clock_get_monotonic() - start);
+    if (duration > ZX_SEC(4)) {
+      running = false;
+      break;
+    }
+
+    zx::channel temp[2];
+    zx::channel::create(0, &temp[0], &temp[1]);
+    syslog_backend::SetLogSettings(
+        syslog::LogSettings{.archivist_channel_override = temp[0].release()});
+    FX_SLOG(WARNING, "test_log", KV("foo", "bar"));
+  }
+  thread_a.join();
+  thread_b.join();
+  syslog_backend::SetLogSettings(syslog::LogSettings{});
 }
 
 TEST(StructuredLogging, BackendDirect) {

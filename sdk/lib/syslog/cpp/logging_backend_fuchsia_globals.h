@@ -15,9 +15,13 @@ class LogState;
 
 extern "C" {
 
-syslog_backend::LogState* SetState(syslog_backend::LogState* new_state);
+void AcquireState();
 
-syslog_backend::LogState* GetState();
+void SetStateLocked(syslog_backend::LogState* new_state);
+
+void ReleaseState();
+
+syslog_backend::LogState* GetStateLocked();
 
 uint32_t GetAndResetDropped();
 

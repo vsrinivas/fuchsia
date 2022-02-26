@@ -322,17 +322,17 @@ const char kTagFieldName[] = "tag";
 const char kFileFieldName[] = "file";
 const char kLineFieldName[] = "line";
 
+class GlobalStateLock;
 class LogState {
  public:
-  static void Set(const syslog::LogSettings& settings);
+  static void Set(const syslog::LogSettings& settings, const GlobalStateLock& lock);
   static void Set(const syslog::LogSettings& settings,
-                  const std::initializer_list<std::string>& tags);
+                  const std::initializer_list<std::string>& tags, const GlobalStateLock& lock);
   void set_severity_handler(void (*callback)(void* context, syslog::LogSeverity severity),
                             void* context) {
     handler_ = callback;
     handler_context_ = context;
   }
-  static LogState& Get();
 
   syslog::LogSeverity min_severity() const { return min_severity_; }
 
@@ -388,6 +388,32 @@ class LogState {
   bool serve_interest_listener_;
   // Handle to a fuchsia.logger.LogSink instance.
   zx_handle_t fake_archivist_ = ZX_HANDLE_INVALID;
+};
+
+// Global state lock. In order to mutate the LogState through SetStateLocked
+// and GetStateLocked you must hold this capability.
+// Do not directly use the C API. The C API exists solely
+// to expose globals as a shared library.
+// If the logger is not initialized, this will implicitly init the logger.
+class GlobalStateLock {
+ public:
+  GlobalStateLock() {
+    AcquireState();
+    if (!GetStateLocked()) {
+      LogState::Set(syslog::LogSettings(), *this);
+    }
+  }
+
+  // Retrieves the global state
+  syslog_backend::LogState* operator->() const { return GetStateLocked(); }
+
+  // Sets the global state
+  void Set(syslog_backend::LogState* state) const { SetStateLocked(state); }
+
+  // Retrieves the global state
+  syslog_backend::LogState* operator*() const { return GetStateLocked(); }
+
+  ~GlobalStateLock() { ReleaseState(); }
 };
 
 static syslog::LogSeverity IntoLogSeverity(fuchsia::diagnostics::Severity severity) {
@@ -485,15 +511,15 @@ void LogState::Connect() {
 
 void SetInterestChangedListener(void (*callback)(void* context, syslog::LogSeverity severity),
                                 void* context) {
-  auto& log_state = LogState::Get();
-  log_state.set_severity_handler(callback, context);
+  GlobalStateLock log_state;
+  log_state->set_severity_handler(callback, context);
 }
 
 void BeginRecordInternal(LogBuffer* buffer, syslog::LogSeverity severity, const char* file_name,
                          unsigned int line, const char* msg, const char* condition, bool is_printf,
                          zx_handle_t socket) {
   // Ensure we have log state
-  auto& log_state = LogState::Get();
+  GlobalStateLock log_state;
   cpp17::optional<int8_t> raw_severity;
   // Optional so no allocation overhead
   // occurs if condition isn't set.
@@ -527,11 +553,7 @@ void BeginRecordInternal(LogBuffer* buffer, syslog::LogSeverity severity, const 
   // Invoke the constructor of RecordState to construct a valid RecordState
   // inside the LogBuffer.
   new (state) RecordState;
-  if (socket != ZX_HANDLE_INVALID) {
-    state->socket = socket;
-  } else {
-    state->socket = cpp17::get<zx::socket>(log_state.descriptor()).get();
-  }
+  state->socket = socket;
   if (severity == syslog::LOG_FATAL) {
     state->maybe_fatal_string = msg;
   }
@@ -559,9 +581,9 @@ void BeginRecordInternal(LogBuffer* buffer, syslog::LogSeverity severity, const 
     encoder.AppendArgumentKey(record, SliceFromString(kDroppedLogsFieldName));
     encoder.AppendArgumentValue(record, static_cast<uint64_t>(dropped_count));
   }
-  for (size_t i = 0; i < GetState()->tag_count(); i++) {
+  for (size_t i = 0; i < log_state->tag_count(); i++) {
     encoder.AppendArgumentKey(record, SliceFromString(kTagFieldName));
-    encoder.AppendArgumentValue(record, SliceFromString(GetState()->tags()[i]));
+    encoder.AppendArgumentValue(record, SliceFromString(log_state->tags()[i]));
   }
   if (msg) {
     encoder.AppendArgumentKey(record, SliceFromString(kMessageFieldName));
@@ -644,7 +666,7 @@ void EndRecord(LogBuffer* buffer) {
 }
 
 bool FlushRecord(LogBuffer* buffer) {
-  auto& log_state = LogState::Get();
+  GlobalStateLock log_state;
   auto* state = RecordState::CreatePtr(buffer);
   if (!state->encode_success) {
     return false;
@@ -652,7 +674,7 @@ bool FlushRecord(LogBuffer* buffer) {
   ExternalDataBuffer external_buffer(buffer);
   Encoder<ExternalDataBuffer> encoder(external_buffer);
   auto slice = external_buffer.GetSlice();
-  if (state->log_severity < log_state.min_severity()) {
+  if (state->log_severity < log_state->min_severity()) {
     if (state->log_severity != state->raw_severity) {
       // Assume we're supposed to generate a log here.
       // For custom severities, macros.h is supposed to filter for us.
@@ -660,8 +682,11 @@ bool FlushRecord(LogBuffer* buffer) {
       return true;
     }
   }
-  auto status = zx_socket_write(state->socket, 0, slice.data(),
-                                slice.slice().ToByteOffset().unsafe_get(), nullptr);
+  auto socket = state->socket == ZX_HANDLE_INVALID
+                    ? cpp17::get<zx::socket>(log_state->descriptor()).get()
+                    : state->socket;
+  auto status =
+      zx_socket_write(socket, 0, slice.data(), slice.slice().ToByteOffset().unsafe_get(), nullptr);
   if (status != ZX_OK) {
     AddDropped(state->dropped_count + 1);
   }
@@ -722,22 +747,15 @@ bool LogState::WriteLogToFile(std::ofstream* file_ptr, zx_time_t time, zx_koid_t
   return severity != syslog::LOG_FATAL;
 }
 
-LogState& LogState::Get() {
-  auto state = GetState();
-
-  if (!state) {
-    Set(syslog::LogSettings());
-    state = GetState();
-  }
-
-  return *state;
+void LogState::Set(const syslog::LogSettings& settings, const GlobalStateLock& lock) {
+  Set(settings, {}, lock);
 }
 
-void LogState::Set(const syslog::LogSettings& settings) { Set(settings, {}); }
-
 void LogState::Set(const syslog::LogSettings& settings,
-                   const std::initializer_list<std::string>& tags) {
-  if (auto old = SetState(new LogState(settings, tags))) {
+                   const std::initializer_list<std::string>& tags, const GlobalStateLock& lock) {
+  auto old = *lock;
+  lock.Set(new LogState(settings, tags));
+  if (old) {
     delete old;
   }
 }
@@ -807,13 +825,20 @@ void LogState::WriteLog(syslog::LogSeverity severity, const char* file_name, uns
   std::cerr << msg_str() << std::endl;
 }
 
-void SetLogSettings(const syslog::LogSettings& settings) { LogState::Set(settings); }
+void SetLogSettings(const syslog::LogSettings& settings) {
+  GlobalStateLock lock;
+  LogState::Set(settings, lock);
+}
 
 void SetLogSettings(const syslog::LogSettings& settings,
                     const std::initializer_list<std::string>& tags) {
-  LogState::Set(settings, tags);
+  GlobalStateLock lock;
+  LogState::Set(settings, tags, lock);
 }
 
-syslog::LogSeverity GetMinLogLevel() { return LogState::Get().min_severity(); }
+syslog::LogSeverity GetMinLogLevel() {
+  GlobalStateLock lock;
+  return lock->min_severity();
+}
 
 }  // namespace syslog_backend
