@@ -51,7 +51,6 @@
                 "fuchsia.accessibility.virtualkeyboard.Registry",
                 "fuchsia.bluetooth.a2dp.AudioMode",
                 "fuchsia.bluetooth.gatt.Server",
-                "fuchsia.bluetooth.hfp.Hfp",
                 "fuchsia.bluetooth.le.Central",
                 "fuchsia.bluetooth.le.Peripheral",
                 "fuchsia.bluetooth.sys.Access",
@@ -152,6 +151,12 @@
                 "google.deviceproperty.Writer",
                 "google.flashts.Reader",
             ],
+            from: "parent",
+            to: "#session",
+        },
+        {
+            // Routed to session-manager via bt-hfp-audio-gateway.core_shard.cml
+            protocol: [ "fuchsia.bluetooth.hfp.Hfp" ],
             from: "parent",
             to: "#session",
         },

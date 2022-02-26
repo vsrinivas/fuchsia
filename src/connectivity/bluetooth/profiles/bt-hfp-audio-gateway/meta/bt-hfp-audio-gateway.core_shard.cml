@@ -45,5 +45,10 @@
             from: "#bluetooth-core",
             to: [ "#bt-hfp-audio-gateway" ],
         },
+        {
+            protocol: [ "fuchsia.bluetooth.hfp.Hfp" ],
+            from: "#bt-hfp-audio-gateway",
+            to: "#session-manager",
+        },
     ],
 }
