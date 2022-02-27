@@ -2,12 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <dirent.h>
+#include <errno.h>
+#include <fcntl.h>
 #include <fidl/fuchsia.examples/cpp/wire.h>
 #include <fidl/fuchsia.examples/cpp/wire_messaging.h>
 #include <fidl/fuchsia.io/cpp/markers.h>
 #include <fidl/fuchsia.io/cpp/natural_types.h>
 #include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/fdio/fd.h>
+#include <lib/fdio/namespace.h>
 #include <lib/fidl/llcpp/client.h>
 #include <lib/fidl/llcpp/internal/transport_channel.h>
 #include <lib/fidl/llcpp/string_view.h>
@@ -17,16 +22,22 @@
 #include <lib/sys/component/llcpp/outgoing_directory.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/handle.h>
+#include <unistd.h>
 #include <zircon/assert.h>
 #include <zircon/errors.h>
 
 #include <algorithm>
 #include <array>
 #include <memory>
+#include <thread>
 #include <utility>
 
+#include <fbl/unique_fd.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
+#include <src/lib/storage/vfs/cpp/managed_vfs.h>
+#include <src/lib/storage/vfs/cpp/pseudo_dir.h>
+#include <src/lib/storage/vfs/cpp/pseudo_file.h>
 #include <src/lib/testing/loop_fixture/real_loop_fixture.h>
 
 namespace {
@@ -59,12 +70,10 @@ class EchoImpl final : public fidl::WireServer<fuchsia_examples::Echo> {
 class OutgoingDirectoryTest : public gtest::RealLoopFixture {
  public:
   void SetUp() override {
-    outgoing_directory_ = std::make_unique<component_llcpp::OutgoingDirectory>();
+    outgoing_directory_ = std::make_unique<component_llcpp::OutgoingDirectory>(dispatcher());
     auto endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
-    ZX_ASSERT(outgoing_directory_->Serve(std::move(endpoints->server), dispatcher()).is_ok());
-    svc_client_ =
-        fidl::WireClient<fuchsia_io::Directory>(std::move(endpoints->client), dispatcher());
-
+    ZX_ASSERT(outgoing_directory_->Serve(std::move(endpoints->server)).is_ok());
+    client_end_ = std::move(endpoints->client);
     async_set_default_dispatcher(dispatcher());
   }
 
@@ -73,11 +82,19 @@ class OutgoingDirectoryTest : public gtest::RealLoopFixture {
   fidl::ClientEnd<fuchsia_io::Directory> TakeSvcClientEnd() {
     zx::channel server_end, client_end;
     ZX_ASSERT(ZX_OK == zx::channel::create(0, &server_end, &client_end));
+    // Check if this has already be initialized.
+    if (!svc_client_.is_valid()) {
+      auto root_ = TakeRootClientEnd();
+      svc_client_ = fidl::WireClient<fuchsia_io::Directory>(std::move(root_), dispatcher());
+    }
+
     svc_client_->Open(fuchsia_io::OPEN_RIGHT_WRITABLE | fuchsia_io::OPEN_RIGHT_READABLE,
                       fuchsia_io::MODE_TYPE_DIRECTORY, kSvcDirectoryPath,
                       fidl::ServerEnd<fuchsia_io::Node>(std::move(server_end)));
     return fidl::ClientEnd<fuchsia_io::Directory>(std::move(client_end));
   }
+
+  fidl::ClientEnd<fuchsia_io::Directory> TakeRootClientEnd() { return std::move(client_end_); }
 
  protected:
   void InstallServiceHandler(fuchsia_examples::EchoService::Handler& service_handler,
@@ -107,6 +124,7 @@ class OutgoingDirectoryTest : public gtest::RealLoopFixture {
 
  private:
   std::unique_ptr<component_llcpp::OutgoingDirectory> outgoing_directory_ = nullptr;
+  fidl::ClientEnd<fuchsia_io::Directory> client_end_;
   fidl::WireClient<fuchsia_io::Directory> svc_client_;
 };
 
@@ -173,7 +191,7 @@ TEST_F(OutgoingDirectoryTest, AddServiceServesAllMembers) {
 TEST_F(OutgoingDirectoryTest, ServeFailsOnBadInput) {
   // Test invalid directory handle.
   {
-    auto outgoing_directory = std::make_unique<component_llcpp::OutgoingDirectory>();
+    auto outgoing_directory = std::make_unique<component_llcpp::OutgoingDirectory>(dispatcher());
     auto endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
     // Close server end in order to  invalidate channel.
     endpoints->server.reset();
@@ -181,9 +199,28 @@ TEST_F(OutgoingDirectoryTest, ServeFailsOnBadInput) {
               ZX_ERR_BAD_HANDLE);
   }
 
+  // Test nullptr for dispatcher
+  {
+    // Before nullifying the global dispatcher, we'll keep a reference to it
+    // in a local variable. This is needed because this test's teardown relies on
+    // it being present.
+    async_dispatcher_t* dispatcher = async_get_default_dispatcher();
+
+    // Now that it's in a local variable, it's safe to set this to nullptr.
+    async_set_default_dispatcher(nullptr);
+    auto outgoing_directory =
+        std::make_unique<component_llcpp::OutgoingDirectory>(/*dispatcher=*/nullptr);
+    auto endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
+    EXPECT_EQ(outgoing_directory->Serve(std::move(endpoints->server)).status_value(),
+              ZX_ERR_INVALID_ARGS);
+
+    // Return original dispatcher before test tear down.
+    async_set_default_dispatcher(dispatcher);
+  }
+
   // Test multiple invocations of |Serve|.
   {
-    auto outgoing_directory = std::make_unique<component_llcpp::OutgoingDirectory>();
+    auto outgoing_directory = std::make_unique<component_llcpp::OutgoingDirectory>(dispatcher());
     auto endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
     ZX_ASSERT(outgoing_directory->Serve(std::move(endpoints->server)).is_ok());
     auto fresh_endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
@@ -202,10 +239,9 @@ TEST_F(OutgoingDirectoryTest, AddProtocolCanServeMultipleProtocols) {
   EchoImpl reversed_impl(/*reversed=*/true);
   for (auto [reversed, path] : kIsReversedAndPaths) {
     auto* impl = reversed ? &reversed_impl : &regular_impl;
-    ASSERT_EQ(GetOutgoingDirectory()
-                  ->AddProtocol<fuchsia_examples::Echo>(impl, dispatcher(), path)
-                  .status_value(),
-              ZX_OK);
+    ASSERT_EQ(
+        GetOutgoingDirectory()->AddProtocol<fuchsia_examples::Echo>(impl, path).status_value(),
+        ZX_OK);
   }
 
   // Setup fuchsia.examples.Echo client
@@ -231,37 +267,72 @@ TEST_F(OutgoingDirectoryTest, AddProtocolCanServeMultipleProtocols) {
   }
 }
 
+TEST_F(OutgoingDirectoryTest, AddDirectoryCanServeADirectory) {
+  static constexpr char kTestDirectory[] = "diagnostics";
+  static constexpr char kTestFile[] = "sample.txt";
+  static constexpr char kTestContent[] = "Hello World!";
+
+  fs::ManagedVfs vfs(dispatcher());
+  auto endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
+  auto text_file = fbl::MakeRefCounted<fs::BufferedPseudoFile>(
+      /*read_handler=*/[](fbl::String* output) -> zx_status_t {
+        *output = kTestContent;
+        return ZX_OK;
+      });
+  auto diagnostics = fbl::MakeRefCounted<fs::PseudoDir>();
+  diagnostics->AddEntry(kTestFile, text_file);
+  vfs.ServeDirectory(diagnostics, std::move(endpoints->server));
+  ASSERT_EQ(GetOutgoingDirectory()
+                ->AddDirectory(std::move(endpoints->client), kTestDirectory)
+                .status_value(),
+            ZX_OK);
+
+  std::thread([client_end = TakeRootClientEnd().TakeChannel().release(),
+               quit_loop = QuitLoopClosure()]() {
+    fbl::unique_fd root_fd;
+    ASSERT_EQ(fdio_fd_create(client_end, root_fd.reset_and_get_address()), ZX_OK);
+    ZX_ASSERT_MSG(root_fd.is_valid(), "Failed to open root ns as a file descriptor: %s",
+                  strerror(errno));
+
+    fbl::unique_fd dir_fd(openat(root_fd.get(), kTestDirectory, O_DIRECTORY));
+    ZX_ASSERT_MSG(dir_fd.is_valid(), "Failed to open directory \"%s\": %s", kTestDirectory,
+                  strerror(errno));
+
+    fbl::unique_fd filefd(openat(dir_fd.get(), kTestFile, O_RDONLY));
+    ZX_ASSERT_MSG(filefd.is_valid(), "Failed to open file \"%s\": %s", kTestFile, strerror(errno));
+    static constexpr size_t kMaxBufferSize = 1024;
+    static char kReadBuffer[kMaxBufferSize];
+    size_t bytes_read = read(filefd.get(), reinterpret_cast<void*>(kReadBuffer), kMaxBufferSize);
+    ZX_ASSERT_MSG(bytes_read > 0, "Read 0 bytes from file at \"%s\": %s", kTestFile,
+                  strerror(errno));
+
+    std::string actual_content(kReadBuffer, bytes_read);
+    EXPECT_EQ(actual_content, kTestContent);
+    quit_loop();
+  }).detach();
+
+  RunLoop();
+
+  vfs.Shutdown([quit_loop = QuitLoopClosure()](zx_status_t status) {
+    ASSERT_EQ(status, ZX_OK);
+    quit_loop();
+  });
+  RunLoop();
+
+  EXPECT_EQ(GetOutgoingDirectory()->RemoveDirectory(kTestDirectory).status_value(), ZX_OK);
+}
+
 TEST_F(OutgoingDirectoryTest, AddProtocolFailsIfServeNotCalled) {
   auto outgoing_directory = std::make_unique<component_llcpp::OutgoingDirectory>();
   EchoImpl impl(/*reversed=*/false);
-  EXPECT_EQ(
-      outgoing_directory->AddProtocol<fuchsia_examples::Echo>(&impl, dispatcher()).status_value(),
-      ZX_ERR_BAD_HANDLE);
+  EXPECT_EQ(outgoing_directory->AddProtocol<fuchsia_examples::Echo>(&impl).status_value(),
+            ZX_ERR_BAD_HANDLE);
 }
 
 TEST_F(OutgoingDirectoryTest, AddProtocolFailsIfImplIsNullptr) {
-  EXPECT_EQ(GetOutgoingDirectory()
-                ->AddProtocol<fuchsia_examples::Echo>(/*impl=*/nullptr, dispatcher())
-                .status_value(),
-            ZX_ERR_INVALID_ARGS);
-}
-
-TEST_F(OutgoingDirectoryTest, AddProtocolFailsIfDispatcherIsNullptr) {
-  EchoImpl impl(/*reversed=*/false);
-  // Before nullifying the global dispatcher, we'll keep a reference to it
-  // in a local variable. This is needed because this test's teardown relies on
-  // it being present.
-  async_dispatcher_t* dispatcher = async_get_default_dispatcher();
-
-  // Now that it's in a local variable, it's safe to set this to nullptr.
-  async_set_default_dispatcher(nullptr);
-  EXPECT_EQ(GetOutgoingDirectory()
-                ->AddProtocol<fuchsia_examples::Echo>(&impl, /*dispatcher=*/nullptr)
-                .status_value(),
-            ZX_ERR_INVALID_ARGS);
-
-  // Return original dispatcher before test tear down.
-  async_set_default_dispatcher(dispatcher);
+  EXPECT_EQ(
+      GetOutgoingDirectory()->AddProtocol<fuchsia_examples::Echo>(/*impl=*/nullptr).status_value(),
+      ZX_ERR_INVALID_ARGS);
 }
 
 TEST_F(OutgoingDirectoryTest, RemoveProtocolFailsIfEntryDoesNotExist) {

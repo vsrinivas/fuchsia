@@ -59,7 +59,7 @@ class EchoImpl final : public fidl::WireServer<fuchsia_examples::Echo> {
 int main(int argc, const char** argv) {
   FX_LOGS(INFO) << "Starting echo service server";
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
-  component_llcpp::OutgoingDirectory outgoing;
+  component_llcpp::OutgoingDirectory outgoing(loop.dispatcher());
 
   component_llcpp::ServiceHandler handler;
   fuchsia_examples::EchoService::Handler my_service(&handler);
@@ -81,7 +81,7 @@ int main(int argc, const char** argv) {
       });
   ZX_ASSERT(add_reversed_result.is_ok());
 
-  auto result = outgoing.ServeFromStartupInfo(loop.dispatcher());
+  auto result = outgoing.ServeFromStartupInfo();
   if (result.is_error()) {
     FX_LOGS(ERROR) << "Failed to Serve OutgoingDirectory: " << result.status_string();
     return result.status_value();

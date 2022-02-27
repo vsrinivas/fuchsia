@@ -55,7 +55,10 @@ class OutgoingDirectory final {
  public:
   // Creates an OutgoingDirectory which will serve requests when
   // |Serve(zx::channel)| or |ServeFromStartupInfo()| is called.
-  OutgoingDirectory() = default;
+  //
+  // If |dispatcher| is nullptr, then the global dispatcher set via
+  // |async_get_default_dispatcher| will be used.
+  explicit OutgoingDirectory(async_dispatcher_t* dispatcher = nullptr);
 
   ~OutgoingDirectory();
 
@@ -68,9 +71,6 @@ class OutgoingDirectory final {
   // This object will implement the |fuchsia.io.Directory| interface using this
   // channel.
   //
-  // If |dispatcher| is nullptr, then the global dispatcher set via
-  // |async_get_default_dispatcher| will be used.
-  //
   // # Errors
   //
   // ZX_ERR_BAD_HANDLE: |directory_request| is not a valid handle.
@@ -79,10 +79,9 @@ class OutgoingDirectory final {
   //
   // ZX_ERR_ALREADY_EXISTS: |Serve| was already invoked previously.
   //
-  // ZX_ERR_INVALID_ARGS: |dispatcher| is nullptr and no dispatcher is set
-  // globally via |async_set_default_dispatcher|.
-  zx::status<> Serve(fidl::ServerEnd<fuchsia_io::Directory> directory_request,
-                     async_dispatcher_t* dispatcher = nullptr);
+  // ZX_ERR_INVALID_ARGS: |dispatcher| passed to constructor is nullptr and no
+  // dispatcher is set globally via |async_set_default_dispatcher|.
+  zx::status<> Serve(fidl::ServerEnd<fuchsia_io::Directory> directory_request);
 
   // Starts serving the outgoing directory on the channel provided to this
   // process at startup as |PA_DIRECTORY_REQUEST|.
@@ -101,7 +100,10 @@ class OutgoingDirectory final {
   // ZX_ERR_ACCESS_DENIED: |directory_request| has insufficient rights.
   //
   // ZX_ERR_ALREADY_EXISTS: |Serve| was already invoked previously.
-  zx::status<> ServeFromStartupInfo(async_dispatcher_t* dispatcher = nullptr);
+  //
+  // ZX_ERR_INVALID_ARGS: |dispatcher| passed to constructor is nullptr and no
+  // dispatcher is set globally via |async_set_default_dispatcher|.
+  zx::status<> ServeFromStartupInfo();
 
   // Adds a protocol instance.
   //
@@ -118,8 +120,10 @@ class OutgoingDirectory final {
   // This is only returned if |Serve| or |ServeFromStartupInfo| is not called
   // before invoking this method.
   //
-  // ZX_ERR_INVALID_ARGS: |server| or |dispatcher| is nullptr. |dispatcher|
-  // may be nullptr iff it is configured using |async_set_default_dispatcher|.
+  // ZX_ERR_INVALID_ARGS: |impl| is nullptr.
+  //
+  // ZX_ERR_INVALID_ARGS: |dispatcher| passed to constructor is nullptr and no
+  // dispatcher is set globally via |async_set_default_dispatcher|.
   //
   // # Examples
   //
@@ -127,13 +131,8 @@ class OutgoingDirectory final {
   // //sdk/lib/sys/component/llcpp/outgoing_directory_test.cc
   template <typename Protocol>
   zx::status<> AddProtocol(fidl::WireServer<Protocol>* impl,
-                           async_dispatcher_t* dispatcher = nullptr,
                            cpp17::string_view name = fidl::DiscoverableProtocolName<Protocol>) {
-    if (dispatcher == nullptr) {
-      dispatcher = async_get_default_dispatcher();
-    }
-
-    if (impl == nullptr || dispatcher == nullptr) {
+    if (impl == nullptr || dispatcher_ == nullptr) {
       return zx::make_status(ZX_ERR_INVALID_ARGS);
     }
 
@@ -141,7 +140,7 @@ class OutgoingDirectory final {
         [=](fidl::ServerEnd<Protocol> request) {
           // This object is safe to drop. Server will still begin to operate
           // past its lifetime.
-          auto _server = fidl::BindServer(dispatcher, std::move(request), impl);
+          auto _server = fidl::BindServer(dispatcher_, std::move(request), impl);
         },
         name);
   }
@@ -161,6 +160,9 @@ class OutgoingDirectory final {
   // This is only returned if |Serve| or |ServeFromStartupInfo| is not called
   // before invoking this method.
   //
+  // ZX_ERR_INVALID_ARGS: |dispatcher| passed to constructor is nullptr and no
+  // dispatcher is set globally via |async_set_default_dispatcher|.
+  //
   // # Examples
   //
   // See sample use cases in test case(s) located at
@@ -179,6 +181,22 @@ class OutgoingDirectory final {
   // Same as above but is untyped. This method is generally discouraged but
   // is made available if a generic handler needs to be provided.
   zx::status<> AddNamedProtocol(AnyHandler handler, cpp17::string_view name);
+
+  // Serve a subdirectory at the root of this outgoing directory.
+  //
+  // The directory will be installed under the path |directory_name|. When
+  // a request is received under this path, then it will be forwarded to
+  // |remote_dir|.
+  //
+  // # Errors
+  //
+  // ZX_ERR_ALREADY_EXISTS: An entry with the provided name already exists.
+  //
+  // ZX_ERR_BAD_HANDLE: This instance is not serving the outgoing directory.
+  // This is only returned if |Serve| or |ServeFromStartupInfo| is not called
+  // before invoking this method.
+  zx::status<> AddDirectory(fidl::ClientEnd<fuchsia_io::Directory> remote_dir,
+                            cpp17::string_view directory_name);
 
   // Adds an instance of a service.
   //
@@ -278,6 +296,17 @@ class OutgoingDirectory final {
   zx::status<> RemoveNamedService(cpp17::string_view service,
                                   cpp17::string_view instance = kDefaultInstance);
 
+  // Removes the subdirectory on the provided |directory_name|.
+  //
+  // # Errors
+  //
+  // ZX_ERR_NOT_FOUND: No entry was found with provided name.
+  //
+  // ZX_ERR_BAD_HANDLE: This instance is not serving the outgoing directory.
+  // This is only returned if |Serve| or |ServeFromStartupInfo| is not called
+  // before invoking this method.
+  zx::status<> RemoveDirectory(cpp17::string_view directory_name);
+
  private:
   // |svc_dir_add_service_by_path| takes in a void* |context| that is passed to
   // the |handler| callback passed as the last argument to the function call.
@@ -296,6 +325,8 @@ class OutgoingDirectory final {
   static std::string MakePath(cpp17::string_view service, cpp17::string_view instance);
 
   svc_dir_t* root_ = nullptr;
+
+  async_dispatcher_t* dispatcher_ = nullptr;
 
   // Mapping of all registered protocol handlers. Key represents a path to
   // the directory in which the protocol ought to be installed. For example,

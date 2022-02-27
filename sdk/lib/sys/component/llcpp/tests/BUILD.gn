@@ -55,6 +55,7 @@ executable("llcpp_outgoing_directory_integration_test_bin") {
     "//sdk/lib/sys/component/cpp/testing:cpp",
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl/test:gtest_main",
+    "//src/lib/storage/vfs/cpp",
     "//src/lib/testing/loop_fixture",
   ]
 }
