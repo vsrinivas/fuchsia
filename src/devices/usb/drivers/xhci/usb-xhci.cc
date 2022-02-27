@@ -1900,17 +1900,20 @@ zx_status_t UsbXhci::Init() {
     return ZX_ERR_IO_INVALID;
   }
   zx_status_t status =
-      device_get_profile(zxdev_, /*HIGH_PRIORITY*/ 31, "src/devices/usb/drivers/xhci/usb-xhci",
-                         profile_.reset_and_get_address());
+      DdkAdd(ddk::DeviceAddArgs("xhci").set_inspect_vmo(inspect_.inspector.DuplicateVmo()));
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "DdkAdd() error: %s", zx_status_get_string(status));
+    return status;
+  }
+
+  status = device_get_profile(zxdev_, /*HIGH_PRIORITY*/ 31, "src/devices/usb/drivers/xhci/usb-xhci",
+                              profile_.reset_and_get_address());
   if (status != ZX_OK) {
     zxlogf(WARNING, "Failed to obtain scheduler profile for high priority completer (res %d)",
            status);
   }
-  status = DdkAdd(ddk::DeviceAddArgs("xhci").set_inspect_vmo(inspect_.inspector.DuplicateVmo()));
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "DdkAdd() error: %s", zx_status_get_string(status));
-  }
-  return status;
+
+  return ZX_OK;
 }
 
 void UsbXhci::DdkInit(ddk::InitTxn txn) {
