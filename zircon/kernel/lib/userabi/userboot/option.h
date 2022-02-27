@@ -24,7 +24,8 @@ struct Options {
   // child program and the libraries accessible to its loader service
   std::string_view root;
 
-  // `userboot.next`: The root-relative child program path.
+  // `userboot.next`: The root-relative child program path, with optional '+' separated
+  // arguments to pass to the child program.
   std::string_view next;
 
   Epilogue epilogue = Epilogue::kExitAfterChildLaunch;

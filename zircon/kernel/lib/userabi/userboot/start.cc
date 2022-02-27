@@ -55,13 +55,14 @@ using namespace userboot;
     __builtin_trap();
 }
 
-void load_child_process(const zx::debuglog& log, const Options& opts, Bootfs& bootfs,
-                        const zx::vmo& vdso_vmo, const zx::process& proc, const zx::vmar& vmar,
-                        const zx::thread& thread, const zx::channel& to_child, zx_vaddr_t* entry,
-                        zx_vaddr_t* vdso_base, size_t* stack_size, zx::channel* loader_svc) {
+void load_child_process(const zx::debuglog& log, const Options& opts, std::string_view filename,
+                        Bootfs& bootfs, const zx::vmo& vdso_vmo, const zx::process& proc,
+                        const zx::vmar& vmar, const zx::thread& thread, const zx::channel& to_child,
+                        zx_vaddr_t* entry, zx_vaddr_t* vdso_base, size_t* stack_size,
+                        zx::channel* loader_svc) {
   // Examine the bootfs image and find the requested file in it.
   // This will handle a PT_INTERP by doing a second lookup in bootfs.
-  *entry = elf_load_bootfs(log, bootfs, opts.root, proc, vmar, thread, opts.next, to_child,
+  *entry = elf_load_bootfs(log, bootfs, opts.root, proc, vmar, thread, filename, to_child,
                            stack_size, loader_svc);
   // Now load the vDSO into the child, so it has access to system calls.
   *vdso_base = elf_load_vdso(log, vmar, vdso_vmo);
@@ -91,6 +92,37 @@ zx::vmar reserve_low_address_space(const zx::debuglog& log, const zx::vmar& root
   return vmar;
 }
 
+void parse_next_process_arguments(const zx::debuglog& log, const Options& opts, uint32_t& argc,
+                                  char* argv) {
+  // Extra byte for null terminator.
+  uint32_t required_size = opts.next.size() + 1;
+  if (required_size > kProcessArgsMaxBytes) {
+    fail(log, "required %u bytes for process arguments, but only %u are available", required_size,
+         kProcessArgsMaxBytes);
+  }
+
+  // At a minimum, child processes will be passed a single argument containing the binary name.
+  argc++;
+  uint32_t index = 0;
+  for (char c : opts.next) {
+    if (c == '+') {
+      // Argument list is provided as '+' separated, but passed as null separated. Every time
+      // we encounter a '+' we replace it with a null and increment the argument counter.
+      argv[index] = '\0';
+      argc++;
+    } else {
+      argv[index] = c;
+    }
+    index++;
+  }
+
+  argv[index] = '\0';
+}
+
+std::string_view get_userboot_next_filename(const Options& opts) {
+  return opts.next.substr(0, opts.next.find_first_of('+'));
+}
+
 // This is the main logic:
 // 1. Read the kernel's bootstrap message.
 // 2. Load up the child process from ELF file(s) on the bootfs.
@@ -103,22 +135,26 @@ zx::vmar reserve_low_address_space(const zx::debuglog& log, const zx::vmar& root
   // errors will be reported via zx_debug_write.
   zx::debuglog log;
 
-  // We don't need our own thread handle, but the child does.
-  // We pass the decompressed BOOTFS VMO along as well as the others.
-  // So we're passing along two more handles than we got.
+  // We don't need our own thread handle, but the child does. In addition we pass on a decompressed
+  // BOOTFS VMO, and a debuglog handle (tied to stdout).
+  //
+  // In total we're passing along three more handles than we got.
   constexpr uint32_t kThreadSelf = kHandleCount;
   constexpr uint32_t kBootfsVmo = kHandleCount + 1;
-  constexpr uint32_t kChildHandleCount = kHandleCount + 2;
+  constexpr uint32_t kDebugLog = kHandleCount + 2;
+  constexpr uint32_t kChildHandleCount = kHandleCount + 3;
 
   // This is the processargs message the child will receive.
   struct child_message_layout {
     zx_proc_args_t pargs{};
+    char args[kProcessArgsMaxBytes];
     uint32_t info[kChildHandleCount];
   } child_message;
 
   // We pass all the same handles the kernel gives us along to the child,
   // except replacing our own process/root-VMAR handles with its, and
-  // passing along the two extra handles (BOOTFS and thread-self).
+  // passing along the three extra handles (BOOTFS, thread-self, and a debuglog
+  // handle tied to stdout).
   std::array<zx_handle_t, kChildHandleCount> handles;
 
   // Read the command line and the essential handles from the kernel.
@@ -139,6 +175,19 @@ zx::vmar reserve_low_address_space(const zx::debuglog& log, const zx::vmar& root
     printl(log, "zx_debuglog_create failed: %d, using zx_debug_write instead", status);
   }
 
+  // We need our own root VMAR handle to map in the ZBI.
+  zx::vmar vmar_self{handles[kVmarRootSelf]};
+  handles[kVmarRootSelf] = ZX_HANDLE_INVALID;
+
+  // Locate the ZBI_TYPE_STORAGE_BOOTFS item and decompress it. This will be used to load
+  // the binary referenced by userboot.next, as well as libc. Bootfs will be fully parsed
+  // and hosted under '/boot' either by bootsvc or component manager.
+  const zx::unowned_vmo zbi{handles[kZbi]};
+  zx::vmo bootfs_vmo = GetBootfsFromZbi(log, vmar_self, *zbi);
+
+  // Parse CMDLINE items to determine the set of runtime options.
+  Options opts = GetOptionsFromZbi(log, vmar_self, *zbi);
+
   // Get the power resource handle in case we call powerctl below.
   zx::resource power_resource;
   zx::unowned_resource system_resource(handles[kSystemResource]);
@@ -149,7 +198,12 @@ zx::vmar reserve_low_address_space(const zx::debuglog& log, const zx::vmar& root
   // Fill in the child message header.
   child_message.pargs.protocol = ZX_PROCARGS_PROTOCOL;
   child_message.pargs.version = ZX_PROCARGS_VERSION;
+  child_message.pargs.args_off = offsetof(struct child_message_layout, args),
   child_message.pargs.handle_info_off = offsetof(child_message_layout, info);
+
+  // Fill in any '+' separated arguments provided by `userboot.next`. If arguments are longer than
+  // kProcessArgsMaxBytes, this function will fail process creation.
+  parse_next_process_arguments(log, opts, child_message.pargs.args_num, child_message.args);
 
   // Fill in the handle info table.
   child_message.info[kBootfsVmo] = PA_HND(PA_VMO_BOOTFS, 0);
@@ -174,23 +228,19 @@ zx::vmar reserve_low_address_space(const zx::debuglog& log, const zx::vmar& root
     child_message.info[i] = PA_HND(PA_VMO_KERNEL_FILE, i - kFirstKernelFile);
   }
 
+  zx::debuglog log_dup;
+  status = log.duplicate(ZX_RIGHT_SAME_RIGHTS, &log_dup);
+  check(log, status, "zx_handle_duplicate failed on debuglog handle");
+  handles[kDebugLog] = log_dup.release();
+  child_message.info[kDebugLog] = PA_HND(PA_FD, kFdioFlagUseForStdio);
+
   // Hang on to our own process handle.  If we closed it, our process
   // would be killed.  Exiting will clean it up.
   zx::process proc_self{handles[kProcSelf]};
   handles[kProcSelf] = ZX_HANDLE_INVALID;
 
-  // We need our own root VMAR handle to map in the ZBI.
-  zx::vmar vmar_self{handles[kVmarRootSelf]};
-  handles[kVmarRootSelf] = ZX_HANDLE_INVALID;
-
-  // Locate the ZBI_TYPE_STORAGE_BOOTFS item and decompress it.
-  // We need it to load bootsvc and libc from.
-  // Later bootfs sections will be processed by devmgr.
-  const zx::unowned_vmo zbi{handles[kZbi]};
-  zx::vmo bootfs_vmo = GetBootfsFromZbi(log, vmar_self, *zbi);
-
-  // Parse CMDLINE items to determine the set of runtime options.
-  Options opts = GetOptionsFromZbi(log, vmar_self, *zbi);
+  // Strips any arguments passed along with the filename to userboot.next.
+  std::string_view filename = get_userboot_next_filename(opts);
 
   zx::process proc;
   {
@@ -224,8 +274,8 @@ zx::vmar reserve_low_address_space(const zx::debuglog& log, const zx::vmar& root
 
     // Create the process itself.
     zx::vmar vmar;
-    status = zx::process::create(*zx::unowned_job{handles[kRootJob]}, opts.next.data(),
-                                 static_cast<uint32_t>(opts.next.size()), 0, &proc, &vmar);
+    status = zx::process::create(*zx::unowned_job{handles[kRootJob]}, filename.data(),
+                                 static_cast<uint32_t>(filename.size()), 0, &proc, &vmar);
     check(log, status, "zx_process_create");
 
     // Squat on some address space before we start loading it up.
@@ -233,7 +283,7 @@ zx::vmar reserve_low_address_space(const zx::debuglog& log, const zx::vmar& root
 
     // Create the initial thread in the new process
     zx::thread thread;
-    status = zx::thread::create(proc, opts.next.data(), static_cast<uint32_t>(opts.next.size()), 0,
+    status = zx::thread::create(proc, filename.data(), static_cast<uint32_t>(filename.size()), 0,
                                 &thread);
     check(log, status, "zx_thread_create");
 
@@ -241,8 +291,9 @@ zx::vmar reserve_low_address_space(const zx::debuglog& log, const zx::vmar& root
     zx_vaddr_t entry, vdso_base;
     size_t stack_size = ZIRCON_DEFAULT_STACK_SIZE;
     zx::channel loader_service_channel;
-    load_child_process(log, opts, bootfs, *zx::unowned_vmo{handles[kFirstVdso]}, proc, vmar, thread,
-                       to_child, &entry, &vdso_base, &stack_size, &loader_service_channel);
+    load_child_process(log, opts, filename, bootfs, *zx::unowned_vmo{handles[kFirstVdso]}, proc,
+                       vmar, thread, to_child, &entry, &vdso_base, &stack_size,
+                       &loader_service_channel);
 
     // Allocate the stack for the child.
     uintptr_t sp;
@@ -295,7 +346,7 @@ zx::vmar reserve_low_address_space(const zx::debuglog& log, const zx::vmar& root
     check(log, status, "zx_process_start failed");
     thread.reset();
 
-    printl(log, "process %.*s started.", static_cast<int>(opts.next.size()), opts.next.data());
+    printl(log, "process %.*s started.", static_cast<int>(filename.size()), filename.data());
 
     // Now become the loader service for as long as that's needed.
     if (loader_service_channel) {
@@ -310,7 +361,7 @@ zx::vmar reserve_low_address_space(const zx::debuglog& log, const zx::vmar& root
     // All done with bootfs! Let it go out of scope.
   }
 
-  auto wait_till_child_exits = [child_name = opts.next, &log, &proc]() {
+  auto wait_till_child_exits = [child_name = filename, &log, &proc]() {
     printl(log, "Waiting for %.*s to exit...", static_cast<int>(child_name.size()),
            child_name.data());
     zx_status_t status = proc.wait_one(ZX_PROCESS_TERMINATED, zx::time::infinite(), nullptr);

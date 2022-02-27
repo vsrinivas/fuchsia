@@ -62,6 +62,14 @@ enum HandleIndex : uint32_t {
   kHandleCount = kFirstInstrumentationData + InstrumentationData::vmo_count()
 };
 
+// Copied from sdk/lib/fdio/include/lib/fdio/io.h to avoid the dependency. When this is passed
+// with a PA_FD handle, the handle is tied to stdout.
+constexpr uint32_t kFdioFlagUseForStdio = 0x8000;
+
+// Max number of bytes allowed for arguments to the userboot.next binary. This is an arbitrary
+// value.
+constexpr uint32_t kProcessArgsMaxBytes = 128;
+
 }  // namespace userboot
 
 #endif  // ZIRCON_KERNEL_LIB_USERABI_INCLUDE_LIB_USERABI_USERBOOT_H_
