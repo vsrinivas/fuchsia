@@ -104,10 +104,8 @@ class Handle final {
   // Called only by Dup.
   Handle(Handle* rhs, zx_rights_t rights, uint32_t base_value);
 
-  // Handle should never be destroyed by anything other than HandleTableArena::Delete,
-  // which uses TearDown to do the actual destruction.
+  // Handle should never be destroyed by anything other than HandleTableArena::Delete.
   ~Handle() = default;
-  void TearDown();
 
   // NOTE! This can return an invalid address.  It must be checked
   // against the arena bounds before being cast to a Handle*.

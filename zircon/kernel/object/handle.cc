@@ -171,46 +171,32 @@ Handle::Handle(Handle* rhs, zx_rights_t rights, uint32_t base_value)
       rights_(rights),
       base_value_(base_value) {}
 
-// Destroys, but does not free, the Handle, and fixes up its memory to protect
-// against stale pointers to it. Also stashes the Handle's base_value for reuse
-// the next time this slot is allocated.
-void Handle::TearDown() {
-  uint32_t __UNUSED old_base_value = base_value();
-
+void HandleTableArena::Delete(Handle* handle) {
+  fbl::RefPtr<Dispatcher> dispatcher(ktl::move(handle->dispatcher_));
+  uint32_t __UNUSED old_base_value = handle->base_value_;
+  const uint32_t* __UNUSED base_value = &handle->base_value_;
   // There may be stale pointers to this slot and they will look at process_id. We expect
   // process_id to already have been cleared by the process dispatcher before the handle got to
   // this point.
-  DEBUG_ASSERT(process_id() == ZX_KOID_INVALID);
+  DEBUG_ASSERT(handle->process_id() == ZX_KOID_INVALID);
 
-  // Explicitly reset the dispatcher to drop the reference, if this deletes the dispatcher then
-  // many things could ultimately happen and so it is important that this be outside the lock.
-  // Performing an explicit reset instead of letting it happen in the destructor means that the
-  // pointer gets reset to null, which is important in case there are stale pointers to this slot.
-  this->dispatcher_.reset();
-  // The destructor does not do much of interest now since we have already cleaned up the
-  // dispatcher_ ref, but call it for completeness.
-  this->~Handle();
+  if (dispatcher->is_waitable()) {
+    dispatcher->Cancel(handle);
+  }
+  // The destructor should not do anything interesting but call it for completeness.
+  handle->~Handle();
+  // Make sure the base value was not altered by the destructor.
+  DEBUG_ASSERT(*base_value == old_base_value);
 
-  // Validate that destruction did not change the stored base value.
-  DEBUG_ASSERT(base_value() == old_base_value);
-}
-
-void HandleTableArena::Delete(Handle* handle) {
-  fbl::RefPtr<Dispatcher> disp = handle->dispatcher();
-
-  if (disp->is_waitable())
-    disp->Cancel(handle);
-
-  handle->TearDown();
-
-  bool zero_handles = disp->decrement_handle_count();
+  bool zero_handles = dispatcher->decrement_handle_count();
   arena_.Free(handle);
 
-  if (zero_handles)
-    disp->on_zero_handles();
+  if (zero_handles) {
+    dispatcher->on_zero_handles();
+  }
 
-  // If |disp| is the last reference then the dispatcher object
-  // gets destroyed here.
+  // If |disp| is the last reference (which is likely) then the dispatcher object
+  // gets destroyed at the exit of this function.
   kcounter_add(handle_count_live, -1);
 }
 
