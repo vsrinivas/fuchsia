@@ -310,7 +310,9 @@ func (ni *stackImpl) SetInterfaceIpForwarding(_ fidl.Context, id uint64, ip net.
 		return stack.StackSetInterfaceIpForwardingResultWithErr(stack.ErrorInvalidArgs), nil
 	}
 
-	switch err := ni.ns.stack.SetNICForwarding(tcpip.NICID(id), netProto, enabled); err.(type) {
+	// We ignore the returned previous forwarding configuration as this FIDL
+	// method has no use for it.
+	switch _, err := ni.ns.stack.SetNICForwarding(tcpip.NICID(id), netProto, enabled); err.(type) {
 	case nil:
 		return stack.StackSetInterfaceIpForwardingResultWithResponse(stack.StackSetInterfaceIpForwardingResponse{}), nil
 	case *tcpip.ErrUnknownNICID:
