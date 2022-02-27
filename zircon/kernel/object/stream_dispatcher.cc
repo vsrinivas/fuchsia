@@ -66,7 +66,7 @@ zx_status_t StreamDispatcher::ReadVector(VmAspace* current_aspace, user_out_iove
   uint64_t content_size = vmo_->GetContentSize();
 
   {
-    Guard<Mutex> guard{get_lock()};
+    Guard<Mutex> guard{&seek_lock_};
 
     if (seek_ >= content_size) {
       *out_actual = 0u;
@@ -123,7 +123,7 @@ zx_status_t StreamDispatcher::WriteVector(VmAspace* current_aspace, user_in_iove
   uint64_t offset = 0u;
 
   {
-    Guard<Mutex> guard{get_lock()};
+    Guard<Mutex> guard{&seek_lock_};
 
     size_t requested_content_size = 0u;
     if (add_overflow(seek_, total_capacity, &requested_content_size)) {
@@ -192,7 +192,7 @@ zx_status_t StreamDispatcher::AppendVector(VmAspace* current_aspace, user_in_iov
   uint64_t offset = 0u;
 
   {
-    Guard<Mutex> guard{get_lock()};
+    Guard<Mutex> guard{&seek_lock_};
 
     offset = vmo_->GetContentSize();
 
@@ -217,7 +217,7 @@ zx_status_t StreamDispatcher::Seek(zx_stream_seek_origin_t whence, int64_t offse
                                    zx_off_t* out_seek) {
   canary_.Assert();
 
-  Guard<Mutex> guard{get_lock()};
+  Guard<Mutex> guard{&seek_lock_};
 
   zx_off_t target;
   switch (whence) {
@@ -254,7 +254,7 @@ zx_status_t StreamDispatcher::Seek(zx_stream_seek_origin_t whence, int64_t offse
 void StreamDispatcher::GetInfo(zx_info_stream_t* info) const {
   canary_.Assert();
 
-  Guard<Mutex> guard{get_lock()};
+  Guard<Mutex> guard{&seek_lock_};
   info->options = options_;
   info->seek = seek_;
   info->content_size = vmo_->GetContentSize();

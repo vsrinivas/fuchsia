@@ -96,8 +96,16 @@ class VmObjectDispatcher final : public SoloDispatcher<VmObjectDispatcher, ZX_DE
   // except during destruction.
   fbl::RefPtr<VmObject> const vmo_;
 
+  // The content_size_lock_ is used to synchronize vmo_ operations and updates to content_size_.
+  // Ideally the existing dispatchers lock would be used, but presently it is possible for page
+  // requests to get waited on while this lock is held due to calls to vmo_->ZeroRange, and so
+  // prefer to use a separate lock that we can add instrumentation to without needing to change the
+  // entire dispatcher lock.
+  // TODO: Remove this and use dispatcher lock once content size operations will not block.
+  mutable DECLARE_MUTEX(VmObjectDispatcher) content_size_lock_;
+
   // The size of the content stored in the VMO in bytes.
-  uint64_t content_size_ TA_GUARDED(get_lock()) = 0u;
+  uint64_t content_size_ TA_GUARDED(content_size_lock_) = 0u;
 
   // The koid of the related pager object, or ZX_KOID_INVALID if
   // there is no related pager.
