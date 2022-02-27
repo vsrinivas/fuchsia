@@ -4,9 +4,11 @@
 
 #include <lib/svc/dir.h>
 #include <lib/vfs/cpp/pseudo_dir.h>
+#include <lib/vfs/cpp/remote_dir.h>
 #include <lib/vfs/cpp/service.h>
 #include <zircon/assert.h>
 #include <zircon/errors.h>
+#include <zircon/types.h>
 
 #include <algorithm>
 #include <memory>
@@ -134,6 +136,15 @@ zx_status_t svc_dir_add_service_by_path(svc_dir_t* dir, const char* path, const 
   return AddServiceEntry(node, service_name, context, handler);
 }
 
+zx_status_t svc_dir_add_directory(svc_dir_t* dir, const char* name, zx_handle_t subdir) {
+  if (dir == nullptr || name == nullptr || subdir == ZX_HANDLE_INVALID) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  auto remote_dir = std::make_unique<vfs::RemoteDir>(zx::channel(subdir));
+  return dir->impl->AddEntry(name, std::move(remote_dir));
+}
+
 zx_status_t svc_dir_remove_service(svc_dir_t* dir, const char* type, const char* service_name) {
   const char* path = type == nullptr ? "" : type;
   return svc_dir_remove_service_by_path(dir, path, service_name);
@@ -148,6 +159,14 @@ zx_status_t svc_dir_remove_service_by_path(svc_dir_t* dir, const char* path,
   }
 
   return node->RemoveEntry(service_name);
+}
+
+zx_status_t svc_dir_remove_directory(svc_dir_t* dir, const char* name) {
+  if (dir == nullptr || name == nullptr) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  return dir->impl->RemoveEntry(name);
 }
 
 zx_status_t svc_dir_destroy(svc_dir_t* dir) {

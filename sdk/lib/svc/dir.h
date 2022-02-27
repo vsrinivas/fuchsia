@@ -66,6 +66,20 @@ __EXPORT zx_status_t svc_dir_add_service_by_path(svc_dir_t* dir, const char* pat
                                                  const char* service_name, void* context,
                                                  svc_connector_t* handler) ZX_AVAILABLE_SINCE(7);
 
+// Add a subdirectory to the given |dir| using the provided entry |name|.
+//
+// |subdir| should be a handle to a client end for a |fuchsia.io.Directory|
+// connection. When |dir| receives requests for |name|, it will forwards all
+// requests to this handle.
+//
+// This may fail in the following ways:
+// If |dir| or |name| is NULL, or |subdir| is an invalid handle, then
+// ZX_ERR_INVALID_ARGS is returned.
+// If an entry already exists under |name|, then ZX_ERR_ALREADY_EXISTS
+// is returned.
+__EXPORT zx_status_t svc_dir_add_directory(svc_dir_t* dir, const char* name, zx_handle_t subdir)
+    ZX_AVAILABLE_SINCE(7);
+
 // Removes the service named |service_name| of type |type| from the
 // given |dir|. This reports a failure if the entry does not exist, by
 // returning ZX_ERR_NOT_FOUND. Otherwise, the service entry is
@@ -80,6 +94,14 @@ __EXPORT zx_status_t svc_dir_remove_service(svc_dir_t* dir, const char* type,
 // the service entry is removed, and ZX_OK is returned.
 __EXPORT zx_status_t svc_dir_remove_service_by_path(svc_dir_t* dir, const char* path,
                                                     const char* service_name) ZX_AVAILABLE_SINCE(7);
+
+// Remove a subdirectory named |name| from the given |dir|.
+//
+// This may fail in the following ways:
+// If |dir| or |name| is NULL then ZX_ERR_INVALID_ARGS is returned.
+// If no entry exists under |name| then ZX_ERR_NOT_FOUND is returned.
+__EXPORT zx_status_t svc_dir_remove_directory(svc_dir_t* dir, const char* name)
+    ZX_AVAILABLE_SINCE(7);
 
 // Destroy the provided directory. This currently cannot fail, and
 // returns ZX_OK.
