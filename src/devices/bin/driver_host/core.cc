@@ -312,6 +312,8 @@ uint8_t device_get_suspend_reason(SystemPowerState power_state) {
       return DEVICE_SUSPEND_REASON_POWEROFF;
     case SystemPowerState::kSuspendRam:
       return DEVICE_SUSPEND_REASON_SUSPEND_RAM;
+    case SystemPowerState::kRebootKernelInitiated:
+      return DEVICE_SUSPEND_REASON_REBOOT_KERNEL_INITIATED;
     default:
       return DEVICE_SUSPEND_REASON_SELECTIVE_SUSPEND;
   }

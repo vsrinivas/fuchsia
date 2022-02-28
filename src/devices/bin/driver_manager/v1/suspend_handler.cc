@@ -38,6 +38,9 @@ void SuspendFallback(const zx::resource& root_resource, uint32_t flags,
     status = zx_system_powerctl(root_resource.get(), ZX_SYSTEM_POWERCTL_REBOOT_BOOTLOADER, nullptr);
   } else if (flags == DEVICE_SUSPEND_FLAG_REBOOT_RECOVERY) {
     status = zx_system_powerctl(root_resource.get(), ZX_SYSTEM_POWERCTL_REBOOT_RECOVERY, nullptr);
+  } else if (flags == DEVICE_SUSPEND_FLAG_REBOOT_KERNEL_INITIATED) {
+    status = zx_system_powerctl(root_resource.get(), ZX_SYSTEM_POWERCTL_ACK_KERNEL_INITIATED_REBOOT,
+                                nullptr);
   } else if (flags == DEVICE_SUSPEND_FLAG_POWEROFF) {
     status = zx_system_powerctl(root_resource.get(), ZX_SYSTEM_POWERCTL_SHUTDOWN, nullptr);
   } else if (flags == DEVICE_SUSPEND_FLAG_MEXEC) {
@@ -124,6 +127,7 @@ void SuspendHandler::Suspend(uint32_t flags, SuspendCallback callback) {
   sflags_ = flags;
   suspend_callback_ = std::move(callback);
 
+  // TODO(91708) remove once driver_manager is no longer listening to the OOM event
   if ((sflags_ & DEVICE_SUSPEND_REASON_MASK) != DEVICE_SUSPEND_FLAG_SUSPEND_RAM) {
     log_to_debuglog();
     LOGF(INFO, "Shutting down filesystems to prepare for system-suspend");

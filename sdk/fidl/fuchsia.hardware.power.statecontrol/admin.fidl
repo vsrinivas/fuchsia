@@ -16,8 +16,9 @@ type SystemPowerState = strict enum : uint8 {
     POWEROFF = 5;
     MEXEC = 6;
     SUSPEND_RAM = 7;
+    REBOOT_KERNEL_INITIATED = 8;
 };
-const MAX_SYSTEM_POWER_STATES uint32 = 7;
+const MAX_SYSTEM_POWER_STATES uint32 = 8;
 
 /// The maxium number of seconds the server will wait for responses from all RebootMethodsWatchers
 /// before changing the system power state.

@@ -35,7 +35,7 @@ union/member fuchsia.hardware.power.statecontrol/Admin_SuspendToRam_Result.err i
 union/member fuchsia.hardware.power.statecontrol/Admin_SuspendToRam_Result.response fuchsia.hardware.power.statecontrol/Admin_SuspendToRam_Response
 strict union fuchsia.hardware.power.statecontrol/Admin_SuspendToRam_Result
 const fuchsia.hardware.power.statecontrol/MAX_REBOOT_WATCHER_RESPONSE_TIME_SECONDS uint32 5
-const fuchsia.hardware.power.statecontrol/MAX_SYSTEM_POWER_STATES uint32 7
+const fuchsia.hardware.power.statecontrol/MAX_SYSTEM_POWER_STATES uint32 8
 protocol/member fuchsia.hardware.power.statecontrol/RebootMethodsWatcher.OnReboot(fuchsia.hardware.power.statecontrol/RebootReason reason) -> ()
 protocol fuchsia.hardware.power.statecontrol/RebootMethodsWatcher
 protocol/member fuchsia.hardware.power.statecontrol/RebootMethodsWatcherRegister.Register(client_end:fuchsia.hardware.power.statecontrol/RebootMethodsWatcher watcher)
@@ -55,6 +55,7 @@ enum/member fuchsia.hardware.power.statecontrol/SystemPowerState.MEXEC 6
 enum/member fuchsia.hardware.power.statecontrol/SystemPowerState.POWEROFF 5
 enum/member fuchsia.hardware.power.statecontrol/SystemPowerState.REBOOT 2
 enum/member fuchsia.hardware.power.statecontrol/SystemPowerState.REBOOT_BOOTLOADER 3
+enum/member fuchsia.hardware.power.statecontrol/SystemPowerState.REBOOT_KERNEL_INITIATED 8
 enum/member fuchsia.hardware.power.statecontrol/SystemPowerState.REBOOT_RECOVERY 4
 enum/member fuchsia.hardware.power.statecontrol/SystemPowerState.SUSPEND_RAM 7
 strict enum fuchsia.hardware.power.statecontrol/SystemPowerState uint8

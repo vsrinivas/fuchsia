@@ -119,6 +119,8 @@ uint32_t SuspendResumeManager::GetSuspendFlagsFromSystemPowerState(
       return DEVICE_SUSPEND_FLAG_REBOOT_BOOTLOADER;
     case statecontrol_fidl::wire::SystemPowerState::kRebootRecovery:
       return DEVICE_SUSPEND_FLAG_REBOOT_RECOVERY;
+    case statecontrol_fidl::wire::SystemPowerState::kRebootKernelInitiated:
+      return DEVICE_SUSPEND_FLAG_REBOOT_KERNEL_INITIATED;
     case statecontrol_fidl::wire::SystemPowerState::kPoweroff:
       return DEVICE_SUSPEND_FLAG_POWEROFF;
     case statecontrol_fidl::wire::SystemPowerState::kMexec:

@@ -149,6 +149,9 @@ zx_status_t acpi_suspend(uint8_t requested_state, bool enable_wake, uint8_t susp
         reboot_bootloader();
       } else if (suspend_reason == DEVICE_SUSPEND_REASON_REBOOT_RECOVERY) {
         reboot_recovery();
+      } else if (suspend_reason == DEVICE_SUSPEND_REASON_REBOOT_KERNEL_INITIATED) {
+        // will cause fallback behavior
+        return ZX_ERR_NOT_SUPPORTED;
       } else {
         reboot();
       }
