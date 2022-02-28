@@ -239,8 +239,8 @@ func main() {
 			return
 		}
 
-		if err = removeFFXRepository(ctx, sdk, *nameFlag); err != nil {
-			log.Fatalf("Could not remove repositories from ffx: %v", err)
+		if err = killFFXServer(ctx, sdk); err != nil {
+			log.Fatalf("Could not shut down the ffx repository server: %v", err)
 		}
 		if *killFlag {
 			osExit(0)
@@ -352,10 +352,10 @@ func (s *pmServer) registerRepository(ctx context.Context, sdk sdkProvider) erro
 	return registerPMRepository(ctx, sdk, s.repoPort, s.name, s.targetAddress, s.sshConfig, s.privateKey, s.persist, s.sshPort)
 }
 
-func removeFFXRepository(ctx context.Context, sdk sdkProvider, name string) error {
+func killFFXServer(ctx context.Context, sdk sdkProvider) error {
 	// TODO(http://fxbug.dev/83720): We need `ffx_repository=true` until
 	// ffx repository has graduated from experimental.
-	args := []string{"--config", "ffx_repository=true", "repository", "remove", name}
+	args := []string{"--config", "ffx_repository=true", "repository", "server", "stop"}
 	logger.Debugf(ctx, "running %v", args)
 	if _, err := sdk.RunFFX(args, false); err != nil {
 		var exitError *exec.ExitError
@@ -377,7 +377,18 @@ type ffxServer struct {
 func (s *ffxServer) startServer(ctx context.Context, sdk sdkProvider) error {
 	// TODO(http://fxbug.dev/83720): We need `ffx_repository=true` until
 	// ffx repository has graduated from experimental.
-	args := []string{"--config", "ffx_repository=true", "repository",
+
+	args := []string{"--config", "ffx_repository=true", "repository", "server", "start"}
+	logger.Debugf(ctx, "running %v", args)
+	if _, err := sdk.RunFFX(args, false); err != nil {
+		var exitError *exec.ExitError
+		if errors.As(err, &exitError) {
+			return fmt.Errorf("Error starting repository server %v: %w", string(exitError.Stderr), err)
+		}
+		return err
+	}
+
+	args = []string{"--config", "ffx_repository=true", "repository",
 		"add-from-pm", "--repository", s.name, s.repoPath}
 	logger.Debugf(ctx, "running %v", args)
 	if _, err := sdk.RunFFX(args, false); err != nil {
@@ -387,6 +398,7 @@ func (s *ffxServer) startServer(ctx context.Context, sdk sdkProvider) error {
 		}
 		return err
 	}
+
 	return nil
 }
 
