@@ -13,6 +13,7 @@ ffx_plugin("ffx_assembly") {
   args_sources = [ "src/args.rs" ]
   sources = [
     "src/base_package.rs",
+    "src/blob_json_generator.rs",
     "src/blobfs.rs",
     "src/config.rs",
     "src/config/product_config.rs",
@@ -72,5 +73,6 @@ ffx_plugin("ffx_assembly") {
     "//src/lib/assembly/test_util",
     "//third_party/rust_crates:assert_matches",
     "//third_party/rust_crates:serial_test",
+    "//zircon/tools/blobfs",
   ]
 }

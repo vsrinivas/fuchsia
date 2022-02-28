@@ -8,15 +8,34 @@ use crate::tool::{Tool, ToolCommand, ToolCommandLog, ToolProvider};
 use anyhow::Result;
 
 /// A provider for tools that no-op, but log their execution so it can be asserted in a test.
-#[derive(Default)]
 pub struct FakeToolProvider {
     /// A log of all the tools that were run.
     log: ToolCommandLog,
+    /// Function called for each tool invocation.
+    side_effect: fn(&str, &[String]) -> (),
+}
+
+impl FakeToolProvider {
+    /// Creates a tool provider that notifies a function for each invocation.
+    pub fn new_with_side_effect(side_effect: fn(&str, &[String]) -> ()) -> FakeToolProvider {
+        FakeToolProvider { log: ToolCommandLog::default(), side_effect }
+    }
+}
+
+impl Default for FakeToolProvider {
+    fn default() -> FakeToolProvider {
+        fn noop(_: &str, _: &[String]) -> () {}
+        FakeToolProvider::new_with_side_effect(noop)
+    }
 }
 
 impl ToolProvider for FakeToolProvider {
-    fn get_tool(&self, name: impl AsRef<str>) -> Result<Box<dyn Tool>> {
-        Ok(Box::new(FakeTool::new(name, self.log().clone())))
+    fn get_tool(&self, name: &str) -> Result<Box<dyn Tool>> {
+        Ok(Box::new(FakeTool {
+            name: name.to_string(),
+            log: self.log().clone(),
+            side_effect: self.side_effect,
+        }))
     }
 
     fn log(&self) -> &ToolCommandLog {
@@ -28,20 +47,15 @@ impl ToolProvider for FakeToolProvider {
 struct FakeTool {
     /// The name of the tool.
     name: String,
-
     /// The log to write the execution details into upon a `run()`.
     log: ToolCommandLog,
-}
-
-impl FakeTool {
-    /// Construct a new FakeTool.
-    fn new(name: impl AsRef<str>, log: ToolCommandLog) -> Self {
-        Self { name: name.as_ref().into(), log }
-    }
+    /// Function called for each tool invocation.
+    side_effect: fn(&str, &[String]) -> (),
 }
 
 impl Tool for FakeTool {
     fn run(&self, args: &[String]) -> Result<()> {
+        (self.side_effect)(&self.name, args);
         self.log.add(ToolCommand::new(format!("./host_x64/{}", self.name), args.into()));
         Ok(())
     }

@@ -33,11 +33,11 @@ impl SdkToolProvider {
 }
 
 impl ToolProvider for SdkToolProvider {
-    fn get_tool(&self, name: impl AsRef<str>) -> Result<Box<dyn Tool>> {
+    fn get_tool(&self, name: &str) -> Result<Box<dyn Tool>> {
         let path = self
             .sdk
             .get_host_tool(name.as_ref())
-            .context(format!("Getting host tool from the SDK: {}", name.as_ref()))?;
+            .context(format!("Getting host tool from the SDK: {}", name))?;
         let tool = SdkTool::new(path, self.log.clone());
         Ok(Box::new(tool))
     }

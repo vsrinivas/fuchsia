@@ -106,6 +106,7 @@ class ConvertTest(unittest.TestCase):
                                 'obj/a/b/c2/package_manifest.json',
                             ]),
                     ]),
+                expected_non_blobfs_output=None,
                 return_value=0),
             param(
                 name="failure_when_manifest_is_matched_twice",
@@ -133,6 +134,7 @@ class ConvertTest(unittest.TestCase):
                 image_assembly_config=dict(
                     base=["obj/a/b/c2/package_manifest.json"]),
                 expected_output=None,
+                expected_non_blobfs_output=None,
                 return_value=1),
             param(
                 name=
@@ -141,12 +143,37 @@ class ConvertTest(unittest.TestCase):
                 image_assembly_config=dict(),
                 expected_output=dict(
                     resource_budgets=[], package_set_budgets=[]),
+                expected_non_blobfs_output=None,
+                return_value=0),
+            param(
+                name="non_blobfs_config",
+                size_limits=dict(
+                    non_blobfs_components=[
+                        dict(
+                            component="Update",
+                            limit=1024,
+                            creep_limit=128,
+                            merge=False,
+                            blobs_json_path="obj/a/package_manifest.json")
+                    ]),
+                image_assembly_config=dict(),
+                expected_output=dict(
+                    resource_budgets=[], package_set_budgets=[]),
+                expected_non_blobfs_output=dict(
+                    package_set_budgets=[
+                        dict(
+                            name="Update",
+                            budget_bytes=1024,
+                            creep_budget_bytes=128,
+                            merge=False,
+                            packages=["obj/a/package_manifest.json"]),
+                    ]),
                 return_value=0),
         ])
     def test_run_main(
             self, name, size_limits, image_assembly_config, expected_output,
-            return_value):
-        self.maxDiff = None
+            expected_non_blobfs_output, return_value):
+        self.maxDiff = None  # Do not truncate the diff result.
         with tempfile.TemporaryDirectory() as tmpdir:
 
             size_limits_path = os.path.join(tmpdir, "size_limits.json")
@@ -159,12 +186,15 @@ class ConvertTest(unittest.TestCase):
                 json.dump(image_assembly_config, file)
 
             output_path = os.path.join(tmpdir, "output.json")
+            non_blobfs_output_path = os.path.join(
+                tmpdir, "non_blobfs_output.json")
             # The first argument of a command line is the path to the program.
             # It is unused and left empty.
             sys.argv = [
                 "", "--size_limits", size_limits_path,
                 "--image_assembly_config", image_assembly_config_path,
-                "--output", output_path
+                "--output", output_path, "--non_blobfs_output",
+                non_blobfs_output_path
             ]
 
             self.assertEqual(convert_size_limits.main(), return_value)
@@ -172,3 +202,8 @@ class ConvertTest(unittest.TestCase):
             if expected_output is not None:
                 with open(output_path, "r") as file:
                     self.assertEqual(expected_output, json.load(file))
+
+            if expected_non_blobfs_output is not None:
+                with open(non_blobfs_output_path, "r") as file:
+                    self.assertEqual(
+                        expected_non_blobfs_output, json.load(file))

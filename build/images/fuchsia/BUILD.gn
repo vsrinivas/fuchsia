@@ -206,13 +206,20 @@ group("fuchsia") {
   }
 }
 
+# Path to the configuration setting a maximum size for sets of packages.
+size_budgets_blobfs_file = "$target_out_dir/size_budgets.json"
+size_budgets_non_blobfs_file = "$target_out_dir/update_package_budget.json"
+
 action("convert_size_limits_to_size_budgets") {
   script = "//build/images/assembly/convert_size_limits.py"
   inputs = [
     "$root_build_dir/size_checker.json",
     "$target_out_dir/fuchsia_image_assembly_config.json",
   ]
-  outputs = [ "$target_out_dir/size_budgets.json" ]
+  outputs = [
+    size_budgets_blobfs_file,
+    size_budgets_non_blobfs_file,
+  ]
   deps = [
     ":fuchsia_image_assembly_config",
     "//tools/size_checker/cmd:size_checker_json",
@@ -225,7 +232,9 @@ action("convert_size_limits_to_size_budgets") {
     rebase_path("$target_out_dir/fuchsia_image_assembly_config.json",
                 root_build_dir),
     "--output",
-    rebase_path("$target_out_dir/size_budgets.json", root_build_dir),
+    rebase_path(size_budgets_blobfs_file, root_build_dir),
+    "--non_blobfs_output",
+    rebase_path(size_budgets_non_blobfs_file, root_build_dir),
   ]
 }
 

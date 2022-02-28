@@ -157,6 +157,10 @@ pub struct SizeCheckArgs {
     /// composing the package on device.
     #[argh(option)]
     pub blob_sizes: Vec<PathBuf>,
+
+    /// directory to write the UpdatePackage.
+    #[argh(option)]
+    pub board_config: Option<PathBuf>,
     /// path where to write the verification report, in JSON format.
     #[argh(option)]
     pub gerrit_output: Option<PathBuf>,

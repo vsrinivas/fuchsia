@@ -64,6 +64,30 @@ def convert_budget_format(component, all_manifests):
         packages=packages)
 
 
+def convert_non_blobfs_budget(component):
+    """Converts a budget that are not part of blobfs.
+
+  Args:
+    component: dictionary, former non_blobfs size checker configuration entry.
+  Returns:
+    dictionary, new configuration with a name, a maximum size and the list of
+    packages manifest to fit in the budget.
+  """
+    return dict(
+        name=component["component"],
+        budget_bytes=component["limit"],
+        creep_budget_bytes=component["creep_limit"],
+        merge=False,
+        packages=[component["blobs_json_path"]])
+
+
+def make_non_blobfs_budgets(size_limits):
+    return [
+        convert_non_blobfs_budget(non_blobfs)
+        for non_blobfs in size_limits.get("non_blobfs_components", [])
+    ]
+
+
 def count_packages(budgets, all_manifests):
     """Returns packages that are missing, or present in multiple budgets."""
     package_count = collections.Counter(
@@ -150,6 +174,8 @@ def main():
     parser.add_argument(
         '--image_assembly_config', type=argparse.FileType('r'), required=True)
     parser.add_argument('--output', type=argparse.FileType('w'), required=True)
+    parser.add_argument(
+        '--non_blobfs_output', type=argparse.FileType('w'), required=True)
     parser.add_argument('-v', '--verbose', action='store_true')
     args = parser.parse_args()
 
@@ -165,8 +191,14 @@ def main():
                 dict(
                     resource_budgets=make_resources_budgets(size_limits),
                     package_set_budgets=make_package_set_budgets(
-                        size_limits, image_assembly_config),
-                ),
+                        size_limits, image_assembly_config)),
+                output,
+                indent=2)
+        # Non blobfs budgets are written to a separate configuration so that
+        # they can be evaluated separately.
+        with args.non_blobfs_output as output:
+            json.dump(
+                dict(package_set_budgets=make_non_blobfs_budgets(size_limits)),
                 output,
                 indent=2)
 

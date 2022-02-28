@@ -12,7 +12,7 @@ use std::sync::Arc;
 /// A producer of `Tool`s that can be run, and log their execution.
 pub trait ToolProvider {
     /// Access a tool from the provider.
-    fn get_tool(&self, name: impl AsRef<str>) -> Result<Box<dyn Tool>>;
+    fn get_tool(&self, name: &str) -> Result<Box<dyn Tool>>;
 
     /// Get the log of the commands that have been run.
     fn log(&self) -> &ToolCommandLog;
