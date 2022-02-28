@@ -6,6 +6,7 @@ import("//build/components.gni")
 import("//build/config.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
+import("//src/sys/core/build/core_shard.gni")
 
 group("setui") {
   testonly = true
@@ -364,6 +365,16 @@ fuchsia_package("setui_service") {
     ":setui_service_v2",
     "//src/intl:icudtl",
   ]
+}
+
+# Core shard for products that don't have a camera.
+core_shard("setui_service_core_shard") {
+  shard_file = "meta/setui_service.core_shard.cml"
+}
+
+# Core shard for products that have a camera.
+core_shard("setui_service_with_camera_core_shard") {
+  shard_file = "meta/setui_service_with_camera.core_shard.cml"
 }
 
 rustc_binary("setui-config-test") {
