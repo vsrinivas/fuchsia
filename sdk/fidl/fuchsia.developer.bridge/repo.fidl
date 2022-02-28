@@ -4,6 +4,7 @@
 library fuchsia.developer.bridge;
 
 using fuchsia.device;
+using fuchsia.net;
 
 const MAX_NAME uint64 = 255;
 const MAX_PATH uint64 = 4095;
@@ -43,6 +44,15 @@ type HttpRepositorySpec = table {
 
 @discoverable
 protocol RepositoryRegistry {
+    /// Start the repository server if it is not already running. Returns the local socket address
+    /// the server is listening upon.
+    ServerStart() -> (struct {
+        address fuchsia.net.SocketAddress;
+    }) error RepositoryError;
+
+    /// Stop the repository server. This has no effect if the server is already stopped.
+    ServerStop() -> (struct {}) error RepositoryError;
+
     /// Add a repository named `name` that has the following [RepositorySpec].
     AddRepository(struct {
         name string:MAX_NAME;

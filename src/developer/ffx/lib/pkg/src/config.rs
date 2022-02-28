@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::{Context, Result},
+    anyhow::{anyhow, Context, Result},
     ffx_config::{self, ConfigLevel},
     fidl_fuchsia_developer_bridge_ext::{RepositorySpec, RepositoryTarget},
     percent_encoding::{percent_decode_str, percent_encode, AsciiSet, CONTROLS},
@@ -14,11 +14,64 @@ use {
 const CONFIG_KEY_REPOSITORIES: &str = "repository.repositories";
 const CONFIG_KEY_REGISTRATIONS: &str = "repository.registrations";
 const CONFIG_KEY_DEFAULT_REPOSITORY: &str = "repository.default";
+const CONFIG_KEY_SERVER_MODE: &str = "repository.server.mode";
+const CONFIG_KEY_SERVER_ENABLED: &str = "repository.server.enabled";
+const CONFIG_KEY_SERVER_LISTEN: &str = "repository.server.listen";
 const ESCAPE_SET: &AsciiSet = &CONTROLS.add(b'%').add(b'.');
+
+// Try to figure out why the server is not running.
+pub async fn determine_why_repository_server_is_not_running() -> anyhow::Error {
+    macro_rules! check {
+        ($e:expr) => {
+            match $e {
+                Ok(value) => value,
+                Err(err) => {
+                    return err;
+                }
+            }
+        };
+    }
+
+    let mode = check!(repository_server_mode().await);
+    if mode != "ffx" {
+        return anyhow!(
+            "Server cannot run because the server mode \"{}\", not \"ffx\". \
+            You can correct this with:\n\
+            $ ffx config set repository.server.mode ffx\n\
+            $ ffx doctor --restart-daemon",
+            mode
+        );
+    }
+
+    if !check!(get_repository_server_enabled().await) {
+        return anyhow!(
+            "Server is disabled. It can be started with:\n\
+            $ ffx repository server start",
+        );
+    }
+
+    match check!(repository_listen_addr().await) {
+        Some(addr) => {
+            return anyhow!(
+                "Another process may be using {}. Try shutting it down and restarting the \
+                ffx daemon with:\n\
+                $ ffx repository server start",
+                addr,
+            );
+        }
+        None => {
+            return anyhow!(
+                "Server listening address is unspecified. You can fix this with:\n\
+                $ ffx config set repository.server.listen '[::]:8083'\n\
+                $ ffx doctor --restart-daemon",
+            );
+        }
+    }
+}
 
 /// Return the repository server mode.
 pub async fn repository_server_mode() -> Result<String> {
-    if let Some(mode) = ffx_config::get("repository.server.mode").await? {
+    if let Some(mode) = ffx_config::get(CONFIG_KEY_SERVER_MODE).await? {
         Ok(mode)
     } else {
         Ok(String::new())
@@ -26,14 +79,23 @@ pub async fn repository_server_mode() -> Result<String> {
 }
 
 /// Return if the repository server is enabled.
-pub async fn repository_server_enabled() -> Result<bool> {
-    Ok(repository_server_mode().await? == "ffx")
+pub async fn get_repository_server_enabled() -> Result<bool> {
+    Ok(ffx_config::get(CONFIG_KEY_SERVER_ENABLED).await?)
+}
+
+/// Sets if the repository server is enabled.
+pub async fn set_repository_server_enabled(enabled: bool) -> Result<()> {
+    ffx_config::set((CONFIG_KEY_SERVER_ENABLED, ConfigLevel::User), enabled.into()).await
 }
 
 /// Return the repository server address.
 pub async fn repository_listen_addr() -> Result<Option<std::net::SocketAddr>> {
-    if let Some(address) = ffx_config::get::<Option<String>, _>("repository.server.listen").await? {
-        Ok(Some(address.parse::<std::net::SocketAddr>()?))
+    if let Some(address) = ffx_config::get::<Option<String>, _>(CONFIG_KEY_SERVER_LISTEN).await? {
+        Ok(Some(
+            address
+                .parse::<std::net::SocketAddr>()
+                .with_context(|| format!("Failed to parse {}", CONFIG_KEY_SERVER_LISTEN))?,
+        ))
     } else {
         Ok(None)
     }

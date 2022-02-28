@@ -13,6 +13,7 @@ use {
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_developer_bridge as bridge,
     fidl_fuchsia_developer_bridge_ext::{RepositorySpec, RepositoryTarget},
+    fidl_fuchsia_net_ext::SocketAddress,
     fidl_fuchsia_pkg::RepositoryManagerMarker,
     fidl_fuchsia_pkg_rewrite::EngineMarker,
     fidl_fuchsia_pkg_rewrite_ext::{do_transaction, Rule},
@@ -54,26 +55,21 @@ const MAX_REGISTERED_TARGETS: i64 = 512;
 
 #[derive(Debug)]
 struct ServerInfo {
+    listen_addr: SocketAddr,
     server: RepositoryServer,
     task: fasync::Task<()>,
     tunnel_manager: TunnelManager,
 }
 
-#[derive(Debug)]
-enum ServerState {
-    Running(ServerInfo),
-    Stopped(SocketAddr),
-    Unconfigured,
-}
+impl ServerInfo {
+    async fn new(listen_addr: SocketAddr, manager: Arc<RepositoryManager>) -> Result<Self> {
+        log::info!("Starting repository server on {}", listen_addr);
 
-impl ServerState {
-    async fn new_running(addr: SocketAddr, manager: Arc<RepositoryManager>) -> Result<Self> {
-        log::info!("Starting repository server on {}", addr);
-
-        let (server_fut, sink, server) = RepositoryServer::builder(addr, Arc::clone(&manager))
-            .start()
-            .await
-            .context("starting repository server")?;
+        let (server_fut, sink, server) =
+            RepositoryServer::builder(listen_addr, Arc::clone(&manager))
+                .start()
+                .await
+                .context("starting repository server")?;
 
         log::info!("Started repository server on {}", server.local_addr());
 
@@ -82,9 +78,18 @@ impl ServerState {
 
         let tunnel_manager = TunnelManager::new(server.local_addr(), sink);
 
-        Ok(ServerState::Running(ServerInfo { server, task, tunnel_manager }))
+        Ok(ServerInfo { listen_addr, server, task, tunnel_manager })
     }
+}
 
+#[derive(Debug)]
+enum ServerState {
+    Running(ServerInfo),
+    Stopped(SocketAddr),
+    Disabled,
+}
+
+impl ServerState {
     async fn start_tunnel(&self, cx: &Context, target_nodename: &str) -> Result<()> {
         match self {
             ServerState::Running(ref server_info) => {
@@ -95,9 +100,9 @@ impl ServerState {
     }
 
     async fn stop(&mut self) {
-        match std::mem::replace(self, ServerState::Unconfigured) {
+        match std::mem::replace(self, ServerState::Disabled) {
             ServerState::Running(server_info) => {
-                *self = ServerState::Stopped(server_info.server.local_addr());
+                *self = ServerState::Stopped(server_info.listen_addr);
 
                 log::info!("Stopping the repository server");
 
@@ -139,7 +144,7 @@ impl RepoInner {
     fn new() -> Arc<RwLock<Self>> {
         Arc::new(RwLock::new(RepoInner {
             manager: RepositoryManager::new(),
-            server: ServerState::Unconfigured,
+            server: ServerState::Disabled,
             https_client: new_https_client(),
         }))
     }
@@ -530,25 +535,36 @@ async fn remove_aliases(
 }
 
 impl RepoInner {
-    async fn start_server(&mut self) -> Result<(), anyhow::Error> {
-        // Exit early if we're already running on this address.
-        let addr = match self.server {
-            ServerState::Running(_) | ServerState::Unconfigured => return Ok(()),
-            ServerState::Stopped(addr) => addr.clone(),
-        };
-
-        match ServerState::new_running(addr, Arc::clone(&self.manager)).await {
-            Ok(server) => {
-                self.server = server;
-                metrics::server_started_event().await;
-            }
-            Err(err) => {
-                metrics::server_failed_to_start_event(&err.to_string()).await;
-                return Err(err);
-            }
+    async fn start_server(&mut self) -> Result<Option<SocketAddr>, anyhow::Error> {
+        // Exit early if the server is disabled.
+        if !pkg_config::get_repository_server_enabled().await? {
+            return Ok(None);
         }
 
-        Ok(())
+        // Exit early if we're already running on this address.
+        let addr = match &self.server {
+            ServerState::Disabled => {
+                return Ok(None);
+            }
+            ServerState::Running(info) => {
+                return Ok(Some(info.server.local_addr()));
+            }
+            ServerState::Stopped(addr) => *addr,
+        };
+
+        match ServerInfo::new(addr, Arc::clone(&self.manager)).await {
+            Ok(info) => {
+                let local_addr = info.server.local_addr();
+                self.server = ServerState::Running(info);
+                metrics::server_started_event().await;
+                Ok(Some(local_addr))
+            }
+            Err(err) => {
+                log::error!("failed to start server: {:#?}", err);
+                metrics::server_failed_to_start_event(&err.to_string()).await;
+                Err(err)
+            }
+        }
     }
 
     async fn start_server_warn(&mut self) {
@@ -855,6 +871,54 @@ impl<T: EventHandlerProvider + Default + Unpin + 'static> FidlProtocol for Repo<
         req: bridge::RepositoryRegistryRequest,
     ) -> Result<(), anyhow::Error> {
         match req {
+            bridge::RepositoryRegistryRequest::ServerStart { responder } => {
+                let mut res = async {
+                    pkg_config::set_repository_server_enabled(true).await.map_err(|err| {
+                        log::error!("failed to save server enabled flag to config: {:#?}", err);
+                        bridge::RepositoryError::InternalError
+                    })?;
+
+                    let mut inner = self.inner.write().await;
+
+                    if matches!(inner.server, ServerState::Disabled) {
+                        return Err(bridge::RepositoryError::ServerNotRunning);
+                    }
+
+                    match inner.start_server().await {
+                        Ok(Some(addr)) => Ok(SocketAddress(addr).into()),
+                        Ok(None) => {
+                            log::warn!("Not starting server because the server is disabled");
+                            Err(bridge::RepositoryError::ServerNotRunning)
+                        }
+                        Err(err) => {
+                            log::error!("Failed to start repository server: {:#?}", err);
+                            Err(bridge::RepositoryError::ServerNotRunning)
+                        }
+                    }
+                }
+                .await;
+
+                responder.send(&mut res)?;
+
+                Ok(())
+            }
+            bridge::RepositoryRegistryRequest::ServerStop { responder } => {
+                let mut res = async {
+                    pkg_config::set_repository_server_enabled(false).await.map_err(|err| {
+                        log::error!("failed to save server disabled flag to config: {:#?}", err);
+                        bridge::RepositoryError::InternalError
+                    })?;
+
+                    self.inner.write().await.stop_server().await;
+
+                    Ok(())
+                }
+                .await;
+
+                responder.send(&mut res)?;
+
+                Ok(())
+            }
             bridge::RepositoryRegistryRequest::AddRepository { name, repository, responder } => {
                 let mut res = match repository.try_into() {
                     Ok(repo_spec) => {
@@ -1728,6 +1792,76 @@ mod tests {
                 }],
             );
         });
+    }
+
+    #[test]
+    fn test_start_stop_server() {
+        run_test(async {
+            let repo = Rc::new(RefCell::new(Repo::<TestEventHandlerProvider>::default()));
+            let (_fake_rcs, fake_rcs_closure) = FakeRcs::new();
+
+            let daemon = FakeDaemonBuilder::new()
+                .rcs_handler(fake_rcs_closure)
+                .inject_fidl_protocol(Rc::clone(&repo))
+                .build();
+
+            let proxy = daemon.open_proxy::<bridge::RepositoryRegistryMarker>().await;
+
+            let actual_address =
+                SocketAddress::from(proxy.server_start().await.unwrap().unwrap()).0;
+            let expected_address = repo.borrow().inner.read().await.server.listen_addr().unwrap();
+            assert_eq!(actual_address, expected_address);
+
+            assert_matches!(proxy.server_stop().await.unwrap(), Ok(()));
+        })
+    }
+
+    #[test]
+    fn test_start_server_starts_a_disabled_server() {
+        run_test(async {
+            pkg_config::set_repository_server_enabled(false).await.unwrap();
+
+            let repo = Rc::new(RefCell::new(Repo::<TestEventHandlerProvider>::default()));
+            let (_fake_rcs, fake_rcs_closure) = FakeRcs::new();
+
+            let daemon = FakeDaemonBuilder::new()
+                .rcs_handler(fake_rcs_closure)
+                .inject_fidl_protocol(Rc::clone(&repo))
+                .build();
+
+            let proxy = daemon.open_proxy::<bridge::RepositoryRegistryMarker>().await;
+
+            let actual_address =
+                SocketAddress::from(proxy.server_start().await.unwrap().unwrap()).0;
+            let expected_address = repo.borrow().inner.read().await.server.listen_addr().unwrap();
+            assert_eq!(actual_address, expected_address);
+
+            assert!(pkg_config::get_repository_server_enabled().await.unwrap());
+        })
+    }
+
+    #[test]
+    fn test_start_server_cannot_start_a_server_in_the_wrong_mode() {
+        run_test(async {
+            ffx_config::set(("repository.server.mode", ConfigLevel::User), "pm".into())
+                .await
+                .unwrap();
+
+            let repo = Rc::new(RefCell::new(Repo::<TestEventHandlerProvider>::default()));
+            let (_fake_rcs, fake_rcs_closure) = FakeRcs::new();
+
+            let daemon = FakeDaemonBuilder::new()
+                .rcs_handler(fake_rcs_closure)
+                .inject_fidl_protocol(Rc::clone(&repo))
+                .build();
+
+            let proxy = daemon.open_proxy::<bridge::RepositoryRegistryMarker>().await;
+
+            assert_matches!(
+                proxy.server_start().await.unwrap(),
+                Err(bridge::RepositoryError::ServerNotRunning)
+            );
+        })
     }
 
     #[test]

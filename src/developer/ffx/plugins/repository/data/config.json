@@ -1,6 +1,7 @@
 {
     "repository": {
         "server": {
+            "enabled": true,
             "listen": "[::]:8083",
             "mode": "pm"
         }

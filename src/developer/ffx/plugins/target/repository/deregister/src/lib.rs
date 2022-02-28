@@ -55,50 +55,14 @@ async fn deregister(
                 err,
             )
         }
-        Err(err @ RepositoryError::ServerNotRunning) => {
-            // Try to figure out why the server is not running.
-            if !pkg::config::repository_server_enabled().await.unwrap_or(true) {
-                ffx_bail!(
-                    "Error while deregistering repository: {}\n\
-                    You can correct this by enabling the server with:\n\
-                    $ ffx config set repository.server.mode ffx\n\
-                    $ ffx doctor --restart-daemon",
-                    err,
-                )
-            } else {
-                match pkg::config::repository_listen_addr().await {
-                    Ok(Some(addr)) => {
-                        ffx_bail!(
-                            "Error while deregistering repository: {}\n\
-                            Another process may be using {}. Try shutting it down and restarting the\n\
-                            ffx daemon with:\n\
-                            $ ffx doctor --restart-daemon",
-                            err,
-                            addr,
-                        )
-                    }
-                    Ok(None) => {
-                        ffx_bail!(
-                            "Error while deregistering repository: {}\n\
-                            You can correct this by enabling the server with:\n\
-                            $ ffx config set repository.server.listen '[::]:8083'\n\
-                            $ ffx doctor --restart-daemon",
-                            err,
-                        )
-                    }
-                    Err(config_err) => {
-                        ffx_bail!(
-                            "Error while deregistering repository: {}\n\
-                            Failed to read repository.server.listen from the ffx config: {:#}",
-                            err,
-                            config_err,
-                        )
-                    }
-                }
-            }
+        Err(RepositoryError::ServerNotRunning) => {
+            ffx_bail!(
+                "Failed to deregister repository: {:#}",
+                pkg::config::determine_why_repository_server_is_not_running().await
+            )
         }
         Err(err) => {
-            ffx_bail!("failed to deregister repository: {}", err)
+            ffx_bail!("Failed to deregister repository: {}", err)
         }
     }
 }
