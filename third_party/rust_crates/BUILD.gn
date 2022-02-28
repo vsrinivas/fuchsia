@@ -692,6 +692,12 @@ group("rustc-hash") {
   deps = [ ":rustc-hash-v1_0_1" ]
 }
 
+if (!(current_os == "fuchsia")) {
+  group("rustfix") {
+    deps = [ ":rustfix-v0_6_0" ]
+  }
+}
+
 group("rustls") {
   deps = [ ":rustls-v0_17_0" ]
 }
@@ -9090,6 +9096,33 @@ rust_library("rustc-serialize-v0_3_24") {
     "--edition=2015",
     "-Cmetadata=cf1d65d911e642f1",
     "-Cextra-filename=-cf1d65d911e642f1",
+  ]
+
+  visibility = [ ":*" ]
+}
+
+rust_library("rustfix-v0_6_0") {
+  crate_name = "rustfix"
+  crate_root = "//third_party/rust_crates/vendor/rustfix/src/lib.rs"
+  output_name = "rustfix-fda3b6dfc642f9fd"
+  configs -= [
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
+  ]
+
+  deps = []
+  deps += [ ":anyhow-v1_0_38" ]
+  deps += [ ":log-v0_4_11" ]
+  deps += [ ":serde-v1_0_116" ]
+  deps += [ ":serde_json-v1_0_59" ]
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2018",
+    "-Cmetadata=fda3b6dfc642f9fd",
+    "-Cextra-filename=-fda3b6dfc642f9fd",
   ]
 
   visibility = [ ":*" ]

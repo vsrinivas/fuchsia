@@ -276,6 +276,7 @@ proc-macro2 = "1.0.28"
 polling = "2.0.2"
 pulldown-cmark = "0.6.0"
 quote = "1.0.2"
+rustfix = "0.6"
 rustls-native-certs = "0.3.0"
 serial_test = "0.5.1" # Not for use on Fuchsia, only for a single process.
 shared_child = "0.3.5"
