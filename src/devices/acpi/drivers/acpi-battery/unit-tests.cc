@@ -73,6 +73,7 @@ class AcpiBatteryTest : public InspectTestHelper, public zxtest::Test {
     for (auto& device : fake_root_->children()) {
       device_async_remove(device.get());
     }
+    loop_.Shutdown();
     ASSERT_OK(mock_ddk::ReleaseFlaggedDevices(fake_root_.get()));
   }
 
