@@ -250,22 +250,6 @@ if [[ $ARGS_GN == "1" ]]; then
   FILES+=( "${FUCHSIA_BUILD_DIR}/args.gn" )
 fi
 
-# Do not format these files
-NO_FORMAT=(
-  # fxbug.dev/46090
-  "${FUCHSIA_DIR}/build/unification/images/BUILD.gn"
-  "${FUCHSIA_DIR}/build/unification/tests/host/BUILD.gn"
-  "${FUCHSIA_DIR}/zircon/system/banjo/BUILD.gn"
-  "${FUCHSIA_DIR}/zircon/system/fidl/BUILD.gn"
-  "${FUCHSIA_DIR}/zircon/system/utest/BUILD.gn"
-)
-
-for to_remove in "${NO_FORMAT[@]}"; do
-  FILES=( \
-    "${FILES[@]//$to_remove}" \
-  )
-done
-
 if [[ -n "${VERBOSE}" ]]; then
   printf "Files to be formatted:\n%s\n" "${FILES[@]}"
 fi
