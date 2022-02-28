@@ -134,7 +134,7 @@ type ComponentListReport struct {
 }
 
 const (
-	MetaFar             = "meta.far"
+	MetaFar             = ".far"
 	BlobManifest        = "obj/build/images/fuchsia/fuchsia/gen/blob.manifest"
 	RootBlobsJSON       = "obj/build/images/fuchsia/fuchsia/gen/blobs.json"
 	BasePackageManifest = "obj/build/images/fuchsia/fuchsia/base_package_manifest.json"
@@ -359,7 +359,7 @@ func extractPackages(buildDir string, blobManifestFileName string) (packages []s
 		fileName := temp[1]
 
 		// This blob is a Fuchsia package.
-		if strings.HasSuffix(fileName, MetaFar) {
+		if strings.HasSuffix(fileName, MetaFar) && !strings.HasSuffix(fileName, "base.far") {
 			packages = append(packages, fileName)
 		}
 	}
