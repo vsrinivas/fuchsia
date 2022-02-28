@@ -6,7 +6,7 @@
 
 use {
     crate::{
-        crypt::WrappedKeys,
+        crypt::{WrappedKeys, WrappedKeysV1},
         lsm_tree::types::{Item, NextKey, OrdLowerBound, OrdUpperBound},
         serialized_types::Versioned,
     },
@@ -226,6 +226,82 @@ impl ObjectItem {
                 ..
             }
         )
+    }
+}
+
+// Below this point, outdated structs are defined.  These can be removed only after we can be
+// certain that at least two updates have applied since the new struct versions were introduced
+// (which requires stepping-stone releases, but is also hard to predict because of fxbug.dev/94256).
+// See serialized_types/types.rs for the version at which these were last used.
+
+pub type ObjectItemV1 = Item<ObjectKey, ObjectValueV1>;
+
+impl From<ObjectItemV1> for ObjectItem {
+    fn from(other: ObjectItemV1) -> Self {
+        Self::new(other.key, other.value.into())
+    }
+}
+
+#[derive(Serialize, Deserialize, Versioned)]
+pub enum ObjectValueV1 {
+    None,
+    Some,
+    Object { kind: ObjectKindV1, attributes: ObjectAttributes },
+    Attribute { size: u64 },
+    Child { object_id: u64, object_descriptor: ObjectDescriptor },
+}
+
+impl From<ObjectValueV1> for ObjectValue {
+    fn from(value: ObjectValueV1) -> Self {
+        use ObjectValue as New;
+        use ObjectValueV1 as Old;
+        match value {
+            Old::None => New::None,
+            Old::Some => New::Some,
+            Old::Object { kind, attributes } => New::Object { kind: kind.into(), attributes },
+            Old::Attribute { size } => New::Attribute { size },
+            Old::Child { object_id, object_descriptor } => {
+                New::Child { object_id, object_descriptor }
+            }
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize)]
+pub enum ObjectKindV1 {
+    File { refs: u64, allocated_size: u64, keys: EncryptionKeysV1 },
+    Directory { sub_dirs: u64 },
+    Graveyard,
+}
+
+impl From<ObjectKindV1> for ObjectKind {
+    fn from(value: ObjectKindV1) -> Self {
+        use ObjectKind as New;
+        use ObjectKindV1 as Old;
+        match value {
+            Old::File { refs, allocated_size, keys } => {
+                New::File { refs, allocated_size, keys: keys.into() }
+            }
+            Old::Directory { sub_dirs } => New::Directory { sub_dirs },
+            Old::Graveyard => New::Graveyard,
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize)]
+pub enum EncryptionKeysV1 {
+    None,
+    AES256XTS(WrappedKeysV1),
+}
+
+impl From<EncryptionKeysV1> for EncryptionKeys {
+    fn from(value: EncryptionKeysV1) -> Self {
+        use EncryptionKeys as New;
+        use EncryptionKeysV1 as Old;
+        match value {
+            Old::None => New::None,
+            Old::AES256XTS(keys) => New::AES256XTS(keys.into()),
+        }
     }
 }
 

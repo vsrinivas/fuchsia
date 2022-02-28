@@ -30,7 +30,7 @@ pub use store_object_handle::StoreObjectHandle;
 
 use {
     crate::{
-        crypt::{Crypt, StreamCipher, WrappedKeys},
+        crypt::{Crypt, StreamCipher, WrappedKeys, WrappedKeysV1},
         data_buffer::{DataBuffer, MemDataBuffer},
         debug_assert_not_too_long,
         errors::FxfsError,
@@ -77,7 +77,7 @@ use {
 pub use allocator::{AllocatorInfo, AllocatorKey, AllocatorValue};
 pub use extent_record::{ExtentKey, ExtentValue};
 pub use journal::{JournalRecord, SuperBlock, SuperBlockRecord};
-pub use object_record::{ObjectKey, ObjectValue};
+pub use object_record::{ObjectKey, ObjectValue, ObjectValueV1};
 
 /// StoreObjectHandle stores an owner that must implement this trait, which allows the handle to get
 /// back to an ObjectStore and provides a callback for creating a data buffer for the handle.
@@ -120,6 +120,35 @@ pub struct StoreInfo {
     // If we have to flush the store whilst we do not have the key, we need to write the encrypted
     // mutations to an object. This is the object ID of that file if it exists.
     encrypted_mutations_object_id: u64,
+}
+
+#[derive(Serialize, Deserialize, Versioned)]
+pub struct StoreInfoV1 {
+    last_object_id: u64,
+    object_tree_layers: Vec<u64>,
+    extent_tree_layers: Vec<u64>,
+    root_directory_object_id: u64,
+    graveyard_directory_object_id: u64,
+    object_count: u64,
+    mutations_key: Option<WrappedKeysV1>,
+    mutations_cipher_offset: u64,
+    encrypted_mutations_object_id: u64,
+}
+
+impl From<StoreInfoV1> for StoreInfo {
+    fn from(other: StoreInfoV1) -> Self {
+        Self {
+            last_object_id: other.last_object_id,
+            object_tree_layers: other.object_tree_layers,
+            extent_tree_layers: other.extent_tree_layers,
+            root_directory_object_id: other.root_directory_object_id,
+            graveyard_directory_object_id: other.graveyard_directory_object_id,
+            object_count: other.object_count,
+            mutations_key: other.mutations_key.map(|k| k.into()),
+            mutations_cipher_offset: other.mutations_cipher_offset,
+            encrypted_mutations_object_id: other.encrypted_mutations_object_id,
+        }
+    }
 }
 
 // TODO(csuter): We should test or put checks in place to ensure this limit isn't exceeded.  It

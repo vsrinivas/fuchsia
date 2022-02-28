@@ -128,7 +128,8 @@ pub async fn fsck_with_options<F: Fn(&FsckIssue)>(
     while let Some((name, store_id, _)) = iter.get() {
         fsck.verbose(format!("Scanning volume \"{}\" (id {})...", name, store_id));
         fsck.check_child_store(&filesystem, store_id, &mut root_store_root_objects, crypt.clone())
-            .await?;
+            .await
+            .context("Failed to check child store")?;
         iter.advance().await?;
         fsck.verbose("Scanning volume done");
     }
@@ -370,9 +371,16 @@ impl<F: Fn(&FsckIssue)> Fsck<F> {
         }
 
         // TODO(fxbug.dev/92275): This will panic if the store is already unlocked.
-        let store = filesystem.object_manager().open_store(store_id, crypt).await?;
+        let store = filesystem
+            .object_manager()
+            .open_store(store_id, crypt)
+            .await
+            .context("open_store failed")
+            .unwrap();
 
-        store_scanner::scan_store(self, store.as_ref(), &store.root_objects()).await?;
+        store_scanner::scan_store(self, store.as_ref(), &store.root_objects())
+            .await
+            .context("scan_store failed")?;
         let mut parent_objects = store.parent_objects();
         root_store_root_objects.append(&mut parent_objects);
         Ok(())

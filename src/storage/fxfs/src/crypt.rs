@@ -30,6 +30,12 @@ pub struct UnwrappedKey {
     key: KeyBytes,
 }
 
+impl std::fmt::Debug for UnwrappedKey {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("UnwrappedKey").field("id", &self.id).finish()
+    }
+}
+
 impl UnwrappedKey {
     pub fn new(id: u64, key: KeyBytes) -> Self {
         UnwrappedKey { id, key }
@@ -46,25 +52,45 @@ impl UnwrappedKey {
 
 pub type UnwrappedKeys = Vec<UnwrappedKey>;
 
-#[derive(Clone, Serialize, Deserialize, PartialEq)]
-pub struct WrappedKeys {
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+pub struct WrappedKey {
     /// The identifier of the wrapping key.  The identifier has meaning to whatever is doing the
     /// unwrapping.
     pub wrapping_key_id: u64,
+    /// Each of the keys is given an identifier.  The identifier is unique to the object.
+    pub key_id: u64,
+    /// AES 256 requires a 512 bit key, which is made of two 256 bit keys, one for the data and one
+    /// for the tweak.  Both those keys are derived from the single 256 bit key we have here.
+    pub key: [u8; 32],
+}
 
-    /// The keys (wrapped).  To support key rolling and clones, there can be more than one key.
-    /// Each of the keys is given an identifier.  The identifier is unique to the object.  AES 256
-    /// requires a 512 bit key, which is made of two 256 bit keys, one for the data and one for the
-    /// tweak.  Both those keys are derived from the single 256 bit key we have here.
+/// To support key rolling and clones, a file can have more than one key.
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+pub struct WrappedKeys(pub Vec<WrappedKey>);
+
+impl std::ops::Deref for WrappedKeys {
+    type Target = [WrappedKey];
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+#[derive(Serialize, Debug, Deserialize)]
+pub struct WrappedKeysV1 {
+    pub wrapping_key_id: u64,
     pub keys: Vec<(/* id= */ u64, [u8; 32])>,
 }
 
-impl std::fmt::Debug for WrappedKeys {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("WrappedKeys")
-            .field("wrapping_key_id", &self.wrapping_key_id)
-            .field("keys", &self.keys.iter().map(|k| k.0).collect::<Vec<_>>())
-            .finish()
+impl From<WrappedKeysV1> for WrappedKeys {
+    fn from(value: WrappedKeysV1) -> Self {
+        let wrapping_key_id = value.wrapping_key_id;
+        Self(
+            value
+                .keys
+                .into_iter()
+                .map(|(id, key)| WrappedKey { wrapping_key_id, key_id: id, key })
+                .collect(),
+        )
     }
 }
 
@@ -209,7 +235,7 @@ impl Crypt for InsecureCrypt {
             wrapped[i] = key[i] ^ WRAP_XOR[j] ^ owner_bytes[j];
         }
         Ok((
-            WrappedKeys { wrapping_key_id: 0, keys: vec![(0, wrapped)] },
+            WrappedKeys(vec![WrappedKey { wrapping_key_id: 0, key_id: 0, key: wrapped }]),
             vec![UnwrappedKey::new(0, key)],
         ))
     }
@@ -217,16 +243,15 @@ impl Crypt for InsecureCrypt {
     /// Unwraps the keys and stores the result in UnwrappedKeys.
     async fn unwrap_keys(&self, keys: &WrappedKeys, owner: u64) -> Result<UnwrappedKeys, Error> {
         Ok(keys
-            .keys
             .iter()
-            .map(|(id, key)| {
+            .map(|key| {
                 let mut unwrapped: KeyBytes = [0; KEY_SIZE];
                 let owner_bytes = owner.to_le_bytes();
                 for i in 0..unwrapped.len() {
                     let j = i % WRAP_XOR.len();
-                    unwrapped[i] = key[i] ^ WRAP_XOR[j] ^ owner_bytes[j];
+                    unwrapped[i] = key.key[i] ^ WRAP_XOR[j] ^ owner_bytes[j];
                 }
-                UnwrappedKey::new(*id, unwrapped)
+                UnwrappedKey::new(key.key_id, unwrapped)
             })
             .collect())
     }

@@ -165,6 +165,7 @@ const LOGGER: SimpleLogger = SimpleLogger {};
 #[fasync::run(10)]
 async fn main() -> Result<(), Error> {
     log::set_logger(&LOGGER)?;
+    log::set_max_level(log::LevelFilter::Info);
     log::debug!("fxfs {:?}", std::env::args());
 
     let args: TopLevel = argh::from_env();

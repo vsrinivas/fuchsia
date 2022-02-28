@@ -4,7 +4,7 @@
 
 use {
     crate::ops,
-    anyhow::{bail, Error},
+    anyhow::{bail, Context, Error},
     chrono::Local,
     fxfs::{
         crypt::{Crypt, InsecureCrypt},
@@ -128,7 +128,7 @@ async fn check_image(path: &Path) -> Result<(), Error> {
     {
         let device = DeviceHolder::new(load_device(path).await?);
         let fs = mount(device).await?;
-        ops::fsck(&fs, crypt.clone(), true).await?;
+        ops::fsck(&fs, crypt.clone(), true).await.context("fsck failed")?;
     }
     {
         let device = DeviceHolder::new(load_device(path).await?);

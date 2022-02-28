@@ -11,7 +11,7 @@ use {
             allocator::{AllocatorItem, Reservation},
             extent_record::{ExtentKey, ExtentValue},
             object_manager::{reserved_space_from_journal_usage, ObjectManager},
-            object_record::{ObjectItem, ObjectKey, ObjectValue},
+            object_record::{ObjectItem, ObjectItemV1, ObjectKey, ObjectValue},
         },
         serialized_types::Versioned,
     },
@@ -140,6 +140,37 @@ pub enum Mutation {
     Extent(ExtentMutation),
 }
 
+#[derive(Serialize, Deserialize, Versioned)]
+pub enum MutationV1 {
+    ObjectStore(ObjectStoreMutationV1),
+    EncryptedObjectStore(Box<[u8]>),
+    ObjectStoreInfo(StoreInfoMutation),
+    Allocator(AllocatorMutation),
+    AllocatorRef(AllocatorMutation),
+    BeginFlush,
+    EndFlush,
+    UpdateBorrowed(u64),
+    Extent(ExtentMutation),
+}
+
+impl From<MutationV1> for Mutation {
+    fn from(other: MutationV1) -> Self {
+        use Mutation as New;
+        use MutationV1 as Old;
+        match other {
+            Old::ObjectStore(mutation) => New::ObjectStore(mutation.into()),
+            Old::EncryptedObjectStore(value) => New::EncryptedObjectStore(value),
+            Old::ObjectStoreInfo(value) => New::ObjectStoreInfo(value),
+            Old::Allocator(value) => New::Allocator(value),
+            Old::AllocatorRef(value) => New::AllocatorRef(value),
+            Old::BeginFlush => New::BeginFlush,
+            Old::EndFlush => New::EndFlush,
+            Old::UpdateBorrowed(value) => New::UpdateBorrowed(value),
+            Old::Extent(value) => New::Extent(value),
+        }
+    }
+}
+
 impl Mutation {
     pub fn insert_object(key: ObjectKey, value: ObjectValue) -> Self {
         Mutation::ObjectStore(ObjectStoreMutation {
@@ -195,6 +226,18 @@ impl Mutation {
 pub struct ObjectStoreMutation {
     pub item: ObjectItem,
     pub op: Operation,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct ObjectStoreMutationV1 {
+    pub item: ObjectItemV1,
+    pub op: Operation,
+}
+
+impl From<ObjectStoreMutationV1> for ObjectStoreMutation {
+    fn from(other: ObjectStoreMutationV1) -> Self {
+        Self { item: other.item.into(), op: other.op }
+    }
 }
 
 // The different LSM tree operations that can be performed as part of a mutation.
