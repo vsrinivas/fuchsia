@@ -41,6 +41,10 @@ kernel_cmdline("bootsvc.next--host_bootfs") {
   args = [ "bootsvc.next=bin/component_manager,fuchsia-boot:///#meta/root.cm,--config,/boot/config/component_manager,--host_bootfs" ]
 }
 
+kernel_cmdline("userboot-next--skip_bootsvc") {
+  args = [ "userboot.next=bin/component_manager+fuchsia-boot:///#meta/root.cm+--config+/boot/config/component_manager+--host_bootfs" ]
+}
+
 kernel_cmdline("kernel.bypass-debuglog--true") {
   args = [ "kernel.bypass-debuglog=true" ]
 }
