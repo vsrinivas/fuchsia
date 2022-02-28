@@ -197,6 +197,28 @@ function ffx-default-repository-name {
     basename "${FUCHSIA_BUILD_DIR}" | tr '_' '-'
 }
 
+function ffx-start-server {
+  fx-command-run ffx --config ffx_repository=true repository server start
+  err=$?
+  if [[ "${err}" -ne 0 ]]; then
+    fx-error "The repository server was unable to be started"
+    return "${err}"
+  fi
+
+  return 0
+}
+
+function ffx-stop-server {
+  fx-command-run ffx --config ffx_repository=true repository server stop
+  err=$?
+  if [[ "${err}" -ne 0 ]]; then
+    fx-error "The repository server was unable to be stopped"
+    return "${err}"
+  fi
+
+  return 0
+}
+
 function ffx-add-repository {
   local repo_name=$1
   shift
