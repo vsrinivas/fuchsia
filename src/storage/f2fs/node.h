@@ -225,12 +225,12 @@ class NodeManager {
   void SetNodeAddr(NodeInfo &ni, block_t new_blkaddr);
   int TryToFreeNats(int nr_shrink);
 
-  zx::status<int> GetNodePath(VnodeF2fs &vnode, long block, int (&offset)[4],
-                              uint32_t (&noffset)[4]);
+  zx::status<int32_t> GetNodePath(VnodeF2fs &vnode, pgoff_t block, int32_t (&offset)[4],
+                                  uint32_t (&noffset)[4]);
   void TruncateNode(DnodeOfData &dn);
-  zx_status_t TruncateDnode(DnodeOfData &dn);
-  zx_status_t TruncateNodes(DnodeOfData &dn, uint32_t nofs, int ofs, int depth);
-  zx_status_t TruncatePartialNodes(DnodeOfData &dn, Inode &ri, int (&offset)[4], int depth);
+  zx::status<uint32_t> TruncateDnode(DnodeOfData &dn);
+  zx::status<uint32_t> TruncateNodes(DnodeOfData &dn, uint32_t nofs, int32_t ofs, int32_t depth);
+  zx_status_t TruncatePartialNodes(DnodeOfData &dn, Inode &ri, int32_t (&offset)[4], int32_t depth);
   zx_status_t NewNodePage(DnodeOfData &dn, uint32_t ofs, fbl::RefPtr<Page> *out);
 
 #if 0  // Use xxColdxx and RA when gc impl.
