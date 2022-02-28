@@ -20,9 +20,8 @@ fn run() -> io::Result<()> {
     let input = std::env::args().nth(1).unwrap_or(sample);
 
     // Open disk image.
-    let diskpath = std::path::Path::new(&input);
     let cfg = gpt::GptConfig::new().writable(false);
-    let disk = cfg.open(diskpath)?;
+    let disk = cfg.open(input)?;
 
     // Print GPT layout.
     println!("Disk (primary) header: {:#?}", disk.primary_header());

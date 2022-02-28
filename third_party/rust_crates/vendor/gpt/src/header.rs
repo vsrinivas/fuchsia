@@ -52,6 +52,7 @@ impl Header {
         backup_offset: u64,
         original_header: &Option<Header>,
         lb_size: disk::LogicalBlockSize,
+        num_parts: Option<u32>,
     ) -> Result<Self> {
         let (cur, bak) = if primary {
             (1, backup_offset)
@@ -64,9 +65,14 @@ impl Header {
         // UEFI requires space for 128 minimum, but the number can be increased or reduced.
         // If we're creating the table from scratch, make sure the table contains enough
         // room to be UEFI compliant.
-        let num_parts = match original_header {
-            Some(header) => header.num_parts,
-            None => (pp.iter().filter(|p| p.1.is_used()).count() as u32).max(128),
+        let parts = match num_parts {
+            Some(p) => {p}
+            None => {
+                match original_header {
+                    Some(header) => header.num_parts,
+                    None => (pp.iter().filter(|p| p.1.is_used()).count() as u32).max(128),
+                }
+            }
         };
         //though usually 128, it might be a different number
         let part_size = match original_header {
@@ -74,7 +80,7 @@ impl Header {
             None => 128,
         };
 
-        let part_array_num_bytes = u64::from(num_parts * part_size);
+        let part_array_num_bytes = u64::from(parts * part_size);
         // If not an exact multiple of a sector, round up to the next # of whole sectors.
         let lb_size_u64 = Into::<u64>::into(lb_size);
         let part_array_num_lbs = (part_array_num_bytes + (lb_size_u64 - 1)) / lb_size_u64;
@@ -82,17 +88,32 @@ impl Header {
         // sometimes the first usable isn't sector 34, fdisk starts at 2048
         // alternatively, if the sector size is 4096 it might not be 34 either.
         // to align partition boundaries (https://metebalci.com/blog/a-quick-tour-of-guid-partition-table-gpt/)
-        let first = match original_header {
-            Some(header) => header.first_usable,
-            None => 1 + 1 + part_array_num_lbs, //protective MBR + GPT header + partition array
-        };
-        let last = match original_header {
-            Some(header) => header.last_usable,
+        let first = match num_parts {
+            Some(_) => 1 + 1 + part_array_num_lbs,
             None => {
+                match original_header {
+                    Some(header) => header.first_usable,
+                    None => 1 + 1 + part_array_num_lbs, //protective MBR + GPT header + partition array
+                }
+            }
+        };
+        let last = match num_parts {
+            Some(_) => {
                 // last is inclusive: end of disk is (partition array) (backup header)
                 backup_offset
-                    .checked_sub(part_array_num_lbs + 1)
-                    .ok_or_else(|| Error::new(ErrorKind::Other, "header underflow - last usable"))?
+                .checked_sub(part_array_num_lbs + 1)
+                .ok_or_else(|| Error::new(ErrorKind::Other, "header underflow - last usable"))?
+            },
+            None => {
+                match original_header {
+                    Some(header) => header.last_usable,
+                    None => {
+                        // last is inclusive: end of disk is (partition array) (backup header)
+                        backup_offset
+                            .checked_sub(part_array_num_lbs + 1)
+                            .ok_or_else(|| Error::new(ErrorKind::Other, "header underflow - last usable"))?
+                    }
+                }
             }
         };
         // the partition entry LBA starts at 2 (usually) for primary headers and at the last_usable + 1 for backup headers
@@ -110,7 +131,7 @@ impl Header {
             last_usable: last,
             disk_guid: guid,
             part_start,
-            num_parts,
+            num_parts: parts,
             part_size,
             crc32_parts: 0,
         };
@@ -212,7 +233,7 @@ impl Header {
         buff.write_all(&self.header_size_le.to_le_bytes())?;
         match header_checksum {
             Some(c) => buff.write_all(&c.to_le_bytes())?,
-            None => buff.write_all(&[0u8; 4])?,
+            None => buff.write_all(&[0_u8; 4])?,
         };
         buff.write_all(&[0; 4])?;
         buff.write_all(&self.current_lba.to_le_bytes())?;
@@ -228,7 +249,7 @@ impl Header {
         buff.write_all(&self.part_size.to_le_bytes())?;
         match partitions_checksum {
             Some(c) => buff.write_all(&c.to_le_bytes())?,
-            None => buff.write_all(&[0u8; 4])?,
+            None => buff.write_all(&[0_u8; 4])?,
         };
         Ok(buff)
     }
@@ -275,7 +296,10 @@ impl fmt::Display for Header {
 ///
 /// let h = read_header(diskpath, lb_size).unwrap();
 /// ```
-pub fn read_header(path: &Path, sector_size: disk::LogicalBlockSize) -> Result<Header> {
+pub fn read_header(
+    path: impl AsRef<Path>,
+    sector_size: disk::LogicalBlockSize
+) -> Result<Header> {
     let mut file = File::open(path)?;
     read_primary_header(&mut file, sector_size)
 }
@@ -429,11 +453,11 @@ pub(crate) fn partentry_checksum<D: Read + Seek>(
 // TODO: Move this to Header::new() and Header::write to write it
 // that will match the Partition::write() API
 pub fn write_header(
-    p: &Path,
+    p: impl AsRef<Path>,
     uuid: Option<uuid::Uuid>,
     sector_size: disk::LogicalBlockSize,
 ) -> Result<uuid::Uuid> {
-    debug!("opening {} for writing", p.display());
+    debug!("opening {} for writing", p.as_ref().display());
     let mut file = OpenOptions::new().write(true).read(true).open(p)?;
     let bak = find_backup_lba(&mut file, sector_size)?;
     let guid = match uuid {
@@ -445,7 +469,7 @@ pub fn write_header(
         }
     };
 
-    let hdr = Header::compute_new(true, &BTreeMap::new(), guid, bak, &None, sector_size)?;
+    let hdr = Header::compute_new(true, &BTreeMap::new(), guid, bak, &None, sector_size, None)?;
     debug!("new header: {:#?}", hdr);
     hdr.write_primary(&mut file, sector_size)?;
 
@@ -482,10 +506,10 @@ fn test_compute_new_fdisk_no_header() {
         }
     };
     let new_primary =
-        Header::compute_new(true, &partitions, uuid::Uuid::new_v4(), bak, &None, lb_size).unwrap();
+        Header::compute_new(true, &partitions, uuid::Uuid::new_v4(), bak, &None, lb_size, None).unwrap();
     println!("new primary header {:#?}", new_primary);
     let new_backup =
-        Header::compute_new(false, &partitions, uuid::Uuid::new_v4(), bak, &None, lb_size).unwrap();
+        Header::compute_new(false, &partitions, uuid::Uuid::new_v4(), bak, &None, lb_size, None).unwrap();
     println!("new backup header {:#?}", new_backup);
     new_primary
         .write_primary(&mut tempdisk, lb_size)
@@ -557,6 +581,7 @@ fn test_compute_new_fdisk_pass_header() {
         bak,
         &Some(h.clone()),
         disk::DEFAULT_SECTOR_SIZE,
+        None,
     )
     .unwrap();
     println!("new primary header {:#?}", new_primary);
@@ -567,6 +592,7 @@ fn test_compute_new_fdisk_pass_header() {
         bak,
         &Some(h.clone()),
         disk::DEFAULT_SECTOR_SIZE,
+        None,
     )
     .unwrap();
     println!("new backup header {:#?}", new_backup);
@@ -627,10 +653,10 @@ fn test_compute_new_gpt_no_header() {
         }
     };
     let new_primary =
-        Header::compute_new(true, &partitions, uuid::Uuid::new_v4(), bak, &None, lb_size).unwrap();
+        Header::compute_new(true, &partitions, uuid::Uuid::new_v4(), bak, &None, lb_size, None).unwrap();
     println!("new primary header {:#?}", new_primary);
     let new_backup =
-        Header::compute_new(false, &partitions, uuid::Uuid::new_v4(), bak, &None, lb_size).unwrap();
+        Header::compute_new(false, &partitions, uuid::Uuid::new_v4(), bak, &None, lb_size, None).unwrap();
     println!("new backup header {:#?}", new_backup);
     new_primary
         .write_primary(&mut tempdisk, lb_size)
@@ -702,6 +728,7 @@ fn test_compute_new_fdisk_gpt_header() {
         bak,
         &Some(h.clone()),
         disk::DEFAULT_SECTOR_SIZE,
+        None,
     )
     .unwrap();
     println!("new primary header {:#?}", new_primary);
@@ -712,6 +739,7 @@ fn test_compute_new_fdisk_gpt_header() {
         bak,
         &Some(h.clone()),
         disk::DEFAULT_SECTOR_SIZE,
+        None,
     )
     .unwrap();
     println!("new backup header {:#?}", new_backup);

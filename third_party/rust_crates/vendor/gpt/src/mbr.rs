@@ -115,7 +115,7 @@ impl ProtectiveMBR {
         sector_size: disk::LogicalBlockSize
     ) -> io::Result<Self> {
         let totlen: u64 = sector_size.into();
-        let mut buf = vec![0u8; totlen as usize];
+        let mut buf = vec![0_u8; totlen as usize];
         let cur = device.seek(io::SeekFrom::Current(0))?;
 
         device.seek(io::SeekFrom::Start(0))?;

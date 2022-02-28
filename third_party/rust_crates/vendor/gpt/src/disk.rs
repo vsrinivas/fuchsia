@@ -15,18 +15,18 @@ pub enum LogicalBlockSize {
     Lb4096,
 }
 
-impl Into<u64> for LogicalBlockSize {
-    fn into(self) -> u64 {
-        match self {
+impl From<LogicalBlockSize> for u64 {
+    fn from(lb: LogicalBlockSize) -> u64 {
+        match lb {
             LogicalBlockSize::Lb512 => 512,
             LogicalBlockSize::Lb4096 => 4096,
         }
     }
 }
 
-impl Into<usize> for LogicalBlockSize {
-    fn into(self) -> usize {
-        match self {
+impl From<LogicalBlockSize> for usize {
+    fn from(lb: LogicalBlockSize) -> usize {
+        match lb {
             LogicalBlockSize::Lb512 => 512,
             LogicalBlockSize::Lb4096 => 4096,
         }
@@ -61,11 +61,10 @@ impl fmt::Display for LogicalBlockSize {
 /// ## Example
 ///
 /// ```rust,no_run
-/// let diskpath = std::path::Path::new("/dev/sdz");
-/// let gpt_disk = gpt::disk::read_disk(diskpath).unwrap();
+/// let gpt_disk = gpt::disk::read_disk("/dev/sdz").unwrap();
 /// println!("{:#?}", gpt_disk);
 /// ```
-pub fn read_disk(diskpath: &path::Path) -> io::Result<GptDisk> {
+pub fn read_disk(diskpath: impl AsRef<path::Path>) -> io::Result<GptDisk<'static>> {
     let cfg = GptConfig::new();
     cfg.open(diskpath)
 }

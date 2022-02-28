@@ -328,9 +328,9 @@ checksum = "a260ed6b9f3ca16a4389390b1b1cd15a3bc0a9d3e63b1ef39f4978cec58a4e83"
 
 [[package]]
 name = "bitflags"
-version = "1.2.1"
+version = "1.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cf1de2fe8c75bc145a2f577add951f8134889b4795d47466a54a5c846d691693"
+checksum = "bef38d45163c2f1dde094a7dfd33ccf595c92905c8f8f4fdc18d06fb1037718a"
 
 [[package]]
 name = "block-buffer"
@@ -1569,9 +1569,9 @@ checksum = "9b919933a397b79c37e33b77bb2aa3dc8eb6e165ad809e58ff75bc7db2e34574"
 
 [[package]]
 name = "gpt"
-version = "2.0.0"
+version = "3.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8a30b0e3659ffee31427c4aaa68c1e5115c8c86ba71ff11da5a16e5b70f3471d"
+checksum = "5dd7365d734a70ac5dd7be791b0c96083852188df015b8c665bb2dadb108a743"
 dependencies = [
  "bitflags",
  "crc",

@@ -161,16 +161,20 @@ impl Partition {
             .checked_mul(number_entries)
             .and_then(|x| usize::try_from(x).ok())
             .ok_or_else(|| Error::new(ErrorKind::Other, "partition overflow - bytes to zero"))?;
-        device.write_all(&vec![0u8; bytes_to_zero])?;
+        device.write_all(&vec![0_u8; bytes_to_zero])?;
         Ok(())
     }
 
     /// Return the length (in bytes) of this partition.
+    /// Partition size is calculated as (last_lba + 1 - first_lba) * block_size
+    /// Bounds are inclusive, meaning we add one to account for the full last logical block
     pub fn bytes_len(&self, lb_size: disk::LogicalBlockSize) -> Result<u64> {
         let len = self
             .last_lba
             .checked_sub(self.first_lba)
             .ok_or_else(|| Error::new(ErrorKind::Other, "partition length underflow - sectors"))?
+            .checked_add(1)
+            .ok_or_else(|| Error::new(ErrorKind::Other, "partition length overflow - sectors"))?
             .checked_mul(lb_size.into())
             .ok_or_else(|| Error::new(ErrorKind::Other, "partition length overflow - bytes"))?;
         Ok(len)
@@ -223,11 +227,10 @@ fn read_part_name(rdr: &mut Cursor<&[u8]>) -> Result<String> {
     let mut namebytes: Vec<u16> = Vec::new();
     for _ in 0..36 {
         let b = u16::from_le_bytes(read_exact_buff!(bbuff, rdr, 2));
-        if b != 0 {
-            namebytes.push(b);
-        } else {
-	    break;
-	}
+        if b == 0 {
+            break
+        }
+        namebytes.push(b);
     }
 
     Ok(String::from_utf16_lossy(&namebytes))
@@ -248,11 +251,11 @@ fn read_part_name(rdr: &mut Cursor<&[u8]>) -> Result<String> {
 /// println!("{:#?}", partitions);
 /// ```
 pub fn read_partitions(
-    path: &Path,
+    path: impl AsRef<Path>,
     header: &Header,
     lb_size: disk::LogicalBlockSize,
 ) -> Result<BTreeMap<u32, Partition>> {
-    debug!("reading partitions from file: {}", path.display());
+    debug!("reading partitions from file: {}", path.as_ref().display());
     let mut file = File::open(path)?;
     file_read_partitions(&mut file, header, lb_size)
 }
@@ -292,9 +295,7 @@ pub fn file_read_partitions<D: Read + Seek>(
 
             let partname = read_part_name(&mut Cursor::new(&nameraw[..]))?;
             let p = Partition {
-                part_type_guid: Type::from_uuid(&type_guid).map_err(|e| {
-                    Error::new(ErrorKind::Other, format!("Unknown Partition Type: {}", e))
-                })?,
+                part_type_guid: Type::from_uuid(&type_guid).unwrap_or_default(),
                 part_guid,
                 first_lba: u64::from_le_bytes(read_exact_buff!(flba, reader, 8)),
                 last_lba: u64::from_le_bytes(read_exact_buff!(llba, reader, 8)),
@@ -334,11 +335,11 @@ mod tests {
 
         let b128 = p0.as_bytes(128).unwrap();
         assert_eq!(b128.len(), 128);
-        assert_eq!(b128, vec![0u8; 128]);
+        assert_eq!(b128, vec![0_u8; 128]);
 
         let b256 = p0.as_bytes(256).unwrap();
         assert_eq!(b256.len(), 256);
-        assert_eq!(b256, vec![0u8; 256]);
+        assert_eq!(b256, vec![0_u8; 256]);
     }
 
     #[test]
@@ -349,8 +350,12 @@ mod tests {
             let b512len = p0.bytes_len(disk::LogicalBlockSize::Lb512).unwrap();
             let b4096len = p0.bytes_len(disk::LogicalBlockSize::Lb4096).unwrap();
 
-            assert_eq!(b512len, 0);
-            assert_eq!(b4096len, 0);
+            // The lower bound of partition size is equal to the logical block size.
+            // This is because the bounds for the partition size are inclusive and use
+            // logical block addressing, meaning that even when the lba_start and lba_end
+            // are set to the same block, you still have the space within that block.
+            assert_eq!(b512len, 512);
+            assert_eq!(b4096len, 4096);
         }
 
         {
@@ -373,7 +378,7 @@ mod tests {
             // Positive value.
             let mut p3 = partition::Partition::zero();
             p3.first_lba = 2;
-            p3.last_lba = 4;
+            p3.last_lba = 3;
             let b512len = p3.bytes_len(disk::LogicalBlockSize::Lb512).unwrap();
             let b4096len = p3.bytes_len(disk::LogicalBlockSize::Lb4096).unwrap();
 

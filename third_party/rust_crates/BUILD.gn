@@ -99,7 +99,7 @@ group("bitfield") {
 }
 
 group("bitflags") {
-  deps = [ ":bitflags-v1_2_1" ]
+  deps = [ ":bitflags-v1_3_2" ]
 }
 
 group("blocking") {
@@ -307,7 +307,7 @@ group("glob") {
 }
 
 group("gpt") {
-  deps = [ ":gpt-v2_0_0" ]
+  deps = [ ":gpt-v3_0_0" ]
 }
 
 if (!(current_os == "fuchsia")) {
@@ -1076,7 +1076,6 @@ rust_library("aes-v0_7_5") {
     "//build/config/rust:edition_2018",
     "//build/config/rust:2018_idioms",
   ]
-  configs += [ "//build/config/rust:allow_simd" ]
 
   deps = []
   deps += [ ":cfg-if-v1_0_0" ]
@@ -1094,9 +1093,6 @@ rust_library("aes-v0_7_5") {
     "-Cmetadata=7d6cffd832fe874d",
     "-Cextra-filename=-7d6cffd832fe874d",
   ]
-  if (current_cpu == "arm64") {
-    rustflags += [ "--cfg=feature=\"armv8\"" ]
-  }
 
   visibility = [ ":*" ]
 }
@@ -1896,10 +1892,10 @@ rust_library("bitfield-v0_13_1") {
   visibility = [ ":*" ]
 }
 
-rust_library("bitflags-v1_2_1") {
+rust_library("bitflags-v1_3_2") {
   crate_name = "bitflags"
   crate_root = "//third_party/rust_crates/vendor/bitflags/src/lib.rs"
-  output_name = "bitflags-8e1938b48c59a475"
+  output_name = "bitflags-d696f344bc6327ae"
   configs -= [
     "//build/config/rust:edition_2018",
     "//build/config/rust:2018_idioms",
@@ -1911,11 +1907,10 @@ rust_library("bitflags-v1_2_1") {
 
   rustflags = [
     "--cap-lints=allow",
-    "--edition=2015",
-    "-Cmetadata=8e1938b48c59a475",
-    "-Cextra-filename=-8e1938b48c59a475",
+    "--edition=2018",
+    "-Cmetadata=d696f344bc6327ae",
+    "-Cextra-filename=-d696f344bc6327ae",
     "--cfg=feature=\"default\"",
-    "--cfg=bitflags_const_fn",
   ]
 
   visibility = [ ":*" ]
@@ -2453,7 +2448,7 @@ rust_library("clap-v2_33_0") {
 
   deps = []
   deps += [ ":atty-v0_2_11" ]
-  deps += [ ":bitflags-v1_2_1" ]
+  deps += [ ":bitflags-v1_3_2" ]
   deps += [ ":strsim-v0_8_0" ]
   deps += [ ":textwrap-v0_11_0" ]
   deps += [ ":unicode-width-v0_1_5" ]
@@ -2491,7 +2486,7 @@ rust_library("cloudabi-v0_0_3") {
   ]
 
   deps = []
-  deps += [ ":bitflags-v1_2_1" ]
+  deps += [ ":bitflags-v1_3_2" ]
 
   rustenv = []
 
@@ -3068,7 +3063,7 @@ rust_library("crossterm-v0_19_0") {
   ]
 
   deps = []
-  deps += [ ":bitflags-v1_2_1" ]
+  deps += [ ":bitflags-v1_3_2" ]
   deps += [ ":lazy_static-v1_4_0" ]
   deps += [ ":parking_lot-v0_11_1" ]
   if (true) {
@@ -3941,7 +3936,7 @@ rust_library("fatfs-v0_4_0") {
   ]
 
   deps = []
-  deps += [ ":bitflags-v1_2_1" ]
+  deps += [ ":bitflags-v1_3_2" ]
   deps += [ ":byteorder-v1_3_1" ]
   deps += [ ":chrono-v0_4_11" ]
   deps += [ ":log-v0_4_11" ]
@@ -4657,17 +4652,17 @@ rust_library("glob-v0_3_0") {
   visibility = [ ":*" ]
 }
 
-rust_library("gpt-v2_0_0") {
+rust_library("gpt-v3_0_0") {
   crate_name = "gpt"
   crate_root = "//third_party/rust_crates/vendor/gpt/src/lib.rs"
-  output_name = "gpt-92cda70d62a05801"
+  output_name = "gpt-ee8537fb7cdea5c1"
   configs -= [
     "//build/config/rust:edition_2018",
     "//build/config/rust:2018_idioms",
   ]
 
   deps = []
-  deps += [ ":bitflags-v1_2_1" ]
+  deps += [ ":bitflags-v1_3_2" ]
   deps += [ ":crc-v1_8_1" ]
   deps += [ ":log-v0_4_11" ]
   deps += [ ":uuid-v0_8_2" ]
@@ -4677,8 +4672,8 @@ rust_library("gpt-v2_0_0") {
   rustflags = [
     "--cap-lints=allow",
     "--edition=2018",
-    "-Cmetadata=92cda70d62a05801",
-    "-Cextra-filename=-92cda70d62a05801",
+    "-Cmetadata=ee8537fb7cdea5c1",
+    "-Cextra-filename=-ee8537fb7cdea5c1",
   ]
 
   visibility = [ ":*" ]
@@ -5247,7 +5242,7 @@ rust_library("inotify-v0_9_3") {
   ]
 
   deps = []
-  deps += [ ":bitflags-v1_2_1" ]
+  deps += [ ":bitflags-v1_3_2" ]
   deps += [ ":inotify-sys-v0_1_5" ]
   deps += [ ":libc-v0_2_116" ]
 
@@ -6094,7 +6089,7 @@ rust_library("nix-v0_20_0") {
   ]
 
   deps = []
-  deps += [ ":bitflags-v1_2_1" ]
+  deps += [ ":bitflags-v1_3_2" ]
   deps += [ ":cfg-if-v1_0_0" ]
   deps += [ ":libc-v0_2_116" ]
 
@@ -6230,7 +6225,7 @@ rust_library("notify-v5_0_0-pre_10") {
   ]
 
   deps = []
-  deps += [ ":bitflags-v1_2_1" ]
+  deps += [ ":bitflags-v1_3_2" ]
   deps += [ ":crossbeam-channel-v0_5_1" ]
   deps += [ ":filetime-v0_2_14" ]
   deps += [ ":libc-v0_2_116" ]
@@ -7327,7 +7322,7 @@ rust_library("png-v0_14_0") {
   ]
 
   deps = []
-  deps += [ ":bitflags-v1_2_1" ]
+  deps += [ ":bitflags-v1_3_2" ]
   deps += [ ":deflate-v0_7_19" ]
   deps += [ ":inflate-v0_4_5" ]
   deps += [ ":num-iter-v0_1_42" ]
@@ -7718,7 +7713,7 @@ rust_library("proptest-v0_9_3") {
 
   deps = []
   deps += [ ":bit-set-v0_5_0" ]
-  deps += [ ":bitflags-v1_2_1" ]
+  deps += [ ":bitflags-v1_3_2" ]
   deps += [ ":byteorder-v1_3_1" ]
   deps += [ ":lazy_static-v1_4_0" ]
   deps += [ ":num-traits-v0_2_14" ]
@@ -7817,7 +7812,7 @@ rust_library("pulldown-cmark-v0_6_0") {
   ]
 
   deps = []
-  deps += [ ":bitflags-v1_2_1" ]
+  deps += [ ":bitflags-v1_3_2" ]
   deps += [ ":getopts-v0_2_18" ]
   deps += [ ":memchr-v2_4_0" ]
   deps += [ ":unicase-v2_5_1" ]
@@ -8502,7 +8497,7 @@ rust_library("redox_syscall-v0_2_5") {
   ]
 
   deps = []
-  deps += [ ":bitflags-v1_2_1" ]
+  deps += [ ":bitflags-v1_3_2" ]
 
   rustenv = []
 
@@ -9436,7 +9431,7 @@ rust_library("security-framework-v0_4_4") {
   ]
 
   deps = []
-  deps += [ ":bitflags-v1_2_1" ]
+  deps += [ ":bitflags-v1_3_2" ]
   deps += [ ":core-foundation-v0_7_0" ]
   deps += [ ":core-foundation-sys-v0_7_0" ]
   deps += [ ":libc-v0_2_116" ]
@@ -11342,7 +11337,7 @@ rust_library("tui-v0_16_0") {
   ]
 
   deps = []
-  deps += [ ":bitflags-v1_2_1" ]
+  deps += [ ":bitflags-v1_3_2" ]
   deps += [ ":cassowary-v0_3_0" ]
   deps += [ ":termion-v1_5_3" ]
   deps += [ ":unicode-segmentation-v1_2_1" ]

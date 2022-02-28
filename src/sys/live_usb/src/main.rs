@@ -191,7 +191,7 @@ mod tests {
         for (i, uuid) in uuids.into_iter().enumerate() {
             let partition_type = Type { guid: uuid, os: OperatingSystem::None };
 
-            disk.add_partition(&format!("part{}", i), 1024, partition_type, 0)
+            disk.add_partition(&format!("part{}", i), 1024, partition_type, 0, None)
                 .expect("adding partition succeeds");
         }
 

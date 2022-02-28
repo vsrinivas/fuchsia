@@ -44,9 +44,9 @@ pub fn write_ramdisk<'a, T: FileLike + 'a>(ramdisk: T) -> Result<gpt::DiskDevice
     assert!(sectors.len() == 1);
     let block_size: u64 = disk.logical_block_size().clone().into();
     let available_space = block_size * sectors[0].1 as u64;
-    disk.add_partition("fuchsia-fvm", available_space - MISC_SIZE, fvm_type, 0)
+    disk.add_partition("fuchsia-fvm", available_space - MISC_SIZE, fvm_type, 0, None)
         .context("adding fvm partition")?;
-    disk.add_partition("misc", MISC_SIZE, misc_type, 0).context("adding misc partition")?;
+    disk.add_partition("misc", MISC_SIZE, misc_type, 0, None).context("adding misc partition")?;
     fx_log_info!("free sectors: {:?}", disk.find_free_sectors());
     fx_log_info!("partitions: {:?}", disk.partitions());
     fx_log_info!("disk header: {:?}", disk.primary_header().unwrap());

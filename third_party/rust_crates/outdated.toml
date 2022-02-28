@@ -10,7 +10,6 @@ skip_updating = [
     "base64",
     "bincode",
     "bitfield",
-    "bitflags",
     "bumpalo",
     "bytes",
     "cargo_metadata",

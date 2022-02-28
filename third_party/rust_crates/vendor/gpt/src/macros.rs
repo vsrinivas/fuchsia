@@ -5,7 +5,7 @@ pub(crate) mod crate_macros {
     macro_rules! read_exact_buff {
         ($bufid:ident, $rdr:expr, $buflen:expr) => {
             {
-                let mut $bufid = [0u8; $buflen];
+                let mut $bufid = [0_u8; $buflen];
                 let _ = $rdr.read_exact(&mut $bufid)?;
                 $bufid
             }
