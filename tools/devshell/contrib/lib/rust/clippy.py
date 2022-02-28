@@ -4,7 +4,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-# Runs `clippy` on a set of gn targets or rust source files
+# Runs clippy on a set of gn targets or rust source files
 
 import argparse
 import json
@@ -33,6 +33,11 @@ def main():
     else:
         clippy_targets = []
         for target in args.input:
+            if target.endswith(".rs"):
+                print(
+                    f"Warning: {target} looks like a source file rather than a target, "
+                    "maybe you meant to use --files ?"
+                )
             gn_target = rust.GnTarget(target, args.fuchsia_dir)
             gn_target.label_name += ".clippy"
             clippy_targets.append(gn_target)
@@ -50,7 +55,9 @@ def main():
     if args.no_build:
         returncode = 0
     else:
-        returncode = build_targets(output_files, build_dir, args.fuchsia_dir, args.verbose, args.raw).returncode
+        returncode = build_targets(
+            output_files, build_dir, args.fuchsia_dir, args.verbose, args.raw
+        ).returncode
 
     lints = {}
     for clippy_output in output_files:
