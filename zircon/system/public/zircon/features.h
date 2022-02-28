@@ -11,6 +11,7 @@
 #define ZX_FEATURE_KIND_CPU                   ((uint32_t)0)
 #define ZX_FEATURE_KIND_HW_BREAKPOINT_COUNT   ((uint32_t)1)
 #define ZX_FEATURE_KIND_HW_WATCHPOINT_COUNT   ((uint32_t)2)
+#define ZX_FEATURE_KIND_ADDRESS_TAGGING       ((uint32_t)3)
 
 // arch-independent CPU features
 #define ZX_HAS_CPU_FEATURES            ((uint32_t)(1u << 0))
@@ -44,6 +45,9 @@
 
 // This is an obsolete name for the same thing.
 #define ZX_ARM64_FEATURE_ISA_SHA2      ZX_ARM64_FEATURE_ISA_SHA256
+
+// arm64 address-tagging features
+#define ZX_ARM64_FEATURE_ADDRESS_TAGGING_TBI  ((uint32_t)(1u << 0))
 
 #else
 

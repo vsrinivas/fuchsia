@@ -1824,3 +1824,8 @@ void arm64_mmu_early_init() {
   // after we've probed the feature set, initialize the asid allocator
   asid.Initialize();
 }
+
+uint32_t arch_address_tagging_features() {
+  static_assert(MMU_TCR_FLAGS_USER & MMU_TCR_TBI0, "Expected TBI enabled.");
+  return ZX_ARM64_FEATURE_ADDRESS_TAGGING_TBI;
+}

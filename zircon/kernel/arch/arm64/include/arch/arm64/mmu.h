@@ -323,6 +323,7 @@
 #define MMU_TCR_FLAGS_USER (MMU_TCR_IPS_DEFAULT | \
                             MMU_TCR_FLAGS1 | \
                             MMU_TCR_FLAGS0 | \
+                            MMU_TCR_TBI0 | \
                             MMU_TCR_AS)
 
 #define MMU_VTCR_FLAGS_GUEST \

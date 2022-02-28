@@ -801,3 +801,5 @@ vaddr_t X86ArchVmAspace::PickSpot(vaddr_t base, vaddr_t end, vaddr_t align, size
   canary_.Assert();
   return PAGE_ALIGN(base);
 }
+
+uint32_t arch_address_tagging_features() { return 0; }

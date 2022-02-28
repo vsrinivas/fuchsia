@@ -31,6 +31,8 @@ static uint arch_cpu_features();
 uint8_t arch_get_hw_breakpoint_count();
 uint8_t arch_get_hw_watchpoint_count();
 
+uint32_t arch_address_tagging_features();
+
 // Usually implemented in or called from assembly.
 extern "C" {
 void arch_clean_cache_range(vaddr_t start, size_t len);

@@ -28,6 +28,10 @@ __EXPORT zx_status_t _zx_system_get_features(uint32_t kind, uint32_t* features) 
       *features = DATA_CONSTANTS.features.hw_watchpoint_count;
       return ZX_OK;
     }
+    case ZX_FEATURE_KIND_ADDRESS_TAGGING: {
+      *features = DATA_CONSTANTS.features.address_tagging;
+      return ZX_OK;
+    }
     default:
       return ZX_ERR_NOT_SUPPORTED;
   }

@@ -1,0 +1,13 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("address-tagging") {
+  testonly = true
+  sources = [ "address-tagging-test.cc" ]
+  deps = [
+    "//zircon/system/ulib/test-utils",
+    "//zircon/system/ulib/zircon-internal",
+    "//zircon/system/ulib/zxtest",
+  ]
+}
