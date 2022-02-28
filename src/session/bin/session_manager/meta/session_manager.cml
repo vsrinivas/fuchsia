@@ -74,7 +74,6 @@
                 "fuchsia.input.virtualkeyboard.Manager",
                 "fuchsia.location.namedplace.RegulatoryRegionConfigurator",
                 "fuchsia.location.namedplace.RegulatoryRegionWatcher",
-                "fuchsia.location.position.EmergencyProvider",
                 "fuchsia.lowpan.bootstrap.Thread",
                 "fuchsia.media.ActivityReporter",
                 "fuchsia.media.audio.EffectsController",
@@ -147,6 +146,12 @@
                 "google.deviceproperty.Writer",
                 "google.flashts.Reader",
             ],
+            from: "parent",
+            to: "#session",
+        },
+        {
+            // Routed to session-manager via emergency.core_shard.cml
+            protocol: [ "fuchsia.location.position.EmergencyProvider" ],
             from: "parent",
             to: "#session",
         },
