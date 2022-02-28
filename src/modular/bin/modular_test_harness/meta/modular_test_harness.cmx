@@ -24,6 +24,7 @@
             "fuchsia.scheduler.ProfileProvider",
             "fuchsia.sys.Environment",
             "fuchsia.sys.Loader",
+            "fuchsia.sysmem.Allocator",
             "fuchsia.sysinfo.SysInfo",
             "fuchsia.ui.accessibility.view.Registry",
             "fuchsia.ui.activity.Provider",
