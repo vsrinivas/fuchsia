@@ -77,6 +77,36 @@ bool Vmo::CheckVmo(uint64_t offset, uint64_t len, const void* expected) {
   return true;
 }
 
+bool Vmo::Resize(uint64_t new_page_count) {
+  const uint64_t new_size = new_page_count * zx_system_get_page_size();
+  zx_status_t status = vmo_.set_size(new_size);
+  if (status != ZX_OK) {
+    fprintf(stderr, "vmo resize failed with %s\n", zx_status_get_string(status));
+    return false;
+  }
+
+  // If we're growing the VMO, tear down the old mapping and create a new one to be able to access
+  // the new range.
+  if (new_size > size_) {
+    if ((status = zx::vmar::root_self()->unmap(base_addr_, size_)) != ZX_OK) {
+      fprintf(stderr, "vmar unmap failed with %s\n", zx_status_get_string(status));
+      return false;
+    }
+
+    zx_vaddr_t addr;
+    if ((status = zx::vmar::root_self()->map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, vmo_, 0,
+                                             new_size, &addr)) != ZX_OK) {
+      fprintf(stderr, "vmar map failed with %s\n", zx_status_get_string(status));
+      return false;
+    }
+
+    size_ = new_size;
+    base_ = reinterpret_cast<uint64_t*>(addr);
+    base_addr_ = addr;
+  }
+  return true;
+}
+
 bool Vmo::OpRange(uint32_t op, uint64_t offset, uint64_t len) {
   return vmo_.op_range(op, offset * zx_system_get_page_size(), len * zx_system_get_page_size(),
                        nullptr, 0) == ZX_OK;
@@ -145,7 +175,7 @@ bool UserPager::Init() {
 }
 
 bool UserPager::CreateVmo(uint64_t size, Vmo** vmo_out) {
-  return CreateVmoWithOptions(size, ZX_VMO_RESIZABLE, vmo_out);
+  return CreateVmoWithOptions(size, 0, vmo_out);
 }
 
 bool UserPager::CreateVmoWithOptions(uint64_t size, uint32_t options, Vmo** vmo_out) {

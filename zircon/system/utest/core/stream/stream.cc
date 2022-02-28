@@ -690,7 +690,7 @@ TEST(StreamTestCase, ShrinkGuard) {
   ASSERT_TRUE(pager.Init());
 
   pager_tests::Vmo* vmo;
-  ASSERT_TRUE(pager.CreateVmo(80, &vmo));
+  ASSERT_TRUE(pager.CreateVmoWithOptions(80, ZX_VMO_RESIZABLE, &vmo));
 
   zx::stream stream;
   ASSERT_OK(zx::stream::create(ZX_STREAM_MODE_READ, vmo->vmo(), 0, &stream));

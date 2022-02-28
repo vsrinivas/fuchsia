@@ -495,7 +495,7 @@ VMO_VMAR_TEST(Pager, ReadResizeTest) {
   ASSERT_TRUE(pager.Init());
 
   Vmo* vmo;
-  ASSERT_TRUE(pager.CreateVmo(1, &vmo));
+  ASSERT_TRUE(pager.CreateVmoWithOptions(1, ZX_VMO_RESIZABLE, &vmo));
 
   TestThread t([vmo, check_vmar]() -> bool { return check_buffer(vmo, 0, 1, check_vmar); });
 
@@ -1194,7 +1194,7 @@ TEST(Pager, CloneResizeParentOK) {
 
   const uint64_t kSize = 2 * zx_system_get_page_size();
   Vmo* vmo;
-  ASSERT_TRUE(pager.CreateVmo(2, &vmo));
+  ASSERT_TRUE(pager.CreateVmoWithOptions(2, ZX_VMO_RESIZABLE, &vmo));
   ASSERT_TRUE(pager.SupplyPages(vmo, 0, 2));
 
   zx::vmo clone_vmo;
@@ -1240,7 +1240,8 @@ TEST(Pager, CloneShrinkGrowParent) {
     ASSERT_TRUE(pager.Init());
 
     Vmo* vmo;
-    ASSERT_TRUE(pager.CreateVmo(config.vmo_size / zx_system_get_page_size(), &vmo));
+    ASSERT_TRUE(pager.CreateVmoWithOptions(config.vmo_size / zx_system_get_page_size(),
+                                           ZX_VMO_RESIZABLE, &vmo));
 
     zx::vmo aux;
     ASSERT_EQ(ZX_OK, zx::vmo::create(config.vmo_size, 0, &aux));
@@ -1483,7 +1484,7 @@ TEST(Pager, ResizeCommitTest) {
   ASSERT_TRUE(pager.Init());
 
   Vmo* vmo;
-  ASSERT_TRUE(pager.CreateVmo(3, &vmo));
+  ASSERT_TRUE(pager.CreateVmoWithOptions(3, ZX_VMO_RESIZABLE, &vmo));
 
   TestThread t([vmo]() -> bool { return vmo->Commit(0, 3); });
 
@@ -2439,7 +2440,7 @@ TEST(Pager, ResizeBlockedPin) {
 
   constexpr uint64_t kNumPages = 2;
   Vmo* vmo;
-  ASSERT_TRUE(pager.CreateVmo(kNumPages, &vmo));
+  ASSERT_TRUE(pager.CreateVmoWithOptions(kNumPages, ZX_VMO_RESIZABLE, &vmo));
 
   zx::iommu iommu;
   zx::bti bti;
@@ -3035,7 +3036,7 @@ TEST(Pager, EvictionHintsWithResize) {
 
   constexpr uint64_t kNumPages = 20;
   Vmo* vmo;
-  ASSERT_TRUE(pager.CreateVmo(kNumPages, &vmo));
+  ASSERT_TRUE(pager.CreateVmoWithOptions(kNumPages, ZX_VMO_RESIZABLE, &vmo));
 
   // Hint ALWAYS_NEED on 10 pages starting at page 10. This will try to commit those pages and we
   // should see pager requests.
