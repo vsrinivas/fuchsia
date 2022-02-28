@@ -6,7 +6,6 @@ group("hci") {
   testonly = true
   deps = [
     "emulator",
-    "lib:bt-hci",
     "passthrough",
     "vendor",
   ]
@@ -16,7 +15,6 @@ group("tests") {
   testonly = true
   deps = [
     "emulator:tests",
-    "lib:tests",
     "passthrough:tests",
     "transport/uart:tests",
     "transport/usb:tests",
