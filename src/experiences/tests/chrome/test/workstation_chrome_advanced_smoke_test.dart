@@ -47,18 +47,16 @@ void main() {
     await ermine.driver.waitUntilNoTransientCallbacks();
     print('Launched the test server.');
 
-    // Calls the app launcher
     // TODO(fxb/94441): Launch Chromium using [ErmineDriver.launch] once the blocker is fixed.
-    await ermine.threeKeyShortcut(Key.leftMeta, Key.leftAlt, Key.space);
+    // Opens the app launcher and find the Chromium app entry
+    print('Opening the app launcher');
+    await ermine.driver.requestData('launcher');
     await ermine.driver.waitUntilNoTransientCallbacks();
-    final ermineSnapshot = await ermine.snapshot;
-    expect(ermineSnapshot.sideBarVisible, isTrue);
-    print('Opened the app launcher');
-
-    // Launch Chromium app
     final chromiumEntry = find.text('Chromium');
     await ermine.driver.waitFor(chromiumEntry);
-    print('Found Chromium app entry');
+    print('Found Chromium app entry on the app launcher');
+
+    // Launch Chromium app
     await ermine.driver.tap(chromiumEntry);
     print('Tapped Chromium app entry');
     await ermine.driver.waitUntilNoTransientCallbacks();
