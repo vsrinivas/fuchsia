@@ -215,21 +215,24 @@ uint32_t BlocksRequiredForBits(uint64_t bit_count) {
                                           kBlobfsBlockBits);
 }
 
-uint32_t SuggestJournalBlocks(uint32_t current, uint32_t available) { return current + available; }
-
-void InitializeSuperblock(uint64_t block_count, const FilesystemOptions& options,
-                          Superblock* info) {
+void InitializeSuperblockOptions(const FilesystemOptions& options, Superblock* info) {
   memset(info, 0x00, sizeof(*info));
   info->magic0 = kBlobfsMagic0;
   info->magic1 = kBlobfsMagic1;
   info->major_version = GetBlobfsMajorVersionFromOptions(options);
   info->flags = kBlobFlagClean;
   info->block_size = kBlobfsBlockSize;
-  // Round up |inode_count| to use a block-aligned amount.
-  info->inode_count = BlocksRequiredForInode(options.num_inodes) * kBlobfsInodesPerBlock;
   info->alloc_block_count = kStartBlockMinimum;
   info->alloc_inode_count = 0;
   info->oldest_minor_version = options.oldest_minor_version;
+}
+
+zx_status_t InitializeSuperblock(uint64_t block_count, const FilesystemOptions& options,
+                                 Superblock* info) {
+  InitializeSuperblockOptions(options, info);
+
+  // Round up |inode_count| to use a block-aligned amount.
+  info->inode_count = BlocksRequiredForInode(options.num_inodes) * kBlobfsInodesPerBlock;
 
   // Temporarily set the data_block_count to the total block_count so we can estimate the number
   // of pre-data blocks.
@@ -240,27 +243,15 @@ void InitializeSuperblock(uint64_t block_count, const FilesystemOptions& options
   size_t usable_blocks =
       JournalStartBlock(*info) < block_count ? block_count - JournalStartBlock(*info) : 0;
 
-  // Determine allocation for the journal vs. data blocks based on the number of blocks remaining.
-  if (usable_blocks >= kDefaultJournalBlocks * 2) {
-    // Regular-sized partition, capable of fitting a data region
-    // at least as large as the journal. Give all excess blocks
-    // to the data region.
-    info->journal_block_count = kDefaultJournalBlocks;
-    info->data_block_count = usable_blocks - kDefaultJournalBlocks;
-  } else if (usable_blocks >= kMinimumDataBlocks + kMinimumJournalBlocks) {
-    // On smaller partitions, give both regions the minimum amount of space,
-    // and split the remainder. The choice of where to allocate the "remainder"
-    // is arbitrary.
-    const size_t remainder_blocks = usable_blocks - (kMinimumDataBlocks + kMinimumJournalBlocks);
-    const size_t remainder_for_journal = remainder_blocks / 2;
-    const size_t remainder_for_data = remainder_blocks - remainder_for_journal;
-    info->journal_block_count = kMinimumJournalBlocks + remainder_for_journal;
-    info->data_block_count = kMinimumDataBlocks + remainder_for_data;
-  } else {
-    // Error, partition too small.
+  if (usable_blocks < kMinimumDataBlocks + kMinimumJournalBlocks) {
     info->journal_block_count = 0;
     info->data_block_count = 0;
+    return ZX_ERR_NO_SPACE;
   }
+
+  info->journal_block_count = kMinimumJournalBlocks;
+  info->data_block_count = block_count - DataStartBlock(*info);
+  return ZX_OK;
 }
 
 BlobLayoutFormat GetBlobLayoutFormat(const Superblock& info) {

@@ -250,7 +250,7 @@ zx_status_t BlobfsCreator::CalculateRequiredSize(off_t* out) {
   // Initialize enough of |info| to be able to compute the number of bytes the image will occupy.
   info.inode_count = required_inodes_;
   info.data_block_count = data_blocks_;
-  info.journal_block_count = blobfs::kDefaultJournalBlocks;
+  info.journal_block_count = blobfs::kMinimumJournalBlocks;
   *out = blobfs::TotalBlocks(info) * blobfs::kBlobfsBlockSize;
   return ZX_OK;
 }

@@ -44,7 +44,7 @@ class LargeBlobTest : public BaseBlobfsTest {
     Superblock superblock;
     superblock.flags = 0;
     superblock.inode_count = kBlobfsDefaultInodeCount;
-    superblock.journal_block_count = kDefaultJournalBlocks;
+    superblock.journal_block_count = kMinimumJournalBlocks;
     superblock.data_block_count = GetDataBlockCount();
     return TotalBlocks(superblock) * kBlobfsBlockSize;
   }

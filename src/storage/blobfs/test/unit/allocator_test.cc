@@ -561,7 +561,6 @@ TEST(AllocatorTest, TwoInodePtrsDontBlock) {
 TEST(AllocatorTest, FreedBlocksAreReservedUntilTransactionCommits) {
   constexpr uint32_t kBlockSize = 512;
   constexpr uint32_t kNumBlocks = 200 * kBlobfsBlockSize / kBlockSize;
-  constexpr size_t kBlobSize = 150000;
   auto device = std::make_unique<block_client::FakeBlockDevice>(kNumBlocks, kBlockSize);
 
   EXPECT_EQ(FormatFilesystem(device.get(), FilesystemOptions{}), ZX_OK);
@@ -573,7 +572,9 @@ TEST(AllocatorTest, FreedBlocksAreReservedUntilTransactionCommits) {
   // Create a blob that takes up more than half of the volume.
   fbl::RefPtr<fs::Vnode> root;
   ASSERT_EQ(setup.blobfs()->OpenRootNode(&root), ZX_OK);
-  std::unique_ptr<BlobInfo> info = GenerateRandomBlob(/*mount_path=*/"", kBlobSize);
+  // Use a blob size large enough to fit one, but not two.
+  size_t blob_size = setup.blobfs()->Info().data_block_count * kBlobfsBlockSize * 3 / 4;
+  std::unique_ptr<BlobInfo> info = GenerateRandomBlob(/*mount_path=*/"", blob_size);
   fbl::RefPtr<fs::Vnode> file;
   ASSERT_EQ(root->Create(info->path + 1, 0, &file), ZX_OK);
   size_t actual;
@@ -582,7 +583,7 @@ TEST(AllocatorTest, FreedBlocksAreReservedUntilTransactionCommits) {
   EXPECT_EQ(file->Close(), ZX_OK);
 
   // Attempting to create another blob should result in a no-space condition.
-  std::unique_ptr<BlobInfo> info2 = GenerateRandomBlob("", kBlobSize);
+  std::unique_ptr<BlobInfo> info2 = GenerateRandomBlob("", blob_size);
   ASSERT_EQ(root->Create(info2->path + 1, 0, &file), ZX_OK);
   EXPECT_EQ(file->Truncate(info2->size_data), ZX_OK);
   EXPECT_EQ(file->Write(info2->data.get(), info2->size_data, 0, &actual), ZX_ERR_NO_SPACE);

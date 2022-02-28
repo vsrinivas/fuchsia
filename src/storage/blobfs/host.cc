@@ -364,9 +364,10 @@ zx_status_t GetBlockCount(int fd, uint64_t* out) {
 
 int Mkfs(int fd, uint64_t block_count, const FilesystemOptions& options) {
   Superblock info;
-  InitializeSuperblock(block_count, options, &info);
-  zx_status_t status = CheckSuperblock(&info, block_count);
-  if (status != ZX_OK) {
+  if (zx_status_t status = InitializeSuperblock(block_count, options, &info); status != ZX_OK) {
+    return status;
+  }
+  if (zx_status_t status = CheckSuperblock(&info, block_count); status != ZX_OK) {
     FX_LOGS(ERROR) << "Failed to initialize superblock: " << status;
     return -1;
   }
@@ -395,8 +396,7 @@ int Mkfs(int fd, uint64_t block_count, const FilesystemOptions& options) {
     return WriteBlocks(fd, JournalStartBlock(info) + block_offset, block_count, buffer.data())
         .status_value();
   };
-  status = fs::MakeJournal(JournalBlocks(info), write_blocks_fn);
-  if (status != ZX_OK) {
+  if (zx_status_t status = fs::MakeJournal(JournalBlocks(info), write_blocks_fn); status != ZX_OK) {
     FX_LOGS(ERROR) << "Failed to write journal block";
     return -1;
   }

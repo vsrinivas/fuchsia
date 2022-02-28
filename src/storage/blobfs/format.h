@@ -128,12 +128,6 @@ constexpr uint32_t kMaxEntryDataBlocks = 64;
 constexpr size_t kMinimumJournalBlocks =
     fs::kJournalMetadataBlocks + fs::kEntryMetadataBlocks + kMaxEntryDataBlocks;
 
-// This serves as both default journal size and as minimum journal size.
-// This value is somewhat arbitrarily chosen. It is large enough to allow
-// us to run transactions and still small so that resources spent on
-// journals are limited. Mkfs can override this value.
-constexpr size_t kDefaultJournalBlocks = std::max(kMinimumJournalBlocks, static_cast<size_t>(16));
-
 // This serves as both default inode count when mkfs arguments do not specify
 // inode count and as absolute minimum inodes allowed in the fs.
 // This value is somewhat arbitrarily chosen. It is large enough to allow us

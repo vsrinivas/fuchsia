@@ -36,7 +36,7 @@ void CheckDefaultInodeCount(std::unique_ptr<BlockDevice> device) {
 void CheckDefaultJournalBlocks(std::unique_ptr<BlockDevice> device) {
   BlobfsTestSetup setup;
   ASSERT_EQ(ZX_OK, setup.Mount(std::move(device)));
-  ASSERT_GE(setup.blobfs()->Info().journal_block_count, kDefaultJournalBlocks);
+  ASSERT_GE(setup.blobfs()->Info().journal_block_count, kMinimumJournalBlocks);
 }
 
 // Formatting filesystems should fail on devices that cannot be written.
@@ -109,7 +109,7 @@ uint64_t MinimumFilesystemSlices(uint64_t kSliceSize) {
 
   const uint64_t kSuperBlockSlices = BlocksToSlices(1);
   const uint64_t kInodeSlices = BlocksToSlices(kBlobfsDefaultInodeCount / kBlobfsInodesPerBlock);
-  const uint64_t kJournalSlices = BlocksToSlices(kDefaultJournalBlocks);
+  const uint64_t kJournalSlices = BlocksToSlices(kMinimumJournalBlocks);
   const uint64_t kDataSlices = BlocksToSlices(kMinimumDataBlocks);
   const uint64_t kBlockMapSlices = BlocksToSlices(BlocksRequiredForBits(kMinimumDataBlocks));
 

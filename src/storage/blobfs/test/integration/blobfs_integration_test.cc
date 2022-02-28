@@ -430,7 +430,7 @@ fs_test::TestFilesystemOptions MinimumFvmDiskSizeOptions() {
   uint64_t required_data_slices =
       fbl::round_up(kMinimumDataBlocks, blocks_per_slice) / blocks_per_slice;
   uint64_t required_journal_slices =
-      fbl::round_up(kDefaultJournalBlocks, blocks_per_slice) / blocks_per_slice;
+      fbl::round_up(kMinimumJournalBlocks, blocks_per_slice) / blocks_per_slice;
   uint64_t required_inode_slices =
       fbl::round_up(BlocksRequiredForInode(options.num_inodes), blocks_per_slice) /
       blocks_per_slice;

@@ -42,7 +42,9 @@ zx::status<Superblock> FormatSuperblock(const fuchsia_hardware_block_BlockInfo& 
                                         const FilesystemOptions& options) {
   uint64_t blocks = (block_info.block_size * block_info.block_count) / kBlobfsBlockSize;
   Superblock superblock;
-  InitializeSuperblock(blocks, options, &superblock);
+  if (zx_status_t status = InitializeSuperblock(blocks, options, &superblock); status != ZX_OK) {
+    return zx::error(status);
+  }
 
   zx_status_t status = CheckSuperblock(&superblock, blocks);
   if (status != ZX_OK) {
@@ -57,11 +59,8 @@ zx::status<Superblock> FormatSuperblock(const fuchsia_hardware_block_BlockInfo& 
 zx::status<Superblock> FormatSuperblockFVM(
     BlockDevice* device, const fuchsia_hardware_block_volume_VolumeManagerInfo& fvm_info,
     const FilesystemOptions& options) {
-  // Initialize the superblock with no blocks for now. This'll set many of the fields (mostly
-  // block_counts) into invalid states, but we'll correct these later after we've allocated slices
-  // for the various metadata regions.
   Superblock superblock;
-  InitializeSuperblock(/*block_count=*/0, options, &superblock);
+  InitializeSuperblockOptions(options, &superblock);
 
   superblock.slice_size = fvm_info.slice_size;
   superblock.flags |= kBlobFlagFVM;
@@ -107,7 +106,7 @@ zx::status<Superblock> FormatSuperblockFVM(
 
   // Allocate the minimum number of journal blocks in FVM.
   offset = kFVMJournalStart / blocks_per_slice;
-  length = BlocksToSlices(kDefaultJournalBlocks);
+  length = BlocksToSlices(kMinimumJournalBlocks);
   superblock.journal_slices = safemath::checked_cast<uint32_t>(length);
   status = device->VolumeExtend(offset, superblock.journal_slices);
   if (status != ZX_OK) {

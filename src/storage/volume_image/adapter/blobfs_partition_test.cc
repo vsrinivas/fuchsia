@@ -472,7 +472,7 @@ TEST(BlobfsPartitionTest, PartitionDataAndReaderIsCorrectWithMinimumDataBytesHig
   const blobfs::Superblock* original_sb =
       reinterpret_cast<blobfs::Superblock*>(original_superblock.data());
 
-  ASSERT_EQ(sb->data_block_count,
+  ASSERT_GE(sb->data_block_count,
             GetBlockCount(blobfs::kFVMDataStart, partition_options.min_data_bytes.value(),
                           blobfs::kBlobfsBlockSize));
   ASSERT_NO_FATAL_FAILURE(CheckSuperblock(*sb, *original_sb, fvm_options, partition_options));

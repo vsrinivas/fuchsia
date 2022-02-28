@@ -167,12 +167,12 @@ TEST(BlobfsHostFormatTest, FormatDeviceWithExtraInodes) {
 
 TEST(BlobfsHostFormatTest, FormatZeroBlockDevice) {
   File file(tmpfile());
-  EXPECT_EQ(Mkfs(file.fd(), 0, DefaultFilesystemOptions()), -1);
+  EXPECT_EQ(Mkfs(file.fd(), 0, DefaultFilesystemOptions()), ZX_ERR_NO_SPACE);
 }
 
 TEST(BlobfsHostFormatTest, FormatTooSmallDevice) {
   File file(tmpfile());
-  EXPECT_EQ(Mkfs(file.fd(), 1, DefaultFilesystemOptions()), -1);
+  EXPECT_EQ(Mkfs(file.fd(), 1, DefaultFilesystemOptions()), ZX_ERR_NO_SPACE);
 }
 
 TEST(BlobfsHostFormatTest, FormatTooFewInodes) {

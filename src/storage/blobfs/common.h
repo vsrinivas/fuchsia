@@ -66,15 +66,16 @@ uint32_t BlocksRequiredForInode(uint64_t inode_count);
 // Returns number of blocks required for bit_count bits
 uint32_t BlocksRequiredForBits(uint64_t bit_count);
 
-// Suggests a journal size, in blocks.
-// |current|: The current size of the journal, in blocks.
-// |available|: An additional number of blocks available which may be used by the journal.
-uint32_t SuggestJournalBlocks(uint32_t current, uint32_t available);
+// Calling this method will initialize the superblock's common fields with non-fvm values but leave
+// all of the size-related fields set to zero. It is the caller's responsibility to set the
+// size-related and fvm-specific fields to appropriate values.
+void InitializeSuperblockOptions(const FilesystemOptions& options, Superblock* info);
 
-// Creates a superblock, formatted for |block_count| disk blocks on a non-FVM volume. This method
-// should also be invoked to create FVM-based superblocks, but it is the responsibility of the
-// caller to update |info->flags| to include |kBlobFlagFVM|, and fill in all FVM-specific fields.
-void InitializeSuperblock(uint64_t block_count, const FilesystemOptions& options, Superblock* info);
+// Creates a superblock, formatted for |block_count| disk blocks on a non-FVM volume. Calls
+// |InitializeSuperblockOptions|. Returns ZX_ERR_NO_SPACE if there is not enough blocks to make a
+// minimal partition.
+zx_status_t InitializeSuperblock(uint64_t block_count, const FilesystemOptions& options,
+                                 Superblock* info);
 
 // Get a pointer to the nth block of the bitmap.
 inline void* GetRawBitmapData(const RawBitmap& bm, uint64_t n) {
