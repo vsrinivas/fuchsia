@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::{object_handle::ReadObjectHandle, object_store::data_buffer::DataBuffer},
+    crate::{data_buffer::DataBuffer, object_handle::ReadObjectHandle},
     anyhow::{bail, Error},
     async_lock::Semaphore,
     async_trait::async_trait,

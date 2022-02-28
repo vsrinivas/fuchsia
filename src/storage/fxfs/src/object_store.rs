@@ -5,7 +5,6 @@
 mod allocator;
 pub mod caching_object_handle;
 mod constants;
-pub mod data_buffer;
 pub mod directory;
 mod extent_record;
 pub mod filesystem;
@@ -32,6 +31,7 @@ pub use store_object_handle::StoreObjectHandle;
 use {
     crate::{
         crypt::{Crypt, StreamCipher, WrappedKeys},
+        data_buffer::{DataBuffer, MemDataBuffer},
         debug_assert_not_too_long,
         errors::FxfsError,
         lsm_tree::{
@@ -41,7 +41,6 @@ use {
         },
         object_handle::{ObjectHandle, ObjectHandleExt, WriteObjectHandle, INVALID_OBJECT_ID},
         object_store::{
-            data_buffer::{DataBuffer, MemDataBuffer},
             extent_record::{Checksums, DEFAULT_DATA_ATTRIBUTE_ID},
             filesystem::{ApplyContext, ApplyMode, Filesystem, Mutations},
             journal::{checksum_list::ChecksumList, JournalCheckpoint},

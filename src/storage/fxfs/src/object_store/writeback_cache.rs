@@ -4,12 +4,10 @@
 
 use {
     crate::{
+        data_buffer::DataBuffer,
         errors::FxfsError,
         object_handle::ReadObjectHandle,
-        object_store::{
-            allocator::{self},
-            data_buffer::DataBuffer,
-        },
+        object_store::allocator::{self},
         round::{round_down, round_up},
     },
     anyhow::{ensure, Error},
@@ -601,9 +599,9 @@ mod tests {
     use {
         super::{Flushable, FlushableData, StorageReservation, WritebackCache},
         crate::{
+            data_buffer::MemDataBuffer,
             object_store::{
                 allocator::{Allocator, AllocatorInfo, Reservation, ReservationOwner},
-                data_buffer::MemDataBuffer,
                 filesystem::Mutations,
                 journal::checksum_list::ChecksumList,
                 transaction::{Mutation, Transaction},

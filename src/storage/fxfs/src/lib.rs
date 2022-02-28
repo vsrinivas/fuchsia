@@ -11,6 +11,7 @@
 //! Fuchsia specific bindings are primarily found under [server].
 
 pub mod crypt;
+mod data_buffer;
 pub mod errors;
 mod lsm_tree;
 pub mod mkfs;

@@ -45,6 +45,7 @@ fxfs_test_deps = [ "//third_party/rust_crates:assert_matches" ]
 
 fxfs_sources = [
   "src/crypt.rs",
+  "src/data_buffer.rs",
   "src/debug_assert_not_too_long.rs",
   "src/errors.rs",
   "src/lib.rs",
@@ -61,7 +62,6 @@ fxfs_sources = [
   "src/object_store/allocator/merge.rs",
   "src/object_store/caching_object_handle.rs",
   "src/object_store/constants.rs",
-  "src/object_store/data_buffer.rs",
   "src/object_store/directory.rs",
   "src/object_store/extent_record.rs",
   "src/object_store/filesystem.rs",
