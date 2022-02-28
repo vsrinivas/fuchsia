@@ -348,6 +348,18 @@ fidl::VectorView<fdecl::wire::Offer> Node::CreateOffers(fidl::AnyArena& arena) c
   return out;
 }
 
+fuchsia_driver_framework::wire::NodeAddArgs Node::CreateAddArgs(fidl::AnyArena& arena) {
+  fuchsia_driver_framework::wire::NodeAddArgs args(arena);
+  args.set_name(arena, arena, name());
+  args.set_offers(arena, CreateOffers(arena));
+  args.set_properties(
+      arena,
+      fidl::VectorView<fuchsia_driver_framework::wire::NodeProperty>::FromExternal(properties_));
+  args.set_symbols(
+      arena, fidl::VectorView<fuchsia_driver_framework::wire::NodeSymbol>::FromExternal(symbols_));
+  return args;
+}
+
 void Node::OnBind() const {
   if (controller_ref_) {
     fidl::Result result = fidl::WireSendEvent(*controller_ref_)->OnBind();
@@ -576,6 +588,38 @@ zx::status<> DriverRunner::StartRootDriver(std::string_view url) {
 }
 
 const Node* DriverRunner::root_node() const { return root_node_.get(); }
+
+void DriverRunner::ScheduleBaseDriversBinding() {
+  driver_index_->WaitForBaseDrivers(
+      [this](fidl::WireUnownedResult<fdf::DriverIndex::WaitForBaseDrivers>& result) mutable {
+        if (!result.ok()) {
+          // It's possible in tests that the test can finish before WaitForBaseDrivers
+          // finishes.
+          if (result.status() == ZX_ERR_PEER_CLOSED) {
+            LOGF(WARNING, "Connection to DriverIndex closed during WaitForBaseDrivers.");
+          } else {
+            LOGF(ERROR, "DriverIndex::WaitForBaseDrivers failed with: %s",
+                 result.error().FormatDescription().c_str());
+          }
+          return;
+        }
+
+        // Clear our stored vector of orphaned nodes, we will repopulate it with the
+        // new orphans.
+        std::vector<std::weak_ptr<Node>> orphaned_nodes = std::move(orphaned_nodes_);
+        orphaned_nodes_ = {};
+
+        for (auto& weak_node : orphaned_nodes) {
+          auto node = weak_node.lock();
+          if (!node) {
+            continue;
+          }
+          fidl::Arena arena;
+          auto args = node->CreateAddArgs(arena);
+          Bind(*node, args);
+        }
+      });
+}
 
 zx::status<> DriverRunner::StartDriver(Node& node, std::string_view url) {
   zx::event token;

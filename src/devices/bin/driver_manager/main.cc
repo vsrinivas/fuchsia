@@ -427,6 +427,8 @@ int main(int argc, char** argv) {
     if (devfs_publish.is_error()) {
       return devfs_publish.error_value();
     }
+
+    driver_runner->ScheduleBaseDriversBinding();
   }
 
   devfs_connect_diagnostics(coordinator.inspect_manager().diagnostics_client());
