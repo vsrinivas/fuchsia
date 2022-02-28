@@ -4670,46 +4670,29 @@ mod tests {
     // Test 4-msg exchange for address assignment.
     #[test]
     fn assign_addresses() {
-        const T1: u32 = 50;
-        const T2: u32 = 80;
-        let t1_time_value = v6::NonZeroTimeValue::Finite(
-            v6::NonZeroOrMaxU32::new(T1).expect("should succeed for non-zero or u32::MAX values"),
-        );
-        let t2_time_value = v6::NonZeroTimeValue::Finite(
-            v6::NonZeroOrMaxU32::new(T2).expect("should succeed for non-zero or u32::MAX values"),
-        );
+        let t1_secs = 50;
+        let t1 = v6::NonZeroOrMaxU32::new(t1_secs).expect("50 is non-zero or u32::MAX");
+        let t2 = v6::NonZeroOrMaxU32::new(80).expect("80 is non-zero or u32::MAX");
         let (client, actions) = testutil::assign_addresses_and_assert(
             v6::duid_uuid(),
             vec![
-                TestIdentityAssociation {
-                    address: std_ip_v6!("::ffff:c00a:1ff"),
-                    preferred_lifetime: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(
-                        v6::NonZeroOrMaxU32::new(100)
-                            .expect("should succeed for non-zero or u32::MAX values"),
-                    )),
-                    valid_lifetime: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(
-                        v6::NonZeroOrMaxU32::new(120)
-                            .expect("should succeed for non-zero or u32::MAX values"),
-                    )),
-                    t1: v6::TimeValue::NonZero(t1_time_value),
-                    t2: v6::TimeValue::NonZero(t2_time_value),
-                },
-                TestIdentityAssociation {
-                    address: std_ip_v6!("::ffff:c00a:2ff"),
-                    preferred_lifetime: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(
-                        v6::NonZeroOrMaxU32::new(150)
-                            .expect("should succeed for non-zero or u32::MAX values"),
-                    )),
-                    valid_lifetime: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(
-                        v6::NonZeroOrMaxU32::new(180)
-                            .expect("should succeed for non-zero or u32::MAX values"),
-                    )),
-                    t1: v6::TimeValue::NonZero(t1_time_value),
-                    t2: v6::TimeValue::NonZero(t2_time_value),
-                },
+                TestIdentityAssociation::new_nonzero_finite(
+                    std_ip_v6!("::ffff:c00a:1ff"),
+                    v6::NonZeroOrMaxU32::new(100).expect("100 is non-zero or u32::MAX"),
+                    v6::NonZeroOrMaxU32::new(120).expect("120 is non-zero or u32::MAX"),
+                    t1,
+                    t2,
+                ),
+                TestIdentityAssociation::new_nonzero_finite(
+                    std_ip_v6!("::ffff:c00a:2ff"),
+                    v6::NonZeroOrMaxU32::new(150).expect("150 is non-zero or u32::MAX"),
+                    v6::NonZeroOrMaxU32::new(180).expect("180 is non-zero or u32::MAX"),
+                    t1,
+                    t2,
+                ),
             ],
             &[],
-            t1_time_value,
+            v6::NonZeroTimeValue::Finite(t1),
             StepRng::new(std::u64::MAX / 2, 0),
         );
 
@@ -4725,44 +4708,33 @@ mod tests {
                 t2: got_t2,
                 dns_servers: _,
                 solicit_max_rt: _,
-            })) if *got_t2 == v6::NonZeroTimeValue::Finite(v6::NonZeroOrMaxU32::new(T2).expect("should succeed"))
+            })) if *got_t2 == v6::NonZeroTimeValue::Finite(t2)
         );
         assert_matches!(
             &actions[..],
             [
                 Action::CancelTimer(ClientTimerType::Retransmission),
                 Action::ScheduleTimer(ClientTimerType::Renew, t1)
-            ] if *t1 == Duration::from_secs(T1.into())
+            ] if *t1 == Duration::from_secs(t1_secs.into())
         );
     }
 
     #[test]
     fn address_assigned_get_dns_servers() {
         let dns_servers = [std_ip_v6!("ff01::0102"), std_ip_v6!("ff01::0304")];
-        const T1: u32 = 70;
-        let t1_time_value = v6::NonZeroTimeValue::Finite(
-            v6::NonZeroOrMaxU32::new(T1).expect("should succeed for non-zero or u32::MAX values"),
-        );
+        let t1_secs = 70;
+        let t1 = v6::NonZeroOrMaxU32::new(t1_secs).expect("70 is non-zero or u32::MAX");
         let (client, actions) = testutil::assign_addresses_and_assert(
             v6::duid_uuid(),
-            vec![TestIdentityAssociation {
-                address: std_ip_v6!("::ffff:c00a:101"),
-                preferred_lifetime: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(
-                    v6::NonZeroOrMaxU32::new(100)
-                        .expect("should succeed for non-zero or u32::MAX values"),
-                )),
-                valid_lifetime: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(
-                    v6::NonZeroOrMaxU32::new(120)
-                        .expect("should succeed for non-zero or u32::MAX values"),
-                )),
-                t1: v6::TimeValue::NonZero(t1_time_value),
-                t2: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(
-                    v6::NonZeroOrMaxU32::new(90)
-                        .expect("should succeed for non-zero or u32::MAX values"),
-                )),
-            }],
+            vec![TestIdentityAssociation::new_nonzero_finite(
+                std_ip_v6!("::ffff:c00a:102"),
+                v6::NonZeroOrMaxU32::new(100).expect("100 is non-zero or u32::MAX"),
+                v6::NonZeroOrMaxU32::new(120).expect("120 is non-zero or u32::MAX"),
+                t1,
+                v6::NonZeroOrMaxU32::new(90).expect("90 is non-zero or u32::MAX"),
+            )],
             &dns_servers,
-            t1_time_value,
+            v6::NonZeroTimeValue::Finite(t1),
             StepRng::new(std::u64::MAX / 2, 0),
         );
         assert_matches!(
@@ -4772,7 +4744,7 @@ mod tests {
                 Action::UpdateDnsServers(got_dns_servers),
                 Action::ScheduleTimer(ClientTimerType::Renew, t1)
             ] if got_dns_servers[..] == dns_servers &&
-                 *t1 == Duration::from_secs(T1.into())
+                 *t1 == Duration::from_secs(t1_secs.into())
         );
         assert_eq!(client.get_dns_servers()[..], dns_servers);
     }
