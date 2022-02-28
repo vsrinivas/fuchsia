@@ -639,8 +639,7 @@ template("assemble_system") {
     outputs = [ files.product_assembly_config ]
     output_conversion = "json"
     contents = {
-      # This isn't used, except to validate that the file is read correctly.
-      build_type = "eng"
+      platform = platform_config
     }
   }
 

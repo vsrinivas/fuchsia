@@ -13,6 +13,12 @@ use std::collections::BTreeMap;
 /// (`crate::config::ProductConfig`) from that.
 #[derive(Debug, Deserialize, Serialize)]
 pub struct ProductAssemblyConfig {
+    pub platform: PlatformConfig,
+}
+
+#[derive(Debug, Deserialize, Serialize, PartialEq)]
+pub struct PlatformConfig {
+    #[serde(default)]
     pub build_type: BuildType,
 }
 
@@ -20,6 +26,12 @@ pub struct ProductAssemblyConfig {
 pub enum BuildType {
     #[serde(rename = "eng")]
     Eng,
+}
+
+impl Default for BuildType {
+    fn default() -> Self {
+        BuildType::Eng
+    }
 }
 
 /// A bundle of inputs to be used in the assembly of a product.  This is closely
@@ -47,13 +59,15 @@ mod tests {
     fn test_product_assembly_config_from_json5() {
         let json5 = r#"
             {
-              build_type: "eng"
+              platform: {
+                build_type: "eng",
+              },
             }
         "#;
 
         let mut cursor = std::io::Cursor::new(json5);
         let config: ProductAssemblyConfig = util::from_reader(&mut cursor).unwrap();
-        assert_eq!(config.build_type, BuildType::Eng);
+        assert_eq!(config.platform.build_type, BuildType::Eng);
     }
 
     #[test]
