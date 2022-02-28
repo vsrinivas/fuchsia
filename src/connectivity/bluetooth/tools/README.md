@@ -1,5 +1,7 @@
 This directory contains command-line tools for Bluetooth development.
 
+Note: to use the bluetooth tools with your Fuchsia build, add `--with //src/connectivity/bluetooth/tools` to your `fx set` command.
+
 ## bt-hci-tool
 
 `bt-hci-tool` uses the [host HCI library](../../../drivers/bluetooth/lib/hci) to send
