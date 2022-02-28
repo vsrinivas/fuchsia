@@ -99,6 +99,19 @@ protocol AnnotationController {
     GetAnnotations() -> (resource struct {
         annotations Annotations;
     }) error GetAnnotationsError;
+
+    /// Returns annotations when they have changed, or when this method is
+    /// called by the client for the first time.
+    ///
+    /// This operation does not block other requests from the client, but only one
+    /// `WatchAnnotations` request at a time can be made on a connection. If the
+    /// client makes a second `WatchAnnotations` request before waiting for the
+    /// previous request to complete, the connection will be closed.
+    ///
+    /// * error `WatchAnnotationsError` if the annotations could not be returned.
+    WatchAnnotations() -> (resource struct {
+        annotations Annotations;
+    }) error WatchAnnotationsError;
 };
 
 /// An error returned from `AnnotationController/UpdateAnnotations`
@@ -113,6 +126,13 @@ type UpdateAnnotationsError = strict enum {
 
 /// An error returned from `ElementController/GetAnnotations`.
 type GetAnnotationsError = strict enum {
+    /// The `AnnotationValue.buffer` of an annotation could not be read.
+    BUFFER_READ_FAILED = 1;
+};
+
+/// An error returned from `AnnotationController/WatchAnnotations` and
+/// `ElementController/WatchAnnotations`.
+type WatchAnnotationsError = flexible enum {
     /// The `AnnotationValue.buffer` of an annotation could not be read.
     BUFFER_READ_FAILED = 1;
 };

@@ -128,4 +128,7 @@ void AnnotationControllerImpl::GetAnnotations(GetAnnotationsCallback callback) {
   callback(std::move(result));
 }
 
+void AnnotationControllerImpl::WatchAnnotations(WatchAnnotationsCallback callback) {
+  FX_NOTIMPLEMENTED() << "TODO(fxbug.dev/56594)";
+}
 }  // namespace modular
