@@ -129,8 +129,8 @@ type Foo = struct {
 };
 
 )FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnknownType);
-  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "dependent.Bar");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrNameNotFound);
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "'dependent' in library 'example'");
 }
 
 TEST(UsingTests, BadUnknownUsing) {
@@ -170,8 +170,8 @@ type Foo = struct {
 
 )FIDL",
                       &shared);
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnknownType);
-  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "dependent.Bar");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrNameNotFound);
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "'dependent' in library 'example'");
 }
 
 TEST(UsingTests, BadDuplicateUsingNoAlias) {

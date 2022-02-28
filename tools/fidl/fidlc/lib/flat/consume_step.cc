@@ -10,6 +10,19 @@
 
 namespace fidl::flat {
 
+ConsumeStep::ConsumeStep(Compiler* compiler, std::unique_ptr<raw::File> file)
+    : Step(compiler), file_(std::move(file)) {
+  // TODO(fxbug.dev/67858): Consider making builtins_declarations a struct
+  // rather than a vector to avoid lookups like this.
+  for (auto& builtin : all_libraries()->root_library()->builtin_declarations) {
+    if (builtin->kind == Builtin::Kind::kUint32) {
+      default_underlying_type = builtin.get();
+      break;
+    }
+  }
+  assert(default_underlying_type && "root library must have uint32");
+}
+
 void ConsumeStep::RunImpl() {
   // All fidl files in a library should agree on the library name.
   std::vector<std::string_view> new_name;
@@ -51,48 +64,6 @@ void ConsumeStep::RunImpl() {
   }
 }
 
-std::optional<Name> ConsumeStep::CompileCompoundIdentifier(
-    const raw::CompoundIdentifier* compound_identifier) {
-  const auto& components = compound_identifier->components;
-  assert(components.size() >= 1);
-
-  SourceSpan decl_name = components.back()->span();
-
-  // First try resolving the identifier in the library.
-  if (components.size() == 1) {
-    return Name::CreateSourced(library(), decl_name);
-  }
-
-  std::vector<std::string_view> library_name;
-  for (auto iter = components.begin(); iter != components.end() - 1; ++iter) {
-    library_name.push_back((*iter)->span().data());
-  }
-
-  auto filename = compound_identifier->span().source_file().filename();
-  if (auto dep_library = library()->dependencies.LookupAndMarkUsed(filename, library_name)) {
-    return Name::CreateSourced(dep_library, decl_name);
-  }
-
-  // If the identifier is not found in the library it might refer to a
-  // declaration with a member (e.g. library.EnumX.val or BitsY.val).
-  SourceSpan member_name = decl_name;
-  SourceSpan member_decl_name = components.rbegin()[1]->span();
-
-  if (components.size() == 2) {
-    return Name::CreateSourced(library(), member_decl_name, std::string(member_name.data()));
-  }
-
-  std::vector<std::string_view> member_library_name(library_name);
-  member_library_name.pop_back();
-
-  if (auto dep_library = library()->dependencies.LookupAndMarkUsed(filename, member_library_name)) {
-    return Name::CreateSourced(dep_library, member_decl_name, std::string(member_name.data()));
-  }
-
-  Fail(ErrUnknownDependentLibrary, components[0]->span(), library_name, member_library_name);
-  return std::nullopt;
-}
-
 template <typename T>
 static void StoreDecl(Decl* decl_ptr, std::vector<std::unique_ptr<T>>* declarations) {
   std::unique_ptr<T> t_decl;
@@ -106,6 +77,9 @@ Decl* ConsumeStep::RegisterDecl(std::unique_ptr<Decl> decl) {
   auto decl_ptr = decl.release();
   auto kind = decl_ptr->kind;
   switch (kind) {
+    case Decl::Kind::kBuiltin:
+      assert(false && "cannot consume builtins");
+      break;
     case Decl::Kind::kBits:
       StoreDecl(decl_ptr, &library()->bits_declarations);
       break;
@@ -140,7 +114,7 @@ Decl* ConsumeStep::RegisterDecl(std::unique_ptr<Decl> decl) {
 
   const Name& name = decl_ptr->name;
   {
-    const auto it = library()->declarations.emplace(name, decl_ptr);
+    const auto it = library()->declarations.emplace(name.decl_name(), decl_ptr);
     if (!it.second) {
       const auto previous_name = it.first->second->name;
       Fail(ErrNameCollision, name.span().value(), name, previous_name.span().value());
@@ -172,38 +146,6 @@ Decl* ConsumeStep::RegisterDecl(std::unique_ptr<Decl> decl) {
       return nullptr;
     }
   }
-
-  switch (kind) {
-    case Decl::Kind::kBits:
-    case Decl::Kind::kEnum:
-    case Decl::Kind::kService:
-    case Decl::Kind::kStruct:
-    case Decl::Kind::kTable:
-    case Decl::Kind::kUnion:
-    case Decl::Kind::kProtocol: {
-      auto type_decl = static_cast<TypeDecl*>(decl_ptr);
-      auto type_template =
-          std::make_unique<TypeDeclTypeTemplate>(name, typespace(), reporter(), type_decl);
-      typespace()->AddTemplate(std::move(type_template));
-      break;
-    }
-    case Decl::Kind::kResource: {
-      auto resource_decl = static_cast<Resource*>(decl_ptr);
-      auto type_template =
-          std::make_unique<HandleTypeTemplate>(name, typespace(), reporter(), resource_decl);
-      typespace()->AddTemplate(std::move(type_template));
-      break;
-    }
-    case Decl::Kind::kTypeAlias: {
-      auto type_alias_decl = static_cast<TypeAlias*>(decl_ptr);
-      auto type_alias_template =
-          std::make_unique<TypeAliasTypeTemplate>(name, typespace(), reporter(), type_alias_decl);
-      typespace()->AddTemplate(std::move(type_alias_template));
-      break;
-    }
-    case Decl::Kind::kConst:
-      break;
-  }  // switch
 
   return decl_ptr;
 }
@@ -263,11 +205,8 @@ bool ConsumeStep::ConsumeConstant(std::unique_ptr<raw::Constant> raw_constant,
   switch (raw_constant->kind) {
     case raw::Constant::Kind::kIdentifier: {
       auto identifier = static_cast<raw::IdentifierConstant*>(raw_constant.get());
-      auto name = CompileCompoundIdentifier(identifier->identifier.get());
-      if (!name)
-        return false;
       *out_constant =
-          std::make_unique<IdentifierConstant>(std::move(name.value()), identifier->span());
+          std::make_unique<IdentifierConstant>(*identifier->identifier, identifier->span());
       break;
     }
     case raw::Constant::Kind::kLiteral: {
@@ -342,10 +281,6 @@ void ConsumeStep::ConsumeUsing(std::unique_ptr<raw::Using> using_directive) {
       Fail(ErrConflictingLibraryImport, using_directive->span(), library_name);
       return;
   }
-
-  // Import declarations, and type aliases of dependent library.
-  const auto& declarations = dep_library->declarations;
-  library()->declarations.insert(declarations.begin(), declarations.end());
 }
 
 void ConsumeStep::ConsumeAliasDeclaration(
@@ -387,10 +322,9 @@ void ConsumeStep::ConsumeConstDeclaration(
 }
 
 // Create a type constructor pointing to an anonymous layout.
-static std::unique_ptr<TypeConstructor> IdentifierTypeForDecl(const Decl* decl) {
-  return std::make_unique<TypeConstructor>(decl->name, std::make_unique<LayoutParameterList>(),
-                                           std::make_unique<TypeConstraints>(),
-                                           /*span=*/std::nullopt);
+static std::unique_ptr<TypeConstructor> IdentifierTypeForDecl(Decl* decl) {
+  return std::make_unique<TypeConstructor>(Reference(decl), std::make_unique<LayoutParameterList>(),
+                                           std::make_unique<TypeConstraints>());
 }
 
 bool ConsumeStep::CreateMethodResult(const std::shared_ptr<NamingContext>& success_variant_context,
@@ -460,13 +394,7 @@ void ConsumeStep::ConsumeProtocolDeclaration(
   for (auto& raw_composed : protocol_declaration->composed_protocols) {
     std::unique_ptr<AttributeList> attributes;
     ConsumeAttributeList(std::move(raw_composed->attributes), &attributes);
-
-    auto& raw_protocol_name = raw_composed->protocol_name;
-    auto composed_protocol_name = CompileCompoundIdentifier(raw_protocol_name.get());
-    if (!composed_protocol_name)
-      return;
-    composed_protocols.emplace_back(std::move(attributes),
-                                    std::move(composed_protocol_name.value()));
+    composed_protocols.emplace_back(std::move(attributes), Reference(*raw_composed->protocol_name));
   }
 
   std::vector<Protocol::Method> methods;
@@ -627,7 +555,7 @@ void ConsumeStep::ConsumeResourceDeclaration(
                                 NamingContext::Create(name), &type_ctor))
       return;
   } else {
-    type_ctor = TypeConstructor::CreateSizeType();
+    type_ctor = IdentifierTypeForDecl(default_underlying_type);
   }
 
   RegisterDecl(std::make_unique<Resource>(std::move(attributes), std::move(name),
@@ -703,7 +631,7 @@ bool ConsumeStep::ConsumeValueLayout(std::unique_ptr<raw::Layout> layout,
     if (!ConsumeTypeConstructor(std::move(layout->subtype_ctor), context, &subtype_ctor))
       return false;
   } else {
-    subtype_ctor = TypeConstructor::CreateSizeType();
+    subtype_ctor = IdentifierTypeForDecl(default_underlying_type);
   }
 
   std::unique_ptr<AttributeList> attributes;
@@ -884,12 +812,8 @@ bool ConsumeStep::ConsumeTypeConstructor(std::unique_ptr<raw::TypeConstructor> r
         }
         case raw::LayoutParameter::Kind::kIdentifier: {
           auto id_param = static_cast<raw::IdentifierLayoutParameter*>(param.get());
-          auto name = CompileCompoundIdentifier(id_param->identifier.get());
-          if (!name)
-            return false;
-
           std::unique_ptr<LayoutParameter> consumed =
-              std::make_unique<IdentifierLayoutParameter>(std::move(name.value()), span);
+              std::make_unique<IdentifierLayoutParameter>(Reference(*id_param->identifier), span);
           params.push_back(std::move(consumed));
           break;
         }
@@ -917,31 +841,28 @@ bool ConsumeStep::ConsumeTypeConstructor(std::unique_ptr<raw::TypeConstructor> r
     auto attributes = std::move(raw_attribute_list);
     if (inline_ref->attributes != nullptr)
       attributes = std::move(inline_ref->attributes);
-    if (!ConsumeLayout(std::move(inline_ref->layout), context, std::move(attributes),
-                       out_inline_decl))
+    Decl* inline_decl;
+    if (!ConsumeLayout(std::move(inline_ref->layout), context, std::move(attributes), &inline_decl))
       return false;
 
+    if (out_inline_decl) {
+      *out_inline_decl = inline_decl;
+    }
     if (out_type_ctor) {
       *out_type_ctor = std::make_unique<TypeConstructor>(
-          context->ToName(library(), raw_type_ctor->layout_ref->span()),
+          Reference(inline_decl),
           std::make_unique<LayoutParameterList>(std::move(params), params_span),
-          std::make_unique<TypeConstraints>(std::move(constraints), constraints_span),
-          raw_type_ctor->span());
+          std::make_unique<TypeConstraints>(std::move(constraints), constraints_span));
     }
     return true;
   }
 
   auto named_ref = static_cast<raw::NamedLayoutReference*>(raw_type_ctor->layout_ref.get());
-  auto name = CompileCompoundIdentifier(named_ref->identifier.get());
-  if (!name)
-    return false;
-
   assert(out_type_ctor && "out type ctors should always be provided for a named type ctor");
   *out_type_ctor = std::make_unique<TypeConstructor>(
-      std::move(name.value()),
+      Reference(*named_ref->identifier),
       std::make_unique<LayoutParameterList>(std::move(params), params_span),
-      std::make_unique<TypeConstraints>(std::move(constraints), constraints_span),
-      raw_type_ctor->span());
+      std::make_unique<TypeConstraints>(std::move(constraints), constraints_span));
   return true;
 }
 

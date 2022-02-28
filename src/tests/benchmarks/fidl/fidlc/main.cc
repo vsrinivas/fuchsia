@@ -49,7 +49,11 @@ bool RunBenchmark(perftest::RepeatState* state, const char* fidl) {
       reporter.PrintReports(enable_color);
       return false;
     }
-    fidl::JSONGenerator json_generator(library.get());
+    if (!all_libraries.Insert(std::move(library))) {
+      reporter.PrintReports(enable_color);
+      return false;
+    }
+    fidl::JSONGenerator json_generator(&all_libraries);
     json_generator.Produce();
   }
   return true;

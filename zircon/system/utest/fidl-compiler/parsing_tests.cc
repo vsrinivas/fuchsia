@@ -91,79 +91,78 @@ type InStruct = struct {
 TEST(ParsingTests, GoodParsingReservedWordsInConstraint) {
   TestLibrary library(R"FIDL(library example;
 
-type Unshadowed = struct {};
+alias T = fidl.uint8;
+type S = struct {};
 
 // Keywords
-const as uint16 = 1;
-alias as_constraint = vector<Unshadowed>:as;
-const library uint16 = 1;
-alias library_constraint = vector<Unshadowed>:library;
-const using uint16 = 1;
-alias using_constraint = vector<Unshadowed>:using;
-const alias uint16 = 1;
-alias alias_constraint = vector<Unshadowed>:alias;
-const type uint16 = 1;
-alias type_constraint = vector<Unshadowed>:type;
-const const uint16 = 1;
-alias const_constraint = vector<Unshadowed>:const;
-const protocol uint16 = 1;
-alias protocol_constraint = vector<Unshadowed>:protocol;
-const service uint16 = 1;
-alias service_constraint = vector<Unshadowed>:service;
-const compose uint16 = 1;
-alias compose_constraint = vector<Unshadowed>:compose;
-const reserved uint16 = 1;
-alias reserved_constraint = vector<Unshadowed>:reserved;
+const as T = 1;
+alias as_constraint = vector<S>:as;
+const library T = 1;
+alias library_constraint = vector<S>:library;
+const using T = 1;
+alias using_constraint = vector<S>:using;
+const alias T = 1;
+alias alias_constraint = vector<S>:alias;
+const type T = 1;
+alias type_constraint = vector<S>:type;
+const const T = 1;
+alias const_constraint = vector<S>:const;
+const protocol T = 1;
+alias protocol_constraint = vector<S>:protocol;
+const service T = 1;
+alias service_constraint = vector<S>:service;
+const compose T = 1;
+alias compose_constraint = vector<S>:compose;
+const reserved T = 1;
+alias reserved_constraint = vector<S>:reserved;
 
 // Layouts
-const bits uint16 = 1;
-alias bits_constraint = vector<Unshadowed>:bits;
-const enum uint16 = 1;
-alias enum_constraint = vector<Unshadowed>:enum;
-const struct uint16 = 1;
-alias struct_constraint = vector<Unshadowed>:struct;
-const table uint16 = 1;
-alias table_constraint = vector<Unshadowed>:table;
-const union uint16 = 1;
-alias union_constraint = vector<Unshadowed>:union;
+const bits T = 1;
+alias bits_constraint = vector<S>:bits;
+const enum T = 1;
+alias enum_constraint = vector<S>:enum;
+const struct T = 1;
+alias struct_constraint = vector<S>:struct;
+const table T = 1;
+alias table_constraint = vector<S>:table;
+const union T = 1;
+alias union_constraint = vector<S>:union;
 
 // Builtins
-const array uint16 = 1;
-alias array_constraint = vector<Unshadowed>:array;
-const handle uint16 = 1;
-alias handle_constraint = vector<Unshadowed>:handle;
-const request uint16 = 1;
-alias request_constraint = vector<Unshadowed>:request;
-const string uint16 = 1;
-alias string_constraint = vector<Unshadowed>:string;
-const optional uint16 = 1;
-alias optional_constraint = vector<Unshadowed>:optional;
+const array T = 1;
+alias array_constraint = vector<S>:array;
+const handle T = 1;
+alias handle_constraint = vector<S>:handle;
+const request T = 1;
+alias request_constraint = vector<S>:request;
+const string T = 1;
+alias string_constraint = vector<S>:string;
+const optional T = 1;
+alias optional_constraint = vector<S>:optional;
 
 // Primitives
-const bool uint16 = 1;
-alias bool_constraint = vector<Unshadowed>:bool;
-const int8 uint16 = 1;
-alias int8_constraint = vector<Unshadowed>:int8;
-const int16 uint16 = 1;
-alias int16_constraint = vector<Unshadowed>:int16;
-const int32 uint16 = 1;
-alias int32_constraint = vector<Unshadowed>:int32;
-const int64 uint16 = 1;
-alias int64_constraint = vector<Unshadowed>:int64;
-const uint8 uint16 = 1;
-alias uint8_constraint = vector<Unshadowed>:uint8;
-const uint32 uint16 = 1;
-alias uint32_constraint = vector<Unshadowed>:uint32;
-const uint64 uint16 = 1;
-alias uint64_constraint = vector<Unshadowed>:uint64;
-const float32 uint16 = 1;
-alias float32_constraint = vector<Unshadowed>:float32;
-const float64 uint16 = 1;
-alias float64_constraint = vector<Unshadowed>:float64;
-
-// Must go last so we don't overwrite uint16 for other tests.
-const uint16 uint16 = 1;
-alias uint16_constraint = vector<Unshadowed>:uint16;
+const bool T = 1;
+alias bool_constraint = vector<S>:bool;
+const int8 T = 1;
+alias int8_constraint = vector<S>:int8;
+const int16 T = 1;
+alias int16_constraint = vector<S>:int16;
+const int32 T = 1;
+alias int32_constraint = vector<S>:int32;
+const int64 T = 1;
+alias int64_constraint = vector<S>:int64;
+const uint8 T = 1;
+alias uint8_constraint = vector<S>:uint8;
+const uint16 T = 1;
+alias uint16_constraint = vector<S>:uint16;
+const uint32 T = 1;
+alias uint32_constraint = vector<S>:uint32;
+const uint64 T = 1;
+alias uint64_constraint = vector<S>:uint64;
+const float32 T = 1;
+alias float32_constraint = vector<S>:float32;
+const float64 T = 1;
+alias float64_constraint = vector<S>:float64;
 )FIDL");
   ASSERT_COMPILED(library);
 }

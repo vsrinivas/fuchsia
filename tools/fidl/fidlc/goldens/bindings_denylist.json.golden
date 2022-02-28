@@ -1633,8 +1633,8 @@
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
             "line": 156,
-            "column": 28,
-            "length": 14
+            "column": 13,
+            "length": 29
           }
         },
         {
@@ -1642,8 +1642,8 @@
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
             "line": 157,
-            "column": 28,
-            "length": 15
+            "column": 13,
+            "length": 30
           }
         }
       ],

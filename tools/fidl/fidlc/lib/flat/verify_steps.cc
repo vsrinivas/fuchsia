@@ -10,7 +10,7 @@
 namespace fidl::flat {
 
 void VerifyResourcenessStep::RunImpl() {
-  for (const Decl* decl : library()->declaration_order) {
+  for (const auto& [name, decl] : library()->declarations) {
     VerifyDecl(decl);
   }
 }
@@ -111,6 +111,7 @@ types::Resourceness VerifyResourcenessStep::EffectiveResourceness(const Type* ty
       break;
     case Decl::Kind::kService:
       return types::Resourceness::kValue;
+    case Decl::Kind::kBuiltin:
     case Decl::Kind::kConst:
     case Decl::Kind::kResource:
     case Decl::Kind::kTypeAlias:
@@ -179,12 +180,9 @@ void VerifyDependenciesStep::RunImpl() {
 }
 
 void VerifyInlineSizeStep::RunImpl() {
-  for (const Decl* decl : library()->declaration_order) {
-    if (decl->kind == Decl::Kind::kStruct) {
-      auto struct_decl = static_cast<const Struct*>(decl);
-      if (struct_decl->typeshape(WireFormat::kV1NoEe).inline_size >= 65536) {
-        Fail(ErrInlineSizeExceeds64k, struct_decl->name.span().value());
-      }
+  for (auto& struct_decl : library()->struct_declarations) {
+    if (struct_decl->typeshape(WireFormat::kV1NoEe).inline_size >= 65536) {
+      Fail(ErrInlineSizeExceeds64k, struct_decl->name.span().value());
     }
   }
 }
@@ -199,16 +197,15 @@ void VerifyOpenInteractionsStep::VerifyProtocolOpenness(const Protocol& protocol
   assert(protocol.compiled && "verification must happen after compilation of decls");
 
   for (const auto& composed : protocol.composed_protocols) {
-    auto decl = library()->LookupDeclByName(composed.name);
+    auto target = composed.reference.target();
 
     // These shoud be ensured by CompileStep.
-    assert(decl && "Composed protocol unknown");
-    assert(decl->kind == Decl::Kind::kProtocol && "Composed protocol not a protocol");
+    assert(target->kind == Element::Kind::kProtocol && "Composed protocol not a protocol");
 
-    auto composed_protocol = static_cast<const Protocol*>(decl);
+    auto composed_protocol = static_cast<const Protocol*>(target);
 
     if (!IsAllowedComposition(protocol.openness, composed_protocol->openness)) {
-      Fail(ErrComposedProtocolTooOpen, composed.name.span().value(), protocol.openness,
+      Fail(ErrComposedProtocolTooOpen, composed.reference.span().value(), protocol.openness,
            protocol.name, composed_protocol->openness, composed_protocol->name);
     }
   }

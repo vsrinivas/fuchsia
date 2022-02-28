@@ -52,9 +52,7 @@ void CalcDependencies::VisitConstant(const Constant* constant) {
   switch (constant->kind) {
     case Constant::Kind::kIdentifier: {
       auto identifier = static_cast<const flat::IdentifierConstant*>(constant);
-      auto decl = library_->LookupDeclByName(identifier->name.memberless_key());
-      assert(decl && "constant lookup failure should have happened earlier");
-      AddDependency(decl);
+      AddDependency(identifier->reference.target_or_parent_decl());
       break;
     }
     case Constant::Kind::kLiteral: {
@@ -125,6 +123,8 @@ void CalcDependencies::VisitTypeConstructor(const TypeConstructor* type_ctor) {
 
 CalcDependencies::CalcDependencies(const Decl* decl) : library_(decl->name.library()) {
   switch (decl->kind) {
+    case Decl::Kind::kBuiltin:
+      break;
     case Decl::Kind::kBits: {
       auto bits_decl = static_cast<const Bits*>(decl);
       VisitTypeConstructor(bits_decl->subtype_ctor.get());
@@ -150,20 +150,14 @@ CalcDependencies::CalcDependencies(const Decl* decl) : library_(decl->name.libra
     case Decl::Kind::kProtocol: {
       auto protocol_decl = static_cast<const Protocol*>(decl);
       for (const auto& composed_protocol : protocol_decl->composed_protocols) {
-        if (auto type_decl = library_->LookupDeclByName(composed_protocol.name)) {
-          AddDependency(type_decl);
-        }
+        AddDependency(composed_protocol.reference.target()->AsDecl());
       }
       for (const auto& method : protocol_decl->methods) {
         if (method.maybe_request) {
-          if (auto type_decl = library_->LookupDeclByName(method.maybe_request->name)) {
-            AddDependency(type_decl);
-          }
+          AddDependency(method.maybe_request->layout.target()->AsDecl());
         }
         if (method.maybe_response) {
-          if (auto type_decl = library_->LookupDeclByName(method.maybe_response->name)) {
-            AddDependency(type_decl);
-          }
+          AddDependency(method.maybe_response->layout.target()->AsDecl());
         }
       }
       break;
@@ -258,11 +252,7 @@ void SortStep::RunImpl() {
   std::map<const Decl*, std::set<const Decl*, CmpDeclName>, CmpDeclName> dependencies;
   // |inverse_dependencies| records the decls that depend on each decl.
   std::map<const Decl*, std::vector<const Decl*>, CmpDeclName> inverse_dependencies;
-  for (const auto& [key, decl] : library()->declarations) {
-    // Only process decls from the current library.
-    if (decl->name.library() != library()) {
-      continue;
-    }
+  for (const auto& [name, decl] : library()->declarations) {
     auto deps = CalcDependencies(decl).get();
     for (const Decl* dep : deps) {
       inverse_dependencies[dep].push_back(decl);

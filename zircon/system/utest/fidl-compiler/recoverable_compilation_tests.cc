@@ -33,7 +33,7 @@ library example;
 
 type Union = union {
     1: string_value string;
-    2: unknown_value UnknownType; // Error: unknown type
+    2: unknown_value vector;      // Error: expected 1 layout parameter
 };
 
 type Enum = enum {
@@ -60,7 +60,7 @@ type NonDenseTable = table {
   ASSERT_ERR(errors[0], fidl::ErrDuplicateMemberValue);
   ASSERT_ERR(errors[1], fidl::ErrNonDenseOrdinal);
   ASSERT_ERR(errors[2], fidl::ErrDuplicateMemberName);
-  ASSERT_ERR(errors[3], fidl::ErrUnknownType);
+  ASSERT_ERR(errors[3], fidl::ErrWrongNumberOfLayoutParameters);
 }
 
 TEST(RecoverableCompilationTests, BadRecoverInLibraryVerifyAttributePlacement) {
@@ -134,7 +134,7 @@ library example;
 type Foo = bits {
     BAR                    // Error: cannot resolve bits member
         = "not a number";  // Error: cannot interpret as uint32
-    QUX = nonexistent;     // Error: cannot resolve bits member
+    QUX = vector;          // Error: cannot resolve bits member
     bar = 2;               // Error: canonical name conflicts with 'bar'
     BAZ = 2;               // Error: duplicate value 2
     XYZ = 3;               // Error: not a power of two
@@ -158,7 +158,7 @@ library example;
 type Foo = flexible enum : uint8 {
     BAR                    // Error: cannot resolve enum member
         = "not a number";  // Error: cannot interpret as uint32
-    QUX = nonexistent;     // Error: cannot resolve enum member
+    QUX = vector;          // Error: cannot resolve enum member
     bar = 2;               // Error: canonical name conflicts with 'bar'
     BAZ = 2;               // Error: duplicate value 2
     XYZ = 255;             // Error: max value on flexible enum
@@ -181,7 +181,7 @@ library example;
 
 type Foo = struct {
     bar string<1>;     // Error: unexpected layout parameter
-    qux nonexistent;   // Error: unknown type
+    qux vector;        // Error: expected 1 layout parameter
     BAR                // Error: canonical name conflicts with 'bar'
         bool           // Error: cannot resolve default value
         = "not bool";  // Error: cannot interpret as bool
@@ -191,7 +191,7 @@ type Foo = struct {
   const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 5);
   EXPECT_ERR(errors[0], fidl::ErrWrongNumberOfLayoutParameters);
-  EXPECT_ERR(errors[1], fidl::ErrUnknownType);
+  EXPECT_ERR(errors[1], fidl::ErrWrongNumberOfLayoutParameters);
   EXPECT_ERR(errors[2], fidl::ErrDuplicateStructMemberNameCanonical);
   EXPECT_ERR(errors[3], fidl::ErrTypeCannotBeConvertedToType);
   EXPECT_ERR(errors[4], fidl::ErrCouldNotResolveMemberDefault);
@@ -204,7 +204,7 @@ library example;
 type Foo = table {
     1: bar string:optional;  // Error: table member cannot be optional
     1: qux                   // Error: duplicate ordinal
-       nonexistent;          // Error: unknown type
+       vector;               // Error: expected 1 layout parameter
     // 2: reserved;          // Error: not dense
     3: BAR bool;             // Error: canonical name conflicts with 'bar'
 };
@@ -214,7 +214,7 @@ type Foo = table {
   ASSERT_EQ(errors.size(), 5);
   EXPECT_ERR(errors[0], fidl::ErrNullableTableMember);
   EXPECT_ERR(errors[1], fidl::ErrDuplicateTableFieldOrdinal);
-  EXPECT_ERR(errors[2], fidl::ErrUnknownType);
+  EXPECT_ERR(errors[2], fidl::ErrWrongNumberOfLayoutParameters);
   EXPECT_ERR(errors[3], fidl::ErrDuplicateTableFieldNameCanonical);
   EXPECT_ERR(errors[4], fidl::ErrNonDenseOrdinal);
 }
@@ -226,7 +226,7 @@ library example;
 type Foo = union {
     1: bar string:optional;  // Error: union member cannot be optional
     1: qux                   // Error: duplicate ordinal
-        nonexistent;         // Error: unknown type
+        vector;              // Error: expected 1 layout parameter
     // 2: reserved;          // Error: not dense
     3: BAR bool;             // Error: canonical name conflicts with 'bar'
 };
@@ -236,7 +236,7 @@ type Foo = union {
   ASSERT_EQ(errors.size(), 5);
   EXPECT_ERR(errors[0], fidl::ErrNullableUnionMember);
   EXPECT_ERR(errors[1], fidl::ErrDuplicateUnionMemberOrdinal);
-  EXPECT_ERR(errors[2], fidl::ErrUnknownType);
+  EXPECT_ERR(errors[2], fidl::ErrWrongNumberOfLayoutParameters);
   EXPECT_ERR(errors[3], fidl::ErrDuplicateUnionMemberNameCanonical);
   EXPECT_ERR(errors[4], fidl::ErrNonDenseOrdinal);
 }
@@ -246,22 +246,22 @@ TEST(RecoverableCompilationTests, BadRecoverInProtocol) {
 library example;
 
 protocol Foo {
-    compose nonexistent;   // Error: unknown type
+    compose vector;        // Error: expected protocol
     @selector("not good")  // Error: invalid selector
     Bar();
     BAR() -> (struct {     // Error: canonical name conflicts with 'bar'
         b bool:optional;   // Error: bool cannot be optional
-    }) error nonexistent;  // Error: unknown type
+    }) error vector;       // Error: expected 1 layout parameter
 };
 )FIDL");
   EXPECT_FALSE(library.Compile());
   const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 5);
-  EXPECT_ERR(errors[0], fidl::ErrUnknownType);
+  EXPECT_ERR(errors[0], fidl::ErrComposingNonProtocol);
   EXPECT_ERR(errors[1], fidl::ErrInvalidSelectorValue);
   EXPECT_ERR(errors[2], fidl::ErrDuplicateMethodNameCanonical);
   EXPECT_ERR(errors[3], fidl::ErrCannotBeNullable);
-  EXPECT_ERR(errors[4], fidl::ErrUnknownType);
+  EXPECT_ERR(errors[4], fidl::ErrWrongNumberOfLayoutParameters);
 }
 
 TEST(RecoverableCompilationTests, BadRecoverInService) {
@@ -271,7 +271,7 @@ library example;
 protocol P {};
 service Foo {
     bar string;                   // Error: must be client_end
-    baz nonexistent;              // Error: unknown type
+    baz vector;                   // Error: expected 1 layout parameter
     qux server_end:P;             // Error: must be client_end
     BAR                           // Error: canonical name conflicts with 'bar'
         client_end:<P,optional>;  // Error: cannot be optional
@@ -281,7 +281,7 @@ service Foo {
   const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 5);
   EXPECT_ERR(errors[0], fidl::ErrOnlyClientEndsInServices);
-  EXPECT_ERR(errors[1], fidl::ErrUnknownType);
+  EXPECT_ERR(errors[1], fidl::ErrWrongNumberOfLayoutParameters);
   EXPECT_ERR(errors[2], fidl::ErrOnlyClientEndsInServices);
   EXPECT_ERR(errors[3], fidl::ErrDuplicateServiceMemberNameCanonical);
   EXPECT_ERR(errors[4], fidl::ErrNullableServiceMember);

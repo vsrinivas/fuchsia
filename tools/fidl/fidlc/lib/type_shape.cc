@@ -155,6 +155,7 @@ class UnalignedSizeVisitor final : public TypeShapeVisitor<DataSize> {
                 return DataSize(16);
             }
           case flat::Decl::Kind::kBits:
+          case flat::Decl::Kind::kBuiltin:
           case flat::Decl::Kind::kConst:
           case flat::Decl::Kind::kEnum:
           case flat::Decl::Kind::kResource:
@@ -265,6 +266,7 @@ class AlignmentVisitor final : public TypeShapeVisitor<DataSize> {
           case flat::Decl::Kind::kUnion:
             return DataSize(8);
           case flat::Decl::Kind::kBits:
+          case flat::Decl::Kind::kBuiltin:
           case flat::Decl::Kind::kConst:
           case flat::Decl::Kind::kEnum:
           case flat::Decl::Kind::kResource:
@@ -377,6 +379,7 @@ class DepthVisitor : public TypeShapeVisitor<DataSize> {
           case flat::Decl::Kind::kUnion:
             return Depth(object.type_decl);
           case flat::Decl::Kind::kBits:
+          case flat::Decl::Kind::kBuiltin:
           case flat::Decl::Kind::kConst:
           case flat::Decl::Kind::kEnum:
           case flat::Decl::Kind::kTable:
@@ -399,6 +402,9 @@ class DepthVisitor : public TypeShapeVisitor<DataSize> {
           case flat::Decl::Kind::kTypeAlias:
           case flat::Decl::Kind::kStruct:
             return Depth(object.type_decl);
+          case flat::Decl::Kind::kBuiltin:
+            assert(false && "unexpected builtin");
+            return DataSize(0);
         }
     }
   }
@@ -674,6 +680,7 @@ class MaxOutOfLineVisitor final : public TypeShapeVisitor<DataSize> {
           case flat::Decl::Kind::kUnion:
             return MaxOutOfLine(object.type_decl);
           case flat::Decl::Kind::kBits:
+          case flat::Decl::Kind::kBuiltin:
           case flat::Decl::Kind::kConst:
           case flat::Decl::Kind::kEnum:
           case flat::Decl::Kind::kResource:
@@ -842,6 +849,7 @@ class HasPaddingVisitor final : public TypeShapeVisitor<bool> {
             return Padding(UnalignedSize(object.type_decl, wire_format()), 8) > 0 ||
                    HasPadding(object.type_decl);
           case flat::Decl::Kind::kBits:
+          case flat::Decl::Kind::kBuiltin:
           case flat::Decl::Kind::kConst:
           case flat::Decl::Kind::kEnum:
           case flat::Decl::Kind::kResource:

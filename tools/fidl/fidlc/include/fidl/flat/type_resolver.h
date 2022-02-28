@@ -22,10 +22,10 @@ class TypeResolver : private ReporterMixin {
 
   // Top level methods for resolving layout parameters. These are used by
   // TypeTemplates.
-  bool ResolveParamAsType(const flat::TypeTemplate* layout,
-                          const std::unique_ptr<LayoutParameter>& param, const Type** out_type);
-  bool ResolveParamAsSize(const flat::TypeTemplate* layout,
-                          const std::unique_ptr<LayoutParameter>& param, const Size** out_size);
+  bool ResolveParamAsType(const Reference& layout, const std::unique_ptr<LayoutParameter>& param,
+                          const Type** out_type);
+  bool ResolveParamAsSize(const Reference& layout, const std::unique_ptr<LayoutParameter>& param,
+                          const Size** out_size);
 
   // Top level methods for resolving constraints. These are used by Types
   enum class ConstraintKind {
@@ -65,7 +65,6 @@ class TypeResolver : private ReporterMixin {
   bool ResolveAsHandleRights(Resource* resource, Constant* constant,
                              const HandleRights** out_rights);
   bool ResolveAsProtocol(const Constant* size_constant, const Protocol** out_decl);
-  Decl* LookupDeclByName(Name::Key name);
 
   // Used specifically in TypeAliasTypeTemplates to recursively compile the next
   // type alias.

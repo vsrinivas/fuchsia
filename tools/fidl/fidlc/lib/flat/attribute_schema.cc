@@ -217,40 +217,40 @@ void AttributeArgSchema::ResolveArg(CompileStep* step, Attribute* attribute, Att
       assert(false && "we know the target type of doc comments, and should not end up here");
       return;
     case ConstantValue::Kind::kString:
-      target_type = &Typespace::kUnboundedStringType;
+      target_type = step->typespace()->GetUnboundedStringType();
       break;
     case ConstantValue::Kind::kBool:
-      target_type = &Typespace::kBoolType;
+      target_type = step->typespace()->GetPrimitiveType(types::PrimitiveSubtype::kBool);
       break;
     case ConstantValue::Kind::kInt8:
-      target_type = &Typespace::kInt8Type;
+      target_type = step->typespace()->GetPrimitiveType(types::PrimitiveSubtype::kInt8);
       break;
     case ConstantValue::Kind::kInt16:
-      target_type = &Typespace::kInt16Type;
+      target_type = step->typespace()->GetPrimitiveType(types::PrimitiveSubtype::kInt16);
       break;
     case ConstantValue::Kind::kInt32:
-      target_type = &Typespace::kInt32Type;
+      target_type = step->typespace()->GetPrimitiveType(types::PrimitiveSubtype::kInt32);
       break;
     case ConstantValue::Kind::kInt64:
-      target_type = &Typespace::kInt64Type;
+      target_type = step->typespace()->GetPrimitiveType(types::PrimitiveSubtype::kInt64);
       break;
     case ConstantValue::Kind::kUint8:
-      target_type = &Typespace::kUint8Type;
+      target_type = step->typespace()->GetPrimitiveType(types::PrimitiveSubtype::kUint8);
       break;
     case ConstantValue::Kind::kUint16:
-      target_type = &Typespace::kUint16Type;
+      target_type = step->typespace()->GetPrimitiveType(types::PrimitiveSubtype::kUint16);
       break;
     case ConstantValue::Kind::kUint32:
-      target_type = &Typespace::kUint32Type;
+      target_type = step->typespace()->GetPrimitiveType(types::PrimitiveSubtype::kUint32);
       break;
     case ConstantValue::Kind::kUint64:
-      target_type = &Typespace::kUint64Type;
+      target_type = step->typespace()->GetPrimitiveType(types::PrimitiveSubtype::kUint64);
       break;
     case ConstantValue::Kind::kFloat32:
-      target_type = &Typespace::kFloat32Type;
+      target_type = step->typespace()->GetPrimitiveType(types::PrimitiveSubtype::kFloat32);
       break;
     case ConstantValue::Kind::kFloat64:
-      target_type = &Typespace::kFloat64Type;
+      target_type = step->typespace()->GetPrimitiveType(types::PrimitiveSubtype::kFloat64);
       break;
   }
   if (!step->ResolveConstant(constant, target_type)) {

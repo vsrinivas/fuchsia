@@ -28,8 +28,8 @@ struct Attribute;
 struct AttributeArg;
 struct Constant;
 struct Decl;
+struct Element;
 struct Type;
-class TypeTemplate;
 class Name;
 }  // namespace flat
 
@@ -51,7 +51,6 @@ std::string Display(const flat::Constant* c);
 std::string Display(const flat::Decl* d);
 std::string Display(std::vector<const flat::Decl*>& d);
 std::string Display(const flat::Type* t);
-std::string Display(const flat::TypeTemplate* t);
 std::string Display(const flat::Name& n);
 template <typename T, typename = decltype(std::to_string(std::declval<T>()))>
 std::string Display(T val) {

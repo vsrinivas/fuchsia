@@ -181,7 +181,7 @@ type Foo = table {
 };
 
 type OptionalTableContainer = struct {
-    foo Foo:<optional, foo, bar>;
+    foo Foo:<optional, 1, 2>;
 };
 )FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrTooManyConstraints);

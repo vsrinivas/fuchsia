@@ -50,8 +50,8 @@
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocol_payloads/example.test.fidl",
             "line": 12,
-            "column": 17,
-            "length": 16
+            "column": 13,
+            "length": 20
           }
         }
       ],

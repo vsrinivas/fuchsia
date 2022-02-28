@@ -236,6 +236,7 @@ void EmitMethodInParamDecl(std::ostream* file, const CGenerator::Member& member)
       break;
     case flat::Type::Kind::kIdentifier:
       switch (member.decl_kind.value()) {
+        case flat::Decl::Kind::kBuiltin:
         case flat::Decl::Kind::kConst:
         case flat::Decl::Kind::kResource:
         case flat::Decl::Kind::kService:
@@ -295,6 +296,7 @@ void EmitMethodOutParamDecl(std::ostream* file, const CGenerator::Member& member
       break;
     case flat::Type::Kind::kIdentifier:
       switch (member.decl_kind.value()) {
+        case flat::Decl::Kind::kBuiltin:
         case flat::Decl::Kind::kConst:
         case flat::Decl::Kind::kResource:
         case flat::Decl::Kind::kService:
@@ -514,6 +516,7 @@ void EmitLinearizeMessage(std::ostream* file, std::string_view receiver, std::st
         break;
       case flat::Type::Kind::kIdentifier:
         switch (member.decl_kind.value()) {
+          case flat::Decl::Kind::kBuiltin:
           case flat::Decl::Kind::kConst:
           case flat::Decl::Kind::kResource:
           case flat::Decl::Kind::kService:
@@ -1021,10 +1024,10 @@ std::map<const flat::Decl*, CGenerator::NamedStruct> CGenerator::NameStructs(
   for (const auto& protocol_info : protocol_infos) {
     for (const auto& method_info : protocol_info->all_methods) {
       if (method_info.method->maybe_request != nullptr) {
-        message_body_type_names.insert(method_info.method->maybe_request->name);
+        message_body_type_names.insert(method_info.method->maybe_request->layout.target_name());
       }
       if (method_info.method->maybe_response != nullptr) {
-        message_body_type_names.insert(method_info.method->maybe_response->name);
+        message_body_type_names.insert(method_info.method->maybe_response->layout.target_name());
       }
     }
   }
@@ -1427,6 +1430,7 @@ void CGenerator::ProduceProtocolClientImplementation(const NamedProtocol& named_
             break;
           case flat::Type::Kind::kIdentifier:
             switch (member.decl_kind.value()) {
+              case flat::Decl::Kind::kBuiltin:
               case flat::Decl::Kind::kConst:
               case flat::Decl::Kind::kResource:
               case flat::Decl::Kind::kService:
@@ -1565,6 +1569,7 @@ void CGenerator::ProduceProtocolServerImplementation(const NamedProtocol& named_
           break;
         case flat::Type::Kind::kIdentifier:
           switch (member.decl_kind.value()) {
+            case flat::Decl::Kind::kBuiltin:
             case flat::Decl::Kind::kConst:
             case flat::Decl::Kind::kResource:
             case flat::Decl::Kind::kService:
@@ -1702,6 +1707,9 @@ std::ostringstream CGenerator::ProduceHeader() {
       continue;
     }
     switch (decl->kind) {
+      case flat::Decl::Kind::kBuiltin:
+        assert(false && "unexpected builtin");
+        break;
       case flat::Decl::Kind::kBits: {
         auto iter = named_bits.find(decl);
         if (iter != named_bits.end()) {
@@ -1763,6 +1771,7 @@ std::ostringstream CGenerator::ProduceHeader() {
     }
 
     switch (decl->kind) {
+      case flat::Decl::Kind::kBuiltin:
       case flat::Decl::Kind::kBits:
       case flat::Decl::Kind::kConst:
       case flat::Decl::Kind::kEnum:
@@ -1792,6 +1801,9 @@ std::ostringstream CGenerator::ProduceHeader() {
     }
 
     switch (decl->kind) {
+      case flat::Decl::Kind::kBuiltin:
+        assert(false && "unexpected builtin");
+        break;
       case flat::Decl::Kind::kBits:
         // Bits can be entirely forward declared, as they have no
         // dependencies other than standard headers.
@@ -1843,6 +1855,7 @@ std::ostringstream CGenerator::ProduceHeader() {
 
   for (const auto* decl : library_->declaration_order) {
     switch (decl->kind) {
+      case flat::Decl::Kind::kBuiltin:
       case flat::Decl::Kind::kBits:
       case flat::Decl::Kind::kConst:
       case flat::Decl::Kind::kEnum:
@@ -1889,6 +1902,7 @@ std::ostringstream CGenerator::ProduceClient() {
 
   for (const auto* decl : library_->declaration_order) {
     switch (decl->kind) {
+      case flat::Decl::Kind::kBuiltin:
       case flat::Decl::Kind::kBits:
       case flat::Decl::Kind::kConst:
       case flat::Decl::Kind::kEnum:
@@ -1932,6 +1946,7 @@ std::ostringstream CGenerator::ProduceServer() {
 
   for (const auto* decl : library_->declaration_order) {
     switch (decl->kind) {
+      case flat::Decl::Kind::kBuiltin:
       case flat::Decl::Kind::kBits:
       case flat::Decl::Kind::kConst:
       case flat::Decl::Kind::kEnum:

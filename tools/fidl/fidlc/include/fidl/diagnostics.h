@@ -43,8 +43,6 @@ constexpr ErrorDef ErrCannotAttachAttributeToIdentifier("cannot attach attribute
 constexpr ErrorDef ErrRedundantAttributePlacement(
     "cannot specify attributes on the type declaration and the corresponding layout at the same "
     "time; please merge them into one location instead");
-constexpr ErrorDef<Token::KindAndSubkind> ErrExpectedOrdinalOrCloseBrace(
-    "Expected one of ordinal or '}', found {}");
 constexpr ErrorDef ErrMustHaveNonReservedMember(
     "must have at least one non reserved member; you can use an empty struct to "
     "define a placeholder variant");
@@ -102,6 +100,18 @@ constexpr ErrorDef ErrNullableTableMember("Table members cannot be nullable");
 constexpr ErrorDef ErrNullableUnionMember("Union members cannot be nullable");
 
 // ---------------------------------------------------------------------------
+// ResolveStep
+// ---------------------------------------------------------------------------
+constexpr ErrorDef<std::vector<std::string_view>, std::vector<std::string_view>>
+    ErrUnknownDependentLibrary(
+        "Unknown dependent library {} or reference to member of "
+        "library {}. Did you require it with `using`?");
+constexpr ErrorDef<std::string_view, std::vector<std::string_view>> ErrNameNotFound(
+    "cannot find '{}' in library '{}'");
+constexpr ErrorDef<const flat::Decl *> ErrCannotReferToMember("cannot refer to member of {}");
+constexpr ErrorDef<const flat::Decl *, std::string_view> ErrMemberNotFound("{} has no member '{}'");
+
+// ---------------------------------------------------------------------------
 // Library::Compile: SortDeclarations
 // ---------------------------------------------------------------------------
 // ErrIncludeCycle is thrown either as part of SortDeclarations or as part of
@@ -115,16 +125,10 @@ constexpr ErrorDef<std::vector<const flat::Decl *>> ErrIncludeCycle(
 // Library::Compile: Compilation, Resolution, Validation
 // ---------------------------------------------------------------------------
 constexpr ErrorDef<flat::Name> ErrAnonymousNameReference("cannot refer to anonymous name {}");
-constexpr ErrorDef<std::vector<std::string_view>, std::vector<std::string_view>>
-    ErrUnknownDependentLibrary(
-        "Unknown dependent library {} or reference to member of "
-        "library {}. Did you require it with `using`?");
 constexpr ErrorDef<const flat::Type *> ErrInvalidConstantType("invalid constant type {}");
 constexpr ErrorDef ErrCannotResolveConstantValue("unable to resolve constant value");
 constexpr ErrorDef ErrOrOperatorOnNonPrimitiveValue(
     "Or operator can only be applied to primitive-kinded values");
-constexpr ErrorDef<std::string_view> ErrUnknownEnumMember("unknown enum member '{}'");
-constexpr ErrorDef<std::string_view> ErrUnknownBitsMember("unknown bits member '{}'");
 constexpr ErrorDef<flat::Name, std::string_view> ErrNewTypesNotAllowed(
     "newtypes not allowed: type declaration {} defines a new type of the existing {} type, which "
     "is not yet supported");
@@ -153,7 +157,9 @@ constexpr ErrorDef ErrUnknownAttributeOnStrictEnumMember(
 constexpr ErrorDef ErrUnknownAttributeOnMultipleEnumMembers(
     "the @unknown attribute can be only applied to one enum member.");
 constexpr ErrorDef ErrComposingNonProtocol("This declaration is not a protocol");
-constexpr ErrorDef<const flat::Decl *> ErrInvalidParameterListType(
+constexpr ErrorDef<const flat::Decl *> ErrInvalidParameterListDecl(
+    "'{}' cannot be used as a parameter list");
+constexpr ErrorDef<const flat::Type *> ErrInvalidParameterListType(
     "'{}' cannot be used as a parameter list");
 constexpr ErrorDef<const flat::Decl *> ErrNotYetSupportedParameterListType(
     "'{}' cannot be yet be used as a parameter list (http://fxbug.dev/88343)");
@@ -245,9 +251,6 @@ constexpr ErrorDef ErrInlineSizeExceeds64k(
 // TODO(fxbug.dev/70399): As part of consolidating name resolution, these should
 // be grouped into a single "expected foo but got bar" error, along with
 // ErrExpectedValueButGotType.
-constexpr ErrorDef ErrCannotUseService("cannot use services in other declarations");
-constexpr ErrorDef ErrCannotUseProtocol("cannot use protocol in this context");
-constexpr ErrorDef ErrCannotUseType("cannot use type in this context");
 constexpr ErrorDef ErrOnlyClientEndsInServices("service members must be client_end:P");
 constexpr ErrorDef<types::Openness, flat::Name, types::Openness, flat::Name>
     ErrComposedProtocolTooOpen(
@@ -318,24 +321,20 @@ constexpr ErrorDef ErrInvalidGeneratedName("generated name must be a valid ident
 // ---------------------------------------------------------------------------
 // Type Templates
 // ---------------------------------------------------------------------------
-constexpr ErrorDef<flat::Name> ErrUnknownType("unknown type {}");
-constexpr ErrorDef<const flat::TypeTemplate *> ErrCannotBeNullable("{} cannot be nullable");
-constexpr ErrorDef<const flat::TypeTemplate *> ErrMustBeAProtocol("{} must be a protocol");
-constexpr ErrorDef<const flat::TypeTemplate *> ErrCannotBoundTwice("{} cannot bound twice");
-constexpr ErrorDef<const flat::TypeTemplate *> ErrCannotIndicateNullabilityTwice(
+constexpr ErrorDef<flat::Name> ErrCannotBeNullable("{} cannot be nullable");
+constexpr ErrorDef<flat::Name> ErrMustBeAProtocol("{} must be a protocol");
+constexpr ErrorDef<flat::Name> ErrCannotBoundTwice("{} cannot bound twice");
+constexpr ErrorDef<flat::Name> ErrCannotIndicateNullabilityTwice(
     "{} cannot indicate nullability twice");
-constexpr ErrorDef<const flat::TypeTemplate *> ErrMustHaveNonZeroSize("{} must have non-zero size");
-constexpr ErrorDef<const flat::TypeTemplate *, size_t, size_t> ErrWrongNumberOfLayoutParameters(
+constexpr ErrorDef<flat::Name> ErrMustHaveNonZeroSize("{} must have non-zero size");
+constexpr ErrorDef<flat::Name, size_t, size_t> ErrWrongNumberOfLayoutParameters(
     "{} expected {} layout parameter(s), but got {}");
-constexpr ErrorDef<const flat::TypeTemplate *, size_t, size_t> ErrTooManyConstraints(
+constexpr ErrorDef<flat::Name, size_t, size_t> ErrTooManyConstraints(
     "{} expected at most {} constraints, but got {}");
 constexpr ErrorDef ErrExpectedType("expected type but got a literal or constant");
-constexpr ErrorDef<const flat::TypeTemplate *> ErrUnexpectedConstraint(
-    "{} failed to resolve constraint");
-// TODO(fxbug.dev/74193): Remove this error and allow re-constraining.
-constexpr ErrorDef<const flat::TypeTemplate *> ErrCannotConstrainTwice(
-    "{} cannot add additional constraint");
-constexpr ErrorDef<const flat::TypeTemplate *> ErrProtocolConstraintRequired(
+constexpr ErrorDef<flat::Name> ErrUnexpectedConstraint("{} failed to resolve constraint");
+constexpr ErrorDef<flat::Name> ErrCannotConstrainTwice("{} cannot add additional constraint");
+constexpr ErrorDef<flat::Name> ErrProtocolConstraintRequired(
     "{} requires a protocol as its first constraint");
 // The same error as ErrCannotBeNullable, but with a more specific message since the
 // optionality of boxes may be confusing

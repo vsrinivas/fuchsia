@@ -23,7 +23,7 @@ type Fruit = enum : uint64 {
   auto type_decl = library.LookupEnum("Fruit");
   ASSERT_NOT_NULL(type_decl);
   EXPECT_EQ(type_decl->members.size(), 3);
-  EXPECT_EQ(type_decl->subtype_ctor->name.decl_name(), "uint64");
+  EXPECT_EQ(type_decl->subtype_ctor->layout.target_name().decl_name(), "uint64");
 }
 
 TEST(EnumsTests, BadEnumTestWithNonUniqueValues) {
@@ -187,7 +187,7 @@ type NotNullable = enum {
 };
 
 type Struct = struct {
-    not_nullable NotNullable:<optional, foo, bar>;
+    not_nullable NotNullable:<optional, 1, 2>;
 };
 )FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrTooManyConstraints)

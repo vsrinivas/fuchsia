@@ -10,6 +10,7 @@
 #include <optional>
 #include <string>
 #include <string_view>
+#include <utility>
 #include <variant>
 #include <vector>
 
@@ -198,8 +199,8 @@ class Name final {
     return Name(library, AnonymousNameContext(std::move(context), span), std::nullopt);
   }
 
-  static Name CreateIntrinsic(std::string name) {
-    return Name(nullptr, IntrinsicNameContext(std::move(name)), std::nullopt);
+  static Name CreateIntrinsic(const Library* library, std::string name) {
+    return Name(library, IntrinsicNameContext(std::move(name)), std::nullopt);
   }
 
   Name(const Name& other) noexcept = default;
@@ -234,6 +235,13 @@ class Name final {
     other.name_context_ = std::monostate();
 
     return *this;
+  }
+
+  Name WithMemberName(std::string member_name) const {
+    assert(!member_name_.has_value() && "already has a member name");
+    Name new_name = *this;
+    new_name.member_name_ = std::move(member_name);
+    return new_name;
   }
 
   const Library* library() const { return library_; }
@@ -302,6 +310,7 @@ class Name final {
 
  public:
   bool is_sourced() const { return std::get_if<SourcedNameContext>(&name_context_); }
+  bool is_intrinsic() const { return std::get_if<IntrinsicNameContext>(&name_context_); }
   const AnonymousNameContext* as_anonymous() const {
     return std::get_if<AnonymousNameContext>(&name_context_);
   }

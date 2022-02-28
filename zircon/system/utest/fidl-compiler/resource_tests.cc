@@ -34,11 +34,11 @@ resource_definition SomeResource : uint32 {
   ASSERT_NOT_NULL(resource);
 
   ASSERT_EQ(resource->properties.size(), 1u);
-  EXPECT_EQ(resource->properties[0].type_ctor->name.span()->data(), "MyEnum");
   EXPECT_EQ(resource->properties[0].name.data(), "subtype");
+  EXPECT_EQ(resource->properties[0].type_ctor->layout.target(), library.LookupEnum("MyEnum"));
 
   ASSERT_NOT_NULL(resource->subtype_ctor);
-  EXPECT_EQ(resource->subtype_ctor->name.span()->data(), "uint32");
+  EXPECT_EQ(resource->subtype_ctor->layout.target_name().decl_name(), "uint32");
 }
 
 TEST(ResourceTests, GoodAliasedBaseType) {
@@ -62,8 +62,8 @@ resource_definition SomeResource : via {
   ASSERT_NOT_NULL(resource);
 
   ASSERT_EQ(resource->properties.size(), 1u);
-  EXPECT_EQ(resource->properties[0].type_ctor->name.span()->data(), "MyEnum");
   EXPECT_EQ(resource->properties[0].name.data(), "subtype");
+  EXPECT_EQ(resource->properties[0].type_ctor->layout.target(), library.LookupEnum("MyEnum"));
 
   ASSERT_NOT_NULL(resource->subtype_ctor);
   ASSERT_NOT_NULL(resource->subtype_ctor->type);

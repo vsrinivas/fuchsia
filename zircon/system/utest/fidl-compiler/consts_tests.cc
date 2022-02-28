@@ -475,9 +475,7 @@ using dependency;
 type Example = struct { s string:dependency.MAX; };
 )FIDL",
                       &shared);
-  // NOTE(fxbug.dev/72924): we provide a more general error because there are multiple
-  // possible interpretations.
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnexpectedConstraint);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrNameNotFound);
 }
 
 TEST(ConstsTests, BadParameterizePrimitive) {
@@ -551,8 +549,7 @@ type EnumType = enum : int32 {
 
 const dee EnumType = EnumType.D;
 )FIDL");
-  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrUnknownEnumMember,
-                                      fidl::ErrCannotResolveConstantValue);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrMemberNotFound);
 }
 
 TEST(ConstsTests, BadUnknownBitsMemberTest) {
@@ -567,8 +564,7 @@ type BitsType = bits {
 
 const dee BitsType = BitsType.D;
 )FIDL");
-  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrUnknownBitsMember,
-                                      fidl::ErrCannotResolveConstantValue);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrMemberNotFound);
 }
 
 TEST(ConstsTests, GoodOrOperatorTest) {

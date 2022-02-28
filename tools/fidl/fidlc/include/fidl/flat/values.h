@@ -10,6 +10,7 @@
 #include <type_traits>
 
 #include "fidl/flat/name.h"
+#include "fidl/flat/reference.h"
 #include "fidl/raw_ast.h"
 #include "fidl/source_span.h"
 #include "fidl/types.h"
@@ -139,6 +140,7 @@ struct NumericConstantValue final : ConstantValue {
 };
 
 using Size = NumericConstantValue<uint32_t>;
+using HandleSubtype = NumericConstantValue<uint32_t>;
 using HandleRights = NumericConstantValue<types::RightsWrappedType>;
 
 struct BoolConstantValue final : ConstantValue {
@@ -221,10 +223,13 @@ struct Constant {
 };
 
 struct IdentifierConstant final : Constant {
-  explicit IdentifierConstant(Name name, SourceSpan span)
-      : Constant(Kind::kIdentifier, span), name(std::move(name)) {}
+  explicit IdentifierConstant(const raw::CompoundIdentifier& name, SourceSpan span)
+      : Constant(Kind::kIdentifier, span), reference(name) {}
+  // This constructor is needed for IdentifierLayoutParameter::Disambiguate().
+  explicit IdentifierConstant(Reference reference, SourceSpan span)
+      : Constant(Kind::kIdentifier, span), reference(std::move(reference)) {}
 
-  const Name name;
+  Reference reference;
 };
 
 struct LiteralConstant final : Constant {

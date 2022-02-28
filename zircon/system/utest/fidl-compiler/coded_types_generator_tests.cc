@@ -909,14 +909,12 @@ type OuterStruct = resource struct {
   EXPECT_EQ(std::get<uint32_t>(padding(struct_outer_struct->elements[4]).mask), 0xffffffff);
 }
 
-// In the following example, we define the `byte` struct. However, fidlc has
-// an outstanding scoping bug which causes the `byte` type within the
-// `badlookup` struct to resolve to the primitive alias of `uint8`.
-//
-// When calculating coding tables, we must therefore ensure to follow exactly
-// the object graph provided by earlier stages of the compiler rather than
-// implementing a lookup which may not be the same as the lookup done earlier.
-TEST(CodedTypesGeneratorTests, GoodScopingBugShouldNotAffectCodingTables) {
+// In the following example, we shadow the builtin `byte` alias to a struct.
+// fidlc previous had a scoping bug where the `f1` field's `byte` type referred
+// to the builtin rather than the struct. This has since been fixed. Here we
+// test that the coding tables take the same interpretation, i.e. that they do
+// not do their own lookups with different scoping rules.
+TEST(CodedTypesGeneratorTests, GoodCodingTablesMatchScoping) {
   TestLibrary library(R"FIDL(library example;
 
 alias membertype = uint32;
@@ -925,7 +923,7 @@ type byte = struct {
     member membertype = 1;
 };
 
-type badlookup = struct {
+type container = struct {
     f1 byte;
     f2 bytes;
 };
@@ -934,14 +932,13 @@ type badlookup = struct {
   fidl::CodedTypesGenerator gen(library.all_libraries());
   gen.CompileCodedTypes();
 
-  auto the_struct_name = fidl::flat::Name::Key(library.library(), "badlookup");
+  auto the_struct_name = fidl::flat::Name::Key(library.library(), "container");
   auto the_coded_type = gen.CodedTypeFor(the_struct_name);
   ASSERT_NOT_NULL(the_coded_type);
   auto the_struct_coded_type = static_cast<const fidl::coded::StructType*>(the_coded_type);
   ASSERT_FALSE(the_struct_coded_type->is_empty);
   ASSERT_EQ(the_struct_coded_type->elements.size(), 2);
-  EXPECT_EQ(0xffffffffffffff00,
-            std::get<uint64_t>(padding(the_struct_coded_type->elements[0]).mask));
+  EXPECT_EQ(0xffffffff, std::get<uint32_t>(padding(the_struct_coded_type->elements[0]).mask));
   EXPECT_EQ(fidl::coded::Type::Kind::kVector, field(the_struct_coded_type->elements[1]).type->kind);
 }
 

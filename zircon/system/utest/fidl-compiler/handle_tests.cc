@@ -168,9 +168,7 @@ type MyStruct = struct {
 };
 )FIDL");
 
-  // NOTE(fxbug.dev/72924): we provide a more general error because there are multiple
-  // possible interpretations.
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnexpectedConstraint);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrNameNotFound);
 }
 
 TEST(HandleTests, BadDisallowOldHandles) {
@@ -183,7 +181,10 @@ type MyStruct = struct {
     h handle<vmo>;
 };
 )FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnknownType);
+
+  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrNameNotFound, fidl::ErrNameNotFound);
+  EXPECT_SUBSTR(library.errors()[0]->msg.c_str(), "cannot find 'handle'");
+  EXPECT_SUBSTR(library.errors()[1]->msg.c_str(), "cannot find 'vmo'");
 }
 
 // TODO(fxbug.dev/64629): Consider how we could validate resource_declaration without any use.
@@ -264,7 +265,7 @@ type MyStruct = resource struct {
 )FIDL");
 
   // TODO(fxbug.dev/75112): should include ErrResourceMissingSubtypeProperty
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnexpectedConstraint);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrNameNotFound);
 }
 
 // TODO(fxbug.dev/64629): Consider how we could validate resource_declaration without any use.
@@ -286,7 +287,7 @@ type MyStruct = resource struct {
 )FIDL");
 
   // TODO(fxbug.dev/75112): should include ErrResourceSubtypePropertyMustReferToEnum
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnexpectedConstraint);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrNameNotFound);
 }
 
 TEST(HandleTests, BadNonIdentifierSubtype) {
@@ -310,7 +311,8 @@ type MyStruct = resource struct {
 )FIDL");
 
   // TODO(fxbug.dev/75112): should include ErrHandleSubtypeMustReferToResourceSubtype
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnexpectedConstraint);
+  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrTypeCannotBeConvertedToType,
+                                      fidl::ErrUnexpectedConstraint);
 }
 
 // TODO(fxbug.dev/64629): Consider how we could validate resource_declaration without any use.
@@ -347,7 +349,7 @@ type MyStruct = resource struct {
     h handle;
 };
 )FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnknownType);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrNameNotFound);
 }
 
 TEST(HandleTests, BadBareHandleWithConstraints) {
@@ -358,7 +360,7 @@ type MyStruct = resource struct {
     h handle:VMO;
 };
 )FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnknownType);
+  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrNameNotFound, fidl::ErrNameNotFound);
 }
 
 TEST(HandleTests, BadBareHandleWithConstraintsThroughAlias) {
@@ -371,7 +373,7 @@ type MyStruct = resource struct {
     h my_handle:VMO;
 };
 )FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnknownType);
+  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrNameNotFound, fidl::ErrNameNotFound);
 }
 
 }  // namespace

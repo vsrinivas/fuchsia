@@ -81,6 +81,10 @@ std::string Display(const flat::Decl* d) {
       decl_kind = "bits";
       break;
     }
+    case flat::Decl::Kind::kBuiltin: {
+      decl_kind = "builtin";
+      break;
+    }
     case flat::Decl::Kind::kConst: {
       decl_kind = "const";
       break;
@@ -140,8 +144,6 @@ std::string Display(std::vector<const flat::Decl*>& d) {
 }
 
 std::string Display(const flat::Type* t) { return NameFlatType(t); }
-
-std::string Display(const flat::TypeTemplate* t) { return NameFlatName(t->name()); }
 
 std::string Display(const flat::Name& n) { return std::string(n.full_name()); }
 

@@ -62,21 +62,12 @@ class CompileStep : public Compiler::Step {
   bool ResolveLiteralConstantKindNumericLiteral(LiteralConstant* literal_constant,
                                                 const Type* type);
 
-  enum class AllowedCategories {
-    kTypeOrProtocol,
-    kTypeOnly,
-    kProtocolOnly,
-    // Note: there's currently no scenario where we expect a service.
-  };
-
   // Type methods
   bool TypeCanBeConst(const Type* type);
   bool TypeIsConvertibleTo(const Type* from_type, const Type* to_type);
   const Type* UnderlyingType(const Type* type);
   const Type* InferType(Constant* constant);
   ConstantValue::Kind ConstantValuePrimitiveKind(types::PrimitiveSubtype primitive_subtype);
-  bool VerifyTypeCategory(const Type* type, std::optional<SourceSpan> span,
-                          AllowedCategories category);
 
   // Validates a single member of a bits or enum. On success, returns nullptr,
   // and on failure returns an error. The caller will set the diagnostic span.

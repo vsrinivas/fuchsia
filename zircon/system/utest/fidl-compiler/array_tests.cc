@@ -70,7 +70,7 @@ TEST(ArrayTest, BadMultipleConstraintsOnArray) {
 library example;
 
 type S = struct {
-    arr array<uint8, 10>:<optional, foo, bar>;
+    arr array<uint8, 10>:<optional, 1, 2>;
 };
 )FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrTooManyConstraints);

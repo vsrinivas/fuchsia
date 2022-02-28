@@ -91,13 +91,8 @@ type TimeZone = struct {
   ASSERT_ERR(errors[0], fidl::ErrUnexpectedTokenOfKind);
   ASSERT_ERR(errors[1], fidl::ErrUnexpectedTokenOfKind);
   ASSERT_ERR(errors[2], fidl::ErrMissingOrdinalBeforeMember);
-  // NOTE(fxbug.dev/72924): In the new syntax this is a parse error instead of
-  // ErrExpectedDeclaration, which no longer applies in the new syntax.
   ASSERT_ERR(errors[3], fidl::ErrUnexpectedTokenOfKind);
   ASSERT_ERR(errors[4], fidl::ErrUnexpectedTokenOfKind);
-  // NOTE(fxbug.dev/72924): The more specific ErrExpectedOrdinalOrCloseBrace
-  // isn't returned in the new syntax. It doesn't seem all that useful anyway,
-  // since we also get an ErrUnexpectedTokenOfKind
   ASSERT_ERR(errors[5], fidl::ErrUnexpectedTokenOfKind);
 }
 

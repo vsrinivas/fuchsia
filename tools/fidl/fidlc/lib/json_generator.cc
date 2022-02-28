@@ -126,13 +126,24 @@ void JSONGenerator::Generate(const flat::Constant& value) {
     GenerateObjectMember("expression", value.span);
     switch (value.kind) {
       case flat::Constant::Kind::kIdentifier: {
-        auto type = static_cast<const flat::IdentifierConstant*>(&value);
-        GenerateObjectMember("identifier", type->name);
+        auto identifier = static_cast<const flat::IdentifierConstant*>(&value);
+        // TODO(fxbug.dev/92422): The naming functions do not include the
+        // library name for builtins, otherwise error messages would refer to
+        // fidl/uint32 etc. But if we emit "MAX" here it fails JSON schema
+        // validation, so we manually emit "fidl/MAX". We likely shouldn't be
+        // emitting anything in the IR for MAX bounds.
+        if (identifier->reference.target()->kind == flat::Element::Kind::kBuiltin &&
+            static_cast<const flat::Builtin*>(identifier->reference.target())->kind ==
+                flat::Builtin::Kind::kMax) {
+          GenerateObjectMember("identifier", std::string_view("fidl/MAX"));
+        } else {
+          GenerateObjectMember("identifier", identifier->reference.target_name());
+        }
         break;
       }
       case flat::Constant::Kind::kLiteral: {
-        auto& type = static_cast<const flat::LiteralConstant&>(value);
-        GenerateObjectMember("literal", type);
+        auto literal = static_cast<const flat::LiteralConstant*>(&value);
+        GenerateObjectMember("literal", *literal);
         break;
       }
       case flat::Constant::Kind::kBinaryOperator: {
@@ -352,10 +363,10 @@ void JSONGenerator::Generate(const flat::Protocol& value) {
 
 void JSONGenerator::Generate(const flat::Protocol::ComposedProtocol& value) {
   GenerateObject([&]() {
-    GenerateObjectMember("name", value.name, Position::kFirst);
+    GenerateObjectMember("name", value.reference.target_name(), Position::kFirst);
     if (!value.attributes->Empty())
       GenerateObjectMember("maybe_attributes", value.attributes);
-    GenerateObjectMember("location", NameSpan(value.name));
+    GenerateObjectMember("location", NameSpan(value.reference.span().value()));
   });
 }
 
@@ -688,7 +699,7 @@ void JSONGenerator::Generate(const flat::LayoutInvocation& value) {
     if (value.element_type_resolved) {
       Indent();
       EmitNewlineWithIndent();
-      Generate(value.element_type_raw->name);
+      Generate(value.element_type_raw->layout.target_name());
       Outdent();
       EmitNewlineWithIndent();
     }
@@ -721,11 +732,13 @@ void JSONGenerator::Generate(const flat::TypeConstructor& value) {
         // for server ends, the partial_type_ctor name is just "request" (since
         // server_end:P is request<P> in the old syntax), and we also need to
         // emit the protocol "arg" below
-        GenerateObjectMember("name", flat::Name::CreateIntrinsic("request"), Position::kFirst);
+        GenerateObjectMember("name", flat::Name::CreateIntrinsic(nullptr, "request"),
+                             Position::kFirst);
         server_end = end_type;
       }
     } else {
-      GenerateObjectMember("name", value.type ? value.type->name : value.name, Position::kFirst);
+      GenerateObjectMember("name", value.type ? value.type->name : value.layout.target_name(),
+                           Position::kFirst);
     }
     GenerateObjectPunctuation(Position::kSubsequent);
     EmitObjectKey("args");
@@ -976,42 +989,40 @@ std::vector<const flat::Struct*> ExternalStructs(const flat::Library* library) {
 }  // namespace
 
 std::ostringstream JSONGenerator::Produce() {
+  const flat::Library* library = all_libraries_->target_library();
   ResetIndentLevel();
   GenerateObject([&]() {
     GenerateObjectMember("version", std::string_view("0.0.1"), Position::kFirst);
 
-    GenerateObjectMember("name", LibraryName(library_, "."));
+    GenerateObjectMember("name", LibraryName(library, "."));
 
-    if (!library_->attributes->Empty()) {
-      GenerateObjectMember("maybe_attributes", library_->attributes);
+    if (!library->attributes->Empty()) {
+      GenerateObjectMember("maybe_attributes", library->attributes);
     }
 
     GenerateObjectPunctuation(Position::kSubsequent);
     EmitObjectKey("library_dependencies");
-    GenerateArray(library_->DirectAndComposedDependencies());
+    GenerateArray(all_libraries_->DirectAndComposedDependencies(library));
 
-    GenerateObjectMember("bits_declarations", library_->bits_declarations);
-    GenerateObjectMember("const_declarations", library_->const_declarations);
-    GenerateObjectMember("enum_declarations", library_->enum_declarations);
-    GenerateObjectMember("experimental_resource_declarations", library_->resource_declarations);
-    GenerateObjectMember("interface_declarations", library_->protocol_declarations);
-    GenerateObjectMember("service_declarations", library_->service_declarations);
-    GenerateObjectMember("struct_declarations", library_->struct_declarations);
-    GenerateObjectMember("external_struct_declarations", ExternalStructs(library_));
-    GenerateObjectMember("table_declarations", library_->table_declarations);
-    GenerateObjectMember("union_declarations", library_->union_declarations);
-    GenerateObjectMember("type_alias_declarations", library_->type_alias_declarations);
+    GenerateObjectMember("bits_declarations", library->bits_declarations);
+    GenerateObjectMember("const_declarations", library->const_declarations);
+    GenerateObjectMember("enum_declarations", library->enum_declarations);
+    GenerateObjectMember("experimental_resource_declarations", library->resource_declarations);
+    GenerateObjectMember("interface_declarations", library->protocol_declarations);
+    GenerateObjectMember("service_declarations", library->service_declarations);
+    GenerateObjectMember("struct_declarations", library->struct_declarations);
+    GenerateObjectMember("external_struct_declarations", ExternalStructs(library));
+    GenerateObjectMember("table_declarations", library->table_declarations);
+    GenerateObjectMember("union_declarations", library->union_declarations);
+    GenerateObjectMember("type_alias_declarations", library->type_alias_declarations);
 
-    // The library's declaration_order_ contains all the declarations for all
-    // transitive dependencies. The backend only needs the declaration order
-    // for this specific library.
     std::vector<std::string> declaration_order;
-    for (const flat::Decl* decl : library_->declaration_order) {
+    for (const flat::Decl* decl : library->declaration_order) {
       declaration_order.push_back(NameFlatName(decl->name));
     }
     GenerateObjectMember("declaration_order", declaration_order);
 
-    GenerateDeclarationsMember(library_);
+    GenerateDeclarationsMember(library);
   });
   GenerateEOF();
 

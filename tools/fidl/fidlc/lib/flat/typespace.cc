@@ -9,323 +9,343 @@
 
 namespace fidl::flat {
 
-constexpr std::string_view kChannelTransport = "Channel";
+static const Size kMaxSize = Size::Max();
 
-bool Typespace::Create(TypeResolver* resolver, const flat::Name& name,
-                       const std::unique_ptr<LayoutParameterList>& parameters,
-                       const std::unique_ptr<TypeConstraints>& constraints, const Type** out_type,
-                       LayoutInvocation* out_params,
-                       const std::optional<SourceSpan>& type_ctor_span) {
-  std::unique_ptr<Type> type;
-  if (!CreateNotOwned(resolver, name, parameters, constraints, &type, out_params, type_ctor_span))
-    return false;
-  types_.push_back(std::move(type));
-  *out_type = types_.back().get();
-  return true;
-}
-
-bool Typespace::CreateNotOwned(TypeResolver* resolver, const flat::Name& name,
-                               const std::unique_ptr<LayoutParameterList>& parameters,
-                               const std::unique_ptr<TypeConstraints>& constraints,
-                               std::unique_ptr<Type>* out_type, LayoutInvocation* out_params,
-                               const std::optional<SourceSpan>& type_ctor_span) {
-  // TODO(pascallouis): lookup whether we've already created the type, and
-  // return it rather than create a new one. Lookup must be by name,
-  // arg_type, size, and nullability.
-
-  auto type_template = LookupTemplate(name);
-  if (type_template == nullptr) {
-    return Fail(ErrUnknownType, name.span().value(), name);
+static std::optional<types::PrimitiveSubtype> BuiltinKindToPrimitiveSubtype(Builtin::Kind kind) {
+  switch (kind) {
+    case Builtin::Kind::kBool:
+      return types::PrimitiveSubtype::kBool;
+    case Builtin::Kind::kInt8:
+      return types::PrimitiveSubtype::kInt8;
+    case Builtin::Kind::kInt16:
+      return types::PrimitiveSubtype::kInt16;
+    case Builtin::Kind::kInt32:
+      return types::PrimitiveSubtype::kInt32;
+    case Builtin::Kind::kInt64:
+      return types::PrimitiveSubtype::kInt64;
+    case Builtin::Kind::kUint8:
+      return types::PrimitiveSubtype::kUint8;
+    case Builtin::Kind::kUint16:
+      return types::PrimitiveSubtype::kUint16;
+    case Builtin::Kind::kUint32:
+      return types::PrimitiveSubtype::kUint32;
+    case Builtin::Kind::kUint64:
+      return types::PrimitiveSubtype::kUint64;
+    case Builtin::Kind::kFloat32:
+      return types::PrimitiveSubtype::kFloat32;
+    case Builtin::Kind::kFloat64:
+      return types::PrimitiveSubtype::kFloat64;
+    default:
+      return std::nullopt;
   }
-  if (type_template->HasGeneratedName() && (name.as_anonymous() == nullptr)) {
-    return Fail(ErrAnonymousNameReference, name.span().value(), name);
+}
+
+Typespace::Typespace(const Library* root_library, Reporter* reporter) : ReporterMixin(reporter) {
+  for (auto& builtin : root_library->builtin_declarations) {
+    if (auto subtype = BuiltinKindToPrimitiveSubtype(builtin->kind)) {
+      primitive_types_.emplace(subtype.value(),
+                               std::make_unique<PrimitiveType>(builtin->name, subtype.value()));
+    } else if (builtin->kind == Builtin::Kind::kString) {
+      unbounded_string_type_ =
+          std::make_unique<StringType>(builtin->name, &kMaxSize, types::Nullability::kNonnullable);
+    } else if (builtin->kind == Builtin::Kind::kVector) {
+      vector_layout_name_ = builtin->name;
+    }
   }
-  return type_template->Create(
-      resolver,
-      {.parameters = parameters, .constraints = constraints, .type_ctor_span = type_ctor_span},
-      out_type, out_params);
+  untyped_numeric_type_ =
+      std::make_unique<UntypedNumericType>(Name::CreateIntrinsic(nullptr, "untyped numeric"));
 }
 
-const SourceSpan& TypeTemplate::ParamsAndConstraints::ParametersSpan() const {
-  auto num_params = parameters->items.size();
-  if (num_params > 0)
-    return parameters->span.value();
-  if (type_ctor_span)
-    return *type_ctor_span;
-  // Fallback empty span
-  return parameters->span.value();
+const PrimitiveType* Typespace::GetPrimitiveType(types::PrimitiveSubtype subtype) {
+  return primitive_types_.at(subtype).get();
 }
 
-bool TypeTemplate::EnsureNumberOfLayoutParams(const ParamsAndConstraints& unresolved_args,
-                                              size_t expected_params) const {
-  auto num_params = unresolved_args.parameters->items.size();
-  if (num_params != expected_params) {
-    Fail(ErrWrongNumberOfLayoutParameters, unresolved_args.ParametersSpan(), this, expected_params,
-         num_params);
-    return false;
-  }
-  return true;
+const Type* Typespace::GetUnboundedStringType() { return unbounded_string_type_.get(); }
+
+const Type* Typespace::GetStringType(size_t max_size) {
+  auto name = unbounded_string_type_->name;
+  sizes_.push_back(std::make_unique<Size>(max_size));
+  auto size = sizes_.back().get();
+  types_.push_back(std::make_unique<StringType>(name, size, types::Nullability::kNonnullable));
+  return types_.back().get();
 }
 
-const Size* Typespace::InternSize(uint32_t size) {
-  sizes_.push_back(std::make_unique<Size>(size));
-  return sizes_.back().get();
-}
+const Type* Typespace::GetUntypedNumericType() { return untyped_numeric_type_.get(); }
 
 const Type* Typespace::Intern(std::unique_ptr<Type> type) {
   types_.push_back(std::move(type));
   return types_.back().get();
 }
 
-void Typespace::AddTemplate(std::unique_ptr<TypeTemplate> type_template) {
-  templates_.emplace(type_template->name(), std::move(type_template));
+class Typespace::Creator : private ReporterMixin {
+ public:
+  Creator(Typespace* typespace, TypeResolver* resolver, const Reference& layout,
+          const LayoutParameterList& parameters, const TypeConstraints& constraints,
+          LayoutInvocation* out_params)
+      : ReporterMixin(typespace->reporter()),
+        typespace_(typespace),
+        resolver_(resolver),
+        layout_(layout),
+        parameters_(parameters),
+        constraints_(constraints),
+        out_params_(out_params) {}
+
+  const Type* Create();
+
+ private:
+  bool EnsureNumberOfLayoutParams(size_t expected_params);
+
+  const Type* CreatePrimitiveType(types::PrimitiveSubtype subtype);
+  const Type* CreateStringType();
+  const Type* CreateArrayType();
+  const Type* CreateVectorType();
+  const Type* CreateBytesType();
+  const Type* CreateBoxType();
+  const Type* CreateHandleType(Resource* resource);
+  const Type* CreateTransportSideType(TransportSide end);
+  const Type* CreateIdentifierType(TypeDecl* type_decl);
+  const Type* CreateTypeAliasType(TypeAlias* type_alias);
+
+  Typespace* typespace_;
+  TypeResolver* resolver_;
+  const Reference& layout_;
+  const LayoutParameterList& parameters_;
+  const TypeConstraints& constraints_;
+  LayoutInvocation* out_params_;
+};
+
+const Type* Typespace::Create(TypeResolver* resolver, const Reference& layout,
+                              const LayoutParameterList& parameters,
+                              const TypeConstraints& constraints, LayoutInvocation* out_params) {
+  // TODO(fxbug.dev/76219): lookup whether we've already created the type, and
+  // return it rather than create a new one. Lookup must be by name, arg_type,
+  // size, and nullability.
+  return Creator(this, resolver, layout, parameters, constraints, out_params).Create();
 }
 
-const TypeTemplate* Typespace::LookupTemplate(const flat::Name& name) const {
-  auto global_name = Name::Key(nullptr, name.decl_name());
-  if (auto iter = templates_.find(global_name); iter != templates_.end()) {
-    return iter->second.get();
+const Type* Typespace::Creator::Create() {
+  Decl* target = layout_.target()->AsDecl();
+
+  switch (target->kind) {
+    case Decl::Kind::kBits:
+    case Decl::Kind::kEnum:
+    case Decl::Kind::kStruct:
+    case Decl::Kind::kTable:
+    case Decl::Kind::kUnion:
+      return CreateIdentifierType(static_cast<TypeDecl*>(target));
+    case Decl::Kind::kResource:
+      return CreateHandleType(static_cast<Resource*>(target));
+    case Decl::Kind::kTypeAlias:
+      return CreateTypeAliasType(static_cast<TypeAlias*>(target));
+    case Decl::Kind::kBuiltin:
+      // Handled below.
+      break;
+    default:
+      Fail(ErrExpectedType, layout_.span().value());
+      return nullptr;
   }
 
-  if (auto iter = templates_.find(name); iter != templates_.end()) {
-    return iter->second.get();
+  auto builtin = static_cast<const Builtin*>(target);
+  switch (builtin->kind) {
+    case Builtin::Kind::kBool:
+    case Builtin::Kind::kInt8:
+    case Builtin::Kind::kInt16:
+    case Builtin::Kind::kInt32:
+    case Builtin::Kind::kInt64:
+    case Builtin::Kind::kUint8:
+    case Builtin::Kind::kUint16:
+    case Builtin::Kind::kUint32:
+    case Builtin::Kind::kUint64:
+    case Builtin::Kind::kFloat32:
+    case Builtin::Kind::kFloat64:
+      return CreatePrimitiveType(BuiltinKindToPrimitiveSubtype(builtin->kind).value());
+    case Builtin::Kind::kString:
+      return CreateStringType();
+    case Builtin::Kind::kBox:
+      return CreateBoxType();
+    case Builtin::Kind::kArray:
+      return CreateArrayType();
+    case Builtin::Kind::kVector:
+      return CreateVectorType();
+    case Builtin::Kind::kClientEnd:
+      return CreateTransportSideType(TransportSide::kClient);
+    case Builtin::Kind::kServerEnd:
+      return CreateTransportSideType(TransportSide::kServer);
+    case Builtin::Kind::kByte:
+      return CreatePrimitiveType(types::PrimitiveSubtype::kUint8);
+    case Builtin::Kind::kBytes:
+      return CreateBytesType();
+    case Builtin::Kind::kOptional:
+    case Builtin::Kind::kMax:
+      Fail(ErrExpectedType, layout_.span().value());
+      return nullptr;
   }
-
-  return nullptr;
 }
 
-bool TypeTemplate::HasGeneratedName() const { return name_.as_anonymous() != nullptr; }
-
-Typespace Typespace::RootTypes(Reporter* reporter) {
-  Typespace root_typespace(reporter);
-
-  auto add_template = [&](std::unique_ptr<TypeTemplate> type_template) {
-    const Name& name = type_template->name();
-    root_typespace.templates_.emplace(name, std::move(type_template));
-  };
-
-  auto add_primitive = [&](std::string name, types::PrimitiveSubtype subtype) {
-    add_template(std::make_unique<PrimitiveTypeTemplate>(&root_typespace, reporter, std::move(name),
-                                                         subtype));
-  };
-
-  add_primitive("bool", types::PrimitiveSubtype::kBool);
-
-  add_primitive("int8", types::PrimitiveSubtype::kInt8);
-  add_primitive("int16", types::PrimitiveSubtype::kInt16);
-  add_primitive("int32", types::PrimitiveSubtype::kInt32);
-  add_primitive("int64", types::PrimitiveSubtype::kInt64);
-  add_primitive("uint8", types::PrimitiveSubtype::kUint8);
-  add_primitive("uint16", types::PrimitiveSubtype::kUint16);
-  add_primitive("uint32", types::PrimitiveSubtype::kUint32);
-  add_primitive("uint64", types::PrimitiveSubtype::kUint64);
-
-  add_primitive("float32", types::PrimitiveSubtype::kFloat32);
-  add_primitive("float64", types::PrimitiveSubtype::kFloat64);
-
-  // TODO(fxbug.dev/7807): Remove when there is generalized support.
-  const static auto kByteName = Name::CreateIntrinsic("byte");
-  const static auto kBytesName = Name::CreateIntrinsic("bytes");
-  root_typespace.templates_.emplace(
-      kByteName, std::make_unique<PrimitiveTypeTemplate>(&root_typespace, reporter, "uint8",
-                                                         types::PrimitiveSubtype::kUint8));
-  root_typespace.templates_.emplace(kBytesName,
-                                    std::make_unique<BytesTypeTemplate>(&root_typespace, reporter));
-
-  add_template(std::make_unique<ArrayTypeTemplate>(&root_typespace, reporter));
-  add_template(std::make_unique<VectorTypeTemplate>(&root_typespace, reporter));
-  add_template(std::make_unique<StringTypeTemplate>(&root_typespace, reporter));
-  add_template(std::make_unique<TransportSideTypeTemplate>(
-      &root_typespace, reporter, TransportSide::kServer, kChannelTransport));
-  add_template(std::make_unique<TransportSideTypeTemplate>(
-      &root_typespace, reporter, TransportSide::kClient, kChannelTransport));
-  add_template(std::make_unique<BoxTypeTemplate>(&root_typespace, reporter));
-  return root_typespace;
+bool Typespace::Creator::EnsureNumberOfLayoutParams(size_t expected_params) {
+  auto num_params = parameters_.items.size();
+  if (num_params == expected_params) {
+    return true;
+  }
+  auto span = num_params == 0 ? layout_.span().value() : parameters_.span.value();
+  return Fail(ErrWrongNumberOfLayoutParameters, span, layout_.target_name(), expected_params,
+              num_params);
 }
 
-// static
-const Name Typespace::kBoolTypeName = Name::CreateIntrinsic("bool");
-const Name Typespace::kInt8TypeName = Name::CreateIntrinsic("int8");
-const Name Typespace::kInt16TypeName = Name::CreateIntrinsic("int16");
-const Name Typespace::kInt32TypeName = Name::CreateIntrinsic("int32");
-const Name Typespace::kInt64TypeName = Name::CreateIntrinsic("int64");
-const Name Typespace::kUint8TypeName = Name::CreateIntrinsic("uint8");
-const Name Typespace::kUint16TypeName = Name::CreateIntrinsic("uint16");
-const Name Typespace::kUint32TypeName = Name::CreateIntrinsic("uint32");
-const Name Typespace::kUint64TypeName = Name::CreateIntrinsic("uint64");
-const Name Typespace::kFloat32TypeName = Name::CreateIntrinsic("float32");
-const Name Typespace::kFloat64TypeName = Name::CreateIntrinsic("float64");
-const Name Typespace::kUntypedNumericTypeName = Name::CreateIntrinsic("untyped numeric");
-const Name Typespace::kStringTypeName = Name::CreateIntrinsic("string");
-const PrimitiveType Typespace::kBoolType =
-    PrimitiveType(kBoolTypeName, types::PrimitiveSubtype::kBool);
-const PrimitiveType Typespace::kInt8Type =
-    PrimitiveType(kInt8TypeName, types::PrimitiveSubtype::kInt8);
-const PrimitiveType Typespace::kInt16Type =
-    PrimitiveType(kInt16TypeName, types::PrimitiveSubtype::kInt16);
-const PrimitiveType Typespace::kInt32Type =
-    PrimitiveType(kInt32TypeName, types::PrimitiveSubtype::kInt32);
-const PrimitiveType Typespace::kInt64Type =
-    PrimitiveType(kInt64TypeName, types::PrimitiveSubtype::kInt64);
-const PrimitiveType Typespace::kUint8Type =
-    PrimitiveType(kUint8TypeName, types::PrimitiveSubtype::kUint8);
-const PrimitiveType Typespace::kUint16Type =
-    PrimitiveType(kUint16TypeName, types::PrimitiveSubtype::kUint16);
-const PrimitiveType Typespace::kUint32Type =
-    PrimitiveType(kUint32TypeName, types::PrimitiveSubtype::kUint32);
-const PrimitiveType Typespace::kUint64Type =
-    PrimitiveType(kUint64TypeName, types::PrimitiveSubtype::kUint64);
-const PrimitiveType Typespace::kFloat32Type =
-    PrimitiveType(kFloat32TypeName, types::PrimitiveSubtype::kFloat32);
-const PrimitiveType Typespace::kFloat64Type =
-    PrimitiveType(kFloat64TypeName, types::PrimitiveSubtype::kFloat64);
-const UntypedNumericType Typespace::kUntypedNumericType =
-    UntypedNumericType(kUntypedNumericTypeName);
-const StringType Typespace::kUnboundedStringType = StringType(
-    Typespace::kStringTypeName, &VectorBaseType::kMaxSize, types::Nullability::kNonnullable);
+const Type* Typespace::Creator::CreatePrimitiveType(types::PrimitiveSubtype subtype) {
+  if (!EnsureNumberOfLayoutParams(0)) {
+    return nullptr;
+  }
+  std::unique_ptr<Type> constrained_type;
+  typespace_->GetPrimitiveType(subtype)->ApplyConstraints(resolver_, constraints_, layout_,
+                                                          &constrained_type, out_params_);
+  return typespace_->Intern(std::move(constrained_type));
+}
 
-bool ArrayTypeTemplate::Create(TypeResolver* resolver, const ParamsAndConstraints& unresolved_args,
-                               std::unique_ptr<Type>* out_type,
-                               LayoutInvocation* out_params) const {
-  if (!EnsureNumberOfLayoutParams(unresolved_args, 2))
-    return false;
+const Type* Typespace::Creator::CreateArrayType() {
+  if (!EnsureNumberOfLayoutParams(2))
+    return nullptr;
 
   const Type* element_type = nullptr;
-  if (!resolver->ResolveParamAsType(this, unresolved_args.parameters->items[0], &element_type))
-    return false;
-  out_params->element_type_resolved = element_type;
-  out_params->element_type_raw = unresolved_args.parameters->items[0]->AsTypeCtor();
+  if (!resolver_->ResolveParamAsType(layout_, parameters_.items[0], &element_type))
+    return nullptr;
+  out_params_->element_type_resolved = element_type;
+  out_params_->element_type_raw = parameters_.items[0]->AsTypeCtor();
 
   const Size* size = nullptr;
-  if (!resolver->ResolveParamAsSize(this, unresolved_args.parameters->items[1], &size))
-    return false;
-  out_params->size_resolved = size;
-  out_params->size_raw = unresolved_args.parameters->items[1]->AsConstant();
+  if (!resolver_->ResolveParamAsSize(layout_, parameters_.items[1], &size))
+    return nullptr;
+  out_params_->size_resolved = size;
+  out_params_->size_raw = parameters_.items[1]->AsConstant();
 
-  ArrayType type(name_, element_type, size);
-  return type.ApplyConstraints(resolver, *unresolved_args.constraints, this, out_type, out_params);
+  ArrayType type(layout_.target_name(), element_type, size);
+  std::unique_ptr<Type> constrained_type;
+  type.ApplyConstraints(resolver_, constraints_, layout_, &constrained_type, out_params_);
+  return typespace_->Intern(std::move(constrained_type));
 }
 
-bool BytesTypeTemplate::Create(TypeResolver* resolver, const ParamsAndConstraints& unresolved_args,
-                               std::unique_ptr<Type>* out_type,
-                               LayoutInvocation* out_params) const {
-  if (!EnsureNumberOfLayoutParams(unresolved_args, 0))
-    return false;
-
-  VectorType type(name_, &uint8_type_);
-  return type.ApplyConstraints(resolver, *unresolved_args.constraints, this, out_type, out_params);
-}
-
-bool VectorTypeTemplate::Create(TypeResolver* resolver, const ParamsAndConstraints& unresolved_args,
-                                std::unique_ptr<Type>* out_type,
-                                LayoutInvocation* out_params) const {
-  if (!EnsureNumberOfLayoutParams(unresolved_args, 1))
-    return false;
+const Type* Typespace::Creator::CreateVectorType() {
+  if (!EnsureNumberOfLayoutParams(1))
+    return nullptr;
 
   const Type* element_type = nullptr;
-  if (!resolver->ResolveParamAsType(this, unresolved_args.parameters->items[0], &element_type))
-    return false;
-  out_params->element_type_resolved = element_type;
-  out_params->element_type_raw = unresolved_args.parameters->items[0]->AsTypeCtor();
+  if (!resolver_->ResolveParamAsType(layout_, parameters_.items[0], &element_type))
+    return nullptr;
+  out_params_->element_type_resolved = element_type;
+  out_params_->element_type_raw = parameters_.items[0]->AsTypeCtor();
 
-  VectorType type(name_, element_type);
-  return type.ApplyConstraints(resolver, *unresolved_args.constraints, this, out_type, out_params);
+  VectorType type(layout_.target_name(), element_type);
+  std::unique_ptr<Type> constrained_type;
+  type.ApplyConstraints(resolver_, constraints_, layout_, &constrained_type, out_params_);
+  return typespace_->Intern(std::move(constrained_type));
 }
 
-bool StringTypeTemplate::Create(TypeResolver* resolver, const ParamsAndConstraints& unresolved_args,
-                                std::unique_ptr<Type>* out_type,
-                                LayoutInvocation* out_params) const {
-  if (!EnsureNumberOfLayoutParams(unresolved_args, 0))
-    return false;
+const Type* Typespace::Creator::CreateBytesType() {
+  if (!EnsureNumberOfLayoutParams(0))
+    return nullptr;
 
-  StringType type(name_);
-  return type.ApplyConstraints(resolver, *unresolved_args.constraints, this, out_type, out_params);
+  // Note that we name the type "vector", not "bytes".
+  VectorType type(typespace_->vector_layout_name_.value(),
+                  typespace_->GetPrimitiveType(types::PrimitiveSubtype::kUint8));
+  std::unique_ptr<Type> constrained_type;
+  type.ApplyConstraints(resolver_, constraints_, layout_, &constrained_type, out_params_);
+  return typespace_->Intern(std::move(constrained_type));
 }
 
-const HandleRights HandleType::kSameRights = HandleRights(kHandleSameRights);
+const Type* Typespace::Creator::CreateStringType() {
+  if (!EnsureNumberOfLayoutParams(0))
+    return nullptr;
 
-bool HandleTypeTemplate::Create(TypeResolver* resolver, const ParamsAndConstraints& unresolved_args,
-                                std::unique_ptr<Type>* out_type,
-                                LayoutInvocation* out_params) const {
-  if (!EnsureNumberOfLayoutParams(unresolved_args, 0))
-    return false;
-
-  HandleType type(name_, resource_decl_);
-  return type.ApplyConstraints(resolver, *unresolved_args.constraints, this, out_type, out_params);
+  StringType type(layout_.target_name());
+  std::unique_ptr<Type> constrained_type;
+  type.ApplyConstraints(resolver_, constraints_, layout_, &constrained_type, out_params_);
+  return typespace_->Intern(std::move(constrained_type));
 }
 
-bool TransportSideTypeTemplate::Create(TypeResolver* resolver,
-                                       const ParamsAndConstraints& unresolved_args,
-                                       std::unique_ptr<Type>* out_type,
-                                       LayoutInvocation* out_params) const {
-  if (!EnsureNumberOfLayoutParams(unresolved_args, 0))
-    return false;
+const Type* Typespace::Creator::CreateHandleType(Resource* resource) {
+  if (!EnsureNumberOfLayoutParams(0))
+    return nullptr;
 
-  TransportSideType type(name_, end_, protocol_transport_);
-  return type.ApplyConstraints(resolver, *unresolved_args.constraints, this, out_type, out_params);
+  HandleType type(layout_.target_name(), resource);
+  std::unique_ptr<Type> constrained_type;
+  type.ApplyConstraints(resolver_, constraints_, layout_, &constrained_type, out_params_);
+  return typespace_->Intern(std::move(constrained_type));
 }
 
-bool TypeDeclTypeTemplate::Create(TypeResolver* resolver,
-                                  const ParamsAndConstraints& unresolved_args,
-                                  std::unique_ptr<Type>* out_type,
-                                  LayoutInvocation* out_params) const {
-  if (!type_decl_->compiled && type_decl_->kind != Decl::Kind::kProtocol) {
-    if (type_decl_->compiling) {
-      type_decl_->recursive = true;
+// TODO(fxbug.dev/56727): Support more transports.
+static constexpr std::string_view kChannelTransport = "Channel";
+
+const Type* Typespace::Creator::CreateTransportSideType(TransportSide end) {
+  if (!EnsureNumberOfLayoutParams(0))
+    return nullptr;
+
+  TransportSideType type(layout_.target_name(), end, kChannelTransport);
+  std::unique_ptr<Type> constrained_type;
+  type.ApplyConstraints(resolver_, constraints_, layout_, &constrained_type, out_params_);
+  return typespace_->Intern(std::move(constrained_type));
+}
+
+const Type* Typespace::Creator::CreateIdentifierType(TypeDecl* type_decl) {
+  if (!type_decl->compiled && type_decl->kind != Decl::Kind::kProtocol) {
+    if (type_decl->compiling) {
+      type_decl->recursive = true;
     } else {
-      resolver->CompileDecl(type_decl_);
+      resolver_->CompileDecl(type_decl);
     }
   }
 
-  if (!EnsureNumberOfLayoutParams(unresolved_args, 0))
-    return false;
+  if (!EnsureNumberOfLayoutParams(0))
+    return nullptr;
 
-  IdentifierType type(name_, type_decl_);
-  return type.ApplyConstraints(resolver, *unresolved_args.constraints, this, out_type, out_params);
+  IdentifierType type(type_decl);
+  std::unique_ptr<Type> constrained_type;
+  type.ApplyConstraints(resolver_, constraints_, layout_, &constrained_type, out_params_);
+  return typespace_->Intern(std::move(constrained_type));
 }
 
-bool TypeAliasTypeTemplate::Create(TypeResolver* resolver,
-                                   const ParamsAndConstraints& unresolved_args,
-                                   std::unique_ptr<Type>* out_type,
-                                   LayoutInvocation* out_params) const {
-  if (auto cycle = resolver->GetDeclCycle(decl_); cycle) {
-    return Fail(ErrIncludeCycle, decl_->name.span().value(), cycle.value());
+const Type* Typespace::Creator::CreateTypeAliasType(TypeAlias* type_alias) {
+  if (auto cycle = resolver_->GetDeclCycle(type_alias); cycle) {
+    Fail(ErrIncludeCycle, type_alias->name.span().value(), cycle.value());
+    return nullptr;
   }
-  resolver->CompileDecl(decl_);
+  resolver_->CompileDecl(type_alias);
 
-  if (!EnsureNumberOfLayoutParams(unresolved_args, 0))
-    return false;
+  if (!EnsureNumberOfLayoutParams(0))
+    return nullptr;
 
   // Compilation failed while trying to resolve something farther up the chain;
   // exit early
-  if (decl_->partial_type_ctor->type == nullptr)
-    return false;
-  const auto& aliased_type = decl_->partial_type_ctor->type;
-  out_params->from_type_alias = decl_;
-  return aliased_type->ApplyConstraints(resolver, *unresolved_args.constraints, this, out_type,
-                                        out_params);
+  if (type_alias->partial_type_ctor->type == nullptr)
+    return nullptr;
+  const auto& aliased_type = type_alias->partial_type_ctor->type;
+  out_params_->from_type_alias = type_alias;
+  std::unique_ptr<Type> constrained_type;
+  aliased_type->ApplyConstraints(resolver_, constraints_, layout_, &constrained_type, out_params_);
+  return typespace_->Intern(std::move(constrained_type));
 }
 
-static bool IsStruct(const Type* boxed_type) {
-  if (!boxed_type || boxed_type->kind != Type::Kind::kIdentifier)
+static bool IsStruct(const Type* type) {
+  if (type->kind != Type::Kind::kIdentifier) {
     return false;
-
-  return static_cast<const IdentifierType*>(boxed_type)->type_decl->kind == Decl::Kind::kStruct;
+  }
+  return static_cast<const IdentifierType*>(type)->type_decl->kind == Decl::Kind::kStruct;
 }
 
-bool BoxTypeTemplate::Create(TypeResolver* resolver, const ParamsAndConstraints& unresolved_args,
-                             std::unique_ptr<Type>* out_type, LayoutInvocation* out_params) const {
-  if (!EnsureNumberOfLayoutParams(unresolved_args, 1))
-    return false;
+const Type* Typespace::Creator::CreateBoxType() {
+  if (!EnsureNumberOfLayoutParams(1))
+    return nullptr;
 
   const Type* boxed_type = nullptr;
-  if (!resolver->ResolveParamAsType(this, unresolved_args.parameters->items[0], &boxed_type))
-    return false;
-  if (!IsStruct(boxed_type))
-    return Fail(ErrCannotBeBoxed, unresolved_args.parameters->items[0]->span, boxed_type->name);
+  if (!resolver_->ResolveParamAsType(layout_, parameters_.items[0], &boxed_type))
+    return nullptr;
+  if (!IsStruct(boxed_type)) {
+    Fail(ErrCannotBeBoxed, parameters_.items[0]->span, boxed_type->name);
+    return nullptr;
+  }
   const auto* inner = static_cast<const IdentifierType*>(boxed_type);
   if (inner->nullability == types::Nullability::kNullable) {
-    return Fail(ErrBoxedTypeCannotBeNullable, unresolved_args.parameters->items[0]->span);
+    Fail(ErrBoxedTypeCannotBeNullable, parameters_.items[0]->span);
+    return nullptr;
   }
   // We disallow specifying the boxed type as nullable in FIDL source but
   // then mark the boxed type as nullable, so that internally it shares the
@@ -338,24 +358,13 @@ bool BoxTypeTemplate::Create(TypeResolver* resolver, const ParamsAndConstraints&
   auto* mutable_inner = const_cast<IdentifierType*>(inner);
   mutable_inner->nullability = types::Nullability::kNullable;
 
-  out_params->boxed_type_resolved = boxed_type;
-  out_params->boxed_type_raw = unresolved_args.parameters->items[0]->AsTypeCtor();
+  out_params_->boxed_type_resolved = boxed_type;
+  out_params_->boxed_type_raw = parameters_.items[0]->AsTypeCtor();
 
-  BoxType type(name_, boxed_type);
-  return type.ApplyConstraints(resolver, *unresolved_args.constraints, this, out_type, out_params);
-}
-
-bool PrimitiveTypeTemplate::Create(TypeResolver* resolver,
-                                   const ParamsAndConstraints& unresolved_args,
-                                   std::unique_ptr<Type>* out_type,
-                                   LayoutInvocation* out_params) const {
-  if (!EnsureNumberOfLayoutParams(unresolved_args, 0))
-    return false;
-
-  // TODO(fxbug.dev/76219): Should instead use the static const types provided
-  // on Typespace, e.g. Typespace::kBoolType.
-  PrimitiveType type(name_, subtype_);
-  return type.ApplyConstraints(resolver, *unresolved_args.constraints, this, out_type, out_params);
+  BoxType type(layout_.target_name(), boxed_type);
+  std::unique_ptr<Type> constrained_type;
+  type.ApplyConstraints(resolver_, constraints_, layout_, &constrained_type, out_params_);
+  return typespace_->Intern(std::move(constrained_type));
 }
 
 }  // namespace fidl::flat

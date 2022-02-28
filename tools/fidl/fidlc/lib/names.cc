@@ -28,7 +28,7 @@ std::string NameSize(uint64_t size) {
 std::string FormatName(const flat::Name& name, std::string_view library_separator,
                        std::string_view name_separator) {
   std::string compiled_name("");
-  if (name.library() != nullptr) {
+  if (name.library() != nullptr && !name.is_intrinsic()) {
     compiled_name += LibraryName(name.library(), library_separator);
     compiled_name += name_separator;
   }
@@ -293,7 +293,7 @@ std::string NameFlatConstant(const flat::Constant* constant) {
     }
     case flat::Constant::Kind::kIdentifier: {
       auto identifier_constant = static_cast<const flat::IdentifierConstant*>(constant);
-      return NameFlatName(identifier_constant->name);
+      return NameFlatName(identifier_constant->reference.target_name());
     }
     case flat::Constant::Kind::kBinaryOperator: {
       return std::string("binary operator");
@@ -419,6 +419,7 @@ std::string NameFlatCType(const flat::Type* type) {
             return "fidl_table_t";
           case flat::Decl::Kind::kProtocol:
             return "zx_handle_t";
+          case flat::Decl::Kind::kBuiltin:
           case flat::Decl::Kind::kResource:
           case flat::Decl::Kind::kService:
           case flat::Decl::Kind::kTypeAlias:

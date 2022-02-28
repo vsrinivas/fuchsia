@@ -76,8 +76,8 @@
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/foreign_type_in_response_used_through_compose/top.test.fidl",
             "line": 9,
-            "column": 25,
-            "length": 6
+            "column": 13,
+            "length": 18
           }
         }
       ],

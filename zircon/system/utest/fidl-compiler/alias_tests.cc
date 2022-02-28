@@ -103,7 +103,7 @@ type Message = struct {
   EXPECT_EQ(invocation.nullability, fidl::types::Nullability::kNonnullable);
 }
 
-TEST(AliasTests, BadPrimitiveTypeShadowing) {
+TEST(AliasTests, BadSelfReferentialAlias) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -134,7 +134,7 @@ TEST(AliasTests, BadMultipleConstraintsOnPrimitive) {
 library test.optionals;
 
 type Bad = struct {
-    opt_num int64:<optional, foo, bar>;
+    opt_num int64:<optional, 1, 2>;
 };
 
 )FIDL");
@@ -200,8 +200,7 @@ alias alias_of_vector = vector;
   ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrWrongNumberOfLayoutParameters,
                                       fidl::ErrWrongNumberOfLayoutParameters);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "vector expected 1 layout parameter(s)");
-  ASSERT_SUBSTR(library.errors()[1]->msg.c_str(),
-                "example/alias_of_vector expected 0 layout parameter(s)");
+  ASSERT_SUBSTR(library.errors()[1]->msg.c_str(), "alias_of_vector expected 0 layout parameter(s)");
 }
 
 TEST(AliasTests, BadVectorBoundedOnDecl) {
@@ -218,7 +217,7 @@ alias alias_of_vector_max_8 = vector:8;
                                       fidl::ErrWrongNumberOfLayoutParameters);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "vector expected 1 layout parameter(s)");
   ASSERT_SUBSTR(library.errors()[1]->msg.c_str(),
-                "example/alias_of_vector_max_8 expected 0 layout parameter(s)");
+                "alias_of_vector_max_8 expected 0 layout parameter(s)");
 }
 
 TEST(AliasTests, GoodVectorBoundedOnUse) {

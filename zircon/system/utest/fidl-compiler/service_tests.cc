@@ -130,7 +130,7 @@ type CannotUseService = struct {
 };
 
 )FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCannotUseService);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrExpectedType);
 }
 
 }  // namespace

@@ -33,7 +33,7 @@ TEST(FlatAstTests, GoodImplicitAssumptions) {
 }
 
 TEST(FlatAstTests, GoodCompareHandles) {
-  auto name_not_important = Name::CreateIntrinsic("ignore");
+  auto name_not_important = Name::CreateIntrinsic(nullptr, "ignore");
   auto rights1Constant = std::make_unique<Constant>(Constant::Kind::kLiteral, SourceSpan());
   rights1Constant->ResolveTo(std::make_unique<HandleRights>(1), nullptr);
   auto rights1Value = static_cast<const HandleRights*>(&rights1Constant->Value());

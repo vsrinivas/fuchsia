@@ -21,7 +21,6 @@ constexpr size_t kMaxTableOrdinals = 64;
 
 void CompileStep::RunImpl() {
   CompileAttributeList(library()->attributes.get());
-
   for (auto& [name, decl] : library()->declarations) {
     CompileDecl(decl);
   }
@@ -172,6 +171,9 @@ void CompileStep::CompileDecl(Decl* decl) {
   }
   Compiling guard(decl, decl_stack_);
   switch (decl->kind) {
+    case Decl::Kind::kBuiltin:
+      // Nothing to do.
+      break;
     case Decl::Kind::kBits:
       CompileBits(static_cast<Bits*>(decl));
       break;
@@ -305,16 +307,20 @@ bool CompileStep::ResolveIdentifierConstant(IdentifierConstant* identifier_const
            "Compiler bug: resolving identifier constant to non-const-able type!");
   }
 
-  auto decl = library()->LookupDeclByName(identifier_constant->name.memberless_key());
-  if (!decl)
-    return false;
-  CompileDecl(decl);
+  Decl* parent = identifier_constant->reference.target_or_parent_decl();
+  Element* target = identifier_constant->reference.target();
+  CompileDecl(parent);
 
   const Type* const_type = nullptr;
   const ConstantValue* const_val = nullptr;
-  switch (decl->kind) {
-    case Decl::Kind::kConst: {
-      auto const_decl = static_cast<Const*>(decl);
+  switch (target->kind) {
+    case Element::Kind::kBuiltin: {
+      // If we get here, we're trying to resolve a builtin constraint like
+      // `optional` when a regular constant was expected.
+      return false;
+    }
+    case Element::Kind::kConst: {
+      auto const_decl = static_cast<Const*>(target);
       if (!const_decl->value->IsResolved()) {
         return false;
       }
@@ -322,49 +328,30 @@ bool CompileStep::ResolveIdentifierConstant(IdentifierConstant* identifier_const
       const_val = &const_decl->value->Value();
       break;
     }
-    case Decl::Kind::kEnum: {
-      // If there is no member name, fallthrough to default.
-      if (auto member_name = identifier_constant->name.member_name(); member_name) {
-        auto enum_decl = static_cast<Enum*>(decl);
-        const_type = enum_decl->subtype_ctor->type;
-        for (auto& member : enum_decl->members) {
-          if (member.name.data() == member_name) {
-            if (!member.value->IsResolved()) {
-              return false;
-            }
-            const_val = &member.value->Value();
-          }
-        }
-        if (!const_val) {
-          return Fail(ErrUnknownEnumMember, identifier_constant->name.span().value(), *member_name);
-        }
-        break;
+    case Element::Kind::kEnumMember: {
+      assert(parent->kind == Decl::Kind::kEnum);
+      const_type = static_cast<Enum*>(parent)->subtype_ctor->type;
+      auto member = static_cast<Enum::Member*>(target);
+      if (!member->value->IsResolved()) {
+        return false;
       }
-      [[fallthrough]];
+      const_val = &member->value->Value();
+      break;
     }
-    case Decl::Kind::kBits: {
-      // If there is no member name, fallthrough to default.
-      if (auto member_name = identifier_constant->name.member_name(); member_name) {
-        auto bits_decl = static_cast<Bits*>(decl);
-        const_type = bits_decl->subtype_ctor->type;
-        for (auto& member : bits_decl->members) {
-          if (member.name.data() == member_name) {
-            if (!member.value->IsResolved()) {
-              return false;
-            }
-            const_val = &member.value->Value();
-          }
-        }
-        if (!const_val) {
-          return Fail(ErrUnknownBitsMember, identifier_constant->name.span().value(), *member_name);
-        }
-        break;
+    case Element::Kind::kBitsMember: {
+      assert(parent->kind == Decl::Kind::kBits);
+      const_type = static_cast<Bits*>(parent)->subtype_ctor->type;
+      auto member = static_cast<Bits::Member*>(target);
+      if (!member->value->IsResolved()) {
+        return false;
       }
-      [[fallthrough]];
+      const_val = &member->value->Value();
+      break;
     }
     default: {
-      return Fail(ErrExpectedValueButGotType, identifier_constant->name.span().value(),
-                  identifier_constant->name);
+      return Fail(ErrExpectedValueButGotType, identifier_constant->reference.span().value(),
+                  identifier_constant->reference.target_name());
+      break;
     }
   }
 
@@ -421,7 +408,7 @@ bool CompileStep::ResolveIdentifierConstant(IdentifierConstant* identifier_const
                     identifier_type->type_decl->name, type_name);
       };
 
-      switch (decl->kind) {
+      switch (parent->kind) {
         case Decl::Kind::kConst: {
           if (const_type->name != identifier_type->type_decl->name)
             return fail_with_mismatched_type(const_type->name);
@@ -429,8 +416,8 @@ bool CompileStep::ResolveIdentifierConstant(IdentifierConstant* identifier_const
         }
         case Decl::Kind::kBits:
         case Decl::Kind::kEnum: {
-          if (decl->name != identifier_type->type_decl->name)
-            return fail_with_mismatched_type(decl->name);
+          if (parent->name != identifier_type->type_decl->name)
+            return fail_with_mismatched_type(parent->name);
           break;
         }
         default: {
@@ -451,7 +438,7 @@ bool CompileStep::ResolveIdentifierConstant(IdentifierConstant* identifier_const
   return true;
 
 fail_cannot_convert:
-  return Fail(ErrTypeCannotBeConvertedToType, identifier_constant->name.span().value(),
+  return Fail(ErrTypeCannotBeConvertedToType, identifier_constant->reference.span().value(),
               identifier_constant, const_type, type);
 }
 
@@ -469,19 +456,19 @@ bool CompileStep::ResolveLiteralConstant(LiteralConstant* literal_constant,
           static_cast<raw::DocCommentLiteral*>(literal_constant->literal.get());
       literal_constant->ResolveTo(
           std::make_unique<DocCommentConstantValue>(doc_comment_literal->span().data()),
-          &Typespace::kUnboundedStringType);
+          typespace()->GetUnboundedStringType());
       return true;
     }
     case raw::Literal::Kind::kString: {
       literal_constant->ResolveTo(
           std::make_unique<StringConstantValue>(literal_constant->literal->span().data()),
-          &Typespace::kUnboundedStringType);
+          typespace()->GetUnboundedStringType());
       return true;
     }
     case raw::Literal::Kind::kBool: {
       auto bool_literal = static_cast<raw::BoolLiteral*>(literal_constant->literal.get());
       literal_constant->ResolveTo(std::make_unique<BoolConstantValue>(bool_literal->value),
-                                  &Typespace::kBoolType);
+                                  typespace()->GetPrimitiveType(types::PrimitiveSubtype::kBool));
       return true;
     }
     case raw::Literal::Kind::kNumeric: {
@@ -547,17 +534,14 @@ const Type* CompileStep::InferType(Constant* constant) {
         case raw::Literal::Kind::kString: {
           auto string_literal = static_cast<const raw::StringLiteral*>(literal);
           auto inferred_size = utils::string_literal_length(string_literal->span().data());
-          auto inferred_type = std::make_unique<StringType>(Typespace::kUnboundedStringType.name,
-                                                            typespace()->InternSize(inferred_size),
-                                                            types::Nullability::kNonnullable);
-          return typespace()->Intern(std::move(inferred_type));
+          return typespace()->GetStringType(inferred_size);
         }
         case raw::Literal::Kind::kNumeric:
-          return &Typespace::kUntypedNumericType;
+          return typespace()->GetUntypedNumericType();
         case raw::Literal::Kind::kBool:
-          return &Typespace::kBoolType;
+          return typespace()->GetPrimitiveType(types::PrimitiveSubtype::kBool);
         case raw::Literal::Kind::kDocComment:
-          return &Typespace::kUnboundedStringType;
+          return typespace()->GetUnboundedStringType();
       }
       return nullptr;
     }
@@ -578,16 +562,12 @@ bool CompileStep::ResolveAsOptional(Constant* constant) {
   if (constant->kind != Constant::Kind::kIdentifier)
     return false;
 
-  // This refers to the `optional` constraint only if it is "optional" AND
-  // it is not shadowed by a previous definition.
-  // Note that as we improve scoping rules, we would need to allow `fidl.optional`
-  // to be the FQN for the `optional` constant.
   auto identifier_constant = static_cast<IdentifierConstant*>(constant);
-  auto decl = library()->LookupDeclByName(identifier_constant->name.memberless_key());
-  if (decl)
+  auto decl = identifier_constant->reference.target();
+  if (decl->kind != Element::Kind::kBuiltin)
     return false;
-
-  return identifier_constant->name.decl_name() == "optional";
+  auto builtin = static_cast<Builtin*>(decl);
+  return builtin->kind == Builtin::Kind::kOptional;
 }
 
 void CompileStep::CompileAttributeList(AttributeList* attributes) {
@@ -633,8 +613,8 @@ void CompileStep::CompileAttribute(Attribute* attribute, bool early) {
     }
   }
 
-  const AttributeSchema& schema = all_libraries()->RetrieveAttributeSchema(attribute,
-                                                                           /*warn_on_typo=*/true);
+  const AttributeSchema& schema =
+      all_libraries()->RetrieveAttributeSchema(attribute, /*warn_on_typo=*/true);
   if (early) {
     assert(schema.CanCompileEarly() && "attribute is not allowed to be compiled early");
   }
@@ -652,12 +632,7 @@ const Type* CompileStep::UnderlyingType(const Type* type) {
     return type;
   }
   auto identifier_type = static_cast<const IdentifierType*>(type);
-  Decl* decl = library()->LookupDeclByName(identifier_type->name);
-  // This is only reachable via ResolveOrOperatorConstant, which is always
-  // called from ResolveConstant only after resolving the left and right sides.
-  // That process should force declaration of the constant, which should fail
-  // before this is reached if the type can't be resolved.
-  assert(decl);
+  Decl* decl = identifier_type->type_decl;
   CompileDecl(decl);
   switch (decl->kind) {
     case Decl::Kind::kBits:
@@ -935,17 +910,13 @@ void CompileStep::CompileProtocol(Protocol* protocol_declaration) {
   auto CheckScopes = [this, &protocol_declaration, &method_scope](const Protocol* protocol,
                                                                   auto Visitor) -> void {
     for (const auto& composed_protocol : protocol->composed_protocols) {
-      auto name = composed_protocol.name;
-      auto decl = library()->LookupDeclByName(name);
-      // TODO(fxbug.dev/7926): Special handling here should not be required, we
-      // should first rely on creating the types representing composed
-      // protocols.
-      if (!decl || decl->kind != Decl::Kind::kProtocol) {
+      auto target = composed_protocol.reference.target();
+      if (target->kind != Element::Kind::kProtocol) {
         // No need to report an error here since it was already done by the loop
         // after the definition of CheckScopes (before calling CheckScopes).
         continue;
       }
-      auto composed_protocol_declaration = static_cast<const Protocol*>(decl);
+      auto composed_protocol_declaration = static_cast<const Protocol*>(target);
       auto span = composed_protocol_declaration->name.span();
       assert(span);
       if (method_scope.protocols.Insert(composed_protocol_declaration, span.value()).ok()) {
@@ -1002,21 +973,18 @@ void CompileStep::CompileProtocol(Protocol* protocol_declaration) {
   Scope<const Protocol*> scope;
   for (const auto& composed_protocol : protocol_declaration->composed_protocols) {
     CompileAttributeList(composed_protocol.attributes.get());
-    auto span = composed_protocol.name.span().value();
-    auto decl = library()->LookupDeclByName(composed_protocol.name);
-    if (!decl) {
-      Fail(ErrUnknownType, span, composed_protocol.name);
-      continue;
-    }
-    if (decl->kind != Decl::Kind::kProtocol) {
+    auto target = composed_protocol.reference.target();
+    auto span = composed_protocol.reference.span().value();
+    if (target->kind != Element::Kind::kProtocol) {
       Fail(ErrComposingNonProtocol, span);
       continue;
     }
-    auto result = scope.Insert(static_cast<const Protocol*>(decl), span);
+    auto target_protocol = static_cast<Protocol*>(target);
+    auto result = scope.Insert(target_protocol, span);
     if (!result.ok()) {
       Fail(ErrProtocolComposedMultipleTimes, span, result.previous_occurrence());
     }
-    CompileDecl(decl);
+    CompileDecl(target_protocol);
   }
   for (auto& method : protocol_declaration->methods) {
     CompileAttributeList(method.attributes.get());
@@ -1067,14 +1035,14 @@ void CompileStep::CompileProtocol(Protocol* protocol_declaration) {
             break;
           }
           default: {
-            Fail(ErrInvalidParameterListType, method_name, decl);
+            Fail(ErrInvalidParameterListDecl, method_name, decl);
             break;
           }
         }
         break;
       }
       default: {
-        Fail(ErrInvalidParameterListType, method_name, decl);
+        Fail(ErrInvalidParameterListDecl, method_name, decl);
         break;
       }
     }
@@ -1101,49 +1069,50 @@ void CompileStep::CompileProtocol(Protocol* protocol_declaration) {
   };
 
   for (auto& method : protocol_declaration->methods) {
-    if (method.maybe_request != nullptr) {
-      const Name name = method.maybe_request->name;
+    if (method.maybe_request) {
       CompileTypeConstructor(method.maybe_request.get());
-      Decl* decl = library()->LookupDeclByName(name);
-      if (!method.maybe_request->type || !decl) {
-        Fail(ErrUnknownType, name.span().value(), name);
-        continue;
-      }
-      CompileDecl(decl);
-      CheckNoDefaultMembers(decl);
-      CheckPayloadDeclKind(method.name, decl, false);
-    }
-    if (method.maybe_response != nullptr) {
-      const Name name = method.maybe_response->name;
-      CompileTypeConstructor(method.maybe_response.get());
-      Decl* decl = library()->LookupDeclByName(name);
-      if (!method.maybe_response->type || !decl) {
-        Fail(ErrUnknownType, name.span().value(), name);
-        continue;
-      }
-      CompileDecl(decl);
-
-      if (method.has_error) {
-        assert(method.maybe_response->type->kind == Type::Kind::kIdentifier);
-        auto response_id = static_cast<const flat::IdentifierType*>(method.maybe_response->type);
-
-        assert(response_id->type_decl->kind == Decl::Kind::kStruct);
-        auto response_struct = static_cast<const flat::Struct*>(response_id->type_decl);
-        const auto* result_union_type =
-            static_cast<const flat::IdentifierType*>(response_struct->members[0].type_ctor->type);
-
-        assert(result_union_type->type_decl->kind == Decl::Kind::kUnion);
-        const auto* result_union = static_cast<const flat::Union*>(result_union_type->type_decl);
-        const auto* success_variant_type = static_cast<const flat::IdentifierType*>(
-            result_union->members[0].maybe_used->type_ctor->type);
-
-        if (success_variant_type != nullptr) {
-          CheckNoDefaultMembers(success_variant_type->type_decl);
-          CheckPayloadDeclKind(method.name, success_variant_type->type_decl, true);
+      if (auto type = method.maybe_request->type) {
+        if (type->kind != Type::Kind::kIdentifier) {
+          Fail(ErrInvalidParameterListType, method.name, type);
+        } else {
+          assert(type->kind == Type::Kind::kIdentifier);
+          auto decl = static_cast<const flat::IdentifierType*>(type)->type_decl;
+          CompileDecl(decl);
+          CheckNoDefaultMembers(decl);
+          CheckPayloadDeclKind(method.name, decl, false);
         }
-      } else {
-        CheckNoDefaultMembers(decl);
-        CheckPayloadDeclKind(method.name, decl, false);
+      }
+    }
+    if (method.maybe_response) {
+      CompileTypeConstructor(method.maybe_response.get());
+      if (auto type = method.maybe_response->type) {
+        if (type->kind != Type::Kind::kIdentifier) {
+          Fail(ErrInvalidParameterListType, method.name, type);
+        } else {
+          assert(type->kind == Type::Kind::kIdentifier);
+          auto decl = static_cast<const flat::IdentifierType*>(type)->type_decl;
+          CompileDecl(decl);
+          if (method.has_error) {
+            assert(decl->kind == Decl::Kind::kStruct);
+            auto response_struct = static_cast<const flat::Struct*>(decl);
+            const auto* result_union_type = static_cast<const flat::IdentifierType*>(
+                response_struct->members[0].type_ctor->type);
+
+            assert(result_union_type->type_decl->kind == Decl::Kind::kUnion);
+            const auto* result_union =
+                static_cast<const flat::Union*>(result_union_type->type_decl);
+            const auto* success_variant_type = static_cast<const flat::IdentifierType*>(
+                result_union->members[0].maybe_used->type_ctor->type);
+
+            if (success_variant_type) {
+              CheckNoDefaultMembers(success_variant_type->type_decl);
+              CheckPayloadDeclKind(method.name, success_variant_type->type_decl, true);
+            }
+          } else {
+            CheckNoDefaultMembers(decl);
+            CheckPayloadDeclKind(method.name, decl, false);
+          }
+        }
       }
     }
   }
@@ -1328,21 +1297,6 @@ void CompileStep::CompileUnion(Union* union_declaration) {
 
 void CompileStep::CompileTypeAlias(TypeAlias* type_alias) {
   CompileAttributeList(type_alias->attributes.get());
-
-  if (type_alias->partial_type_ctor->name == type_alias->name) {
-    // fidlc's current semantics for cases like `alias foo = foo;` is to
-    // include the LHS in the scope while compiling the RHS. Note that because
-    // of an interaction with a fidlc scoping bug that prevents shadowing builtins,
-    // this means that `alias Recursive = Recursive;` will fail with an includes
-    // cycle error, but e.g. `alias uint32 = uint32;` won't because the user
-    // defined `uint32` fails to shadow the builtin which means that we successfully
-    // resolve the RHS. To avoid inconsistent semantics, we need to manually
-    // catch this case and fail.
-    std::vector<const Decl*> cycle = {static_cast<const Decl*>(type_alias),
-                                      static_cast<const Decl*>(type_alias)};
-    Fail(ErrIncludeCycle, type_alias->name.span().value(), cycle);
-    return;
-  }
   CompileTypeConstructor(type_alias->partial_type_ctor.get());
 }
 
@@ -1350,44 +1304,18 @@ void CompileStep::CompileTypeConstructor(TypeConstructor* type_ctor) {
   if (type_ctor->type != nullptr) {
     return;
   }
-  TypeResolver resolver(this);
-  if (!typespace()->Create(&resolver, type_ctor->name, type_ctor->parameters,
-                           type_ctor->constraints, &type_ctor->type, &type_ctor->resolved_params,
-                           type_ctor->span)) {
+  TypeResolver type_resolver(this);
+  type_ctor->type = typespace()->Create(&type_resolver, type_ctor->layout, *type_ctor->parameters,
+                                        *type_ctor->constraints, &type_ctor->resolved_params);
+  if (!type_ctor->type) {
     return;
   }
-
-  // postcondition: compilation sets the Type of the TypeConstructor
   assert(type_ctor->type && "type constructors' type not resolved after compilation");
-  VerifyTypeCategory(type_ctor->type, type_ctor->name.span(), AllowedCategories::kTypeOnly);
-}
-
-bool CompileStep::VerifyTypeCategory(const Type* type, std::optional<SourceSpan> span,
-                                     AllowedCategories category) {
-  assert(type && "CompileTypeConstructor did not set Type");
-  if (type->kind != Type::Kind::kIdentifier) {
-    // we assume that all non-identifier types (i.e. builtins) are actually
-    // types (and not e.g. protocols or services).
-    return category == AllowedCategories::kProtocolOnly ? Fail(ErrCannotUseType, span.value())
-                                                        : true;
+  const auto& src_span = type_ctor->layout.span();
+  const auto& dest_name = type_ctor->type->name;
+  if (src_span.has_value() && dest_name.as_anonymous()) {
+    Fail(ErrAnonymousNameReference, src_span.value(), dest_name);
   }
-
-  auto identifier_type = static_cast<const IdentifierType*>(type);
-  switch (identifier_type->type_decl->kind) {
-    // services are never allowed in any context
-    case Decl::Kind::kService:
-      return Fail(ErrCannotUseService, span.value());
-      break;
-    case Decl::Kind::kProtocol:
-      if (category == AllowedCategories::kTypeOnly)
-        return Fail(ErrCannotUseProtocol, span.value());
-      break;
-    default:
-      if (category == AllowedCategories::kProtocolOnly)
-        return Fail(ErrCannotUseType, span.value());
-      break;
-  }
-  return true;
 }
 
 bool CompileStep::ResolveHandleRightsConstant(Resource* resource, Constant* constant,
@@ -1396,84 +1324,67 @@ bool CompileStep::ResolveHandleRightsConstant(Resource* resource, Constant* cons
   if (!rights_property) {
     return false;
   }
-
-  Decl* rights_decl = library()->LookupDeclByName(rights_property->type_ctor->name);
-  if (!rights_decl || rights_decl->kind != Decl::Kind::kBits) {
-    return false;
-  }
-
   CompileTypeConstructor(rights_property->type_ctor.get());
   const Type* rights_type = rights_property->type_ctor->type;
   if (!rights_type) {
     return false;
   }
-
-  if (!ResolveConstant(constant, rights_type))
+  const Type* underlying = UnderlyingType(rights_type);
+  if (!(underlying->kind == Type::Kind::kPrimitive &&
+        static_cast<const PrimitiveType*>(underlying)->subtype ==
+            types::PrimitiveSubtype::kUint32)) {
     return false;
-
-  if (out_rights)
+  }
+  if (!ResolveConstant(constant, rights_type)) {
+    return false;
+  }
+  if (out_rights) {
     *out_rights = static_cast<const HandleRights*>(&constant->Value());
+  }
   return true;
 }
 
 bool CompileStep::ResolveHandleSubtypeIdentifier(Resource* resource, Constant* constant,
                                                  uint32_t* out_obj_type) {
-  // We only support an extremely limited form of resource suitable for
-  // handles here, where it must be:
-  // - derived from uint32
-  // - have a single properties element
-  // - the single property element must be a reference to an enum
-  // - the single property must be named "subtype".
-  if (constant->kind != Constant::Kind::kIdentifier) {
-    return false;
-  }
-  auto identifier_constant = static_cast<IdentifierConstant*>(constant);
-  const Name& handle_subtype_identifier = identifier_constant->name;
-
   auto subtype_property = resource->LookupProperty("subtype");
   if (!subtype_property) {
     return false;
   }
-
-  Decl* subtype_decl = library()->LookupDeclByName(subtype_property->type_ctor->name);
-  if (!subtype_decl || subtype_decl->kind != Decl::Kind::kEnum) {
-    return false;
-  }
-
   CompileTypeConstructor(subtype_property->type_ctor.get());
   const Type* subtype_type = subtype_property->type_ctor->type;
   if (!subtype_type) {
     return false;
   }
-
-  auto* subtype_enum = static_cast<Enum*>(subtype_decl);
-  for (const auto& member : subtype_enum->members) {
-    if (member.name.data() == handle_subtype_identifier.span()->data()) {
-      if (!ResolveConstant(member.value.get(), subtype_type)) {
-        return false;
-      }
-      const flat::ConstantValue& value = member.value->Value();
-      auto obj_type = static_cast<uint32_t>(
-          reinterpret_cast<const flat::NumericConstantValue<uint32_t>&>(value));
-      *out_obj_type = obj_type;
-      return true;
-    }
+  const Type* underlying = UnderlyingType(subtype_type);
+  if (!(underlying->kind == Type::Kind::kPrimitive &&
+        static_cast<const PrimitiveType*>(underlying)->subtype ==
+            types::PrimitiveSubtype::kUint32)) {
+    return false;
   }
-
-  return false;
+  if (!ResolveConstant(constant, subtype_type)) {
+    return false;
+  }
+  if (out_obj_type) {
+    *out_obj_type = static_cast<const HandleSubtype*>(&constant->Value())->value;
+  }
+  return true;
 }
 
 bool CompileStep::ResolveSizeBound(Constant* size_constant, const Size** out_size) {
-  if (!ResolveConstant(size_constant, &Typespace::kUint32Type)) {
-    if (size_constant->kind == Constant::Kind::kIdentifier) {
-      auto name = static_cast<IdentifierConstant*>(size_constant)->name;
-      if (name.library() == library() && name.decl_name() == "MAX" && !name.member_name()) {
-        size_constant->ResolveTo(std::make_unique<Size>(Size::Max()), &Typespace::kUint32Type);
-      }
+  if (size_constant->kind == Constant::Kind::kIdentifier) {
+    auto identifier_constant = static_cast<IdentifierConstant*>(size_constant);
+    auto target = identifier_constant->reference.target();
+    if (target->kind == Element::Kind::kBuiltin &&
+        static_cast<Builtin*>(target)->kind == Builtin::Kind::kMax) {
+      size_constant->ResolveTo(std::make_unique<Size>(Size::Max()),
+                               typespace()->GetPrimitiveType(types::PrimitiveSubtype::kUint32));
     }
   }
   if (!size_constant->IsResolved()) {
-    return false;
+    if (!ResolveConstant(size_constant,
+                         typespace()->GetPrimitiveType(types::PrimitiveSubtype::kUint32))) {
+      return false;
+    }
   }
   if (out_size) {
     *out_size = static_cast<const Size*>(&size_constant->Value());

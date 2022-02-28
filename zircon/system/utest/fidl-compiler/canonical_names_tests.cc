@@ -568,7 +568,7 @@ TEST(CanonicalNamesTests, BadInconsistentTypeSpelling) {
       ASSERT_FALSE(library.Compile(), "%s", fidl.c_str());
       const auto& errors = library.errors();
       ASSERT_EQ(errors.size(), 1, "%s", fidl.c_str());
-      ASSERT_ERR(errors[0], fidl::ErrUnknownType, "%s", fidl.c_str());
+      ASSERT_ERR(errors[0], fidl::ErrNameNotFound, "%s", fidl.c_str());
       ASSERT_SUBSTR(errors[0]->msg.c_str(), use_name, "%s", fidl.c_str());
     }
   }
@@ -588,7 +588,7 @@ TEST(CanonicalNamesTests, BadInconsistentConstSpelling) {
       << "const EXAMPLE bool = " << use_name << ";\n";
     const auto fidl = s.str();
     TestLibrary library(fidl);
-    ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCannotResolveConstantValue);
+    ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrNameNotFound);
   }
 }
 
@@ -608,10 +608,8 @@ TEST(CanonicalNamesTests, BadInconsistentEnumMemberSpelling) {
     TestLibrary library(fidl);
     ASSERT_FALSE(library.Compile(), "%s", fidl.c_str());
     const auto& errors = library.errors();
-    ASSERT_EQ(errors.size(), 2, "%s", fidl.c_str());
-    ASSERT_ERR(errors[0], fidl::ErrUnknownEnumMember, "%s", fidl.c_str());
-    ASSERT_SUBSTR(errors[0]->msg.c_str(), use_name, "%s", fidl.c_str());
-    ASSERT_ERR(errors[1], fidl::ErrCannotResolveConstantValue, "%s", fidl.c_str());
+    ASSERT_EQ(errors.size(), 1, "%s", fidl.c_str());
+    ASSERT_ERR(errors[0], fidl::ErrMemberNotFound, "%s", fidl.c_str());
   }
 }
 
@@ -631,10 +629,8 @@ TEST(CanonicalNamesTests, BadInconsistentBitsMemberSpelling) {
     TestLibrary library(fidl);
     ASSERT_FALSE(library.Compile(), "%s", fidl.c_str());
     const auto& errors = library.errors();
-    ASSERT_EQ(errors.size(), 2, "%s", fidl.c_str());
-    ASSERT_ERR(errors[0], fidl::ErrUnknownBitsMember, "%s", fidl.c_str());
-    ASSERT_SUBSTR(errors[0]->msg.c_str(), use_name, "%s", fidl.c_str());
-    ASSERT_ERR(errors[1], fidl::ErrCannotResolveConstantValue, "%s", fidl.c_str());
+    ASSERT_EQ(errors.size(), 1, "%s", fidl.c_str());
+    ASSERT_ERR(errors[0], fidl::ErrMemberNotFound, "%s", fidl.c_str());
   }
 }
 

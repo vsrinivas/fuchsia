@@ -1540,22 +1540,22 @@ TEST(AttributesTests, GoodReferencedTypesWithSchema) {
   TestLibrary library(R"FIDL(
 library fidl.test;
 
-const string string = "foo";
-const bool bool = true;
-const int8 int8 = -1;
-const int16 int16 = -2;
-const int32 int32 = -3;
-type int64 = enum : int64 {
+const string fidl.string = "foo";
+const bool fidl.bool = true;
+const int8 fidl.int8 = -1;
+const int16 fidl.int16 = -2;
+const int32 fidl.int32 = -3;
+type int64 = enum : fidl.int64 {
     MEMBER = -4;
 };
-const uint8 uint8 = 1;
-const uint16 uint16 = 2;
-const uint32 uint32 = 3;
-type uint64 = bits : uint64 {
+const uint8 fidl.uint8 = 1;
+const uint16 fidl.uint16 = 2;
+const uint32 fidl.uint32 = 3;
+type uint64 = bits : fidl.uint64 {
     MEMBER = 4;
 };
-const float32 float32 = 1.2;
-const float64 float64 = -3.4;
+const float32 fidl.float32 = 1.2;
+const float64 fidl.float64 = -3.4;
 
 @attr(
         string=string,
@@ -1869,7 +1869,7 @@ library example;
 type MyStruct = struct {};
 
 )FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCouldNotResolveAttributeArg);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrNameNotFound);
 }
 
 TEST(AttributesTests, BadReferencesNonexistentConstWithSchema) {
@@ -1882,7 +1882,7 @@ type MyStruct = struct {};
 )FIDL");
   library.AddAttributeSchema("foo").AddArg(
       "value", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kBool));
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCouldNotResolveAttributeArg);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrNameNotFound);
 }
 
 TEST(AttributesTests, BadReferencesInvalidConstWithoutSchema) {

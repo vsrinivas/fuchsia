@@ -12,8 +12,7 @@ namespace fidl::flat {
 // We run a separate ConsumeStep for each file in the library.
 class ConsumeStep : public Compiler::Step {
  public:
-  explicit ConsumeStep(Compiler* compiler, std::unique_ptr<raw::File> file)
-      : Step(compiler), file_(std::move(file)) {}
+  explicit ConsumeStep(Compiler* compiler, std::unique_ptr<raw::File> file);
 
  private:
   void RunImpl() override;
@@ -72,9 +71,6 @@ class ConsumeStep : public Compiler::Step {
   // Sets the naming context's generated name override to the @generated_name
   // attribute's value if present, otherwise does nothing.
   void MaybeOverrideName(AttributeList& attributes, NamingContext* context);
-  // Attempts to resolve the compound identifier to a name within the context of
-  // a library. On failure, reports an errro and returns null.
-  std::optional<Name> CompileCompoundIdentifier(const raw::CompoundIdentifier* compound_identifier);
   bool CreateMethodResult(const std::shared_ptr<NamingContext>& success_variant_context,
                           const std::shared_ptr<NamingContext>& err_variant_context,
                           SourceSpan response_span, raw::ProtocolMethod* method,
@@ -83,8 +79,11 @@ class ConsumeStep : public Compiler::Step {
 
   std::unique_ptr<raw::File> file_;
 
-  // This map contains a subset of library_->declarations_ (no imported decls)
-  // keyed by `utils::canonicalize(name.decl_name())` rather than `name.key()`.
+  // Decl for default underlying type to use for bits and enums.
+  Decl* default_underlying_type;
+
+  // This map contains the same decls as library()->declarations keyed by
+  // `utils::canonicalize(name.decl_name())` rather than `name.key()`.
   std::map<std::string, const Decl*> declarations_by_canonical_name_;
 };
 

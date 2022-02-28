@@ -10,17 +10,20 @@
 
 namespace fidl::flat {
 
+// ZX_HANDLE_SAME_RIGHTS
+const HandleRights HandleType::kSameRights = HandleRights(0x80000000);
+
 bool ArrayType::ApplyConstraints(TypeResolver* resolver, const TypeConstraints& constraints,
-                                 const TypeTemplate* layout, std::unique_ptr<Type>* out_type,
+                                 const Reference& layout, std::unique_ptr<Type>* out_type,
                                  LayoutInvocation* out_params) const {
   size_t num_constraints = constraints.items.size();
   // assume that a lone constraint was an attempt at specifying `optional` and provide a more
   // specific error
   // TODO(fxbug.dev/75112): actually try to compile the optional constraint
   if (num_constraints == 1)
-    return resolver->Fail(ErrCannotBeNullable, constraints.items[0]->span, layout);
+    return resolver->Fail(ErrCannotBeNullable, constraints.items[0]->span, layout.target_name());
   if (num_constraints > 1)
-    return resolver->Fail(ErrTooManyConstraints, constraints.span.value(), layout, 0,
+    return resolver->Fail(ErrTooManyConstraints, constraints.span.value(), layout.target_name(), 0,
                           num_constraints);
   *out_type = std::make_unique<ArrayType>(name, element_type, element_count);
   return true;
@@ -30,7 +33,7 @@ const Size VectorBaseType::kMaxSize = Size::Max();
 
 bool VectorBaseType::ResolveSizeAndNullability(TypeResolver* resolver,
                                                const TypeConstraints& constraints,
-                                               const TypeTemplate* layout,
+                                               const Reference& layout,
                                                LayoutInvocation* out_params) {
   size_t num_constraints = constraints.items.size();
   if (num_constraints == 1) {
@@ -39,7 +42,8 @@ bool VectorBaseType::ResolveSizeAndNullability(TypeResolver* resolver,
             constraints.items[0].get(),
             {TypeResolver::ConstraintKind::kSize, TypeResolver::ConstraintKind::kNullability},
             nullptr /* resource_decl */, &resolved))
-      return resolver->Fail(ErrUnexpectedConstraint, constraints.items[0]->span, layout);
+      return resolver->Fail(ErrUnexpectedConstraint, constraints.items[0]->span,
+                            layout.target_name());
     switch (resolved.kind) {
       case TypeResolver::ConstraintKind::kSize:
         out_params->size_resolved = resolved.value.size;
@@ -57,18 +61,19 @@ bool VectorBaseType::ResolveSizeAndNullability(TypeResolver* resolver,
       return resolver->Fail(ErrCouldNotParseSizeBound, constraints.items[0]->span);
     out_params->size_raw = constraints.items[0].get();
     if (!resolver->ResolveAsOptional(constraints.items[1].get())) {
-      return resolver->Fail(ErrUnexpectedConstraint, constraints.items[1]->span, layout);
+      return resolver->Fail(ErrUnexpectedConstraint, constraints.items[1]->span,
+                            layout.target_name());
     }
     out_params->nullability = types::Nullability::kNullable;
   } else if (num_constraints >= 3) {
-    return resolver->Fail(ErrTooManyConstraints, constraints.span.value(), layout, 2,
+    return resolver->Fail(ErrTooManyConstraints, constraints.span.value(), layout.target_name(), 2,
                           num_constraints);
   }
   return true;
 }
 
 bool VectorType::ApplyConstraints(TypeResolver* resolver, const TypeConstraints& constraints,
-                                  const TypeTemplate* layout, std::unique_ptr<Type>* out_type,
+                                  const Reference& layout, std::unique_ptr<Type>* out_type,
                                   LayoutInvocation* out_params) const {
   if (!ResolveSizeAndNullability(resolver, constraints, layout, out_params))
     return false;
@@ -76,13 +81,14 @@ bool VectorType::ApplyConstraints(TypeResolver* resolver, const TypeConstraints&
   bool is_already_nullable = nullability == types::Nullability::kNullable;
   bool is_nullability_applied = out_params->nullability == types::Nullability::kNullable;
   if (is_already_nullable && is_nullability_applied)
-    return resolver->Fail(ErrCannotIndicateNullabilityTwice, constraints.span.value(), layout);
+    return resolver->Fail(ErrCannotIndicateNullabilityTwice, constraints.span.value(),
+                          layout.target_name());
   auto merged_nullability = is_already_nullable || is_nullability_applied
                                 ? types::Nullability::kNullable
                                 : types::Nullability::kNonnullable;
 
   if (element_count != &kMaxSize && out_params->size_resolved)
-    return resolver->Fail(ErrCannotBoundTwice, constraints.span.value(), layout);
+    return resolver->Fail(ErrCannotBoundTwice, constraints.span.value(), layout.target_name());
   auto merged_size = out_params->size_resolved ? out_params->size_resolved : element_count;
 
   *out_type = std::make_unique<VectorType>(name, element_type, merged_size, merged_nullability);
@@ -90,7 +96,7 @@ bool VectorType::ApplyConstraints(TypeResolver* resolver, const TypeConstraints&
 }
 
 bool StringType::ApplyConstraints(TypeResolver* resolver, const TypeConstraints& constraints,
-                                  const TypeTemplate* layout, std::unique_ptr<Type>* out_type,
+                                  const Reference& layout, std::unique_ptr<Type>* out_type,
                                   LayoutInvocation* out_params) const {
   if (!ResolveSizeAndNullability(resolver, constraints, layout, out_params))
     return false;
@@ -98,13 +104,14 @@ bool StringType::ApplyConstraints(TypeResolver* resolver, const TypeConstraints&
   bool is_already_nullable = nullability == types::Nullability::kNullable;
   bool is_nullability_applied = out_params->nullability == types::Nullability::kNullable;
   if (is_already_nullable && is_nullability_applied)
-    return resolver->Fail(ErrCannotIndicateNullabilityTwice, constraints.span.value(), layout);
+    return resolver->Fail(ErrCannotIndicateNullabilityTwice, constraints.span.value(),
+                          layout.target_name());
   auto merged_nullability = is_already_nullable || is_nullability_applied
                                 ? types::Nullability::kNullable
                                 : types::Nullability::kNonnullable;
 
   if (max_size != &kMaxSize && out_params->size_resolved)
-    return resolver->Fail(ErrCannotBoundTwice, constraints.span.value(), layout);
+    return resolver->Fail(ErrCannotBoundTwice, constraints.span.value(), layout.target_name());
   auto merged_size = out_params->size_resolved ? out_params->size_resolved : max_size;
 
   *out_type = std::make_unique<StringType>(name, merged_size, merged_nullability);
@@ -112,7 +119,7 @@ bool StringType::ApplyConstraints(TypeResolver* resolver, const TypeConstraints&
 }
 
 bool HandleType::ApplyConstraints(TypeResolver* resolver, const TypeConstraints& constraints,
-                                  const TypeTemplate* layout, std::unique_ptr<Type>* out_type,
+                                  const Reference& layout, std::unique_ptr<Type>* out_type,
                                   LayoutInvocation* out_params) const {
   assert(resource_decl);
 
@@ -131,7 +138,7 @@ bool HandleType::ApplyConstraints(TypeResolver* resolver, const TypeConstraints&
                                        {TypeResolver::ConstraintKind::kHandleSubtype,
                                         TypeResolver::ConstraintKind::kNullability},
                                        resource_decl, &resolved))
-      return resolver->Fail(ErrUnexpectedConstraint, constraint_span, layout);
+      return resolver->Fail(ErrUnexpectedConstraint, constraint_span, layout.target_name());
     switch (resolved.kind) {
       case TypeResolver::ConstraintKind::kHandleSubtype:
         out_params->subtype_resolved = resolved.value.handle_subtype;
@@ -149,7 +156,7 @@ bool HandleType::ApplyConstraints(TypeResolver* resolver, const TypeConstraints&
     auto constraint_span = constraints.items[0]->span;
     uint32_t obj_type = 0;
     if (!resolver->ResolveAsHandleSubtype(resource_decl, constraints.items[0].get(), &obj_type))
-      return resolver->Fail(ErrUnexpectedConstraint, constraint_span, layout);
+      return resolver->Fail(ErrUnexpectedConstraint, constraint_span, layout.target_name());
     out_params->subtype_resolved = obj_type;
     out_params->subtype_raw = constraints.items[0].get();
 
@@ -160,7 +167,7 @@ bool HandleType::ApplyConstraints(TypeResolver* resolver, const TypeConstraints&
                                        {TypeResolver::ConstraintKind::kHandleRights,
                                         TypeResolver::ConstraintKind::kNullability},
                                        resource_decl, &resolved))
-      return resolver->Fail(ErrUnexpectedConstraint, constraint_span, layout);
+      return resolver->Fail(ErrUnexpectedConstraint, constraint_span, layout.target_name());
     switch (resolved.kind) {
       case TypeResolver::ConstraintKind::kHandleRights:
         out_params->rights_resolved = resolved.value.handle_rights;
@@ -177,26 +184,30 @@ bool HandleType::ApplyConstraints(TypeResolver* resolver, const TypeConstraints&
     // no degrees of freedom: must be subtype, followed by rights, then optional
     uint32_t obj_type = 0;
     if (!resolver->ResolveAsHandleSubtype(resource_decl, constraints.items[0].get(), &obj_type))
-      return resolver->Fail(ErrUnexpectedConstraint, constraints.items[0]->span, layout);
+      return resolver->Fail(ErrUnexpectedConstraint, constraints.items[0]->span,
+                            layout.target_name());
     out_params->subtype_resolved = obj_type;
     out_params->subtype_raw = constraints.items[0].get();
     const HandleRights* rights = nullptr;
     if (!resolver->ResolveAsHandleRights(resource_decl, constraints.items[1].get(), &rights))
-      return resolver->Fail(ErrUnexpectedConstraint, constraints.items[1]->span, layout);
+      return resolver->Fail(ErrUnexpectedConstraint, constraints.items[1]->span,
+                            layout.target_name());
     out_params->rights_resolved = rights;
     out_params->rights_raw = constraints.items[1].get();
     if (!resolver->ResolveAsOptional(constraints.items[2].get()))
-      return resolver->Fail(ErrUnexpectedConstraint, constraints.items[2]->span, layout);
+      return resolver->Fail(ErrUnexpectedConstraint, constraints.items[2]->span,
+                            layout.target_name());
     out_params->nullability = types::Nullability::kNullable;
     applied_nullability_span = constraints.items[2]->span;
   } else {
-    return resolver->Fail(ErrTooManyConstraints, constraints.span.value(), layout, 3,
+    return resolver->Fail(ErrTooManyConstraints, constraints.span.value(), layout.target_name(), 3,
                           num_constraints);
   }
 
   bool has_obj_type = subtype != types::HandleSubtype::kHandle;
   if (has_obj_type && out_params->subtype_resolved)
-    return resolver->Fail(ErrCannotConstrainTwice, out_params->subtype_raw->span, layout);
+    return resolver->Fail(ErrCannotConstrainTwice, out_params->subtype_raw->span,
+                          layout.target_name());
   // TODO(fxbug.dev/64629): We need to allow setting a default obj_type in
   // resource_definition declarations rather than hard-coding.
   uint32_t merged_obj_type = obj_type;
@@ -207,7 +218,7 @@ bool HandleType::ApplyConstraints(TypeResolver* resolver, const TypeConstraints&
   bool has_nullability = nullability == types::Nullability::kNullable;
   if (has_nullability && out_params->nullability == types::Nullability::kNullable)
     return resolver->Fail(ErrCannotIndicateNullabilityTwice, applied_nullability_span.value(),
-                          layout);
+                          layout.target_name());
   auto merged_nullability =
       has_nullability || out_params->nullability == types::Nullability::kNullable
           ? types::Nullability::kNullable
@@ -215,7 +226,8 @@ bool HandleType::ApplyConstraints(TypeResolver* resolver, const TypeConstraints&
 
   bool has_rights = rights != &kSameRights;
   if (has_rights && out_params->rights_resolved)
-    return resolver->Fail(ErrCannotConstrainTwice, out_params->rights_raw->span, layout);
+    return resolver->Fail(ErrCannotConstrainTwice, out_params->rights_raw->span,
+                          layout.target_name());
   auto merged_rights = rights;
   if (out_params->rights_resolved) {
     merged_rights = out_params->rights_resolved;
@@ -227,8 +239,7 @@ bool HandleType::ApplyConstraints(TypeResolver* resolver, const TypeConstraints&
 }
 
 bool TransportSideType::ApplyConstraints(TypeResolver* resolver, const TypeConstraints& constraints,
-                                         const TypeTemplate* layout,
-                                         std::unique_ptr<Type>* out_type,
+                                         const Reference& layout, std::unique_ptr<Type>* out_type,
                                          LayoutInvocation* out_params) const {
   size_t num_constraints = constraints.items.size();
 
@@ -244,7 +255,7 @@ bool TransportSideType::ApplyConstraints(TypeResolver* resolver, const TypeConst
             constraints.items[0].get(),
             {TypeResolver::ConstraintKind::kProtocol, TypeResolver::ConstraintKind::kNullability},
             /* resource_decl */ nullptr, &resolved))
-      return resolver->Fail(ErrUnexpectedConstraint, constraint_span, layout);
+      return resolver->Fail(ErrUnexpectedConstraint, constraint_span, layout.target_name());
     switch (resolved.kind) {
       case TypeResolver::ConstraintKind::kProtocol:
         out_params->protocol_decl = resolved.value.protocol_decl;
@@ -260,25 +271,28 @@ bool TransportSideType::ApplyConstraints(TypeResolver* resolver, const TypeConst
   } else if (num_constraints == 2) {
     // first constraint must be protocol
     if (!resolver->ResolveAsProtocol(constraints.items[0].get(), &out_params->protocol_decl))
-      return resolver->Fail(ErrMustBeAProtocol, constraints.items[0]->span, layout);
+      return resolver->Fail(ErrMustBeAProtocol, constraints.items[0]->span, layout.target_name());
     out_params->protocol_decl_raw = constraints.items[0].get();
 
     // second constraint must be optional
     if (!resolver->ResolveAsOptional(constraints.items[1].get()))
-      return resolver->Fail(ErrUnexpectedConstraint, constraints.items[1]->span, layout);
+      return resolver->Fail(ErrUnexpectedConstraint, constraints.items[1]->span,
+                            layout.target_name());
     out_params->nullability = types::Nullability::kNullable;
     applied_nullability_span = constraints.items[1]->span;
   } else if (num_constraints > 2) {
-    return resolver->Fail(ErrTooManyConstraints, constraints.span.value(), layout, 2,
+    return resolver->Fail(ErrTooManyConstraints, constraints.span.value(), layout.target_name(), 2,
                           num_constraints);
   }
 
   if (protocol_decl && out_params->protocol_decl)
-    return resolver->Fail(ErrCannotConstrainTwice, constraints.items[0]->span, layout);
+    return resolver->Fail(ErrCannotConstrainTwice, constraints.items[0]->span,
+                          layout.target_name());
   if (!protocol_decl && !out_params->protocol_decl) {
     // TODO(fxbug.dev/87619): There are no constraints so this should use the
     // layout span rather than relying on the constraints.span fallback.
-    return resolver->Fail(ErrProtocolConstraintRequired, constraints.span.value(), layout);
+    return resolver->Fail(ErrProtocolConstraintRequired, constraints.span.value(),
+                          layout.target_name());
   }
   const Decl* merged_protocol = protocol_decl;
   if (out_params->protocol_decl)
@@ -300,7 +314,7 @@ bool TransportSideType::ApplyConstraints(TypeResolver* resolver, const TypeConst
   bool has_nullability = nullability == types::Nullability::kNullable;
   if (has_nullability && out_params->nullability == types::Nullability::kNullable)
     return resolver->Fail(ErrCannotIndicateNullabilityTwice, applied_nullability_span.value(),
-                          layout);
+                          layout.target_name());
   auto merged_nullability =
       has_nullability || out_params->nullability == types::Nullability::kNullable
           ? types::Nullability::kNullable
@@ -311,8 +325,11 @@ bool TransportSideType::ApplyConstraints(TypeResolver* resolver, const TypeConst
   return true;
 }
 
+IdentifierType::IdentifierType(TypeDecl* type_decl, types::Nullability nullability)
+    : Type(type_decl->name, Kind::kIdentifier, nullability), type_decl(type_decl) {}
+
 bool IdentifierType::ApplyConstraints(TypeResolver* resolver, const TypeConstraints& constraints,
-                                      const TypeTemplate* layout, std::unique_ptr<Type>* out_type,
+                                      const Reference& layout, std::unique_ptr<Type>* out_type,
                                       LayoutInvocation* out_params) const {
   size_t num_constraints = constraints.items.size();
   switch (type_decl->kind) {
@@ -324,10 +341,11 @@ bool IdentifierType::ApplyConstraints(TypeResolver* resolver, const TypeConstrai
       // specific error
       // TODO(fxbug.dev/75112): actually try to compile the optional constraint
       if (num_constraints == 1)
-        return resolver->Fail(ErrCannotBeNullable, constraints.items[0]->span, layout);
+        return resolver->Fail(ErrCannotBeNullable, constraints.items[0]->span,
+                              layout.target_name());
       if (num_constraints > 1) {
-        return resolver->Fail(ErrTooManyConstraints, constraints.span.value(), layout, 0,
-                              num_constraints);
+        return resolver->Fail(ErrTooManyConstraints, constraints.span.value(), layout.target_name(),
+                              0, num_constraints);
       }
       break;
 
@@ -338,11 +356,12 @@ bool IdentifierType::ApplyConstraints(TypeResolver* resolver, const TypeConstrai
     case Decl::Kind::kStruct:
     case Decl::Kind::kUnion:
       if (num_constraints > 1) {
-        return resolver->Fail(ErrTooManyConstraints, constraints.span.value(), layout, 1,
-                              num_constraints);
+        return resolver->Fail(ErrTooManyConstraints, constraints.span.value(), layout.target_name(),
+                              1, num_constraints);
       }
       break;
 
+    case Decl::Kind::kBuiltin:
     case Decl::Kind::kConst:
     case Decl::Kind::kResource:
       // Cannot have const: entries for constants do not exist in the typespace, so
@@ -362,24 +381,26 @@ bool IdentifierType::ApplyConstraints(TypeResolver* resolver, const TypeConstrai
   if (num_constraints == 1) {
     // must be optional
     if (!resolver->ResolveAsOptional(constraints.items[0].get()))
-      return resolver->Fail(ErrUnexpectedConstraint, constraints.items[0]->span, layout);
+      return resolver->Fail(ErrUnexpectedConstraint, constraints.items[0]->span,
+                            layout.target_name());
     applied_nullability = types::Nullability::kNullable;
   }
 
   if (nullability == types::Nullability::kNullable &&
       applied_nullability == types::Nullability::kNullable)
-    return resolver->Fail(ErrCannotIndicateNullabilityTwice, constraints.span.value(), layout);
+    return resolver->Fail(ErrCannotIndicateNullabilityTwice, constraints.span.value(),
+                          layout.target_name());
   auto merged_nullability = nullability;
   if (applied_nullability == types::Nullability::kNullable)
     merged_nullability = applied_nullability;
 
   out_params->nullability = applied_nullability;
-  *out_type = std::make_unique<IdentifierType>(name, type_decl, merged_nullability);
+  *out_type = std::make_unique<IdentifierType>(type_decl, merged_nullability);
   return true;
 }
 
 bool BoxType::ApplyConstraints(TypeResolver* resolver, const TypeConstraints& constraints,
-                               const TypeTemplate* layout, std::unique_ptr<Type>* out_type,
+                               const Reference& layout, std::unique_ptr<Type>* out_type,
                                LayoutInvocation* out_params) const {
   size_t num_constraints = constraints.items.size();
   // assume that a lone constraint was an attempt at specifying `optional` and provide a more
@@ -388,7 +409,7 @@ bool BoxType::ApplyConstraints(TypeResolver* resolver, const TypeConstraints& co
   if (num_constraints == 1)
     return resolver->Fail(ErrBoxCannotBeNullable, constraints.items[0]->span);
   if (num_constraints > 1)
-    return resolver->Fail(ErrTooManyConstraints, constraints.span.value(), layout, 0,
+    return resolver->Fail(ErrTooManyConstraints, constraints.span.value(), layout.target_name(), 0,
                           num_constraints);
   *out_type = std::make_unique<BoxType>(name, boxed_type);
   return true;
@@ -396,8 +417,7 @@ bool BoxType::ApplyConstraints(TypeResolver* resolver, const TypeConstraints& co
 
 bool UntypedNumericType::ApplyConstraints(TypeResolver* resolver,
                                           const TypeConstraints& constraints,
-                                          const TypeTemplate* layout,
-                                          std::unique_ptr<Type>* out_type,
+                                          const Reference& layout, std::unique_ptr<Type>* out_type,
                                           LayoutInvocation* out_params) const {
   assert(false && "compiler bug: should not have untyped numeric here");
   return false;
@@ -427,16 +447,16 @@ uint32_t PrimitiveType::SubtypeSize(types::PrimitiveSubtype subtype) {
 }
 
 bool PrimitiveType::ApplyConstraints(TypeResolver* resolver, const TypeConstraints& constraints,
-                                     const TypeTemplate* layout, std::unique_ptr<Type>* out_type,
+                                     const Reference& layout, std::unique_ptr<Type>* out_type,
                                      LayoutInvocation* out_params) const {
   size_t num_constraints = constraints.items.size();
   // assume that a lone constraint was an attempt at specifying `optional` and provide a more
   // specific error
   // TODO(fxbug.dev/75112): actually try to compile the optional constraint
   if (num_constraints == 1)
-    return resolver->Fail(ErrCannotBeNullable, constraints.items[0]->span, layout);
+    return resolver->Fail(ErrCannotBeNullable, constraints.items[0]->span, layout.target_name());
   if (num_constraints > 1)
-    return resolver->Fail(ErrTooManyConstraints, constraints.span.value(), layout, 0,
+    return resolver->Fail(ErrTooManyConstraints, constraints.span.value(), layout.target_name(), 0,
                           num_constraints);
   *out_type = std::make_unique<PrimitiveType>(name, subtype);
   return true;
@@ -478,6 +498,7 @@ types::Resourceness Type::Resourceness() const {
     case Decl::Kind::kUnion:
       assert(decl->compiled && "Compiler bug: accessing resourceness of not-yet-compiled union");
       return static_cast<const Union*>(decl)->resourceness.value();
+    case Decl::Kind::kBuiltin:
     case Decl::Kind::kConst:
     case Decl::Kind::kResource:
     case Decl::Kind::kService:

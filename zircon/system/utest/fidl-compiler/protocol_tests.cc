@@ -602,7 +602,7 @@ protocol Child {
 };
 
 )FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnknownType);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrNameNotFound);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "MissingParent");
 }
 
@@ -790,7 +790,7 @@ library example;
 protocol MyProtocol {};
 
 type Foo = resource struct {
-  foo client_end:<MyProtocol, optional, foo, bar>;
+  foo client_end:<MyProtocol, optional, 1, 2>;
 };
 )FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrTooManyConstraints);
@@ -1055,7 +1055,7 @@ protocol MyProtocol {
     MyMethod(handle);
 };
 )FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidParameterListType);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidParameterListDecl);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "handle");
 }
 
@@ -1092,14 +1092,14 @@ protocol MyProtocol {
   ASSERT_FALSE(library.Compile());
 
   ASSERT_ERR(library.errors()[0], fidl::ErrInvalidParameterListType);
-  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "MyPrim");
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "bool");
   ASSERT_ERR(library.errors()[1], fidl::ErrInvalidParameterListType);
-  ASSERT_SUBSTR(library.errors()[1]->msg.c_str(), "MyHandle");
+  ASSERT_SUBSTR(library.errors()[1]->msg.c_str(), "example/handle");
 
   ASSERT_ERR(library.errors()[2], fidl::ErrInvalidParameterListType);
-  ASSERT_SUBSTR(library.errors()[2]->msg.c_str(), "MyVector");
+  ASSERT_SUBSTR(library.errors()[2]->msg.c_str(), "vector<bool>");
   ASSERT_ERR(library.errors()[3], fidl::ErrInvalidParameterListType);
-  ASSERT_SUBSTR(library.errors()[3]->msg.c_str(), "MyAlias");
+  ASSERT_SUBSTR(library.errors()[3]->msg.c_str(), "vector<bool>?");
 }
 
 TEST(ProtocolTests, BadMethodNamedInvalidKind) {
@@ -1118,16 +1118,7 @@ protocol MyProtocol {
     MyMethod(MyOtherProtocol) -> (MyService);
 };
 )FIDL");
-  TestLibrary& library_ref = (library);
-  ASSERT_FALSE(library_ref.Compile());
-
-  ASSERT_ERR(library.errors()[0], fidl::ErrCannotUseProtocol);
-  ASSERT_ERR(library.errors()[1], fidl::ErrInvalidParameterListType);
-  ASSERT_SUBSTR(library.errors()[1]->msg.c_str(), "MyOtherProtocol");
-
-  ASSERT_ERR(library.errors()[2], fidl::ErrCannotUseService);
-  ASSERT_ERR(library.errors()[3], fidl::ErrInvalidParameterListType);
-  ASSERT_SUBSTR(library.errors()[3]->msg.c_str(), "MyService");
+  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrExpectedType, fidl::ErrExpectedType);
 }
 
 }  // namespace

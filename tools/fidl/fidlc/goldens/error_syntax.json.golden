@@ -46,8 +46,8 @@
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/error_syntax/child.test.fidl",
             "line": 10,
-            "column": 37,
-            "length": 21
+            "column": 13,
+            "length": 45
           }
         }
       ],

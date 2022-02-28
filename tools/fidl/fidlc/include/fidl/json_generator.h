@@ -11,6 +11,7 @@
 #include <string_view>
 #include <vector>
 
+#include "flat/compiler.h"
 #include "flat_ast.h"
 #include "json_writer.h"
 
@@ -54,8 +55,8 @@ class JSONGenerator : public utils::JsonWriter<JSONGenerator> {
   using utils::JsonWriter<JSONGenerator>::Generate;
   using utils::JsonWriter<JSONGenerator>::GenerateArray;
 
-  explicit JSONGenerator(const flat::Library* library)
-      : JsonWriter(json_file_), library_(library) {}
+  explicit JSONGenerator(const flat::Libraries* all_libraries)
+      : JsonWriter(json_file_), all_libraries_(all_libraries) {}
 
   ~JSONGenerator() = default;
 
@@ -149,7 +150,7 @@ class JSONGenerator : public utils::JsonWriter<JSONGenerator> {
   void GenerateTypeShapes(const flat::Object& object);
   void GenerateFieldShapes(const flat::Struct::Member& struct_member);
 
-  const flat::Library* library_;
+  const flat::Libraries* all_libraries_;
   std::ostringstream json_file_;
 };
 

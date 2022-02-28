@@ -425,10 +425,10 @@ int compile(fidl::Reporter* reporter, std::string library_name, std::string dep_
       return 1;
     }
   }
-  const fidl::flat::Library* target_library = all_libraries.target_library();
-  if (!target_library) {
+  if (all_libraries.Empty()) {
     Fail("No library was produced.\n");
   }
+  const fidl::flat::Library* target_library = all_libraries.target_library();
   auto unused_libraries = all_libraries.Unused();
   // TODO(fxbug.dev/90838): Remove this once all GN rules only include zx
   // sources when the zx library is actually used.
@@ -508,7 +508,7 @@ int compile(fidl::Reporter* reporter, std::string library_name, std::string dep_
         break;
       }
       case Behavior::kJSON: {
-        fidl::JSONGenerator generator(target_library);
+        fidl::JSONGenerator generator(&all_libraries);
         Write(generator.Produce(), file_path);
         break;
       }

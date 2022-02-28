@@ -40,6 +40,8 @@ zx_library("fidl") {
     "lib/flat/compiler.cc",
     "lib/flat/consume_step.cc",
     "lib/flat/name.cc",
+    "lib/flat/reference.cc",
+    "lib/flat/resolve_step.cc",
     "lib/flat/sort_step.cc",
     "lib/flat/type_resolver.cc",
     "lib/flat/types.cc",

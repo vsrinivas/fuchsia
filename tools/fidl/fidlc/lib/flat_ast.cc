@@ -4,14 +4,42 @@
 
 #include "fidl/flat_ast.h"
 
-#include "fidl/flat/attribute_schema.h"
-#include "fidl/flat/compile_step.h"
-#include "fidl/flat/consume_step.h"
-#include "fidl/flat/sort_step.h"
-#include "fidl/flat/verify_steps.h"
 #include "fidl/flat/visitor.h"
 
 namespace fidl::flat {
+
+bool Element::IsDecl() const {
+  switch (kind) {
+    case Kind::kBits:
+    case Kind::kBuiltin:
+    case Kind::kConst:
+    case Kind::kEnum:
+    case Kind::kProtocol:
+    case Kind::kResource:
+    case Kind::kService:
+    case Kind::kStruct:
+    case Kind::kTable:
+    case Kind::kTypeAlias:
+    case Kind::kUnion:
+      return true;
+    case Kind::kLibrary:
+    case Kind::kBitsMember:
+    case Kind::kEnumMember:
+    case Kind::kProtocolCompose:
+    case Kind::kProtocolMethod:
+    case Kind::kResourceProperty:
+    case Kind::kServiceMember:
+    case Kind::kStructMember:
+    case Kind::kTableMember:
+    case Kind::kUnionMember:
+      return false;
+  }
+}
+
+Decl* Element::AsDecl() {
+  assert(IsDecl());
+  return static_cast<Decl*>(this);
+}
 
 std::string Decl::GetName() const { return std::string(name.decl_name()); }
 
@@ -114,83 +142,41 @@ std::string LibraryName(const Library* library, std::string_view separator) {
   return std::string();
 }
 
-// Library resolution is concerned with resolving identifiers to their
-// declarations, and with computing type sizes and alignments.
-
-Decl* Library::LookupDeclByName(Name::Key name) const {
-  auto iter = declarations.find(name);
-  if (iter == declarations.end()) {
-    return nullptr;
-  }
-  return iter->second;
+// static
+std::unique_ptr<Library> Library::CreateRootLibrary() {
+  auto library = std::make_unique<Library>();
+  library->name = {"fidl"};
+  auto insert = [&](const char* name, Builtin::Kind kind) {
+    auto decl = std::make_unique<Builtin>(kind, Name::CreateIntrinsic(library.get(), name));
+    library->declarations.emplace(name, decl.get());
+    library->builtin_declarations.push_back(std::move(decl));
+  };
+  insert("bool", Builtin::Kind::kBool);
+  insert("int8", Builtin::Kind::kInt8);
+  insert("int16", Builtin::Kind::kInt16);
+  insert("int32", Builtin::Kind::kInt32);
+  insert("int64", Builtin::Kind::kInt64);
+  insert("uint8", Builtin::Kind::kUint8);
+  insert("uint16", Builtin::Kind::kUint16);
+  insert("uint32", Builtin::Kind::kUint32);
+  insert("uint64", Builtin::Kind::kUint64);
+  insert("float32", Builtin::Kind::kFloat32);
+  insert("float64", Builtin::Kind::kFloat64);
+  insert("string", Builtin::Kind::kString);
+  insert("box", Builtin::Kind::kBox);
+  insert("array", Builtin::Kind::kArray);
+  insert("vector", Builtin::Kind::kVector);
+  insert("client_end", Builtin::Kind::kClientEnd);
+  insert("server_end", Builtin::Kind::kServerEnd);
+  insert("byte", Builtin::Kind::kByte);
+  insert("bytes", Builtin::Kind::kBytes);
+  insert("optional", Builtin::Kind::kOptional);
+  insert("MAX", Builtin::Kind::kMax);
+  return library;
 }
 
 bool HasSimpleLayout(const Decl* decl) {
   return decl->attributes->Get("for_deprecated_c_bindings") != nullptr;
-}
-
-std::set<const Library*, LibraryComparator> Library::DirectAndComposedDependencies() const {
-  std::set<const Library*, LibraryComparator> direct_dependencies;
-  auto add_constant_deps = [&](const Constant* constant) {
-    if (constant->kind != Constant::Kind::kIdentifier)
-      return;
-    auto* dep_library = static_cast<const IdentifierConstant*>(constant)->name.library();
-    assert(dep_library != nullptr && "all identifier constants have a library");
-    direct_dependencies.insert(dep_library);
-  };
-  auto add_type_ctor_deps = [&](const TypeConstructor& type_ctor) {
-    if (auto dep_library = type_ctor.name.library())
-      direct_dependencies.insert(dep_library);
-
-    // TODO(fxbug.dev/64629): Add dependencies introduced through handle constraints.
-    // This code currently assumes the handle constraints are always defined in the same
-    // library as the resource_definition and so does not check for them separately.
-    const auto& invocation = type_ctor.resolved_params;
-    if (invocation.size_raw)
-      add_constant_deps(invocation.size_raw);
-    if (invocation.protocol_decl_raw)
-      add_constant_deps(invocation.protocol_decl_raw);
-    if (invocation.element_type_raw != nullptr) {
-      if (auto dep_library = invocation.element_type_raw->name.library())
-        direct_dependencies.insert(dep_library);
-    }
-    if (invocation.boxed_type_raw != nullptr) {
-      if (auto dep_library = invocation.boxed_type_raw->name.library())
-        direct_dependencies.insert(dep_library);
-    }
-  };
-  for (const auto& dep_library : dependencies.all()) {
-    direct_dependencies.insert(dep_library);
-  }
-  // Discover additional dependencies that are required to support
-  // cross-library protocol composition.
-  for (const auto& protocol : protocol_declarations) {
-    for (const auto method_with_info : protocol->all_methods) {
-      if (method_with_info.method->maybe_request) {
-        auto id =
-            static_cast<const flat::IdentifierType*>(method_with_info.method->maybe_request->type);
-
-        // TODO(fxbug.dev/88343): switch on union/table when those are enabled.
-        auto as_struct = static_cast<const flat::Struct*>(id->type_decl);
-        for (const auto& member : as_struct->members) {
-          add_type_ctor_deps(*member.type_ctor);
-        }
-      }
-      if (method_with_info.method->maybe_response) {
-        auto id =
-            static_cast<const flat::IdentifierType*>(method_with_info.method->maybe_response->type);
-
-        // TODO(fxbug.dev/88343): switch on union/table when those are enabled.
-        auto as_struct = static_cast<const flat::Struct*>(id->type_decl);
-        for (const auto& member : as_struct->members) {
-          add_type_ctor_deps(*member.type_ctor);
-        }
-      }
-      direct_dependencies.insert(method_with_info.method->owning_protocol->name.library());
-    }
-  }
-  direct_dependencies.erase(this);
-  return direct_dependencies;
 }
 
 void Library::TraverseElements(const fit::function<void(Element*)>& fn) {
@@ -203,6 +189,7 @@ void Library::TraverseElements(const fit::function<void(Element*)>& fn) {
 
 void Decl::ForEachMember(const fit::function<void(Element*)>& fn) {
   switch (kind) {
+    case Decl::Kind::kBuiltin:
     case Decl::Kind::kConst:
     case Decl::Kind::kTypeAlias:
       break;
@@ -252,31 +239,27 @@ void Decl::ForEachMember(const fit::function<void(Element*)>& fn) {
   }  // switch
 }
 
-std::unique_ptr<TypeConstructor> TypeConstructor::CreateSizeType() {
-  return std::make_unique<TypeConstructor>(
-      Name::CreateIntrinsic("uint32"), std::make_unique<LayoutParameterList>(),
-      std::make_unique<TypeConstraints>(), /*span=*/std::nullopt);
-}
-
-Constant* LiteralLayoutParameter::AsConstant() const { return literal.get(); }
-Constant* TypeLayoutParameter::AsConstant() const { return nullptr; }
-Constant* IdentifierLayoutParameter::AsConstant() const {
-  if (!as_constant) {
-    as_constant = std::make_unique<IdentifierConstant>(name, span);
-  }
-  return as_constant.get();
-}
-
 TypeConstructor* LiteralLayoutParameter::AsTypeCtor() const { return nullptr; }
 TypeConstructor* TypeLayoutParameter::AsTypeCtor() const { return type_ctor.get(); }
-TypeConstructor* IdentifierLayoutParameter::AsTypeCtor() const {
-  if (!as_type_ctor) {
-    as_type_ctor = std::make_unique<TypeConstructor>(name, std::make_unique<LayoutParameterList>(),
-                                                     std::make_unique<TypeConstraints>(),
-                                                     /*span=*/std::nullopt);
-  }
+TypeConstructor* IdentifierLayoutParameter::AsTypeCtor() const { return as_type_ctor.get(); }
+Constant* LiteralLayoutParameter::AsConstant() const { return literal.get(); }
+Constant* TypeLayoutParameter::AsConstant() const { return nullptr; }
+Constant* IdentifierLayoutParameter::AsConstant() const { return as_constant.get(); }
 
-  return as_type_ctor.get();
+void IdentifierLayoutParameter::Disambiguate() {
+  switch (reference.target()->kind) {
+    case Element::Kind::kConst:
+    case Element::Kind::kBitsMember:
+    case Element::Kind::kEnumMember: {
+      as_constant = std::make_unique<IdentifierConstant>(reference, span);
+      break;
+    }
+    default: {
+      as_type_ctor = std::make_unique<TypeConstructor>(
+          reference, std::make_unique<LayoutParameterList>(), std::make_unique<TypeConstraints>());
+      break;
+    }
+  }
 }
 
 std::any Bits::AcceptAny(VisitorAny* visitor) const { return visitor->Visit(*this); }

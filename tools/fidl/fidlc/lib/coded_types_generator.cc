@@ -322,7 +322,7 @@ void CodedTypesGenerator::CompileFields(const flat::Decl* decl) {
         assert(method_with_info.method != nullptr);
         const auto& method = *method_with_info.method;
         auto CompileMessage = [&](const std::unique_ptr<flat::TypeConstructor>& payload) -> void {
-          if (payload && payload->name.as_anonymous() != nullptr) {
+          if (payload && payload->layout.target_name().as_anonymous() != nullptr) {
             std::unique_ptr<coded::StructType>& coded_message =
                 coded_protocol->messages_during_compile[i++];
             std::vector<coded::StructElement>& request_elements = coded_message->elements;
@@ -457,6 +457,10 @@ void CodedTypesGenerator::CompileFields(const flat::Decl* decl) {
 
 void CodedTypesGenerator::CompileDecl(const flat::Decl* decl) {
   switch (decl->kind) {
+    case flat::Decl::Kind::kBuiltin: {
+      assert(false && "unexpected builtin");
+      break;
+    }
     case flat::Decl::Kind::kBits: {
       auto bits_decl = static_cast<const flat::Bits*>(decl);
       std::string bits_name = NameCodedName(bits_decl->name);
@@ -511,7 +515,7 @@ void CodedTypesGenerator::CompileDecl(const flat::Decl* decl) {
         std::string method_qname = NameMethod(protocol_qname, method);
         auto CreateMessage = [&](const std::unique_ptr<flat::TypeConstructor>& payload,
                                  types::MessageKind kind) -> void {
-          if (payload && payload->name.as_anonymous() != nullptr) {
+          if (payload && payload->layout.target_name().as_anonymous() != nullptr) {
             std::string message_name = NameMessage(method_name, kind);
             std::string message_qname = NameMessage(method_qname, kind);
             auto typeshape_v1 = TypeShape::ForEmptyPayload();

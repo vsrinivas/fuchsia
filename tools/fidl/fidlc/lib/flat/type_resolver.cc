@@ -8,7 +8,7 @@
 
 namespace fidl::flat {
 
-bool TypeResolver::ResolveParamAsType(const flat::TypeTemplate* layout,
+bool TypeResolver::ResolveParamAsType(const Reference& layout,
                                       const std::unique_ptr<LayoutParameter>& param,
                                       const Type** out_type) {
   auto type_ctor = param->AsTypeCtor();
@@ -27,7 +27,7 @@ bool TypeResolver::ResolveParamAsType(const flat::TypeTemplate* layout,
   return true;
 }
 
-bool TypeResolver::ResolveParamAsSize(const flat::TypeTemplate* layout,
+bool TypeResolver::ResolveParamAsSize(const Reference& layout,
                                       const std::unique_ptr<LayoutParameter>& param,
                                       const Size** out_size) {
   // We could use param->AsConstant() here, leading to code similar to ResolveParamAsType.
@@ -43,19 +43,25 @@ bool TypeResolver::ResolveParamAsSize(const flat::TypeTemplate* layout,
     }
     case LayoutParameter::kType: {
       auto type_param = static_cast<TypeLayoutParameter*>(param.get());
-      return Fail(ErrExpectedValueButGotType, type_param->span, type_param->type_ctor->name);
+      return Fail(ErrExpectedValueButGotType, type_param->span,
+                  type_param->type_ctor->layout.target_name());
     }
     case LayoutParameter::Kind::kIdentifier: {
       auto ambig_param = static_cast<IdentifierLayoutParameter*>(param.get());
       auto as_constant = ambig_param->AsConstant();
-      if (!ResolveSizeBound(as_constant, out_size))
-        return Fail(ErrExpectedValueButGotType, ambig_param->span, ambig_param->name);
+      if (!as_constant) {
+        return Fail(ErrExpectedValueButGotType, ambig_param->span,
+                    ambig_param->reference.target_name());
+      }
+      if (!ResolveSizeBound(as_constant, out_size)) {
+        return Fail(ErrCannotResolveConstantValue, ambig_param->span);
+      }
       break;
     }
   }
   assert(*out_size);
   if ((*out_size)->value == 0)
-    return Fail(ErrMustHaveNonZeroSize, param->span, layout);
+    return Fail(ErrMustHaveNonZeroSize, param->span, layout.target_name());
   return true;
 }
 
@@ -129,15 +135,11 @@ bool TypeResolver::ResolveAsProtocol(const Constant* constant, const Protocol** 
     return false;
 
   const auto* as_identifier = static_cast<const IdentifierConstant*>(constant);
-  const auto* decl = LookupDeclByName(as_identifier->name);
-  if (!decl || decl->kind != Decl::Kind::kProtocol)
+  const auto* target = as_identifier->reference.target();
+  if (target->kind != Element::Kind::kProtocol)
     return false;
-  *out_decl = static_cast<const Protocol*>(decl);
+  *out_decl = static_cast<const Protocol*>(target);
   return true;
-}
-
-Decl* TypeResolver::LookupDeclByName(Name::Key name) {
-  return compile_step_->library()->LookupDeclByName(name);
 }
 
 void TypeResolver::CompileDecl(Decl* decl) { compile_step_->CompileDecl(decl); }

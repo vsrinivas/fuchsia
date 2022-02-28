@@ -7,6 +7,7 @@
 #include "fidl/flat/attribute_schema.h"
 #include "fidl/flat/compile_step.h"
 #include "fidl/flat/consume_step.h"
+#include "fidl/flat/resolve_step.h"
 #include "fidl/flat/sort_step.h"
 #include "fidl/flat/verify_steps.h"
 
@@ -27,6 +28,8 @@ bool Compiler::ConsumeFile(std::unique_ptr<raw::File> file) {
 std::unique_ptr<Library> Compiler::Compile() {
   [[maybe_unused]] auto checkpoint = reporter()->Checkpoint();
 
+  if (!ResolveStep(this).Run())
+    return nullptr;
   if (!CompileStep(this).Run())
     return nullptr;
   if (!SortStep(this).Run())
@@ -117,6 +120,72 @@ std::vector<const Decl*> Libraries::DeclarationOrder() const {
     order.insert(order.end(), library->declaration_order.begin(), library->declaration_order.end());
   };
   return order;
+}
+
+std::set<const Library*, LibraryComparator> Libraries::DirectAndComposedDependencies(
+    const Library* library) const {
+  std::set<const Library*, LibraryComparator> direct_dependencies;
+  auto add_constant_deps = [&](const Constant* constant) {
+    if (constant->kind != Constant::Kind::kIdentifier)
+      return;
+    auto identifier_constant = static_cast<const IdentifierConstant*>(constant);
+    if (auto dep_library = identifier_constant->reference.target_library())
+      direct_dependencies.insert(dep_library);
+  };
+  auto add_type_ctor_deps = [&](const TypeConstructor& type_ctor) {
+    if (auto dep_library = type_ctor.layout.target_library())
+      direct_dependencies.insert(dep_library);
+
+    // TODO(fxbug.dev/64629): Add dependencies introduced through handle constraints.
+    // This code currently assumes the handle constraints are always defined in the same
+    // library as the resource_definition and so does not check for them separately.
+    const auto& invocation = type_ctor.resolved_params;
+    if (invocation.size_raw)
+      add_constant_deps(invocation.size_raw);
+    if (invocation.protocol_decl_raw)
+      add_constant_deps(invocation.protocol_decl_raw);
+    if (invocation.element_type_raw != nullptr) {
+      if (auto dep_library = invocation.element_type_raw->layout.target_library())
+        direct_dependencies.insert(dep_library);
+    }
+    if (invocation.boxed_type_raw != nullptr) {
+      if (auto dep_library = invocation.boxed_type_raw->layout.target_library())
+        direct_dependencies.insert(dep_library);
+    }
+  };
+  for (const auto& dep_library : library->dependencies.all()) {
+    direct_dependencies.insert(dep_library);
+  }
+  // Discover additional dependencies that are required to support
+  // cross-library protocol composition.
+  for (const auto& protocol : library->protocol_declarations) {
+    for (const auto method_with_info : protocol->all_methods) {
+      if (method_with_info.method->maybe_request) {
+        auto id =
+            static_cast<const flat::IdentifierType*>(method_with_info.method->maybe_request->type);
+
+        // TODO(fxbug.dev/88343): switch on union/table when those are enabled.
+        auto as_struct = static_cast<const flat::Struct*>(id->type_decl);
+        for (const auto& member : as_struct->members) {
+          add_type_ctor_deps(*member.type_ctor);
+        }
+      }
+      if (method_with_info.method->maybe_response) {
+        auto id =
+            static_cast<const flat::IdentifierType*>(method_with_info.method->maybe_response->type);
+
+        // TODO(fxbug.dev/88343): switch on union/table when those are enabled.
+        auto as_struct = static_cast<const flat::Struct*>(id->type_decl);
+        for (const auto& member : as_struct->members) {
+          add_type_ctor_deps(*member.type_ctor);
+        }
+      }
+      direct_dependencies.insert(method_with_info.method->owning_protocol->name.library());
+    }
+  }
+  direct_dependencies.erase(library);
+  direct_dependencies.erase(root_library());
+  return direct_dependencies;
 }
 
 static size_t EditDistance(std::string_view sequence1, std::string_view sequence2) {

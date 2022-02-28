@@ -76,7 +76,8 @@ class Libraries : private ReporterMixin {
  public:
   explicit Libraries(Reporter* reporter)
       : ReporterMixin(reporter),
-        typespace_(Typespace::RootTypes(reporter)),
+        root_library_(Library::CreateRootLibrary()),
+        typespace_(root_library_.get(), reporter),
         attribute_schemas_(AttributeSchema::OfficialAttributes()) {}
   Libraries(const Libraries&) = delete;
   Libraries(Libraries&&) = default;
@@ -93,9 +94,16 @@ class Libraries : private ReporterMixin {
   // and should be deleted once that is no longer necessary.
   void Remove(const Library* library);
 
-  // Returns the target library, or null if none have been inserted.
+  // Returns true if no libraries have been inserted.
+  bool Empty() const { return libraries_.empty(); }
+
+  // Returns the root library, which defines builtin types.
+  const Library* root_library() const { return root_library_.get(); }
+
+  // Returns the target library. Must have inserted at least one library.
   const Library* target_library() const {
-    return libraries_.empty() ? nullptr : libraries_.back().get();
+    assert(!libraries_.empty());
+    return libraries_.back().get();
   }
 
   // Returns libraries that were inserted but never used, i.e. that do not occur
@@ -105,6 +113,12 @@ class Libraries : private ReporterMixin {
   // Returns decls from all libraries in a topologically sorted order, i.e.
   // later decls only depend on earlier ones.
   std::vector<const Decl*> DeclarationOrder() const;
+
+  // Returns a set that is like `library->dependencies`, but also includes
+  // indirect dependencies that come from protocol composition, i.e. what would
+  // need to be imported if the composed methods were copied and pasted.
+  std::set<const Library*, LibraryComparator> DirectAndComposedDependencies(
+      const Library* library) const;
 
   // Registers a new attribute schema under the given name, and returns it.
   AttributeSchema& AddAttributeSchema(std::string name);
@@ -120,6 +134,7 @@ class Libraries : private ReporterMixin {
   VirtualSourceFile* generated_source_file() { return &generated_source_file_; }
 
  private:
+  std::unique_ptr<Library> root_library_;
   std::vector<std::unique_ptr<Library>> libraries_;
   std::map<std::vector<std::string_view>, Library*> libraries_by_name_;
   Typespace typespace_;

@@ -18,6 +18,7 @@
 #include <set>
 #include <string>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 #include "flat/attributes.h"
@@ -53,6 +54,7 @@ struct Element {
   enum struct Kind {
     kBits,
     kBitsMember,
+    kBuiltin,
     kConst,
     kEnum,
     kEnumMember,
@@ -81,6 +83,11 @@ struct Element {
   Element(Kind kind, std::unique_ptr<AttributeList> attributes)
       : kind(kind), attributes(std::move(attributes)) {}
 
+  // Returns true if this element is a decl.
+  bool IsDecl() const;
+  // Asserts that this element is a decl.
+  Decl* AsDecl();
+
   Kind kind;
   std::unique_ptr<AttributeList> attributes;
 };
@@ -88,6 +95,7 @@ struct Element {
 struct Decl : public Element {
   enum struct Kind {
     kBits,
+    kBuiltin,
     kConst,
     kEnum,
     kProtocol,
@@ -95,14 +103,16 @@ struct Decl : public Element {
     kService,
     kStruct,
     kTable,
-    kUnion,
     kTypeAlias,
+    kUnion,
   };
 
   static Element::Kind ElementKind(Kind kind) {
     switch (kind) {
       case Kind::kBits:
         return Element::Kind::kBits;
+      case Kind::kBuiltin:
+        return Element::Kind::kBuiltin;
       case Kind::kConst:
         return Element::Kind::kConst;
       case Kind::kEnum:
@@ -117,10 +127,10 @@ struct Decl : public Element {
         return Element::Kind::kStruct;
       case Kind::kTable:
         return Element::Kind::kTable;
-      case Kind::kUnion:
-        return Element::Kind::kUnion;
       case Kind::kTypeAlias:
         return Element::Kind::kTypeAlias;
+      case Kind::kUnion:
+        return Element::Kind::kUnion;
     }
   }
 
@@ -138,6 +148,43 @@ struct Decl : public Element {
 
   bool compiling = false;
   bool compiled = false;
+};
+
+struct Builtin : public Decl {
+  enum struct Kind {
+    // Layouts (primitive)
+    kBool,
+    kInt8,
+    kInt16,
+    kInt32,
+    kInt64,
+    kUint8,
+    kUint16,
+    kUint32,
+    kUint64,
+    kFloat32,
+    kFloat64,
+    // Layouts (other)
+    kString,
+    // Layouts (templated)
+    kBox,
+    kArray,
+    kVector,
+    kClientEnd,
+    kServerEnd,
+    // Layouts (aliases)
+    kByte,
+    kBytes,
+    // Constraints
+    kOptional,
+    kMax,
+  };
+
+  explicit Builtin(Kind kind, Name name)
+      : Decl(Decl::Kind::kBuiltin, std::make_unique<AttributeList>(), std::move(name)),
+        kind(kind) {}
+
+  const Kind kind;
 };
 
 struct TypeDecl : public Decl, public Object {
@@ -203,29 +250,25 @@ struct LayoutInvocation {
 struct LayoutParameterList;
 struct TypeConstraints;
 
-// Unlike raw::TypeConstructor which will either store a name referencing
-// a layout or an anonymous layout directly, in the flat AST all type
-// constructors store a Name. In the case where the type constructor represents
-// an anonymous layout, the data of the anonymous layout is consumed and stored
-// in the Typespace and the corresponding type constructor contains a Name with
-// is_anonymous=true and with a span covering the anonymous layout.
+// Unlike raw::TypeConstructor which will either store a name referencing a
+// layout or an anonymous layout directly, in the flat AST all type constructors
+// store a Reference. In the case where the type constructor represents an
+// anonymous layout, the data of the anonymous layout is consumed and stored in
+// the library and the corresponding type constructor contains a Reference
+// whose name has is_anonymous=true and a span covering the anonymous layout.
 //
-// This allows all type compilation to share the code paths through the
-// consume step (i.e. RegisterDecl) and the compilation step (i.e. Typespace::Create),
+// This allows all type compilation to share the code paths through the consume
+// step (i.e. RegisterDecl) and the compilation step (i.e. Typespace::Create),
 // while ensuring that users cannot refer to anonymous layouts by name.
 struct TypeConstructor final {
-  TypeConstructor(Name name, std::unique_ptr<LayoutParameterList> parameters,
-                  std::unique_ptr<TypeConstraints> constraints, std::optional<SourceSpan> span)
-      : name(std::move(name)),
+  explicit TypeConstructor(Reference layout, std::unique_ptr<LayoutParameterList> parameters,
+                           std::unique_ptr<TypeConstraints> constraints)
+      : layout(std::move(layout)),
         parameters(std::move(parameters)),
-        constraints(std::move(constraints)),
-        span(span) {}
-
-  // Returns a type constructor for the size type (used for bounds).
-  static std::unique_ptr<TypeConstructor> CreateSizeType();
+        constraints(std::move(constraints)) {}
 
   // Set during construction.
-  const Name name;
+  Reference layout;
   std::unique_ptr<LayoutParameterList> parameters;
   std::unique_ptr<TypeConstraints> constraints;
   std::optional<SourceSpan> span;
@@ -246,27 +289,9 @@ struct LayoutParameter {
 
   explicit LayoutParameter(Kind kind, SourceSpan span) : kind(kind), span(span) {}
 
-  // TODO(fxbug.dev/75112): Providing these virtual methods rather than handling
-  // each case individually in the caller makes it harder to provide more precise
-  // error messages. For example, using this pattern we'd only know that a parameter
-  // failed to be interpreted as a type and not the specifics about why it failed
-  // (was this actually a string literal? did it look like a type but fail to
-  // resolve? did it look like a type but actually point to a constant?).
-  // Addressing the bug might involve refactoring this part of the code to move
-  // more logic into the caller. This might be acceptable when the caller is
-  // type compilation (it probably needs to know these details anyways), but
-  // less so when it's a consumer of compiled results that needs to reconstruct
-  // details about the type constructor (e.g. during declaration sorting or
-  // JSON generation).
-
-  // Returns the interpretation of this layout parameter as a type if possible
-  // or nullptr otherwise. There are no guarantees that the returned type has
-  // been compiled or will actually successfully compile.
+  // A layout parameter is either a type constructor or a constant. One of these
+  // two methods must return non-null, and the other one must return null.
   virtual TypeConstructor* AsTypeCtor() const = 0;
-
-  // Returns the interpretation of this layout parameter as a constant if possible
-  // or nullptr otherwise. There are no guarantees that the returned constant has
-  // been compiled or will actually successfully compile.
   virtual Constant* AsConstant() const = 0;
 
   const Kind kind;
@@ -292,22 +317,20 @@ struct TypeLayoutParameter final : public LayoutParameter {
 };
 
 struct IdentifierLayoutParameter final : public LayoutParameter {
-  explicit IdentifierLayoutParameter(Name name, SourceSpan span)
-      : LayoutParameter(Kind::kIdentifier, span), name(std::move(name)) {}
+  explicit IdentifierLayoutParameter(Reference reference, SourceSpan span)
+      : LayoutParameter(Kind::kIdentifier, span), reference(std::move(reference)) {}
+
+  // Disambiguates between type constructor and constant. Must call after
+  // resolving the reference, but before calling AsTypeCtor or AsConstant.
+  void Disambiguate();
 
   TypeConstructor* AsTypeCtor() const override;
   Constant* AsConstant() const override;
 
-  // Stores an interpretation of this layout as a TypeConstructor, if asked
-  // at some point (i.e. on demand by calling AsTypeCtor). We store this to
-  // store a reference to the compiled Type and LayoutInvocation
-  mutable std::unique_ptr<TypeConstructor> as_type_ctor;
+  Reference reference;
 
-  // Stores an interpretation of this layout as a Constant, if asked at some
-  // point (i.e. on demand by calling AsConstant). We store this to store a
-  // reference to the compiled ConstantValue
-  mutable std::unique_ptr<Constant> as_constant;
-  const Name name;
+  std::unique_ptr<TypeConstructor> as_type_ctor;
+  std::unique_ptr<Constant> as_constant;
 };
 
 struct LayoutParameterList {
@@ -657,10 +680,11 @@ struct Protocol final : public TypeDecl {
   };
 
   struct ComposedProtocol : public Element {
-    ComposedProtocol(std::unique_ptr<AttributeList> attributes, Name name)
-        : Element(Element::Kind::kProtocolCompose, std::move(attributes)), name(std::move(name)) {}
+    ComposedProtocol(std::unique_ptr<AttributeList> attributes, Reference reference)
+        : Element(Element::Kind::kProtocolCompose, std::move(attributes)),
+          reference(std::move(reference)) {}
 
-    Name name;
+    Reference reference;
   };
 
   Protocol(std::unique_ptr<AttributeList> attributes, types::Openness openness, Name name,
@@ -786,14 +810,8 @@ struct LibraryComparator;
 struct Library final : public Element {
   Library() : Element(Element::Kind::kLibrary, std::make_unique<AttributeList>()) {}
 
-  // Like the `dependencies` field, but also includes indirect dependencies that
-  // come from protocol composition, i.e. what would need to be imported if the
-  // composed methods were copied and pasted into the protocol.
-  std::set<const Library*, LibraryComparator> DirectAndComposedDependencies() const;
-
-  // Returns nullptr when the |name| cannot be resolved to a
-  // Name. Otherwise it returns the declaration.
-  Decl* LookupDeclByName(Name::Key name) const;
+  // Creates the root library which holds all Builtin decls.
+  static std::unique_ptr<Library> CreateRootLibrary();
 
   // Runs a function on every element in the library via depth-first traversal.
   // Runs it on the library itself, on all Decls, and on all their members.
@@ -805,12 +823,13 @@ struct Library final : public Element {
   SourceSpan arbitrary_name_span;
   Dependencies dependencies;
   // Maps decl names to decls, which are owned by the vectors below.
-  std::map<Name::Key, Decl*> declarations;
+  std::map<std::string_view, Decl*> declarations;
   // Contains the same decls as `declarations`, but in a topologically sorted
   // order, i.e. later decls only depend on earlier ones. Populated by SortStep.
   std::vector<const Decl*> declaration_order;
 
   std::vector<std::unique_ptr<Bits>> bits_declarations;
+  std::vector<std::unique_ptr<Builtin>> builtin_declarations;
   std::vector<std::unique_ptr<Const>> const_declarations;
   std::vector<std::unique_ptr<Enum>> enum_declarations;
   std::vector<std::unique_ptr<Protocol>> protocol_declarations;

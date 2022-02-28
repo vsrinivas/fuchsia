@@ -123,7 +123,6 @@ class TestLibrary final {
       if (!compiler.ConsumeFile(std::move(ast)))
         return false;
     }
-
     auto library = compiler.Compile();
     if (!library)
       return false;
@@ -167,7 +166,7 @@ class TestLibrary final {
   }
 
   std::string GenerateJSON() {
-    auto json_generator = fidl::JSONGenerator(library_);
+    auto json_generator = fidl::JSONGenerator(all_libraries_);
     auto out = json_generator.Produce();
     return out.str();
   }

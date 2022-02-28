@@ -137,7 +137,7 @@ protocol Example {
 };
 )FIDL");
 
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnknownType);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrNameNotFound);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "ErrorType");
 }
 

@@ -16,7 +16,6 @@
 namespace fidl::flat {
 
 class TypeResolver;
-class TypeTemplate;
 
 struct Decl;
 struct LayoutInvocation;
@@ -101,7 +100,7 @@ struct Type : public Object {
   // layout parameter (TypeTemplate::Create) code, we'll be able to remove this
   // extraneous parameter.
   virtual bool ApplyConstraints(TypeResolver* resolver, const TypeConstraints& constraints,
-                                const TypeTemplate* layout, std::unique_ptr<Type>* out_type,
+                                const Reference& layout, std::unique_ptr<Type>* out_type,
                                 LayoutInvocation* out_params) const = 0;
 };
 
@@ -124,7 +123,7 @@ struct ArrayType final : public Type {
   }
 
   bool ApplyConstraints(TypeResolver* resolver, const TypeConstraints& constraints,
-                        const TypeTemplate* layout, std::unique_ptr<Type>* out_type,
+                        const Reference& layout, std::unique_ptr<Type>* out_type,
                         LayoutInvocation* out_params) const override;
 };
 
@@ -135,7 +134,7 @@ struct VectorBaseType {
   // We can't abstract away only the element type resolution process, because not
   // all vector based type templates return a VectorType (the exception being StringTypeTemplate).
   static bool ResolveSizeAndNullability(TypeResolver* resolver, const TypeConstraints& constraints,
-                                        const TypeTemplate* layout, LayoutInvocation* out_params);
+                                        const Reference& layout, LayoutInvocation* out_params);
 
   const static Size kMaxSize;
 };
@@ -164,7 +163,7 @@ struct VectorType final : public Type, public VectorBaseType {
   }
 
   bool ApplyConstraints(TypeResolver* resolver, const TypeConstraints& constraints,
-                        const TypeTemplate* layout, std::unique_ptr<Type>* out_type,
+                        const Reference& layout, std::unique_ptr<Type>* out_type,
                         LayoutInvocation* out_params) const override;
 };
 
@@ -184,7 +183,7 @@ struct StringType final : public Type, public VectorBaseType {
   }
 
   bool ApplyConstraints(TypeResolver* resolver, const TypeConstraints& constraints,
-                        const TypeTemplate* layout, std::unique_ptr<Type>* out_type,
+                        const Reference& layout, std::unique_ptr<Type>* out_type,
                         LayoutInvocation* out_params) const override;
 };
 
@@ -222,7 +221,7 @@ struct HandleType final : public Type {
   }
 
   bool ApplyConstraints(TypeResolver* resolver, const TypeConstraints& constraints,
-                        const TypeTemplate* layout, std::unique_ptr<Type>* out_type,
+                        const Reference& layout, std::unique_ptr<Type>* out_type,
                         LayoutInvocation* out_params) const override;
 
   const static HandleRights kSameRights;
@@ -242,7 +241,7 @@ struct PrimitiveType final : public Type {
   }
 
   bool ApplyConstraints(TypeResolver* resolver, const TypeConstraints& constraints,
-                        const TypeTemplate* layout, std::unique_ptr<Type>* out_type,
+                        const Reference& layout, std::unique_ptr<Type>* out_type,
                         LayoutInvocation* out_params) const override;
 
  private:
@@ -250,12 +249,11 @@ struct PrimitiveType final : public Type {
 };
 
 struct IdentifierType final : public Type {
-  IdentifierType(const Name& name, const TypeDecl* type_decl)
-      : IdentifierType(name, type_decl, types::Nullability::kNonnullable) {}
-  IdentifierType(const Name& name, const TypeDecl* type_decl, types::Nullability nullability)
-      : Type(name, Kind::kIdentifier, nullability), type_decl(type_decl) {}
+  explicit IdentifierType(TypeDecl* type_decl)
+      : IdentifierType(type_decl, types::Nullability::kNonnullable) {}
+  IdentifierType(TypeDecl* type_decl, types::Nullability nullability);
 
-  const TypeDecl* type_decl;
+  TypeDecl* type_decl;
 
   std::any AcceptAny(VisitorAny* visitor) const override;
 
@@ -265,7 +263,7 @@ struct IdentifierType final : public Type {
   }
 
   bool ApplyConstraints(TypeResolver* resolver, const TypeConstraints& constraints,
-                        const TypeTemplate* layout, std::unique_ptr<Type>* out_type,
+                        const Reference& layout, std::unique_ptr<Type>* out_type,
                         LayoutInvocation* out_params) const override;
 };
 
@@ -302,7 +300,7 @@ struct TransportSideType final : public Type {
   }
 
   bool ApplyConstraints(TypeResolver* resolver, const TypeConstraints& constraints,
-                        const TypeTemplate* layout, std::unique_ptr<Type>* out_type,
+                        const Reference& layout, std::unique_ptr<Type>* out_type,
                         LayoutInvocation* out_params) const override;
 };
 
@@ -322,7 +320,7 @@ struct BoxType final : public Type {
   }
 
   bool ApplyConstraints(TypeResolver* resolver, const TypeConstraints& constraints,
-                        const TypeTemplate* layout, std::unique_ptr<Type>* out_type,
+                        const Reference& layout, std::unique_ptr<Type>* out_type,
                         LayoutInvocation* out_params) const override;
 };
 
@@ -331,7 +329,7 @@ struct UntypedNumericType final : public Type {
       : Type(name, Kind::kUntypedNumeric, types::Nullability::kNonnullable) {}
   std::any AcceptAny(VisitorAny* visitor) const override;
   bool ApplyConstraints(TypeResolver* resolver, const TypeConstraints& constraints,
-                        const TypeTemplate* layout, std::unique_ptr<Type>* out_type,
+                        const Reference& layout, std::unique_ptr<Type>* out_type,
                         LayoutInvocation* out_params) const override;
 };
 

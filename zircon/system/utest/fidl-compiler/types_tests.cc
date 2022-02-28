@@ -15,7 +15,16 @@
 
 namespace fidl::flat {
 
-TEST(TypesTests, GoodRootTypes) {
+static std::optional<types::PrimitiveSubtype> ConstPrimitiveSubtype(TestLibrary& library,
+                                                                    const char* const_name) {
+  auto type = library.LookupConstant(const_name)->value->type;
+  if (type->kind == Type::Kind::kPrimitive) {
+    return static_cast<const PrimitiveType*>(type)->subtype;
+  }
+  return std::nullopt;
+}
+
+TEST(TypesTests, GoodRootTypesUnqualified) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -33,25 +42,48 @@ const f64 float64 = 0;
 )FIDL");
   ASSERT_TRUE(library.Compile());
 
-  auto subtype = [&](const char* const_name) -> std::optional<types::PrimitiveSubtype> {
-    auto type = library.LookupConstant(const_name)->value->type;
-    if (type->kind == Type::Kind::kPrimitive) {
-      return static_cast<const PrimitiveType*>(type)->subtype;
-    }
-    return std::nullopt;
-  };
+  EXPECT_EQ(ConstPrimitiveSubtype(library, "b"), types::PrimitiveSubtype::kBool);
+  EXPECT_EQ(ConstPrimitiveSubtype(library, "i8"), types::PrimitiveSubtype::kInt8);
+  EXPECT_EQ(ConstPrimitiveSubtype(library, "i16"), types::PrimitiveSubtype::kInt16);
+  EXPECT_EQ(ConstPrimitiveSubtype(library, "i32"), types::PrimitiveSubtype::kInt32);
+  EXPECT_EQ(ConstPrimitiveSubtype(library, "i64"), types::PrimitiveSubtype::kInt64);
+  EXPECT_EQ(ConstPrimitiveSubtype(library, "u8"), types::PrimitiveSubtype::kUint8);
+  EXPECT_EQ(ConstPrimitiveSubtype(library, "u16"), types::PrimitiveSubtype::kUint16);
+  EXPECT_EQ(ConstPrimitiveSubtype(library, "u32"), types::PrimitiveSubtype::kUint32);
+  EXPECT_EQ(ConstPrimitiveSubtype(library, "u64"), types::PrimitiveSubtype::kUint64);
+  EXPECT_EQ(ConstPrimitiveSubtype(library, "f32"), types::PrimitiveSubtype::kFloat32);
+  EXPECT_EQ(ConstPrimitiveSubtype(library, "f64"), types::PrimitiveSubtype::kFloat64);
+}
 
-  EXPECT_EQ(subtype("b"), types::PrimitiveSubtype::kBool);
-  EXPECT_EQ(subtype("i8"), types::PrimitiveSubtype::kInt8);
-  EXPECT_EQ(subtype("i16"), types::PrimitiveSubtype::kInt16);
-  EXPECT_EQ(subtype("i32"), types::PrimitiveSubtype::kInt32);
-  EXPECT_EQ(subtype("i64"), types::PrimitiveSubtype::kInt64);
-  EXPECT_EQ(subtype("u8"), types::PrimitiveSubtype::kUint8);
-  EXPECT_EQ(subtype("u16"), types::PrimitiveSubtype::kUint16);
-  EXPECT_EQ(subtype("u32"), types::PrimitiveSubtype::kUint32);
-  EXPECT_EQ(subtype("u64"), types::PrimitiveSubtype::kUint64);
-  EXPECT_EQ(subtype("f32"), types::PrimitiveSubtype::kFloat32);
-  EXPECT_EQ(subtype("f64"), types::PrimitiveSubtype::kFloat64);
+TEST(TypesTests, GoodRootTypesQualified) {
+  TestLibrary library(R"FIDL(
+library example;
+
+const bool fidl.bool = false;
+const int8 fidl.int8 = 0;
+const int16 fidl.int16 = 0;
+const int32 fidl.int32 = 0;
+const int64 fidl.int64 = 0;
+const uint8 fidl.uint8 = 0;
+const uint16 fidl.uint16 = 0;
+const uint32 fidl.uint32 = 0;
+const uint64 fidl.uint64 = 0;
+const float32 fidl.float32 = 0;
+const float64 fidl.float64 = 0;
+)FIDL");
+  ASSERT_TRUE(library.Compile());
+
+  EXPECT_EQ(ConstPrimitiveSubtype(library, "bool"), types::PrimitiveSubtype::kBool);
+  EXPECT_EQ(ConstPrimitiveSubtype(library, "int8"), types::PrimitiveSubtype::kInt8);
+  EXPECT_EQ(ConstPrimitiveSubtype(library, "int16"), types::PrimitiveSubtype::kInt16);
+  EXPECT_EQ(ConstPrimitiveSubtype(library, "int32"), types::PrimitiveSubtype::kInt32);
+  EXPECT_EQ(ConstPrimitiveSubtype(library, "int64"), types::PrimitiveSubtype::kInt64);
+  EXPECT_EQ(ConstPrimitiveSubtype(library, "uint8"), types::PrimitiveSubtype::kUint8);
+  EXPECT_EQ(ConstPrimitiveSubtype(library, "uint16"), types::PrimitiveSubtype::kUint16);
+  EXPECT_EQ(ConstPrimitiveSubtype(library, "uint32"), types::PrimitiveSubtype::kUint32);
+  EXPECT_EQ(ConstPrimitiveSubtype(library, "uint64"), types::PrimitiveSubtype::kUint64);
+  EXPECT_EQ(ConstPrimitiveSubtype(library, "float32"), types::PrimitiveSubtype::kFloat32);
+  EXPECT_EQ(ConstPrimitiveSubtype(library, "float64"), types::PrimitiveSubtype::kFloat64);
 }
 
 // Check that fidl's types.h and zircon/types.h's handle subtype
@@ -576,11 +608,14 @@ using zx;
 alias MyVmo = zx.handle:VMO;
 
 type Foo = struct {
-    foo MyVmo:CHANNEL;
+    foo MyVmo:zx.obj_type.CHANNEL;
 };
 
 )FIDL");
 
+  // TODO(fxbug.dev/74193): We plan to disallow constraints on aliases, so this
+  // error message should change to that. For now, to test this we have to use
+  // `zx.obj_type` above because contextual lookup is not done through aliases.
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCannotConstrainTwice);
 }
 
