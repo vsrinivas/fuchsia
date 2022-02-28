@@ -11,10 +11,18 @@
         binary: "bin/storage_example",
     },
     use: [
-        // Use isolated persistent storage to store data.
+        // Use each form of storage to store data.
         {
             storage: "data",
             path: "/data",
+        },
+        {
+            storage: "cache",
+            path: "/cache",
+        },
+        {
+            storage: "tmp",
+            path: "/tmp",
         },
     ],
 }

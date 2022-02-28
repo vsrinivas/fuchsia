@@ -19,9 +19,10 @@ use {
 
 const U64_SIZE: usize = (u64::BITS / 8) as usize;
 const DEFAULT_VALUE: u64 = 1;
+const FILENAME: &str = "counter";
 
 lazy_static! {
-    static ref FILE_PATH: PathBuf = PathBuf::from("/data/counter");
+    static ref DIRECTORIES: Vec<&'static str> = vec!["data", "cache", "tmp"];
     static ref INSPECTOR: Inspector = Inspector::new();
 }
 
@@ -29,10 +30,16 @@ lazy_static! {
 async fn main() -> Result<(), Error> {
     info!("Initializing and serving inspect on servicefs");
     let mut fs = ServiceFs::new();
+    let mut inspect_nodes = Vec::new();
     inspect_runtime::serve(&INSPECTOR, &mut fs)?;
 
-    info!("Attempted to read and write from storage");
-    process_file(&FILE_PATH, INSPECTOR.root());
+    for dirname in &*DIRECTORIES {
+        let path = PathBuf::from(format!("/{}/{}", dirname, FILENAME));
+        let node = INSPECTOR.root().create_child(*dirname);
+        info!("Attempting to read and write from {:?}", path);
+        process_file(&path, &node);
+        inspect_nodes.push(node);
+    }
 
     fs.take_and_serve_directory_handle()?;
     Ok(fs.collect().await)
@@ -44,13 +51,13 @@ async fn main() -> Result<(), Error> {
 fn process_file(path: &Path, inspect_node: &Node) {
     let updated_value = match read_file(path) {
         Ok(value) => {
-            info!("Successfully read a value of: {}", value);
+            info!("Successfully read a value from {:?}: {}", path, value);
             inspect_node.record_uint("read_value", value);
             value.wrapping_add(1)
         }
         Err(err) => {
             let error_string = format!("{:?}", err);
-            warn!("Error reading previous value: {}", error_string);
+            warn!("Error reading previous value from {:?}: {}", path, error_string);
             inspect_node.record_string("read_error", error_string);
             DEFAULT_VALUE
         }
@@ -58,12 +65,12 @@ fn process_file(path: &Path, inspect_node: &Node) {
 
     match write_file(path, updated_value) {
         Ok(()) => {
-            info!("Successfully wrote a value of: {}", updated_value);
+            info!("Successfully wrote a value to {:?}: {}", path, updated_value);
             inspect_node.record_uint("write_value", updated_value);
         }
         Err(err) => {
             let error_string = format!("{:?}", err);
-            warn!("Error writing updated value: {}", error_string);
+            warn!("Error writing updated value to {:?}: {}", path, error_string);
             inspect_node.record_string("write_error", error_string);
         }
     }
