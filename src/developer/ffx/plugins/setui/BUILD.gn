@@ -9,6 +9,7 @@ ffx_plugin("ffx_setui") {
   edition = "2018"
 
   plugin_deps = [
+    "accessibility:ffx_setui_accessibility",
     "audio:ffx_setui_audio",
     "display:ffx_setui_display",
     "do_not_disturb:ffx_setui_do_not_disturb",
