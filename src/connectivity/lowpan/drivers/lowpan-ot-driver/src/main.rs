@@ -214,6 +214,10 @@ impl Config {
                 .expect("Network interface index is too large for OpenThread"),
         );
 
+        netif
+            .set_ipv6_forwarding_enabled(true)
+            .expect("Unable to enable ipv6 packet forwarding on lowapn interface");
+
         // TODO (fxbug.dev/94129): Handle removal/re-add of backbone interface device
         // This is needed for now due to the removal of backbone when its region code is set.
         info!("Wait for 20s before getting backbone interface {:?}", self.backbone_name);

@@ -379,4 +379,19 @@ impl NetworkInterface for TunNetworkInterface {
 
         futures::stream::select(enabled_stream, if_event_stream).boxed()
     }
+
+    fn set_ipv6_forwarding_enabled(&self, enabled: bool) -> Result<(), Error> {
+        let (client, server) = zx::Channel::create()?;
+        connect_channel_to_protocol::<fidl_fuchsia_net_stack::StackMarker>(server)?;
+        let stack_sync = fidl_fuchsia_net_stack::StackSynchronousProxy::new(client);
+        stack_sync
+            .set_interface_ip_forwarding(
+                self.id,
+                fidl_fuchsia_net::IpVersion::V6,
+                enabled,
+                zx::Time::INFINITE,
+            )?
+            .expect("fidl_fuchsia_net_stack::Error when handling set_interface_ip_forwarding");
+        Ok(())
+    }
 }
