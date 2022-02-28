@@ -82,6 +82,7 @@ import("//tools/configc/build/config.gni")
 #     The basename of the component manifest within the package. If not provided, derived
 #     from the `component` parameter's target info.
 #
+#   deps (optional)
 #   testonly (optional)
 #     Standard GN meaning.
 template("fuchsia_structured_config_values") {
@@ -106,10 +107,17 @@ template("fuchsia_structured_config_values") {
 
     # compile the value file
     cvf(target_name) {
-      forward_variables_from(invoker, [ "testonly" ])
+      forward_variables_from(invoker,
+                             [
+                               "deps",
+                               "testonly",
+                             ])
       cm = compiled_manifest
       value_file = invoker.values
-      deps = [
+      if (!defined(deps)) {
+        deps = []
+      }
+      deps += [
         ":$manifest_resource_target",
         "${invoker.cm_target}",
       ]
