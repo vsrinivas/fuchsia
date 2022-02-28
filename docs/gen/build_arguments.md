@@ -2091,14 +2091,6 @@ injected that way can override that option's setting in this list.
 
 From //build/config/sanitizers/sanitizer_default_options.gni:94
 
-### i_can_haz_atlas_camera
-If true, power on the Atlas camera at boot.
-TODO(fxbug.dev/81684): remove once we have a better way to manage ACPI device power.
-
-**Current value (from the default):** `false`
-
-From //src/devices/board/drivers/x86/BUILD.gn:15
-
 ### icu_disable_thin_archive
 If true, compile icu into a standalone static library. Currently this is
 only useful on Chrome OS.
@@ -3343,6 +3335,13 @@ cacheline size of the target architecture.
 **Current value (from the default):** `128`
 
 From //zircon/kernel/params.gni:100
+
+### platform_config
+Passed as the `platform` key in the product assembly config.
+
+**Current value (from the default):** `{ }`
+
+From //build/product.gni:29
 
 ### platform_enable_user_pci
 
@@ -4818,4 +4817,12 @@ be removed after everyone has had a chance to get hold of their machines.
 **Current value (from the default):** `false`
 
 From //zircon/kernel/BUILD.gn:29
+
+### i_can_haz_atlas_camera
+If true, power on the Atlas camera at boot.
+TODO(fxbug.dev/81684): remove once we have a better way to manage ACPI device power.
+
+**Current value (from the default):** `false`
+
+From //src/devices/board/drivers/x86/BUILD.gn:15
 
