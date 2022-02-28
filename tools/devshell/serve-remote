@@ -229,8 +229,18 @@ done
 if "${serve}"; then
   remote_server_mode=$(ssh "${host}" "${ssh_base_args[@]}" "cd ${dir} && ./.jiri_root/bin/ffx config get repository.server.mode") || err=$?
   if [[ "${err}" -ne 0 ]]; then
-    fx-error "Unable to get the remote configured repository server mode."
-    exit "${err}"
+    # Warn if we can't look up the remote server mode, which might mean the
+    # remote checkout is out of date.
+    fx-warn "It appears the remote host does not have a value defined for"
+    fx-warn "'ffx config get repository.server.mode', which suggests it might be"
+    fx-warn "out of date."
+    fx-warn ""
+    fx-warn "Run '$ jiri update && fx build ffx' on both the local and remote hosts, then"
+    fx-warn "confirm that '$ ffx config get repository.server.mode' returns a string on"
+    fx-warn "both the local and remote hosts."
+
+    # Clear the error so later checks won't fail.
+    err=0
   fi
 
   if [[ "${remote_server_mode}" == \"pm\" ]]; then
