@@ -21,14 +21,25 @@
             protocol: [ "fuchsia.ui.app.ViewProvider" ],
         },
         {
-            directory: "account_dir",
+            directory: "account_data_dir",
             rights: [ "rw*" ],
             path: "/hosted_directories/account_data",
         },
         {
+            directory: "account_cache_dir",
+            rights: [ "rw*" ],
+            path: "/hosted_directories/account_cache",
+        },
+        {
             storage: "account",
             from: "self",
-            backing_dir: "account_dir",
+            backing_dir: "account_data_dir",
+            storage_id: "static_instance_id_or_moniker",
+        },
+        {
+            storage: "account_cache",
+            from: "self",
+            backing_dir: "account_cache_dir",
             storage_id: "static_instance_id_or_moniker",
         },
     ],
@@ -128,10 +139,16 @@
             to: "#ermine_shell",
         },
         {
-            storage: [
-                "cache",
-                "tmp",
-            ],
+            // TODO(fxbug.dev/89628): This cache does not currently have any
+            // process deleting files when it gets full, meaning all clients
+            // need to place constraints on their usage. This is part of a wider
+            // question on cache policy management discussed in fxb/89628.
+            storage: "account_cache",
+            from: "self",
+            to: "#ermine_shell",
+        },
+        {
+            storage: "tmp",
             from: "parent",
             to: "#ermine_shell",
         },

@@ -5,6 +5,7 @@
 import 'package:fidl/fidl.dart';
 import 'package:ermine_utils/ermine_utils.dart';
 import 'package:fidl_fuchsia_identity_account/fidl_async.dart';
+import 'package:fidl_fuchsia_io/fidl_async.dart';
 import 'package:fidl_fuchsia_recovery/fidl_async.dart';
 import 'package:fuchsia_logger/logger.dart';
 import 'package:fuchsia_services/services.dart';
@@ -16,7 +17,9 @@ import 'package:zircon/zircon.dart';
 const kDeprecatedAccountName = 'created_by_user';
 const kSystemPickedAccountName = 'picked_by_system';
 const kUserPickedAccountName = 'picked_by_user';
-const kAccountDirectory = 'account_data';
+const kAccountDataDirectory = 'account_data';
+const kAccountCacheDirectory = 'account_cache';
+const kCacheSubdirectory = 'cache/';
 
 enum AuthMode { automatic, manual }
 
@@ -185,13 +188,29 @@ class AuthService {
   Future<void> _publishAccountDirectory(Account account) async {
     // Get the data directory for the account.
     log.info('Getting data directory for account.');
-    final directory = ChannelPair();
-    await account.getDataDirectory(InterfaceRequest(directory.second));
+    final dataDirChannel = ChannelPair();
+    await account.getDataDirectory(InterfaceRequest(dataDirChannel.second));
 
+    // Open or create a subdirectory for the cache storage capability.
+    log.info('Opening cache directory for account.');
+    final dataDir = RemoteDir(dataDirChannel.first!);
+    final cacheDirChannel = ChannelPair();
+    dataDir.open(
+        openRightReadable |
+            openRightWritable |
+            openFlagCreate |
+            openFlagDirectory,
+        0,
+        kCacheSubdirectory,
+        InterfaceRequest(cacheDirChannel.second));
+
+    // Host both directories.
     hostedDirectories
-      ..removeNode(kAccountDirectory)
-      ..addNode(kAccountDirectory, RemoteDir(directory.first!));
+      ..removeNode(kAccountDataDirectory)
+      ..addNode(kAccountDataDirectory, dataDir)
+      ..removeNode(kAccountCacheDirectory)
+      ..addNode(kAccountCacheDirectory, RemoteDir(cacheDirChannel.first!));
 
-    log.info('Data directory for account published.');
+    log.info('Data and cache directories for account published.');
   }
 }

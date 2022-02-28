@@ -158,8 +158,9 @@
             to: [ "#chrome" ],
         },
         {
-            storage: [ "cache" ],
+            storage: [ "account_cache" ],
             from: "parent",
+            as: "cache",
             to: "#chrome",
         },
         {
