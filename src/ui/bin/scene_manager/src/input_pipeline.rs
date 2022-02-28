@@ -17,7 +17,6 @@ use {
     icu_data,
     input_pipeline::{
         self, dead_keys_handler,
-        display_ownership_handler::DisplayOwnershipHandler,
         ime_handler::ImeHandler,
         input_device,
         input_pipeline::{InputDeviceBindingHashMap, InputPipeline, InputPipelineAssembly},
@@ -155,7 +154,7 @@ async fn build_input_pipeline_assembly(
     let mut assembly = InputPipelineAssembly::new();
     let (sender, mut receiver) = futures::channel::mpsc::channel(0);
     {
-        assembly = add_display_ownership_handler(display_ownership_event, assembly);
+        assembly = assembly.add_display_ownership_handler(display_ownership_event);
         assembly = add_modifier_handler(assembly);
         assembly = add_inspect_handler(node.create_child("input_pipeline_entry"), assembly);
         // Add the text settings handler early in the pipeline to use the
@@ -215,13 +214,6 @@ async fn build_input_pipeline_assembly(
     }
 
     assembly
-}
-
-fn add_display_ownership_handler(
-    display_ownership_event: zx::Event,
-    assembly: InputPipelineAssembly,
-) -> InputPipelineAssembly {
-    assembly.add_handler(DisplayOwnershipHandler::new(display_ownership_event))
 }
 
 /// Hooks up the modifier keys handler.

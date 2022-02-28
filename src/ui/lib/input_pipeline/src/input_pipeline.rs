@@ -3,13 +3,17 @@
 // found in the LICENSE file.
 
 use {
-    crate::{autorepeater::Autorepeater, input_device, input_handler},
+    crate::{
+        autorepeater::Autorepeater, display_ownership_handler::DisplayOwnershipHandler,
+        input_device, input_handler,
+    },
     anyhow::{format_err, Context, Error},
     fidl_fuchsia_input_injection,
     fidl_fuchsia_io::OPEN_RIGHT_READABLE,
     fuchsia_async as fasync,
     fuchsia_syslog::{fx_log_err, fx_log_warn},
     fuchsia_vfs_watcher::{WatchEvent, Watcher},
+    fuchsia_zircon as zx,
     futures::channel::mpsc::{self, Receiver, Sender, UnboundedReceiver, UnboundedSender},
     futures::lock::Mutex,
     futures::{StreamExt, TryStreamExt},
@@ -95,6 +99,26 @@ impl InputPipelineAssembly {
     /// Adds all handlers into the assembly in the order they appear in `handlers`.
     pub fn add_all_handlers(self, handlers: Vec<Rc<dyn input_handler::InputHandler>>) -> Self {
         handlers.into_iter().fold(self, |assembly, handler| assembly.add_handler(handler))
+    }
+
+    /// Adds the [DisplayOwnershipHandler] to the input pipeline.  The `display_ownership_event` is
+    /// assumed to be the Scenic event used to report changes in display ownership, obtained
+    /// by `fuchsia.ui.scenic/Scenic.GetDisplayOwnershipEvent`. This code has no way to check
+    /// whether that invariant is upheld, so this is something that the user will need to
+    /// ensure.
+    pub fn add_display_ownership_handler(
+        self,
+        display_ownership_event: zx::Event,
+    ) -> InputPipelineAssembly {
+        let (sender, autorepeat_receiver, mut tasks) = self.into_components();
+        let (autorepeat_sender, receiver) = mpsc::unbounded();
+        let h = DisplayOwnershipHandler::new(display_ownership_event);
+        tasks.push(fasync::Task::local(async move {
+            h.handle_input_events(autorepeat_receiver, autorepeat_sender)
+                .await
+                .map_err(|e| fx_log_err!("display ownership handler is not supposed to terminate - this is likely a problem: {:?}", &e)).unwrap();
+        }));
+        InputPipelineAssembly { sender, receiver, tasks }
     }
 
     /// Adds the autorepeater into the input pipeline assembly.  The autorepeater

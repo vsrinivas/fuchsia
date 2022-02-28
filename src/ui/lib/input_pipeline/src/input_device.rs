@@ -347,6 +347,11 @@ impl InputEvent {
     pub fn into_with_device_descriptor(self, device_descriptor: InputDeviceDescriptor) -> Self {
         Self { device_descriptor, ..self }
     }
+
+    /// Returns true if this handler is marked as handled.
+    pub fn is_handled(&self) -> bool {
+        self.handled == Handled::Yes
+    }
 }
 
 #[cfg(test)]
