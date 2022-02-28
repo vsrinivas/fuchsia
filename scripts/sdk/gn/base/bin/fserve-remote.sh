@@ -110,6 +110,8 @@ while [[ $# -ne 0 ]]; do
   shift
 done
 
+echo "Note: fserve-remote is being deprecated. Please use fssh tunnel instead."
+
 if [[ -z "${REMOTE_HOST}" ]]; then
   fx-error "HOSTNAME must be specified"
   usage
