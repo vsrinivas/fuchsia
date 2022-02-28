@@ -2,15 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::config as image_assembly_config;
-use crate::config::FileEntry;
+use crate as image_assembly_config;
+use crate::FileEntry;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
 /// Configuration for a Product Assembly operation.  This is a high-level operation
 /// that takes a more abstract description of what is desired in the assembled
 /// product images, and then generates the complete Image Assembly configuration
-/// (`crate::config::ProductConfig`) from that.
+/// (`crate::config::ImageAssemblyConfig`) from that.
 #[derive(Debug, Deserialize, Serialize)]
 pub struct ProductAssemblyConfig {
     pub platform: PlatformConfig,
@@ -39,10 +39,10 @@ impl Default for BuildType {
 #[derive(Debug, Default, Deserialize, Serialize, PartialEq)]
 #[serde(deny_unknown_fields)]
 pub struct AssemblyInputBundle {
-    /// The Image Assembly's ProductConfiguration is most of the fields here, so
+    /// The Image Assembly's ImageAssemblyConfiguration is most of the fields here, so
     /// it's re-used to gain access to the methods it has for merging.
     #[serde(flatten)]
-    pub image_assembly: image_assembly_config::PartialProductConfig,
+    pub image_assembly: image_assembly_config::PartialImageAssemblyConfig,
 
     /// Entries for the `config_data` package.
     #[serde(default)]
@@ -52,7 +52,8 @@ pub struct AssemblyInputBundle {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{config::PartialKernelConfig, util};
+    use crate::PartialKernelConfig;
+    use assembly_util as util;
     use std::path::PathBuf;
 
     #[test]

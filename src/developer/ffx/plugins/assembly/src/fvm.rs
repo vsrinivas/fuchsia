@@ -2,9 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::config::{FastbootConfig, FvmConfig, FvmFilesystemEntry};
-
 use anyhow::{Context, Result};
+use assembly_config::{FastbootConfig, FvmConfig, FvmFilesystemEntry};
 use assembly_fvm::{Filesystem, FvmBuilder, FvmType, NandFvmBuilder};
 use assembly_minfs::MinFSBuilder;
 use assembly_tool::ToolProvider;
@@ -190,7 +189,7 @@ pub fn construct_fvm(
 mod tests {
     use super::*;
 
-    use crate::config::{FastbootConfig, FvmConfig, FvmFilesystemEntry};
+    use assembly_config::{FastbootConfig, FvmConfig, FvmFilesystemEntry};
     use assembly_fvm::FilesystemAttributes;
     use assembly_tool::testing::FakeToolProvider;
     use tempfile::tempdir;

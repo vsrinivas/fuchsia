@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use anyhow::Context as _;
+use assembly_config::{FileEntry, ImageAssemblyConfig};
 use assembly_validate_util::{BootfsContents, PkgNamespace};
 use fuchsia_pkg::PackageManifest;
 use rayon::iter::{ParallelBridge, ParallelIterator};
@@ -15,12 +16,10 @@ use std::{
 };
 
 /// Validate a product config.
-pub fn validate_product<'a>(
-    // TODO change these to a reference to a whole image assembly once that type is in a library
-    bootfs_files: impl Iterator<Item = (impl AsRef<str>, impl AsRef<Path>)>,
-    package_manifests: impl Iterator<Item = impl AsRef<Path> + Send> + Send,
-) -> Result<(), ProductValidationError> {
-    let packages: BTreeMap<_, _> = package_manifests
+pub fn validate_product(product: &ImageAssemblyConfig) -> Result<(), ProductValidationError> {
+    // validate the packages in the system/base/cache package sets
+    let manifests = product.system.iter().chain(product.base.iter()).chain(product.cache.iter());
+    let packages: BTreeMap<_, _> = manifests
         .par_bridge()
         .filter_map(|package| {
             let package = package.as_ref();
@@ -32,7 +31,8 @@ pub fn validate_product<'a>(
         })
         .collect();
 
-    match validate_bootfs(bootfs_files) {
+    // validate the contents of bootfs
+    match validate_bootfs(&product.bootfs_files) {
         Ok(()) if packages.is_empty() => Ok(()),
         Ok(()) => Err(ProductValidationError { bootfs: Default::default(), packages }),
         Err(bootfs) => Err(ProductValidationError { bootfs: Some(bootfs), packages }),
@@ -42,11 +42,11 @@ pub fn validate_product<'a>(
 /// Validate the contents of bootfs.
 ///
 /// Assumes that all component manifests have a `.cm` extension within the destination namespace.
-fn validate_bootfs(
-    bootfs_files: impl Iterator<Item = (impl AsRef<str>, impl AsRef<Path>)>,
-) -> Result<(), BootfsValidationError> {
-    let mut bootfs =
-        BootfsContents::from_iter(bootfs_files).map_err(BootfsValidationError::ReadContents)?;
+fn validate_bootfs(bootfs_files: &[FileEntry]) -> Result<(), BootfsValidationError> {
+    let mut bootfs = BootfsContents::from_iter(
+        bootfs_files.iter().map(|entry| (&entry.destination, &entry.source)),
+    )
+    .map_err(BootfsValidationError::ReadContents)?;
 
     // validate components
     let mut errors = BTreeMap::new();

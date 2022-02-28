@@ -3,10 +3,10 @@
 // found in the LICENSE file.
 
 use crate::base_package::BasePackage;
-use crate::config::{ProductConfig, ZbiConfig};
 use crate::util::pkg_manifest_from_path;
 
 use anyhow::{anyhow, Context, Result};
+use assembly_config::{ImageAssemblyConfig, ZbiConfig};
 use assembly_images_config::{PostProcessingScript, Zbi, ZbiCompression};
 use assembly_tool::Tool;
 use assembly_util::PathToStringExt;
@@ -33,7 +33,7 @@ pub fn construct_zbi(
     zbi_tool: Box<dyn Tool>,
     outdir: impl AsRef<Path>,
     gendir: impl AsRef<Path>,
-    product: &ProductConfig,
+    product: &ImageAssemblyConfig,
     zbi_config: &Zbi,
     base_package: Option<&BasePackage>,
     fvm: Option<impl AsRef<Path>>,
@@ -158,7 +158,7 @@ mod tests {
     use super::{construct_zbi, convert_to_new_config, vendor_sign_zbi};
 
     use crate::base_package::BasePackage;
-    use crate::config::{ProductConfig, ZbiConfig, ZbiSigningScript};
+    use assembly_config::{ImageAssemblyConfig, ZbiConfig, ZbiSigningScript};
     use assembly_images_config::{PostProcessingScript, Zbi, ZbiCompression};
     use assembly_test_util::generate_fake_tool;
     use assembly_tool::testing::FakeToolProvider;
@@ -217,7 +217,7 @@ mod tests {
 
         // Create fake product/board definitions.
         let kernel_path = dir.path().join("kernel");
-        let mut product_config = ProductConfig::new(&kernel_path, 0);
+        let mut product_config = ImageAssemblyConfig::new_for_testing(&kernel_path, 0);
         let zbi_config = Zbi {
             name: "fuchsia".into(),
             compression: ZbiCompression::ZStd,

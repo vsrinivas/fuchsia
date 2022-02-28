@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::util;
 use anyhow::{anyhow, Result};
 use assembly_fvm::FilesystemAttributes;
+use assembly_util as util;
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 pub mod product_config;
 
@@ -15,7 +15,7 @@ pub mod product_config;
 /// optional to allow for specifying incomplete configurations.
 #[derive(Debug, Default, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
-pub struct PartialProductConfig {
+pub struct PartialImageAssemblyConfig {
     /// The packages whose files get added to the base package. The
     /// packages themselves are not added, but their individual files are
     /// extracted and added to the base package. These files are needed
@@ -47,8 +47,8 @@ pub struct PartialProductConfig {
     pub bootfs_files: Vec<FileEntry>,
 }
 
-impl PartialProductConfig {
-    /// Create a new PartialProductConfig by merging N PartialProductConfigs.
+impl PartialImageAssemblyConfig {
+    /// Create a new PartialImageAssemblyConfig by merging N PartialImageAssemblyConfigs.
     /// At most one can specify a kernel path, or a clock backstop.
     ///
     /// Packages in the base and cache sets are deduplicated, as are any boot
@@ -57,7 +57,7 @@ impl PartialProductConfig {
     ///
     /// bootfs entries are merged, and any entries with duplicate destination
     /// paths will cause an error.
-    pub fn try_from_partials<I: IntoIterator<Item = PartialProductConfig>>(
+    pub fn try_from_partials<I: IntoIterator<Item = PartialImageAssemblyConfig>>(
         configs: I,
     ) -> Result<Self> {
         let mut system = BTreeSet::new();
@@ -115,7 +115,7 @@ impl PartialProductConfig {
 /// being a complete configuration (it at least has a kernel).
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
-pub struct ProductConfig {
+pub struct ImageAssemblyConfig {
     /// The packages whose files get added to the base package. The
     /// packages themselves are not added, but their individual files are
     /// extracted and added to the base package. These files are needed
@@ -147,8 +147,25 @@ pub struct ProductConfig {
     pub bootfs_files: Vec<FileEntry>,
 }
 
-impl ProductConfig {
-    /// Create a new ProductConfig by merging N PartialProductConfigs, only one
+impl ImageAssemblyConfig {
+    /// Helper function for constructing a ImageAssemblyConfig in tests in this
+    /// and other modules within the crate.
+    pub fn new_for_testing(kernel_path: impl AsRef<Path>, clock_backstop: u64) -> Self {
+        Self {
+            system: Vec::default(),
+            base: Vec::default(),
+            cache: Vec::default(),
+            boot_args: Vec::default(),
+            bootfs_files: Vec::default(),
+            kernel: KernelConfig {
+                path: kernel_path.as_ref().into(),
+                args: Vec::default(),
+                clock_backstop,
+            },
+        }
+    }
+
+    /// Create a new ImageAssemblyConfig by merging N PartialImageAssemblyConfigs, only one
     /// of which must specify the kernel path and the clock_backstop.
     ///
     /// Packages in the base and cache sets are deduplicated, as are any boot
@@ -157,11 +174,11 @@ impl ProductConfig {
     ///
     /// bootfs entries are merged, and any entries with duplicate destination
     /// paths will cause an error.
-    pub fn try_from_partials<I: IntoIterator<Item = PartialProductConfig>>(
+    pub fn try_from_partials<I: IntoIterator<Item = PartialImageAssemblyConfig>>(
         configs: I,
     ) -> Result<Self> {
-        let PartialProductConfig { system, base, cache, kernel, boot_args, bootfs_files } =
-            PartialProductConfig::try_from_partials(configs.into_iter())?;
+        let PartialImageAssemblyConfig { system, base, cache, kernel, boot_args, bootfs_files } =
+            PartialImageAssemblyConfig::try_from_partials(configs.into_iter())?;
 
         let PartialKernelConfig { path: kernel_path, args: cmdline_args, clock_backstop } =
             kernel.ok_or(anyhow!("A kernel configuration must be specified"))?;
@@ -526,30 +543,10 @@ pub struct RecoveryConfig {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::util::from_reader;
+    use assembly_util::from_reader;
     use assert_matches::assert_matches;
     use serde::de::DeserializeOwned;
     use serde_json::json;
-    use std::path::Path;
-
-    impl ProductConfig {
-        /// Helper function for constructing a ProductConfig in tests in this
-        /// and other modules within the crate.
-        pub fn new(kernel_path: impl AsRef<Path>, clock_backstop: u64) -> Self {
-            Self {
-                system: Vec::default(),
-                base: Vec::default(),
-                cache: Vec::default(),
-                boot_args: Vec::default(),
-                bootfs_files: Vec::default(),
-                kernel: KernelConfig {
-                    path: kernel_path.as_ref().into(),
-                    args: Vec::default(),
-                    clock_backstop,
-                },
-            }
-        }
-    }
 
     impl Default for BoardConfig {
         fn default() -> Self {
@@ -592,7 +589,7 @@ mod tests {
             }
         "#;
 
-        let config: PartialProductConfig = from_json_str(json).unwrap();
+        let config: PartialImageAssemblyConfig = from_json_str(json).unwrap();
         assert_matches!(
             config.kernel,
             Some(PartialKernelConfig { path: Some(_), args: _, clock_backstop: Some(0) })
@@ -623,7 +620,7 @@ mod tests {
             }
         "#;
 
-        let config: PartialProductConfig = from_json_str(json).unwrap();
+        let config: PartialImageAssemblyConfig = from_json_str(json).unwrap();
         assert_matches!(
             config.kernel,
             Some(PartialKernelConfig { path: Some(_), args: _, clock_backstop: Some(0) })
@@ -641,7 +638,7 @@ mod tests {
             }
         "#;
 
-        let config: PartialProductConfig = from_json_str(json).unwrap();
+        let config: PartialImageAssemblyConfig = from_json_str(json).unwrap();
         assert_matches!(
             config.kernel,
             Some(PartialKernelConfig { path: Some(_), args: _, clock_backstop: Some(0) })
@@ -750,7 +747,7 @@ mod tests {
             }
         "#;
 
-        let config: Result<ProductConfig> = from_json_str(json);
+        let config: Result<ImageAssemblyConfig> = from_json_str(json);
         assert!(config.is_err());
     }
 
@@ -768,7 +765,7 @@ mod tests {
 
     #[test]
     fn merge_product_config() {
-        let config_a = serde_json::from_value::<PartialProductConfig>(json!({
+        let config_a = serde_json::from_value::<PartialImageAssemblyConfig>(json!({
             "system": ["package0a"],
             "base": ["package1a", "package2a"],
             "cache": ["package3a", "package4a"],
@@ -787,7 +784,7 @@ mod tests {
         }))
         .unwrap();
 
-        let config_b = serde_json::from_value::<PartialProductConfig>(json!({
+        let config_b = serde_json::from_value::<PartialImageAssemblyConfig>(json!({
           "system": ["package0b"],
           "base": ["package1a", "package2b"],
           "cache": ["package3b", "package4b"],
@@ -801,7 +798,7 @@ mod tests {
         }))
         .unwrap();
 
-        let config_c = serde_json::from_value::<PartialProductConfig>(json!({
+        let config_c = serde_json::from_value::<PartialImageAssemblyConfig>(json!({
           "system": ["package0c"],
           "base": ["package1a", "package2c"],
           "cache": ["package3c", "package4c"],
@@ -815,9 +812,10 @@ mod tests {
         }))
         .unwrap();
 
-        let result = ProductConfig::try_from_partials(vec![config_a, config_b, config_c]).unwrap();
+        let result =
+            ImageAssemblyConfig::try_from_partials(vec![config_a, config_b, config_c]).unwrap();
 
-        let expected = serde_json::from_value::<ProductConfig>(json!({
+        let expected = serde_json::from_value::<ImageAssemblyConfig>(json!({
             "system": ["package0a", "package0b", "package0c"],
             "base": ["package1a", "package2a", "package2b", "package2c"],
             "cache": ["package3a", "package3b", "package3c", "package4a", "package4b", "package4c"],
@@ -849,33 +847,33 @@ mod tests {
 
     #[test]
     fn test_fail_merge_with_no_kernel() {
-        let config_a = PartialProductConfig::default();
-        let config_b = PartialProductConfig::default();
+        let config_a = PartialImageAssemblyConfig::default();
+        let config_b = PartialImageAssemblyConfig::default();
 
-        let result = ProductConfig::try_from_partials(vec![config_a, config_b]);
+        let result = ImageAssemblyConfig::try_from_partials(vec![config_a, config_b]);
         assert!(result.is_err());
     }
 
     #[test]
     fn test_fail_merge_with_more_than_one_kernel() {
-        let config_a = PartialProductConfig {
+        let config_a = PartialImageAssemblyConfig {
             kernel: Some(PartialKernelConfig {
                 path: Some("foo".into()),
                 args: Vec::default(),
                 clock_backstop: Some(0),
             }),
-            ..PartialProductConfig::default()
+            ..PartialImageAssemblyConfig::default()
         };
-        let config_b = PartialProductConfig {
+        let config_b = PartialImageAssemblyConfig {
             kernel: Some(PartialKernelConfig {
                 path: Some("bar".into()),
                 args: Vec::default(),
                 clock_backstop: Some(2),
             }),
-            ..PartialProductConfig::default()
+            ..PartialImageAssemblyConfig::default()
         };
 
-        let result = ProductConfig::try_from_partials(vec![config_a, config_b]);
+        let result = ImageAssemblyConfig::try_from_partials(vec![config_a, config_b]);
         assert!(result.is_err());
     }
 }

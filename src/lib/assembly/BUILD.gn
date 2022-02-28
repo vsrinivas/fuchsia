@@ -8,6 +8,7 @@ if (is_host) {
     deps = [
       "base_package:host_tests",
       "blobfs:host_tests",
+      "config:host_tests",
       "config_data:host_tests",
       "fvm:host_tests",
       "images_config:host_tests",

@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::config::VBMetaConfig;
 use crate::extra_hash_descriptor::ExtraHashDescriptor;
 use crate::util::read_config;
 use crate::vfs::{FilesystemProvider, RealFilesystemProvider};
 use anyhow::Result;
+use assembly_config::VBMetaConfig;
 use assembly_images_config::{VBMeta, VBMetaDescriptor};
 use std::path::{Path, PathBuf};
 use vbmeta::VBMeta as VBMetaImage;
@@ -97,9 +97,9 @@ pub fn sign<FSP: FilesystemProvider>(
 mod tests {
     use super::{construct_vbmeta, convert_to_new_config, sign};
 
-    use crate::config::VBMetaConfig;
     use crate::vfs::mock::MockFilesystemProvider;
 
+    use assembly_config::VBMetaConfig;
     use assembly_images_config::VBMeta;
     use serde_json::json;
     use std::convert::TryFrom;

@@ -2,12 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::config as image_assembly_config;
-use crate::{
-    config::{product_config::AssemblyInputBundle, FileEntry},
-    util,
-};
+use crate::util;
 use anyhow::{anyhow, Context, Result};
+use assembly_config::{
+    self as image_assembly_config, product_config::AssemblyInputBundle, FileEntry,
+};
 use assembly_config_data::ConfigDataBuilder;
 use assembly_util::{DuplicateKeyError, InsertAllUniqueExt, InsertUniqueExt, MapEntry};
 use std::path::Path;
@@ -98,7 +97,7 @@ impl ImageAssemblyConfigBuilder {
         }
 
         if let Some(kernel) = bundle.kernel {
-            util::set_option_once_or(
+            assembly_util::set_option_once_or(
                 &mut self.kernel_path,
                 kernel.path.map(|p| bundle_path.join(p)),
                 anyhow!("Only one input bundle can specify a kernel path"),
@@ -108,7 +107,7 @@ impl ImageAssemblyConfigBuilder {
                 .try_insert_all_unique(kernel.args)
                 .map_err(|arg| anyhow!("duplicate kernel arg found: {}", arg))?;
 
-            util::set_option_once_or(
+            assembly_util::set_option_once_or(
                 &mut self.kernel_clock_backstop,
                 kernel.clock_backstop,
                 anyhow!("Only one input bundle can specify a kernel clock backstop"),
@@ -157,16 +156,19 @@ impl ImageAssemblyConfigBuilder {
             ))
     }
 
-    /// Construct an ImageAssembly ProductConfig from the collected items in the
+    /// Construct an ImageAssembly ImageAssemblyConfig from the collected items in the
     /// builder.
     ///
     /// If there are config_data entries, the config_data package will be
     /// created in the outdir, and it will be added to the returned
     /// ImageAssemblyConfig.
     ///
-    /// If this cannot create a completed ProductConfig, it will return an error
+    /// If this cannot create a completed ImageAssemblyConfig, it will return an error
     /// instead.
-    pub fn build(self, outdir: impl AsRef<Path>) -> Result<image_assembly_config::ProductConfig> {
+    pub fn build(
+        self,
+        outdir: impl AsRef<Path>,
+    ) -> Result<image_assembly_config::ImageAssemblyConfig> {
         // Decompose the fields in self, so that they can be recomposed into the generated
         // image assembly configuration.
         let Self {
@@ -201,9 +203,9 @@ impl ImageAssemblyConfigBuilder {
         }
 
         // Construct a single "partial" config from the combined fields, and
-        // then pass this to the ProductConfig::try_from_partials() to get the
+        // then pass this to the ImageAssemblyConfig::try_from_partials() to get the
         // final validation that it's complete.
-        let partial = image_assembly_config::PartialProductConfig {
+        let partial = image_assembly_config::PartialImageAssemblyConfig {
             system: system.into_iter().collect(),
             base: base.into_iter().collect(),
             cache: cache.into_iter().collect(),
@@ -219,8 +221,9 @@ impl ImageAssemblyConfigBuilder {
                 .collect(),
         };
 
-        let image_assembly_config =
-            image_assembly_config::ProductConfig::try_from_partials(std::iter::once(partial))?;
+        let image_assembly_config = image_assembly_config::ImageAssemblyConfig::try_from_partials(
+            std::iter::once(partial),
+        )?;
 
         Ok(image_assembly_config)
     }
@@ -235,7 +238,7 @@ mod tests {
 
     fn make_test_assembly_bundle() -> AssemblyInputBundle {
         AssemblyInputBundle {
-            image_assembly: image_assembly_config::PartialProductConfig {
+            image_assembly: image_assembly_config::PartialImageAssemblyConfig {
                 system: vec!["sys_package0".into()],
                 base: vec!["base_package0".into()],
                 cache: vec!["cache_package0".into()],
@@ -259,7 +262,7 @@ mod tests {
         let outdir = TempDir::new().unwrap();
         let mut builder = ImageAssemblyConfigBuilder::default();
         builder.add_parsed_bundle(PathBuf::from("test"), make_test_assembly_bundle()).unwrap();
-        let result: image_assembly_config::ProductConfig = builder.build(&outdir).unwrap();
+        let result: image_assembly_config::ImageAssemblyConfig = builder.build(&outdir).unwrap();
 
         assert_eq!(result.base, vec!(PathBuf::from("test/base_package0")));
         assert_eq!(result.cache, vec!(PathBuf::from("test/cache_package0")));
@@ -304,7 +307,7 @@ mod tests {
         );
 
         builder.add_parsed_bundle(&bundle_path, bundle).unwrap();
-        let result: image_assembly_config::ProductConfig = builder.build(&outdir).unwrap();
+        let result: image_assembly_config::ImageAssemblyConfig = builder.build(&outdir).unwrap();
 
         // config_data's manifest is in outdir
         let expected_config_data_manifest_path =

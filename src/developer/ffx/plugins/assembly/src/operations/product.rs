@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::config::product_config::ProductAssemblyConfig;
 use crate::operations::product::assembly_builder::ImageAssemblyConfigBuilder;
 use crate::util;
 use anyhow::{Context, Result};
+use assembly_config::product_config::ProductAssemblyConfig;
 use ffx_assembly_args::ProductArgs;
 use log::info;
 
@@ -30,15 +30,8 @@ pub fn assemble(args: ProductArgs) -> Result<()> {
     }
 
     let image_assembly = builder.build(&outdir).context("Building Image Assembly config")?;
-    // TODO pass a reference to a whole assembly once that type is extracted to a library
-    assembly_validate_product::validate_product(
-        image_assembly.bootfs_files.iter().map(|entry| (&entry.destination, &entry.source)),
-        image_assembly
-            .system
-            .iter()
-            .chain(image_assembly.base.iter())
-            .chain(image_assembly.cache.iter()),
-    )?;
+    assembly_validate_product::validate_product(&image_assembly)?;
+
     let image_assembly_path = outdir.join("image_assembly.json");
     let image_assembly_file = std::fs::File::create(&image_assembly_path).context(format!(
         "Failed to create image assembly config file: {}",

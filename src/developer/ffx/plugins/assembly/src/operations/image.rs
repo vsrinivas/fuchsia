@@ -4,13 +4,13 @@
 
 use crate::base_package::{construct_base_package, BasePackage};
 use crate::blobfs;
-use crate::config::{BoardConfig, PartialProductConfig, ProductConfig};
 use crate::fvm::{construct_fvm, Fvms};
 use crate::util;
 use crate::vbmeta;
 use crate::zbi;
 
 use anyhow::{Context, Result};
+use assembly_config::{BoardConfig, ImageAssemblyConfig, PartialImageAssemblyConfig};
 use assembly_images_manifest::{Image, ImagesManifest};
 use assembly_tool::{SdkToolProvider, ToolProvider};
 use assembly_update_packages_manifest::UpdatePackagesManifest;
@@ -33,7 +33,7 @@ pub fn assemble(args: ImageArgs) -> Result<()> {
     info!("    board:  {}", board.display());
 
     let (products, board) = read_configs(&products, board)?;
-    let product = ProductConfig::try_from_partials(products)?;
+    let product = ImageAssemblyConfig::try_from_partials(products)?;
 
     let gendir = gendir.unwrap_or(outdir.clone());
 
@@ -171,7 +171,7 @@ pub fn assemble(args: ImageArgs) -> Result<()> {
 fn create_package_manifest(
     outdir: impl AsRef<Path>,
     board: &BoardConfig,
-    product: &ProductConfig,
+    product: &ImageAssemblyConfig,
     base_package: Option<&BasePackage>,
 ) -> Result<()> {
     let packages_path = outdir.as_ref().join("packages.json");
@@ -203,17 +203,17 @@ fn create_package_manifest(
 fn read_configs(
     products: &[impl AsRef<Path>],
     board: impl AsRef<Path>,
-) -> Result<(Vec<PartialProductConfig>, BoardConfig)> {
+) -> Result<(Vec<PartialImageAssemblyConfig>, BoardConfig)> {
     let products = products
         .iter()
         .map(util::read_config)
-        .collect::<Result<Vec<PartialProductConfig>>>()
-        .context("Unable to parse product configs")?;
+        .collect::<Result<Vec<PartialImageAssemblyConfig>>>()
+        .context("Unable to parse image configs")?;
 
     let board: BoardConfig = util::read_config(board).context("Failed to read the board config")?;
     Ok((products, board))
 }
 
-fn has_base_package(product: &ProductConfig) -> bool {
+fn has_base_package(product: &ImageAssemblyConfig) -> bool {
     return !(product.base.is_empty() && product.cache.is_empty() && product.system.is_empty());
 }

@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::config::ProductConfig;
 use crate::util::pkg_manifest_from_path;
 
 use anyhow::{Context, Result};
 use assembly_base_package::BasePackageBuilder;
+use assembly_config::ImageAssemblyConfig;
 use fuchsia_hash::Hash;
 use fuchsia_merkle::MerkleTree;
 use log::info;
@@ -24,7 +24,7 @@ pub fn construct_base_package(
     outdir: impl AsRef<Path>,
     gendir: impl AsRef<Path>,
     name: impl AsRef<str>,
-    product: &ProductConfig,
+    product: &ImageAssemblyConfig,
 ) -> Result<BasePackage> {
     let mut base_pkg_builder = BasePackageBuilder::default();
     for pkg_manifest_path in &product.system {
@@ -72,7 +72,6 @@ pub fn construct_base_package(
 mod tests {
     use super::*;
 
-    use crate::config::ProductConfig;
     use fuchsia_archive::Reader;
     use serde_json::json;
     use std::fs::File;
@@ -87,7 +86,7 @@ mod tests {
         let system_manifest = generate_test_manifest_file(&dir.path(), "extra_base");
         let base_manifest = generate_test_manifest_file(&dir.path(), "test_static");
         let cache_manifest = generate_test_manifest_file(&dir.path(), "test_cache");
-        let mut product_config = ProductConfig::new("kernel", 0);
+        let mut product_config = ImageAssemblyConfig::new_for_testing("kernel", 0);
         product_config.system.push(system_manifest);
         product_config.base.push(base_manifest);
         product_config.cache.push(cache_manifest);
@@ -120,7 +119,7 @@ mod tests {
         let system_manifest = generate_test_manifest_file(&dir.path(), "extra_base");
         let base_manifest = generate_test_manifest_file(&dir.path(), "test_static");
         let cache_manifest = generate_test_manifest_file(&dir.path(), "test_cache");
-        let mut product_config = ProductConfig::new("kernel", 0);
+        let mut product_config = ImageAssemblyConfig::new_for_testing("kernel", 0);
         product_config.system.push(system_manifest);
         product_config.base.push(base_manifest);
         product_config.cache.push(cache_manifest);

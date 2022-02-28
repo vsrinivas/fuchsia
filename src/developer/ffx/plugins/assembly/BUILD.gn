@@ -15,8 +15,6 @@ ffx_plugin("ffx_assembly") {
     "src/base_package.rs",
     "src/blob_json_generator.rs",
     "src/blobfs.rs",
-    "src/config.rs",
-    "src/config/product_config.rs",
     "src/extra_hash_descriptor.rs",
     "src/fvm.rs",
     "src/lib.rs",
@@ -40,6 +38,7 @@ ffx_plugin("ffx_assembly") {
   deps = [
     "//src/lib/assembly/base_package",
     "//src/lib/assembly/blobfs",
+    "//src/lib/assembly/config",
     "//src/lib/assembly/config_data",
     "//src/lib/assembly/fvm",
     "//src/lib/assembly/images_config",

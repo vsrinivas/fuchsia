@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::config::BoardConfig;
 use crate::operations::size_check::BlobJsonEntry;
 use crate::util::read_config;
 use anyhow::Context;
 use anyhow::Result;
+use assembly_config::BoardConfig;
 use assembly_tool::ToolProvider;
 use std::path::Path;
 use tempfile::NamedTempFile;

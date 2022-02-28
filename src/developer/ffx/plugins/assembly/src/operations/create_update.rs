@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::util::from_reader;
 use anyhow::{Context, Result};
 use assembly_images_manifest::ImagesManifest;
 use assembly_partitions_config::PartitionsConfig;
 use assembly_update_package::{Slot, UpdatePackageBuilder};
 use assembly_update_packages_manifest::UpdatePackagesManifest;
+use assembly_util::from_reader;
 use epoch::EpochFile;
 use ffx_assembly_args::CreateUpdateArgs;
 use std::fs::File;

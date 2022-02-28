@@ -16,7 +16,9 @@ if (is_host) {
       "//src/sys/pkg/lib/version-history/rust:version-history",
       "//third_party/rust_crates:anyhow",
       "//third_party/rust_crates:camino",
+      "//third_party/rust_crates:serde",
       "//third_party/rust_crates:serde_json",
+      "//third_party/rust_crates:serde_json5",
     ]
     test_deps = [
       "//src/sys/pkg/lib/fuchsia-merkle",

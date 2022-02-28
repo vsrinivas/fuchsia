@@ -3,10 +3,10 @@
 // found in the LICENSE file.
 
 use crate::base_package::BasePackage;
-use crate::config::{BlobFSConfig, ProductConfig};
 
 use anyhow::{Context, Result};
 use assembly_blobfs::BlobFSBuilder;
+use assembly_config::{BlobFSConfig, ImageAssemblyConfig};
 use assembly_images_config::BlobFS;
 use assembly_tool::Tool;
 use std::convert::TryInto;
@@ -27,7 +27,7 @@ pub fn construct_blobfs(
     blobfs_tool: Box<dyn Tool>,
     outdir: impl AsRef<Path>,
     gendir: impl AsRef<Path>,
-    product: &ProductConfig,
+    image_config: &ImageAssemblyConfig,
     blobfs_config: &BlobFS,
     base_package: &BasePackage,
 ) -> Result<PathBuf> {
@@ -35,10 +35,10 @@ pub fn construct_blobfs(
     blobfs_builder.set_compressed(blobfs_config.compress);
 
     // Add the base and cache packages.
-    for package_manifest_path in &product.base {
+    for package_manifest_path in &image_config.base {
         blobfs_builder.add_package(&package_manifest_path)?;
     }
-    for package_manifest_path in &product.cache {
+    for package_manifest_path in &image_config.cache {
         blobfs_builder.add_package(&package_manifest_path)?;
     }
 
@@ -58,7 +58,7 @@ pub fn construct_blobfs(
 mod tests {
     use super::{construct_blobfs, convert_to_new_config};
     use crate::base_package::BasePackage;
-    use crate::config::{BlobFSConfig, ProductConfig};
+    use assembly_config::{BlobFSConfig, ImageAssemblyConfig};
     use assembly_images_config::{BlobFS, BlobFSLayout};
     use assembly_tool::testing::FakeToolProvider;
     use assembly_tool::ToolProvider;
@@ -87,7 +87,7 @@ mod tests {
     #[test]
     fn construct() {
         let dir = tempdir().unwrap();
-        let product_config = ProductConfig::new("kernel", 0);
+        let image_config = ImageAssemblyConfig::new_for_testing("kernel", 0);
         let blobfs_config = BlobFS {
             name: "blob".into(),
             layout: BlobFSLayout::Compact,
@@ -114,14 +114,7 @@ mod tests {
         let blobfs_tool = tools.get_tool("blobfs").unwrap();
 
         // Construct blobfs, and ensure no error is returned.
-        construct_blobfs(
-            blobfs_tool,
-            dir.path(),
-            dir.path(),
-            &product_config,
-            &blobfs_config,
-            &base,
-        )
-        .unwrap();
+        construct_blobfs(blobfs_tool, dir.path(), dir.path(), &image_config, &blobfs_config, &base)
+            .unwrap();
     }
 }
