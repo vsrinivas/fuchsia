@@ -152,7 +152,7 @@ impl ClientConfiguration {
     fn add_eager_packages(app_set: &mut FuchsiaAppSet, eager_package_configs: EagerPackageConfigs) {
         for package in eager_package_configs.packages {
             // TODO: ask pkg-resolver for current channel and version first.
-            let version = [0];
+            let version = [0, 0, 0, 1];
             let channel_config = package.channel_config.get_default_channel();
 
             let appid = match channel_config.as_ref().and_then(|c| c.appid.as_ref()) {
@@ -599,7 +599,7 @@ mod tests {
             ],
         };
         ClientConfiguration::add_eager_packages(&mut app_set, config);
-        let package_app = App::builder("1a2b3c4d", [0])
+        let package_app = App::builder("1a2b3c4d", [0, 0, 0, 1])
             .with_cohort(Cohort {
                 hint: Some("stable".into()),
                 name: Some("stable".into()),
@@ -607,7 +607,7 @@ mod tests {
             })
             .with_extra("channel", "stable")
             .build();
-        let package2_app = App::builder("", [0]).build();
+        let package2_app = App::builder("", [0, 0, 0, 1]).build();
         assert_eq!(app_set.get_apps(), vec![system_app, package_app, package2_app]);
     }
 }

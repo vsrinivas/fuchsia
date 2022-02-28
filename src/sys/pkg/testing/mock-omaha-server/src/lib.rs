@@ -13,18 +13,18 @@ use {
         service::{make_service_fn, service_fn},
         Body, Method, Request, Response, StatusCode,
     },
+    itertools::zip_eq,
     parking_lot::Mutex,
     serde_json::json,
     std::{
         convert::Infallible,
-        iter::zip,
         net::{Ipv4Addr, SocketAddr},
         str::FromStr,
         sync::Arc,
     },
 };
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum OmahaResponse {
     NoUpdate,
     Update,
@@ -40,11 +40,11 @@ pub struct OmahaServer {
 
 #[derive(Clone, Debug)]
 pub struct ResponseAndMetadata {
-    response: OmahaResponse,
-    merkle: Hash,
-    check_assertion: Option<UpdateCheckAssertion>,
-    app_id: String,
-    version: String,
+    pub response: OmahaResponse,
+    pub merkle: Hash,
+    pub check_assertion: Option<UpdateCheckAssertion>,
+    pub app_id: String,
+    pub version: String,
 }
 
 impl Default for ResponseAndMetadata {
@@ -124,11 +124,9 @@ impl OmahaServer {
     }
 
     pub fn new_with_hash(responses: Vec<OmahaResponse>, merkles: Vec<Hash>) -> Self {
-        let num_apps: usize = responses.len();
-        assert_eq!(num_apps, merkles.len());
         Self::builder()
             .set(
-                zip(responses, merkles)
+                zip_eq(responses, merkles)
                     .map(|(response, merkle)| ResponseAndMetadata {
                         response,
                         merkle,
@@ -139,7 +137,6 @@ impl OmahaServer {
             .build()
     }
 
-    #[allow(dead_code)]
     pub fn new_with_metadata(responses_and_metadata: Vec<ResponseAndMetadata>) -> Self {
         Self::builder().set(responses_and_metadata).build()
     }
@@ -208,11 +205,20 @@ async fn handle_omaha_request(
 
     let request = req_json.get("request").unwrap();
     let apps = request.get("app").unwrap().as_array().unwrap();
-    assert_eq!(apps.len(), inner.num_apps());
-    let apps: Vec<serde_json::Value> = zip(apps.iter(), inner.responses_and_metadata)
-        .map(|(app, expected)| {
+
+    // If this request contains updatecheck, make sure the mock has the right number of configured apps.
+    match apps.iter().filter(|app| app.get("updatecheck").is_some()).count() {
+        0 => {}
+        x => assert_eq!(x, inner.num_apps()),
+    }
+
+    let apps: Vec<serde_json::Value> = apps
+        .iter()
+        .map(|app| {
             let appid = app.get("appid").unwrap();
-            assert_eq!(appid, &expected.app_id);
+            let expected =
+                inner.responses_and_metadata.iter().find(|r| &r.app_id == appid).unwrap();
+
             let version = app.get("version").unwrap();
             assert_eq!(version, &expected.version);
 
@@ -359,7 +365,7 @@ mod tests {
     };
 
     #[fasync::run_singlethreaded(test)]
-    #[should_panic(expected = "assertion failed")]
+    #[should_panic(expected = "reached end of one iterator before the other")]
     // TODO(fxbug.dev/88496): delete the below
     #[cfg_attr(feature = "variant_asan", ignore)]
     async fn test_invalid_construction() {

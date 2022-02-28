@@ -39,7 +39,7 @@ use {
     },
     mock_crash_reporter::{CrashReport, MockCrashReporterService, ThrottleHook},
     mock_installer::MockUpdateInstallerService,
-    mock_omaha_server::{OmahaResponse, OmahaServer},
+    mock_omaha_server::{OmahaResponse, OmahaServer, ResponseAndMetadata},
     mock_paver::{hooks as mphooks, MockPaverService, MockPaverServiceBuilder, PaverEvent},
     mock_reboot::{MockRebootService, RebootReason},
     mock_resolver::MockResolverService,
@@ -98,6 +98,11 @@ impl Mounts {
         let version_path = self.build_info.join("version");
         fs::write(version_path, version).expect("write version");
     }
+
+    fn write_eager_package_config(&self, config: impl AsRef<[u8]>) {
+        let eager_package_config_path = self.config_data.join("eager_package_config.json");
+        fs::write(eager_package_config_path, config).expect("write eager_package_config.json");
+    }
 }
 struct Proxies {
     _cache: Arc<MockCache>,
@@ -110,26 +115,39 @@ struct Proxies {
 }
 
 struct TestEnvBuilder {
-    response: OmahaResponse,
+    // Set one of responses, responses_and_metadata.
+    responses: Vec<ResponseAndMetadata>,
     version: String,
     installer: Option<MockUpdateInstallerService>,
     paver: Option<MockPaverService>,
     crash_reporter: Option<MockCrashReporterService>,
+    eager_package_config: Option<serde_json::Value>,
 }
 
 impl TestEnvBuilder {
     fn new() -> Self {
         Self {
-            response: OmahaResponse::NoUpdate,
+            responses: vec![ResponseAndMetadata::default()],
             version: "0.1.2.3".to_string(),
             installer: None,
             paver: None,
             crash_reporter: None,
+            eager_package_config: None,
         }
     }
 
-    fn response(self, response: OmahaResponse) -> Self {
-        Self { response, ..self }
+    fn responses(self, responses: impl IntoIterator<Item = OmahaResponse>) -> Self {
+        Self {
+            responses: responses
+                .into_iter()
+                .map(|response| ResponseAndMetadata { response, ..Default::default() })
+                .collect(),
+            ..self
+        }
+    }
+
+    fn responses_and_metadata(self, responses_and_metadata: Vec<ResponseAndMetadata>) -> Self {
+        Self { responses: responses_and_metadata, ..self }
     }
 
     fn version(self, version: impl Into<String>) -> Self {
@@ -146,6 +164,10 @@ impl TestEnvBuilder {
 
     fn crash_reporter(self, crash_reporter: MockCrashReporterService) -> Self {
         Self { crash_reporter: Some(crash_reporter), ..self }
+    }
+
+    fn eager_package_config(self, eager_package_config: serde_json::Value) -> Self {
+        Self { eager_package_config: Some(eager_package_config), ..self }
     }
 
     async fn build(self) -> TestEnv {
@@ -167,7 +189,7 @@ impl TestEnvBuilder {
         fs.dir("config").add_remote("data", config_data);
         fs.dir("config").add_remote("build-info", build_info);
 
-        let server = OmahaServer::new(vec![self.response]);
+        let server = OmahaServer::new_with_metadata(self.responses);
         let url = server.clone().start().expect("start server");
         mounts.write_url(url);
         mounts.write_appid("integration-test-appid");
@@ -178,6 +200,9 @@ impl TestEnvBuilder {
             })
             .to_string(),
         );
+        if let Some(json) = self.eager_package_config {
+            mounts.write_eager_package_config(json.to_string());
+        }
 
         let paver = Arc::new(self.paver.unwrap_or_else(|| MockPaverServiceBuilder::new().build()));
         fs.dir("svc").add_fidl_service(move |stream: PaverRequestStream| {
@@ -739,7 +764,89 @@ async fn omaha_client_update(mut env: TestEnv, platform_metrics: TreeAssertion) 
 
 #[fasync::run_singlethreaded(test)]
 async fn test_omaha_client_update() {
-    let env = TestEnvBuilder::new().response(OmahaResponse::Update).build().await;
+    let env = TestEnvBuilder::new().responses(vec![OmahaResponse::Update]).build().await;
+    omaha_client_update(
+        env,
+        tree_assertion!(
+            "children": {
+                "0": contains {
+                    "event": "CheckingForUpdates",
+                },
+                "1": contains {
+                    "event": "InstallingUpdate",
+                    "target-version": "0.1.2.3",
+                },
+                "2": contains {
+                    "event": "WaitingForReboot",
+                    "target-version": "0.1.2.3",
+                }
+            }
+        ),
+    )
+    .await;
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn test_omaha_client_update_multi_app() {
+    let env = TestEnvBuilder::new()
+        .responses_and_metadata(vec![
+            ResponseAndMetadata {
+                response: OmahaResponse::Update,
+                app_id: "integration-test-appid".to_string(),
+                ..Default::default()
+            },
+            ResponseAndMetadata {
+                response: OmahaResponse::NoUpdate,
+                app_id: "foo".to_string(),
+                version: "0.0.0.1".to_string(),
+                ..Default::default()
+            },
+            ResponseAndMetadata {
+                response: OmahaResponse::NoUpdate,
+                app_id: "bar".to_string(),
+                version: "0.0.0.1".to_string(),
+                ..Default::default()
+            },
+        ])
+        .eager_package_config(json!(
+        {
+            "packages":
+            [
+                {
+                    "url": "fuchsia-pkg://example.com/package",
+                    "flavor": "debug",
+                    "channel_config":
+                        {
+                            "channels":
+                                [
+                                    {
+                                        "name": "stable",
+                                        "repo": "stable",
+                                        "appid": "foo"
+                                    },
+                                ],
+                            "default_channel": "stable"
+                        }
+                },
+                {
+                    "url": "fuchsia-pkg://example.com/package2",
+                    "channel_config":
+                        {
+                            "channels":
+                                [
+                                    {
+                                        "name": "stable",
+                                        "repo": "stable",
+                                        "appid": "bar"
+                                    }
+                                ],
+                            "default_channel": "stable"
+                        }
+                }
+            ]
+        }))
+        .build()
+        .await;
     omaha_client_update(
         env,
         tree_assertion!(
@@ -765,8 +872,11 @@ async fn test_omaha_client_update() {
 async fn test_omaha_client_attempt_monitor_update_progress_with_mock_installer() {
     let (mut sender, receiver) = mpsc::channel(0);
     let installer = MockUpdateInstallerService::builder().states_receiver(receiver).build();
-    let env =
-        TestEnvBuilder::new().response(OmahaResponse::Update).installer(installer).build().await;
+    let env = TestEnvBuilder::new()
+        .responses(vec![OmahaResponse::Update])
+        .installer(installer)
+        .build()
+        .await;
 
     env.check_now().await;
     let mut request_stream = env.monitor_all_update_checks().await;
@@ -876,8 +986,11 @@ async fn test_omaha_client_attempt_monitor_update_progress_with_mock_installer()
 async fn test_omaha_client_update_progress_with_mock_installer() {
     let (mut sender, receiver) = mpsc::channel(0);
     let installer = MockUpdateInstallerService::builder().states_receiver(receiver).build();
-    let env =
-        TestEnvBuilder::new().response(OmahaResponse::Update).installer(installer).build().await;
+    let env = TestEnvBuilder::new()
+        .responses(vec![OmahaResponse::Update])
+        .installer(installer)
+        .build()
+        .await;
 
     let mut stream = env.check_now().await;
 
@@ -989,7 +1102,7 @@ async fn test_omaha_client_installation_deferred() {
                 }))
                 .build(),
         )
-        .response(OmahaResponse::Update)
+        .responses(vec![OmahaResponse::Update])
         .build()
         .await;
 
@@ -1074,7 +1187,7 @@ async fn test_omaha_client_installation_deferred() {
 
 #[fasync::run_singlethreaded(test)]
 async fn test_omaha_client_update_error() {
-    let env = TestEnvBuilder::new().response(OmahaResponse::Update).build().await;
+    let env = TestEnvBuilder::new().responses(vec![OmahaResponse::Update]).build().await;
 
     let mut stream = env.check_now().await;
     expect_states(
@@ -1221,7 +1334,7 @@ async fn do_nop_update_check(env: &TestEnv) {
 
 #[fasync::run_singlethreaded(test)]
 async fn test_omaha_client_invalid_response() {
-    let env = TestEnvBuilder::new().response(OmahaResponse::InvalidResponse).build().await;
+    let env = TestEnvBuilder::new().responses(vec![OmahaResponse::InvalidResponse]).build().await;
 
     do_failed_update_check(&env).await;
 
@@ -1240,7 +1353,7 @@ async fn test_omaha_client_invalid_response() {
 
 #[fasync::run_singlethreaded(test)]
 async fn test_omaha_client_invalid_url() {
-    let env = TestEnvBuilder::new().response(OmahaResponse::InvalidURL).build().await;
+    let env = TestEnvBuilder::new().responses(vec![OmahaResponse::InvalidURL]).build().await;
 
     let mut stream = env.check_now().await;
     expect_states(
@@ -1317,7 +1430,7 @@ async fn test_omaha_client_policy_config_inspect() {
 
 #[fasync::run_singlethreaded(test)]
 async fn test_omaha_client_perform_pending_reboot_after_out_of_space() {
-    let env = TestEnvBuilder::new().response(OmahaResponse::Update).build().await;
+    let env = TestEnvBuilder::new().responses(vec![OmahaResponse::Update]).build().await;
 
     // We should be able to get the update package just fine
     env.proxies
@@ -1403,7 +1516,7 @@ fn assert_signature(report: CrashReport, expected_signature: &str) {
 async fn test_crash_report_installation_error() {
     let (hook, mut recv) = ThrottleHook::new(Ok(()));
     let env = TestEnvBuilder::new()
-        .response(OmahaResponse::Update)
+        .responses(vec![OmahaResponse::Update])
         .installer(MockUpdateInstallerService::with_response(Err(
             UpdateNotStartedReason::AlreadyInProgress,
         )))
@@ -1441,7 +1554,7 @@ async fn test_crash_report_installation_error() {
 async fn test_crash_report_consecutive_failed_update_checks() {
     let (hook, mut recv) = ThrottleHook::new(Ok(()));
     let env = TestEnvBuilder::new()
-        .response(OmahaResponse::InvalidResponse)
+        .responses(vec![OmahaResponse::InvalidResponse])
         .crash_reporter(MockCrashReporterService::new(hook))
         .build()
         .await;
@@ -1464,7 +1577,7 @@ async fn test_crash_report_consecutive_failed_update_checks() {
 async fn test_update_check_sets_updatedisabled_when_opted_out() {
     use mock_omaha_server::UpdateCheckAssertion;
 
-    let env = TestEnvBuilder::new().response(OmahaResponse::NoUpdate).build().await;
+    let env = TestEnvBuilder::new().responses(vec![OmahaResponse::NoUpdate]).build().await;
 
     // The default is to enable updates.
     env.server.set_all_update_check_assertions(Some(UpdateCheckAssertion::UpdatesEnabled));
