@@ -17,6 +17,7 @@
 #include <lib/inspect/cpp/inspect.h>
 #include <lib/zx/status.h>
 
+#include <list>
 #include <unordered_map>
 
 #include <fbl/intrusive_double_list.h>
@@ -167,7 +168,7 @@ class Node : public fidl::WireServer<fuchsia_driver_framework::NodeController>,
   const std::string& name() const;
   const std::optional<DriverComponent*>& driver_component() const;
   const std::vector<Node*>& parents() const;
-  const std::vector<std::shared_ptr<Node>>& children() const;
+  const std::list<std::shared_ptr<Node>>& children() const;
   std::vector<OwnedOffer>& offers() const;
   fidl::VectorView<fuchsia_driver_framework::wire::NodeSymbol> symbols() const;
   const std::vector<fuchsia_driver_framework::wire::NodeProperty>& properties() const;
@@ -204,7 +205,7 @@ class Node : public fidl::WireServer<fuchsia_driver_framework::NodeController>,
 
   const std::string name_;
   std::vector<Node*> parents_;
-  std::vector<std::shared_ptr<Node>> children_;
+  std::list<std::shared_ptr<Node>> children_;
   fit::nullable<DriverBinder*> driver_binder_;
   async_dispatcher_t* const dispatcher_;
 

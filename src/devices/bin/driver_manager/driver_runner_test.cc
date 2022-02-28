@@ -1684,3 +1684,41 @@ TEST_F(DriverRunnerTest, StartAndInspect_CompositeDriver) {
 
   StopDriverComponent(std::move(root_driver.value()));
 }
+
+TEST_F(DriverRunnerTest, TestTearDownNodeTreeWithManyChildren) {
+  auto driver_index = CreateDriverIndex();
+  auto driver_index_client = driver_index.Connect();
+  ASSERT_EQ(ZX_OK, driver_index_client.status_value());
+  DriverRunner driver_runner(ConnectToRealm(), std::move(*driver_index_client), inspector(),
+                             dispatcher());
+  auto defer = fit::defer([this] { Unbind(); });
+
+  std::vector<fdf::NodeControllerPtr> node_controller;
+  std::vector<fdf::NodePtr> nodes;
+  driver_host().SetStartHandler(
+      [this, &node_controller, &nodes](fdf::DriverStartArgs start_args, auto request) {
+        realm().SetCreateChildHandler(
+            [](fdecl::CollectionRef collection, fdecl::Child decl, auto offers) {});
+        realm().SetOpenExposedDirHandler([this](fdecl::ChildRef child, auto exposed_dir) {
+          driver_dir().Bind(std::move(exposed_dir));
+        });
+
+        fdf::NodePtr node;
+        EXPECT_EQ(ZX_OK, node.Bind(std::move(*start_args.mutable_node()), dispatcher()));
+        for (size_t i = 0; i < 100; i++) {
+          fdf::NodeAddArgs args;
+          args.set_name(std::string("child") + std::to_string(i));
+          fdf::NodeControllerPtr ptr;
+          node->AddChild(std::move(args), ptr.NewRequest(dispatcher()), {},
+                         [&node_controller, ptr = std::move(ptr)](auto result) mutable {
+                           EXPECT_FALSE(result.is_err());
+                           node_controller.emplace_back(std::move(ptr));
+                         });
+        }
+        auto driver = BindDriver(std::move(request), std::move(node));
+        nodes.emplace_back(std::move(driver->node()));
+      });
+  auto root_driver = StartRootDriver("fuchsia-boot:///#meta/root-driver.cm", driver_runner);
+  ASSERT_EQ(ZX_OK, root_driver.status_value());
+  Unbind();
+}

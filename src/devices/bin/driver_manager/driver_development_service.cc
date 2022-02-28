@@ -138,7 +138,7 @@ void DriverDevelopmentService::GetDeviceInfo(GetDeviceInfoRequestView request,
       // Only insert unique nodes from the DAG.
       continue;
     }
-    const std::vector<std::shared_ptr<Node>>& children = node->children();
+    const auto& children = node->children();
     for (const auto& child : children) {
       remaining_nodes.push(child.get());
     }

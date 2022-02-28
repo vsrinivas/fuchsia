@@ -268,7 +268,7 @@ const std::optional<DriverComponent*>& Node::driver_component() const { return d
 
 const std::vector<Node*>& Node::parents() const { return parents_; }
 
-const std::vector<std::shared_ptr<Node>>& Node::children() const { return children_; }
+const std::list<std::shared_ptr<Node>>& Node::children() const { return children_; }
 
 std::vector<Node::OwnedOffer>& Node::offers() const {
   // TODO(fxbug.dev/66150): Once FIDL wire types support a Clone() method,
@@ -372,7 +372,11 @@ void Node::Remove() {
   driver_binder_ = nullptr;
 
   // Ask each of our children to remove themselves.
-  for (auto& child : children_) {
+  for (auto it = children_.begin(); it != children_.end();) {
+    // We have to be careful here - Remove() could invalidate the iterator, so we increment the
+    // iterator before we call Remove().
+    auto child = it->get();
+    ++it;
     child->Remove();
   }
 
