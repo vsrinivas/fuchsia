@@ -37,9 +37,21 @@ int main(int argc, char** argv) {
     FX_LOGS(ERROR) << "Could not obtain handle to '/boot/kernel/data'. " << err;
   }
 
-  if (auto res = early_boot_instrumentation::ExposeKernelProfileData(kernel_data_dir, *static_prof);
+  if (auto res =
+          early_boot_instrumentation::ExposeKernelProfileData(kernel_data_dir, *dynamic_prof);
       res.is_error()) {
     FX_LOGS(ERROR) << "Could not expose kernel profile data. " << res.status_value();
+  }
+
+  fbl::unique_fd phys_data_dir(open("/boot/kernel/data/phys", O_RDONLY));
+  if (!kernel_data_dir) {
+    const char* err = strerror(errno);
+    FX_LOGS(ERROR) << "Could not obtain handle to '/boot/kernel/data/phys'. " << err;
+  }
+
+  if (auto res = early_boot_instrumentation::ExposePhysbootProfileData(phys_data_dir, *static_prof);
+      res.is_error()) {
+    FX_LOGS(ERROR) << "Could not expose physboot profile data. " << res.status_value();
   }
 
   // outgoing/prof-data/static

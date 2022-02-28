@@ -19,7 +19,10 @@ source_set("coverage-source") {
     "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxc",
   ]
-  deps = [ "//sdk/lib/fdio" ]
+  deps = [
+    "//sdk/lib/fdio",
+    "//sdk/lib/stdcompat",
+  ]
 }
 
 executable("app") {

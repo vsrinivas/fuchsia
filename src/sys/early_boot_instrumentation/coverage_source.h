@@ -25,11 +25,24 @@ static constexpr std::string_view kKernelFile = "zircon.profraw";
 // This might eventually be replaced by self-describing profraw file.
 static constexpr std::string_view kKernelSymbolizerFile = "zircon.log";
 
+// Physboot's profraw and optionally symbolizer log.
+static constexpr std::string_view kPhysFile = "physboot.profraw";
+
+// This file may be available, only if, the physboot exposes a symbolizer log as well.
+// This might eventually be replaced by self-describing profraw file.
+static constexpr std::string_view kPhysSymbolizerFile = "physboot.log";
+
 // Given a handle to |kernel_data_dir|, will extract the kernel coverage vmos from it,
 // and add them as VMO file into |out_dir|.
 //
 // Usually |kernel_data_dir| is '/boot/kernel/data'.
 zx::status<> ExposeKernelProfileData(fbl::unique_fd& kernel_data_dir, vfs::PseudoDir& out_dir);
+
+// Given a handle to |phys_data_dir|, will extract the physboot's coverage vmos from it,
+// and add them as VMO file into |out_dir|.
+//
+// Usually |phys_data_dir| is '/boot/kernel/data/phys'.
+zx::status<> ExposePhysbootProfileData(fbl::unique_fd& physboot_data_dir, vfs::PseudoDir& out_dir);
 
 }  // namespace early_boot_instrumentation
 

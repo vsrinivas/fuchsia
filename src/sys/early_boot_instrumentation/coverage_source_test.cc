@@ -35,43 +35,36 @@ zx_koid_t GetKoid(zx_handle_t handle) {
 // Serve the vmos from /somepath/kernel/vmofile.name.
 class FakeBootItemsFixture : public testing::Test {
  public:
-  void Serve() {
+  void Serve(const std::string& path) {
     zx::channel dir_server, dir_client;
     ASSERT_EQ(zx::channel::create(0, &dir_server, &dir_client), 0);
 
     fdio_ns_t* root_ns = nullptr;
+    path_ = path;
     ASSERT_EQ(fdio_ns_get_installed(&root_ns), ZX_OK);
-    ASSERT_EQ(fdio_ns_bind(root_ns, "/boot/kernel/data", dir_client.release()), ZX_OK);
+    ASSERT_EQ(fdio_ns_bind(root_ns, path.c_str(), dir_client.release()), ZX_OK);
 
     ASSERT_EQ(kernel_dir_.Serve(kFlags, std::move(dir_server), loop_.dispatcher()), ZX_OK);
     loop_.StartThread("kernel_data_dir");
   }
 
-  void BindKernelFile() {
-    zx::vmo kernel_vmo;
-    ASSERT_EQ(zx::vmo::create(4096, 0, &kernel_vmo), 0);
-    kernel_koid_ = GetKoid(kernel_vmo.get());
+  void BindFile(std::string_view path) {
+    zx::vmo path_vmo;
+    ASSERT_EQ(zx::vmo::create(4096, 0, &path_vmo), 0);
+    zx_koid_t koid = GetKoid(path_vmo.get());
+    ASSERT_NE(koid, ZX_KOID_INVALID);
+    auto str_path = std::string(path);
+    path_to_koid_[str_path] = koid;
 
-    auto file = std::make_unique<vfs::VmoFile>(std::move(kernel_vmo), 0, 4096);
-    ASSERT_NE(kernel_koid_, ZX_KOID_INVALID);
-    ASSERT_EQ(kernel_dir_.AddEntry("zircon.elf.profraw", std::move(file)), ZX_OK);
-  }
-
-  void BindSymbolizerFile() {
-    zx::vmo symbolizer_vmo;
-    ASSERT_EQ(zx::vmo::create(4096, 0, &symbolizer_vmo), 0);
-    symbolizer_koid_ = GetKoid(symbolizer_vmo.get());
-
-    auto file = std::make_unique<vfs::VmoFile>(std::move(symbolizer_vmo), 0, 4096);
-    ASSERT_NE(symbolizer_koid_, ZX_KOID_INVALID);
-    ASSERT_EQ(kernel_dir_.AddEntry("symbolizer.log", std::move(file)), ZX_OK);
+    auto file = std::make_unique<vfs::VmoFile>(std::move(path_vmo), 0, 4096);
+    ASSERT_EQ(kernel_dir_.AddEntry(str_path, std::move(file)), ZX_OK);
   }
 
   void TearDown() override {
     // Best effort.
     fdio_ns_t* root_ns = nullptr;
     ASSERT_EQ(fdio_ns_get_installed(&root_ns), ZX_OK);
-    fdio_ns_unbind(root_ns, "/boot/kernel/data");
+    fdio_ns_unbind(root_ns, path_.c_str());
     loop_.Shutdown();
   }
 
@@ -79,17 +72,17 @@ class FakeBootItemsFixture : public testing::Test {
   async::Loop loop_ = async::Loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   vfs::PseudoDir kernel_dir_;
 
-  zx_koid_t kernel_koid_ = ZX_KOID_INVALID;
-  zx_koid_t symbolizer_koid_ = ZX_KOID_INVALID;
+  std::map<std::string, zx_koid_t> path_to_koid_;
+  std::string path_;
 };
 
 using ExposeKernelProfileDataTest = FakeBootItemsFixture;
+using ExposePhysbootProfileDataTest = FakeBootItemsFixture;
 
 TEST_F(ExposeKernelProfileDataTest, WithSymbolizerLogExposesBoth) {
-  // Dispatcher
-  BindKernelFile();
-  BindSymbolizerFile();
-  ASSERT_NO_FATAL_FAILURE(Serve());
+  BindFile("zircon.elf.profraw");
+  BindFile("symbolizer.log");
+  ASSERT_NO_FATAL_FAILURE(Serve("/boot/kernel/data"));
 
   fbl::unique_fd kernel_data_dir(open("/boot/kernel/data", O_RDONLY));
   ASSERT_TRUE(kernel_data_dir) << strerror(errno);
@@ -111,8 +104,8 @@ TEST_F(ExposeKernelProfileDataTest, WithSymbolizerLogExposesBoth) {
 
 TEST_F(ExposeKernelProfileDataTest, OnlyKernelFileIsOk) {
   // Dispatcher
-  BindKernelFile();
-  ASSERT_NO_FATAL_FAILURE(Serve());
+  BindFile("zircon.elf.profraw");
+  ASSERT_NO_FATAL_FAILURE(Serve("/boot/kernel/data"));
 
   fbl::unique_fd kernel_data_dir(open("/boot/kernel/data", O_RDONLY));
   ASSERT_TRUE(kernel_data_dir) << strerror(errno);
@@ -128,6 +121,52 @@ TEST_F(ExposeKernelProfileDataTest, OnlyKernelFileIsOk) {
 
   node = nullptr;
   std::string symbolizer_file(kKernelSymbolizerFile);
+  ASSERT_NE(out_dir.Lookup(symbolizer_file, &node), ZX_OK);
+}
+
+TEST_F(ExposePhysbootProfileDataTest, WithSymbolizerFileIsOk) {
+  // Dispatcher
+  BindFile("physboot.profraw");
+  BindFile("symbolizer.log");
+  ASSERT_NO_FATAL_FAILURE(Serve("/boot/kernel/data/phys"));
+
+  fbl::unique_fd kernel_data_dir(open("/boot/kernel/data/phys", O_RDONLY));
+  ASSERT_TRUE(kernel_data_dir) << strerror(errno);
+
+  vfs::PseudoDir out_dir;
+  ASSERT_TRUE(ExposePhysbootProfileData(kernel_data_dir, out_dir).is_ok());
+  ASSERT_FALSE(out_dir.IsEmpty());
+
+  std::string phys_file(kPhysFile);
+  vfs::internal::Node* node = nullptr;
+  ASSERT_EQ(out_dir.Lookup(phys_file, &node), ZX_OK);
+  ASSERT_NE(node, nullptr);
+
+  node = nullptr;
+  std::string symbolizer_file(kPhysSymbolizerFile);
+  ASSERT_EQ(out_dir.Lookup(symbolizer_file, &node), ZX_OK);
+  ASSERT_NE(node, nullptr);
+}
+
+TEST_F(ExposePhysbootProfileDataTest, OnlyProfrawFileIsOk) {
+  // Dispatcher
+  BindFile("physboot.profraw");
+  ASSERT_NO_FATAL_FAILURE(Serve("/boot/kernel/data/phys"));
+
+  fbl::unique_fd kernel_data_dir(open("/boot/kernel/data/phys", O_RDONLY));
+  ASSERT_TRUE(kernel_data_dir) << strerror(errno);
+
+  vfs::PseudoDir out_dir;
+  ASSERT_TRUE(ExposePhysbootProfileData(kernel_data_dir, out_dir).is_ok());
+  ASSERT_FALSE(out_dir.IsEmpty());
+
+  std::string phys_file(kPhysFile);
+  vfs::internal::Node* node = nullptr;
+  ASSERT_EQ(out_dir.Lookup(phys_file, &node), ZX_OK);
+  ASSERT_NE(node, nullptr);
+
+  node = nullptr;
+  std::string symbolizer_file(kPhysSymbolizerFile);
   ASSERT_NE(out_dir.Lookup(symbolizer_file, &node), ZX_OK);
 }
 
