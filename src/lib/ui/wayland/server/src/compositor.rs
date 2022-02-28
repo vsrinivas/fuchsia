@@ -620,65 +620,58 @@ impl Surface {
         Ok(())
     }
 
-    fn present_now(&mut self) -> Result<(), Error> {
+    fn present_now(&mut self) {
         ftrace::duration!("wayland", "Surface::present_now");
-        let flatland = self
-            .flatland()
-            .ok_or(format_err!("Unable to present surface without a flatland instance."))?;
-        // Wayland protocol doesn't provide a mechanism to control presentation time
-        // so we ask Flatland to present contents immediately by specifying a presentation
-        // time of 0.
-        flatland.borrow_mut().present(0);
-        self.present_credits -= 1;
-        self.present_needed = false;
-        let mut callbacks = mem::replace(&mut self.present_callbacks, vec![]);
-        self.on_next_frame_begin_callbacks.append(&mut callbacks);
-        Ok(())
+        if let Some(flatland) = self.flatland() {
+            // Wayland protocol doesn't provide a mechanism to control presentation time
+            // so we ask Flatland to present contents immediately by specifying a presentation
+            // time of 0.
+            flatland.borrow_mut().present(0);
+            self.present_credits -= 1;
+            self.present_needed = false;
+            let mut callbacks = mem::replace(&mut self.present_callbacks, vec![]);
+            self.on_next_frame_begin_callbacks.append(&mut callbacks);
+        } else {
+            println!("Unable to present surface without a flatland instance.");
+        }
     }
 
-    pub fn present_internal(this: ObjectRef<Self>, client: &mut Client) -> Result<(), Error> {
+    pub fn present_internal(this: ObjectRef<Self>, client: &mut Client) {
         ftrace::duration!("wayland", "Surface::present_internal");
         if let Some(surface) = this.try_get_mut(client) {
             if surface.present_credits == 0 {
                 surface.present_needed = true;
             } else {
-                surface.present_now()?;
+                surface.present_now();
             }
         }
-        Ok(())
     }
 
     pub fn present(
         this: ObjectRef<Self>,
         client: &mut Client,
         mut callbacks: Vec<ObjectRef<Callback>>,
-    ) -> Result<(), Error> {
+    ) {
         ftrace::duration!("wayland", "Surface::present");
         if let Some(surface) = this.try_get_mut(client) {
             surface.present_callbacks.append(&mut callbacks);
             if surface.present_credits == 0 {
                 surface.present_needed = true;
             } else {
-                surface.present_now()?;
+                surface.present_now();
             }
         }
-        Ok(())
     }
 
-    pub fn add_present_credits(
-        this: ObjectRef<Self>,
-        client: &mut Client,
-        present_credits: u32,
-    ) -> Result<(), Error> {
+    pub fn add_present_credits(this: ObjectRef<Self>, client: &mut Client, present_credits: u32) {
         ftrace::duration!("wayland", "Surface::add_present_credits");
         if let Some(surface) = this.try_get_mut(client) {
             surface.present_credits += present_credits;
             // Present immediately if needed.
             if surface.present_needed && surface.present_credits > 0 {
-                surface.present_now()?;
+                surface.present_now();
             }
         }
-        Ok(())
     }
 }
 
@@ -766,7 +759,7 @@ impl RequestReceiver<WlSurface> for Surface {
                 // We trigger a present if explicitly requested of if there are any
                 // remaining frame callbacks.
                 if needs_present || !callbacks.is_empty() {
-                    Self::present(this, client, callbacks)?;
+                    Self::present(this, client, callbacks);
                 }
             }
             WlSurfaceRequest::Damage { .. } => {}

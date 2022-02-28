@@ -601,7 +601,8 @@ impl XdgSurface {
                                     surface_ref,
                                     client,
                                     values.additional_present_credits.unwrap_or(0),
-                                )
+                                );
+                                Ok(())
                             });
                         }
                         FlatlandEvent::OnFramePresented { frame_presented_info: _ } => {}
@@ -1076,7 +1077,7 @@ impl RequestReceiver<xdg_shell::XdgPopup> for XdgPopup {
                 // We need to present here to commit the removal of our
                 // popup. This will inform our parent that our view has
                 // been destroyed.
-                Surface::present_internal(surface_ref, client)?;
+                Surface::present_internal(surface_ref, client);
 
                 surface_ref.get_mut(client)?.clear_flatland();
                 client.delete_id(this.id())?;
@@ -1569,7 +1570,7 @@ impl RequestReceiver<xdg_shell::XdgToplevel> for XdgToplevel {
                 // We need to present here to commit the removal of our
                 // toplevel. This will inform our parent that our view has
                 // been destroyed.
-                Surface::present_internal(surface_ref, client)?;
+                Surface::present_internal(surface_ref, client);
 
                 surface_ref.get_mut(client)?.clear_flatland();
                 client.delete_id(this.id())?;
@@ -1629,7 +1630,7 @@ type XdgSurfaceViewPtr = Arc<Mutex<XdgSurfaceView>>;
 impl XdgSurfaceView {
     fn present_internal(&mut self) {
         let surface_ref = self.surface;
-        self.task_queue.post(move |client| Surface::present_internal(surface_ref, client));
+        self.task_queue.post(move |client| Ok(Surface::present_internal(surface_ref, client)));
     }
 
     fn update_and_present(&mut self) {
