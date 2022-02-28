@@ -13,9 +13,7 @@ use {
         },
     },
     ::routing::{
-        capability_source::InternalCapability,
-        config::RuntimeConfig,
-        error::{ComponentInstanceError, RoutingError},
+        capability_source::InternalCapability, config::RuntimeConfig, error::ComponentInstanceError,
     },
     anyhow::Error,
     async_trait::async_trait,
@@ -185,16 +183,9 @@ impl RealmCapabilityHost {
                 // start the component.
                 let child_ref =
                     fdecl::ChildRef { name: child_decl.name, collection: Some(collection.name) };
-                let (_client_end, server_end) =
-                    fidl::endpoints::create_endpoints::<DirectoryMarker>().unwrap();
                 let weak_component = WeakComponentInstance::new(&component);
-                RealmCapabilityHost::start_child(
-                    &weak_component,
-                    child_ref,
-                    server_end,
-                    StartReason::SingleRun,
-                )
-                .await
+                RealmCapabilityHost::start_child(&weak_component, child_ref, StartReason::SingleRun)
+                    .await
             }
             Ok(_) => Ok(()),
             Err(e) => match e {
@@ -216,12 +207,10 @@ impl RealmCapabilityHost {
     async fn start_child(
         component: &WeakComponentInstance,
         child: fdecl::ChildRef,
-        exposed_dir: ServerEnd<DirectoryMarker>,
         start_reason: StartReason,
     ) -> Result<(), fcomponent::Error> {
         match Self::get_child(component, child.clone()).await? {
             Some(child) => {
-                let mut exposed_dir = exposed_dir.into_channel();
                 child.start(&start_reason).await.map_err(|e| match e {
                     ModelError::ResolverError { err, .. } => {
                         debug!("failed to resolve child: {}", err);
@@ -236,27 +225,6 @@ impl RealmCapabilityHost {
                         fcomponent::Error::Internal
                     }
                 })?;
-                let res = child.open_exposed(&mut exposed_dir).await;
-                match res {
-                    Ok(()) => (),
-                    Err(ModelError::RoutingError {
-                        err: RoutingError::SourceInstanceStopped { .. },
-                    }) => {
-                        // TODO(fxbug.dev/54109): The runner may have decided to not run the component. Perhaps a
-                        // security policy prevented it, or maybe there was some other issue.
-                        // Unfortunately these failed runs may or may not have occurred by this point,
-                        // but we want to be consistent about how start_child responds to these errors.
-                        // Since this call succeeds if the runner hasn't yet decided to not run the
-                        // component, we need to also succeed if the runner has already decided to not
-                        // run the component, because otherwise the result of this call will be
-                        // inconsistent.
-                        ()
-                    }
-                    Err(e) => {
-                        debug!("open_exposed() failed: {}", e);
-                        return Err(fcomponent::Error::Internal);
-                    }
-                }
             }
             None => {
                 debug!("start_child() failed: instance not found {:?}", child);
