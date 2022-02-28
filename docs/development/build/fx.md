@@ -77,9 +77,19 @@ ready to configure your build:
 fx set workstation.x64 --with //bundles:tests
 ```
 
-This command stores the configuration in an `args.gn` file in the build
-directory (which is `out/default` by default). You can edit this file using the
-`fx args` command to create more elaborate configurations.
+Once you ran `fx set` in your checkout, there is no need to run it again unless
+you need to modify the arguments that follow.
+
+`fx set` stores its configuration in an `args.gn` file in the output directory.
+The output directly is `out/default`. You can specify a different directory
+using `fx set --dir <out_dir>`.
+
+You can edit the generated `args.gn` file using the `fx args` command to create
+more elaborate configurations. `fx args` will open `args.gn` in an editor, let
+you make changes, and regenerate the build graph.
+
+Note: If you edit `args.gn` directly then run `fx gen` to regenerate the build
+graph.
 
 ### What just happened?
 
@@ -186,25 +196,30 @@ following bundles:
 
 ## Execute a build {#execute-a-build}
 
-For most use cases, only `fx build` is needed. `fx build` builds both Zircon
-and the Fuchsia portions of the build.
+Once you configured your build with `fx set` as shown above, you can run a build
+with `fx build`. This commands builds all required targets and their outputs.
 
-Additionally to `fx build`, a few other build related commands provide
-more granular control:
+### Clean a build
 
-* `fx clean` clear out all build artifacts.
-* `fx clean-build` perform a clean, then a build.
-* `fx gen` repeat the `gn gen` process that `fx set` performed. Users making
-  fine grained build argument changes (e.g. by editing `args.gn` directly) can
-  run `fx gen` to reconfigure their build.
+You can continue to make changes to files in your checkout and run `fx build` to
+rebuild. The build system will attempt to do less work when there are results from
+a previous build. A build that uses previous build results is called an incremental
+build, and is usually much faster than a clean rebuild.
 
-### Enabling incremental rebuilds
+Changing configurations should not result in a broken incremental build, but this
+may still happen in rare cases due to [limitations of the build system][fxb94508].
+If this happens, please file a detailed bug that captures any steps to reproduce the
+problem and any diagnostics such as build logs. Then use these commands to recover:
 
-By default, `fx build` performs a full build, which includes building host tools,
-`//zircon`, and all other packages configured by `fx set`. This is necessary for
-some developer workflows, but it is excessive for many others. For example, if you
-are only iterating on your test, you shouldn't need to rebuild and republish all
-ephemeral (universe) packages.
+* `fx clean` will clear out all build artifacts.
+* `fx clean-build` is equivalent to `fx clean`, then `fx build`.
+
+### Enabling incremental package rebuilds
+
+By default, `fx build` builds all packages for the specified product configuration.
+This is necessary for some developer workflows, but it is excessive for many others.
+If you are only iterating on your test, you shouldn't need to rebuild and republish
+all ephemeral (universe) packages.
 
 You can enable incremental rebuilds by adding `export FUCHSIA_DISABLED_incremental=0`
 to your `~/.bashrc` or equivalent. This change results in the following:
@@ -598,3 +613,4 @@ To view Fuchsia's integration dashboard, see [Builders](https://luci-milo.appspo
 [build-overview]: /docs/development/build/concepts/build_system/fuchsia_build_system_overview.md
 [executing-tests]: /docs/development/testing/run_fuchsia_tests.md
 [ffx-target-flash]: https://fuchsia.dev/reference/tools/sdk/ffx#flash
+[fxb94507]: https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=94507
