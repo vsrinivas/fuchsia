@@ -38,7 +38,7 @@ async fn process_packet<T: Read + Write>(
     packet_size: usize,
 ) -> Result<(), anyhow::Error> {
     // Process the new packet
-    return fastboot_process_safe(stream, packet_size);
+    return fastboot_process_safe(stream, packet_size).await;
 }
 
 /// Start a fastboot session.
