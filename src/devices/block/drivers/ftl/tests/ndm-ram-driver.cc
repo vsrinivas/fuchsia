@@ -177,7 +177,7 @@ int NdmRamDriver::IsBadBlock(uint32_t page_num) {
   return ftl::kFalse;
 }
 
-bool NdmRamDriver::IsEmptyPage(uint32_t page_num, const uint8_t* data, const uint8_t* spare) {
+bool NdmRamDriver::IsEmptyPage(uint32_t page_num, const uint8_t* data, const uint8_t* spare) const {
   ZX_ASSERT(page_num < options_.block_size * options_.num_blocks);
   if (!Written(page_num)) {
     return true;
@@ -250,9 +250,9 @@ int NdmRamDriver::WritePage(uint32_t page_num, const uint8_t* data, const uint8_
   return ftl::kNdmOk;
 }
 
-uint32_t NdmRamDriver::PageSize() { return options_.page_size; }
+uint32_t NdmRamDriver::PageSize() const { return options_.page_size; }
 
-uint8_t NdmRamDriver::SpareSize() { return options_.eb_size; }
+uint8_t NdmRamDriver::SpareSize() const { return options_.eb_size; }
 
 bool NdmRamDriver::SimulateBadBlock(uint32_t page_num) {
   if (num_bad_blocks_ < options_.max_bad_blocks) {
@@ -279,15 +279,19 @@ uint8_t* NdmRamDriver::SpareData(uint32_t page_num) {
   return MainData(page_num) + options_.page_size;
 }
 
-bool NdmRamDriver::Written(uint32_t page_num) { return IsFlagSet(kWrittenFlag, &flags_[page_num]); }
+bool NdmRamDriver::Written(uint32_t page_num) const {
+  return IsFlagSet(kWrittenFlag, &flags_[page_num]);
+}
 
-bool NdmRamDriver::FailEcc(uint32_t page_num) { return IsFlagSet(kFailEccFlag, &flags_[page_num]); }
+bool NdmRamDriver::FailEcc(uint32_t page_num) const {
+  return IsFlagSet(kFailEccFlag, &flags_[page_num]);
+}
 
-bool NdmRamDriver::UnsafeEcc(uint32_t page_num) {
+bool NdmRamDriver::UnsafeEcc(uint32_t page_num) const {
   return IsFlagSet(kUnsafeEccFlag, &flags_[page_num]);
 }
 
-bool NdmRamDriver::BadBlock(uint32_t page_num) {
+bool NdmRamDriver::BadBlock(uint32_t page_num) const {
   return IsFlagSet(kBadBlockFlag, &flags_[page_num / PagesPerBlock()]);
 }
 

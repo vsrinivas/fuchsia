@@ -92,10 +92,10 @@ class NandDriverImpl final : public ftl::NandDriver {
                 const void* oob_buffer) final;
   int NandErase(uint32_t page_num) final;
   int IsBadBlock(uint32_t page_num) final;
-  bool IsEmptyPage(uint32_t page_num, const uint8_t* data, const uint8_t* spare) final;
+  bool IsEmptyPage(uint32_t page_num, const uint8_t* data, const uint8_t* spare) const final;
   void TryEraseRange(uint32_t start_block, uint32_t end_block) final;
-  uint32_t PageSize() final { return info_.page_size; }
-  uint8_t SpareSize() final { return info_.oob_size; }
+  uint32_t PageSize() const final { return info_.page_size; }
+  uint8_t SpareSize() const final { return info_.oob_size; }
   const nand_info_t& info() const final { return info_; }
 
  private:
@@ -321,7 +321,8 @@ int NandDriverImpl::IsBadBlock(uint32_t page_num) {
   return ftl::kFalse;
 }
 
-bool NandDriverImpl::IsEmptyPage(uint32_t page_num, const uint8_t* data, const uint8_t* spare) {
+bool NandDriverImpl::IsEmptyPage(uint32_t page_num, const uint8_t* data,
+                                 const uint8_t* spare) const {
   return IsEmptyPageImpl(data, info_.page_size, spare, info_.oob_size);
 }
 

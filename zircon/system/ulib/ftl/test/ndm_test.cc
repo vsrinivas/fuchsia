@@ -48,11 +48,11 @@ class NdmRamDriver final : public ftl::NdmBaseDriver {
                 const void* oob_buffer) final;
   int NandErase(uint32_t page_num) final;
   int IsBadBlock(uint32_t page_num) final { return ftl::kFalse; }
-  bool IsEmptyPage(uint32_t page_num, const uint8_t* data, const uint8_t* spare) final {
+  bool IsEmptyPage(uint32_t page_num, const uint8_t* data, const uint8_t* spare) const final {
     return IsEmptyPageImpl(data, kPageSize, spare, kOobSize);
   }
-  uint32_t PageSize() final { return kPageSize; }
-  uint8_t SpareSize() final { return kOobSize; }
+  uint32_t PageSize() const final { return kPageSize; }
+  uint8_t SpareSize() const final { return kOobSize; }
 
  private:
   std::vector<uint8_t> volume_;

@@ -108,7 +108,7 @@ int InMemoryNdm::NandErase(uint32_t page_num) {
 
 // Returns whether a given page is empty or not. |data| and |spare| store
 // the contents of the page.
-bool InMemoryNdm::IsEmptyPage(uint32_t page_num, const uint8_t* data, const uint8_t* spare) {
+bool InMemoryNdm::IsEmptyPage(uint32_t page_num, const uint8_t* data, const uint8_t* spare) const {
   auto page_view = cpp20::span<const uint8_t>(reinterpret_cast<const uint8_t*>(data), page_size_);
   auto oob_view = cpp20::span<const uint8_t>(reinterpret_cast<const uint8_t*>(spare), oob_size_);
 

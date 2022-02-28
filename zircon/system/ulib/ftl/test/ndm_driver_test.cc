@@ -29,10 +29,10 @@ class MockDriver final : public ftl::NdmBaseDriver {
                 const void* oob_buffer) final;
   int NandErase(uint32_t page_num) final;
   int IsBadBlock(uint32_t page_num) final { return ftl::kFalse; }
-  bool IsEmptyPage(uint32_t page_num, const uint8_t* data, const uint8_t* spare) final;
-  bool IncompletePageWrite(uint8_t* spare, uint8_t* data) final { return incomplete_; }
-  uint32_t PageSize() final { return 4096; }
-  uint8_t SpareSize() final { return 16; }
+  bool IsEmptyPage(uint32_t page_num, const uint8_t* data, const uint8_t* spare) const final;
+  bool IncompletePageWrite(uint8_t* spare) const final { return incomplete_; }
+  uint32_t PageSize() const final { return 4096; }
+  uint8_t SpareSize() const final { return 16; }
 
  private:
   int result_ = ftl::kNdmOk;
@@ -52,7 +52,7 @@ int MockDriver::NandWrite(uint32_t start_page, uint32_t page_count, const void* 
 
 int MockDriver::NandErase(uint32_t page_num) { return result_; }
 
-bool MockDriver::IsEmptyPage(uint32_t page_num, const uint8_t* data, const uint8_t* spare) {
+bool MockDriver::IsEmptyPage(uint32_t page_num, const uint8_t* data, const uint8_t* spare) const {
   return empty_;
 }
 

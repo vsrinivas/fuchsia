@@ -74,9 +74,9 @@ class NdmRamDriver final : public ftl::NdmBaseDriver {
   }
 
   // Access flags for a given page.
-  bool FailEcc(uint32_t page_num);
-  bool UnsafeEcc(uint32_t page_num);
-  bool BadBlock(uint32_t page_num);
+  bool FailEcc(uint32_t page_num) const;
+  bool UnsafeEcc(uint32_t page_num) const;
+  bool BadBlock(uint32_t page_num) const;
   void SetFailEcc(uint32_t page_num, bool value);
   void SetUnsafeEcc(uint32_t page_num, bool value);
   void SetBadBlock(uint32_t page_num, bool value);
@@ -94,9 +94,9 @@ class NdmRamDriver final : public ftl::NdmBaseDriver {
                 const void* oob_buffer) final;
   int NandErase(uint32_t page_num) final;
   int IsBadBlock(uint32_t page_num) final;
-  bool IsEmptyPage(uint32_t page_num, const uint8_t* data, const uint8_t* spare) final;
-  uint32_t PageSize() final;
-  uint8_t SpareSize() final;
+  bool IsEmptyPage(uint32_t page_num, const uint8_t* data, const uint8_t* spare) const final;
+  uint32_t PageSize() const final;
+  uint8_t SpareSize() const final;
 
  private:
   // Reads or Writes a single page.
@@ -114,7 +114,7 @@ class NdmRamDriver final : public ftl::NdmBaseDriver {
   void OnErasePowerFailure(uint64_t page_number);
 
   // Access flags for a given page.
-  bool Written(uint32_t page_num);
+  bool Written(uint32_t page_num) const;
   void SetWritten(uint32_t page_num, bool value);
 
   uint32_t PagesPerBlock() const;

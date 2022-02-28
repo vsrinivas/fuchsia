@@ -46,7 +46,7 @@ FtlLogger DefaultLogger();
 // Encapsulates the lower layer TargetFtl-Ndm driver.
 class __EXPORT NdmDriver {
  public:
-  virtual ~NdmDriver() {}
+  virtual ~NdmDriver() = default;
 
   // Performs driver initialization. Returns an error string, or nullptr on
   // success.
@@ -84,17 +84,17 @@ class __EXPORT NdmDriver {
 
   // Returns whether a given page is empty or not. |data| and |spare| store
   // the contents of the page.
-  virtual bool IsEmptyPage(uint32_t page_num, const uint8_t* data, const uint8_t* spare) = 0;
+  virtual bool IsEmptyPage(uint32_t page_num, const uint8_t* data, const uint8_t* spare) const = 0;
 
   // Returns the number of bytes in a page.
-  virtual uint32_t PageSize() = 0;
+  virtual uint32_t PageSize() const = 0;
 
   // Returns the number of bytes available for spare data storage.
-  virtual uint8_t SpareSize() = 0;
+  virtual uint8_t SpareSize() const = 0;
 
-  // Looks at the spare  and data buffer to try to determine if the write may
+  // Looks at the spare buffer to try to determine if the write may
   // have been incomplete. Return true if it appears to have been incomplete.
-  virtual bool IncompletePageWrite(uint8_t* spare, uint8_t* data) = 0;
+  virtual bool IncompletePageWrite(uint8_t* spare) const = 0;
 };
 
 // Base functionality for a driver implementation.
@@ -155,10 +155,10 @@ class __EXPORT NdmBaseDriver : public NdmDriver {
   // save_volume_data set to true.
   bool WriteVolumeData();
 
-  bool IncompletePageWrite(uint8_t* spare, uint8_t* data) override;
+  bool IncompletePageWrite(uint8_t* spare) const override;
 
-  uint32_t PageSize() override;
-  uint8_t SpareSize() override;
+  uint32_t PageSize() const override;
+  uint8_t SpareSize() const override;
 
  protected:
   // This is exposed for unit tests only.

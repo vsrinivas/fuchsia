@@ -76,10 +76,10 @@ class InMemoryNdm final : public ftl::NdmBaseDriver {
 
   // Returns whether a given page is empty or not. |data| and |spare| store
   // the contents of the page.
-  bool IsEmptyPage(uint32_t page_num, const uint8_t* data, const uint8_t* spare) final;
+  bool IsEmptyPage(uint32_t page_num, const uint8_t* data, const uint8_t* spare) const final;
 
-  uint32_t PageSize() final { return static_cast<uint32_t>(page_size_); }
-  uint8_t SpareSize() final { return static_cast<uint8_t>(oob_size_); }
+  uint32_t PageSize() const final { return static_cast<uint32_t>(page_size_); }
+  uint8_t SpareSize() const final { return static_cast<uint8_t>(oob_size_); }
 
  private:
   InMemoryRawNand* raw_nand_ = nullptr;

@@ -2,7 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_FTL_MTD_NAND_VOLUME_DRIVER_H_
+#define LIB_FTL_MTD_NAND_VOLUME_DRIVER_H_
+
+#include <lib/ftl/ndm-driver.h>
+#include <lib/mtd/nand-interface.h>
+#include <zircon/types.h>
 
 #include <memory>
 #include <set>
@@ -10,10 +15,6 @@
 #include <vector>
 
 #include <fbl/macros.h>
-#include <lib/ftl/ndm-driver.h>
-#include <zircon/types.h>
-
-#include <lib/mtd/nand-interface.h>
 
 namespace ftl_mtd {
 
@@ -38,9 +39,9 @@ class NandVolumeDriver : public ftl::NdmBaseDriver {
   int NandRead(uint32_t start_page, uint32_t page_count, void* page_buffer, void* oob_buffer);
   int NandErase(uint32_t page_num);
   int IsBadBlock(uint32_t page_num);
-  bool IsEmptyPage(uint32_t page_num, const uint8_t* page_buffer, const uint8_t* oob_buffer);
-  uint32_t PageSize() final;
-  uint8_t SpareSize() final;
+  bool IsEmptyPage(uint32_t page_num, const uint8_t* page_buffer, const uint8_t* oob_buffer) const;
+  uint32_t PageSize() const final;
+  uint8_t SpareSize() const final;
 
   DISALLOW_COPY_ASSIGN_AND_MOVE(NandVolumeDriver);
 
@@ -51,11 +52,11 @@ class NandVolumeDriver : public ftl::NdmBaseDriver {
   zx_status_t ReadPageAndOob(uint32_t byte_offset, void* page_buffer, void* oob_buffer);
 
   zx_status_t GetPageIndices(uint32_t mapped_page, uint32_t mapped_page_count, uint32_t* start_page,
-                             uint32_t* end_page);
-  uint32_t GetBlockOffsetForPage(uint32_t real_page);
-  uint32_t GetByteOffsetForPage(uint32_t real_page);
+                             uint32_t* end_page) const;
+  uint32_t GetBlockOffsetForPage(uint32_t real_page) const;
+  uint32_t GetByteOffsetForPage(uint32_t real_page) const;
 
-  uint32_t ByteOffset();
+  uint32_t ByteOffset() const;
 
   uint32_t block_offset_;
   uint32_t page_multiplier_;
@@ -64,3 +65,5 @@ class NandVolumeDriver : public ftl::NdmBaseDriver {
 };
 
 }  // namespace ftl_mtd
+
+#endif  // LIB_FTL_MTD_NAND_VOLUME_DRIVER_H_

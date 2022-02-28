@@ -4,13 +4,12 @@
 
 #include <errno.h>
 #include <fcntl.h>
+#include <lib/log/log.h>
+#include <lib/mtd/mtd-interface.h>
 #include <stdio.h>
 #include <string.h>
 #include <sys/ioctl.h>
 #include <unistd.h>
-
-#include <lib/log/log.h>
-#include <lib/mtd/mtd-interface.h>
 
 // Some chips report a spare size that is not capable of being read and/or
 // written usually due to reserved bits for ECC or limits set by a NAND
@@ -44,13 +43,13 @@ std::unique_ptr<MtdInterface> MtdInterface::Create(const std::string& path) {
 MtdInterface::MtdInterface(fbl::unique_fd fd, const mtd_info_t& mtd_info)
     : fd_(std::move(fd)), mtd_info_(mtd_info) {}
 
-uint32_t MtdInterface::PageSize() { return mtd_info_.writesize; }
+uint32_t MtdInterface::PageSize() const { return mtd_info_.writesize; }
 
-uint32_t MtdInterface::BlockSize() { return mtd_info_.erasesize; }
+uint32_t MtdInterface::BlockSize() const { return mtd_info_.erasesize; }
 
-uint32_t MtdInterface::OobSize() { return SPARE_SIZE > 0 ? SPARE_SIZE : mtd_info_.oobsize; }
+uint32_t MtdInterface::OobSize() const { return SPARE_SIZE > 0 ? SPARE_SIZE : mtd_info_.oobsize; }
 
-uint32_t MtdInterface::Size() { return mtd_info_.size; }
+uint32_t MtdInterface::Size() const { return mtd_info_.size; }
 
 zx_status_t MtdInterface::ReadPage(uint32_t byte_offset, void* data_bytes, uint32_t* actual) {
   if (byte_offset % PageSize() != 0) {

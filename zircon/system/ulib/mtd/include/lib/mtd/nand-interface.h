@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_MTD_NAND_INTERFACE_H_
+#define LIB_MTD_NAND_INTERFACE_H_
 
 #include <stdint.h>
 #include <zircon/types.h>
@@ -12,18 +13,18 @@ namespace mtd {
 // Base interface for a NAND-based storage device.
 class NandInterface {
  public:
-  virtual ~NandInterface() {}
+  virtual ~NandInterface() = default;
 
   // Gets the page size in bytes.
-  virtual uint32_t PageSize() = 0;
+  virtual uint32_t PageSize() const = 0;
   // Gets the block size in bytes.
-  virtual uint32_t BlockSize() = 0;
+  virtual uint32_t BlockSize() const = 0;
   // Gets the out-of-band (aka spare or OOB) size in bytes.
-  virtual uint32_t OobSize() = 0;
+  virtual uint32_t OobSize() const = 0;
   // Gets the size of the NAND-based storage device in bytes. This value may not
   // represent the full size of the chip depending on the implementation of
   // this interface.
-  virtual uint32_t Size() = 0;
+  virtual uint32_t Size() const = 0;
 
   // Reads the OOB at the specified |byte_offset| into the buffer specified by
   // |bytes|. |byte_offset| should be a multiple of |PageSize|. |bytes| should
@@ -52,3 +53,5 @@ class NandInterface {
 };
 
 }  // namespace mtd
+
+#endif  // LIB_MTD_NAND_INTERFACE_H_

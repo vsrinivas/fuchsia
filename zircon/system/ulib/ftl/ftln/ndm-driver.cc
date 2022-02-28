@@ -121,7 +121,7 @@ int IsEmpty(uint32_t page, uint8_t* data, uint8_t* spare, void* dev) {
     return kFalse;
   }
 
-  NdmDriver* device = reinterpret_cast<NdmDriver*>(dev);
+  const NdmDriver* device = reinterpret_cast<const NdmDriver*>(dev);
   return device->IsEmptyPage(page, data, spare) ? kTrue : kFalse;
 }
 
@@ -136,8 +136,8 @@ int CheckPage(uint32_t page, uint8_t* data, uint8_t* spare, int* status, void* d
 
   // Mark page as invalid if the data fails ECC or if we detected a partial page write, since both
   // the page and spare data should not be used in that case.
-  NdmDriver* device = reinterpret_cast<NdmDriver*>(dev);
-  if (result == kNdmUncorrectableEcc || device->IncompletePageWrite(spare, data)) {
+  const NdmDriver* device = reinterpret_cast<const NdmDriver*>(dev);
+  if (result == kNdmUncorrectableEcc || device->IncompletePageWrite(spare)) {
     *status = NDM_PAGE_INVALID;
     return kNdmOk;
   }
@@ -375,13 +375,11 @@ void NdmBaseDriver::FillNdmDriver(const VolumeOptions& options, bool use_format_
   driver->logger = logger_;
 }
 
-uint32_t NdmBaseDriver::PageSize() { return ndm_->page_size; }
+uint32_t NdmBaseDriver::PageSize() const { return ndm_->page_size; }
 
-uint8_t NdmBaseDriver::SpareSize() { return ndm_->eb_size; }
+uint8_t NdmBaseDriver::SpareSize() const { return ndm_->eb_size; }
 
-bool NdmBaseDriver::IncompletePageWrite(uint8_t* spare, uint8_t* data) {
-  return FtlnIncompleteWrite(spare);
-}
+bool NdmBaseDriver::IncompletePageWrite(uint8_t* spare) const { return FtlnIncompleteWrite(spare); }
 
 __EXPORT
 bool InitModules() {

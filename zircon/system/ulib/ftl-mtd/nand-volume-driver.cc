@@ -155,7 +155,7 @@ int NandVolumeDriver::IsBadBlock(uint32_t page_num) {
 }
 
 bool NandVolumeDriver::IsEmptyPage(uint32_t page_num, const uint8_t* page_buffer,
-                                   const uint8_t* oob_buffer) {
+                                   const uint8_t* oob_buffer) const {
   return IsEmptyPageImpl(page_buffer, PageSize(), oob_buffer, SpareSize());
 }
 
@@ -185,7 +185,7 @@ zx_status_t NandVolumeDriver::ReadPageAndOob(uint32_t byte_offset, void* page_bu
 }
 
 zx_status_t NandVolumeDriver::GetPageIndices(uint32_t mapped_page, uint32_t mapped_page_count,
-                                             uint32_t* start_page, uint32_t* end_page) {
+                                             uint32_t* start_page, uint32_t* end_page) const {
   uint32_t start = ByteOffset() / interface_->PageSize() + page_multiplier_ * mapped_page;
   uint32_t end = start + page_multiplier_ * mapped_page_count;
   uint32_t last_page = interface_->Size() / interface_->PageSize();
@@ -199,19 +199,19 @@ zx_status_t NandVolumeDriver::GetPageIndices(uint32_t mapped_page, uint32_t mapp
   return ZX_OK;
 }
 
-uint32_t NandVolumeDriver::GetBlockOffsetForPage(uint32_t real_page) {
+uint32_t NandVolumeDriver::GetBlockOffsetForPage(uint32_t real_page) const {
   return GetByteOffsetForPage(real_page) / interface_->BlockSize() * interface_->BlockSize();
 }
 
-uint32_t NandVolumeDriver::GetByteOffsetForPage(uint32_t real_page) {
+uint32_t NandVolumeDriver::GetByteOffsetForPage(uint32_t real_page) const {
   return real_page * interface_->PageSize();
 }
 
-uint32_t NandVolumeDriver::ByteOffset() { return block_offset_ * interface_->BlockSize(); }
+uint32_t NandVolumeDriver::ByteOffset() const { return block_offset_ * interface_->BlockSize(); }
 
-uint32_t NandVolumeDriver::PageSize() { return page_multiplier_ * interface_->PageSize(); }
+uint32_t NandVolumeDriver::PageSize() const { return page_multiplier_ * interface_->PageSize(); }
 
-uint8_t NandVolumeDriver::SpareSize() {
+uint8_t NandVolumeDriver::SpareSize() const {
   return static_cast<uint8_t>(page_multiplier_ * interface_->OobSize());
 }
 
