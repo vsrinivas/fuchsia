@@ -468,6 +468,11 @@ async fn with_netsvc_and_netstack_bind_port<E, F, Fut, A, V>(
     .await
     .expect("bind in realm");
 
+    // Disable looping multicast sockets back to us; That prevents us from
+    // seeing our own generated multicast traffic in case the local port we get
+    // matches some netsvc service port.
+    let () = sock.as_ref().set_multicast_loop_v6(false).expect("failed to disable multicast loop");
+
     let test_fut = test(sock, interface.id().try_into().expect("interface ID doesn't fit u32"));
     futures::select! {
         r = netsvc_stopped_fut.fuse() => {
