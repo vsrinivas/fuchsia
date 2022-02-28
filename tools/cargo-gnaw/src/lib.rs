@@ -538,9 +538,14 @@ pub fn run(args: &[impl AsRef<str>]) -> Result<(), Error> {
         // shift all args by one.
         strs = strs[1..].to_vec()
     }
-    let opt = Opt::from_args(&[strs[0]], &strs[1..])
-        .map_err(|early_exit| anyhow::anyhow!("early exit: {:?}", &early_exit))
-        .with_context(|| "while parsing command line arguments")?;
+    let opt = match Opt::from_args(&[strs[0]], &strs[1..]) {
+        Ok(opt) => opt,
+        Err(e) if e.status.is_ok() => {
+            println!("{}", e.output);
+            return Ok(());
+        }
+        Err(e) => return Err(anyhow::Error::msg(e.output)),
+    };
 
     eprintln!("Generating GN file from {}", opt.manifest_path.to_string_lossy());
 
