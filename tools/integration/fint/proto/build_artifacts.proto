@@ -24,6 +24,15 @@ message NinjaActionMetrics {
   map<string, int32> actions_by_type = 3;
 }
 
+message DebugFile {
+  // Absolute path to the file.
+  string path = 1;
+
+  // Relative path to which the file should be uploaded within the build's
+  // namespace in cloud storage.
+  string upload_dest = 2;
+}
+
 // BuildArtifacts contains information about the targets built by `fint build`.
 message BuildArtifacts {
   // A brief error log populated in case of a recognized failure mode (e.g. a
@@ -68,12 +77,18 @@ message BuildArtifacts {
   // very hard for humans to read the output proto.
   map<string, string> log_files = 11;
 
+  // Files to upload to cloud storage even if the build fails, to help with
+  // debugging and understanding build performance. Files produced by ninja
+  // targets themselves should *not* be uploaded via this mechanism, use
+  // artifactory instead.
+  repeated DebugFile debug_files = 12;
+
   // Whether an analysis of the build graph determined that the changed files do
   // not affect the build.
-  bool build_not_affected = 12;
+  bool build_not_affected = 13;
 
   // Names, as they appear in tests.json, of tests affected by the change under
   // tests. This is determined by doing a build graph analysis of the files
   // reported in the `changed_files` context spec field.
-  repeated string affected_tests = 13;
+  repeated string affected_tests = 14;
 }

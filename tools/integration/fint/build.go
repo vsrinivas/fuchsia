@@ -34,6 +34,11 @@ const (
 
 	// ninjaLogPath is the path to the main ninja log relative to the build directory.
 	ninjaLogPath = ".ninja_log"
+
+	// Name of the directory within the build directory that will contain clang
+	// crash reports. This name is configured by the `crash_diagnostics_dir` GN
+	// arg in //build/config/clang/crash_diagnostics.gni.
+	clangCrashReportsDirName = "clang-crashreports"
 )
 
 var (
@@ -100,8 +105,8 @@ func buildImpl(
 	}
 	proto.Merge(artifacts, targetArtifacts)
 
-	// Initialize the map, otherwise it will be nil and attempts to set keys
-	// will fail.
+	// Initialize maps, otherwise they will be nil and attempts to set keys will
+	// fail.
 	artifacts.LogFiles = make(map[string]string)
 
 	ninjaPath, err := toolAbsPath(modules, contextSpec.BuildDir, platform, "ninja")
@@ -175,6 +180,22 @@ func buildImpl(
 	}
 
 	if ninjaErr != nil {
+		if contextSpec.ArtifactDir != "" {
+			crashReportFiles, err := collectClangCrashReports(contextSpec.BuildDir)
+			if err != nil {
+				return artifacts, err
+			}
+			for _, path := range crashReportFiles {
+				rel, err := filepath.Rel(contextSpec.BuildDir, path)
+				if err != nil {
+					return artifacts, err
+				}
+				artifacts.DebugFiles = append(artifacts.DebugFiles, &fintpb.DebugFile{
+					Path:       path,
+					UploadDest: filepath.ToSlash(rel),
+				})
+			}
+		}
 		return artifacts, fmt.Errorf("build failed, see ninja output for details: %w", ninjaErr)
 	}
 
@@ -252,6 +273,32 @@ func buildImpl(
 	}
 
 	return artifacts, nil
+}
+
+// collectClangCrashReports finds reproducer scripts for clang crashes in the
+// build directory and returns a list of absolute paths to those files.
+func collectClangCrashReports(buildDir string) ([]string, error) {
+	crashReportsDir := filepath.Join(buildDir, clangCrashReportsDirName)
+	if isDir, err := osmisc.IsDir(crashReportsDir); err != nil || !isDir {
+		return nil, err
+	}
+
+	reproducers, err := filepath.Glob(filepath.Join(crashReportsDir, "*.sh"))
+	if err != nil {
+		return nil, err
+	}
+
+	var outputs []string
+	for _, rep := range reproducers {
+		noExt := strings.TrimSuffix(rep, filepath.Ext(rep))
+		files, err := filepath.Glob(noExt + ".*")
+		if err != nil {
+			return nil, err
+		}
+		outputs = append(outputs, files...)
+	}
+
+	return outputs, nil
 }
 
 func ninjaNoopFailureMessage(platform string) string {

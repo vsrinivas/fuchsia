@@ -23,6 +23,7 @@ import (
 
 	"go.fuchsia.dev/fuchsia/tools/build"
 	fintpb "go.fuchsia.dev/fuchsia/tools/integration/fint/proto"
+	"go.fuchsia.dev/fuchsia/tools/lib/osmisc"
 )
 
 type fakeBuildModules struct {
@@ -46,19 +47,25 @@ func (m fakeBuildModules) Tools() build.Tools                            { retur
 func (m fakeBuildModules) ZBITests() []build.ZBITest                     { return m.zbiTests }
 
 func TestBuild(t *testing.T) {
-	platform := "linux-x64"
-	artifactDir := filepath.Join(t.TempDir(), "artifacts")
-	resetArtifactDir := func(t *testing.T) {
-		// `artifactDir` is in the top-level tempdir so it can be referenced
-		// in the `testCases` table, but that means it doesn't get cleared
-		// between sub-tests so we need to clear it explicitly.
-		if err := os.RemoveAll(artifactDir); err != nil {
-			t.Fatal(err)
-		}
-		if err := os.MkdirAll(artifactDir, 0o700); err != nil {
-			t.Fatal(err)
+	checkoutDir := t.TempDir()
+	buildDir := filepath.Join(checkoutDir, "out", "default")
+	artifactDir := t.TempDir()
+
+	// The directories are shared across all test cases so they can be
+	// referenced in the `testCases` table, but that means they don't get
+	// cleared between sub-tests so we need to clear them explicitly.
+	resetDirs := func(t *testing.T) {
+		for _, dir := range []string{checkoutDir, buildDir, artifactDir} {
+			if err := os.RemoveAll(dir); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.MkdirAll(dir, 0o700); err != nil {
+				t.Fatal(err)
+			}
 		}
 	}
+
+	platform := "linux-x64"
 
 	testCases := []struct {
 		name        string
@@ -69,7 +76,9 @@ func TestBuild(t *testing.T) {
 		// `SkipNinjaNoopCheck` on every test's context spec. This effectively
 		// makes `SkipNinjaNoopCheck` default to true.
 		ninjaNoopCheck bool
-		modules        fakeBuildModules
+		// Mock files to populate the build directory with.
+		buildDirFiles []string
+		modules       fakeBuildModules
 		// Callback that is called by the fake runner whenever it starts
 		// "running" a command, allowing each test to fake the result and output
 		// of any subprocess.
@@ -121,6 +130,36 @@ func TestBuild(t *testing.T) {
 					"ninja dry run output": filepath.Join(artifactDir, "ninja_dry_run_output"),
 				},
 			},
+		},
+		{
+			name:       "failed build with clang crash reports",
+			staticSpec: &fintpb.Static{},
+			contextSpec: &fintpb.Context{
+				ArtifactDir: artifactDir,
+			},
+			// We should check for these files when the build fails and
+			// reference them in the output artifacts proto.
+			buildDirFiles: []string{
+				filepath.Join(clangCrashReportsDirName, "foo.sh"),
+				filepath.Join(clangCrashReportsDirName, "bar.sh"),
+			},
+			runnerFunc: func(cmd []string, _ io.Writer) error {
+				return fmt.Errorf("failed to run command: %s", cmd)
+			},
+			expectedArtifacts: &fintpb.BuildArtifacts{
+				FailureSummary: unrecognizedFailureMsg,
+				DebugFiles: []*fintpb.DebugFile{
+					{
+						Path:       filepath.Join(buildDir, "clang-crashreports", "foo.sh"),
+						UploadDest: "clang-crashreports/foo.sh",
+					},
+					{
+						Path:       filepath.Join(buildDir, "clang-crashreports", "bar.sh"),
+						UploadDest: "clang-crashreports/bar.sh",
+					},
+				},
+			},
+			expectErr: true,
 		},
 		{
 			name: "incremental build",
@@ -502,10 +541,11 @@ func TestBuild(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			resetArtifactDir(t)
+			resetDirs(t)
 
-			checkoutDir := t.TempDir()
-			buildDir := filepath.Join(checkoutDir, "out", "default")
+			for _, relpath := range tc.buildDirFiles {
+				createEmptyFile(t, filepath.Join(buildDir, relpath))
+			}
 
 			defaultContextSpec := &fintpb.Context{
 				SkipNinjaNoopCheck: !tc.ninjaNoopCheck,
@@ -552,6 +592,7 @@ func TestBuild(t *testing.T) {
 				protocmp.Transform(),
 				// Ordering of the repeated artifact fields doesn't matter.
 				sortSlicesOpt,
+				protocmp.SortRepeated(func(a, b *fintpb.DebugFile) bool { return a.Path < b.Path }),
 			}
 			if diff := cmp.Diff(tc.expectedArtifacts, artifacts, opts...); diff != "" {
 				t.Errorf("Got wrong artifacts (-want +got):\n%s", diff)
@@ -621,6 +662,18 @@ func makeTools(supportedOSes map[string][]string) build.Tools {
 		}
 	}
 	return res
+}
+
+func createEmptyFile(t *testing.T, path string) {
+	t.Helper()
+
+	f, err := osmisc.CreateFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := f.Close(); err != nil {
+		t.Fatal(err)
+	}
 }
 
 // mustStructPB converts a Go struct to a protobuf Struct, failing the test in
