@@ -60,7 +60,15 @@ dart_test("workstation_chrome_advanced_smoke_test") {
       }
       tags = [ "e2e-fyi" ]
     },
-    atlas_env,
+
+    # TODO(fxbug.dev/94042): Reenable on Atlas after non-hermetic interactions
+    # with experiences_ermine_smoke_e2e_test are resolved.
+    {
+      dimensions = {
+        device_type = "Atlas"
+      }
+      tags = [ "e2e-fyi" ]
+    },
   ]
 }
 
