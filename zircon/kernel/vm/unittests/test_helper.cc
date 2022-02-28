@@ -37,14 +37,8 @@ zx_status_t AllocUser(VmAspace* aspace, const char* name, size_t size, user_inou
   return ZX_OK;
 }
 
-zx_status_t make_committed_pager_vmo(size_t num_pages, bool trap_dirty, vm_page_t** out_pages,
-                                     fbl::RefPtr<VmObjectPaged>* out_vmo) {
-  // Disable the scanner so we can safely submit our aux vmo and query pages without eviction
-  // happening.
-  AutoVmScannerDisable scanner_disable;
-
-  // Create a pager backed VMO and jump through some hoops to pre-fill pages for it so we do not
-  // actually take any page faults.
+zx_status_t make_uncommitted_pager_vmo(size_t num_pages, bool trap_dirty, bool resizable,
+                                       fbl::RefPtr<VmObjectPaged>* out_vmo) {
   fbl::AllocChecker ac;
   fbl::RefPtr<StubPageProvider> pager =
       fbl::MakeRefCountedChecked<StubPageProvider>(&ac, trap_dirty);
@@ -58,8 +52,26 @@ zx_status_t make_committed_pager_vmo(size_t num_pages, bool trap_dirty, vm_page_
   }
 
   fbl::RefPtr<VmObjectPaged> vmo;
-  zx_status_t status =
-      VmObjectPaged::CreateExternal(ktl::move(src), 0, num_pages * PAGE_SIZE, &vmo);
+  zx_status_t status = VmObjectPaged::CreateExternal(
+      ktl::move(src), resizable ? VmObjectPaged::kResizable : 0, num_pages * PAGE_SIZE, &vmo);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  *out_vmo = ktl::move(vmo);
+  return ZX_OK;
+}
+
+zx_status_t make_committed_pager_vmo(size_t num_pages, bool trap_dirty, bool resizable,
+                                     vm_page_t** out_pages, fbl::RefPtr<VmObjectPaged>* out_vmo) {
+  // Disable the scanner so we can safely submit our aux vmo and query pages without eviction
+  // happening.
+  AutoVmScannerDisable scanner_disable;
+
+  // Create a pager backed VMO and jump through some hoops to pre-fill pages for it so we do not
+  // actually take any page faults.
+  fbl::RefPtr<VmObjectPaged> vmo;
+  zx_status_t status = make_uncommitted_pager_vmo(num_pages, trap_dirty, resizable, &vmo);
   if (status != ZX_OK) {
     return status;
   }

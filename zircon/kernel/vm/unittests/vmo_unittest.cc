@@ -605,8 +605,8 @@ static bool vmo_contiguous_decommit_test() {
     constexpr uint64_t kBorrowingVmoPages = 64;
     vm_page_t* pages[kBorrowingVmoPages];
     fbl::RefPtr<VmObjectPaged> borrowing_vmo;
-    status = make_committed_pager_vmo(kBorrowingVmoPages, /*trap_dirty=*/false, &pages[0],
-                                      &borrowing_vmo);
+    status = make_committed_pager_vmo(kBorrowingVmoPages, /*trap_dirty=*/false, /*resizable=*/false,
+                                      &pages[0], &borrowing_vmo);
     ASSERT_EQ(status, ZX_OK);
 
     // Updates borrowing_seen to true, if any pages of vmo are seen to be borrowed (maybe by
@@ -1351,7 +1351,8 @@ static bool vmo_move_pages_on_access_test() {
 
   fbl::RefPtr<VmObjectPaged> vmo;
   vm_page_t* page;
-  zx_status_t status = make_committed_pager_vmo(1, /*trap_dirty=*/false, &page, &vmo);
+  zx_status_t status =
+      make_committed_pager_vmo(1, /*trap_dirty=*/false, /*resizable=*/false, &page, &vmo);
   ASSERT_EQ(ZX_OK, status);
 
   // Our page should now be in a pager backed page queue.
@@ -1404,7 +1405,8 @@ static bool vmo_eviction_hints_test() {
   // Create a pager-backed VMO with a single page.
   fbl::RefPtr<VmObjectPaged> vmo;
   vm_page_t* page;
-  zx_status_t status = make_committed_pager_vmo(1, /*trap_dirty=*/false, &page, &vmo);
+  zx_status_t status =
+      make_committed_pager_vmo(1, /*trap_dirty=*/false, /*resizable=*/false, &page, &vmo);
   ASSERT_EQ(ZX_OK, status);
 
   // Newly created page should be in the first pager backed page queue.
@@ -1518,7 +1520,7 @@ static bool vmo_always_need_evicts_loaned_test() {
       }
 
       // Create a pager-backed VMO with a single page.
-      status = make_committed_pager_vmo(1, /*trap_dirty=*/false, &page, &vmo);
+      status = make_committed_pager_vmo(1, /*trap_dirty=*/false, /*resizable=*/false, &page, &vmo);
       ASSERT_EQ(ZX_OK, status);
       ++iteration_count;
     } while (!pmm_is_loaned(page) && iteration_count < kMaxIterations);
@@ -1548,7 +1550,8 @@ static bool vmo_eviction_hints_clone_test() {
   // Create a pager-backed VMO with two pages. We will fork a page in a clone later.
   fbl::RefPtr<VmObjectPaged> vmo;
   vm_page_t* pages[2];
-  zx_status_t status = make_committed_pager_vmo(2, /*trap_dirty=*/false, pages, &vmo);
+  zx_status_t status =
+      make_committed_pager_vmo(2, /*trap_dirty=*/false, /*resizable=*/false, pages, &vmo);
   ASSERT_EQ(ZX_OK, status);
 
   // Newly created pages should be in the first pager backed page queue.
@@ -1699,9 +1702,10 @@ static bool vmo_eviction_test() {
   fbl::RefPtr<VmObjectPaged> vmo2;
   vm_page_t* page;
   vm_page_t* page2;
-  zx_status_t status = make_committed_pager_vmo(1, /*trap_dirty=*/false, &page, &vmo);
+  zx_status_t status =
+      make_committed_pager_vmo(1, /*trap_dirty=*/false, /*resizable=*/false, &page, &vmo);
   ASSERT_EQ(ZX_OK, status);
-  status = make_committed_pager_vmo(1, /*trap_dirty=*/false, &page2, &vmo2);
+  status = make_committed_pager_vmo(1, /*trap_dirty=*/false, /*resizable=*/false, &page2, &vmo2);
   ASSERT_EQ(ZX_OK, status);
 
   // Shouldn't be able to evict pages from the wrong VMO.
@@ -2136,16 +2140,11 @@ static bool vmo_attribution_pager_test() {
   BEGIN_TEST;
   AutoVmScannerDisable scanner_disable;
 
-  fbl::AllocChecker ac;
-  fbl::RefPtr<StubPageProvider> pager = fbl::MakeRefCountedChecked<StubPageProvider>(&ac);
-  ASSERT_TRUE(ac.check());
-
-  fbl::RefPtr<PageSource> src = fbl::MakeRefCountedChecked<PageSource>(&ac, ktl::move(pager));
-  ASSERT_TRUE(ac.check());
-
-  static const size_t alloc_size = 2 * PAGE_SIZE;
+  static const size_t kNumPages = 2;
+  static const size_t alloc_size = kNumPages * PAGE_SIZE;
   fbl::RefPtr<VmObjectPaged> vmo;
-  zx_status_t status = VmObjectPaged::CreateExternal(ktl::move(src), 0, alloc_size, &vmo);
+  zx_status_t status =
+      make_uncommitted_pager_vmo(kNumPages, /*trap_dirty=*/false, /*resizable=*/false, &vmo);
   ASSERT_EQ(ZX_OK, status);
   // Dummy user id to keep the cloning code happy.
   vmo->set_user_id(0xff);
@@ -2220,7 +2219,8 @@ static bool vmo_attribution_evict_test() {
 
   fbl::RefPtr<VmObjectPaged> vmo;
   vm_page_t* page;
-  zx_status_t status = make_committed_pager_vmo(1, /*trap_dirty=*/false, &page, &vmo);
+  zx_status_t status =
+      make_committed_pager_vmo(1, /*trap_dirty=*/false, /*resizable=*/false, &page, &vmo);
   ASSERT_EQ(ZX_OK, status);
 
   uint64_t expected_gen_count = 2;
@@ -3028,7 +3028,7 @@ static bool vmo_dirty_pages_test() {
   // Create a pager-backed VMO with a single page.
   fbl::RefPtr<VmObjectPaged> vmo;
   vm_page_t* page;
-  ASSERT_OK(make_committed_pager_vmo(1, /*trap_dirty=*/true, &page, &vmo));
+  ASSERT_OK(make_committed_pager_vmo(1, /*trap_dirty=*/true, /*resizable=*/false, &page, &vmo));
 
   // Newly created page should be in the first pager backed page queue.
   size_t queue;
@@ -3069,7 +3069,7 @@ static bool vmo_dirty_pages_writeback_test() {
   // Create a pager-backed VMO with a single page.
   fbl::RefPtr<VmObjectPaged> vmo;
   vm_page_t* page;
-  ASSERT_OK(make_committed_pager_vmo(1, /*trap_dirty=*/true, &page, &vmo));
+  ASSERT_OK(make_committed_pager_vmo(1, /*trap_dirty=*/true, /*resizable=*/false, &page, &vmo));
 
   // Newly created page should be in the first pager backed page queue.
   size_t queue;
@@ -3140,7 +3140,7 @@ static bool vmo_dirty_pages_with_hints_test() {
   // Create a pager-backed VMO with a single page.
   fbl::RefPtr<VmObjectPaged> vmo;
   vm_page_t* page;
-  ASSERT_OK(make_committed_pager_vmo(1, /*trap_dirty=*/true, &page, &vmo));
+  ASSERT_OK(make_committed_pager_vmo(1, /*trap_dirty=*/true, /*resizable=*/false, &page, &vmo));
 
   // Newly created page should be in the first pager backed page queue.
   size_t queue;
@@ -3190,7 +3190,7 @@ static bool vmo_dirty_pages_with_hints_test() {
   // the page *after* hinting.
   vmo.reset();
 
-  ASSERT_OK(make_committed_pager_vmo(1, /*trap_dirty=*/true, &page, &vmo));
+  ASSERT_OK(make_committed_pager_vmo(1, /*trap_dirty=*/true, /*resizable=*/false, &page, &vmo));
 
   // Newly created page should be in the first pager backed page queue.
   EXPECT_TRUE(pmm_page_queues()->DebugPageIsPagerBacked(page, &queue));
@@ -3224,7 +3224,8 @@ static bool vmo_pinning_backlink_test() {
   // Create a pager-backed VMO with two pages, so we can verify a non-zero offset value.
   fbl::RefPtr<VmObjectPaged> vmo;
   vm_page_t* pages[2];
-  zx_status_t status = make_committed_pager_vmo(2, /*trap_dirty=*/false, pages, &vmo);
+  zx_status_t status =
+      make_committed_pager_vmo(2, /*trap_dirty=*/false, /*resizable=*/false, pages, &vmo);
   ASSERT_EQ(ZX_OK, status);
 
   // Pages should be in the pager queue.

@@ -91,10 +91,15 @@ zx_status_t AllocUser(VmAspace* aspace, const char* name, size_t size, user_inou
 
 // Create a pager-backed VMO |out_vmo| with size equals |num_pages| pages, and commit all its pages.
 // |trap_dirty| controls whether modifications to pages must be trapped in order to generate DIRTY
-// page requests. Return pointers to the pages committed in |out_pages|, so that tests can examine
+// page requests. |resizable| controls whether the created VMO is resizable.
+// Returns pointers to the pages committed in |out_pages|, so that tests can examine
 // their state. Allows tests to work with pager-backed VMOs without blocking on page faults.
-zx_status_t make_committed_pager_vmo(size_t num_pages, bool trap_dirty, vm_page_t** out_pages,
-                                     fbl::RefPtr<VmObjectPaged>* out_vmo);
+zx_status_t make_committed_pager_vmo(size_t num_pages, bool trap_dirty, bool resizable,
+                                     vm_page_t** out_pages, fbl::RefPtr<VmObjectPaged>* out_vmo);
+
+// Same as make_committed_pager_vmo but does not commit any pages in the VMO.
+zx_status_t make_uncommitted_pager_vmo(size_t num_pages, bool trap_dirty, bool resizable,
+                                       fbl::RefPtr<VmObjectPaged>* out_vmo);
 
 uint32_t test_rand(uint32_t seed);
 
