@@ -125,16 +125,15 @@ impl InputPipelineAssembly {
     /// is installed after any handlers that have been already added to the
     /// assembly.
     pub fn add_autorepeater(self) -> Self {
-        let (sender, autorepeat_receiver, tasks) = self.into_components();
+        let (sender, autorepeat_receiver, mut tasks) = self.into_components();
         let (autorepeat_sender, receiver) = mpsc::unbounded();
         let a = Autorepeater::new(autorepeat_receiver);
-        fasync::Task::local(async move {
+        tasks.push(fasync::Task::local(async move {
             a.run(autorepeat_sender)
                 .await
                 .map_err(|e| fx_log_err!("error while running autorepeater: {:?}", &e))
                 .expect("autorepeater should never error out");
-        })
-        .detach();
+        }));
         InputPipelineAssembly { sender, receiver, tasks }
     }
 
