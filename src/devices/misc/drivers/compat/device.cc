@@ -128,7 +128,8 @@ zx_status_t Device::Add(device_add_args_t* zx_args, zx_device_t** out) {
     }
   }
 
-  device->properties_.reserve(zx_args->prop_count);
+  // +1 for the implicit BIND_PROTOCOL property.
+  device->properties_.reserve(zx_args->prop_count + zx_args->str_prop_count + 1);
   bool has_protocol = false;
   for (auto [id, _, value] : cpp20::span(zx_args->props, zx_args->prop_count)) {
     device->properties_.emplace_back(arena_)
@@ -136,6 +137,27 @@ zx_status_t Device::Add(device_add_args_t* zx_args, zx_device_t** out) {
         .set_value(arena_, fdf::wire::NodePropertyValue::WithIntValue(value));
     if (id == BIND_PROTOCOL) {
       has_protocol = true;
+    }
+  }
+
+  for (auto [key, value] : cpp20::span(zx_args->str_props, zx_args->str_prop_count)) {
+    auto& ref = device->properties_.emplace_back(arena_).set_key(
+        arena_,
+        fdf::wire::NodePropertyKey::WithStringValue(arena_, fidl::StringView::FromExternal(key)));
+    switch (value.value_type) {
+      case ZX_DEVICE_PROPERTY_VALUE_BOOL:
+        ref.set_value(arena_, fdf::wire::NodePropertyValue::WithBoolValue(value.value.bool_val));
+        break;
+      case ZX_DEVICE_PROPERTY_VALUE_STRING:
+        ref.set_value(arena_, fdf::wire::NodePropertyValue::WithStringValue(
+                                  arena_, fidl::StringView::FromExternal(value.value.str_val)));
+        break;
+      case ZX_DEVICE_PROPERTY_VALUE_INT:
+        ref.set_value(arena_, fdf::wire::NodePropertyValue::WithIntValue(value.value.int_val));
+        break;
+      default:
+        FDF_LOG(ERROR, "Unsupported property type, key: %s", key);
+        break;
     }
   }
 
