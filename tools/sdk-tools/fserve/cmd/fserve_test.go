@@ -1258,7 +1258,7 @@ func fakeFFX(args []string) {
 		os.Exit(0)
 	}
 
-	if args[0] == "target" && args[1] == "list" && args[2] == "--format" && args[3] == "json" {
+	if args[0] == "--machine" && args[1] == "json" && args[2] == "target" && args[3] == "list" {
 		fmt.Printf("%v\n", os.Getenv("_FAKE_FFX_TARGET_LIST"))
 		os.Exit(0)
 	}

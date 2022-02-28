@@ -373,7 +373,7 @@ func (sdk SDKProperties) isUnknownInListOutput(discoveredDevices []*deviceInfo) 
 }
 
 func (sdk SDKProperties) listDevicesWithFFX() ([]*deviceInfo, error) {
-	args := []string{"target", "list", "--format", "json"}
+	args := []string{"--machine", "json", "target", "list"}
 	output, err := sdk.RunFFX(args, false)
 	if err != nil {
 		return nil, fmt.Errorf("Unable to list devices, please try running 'ffx doctor': %v", err)

@@ -1369,26 +1369,27 @@ func fakeGSUtil(args []string) {
 
 func fakeFfxTarget(args []string) {
 	expected := []string{}
-	expectedListArgs := []string{"target", "list", "--format", "json"}
+	argsStr := strings.Join(args, " ")
+	expectedListArgs := []string{"--machine", "json", "target", "list"}
 	expectedGetSSHAddressArgs := []string{"--target", "*", "target", "get-ssh-address"}
 	expectedGetDefaultTarget := []string{"target", "default", "get"}
 	expectedSetDefaultTarget := []string{"target", "default", "set", "new-device-name"}
 	expectedUnsetDefaultTarget := []string{"target", "default", "unset"}
-	if args[0] == "target" && args[1] == "list" {
+	if strings.Contains(argsStr, "target list") {
 		expected = expectedListArgs
 		if os.Getenv("TEST_FFX_TARGET_LIST_OUTPUT") != "" {
 			fmt.Println(os.Getenv("TEST_FFX_TARGET_LIST_OUTPUT"))
 		} else {
 			fmt.Println(defaultTargetJSONOutput)
 		}
-	} else if args[0] == "--target" && args[len(args)-1] == "get-ssh-address" {
+	} else if strings.Contains(argsStr, "target get-ssh-address") {
 		expected = expectedGetSSHAddressArgs
 		if val, ok := sshAddresses[args[1]]; ok {
 			fmt.Println(val)
 		} else {
 			fmt.Println(getSSHAddressOutput)
 		}
-	} else if args[0] == "target" && args[1] == "default" {
+	} else if strings.Contains(argsStr, "target default") {
 		if args[2] == "get" {
 			expected = expectedGetDefaultTarget
 			if os.Getenv("TEST_FFX_TARGET_DEFAULT_GET") != "" {
@@ -1440,7 +1441,7 @@ func TestFakeFfx(*testing.T) {
 		fmt.Printf("Welcome to ffx doctor.")
 		os.Exit(0)
 	}
-	if strings.HasSuffix(args[0], "ffx") && (args[1] == "target" || args[1] == "--target") {
+	if strings.HasSuffix(args[0], "ffx") && (args[1] == "target" || args[1] == "--target" || args[1] == "--machine") {
 		fakeFfxTarget(args[1:])
 		os.Exit(0)
 	}

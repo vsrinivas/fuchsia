@@ -282,7 +282,7 @@ func TestFakeFFX(t *testing.T) {
 	} else if strings.HasSuffix(args[0], "ffx") && args[1] == "target" && args[2] == "default" && args[3] == "get" {
 		fmt.Printf("%v\n", os.Getenv("_FAKE_FFX_TARGET_DEFAULT"))
 		os.Exit(0)
-	} else if strings.HasSuffix(args[0], "ffx") && args[1] == "target" && args[2] == "list" && args[3] == "--format" && args[4] == "json" {
+	} else if strings.HasSuffix(args[0], "ffx") && args[1] == "--machine" && args[2] == "json" && args[3] == "target" && args[4] == "list" {
 		fmt.Printf("%v\n", os.Getenv("_FAKE_FFX_TARGET_LIST"))
 		os.Exit(0)
 	} else if strings.HasSuffix(args[0], "ffx") && args[3] == "target" && args[4] == "get-ssh-address" {
