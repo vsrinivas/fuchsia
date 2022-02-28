@@ -13,7 +13,7 @@ use net_types::ip::IpAddress as _;
 use netemul::RealmUdpSocket as _;
 use netstack_testing_common::{
     interfaces,
-    realms::{Netstack2, TestSandboxExt as _},
+    realms::{Netstack2, TestRealmExt as _, TestSandboxExt as _},
 };
 use netstack_testing_macros::variants_test;
 use std::collections::{HashMap, HashSet};
@@ -46,34 +46,19 @@ async fn add_address_errors() {
     let sandbox = netemul::TestSandbox::new().expect("create sandbox");
     let realm = sandbox.create_netstack_realm::<Netstack2, _>(name).expect("create realm");
 
-    let interface_state = realm
-        .connect_to_protocol::<fidl_fuchsia_net_interfaces::StateMarker>()
-        .expect(<fidl_fuchsia_net_interfaces::StateMarker as fidl::endpoints::DiscoverableProtocolMarker>::PROTOCOL_NAME);
-
-    let interfaces = fidl_fuchsia_net_interfaces_ext::existing(
-        fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&interface_state)
-            .expect("create watcher event stream"),
-        HashMap::new(),
-    )
-    .await
-    .expect("initial");
-    assert_eq!(interfaces.len(), 1);
-    let (
-        key,
-        fidl_fuchsia_net_interfaces_ext::Properties {
-            id,
-            name: _,
-            device_class: _,
-            online: _,
-            addresses,
-            has_default_ipv4_route: _,
-            has_default_ipv6_route: _,
-        },
-    ) = interfaces
-        .iter()
-        .next()
-        .expect("interface properties map unexpectedly does not include loopback");
-    assert_eq!(key, id);
+    let fidl_fuchsia_net_interfaces_ext::Properties {
+        id,
+        addresses,
+        name: _,
+        device_class: _,
+        online: _,
+        has_default_ipv4_route: _,
+        has_default_ipv6_route: _,
+    } = realm
+        .loopback_properties()
+        .await
+        .expect("loopback_properties")
+        .expect("loopback not found");
 
     let debug_control = realm
         .connect_to_protocol::<fidl_fuchsia_net_debug::InterfacesMarker>()
@@ -81,7 +66,7 @@ async fn add_address_errors() {
 
     let (control, server) = fidl_fuchsia_net_interfaces_ext::admin::Control::create_endpoints()
         .expect("create Control proxy");
-    let () = debug_control.get_admin(*id, server).expect("get admin");
+    let () = debug_control.get_admin(id, server).expect("get admin");
 
     const VALID_ADDRESS_PARAMETERS: fidl_fuchsia_net_interfaces_admin::AddressParameters =
         fidl_fuchsia_net_interfaces_admin::AddressParameters::EMPTY;
@@ -108,7 +93,7 @@ async fn add_address_errors() {
                         addr: fidl_fuchsia_net::Ipv4Address { addr },
                         prefix_len: _,
                     } = addr;
-                    let nt_addr = net_types::ip::Ipv4Addr::new(*addr);
+                    let nt_addr = net_types::ip::Ipv4Addr::new(addr);
                     assert!(nt_addr.is_loopback(), "{} is not a loopback address", nt_addr);
                 }
                 assert_eq!(v4, None, "v4 address already present, found {:?}", addr);
@@ -117,11 +102,11 @@ async fn add_address_errors() {
             fidl_fuchsia_net::InterfaceAddress::Ipv6(addr) => {
                 {
                     let fidl_fuchsia_net::Ipv6Address { addr } = addr;
-                    let nt_addr = net_types::ip::Ipv6Addr::from_bytes(*addr);
+                    let nt_addr = net_types::ip::Ipv6Addr::from_bytes(addr);
                     assert!(nt_addr.is_loopback(), "{} is not a loopback address", nt_addr);
                 }
                 assert_eq!(v6, None, "v6 address already present, found {:?}", addr);
-                (value, v4, Some(*addr))
+                (value, v4, Some(addr))
             }
         };
         async move {

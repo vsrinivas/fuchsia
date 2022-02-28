@@ -5,22 +5,9 @@
 #![cfg(test)]
 
 use futures::{FutureExt as _, TryStreamExt as _};
-use netstack_testing_common::realms::{Netstack2, TestSandboxExt as _};
-use std::collections::HashMap;
+use netstack_testing_common::realms::{Netstack2, TestRealmExt as _, TestSandboxExt as _};
 
 async fn get_loopback_id(realm: &netemul::TestRealm<'_>) -> u64 {
-    let interface_state = realm
-        .connect_to_protocol::<fidl_fuchsia_net_interfaces::StateMarker>()
-        .expect("connect to protocol");
-
-    let stream = fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&interface_state)
-        .expect("create watcher event stream");
-
-    let interfaces = fidl_fuchsia_net_interfaces_ext::existing(stream, HashMap::new())
-        .await
-        .expect("get starting state");
-
-    let mut interfaces = interfaces.into_values();
     let fidl_fuchsia_net_interfaces_ext::Properties {
         id,
         name: _,
@@ -29,9 +16,7 @@ async fn get_loopback_id(realm: &netemul::TestRealm<'_>) -> u64 {
         addresses: _,
         has_default_ipv4_route: _,
         has_default_ipv6_route: _,
-    } = interfaces.next().expect("interface properties map unexpectedly does not include loopback");
-    assert_eq!(interfaces.next(), None);
-
+    } = realm.loopback_properties().await.expect("loopback properties").expect("loopback missing");
     id
 }
 

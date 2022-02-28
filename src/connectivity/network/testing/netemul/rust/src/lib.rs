@@ -6,9 +6,11 @@
 
 //! Netemul utilities.
 
-use std::borrow::Cow;
-use std::convert::{TryFrom as _, TryInto as _};
-use std::path::{Path, PathBuf};
+use std::{
+    borrow::Cow,
+    convert::{TryFrom as _, TryInto as _},
+    path::{Path, PathBuf},
+};
 
 use fidl_fuchsia_hardware_ethernet as fethernet;
 use fidl_fuchsia_hardware_network as fnetwork;

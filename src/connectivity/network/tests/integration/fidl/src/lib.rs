@@ -23,7 +23,8 @@ use netemul::RealmUdpSocket as _;
 use netstack_testing_common::{
     get_component_moniker,
     realms::{
-        constants, KnownServiceProvider, Netstack, Netstack2, NetstackVersion, TestSandboxExt as _,
+        constants, KnownServiceProvider, Netstack, Netstack2, NetstackVersion, TestRealmExt as _,
+        TestSandboxExt as _,
     },
     ASYNC_EVENT_NEGATIVE_CHECK_TIMEOUT, ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT,
 };
@@ -464,33 +465,20 @@ async fn add_remove_address_on_loopback<N: Netstack>(name: &str) {
     let sandbox = netemul::TestSandbox::new().expect("create sandbox");
     let realm = sandbox.create_netstack_realm::<N, _>(name).expect("create realm");
 
-    let interface_state = realm
-        .connect_to_protocol::<fidl_fuchsia_net_interfaces::StateMarker>()
-        .expect("connect to protocol");
-    let stream = fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&interface_state)
-        .expect("get interface event stream");
-    futures::pin_mut!(stream);
-
     let (loopback_id, addresses) = assert_matches::assert_matches!(
-        stream.try_next().await,
-        Ok(Some(fidl_fuchsia_net_interfaces::Event::Existing(
-            fidl_fuchsia_net_interfaces::Properties {
-                id: Some(id),
-                device_class:
-                    Some(fidl_fuchsia_net_interfaces::DeviceClass::Loopback(
-                        fidl_fuchsia_net_interfaces::Empty {},
-                    )),
-                online: Some(true),
-                addresses: Some(addresses),
+        realm.loopback_properties().await,
+        Ok(Some(
+            fidl_fuchsia_net_interfaces_ext::Properties {
+                id,
+                online: true,
+                addresses,
                 ..
             },
-        ))) => (id, addresses)
+        )) => (id, addresses)
     );
     let addresses: Vec<_> = addresses
         .into_iter()
-        .map(|fidl_fuchsia_net_interfaces::Address { value, .. }| {
-            value.expect("expected address to be set")
-        })
+        .map(|fidl_fuchsia_net_interfaces_ext::Address { value, .. }| value)
         .collect();
     assert_eq!(
         addresses[..],
@@ -546,8 +534,11 @@ async fn add_remove_address_on_loopback<N: Netstack>(name: &str) {
     // queried for all interface states on watcher creation (no events happen
     // asynchronously).
     //
-    // TODO(https://fxbug.dev/75553): Wait for changed event instead of creating
+    // TODO(https://fxbug.dev/60923): Wait for changed event instead of creating
     // a new watcher.
+    let interface_state = realm
+        .connect_to_protocol::<fidl_fuchsia_net_interfaces::StateMarker>()
+        .expect("connect to protocol");
     let mut state = fidl_fuchsia_net_interfaces_ext::InterfaceState::Unknown(loopback_id);
     fidl_fuchsia_net_interfaces_ext::wait_interface_with_id(
         fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&interface_state)

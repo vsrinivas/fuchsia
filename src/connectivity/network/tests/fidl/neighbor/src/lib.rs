@@ -17,7 +17,7 @@ use net_types::SpecifiedAddress;
 use netemul::{
     Endpoint as _, RealmUdpSocket as _, TestInterface, TestNetwork, TestRealm, TestSandbox,
 };
-use netstack_testing_common::realms::*;
+use netstack_testing_common::realms::{Netstack2, TestRealmExt as _, TestSandboxExt as _};
 use netstack_testing_common::Result;
 
 const ALICE_MAC: fidl_fuchsia_net::MacAddress = fidl_mac!("02:00:01:02:03:04");
@@ -60,34 +60,35 @@ async fn create_realm<'a>(
         .await
         .expect("failed to join network");
 
+    let fidl_fuchsia_net_interfaces_ext::Properties {
+        id: loopback_id,
+        name: _,
+        device_class: _,
+        online: _,
+        addresses: _,
+        has_default_ipv4_route: _,
+        has_default_ipv6_route: _,
+    } = realm
+        .loopback_properties()
+        .await
+        .expect("loopback properties")
+        .expect("loopback not found");
+
     // Get IPv6 address.
-    let interfaces = realm
-        .connect_to_protocol::<fidl_fuchsia_net_interfaces::StateMarker>()
-        .expect("failed to connect to interfaces.State");
-    let (ipv6, loopback_id) = fidl_fuchsia_net_interfaces_ext::wait_interface(
-        fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&interfaces)
-            .expect("failed to get interfaces stream"),
+    let ipv6 = fidl_fuchsia_net_interfaces_ext::wait_interface(
+        fidl_fuchsia_net_interfaces_ext::event_stream(
+            ep.get_interfaces_watcher().expect("get interfaces watcher"),
+        ),
         &mut std::collections::HashMap::new(),
         |interfaces| {
-            let addr = interfaces.get(&ep.id())?.addresses.iter().find_map(
+            interfaces.get(&ep.id())?.addresses.iter().find_map(
                 |&fidl_fuchsia_net_interfaces_ext::Address { value, valid_until: _ }| match value {
                     fidl_fuchsia_net::InterfaceAddress::Ipv4(_) => None,
                     fidl_fuchsia_net::InterfaceAddress::Ipv6(addr) => {
                         Some(fidl_fuchsia_net::IpAddress::Ipv6(addr))
                     }
                 },
-            )?;
-            let loopback_id = interfaces.iter().find_map(|(id, props)| {
-                if let fidl_fuchsia_net_interfaces::DeviceClass::Loopback(
-                    fidl_fuchsia_net_interfaces::Empty {},
-                ) = props.device_class
-                {
-                    Some(*id)
-                } else {
-                    None
-                }
-            })?;
-            Some((addr, loopback_id))
+            )
         },
     )
     .await

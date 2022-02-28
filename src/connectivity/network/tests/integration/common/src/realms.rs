@@ -4,7 +4,7 @@
 
 //! Provides utilities for test realms.
 
-use std::borrow::Cow;
+use std::{borrow::Cow, collections::HashMap};
 
 use fidl::endpoints::DiscoverableProtocolMarker as _;
 use fidl_fuchsia_component as fcomponent;
@@ -14,6 +14,7 @@ use fidl_fuchsia_net_dhcpv6 as fnet_dhcpv6;
 use fidl_fuchsia_net_filter as fnet_filter;
 use fidl_fuchsia_net_interfaces as fnet_interfaces;
 use fidl_fuchsia_net_interfaces_admin as fnet_interfaces_admin;
+use fidl_fuchsia_net_interfaces_ext as fnet_interfaces_ext;
 use fidl_fuchsia_net_name as fnet_name;
 use fidl_fuchsia_net_neighbor as fnet_neighbor;
 use fidl_fuchsia_net_routes as fnet_routes;
@@ -26,6 +27,7 @@ use fidl_fuchsia_posix_socket as fposix_socket;
 use fidl_fuchsia_posix_socket_packet as fposix_socket_packet;
 use fidl_fuchsia_stash as fstash;
 
+use anyhow::Context as _;
 use async_trait::async_trait;
 
 use crate::Result;
@@ -555,7 +557,7 @@ impl Manager for NetCfgAdvanced {
     const MANAGEMENT_AGENT: ManagementAgent = ManagementAgent::NetCfg(NetCfgVersion::Advanced);
 }
 
-/// Extensions to `netemul::TestSandbox`.
+/// Helpers for `netemul::TestSandbox`.
 #[async_trait]
 pub trait TestSandboxExt {
     /// Creates a realm with Netstack services.
@@ -580,7 +582,6 @@ pub trait TestSandboxExt {
 
 #[async_trait]
 impl TestSandboxExt for netemul::TestSandbox {
-    /// Creates a realm with Netstack services.
     fn create_netstack_realm<'a, N, S>(&'a self, name: S) -> Result<netemul::TestRealm<'a>>
     where
         N: Netstack,
@@ -589,8 +590,6 @@ impl TestSandboxExt for netemul::TestSandbox {
         self.create_netstack_realm_with::<N, _, _>(name, std::iter::empty::<fnetemul::ChildDef>())
     }
 
-    /// Creates a realm with the base Netstack services plus additional ones in
-    /// `children`.
     fn create_netstack_realm_with<'a, N, S, I>(
         &'a self,
         name: S,
@@ -609,5 +608,47 @@ impl TestSandboxExt for netemul::TestSandbox {
                 .map(fnetemul::ChildDef::from)
                 .chain(children.into_iter().map(Into::into)),
         )
+    }
+}
+
+/// Helpers for `netemul::TestRealm`.
+#[async_trait]
+pub trait TestRealmExt {
+    /// Returns the properties of the loopback interface, or `None` if there is no
+    /// loopback interface.
+    async fn loopback_properties(&self) -> Result<Option<fnet_interfaces_ext::Properties>>;
+}
+
+#[async_trait]
+impl TestRealmExt for netemul::TestRealm<'_> {
+    async fn loopback_properties(&self) -> Result<Option<fnet_interfaces_ext::Properties>> {
+        let interface_state = self
+            .connect_to_protocol::<fnet_interfaces::StateMarker>()
+            .context("failed to connect to fuchsia.net.interfaces/State")?;
+
+        let properties = fnet_interfaces_ext::existing(
+            fnet_interfaces_ext::event_stream_from_state(&interface_state)
+                .expect("create watcher event stream"),
+            HashMap::new(),
+        )
+        .await
+        .context("failed to get existing interface properties from watcher")?
+        .into_iter()
+        .find_map(|(_id, properties): (u64, _)| {
+            let fnet_interfaces_ext::Properties {
+                id: _,
+                name: _,
+                device_class,
+                online: _,
+                addresses: _,
+                has_default_ipv4_route: _,
+                has_default_ipv6_route: _,
+            } = properties;
+            match device_class {
+                fnet_interfaces::DeviceClass::Loopback(fnet_interfaces::Empty) => Some(properties),
+                fnet_interfaces::DeviceClass::Device(_) => None,
+            }
+        });
+        Ok(properties)
     }
 }
