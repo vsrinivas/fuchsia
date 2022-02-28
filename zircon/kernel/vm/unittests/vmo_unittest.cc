@@ -3277,6 +3277,90 @@ static bool vmo_pinning_backlink_test() {
   END_TEST;
 }
 
+// Tests that the supply_zero_offset is updated as expected on VMO resize.
+static bool vmo_supply_zero_offset_test() {
+  BEGIN_TEST;
+
+  fbl::RefPtr<VmObjectPaged> vmo;
+  zx_status_t status =
+      make_uncommitted_pager_vmo(50, /*trap_dirty=*/false, /*resizable=*/true, &vmo);
+  ASSERT_EQ(ZX_OK, status);
+
+  uint64_t expected = 50 * PAGE_SIZE;
+  EXPECT_EQ(expected, vmo->DebugGetCowPages()->DebugGetSupplyZeroOffset());
+
+  // Resizing up should not alter the zero offset.
+  status = vmo->Resize(100 * PAGE_SIZE);
+  ASSERT_EQ(ZX_OK, status);
+  EXPECT_EQ(expected, vmo->DebugGetCowPages()->DebugGetSupplyZeroOffset());
+
+  // Resizing down to beyond the zero offset should not alter the zero offset.
+  status = vmo->Resize(80 * PAGE_SIZE);
+  ASSERT_EQ(ZX_OK, status);
+  EXPECT_EQ(expected, vmo->DebugGetCowPages()->DebugGetSupplyZeroOffset());
+
+  // Resizing down to the zero offset should not alter the zero offset.
+  status = vmo->Resize(50 * PAGE_SIZE);
+  ASSERT_EQ(ZX_OK, status);
+  EXPECT_EQ(expected, vmo->DebugGetCowPages()->DebugGetSupplyZeroOffset());
+
+  // Resizing down to less than the zero offset should shrink the zero offset.
+  status = vmo->Resize(30 * PAGE_SIZE);
+  ASSERT_EQ(ZX_OK, status);
+  expected = 30 * PAGE_SIZE;
+  EXPECT_EQ(expected, vmo->DebugGetCowPages()->DebugGetSupplyZeroOffset());
+
+  // Randomly resize a few times and check that the zero offset at the end is the lowest size set.
+  size_t min = vmo->DebugGetCowPages()->DebugGetSupplyZeroOffset() / PAGE_SIZE;
+  for (int i = 0; i < 100; i++) {
+    size_t num_pages = rand() % 100;
+    status = vmo->Resize(num_pages * PAGE_SIZE);
+    ASSERT_EQ(ZX_OK, status);
+    if (num_pages < min) {
+      min = num_pages;
+    }
+  }
+  EXPECT_EQ(min * PAGE_SIZE, vmo->DebugGetCowPages()->DebugGetSupplyZeroOffset());
+
+  // Zero offset is not applicable to clones of pager backed VMOs.
+  fbl::RefPtr<VmObject> clone;
+  const uint64_t size = vmo->size();
+  status = vmo->CreateClone(Resizability::Resizable, CloneType::PrivatePagerCopy, 0,
+                            size * PAGE_SIZE, true, &clone);
+  ASSERT_EQ(ZX_OK, status);
+  auto cow = reinterpret_cast<VmObjectPaged*>(clone.get())->DebugGetCowPages();
+  EXPECT_EQ(UINT64_MAX, cow->DebugGetSupplyZeroOffset());
+
+  // Resizing the clone should not alter its zero offset either.
+  status = clone->Resize(size * 2 * PAGE_SIZE);
+  ASSERT_EQ(ZX_OK, status);
+  EXPECT_EQ(UINT64_MAX, cow->DebugGetSupplyZeroOffset());
+
+  status = clone->Resize(size / 2 * PAGE_SIZE);
+  ASSERT_EQ(ZX_OK, status);
+  EXPECT_EQ(UINT64_MAX, cow->DebugGetSupplyZeroOffset());
+
+  cow.reset();
+  clone.reset();
+
+  // Zero offset is not applicable to non pager backed VMOs.
+  vmo.reset();
+  status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, VmObjectPaged::kResizable, PAGE_SIZE, &vmo);
+  ASSERT_EQ(ZX_OK, status);
+  EXPECT_EQ(UINT64_MAX, vmo->DebugGetCowPages()->DebugGetSupplyZeroOffset());
+
+  // Resizing a non pager backed VMO should not alter its zero offset.
+  status = vmo->Resize(2 * PAGE_SIZE);
+  ASSERT_EQ(ZX_OK, status);
+  EXPECT_EQ(UINT64_MAX, vmo->DebugGetCowPages()->DebugGetSupplyZeroOffset());
+
+  status = vmo->Resize(PAGE_SIZE);
+  ASSERT_EQ(ZX_OK, status);
+  EXPECT_EQ(UINT64_MAX, vmo->DebugGetCowPages()->DebugGetSupplyZeroOffset());
+
+  END_TEST;
+}
+
 UNITTEST_START_TESTCASE(vmo_tests)
 VM_UNITTEST(vmo_create_test)
 VM_UNITTEST(vmo_create_maximum_size)
@@ -3328,6 +3412,7 @@ VM_UNITTEST(vmo_dirty_pages_test)
 VM_UNITTEST(vmo_dirty_pages_writeback_test)
 VM_UNITTEST(vmo_dirty_pages_with_hints_test)
 VM_UNITTEST(vmo_pinning_backlink_test)
+VM_UNITTEST(vmo_supply_zero_offset_test)
 UNITTEST_END_TESTCASE(vmo_tests, "vmo", "VmObject tests")
 
 }  // namespace vm_unittest

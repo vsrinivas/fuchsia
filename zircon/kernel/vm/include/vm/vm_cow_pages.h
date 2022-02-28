@@ -504,6 +504,7 @@ class VmCowPages final
   bool DebugIsEmpty(uint64_t offset) const;
   vm_page_t* DebugGetPage(uint64_t offset) const TA_EXCL(lock_);
   vm_page_t* DebugGetPageLocked(uint64_t offset) const TA_REQ(lock_);
+  uint64_t DebugGetSupplyZeroOffset() const TA_EXCL(lock_);
 
   // Discard all the pages from a discardable vmo in the |kReclaimable| state. For this call to
   // succeed, the vmo should have been in the reclaimable state for at least
@@ -1049,6 +1050,11 @@ class VmCowPages final
 
   // The page source, if any.
   const fbl::RefPtr<PageSource> page_source_;
+
+  // The offset beyond which new page requests are fulfilled by supplying zero pages, rather than
+  // having the page source supply pages. Only relevant if there is a valid page_source_ and it
+  // preserves page content.
+  uint64_t supply_zero_offset_ TA_GUARDED(lock_) = UINT64_MAX;
 
   // Count eviction events so that we can report them to the user.
   uint64_t eviction_event_count_ TA_GUARDED(lock_) = 0;

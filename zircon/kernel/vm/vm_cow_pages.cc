@@ -458,6 +458,18 @@ zx_status_t VmCowPages::CreateExternal(fbl::RefPtr<PageSource> src, VmCowPagesOp
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
+
+  {
+    // If the page source preserves content, initialize supply_zero_offset_ to size. All initial
+    // content for a newly created VMO is provided by the page source, i.e. there is no content that
+    // the kernel implicitly supplies with zero.
+    Guard<Mutex> guard{&cow->lock_};
+    if (cow->is_source_preserving_page_content_locked()) {
+      DEBUG_ASSERT(IS_PAGE_ALIGNED(size));
+      cow->supply_zero_offset_ = size;
+    }
+  }
+
   *cow_pages = ktl::move(cow);
   return ZX_OK;
 }
@@ -3333,6 +3345,14 @@ zx_status_t VmCowPages::ResizeLocked(uint64_t s) {
       DEBUG_ASSERT(status == ZX_OK);
     }
 
+    // If the page source is preserving content, supply_zero_offset_ might need updating.
+    if (is_source_preserving_page_content_locked()) {
+      // If the new size is smaller than supply_zero_offset_, supply_zero_offset_ can be clipped to
+      // the new size. The supply_zero_offset_ is used to supply zero pages at the tail end of the
+      // VMO and must therefore fall within the VMO size.
+      supply_zero_offset_ = ktl::min(supply_zero_offset_, s);
+    }
+
     bool hidden_parent = false;
     if (parent_) {
       AssertHeld(parent_->lock_ref());
@@ -4775,6 +4795,11 @@ vm_page_t* VmCowPages::DebugGetPageLocked(uint64_t offset) const {
     return p->Page();
   }
   return nullptr;
+}
+
+uint64_t VmCowPages::DebugGetSupplyZeroOffset() const {
+  Guard<Mutex> guard{&lock_};
+  return supply_zero_offset_;
 }
 
 VmCowPages::DiscardablePageCounts VmCowPages::GetDiscardablePageCounts() const {
