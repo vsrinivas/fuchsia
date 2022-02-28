@@ -6,6 +6,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <fidl/fuchsia.io/cpp/wire.h>
+#include <fidl/fuchsia.kernel/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fdio/directory.h>
@@ -13,6 +14,7 @@
 #include <lib/fdio/fdio.h>
 #include <lib/memfs/cpp/vnode.h>
 #include <lib/memfs/memfs.h>
+#include <lib/service/llcpp/service.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/vmo.h>
 #include <sys/stat.h>
@@ -160,9 +162,14 @@ TEST(VmofileTests, test_vmofile_exec) {
   zx::vmo read_exec_vmo;
   ASSERT_OK(zx::vmo::create(64, 0, &read_exec_vmo));
   ASSERT_OK(read_exec_vmo.write("hello, world!", 0, 13));
-  // TODO: Update this test to a VMEX resource from fuchsia.security.resource.Vmex instead of
-  // relying on the VMEX job policy
-  ASSERT_OK(read_exec_vmo.replace_as_executable(zx::resource(), &read_exec_vmo));
+
+  zx::status client_end = service::Connect<fuchsia_kernel::VmexResource>();
+  ASSERT_OK(client_end.status_value());
+  fidl::WireResult result = fidl::WireCall(client_end.value())->Get();
+  ASSERT_TRUE(result.ok(), "%s", result.FormatDescription().c_str());
+  auto& response = result.value();
+
+  ASSERT_OK(read_exec_vmo.replace_as_executable(std::move(response.vmex_resource), &read_exec_vmo));
   ASSERT_OK(vfs->CreateFromVmo(root.get(), "read_exec", read_exec_vmo.get(), 0, 13));
   ASSERT_OK(vfs->ServeDirectory(std::move(root), std::move(directory_endpoints->server)));
 

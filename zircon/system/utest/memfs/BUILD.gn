@@ -2,17 +2,19 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/components.gni")
 import("//build/test.gni")
-import("//build/testing/bootfs_test.gni")
 
 test("memfs") {
   output_dir = "$root_out_dir/zircon-migrated"
+  output_name = "memfs-test"
   sources = [
     "fidl-tests.cc",
     "vmofile-tests.cc",
   ]
   deps = [
     "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
+    "//sdk/fidl/fuchsia.kernel:fuchsia.kernel_llcpp",
     "//sdk/lib/fdio",
     "//src/lib/storage/vfs/cpp",
     "//src/storage/memfs",
@@ -26,6 +28,7 @@ test("memfs") {
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fdio-caller",
     "//zircon/system/ulib/fzl",
+    "//zircon/system/ulib/service:service-llcpp",
     "//zircon/system/ulib/sync",
     "//zircon/system/ulib/trace-engine",
     "//zircon/system/ulib/zx",
@@ -33,7 +36,12 @@ test("memfs") {
   ]
 }
 
-bootfs_test("memfs-bootfs-test") {
-  name = "memfs"
+fuchsia_unittest_package("memfs-test") {
+  manifest = "meta/memfs-test.cml"
   deps = [ ":memfs" ]
+}
+
+group("tests") {
+  testonly = true
+  public_deps = [ ":memfs-test" ]
 }

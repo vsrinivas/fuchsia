@@ -95,7 +95,6 @@ group("tests") {
     "//zircon/system/utest/dlfcn:dlfcn-bootfs-test",
     "//zircon/system/utest/kernel-unittests:kernel-unittests-bootfs-test",
     "//zircon/system/utest/log:log-bootfs-test",
-    "//zircon/system/utest/memfs:memfs-bootfs-test",
     "//zircon/system/utest/miscsvc:miscsvc-bootfs-test",
     "//zircon/system/utest/namespace:namespace-bootfs-test",
     "//zircon/system/utest/psutils:ps-bootfs-test",
