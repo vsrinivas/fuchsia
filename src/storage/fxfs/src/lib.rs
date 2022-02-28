@@ -14,6 +14,7 @@ pub mod crypt;
 mod data_buffer;
 pub mod errors;
 mod lsm_tree;
+pub mod metrics;
 pub mod mkfs;
 pub mod mount;
 pub mod object_handle;

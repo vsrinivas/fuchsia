@@ -6,6 +6,7 @@ use {
     crate::{
         debug_assert_not_too_long,
         errors::FxfsError,
+        metrics::{traits::Metric as _, traits::NumericMetric as _, UintMetric},
         object_store::{
             allocator::{Allocator, Hold, Reservation, ReservationOwner},
             directory::Directory,
@@ -187,6 +188,7 @@ pub struct FxFilesystem {
     read_only: bool,
     trace: bool,
     graveyard: Arc<Graveyard>,
+    completed_transactions: UintMetric,
 }
 
 #[derive(Clone, Debug, Default)]
@@ -213,6 +215,7 @@ impl FxFilesystem {
             read_only: false,
             trace: false,
             graveyard: Graveyard::new(objects.clone()),
+            completed_transactions: UintMetric::new("completed_transactions", 0),
         });
         filesystem.device.set(device).unwrap_or_else(|_| unreachable!());
         filesystem.journal.init_empty(filesystem.clone()).await?;
@@ -261,6 +264,7 @@ impl FxFilesystem {
             read_only: options.read_only,
             trace: options.trace,
             graveyard: Graveyard::new(objects.clone()),
+            completed_transactions: UintMetric::new("completed_transactions", 0),
         });
         if !options.read_only {
             // See comment in JournalRecord::DidFlushDevice for why we need to flush the device
@@ -475,6 +479,7 @@ impl TransactionHandler for FxFilesystem {
             }
         }
         let journal_offset = self.journal.commit(transaction).await?;
+        self.completed_transactions.add(1);
         Ok(journal_offset)
     }
 

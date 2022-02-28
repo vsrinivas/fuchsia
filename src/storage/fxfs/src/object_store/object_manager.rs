@@ -6,6 +6,7 @@ use {
     crate::{
         crypt::Crypt,
         errors::FxfsError,
+        metrics::{traits::Metric as _, traits::NumericMetric as _, UintMetric},
         object_handle::INVALID_OBJECT_ID,
         object_store::{
             allocator::{Allocator, Reservation},
@@ -92,7 +93,7 @@ struct Inner {
     borrowed_metadata_space: u64,
 
     // The maximum transaction size that has been encountered so far.
-    max_txn_size: u64,
+    max_transaction_size: UintMetric,
 }
 
 impl Inner {
@@ -127,7 +128,7 @@ impl ObjectManager {
                 reservations: HashMap::new(),
                 last_end_offset: 0,
                 borrowed_metadata_space: 0,
-                max_txn_size: 0,
+                max_transaction_size: UintMetric::new("max_transaction_size", 0),
             }),
             metadata_reservation: OnceCell::new(),
             volume_directory: OnceCell::new(),
@@ -475,10 +476,7 @@ impl ObjectManager {
         let reservation = self.metadata_reservation();
         let mut inner = self.inner.write().unwrap();
         let journal_usage = end_offset - std::mem::replace(&mut inner.last_end_offset, end_offset);
-        if journal_usage > inner.max_txn_size {
-            inner.max_txn_size = journal_usage;
-            log::info!("max txn size: {}", journal_usage);
-        }
+        inner.max_transaction_size.set_if(journal_usage, |curr, new| new > curr);
         let txn_space = reserved_space_from_journal_usage(journal_usage);
         match &mut transaction.metadata_reservation {
             MetadataReservation::Borrowed => {

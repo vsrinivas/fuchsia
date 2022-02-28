@@ -121,11 +121,11 @@ impl FxfsServer {
         // Since fshost currently exports all filesystem inspect trees under its own diagnostics
         // directory, in order to work properly with Lapis, each filesystem must use a uniquely
         // named root node.
-        let root_fs_node = fuchsia_inspect::component::inspector().root().create_child("fxfs");
 
         // The Inspect nodes will remain live until `_fs_inspect_nodes` goes out of scope.
         let self_weak = Arc::downgrade(&self);
-        let _fs_inspect_nodes = FsInspectTree::new(self_weak, &root_fs_node);
+        let _fs_inspect_nodes =
+            FsInspectTree::new(self_weak, &crate::metrics::FXFS_ROOT_NODE.lock().unwrap());
 
         // Export the root directory in our outgoing directory.
         let mut fs = ServiceFs::new();
