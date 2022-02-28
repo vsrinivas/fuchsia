@@ -207,12 +207,18 @@ a previous build. A build that uses previous build results is called an incremen
 build, and is usually much faster than a clean rebuild.
 
 Changing configurations should not result in a broken incremental build, but this
-may still happen in rare cases due to [limitations of the build system][fxb94508].
+may still happen in rare cases due to [limitations of the build system][fxb94507].
 If this happens, please file a detailed bug that captures any steps to reproduce the
 problem and any diagnostics such as build logs. Then use these commands to recover:
 
 * `fx clean` will clear out all build artifacts.
 * `fx clean-build` is equivalent to `fx clean`, then `fx build`.
+
+If you find yourself changing configurations and cleaning your output directory
+often then consider using `fx set --auto-dir` instead. In this mode, `fx set` will
+choose different output directories for different configurations. Note that this
+will increase your disk usage and you may need to delete old output directories
+that are no longer needed.
 
 ### Enabling incremental package rebuilds
 
