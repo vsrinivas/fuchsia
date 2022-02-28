@@ -108,12 +108,15 @@ impl Service {
     ) -> Service {
         session.set_debug_name("Tiles Service").expect("fidl error");
 
-        let mut link_tokens =
-            flatland::LinkTokenPair::new().expect("failed to create LinkTokenPair");
+        let mut view_creation_tokens =
+            flatland::ViewCreationTokenPair::new().expect("failed to create ViewCreationTokenPair");
         let (_, child_view_watcher_request) = create_proxy::<flatland::ChildViewWatcherMarker>()
             .expect("failed to create ChildViewWatcher endpoints");
         display
-            .set_content(&mut link_tokens.viewport_creation_token, child_view_watcher_request)
+            .set_content(
+                &mut view_creation_tokens.viewport_creation_token,
+                child_view_watcher_request,
+            )
             .expect("fidl error");
 
         let (parent_viewport_watcher_proxy, parent_viewport_watcher_request) =
@@ -130,7 +133,7 @@ impl Service {
         };
         session
             .create_view2(
-                &mut link_tokens.view_creation_token,
+                &mut view_creation_tokens.view_creation_token,
                 &mut view_identity,
                 view_bound_protocols,
                 parent_viewport_watcher_request,
@@ -189,10 +192,10 @@ impl Service {
 
         let app = launch(&self.launcher, url.clone(), args)?;
         let view_provider = app.connect_to_protocol::<ui_app::ViewProviderMarker>()?;
-        let mut link_tokens = flatland::LinkTokenPair::new()?;
+        let mut view_creation_tokens = flatland::ViewCreationTokenPair::new()?;
         view_provider
             .create_view2(ui_app::CreateView2Args {
-                view_creation_token: Some(link_tokens.view_creation_token),
+                view_creation_token: Some(view_creation_tokens.view_creation_token),
                 ..ui_app::CreateView2Args::EMPTY
             })
             .expect("fidl error");
@@ -217,7 +220,7 @@ impl Service {
         self.session
             .create_viewport(
                 &mut link_id,
-                &mut link_tokens.viewport_creation_token,
+                &mut view_creation_tokens.viewport_creation_token,
                 link_properties,
                 child_view_watcher_request,
             )

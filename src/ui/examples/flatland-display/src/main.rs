@@ -5,7 +5,7 @@
 use {
     fidl_fuchsia_math as fmath, fidl_fuchsia_ui_composition as fland, fuchsia_async as fasync,
     fuchsia_component::client::connect_to_protocol,
-    fuchsia_scenic::{flatland::LinkTokenPair, BufferCollectionTokenPair},
+    fuchsia_scenic::{flatland::ViewCreationTokenPair, BufferCollectionTokenPair},
     fuchsia_syslog as syslog, fuchsia_zircon as zx,
     log::*,
 };
@@ -40,8 +40,9 @@ async fn main() {
     info!("Established connections to Flatland and Allocator");
 
     // Link the Flatland display to the Flatland session.  This is accomplished by passing each of
-    // them one half of the LinkTokenPair.
-    let mut link_tokens = LinkTokenPair::new().expect("failed to create LinkTokenPair");
+    // them one half of the ViewCreationTokenPair.
+    let mut link_tokens =
+        ViewCreationTokenPair::new().expect("failed to create ViewCreationTokenPair");
 
     let (_child_view_watcher_proxy, child_view_watcher_request) =
         create_proxy::<fland::ChildViewWatcherMarker>()

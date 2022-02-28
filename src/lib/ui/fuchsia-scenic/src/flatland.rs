@@ -16,15 +16,15 @@ pub use {
 };
 
 // Pair of tokens used to link two Flatland sessions together.
-pub struct LinkTokenPair {
+pub struct ViewCreationTokenPair {
     pub view_creation_token: ViewCreationToken,
     pub viewport_creation_token: ViewportCreationToken,
 }
 
-impl LinkTokenPair {
-    pub fn new() -> Result<LinkTokenPair, Error> {
+impl ViewCreationTokenPair {
+    pub fn new() -> Result<ViewCreationTokenPair, Error> {
         let (view_creation_token, viewport_creation_token) = zx::Channel::create()?;
-        Ok(LinkTokenPair {
+        Ok(ViewCreationTokenPair {
             view_creation_token: ViewCreationToken { value: view_creation_token },
             viewport_creation_token: ViewportCreationToken { value: viewport_creation_token },
         })

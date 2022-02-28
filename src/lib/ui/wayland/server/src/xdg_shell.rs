@@ -34,7 +34,7 @@ use {
     },
     fuchsia_async as fasync,
     fuchsia_component::client::connect_to_protocol,
-    fuchsia_scenic::flatland::{LinkTokenPair, ViewBoundProtocols},
+    fuchsia_scenic::flatland::{ViewBoundProtocols, ViewCreationTokenPair},
     fuchsia_scenic::ViewRefPair,
     fuchsia_trace as ftrace, fuchsia_wayland_core as wl,
     fuchsia_wayland_core::Enum,
@@ -531,11 +531,12 @@ impl XdgSurface {
         geometry: Rect,
     ) -> Result<(), Error> {
         ftrace::duration!("wayland", "XdgSurface::spawn_child_view");
-        let mut link_tokens = LinkTokenPair::new().expect("failed to create LinkTokenPair");
+        let mut creation_tokens =
+            ViewCreationTokenPair::new().expect("failed to create ViewCreationTokenPair");
         let parent = parent_ref.get(client)?;
         let parent_view = parent.view.clone();
         let root_surface_ref = parent.root_surface_ref();
-        Self::add_child_view(parent_ref, client, link_tokens.viewport_creation_token)?;
+        Self::add_child_view(parent_ref, client, creation_tokens.viewport_creation_token)?;
         let xdg_surface = this.get(client)?;
         let surface_ref = xdg_surface.surface_ref();
         let task_queue = client.task_queue();
@@ -544,7 +545,7 @@ impl XdgSurface {
         flatland
             .borrow()
             .proxy()
-            .create_view(&mut link_tokens.view_creation_token, server_end)
+            .create_view(&mut creation_tokens.view_creation_token, server_end)
             .expect("fidl error");
         XdgSurface::spawn_parent_viewport_listener(
             this,
@@ -1361,7 +1362,8 @@ impl XdgToplevel {
         ftrace::duration!("wayland", "XdgToplevel::spawn_view");
         let (proxy, server_end) = create_proxy::<ViewControllerMarker>()?;
         let stream = proxy.take_event_stream();
-        let mut link_tokens = LinkTokenPair::new().expect("failed to create token pair");
+        let mut creation_tokens =
+            ViewCreationTokenPair::new().expect("failed to create token pair");
         let viewref_pair = ViewRefPair::new()?;
         let view_ref_dup = fuchsia_scenic::duplicate_view_ref(&viewref_pair.view_ref)?;
         let view_ref_dup2 = fuchsia_scenic::duplicate_view_ref(&viewref_pair.view_ref)?;
@@ -1375,7 +1377,7 @@ impl XdgToplevel {
             vec![Annotation { key: title_key, value: AnnotationValue::Text(title.clone()) }]
         });
         let view_spec = ViewSpec {
-            viewport_creation_token: Some(link_tokens.viewport_creation_token),
+            viewport_creation_token: Some(creation_tokens.viewport_creation_token),
             view_ref: Some(view_ref_dup),
             annotations,
             ..ViewSpec::EMPTY
@@ -1399,7 +1401,7 @@ impl XdgToplevel {
             .borrow()
             .proxy()
             .create_view2(
-                &mut link_tokens.view_creation_token,
+                &mut creation_tokens.view_creation_token,
                 &mut view_identity,
                 view_bound_protocols,
                 parent_viewport_watcher_request,

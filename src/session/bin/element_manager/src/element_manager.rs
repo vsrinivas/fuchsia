@@ -445,7 +445,7 @@ impl ElementManager {
         };
 
         if self.scenic_uses_flatland {
-            let link_token_pair = scenic::flatland::LinkTokenPair::new()?;
+            let link_token_pair = scenic::flatland::ViewCreationTokenPair::new()?;
 
             view_provider.create_view2(fuiapp::CreateView2Args {
                 view_creation_token: Some(link_token_pair.view_creation_token),

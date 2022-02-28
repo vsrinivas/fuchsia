@@ -221,7 +221,7 @@ impl SceneManager for FlatlandSceneManager {
         &mut self,
         view_provider: ui_app::ViewProviderProxy,
     ) -> Result<ui_views::ViewRef, Error> {
-        let mut link_token_pair = scenic::flatland::LinkTokenPair::new()?;
+        let mut link_token_pair = scenic::flatland::ViewCreationTokenPair::new()?;
 
         // Use view provider to initiate creation of the view which will be connected to the
         // viewport that we create below.
@@ -428,14 +428,14 @@ impl FlatlandSceneManager {
         pointerinjector_flatland.set_debug_name("SceneManager PointerInjector")?;
         scene_flatland.set_debug_name("SceneManager Scene")?;
 
-        let mut root_view_creation_pair = scenic::flatland::LinkTokenPair::new()?;
+        let mut root_view_creation_pair = scenic::flatland::ViewCreationTokenPair::new()?;
         let root_flatland = FlatlandInstance::new(
             root_flatland,
             root_view_creation_pair.view_creation_token,
             &mut id_generator,
         )?;
 
-        let mut cursor_view_creation_pair = scenic::flatland::LinkTokenPair::new()?;
+        let mut cursor_view_creation_pair = scenic::flatland::ViewCreationTokenPair::new()?;
         cursor_view_provider
             .create_view2(ui_app::CreateView2Args {
                 view_creation_token: Some(cursor_view_creation_pair.view_creation_token),
@@ -443,14 +443,15 @@ impl FlatlandSceneManager {
             })
             .expect("fidl error");
 
-        let mut pointerinjector_view_creation_pair = scenic::flatland::LinkTokenPair::new()?;
+        let mut pointerinjector_view_creation_pair =
+            scenic::flatland::ViewCreationTokenPair::new()?;
         let pointerinjector_flatland = FlatlandInstance::new(
             pointerinjector_flatland,
             pointerinjector_view_creation_pair.view_creation_token,
             &mut id_generator,
         )?;
 
-        let mut scene_view_creation_pair = scenic::flatland::LinkTokenPair::new()?;
+        let mut scene_view_creation_pair = scenic::flatland::ViewCreationTokenPair::new()?;
         let scene_flatland = FlatlandInstance::new(
             scene_flatland,
             scene_view_creation_pair.view_creation_token,
