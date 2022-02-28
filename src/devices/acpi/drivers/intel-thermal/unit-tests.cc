@@ -69,6 +69,7 @@ class IntelThermalTest : public InspectTestHelper, public zxtest::Test {
 
   void TearDown() override {
     device_async_remove(device_);
+    loop_.Shutdown();
     ASSERT_OK(mock_ddk::ReleaseFlaggedDevices(fake_root_.get()));
   }
 
