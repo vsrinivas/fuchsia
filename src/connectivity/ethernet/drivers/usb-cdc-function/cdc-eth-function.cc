@@ -614,11 +614,13 @@ static zx_status_t cdc_set_configured(void* ctx, bool configured, usb_speed_t sp
   zx_status_t status;
 
   mtx_lock(&cdc->ethernet_mutex);
+  zxlogf(DEBUG, "%s: crit_enter", __func__);
   cdc->online = false;
   if (cdc->ethernet_ifc.ops) {
     ethernet_ifc_status(&cdc->ethernet_ifc, 0);
   }
   mtx_unlock(&cdc->ethernet_mutex);
+  zxlogf(DEBUG, "%s: crit_leave", __func__);
 
   if (configured) {
     if ((status = usb_function_config_ep(&cdc->function, &descriptors.intr_ep, NULL)) != ZX_OK) {
@@ -635,6 +637,7 @@ static zx_status_t cdc_set_configured(void* ctx, bool configured, usb_speed_t sp
 
   cdc_send_notifications(cdc);
 
+  zxlogf(DEBUG, "%s: return ZX_OK", __func__);
   return ZX_OK;
 }
 
