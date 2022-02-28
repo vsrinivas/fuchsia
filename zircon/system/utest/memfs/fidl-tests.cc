@@ -33,10 +33,10 @@ namespace fio = fuchsia_io;
 
 TEST(FidlTests, TestFidlBasic) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-  ASSERT_EQ(loop.StartThread(), ZX_OK);
+  ASSERT_OK(loop.StartThread());
 
   memfs_filesystem_t* fs;
-  ASSERT_EQ(memfs_install_at(loop.dispatcher(), "/fidltmp", &fs), ZX_OK);
+  ASSERT_OK(memfs_install_at(loop.dispatcher(), "/fidltmp", &fs));
   fbl::unique_fd fd(open("/fidltmp", O_DIRECTORY | O_RDONLY));
   ASSERT_GE(fd.get(), 0);
 
@@ -54,7 +54,7 @@ TEST(FidlTests, TestFidlBasic) {
   ASSERT_OK(fdio_service_connect("/fidltmp/file-a", endpoints->server.TakeChannel().release()));
 
   auto describe_result = fidl::WireCall(endpoints->client)->Describe();
-  ASSERT_EQ(describe_result.status(), ZX_OK);
+  ASSERT_OK(describe_result.status());
   ASSERT_TRUE(describe_result.Unwrap()->info.is_file());
   ASSERT_EQ(describe_result.Unwrap()->info.file().event.get(), ZX_HANDLE_INVALID);
   endpoints->client.TakeChannel().reset();
@@ -68,10 +68,10 @@ TEST(FidlTests, TestFidlBasic) {
 
 TEST(FidlTests, TestFidlOpenReadOnly) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-  ASSERT_EQ(loop.StartThread(), ZX_OK);
+  ASSERT_OK(loop.StartThread());
 
   memfs_filesystem_t* fs;
-  ASSERT_EQ(memfs_install_at(loop.dispatcher(), "/fidltmp-ro", &fs), ZX_OK);
+  ASSERT_OK(memfs_install_at(loop.dispatcher(), "/fidltmp-ro", &fs));
   fbl::unique_fd fd(open("/fidltmp-ro", O_DIRECTORY | O_RDONLY));
   ASSERT_GE(fd.get(), 0);
 
@@ -83,13 +83,12 @@ TEST(FidlTests, TestFidlOpenReadOnly) {
 
   zx::status endpoints = fidl::CreateEndpoints<fio::Node>();
   ASSERT_OK(endpoints.status_value());
-  ASSERT_EQ(fdio_open("/fidltmp-ro/file-ro", ZX_FS_RIGHT_READABLE,
-                      endpoints->server.TakeChannel().release()),
-            ZX_OK);
+  ASSERT_OK(fdio_open("/fidltmp-ro/file-ro", ZX_FS_RIGHT_READABLE,
+                      endpoints->server.TakeChannel().release()));
 
   auto result = fidl::WireCall(endpoints->client)->GetFlags();
-  ASSERT_EQ(result.status(), ZX_OK);
-  ASSERT_EQ(result.Unwrap()->s, ZX_OK);
+  ASSERT_OK(result.status());
+  ASSERT_OK(result.Unwrap()->s);
   ASSERT_EQ(result.Unwrap()->flags, ZX_FS_RIGHT_READABLE);
   endpoints->client.TakeChannel().reset();
 
@@ -105,8 +104,8 @@ void QueryInfo(const char* path, fuchsia_io::wire::FilesystemInfo* info) {
   ASSERT_TRUE(fd);
   fdio_cpp::FdioCaller caller(std::move(fd));
   auto result = fidl::WireCall(caller.node())->QueryFilesystem();
-  ASSERT_EQ(result.status(), ZX_OK);
-  ASSERT_EQ(result.Unwrap()->s, ZX_OK);
+  ASSERT_OK(result.status());
+  ASSERT_OK(result.Unwrap()->s);
   ASSERT_NOT_NULL(result.Unwrap()->info);
   *info = *(result.Unwrap()->info);
   const char* kFsName = "memfs";
@@ -121,10 +120,10 @@ void QueryInfo(const char* path, fuchsia_io::wire::FilesystemInfo* info) {
 
 TEST(FidlTests, TestFidlQueryFilesystem) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-  ASSERT_EQ(loop.StartThread(), ZX_OK);
+  ASSERT_OK(loop.StartThread());
 
   memfs_filesystem_t* fs;
-  ASSERT_EQ(memfs_install_at(loop.dispatcher(), "/fidltmp-basic", &fs), ZX_OK);
+  ASSERT_OK(memfs_install_at(loop.dispatcher(), "/fidltmp-basic", &fs));
   fbl::unique_fd fd(open("/fidltmp-basic", O_DIRECTORY | O_RDONLY));
   ASSERT_GE(fd.get(), 0);
 
