@@ -4487,7 +4487,7 @@ TEST_P(DatagramSendTest, DatagramSend) {
                             &addrlen, SOCK_DGRAM, kTimeout),
             ssize_t(msg.size()));
   auto success_rcv_duration = std::chrono::steady_clock::now() - start;
-  EXPECT_EQ(std::string(recvbuf, msg.size()), msg);
+  EXPECT_EQ(std::string_view(recvbuf, msg.size()), msg);
   EXPECT_EQ(close(sendfd.release()), 0) << strerror(errno);
 
   // sendto/sendmsg on connected sockets does accept sockaddr input argument and
@@ -4515,7 +4515,7 @@ TEST_P(DatagramSendTest, DatagramSend) {
   EXPECT_EQ(asyncSocketRead(recvfd.get(), sendfd.get(), recvbuf, sizeof(recvbuf), 0, &addr,
                             &addrlen, SOCK_DGRAM, kTimeout),
             ssize_t(msg.size()));
-  EXPECT_EQ(std::string(recvbuf, msg.size()), msg);
+  EXPECT_EQ(std::string_view(recvbuf, msg.size()), msg);
 
   // Test sending to an address that is different from what we're connected to.
   //
@@ -4631,15 +4631,15 @@ TEST(NetDatagramTest, DatagramPartialRecv) {
   ASSERT_EQ(getsockname(recvfd.get(), reinterpret_cast<sockaddr*>(&addr), &addrlen), 0)
       << strerror(errno);
 
-  const char kTestMsg[] = "hello";
-  const int kTestMsgSize = sizeof(kTestMsg);
+  constexpr std::string_view kTestMsg = "hello";
 
   fbl::unique_fd sendfd;
   ASSERT_TRUE(sendfd = fbl::unique_fd(socket(AF_INET, SOCK_DGRAM, 0))) << strerror(errno);
-  ASSERT_EQ(kTestMsgSize, sendto(sendfd.get(), kTestMsg, kTestMsgSize, 0,
-                                 reinterpret_cast<sockaddr*>(&addr), addrlen));
+  ASSERT_EQ(sendto(sendfd.get(), kTestMsg.data(), kTestMsg.size(), 0,
+                   reinterpret_cast<sockaddr*>(&addr), addrlen),
+            ssize_t(kTestMsg.size()));
 
-  char recv_buf[kTestMsgSize];
+  char recv_buf[kTestMsg.size()];
 
   // Read only first 2 bytes of the message. recv() is expected to discard the
   // rest.
@@ -4664,18 +4664,19 @@ TEST(NetDatagramTest, DatagramPartialRecv) {
 
   ASSERT_EQ(recvmsg(recvfd.get(), &msg, 0), kPartialReadSize);
   ASSERT_EQ(msg.msg_namelen, sizeof(addr));
-  ASSERT_EQ(std::string(kTestMsg, kPartialReadSize), std::string(recv_buf, kPartialReadSize));
+  ASSERT_EQ(std::string_view(recv_buf, kPartialReadSize), kTestMsg.substr(0, kPartialReadSize));
   EXPECT_EQ(MSG_TRUNC, msg.msg_flags);
 
   // Send the second packet.
-  ASSERT_EQ(kTestMsgSize, sendto(sendfd.get(), kTestMsg, kTestMsgSize, 0,
-                                 reinterpret_cast<sockaddr*>(&addr), addrlen));
+  ASSERT_EQ(sendto(sendfd.get(), kTestMsg.data(), kTestMsg.size(), 0,
+                   reinterpret_cast<sockaddr*>(&addr), addrlen),
+            ssize_t(kTestMsg.size()));
 
   // Read the whole packet now.
   recv_buf[0] = 0;
   iov.iov_len = sizeof(recv_buf);
-  ASSERT_EQ(recvmsg(recvfd.get(), &msg, 0), kTestMsgSize);
-  ASSERT_EQ(std::string(kTestMsg, kTestMsgSize), std::string(recv_buf, kTestMsgSize));
+  ASSERT_EQ(recvmsg(recvfd.get(), &msg, 0), ssize_t(kTestMsg.size()));
+  ASSERT_EQ(std::string_view(recv_buf, kTestMsg.size()), kTestMsg);
   EXPECT_EQ(msg.msg_flags, 0);
 
   EXPECT_EQ(close(sendfd.release()), 0) << strerror(errno);
