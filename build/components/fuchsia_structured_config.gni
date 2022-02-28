@@ -471,10 +471,12 @@ template("fuchsia_structured_config_cpp_elf_lib") {
       ":${cpp_elf_source_target}($default_toolchain)",
       ":${fidl_library_target}_llcpp",
       "//sdk/lib/sys/cpp",
-      "//sdk/lib/sys/inspect/cpp",
       "//zircon/system/ulib/fidl",
     ]
 
-    public_deps = [ ":${cpp_elf_headers_target}" ]
+    public_deps = [
+      ":${cpp_elf_headers_target}",
+      "//sdk/lib/sys/inspect/cpp",
+    ]
   }
 }
