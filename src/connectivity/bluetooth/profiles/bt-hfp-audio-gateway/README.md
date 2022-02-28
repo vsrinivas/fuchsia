@@ -26,7 +26,9 @@ Component startup differs based on the component framework version.
 Currently, the only way to start the v2 component is via protocol discovery. Include the appropriate
 `core_shard` in your product config target. For configurations in which both A2DP and HFP AG support
 is desired, include the `bt-headset-core-shard`. For configurations in which A2DP is not desired
-but HFP AG is, include the `bt-hfp-audio-gateway-core-shard`.
+but HFP AG is, include the `bt-hfp-audio-gateway-core-shard`. For testonly configurations, include
+the `bt-headset-for-testing-core-shard`.
+
 When the `fuchsia.bluetooth.hfp.Hfp` FIDL capability is requested, the CFv2 HFP AG component will be
 started.
 

@@ -11,13 +11,7 @@
     ],
     use: [
         {
-            protocol: [
-                "fuchsia.bluetooth.hfp.Hfp",
-
-                // TODO(fxbug.dev/86390): `HfpTest` is a testonly capability. It should not be
-                // exposed to the system. Remove this once it is only exposed in testing scenarios.
-                "fuchsia.bluetooth.hfp.test.HfpTest",
-            ],
+            protocol: [ "fuchsia.bluetooth.hfp.Hfp" ],
             from: "#bt-hfp-audio-gateway",
         },
     ],
