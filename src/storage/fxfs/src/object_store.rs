@@ -976,7 +976,7 @@ impl ObjectStore {
             let handle = CachingObjectHandle::new(
                 ObjectStore::open_object(&parent_store, object_id, HandleOptions::default(), crypt)
                     .await
-                    .context(format!("Failed to open layerr file {}", object_id))?,
+                    .context(format!("Failed to open layer file {}", object_id))?,
             );
             handles.push(handle);
         }
@@ -1000,7 +1000,8 @@ impl ObjectStore {
                 .await?
                 .into(),
             )
-            .await?;
+            .await
+            .context("Failed to read object tree layer file contents")?;
 
         let unwrapped_keys = crypt
             .unwrap_keys(store_info.mutations_key.as_ref().unwrap(), self.store_object_id)
