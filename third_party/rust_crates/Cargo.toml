@@ -23,7 +23,7 @@ version = "0.1.0"
 
 [dependencies]
 # Keep this sorted alphabetically, please.
-aes = "0.7.5"
+aes = { version = "0.7.5", features = ["armv8"] }
 aes-gcm = "0.9"
 ansi_term = "0.11.0"
 anyhow = "1.0.38"

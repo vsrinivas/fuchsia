@@ -1099,6 +1099,7 @@ rust_library("aes-v0_7_5") {
     "--edition=2018",
     "-Cmetadata=7d6cffd832fe874d",
     "-Cextra-filename=-7d6cffd832fe874d",
+    "--cfg=feature=\"armv8\"",
   ]
 
   visibility = [ ":*" ]
