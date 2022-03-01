@@ -52,7 +52,7 @@ protocol/member fuchsia.hardware.wlan.softmac/WlanSoftmac.StartPassiveScan(fuchs
 protocol/member fuchsia.hardware.wlan.softmac/WlanSoftmac.Stop() -> ()
 protocol/member fuchsia.hardware.wlan.softmac/WlanSoftmac.UpdateWmmParams(fuchsia.hardware.wlan.associnfo/WlanAc ac,fuchsia.hardware.wlan.associnfo/WlanWmmParams params) -> (int32 st)
 protocol fuchsia.hardware.wlan.softmac/WlanSoftmac
-struct/member fuchsia.hardware.wlan.softmac/WlanSoftmacActiveScanArgs.channels vector<uint8>:255
+struct/member fuchsia.hardware.wlan.softmac/WlanSoftmacActiveScanArgs.channels vector<uint8>:256
 struct/member fuchsia.hardware.wlan.softmac/WlanSoftmacActiveScanArgs.ies vector<uint8>:11454
 struct/member fuchsia.hardware.wlan.softmac/WlanSoftmacActiveScanArgs.mac_header vector<uint8>:28
 struct/member fuchsia.hardware.wlan.softmac/WlanSoftmacActiveScanArgs.max_channel_time int64
@@ -67,8 +67,8 @@ struct/member fuchsia.hardware.wlan.softmac/WlanSoftmacBandCapability.basic_rate
 struct/member fuchsia.hardware.wlan.softmac/WlanSoftmacBandCapability.basic_rate_list array<uint8,12>
 struct/member fuchsia.hardware.wlan.softmac/WlanSoftmacBandCapability.ht_caps fuchsia.wlan.ieee80211/HtCapabilitiesFields
 struct/member fuchsia.hardware.wlan.softmac/WlanSoftmacBandCapability.ht_supported bool
-struct/member fuchsia.hardware.wlan.softmac/WlanSoftmacBandCapability.operating_channel_count uint8
-struct/member fuchsia.hardware.wlan.softmac/WlanSoftmacBandCapability.operating_channel_list array<uint8,255>
+struct/member fuchsia.hardware.wlan.softmac/WlanSoftmacBandCapability.operating_channel_count uint16
+struct/member fuchsia.hardware.wlan.softmac/WlanSoftmacBandCapability.operating_channel_list array<uint8,256>
 struct/member fuchsia.hardware.wlan.softmac/WlanSoftmacBandCapability.vht_caps fuchsia.wlan.ieee80211/VhtCapabilitiesFields
 struct/member fuchsia.hardware.wlan.softmac/WlanSoftmacBandCapability.vht_supported bool
 struct fuchsia.hardware.wlan.softmac/WlanSoftmacBandCapability
@@ -87,7 +87,7 @@ struct/member fuchsia.hardware.wlan.softmac/WlanSoftmacInfo.sta_addr array<uint8
 struct/member fuchsia.hardware.wlan.softmac/WlanSoftmacInfo.supported_phys_count uint8
 struct/member fuchsia.hardware.wlan.softmac/WlanSoftmacInfo.supported_phys_list array<fuchsia.wlan.common/WlanPhyType,64>
 struct fuchsia.hardware.wlan.softmac/WlanSoftmacInfo
-struct/member fuchsia.hardware.wlan.softmac/WlanSoftmacPassiveScanArgs.channels vector<uint8>:255
+struct/member fuchsia.hardware.wlan.softmac/WlanSoftmacPassiveScanArgs.channels vector<uint8>:256
 struct/member fuchsia.hardware.wlan.softmac/WlanSoftmacPassiveScanArgs.max_channel_time int64
 struct/member fuchsia.hardware.wlan.softmac/WlanSoftmacPassiveScanArgs.min_channel_time int64
 struct/member fuchsia.hardware.wlan.softmac/WlanSoftmacPassiveScanArgs.min_home_time int64

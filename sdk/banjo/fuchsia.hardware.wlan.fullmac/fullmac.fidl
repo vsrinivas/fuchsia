@@ -422,7 +422,7 @@ type WlanFullmacBandCapability = struct {
     /// This list should be used to determine efficacy of subsequent requests to
     /// scan a subset of channels using the iface, or to determine which operating
     /// channel to use when starting an AP.
-    operating_channel_count uint8;
+    operating_channel_count uint16;
     operating_channel_list array<uint8, ieee80211.MAX_UNIQUE_CHANNEL_NUMBERS>;
 };
 

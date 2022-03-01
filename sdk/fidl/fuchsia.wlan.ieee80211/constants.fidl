@@ -18,13 +18,12 @@ const MAX_SSID_BYTE_LEN uint8 = 32;
 @namespaced
 const SSID_LIST_MAX uint8 = 84;
 
-/// The limit on the number of channels in a list of unique channel numbers is 255
-/// since a channel number in IEEE 802.11-2016 cannot exceed one octet and channel
-/// numbers must be non-zero. See IEEE 802.11-2016 9.4.2.18 Supported Channels
-/// element for an example element that assumes a channel number does not exceed
-/// one octet.
+/// The limit on the number of channels in a list of unique channel numbers is 256
+/// since a channel number in IEEE 802.11-2016 cannot exceed one octet. See
+/// IEEE 802.11-2016 9.4.2.18 Supported Channels element for an example element
+/// that assumes a channel number does not exceed one octet.
 @namespaced
-const MAX_UNIQUE_CHANNEL_NUMBERS uint8 = 255;
+const MAX_UNIQUE_CHANNEL_NUMBERS uint16 = 256;
 
 @namespaced
 const MAC_ADDR_LEN uint8 = 6;
