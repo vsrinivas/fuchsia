@@ -896,7 +896,7 @@ mod tests {
         super::*,
         crate::{
             config_management::{
-                network_config::{self, Credential, FailureReason},
+                network_config::{self, AddAndGetRecent, Credential, FailureReason},
                 SavedNetworksManager,
             },
             telemetry::{TelemetryEvent, TelemetrySender},

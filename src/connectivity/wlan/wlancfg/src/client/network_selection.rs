@@ -10,7 +10,8 @@ use {
             types,
         },
         config_management::{
-            ConnectFailure, Credential, Disconnect, FailureReason, SavedNetworksManagerApi,
+            network_config::AddAndGetRecent, ConnectFailure, Credential, Disconnect, FailureReason,
+            SavedNetworksManagerApi,
         },
         mode_management::iface_manager_api::IfaceManagerApi,
         telemetry::{self, TelemetryEvent, TelemetrySender},

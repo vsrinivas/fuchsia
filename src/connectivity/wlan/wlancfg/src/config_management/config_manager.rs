@@ -5,8 +5,9 @@
 use {
     super::{
         network_config::{
-            Credential, FailureReason, HiddenProbEvent, NetworkConfig, NetworkConfigError,
-            NetworkIdentifier, PastConnectionList, SecurityType,
+            AddAndGetRecent, ConnectFailure, Credential, Disconnect, FailureReason,
+            HiddenProbEvent, NetworkConfig, NetworkConfigError, NetworkIdentifier,
+            PastConnectionList, SecurityType,
         },
         stash_conversion::*,
     },
@@ -394,13 +395,24 @@ impl SavedNetworksManagerApi for SavedNetworksManager {
                     }
                     (fidl_ieee80211::StatusCode::Canceled, _) => {}
                     (_, true) => {
-                        network
-                            .perf_stats
-                            .failure_list
-                            .add(bssid, FailureReason::CredentialRejected);
+                        network.perf_stats.failure_list.add(
+                            bssid,
+                            ConnectFailure {
+                                time: zx::Time::get_monotonic(),
+                                reason: FailureReason::CredentialRejected,
+                                bssid: bssid.clone(),
+                            },
+                        );
                     }
                     (_, _) => {
-                        network.perf_stats.failure_list.add(bssid, FailureReason::GeneralFailure);
+                        network.perf_stats.failure_list.add(
+                            bssid,
+                            ConnectFailure {
+                                time: zx::Time::get_monotonic(),
+                                reason: FailureReason::GeneralFailure,
+                                bssid: bssid.clone(),
+                            },
+                        );
                     }
                 }
                 return;
@@ -428,7 +440,11 @@ impl SavedNetworksManagerApi for SavedNetworksManager {
         };
         for network in networks.iter_mut() {
             if &network.credential == credential {
-                network.perf_stats.disconnect_list.add(bssid, uptime, curr_time);
+                network.perf_stats.disconnect_list.add(Disconnect {
+                    bssid: bssid,
+                    uptime: uptime,
+                    time: curr_time,
+                });
             }
         }
     }

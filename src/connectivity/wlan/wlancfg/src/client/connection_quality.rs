@@ -15,7 +15,7 @@ use {
 pub const EWMA_SMOOTHING_FACTOR: usize = 10;
 
 /// Connection quality data related to signal
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub struct SignalData {
     pub ewma_rssi: EwmaPseudoDecibel,
     pub ewma_snr: EwmaPseudoDecibel,
