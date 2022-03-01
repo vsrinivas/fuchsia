@@ -3241,12 +3241,13 @@ pub(crate) mod testutil {
         // Renew timeout should trigger a transition to Renewing, send a renew
         // message and schedule retransmission.
         let actions = client.handle_timeout(ClientTimerType::Renew);
-        let mut buf = match &actions[..] {
-            [Action::SendMessage(buf), Action::ScheduleTimer(ClientTimerType::Retransmission, INITIAL_RENEW_TIMEOUT)] => {
-                buf
-            }
-            actions => panic!("unexpected actions {:?}", actions),
-        };
+        let mut buf = assert_matches!(
+            &actions[..],
+            [
+                Action::SendMessage(buf),
+                Action::ScheduleTimer(ClientTimerType::Retransmission, INITIAL_RENEW_TIMEOUT)
+            ] => buf
+        );
         let ClientStateMachine { transaction_id, options_to_request: _, state, rng: _ } = &client;
         // Assert that sending a renew starts a new transaction.
         assert_ne!(*transaction_id, old_transaction_id);
@@ -3711,12 +3712,14 @@ mod tests {
                 solicit_max_rt: _,
             }))
         );
-        let buf = match &actions[..] {
-            [Action::CancelTimer(ClientTimerType::Retransmission), Action::SendMessage(buf), Action::ScheduleTimer(ClientTimerType::Retransmission, INITIAL_REQUEST_TIMEOUT)] => {
-                buf
-            }
-            actions => panic!("unexpected actions {:?}", actions),
-        };
+        let buf = assert_matches!(
+            &actions[..],
+            [
+                Action::CancelTimer(ClientTimerType::Retransmission),
+                Action::SendMessage(buf),
+                Action::ScheduleTimer(ClientTimerType::Retransmission, INITIAL_REQUEST_TIMEOUT)
+            ] => buf
+        );
         assert_eq!(testutil::msg_type(buf), v6::MessageType::Request);
     }
 
@@ -3775,7 +3778,8 @@ mod tests {
         assert_matches!(client.handle_message_receive(msg)[..], []);
         let ClientStateMachine { transaction_id: _, options_to_request: _, state, rng: _ } =
             &client;
-        let collected_advertise = match state {
+        let collected_advertise = assert_matches!(
+            state,
             Some(ClientState::ServerDiscovery(ServerDiscovery {
                 client_id: _,
                 configured_addresses: _,
@@ -3784,9 +3788,8 @@ mod tests {
                 solicit_max_rt: _,
                 collected_advertise,
                 collected_sol_max_rt: _,
-            })) => collected_advertise,
-            state => panic!("unexpected state {:?}", state),
-        };
+            })) => collected_advertise
+        );
         match ignore_iana {
             true => assert!(
                 collected_advertise.is_empty(),
@@ -3794,7 +3797,8 @@ mod tests {
                 collected_advertise
             ),
             false => {
-                let addresses = match collected_advertise.peek() {
+                assert_matches!(
+                    collected_advertise.peek(),
                     Some(AdvertiseMessage {
                         server_id: _,
                         addresses,
@@ -3802,10 +3806,8 @@ mod tests {
                         preference: _,
                         receive_time: _,
                         preferred_addresses_count: _,
-                    }) => addresses,
-                    advertise => panic!("unexpected advertise {:?}", advertise),
-                };
-                assert_eq!(*addresses, HashMap::from([(v6::IAID::new(0), ia)]));
+                    }) if *addresses == HashMap::from([(v6::IAID::new(0), ia)])
+                )
             }
         }
     }
@@ -3824,14 +3826,14 @@ mod tests {
         // On transmission timeout, if no advertise were received the client
         // should stay in server discovery and resend solicit.
         let actions = client.handle_timeout(ClientTimerType::Retransmission);
-        let (buf, timeout) = match &actions[..] {
-            [Action::SendMessage(buf), Action::ScheduleTimer(ClientTimerType::Retransmission, timeout)] => {
-                (buf, timeout)
-            }
-            actions => panic!("unexpected actions {:?}", actions),
-        };
-        assert_eq!(testutil::msg_type(buf), v6::MessageType::Solicit);
-        assert_eq!(*timeout, 2 * INITIAL_SOLICIT_TIMEOUT);
+        assert_matches!(
+            &actions[..],
+            [
+                Action::SendMessage(buf),
+                Action::ScheduleTimer(ClientTimerType::Retransmission, timeout)
+            ] if testutil::msg_type(buf) == v6::MessageType::Solicit &&
+                 *timeout == 2 * INITIAL_SOLICIT_TIMEOUT => buf
+        );
         let ClientStateMachine { transaction_id, options_to_request: _, state, rng: _ } = &client;
         assert_matches!(
             state,
@@ -3867,13 +3869,14 @@ mod tests {
         // The client should transition to Requesting when receiving any
         // advertise while retransmitting.
         let actions = client.handle_message_receive(msg);
-        let buf = match &actions[..] {
-            [Action::CancelTimer(ClientTimerType::Retransmission), Action::SendMessage(buf), Action::ScheduleTimer(ClientTimerType::Retransmission, INITIAL_REQUEST_TIMEOUT)] => {
-                buf
-            }
-            actions => panic!("unexpected actions {:?}", actions),
-        };
-        assert_eq!(testutil::msg_type(buf), v6::MessageType::Request);
+        assert_matches!(
+            &actions[..],
+            [
+                Action::CancelTimer(ClientTimerType::Retransmission),
+                Action::SendMessage(buf),
+                Action::ScheduleTimer(ClientTimerType::Retransmission, INITIAL_REQUEST_TIMEOUT)
+            ] if testutil::msg_type(buf) == v6::MessageType::Request
+        );
         let ClientStateMachine { transaction_id: _, options_to_request: _, state, rng: _ } = client;
         assert_matches!(
             state,
@@ -3933,12 +3936,14 @@ mod tests {
                 solicit_max_rt: _,
             })
         );
-        let mut buf = match &actions[..] {
-            [Action::CancelTimer(ClientTimerType::Retransmission), Action::SendMessage(buf), Action::ScheduleTimer(ClientTimerType::Retransmission, INITIAL_REQUEST_TIMEOUT)] => {
-                buf
-            }
-            actions => panic!("unexpected actions {:?}", actions),
-        };
+        let mut buf = assert_matches!(
+            &actions[..],
+            [
+                Action::CancelTimer(ClientTimerType::Retransmission),
+                Action::SendMessage(buf),
+                Action::ScheduleTimer(ClientTimerType::Retransmission, INITIAL_REQUEST_TIMEOUT)
+            ] => buf
+        );
         let expected_addresses = (0..)
             .map(v6::IAID::new)
             .zip(advertised_addresses.map(Some))
@@ -3990,7 +3995,12 @@ mod tests {
             &mut rng,
         );
 
-        let (server_id, got_addresses_to_request) = match &state {
+        let expected_addresses_to_request = (0..)
+            .map(v6::IAID::new)
+            .zip(advertised_addresses.iter().map(|addr| AddressToRequest::new(Some(*addr), None)))
+            .collect::<HashMap<v6::IAID, AddressToRequest>>();
+        assert_matches!(
+            &state,
             ClientState::Requesting(Requesting {
                 client_id: _,
                 addresses_to_request: got_addresses_to_request,
@@ -4000,15 +4010,9 @@ mod tests {
                 retrans_timeout: _,
                 retrans_count: _,
                 solicit_max_rt: _,
-            }) => (server_id, got_addresses_to_request),
-            state => panic!("unexpected state {:?}", state),
-        };
-        assert_eq!(*server_id, vec![1, 2, 3]);
-        let expected_addresses_to_request = (0..)
-            .map(v6::IAID::new)
-            .zip(advertised_addresses.iter().map(|addr| AddressToRequest::new(Some(*addr), None)))
-            .collect::<HashMap<v6::IAID, AddressToRequest>>();
-        assert_eq!(*got_addresses_to_request, expected_addresses_to_request);
+            }) if *server_id == vec![1, 2, 3] &&
+                  *got_addresses_to_request == expected_addresses_to_request
+        );
 
         // If the reply contains an top level UnspecFail status code, the
         // request should be resent.
@@ -4027,7 +4031,8 @@ mod tests {
         let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
         let Transition { state, actions: _, transaction_id } =
             state.reply_message_received(&options_to_request, &mut rng, msg);
-        let (server_id, got_addresses_to_request) = match &state {
+        assert_matches!(
+            &state,
             ClientState::Requesting(Requesting {
                 client_id: _,
                 addresses_to_request: got_addresses_to_request,
@@ -4037,11 +4042,9 @@ mod tests {
                 retrans_timeout: _,
                 retrans_count: _,
                 solicit_max_rt: _,
-            }) => (server_id, got_addresses_to_request),
-            state => panic!("unexpected state {:?}", state),
-        };
-        assert_eq!(*server_id, vec![1, 2, 3]);
-        assert_eq!(*got_addresses_to_request, expected_addresses_to_request);
+            }) if *server_id == vec![1, 2, 3] &&
+                  *got_addresses_to_request == expected_addresses_to_request
+        );
         assert!(transaction_id.is_some());
 
         // If the reply contains an top level NotOnLink status code, the
@@ -4064,7 +4067,8 @@ mod tests {
 
         let expected_addresses_to_request: HashMap<v6::IAID, AddressToRequest> =
             HashMap::from([(v6::IAID::new(0), AddressToRequest::new(None, None))]);
-        let (server_id, got_addresses_to_request) = match &state {
+        assert_matches!(
+            &state,
             ClientState::Requesting(Requesting {
                 client_id: _,
                 addresses_to_request: got_addresses_to_request,
@@ -4074,11 +4078,9 @@ mod tests {
                 retrans_timeout: _,
                 retrans_count: _,
                 solicit_max_rt: _,
-            }) => (server_id, got_addresses_to_request),
-            state => panic!("unexpected state {:?}", state),
-        };
-        assert_eq!(*server_id, vec![1, 2, 3]);
-        assert_eq!(expected_addresses_to_request, *got_addresses_to_request);
+            }) if *server_id == vec![1, 2, 3] &&
+                  *got_addresses_to_request == expected_addresses_to_request
+        );
         assert!(transaction_id.is_some());
 
         // If the reply contains a top level status code indicating failure
@@ -4438,7 +4440,8 @@ mod tests {
             let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
             let Transition { state, actions: _, transaction_id: _ } =
                 state.reply_message_received(&[], &mut rng, msg);
-            let (t1, t2) = match state {
+            assert_matches!(
+                state,
                 ClientState::AddressAssigned(AddressAssigned {
                     client_id: _,
                     addresses: _,
@@ -4447,11 +4450,9 @@ mod tests {
                     t2,
                     dns_servers: _,
                     solicit_max_rt: _,
-                }) => (t1, t2),
-                state => panic!("unexpected state {:?}", state),
-            };
-            assert_eq!(t1, expected_t1.into());
-            assert_eq!(t2, expected_t2.into());
+                }) if t1 == expected_t1.into() &&
+                      t2 == expected_t2.into()
+            );
         }
     }
 
@@ -4569,7 +4570,8 @@ mod tests {
             );
             let ClientStateMachine { transaction_id: _, options_to_request: _, state, rng: _ } =
                 &client;
-            let (server_id, retrans_count) = match state {
+            assert_matches!(
+                state,
                 Some(ClientState::Requesting(Requesting {
                     client_id: _,
                     addresses_to_request: _,
@@ -4579,11 +4581,9 @@ mod tests {
                     retrans_timeout: _,
                     retrans_count,
                     solicit_max_rt: _,
-                })) => (server_id, retrans_count),
-                state => panic!("unexpected state {:?}", state),
-            };
-            assert_eq!(*server_id, server_id_1);
-            assert_eq!(*retrans_count, count);
+                })) if *server_id == server_id_1 &&
+                       *retrans_count == count
+            );
         }
 
         // When the retransmission count reaches REQUEST_MAX_RC, the client
@@ -4598,7 +4598,8 @@ mod tests {
         );
         let ClientStateMachine { transaction_id: _, options_to_request: _, state, rng: _ } =
             &client;
-        let (server_id, retrans_count) = match state {
+        assert_matches!(
+            state,
             Some(ClientState::Requesting(Requesting {
                 client_id: _,
                 addresses_to_request: _,
@@ -4608,11 +4609,9 @@ mod tests {
                 retrans_timeout: _,
                 retrans_count,
                 solicit_max_rt: _,
-            })) => (server_id, retrans_count),
-            state => panic!("unexpected state {:?}", state),
-        };
-        assert_eq!(*server_id, server_id_2);
-        assert_eq!(*retrans_count, 0);
+            })) if *server_id == server_id_2 &&
+                   *retrans_count == 0
+        );
 
         for count in 1..REQUEST_MAX_RC + 1 {
             assert_matches!(
@@ -4626,7 +4625,8 @@ mod tests {
             );
             let ClientStateMachine { transaction_id: _, options_to_request: _, state, rng: _ } =
                 &client;
-            let (server_id, retrans_count) = match state {
+            assert_matches!(
+                state,
                 Some(ClientState::Requesting(Requesting {
                     client_id: _,
                     addresses_to_request: _,
@@ -4636,11 +4636,9 @@ mod tests {
                     retrans_timeout: _,
                     retrans_count,
                     solicit_max_rt: _,
-                })) => (server_id, retrans_count),
-                state => panic!("unexpected state {:?}", state),
-            };
-            assert_eq!(*server_id, server_id_2);
-            assert_eq!(*retrans_count, count);
+                })) if *server_id == server_id_2 &&
+                       *retrans_count == count
+            );
         }
 
         // When the retransmission count reaches REQUEST_MAX_RC, and the client
