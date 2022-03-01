@@ -66,7 +66,6 @@ import("//build/testing/host_test_data.gni")
 #     before comparing it to the newly generated version. This allows changes
 #     to source formatting tools to not cause goldens tests to fail.
 #     Type: string
-#     Default: /bin/cat
 #
 #   reformat_goldens_args (optional)
 #     A list of args for invoking `reformat_goldens_bin`.
@@ -115,7 +114,12 @@ template("golden_test") {
     # (action_foreach is not allowed to have zero source files).
     group(target_reformat_goldens) {
     }
-    not_needed([ "reformat_goldens" ])
+    not_needed(invoker,
+               [
+                 "reformat_goldens_bin",
+                 "reformat_goldens_args",
+                 "reformat_goldens_inputs",
+               ])
   } else {
     action_foreach(target_reformat_goldens) {
       testonly = true
