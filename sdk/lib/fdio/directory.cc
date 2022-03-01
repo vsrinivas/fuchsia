@@ -96,7 +96,7 @@ zx_status_t fdio_open_at(zx_handle_t dir, const char* path, uint32_t flags,
 
 namespace {
 
-zx_status_t fdio_open_fd_common(const fdio_ptr& iodir, const char* path, uint32_t flags,
+zx_status_t fdio_open_fd_common(const fdio_ptr& iodir, std::string_view path, uint32_t flags,
                                 uint32_t mode, int* out_fd) {
   // We're opening a file descriptor rather than just a channel (like fdio_open), so we always want
   // to Describe (or listen for an OnOpen event on) the opened connection. This ensures that the fd
@@ -104,7 +104,7 @@ zx_status_t fdio_open_fd_common(const fdio_ptr& iodir, const char* path, uint32_
   // (fdio_flags_to_zxio always add _FLAG_DESCRIBE).
   flags |= ZX_FS_FLAG_DESCRIBE;
 
-  zx::status io = iodir->open(path, flags, mode);
+  zx::status io = iodir->open(path.data(), flags, mode);
   if (io.is_error()) {
     return io.status_value();
   }
@@ -120,32 +120,50 @@ zx_status_t fdio_open_fd_common(const fdio_ptr& iodir, const char* path, uint32_
 }  // namespace
 
 __EXPORT
-zx_status_t fdio_open_fd(const char* path, uint32_t flags, int* out_fd) {
-  zx_status_t status = fdio_validate_path(path, nullptr);
-  if (status != ZX_OK) {
-    return status;
+zx_status_t fdio_open_fd(const char* dirty_path, uint32_t flags, int* out_fd) {
+  if (dirty_path == nullptr) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  fdio_internal::PathBuffer clean;
+  bool has_ending_slash;
+  if (!fdio_internal::CleanPath(dirty_path, &clean, &has_ending_slash)) {
+    return ZX_ERR_BAD_PATH;
+  }
+  std::string_view clean_path = clean;
+  if (has_ending_slash) {
+    flags |= ZX_FS_FLAG_DIRECTORY;
   }
 
   // Since we are sending a request to the root handle, require that we start at '/'. (In fdio_open
   // above this is done by fdio_ns_connect.)
-  if (path[0] != '/') {
+  if (clean_path[0] != '/') {
     return ZX_ERR_NOT_FOUND;
   }
-  path++;
+  clean_path.remove_prefix(1);
 
   return fdio_open_fd_common(
       []() {
         fbl::AutoLock lock(&fdio_lock);
         return fdio_root_handle.get();
       }(),
-      path, flags, kArbitraryMode, out_fd);
+      clean_path, flags, kArbitraryMode, out_fd);
 }
 
 __EXPORT
-zx_status_t fdio_open_fd_at(int dir_fd, const char* path, uint32_t flags, int* out_fd) {
-  zx_status_t status = fdio_validate_path(path, nullptr);
-  if (status != ZX_OK) {
-    return status;
+zx_status_t fdio_open_fd_at(int dir_fd, const char* dirty_path, uint32_t flags, int* out_fd) {
+  if (dirty_path == nullptr) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  fdio_internal::PathBuffer clean;
+  bool has_ending_slash;
+  if (!fdio_internal::CleanPath(dirty_path, &clean, &has_ending_slash)) {
+    return ZX_ERR_BAD_PATH;
+  }
+  std::string_view clean_path = clean;
+  if (has_ending_slash) {
+    flags |= ZX_FS_FLAG_DIRECTORY;
   }
 
   fdio_ptr iodir = fd_to_io(dir_fd);
@@ -153,7 +171,7 @@ zx_status_t fdio_open_fd_at(int dir_fd, const char* path, uint32_t flags, int* o
     return ZX_ERR_INVALID_ARGS;
   }
 
-  return fdio_open_fd_common(iodir, path, flags, kArbitraryMode, out_fd);
+  return fdio_open_fd_common(iodir, clean_path, flags, kArbitraryMode, out_fd);
 }
 
 __EXPORT
