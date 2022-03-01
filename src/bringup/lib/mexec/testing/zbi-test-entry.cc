@@ -5,6 +5,7 @@
 #include <fcntl.h>
 #include <lib/fdio/io.h>
 #include <lib/zbitl/error-stdio.h>
+#include <lib/zbitl/items/bootfs.h>
 #include <lib/zbitl/view.h>
 #include <lib/zbitl/vmo.h>
 #include <lib/zx/vmo.h>
@@ -18,21 +19,52 @@
 #include <fbl/unique_fd.h>
 #include <src/bringup/lib/mexec/mexec.h>
 
-constexpr const char* kMexecZbi = "/boot/testdata/mexec-child.zbi";
+constexpr const char* kMexecZbi = "testdata/mexec-child.zbi";
+
+namespace {
+
+using BootfsView = zbitl::BootfsView<zbitl::MapUnownedVmo>;
+
+// The bootfs VFS (rooted under '/boot') is hosted by component manager. These tests can be started
+// directly from userboot without starting component manager, so the bootfs VFS will not be
+// available. Instead, we can just read any files needed directly from the uncompressed bootfs VMO.
+zx_status_t GetFileFromBootfs(std::string_view path, zbitl::MapUnownedVmo bootfs, zx::vmo* vmo) {
+  BootfsView view;
+  if (auto result = BootfsView::Create(std::move(bootfs)); result.is_error()) {
+    zbitl::PrintBootfsError(result.error_value());
+    return ZX_ERR_INTERNAL;
+  } else {
+    view = std::move(result).value();
+  }
+
+  auto file = view.find(path);
+  if (auto result = view.take_error(); result.is_error()) {
+    zbitl::PrintBootfsError(result.error_value());
+    return ZX_ERR_INTERNAL;
+  }
+  if (file == view.end()) {
+    return ZX_ERR_NOT_FOUND;
+  }
+
+  return view.storage().vmo().create_child(ZX_VMO_CHILD_SNAPSHOT | ZX_VMO_CHILD_NO_WRITE,
+                                           file->offset, file->size, vmo);
+}
+
+}  // namespace
 
 int main() {
-  fbl::unique_fd fd{open(kMexecZbi, O_RDONLY)};
-  if (!fd) {
-    printf("zbi-mexec-test-entry: failed to open child ZBI %s: %s\n", kMexecZbi, strerror(errno));
+  zx::vmo bootfs(zx_take_startup_handle(PA_HND(PA_VMO_BOOTFS, 0)));
+  if (!bootfs.is_valid()) {
+    printf("zbi_mexec-test-entry: received an invalid bootfs vmo handle\n");
     return ZX_ERR_INTERNAL;
   }
 
   zx::vmo kernel_zbi, data_zbi;
   {
     zx::vmo vmo;
-    if (zx_status_t status = fdio_get_vmo_exact(fd.get(), vmo.reset_and_get_address());
-        status != ZX_OK) {
-      printf("zbi-mexec-test-entry: failed get child ZBI's VMO: %s\n",
+    zbitl::MapUnownedVmo unowned_bootfs(bootfs.borrow());
+    if (zx_status_t status = GetFileFromBootfs(kMexecZbi, unowned_bootfs, &vmo); status != ZX_OK) {
+      printf("zbi-mexec-test-entry: failed to get child ZBI's VMO: %s\n",
              zx_status_get_string(status));
       return status;
     }
