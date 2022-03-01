@@ -15,7 +15,8 @@ constexpr zx_pixel_format_t kDsiSupportedPixelFormats[4] = {
     ZX_PIXEL_FORMAT_ARGB_8888, ZX_PIXEL_FORMAT_RGB_x888, ZX_PIXEL_FORMAT_ABGR_8888,
     ZX_PIXEL_FORMAT_BGR_888x};
 // TODO(fxb/69236): Add more supported formats
-zx_pixel_format_t kHdmiSupportedPixelFormats[] = {ZX_PIXEL_FORMAT_RGB_x888};
+zx_pixel_format_t kHdmiSupportedPixelFormats[] = {ZX_PIXEL_FORMAT_ARGB_8888,
+                                                  ZX_PIXEL_FORMAT_RGB_x888};
 
 // List of supported features
 struct supported_features_t {
