@@ -430,6 +430,16 @@ template("clang_toolchain") {
 
       # Expand BREAKPAD_NAME, if present, which is unused for dynamic libraries.
       command = string_replace(command, "{{BREAKPAD_NAME}}", "")
+
+      if (invoker.toolchain_os == "fuchsia") {
+        # On Fuchsia, lld is directly used to perform linking
+        command = string_replace(
+                command,
+                "{{rustflags}}",
+                "-C link-arg=--soname=\"{{target_output_name}}{{output_extension}}\" {{rustflags}}")
+      } else {
+        # TODO: should soname be set on other platforms?
+      }
     }
 
     tool("rust_bin") {

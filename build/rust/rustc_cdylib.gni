@@ -145,7 +145,21 @@ template("rustc_cdylib") {
                              "output_dir",
                              "testonly",
                              "visibility",
+                             "runtime_deps",
+                             "sources",
                            ])
+    inputs = []
+    if (defined(invoker.inputs)) {
+      inputs = invoker.inputs
+    }
+    _use_rbe = enable_rbe
+    if (defined(invoker.disable_rbe) && invoker.disable_rbe) {
+      _use_rbe = false
+    }
+    if (_use_rbe) {
+      # Depend on Rust/RBE scripts and tools
+      inputs += rust_rbe_deps
+    }
   }
 
   public_hdrs = []
@@ -165,19 +179,6 @@ template("rustc_cdylib") {
       # dependencies through an intermediate Rust target.
       deps += invoker.non_rust_deps
     }
-  }
-
-  inputs = []
-  if (defined(invoker.inputs)) {
-    inputs = invoker.inputs
-  }
-  _use_rbe = enable_rbe
-  if (defined(invoker.disable_rbe) && invoker.disable_rbe) {
-    _use_rbe = false
-  }
-  if (_use_rbe) {
-    # Depend on Rust/RBE scripts and tools
-    inputs += rust_rbe_deps
   }
 
   group(target_name) {

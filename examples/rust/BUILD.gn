@@ -13,10 +13,8 @@ group("tests") {
   testonly = true
   deps = [
     ":garnet-rust-examples",
+    "cdylib:tests",
     "rust_static_linking:tests",
-
-    # TODO(fxbug.dev/50421): This target seems broken.
-    # "cdylib:tests",
     "staticlib:tests",
   ]
 }

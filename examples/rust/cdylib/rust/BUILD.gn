@@ -4,16 +4,15 @@
 
 import("//build/rust/rustc_cdylib.gni")
 
-# NOTE: This target does not link properly due to changes
-# in our build system. See https://fxbug.dev/74403 for
-# details.
 rustc_cdylib("crust-shared") {
   output_name = "crust_shared_rust"
 
-  # TODO(fxbug.dev/74403): rustc_cdylib() does not support
-  # explicit sources lists yet.
-  # sources = [ "src/lib.rs" ]
+  sources = [ "src/lib.rs" ]
 
   edition = "2018"
   public = [ "crust.h" ]
+
+  # Unlike executables, libfdio is not added as an implicit dependency to
+  # shared libraries, so we have to add it ourselves.
+  deps = [ "//sdk/lib/fdio:fdio" ]
 }
