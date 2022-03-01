@@ -8,6 +8,7 @@
         sdio_max_tx_seq_err_24hrs: "INSPECT:bootstrap/driver_manager:root/brcmfmac-phy:sdio_max_tx_seq_err_24hrs",
         ap_set_ssid_err_24hrs: "INSPECT:bootstrap/driver_manager:root/brcmfmac-phy:ap_set_ssid_err_24hrs",
         fw_recovered_24hrs: "INSPECT:bootstrap/driver_manager:root/brcmfmac-phy:fw_recovered_24hrs",
+        low_data_rate_24hrs: "INSPECT:bootstrap/driver_manager:root/brcmfmac-phy:low_data_rate_24hrs",
     },
     act: {
         excessive_tx_qfull: {
@@ -57,6 +58,12 @@
             trigger: "fw_recovered_24hrs >= 1",
             repeat: "Hours(24)",
             signature: "occurrence-fw-recovered",
+        },
+        occurrence_low_data_rate: {
+            type: "Snapshot",
+            trigger: "low_data_rate_24hrs >= 1",
+            repeat: "Hours(24)",
+            signature: "low-data-rate",
         },
     },
     test: {
@@ -202,6 +209,24 @@
             ],
             values: {
                 fw_recovered_24hrs: 0,
+            },
+        },
+        occurrence_low_data_rate: {
+            yes: [
+                "occurrence_low_data_rate",
+            ],
+            no: [],
+            values: {
+                low_data_rate_24hrs: 1,
+            },
+        },
+        no_occurrence_low_data_rate: {
+            yes: [],
+            no: [
+                "occurrence_low_data_rate",
+            ],
+            values: {
+                low_data_rate_24hrs: 0,
             },
         },
     },
