@@ -663,7 +663,8 @@ bool TestLogOccurrence(CobaltTestAppLogger* logger, SystemClockInterface* clock,
   FX_LOGS(INFO) << "========================";
   FX_LOGS(INFO) << "TestLogOccurrence";
 
-  // All occurrence count data for a single report is aggregated into a single observation.
+  // All occurrence count data for a single report is aggregated into a single observation, with the
+  // exception of ErrorCountsExperiment report which uses REPORT_ALL.
   std::map<std::pair<uint32_t, uint32_t>, uint64_t> expected_num_obs = {
       {{cobalt_registry::kFeaturesActiveNewMetricId,
         cobalt_registry::kFeaturesActiveNewFeaturesActiveUniqueDevicesReportId},
@@ -680,10 +681,11 @@ bool TestLogOccurrence(CobaltTestAppLogger* logger, SystemClockInterface* clock,
       {{cobalt_registry::kConnectionAttemptsNewMetricId,
         cobalt_registry::kConnectionAttemptsNewConnectionAttemptsPerDeviceCountReportId},
        1},
-      // TODO(fxbug.dev/85440): Temporarily disable this test until fxrev.dev/602370 rolls.
-      // {{cobalt_registry::kErrorOccurredNewMetricId,
-      //   cobalt_registry::kErrorOccurredNewErrorCountsExperimentReportId},
-      //  1},
+      {{cobalt_registry::kErrorOccurredNewMetricId,
+        cobalt_registry::kErrorOccurredNewErrorCountsExperimentReportId},
+       // This metric is logged with 3 distinct experiment ids, and this report uses
+       // system_profile_selection: REPORT_ALL, so there will be 3 observations generated.
+       3},
   };
   std::map<std::pair<uint32_t, uint32_t>, uint64_t> expect_no_obs{
       {{cobalt_registry::kFeaturesActiveNewMetricId,
