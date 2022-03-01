@@ -62,10 +62,13 @@ impl FactoryResetStateMachine {
     /// the new state and a boolean indicating if that new state is changed from
     /// the previous state.
     pub fn handle_event(&mut self, event: ResetEvent) -> FactoryResetState {
-        let new_state: FactoryResetState = match self.state {
+        if let ResetEvent::ButtonPress(button, phase) = event {
+            // Handle all volume button events here to make sure we don't miss anything in default matches
+            self.update_button_state(button, phase);
+        }
+        let new_state = match self.state {
             FactoryResetState::Waiting => match event {
-                ResetEvent::ButtonPress(button, phase) => {
-                    self.update_button_state(button, phase);
+                ResetEvent::ButtonPress(_, _) => {
                     if self.check_buttons_pressed() {
                         self.last_policy_check_id += 1;
                         FactoryResetState::AwaitingPolicy(self.last_policy_check_id)
@@ -73,14 +76,15 @@ impl FactoryResetStateMachine {
                         FactoryResetState::Waiting
                     }
                 }
-                ResetEvent::CountdownCancelled | ResetEvent::CountdownFinished => {
+                ResetEvent::CountdownFinished => {
                     panic!("Not expecting timer updates when in waiting state")
                 }
-                ResetEvent::AwaitPolicyResult(_, _) => FactoryResetState::Waiting,
+                ResetEvent::CountdownCancelled | ResetEvent::AwaitPolicyResult(_, _) => {
+                    FactoryResetState::Waiting
+                }
             },
             FactoryResetState::AwaitingPolicy(check_id) => match event {
-                ResetEvent::ButtonPress(button, phase) => {
-                    self.update_button_state(button, phase);
+                ResetEvent::ButtonPress(_, _) => {
                     if !self.check_buttons_pressed() {
                         FactoryResetState::Waiting
                     } else {
@@ -100,8 +104,7 @@ impl FactoryResetStateMachine {
                 _ => FactoryResetState::Waiting,
             },
             FactoryResetState::StartCountdown => match event {
-                ResetEvent::ButtonPress(button, phase) => {
-                    self.update_button_state(button, phase);
+                ResetEvent::ButtonPress(_, _) => {
                     if self.check_buttons_pressed() {
                         panic!(
                             "Not expecting both buttons to be pressed while in StartCountdown state"
@@ -125,7 +128,9 @@ impl FactoryResetStateMachine {
             },
             FactoryResetState::CancelCountdown => match event {
                 ResetEvent::CountdownCancelled => FactoryResetState::Waiting,
-                ResetEvent::AwaitPolicyResult(_, _) => FactoryResetState::CancelCountdown,
+                ResetEvent::AwaitPolicyResult(_, _) | ResetEvent::ButtonPress(_, _) => {
+                    FactoryResetState::CancelCountdown
+                }
                 _ => panic!("Only expecting CountdownCancelled event in CancelCountdown state."),
             },
             FactoryResetState::ExecuteReset => match event {
@@ -215,16 +220,6 @@ mod tests {
 
     #[test]
     #[should_panic]
-    fn test_cancel_early() {
-        let mut state_machine = FactoryResetStateMachine::new();
-        let state = state_machine
-            .handle_event(ResetEvent::ButtonPress(ConsumerControlButton::VolumeUp, Phase::Down));
-        assert_eq!(state, FactoryResetState::Waiting);
-        let _state = state_machine.handle_event(ResetEvent::CountdownCancelled);
-    }
-
-    #[test]
-    #[should_panic]
     fn test_early_complete_countdown() {
         let mut state_machine = FactoryResetStateMachine::new();
         let state = state_machine
@@ -249,5 +244,24 @@ mod tests {
             .handle_event(ResetEvent::ButtonPress(ConsumerControlButton::VolumeDown, Phase::Up));
         assert_eq!(state, FactoryResetState::CancelCountdown);
         let _state = state_machine.handle_event(ResetEvent::CountdownFinished);
+    }
+
+    #[test]
+    fn test_cancelled_countdown_with_extra_button_press() {
+        let mut state_machine = FactoryResetStateMachine::new();
+        let state = state_machine
+            .handle_event(ResetEvent::ButtonPress(ConsumerControlButton::VolumeUp, Phase::Down));
+        assert_eq!(state, FactoryResetState::Waiting);
+        let state = state_machine
+            .handle_event(ResetEvent::ButtonPress(ConsumerControlButton::VolumeDown, Phase::Down));
+        assert_eq!(state, FactoryResetState::AwaitingPolicy(1));
+        let state = state_machine.handle_event(ResetEvent::AwaitPolicyResult(1, true));
+        assert_eq!(state, FactoryResetState::StartCountdown);
+        let state = state_machine
+            .handle_event(ResetEvent::ButtonPress(ConsumerControlButton::VolumeDown, Phase::Up));
+        assert_eq!(state, FactoryResetState::CancelCountdown);
+        let state = state_machine
+            .handle_event(ResetEvent::ButtonPress(ConsumerControlButton::VolumeUp, Phase::Up));
+        assert_eq!(state, FactoryResetState::CancelCountdown);
     }
 }
