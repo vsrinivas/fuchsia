@@ -5,7 +5,7 @@
 use {
     crate::common::{
         done_time, file::FileResolver, handle_upload_progress_for_staging, is_locked,
-        map_fidl_error, UNLOCK_ERR,
+        map_fidl_error,
     },
     anyhow::{anyhow, bail, Result},
     async_fs::OpenOptions,
@@ -168,6 +168,9 @@ pub async fn unlock_device<W: Write, F: FileResolver + Sync>(
     creds: &Vec<String>,
     fastboot_proxy: &FastbootProxy,
 ) -> Result<()> {
+    if creds.len() == 0 {
+        ffx_bail!("No credentials given. Could not unlock device.")
+    }
     let search = Utc::now();
     write!(writer, "Looking for unlock credentials...")?;
     writer.flush()?;
@@ -181,7 +184,7 @@ pub async fn unlock_device<W: Write, F: FileResolver + Sync>(
             return unlock_device_with_creds(writer, unlock_creds, challenge, fastboot_proxy).await;
         }
     }
-    ffx_bail!("{}", UNLOCK_ERR);
+    ffx_bail!("Key mismatch. Credentials given could not unlock the device.")
 }
 
 async fn unlock_device_with_creds<W: Write>(
