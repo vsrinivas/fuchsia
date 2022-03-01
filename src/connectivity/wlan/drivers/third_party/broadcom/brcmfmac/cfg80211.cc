@@ -4385,6 +4385,7 @@ void brcmf_if_query_mac_sublayer_support(net_device* ndev, mac_sublayer_support_
 
   memset(resp, 0, sizeof(*resp));
   resp->data_plane.data_plane_type = DATA_PLANE_TYPE_ETHERNET_DEVICE;
+  resp->device.mac_implementation_type = MAC_IMPLEMENTATION_TYPE_FULLMAC;
 }
 
 void brcmf_if_query_security_support(net_device* ndev, security_support_t* resp) {

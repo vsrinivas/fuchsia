@@ -52,7 +52,7 @@ type DataPlaneExtension = struct {
 /// Indicates where MAC layer is implemented.
 type MacImplementationType = strict enum : uint8 {
     SOFTMAC = 1;
-    // Other implementations (e.g. FULLMAC) may be added in the future.
+    FULLMAC = 2;
 };
 
 /// Feature-like information specific to the device.
