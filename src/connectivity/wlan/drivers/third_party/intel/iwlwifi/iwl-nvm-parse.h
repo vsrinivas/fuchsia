@@ -36,6 +36,7 @@
 
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-eeprom-parse.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/compiler.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/regulatory.h"
 
 /**
  * enum iwl_nvm_sbands_flags - modification flags for the channel profiles
@@ -66,16 +67,11 @@ struct iwl_nvm_data* iwl_parse_nvm_data(struct iwl_trans* trans, const struct iw
 /**
  * iwl_parse_mcc_info - parse MCC (mobile country code) info coming from FW
  *
- * This function parses the regulatory channel data received as a
- * MCC_UPDATE_CMD command. It returns a newly allocation regulatory domain,
- * to be fed into the regulatory core. In case the geo_info is set handle
- * accordingly. An ERR_PTR is returned on error.
- * If not given to the regulatory core, the user is responsible for freeing
- * the regdomain returned here with kfree.
+ * This function parses the regulatory channel data received as a MCC_UPDATE_CMD command.
+ * The parsing result is saved in the 'mvm'.
  */
-struct ieee80211_regdomain* iwl_parse_nvm_mcc_info(struct device* dev, const struct iwl_cfg* cfg,
-                                                   int num_of_ch, __le32* channels, uint16_t fw_mcc,
-                                                   uint16_t geo_info);
+void iwl_parse_nvm_mcc_info(struct mcc_info* mcc_info, const struct iwl_cfg* cfg, int num_of_ch,
+                            const __le32* channels, uint16_t fw_mcc, uint16_t geo_info);
 
 /**
  * struct iwl_nvm_section - describes an NVM section in memory.

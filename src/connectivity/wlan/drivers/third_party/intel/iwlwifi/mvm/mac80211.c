@@ -287,13 +287,11 @@ static void iwl_mvm_reset_phy_ctxts(struct iwl_mvm* mvm) {
 zx_status_t iwl_mvm_get_regdomain(struct iwl_mvm* mvm, const char* alpha2,
                                   enum iwl_mcc_source src_id, bool* changed,
                                   wlanphy_country_t* out_country) {
-  wlanphy_country_t country = {};
-  wlanphy_country_t* regd = &country;
   struct iwl_mcc_update_resp* resp;
 
   ZX_ASSERT(out_country);
 
-  IWL_DEBUG_LAR(mvm, "Getting regdomain data for %s from FW\n", alpha2);
+  IWL_DEBUG_LAR(mvm, "Getting regdomain data for %c%c from FW\n", alpha2[0], alpha2[1]);
 
   iwl_assert_lock_held(&mvm->mutex);
 
@@ -309,16 +307,8 @@ zx_status_t iwl_mvm_get_regdomain(struct iwl_mvm* mvm, const char* alpha2,
     *changed = (status == MCC_RESP_NEW_CHAN_PROFILE || status == MCC_RESP_ILLEGAL);
   }
 
-#if 1  // NEEDS_PORTING
-  country.alpha2[0] = le16_to_cpu(resp->mcc) >> 8;
-  country.alpha2[1] = le16_to_cpu(resp->mcc) & 0xff;
-  *out_country = *regd;
-#else   // NEEDS_PORTING
-  // TODO(fxbug.dev/87321): port iwl_parse_nvm_mcc_info()
-  struct ieee80211_regdomain* regd = iwl_parse_nvm_mcc_info(
-      mvm->trans->dev, mvm->cfg, __le32_to_cpu(resp->n_channels), resp->channels,
-      __le16_to_cpu(resp->mcc), __le16_to_cpu(resp->geo_info));
-#endif  // NEEDS_PORTING
+  iwl_parse_nvm_mcc_info(&mvm->mcc_info, mvm->cfg, le32_to_cpu(resp->n_channels), resp->channels,
+                         le16_to_cpu(resp->mcc), le16_to_cpu(resp->geo_info));
 
   /* Store the return source id */
   src_id = resp->source_id;
@@ -328,10 +318,12 @@ zx_status_t iwl_mvm_get_regdomain(struct iwl_mvm* mvm, const char* alpha2,
     goto out;
   }
 
-  IWL_DEBUG_LAR(mvm, "setting alpha2 from FW to %c%c (0x%x, 0x%x) src=%d\n", regd->alpha2[0],
-                regd->alpha2[1], regd->alpha2[0], regd->alpha2[1], src_id);
+  IWL_DEBUG_LAR(mvm, "setting alpha2 from FW to %c%c (0x%x, 0x%x) src=%d\n",
+                mvm->mcc_info.country.alpha2[0], mvm->mcc_info.country.alpha2[1],
+                mvm->mcc_info.country.alpha2[0], mvm->mcc_info.country.alpha2[1], src_id);
   mvm->lar_regdom_set = true;
   mvm->mcc_src = src_id;
+  *out_country = mvm->mcc_info.country;
 
 out:
   return ret;

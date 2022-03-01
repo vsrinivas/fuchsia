@@ -22,6 +22,11 @@ extern "C" {
 namespace wlan::testing {
 namespace {
 
+// A helper class to set up a MAC interface with the given |sim_trans|.
+//
+// To use this, the test case just create an instance at beginning. This class will set up
+// everything and release the resources in destructor.
+//
 class ClientInterfaceHelper {
  public:
   ClientInterfaceHelper(SimTransport* sim_trans) : mvmvif_{}, ap_sta_{}, txqs_ {}
@@ -383,6 +388,84 @@ TEST_F(RegulatoryTest, RegulatoryTestNormal) {
   EXPECT_EQ(0x57, country.alpha2[1]);
   EXPECT_EQ(true, mvm_->lar_regdom_set);
   EXPECT_EQ(MCC_SOURCE_WIFI, mvm_->mcc_src);
+}
+
+TEST_F(RegulatoryTest, ChannelFilterDefault) {
+  ClientInterfaceHelper helper = ClientInterfaceHelper(&sim_trans_);
+
+  // compare the channel list and flags.
+  // check the test/sim-mcc-update.cc:HandleMccUpdate() for the fake data.
+  EXPECT_EQ(4, mvm_->mcc_info.num_ch);
+  EXPECT_EQ(1, mvm_->mcc_info.channels[0]);       // Ch1
+  EXPECT_EQ(0x034b, mvm_->mcc_info.ch_flags[0]);  // Ch1 flags
+  EXPECT_EQ(2, mvm_->mcc_info.channels[1]);       // Ch2
+  EXPECT_EQ(0x0f4a, mvm_->mcc_info.ch_flags[1]);  // Ch2 flags
+  EXPECT_EQ(3, mvm_->mcc_info.channels[2]);       // Ch3
+  EXPECT_EQ(0x0f43, mvm_->mcc_info.ch_flags[2]);  // Ch3 flags
+  EXPECT_EQ(4, mvm_->mcc_info.channels[3]);       // Ch4
+  EXPECT_EQ(0x0f4b, mvm_->mcc_info.ch_flags[3]);  // Ch4 flags
+}
+
+TEST_F(RegulatoryTest, ChannelFilterPassiveList) {
+  ClientInterfaceHelper helper = ClientInterfaceHelper(&sim_trans_);
+
+  // The passive scan just uses whatever channels that MLME told us to do.
+  uint8_t ch_list[] = {
+      14,
+      36,
+      144,
+      181,
+  };
+  uint8_t out_ch[std::size(ch_list)] = {};  // The returning list is never larger than the input.
+  EXPECT_EQ(4, reg_filter_channels(false, &mvm_->mcc_info, std::size(ch_list), ch_list, out_ch));
+  EXPECT_EQ(14, out_ch[0]);
+  EXPECT_EQ(181, out_ch[3]);
+}
+
+TEST_F(RegulatoryTest, ChannelFilterActiveList) {
+  ClientInterfaceHelper helper = ClientInterfaceHelper(&sim_trans_);
+
+  uint8_t ch_list[] = {
+      255,  // Ch 255: not supported in any country.
+      4,    // Ch   4: expected to be returned by the API.
+      36,   // Ch  36: not in the return list of wlan::testing::HandleMccUpdate().
+      3,    // Ch   3: in the list but is inactive.
+      2,    // Ch   2: in the list but is invalid.
+  };
+  uint8_t out_ch[std::size(ch_list)] = {};  // The returning list is never larger than the input.
+  EXPECT_EQ(1, reg_filter_channels(true, &mvm_->mcc_info, std::size(ch_list), ch_list, out_ch));
+  EXPECT_EQ(4, out_ch[0]);
+}
+
+// In this test case, we are testing the wild-card query. We expect the function returns all the
+// channels allowed in the current regulatory domain.
+//
+// Check the test/sim-mcc-update.cc:HandleMccUpdate() for the fake data.
+//
+TEST_F(RegulatoryTest, ChannelFilterActiveWildcard) {
+  ClientInterfaceHelper helper = ClientInterfaceHelper(&sim_trans_);
+
+  uint8_t out_ch[MAX_MCC_INFO_CH] = {};
+  EXPECT_EQ(2, reg_filter_channels(true, &mvm_->mcc_info, 0, nullptr, out_ch));
+  EXPECT_EQ(1, out_ch[0]);  // Ch1
+                            // Ch2 is invalid.
+                            // Ch3 is inactive.
+  EXPECT_EQ(4, out_ch[1]);  // Ch4
+}
+
+// In this test case, only 1 channel is specified. We would assume the upper layer is pretty sure
+// this channel is usable (for example, it learns that fact from a passive scan on a DFS channel).
+// Then the function just returns whatever the upper layer specified.
+//
+TEST_F(RegulatoryTest, ChannelFilterOneChannel) {
+  ClientInterfaceHelper helper = ClientInterfaceHelper(&sim_trans_);
+
+  uint8_t ch_list[] = {
+      255,  // Ch 255: not supported in any country.
+  };
+  uint8_t out_ch[std::size(ch_list)] = {};  // The returning list is never larger than the input.
+  EXPECT_EQ(1, reg_filter_channels(true, &mvm_->mcc_info, std::size(ch_list), ch_list, out_ch));
+  EXPECT_EQ(255, out_ch[0]);
 }
 
 TEST_F(RegulatoryTest, TestGetCurrentRegDomain) {

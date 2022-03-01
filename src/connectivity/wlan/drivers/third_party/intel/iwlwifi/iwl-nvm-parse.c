@@ -1078,7 +1078,7 @@ struct iwl_nvm_data* iwl_parse_nvm_data(struct iwl_trans* trans, const struct iw
   return data;
 }
 
-#if 0  // NEEDS_PORTING
+#if 0   // NEEDS_PORTING
 static uint32_t iwl_nvm_get_regdom_bw_flags(const uint8_t* nvm_chan, int ch_idx, uint16_t nvm_flags,
                                             const struct iwl_cfg* cfg) {
   uint32_t flags = NL80211_RRF_NO_HT40;
@@ -1136,128 +1136,88 @@ struct regdb_ptrs {
   struct ieee80211_wmm_rule* rule;
   uint32_t token;
 };
+#endif  // NEEDS_PORTING
 
-struct ieee80211_regdomain* iwl_parse_nvm_mcc_info(struct device* dev, const struct iwl_cfg* cfg,
-                                                   int num_of_ch, __le32* channels, uint16_t fw_mcc,
-                                                   uint16_t geo_info) {
+// This function will parse the regulatory data and store in the mvm->mcc_info.
+void iwl_parse_nvm_mcc_info(struct mcc_info* mcc_info, const struct iwl_cfg* cfg, int num_of_ch,
+                            const __le32* channels, uint16_t fw_mcc, uint16_t geo_info) {
   int ch_idx;
-  uint16_t ch_flags;
-  uint32_t reg_rule_flags, prev_reg_rule_flags = 0;
   const uint8_t* nvm_chan = cfg->nvm_type == IWL_NVM_EXT ? iwl_ext_nvm_channels : iwl_nvm_channels;
-  struct ieee80211_regdomain *regd, *copy_rd;
-  int size_of_regd, regd_to_copy;
-  struct ieee80211_reg_rule* rule;
-  struct regdb_ptrs* regdb_ptrs;
-  enum nl80211_band band;
-  int center_freq, prev_center_freq = 0;
-  int valid_rules = 0;
-  bool new_rule;
   int max_num_ch = cfg->nvm_type == IWL_NVM_EXT ? IWL_NVM_NUM_CHANNELS_EXT : IWL_NVM_NUM_CHANNELS;
 
-  if (WARN_ON_ONCE(num_of_ch > NL80211_MAX_SUPP_REG_RULES)) {
-    return ERR_PTR(-EINVAL);
-  }
-
-  if (WARN_ON(num_of_ch > max_num_ch)) {
+  if (num_of_ch > max_num_ch) {
+    IWL_WARN(mcc_info, "num_of_ch is restricted from %d to %d\n", num_of_ch, max_num_ch);
     num_of_ch = max_num_ch;
   }
 
-  IWL_DEBUG_DEV(dev, IWL_DL_LAR, "building regdom for %d channels\n", num_of_ch);
+  IWL_DEBUG_DEV(mcc_info, IWL_DL_LAR, "building regdom for %d channels\n", num_of_ch);
 
-  /* build a regdomain rule for every valid channel */
-  size_of_regd = sizeof(struct ieee80211_regdomain) + num_of_ch * sizeof(struct ieee80211_reg_rule);
-
-  regd = kzalloc(size_of_regd, GFP_KERNEL);
-  if (!regd) {
-    return ERR_PTR(-ENOMEM);
-  }
-
-  regdb_ptrs = kcalloc(num_of_ch, sizeof(*regdb_ptrs), GFP_KERNEL);
-  if (!regdb_ptrs) {
-    copy_rd = ERR_PTR(-ENOMEM);
-    goto out;
-  }
+  memset(mcc_info, 0, sizeof(*mcc_info));
+  ZX_ASSERT(((size_t)num_of_ch) <= MAX_MCC_INFO_CH);
+  mcc_info->num_ch = num_of_ch;
 
   /* set alpha2 from FW. */
-  regd->alpha2[0] = fw_mcc >> 8;
-  regd->alpha2[1] = fw_mcc & 0xff;
+  mcc_info->country.alpha2[0] = fw_mcc >> 8;
+  mcc_info->country.alpha2[1] = fw_mcc & 0xff;
 
   for (ch_idx = 0; ch_idx < num_of_ch; ch_idx++) {
-    ch_flags = (uint16_t)__le32_to_cpup(channels + ch_idx);
-    band = (ch_idx < NUM_2GHZ_CHANNELS) ? NL80211_BAND_2GHZ : NL80211_BAND_5GHZ;
-    center_freq = ieee80211_channel_to_frequency(nvm_chan[ch_idx], band);
-    new_rule = false;
+    uint16_t ch_flags = (uint16_t)le32_to_cpup(channels + ch_idx);
 
-    if (!(ch_flags & NVM_CHANNEL_VALID)) {
-      iwl_nvm_print_channel_flags(dev, IWL_DL_LAR, nvm_chan[ch_idx], ch_flags);
-      continue;
-    }
+    iwl_nvm_print_channel_flags(NULL, IWL_DL_LAR, nvm_chan[ch_idx], ch_flags);
 
-    reg_rule_flags = iwl_nvm_get_regdom_bw_flags(nvm_chan, ch_idx, ch_flags, cfg);
+    mcc_info->channels[ch_idx] = nvm_chan[ch_idx];
+    mcc_info->ch_flags[ch_idx] = ch_flags;
 
-    /* we can't continue the same rule */
-    if (ch_idx == 0 || prev_reg_rule_flags != reg_rule_flags ||
-        center_freq - prev_center_freq > 20) {
-      valid_rules++;
-      new_rule = true;
-    }
-
-    rule = &regd->reg_rules[valid_rules - 1];
-
-    if (new_rule) {
-      rule->freq_range.start_freq_khz = MHZ_TO_KHZ(center_freq - 10);
-    }
-
-    rule->freq_range.end_freq_khz = MHZ_TO_KHZ(center_freq + 10);
-
-    /* this doesn't matter - not used by FW */
-    rule->power_rule.max_antenna_gain = DBI_TO_MBI(6);
-    rule->power_rule.max_eirp = DBM_TO_MBM(IWL_DEFAULT_MAX_TX_POWER);
-
-    rule->flags = reg_rule_flags;
-
-    /* rely on auto-calculation to merge BW of contiguous chans */
-    rule->flags |= NL80211_RRF_AUTO_BW;
-    rule->freq_range.max_bandwidth_khz = 0;
-
-    prev_center_freq = center_freq;
-    prev_reg_rule_flags = reg_rule_flags;
-
-    iwl_nvm_print_channel_flags(dev, IWL_DL_LAR, nvm_chan[ch_idx], ch_flags);
-
-    if (!(geo_info & GEO_WMM_ETSI_5GHZ_INFO) || band == NL80211_BAND_2GHZ) {
-      continue;
-    }
-
+#if 0   // NEEDS_PORTING
     reg_query_regdb_wmm(regd->alpha2, center_freq, rule);
-  }
-
-  regd->n_reg_rules = valid_rules;
-
-  /*
-   * Narrow down regdom for unused regulatory rules to prevent hole
-   * between reg rules to wmm rules.
-   */
-  regd_to_copy =
-      sizeof(struct ieee80211_regdomain) + valid_rules * sizeof(struct ieee80211_reg_rule);
-
-  copy_rd = kmemdup(regd, regd_to_copy, GFP_KERNEL);
-  if (!copy_rd) {
-    copy_rd = ERR_PTR(-ENOMEM);
-    goto out;
-  }
-
-out:
-  kfree(regdb_ptrs);
-  kfree(regd);
-  return copy_rd;
-}
-IWL_EXPORT_SYMBOL(iwl_parse_nvm_mcc_info);
-
-#define IWL_MAX_NVM_SECTION_SIZE 0x1b58
-#define IWL_MAX_EXT_NVM_SECTION_SIZE 0x1ffc
-#define MAX_NVM_FILE_LEN 16384
 #endif  // NEEDS_PORTING
+  }
+}
+
+bool reg_channel_is_txable(struct mcc_info* mcc_info, uint8_t ch_num) {
+  for (size_t k = 0; k < mcc_info->num_ch; k++) {
+    if (ch_num == mcc_info->channels[k]) {
+      uint32_t ch_flags = mcc_info->ch_flags[k];
+
+      return (ch_flags & NVM_CHANNEL_VALID) && (ch_flags & NVM_CHANNEL_ACTIVE);
+    }
+  }
+
+  return false;
+}
+
+size_t reg_filter_channels(bool active_scan, struct mcc_info* mcc_info, size_t num_ch,
+                           const uint8_t* ch_list, uint8_t* out_list) {
+  size_t i, j = 0;  // i as input while j is output.
+
+  // If this is a passive, we just copy the list. No filtering.
+  if (!active_scan) {
+    memcpy(out_list, ch_list, num_ch * sizeof(ch_list[0]));
+    return num_ch;
+  }
+
+  // If just one channel is specified, this implies that the upper layer learns that this channel
+  // is allowed to use (for example, from a passive scan in the DFS channels).  In this case, we
+  // allow this channel to be used for active scan.
+  if (num_ch == 1) {
+    memcpy(out_list, ch_list, num_ch * sizeof(ch_list[0]));
+    return num_ch;
+  }
+
+  if (!num_ch) {
+    // wildcard. search in the current channel list.
+    ch_list = mcc_info->channels;
+    num_ch = mcc_info->num_ch;
+  }
+
+  for (i = 0; i < num_ch; i++) {
+    if (reg_channel_is_txable(mcc_info, ch_list[i])) {
+      out_list[j++] = ch_list[i];
+    }
+  }
+
+  return j;
+}
 
 void iwl_nvm_fixups(uint32_t hw_id, unsigned int section, uint8_t* data, unsigned int len) {
 #define IWL_4165_DEVICE_ID 0x5501

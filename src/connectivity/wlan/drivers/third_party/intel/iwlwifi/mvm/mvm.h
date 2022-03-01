@@ -61,6 +61,7 @@
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/compiler.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/ieee80211.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/kernel.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/regulatory.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/task.h"
 
 #ifdef CPTCFG_IWLWIFI_LTE_COEX
@@ -1152,6 +1153,7 @@ struct iwl_mvm {
 
   bool lar_regdom_set;
   enum iwl_mcc_source mcc_src;
+  struct mcc_info mcc_info;
 
   /* TDLS channel switch data */
   struct {

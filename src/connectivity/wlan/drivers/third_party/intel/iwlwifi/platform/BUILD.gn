@@ -35,6 +35,7 @@ source_set("platform") {
     "module.h",
     "pci.h",
     "rcu.h",
+    "regulatory.h",
     "task-internal.h",
     "task.h",
     "time.h",
