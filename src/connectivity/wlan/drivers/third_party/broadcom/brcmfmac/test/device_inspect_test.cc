@@ -33,8 +33,8 @@ namespace wlan::brcmfmac {
 
 using ::testing::NotNull;
 
-constexpr uint16_t kUintPropertyNum = 9;
-constexpr uint16_t kWindowPropertyNum = 9;
+constexpr uint16_t kUintPropertyNum = 10;
+constexpr uint16_t kWindowPropertyNum = 10;
 
 const std::vector<std::string> kRootMetrics = {"brcmfmac-phy"};
 const std::vector<std::string> kConnMetrics = {"brcmfmac-phy", "connection-metrics"};
@@ -61,6 +61,7 @@ class DeviceInspectTest : public gtest::TestLoopFixture {
   void LogRxFreeze() { device_inspect_->LogRxFreeze(); }
   void LogSdioMaxTxSeqErr() { device_inspect_->LogSdioMaxTxSeqErr(); }
   void LogApSetSsidErr() { device_inspect_->LogApSetSsidErr(); }
+  void LogLowDataRate() { device_inspect_->LogLowDataRate(); }
 
   void GetUintProperty(const std::vector<std::string>& path, std::string name,
                        uint64_t* out_property) {
@@ -92,6 +93,8 @@ class DeviceInspectTest : public gtest::TestLoopFixture {
                        std::bind(&DeviceInspectTest::LogSdioMaxTxSeqErr, this)),
       PropertyTestUnit(kRootMetrics, "ap_set_ssid_err",
                        std::bind(&DeviceInspectTest::LogApSetSsidErr, this)),
+      PropertyTestUnit(kRootMetrics, "low_data_rate",
+                       std::bind(&DeviceInspectTest::LogLowDataRate, this)),
   };
   const PropertyTestUnit window_properties_[kWindowPropertyNum] = {
       PropertyTestUnit(kRootMetrics, "tx_qfull_24hrs",
@@ -112,6 +115,8 @@ class DeviceInspectTest : public gtest::TestLoopFixture {
                        std::bind(&DeviceInspectTest::LogSdioMaxTxSeqErr, this)),
       PropertyTestUnit(kRootMetrics, "ap_set_ssid_err_24hrs",
                        std::bind(&DeviceInspectTest::LogApSetSsidErr, this)),
+      PropertyTestUnit(kRootMetrics, "low_data_rate_24hrs",
+                       std::bind(&DeviceInspectTest::LogLowDataRate, this)),
   };
 };
 

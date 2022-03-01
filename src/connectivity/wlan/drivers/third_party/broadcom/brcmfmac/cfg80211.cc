@@ -75,6 +75,8 @@
 #define BRCMF_SCAN_PASSIVE_TIME 120
 
 #define BRCMF_ND_INFO_TIMEOUT_MSEC 2000
+// Rate returned by FW (in units of Mbps) is multiplied by 2 to avoid passing fractional value
+#define BRCMF_CONVERT_TO_REAL_RATE(fw_rate) (fw_rate / 2.0)
 
 #define EXEC_TIMEOUT_WORKER(worker)                                       \
   {                                                                       \
@@ -1958,11 +1960,14 @@ static void brcmf_log_client_stats(struct brcmf_cfg80211_info* cfg) {
   err = brcmf_get_ctrl_channel(ifp, &chanspec, &ctl_chan);
 
   // Get the current rate
-  uint32_t rate = 0;
-  err = brcmf_fil_cmd_data_get(ifp, BRCMF_C_GET_RATE, &rate, sizeof(rate), &fw_err);
+  uint32_t fw_rate = 0;
+  float real_rate = 0.0;
+  err = brcmf_fil_cmd_data_get(ifp, BRCMF_C_GET_RATE, &fw_rate, sizeof(fw_rate), &fw_err);
   if (err != ZX_OK) {
     BRCMF_INFO("Unable to get rate: %s fw err %s", zx_status_get_string(err),
                brcmf_fil_get_errstr(fw_err));
+  } else {
+    real_rate = BRCMF_CONVERT_TO_REAL_RATE(fw_rate);
   }
 
   // Get the current noise floor
@@ -1972,8 +1977,9 @@ static void brcmf_log_client_stats(struct brcmf_cfg80211_info* cfg) {
     BRCMF_INFO("Unable to get noise: %s fw err %s", zx_status_get_string(err),
                brcmf_fil_get_errstr(fw_err));
   }
-  zxlogf(INFO, "Client IF up: %d channel: %d Rate: %d Mbps RSSI: %d dBm SNR: %d dB  noise: %d dBm",
-         is_up, ctl_chan, rate / 2, ndev->last_known_rssi_dbm, ndev->last_known_snr_db, noise);
+  zxlogf(INFO,
+         "Client IF up: %d channel: %d Rate: %.2f Mbps RSSI: %d dBm SNR: %d dB  noise: %d dBm",
+         is_up, ctl_chan, real_rate, ndev->last_known_rssi_dbm, ndev->last_known_snr_db, noise);
 
   // Get the FW packet counts
   brcmf_pktcnt_le fw_pktcnt = {};
@@ -2096,8 +2102,27 @@ static void brcmf_log_client_stats(struct brcmf_cfg80211_info* cfg) {
 
   // If the rate is 6 Mbps or less OR Rx error rate >= 40% OR Tx error rate is >= 40%
   // log some of the Tx and Rx error counts retrieved from FW.
-  if ((rate != 0 && (rate / 2) <= 6) || rx_err_rate >= 0.4 || tx_err_rate >= 0.4) {
+  if ((real_rate != 0.0 && (real_rate <= BRCMF_LOW_DATA_RATE_THRESHOLD)) || rx_err_rate >= 0.4 ||
+      tx_err_rate >= 0.4) {
     uint8_t cnt_buf[BRCMF_DCMD_MAXLEN] = {0};
+    // If data rate is at or below threshold, increment the counter.
+    if (real_rate != 0.0 && (real_rate <= BRCMF_LOW_DATA_RATE_THRESHOLD)) {
+      ndev->stats.low_data_rate_count++;
+    } else if (real_rate != 0.0) {
+      ndev->stats.low_data_rate_count = 0;
+    }
+    // Increase inspect counter when the low data rate counter first reaches threshold.
+    if (ndev->stats.low_data_rate_count ==
+        BRCMF_LOW_DATA_RATE_DUR_THRESHOLD / BRCMF_CONNECT_LOG_DUR) {
+      // Note the low data rate in the inspect logs
+      ifp->drvr->device->GetInspect()->LogLowDataRate();
+    }
+    if (ndev->stats.low_data_rate_count >=
+        BRCMF_LOW_DATA_RATE_DUR_RESET_THRESHOLD / BRCMF_CONNECT_LOG_DUR) {
+      // Reset the low data rate counter if it has been stuck for this long (so it can be logged
+      // into inspect again).
+      ndev->stats.low_data_rate_count = 0;
+    }
     // The version # in the counters struct returned by FW is set to 10 currently but its
     // corresponding struct definition is not available. It appears each new version is a superset
     // of the previous one. So tell FW the size of the struct is that of wl_cnt_ver_11_t which is >=
@@ -2108,17 +2133,19 @@ static void brcmf_log_client_stats(struct brcmf_cfg80211_info* cfg) {
     } else {
       wl_cnt_ver_6_t* counters = reinterpret_cast<wl_cnt_ver_6_t*>(cnt_buf);
 
-      BRCMF_INFO(
-          "FW Err Counts: Tx: Err Rate: %f retrans: %u err %u serr %u nobuf %u runt %u uflo %u "
+      zxlogf(
+          INFO,
+          "FW Err Counts: Tx: Err Rate: %.2f retrans: %u err %u serr %u nobuf %u runt %u uflo %u "
           "phyerr %u fail %u",
           tx_err_rate * 100.0, counters->txretrans, counters->txerror, counters->txserr,
           counters->txnobuf, counters->txrunt, counters->txuflo, counters->txphyerr,
           counters->txfail);
-      BRCMF_INFO(
-          "FW Err Counts: Rx: Err Rate: %f err %u nobuf %u runt %u fragerr %u badplcp %u crsglitch "
-          "%u badfcs %u",
-          rx_err_rate * 100.0, counters->rxerror, counters->rxnobuf, counters->rxrunt,
-          counters->rxfragerr, counters->rxbadplcp, counters->rxcrsglitch, counters->rxbadfcs);
+      zxlogf(INFO,
+             "FW Err Counts: Rx: Err Rate: %.2f err %u nobuf %u runt %u fragerr %u badplcp %u "
+             "crsglitch "
+             "%u badfcs %u",
+             rx_err_rate * 100.0, counters->rxerror, counters->rxnobuf, counters->rxrunt,
+             counters->rxfragerr, counters->rxbadplcp, counters->rxcrsglitch, counters->rxbadfcs);
     }
 
     ndev->client_stats_log_count++;

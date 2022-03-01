@@ -80,6 +80,12 @@ zx_status_t DeviceInspect::Create(async_dispatcher_t* dispatcher,
     return status;
   }
 
+  inspect->low_data_rate_ = inspect->root_.CreateUint("low_data_rate", 0);
+  if ((status = inspect->low_data_rate_24hrs_.Init(&inspect->root_, 24, "low_data_rate_24hrs",
+                                                   0)) != ZX_OK) {
+    return status;
+  }
+
   // Start timers.
   constexpr bool kPeriodic = true;
   inspect->timer_hr_ = std::make_unique<Timer>(
@@ -94,6 +100,7 @@ zx_status_t DeviceInspect::Create(async_dispatcher_t* dispatcher,
         inspect->conn_metrics_.no_network_fail_24hrs.SlideWindow();
         inspect->conn_metrics_.auth_fail_24hrs.SlideWindow();
         inspect->conn_metrics_.other_fail_24hrs.SlideWindow();
+        inspect->low_data_rate_24hrs_.SlideWindow();
       },
       kPeriodic);
   inspect->timer_hr_->Start(zx::hour(1).get());
@@ -142,6 +149,11 @@ void DeviceInspect::LogSdioMaxTxSeqErr() {
 void DeviceInspect::LogApSetSsidErr() {
   ap_set_ssid_err_.Add(1);
   ap_set_ssid_err_24hrs_.Add(1);
+}
+
+void DeviceInspect::LogLowDataRate() {
+  low_data_rate_.Add(1);
+  low_data_rate_24hrs_.Add(1);
 }
 
 }  // namespace wlan::brcmfmac

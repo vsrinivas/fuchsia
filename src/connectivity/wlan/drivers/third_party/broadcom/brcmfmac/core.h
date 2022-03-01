@@ -299,6 +299,9 @@ struct net_device {
                           // brcmf_log_client_stats().
     int rx_freeze_count;  // The number of brcmf_log_client_stats called in which rx_packet number
                           // freeze happens.
+    // The number of brcmf_log_client_stats() called in which data rate is low (gets reset any time
+    // data rate goes higher and also when the client disconnects).
+    int low_data_rate_count;
 
     // rssi histogram, index = -(rssi), For ex, -128 => 128....-1 => 1
     std::array<uint64_t, RSSI_HISTOGRAM_LEN> rssi_buckets;

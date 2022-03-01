@@ -62,6 +62,14 @@
 #define BRCMF_RX_FREEZE_THRESHOLD         ZX_MIN(1)
 // Maximum number of times we can trigger a deauth for an rx freeze per hour
 #define BRCMF_RX_FREEZE_MAX_DEAUTHS_PER_HOUR 2
+// FW data rate stuck at a low value for at least this long.
+#define BRCMF_LOW_DATA_RATE_DUR_THRESHOLD           ZX_MIN(5)
+// Reset the low data rate counter (if it has been stuck that long) so it can be logged into inspect
+// again.
+#define BRCMF_LOW_DATA_RATE_DUR_RESET_THRESHOLD     ZX_MIN(60)
+
+// FW data rate low threshold
+#define BRCMF_LOW_DATA_RATE_THRESHOLD     (6) // 6Mbps
 
 #define WL_ESCAN_ACTION_START      1
 #define WL_ESCAN_ACTION_CONTINUE   2
