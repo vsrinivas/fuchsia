@@ -4269,11 +4269,13 @@ void brcmf_if_query(net_device* ndev, wlan_fullmac_query_info_t* info) {
     if (j != band_cap->operating_channel_count) {
       continue;
     }
-
-    if (band_cap->operating_channel_count + 1 >= sizeof(band_cap->operating_channel_list)) {
-      BRCMF_ERR("insufficient space for channel %d, skipping", ch.control_ch_num);
-      continue;
+    if (band_cap->operating_channel_count + 1 >
+        sizeof(band_cap->operating_channel_list) / sizeof(band_cap->operating_channel_list[0])) {
+      BRCMF_ERR("Insufficient space for channel %d", ch.control_ch_num);
+      BRCMF_ERR("Skipping all remaining channels: %d skipped", list->count - i);
+      break;
     }
+
     band_cap->operating_channel_list[band_cap->operating_channel_count++] = ch.control_ch_num;
   }
 
@@ -4303,7 +4305,7 @@ void brcmf_if_query(net_device* ndev, wlan_fullmac_query_info_t* info) {
   max_ampdu_len_exp = 0;
   status = brcmf_fil_iovar_int_get(ifp, "ampdu_rx_factor", &max_ampdu_len_exp, nullptr);
   if (status != ZX_OK) {
-    BRCMF_ERR("Failed to retrieve value for AMPDU maximum Rx length, using 8191 bytes");
+    BRCMF_ERR("Failed to retrieve value for AMPDU maximum Rx length. Using 8191 bytes");
   }
 
   // Rx chains (and streams)

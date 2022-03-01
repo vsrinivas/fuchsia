@@ -3,6 +3,7 @@
 
 #include <fuchsia/hardware/wlan/fullmac/c/banjo.h>
 #include <fuchsia/hardware/wlan/phyinfo/c/banjo.h>
+#include <fuchsia/wlan/common/c/banjo.h>
 #include <fuchsia/wlan/ieee80211/c/banjo.h>
 #include <zircon/errors.h>
 
@@ -28,6 +29,8 @@ TEST_F(SimTest, ClientIfcQuery) {
   ASSERT_EQ(StartInterface(WLAN_MAC_ROLE_CLIENT, &client_ifc, std::nullopt, kDefaultMac), ZX_OK);
 
   wlan_fullmac_query_info_t ifc_query_result;
+  // TODO(fxbug.dev/94163): This query silently logs errors and fails because the
+  // the "chanspecs", "ldpc_cap", and other iovars are not supported by the simulated firmware.
   env_->ScheduleNotification(std::bind(&SimInterface::Query, &client_ifc, &ifc_query_result),
                              zx::sec(1));
   env_->Run(kSimulatedClockDuration);
@@ -46,11 +49,7 @@ TEST_F(SimTest, ClientIfcQuery) {
     wlan_fullmac_band_capability* band_cap = &ifc_query_result.band_cap_list[band];
 
     // Band id should be in valid range
-    EXPECT_LE(band_cap->band, fuchsia_wlan_common_MAX_BANDS);
-
-    // Number of channels shouldn't exceed the maximum allowable
-    ASSERT_LE(band_cap->operating_channel_count,
-              (size_t)fuchsia_wlan_ieee80211_MAX_UNIQUE_CHANNEL_NUMBERS);
+    EXPECT_TRUE(band_cap->band == WLAN_BAND_TWO_GHZ || band_cap->band == WLAN_BAND_FIVE_GHZ);
   }
 
   // Verify driver features from if query.
