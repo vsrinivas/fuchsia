@@ -38,6 +38,7 @@ use net_types::{
     SpecifiedAddr, SpecifiedAddress, UnicastAddr, Witness,
 };
 use nonzero_ext::nonzero;
+use num::rational::Ratio;
 use packet::{EmptyBuf, InnerPacketBuilder, Serializer};
 use packet_formats::{
     icmp::{
@@ -160,7 +161,7 @@ const MAX_RTR_SOLICITATION_DELAY: Duration = Duration::from_secs(1);
 /// described in [RFC 8981 Section 3.8].
 ///
 /// [RFC 8981 Section 3.8]: http://tools.ietf.org/html/rfc8981#section-3.8
-const MAX_DESYNC_FACTOR_RATIO: f32 = 0.4;
+const MAX_DESYNC_FACTOR_RATIO: Ratio<u64> = Ratio::new_raw(2, 5);
 
 // NOTE(joshlf): The `LinkDevice` parameter may seem unnecessary. We only ever
 // use the associated `Address` type, so why not just take that directly? By the
@@ -681,7 +682,7 @@ pub(crate) struct NdpState<D: LinkDevice> {
     /// neighbor when resolving the address or when probing the reachability of
     /// a neighbor.
     ///
-    /// Default: `RETRANS_TIMER_DEFAULT`.
+    /// Default: [`RETRANS_TIMER_DEFAULT`].
     ///
     /// See RetransTimer in [RFC 4861 section 6.3.2] for more details.
     ///
@@ -2128,7 +2129,13 @@ fn add_slaac_addr_sub<'a, D: LinkDevice, C: NdpContext<D>>(
             //       is associated with the corresponding address.  It MUST be
             //       smaller than (TEMP_PREFERRED_LIFETIME - REGEN_ADVANCE).
             let max_desync_factor = core::cmp::min(
-                temp_preferred_lifetime.mul_f32(MAX_DESYNC_FACTOR_RATIO),
+                // Using second accuracy will only cause problems here if
+                // temp_preferred_lifetime is < 1s, in which case
+                // `preferred_for.checked_sub(regen_advance)` below will be None
+                // and an address will not be generated.
+                Duration::from_secs(
+                    (MAX_DESYNC_FACTOR_RATIO * temp_preferred_lifetime.as_secs()).to_integer(),
+                ),
                 temp_preferred_lifetime - regen_advance,
             );
 
