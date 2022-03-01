@@ -64,8 +64,11 @@ rustc_library("test_lib") {
   edition = "2018"
   source_root = "src/test_lib.rs"
 
-  # Only for internal use.
-  visibility = [ "./*" ]
+  # Only for use by test runners.
+  visibility = [
+    "./*",
+    "//src/connectivity/network/testing/netemul-v2/runner/*",
+  ]
 
   deps = [
     ":lib",

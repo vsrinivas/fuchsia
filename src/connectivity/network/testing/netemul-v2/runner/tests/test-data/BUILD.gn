@@ -1,0 +1,47 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+
+# TODO(https://fxbug.dev/92247): read the configuration directly from the
+# `program` section of the component's manifest rather than from a packaged
+# config file, once the CML schema supports it.
+resource("empty-network-config") {
+  sources = [ "empty_config.json" ]
+  outputs = [ "empty_config.json" ]
+}
+
+tests = [
+  "elf",
+  "gtest",
+  "rust",
+]
+
+foreach(test, tests) {
+  test_driver = "${test}-test-driver"
+  test_root = "${test}-test"
+
+  fuchsia_test_component(test_driver) {
+    component_name = test_driver
+    manifest = "${test}/meta/test-driver.cml"
+    deps = [ test ]
+  }
+
+  fuchsia_test_component(test_root) {
+    component_name = test_root
+    manifest = "${test}/meta/test-root.cml"
+    deps = [
+      ":${test_driver}",
+      ":empty-network-config",
+    ]
+  }
+}
+
+group("test-data") {
+  testonly = true
+  deps = []
+  foreach(test, tests) {
+    deps += [ ":${test}-test" ]
+  }
+}

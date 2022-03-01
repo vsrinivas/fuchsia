@@ -1,0 +1,37 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "//src/sys/test_manager/system-test.shard.cml",
+        "//src/sys/test_runners/rust/default.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        binary: "bin/netemul_runner_test",
+    },
+    children: [
+        {
+            name: "test_manager",
+            url: "#meta/test_manager_for_tests.cm",
+        },
+    ],
+    use: [
+        {
+            protocol: "fuchsia.test.manager.RunBuilder",
+            from: "#test_manager",
+        },
+    ],
+    offer: [
+        {
+            protocol: [
+                "fuchsia.logger.LogSink",
+                "fuchsia.process.Launcher",
+                "fuchsia.sys2.ComponentResolver",
+                "fuchsia.sys2.EventSource",
+            ],
+            from: "parent",
+            to: "#test_manager",
+        },
+    ],
+}

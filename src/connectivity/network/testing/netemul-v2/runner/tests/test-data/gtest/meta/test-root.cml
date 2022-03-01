@@ -1,0 +1,28 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [ "//src/connectivity/network/testing/netemul-v2/runner/default.shard.cml" ],
+    program: {
+        network_config: "empty_config.json",
+    },
+    children: [
+        {
+            name: "test-driver",
+            url: "#meta/gtest-test-driver.cm",
+        },
+    ],
+    use: [
+        {
+            protocol: "fuchsia.test.Suite",
+            from: "#test-driver",
+        },
+    ],
+    offer: [
+        {
+            protocol: "fuchsia.logger.LogSink",
+            from: "parent",
+            to: "#test-driver",
+        },
+    ],
+}

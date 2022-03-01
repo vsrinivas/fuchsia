@@ -4,12 +4,12 @@
 {
     include: [ "//src/connectivity/network/testing/netemul-v2/runner/default.shard.cml" ],
     program: {
-        network_config: "config.json",
+        network_config: "empty_config.json",
     },
     children: [
         {
             name: "test-driver",
-            url: "#meta/test-driver.cm",
+            url: "#meta/rust-test-driver.cm",
         },
     ],
     use: [
