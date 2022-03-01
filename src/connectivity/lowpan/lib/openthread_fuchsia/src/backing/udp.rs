@@ -81,7 +81,7 @@ trait UdpSocketHelpers {
     fn connect(&mut self) -> ot::Result;
     fn send(
         &mut self,
-        message: OtMessageBox<'_>,
+        message: &'_ ot::Message<'_>,
         message_info: &'_ ot::message::Info,
     ) -> ot::Result;
     fn join_mcast_group(&mut self, netif: ot::NetifIdentifier, addr: &ot::Ip6Address)
@@ -139,7 +139,7 @@ impl UdpSocketHelpers for ot::UdpSocket<'_> {
         }
 
         let socket = socket2::Socket::new(
-            socket2::Domain::IPV4,
+            socket2::Domain::IPV6,
             socket2::Type::DGRAM,
             Some(socket2::Protocol::UDP),
         )
@@ -222,7 +222,7 @@ impl UdpSocketHelpers for ot::UdpSocket<'_> {
         Ok(())
     }
 
-    fn send(&mut self, message: OtMessageBox<'_>, info: &'_ ot::message::Info) -> ot::Result {
+    fn send(&mut self, message: &ot::Message<'_>, info: &'_ ot::message::Info) -> ot::Result {
         let data = message.to_vec();
 
         debug!(
@@ -400,9 +400,10 @@ unsafe extern "C" fn otPlatUdpSend(
     ot::UdpSocket::mut_from_ot_mut_ptr(ot_socket_ptr)
         .unwrap()
         .send(
-            OtMessageBox::from_ot_ptr(message).unwrap(),
+            ot::Message::ref_from_ot_ptr(message).unwrap(),
             ot::message::Info::ref_from_ot_ptr(message_info).unwrap(),
         )
+        .map(move |_| otMessageFree(message)) // Only free on success
         .into_ot_error()
 }
 
