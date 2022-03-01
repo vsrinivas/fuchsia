@@ -11,8 +11,19 @@ config("config") {
   include_dirs = [ "include" ]
 }
 
+#
+# Enables annotation of relevant Vulkan objects using
+# VK_EXT_debug_utils
+#
 config("config_debug_utils") {
   defines = [ "SPN_VK_ENABLE_DEBUG_UTILS" ]
+}
+
+#
+# Disables both Fuchsia tracing and SPN_VK_ENABLE_DEBUG_UTILS
+#
+config("config_disable_trace") {
+  defines = [ "SPN_VK_DISABLE_TRACE" ]
 }
 
 source_set("vk") {
@@ -61,14 +72,17 @@ source_set("vk") {
     "target_requirements.h",
   ]
   include_dirs = [ "${graphics_compute_dir}/spinel2" ]
+  public_deps = [
+    "${graphics_compute_dir}/spinel2:spinel2",
+    graphics_compute_vulkan_loader_target,
+  ]
   deps = [
     "${graphics_compute_dir}/common",
     "${graphics_compute_dir}/common/vk",
     "${graphics_compute_dir}/radix_sort/platforms/vk",
     "${graphics_compute_dir}/tools/target_archive:target_archive_headers",
   ]
-  public_deps = [
-    "${graphics_compute_dir}/spinel2:spinel2",
-    graphics_compute_vulkan_loader_target,
-  ]
+  if (is_fuchsia) {
+    deps += [ "//zircon/system/ulib/trace" ]
+  }
 }

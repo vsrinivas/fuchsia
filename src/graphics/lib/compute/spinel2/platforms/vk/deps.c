@@ -863,13 +863,16 @@ spinel_deps_signalset_append_import(struct spinel_deps const *                  
 // been submitted.
 //
 void
-spinel_deps_immediate_submit(struct spinel_deps *                             deps,
-                             struct spinel_device_vk *                        vk,
-                             struct spinel_deps_immediate_submit_info const * info,
-                             spinel_deps_immediate_semaphore_t *              p_immediate)
+SPN_VK_TRACE_DEFINE(spinel_deps_immediate_submit,
+                    struct spinel_deps *                             deps,
+                    struct spinel_device_vk *                        vk,
+                    struct spinel_deps_immediate_submit_info const * info,
+                    spinel_deps_immediate_semaphore_t *              p_immediate)
 {
   assert(info->wait.immediate.count <= SPN_DEPS_IMMEDIATE_SUBMIT_SIZE_WAIT_IMMEDIATE);
   assert(info->signal.delayed.count <= SPN_DEPS_IMMEDIATE_SUBMIT_SIZE_SIGNAL_DELAYED);
+
+  SPN_VK_TRACE_HOST_DURATION_BEGIN();
 
   //
   // Gather immediate semaphores as well as delayed semaphores associated with a
@@ -929,16 +932,24 @@ spinel_deps_immediate_submit(struct spinel_deps *                             de
 
   vk(BeginCommandBuffer(cb, &cbbi));
 
+  SPN_VK_TRACE_DEVICE_BEGIN_COMMAND_BUFFER(cb);
+
   if (info->record.pfn != NULL)
     {
+      SPN_VK_TRACE_HOST_DURATION_BEGIN_REGION("Recording");
+
       deps->immediate.stages[immediate] = info->record.pfn(cb,                   //
                                                            info->record.data0,   //
                                                            info->record.data1);  //
+
+      SPN_VK_TRACE_HOST_DURATION_END_REGION();
     }
   else
     {
       deps->immediate.stages[immediate] = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
     }
+
+  SPN_VK_TRACE_DEVICE_END_COMMAND_BUFFER(cb);
 
   vk(EndCommandBuffer(cb));
 
@@ -976,6 +987,8 @@ spinel_deps_immediate_submit(struct spinel_deps *                             de
   // Ignore return value.
   //
   (void)spinel_deps_completion_drain_all(deps);
+
+  SPN_VK_TRACE_HOST_DURATION_END();
 }
 
 //
@@ -992,18 +1005,27 @@ spinel_deps_immediate_get_stage(struct spinel_deps *              deps,
 // Blocks until:
 //
 //   * At least one completion action is executed
-//   * Or a submission is completed and its action is executed.//
+//   * Or a submission is completed and its action is executed.
+//
 // Returns true if either case is true.
 //
 // FIXME(allanmac): Refactor to support VK_ERROR_DEVICE_LOST
 //
 bool
-spinel_deps_drain_1(struct spinel_deps * deps, struct spinel_device_vk const * vk)
+SPN_VK_TRACE_DEFINE(spinel_deps_drain_1,
+                    struct spinel_deps *            deps,
+                    struct spinel_device_vk const * vk)
 {
-  return spinel_deps_completion_drain_all(deps) ||
-         (!spinel_ring_is_full(&deps->immediate.ring) &&
-          spinel_deps_immediate_drain_tail(deps, vk, UINT64_MAX) &&
-          spinel_deps_completion_drain_all(deps));
+  SPN_VK_TRACE_HOST_DURATION_BEGIN();
+
+  bool const is_complete = spinel_deps_completion_drain_all(deps) ||
+                           (!spinel_ring_is_full(&deps->immediate.ring) &&
+                            spinel_deps_immediate_drain_tail(deps, vk, UINT64_MAX) &&
+                            spinel_deps_completion_drain_all(deps));
+
+  SPN_VK_TRACE_HOST_DURATION_END();
+
+  return is_complete;
 }
 
 //
@@ -1012,8 +1034,12 @@ spinel_deps_drain_1(struct spinel_deps * deps, struct spinel_device_vk const * v
 // FIXME(allanmac): Refactor to support VK_ERROR_DEVICE_LOST
 //
 void
-spinel_deps_drain_all(struct spinel_deps * deps, struct spinel_device_vk const * vk)
+SPN_VK_TRACE_DEFINE(spinel_deps_drain_all,
+                    struct spinel_deps *            deps,
+                    struct spinel_device_vk const * vk)
 {
+  SPN_VK_TRACE_HOST_DURATION_BEGIN();
+
   spinel_deps_completion_drain_all(deps);
 
   while ((!spinel_ring_is_full(&deps->immediate.ring) &&
@@ -1022,6 +1048,8 @@ spinel_deps_drain_all(struct spinel_deps * deps, struct spinel_device_vk const *
     {
       ;
     }
+
+  SPN_VK_TRACE_HOST_DURATION_END();
 }
 
 //

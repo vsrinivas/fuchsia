@@ -16,6 +16,7 @@
 #include "queue_pool.h"
 #include "spinel/platforms/vk/spinel_vk_types.h"
 #include "spinel/spinel_types.h"
+#include "trace.h"
 
 //
 // Forwards
@@ -326,21 +327,28 @@ void
 spinel_deps_delayed_flush(struct spinel_deps * deps, spinel_deps_delayed_semaphore_t delayed);
 
 //
-// An immediate submission will only ever wait on small number of prior
-// immediate semaphores.  This is statically known.
-//
-void
-spinel_deps_immediate_submit(struct spinel_deps *                             deps,
-                             struct spinel_device_vk *                        vk,
-                             struct spinel_deps_immediate_submit_info const * info,
-                             spinel_deps_immediate_semaphore_t *              p_immediate);
-
-//
 // Get the final stage of the submission associated with `immediate`
 //
 VkPipelineStageFlags
 spinel_deps_immediate_get_stage(struct spinel_deps *              deps,
                                 spinel_deps_immediate_semaphore_t immediate);
+
+////////////////////////////////////////////////////////////////////////
+//
+// The following functions handle the bulk of Spinel's labelling and tracing.
+//
+////////////////////////////////////////////////////////////////////////
+
+//
+// An immediate submission will only ever wait on small number of prior
+// immediate semaphores.  This is statically known.
+//
+void
+SPN_VK_TRACE_DEFINE(spinel_deps_immediate_submit,
+                    struct spinel_deps *                             deps,
+                    struct spinel_device_vk *                        vk,
+                    struct spinel_deps_immediate_submit_info const * info,
+                    spinel_deps_immediate_semaphore_t *              p_immediate);
 
 //
 // Blocks until:
@@ -351,14 +359,41 @@ spinel_deps_immediate_get_stage(struct spinel_deps *              deps,
 // Returns true if either case is true.
 //
 bool
-spinel_deps_drain_1(struct spinel_deps * deps, struct spinel_device_vk const * vk);
+SPN_VK_TRACE_DEFINE(spinel_deps_drain_1,
+                    struct spinel_deps *            deps,
+                    struct spinel_device_vk const * vk);
 
 //
 // Blocks until all submissions and actions are drained.
 //
 void
-spinel_deps_drain_all(struct spinel_deps *            deps,  //
-                      struct spinel_device_vk const * vk);
+SPN_VK_TRACE_DEFINE(spinel_deps_drain_all,
+                    struct spinel_deps *            deps,
+                    struct spinel_device_vk const * vk);
+
+//
+// Only defined when either debug_utils or tracing are enabled.
+//
+#if !defined(SPN_VK_DISABLE_TRACE) && (defined(SPN_VK_ENABLE_DEBUG_UTILS) || !defined(NTRACE))
+
+#define spinel_deps_immediate_submit(deps_, vk_, info_, p_immediate_)                              \
+  SPN_VK_TRACE_INVOKE(spinel_deps_immediate_submit, /**/                                           \
+                      deps_,                                                                       \
+                      vk_,                                                                         \
+                      info_,                                                                       \
+                      p_immediate_)
+
+#define spinel_deps_drain_1(deps_, vk_)                                                            \
+  SPN_VK_TRACE_INVOKE(spinel_deps_drain_1, /**/                                                    \
+                      deps_,                                                                       \
+                      vk_)
+
+#define spinel_deps_drain_all(deps_, vk_)                                                          \
+  SPN_VK_TRACE_INVOKE(spinel_deps_drain_all, /**/                                                  \
+                      deps_,                                                                       \
+                      vk_)
+
+#endif
 
 //
 //

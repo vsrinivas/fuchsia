@@ -10,6 +10,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fdio/fdio.h>
+#include <lib/trace-provider/provider.h>
 
 #include <algorithm>
 #include <array>
@@ -135,6 +136,14 @@ struct surface_platform
 
   void
   input(surface_input_pfn_t input_pfn, void * data);
+
+#if !defined(SPN_VK_SURFACE_FUCHSIA_DISABLE_TRACE) && !defined(NTRACE)
+  //
+  // Fuchsia tracing
+  //
+  async::Loop                  trace_loop;
+  trace::TraceProviderWithFdio trace_provider;
+#endif
 };
 
 //
@@ -154,6 +163,13 @@ surface_platform::input(surface_input_pfn_t input_pfn, void * data)
 
 surface_platform::surface_platform(uint32_t device_count)
     : loop(&kAsyncLoopConfigAttachToCurrentThread)
+
+#if !defined(SPN_VK_SURFACE_FUCHSIA_DISABLE_TRACE) && !defined(NTRACE)
+      ,
+      trace_loop(&kAsyncLoopConfigNoAttachToCurrentThread),
+      trace_provider(trace_loop.dispatcher())
+#endif
+
 {
   // limit probing of input-reports to [000,009]
   device_count = std::min(device_count, 10u);
@@ -221,6 +237,19 @@ surface_platform::surface_platform(uint32_t device_count)
             }
         }
     }
+
+#if !defined(SPN_VK_SURFACE_FUCHSIA_DISABLE_TRACE) && !defined(NTRACE)
+  //
+  // Start tracing loop
+  //
+  // trace.loop = async::Loop(&kAsyncLoopConfigNoAttachToCurrentThread)
+  zx_status_t const status = trace_loop.StartThread();
+
+  if (status != ZX_OK)
+    {
+      exit(EXIT_FAILURE);
+    }
+#endif
 }
 
 //
@@ -232,7 +261,7 @@ destroy(struct surface * surface)
 {
   struct surface_platform * const platform = surface->platform;
 
-  platform->loop.Shutdown();  // drain input reporst
+  platform->loop.Shutdown();  // drain input reports
 
   surface_detach(surface);
 

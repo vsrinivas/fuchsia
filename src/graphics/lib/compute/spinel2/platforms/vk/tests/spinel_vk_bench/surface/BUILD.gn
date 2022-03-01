@@ -4,7 +4,7 @@
 
 import("//src/graphics/lib/compute/gn/build_rules.gni")
 
-config("surface_config") {
+config("config_surface") {
   #
   # NOTE: For now this is hanging off of spinel-vk-bench but should be
   # hoisted elsewhere in the tree.
@@ -15,6 +15,16 @@ config("surface_config") {
   include_dirs = [ "include" ]
 }
 
+#
+# Disables Fuchsia tracing
+#
+config("config_surface_fuchsia_disable_trace") {
+  defines = [ "SPN_VK_SURFACE_FUCHSIA_DISABLE_TRACE" ]
+}
+
+#
+#
+#
 source_set("surface") {
   public = [
     "include/surface/surface.h",
@@ -51,6 +61,7 @@ source_set("surface") {
       "//src/lib/fxl",
       "//zircon/system/ulib/async-loop:async-loop-cpp",
       "//zircon/system/ulib/async-loop:async-loop-default",
+      "//zircon/system/ulib/trace-provider:trace-provider-with-fdio",
     ]
 
     sources += [
@@ -62,5 +73,5 @@ source_set("surface") {
     public += [ "include/surface/surface_fuchsia_fb.h" ]
   }
 
-  public_configs = [ ":surface_config" ]
+  public_configs = [ ":config_surface" ]
 }
