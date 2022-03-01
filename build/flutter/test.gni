@@ -280,7 +280,7 @@ if (current_toolchain == dart_toolchain) {
       {
         flag = "--out"
         path = _invocation_file
-        base = ""  # Will result in an absolute path.
+        base = root_build_dir
       },
       {
         flag = "--dart"

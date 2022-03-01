@@ -36,16 +36,17 @@ template("cts_element") {
     # GN requires an action to output a file. This file is written, but not used.
     outputs = [ "${target_gen_dir}/${target_name}_DEPFILE" ]
 
-    args = [
-             "--root_build_dir",
-             rebase_path(root_build_dir),
-             "--output",
-             rebase_path(outputs[0]),
-             "--invoker_label",
-             invoker_label,
-             "--deps",
-           ] + fully_qualified_deps + [ "--allowed_cts_deps" ] +
-           ALLOWED_CTS_DEPS + ALLOWED_RUST_DEPS + [ "--allowed_cts_dirs" ] +
-           ALLOWED_CTS_DIRS + [ "--sdk_manifests" ] + rebase_path(inputs)
+    args =
+        [
+          "--root_build_dir",
+          rebase_path(root_build_dir, root_build_dir),
+          "--output",
+          rebase_path(outputs[0], root_build_dir),
+          "--invoker_label",
+          invoker_label,
+          "--deps",
+        ] + fully_qualified_deps + [ "--allowed_cts_deps" ] + ALLOWED_CTS_DEPS +
+        ALLOWED_RUST_DEPS + [ "--allowed_cts_dirs" ] + ALLOWED_CTS_DIRS +
+        [ "--sdk_manifests" ] + rebase_path(inputs, root_build_dir)
   }
 }

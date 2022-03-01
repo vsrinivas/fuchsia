@@ -192,6 +192,9 @@ template("ffx_apply_version") {
         "//src/developer/ffx/lib/version/build:version-info.bin($default_toolchain)",
       ]
 
+      # executable contains output dir
+      no_output_dir_leaks = false
+
       # Note: binaries metadata is not produced, as the build-id is not updated, and will match with the unversioned build.
       metadata = {
         if (defined(invoker.metadata)) {

@@ -622,6 +622,9 @@ if (current_toolchain == dart_toolchain) {
                  _detect_snapshot_label,
                ]
         forward_variables_from(invoker, [ "testonly" ])
+
+        # --fuchsia-root is absolute path to output dir
+        no_output_dir_leaks = false
       }
 
       # Verify that the library API file complies with the specified schema.
