@@ -699,7 +699,6 @@ impl<'a> Decoder<'a> {
         value_offset: usize,
         value_len: usize,
     ) -> Result<()> {
-        debug_assert!(value_len <= 4);
         let valid_padding = match value_len {
             1 => {
                 self.buf[value_offset + 1] == 0
@@ -709,7 +708,7 @@ impl<'a> Decoder<'a> {
             2 => self.buf[value_offset + 2] == 0 && self.buf[value_offset + 3] == 0,
             3 => self.buf[value_offset + 3] == 0,
             4 => true,
-            _ => unreachable!(),
+            value_len => unreachable!("value_len={}", value_len),
         };
         if valid_padding {
             Ok(())
