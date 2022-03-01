@@ -473,20 +473,9 @@ class ::fidl::internal::WireCompleterImpl<::test_error::Example::Foo>
  public:
   using CompleterImplBase::CompleterImplBase;
 
-  // In the following methods, the return value indicates internal errors during
-  // the reply, such as encoding or writing to the transport.
-  // Note that any error will automatically lead to the destruction of the
-  // binding, after which the |on_unbound| callback will be triggered with a
-  // detailed reason.
-  //
-  // See //zircon/system/ulib/fidl/include/lib/fidl/llcpp/server.h.
-  //
-  // Because the reply status is identical to the unbinding status, it can be
-  // safely ignored.
-
-  ::fidl::Result Reply(::test_error::wire::ExampleFooResult result);
-  ::fidl::Result ReplySuccess(int64_t y);
-  ::fidl::Result ReplyError(uint32_t error);
+  void Reply(::test_error::wire::ExampleFooResult result);
+  void ReplySuccess(int64_t y);
+  void ReplyError(uint32_t error);
 };
 
 template <>
@@ -495,20 +484,9 @@ class ::fidl::internal::WireBufferCompleterImpl<::test_error::Example::Foo>
  public:
   using BufferCompleterImplBase::BufferCompleterImplBase;
 
-  // In the following methods, the return value indicates internal errors during
-  // the reply, such as encoding or writing to the transport.
-  // Note that any error will automatically lead to the destruction of the
-  // binding, after which the |on_unbound| callback will be triggered with a
-  // detailed reason.
-  //
-  // See //zircon/system/ulib/fidl/include/lib/fidl/llcpp/server.h.
-  //
-  // Because the reply status is identical to the unbinding status, it can be
-  // safely ignored.
-
-  ::fidl::Result Reply(::test_error::wire::ExampleFooResult result);
-  ::fidl::Result ReplySuccess(int64_t y);
-  ::fidl::Result ReplyError(uint32_t error);
+  void Reply(::test_error::wire::ExampleFooResult result);
+  void ReplySuccess(int64_t y);
+  void ReplyError(uint32_t error);
 };
 
 template <>

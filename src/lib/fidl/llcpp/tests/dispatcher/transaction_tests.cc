@@ -3,10 +3,12 @@
 // found in the LICENSE file.
 
 #include <fidl/fidl.test.coding.fuchsia/cpp/wire.h>
+#include <lib/fidl/llcpp/result.h>
 #include <lib/fidl/llcpp/string_view.h>
 #include <lib/fidl/llcpp/transaction.h>
 #include <lib/sync/completion.h>
 #include <limits.h>
+#include <zircon/errors.h>
 #include <zircon/syscalls.h>
 
 #include <thread>
@@ -34,11 +36,19 @@ class Transaction : public fidl::Transaction {
 
   void Close(zx_status_t epitaph) override {}
 
+  void InternalError(fidl::UnbindInfo error, fidl::ErrorOrigin origin) override {
+    error_.emplace(error);
+    fidl::Transaction::InternalError(error, origin);
+  }
+
   ~Transaction() override = default;
+
+  const std::optional<fidl::UnbindInfo>& error() const { return error_; }
 
  private:
   sync_completion_t* wait_;
   sync_completion_t* signal_;
+  std::optional<fidl::UnbindInfo> error_ = std::nullopt;
 };
 
 using OneWayCompleter =
@@ -114,8 +124,57 @@ TEST(LlcppTransaction, transaction_error) {
   Transaction txn{};
   fidl::WireServer<::fidl_test_coding_fuchsia::Llcpp>::EnumActionCompleter::Sync completer(&txn);
   // We are using the fact that 2 isn't a valid enum value to cause an error.
-  fidl::Result result = completer.Reply(static_cast<fidl_test_coding_fuchsia::wire::TestEnum>(2));
-  ASSERT_FALSE(result.ok());
+  EXPECT_FALSE(txn.error().has_value());
+  completer.Reply(static_cast<fidl_test_coding_fuchsia::wire::TestEnum>(2));
+  EXPECT_TRUE(txn.error().has_value());
+  EXPECT_EQ(fidl::Reason::kEncodeError, txn.error()->reason());
+  EXPECT_STATUS(ZX_ERR_INVALID_ARGS, txn.error()->status());
+}
+
+TEST(CompleterResultOfReply, CalledWithoutMakingAReply) {
+  Transaction txn{};
+  Completer completer(&txn);
+  ASSERT_DEATH([&] { (void)completer.result_of_reply(); });
+  // Passivate the completer.
+  completer.Close(ZX_OK);
+}
+
+TEST(CompleterResultOfReply, Ok) {
+  Transaction txn{};
+  Completer completer(&txn);
+  completer.Reply(0);
+  EXPECT_OK(completer.result_of_reply().status());
+}
+
+TEST(CompleterResultOfReply, EncodeError) {
+  Transaction txn{};
+  fidl::WireServer<::fidl_test_coding_fuchsia::Llcpp>::EnumActionCompleter::Sync completer(&txn);
+  // We are using the fact that 2 isn't a valid enum value to cause an error.
+  EXPECT_FALSE(txn.error().has_value());
+  completer.Reply(static_cast<fidl_test_coding_fuchsia::wire::TestEnum>(2));
+  fidl::Result result = completer.result_of_reply();
+  EXPECT_EQ(fidl::Reason::kEncodeError, result.reason());
+  EXPECT_STATUS(ZX_ERR_INVALID_ARGS, result.status());
+}
+
+TEST(CompleterResultOfReply, TransportError) {
+  class FakeTransportErrorTransaction : public fidl::Transaction {
+    std::unique_ptr<Transaction> TakeOwnership() override { ZX_PANIC("Unused"); }
+
+    zx_status_t Reply(fidl::OutgoingMessage* message,
+                      fidl::WriteOptions write_options = {}) override {
+      return ZX_ERR_ACCESS_DENIED;
+    }
+
+    void Close(zx_status_t epitaph) override {}
+  };
+
+  FakeTransportErrorTransaction txn{};
+  Completer completer(&txn);
+  completer.Reply(0);
+  fidl::Result result = completer.result_of_reply();
+  EXPECT_EQ(fidl::Reason::kTransportError, result.reason());
+  EXPECT_STATUS(ZX_ERR_ACCESS_DENIED, result.status());
 }
 
 namespace test_async_completer_deleted_methods {

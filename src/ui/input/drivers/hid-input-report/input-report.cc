@@ -196,7 +196,8 @@ void InputReport::GetDescriptor(GetDescriptorRequestView request,
     device->CreateDescriptor(descriptor_allocator, descriptor);
   }
 
-  fidl::Result result = completer.Reply(std::move(descriptor));
+  completer.Reply(std::move(descriptor));
+  fidl::Result result = completer.result_of_reply();
   if (result.status() != ZX_OK) {
     zxlogf(ERROR, "GetDescriptor: Failed to send descriptor: %s\n",
            result.FormatDescription().c_str());
@@ -261,7 +262,8 @@ void InputReport::GetFeatureReport(GetFeatureReportRequestView request,
     }
   }
 
-  fidl::Result result = completer.ReplySuccess(std::move(report));
+  completer.ReplySuccess(std::move(report));
+  fidl::Result result = completer.result_of_reply();
   if (result.status() != ZX_OK) {
     zxlogf(ERROR, "Failed to get feature report: %s\n", result.FormatDescription().c_str());
   }
@@ -301,7 +303,8 @@ void InputReport::SetFeatureReport(SetFeatureReportRequestView request,
     completer.ReplyError(ZX_ERR_INTERNAL);
     return;
   }
-  fidl::Result result = completer.ReplySuccess();
+  completer.ReplySuccess();
+  fidl::Result result = completer.result_of_reply();
   if (result.status() != ZX_OK) {
     zxlogf(ERROR, "Failed to set feature report: %s\n", result.FormatDescription().c_str());
   }

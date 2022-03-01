@@ -113,14 +113,16 @@ void LogListener::Ack(uint32_t seqno) {
 void LogListener::PendingMessage::Complete() {
   std::visit(overloaded{[](std::monostate&) {},
                         [](LogCompleter::Async& c) {
-                          fidl::Result result = c.Reply();
+                          c.Reply();
+                          fidl::Result result = c.result_of_reply();
                           if (!result.ok()) {
                             printf("netsvc: failed to confirm logs: %s\n",
                                    result.FormatDescription().c_str());
                           }
                         },
                         [](LogManyCompleter::Async& c) {
-                          fidl::Result result = c.Reply();
+                          c.Reply();
+                          fidl::Result result = c.result_of_reply();
                           if (!result.ok()) {
                             printf("netsvc: failed to confirm logs: %s\n",
                                    result.FormatDescription().c_str());

@@ -15,14 +15,10 @@ namespace internal {
 // TODO(fxbug.dev/82189): Switch to new natural domain objects instead of HLCPP.
 void NaturalServerMessenger::SendReply(const fidl_type_t* type,
                                        HLCPPOutgoingMessage&& message) const {
-  fidl::Result result = ConvertFromHLCPPOutgoingMessageThen(
+  ConvertFromHLCPPOutgoingMessageThen(
       type, std::move(message), [&](fidl::OutgoingMessage outgoing) {
-        return completer_base_->SendReply(&outgoing, OutgoingTransportContext{});
+        completer_base_->SendReply(&outgoing, OutgoingTransportContext{});
       });
-
-  // Failures are already handled by |completer_base_|.
-  // The return value is only for debugging purposes, and can be safely ignored.
-  (void)result;
 }
 
 }  // namespace internal

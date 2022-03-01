@@ -394,7 +394,8 @@ TEST(BindServerTestCase, DestroyBindingWithPendingCancel) {
     void Echo(EchoRequestView request, EchoCompleter::Sync& completer) override {
       sync_completion_signal(worker_start_);
       sync_completion_wait(worker_done_, ZX_TIME_INFINITE);
-      EXPECT_EQ(ZX_ERR_PEER_CLOSED, completer.Reply(request->request).status());
+      completer.Reply(request->request);
+      EXPECT_EQ(ZX_ERR_PEER_CLOSED, completer.result_of_reply().status());
     }
     void Close(CloseRequestView request, CloseCompleter::Sync& completer) override {
       ADD_FAILURE("Must not call close");
@@ -1053,7 +1054,8 @@ TEST(BindServerTestCase, UnbindInfoErrorSendingReply) {
   struct WorkingServer : fidl::WireServer<Example> {
     WorkingServer() = default;
     void TwoWay(TwoWayRequestView request, TwoWayCompleter::Sync& completer) override {
-      EXPECT_EQ(ZX_ERR_ACCESS_DENIED, completer.Reply(request->in).status());
+      completer.Reply(request->in);
+      EXPECT_EQ(ZX_ERR_ACCESS_DENIED, completer.result_of_reply().status());
     }
     void OneWay(OneWayRequestView request, OneWayCompleter::Sync& completer) override {
       ADD_FAILURE("Must not call OneWay");
@@ -1154,7 +1156,8 @@ TEST(BindServerTestCase, DrainAllMessageInPeerClosedSendErrorReply) {
     void TwoWay(TwoWayRequestView request, TwoWayCompleter::Sync& completer) override {
       // Sending reply fails due to client endpoint closing.
       EXPECT_EQ(request->in.get(), kData);
-      fidl::Result result = completer.Reply(kData);
+      completer.Reply(kData);
+      fidl::Result result = completer.result_of_reply();
       EXPECT_STATUS(ZX_ERR_PEER_CLOSED, result.status());
       two_way_called_ = true;
     }

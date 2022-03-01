@@ -347,7 +347,7 @@ void fidl::WireServer<::test_foreigntypeinresponseusedthroughcompose::Top>::
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-::fidl::Result fidl::internal::WireCompleterImpl<
+void fidl::internal::WireCompleterImpl<
     ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>::
     Reply(const ::test_bottom::wire::Foo& foo) {
   ::fidl::internal::TransactionalResponse<
@@ -363,7 +363,7 @@ void fidl::WireServer<::test_foreigntypeinresponseusedthroughcompose::Top>::
                             ::fidl::internal::OutgoingTransportContext());
 }
 
-::fidl::Result fidl::internal::WireBufferCompleterImpl<
+void fidl::internal::WireBufferCompleterImpl<
     ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>::
     Reply(const ::test_bottom::wire::Foo& foo) {
   ::fidl::internal::TransactionalResponse<

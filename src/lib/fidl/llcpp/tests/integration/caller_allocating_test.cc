@@ -423,7 +423,8 @@ TEST_F(WireCompleterTest, CallerAllocateInsufficientBufferSize) {
       [](Frobinator::GrobRequestView request, Frobinator::GrobCompleter::Sync& completer) {
         FIDL_ALIGNDECL uint8_t small[8];
         fidl::BufferSpan small_buf(small, sizeof(small));
-        fidl::Result result = completer.buffer(small_buf).Reply(request->value);
+        completer.buffer(small_buf).Reply(request->value);
+        fidl::Result result = completer.result_of_reply();
         EXPECT_STATUS(ZX_ERR_BUFFER_TOO_SMALL, result.status());
         EXPECT_EQ(fidl::Reason::kEncodeError, result.reason());
       });

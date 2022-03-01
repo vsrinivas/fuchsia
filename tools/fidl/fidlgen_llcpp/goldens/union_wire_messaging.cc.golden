@@ -616,7 +616,7 @@ void fidl::WireServer<::test_union::TestProtocol>::dispatch_message(
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-::fidl::Result fidl::internal::WireCompleterImpl<
+void fidl::internal::WireCompleterImpl<
     ::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>::
     Reply(::test_union::wire::StrictBoundedXUnion xu) {
   ::fidl::internal::TransactionalResponse<
@@ -633,7 +633,7 @@ void fidl::WireServer<::test_union::TestProtocol>::dispatch_message(
                             ::fidl::internal::OutgoingTransportContext());
 }
 
-::fidl::Result fidl::internal::WireBufferCompleterImpl<
+void fidl::internal::WireBufferCompleterImpl<
     ::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>::
     Reply(::test_union::wire::StrictBoundedXUnion xu) {
   ::fidl::internal::TransactionalResponse<
@@ -661,7 +661,7 @@ void fidl::WireServer<::test_union::TestProtocol>::dispatch_message(
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-::fidl::Result fidl::internal::WireCompleterImpl<
+void fidl::internal::WireCompleterImpl<
     ::test_union::TestProtocol::
         FlexibleXUnionHenceResponseMustBeHeapAllocated>::
     Reply(::test_union::wire::OlderSimpleUnion xu) {
@@ -680,7 +680,7 @@ void fidl::WireServer<::test_union::TestProtocol>::dispatch_message(
                             ::fidl::internal::OutgoingTransportContext());
 }
 
-::fidl::Result fidl::internal::WireBufferCompleterImpl<
+void fidl::internal::WireBufferCompleterImpl<
     ::test_union::TestProtocol::
         FlexibleXUnionHenceResponseMustBeHeapAllocated>::
     Reply(::test_union::wire::OlderSimpleUnion xu) {

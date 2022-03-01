@@ -2790,7 +2790,7 @@ void fidl::WireServer<::test_protocolpayloads::MainProtocol>::dispatch_message(
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-::fidl::Result fidl::internal::WireCompleterImpl<
+void fidl::internal::WireCompleterImpl<
     ::test_protocolpayloads::MainProtocol::TwoWayComposed>::Reply(int32_t a) {
   ::fidl::internal::TransactionalResponse<
       ::test_protocolpayloads::MainProtocol::TwoWayComposed>
@@ -2805,7 +2805,7 @@ void fidl::WireServer<::test_protocolpayloads::MainProtocol>::dispatch_message(
                             ::fidl::internal::OutgoingTransportContext());
 }
 
-::fidl::Result fidl::internal::WireBufferCompleterImpl<
+void fidl::internal::WireBufferCompleterImpl<
     ::test_protocolpayloads::MainProtocol::TwoWayComposed>::Reply(int32_t a) {
   ::fidl::internal::TransactionalResponse<
       ::test_protocolpayloads::MainProtocol::TwoWayComposed>
@@ -2830,7 +2830,7 @@ void fidl::WireServer<::test_protocolpayloads::MainProtocol>::dispatch_message(
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-::fidl::Result fidl::internal::WireCompleterImpl<
+void fidl::internal::WireCompleterImpl<
     ::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>::
     Reply(::test_protocolpayloads_imported::wire::
               ComposedProtocolTwoWayComposedWithErrorResult result) {
@@ -2846,7 +2846,7 @@ void fidl::WireServer<::test_protocolpayloads::MainProtocol>::dispatch_message(
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
                             ::fidl::internal::OutgoingTransportContext());
 }
-::fidl::Result fidl::internal::WireCompleterImpl<
+void fidl::internal::WireCompleterImpl<
     ::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>::
     ReplySuccess(int32_t a) {
   ::test_protocolpayloads_imported::wire::ImportStructPayload _response;
@@ -2856,7 +2856,7 @@ void fidl::WireServer<::test_protocolpayloads::MainProtocol>::dispatch_message(
                        std::move(_response)));
 }
 
-::fidl::Result fidl::internal::WireCompleterImpl<
+void fidl::internal::WireCompleterImpl<
     ::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>::
     ReplyError(uint32_t error) {
   return Reply(::test_protocolpayloads_imported::wire::
@@ -2864,7 +2864,7 @@ void fidl::WireServer<::test_protocolpayloads::MainProtocol>::dispatch_message(
                        std::move(error)));
 }
 
-::fidl::Result fidl::internal::WireBufferCompleterImpl<
+void fidl::internal::WireBufferCompleterImpl<
     ::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>::
     Reply(::test_protocolpayloads_imported::wire::
               ComposedProtocolTwoWayComposedWithErrorResult result) {
@@ -2888,7 +2888,7 @@ void fidl::WireServer<::test_protocolpayloads::MainProtocol>::dispatch_message(
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
                             ::fidl::internal::OutgoingTransportContext());
 }
-::fidl::Result fidl::internal::WireBufferCompleterImpl<
+void fidl::internal::WireBufferCompleterImpl<
     ::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>::
     ReplySuccess(int32_t a) {
   ::test_protocolpayloads_imported::wire::ImportStructPayload response;
@@ -2898,7 +2898,7 @@ void fidl::WireServer<::test_protocolpayloads::MainProtocol>::dispatch_message(
                        std::move(response)));
 }
 
-::fidl::Result fidl::internal::WireBufferCompleterImpl<
+void fidl::internal::WireBufferCompleterImpl<
     ::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>::
     ReplyError(uint32_t error) {
   return Reply(::test_protocolpayloads_imported::wire::
@@ -2908,7 +2908,7 @@ void fidl::WireServer<::test_protocolpayloads::MainProtocol>::dispatch_message(
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-::fidl::Result fidl::internal::WireCompleterImpl<
+void fidl::internal::WireCompleterImpl<
     ::test_protocolpayloads::MainProtocol::TwoWayLocal>::Reply(uint32_t a,
                                                                uint32_t b) {
   ::fidl::internal::TransactionalResponse<
@@ -2924,7 +2924,7 @@ void fidl::WireServer<::test_protocolpayloads::MainProtocol>::dispatch_message(
                             ::fidl::internal::OutgoingTransportContext());
 }
 
-::fidl::Result fidl::internal::WireBufferCompleterImpl<
+void fidl::internal::WireBufferCompleterImpl<
     ::test_protocolpayloads::MainProtocol::TwoWayLocal>::Reply(uint32_t a,
                                                                uint32_t b) {
   ::fidl::internal::TransactionalResponse<
@@ -2950,7 +2950,7 @@ void fidl::WireServer<::test_protocolpayloads::MainProtocol>::dispatch_message(
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-::fidl::Result fidl::internal::WireCompleterImpl<
+void fidl::internal::WireCompleterImpl<
     ::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>::
     Reply(::test_protocolpayloads::wire::MainProtocolTwoWayLocalWithErrorResult
               result) {
@@ -2966,7 +2966,7 @@ void fidl::WireServer<::test_protocolpayloads::MainProtocol>::dispatch_message(
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
                             ::fidl::internal::OutgoingTransportContext());
 }
-::fidl::Result fidl::internal::WireCompleterImpl<
+void fidl::internal::WireCompleterImpl<
     ::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>::
     ReplySuccess(uint32_t a, uint32_t b) {
   ::test_protocolpayloads::wire::LocalStructPayload _response;
@@ -2979,7 +2979,7 @@ void fidl::WireServer<::test_protocolpayloads::MainProtocol>::dispatch_message(
                            FromExternal(&_response)));
 }
 
-::fidl::Result fidl::internal::WireCompleterImpl<
+void fidl::internal::WireCompleterImpl<
     ::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>::
     ReplyError(uint32_t error) {
   return Reply(
@@ -2987,7 +2987,7 @@ void fidl::WireServer<::test_protocolpayloads::MainProtocol>::dispatch_message(
           WithErr(std::move(error)));
 }
 
-::fidl::Result fidl::internal::WireBufferCompleterImpl<
+void fidl::internal::WireBufferCompleterImpl<
     ::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>::
     Reply(::test_protocolpayloads::wire::MainProtocolTwoWayLocalWithErrorResult
               result) {
@@ -3011,7 +3011,7 @@ void fidl::WireServer<::test_protocolpayloads::MainProtocol>::dispatch_message(
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
                             ::fidl::internal::OutgoingTransportContext());
 }
-::fidl::Result fidl::internal::WireBufferCompleterImpl<
+void fidl::internal::WireBufferCompleterImpl<
     ::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>::
     ReplySuccess(uint32_t a, uint32_t b) {
   ::test_protocolpayloads::wire::LocalStructPayload response;
@@ -3024,7 +3024,7 @@ void fidl::WireServer<::test_protocolpayloads::MainProtocol>::dispatch_message(
                            FromExternal(&response)));
 }
 
-::fidl::Result fidl::internal::WireBufferCompleterImpl<
+void fidl::internal::WireBufferCompleterImpl<
     ::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>::
     ReplyError(uint32_t error) {
   return Reply(
@@ -3034,7 +3034,7 @@ void fidl::WireServer<::test_protocolpayloads::MainProtocol>::dispatch_message(
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-::fidl::Result fidl::internal::WireCompleterImpl<
+void fidl::internal::WireCompleterImpl<
     ::test_protocolpayloads::MainProtocol::TwoWayImport>::Reply(int32_t a) {
   ::fidl::internal::TransactionalResponse<
       ::test_protocolpayloads::MainProtocol::TwoWayImport>
@@ -3049,7 +3049,7 @@ void fidl::WireServer<::test_protocolpayloads::MainProtocol>::dispatch_message(
                             ::fidl::internal::OutgoingTransportContext());
 }
 
-::fidl::Result fidl::internal::WireBufferCompleterImpl<
+void fidl::internal::WireBufferCompleterImpl<
     ::test_protocolpayloads::MainProtocol::TwoWayImport>::Reply(int32_t a) {
   ::fidl::internal::TransactionalResponse<
       ::test_protocolpayloads::MainProtocol::TwoWayImport>
@@ -3074,7 +3074,7 @@ void fidl::WireServer<::test_protocolpayloads::MainProtocol>::dispatch_message(
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-::fidl::Result fidl::internal::WireCompleterImpl<
+void fidl::internal::WireCompleterImpl<
     ::test_protocolpayloads::MainProtocol::TwoWayImportWithError>::
     Reply(::test_protocolpayloads::wire::MainProtocolTwoWayImportWithErrorResult
               result) {
@@ -3090,7 +3090,7 @@ void fidl::WireServer<::test_protocolpayloads::MainProtocol>::dispatch_message(
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
                             ::fidl::internal::OutgoingTransportContext());
 }
-::fidl::Result fidl::internal::WireCompleterImpl<
+void fidl::internal::WireCompleterImpl<
     ::test_protocolpayloads::MainProtocol::TwoWayImportWithError>::
     ReplySuccess(int32_t a) {
   ::test_protocolpayloads_imported::wire::ImportStructPayload _response;
@@ -3100,7 +3100,7 @@ void fidl::WireServer<::test_protocolpayloads::MainProtocol>::dispatch_message(
           WithResponse(std::move(_response)));
 }
 
-::fidl::Result fidl::internal::WireCompleterImpl<
+void fidl::internal::WireCompleterImpl<
     ::test_protocolpayloads::MainProtocol::TwoWayImportWithError>::
     ReplyError(uint32_t error) {
   return Reply(
@@ -3108,7 +3108,7 @@ void fidl::WireServer<::test_protocolpayloads::MainProtocol>::dispatch_message(
           WithErr(std::move(error)));
 }
 
-::fidl::Result fidl::internal::WireBufferCompleterImpl<
+void fidl::internal::WireBufferCompleterImpl<
     ::test_protocolpayloads::MainProtocol::TwoWayImportWithError>::
     Reply(::test_protocolpayloads::wire::MainProtocolTwoWayImportWithErrorResult
               result) {
@@ -3132,7 +3132,7 @@ void fidl::WireServer<::test_protocolpayloads::MainProtocol>::dispatch_message(
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
                             ::fidl::internal::OutgoingTransportContext());
 }
-::fidl::Result fidl::internal::WireBufferCompleterImpl<
+void fidl::internal::WireBufferCompleterImpl<
     ::test_protocolpayloads::MainProtocol::TwoWayImportWithError>::
     ReplySuccess(int32_t a) {
   ::test_protocolpayloads_imported::wire::ImportStructPayload response;
@@ -3142,7 +3142,7 @@ void fidl::WireServer<::test_protocolpayloads::MainProtocol>::dispatch_message(
           WithResponse(std::move(response)));
 }
 
-::fidl::Result fidl::internal::WireBufferCompleterImpl<
+void fidl::internal::WireBufferCompleterImpl<
     ::test_protocolpayloads::MainProtocol::TwoWayImportWithError>::
     ReplyError(uint32_t error) {
   return Reply(
@@ -3152,7 +3152,7 @@ void fidl::WireServer<::test_protocolpayloads::MainProtocol>::dispatch_message(
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-::fidl::Result fidl::internal::WireCompleterImpl<
+void fidl::internal::WireCompleterImpl<
     ::test_protocolpayloads::MainProtocol::TwoWayAnon>::Reply(uint32_t a,
                                                               uint32_t b) {
   ::fidl::internal::TransactionalResponse<
@@ -3168,7 +3168,7 @@ void fidl::WireServer<::test_protocolpayloads::MainProtocol>::dispatch_message(
                             ::fidl::internal::OutgoingTransportContext());
 }
 
-::fidl::Result fidl::internal::WireBufferCompleterImpl<
+void fidl::internal::WireBufferCompleterImpl<
     ::test_protocolpayloads::MainProtocol::TwoWayAnon>::Reply(uint32_t a,
                                                               uint32_t b) {
   ::fidl::internal::TransactionalResponse<
@@ -3194,7 +3194,7 @@ void fidl::WireServer<::test_protocolpayloads::MainProtocol>::dispatch_message(
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-::fidl::Result fidl::internal::WireCompleterImpl<
+void fidl::internal::WireCompleterImpl<
     ::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>::
     Reply(::test_protocolpayloads::wire::MainProtocolTwoWayAnonWithErrorResult
               result) {
@@ -3210,7 +3210,7 @@ void fidl::WireServer<::test_protocolpayloads::MainProtocol>::dispatch_message(
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
                             ::fidl::internal::OutgoingTransportContext());
 }
-::fidl::Result fidl::internal::WireCompleterImpl<
+void fidl::internal::WireCompleterImpl<
     ::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>::
     ReplySuccess(uint32_t a, uint32_t b) {
   ::test_protocolpayloads::wire::MainProtocolTwoWayAnonWithErrorResponse
@@ -3225,7 +3225,7 @@ void fidl::WireServer<::test_protocolpayloads::MainProtocol>::dispatch_message(
                   FromExternal(&_response)));
 }
 
-::fidl::Result fidl::internal::WireCompleterImpl<
+void fidl::internal::WireCompleterImpl<
     ::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>::
     ReplyError(uint32_t error) {
   return Reply(
@@ -3233,7 +3233,7 @@ void fidl::WireServer<::test_protocolpayloads::MainProtocol>::dispatch_message(
           WithErr(std::move(error)));
 }
 
-::fidl::Result fidl::internal::WireBufferCompleterImpl<
+void fidl::internal::WireBufferCompleterImpl<
     ::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>::
     Reply(::test_protocolpayloads::wire::MainProtocolTwoWayAnonWithErrorResult
               result) {
@@ -3257,7 +3257,7 @@ void fidl::WireServer<::test_protocolpayloads::MainProtocol>::dispatch_message(
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
                             ::fidl::internal::OutgoingTransportContext());
 }
-::fidl::Result fidl::internal::WireBufferCompleterImpl<
+void fidl::internal::WireBufferCompleterImpl<
     ::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>::
     ReplySuccess(uint32_t a, uint32_t b) {
   ::test_protocolpayloads::wire::MainProtocolTwoWayAnonWithErrorResponse
@@ -3272,7 +3272,7 @@ void fidl::WireServer<::test_protocolpayloads::MainProtocol>::dispatch_message(
                   FromExternal(&response)));
 }
 
-::fidl::Result fidl::internal::WireBufferCompleterImpl<
+void fidl::internal::WireBufferCompleterImpl<
     ::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>::
     ReplyError(uint32_t error) {
   return Reply(

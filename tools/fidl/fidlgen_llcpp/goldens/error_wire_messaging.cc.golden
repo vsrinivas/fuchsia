@@ -307,8 +307,7 @@ void fidl::WireServer<::test_error::Example>::dispatch_message(
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-::fidl::Result
-fidl::internal::WireCompleterImpl<::test_error::Example::Foo>::Reply(
+void fidl::internal::WireCompleterImpl<::test_error::Example::Foo>::Reply(
     ::test_error::wire::ExampleFooResult result) {
   ::fidl::internal::TransactionalResponse<::test_error::Example::Foo> _response{
       result};
@@ -320,7 +319,7 @@ fidl::internal::WireCompleterImpl<::test_error::Example::Foo>::Reply(
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
                             ::fidl::internal::OutgoingTransportContext());
 }
-::fidl::Result fidl::internal::WireCompleterImpl<
+void fidl::internal::WireCompleterImpl<
     ::test_error::Example::Foo>::ReplySuccess(int64_t y) {
   ::test_error::wire::ExampleFooResponse _response;
   _response.y = std::move(y);
@@ -329,13 +328,12 @@ fidl::internal::WireCompleterImpl<::test_error::Example::Foo>::Reply(
           &_response)));
 }
 
-::fidl::Result fidl::internal::WireCompleterImpl<
-    ::test_error::Example::Foo>::ReplyError(uint32_t error) {
+void fidl::internal::WireCompleterImpl<::test_error::Example::Foo>::ReplyError(
+    uint32_t error) {
   return Reply(::test_error::wire::ExampleFooResult::WithErr(std::move(error)));
 }
 
-::fidl::Result
-fidl::internal::WireBufferCompleterImpl<::test_error::Example::Foo>::Reply(
+void fidl::internal::WireBufferCompleterImpl<::test_error::Example::Foo>::Reply(
     ::test_error::wire::ExampleFooResult result) {
   ::fidl::internal::TransactionalResponse<::test_error::Example::Foo> _response{
       result};
@@ -355,7 +353,7 @@ fidl::internal::WireBufferCompleterImpl<::test_error::Example::Foo>::Reply(
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
                             ::fidl::internal::OutgoingTransportContext());
 }
-::fidl::Result fidl::internal::WireBufferCompleterImpl<
+void fidl::internal::WireBufferCompleterImpl<
     ::test_error::Example::Foo>::ReplySuccess(int64_t y) {
   ::test_error::wire::ExampleFooResponse response;
   response.y = std::move(y);
@@ -364,7 +362,7 @@ fidl::internal::WireBufferCompleterImpl<::test_error::Example::Foo>::Reply(
           &response)));
 }
 
-::fidl::Result fidl::internal::WireBufferCompleterImpl<
+void fidl::internal::WireBufferCompleterImpl<
     ::test_error::Example::Foo>::ReplyError(uint32_t error) {
   return Reply(::test_error::wire::ExampleFooResult::WithErr(std::move(error)));
 }

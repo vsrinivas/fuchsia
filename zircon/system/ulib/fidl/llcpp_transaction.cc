@@ -45,9 +45,11 @@ void CompleterBase::EnableNextDispatch() {
 
 CompleterBase::CompleterBase(CompleterBase&& other) noexcept
     : transaction_(other.transaction_),
+      reply_result_(other.reply_result_),
       owned_(other.owned_),
       needs_to_reply_(other.needs_to_reply_) {
   other.transaction_ = nullptr;
+  other.reply_result_.reset();
   other.owned_ = false;
   other.needs_to_reply_ = false;
 }
@@ -65,8 +67,15 @@ std::unique_ptr<Transaction> CompleterBase::TakeOwnership() {
   return clone;
 }
 
-fidl::Result CompleterBase::SendReply(::fidl::OutgoingMessage* message,
-                                      internal::OutgoingTransportContext transport_context) {
+fidl::Result CompleterBase::result_of_reply() const {
+  if (!reply_result_.has_value()) {
+    ZX_PANIC("Did not make a reply on this completer.");
+  }
+  return reply_result_.value();
+}
+
+void CompleterBase::SendReply(::fidl::OutgoingMessage* message,
+                              internal::OutgoingTransportContext transport_context) {
   ScopedLock lock(lock_);
   EnsureHasTransaction(&lock);
   if (unlikely(!needs_to_reply_)) {
@@ -78,7 +87,8 @@ fidl::Result CompleterBase::SendReply(::fidl::OutgoingMessage* message,
   needs_to_reply_ = false;
   if (!message->ok()) {
     transaction_->InternalError(fidl::UnbindInfo{*message}, fidl::ErrorOrigin::kSend);
-    return *message;
+    reply_result_.emplace(*message);
+    return;
   }
   fidl::WriteOptions write_options = {
       .outgoing_transport_context = std::move(transport_context),
@@ -87,9 +97,10 @@ fidl::Result CompleterBase::SendReply(::fidl::OutgoingMessage* message,
   if (status != ZX_OK) {
     auto error = fidl::Result::TransportError(status);
     transaction_->InternalError(fidl::UnbindInfo{error}, fidl::ErrorOrigin::kSend);
-    return error;
+    reply_result_.emplace(error);
+    return;
   }
-  return fidl::Result::Ok();
+  reply_result_.emplace(fidl::Result::Ok());
 }
 
 void CompleterBase::EnsureHasTransaction(ScopedLock* lock) {

@@ -521,22 +521,9 @@ class ::fidl::internal::WireCompleterImpl<
  public:
   using CompleterImplBase::CompleterImplBase;
 
-  // In the following methods, the return value indicates internal errors during
-  // the reply, such as encoding or writing to the transport.
-  // Note that any error will automatically lead to the destruction of the
-  // binding, after which the |on_unbound| callback will be triggered with a
-  // detailed reason.
-  //
-  // See //zircon/system/ulib/fidl/include/lib/fidl/llcpp/server.h.
-  //
-  // Because the reply status is identical to the unbinding status, it can be
-  // safely ignored.
-
-  ::fidl::Result Reply(
-      ::test_anonymous::wire::SomeProtocolSomeMethodResult result);
-  ::fidl::Result ReplySuccess(::test_anonymous::wire::BitsMember bits_member);
-  ::fidl::Result ReplyError(
-      ::test_anonymous::wire::SomeProtocolSomeMethodError error);
+  void Reply(::test_anonymous::wire::SomeProtocolSomeMethodResult result);
+  void ReplySuccess(::test_anonymous::wire::BitsMember bits_member);
+  void ReplyError(::test_anonymous::wire::SomeProtocolSomeMethodError error);
 };
 
 template <>
@@ -546,22 +533,9 @@ class ::fidl::internal::WireBufferCompleterImpl<
  public:
   using BufferCompleterImplBase::BufferCompleterImplBase;
 
-  // In the following methods, the return value indicates internal errors during
-  // the reply, such as encoding or writing to the transport.
-  // Note that any error will automatically lead to the destruction of the
-  // binding, after which the |on_unbound| callback will be triggered with a
-  // detailed reason.
-  //
-  // See //zircon/system/ulib/fidl/include/lib/fidl/llcpp/server.h.
-  //
-  // Because the reply status is identical to the unbinding status, it can be
-  // safely ignored.
-
-  ::fidl::Result Reply(
-      ::test_anonymous::wire::SomeProtocolSomeMethodResult result);
-  ::fidl::Result ReplySuccess(::test_anonymous::wire::BitsMember bits_member);
-  ::fidl::Result ReplyError(
-      ::test_anonymous::wire::SomeProtocolSomeMethodError error);
+  void Reply(::test_anonymous::wire::SomeProtocolSomeMethodResult result);
+  void ReplySuccess(::test_anonymous::wire::BitsMember bits_member);
+  void ReplyError(::test_anonymous::wire::SomeProtocolSomeMethodError error);
 };
 
 template <>

@@ -504,7 +504,7 @@ void fidl::WireServer<::test_protocols::HandleRightsProtocol>::dispatch_message(
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-::fidl::Result fidl::internal::WireCompleterImpl<
+void fidl::internal::WireCompleterImpl<
     ::test_protocols::HandleRightsProtocol::ResponseMethod>::
     Reply(::zx::socket&& h) {
   ::fidl::internal::TransactionalResponse<
@@ -520,7 +520,7 @@ void fidl::WireServer<::test_protocols::HandleRightsProtocol>::dispatch_message(
                             ::fidl::internal::OutgoingTransportContext());
 }
 
-::fidl::Result fidl::internal::WireBufferCompleterImpl<
+void fidl::internal::WireBufferCompleterImpl<
     ::test_protocols::HandleRightsProtocol::ResponseMethod>::
     Reply(::zx::socket&& h) {
   ::fidl::internal::TransactionalResponse<
@@ -2058,7 +2058,7 @@ void fidl::WireServer<::test_protocols::WithAndWithoutRequestResponse>::
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-::fidl::Result fidl::internal::WireCompleterImpl<
+void fidl::internal::WireCompleterImpl<
     ::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse>::
     Reply() {
   ::fidl::internal::TransactionalResponse<
@@ -2075,7 +2075,7 @@ void fidl::WireServer<::test_protocols::WithAndWithoutRequestResponse>::
                             ::fidl::internal::OutgoingTransportContext());
 }
 
-::fidl::Result fidl::internal::WireBufferCompleterImpl<
+void fidl::internal::WireBufferCompleterImpl<
     ::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse>::
     Reply() {
   ::fidl::internal::TransactionalResponse<
@@ -2103,7 +2103,7 @@ void fidl::WireServer<::test_protocols::WithAndWithoutRequestResponse>::
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-::fidl::Result fidl::internal::WireCompleterImpl<
+void fidl::internal::WireCompleterImpl<
     ::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>::
     Reply(::fidl::StringView ret) {
   ::fidl::internal::TransactionalResponse<
@@ -2120,7 +2120,7 @@ void fidl::WireServer<::test_protocols::WithAndWithoutRequestResponse>::
                             ::fidl::internal::OutgoingTransportContext());
 }
 
-::fidl::Result fidl::internal::WireBufferCompleterImpl<
+void fidl::internal::WireBufferCompleterImpl<
     ::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>::
     Reply(::fidl::StringView ret) {
   ::fidl::internal::TransactionalResponse<
@@ -2147,7 +2147,7 @@ void fidl::WireServer<::test_protocols::WithAndWithoutRequestResponse>::
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-::fidl::Result fidl::internal::WireCompleterImpl<
+void fidl::internal::WireCompleterImpl<
     ::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse>::
     Reply() {
   ::fidl::internal::TransactionalResponse<
@@ -2164,7 +2164,7 @@ void fidl::WireServer<::test_protocols::WithAndWithoutRequestResponse>::
                             ::fidl::internal::OutgoingTransportContext());
 }
 
-::fidl::Result fidl::internal::WireBufferCompleterImpl<
+void fidl::internal::WireBufferCompleterImpl<
     ::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse>::
     Reply() {
   ::fidl::internal::TransactionalResponse<
@@ -2192,7 +2192,7 @@ void fidl::WireServer<::test_protocols::WithAndWithoutRequestResponse>::
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-::fidl::Result fidl::internal::WireCompleterImpl<
+void fidl::internal::WireCompleterImpl<
     ::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>::
     Reply(::fidl::StringView ret) {
   ::fidl::internal::TransactionalResponse<
@@ -2209,7 +2209,7 @@ void fidl::WireServer<::test_protocols::WithAndWithoutRequestResponse>::
                             ::fidl::internal::OutgoingTransportContext());
 }
 
-::fidl::Result fidl::internal::WireBufferCompleterImpl<
+void fidl::internal::WireBufferCompleterImpl<
     ::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>::
     Reply(::fidl::StringView ret) {
   ::fidl::internal::TransactionalResponse<
@@ -2965,7 +2965,7 @@ void fidl::WireServer<::test_protocols::Transitional>::dispatch_message(
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-::fidl::Result fidl::internal::WireCompleterImpl<
+void fidl::internal::WireCompleterImpl<
     ::test_protocols::Transitional::Request>::Reply(int64_t y) {
   ::fidl::internal::TransactionalResponse<
       ::test_protocols::Transitional::Request>
@@ -2980,7 +2980,7 @@ void fidl::WireServer<::test_protocols::Transitional>::dispatch_message(
                             ::fidl::internal::OutgoingTransportContext());
 }
 
-::fidl::Result fidl::internal::WireBufferCompleterImpl<
+void fidl::internal::WireBufferCompleterImpl<
     ::test_protocols::Transitional::Request>::Reply(int64_t y) {
   ::fidl::internal::TransactionalResponse<
       ::test_protocols::Transitional::Request>
@@ -4131,7 +4131,7 @@ void fidl::WireServer<::test_protocols::WithProtocolEnds>::dispatch_message(
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-::fidl::Result fidl::internal::
+void fidl::internal::
     WireCompleterImpl<::test_protocols::WithProtocolEnds::ClientEnds>::Reply(
         ::fidl::ClientEnd<::test_protocols::DiscoverableProtocol>&& out) {
   ::fidl::internal::TransactionalResponse<
@@ -4147,7 +4147,7 @@ void fidl::WireServer<::test_protocols::WithProtocolEnds>::dispatch_message(
                             ::fidl::internal::OutgoingTransportContext());
 }
 
-::fidl::Result fidl::internal::WireBufferCompleterImpl<
+void fidl::internal::WireBufferCompleterImpl<
     ::test_protocols::WithProtocolEnds::ClientEnds>::
     Reply(::fidl::ClientEnd<::test_protocols::DiscoverableProtocol>&& out) {
   ::fidl::internal::TransactionalResponse<
@@ -4173,7 +4173,7 @@ void fidl::WireServer<::test_protocols::WithProtocolEnds>::dispatch_message(
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-::fidl::Result fidl::internal::
+void fidl::internal::
     WireCompleterImpl<::test_protocols::WithProtocolEnds::ServerEnds>::Reply(
         ::fidl::ServerEnd<::test_protocols::DiscoverableProtocol>&& out) {
   ::fidl::internal::TransactionalResponse<
@@ -4189,7 +4189,7 @@ void fidl::WireServer<::test_protocols::WithProtocolEnds>::dispatch_message(
                             ::fidl::internal::OutgoingTransportContext());
 }
 
-::fidl::Result fidl::internal::WireBufferCompleterImpl<
+void fidl::internal::WireBufferCompleterImpl<
     ::test_protocols::WithProtocolEnds::ServerEnds>::
     Reply(::fidl::ServerEnd<::test_protocols::DiscoverableProtocol>&& out) {
   ::fidl::internal::TransactionalResponse<
@@ -4215,7 +4215,7 @@ void fidl::WireServer<::test_protocols::WithProtocolEnds>::dispatch_message(
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-::fidl::Result fidl::internal::WireCompleterImpl<
+void fidl::internal::WireCompleterImpl<
     ::test_protocols::WithProtocolEnds::StructContainingEnds>::
     Reply(::test_protocols::wire::ProtocolEnds&& out) {
   ::fidl::internal::TransactionalResponse<
@@ -4231,7 +4231,7 @@ void fidl::WireServer<::test_protocols::WithProtocolEnds>::dispatch_message(
                             ::fidl::internal::OutgoingTransportContext());
 }
 
-::fidl::Result fidl::internal::WireBufferCompleterImpl<
+void fidl::internal::WireBufferCompleterImpl<
     ::test_protocols::WithProtocolEnds::StructContainingEnds>::
     Reply(::test_protocols::wire::ProtocolEnds&& out) {
   ::fidl::internal::TransactionalResponse<
@@ -5570,7 +5570,7 @@ void fidl::WireServer<::test_protocols::WithErrorSyntax>::dispatch_message(
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-::fidl::Result fidl::internal::WireCompleterImpl<
+void fidl::internal::WireCompleterImpl<
     ::test_protocols::WithErrorSyntax::ResponseAsStruct>::
     Reply(
         ::test_protocols::wire::WithErrorSyntaxResponseAsStructResult result) {
@@ -5586,7 +5586,7 @@ void fidl::WireServer<::test_protocols::WithErrorSyntax>::dispatch_message(
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
                             ::fidl::internal::OutgoingTransportContext());
 }
-::fidl::Result fidl::internal::WireCompleterImpl<
+void fidl::internal::WireCompleterImpl<
     ::test_protocols::WithErrorSyntax::ResponseAsStruct>::
     ReplySuccess(int64_t a, int64_t b, int64_t c) {
   ::test_protocols::wire::WithErrorSyntaxResponseAsStructResponse _response;
@@ -5601,7 +5601,7 @@ void fidl::WireServer<::test_protocols::WithErrorSyntax>::dispatch_message(
                   FromExternal(&_response)));
 }
 
-::fidl::Result fidl::internal::WireCompleterImpl<
+void fidl::internal::WireCompleterImpl<
     ::test_protocols::WithErrorSyntax::ResponseAsStruct>::
     ReplyError(uint32_t error) {
   return Reply(
@@ -5609,7 +5609,7 @@ void fidl::WireServer<::test_protocols::WithErrorSyntax>::dispatch_message(
           std::move(error)));
 }
 
-::fidl::Result fidl::internal::WireBufferCompleterImpl<
+void fidl::internal::WireBufferCompleterImpl<
     ::test_protocols::WithErrorSyntax::ResponseAsStruct>::
     Reply(
         ::test_protocols::wire::WithErrorSyntaxResponseAsStructResult result) {
@@ -5633,7 +5633,7 @@ void fidl::WireServer<::test_protocols::WithErrorSyntax>::dispatch_message(
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
                             ::fidl::internal::OutgoingTransportContext());
 }
-::fidl::Result fidl::internal::WireBufferCompleterImpl<
+void fidl::internal::WireBufferCompleterImpl<
     ::test_protocols::WithErrorSyntax::ResponseAsStruct>::
     ReplySuccess(int64_t a, int64_t b, int64_t c) {
   ::test_protocols::wire::WithErrorSyntaxResponseAsStructResponse response;
@@ -5648,7 +5648,7 @@ void fidl::WireServer<::test_protocols::WithErrorSyntax>::dispatch_message(
                   FromExternal(&response)));
 }
 
-::fidl::Result fidl::internal::WireBufferCompleterImpl<
+void fidl::internal::WireBufferCompleterImpl<
     ::test_protocols::WithErrorSyntax::ResponseAsStruct>::
     ReplyError(uint32_t error) {
   return Reply(
@@ -5658,7 +5658,7 @@ void fidl::WireServer<::test_protocols::WithErrorSyntax>::dispatch_message(
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-::fidl::Result fidl::internal::WireCompleterImpl<
+void fidl::internal::WireCompleterImpl<
     ::test_protocols::WithErrorSyntax::ErrorAsPrimitive>::
     Reply(
         ::test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResult result) {
@@ -5674,14 +5674,14 @@ void fidl::WireServer<::test_protocols::WithErrorSyntax>::dispatch_message(
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
                             ::fidl::internal::OutgoingTransportContext());
 }
-::fidl::Result fidl::internal::WireCompleterImpl<
+void fidl::internal::WireCompleterImpl<
     ::test_protocols::WithErrorSyntax::ErrorAsPrimitive>::ReplySuccess() {
   ::test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResponse _response;
   return Reply(::test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResult::
                    WithResponse(std::move(_response)));
 }
 
-::fidl::Result fidl::internal::WireCompleterImpl<
+void fidl::internal::WireCompleterImpl<
     ::test_protocols::WithErrorSyntax::ErrorAsPrimitive>::
     ReplyError(uint32_t error) {
   return Reply(
@@ -5689,7 +5689,7 @@ void fidl::WireServer<::test_protocols::WithErrorSyntax>::dispatch_message(
           std::move(error)));
 }
 
-::fidl::Result fidl::internal::WireBufferCompleterImpl<
+void fidl::internal::WireBufferCompleterImpl<
     ::test_protocols::WithErrorSyntax::ErrorAsPrimitive>::
     Reply(
         ::test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResult result) {
@@ -5713,14 +5713,14 @@ void fidl::WireServer<::test_protocols::WithErrorSyntax>::dispatch_message(
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
                             ::fidl::internal::OutgoingTransportContext());
 }
-::fidl::Result fidl::internal::WireBufferCompleterImpl<
+void fidl::internal::WireBufferCompleterImpl<
     ::test_protocols::WithErrorSyntax::ErrorAsPrimitive>::ReplySuccess() {
   ::test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResponse response;
   return Reply(::test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResult::
                    WithResponse(std::move(response)));
 }
 
-::fidl::Result fidl::internal::WireBufferCompleterImpl<
+void fidl::internal::WireBufferCompleterImpl<
     ::test_protocols::WithErrorSyntax::ErrorAsPrimitive>::
     ReplyError(uint32_t error) {
   return Reply(
@@ -5730,7 +5730,7 @@ void fidl::WireServer<::test_protocols::WithErrorSyntax>::dispatch_message(
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-::fidl::Result fidl::internal::
+void fidl::internal::
     WireCompleterImpl<::test_protocols::WithErrorSyntax::ErrorAsEnum>::Reply(
         ::test_protocols::wire::WithErrorSyntaxErrorAsEnumResult result) {
   ::fidl::internal::TransactionalResponse<
@@ -5745,7 +5745,7 @@ void fidl::WireServer<::test_protocols::WithErrorSyntax>::dispatch_message(
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
                             ::fidl::internal::OutgoingTransportContext());
 }
-::fidl::Result fidl::internal::WireCompleterImpl<
+void fidl::internal::WireCompleterImpl<
     ::test_protocols::WithErrorSyntax::ErrorAsEnum>::ReplySuccess() {
   ::test_protocols::wire::WithErrorSyntaxErrorAsEnumResponse _response;
   return Reply(
@@ -5753,7 +5753,7 @@ void fidl::WireServer<::test_protocols::WithErrorSyntax>::dispatch_message(
           std::move(_response)));
 }
 
-::fidl::Result fidl::internal::WireCompleterImpl<
+void fidl::internal::WireCompleterImpl<
     ::test_protocols::WithErrorSyntax::ErrorAsEnum>::
     ReplyError(::test_protocols::wire::ErrorEnum error) {
   return Reply(
@@ -5761,7 +5761,7 @@ void fidl::WireServer<::test_protocols::WithErrorSyntax>::dispatch_message(
           std::move(error)));
 }
 
-::fidl::Result fidl::internal::WireBufferCompleterImpl<
+void fidl::internal::WireBufferCompleterImpl<
     ::test_protocols::WithErrorSyntax::ErrorAsEnum>::
     Reply(::test_protocols::wire::WithErrorSyntaxErrorAsEnumResult result) {
   ::fidl::internal::TransactionalResponse<
@@ -5784,7 +5784,7 @@ void fidl::WireServer<::test_protocols::WithErrorSyntax>::dispatch_message(
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
                             ::fidl::internal::OutgoingTransportContext());
 }
-::fidl::Result fidl::internal::WireBufferCompleterImpl<
+void fidl::internal::WireBufferCompleterImpl<
     ::test_protocols::WithErrorSyntax::ErrorAsEnum>::ReplySuccess() {
   ::test_protocols::wire::WithErrorSyntaxErrorAsEnumResponse response;
   return Reply(
@@ -5792,7 +5792,7 @@ void fidl::WireServer<::test_protocols::WithErrorSyntax>::dispatch_message(
           std::move(response)));
 }
 
-::fidl::Result fidl::internal::WireBufferCompleterImpl<
+void fidl::internal::WireBufferCompleterImpl<
     ::test_protocols::WithErrorSyntax::ErrorAsEnum>::
     ReplyError(::test_protocols::wire::ErrorEnum error) {
   return Reply(
@@ -5802,7 +5802,7 @@ void fidl::WireServer<::test_protocols::WithErrorSyntax>::dispatch_message(
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-::fidl::Result fidl::internal::
+void fidl::internal::
     WireCompleterImpl<::test_protocols::WithErrorSyntax::HandleInResult>::Reply(
         ::test_protocols::wire::WithErrorSyntaxHandleInResultResult result) {
   ::fidl::internal::TransactionalResponse<
@@ -5817,7 +5817,7 @@ void fidl::WireServer<::test_protocols::WithErrorSyntax>::dispatch_message(
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
                             ::fidl::internal::OutgoingTransportContext());
 }
-::fidl::Result fidl::internal::WireCompleterImpl<
+void fidl::internal::WireCompleterImpl<
     ::test_protocols::WithErrorSyntax::HandleInResult>::
     ReplySuccess(::zx::handle&& h) {
   ::test_protocols::wire::WithErrorSyntaxHandleInResultResponse _response;
@@ -5827,7 +5827,7 @@ void fidl::WireServer<::test_protocols::WithErrorSyntax>::dispatch_message(
           std::move(_response)));
 }
 
-::fidl::Result fidl::internal::WireCompleterImpl<
+void fidl::internal::WireCompleterImpl<
     ::test_protocols::WithErrorSyntax::HandleInResult>::ReplyError(uint32_t
                                                                        error) {
   return Reply(
@@ -5835,7 +5835,7 @@ void fidl::WireServer<::test_protocols::WithErrorSyntax>::dispatch_message(
           std::move(error)));
 }
 
-::fidl::Result fidl::internal::WireBufferCompleterImpl<
+void fidl::internal::WireBufferCompleterImpl<
     ::test_protocols::WithErrorSyntax::HandleInResult>::
     Reply(::test_protocols::wire::WithErrorSyntaxHandleInResultResult result) {
   ::fidl::internal::TransactionalResponse<
@@ -5858,7 +5858,7 @@ void fidl::WireServer<::test_protocols::WithErrorSyntax>::dispatch_message(
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
                             ::fidl::internal::OutgoingTransportContext());
 }
-::fidl::Result fidl::internal::WireBufferCompleterImpl<
+void fidl::internal::WireBufferCompleterImpl<
     ::test_protocols::WithErrorSyntax::HandleInResult>::
     ReplySuccess(::zx::handle&& h) {
   ::test_protocols::wire::WithErrorSyntaxHandleInResultResponse response;
@@ -5868,7 +5868,7 @@ void fidl::WireServer<::test_protocols::WithErrorSyntax>::dispatch_message(
           std::move(response)));
 }
 
-::fidl::Result fidl::internal::WireBufferCompleterImpl<
+void fidl::internal::WireBufferCompleterImpl<
     ::test_protocols::WithErrorSyntax::HandleInResult>::ReplyError(uint32_t
                                                                        error) {
   return Reply(
@@ -7049,7 +7049,7 @@ void fidl::WireServer<::test_protocols::ChannelProtocol>::dispatch_message(
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-::fidl::Result fidl::internal::WireCompleterImpl<
+void fidl::internal::WireCompleterImpl<
     ::test_protocols::ChannelProtocol::MethodB>::Reply(int64_t result) {
   ::fidl::internal::TransactionalResponse<
       ::test_protocols::ChannelProtocol::MethodB>
@@ -7064,7 +7064,7 @@ void fidl::WireServer<::test_protocols::ChannelProtocol>::dispatch_message(
                             ::fidl::internal::OutgoingTransportContext());
 }
 
-::fidl::Result fidl::internal::WireBufferCompleterImpl<
+void fidl::internal::WireBufferCompleterImpl<
     ::test_protocols::ChannelProtocol::MethodB>::Reply(int64_t result) {
   ::fidl::internal::TransactionalResponse<
       ::test_protocols::ChannelProtocol::MethodB>
@@ -7089,7 +7089,7 @@ void fidl::WireServer<::test_protocols::ChannelProtocol>::dispatch_message(
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-::fidl::Result fidl::internal::WireCompleterImpl<
+void fidl::internal::WireCompleterImpl<
     ::test_protocols::ChannelProtocol::TakeHandle>::Reply() {
   ::fidl::internal::TransactionalResponse<
       ::test_protocols::ChannelProtocol::TakeHandle>
@@ -7104,7 +7104,7 @@ void fidl::WireServer<::test_protocols::ChannelProtocol>::dispatch_message(
                             ::fidl::internal::OutgoingTransportContext());
 }
 
-::fidl::Result fidl::internal::WireBufferCompleterImpl<
+void fidl::internal::WireBufferCompleterImpl<
     ::test_protocols::ChannelProtocol::TakeHandle>::Reply() {
   ::fidl::internal::TransactionalResponse<
       ::test_protocols::ChannelProtocol::TakeHandle>
@@ -7129,7 +7129,7 @@ void fidl::WireServer<::test_protocols::ChannelProtocol>::dispatch_message(
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-::fidl::Result fidl::internal::WireCompleterImpl<
+void fidl::internal::WireCompleterImpl<
     ::test_protocols::ChannelProtocol::MutateSocket>::Reply(::zx::socket&& b) {
   ::fidl::internal::TransactionalResponse<
       ::test_protocols::ChannelProtocol::MutateSocket>
@@ -7144,7 +7144,7 @@ void fidl::WireServer<::test_protocols::ChannelProtocol>::dispatch_message(
                             ::fidl::internal::OutgoingTransportContext());
 }
 
-::fidl::Result fidl::internal::WireBufferCompleterImpl<
+void fidl::internal::WireBufferCompleterImpl<
     ::test_protocols::ChannelProtocol::MutateSocket>::Reply(::zx::socket&& b) {
   ::fidl::internal::TransactionalResponse<
       ::test_protocols::ChannelProtocol::MutateSocket>

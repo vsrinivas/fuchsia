@@ -485,7 +485,7 @@ void fidl::WireServer<::test_emptystruct::EmptyProtocol>::dispatch_message(
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-::fidl::Result fidl::internal::
+void fidl::internal::
     WireCompleterImpl<::test_emptystruct::EmptyProtocol::SendAndReceive>::Reply(
         const ::test_emptystruct::wire::Empty& e) {
   ::fidl::internal::TransactionalResponse<
@@ -501,7 +501,7 @@ void fidl::WireServer<::test_emptystruct::EmptyProtocol>::dispatch_message(
                             ::fidl::internal::OutgoingTransportContext());
 }
 
-::fidl::Result fidl::internal::WireBufferCompleterImpl<
+void fidl::internal::WireBufferCompleterImpl<
     ::test_emptystruct::EmptyProtocol::SendAndReceive>::
     Reply(const ::test_emptystruct::wire::Empty& e) {
   ::fidl::internal::TransactionalResponse<

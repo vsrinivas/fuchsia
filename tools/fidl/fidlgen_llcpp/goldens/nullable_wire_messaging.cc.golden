@@ -322,7 +322,7 @@ void fidl::WireServer<::test_nullable::SimpleProtocol>::dispatch_message(
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-::fidl::Result fidl::internal::WireCompleterImpl<
+void fidl::internal::WireCompleterImpl<
     ::test_nullable::SimpleProtocol::Add>::Reply(int32_t sum) {
   ::fidl::internal::TransactionalResponse<::test_nullable::SimpleProtocol::Add>
       _response{sum};
@@ -336,7 +336,7 @@ void fidl::WireServer<::test_nullable::SimpleProtocol>::dispatch_message(
                             ::fidl::internal::OutgoingTransportContext());
 }
 
-::fidl::Result fidl::internal::WireBufferCompleterImpl<
+void fidl::internal::WireBufferCompleterImpl<
     ::test_nullable::SimpleProtocol::Add>::Reply(int32_t sum) {
   ::fidl::internal::TransactionalResponse<::test_nullable::SimpleProtocol::Add>
       _response{sum};

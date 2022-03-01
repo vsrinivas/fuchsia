@@ -306,8 +306,8 @@ void fidl::WireServer<::test_inheritance::Super>::dispatch_message(
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-::fidl::Result fidl::internal::WireCompleterImpl<
-    ::test_inheritance::Super::Foo>::Reply(int64_t y) {
+void fidl::internal::WireCompleterImpl<::test_inheritance::Super::Foo>::Reply(
+    int64_t y) {
   ::fidl::internal::TransactionalResponse<::test_inheritance::Super::Foo>
       _response{y};
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
@@ -319,7 +319,7 @@ void fidl::WireServer<::test_inheritance::Super>::dispatch_message(
                             ::fidl::internal::OutgoingTransportContext());
 }
 
-::fidl::Result fidl::internal::WireBufferCompleterImpl<
+void fidl::internal::WireBufferCompleterImpl<
     ::test_inheritance::Super::Foo>::Reply(int64_t y) {
   ::fidl::internal::TransactionalResponse<::test_inheritance::Super::Foo>
       _response{y};
@@ -657,8 +657,8 @@ void fidl::WireServer<::test_inheritance::Sub>::dispatch_message(
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-::fidl::Result fidl::internal::WireCompleterImpl<
-    ::test_inheritance::Sub::Foo>::Reply(int64_t y) {
+void fidl::internal::WireCompleterImpl<::test_inheritance::Sub::Foo>::Reply(
+    int64_t y) {
   ::fidl::internal::TransactionalResponse<::test_inheritance::Sub::Foo>
       _response{y};
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
@@ -670,7 +670,7 @@ void fidl::WireServer<::test_inheritance::Sub>::dispatch_message(
                             ::fidl::internal::OutgoingTransportContext());
 }
 
-::fidl::Result fidl::internal::WireBufferCompleterImpl<
+void fidl::internal::WireBufferCompleterImpl<
     ::test_inheritance::Sub::Foo>::Reply(int64_t y) {
   ::fidl::internal::TransactionalResponse<::test_inheritance::Sub::Foo>
       _response{y};

@@ -207,7 +207,7 @@ void fdf::WireServer<::test_drivertwoway::TwoWay>::dispatch_message(
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-::fidl::Result fidl::internal::WireBufferCompleterImpl<
+void fidl::internal::WireBufferCompleterImpl<
     ::test_drivertwoway::TwoWay::Add>::Reply(uint16_t sum) {
   ::fidl::internal::TransactionalResponse<::test_drivertwoway::TwoWay::Add>
       _response{sum};

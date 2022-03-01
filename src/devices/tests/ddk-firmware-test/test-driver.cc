@@ -52,7 +52,8 @@ void TestFirmwareDriver::LoadFirmware(LoadFirmwareRequestView request,
   std::string str_path(request->path.begin(), request->path.size());
   auto status = load_firmware(zxdev(), str_path.c_str(), &fw, &size);
   if (status != ZX_OK) {
-    ZX_DEBUG_ASSERT(completer.ReplyError(status).status() == ZX_OK);
+    completer.ReplyError(status);
+    ZX_DEBUG_ASSERT(completer.result_of_reply().status() == ZX_OK);
     return;
   }
 

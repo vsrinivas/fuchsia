@@ -638,7 +638,7 @@ void fidl::WireServer<::test_requestflexibleenvelope::Protocol>::
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-::fidl::Result fidl::internal::WireCompleterImpl<
+void fidl::internal::WireCompleterImpl<
     ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>::
     Reply(::test_requestflexibleenvelope::wire::FlexibleFoo f) {
   ::fidl::internal::TransactionalResponse<
@@ -655,7 +655,7 @@ void fidl::WireServer<::test_requestflexibleenvelope::Protocol>::
                             ::fidl::internal::OutgoingTransportContext());
 }
 
-::fidl::Result fidl::internal::WireBufferCompleterImpl<
+void fidl::internal::WireBufferCompleterImpl<
     ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>::
     Reply(::test_requestflexibleenvelope::wire::FlexibleFoo f) {
   ::fidl::internal::TransactionalResponse<
@@ -683,7 +683,7 @@ void fidl::WireServer<::test_requestflexibleenvelope::Protocol>::
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-::fidl::Result fidl::internal::WireCompleterImpl<
+void fidl::internal::WireCompleterImpl<
     ::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>::
     Reply(::test_requestflexibleenvelope::wire::StrictFoo f) {
   ::fidl::internal::TransactionalResponse<
@@ -700,7 +700,7 @@ void fidl::WireServer<::test_requestflexibleenvelope::Protocol>::
                             ::fidl::internal::OutgoingTransportContext());
 }
 
-::fidl::Result fidl::internal::WireBufferCompleterImpl<
+void fidl::internal::WireBufferCompleterImpl<
     ::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>::
     Reply(::test_requestflexibleenvelope::wire::StrictFoo f) {
   ::fidl::internal::TransactionalResponse<

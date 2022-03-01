@@ -228,7 +228,8 @@ class I2cHidTest : public zxtest::Test {
           fuchsia_hardware_acpi::wire::EncodedObject encoded;
           encoded.set_object(alloc, obj);
 
-          ASSERT_TRUE(completer.ReplySuccess(std::move(encoded)).ok());
+          completer.ReplySuccess(std::move(encoded));
+          ASSERT_TRUE(completer.result_of_reply().ok());
         });
 
     ASSERT_OK(zx::interrupt::create(zx::resource(), 0, ZX_INTERRUPT_VIRTUAL, &irq_));

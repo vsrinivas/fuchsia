@@ -628,7 +628,7 @@ void fidl::WireServer<::test_errorsyntax::ExampleUseOfErrorSyntax>::
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-::fidl::Result fidl::internal::WireCompleterImpl<
+void fidl::internal::WireCompleterImpl<
     ::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>::
     Reply(::test_errorsyntax_parent::wire::
               ParentUsesErrorSyntaxComposedCallWhichMayFailResult result) {
@@ -645,7 +645,7 @@ void fidl::WireServer<::test_errorsyntax::ExampleUseOfErrorSyntax>::
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
                             ::fidl::internal::OutgoingTransportContext());
 }
-::fidl::Result fidl::internal::WireCompleterImpl<
+void fidl::internal::WireCompleterImpl<
     ::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>::
     ReplySuccess(int64_t value) {
   ::test_errorsyntax_parent::wire::
@@ -660,7 +660,7 @@ void fidl::WireServer<::test_errorsyntax::ExampleUseOfErrorSyntax>::
                   FromExternal(&_response)));
 }
 
-::fidl::Result fidl::internal::WireCompleterImpl<
+void fidl::internal::WireCompleterImpl<
     ::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>::
     ReplyError(uint32_t error) {
   return Reply(::test_errorsyntax_parent::wire::
@@ -668,7 +668,7 @@ void fidl::WireServer<::test_errorsyntax::ExampleUseOfErrorSyntax>::
                        std::move(error)));
 }
 
-::fidl::Result fidl::internal::WireBufferCompleterImpl<
+void fidl::internal::WireBufferCompleterImpl<
     ::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>::
     Reply(::test_errorsyntax_parent::wire::
               ParentUsesErrorSyntaxComposedCallWhichMayFailResult result) {
@@ -693,7 +693,7 @@ void fidl::WireServer<::test_errorsyntax::ExampleUseOfErrorSyntax>::
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
                             ::fidl::internal::OutgoingTransportContext());
 }
-::fidl::Result fidl::internal::WireBufferCompleterImpl<
+void fidl::internal::WireBufferCompleterImpl<
     ::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>::
     ReplySuccess(int64_t value) {
   ::test_errorsyntax_parent::wire::
@@ -708,7 +708,7 @@ void fidl::WireServer<::test_errorsyntax::ExampleUseOfErrorSyntax>::
                   FromExternal(&response)));
 }
 
-::fidl::Result fidl::internal::WireBufferCompleterImpl<
+void fidl::internal::WireBufferCompleterImpl<
     ::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>::
     ReplyError(uint32_t error) {
   return Reply(::test_errorsyntax_parent::wire::
@@ -718,7 +718,7 @@ void fidl::WireServer<::test_errorsyntax::ExampleUseOfErrorSyntax>::
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-::fidl::Result fidl::internal::WireCompleterImpl<
+void fidl::internal::WireCompleterImpl<
     ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>::
     Reply(
         ::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResult
@@ -735,7 +735,7 @@ void fidl::WireServer<::test_errorsyntax::ExampleUseOfErrorSyntax>::
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
                             ::fidl::internal::OutgoingTransportContext());
 }
-::fidl::Result fidl::internal::WireCompleterImpl<
+void fidl::internal::WireCompleterImpl<
     ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>::
     ReplySuccess(int64_t value) {
   ::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResponse
@@ -749,7 +749,7 @@ void fidl::WireServer<::test_errorsyntax::ExampleUseOfErrorSyntax>::
                            FromExternal(&_response)));
 }
 
-::fidl::Result fidl::internal::WireCompleterImpl<
+void fidl::internal::WireCompleterImpl<
     ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>::
     ReplyError(uint32_t error) {
   return Reply(
@@ -757,7 +757,7 @@ void fidl::WireServer<::test_errorsyntax::ExampleUseOfErrorSyntax>::
           WithErr(std::move(error)));
 }
 
-::fidl::Result fidl::internal::WireBufferCompleterImpl<
+void fidl::internal::WireBufferCompleterImpl<
     ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>::
     Reply(
         ::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResult
@@ -782,7 +782,7 @@ void fidl::WireServer<::test_errorsyntax::ExampleUseOfErrorSyntax>::
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
                             ::fidl::internal::OutgoingTransportContext());
 }
-::fidl::Result fidl::internal::WireBufferCompleterImpl<
+void fidl::internal::WireBufferCompleterImpl<
     ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>::
     ReplySuccess(int64_t value) {
   ::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResponse
@@ -796,7 +796,7 @@ void fidl::WireServer<::test_errorsyntax::ExampleUseOfErrorSyntax>::
                            FromExternal(&response)));
 }
 
-::fidl::Result fidl::internal::WireBufferCompleterImpl<
+void fidl::internal::WireBufferCompleterImpl<
     ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>::
     ReplyError(uint32_t error) {
   return Reply(

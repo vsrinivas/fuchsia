@@ -15,6 +15,7 @@
 #include <atomic>
 #include <cstdlib>
 #include <memory>
+#include <optional>
 #include <type_traits>
 #include <utility>
 
@@ -157,10 +158,21 @@ class CompleterBase {
   // hook provided to |fidl::BindServer|.
   bool is_reply_needed() const;
 
+  // Inspects the status of sending the reply. One may only call this after
+  // making a reply.
+  //
+  // A non-ok status indicates internal errors during the reply, such as
+  // encoding or writing to the transport. Note that any error will
+  // automatically lead to unbinding the server, after which the |on_unbound|
+  // callback will be triggered with a detailed reason. As such, this accessor
+  // is only useful when one needs to determine which particular method reply
+  // failed, and can be ignored in general use.
+  fidl::Result result_of_reply() const;
+
   // TODO(fxbug.dev/60240): Use composition instead of inheriting all completers
   // from |CompleterBase|. This method is unnecessarily exposed to the user.
-  fidl::Result SendReply(::fidl::OutgoingMessage* message,
-                         fidl::internal::OutgoingTransportContext transport_context);
+  void SendReply(::fidl::OutgoingMessage* message,
+                 fidl::internal::OutgoingTransportContext transport_context);
 
  protected:
   explicit CompleterBase(Transaction* transaction, bool owned, bool method_expects_reply)
@@ -207,6 +219,7 @@ class CompleterBase {
   void DropTransaction();
 
   Transaction* transaction_;
+  std::optional<fidl::Result> reply_result_;
   bool owned_;
   bool needs_to_reply_;
 

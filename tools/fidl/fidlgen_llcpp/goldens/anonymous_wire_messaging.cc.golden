@@ -335,7 +335,7 @@ void fidl::WireServer<::test_anonymous::SomeProtocol>::dispatch_message(
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-::fidl::Result fidl::internal::
+void fidl::internal::
     WireCompleterImpl<::test_anonymous::SomeProtocol::SomeMethod>::Reply(
         ::test_anonymous::wire::SomeProtocolSomeMethodResult result) {
   ::fidl::internal::TransactionalResponse<
@@ -350,7 +350,7 @@ void fidl::WireServer<::test_anonymous::SomeProtocol>::dispatch_message(
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
                             ::fidl::internal::OutgoingTransportContext());
 }
-::fidl::Result fidl::internal::
+void fidl::internal::
     WireCompleterImpl<::test_anonymous::SomeProtocol::SomeMethod>::ReplySuccess(
         ::test_anonymous::wire::BitsMember bits_member) {
   ::test_anonymous::wire::SomeProtocolSomeMethodResponse _response;
@@ -360,14 +360,14 @@ void fidl::WireServer<::test_anonymous::SomeProtocol>::dispatch_message(
           std::move(_response)));
 }
 
-::fidl::Result fidl::internal::
+void fidl::internal::
     WireCompleterImpl<::test_anonymous::SomeProtocol::SomeMethod>::ReplyError(
         ::test_anonymous::wire::SomeProtocolSomeMethodError error) {
   return Reply(::test_anonymous::wire::SomeProtocolSomeMethodResult::WithErr(
       std::move(error)));
 }
 
-::fidl::Result fidl::internal::
+void fidl::internal::
     WireBufferCompleterImpl<::test_anonymous::SomeProtocol::SomeMethod>::Reply(
         ::test_anonymous::wire::SomeProtocolSomeMethodResult result) {
   ::fidl::internal::TransactionalResponse<
@@ -390,7 +390,7 @@ void fidl::WireServer<::test_anonymous::SomeProtocol>::dispatch_message(
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
                             ::fidl::internal::OutgoingTransportContext());
 }
-::fidl::Result fidl::internal::WireBufferCompleterImpl<
+void fidl::internal::WireBufferCompleterImpl<
     ::test_anonymous::SomeProtocol::SomeMethod>::
     ReplySuccess(::test_anonymous::wire::BitsMember bits_member) {
   ::test_anonymous::wire::SomeProtocolSomeMethodResponse response;
@@ -400,7 +400,7 @@ void fidl::WireServer<::test_anonymous::SomeProtocol>::dispatch_message(
           std::move(response)));
 }
 
-::fidl::Result fidl::internal::WireBufferCompleterImpl<
+void fidl::internal::WireBufferCompleterImpl<
     ::test_anonymous::SomeProtocol::SomeMethod>::
     ReplyError(::test_anonymous::wire::SomeProtocolSomeMethodError error) {
   return Reply(::test_anonymous::wire::SomeProtocolSomeMethodResult::WithErr(

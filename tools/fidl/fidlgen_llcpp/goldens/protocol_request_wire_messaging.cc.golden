@@ -763,7 +763,7 @@ void fidl::WireServer<::test_protocolrequest::Parent>::dispatch_message(
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-::fidl::Result fidl::internal::
+void fidl::internal::
     WireCompleterImpl<::test_protocolrequest::Parent::GetChild>::Reply(
         ::fidl::ClientEnd<::test_protocolrequest::Child>&& c) {
   ::fidl::internal::TransactionalResponse<
@@ -779,7 +779,7 @@ void fidl::WireServer<::test_protocolrequest::Parent>::dispatch_message(
                             ::fidl::internal::OutgoingTransportContext());
 }
 
-::fidl::Result fidl::internal::
+void fidl::internal::
     WireBufferCompleterImpl<::test_protocolrequest::Parent::GetChild>::Reply(
         ::fidl::ClientEnd<::test_protocolrequest::Child>&& c) {
   ::fidl::internal::TransactionalResponse<
@@ -805,7 +805,7 @@ void fidl::WireServer<::test_protocolrequest::Parent>::dispatch_message(
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-::fidl::Result fidl::internal::
+void fidl::internal::
     WireCompleterImpl<::test_protocolrequest::Parent::GetChildRequest>::Reply(
         ::fidl::ServerEnd<::test_protocolrequest::Child>&& r) {
   ::fidl::internal::TransactionalResponse<
@@ -821,7 +821,7 @@ void fidl::WireServer<::test_protocolrequest::Parent>::dispatch_message(
                             ::fidl::internal::OutgoingTransportContext());
 }
 
-::fidl::Result fidl::internal::WireBufferCompleterImpl<
+void fidl::internal::WireBufferCompleterImpl<
     ::test_protocolrequest::Parent::GetChildRequest>::
     Reply(::fidl::ServerEnd<::test_protocolrequest::Child>&& r) {
   ::fidl::internal::TransactionalResponse<

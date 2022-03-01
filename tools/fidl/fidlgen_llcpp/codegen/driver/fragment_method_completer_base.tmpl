@@ -20,20 +20,11 @@ class {{ .WireBufferCompleterImpl }} : public ::fdf::internal::BufferCompleterIm
  public:
   using BufferCompleterImplBase::BufferCompleterImplBase;
 
-  // In the following methods, the return value indicates internal errors during
-  // the reply, such as encoding or writing to the transport.
-  // Note that any error will automatically lead to the destruction of the binding,
-  // after which the |on_unbound| callback will be triggered with a detailed reason.
-  //
-  // See //zircon/system/ulib/fidl/include/lib/fidl/llcpp/server.h.
-  //
-  // Because the reply status is identical to the unbinding status, it can be safely ignored.
-
-  ::fidl::Result Reply({{ RenderParams .ResponseArgs }});
+  void Reply({{ RenderParams .ResponseArgs }});
 
   {{- if .Result }}
-  ::fidl::Result ReplySuccess({{ RenderParams .Result.ValueMembers }});
-  ::fidl::Result ReplyError({{ .Result.ErrorDecl }} error);
+  void ReplySuccess({{ RenderParams .Result.ValueMembers }});
+  void ReplyError({{ .Result.ErrorDecl }} error);
   {{- end }}
 };
 
@@ -66,7 +57,7 @@ struct {{ .WireMethodTypes }} {
 {{ EnsureNamespace "" }}
 {{- IfdefFuchsia -}}
 
-::fidl::Result
+void
 {{ .WireBufferCompleterImpl.NoLeading }}::Reply({{ RenderParams .ResponseArgs }}) {
   {{ .WireTransactionalResponse }} _response{ {{ RenderForwardParams .ResponseArgs }} };
   constexpr uint32_t _buffer_size = ::fidl::ServerReplyBufferSizeInChannel<{{ .Marker }}>();
@@ -81,7 +72,7 @@ struct {{ .WireMethodTypes }} {
 }
 
 {{- if .Result }}
-  ::fidl::Result
+  void
   {{ .WireBufferCompleterImpl.NoLeading }}::ReplySuccess({{ RenderParams .Result.ValueMembers }}) {
     {{ .Result.ValueStructDecl }} response;
     {{- range .Result.ValueMembers }}
@@ -95,7 +86,7 @@ struct {{ .WireMethodTypes }} {
     {{- end }}
   }
 
-  ::fidl::Result
+  void
   {{ .WireBufferCompleterImpl.NoLeading }}::ReplyError({{ .Result.ErrorDecl }} error) {
     {{- if .Result.Error.InlineInEnvelope }}
     return Reply({{ .Result.ResultDecl }}::WithErr(std::move(error)));

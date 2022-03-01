@@ -28,20 +28,23 @@ class Server final : public fidl::testing::WireTestBase<fuchsia_io::Node> {
 
   void CloseDeprecated(CloseDeprecatedRequestView request,
                        CloseDeprecatedCompleter::Sync& completer) override {
-    EXPECT_OK(completer.Reply(ZX_OK).status());
+    completer.Reply(ZX_OK);
+    EXPECT_OK(completer.result_of_reply().status());
     // FDIO expects the channel to be closed after replying.
     completer.Close(ZX_OK);
   }
 
   void Close(CloseRequestView request, CloseCompleter::Sync& completer) override {
-    EXPECT_OK(completer.ReplySuccess().status());
+    completer.ReplySuccess();
+    EXPECT_OK(completer.result_of_reply().status());
     // FDIO expects the channel to be closed after replying.
     completer.Close(ZX_OK);
   }
 
   void Describe(DescribeRequestView request, DescribeCompleter::Sync& completer) override {
     ASSERT_TRUE(describe_info_.has_value(), "Describe called more than once");
-    EXPECT_OK(completer.Reply(std::move(*describe_info_)).status());
+    completer.Reply(std::move(*describe_info_));
+    EXPECT_OK(completer.result_of_reply().status());
     describe_info_.reset();
   }
 
