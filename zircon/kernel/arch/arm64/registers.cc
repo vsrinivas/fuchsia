@@ -42,7 +42,7 @@ static bool arm64_validate_hw_breakpoints(arm64_debug_state_t* state,
     }
 
     // Verify that the breakpoint refers to userspace.
-    if (dbgbvr != 0 && !is_user_address(dbgbvr)) {
+    if (dbgbvr != 0 && !is_user_accessible(dbgbvr)) {
       return false;
     }
     state->hw_bps[i].dbgbvr &= ARM64_DBGBVR_USER_MASK;
@@ -80,7 +80,7 @@ static bool arm64_validate_hw_watchpoints(arm64_debug_state_t* state,
     }
 
     // Verify that the breakpoint refers to userspace.
-    if (dbgwvr != 0 && !is_user_address(dbgwvr)) {
+    if (dbgwvr != 0 && !is_user_accessible(dbgwvr)) {
       return false;
     }
     dbgwvr &= ARM64_DBGWVR_USER_MASK;

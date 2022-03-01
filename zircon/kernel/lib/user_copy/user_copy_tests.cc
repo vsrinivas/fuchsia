@@ -135,44 +135,140 @@ bool capture_faults_test_capture() {
   END_TEST;
 }
 
-bool test_out_of_user_range(bool capture_faults) {
+bool test_addresses_outside_user_range(bool capture_faults) {
   BEGIN_TEST;
 
-  // If a user copy routine is asked to copy data to/from addresses which cannot
-  // possibly exist in the user's address space, the copy routine will not even
-  // try to perform the copy.  There is no "fault address" in this case, but the
-  // operation is still a failure.
+  // User copy routines can operate on user addresses whose values may be outside
+  // the range of [USER_ASPACE_BASE, USER_ASPACE_BASE + USER_ASPACE_SIZE]. If a
+  // user_copy function accepts an address that userspace would normally fault on
+  // when accessed, then user_copy will page fault on that address.
   //
-  // Test to make sure that we catch and reject anything which is outside of or
-  // overlapping with the acceptable user address space range.  None of these
-  // requests should be attempted, nor should they produce fault info.
+  // Test to make sure that we fault on anything that userspace would normally
+  // fault on. If we do fault or receive something that isn't accessible to the
+  // user (determined by the arch), then ZX_ERR_INVALID_ARGS is returned. If
+  // there was a fault, then fault info should be provided.
   uint8_t test_buffer[32] = {0};
   static_assert((sizeof(test_buffer) * 2) < USER_ASPACE_BASE,
                 "Insufficient space before start of user address space for test buffer");
   static_assert((sizeof(test_buffer) * 2) <
                     (ktl::numeric_limits<vaddr_t>::max() - (USER_ASPACE_BASE + USER_ASPACE_SIZE)),
                 "Insufficient space afer end of user address space for test buffer.");
-  constexpr ktl::array<vaddr_t, 5> kTestAddrs = {
-      static_cast<vaddr_t>(0),                                          // Explicit check of null
-      USER_ASPACE_BASE - (sizeof(test_buffer) * 2),                     // Entirely before
-      USER_ASPACE_BASE - (sizeof(test_buffer) / 2),                     // Overlapping start
-      USER_ASPACE_BASE + USER_ASPACE_SIZE + sizeof(test_buffer),        // Entirely after
-      USER_ASPACE_BASE + USER_ASPACE_SIZE - (sizeof(test_buffer) / 2),  // Overlapping end
+  struct TestCase {
+    vaddr_t test_addr;
+    zx_status_t copy_from_user_expected_status;
+    zx_status_t copy_to_user_expected_status;
+
+    // These are for differentiating between failed copies. user_copy would
+    // fail if the `test_addr` is an address the user wouldn't be able to
+    // access, but wouldn't fault. Whereas other user addresses would fail on
+    // user_copy from faults.
+    bool copy_from_user_expected_fault;
+    bool copy_to_user_expected_fault;
+  };
+  constexpr TestCase kTestCases[] = {
+    // These addresses will result in ZX_ERR_INVALID_ARGS when copying to and
+    // from a user pointer because we fault on bad addresses.
+
+    // Explicit check of null
+    {static_cast<vaddr_t>(0), ZX_ERR_INVALID_ARGS, ZX_ERR_INVALID_ARGS, true, true},
+    // Entirely before USER_ASPACE_BASE
+    {USER_ASPACE_BASE - (sizeof(test_buffer) * 2), ZX_ERR_INVALID_ARGS, ZX_ERR_INVALID_ARGS, true, true},
+    // Overlapping USER_ASPACE_BASE
+    {USER_ASPACE_BASE - (sizeof(test_buffer) / 2), ZX_ERR_INVALID_ARGS, ZX_ERR_INVALID_ARGS, true, true},
+
+#if defined(__aarch64__)
+
+    // These addresses will result in ZX_ERR_INVALID_ARGS when copying to a
+    // user pointer because we fault on a bad address.
+    //
+    // FIXME: ZX_OK is returned here when copying *from* a user pointer because
+    // the `copy_from_user` functions have spectre mitigation that sets the
+    // source address and length to zero if any part of the address range
+    // provided is exceeds USER_ASPACE_BASE + USER_ASPACE_SIZE (see
+    // `internal::confine_user_address_range`). This means copies on user
+    // addresses that exceed USER_ASPACE_BASE + USER_ASPACE_SIZE will silently
+    // pass without an error or performing the actual copy.
+
+    // Entirely after USER_ASPACE_BASE + USER_ASPACE_SIZE
+    {USER_ASPACE_BASE + USER_ASPACE_SIZE + sizeof(test_buffer), ZX_OK, ZX_ERR_INVALID_ARGS, false, true},
+    // Overlapping USER_ASPACE_BASE + USER_ASPACE_SIZE
+    {USER_ASPACE_BASE + USER_ASPACE_SIZE - (sizeof(test_buffer) / 2), ZX_OK, ZX_ERR_INVALID_ARGS, false, true},
+
+    // On AArch64, an address is considered accessible to the user if bit 55
+    // is zero. This implies addresses above 2^55 that don't set that bit are
+    // considered accessible to the user, but the user_copy operation would
+    // still fault on them.
+    //
+    // These addresses will result in ZX_ERR_INVALID_ARGS when copying to and
+    // from a user pointer either because bit 55 is not zero or there was a
+    // page fault.
+
+    // Start at 2^55
+    {UINT64_C(1) << 55, ZX_ERR_INVALID_ARGS, ZX_ERR_INVALID_ARGS, false, false},
+    // Slightly after 2^55 (bit 55 is set)
+    {(UINT64_C(1) << 55) + sizeof(test_buffer), ZX_ERR_INVALID_ARGS, ZX_ERR_INVALID_ARGS, false, false},
+    // Overlapping 2^55
+    {(UINT64_C(1) << 55) - sizeof(test_buffer) / 2, ZX_ERR_INVALID_ARGS, ZX_ERR_INVALID_ARGS, false, false},
+
+    // These addresses will result in ZX_ERR_INVALID_ARGS when copying to a
+    // user pointer because we fault on a bad address.
+    //
+    // FIXME: These return ZX_OK when copying from a user pointer for the
+    // same reason as above.
+
+    // End right before 2^55
+    {(UINT64_C(1) << 55) - sizeof(test_buffer), ZX_OK, ZX_ERR_INVALID_ARGS, false, true},
+    // Way beyond 2^55 (bit 55 is not set)
+    {(UINT64_C(1) << 56), ZX_OK, ZX_ERR_INVALID_ARGS, false, true},
+
+#elif defined(__x86_64__)
+
+    // On x86_64, an address is considered accessible to the user if everything
+    // above bit 47 is zero. Passing an address that doesn't meet this constraint
+    // will cause the user_copy to fail without performing the copy.
+    //
+    // NOTE: On x86 this doesn't succumb to the issue mentioned above with spectre
+    // mitigation because the x86 user_copy implementation doesn't call
+    // `internal::confine_user_address_range`.
+
+    // Entirely after USER_ASPACE_BASE + USER_ASPACE_SIZE
+    {USER_ASPACE_BASE + USER_ASPACE_SIZE + sizeof(test_buffer), ZX_ERR_INVALID_ARGS, ZX_ERR_INVALID_ARGS, true, true},
+    // Overlapping USER_ASPACE_BASE + USER_ASPACE_SIZE
+    {USER_ASPACE_BASE + USER_ASPACE_SIZE - (sizeof(test_buffer) / 2), ZX_ERR_INVALID_ARGS, ZX_ERR_INVALID_ARGS, true, true},
+
+    // Start at 2^48
+    {UINT64_C(1) << 48, ZX_ERR_INVALID_ARGS, ZX_ERR_INVALID_ARGS, false, false},
+    // Overlapping 2^48
+    {(UINT64_C(1) << 48) - sizeof(test_buffer) / 2, ZX_ERR_INVALID_ARGS, ZX_ERR_INVALID_ARGS, false, false},
+
+#endif
+
   };
 
-  for (const vaddr_t test_addr : kTestAddrs) {
-    ASSERT_FALSE(is_user_address_range(test_addr, sizeof(test_buffer)));
+  for (const TestCase& test_case : kTestCases) {
+    vaddr_t test_addr = test_case.test_addr;
+    zx_status_t copy_from_user_expected_status = test_case.copy_from_user_expected_status;
+    zx_status_t copy_to_user_expected_status = test_case.copy_to_user_expected_status;
+    bool copy_from_user_expected_fault = test_case.copy_from_user_expected_fault;
+    bool copy_to_user_expected_fault = test_case.copy_to_user_expected_fault;
+    printf("test_addr: 0x%lx\n", test_addr);
 
     {
       user_in_ptr<const uint8_t> user{reinterpret_cast<uint8_t*>(test_addr)};
 
       if (capture_faults) {
         auto ret = user.copy_array_from_user_capture_faults(test_buffer, std::size(test_buffer), 0);
-        ASSERT_FALSE(ret.fault_info.has_value(), "");
-        EXPECT_EQ(ZX_ERR_INVALID_ARGS, ret.status);
+        EXPECT_EQ(copy_from_user_expected_status, ret.status);
+        if (ret.status == ZX_OK) {
+          EXPECT_FALSE(ret.fault_info.has_value());
+        }
+        if (copy_from_user_expected_fault) {
+          EXPECT_TRUE(ret.fault_info.has_value());
+          EXPECT_EQ(ret.fault_info->pf_va, test_addr, "Page faulted on the user address");
+        }
       } else {
         auto ret = user.copy_array_from_user(test_buffer, std::size(test_buffer));
-        EXPECT_EQ(ZX_ERR_INVALID_ARGS, ret);
+        EXPECT_EQ(copy_from_user_expected_status, ret);
       }
     }
 
@@ -181,11 +277,17 @@ bool test_out_of_user_range(bool capture_faults) {
 
       if (capture_faults) {
         auto ret = user.copy_array_to_user_capture_faults(test_buffer, std::size(test_buffer), 0);
-        ASSERT_FALSE(ret.fault_info.has_value(), "");
-        EXPECT_EQ(ZX_ERR_INVALID_ARGS, ret.status);
+        EXPECT_EQ(copy_to_user_expected_status, ret.status);
+        if (ret.status == ZX_OK) {
+          EXPECT_FALSE(ret.fault_info.has_value());
+        }
+        if (copy_to_user_expected_fault) {
+          EXPECT_TRUE(ret.fault_info.has_value());
+          EXPECT_EQ(ret.fault_info->pf_va, test_addr, "Page faulted on the user address");
+        }
       } else {
         auto ret = user.copy_array_to_user(test_buffer, std::size(test_buffer));
-        EXPECT_EQ(ZX_ERR_INVALID_ARGS, ret);
+        EXPECT_EQ(copy_to_user_expected_status, ret);
       }
     }
   }
@@ -193,8 +295,12 @@ bool test_out_of_user_range(bool capture_faults) {
   END_TEST;
 }
 
-bool user_copy_test_out_of_user_range() { return test_out_of_user_range(false); }
-bool capture_faults_test_out_of_user_range() { return test_out_of_user_range(true); }
+bool user_copy_test_addresses_outside_user_range() {
+  return test_addresses_outside_user_range(false);
+}
+bool capture_faults_test_addresses_outside_user_range() {
+  return test_addresses_outside_user_range(true);
+}
 
 // Verify is_copy_allowed<T>::value is true when T contains no implicit padding.
 struct SomeTypeWithNoPadding {
@@ -367,11 +473,11 @@ USER_COPY_UNITTEST(pre_map_copy_out)
 USER_COPY_UNITTEST(fault_copy_out)
 USER_COPY_UNITTEST(pre_map_copy_in)
 USER_COPY_UNITTEST(fault_copy_in)
-USER_COPY_UNITTEST(user_copy_test_out_of_user_range)
+USER_COPY_UNITTEST(user_copy_test_addresses_outside_user_range)
 USER_COPY_UNITTEST(capture_faults_copy_out_success)
 USER_COPY_UNITTEST(capture_faults_copy_in_success)
 USER_COPY_UNITTEST(capture_faults_test_capture)
-USER_COPY_UNITTEST(capture_faults_test_out_of_user_range)
+USER_COPY_UNITTEST(capture_faults_test_addresses_outside_user_range)
 USER_COPY_UNITTEST(test_get_total_capacity)
 USER_COPY_UNITTEST(test_iovec_foreach)
 USER_COPY_UNITTEST(test_confine_user_address_range)

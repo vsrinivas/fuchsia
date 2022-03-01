@@ -672,8 +672,9 @@ bool x86_validate_debug_state(x86_debug_state_t* debug_state) {
     if (addr == 0)
       continue;
 
-    if (!is_user_address(addr) || !x86_is_vaddr_canonical(addr))
+    if (!is_user_accessible(addr) || !x86_is_vaddr_canonical(addr)) {
       return false;
+    }
   }
 
   // DR6 is not writable from userspace, as it is a debug status registers.

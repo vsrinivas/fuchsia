@@ -48,7 +48,7 @@ static bool can_access(const void* base, size_t len) {
   // We don't care about whether pages are actually mapped or what their
   // permissions are, as long as they are in the user address space.  We
   // rely on a page fault occurring if an actual permissions error occurs.
-  return is_user_address_range(reinterpret_cast<vaddr_t>(base), len);
+  return is_user_accessible_range(reinterpret_cast<vaddr_t>(base), len);
 }
 
 template <uint64_t FAULT_RETURN_MASK, CopyDirection DIRECTION>

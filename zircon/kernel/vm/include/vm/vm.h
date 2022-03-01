@@ -18,6 +18,7 @@
 #include <zircon/listnode.h>
 
 #include <arch/kernel_aspace.h>
+#include <arch/vm.h>
 #include <ktl/span.h>
 #include <vm/arch_vm_aspace.h>
 
@@ -53,21 +54,8 @@ class VmAspace;
 // kernel address space
 static_assert(KERNEL_ASPACE_BASE + (KERNEL_ASPACE_SIZE - 1) > KERNEL_ASPACE_BASE, "");
 
-static inline bool is_kernel_address(vaddr_t va) {
-  return (va >= (vaddr_t)KERNEL_ASPACE_BASE &&
-          va - (vaddr_t)KERNEL_ASPACE_BASE < (vaddr_t)KERNEL_ASPACE_SIZE);
-}
-
 // user address space, defaults to below kernel space with a 16MB guard gap on either side
 static_assert(USER_ASPACE_BASE + (USER_ASPACE_SIZE - 1) > USER_ASPACE_BASE, "");
-
-static inline bool is_user_address(vaddr_t va) {
-  return (va >= USER_ASPACE_BASE && va <= (USER_ASPACE_BASE + (USER_ASPACE_SIZE - 1)));
-}
-
-static inline bool is_user_address_range(vaddr_t va, size_t len) {
-  return va + len >= va && is_user_address(va) && (len == 0 || is_user_address(va + len - 1));
-}
 
 // linker script provided variables for various virtual kernel addresses
 extern char __code_start[];

@@ -181,7 +181,7 @@ bool GetBacktraceFromDapStateTest() {
     state.r[30] = kLr;
     state.edscr = kEdscrEl1;
     state.r[18] = 0xdc050800;
-    ASSERT_TRUE(is_user_address(state.r[18]));
+    ASSERT_FALSE(is_kernel_address(state.r[18]));
     Backtrace bt;
     ASSERT_EQ(ZX_ERR_OUT_OF_RANGE, lockup_internal::GetBacktraceFromDapState(state, bt));
     EXPECT_TRUE(check_backtrace(bt, 2, kPc, kLr, 0));

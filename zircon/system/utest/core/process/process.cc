@@ -180,7 +180,10 @@ TEST(ProcessTest, ProcessStartNonUserspaceEntry) {
     zx_handle_close(proc);
   };
 
-  uintptr_t non_user_pc = 0x1UL;
+  // This represents an inaccessible address on both aarch64 (because bit 55 == 0
+  // indicates an accessible user address) and x86_64 (because the upper 16 bits
+  // are not all zero).
+  uintptr_t non_user_pc = 0x1UL << 55;
   uintptr_t kernel_pc = 0xffffff8000000000UL;
 
   test_process_start(non_user_pc, ZX_ERR_INVALID_ARGS);

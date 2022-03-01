@@ -8,6 +8,7 @@
 
 #include <ktl/initializer_list.h>
 #include <vm/vm_address_region_enumerator.h>
+#include <vm/vm.h>
 
 #include "test_helper.h"
 
@@ -1562,6 +1563,117 @@ static bool dump_all_aspaces() {
   END_TEST;
 }
 
+static bool arch_is_user_accessible_range() {
+  BEGIN_TEST;
+  vaddr_t va;
+  size_t len;
+
+  // Test address of zero.
+  va = 0;
+  len = PAGE_SIZE;
+  EXPECT_TRUE(is_user_accessible_range(va, len));
+
+  // Test a regular user address.
+  va = USER_ASPACE_BASE;
+  len = PAGE_SIZE;
+  EXPECT_TRUE(is_user_accessible_range(va, len));
+
+  // Test zero-length on a regular user address.
+  va = USER_ASPACE_BASE;
+  len = 0;
+  EXPECT_TRUE(is_user_accessible_range(va, len));
+
+  // Test overflow past 64 bits.
+  va = USER_ASPACE_BASE;
+  len = std::numeric_limits<uint64_t>::max() - va + 1;
+  EXPECT_FALSE(is_user_accessible_range(va, len));
+
+#if defined(__aarch64__)
+
+  // On aarch64, an address is accessible to the user if bit 55 is zero.
+
+  // Test starting on a bad user address.
+  constexpr vaddr_t kBadAddrMask = UINT64_C(1) << 55;
+  va = kBadAddrMask | USER_ASPACE_BASE;
+  len = PAGE_SIZE;
+  EXPECT_FALSE(is_user_accessible_range(va, len));
+
+  // Test zero-length on a bad user address.
+  va = kBadAddrMask | USER_ASPACE_BASE;
+  len = 0;
+  EXPECT_FALSE(is_user_accessible_range(va, len));
+
+  // Test 2^55 is in the range of [va, va+len), ending on a bad user address.
+  va = USER_ASPACE_BASE;
+  len = kBadAddrMask;
+  EXPECT_FALSE(is_user_accessible_range(va, len));
+
+  // Test this returns false if any address within the range of [va, va+len)
+  // contains a value where bit 55 is set. This also implies there are many
+  // gaps in ranges above 2^56.
+  //
+  // Here both the start and end values are valid, but this range contains an
+  // address that is invalid.
+  va = 0;
+  len = 0x17f'ffff'ffff'ffff;  // Bits 0-56 (except 55) are set.
+  ASSERT_TRUE(is_user_accessible(va));
+  ASSERT_TRUE(is_user_accessible(va + len));
+  EXPECT_FALSE(is_user_accessible_range(va, len));
+
+  // Test the range of the largest value less than 2^55 and the smallest value
+  // greater than 2^55 where bit 55 == 0.
+  va = (UINT64_C(1) << 55) - 1;
+  len = 0x80'0000'0000'0001;  // End = va + len = 2^56.
+  EXPECT_FALSE(is_user_accessible_range(va, len));
+
+  // Be careful not to just check that 2^55 is in the range. We really want to
+  // check whenever bit 55 is flipped in the range.
+  va = 0x17f'ffff'ffff'ffff;  // Start above 2^56. Bit 55 is not set.
+  len = 0x80'0000'0000'0001;  // End = va + len = 0x200'0000'0000'0000. This is above 2^56 and bit
+                              // 55 also is not set.
+  ASSERT_TRUE(is_user_accessible(va));
+  ASSERT_TRUE(is_user_accessible(va + len));
+  EXPECT_FALSE(is_user_accessible_range(va, len));
+
+  va = USER_ASPACE_BASE;
+  len = (UINT64_C(1) << 57) + 1;
+  EXPECT_FALSE(is_user_accessible_range(va, len));
+
+  // Test a range above 2^56 where bit 55 is never set.
+  va = 0x170'0000'0000'0000;
+  len = 0xf'ffff'ffff'ffff;
+  EXPECT_TRUE(is_user_accessible_range(va, len));
+
+  // Test a range right below 2^55 where bit 55 is never set.
+  va = 0x70'0000'0000'0000;
+  len = 0xf'ffff'ffff'ffff;
+  EXPECT_TRUE(is_user_accessible_range(va, len));
+
+#elif defined(__x86_64__)
+
+  // On x86_64, an address is accessible to the user if bits 48-63 are zero.
+
+  // Test a bad user address.
+  constexpr vaddr_t kBadAddrMask = UINT64_C(1) << 48;
+  va = kBadAddrMask | USER_ASPACE_BASE;
+  len = PAGE_SIZE;
+  EXPECT_FALSE(is_user_accessible_range(va, len));
+
+  // Test zero-length on a bad user address.
+  va = kBadAddrMask | USER_ASPACE_BASE;
+  len = 0;
+  EXPECT_FALSE(is_user_accessible_range(va, len));
+
+  // Test ending on a bad user address.
+  va = USER_ASPACE_BASE;
+  len = kBadAddrMask;
+  EXPECT_FALSE(is_user_accessible_range(va, len));
+
+#endif
+
+  END_TEST;
+}
+
 UNITTEST_START_TESTCASE(aspace_tests)
 VM_UNITTEST(vmm_alloc_smoke_test)
 VM_UNITTEST(vmm_alloc_contiguous_smoke_test)
@@ -1579,6 +1691,7 @@ VM_UNITTEST(vmaspace_merge_mapping_test)
 VM_UNITTEST(vm_mapping_attribution_commit_decommit_test)
 VM_UNITTEST(vm_mapping_attribution_map_unmap_test)
 VM_UNITTEST(vm_mapping_attribution_merge_test)
+VM_UNITTEST(arch_is_user_accessible_range)
 VM_UNITTEST(arch_noncontiguous_map)
 VM_UNITTEST(arch_vm_aspace_protect_split_pages)
 VM_UNITTEST(arch_vm_aspace_protect_split_pages_out_of_memory)

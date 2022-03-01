@@ -179,7 +179,7 @@ static void arm64_brk_handler(iframe_t* iframe, uint exception_flags, uint32_t e
   // Spectre V2: If we took a BRK exception from EL0, but the ELR address is not a user address,
   // invalidate the branch predictor. User code may be attempting to mistrain indirect branch
   // prediction structures.
-  if (unlikely(!is_user_address(iframe->elr)) && arm64_uarch_needs_spectre_v2_mitigation()) {
+  if (unlikely(!is_user_accessible(iframe->elr)) && arm64_uarch_needs_spectre_v2_mitigation()) {
     arm64_uarch_do_spectre_v2_mitigation();
   }
   try_dispatch_user_exception(ZX_EXCP_SW_BREAKPOINT, iframe, esr);
@@ -262,7 +262,7 @@ static void arm64_instruction_abort_handler(iframe_t* iframe, uint exception_fla
   // Spectre V2: If we took an instruction abort in EL0 but the faulting address is not a user
   // address, invalidate the branch predictor. The $PC may have been updated before the abort is
   // delivered, user code may be attempting to mistrain indirect branch prediction structures.
-  if (unlikely(is_user && !is_user_address(far)) && arm64_uarch_needs_spectre_v2_mitigation()) {
+  if (unlikely(is_user && !is_user_accessible(far)) && arm64_uarch_needs_spectre_v2_mitigation()) {
     arm64_uarch_do_spectre_v2_mitigation();
   }
 
@@ -376,7 +376,7 @@ static void arm64_data_abort_handler(iframe_t* iframe, uint exception_flags, uin
 
   // Check if the current thread was expecting a data fault and
   // we should return to its handler.
-  if (dfr && is_user_address(far)) {
+  if (dfr && is_user_accessible(far)) {
     // Having the ARM64_DFR_RUN_FAULT_HANDLER_BIT set should have already resulted in a valid
     // sign extended canonical address. Double check the bit before, which should be a one.
     DEBUG_ASSERT(BIT_SET(dfr, ARM64_DFR_RUN_FAULT_HANDLER_BIT - 1));
@@ -489,7 +489,7 @@ extern "C" void arm64_irq(iframe_t* iframe, uint exception_flags) {
 
   // Spectre V2: If we took an interrupt while in EL0 but $PC was not a user address, invalidate
   // the branch predictor. User code may be attempting to mistrain an indirect branch predictor.
-  if (unlikely(is_user && !is_user_address(iframe->elr)) &&
+  if (unlikely(is_user && !is_user_accessible(iframe->elr)) &&
       arm64_uarch_needs_spectre_v2_mitigation()) {
     arm64_uarch_do_spectre_v2_mitigation();
   }
@@ -566,7 +566,7 @@ void arch_dump_exception_context(const arch_exception_context_t* context) {
   dump_iframe(context->frame);
 
   // try to dump the user stack
-  if (is_user_address(context->frame->usp)) {
+  if (is_user_accessible(context->frame->usp)) {
     uint8_t buf[256];
     if (arch_copy_from_user(buf, (void*)context->frame->usp, sizeof(buf)) == ZX_OK) {
       printf("bottom of user stack at %#lx:\n", (vaddr_t)context->frame->usp);

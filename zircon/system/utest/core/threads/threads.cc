@@ -1497,7 +1497,10 @@ TEST(Threads, ThreadStartInvalidEntry) {
     zx_handle_close(thread);
   };
 
-  uintptr_t non_user_pc = 0x1UL;
+  // This represents an inaccessible address on both aarch64 (because bit 55 == 0
+  // indicates an accessible user address) and x86_64 (because the upper 16 bits
+  // are not all zero).
+  uintptr_t non_user_pc = 0x1UL << 55;
   uintptr_t kernel_pc = 0xffffff8000000000UL;
 
   test_thread_start(non_user_pc, ZX_ERR_INVALID_ARGS);
@@ -1762,13 +1765,6 @@ TEST(Threads, DebugRegistersValidation) {
     ASSERT_EQ(debug_regs.dr[i], 0);
   ASSERT_EQ(debug_regs.dr6, DR6_ZERO_MASK);
   ASSERT_EQ(debug_regs.dr7, DR7_ZERO_MASK);
-
-  // Writing an invalid address should fail.
-  debug_regs = {};
-  debug_regs.dr[1] = 0x1000;
-  ASSERT_EQ(zx_thread_write_state(setup.thread_handle(), ZX_THREAD_STATE_DEBUG_REGS, &debug_regs,
-                                  sizeof(debug_regs)),
-            ZX_ERR_INVALID_ARGS);
 
   // Writing an kernel address should fail.
   debug_regs = {};

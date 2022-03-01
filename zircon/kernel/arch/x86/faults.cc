@@ -77,7 +77,7 @@ __NO_RETURN static void exception_die(iframe_t* frame, const char* msg) {
   g_crashlog.iframe = frame;
 
   // try to dump the user stack
-  if (is_user_address(frame->user_sp)) {
+  if (is_user_accessible(frame->user_sp)) {
     uint8_t buf[256];
     if (arch_copy_from_user(buf, (void*)frame->user_sp, sizeof(buf)) == ZX_OK) {
       printf("bottom of user stack at 0x%lx:\n", (vaddr_t)frame->user_sp);
@@ -287,7 +287,7 @@ static zx_status_t x86_pfe_handler(iframe_t* frame) {
     // performing a user_copy. SMAP is used to enforce the policy.
     if (g_x86_feature_has_smap &&          // CPU supports SMAP
         !(frame->flags & X86_FLAGS_AC) &&  // SMAP was enabled at time of fault
-        is_user_address(va)) {             // fault address is a user address
+        is_user_accessible(va)) {          // fault address is a user address
       printf("x86_pfe_handler: potential SMAP failure, supervisor access at address %#" PRIxPTR
              "\n",
              va);
@@ -558,7 +558,7 @@ void arch_dump_exception_context(const arch_exception_context_t* context) {
   dump_fault_frame(context->frame);
 
   // try to dump the user stack
-  if (context->frame->cs != CODE_64_SELECTOR && is_user_address(context->frame->user_sp)) {
+  if (context->frame->cs != CODE_64_SELECTOR && is_user_accessible(context->frame->user_sp)) {
     uint8_t buf[256];
     if (arch_copy_from_user(buf, (void*)context->frame->user_sp, sizeof(buf)) == ZX_OK) {
       printf("bottom of user stack at 0x%lx:\n", (vaddr_t)context->frame->user_sp);
