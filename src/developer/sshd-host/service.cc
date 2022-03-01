@@ -193,11 +193,17 @@ void Service::Wait() {
           return;
         }
         std::string peer_name = "unknown";
-        char host[32];
-        char port[16];
-        if (getnameinfo(reinterpret_cast<struct sockaddr*>(&peer_addr), peer_addr_len, host,
-                        sizeof(host), port, sizeof(port), NI_NUMERICHOST | NI_NUMERICSERV) == 0) {
+        char host[NI_MAXHOST];
+        char port[NI_MAXSERV];
+        if (int res =
+                getnameinfo(reinterpret_cast<struct sockaddr*>(&peer_addr), peer_addr_len, host,
+                            sizeof(host), port, sizeof(port), NI_NUMERICHOST | NI_NUMERICSERV);
+            res == 0) {
           peer_name = fxl::StringPrintf("%s:%s", host, port);
+        } else {
+          FX_LOGS(WARNING)
+              << "Error from getnameinfo(.., NI_NUMERICHOST | NI_NUMERICSERV) for peer address: "
+              << gai_strerror(res);
         }
         Launch(conn, peer_name);
         Wait();
