@@ -20,6 +20,15 @@ typedef struct svc_dir svc_dir_t ZX_AVAILABLE_SINCE(1);
 __EXPORT zx_status_t svc_dir_create(async_dispatcher_t* dispatcher, zx_handle_t directory_request,
                                     svc_dir_t** out_result) ZX_AVAILABLE_SINCE(1);
 
+// Unlike |svc_dir_create|, this function does not serve the directory during creation,
+// users should instead invoke |svc_dir_serve| in order to do so.
+__EXPORT zx_status_t svc_dir_create_without_serve(svc_dir_t** result) ZX_AVAILABLE_SINCE(7);
+
+// Serve |dir| on the provided |request| handle. This function should
+// only be called once and must be done *after* the directory has been populated.
+__EXPORT zx_status_t svc_dir_serve(svc_dir_t* dir, async_dispatcher_t* dispatcher,
+                                   zx_handle_t request) ZX_AVAILABLE_SINCE(7);
+
 // Adds a service named |service_name| to the given |dir|.
 //
 // If |type| is non-NULL, the service will be published in a directory whose

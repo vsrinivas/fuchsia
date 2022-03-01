@@ -107,16 +107,28 @@ struct svc_dir {
 
 zx_status_t svc_dir_create(async_dispatcher_t* dispatcher, zx_handle_t dir_request,
                            svc_dir_t** result) {
-  svc_dir_t* dir = new svc_dir_t;
-  zx_status_t status =
-      dir->impl->Serve(fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_WRITABLE,
-                       zx::channel(dir_request), dispatcher);
+  svc_dir_create_without_serve(result);
+  zx_status_t status = svc_dir_serve(*result, dispatcher, dir_request);
   if (status != ZX_OK) {
-    delete dir;
+    svc_dir_destroy(*result);
     return status;
   }
-  *result = dir;
+
   return ZX_OK;
+}
+
+zx_status_t svc_dir_create_without_serve(svc_dir_t** result) {
+  *result = new svc_dir_t;
+  return ZX_OK;
+}
+
+zx_status_t svc_dir_serve(svc_dir_t* dir, async_dispatcher_t* dispatcher, zx_handle_t request) {
+  if (dir == nullptr) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  return dir->impl->Serve(fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_WRITABLE,
+                          zx::channel(request), dispatcher);
 }
 
 zx_status_t svc_dir_add_service(svc_dir_t* dir, const char* type, const char* service_name,
