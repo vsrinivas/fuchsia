@@ -26,7 +26,8 @@ pub async fn flash_plugin_impl<W: Write>(
     mut cmd: FlashCommand,
     writer: &mut W,
 ) -> Result<()> {
-    match cmd.ssh_key.as_ref() {
+    // TODO(94641): Remove ssh_key after migrated to authorized_keys.
+    match cmd.authorized_keys.as_ref().or(cmd.ssh_key.as_ref()) {
         Some(ssh) => {
             let ssh_file = Path::new(ssh);
             if !ssh_file.is_file() {

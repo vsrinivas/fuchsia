@@ -23,7 +23,7 @@ use {
 To include SSH keys as well:
 
     $ ffx target flash
-    --ssh-key ~/fuchsia/.ssh/authorized_keys
+    --authorized-keys ~/fuchsia/.ssh/authorized_keys
     ~/fuchsia/out/default/flash.json
     --product fuchsia",
     note = "Flashes an image to a target device using the fastboot protocol.
@@ -64,12 +64,20 @@ pub struct FlashCommand {
     #[argh(option, description = "oem staged file - can be supplied multiple times")]
     pub oem_stage: Vec<OemFile>,
 
+    // TODO(94641): Remove ssh_key after migrated to authorized_keys.
     #[argh(
         option,
-        description = "path to ssh key - will default to the `ssh.pub` \
-           key in ffx config"
+        description = "[DEPRECATED] path to ssh key - will default to the `ssh.pub` \
+           key in ffx config. Use --authorized-keys instead"
     )]
     pub ssh_key: Option<String>,
+
+    #[argh(
+        option,
+        description = "path to authorized keys file - will default to the `ssh.pub` \
+           key in ffx config"
+    )]
+    pub authorized_keys: Option<String>,
 
     #[argh(
         switch,
@@ -149,6 +157,7 @@ mod test {
             product: "fuchsia".to_string(),
             product_bundle: None,
             ssh_key: None,
+            authorized_keys: None,
             no_bootloader_reboot: false,
             skip_verify: false,
             oem_stage: vec![test_staged_file],
