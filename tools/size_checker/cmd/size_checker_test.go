@@ -445,25 +445,6 @@ func Test_processInput(t *testing.T) {
 	}
 	packageManifestJSONF.Close()
 
-	// Create the base package manifest.
-	basePackageManifestRelPath := "base_package_manifest.json"
-	basePackageManifestJSONF, err := os.Create(path.Join(buildDir, basePackageManifestRelPath))
-	if err != nil {
-		t.Fatalf("Failed to create base_package_manifest.json: %v", err)
-	}
-	baseBlobs := []BlobFromJSON{}
-	basePackageManifest := PackageManifestJSON{
-		Blobs: baseBlobs,
-	}
-	basePackageManifestJSONBytes, err := json.Marshal(basePackageManifest)
-	if err != nil {
-		t.Fatalf("Failed to marshal JSON for base_package_manifest.json: %v", err)
-	}
-	if _, err := basePackageManifestJSONF.Write(basePackageManifestJSONBytes); err != nil {
-		t.Fatalf("Failed to write base_package_manifest.json: %v", err)
-	}
-	basePackageManifestJSONF.Close()
-
 	// Create the blob.manifest.
 	blobManifestRelPath := "blobs.manifest"
 	blobManifestF, err := os.Create(path.Join(buildDir, blobManifestRelPath))
@@ -502,7 +483,7 @@ func Test_processInput(t *testing.T) {
 	blobfsCompression.Close()
 
 	// Run the function under test.
-	sizes, err := parseSizeLimits(&input, buildDir, blobManifestRelPath, basePackageManifestRelPath, blobSizeRelPath)
+	sizes, err := parseSizeLimits(&input, buildDir, blobManifestRelPath, blobSizeRelPath)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -137,7 +137,6 @@ const (
 	MetaFar             = ".far"
 	BlobManifest        = "obj/build/images/fuchsia/fuchsia/gen/blob.manifest"
 	RootBlobsJSON       = "obj/build/images/fuchsia/fuchsia/gen/blobs.json"
-	BasePackageManifest = "obj/build/images/fuchsia/fuchsia/base_package_manifest.json"
 	PackageManifest     = "package_manifest.json"
 	BlobsJSON           = "blobs.json"
 	ConfigData          = "config-data"
@@ -359,7 +358,7 @@ func extractPackages(buildDir string, blobManifestFileName string) (packages []s
 		fileName := temp[1]
 
 		// This blob is a Fuchsia package.
-		if strings.HasSuffix(fileName, MetaFar) && !strings.HasSuffix(fileName, "base.far") {
+		if strings.HasSuffix(fileName, MetaFar) {
 			packages = append(packages, fileName)
 		}
 	}
@@ -406,7 +405,6 @@ func calculateBlobSizes(
 	state *processingState,
 	buildDir string,
 	blobManifest string,
-	basePackageManifest string,
 	rootBlobsJSON string,
 	packages []string) error {
 
@@ -425,11 +423,6 @@ func calculateBlobSizes(
 		}
 		packageManifestFiles = append(packageManifestFiles, packageManifestFile)
 	}
-
-	// Manually add the base package manifest, because we do not yet have a way to
-	// find it in the blob.manifest.
-	// TODO: Determine a better way to find the base package manifest.
-	packageManifestFiles = append(packageManifestFiles, basePackageManifest)
 
 	// Add every blob to the blobMap, which will deduplicate the size across blobs.
 	for _, packageManifestFile := range packageManifestFiles {
@@ -649,7 +642,7 @@ func getBlobPathsFromBlobsJSON(blobsJSON []BlobFromJSON) []string {
 ////////////////////////////////////////////
 
 // Processes the given sizeLimits and populates an output report.
-func parseSizeLimits(sizeLimits *SizeLimits, buildDir string, blobManifest string, basePackageManifest string, rootBlobsJSON string) (OutputReport, error) {
+func parseSizeLimits(sizeLimits *SizeLimits, buildDir string, blobManifest string, rootBlobsJSON string) (OutputReport, error) {
 	outputSizes := make(OutputReport)
 	// 1. Collect the list of packages.
 	packages, err := extractPackages(buildDir, blobManifest)
@@ -680,7 +673,7 @@ func parseSizeLimits(sizeLimits *SizeLimits, buildDir string, blobManifest strin
 		// The dummy node will have the root node as its only child.
 		newDummyNode(),
 	}
-	if err := calculateBlobSizes(&st, buildDir, blobManifest, basePackageManifest, rootBlobsJSON, packages); err != nil {
+	if err := calculateBlobSizes(&st, buildDir, blobManifest, rootBlobsJSON, packages); err != nil {
 		return nil, fmt.Errorf("failed to calculate the blob sizes: %s", err)
 	}
 
@@ -1120,7 +1113,7 @@ See //tools/size_checker for more details.`)
 		os.Exit(0)
 	}
 
-	outputSizes, err := parseSizeLimits(&sizeLimits, buildDir, BlobManifest, BasePackageManifest, RootBlobsJSON)
+	outputSizes, err := parseSizeLimits(&sizeLimits, buildDir, BlobManifest, RootBlobsJSON)
 	if err != nil {
 		log.Fatal(err)
 	}

@@ -89,7 +89,7 @@ impl BasePackageBuilder {
         for (destination, source) in &external_contents {
             builder.add_file_as_blob(destination, source)?;
         }
-        builder.manifest_path(outdir.as_ref().join("base_package_manifest.json"));
+        builder.manifest_path(outdir.as_ref().join("package_manifest.json"));
         builder.build(gendir, out)?;
 
         Ok(BasePackageBuildResults {

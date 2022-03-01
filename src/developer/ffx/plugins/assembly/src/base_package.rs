@@ -26,6 +26,11 @@ pub fn construct_base_package(
     name: impl AsRef<str>,
     product: &ImageAssemblyConfig,
 ) -> Result<BasePackage> {
+    let outdir = outdir.as_ref().join("base");
+    if !outdir.exists() {
+        std::fs::create_dir(&outdir)?;
+    }
+
     let mut base_pkg_builder = BasePackageBuilder::default();
     for pkg_manifest_path in &product.system {
         let pkg_manifest = pkg_manifest_from_path(pkg_manifest_path)?;
@@ -46,7 +51,7 @@ pub fn construct_base_package(
         ))?;
     }
 
-    let base_package_path = outdir.as_ref().join("base.far");
+    let base_package_path = outdir.join("meta.far");
     let build_results = base_pkg_builder
         .build(&outdir, gendir, name, &base_package_path)
         .context("Failed to build the base package")?;
@@ -58,7 +63,7 @@ pub fn construct_base_package(
     info!("Base merkle: {}", &base_merkle);
 
     // Write the merkle to a file.
-    let merkle_path = outdir.as_ref().join("base.merkle");
+    let merkle_path = outdir.join("base.merkle");
     std::fs::write(merkle_path, hex::encode(base_merkle.as_bytes()))?;
 
     Ok(BasePackage {
@@ -95,7 +100,7 @@ mod tests {
         let base_package =
             construct_base_package(dir.path(), dir.path(), "system_image", &product_config)
                 .unwrap();
-        assert_eq!(base_package.path, dir.path().join("base.far"));
+        assert_eq!(base_package.path, dir.path().join("base/meta.far"));
 
         // Read the base package, and assert the contents are correct.
         let base_package_file = File::open(base_package.path).unwrap();
@@ -128,7 +133,7 @@ mod tests {
         let base_package =
             construct_base_package(dir.path(), dir.path(), "system_image", &product_config)
                 .unwrap();
-        assert_eq!(base_package.path, dir.path().join("base.far"));
+        assert_eq!(base_package.path, dir.path().join("base/meta.far"));
 
         // Read the base package, and assert the contents are correct.
         let base_package_file = File::open(base_package.path).unwrap();

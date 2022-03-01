@@ -55,8 +55,8 @@ class Build {
 
   /// Returns the base package manifest.
   File basePackageManifestFile() =>
-      openDirectory('obj/build/images/fuchsia/fuchsia') /
-      File('base_package_manifest.json');
+      openDirectory('obj/build/images/fuchsia/fuchsia/base') /
+      File('package_manifest.json');
 
   /// Returns the blob manifest listing.
   File blobManifestFile() =>

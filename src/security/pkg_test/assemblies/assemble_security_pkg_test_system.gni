@@ -166,7 +166,7 @@ template("assemble_security_pkg_test_system") {
       packaged = "data/assemblies/${packaged_assembly_directory}/fvm.blk"
     }
     base_far_resource = {
-      local = "${directories.assembly_out}/base.far"
+      local = "${directories.assembly_out}/base/meta.far"
       packaged = "data/assemblies/${packaged_assembly_directory}/base.far"
     }
     update_far_resource = {
