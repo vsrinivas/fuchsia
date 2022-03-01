@@ -172,7 +172,7 @@ void Device::EthUnbind() {
   debugfn();
   ShutdownMainLoop();
   wlan_softmac_proxy_.Stop();
-  device_async_remove(ethdev_);
+  device_unbind_reply(ethdev_);
 }
 
 void Device::EthRelease() {
