@@ -1998,6 +1998,32 @@ impl SlaacInitConfig {
     }
 }
 
+/// Checks whether the address has an IID that doesn't conflict with existing
+/// IANA reserved ranges.
+///
+/// Compares against the ranges defined by various RFCs and listed at
+/// https://www.iana.org/assignments/ipv6-interface-ids/ipv6-interface-ids.xhtml
+fn has_iana_allowed_iid(address: Ipv6Addr) -> bool {
+    let mut iid = [0u8; 8];
+    const U64_SUFFIX_LEN: usize = Ipv6Addr::BYTES as usize - u64::BITS as usize / 8;
+    iid.copy_from_slice(&address.bytes()[U64_SUFFIX_LEN..]);
+    let iid = u64::from_be_bytes(iid);
+    match iid {
+        // Subnet-Router Anycast
+        0x0000_0000_0000_0000 => false,
+        // Consolidated match for
+        // - Ethernet Block: 0x200:5EFF:FE00:0000-0200:4EFF:FE00:5212
+        // - Proxy Mobile: 0x200:5EFF:FE00:5213
+        // - Ethernet Block: 0x200:5EFF:FE00:5214-0200:4EFF:FEFF:FFFF
+        0x0200_5EFF_FE00_0000..=0x0200_5EFF_FEFF_FFFF => false,
+        // Subnet Anycast Addresses
+        0xFDFF_FFFF_FFFF_FF80..=0xFDFF_FFFF_FFFF_FFFF => false,
+
+        // All other IIDs not in the reserved ranges
+        _iid => true,
+    }
+}
+
 fn add_slaac_addr_sub<'a, D: LinkDevice, C: NdpContext<D>>(
     ctx: &mut C,
     device_id: <C as DeviceIdContext<D>>::DeviceId,
@@ -2059,17 +2085,40 @@ fn add_slaac_addr_sub<'a, D: LinkDevice, C: NdpContext<D>>(
             //       of the prefix and TEMP_PREFERRED_LIFETIME - DESYNC_FACTOR.
             let valid_for =
                 core::cmp::min(prefix_valid_for, temporary_address_config.temp_valid_lifetime);
-            let valid_until = now.checked_add(valid_for.get()).unwrap();
 
             let regen_advance =
                 regen_advance(temporary_address_config.temp_idgen_retries, state.retrans_timer)
                     .get();
-            let address = generate_global_temporary_address(
-                &subnet,
-                &ctx.get_interface_identifier(device_id)[..],
-                per_attempt_random_seed,
-                &temporary_address_config.secret_key,
-            );
+
+            let address = {
+                // RFC 8981 Section 3.3.3 specifies that
+                //
+                //   The resulting IID MUST be compared against the reserved
+                //   IPv6 IIDs and against those IIDs already employed in an
+                //   address of the same network interface and the same network
+                //   prefix.  In the event that an unacceptable identifier has
+                //   been generated, the DAD_Counter should be incremented by 1,
+                //   and the algorithm should be restarted from the first step.
+                let mut seed = per_attempt_random_seed;
+                loop {
+                    let address = generate_global_temporary_address(
+                        &subnet,
+                        &ctx.get_interface_identifier(device_id),
+                        seed,
+                        &temporary_address_config.secret_key,
+                    );
+
+                    if has_iana_allowed_iid(address.addr().get())
+                        && ctx.get_ip_device_state(device_id).find_addr(&address.addr()) == None
+                    {
+                        break address;
+                    } else {
+                        seed = seed.wrapping_add(1);
+                    }
+                }
+            };
+
+            let valid_until = now.checked_add(valid_for.get()).unwrap();
 
             let temp_preferred_lifetime = temporary_address_config.temp_preferred_lifetime.get();
             // Per RFC 8981 Section 3.8:
@@ -2960,7 +3009,7 @@ fn generate_global_static_address(
 /// prefix, or if the prefix length is not a multiple of 8 bits.
 fn generate_global_temporary_address(
     prefix: &Subnet<Ipv6Addr>,
-    iid: &[u8],
+    iid: &[u8; 8],
     seed: u64,
     secret_key: &[u8; STABLE_IID_SECRET_KEY_BYTES],
 ) -> AddrSubnet<Ipv6Addr, UnicastAddr<Ipv6Addr>> {
@@ -2993,7 +3042,7 @@ mod tests {
     use core::convert::{TryFrom, TryInto as _};
     use rand::rngs::mock::StepRng;
 
-    use net_declare::net::{mac, subnet_v6};
+    use net_declare::net::{ip_v6, mac, subnet_v6};
     use net_types::{ethernet::Mac, ip::AddrSubnet};
     use packet::{Buf, ParseBuffer};
     use packet_formats::{
@@ -3007,6 +3056,7 @@ mod tests {
         ip::IpProto,
         testutil::{parse_ethernet_frame, parse_icmp_packet_in_ip_packet_in_ethernet_frame},
     };
+    use test_case::test_case;
 
     use crate::{
         assert_empty,
@@ -6155,6 +6205,18 @@ mod tests {
         assert_eq!(trigger_next_timer(&mut ctx), None);
     }
 
+    #[test_case(ip_v6!("1:2:3:4::"), false; "subnet-router anycast")]
+    #[test_case(ip_v6!("::1"), true; "allowed 1")]
+    #[test_case(ip_v6!("1:2:3:4::1"), true; "allowed 2")]
+    #[test_case(ip_v6!("4:4:4:4:0200:5eff:fe00:1"), false; "first ethernet block")]
+    #[test_case(ip_v6!("1:1:1:1:0200:5eff:fe00:5213"), false; "proxy mobile")]
+    #[test_case(ip_v6!("8:8:8:8:0200:5eff:fe00:8000"), false; "second ethernet block")]
+    #[test_case(ip_v6!("a:a:a:a:fdff:ffff:ffff:ffaa"), false; "subnet anycast")]
+    #[test_case(ip_v6!("c:c:c:c:fe00::"), true; "allowed 3")]
+    fn test_has_iana_allowed_iid(addr: Ipv6Addr, expect_allowed: bool) {
+        assert_eq!(has_iana_allowed_iid(addr), expect_allowed);
+    }
+
     #[derive(Copy, Clone, Debug)]
     struct TestSlaacPrefix {
         prefix: Subnet<Ipv6Addr>,
@@ -6221,6 +6283,7 @@ mod tests {
             (static_addresses[0], temporary_addresses[0])
         }
     }
+
     fn initialize_with_temporary_addresses_enabled(
     ) -> (crate::testutil::DummyCtx, DeviceId, NdpConfiguration) {
         set_logger_for_test();
@@ -6432,7 +6495,7 @@ mod tests {
     }
 
     #[test]
-    fn test_host_slaac_and_manual_address_and_prefix_conflict() {
+    fn test_host_static_slaac_and_manual_address_and_prefix_conflict() {
         // SLAAC should not overwrite any manually added addresses that may
         // conflict with the generated SLAAC address.
 
@@ -6511,7 +6574,7 @@ mod tests {
     }
 
     #[test]
-    fn test_host_slaac_and_manual_address_conflict() {
+    fn test_host_static_slaac_and_manual_address_conflict() {
         // SLAAC should not overwrite any manually added addresses that may
         // conflict with the generated SLAAC address, even if the manually added
         // address has a different prefix.
@@ -6592,7 +6655,7 @@ mod tests {
     }
 
     #[test]
-    fn test_host_slaac_and_manual_address_prefix_conflict() {
+    fn test_host_static_slaac_and_manual_address_prefix_conflict() {
         // SLAAC should not overwrite any manually added addresses that use the
         // same prefix as a SLAAC generated one.
 
@@ -6677,6 +6740,85 @@ mod tests {
 
         // Address invalidation timers were added.
         assert_eq!(ctx.dispatcher.timer_events().count(), 2);
+    }
+
+    #[test]
+    fn test_host_temporary_slaac_and_manual_addresses_conflict() {
+        let (mut ctx, device, _config) = initialize_with_temporary_addresses_enabled();
+        let device_id = device.try_into().unwrap();
+        let config = Ipv6::DUMMY_CONFIG;
+
+        let src_mac = config.remote_mac;
+        let dst_ip = config.local_ip;
+        let src_ip = src_mac.to_ipv6_link_local().addr().get();
+        let subnet = subnet_v6!("0102:0304:0506:0708::/64");
+
+        // Before sending an RA, which would cause the same temporary address to
+        // be generated, manually assign that address.
+        crate::device::add_ip_addr_subnet(
+            &mut ctx,
+            device,
+            AddrSubnet::from_witness(
+                UnicastAddr::new(ip_v6!("0102:0304:0506:0708:7a76:733e:a50c:7a99")).unwrap(),
+                64,
+            )
+            .unwrap()
+            .to_witness(),
+        )
+        .expect("adding address failed");
+        // Groom the RNG so it will produce the expected conflicted address that
+        // we just assigned.
+        *ctx.dispatcher.rng_mut() = rand::SeedableRng::from_seed([1; 16]);
+
+        let interface_identifier = generate_opaque_interface_identifier(
+            subnet,
+            &ctx.get_interface_identifier(device_id)[..],
+            [],
+            // Clone the RNG so we can see what the next value (which will be
+            // used to generate the temporary address) will be.
+            OpaqueIidNonce::Random(ctx.dispatcher.rng().clone().next_u64()),
+            &StateContext::<NdpState<_>, _>::get_state_with(&ctx, device_id)
+                .config
+                .get_temporary_address_configuration()
+                .unwrap()
+                .secret_key,
+        );
+        let mut conflicted_addr = [1, 2, 3, 4, 5, 6, 7, 8, 0, 0, 0, 0, 0, 0, 0, 0];
+        conflicted_addr[8..].copy_from_slice(&interface_identifier.to_be_bytes()[..8]);
+        let conflicted_addr = UnicastAddr::new(Ipv6Addr::from(conflicted_addr)).unwrap();
+        let conflicted_addr_sub =
+            AddrSubnet::from_witness(conflicted_addr, subnet.prefix()).unwrap();
+        // Sanity check: `conflicted_addr` is already assigned on the device.
+        assert_ne!(
+            NdpContext::<EthernetLinkDevice>::get_ip_device_state(&ctx, device_id)
+                .iter_global_ipv6_addrs()
+                .find(|entry| entry.addr_sub().addr() == conflicted_addr),
+            None,
+        );
+
+        // Receive a new RA with new prefix (autonomous).
+        //
+        // Should get a new temporary IP that is different from
+        // `conflicted_addr_sub`.
+        receive_prefix_update(&mut ctx, device, src_ip, dst_ip, subnet, 9000, 10000, true);
+        let ndp_state = StateContext::<NdpState<EthernetLinkDevice>, _>::get_state_mut_with(
+            &mut ctx, device_id,
+        );
+        assert!(ndp_state.has_prefix(&subnet));
+
+        // Should have gotten a new temporary IP.
+        let temporary_slaac_addresses =
+            get_matching_slaac_address_entries(&ctx, device, |entry| match entry.config {
+                AddrConfig::Slaac(SlaacConfig::Static { valid_until: _ }) => false,
+                AddrConfig::Slaac(SlaacConfig::Temporary(_)) => true,
+                AddrConfig::Manual => false,
+            })
+            .map(|entry| entry.addr_sub())
+            .collect::<Vec<_>>();
+        assert_matches!(&temporary_slaac_addresses[..], [&temporary_addr] => {
+            assert_eq!(temporary_addr.subnet(), conflicted_addr_sub.subnet());
+            assert_ne!(temporary_addr, conflicted_addr_sub);
+        });
     }
 
     #[test]

@@ -92,7 +92,7 @@ pub(crate) type DummyCtx = Ctx<DummyEventDispatcher>;
 /// # Security
 ///
 /// This is obviously insecure. Don't use it except in testing!
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub(crate) struct FakeCryptoRng<R>(R);
 
 impl Default for FakeCryptoRng<XorShiftRng> {
@@ -124,6 +124,14 @@ impl<R: RngCore> RngCore for FakeCryptoRng<R> {
 }
 
 impl<R: RngCore> CryptoRng for FakeCryptoRng<R> {}
+
+impl<R: SeedableRng> SeedableRng for FakeCryptoRng<R> {
+    type Seed = R::Seed;
+
+    fn from_seed(seed: Self::Seed) -> Self {
+        Self(R::from_seed(seed))
+    }
+}
 
 impl<R: RngCore> crate::context::RngContext for FakeCryptoRng<R> {
     type Rng = Self;
