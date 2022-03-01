@@ -10,6 +10,7 @@ package pkgfs
 import (
 	"bytes"
 	"context"
+	"encoding/binary"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -87,8 +88,7 @@ var testPackageMerkle string
 
 // tmain exists for the defer convenience, so that defers are run before os.Exit gets called.
 func tmain(m *testing.M) int {
-	// Undo the defaults that print to the system log...
-	log.SetOutput(os.Stdout)
+	log.SetFlags(log.Lshortfile)
 
 	var err error
 	if blobDir, err = ramdisk.New(10 * 1024 * 1024); err != nil {
@@ -588,23 +588,37 @@ func TestMapFileForRead(t *testing.T) {
 	}
 	defer fdioFile.Close()
 
-	flags := zxio.VmoFlagRead
-	status, buffer, err := fdioFile.GetBuffer(flags)
-	if err != nil || status != int32(zx.ErrOk) {
-		t.Fatal("Could not get buffer:", err, status)
-	}
-	if buffer.Size == 0 {
-		t.Fatal("Buffer has zero size")
-	}
-
-	size := buffer.Size
-	buf := make([]byte, size)
-	offset := uint64(0)
-	err = buffer.Vmo.Read(buf, offset)
+	flags := zxio.VmoFlagsRead
+	result, err := fdioFile.GetBackingMemory(flags)
 	if err != nil {
-		t.Fatal("Error reading data from VMO")
+		t.Fatalf("GetBackingMemory(): %s", err)
 	}
-	buffer.Vmo.Close()
+	switch w := result.Which(); w {
+	case zxio.File2GetBackingMemoryResultErr:
+		t.Fatalf("GetBackingMemory: %s", zx.Status(result.Err))
+	case zxio.File2GetBackingMemoryResultResponse:
+		vmo := result.Response.Vmo
+		defer func() {
+			if err := vmo.Close(); err != nil {
+				t.Errorf("vmo.Close(): %s", err)
+			}
+		}()
+		var sizeBytes [8]byte
+		if err := vmo.Handle().GetProperty(zx.PropVmoContentSize, sizeBytes[:]); err != nil {
+			t.Fatalf("GetProperty(zx.PropVmoContentSize): %s", err)
+		}
+		size := binary.LittleEndian.Uint64(sizeBytes[:])
+		if want := uint64(347); size != want {
+			t.Fatalf("got size = %d, want %d", size, want)
+		}
+		buf := make([]byte, size)
+		offset := uint64(0)
+		if err := vmo.Read(buf, offset); err != nil {
+			t.Fatalf("vmo.Read(): %s", err)
+		}
+	default:
+		t.Fatalf("unknown variant %d", w)
+	}
 }
 
 func getKoid(h *zx.Handle) (uint64, error) {
@@ -629,26 +643,53 @@ func TestMapFileForReadPrivate(t *testing.T) {
 	}
 	defer fdioFile.Close()
 
-	flags := zxio.VmoFlagRead | zxio.VmoFlagPrivate
+	flags := zxio.VmoFlagsRead | zxio.VmoFlagsPrivateClone
 
 	// We want to test that we're receiving our own clone each time we invoke
-	// GetBuffer() with the VmoFlagPrivate field set
-	status, buffer, err := fdioFile.GetBuffer(flags)
-	if err != nil || status != int32(zx.ErrOk) {
-		t.Fatal("Could not get buffer:", err, status)
+	// GetBackingMemory() with VmoFlagsPrivateClone.
+	var firstVmo *zx.VMO
+	{
+		result, err := fdioFile.GetBackingMemory(flags)
+		if err != nil {
+			t.Fatalf("GetBackingMemory(): %s", err)
+		}
+		switch w := result.Which(); w {
+		case zxio.File2GetBackingMemoryResultErr:
+			t.Fatalf("GetBackingMemory: %s", zx.Status(result.Err))
+		case zxio.File2GetBackingMemoryResultResponse:
+			vmo := result.Response.Vmo
+			defer func() {
+				if err := vmo.Close(); err != nil {
+					t.Errorf("vmo.Close(): %s", err)
+				}
+			}()
+			firstVmo = &vmo
+		default:
+			t.Fatalf("unhandled variant: %d", w)
+		}
 	}
 
-	firstVmo := buffer.Vmo
-	defer firstVmo.Close()
-
-	status, buffer, err = fdioFile.GetBuffer(flags)
-
-	if err != nil || status != int32(zx.ErrOk) {
-		t.Fatal("Could not get buffer:", err, status)
+	var secondVmo *zx.VMO
+	{
+		result, err := fdioFile.GetBackingMemory(flags)
+		if err != nil {
+			t.Fatalf("GetBackingMemory(): %s", err)
+		}
+		switch w := result.Which(); w {
+		case zxio.File2GetBackingMemoryResultErr:
+			t.Fatalf("GetBackingMemory: %s", zx.Status(result.Err))
+		case zxio.File2GetBackingMemoryResultResponse:
+			vmo := result.Response.Vmo
+			defer func() {
+				if err := vmo.Close(); err != nil {
+					t.Errorf("vmo.Close(): %s", err)
+				}
+			}()
+			secondVmo = &vmo
+		default:
+			t.Fatalf("unhandled variant: %d", w)
+		}
 	}
-
-	secondVmo := buffer.Vmo
-	defer secondVmo.Close()
 
 	firstKoid, err := getKoid(firstVmo.Handle())
 	if err != nil {
@@ -659,7 +700,7 @@ func TestMapFileForReadPrivate(t *testing.T) {
 		t.Fatal("Could not retrieve koid of handle: ", err)
 	}
 	if firstKoid == secondKoid {
-		t.Fatal("Two GetBuffer calls with VmoFlagPrivate produced handles to the same object")
+		t.Fatal("Two GetBuffer calls with VmoFlagsPrivate produced handles to the same object")
 	}
 }
 
@@ -677,11 +718,20 @@ func TestMapFileForReadExact(t *testing.T) {
 	}
 
 	// Exact flag is not supported in pkgfs
-	flags := zxio.VmoFlagExact
-
-	_, _, err = fdioFile.GetBuffer(flags)
-	if err == nil {
-		t.Fatal("Attempt to map with VmoFlagExact should fail")
+	flags := zxio.VmoFlagsSharedBuffer
+	result, err := fdioFile.GetBackingMemory(flags)
+	if err != nil {
+		t.Fatalf("GetBackingMemory(): %s", err)
+	}
+	switch w := result.Which(); w {
+	case zxio.File2GetBackingMemoryResultErr:
+		if got, want := zx.Status(result.Err), zx.ErrNotSupported; got != want {
+			t.Fatalf("got GetBackingMemory() = %s, want %s", got, want)
+		}
+	case zxio.File2GetBackingMemoryResultResponse:
+		t.Fatal("Attempt to map with VmoFlagsSharedBuffer should fail")
+	default:
+		t.Fatalf("unhandled variant: %d", w)
 	}
 }
 
@@ -699,11 +749,20 @@ func TestMapFilePrivateAndExact(t *testing.T) {
 	}
 
 	// This combination is invalid according to the fuchsia.io protocol definition.
-	flags := zxio.VmoFlagPrivate | zxio.VmoFlagExact
-
-	_, _, err = fdioFile.GetBuffer(flags)
-	if err == nil {
-		t.Fatal("Attempt to specify VmoFlagPrivate and VmoFlagExact should fail")
+	flags := zxio.VmoFlagsPrivateClone | zxio.VmoFlagsSharedBuffer
+	result, err := fdioFile.GetBackingMemory(flags)
+	if err != nil {
+		t.Fatalf("GetBackingMemory(): %s", err)
+	}
+	switch w := result.Which(); w {
+	case zxio.File2GetBackingMemoryResultErr:
+		if got, want := zx.Status(result.Err), zx.ErrNotSupported; got != want {
+			t.Fatalf("got GetBackingMemory() = %s, want %s", got, want)
+		}
+	case zxio.File2GetBackingMemoryResultResponse:
+		t.Fatal("Attempt to specify VmoFlagsPrivateClone and VmoFlagsSharedBuffer should fail")
+	default:
+		t.Fatalf("unhandled variant: %d", w)
 	}
 }
 
@@ -722,10 +781,20 @@ func TestMapFileForWrite(t *testing.T) {
 
 	// Files in a meta directory are read-only, creating a writable mapping
 	// should fail.
-	flags := zxio.VmoFlagWrite
-	_, _, err = fdioFile.GetBuffer(flags)
-	if err == nil {
+	flags := zxio.VmoFlagsWrite
+	result, err := fdioFile.GetBackingMemory(flags)
+	if err != nil {
+		t.Fatalf("GetBackingMemory(): %s", err)
+	}
+	switch w := result.Which(); w {
+	case zxio.File2GetBackingMemoryResultErr:
+		if got, want := zx.Status(result.Err), zx.ErrBadHandle; got != want {
+			t.Fatalf("got GetBackingMemory() = %s, want %s", got, want)
+		}
+	case zxio.File2GetBackingMemoryResultResponse:
 		t.Fatal("Attempt to get a writable buffer should fail")
+	default:
+		t.Fatalf("unhandled variant: %d", w)
 	}
 }
 
@@ -742,10 +811,20 @@ func TestMapFileForExec(t *testing.T) {
 		t.Fatal("File is not an fdio.File")
 	}
 
-	flags := zxio.VmoFlagExec
-	_, _, err = fdioFile.GetBuffer(flags)
-	if err == nil {
+	flags := zxio.VmoFlagsExecute
+	result, err := fdioFile.GetBackingMemory(flags)
+	if err != nil {
+		t.Fatalf("GetBackingMemory(): %s", err)
+	}
+	switch w := result.Which(); w {
+	case zxio.File2GetBackingMemoryResultErr:
+		if got, want := zx.Status(result.Err), zx.ErrBadHandle; got != want {
+			t.Fatalf("got GetBackingMemory() = %s, want %s", got, want)
+		}
+	case zxio.File2GetBackingMemoryResultResponse:
 		t.Fatal("Attempt to get executable buffer should fail")
+	default:
+		t.Fatalf("unhandled variant: %d", w)
 	}
 }
 

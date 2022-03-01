@@ -2,17 +2,20 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+//go:build !build_with_native_toolchain
 // +build !build_with_native_toolchain
 
 package pkgfs
 
 import (
+	"encoding/binary"
+	"fmt"
 	"path/filepath"
 	"sort"
 	"strings"
 	"time"
 
-	"fidl/fuchsia/mem"
+	"fidl/fuchsia/io"
 
 	"go.fuchsia.dev/fuchsia/src/lib/thinfs/fs"
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/lib/far/go"
@@ -216,7 +219,7 @@ func (d *metaFarDir) Stat() (int64, time.Time, time.Time, error) {
 }
 
 var _ fs.File = (*metaFarFile)(nil)
-var _ fs.FileWithGetBuffer = (*metaFarFile)(nil)
+var _ fs.FileWithBackingMemory = (*metaFarFile)(nil)
 
 type metaFarFile struct {
 	unsupportedFile
@@ -349,21 +352,30 @@ func (mf *metaFarFile) getBackingBlobVMO() (*zx.VMO, error) {
 	defer f.Close()
 
 	fdioFile := syscall.FDIOForFD(int(f.Fd())).(*fdio.File)
-	flags := zxio.VmoFlagRead
-	_, buffer, err := fdioFile.GetBuffer(flags)
+	result, err := fdioFile.GetBackingMemory(zxio.VmoFlagsRead)
 	if err != nil {
 		return nil, err
 	}
-	mf.backingBlobVMO = &buffer.Vmo
-	return mf.backingBlobVMO, nil
+	switch w := result.Which(); w {
+	case zxio.File2GetBackingMemoryResultErr:
+		return nil, &zx.Error{
+			Status: zx.Status(result.Err),
+			Text:   "File.GetBackingMemory",
+		}
+	case zxio.File2GetBackingMemoryResultResponse:
+		mf.backingBlobVMO = &result.Response.Vmo
+		return mf.backingBlobVMO, nil
+	default:
+		panic(fmt.Sprintf("unhandle variant %d", w))
+	}
 }
 
-func (f *metaFarFile) GetBuffer(flags uint32) (*mem.Buffer, error) {
+func (f *metaFarFile) GetBackingMemory(flags io.VmoFlags) (*zx.VMO, uint64, error) {
 	size := f.er.Length
 	if f.vmo == nil {
 		parentVmo, err := f.getBackingBlobVMO()
 		if err != nil {
-			return nil, fs.ErrIO
+			return nil, 0, fs.ErrIO
 		}
 		// All entries in a FAR are at 4096 byte offsets from the start of the
 		// file and are zero padded up to the next 4096 byte boundary:
@@ -373,33 +385,30 @@ func (f *metaFarFile) GetBuffer(flags uint32) (*mem.Buffer, error) {
 
 		vmo, err := parentVmo.CreateChild(options, offset, size)
 		if err != nil {
-			return nil, fs.ErrIO
+			return nil, 0, fs.ErrIO
 		}
 		f.vmo = &vmo
 	}
 
 	rights := zx.RightsBasic | zx.RightMap | zx.RightsProperty
 
-	if flags&zxio.VmoFlagRead != 0 {
+	if flags&io.VmoFlagsRead != 0 {
 		rights |= zx.RightRead
 	}
-	if flags&zxio.VmoFlagWrite != 0 {
+	if flags&io.VmoFlagsWrite != 0 {
 		// Contents of a meta directory are never writable.
-		return nil, fs.ErrReadOnly
+		return nil, 0, fs.ErrReadOnly
 	}
-	if flags&zxio.VmoFlagExec != 0 {
+	if flags&io.VmoFlagsExecute != 0 {
 		// Contents of a meta directory are never executable.
-		return nil, fs.ErrPermission
+		return nil, 0, fs.ErrPermission
 	}
 
-	if flags&zxio.VmoFlagExact != 0 {
-		return nil, fs.ErrNotSupported
+	if flags&io.VmoFlagsSharedBuffer != 0 {
+		return nil, 0, fs.ErrNotSupported
 	}
 
-	buffer := &mem.Buffer{}
-	buffer.Size = size
-
-	if flags&zxio.VmoFlagPrivate != 0 {
+	if flags&io.VmoFlagsPrivateClone != 0 {
 		// Create a separate VMO for the caller if they specified that they want a private copy.
 
 		options := zx.VMOChildOption(zx.VMOChildOptionSnapshotAtLeastOnWrite)
@@ -407,19 +416,21 @@ func (f *metaFarFile) GetBuffer(flags uint32) (*mem.Buffer, error) {
 		offset := uint64(0)
 		child, err := f.vmo.CreateChild(options, offset, size)
 		if err != nil {
-			return nil, fs.ErrIO
+			return nil, 0, fs.ErrIO
 		}
-		buffer.Vmo = child
-	} else {
-		// Otherwise, just duplicate our VMO.
-
-		handle := zx.Handle(*f.vmo)
-		d, err := handle.Duplicate(rights)
-		if err != nil {
-			return nil, fs.ErrPermission
-		}
-		buffer.Vmo = zx.VMO(d)
+		return &child, size, nil
 	}
 
-	return buffer, nil
+	// Otherwise, just duplicate our VMO.
+	h, err := f.vmo.Handle().Duplicate(rights)
+	if err != nil {
+		return nil, 0, fs.ErrPermission
+	}
+	var sizeBytes [8]byte
+	binary.LittleEndian.PutUint64(sizeBytes[:], size)
+	if err := h.SetProperty(zx.PropVmoContentSize, sizeBytes[:]); err != nil {
+		return nil, 0, err
+	}
+	vmo := zx.VMO(h)
+	return &vmo, size, nil
 }

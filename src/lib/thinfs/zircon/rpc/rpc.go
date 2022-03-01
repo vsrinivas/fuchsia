@@ -726,20 +726,29 @@ func (d *fileWrapper) QueryFilesystem(fidl.Context) (int32, *io.FilesystemInfo, 
 }
 
 func (f *fileWrapper) GetBufferDeprecatedUseGetBackingMemory(_ fidl.Context, flags uint32) (int32, *mem.Buffer, error) {
-	if file, ok := f.file.(fs.FileWithGetBuffer); ok {
-		buf, err := file.GetBuffer(flags)
-		return int32(errorToZx(err)), buf, err
+	if file, ok := f.file.(fs.FileWithBackingMemory); ok {
+		vmo, size, err := file.GetBackingMemory(io.VmoFlags(flags))
+		var buffer *mem.Buffer
+		if vmo != nil {
+			buffer = &mem.Buffer{
+				Vmo:  *vmo,
+				Size: size,
+			}
+		}
+		return int32(errorToZx(err)), buffer, nil
 	}
 	return int32(zx.ErrNotSupported), nil, nil
 }
 
 func (f *fileWrapper) GetBackingMemory(_ fidl.Context, flags io.VmoFlags) (io.File2GetBackingMemoryResult, error) {
-	if file, ok := f.file.(fs.FileWithGetBuffer); ok {
-		buf, err := file.GetBuffer(uint32(flags))
-		if zxErr := errorToZx(err); zxErr != zx.ErrOk {
-			return io.File2GetBackingMemoryResultWithErr(int32(zxErr)), nil
+	if file, ok := f.file.(fs.FileWithBackingMemory); ok {
+		vmo, _, err := file.GetBackingMemory(io.VmoFlags(flags))
+		if err != nil {
+			return io.File2GetBackingMemoryResultWithErr(int32(errorToZx(err))), nil
 		}
-		return io.File2GetBackingMemoryResultWithResponse(io.File2GetBackingMemoryResponse{Vmo: buf.Vmo}), nil
+		return io.File2GetBackingMemoryResultWithResponse(io.File2GetBackingMemoryResponse{
+			Vmo: *vmo,
+		}), nil
 	}
 	return io.File2GetBackingMemoryResultWithErr(int32(zx.ErrNotSupported)), nil
 }
