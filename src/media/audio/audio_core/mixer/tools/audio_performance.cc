@@ -374,6 +374,10 @@ void AudioPerformance::ProfileMixer(const std::vector<MixerConfig>& configs, con
       case ASF::FLOAT:
         ProfileMixer<ASF::FLOAT>(cfg, limits, results);
         break;
+      case ASF::FLOAT_64:
+        // No need to do this yet
+        // ProfileMixer<ASF::FLOAT_64>(cfg, limits, results);
+        break;
     }
   }
 
@@ -542,6 +546,10 @@ void AudioPerformance::ProfileOutputProducer(const std::vector<OutputProducerCon
         break;
       case ASF::FLOAT:
         ProfileOutputProducer<ASF::FLOAT>(cfg, limits, results);
+        break;
+      case ASF::FLOAT_64:
+        // No need to do this yet
+        // ProfileOutputProducer<ASF::FLOAT_64>(cfg, limits, results);
         break;
     }
   }

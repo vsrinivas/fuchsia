@@ -404,6 +404,8 @@ static inline std::unique_ptr<Mixer> SelectPSM(const fuchsia::media::AudioStream
       return SelectPSM<DestChanCount, int32_t>(source_format, dest_format, gain_limits);
     case fuchsia::media::AudioSampleFormat::FLOAT:
       return SelectPSM<DestChanCount, float>(source_format, dest_format, gain_limits);
+    case fuchsia::media::AudioSampleFormat::FLOAT_64:
+      return SelectPSM<DestChanCount, double>(source_format, dest_format, gain_limits);
     default:
       return nullptr;
   }
@@ -421,6 +423,8 @@ static inline std::unique_ptr<Mixer> SelectNxNPSM(
       return std::make_unique<NxNPointSamplerImpl<int32_t>>(source_format.channels, gain_limits);
     case fuchsia::media::AudioSampleFormat::FLOAT:
       return std::make_unique<NxNPointSamplerImpl<float>>(source_format.channels, gain_limits);
+    case fuchsia::media::AudioSampleFormat::FLOAT_64:
+      return std::make_unique<NxNPointSamplerImpl<double>>(source_format.channels, gain_limits);
     default:
       return nullptr;
   }

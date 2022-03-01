@@ -68,7 +68,8 @@ std::unique_ptr<Mixer> Mixer::Select(const fuchsia::media::AudioStreamType& sour
   if (source_format.sample_format != fuchsia::media::AudioSampleFormat::UNSIGNED_8 &&
       source_format.sample_format != fuchsia::media::AudioSampleFormat::SIGNED_16 &&
       source_format.sample_format != fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32 &&
-      source_format.sample_format != fuchsia::media::AudioSampleFormat::FLOAT) {
+      source_format.sample_format != fuchsia::media::AudioSampleFormat::FLOAT &&
+      source_format.sample_format != fuchsia::media::AudioSampleFormat::FLOAT_64) {
     FX_LOGS(WARNING) << "Unsupported mixer sample format "
                      << static_cast<int64_t>(source_format.sample_format);
     return nullptr;

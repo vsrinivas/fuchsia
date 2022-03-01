@@ -51,8 +51,11 @@ constexpr double kFullScaleInt24In32InputAmplitude =
 constexpr double kFullScaleInt24In32AccumAmplitude =  // 0.99999988079071045
     static_cast<double>(media::audio::kMaxInt24) / media::audio::kFloatToInt24;
 
-constexpr double kFullScaleFloatInputAmplitude = 1.0f;
-constexpr double kFullScaleFloatAccumAmplitude = 1.0f;
+constexpr double kFullScaleFloatInputAmplitude = 1.0;
+constexpr double kFullScaleFloatAccumAmplitude = 1.0;
+
+constexpr double kFullScaleFloat64InputAmplitude = 1.0;
+constexpr double kFullScaleFloat64AccumAmplitude = 1.0;
 
 // Use supplied mixer to mix (w/out rate conversion) from source to accumulator.
 // TODO(mpuryear): refactor this so that tests just call mixer->Mix directly.

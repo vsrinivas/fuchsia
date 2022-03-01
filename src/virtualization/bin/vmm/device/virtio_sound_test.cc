@@ -694,7 +694,8 @@ TEST_F(VirtioSoundTest, GetPcmInfos) {
   for (size_t k = 0; k < kNumStreams; k++) {
     SCOPED_TRACE(fxl::StringPrintf("stream %lu", k));
     uint64_t supported_formats = bit(VIRTIO_SND_PCM_FMT_U8) | bit(VIRTIO_SND_PCM_FMT_S16) |
-                                 bit(VIRTIO_SND_PCM_FMT_S24) | bit(VIRTIO_SND_PCM_FMT_FLOAT);
+                                 bit(VIRTIO_SND_PCM_FMT_S24) | bit(VIRTIO_SND_PCM_FMT_FLOAT) |
+                                 bit(VIRTIO_SND_PCM_FMT_FLOAT64);
     uint64_t supported_rates = bit(VIRTIO_SND_PCM_RATE_8000) | bit(VIRTIO_SND_PCM_RATE_11025) |
                                bit(VIRTIO_SND_PCM_RATE_16000) | bit(VIRTIO_SND_PCM_RATE_22050) |
                                bit(VIRTIO_SND_PCM_RATE_32000) | bit(VIRTIO_SND_PCM_RATE_44100) |
@@ -737,7 +738,8 @@ TEST_F(VirtioSoundInputDisabledTest, GetPcmInfos) {
   ASSERT_EQ(resphdr->code, VIRTIO_SND_S_OK);
 
   uint64_t supported_formats = bit(VIRTIO_SND_PCM_FMT_U8) | bit(VIRTIO_SND_PCM_FMT_S16) |
-                               bit(VIRTIO_SND_PCM_FMT_S24) | bit(VIRTIO_SND_PCM_FMT_FLOAT);
+                               bit(VIRTIO_SND_PCM_FMT_S24) | bit(VIRTIO_SND_PCM_FMT_FLOAT) |
+                               bit(VIRTIO_SND_PCM_FMT_FLOAT64);
   uint64_t supported_rates = bit(VIRTIO_SND_PCM_RATE_8000) | bit(VIRTIO_SND_PCM_RATE_11025) |
                              bit(VIRTIO_SND_PCM_RATE_16000) | bit(VIRTIO_SND_PCM_RATE_22050) |
                              bit(VIRTIO_SND_PCM_RATE_32000) | bit(VIRTIO_SND_PCM_RATE_44100) |
@@ -1097,27 +1099,27 @@ void VirtioSoundTestBase<EnableInput>::TestPcmOutputSetParamsAndPrepare(
   EXPECT_EQ(stream_type.frames_per_second, fidl_rate);
 }
 
-TEST_F(VirtioSoundTest, PcmOutputPrepareUint8Mono44khz) {
+TEST_F(VirtioSoundTest, PcmOutputPrepareUint8Mono48khz) {
   TestPcmOutputSetParamsAndPrepare(1, VIRTIO_SND_PCM_FMT_U8, VIRTIO_SND_PCM_RATE_48000,
                                    fuchsia::media::AudioSampleFormat::UNSIGNED_8, 48000);
 }
 
-TEST_F(VirtioSoundTest, PcmOutputPrepareInt16Mono44khz) {
+TEST_F(VirtioSoundTest, PcmOutputPrepareInt16Mono48khz) {
   TestPcmOutputSetParamsAndPrepare(1, VIRTIO_SND_PCM_FMT_S16, VIRTIO_SND_PCM_RATE_48000,
                                    fuchsia::media::AudioSampleFormat::SIGNED_16, 48000);
 }
 
-TEST_F(VirtioSoundTest, PcmOutputPrepareInt24Mono44khz) {
+TEST_F(VirtioSoundTest, PcmOutputPrepareInt24Mono48khz) {
   TestPcmOutputSetParamsAndPrepare(1, VIRTIO_SND_PCM_FMT_S24, VIRTIO_SND_PCM_RATE_48000,
                                    fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32, 48000);
 }
 
-TEST_F(VirtioSoundTest, PcmOutputPrepareFloatMono44khz) {
+TEST_F(VirtioSoundTest, PcmOutputPrepareFloatMono48khz) {
   TestPcmOutputSetParamsAndPrepare(1, VIRTIO_SND_PCM_FMT_FLOAT, VIRTIO_SND_PCM_RATE_48000,
                                    fuchsia::media::AudioSampleFormat::FLOAT, 48000);
 }
 
-TEST_F(VirtioSoundTest, PcmOutputPrepareFloatStereo44khz) {
+TEST_F(VirtioSoundTest, PcmOutputPrepareFloatStereo48khz) {
   TestPcmOutputSetParamsAndPrepare(2, VIRTIO_SND_PCM_FMT_FLOAT, VIRTIO_SND_PCM_RATE_48000,
                                    fuchsia::media::AudioSampleFormat::FLOAT, 48000);
 }
@@ -1135,6 +1137,11 @@ TEST_F(VirtioSoundTest, PcmOutputPrepareFloatMono96khz) {
 TEST_F(VirtioSoundTest, PcmOutputPrepareFloatMono192khz) {
   TestPcmOutputSetParamsAndPrepare(1, VIRTIO_SND_PCM_FMT_FLOAT, VIRTIO_SND_PCM_RATE_192000,
                                    fuchsia::media::AudioSampleFormat::FLOAT, 192000);
+}
+
+TEST_F(VirtioSoundTest, PcmOutputPrepareFloat64Mono48khz) {
+  TestPcmOutputSetParamsAndPrepare(1, VIRTIO_SND_PCM_FMT_FLOAT64, VIRTIO_SND_PCM_RATE_48000,
+                                   fuchsia::media::AudioSampleFormat::FLOAT_64, 48000);
 }
 
 //
@@ -1695,22 +1702,22 @@ void VirtioSoundTestBase<true>::TestPcmInputSetParamsAndPrepare(
   EXPECT_EQ(stream_type.frames_per_second, fidl_rate);
 }
 
-TEST_F(VirtioSoundTest, PcmInputPrepareUint8Mono44khz) {
+TEST_F(VirtioSoundTest, PcmInputPrepareUint8Mono48khz) {
   TestPcmInputSetParamsAndPrepare(1, VIRTIO_SND_PCM_FMT_U8, VIRTIO_SND_PCM_RATE_48000,
                                   fuchsia::media::AudioSampleFormat::UNSIGNED_8, 48000);
 }
 
-TEST_F(VirtioSoundTest, PcmInputPrepareInt16Mono44khz) {
+TEST_F(VirtioSoundTest, PcmInputPrepareInt16Mono48khz) {
   TestPcmInputSetParamsAndPrepare(1, VIRTIO_SND_PCM_FMT_S16, VIRTIO_SND_PCM_RATE_48000,
                                   fuchsia::media::AudioSampleFormat::SIGNED_16, 48000);
 }
 
-TEST_F(VirtioSoundTest, PcmInputPrepareInt24Mono44khz) {
+TEST_F(VirtioSoundTest, PcmInputPrepareInt24Mono48khz) {
   TestPcmInputSetParamsAndPrepare(1, VIRTIO_SND_PCM_FMT_S24, VIRTIO_SND_PCM_RATE_48000,
                                   fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32, 48000);
 }
 
-TEST_F(VirtioSoundTest, PcmInputPrepareFloatMono44khz) {
+TEST_F(VirtioSoundTest, PcmInputPrepareFloatMono48khz) {
   TestPcmInputSetParamsAndPrepare(1, VIRTIO_SND_PCM_FMT_FLOAT, VIRTIO_SND_PCM_RATE_48000,
                                   fuchsia::media::AudioSampleFormat::FLOAT, 48000);
 }
@@ -1728,6 +1735,11 @@ TEST_F(VirtioSoundTest, PcmInputPrepareFloatMono96khz) {
 TEST_F(VirtioSoundTest, PcmInputPrepareFloatMono192khz) {
   TestPcmInputSetParamsAndPrepare(1, VIRTIO_SND_PCM_FMT_FLOAT, VIRTIO_SND_PCM_RATE_192000,
                                   fuchsia::media::AudioSampleFormat::FLOAT, 192000);
+}
+
+TEST_F(VirtioSoundTest, PcmInputPrepareFloat64Mono48khz) {
+  TestPcmInputSetParamsAndPrepare(1, VIRTIO_SND_PCM_FMT_FLOAT64, VIRTIO_SND_PCM_RATE_48000,
+                                  fuchsia::media::AudioSampleFormat::FLOAT_64, 48000);
 }
 
 //

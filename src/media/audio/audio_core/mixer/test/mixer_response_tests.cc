@@ -117,6 +117,19 @@ TEST(NoiseFloor, SourceFloat32) {
       << std::setprecision(10) << AudioResult::FloorSourceFloat;
 }
 
+// Measure level response and noise floor for 1kHz sine from float source.
+TEST(NoiseFloor, SourceFloat64) {
+  AudioResult::LevelSourceFloat64 =
+      MeasureSourceNoiseFloor<ASF::FLOAT_64>(&AudioResult::FloorSourceFloat64);
+
+  EXPECT_NEAR(AudioResult::LevelSourceFloat64, 0.0, AudioResult::kPrevLevelToleranceSourceFloat64);
+  AudioResult::LevelToleranceSourceFloat =
+      fmax(AudioResult::LevelToleranceSourceFloat64, abs(AudioResult::LevelSourceFloat64));
+
+  EXPECT_GE(AudioResult::FloorSourceFloat64, AudioResult::kPrevFloorSourceFloat64)
+      << std::setprecision(10) << AudioResult::FloorSourceFloat64;
+}
+
 // Calculate magnitude of primary signal strength, compared to max value. Do the same for noise
 // level, compared to the received signal.  For 8-bit output, using int8::max (not uint8::max) is
 // intentional, as within uint8 we still use a maximum amplitude of 127 (it is just centered on

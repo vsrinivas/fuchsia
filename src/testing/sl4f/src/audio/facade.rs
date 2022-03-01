@@ -26,6 +26,7 @@ const AUDIO_SAMPLE_FORMAT_8BIT: u32 = 1 << 1;
 const AUDIO_SAMPLE_FORMAT_16BIT: u32 = 1 << 2;
 const AUDIO_SAMPLE_FORMAT_24BIT_IN32: u32 = 1 << 7;
 const AUDIO_SAMPLE_FORMAT_32BIT_FLOAT: u32 = 1 << 9;
+const AUDIO_SAMPLE_FORMAT_64BIT_FLOAT: u32 = 1 << 10;
 
 const ASF_RANGE_FLAG_FPS_CONTINUOUS: u16 = 1 << 0;
 
@@ -39,6 +40,7 @@ fn get_sample_size(format: u32) -> Result<u32, Error> {
         AUDIO_SAMPLE_FORMAT_16BIT => 2,
         AUDIO_SAMPLE_FORMAT_24BIT_IN32 => 4,
         AUDIO_SAMPLE_FORMAT_32BIT_FLOAT => 4,
+        AUDIO_SAMPLE_FORMAT_64BIT_FLOAT => 8,
         _ => return Err(format_err!("Cannot handle sample_format: {:?}", format)),
     })
 }
@@ -49,6 +51,7 @@ fn get_zircon_sample_format(format: AudioSampleFormat) -> u32 {
         AudioSampleFormat::Unsigned8 => AUDIO_SAMPLE_FORMAT_8BIT,
         AudioSampleFormat::Signed24In32 => AUDIO_SAMPLE_FORMAT_24BIT_IN32,
         AudioSampleFormat::Float => AUDIO_SAMPLE_FORMAT_32BIT_FLOAT,
+        AudioSampleFormat::Float64 => AUDIO_SAMPLE_FORMAT_64BIT_FLOAT,
         // No default case, these are all the audio sample formats supported right now.
     }
 }

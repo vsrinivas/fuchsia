@@ -145,7 +145,7 @@ void WavPlayer::InitializeWavReader() {
   }
 
   if (wav_reader_->length_in_frames() == 0) {
-    stopping_ = true;
+    reached_end_of_file_ = true;
     return;
   }
 }
@@ -294,6 +294,9 @@ void WavPlayer::SetupPayloadCoefficients() {
     case fuchsia::media::AudioSampleFormat::FLOAT:
       sample_size = sizeof(float);
       break;
+    case fuchsia::media::AudioSampleFormat::FLOAT_64:
+      sample_size = sizeof(double);
+      break;
     default:
       printf("Unknown AudioSampleFormat: %u\n", sample_format_);
       Shutdown();
@@ -402,7 +405,7 @@ void WavPlayer::GetClockAndStart() {
 
 // Prime (pre-submit) an initial set of packets, then start playback.
 void WavPlayer::Play() {
-  if (stopping_) {
+  if (reached_end_of_file_) {
     // No packets to send, so we're done! Shutdown will unwind everything and exit our loop.
     Shutdown();
     return;
@@ -510,13 +513,6 @@ fuchsia::media::StreamPacket WavPlayer::CreateAudioPacket(uint64_t packet_num) {
 
 uint64_t WavPlayer::RetrieveAudioForPacket(const fuchsia::media::StreamPacket& packet,
                                            uint64_t packet_num) {
-  if (looping_reached_end_of_file_) {
-    auto reset_status = wav_reader_->Reset();
-    CLI_CHECK_OK(reset_status, "Could not reset file read pointer to beginning of file");
-
-    looping_reached_end_of_file_ = false;
-  }
-
   auto audio_buff = reinterpret_cast<uint8_t*>(payload_buffer_.start()) + packet.payload_offset;
   uint64_t bytes_added = 0;
 
@@ -528,13 +524,9 @@ uint64_t WavPlayer::RetrieveAudioForPacket(const fuchsia::media::StreamPacket& p
   bytes_added = status.value();
 
   if (bytes_added < packet.payload_size) {
-    if (bytes_added == 0) {
-      if (options_.loop_playback) {
-        looping_reached_end_of_file_ = true;
-        bytes_added = RetrieveAudioForPacket(packet, packet_num);
-      } else {
-        stopping_ = true;
-      }
+    if (options_.loop_playback) {
+      auto reset_status = wav_reader_->Reset();
+      CLI_CHECK_OK(reset_status, "Could not reset file read pointer to beginning of file");
     }
 
     // Extra-safe but unnecessary, since we shorten the final packet based on bytes_added retval.
@@ -549,7 +541,7 @@ uint64_t WavPlayer::RetrieveAudioForPacket(const fuchsia::media::StreamPacket& p
 // b. if all expected packets have completed, begin closing down the system.
 void WavPlayer::SendPacket() {
   // If we reached end-of-file (not looping) or got a keypress, no need to send more packets.
-  if (stopping_) {
+  if (reached_end_of_file_) {
     return;
   }
 
@@ -557,19 +549,20 @@ void WavPlayer::SendPacket() {
 
   auto packet = CreateAudioPacket(num_packets_sent_);
 
-  auto actual_bytes_retrieved = RetrieveAudioForPacket(packet, num_packets_sent_);
+  auto bytes_retrieved = RetrieveAudioForPacket(packet, num_packets_sent_);
   // RetrieveAudioForPacket will never return MORE data than expected
-  CLI_CHECK(actual_bytes_retrieved <= bytes_per_packet_, "RetrieveAudioForPacket size too large");
+  CLI_CHECK(bytes_retrieved <= bytes_per_packet_, "RetrieveAudioForPacket size too large");
 
-  // If actual_bytes_retrieved is less than bytes_per_packet_, this is the last packet at EOF.
-  // We might be looping, so we let RetrieveAudioForPacket handle whether to set stopping_.
-  // Either way, we should play out this last partially-filled packet, unless it is truly empty --
-  // in which case we can safely return without doing anything.
-  if (!actual_bytes_retrieved) {
-    return;
+  // If bytes_retrieved is less than bytes_per_packet_, this is the last packet at EOF.
+  // Send it normally (unless it is completely empty -- see below). If we are looping, the
+  // subsequent packet will again be full. If we aren't looping, the next packet will be completely
+  // empty -- set a flag so we don't keep reading the EOF, and let any remaining packets complete.
+  if (bytes_retrieved < bytes_per_packet_) {
+    packet.payload_size = bytes_retrieved;
   }
-  if (actual_bytes_retrieved < bytes_per_packet_) {
-    packet.payload_size = actual_bytes_retrieved;
+  if (!bytes_retrieved) {
+    reached_end_of_file_ = true;
+    return;
   }
 
   if (options_.verbose) {
@@ -597,7 +590,9 @@ void WavPlayer::SendPacket() {
 }
 
 void WavPlayer::OnSendPacketComplete(uint64_t frames_completed) {
-  num_frames_completed_ += frames_completed;
+  if (!stopping_) {
+    num_frames_completed_ += frames_completed;
+  }
 
   if (options_.verbose) {
     zx::time ref_now;
@@ -622,6 +617,7 @@ void WavPlayer::OnSendPacketComplete(uint64_t frames_completed) {
             "packets_completed cannot exceed num_packets_sent !");
 
   if (num_packets_completed_ == num_packets_sent_) {
+    // We've completed everything that we needed to send. Close channels and exit.
     Shutdown();
   } else if (!stopping_) {
     SendPacket();
@@ -651,13 +647,16 @@ void WavPlayer::SetAudioRendererEvents() {
 // When a key is pressed, don't send additional packets. Also, recall existing packets (don't wait
 // for the multi-sec buffer to empty out).
 void WavPlayer::OnKeyPress() {
+  // Don't send any more packets
   stopping_ = true;
+  // Recall all the outstanding packets; don't want for them to complete.
   audio_renderer_->DiscardAllPacketsNoReply();
 }
 
 // Unmap memory, quit message loop (FIDL interfaces auto-delete upon ~WavPlayer).
 bool WavPlayer::Shutdown() {
   stopping_ = true;
+  printf("\nwav_player is exiting after playing %lu frames\n\n", num_frames_completed_);
 
   gain_control_.Unbind();
   usage_volume_control_.Unbind();

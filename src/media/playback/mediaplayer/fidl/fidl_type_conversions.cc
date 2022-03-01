@@ -83,6 +83,8 @@ TypeConverter<media_player::AudioStreamType::SampleFormat, fuchsia::media::Audio
       return media_player::AudioStreamType::SampleFormat::kSigned24In32;
     case fuchsia::media::AudioSampleFormat::FLOAT:
       return media_player::AudioStreamType::SampleFormat::kFloat;
+    case fuchsia::media::AudioSampleFormat::FLOAT_64:
+      return media_player::AudioStreamType::SampleFormat::kFloat64;
   }
 
   FX_LOGS(ERROR) << "unrecognized sample format";
@@ -139,6 +141,8 @@ TypeConverter<fuchsia::media::AudioSampleFormat, media_player::AudioStreamType::
       return fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32;
     case media_player::AudioStreamType::SampleFormat::kFloat:
       return fuchsia::media::AudioSampleFormat::FLOAT;
+    case media_player::AudioStreamType::SampleFormat::kFloat64:
+      return fuchsia::media::AudioSampleFormat::FLOAT_64;
     default:
       break;
   }

@@ -381,38 +381,44 @@ void MixerTestsRecap::PrintNoiseFloorSummary() {
   printf("\n\t    8-bit    ");
   printf("        16-bit   ");
   printf("        24-bit   ");
-  printf("        Float");
+  printf("        Float    ");
+  printf("       Float64");
   printf("\n\t%6.2lf (%6.2lf)  %6.2lf (%6.2lf)  ", AudioResult::FloorSource8,
          AudioResult::kPrevFloorSource8, AudioResult::FloorSource16,
          AudioResult::kPrevFloorSource16);
-  printf("%6.2lf (%6.2lf)  %6.2lf (%6.2lf)", AudioResult::FloorSource24,
+  printf("%6.2lf (%6.2lf)  %6.2lf (%6.2lf)  %6.2lf (%6.2lf)", AudioResult::FloorSource24,
          AudioResult::kPrevFloorSource24, AudioResult::FloorSourceFloat,
-         AudioResult::kPrevFloorSourceFloat);
+         AudioResult::kPrevFloorSourceFloat, AudioResult::FloorSourceFloat64,
+         AudioResult::kPrevFloorSourceFloat64);
 
   printf("\n\n   Mix Floor");
   printf("\n\t    8-bit    ");
   printf("        16-bit   ");
   printf("        24-bit   ");
   printf("        Float    ");
+  printf("       Float64   ");
   printf("     Stereo->Mono");
   printf("\n\t%6.2lf (%6.2lf)  %6.2lf (%6.2lf)  %6.2lf (%6.2lf)  ", AudioResult::FloorMix8,
          AudioResult::kPrevFloorMix8, AudioResult::FloorMix16, AudioResult::kPrevFloorMix16,
          AudioResult::FloorMix24, AudioResult::kPrevFloorMix24);
-  printf("%6.2lf (%6.2lf)  %6.2lf (%6.2lf)", AudioResult::FloorMixFloat,
-         AudioResult::kPrevFloorMixFloat, AudioResult::FloorStereoMono,
+  printf("%6.2lf (%6.2lf)  %6.2lf (%6.2lf)  %6.2lf (%6.2lf)", AudioResult::FloorMixFloat,
+         AudioResult::kPrevFloorMixFloat, AudioResult::FloorMixFloat64,
+         AudioResult::kPrevFloorMixFloat64, AudioResult::FloorStereoMono,
          AudioResult::kPrevFloorStereoMono);
 
   printf("\n\n   Outputs");
   printf("\n\t    8-bit    ");
   printf("        16-bit   ");
   printf("        24-bit   ");
-  printf("        Float");
+  printf("        Float    ");
+  printf("       Float64");
   printf("\n\t%6.2lf (%6.2lf)  %6.2lf (%6.2lf)  ", AudioResult::FloorOutput8,
          AudioResult::kPrevFloorOutput8, AudioResult::FloorOutput16,
          AudioResult::kPrevFloorOutput16);
-  printf("%6.2lf (%6.2lf)  %6.2lf (%6.2lf)", AudioResult::FloorOutput24,
+  printf("%6.2lf (%6.2lf)  %6.2lf (%6.2lf)  %6.2lf (%6.2lf)", AudioResult::FloorOutput24,
          AudioResult::kPrevFloorOutput24, AudioResult::FloorOutputFloat,
-         AudioResult::kPrevFloorOutputFloat);
+         AudioResult::kPrevFloorOutputFloat, AudioResult::FloorOutputFloat64,
+         AudioResult::kPrevFloorOutputFloat64);
 
   printf("\n\n");
 }

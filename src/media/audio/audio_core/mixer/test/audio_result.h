@@ -55,6 +55,7 @@ class AudioResult {
   static double LevelToleranceSource16;
   static double LevelToleranceSource24;
   static double LevelToleranceSourceFloat;
+  static double LevelToleranceSourceFloat64;
 
   // Related to the above, these constants store the previous measurements. These are used as
   // threshold limits -- if any current test EXCEEDS this tolerance, it is considered an error and
@@ -63,6 +64,7 @@ class AudioResult {
   static constexpr double kPrevLevelToleranceSource16 = 6.8541681e-07;
   static constexpr double kPrevLevelToleranceSource24 = 3.0346074e-09;
   static constexpr double kPrevLevelToleranceSourceFloat = 5.3282082e-10;
+  static constexpr double kPrevLevelToleranceSourceFloat64 = 5.3282082e-10;
 
   // These variables store the specific result magnitude (in dBFS) for the input type when a 1 kHz
   // reference-frequency full-scale 0 dBFS signal is provided.
@@ -70,6 +72,7 @@ class AudioResult {
   static double LevelSource16;
   static double LevelSource24;
   static double LevelSourceFloat;
+  static double LevelSourceFloat64;
 
   // Related to the above, if the current measurement (0 dBFS sinusoid at a single reference
   // frequency) is LESS than the threshold constants listed below, it is considered an error and
@@ -78,6 +81,7 @@ class AudioResult {
   static constexpr double kPrevLevelSource16 = 0.0;
   static constexpr double kPrevLevelSource24 = 0.0;
   static constexpr double kPrevLevelSourceFloat = 0.0;
+  static constexpr double kPrevLevelSourceFloat64 = 0.0;
 
   // Noise floor is assessed by injecting a full-scale 1 kHz sinusoid, then measuring the
   // root-sum-square strength of all the other frequencies besides 1 kHz. This strength is compared
@@ -92,6 +96,7 @@ class AudioResult {
   static double FloorSource16;
   static double FloorSource24;
   static double FloorSourceFloat;
+  static double FloorSourceFloat64;
 
   // These constants store previous noise floors per input type. Any current measurement LESS than
   // this threshold limit is considered a test failure.
@@ -99,6 +104,7 @@ class AudioResult {
   static constexpr double kPrevFloorSource16 = 98.104753;
   static constexpr double kPrevFloorSource24 = 146.30926;
   static constexpr double kPrevFloorSourceFloat = 153.74509;
+  static constexpr double kPrevFloorSourceFloat64 = 153.74509;
 
   //
   //
@@ -436,36 +442,42 @@ class AudioResult {
   static double LevelToleranceMix16;
   static double LevelToleranceMix24;
   static double LevelToleranceMixFloat;
+  static double LevelToleranceMixFloat64;
 
   // If current tolerance EXCEEDS this value, then the test case fails.
   static constexpr double kPrevLevelToleranceMix8 = 6.4082082e-04;
   static constexpr double kPrevLevelToleranceMix16 = 6.8541681e-07;
   static constexpr double kPrevLevelToleranceMix24 = 3.0346074e-09;
   static constexpr double kPrevLevelToleranceMixFloat = 5.3282082e-10;
+  static constexpr double kPrevLevelToleranceMixFloat64 = 5.3282082e-10;
 
   // Absolute output level (dBFS) measured in Mix tests for this input type.
   static double LevelMix8;
   static double LevelMix16;
   static double LevelMix24;
   static double LevelMixFloat;
+  static double LevelMixFloat64;
 
   // If current value is LESS than this value, then the test case fails.
   static constexpr double kPrevLevelMix8 = 0.0;
   static constexpr double kPrevLevelMix16 = 0.0;
   static constexpr double kPrevLevelMix24 = 0.0;
   static constexpr double kPrevLevelMixFloat = 0.0;
+  static constexpr double kPrevLevelMixFloat64 = 0.0;
 
   // Noise floor (dBr to full-scale) measured in Mix tests for this input type.
   static double FloorMix8;
   static double FloorMix16;
   static double FloorMix24;
   static double FloorMixFloat;
+  static double FloorMixFloat64;
 
   // If current value is LESS than this value, then the test case fails.
   static constexpr double kPrevFloorMix8 = 49.952317;
   static constexpr double kPrevFloorMix16 = 98.104753;
   static constexpr double kPrevFloorMix24 = 146.30926;
   static constexpr double kPrevFloorMixFloat = 153.74509;
+  static constexpr double kPrevFloorMixFloat64 = 153.74509;
 
   //
   //
@@ -481,24 +493,28 @@ class AudioResult {
   static double LevelToleranceOutput16;
   static double LevelToleranceOutput24;
   static double LevelToleranceOutputFloat;
+  static double LevelToleranceOutputFloat64;
 
   // If current tolerance EXCEEDS this value, then the test case fails.
   static constexpr double kPrevLevelToleranceOutput8 = 6.4082082e-04;
   static constexpr double kPrevLevelToleranceOutput16 = 9.9668031e-07;
   static constexpr double kPrevLevelToleranceOutput24 = 3.0250373e-07;
   static constexpr double kPrevLevelToleranceOutputFloat = 5.3282082e-10;
+  static constexpr double kPrevLevelToleranceOutputFloat64 = 5.3282082e-10;
 
   // Absolute output level (dBFS) measured in Output tests for this type.
   static double LevelOutput8;
   static double LevelOutput16;
   static double LevelOutput24;
   static double LevelOutputFloat;
+  static double LevelOutputFloat64;
 
   // If current value is LESS than this value, then the test case fails.
   static constexpr double kPrevLevelOutput8 = 0.0;
   static constexpr double kPrevLevelOutput16 = 0.0;
   static constexpr double kPrevLevelOutput24 = 0.0;
   static constexpr double kPrevLevelOutputFloat = 0.0;
+  static constexpr double kPrevLevelOutputFloat64 = 0.0;
 
   // What is our best-case noise floor in absence of rechannel/gain/SRC/mix. Val is root-sum-square
   // of all other freqs besides the 1kHz reference, in dBr units (compared to magnitude of received
@@ -508,12 +524,14 @@ class AudioResult {
   static double FloorOutput16;
   static double FloorOutput24;
   static double FloorOutputFloat;
+  static double FloorOutputFloat64;
 
   // If current value is LESS than this value, then the test case fails.
   static constexpr double kPrevFloorOutput8 = 49.952957;
   static constexpr double kPrevFloorOutput16 = 98.104911;
   static constexpr double kPrevFloorOutput24 = 146.22129;
   static constexpr double kPrevFloorOutputFloat = 153.74509;
+  static constexpr double kPrevFloorOutputFloat64 = 153.74509;
 
   // class is static only - prevent attempts to instantiate it
   AudioResult() = delete;

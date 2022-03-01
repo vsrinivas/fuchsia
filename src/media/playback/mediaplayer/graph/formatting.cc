@@ -180,7 +180,9 @@ std::ostream& operator<<(std::ostream& os, AudioStreamType::SampleFormat value) 
     case AudioStreamType::SampleFormat::kSigned24In32:
       return os << "signed 24 in 32";
     case AudioStreamType::SampleFormat::kFloat:
-      return os << "float";
+      return os << "float32";
+    case AudioStreamType::SampleFormat::kFloat64:
+      return os << "float64";
   }
 
   return os;

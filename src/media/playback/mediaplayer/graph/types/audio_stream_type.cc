@@ -45,6 +45,8 @@ uint32_t AudioStreamType::SampleSizeFromFormat(SampleFormat sample_format) {
       return sizeof(int32_t);
     case SampleFormat::kFloat:
       return sizeof(float);
+    case SampleFormat::kFloat64:
+      return sizeof(double);
   }
 
   return 0;

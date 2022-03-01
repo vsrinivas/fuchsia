@@ -3,6 +3,8 @@
 
 #include "src/media/audio/audio_core/mixer/point_sampler.h"
 
+#include <limits>
+
 #include <fbl/algorithm.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
@@ -30,8 +32,7 @@ class PointSamplerTest : public testing::Test {
 
   static const std::vector<fuchsia::media::AudioSampleFormat> kFormats;
   const fuchsia::media::AudioSampleFormat kInvalidFormat =
-      static_cast<fuchsia::media::AudioSampleFormat>(
-          static_cast<int64_t>(kFormats[std::size(kFormats) - 1]) + 1);
+      static_cast<fuchsia::media::AudioSampleFormat>(-1);
 
   std::unique_ptr<Mixer> SelectPointSampler(
       int32_t source_channels, int32_t dest_channels, int32_t source_frame_rate,
@@ -115,6 +116,7 @@ const std::vector<fuchsia::media::AudioSampleFormat> PointSamplerTest::kFormats 
     fuchsia::media::AudioSampleFormat::SIGNED_16,
     fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32,
     fuchsia::media::AudioSampleFormat::FLOAT,
+    fuchsia::media::AudioSampleFormat::FLOAT_64,
 };
 
 // These formats are supported
@@ -304,9 +306,9 @@ TEST_F(PointSamplerPassThruTest, Int24In32) {
   EXPECT_THAT(accum, Pointwise(FloatEq(), expect));
 }
 
-// Can float values flow unchanged (1-1, N-N) thru the system? With 1:1 frame
+// Can float32 values flow unchanged (1-1, N-N) thru the system? With 1:1 frame
 // conversion, unity scale and no accumulation, we expect bit-equality.
-TEST_F(PointSamplerPassThruTest, Float) {
+TEST_F(PointSamplerPassThruTest, Float32) {
   auto source = std::vector<float>{-1.0, 1.0f,      -0.809783935f, 0.603912353f, -0.00888061523f,
                                    0.0f, 0.296875f, -0.357757568f};
 
@@ -322,6 +324,69 @@ TEST_F(PointSamplerPassThruTest, Float) {
   DoMix(mixer.get(), source.data(), accum.data(), false, accum.size() / 4);
   EXPECT_THAT(accum, Pointwise(FloatEq(), source));
 }
+
+// Can float64 values flow unchanged (1-1, N-N) thru the system? With 1:1 frame conversion, unity
+// scale and no accumulation, we expect bit-equality only to the extent of our pipeline support,
+// plus the system's built-in double-to-float casting.
+TEST_F(PointSamplerPassThruTest, Float64) {
+  auto source = std::vector<double>{-1.0,           1.0, -0.809783935, 0.603912353,
+                                    -0.00888061523, 0.0, 0.296875,     -0.357757568};
+  auto expect = std::vector<float>(source.size());
+  for (auto idx = 0u; idx < source.size(); ++idx) {
+    expect[idx] = static_cast<float>(source[idx]);
+  }
+
+  // Try in 1-channel mode
+  auto accum = std::vector<float>(source.size());
+  auto mixer = SelectPointSampler(1, 1, 48000, 48000, fuchsia::media::AudioSampleFormat::FLOAT_64);
+  DoMix(mixer.get(), source.data(), accum.data(), false, accum.size());
+  EXPECT_THAT(accum, Pointwise(FloatEq(), expect));
+
+  // Now try in 4-channel mode
+  std::fill(accum.begin(), accum.end(), NAN);  // fill accum with nonsense (overwritten)
+  mixer = SelectPointSampler(4, 4, 8000, 8000, fuchsia::media::AudioSampleFormat::FLOAT_64);
+  DoMix(mixer.get(), source.data(), accum.data(), false, accum.size() / 4);
+  EXPECT_THAT(accum, Pointwise(FloatEq(), expect));
+
+  // Ingesting float64 data does not mean a pipeline supports that precision level. Translating a
+  // (float) result back to double, there's no guarantee that it will equal the original double
+  // source value. However, any difference should be less than the float32 epsilon.
+  // Example: source[3] is 0.603912353000000 as double, but 0.603912353515625 as float.
+  EXPECT_NE(static_cast<double>(accum[3]), source[3]);
+  EXPECT_LT(static_cast<double>(accum[3]) - source[3],
+            static_cast<double>(std::numeric_limits<float>::epsilon()));
+}
+
+// Can out-of-range float32 values flow unchanged into the system?
+// On ingestion, we do not clamp float32 sources to the [-1.0, +1.0] range. We only clamp when
+// (1) converting to non-float format, (2) emitting to device, or (3) conveying to capture client.
+TEST_F(PointSamplerPassThruTest, Float32AllowsOutOfRangeSourceValues) {
+  auto source = std::vector<float>{1.1f, -1.1f};
+  auto accum = std::vector<float>(source.size());
+
+  auto mixer = SelectPointSampler(1, 1, 48000, 48000, fuchsia::media::AudioSampleFormat::FLOAT);
+  DoMix(mixer.get(), source.data(), accum.data(), false, accum.size());
+  EXPECT_THAT(accum, Pointwise(FloatEq(), source));
+}
+
+// Can out-of-range float64 values flow unchanged into the system?
+// On ingestion, we do not clamp float64 sources to [-1.0, +1.0]; we convert to float32, as-is.
+TEST_F(PointSamplerPassThruTest, Float64AllowsOutOfRangeSourceValues) {
+  auto source = std::vector<double>{1.1, -1.1};
+  auto expect = std::vector<float>(source.size());
+  for (auto idx = 0u; idx < source.size(); ++idx) {
+    expect[idx] = static_cast<float>(source[idx]);
+  }
+  auto accum = std::vector<float>(source.size());
+
+  auto mixer = SelectPointSampler(1, 1, 48000, 48000, fuchsia::media::AudioSampleFormat::FLOAT_64);
+  DoMix(mixer.get(), source.data(), accum.data(), false, accum.size());
+  EXPECT_THAT(accum, Pointwise(FloatEq(), expect));
+}
+
+// Although aspects like scaling, rechannelization, accumulate, etc. are unittested directly
+// elsewhere (SampleScalerTest, SourceReaderTest, DestMixerTest), these cases test them as part of
+// an entire intact mixer. We do this with PointSampler rather than SincSampler, for simplicity.
 
 // Rechannelization tests
 //

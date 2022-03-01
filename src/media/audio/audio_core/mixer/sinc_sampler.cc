@@ -372,6 +372,8 @@ static inline std::unique_ptr<Mixer> SelectSSM(const fuchsia::media::AudioStream
       return SelectSSM<DestChanCount, int32_t>(source_format, dest_format, gain_limits);
     case fuchsia::media::AudioSampleFormat::FLOAT:
       return SelectSSM<DestChanCount, float>(source_format, dest_format, gain_limits);
+    case fuchsia::media::AudioSampleFormat::FLOAT_64:
+      return SelectSSM<DestChanCount, double>(source_format, dest_format, gain_limits);
     default:
       FX_LOGS(WARNING) << "SincSampler does not support this sample_format: "
                        << static_cast<int64_t>(source_format.sample_format);

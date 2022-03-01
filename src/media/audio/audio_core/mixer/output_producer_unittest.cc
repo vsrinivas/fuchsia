@@ -5,6 +5,7 @@
 #include "src/media/audio/audio_core/mixer/output_producer.h"
 
 #include <cmath>
+#include <iomanip>
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
@@ -73,6 +74,11 @@ TEST_F(OutputProducerTest, ConstructionInt24) {
 // Create OutputProducer objects for outgoing buffers of type float
 TEST_F(OutputProducerTest, ConstructionFloat32) {
   EXPECT_NE(nullptr, SelectOutputProducer(fuchsia::media::AudioSampleFormat::FLOAT, 1));
+}
+
+// Create OutputProducer objects for outgoing buffers of type float
+TEST_F(OutputProducerTest, ConstructionFloat64) {
+  EXPECT_NE(nullptr, SelectOutputProducer(fuchsia::media::AudioSampleFormat::FLOAT_64, 8));
 }
 
 // Are all valid data values rounded correctly to 8-bit outputs?
@@ -296,6 +302,47 @@ TEST_F(OutputProducerTest, PassThruFloat32DontOverwriteExtraDestFrames) {
   EXPECT_THAT(accum, testing::Pointwise(testing::FloatEq(), dest));
 }
 
+// Are all valid data values passed correctly to float64 outputs
+TEST_F(OutputProducerTest, PassThruFloat64) {
+  auto accum = std::array<float, 10>{
+      -1.1f,
+      1.1f,
+      -1.0f,
+      1.0f,
+      -0.503921568393707f,
+      0.503921568393707f,
+      -0.0000001189999991879631f,
+      0.0000001189999991879631f,
+      0,
+      -7.5,  // will not be read and output to the dest buffer
+  };
+
+  constexpr double kPrevValue = 4.2;
+  auto dest = std::vector<double>(accum.size());
+  std::fill(dest.begin(), dest.end(), kPrevValue);
+  ASSERT_EQ(dest.size(), accum.size()) << "Test error, vector lengths should match";
+
+  std::array<double, 10> expect{
+      -1.0,  // clamped
+      1.0,   // clamped
+      -1.0,
+      1.0,
+      -0.503921568393707,
+      0.503921568393707,
+      -0.0000001189999991879631,
+      0.0000001189999991879631,
+      0,
+      kPrevValue,  // not get overwritten by ProduceOutput()
+  };
+  static_assert(std::size(accum) == std::size(expect), "Test error, vector lengths should match");
+
+  auto output_producer = SelectOutputProducer(fuchsia::media::AudioSampleFormat::FLOAT_64, 1);
+  ASSERT_NE(nullptr, output_producer);
+
+  output_producer->ProduceOutput(accum.data(), dest.data(), accum.size() - 1);
+  EXPECT_THAT(dest, testing::Pointwise(testing::DoubleEq(), expect));
+}
+
 // Are 8-bit output buffers correctly silenced? Do we stop when we should?
 TEST_F(OutputProducerTest, SilenceUint8) {
   constexpr auto num_frames = 6;
@@ -336,7 +383,7 @@ TEST_F(OutputProducerTest, SilenceInt24) {
   EXPECT_THAT(dest, testing::Each(testing::Eq(0)));
 }
 
-// Are float output buffers correctly silenced? Do we stop when we should?
+// Are float32 output buffers correctly silenced? Do we stop when we should?
 TEST_F(OutputProducerTest, SilenceFloat32) {
   constexpr auto num_frames = 6;
   std::array<float, num_frames> dest;
@@ -383,31 +430,63 @@ TEST_F(OutputProducerTest, SilenceFloat32DontOverwriteExtraDestFrames) {
   EXPECT_THAT(dest, testing::Each(testing::Eq(0.0f)));
 }
 
+// Are float64 output buffers correctly silenced? Do we stop when we should?
+TEST_F(OutputProducerTest, SilenceFloat64) {
+  constexpr auto num_silent_samples = 6;
+  std::array<double, num_silent_samples + 1> dest;
+  std::fill(dest.begin(), dest.end(), -4.2);
+
+  auto output_producer = SelectOutputProducer(fuchsia::media::AudioSampleFormat::FLOAT_64, 1);
+  ASSERT_NE(output_producer, nullptr);
+
+  output_producer->FillWithSilence(dest.data(), num_silent_samples);
+  // Check the not-overwritten dest value, then clear it so we can compare entire arrays
+  EXPECT_EQ(dest[num_silent_samples], -4.2);
+  dest[num_silent_samples] = 0.0;
+  EXPECT_THAT(dest, testing::Each(testing::Eq(0.0)));
+}
+
 // Mixer objects produce normal data, but arbitrary pipeline effects may not.
 //
 // Currently OutputProducer clamps +/-INF to [-1.0, 1.0].
 TEST_F(OutputProducerTest, InfinitiesFloat32) {
-  float source, output;
   auto output_producer = SelectOutputProducer(fuchsia::media::AudioSampleFormat::FLOAT, 1);
   ASSERT_NE(nullptr, output_producer);
+
+  float source, output;
 
   source = -INFINITY;  // will be clamped
   output_producer->ProduceOutput(&source, &output, 1);
   EXPECT_FLOAT_EQ(output, -1);
-  EXPECT_TRUE(std::isnormal(output));
 
   source = INFINITY;  // will be clamped
   output_producer->ProduceOutput(&source, &output, 1);
   EXPECT_FLOAT_EQ(output, 1);
-  EXPECT_TRUE(std::isnormal(output));
+}
+
+TEST_F(OutputProducerTest, InfinitiesFloat64) {
+  auto output_producer = SelectOutputProducer(fuchsia::media::AudioSampleFormat::FLOAT_64, 1);
+  ASSERT_NE(nullptr, output_producer);
+
+  float source;
+  double output;
+
+  source = -INFINITY;  // will be clamped
+  output_producer->ProduceOutput(&source, &output, 1);
+  EXPECT_DOUBLE_EQ(output, -1);
+
+  source = INFINITY;  // will be clamped
+  output_producer->ProduceOutput(&source, &output, 1);
+  EXPECT_DOUBLE_EQ(output, 1);
 }
 
 // Currently OutputProducer makes no explicit effort to detect and prevent NAN output.
 // TODO(fxbug.dev/84260): Consider a mode where we eliminate NANs (presumably emitting 0 instead).
 TEST_F(OutputProducerTest, DISABLED_NanFloat32) {
-  float source, output;
   auto output_producer = SelectOutputProducer(fuchsia::media::AudioSampleFormat::FLOAT, 1);
   ASSERT_NE(nullptr, output_producer);
+
+  float source, output;
 
   source = NAN;  // should be changed to zero
   output_producer->ProduceOutput(&source, &output, 1);
@@ -415,12 +494,26 @@ TEST_F(OutputProducerTest, DISABLED_NanFloat32) {
   EXPECT_FLOAT_EQ(output, 0.0f);
 }
 
+TEST_F(OutputProducerTest, DISABLED_NanFloat64) {
+  auto output_producer = SelectOutputProducer(fuchsia::media::AudioSampleFormat::FLOAT_64, 1);
+  ASSERT_NE(nullptr, output_producer);
+
+  float source;
+  double output;
+
+  source = NAN;  // should be changed to zero
+  output_producer->ProduceOutput(&source, &output, 1);
+  EXPECT_FALSE(isnan(output));
+  EXPECT_DOUBLE_EQ(output, 0.0);
+}
+
 // Currently OutputProducer makes no explicit effort to detect and prevent subnormal output.
 // TODO(fxbug.dev/84260): Consider a mode where we detect subnormals and round to zero.
 TEST_F(OutputProducerTest, DISABLED_SubnormalsFloat32) {
-  float source, output;
   auto output_producer = SelectOutputProducer(fuchsia::media::AudioSampleFormat::FLOAT, 1);
   ASSERT_NE(nullptr, output_producer);
+
+  float source, output;
 
   source = -FLT_MIN / 2.0;  // subnormal; should be rounded to zero
   output_producer->ProduceOutput(&source, &output, 1);
@@ -429,6 +522,22 @@ TEST_F(OutputProducerTest, DISABLED_SubnormalsFloat32) {
   source = FLT_MIN / 2.0;  // subnormal; should be rounded to zero
   output_producer->ProduceOutput(&source, &output, 1);
   EXPECT_FLOAT_EQ(output, 0.0f);
+}
+
+TEST_F(OutputProducerTest, DISABLED_SubnormalsFloat64) {
+  auto output_producer = SelectOutputProducer(fuchsia::media::AudioSampleFormat::FLOAT_64, 1);
+  ASSERT_NE(nullptr, output_producer);
+
+  float source;
+  double output;
+
+  source = -FLT_MIN / 2.0;  // subnormal; should be rounded to zero during conversion to double
+  output_producer->ProduceOutput(&source, &output, 1);
+  EXPECT_DOUBLE_EQ(output, 0.0);
+
+  source = FLT_MIN / 2.0;  // subnormal; should be rounded to zero during conversion to double
+  output_producer->ProduceOutput(&source, &output, 1);
+  EXPECT_DOUBLE_EQ(output, 0.0);
 }
 
 }  // namespace

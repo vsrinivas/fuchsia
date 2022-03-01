@@ -227,7 +227,10 @@ struct Format {
   int32_t file_sample_size;
   int32_t stream_sample_size;
 };
+
+// Parameterized test class that accepts a Format struct and a channel count
 class WavWriterReaderTest : public testing::TestWithParam<std::tuple<Format, int32_t>> {};
+
 TEST_P(WavWriterReaderTest, FormatSpecifics) {
   Format format = std::get<0>(GetParam());
   int32_t num_channels = std::get<1>(GetParam());
@@ -274,14 +277,18 @@ TEST_P(WavWriterReaderTest, FormatSpecifics) {
   EXPECT_TRUE(writer.Delete());
 }
 
-std::array<Format, 5> formats{
+// Specify sample_format, test frame rate, and sample size - both at rest (in file) and in transit.
+std::array<Format, 6> formats{
     Format(fuchsia::media::AudioSampleFormat::FLOAT, 48000, 4, 4),
+    Format(fuchsia::media::AudioSampleFormat::FLOAT_64, 44100, 8, 8),
     Format(fuchsia::media::AudioSampleFormat::SIGNED_16, 96000, 2, 2),
     Format(fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32, 16000, 3, 4),
     Format(fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32, 192000, 4, 4),
     Format(fuchsia::media::AudioSampleFormat::UNSIGNED_8, 44100, 1, 1),
 };
-INSTANTIATE_TEST_SUITE_P(null, WavWriterReaderTest,
+
+// Test all the specified formats, with every possible channel count [1,8].
+INSTANTIATE_TEST_SUITE_P(RoundTrip, WavWriterReaderTest,
                          testing::Combine(testing::ValuesIn(formats), testing::Range(1, 9)),
                          [](const testing::TestParamInfo<WavWriterReaderTest::ParamType>& info) {
                            std::string name;
@@ -298,6 +305,9 @@ INSTANTIATE_TEST_SUITE_P(null, WavWriterReaderTest,
                                break;
                              case fuchsia::media::AudioSampleFormat::FLOAT:
                                name = "Float32";
+                               break;
+                             case fuchsia::media::AudioSampleFormat::FLOAT_64:
+                               name = "Float64";
                                break;
                            }
                            name += "_" + std::to_string(std::get<1>(info.param)) + "chan";

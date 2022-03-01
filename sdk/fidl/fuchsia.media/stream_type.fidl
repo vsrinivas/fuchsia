@@ -99,6 +99,9 @@ type AudioSampleFormat = strict enum {
 
     /// 32-bit floating-point samples, sample size 4 bytes.
     FLOAT = 4;
+
+    /// 64-bit floating-point samples, sample size 8 bytes.
+    FLOAT_64 = 6;
 };
 
 // /////////////////////////////////////////////////////////////////////////////

@@ -49,6 +49,8 @@ uint32_t Sound::sample_size() const {
       return sizeof(int32_t);
     case fuchsia::media::AudioSampleFormat::FLOAT:
       return sizeof(float);
+    case fuchsia::media::AudioSampleFormat::FLOAT_64:
+      return sizeof(double);
   }
 }
 

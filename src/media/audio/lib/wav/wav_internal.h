@@ -122,11 +122,21 @@ struct __PACKED WavHeader {
   }
 
   void set_format(fuchsia::media::AudioSampleFormat f) {
-    format = (f == fuchsia::media::AudioSampleFormat::FLOAT) ? FORMAT_FLOAT : FORMAT_LPCM;
+    format = (f == fuchsia::media::AudioSampleFormat::FLOAT ||
+              f == fuchsia::media::AudioSampleFormat::FLOAT_64)
+                 ? FORMAT_FLOAT
+                 : FORMAT_LPCM;
   }
   fuchsia::media::AudioSampleFormat sample_format() const {
     if (format == FORMAT_FLOAT) {
-      return fuchsia::media::AudioSampleFormat::FLOAT;
+      switch (bits_per_sample) {
+        case 32:
+          return fuchsia::media::AudioSampleFormat::FLOAT;
+        case 64:
+          return fuchsia::media::AudioSampleFormat::FLOAT_64;
+      }
+      FX_CHECK(false) << "Float format (" << format << ") bits_per_sample " << bits_per_sample;
+      __UNREACHABLE;
     }
     switch (bits_per_sample) {
       case 8:

@@ -76,6 +76,15 @@ class SampleNormalizer<SourceSampleType,
   static inline float Read(const SourceSampleType* source_ptr) { return *source_ptr; }
 };
 
+template <typename SourceSampleType>
+class SampleNormalizer<SourceSampleType,
+                       typename std::enable_if_t<std::is_same_v<SourceSampleType, double>>> {
+ public:
+  static inline float Read(const SourceSampleType* source_ptr) {
+    return static_cast<float>(*source_ptr);
+  }
+};
+
 //
 // SampleScaler
 //

@@ -66,10 +66,11 @@ class DestConverter<DType, typename std::enable_if_t<std::is_same_v<DType, int32
 
 // TODO(fxbug.dev/84260): Consider a mode where we normalize NANs and subnormals.
 template <typename DType>
-class DestConverter<DType, typename std::enable_if_t<std::is_same_v<DType, float>>> {
+class DestConverter<DType, typename std::enable_if_t<std::is_same_v<DType, float> ||
+                                                     std::is_same_v<DType, double>>> {
  public:
   // This will emit +1.0 values, which are legal per WAV format custom.
-  static inline constexpr DType Convert(float sample) { return std::clamp(sample, -1.0f, 1.0f); }
+  static inline constexpr DType Convert(float sample) { return std::clamp<DType>(sample, -1, 1); }
 };
 
 // Template to fill samples with silence based on sample type.
@@ -77,9 +78,9 @@ template <typename DType, typename Enable = void>
 class SilenceMaker;
 
 template <typename DType>
-class SilenceMaker<DType, typename std::enable_if_t<std::is_same_v<DType, int16_t> ||
-                                                    std::is_same_v<DType, int32_t> ||
-                                                    std::is_same_v<DType, float>>> {
+class SilenceMaker<DType, typename std::enable_if_t<
+                              std::is_same_v<DType, int16_t> || std::is_same_v<DType, int32_t> ||
+                              std::is_same_v<DType, float> || std::is_same_v<DType, double>>> {
  public:
   static inline void Fill(void* dest_void_ptr, size_t samples) {
     // This works even if DType is float/double: per IEEE-754, all 0s == +0.0.
@@ -148,6 +149,8 @@ std::unique_ptr<OutputProducer> OutputProducer::Select(
       return std::make_unique<OutputProducerImpl<int32_t>>(format);
     case fuchsia::media::AudioSampleFormat::FLOAT:
       return std::make_unique<OutputProducerImpl<float>>(format);
+    case fuchsia::media::AudioSampleFormat::FLOAT_64:
+      return std::make_unique<OutputProducerImpl<double>>(format);
     default:
       FX_LOGS(ERROR) << "Unsupported output format " << (int64_t)format.sample_format;
       return nullptr;

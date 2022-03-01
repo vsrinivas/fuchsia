@@ -84,6 +84,7 @@ class WavPlayer {
   fuchsia::media::StreamPacket CreateAudioPacket(uint64_t packet_num);
   uint64_t RetrieveAudioForPacket(const fuchsia::media::StreamPacket& packet, uint64_t packet_num);
 
+  void DisplaySummary();
   bool Shutdown();
 
   std::unique_ptr<media::audio::WavReader> wav_reader_;
@@ -111,7 +112,7 @@ class WavPlayer {
 
   bool started_ = false;
   bool stopping_ = false;
-  bool looping_reached_end_of_file_ = false;
+  bool reached_end_of_file_ = false;
 
   fsl::FDWaiter keystroke_waiter_;
 };
