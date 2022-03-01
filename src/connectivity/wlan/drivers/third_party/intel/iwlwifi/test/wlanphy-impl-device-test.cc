@@ -20,7 +20,7 @@ extern "C" {
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/ieee80211.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/mvm-mlme.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/wlanphy-impl-device.h"
-#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test/single-ap-test.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test/fake-ucode-test.h"
 
 namespace wlan::testing {
 namespace {
@@ -28,10 +28,12 @@ namespace {
 constexpr size_t kListenInterval = 100;
 constexpr zx_handle_t kDummyMlmeChannel = 73939133;  // An arbitrary value not ZX_HANDLE_INVALID
 
-class WlanphyImplDeviceTest : public SingleApTest {
+class WlanphyImplDeviceTest : public FakeUcodeTest {
  public:
   WlanphyImplDeviceTest()
-      : mvmvif_sta_{
+      : FakeUcodeTest(0, BIT(IWL_UCODE_TLV_CAPA_LAR_SUPPORT), 0,
+                      BIT(IWL_UCODE_TLV_API_WIFI_MCC_UPDATE)),
+        mvmvif_sta_{
             .mvm = iwl_trans_get_mvm(sim_trans_.iwl_trans()),
             .mac_role = WLAN_MAC_ROLE_CLIENT,
             .bss_conf =
@@ -207,6 +209,13 @@ TEST_F(WlanphyImplDeviceTest, PhyCreateDestroyMultipleInterfaces) {
   // Remove the 1st interface again and it should fail.
   ASSERT_EQ(device_->WlanphyImplDestroyIface(0), ZX_ERR_NOT_FOUND);
   ASSERT_EQ(fake_parent_->descendant_count(), 1);
+}
+
+TEST_F(WlanphyImplDeviceTest, GetCountry) {
+  wlanphy_country_t country;
+  ASSERT_EQ(ZX_OK, device_->WlanphyImplGetCountry(&country));
+  EXPECT_EQ('Z', country.alpha2[0]);
+  EXPECT_EQ('Z', country.alpha2[1]);
 }
 
 }  // namespace

@@ -757,10 +757,16 @@ zx_status_t phy_set_country(void* ctx, const wlanphy_country_t* country) {
 }
 
 zx_status_t phy_get_country(void* ctx, wlanphy_country_t* out_country) {
+  const auto iwl_trans = reinterpret_cast<struct iwl_trans*>(ctx);
+  struct iwl_mvm* mvm = iwl_trans_get_mvm(iwl_trans);
+
   if (out_country == nullptr) {
     return ZX_ERR_INVALID_ARGS;
   }
 
-  IWL_ERR(ctx, "%s() needs porting ...\n", __func__);
-  return ZX_ERR_NOT_SUPPORTED;
+  bool changed;
+  mtx_lock(&mvm->mutex);
+  zx_status_t ret = iwl_mvm_get_current_regdomain(mvm, &changed, out_country);
+  mtx_unlock(&mvm->mutex);
+  return ret;
 }
