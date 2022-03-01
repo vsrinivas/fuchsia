@@ -330,7 +330,24 @@ async fn run() -> Result<i32> {
     let overrides = set_buildid_config(app.runtime_config_overrides())?;
 
     let env = match app.env {
-        Some(ref env) => PathBuf::from(env),
+        Some(ref env) => {
+            let path = PathBuf::from(env);
+            if path.is_file() {
+                path
+            } else {
+                if path.is_dir() {
+                    eprintln!("Expected an environment file. \"{}\" is a directory.", env);
+                } else if !path.exists() {
+                    eprintln!(
+                        "Could not locate envionrment file \"{}\". \
+                        Ensure the file exists and try again.",
+                        env
+                    );
+                }
+
+                return Ok(1);
+            }
+        }
         None => match ffx_config::default_env_path() {
             Ok(path) => path,
             Err(e) => {
