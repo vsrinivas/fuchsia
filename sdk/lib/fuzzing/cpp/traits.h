@@ -5,6 +5,7 @@
 #ifndef LIB_FUZZING_CPP_TRAITS_H_
 #define LIB_FUZZING_CPP_TRAITS_H_
 
+#include <lib/fidl/cpp/interface_handle.h>
 #include <lib/fidl/cpp/interface_request.h>
 #include <lib/fuzzing/cpp/fuzz_input.h>
 #include <lib/zx/object.h>
@@ -164,6 +165,18 @@ FUZZING_ZX_OBJ(::zx::vmar);
 FUZZING_ZX_OBJ(::zx::vmo);
 
 #undef FUZZING_ZX_OBJ
+
+template <typename T>
+struct MinSize<::fidl::InterfaceHandle<T>> {
+  constexpr operator size_t() const { return MinSize<::zx::channel>(); }
+};
+
+template <typename T>
+struct Allocate<::fidl::InterfaceHandle<T>> {
+  ::fidl::InterfaceHandle<T> operator()(FuzzInput* src, size_t* size) {
+    return ::fidl::InterfaceHandle<T>(std::move(Allocate<zx::channel>{}(src, size)));
+  }
+};
 
 template <typename T>
 struct MinSize<::fidl::InterfaceRequest<T>> {

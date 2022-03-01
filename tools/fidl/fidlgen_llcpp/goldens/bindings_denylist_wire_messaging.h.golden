@@ -1383,10 +1383,11 @@ struct ::fidl::internal::WireServerDispatcher<
 template <>
 struct ::fidl::WireRequest<
     ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>
-    final {
-  bool a;
-
-  explicit WireRequest(bool a) : a(a) {}
+    final
+    : public ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartRequest {
+  explicit WireRequest(bool a)
+      : ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartRequest{
+            .a = std::move(a)} {}
   WireRequest() = default;
   using ResponseType = ::fidl::WireResponse<
       ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>;
@@ -1417,14 +1418,14 @@ struct ::fidl::internal::TransactionalRequest<
 template <>
 struct ::fidl::WireResponse<
     ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>
-    final {
+    final : public ::test_bindingsdenylist::wire::
+                DenyEachBindingOnlyDenyDartTopResponse {
   using Result = test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartResult;
-
-  ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartResult result;
 
   explicit WireResponse(
       ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartResult result)
-      : result(result) {}
+      : ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartTopResponse{
+            .result = std::move(result)} {}
   WireResponse() = default;
 };
 
@@ -1451,10 +1452,11 @@ struct ::fidl::internal::TransactionalResponse<
 
 template <>
 struct ::fidl::WireRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>
-    final {
-  bool a;
-
-  explicit WireRequest(bool a) : a(a) {}
+    final
+    : public ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoRequest {
+  explicit WireRequest(bool a)
+      : ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoRequest{
+            .a = std::move(a)} {}
   WireRequest() = default;
   using ResponseType = ::fidl::WireResponse<
       ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>;
@@ -1485,14 +1487,14 @@ struct ::fidl::internal::TransactionalRequest<
 template <>
 struct ::fidl::WireResponse<
     ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>
-    final {
+    final : public ::test_bindingsdenylist::wire::
+                DenyEachBindingOnlyDenyGoTopResponse {
   using Result = test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResult;
-
-  ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResult result;
 
   explicit WireResponse(
       ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResult result)
-      : result(result) {}
+      : ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoTopResponse{
+            .result = std::move(result)} {}
   WireResponse() = default;
 };
 
@@ -1520,10 +1522,11 @@ struct ::fidl::internal::TransactionalResponse<
 template <>
 struct ::fidl::WireRequest<
     ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>
-    final {
-  bool a;
-
-  explicit WireRequest(bool a) : a(a) {}
+    final : public ::test_bindingsdenylist::wire::
+                DenyEachBindingOnlyDenyLibfuzzerRequest {
+  explicit WireRequest(bool a)
+      : ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerRequest{
+            .a = std::move(a)} {}
   WireRequest() = default;
   using ResponseType = ::fidl::WireResponse<
       ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>;
@@ -1555,16 +1558,18 @@ struct ::fidl::internal::TransactionalRequest<
 template <>
 struct ::fidl::WireResponse<
     ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>
-    final {
+    final : public ::test_bindingsdenylist::wire::
+                DenyEachBindingOnlyDenyLibfuzzerTopResponse {
   using Result =
       test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResult;
-
-  ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResult result;
 
   explicit WireResponse(
       ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResult
           result)
-      : result(result) {}
+      : ::test_bindingsdenylist::wire::
+            DenyEachBindingOnlyDenyLibfuzzerTopResponse{.result =
+                                                            std::move(result)} {
+  }
   WireResponse() = default;
 };
 
@@ -1595,10 +1600,11 @@ struct ::fidl::internal::TransactionalResponse<
 template <>
 struct ::fidl::WireRequest<
     ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>
-    final {
-  bool a;
-
-  explicit WireRequest(bool a) : a(a) {}
+    final
+    : public ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustRequest {
+  explicit WireRequest(bool a)
+      : ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustRequest{
+            .a = std::move(a)} {}
   WireRequest() = default;
   using ResponseType = ::fidl::WireResponse<
       ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>;
@@ -1629,14 +1635,14 @@ struct ::fidl::internal::TransactionalRequest<
 template <>
 struct ::fidl::WireResponse<
     ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>
-    final {
+    final : public ::test_bindingsdenylist::wire::
+                DenyEachBindingOnlyDenyRustTopResponse {
   using Result = test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResult;
-
-  ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResult result;
 
   explicit WireResponse(
       ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResult result)
-      : result(result) {}
+      : ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustTopResponse{
+            .result = std::move(result)} {}
   WireResponse() = default;
 };
 
@@ -1664,10 +1670,11 @@ struct ::fidl::internal::TransactionalResponse<
 template <>
 struct ::fidl::WireRequest<
     ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>
-    final {
-  bool a;
-
-  explicit WireRequest(bool a) : a(a) {}
+    final : public ::test_bindingsdenylist::wire::
+                DenyEachBindingOnlyDenySyzkallerRequest {
+  explicit WireRequest(bool a)
+      : ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerRequest{
+            .a = std::move(a)} {}
   WireRequest() = default;
   using ResponseType = ::fidl::WireResponse<
       ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>;
@@ -1699,16 +1706,18 @@ struct ::fidl::internal::TransactionalRequest<
 template <>
 struct ::fidl::WireResponse<
     ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>
-    final {
+    final : public ::test_bindingsdenylist::wire::
+                DenyEachBindingOnlyDenySyzkallerTopResponse {
   using Result =
       test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResult;
-
-  ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResult result;
 
   explicit WireResponse(
       ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResult
           result)
-      : result(result) {}
+      : ::test_bindingsdenylist::wire::
+            DenyEachBindingOnlyDenySyzkallerTopResponse{.result =
+                                                            std::move(result)} {
+  }
   WireResponse() = default;
 };
 

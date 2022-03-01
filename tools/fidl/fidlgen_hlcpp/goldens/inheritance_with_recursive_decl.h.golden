@@ -9,16 +9,50 @@
 //
 namespace test {
 namespace inheritancewithrecursivedecl {
+class ParentFirstRequest;
+
 #ifdef __Fuchsia__
 
 class Parent;
 using ParentHandle = ::fidl::InterfaceHandle<Parent>;
 #endif  // __Fuchsia__
 
+class ChildSecondRequest;
+
 #ifdef __Fuchsia__
 
 class Child;
 using ChildHandle = ::fidl::InterfaceHandle<Child>;
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+class ParentFirstRequest final {
+ public:
+  static const fidl_type_t* FidlType;
+
+  ::fidl::InterfaceRequest<::test::inheritancewithrecursivedecl::Parent>
+      request{};
+
+  static inline ::std::unique_ptr<ParentFirstRequest> New() {
+    return ::std::make_unique<ParentFirstRequest>();
+  }
+
+  void Encode(::fidl::Encoder* _encoder, size_t _offset,
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
+                  cpp17::nullopt);
+  static void Decode(::fidl::Decoder* _decoder, ParentFirstRequest* value,
+                     size_t _offset);
+  zx_status_t Clone(ParentFirstRequest* result) const;
+};
+
+inline zx_status_t Clone(
+    const ::test::inheritancewithrecursivedecl::ParentFirstRequest& _value,
+    ::test::inheritancewithrecursivedecl::ParentFirstRequest* _result) {
+  return _value.Clone(_result);
+}
+
+using ParentFirstRequestPtr = ::std::unique_ptr<ParentFirstRequest>;
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -72,6 +106,36 @@ class Parent_RequestEncoder {
 class Parent_ResponseEncoder {
  public:
 };
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+class ChildSecondRequest final {
+ public:
+  static const fidl_type_t* FidlType;
+
+  ::fidl::InterfaceRequest<::test::inheritancewithrecursivedecl::Parent>
+      request{};
+
+  static inline ::std::unique_ptr<ChildSecondRequest> New() {
+    return ::std::make_unique<ChildSecondRequest>();
+  }
+
+  void Encode(::fidl::Encoder* _encoder, size_t _offset,
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
+                  cpp17::nullopt);
+  static void Decode(::fidl::Decoder* _decoder, ChildSecondRequest* value,
+                     size_t _offset);
+  zx_status_t Clone(ChildSecondRequest* result) const;
+};
+
+inline zx_status_t Clone(
+    const ::test::inheritancewithrecursivedecl::ChildSecondRequest& _value,
+    ::test::inheritancewithrecursivedecl::ChildSecondRequest* _result) {
+  return _value.Clone(_result);
+}
+
+using ChildSecondRequestPtr = ::std::unique_ptr<ChildSecondRequest>;
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -167,6 +231,77 @@ class Child_ResponseEncoder {
 }  // namespace inheritancewithrecursivedecl
 }  // namespace test
 namespace fidl {
+#ifdef __Fuchsia__
+
+template <>
+struct CodingTraits<::test::inheritancewithrecursivedecl::ParentFirstRequest>
+    : public EncodableCodingTraits<
+          ::test::inheritancewithrecursivedecl::ParentFirstRequest, 4, 4> {};
+
+template <>
+struct IsMemcpyCompatible<
+    ::test::inheritancewithrecursivedecl::ParentFirstRequest>
+    : public internal::BoolConstant<
+          !HasPadding<::test::inheritancewithrecursivedecl::
+                          ParentFirstRequest>::value &&
+          IsMemcpyCompatible<::fidl::InterfaceRequest<
+              ::test::inheritancewithrecursivedecl::Parent>>::value> {};
+
+inline zx_status_t Clone(
+    const ::test::inheritancewithrecursivedecl::ParentFirstRequest& value,
+    ::test::inheritancewithrecursivedecl::ParentFirstRequest* result) {
+  return ::test::inheritancewithrecursivedecl::Clone(value, result);
+}
+
+template <>
+struct Equality<::test::inheritancewithrecursivedecl::ParentFirstRequest> {
+  bool operator()(
+      const ::test::inheritancewithrecursivedecl::ParentFirstRequest& _lhs,
+      const ::test::inheritancewithrecursivedecl::ParentFirstRequest& _rhs)
+      const {
+    if (!::fidl::Equals(_lhs.request, _rhs.request)) {
+      return false;
+    }
+    return true;
+  }
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+template <>
+struct CodingTraits<::test::inheritancewithrecursivedecl::ChildSecondRequest>
+    : public EncodableCodingTraits<
+          ::test::inheritancewithrecursivedecl::ChildSecondRequest, 4, 4> {};
+
+template <>
+struct IsMemcpyCompatible<
+    ::test::inheritancewithrecursivedecl::ChildSecondRequest>
+    : public internal::BoolConstant<
+          !HasPadding<::test::inheritancewithrecursivedecl::
+                          ChildSecondRequest>::value &&
+          IsMemcpyCompatible<::fidl::InterfaceRequest<
+              ::test::inheritancewithrecursivedecl::Parent>>::value> {};
+
+inline zx_status_t Clone(
+    const ::test::inheritancewithrecursivedecl::ChildSecondRequest& value,
+    ::test::inheritancewithrecursivedecl::ChildSecondRequest* result) {
+  return ::test::inheritancewithrecursivedecl::Clone(value, result);
+}
+
+template <>
+struct Equality<::test::inheritancewithrecursivedecl::ChildSecondRequest> {
+  bool operator()(
+      const ::test::inheritancewithrecursivedecl::ChildSecondRequest& _lhs,
+      const ::test::inheritancewithrecursivedecl::ChildSecondRequest& _rhs)
+      const {
+    if (!::fidl::Equals(_lhs.request, _rhs.request)) {
+      return false;
+    }
+    return true;
+  }
+};
+#endif  // __Fuchsia__
 
 //
 // Proxies and stubs declarations

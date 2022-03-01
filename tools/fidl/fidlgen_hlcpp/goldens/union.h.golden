@@ -23,6 +23,8 @@ class StrictFoo;
 
 class StrictBoundedXUnion;
 
+class TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse;
+
 class ReverseOrdinalUnion;
 
 class Pizza;
@@ -38,6 +40,8 @@ class FlexiblePizzaOrPasta;
 class ExplicitPizzaOrPasta;
 
 class OlderSimpleUnion;
+
+class TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse;
 
 #ifdef __Fuchsia__
 
@@ -685,6 +689,47 @@ inline zx_status_t Clone(const ::test::union_::StrictBoundedXUnion& value,
 
 using StrictBoundedXUnionPtr = ::std::unique_ptr<StrictBoundedXUnion>;
 
+class TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse
+    final {
+ public:
+  static const fidl_type_t* FidlType;
+
+  ::test::union_::StrictBoundedXUnion xu{};
+
+  static inline ::std::unique_ptr<
+      TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse>
+  New() {
+    return ::std::make_unique<
+        TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse>();
+  }
+
+  void Encode(::fidl::Encoder* _encoder, size_t _offset,
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
+                  cpp17::nullopt);
+  static void Decode(
+      ::fidl::Decoder* _decoder,
+      TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse*
+          value,
+      size_t _offset);
+  zx_status_t Clone(
+      TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse*
+          result) const;
+};
+
+inline zx_status_t Clone(
+    const ::test::union_::
+        TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse&
+            _value,
+    ::test::union_::
+        TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse*
+            _result) {
+  return _value.Clone(_result);
+}
+
+using TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponsePtr =
+    ::std::unique_ptr<
+        TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse>;
+
 class ReverseOrdinalUnion final {
  public:
   static const fidl_type_t* FidlType;
@@ -1318,6 +1363,47 @@ inline zx_status_t Clone(const ::test::union_::OlderSimpleUnion& value,
 }
 
 using OlderSimpleUnionPtr = ::std::unique_ptr<OlderSimpleUnion>;
+
+class TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse
+    final {
+ public:
+  static const fidl_type_t* FidlType;
+
+  ::test::union_::OlderSimpleUnion xu{};
+
+  static inline ::std::unique_ptr<
+      TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse>
+  New() {
+    return ::std::make_unique<
+        TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse>();
+  }
+
+  void Encode(::fidl::Encoder* _encoder, size_t _offset,
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
+                  cpp17::nullopt);
+  static void Decode(
+      ::fidl::Decoder* _decoder,
+      TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse*
+          value,
+      size_t _offset);
+  zx_status_t Clone(
+      TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse*
+          result) const;
+};
+
+inline zx_status_t Clone(
+    const ::test::union_::
+        TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse&
+            _value,
+    ::test::union_::
+        TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse*
+            _result) {
+  return _value.Clone(_result);
+}
+
+using TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponsePtr =
+    ::std::unique_ptr<
+        TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse>;
 
 #ifdef __Fuchsia__
 
@@ -2846,6 +2932,59 @@ struct Equality<::test::union_::StrictBoundedXUnion> {
   }
 };
 template <>
+struct CodingTraits<
+    ::test::union_::
+        TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse>
+    : public EncodableCodingTraits<
+          ::test::union_::
+              TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse,
+          24, 16> {};
+
+template <>
+struct HasPadding<
+    ::test::union_::
+        TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse>
+    : public std::true_type {};
+
+template <>
+struct IsMemcpyCompatible<
+    ::test::union_::
+        TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse>
+    : public internal::BoolConstant<
+          !HasPadding<
+              ::test::union_::
+                  TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse>::
+              value &&
+          IsMemcpyCompatible<::test::union_::StrictBoundedXUnion>::value> {};
+
+inline zx_status_t Clone(
+    const ::test::union_::
+        TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse&
+            value,
+    ::test::union_::
+        TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse*
+            result) {
+  return ::test::union_::Clone(value, result);
+}
+
+template <>
+struct Equality<
+    ::test::union_::
+        TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse> {
+  bool operator()(
+      const ::test::union_::
+          TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse&
+              _lhs,
+      const ::test::union_::
+          TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse&
+              _rhs) const {
+    if (!::fidl::Equals(_lhs.xu, _rhs.xu)) {
+      return false;
+    }
+    return true;
+  }
+};
+template <>
 struct IsFidlXUnion<::test::union_::ReverseOrdinalUnion>
     : public std::true_type {};
 
@@ -3298,6 +3437,59 @@ struct Equality<::test::union_::OlderSimpleUnion> {
       default:
         return ::fidl::Equals(_lhs.unknown_data_, _rhs.unknown_data_);
     }
+  }
+};
+template <>
+struct CodingTraits<
+    ::test::union_::
+        TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse>
+    : public EncodableCodingTraits<
+          ::test::union_::
+              TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse,
+          24, 16> {};
+
+template <>
+struct HasPadding<
+    ::test::union_::
+        TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse>
+    : public std::true_type {};
+
+template <>
+struct IsMemcpyCompatible<
+    ::test::union_::
+        TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse>
+    : public internal::BoolConstant<
+          !HasPadding<
+              ::test::union_::
+                  TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse>::
+              value &&
+          IsMemcpyCompatible<::test::union_::OlderSimpleUnion>::value> {};
+
+inline zx_status_t Clone(
+    const ::test::union_::
+        TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse&
+            value,
+    ::test::union_::
+        TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse*
+            result) {
+  return ::test::union_::Clone(value, result);
+}
+
+template <>
+struct Equality<
+    ::test::union_::
+        TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse> {
+  bool operator()(
+      const ::test::union_::
+          TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse&
+              _lhs,
+      const ::test::union_::
+          TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse&
+              _rhs) const {
+    if (!::fidl::Equals(_lhs.xu, _rhs.xu)) {
+      return false;
+    }
+    return true;
   }
 };
 template <>

@@ -26,10 +26,18 @@ namespace test_driveroneway {
 namespace wire {
 struct Payload;
 
+struct OneWaySendRequest;
+
 extern "C" const fidl_type_t test_driveroneway_PayloadTable;
 
 struct Payload {
   uint32_t value = {};
+};
+
+extern "C" const fidl_type_t test_driveroneway_OneWaySendRequestTable;
+
+struct OneWaySendRequest {
+  ::test_driveroneway::wire::Payload payload = {};
 };
 
 }  // namespace wire
@@ -57,5 +65,31 @@ static_assert(std::is_standard_layout_v<::test_driveroneway::wire::Payload>);
 static_assert(offsetof(::test_driveroneway::wire::Payload, value) == 0);
 static_assert(sizeof(::test_driveroneway::wire::Payload) ==
               TypeTraits<::test_driveroneway::wire::Payload>::kPrimarySize);
+
+template <>
+struct TypeTraits<::test_driveroneway::wire::OneWaySendRequest> {
+  static constexpr const fidl_type_t* kType =
+      &::test_driveroneway::wire::test_driveroneway_OneWaySendRequestTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 4;
+  static constexpr uint32_t kPrimarySizeV1 = 4;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasPointer = false;
+};
+
+template <>
+struct IsFidlType<::test_driveroneway::wire::OneWaySendRequest>
+    : public std::true_type {};
+template <>
+struct IsStruct<::test_driveroneway::wire::OneWaySendRequest>
+    : public std::true_type {};
+static_assert(
+    std::is_standard_layout_v<::test_driveroneway::wire::OneWaySendRequest>);
+static_assert(offsetof(::test_driveroneway::wire::OneWaySendRequest, payload) ==
+              0);
+static_assert(
+    sizeof(::test_driveroneway::wire::OneWaySendRequest) ==
+    TypeTraits<::test_driveroneway::wire::OneWaySendRequest>::kPrimarySize);
 
 }  // namespace fidl

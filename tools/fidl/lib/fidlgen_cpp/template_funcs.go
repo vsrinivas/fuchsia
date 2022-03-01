@@ -232,6 +232,10 @@ func forwardParam(n string, t Type) string {
 	panic("not reached")
 }
 
+func forwardStructParam(n string, _ Type) string {
+	return fmt.Sprintf(".%s = std::move(%s)", n, n)
+}
+
 // renderParams renders a nested list of parameter definitions.
 // The parameter definitions are either strings or Members.
 // Parameter structs are rendered with the supplied format func.
@@ -310,19 +314,6 @@ var commonTemplateFuncs = template.FuncMap{
 		return ""
 	},
 
-	"SkipRequestResponseDecls": func(decls []Kinded) []Kinded {
-		var filtered []Kinded
-		for _, decl := range decls {
-			if s, ok := decl.(*Struct); ok {
-				if s.IsAnonymousRequestOrResponse() {
-					continue
-				}
-			}
-			filtered = append(filtered, decl)
-		}
-		return filtered
-	},
-
 	// Renders a list of parameters in a declaration, without extra decoration.
 	//
 	// Usage:
@@ -348,14 +339,17 @@ var commonTemplateFuncs = template.FuncMap{
 		return renderParams(forwardParam, params)
 	},
 
-	"RenderInitMessage": func(params ...interface{}) string {
-		s := renderParams(func(n string, t Type) string {
-			return n + "(" + forwardParam(n, t) + ")"
-		}, params)
-		if len(s) == 0 {
-			return ""
-		}
-		return ": " + s
+	// Renders a list of parameters as a struct initializer list, wrapping
+	// every name in a `std::move`.
+	//
+	// Usage:
+	//   (RenderForwardStructParams .Args "foo")
+	//
+	// Output:
+	//   .arg1 = std::move(arg1), .foo = std::move(foo)
+	//
+	"RenderForwardStructParams": func(params ...interface{}) string {
+		return renderParams(forwardStructParam, params)
 	},
 
 	// List is a helper to return a list of its arguments.

@@ -14,7 +14,15 @@
 namespace fuzzing {
 
 using StrictFoo = ::test::requestflexibleenvelope::StrictFoo;
+using ProtocolRequestStrictResponseFlexibleRequest = ::test::
+    requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleRequest;
+using ProtocolRequestFlexibleResponseStrictTopResponse = ::test::
+    requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictTopResponse;
 using FlexibleFoo = ::test::requestflexibleenvelope::FlexibleFoo;
+using ProtocolRequestStrictResponseFlexibleTopResponse = ::test::
+    requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleTopResponse;
+using ProtocolRequestFlexibleResponseStrictRequest = ::test::
+    requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictRequest;
 
 template <>
 struct MinSize<StrictFoo> {
@@ -50,6 +58,52 @@ struct Allocate<StrictFoo> {
   }
 };
 template <>
+struct MinSize<ProtocolRequestStrictResponseFlexibleRequest> {
+  operator size_t() {
+    return MinSize<::test::requestflexibleenvelope::StrictFoo>();
+  }
+};
+template <>
+struct Allocate<ProtocolRequestStrictResponseFlexibleRequest> {
+  ProtocolRequestStrictResponseFlexibleRequest operator()(FuzzInput* src,
+                                                          size_t* size) {
+    ZX_ASSERT(*size >= MinSize<ProtocolRequestStrictResponseFlexibleRequest>());
+    ProtocolRequestStrictResponseFlexibleRequest out;
+    const size_t slack_per_member =
+        (*size - MinSize<ProtocolRequestStrictResponseFlexibleRequest>()) / 1;
+    size_t out_size;
+    out_size = MinSize<::test::requestflexibleenvelope::StrictFoo>() +
+               slack_per_member;
+    out.s =
+        Allocate<::test::requestflexibleenvelope::StrictFoo>{}(src, &out_size);
+    return out;
+  }
+};
+template <>
+struct MinSize<ProtocolRequestFlexibleResponseStrictTopResponse> {
+  operator size_t() {
+    return MinSize<::test::requestflexibleenvelope::StrictFoo>();
+  }
+};
+template <>
+struct Allocate<ProtocolRequestFlexibleResponseStrictTopResponse> {
+  ProtocolRequestFlexibleResponseStrictTopResponse operator()(FuzzInput* src,
+                                                              size_t* size) {
+    ZX_ASSERT(*size >=
+              MinSize<ProtocolRequestFlexibleResponseStrictTopResponse>());
+    ProtocolRequestFlexibleResponseStrictTopResponse out;
+    const size_t slack_per_member =
+        (*size - MinSize<ProtocolRequestFlexibleResponseStrictTopResponse>()) /
+        1;
+    size_t out_size;
+    out_size = MinSize<::test::requestflexibleenvelope::StrictFoo>() +
+               slack_per_member;
+    out.f =
+        Allocate<::test::requestflexibleenvelope::StrictFoo>{}(src, &out_size);
+    return out;
+  }
+};
+template <>
 struct MinSize<FlexibleFoo> {
   operator size_t() {
     size_t sizes[] = {0, MinSize<::std::string>(), MinSize<int32_t>()};
@@ -79,6 +133,52 @@ struct Allocate<FlexibleFoo> {
       }
     }
 
+    return out;
+  }
+};
+template <>
+struct MinSize<ProtocolRequestStrictResponseFlexibleTopResponse> {
+  operator size_t() {
+    return MinSize<::test::requestflexibleenvelope::FlexibleFoo>();
+  }
+};
+template <>
+struct Allocate<ProtocolRequestStrictResponseFlexibleTopResponse> {
+  ProtocolRequestStrictResponseFlexibleTopResponse operator()(FuzzInput* src,
+                                                              size_t* size) {
+    ZX_ASSERT(*size >=
+              MinSize<ProtocolRequestStrictResponseFlexibleTopResponse>());
+    ProtocolRequestStrictResponseFlexibleTopResponse out;
+    const size_t slack_per_member =
+        (*size - MinSize<ProtocolRequestStrictResponseFlexibleTopResponse>()) /
+        1;
+    size_t out_size;
+    out_size = MinSize<::test::requestflexibleenvelope::FlexibleFoo>() +
+               slack_per_member;
+    out.f = Allocate<::test::requestflexibleenvelope::FlexibleFoo>{}(src,
+                                                                     &out_size);
+    return out;
+  }
+};
+template <>
+struct MinSize<ProtocolRequestFlexibleResponseStrictRequest> {
+  operator size_t() {
+    return MinSize<::test::requestflexibleenvelope::FlexibleFoo>();
+  }
+};
+template <>
+struct Allocate<ProtocolRequestFlexibleResponseStrictRequest> {
+  ProtocolRequestFlexibleResponseStrictRequest operator()(FuzzInput* src,
+                                                          size_t* size) {
+    ZX_ASSERT(*size >= MinSize<ProtocolRequestFlexibleResponseStrictRequest>());
+    ProtocolRequestFlexibleResponseStrictRequest out;
+    const size_t slack_per_member =
+        (*size - MinSize<ProtocolRequestFlexibleResponseStrictRequest>()) / 1;
+    size_t out_size;
+    out_size = MinSize<::test::requestflexibleenvelope::FlexibleFoo>() +
+               slack_per_member;
+    out.s = Allocate<::test::requestflexibleenvelope::FlexibleFoo>{}(src,
+                                                                     &out_size);
     return out;
   }
 };

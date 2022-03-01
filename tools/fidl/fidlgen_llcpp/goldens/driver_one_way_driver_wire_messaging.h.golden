@@ -58,11 +58,11 @@ struct ::fidl::internal::WireServerDispatcher<::test_driveroneway::OneWay>
 #endif  // __Fuchsia__
 
 template <>
-struct ::fidl::WireRequest<::test_driveroneway::OneWay::Send> final {
-  ::test_driveroneway::wire::Payload payload;
-
+struct ::fidl::WireRequest<::test_driveroneway::OneWay::Send> final
+    : public ::test_driveroneway::wire::OneWaySendRequest {
   explicit WireRequest(const ::test_driveroneway::wire::Payload& payload)
-      : payload(payload) {}
+      : ::test_driveroneway::wire::OneWaySendRequest{.payload =
+                                                         std::move(payload)} {}
   WireRequest() = default;
 };
 

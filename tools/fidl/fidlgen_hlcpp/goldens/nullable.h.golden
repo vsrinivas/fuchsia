@@ -25,6 +25,10 @@ class StructWithNullableHandle;
 
 class SimpleUnion;
 
+class SimpleProtocolAddTopResponse;
+
+class SimpleProtocolAddRequest;
+
 #ifdef __Fuchsia__
 
 class SimpleProtocol;
@@ -313,6 +317,61 @@ inline zx_status_t Clone(const ::test::nullable::SimpleUnion& value,
 }
 
 using SimpleUnionPtr = ::std::unique_ptr<SimpleUnion>;
+
+class SimpleProtocolAddTopResponse final {
+ public:
+  static const fidl_type_t* FidlType;
+
+  int32_t sum{};
+
+  static inline ::std::unique_ptr<SimpleProtocolAddTopResponse> New() {
+    return ::std::make_unique<SimpleProtocolAddTopResponse>();
+  }
+
+  void Encode(::fidl::Encoder* _encoder, size_t _offset,
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
+                  cpp17::nullopt);
+  static void Decode(::fidl::Decoder* _decoder,
+                     SimpleProtocolAddTopResponse* value, size_t _offset);
+  zx_status_t Clone(SimpleProtocolAddTopResponse* result) const;
+};
+
+inline zx_status_t Clone(
+    const ::test::nullable::SimpleProtocolAddTopResponse& _value,
+    ::test::nullable::SimpleProtocolAddTopResponse* _result) {
+  return _value.Clone(_result);
+}
+
+using SimpleProtocolAddTopResponsePtr =
+    ::std::unique_ptr<SimpleProtocolAddTopResponse>;
+
+class SimpleProtocolAddRequest final {
+ public:
+  static const fidl_type_t* FidlType;
+
+  int32_t a{};
+
+  int32_t b{};
+
+  static inline ::std::unique_ptr<SimpleProtocolAddRequest> New() {
+    return ::std::make_unique<SimpleProtocolAddRequest>();
+  }
+
+  void Encode(::fidl::Encoder* _encoder, size_t _offset,
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
+                  cpp17::nullopt);
+  static void Decode(::fidl::Decoder* _decoder, SimpleProtocolAddRequest* value,
+                     size_t _offset);
+  zx_status_t Clone(SimpleProtocolAddRequest* result) const;
+};
+
+inline zx_status_t Clone(
+    const ::test::nullable::SimpleProtocolAddRequest& _value,
+    ::test::nullable::SimpleProtocolAddRequest* _result) {
+  return _value.Clone(_result);
+}
+
+using SimpleProtocolAddRequestPtr = ::std::unique_ptr<SimpleProtocolAddRequest>;
 
 #ifdef __Fuchsia__
 
@@ -708,6 +767,65 @@ struct Equality<::test::nullable::SimpleUnion> {
       default:
         return false;
     }
+  }
+};
+template <>
+struct CodingTraits<::test::nullable::SimpleProtocolAddTopResponse>
+    : public EncodableCodingTraits<
+          ::test::nullable::SimpleProtocolAddTopResponse, 4, 4> {};
+
+template <>
+struct IsMemcpyCompatible<::test::nullable::SimpleProtocolAddTopResponse>
+    : public internal::BoolConstant<
+          !HasPadding<::test::nullable::SimpleProtocolAddTopResponse>::value &&
+          IsMemcpyCompatible<int32_t>::value> {};
+
+inline zx_status_t Clone(
+    const ::test::nullable::SimpleProtocolAddTopResponse& value,
+    ::test::nullable::SimpleProtocolAddTopResponse* result) {
+  return ::test::nullable::Clone(value, result);
+}
+
+template <>
+struct Equality<::test::nullable::SimpleProtocolAddTopResponse> {
+  bool operator()(
+      const ::test::nullable::SimpleProtocolAddTopResponse& _lhs,
+      const ::test::nullable::SimpleProtocolAddTopResponse& _rhs) const {
+    if (!::fidl::Equals(_lhs.sum, _rhs.sum)) {
+      return false;
+    }
+    return true;
+  }
+};
+template <>
+struct CodingTraits<::test::nullable::SimpleProtocolAddRequest>
+    : public EncodableCodingTraits<::test::nullable::SimpleProtocolAddRequest,
+                                   8, 8> {};
+
+template <>
+struct IsMemcpyCompatible<::test::nullable::SimpleProtocolAddRequest>
+    : public internal::BoolConstant<
+          !HasPadding<::test::nullable::SimpleProtocolAddRequest>::value &&
+          IsMemcpyCompatible<int32_t>::value> {};
+
+inline zx_status_t Clone(
+    const ::test::nullable::SimpleProtocolAddRequest& value,
+    ::test::nullable::SimpleProtocolAddRequest* result) {
+  return ::test::nullable::Clone(value, result);
+}
+
+template <>
+struct Equality<::test::nullable::SimpleProtocolAddRequest> {
+  bool operator()(
+      const ::test::nullable::SimpleProtocolAddRequest& _lhs,
+      const ::test::nullable::SimpleProtocolAddRequest& _rhs) const {
+    if (!::fidl::Equals(_lhs.a, _rhs.a)) {
+      return false;
+    }
+    if (!::fidl::Equals(_lhs.b, _rhs.b)) {
+      return false;
+    }
+    return true;
   }
 };
 template <>

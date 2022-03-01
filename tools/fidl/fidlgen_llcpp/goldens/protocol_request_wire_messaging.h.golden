@@ -109,11 +109,11 @@ struct ::fidl::internal::TransactionalRequest<
 #ifdef __Fuchsia__
 
 template <>
-struct ::fidl::WireResponse<::test_protocolrequest::Parent::GetChild> final {
-  ::fidl::ClientEnd<::test_protocolrequest::Child> c;
-
+struct ::fidl::WireResponse<::test_protocolrequest::Parent::GetChild> final
+    : public ::test_protocolrequest::wire::ParentGetChildTopResponse {
   explicit WireResponse(::fidl::ClientEnd<::test_protocolrequest::Child>&& c)
-      : c(std::move(c)) {}
+      : ::test_protocolrequest::wire::ParentGetChildTopResponse{
+            .c = std::move(c)} {}
   WireResponse() = default;
   void _CloseHandles();
 };
@@ -166,11 +166,11 @@ struct ::fidl::internal::TransactionalRequest<
 
 template <>
 struct ::fidl::WireResponse<::test_protocolrequest::Parent::GetChildRequest>
-    final {
-  ::fidl::ServerEnd<::test_protocolrequest::Child> r;
-
+    final
+    : public ::test_protocolrequest::wire::ParentGetChildRequestTopResponse {
   explicit WireResponse(::fidl::ServerEnd<::test_protocolrequest::Child>&& r)
-      : r(std::move(r)) {}
+      : ::test_protocolrequest::wire::ParentGetChildRequestTopResponse{
+            .r = std::move(r)} {}
   WireResponse() = default;
   void _CloseHandles();
 };
@@ -200,11 +200,12 @@ struct ::fidl::internal::TransactionalResponse<
 #ifdef __Fuchsia__
 
 template <>
-struct ::fidl::WireRequest<::test_protocolrequest::Parent::TakeChild> final {
-  ::fidl::ClientEnd<::test_protocolrequest::Child> c;
-
+struct ::fidl::WireRequest<::test_protocolrequest::Parent::TakeChild> final
+    : public ::test_protocolrequest::wire::ParentTakeChildRequest {
   explicit WireRequest(::fidl::ClientEnd<::test_protocolrequest::Child>&& c)
-      : c(std::move(c)) {}
+      : ::test_protocolrequest::wire::ParentTakeChildRequest{.c =
+                                                                 std::move(c)} {
+  }
   WireRequest() = default;
   void _CloseHandles();
 };
@@ -235,11 +236,10 @@ struct ::fidl::internal::TransactionalRequest<
 
 template <>
 struct ::fidl::WireRequest<::test_protocolrequest::Parent::TakeChildRequest>
-    final {
-  ::fidl::ServerEnd<::test_protocolrequest::Child> r;
-
+    final : public ::test_protocolrequest::wire::ParentTakeChildRequestRequest {
   explicit WireRequest(::fidl::ServerEnd<::test_protocolrequest::Child>&& r)
-      : r(std::move(r)) {}
+      : ::test_protocolrequest::wire::ParentTakeChildRequestRequest{
+            .r = std::move(r)} {}
   WireRequest() = default;
   void _CloseHandles();
 };

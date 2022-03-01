@@ -14,6 +14,7 @@
 namespace fuzzing {
 
 using Payload = ::test::driveroneway::Payload;
+using OneWaySendRequest = ::test::driveroneway::OneWaySendRequest;
 
 template <>
 struct MinSize<Payload> {
@@ -28,6 +29,22 @@ struct Allocate<Payload> {
     size_t out_size;
     out_size = MinSize<uint32_t>() + slack_per_member;
     out.value = Allocate<uint32_t>{}(src, &out_size);
+    return out;
+  }
+};
+template <>
+struct MinSize<OneWaySendRequest> {
+  operator size_t() { return MinSize<::test::driveroneway::Payload>(); }
+};
+template <>
+struct Allocate<OneWaySendRequest> {
+  OneWaySendRequest operator()(FuzzInput* src, size_t* size) {
+    ZX_ASSERT(*size >= MinSize<OneWaySendRequest>());
+    OneWaySendRequest out;
+    const size_t slack_per_member = (*size - MinSize<OneWaySendRequest>()) / 1;
+    size_t out_size;
+    out_size = MinSize<::test::driveroneway::Payload>() + slack_per_member;
+    out.payload = Allocate<::test::driveroneway::Payload>{}(src, &out_size);
     return out;
   }
 };

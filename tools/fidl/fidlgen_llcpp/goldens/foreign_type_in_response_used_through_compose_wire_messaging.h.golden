@@ -93,10 +93,9 @@ struct ::fidl::internal::TransactionalRequest<
 template <>
 struct ::fidl::WireResponse<
     ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>
-    final {
-  ::test_bottom::wire::Foo foo;
-
-  explicit WireResponse(const ::test_bottom::wire::Foo& foo) : foo(foo) {}
+    final : public ::test_middle::wire::MiddleGetFooTopResponse {
+  explicit WireResponse(const ::test_bottom::wire::Foo& foo)
+      : ::test_middle::wire::MiddleGetFooTopResponse{.foo = std::move(foo)} {}
   WireResponse() = default;
 };
 

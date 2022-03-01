@@ -56,10 +56,10 @@ struct ::fidl::internal::WireServerDispatcher<::test_error::Example> final {
 #endif  // __Fuchsia__
 
 template <>
-struct ::fidl::WireRequest<::test_error::Example::Foo> final {
-  ::fidl::StringView s;
-
-  explicit WireRequest(::fidl::StringView s) : s(s) {}
+struct ::fidl::WireRequest<::test_error::Example::Foo> final
+    : public ::test_error::wire::ExampleFooRequest {
+  explicit WireRequest(::fidl::StringView s)
+      : ::test_error::wire::ExampleFooRequest{.s = std::move(s)} {}
   WireRequest() = default;
   using ResponseType = ::fidl::WireResponse<::test_error::Example::Foo>;
 };
@@ -84,13 +84,13 @@ struct ::fidl::internal::TransactionalRequest<::test_error::Example::Foo>
 };
 
 template <>
-struct ::fidl::WireResponse<::test_error::Example::Foo> final {
+struct ::fidl::WireResponse<::test_error::Example::Foo> final
+    : public ::test_error::wire::ExampleFooTopResponse {
   using Result = test_error::wire::ExampleFooResult;
 
-  ::test_error::wire::ExampleFooResult result;
-
   explicit WireResponse(::test_error::wire::ExampleFooResult result)
-      : result(result) {}
+      : ::test_error::wire::ExampleFooTopResponse{.result = std::move(result)} {
+  }
   WireResponse() = default;
 };
 

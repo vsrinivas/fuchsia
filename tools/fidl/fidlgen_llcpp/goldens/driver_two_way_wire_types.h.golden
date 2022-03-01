@@ -22,4 +22,82 @@
 #include <fidl/test.drivertwoway/cpp/common_types.h>
 #include <fidl/test.drivertwoway/cpp/markers.h>
 
-namespace fidl {}  // namespace fidl
+namespace test_drivertwoway {
+namespace wire {
+struct TwoWayAddTopResponse;
+
+struct TwoWayAddRequest;
+
+extern "C" const fidl_type_t test_drivertwoway_TwoWayAddTopResponseTable;
+
+struct TwoWayAddTopResponse {
+  uint16_t sum = {};
+};
+
+extern "C" const fidl_type_t test_drivertwoway_TwoWayAddRequestTable;
+
+struct TwoWayAddRequest {
+  uint16_t addend1 = {};
+
+  uint16_t addend2 = {};
+};
+
+}  // namespace wire
+}  // namespace test_drivertwoway
+namespace fidl {
+
+template <>
+struct TypeTraits<::test_drivertwoway::wire::TwoWayAddTopResponse> {
+  static constexpr const fidl_type_t* kType =
+      &::test_drivertwoway::wire::test_drivertwoway_TwoWayAddTopResponseTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 2;
+  static constexpr uint32_t kPrimarySizeV1 = 2;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasPointer = false;
+};
+
+template <>
+struct IsFidlType<::test_drivertwoway::wire::TwoWayAddTopResponse>
+    : public std::true_type {};
+template <>
+struct IsStruct<::test_drivertwoway::wire::TwoWayAddTopResponse>
+    : public std::true_type {};
+static_assert(
+    std::is_standard_layout_v<::test_drivertwoway::wire::TwoWayAddTopResponse>);
+static_assert(offsetof(::test_drivertwoway::wire::TwoWayAddTopResponse, sum) ==
+              0);
+static_assert(
+    sizeof(::test_drivertwoway::wire::TwoWayAddTopResponse) ==
+    TypeTraits<::test_drivertwoway::wire::TwoWayAddTopResponse>::kPrimarySize);
+
+template <>
+struct TypeTraits<::test_drivertwoway::wire::TwoWayAddRequest> {
+  static constexpr const fidl_type_t* kType =
+      &::test_drivertwoway::wire::test_drivertwoway_TwoWayAddRequestTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 4;
+  static constexpr uint32_t kPrimarySizeV1 = 4;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasPointer = false;
+};
+
+template <>
+struct IsFidlType<::test_drivertwoway::wire::TwoWayAddRequest>
+    : public std::true_type {};
+template <>
+struct IsStruct<::test_drivertwoway::wire::TwoWayAddRequest>
+    : public std::true_type {};
+static_assert(
+    std::is_standard_layout_v<::test_drivertwoway::wire::TwoWayAddRequest>);
+static_assert(offsetof(::test_drivertwoway::wire::TwoWayAddRequest, addend1) ==
+              0);
+static_assert(offsetof(::test_drivertwoway::wire::TwoWayAddRequest, addend2) ==
+              2);
+static_assert(
+    sizeof(::test_drivertwoway::wire::TwoWayAddRequest) ==
+    TypeTraits<::test_drivertwoway::wire::TwoWayAddRequest>::kPrimarySize);
+
+}  // namespace fidl

@@ -7,14 +7,215 @@
 //
 // Domain objects definitions (i.e. "natural types" in unified bindings)
 //
+namespace test {
+namespace protocolrequest {
+#ifdef __Fuchsia__
+
+extern "C" const fidl_type_t
+    test_protocolrequest_ParentTakeChildRequestRequestTable;
+const fidl_type_t* ParentTakeChildRequestRequest::FidlType =
+    &test_protocolrequest_ParentTakeChildRequestRequestTable;
+
+void ParentTakeChildRequestRequest::Encode(
+    ::fidl::Encoder* _encoder, size_t _offset,
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  if (::fidl::IsMemcpyCompatible<ParentTakeChildRequestRequest>::value) {
+    memcpy(_encoder->template GetPtr<ParentTakeChildRequestRequest>(_offset),
+           this, sizeof(ParentTakeChildRequestRequest));
+  } else {
+    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
+      ::fidl::Encode(_encoder, &r, _offset + 0,
+                     ::fidl::HandleInformation{
+                         .object_type = ZX_OBJ_TYPE_CHANNEL,
+                         .rights = ZX_DEFAULT_CHANNEL_RIGHTS,
+                     });
+
+    } else {
+      ::fidl::Encode(_encoder, &r, _offset + 0,
+                     ::fidl::HandleInformation{
+                         .object_type = ZX_OBJ_TYPE_CHANNEL,
+                         .rights = ZX_DEFAULT_CHANNEL_RIGHTS,
+                     });
+    }
+  }
+}
+
+void ParentTakeChildRequestRequest::Decode(
+    ::fidl::Decoder* _decoder, ParentTakeChildRequestRequest* _value,
+    size_t _offset) {
+  if (::fidl::IsMemcpyCompatible<ParentTakeChildRequestRequest>::value) {
+    memcpy(_value,
+           _decoder->template GetPtr<ParentTakeChildRequestRequest>(_offset),
+           sizeof(ParentTakeChildRequestRequest));
+  } else {
+    ::fidl::Decode(_decoder, &_value->r, _offset + 0);
+  }
+}
+
+zx_status_t ParentTakeChildRequestRequest::Clone(
+    ParentTakeChildRequestRequest* _result) const {
+  zx_status_t _status = ::fidl::Clone(r, &_result->r);
+  if (_status != ZX_OK) return _status;
+  return ZX_OK;
+}
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+extern "C" const fidl_type_t test_protocolrequest_ParentTakeChildRequestTable;
+const fidl_type_t* ParentTakeChildRequest::FidlType =
+    &test_protocolrequest_ParentTakeChildRequestTable;
+
+void ParentTakeChildRequest::Encode(
+    ::fidl::Encoder* _encoder, size_t _offset,
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  if (::fidl::IsMemcpyCompatible<ParentTakeChildRequest>::value) {
+    memcpy(_encoder->template GetPtr<ParentTakeChildRequest>(_offset), this,
+           sizeof(ParentTakeChildRequest));
+  } else {
+    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
+      ::fidl::Encode(_encoder, &c, _offset + 0,
+                     ::fidl::HandleInformation{
+                         .object_type = ZX_OBJ_TYPE_CHANNEL,
+                         .rights = ZX_DEFAULT_CHANNEL_RIGHTS,
+                     });
+
+    } else {
+      ::fidl::Encode(_encoder, &c, _offset + 0,
+                     ::fidl::HandleInformation{
+                         .object_type = ZX_OBJ_TYPE_CHANNEL,
+                         .rights = ZX_DEFAULT_CHANNEL_RIGHTS,
+                     });
+    }
+  }
+}
+
+void ParentTakeChildRequest::Decode(::fidl::Decoder* _decoder,
+                                    ParentTakeChildRequest* _value,
+                                    size_t _offset) {
+  if (::fidl::IsMemcpyCompatible<ParentTakeChildRequest>::value) {
+    memcpy(_value, _decoder->template GetPtr<ParentTakeChildRequest>(_offset),
+           sizeof(ParentTakeChildRequest));
+  } else {
+    ::fidl::Decode(_decoder, &_value->c, _offset + 0);
+  }
+}
+
+zx_status_t ParentTakeChildRequest::Clone(
+    ParentTakeChildRequest* _result) const {
+  zx_status_t _status = ::fidl::Clone(c, &_result->c);
+  if (_status != ZX_OK) return _status;
+  return ZX_OK;
+}
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+extern "C" const fidl_type_t
+    test_protocolrequest_ParentGetChildTopResponseTable;
+const fidl_type_t* ParentGetChildTopResponse::FidlType =
+    &test_protocolrequest_ParentGetChildTopResponseTable;
+
+void ParentGetChildTopResponse::Encode(
+    ::fidl::Encoder* _encoder, size_t _offset,
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  if (::fidl::IsMemcpyCompatible<ParentGetChildTopResponse>::value) {
+    memcpy(_encoder->template GetPtr<ParentGetChildTopResponse>(_offset), this,
+           sizeof(ParentGetChildTopResponse));
+  } else {
+    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
+      ::fidl::Encode(_encoder, &c, _offset + 0,
+                     ::fidl::HandleInformation{
+                         .object_type = ZX_OBJ_TYPE_CHANNEL,
+                         .rights = ZX_DEFAULT_CHANNEL_RIGHTS,
+                     });
+
+    } else {
+      ::fidl::Encode(_encoder, &c, _offset + 0,
+                     ::fidl::HandleInformation{
+                         .object_type = ZX_OBJ_TYPE_CHANNEL,
+                         .rights = ZX_DEFAULT_CHANNEL_RIGHTS,
+                     });
+    }
+  }
+}
+
+void ParentGetChildTopResponse::Decode(::fidl::Decoder* _decoder,
+                                       ParentGetChildTopResponse* _value,
+                                       size_t _offset) {
+  if (::fidl::IsMemcpyCompatible<ParentGetChildTopResponse>::value) {
+    memcpy(_value,
+           _decoder->template GetPtr<ParentGetChildTopResponse>(_offset),
+           sizeof(ParentGetChildTopResponse));
+  } else {
+    ::fidl::Decode(_decoder, &_value->c, _offset + 0);
+  }
+}
+
+zx_status_t ParentGetChildTopResponse::Clone(
+    ParentGetChildTopResponse* _result) const {
+  zx_status_t _status = ::fidl::Clone(c, &_result->c);
+  if (_status != ZX_OK) return _status;
+  return ZX_OK;
+}
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+extern "C" const fidl_type_t
+    test_protocolrequest_ParentGetChildRequestTopResponseTable;
+const fidl_type_t* ParentGetChildRequestTopResponse::FidlType =
+    &test_protocolrequest_ParentGetChildRequestTopResponseTable;
+
+void ParentGetChildRequestTopResponse::Encode(
+    ::fidl::Encoder* _encoder, size_t _offset,
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  if (::fidl::IsMemcpyCompatible<ParentGetChildRequestTopResponse>::value) {
+    memcpy(_encoder->template GetPtr<ParentGetChildRequestTopResponse>(_offset),
+           this, sizeof(ParentGetChildRequestTopResponse));
+  } else {
+    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
+      ::fidl::Encode(_encoder, &r, _offset + 0,
+                     ::fidl::HandleInformation{
+                         .object_type = ZX_OBJ_TYPE_CHANNEL,
+                         .rights = ZX_DEFAULT_CHANNEL_RIGHTS,
+                     });
+
+    } else {
+      ::fidl::Encode(_encoder, &r, _offset + 0,
+                     ::fidl::HandleInformation{
+                         .object_type = ZX_OBJ_TYPE_CHANNEL,
+                         .rights = ZX_DEFAULT_CHANNEL_RIGHTS,
+                     });
+    }
+  }
+}
+
+void ParentGetChildRequestTopResponse::Decode(
+    ::fidl::Decoder* _decoder, ParentGetChildRequestTopResponse* _value,
+    size_t _offset) {
+  if (::fidl::IsMemcpyCompatible<ParentGetChildRequestTopResponse>::value) {
+    memcpy(_value,
+           _decoder->template GetPtr<ParentGetChildRequestTopResponse>(_offset),
+           sizeof(ParentGetChildRequestTopResponse));
+  } else {
+    ::fidl::Decode(_decoder, &_value->r, _offset + 0);
+  }
+}
+
+zx_status_t ParentGetChildRequestTopResponse::Clone(
+    ParentGetChildRequestTopResponse* _result) const {
+  zx_status_t _status = ::fidl::Clone(r, &_result->r);
+  if (_status != ZX_OK) return _status;
+  return ZX_OK;
+}
+#endif  // __Fuchsia__
 
 //
 // Proxies and stubs definitions
 //
 #ifdef __Fuchsia__
 
-namespace test {
-namespace protocolrequest {
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t
     test_protocolrequest_ParentGetChildTopResponseTable;
@@ -367,14 +568,10 @@ zx_status_t Parent_SyncProxy::TakeChildRequest(
       ::test::protocolrequest::Parent_RequestEncoder::TakeChildRequest(
           &_encoder, &r));
 }
-}  // namespace protocolrequest
-}  // namespace test
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 
-namespace test {
-namespace protocolrequest {
 Child::~Child() = default;
 
 const fidl_type_t* ::test::protocolrequest::Child_RequestDecoder::GetType(
@@ -466,6 +663,7 @@ Child_SyncProxy::Child_SyncProxy(::zx::channel channel)
     : proxy_(::std::move(channel)) {}
 
 Child_SyncProxy::~Child_SyncProxy() = default;
+#endif  // __Fuchsia__
+
 }  // namespace protocolrequest
 }  // namespace test
-#endif  // __Fuchsia__

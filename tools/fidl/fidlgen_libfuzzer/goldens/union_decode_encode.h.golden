@@ -9,13 +9,22 @@
 
 namespace fuzzing {
 
-inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoderForType, 10>
+inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoderForType, 12>
     test_union_decoder_encoders = {
         ::fidl::fuzzing::DecoderEncoderForType{
             .fidl_type_name = "::test_union::wire::StructWithNullableXUnion",
             .has_flexible_envelope = true,
             .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<
                 ::test_union::wire::StructWithNullableXUnion>,
+        },
+        ::fidl::fuzzing::DecoderEncoderForType{
+            .fidl_type_name = "::test_union::wire::"
+                              "TestProtocolStrictXUnionHenceResponseMayBeStackA"
+                              "llocatedTopResponse",
+            .has_flexible_envelope = false,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<
+                ::test_union::wire::
+                    TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse>,
         },
         ::fidl::fuzzing::DecoderEncoderForType{
             .fidl_type_name = "::test_union::wire::Pizza",
@@ -28,6 +37,15 @@ inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoderForType, 10>
             .has_flexible_envelope = false,
             .decoder_encoder =
                 ::fidl::fuzzing::DecoderEncoderImpl<::test_union::wire::Pasta>,
+        },
+        ::fidl::fuzzing::DecoderEncoderForType{
+            .fidl_type_name = "::test_union::wire::"
+                              "TestProtocolFlexibleXUnionHenceResponseMustBeHea"
+                              "pAllocatedTopResponse",
+            .has_flexible_envelope = true,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<
+                ::test_union::wire::
+                    TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse>,
         },
 
         ::fidl::fuzzing::DecoderEncoderForType{

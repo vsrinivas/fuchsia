@@ -15,6 +15,8 @@ class TableData;
 
 class TableMember;
 
+class SomeProtocolSomeMethodRequest;
+
 class SomeProtocol_SomeMethod_Error final {
  public:
   constexpr SomeProtocol_SomeMethod_Error() : value_(0) {}
@@ -330,6 +332,8 @@ class SomeProtocol_SomeMethod_Response;
 
 class SomeProtocol_SomeMethod_Result;
 
+class SomeProtocolSomeMethodTopResponse;
+
 #ifdef __Fuchsia__
 
 class SomeProtocol;
@@ -557,6 +561,35 @@ class TableMember final {
 };
 
 using TableMemberPtr = ::std::unique_ptr<TableMember>;
+
+class SomeProtocolSomeMethodRequest final {
+ public:
+  static const fidl_type_t* FidlType;
+
+  ::test::anonymous::UnionMember union_member{};
+
+  ::test::anonymous::TableMember table_member{};
+
+  static inline ::std::unique_ptr<SomeProtocolSomeMethodRequest> New() {
+    return ::std::make_unique<SomeProtocolSomeMethodRequest>();
+  }
+
+  void Encode(::fidl::Encoder* _encoder, size_t _offset,
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
+                  cpp17::nullopt);
+  static void Decode(::fidl::Decoder* _decoder,
+                     SomeProtocolSomeMethodRequest* value, size_t _offset);
+  zx_status_t Clone(SomeProtocolSomeMethodRequest* result) const;
+};
+
+inline zx_status_t Clone(
+    const ::test::anonymous::SomeProtocolSomeMethodRequest& _value,
+    ::test::anonymous::SomeProtocolSomeMethodRequest* _result) {
+  return _value.Clone(_result);
+}
+
+using SomeProtocolSomeMethodRequestPtr =
+    ::std::unique_ptr<SomeProtocolSomeMethodRequest>;
 
 class OverrideTest final {
  public:
@@ -1079,6 +1112,33 @@ inline zx_status_t Clone(
 using SomeProtocol_SomeMethod_ResultPtr =
     ::std::unique_ptr<SomeProtocol_SomeMethod_Result>;
 
+class SomeProtocolSomeMethodTopResponse final {
+ public:
+  static const fidl_type_t* FidlType;
+
+  ::test::anonymous::SomeProtocol_SomeMethod_Result result{};
+
+  static inline ::std::unique_ptr<SomeProtocolSomeMethodTopResponse> New() {
+    return ::std::make_unique<SomeProtocolSomeMethodTopResponse>();
+  }
+
+  void Encode(::fidl::Encoder* _encoder, size_t _offset,
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
+                  cpp17::nullopt);
+  static void Decode(::fidl::Decoder* _decoder,
+                     SomeProtocolSomeMethodTopResponse* value, size_t _offset);
+  zx_status_t Clone(SomeProtocolSomeMethodTopResponse* result) const;
+};
+
+inline zx_status_t Clone(
+    const ::test::anonymous::SomeProtocolSomeMethodTopResponse& _value,
+    ::test::anonymous::SomeProtocolSomeMethodTopResponse* _result) {
+  return _value.Clone(_result);
+}
+
+using SomeProtocolSomeMethodTopResponsePtr =
+    ::std::unique_ptr<SomeProtocolSomeMethodTopResponse>;
+
 #ifdef __Fuchsia__
 
 namespace _internal {
@@ -1274,6 +1334,43 @@ struct Equality<::test::anonymous::TableMember> {
       return false;
     }
     return ::fidl::Equals(_lhs.UnknownData(), _rhs.UnknownData());
+  }
+};
+template <>
+struct CodingTraits<::test::anonymous::SomeProtocolSomeMethodRequest>
+    : public EncodableCodingTraits<
+          ::test::anonymous::SomeProtocolSomeMethodRequest, 40, 32> {};
+
+template <>
+struct HasPadding<::test::anonymous::SomeProtocolSomeMethodRequest>
+    : public std::true_type {};
+
+template <>
+struct IsMemcpyCompatible<::test::anonymous::SomeProtocolSomeMethodRequest>
+    : public internal::BoolConstant<
+          !HasPadding<
+              ::test::anonymous::SomeProtocolSomeMethodRequest>::value &&
+          IsMemcpyCompatible<::test::anonymous::UnionMember>::value &&
+          IsMemcpyCompatible<::test::anonymous::TableMember>::value> {};
+
+inline zx_status_t Clone(
+    const ::test::anonymous::SomeProtocolSomeMethodRequest& value,
+    ::test::anonymous::SomeProtocolSomeMethodRequest* result) {
+  return ::test::anonymous::Clone(value, result);
+}
+
+template <>
+struct Equality<::test::anonymous::SomeProtocolSomeMethodRequest> {
+  bool operator()(
+      const ::test::anonymous::SomeProtocolSomeMethodRequest& _lhs,
+      const ::test::anonymous::SomeProtocolSomeMethodRequest& _rhs) const {
+    if (!::fidl::Equals(_lhs.union_member, _rhs.union_member)) {
+      return false;
+    }
+    if (!::fidl::Equals(_lhs.table_member, _rhs.table_member)) {
+      return false;
+    }
+    return true;
   }
 };
 template <>
@@ -1667,6 +1764,40 @@ struct Equality<::test::anonymous::SomeProtocol_SomeMethod_Result> {
       default:
         return false;
     }
+  }
+};
+template <>
+struct CodingTraits<::test::anonymous::SomeProtocolSomeMethodTopResponse>
+    : public EncodableCodingTraits<
+          ::test::anonymous::SomeProtocolSomeMethodTopResponse, 24, 16> {};
+
+template <>
+struct HasPadding<::test::anonymous::SomeProtocolSomeMethodTopResponse>
+    : public std::true_type {};
+
+template <>
+struct IsMemcpyCompatible<::test::anonymous::SomeProtocolSomeMethodTopResponse>
+    : public internal::BoolConstant<
+          !HasPadding<
+              ::test::anonymous::SomeProtocolSomeMethodTopResponse>::value &&
+          IsMemcpyCompatible<
+              ::test::anonymous::SomeProtocol_SomeMethod_Result>::value> {};
+
+inline zx_status_t Clone(
+    const ::test::anonymous::SomeProtocolSomeMethodTopResponse& value,
+    ::test::anonymous::SomeProtocolSomeMethodTopResponse* result) {
+  return ::test::anonymous::Clone(value, result);
+}
+
+template <>
+struct Equality<::test::anonymous::SomeProtocolSomeMethodTopResponse> {
+  bool operator()(
+      const ::test::anonymous::SomeProtocolSomeMethodTopResponse& _lhs,
+      const ::test::anonymous::SomeProtocolSomeMethodTopResponse& _rhs) const {
+    if (!::fidl::Equals(_lhs.result, _rhs.result)) {
+      return false;
+    }
+    return true;
   }
 };
 

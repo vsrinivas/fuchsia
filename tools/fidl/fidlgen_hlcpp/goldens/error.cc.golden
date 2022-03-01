@@ -313,6 +313,79 @@ void Example_foo_Result::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
   }
 }
 
+extern "C" const fidl_type_t test_error_ExampleFooTopResponseTable;
+const fidl_type_t* ExampleFooTopResponse::FidlType =
+    &test_error_ExampleFooTopResponseTable;
+
+void ExampleFooTopResponse::Encode(
+    ::fidl::Encoder* _encoder, size_t _offset,
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  if (::fidl::IsMemcpyCompatible<ExampleFooTopResponse>::value) {
+    memcpy(_encoder->template GetPtr<ExampleFooTopResponse>(_offset), this,
+           sizeof(ExampleFooTopResponse));
+  } else {
+    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
+      ::fidl::Encode(_encoder, &result, _offset + 0);
+
+    } else {
+      ::fidl::Encode(_encoder, &result, _offset + 0);
+    }
+  }
+}
+
+void ExampleFooTopResponse::Decode(::fidl::Decoder* _decoder,
+                                   ExampleFooTopResponse* _value,
+                                   size_t _offset) {
+  if (::fidl::IsMemcpyCompatible<ExampleFooTopResponse>::value) {
+    memcpy(_value, _decoder->template GetPtr<ExampleFooTopResponse>(_offset),
+           sizeof(ExampleFooTopResponse));
+  } else {
+    ::fidl::Decode(_decoder, &_value->result, _offset + 0);
+  }
+}
+
+zx_status_t ExampleFooTopResponse::Clone(ExampleFooTopResponse* _result) const {
+  zx_status_t _status = ::fidl::Clone(result, &_result->result);
+  if (_status != ZX_OK) return _status;
+  return ZX_OK;
+}
+
+extern "C" const fidl_type_t test_error_ExampleFooRequestTable;
+const fidl_type_t* ExampleFooRequest::FidlType =
+    &test_error_ExampleFooRequestTable;
+
+void ExampleFooRequest::Encode(
+    ::fidl::Encoder* _encoder, size_t _offset,
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  if (::fidl::IsMemcpyCompatible<ExampleFooRequest>::value) {
+    memcpy(_encoder->template GetPtr<ExampleFooRequest>(_offset), this,
+           sizeof(ExampleFooRequest));
+  } else {
+    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
+      ::fidl::Encode(_encoder, &s, _offset + 0);
+
+    } else {
+      ::fidl::Encode(_encoder, &s, _offset + 0);
+    }
+  }
+}
+
+void ExampleFooRequest::Decode(::fidl::Decoder* _decoder,
+                               ExampleFooRequest* _value, size_t _offset) {
+  if (::fidl::IsMemcpyCompatible<ExampleFooRequest>::value) {
+    memcpy(_value, _decoder->template GetPtr<ExampleFooRequest>(_offset),
+           sizeof(ExampleFooRequest));
+  } else {
+    ::fidl::Decode(_decoder, &_value->s, _offset + 0);
+  }
+}
+
+zx_status_t ExampleFooRequest::Clone(ExampleFooRequest* _result) const {
+  zx_status_t _status = ::fidl::Clone(s, &_result->s);
+  if (_status != ZX_OK) return _status;
+  return ZX_OK;
+}
+
 //
 // Proxies and stubs definitions
 //

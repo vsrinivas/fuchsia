@@ -2,4 +2,4 @@
 
 #include <test/drivertwoway/cpp/libfuzzer_decode_encode.h>
 
-static_assert(::fuzzing::test_drivertwoway_decoder_encoders.size() == 2);
+static_assert(::fuzzing::test_drivertwoway_decoder_encoders.size() == 4);

@@ -7,14 +7,109 @@
 //
 // Domain objects definitions (i.e. "natural types" in unified bindings)
 //
+namespace test {
+namespace inheritancewithrecursivedecl {
+#ifdef __Fuchsia__
+
+extern "C" const fidl_type_t
+    test_inheritancewithrecursivedecl_ParentFirstRequestTable;
+const fidl_type_t* ParentFirstRequest::FidlType =
+    &test_inheritancewithrecursivedecl_ParentFirstRequestTable;
+
+void ParentFirstRequest::Encode(
+    ::fidl::Encoder* _encoder, size_t _offset,
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  if (::fidl::IsMemcpyCompatible<ParentFirstRequest>::value) {
+    memcpy(_encoder->template GetPtr<ParentFirstRequest>(_offset), this,
+           sizeof(ParentFirstRequest));
+  } else {
+    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
+      ::fidl::Encode(_encoder, &request, _offset + 0,
+                     ::fidl::HandleInformation{
+                         .object_type = ZX_OBJ_TYPE_CHANNEL,
+                         .rights = ZX_DEFAULT_CHANNEL_RIGHTS,
+                     });
+
+    } else {
+      ::fidl::Encode(_encoder, &request, _offset + 0,
+                     ::fidl::HandleInformation{
+                         .object_type = ZX_OBJ_TYPE_CHANNEL,
+                         .rights = ZX_DEFAULT_CHANNEL_RIGHTS,
+                     });
+    }
+  }
+}
+
+void ParentFirstRequest::Decode(::fidl::Decoder* _decoder,
+                                ParentFirstRequest* _value, size_t _offset) {
+  if (::fidl::IsMemcpyCompatible<ParentFirstRequest>::value) {
+    memcpy(_value, _decoder->template GetPtr<ParentFirstRequest>(_offset),
+           sizeof(ParentFirstRequest));
+  } else {
+    ::fidl::Decode(_decoder, &_value->request, _offset + 0);
+  }
+}
+
+zx_status_t ParentFirstRequest::Clone(ParentFirstRequest* _result) const {
+  zx_status_t _status = ::fidl::Clone(request, &_result->request);
+  if (_status != ZX_OK) return _status;
+  return ZX_OK;
+}
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+extern "C" const fidl_type_t
+    test_inheritancewithrecursivedecl_ChildSecondRequestTable;
+const fidl_type_t* ChildSecondRequest::FidlType =
+    &test_inheritancewithrecursivedecl_ChildSecondRequestTable;
+
+void ChildSecondRequest::Encode(
+    ::fidl::Encoder* _encoder, size_t _offset,
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  if (::fidl::IsMemcpyCompatible<ChildSecondRequest>::value) {
+    memcpy(_encoder->template GetPtr<ChildSecondRequest>(_offset), this,
+           sizeof(ChildSecondRequest));
+  } else {
+    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
+      ::fidl::Encode(_encoder, &request, _offset + 0,
+                     ::fidl::HandleInformation{
+                         .object_type = ZX_OBJ_TYPE_CHANNEL,
+                         .rights = ZX_DEFAULT_CHANNEL_RIGHTS,
+                     });
+
+    } else {
+      ::fidl::Encode(_encoder, &request, _offset + 0,
+                     ::fidl::HandleInformation{
+                         .object_type = ZX_OBJ_TYPE_CHANNEL,
+                         .rights = ZX_DEFAULT_CHANNEL_RIGHTS,
+                     });
+    }
+  }
+}
+
+void ChildSecondRequest::Decode(::fidl::Decoder* _decoder,
+                                ChildSecondRequest* _value, size_t _offset) {
+  if (::fidl::IsMemcpyCompatible<ChildSecondRequest>::value) {
+    memcpy(_value, _decoder->template GetPtr<ChildSecondRequest>(_offset),
+           sizeof(ChildSecondRequest));
+  } else {
+    ::fidl::Decode(_decoder, &_value->request, _offset + 0);
+  }
+}
+
+zx_status_t ChildSecondRequest::Clone(ChildSecondRequest* _result) const {
+  zx_status_t _status = ::fidl::Clone(request, &_result->request);
+  if (_status != ZX_OK) return _status;
+  return ZX_OK;
+}
+#endif  // __Fuchsia__
 
 //
 // Proxies and stubs definitions
 //
 #ifdef __Fuchsia__
 
-namespace test {
-namespace inheritancewithrecursivedecl {
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t
     test_inheritancewithrecursivedecl_ParentFirstRequestTable;
@@ -153,14 +248,10 @@ zx_status_t Parent_SyncProxy::First(
       ::test::inheritancewithrecursivedecl::Parent_RequestEncoder::First(
           &_encoder, &request));
 }
-}  // namespace inheritancewithrecursivedecl
-}  // namespace test
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 
-namespace test {
-namespace inheritancewithrecursivedecl {
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t
     test_inheritancewithrecursivedecl_ChildSecondRequestTable;
@@ -338,6 +429,7 @@ zx_status_t Child_SyncProxy::Second(
       ::test::inheritancewithrecursivedecl::Child_RequestEncoder::Second(
           &_encoder, &request));
 }
+#endif  // __Fuchsia__
+
 }  // namespace inheritancewithrecursivedecl
 }  // namespace test
-#endif  // __Fuchsia__

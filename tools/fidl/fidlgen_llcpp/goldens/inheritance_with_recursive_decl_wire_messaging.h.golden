@@ -69,12 +69,12 @@ struct ::fidl::internal::WireServerDispatcher<
 
 template <>
 struct ::fidl::WireRequest<::test_inheritancewithrecursivedecl::Parent::First>
-    final {
-  ::fidl::ServerEnd<::test_inheritancewithrecursivedecl::Parent> request;
-
+    final
+    : public ::test_inheritancewithrecursivedecl::wire::ParentFirstRequest {
   explicit WireRequest(
       ::fidl::ServerEnd<::test_inheritancewithrecursivedecl::Parent>&& request)
-      : request(std::move(request)) {}
+      : ::test_inheritancewithrecursivedecl::wire::ParentFirstRequest{
+            .request = std::move(request)} {}
   WireRequest() = default;
   void _CloseHandles();
 };
@@ -428,12 +428,12 @@ struct ::fidl::internal::WireServerDispatcher<
 
 template <>
 struct ::fidl::WireRequest<::test_inheritancewithrecursivedecl::Child::First>
-    final {
-  ::fidl::ServerEnd<::test_inheritancewithrecursivedecl::Parent> request;
-
+    final
+    : public ::test_inheritancewithrecursivedecl::wire::ParentFirstRequest {
   explicit WireRequest(
       ::fidl::ServerEnd<::test_inheritancewithrecursivedecl::Parent>&& request)
-      : request(std::move(request)) {}
+      : ::test_inheritancewithrecursivedecl::wire::ParentFirstRequest{
+            .request = std::move(request)} {}
   WireRequest() = default;
   void _CloseHandles();
 };
@@ -465,12 +465,12 @@ struct ::fidl::internal::TransactionalRequest<
 
 template <>
 struct ::fidl::WireRequest<::test_inheritancewithrecursivedecl::Child::Second>
-    final {
-  ::fidl::ServerEnd<::test_inheritancewithrecursivedecl::Parent> request;
-
+    final
+    : public ::test_inheritancewithrecursivedecl::wire::ChildSecondRequest {
   explicit WireRequest(
       ::fidl::ServerEnd<::test_inheritancewithrecursivedecl::Parent>&& request)
-      : request(std::move(request)) {}
+      : ::test_inheritancewithrecursivedecl::wire::ChildSecondRequest{
+            .request = std::move(request)} {}
   WireRequest() = default;
   void _CloseHandles();
 };

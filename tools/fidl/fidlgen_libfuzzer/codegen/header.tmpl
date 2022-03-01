@@ -31,13 +31,13 @@
 
 namespace fuzzing {
 
-{{ range .Decls | SkipRequestResponseDecls }}
+{{ range .Decls }}
 {{- if and (NEq .Kind Kinds.Protocol) (NEq .Kind Kinds.Const) }}
 using {{ .Name }} = {{ . }};
 {{- end }}
 {{- end }}
 
-{{ range .Decls | SkipRequestResponseDecls }}
+{{ range .Decls }}
 {{- if Eq .Kind Kinds.Bits }}{{ template "BitsSizeAndAlloc" . }}{{- end }}
 {{- if Eq .Kind Kinds.Enum }}{{ template "EnumSizeAndAlloc" . }}{{- end }}
 {{- if Eq .Kind Kinds.Struct }}{{ template "StructSizeAndAlloc" . }}{{- end }}

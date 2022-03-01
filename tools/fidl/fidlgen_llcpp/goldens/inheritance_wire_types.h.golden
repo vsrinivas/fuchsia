@@ -22,4 +22,76 @@
 #include <fidl/test.inheritance/cpp/common_types.h>
 #include <fidl/test.inheritance/cpp/markers.h>
 
-namespace fidl {}  // namespace fidl
+namespace test_inheritance {
+namespace wire {
+struct SuperFooTopResponse;
+
+struct SuperFooRequest;
+
+extern "C" const fidl_type_t test_inheritance_SuperFooTopResponseTable;
+
+struct SuperFooTopResponse {
+  int64_t y = {};
+};
+
+extern "C" const fidl_type_t test_inheritance_SuperFooRequestTable;
+
+struct SuperFooRequest {
+  ::fidl::StringView s = {};
+};
+
+}  // namespace wire
+}  // namespace test_inheritance
+namespace fidl {
+
+template <>
+struct TypeTraits<::test_inheritance::wire::SuperFooTopResponse> {
+  static constexpr const fidl_type_t* kType =
+      &::test_inheritance::wire::test_inheritance_SuperFooTopResponseTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 8;
+  static constexpr uint32_t kPrimarySizeV1 = 8;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasPointer = false;
+};
+
+template <>
+struct IsFidlType<::test_inheritance::wire::SuperFooTopResponse>
+    : public std::true_type {};
+template <>
+struct IsStruct<::test_inheritance::wire::SuperFooTopResponse>
+    : public std::true_type {};
+static_assert(
+    std::is_standard_layout_v<::test_inheritance::wire::SuperFooTopResponse>);
+static_assert(offsetof(::test_inheritance::wire::SuperFooTopResponse, y) == 0);
+static_assert(
+    sizeof(::test_inheritance::wire::SuperFooTopResponse) ==
+    TypeTraits<::test_inheritance::wire::SuperFooTopResponse>::kPrimarySize);
+
+template <>
+struct TypeTraits<::test_inheritance::wire::SuperFooRequest> {
+  static constexpr const fidl_type_t* kType =
+      &::test_inheritance::wire::test_inheritance_SuperFooRequestTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 16;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 4294967295;
+  static constexpr uint32_t kMaxOutOfLineV1 = 4294967295;
+  static constexpr bool kHasPointer = true;
+};
+
+template <>
+struct IsFidlType<::test_inheritance::wire::SuperFooRequest>
+    : public std::true_type {};
+template <>
+struct IsStruct<::test_inheritance::wire::SuperFooRequest>
+    : public std::true_type {};
+static_assert(
+    std::is_standard_layout_v<::test_inheritance::wire::SuperFooRequest>);
+static_assert(offsetof(::test_inheritance::wire::SuperFooRequest, s) == 0);
+static_assert(
+    sizeof(::test_inheritance::wire::SuperFooRequest) ==
+    TypeTraits<::test_inheritance::wire::SuperFooRequest>::kPrimarySize);
+
+}  // namespace fidl

@@ -77,11 +77,11 @@ struct ::fidl::internal::WireServerDispatcher<
 template <>
 struct ::fidl::WireRequest<
     ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>
-    final {
-  ::test_requestflexibleenvelope::wire::StrictFoo s;
-
+    final : public ::test_requestflexibleenvelope::wire::
+                ProtocolRequestStrictResponseFlexibleRequest {
   explicit WireRequest(::test_requestflexibleenvelope::wire::StrictFoo s)
-      : s(s) {}
+      : ::test_requestflexibleenvelope::wire::
+            ProtocolRequestStrictResponseFlexibleRequest{.s = std::move(s)} {}
   WireRequest() = default;
   using ResponseType = ::fidl::WireResponse<
       ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>;
@@ -114,11 +114,13 @@ struct ::fidl::internal::TransactionalRequest<
 template <>
 struct ::fidl::WireResponse<
     ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>
-    final {
-  ::test_requestflexibleenvelope::wire::FlexibleFoo f;
-
+    final : public ::test_requestflexibleenvelope::wire::
+                ProtocolRequestStrictResponseFlexibleTopResponse {
   explicit WireResponse(::test_requestflexibleenvelope::wire::FlexibleFoo f)
-      : f(f) {}
+      : ::test_requestflexibleenvelope::wire::
+            ProtocolRequestStrictResponseFlexibleTopResponse{.f =
+                                                                 std::move(f)} {
+  }
   WireResponse() = default;
 };
 
@@ -147,11 +149,11 @@ struct ::fidl::internal::TransactionalResponse<
 template <>
 struct ::fidl::WireRequest<
     ::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>
-    final {
-  ::test_requestflexibleenvelope::wire::FlexibleFoo s;
-
+    final : public ::test_requestflexibleenvelope::wire::
+                ProtocolRequestFlexibleResponseStrictRequest {
   explicit WireRequest(::test_requestflexibleenvelope::wire::FlexibleFoo s)
-      : s(s) {}
+      : ::test_requestflexibleenvelope::wire::
+            ProtocolRequestFlexibleResponseStrictRequest{.s = std::move(s)} {}
   WireRequest() = default;
   using ResponseType = ::fidl::WireResponse<
       ::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>;
@@ -184,11 +186,13 @@ struct ::fidl::internal::TransactionalRequest<
 template <>
 struct ::fidl::WireResponse<
     ::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>
-    final {
-  ::test_requestflexibleenvelope::wire::StrictFoo f;
-
+    final : public ::test_requestflexibleenvelope::wire::
+                ProtocolRequestFlexibleResponseStrictTopResponse {
   explicit WireResponse(::test_requestflexibleenvelope::wire::StrictFoo f)
-      : f(f) {}
+      : ::test_requestflexibleenvelope::wire::
+            ProtocolRequestFlexibleResponseStrictTopResponse{.f =
+                                                                 std::move(f)} {
+  }
   WireResponse() = default;
 };
 

@@ -41,6 +41,169 @@ zx_status_t Empty::Clone(Empty* _result) const {
   return ZX_OK;
 }
 
+extern "C" const fidl_type_t test_emptystruct_EmptyProtocolSendRequestTable;
+const fidl_type_t* EmptyProtocolSendRequest::FidlType =
+    &test_emptystruct_EmptyProtocolSendRequestTable;
+
+void EmptyProtocolSendRequest::Encode(
+    ::fidl::Encoder* _encoder, size_t _offset,
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  if (::fidl::IsMemcpyCompatible<EmptyProtocolSendRequest>::value) {
+    memcpy(_encoder->template GetPtr<EmptyProtocolSendRequest>(_offset), this,
+           sizeof(EmptyProtocolSendRequest));
+  } else {
+    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
+      ::fidl::Encode(_encoder, &e, _offset + 0);
+
+    } else {
+      ::fidl::Encode(_encoder, &e, _offset + 0);
+    }
+  }
+}
+
+void EmptyProtocolSendRequest::Decode(::fidl::Decoder* _decoder,
+                                      EmptyProtocolSendRequest* _value,
+                                      size_t _offset) {
+  if (::fidl::IsMemcpyCompatible<EmptyProtocolSendRequest>::value) {
+    memcpy(_value, _decoder->template GetPtr<EmptyProtocolSendRequest>(_offset),
+           sizeof(EmptyProtocolSendRequest));
+  } else {
+    ::fidl::Decode(_decoder, &_value->e, _offset + 0);
+  }
+}
+
+zx_status_t EmptyProtocolSendRequest::Clone(
+    EmptyProtocolSendRequest* _result) const {
+  zx_status_t _status = ::fidl::Clone(e, &_result->e);
+  if (_status != ZX_OK) return _status;
+  return ZX_OK;
+}
+
+extern "C" const fidl_type_t
+    test_emptystruct_EmptyProtocolSendAndReceiveTopResponseTable;
+const fidl_type_t* EmptyProtocolSendAndReceiveTopResponse::FidlType =
+    &test_emptystruct_EmptyProtocolSendAndReceiveTopResponseTable;
+
+void EmptyProtocolSendAndReceiveTopResponse::Encode(
+    ::fidl::Encoder* _encoder, size_t _offset,
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  if (::fidl::IsMemcpyCompatible<
+          EmptyProtocolSendAndReceiveTopResponse>::value) {
+    memcpy(_encoder->template GetPtr<EmptyProtocolSendAndReceiveTopResponse>(
+               _offset),
+           this, sizeof(EmptyProtocolSendAndReceiveTopResponse));
+  } else {
+    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
+      ::fidl::Encode(_encoder, &e, _offset + 0);
+
+    } else {
+      ::fidl::Encode(_encoder, &e, _offset + 0);
+    }
+  }
+}
+
+void EmptyProtocolSendAndReceiveTopResponse::Decode(
+    ::fidl::Decoder* _decoder, EmptyProtocolSendAndReceiveTopResponse* _value,
+    size_t _offset) {
+  if (::fidl::IsMemcpyCompatible<
+          EmptyProtocolSendAndReceiveTopResponse>::value) {
+    memcpy(_value,
+           _decoder->template GetPtr<EmptyProtocolSendAndReceiveTopResponse>(
+               _offset),
+           sizeof(EmptyProtocolSendAndReceiveTopResponse));
+  } else {
+    ::fidl::Decode(_decoder, &_value->e, _offset + 0);
+  }
+}
+
+zx_status_t EmptyProtocolSendAndReceiveTopResponse::Clone(
+    EmptyProtocolSendAndReceiveTopResponse* _result) const {
+  zx_status_t _status = ::fidl::Clone(e, &_result->e);
+  if (_status != ZX_OK) return _status;
+  return ZX_OK;
+}
+
+extern "C" const fidl_type_t
+    test_emptystruct_EmptyProtocolSendAndReceiveRequestTable;
+const fidl_type_t* EmptyProtocolSendAndReceiveRequest::FidlType =
+    &test_emptystruct_EmptyProtocolSendAndReceiveRequestTable;
+
+void EmptyProtocolSendAndReceiveRequest::Encode(
+    ::fidl::Encoder* _encoder, size_t _offset,
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  if (::fidl::IsMemcpyCompatible<EmptyProtocolSendAndReceiveRequest>::value) {
+    memcpy(
+        _encoder->template GetPtr<EmptyProtocolSendAndReceiveRequest>(_offset),
+        this, sizeof(EmptyProtocolSendAndReceiveRequest));
+  } else {
+    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
+      ::fidl::Encode(_encoder, &e, _offset + 0);
+
+    } else {
+      ::fidl::Encode(_encoder, &e, _offset + 0);
+    }
+  }
+}
+
+void EmptyProtocolSendAndReceiveRequest::Decode(
+    ::fidl::Decoder* _decoder, EmptyProtocolSendAndReceiveRequest* _value,
+    size_t _offset) {
+  if (::fidl::IsMemcpyCompatible<EmptyProtocolSendAndReceiveRequest>::value) {
+    memcpy(
+        _value,
+        _decoder->template GetPtr<EmptyProtocolSendAndReceiveRequest>(_offset),
+        sizeof(EmptyProtocolSendAndReceiveRequest));
+  } else {
+    ::fidl::Decode(_decoder, &_value->e, _offset + 0);
+  }
+}
+
+zx_status_t EmptyProtocolSendAndReceiveRequest::Clone(
+    EmptyProtocolSendAndReceiveRequest* _result) const {
+  zx_status_t _status = ::fidl::Clone(e, &_result->e);
+  if (_status != ZX_OK) return _status;
+  return ZX_OK;
+}
+
+extern "C" const fidl_type_t test_emptystruct_EmptyProtocolReceiveRequestTable;
+const fidl_type_t* EmptyProtocolReceiveRequest::FidlType =
+    &test_emptystruct_EmptyProtocolReceiveRequestTable;
+
+void EmptyProtocolReceiveRequest::Encode(
+    ::fidl::Encoder* _encoder, size_t _offset,
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  if (::fidl::IsMemcpyCompatible<EmptyProtocolReceiveRequest>::value) {
+    memcpy(_encoder->template GetPtr<EmptyProtocolReceiveRequest>(_offset),
+           this, sizeof(EmptyProtocolReceiveRequest));
+  } else {
+    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
+      ::fidl::Encode(_encoder, &e, _offset + 0);
+
+    } else {
+      ::fidl::Encode(_encoder, &e, _offset + 0);
+    }
+  }
+}
+
+void EmptyProtocolReceiveRequest::Decode(::fidl::Decoder* _decoder,
+                                         EmptyProtocolReceiveRequest* _value,
+                                         size_t _offset) {
+  if (::fidl::IsMemcpyCompatible<EmptyProtocolReceiveRequest>::value) {
+    memcpy(_value,
+           _decoder->template GetPtr<EmptyProtocolReceiveRequest>(_offset),
+           sizeof(EmptyProtocolReceiveRequest));
+  } else {
+    ::fidl::Decode(_decoder, &_value->e, _offset + 0);
+  }
+}
+
+zx_status_t EmptyProtocolReceiveRequest::Clone(
+    EmptyProtocolReceiveRequest* _result) const {
+  zx_status_t _status = ::fidl::Clone(e, &_result->e);
+  if (_status != ZX_OK) return _status;
+  return ZX_OK;
+}
+
 //
 // Proxies and stubs definitions
 //

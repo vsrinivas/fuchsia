@@ -620,6 +620,46 @@ zx_status_t ExampleStruct::Clone(ExampleStruct* _result) const {
   return ZX_OK;
 }
 
+extern "C" const fidl_type_t
+    test_placementofattributes_ExampleProtocolMethodRequestTable;
+const fidl_type_t* ExampleProtocolMethodRequest::FidlType =
+    &test_placementofattributes_ExampleProtocolMethodRequestTable;
+
+void ExampleProtocolMethodRequest::Encode(
+    ::fidl::Encoder* _encoder, size_t _offset,
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  if (::fidl::IsMemcpyCompatible<ExampleProtocolMethodRequest>::value) {
+    memcpy(_encoder->template GetPtr<ExampleProtocolMethodRequest>(_offset),
+           this, sizeof(ExampleProtocolMethodRequest));
+  } else {
+    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
+      ::fidl::Encode(_encoder, &arg, _offset + 0);
+
+    } else {
+      ::fidl::Encode(_encoder, &arg, _offset + 0);
+    }
+  }
+}
+
+void ExampleProtocolMethodRequest::Decode(::fidl::Decoder* _decoder,
+                                          ExampleProtocolMethodRequest* _value,
+                                          size_t _offset) {
+  if (::fidl::IsMemcpyCompatible<ExampleProtocolMethodRequest>::value) {
+    memcpy(_value,
+           _decoder->template GetPtr<ExampleProtocolMethodRequest>(_offset),
+           sizeof(ExampleProtocolMethodRequest));
+  } else {
+    ::fidl::Decode(_decoder, &_value->arg, _offset + 0);
+  }
+}
+
+zx_status_t ExampleProtocolMethodRequest::Clone(
+    ExampleProtocolMethodRequest* _result) const {
+  zx_status_t _status = ::fidl::Clone(arg, &_result->arg);
+  if (_status != ZX_OK) return _status;
+  return ZX_OK;
+}
+
 //
 // Proxies and stubs definitions
 //

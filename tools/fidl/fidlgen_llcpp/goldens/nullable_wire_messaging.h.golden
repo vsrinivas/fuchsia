@@ -61,11 +61,11 @@ struct ::fidl::internal::WireServerDispatcher<::test_nullable::SimpleProtocol>
 #endif  // __Fuchsia__
 
 template <>
-struct ::fidl::WireRequest<::test_nullable::SimpleProtocol::Add> final {
-  int32_t a;
-  int32_t b;
-
-  explicit WireRequest(int32_t a, int32_t b) : a(a), b(b) {}
+struct ::fidl::WireRequest<::test_nullable::SimpleProtocol::Add> final
+    : public ::test_nullable::wire::SimpleProtocolAddRequest {
+  explicit WireRequest(int32_t a, int32_t b)
+      : ::test_nullable::wire::SimpleProtocolAddRequest{.a = std::move(a),
+                                                        .b = std::move(b)} {}
   WireRequest() = default;
   using ResponseType =
       ::fidl::WireResponse<::test_nullable::SimpleProtocol::Add>;
@@ -92,10 +92,11 @@ struct ::fidl::internal::TransactionalRequest<
 };
 
 template <>
-struct ::fidl::WireResponse<::test_nullable::SimpleProtocol::Add> final {
-  int32_t sum;
-
-  explicit WireResponse(int32_t sum) : sum(sum) {}
+struct ::fidl::WireResponse<::test_nullable::SimpleProtocol::Add> final
+    : public ::test_nullable::wire::SimpleProtocolAddTopResponse {
+  explicit WireResponse(int32_t sum)
+      : ::test_nullable::wire::SimpleProtocolAddTopResponse{
+            .sum = std::move(sum)} {}
   WireResponse() = default;
 };
 

@@ -36,7 +36,7 @@ do not support them in the bindings. */}}
 // Domain objects definitions (i.e. "natural types" in unified bindings)
 //
 
-{{- range .Decls | SkipRequestResponseDecls }}
+{{- range .Decls }}
 {{- if Eq .Kind Kinds.Bits }}{{ template "BitsDefinition" . }}{{- end }}
 {{- if Eq .Kind Kinds.Const }}{{ template "ConstDefinition" . }}{{- end }}
 {{- if Eq .Kind Kinds.Enum }}{{ template "EnumDefinition" . }}{{- end }}

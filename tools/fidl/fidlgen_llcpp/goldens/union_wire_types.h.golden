@@ -26,9 +26,13 @@ namespace test_union {
 namespace wire {
 struct StructWithNullableXUnion;
 
+struct TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse;
+
 struct Pizza;
 
 struct Pasta;
+
+struct TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse;
 
 struct NullableUnionStruct;
 
@@ -2444,6 +2448,13 @@ struct StructWithNullableXUnion {
   ::test_union::wire::OlderSimpleUnion x1 = {};
 };
 
+extern "C" const fidl_type_t
+    test_union_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponseTable;
+
+struct TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse {
+  ::test_union::wire::StrictBoundedXUnion xu = {};
+};
+
 extern "C" const fidl_type_t test_union_PizzaTable;
 
 struct Pizza {
@@ -2454,6 +2465,13 @@ extern "C" const fidl_type_t test_union_PastaTable;
 
 struct Pasta {
   ::fidl::StringView sauce = {};
+};
+
+extern "C" const fidl_type_t
+    test_union_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponseTable;
+
+struct TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse {
+  ::test_union::wire::OlderSimpleUnion xu = {};
 };
 
 extern "C" const fidl_type_t test_union_NullableUnionStructTable;
@@ -2502,6 +2520,49 @@ static_assert(
     TypeTraits<::test_union::wire::StructWithNullableXUnion>::kPrimarySize);
 
 template <>
+struct TypeTraits<
+    ::test_union::wire::
+        TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse> {
+  static constexpr const fidl_type_t* kType =
+      &::test_union::wire::
+          test_union_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponseTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 24;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 32;
+  static constexpr uint32_t kMaxOutOfLineV1 = 32;
+  static constexpr bool kHasPointer = true;
+};
+
+template <>
+struct IsFidlType<
+    ::test_union::wire::
+        TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse>
+    : public std::true_type {};
+template <>
+struct IsStruct<
+    ::test_union::wire::
+        TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse>
+    : public std::true_type {};
+static_assert(
+    std::is_standard_layout_v<
+        ::test_union::wire::
+            TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse>);
+static_assert(
+    offsetof(
+        ::test_union::wire::
+            TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse,
+        xu) == 0);
+static_assert(
+    sizeof(
+        ::test_union::wire::
+            TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse) ==
+    TypeTraits<
+        ::test_union::wire::
+            TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse>::
+        kPrimarySize);
+
+template <>
 struct TypeTraits<::test_union::wire::Pizza> {
   static constexpr const fidl_type_t* kType =
       &::test_union::wire::test_union_PizzaTable;
@@ -2542,6 +2603,49 @@ static_assert(std::is_standard_layout_v<::test_union::wire::Pasta>);
 static_assert(offsetof(::test_union::wire::Pasta, sauce) == 0);
 static_assert(sizeof(::test_union::wire::Pasta) ==
               TypeTraits<::test_union::wire::Pasta>::kPrimarySize);
+
+template <>
+struct TypeTraits<
+    ::test_union::wire::
+        TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse> {
+  static constexpr const fidl_type_t* kType =
+      &::test_union::wire::
+          test_union_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponseTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 24;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 8;
+  static constexpr uint32_t kMaxOutOfLineV1 = 8;
+  static constexpr bool kHasPointer = true;
+};
+
+template <>
+struct IsFidlType<
+    ::test_union::wire::
+        TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse>
+    : public std::true_type {};
+template <>
+struct IsStruct<
+    ::test_union::wire::
+        TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse>
+    : public std::true_type {};
+static_assert(
+    std::is_standard_layout_v<
+        ::test_union::wire::
+            TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse>);
+static_assert(
+    offsetof(
+        ::test_union::wire::
+            TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse,
+        xu) == 0);
+static_assert(
+    sizeof(
+        ::test_union::wire::
+            TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse) ==
+    TypeTraits<
+        ::test_union::wire::
+            TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse>::
+        kPrimarySize);
 
 template <>
 struct TypeTraits<::test_union::wire::NullableUnionStruct> {

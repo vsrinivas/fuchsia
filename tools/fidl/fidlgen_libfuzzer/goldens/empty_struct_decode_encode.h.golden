@@ -9,13 +9,42 @@
 
 namespace fuzzing {
 
-inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoderForType, 5>
+inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoderForType, 9>
     test_emptystruct_decoder_encoders = {
         ::fidl::fuzzing::DecoderEncoderForType{
             .fidl_type_name = "::test_emptystruct::wire::Empty",
             .has_flexible_envelope = false,
             .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<
                 ::test_emptystruct::wire::Empty>,
+        },
+        ::fidl::fuzzing::DecoderEncoderForType{
+            .fidl_type_name =
+                "::test_emptystruct::wire::EmptyProtocolSendRequest",
+            .has_flexible_envelope = false,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<
+                ::test_emptystruct::wire::EmptyProtocolSendRequest>,
+        },
+        ::fidl::fuzzing::DecoderEncoderForType{
+            .fidl_type_name = "::test_emptystruct::wire::"
+                              "EmptyProtocolSendAndReceiveTopResponse",
+            .has_flexible_envelope = false,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<
+                ::test_emptystruct::wire::
+                    EmptyProtocolSendAndReceiveTopResponse>,
+        },
+        ::fidl::fuzzing::DecoderEncoderForType{
+            .fidl_type_name =
+                "::test_emptystruct::wire::EmptyProtocolSendAndReceiveRequest",
+            .has_flexible_envelope = false,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<
+                ::test_emptystruct::wire::EmptyProtocolSendAndReceiveRequest>,
+        },
+        ::fidl::fuzzing::DecoderEncoderForType{
+            .fidl_type_name =
+                "::test_emptystruct::wire::EmptyProtocolReceiveRequest",
+            .has_flexible_envelope = false,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<
+                ::test_emptystruct::wire::EmptyProtocolReceiveRequest>,
         },
 
         ::fidl::fuzzing::DecoderEncoderForType{

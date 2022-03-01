@@ -11,4 +11,43 @@
 // For uint64_t.
 #include <stdint.h>
 
-namespace fuzzing {}  // namespace fuzzing
+namespace fuzzing {
+
+using SuperFooTopResponse = ::test::inheritance::SuperFooTopResponse;
+using SuperFooRequest = ::test::inheritance::SuperFooRequest;
+
+template <>
+struct MinSize<SuperFooTopResponse> {
+  operator size_t() { return MinSize<int64_t>(); }
+};
+template <>
+struct Allocate<SuperFooTopResponse> {
+  SuperFooTopResponse operator()(FuzzInput* src, size_t* size) {
+    ZX_ASSERT(*size >= MinSize<SuperFooTopResponse>());
+    SuperFooTopResponse out;
+    const size_t slack_per_member =
+        (*size - MinSize<SuperFooTopResponse>()) / 1;
+    size_t out_size;
+    out_size = MinSize<int64_t>() + slack_per_member;
+    out.y = Allocate<int64_t>{}(src, &out_size);
+    return out;
+  }
+};
+template <>
+struct MinSize<SuperFooRequest> {
+  operator size_t() { return MinSize<::std::string>(); }
+};
+template <>
+struct Allocate<SuperFooRequest> {
+  SuperFooRequest operator()(FuzzInput* src, size_t* size) {
+    ZX_ASSERT(*size >= MinSize<SuperFooRequest>());
+    SuperFooRequest out;
+    const size_t slack_per_member = (*size - MinSize<SuperFooRequest>()) / 1;
+    size_t out_size;
+    out_size = MinSize<::std::string>() + slack_per_member;
+    out.s = Allocate<::std::string>{}(src, &out_size);
+    return out;
+  }
+};
+
+}  // namespace fuzzing

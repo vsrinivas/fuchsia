@@ -44,28 +44,28 @@ fidl/{{ .LibraryDots }}/cpp/wire_types.h
 
   {{ range .Bits }}{{ template "Bits:WireTypesHeader" . }}{{ end }}
   {{ range .Enums }}{{ template "Enum:WireTypesHeader" . }}{{ end }}
-  {{ range .Structs | SkipRequestResponseDecls }}{{ template "Struct:ForwardDeclaration:WireTypesHeader" . }}{{ end }}
-  {{ range .Tables | SkipRequestResponseDecls }}{{ template "Table:ForwardDeclaration:WireTypesHeader" . }}{{ end }}
-  {{ range .Unions | SkipRequestResponseDecls }}{{ template "Union:ForwardDeclaration:WireTypesHeader" . }}{{ end }}
+  {{ range .Structs }}{{ template "Struct:ForwardDeclaration:WireTypesHeader" . }}{{ end }}
+  {{ range .Tables }}{{ template "Table:ForwardDeclaration:WireTypesHeader" . }}{{ end }}
+  {{ range .Unions }}{{ template "Union:ForwardDeclaration:WireTypesHeader" . }}{{ end }}
 
   {{- /* Resolve inline object declaration order by defining small inline structs first
     (size <= 4 so can't contain a table or a union), then tables and unions, then
     the remaining types. */}}
-  {{- range .Structs | SkipRequestResponseDecls }}
+  {{- range .Structs }}
     {{ if le .TypeShapeV2.InlineSize 4 }}{{ template "Struct:WireTypesHeader" . }}{{ end }}
   {{- end }}
-  {{ range .Tables | SkipRequestResponseDecls }}{{ template "Table:WireTypesHeader" . }}{{ end }}
-  {{ range .Unions | SkipRequestResponseDecls }}{{ template "Union:WireTypesHeader" . }}{{ end }}
+  {{ range .Tables }}{{ template "Table:WireTypesHeader" . }}{{ end }}
+  {{ range .Unions }}{{ template "Union:WireTypesHeader" . }}{{ end }}
   {{ range .Consts }}{{ template "Const:WireTypesHeader" . }}{{ end }}
-  {{ range .Structs | SkipRequestResponseDecls }}
+  {{ range .Structs }}
     {{ if gt .TypeShapeV2.InlineSize 4 }}{{ template "Struct:WireTypesHeader" . }}{{ end }}
   {{- end }}
 
   {{ EnsureNamespace "fidl" }}
 
-  {{ range .Structs | SkipRequestResponseDecls }}{{ template "Struct:Traits:WireTypesHeader" . }}{{ end }}
-  {{ range .Tables | SkipRequestResponseDecls }}{{ template "Table:Traits:WireTypesHeader" . }}{{ end }}
-  {{ range .Unions | SkipRequestResponseDecls }}{{ template "Union:Traits:WireTypesHeader" . }}{{ end }}
+  {{ range .Structs }}{{ template "Struct:Traits:WireTypesHeader" . }}{{ end }}
+  {{ range .Tables }}{{ template "Table:Traits:WireTypesHeader" . }}{{ end }}
+  {{ range .Unions }}{{ template "Union:Traits:WireTypesHeader" . }}{{ end }}
 
   {{ EndOfFile }}
 {{ end }}

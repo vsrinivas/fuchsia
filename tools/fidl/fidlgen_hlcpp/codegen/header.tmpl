@@ -32,7 +32,7 @@
 // Domain objects declarations (i.e. "natural types" in unified bindings).
 //
 
-{{- range .Decls | SkipRequestResponseDecls }}
+{{- range .Decls }}
 {{- if Eq .Kind Kinds.Bits }}{{ template "BitsForwardDeclaration" . }}{{- end }}
 {{- if Eq .Kind Kinds.Enum }}{{ template "EnumForwardDeclaration" . }}{{- end }}
 {{- if Eq .Kind Kinds.Protocol }}{{ template "DispatchProtocolForwardDeclaration/NaturalTypes" . }}{{- end }}
@@ -42,7 +42,7 @@
 {{- if Eq .Kind Kinds.Union }}{{ template "UnionForwardDeclaration" . }}{{- end }}
 {{- end }}
 
-{{- range .Decls | SkipRequestResponseDecls }}
+{{- range .Decls }}
 {{- if Eq .Kind Kinds.Const }}{{ template "ConstDeclaration" . }}{{- end }}
 {{- if Eq .Kind Kinds.Protocol }}{{ template "DispatchProtocolDeclaration/NaturalTypes" . }}{{- end }}
 {{- if Eq .Kind Kinds.Struct }}{{ template "StructDeclaration" . }}{{- end }}
@@ -53,7 +53,7 @@
 
 {{ EnsureNamespace "fidl" }}
 
-{{- range .Decls | SkipRequestResponseDecls }}
+{{- range .Decls }}
 {{- if Eq .Kind Kinds.Bits }}{{ template "BitsTraits" . }}{{- end }}
 {{- if Eq .Kind Kinds.Enum }}{{ template "EnumTraits" . }}{{- end }}
 {{- if Eq .Kind Kinds.Struct }}{{ template "StructTraits" . }}{{- end }}

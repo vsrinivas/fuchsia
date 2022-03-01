@@ -22,4 +22,110 @@
 #include <fidl/test.inheritancewithrecursivedecl/cpp/common_types.h>
 #include <fidl/test.inheritancewithrecursivedecl/cpp/markers.h>
 
-namespace fidl {}  // namespace fidl
+namespace test_inheritancewithrecursivedecl {
+namespace wire {
+struct ParentFirstRequest;
+
+struct ChildSecondRequest;
+
+#ifdef __Fuchsia__
+
+extern "C" const fidl_type_t
+    test_inheritancewithrecursivedecl_ParentFirstRequestTable;
+
+struct ParentFirstRequest {
+  ::fidl::ServerEnd<::test_inheritancewithrecursivedecl::Parent> request = {};
+
+  void _CloseHandles();
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+extern "C" const fidl_type_t
+    test_inheritancewithrecursivedecl_ChildSecondRequestTable;
+
+struct ChildSecondRequest {
+  ::fidl::ServerEnd<::test_inheritancewithrecursivedecl::Parent> request = {};
+
+  void _CloseHandles();
+};
+#endif  // __Fuchsia__
+
+}  // namespace wire
+}  // namespace test_inheritancewithrecursivedecl
+namespace fidl {
+
+#ifdef __Fuchsia__
+template <>
+struct IsResource<::test_inheritancewithrecursivedecl::wire::ParentFirstRequest>
+    : public std::true_type {};
+
+template <>
+struct TypeTraits<
+    ::test_inheritancewithrecursivedecl::wire::ParentFirstRequest> {
+  static constexpr const fidl_type_t* kType =
+      &::test_inheritancewithrecursivedecl::wire::
+          test_inheritancewithrecursivedecl_ParentFirstRequestTable;
+  static constexpr uint32_t kMaxNumHandles = 1;
+  static constexpr uint32_t kPrimarySize = 4;
+  static constexpr uint32_t kPrimarySizeV1 = 4;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasPointer = false;
+};
+
+template <>
+struct IsFidlType<::test_inheritancewithrecursivedecl::wire::ParentFirstRequest>
+    : public std::true_type {};
+template <>
+struct IsStruct<::test_inheritancewithrecursivedecl::wire::ParentFirstRequest>
+    : public std::true_type {};
+static_assert(std::is_standard_layout_v<
+              ::test_inheritancewithrecursivedecl::wire::ParentFirstRequest>);
+static_assert(
+    offsetof(::test_inheritancewithrecursivedecl::wire::ParentFirstRequest,
+             request) == 0);
+static_assert(
+    sizeof(::test_inheritancewithrecursivedecl::wire::ParentFirstRequest) ==
+    TypeTraits<::test_inheritancewithrecursivedecl::wire::ParentFirstRequest>::
+        kPrimarySize);
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+template <>
+struct IsResource<::test_inheritancewithrecursivedecl::wire::ChildSecondRequest>
+    : public std::true_type {};
+
+template <>
+struct TypeTraits<
+    ::test_inheritancewithrecursivedecl::wire::ChildSecondRequest> {
+  static constexpr const fidl_type_t* kType =
+      &::test_inheritancewithrecursivedecl::wire::
+          test_inheritancewithrecursivedecl_ChildSecondRequestTable;
+  static constexpr uint32_t kMaxNumHandles = 1;
+  static constexpr uint32_t kPrimarySize = 4;
+  static constexpr uint32_t kPrimarySizeV1 = 4;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasPointer = false;
+};
+
+template <>
+struct IsFidlType<::test_inheritancewithrecursivedecl::wire::ChildSecondRequest>
+    : public std::true_type {};
+template <>
+struct IsStruct<::test_inheritancewithrecursivedecl::wire::ChildSecondRequest>
+    : public std::true_type {};
+static_assert(std::is_standard_layout_v<
+              ::test_inheritancewithrecursivedecl::wire::ChildSecondRequest>);
+static_assert(
+    offsetof(::test_inheritancewithrecursivedecl::wire::ChildSecondRequest,
+             request) == 0);
+static_assert(
+    sizeof(::test_inheritancewithrecursivedecl::wire::ChildSecondRequest) ==
+    TypeTraits<::test_inheritancewithrecursivedecl::wire::ChildSecondRequest>::
+        kPrimarySize);
+#endif  // __Fuchsia__
+
+}  // namespace fidl

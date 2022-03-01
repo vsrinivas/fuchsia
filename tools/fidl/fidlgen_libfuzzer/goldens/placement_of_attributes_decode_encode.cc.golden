@@ -3,4 +3,4 @@
 #include <test/placementofattributes/cpp/libfuzzer_decode_encode.h>
 
 static_assert(::fuzzing::test_placementofattributes_decoder_encoders.size() ==
-              3);
+              4);

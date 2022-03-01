@@ -1752,6 +1752,64 @@ void StrictBoundedXUnion::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
   }
 }
 
+extern "C" const fidl_type_t
+    test_union_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponseTable;
+const fidl_type_t*
+    TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse::FidlType =
+        &test_union_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponseTable;
+
+void TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse::
+    Encode(::fidl::Encoder* _encoder, size_t _offset,
+           cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  if (::fidl::IsMemcpyCompatible<
+          TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse>::
+          value) {
+    memcpy(
+        _encoder->template GetPtr<
+            TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse>(
+            _offset),
+        this,
+        sizeof(
+            TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse));
+  } else {
+    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
+      ::fidl::Encode(_encoder, &xu, _offset + 0);
+
+    } else {
+      ::fidl::Encode(_encoder, &xu, _offset + 0);
+    }
+  }
+}
+
+void TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse::
+    Decode(::fidl::Decoder* _decoder,
+           TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse*
+               _value,
+           size_t _offset) {
+  if (::fidl::IsMemcpyCompatible<
+          TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse>::
+          value) {
+    memcpy(
+        _value,
+        _decoder->template GetPtr<
+            TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse>(
+            _offset),
+        sizeof(
+            TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse));
+  } else {
+    ::fidl::Decode(_decoder, &_value->xu, _offset + 0);
+  }
+}
+
+zx_status_t
+TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse::Clone(
+    TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse*
+        _result) const {
+  zx_status_t _status = ::fidl::Clone(xu, &_result->xu);
+  if (_status != ZX_OK) return _status;
+  return ZX_OK;
+}
+
 extern "C" const fidl_type_t test_union_ReverseOrdinalUnionTable;
 const fidl_type_t* ReverseOrdinalUnion::FidlType =
     &test_union_ReverseOrdinalUnionTable;
@@ -3471,6 +3529,65 @@ void OlderSimpleUnion::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
         break;
     }
   }
+}
+
+extern "C" const fidl_type_t
+    test_union_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponseTable;
+const fidl_type_t*
+    TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse::FidlType =
+        &test_union_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponseTable;
+
+void TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse::
+    Encode(::fidl::Encoder* _encoder, size_t _offset,
+           cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  if (::fidl::IsMemcpyCompatible<
+          TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse>::
+          value) {
+    memcpy(
+        _encoder->template GetPtr<
+            TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse>(
+            _offset),
+        this,
+        sizeof(
+            TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse));
+  } else {
+    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
+      ::fidl::Encode(_encoder, &xu, _offset + 0);
+
+    } else {
+      ::fidl::Encode(_encoder, &xu, _offset + 0);
+    }
+  }
+}
+
+void TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse::
+    Decode(
+        ::fidl::Decoder* _decoder,
+        TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse*
+            _value,
+        size_t _offset) {
+  if (::fidl::IsMemcpyCompatible<
+          TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse>::
+          value) {
+    memcpy(
+        _value,
+        _decoder->template GetPtr<
+            TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse>(
+            _offset),
+        sizeof(
+            TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse));
+  } else {
+    ::fidl::Decode(_decoder, &_value->xu, _offset + 0);
+  }
+}
+
+zx_status_t
+TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse::Clone(
+    TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse*
+        _result) const {
+  zx_status_t _status = ::fidl::Clone(xu, &_result->xu);
+  if (_status != ZX_OK) return _status;
+  return ZX_OK;
 }
 
 extern "C" const fidl_type_t test_union_NullableUnionStructTable;

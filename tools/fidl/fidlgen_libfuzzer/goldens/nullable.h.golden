@@ -21,6 +21,9 @@ using StructWithNullableRequest = ::test::nullable::StructWithNullableRequest;
 using StructWithNullableProtocol = ::test::nullable::StructWithNullableProtocol;
 using StructWithNullableHandle = ::test::nullable::StructWithNullableHandle;
 using SimpleUnion = ::test::nullable::SimpleUnion;
+using SimpleProtocolAddTopResponse =
+    ::test::nullable::SimpleProtocolAddTopResponse;
+using SimpleProtocolAddRequest = ::test::nullable::SimpleProtocolAddRequest;
 using Int32Wrapper = ::test::nullable::Int32Wrapper;
 
 template <>
@@ -193,6 +196,42 @@ struct Allocate<SimpleUnion> {
       }
     }
 
+    return out;
+  }
+};
+template <>
+struct MinSize<SimpleProtocolAddTopResponse> {
+  operator size_t() { return MinSize<int32_t>(); }
+};
+template <>
+struct Allocate<SimpleProtocolAddTopResponse> {
+  SimpleProtocolAddTopResponse operator()(FuzzInput* src, size_t* size) {
+    ZX_ASSERT(*size >= MinSize<SimpleProtocolAddTopResponse>());
+    SimpleProtocolAddTopResponse out;
+    const size_t slack_per_member =
+        (*size - MinSize<SimpleProtocolAddTopResponse>()) / 1;
+    size_t out_size;
+    out_size = MinSize<int32_t>() + slack_per_member;
+    out.sum = Allocate<int32_t>{}(src, &out_size);
+    return out;
+  }
+};
+template <>
+struct MinSize<SimpleProtocolAddRequest> {
+  operator size_t() { return MinSize<int32_t>() + MinSize<int32_t>(); }
+};
+template <>
+struct Allocate<SimpleProtocolAddRequest> {
+  SimpleProtocolAddRequest operator()(FuzzInput* src, size_t* size) {
+    ZX_ASSERT(*size >= MinSize<SimpleProtocolAddRequest>());
+    SimpleProtocolAddRequest out;
+    const size_t slack_per_member =
+        (*size - MinSize<SimpleProtocolAddRequest>()) / 2;
+    size_t out_size;
+    out_size = MinSize<int32_t>() + slack_per_member;
+    out.a = Allocate<int32_t>{}(src, &out_size);
+    out_size = MinSize<int32_t>() + slack_per_member;
+    out.b = Allocate<int32_t>{}(src, &out_size);
     return out;
   }
 };

@@ -77,10 +77,10 @@ struct ::fidl::internal::WireServerDispatcher<::test_emptystruct::EmptyProtocol>
 #endif  // __Fuchsia__
 
 template <>
-struct ::fidl::WireRequest<::test_emptystruct::EmptyProtocol::Send> final {
-  ::test_emptystruct::wire::Empty e;
-
-  explicit WireRequest(const ::test_emptystruct::wire::Empty& e) : e(e) {}
+struct ::fidl::WireRequest<::test_emptystruct::EmptyProtocol::Send> final
+    : public ::test_emptystruct::wire::EmptyProtocolSendRequest {
+  explicit WireRequest(const ::test_emptystruct::wire::Empty& e)
+      : ::test_emptystruct::wire::EmptyProtocolSendRequest{.e = std::move(e)} {}
   WireRequest() = default;
 };
 
@@ -103,10 +103,11 @@ struct ::fidl::internal::TransactionalRequest<
 };
 
 template <>
-struct ::fidl::WireEvent<::test_emptystruct::EmptyProtocol::Receive> final {
-  ::test_emptystruct::wire::Empty e;
-
-  explicit WireEvent(const ::test_emptystruct::wire::Empty& e) : e(e) {}
+struct ::fidl::WireEvent<::test_emptystruct::EmptyProtocol::Receive> final
+    : public ::test_emptystruct::wire::EmptyProtocolReceiveRequest {
+  explicit WireEvent(const ::test_emptystruct::wire::Empty& e)
+      : ::test_emptystruct::wire::EmptyProtocolReceiveRequest{
+            .e = std::move(e)} {}
   WireEvent() = default;
 };
 
@@ -130,10 +131,11 @@ struct ::fidl::internal::TransactionalEvent<
 
 template <>
 struct ::fidl::WireRequest<::test_emptystruct::EmptyProtocol::SendAndReceive>
-    final {
-  ::test_emptystruct::wire::Empty e;
-
-  explicit WireRequest(const ::test_emptystruct::wire::Empty& e) : e(e) {}
+    final
+    : public ::test_emptystruct::wire::EmptyProtocolSendAndReceiveRequest {
+  explicit WireRequest(const ::test_emptystruct::wire::Empty& e)
+      : ::test_emptystruct::wire::EmptyProtocolSendAndReceiveRequest{
+            .e = std::move(e)} {}
   WireRequest() = default;
   using ResponseType =
       ::fidl::WireResponse<::test_emptystruct::EmptyProtocol::SendAndReceive>;
@@ -162,10 +164,11 @@ struct ::fidl::internal::TransactionalRequest<
 
 template <>
 struct ::fidl::WireResponse<::test_emptystruct::EmptyProtocol::SendAndReceive>
-    final {
-  ::test_emptystruct::wire::Empty e;
-
-  explicit WireResponse(const ::test_emptystruct::wire::Empty& e) : e(e) {}
+    final
+    : public ::test_emptystruct::wire::EmptyProtocolSendAndReceiveTopResponse {
+  explicit WireResponse(const ::test_emptystruct::wire::Empty& e)
+      : ::test_emptystruct::wire::EmptyProtocolSendAndReceiveTopResponse{
+            .e = std::move(e)} {}
   WireResponse() = default;
 };
 

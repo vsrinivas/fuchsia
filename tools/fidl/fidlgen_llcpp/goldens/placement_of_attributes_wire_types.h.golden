@@ -31,6 +31,8 @@ using ExampleEnum = ::test_placementofattributes::ExampleEnum;
 
 struct ExampleStruct;
 
+struct ExampleProtocolMethodRequest;
+
 class ExampleTable;
 
 class ExampleXUnion;
@@ -41,6 +43,13 @@ extern "C" const fidl_type_t test_placementofattributes_ExampleStructTable;
 
 struct ExampleStruct {
   uint32_t member = {};
+};
+
+extern "C" const fidl_type_t
+    test_placementofattributes_ExampleProtocolMethodRequestTable;
+
+struct ExampleProtocolMethodRequest {
+  ::test_exampleusing::wire::Empty arg = {};
 };
 
 }  // namespace wire
@@ -311,6 +320,39 @@ static_assert(offsetof(::test_placementofattributes::wire::ExampleStruct,
 static_assert(sizeof(::test_placementofattributes::wire::ExampleStruct) ==
               TypeTraits<::test_placementofattributes::wire::ExampleStruct>::
                   kPrimarySize);
+
+template <>
+struct TypeTraits<
+    ::test_placementofattributes::wire::ExampleProtocolMethodRequest> {
+  static constexpr const fidl_type_t* kType =
+      &::test_placementofattributes::wire::
+          test_placementofattributes_ExampleProtocolMethodRequestTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 1;
+  static constexpr uint32_t kPrimarySizeV1 = 1;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasPointer = false;
+};
+
+template <>
+struct IsFidlType<
+    ::test_placementofattributes::wire::ExampleProtocolMethodRequest>
+    : public std::true_type {};
+template <>
+struct IsStruct<
+    ::test_placementofattributes::wire::ExampleProtocolMethodRequest>
+    : public std::true_type {};
+static_assert(
+    std::is_standard_layout_v<
+        ::test_placementofattributes::wire::ExampleProtocolMethodRequest>);
+static_assert(
+    offsetof(::test_placementofattributes::wire::ExampleProtocolMethodRequest,
+             arg) == 0);
+static_assert(
+    sizeof(::test_placementofattributes::wire::ExampleProtocolMethodRequest) ==
+    TypeTraits<::test_placementofattributes::wire::
+                   ExampleProtocolMethodRequest>::kPrimarySize);
 
 template <>
 struct TypeTraits<::test_placementofattributes::wire::ExampleTable> {

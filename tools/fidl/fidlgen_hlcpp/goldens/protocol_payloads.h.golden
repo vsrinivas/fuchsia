@@ -13,21 +13,43 @@ namespace test {
 namespace protocolpayloads {
 class MainProtocol_TwoWayImportWithError_Result;
 
+class MainProtocolTwoWayImportWithErrorTopResponse;
+
 class MainProtocol_TwoWayAnonWithError_Response;
 
 class MainProtocol_TwoWayAnonWithError_Result;
 
+class MainProtocolTwoWayAnonWithErrorTopResponse;
+
 class MainProtocol_OnImportWithError_Result;
+
+class MainProtocolOnImportWithErrorRequest;
 
 class MainProtocol_OnAnonWithError_Response;
 
 class MainProtocol_OnAnonWithError_Result;
 
+class MainProtocolOnAnonWithErrorRequest;
+
+class MainProtocolTwoWayAnonWithErrorRequest;
+
+class MainProtocolTwoWayAnonTopResponse;
+
+class MainProtocolTwoWayAnonRequest;
+
+class MainProtocolOneWayAnonRequest;
+
+class MainProtocolOnAnonRequest;
+
 class LocalStructPayload;
 
 class MainProtocol_TwoWayLocalWithError_Result;
 
+class MainProtocolTwoWayLocalWithErrorTopResponse;
+
 class MainProtocol_OnLocalWithError_Result;
+
+class MainProtocolOnLocalWithErrorRequest;
 
 #ifdef __Fuchsia__
 
@@ -148,6 +170,37 @@ inline zx_status_t Clone(
 
 using MainProtocol_TwoWayImportWithError_ResultPtr =
     ::std::unique_ptr<MainProtocol_TwoWayImportWithError_Result>;
+
+class MainProtocolTwoWayImportWithErrorTopResponse final {
+ public:
+  static const fidl_type_t* FidlType;
+
+  ::test::protocolpayloads::MainProtocol_TwoWayImportWithError_Result result{};
+
+  static inline ::std::unique_ptr<MainProtocolTwoWayImportWithErrorTopResponse>
+  New() {
+    return ::std::make_unique<MainProtocolTwoWayImportWithErrorTopResponse>();
+  }
+
+  void Encode(::fidl::Encoder* _encoder, size_t _offset,
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
+                  cpp17::nullopt);
+  static void Decode(::fidl::Decoder* _decoder,
+                     MainProtocolTwoWayImportWithErrorTopResponse* value,
+                     size_t _offset);
+  zx_status_t Clone(MainProtocolTwoWayImportWithErrorTopResponse* result) const;
+};
+
+inline zx_status_t Clone(
+    const ::test::protocolpayloads::
+        MainProtocolTwoWayImportWithErrorTopResponse& _value,
+    ::test::protocolpayloads::MainProtocolTwoWayImportWithErrorTopResponse*
+        _result) {
+  return _value.Clone(_result);
+}
+
+using MainProtocolTwoWayImportWithErrorTopResponsePtr =
+    ::std::unique_ptr<MainProtocolTwoWayImportWithErrorTopResponse>;
 
 class MainProtocol_TwoWayAnonWithError_Response final {
  public:
@@ -332,6 +385,37 @@ inline zx_status_t Clone(
 using MainProtocol_TwoWayAnonWithError_ResultPtr =
     ::std::unique_ptr<MainProtocol_TwoWayAnonWithError_Result>;
 
+class MainProtocolTwoWayAnonWithErrorTopResponse final {
+ public:
+  static const fidl_type_t* FidlType;
+
+  ::test::protocolpayloads::MainProtocol_TwoWayAnonWithError_Result result{};
+
+  static inline ::std::unique_ptr<MainProtocolTwoWayAnonWithErrorTopResponse>
+  New() {
+    return ::std::make_unique<MainProtocolTwoWayAnonWithErrorTopResponse>();
+  }
+
+  void Encode(::fidl::Encoder* _encoder, size_t _offset,
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
+                  cpp17::nullopt);
+  static void Decode(::fidl::Decoder* _decoder,
+                     MainProtocolTwoWayAnonWithErrorTopResponse* value,
+                     size_t _offset);
+  zx_status_t Clone(MainProtocolTwoWayAnonWithErrorTopResponse* result) const;
+};
+
+inline zx_status_t Clone(
+    const ::test::protocolpayloads::MainProtocolTwoWayAnonWithErrorTopResponse&
+        _value,
+    ::test::protocolpayloads::MainProtocolTwoWayAnonWithErrorTopResponse*
+        _result) {
+  return _value.Clone(_result);
+}
+
+using MainProtocolTwoWayAnonWithErrorTopResponsePtr =
+    ::std::unique_ptr<MainProtocolTwoWayAnonWithErrorTopResponse>;
+
 class MainProtocol_OnImportWithError_Result final {
  public:
   static const fidl_type_t* FidlType;
@@ -442,6 +526,35 @@ inline zx_status_t Clone(
 
 using MainProtocol_OnImportWithError_ResultPtr =
     ::std::unique_ptr<MainProtocol_OnImportWithError_Result>;
+
+class MainProtocolOnImportWithErrorRequest final {
+ public:
+  static const fidl_type_t* FidlType;
+
+  ::test::protocolpayloads::MainProtocol_OnImportWithError_Result result{};
+
+  static inline ::std::unique_ptr<MainProtocolOnImportWithErrorRequest> New() {
+    return ::std::make_unique<MainProtocolOnImportWithErrorRequest>();
+  }
+
+  void Encode(::fidl::Encoder* _encoder, size_t _offset,
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
+                  cpp17::nullopt);
+  static void Decode(::fidl::Decoder* _decoder,
+                     MainProtocolOnImportWithErrorRequest* value,
+                     size_t _offset);
+  zx_status_t Clone(MainProtocolOnImportWithErrorRequest* result) const;
+};
+
+inline zx_status_t Clone(
+    const ::test::protocolpayloads::MainProtocolOnImportWithErrorRequest&
+        _value,
+    ::test::protocolpayloads::MainProtocolOnImportWithErrorRequest* _result) {
+  return _value.Clone(_result);
+}
+
+using MainProtocolOnImportWithErrorRequestPtr =
+    ::std::unique_ptr<MainProtocolOnImportWithErrorRequest>;
 
 class MainProtocol_OnAnonWithError_Response final {
  public:
@@ -616,6 +729,181 @@ inline zx_status_t Clone(
 using MainProtocol_OnAnonWithError_ResultPtr =
     ::std::unique_ptr<MainProtocol_OnAnonWithError_Result>;
 
+class MainProtocolOnAnonWithErrorRequest final {
+ public:
+  static const fidl_type_t* FidlType;
+
+  ::test::protocolpayloads::MainProtocol_OnAnonWithError_Result result{};
+
+  static inline ::std::unique_ptr<MainProtocolOnAnonWithErrorRequest> New() {
+    return ::std::make_unique<MainProtocolOnAnonWithErrorRequest>();
+  }
+
+  void Encode(::fidl::Encoder* _encoder, size_t _offset,
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
+                  cpp17::nullopt);
+  static void Decode(::fidl::Decoder* _decoder,
+                     MainProtocolOnAnonWithErrorRequest* value, size_t _offset);
+  zx_status_t Clone(MainProtocolOnAnonWithErrorRequest* result) const;
+};
+
+inline zx_status_t Clone(
+    const ::test::protocolpayloads::MainProtocolOnAnonWithErrorRequest& _value,
+    ::test::protocolpayloads::MainProtocolOnAnonWithErrorRequest* _result) {
+  return _value.Clone(_result);
+}
+
+using MainProtocolOnAnonWithErrorRequestPtr =
+    ::std::unique_ptr<MainProtocolOnAnonWithErrorRequest>;
+
+class MainProtocolTwoWayAnonWithErrorRequest final {
+ public:
+  static const fidl_type_t* FidlType;
+
+  uint32_t a{};
+
+  uint32_t b{};
+
+  static inline ::std::unique_ptr<MainProtocolTwoWayAnonWithErrorRequest>
+  New() {
+    return ::std::make_unique<MainProtocolTwoWayAnonWithErrorRequest>();
+  }
+
+  void Encode(::fidl::Encoder* _encoder, size_t _offset,
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
+                  cpp17::nullopt);
+  static void Decode(::fidl::Decoder* _decoder,
+                     MainProtocolTwoWayAnonWithErrorRequest* value,
+                     size_t _offset);
+  zx_status_t Clone(MainProtocolTwoWayAnonWithErrorRequest* result) const;
+};
+
+inline zx_status_t Clone(
+    const ::test::protocolpayloads::MainProtocolTwoWayAnonWithErrorRequest&
+        _value,
+    ::test::protocolpayloads::MainProtocolTwoWayAnonWithErrorRequest* _result) {
+  return _value.Clone(_result);
+}
+
+using MainProtocolTwoWayAnonWithErrorRequestPtr =
+    ::std::unique_ptr<MainProtocolTwoWayAnonWithErrorRequest>;
+
+class MainProtocolTwoWayAnonTopResponse final {
+ public:
+  static const fidl_type_t* FidlType;
+
+  uint32_t a{};
+
+  uint32_t b{};
+
+  static inline ::std::unique_ptr<MainProtocolTwoWayAnonTopResponse> New() {
+    return ::std::make_unique<MainProtocolTwoWayAnonTopResponse>();
+  }
+
+  void Encode(::fidl::Encoder* _encoder, size_t _offset,
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
+                  cpp17::nullopt);
+  static void Decode(::fidl::Decoder* _decoder,
+                     MainProtocolTwoWayAnonTopResponse* value, size_t _offset);
+  zx_status_t Clone(MainProtocolTwoWayAnonTopResponse* result) const;
+};
+
+inline zx_status_t Clone(
+    const ::test::protocolpayloads::MainProtocolTwoWayAnonTopResponse& _value,
+    ::test::protocolpayloads::MainProtocolTwoWayAnonTopResponse* _result) {
+  return _value.Clone(_result);
+}
+
+using MainProtocolTwoWayAnonTopResponsePtr =
+    ::std::unique_ptr<MainProtocolTwoWayAnonTopResponse>;
+
+class MainProtocolTwoWayAnonRequest final {
+ public:
+  static const fidl_type_t* FidlType;
+
+  uint32_t a{};
+
+  uint32_t b{};
+
+  static inline ::std::unique_ptr<MainProtocolTwoWayAnonRequest> New() {
+    return ::std::make_unique<MainProtocolTwoWayAnonRequest>();
+  }
+
+  void Encode(::fidl::Encoder* _encoder, size_t _offset,
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
+                  cpp17::nullopt);
+  static void Decode(::fidl::Decoder* _decoder,
+                     MainProtocolTwoWayAnonRequest* value, size_t _offset);
+  zx_status_t Clone(MainProtocolTwoWayAnonRequest* result) const;
+};
+
+inline zx_status_t Clone(
+    const ::test::protocolpayloads::MainProtocolTwoWayAnonRequest& _value,
+    ::test::protocolpayloads::MainProtocolTwoWayAnonRequest* _result) {
+  return _value.Clone(_result);
+}
+
+using MainProtocolTwoWayAnonRequestPtr =
+    ::std::unique_ptr<MainProtocolTwoWayAnonRequest>;
+
+class MainProtocolOneWayAnonRequest final {
+ public:
+  static const fidl_type_t* FidlType;
+
+  uint32_t a{};
+
+  uint32_t b{};
+
+  static inline ::std::unique_ptr<MainProtocolOneWayAnonRequest> New() {
+    return ::std::make_unique<MainProtocolOneWayAnonRequest>();
+  }
+
+  void Encode(::fidl::Encoder* _encoder, size_t _offset,
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
+                  cpp17::nullopt);
+  static void Decode(::fidl::Decoder* _decoder,
+                     MainProtocolOneWayAnonRequest* value, size_t _offset);
+  zx_status_t Clone(MainProtocolOneWayAnonRequest* result) const;
+};
+
+inline zx_status_t Clone(
+    const ::test::protocolpayloads::MainProtocolOneWayAnonRequest& _value,
+    ::test::protocolpayloads::MainProtocolOneWayAnonRequest* _result) {
+  return _value.Clone(_result);
+}
+
+using MainProtocolOneWayAnonRequestPtr =
+    ::std::unique_ptr<MainProtocolOneWayAnonRequest>;
+
+class MainProtocolOnAnonRequest final {
+ public:
+  static const fidl_type_t* FidlType;
+
+  uint32_t a{};
+
+  uint32_t b{};
+
+  static inline ::std::unique_ptr<MainProtocolOnAnonRequest> New() {
+    return ::std::make_unique<MainProtocolOnAnonRequest>();
+  }
+
+  void Encode(::fidl::Encoder* _encoder, size_t _offset,
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
+                  cpp17::nullopt);
+  static void Decode(::fidl::Decoder* _decoder,
+                     MainProtocolOnAnonRequest* value, size_t _offset);
+  zx_status_t Clone(MainProtocolOnAnonRequest* result) const;
+};
+
+inline zx_status_t Clone(
+    const ::test::protocolpayloads::MainProtocolOnAnonRequest& _value,
+    ::test::protocolpayloads::MainProtocolOnAnonRequest* _result) {
+  return _value.Clone(_result);
+}
+
+using MainProtocolOnAnonRequestPtr =
+    ::std::unique_ptr<MainProtocolOnAnonRequest>;
+
 class LocalStructPayload final {
  public:
   static const fidl_type_t* FidlType;
@@ -789,6 +1077,37 @@ inline zx_status_t Clone(
 using MainProtocol_TwoWayLocalWithError_ResultPtr =
     ::std::unique_ptr<MainProtocol_TwoWayLocalWithError_Result>;
 
+class MainProtocolTwoWayLocalWithErrorTopResponse final {
+ public:
+  static const fidl_type_t* FidlType;
+
+  ::test::protocolpayloads::MainProtocol_TwoWayLocalWithError_Result result{};
+
+  static inline ::std::unique_ptr<MainProtocolTwoWayLocalWithErrorTopResponse>
+  New() {
+    return ::std::make_unique<MainProtocolTwoWayLocalWithErrorTopResponse>();
+  }
+
+  void Encode(::fidl::Encoder* _encoder, size_t _offset,
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
+                  cpp17::nullopt);
+  static void Decode(::fidl::Decoder* _decoder,
+                     MainProtocolTwoWayLocalWithErrorTopResponse* value,
+                     size_t _offset);
+  zx_status_t Clone(MainProtocolTwoWayLocalWithErrorTopResponse* result) const;
+};
+
+inline zx_status_t Clone(
+    const ::test::protocolpayloads::MainProtocolTwoWayLocalWithErrorTopResponse&
+        _value,
+    ::test::protocolpayloads::MainProtocolTwoWayLocalWithErrorTopResponse*
+        _result) {
+  return _value.Clone(_result);
+}
+
+using MainProtocolTwoWayLocalWithErrorTopResponsePtr =
+    ::std::unique_ptr<MainProtocolTwoWayLocalWithErrorTopResponse>;
+
 class MainProtocol_OnLocalWithError_Result final {
  public:
   static const fidl_type_t* FidlType;
@@ -922,6 +1241,34 @@ inline zx_status_t Clone(
 
 using MainProtocol_OnLocalWithError_ResultPtr =
     ::std::unique_ptr<MainProtocol_OnLocalWithError_Result>;
+
+class MainProtocolOnLocalWithErrorRequest final {
+ public:
+  static const fidl_type_t* FidlType;
+
+  ::test::protocolpayloads::MainProtocol_OnLocalWithError_Result result{};
+
+  static inline ::std::unique_ptr<MainProtocolOnLocalWithErrorRequest> New() {
+    return ::std::make_unique<MainProtocolOnLocalWithErrorRequest>();
+  }
+
+  void Encode(::fidl::Encoder* _encoder, size_t _offset,
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
+                  cpp17::nullopt);
+  static void Decode(::fidl::Decoder* _decoder,
+                     MainProtocolOnLocalWithErrorRequest* value,
+                     size_t _offset);
+  zx_status_t Clone(MainProtocolOnLocalWithErrorRequest* result) const;
+};
+
+inline zx_status_t Clone(
+    const ::test::protocolpayloads::MainProtocolOnLocalWithErrorRequest& _value,
+    ::test::protocolpayloads::MainProtocolOnLocalWithErrorRequest* _result) {
+  return _value.Clone(_result);
+}
+
+using MainProtocolOnLocalWithErrorRequestPtr =
+    ::std::unique_ptr<MainProtocolOnLocalWithErrorRequest>;
 
 #ifdef __Fuchsia__
 
@@ -1889,6 +2236,52 @@ struct Equality<
 };
 template <>
 struct CodingTraits<
+    ::test::protocolpayloads::MainProtocolTwoWayImportWithErrorTopResponse>
+    : public EncodableCodingTraits<
+          ::test::protocolpayloads::
+              MainProtocolTwoWayImportWithErrorTopResponse,
+          24, 16> {};
+
+template <>
+struct HasPadding<
+    ::test::protocolpayloads::MainProtocolTwoWayImportWithErrorTopResponse>
+    : public std::true_type {};
+
+template <>
+struct IsMemcpyCompatible<
+    ::test::protocolpayloads::MainProtocolTwoWayImportWithErrorTopResponse>
+    : public internal::BoolConstant<
+          !HasPadding<
+              ::test::protocolpayloads::
+                  MainProtocolTwoWayImportWithErrorTopResponse>::value &&
+          IsMemcpyCompatible<
+              ::test::protocolpayloads::
+                  MainProtocol_TwoWayImportWithError_Result>::value> {};
+
+inline zx_status_t Clone(
+    const ::test::protocolpayloads::
+        MainProtocolTwoWayImportWithErrorTopResponse& value,
+    ::test::protocolpayloads::MainProtocolTwoWayImportWithErrorTopResponse*
+        result) {
+  return ::test::protocolpayloads::Clone(value, result);
+}
+
+template <>
+struct Equality<
+    ::test::protocolpayloads::MainProtocolTwoWayImportWithErrorTopResponse> {
+  bool operator()(
+      const ::test::protocolpayloads::
+          MainProtocolTwoWayImportWithErrorTopResponse& _lhs,
+      const ::test::protocolpayloads::
+          MainProtocolTwoWayImportWithErrorTopResponse& _rhs) const {
+    if (!::fidl::Equals(_lhs.result, _rhs.result)) {
+      return false;
+    }
+    return true;
+  }
+};
+template <>
+struct CodingTraits<
     ::test::protocolpayloads::MainProtocol_TwoWayAnonWithError_Response>
     : public EncodableCodingTraits<
           ::test::protocolpayloads::MainProtocol_TwoWayAnonWithError_Response,
@@ -2015,6 +2408,49 @@ struct Equality<
   }
 };
 template <>
+struct CodingTraits<
+    ::test::protocolpayloads::MainProtocolTwoWayAnonWithErrorTopResponse>
+    : public EncodableCodingTraits<
+          ::test::protocolpayloads::MainProtocolTwoWayAnonWithErrorTopResponse,
+          24, 16> {};
+
+template <>
+struct HasPadding<
+    ::test::protocolpayloads::MainProtocolTwoWayAnonWithErrorTopResponse>
+    : public std::true_type {};
+
+template <>
+struct IsMemcpyCompatible<
+    ::test::protocolpayloads::MainProtocolTwoWayAnonWithErrorTopResponse>
+    : public internal::BoolConstant<
+          !HasPadding<::test::protocolpayloads::
+                          MainProtocolTwoWayAnonWithErrorTopResponse>::value &&
+          IsMemcpyCompatible<
+              ::test::protocolpayloads::
+                  MainProtocol_TwoWayAnonWithError_Result>::value> {};
+
+inline zx_status_t Clone(
+    const ::test::protocolpayloads::MainProtocolTwoWayAnonWithErrorTopResponse&
+        value,
+    ::test::protocolpayloads::MainProtocolTwoWayAnonWithErrorTopResponse*
+        result) {
+  return ::test::protocolpayloads::Clone(value, result);
+}
+
+template <>
+struct Equality<
+    ::test::protocolpayloads::MainProtocolTwoWayAnonWithErrorTopResponse> {
+  bool operator()(const ::test::protocolpayloads::
+                      MainProtocolTwoWayAnonWithErrorTopResponse& _lhs,
+                  const ::test::protocolpayloads::
+                      MainProtocolTwoWayAnonWithErrorTopResponse& _rhs) const {
+    if (!::fidl::Equals(_lhs.result, _rhs.result)) {
+      return false;
+    }
+    return true;
+  }
+};
+template <>
 struct IsFidlXUnion<
     ::test::protocolpayloads::MainProtocol_OnImportWithError_Result>
     : public std::true_type {};
@@ -2099,6 +2535,48 @@ struct Equality<
       default:
         return false;
     }
+  }
+};
+template <>
+struct CodingTraits<
+    ::test::protocolpayloads::MainProtocolOnImportWithErrorRequest>
+    : public EncodableCodingTraits<
+          ::test::protocolpayloads::MainProtocolOnImportWithErrorRequest, 24,
+          16> {};
+
+template <>
+struct HasPadding<
+    ::test::protocolpayloads::MainProtocolOnImportWithErrorRequest>
+    : public std::true_type {};
+
+template <>
+struct IsMemcpyCompatible<
+    ::test::protocolpayloads::MainProtocolOnImportWithErrorRequest>
+    : public internal::BoolConstant<
+          !HasPadding<::test::protocolpayloads::
+                          MainProtocolOnImportWithErrorRequest>::value &&
+          IsMemcpyCompatible<
+              ::test::protocolpayloads::MainProtocol_OnImportWithError_Result>::
+              value> {};
+
+inline zx_status_t Clone(
+    const ::test::protocolpayloads::MainProtocolOnImportWithErrorRequest& value,
+    ::test::protocolpayloads::MainProtocolOnImportWithErrorRequest* result) {
+  return ::test::protocolpayloads::Clone(value, result);
+}
+
+template <>
+struct Equality<
+    ::test::protocolpayloads::MainProtocolOnImportWithErrorRequest> {
+  bool operator()(
+      const ::test::protocolpayloads::MainProtocolOnImportWithErrorRequest&
+          _lhs,
+      const ::test::protocolpayloads::MainProtocolOnImportWithErrorRequest&
+          _rhs) const {
+    if (!::fidl::Equals(_lhs.result, _rhs.result)) {
+      return false;
+    }
+    return true;
   }
 };
 template <>
@@ -2223,6 +2701,218 @@ struct Equality<::test::protocolpayloads::MainProtocol_OnAnonWithError_Result> {
   }
 };
 template <>
+struct CodingTraits<
+    ::test::protocolpayloads::MainProtocolOnAnonWithErrorRequest>
+    : public EncodableCodingTraits<
+          ::test::protocolpayloads::MainProtocolOnAnonWithErrorRequest, 24,
+          16> {};
+
+template <>
+struct HasPadding<::test::protocolpayloads::MainProtocolOnAnonWithErrorRequest>
+    : public std::true_type {};
+
+template <>
+struct IsMemcpyCompatible<
+    ::test::protocolpayloads::MainProtocolOnAnonWithErrorRequest>
+    : public internal::BoolConstant<
+          !HasPadding<::test::protocolpayloads::
+                          MainProtocolOnAnonWithErrorRequest>::value &&
+          IsMemcpyCompatible<::test::protocolpayloads::
+                                 MainProtocol_OnAnonWithError_Result>::value> {
+};
+
+inline zx_status_t Clone(
+    const ::test::protocolpayloads::MainProtocolOnAnonWithErrorRequest& value,
+    ::test::protocolpayloads::MainProtocolOnAnonWithErrorRequest* result) {
+  return ::test::protocolpayloads::Clone(value, result);
+}
+
+template <>
+struct Equality<::test::protocolpayloads::MainProtocolOnAnonWithErrorRequest> {
+  bool operator()(
+      const ::test::protocolpayloads::MainProtocolOnAnonWithErrorRequest& _lhs,
+      const ::test::protocolpayloads::MainProtocolOnAnonWithErrorRequest& _rhs)
+      const {
+    if (!::fidl::Equals(_lhs.result, _rhs.result)) {
+      return false;
+    }
+    return true;
+  }
+};
+template <>
+struct CodingTraits<
+    ::test::protocolpayloads::MainProtocolTwoWayAnonWithErrorRequest>
+    : public EncodableCodingTraits<
+          ::test::protocolpayloads::MainProtocolTwoWayAnonWithErrorRequest, 8,
+          8> {};
+
+template <>
+struct IsMemcpyCompatible<
+    ::test::protocolpayloads::MainProtocolTwoWayAnonWithErrorRequest>
+    : public internal::BoolConstant<
+          !HasPadding<::test::protocolpayloads::
+                          MainProtocolTwoWayAnonWithErrorRequest>::value &&
+          IsMemcpyCompatible<uint32_t>::value> {};
+
+inline zx_status_t Clone(
+    const ::test::protocolpayloads::MainProtocolTwoWayAnonWithErrorRequest&
+        value,
+    ::test::protocolpayloads::MainProtocolTwoWayAnonWithErrorRequest* result) {
+  return ::test::protocolpayloads::Clone(value, result);
+}
+
+template <>
+struct Equality<
+    ::test::protocolpayloads::MainProtocolTwoWayAnonWithErrorRequest> {
+  bool operator()(
+      const ::test::protocolpayloads::MainProtocolTwoWayAnonWithErrorRequest&
+          _lhs,
+      const ::test::protocolpayloads::MainProtocolTwoWayAnonWithErrorRequest&
+          _rhs) const {
+    if (!::fidl::Equals(_lhs.a, _rhs.a)) {
+      return false;
+    }
+    if (!::fidl::Equals(_lhs.b, _rhs.b)) {
+      return false;
+    }
+    return true;
+  }
+};
+template <>
+struct CodingTraits<::test::protocolpayloads::MainProtocolTwoWayAnonTopResponse>
+    : public EncodableCodingTraits<
+          ::test::protocolpayloads::MainProtocolTwoWayAnonTopResponse, 8, 8> {};
+
+template <>
+struct IsMemcpyCompatible<
+    ::test::protocolpayloads::MainProtocolTwoWayAnonTopResponse>
+    : public internal::BoolConstant<
+          !HasPadding<::test::protocolpayloads::
+                          MainProtocolTwoWayAnonTopResponse>::value &&
+          IsMemcpyCompatible<uint32_t>::value> {};
+
+inline zx_status_t Clone(
+    const ::test::protocolpayloads::MainProtocolTwoWayAnonTopResponse& value,
+    ::test::protocolpayloads::MainProtocolTwoWayAnonTopResponse* result) {
+  return ::test::protocolpayloads::Clone(value, result);
+}
+
+template <>
+struct Equality<::test::protocolpayloads::MainProtocolTwoWayAnonTopResponse> {
+  bool operator()(
+      const ::test::protocolpayloads::MainProtocolTwoWayAnonTopResponse& _lhs,
+      const ::test::protocolpayloads::MainProtocolTwoWayAnonTopResponse& _rhs)
+      const {
+    if (!::fidl::Equals(_lhs.a, _rhs.a)) {
+      return false;
+    }
+    if (!::fidl::Equals(_lhs.b, _rhs.b)) {
+      return false;
+    }
+    return true;
+  }
+};
+template <>
+struct CodingTraits<::test::protocolpayloads::MainProtocolTwoWayAnonRequest>
+    : public EncodableCodingTraits<
+          ::test::protocolpayloads::MainProtocolTwoWayAnonRequest, 8, 8> {};
+
+template <>
+struct IsMemcpyCompatible<
+    ::test::protocolpayloads::MainProtocolTwoWayAnonRequest>
+    : public internal::BoolConstant<
+          !HasPadding<
+              ::test::protocolpayloads::MainProtocolTwoWayAnonRequest>::value &&
+          IsMemcpyCompatible<uint32_t>::value> {};
+
+inline zx_status_t Clone(
+    const ::test::protocolpayloads::MainProtocolTwoWayAnonRequest& value,
+    ::test::protocolpayloads::MainProtocolTwoWayAnonRequest* result) {
+  return ::test::protocolpayloads::Clone(value, result);
+}
+
+template <>
+struct Equality<::test::protocolpayloads::MainProtocolTwoWayAnonRequest> {
+  bool operator()(
+      const ::test::protocolpayloads::MainProtocolTwoWayAnonRequest& _lhs,
+      const ::test::protocolpayloads::MainProtocolTwoWayAnonRequest& _rhs)
+      const {
+    if (!::fidl::Equals(_lhs.a, _rhs.a)) {
+      return false;
+    }
+    if (!::fidl::Equals(_lhs.b, _rhs.b)) {
+      return false;
+    }
+    return true;
+  }
+};
+template <>
+struct CodingTraits<::test::protocolpayloads::MainProtocolOneWayAnonRequest>
+    : public EncodableCodingTraits<
+          ::test::protocolpayloads::MainProtocolOneWayAnonRequest, 8, 8> {};
+
+template <>
+struct IsMemcpyCompatible<
+    ::test::protocolpayloads::MainProtocolOneWayAnonRequest>
+    : public internal::BoolConstant<
+          !HasPadding<
+              ::test::protocolpayloads::MainProtocolOneWayAnonRequest>::value &&
+          IsMemcpyCompatible<uint32_t>::value> {};
+
+inline zx_status_t Clone(
+    const ::test::protocolpayloads::MainProtocolOneWayAnonRequest& value,
+    ::test::protocolpayloads::MainProtocolOneWayAnonRequest* result) {
+  return ::test::protocolpayloads::Clone(value, result);
+}
+
+template <>
+struct Equality<::test::protocolpayloads::MainProtocolOneWayAnonRequest> {
+  bool operator()(
+      const ::test::protocolpayloads::MainProtocolOneWayAnonRequest& _lhs,
+      const ::test::protocolpayloads::MainProtocolOneWayAnonRequest& _rhs)
+      const {
+    if (!::fidl::Equals(_lhs.a, _rhs.a)) {
+      return false;
+    }
+    if (!::fidl::Equals(_lhs.b, _rhs.b)) {
+      return false;
+    }
+    return true;
+  }
+};
+template <>
+struct CodingTraits<::test::protocolpayloads::MainProtocolOnAnonRequest>
+    : public EncodableCodingTraits<
+          ::test::protocolpayloads::MainProtocolOnAnonRequest, 8, 8> {};
+
+template <>
+struct IsMemcpyCompatible<::test::protocolpayloads::MainProtocolOnAnonRequest>
+    : public internal::BoolConstant<
+          !HasPadding<
+              ::test::protocolpayloads::MainProtocolOnAnonRequest>::value &&
+          IsMemcpyCompatible<uint32_t>::value> {};
+
+inline zx_status_t Clone(
+    const ::test::protocolpayloads::MainProtocolOnAnonRequest& value,
+    ::test::protocolpayloads::MainProtocolOnAnonRequest* result) {
+  return ::test::protocolpayloads::Clone(value, result);
+}
+
+template <>
+struct Equality<::test::protocolpayloads::MainProtocolOnAnonRequest> {
+  bool operator()(
+      const ::test::protocolpayloads::MainProtocolOnAnonRequest& _lhs,
+      const ::test::protocolpayloads::MainProtocolOnAnonRequest& _rhs) const {
+    if (!::fidl::Equals(_lhs.a, _rhs.a)) {
+      return false;
+    }
+    if (!::fidl::Equals(_lhs.b, _rhs.b)) {
+      return false;
+    }
+    return true;
+  }
+};
+template <>
 struct CodingTraits<::test::protocolpayloads::LocalStructPayload>
     : public EncodableCodingTraits<::test::protocolpayloads::LocalStructPayload,
                                    8, 8> {};
@@ -2342,6 +3032,49 @@ struct Equality<
   }
 };
 template <>
+struct CodingTraits<
+    ::test::protocolpayloads::MainProtocolTwoWayLocalWithErrorTopResponse>
+    : public EncodableCodingTraits<
+          ::test::protocolpayloads::MainProtocolTwoWayLocalWithErrorTopResponse,
+          24, 16> {};
+
+template <>
+struct HasPadding<
+    ::test::protocolpayloads::MainProtocolTwoWayLocalWithErrorTopResponse>
+    : public std::true_type {};
+
+template <>
+struct IsMemcpyCompatible<
+    ::test::protocolpayloads::MainProtocolTwoWayLocalWithErrorTopResponse>
+    : public internal::BoolConstant<
+          !HasPadding<::test::protocolpayloads::
+                          MainProtocolTwoWayLocalWithErrorTopResponse>::value &&
+          IsMemcpyCompatible<
+              ::test::protocolpayloads::
+                  MainProtocol_TwoWayLocalWithError_Result>::value> {};
+
+inline zx_status_t Clone(
+    const ::test::protocolpayloads::MainProtocolTwoWayLocalWithErrorTopResponse&
+        value,
+    ::test::protocolpayloads::MainProtocolTwoWayLocalWithErrorTopResponse*
+        result) {
+  return ::test::protocolpayloads::Clone(value, result);
+}
+
+template <>
+struct Equality<
+    ::test::protocolpayloads::MainProtocolTwoWayLocalWithErrorTopResponse> {
+  bool operator()(const ::test::protocolpayloads::
+                      MainProtocolTwoWayLocalWithErrorTopResponse& _lhs,
+                  const ::test::protocolpayloads::
+                      MainProtocolTwoWayLocalWithErrorTopResponse& _rhs) const {
+    if (!::fidl::Equals(_lhs.result, _rhs.result)) {
+      return false;
+    }
+    return true;
+  }
+};
+template <>
 struct IsFidlXUnion<
     ::test::protocolpayloads::MainProtocol_OnLocalWithError_Result>
     : public std::true_type {};
@@ -2425,6 +3158,45 @@ struct Equality<
       default:
         return false;
     }
+  }
+};
+template <>
+struct CodingTraits<
+    ::test::protocolpayloads::MainProtocolOnLocalWithErrorRequest>
+    : public EncodableCodingTraits<
+          ::test::protocolpayloads::MainProtocolOnLocalWithErrorRequest, 24,
+          16> {};
+
+template <>
+struct HasPadding<::test::protocolpayloads::MainProtocolOnLocalWithErrorRequest>
+    : public std::true_type {};
+
+template <>
+struct IsMemcpyCompatible<
+    ::test::protocolpayloads::MainProtocolOnLocalWithErrorRequest>
+    : public internal::BoolConstant<
+          !HasPadding<::test::protocolpayloads::
+                          MainProtocolOnLocalWithErrorRequest>::value &&
+          IsMemcpyCompatible<::test::protocolpayloads::
+                                 MainProtocol_OnLocalWithError_Result>::value> {
+};
+
+inline zx_status_t Clone(
+    const ::test::protocolpayloads::MainProtocolOnLocalWithErrorRequest& value,
+    ::test::protocolpayloads::MainProtocolOnLocalWithErrorRequest* result) {
+  return ::test::protocolpayloads::Clone(value, result);
+}
+
+template <>
+struct Equality<::test::protocolpayloads::MainProtocolOnLocalWithErrorRequest> {
+  bool operator()(
+      const ::test::protocolpayloads::MainProtocolOnLocalWithErrorRequest& _lhs,
+      const ::test::protocolpayloads::MainProtocolOnLocalWithErrorRequest& _rhs)
+      const {
+    if (!::fidl::Equals(_lhs.result, _rhs.result)) {
+      return false;
+    }
+    return true;
   }
 };
 

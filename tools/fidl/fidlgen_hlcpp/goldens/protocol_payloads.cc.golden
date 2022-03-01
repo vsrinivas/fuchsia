@@ -322,6 +322,52 @@ void MainProtocol_TwoWayImportWithError_Result::EnsureStorageInitialized(
 }
 
 extern "C" const fidl_type_t
+    test_protocolpayloads_MainProtocolTwoWayImportWithErrorTopResponseTable;
+const fidl_type_t* MainProtocolTwoWayImportWithErrorTopResponse::FidlType =
+    &test_protocolpayloads_MainProtocolTwoWayImportWithErrorTopResponseTable;
+
+void MainProtocolTwoWayImportWithErrorTopResponse::Encode(
+    ::fidl::Encoder* _encoder, size_t _offset,
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  if (::fidl::IsMemcpyCompatible<
+          MainProtocolTwoWayImportWithErrorTopResponse>::value) {
+    memcpy(
+        _encoder->template GetPtr<MainProtocolTwoWayImportWithErrorTopResponse>(
+            _offset),
+        this, sizeof(MainProtocolTwoWayImportWithErrorTopResponse));
+  } else {
+    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
+      ::fidl::Encode(_encoder, &result, _offset + 0);
+
+    } else {
+      ::fidl::Encode(_encoder, &result, _offset + 0);
+    }
+  }
+}
+
+void MainProtocolTwoWayImportWithErrorTopResponse::Decode(
+    ::fidl::Decoder* _decoder,
+    MainProtocolTwoWayImportWithErrorTopResponse* _value, size_t _offset) {
+  if (::fidl::IsMemcpyCompatible<
+          MainProtocolTwoWayImportWithErrorTopResponse>::value) {
+    memcpy(
+        _value,
+        _decoder->template GetPtr<MainProtocolTwoWayImportWithErrorTopResponse>(
+            _offset),
+        sizeof(MainProtocolTwoWayImportWithErrorTopResponse));
+  } else {
+    ::fidl::Decode(_decoder, &_value->result, _offset + 0);
+  }
+}
+
+zx_status_t MainProtocolTwoWayImportWithErrorTopResponse::Clone(
+    MainProtocolTwoWayImportWithErrorTopResponse* _result) const {
+  zx_status_t _status = ::fidl::Clone(result, &_result->result);
+  if (_status != ZX_OK) return _status;
+  return ZX_OK;
+}
+
+extern "C" const fidl_type_t
     test_protocolpayloads_MainProtocol_TwoWayAnonWithError_ResponseTable;
 const fidl_type_t* MainProtocol_TwoWayAnonWithError_Response::FidlType =
     &test_protocolpayloads_MainProtocol_TwoWayAnonWithError_ResponseTable;
@@ -685,6 +731,52 @@ void MainProtocol_TwoWayAnonWithError_Result::EnsureStorageInitialized(
 }
 
 extern "C" const fidl_type_t
+    test_protocolpayloads_MainProtocolTwoWayAnonWithErrorTopResponseTable;
+const fidl_type_t* MainProtocolTwoWayAnonWithErrorTopResponse::FidlType =
+    &test_protocolpayloads_MainProtocolTwoWayAnonWithErrorTopResponseTable;
+
+void MainProtocolTwoWayAnonWithErrorTopResponse::Encode(
+    ::fidl::Encoder* _encoder, size_t _offset,
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  if (::fidl::IsMemcpyCompatible<
+          MainProtocolTwoWayAnonWithErrorTopResponse>::value) {
+    memcpy(
+        _encoder->template GetPtr<MainProtocolTwoWayAnonWithErrorTopResponse>(
+            _offset),
+        this, sizeof(MainProtocolTwoWayAnonWithErrorTopResponse));
+  } else {
+    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
+      ::fidl::Encode(_encoder, &result, _offset + 0);
+
+    } else {
+      ::fidl::Encode(_encoder, &result, _offset + 0);
+    }
+  }
+}
+
+void MainProtocolTwoWayAnonWithErrorTopResponse::Decode(
+    ::fidl::Decoder* _decoder,
+    MainProtocolTwoWayAnonWithErrorTopResponse* _value, size_t _offset) {
+  if (::fidl::IsMemcpyCompatible<
+          MainProtocolTwoWayAnonWithErrorTopResponse>::value) {
+    memcpy(
+        _value,
+        _decoder->template GetPtr<MainProtocolTwoWayAnonWithErrorTopResponse>(
+            _offset),
+        sizeof(MainProtocolTwoWayAnonWithErrorTopResponse));
+  } else {
+    ::fidl::Decode(_decoder, &_value->result, _offset + 0);
+  }
+}
+
+zx_status_t MainProtocolTwoWayAnonWithErrorTopResponse::Clone(
+    MainProtocolTwoWayAnonWithErrorTopResponse* _result) const {
+  zx_status_t _status = ::fidl::Clone(result, &_result->result);
+  if (_status != ZX_OK) return _status;
+  return ZX_OK;
+}
+
+extern "C" const fidl_type_t
     test_protocolpayloads_MainProtocol_OnImportWithError_ResultTable;
 const fidl_type_t* MainProtocol_OnImportWithError_Result::FidlType =
     &test_protocolpayloads_MainProtocol_OnImportWithError_ResultTable;
@@ -993,6 +1085,48 @@ void MainProtocol_OnImportWithError_Result::EnsureStorageInitialized(
         break;
     }
   }
+}
+
+extern "C" const fidl_type_t
+    test_protocolpayloads_MainProtocolOnImportWithErrorRequestTable;
+const fidl_type_t* MainProtocolOnImportWithErrorRequest::FidlType =
+    &test_protocolpayloads_MainProtocolOnImportWithErrorRequestTable;
+
+void MainProtocolOnImportWithErrorRequest::Encode(
+    ::fidl::Encoder* _encoder, size_t _offset,
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  if (::fidl::IsMemcpyCompatible<MainProtocolOnImportWithErrorRequest>::value) {
+    memcpy(_encoder->template GetPtr<MainProtocolOnImportWithErrorRequest>(
+               _offset),
+           this, sizeof(MainProtocolOnImportWithErrorRequest));
+  } else {
+    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
+      ::fidl::Encode(_encoder, &result, _offset + 0);
+
+    } else {
+      ::fidl::Encode(_encoder, &result, _offset + 0);
+    }
+  }
+}
+
+void MainProtocolOnImportWithErrorRequest::Decode(
+    ::fidl::Decoder* _decoder, MainProtocolOnImportWithErrorRequest* _value,
+    size_t _offset) {
+  if (::fidl::IsMemcpyCompatible<MainProtocolOnImportWithErrorRequest>::value) {
+    memcpy(_value,
+           _decoder->template GetPtr<MainProtocolOnImportWithErrorRequest>(
+               _offset),
+           sizeof(MainProtocolOnImportWithErrorRequest));
+  } else {
+    ::fidl::Decode(_decoder, &_value->result, _offset + 0);
+  }
+}
+
+zx_status_t MainProtocolOnImportWithErrorRequest::Clone(
+    MainProtocolOnImportWithErrorRequest* _result) const {
+  zx_status_t _status = ::fidl::Clone(result, &_result->result);
+  if (_status != ZX_OK) return _status;
+  return ZX_OK;
 }
 
 extern "C" const fidl_type_t
@@ -1354,6 +1488,279 @@ void MainProtocol_OnAnonWithError_Result::EnsureStorageInitialized(
   }
 }
 
+extern "C" const fidl_type_t
+    test_protocolpayloads_MainProtocolOnAnonWithErrorRequestTable;
+const fidl_type_t* MainProtocolOnAnonWithErrorRequest::FidlType =
+    &test_protocolpayloads_MainProtocolOnAnonWithErrorRequestTable;
+
+void MainProtocolOnAnonWithErrorRequest::Encode(
+    ::fidl::Encoder* _encoder, size_t _offset,
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  if (::fidl::IsMemcpyCompatible<MainProtocolOnAnonWithErrorRequest>::value) {
+    memcpy(
+        _encoder->template GetPtr<MainProtocolOnAnonWithErrorRequest>(_offset),
+        this, sizeof(MainProtocolOnAnonWithErrorRequest));
+  } else {
+    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
+      ::fidl::Encode(_encoder, &result, _offset + 0);
+
+    } else {
+      ::fidl::Encode(_encoder, &result, _offset + 0);
+    }
+  }
+}
+
+void MainProtocolOnAnonWithErrorRequest::Decode(
+    ::fidl::Decoder* _decoder, MainProtocolOnAnonWithErrorRequest* _value,
+    size_t _offset) {
+  if (::fidl::IsMemcpyCompatible<MainProtocolOnAnonWithErrorRequest>::value) {
+    memcpy(
+        _value,
+        _decoder->template GetPtr<MainProtocolOnAnonWithErrorRequest>(_offset),
+        sizeof(MainProtocolOnAnonWithErrorRequest));
+  } else {
+    ::fidl::Decode(_decoder, &_value->result, _offset + 0);
+  }
+}
+
+zx_status_t MainProtocolOnAnonWithErrorRequest::Clone(
+    MainProtocolOnAnonWithErrorRequest* _result) const {
+  zx_status_t _status = ::fidl::Clone(result, &_result->result);
+  if (_status != ZX_OK) return _status;
+  return ZX_OK;
+}
+
+extern "C" const fidl_type_t
+    test_protocolpayloads_MainProtocolTwoWayAnonWithErrorRequestTable;
+const fidl_type_t* MainProtocolTwoWayAnonWithErrorRequest::FidlType =
+    &test_protocolpayloads_MainProtocolTwoWayAnonWithErrorRequestTable;
+
+void MainProtocolTwoWayAnonWithErrorRequest::Encode(
+    ::fidl::Encoder* _encoder, size_t _offset,
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  if (::fidl::IsMemcpyCompatible<
+          MainProtocolTwoWayAnonWithErrorRequest>::value) {
+    memcpy(_encoder->template GetPtr<MainProtocolTwoWayAnonWithErrorRequest>(
+               _offset),
+           this, sizeof(MainProtocolTwoWayAnonWithErrorRequest));
+  } else {
+    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
+      ::fidl::Encode(_encoder, &a, _offset + 0);
+      ::fidl::Encode(_encoder, &b, _offset + 4);
+
+    } else {
+      ::fidl::Encode(_encoder, &a, _offset + 0);
+      ::fidl::Encode(_encoder, &b, _offset + 4);
+    }
+  }
+}
+
+void MainProtocolTwoWayAnonWithErrorRequest::Decode(
+    ::fidl::Decoder* _decoder, MainProtocolTwoWayAnonWithErrorRequest* _value,
+    size_t _offset) {
+  if (::fidl::IsMemcpyCompatible<
+          MainProtocolTwoWayAnonWithErrorRequest>::value) {
+    memcpy(_value,
+           _decoder->template GetPtr<MainProtocolTwoWayAnonWithErrorRequest>(
+               _offset),
+           sizeof(MainProtocolTwoWayAnonWithErrorRequest));
+  } else {
+    ::fidl::Decode(_decoder, &_value->a, _offset + 0);
+    ::fidl::Decode(_decoder, &_value->b, _offset + 4);
+  }
+}
+
+zx_status_t MainProtocolTwoWayAnonWithErrorRequest::Clone(
+    MainProtocolTwoWayAnonWithErrorRequest* _result) const {
+  zx_status_t _status = ::fidl::Clone(a, &_result->a);
+  if (_status != ZX_OK) return _status;
+  _status = ::fidl::Clone(b, &_result->b);
+  if (_status != ZX_OK) return _status;
+  return ZX_OK;
+}
+
+extern "C" const fidl_type_t
+    test_protocolpayloads_MainProtocolTwoWayAnonTopResponseTable;
+const fidl_type_t* MainProtocolTwoWayAnonTopResponse::FidlType =
+    &test_protocolpayloads_MainProtocolTwoWayAnonTopResponseTable;
+
+void MainProtocolTwoWayAnonTopResponse::Encode(
+    ::fidl::Encoder* _encoder, size_t _offset,
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  if (::fidl::IsMemcpyCompatible<MainProtocolTwoWayAnonTopResponse>::value) {
+    memcpy(
+        _encoder->template GetPtr<MainProtocolTwoWayAnonTopResponse>(_offset),
+        this, sizeof(MainProtocolTwoWayAnonTopResponse));
+  } else {
+    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
+      ::fidl::Encode(_encoder, &a, _offset + 0);
+      ::fidl::Encode(_encoder, &b, _offset + 4);
+
+    } else {
+      ::fidl::Encode(_encoder, &a, _offset + 0);
+      ::fidl::Encode(_encoder, &b, _offset + 4);
+    }
+  }
+}
+
+void MainProtocolTwoWayAnonTopResponse::Decode(
+    ::fidl::Decoder* _decoder, MainProtocolTwoWayAnonTopResponse* _value,
+    size_t _offset) {
+  if (::fidl::IsMemcpyCompatible<MainProtocolTwoWayAnonTopResponse>::value) {
+    memcpy(
+        _value,
+        _decoder->template GetPtr<MainProtocolTwoWayAnonTopResponse>(_offset),
+        sizeof(MainProtocolTwoWayAnonTopResponse));
+  } else {
+    ::fidl::Decode(_decoder, &_value->a, _offset + 0);
+    ::fidl::Decode(_decoder, &_value->b, _offset + 4);
+  }
+}
+
+zx_status_t MainProtocolTwoWayAnonTopResponse::Clone(
+    MainProtocolTwoWayAnonTopResponse* _result) const {
+  zx_status_t _status = ::fidl::Clone(a, &_result->a);
+  if (_status != ZX_OK) return _status;
+  _status = ::fidl::Clone(b, &_result->b);
+  if (_status != ZX_OK) return _status;
+  return ZX_OK;
+}
+
+extern "C" const fidl_type_t
+    test_protocolpayloads_MainProtocolTwoWayAnonRequestTable;
+const fidl_type_t* MainProtocolTwoWayAnonRequest::FidlType =
+    &test_protocolpayloads_MainProtocolTwoWayAnonRequestTable;
+
+void MainProtocolTwoWayAnonRequest::Encode(
+    ::fidl::Encoder* _encoder, size_t _offset,
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  if (::fidl::IsMemcpyCompatible<MainProtocolTwoWayAnonRequest>::value) {
+    memcpy(_encoder->template GetPtr<MainProtocolTwoWayAnonRequest>(_offset),
+           this, sizeof(MainProtocolTwoWayAnonRequest));
+  } else {
+    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
+      ::fidl::Encode(_encoder, &a, _offset + 0);
+      ::fidl::Encode(_encoder, &b, _offset + 4);
+
+    } else {
+      ::fidl::Encode(_encoder, &a, _offset + 0);
+      ::fidl::Encode(_encoder, &b, _offset + 4);
+    }
+  }
+}
+
+void MainProtocolTwoWayAnonRequest::Decode(
+    ::fidl::Decoder* _decoder, MainProtocolTwoWayAnonRequest* _value,
+    size_t _offset) {
+  if (::fidl::IsMemcpyCompatible<MainProtocolTwoWayAnonRequest>::value) {
+    memcpy(_value,
+           _decoder->template GetPtr<MainProtocolTwoWayAnonRequest>(_offset),
+           sizeof(MainProtocolTwoWayAnonRequest));
+  } else {
+    ::fidl::Decode(_decoder, &_value->a, _offset + 0);
+    ::fidl::Decode(_decoder, &_value->b, _offset + 4);
+  }
+}
+
+zx_status_t MainProtocolTwoWayAnonRequest::Clone(
+    MainProtocolTwoWayAnonRequest* _result) const {
+  zx_status_t _status = ::fidl::Clone(a, &_result->a);
+  if (_status != ZX_OK) return _status;
+  _status = ::fidl::Clone(b, &_result->b);
+  if (_status != ZX_OK) return _status;
+  return ZX_OK;
+}
+
+extern "C" const fidl_type_t
+    test_protocolpayloads_MainProtocolOneWayAnonRequestTable;
+const fidl_type_t* MainProtocolOneWayAnonRequest::FidlType =
+    &test_protocolpayloads_MainProtocolOneWayAnonRequestTable;
+
+void MainProtocolOneWayAnonRequest::Encode(
+    ::fidl::Encoder* _encoder, size_t _offset,
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  if (::fidl::IsMemcpyCompatible<MainProtocolOneWayAnonRequest>::value) {
+    memcpy(_encoder->template GetPtr<MainProtocolOneWayAnonRequest>(_offset),
+           this, sizeof(MainProtocolOneWayAnonRequest));
+  } else {
+    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
+      ::fidl::Encode(_encoder, &a, _offset + 0);
+      ::fidl::Encode(_encoder, &b, _offset + 4);
+
+    } else {
+      ::fidl::Encode(_encoder, &a, _offset + 0);
+      ::fidl::Encode(_encoder, &b, _offset + 4);
+    }
+  }
+}
+
+void MainProtocolOneWayAnonRequest::Decode(
+    ::fidl::Decoder* _decoder, MainProtocolOneWayAnonRequest* _value,
+    size_t _offset) {
+  if (::fidl::IsMemcpyCompatible<MainProtocolOneWayAnonRequest>::value) {
+    memcpy(_value,
+           _decoder->template GetPtr<MainProtocolOneWayAnonRequest>(_offset),
+           sizeof(MainProtocolOneWayAnonRequest));
+  } else {
+    ::fidl::Decode(_decoder, &_value->a, _offset + 0);
+    ::fidl::Decode(_decoder, &_value->b, _offset + 4);
+  }
+}
+
+zx_status_t MainProtocolOneWayAnonRequest::Clone(
+    MainProtocolOneWayAnonRequest* _result) const {
+  zx_status_t _status = ::fidl::Clone(a, &_result->a);
+  if (_status != ZX_OK) return _status;
+  _status = ::fidl::Clone(b, &_result->b);
+  if (_status != ZX_OK) return _status;
+  return ZX_OK;
+}
+
+extern "C" const fidl_type_t
+    test_protocolpayloads_MainProtocolOnAnonRequestTable;
+const fidl_type_t* MainProtocolOnAnonRequest::FidlType =
+    &test_protocolpayloads_MainProtocolOnAnonRequestTable;
+
+void MainProtocolOnAnonRequest::Encode(
+    ::fidl::Encoder* _encoder, size_t _offset,
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  if (::fidl::IsMemcpyCompatible<MainProtocolOnAnonRequest>::value) {
+    memcpy(_encoder->template GetPtr<MainProtocolOnAnonRequest>(_offset), this,
+           sizeof(MainProtocolOnAnonRequest));
+  } else {
+    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
+      ::fidl::Encode(_encoder, &a, _offset + 0);
+      ::fidl::Encode(_encoder, &b, _offset + 4);
+
+    } else {
+      ::fidl::Encode(_encoder, &a, _offset + 0);
+      ::fidl::Encode(_encoder, &b, _offset + 4);
+    }
+  }
+}
+
+void MainProtocolOnAnonRequest::Decode(::fidl::Decoder* _decoder,
+                                       MainProtocolOnAnonRequest* _value,
+                                       size_t _offset) {
+  if (::fidl::IsMemcpyCompatible<MainProtocolOnAnonRequest>::value) {
+    memcpy(_value,
+           _decoder->template GetPtr<MainProtocolOnAnonRequest>(_offset),
+           sizeof(MainProtocolOnAnonRequest));
+  } else {
+    ::fidl::Decode(_decoder, &_value->a, _offset + 0);
+    ::fidl::Decode(_decoder, &_value->b, _offset + 4);
+  }
+}
+
+zx_status_t MainProtocolOnAnonRequest::Clone(
+    MainProtocolOnAnonRequest* _result) const {
+  zx_status_t _status = ::fidl::Clone(a, &_result->a);
+  if (_status != ZX_OK) return _status;
+  _status = ::fidl::Clone(b, &_result->b);
+  if (_status != ZX_OK) return _status;
+  return ZX_OK;
+}
+
 extern "C" const fidl_type_t test_protocolpayloads_LocalStructPayloadTable;
 const fidl_type_t* LocalStructPayload::FidlType =
     &test_protocolpayloads_LocalStructPayloadTable;
@@ -1702,6 +2109,52 @@ void MainProtocol_TwoWayLocalWithError_Result::EnsureStorageInitialized(
 }
 
 extern "C" const fidl_type_t
+    test_protocolpayloads_MainProtocolTwoWayLocalWithErrorTopResponseTable;
+const fidl_type_t* MainProtocolTwoWayLocalWithErrorTopResponse::FidlType =
+    &test_protocolpayloads_MainProtocolTwoWayLocalWithErrorTopResponseTable;
+
+void MainProtocolTwoWayLocalWithErrorTopResponse::Encode(
+    ::fidl::Encoder* _encoder, size_t _offset,
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  if (::fidl::IsMemcpyCompatible<
+          MainProtocolTwoWayLocalWithErrorTopResponse>::value) {
+    memcpy(
+        _encoder->template GetPtr<MainProtocolTwoWayLocalWithErrorTopResponse>(
+            _offset),
+        this, sizeof(MainProtocolTwoWayLocalWithErrorTopResponse));
+  } else {
+    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
+      ::fidl::Encode(_encoder, &result, _offset + 0);
+
+    } else {
+      ::fidl::Encode(_encoder, &result, _offset + 0);
+    }
+  }
+}
+
+void MainProtocolTwoWayLocalWithErrorTopResponse::Decode(
+    ::fidl::Decoder* _decoder,
+    MainProtocolTwoWayLocalWithErrorTopResponse* _value, size_t _offset) {
+  if (::fidl::IsMemcpyCompatible<
+          MainProtocolTwoWayLocalWithErrorTopResponse>::value) {
+    memcpy(
+        _value,
+        _decoder->template GetPtr<MainProtocolTwoWayLocalWithErrorTopResponse>(
+            _offset),
+        sizeof(MainProtocolTwoWayLocalWithErrorTopResponse));
+  } else {
+    ::fidl::Decode(_decoder, &_value->result, _offset + 0);
+  }
+}
+
+zx_status_t MainProtocolTwoWayLocalWithErrorTopResponse::Clone(
+    MainProtocolTwoWayLocalWithErrorTopResponse* _result) const {
+  zx_status_t _status = ::fidl::Clone(result, &_result->result);
+  if (_status != ZX_OK) return _status;
+  return ZX_OK;
+}
+
+extern "C" const fidl_type_t
     test_protocolpayloads_MainProtocol_OnLocalWithError_ResultTable;
 const fidl_type_t* MainProtocol_OnLocalWithError_Result::FidlType =
     &test_protocolpayloads_MainProtocol_OnLocalWithError_ResultTable;
@@ -2001,6 +2454,48 @@ void MainProtocol_OnLocalWithError_Result::EnsureStorageInitialized(
         break;
     }
   }
+}
+
+extern "C" const fidl_type_t
+    test_protocolpayloads_MainProtocolOnLocalWithErrorRequestTable;
+const fidl_type_t* MainProtocolOnLocalWithErrorRequest::FidlType =
+    &test_protocolpayloads_MainProtocolOnLocalWithErrorRequestTable;
+
+void MainProtocolOnLocalWithErrorRequest::Encode(
+    ::fidl::Encoder* _encoder, size_t _offset,
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  if (::fidl::IsMemcpyCompatible<MainProtocolOnLocalWithErrorRequest>::value) {
+    memcpy(
+        _encoder->template GetPtr<MainProtocolOnLocalWithErrorRequest>(_offset),
+        this, sizeof(MainProtocolOnLocalWithErrorRequest));
+  } else {
+    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
+      ::fidl::Encode(_encoder, &result, _offset + 0);
+
+    } else {
+      ::fidl::Encode(_encoder, &result, _offset + 0);
+    }
+  }
+}
+
+void MainProtocolOnLocalWithErrorRequest::Decode(
+    ::fidl::Decoder* _decoder, MainProtocolOnLocalWithErrorRequest* _value,
+    size_t _offset) {
+  if (::fidl::IsMemcpyCompatible<MainProtocolOnLocalWithErrorRequest>::value) {
+    memcpy(
+        _value,
+        _decoder->template GetPtr<MainProtocolOnLocalWithErrorRequest>(_offset),
+        sizeof(MainProtocolOnLocalWithErrorRequest));
+  } else {
+    ::fidl::Decode(_decoder, &_value->result, _offset + 0);
+  }
+}
+
+zx_status_t MainProtocolOnLocalWithErrorRequest::Clone(
+    MainProtocolOnLocalWithErrorRequest* _result) const {
+  zx_status_t _status = ::fidl::Clone(result, &_result->result);
+  if (_status != ZX_OK) return _status;
+  return ZX_OK;
 }
 
 //

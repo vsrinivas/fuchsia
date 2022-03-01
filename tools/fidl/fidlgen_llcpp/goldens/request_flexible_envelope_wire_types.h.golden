@@ -24,6 +24,14 @@
 
 namespace test_requestflexibleenvelope {
 namespace wire {
+struct ProtocolRequestStrictResponseFlexibleRequest;
+
+struct ProtocolRequestFlexibleResponseStrictTopResponse;
+
+struct ProtocolRequestStrictResponseFlexibleTopResponse;
+
+struct ProtocolRequestFlexibleResponseStrictRequest;
+
 class StrictFoo;
 
 class FlexibleFoo;
@@ -245,9 +253,175 @@ class FlexibleFoo {
   ::fidl::UntypedEnvelope envelope_;
 };
 
+extern "C" const fidl_type_t
+    test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleRequestTable;
+
+struct ProtocolRequestStrictResponseFlexibleRequest {
+  ::test_requestflexibleenvelope::wire::StrictFoo s = {};
+};
+
+extern "C" const fidl_type_t
+    test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictTopResponseTable;
+
+struct ProtocolRequestFlexibleResponseStrictTopResponse {
+  ::test_requestflexibleenvelope::wire::StrictFoo f = {};
+};
+
+extern "C" const fidl_type_t
+    test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleTopResponseTable;
+
+struct ProtocolRequestStrictResponseFlexibleTopResponse {
+  ::test_requestflexibleenvelope::wire::FlexibleFoo f = {};
+};
+
+extern "C" const fidl_type_t
+    test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictRequestTable;
+
+struct ProtocolRequestFlexibleResponseStrictRequest {
+  ::test_requestflexibleenvelope::wire::FlexibleFoo s = {};
+};
+
 }  // namespace wire
 }  // namespace test_requestflexibleenvelope
 namespace fidl {
+
+template <>
+struct TypeTraits<::test_requestflexibleenvelope::wire::
+                      ProtocolRequestStrictResponseFlexibleRequest> {
+  static constexpr const fidl_type_t* kType =
+      &::test_requestflexibleenvelope::wire::
+          test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleRequestTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 24;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 4294967295;
+  static constexpr uint32_t kMaxOutOfLineV1 = 4294967295;
+  static constexpr bool kHasPointer = true;
+};
+
+template <>
+struct IsFidlType<::test_requestflexibleenvelope::wire::
+                      ProtocolRequestStrictResponseFlexibleRequest>
+    : public std::true_type {};
+template <>
+struct IsStruct<::test_requestflexibleenvelope::wire::
+                    ProtocolRequestStrictResponseFlexibleRequest>
+    : public std::true_type {};
+static_assert(std::is_standard_layout_v<
+              ::test_requestflexibleenvelope::wire::
+                  ProtocolRequestStrictResponseFlexibleRequest>);
+static_assert(offsetof(::test_requestflexibleenvelope::wire::
+                           ProtocolRequestStrictResponseFlexibleRequest,
+                       s) == 0);
+static_assert(
+    sizeof(::test_requestflexibleenvelope::wire::
+               ProtocolRequestStrictResponseFlexibleRequest) ==
+    TypeTraits<::test_requestflexibleenvelope::wire::
+                   ProtocolRequestStrictResponseFlexibleRequest>::kPrimarySize);
+
+template <>
+struct TypeTraits<::test_requestflexibleenvelope::wire::
+                      ProtocolRequestFlexibleResponseStrictTopResponse> {
+  static constexpr const fidl_type_t* kType =
+      &::test_requestflexibleenvelope::wire::
+          test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictTopResponseTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 24;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 4294967295;
+  static constexpr uint32_t kMaxOutOfLineV1 = 4294967295;
+  static constexpr bool kHasPointer = true;
+};
+
+template <>
+struct IsFidlType<::test_requestflexibleenvelope::wire::
+                      ProtocolRequestFlexibleResponseStrictTopResponse>
+    : public std::true_type {};
+template <>
+struct IsStruct<::test_requestflexibleenvelope::wire::
+                    ProtocolRequestFlexibleResponseStrictTopResponse>
+    : public std::true_type {};
+static_assert(std::is_standard_layout_v<
+              ::test_requestflexibleenvelope::wire::
+                  ProtocolRequestFlexibleResponseStrictTopResponse>);
+static_assert(offsetof(::test_requestflexibleenvelope::wire::
+                           ProtocolRequestFlexibleResponseStrictTopResponse,
+                       f) == 0);
+static_assert(
+    sizeof(::test_requestflexibleenvelope::wire::
+               ProtocolRequestFlexibleResponseStrictTopResponse) ==
+    TypeTraits<
+        ::test_requestflexibleenvelope::wire::
+            ProtocolRequestFlexibleResponseStrictTopResponse>::kPrimarySize);
+
+template <>
+struct TypeTraits<::test_requestflexibleenvelope::wire::
+                      ProtocolRequestStrictResponseFlexibleTopResponse> {
+  static constexpr const fidl_type_t* kType =
+      &::test_requestflexibleenvelope::wire::
+          test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleTopResponseTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 24;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 4294967295;
+  static constexpr uint32_t kMaxOutOfLineV1 = 4294967295;
+  static constexpr bool kHasPointer = true;
+};
+
+template <>
+struct IsFidlType<::test_requestflexibleenvelope::wire::
+                      ProtocolRequestStrictResponseFlexibleTopResponse>
+    : public std::true_type {};
+template <>
+struct IsStruct<::test_requestflexibleenvelope::wire::
+                    ProtocolRequestStrictResponseFlexibleTopResponse>
+    : public std::true_type {};
+static_assert(std::is_standard_layout_v<
+              ::test_requestflexibleenvelope::wire::
+                  ProtocolRequestStrictResponseFlexibleTopResponse>);
+static_assert(offsetof(::test_requestflexibleenvelope::wire::
+                           ProtocolRequestStrictResponseFlexibleTopResponse,
+                       f) == 0);
+static_assert(
+    sizeof(::test_requestflexibleenvelope::wire::
+               ProtocolRequestStrictResponseFlexibleTopResponse) ==
+    TypeTraits<
+        ::test_requestflexibleenvelope::wire::
+            ProtocolRequestStrictResponseFlexibleTopResponse>::kPrimarySize);
+
+template <>
+struct TypeTraits<::test_requestflexibleenvelope::wire::
+                      ProtocolRequestFlexibleResponseStrictRequest> {
+  static constexpr const fidl_type_t* kType =
+      &::test_requestflexibleenvelope::wire::
+          test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictRequestTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 24;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 4294967295;
+  static constexpr uint32_t kMaxOutOfLineV1 = 4294967295;
+  static constexpr bool kHasPointer = true;
+};
+
+template <>
+struct IsFidlType<::test_requestflexibleenvelope::wire::
+                      ProtocolRequestFlexibleResponseStrictRequest>
+    : public std::true_type {};
+template <>
+struct IsStruct<::test_requestflexibleenvelope::wire::
+                    ProtocolRequestFlexibleResponseStrictRequest>
+    : public std::true_type {};
+static_assert(std::is_standard_layout_v<
+              ::test_requestflexibleenvelope::wire::
+                  ProtocolRequestFlexibleResponseStrictRequest>);
+static_assert(offsetof(::test_requestflexibleenvelope::wire::
+                           ProtocolRequestFlexibleResponseStrictRequest,
+                       s) == 0);
+static_assert(
+    sizeof(::test_requestflexibleenvelope::wire::
+               ProtocolRequestFlexibleResponseStrictRequest) ==
+    TypeTraits<::test_requestflexibleenvelope::wire::
+                   ProtocolRequestFlexibleResponseStrictRequest>::kPrimarySize);
 
 template <>
 struct TypeTraits<::test_requestflexibleenvelope::wire::StrictFoo> {

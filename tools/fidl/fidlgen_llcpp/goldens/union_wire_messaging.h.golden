@@ -94,10 +94,13 @@ struct ::fidl::internal::TransactionalRequest<
 template <>
 struct ::fidl::WireResponse<
     ::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>
-    final {
-  ::test_union::wire::StrictBoundedXUnion xu;
-
-  explicit WireResponse(::test_union::wire::StrictBoundedXUnion xu) : xu(xu) {}
+    final
+    : public ::test_union::wire::
+          TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse {
+  explicit WireResponse(::test_union::wire::StrictBoundedXUnion xu)
+      : ::test_union::wire::
+            TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse{
+                .xu = std::move(xu)} {}
   WireResponse() = default;
 };
 
@@ -152,10 +155,13 @@ struct ::fidl::internal::TransactionalRequest<
 template <>
 struct ::fidl::WireResponse<
     ::test_union::TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocated>
-    final {
-  ::test_union::wire::OlderSimpleUnion xu;
-
-  explicit WireResponse(::test_union::wire::OlderSimpleUnion xu) : xu(xu) {}
+    final
+    : public ::test_union::wire::
+          TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse {
+  explicit WireResponse(::test_union::wire::OlderSimpleUnion xu)
+      : ::test_union::wire::
+            TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse{
+                .xu = std::move(xu)} {}
   WireResponse() = default;
 };
 

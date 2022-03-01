@@ -19,6 +19,8 @@ class ExampleTable;
 
 class ExampleStruct;
 
+class ExampleProtocolMethodRequest;
+
 #ifdef __Fuchsia__
 
 class ExampleProtocol;
@@ -399,6 +401,33 @@ inline zx_status_t Clone(
 
 using ExampleStructPtr = ::std::unique_ptr<ExampleStruct>;
 
+class ExampleProtocolMethodRequest final {
+ public:
+  static const fidl_type_t* FidlType;
+
+  ::test::exampleusing::Empty arg{};
+
+  static inline ::std::unique_ptr<ExampleProtocolMethodRequest> New() {
+    return ::std::make_unique<ExampleProtocolMethodRequest>();
+  }
+
+  void Encode(::fidl::Encoder* _encoder, size_t _offset,
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
+                  cpp17::nullopt);
+  static void Decode(::fidl::Decoder* _decoder,
+                     ExampleProtocolMethodRequest* value, size_t _offset);
+  zx_status_t Clone(ExampleProtocolMethodRequest* result) const;
+};
+
+inline zx_status_t Clone(
+    const ::test::placementofattributes::ExampleProtocolMethodRequest& _value,
+    ::test::placementofattributes::ExampleProtocolMethodRequest* _result) {
+  return _value.Clone(_result);
+}
+
+using ExampleProtocolMethodRequestPtr =
+    ::std::unique_ptr<ExampleProtocolMethodRequest>;
+
 #ifdef __Fuchsia__
 
 namespace _internal {
@@ -637,6 +666,37 @@ struct Equality<::test::placementofattributes::ExampleStruct> {
       const ::test::placementofattributes::ExampleStruct& _lhs,
       const ::test::placementofattributes::ExampleStruct& _rhs) const {
     if (!::fidl::Equals(_lhs.member, _rhs.member)) {
+      return false;
+    }
+    return true;
+  }
+};
+template <>
+struct CodingTraits<::test::placementofattributes::ExampleProtocolMethodRequest>
+    : public EncodableCodingTraits<
+          ::test::placementofattributes::ExampleProtocolMethodRequest, 1, 1> {};
+
+template <>
+struct IsMemcpyCompatible<
+    ::test::placementofattributes::ExampleProtocolMethodRequest>
+    : public internal::BoolConstant<
+          !HasPadding<::test::placementofattributes::
+                          ExampleProtocolMethodRequest>::value &&
+          IsMemcpyCompatible<::test::exampleusing::Empty>::value> {};
+
+inline zx_status_t Clone(
+    const ::test::placementofattributes::ExampleProtocolMethodRequest& value,
+    ::test::placementofattributes::ExampleProtocolMethodRequest* result) {
+  return ::test::placementofattributes::Clone(value, result);
+}
+
+template <>
+struct Equality<::test::placementofattributes::ExampleProtocolMethodRequest> {
+  bool operator()(
+      const ::test::placementofattributes::ExampleProtocolMethodRequest& _lhs,
+      const ::test::placementofattributes::ExampleProtocolMethodRequest& _rhs)
+      const {
+    if (!::fidl::Equals(_lhs.arg, _rhs.arg)) {
       return false;
     }
     return true;

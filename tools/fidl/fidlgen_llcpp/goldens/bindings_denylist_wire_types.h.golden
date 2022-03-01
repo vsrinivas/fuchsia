@@ -31,13 +31,33 @@ struct OnlyAppearsInImportingLibrary;
 
 struct DenyEachBindingOnlyDenySyzkallerResponse;
 
+struct DenyEachBindingOnlyDenySyzkallerTopResponse;
+
 struct DenyEachBindingOnlyDenyRustResponse;
+
+struct DenyEachBindingOnlyDenyRustTopResponse;
 
 struct DenyEachBindingOnlyDenyLibfuzzerResponse;
 
+struct DenyEachBindingOnlyDenyLibfuzzerTopResponse;
+
 struct DenyEachBindingOnlyDenyGoResponse;
 
+struct DenyEachBindingOnlyDenyGoTopResponse;
+
 struct DenyEachBindingOnlyDenyDartResponse;
+
+struct DenyEachBindingOnlyDenyDartTopResponse;
+
+struct DenyEachBindingOnlyDenySyzkallerRequest;
+
+struct DenyEachBindingOnlyDenyRustRequest;
+
+struct DenyEachBindingOnlyDenyLibfuzzerRequest;
+
+struct DenyEachBindingOnlyDenyGoRequest;
+
+struct DenyEachBindingOnlyDenyDartRequest;
 
 class OnlyLlcpp;
 
@@ -102,6 +122,41 @@ extern "C" const fidl_type_t
 
 struct DenyEachBindingOnlyDenyDartResponse {
   int32_t b = {};
+};
+
+extern "C" const fidl_type_t
+    test_bindingsdenylist_DenyEachBindingOnlyDenySyzkallerRequestTable;
+
+struct DenyEachBindingOnlyDenySyzkallerRequest {
+  bool a = {};
+};
+
+extern "C" const fidl_type_t
+    test_bindingsdenylist_DenyEachBindingOnlyDenyRustRequestTable;
+
+struct DenyEachBindingOnlyDenyRustRequest {
+  bool a = {};
+};
+
+extern "C" const fidl_type_t
+    test_bindingsdenylist_DenyEachBindingOnlyDenyLibfuzzerRequestTable;
+
+struct DenyEachBindingOnlyDenyLibfuzzerRequest {
+  bool a = {};
+};
+
+extern "C" const fidl_type_t
+    test_bindingsdenylist_DenyEachBindingOnlyDenyGoRequestTable;
+
+struct DenyEachBindingOnlyDenyGoRequest {
+  bool a = {};
+};
+
+extern "C" const fidl_type_t
+    test_bindingsdenylist_DenyEachBindingOnlyDenyDartRequestTable;
+
+struct DenyEachBindingOnlyDenyDartRequest {
+  bool a = {};
 };
 
 extern "C" const fidl_type_t test_bindingsdenylist_OnlyLlcppTable;
@@ -796,6 +851,55 @@ class DenyEachBindingOnlyDenyDartResult {
 
 constexpr uint32_t kAllBindings = 0u;
 
+extern "C" const fidl_type_t
+    test_bindingsdenylist_DenyEachBindingOnlyDenySyzkallerTopResponseTable;
+
+struct DenyEachBindingOnlyDenySyzkallerTopResponse {
+  using Result =
+      test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResult;
+
+  ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResult result =
+      {};
+};
+
+extern "C" const fidl_type_t
+    test_bindingsdenylist_DenyEachBindingOnlyDenyRustTopResponseTable;
+
+struct DenyEachBindingOnlyDenyRustTopResponse {
+  using Result = test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResult;
+
+  ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResult result = {};
+};
+
+extern "C" const fidl_type_t
+    test_bindingsdenylist_DenyEachBindingOnlyDenyLibfuzzerTopResponseTable;
+
+struct DenyEachBindingOnlyDenyLibfuzzerTopResponse {
+  using Result =
+      test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResult;
+
+  ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResult result =
+      {};
+};
+
+extern "C" const fidl_type_t
+    test_bindingsdenylist_DenyEachBindingOnlyDenyGoTopResponseTable;
+
+struct DenyEachBindingOnlyDenyGoTopResponse {
+  using Result = test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResult;
+
+  ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResult result = {};
+};
+
+extern "C" const fidl_type_t
+    test_bindingsdenylist_DenyEachBindingOnlyDenyDartTopResponseTable;
+
+struct DenyEachBindingOnlyDenyDartTopResponse {
+  using Result = test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartResult;
+
+  ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartResult result = {};
+};
+
 }  // namespace wire
 }  // namespace test_bindingsdenylist
 namespace fidl {
@@ -900,6 +1004,40 @@ static_assert(
                    DenyEachBindingOnlyDenySyzkallerResponse>::kPrimarySize);
 
 template <>
+struct TypeTraits<::test_bindingsdenylist::wire::
+                      DenyEachBindingOnlyDenySyzkallerTopResponse> {
+  static constexpr const fidl_type_t* kType =
+      &::test_bindingsdenylist::wire::
+          test_bindingsdenylist_DenyEachBindingOnlyDenySyzkallerTopResponseTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 24;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 8;
+  static constexpr bool kHasPointer = true;
+};
+
+template <>
+struct IsFidlType<
+    ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerTopResponse>
+    : public std::true_type {};
+template <>
+struct IsStruct<
+    ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerTopResponse>
+    : public std::true_type {};
+static_assert(
+    std::is_standard_layout_v<::test_bindingsdenylist::wire::
+                                  DenyEachBindingOnlyDenySyzkallerTopResponse>);
+static_assert(offsetof(::test_bindingsdenylist::wire::
+                           DenyEachBindingOnlyDenySyzkallerTopResponse,
+                       result) == 0);
+static_assert(
+    sizeof(::test_bindingsdenylist::wire::
+               DenyEachBindingOnlyDenySyzkallerTopResponse) ==
+    TypeTraits<::test_bindingsdenylist::wire::
+                   DenyEachBindingOnlyDenySyzkallerTopResponse>::kPrimarySize);
+
+template <>
 struct TypeTraits<
     ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResponse> {
   static constexpr const fidl_type_t* kType =
@@ -932,6 +1070,41 @@ static_assert(
         ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResponse) ==
     TypeTraits<::test_bindingsdenylist::wire::
                    DenyEachBindingOnlyDenyRustResponse>::kPrimarySize);
+
+template <>
+struct TypeTraits<
+    ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustTopResponse> {
+  static constexpr const fidl_type_t* kType =
+      &::test_bindingsdenylist::wire::
+          test_bindingsdenylist_DenyEachBindingOnlyDenyRustTopResponseTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 24;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 8;
+  static constexpr bool kHasPointer = true;
+};
+
+template <>
+struct IsFidlType<
+    ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustTopResponse>
+    : public std::true_type {};
+template <>
+struct IsStruct<
+    ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustTopResponse>
+    : public std::true_type {};
+static_assert(
+    std::is_standard_layout_v<
+        ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustTopResponse>);
+static_assert(
+    offsetof(
+        ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustTopResponse,
+        result) == 0);
+static_assert(
+    sizeof(::test_bindingsdenylist::wire::
+               DenyEachBindingOnlyDenyRustTopResponse) ==
+    TypeTraits<::test_bindingsdenylist::wire::
+                   DenyEachBindingOnlyDenyRustTopResponse>::kPrimarySize);
 
 template <>
 struct TypeTraits<
@@ -969,6 +1142,40 @@ static_assert(
                    DenyEachBindingOnlyDenyLibfuzzerResponse>::kPrimarySize);
 
 template <>
+struct TypeTraits<::test_bindingsdenylist::wire::
+                      DenyEachBindingOnlyDenyLibfuzzerTopResponse> {
+  static constexpr const fidl_type_t* kType =
+      &::test_bindingsdenylist::wire::
+          test_bindingsdenylist_DenyEachBindingOnlyDenyLibfuzzerTopResponseTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 24;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 8;
+  static constexpr bool kHasPointer = true;
+};
+
+template <>
+struct IsFidlType<
+    ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerTopResponse>
+    : public std::true_type {};
+template <>
+struct IsStruct<
+    ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerTopResponse>
+    : public std::true_type {};
+static_assert(
+    std::is_standard_layout_v<::test_bindingsdenylist::wire::
+                                  DenyEachBindingOnlyDenyLibfuzzerTopResponse>);
+static_assert(offsetof(::test_bindingsdenylist::wire::
+                           DenyEachBindingOnlyDenyLibfuzzerTopResponse,
+                       result) == 0);
+static_assert(
+    sizeof(::test_bindingsdenylist::wire::
+               DenyEachBindingOnlyDenyLibfuzzerTopResponse) ==
+    TypeTraits<::test_bindingsdenylist::wire::
+                   DenyEachBindingOnlyDenyLibfuzzerTopResponse>::kPrimarySize);
+
+template <>
 struct TypeTraits<
     ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResponse> {
   static constexpr const fidl_type_t* kType =
@@ -1003,6 +1210,41 @@ static_assert(
 
 template <>
 struct TypeTraits<
+    ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoTopResponse> {
+  static constexpr const fidl_type_t* kType =
+      &::test_bindingsdenylist::wire::
+          test_bindingsdenylist_DenyEachBindingOnlyDenyGoTopResponseTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 24;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 8;
+  static constexpr bool kHasPointer = true;
+};
+
+template <>
+struct IsFidlType<
+    ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoTopResponse>
+    : public std::true_type {};
+template <>
+struct IsStruct<
+    ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoTopResponse>
+    : public std::true_type {};
+static_assert(
+    std::is_standard_layout_v<
+        ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoTopResponse>);
+static_assert(
+    offsetof(
+        ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoTopResponse,
+        result) == 0);
+static_assert(
+    sizeof(
+        ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoTopResponse) ==
+    TypeTraits<::test_bindingsdenylist::wire::
+                   DenyEachBindingOnlyDenyGoTopResponse>::kPrimarySize);
+
+template <>
+struct TypeTraits<
     ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartResponse> {
   static constexpr const fidl_type_t* kType =
       &::test_bindingsdenylist::wire::
@@ -1034,6 +1276,208 @@ static_assert(
         ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartResponse) ==
     TypeTraits<::test_bindingsdenylist::wire::
                    DenyEachBindingOnlyDenyDartResponse>::kPrimarySize);
+
+template <>
+struct TypeTraits<
+    ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartTopResponse> {
+  static constexpr const fidl_type_t* kType =
+      &::test_bindingsdenylist::wire::
+          test_bindingsdenylist_DenyEachBindingOnlyDenyDartTopResponseTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 24;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 8;
+  static constexpr bool kHasPointer = true;
+};
+
+template <>
+struct IsFidlType<
+    ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartTopResponse>
+    : public std::true_type {};
+template <>
+struct IsStruct<
+    ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartTopResponse>
+    : public std::true_type {};
+static_assert(
+    std::is_standard_layout_v<
+        ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartTopResponse>);
+static_assert(
+    offsetof(
+        ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartTopResponse,
+        result) == 0);
+static_assert(
+    sizeof(::test_bindingsdenylist::wire::
+               DenyEachBindingOnlyDenyDartTopResponse) ==
+    TypeTraits<::test_bindingsdenylist::wire::
+                   DenyEachBindingOnlyDenyDartTopResponse>::kPrimarySize);
+
+template <>
+struct TypeTraits<
+    ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerRequest> {
+  static constexpr const fidl_type_t* kType =
+      &::test_bindingsdenylist::wire::
+          test_bindingsdenylist_DenyEachBindingOnlyDenySyzkallerRequestTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 1;
+  static constexpr uint32_t kPrimarySizeV1 = 1;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasPointer = false;
+};
+
+template <>
+struct IsFidlType<
+    ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerRequest>
+    : public std::true_type {};
+template <>
+struct IsStruct<
+    ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerRequest>
+    : public std::true_type {};
+static_assert(
+    std::is_standard_layout_v<::test_bindingsdenylist::wire::
+                                  DenyEachBindingOnlyDenySyzkallerRequest>);
+static_assert(
+    offsetof(
+        ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerRequest,
+        a) == 0);
+static_assert(
+    sizeof(::test_bindingsdenylist::wire::
+               DenyEachBindingOnlyDenySyzkallerRequest) ==
+    TypeTraits<::test_bindingsdenylist::wire::
+                   DenyEachBindingOnlyDenySyzkallerRequest>::kPrimarySize);
+
+template <>
+struct TypeTraits<
+    ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustRequest> {
+  static constexpr const fidl_type_t* kType =
+      &::test_bindingsdenylist::wire::
+          test_bindingsdenylist_DenyEachBindingOnlyDenyRustRequestTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 1;
+  static constexpr uint32_t kPrimarySizeV1 = 1;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasPointer = false;
+};
+
+template <>
+struct IsFidlType<
+    ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustRequest>
+    : public std::true_type {};
+template <>
+struct IsStruct<
+    ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustRequest>
+    : public std::true_type {};
+static_assert(
+    std::is_standard_layout_v<
+        ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustRequest>);
+static_assert(
+    offsetof(::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustRequest,
+             a) == 0);
+static_assert(
+    sizeof(::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustRequest) ==
+    TypeTraits<::test_bindingsdenylist::wire::
+                   DenyEachBindingOnlyDenyRustRequest>::kPrimarySize);
+
+template <>
+struct TypeTraits<
+    ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerRequest> {
+  static constexpr const fidl_type_t* kType =
+      &::test_bindingsdenylist::wire::
+          test_bindingsdenylist_DenyEachBindingOnlyDenyLibfuzzerRequestTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 1;
+  static constexpr uint32_t kPrimarySizeV1 = 1;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasPointer = false;
+};
+
+template <>
+struct IsFidlType<
+    ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerRequest>
+    : public std::true_type {};
+template <>
+struct IsStruct<
+    ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerRequest>
+    : public std::true_type {};
+static_assert(
+    std::is_standard_layout_v<::test_bindingsdenylist::wire::
+                                  DenyEachBindingOnlyDenyLibfuzzerRequest>);
+static_assert(
+    offsetof(
+        ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerRequest,
+        a) == 0);
+static_assert(
+    sizeof(::test_bindingsdenylist::wire::
+               DenyEachBindingOnlyDenyLibfuzzerRequest) ==
+    TypeTraits<::test_bindingsdenylist::wire::
+                   DenyEachBindingOnlyDenyLibfuzzerRequest>::kPrimarySize);
+
+template <>
+struct TypeTraits<
+    ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoRequest> {
+  static constexpr const fidl_type_t* kType =
+      &::test_bindingsdenylist::wire::
+          test_bindingsdenylist_DenyEachBindingOnlyDenyGoRequestTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 1;
+  static constexpr uint32_t kPrimarySizeV1 = 1;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasPointer = false;
+};
+
+template <>
+struct IsFidlType<
+    ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoRequest>
+    : public std::true_type {};
+template <>
+struct IsStruct<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoRequest>
+    : public std::true_type {};
+static_assert(std::is_standard_layout_v<
+              ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoRequest>);
+static_assert(
+    offsetof(::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoRequest,
+             a) == 0);
+static_assert(
+    sizeof(::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoRequest) ==
+    TypeTraits<::test_bindingsdenylist::wire::
+                   DenyEachBindingOnlyDenyGoRequest>::kPrimarySize);
+
+template <>
+struct TypeTraits<
+    ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartRequest> {
+  static constexpr const fidl_type_t* kType =
+      &::test_bindingsdenylist::wire::
+          test_bindingsdenylist_DenyEachBindingOnlyDenyDartRequestTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 1;
+  static constexpr uint32_t kPrimarySizeV1 = 1;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasPointer = false;
+};
+
+template <>
+struct IsFidlType<
+    ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartRequest>
+    : public std::true_type {};
+template <>
+struct IsStruct<
+    ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartRequest>
+    : public std::true_type {};
+static_assert(
+    std::is_standard_layout_v<
+        ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartRequest>);
+static_assert(
+    offsetof(::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartRequest,
+             a) == 0);
+static_assert(
+    sizeof(::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartRequest) ==
+    TypeTraits<::test_bindingsdenylist::wire::
+                   DenyEachBindingOnlyDenyDartRequest>::kPrimarySize);
 
 template <>
 struct TypeTraits<::test_bindingsdenylist::wire::OnlyLlcpp> {

@@ -102,10 +102,11 @@ struct ::fidl::internal::WireServerDispatcher<
 template <>
 struct ::fidl::WireRequest<
     ::test_protocols::HandleRightsProtocol::NoResponseMethod>
-    final {
-  ::zx::socket h;
-
-  explicit WireRequest(::zx::socket&& h) : h(std::move(h)) {}
+    final : public ::test_protocols::wire::
+                HandleRightsProtocolNoResponseMethodRequest {
+  explicit WireRequest(::zx::socket&& h)
+      : ::test_protocols::wire::HandleRightsProtocolNoResponseMethodRequest{
+            .h = std::move(h)} {}
   WireRequest() = default;
   void _CloseHandles();
 };
@@ -138,10 +139,11 @@ struct ::fidl::internal::TransactionalRequest<
 template <>
 struct ::fidl::WireRequest<
     ::test_protocols::HandleRightsProtocol::ResponseMethod>
-    final {
-  ::zx::socket h;
-
-  explicit WireRequest(::zx::socket&& h) : h(std::move(h)) {}
+    final
+    : public ::test_protocols::wire::HandleRightsProtocolResponseMethodRequest {
+  explicit WireRequest(::zx::socket&& h)
+      : ::test_protocols::wire::HandleRightsProtocolResponseMethodRequest{
+            .h = std::move(h)} {}
   WireRequest() = default;
   using ResponseType = ::fidl::WireResponse<
       ::test_protocols::HandleRightsProtocol::ResponseMethod>;
@@ -178,10 +180,11 @@ struct ::fidl::internal::TransactionalRequest<
 template <>
 struct ::fidl::WireResponse<
     ::test_protocols::HandleRightsProtocol::ResponseMethod>
-    final {
-  ::zx::socket h;
-
-  explicit WireResponse(::zx::socket&& h) : h(std::move(h)) {}
+    final : public ::test_protocols::wire::
+                HandleRightsProtocolResponseMethodTopResponse {
+  explicit WireResponse(::zx::socket&& h)
+      : ::test_protocols::wire::HandleRightsProtocolResponseMethodTopResponse{
+            .h = std::move(h)} {}
   WireResponse() = default;
   void _CloseHandles();
 };
@@ -212,11 +215,11 @@ struct ::fidl::internal::TransactionalResponse<
 #ifdef __Fuchsia__
 
 template <>
-struct ::fidl::WireEvent<::test_protocols::HandleRightsProtocol::AnEvent>
-    final {
-  ::zx::socket h;
-
-  explicit WireEvent(::zx::socket&& h) : h(std::move(h)) {}
+struct ::fidl::WireEvent<::test_protocols::HandleRightsProtocol::AnEvent> final
+    : public ::test_protocols::wire::HandleRightsProtocolAnEventRequest {
+  explicit WireEvent(::zx::socket&& h)
+      : ::test_protocols::wire::HandleRightsProtocolAnEventRequest{
+            .h = std::move(h)} {}
   WireEvent() = default;
   void _CloseHandles();
 };
@@ -1197,10 +1200,12 @@ struct ::fidl::internal::TransactionalRequest<
 template <>
 struct ::fidl::WireResponse<
     ::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>
-    final {
-  ::fidl::StringView ret;
-
-  explicit WireResponse(::fidl::StringView ret) : ret(ret) {}
+    final : public ::test_protocols::wire::
+                WithAndWithoutRequestResponseNoRequestWithResponseTopResponse {
+  explicit WireResponse(::fidl::StringView ret)
+      : ::test_protocols::wire::
+            WithAndWithoutRequestResponseNoRequestWithResponseTopResponse{
+                .ret = std::move(ret)} {}
   WireResponse() = default;
 };
 
@@ -1229,10 +1234,12 @@ struct ::fidl::internal::TransactionalResponse<
 template <>
 struct ::fidl::WireRequest<
     ::test_protocols::WithAndWithoutRequestResponse::WithRequestNoResponse>
-    final {
-  ::fidl::StringView arg;
-
-  explicit WireRequest(::fidl::StringView arg) : arg(arg) {}
+    final : public ::test_protocols::wire::
+                WithAndWithoutRequestResponseWithRequestNoResponseRequest {
+  explicit WireRequest(::fidl::StringView arg)
+      : ::test_protocols::wire::
+            WithAndWithoutRequestResponseWithRequestNoResponseRequest{
+                .arg = std::move(arg)} {}
   WireRequest() = default;
 };
 
@@ -1261,10 +1268,12 @@ struct ::fidl::internal::TransactionalRequest<
 template <>
 struct ::fidl::WireRequest<
     ::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse>
-    final {
-  ::fidl::StringView arg;
-
-  explicit WireRequest(::fidl::StringView arg) : arg(arg) {}
+    final : public ::test_protocols::wire::
+                WithAndWithoutRequestResponseWithRequestEmptyResponseRequest {
+  explicit WireRequest(::fidl::StringView arg)
+      : ::test_protocols::wire::
+            WithAndWithoutRequestResponseWithRequestEmptyResponseRequest{
+                .arg = std::move(arg)} {}
   WireRequest() = default;
 };
 
@@ -1313,10 +1322,12 @@ struct ::fidl::internal::TransactionalResponse<
 template <>
 struct ::fidl::WireRequest<
     ::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>
-    final {
-  ::fidl::StringView arg;
-
-  explicit WireRequest(::fidl::StringView arg) : arg(arg) {}
+    final : public ::test_protocols::wire::
+                WithAndWithoutRequestResponseWithRequestWithResponseRequest {
+  explicit WireRequest(::fidl::StringView arg)
+      : ::test_protocols::wire::
+            WithAndWithoutRequestResponseWithRequestWithResponseRequest{
+                .arg = std::move(arg)} {}
   WireRequest() = default;
   using ResponseType = ::fidl::WireResponse<
       ::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>;
@@ -1349,10 +1360,13 @@ struct ::fidl::internal::TransactionalRequest<
 template <>
 struct ::fidl::WireResponse<
     ::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>
-    final {
-  ::fidl::StringView ret;
-
-  explicit WireResponse(::fidl::StringView ret) : ret(ret) {}
+    final
+    : public ::test_protocols::wire::
+          WithAndWithoutRequestResponseWithRequestWithResponseTopResponse {
+  explicit WireResponse(::fidl::StringView ret)
+      : ::test_protocols::wire::
+            WithAndWithoutRequestResponseWithRequestWithResponseTopResponse{
+                .ret = std::move(ret)} {}
   WireResponse() = default;
 };
 
@@ -1401,10 +1415,12 @@ struct ::fidl::internal::TransactionalEvent<
 template <>
 struct ::fidl::WireEvent<
     ::test_protocols::WithAndWithoutRequestResponse::OnWithResponse>
-    final {
-  ::fidl::StringView ret;
-
-  explicit WireEvent(::fidl::StringView ret) : ret(ret) {}
+    final : public ::test_protocols::wire::
+                WithAndWithoutRequestResponseOnWithResponseRequest {
+  explicit WireEvent(::fidl::StringView ret)
+      : ::test_protocols::wire::
+            WithAndWithoutRequestResponseOnWithResponseRequest{
+                .ret = std::move(ret)} {}
   WireEvent() = default;
 };
 
@@ -3430,10 +3446,10 @@ struct ::fidl::internal::WireServerDispatcher<::test_protocols::Transitional>
 #endif  // __Fuchsia__
 
 template <>
-struct ::fidl::WireRequest<::test_protocols::Transitional::Request> final {
-  int64_t x;
-
-  explicit WireRequest(int64_t x) : x(x) {}
+struct ::fidl::WireRequest<::test_protocols::Transitional::Request> final
+    : public ::test_protocols::wire::TransitionalRequestRequest {
+  explicit WireRequest(int64_t x)
+      : ::test_protocols::wire::TransitionalRequestRequest{.x = std::move(x)} {}
   WireRequest() = default;
   using ResponseType =
       ::fidl::WireResponse<::test_protocols::Transitional::Request>;
@@ -3460,10 +3476,11 @@ struct ::fidl::internal::TransactionalRequest<
 };
 
 template <>
-struct ::fidl::WireResponse<::test_protocols::Transitional::Request> final {
-  int64_t y;
-
-  explicit WireResponse(int64_t y) : y(y) {}
+struct ::fidl::WireResponse<::test_protocols::Transitional::Request> final
+    : public ::test_protocols::wire::TransitionalRequestTopResponse {
+  explicit WireResponse(int64_t y)
+      : ::test_protocols::wire::TransitionalRequestTopResponse{
+            .y = std::move(y)} {}
   WireResponse() = default;
 };
 
@@ -3486,10 +3503,10 @@ struct ::fidl::internal::TransactionalResponse<
 };
 
 template <>
-struct ::fidl::WireRequest<::test_protocols::Transitional::OneWay> final {
-  int64_t x;
-
-  explicit WireRequest(int64_t x) : x(x) {}
+struct ::fidl::WireRequest<::test_protocols::Transitional::OneWay> final
+    : public ::test_protocols::wire::TransitionalOneWayRequest {
+  explicit WireRequest(int64_t x)
+      : ::test_protocols::wire::TransitionalOneWayRequest{.x = std::move(x)} {}
   WireRequest() = default;
 };
 
@@ -3512,10 +3529,10 @@ struct ::fidl::internal::TransactionalRequest<
 };
 
 template <>
-struct ::fidl::WireEvent<::test_protocols::Transitional::Event> final {
-  int64_t x;
-
-  explicit WireEvent(int64_t x) : x(x) {}
+struct ::fidl::WireEvent<::test_protocols::Transitional::Event> final
+    : public ::test_protocols::wire::TransitionalEventRequest {
+  explicit WireEvent(int64_t x)
+      : ::test_protocols::wire::TransitionalEventRequest{.x = std::move(x)} {}
   WireEvent() = default;
 };
 
@@ -4225,11 +4242,11 @@ struct ::fidl::internal::WireServerDispatcher<::test_protocols::MethodWithUnion>
 #endif  // __Fuchsia__
 
 template <>
-struct ::fidl::WireRequest<::test_protocols::MethodWithUnion::UnionMethod>
-    final {
-  ::test_protocols::wire::TheUnion u;
-
-  explicit WireRequest(::test_protocols::wire::TheUnion u) : u(u) {}
+struct ::fidl::WireRequest<::test_protocols::MethodWithUnion::UnionMethod> final
+    : public ::test_protocols::wire::MethodWithUnionUnionMethodRequest {
+  explicit WireRequest(::test_protocols::wire::TheUnion u)
+      : ::test_protocols::wire::MethodWithUnionUnionMethodRequest{
+            .u = std::move(u)} {}
   WireRequest() = default;
 };
 
@@ -4564,13 +4581,12 @@ struct ::fidl::internal::WireServerDispatcher<
 #ifdef __Fuchsia__
 
 template <>
-struct ::fidl::WireRequest<::test_protocols::WithProtocolEnds::ClientEnds>
-    final {
-  ::fidl::ClientEnd<::test_protocols::DiscoverableProtocol> in;
-
+struct ::fidl::WireRequest<::test_protocols::WithProtocolEnds::ClientEnds> final
+    : public ::test_protocols::wire::WithProtocolEndsClientEndsRequest {
   explicit WireRequest(
       ::fidl::ClientEnd<::test_protocols::DiscoverableProtocol>&& in)
-      : in(std::move(in)) {}
+      : ::test_protocols::wire::WithProtocolEndsClientEndsRequest{
+            .in = std::move(in)} {}
   WireRequest() = default;
   using ResponseType =
       ::fidl::WireResponse<::test_protocols::WithProtocolEnds::ClientEnds>;
@@ -4606,12 +4622,12 @@ struct ::fidl::internal::TransactionalRequest<
 
 template <>
 struct ::fidl::WireResponse<::test_protocols::WithProtocolEnds::ClientEnds>
-    final {
-  ::fidl::ClientEnd<::test_protocols::DiscoverableProtocol> out;
-
+    final
+    : public ::test_protocols::wire::WithProtocolEndsClientEndsTopResponse {
   explicit WireResponse(
       ::fidl::ClientEnd<::test_protocols::DiscoverableProtocol>&& out)
-      : out(std::move(out)) {}
+      : ::test_protocols::wire::WithProtocolEndsClientEndsTopResponse{
+            .out = std::move(out)} {}
   WireResponse() = default;
   void _CloseHandles();
 };
@@ -4641,13 +4657,12 @@ struct ::fidl::internal::TransactionalResponse<
 #ifdef __Fuchsia__
 
 template <>
-struct ::fidl::WireRequest<::test_protocols::WithProtocolEnds::ServerEnds>
-    final {
-  ::fidl::ServerEnd<::test_protocols::DiscoverableProtocol> in;
-
+struct ::fidl::WireRequest<::test_protocols::WithProtocolEnds::ServerEnds> final
+    : public ::test_protocols::wire::WithProtocolEndsServerEndsRequest {
   explicit WireRequest(
       ::fidl::ServerEnd<::test_protocols::DiscoverableProtocol>&& in)
-      : in(std::move(in)) {}
+      : ::test_protocols::wire::WithProtocolEndsServerEndsRequest{
+            .in = std::move(in)} {}
   WireRequest() = default;
   using ResponseType =
       ::fidl::WireResponse<::test_protocols::WithProtocolEnds::ServerEnds>;
@@ -4683,12 +4698,12 @@ struct ::fidl::internal::TransactionalRequest<
 
 template <>
 struct ::fidl::WireResponse<::test_protocols::WithProtocolEnds::ServerEnds>
-    final {
-  ::fidl::ServerEnd<::test_protocols::DiscoverableProtocol> out;
-
+    final
+    : public ::test_protocols::wire::WithProtocolEndsServerEndsTopResponse {
   explicit WireResponse(
       ::fidl::ServerEnd<::test_protocols::DiscoverableProtocol>&& out)
-      : out(std::move(out)) {}
+      : ::test_protocols::wire::WithProtocolEndsServerEndsTopResponse{
+            .out = std::move(out)} {}
   WireResponse() = default;
   void _CloseHandles();
 };
@@ -4720,11 +4735,11 @@ struct ::fidl::internal::TransactionalResponse<
 template <>
 struct ::fidl::WireRequest<
     ::test_protocols::WithProtocolEnds::StructContainingEnds>
-    final {
-  ::test_protocols::wire::ProtocolEnds in;
-
+    final : public ::test_protocols::wire::
+                WithProtocolEndsStructContainingEndsRequest {
   explicit WireRequest(::test_protocols::wire::ProtocolEnds&& in)
-      : in(std::move(in)) {}
+      : ::test_protocols::wire::WithProtocolEndsStructContainingEndsRequest{
+            .in = std::move(in)} {}
   WireRequest() = default;
   using ResponseType = ::fidl::WireResponse<
       ::test_protocols::WithProtocolEnds::StructContainingEnds>;
@@ -4761,11 +4776,11 @@ struct ::fidl::internal::TransactionalRequest<
 template <>
 struct ::fidl::WireResponse<
     ::test_protocols::WithProtocolEnds::StructContainingEnds>
-    final {
-  ::test_protocols::wire::ProtocolEnds out;
-
+    final : public ::test_protocols::wire::
+                WithProtocolEndsStructContainingEndsTopResponse {
   explicit WireResponse(::test_protocols::wire::ProtocolEnds&& out)
-      : out(std::move(out)) {}
+      : ::test_protocols::wire::WithProtocolEndsStructContainingEndsTopResponse{
+            .out = std::move(out)} {}
   WireResponse() = default;
   void _CloseHandles();
 };
@@ -6146,41 +6161,27 @@ struct ::fidl::internal::WireServerDispatcher<::test_protocols::ManyParameters>
 #endif  // __Fuchsia__
 
 template <>
-struct ::fidl::WireRequest<::test_protocols::ManyParameters::Fifteen> final {
-  bool p1;
-  bool p2;
-  bool p3;
-  bool p4;
-  bool p5;
-  bool p6;
-  bool p7;
-  bool p8;
-  bool p9;
-  bool p10;
-  bool p11;
-  bool p12;
-  bool p13;
-  bool p14;
-  bool p15;
-
+struct ::fidl::WireRequest<::test_protocols::ManyParameters::Fifteen> final
+    : public ::test_protocols::wire::ManyParametersFifteenRequest {
   explicit WireRequest(bool p1, bool p2, bool p3, bool p4, bool p5, bool p6,
                        bool p7, bool p8, bool p9, bool p10, bool p11, bool p12,
                        bool p13, bool p14, bool p15)
-      : p1(p1),
-        p2(p2),
-        p3(p3),
-        p4(p4),
-        p5(p5),
-        p6(p6),
-        p7(p7),
-        p8(p8),
-        p9(p9),
-        p10(p10),
-        p11(p11),
-        p12(p12),
-        p13(p13),
-        p14(p14),
-        p15(p15) {}
+      : ::test_protocols::wire::ManyParametersFifteenRequest{
+            .p1 = std::move(p1),
+            .p2 = std::move(p2),
+            .p3 = std::move(p3),
+            .p4 = std::move(p4),
+            .p5 = std::move(p5),
+            .p6 = std::move(p6),
+            .p7 = std::move(p7),
+            .p8 = std::move(p8),
+            .p9 = std::move(p9),
+            .p10 = std::move(p10),
+            .p11 = std::move(p11),
+            .p12 = std::move(p12),
+            .p13 = std::move(p13),
+            .p14 = std::move(p14),
+            .p15 = std::move(p15)} {}
   WireRequest() = default;
 };
 
@@ -6585,14 +6586,14 @@ struct ::fidl::internal::TransactionalRequest<
 
 template <>
 struct ::fidl::WireResponse<::test_protocols::WithErrorSyntax::ResponseAsStruct>
-    final {
+    final : public ::test_protocols::wire::
+                WithErrorSyntaxResponseAsStructTopResponse {
   using Result = test_protocols::wire::WithErrorSyntaxResponseAsStructResult;
-
-  ::test_protocols::wire::WithErrorSyntaxResponseAsStructResult result;
 
   explicit WireResponse(
       ::test_protocols::wire::WithErrorSyntaxResponseAsStructResult result)
-      : result(result) {}
+      : ::test_protocols::wire::WithErrorSyntaxResponseAsStructTopResponse{
+            .result = std::move(result)} {}
   WireResponse() = default;
 };
 
@@ -6642,14 +6643,14 @@ struct ::fidl::internal::TransactionalRequest<
 
 template <>
 struct ::fidl::WireResponse<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>
-    final {
+    final : public ::test_protocols::wire::
+                WithErrorSyntaxErrorAsPrimitiveTopResponse {
   using Result = test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResult;
-
-  ::test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResult result;
 
   explicit WireResponse(
       ::test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResult result)
-      : result(result) {}
+      : ::test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveTopResponse{
+            .result = std::move(result)} {}
   WireResponse() = default;
 };
 
@@ -6699,14 +6700,14 @@ struct ::fidl::internal::TransactionalRequest<
 
 template <>
 struct ::fidl::WireResponse<::test_protocols::WithErrorSyntax::ErrorAsEnum>
-    final {
+    final
+    : public ::test_protocols::wire::WithErrorSyntaxErrorAsEnumTopResponse {
   using Result = test_protocols::wire::WithErrorSyntaxErrorAsEnumResult;
-
-  ::test_protocols::wire::WithErrorSyntaxErrorAsEnumResult result;
 
   explicit WireResponse(
       ::test_protocols::wire::WithErrorSyntaxErrorAsEnumResult result)
-      : result(result) {}
+      : ::test_protocols::wire::WithErrorSyntaxErrorAsEnumTopResponse{
+            .result = std::move(result)} {}
   WireResponse() = default;
 };
 
@@ -6756,14 +6757,14 @@ struct ::fidl::internal::TransactionalRequest<
 
 template <>
 struct ::fidl::WireResponse<::test_protocols::WithErrorSyntax::HandleInResult>
-    final {
+    final
+    : public ::test_protocols::wire::WithErrorSyntaxHandleInResultTopResponse {
   using Result = test_protocols::wire::WithErrorSyntaxHandleInResultResult;
-
-  ::test_protocols::wire::WithErrorSyntaxHandleInResultResult result;
 
   explicit WireResponse(
       ::test_protocols::wire::WithErrorSyntaxHandleInResultResult result)
-      : result(std::move(result)) {}
+      : ::test_protocols::wire::WithErrorSyntaxHandleInResultTopResponse{
+            .result = std::move(result)} {}
   WireResponse() = default;
   void _CloseHandles();
 };
@@ -8734,11 +8735,11 @@ struct ::fidl::internal::WireServerDispatcher<::test_protocols::ChannelProtocol>
 #endif  // __Fuchsia__
 
 template <>
-struct ::fidl::WireRequest<::test_protocols::ChannelProtocol::MethodA> final {
-  int64_t a;
-  int64_t b;
-
-  explicit WireRequest(int64_t a, int64_t b) : a(a), b(b) {}
+struct ::fidl::WireRequest<::test_protocols::ChannelProtocol::MethodA> final
+    : public ::test_protocols::wire::ChannelProtocolMethodARequest {
+  explicit WireRequest(int64_t a, int64_t b)
+      : ::test_protocols::wire::ChannelProtocolMethodARequest{
+            .a = std::move(a), .b = std::move(b)} {}
   WireRequest() = default;
 };
 
@@ -8762,11 +8763,11 @@ struct ::fidl::internal::TransactionalRequest<
 };
 
 template <>
-struct ::fidl::WireEvent<::test_protocols::ChannelProtocol::EventA> final {
-  int64_t a;
-  int64_t b;
-
-  explicit WireEvent(int64_t a, int64_t b) : a(a), b(b) {}
+struct ::fidl::WireEvent<::test_protocols::ChannelProtocol::EventA> final
+    : public ::test_protocols::wire::ChannelProtocolEventARequest {
+  explicit WireEvent(int64_t a, int64_t b)
+      : ::test_protocols::wire::ChannelProtocolEventARequest{
+            .a = std::move(a), .b = std::move(b)} {}
   WireEvent() = default;
 };
 
@@ -8790,11 +8791,11 @@ struct ::fidl::internal::TransactionalEvent<
 };
 
 template <>
-struct ::fidl::WireRequest<::test_protocols::ChannelProtocol::MethodB> final {
-  int64_t a;
-  int64_t b;
-
-  explicit WireRequest(int64_t a, int64_t b) : a(a), b(b) {}
+struct ::fidl::WireRequest<::test_protocols::ChannelProtocol::MethodB> final
+    : public ::test_protocols::wire::ChannelProtocolMethodBRequest {
+  explicit WireRequest(int64_t a, int64_t b)
+      : ::test_protocols::wire::ChannelProtocolMethodBRequest{
+            .a = std::move(a), .b = std::move(b)} {}
   WireRequest() = default;
   using ResponseType =
       ::fidl::WireResponse<::test_protocols::ChannelProtocol::MethodB>;
@@ -8822,10 +8823,11 @@ struct ::fidl::internal::TransactionalRequest<
 };
 
 template <>
-struct ::fidl::WireResponse<::test_protocols::ChannelProtocol::MethodB> final {
-  int64_t result;
-
-  explicit WireResponse(int64_t result) : result(result) {}
+struct ::fidl::WireResponse<::test_protocols::ChannelProtocol::MethodB> final
+    : public ::test_protocols::wire::ChannelProtocolMethodBTopResponse {
+  explicit WireResponse(int64_t result)
+      : ::test_protocols::wire::ChannelProtocolMethodBTopResponse{
+            .result = std::move(result)} {}
   WireResponse() = default;
 };
 
@@ -8850,11 +8852,11 @@ struct ::fidl::internal::TransactionalResponse<
 #ifdef __Fuchsia__
 
 template <>
-struct ::fidl::WireRequest<::test_protocols::ChannelProtocol::TakeHandle>
-    final {
-  ::zx::handle h;
-
-  explicit WireRequest(::zx::handle&& h) : h(std::move(h)) {}
+struct ::fidl::WireRequest<::test_protocols::ChannelProtocol::TakeHandle> final
+    : public ::test_protocols::wire::ChannelProtocolTakeHandleRequest {
+  explicit WireRequest(::zx::handle&& h)
+      : ::test_protocols::wire::ChannelProtocolTakeHandleRequest{
+            .h = std::move(h)} {}
   WireRequest() = default;
   void _CloseHandles();
 };
@@ -8902,10 +8904,10 @@ struct ::fidl::internal::TransactionalResponse<
 
 template <>
 struct ::fidl::WireRequest<::test_protocols::ChannelProtocol::MutateSocket>
-    final {
-  ::zx::socket a;
-
-  explicit WireRequest(::zx::socket&& a) : a(std::move(a)) {}
+    final : public ::test_protocols::wire::ChannelProtocolMutateSocketRequest {
+  explicit WireRequest(::zx::socket&& a)
+      : ::test_protocols::wire::ChannelProtocolMutateSocketRequest{
+            .a = std::move(a)} {}
   WireRequest() = default;
   using ResponseType =
       ::fidl::WireResponse<::test_protocols::ChannelProtocol::MutateSocket>;
@@ -8939,10 +8941,11 @@ struct ::fidl::internal::TransactionalRequest<
 
 template <>
 struct ::fidl::WireResponse<::test_protocols::ChannelProtocol::MutateSocket>
-    final {
-  ::zx::socket b;
-
-  explicit WireResponse(::zx::socket&& b) : b(std::move(b)) {}
+    final
+    : public ::test_protocols::wire::ChannelProtocolMutateSocketTopResponse {
+  explicit WireResponse(::zx::socket&& b)
+      : ::test_protocols::wire::ChannelProtocolMutateSocketTopResponse{
+            .b = std::move(b)} {}
   WireResponse() = default;
   void _CloseHandles();
 };

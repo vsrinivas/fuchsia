@@ -67,11 +67,11 @@ struct ::fidl::internal::WireServerDispatcher<
 template <>
 struct ::fidl::WireRequest<
     ::test_placementofattributes::ExampleProtocol::Method>
-    final {
-  ::test_exampleusing::wire::Empty arg;
-
+    final
+    : public ::test_placementofattributes::wire::ExampleProtocolMethodRequest {
   explicit WireRequest(const ::test_exampleusing::wire::Empty& arg)
-      : arg(arg) {}
+      : ::test_placementofattributes::wire::ExampleProtocolMethodRequest{
+            .arg = std::move(arg)} {}
   WireRequest() = default;
 };
 

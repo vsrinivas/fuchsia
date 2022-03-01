@@ -22,4 +22,205 @@
 #include <fidl/test.protocolrequest/cpp/common_types.h>
 #include <fidl/test.protocolrequest/cpp/markers.h>
 
-namespace fidl {}  // namespace fidl
+namespace test_protocolrequest {
+namespace wire {
+struct ParentTakeChildRequestRequest;
+
+struct ParentTakeChildRequest;
+
+struct ParentGetChildTopResponse;
+
+struct ParentGetChildRequestTopResponse;
+
+#ifdef __Fuchsia__
+
+extern "C" const fidl_type_t
+    test_protocolrequest_ParentTakeChildRequestRequestTable;
+
+struct ParentTakeChildRequestRequest {
+  ::fidl::ServerEnd<::test_protocolrequest::Child> r = {};
+
+  void _CloseHandles();
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+extern "C" const fidl_type_t test_protocolrequest_ParentTakeChildRequestTable;
+
+struct ParentTakeChildRequest {
+  ::fidl::ClientEnd<::test_protocolrequest::Child> c = {};
+
+  void _CloseHandles();
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+extern "C" const fidl_type_t
+    test_protocolrequest_ParentGetChildTopResponseTable;
+
+struct ParentGetChildTopResponse {
+  ::fidl::ClientEnd<::test_protocolrequest::Child> c = {};
+
+  void _CloseHandles();
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+extern "C" const fidl_type_t
+    test_protocolrequest_ParentGetChildRequestTopResponseTable;
+
+struct ParentGetChildRequestTopResponse {
+  ::fidl::ServerEnd<::test_protocolrequest::Child> r = {};
+
+  void _CloseHandles();
+};
+#endif  // __Fuchsia__
+
+}  // namespace wire
+}  // namespace test_protocolrequest
+namespace fidl {
+
+#ifdef __Fuchsia__
+template <>
+struct IsResource<::test_protocolrequest::wire::ParentTakeChildRequestRequest>
+    : public std::true_type {};
+
+template <>
+struct TypeTraits<::test_protocolrequest::wire::ParentTakeChildRequestRequest> {
+  static constexpr const fidl_type_t* kType =
+      &::test_protocolrequest::wire::
+          test_protocolrequest_ParentTakeChildRequestRequestTable;
+  static constexpr uint32_t kMaxNumHandles = 1;
+  static constexpr uint32_t kPrimarySize = 4;
+  static constexpr uint32_t kPrimarySizeV1 = 4;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasPointer = false;
+};
+
+template <>
+struct IsFidlType<::test_protocolrequest::wire::ParentTakeChildRequestRequest>
+    : public std::true_type {};
+template <>
+struct IsStruct<::test_protocolrequest::wire::ParentTakeChildRequestRequest>
+    : public std::true_type {};
+static_assert(std::is_standard_layout_v<
+              ::test_protocolrequest::wire::ParentTakeChildRequestRequest>);
+static_assert(
+    offsetof(::test_protocolrequest::wire::ParentTakeChildRequestRequest, r) ==
+    0);
+static_assert(
+    sizeof(::test_protocolrequest::wire::ParentTakeChildRequestRequest) ==
+    TypeTraits<::test_protocolrequest::wire::ParentTakeChildRequestRequest>::
+        kPrimarySize);
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+template <>
+struct IsResource<::test_protocolrequest::wire::ParentTakeChildRequest>
+    : public std::true_type {};
+
+template <>
+struct TypeTraits<::test_protocolrequest::wire::ParentTakeChildRequest> {
+  static constexpr const fidl_type_t* kType =
+      &::test_protocolrequest::wire::
+          test_protocolrequest_ParentTakeChildRequestTable;
+  static constexpr uint32_t kMaxNumHandles = 1;
+  static constexpr uint32_t kPrimarySize = 4;
+  static constexpr uint32_t kPrimarySizeV1 = 4;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasPointer = false;
+};
+
+template <>
+struct IsFidlType<::test_protocolrequest::wire::ParentTakeChildRequest>
+    : public std::true_type {};
+template <>
+struct IsStruct<::test_protocolrequest::wire::ParentTakeChildRequest>
+    : public std::true_type {};
+static_assert(std::is_standard_layout_v<
+              ::test_protocolrequest::wire::ParentTakeChildRequest>);
+static_assert(offsetof(::test_protocolrequest::wire::ParentTakeChildRequest,
+                       c) == 0);
+static_assert(sizeof(::test_protocolrequest::wire::ParentTakeChildRequest) ==
+              TypeTraits<::test_protocolrequest::wire::ParentTakeChildRequest>::
+                  kPrimarySize);
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+template <>
+struct IsResource<::test_protocolrequest::wire::ParentGetChildTopResponse>
+    : public std::true_type {};
+
+template <>
+struct TypeTraits<::test_protocolrequest::wire::ParentGetChildTopResponse> {
+  static constexpr const fidl_type_t* kType =
+      &::test_protocolrequest::wire::
+          test_protocolrequest_ParentGetChildTopResponseTable;
+  static constexpr uint32_t kMaxNumHandles = 1;
+  static constexpr uint32_t kPrimarySize = 4;
+  static constexpr uint32_t kPrimarySizeV1 = 4;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasPointer = false;
+};
+
+template <>
+struct IsFidlType<::test_protocolrequest::wire::ParentGetChildTopResponse>
+    : public std::true_type {};
+template <>
+struct IsStruct<::test_protocolrequest::wire::ParentGetChildTopResponse>
+    : public std::true_type {};
+static_assert(std::is_standard_layout_v<
+              ::test_protocolrequest::wire::ParentGetChildTopResponse>);
+static_assert(offsetof(::test_protocolrequest::wire::ParentGetChildTopResponse,
+                       c) == 0);
+static_assert(
+    sizeof(::test_protocolrequest::wire::ParentGetChildTopResponse) ==
+    TypeTraits<
+        ::test_protocolrequest::wire::ParentGetChildTopResponse>::kPrimarySize);
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+template <>
+struct IsResource<
+    ::test_protocolrequest::wire::ParentGetChildRequestTopResponse>
+    : public std::true_type {};
+
+template <>
+struct TypeTraits<
+    ::test_protocolrequest::wire::ParentGetChildRequestTopResponse> {
+  static constexpr const fidl_type_t* kType =
+      &::test_protocolrequest::wire::
+          test_protocolrequest_ParentGetChildRequestTopResponseTable;
+  static constexpr uint32_t kMaxNumHandles = 1;
+  static constexpr uint32_t kPrimarySize = 4;
+  static constexpr uint32_t kPrimarySizeV1 = 4;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasPointer = false;
+};
+
+template <>
+struct IsFidlType<
+    ::test_protocolrequest::wire::ParentGetChildRequestTopResponse>
+    : public std::true_type {};
+template <>
+struct IsStruct<::test_protocolrequest::wire::ParentGetChildRequestTopResponse>
+    : public std::true_type {};
+static_assert(std::is_standard_layout_v<
+              ::test_protocolrequest::wire::ParentGetChildRequestTopResponse>);
+static_assert(
+    offsetof(::test_protocolrequest::wire::ParentGetChildRequestTopResponse,
+             r) == 0);
+static_assert(
+    sizeof(::test_protocolrequest::wire::ParentGetChildRequestTopResponse) ==
+    TypeTraits<::test_protocolrequest::wire::ParentGetChildRequestTopResponse>::
+        kPrimarySize);
+#endif  // __Fuchsia__
+
+}  // namespace fidl

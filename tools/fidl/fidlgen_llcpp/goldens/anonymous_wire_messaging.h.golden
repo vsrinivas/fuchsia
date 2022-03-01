@@ -60,16 +60,16 @@ struct ::fidl::internal::WireServerDispatcher<::test_anonymous::SomeProtocol>
 #endif  // __Fuchsia__
 
 template <>
-struct ::fidl::WireRequest<::test_anonymous::SomeProtocol::SomeMethod> final {
+struct ::fidl::WireRequest<::test_anonymous::SomeProtocol::SomeMethod> final
+    : public ::test_anonymous::wire::SomeProtocolSomeMethodRequest {
   using UnionMember = test_anonymous::wire::UnionMember;
   using TableMember = test_anonymous::wire::TableMember;
 
-  ::test_anonymous::wire::UnionMember union_member;
-  ::test_anonymous::wire::TableMember table_member;
-
   explicit WireRequest(::test_anonymous::wire::UnionMember union_member,
                        ::test_anonymous::wire::TableMember table_member)
-      : union_member(union_member), table_member(table_member) {}
+      : ::test_anonymous::wire::SomeProtocolSomeMethodRequest{
+            .union_member = std::move(union_member),
+            .table_member = std::move(table_member)} {}
   WireRequest() = default;
   using ResponseType =
       ::fidl::WireResponse<::test_anonymous::SomeProtocol::SomeMethod>;
@@ -99,14 +99,14 @@ struct ::fidl::internal::TransactionalRequest<
 };
 
 template <>
-struct ::fidl::WireResponse<::test_anonymous::SomeProtocol::SomeMethod> final {
+struct ::fidl::WireResponse<::test_anonymous::SomeProtocol::SomeMethod> final
+    : public ::test_anonymous::wire::SomeProtocolSomeMethodTopResponse {
   using Result = test_anonymous::wire::SomeProtocolSomeMethodResult;
-
-  ::test_anonymous::wire::SomeProtocolSomeMethodResult result;
 
   explicit WireResponse(
       ::test_anonymous::wire::SomeProtocolSomeMethodResult result)
-      : result(result) {}
+      : ::test_anonymous::wire::SomeProtocolSomeMethodTopResponse{
+            .result = std::move(result)} {}
   WireResponse() = default;
 };
 

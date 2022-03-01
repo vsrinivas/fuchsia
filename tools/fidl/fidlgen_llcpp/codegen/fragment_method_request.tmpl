@@ -11,18 +11,14 @@
 {{- end }}
 
 template<>
-struct {{ .WireRequest }} final {
+struct {{ .WireRequest }} final {{- if .HasRequestPayload }} : public {{ .RequestPayload }}{{ end }} {
 {{- range .RequestAnonymousChildren }}
   using {{ .ScopedName }} = {{ .FlattenedName }};
 {{- end }}
 
   {{ if .RequestArgs }}
-    {{- range $index, $param := .RequestArgs }}
-  {{ $param.Type }} {{ $param.Name }};
-    {{- end }}
-
-  explicit {{ .WireRequest.Self }}({{ RenderParams .RequestArgs }})
-  {{ RenderInitMessage .RequestArgs }}{}
+  explicit {{ .WireRequest.Self }}({{ RenderParams .RequestArgs }}) : {{ .RequestPayload }}
+  {{- "{ " }}{{ RenderForwardStructParams .RequestArgs }}}{}
   {{- end }}
   {{ .WireRequest.Self }}() = default;
 

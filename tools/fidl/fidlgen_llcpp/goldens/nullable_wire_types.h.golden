@@ -39,6 +39,10 @@ struct StructWithNullableProtocol;
 
 struct StructWithNullableHandle;
 
+struct SimpleProtocolAddTopResponse;
+
+struct SimpleProtocolAddRequest;
+
 struct Int32Wrapper;
 
 class SimpleUnion;
@@ -75,6 +79,12 @@ struct StructWithNullableHandle {
   void _CloseHandles();
 };
 #endif  // __Fuchsia__
+
+extern "C" const fidl_type_t test_nullable_SimpleProtocolAddTopResponseTable;
+
+struct SimpleProtocolAddTopResponse {
+  int32_t sum = {};
+};
 
 extern "C" const fidl_type_t test_nullable_Int32WrapperTable;
 
@@ -190,6 +200,14 @@ extern "C" const fidl_type_t test_nullable_StructWithNullableStringTable;
 
 struct StructWithNullableString {
   ::fidl::StringView val = {};
+};
+
+extern "C" const fidl_type_t test_nullable_SimpleProtocolAddRequestTable;
+
+struct SimpleProtocolAddRequest {
+  int32_t a = {};
+
+  int32_t b = {};
 };
 
 }  // namespace wire
@@ -395,6 +413,60 @@ static_assert(
     sizeof(::test_nullable::wire::StructWithNullableHandle) ==
     TypeTraits<::test_nullable::wire::StructWithNullableHandle>::kPrimarySize);
 #endif  // __Fuchsia__
+
+template <>
+struct TypeTraits<::test_nullable::wire::SimpleProtocolAddTopResponse> {
+  static constexpr const fidl_type_t* kType =
+      &::test_nullable::wire::test_nullable_SimpleProtocolAddTopResponseTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 4;
+  static constexpr uint32_t kPrimarySizeV1 = 4;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasPointer = false;
+};
+
+template <>
+struct IsFidlType<::test_nullable::wire::SimpleProtocolAddTopResponse>
+    : public std::true_type {};
+template <>
+struct IsStruct<::test_nullable::wire::SimpleProtocolAddTopResponse>
+    : public std::true_type {};
+static_assert(std::is_standard_layout_v<
+              ::test_nullable::wire::SimpleProtocolAddTopResponse>);
+static_assert(offsetof(::test_nullable::wire::SimpleProtocolAddTopResponse,
+                       sum) == 0);
+static_assert(sizeof(::test_nullable::wire::SimpleProtocolAddTopResponse) ==
+              TypeTraits<::test_nullable::wire::SimpleProtocolAddTopResponse>::
+                  kPrimarySize);
+
+template <>
+struct TypeTraits<::test_nullable::wire::SimpleProtocolAddRequest> {
+  static constexpr const fidl_type_t* kType =
+      &::test_nullable::wire::test_nullable_SimpleProtocolAddRequestTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 8;
+  static constexpr uint32_t kPrimarySizeV1 = 8;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasPointer = false;
+};
+
+template <>
+struct IsFidlType<::test_nullable::wire::SimpleProtocolAddRequest>
+    : public std::true_type {};
+template <>
+struct IsStruct<::test_nullable::wire::SimpleProtocolAddRequest>
+    : public std::true_type {};
+static_assert(
+    std::is_standard_layout_v<::test_nullable::wire::SimpleProtocolAddRequest>);
+static_assert(offsetof(::test_nullable::wire::SimpleProtocolAddRequest, a) ==
+              0);
+static_assert(offsetof(::test_nullable::wire::SimpleProtocolAddRequest, b) ==
+              4);
+static_assert(
+    sizeof(::test_nullable::wire::SimpleProtocolAddRequest) ==
+    TypeTraits<::test_nullable::wire::SimpleProtocolAddRequest>::kPrimarySize);
 
 template <>
 struct TypeTraits<::test_nullable::wire::Int32Wrapper> {

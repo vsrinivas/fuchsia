@@ -564,6 +564,88 @@ void SimpleUnion::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
   }
 }
 
+extern "C" const fidl_type_t test_nullable_SimpleProtocolAddTopResponseTable;
+const fidl_type_t* SimpleProtocolAddTopResponse::FidlType =
+    &test_nullable_SimpleProtocolAddTopResponseTable;
+
+void SimpleProtocolAddTopResponse::Encode(
+    ::fidl::Encoder* _encoder, size_t _offset,
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  if (::fidl::IsMemcpyCompatible<SimpleProtocolAddTopResponse>::value) {
+    memcpy(_encoder->template GetPtr<SimpleProtocolAddTopResponse>(_offset),
+           this, sizeof(SimpleProtocolAddTopResponse));
+  } else {
+    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
+      ::fidl::Encode(_encoder, &sum, _offset + 0);
+
+    } else {
+      ::fidl::Encode(_encoder, &sum, _offset + 0);
+    }
+  }
+}
+
+void SimpleProtocolAddTopResponse::Decode(::fidl::Decoder* _decoder,
+                                          SimpleProtocolAddTopResponse* _value,
+                                          size_t _offset) {
+  if (::fidl::IsMemcpyCompatible<SimpleProtocolAddTopResponse>::value) {
+    memcpy(_value,
+           _decoder->template GetPtr<SimpleProtocolAddTopResponse>(_offset),
+           sizeof(SimpleProtocolAddTopResponse));
+  } else {
+    ::fidl::Decode(_decoder, &_value->sum, _offset + 0);
+  }
+}
+
+zx_status_t SimpleProtocolAddTopResponse::Clone(
+    SimpleProtocolAddTopResponse* _result) const {
+  zx_status_t _status = ::fidl::Clone(sum, &_result->sum);
+  if (_status != ZX_OK) return _status;
+  return ZX_OK;
+}
+
+extern "C" const fidl_type_t test_nullable_SimpleProtocolAddRequestTable;
+const fidl_type_t* SimpleProtocolAddRequest::FidlType =
+    &test_nullable_SimpleProtocolAddRequestTable;
+
+void SimpleProtocolAddRequest::Encode(
+    ::fidl::Encoder* _encoder, size_t _offset,
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  if (::fidl::IsMemcpyCompatible<SimpleProtocolAddRequest>::value) {
+    memcpy(_encoder->template GetPtr<SimpleProtocolAddRequest>(_offset), this,
+           sizeof(SimpleProtocolAddRequest));
+  } else {
+    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
+      ::fidl::Encode(_encoder, &a, _offset + 0);
+      ::fidl::Encode(_encoder, &b, _offset + 4);
+
+    } else {
+      ::fidl::Encode(_encoder, &a, _offset + 0);
+      ::fidl::Encode(_encoder, &b, _offset + 4);
+    }
+  }
+}
+
+void SimpleProtocolAddRequest::Decode(::fidl::Decoder* _decoder,
+                                      SimpleProtocolAddRequest* _value,
+                                      size_t _offset) {
+  if (::fidl::IsMemcpyCompatible<SimpleProtocolAddRequest>::value) {
+    memcpy(_value, _decoder->template GetPtr<SimpleProtocolAddRequest>(_offset),
+           sizeof(SimpleProtocolAddRequest));
+  } else {
+    ::fidl::Decode(_decoder, &_value->a, _offset + 0);
+    ::fidl::Decode(_decoder, &_value->b, _offset + 4);
+  }
+}
+
+zx_status_t SimpleProtocolAddRequest::Clone(
+    SimpleProtocolAddRequest* _result) const {
+  zx_status_t _status = ::fidl::Clone(a, &_result->a);
+  if (_status != ZX_OK) return _status;
+  _status = ::fidl::Clone(b, &_result->b);
+  if (_status != ZX_OK) return _status;
+  return ZX_OK;
+}
+
 extern "C" const fidl_type_t test_nullable_Int32WrapperTable;
 const fidl_type_t* Int32Wrapper::FidlType = &test_nullable_Int32WrapperTable;
 

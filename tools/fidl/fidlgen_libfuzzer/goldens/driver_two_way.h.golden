@@ -11,4 +11,45 @@
 // For uint64_t.
 #include <stdint.h>
 
-namespace fuzzing {}  // namespace fuzzing
+namespace fuzzing {
+
+using TwoWayAddTopResponse = ::test::drivertwoway::TwoWayAddTopResponse;
+using TwoWayAddRequest = ::test::drivertwoway::TwoWayAddRequest;
+
+template <>
+struct MinSize<TwoWayAddTopResponse> {
+  operator size_t() { return MinSize<uint16_t>(); }
+};
+template <>
+struct Allocate<TwoWayAddTopResponse> {
+  TwoWayAddTopResponse operator()(FuzzInput* src, size_t* size) {
+    ZX_ASSERT(*size >= MinSize<TwoWayAddTopResponse>());
+    TwoWayAddTopResponse out;
+    const size_t slack_per_member =
+        (*size - MinSize<TwoWayAddTopResponse>()) / 1;
+    size_t out_size;
+    out_size = MinSize<uint16_t>() + slack_per_member;
+    out.sum = Allocate<uint16_t>{}(src, &out_size);
+    return out;
+  }
+};
+template <>
+struct MinSize<TwoWayAddRequest> {
+  operator size_t() { return MinSize<uint16_t>() + MinSize<uint16_t>(); }
+};
+template <>
+struct Allocate<TwoWayAddRequest> {
+  TwoWayAddRequest operator()(FuzzInput* src, size_t* size) {
+    ZX_ASSERT(*size >= MinSize<TwoWayAddRequest>());
+    TwoWayAddRequest out;
+    const size_t slack_per_member = (*size - MinSize<TwoWayAddRequest>()) / 2;
+    size_t out_size;
+    out_size = MinSize<uint16_t>() + slack_per_member;
+    out.addend1 = Allocate<uint16_t>{}(src, &out_size);
+    out_size = MinSize<uint16_t>() + slack_per_member;
+    out.addend2 = Allocate<uint16_t>{}(src, &out_size);
+    return out;
+  }
+};
+
+}  // namespace fuzzing

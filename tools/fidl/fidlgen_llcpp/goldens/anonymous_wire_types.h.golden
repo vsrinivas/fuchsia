@@ -33,9 +33,13 @@ using Op = ::test_anonymous::Op;
 
 struct TableData;
 
+struct SomeProtocolSomeMethodRequest;
+
 struct OverrideTest;
 
 struct SomeProtocolSomeMethodResponse;
+
+struct SomeProtocolSomeMethodTopResponse;
 
 class TableMember;
 
@@ -718,6 +722,17 @@ class SomeProtocolSomeMethodResult {
   ::fidl::UntypedEnvelope envelope_;
 };
 
+extern "C" const fidl_type_t test_anonymous_SomeProtocolSomeMethodRequestTable;
+
+struct SomeProtocolSomeMethodRequest {
+  using UnionMember = test_anonymous::wire::UnionMember;
+  using TableMember = test_anonymous::wire::TableMember;
+
+  ::test_anonymous::wire::UnionMember union_member = {};
+
+  ::test_anonymous::wire::TableMember table_member = {};
+};
+
 extern "C" const fidl_type_t test_anonymous_OverrideTestTable;
 
 struct OverrideTest {
@@ -728,6 +743,15 @@ struct OverrideTest {
   ::test_anonymous::wire::Expression left = {};
 
   ::test_anonymous::wire::Expression right = {};
+};
+
+extern "C" const fidl_type_t
+    test_anonymous_SomeProtocolSomeMethodTopResponseTable;
+
+struct SomeProtocolSomeMethodTopResponse {
+  using Result = test_anonymous::wire::SomeProtocolSomeMethodResult;
+
+  ::test_anonymous::wire::SomeProtocolSomeMethodResult result = {};
 };
 
 }  // namespace wire
@@ -754,6 +778,36 @@ static_assert(std::is_standard_layout_v<::test_anonymous::wire::TableData>);
 static_assert(offsetof(::test_anonymous::wire::TableData, data) == 0);
 static_assert(sizeof(::test_anonymous::wire::TableData) ==
               TypeTraits<::test_anonymous::wire::TableData>::kPrimarySize);
+
+template <>
+struct TypeTraits<::test_anonymous::wire::SomeProtocolSomeMethodRequest> {
+  static constexpr const fidl_type_t* kType =
+      &::test_anonymous::wire::
+          test_anonymous_SomeProtocolSomeMethodRequestTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 32;
+  static constexpr uint32_t kPrimarySizeV1 = 40;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 48;
+  static constexpr uint32_t kMaxOutOfLineV1 = 72;
+  static constexpr bool kHasPointer = true;
+};
+
+template <>
+struct IsFidlType<::test_anonymous::wire::SomeProtocolSomeMethodRequest>
+    : public std::true_type {};
+template <>
+struct IsStruct<::test_anonymous::wire::SomeProtocolSomeMethodRequest>
+    : public std::true_type {};
+static_assert(std::is_standard_layout_v<
+              ::test_anonymous::wire::SomeProtocolSomeMethodRequest>);
+static_assert(offsetof(::test_anonymous::wire::SomeProtocolSomeMethodRequest,
+                       union_member) == 0);
+static_assert(offsetof(::test_anonymous::wire::SomeProtocolSomeMethodRequest,
+                       table_member) == 16);
+static_assert(
+    sizeof(::test_anonymous::wire::SomeProtocolSomeMethodRequest) ==
+    TypeTraits<
+        ::test_anonymous::wire::SomeProtocolSomeMethodRequest>::kPrimarySize);
 
 template <>
 struct TypeTraits<::test_anonymous::wire::OverrideTest> {
@@ -807,6 +861,35 @@ static_assert(
     sizeof(::test_anonymous::wire::SomeProtocolSomeMethodResponse) ==
     TypeTraits<
         ::test_anonymous::wire::SomeProtocolSomeMethodResponse>::kPrimarySize);
+
+template <>
+struct TypeTraits<::test_anonymous::wire::SomeProtocolSomeMethodTopResponse> {
+  static constexpr const fidl_type_t* kType =
+      &::test_anonymous::wire::
+          test_anonymous_SomeProtocolSomeMethodTopResponseTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 24;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 8;
+  static constexpr bool kHasPointer = true;
+};
+
+template <>
+struct IsFidlType<::test_anonymous::wire::SomeProtocolSomeMethodTopResponse>
+    : public std::true_type {};
+template <>
+struct IsStruct<::test_anonymous::wire::SomeProtocolSomeMethodTopResponse>
+    : public std::true_type {};
+static_assert(std::is_standard_layout_v<
+              ::test_anonymous::wire::SomeProtocolSomeMethodTopResponse>);
+static_assert(
+    offsetof(::test_anonymous::wire::SomeProtocolSomeMethodTopResponse,
+             result) == 0);
+static_assert(
+    sizeof(::test_anonymous::wire::SomeProtocolSomeMethodTopResponse) ==
+    TypeTraits<::test_anonymous::wire::SomeProtocolSomeMethodTopResponse>::
+        kPrimarySize);
 
 template <>
 struct TypeTraits<::test_anonymous::wire::TableMember> {

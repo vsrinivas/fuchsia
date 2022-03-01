@@ -13,6 +13,10 @@ class Example_foo_Response;
 
 class Example_foo_Result;
 
+class ExampleFooTopResponse;
+
+class ExampleFooRequest;
+
 #ifdef __Fuchsia__
 
 class Example;
@@ -163,6 +167,56 @@ inline zx_status_t Clone(const ::test::error::Example_foo_Result& value,
 }
 
 using Example_foo_ResultPtr = ::std::unique_ptr<Example_foo_Result>;
+
+class ExampleFooTopResponse final {
+ public:
+  static const fidl_type_t* FidlType;
+
+  ::test::error::Example_foo_Result result{};
+
+  static inline ::std::unique_ptr<ExampleFooTopResponse> New() {
+    return ::std::make_unique<ExampleFooTopResponse>();
+  }
+
+  void Encode(::fidl::Encoder* _encoder, size_t _offset,
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
+                  cpp17::nullopt);
+  static void Decode(::fidl::Decoder* _decoder, ExampleFooTopResponse* value,
+                     size_t _offset);
+  zx_status_t Clone(ExampleFooTopResponse* result) const;
+};
+
+inline zx_status_t Clone(const ::test::error::ExampleFooTopResponse& _value,
+                         ::test::error::ExampleFooTopResponse* _result) {
+  return _value.Clone(_result);
+}
+
+using ExampleFooTopResponsePtr = ::std::unique_ptr<ExampleFooTopResponse>;
+
+class ExampleFooRequest final {
+ public:
+  static const fidl_type_t* FidlType;
+
+  ::std::string s{};
+
+  static inline ::std::unique_ptr<ExampleFooRequest> New() {
+    return ::std::make_unique<ExampleFooRequest>();
+  }
+
+  void Encode(::fidl::Encoder* _encoder, size_t _offset,
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
+                  cpp17::nullopt);
+  static void Decode(::fidl::Decoder* _decoder, ExampleFooRequest* value,
+                     size_t _offset);
+  zx_status_t Clone(ExampleFooRequest* result) const;
+};
+
+inline zx_status_t Clone(const ::test::error::ExampleFooRequest& _value,
+                         ::test::error::ExampleFooRequest* _result) {
+  return _value.Clone(_result);
+}
+
+using ExampleFooRequestPtr = ::std::unique_ptr<ExampleFooRequest>;
 
 #ifdef __Fuchsia__
 
@@ -328,6 +382,64 @@ struct Equality<::test::error::Example_foo_Result> {
       default:
         return false;
     }
+  }
+};
+template <>
+struct CodingTraits<::test::error::ExampleFooTopResponse>
+    : public EncodableCodingTraits<::test::error::ExampleFooTopResponse, 24,
+                                   16> {};
+
+template <>
+struct HasPadding<::test::error::ExampleFooTopResponse>
+    : public std::true_type {};
+
+template <>
+struct IsMemcpyCompatible<::test::error::ExampleFooTopResponse>
+    : public internal::BoolConstant<
+          !HasPadding<::test::error::ExampleFooTopResponse>::value &&
+          IsMemcpyCompatible<::test::error::Example_foo_Result>::value> {};
+
+inline zx_status_t Clone(const ::test::error::ExampleFooTopResponse& value,
+                         ::test::error::ExampleFooTopResponse* result) {
+  return ::test::error::Clone(value, result);
+}
+
+template <>
+struct Equality<::test::error::ExampleFooTopResponse> {
+  bool operator()(const ::test::error::ExampleFooTopResponse& _lhs,
+                  const ::test::error::ExampleFooTopResponse& _rhs) const {
+    if (!::fidl::Equals(_lhs.result, _rhs.result)) {
+      return false;
+    }
+    return true;
+  }
+};
+template <>
+struct CodingTraits<::test::error::ExampleFooRequest>
+    : public EncodableCodingTraits<::test::error::ExampleFooRequest, 16, 16> {};
+
+template <>
+struct HasPadding<::test::error::ExampleFooRequest> : public std::true_type {};
+
+template <>
+struct IsMemcpyCompatible<::test::error::ExampleFooRequest>
+    : public internal::BoolConstant<
+          !HasPadding<::test::error::ExampleFooRequest>::value &&
+          IsMemcpyCompatible<::std::string>::value> {};
+
+inline zx_status_t Clone(const ::test::error::ExampleFooRequest& value,
+                         ::test::error::ExampleFooRequest* result) {
+  return ::test::error::Clone(value, result);
+}
+
+template <>
+struct Equality<::test::error::ExampleFooRequest> {
+  bool operator()(const ::test::error::ExampleFooRequest& _lhs,
+                  const ::test::error::ExampleFooRequest& _rhs) const {
+    if (!::fidl::Equals(_lhs.s, _rhs.s)) {
+      return false;
+    }
+    return true;
   }
 };
 

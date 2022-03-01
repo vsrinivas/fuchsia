@@ -18,6 +18,8 @@ using ExampleXUnion = ::test::placementofattributes::ExampleXUnion;
 using ExampleUnion = ::test::placementofattributes::ExampleUnion;
 using ExampleTable = ::test::placementofattributes::ExampleTable;
 using ExampleStruct = ::test::placementofattributes::ExampleStruct;
+using ExampleProtocolMethodRequest =
+    ::test::placementofattributes::ExampleProtocolMethodRequest;
 using ExampleEnum = ::test::placementofattributes::ExampleEnum;
 using ExampleBits = ::test::placementofattributes::ExampleBits;
 
@@ -108,6 +110,23 @@ struct Allocate<ExampleStruct> {
     size_t out_size;
     out_size = MinSize<uint32_t>() + slack_per_member;
     out.member = Allocate<uint32_t>{}(src, &out_size);
+    return out;
+  }
+};
+template <>
+struct MinSize<ExampleProtocolMethodRequest> {
+  operator size_t() { return MinSize<::test::exampleusing::Empty>(); }
+};
+template <>
+struct Allocate<ExampleProtocolMethodRequest> {
+  ExampleProtocolMethodRequest operator()(FuzzInput* src, size_t* size) {
+    ZX_ASSERT(*size >= MinSize<ExampleProtocolMethodRequest>());
+    ExampleProtocolMethodRequest out;
+    const size_t slack_per_member =
+        (*size - MinSize<ExampleProtocolMethodRequest>()) / 1;
+    size_t out_size;
+    out_size = MinSize<::test::exampleusing::Empty>() + slack_per_member;
+    out.arg = Allocate<::test::exampleusing::Empty>{}(src, &out_size);
     return out;
   }
 };

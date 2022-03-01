@@ -217,10 +217,10 @@ struct ::fidl::internal::WireServerDispatcher<
 template <>
 struct ::fidl::WireRequest<
     ::test_protocolpayloads::MainProtocol::OneWayComposed>
-    final {
-  int32_t a;
-
-  explicit WireRequest(int32_t a) : a(a) {}
+    final : public ::test_protocolpayloads_imported::wire::ImportStructPayload {
+  explicit WireRequest(int32_t a)
+      : ::test_protocolpayloads_imported::wire::ImportStructPayload{
+            .a = std::move(a)} {}
   WireRequest() = default;
 };
 
@@ -247,10 +247,10 @@ struct ::fidl::internal::TransactionalRequest<
 template <>
 struct ::fidl::WireRequest<
     ::test_protocolpayloads::MainProtocol::TwoWayComposed>
-    final {
-  int32_t a;
-
-  explicit WireRequest(int32_t a) : a(a) {}
+    final : public ::test_protocolpayloads_imported::wire::ImportStructPayload {
+  explicit WireRequest(int32_t a)
+      : ::test_protocolpayloads_imported::wire::ImportStructPayload{
+            .a = std::move(a)} {}
   WireRequest() = default;
   using ResponseType = ::fidl::WireResponse<
       ::test_protocolpayloads::MainProtocol::TwoWayComposed>;
@@ -281,10 +281,10 @@ struct ::fidl::internal::TransactionalRequest<
 template <>
 struct ::fidl::WireResponse<
     ::test_protocolpayloads::MainProtocol::TwoWayComposed>
-    final {
-  int32_t a;
-
-  explicit WireResponse(int32_t a) : a(a) {}
+    final : public ::test_protocolpayloads_imported::wire::ImportStructPayload {
+  explicit WireResponse(int32_t a)
+      : ::test_protocolpayloads_imported::wire::ImportStructPayload{
+            .a = std::move(a)} {}
   WireResponse() = default;
 };
 
@@ -311,10 +311,10 @@ struct ::fidl::internal::TransactionalResponse<
 template <>
 struct ::fidl::WireRequest<
     ::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>
-    final {
-  int32_t a;
-
-  explicit WireRequest(int32_t a) : a(a) {}
+    final : public ::test_protocolpayloads_imported::wire::ImportStructPayload {
+  explicit WireRequest(int32_t a)
+      : ::test_protocolpayloads_imported::wire::ImportStructPayload{
+            .a = std::move(a)} {}
   WireRequest() = default;
   using ResponseType = ::fidl::WireResponse<
       ::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>;
@@ -347,14 +347,14 @@ struct ::fidl::internal::TransactionalRequest<
 template <>
 struct ::fidl::WireResponse<
     ::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>
-    final {
-  ::test_protocolpayloads_imported::wire::
-      ComposedProtocolTwoWayComposedWithErrorResult result;
-
+    final : public ::test_protocolpayloads_imported::wire::
+                ComposedProtocolTwoWayComposedWithErrorTopResponse {
   explicit WireResponse(
       ::test_protocolpayloads_imported::wire::
           ComposedProtocolTwoWayComposedWithErrorResult result)
-      : result(result) {}
+      : ::test_protocolpayloads_imported::wire::
+            ComposedProtocolTwoWayComposedWithErrorTopResponse{
+                .result = std::move(result)} {}
   WireResponse() = default;
 };
 
@@ -384,10 +384,10 @@ struct ::fidl::internal::TransactionalResponse<
 
 template <>
 struct ::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnComposed>
-    final {
-  int32_t a;
-
-  explicit WireEvent(int32_t a) : a(a) {}
+    final : public ::test_protocolpayloads_imported::wire::ImportStructPayload {
+  explicit WireEvent(int32_t a)
+      : ::test_protocolpayloads_imported::wire::ImportStructPayload{
+            .a = std::move(a)} {}
   WireEvent() = default;
 };
 
@@ -413,13 +413,13 @@ struct ::fidl::internal::TransactionalEvent<
 template <>
 struct ::fidl::WireEvent<
     ::test_protocolpayloads::MainProtocol::OnComposedWithError>
-    final {
-  ::test_protocolpayloads_imported::wire::
-      ComposedProtocolOnComposedWithErrorResult result;
-
+    final : public ::test_protocolpayloads_imported::wire::
+                ComposedProtocolOnComposedWithErrorRequest {
   explicit WireEvent(::test_protocolpayloads_imported::wire::
                          ComposedProtocolOnComposedWithErrorResult result)
-      : result(result) {}
+      : ::test_protocolpayloads_imported::wire::
+            ComposedProtocolOnComposedWithErrorRequest{.result =
+                                                           std::move(result)} {}
   WireEvent() = default;
 };
 
@@ -448,11 +448,10 @@ struct ::fidl::internal::TransactionalEvent<
 
 template <>
 struct ::fidl::WireRequest<::test_protocolpayloads::MainProtocol::OneWayLocal>
-    final {
-  uint32_t a;
-  uint32_t b;
-
-  explicit WireRequest(uint32_t a, uint32_t b) : a(a), b(b) {}
+    final : public ::test_protocolpayloads::wire::LocalStructPayload {
+  explicit WireRequest(uint32_t a, uint32_t b)
+      : ::test_protocolpayloads::wire::LocalStructPayload{.a = std::move(a),
+                                                          .b = std::move(b)} {}
   WireRequest() = default;
 };
 
@@ -477,11 +476,10 @@ struct ::fidl::internal::TransactionalRequest<
 
 template <>
 struct ::fidl::WireRequest<::test_protocolpayloads::MainProtocol::TwoWayLocal>
-    final {
-  uint32_t a;
-  uint32_t b;
-
-  explicit WireRequest(uint32_t a, uint32_t b) : a(a), b(b) {}
+    final : public ::test_protocolpayloads::wire::LocalStructPayload {
+  explicit WireRequest(uint32_t a, uint32_t b)
+      : ::test_protocolpayloads::wire::LocalStructPayload{.a = std::move(a),
+                                                          .b = std::move(b)} {}
   WireRequest() = default;
   using ResponseType =
       ::fidl::WireResponse<::test_protocolpayloads::MainProtocol::TwoWayLocal>;
@@ -510,11 +508,10 @@ struct ::fidl::internal::TransactionalRequest<
 
 template <>
 struct ::fidl::WireResponse<::test_protocolpayloads::MainProtocol::TwoWayLocal>
-    final {
-  uint32_t a;
-  uint32_t b;
-
-  explicit WireResponse(uint32_t a, uint32_t b) : a(a), b(b) {}
+    final : public ::test_protocolpayloads::wire::LocalStructPayload {
+  explicit WireResponse(uint32_t a, uint32_t b)
+      : ::test_protocolpayloads::wire::LocalStructPayload{.a = std::move(a),
+                                                          .b = std::move(b)} {}
   WireResponse() = default;
 };
 
@@ -540,11 +537,10 @@ struct ::fidl::internal::TransactionalResponse<
 template <>
 struct ::fidl::WireRequest<
     ::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>
-    final {
-  uint32_t a;
-  uint32_t b;
-
-  explicit WireRequest(uint32_t a, uint32_t b) : a(a), b(b) {}
+    final : public ::test_protocolpayloads::wire::LocalStructPayload {
+  explicit WireRequest(uint32_t a, uint32_t b)
+      : ::test_protocolpayloads::wire::LocalStructPayload{.a = std::move(a),
+                                                          .b = std::move(b)} {}
   WireRequest() = default;
   using ResponseType = ::fidl::WireResponse<
       ::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>;
@@ -577,16 +573,18 @@ struct ::fidl::internal::TransactionalRequest<
 template <>
 struct ::fidl::WireResponse<
     ::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>
-    final {
+    final : public ::test_protocolpayloads::wire::
+                MainProtocolTwoWayLocalWithErrorTopResponse {
   using Result =
       test_protocolpayloads::wire::MainProtocolTwoWayLocalWithErrorResult;
-
-  ::test_protocolpayloads::wire::MainProtocolTwoWayLocalWithErrorResult result;
 
   explicit WireResponse(
       ::test_protocolpayloads::wire::MainProtocolTwoWayLocalWithErrorResult
           result)
-      : result(result) {}
+      : ::test_protocolpayloads::wire::
+            MainProtocolTwoWayLocalWithErrorTopResponse{.result =
+                                                            std::move(result)} {
+  }
   WireResponse() = default;
 };
 
@@ -615,11 +613,11 @@ struct ::fidl::internal::TransactionalResponse<
 };
 
 template <>
-struct ::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnLocal> final {
-  uint32_t a;
-  uint32_t b;
-
-  explicit WireEvent(uint32_t a, uint32_t b) : a(a), b(b) {}
+struct ::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnLocal> final
+    : public ::test_protocolpayloads::wire::LocalStructPayload {
+  explicit WireEvent(uint32_t a, uint32_t b)
+      : ::test_protocolpayloads::wire::LocalStructPayload{.a = std::move(a),
+                                                          .b = std::move(b)} {}
   WireEvent() = default;
 };
 
@@ -645,15 +643,15 @@ struct ::fidl::internal::TransactionalEvent<
 template <>
 struct ::fidl::WireEvent<
     ::test_protocolpayloads::MainProtocol::OnLocalWithError>
-    final {
+    final : public ::test_protocolpayloads::wire::
+                MainProtocolOnLocalWithErrorRequest {
   using Result =
       test_protocolpayloads::wire::MainProtocolOnLocalWithErrorResult;
 
-  ::test_protocolpayloads::wire::MainProtocolOnLocalWithErrorResult result;
-
   explicit WireEvent(
       ::test_protocolpayloads::wire::MainProtocolOnLocalWithErrorResult result)
-      : result(result) {}
+      : ::test_protocolpayloads::wire::MainProtocolOnLocalWithErrorRequest{
+            .result = std::move(result)} {}
   WireEvent() = default;
 };
 
@@ -680,10 +678,10 @@ struct ::fidl::internal::TransactionalEvent<
 
 template <>
 struct ::fidl::WireRequest<::test_protocolpayloads::MainProtocol::OneWayImport>
-    final {
-  int32_t a;
-
-  explicit WireRequest(int32_t a) : a(a) {}
+    final : public ::test_protocolpayloads_imported::wire::ImportStructPayload {
+  explicit WireRequest(int32_t a)
+      : ::test_protocolpayloads_imported::wire::ImportStructPayload{
+            .a = std::move(a)} {}
   WireRequest() = default;
 };
 
@@ -708,10 +706,10 @@ struct ::fidl::internal::TransactionalRequest<
 
 template <>
 struct ::fidl::WireRequest<::test_protocolpayloads::MainProtocol::TwoWayImport>
-    final {
-  int32_t a;
-
-  explicit WireRequest(int32_t a) : a(a) {}
+    final : public ::test_protocolpayloads_imported::wire::ImportStructPayload {
+  explicit WireRequest(int32_t a)
+      : ::test_protocolpayloads_imported::wire::ImportStructPayload{
+            .a = std::move(a)} {}
   WireRequest() = default;
   using ResponseType =
       ::fidl::WireResponse<::test_protocolpayloads::MainProtocol::TwoWayImport>;
@@ -740,10 +738,10 @@ struct ::fidl::internal::TransactionalRequest<
 
 template <>
 struct ::fidl::WireResponse<::test_protocolpayloads::MainProtocol::TwoWayImport>
-    final {
-  int32_t a;
-
-  explicit WireResponse(int32_t a) : a(a) {}
+    final : public ::test_protocolpayloads_imported::wire::ImportStructPayload {
+  explicit WireResponse(int32_t a)
+      : ::test_protocolpayloads_imported::wire::ImportStructPayload{
+            .a = std::move(a)} {}
   WireResponse() = default;
 };
 
@@ -770,10 +768,10 @@ struct ::fidl::internal::TransactionalResponse<
 template <>
 struct ::fidl::WireRequest<
     ::test_protocolpayloads::MainProtocol::TwoWayImportWithError>
-    final {
-  int32_t a;
-
-  explicit WireRequest(int32_t a) : a(a) {}
+    final : public ::test_protocolpayloads_imported::wire::ImportStructPayload {
+  explicit WireRequest(int32_t a)
+      : ::test_protocolpayloads_imported::wire::ImportStructPayload{
+            .a = std::move(a)} {}
   WireRequest() = default;
   using ResponseType = ::fidl::WireResponse<
       ::test_protocolpayloads::MainProtocol::TwoWayImportWithError>;
@@ -805,16 +803,17 @@ struct ::fidl::internal::TransactionalRequest<
 template <>
 struct ::fidl::WireResponse<
     ::test_protocolpayloads::MainProtocol::TwoWayImportWithError>
-    final {
+    final : public ::test_protocolpayloads::wire::
+                MainProtocolTwoWayImportWithErrorTopResponse {
   using Result =
       test_protocolpayloads::wire::MainProtocolTwoWayImportWithErrorResult;
-
-  ::test_protocolpayloads::wire::MainProtocolTwoWayImportWithErrorResult result;
 
   explicit WireResponse(
       ::test_protocolpayloads::wire::MainProtocolTwoWayImportWithErrorResult
           result)
-      : result(result) {}
+      : ::test_protocolpayloads::wire::
+            MainProtocolTwoWayImportWithErrorTopResponse{
+                .result = std::move(result)} {}
   WireResponse() = default;
 };
 
@@ -843,11 +842,11 @@ struct ::fidl::internal::TransactionalResponse<
 };
 
 template <>
-struct ::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnImport>
-    final {
-  int32_t a;
-
-  explicit WireEvent(int32_t a) : a(a) {}
+struct ::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnImport> final
+    : public ::test_protocolpayloads_imported::wire::ImportStructPayload {
+  explicit WireEvent(int32_t a)
+      : ::test_protocolpayloads_imported::wire::ImportStructPayload{
+            .a = std::move(a)} {}
   WireEvent() = default;
 };
 
@@ -873,15 +872,15 @@ struct ::fidl::internal::TransactionalEvent<
 template <>
 struct ::fidl::WireEvent<
     ::test_protocolpayloads::MainProtocol::OnImportWithError>
-    final {
+    final : public ::test_protocolpayloads::wire::
+                MainProtocolOnImportWithErrorRequest {
   using Result =
       test_protocolpayloads::wire::MainProtocolOnImportWithErrorResult;
 
-  ::test_protocolpayloads::wire::MainProtocolOnImportWithErrorResult result;
-
   explicit WireEvent(
       ::test_protocolpayloads::wire::MainProtocolOnImportWithErrorResult result)
-      : result(result) {}
+      : ::test_protocolpayloads::wire::MainProtocolOnImportWithErrorRequest{
+            .result = std::move(result)} {}
   WireEvent() = default;
 };
 
@@ -909,11 +908,11 @@ struct ::fidl::internal::TransactionalEvent<
 
 template <>
 struct ::fidl::WireRequest<::test_protocolpayloads::MainProtocol::OneWayAnon>
-    final {
-  uint32_t a;
-  uint32_t b;
-
-  explicit WireRequest(uint32_t a, uint32_t b) : a(a), b(b) {}
+    final
+    : public ::test_protocolpayloads::wire::MainProtocolOneWayAnonRequest {
+  explicit WireRequest(uint32_t a, uint32_t b)
+      : ::test_protocolpayloads::wire::MainProtocolOneWayAnonRequest{
+            .a = std::move(a), .b = std::move(b)} {}
   WireRequest() = default;
 };
 
@@ -938,11 +937,11 @@ struct ::fidl::internal::TransactionalRequest<
 
 template <>
 struct ::fidl::WireRequest<::test_protocolpayloads::MainProtocol::TwoWayAnon>
-    final {
-  uint32_t a;
-  uint32_t b;
-
-  explicit WireRequest(uint32_t a, uint32_t b) : a(a), b(b) {}
+    final
+    : public ::test_protocolpayloads::wire::MainProtocolTwoWayAnonRequest {
+  explicit WireRequest(uint32_t a, uint32_t b)
+      : ::test_protocolpayloads::wire::MainProtocolTwoWayAnonRequest{
+            .a = std::move(a), .b = std::move(b)} {}
   WireRequest() = default;
   using ResponseType =
       ::fidl::WireResponse<::test_protocolpayloads::MainProtocol::TwoWayAnon>;
@@ -971,11 +970,11 @@ struct ::fidl::internal::TransactionalRequest<
 
 template <>
 struct ::fidl::WireResponse<::test_protocolpayloads::MainProtocol::TwoWayAnon>
-    final {
-  uint32_t a;
-  uint32_t b;
-
-  explicit WireResponse(uint32_t a, uint32_t b) : a(a), b(b) {}
+    final
+    : public ::test_protocolpayloads::wire::MainProtocolTwoWayAnonTopResponse {
+  explicit WireResponse(uint32_t a, uint32_t b)
+      : ::test_protocolpayloads::wire::MainProtocolTwoWayAnonTopResponse{
+            .a = std::move(a), .b = std::move(b)} {}
   WireResponse() = default;
 };
 
@@ -1001,11 +1000,11 @@ struct ::fidl::internal::TransactionalResponse<
 template <>
 struct ::fidl::WireRequest<
     ::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>
-    final {
-  uint32_t a;
-  uint32_t b;
-
-  explicit WireRequest(uint32_t a, uint32_t b) : a(a), b(b) {}
+    final : public ::test_protocolpayloads::wire::
+                MainProtocolTwoWayAnonWithErrorRequest {
+  explicit WireRequest(uint32_t a, uint32_t b)
+      : ::test_protocolpayloads::wire::MainProtocolTwoWayAnonWithErrorRequest{
+            .a = std::move(a), .b = std::move(b)} {}
   WireRequest() = default;
   using ResponseType = ::fidl::WireResponse<
       ::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>;
@@ -1038,16 +1037,17 @@ struct ::fidl::internal::TransactionalRequest<
 template <>
 struct ::fidl::WireResponse<
     ::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>
-    final {
+    final : public ::test_protocolpayloads::wire::
+                MainProtocolTwoWayAnonWithErrorTopResponse {
   using Result =
       test_protocolpayloads::wire::MainProtocolTwoWayAnonWithErrorResult;
-
-  ::test_protocolpayloads::wire::MainProtocolTwoWayAnonWithErrorResult result;
 
   explicit WireResponse(
       ::test_protocolpayloads::wire::MainProtocolTwoWayAnonWithErrorResult
           result)
-      : result(result) {}
+      : ::test_protocolpayloads::wire::
+            MainProtocolTwoWayAnonWithErrorTopResponse{.result =
+                                                           std::move(result)} {}
   WireResponse() = default;
 };
 
@@ -1076,11 +1076,11 @@ struct ::fidl::internal::TransactionalResponse<
 };
 
 template <>
-struct ::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnAnon> final {
-  uint32_t a;
-  uint32_t b;
-
-  explicit WireEvent(uint32_t a, uint32_t b) : a(a), b(b) {}
+struct ::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnAnon> final
+    : public ::test_protocolpayloads::wire::MainProtocolOnAnonRequest {
+  explicit WireEvent(uint32_t a, uint32_t b)
+      : ::test_protocolpayloads::wire::MainProtocolOnAnonRequest{
+            .a = std::move(a), .b = std::move(b)} {}
   WireEvent() = default;
 };
 
@@ -1105,14 +1105,14 @@ struct ::fidl::internal::TransactionalEvent<
 
 template <>
 struct ::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnAnonWithError>
-    final {
+    final
+    : public ::test_protocolpayloads::wire::MainProtocolOnAnonWithErrorRequest {
   using Result = test_protocolpayloads::wire::MainProtocolOnAnonWithErrorResult;
-
-  ::test_protocolpayloads::wire::MainProtocolOnAnonWithErrorResult result;
 
   explicit WireEvent(
       ::test_protocolpayloads::wire::MainProtocolOnAnonWithErrorResult result)
-      : result(result) {}
+      : ::test_protocolpayloads::wire::MainProtocolOnAnonWithErrorRequest{
+            .result = std::move(result)} {}
   WireEvent() = default;
 };
 

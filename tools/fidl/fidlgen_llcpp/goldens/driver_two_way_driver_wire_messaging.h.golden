@@ -59,12 +59,11 @@ struct ::fidl::internal::WireServerDispatcher<::test_drivertwoway::TwoWay>
 #endif  // __Fuchsia__
 
 template <>
-struct ::fidl::WireRequest<::test_drivertwoway::TwoWay::Add> final {
-  uint16_t addend1;
-  uint16_t addend2;
-
+struct ::fidl::WireRequest<::test_drivertwoway::TwoWay::Add> final
+    : public ::test_drivertwoway::wire::TwoWayAddRequest {
   explicit WireRequest(uint16_t addend1, uint16_t addend2)
-      : addend1(addend1), addend2(addend2) {}
+      : ::test_drivertwoway::wire::TwoWayAddRequest{
+            .addend1 = std::move(addend1), .addend2 = std::move(addend2)} {}
   WireRequest() = default;
   using ResponseType = ::fidl::WireResponse<::test_drivertwoway::TwoWay::Add>;
 };
@@ -90,10 +89,11 @@ struct ::fidl::internal::TransactionalRequest<::test_drivertwoway::TwoWay::Add>
 };
 
 template <>
-struct ::fidl::WireResponse<::test_drivertwoway::TwoWay::Add> final {
-  uint16_t sum;
-
-  explicit WireResponse(uint16_t sum) : sum(sum) {}
+struct ::fidl::WireResponse<::test_drivertwoway::TwoWay::Add> final
+    : public ::test_drivertwoway::wire::TwoWayAddTopResponse {
+  explicit WireResponse(uint16_t sum)
+      : ::test_drivertwoway::wire::TwoWayAddTopResponse{.sum = std::move(sum)} {
+  }
   WireResponse() = default;
 };
 

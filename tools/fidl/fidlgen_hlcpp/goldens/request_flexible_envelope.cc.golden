@@ -271,6 +271,100 @@ void StrictFoo::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
   }
 }
 
+extern "C" const fidl_type_t
+    test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleRequestTable;
+const fidl_type_t* ProtocolRequestStrictResponseFlexibleRequest::FidlType =
+    &test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleRequestTable;
+
+void ProtocolRequestStrictResponseFlexibleRequest::Encode(
+    ::fidl::Encoder* _encoder, size_t _offset,
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  if (::fidl::IsMemcpyCompatible<
+          ProtocolRequestStrictResponseFlexibleRequest>::value) {
+    memcpy(
+        _encoder->template GetPtr<ProtocolRequestStrictResponseFlexibleRequest>(
+            _offset),
+        this, sizeof(ProtocolRequestStrictResponseFlexibleRequest));
+  } else {
+    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
+      ::fidl::Encode(_encoder, &s, _offset + 0);
+
+    } else {
+      ::fidl::Encode(_encoder, &s, _offset + 0);
+    }
+  }
+}
+
+void ProtocolRequestStrictResponseFlexibleRequest::Decode(
+    ::fidl::Decoder* _decoder,
+    ProtocolRequestStrictResponseFlexibleRequest* _value, size_t _offset) {
+  if (::fidl::IsMemcpyCompatible<
+          ProtocolRequestStrictResponseFlexibleRequest>::value) {
+    memcpy(
+        _value,
+        _decoder->template GetPtr<ProtocolRequestStrictResponseFlexibleRequest>(
+            _offset),
+        sizeof(ProtocolRequestStrictResponseFlexibleRequest));
+  } else {
+    ::fidl::Decode(_decoder, &_value->s, _offset + 0);
+  }
+}
+
+zx_status_t ProtocolRequestStrictResponseFlexibleRequest::Clone(
+    ProtocolRequestStrictResponseFlexibleRequest* _result) const {
+  zx_status_t _status = ::fidl::Clone(s, &_result->s);
+  if (_status != ZX_OK) return _status;
+  return ZX_OK;
+}
+
+extern "C" const fidl_type_t
+    test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictTopResponseTable;
+const fidl_type_t* ProtocolRequestFlexibleResponseStrictTopResponse::FidlType =
+    &test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictTopResponseTable;
+
+void ProtocolRequestFlexibleResponseStrictTopResponse::Encode(
+    ::fidl::Encoder* _encoder, size_t _offset,
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  if (::fidl::IsMemcpyCompatible<
+          ProtocolRequestFlexibleResponseStrictTopResponse>::value) {
+    memcpy(
+        _encoder
+            ->template GetPtr<ProtocolRequestFlexibleResponseStrictTopResponse>(
+                _offset),
+        this, sizeof(ProtocolRequestFlexibleResponseStrictTopResponse));
+  } else {
+    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
+      ::fidl::Encode(_encoder, &f, _offset + 0);
+
+    } else {
+      ::fidl::Encode(_encoder, &f, _offset + 0);
+    }
+  }
+}
+
+void ProtocolRequestFlexibleResponseStrictTopResponse::Decode(
+    ::fidl::Decoder* _decoder,
+    ProtocolRequestFlexibleResponseStrictTopResponse* _value, size_t _offset) {
+  if (::fidl::IsMemcpyCompatible<
+          ProtocolRequestFlexibleResponseStrictTopResponse>::value) {
+    memcpy(
+        _value,
+        _decoder
+            ->template GetPtr<ProtocolRequestFlexibleResponseStrictTopResponse>(
+                _offset),
+        sizeof(ProtocolRequestFlexibleResponseStrictTopResponse));
+  } else {
+    ::fidl::Decode(_decoder, &_value->f, _offset + 0);
+  }
+}
+
+zx_status_t ProtocolRequestFlexibleResponseStrictTopResponse::Clone(
+    ProtocolRequestFlexibleResponseStrictTopResponse* _result) const {
+  zx_status_t _status = ::fidl::Clone(f, &_result->f);
+  if (_status != ZX_OK) return _status;
+  return ZX_OK;
+}
+
 extern "C" const fidl_type_t test_requestflexibleenvelope_FlexibleFooTable;
 const fidl_type_t* FlexibleFoo::FidlType =
     &test_requestflexibleenvelope_FlexibleFooTable;
@@ -564,6 +658,100 @@ void FlexibleFoo::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
         break;
     }
   }
+}
+
+extern "C" const fidl_type_t
+    test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleTopResponseTable;
+const fidl_type_t* ProtocolRequestStrictResponseFlexibleTopResponse::FidlType =
+    &test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleTopResponseTable;
+
+void ProtocolRequestStrictResponseFlexibleTopResponse::Encode(
+    ::fidl::Encoder* _encoder, size_t _offset,
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  if (::fidl::IsMemcpyCompatible<
+          ProtocolRequestStrictResponseFlexibleTopResponse>::value) {
+    memcpy(
+        _encoder
+            ->template GetPtr<ProtocolRequestStrictResponseFlexibleTopResponse>(
+                _offset),
+        this, sizeof(ProtocolRequestStrictResponseFlexibleTopResponse));
+  } else {
+    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
+      ::fidl::Encode(_encoder, &f, _offset + 0);
+
+    } else {
+      ::fidl::Encode(_encoder, &f, _offset + 0);
+    }
+  }
+}
+
+void ProtocolRequestStrictResponseFlexibleTopResponse::Decode(
+    ::fidl::Decoder* _decoder,
+    ProtocolRequestStrictResponseFlexibleTopResponse* _value, size_t _offset) {
+  if (::fidl::IsMemcpyCompatible<
+          ProtocolRequestStrictResponseFlexibleTopResponse>::value) {
+    memcpy(
+        _value,
+        _decoder
+            ->template GetPtr<ProtocolRequestStrictResponseFlexibleTopResponse>(
+                _offset),
+        sizeof(ProtocolRequestStrictResponseFlexibleTopResponse));
+  } else {
+    ::fidl::Decode(_decoder, &_value->f, _offset + 0);
+  }
+}
+
+zx_status_t ProtocolRequestStrictResponseFlexibleTopResponse::Clone(
+    ProtocolRequestStrictResponseFlexibleTopResponse* _result) const {
+  zx_status_t _status = ::fidl::Clone(f, &_result->f);
+  if (_status != ZX_OK) return _status;
+  return ZX_OK;
+}
+
+extern "C" const fidl_type_t
+    test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictRequestTable;
+const fidl_type_t* ProtocolRequestFlexibleResponseStrictRequest::FidlType =
+    &test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictRequestTable;
+
+void ProtocolRequestFlexibleResponseStrictRequest::Encode(
+    ::fidl::Encoder* _encoder, size_t _offset,
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  if (::fidl::IsMemcpyCompatible<
+          ProtocolRequestFlexibleResponseStrictRequest>::value) {
+    memcpy(
+        _encoder->template GetPtr<ProtocolRequestFlexibleResponseStrictRequest>(
+            _offset),
+        this, sizeof(ProtocolRequestFlexibleResponseStrictRequest));
+  } else {
+    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
+      ::fidl::Encode(_encoder, &s, _offset + 0);
+
+    } else {
+      ::fidl::Encode(_encoder, &s, _offset + 0);
+    }
+  }
+}
+
+void ProtocolRequestFlexibleResponseStrictRequest::Decode(
+    ::fidl::Decoder* _decoder,
+    ProtocolRequestFlexibleResponseStrictRequest* _value, size_t _offset) {
+  if (::fidl::IsMemcpyCompatible<
+          ProtocolRequestFlexibleResponseStrictRequest>::value) {
+    memcpy(
+        _value,
+        _decoder->template GetPtr<ProtocolRequestFlexibleResponseStrictRequest>(
+            _offset),
+        sizeof(ProtocolRequestFlexibleResponseStrictRequest));
+  } else {
+    ::fidl::Decode(_decoder, &_value->s, _offset + 0);
+  }
+}
+
+zx_status_t ProtocolRequestFlexibleResponseStrictRequest::Clone(
+    ProtocolRequestFlexibleResponseStrictRequest* _result) const {
+  zx_status_t _status = ::fidl::Clone(s, &_result->s);
+  if (_status != ZX_OK) return _status;
+  return ZX_OK;
 }
 
 //

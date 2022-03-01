@@ -27,6 +27,10 @@ namespace test_errorsyntax {
 namespace wire {
 struct ExampleUseOfErrorSyntaxCallWhichMayFailResponse;
 
+struct ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse;
+
+struct ExampleUseOfErrorSyntaxCallWhichMayFailRequest;
+
 class ExampleUseOfErrorSyntaxCallWhichMayFailResult;
 
 extern "C" const fidl_type_t
@@ -193,6 +197,24 @@ struct ExampleUseOfErrorSyntaxCallWhichMayFailResponse {
   int64_t value = {};
 };
 
+extern "C" const fidl_type_t
+    test_errorsyntax_ExampleUseOfErrorSyntaxCallWhichMayFailTopResponseTable;
+
+struct ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse {
+  using Result =
+      test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResult;
+
+  ::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResult
+      result = {};
+};
+
+extern "C" const fidl_type_t
+    test_errorsyntax_ExampleUseOfErrorSyntaxCallWhichMayFailRequestTable;
+
+struct ExampleUseOfErrorSyntaxCallWhichMayFailRequest {
+  ::fidl::StringView s = {};
+};
+
 }  // namespace wire
 }  // namespace test_errorsyntax
 namespace fidl {
@@ -231,6 +253,76 @@ static_assert(
     TypeTraits<
         ::test_errorsyntax::wire::
             ExampleUseOfErrorSyntaxCallWhichMayFailResponse>::kPrimarySize);
+
+template <>
+struct TypeTraits<::test_errorsyntax::wire::
+                      ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse> {
+  static constexpr const fidl_type_t* kType =
+      &::test_errorsyntax::wire::
+          test_errorsyntax_ExampleUseOfErrorSyntaxCallWhichMayFailTopResponseTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 24;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 8;
+  static constexpr uint32_t kMaxOutOfLineV1 = 8;
+  static constexpr bool kHasPointer = true;
+};
+
+template <>
+struct IsFidlType<::test_errorsyntax::wire::
+                      ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse>
+    : public std::true_type {};
+template <>
+struct IsStruct<::test_errorsyntax::wire::
+                    ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse>
+    : public std::true_type {};
+static_assert(std::is_standard_layout_v<
+              ::test_errorsyntax::wire::
+                  ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse>);
+static_assert(offsetof(::test_errorsyntax::wire::
+                           ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse,
+                       result) == 0);
+static_assert(
+    sizeof(::test_errorsyntax::wire::
+               ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse) ==
+    TypeTraits<
+        ::test_errorsyntax::wire::
+            ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse>::kPrimarySize);
+
+template <>
+struct TypeTraits<
+    ::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailRequest> {
+  static constexpr const fidl_type_t* kType =
+      &::test_errorsyntax::wire::
+          test_errorsyntax_ExampleUseOfErrorSyntaxCallWhichMayFailRequestTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 16;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 4294967295;
+  static constexpr uint32_t kMaxOutOfLineV1 = 4294967295;
+  static constexpr bool kHasPointer = true;
+};
+
+template <>
+struct IsFidlType<
+    ::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailRequest>
+    : public std::true_type {};
+template <>
+struct IsStruct<
+    ::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailRequest>
+    : public std::true_type {};
+static_assert(std::is_standard_layout_v<
+              ::test_errorsyntax::wire::
+                  ExampleUseOfErrorSyntaxCallWhichMayFailRequest>);
+static_assert(offsetof(::test_errorsyntax::wire::
+                           ExampleUseOfErrorSyntaxCallWhichMayFailRequest,
+                       s) == 0);
+static_assert(
+    sizeof(::test_errorsyntax::wire::
+               ExampleUseOfErrorSyntaxCallWhichMayFailRequest) ==
+    TypeTraits<
+        ::test_errorsyntax::wire::
+            ExampleUseOfErrorSyntaxCallWhichMayFailRequest>::kPrimarySize);
 
 template <>
 struct TypeTraits<

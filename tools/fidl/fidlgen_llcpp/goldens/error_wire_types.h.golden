@@ -26,6 +26,10 @@ namespace test_error {
 namespace wire {
 struct ExampleFooResponse;
 
+struct ExampleFooTopResponse;
+
+struct ExampleFooRequest;
+
 class ExampleFooResult;
 
 extern "C" const fidl_type_t test_error_Example_foo_ResultTable;
@@ -144,6 +148,20 @@ struct ExampleFooResponse {
   int64_t y = {};
 };
 
+extern "C" const fidl_type_t test_error_ExampleFooTopResponseTable;
+
+struct ExampleFooTopResponse {
+  using Result = test_error::wire::ExampleFooResult;
+
+  ::test_error::wire::ExampleFooResult result = {};
+};
+
+extern "C" const fidl_type_t test_error_ExampleFooRequestTable;
+
+struct ExampleFooRequest {
+  ::fidl::StringView s = {};
+};
+
 }  // namespace wire
 }  // namespace test_error
 namespace fidl {
@@ -171,6 +189,54 @@ static_assert(
 static_assert(offsetof(::test_error::wire::ExampleFooResponse, y) == 0);
 static_assert(sizeof(::test_error::wire::ExampleFooResponse) ==
               TypeTraits<::test_error::wire::ExampleFooResponse>::kPrimarySize);
+
+template <>
+struct TypeTraits<::test_error::wire::ExampleFooTopResponse> {
+  static constexpr const fidl_type_t* kType =
+      &::test_error::wire::test_error_ExampleFooTopResponseTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 24;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 8;
+  static constexpr uint32_t kMaxOutOfLineV1 = 8;
+  static constexpr bool kHasPointer = true;
+};
+
+template <>
+struct IsFidlType<::test_error::wire::ExampleFooTopResponse>
+    : public std::true_type {};
+template <>
+struct IsStruct<::test_error::wire::ExampleFooTopResponse>
+    : public std::true_type {};
+static_assert(
+    std::is_standard_layout_v<::test_error::wire::ExampleFooTopResponse>);
+static_assert(offsetof(::test_error::wire::ExampleFooTopResponse, result) == 0);
+static_assert(
+    sizeof(::test_error::wire::ExampleFooTopResponse) ==
+    TypeTraits<::test_error::wire::ExampleFooTopResponse>::kPrimarySize);
+
+template <>
+struct TypeTraits<::test_error::wire::ExampleFooRequest> {
+  static constexpr const fidl_type_t* kType =
+      &::test_error::wire::test_error_ExampleFooRequestTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 16;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 4294967295;
+  static constexpr uint32_t kMaxOutOfLineV1 = 4294967295;
+  static constexpr bool kHasPointer = true;
+};
+
+template <>
+struct IsFidlType<::test_error::wire::ExampleFooRequest>
+    : public std::true_type {};
+template <>
+struct IsStruct<::test_error::wire::ExampleFooRequest> : public std::true_type {
+};
+static_assert(std::is_standard_layout_v<::test_error::wire::ExampleFooRequest>);
+static_assert(offsetof(::test_error::wire::ExampleFooRequest, s) == 0);
+static_assert(sizeof(::test_error::wire::ExampleFooRequest) ==
+              TypeTraits<::test_error::wire::ExampleFooRequest>::kPrimarySize);
 
 template <>
 struct TypeTraits<::test_error::wire::ExampleFooResult> {

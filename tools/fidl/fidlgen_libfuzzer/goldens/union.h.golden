@@ -20,6 +20,9 @@ using StrictUnion = ::test::union_::StrictUnion;
 using StrictSimpleXUnion = ::test::union_::StrictSimpleXUnion;
 using StrictFoo = ::test::union_::StrictFoo;
 using StrictBoundedXUnion = ::test::union_::StrictBoundedXUnion;
+using TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse =
+    ::test::union_::
+        TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse;
 using ReverseOrdinalUnion = ::test::union_::ReverseOrdinalUnion;
 using Pizza = ::test::union_::Pizza;
 using Pasta = ::test::union_::Pasta;
@@ -28,6 +31,9 @@ using PizzaOrPasta = ::test::union_::PizzaOrPasta;
 using FlexiblePizzaOrPasta = ::test::union_::FlexiblePizzaOrPasta;
 using ExplicitPizzaOrPasta = ::test::union_::ExplicitPizzaOrPasta;
 using OlderSimpleUnion = ::test::union_::OlderSimpleUnion;
+using TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse =
+    ::test::union_::
+        TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse;
 using NullableUnionStruct = ::test::union_::NullableUnionStruct;
 using NewerSimpleUnion = ::test::union_::NewerSimpleUnion;
 using FlexibleUnion = ::test::union_::FlexibleUnion;
@@ -270,6 +276,33 @@ struct Allocate<StrictBoundedXUnion> {
   }
 };
 template <>
+struct MinSize<
+    TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse> {
+  operator size_t() { return MinSize<::test::union_::StrictBoundedXUnion>(); }
+};
+template <>
+struct Allocate<
+    TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse> {
+  TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse
+  operator()(FuzzInput* src, size_t* size) {
+    ZX_ASSERT(
+        *size >=
+        MinSize<
+            TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse>());
+    TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse out;
+    const size_t slack_per_member =
+        (*size -
+         MinSize<
+             TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse>()) /
+        1;
+    size_t out_size;
+    out_size =
+        MinSize<::test::union_::StrictBoundedXUnion>() + slack_per_member;
+    out.xu = Allocate<::test::union_::StrictBoundedXUnion>{}(src, &out_size);
+    return out;
+  }
+};
+template <>
 struct MinSize<ReverseOrdinalUnion> {
   operator size_t() {
     size_t sizes[] = {0, MinSize<uint32_t>(), MinSize<uint32_t>()};
@@ -500,6 +533,32 @@ struct Allocate<OlderSimpleUnion> {
       }
     }
 
+    return out;
+  }
+};
+template <>
+struct MinSize<
+    TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse> {
+  operator size_t() { return MinSize<::test::union_::OlderSimpleUnion>(); }
+};
+template <>
+struct Allocate<
+    TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse> {
+  TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse
+  operator()(FuzzInput* src, size_t* size) {
+    ZX_ASSERT(
+        *size >=
+        MinSize<
+            TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse>());
+    TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse out;
+    const size_t slack_per_member =
+        (*size -
+         MinSize<
+             TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse>()) /
+        1;
+    size_t out_size;
+    out_size = MinSize<::test::union_::OlderSimpleUnion>() + slack_per_member;
+    out.xu = Allocate<::test::union_::OlderSimpleUnion>{}(src, &out_size);
     return out;
   }
 };

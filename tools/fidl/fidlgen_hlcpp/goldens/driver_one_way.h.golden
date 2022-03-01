@@ -11,6 +11,8 @@ namespace test {
 namespace driveroneway {
 class Payload;
 
+class OneWaySendRequest;
+
 class Payload final {
  public:
   static const fidl_type_t* FidlType;
@@ -35,6 +37,31 @@ inline zx_status_t Clone(const ::test::driveroneway::Payload& _value,
 
 using PayloadPtr = ::std::unique_ptr<Payload>;
 
+class OneWaySendRequest final {
+ public:
+  static const fidl_type_t* FidlType;
+
+  ::test::driveroneway::Payload payload{};
+
+  static inline ::std::unique_ptr<OneWaySendRequest> New() {
+    return ::std::make_unique<OneWaySendRequest>();
+  }
+
+  void Encode(::fidl::Encoder* _encoder, size_t _offset,
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
+                  cpp17::nullopt);
+  static void Decode(::fidl::Decoder* _decoder, OneWaySendRequest* value,
+                     size_t _offset);
+  zx_status_t Clone(OneWaySendRequest* result) const;
+};
+
+inline zx_status_t Clone(const ::test::driveroneway::OneWaySendRequest& _value,
+                         ::test::driveroneway::OneWaySendRequest* _result) {
+  return _value.Clone(_result);
+}
+
+using OneWaySendRequestPtr = ::std::unique_ptr<OneWaySendRequest>;
+
 }  // namespace driveroneway
 }  // namespace test
 namespace fidl {
@@ -58,6 +85,32 @@ struct Equality<::test::driveroneway::Payload> {
   bool operator()(const ::test::driveroneway::Payload& _lhs,
                   const ::test::driveroneway::Payload& _rhs) const {
     if (!::fidl::Equals(_lhs.value, _rhs.value)) {
+      return false;
+    }
+    return true;
+  }
+};
+template <>
+struct CodingTraits<::test::driveroneway::OneWaySendRequest>
+    : public EncodableCodingTraits<::test::driveroneway::OneWaySendRequest, 4,
+                                   4> {};
+
+template <>
+struct IsMemcpyCompatible<::test::driveroneway::OneWaySendRequest>
+    : public internal::BoolConstant<
+          !HasPadding<::test::driveroneway::OneWaySendRequest>::value &&
+          IsMemcpyCompatible<::test::driveroneway::Payload>::value> {};
+
+inline zx_status_t Clone(const ::test::driveroneway::OneWaySendRequest& value,
+                         ::test::driveroneway::OneWaySendRequest* result) {
+  return ::test::driveroneway::Clone(value, result);
+}
+
+template <>
+struct Equality<::test::driveroneway::OneWaySendRequest> {
+  bool operator()(const ::test::driveroneway::OneWaySendRequest& _lhs,
+                  const ::test::driveroneway::OneWaySendRequest& _rhs) const {
+    if (!::fidl::Equals(_lhs.payload, _rhs.payload)) {
       return false;
     }
     return true;

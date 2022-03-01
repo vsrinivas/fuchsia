@@ -58,10 +58,10 @@ struct ::fidl::internal::WireServerDispatcher<::test_inheritance::Super> final {
 #endif  // __Fuchsia__
 
 template <>
-struct ::fidl::WireRequest<::test_inheritance::Super::Foo> final {
-  ::fidl::StringView s;
-
-  explicit WireRequest(::fidl::StringView s) : s(s) {}
+struct ::fidl::WireRequest<::test_inheritance::Super::Foo> final
+    : public ::test_inheritance::wire::SuperFooRequest {
+  explicit WireRequest(::fidl::StringView s)
+      : ::test_inheritance::wire::SuperFooRequest{.s = std::move(s)} {}
   WireRequest() = default;
   using ResponseType = ::fidl::WireResponse<::test_inheritance::Super::Foo>;
 };
@@ -86,10 +86,10 @@ struct ::fidl::internal::TransactionalRequest<::test_inheritance::Super::Foo>
 };
 
 template <>
-struct ::fidl::WireResponse<::test_inheritance::Super::Foo> final {
-  int64_t y;
-
-  explicit WireResponse(int64_t y) : y(y) {}
+struct ::fidl::WireResponse<::test_inheritance::Super::Foo> final
+    : public ::test_inheritance::wire::SuperFooTopResponse {
+  explicit WireResponse(int64_t y)
+      : ::test_inheritance::wire::SuperFooTopResponse{.y = std::move(y)} {}
   WireResponse() = default;
 };
 
@@ -582,10 +582,10 @@ struct ::fidl::internal::WireServerDispatcher<::test_inheritance::Sub> final {
 #endif  // __Fuchsia__
 
 template <>
-struct ::fidl::WireRequest<::test_inheritance::Sub::Foo> final {
-  ::fidl::StringView s;
-
-  explicit WireRequest(::fidl::StringView s) : s(s) {}
+struct ::fidl::WireRequest<::test_inheritance::Sub::Foo> final
+    : public ::test_inheritance::wire::SuperFooRequest {
+  explicit WireRequest(::fidl::StringView s)
+      : ::test_inheritance::wire::SuperFooRequest{.s = std::move(s)} {}
   WireRequest() = default;
   using ResponseType = ::fidl::WireResponse<::test_inheritance::Sub::Foo>;
 };
@@ -610,10 +610,10 @@ struct ::fidl::internal::TransactionalRequest<::test_inheritance::Sub::Foo>
 };
 
 template <>
-struct ::fidl::WireResponse<::test_inheritance::Sub::Foo> final {
-  int64_t y;
-
-  explicit WireResponse(int64_t y) : y(y) {}
+struct ::fidl::WireResponse<::test_inheritance::Sub::Foo> final
+    : public ::test_inheritance::wire::SuperFooTopResponse {
+  explicit WireResponse(int64_t y)
+      : ::test_inheritance::wire::SuperFooTopResponse{.y = std::move(y)} {}
   WireResponse() = default;
 };
 

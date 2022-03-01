@@ -459,6 +459,52 @@ void DenyEachBinding_OnlyDenySyzkaller_Result::EnsureStorageInitialized(
 }
 
 extern "C" const fidl_type_t
+    test_bindingsdenylist_DenyEachBindingOnlyDenySyzkallerTopResponseTable;
+const fidl_type_t* DenyEachBindingOnlyDenySyzkallerTopResponse::FidlType =
+    &test_bindingsdenylist_DenyEachBindingOnlyDenySyzkallerTopResponseTable;
+
+void DenyEachBindingOnlyDenySyzkallerTopResponse::Encode(
+    ::fidl::Encoder* _encoder, size_t _offset,
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  if (::fidl::IsMemcpyCompatible<
+          DenyEachBindingOnlyDenySyzkallerTopResponse>::value) {
+    memcpy(
+        _encoder->template GetPtr<DenyEachBindingOnlyDenySyzkallerTopResponse>(
+            _offset),
+        this, sizeof(DenyEachBindingOnlyDenySyzkallerTopResponse));
+  } else {
+    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
+      ::fidl::Encode(_encoder, &result, _offset + 0);
+
+    } else {
+      ::fidl::Encode(_encoder, &result, _offset + 0);
+    }
+  }
+}
+
+void DenyEachBindingOnlyDenySyzkallerTopResponse::Decode(
+    ::fidl::Decoder* _decoder,
+    DenyEachBindingOnlyDenySyzkallerTopResponse* _value, size_t _offset) {
+  if (::fidl::IsMemcpyCompatible<
+          DenyEachBindingOnlyDenySyzkallerTopResponse>::value) {
+    memcpy(
+        _value,
+        _decoder->template GetPtr<DenyEachBindingOnlyDenySyzkallerTopResponse>(
+            _offset),
+        sizeof(DenyEachBindingOnlyDenySyzkallerTopResponse));
+  } else {
+    ::fidl::Decode(_decoder, &_value->result, _offset + 0);
+  }
+}
+
+zx_status_t DenyEachBindingOnlyDenySyzkallerTopResponse::Clone(
+    DenyEachBindingOnlyDenySyzkallerTopResponse* _result) const {
+  zx_status_t _status = ::fidl::Clone(result, &_result->result);
+  if (_status != ZX_OK) return _status;
+  return ZX_OK;
+}
+
+extern "C" const fidl_type_t
     test_bindingsdenylist_DenyEachBinding_OnlyDenyRust_ResponseTable;
 const fidl_type_t* DenyEachBinding_OnlyDenyRust_Response::FidlType =
     &test_bindingsdenylist_DenyEachBinding_OnlyDenyRust_ResponseTable;
@@ -810,6 +856,50 @@ void DenyEachBinding_OnlyDenyRust_Result::EnsureStorageInitialized(
         break;
     }
   }
+}
+
+extern "C" const fidl_type_t
+    test_bindingsdenylist_DenyEachBindingOnlyDenyRustTopResponseTable;
+const fidl_type_t* DenyEachBindingOnlyDenyRustTopResponse::FidlType =
+    &test_bindingsdenylist_DenyEachBindingOnlyDenyRustTopResponseTable;
+
+void DenyEachBindingOnlyDenyRustTopResponse::Encode(
+    ::fidl::Encoder* _encoder, size_t _offset,
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  if (::fidl::IsMemcpyCompatible<
+          DenyEachBindingOnlyDenyRustTopResponse>::value) {
+    memcpy(_encoder->template GetPtr<DenyEachBindingOnlyDenyRustTopResponse>(
+               _offset),
+           this, sizeof(DenyEachBindingOnlyDenyRustTopResponse));
+  } else {
+    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
+      ::fidl::Encode(_encoder, &result, _offset + 0);
+
+    } else {
+      ::fidl::Encode(_encoder, &result, _offset + 0);
+    }
+  }
+}
+
+void DenyEachBindingOnlyDenyRustTopResponse::Decode(
+    ::fidl::Decoder* _decoder, DenyEachBindingOnlyDenyRustTopResponse* _value,
+    size_t _offset) {
+  if (::fidl::IsMemcpyCompatible<
+          DenyEachBindingOnlyDenyRustTopResponse>::value) {
+    memcpy(_value,
+           _decoder->template GetPtr<DenyEachBindingOnlyDenyRustTopResponse>(
+               _offset),
+           sizeof(DenyEachBindingOnlyDenyRustTopResponse));
+  } else {
+    ::fidl::Decode(_decoder, &_value->result, _offset + 0);
+  }
+}
+
+zx_status_t DenyEachBindingOnlyDenyRustTopResponse::Clone(
+    DenyEachBindingOnlyDenyRustTopResponse* _result) const {
+  zx_status_t _status = ::fidl::Clone(result, &_result->result);
+  if (_status != ZX_OK) return _status;
+  return ZX_OK;
 }
 
 extern "C" const fidl_type_t
@@ -1175,6 +1265,52 @@ void DenyEachBinding_OnlyDenyLibfuzzer_Result::EnsureStorageInitialized(
 }
 
 extern "C" const fidl_type_t
+    test_bindingsdenylist_DenyEachBindingOnlyDenyLibfuzzerTopResponseTable;
+const fidl_type_t* DenyEachBindingOnlyDenyLibfuzzerTopResponse::FidlType =
+    &test_bindingsdenylist_DenyEachBindingOnlyDenyLibfuzzerTopResponseTable;
+
+void DenyEachBindingOnlyDenyLibfuzzerTopResponse::Encode(
+    ::fidl::Encoder* _encoder, size_t _offset,
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  if (::fidl::IsMemcpyCompatible<
+          DenyEachBindingOnlyDenyLibfuzzerTopResponse>::value) {
+    memcpy(
+        _encoder->template GetPtr<DenyEachBindingOnlyDenyLibfuzzerTopResponse>(
+            _offset),
+        this, sizeof(DenyEachBindingOnlyDenyLibfuzzerTopResponse));
+  } else {
+    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
+      ::fidl::Encode(_encoder, &result, _offset + 0);
+
+    } else {
+      ::fidl::Encode(_encoder, &result, _offset + 0);
+    }
+  }
+}
+
+void DenyEachBindingOnlyDenyLibfuzzerTopResponse::Decode(
+    ::fidl::Decoder* _decoder,
+    DenyEachBindingOnlyDenyLibfuzzerTopResponse* _value, size_t _offset) {
+  if (::fidl::IsMemcpyCompatible<
+          DenyEachBindingOnlyDenyLibfuzzerTopResponse>::value) {
+    memcpy(
+        _value,
+        _decoder->template GetPtr<DenyEachBindingOnlyDenyLibfuzzerTopResponse>(
+            _offset),
+        sizeof(DenyEachBindingOnlyDenyLibfuzzerTopResponse));
+  } else {
+    ::fidl::Decode(_decoder, &_value->result, _offset + 0);
+  }
+}
+
+zx_status_t DenyEachBindingOnlyDenyLibfuzzerTopResponse::Clone(
+    DenyEachBindingOnlyDenyLibfuzzerTopResponse* _result) const {
+  zx_status_t _status = ::fidl::Clone(result, &_result->result);
+  if (_status != ZX_OK) return _status;
+  return ZX_OK;
+}
+
+extern "C" const fidl_type_t
     test_bindingsdenylist_DenyEachBinding_OnlyDenyGo_ResponseTable;
 const fidl_type_t* DenyEachBinding_OnlyDenyGo_Response::FidlType =
     &test_bindingsdenylist_DenyEachBinding_OnlyDenyGo_ResponseTable;
@@ -1518,6 +1654,48 @@ void DenyEachBinding_OnlyDenyGo_Result::EnsureStorageInitialized(
         break;
     }
   }
+}
+
+extern "C" const fidl_type_t
+    test_bindingsdenylist_DenyEachBindingOnlyDenyGoTopResponseTable;
+const fidl_type_t* DenyEachBindingOnlyDenyGoTopResponse::FidlType =
+    &test_bindingsdenylist_DenyEachBindingOnlyDenyGoTopResponseTable;
+
+void DenyEachBindingOnlyDenyGoTopResponse::Encode(
+    ::fidl::Encoder* _encoder, size_t _offset,
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  if (::fidl::IsMemcpyCompatible<DenyEachBindingOnlyDenyGoTopResponse>::value) {
+    memcpy(_encoder->template GetPtr<DenyEachBindingOnlyDenyGoTopResponse>(
+               _offset),
+           this, sizeof(DenyEachBindingOnlyDenyGoTopResponse));
+  } else {
+    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
+      ::fidl::Encode(_encoder, &result, _offset + 0);
+
+    } else {
+      ::fidl::Encode(_encoder, &result, _offset + 0);
+    }
+  }
+}
+
+void DenyEachBindingOnlyDenyGoTopResponse::Decode(
+    ::fidl::Decoder* _decoder, DenyEachBindingOnlyDenyGoTopResponse* _value,
+    size_t _offset) {
+  if (::fidl::IsMemcpyCompatible<DenyEachBindingOnlyDenyGoTopResponse>::value) {
+    memcpy(_value,
+           _decoder->template GetPtr<DenyEachBindingOnlyDenyGoTopResponse>(
+               _offset),
+           sizeof(DenyEachBindingOnlyDenyGoTopResponse));
+  } else {
+    ::fidl::Decode(_decoder, &_value->result, _offset + 0);
+  }
+}
+
+zx_status_t DenyEachBindingOnlyDenyGoTopResponse::Clone(
+    DenyEachBindingOnlyDenyGoTopResponse* _result) const {
+  zx_status_t _status = ::fidl::Clone(result, &_result->result);
+  if (_status != ZX_OK) return _status;
+  return ZX_OK;
 }
 
 extern "C" const fidl_type_t
@@ -1872,6 +2050,262 @@ void DenyEachBinding_OnlyDenyDart_Result::EnsureStorageInitialized(
         break;
     }
   }
+}
+
+extern "C" const fidl_type_t
+    test_bindingsdenylist_DenyEachBindingOnlyDenyDartTopResponseTable;
+const fidl_type_t* DenyEachBindingOnlyDenyDartTopResponse::FidlType =
+    &test_bindingsdenylist_DenyEachBindingOnlyDenyDartTopResponseTable;
+
+void DenyEachBindingOnlyDenyDartTopResponse::Encode(
+    ::fidl::Encoder* _encoder, size_t _offset,
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  if (::fidl::IsMemcpyCompatible<
+          DenyEachBindingOnlyDenyDartTopResponse>::value) {
+    memcpy(_encoder->template GetPtr<DenyEachBindingOnlyDenyDartTopResponse>(
+               _offset),
+           this, sizeof(DenyEachBindingOnlyDenyDartTopResponse));
+  } else {
+    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
+      ::fidl::Encode(_encoder, &result, _offset + 0);
+
+    } else {
+      ::fidl::Encode(_encoder, &result, _offset + 0);
+    }
+  }
+}
+
+void DenyEachBindingOnlyDenyDartTopResponse::Decode(
+    ::fidl::Decoder* _decoder, DenyEachBindingOnlyDenyDartTopResponse* _value,
+    size_t _offset) {
+  if (::fidl::IsMemcpyCompatible<
+          DenyEachBindingOnlyDenyDartTopResponse>::value) {
+    memcpy(_value,
+           _decoder->template GetPtr<DenyEachBindingOnlyDenyDartTopResponse>(
+               _offset),
+           sizeof(DenyEachBindingOnlyDenyDartTopResponse));
+  } else {
+    ::fidl::Decode(_decoder, &_value->result, _offset + 0);
+  }
+}
+
+zx_status_t DenyEachBindingOnlyDenyDartTopResponse::Clone(
+    DenyEachBindingOnlyDenyDartTopResponse* _result) const {
+  zx_status_t _status = ::fidl::Clone(result, &_result->result);
+  if (_status != ZX_OK) return _status;
+  return ZX_OK;
+}
+
+extern "C" const fidl_type_t
+    test_bindingsdenylist_DenyEachBindingOnlyDenySyzkallerRequestTable;
+const fidl_type_t* DenyEachBindingOnlyDenySyzkallerRequest::FidlType =
+    &test_bindingsdenylist_DenyEachBindingOnlyDenySyzkallerRequestTable;
+
+void DenyEachBindingOnlyDenySyzkallerRequest::Encode(
+    ::fidl::Encoder* _encoder, size_t _offset,
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  if (::fidl::IsMemcpyCompatible<
+          DenyEachBindingOnlyDenySyzkallerRequest>::value) {
+    memcpy(_encoder->template GetPtr<DenyEachBindingOnlyDenySyzkallerRequest>(
+               _offset),
+           this, sizeof(DenyEachBindingOnlyDenySyzkallerRequest));
+  } else {
+    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
+      ::fidl::Encode(_encoder, &a, _offset + 0);
+
+    } else {
+      ::fidl::Encode(_encoder, &a, _offset + 0);
+    }
+  }
+}
+
+void DenyEachBindingOnlyDenySyzkallerRequest::Decode(
+    ::fidl::Decoder* _decoder, DenyEachBindingOnlyDenySyzkallerRequest* _value,
+    size_t _offset) {
+  if (::fidl::IsMemcpyCompatible<
+          DenyEachBindingOnlyDenySyzkallerRequest>::value) {
+    memcpy(_value,
+           _decoder->template GetPtr<DenyEachBindingOnlyDenySyzkallerRequest>(
+               _offset),
+           sizeof(DenyEachBindingOnlyDenySyzkallerRequest));
+  } else {
+    ::fidl::Decode(_decoder, &_value->a, _offset + 0);
+  }
+}
+
+zx_status_t DenyEachBindingOnlyDenySyzkallerRequest::Clone(
+    DenyEachBindingOnlyDenySyzkallerRequest* _result) const {
+  zx_status_t _status = ::fidl::Clone(a, &_result->a);
+  if (_status != ZX_OK) return _status;
+  return ZX_OK;
+}
+
+extern "C" const fidl_type_t
+    test_bindingsdenylist_DenyEachBindingOnlyDenyRustRequestTable;
+const fidl_type_t* DenyEachBindingOnlyDenyRustRequest::FidlType =
+    &test_bindingsdenylist_DenyEachBindingOnlyDenyRustRequestTable;
+
+void DenyEachBindingOnlyDenyRustRequest::Encode(
+    ::fidl::Encoder* _encoder, size_t _offset,
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  if (::fidl::IsMemcpyCompatible<DenyEachBindingOnlyDenyRustRequest>::value) {
+    memcpy(
+        _encoder->template GetPtr<DenyEachBindingOnlyDenyRustRequest>(_offset),
+        this, sizeof(DenyEachBindingOnlyDenyRustRequest));
+  } else {
+    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
+      ::fidl::Encode(_encoder, &a, _offset + 0);
+
+    } else {
+      ::fidl::Encode(_encoder, &a, _offset + 0);
+    }
+  }
+}
+
+void DenyEachBindingOnlyDenyRustRequest::Decode(
+    ::fidl::Decoder* _decoder, DenyEachBindingOnlyDenyRustRequest* _value,
+    size_t _offset) {
+  if (::fidl::IsMemcpyCompatible<DenyEachBindingOnlyDenyRustRequest>::value) {
+    memcpy(
+        _value,
+        _decoder->template GetPtr<DenyEachBindingOnlyDenyRustRequest>(_offset),
+        sizeof(DenyEachBindingOnlyDenyRustRequest));
+  } else {
+    ::fidl::Decode(_decoder, &_value->a, _offset + 0);
+  }
+}
+
+zx_status_t DenyEachBindingOnlyDenyRustRequest::Clone(
+    DenyEachBindingOnlyDenyRustRequest* _result) const {
+  zx_status_t _status = ::fidl::Clone(a, &_result->a);
+  if (_status != ZX_OK) return _status;
+  return ZX_OK;
+}
+
+extern "C" const fidl_type_t
+    test_bindingsdenylist_DenyEachBindingOnlyDenyLibfuzzerRequestTable;
+const fidl_type_t* DenyEachBindingOnlyDenyLibfuzzerRequest::FidlType =
+    &test_bindingsdenylist_DenyEachBindingOnlyDenyLibfuzzerRequestTable;
+
+void DenyEachBindingOnlyDenyLibfuzzerRequest::Encode(
+    ::fidl::Encoder* _encoder, size_t _offset,
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  if (::fidl::IsMemcpyCompatible<
+          DenyEachBindingOnlyDenyLibfuzzerRequest>::value) {
+    memcpy(_encoder->template GetPtr<DenyEachBindingOnlyDenyLibfuzzerRequest>(
+               _offset),
+           this, sizeof(DenyEachBindingOnlyDenyLibfuzzerRequest));
+  } else {
+    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
+      ::fidl::Encode(_encoder, &a, _offset + 0);
+
+    } else {
+      ::fidl::Encode(_encoder, &a, _offset + 0);
+    }
+  }
+}
+
+void DenyEachBindingOnlyDenyLibfuzzerRequest::Decode(
+    ::fidl::Decoder* _decoder, DenyEachBindingOnlyDenyLibfuzzerRequest* _value,
+    size_t _offset) {
+  if (::fidl::IsMemcpyCompatible<
+          DenyEachBindingOnlyDenyLibfuzzerRequest>::value) {
+    memcpy(_value,
+           _decoder->template GetPtr<DenyEachBindingOnlyDenyLibfuzzerRequest>(
+               _offset),
+           sizeof(DenyEachBindingOnlyDenyLibfuzzerRequest));
+  } else {
+    ::fidl::Decode(_decoder, &_value->a, _offset + 0);
+  }
+}
+
+zx_status_t DenyEachBindingOnlyDenyLibfuzzerRequest::Clone(
+    DenyEachBindingOnlyDenyLibfuzzerRequest* _result) const {
+  zx_status_t _status = ::fidl::Clone(a, &_result->a);
+  if (_status != ZX_OK) return _status;
+  return ZX_OK;
+}
+
+extern "C" const fidl_type_t
+    test_bindingsdenylist_DenyEachBindingOnlyDenyGoRequestTable;
+const fidl_type_t* DenyEachBindingOnlyDenyGoRequest::FidlType =
+    &test_bindingsdenylist_DenyEachBindingOnlyDenyGoRequestTable;
+
+void DenyEachBindingOnlyDenyGoRequest::Encode(
+    ::fidl::Encoder* _encoder, size_t _offset,
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  if (::fidl::IsMemcpyCompatible<DenyEachBindingOnlyDenyGoRequest>::value) {
+    memcpy(_encoder->template GetPtr<DenyEachBindingOnlyDenyGoRequest>(_offset),
+           this, sizeof(DenyEachBindingOnlyDenyGoRequest));
+  } else {
+    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
+      ::fidl::Encode(_encoder, &a, _offset + 0);
+
+    } else {
+      ::fidl::Encode(_encoder, &a, _offset + 0);
+    }
+  }
+}
+
+void DenyEachBindingOnlyDenyGoRequest::Decode(
+    ::fidl::Decoder* _decoder, DenyEachBindingOnlyDenyGoRequest* _value,
+    size_t _offset) {
+  if (::fidl::IsMemcpyCompatible<DenyEachBindingOnlyDenyGoRequest>::value) {
+    memcpy(_value,
+           _decoder->template GetPtr<DenyEachBindingOnlyDenyGoRequest>(_offset),
+           sizeof(DenyEachBindingOnlyDenyGoRequest));
+  } else {
+    ::fidl::Decode(_decoder, &_value->a, _offset + 0);
+  }
+}
+
+zx_status_t DenyEachBindingOnlyDenyGoRequest::Clone(
+    DenyEachBindingOnlyDenyGoRequest* _result) const {
+  zx_status_t _status = ::fidl::Clone(a, &_result->a);
+  if (_status != ZX_OK) return _status;
+  return ZX_OK;
+}
+
+extern "C" const fidl_type_t
+    test_bindingsdenylist_DenyEachBindingOnlyDenyDartRequestTable;
+const fidl_type_t* DenyEachBindingOnlyDenyDartRequest::FidlType =
+    &test_bindingsdenylist_DenyEachBindingOnlyDenyDartRequestTable;
+
+void DenyEachBindingOnlyDenyDartRequest::Encode(
+    ::fidl::Encoder* _encoder, size_t _offset,
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  if (::fidl::IsMemcpyCompatible<DenyEachBindingOnlyDenyDartRequest>::value) {
+    memcpy(
+        _encoder->template GetPtr<DenyEachBindingOnlyDenyDartRequest>(_offset),
+        this, sizeof(DenyEachBindingOnlyDenyDartRequest));
+  } else {
+    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
+      ::fidl::Encode(_encoder, &a, _offset + 0);
+
+    } else {
+      ::fidl::Encode(_encoder, &a, _offset + 0);
+    }
+  }
+}
+
+void DenyEachBindingOnlyDenyDartRequest::Decode(
+    ::fidl::Decoder* _decoder, DenyEachBindingOnlyDenyDartRequest* _value,
+    size_t _offset) {
+  if (::fidl::IsMemcpyCompatible<DenyEachBindingOnlyDenyDartRequest>::value) {
+    memcpy(
+        _value,
+        _decoder->template GetPtr<DenyEachBindingOnlyDenyDartRequest>(_offset),
+        sizeof(DenyEachBindingOnlyDenyDartRequest));
+  } else {
+    ::fidl::Decode(_decoder, &_value->a, _offset + 0);
+  }
+}
+
+zx_status_t DenyEachBindingOnlyDenyDartRequest::Clone(
+    DenyEachBindingOnlyDenyDartRequest* _result) const {
+  zx_status_t _status = ::fidl::Clone(a, &_result->a);
+  if (_status != ZX_OK) return _status;
+  return ZX_OK;
 }
 
 //

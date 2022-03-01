@@ -9,7 +9,7 @@
 
 namespace fuzzing {
 
-inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoderForType, 7>
+inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoderForType, 9>
     test_anonymous_decoder_encoders = {
         ::fidl::fuzzing::DecoderEncoderForType{
             .fidl_type_name = "::test_anonymous::wire::TableData",
@@ -22,6 +22,13 @@ inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoderForType, 7>
             .has_flexible_envelope = true,
             .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<
                 ::test_anonymous::wire::TableMember>,
+        },
+        ::fidl::fuzzing::DecoderEncoderForType{
+            .fidl_type_name =
+                "::test_anonymous::wire::SomeProtocolSomeMethodRequest",
+            .has_flexible_envelope = true,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<
+                ::test_anonymous::wire::SomeProtocolSomeMethodRequest>,
         },
         ::fidl::fuzzing::DecoderEncoderForType{
             .fidl_type_name = "::test_anonymous::wire::OverrideTest",
@@ -41,6 +48,13 @@ inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoderForType, 7>
             .has_flexible_envelope = false,
             .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<
                 ::test_anonymous::wire::SomeProtocolSomeMethodResponse>,
+        },
+        ::fidl::fuzzing::DecoderEncoderForType{
+            .fidl_type_name =
+                "::test_anonymous::wire::SomeProtocolSomeMethodTopResponse",
+            .has_flexible_envelope = false,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<
+                ::test_anonymous::wire::SomeProtocolSomeMethodTopResponse>,
         },
 
         ::fidl::fuzzing::DecoderEncoderForType{

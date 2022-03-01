@@ -25,11 +25,33 @@
 
 namespace test_protocolpayloads {
 namespace wire {
+struct MainProtocolTwoWayImportWithErrorTopResponse;
+
 struct MainProtocolTwoWayAnonWithErrorResponse;
+
+struct MainProtocolTwoWayAnonWithErrorTopResponse;
+
+struct MainProtocolOnImportWithErrorRequest;
 
 struct MainProtocolOnAnonWithErrorResponse;
 
+struct MainProtocolOnAnonWithErrorRequest;
+
+struct MainProtocolTwoWayAnonWithErrorRequest;
+
+struct MainProtocolTwoWayAnonTopResponse;
+
+struct MainProtocolTwoWayAnonRequest;
+
+struct MainProtocolOneWayAnonRequest;
+
+struct MainProtocolOnAnonRequest;
+
 struct LocalStructPayload;
+
+struct MainProtocolTwoWayLocalWithErrorTopResponse;
+
+struct MainProtocolOnLocalWithErrorRequest;
 
 class MainProtocolTwoWayImportWithErrorResult;
 
@@ -857,6 +879,17 @@ class MainProtocolOnLocalWithErrorResult {
 };
 
 extern "C" const fidl_type_t
+    test_protocolpayloads_MainProtocolTwoWayImportWithErrorTopResponseTable;
+
+struct MainProtocolTwoWayImportWithErrorTopResponse {
+  using Result =
+      test_protocolpayloads::wire::MainProtocolTwoWayImportWithErrorResult;
+
+  ::test_protocolpayloads::wire::MainProtocolTwoWayImportWithErrorResult
+      result = {};
+};
+
+extern "C" const fidl_type_t
     test_protocolpayloads_MainProtocol_TwoWayAnonWithError_ResponseTable;
 
 struct MainProtocolTwoWayAnonWithErrorResponse {
@@ -866,9 +899,85 @@ struct MainProtocolTwoWayAnonWithErrorResponse {
 };
 
 extern "C" const fidl_type_t
+    test_protocolpayloads_MainProtocolTwoWayAnonWithErrorTopResponseTable;
+
+struct MainProtocolTwoWayAnonWithErrorTopResponse {
+  using Result =
+      test_protocolpayloads::wire::MainProtocolTwoWayAnonWithErrorResult;
+
+  ::test_protocolpayloads::wire::MainProtocolTwoWayAnonWithErrorResult result =
+      {};
+};
+
+extern "C" const fidl_type_t
+    test_protocolpayloads_MainProtocolOnImportWithErrorRequestTable;
+
+struct MainProtocolOnImportWithErrorRequest {
+  using Result =
+      test_protocolpayloads::wire::MainProtocolOnImportWithErrorResult;
+
+  ::test_protocolpayloads::wire::MainProtocolOnImportWithErrorResult result =
+      {};
+};
+
+extern "C" const fidl_type_t
     test_protocolpayloads_MainProtocol_OnAnonWithError_ResponseTable;
 
 struct MainProtocolOnAnonWithErrorResponse {
+  uint32_t a = {};
+
+  uint32_t b = {};
+};
+
+extern "C" const fidl_type_t
+    test_protocolpayloads_MainProtocolOnAnonWithErrorRequestTable;
+
+struct MainProtocolOnAnonWithErrorRequest {
+  using Result = test_protocolpayloads::wire::MainProtocolOnAnonWithErrorResult;
+
+  ::test_protocolpayloads::wire::MainProtocolOnAnonWithErrorResult result = {};
+};
+
+extern "C" const fidl_type_t
+    test_protocolpayloads_MainProtocolTwoWayAnonWithErrorRequestTable;
+
+struct MainProtocolTwoWayAnonWithErrorRequest {
+  uint32_t a = {};
+
+  uint32_t b = {};
+};
+
+extern "C" const fidl_type_t
+    test_protocolpayloads_MainProtocolTwoWayAnonTopResponseTable;
+
+struct MainProtocolTwoWayAnonTopResponse {
+  uint32_t a = {};
+
+  uint32_t b = {};
+};
+
+extern "C" const fidl_type_t
+    test_protocolpayloads_MainProtocolTwoWayAnonRequestTable;
+
+struct MainProtocolTwoWayAnonRequest {
+  uint32_t a = {};
+
+  uint32_t b = {};
+};
+
+extern "C" const fidl_type_t
+    test_protocolpayloads_MainProtocolOneWayAnonRequestTable;
+
+struct MainProtocolOneWayAnonRequest {
+  uint32_t a = {};
+
+  uint32_t b = {};
+};
+
+extern "C" const fidl_type_t
+    test_protocolpayloads_MainProtocolOnAnonRequestTable;
+
+struct MainProtocolOnAnonRequest {
   uint32_t a = {};
 
   uint32_t b = {};
@@ -882,9 +991,64 @@ struct LocalStructPayload {
   uint32_t b = {};
 };
 
+extern "C" const fidl_type_t
+    test_protocolpayloads_MainProtocolTwoWayLocalWithErrorTopResponseTable;
+
+struct MainProtocolTwoWayLocalWithErrorTopResponse {
+  using Result =
+      test_protocolpayloads::wire::MainProtocolTwoWayLocalWithErrorResult;
+
+  ::test_protocolpayloads::wire::MainProtocolTwoWayLocalWithErrorResult result =
+      {};
+};
+
+extern "C" const fidl_type_t
+    test_protocolpayloads_MainProtocolOnLocalWithErrorRequestTable;
+
+struct MainProtocolOnLocalWithErrorRequest {
+  using Result =
+      test_protocolpayloads::wire::MainProtocolOnLocalWithErrorResult;
+
+  ::test_protocolpayloads::wire::MainProtocolOnLocalWithErrorResult result = {};
+};
+
 }  // namespace wire
 }  // namespace test_protocolpayloads
 namespace fidl {
+
+template <>
+struct TypeTraits<::test_protocolpayloads::wire::
+                      MainProtocolTwoWayImportWithErrorTopResponse> {
+  static constexpr const fidl_type_t* kType =
+      &::test_protocolpayloads::wire::
+          test_protocolpayloads_MainProtocolTwoWayImportWithErrorTopResponseTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 24;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 8;
+  static constexpr bool kHasPointer = true;
+};
+
+template <>
+struct IsFidlType<
+    ::test_protocolpayloads::wire::MainProtocolTwoWayImportWithErrorTopResponse>
+    : public std::true_type {};
+template <>
+struct IsStruct<
+    ::test_protocolpayloads::wire::MainProtocolTwoWayImportWithErrorTopResponse>
+    : public std::true_type {};
+static_assert(std::is_standard_layout_v<
+              ::test_protocolpayloads::wire::
+                  MainProtocolTwoWayImportWithErrorTopResponse>);
+static_assert(offsetof(::test_protocolpayloads::wire::
+                           MainProtocolTwoWayImportWithErrorTopResponse,
+                       result) == 0);
+static_assert(
+    sizeof(::test_protocolpayloads::wire::
+               MainProtocolTwoWayImportWithErrorTopResponse) ==
+    TypeTraits<::test_protocolpayloads::wire::
+                   MainProtocolTwoWayImportWithErrorTopResponse>::kPrimarySize);
 
 template <>
 struct TypeTraits<
@@ -927,6 +1091,75 @@ static_assert(
 
 template <>
 struct TypeTraits<
+    ::test_protocolpayloads::wire::MainProtocolTwoWayAnonWithErrorTopResponse> {
+  static constexpr const fidl_type_t* kType =
+      &::test_protocolpayloads::wire::
+          test_protocolpayloads_MainProtocolTwoWayAnonWithErrorTopResponseTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 24;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 8;
+  static constexpr uint32_t kMaxOutOfLineV1 = 8;
+  static constexpr bool kHasPointer = true;
+};
+
+template <>
+struct IsFidlType<
+    ::test_protocolpayloads::wire::MainProtocolTwoWayAnonWithErrorTopResponse>
+    : public std::true_type {};
+template <>
+struct IsStruct<
+    ::test_protocolpayloads::wire::MainProtocolTwoWayAnonWithErrorTopResponse>
+    : public std::true_type {};
+static_assert(
+    std::is_standard_layout_v<::test_protocolpayloads::wire::
+                                  MainProtocolTwoWayAnonWithErrorTopResponse>);
+static_assert(offsetof(::test_protocolpayloads::wire::
+                           MainProtocolTwoWayAnonWithErrorTopResponse,
+                       result) == 0);
+static_assert(
+    sizeof(::test_protocolpayloads::wire::
+               MainProtocolTwoWayAnonWithErrorTopResponse) ==
+    TypeTraits<::test_protocolpayloads::wire::
+                   MainProtocolTwoWayAnonWithErrorTopResponse>::kPrimarySize);
+
+template <>
+struct TypeTraits<
+    ::test_protocolpayloads::wire::MainProtocolOnImportWithErrorRequest> {
+  static constexpr const fidl_type_t* kType =
+      &::test_protocolpayloads::wire::
+          test_protocolpayloads_MainProtocolOnImportWithErrorRequestTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 24;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 8;
+  static constexpr bool kHasPointer = true;
+};
+
+template <>
+struct IsFidlType<
+    ::test_protocolpayloads::wire::MainProtocolOnImportWithErrorRequest>
+    : public std::true_type {};
+template <>
+struct IsStruct<
+    ::test_protocolpayloads::wire::MainProtocolOnImportWithErrorRequest>
+    : public std::true_type {};
+static_assert(
+    std::is_standard_layout_v<
+        ::test_protocolpayloads::wire::MainProtocolOnImportWithErrorRequest>);
+static_assert(
+    offsetof(
+        ::test_protocolpayloads::wire::MainProtocolOnImportWithErrorRequest,
+        result) == 0);
+static_assert(
+    sizeof(
+        ::test_protocolpayloads::wire::MainProtocolOnImportWithErrorRequest) ==
+    TypeTraits<::test_protocolpayloads::wire::
+                   MainProtocolOnImportWithErrorRequest>::kPrimarySize);
+
+template <>
+struct TypeTraits<
     ::test_protocolpayloads::wire::MainProtocolOnAnonWithErrorResponse> {
   static constexpr const fidl_type_t* kType =
       &::test_protocolpayloads::wire::
@@ -963,6 +1196,210 @@ static_assert(
                    MainProtocolOnAnonWithErrorResponse>::kPrimarySize);
 
 template <>
+struct TypeTraits<
+    ::test_protocolpayloads::wire::MainProtocolOnAnonWithErrorRequest> {
+  static constexpr const fidl_type_t* kType =
+      &::test_protocolpayloads::wire::
+          test_protocolpayloads_MainProtocolOnAnonWithErrorRequestTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 24;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 8;
+  static constexpr uint32_t kMaxOutOfLineV1 = 8;
+  static constexpr bool kHasPointer = true;
+};
+
+template <>
+struct IsFidlType<
+    ::test_protocolpayloads::wire::MainProtocolOnAnonWithErrorRequest>
+    : public std::true_type {};
+template <>
+struct IsStruct<
+    ::test_protocolpayloads::wire::MainProtocolOnAnonWithErrorRequest>
+    : public std::true_type {};
+static_assert(
+    std::is_standard_layout_v<
+        ::test_protocolpayloads::wire::MainProtocolOnAnonWithErrorRequest>);
+static_assert(
+    offsetof(::test_protocolpayloads::wire::MainProtocolOnAnonWithErrorRequest,
+             result) == 0);
+static_assert(
+    sizeof(::test_protocolpayloads::wire::MainProtocolOnAnonWithErrorRequest) ==
+    TypeTraits<::test_protocolpayloads::wire::
+                   MainProtocolOnAnonWithErrorRequest>::kPrimarySize);
+
+template <>
+struct TypeTraits<
+    ::test_protocolpayloads::wire::MainProtocolTwoWayAnonWithErrorRequest> {
+  static constexpr const fidl_type_t* kType =
+      &::test_protocolpayloads::wire::
+          test_protocolpayloads_MainProtocolTwoWayAnonWithErrorRequestTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 8;
+  static constexpr uint32_t kPrimarySizeV1 = 8;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasPointer = false;
+};
+
+template <>
+struct IsFidlType<
+    ::test_protocolpayloads::wire::MainProtocolTwoWayAnonWithErrorRequest>
+    : public std::true_type {};
+template <>
+struct IsStruct<
+    ::test_protocolpayloads::wire::MainProtocolTwoWayAnonWithErrorRequest>
+    : public std::true_type {};
+static_assert(
+    std::is_standard_layout_v<
+        ::test_protocolpayloads::wire::MainProtocolTwoWayAnonWithErrorRequest>);
+static_assert(
+    offsetof(
+        ::test_protocolpayloads::wire::MainProtocolTwoWayAnonWithErrorRequest,
+        a) == 0);
+static_assert(
+    offsetof(
+        ::test_protocolpayloads::wire::MainProtocolTwoWayAnonWithErrorRequest,
+        b) == 4);
+static_assert(
+    sizeof(::test_protocolpayloads::wire::
+               MainProtocolTwoWayAnonWithErrorRequest) ==
+    TypeTraits<::test_protocolpayloads::wire::
+                   MainProtocolTwoWayAnonWithErrorRequest>::kPrimarySize);
+
+template <>
+struct TypeTraits<
+    ::test_protocolpayloads::wire::MainProtocolTwoWayAnonTopResponse> {
+  static constexpr const fidl_type_t* kType =
+      &::test_protocolpayloads::wire::
+          test_protocolpayloads_MainProtocolTwoWayAnonTopResponseTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 8;
+  static constexpr uint32_t kPrimarySizeV1 = 8;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasPointer = false;
+};
+
+template <>
+struct IsFidlType<
+    ::test_protocolpayloads::wire::MainProtocolTwoWayAnonTopResponse>
+    : public std::true_type {};
+template <>
+struct IsStruct<
+    ::test_protocolpayloads::wire::MainProtocolTwoWayAnonTopResponse>
+    : public std::true_type {};
+static_assert(
+    std::is_standard_layout_v<
+        ::test_protocolpayloads::wire::MainProtocolTwoWayAnonTopResponse>);
+static_assert(
+    offsetof(::test_protocolpayloads::wire::MainProtocolTwoWayAnonTopResponse,
+             a) == 0);
+static_assert(
+    offsetof(::test_protocolpayloads::wire::MainProtocolTwoWayAnonTopResponse,
+             b) == 4);
+static_assert(
+    sizeof(::test_protocolpayloads::wire::MainProtocolTwoWayAnonTopResponse) ==
+    TypeTraits<::test_protocolpayloads::wire::
+                   MainProtocolTwoWayAnonTopResponse>::kPrimarySize);
+
+template <>
+struct TypeTraits<
+    ::test_protocolpayloads::wire::MainProtocolTwoWayAnonRequest> {
+  static constexpr const fidl_type_t* kType =
+      &::test_protocolpayloads::wire::
+          test_protocolpayloads_MainProtocolTwoWayAnonRequestTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 8;
+  static constexpr uint32_t kPrimarySizeV1 = 8;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasPointer = false;
+};
+
+template <>
+struct IsFidlType<::test_protocolpayloads::wire::MainProtocolTwoWayAnonRequest>
+    : public std::true_type {};
+template <>
+struct IsStruct<::test_protocolpayloads::wire::MainProtocolTwoWayAnonRequest>
+    : public std::true_type {};
+static_assert(std::is_standard_layout_v<
+              ::test_protocolpayloads::wire::MainProtocolTwoWayAnonRequest>);
+static_assert(
+    offsetof(::test_protocolpayloads::wire::MainProtocolTwoWayAnonRequest, a) ==
+    0);
+static_assert(
+    offsetof(::test_protocolpayloads::wire::MainProtocolTwoWayAnonRequest, b) ==
+    4);
+static_assert(
+    sizeof(::test_protocolpayloads::wire::MainProtocolTwoWayAnonRequest) ==
+    TypeTraits<::test_protocolpayloads::wire::MainProtocolTwoWayAnonRequest>::
+        kPrimarySize);
+
+template <>
+struct TypeTraits<
+    ::test_protocolpayloads::wire::MainProtocolOneWayAnonRequest> {
+  static constexpr const fidl_type_t* kType =
+      &::test_protocolpayloads::wire::
+          test_protocolpayloads_MainProtocolOneWayAnonRequestTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 8;
+  static constexpr uint32_t kPrimarySizeV1 = 8;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasPointer = false;
+};
+
+template <>
+struct IsFidlType<::test_protocolpayloads::wire::MainProtocolOneWayAnonRequest>
+    : public std::true_type {};
+template <>
+struct IsStruct<::test_protocolpayloads::wire::MainProtocolOneWayAnonRequest>
+    : public std::true_type {};
+static_assert(std::is_standard_layout_v<
+              ::test_protocolpayloads::wire::MainProtocolOneWayAnonRequest>);
+static_assert(
+    offsetof(::test_protocolpayloads::wire::MainProtocolOneWayAnonRequest, a) ==
+    0);
+static_assert(
+    offsetof(::test_protocolpayloads::wire::MainProtocolOneWayAnonRequest, b) ==
+    4);
+static_assert(
+    sizeof(::test_protocolpayloads::wire::MainProtocolOneWayAnonRequest) ==
+    TypeTraits<::test_protocolpayloads::wire::MainProtocolOneWayAnonRequest>::
+        kPrimarySize);
+
+template <>
+struct TypeTraits<::test_protocolpayloads::wire::MainProtocolOnAnonRequest> {
+  static constexpr const fidl_type_t* kType =
+      &::test_protocolpayloads::wire::
+          test_protocolpayloads_MainProtocolOnAnonRequestTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 8;
+  static constexpr uint32_t kPrimarySizeV1 = 8;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasPointer = false;
+};
+
+template <>
+struct IsFidlType<::test_protocolpayloads::wire::MainProtocolOnAnonRequest>
+    : public std::true_type {};
+template <>
+struct IsStruct<::test_protocolpayloads::wire::MainProtocolOnAnonRequest>
+    : public std::true_type {};
+static_assert(std::is_standard_layout_v<
+              ::test_protocolpayloads::wire::MainProtocolOnAnonRequest>);
+static_assert(offsetof(::test_protocolpayloads::wire::MainProtocolOnAnonRequest,
+                       a) == 0);
+static_assert(offsetof(::test_protocolpayloads::wire::MainProtocolOnAnonRequest,
+                       b) == 4);
+static_assert(
+    sizeof(::test_protocolpayloads::wire::MainProtocolOnAnonRequest) ==
+    TypeTraits<::test_protocolpayloads::wire::MainProtocolOnAnonRequest>::
+        kPrimarySize);
+
+template <>
 struct TypeTraits<::test_protocolpayloads::wire::LocalStructPayload> {
   static constexpr const fidl_type_t* kType =
       &::test_protocolpayloads::wire::
@@ -990,6 +1427,74 @@ static_assert(offsetof(::test_protocolpayloads::wire::LocalStructPayload, b) ==
 static_assert(sizeof(::test_protocolpayloads::wire::LocalStructPayload) ==
               TypeTraits<::test_protocolpayloads::wire::LocalStructPayload>::
                   kPrimarySize);
+
+template <>
+struct TypeTraits<::test_protocolpayloads::wire::
+                      MainProtocolTwoWayLocalWithErrorTopResponse> {
+  static constexpr const fidl_type_t* kType =
+      &::test_protocolpayloads::wire::
+          test_protocolpayloads_MainProtocolTwoWayLocalWithErrorTopResponseTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 24;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 8;
+  static constexpr uint32_t kMaxOutOfLineV1 = 8;
+  static constexpr bool kHasPointer = true;
+};
+
+template <>
+struct IsFidlType<
+    ::test_protocolpayloads::wire::MainProtocolTwoWayLocalWithErrorTopResponse>
+    : public std::true_type {};
+template <>
+struct IsStruct<
+    ::test_protocolpayloads::wire::MainProtocolTwoWayLocalWithErrorTopResponse>
+    : public std::true_type {};
+static_assert(
+    std::is_standard_layout_v<::test_protocolpayloads::wire::
+                                  MainProtocolTwoWayLocalWithErrorTopResponse>);
+static_assert(offsetof(::test_protocolpayloads::wire::
+                           MainProtocolTwoWayLocalWithErrorTopResponse,
+                       result) == 0);
+static_assert(
+    sizeof(::test_protocolpayloads::wire::
+               MainProtocolTwoWayLocalWithErrorTopResponse) ==
+    TypeTraits<::test_protocolpayloads::wire::
+                   MainProtocolTwoWayLocalWithErrorTopResponse>::kPrimarySize);
+
+template <>
+struct TypeTraits<
+    ::test_protocolpayloads::wire::MainProtocolOnLocalWithErrorRequest> {
+  static constexpr const fidl_type_t* kType =
+      &::test_protocolpayloads::wire::
+          test_protocolpayloads_MainProtocolOnLocalWithErrorRequestTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 24;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 8;
+  static constexpr uint32_t kMaxOutOfLineV1 = 8;
+  static constexpr bool kHasPointer = true;
+};
+
+template <>
+struct IsFidlType<
+    ::test_protocolpayloads::wire::MainProtocolOnLocalWithErrorRequest>
+    : public std::true_type {};
+template <>
+struct IsStruct<
+    ::test_protocolpayloads::wire::MainProtocolOnLocalWithErrorRequest>
+    : public std::true_type {};
+static_assert(
+    std::is_standard_layout_v<
+        ::test_protocolpayloads::wire::MainProtocolOnLocalWithErrorRequest>);
+static_assert(
+    offsetof(::test_protocolpayloads::wire::MainProtocolOnLocalWithErrorRequest,
+             result) == 0);
+static_assert(
+    sizeof(
+        ::test_protocolpayloads::wire::MainProtocolOnLocalWithErrorRequest) ==
+    TypeTraits<::test_protocolpayloads::wire::
+                   MainProtocolOnLocalWithErrorRequest>::kPrimarySize);
 
 template <>
 struct TypeTraits<

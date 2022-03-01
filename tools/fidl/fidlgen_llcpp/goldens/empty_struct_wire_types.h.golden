@@ -26,10 +26,44 @@ namespace test_emptystruct {
 namespace wire {
 struct Empty;
 
+struct EmptyProtocolSendRequest;
+
+struct EmptyProtocolSendAndReceiveTopResponse;
+
+struct EmptyProtocolSendAndReceiveRequest;
+
+struct EmptyProtocolReceiveRequest;
+
 extern "C" const fidl_type_t test_emptystruct_EmptyTable;
 
 struct Empty {
   uint8_t __reserved = {};
+};
+
+extern "C" const fidl_type_t test_emptystruct_EmptyProtocolSendRequestTable;
+
+struct EmptyProtocolSendRequest {
+  ::test_emptystruct::wire::Empty e = {};
+};
+
+extern "C" const fidl_type_t
+    test_emptystruct_EmptyProtocolSendAndReceiveTopResponseTable;
+
+struct EmptyProtocolSendAndReceiveTopResponse {
+  ::test_emptystruct::wire::Empty e = {};
+};
+
+extern "C" const fidl_type_t
+    test_emptystruct_EmptyProtocolSendAndReceiveRequestTable;
+
+struct EmptyProtocolSendAndReceiveRequest {
+  ::test_emptystruct::wire::Empty e = {};
+};
+
+extern "C" const fidl_type_t test_emptystruct_EmptyProtocolReceiveRequestTable;
+
+struct EmptyProtocolReceiveRequest {
+  ::test_emptystruct::wire::Empty e = {};
 };
 
 }  // namespace wire
@@ -56,5 +90,122 @@ static_assert(std::is_standard_layout_v<::test_emptystruct::wire::Empty>);
 static_assert(offsetof(::test_emptystruct::wire::Empty, __reserved) == 0);
 static_assert(sizeof(::test_emptystruct::wire::Empty) ==
               TypeTraits<::test_emptystruct::wire::Empty>::kPrimarySize);
+
+template <>
+struct TypeTraits<::test_emptystruct::wire::EmptyProtocolSendRequest> {
+  static constexpr const fidl_type_t* kType =
+      &::test_emptystruct::wire::test_emptystruct_EmptyProtocolSendRequestTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 1;
+  static constexpr uint32_t kPrimarySizeV1 = 1;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasPointer = false;
+};
+
+template <>
+struct IsFidlType<::test_emptystruct::wire::EmptyProtocolSendRequest>
+    : public std::true_type {};
+template <>
+struct IsStruct<::test_emptystruct::wire::EmptyProtocolSendRequest>
+    : public std::true_type {};
+static_assert(std::is_standard_layout_v<
+              ::test_emptystruct::wire::EmptyProtocolSendRequest>);
+static_assert(offsetof(::test_emptystruct::wire::EmptyProtocolSendRequest, e) ==
+              0);
+static_assert(sizeof(::test_emptystruct::wire::EmptyProtocolSendRequest) ==
+              TypeTraits<::test_emptystruct::wire::EmptyProtocolSendRequest>::
+                  kPrimarySize);
+
+template <>
+struct TypeTraits<
+    ::test_emptystruct::wire::EmptyProtocolSendAndReceiveTopResponse> {
+  static constexpr const fidl_type_t* kType =
+      &::test_emptystruct::wire::
+          test_emptystruct_EmptyProtocolSendAndReceiveTopResponseTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 1;
+  static constexpr uint32_t kPrimarySizeV1 = 1;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasPointer = false;
+};
+
+template <>
+struct IsFidlType<
+    ::test_emptystruct::wire::EmptyProtocolSendAndReceiveTopResponse>
+    : public std::true_type {};
+template <>
+struct IsStruct<
+    ::test_emptystruct::wire::EmptyProtocolSendAndReceiveTopResponse>
+    : public std::true_type {};
+static_assert(
+    std::is_standard_layout_v<
+        ::test_emptystruct::wire::EmptyProtocolSendAndReceiveTopResponse>);
+static_assert(
+    offsetof(::test_emptystruct::wire::EmptyProtocolSendAndReceiveTopResponse,
+             e) == 0);
+static_assert(
+    sizeof(::test_emptystruct::wire::EmptyProtocolSendAndReceiveTopResponse) ==
+    TypeTraits<::test_emptystruct::wire::
+                   EmptyProtocolSendAndReceiveTopResponse>::kPrimarySize);
+
+template <>
+struct TypeTraits<
+    ::test_emptystruct::wire::EmptyProtocolSendAndReceiveRequest> {
+  static constexpr const fidl_type_t* kType =
+      &::test_emptystruct::wire::
+          test_emptystruct_EmptyProtocolSendAndReceiveRequestTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 1;
+  static constexpr uint32_t kPrimarySizeV1 = 1;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasPointer = false;
+};
+
+template <>
+struct IsFidlType<::test_emptystruct::wire::EmptyProtocolSendAndReceiveRequest>
+    : public std::true_type {};
+template <>
+struct IsStruct<::test_emptystruct::wire::EmptyProtocolSendAndReceiveRequest>
+    : public std::true_type {};
+static_assert(std::is_standard_layout_v<
+              ::test_emptystruct::wire::EmptyProtocolSendAndReceiveRequest>);
+static_assert(
+    offsetof(::test_emptystruct::wire::EmptyProtocolSendAndReceiveRequest, e) ==
+    0);
+static_assert(
+    sizeof(::test_emptystruct::wire::EmptyProtocolSendAndReceiveRequest) ==
+    TypeTraits<::test_emptystruct::wire::EmptyProtocolSendAndReceiveRequest>::
+        kPrimarySize);
+
+template <>
+struct TypeTraits<::test_emptystruct::wire::EmptyProtocolReceiveRequest> {
+  static constexpr const fidl_type_t* kType =
+      &::test_emptystruct::wire::
+          test_emptystruct_EmptyProtocolReceiveRequestTable;
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kPrimarySize = 1;
+  static constexpr uint32_t kPrimarySizeV1 = 1;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasPointer = false;
+};
+
+template <>
+struct IsFidlType<::test_emptystruct::wire::EmptyProtocolReceiveRequest>
+    : public std::true_type {};
+template <>
+struct IsStruct<::test_emptystruct::wire::EmptyProtocolReceiveRequest>
+    : public std::true_type {};
+static_assert(std::is_standard_layout_v<
+              ::test_emptystruct::wire::EmptyProtocolReceiveRequest>);
+static_assert(offsetof(::test_emptystruct::wire::EmptyProtocolReceiveRequest,
+                       e) == 0);
+static_assert(
+    sizeof(::test_emptystruct::wire::EmptyProtocolReceiveRequest) ==
+    TypeTraits<
+        ::test_emptystruct::wire::EmptyProtocolReceiveRequest>::kPrimarySize);
 
 }  // namespace fidl
