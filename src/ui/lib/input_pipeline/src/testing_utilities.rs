@@ -341,8 +341,8 @@ pub fn create_mouse_input_report(
 /// - `device_descriptor`: The device descriptor to add to the event.
 pub fn create_mouse_event_with_handled(
     location: mouse_binding::MouseLocation,
-    _wheel_delta_v: Option<i64>,
-    _wheel_delta_h: Option<i64>,
+    wheel_delta_v: Option<i64>,
+    wheel_delta_h: Option<i64>,
     phase: mouse_binding::MousePhase,
     affected_buttons: HashSet<mouse_binding::MouseButton>,
     pressed_buttons: HashSet<mouse_binding::MouseButton>,
@@ -353,6 +353,8 @@ pub fn create_mouse_event_with_handled(
     input_device::InputEvent {
         device_event: input_device::InputDeviceEvent::Mouse(mouse_binding::MouseEvent::new(
             location,
+            wheel_delta_v,
+            wheel_delta_h,
             phase,
             affected_buttons,
             pressed_buttons,

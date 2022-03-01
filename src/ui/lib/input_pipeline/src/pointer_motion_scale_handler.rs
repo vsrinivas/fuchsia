@@ -46,6 +46,8 @@ impl UnhandledInputHandler for PointerMotionScaleHandler {
                 device_event:
                     input_device::InputDeviceEvent::Mouse(mouse_binding::MouseEvent {
                         location: mouse_binding::MouseLocation::Relative(raw_motion),
+                        wheel_delta_v,
+                        wheel_delta_h,
                         // Only the `Move` phase carries non-zero motion.
                         phase: phase @ mouse_binding::MousePhase::Move,
                         affected_buttons,
@@ -59,6 +61,8 @@ impl UnhandledInputHandler for PointerMotionScaleHandler {
                     device_event: input_device::InputDeviceEvent::Mouse(
                         mouse_binding::MouseEvent {
                             location: mouse_binding::MouseLocation::Relative(scaled_motion),
+                            wheel_delta_v,
+                            wheel_delta_h,
                             phase,
                             affected_buttons,
                             pressed_buttons,
@@ -125,6 +129,8 @@ mod tests {
             device_id: 0,
             absolute_x_range: None,
             absolute_y_range: None,
+            wheel_v_range: None,
+            wheel_h_range: None,
             buttons: None,
         });
 
@@ -163,6 +169,8 @@ mod tests {
         let handler = PointerMotionScaleHandler::new(2.0).expect("failed to make handler");
         let input_event = make_unhandled_input_event(mouse_binding::MouseEvent {
             location: mouse_binding::MouseLocation::Relative(Position { x: 1.5, y: 4.5 }),
+            wheel_delta_v: None,
+            wheel_delta_h: None,
             phase: mouse_binding::MousePhase::Move,
             affected_buttons: hashset! {},
             pressed_buttons: hashset! {},
@@ -186,6 +194,8 @@ mod tests {
         let handler = PointerMotionScaleHandler::new(2.0).expect("failed to make handler");
         let input_event = make_unhandled_input_event(mouse_binding::MouseEvent {
             location: mouse_binding::MouseLocation::Relative(Position { x: 1.5, y: 4.5 }),
+            wheel_delta_v: None,
+            wheel_delta_h: None,
             phase: mouse_binding::MousePhase::Move,
             affected_buttons: hashset! {},
             pressed_buttons: hashset! {},
@@ -204,6 +214,8 @@ mod tests {
         let handler = PointerMotionScaleHandler::new(2.0).expect("failed to make handler");
         let input_event = make_unhandled_input_event(mouse_binding::MouseEvent {
             location: mouse_binding::MouseLocation::Relative(Position { x: 1.5, y: 4.5 }),
+            wheel_delta_v: None,
+            wheel_delta_h: None,
             phase: mouse_binding::MousePhase::Move,
             affected_buttons: input_buttons.clone(),
             pressed_buttons: input_buttons.clone(),
@@ -223,6 +235,8 @@ mod tests {
         let handler = PointerMotionScaleHandler::new(2.0).expect("failed to make handler");
         let input_event = make_unhandled_input_event(mouse_binding::MouseEvent {
             location: mouse_binding::MouseLocation::Relative(Position { x: 1.5, y: 4.5 }),
+            wheel_delta_v: None,
+            wheel_delta_h: None,
             phase: mouse_binding::MousePhase::Move,
             affected_buttons: hashset! {},
             pressed_buttons: hashset! {},
@@ -238,6 +252,8 @@ mod tests {
         let handler = PointerMotionScaleHandler::new(2.0).expect("failed to make handler");
         let mut input_event = make_unhandled_input_event(mouse_binding::MouseEvent {
             location: mouse_binding::MouseLocation::Relative(Position { x: 1.5, y: 4.5 }),
+            wheel_delta_v: None,
+            wheel_delta_h: None,
             phase: mouse_binding::MousePhase::Move,
             affected_buttons: hashset! {},
             pressed_buttons: hashset! {},

@@ -314,8 +314,8 @@ impl MouseInjectorHandler {
             target: Some(pointerinjector::Target::View(target)),
             viewport,
             dispatch_policy: Some(pointerinjector::DispatchPolicy::MouseHoverAndLatchInTarget),
-            scroll_v_range: None,
-            scroll_h_range: None,
+            scroll_v_range: mouse_descriptor.wheel_v_range.clone(),
+            scroll_h_range: mouse_descriptor.wheel_h_range.clone(),
             buttons: mouse_descriptor.buttons.clone(),
             ..pointerinjector::Config::EMPTY
         };
@@ -495,8 +495,8 @@ impl MouseInjectorHandler {
             pointer_id: Some(0),
             phase: Some(phase),
             position_in_viewport: Some([current_position.x, current_position.y]),
-            scroll_v: None,
-            scroll_h: None,
+            scroll_v: mouse_event.wheel_delta_v,
+            scroll_h: mouse_event.wheel_delta_h,
             pressed_buttons: Some(Vec::from_iter(mouse_event.pressed_buttons.iter().cloned())),
             relative_motion,
             ..pointerinjector::PointerSample::EMPTY
@@ -578,6 +578,20 @@ mod tests {
             device_id: 1,
             absolute_x_range: Some(fidl_input_report::Range { min: 0, max: 100 }),
             absolute_y_range: Some(fidl_input_report::Range { min: 0, max: 100 }),
+            wheel_v_range: Some(fidl_input_report::Axis {
+                range: fidl_input_report::Range { min: -1, max: 1 },
+                unit: fidl_input_report::Unit {
+                    type_: fidl_input_report::UnitType::Other,
+                    exponent: 0,
+                },
+            }),
+            wheel_h_range: Some(fidl_input_report::Axis {
+                range: fidl_input_report::Range { min: -1, max: 1 },
+                unit: fidl_input_report::Unit {
+                    type_: fidl_input_report::UnitType::Other,
+                    exponent: 0,
+                },
+            }),
             buttons: None,
         });
 
@@ -873,8 +887,8 @@ mod tests {
             None, /* wheel_delta_v */
             None, /* wheel_delta_h */
             mouse_binding::MousePhase::Move,
-            HashSet::<mouse_binding::MouseButton>::new(),
-            HashSet::<mouse_binding::MouseButton>::new(),
+            HashSet::new(),
+            HashSet::new(),
             event_time,
             &DESCRIPTOR,
         );
@@ -983,6 +997,8 @@ mod tests {
                 device_id: DEVICE_ID,
                 absolute_x_range: Some(fidl_input_report::Range { min: -50, max: 50 }),
                 absolute_y_range: Some(fidl_input_report::Range { min: -50, max: 50 }),
+                wheel_v_range: None,
+                wheel_h_range: None,
                 buttons: None,
             });
         let input_event = create_mouse_event(
@@ -990,8 +1006,8 @@ mod tests {
             None, /* wheel_delta_v */
             None, /* wheel_delta_h */
             mouse_binding::MousePhase::Move,
-            HashSet::<mouse_binding::MouseButton>::new(),
-            HashSet::<mouse_binding::MouseButton>::new(),
+            HashSet::new(),
+            HashSet::new(),
             event_time,
             &descriptor,
         );
@@ -1671,8 +1687,8 @@ mod tests {
             None, /* wheel_delta_v */
             None, /* wheel_delta_h */
             mouse_binding::MousePhase::Move,
-            HashSet::<mouse_binding::MouseButton>::new(),
-            HashSet::<mouse_binding::MouseButton>::new(),
+            HashSet::new(),
+            HashSet::new(),
             event_time,
             &DESCRIPTOR,
             input_device::Handled::Yes,
@@ -1687,6 +1703,272 @@ mod tests {
 
         // The cursor location stream should not receive any position.
         assert!(receiver.next().await.is_none());
+    }
+
+    /// Test simple scroll in vertical and horizontal.
+    #[fuchsia::test(allow_stalls = false)]
+    async fn scroll() {
+        // Set up fidl streams.
+        let (configuration_proxy, mut configuration_request_stream) =
+            fidl::endpoints::create_proxy_and_stream::<pointerinjector_config::SetupMarker>()
+                .expect("Failed to create pointerinjector Setup proxy and stream.");
+        let (injector_registry_proxy, injector_registry_request_stream) =
+            fidl::endpoints::create_proxy_and_stream::<pointerinjector::RegistryMarker>()
+                .expect("Failed to create pointerinjector Registry proxy and stream.");
+        let config_request_stream_fut =
+            handle_configuration_request_stream(&mut configuration_request_stream);
+
+        // Create MouseInjectorHandler.
+        let (sender, _) = futures::channel::mpsc::channel::<CursorMessage>(1);
+        let mouse_handler_fut = MouseInjectorHandler::new_handler(
+            configuration_proxy,
+            injector_registry_proxy,
+            Size { width: DISPLAY_WIDTH, height: DISPLAY_HEIGHT },
+            sender,
+        );
+        let (mouse_handler_res, _) = futures::join!(mouse_handler_fut, config_request_stream_fut);
+        let mouse_handler = mouse_handler_res.expect("Failed to create mouse handler");
+
+        // Create a channel for the the registered device's handle to be forwarded to the
+        // DeviceRequestStream handler. This allows the registry_fut to complete and allows
+        // handle_input_event() to continue.
+        let (injector_stream_sender, injector_stream_receiver) =
+            mpsc::unbounded::<Vec<pointerinjector::Event>>();
+        // Up to 2 events per handle_input_event() call.
+        let mut injector_stream_receiver = injector_stream_receiver.ready_chunks(2);
+        let registry_fut = handle_registry_request_stream2(
+            injector_registry_request_stream,
+            injector_stream_sender,
+        );
+
+        // Run all futures until the handler future completes.
+        let _registry_task = fasync::Task::local(registry_fut);
+
+        let zero_location = mouse_binding::MouseLocation::Relative(Position { x: 0.0, y: 0.0 });
+        let expected_position = Position { x: 50.0, y: 50.0 };
+
+        let event_time = zx::Time::get_monotonic();
+        let wheel_v_event = create_mouse_event(
+            zero_location,
+            Some(1),
+            None,
+            mouse_binding::MousePhase::Wheel,
+            HashSet::new(),
+            HashSet::new(),
+            event_time,
+            &DESCRIPTOR,
+        );
+
+        let wheel_h_event = create_mouse_event(
+            zero_location,
+            None,
+            Some(1),
+            mouse_binding::MousePhase::Wheel,
+            HashSet::new(),
+            HashSet::new(),
+            event_time,
+            &DESCRIPTOR,
+        );
+
+        // Handle event 1 vertical scroll.
+        mouse_handler.clone().handle_input_event(wheel_v_event).await;
+        assert_eq!(
+            injector_stream_receiver.next().await.map(|events| events.concat()),
+            Some(vec![
+                create_mouse_pointer_sample_event(
+                    pointerinjector::EventPhase::Add,
+                    vec![],
+                    expected_position,
+                    None,    /*relative_motion*/
+                    Some(1), /*wheel_delta_v*/
+                    None,    /*wheel_delta_h*/
+                    event_time,
+                ),
+                create_mouse_pointer_sample_event(
+                    pointerinjector::EventPhase::Change,
+                    vec![],
+                    expected_position,
+                    None,    /*relative_motion*/
+                    Some(1), /*wheel_delta_v*/
+                    None,    /*wheel_delta_h*/
+                    event_time,
+                ),
+            ])
+        );
+
+        // Handle event 1 horizontal scroll.
+        mouse_handler.clone().handle_input_event(wheel_h_event).await;
+        assert_eq!(
+            injector_stream_receiver.next().await.map(|events| events.concat()),
+            Some(vec![create_mouse_pointer_sample_event(
+                pointerinjector::EventPhase::Change,
+                vec![],
+                expected_position,
+                None,    /*relative_motion*/
+                None,    /*wheel_delta_v*/
+                Some(1), /*wheel_delta_h*/
+                event_time,
+            )])
+        );
+    }
+
+    /// Test button down -> scroll -> button up -> continue scroll.
+    #[fuchsia::test(allow_stalls = false)]
+    async fn down_scroll_up_scroll() {
+        // Set up fidl streams.
+        let (configuration_proxy, mut configuration_request_stream) =
+            fidl::endpoints::create_proxy_and_stream::<pointerinjector_config::SetupMarker>()
+                .expect("Failed to create pointerinjector Setup proxy and stream.");
+        let (injector_registry_proxy, injector_registry_request_stream) =
+            fidl::endpoints::create_proxy_and_stream::<pointerinjector::RegistryMarker>()
+                .expect("Failed to create pointerinjector Registry proxy and stream.");
+        let config_request_stream_fut =
+            handle_configuration_request_stream(&mut configuration_request_stream);
+
+        // Create MouseInjectorHandler.
+        let (sender, _) = futures::channel::mpsc::channel::<CursorMessage>(1);
+        let mouse_handler_fut = MouseInjectorHandler::new_handler(
+            configuration_proxy,
+            injector_registry_proxy,
+            Size { width: DISPLAY_WIDTH, height: DISPLAY_HEIGHT },
+            sender,
+        );
+        let (mouse_handler_res, _) = futures::join!(mouse_handler_fut, config_request_stream_fut);
+        let mouse_handler = mouse_handler_res.expect("Failed to create mouse handler");
+
+        // Create a channel for the the registered device's handle to be forwarded to the
+        // DeviceRequestStream handler. This allows the registry_fut to complete and allows
+        // handle_input_event() to continue.
+        let (injector_stream_sender, injector_stream_receiver) =
+            mpsc::unbounded::<Vec<pointerinjector::Event>>();
+        // Up to 2 events per handle_input_event() call.
+        let mut injector_stream_receiver = injector_stream_receiver.ready_chunks(2);
+        let registry_fut = handle_registry_request_stream2(
+            injector_registry_request_stream,
+            injector_stream_sender,
+        );
+
+        // Run all futures until the handler future completes.
+        let _registry_task = fasync::Task::local(registry_fut);
+
+        let zero_location = mouse_binding::MouseLocation::Relative(Position { x: 0.0, y: 0.0 });
+        let expected_position = Position { x: 50.0, y: 50.0 };
+
+        let event_time = zx::Time::get_monotonic();
+        let down_event = create_mouse_event(
+            zero_location,
+            None,
+            None,
+            mouse_binding::MousePhase::Down,
+            HashSet::from_iter(vec![1]),
+            HashSet::from_iter(vec![1]),
+            event_time,
+            &DESCRIPTOR,
+        );
+
+        let wheel_event = create_mouse_event(
+            zero_location,
+            Some(1),
+            None,
+            mouse_binding::MousePhase::Wheel,
+            HashSet::from_iter(vec![1]),
+            HashSet::from_iter(vec![1]),
+            event_time,
+            &DESCRIPTOR,
+        );
+
+        let up_event = create_mouse_event(
+            zero_location,
+            None,
+            None,
+            mouse_binding::MousePhase::Up,
+            HashSet::from_iter(vec![1]),
+            HashSet::new(),
+            event_time,
+            &DESCRIPTOR,
+        );
+
+        let continue_wheel_event = create_mouse_event(
+            zero_location,
+            Some(1),
+            None,
+            mouse_binding::MousePhase::Wheel,
+            HashSet::new(),
+            HashSet::new(),
+            event_time,
+            &DESCRIPTOR,
+        );
+
+        // Handle button down event.
+        mouse_handler.clone().handle_input_event(down_event).await;
+        assert_eq!(
+            injector_stream_receiver.next().await.map(|events| events.concat()),
+            Some(vec![
+                create_mouse_pointer_sample_event(
+                    pointerinjector::EventPhase::Add,
+                    vec![1],
+                    expected_position,
+                    None, /*relative_motion*/
+                    None, /*wheel_delta_v*/
+                    None, /*wheel_delta_h*/
+                    event_time,
+                ),
+                create_mouse_pointer_sample_event(
+                    pointerinjector::EventPhase::Change,
+                    vec![1],
+                    expected_position,
+                    None, /*relative_motion*/
+                    None, /*wheel_delta_v*/
+                    None, /*wheel_delta_h*/
+                    event_time,
+                ),
+            ])
+        );
+
+        // Handle wheel event with button pressing.
+        mouse_handler.clone().handle_input_event(wheel_event).await;
+        assert_eq!(
+            injector_stream_receiver.next().await.map(|events| events.concat()),
+            Some(vec![create_mouse_pointer_sample_event(
+                pointerinjector::EventPhase::Change,
+                vec![1],
+                expected_position,
+                None,    /*relative_motion*/
+                Some(1), /*wheel_delta_v*/
+                None,    /*wheel_delta_h*/
+                event_time,
+            )])
+        );
+
+        // Handle button up event.
+        mouse_handler.clone().handle_input_event(up_event).await;
+        assert_eq!(
+            injector_stream_receiver.next().await.map(|events| events.concat()),
+            Some(vec![create_mouse_pointer_sample_event(
+                pointerinjector::EventPhase::Change,
+                vec![],
+                expected_position,
+                None, /*relative_motion*/
+                None, /*wheel_delta_v*/
+                None, /*wheel_delta_h*/
+                event_time,
+            )])
+        );
+
+        // Handle wheel event after button released.
+        mouse_handler.clone().handle_input_event(continue_wheel_event).await;
+        assert_eq!(
+            injector_stream_receiver.next().await.map(|events| events.concat()),
+            Some(vec![create_mouse_pointer_sample_event(
+                pointerinjector::EventPhase::Change,
+                vec![],
+                expected_position,
+                None,    /*relative_motion*/
+                Some(1), /*wheel_delta_v*/
+                None,    /*wheel_delta_h*/
+                event_time,
+            )])
+        );
     }
 
     // Tests that a mouse move event that has already been handled is not forwarded to scenic.

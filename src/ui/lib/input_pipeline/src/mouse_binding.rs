@@ -30,9 +30,10 @@ pub enum MouseLocation {
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum MousePhase {
-    Down, // One or more buttons were newly pressed.
-    Move, // The mouse moved with no change in button state.
-    Up,   // One or more buttons were newly released.
+    Down,  // One or more buttons were newly pressed.
+    Move,  // The mouse moved with no change in button state.
+    Up,    // One or more buttons were newly released.
+    Wheel, // Mouse wheel is rotating.
 }
 
 /// A [`MouseEvent`] represents a pointer event with a specified phase, and the buttons
@@ -45,6 +46,8 @@ pub enum MousePhase {
 /// ```
 /// let mouse_device_event = input_device::InputDeviceEvent::Mouse(MouseEvent::new(
 ///     MouseLocation::Relative(Position { x: 40.0, y: 20.0 }),
+///     Some(1),
+///     Some(1),
 ///     MousePhase::Move,
 ///     HashSet::from_iter(vec![1]).into_iter()),
 ///     HashSet::from_iter(vec![1]).into_iter()),,
@@ -54,6 +57,12 @@ pub enum MousePhase {
 pub struct MouseEvent {
     /// The mouse location.
     pub location: MouseLocation,
+
+    /// The mouse wheel rotated delta in vertical.
+    pub wheel_delta_v: Option<i64>,
+
+    /// The mouse wheel rotated delta in horizontal.
+    pub wheel_delta_h: Option<i64>,
 
     /// The phase of the [`buttons`] associated with this input event.
     pub phase: MousePhase,
@@ -74,11 +83,20 @@ impl MouseEvent {
     /// - `buttons`: The buttons relevant to this event.
     pub fn new(
         location: MouseLocation,
+        wheel_delta_v: Option<i64>,
+        wheel_delta_h: Option<i64>,
         phase: MousePhase,
         affected_buttons: HashSet<MouseButton>,
         pressed_buttons: HashSet<MouseButton>,
     ) -> MouseEvent {
-        MouseEvent { location, phase, affected_buttons, pressed_buttons }
+        MouseEvent {
+            location,
+            wheel_delta_v,
+            wheel_delta_h,
+            phase,
+            affected_buttons,
+            pressed_buttons,
+        }
     }
 }
 
@@ -105,6 +123,12 @@ pub struct MouseDeviceDescriptor {
 
     /// The range of possible y values of absolute mouse positions reported by this device.
     pub absolute_y_range: Option<fidl_input_report::Range>,
+
+    /// The range of possible vertical wheel delta reported by this device.
+    pub wheel_v_range: Option<fidl_input_report::Axis>,
+
+    /// The range of possible horizontal wheel delta reported by this device.
+    pub wheel_h_range: Option<fidl_input_report::Axis>,
 
     /// This is a vector of ids for the mouse buttons.
     pub buttons: Option<Vec<MouseButton>>,
@@ -181,6 +205,8 @@ impl MouseBinding {
             device_id,
             absolute_x_range: mouse_input_descriptor.position_x.map(|axis| axis.range),
             absolute_y_range: mouse_input_descriptor.position_y.map(|axis| axis.range),
+            wheel_v_range: mouse_input_descriptor.scroll_v,
+            wheel_h_range: mouse_input_descriptor.scroll_h,
             buttons: mouse_input_descriptor.buttons,
         };
 
@@ -230,6 +256,8 @@ impl MouseBinding {
         //   recently pressed ones (affected_buttons).
         send_mouse_event(
             MouseLocation::Relative(Position::zero()),
+            None, /* wheel_delta_v */
+            None, /* wheel_delta_h */
             MousePhase::Down,
             current_buttons.difference(&previous_buttons).cloned().collect(),
             current_buttons.clone(),
@@ -255,7 +283,22 @@ impl MouseBinding {
         //   set of currently pressed buttons are the same set affected by the event.
         send_mouse_event(
             location,
+            None, /* wheel_delta_v */
+            None, /* wheel_delta_h */
             MousePhase::Move,
+            current_buttons.union(&previous_buttons).cloned().collect(),
+            current_buttons.union(&previous_buttons).cloned().collect(),
+            device_descriptor,
+            event_time,
+            input_event_sender,
+        );
+
+        // Send a mouse wheel event.
+        send_mouse_event(
+            MouseLocation::Relative(Position::zero()),
+            mouse_report.scroll_v,
+            mouse_report.scroll_h,
+            MousePhase::Wheel,
             current_buttons.union(&previous_buttons).cloned().collect(),
             current_buttons.union(&previous_buttons).cloned().collect(),
             device_descriptor,
@@ -270,6 +313,8 @@ impl MouseBinding {
         //   recently released ones (affected_buttons).
         send_mouse_event(
             MouseLocation::Relative(Position::zero()),
+            None, /* wheel_delta_v */
+            None, /* wheel_delta_h */
             MousePhase::Up,
             previous_buttons.difference(&current_buttons).cloned().collect(),
             current_buttons.clone(),
@@ -289,6 +334,8 @@ impl MouseBinding {
 ///
 /// # Parameters
 /// - `location`: The mouse location.
+/// - `wheel_delta_v`: The mouse wheel delta in vertical.
+/// - `wheel_delta_h`: The mouse wheel delta in horizontal.
 /// - `phase`: The phase of the [`buttons`] associated with the input event.
 /// - `buttons`: The buttons relevant to the event.
 /// - `device_descriptor`: The descriptor for the input device generating the input reports.
@@ -296,6 +343,8 @@ impl MouseBinding {
 /// - `sender`: The stream to send the MouseEvent to.
 fn send_mouse_event(
     location: MouseLocation,
+    wheel_delta_v: Option<i64>,
+    wheel_delta_h: Option<i64>,
     phase: MousePhase,
     affected_buttons: HashSet<MouseButton>,
     pressed_buttons: HashSet<MouseButton>,
@@ -304,7 +353,7 @@ fn send_mouse_event(
     sender: &mut Sender<input_device::InputEvent>,
 ) {
     // Only send Down/Up events when there are buttons affected.
-    if phase != MousePhase::Move && affected_buttons.is_empty() {
+    if (phase == MousePhase::Down || phase == MousePhase::Up) && affected_buttons.is_empty() {
         return;
     }
 
@@ -314,9 +363,16 @@ fn send_mouse_event(
         return;
     }
 
+    // Only send wheel events when the delta has value.
+    if phase == MousePhase::Wheel && wheel_delta_v.is_none() && wheel_delta_h.is_none() {
+        return;
+    }
+
     match sender.try_send(input_device::InputEvent {
         device_event: input_device::InputDeviceEvent::Mouse(MouseEvent::new(
             location,
+            wheel_delta_v,
+            wheel_delta_h,
             phase,
             affected_buttons,
             pressed_buttons,
@@ -382,8 +438,8 @@ fn buttons_from_optional_report(
 #[cfg(test)]
 mod tests {
     use {
-        super::*, crate::testing_utilities, fuchsia_async as fasync, futures::StreamExt,
-        pretty_assertions::assert_eq,
+        super::*, crate::testing_utilities, fidl_fuchsia_input_report, fuchsia_async as fasync,
+        futures::StreamExt, pretty_assertions::assert_eq,
     };
 
     const DEVICE_ID: u32 = 1;
@@ -393,6 +449,20 @@ mod tests {
             device_id,
             absolute_x_range: None,
             absolute_y_range: None,
+            wheel_v_range: Some(fidl_fuchsia_input_report::Axis {
+                range: fidl_input_report::Range { min: -1, max: 1 },
+                unit: fidl_input_report::Unit {
+                    type_: fidl_input_report::UnitType::Other,
+                    exponent: 1,
+                },
+            }),
+            wheel_h_range: Some(fidl_fuchsia_input_report::Axis {
+                range: fidl_input_report::Range { min: -1, max: 1 },
+                unit: fidl_input_report::Unit {
+                    type_: fidl_input_report::UnitType::Other,
+                    exponent: 1,
+                },
+            }),
             buttons: None,
         })
     }
@@ -829,22 +899,22 @@ mod tests {
     /// sets of `affected_buttons` and `pressed_buttons`.
     #[fasync::run_singlethreaded(test)]
     async fn down_down() {
-        let primary_button = 1;
-        let secondary_button = 2;
+        const PRIMARY_BUTTON: u8 = 1;
+        const SECONDARY_BUTTON: u8 = 2;
 
         let (event_time_i64, event_time_u64) = testing_utilities::event_times();
         let first_report = testing_utilities::create_mouse_input_report(
             MouseLocation::Relative(Position::zero()),
             None, /* scroll_v */
             None, /* scroll_h */
-            vec![primary_button],
+            vec![PRIMARY_BUTTON],
             event_time_i64,
         );
         let second_report = testing_utilities::create_mouse_input_report(
             MouseLocation::Relative(Position::zero()),
             None, /* scroll_v */
             None, /* scroll_h */
-            vec![primary_button, secondary_button],
+            vec![PRIMARY_BUTTON, SECONDARY_BUTTON],
             event_time_i64,
         );
         let descriptor = mouse_device_descriptor(DEVICE_ID);
@@ -856,8 +926,8 @@ mod tests {
                 None, /* wheel_delta_v */
                 None, /* wheel_delta_h */
                 MousePhase::Down,
-                HashSet::from_iter(vec![primary_button].into_iter()),
-                HashSet::from_iter(vec![primary_button].into_iter()),
+                HashSet::from_iter(vec![PRIMARY_BUTTON].into_iter()),
+                HashSet::from_iter(vec![PRIMARY_BUTTON].into_iter()),
                 event_time_u64,
                 &descriptor,
             ),
@@ -866,8 +936,8 @@ mod tests {
                 None, /* wheel_delta_v */
                 None, /* wheel_delta_h */
                 MousePhase::Down,
-                HashSet::from_iter(vec![secondary_button].into_iter()),
-                HashSet::from_iter(vec![primary_button, secondary_button].into_iter()),
+                HashSet::from_iter(vec![SECONDARY_BUTTON].into_iter()),
+                HashSet::from_iter(vec![PRIMARY_BUTTON, SECONDARY_BUTTON].into_iter()),
                 event_time_u64,
                 &descriptor,
             ),
@@ -892,29 +962,29 @@ mod tests {
     /// | Release button 2 | Up         | [2]                | []                |
     #[fasync::run_singlethreaded(test)]
     async fn down_down_up_up() {
-        let primary_button = 1;
-        let secondary_button = 2;
+        const PRIMARY_BUTTON: u8 = 1;
+        const SECONDARY_BUTTON: u8 = 2;
 
         let (event_time_i64, event_time_u64) = testing_utilities::event_times();
         let first_report = testing_utilities::create_mouse_input_report(
             MouseLocation::Relative(Position::zero()),
             None, /* scroll_v */
             None, /* scroll_h */
-            vec![primary_button],
+            vec![PRIMARY_BUTTON],
             event_time_i64,
         );
         let second_report = testing_utilities::create_mouse_input_report(
             MouseLocation::Relative(Position::zero()),
             None, /* scroll_v */
             None, /* scroll_h */
-            vec![primary_button, secondary_button],
+            vec![PRIMARY_BUTTON, SECONDARY_BUTTON],
             event_time_i64,
         );
         let third_report = testing_utilities::create_mouse_input_report(
             MouseLocation::Relative(Position::zero()),
             None, /* scroll_v */
             None, /* scroll_h */
-            vec![secondary_button],
+            vec![SECONDARY_BUTTON],
             event_time_i64,
         );
         let fourth_report = testing_utilities::create_mouse_input_report(
@@ -933,8 +1003,8 @@ mod tests {
                 None, /* wheel_delta_v */
                 None, /* wheel_delta_h */
                 MousePhase::Down,
-                HashSet::from_iter(vec![primary_button].into_iter()),
-                HashSet::from_iter(vec![primary_button].into_iter()),
+                HashSet::from_iter(vec![PRIMARY_BUTTON].into_iter()),
+                HashSet::from_iter(vec![PRIMARY_BUTTON].into_iter()),
                 event_time_u64,
                 &descriptor,
             ),
@@ -943,8 +1013,8 @@ mod tests {
                 None, /* wheel_delta_v */
                 None, /* wheel_delta_h */
                 MousePhase::Down,
-                HashSet::from_iter(vec![secondary_button].into_iter()),
-                HashSet::from_iter(vec![primary_button, secondary_button].into_iter()),
+                HashSet::from_iter(vec![SECONDARY_BUTTON].into_iter()),
+                HashSet::from_iter(vec![PRIMARY_BUTTON, SECONDARY_BUTTON].into_iter()),
                 event_time_u64,
                 &descriptor,
             ),
@@ -953,8 +1023,8 @@ mod tests {
                 None, /* wheel_delta_v */
                 None, /* wheel_delta_h */
                 MousePhase::Up,
-                HashSet::from_iter(vec![primary_button].into_iter()),
-                HashSet::from_iter(vec![secondary_button].into_iter()),
+                HashSet::from_iter(vec![PRIMARY_BUTTON].into_iter()),
+                HashSet::from_iter(vec![SECONDARY_BUTTON].into_iter()),
                 event_time_u64,
                 &descriptor,
             ),
@@ -963,7 +1033,241 @@ mod tests {
                 None, /* wheel_delta_v */
                 None, /* wheel_delta_h */
                 MousePhase::Up,
-                HashSet::from_iter(vec![secondary_button].into_iter()),
+                HashSet::from_iter(vec![SECONDARY_BUTTON].into_iter()),
+                HashSet::new(),
+                event_time_u64,
+                &descriptor,
+            ),
+        ];
+
+        assert_input_report_sequence_generates_events!(
+            input_reports: input_reports,
+            expected_events: expected_events,
+            device_descriptor: descriptor,
+            device_type: MouseBinding,
+        );
+    }
+
+    /// Test simple scroll in vertical and horizontal.
+    #[fasync::run_singlethreaded(test)]
+    async fn scroll() {
+        let (event_time_i64, event_time_u64) = testing_utilities::event_times();
+        let first_report = testing_utilities::create_mouse_input_report(
+            MouseLocation::Relative(Position::zero()),
+            Some(1),
+            None,
+            vec![],
+            event_time_i64,
+        );
+        let second_report = testing_utilities::create_mouse_input_report(
+            MouseLocation::Relative(Position::zero()),
+            None,
+            Some(1),
+            vec![],
+            event_time_i64,
+        );
+
+        let descriptor = mouse_device_descriptor(DEVICE_ID);
+
+        let input_reports = vec![first_report, second_report];
+        let expected_events = vec![
+            testing_utilities::create_mouse_event(
+                MouseLocation::Relative(Position::zero()),
+                Some(1),
+                None,
+                MousePhase::Wheel,
+                HashSet::new(),
+                HashSet::new(),
+                event_time_u64,
+                &descriptor,
+            ),
+            testing_utilities::create_mouse_event(
+                MouseLocation::Relative(Position::zero()),
+                None,
+                Some(1),
+                MousePhase::Wheel,
+                HashSet::new(),
+                HashSet::new(),
+                event_time_u64,
+                &descriptor,
+            ),
+        ];
+
+        assert_input_report_sequence_generates_events!(
+            input_reports: input_reports,
+            expected_events: expected_events,
+            device_descriptor: descriptor,
+            device_type: MouseBinding,
+        );
+    }
+
+    /// Test button down -> scroll -> button up -> continue scroll.
+    #[fasync::run_singlethreaded(test)]
+    async fn down_scroll_up_scroll() {
+        const PRIMARY_BUTTON: u8 = 1;
+
+        let (event_time_i64, event_time_u64) = testing_utilities::event_times();
+        let first_report = testing_utilities::create_mouse_input_report(
+            MouseLocation::Relative(Position::zero()),
+            None, /* scroll_v */
+            None, /* scroll_h */
+            vec![PRIMARY_BUTTON],
+            event_time_i64,
+        );
+        let second_report = testing_utilities::create_mouse_input_report(
+            MouseLocation::Relative(Position::zero()),
+            Some(1),
+            None,
+            vec![PRIMARY_BUTTON],
+            event_time_i64,
+        );
+        let third_report = testing_utilities::create_mouse_input_report(
+            MouseLocation::Relative(Position::zero()),
+            None, /* scroll_v */
+            None, /* scroll_h */
+            vec![],
+            event_time_i64,
+        );
+        let fourth_report = testing_utilities::create_mouse_input_report(
+            MouseLocation::Relative(Position::zero()),
+            Some(1),
+            None,
+            vec![],
+            event_time_i64,
+        );
+
+        let descriptor = mouse_device_descriptor(DEVICE_ID);
+
+        let input_reports = vec![first_report, second_report, third_report, fourth_report];
+        let expected_events = vec![
+            testing_utilities::create_mouse_event(
+                MouseLocation::Relative(Position::zero()),
+                None, /* wheel_delta_v */
+                None, /* wheel_delta_h */
+                MousePhase::Down,
+                HashSet::from_iter(vec![PRIMARY_BUTTON].into_iter()),
+                HashSet::from_iter(vec![PRIMARY_BUTTON].into_iter()),
+                event_time_u64,
+                &descriptor,
+            ),
+            testing_utilities::create_mouse_event(
+                MouseLocation::Relative(Position::zero()),
+                Some(1),
+                None,
+                MousePhase::Wheel,
+                HashSet::from_iter(vec![PRIMARY_BUTTON].into_iter()),
+                HashSet::from_iter(vec![PRIMARY_BUTTON].into_iter()),
+                event_time_u64,
+                &descriptor,
+            ),
+            testing_utilities::create_mouse_event(
+                MouseLocation::Relative(Position::zero()),
+                None, /* wheel_delta_v */
+                None, /* wheel_delta_h */
+                MousePhase::Up,
+                HashSet::from_iter(vec![PRIMARY_BUTTON].into_iter()),
+                HashSet::new(),
+                event_time_u64,
+                &descriptor,
+            ),
+            testing_utilities::create_mouse_event(
+                MouseLocation::Relative(Position::zero()),
+                Some(1),
+                None,
+                MousePhase::Wheel,
+                HashSet::new(),
+                HashSet::new(),
+                event_time_u64,
+                &descriptor,
+            ),
+        ];
+
+        assert_input_report_sequence_generates_events!(
+            input_reports: input_reports,
+            expected_events: expected_events,
+            device_descriptor: descriptor,
+            device_type: MouseBinding,
+        );
+    }
+
+    /// Test button down with scroll -> button up with scroll -> scroll.
+    #[fasync::run_singlethreaded(test)]
+    async fn down_scroll_bundle_up_scroll_bundle() {
+        const PRIMARY_BUTTON: u8 = 1;
+
+        let (event_time_i64, event_time_u64) = testing_utilities::event_times();
+        let first_report = testing_utilities::create_mouse_input_report(
+            MouseLocation::Relative(Position::zero()),
+            Some(1),
+            None,
+            vec![PRIMARY_BUTTON],
+            event_time_i64,
+        );
+        let second_report = testing_utilities::create_mouse_input_report(
+            MouseLocation::Relative(Position::zero()),
+            Some(1),
+            None,
+            vec![],
+            event_time_i64,
+        );
+        let third_report = testing_utilities::create_mouse_input_report(
+            MouseLocation::Relative(Position::zero()),
+            Some(1),
+            None,
+            vec![],
+            event_time_i64,
+        );
+
+        let descriptor = mouse_device_descriptor(DEVICE_ID);
+
+        let input_reports = vec![first_report, second_report, third_report];
+        let expected_events = vec![
+            testing_utilities::create_mouse_event(
+                MouseLocation::Relative(Position::zero()),
+                None, /* wheel_delta_v */
+                None, /* wheel_delta_h */
+                MousePhase::Down,
+                HashSet::from_iter(vec![PRIMARY_BUTTON].into_iter()),
+                HashSet::from_iter(vec![PRIMARY_BUTTON].into_iter()),
+                event_time_u64,
+                &descriptor,
+            ),
+            testing_utilities::create_mouse_event(
+                MouseLocation::Relative(Position::zero()),
+                Some(1),
+                None,
+                MousePhase::Wheel,
+                HashSet::from_iter(vec![PRIMARY_BUTTON].into_iter()),
+                HashSet::from_iter(vec![PRIMARY_BUTTON].into_iter()),
+                event_time_u64,
+                &descriptor,
+            ),
+            testing_utilities::create_mouse_event(
+                MouseLocation::Relative(Position::zero()),
+                Some(1),
+                None,
+                MousePhase::Wheel,
+                HashSet::from_iter(vec![PRIMARY_BUTTON].into_iter()),
+                HashSet::from_iter(vec![PRIMARY_BUTTON].into_iter()),
+                event_time_u64,
+                &descriptor,
+            ),
+            testing_utilities::create_mouse_event(
+                MouseLocation::Relative(Position::zero()),
+                None, /* wheel_delta_v */
+                None, /* wheel_delta_h */
+                MousePhase::Up,
+                HashSet::from_iter(vec![PRIMARY_BUTTON].into_iter()),
+                HashSet::new(),
+                event_time_u64,
+                &descriptor,
+            ),
+            testing_utilities::create_mouse_event(
+                MouseLocation::Relative(Position::zero()),
+                Some(1),
+                None,
+                MousePhase::Wheel,
+                HashSet::new(),
                 HashSet::new(),
                 event_time_u64,
                 &descriptor,

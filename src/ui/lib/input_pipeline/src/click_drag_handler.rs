@@ -39,9 +39,14 @@ impl TryFrom<input_device::UnhandledInputEvent> for RelativeMouseEvent {
                 device_event:
                     input_device::InputDeviceEvent::Mouse(mouse_binding::MouseEvent {
                         location: mouse_binding::MouseLocation::Relative(position),
-                        phase,
+                        // Click and drag only interested in motion and button events.
+                        phase:
+                            phase @ mouse_binding::MousePhase::Move
+                            | phase @ mouse_binding::MousePhase::Down
+                            | phase @ mouse_binding::MousePhase::Up,
                         affected_buttons,
                         pressed_buttons,
+                        ..
                     }),
                 device_descriptor: input_device::InputDeviceDescriptor::Mouse(mouse_descriptor),
                 event_time,
@@ -64,6 +69,8 @@ impl From<RelativeMouseEvent> for input_device::InputEvent {
         input_device::InputEvent {
             device_event: input_device::InputDeviceEvent::Mouse(mouse_binding::MouseEvent {
                 location: mouse_binding::MouseLocation::Relative(relative_mouse_event.displacement),
+                wheel_delta_v: None,
+                wheel_delta_h: None,
                 phase: relative_mouse_event.phase.into(),
                 affected_buttons: relative_mouse_event.affected_buttons,
                 pressed_buttons: relative_mouse_event.pressed_buttons,
@@ -319,6 +326,8 @@ impl ClickDragHandler {
             (HandlerState::DragGesture { delta_x, delta_y }, mouse_binding::MousePhase::Up) => {
                 (HandlerState::NoActiveGesture, vec![event], Some((delta_x, delta_y)))
             }
+            // Wheel events are filtered out on `try_from()`, should not reach to here.
+            (_, mouse_binding::MousePhase::Wheel) => unreachable!(),
             (HandlerState::LogicError, _) => unreachable!(),
         };
 
@@ -364,6 +373,8 @@ mod tests {
             device_id: 0,
             absolute_x_range: None,
             absolute_y_range: None,
+            wheel_v_range: None,
+            wheel_h_range: None,
             buttons: None,
         });
     const CLICK_TO_DRAG_THRESHOLD: f32 = 16.0;
@@ -394,6 +405,8 @@ mod tests {
         let handler = ClickDragHandler::new(CLICK_TO_DRAG_THRESHOLD);
         let event = make_unhandled_input_event(mouse_binding::MouseEvent {
             location: mouse_binding::MouseLocation::Relative(Position::zero()),
+            wheel_delta_v: None,
+            wheel_delta_h: None,
             phase: mouse_binding::MousePhase::Down,
             affected_buttons: hashset! {0},
             pressed_buttons: hashset! {0},
@@ -412,6 +425,8 @@ mod tests {
                 x: SMALL_MOTION,
                 y: SMALL_MOTION,
             }),
+            wheel_delta_v: None,
+            wheel_delta_h: None,
             phase: mouse_binding::MousePhase::Move,
             affected_buttons: hashset! {},
             pressed_buttons: hashset! {},
@@ -427,12 +442,16 @@ mod tests {
         let handler = ClickDragHandler::new(CLICK_TO_DRAG_THRESHOLD);
         let button_down_event = make_unhandled_input_event(mouse_binding::MouseEvent {
             location: mouse_binding::MouseLocation::Relative(Position::zero()),
+            wheel_delta_v: None,
+            wheel_delta_h: None,
             phase: mouse_binding::MousePhase::Down,
             affected_buttons: hashset! {0},
             pressed_buttons: hashset! {0},
         });
         let move_event = make_unhandled_input_event(mouse_binding::MouseEvent {
             location: mouse_binding::MouseLocation::Relative(Position { x: 0.0, y: SMALL_MOTION }),
+            wheel_delta_v: None,
+            wheel_delta_h: None,
             phase: mouse_binding::MousePhase::Move,
             affected_buttons: hashset! {0},
             pressed_buttons: hashset! {0},
@@ -450,18 +469,24 @@ mod tests {
         let handler = ClickDragHandler::new(CLICK_TO_DRAG_THRESHOLD);
         let button_down_event = make_unhandled_input_event(mouse_binding::MouseEvent {
             location: mouse_binding::MouseLocation::Relative(Position::zero()),
+            wheel_delta_v: None,
+            wheel_delta_h: None,
             phase: mouse_binding::MousePhase::Down,
             affected_buttons: hashset! {0},
             pressed_buttons: hashset! {0},
         });
         let move_event = make_unhandled_input_event(mouse_binding::MouseEvent {
             location: mouse_binding::MouseLocation::Relative(Position { x: 0.0, y: SMALL_MOTION }),
+            wheel_delta_v: None,
+            wheel_delta_h: None,
             phase: mouse_binding::MousePhase::Move,
             affected_buttons: hashset! {0},
             pressed_buttons: hashset! {0},
         });
         let button_up_event = make_unhandled_input_event(mouse_binding::MouseEvent {
             location: mouse_binding::MouseLocation::Relative(Position::zero()),
+            wheel_delta_v: None,
+            wheel_delta_h: None,
             phase: mouse_binding::MousePhase::Up,
             affected_buttons: hashset! {0},
             pressed_buttons: hashset! {},
@@ -494,12 +519,16 @@ mod tests {
         let handler = ClickDragHandler::new(CLICK_TO_DRAG_THRESHOLD);
         let button_down_event = make_unhandled_input_event(mouse_binding::MouseEvent {
             location: mouse_binding::MouseLocation::Relative(Position::zero()),
+            wheel_delta_v: None,
+            wheel_delta_h: None,
             phase: mouse_binding::MousePhase::Down,
             affected_buttons: hashset! {0},
             pressed_buttons: hashset! {0},
         });
         let move_event = make_unhandled_input_event(mouse_binding::MouseEvent {
             location: mouse_binding::MouseLocation::Relative(position),
+            wheel_delta_v: None,
+            wheel_delta_h: None,
             phase: mouse_binding::MousePhase::Move,
             affected_buttons: hashset! {0},
             pressed_buttons: hashset! {0},
@@ -519,18 +548,24 @@ mod tests {
         let handler = ClickDragHandler::new(CLICK_TO_DRAG_THRESHOLD);
         let button_down_event = make_unhandled_input_event(mouse_binding::MouseEvent {
             location: mouse_binding::MouseLocation::Relative(Position::zero()),
+            wheel_delta_v: None,
+            wheel_delta_h: None,
             phase: mouse_binding::MousePhase::Down,
             affected_buttons: hashset! {0},
             pressed_buttons: hashset! {0},
         });
         let move_event = make_unhandled_input_event(mouse_binding::MouseEvent {
             location: mouse_binding::MouseLocation::Relative(Position { x: 0.0, y: LARGE_MOTION }),
+            wheel_delta_v: None,
+            wheel_delta_h: None,
             phase: mouse_binding::MousePhase::Move,
             affected_buttons: hashset! {0},
             pressed_buttons: hashset! {0},
         });
         let button_up_event = make_unhandled_input_event(mouse_binding::MouseEvent {
             location: mouse_binding::MouseLocation::Relative(Position::zero()),
+            wheel_delta_v: None,
+            wheel_delta_h: None,
             phase: mouse_binding::MousePhase::Up,
             affected_buttons: hashset! {0},
             pressed_buttons: hashset! {},
@@ -552,18 +587,24 @@ mod tests {
         let handler = ClickDragHandler::new(CLICK_TO_DRAG_THRESHOLD);
         let button_down_event = make_unhandled_input_event(mouse_binding::MouseEvent {
             location: mouse_binding::MouseLocation::Relative(Position::zero()),
+            wheel_delta_v: None,
+            wheel_delta_h: None,
             phase: mouse_binding::MousePhase::Down,
             affected_buttons: hashset! {0},
             pressed_buttons: hashset! {0},
         });
         let first_move_event = make_unhandled_input_event(mouse_binding::MouseEvent {
             location: mouse_binding::MouseLocation::Relative(Position { x: 0.0, y: HALF_MOTION }),
+            wheel_delta_v: None,
+            wheel_delta_h: None,
             phase: mouse_binding::MousePhase::Move,
             affected_buttons: hashset! {0},
             pressed_buttons: hashset! {0},
         });
         let second_move_event = make_unhandled_input_event(mouse_binding::MouseEvent {
             location: mouse_binding::MouseLocation::Relative(Position { x: 0.0, y: HALF_MOTION }),
+            wheel_delta_v: None,
+            wheel_delta_h: None,
             phase: mouse_binding::MousePhase::Move,
             affected_buttons: hashset! {0},
             pressed_buttons: hashset! {0},
@@ -593,24 +634,32 @@ mod tests {
         let handler = ClickDragHandler::new(CLICK_TO_DRAG_THRESHOLD);
         let button_down_event = make_unhandled_input_event(mouse_binding::MouseEvent {
             location: mouse_binding::MouseLocation::Relative(Position::zero()),
+            wheel_delta_v: None,
+            wheel_delta_h: None,
             phase: mouse_binding::MousePhase::Down,
             affected_buttons: hashset! {0},
             pressed_buttons: hashset! {0},
         });
         let first_move_event = make_unhandled_input_event(mouse_binding::MouseEvent {
             location: mouse_binding::MouseLocation::Relative(Position { x: 0.0, y: HALF_MOTION }),
+            wheel_delta_v: None,
+            wheel_delta_h: None,
             phase: mouse_binding::MousePhase::Move,
             affected_buttons: hashset! {0},
             pressed_buttons: hashset! {0},
         });
         let second_move_event = make_unhandled_input_event(mouse_binding::MouseEvent {
             location: mouse_binding::MouseLocation::Relative(Position { x: 0.0, y: HALF_MOTION }),
+            wheel_delta_v: None,
+            wheel_delta_h: None,
             phase: mouse_binding::MousePhase::Move,
             affected_buttons: hashset! {0},
             pressed_buttons: hashset! {0},
         });
         let third_move_event = make_unhandled_input_event(mouse_binding::MouseEvent {
             location: mouse_binding::MouseLocation::Relative(Position { x: 0.0, y: HALF_MOTION }),
+            wheel_delta_v: None,
+            wheel_delta_h: None,
             phase: mouse_binding::MousePhase::Move,
             affected_buttons: hashset! {0},
             pressed_buttons: hashset! {0},
@@ -640,18 +689,24 @@ mod tests {
         let handler = ClickDragHandler::new(CLICK_TO_DRAG_THRESHOLD);
         let button_down_event = make_unhandled_input_event(mouse_binding::MouseEvent {
             location: mouse_binding::MouseLocation::Relative(Position::zero()),
+            wheel_delta_v: None,
+            wheel_delta_h: None,
             phase: mouse_binding::MousePhase::Down,
             affected_buttons: hashset! {0},
             pressed_buttons: hashset! {0},
         });
         let first_move_event = make_unhandled_input_event(mouse_binding::MouseEvent {
             location: mouse_binding::MouseLocation::Relative(first_motion),
+            wheel_delta_v: None,
+            wheel_delta_h: None,
             phase: mouse_binding::MousePhase::Move,
             affected_buttons: hashset! {0},
             pressed_buttons: hashset! {0},
         });
         let second_move_event = make_unhandled_input_event(mouse_binding::MouseEvent {
             location: mouse_binding::MouseLocation::Relative(second_motion),
+            wheel_delta_v: None,
+            wheel_delta_h: None,
             phase: mouse_binding::MousePhase::Move,
             affected_buttons: hashset! {0},
             pressed_buttons: hashset! {0},
@@ -665,6 +720,64 @@ mod tests {
         pretty_assertions::assert_eq!(
             handler.clone().handle_unhandled_input_event(second_move_event).await.as_slice(),
             []
+        );
+    }
+
+    #[fuchsia::test(allow_stalls = false)]
+    async fn ignore_wheel_events() {
+        let handler = ClickDragHandler::new(CLICK_TO_DRAG_THRESHOLD);
+        let wheel_event = make_unhandled_input_event(mouse_binding::MouseEvent {
+            location: mouse_binding::MouseLocation::Relative(Position::zero()),
+            wheel_delta_v: Some(1),
+            wheel_delta_h: None,
+            phase: mouse_binding::MousePhase::Wheel,
+            affected_buttons: hashset! {},
+            pressed_buttons: hashset! {},
+        });
+
+        assert_eq!(
+            handler.clone().handle_unhandled_input_event(wheel_event.clone()).await.as_slice(),
+            [wheel_event.into()]
+        );
+    }
+
+    #[fuchsia::test(allow_stalls = false)]
+    async fn ignore_wheel_events_in_click_drag() {
+        let handler = ClickDragHandler::new(CLICK_TO_DRAG_THRESHOLD);
+
+        let button_down_event = make_unhandled_input_event(mouse_binding::MouseEvent {
+            location: mouse_binding::MouseLocation::Relative(Position::zero()),
+            wheel_delta_v: None,
+            wheel_delta_h: None,
+            phase: mouse_binding::MousePhase::Down,
+            affected_buttons: hashset! {0},
+            pressed_buttons: hashset! {0},
+        });
+        let move_event = make_unhandled_input_event(mouse_binding::MouseEvent {
+            location: mouse_binding::MouseLocation::Relative(Position { x: -2.0, y: 0.0 }),
+            wheel_delta_v: None,
+            wheel_delta_h: None,
+            phase: mouse_binding::MousePhase::Move,
+            affected_buttons: hashset! {0},
+            pressed_buttons: hashset! {0},
+        });
+        let wheel_event = make_unhandled_input_event(mouse_binding::MouseEvent {
+            location: mouse_binding::MouseLocation::Relative(Position::zero()),
+            wheel_delta_v: Some(1),
+            wheel_delta_h: None,
+            phase: mouse_binding::MousePhase::Wheel,
+            affected_buttons: hashset! {0},
+            pressed_buttons: hashset! {0},
+        });
+
+        // Intermediate values verified by
+        // * button_down_is_passed_through_when_no_button_was_previously_clicked()
+        // * button_down_then_small_motion_yields_no_move_events()
+        handler.clone().handle_unhandled_input_event(button_down_event).await;
+        handler.clone().handle_unhandled_input_event(move_event).await;
+        pretty_assertions::assert_eq!(
+            handler.clone().handle_unhandled_input_event(wheel_event.clone()).await.as_slice(),
+            [wheel_event.into()]
         );
     }
 }

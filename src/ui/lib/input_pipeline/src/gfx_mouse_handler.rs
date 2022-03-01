@@ -24,6 +24,8 @@ impl From<mouse_binding::MousePhase> for fidl_ui_input::PointerEventPhase {
             mouse_binding::MousePhase::Down => fidl_ui_input::PointerEventPhase::Down,
             mouse_binding::MousePhase::Move => fidl_ui_input::PointerEventPhase::Move,
             mouse_binding::MousePhase::Up => fidl_ui_input::PointerEventPhase::Up,
+            // We only want to support wheel events on Flatland. Convert the event phase to Move, then Scenic will see a Move of 0 pixels.
+            mouse_binding::MousePhase::Wheel => fidl_ui_input::PointerEventPhase::Move,
         }
     }
 }
@@ -321,6 +323,8 @@ mod tests {
             device_id,
             absolute_x_range: None,
             absolute_y_range: None,
+            wheel_v_range: None,
+            wheel_h_range: None,
             buttons: None,
         })
     }
@@ -636,6 +640,8 @@ mod tests {
                 device_id: DEVICE_ID,
                 absolute_x_range: Some(fidl_input_report::Range { min: -50, max: 50 }),
                 absolute_y_range: Some(fidl_input_report::Range { min: -50, max: 50 }),
+                wheel_v_range: None,
+                wheel_h_range: None,
                 buttons: None,
             });
         let event_time = zx::Time::get_monotonic();

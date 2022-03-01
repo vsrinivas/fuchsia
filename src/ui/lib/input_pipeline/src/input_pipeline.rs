@@ -516,6 +516,8 @@ mod tests {
         let input_event = input_device::InputEvent {
             device_event: input_device::InputDeviceEvent::Mouse(mouse_binding::MouseEvent::new(
                 mouse_binding::MouseLocation::Relative(offset),
+                None, /* wheel_delta_v */
+                None, /* wheel_delta_h */
                 mouse_binding::MousePhase::Move,
                 HashSet::new(),
                 HashSet::new(),
@@ -525,6 +527,8 @@ mod tests {
                     device_id: 1,
                     absolute_x_range: None,
                     absolute_y_range: None,
+                    wheel_v_range: None,
+                    wheel_h_range: None,
                     buttons: None,
                 },
             ),
@@ -752,6 +756,8 @@ mod tests {
                 device_id: 1,
                 absolute_x_range: None,
                 absolute_y_range: None,
+                wheel_v_range: None,
+                wheel_h_range: None,
                 buttons: Some(vec![0])
             })
         );
