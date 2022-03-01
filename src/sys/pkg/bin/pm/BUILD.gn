@@ -118,7 +118,7 @@ go_binary("pm_bin") {
 }
 
 fuchsia_shell_package("pm") {
-  manifest = "meta/pm.cmx"
+  manifest = "meta/pm.cml"
   deps = [ ":pm_bin" ]
 }
 
