@@ -27,26 +27,50 @@ Reject any occurrences of the output dir ($build_subdir):
   2) in the output files' paths
   3) in the output files' contents
 
-Usage: $script output_files... -- command...
+Usage: $script [options] output_files... -- command...
+Options:
+  --help | -h : print help and exit
+  --label STRING : build system label for this action
 EOF
 }
 
-function error_msg() {
-  echo "[$script] Error: " "$@"
-}
-
 command_break=0
+prev_opt=
+label=
 # Collect names of output files.
 outputs=()
 for opt
 do
+  # handle --option arg
+  if test -n "$prev_opt"
+  then
+    eval "$prev_opt"=\$opt
+    prev_opt=
+    shift
+    continue
+  fi
+  # Extract optarg from --opt=optarg
+  case "$opt" in
+    *=?*) optarg=$(expr "X$opt" : '[^=]*=\(.*\)') ;;
+    *=) optarg= ;;
+  esac
+
   case "$opt" in
     -h | --help) usage; exit ;;
+    --label) prev_opt=label ;;
+    --label=*) label="$optarg" ;;
     --) command_break=1; shift; break ;;
     *) outputs+=( "$opt" ) ;;
   esac
   shift
 done
+
+label_diagnostic=
+test -z "$label" || label_diagnostic=" [$label]"
+
+function error_msg() {
+  echo "[$script]$label_diagnostic Error: " "$@" "(See http://go/remotely-cacheable for more information.)"
+}
 
 test "$command_break" = 1 || {
   error_msg "Missing -- before command."
@@ -61,7 +85,9 @@ do
   case "$f" in
     *"$build_subdir"* )
       err=1
-      error_msg "Output path '$f' contains '$build_subdir'"
+      error_msg "Output path '$f' contains '$build_subdir'." \
+        "Adding rebase_path(..., root_build_dir) may fix this to be relative." \
+        "If this command requires an absolute path, mark this action in GN with 'no_output_dir_leaks = false'."
       ;;
   esac
 done
@@ -72,7 +98,9 @@ do
   case "$tok" in
     *"$build_subdir"* )
       err=1
-      error_msg "Command token '$tok' contains '$build_subdir'"
+      error_msg "Command token '$tok' contains '$build_subdir'." \
+        "Adding rebase_path(..., root_build_dir) may fix this to be relative." \
+        "If this command requires an absolute path, mark this action in GN with 'no_output_dir_leaks = false'."
       ;;
   esac
   # Do not shift, keep tokens for execution.
@@ -90,8 +118,10 @@ test "$status" != 0 || {
     if grep -q "$build_subdir" "$f"
     then
       err=1
-      error_msg "Output file $f contains '$build_subdir'"
+      error_msg "Output file $f contains '$build_subdir'." \
+        "If this cannot be fixed in the tool, mark this action in GN with 'no_output_dir_leaks = false'."
     fi
+    # TODO(http://fxbug.dev/92670) check for known remote paths, like "/b/f/w"
   done
   test "$err" = 0 || exit 1
 }

@@ -1105,7 +1105,11 @@ foreach(_target_type,
 
       if (no_output_dir_leaks && check_output_dir_leaks) {
         _args = []
-        _args = rebase_path(outputs, root_build_dir) + [
+        _args = [
+                  "--label",
+                  get_label_info(":$target_name", "label_with_toolchain"),
+                ] + rebase_path(outputs, root_build_dir) +
+                [
                   "--",
                   rebase_path(script, root_build_dir),
                 ] + args
