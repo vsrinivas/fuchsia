@@ -154,7 +154,7 @@ async fn build_input_pipeline_assembly(
     let mut assembly = InputPipelineAssembly::new();
     let (sender, mut receiver) = futures::channel::mpsc::channel(0);
     {
-        assembly = assembly.add_display_ownership_handler(display_ownership_event);
+        assembly = assembly.add_display_ownership(display_ownership_event);
         assembly = add_modifier_handler(assembly);
         assembly = add_inspect_handler(node.create_child("input_pipeline_entry"), assembly);
         // Add the text settings handler early in the pipeline to use the

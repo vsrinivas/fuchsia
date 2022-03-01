@@ -4,8 +4,8 @@
 
 use {
     crate::{
-        autorepeater::Autorepeater, display_ownership_handler::DisplayOwnershipHandler,
-        input_device, input_handler,
+        autorepeater::Autorepeater, display_ownership::DisplayOwnership, input_device,
+        input_handler,
     },
     anyhow::{format_err, Context, Error},
     fidl_fuchsia_input_injection,
@@ -101,22 +101,22 @@ impl InputPipelineAssembly {
         handlers.into_iter().fold(self, |assembly, handler| assembly.add_handler(handler))
     }
 
-    /// Adds the [DisplayOwnershipHandler] to the input pipeline.  The `display_ownership_event` is
+    /// Adds the [DisplayOwnership] to the input pipeline.  The `display_ownership_event` is
     /// assumed to be the Scenic event used to report changes in display ownership, obtained
     /// by `fuchsia.ui.scenic/Scenic.GetDisplayOwnershipEvent`. This code has no way to check
     /// whether that invariant is upheld, so this is something that the user will need to
     /// ensure.
-    pub fn add_display_ownership_handler(
+    pub fn add_display_ownership(
         self,
         display_ownership_event: zx::Event,
     ) -> InputPipelineAssembly {
         let (sender, autorepeat_receiver, mut tasks) = self.into_components();
         let (autorepeat_sender, receiver) = mpsc::unbounded();
-        let h = DisplayOwnershipHandler::new(display_ownership_event);
+        let h = DisplayOwnership::new(display_ownership_event);
         tasks.push(fasync::Task::local(async move {
             h.handle_input_events(autorepeat_receiver, autorepeat_sender)
                 .await
-                .map_err(|e| fx_log_err!("display ownership handler is not supposed to terminate - this is likely a problem: {:?}", &e)).unwrap();
+                .map_err(|e| fx_log_err!("display ownership is not supposed to terminate - this is likely a problem: {:?}", &e)).unwrap();
         }));
         InputPipelineAssembly { sender, receiver, tasks }
     }

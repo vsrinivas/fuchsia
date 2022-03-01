@@ -81,8 +81,7 @@ impl Ownership {
 /// from the product (e.g. terminal) into virtual console.
 ///
 /// See the `README.md` file in this crate for details.
-// TODO(fmil): Rename this struct since it is no longer a Handler.
-pub struct DisplayOwnershipHandler {
+pub struct DisplayOwnership {
     /// The current view of the display ownership.  It is mutated by the
     /// display ownership task when appropriate signals arrive.
     ownership: Rc<RefCell<Ownership>>,
@@ -106,7 +105,7 @@ pub struct DisplayOwnershipHandler {
     loop_done: RefCell<Option<UnboundedSender<()>>>,
 }
 
-impl DisplayOwnershipHandler {
+impl DisplayOwnership {
     /// Creates a new handler that watches `display_ownership_event` for events.
     ///
     /// The `display_ownership_event` is assumed to be an [Event] obtained from
@@ -114,7 +113,7 @@ impl DisplayOwnershipHandler {
     /// isn't really a way for this code to know here whether this is true or
     /// not, so implementor beware.
     pub fn new(display_ownership_event: impl AsHandleRef + 'static) -> Rc<Self> {
-        DisplayOwnershipHandler::new_internal(display_ownership_event, None)
+        DisplayOwnership::new_internal(display_ownership_event, None)
     }
 
     #[cfg(test)]
@@ -122,7 +121,7 @@ impl DisplayOwnershipHandler {
         display_ownership_event: impl AsHandleRef + 'static,
         loop_done: UnboundedSender<()>,
     ) -> Rc<Self> {
-        DisplayOwnershipHandler::new_internal(display_ownership_event, Some(loop_done))
+        DisplayOwnership::new_internal(display_ownership_event, Some(loop_done))
     }
 
     fn new_internal(
@@ -310,7 +309,7 @@ mod tests {
         // We use a wrapper to signal test_event correctly, since doing it wrong
         // by hand causes tests to hang, which isn't the best dev experience.
         let mut wrangler = DisplayWrangler::new(test_event);
-        let handler = DisplayOwnershipHandler::new_for_test(handler_event, loop_done_sender);
+        let handler = DisplayOwnership::new_for_test(handler_event, loop_done_sender);
 
         let _task = fasync::Task::local(async move {
             handler.handle_input_events(handler_receiver, handler_sender).await.unwrap();
@@ -379,7 +378,7 @@ mod tests {
         let (handler_sender, test_receiver) = mpsc::unbounded::<InputEvent>();
         let (loop_done_sender, mut loop_done) = mpsc::unbounded::<()>();
         let mut wrangler = DisplayWrangler::new(test_event);
-        let handler = DisplayOwnershipHandler::new_for_test(handler_event, loop_done_sender);
+        let handler = DisplayOwnership::new_for_test(handler_event, loop_done_sender);
         let _task = fasync::Task::local(async move {
             handler.handle_input_events(handler_receiver, handler_sender).await.unwrap();
         });
@@ -431,7 +430,7 @@ mod tests {
         let (handler_sender, test_receiver) = mpsc::unbounded::<InputEvent>();
         let (loop_done_sender, mut loop_done) = mpsc::unbounded::<()>();
         let mut wrangler = DisplayWrangler::new(test_event);
-        let handler = DisplayOwnershipHandler::new_for_test(handler_event, loop_done_sender);
+        let handler = DisplayOwnership::new_for_test(handler_event, loop_done_sender);
         let _task = fasync::Task::local(async move {
             handler.handle_input_events(handler_receiver, handler_sender).await.unwrap();
         });

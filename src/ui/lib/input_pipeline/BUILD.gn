@@ -75,7 +75,7 @@ rustc_library("input_pipeline") {
     "src/click_drag_handler.rs",
     "src/consumer_controls_binding.rs",
     "src/dead_keys_handler.rs",
-    "src/display_ownership_handler.rs",
+    "src/display_ownership.rs",
     "src/factory_reset_handler.rs",
     "src/fake_input_device_binding.rs",
     "src/fake_input_handler.rs",
