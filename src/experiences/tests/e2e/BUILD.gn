@@ -17,9 +17,6 @@ group("end_to_end_deps") {
   ]
 }
 
-_service_account =
-    "fuchsia-e2e-auth@fuchsia-cloud-api-for-test.iam.gserviceaccount.com"
-
 if (is_host) {
   host_test_data("scuba_goldens") {
     sources = [
@@ -112,48 +109,6 @@ dart_test("experiences_ermine_terminal_e2e_test") {
   ]
 }
 
-dart_test("experiences_ermine_simple_browser_e2e_test") {
-  null_safe = true
-  sources = [ "ermine_session_shell_simple_browser_test.dart" ]
-
-  deps = [
-    "//sdk/fidl/fuchsia.input",
-    "//sdk/fidl/fuchsia.ui.input",
-    "//sdk/fidl/fuchsia.ui.input3",
-    "//sdk/testing/gcloud_lib",
-    "//sdk/testing/sl4f/client",
-    "//sdk/testing/sl4f/flutter_driver_sl4f",
-    "//src/experiences/tests:ermine_driver",
-    "//third_party/dart-pkg/git/flutter/packages/flutter_driver",
-    "//third_party/dart-pkg/pub/image",
-    "//third_party/dart-pkg/pub/test",
-    "//third_party/dart-pkg/pub/webdriver",
-  ]
-
-  non_dart_deps = [
-    ":runtime_deps",
-    ":scuba_goldens($host_toolchain)",
-  ]
-
-  environments = [
-    # TODO(fxbug.dev/91950): Reenable on AEMU after Screenshots on Flatland is not flaky.
-    {
-      dimensions = {
-        device_type = "Intel NUC Kit NUC7i5DNHE"
-      }
-      service_account = _service_account
-      tags = [ "e2e-fyi" ]
-    },
-    {
-      dimensions = {
-        device_type = "Atlas"
-      }
-      service_account = _service_account
-      tags = [ "e2e-fyi" ]
-    },
-  ]
-}
-
 dart_test("experiences_ermine_smoke_e2e_test") {
   null_safe = true
   sources = [ "ermine_smoke_test.dart" ]
@@ -206,10 +161,6 @@ group("test") {
     # Chromedriver prebuilt is only available for linux-x64
     deps = [
       ":experiences_ermine_session_shell_e2e_test($host_toolchain)",
-
-      # TODO(fxbug.dev/89829): Reenable after simple browser is working on Flatland.
-      # ":experiences_ermine_simple_browser_e2e_test($host_toolchain)",
-
       ":experiences_ermine_smoke_e2e_test($host_toolchain)",
       ":experiences_ermine_terminal_e2e_test($host_toolchain)",
     ]

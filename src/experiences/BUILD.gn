@@ -16,23 +16,13 @@ group("experiences") {
 group("tests") {
   testonly = true
 
-  deps = [
-    ":dart_target_tests",
-    ":dart_unittests",
-  ]
-}
-
-# Dart tests which can run on target
-group("dart_target_tests") {
-  testonly = true
-  deps = [ "bin:dart_target_tests" ]
+  deps = [ ":dart_unittests" ]
 }
 
 # Dart unit tests which can run on the host or target
 group("dart_unittests") {
   testonly = true
   deps = [
-    "bin:dart_unittests",
     "examples:dart_unittests",
     "lib:dart_unittests",
     "session_shells:dart_unittests",
