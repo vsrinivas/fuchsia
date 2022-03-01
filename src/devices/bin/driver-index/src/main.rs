@@ -6,7 +6,8 @@ use {
     crate::match_common::node_to_device_property,
     crate::resolved_driver::{load_driver, ResolvedDriver},
     anyhow::{self, Context},
-    fidl_fuchsia_driver_development as fdd, fidl_fuchsia_driver_framework as fdf,
+    fidl_fuchsia_boot as fboot, fidl_fuchsia_driver_development as fdd,
+    fidl_fuchsia_driver_framework as fdf,
     fidl_fuchsia_driver_framework::{DriverIndexRequest, DriverIndexRequestStream},
     fidl_fuchsia_io as fio, fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
@@ -15,6 +16,7 @@ use {
     serde::Deserialize,
     std::{
         cell::RefCell,
+        collections::HashSet,
         ops::Deref,
         ops::DerefMut,
         rc::Rc,
@@ -51,7 +53,10 @@ enum IncomingRequest {
     DriverDevelopmentProtocol(fdd::DriverIndexRequestStream),
 }
 
-async fn load_boot_drivers(dir: fio::DirectoryProxy) -> Result<Vec<ResolvedDriver>, anyhow::Error> {
+async fn load_boot_drivers(
+    dir: fio::DirectoryProxy,
+    eager_drivers: &HashSet<url::Url>,
+) -> Result<Vec<ResolvedDriver>, anyhow::Error> {
     let meta =
         io_util::open_directory(&dir, std::path::Path::new("meta"), fio::OPEN_RIGHT_READABLE)
             .context("boot: Failed to open meta")?;
@@ -71,8 +76,11 @@ async fn load_boot_drivers(dir: fio::DirectoryProxy) -> Result<Vec<ResolvedDrive
             log::error!("Failed to load boot driver: {}: {}", url_string, e);
             continue;
         }
-        if let Ok(Some(driver)) = driver {
+        if let Ok(Some(mut driver)) = driver {
             log::info!("Found boot driver: {}", driver.component_url.to_string());
+            if eager_drivers.contains(&driver.component_url) {
+                driver.fallback = false;
+            }
             drivers.push(driver);
         }
     }
@@ -285,6 +293,7 @@ async fn run_index_server(
 async fn load_base_drivers(
     indexer: Rc<Indexer>,
     resolver: fidl_fuchsia_pkg::PackageResolverProxy,
+    eager_drivers: &HashSet<url::Url>,
 ) -> Result<(), anyhow::Error> {
     let (dir, dir_server_end) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>()?;
     let res =
@@ -307,13 +316,16 @@ async fn load_base_drivers(
                 continue;
             }
         };
-        let resolved_driver = match ResolvedDriver::resolve(url, &resolver).await {
+        let mut resolved_driver = match ResolvedDriver::resolve(url, &resolver).await {
             Ok(r) => r,
             Err(e) => {
                 log::error!("Error resolving base driver url: {}: error: {}", driver.driver_url, e);
                 continue;
             }
         };
+        if eager_drivers.contains(&resolved_driver.component_url) {
+            resolved_driver.fallback = false;
+        }
         log::info!("Found base driver: {}", resolved_driver.component_url.to_string());
         resolved_drivers.push(resolved_driver);
     }
@@ -336,10 +348,24 @@ async fn main() -> Result<(), anyhow::Error> {
         fidl::endpoints::create_proxy_and_stream::<fidl_fuchsia_pkg::PackageResolverMarker>()
             .unwrap();
 
+    let boot_args = fuchsia_component::client::connect_to_protocol::<fboot::ArgumentsMarker>()
+        .context("Failed to connect to boot arguments service")?;
+    let eager_drivers: HashSet<url::Url> = boot_args
+        .get_string("devmgr.bind-eager")
+        .await
+        .context("Failed to get eager drivers from boot arguments")?
+        .unwrap_or_default()
+        .split(",")
+        .filter(|url| !url.is_empty())
+        .filter_map(|url| url::Url::parse(url).ok())
+        .collect();
+
     let boot = io_util::open_directory_in_namespace("/boot", fio::OPEN_RIGHT_READABLE)
         .context("Failed to open /boot")?;
-    let drivers =
-        load_boot_drivers(boot).await.context("Failed to load boot drivers").map_err(log_error)?;
+    let drivers = load_boot_drivers(boot, &eager_drivers)
+        .await
+        .context("Failed to load boot drivers")
+        .map_err(log_error)?;
 
     let mut should_load_base_drivers = true;
 
@@ -360,7 +386,7 @@ async fn main() -> Result<(), anyhow::Error> {
         },
         async {
             if should_load_base_drivers {
-                load_base_drivers(index.clone(), resolver)
+                load_base_drivers(index.clone(), resolver, &eager_drivers)
                     .await
                     .context("Error loading base packages")
                     .map_err(log_error)
@@ -467,8 +493,11 @@ mod tests {
 
         let index = Rc::new(Indexer::new(std::vec![], BaseRepo::NotResolved(std::vec![])));
 
+        let eager_drivers = HashSet::new();
+
         // Run two tasks: the fake resolver and the task that loads the base drivers.
-        let load_base_drivers_task = load_base_drivers(index.clone(), resolver).fuse();
+        let load_base_drivers_task =
+            load_base_drivers(index.clone(), resolver, &eager_drivers).fuse();
         let resolver_task = run_resolver_server(resolver_stream).fuse();
         futures::pin_mut!(load_base_drivers_task, resolver_task);
         futures::select! {
@@ -716,13 +745,77 @@ mod tests {
         assert!(fallback_driver.fallback);
     }
 
+    #[fasync::run_singlethreaded(test)]
+    async fn test_load_eager_fallback_boot_driver() {
+        let eager_driver_component_url =
+            url::Url::parse("fuchsia-boot:///#meta/test-fallback-component.cm").unwrap();
+
+        let boot = io_util::open_directory_in_namespace("/pkg", fio::OPEN_RIGHT_READABLE).unwrap();
+        let drivers = load_boot_drivers(boot, &HashSet::from([eager_driver_component_url.clone()]))
+            .await
+            .unwrap();
+        assert!(
+            !drivers
+                .iter()
+                .find(|driver| driver.component_url == eager_driver_component_url)
+                .expect("Fallback driver did not load")
+                .fallback
+        );
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_load_eager_fallback_base_driver() {
+        let eager_driver_component_url = url::Url::parse(
+            "fuchsia-pkg://fuchsia.com/driver-index-unittests#meta/test-fallback-component.cm",
+        )
+        .unwrap();
+
+        fuchsia_syslog::init().unwrap();
+        let (resolver, resolver_stream) =
+            fidl::endpoints::create_proxy_and_stream::<fidl_fuchsia_pkg::PackageResolverMarker>()
+                .unwrap();
+
+        let index = Rc::new(Indexer::new(std::vec![], BaseRepo::NotResolved(std::vec![])));
+
+        let eager_drivers = HashSet::from([eager_driver_component_url.clone()]);
+
+        let load_base_drivers_task =
+            load_base_drivers(Rc::clone(&index), resolver, &eager_drivers).fuse();
+        let resolver_task = run_resolver_server(resolver_stream).fuse();
+        futures::pin_mut!(load_base_drivers_task, resolver_task);
+        futures::select! {
+            result = load_base_drivers_task => {
+                result.unwrap();
+            },
+            result = resolver_task => {
+                panic!("Resolver task finished: {:?}", result);
+            },
+        };
+
+        let base_repo = index.base_repo.borrow();
+        match *base_repo {
+            BaseRepo::Resolved(ref drivers) => {
+                assert!(
+                    !drivers
+                        .iter()
+                        .find(|driver| driver.component_url == eager_driver_component_url)
+                        .expect("Fallback driver did not load")
+                        .fallback
+                );
+            }
+            _ => {
+                panic!("Base repo was not resolved");
+            }
+        }
+    }
+
     // This test relies on two drivers existing in the /pkg/ directory of the
     // test package.
     #[fasync::run_singlethreaded(test)]
     async fn test_boot_drivers() {
         fuchsia_syslog::init().unwrap();
         let boot = io_util::open_directory_in_namespace("/pkg", fio::OPEN_RIGHT_READABLE).unwrap();
-        let drivers = load_boot_drivers(boot).await.unwrap();
+        let drivers = load_boot_drivers(boot, &HashSet::new()).await.unwrap();
 
         let (proxy, stream) =
             fidl::endpoints::create_proxy_and_stream::<fdf::DriverIndexMarker>().unwrap();

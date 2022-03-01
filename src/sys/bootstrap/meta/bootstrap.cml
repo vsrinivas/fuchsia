@@ -190,6 +190,11 @@
             to: "#console-launcher",
         },
         {
+            protocol: [ "fuchsia.boot.Arguments" ],
+            from: "parent",
+            to: [ "#driver_index" ],
+        },
+        {
             directory: "boot",
             from: "parent",
             to: [

@@ -42,6 +42,11 @@
             to: "#driver-manager",
         },
         {
+            protocol: [ "fuchsia.boot.Arguments" ],
+            from: "#driver-manager-support",
+            to: "#driver-index",
+        },
+        {
             protocol: [ "fuchsia.logger.LogSink" ],
             from: "parent",
             to: "#driver-index",

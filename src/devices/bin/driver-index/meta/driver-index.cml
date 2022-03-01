@@ -28,6 +28,9 @@
             rights: [ "r*" ],
             path: "/boot",
         },
+        {
+            protocol: [ "fuchsia.boot.Arguments" ],
+        },
     ],
     expose: [
         {
