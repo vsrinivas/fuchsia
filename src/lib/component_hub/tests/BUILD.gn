@@ -39,7 +39,7 @@ fuchsia_component("foo") {
 fuchsia_structured_config_values("test_config_values") {
   testonly = true
   cm_target = ":test_manifest"
-  values = "config/config_values.json5"
+  values_source = "config/config_values.json5"
 }
 
 fuchsia_test_package("component_hub_integration_tests") {

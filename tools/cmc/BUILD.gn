@@ -128,7 +128,15 @@ install_host_tools("install") {
 fuchsia_structured_config_values("example_component_config_values") {
   testonly = true
   cm_target = ":example_component_manifest"
-  values = "config/example_config_values.json5"
+  values = {
+    my_flag = true
+    my_uint8 = 42
+    my_string = "test_string"
+    my_vector_of_string = [
+      "hello, world!",
+      "hello, again!",
+    ]
+  }
 }
 
 group("tests") {

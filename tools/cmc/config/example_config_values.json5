@@ -1,9 +1,0 @@
-{
-    my_flag: true,
-    my_uint8: 42,
-    my_string: "test_string",
-    my_vector_of_string: [
-        "hello, world!",
-        "hello, again!",
-    ],
-}

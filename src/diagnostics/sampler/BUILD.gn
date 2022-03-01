@@ -84,12 +84,12 @@ fuchsia_component("sampler-component") {
 }
 
 fuchsia_structured_config_values("sampler-prod-config") {
-  values = "configs/default.json5"
+  values_source = "configs/default.json5"
   cm_target = ":sampler-manifest"
 }
 
 fuchsia_structured_config_values("sampler-test-config") {
-  values = "configs/integration-test.json5"
+  values_source = "configs/integration-test.json5"
   cm_target = ":sampler-manifest"
 }
 

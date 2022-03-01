@@ -73,10 +73,11 @@ import("//tools/configc/build/config.gni")
 #     The fuchsia_component_manifest target for which the definition file will be generated.
 #     Type: GN target
 #
-#   values (required)
-#     The JSON5 file containing the concrete values for the generated file.
+#   values_source -or- values (required)
+#     file: The JSON5 file containing the concrete values for the generated file.
+#     values: A GN scope containing literal values for the generated file.
 #     TODO(https://fxbug.dev/87988) document this format properly.
-#     Type: path
+#     Type: path or scope
 #
 #   component_name (optional)
 #     The basename of the component manifest within the package. If not provided, derived
@@ -90,8 +91,27 @@ template("fuchsia_structured_config_values") {
     assert(
         defined(invoker.cm_target),
         "must provide a component manifest target with a configuration declaration")
-    assert(defined(invoker.values),
-           "must provide a JSON5 file with config values defined")
+
+    _source_defined = defined(invoker.values_source)
+    _values_defined = defined(invoker.values)
+    assert(
+        (_source_defined || _values_defined) &&
+            !(_source_defined && _values_defined),
+        "must provide either `values_source` (path to JSON5 file) or `values` (GN scope with literal values)")
+
+    if (_values_defined) {
+      _generated_values_label = "${target_name}_generated_values"
+      _value_file_deps = [ ":$_generated_values_label" ]
+      _value_file = "$target_out_dir/config_values_from_literal.json"
+      generated_file(_generated_values_label) {
+        output_conversion = "json"
+        contents = invoker.values
+        outputs = [ _value_file ]
+      }
+    } else {
+      _value_file_deps = []
+      _value_file = invoker.values_source
+    }
 
     # TODO(https://fxbug.dev/86798) allow defining manifest in separate gn mod from config
     component_outputs = get_target_outputs(invoker.cm_target)
@@ -113,14 +133,14 @@ template("fuchsia_structured_config_values") {
                                "testonly",
                              ])
       cm = compiled_manifest
-      value_file = invoker.values
+      value_file = _value_file
       if (!defined(deps)) {
         deps = []
       }
       deps += [
-        ":$manifest_resource_target",
-        "${invoker.cm_target}",
-      ]
+                ":$manifest_resource_target",
+                "${invoker.cm_target}",
+              ] + _value_file_deps
     }
 
     # package the value file

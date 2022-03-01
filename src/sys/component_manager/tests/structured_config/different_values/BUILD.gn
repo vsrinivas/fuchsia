@@ -45,13 +45,13 @@ fuchsia_component("receiver_component") {
 fuchsia_structured_config_values("values_with_true") {
   testonly = true
   cm_target = ":receiver_manifest"
-  values = "config/values_with_true.json5"
+  values_source = "config/values_with_true.json5"
 }
 
 fuchsia_structured_config_values("values_with_false") {
   testonly = true
   cm_target = ":receiver_manifest"
-  values = "config/values_with_false.json5"
+  values_source = "config/values_with_false.json5"
 }
 
 fuchsia_unittest_package("different_values_false") {

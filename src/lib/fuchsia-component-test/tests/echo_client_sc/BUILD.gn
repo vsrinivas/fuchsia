@@ -31,7 +31,7 @@ fuchsia_component("component") {
 }
 
 fuchsia_structured_config_values("config_values") {
-  values = "config/default.json5"
+  values_source = "config/default.json5"
   cm_target = ":manifest"
 }
 

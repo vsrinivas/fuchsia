@@ -42,7 +42,7 @@ fuchsia_component("component") {
 fuchsia_structured_config_values("values") {
   testonly = true
   cm_target = ":manifest"
-  values = "../config/values.json5"
+  values_source = "../config/values.json5"
 }
 
 group("cpp_elf") {

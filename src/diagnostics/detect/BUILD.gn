@@ -74,12 +74,12 @@ fuchsia_component_manifest("triage-detect-manifest") {
 
 fuchsia_structured_config_values("triage-detect-prod-config") {
   cm_target = ":triage-detect-manifest"
-  values = "configs/default.json5"
+  values_source = "configs/default.json5"
 }
 
 fuchsia_structured_config_values("triage-detect-test-config") {
   cm_target = ":triage-detect-manifest"
-  values = "configs/integration-test.json5"
+  values_source = "configs/integration-test.json5"
 }
 
 fuchsia_structured_config_rust_lib("triage-detect-config") {

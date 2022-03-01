@@ -86,7 +86,7 @@ fuchsia_component("structured_config_reporter") {
 fuchsia_structured_config_values("structured_config_reporter_values") {
   testonly = true
   cm_target = ":structured_config_reporter_manifest"
-  values = "components/structured_config/config/reporter.json5"
+  values_source = "components/structured_config/config/reporter.json5"
 }
 
 fuchsia_unittest_package("hub_integration_test") {

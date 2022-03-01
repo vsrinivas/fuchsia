@@ -38,7 +38,7 @@ template("session_manager_package") {
 
   fuchsia_structured_config_values(config_target) {
     cm_target = ":${manifest_target}"
-    values = invoker.config
+    values_source = invoker.config
   }
 
   fuchsia_package(target_name) {
