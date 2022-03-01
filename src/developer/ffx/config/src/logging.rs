@@ -8,6 +8,7 @@ use {
     std::fs::{create_dir_all, File, OpenOptions},
     std::path::PathBuf,
     std::str::FromStr,
+    std::sync::atomic::{AtomicBool, Ordering},
 };
 
 const LOG_DIR: &str = "log.dir";
@@ -15,6 +16,8 @@ const LOG_ENABLED: &str = "log.enabled";
 const LOG_LEVEL: &str = "log.level";
 pub const LOG_PREFIX: &str = "ffx";
 const TIME_FORMAT: &str = "%b %d %H:%M:%S";
+
+static LOG_ENABLED_FLAG: AtomicBool = AtomicBool::new(true);
 
 fn config() -> Config {
     // Sets the target level to "Error" so that all logs show their module
@@ -24,6 +27,60 @@ fn config() -> Config {
         .set_time_to_local(true)
         .set_time_format_str(TIME_FORMAT)
         .build()
+}
+
+struct DisableableSimpleLogger {
+    logger: Box<SimpleLogger>,
+}
+
+pub fn disable_stdio_logging() {
+    LOG_ENABLED_FLAG.store(false, Ordering::Relaxed);
+}
+
+impl DisableableSimpleLogger {
+    pub fn new(logger: Box<SimpleLogger>) -> Box<Self> {
+        Box::new(Self { logger })
+    }
+
+    pub fn is_enabled(&self) -> bool {
+        LOG_ENABLED_FLAG.load(Ordering::Relaxed)
+    }
+}
+
+impl log::Log for DisableableSimpleLogger {
+    fn enabled(&self, metadata: &log::Metadata<'_>) -> bool {
+        self.is_enabled() && self.logger.enabled(metadata)
+    }
+
+    fn log(&self, record: &log::Record<'_>) {
+        if self.is_enabled() {
+            self.logger.log(record);
+        }
+    }
+
+    fn flush(&self) {
+        if self.is_enabled() {
+            self.logger.flush();
+        }
+    }
+}
+
+impl simplelog::SharedLogger for DisableableSimpleLogger {
+    fn level(&self) -> log::LevelFilter {
+        if self.is_enabled() {
+            self.logger.level()
+        } else {
+            log::LevelFilter::Off
+        }
+    }
+
+    fn config(&self) -> Option<&Config> {
+        self.logger.config()
+    }
+
+    fn as_log(self: Box<Self>) -> Box<dyn log::Log> {
+        Box::new(*self)
+    }
 }
 
 pub async fn log_file(name: &str) -> Result<std::fs::File> {
@@ -79,7 +136,7 @@ fn get_loggers(
     // The daemon logs to stdio, and is redirected to file by spawn_daemon, which enables
     // panics and backtraces to also be included.
     if stdio {
-        loggers.push(SimpleLogger::new(level, config()));
+        loggers.push(DisableableSimpleLogger::new(SimpleLogger::new(level, config())));
     }
 
     if let Some(file) = file {
@@ -93,6 +150,7 @@ fn get_loggers(
 #[cfg(test)]
 mod test {
     use super::*;
+    use log::Log;
 
     #[test]
     fn test_get_loggers() {
@@ -110,5 +168,19 @@ mod test {
         // SimpleLogger & WriteLogger (error logs to stderr, all other levels to stdout and file)
         let loggers = get_loggers(true, Some(tempfile::tempfile().unwrap()), LevelFilter::Debug);
         assert!(loggers.len() == 2);
+    }
+
+    #[test]
+    fn test_disable_logger() {
+        let logger = DisableableSimpleLogger::new(SimpleLogger::new(LevelFilter::Debug, config()));
+        let metadata =
+            log::MetadataBuilder::new().level(log::Level::Error).target("test-target").build();
+
+        assert!(logger.enabled(&metadata));
+        disable_stdio_logging();
+        assert!(!logger.enabled(&metadata));
+
+        // This might not be necessary but restores the shared state to what it was before the test
+        LOG_ENABLED_FLAG.store(true, Ordering::Relaxed);
     }
 }

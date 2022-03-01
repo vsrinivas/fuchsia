@@ -539,6 +539,9 @@ impl Daemon {
                     .unwrap_or_else(|e| log::error!("shutting down protocol register: {:?}", e));
 
                 add_daemon_metrics_event("quit").await;
+
+                ffx_config::logging::disable_stdio_logging();
+
                 // It is desirable for the client to receive an ACK for the quit
                 // request. As Overnet has a potentially complicated routing
                 // path, it is tricky to implement some notion of a bounded
