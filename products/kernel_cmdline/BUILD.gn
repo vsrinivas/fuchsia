@@ -154,6 +154,13 @@ kernel_cmdline("kernel_active_aging_2_15_2") {
   ]
 }
 
+kernel_cmdline("low-memory-pools") {
+  args = [
+    "driver.sysmem.contiguous_memory_size=0",
+    "driver.sysmem.protected_memory_size=0",
+  ]
+}
+
 # Should only be visible on x64.
 if (target_cpu == "x64") {
   kernel_cmdline("kernel.serial--legacy") {
