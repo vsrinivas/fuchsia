@@ -38,6 +38,7 @@ if sys.hexversion < 0x030700F0:
   sys.exit(1)
 
 WORKSTATION_INSTALLER_GPT_GUID = '4dce98ce-e77e-45c1-a863-caf92f1330c1'
+ZIRCON_R_GPT_GUID = 'a0e5cf57-2def-46be-a80c-a2067c37cd49'
 
 def make_unique_name(name, type):
   return f'{name}_{type}'
@@ -92,8 +93,10 @@ OLD_INSTALLER_IMAGES = [
 
 NEW_INSTALLER_IMAGES = [
     # The recovery image for chromebook-x64.
-    ManifestImage('recovery-installer.signed', ['kernel'], 'zbi.signed', 'zircon-r')
+    ManifestImage('recovery-installer.signed', ['kernel'], 'zbi.signed', 'zircon-r'),
     # TODO(fxbug.dev/93616): verify installer on x64/UEFI and generate a suitable image.
+    ManifestImage('recovery-installer', [ZIRCON_R_GPT_GUID], 'zbi', 'zircon-r'),
+    ManifestImage('fuchsia.esp', ['efi'], 'blk'),
 ]
 
 def ParseSize(size):
