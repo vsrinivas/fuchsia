@@ -5502,45 +5502,28 @@ TEST(NetDatagramTest, PingIpv4LoopbackAddresses) {
 
 struct CmsgSocketOption {
   int level;
+  std::string level_str;
   int cmsg_type;
+  std::string cmsg_type_str;
   int optname_to_enable_receive;
 };
+
+#define STRINGIFIED_CMSGOPT(lvl, type, optname)                                 \
+  CmsgSocketOption {                                                            \
+    .level = lvl, .level_str = #lvl, .cmsg_type = type, .cmsg_type_str = #type, \
+    .optname_to_enable_receive = optname                                        \
+  }
 
 using SocketDomainAndOption = std::tuple<sa_family_t, CmsgSocketOption>;
 
 std::string SocketDomainAndOptionToString(
     const testing::TestParamInfo<SocketDomainAndOption>& info) {
-  auto const& [domain, cmsg_sockopt] = info.param;
-  auto const& [level, cmsg_type, optname_to_enable_receive] = cmsg_sockopt;
-
-  std::string option_str = [](const int level, const int type) -> std::string {
-    switch (level) {
-      case SOL_SOCKET:
-        return "SOL_SOCKET_" + [type]() -> std::string {
-          switch (type) {
-            case SO_TIMESTAMP:
-              return "SO_TIMESTAMP";
-            case SO_TIMESTAMPNS:
-              return "SO_TIMESTAMPNS";
-            default:
-              return std::to_string(type);
-          }
-        }();
-      case SOL_IP:
-        return "SOL_IP_" + [type]() -> std::string {
-          switch (type) {
-            case IP_RECVTOS:
-              return "IP_RECVTOS";
-            default:
-              return std::to_string(type);
-          }
-        }();
-      default:
-        return std::to_string(level) + "_" + std::to_string(type);
-    }
-  }(level, cmsg_type);
-
-  return socketDomainToString(domain) + "_" + option_str;
+  auto const& [domain, cmsg_opt] = info.param;
+  std::ostringstream oss;
+  oss << socketDomainToString(domain);
+  oss << '_' << cmsg_opt.level_str;
+  oss << '_' << cmsg_opt.cmsg_type_str;
+  return oss.str();
 }
 
 class NetDatagramSocketsCmsgTestBase {
@@ -5639,13 +5622,13 @@ class NetDatagramSocketsCmsgRecvTest : public NetDatagramSocketsCmsgTestBase,
  protected:
   void SetUp() override {
     auto const& [domain, cmsg_sockopt] = GetParam();
-    auto const& [level, cmsg_type, optname_to_enable_receive] = cmsg_sockopt;
 
     ASSERT_NO_FATAL_FAILURE(SetUpDatagramSockets(domain));
 
     // Enable the specified socket option.
     const int optval = 1;
-    ASSERT_EQ(setsockopt(bound().get(), level, optname_to_enable_receive, &optval, sizeof(optval)),
+    ASSERT_EQ(setsockopt(bound().get(), cmsg_sockopt.level, cmsg_sockopt.optname_to_enable_receive,
+                         &optval, sizeof(optval)),
               0)
         << strerror(errno);
   }
@@ -5733,28 +5716,18 @@ TEST_P(NetDatagramSocketsCmsgRecvTest, TruncatedMessage) {
   }));
 }
 
-INSTANTIATE_TEST_SUITE_P(NetDatagramSocketsCmsgRecvTests, NetDatagramSocketsCmsgRecvTest,
-                         testing::Combine(testing::Values(AF_INET, AF_INET6),
-                                          testing::Values(
-                                              CmsgSocketOption{
-                                                  .level = SOL_SOCKET,
-                                                  .cmsg_type = SO_TIMESTAMP,
-                                                  .optname_to_enable_receive = SO_TIMESTAMP,
-                                              },
-                                              CmsgSocketOption{
-                                                  .level = SOL_SOCKET,
-                                                  .cmsg_type = SO_TIMESTAMPNS,
-                                                  .optname_to_enable_receive = SO_TIMESTAMPNS,
-                                              })),
-                         SocketDomainAndOptionToString);
+INSTANTIATE_TEST_SUITE_P(
+    NetDatagramSocketsCmsgRecvTests, NetDatagramSocketsCmsgRecvTest,
+    testing::Combine(testing::Values(AF_INET, AF_INET6),
+                     testing::Values(STRINGIFIED_CMSGOPT(SOL_SOCKET, SO_TIMESTAMP, SO_TIMESTAMP),
+                                     STRINGIFIED_CMSGOPT(SOL_SOCKET, SO_TIMESTAMPNS,
+                                                         SO_TIMESTAMPNS))),
+    SocketDomainAndOptionToString);
 
 INSTANTIATE_TEST_SUITE_P(NetDatagramSocketsCmsgRecvIPv4Tests, NetDatagramSocketsCmsgRecvTest,
                          testing::Combine(testing::Values(AF_INET),
-                                          testing::Values(CmsgSocketOption{
-                                              .level = SOL_IP,
-                                              .cmsg_type = IP_TOS,
-                                              .optname_to_enable_receive = IP_RECVTOS,
-                                          })),
+                                          testing::Values(STRINGIFIED_CMSGOPT(SOL_IP, IP_TOS,
+                                                                              IP_RECVTOS))),
                          SocketDomainAndOptionToString);
 
 class NetDatagramSocketsCmsgSendTest : public NetDatagramSocketsCmsgTestBase,
