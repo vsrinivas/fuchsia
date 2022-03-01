@@ -6,6 +6,7 @@
 
 #include <dirent.h>
 #include <fidl/fuchsia.boot/cpp/wire_test_base.h>
+#include <fidl/fuchsia.device.fs/cpp/wire_test_base.h>
 #include <fidl/fuchsia.driver.framework/cpp/wire_test_base.h>
 #include <fidl/fuchsia.io/cpp/wire_test_base.h>
 #include <fidl/fuchsia.logger/cpp/wire.h>
@@ -186,6 +187,17 @@ class TestProfileProvider : public fidl::testing::WireTestBase<fuchsia_scheduler
   std::function<void(uint32_t, std::string_view)> get_profile_callback_;
 };
 
+class TestExporter : public fidl::testing::WireTestBase<fuchsia_device_fs::Exporter> {
+ public:
+  void Export(ExportRequestView request, ExportCompleter::Sync& completer) override {
+    completer.ReplySuccess();
+  }
+
+  void NotImplemented_(const std::string& name, fidl::CompleterBase& completer) override {
+    printf("Not implemented: TestExporter::%s", name.data());
+  }
+};
+
 }  // namespace
 
 class DriverTest : public gtest::TestLoopFixture {
@@ -260,7 +272,8 @@ class DriverTest : public gtest::TestLoopFixture {
         fidl::BindServer(dispatcher(), std::move(server_end), &items_);
       } else if (request->path.get() ==
                  fidl::DiscoverableProtocolName<fuchsia_device_fs::Exporter>) {
-        // TODO: If the unit tests need a working Exporter add it here.
+        fidl::ServerEnd<fuchsia_device_fs::Exporter> server_end(request->object.TakeChannel());
+        fidl::BindServer(dispatcher(), std::move(server_end), &exporter_);
       } else if (request->path.get() ==
                  fidl::DiscoverableProtocolName<fuchsia_scheduler::ProfileProvider>) {
         fidl::ServerEnd<fuchsia_scheduler::ProfileProvider> server_end(
@@ -329,6 +342,7 @@ class DriverTest : public gtest::TestLoopFixture {
   TestDirectory pkg_directory_;
   TestDirectory svc_directory_;
   TestDirectory compat_service_directory_;
+  TestExporter exporter_;
 };
 
 TEST_F(DriverTest, Start) {

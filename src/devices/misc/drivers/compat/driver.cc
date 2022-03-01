@@ -567,9 +567,19 @@ zx_status_t Driver::AddDevice(Device* parent, device_add_args_t* args, zx_device
               outgoing_.svc_dir()->RemoveEntry(child_protocol);
               outgoing_.vfs().CloseAllConnectionsForVnode(*vnode, {});
             });
+            // We have to create the node for the device after we've exported the
+            // /dev/ entry. Otherwise, we will race any child that's bound to us
+            // to see who can export to /dev/ first.
+            zx_status_t status = child->CreateNode();
+            if (status != ZX_OK) {
+              FDF_LOG(ERROR, "Failed to CreateNode for device: %s: %s", child->Name(),
+                      zx_status_get_string(status));
+              child->Remove();
+            }
           })
-          .or_else([this](const zx_status_t& status) {
+          .or_else([this, child](const zx_status_t& status) {
             FDF_LOG(ERROR, "Failed Export to devfs: %s", zx_status_get_string(status));
+            child->Remove();
             return ok();
           })
           .wrap_with(child->scope())

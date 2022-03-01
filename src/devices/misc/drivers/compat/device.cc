@@ -170,11 +170,6 @@ zx_status_t Device::Add(device_add_args_t* zx_args, zx_device_t** out) {
   }
   device->device_flags_ = zx_args->flags;
 
-  zx_status_t status = device->CreateNode();
-  if (status != ZX_OK) {
-    return status;
-  }
-
   children_.push_back(std::move(device));
 
   if (out) {
@@ -316,11 +311,19 @@ zx_status_t Device::CreateNode() {
 void Device::Remove() {
   if (!controller_) {
     FDF_LOG(ERROR, "Failed to remove device '%s', invalid node controller", Name());
+    if (parent_.has_value()) {
+      auto ptr = shared_from_this();
+      (*parent_)->RemoveChild(ptr);
+    }
     return;
   }
   auto result = controller_->Remove();
   if (!result.ok() && !result.is_peer_closed()) {
     FDF_LOG(ERROR, "Failed to remove device '%s': %s", Name(), result.FormatDescription().data());
+    if (parent_.has_value()) {
+      auto ptr = shared_from_this();
+      (*parent_)->RemoveChild(ptr);
+    }
   }
 }
 

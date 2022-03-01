@@ -70,6 +70,8 @@ class Device : public std::enable_shared_from_this<Device>,
 
   zx_status_t StartCompatService(ServiceDir dir);
 
+  zx_status_t CreateNode();
+
   std::string_view topological_path() const { return topological_path_; }
   void set_topological_path(std::string path) { topological_path_ = std::move(path); }
   Driver* driver() { return driver_; }
@@ -83,8 +85,6 @@ class Device : public std::enable_shared_from_this<Device>,
 
   Device(Device&&) = delete;
   Device& operator=(Device&&) = delete;
-
-  zx_status_t CreateNode();
 
   // fuchsia.driver.compat.Compat
   void GetTopologicalPath(GetTopologicalPathRequestView request,

@@ -528,26 +528,6 @@ async fn test_get_device_info_no_filter_dfv2() -> Result<()> {
         test.info.node_property_list.as_ref().map(|x| x.as_slice()),
         TEST_PARENT_DFV2_NODE_PROPERTY_LIST.as_ref().map(|x| x.as_slice())
     );
-    assert_eq!(test.num_children, 1);
-    assert_eq!(test.child_nodes.len(), 1);
-
-    let sample_driver = &test.child_nodes[0];
-    println!("{:?}", sample_driver.info.node_property_list);
-    assert_eq!(
-        sample_driver.info.moniker.as_ref().expect("DFv2 node missing moniker"),
-        "root.sys.test.sample_driver"
-    );
-    assert!(
-        sample_driver.info.bound_driver_libname.is_none(),
-        "DFv2 node specified bound driver libname"
-    );
-    assert!(sample_driver.info.bound_driver_url.is_none());
-    assert_eq!(
-        sample_driver.info.node_property_list.as_ref().map(|x| x.as_slice()),
-        NO_PROTOCOL_DFV2_NODE_PROPERTY_LIST.as_ref().map(|x| x.as_slice())
-    );
-    assert_eq!(sample_driver.num_children, 0);
-    assert!(sample_driver.child_nodes.is_empty());
     Ok(())
 }
 
@@ -580,7 +560,6 @@ async fn test_get_device_info_with_filter_dfv2() -> Result<()> {
         TEST_PARENT_DFV2_NODE_PROPERTY_LIST.as_ref().map(|x| x.as_slice())
     );
     assert!(root_sys_test.child_nodes.is_empty());
-    assert_eq!(root_sys_test.num_children, 1);
     Ok(())
 }
 
@@ -613,7 +592,6 @@ async fn test_get_device_info_with_duplicate_filter_dfv2() -> Result<()> {
         TEST_PARENT_DFV2_NODE_PROPERTY_LIST.as_ref().map(|x| x.as_slice())
     );
     assert!(root_sys_test.child_nodes.is_empty());
-    assert_eq!(root_sys_test.num_children, 1);
     Ok(())
 }
 

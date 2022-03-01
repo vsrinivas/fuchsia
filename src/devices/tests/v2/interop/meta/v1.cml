@@ -13,4 +13,7 @@
         bind: "meta/bind/v1.bindbc",
         colocate: "true",
     },
+    use: [
+        { protocol: "fuchsia.device.fs.Exporter" },
+    ],
 }

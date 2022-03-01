@@ -223,8 +223,8 @@ TEST_F(DeviceTest, AddChildDevice) {
   // Add a child device.
   device_add_args_t args{.name = "child"};
   zx_device_t* child = nullptr;
-  zx_status_t status = parent.Add(&args, &child);
-  ASSERT_EQ(ZX_OK, status);
+  ASSERT_EQ(ZX_OK, parent.Add(&args, &child));
+  ASSERT_EQ(ZX_OK, child->CreateNode());
   EXPECT_NE(nullptr, child);
   EXPECT_STREQ("child", child->Name());
   EXPECT_TRUE(parent.HasChildren());
@@ -258,8 +258,9 @@ TEST_F(DeviceTest, AddChildWithProtoPropAndProtoId) {
   device_add_args_t args{
       .name = "child", .props = &prop, .prop_count = 1, .proto_id = ZX_PROTOCOL_BLOCK};
   zx_device_t* child = nullptr;
-  zx_status_t status = parent.Add(&args, &child);
-  ASSERT_EQ(ZX_OK, status);
+  ASSERT_EQ(ZX_OK, parent.Add(&args, &child));
+  ASSERT_EQ(ZX_OK, child->CreateNode());
+
   EXPECT_NE(nullptr, child);
   EXPECT_STREQ("child", child->Name());
   EXPECT_TRUE(parent.HasChildren());
@@ -321,8 +322,8 @@ TEST_F(DeviceTest, AddChildWithStringProps) {
                          .str_prop_count = sizeof(props) / sizeof(props[0]),
                          .proto_id = ZX_PROTOCOL_BLOCK};
   zx_device_t* child = nullptr;
-  zx_status_t status = parent.Add(&args, &child);
-  ASSERT_EQ(ZX_OK, status);
+  ASSERT_EQ(ZX_OK, parent.Add(&args, &child));
+  ASSERT_EQ(ZX_OK, child->CreateNode());
   EXPECT_NE(nullptr, child);
   EXPECT_STREQ("child", child->Name());
   EXPECT_TRUE(parent.HasChildren());
@@ -355,8 +356,8 @@ TEST_F(DeviceTest, AddChildDeviceWithInit) {
       .ops = &child_ops,
   };
   zx_device_t* child = nullptr;
-  zx_status_t status = parent.Add(&args, &child);
-  ASSERT_EQ(ZX_OK, status);
+  ASSERT_EQ(ZX_OK, parent.Add(&args, &child));
+  ASSERT_EQ(ZX_OK, child->CreateNode());
   EXPECT_NE(nullptr, child);
   EXPECT_STREQ("child", child->Name());
   EXPECT_TRUE(parent.HasChildren());
@@ -382,8 +383,8 @@ TEST_F(DeviceTest, AddAndRemoveChildDevice) {
   // Add a child device.
   device_add_args_t args{.name = "child"};
   zx_device_t* child = nullptr;
-  zx_status_t status = parent.Add(&args, &child);
-  ASSERT_EQ(ZX_OK, status);
+  ASSERT_EQ(ZX_OK, parent.Add(&args, &child));
+  ASSERT_EQ(ZX_OK, child->CreateNode());
   EXPECT_NE(nullptr, child);
   EXPECT_STREQ("child", child->Name());
   EXPECT_TRUE(parent.HasChildren());
@@ -410,11 +411,8 @@ TEST_F(DeviceTest, AddChildToBindableDevice) {
   // Try to a child device.
   device_add_args_t args{.name = "child"};
   zx_device_t* child = nullptr;
-  zx_status_t status = parent.Add(&args, &child);
-  ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, status);
-
-  // Check that the parent has no children.
-  EXPECT_FALSE(parent.HasChildren());
+  ASSERT_EQ(ZX_OK, parent.Add(&args, &child));
+  ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, child->CreateNode());
 }
 
 TEST_F(DeviceTest, GetProtocolFromDevice) {
@@ -629,7 +627,8 @@ TEST_F(DeviceTest, DevfsVnodeTestBind) {
   device_add_args_t args{
       .name = "second-device",
   };
-  device.Add(&args, &second_device);
+  ASSERT_EQ(ZX_OK, device.Add(&args, &second_device));
+  ASSERT_EQ(ZX_OK, second_device->CreateNode());
 
   auto [vnode, client] = CreateVnode(second_device);
   bool callback_called = false;
@@ -710,7 +709,8 @@ TEST_F(DeviceTest, DevfsVnodeTestRebind) {
   device_add_args_t args{
       .name = "second-device",
   };
-  device.Add(&args, &second_device);
+  ASSERT_EQ(ZX_OK, device.Add(&args, &second_device));
+  ASSERT_EQ(ZX_OK, second_device->CreateNode());
 
   bool callback_called = false;
   auto [vnode, client] = CreateVnode(second_device);

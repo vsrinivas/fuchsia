@@ -433,7 +433,7 @@ void Node::Remove(RemoveRequestView request, RemoveCompleter::Sync& completer) {
 
 void Node::AddChild(AddChildRequestView request, AddChildCompleter::Sync& completer) {
   if (driver_binder_ == nullptr) {
-    LOGF(ERROR, "Failed to add Node, as this Node '%s' was removed", name().data());
+    LOGF(WARNING, "Failed to add Node, as this Node '%s' was removed", name().data());
     completer.ReplyError(fdf::wire::NodeError::kNodeRemoved);
     return;
   }
