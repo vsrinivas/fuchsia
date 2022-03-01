@@ -5526,7 +5526,7 @@ std::string SocketDomainAndOptionToString(
   return oss.str();
 }
 
-class NetDatagramSocketsCmsgTestBase {
+class NetDatagramSocketsCmsgTestBase : public testing::Test {
  protected:
   void SetUpDatagramSockets(sa_family_t domain) {
     ASSERT_TRUE(bound_ = fbl::unique_fd(socket(domain, SOCK_DGRAM, 0))) << strerror(errno);
@@ -5618,7 +5618,7 @@ class NetDatagramSocketsCmsgTestBase {
 };
 
 class NetDatagramSocketsCmsgRecvTest : public NetDatagramSocketsCmsgTestBase,
-                                       public testing::TestWithParam<SocketDomainAndOption> {
+                                       public testing::WithParamInterface<SocketDomainAndOption> {
  protected:
   void SetUp() override {
     auto const& [domain, cmsg_sockopt] = GetParam();
@@ -5731,7 +5731,7 @@ INSTANTIATE_TEST_SUITE_P(NetDatagramSocketsCmsgRecvIPv4Tests, NetDatagramSockets
                          SocketDomainAndOptionToString);
 
 class NetDatagramSocketsCmsgSendTest : public NetDatagramSocketsCmsgTestBase,
-                                       public testing::TestWithParam<sa_family_t> {
+                                       public testing::WithParamInterface<sa_family_t> {
  protected:
   void SetUp() override { ASSERT_NO_FATAL_FAILURE(SetUpDatagramSockets(GetParam())); }
 
@@ -5882,7 +5882,7 @@ INSTANTIATE_TEST_SUITE_P(NetDatagramSocketsCmsgSendTests, NetDatagramSocketsCmsg
                          [](const auto info) { return socketDomainToString(info.param); });
 
 class NetDatagramSocketsCmsgTimestampTest : public NetDatagramSocketsCmsgTestBase,
-                                            public testing::TestWithParam<sa_family_t> {
+                                            public testing::WithParamInterface<sa_family_t> {
  protected:
   void SetUp() override {
     ASSERT_NO_FATAL_FAILURE(SetUpDatagramSockets(GetParam()));
@@ -5969,7 +5969,7 @@ INSTANTIATE_TEST_SUITE_P(NetDatagramSocketsCmsgTimestampTests, NetDatagramSocket
                          [](const auto info) { return socketDomainToString(info.param); });
 
 class NetDatagramSocketsCmsgTimestampNsTest : public NetDatagramSocketsCmsgTestBase,
-                                              public testing::TestWithParam<sa_family_t> {
+                                              public testing::WithParamInterface<sa_family_t> {
  protected:
   void SetUp() override {
     ASSERT_NO_FATAL_FAILURE(SetUpDatagramSockets(GetParam()));
@@ -6071,8 +6071,7 @@ INSTANTIATE_TEST_SUITE_P(NetDatagramSocketsCmsgTimestampNsTests,
                          NetDatagramSocketsCmsgTimestampNsTest, testing::Values(AF_INET, AF_INET6),
                          [](const auto info) { return socketDomainToString(info.param); });
 
-class NetDatagramSocketsCmsgIpTosTest : public NetDatagramSocketsCmsgTestBase,
-                                        public testing::Test {
+class NetDatagramSocketsCmsgIpTosTest : public NetDatagramSocketsCmsgTestBase {
  protected:
   void SetUp() override {
     ASSERT_NO_FATAL_FAILURE(SetUpDatagramSockets(AF_INET));
