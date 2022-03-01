@@ -171,7 +171,13 @@ class Osd {
 
   zx_status_t Init(ddk::PDev& pdev);
   void HwInit();
-  void Disable();
+
+  // Disable the OSD and set the latest stamp to |config_stamp|.
+  // If the driver disables (pauses) the OSD because the client sets an empty
+  // config, the |config_stamp| should be the client-provided stamp; otherwise
+  // it should use the invalid stamp value indicating that the OSD has been
+  // invalidated.
+  void Disable(config_stamp_t config_stamp = {.value = INVALID_CONFIG_STAMP_VALUE});
   void Enable();
 
   // Schedules the given |config| to be applied by the RDMA engine when the next VSYNC interrupt

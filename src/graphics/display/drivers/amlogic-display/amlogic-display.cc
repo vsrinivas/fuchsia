@@ -391,7 +391,7 @@ void AmlogicDisplay::DisplayControllerImplApplyConfiguration(
           capture_active_id_ = INVALID_ID;
         }
       }
-      osd_->Disable();
+      osd_->Disable(*config_stamp);
     }
   }
 

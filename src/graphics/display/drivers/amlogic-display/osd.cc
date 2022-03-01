@@ -258,12 +258,12 @@ zx_status_t Osd::Init(ddk::PDev& pdev) {
   return ZX_OK;
 }
 
-void Osd::Disable(void) {
+void Osd::Disable(config_stamp_t config_stamp) {
   ZX_DEBUG_ASSERT(initialized_);
   StopRdma();
   Osd1CtrlStatReg::Get().ReadFrom(&(*vpu_mmio_)).set_blk_en(0).WriteTo(&(*vpu_mmio_));
   fbl::AutoLock lock(&rdma_lock_);
-  latest_applied_config_ = {.value = INVALID_CONFIG_STAMP_VALUE};
+  latest_applied_config_ = config_stamp;
 }
 
 void Osd::Enable(void) {
