@@ -3,6 +3,7 @@ table fuchsia.data/Dictionary
 struct/member fuchsia.data/DictionaryEntry.key string:1024
 struct/member fuchsia.data/DictionaryEntry.value fuchsia.data/DictionaryValue:optional
 struct fuchsia.data/DictionaryEntry
+union/member fuchsia.data/DictionaryValue.obj_vec vector<fuchsia.data/Dictionary>:1024
 union/member fuchsia.data/DictionaryValue.str string:1024
 union/member fuchsia.data/DictionaryValue.str_vec vector<string:1024>:1024
 flexible union fuchsia.data/DictionaryValue
