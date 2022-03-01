@@ -86,6 +86,18 @@ where
             .ok()?;
         recv.await.ok()?
     }
+
+    #[cfg(test)]
+    pub async fn try_start_update_then_wait_for_terminal_state(
+        &mut self,
+        options: CheckOptions,
+        callback: Option<N>,
+    ) -> Result<(), CheckNotStartedReason> {
+        self.try_start_update(options, callback).await?;
+
+        while !self.get_state().await.unwrap().is_terminal() {}
+        Ok(())
+    }
 }
 
 // Manually implement Clone as not all N impl Clone, so derive(Clone) won't always impl Clone.
@@ -1086,7 +1098,10 @@ pub(crate) mod tests {
         .spawn();
 
         let options = CheckOptions::builder().initiator(Initiator::User).build();
-        assert_eq!(manager.try_start_update(options, None).await, Ok(()));
+        assert_eq!(
+            manager.try_start_update_then_wait_for_terminal_state(options, None).await,
+            Ok(())
+        );
 
         assert_eq!(fidl_call_count.load(Ordering::SeqCst), 1);
     }
@@ -1107,7 +1122,10 @@ pub(crate) mod tests {
         .spawn();
 
         let options = CheckOptions::builder().initiator(Initiator::User).build();
-        assert_eq!(manager.try_start_update(options, None).await, Ok(()));
+        assert_eq!(
+            manager.try_start_update_then_wait_for_terminal_state(options, None).await,
+            Ok(())
+        );
 
         assert_eq!(fidl_call_count.load(Ordering::SeqCst), 1);
     }
@@ -1128,7 +1146,10 @@ pub(crate) mod tests {
         .spawn();
 
         let options = CheckOptions::builder().initiator(Initiator::User).build();
-        assert_eq!(manager.try_start_update(options, None).await, Ok(()));
+        assert_eq!(
+            manager.try_start_update_then_wait_for_terminal_state(options, None).await,
+            Ok(())
+        );
 
         assert_eq!(fidl_call_count.load(Ordering::SeqCst), 0);
     }

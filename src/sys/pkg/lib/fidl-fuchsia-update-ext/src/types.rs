@@ -37,6 +37,18 @@ impl State {
             | State::WaitingForReboot(_) => false,
         }
     }
+
+    /// Returns true if this state is a terminal state.
+    pub fn is_terminal(&self) -> bool {
+        match self {
+            State::CheckingForUpdates | State::InstallingUpdate(_) => false,
+            State::ErrorCheckingForUpdate
+            | State::InstallationError(_)
+            | State::NoUpdateAvailable
+            | State::InstallationDeferredByPolicy(_)
+            | State::WaitingForReboot(_) => true,
+        }
+    }
 }
 
 impl Event for State {
