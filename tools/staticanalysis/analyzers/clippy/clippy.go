@@ -112,43 +112,54 @@ func (c *ClippyAnalyzer) Analyze(ctx context.Context, path string) ([]*staticana
 			if child.Level != "help" {
 				continue
 			}
-			msg := child.Message
-			if span, ok := child.primarySpan(ctx); ok && span.SuggestedReplacement != "" {
+
+			var replacements []staticanalysis.Replacement
+			for _, span := range child.Spans {
+				// Some suggestions have multiple primary spans to indicate that
+				// multiple separate chunks of text need to be updated - e.g.
+				// adding opening and closing parentheses around a multiline
+				// block of code.
+				if !span.Primary || span.SuggestedReplacement == "" {
+					continue
+				}
 				replacementPath, err := staticanalysis.BuildPathToCheckoutPath(span.FileName, c.buildDir, c.checkoutDir)
 				if err != nil {
 					return nil, err
 				}
-				if replacementPath != path {
-					continue
-				}
-				suggestions = append(suggestions, staticanalysis.Suggestion{
-					Description: child.Message,
-					Replacements: []staticanalysis.Replacement{
-						{
-							Path:        replacementPath,
-							Replacement: span.SuggestedReplacement,
-							StartLine:   span.LineStart,
-							EndLine:     span.LineEnd,
-							// Clippy uses one-based column numbers but
-							// staticanalysis finding character indices must be
-							// zero-based.
-							StartChar: span.ColumnStart - 1,
-							EndChar:   span.ColumnEnd - 1,
-						},
-					},
+				replacements = append(replacements, staticanalysis.Replacement{
+					Path:        replacementPath,
+					Replacement: span.SuggestedReplacement,
+					StartLine:   span.LineStart,
+					EndLine:     span.LineEnd,
+					// Clippy uses one-based column numbers but staticanalysis
+					// finding character indices must be zero-based.
+					StartChar: span.ColumnStart - 1,
+					EndChar:   span.ColumnEnd - 1,
 				})
-				if strings.Contains(span.SuggestedReplacement, "\n") {
-					// If the suggested replacement is multiple lines, it's
-					// likely that it starts in the middle of one line and won't
-					// make much sense when rendered out of context.
-					continue
-				}
-				// If there's a suggested replacement, child.Message will be
-				// some text like "try" that is intended to be followed by the
-				// suggested replacement.
-				msg = fmt.Sprintf("%s: `%s`", child.Message, span.SuggestedReplacement)
 			}
-			messageLines = append(messageLines, fmt.Sprintf("help: %s", msg))
+
+			if len(replacements) > 0 {
+				suggestions = append(suggestions, staticanalysis.Suggestion{
+					Description:  child.Message,
+					Replacements: replacements,
+				})
+			}
+
+			switch len(replacements) {
+			case 0:
+				messageLines = append(messageLines, fmt.Sprintf("help: %s", child.Message))
+			case 1:
+				// If there's a single suggested replacement, child.Message will
+				// be some text like "try" that is intended to be followed by
+				// the suggested replacement.
+				repl := replacements[0].Replacement
+				// Only include the suggestion in the message if the suggested
+				// replacement is a single line. It it spans multiple lines it
+				// probably won't make much sense when rendered out of context.
+				if !strings.Contains(repl, "\n") {
+					messageLines = append(messageLines, fmt.Sprintf("help: %s: `%s`", child.Message, repl))
+				}
+			}
 		}
 
 		messageLines = append(messageLines, fmt.Sprintf("To reproduce locally, run `fx clippy -f %s`", path))
