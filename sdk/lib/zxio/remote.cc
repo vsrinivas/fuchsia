@@ -815,30 +815,44 @@ zx_status_t zxio_remote_flags_set(zxio_t* io, uint32_t flags) {
   return response.s;
 }
 
-zx_status_t zxio_remote_vmo_get(zxio_t* io, uint32_t flags, zx_handle_t* out_vmo,
+zx_status_t zxio_remote_vmo_get(zxio_t* io, zxio_vmo_flags_t zxio_flags, zx_handle_t* out_vmo,
                                 size_t* out_size) {
   Remote rio(io);
-  const fidl::WireResult result =
-      fidl::WireCall(fidl::UnownedClientEnd<fio::File>(rio.control()))->GetBuffer(flags);
+  fio::wire::VmoFlags flags;
+  if (zxio_flags & ZXIO_VMO_READ) {
+    flags |= fio::wire::VmoFlags::kRead;
+  }
+  if (zxio_flags & ZXIO_VMO_WRITE) {
+    flags |= fio::wire::VmoFlags::kWrite;
+  }
+  if (zxio_flags & ZXIO_VMO_EXECUTE) {
+    flags |= fio::wire::VmoFlags::kExecute;
+  }
+  if (zxio_flags & ZXIO_VMO_PRIVATE_CLONE) {
+    flags |= fio::wire::VmoFlags::kPrivateClone;
+  }
+  if (zxio_flags & ZXIO_VMO_SHARED_BUFFER) {
+    flags |= fio::wire::VmoFlags::kSharedBuffer;
+  }
+  fidl::WireResult result =
+      fidl::WireCall(fidl::UnownedClientEnd<fio::File>(rio.control()))->GetBackingMemory(flags);
   if (!result.ok()) {
     return result.status();
   }
-  const auto& response = result.value();
-  if (zx_status_t status = response.s; status != ZX_OK) {
-    return status;
+  auto& response = result.value();
+  switch (response.result.Which()) {
+    case fio::wire::File2GetBackingMemoryResult::Tag::kErr:
+      return response.result.err();
+    case fio::wire::File2GetBackingMemoryResult::Tag::kResponse:
+      zx::vmo& vmo = response.result.response().vmo;
+      if (out_size) {
+        if (zx_status_t status = vmo.get_prop_content_size(out_size); status != ZX_OK) {
+          return status;
+        }
+      }
+      *out_vmo = vmo.release();
+      return ZX_OK;
   }
-  const fidl::ObjectView buffer = response.buffer;
-  if (!buffer) {
-    return ZX_ERR_IO;
-  }
-  if (buffer->vmo == ZX_HANDLE_INVALID) {
-    return ZX_ERR_IO;
-  }
-  *out_vmo = buffer->vmo.release();
-  if (out_size) {
-    *out_size = buffer->size;
-  }
-  return ZX_OK;
 }
 
 zx_status_t zxio_dir_open(zxio_t* io, uint32_t flags, uint32_t mode, const char* path,

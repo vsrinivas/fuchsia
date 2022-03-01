@@ -543,19 +543,23 @@ impl VmoFileConnection {
                 // encoded in the API instead, I guess.
                 responder.send(ZX_ERR_NOT_SUPPORTED)?;
             }
-            FileRequest::GetBuffer { flags, responder } => {
-                self.handle_get_buffer(VmoFlags::from_bits_truncate(flags), |status, buffer| {
-                    match buffer {
-                        None => responder.send(status.into_raw(), None),
-                        Some(mut buffer) => responder.send(status.into_raw(), Some(&mut buffer)),
-                    }
-                })
+            FileRequest::GetBufferDeprecatedUseGetBackingMemory { flags, responder } => {
+                self.handle_get_buffer(
+                    VmoFlags::from_bits_truncate(flags),
+                    |buffer| match buffer {
+                        Err(status) => responder.send(status.into_raw(), None),
+                        Ok(mut buffer) => responder.send(ZX_OK, Some(&mut buffer)),
+                    },
+                )
                 .await?;
             }
             FileRequest::GetBackingMemory { flags, responder } => {
-                self.handle_get_buffer(flags, |status, buffer| match buffer {
-                    None => responder.send(&mut Err(status.into_raw())),
-                    Some(buffer) => responder.send(&mut Ok(buffer.vmo)),
+                self.handle_get_buffer(flags, |buffer| {
+                    responder.send(
+                        &mut buffer
+                            .map(|Buffer { vmo, size: _ }| vmo)
+                            .map_err(zx::Status::into_raw),
+                    )
                 })
                 .await?;
             }
@@ -901,58 +905,54 @@ impl VmoFileConnection {
         responder: R,
     ) -> Result<(), fidl::Error>
     where
-        R: FnOnce(zx::Status, Option<Buffer>) -> Result<(), fidl::Error>,
+        R: FnOnce(Result<Buffer, zx::Status>) -> Result<(), fidl::Error>,
     {
-        if let Err(status) = get_buffer_validate_flags(flags, self.flags) {
-            return responder(status, None);
-        }
+        responder(
+            async {
+                let () = get_buffer_validate_flags(flags, self.flags)?;
 
-        // The only sharing mode we support that disallows the VMO size to change currently
-        // is VMO_FLAG_PRIVATE (`get_as_private`), so we require that to be set explicitly.
-        if flags.contains(VmoFlags::WRITE) && !flags.contains(VmoFlags::PRIVATE_CLONE) {
-            return responder(zx::Status::NOT_SUPPORTED, None);
-        }
-
-        // Disallow opening as both writable and executable. In addition to improving W^X
-        // enforcement, this also eliminates any inconstiencies related to clones that use
-        // SNAPSHOT_AT_LEAST_ON_WRITE since in that case, we cannot satisfy both requirements.
-        if flags.contains(VmoFlags::EXECUTE) && flags.contains(VmoFlags::WRITE) {
-            return responder(zx::Status::NOT_SUPPORTED, None);
-        }
-
-        let (status, buffer) = update_initialized_state! {
-            match &*self.file.state().await;
-            error: "handle_write_at" => (zx::Status::INTERNAL, None);
-            { vmo, size, .. } => {
-                // Logic here matches fuchsia.io requirements and matches what works for memfs.
-                // Shared requests are satisfied by duplicating an handle, and private shares are
-                // child VMOs.
-                //
-                // Minfs and blobfs may require customization.  In particular, they may want to
-                // track not just number of connections to a file, but also the number of
-                // outstanding child VMOs.  While it is possible with the `init_vmo`/`consume_vmo`
-                // model currently implemented, it is very likely that adding another customization
-                // callback here will make the implementation of those files systems easier.
-                let vmo_rights = vmo_flags_to_rights(flags);
-                // Unless private sharing mode is specified, we always default to shared.
-                let result = if flags.contains(VmoFlags::PRIVATE_CLONE) {
-                    Self::get_as_private(&vmo, vmo_rights, *size)
+                // The only sharing mode we support that disallows the VMO size to change currently
+                // is VMO_FLAG_PRIVATE (`get_as_private`), so we require that to be set explicitly.
+                if flags.contains(VmoFlags::WRITE) && !flags.contains(VmoFlags::PRIVATE_CLONE) {
+                    return Err(zx::Status::NOT_SUPPORTED);
                 }
-                else {
-                    Self::get_as_shared(&vmo, vmo_rights)
-                };
-                // Ideally a match statement would be more readable here, but using one here causes
-                // within the update_initialized_state! macro causes a syntax error ("unexpected
-                // token in input"), so for now we just use an if statement.
-                if let Ok(vmo) = result {
-                    (zx::Status::OK, Some(Buffer{vmo, size: *size}))
-                } else {
-                    (result.unwrap_err(), None)
+
+                // Disallow opening as both writable and executable. In addition to improving W^X
+                // enforcement, this also eliminates any inconstiencies related to clones that use
+                // SNAPSHOT_AT_LEAST_ON_WRITE since in that case, we cannot satisfy both requirements.
+                if flags.contains(VmoFlags::EXECUTE) && flags.contains(VmoFlags::WRITE) {
+                    return Err(zx::Status::NOT_SUPPORTED);
+                }
+
+                update_initialized_state! {
+                    match &*self.file.state().await;
+                    error: "handle_get_buffer" => Err(zx::Status::INTERNAL);
+                    { vmo, size, .. } => {
+                        let () = vmo.set_content_size(&size)?;
+
+                        // Logic here matches fuchsia.io requirements and matches what works for memfs.
+                        // Shared requests are satisfied by duplicating an handle, and private shares are
+                        // child VMOs.
+                        //
+                        // Minfs and blobfs may require customization.  In particular, they may want to
+                        // track not just number of connections to a file, but also the number of
+                        // outstanding child VMOs.  While it is possible with the `init_vmo`/`consume_vmo`
+                        // model currently implemented, it is very likely that adding another customization
+                        // callback here will make the implementation of those files systems easier.
+                        let vmo_rights = vmo_flags_to_rights(flags);
+                        // Unless private sharing mode is specified, we always default to shared.
+                        let vmo = if flags.contains(VmoFlags::PRIVATE_CLONE) {
+                            Self::get_as_private(&vmo, vmo_rights, *size)
+                        }
+                        else {
+                            Self::get_as_shared(&vmo, vmo_rights)
+                        }?;
+                            Ok(Buffer{vmo, size: *size})
+                    }
                 }
             }
-        };
-
-        responder(status, buffer)
+            .await,
+        )
     }
 
     fn get_as_shared(vmo: &zx::Vmo, mut rights: zx::Rights) -> Result<zx::Vmo, zx::Status> {

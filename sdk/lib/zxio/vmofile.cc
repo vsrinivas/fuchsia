@@ -166,7 +166,7 @@ static zx_status_t zxio_vmofile_seek(zxio_t* io, zxio_seek_origin_t start, int64
   return ZX_OK;
 }
 
-zx_status_t zxio_vmo_get_common(const zx::vmo& vmo, size_t content_size, uint32_t flags,
+zx_status_t zxio_vmo_get_common(const zx::vmo& vmo, size_t content_size, zxio_vmo_flags_t flags,
                                 zx_handle_t* out_vmo, size_t* out_size) {
   if (out_vmo == nullptr) {
     return ZX_ERR_INVALID_ARGS;
@@ -178,23 +178,23 @@ zx_status_t zxio_vmo_get_common(const zx::vmo& vmo, size_t content_size, uint32_
   // rather than from a File.GetBuffer call.
 
   zx_rights_t rights = ZX_RIGHTS_BASIC | ZX_RIGHT_MAP | ZX_RIGHT_GET_PROPERTY;
-  rights |= flags & fio::wire::kVmoFlagRead ? ZX_RIGHT_READ : 0;
-  rights |= flags & fio::wire::kVmoFlagWrite ? ZX_RIGHT_WRITE : 0;
-  rights |= flags & fio::wire::kVmoFlagExec ? ZX_RIGHT_EXECUTE : 0;
+  rights |= flags & ZXIO_VMO_READ ? ZX_RIGHT_READ : 0;
+  rights |= flags & ZXIO_VMO_WRITE ? ZX_RIGHT_WRITE : 0;
+  rights |= flags & ZXIO_VMO_EXECUTE ? ZX_RIGHT_EXECUTE : 0;
 
-  if (flags & fio::wire::kVmoFlagPrivate) {
+  if (flags & ZXIO_VMO_PRIVATE_CLONE) {
     // Allow SET_PROPERTY only if creating a private child VMO so that the user
     // can set ZX_PROP_NAME (or similar).
     rights |= ZX_RIGHT_SET_PROPERTY;
 
     uint32_t options = ZX_VMO_CHILD_SNAPSHOT_AT_LEAST_ON_WRITE;
-    if (flags & fio::wire::kVmoFlagExec) {
+    if (flags & ZXIO_VMO_EXECUTE) {
       // Creating a SNAPSHOT_AT_LEAST_ON_WRITE child removes ZX_RIGHT_EXECUTE even if the
       // parent VMO has it, and we can't arbitrarily add EXECUTE here on the
       // client side. Adding CHILD_NO_WRITE still creates a snapshot and a new
       // VMO object, which e.g. can have a unique ZX_PROP_NAME value, but the
       // returned handle lacks WRITE and maintains EXECUTE.
-      if (flags & fio::wire::kVmoFlagWrite) {
+      if (flags & ZXIO_VMO_WRITE) {
         return ZX_ERR_NOT_SUPPORTED;
       }
       options |= ZX_VMO_CHILD_NO_WRITE;
@@ -236,7 +236,7 @@ zx_status_t zxio_vmo_get_common(const zx::vmo& vmo, size_t content_size, uint32_
   return ZX_OK;
 }
 
-static zx_status_t zxio_vmofile_vmo_get(zxio_t* io, uint32_t flags, zx_handle_t* out_vmo,
+static zx_status_t zxio_vmofile_vmo_get(zxio_t* io, zxio_vmo_flags_t flags, zx_handle_t* out_vmo,
                                         size_t* out_size) {
   // Can't support Vmofiles with a non-zero start/offset, because we return just
   // a VMO with no other data - like a starting offset - to the user.

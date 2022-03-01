@@ -5,16 +5,12 @@
 #include <lib/zx/vmar.h>
 #include <lib/zx/vmo.h>
 #include <lib/zxio/cpp/inception.h>
-#include <lib/zxio/ops.h>
 #include <lib/zxio/zxio.h>
-#include <limits.h>
 #include <string.h>
 #include <zircon/syscalls.h>
 
 #include <algorithm>
 #include <vector>
-
-namespace fio = fuchsia_io;
 
 static zx_status_t read_at(zxio_t* io, void* buf, size_t len, off_t offset, size_t* out_actual) {
   size_t actual = 0u;
@@ -138,15 +134,14 @@ zx_status_t zxio_vmo_get_copy(zxio_t* io, zx_handle_t* out_vmo, size_t* out_size
 }
 
 zx_status_t zxio_vmo_get_clone(zxio_t* io, zx_handle_t* out_vmo, size_t* out_size) {
-  return zxio_vmo_get(io, fio::wire::kVmoFlagRead | fio::wire::kVmoFlagPrivate, out_vmo, out_size);
+  return zxio_vmo_get(io, ZXIO_VMO_READ | ZXIO_VMO_PRIVATE_CLONE, out_vmo, out_size);
 }
 
 zx_status_t zxio_vmo_get_exact(zxio_t* io, zx_handle_t* out_vmo, size_t* out_size) {
-  return zxio_vmo_get(io, fio::wire::kVmoFlagRead | fio::wire::kVmoFlagExact, out_vmo, out_size);
+  return zxio_vmo_get(io, ZXIO_VMO_READ | ZXIO_VMO_SHARED_BUFFER, out_vmo, out_size);
 }
 
 zx_status_t zxio_vmo_get_exec(zxio_t* io, zx_handle_t* out_vmo, size_t* out_size) {
-  return zxio_vmo_get(
-      io, fio::wire::kVmoFlagRead | fio::wire::kVmoFlagExec | fio::wire::kVmoFlagPrivate, out_vmo,
-      out_size);
+  return zxio_vmo_get(io, ZXIO_VMO_READ | ZXIO_VMO_EXECUTE | ZXIO_VMO_PRIVATE_CLONE, out_vmo,
+                      out_size);
 }

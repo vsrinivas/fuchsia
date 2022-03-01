@@ -68,15 +68,23 @@ pub async fn open_file_data(
     } else {
         // we didn't get a VMO handle from DESCRIBE, explicitly ask. ignore the status code, we'll
         // fall back to trying to read over the channel if it doesn't return a handle
-        let (_, buffer) =
-            file.get_buffer(fio::VMO_FLAG_READ).await.map_err(FileError::GetBufferError)?;
+        match file
+            .get_backing_memory(fio::VmoFlags::READ)
+            .await
+            .map_err(FileError::GetBufferError)?
+            .map_err(zxs::Status::from_raw)
+        {
+            Ok(vmo) => {
+                let size = vmo.get_content_size().expect("failed to get VMO size");
 
-        if let Some(buffer) = buffer {
-            Ok(fmem::Data::Buffer(*buffer))
-        } else {
-            // we still didn't get a VMO handle, fallback to reads over the channel
-            let bytes = io_util::file::read(&file).await?;
-            Ok(fmem::Data::Bytes(bytes))
+                Ok(fmem::Data::Buffer(fmem::Buffer { vmo, size }))
+            }
+            Err(e) => {
+                let _: zxs::Status = e;
+                // we still didn't get a VMO handle, fallback to reads over the channel
+                let bytes = io_util::file::read(&file).await?;
+                Ok(fmem::Data::Bytes(bytes))
+            }
         }
     }
 }
@@ -218,13 +226,10 @@ mod tests {
                     let vmo = fidl::Vmo::create(13).unwrap();
                     vmo.write(b"hello, world!", 0).unwrap();
                     match request {
-                        fio::FileRequest::GetBuffer { responder, .. } => responder
-                            .send(
-                                zxs::Status::OK.into_raw(),
-                                Some(&mut fmem::Buffer { vmo, size: 13 }),
-                            )
-                            .unwrap(),
-                        unexpected => todo!("{:#?}", unexpected),
+                        fio::FileRequest::GetBackingMemory { flags: _, responder } => {
+                            responder.send(&mut Ok(vmo)).unwrap()
+                        }
+                        unexpected => unimplemented!("{:#?}", unexpected),
                     }
                 }
             });
@@ -262,10 +267,10 @@ mod tests {
                 let mut have_sent_bytes = false;
                 while let Some(Ok(request)) = file_requests.next().await {
                     match request {
-                        fio::FileRequest::GetBuffer { responder, .. } => {
-                            responder.send(zxs::Status::NOT_SUPPORTED.into_raw(), None).unwrap()
+                        fio::FileRequest::GetBackingMemory { flags: _, responder } => {
+                            responder.send(&mut Err(zxs::Status::NOT_SUPPORTED.into_raw())).unwrap()
                         }
-                        fio::FileRequest::Read { responder, .. } => {
+                        fio::FileRequest::Read { count: _, responder } => {
                             let to_send = if !have_sent_bytes {
                                 have_sent_bytes = true;
                                 b"hello, world!".to_vec()
@@ -274,7 +279,7 @@ mod tests {
                             };
                             responder.send(&mut Ok(to_send)).unwrap();
                         }
-                        unexpected => todo!("{:#?}", unexpected),
+                        unexpected => unimplemented!("{:#?}", unexpected),
                     }
                 }
             });

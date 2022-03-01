@@ -43,7 +43,7 @@ struct Context {
   bool supports_seek;
   bool supports_get_buffer;
   size_t content_size;  // Must be <= zx_system_get_page_size().
-  uint32_t last_flags;
+  fuchsia_io::wire::VmoFlags last_flags;
 };
 class TestServer final : public fidl::testing::WireTestBase<fuchsia_io::File> {
  public:
@@ -130,28 +130,26 @@ class TestServer final : public fidl::testing::WireTestBase<fuchsia_io::File> {
     completer.ReplySuccess(0);
   }
 
-  void GetBuffer(GetBufferRequestView request, GetBufferCompleter::Sync& completer) override {
+  void GetBackingMemory(GetBackingMemoryRequestView request,
+                        GetBackingMemoryCompleter::Sync& completer) override {
     context->last_flags = request->flags;
 
     if (!context->supports_get_buffer) {
-      completer.Reply(ZX_ERR_NOT_SUPPORTED, nullptr);
+      completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
       return;
     }
 
-    fuchsia_mem::wire::Buffer buffer = {};
-    buffer.size = context->content_size;
-
     zx_rights_t rights = ZX_RIGHTS_BASIC | ZX_RIGHT_MAP | ZX_RIGHT_GET_PROPERTY;
-    rights |= (request->flags & fuchsia_io::wire::kVmoFlagRead) ? ZX_RIGHT_READ : 0;
-    rights |= (request->flags & fuchsia_io::wire::kVmoFlagWrite) ? ZX_RIGHT_WRITE : 0;
-    rights |= (request->flags & fuchsia_io::wire::kVmoFlagExec) ? ZX_RIGHT_EXECUTE : 0;
+    rights |= (request->flags & fuchsia_io::wire::VmoFlags::kRead) ? ZX_RIGHT_READ : 0;
+    rights |= (request->flags & fuchsia_io::wire::VmoFlags::kWrite) ? ZX_RIGHT_WRITE : 0;
+    rights |= (request->flags & fuchsia_io::wire::VmoFlags::kExecute) ? ZX_RIGHT_EXECUTE : 0;
 
     zx_status_t status = ZX_OK;
     zx::vmo result;
-    if (request->flags & fuchsia_io::wire::kVmoFlagPrivate) {
+    if (request->flags & fuchsia_io::wire::VmoFlags::kPrivateClone) {
       rights |= ZX_RIGHT_SET_PROPERTY;
       uint32_t options = ZX_VMO_CHILD_SNAPSHOT_AT_LEAST_ON_WRITE;
-      if (request->flags & fuchsia_io::wire::kVmoFlagExec) {
+      if (request->flags & fuchsia_io::wire::VmoFlags::kExecute) {
         // Creating a SNAPSHOT_AT_LEAST_ON_WRITE child removes ZX_RIGHT_EXECUTE even if the parent
         // VMO has it, but NO_WRITE changes this behavior so that the new handle doesn't have WRITE
         // and preserves EXECUTE.
@@ -159,7 +157,7 @@ class TestServer final : public fidl::testing::WireTestBase<fuchsia_io::File> {
       }
       status = context->vmo.create_child(options, 0, zx_system_get_page_size(), &result);
       if (status != ZX_OK) {
-        completer.Reply(status, nullptr);
+        completer.ReplyError(status);
         return;
       }
 
@@ -168,12 +166,11 @@ class TestServer final : public fidl::testing::WireTestBase<fuchsia_io::File> {
       status = context->vmo.duplicate(rights, &result);
     }
     if (status != ZX_OK) {
-      completer.Reply(status, nullptr);
+      completer.ReplyError(status);
       return;
     }
 
-    buffer.vmo = std::move(result);
-    completer.Reply(ZX_OK, fidl::ObjectView<fuchsia_mem::wire::Buffer>::FromExternal(&buffer));
+    completer.ReplySuccess(std::move(result));
   }
 
  private:
@@ -242,8 +239,9 @@ TEST(GetVMOTest, Remote) {
   EXPECT_OK(fdio_get_vmo_exact(fd.get(), received.reset_and_get_address()));
   EXPECT_EQ(get_koid(context.vmo), get_koid(received));
   EXPECT_EQ(get_rights(received), expected_rights);
-  EXPECT_EQ(fuchsia_io::wire::kVmoFlagRead | fuchsia_io::wire::kVmoFlagExact, context.last_flags);
-  context.last_flags = 0;
+  EXPECT_EQ(fuchsia_io::wire::VmoFlags::kRead | fuchsia_io::wire::VmoFlags::kSharedBuffer,
+            context.last_flags);
+  context.last_flags = {};
 
   // The rest of these tests exercise methods which use VMO_FLAG_PRIVATE, in which case the returned
   // rights should also include SET_PROPERTY.
@@ -252,34 +250,37 @@ TEST(GetVMOTest, Remote) {
   EXPECT_OK(fdio_get_vmo_clone(fd.get(), received.reset_and_get_address()));
   EXPECT_NE(get_koid(context.vmo), get_koid(received));
   EXPECT_EQ(get_rights(received), expected_rights);
-  EXPECT_EQ(fuchsia_io::wire::kVmoFlagRead | fuchsia_io::wire::kVmoFlagPrivate, context.last_flags);
+  EXPECT_EQ(fuchsia_io::wire::VmoFlags::kRead | fuchsia_io::wire::VmoFlags::kPrivateClone,
+            context.last_flags);
   EXPECT_TRUE(vmo_starts_with(received, "abcd"));
-  context.last_flags = 0;
+  context.last_flags = {};
 
   EXPECT_OK(fdio_get_vmo_copy(fd.get(), received.reset_and_get_address()));
   EXPECT_NE(get_koid(context.vmo), get_koid(received));
   EXPECT_EQ(get_rights(received), expected_rights);
-  EXPECT_EQ(fuchsia_io::wire::kVmoFlagRead | fuchsia_io::wire::kVmoFlagPrivate, context.last_flags);
+  EXPECT_EQ(fuchsia_io::wire::VmoFlags::kRead | fuchsia_io::wire::VmoFlags::kPrivateClone,
+            context.last_flags);
   EXPECT_TRUE(vmo_starts_with(received, "abcd"));
-  context.last_flags = 0;
+  context.last_flags = {};
 
   EXPECT_OK(fdio_get_vmo_exec(fd.get(), received.reset_and_get_address()));
   EXPECT_NE(get_koid(context.vmo), get_koid(received));
   EXPECT_EQ(get_rights(received), expected_rights | ZX_RIGHT_EXECUTE);
-  EXPECT_EQ(fuchsia_io::wire::kVmoFlagRead | fuchsia_io::wire::kVmoFlagExec |
-                fuchsia_io::wire::kVmoFlagPrivate,
+  EXPECT_EQ(fuchsia_io::wire::VmoFlags::kRead | fuchsia_io::wire::VmoFlags::kExecute |
+                fuchsia_io::wire::VmoFlags::kPrivateClone,
             context.last_flags);
   EXPECT_TRUE(vmo_starts_with(received, "abcd"));
-  context.last_flags = 0;
+  context.last_flags = {};
 
   context.supports_get_buffer = false;
   context.supports_read_at = true;
   EXPECT_OK(fdio_get_vmo_copy(fd.get(), received.reset_and_get_address()));
   EXPECT_NE(get_koid(context.vmo), get_koid(received));
   EXPECT_EQ(get_rights(received), expected_rights);
-  EXPECT_EQ(fuchsia_io::wire::kVmoFlagRead | fuchsia_io::wire::kVmoFlagPrivate, context.last_flags);
+  EXPECT_EQ(fuchsia_io::wire::VmoFlags::kRead | fuchsia_io::wire::VmoFlags::kPrivateClone,
+            context.last_flags);
   EXPECT_TRUE(vmo_starts_with(received, "abcd"));
-  context.last_flags = 0;
+  context.last_flags = {};
 }
 
 TEST(GetVMOTest, VMOFile) {
@@ -363,7 +364,8 @@ TEST(MmapFileTest, ProtExecWorks) {
   zx_vm_option_t zx_options = PROT_READ | PROT_EXEC;
   uintptr_t ptr;
   ASSERT_OK(_mmap_file(offset, len, zx_options, MAP_SHARED, fd.get(), fd_off, &ptr));
-  EXPECT_EQ(context.last_flags, fuchsia_io::wire::kVmoFlagRead | fuchsia_io::wire::kVmoFlagExec);
+  EXPECT_EQ(context.last_flags,
+            fuchsia_io::wire::VmoFlags::kRead | fuchsia_io::wire::VmoFlags::kExecute);
 }
 
 }  // namespace

@@ -88,40 +88,51 @@ TEST(VmofileTests, test_vmofile_basic) {
   fidl::ClientEnd<fio::File> file(node_endpoints->client.TakeChannel());
 
   {
-    auto get_result = fidl::WireCall(file)->GetBuffer(fio::wire::kVmoFlagRead);
-    ASSERT_OK(get_result.status());
-    ASSERT_OK(get_result.Unwrap()->s);
-    fuchsia_mem::wire::Buffer* buffer = get_result.Unwrap()->buffer.get();
-    ASSERT_TRUE(buffer->vmo.is_valid());
-    ASSERT_EQ(get_rights(buffer->vmo), kCommonExpectedRights);
-    ASSERT_EQ(buffer->size, 13);
+    const fidl::WireResult get_result =
+        fidl::WireCall(file)->GetBackingMemory(fio::wire::VmoFlags::kRead);
+    ASSERT_TRUE(get_result.ok(), "%s", get_result.FormatDescription().c_str());
+    const auto& get_response = get_result.value();
+    ASSERT_TRUE(get_response.result.is_response(), "%s",
+                zx_status_get_string(get_response.result.err()));
+    const zx::vmo& vmo = get_response.result.response().vmo;
+    ASSERT_TRUE(vmo.is_valid());
+    ASSERT_EQ(get_rights(vmo), kCommonExpectedRights);
+    uint64_t size;
+    ASSERT_OK(vmo.get_prop_content_size(&size));
+    ASSERT_EQ(size, 13);
   }
 
   {
-    auto get_result =
-        fidl::WireCall(file)->GetBuffer(fio::wire::kVmoFlagRead | fio::wire::kVmoFlagPrivate);
-    ASSERT_OK(get_result.status());
-    ASSERT_OK(get_result.Unwrap()->s);
-    fuchsia_mem::wire::Buffer* buffer = get_result.Unwrap()->buffer.get();
-    ASSERT_TRUE(buffer->vmo.is_valid());
-    ASSERT_EQ(get_rights(buffer->vmo), kCommonExpectedRights | ZX_RIGHT_SET_PROPERTY);
-    ASSERT_EQ(buffer->size, 13);
+    const fidl::WireResult get_result = fidl::WireCall(file)->GetBackingMemory(
+        fio::wire::VmoFlags::kRead | fio::wire::VmoFlags::kPrivateClone);
+    ASSERT_TRUE(get_result.ok(), "%s", get_result.FormatDescription().c_str());
+    const auto& get_response = get_result.value();
+    ASSERT_TRUE(get_response.result.is_response(), "%s",
+                zx_status_get_string(get_response.result.err()));
+    const zx::vmo& vmo = get_response.result.response().vmo;
+    ASSERT_TRUE(vmo.is_valid());
+    ASSERT_EQ(get_rights(vmo), kCommonExpectedRights | ZX_RIGHT_SET_PROPERTY);
+    uint64_t size;
+    ASSERT_OK(vmo.get_prop_content_size(&size));
+    ASSERT_EQ(size, 13);
   }
 
   {
-    auto get_result =
-        fidl::WireCall(file)->GetBuffer(fio::wire::kVmoFlagRead | fio::wire::kVmoFlagExec);
-    ASSERT_OK(get_result.status());
-    ASSERT_EQ(get_result.Unwrap()->s, ZX_ERR_ACCESS_DENIED);
-    ASSERT_EQ(get_result.Unwrap()->buffer.get(), nullptr);
+    const fidl::WireResult get_result = fidl::WireCall(file)->GetBackingMemory(
+        fio::wire::VmoFlags::kRead | fio::wire::VmoFlags::kExecute);
+    ASSERT_TRUE(get_result.ok(), "%s", get_result.FormatDescription().c_str());
+    const auto& get_response = get_result.value();
+    ASSERT_TRUE(get_response.result.is_err());
+    ASSERT_STATUS(get_response.result.err(), ZX_ERR_ACCESS_DENIED);
   }
 
   {
-    auto get_result =
-        fidl::WireCall(file)->GetBuffer(fio::wire::kVmoFlagRead | fio::wire::kVmoFlagWrite);
-    ASSERT_OK(get_result.status());
-    ASSERT_EQ(get_result.Unwrap()->s, ZX_ERR_ACCESS_DENIED);
-    ASSERT_EQ(get_result.Unwrap()->buffer.get(), nullptr);
+    const fidl::WireResult get_result = fidl::WireCall(file)->GetBackingMemory(
+        fio::wire::VmoFlags::kRead | fio::wire::VmoFlags::kWrite);
+    ASSERT_TRUE(get_result.ok(), "%s", get_result.FormatDescription().c_str());
+    const auto& get_response = get_result.value();
+    ASSERT_TRUE(get_response.result.is_err());
+    ASSERT_STATUS(get_response.result.err(), ZX_ERR_ACCESS_DENIED);
   }
 
   {
@@ -182,26 +193,35 @@ TEST(VmofileTests, test_vmofile_exec) {
   fidl::ClientEnd<fio::File> file(node_endpoints->client.TakeChannel());
 
   {
-    auto get_result = fidl::WireCall(file)->GetBuffer(fio::wire::kVmoFlagRead);
-    ASSERT_OK(get_result.status());
-    ASSERT_OK(get_result.Unwrap()->s);
-    fuchsia_mem::wire::Buffer* buffer = get_result.Unwrap()->buffer.get();
-    ASSERT_TRUE(buffer->vmo.is_valid());
-    ASSERT_EQ(get_rights(buffer->vmo), kCommonExpectedRights);
-    ASSERT_EQ(buffer->size, 13);
+    const fidl::WireResult get_result =
+        fidl::WireCall(file)->GetBackingMemory(fio::wire::VmoFlags::kRead);
+    ASSERT_TRUE(get_result.ok(), "%s", get_result.FormatDescription().c_str());
+    const auto& get_response = get_result.value();
+    ASSERT_TRUE(get_response.result.is_response(), "%s",
+                zx_status_get_string(get_response.result.err()));
+    const zx::vmo& vmo = get_response.result.response().vmo;
+    ASSERT_TRUE(vmo.is_valid());
+    ASSERT_EQ(get_rights(vmo), kCommonExpectedRights);
+    uint64_t size;
+    ASSERT_OK(vmo.get_prop_content_size(&size));
+    ASSERT_EQ(size, 13);
   }
 
   {
     // Providing a backing VMO with ZX_RIGHT_EXECUTE in CreateFromVmo above should cause
     // VMO_FLAG_EXEC to work.
-    auto get_result =
-        fidl::WireCall(file)->GetBuffer(fio::wire::kVmoFlagRead | fio::wire::kVmoFlagExec);
-    ASSERT_OK(get_result.status());
-    ASSERT_OK(get_result.Unwrap()->s);
-    auto buffer = get_result.Unwrap()->buffer.get();
-    ASSERT_TRUE(buffer->vmo.is_valid());
-    ASSERT_EQ(get_rights(buffer->vmo), kCommonExpectedRights | ZX_RIGHT_EXECUTE);
-    ASSERT_EQ(buffer->size, 13);
+    const fidl::WireResult get_result = fidl::WireCall(file)->GetBackingMemory(
+        fio::wire::VmoFlags::kRead | fio::wire::VmoFlags::kExecute);
+    ASSERT_TRUE(get_result.ok(), "%s", get_result.FormatDescription().c_str());
+    const auto& get_response = get_result.value();
+    ASSERT_TRUE(get_response.result.is_response(), "%s",
+                zx_status_get_string(get_response.result.err()));
+    const zx::vmo& vmo = get_response.result.response().vmo;
+    ASSERT_TRUE(vmo.is_valid());
+    ASSERT_EQ(get_rights(vmo), kCommonExpectedRights | ZX_RIGHT_EXECUTE);
+    uint64_t size;
+    ASSERT_OK(vmo.get_prop_content_size(&size));
+    ASSERT_EQ(size, 13);
   }
 
   {

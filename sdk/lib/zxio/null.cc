@@ -75,7 +75,7 @@ zx_status_t zxio_default_advisory_lock(zxio_t* io, advisory_lock_req* req) {
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t zxio_default_vmo_get(zxio_t* io, uint32_t flags, zx_handle_t* out_vmo,
+zx_status_t zxio_default_vmo_get(zxio_t* io, zxio_vmo_flags_t flags, zx_handle_t* out_vmo,
                                  size_t* out_size) {
   return ZX_ERR_NOT_SUPPORTED;
 }

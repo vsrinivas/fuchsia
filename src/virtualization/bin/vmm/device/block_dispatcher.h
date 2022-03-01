@@ -59,7 +59,8 @@ void CreateFileBlockDispatcher(async_dispatcher_t* dispatcher, fuchsia::io::File
 // Creates a BlockDispatcher based on a file, by acquiring a vmo representing the file. Falls back
 // to CreateFileBlockDispatcher when failing to acquire a vmo.
 void CreateVmoBlockDispatcher(async_dispatcher_t* dispatcher, fuchsia::io::FilePtr file,
-                              uint32_t vmo_flags, NestedBlockDispatcherCallback callback);
+                              fuchsia::io::VmoFlags vmo_flags,
+                              NestedBlockDispatcherCallback callback);
 
 // Creates a BlockDispatcher based on another BlockDispatcher, but stores writes
 // in memory.

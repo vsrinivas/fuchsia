@@ -45,7 +45,7 @@ zx_status_t zxio_default_seek(zxio_t* io, zxio_seek_origin_t start, int64_t offs
 zx_status_t zxio_default_truncate(zxio_t* io, uint64_t length);
 zx_status_t zxio_default_flags_get(zxio_t* io, uint32_t* out_flags);
 zx_status_t zxio_default_flags_set(zxio_t* io, uint32_t flags);
-zx_status_t zxio_default_vmo_get(zxio_t* io, uint32_t flags, zx_handle_t* out_vmo,
+zx_status_t zxio_default_vmo_get(zxio_t* io, zxio_vmo_flags_t flags, zx_handle_t* out_vmo,
                                  size_t* out_size);
 zx_status_t zxio_default_get_read_buffer_available(zxio_t* io, size_t* out_available);
 zx_status_t zxio_default_shutdown(zxio_t* io, zxio_shutdown_options_t options);

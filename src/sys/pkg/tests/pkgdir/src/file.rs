@@ -9,16 +9,14 @@
 use {
     crate::{dirs_to_test, just_pkgfs_for_now, repeat_by_n, PackageSource},
     anyhow::{anyhow, Context as _, Error},
-    assert_matches::assert_matches,
     fidl::endpoints::create_proxy,
     fidl::AsHandleRef,
     fidl_fuchsia_io::{
-        DirectoryProxy, FileEvent, FileMarker, FileProxy, NodeInfo, SeekOrigin, MAX_BUF,
+        DirectoryProxy, FileEvent, FileMarker, FileProxy, NodeInfo, SeekOrigin, VmoFlags, MAX_BUF,
         OPEN_FLAG_APPEND, OPEN_FLAG_CREATE_IF_ABSENT, OPEN_FLAG_DESCRIBE, OPEN_FLAG_DIRECTORY,
         OPEN_FLAG_NODE_REFERENCE, OPEN_FLAG_NOT_DIRECTORY, OPEN_FLAG_NO_REMOTE,
         OPEN_FLAG_POSIX_EXECUTABLE, OPEN_FLAG_POSIX_WRITABLE, OPEN_RIGHT_EXECUTABLE,
-        OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE, VMO_FLAG_EXACT, VMO_FLAG_EXEC, VMO_FLAG_PRIVATE,
-        VMO_FLAG_READ, VMO_FLAG_WRITE,
+        OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
     },
     fuchsia_zircon as zx,
     futures::StreamExt,
@@ -386,15 +384,17 @@ async fn get_buffer_per_package_source(source: PackageSource) {
 
             let file = open_file(root_dir, &path, OPEN_RIGHT_READABLE).await.unwrap();
 
-            let _ = test_get_buffer_success(&file, VMO_FLAG_READ, size).await;
+            let _: zx::Vmo = test_get_buffer_success(&file, VmoFlags::READ, size).await;
 
-            let buffer0 =
-                test_get_buffer_success(&file, VMO_FLAG_READ | VMO_FLAG_PRIVATE, size).await;
-            let buffer1 =
-                test_get_buffer_success(&file, VMO_FLAG_READ | VMO_FLAG_PRIVATE, size).await;
+            let vmo0 =
+                test_get_buffer_success(&file, VmoFlags::READ | VmoFlags::PRIVATE_CLONE, size)
+                    .await;
+            let vmo1 =
+                test_get_buffer_success(&file, VmoFlags::READ | VmoFlags::PRIVATE_CLONE, size)
+                    .await;
             assert_ne!(
-                buffer0.vmo.as_handle_ref().get_koid().unwrap(),
-                buffer1.vmo.as_handle_ref().get_koid().unwrap(),
+                vmo0.as_handle_ref().get_koid().unwrap(),
+                vmo1.as_handle_ref().get_koid().unwrap(),
                 "We should receive our own clone each time we invoke GetBuffer() with the VmoFlagPrivate field set"
             );
         }
@@ -402,47 +402,74 @@ async fn get_buffer_per_package_source(source: PackageSource) {
 
     // The empty blob will not return a vmo, failing calls to GetBuffer() with BAD_STATE.
     let file = open_file(root_dir, "file_0", OPEN_RIGHT_READABLE).await.unwrap();
-    let (status, _buffer) = file.get_buffer(VMO_FLAG_READ).await.unwrap();
-    assert_eq!(zx::Status::ok(status), Err(zx::Status::BAD_STATE));
+    let result =
+        file.get_backing_memory(VmoFlags::READ).await.unwrap().map_err(zx::Status::from_raw);
+    assert_eq!(result, Err(zx::Status::BAD_STATE));
 
     // For "meta as file", GetBuffer() should be unsupported.
     let file = open_file(root_dir, "meta", OPEN_RIGHT_READABLE).await.unwrap();
-    let (status, _buffer) = file.get_buffer(VMO_FLAG_READ).await.unwrap();
-    assert_eq!(zx::Status::ok(status), Err(zx::Status::NOT_SUPPORTED));
+    let result =
+        file.get_backing_memory(VmoFlags::READ).await.unwrap().map_err(zx::Status::from_raw);
+    assert_eq!(result, Err(zx::Status::NOT_SUPPORTED));
 
     // For files NOT under meta, GetBuffer() calls with unsupported flags should successfully return
     // the FIDL call with a failure status.
     let file = open_file(root_dir, "file", OPEN_RIGHT_READABLE).await.unwrap();
-    let (status, _buffer) = file.get_buffer(VMO_FLAG_EXEC).await.unwrap();
-    assert_eq!(zx::Status::ok(status), Err(zx::Status::ACCESS_DENIED));
-    let (status, _buffer) = file.get_buffer(VMO_FLAG_EXACT).await.unwrap();
-    assert_eq!(zx::Status::ok(status), Err(zx::Status::NOT_SUPPORTED));
-    let (status, _buffer) = file.get_buffer(VMO_FLAG_PRIVATE | VMO_FLAG_EXACT).await.unwrap();
-    assert_eq!(zx::Status::ok(status), Err(zx::Status::INVALID_ARGS));
-    let (status, _buffer) = file.get_buffer(VMO_FLAG_WRITE).await.unwrap();
-    assert_eq!(zx::Status::ok(status), Err(zx::Status::ACCESS_DENIED));
+    let result =
+        file.get_backing_memory(VmoFlags::EXECUTE).await.unwrap().map_err(zx::Status::from_raw);
+    assert_eq!(result, Err(zx::Status::ACCESS_DENIED));
+    let result = file
+        .get_backing_memory(VmoFlags::SHARED_BUFFER)
+        .await
+        .unwrap()
+        .map_err(zx::Status::from_raw);
+    assert_eq!(result, Err(zx::Status::NOT_SUPPORTED));
+    let result = file
+        .get_backing_memory(VmoFlags::PRIVATE_CLONE | VmoFlags::SHARED_BUFFER)
+        .await
+        .unwrap()
+        .map_err(zx::Status::from_raw);
+    assert_eq!(result, Err(zx::Status::INVALID_ARGS));
+    let result =
+        file.get_backing_memory(VmoFlags::WRITE).await.unwrap().map_err(zx::Status::from_raw);
+    assert_eq!(result, Err(zx::Status::ACCESS_DENIED));
 
+    let file = open_file(root_dir, "meta/file", OPEN_RIGHT_READABLE).await.unwrap();
     // files under `/meta` behave like content files for `GetBuffer()`
     if !source.is_pkgdir() {
-        for flags in
-            [VMO_FLAG_EXEC, VMO_FLAG_EXACT, VMO_FLAG_EXACT | VMO_FLAG_PRIVATE, VMO_FLAG_WRITE]
-        {
-            let file = open_file(root_dir, "meta/file", OPEN_RIGHT_READABLE).await.unwrap();
-            assert_matches!(
-                file.get_buffer(flags).await,
-                Err(fidl::Error::ClientChannelClosed { .. })
-            );
+        for flags in [
+            VmoFlags::EXECUTE,
+            VmoFlags::SHARED_BUFFER,
+            VmoFlags::SHARED_BUFFER | VmoFlags::PRIVATE_CLONE,
+            VmoFlags::WRITE,
+        ] {
+            let result =
+                file.get_backing_memory(flags).await.unwrap().map_err(zx::Status::from_raw);
+            if flags.contains(VmoFlags::SHARED_BUFFER) {
+                assert_eq!(result, Err(zx::Status::NOT_SUPPORTED));
+            } else {
+                assert_eq!(result, Err(zx::Status::BAD_HANDLE));
+            }
         }
     } else {
-        let file = open_file(root_dir, "meta/file", OPEN_RIGHT_READABLE).await.unwrap();
-        let (status, _buffer) = file.get_buffer(VMO_FLAG_EXEC).await.unwrap();
-        assert_matches!(zx::Status::ok(status), Err(zx::Status::ACCESS_DENIED));
-        let (status, _buffer) = file.get_buffer(VMO_FLAG_EXACT).await.unwrap();
-        assert_eq!(zx::Status::ok(status), Err(zx::Status::NOT_SUPPORTED));
-        let (status, _buffer) = file.get_buffer(VMO_FLAG_PRIVATE | VMO_FLAG_EXACT).await.unwrap();
-        assert_eq!(zx::Status::ok(status), Err(zx::Status::INVALID_ARGS));
-        let (status, _buffer) = file.get_buffer(VMO_FLAG_WRITE).await.unwrap();
-        assert_eq!(zx::Status::ok(status), Err(zx::Status::ACCESS_DENIED));
+        let result =
+            file.get_backing_memory(VmoFlags::EXECUTE).await.unwrap().map_err(zx::Status::from_raw);
+        assert_eq!(result, Err(zx::Status::ACCESS_DENIED));
+        let result = file
+            .get_backing_memory(VmoFlags::SHARED_BUFFER)
+            .await
+            .unwrap()
+            .map_err(zx::Status::from_raw);
+        assert_eq!(result, Err(zx::Status::NOT_SUPPORTED));
+        let result = file
+            .get_backing_memory(VmoFlags::PRIVATE_CLONE | VmoFlags::SHARED_BUFFER)
+            .await
+            .unwrap()
+            .map_err(zx::Status::from_raw);
+        assert_eq!(result, Err(zx::Status::INVALID_ARGS));
+        let result =
+            file.get_backing_memory(VmoFlags::WRITE).await.unwrap().map_err(zx::Status::from_raw);
+        assert_eq!(result, Err(zx::Status::ACCESS_DENIED));
     }
 }
 
@@ -452,18 +479,20 @@ fn round_up_to_4096_multiple(val: usize) -> usize {
 
 async fn test_get_buffer_success(
     file: &FileProxy,
-    get_buffer_flags: u32,
+    get_buffer_flags: VmoFlags,
     size: usize,
-) -> Box<fidl_fuchsia_mem::Buffer> {
-    let (status, buffer) = file.get_buffer(get_buffer_flags).await.unwrap();
-    let () = zx::Status::ok(status).unwrap();
-    let buffer = buffer.unwrap();
+) -> zx::Vmo {
+    let vmo = file
+        .get_backing_memory(get_buffer_flags)
+        .await
+        .unwrap()
+        .map_err(zx::Status::from_raw)
+        .unwrap();
 
-    assert_eq!(buffer.size, u64::try_from(size).unwrap());
-    assert_eq!(buffer.vmo.get_content_size().unwrap(), u64::try_from(size).unwrap());
-    let vmo_size = buffer.vmo.get_size().unwrap().try_into().unwrap();
+    let vmo_size = vmo.get_size().unwrap().try_into().unwrap();
+    assert_eq!(vmo.get_content_size().unwrap(), u64::try_from(size).unwrap());
     let mut actual_contents = vec![0u8; vmo_size];
-    let () = buffer.vmo.read(actual_contents.as_mut_slice(), 0).unwrap();
+    let () = vmo.read(actual_contents.as_mut_slice(), 0).unwrap();
 
     let rounded_size = round_up_to_4096_multiple(size);
     assert_eq!(vmo_size, rounded_size);
@@ -481,7 +510,7 @@ async fn test_get_buffer_success(
         vmo_size,
     );
 
-    buffer
+    vmo
 }
 
 #[fuchsia::test]

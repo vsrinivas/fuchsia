@@ -121,7 +121,7 @@ zx_status_t zxio_vmo_truncate(zxio_t* io, uint64_t length) {
   return file->vmo.set_size(length);
 }
 
-static zx_status_t zxio_vmo_vmo_get(zxio_t* io, uint32_t flags, zx_handle_t* out_vmo,
+static zx_status_t zxio_vmo_vmo_get(zxio_t* io, zxio_vmo_flags_t flags, zx_handle_t* out_vmo,
                                     size_t* out_size) {
   auto file = reinterpret_cast<zxio_vmo_t*>(io);
 

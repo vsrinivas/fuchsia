@@ -20,9 +20,6 @@ pub enum OpenImageError {
     #[error("while obtaining vmo of file: {0}")]
     GetBuffer(Status),
 
-    #[error("remote reported success without providing a vmo")]
-    MissingBuffer,
-
     #[error("while converting vmo to a resizable vmo: {0}")]
     CloneBuffer(Status),
 }
@@ -181,25 +178,26 @@ pub(crate) async fn open(proxy: &DirectoryProxy, image: &Image) -> Result<Buffer
             .await
             .map_err(OpenImageError::OpenFile)?;
 
-    let (status, buffer) = file
-        .get_buffer(fidl_fuchsia_io::VMO_FLAG_READ)
+    let vmo = file
+        .get_backing_memory(fidl_fuchsia_io::VmoFlags::READ)
         .await
-        .map_err(OpenImageError::FidlGetBuffer)?;
-    Status::ok(status).map_err(OpenImageError::GetBuffer)?;
-    let buffer = buffer.ok_or(OpenImageError::MissingBuffer)?;
+        .map_err(OpenImageError::FidlGetBuffer)?
+        .map_err(Status::from_raw)
+        .map_err(OpenImageError::GetBuffer)?;
+
+    let size = vmo.get_content_size().map_err(OpenImageError::GetBuffer)?;
 
     // The paver service requires VMOs that are resizable, and blobfs does not give out resizable
     // VMOs. Fortunately, a copy-on-write child clone of the vmo can be made resizable.
-    let vmo = buffer
-        .vmo
+    let vmo = vmo
         .create_child(
             VmoChildOptions::SNAPSHOT_AT_LEAST_ON_WRITE | VmoChildOptions::RESIZABLE,
             0,
-            buffer.size,
+            size,
         )
         .map_err(OpenImageError::CloneBuffer)?;
 
-    Ok(Buffer { size: buffer.size, vmo })
+    Ok(Buffer { vmo, size })
 }
 
 #[cfg(test)]

@@ -6,7 +6,6 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fdio/fd.h>
-#include <lib/fdio/fdio_unistd.h>
 #include <lib/fdio/internal.h>
 #include <lib/fdio/io.h>
 #include <lib/fdio/unsafe.h>
@@ -16,11 +15,9 @@
 
 #include <algorithm>
 #include <condition_variable>
-#include <iostream>
-#include <mutex>
 #include <optional>
+#include <utility>
 
-#include <fbl/auto_lock.h>
 #include <fbl/condition_variable.h>
 #include <fbl/unique_fd.h>
 #include <zxtest/zxtest.h>
@@ -29,8 +26,6 @@
 #include "src/lib/storage/vfs/cpp/paged_vfs.h"
 #include "src/lib/storage/vfs/cpp/paged_vnode.h"
 #include "src/lib/storage/vfs/cpp/pseudo_dir.h"
-
-namespace fio = fuchsia_io;
 
 namespace fs {
 
@@ -186,9 +181,9 @@ class PagingTestFile : public PagedVnode {
   friend fbl::internal::MakeRefCountedHelper<PagingTestFile>;
 
   PagingTestFile(PagedVfs* vfs, std::shared_ptr<SharedFileState> shared, std::vector<uint8_t> data)
-      : PagedVnode(vfs), shared_(std::move(shared)), data_(data) {}
+      : PagedVnode(vfs), shared_(std::move(shared)), data_(std::move(data)) {}
 
-  ~PagingTestFile() override {}
+  ~PagingTestFile() override = default;
 
   std::shared_ptr<SharedFileState> shared_;
   std::vector<uint8_t> data_;
@@ -222,7 +217,7 @@ class PagingTest : public zxtest::Test {
     }
   }
 
-  ~PagingTest() {
+  ~PagingTest() override {
     // Tear down the VFS asynchronously.
     if (vfs_) {
       sync_completion_t completion;
@@ -411,9 +406,8 @@ TEST_F(PagingTest, Write) {
   zx::vmo vmo;
   // TODO: Add fdio_get_vmo_write() to fdio
   fdio_t* io = fdio_unsafe_fd_to_io(static_cast<int>(file1_fd.get()));
-  ASSERT_EQ(ZX_OK,
-            zxio_vmo_get(&io->zxio_storage().io, fio::wire::kVmoFlagRead | fio::wire::kVmoFlagWrite,
-                         vmo.reset_and_get_address(), nullptr));
+  ASSERT_EQ(ZX_OK, zxio_vmo_get(&io->zxio_storage().io, ZXIO_VMO_READ | ZXIO_VMO_WRITE,
+                                vmo.reset_and_get_address(), nullptr));
   fdio_unsafe_release(io);
   ASSERT_TRUE(file1_shared_->WaitForChangedVmoPresence());
   EXPECT_TRUE(file1_->HasClones());
@@ -454,8 +448,8 @@ TEST_F(PagingTest, Write) {
 
   // Mmap to another adderss space and verify data in mmaped memory.
   io = fdio_unsafe_fd_to_io(static_cast<int>(file1_fd.get()));
-  ASSERT_EQ(ZX_OK, zxio_vmo_get(&io->zxio_storage().io, fio::wire::kVmoFlagRead,
-                                vmo.reset_and_get_address(), nullptr));
+  ASSERT_EQ(ZX_OK, zxio_vmo_get(&io->zxio_storage().io, ZXIO_VMO_READ, vmo.reset_and_get_address(),
+                                nullptr));
   fdio_unsafe_release(io);
 
   // Map the data and validate the result can be read.
@@ -489,9 +483,8 @@ TEST_F(PagingTest, VmoDirty) {
   zx::vmo vmo;
   // TODO: Add fdio_get_vmo_write() to fdio
   fdio_t* io = fdio_unsafe_fd_to_io(static_cast<int>(file1_fd.get()));
-  ASSERT_EQ(ZX_OK,
-            zxio_vmo_get(&io->zxio_storage().io, fio::wire::kVmoFlagRead | fio::wire::kVmoFlagWrite,
-                         vmo.reset_and_get_address(), nullptr));
+  ASSERT_EQ(ZX_OK, zxio_vmo_get(&io->zxio_storage().io, ZXIO_VMO_READ | ZXIO_VMO_WRITE,
+                                vmo.reset_and_get_address(), nullptr));
   fdio_unsafe_release(io);
 
   // Test that zx_vmo_write works on the file's VMO.
@@ -527,9 +520,8 @@ TEST_F(PagingTest, WriteError) {
   zx::vmo vmo;
   // TODO: Add fdio_get_vmo_write() to fdio
   fdio_t* io = fdio_unsafe_fd_to_io(static_cast<int>(file_err_fd.get()));
-  ASSERT_EQ(ZX_OK,
-            zxio_vmo_get(&io->zxio_storage().io, fio::wire::kVmoFlagRead | fio::wire::kVmoFlagWrite,
-                         vmo.reset_and_get_address(), nullptr));
+  ASSERT_EQ(ZX_OK, zxio_vmo_get(&io->zxio_storage().io, ZXIO_VMO_READ | ZXIO_VMO_WRITE,
+                                vmo.reset_and_get_address(), nullptr));
   fdio_unsafe_release(io);
   // All writes should be errors.
   uint8_t buf[8];

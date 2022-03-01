@@ -13,20 +13,20 @@ use {
     },
     anyhow::{anyhow, Context as _},
     async_trait::async_trait,
+    async_utils::async_once::Once,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::{
-        FileProxy, NodeAttributes, NodeMarker, DIRENT_TYPE_DIRECTORY, INO_UNKNOWN,
+        FileProxy, NodeAttributes, NodeMarker, VmoFlags, DIRENT_TYPE_DIRECTORY, INO_UNKNOWN,
         MODE_TYPE_DIRECTORY, MODE_TYPE_FILE, MODE_TYPE_MASK, OPEN_FLAG_APPEND, OPEN_FLAG_CREATE,
         OPEN_FLAG_CREATE_IF_ABSENT, OPEN_FLAG_DIRECTORY, OPEN_FLAG_NODE_REFERENCE,
         OPEN_FLAG_POSIX_DEPRECATED, OPEN_FLAG_POSIX_EXECUTABLE, OPEN_FLAG_POSIX_WRITABLE,
-        OPEN_FLAG_TRUNCATE, OPEN_RIGHT_WRITABLE, VMO_FLAG_READ,
+        OPEN_FLAG_TRUNCATE, OPEN_RIGHT_WRITABLE,
     },
     fuchsia_archive::AsyncReader,
     fuchsia_pkg::MetaContents,
     fuchsia_syslog::fx_log_err,
     fuchsia_zircon as zx,
     io_util::file::AsyncReadAtExt as _,
-    once_cell::sync::OnceCell,
     std::{collections::HashMap, sync::Arc},
     vfs::{
         common::send_on_open_with_error,
@@ -49,7 +49,7 @@ pub struct RootDir {
     pub(crate) meta_files: HashMap<String, MetaFileLocation>,
     // The keys are object relative path expressions.
     pub(crate) non_meta_files: HashMap<String, fuchsia_hash::Hash>,
-    meta_far_vmo: OnceCell<zx::Vmo>,
+    meta_far_vmo: Once<zx::Vmo>,
 }
 
 impl RootDir {
@@ -89,7 +89,7 @@ impl RootDir {
             .map_err(Error::DeserializeMetaContents)?
             .into_contents();
 
-        let meta_far_vmo = OnceCell::new();
+        let meta_far_vmo = Default::default();
 
         Ok(RootDir { blobfs, hash, meta_far, meta_files, non_meta_files, meta_far_vmo })
     }
@@ -136,21 +136,18 @@ impl RootDir {
     }
 
     pub(crate) async fn meta_far_vmo(&self) -> Result<&zx::Vmo, anyhow::Error> {
-        Ok(if let Some(vmo) = self.meta_far_vmo.get() {
-            vmo
-        } else {
-            let (status, buffer) = self
-                .meta_far
-                .get_buffer(VMO_FLAG_READ)
-                .await
-                .context("meta.far .get_buffer() fidl error")?;
-            let () = zx::Status::ok(status).context("meta.far .get_buffer protocol error")?;
-            if let Some(buffer) = buffer {
-                self.meta_far_vmo.get_or_init(|| buffer.vmo)
-            } else {
-                anyhow::bail!("meta.far get_buffer call succeeded but returned no VMO");
-            }
-        })
+        self.meta_far_vmo
+            .get_or_try_init(async {
+                let vmo = self
+                    .meta_far
+                    .get_backing_memory(VmoFlags::READ)
+                    .await
+                    .context("meta.far .get_buffer() fidl error")?
+                    .map_err(zx::Status::from_raw)
+                    .context("meta.far .get_buffer protocol error")?;
+                Ok(vmo)
+            })
+            .await
     }
 }
 
@@ -866,7 +863,11 @@ mod tests {
         assert_eq!(buf, fuchsia_archive::MAGIC_INDEX_VALUE);
 
         // Accessing the VMO caches it
-        assert!(root_dir.meta_far_vmo.get().is_some());
+        let _: &zx::Vmo = root_dir
+            .meta_far_vmo
+            .get_or_try_init(futures::future::err(anyhow!("vmo should be cached")))
+            .await
+            .unwrap();
 
         // Accessing the VMO through the cached path works
         let vmo = root_dir.meta_far_vmo().await.unwrap();

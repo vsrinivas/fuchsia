@@ -66,17 +66,18 @@ async fn meta_far_file() {
         .await
         .unwrap();
 
-        let (status, buffer) = meta_far_file
-            .get_buffer(fidl_fuchsia_io::VMO_FLAG_READ | fidl_fuchsia_io::VMO_FLAG_PRIVATE)
+        let vmo = meta_far_file
+            .get_backing_memory(
+                fidl_fuchsia_io::VmoFlags::READ | fidl_fuchsia_io::VmoFlags::PRIVATE_CLONE,
+            )
             .await
+            .unwrap()
+            .map_err(Status::from_raw)
             .unwrap();
-        Status::ok(status).unwrap();
-        let buffer = buffer.unwrap();
-
-        assert_eq!(buffer.size, u64::try_from(*size).unwrap());
-        let vmo_size = buffer.vmo.get_size().unwrap().try_into().unwrap();
+        assert_eq!(usize::try_from(vmo.get_content_size().unwrap()).unwrap(), *size);
+        let vmo_size = vmo.get_size().unwrap().try_into().unwrap();
         let mut actual_contents = vec![0u8; vmo_size];
-        let () = buffer.vmo.read(actual_contents.as_mut_slice(), 0).unwrap();
+        let () = vmo.read(actual_contents.as_mut_slice(), 0).unwrap();
         validate_vmo_contents(*size, &actual_contents);
     }
 

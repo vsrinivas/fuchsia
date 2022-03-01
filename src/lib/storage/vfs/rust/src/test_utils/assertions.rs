@@ -15,6 +15,7 @@ pub mod reexport {
             DIRENT_TYPE_UNKNOWN, INO_UNKNOWN, OPEN_FLAG_DESCRIBE, OPEN_RIGHT_READABLE,
             WATCH_EVENT_ADDED, WATCH_EVENT_EXISTING, WATCH_EVENT_IDLE, WATCH_EVENT_REMOVED,
         },
+        fidl_fuchsia_mem::Buffer,
         fuchsia_zircon::{MessageBuf, Status},
         futures::stream::StreamExt,
     };
@@ -743,11 +744,16 @@ macro_rules! assert_channel_closed {
 #[macro_export]
 macro_rules! assert_get_buffer {
     ($proxy:expr, $flags:expr) => {{
-        use $crate::test_utils::assertions::reexport::Status;
+        use $crate::test_utils::assertions::reexport::{Buffer, Status};
 
-        let (status, buffer) = $proxy.get_buffer($flags).await.expect("`get_buffer()` failed");
-        assert_eq!(Status::from_raw(status), Status::OK);
-        buffer
+        let vmo = $proxy
+            .get_backing_memory($flags)
+            .await
+            .expect("`get_backing_memory()` failed")
+            .map_err(Status::from_raw)
+            .expect("`get_backing_memory` error");
+        let size = vmo.get_content_size().expect("`get_content_size` failed");
+        Buffer { vmo, size }
     }};
 }
 
@@ -756,15 +762,13 @@ macro_rules! assert_get_buffer_err {
     ($proxy:expr, $flags:expr, $expected_status:expr) => {{
         use $crate::test_utils::assertions::reexport::Status;
 
-        let (status, buffer) = $proxy.get_buffer($flags).await.expect("`get_buffer()` failed");
+        let result = $proxy
+            .get_backing_memory($flags)
+            .await
+            .expect("`get_backing_memory()` failed")
+            .map_err(Status::from_raw);
 
-        assert_eq!(Status::from_raw(status), $expected_status);
-        assert!(
-            buffer.is_none(),
-            "`get_buffer` returned a buffer along with an error code.\n\
-             buffer: {:?}",
-            buffer
-        );
+        assert_eq!(result, Err($expected_status));
     }};
 }
 

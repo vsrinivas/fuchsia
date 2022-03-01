@@ -4,7 +4,7 @@
 
 use {
     super::collection::AssetCollectionError,
-    anyhow::{format_err, Error},
+    anyhow::Error,
     async_trait::async_trait,
     fidl::endpoints::create_proxy,
     fidl_fuchsia_io as io, fidl_fuchsia_mem as mem,
@@ -119,20 +119,15 @@ impl AssetLoader for AssetLoaderImpl {
             io_util::open_file(&directory_proxy, Path::new(&file_name), io::OPEN_RIGHT_READABLE)
                 .map_err(|e| packaged_file_error(e))?;
 
-        let (status, buffer) = file_proxy
-            .get_buffer(io::VMO_FLAG_READ)
+        let vmo = file_proxy
+            .get_backing_memory(io::VmoFlags::READ)
             .await
+            .map_err(|e| packaged_file_error(e.into()))?
+            .map_err(zx::Status::from_raw)
             .map_err(|e| packaged_file_error(e.into()))?;
 
-        zx::Status::ok(status).map_err(|e| packaged_file_error(e.into()))?;
+        let size = vmo.get_content_size().map_err(|e| packaged_file_error(e.into()))?;
 
-        buffer.map(|b| *b).ok_or_else(|| {
-            packaged_file_error(
-                format_err!(
-                    "Inexplicably failed to access buffer after opening the file successfully"
-                )
-                .into(),
-            )
-        })
+        Ok(mem::Buffer { vmo, size })
     }
 }

@@ -2401,7 +2401,7 @@ mod serve_write_blob_tests {
     use {
         super::*,
         assert_matches::assert_matches,
-        fidl_fuchsia_io::{FileMarker, FileProxy},
+        fidl_fuchsia_io::{FileMarker, FileProxy, VmoFlags},
         futures::task::Poll,
         proptest::prelude::*,
         proptest_derive::Arbitrary,
@@ -2758,7 +2758,7 @@ mod serve_write_blob_tests {
                 StubRequestor::Truncate => "truncate",
                 StubRequestor::GetFlags => "get_flags",
                 StubRequestor::SetFlags => "set_flags",
-                StubRequestor::GetBuffer => "get_buffer",
+                StubRequestor::GetBuffer => "get_backing_memory",
             }
         }
 
@@ -2794,7 +2794,9 @@ mod serve_write_blob_tests {
                 StubRequestor::Truncate => proxy.truncate(0).map(|_| ()).boxed(),
                 StubRequestor::GetFlags => proxy.get_flags().map(|_| ()).boxed(),
                 StubRequestor::SetFlags => proxy.set_flags(0).map(|_| ()).boxed(),
-                StubRequestor::GetBuffer => proxy.get_buffer(0).map(|_| ()).boxed(),
+                StubRequestor::GetBuffer => {
+                    proxy.get_backing_memory(VmoFlags::empty()).map(|_| ()).boxed()
+                }
             }
         }
     }

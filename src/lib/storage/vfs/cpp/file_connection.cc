@@ -195,25 +195,12 @@ zx_status_t FileConnection::GetBackingMemoryInternal(fuchsia_io::wire::VmoFlags 
   }
 }
 
-void FileConnection::GetBuffer(GetBufferRequestView request, GetBufferCompleter::Sync& completer) {
+void FileConnection::GetBufferDeprecatedUseGetBackingMemory(
+    GetBufferDeprecatedUseGetBackingMemoryRequestView request,
+    GetBufferDeprecatedUseGetBackingMemoryCompleter::Sync& completer) {
   FS_PRETTY_TRACE_DEBUG("[FileGetBuffer] our options: ", options(),
                         ", incoming flags: ", ZxFlags(request->flags));
-  fio::wire::VmoFlags flags;
-  if (request->flags & fio::wire::kVmoFlagRead) {
-    flags |= fio::wire::VmoFlags::kRead;
-  }
-  if (request->flags & fio::wire::kVmoFlagWrite) {
-    flags |= fio::wire::VmoFlags::kWrite;
-  }
-  if (request->flags & fio::wire::kVmoFlagExec) {
-    flags |= fio::wire::VmoFlags::kExecute;
-  }
-  if (request->flags & fio::wire::kVmoFlagPrivate) {
-    flags |= fio::wire::VmoFlags::kPrivateClone;
-  }
-  if (request->flags & fio::wire::kVmoFlagExact) {
-    flags |= fio::wire::VmoFlags::kSharedBuffer;
-  }
+  fio::wire::VmoFlags flags = fio::wire::VmoFlags::TruncatingUnknown(request->flags);
 
   fuchsia_mem::wire::Buffer buffer;
   zx_status_t status = GetBackingMemoryInternal(flags, &buffer.vmo, &buffer.size);

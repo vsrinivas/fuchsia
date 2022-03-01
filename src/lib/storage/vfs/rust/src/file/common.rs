@@ -146,7 +146,7 @@ pub fn get_buffer_validate_flags(
         return Err(zx::Status::ACCESS_DENIED);
     }
 
-    // As documented in the fuchsia.io interface, if VMO_FLAG_EXEC is requested, ensure that the
+    // As documented in the fuchsia.io interface, if VmoFlags::EXECUTE is requested, ensure that the
     // connection also has OPEN_RIGHT_READABLE.
     if vmo_flags.contains(VmoFlags::EXECUTE) && connection_flags & OPEN_RIGHT_READABLE == 0 {
         return Err(zx::Status::ACCESS_DENIED);
@@ -168,7 +168,6 @@ mod tests {
             OPEN_FLAG_DIRECTORY, OPEN_FLAG_NODE_REFERENCE, OPEN_FLAG_NOT_DIRECTORY,
             OPEN_FLAG_POSIX_DEPRECATED, OPEN_FLAG_POSIX_EXECUTABLE, OPEN_FLAG_POSIX_WRITABLE,
             OPEN_FLAG_TRUNCATE, OPEN_RIGHT_EXECUTABLE, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
-            VMO_FLAG_EXEC, VMO_FLAG_READ, VMO_FLAG_WRITE,
         },
         fuchsia_zircon as zx,
     };
@@ -363,13 +362,15 @@ mod tests {
     /// Validates that the passed VMO flags are correctly mapped to their respective Rights.
     #[test]
     fn test_vmo_flags_to_rights() {
-        for vmo_flags in build_flag_combinations(0, VMO_FLAG_READ | VMO_FLAG_WRITE | VMO_FLAG_EXEC)
-        {
-            let rights: zx::Rights =
-                vmo_flags_to_rights(VmoFlags::from_bits_truncate(vmo_flags.into()));
-            assert_eq!(vmo_flags & VMO_FLAG_READ != 0, rights.contains(zx::Rights::READ));
-            assert_eq!(vmo_flags & VMO_FLAG_WRITE != 0, rights.contains(zx::Rights::WRITE));
-            assert_eq!(vmo_flags & VMO_FLAG_EXEC != 0, rights.contains(zx::Rights::EXECUTE));
+        for vmo_flags in build_flag_combinations(
+            0,
+            (VmoFlags::READ | VmoFlags::WRITE | VmoFlags::EXECUTE).bits(),
+        ) {
+            let vmo_flags = VmoFlags::from_bits_truncate(vmo_flags.into());
+            let rights: zx::Rights = vmo_flags_to_rights(vmo_flags);
+            assert_eq!(vmo_flags.contains(VmoFlags::READ), rights.contains(zx::Rights::READ));
+            assert_eq!(vmo_flags.contains(VmoFlags::WRITE), rights.contains(zx::Rights::WRITE));
+            assert_eq!(vmo_flags.contains(VmoFlags::EXECUTE), rights.contains(zx::Rights::EXECUTE));
         }
     }
 
@@ -392,8 +393,8 @@ mod tests {
             let (readable, writable, executable) = io_flags_to_rights(open_flags);
             let vmo_flags = rights_to_vmo_flags(readable, writable, executable);
 
-            // The io1.fidl protocol specifies that VMO_FLAG_EXEC requires the connection to be both
-            // readable and executable.
+            // The io1.fidl protocol specifies that VmoFlags::EXECUTE requires the connection to be
+            // both readable and executable.
             if executable && !readable {
                 assert_eq!(
                     get_buffer_validate_flags(vmo_flags, open_flags),

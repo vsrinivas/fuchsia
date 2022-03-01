@@ -33,10 +33,9 @@ use super::test_utils::{
 use {
     fidl::endpoints::create_proxy,
     fidl_fuchsia_io::{
-        FileEvent, FileMarker, NodeAttributes, NodeInfo, Vmofile, INO_UNKNOWN, MODE_TYPE_FILE,
-        OPEN_FLAG_DESCRIBE, OPEN_FLAG_NODE_REFERENCE, OPEN_FLAG_POSIX_WRITABLE, OPEN_FLAG_TRUNCATE,
-        OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE, VMO_FLAG_EXACT, VMO_FLAG_PRIVATE, VMO_FLAG_READ,
-        VMO_FLAG_WRITE,
+        FileEvent, FileMarker, NodeAttributes, NodeInfo, VmoFlags, Vmofile, INO_UNKNOWN,
+        MODE_TYPE_FILE, OPEN_FLAG_DESCRIBE, OPEN_FLAG_NODE_REFERENCE, OPEN_FLAG_POSIX_WRITABLE,
+        OPEN_FLAG_TRUNCATE, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
     },
     fuchsia_async::TestExecutor,
     fuchsia_zircon::{sys::ZX_OK, Status, Vmo},
@@ -1233,27 +1232,21 @@ fn get_buffer_read_only() {
         simple_read_only(b"Read only test"),
         |proxy| async move {
             {
-                let buffer = assert_get_buffer!(proxy, VMO_FLAG_READ);
-                assert!(buffer.is_some());
-                let buffer = buffer.unwrap();
+                let buffer = assert_get_buffer!(proxy, VmoFlags::READ);
 
                 assert_eq!(buffer.size, 14);
                 assert_vmo_content!(&buffer.vmo, b"Read only test");
             }
 
             {
-                let buffer = assert_get_buffer!(proxy, VMO_FLAG_READ | VMO_FLAG_EXACT);
-                assert!(buffer.is_some());
-                let buffer = buffer.unwrap();
+                let buffer = assert_get_buffer!(proxy, VmoFlags::READ | VmoFlags::SHARED_BUFFER);
 
                 assert_eq!(buffer.size, 14);
                 assert_vmo_content!(&buffer.vmo, b"Read only test");
             }
 
             {
-                let buffer = assert_get_buffer!(proxy, VMO_FLAG_READ | VMO_FLAG_PRIVATE);
-                assert!(buffer.is_some());
-                let buffer = buffer.unwrap();
+                let buffer = assert_get_buffer!(proxy, VmoFlags::READ | VmoFlags::PRIVATE_CLONE);
 
                 assert_eq!(buffer.size, 14);
                 assert_vmo_content!(&buffer.vmo, b"Read only test");
@@ -1271,9 +1264,7 @@ fn get_buffer_private_is_resizable() {
         OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
         simple_read_write(b"Private is resizable", b"Private is resizable"),
         |proxy| async move {
-            let buffer = assert_get_buffer!(proxy, VMO_FLAG_WRITE | VMO_FLAG_PRIVATE);
-            assert!(buffer.is_some());
-            let buffer = buffer.unwrap();
+            let buffer = assert_get_buffer!(proxy, VmoFlags::WRITE | VmoFlags::PRIVATE_CLONE);
 
             assert_eq!(buffer.size, 20);
             buffer.vmo.set_size(100).unwrap();
@@ -1294,19 +1285,18 @@ fn get_buffer_write_only() {
             async move {
                 // VMO is not resizable and can not be shared in writeable mode.
                 assert_write!(proxy, "No shared writable VMOs");
-                // Ensure we cannot get a writable VMO without specifying VMO_FLAG_PRIVATE.
-                assert_get_buffer_err!(proxy, VMO_FLAG_WRITE, Status::NOT_SUPPORTED);
+                // Ensure we cannot get a writable VMO without specifying VmoFlags::PRIVATE_CLONE.
+                assert_get_buffer_err!(proxy, VmoFlags::WRITE, Status::NOT_SUPPORTED);
 
                 assert_get_buffer_err!(
                     proxy,
-                    VMO_FLAG_WRITE | VMO_FLAG_EXACT,
+                    VmoFlags::WRITE | VmoFlags::SHARED_BUFFER,
                     Status::NOT_SUPPORTED
                 );
 
                 {
-                    let buffer = assert_get_buffer!(proxy, VMO_FLAG_WRITE | VMO_FLAG_PRIVATE);
-                    assert!(buffer.is_some());
-                    let buffer = buffer.unwrap();
+                    let buffer =
+                        assert_get_buffer!(proxy, VmoFlags::WRITE | VmoFlags::PRIVATE_CLONE);
 
                     assert_eq!(buffer.size, 23);
                     buffer.vmo.write(b"Private is not shared", 0).unwrap();
@@ -1328,10 +1318,8 @@ fn get_buffer_read_write() {
                 {
                     let buffer = assert_get_buffer!(
                         proxy,
-                        VMO_FLAG_READ | VMO_FLAG_WRITE | VMO_FLAG_PRIVATE
+                        VmoFlags::READ | VmoFlags::WRITE | VmoFlags::PRIVATE_CLONE
                     );
-                    assert!(buffer.is_some());
-                    let buffer = buffer.unwrap();
 
                     assert_eq!(buffer.size, 7);
                     assert_vmo_content!(&buffer.vmo, b"Initial");
@@ -1345,17 +1333,15 @@ fn get_buffer_read_write() {
 
                 assert_get_buffer_err!(
                     proxy,
-                    VMO_FLAG_WRITE | VMO_FLAG_EXACT,
+                    VmoFlags::WRITE | VmoFlags::SHARED_BUFFER,
                     Status::NOT_SUPPORTED
                 );
 
                 {
                     let buffer = assert_get_buffer!(
                         proxy,
-                        VMO_FLAG_READ | VMO_FLAG_WRITE | VMO_FLAG_PRIVATE
+                        VmoFlags::READ | VmoFlags::WRITE | VmoFlags::PRIVATE_CLONE
                     );
-                    assert!(buffer.is_some());
-                    let buffer = buffer.unwrap();
 
                     assert_eq!(buffer.size, 9);
                     assert_vmo_content!(&buffer.vmo, b"No shared");
@@ -1382,18 +1368,14 @@ fn get_buffer_two_vmos() {
         //                  0           0         1
         //                  0123456     012345678901234
         |proxy| async move {
-            let buffer1 = assert_get_buffer!(proxy, VMO_FLAG_READ | VMO_FLAG_EXACT);
-            assert!(buffer1.is_some());
-            let buffer1 = buffer1.unwrap();
+            let buffer1 = assert_get_buffer!(proxy, VmoFlags::READ | VmoFlags::SHARED_BUFFER);
 
             assert_eq!(buffer1.size, 7);
             assert_vmo_content!(&buffer1.vmo, b"Initial");
 
             assert_write!(proxy, "Updated content");
 
-            let buffer2 = assert_get_buffer!(proxy, VMO_FLAG_READ | VMO_FLAG_EXACT);
-            assert!(buffer2.is_some());
-            let buffer2 = buffer2.unwrap();
+            let buffer2 = assert_get_buffer!(proxy, VmoFlags::READ | VmoFlags::SHARED_BUFFER);
 
             assert_eq!(buffer2.size, 15);
             assert_vmo_content!(&buffer2.vmo, b"Updated content");

@@ -26,25 +26,32 @@ zx_status_t ReadGuestCfg(const fuchsia::io::DirectoryHandle& dir, const std::str
                         file.TakeChannel().release());
   };
   fuchsia::io::FileSyncPtr file;
-  zx_status_t status = open_at(path.data(), file.NewRequest());
-  if (status != ZX_OK) {
+  if (zx_status_t status = open_at(path.data(), file.NewRequest()); status != ZX_OK) {
     return status;
   }
-  zx_status_t buffer_status;
-  std::unique_ptr<fuchsia::mem::Buffer> buffer;
-  status = file->GetBuffer(fuchsia::io::VMO_FLAG_READ, &buffer_status, &buffer);
-  if (status != ZX_OK) {
-    return status;
-  } else if (buffer_status != ZX_OK) {
-    return buffer_status;
-  }
-  std::string str;
-  str.resize(buffer->size);
-  status = buffer->vmo.read(str.data(), 0, buffer->size);
-  if (status != ZX_OK) {
+  fuchsia::io::File2_GetBackingMemory_Result result;
+  if (zx_status_t status = file->GetBackingMemory(fuchsia::io::VmoFlags::READ, &result);
+      status != ZX_OK) {
     return status;
   }
-  return guest_config::ParseConfig(str, std::move(open_at), cfg);
+  switch (result.Which()) {
+    case fuchsia::io::File2_GetBackingMemory_Result::Tag::Invalid:
+      return ZX_ERR_IO;
+    case fuchsia::io::File2_GetBackingMemory_Result::Tag::kErr:
+      return result.err();
+    case fuchsia::io::File2_GetBackingMemory_Result::Tag::kResponse:
+      const zx::vmo& vmo = result.response().vmo;
+      uint64_t size;
+      if (zx_status_t status = vmo.get_prop_content_size(&size); status != ZX_OK) {
+        return status;
+      }
+      std::string str;
+      str.resize(size);
+      if (zx_status_t status = vmo.read(str.data(), 0, size); status != ZX_OK) {
+        return status;
+      }
+      return guest_config::ParseConfig(str, std::move(open_at), cfg);
+  }
 }
 
 class ServiceProviderImpl : public fuchsia::sys::ServiceProvider,

@@ -180,7 +180,9 @@ void PtyClientDevice::SetFlagsDeprecatedUseNode(
   ZX_ASSERT(false);
 }
 
-void PtyClientDevice::GetBuffer(GetBufferRequestView request, GetBufferCompleter::Sync& completer) {
+void PtyClientDevice::GetBufferDeprecatedUseGetBackingMemory(
+    GetBufferDeprecatedUseGetBackingMemoryRequestView request,
+    GetBufferDeprecatedUseGetBackingMemoryCompleter::Sync& completer) {
   ZX_ASSERT(false);
 }
 

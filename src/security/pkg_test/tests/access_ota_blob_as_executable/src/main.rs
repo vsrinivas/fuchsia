@@ -6,8 +6,8 @@ use {
     anyhow::Result,
     fidl::endpoints::{create_endpoints, create_proxy, ServerEnd},
     fidl_fuchsia_io::{
-        DirectoryMarker, DirectoryProxy, MODE_TYPE_DIRECTORY, OPEN_RIGHT_EXECUTABLE,
-        OPEN_RIGHT_READABLE, VMO_FLAG_EXEC, VMO_FLAG_READ,
+        DirectoryMarker, DirectoryProxy, VmoFlags, MODE_TYPE_DIRECTORY, OPEN_RIGHT_EXECUTABLE,
+        OPEN_RIGHT_READABLE,
     },
     fidl_fuchsia_mem::Buffer,
     fidl_fuchsia_pkg::{BlobId, PackageCacheMarker, PackageResolverMarker, PackageUrl},
@@ -296,13 +296,16 @@ impl AccessCheckRequest {
             OPEN_RIGHT_READABLE | OPEN_RIGHT_EXECUTABLE,
         )
         .await?;
-        let (status, result) = bin_file.get_buffer(VMO_FLAG_READ | VMO_FLAG_EXEC).await.unwrap();
-        Status::ok(status)?;
-        let bin_buf = result.unwrap();
-        let bin_info = bin_buf.vmo.basic_info().unwrap();
+        let vmo = bin_file
+            .get_backing_memory(VmoFlags::READ | VmoFlags::EXECUTE)
+            .await
+            .unwrap()
+            .map_err(Status::from_raw)?;
+        let bin_info = vmo.basic_info().unwrap();
         assert_eq!(bin_info.rights & Rights::READ, Rights::READ);
         assert_eq!(bin_info.rights & Rights::EXECUTE, Rights::EXECUTE);
-        Ok(bin_buf)
+        let size = vmo.get_content_size()?;
+        Ok(Box::new(Buffer { vmo, size }))
     }
 
     async fn attempt_readable(&self, package_directory_proxy: &DirectoryProxy) -> Result<()> {

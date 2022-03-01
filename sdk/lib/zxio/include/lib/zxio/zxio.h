@@ -296,9 +296,7 @@ ZXIO_EXPORT zx_status_t zxio_token_get(zxio_t* io, zx_handle_t* out_token);
 
 // Acquires a VMO representing this file, if there is one, with the requested
 // access rights.
-//
-// |flags| are |fuchsia.io/VMO_FLAG_*|.
-ZXIO_EXPORT zx_status_t zxio_vmo_get(zxio_t* io, uint32_t flags, zx_handle_t* out_vmo,
+ZXIO_EXPORT zx_status_t zxio_vmo_get(zxio_t* io, zxio_vmo_flags_t flags, zx_handle_t* out_vmo,
                                      size_t* out_size);
 
 // Get a read-only VMO containing the whole contents of the file.

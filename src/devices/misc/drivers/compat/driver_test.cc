@@ -25,23 +25,24 @@ namespace fdata = fuchsia_data;
 namespace fdf = fuchsia_driver_framework;
 namespace fio = fuchsia_io;
 namespace flogger = fuchsia_logger;
-namespace fmem = fuchsia_mem;
 namespace frunner = fuchsia_component_runner;
 
 constexpr auto kOpenFlags = fio::wire::kOpenRightReadable | fio::wire::kOpenRightExecutable |
                             fio::wire::kOpenFlagNotDirectory;
-constexpr auto kVmoFlags = fio::wire::kVmoFlagRead | fio::wire::kVmoFlagExec;
+constexpr auto kVmoFlags = fio::wire::VmoFlags::kRead | fio::wire::VmoFlags::kExecute;
 
 namespace {
 
-fmem::wire::Buffer GetBuffer(std::string_view path) {
-  auto endpoints = fidl::CreateEndpoints<fio::File>();
-  EXPECT_TRUE(endpoints.is_ok());
+zx::vmo GetVmo(std::string_view path) {
+  zx::status endpoints = fidl::CreateEndpoints<fio::File>();
+  EXPECT_TRUE(endpoints.is_ok()) << endpoints.status_string();
   zx_status_t status = fdio_open(path.data(), kOpenFlags, endpoints->server.channel().release());
-  EXPECT_EQ(ZX_OK, status);
-  auto result = fidl::WireCall(endpoints->client)->GetBuffer(kVmoFlags);
-  EXPECT_EQ(ZX_OK, result->s);
-  return std::move(*result->buffer);
+  EXPECT_EQ(status, ZX_OK) << zx_status_get_string(status);
+  fidl::WireResult result = fidl::WireCall(endpoints->client)->GetBackingMemory(kVmoFlags);
+  EXPECT_TRUE(result.ok()) << result.FormatDescription();
+  fidl::WireResponse<fio::File::GetBackingMemory>& response = result.value();
+  EXPECT_TRUE(response.result.is_response()) << zx_status_get_string(response.result.err());
+  return std::move(response.result.response().vmo);
 }
 
 class TestNode : public fidl::testing::WireTestBase<fdf::Node> {
@@ -95,11 +96,16 @@ class TestItems : public fidl::testing::WireTestBase<fboot::Items> {
 class TestFile : public fidl::testing::WireTestBase<fio::File> {
  public:
   void SetStatus(zx_status_t status) { status_ = status; }
-  void SetBuffer(fmem::wire::Buffer buffer) { buffer_ = std::move(buffer); }
+  void SetVmo(zx::vmo vmo) { vmo_ = std::move(vmo); }
 
  private:
-  void GetBuffer(GetBufferRequestView request, GetBufferCompleter::Sync& completer) override {
-    completer.Reply(status_, fidl::ObjectView<fmem::wire::Buffer>::FromExternal(&buffer_));
+  void GetBackingMemory(GetBackingMemoryRequestView request,
+                        GetBackingMemoryCompleter::Sync& completer) override {
+    if (status_ != ZX_OK) {
+      completer.ReplyError(status_);
+    } else {
+      completer.ReplySuccess(std::move(vmo_));
+    }
   }
 
   void NotImplemented_(const std::string& name, fidl::CompleterBase& completer) override {
@@ -108,7 +114,7 @@ class TestFile : public fidl::testing::WireTestBase<fio::File> {
   }
 
   zx_status_t status_ = ZX_OK;
-  fmem::wire::Buffer buffer_;
+  zx::vmo vmo_;
 };
 
 class TestDirectory : public fidl::testing::WireTestBase<fio::Directory> {
@@ -206,9 +212,9 @@ class DriverTest : public gtest::TestLoopFixture {
     fidl::BindServer(dispatcher(), std::move(node_endpoints->server), &node_);
 
     // Setup and bind "/pkg" directory.
-    compat_file_.SetBuffer(GetBuffer("/pkg/driver/compat.so"));
-    v1_test_file_.SetBuffer(GetBuffer(v1_driver_path));
-    firmware_file_.SetBuffer(GetBuffer("/pkg/lib/firmware/test"));
+    compat_file_.SetVmo(GetVmo("/pkg/driver/compat.so"));
+    v1_test_file_.SetVmo(GetVmo(v1_driver_path));
+    firmware_file_.SetVmo(GetVmo("/pkg/lib/firmware/test"));
     pkg_directory_.SetOpenHandler([this](TestDirectory::OpenRequestView request) {
       fidl::ServerEnd<fio::File> server_end(request->object.TakeChannel());
       if (request->path.get() == "driver/compat.so") {
@@ -448,7 +454,7 @@ TEST_F(DriverTest, Start_RootResourceIsConstant) {
   ASSERT_EQ(resource, resource2);
 }
 
-TEST_F(DriverTest, Start_GetBufferFailed) {
+TEST_F(DriverTest, Start_GetBackingMemory) {
   compat_file().SetStatus(ZX_ERR_UNAVAILABLE);
 
   zx_protocol_device_t ops{};

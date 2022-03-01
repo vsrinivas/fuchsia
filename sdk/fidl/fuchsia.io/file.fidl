@@ -11,25 +11,6 @@ using zx;
 /// This capacity is currently set somewhat arbitrarily.
 const MAX_BUF uint64 = 8192;
 
-/// Requests that the VMO be readable.
-const VMO_FLAG_READ uint32 = 0x00000001;
-
-/// Requests that the VMO be writable.
-const VMO_FLAG_WRITE uint32 = 0x00000002;
-
-/// Requests that the VMO be executable.
-const VMO_FLAG_EXEC uint32 = 0x00000004;
-
-/// Require a copy-on-write clone of the underlying VMO.
-/// The request should fail if the VMO is not cloned.
-/// May not be supplied with fuchsia_io_`VMO_FLAG_EXACT`.
-const VMO_FLAG_PRIVATE uint32 = 0x00010000;
-
-/// Require an exact (non-cloned) handle to the underlying VMO.
-/// The request should fail if a handle to the exact VMO is not returned.
-/// May not be supplied with `VMO_FLAG_PRIVATE`.
-const VMO_FLAG_EXACT uint32 = 0x00020000;
-
 protocol File {
     compose File1;
     compose File2;
@@ -152,15 +133,16 @@ protocol File1 {
     /// Acquires a buffer representing this file, if there is one, with the
     /// requested access rights.
     ///
-    /// `flags` may be any of `VMO_FLAG_*`.
+    /// `flags` must be a valid [`VmoFlags`].
     ///
     /// This method requires following rights:
     ///
-    /// - `OPEN_RIGHT_WRITABLE` if `flags` includes `VMO_FLAG_WRITE`.
-    /// - `OPEN_RIGHT_READABLE` if `flags` includes `VMO_FLAG_READ` or `VMO_FLAG_EXEC`.
-    /// - `OPEN_RIGHT_EXECUTABLE` if `flags` includes `VMO_FLAG_EXEC`.
+    /// - `OPEN_RIGHT_WRITABLE` if `flags` includes `VmoFlags::WRITE`.
+    /// - `OPEN_RIGHT_READABLE` if `flags` includes `VmoFlags::READ` or `VmoFlags::EXECUTE`.
+    /// - `OPEN_RIGHT_EXECUTABLE` if `flags` includes `VmoFlags::EXECUTE`.
     @selector("fuchsia.io1/File.GetBuffer")
-    GetBuffer(struct {
+    @deprecated("replaced by File2.GetBackingMemory")
+    GetBufferDeprecatedUseGetBackingMemory(struct {
         flags uint32;
     }) -> (resource struct {
         s zx.status;

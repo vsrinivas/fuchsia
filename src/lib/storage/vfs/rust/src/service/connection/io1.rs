@@ -243,7 +243,7 @@ impl Connection {
             FileRequest::SetFlagsDeprecatedUseNode { flags: _, responder } => {
                 responder.send(ZX_ERR_NOT_SUPPORTED)?;
             }
-            FileRequest::GetBuffer { flags: _, responder } => {
+            FileRequest::GetBufferDeprecatedUseGetBackingMemory { flags: _, responder } => {
                 // There is no backing VMO.
                 responder.send(ZX_ERR_NOT_SUPPORTED, None)?;
             }

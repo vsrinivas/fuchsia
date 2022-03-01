@@ -178,14 +178,16 @@ mod tests {
             "/pkg/bin/panic_on_start",
             fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE,
         )?;
-        let (status, fidlbuf) =
-            executable_file_proxy.get_buffer(fio::VMO_FLAG_READ | fio::VMO_FLAG_EXEC).await?;
-        zx::Status::ok(status).context("failed to get VMO of executable")?;
+        let vmo = executable_file_proxy
+            .get_backing_memory(fio::VmoFlags::READ | fio::VmoFlags::EXECUTE)
+            .await?
+            .map_err(zx::Status::from_raw)
+            .context("failed to get VMO of executable")?;
 
         // Launch the process
         let child_job_dup = child_job.duplicate_handle(zx::Rights::SAME_RIGHTS)?;
         let mut launch_info = fprocess::LaunchInfo {
-            executable: fidlbuf.ok_or(format_err!("no buffer returned from GetBuffer"))?.vmo,
+            executable: vmo,
             job: child_job_dup,
             name: "panic_on_start".to_string(),
         };

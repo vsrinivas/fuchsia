@@ -9,6 +9,7 @@ use once_cell::sync::OnceCell;
 use std::future::Future;
 
 /// Wrapper presenting an async interface to a OnceCell.
+#[derive(Debug)]
 pub struct Once<T> {
     mutex: Mutex<()>,
     value: OnceCell<T>,

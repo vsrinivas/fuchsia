@@ -509,13 +509,12 @@ mod tests {
             TEST_UTIL_BIN,
             fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE,
         )?;
-        let (status, fidlbuf) = file_proxy
-            .get_buffer(fio::VMO_FLAG_READ | fio::VMO_FLAG_EXEC)
+        let vmo = file_proxy
+            .get_backing_memory(fio::VmoFlags::READ | fio::VmoFlags::EXECUTE)
             .await
+            .map_err(|e| format_err!("getting test_util as exec failed: {}", e))?
+            .map_err(zx::Status::from_raw)
             .map_err(|e| format_err!("getting test_util as exec failed: {}", e))?;
-        zx::Status::ok(status)
-            .map_err(|e| format_err!("getting test_util as exec failed: {}", e))?;
-        let vmo = fidlbuf.ok_or(format_err!("no buffer returned from GetBuffer"))?.vmo;
         let job = job_default();
 
         let (dir_client, dir_server) = zx::Channel::create()?;

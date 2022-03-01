@@ -350,24 +350,24 @@ fn directory_open(
 /// Open a VMO at the given path in the given directory.
 ///
 /// The semantics for the vmo_flags argument are defined by the
-/// fuchsia.io/File.GetBuffer message (i.e., VMO_FLAG_*).
+/// fuchsia.io/File.GetBuffer message (i.e., VmoFlags::*).
 ///
 /// If the node at the given path is not a VMO, then this function returns
 /// a zx::Status::IO error.
 pub fn directory_open_vmo(
     directory: &fio::DirectorySynchronousProxy,
     path: &str,
-    vmo_flags: u32,
+    vmo_flags: fio::VmoFlags,
     deadline: zx::Time,
 ) -> Result<zx::Vmo, zx::Status> {
     let mut open_flags = 0;
-    if (vmo_flags & fio::VMO_FLAG_WRITE) != 0 {
+    if vmo_flags.contains(fio::VmoFlags::WRITE) {
         open_flags |= fio::OPEN_RIGHT_WRITABLE;
     }
-    if (vmo_flags & fio::VMO_FLAG_READ) != 0 {
+    if vmo_flags.contains(fio::VmoFlags::READ) {
         open_flags |= fio::OPEN_RIGHT_READABLE;
     }
-    if (vmo_flags & fio::VMO_FLAG_EXEC) != 0 {
+    if vmo_flags.contains(fio::VmoFlags::EXECUTE) {
         open_flags |= fio::OPEN_RIGHT_EXECUTABLE;
     }
 
@@ -377,9 +377,11 @@ pub fn directory_open_vmo(
         _ => return Err(zx::Status::IO),
     };
 
-    let (status, buffer) = file.get_buffer(vmo_flags, deadline).map_err(|_| zx::Status::IO)?;
-    zx::Status::ok(status)?;
-    Ok(buffer.ok_or(zx::Status::IO)?.vmo)
+    let vmo = file
+        .get_backing_memory(vmo_flags, deadline)
+        .map_err(|_: fidl::Error| zx::Status::IO)?
+        .map_err(zx::Status::from_raw)?;
+    Ok(vmo)
 }
 
 /// Open the given path in the given directory without blocking.
@@ -495,7 +497,7 @@ mod test {
         let vmo = directory_open_vmo(
             &pkg,
             "bin/syncio_lib_test",
-            fio::VMO_FLAG_READ | fio::VMO_FLAG_EXEC,
+            fio::VmoFlags::READ | fio::VmoFlags::EXECUTE,
             zx::Time::INFINITE,
         )?;
         assert!(!vmo.is_invalid_handle());
@@ -517,7 +519,7 @@ mod test {
         let vmo = directory_open_vmo(
             &bin,
             "syncio_lib_test",
-            fio::VMO_FLAG_READ | fio::VMO_FLAG_EXEC,
+            fio::VmoFlags::READ | fio::VmoFlags::EXECUTE,
             zx::Time::INFINITE,
         )?;
         assert!(!vmo.is_invalid_handle());

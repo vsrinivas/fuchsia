@@ -388,8 +388,10 @@ class _FileConnection extends File {
   }
 
   @override
-  Future<File$GetBuffer$Response> getBuffer(int flags) async {
-    return File$GetBuffer$Response(ZX.ERR_NOT_SUPPORTED, null);
+  Future<File$GetBufferDeprecatedUseGetBackingMemory$Response>
+      getBufferDeprecatedUseGetBackingMemory(int flags) async {
+    return File$GetBufferDeprecatedUseGetBackingMemory$Response(
+        ZX.ERR_NOT_SUPPORTED, null);
   }
 
   @override

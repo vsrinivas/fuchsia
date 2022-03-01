@@ -328,37 +328,40 @@ async fn read_file(dir: &DirectoryProxy, path: &str) -> Result<Vec<u8>, Verifica
     };
 
     let read = async {
-        let (status, buffer) = file.get_buffer(fidl_fuchsia_io::VMO_FLAG_READ).await?;
+        let result = file
+            .get_backing_memory(fidl_fuchsia_io::VmoFlags::READ)
+            .await?
+            .map_err(Status::from_raw);
+
         let mut expect_empty_blob = false;
 
         // First try getting a fuchsia.mem.Buffer of the file, as blobfs already has a VMO for the
         // blob and it is faster to get the file data that way. Not all package blobs support the
         // API, so on expected errors, fall back to reading the file over FIDL.
-        match Status::from_raw(status) {
-            Status::OK => {
-                let buffer = buffer.unwrap();
-                let mut buf = vec![0u8; buffer.size as usize];
-                buffer
-                    .vmo
-                    .read(&mut buf[..], 0)
-                    .map_err(|e| format_err!("unable to read from vmo: {}", e))?;
+        match result {
+            Ok(vmo) => {
+                let size = vmo.get_content_size().context("unable to get vmo size")?;
+                let mut buf = vec![0u8; size as usize];
+                let () = vmo.read(&mut buf[..], 0).context("unable to read from vmo")?;
                 return Ok(buf);
             }
-            Status::NOT_SUPPORTED => {
-                // meta far files do not support get_buffer, fallback to file read path.
-            }
-            Status::BAD_STATE => {
-                // may or may not be intended behavior, but the empty blob will not provide a vmo,
-                // failing with BAD_STATE. Verify in the read path below that the blob is indeed
-                // zero length if this happens.
-                expect_empty_blob = true;
-            }
-            status => {
-                return Err(VerificationError::from(format_err!(
-                    "unexpected error opening file buffer: {:?}",
-                    status
-                )));
-            }
+            Err(status) => match status {
+                Status::NOT_SUPPORTED => {
+                    // meta far files do not support get_buffer, fallback to file read path.
+                }
+                Status::BAD_STATE => {
+                    // may or may not be intended behavior, but the empty blob will not provide a vmo,
+                    // failing with BAD_STATE. Verify in the read path below that the blob is indeed
+                    // zero length if this happens.
+                    expect_empty_blob = true;
+                }
+                status => {
+                    return Err(VerificationError::from(format_err!(
+                        "unexpected error opening file buffer: {:?}",
+                        status
+                    )));
+                }
+            },
         }
 
         let mut buf = vec![];

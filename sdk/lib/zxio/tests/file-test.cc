@@ -174,8 +174,9 @@ TEST_F(File, GetVmoPropagatesError) {
     void GetAttr(GetAttrRequestView request, GetAttrCompleter::Sync& completer) override {
       completer.Reply(kGetAttrError, fuchsia_io::wire::NodeAttributes{});
     }
-    void GetBuffer(GetBufferRequestView request, GetBufferCompleter::Sync& completer) override {
-      completer.Reply(kGetBufferError, nullptr);
+    void GetBackingMemory(GetBackingMemoryRequestView request,
+                          GetBackingMemoryCompleter::Sync& completer) override {
+      completer.ReplyError(kGetBufferError);
     }
   };
   ASSERT_NO_FAILURES(StartServer<TestServer>());

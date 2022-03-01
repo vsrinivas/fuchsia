@@ -24,7 +24,6 @@
 namespace fdata = fuchsia_data;
 namespace fdf = fuchsia_driver_framework;
 namespace fio = fuchsia::io;
-namespace fmem = fuchsia::mem;
 namespace frunner = fuchsia_component_runner;
 namespace ftest = fuchsia_driverhost_test;
 
@@ -49,20 +48,26 @@ class TestFile : public fio::testing::File_TestBase {
   TestFile(std::string_view path) : path_(std::move(path)) {}
 
  private:
-  void GetBuffer(uint32_t flags, GetBufferCallback callback) override {
-    EXPECT_EQ(fio::VMO_FLAG_READ | fio::VMO_FLAG_EXEC | fio::VMO_FLAG_PRIVATE, flags);
+  void GetBackingMemory(fio::VmoFlags flags, GetBackingMemoryCallback callback) override {
+    EXPECT_EQ(fio::VmoFlags::READ | fio::VmoFlags::EXECUTE | fio::VmoFlags::PRIVATE_CLONE, flags);
     auto endpoints = fidl::CreateEndpoints<fuchsia_io::File>();
     ASSERT_TRUE(endpoints.is_ok());
     EXPECT_EQ(ZX_OK, fdio_open(path_.data(), fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE,
                                endpoints->server.channel().release()));
 
     fidl::WireSyncClient<fuchsia_io::File> file(std::move(endpoints->client));
-    auto result = file->GetBuffer(flags);
-    EXPECT_TRUE(result.ok());
-    auto buffer = std::make_unique<fmem::Buffer>();
-    buffer->vmo = std::move(result->buffer->vmo);
-    buffer->size = result->buffer->size;
-    callback(ZX_OK, std::move(buffer));
+    fidl::WireResult result = file->GetBackingMemory(fuchsia_io::wire::VmoFlags(uint32_t(flags)));
+    EXPECT_TRUE(result.ok()) << result.FormatDescription();
+    auto& response = result.value();
+    switch (response.result.Which()) {
+      case fuchsia_io::wire::File2GetBackingMemoryResult::Tag::kErr:
+        callback(fio::File2_GetBackingMemory_Result::WithErr(std::move(response.result.err())));
+        break;
+      case fuchsia_io::wire::File2GetBackingMemoryResult::Tag::kResponse:
+        callback(fio::File2_GetBackingMemory_Result::WithResponse(
+            fio::File2_GetBackingMemory_Response(std::move(response.result.response().vmo))));
+        break;
+    }
   }
 
   void NotImplemented_(const std::string& name) override {

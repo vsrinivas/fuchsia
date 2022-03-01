@@ -314,7 +314,8 @@ zx_status_t zxio_token_get(zxio_t* io, zx_handle_t* out_token) {
   return zio->ops->token_get(io, out_token);
 }
 
-zx_status_t zxio_vmo_get(zxio_t* io, uint32_t flags, zx_handle_t* out_vmo, size_t* out_size) {
+zx_status_t zxio_vmo_get(zxio_t* io, zxio_vmo_flags_t flags, zx_handle_t* out_vmo,
+                         size_t* out_size) {
   if (!zxio_is_valid(io)) {
     return ZX_ERR_BAD_HANDLE;
   }

@@ -41,7 +41,7 @@ namespace {
 
 constexpr auto kOpenFlags = fio::wire::kOpenRightReadable | fio::wire::kOpenRightExecutable |
                             fio::wire::kOpenFlagNotDirectory;
-constexpr auto kVmoFlags = fio::wire::kVmoFlagRead | fio::wire::kVmoFlagExec;
+constexpr auto kVmoFlags = fio::wire::VmoFlags::kRead | fio::wire::VmoFlags::kExecute;
 constexpr auto kLibDriverPath = "/pkg/driver/compat.so";
 
 template <typename T>
@@ -212,18 +212,31 @@ promise<Driver::FileVmo, zx_status_t> Driver::GetBuffer(
     const fidl::WireSharedClient<fio::File>& file) {
   bridge<FileVmo, zx_status_t> bridge;
   auto callback = [completer = std::move(bridge.completer)](
-                      fidl::WireUnownedResult<fio::File::GetBuffer>& result) mutable {
+                      fidl::WireUnownedResult<fio::File::GetBackingMemory>& result) mutable {
     if (!result.ok()) {
       completer.complete_error(result.status());
       return;
     }
-    if (result->s != ZX_OK) {
-      completer.complete_error(result->s);
-      return;
+    auto& response = result.value();
+    switch (response.result.Which()) {
+      case fio::wire::File2GetBackingMemoryResult::Tag::kErr:
+        completer.complete_error(response.result.err());
+        return;
+      case fio::wire::File2GetBackingMemoryResult::Tag::kResponse:
+        zx::vmo& vmo = response.result.response().vmo;
+        uint64_t size;
+        if (zx_status_t status = vmo.get_prop_content_size(&size); status != ZX_OK) {
+          completer.complete_error(status);
+          return;
+        }
+        completer.complete_ok(FileVmo{
+            .vmo = std::move(vmo),
+            .size = size,
+        });
+        return;
     }
-    completer.complete_ok(FileVmo{std::move(result->buffer->vmo), result->buffer->size});
   };
-  file->GetBuffer(kVmoFlags, std::move(callback));
+  file->GetBackingMemory(kVmoFlags, std::move(callback));
   return bridge.consumer.promise_or(error(ZX_ERR_UNAVAILABLE)).or_else([this](zx_status_t& status) {
     FDF_LOG(WARNING, "Failed to get buffer: %s", zx_status_get_string(status));
     return error(status);
@@ -472,26 +485,31 @@ void Driver::Log(FuchsiaLogSeverity severity, const char* tag, const char* file,
 zx::status<zx::vmo> Driver::LoadFirmware(Device* device, const char* filename, size_t* size) {
   std::string full_filename = "/pkg/lib/firmware/";
   full_filename.append(filename);
-  auto firmware_vmo = driver::Connect<fio::File>(ns_, dispatcher_, full_filename, kOpenFlags);
-  auto result = fpromise::run_single_threaded(std::move(firmware_vmo));
-  if (result.is_error()) {
-    zx_status_t error = result.take_error();
-    return zx::error(error);
+  fpromise::result connect_result = fpromise::run_single_threaded(
+      driver::Connect<fio::File>(ns_, dispatcher_, full_filename, kOpenFlags));
+  if (connect_result.is_error()) {
+    return zx::error(connect_result.take_error());
   }
 
-  auto buffer = result.take_value().sync()->GetBuffer(fio::wire::kVmoFlagRead);
-  if (!buffer.ok()) {
-    if (buffer.is_peer_closed()) {
+  fidl::WireResult get_backing_memory_result =
+      connect_result.take_value().sync()->GetBackingMemory(fio::wire::VmoFlags::kRead);
+  if (!get_backing_memory_result.ok()) {
+    if (get_backing_memory_result.is_peer_closed()) {
       return zx::error(ZX_ERR_NOT_FOUND);
     }
-    return zx::error(buffer.status());
+    return zx::error(get_backing_memory_result.status());
   }
-  if (buffer->s != ZX_OK) {
-    return zx::error(buffer->s);
+  auto& response = get_backing_memory_result.value();
+  switch (response.result.Which()) {
+    case fio::wire::File2GetBackingMemoryResult::Tag::kErr:
+      return zx::error(response.result.err());
+    case fio::wire::File2GetBackingMemoryResult::Tag::kResponse:
+      zx::vmo& vmo = response.result.response().vmo;
+      if (zx_status_t status = vmo.get_prop_content_size(size); status != ZX_OK) {
+        return zx::error(status);
+      }
+      return zx::ok(std::move(vmo));
   }
-
-  *size = buffer->buffer->size;
-  return zx::ok(std::move(buffer->buffer->vmo));
 }
 
 void Driver::LoadFirmwareAsync(Device* device, const char* filename,

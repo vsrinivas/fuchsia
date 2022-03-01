@@ -6,7 +6,7 @@
 use {
     crate::directory::entry::DirectoryEntry,
     async_trait::async_trait,
-    fidl_fuchsia_io::{FileObject, FilesystemInfo, NodeAttributes, NodeInfo},
+    fidl_fuchsia_io::{FileObject, FilesystemInfo, NodeAttributes, NodeInfo, VmoFlags},
     fidl_fuchsia_mem::Buffer,
     fuchsia_zircon::Status,
 };
@@ -58,7 +58,7 @@ pub trait File: Sync + Send + DirectoryEntry {
 
     /// Get a VMO representing this file.
     /// If not supported by the underlying filesystem, should return Error(NOT_SUPPORTED).
-    async fn get_buffer(&self, flags: u32) -> Result<Buffer, Status>;
+    async fn get_buffer(&self, flags: VmoFlags) -> Result<Buffer, Status>;
 
     /// Get the size of this file.
     /// This is used to calculate seek offset relative to the end.

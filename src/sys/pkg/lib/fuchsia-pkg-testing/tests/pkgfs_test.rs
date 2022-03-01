@@ -1605,13 +1605,16 @@ async fn test_multiple_opens_on_meta_file() {
             .unwrap();
 
     file_a.close().await.unwrap().map_err(Status::from_raw).unwrap();
-    let (status, buffer) = file_a_2
-        .get_buffer(fidl_fuchsia_io::VMO_FLAG_READ | fidl_fuchsia_io::VMO_FLAG_PRIVATE)
+    let vmo = file_a_2
+        .get_backing_memory(
+            fidl_fuchsia_io::VmoFlags::READ | fidl_fuchsia_io::VmoFlags::PRIVATE_CLONE,
+        )
         .await
+        .unwrap()
+        .map_err(Status::from_raw)
         .unwrap();
-    Status::ok(status).unwrap();
-    let buffer = buffer.unwrap();
-    assert_ne!(buffer.size, 0);
+    let size = vmo.get_content_size().unwrap();
+    assert_ne!(size, 0);
     file_a_2.close().await.unwrap().map_err(Status::from_raw).unwrap();
 
     pkgfs.stop().await.expect("shutting down pkgfs");

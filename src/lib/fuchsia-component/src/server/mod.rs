@@ -1534,7 +1534,9 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
             FileRequest::Resize { length: _, responder } => unsupported2!(responder)?,
             FileRequest::GetFlags { responder } => unsupported!(responder, 0)?,
             FileRequest::SetFlags { flags: _, responder } => unsupported!(responder)?,
-            FileRequest::GetBuffer { flags: _, responder } => unsupported!(responder, None)?,
+            FileRequest::GetBufferDeprecatedUseGetBackingMemory { flags: _, responder } => {
+                unsupported!(responder, None)?
+            }
             FileRequest::GetBackingMemory { flags: _, responder } => unsupported2!(responder)?,
             FileRequest::GetFlagsDeprecatedUseNode { responder } => unsupported!(responder, 0)?,
             FileRequest::SetFlagsDeprecatedUseNode { flags: _, responder } => {

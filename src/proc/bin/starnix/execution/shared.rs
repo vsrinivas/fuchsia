@@ -203,7 +203,7 @@ pub fn create_filesystem_from_spec<'a>(
         }
         "ext4" => {
             let vmo =
-                syncio::directory_open_vmo(&pkg, &fs_src, fio::VMO_FLAG_READ, zx::Time::INFINITE)?;
+                syncio::directory_open_vmo(&pkg, &fs_src, fio::VmoFlags::READ, zx::Time::INFINITE)?;
             Fs(ExtFilesystem::new(vmo)?)
         }
         _ => create_filesystem(&kernel, fs_src.as_bytes(), fs_type.as_bytes(), b"")?,

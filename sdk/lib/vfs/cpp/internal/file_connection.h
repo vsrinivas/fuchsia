@@ -56,7 +56,8 @@ class FileConnection final : public Connection, public fuchsia::io::File {
   void GetFlagsDeprecatedUseNode(GetFlagsDeprecatedUseNodeCallback callback) override;
   void SetFlagsDeprecatedUseNode(uint32_t flags,
                                  SetFlagsDeprecatedUseNodeCallback callback) override;
-  void GetBuffer(uint32_t flags, GetBufferCallback callback) override;
+  void GetBufferDeprecatedUseGetBackingMemory(
+      uint32_t flags, GetBufferDeprecatedUseGetBackingMemoryCallback callback) override;
   void GetBackingMemory(fuchsia::io::VmoFlags flags, GetBackingMemoryCallback callback) override;
   void GetFlags(GetFlagsCallback callback) override;
   void SetFlags(uint32_t flags, SetFlagsCallback callback) override;

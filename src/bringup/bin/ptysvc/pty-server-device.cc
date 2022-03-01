@@ -144,7 +144,9 @@ void PtyServerDevice::SetFlagsDeprecatedUseNode(
   ZX_ASSERT(false);
 }
 
-void PtyServerDevice::GetBuffer(GetBufferRequestView request, GetBufferCompleter::Sync& completer) {
+void PtyServerDevice::GetBufferDeprecatedUseGetBackingMemory(
+    GetBufferDeprecatedUseGetBackingMemoryRequestView request,
+    GetBufferDeprecatedUseGetBackingMemoryCompleter::Sync& completer) {
   ZX_ASSERT(false);
 }
 

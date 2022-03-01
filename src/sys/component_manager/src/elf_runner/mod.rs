@@ -122,12 +122,13 @@ async fn get_next_vdso_vmo() -> Result<zx::Vmo, zx::Status> {
         io_util::OPEN_RIGHT_READABLE | io_util::OPEN_RIGHT_EXECUTABLE,
         server_end.into_channel(),
     )?;
-    let (status, buffer) = vdso_file
-        .get_buffer(fio::VMO_FLAG_EXACT | fio::VMO_FLAG_READ | fio::VMO_FLAG_EXEC)
+    let vmo = vdso_file
+        .get_backing_memory(
+            fio::VmoFlags::SHARED_BUFFER | fio::VmoFlags::READ | fio::VmoFlags::EXECUTE,
+        )
         .await
-        .map_err(|_| zx::Status::IO)?;
-    zx::ok(status)?;
-    let vmo = buffer.ok_or(zx::Status::UNAVAILABLE)?.vmo;
+        .map_err(|_| zx::Status::IO)?
+        .map_err(zx::Status::from_raw)?;
     vmo.duplicate_handle(zx::Rights::SAME_RIGHTS)
 }
 

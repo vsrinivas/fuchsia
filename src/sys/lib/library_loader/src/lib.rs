@@ -102,15 +102,15 @@ pub async fn load_vmo<'a>(
         &Path::new(object_name),
         fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE,
     )?;
-    let (status, fidlbuf) = file_proxy
-        .get_buffer(fio::VMO_FLAG_READ | fio::VMO_FLAG_EXEC)
+    let vmo = file_proxy
+        .get_backing_memory(fio::VmoFlags::READ | fio::VmoFlags::EXECUTE)
         .await
-        .map_err(|e| format_err!("reading object at {:?} failed: {}", object_name, e))?;
-    let status = zx::Status::from_raw(status);
-    if status != zx::Status::OK {
-        return Err(format_err!("reading object at {:?} failed: {}", object_name, status));
-    }
-    Ok(fidlbuf.ok_or(format_err!("no buffer returned from GetBuffer"))?.vmo)
+        .map_err(|e| format_err!("reading object at {:?} failed: {}", object_name, e))?
+        .map_err(|status| {
+            let status = zx::Status::from_raw(status);
+            format_err!("reading object at {:?} failed: {}", object_name, status)
+        })?;
+    Ok(vmo)
 }
 
 /// parses a config string from the `fuchsia.ldsvc.Loader` service. See

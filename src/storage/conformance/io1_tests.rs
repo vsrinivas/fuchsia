@@ -164,7 +164,7 @@ fn get_directory_entry_name(dir_entry: &io_test::DirectoryEntry) -> String {
 /// Asserts that the given `vmo_rights` align with the `vmo_flags` passed to a get_buffer call.
 /// We check that the returned rights align with and do not exceed those in the given flags, that
 /// we have at least basic VMO rights, and that the flags align with the expected sharing mode.
-fn validate_vmo_rights(buffer: &fidl_fuchsia_mem::Buffer, vmo_flags: u32) {
+fn validate_vmo_rights(buffer: &fidl_fuchsia_mem::Buffer, vmo_flags: io::VmoFlags) {
     let vmo_rights: zx::Rights = buffer.vmo.basic_info().expect("failed to get VMO info").rights;
 
     // Ensure that we have at least some basic rights.
@@ -173,12 +173,12 @@ fn validate_vmo_rights(buffer: &fidl_fuchsia_mem::Buffer, vmo_flags: u32) {
     assert!(vmo_rights.contains(zx::Rights::GET_PROPERTY));
 
     // Ensure the returned rights match and do not exceed those we requested in `vmo_flags`.
-    assert!(vmo_rights.contains(zx::Rights::READ) == (vmo_flags & io::VMO_FLAG_READ != 0));
-    assert!(vmo_rights.contains(zx::Rights::WRITE) == (vmo_flags & io::VMO_FLAG_WRITE != 0));
-    assert!(vmo_rights.contains(zx::Rights::EXECUTE) == (vmo_flags & io::VMO_FLAG_EXEC != 0));
+    assert!(vmo_rights.contains(zx::Rights::READ) == vmo_flags.contains(io::VmoFlags::READ));
+    assert!(vmo_rights.contains(zx::Rights::WRITE) == vmo_flags.contains(io::VmoFlags::WRITE));
+    assert!(vmo_rights.contains(zx::Rights::EXECUTE) == vmo_flags.contains(io::VmoFlags::EXECUTE));
 
     // Make sure we get SET_PROPERTY if we specified a private copy.
-    if vmo_flags & io::VMO_FLAG_PRIVATE != 0 {
+    if vmo_flags.contains(io::VmoFlags::PRIVATE_CLONE) {
         assert!(vmo_rights.contains(zx::Rights::SET_PROPERTY));
     }
 }
@@ -189,7 +189,7 @@ async fn create_file_and_get_buffer(
     dir_entry: io_test::DirectoryEntry,
     test_harness: &TestHarness,
     file_flags: u32,
-    vmo_flags: u32,
+    vmo_flags: io::VmoFlags,
 ) -> Result<(fidl_fuchsia_mem::Buffer, (io::DirectoryProxy, io::FileProxy)), zx::Status> {
     let file_path = get_directory_entry_name(&dir_entry);
     let root = root_directory(vec![dir_entry]);
@@ -197,9 +197,13 @@ async fn create_file_and_get_buffer(
     let file_proxy =
         open_node_status::<io::FileMarker>(&dir_proxy, file_flags, io::MODE_TYPE_FILE, &file_path)
             .await?;
-    let (status, buffer) = file_proxy.get_buffer(vmo_flags).await.expect("Get buffer failed");
-    zx::Status::ok(status)?;
-    Ok((*buffer.expect("Buffer is missing"), (dir_proxy, file_proxy)))
+    let vmo = file_proxy
+        .get_backing_memory(vmo_flags)
+        .await
+        .expect("Get buffer failed")
+        .map_err(zx::Status::from_raw)?;
+    let size = vmo.get_content_size()?;
+    Ok((fidl_fuchsia_mem::Buffer { vmo, size }, (dir_proxy, file_proxy)))
 }
 
 fn root_directory(entries: Vec<io_test::DirectoryEntry>) -> io_test::Directory {
@@ -1110,19 +1114,21 @@ async fn file_get_readable_buffer_with_sufficient_rights() {
 
     for file_flags in harness.vmofile_rights.valid_combos_with(io::OPEN_RIGHT_READABLE) {
         // Should be able to get a readable VMO in default, exact, and private sharing modes.
-        for sharing_mode in [0, io::VMO_FLAG_EXACT, io::VMO_FLAG_PRIVATE] {
+        for sharing_mode in
+            [io::VmoFlags::empty(), io::VmoFlags::SHARED_BUFFER, io::VmoFlags::PRIVATE_CLONE]
+        {
             let file = vmo_file(TEST_FILE, TEST_FILE_CONTENTS);
             let (buffer, _) = create_file_and_get_buffer(
                 file,
                 &harness,
                 file_flags,
-                io::VMO_FLAG_READ | sharing_mode,
+                io::VmoFlags::READ | sharing_mode,
             )
             .await
             .expect("Failed to create file and obtain buffer");
 
             // Ensure that the returned VMO's rights are consistent with the expected flags.
-            validate_vmo_rights(&buffer, io::VMO_FLAG_READ);
+            validate_vmo_rights(&buffer, io::VmoFlags::READ);
 
             // Check contents of buffer.
             let mut data = vec![0; buffer.size as usize];
@@ -1142,7 +1148,7 @@ async fn file_get_readable_buffer_with_insufficient_rights() {
     for file_flags in harness.vmofile_rights.valid_combos_without(io::OPEN_RIGHT_READABLE) {
         let file = vmo_file(TEST_FILE, TEST_FILE_CONTENTS);
         assert_eq!(
-            create_file_and_get_buffer(file, &harness, file_flags, io::VMO_FLAG_READ)
+            create_file_and_get_buffer(file, &harness, file_flags, io::VmoFlags::READ)
                 .await
                 .expect_err("Error was expected"),
             zx::Status::ACCESS_DENIED
@@ -1157,7 +1163,8 @@ async fn file_get_writable_buffer_with_sufficient_rights() {
         return;
     }
     // Writable VMOs currently require private sharing mode.
-    const VMO_FLAGS: u32 = io::VMO_FLAG_WRITE | io::VMO_FLAG_PRIVATE;
+    const VMO_FLAGS: io::VmoFlags =
+        io::VmoFlags::empty().union(io::VmoFlags::WRITE).union(io::VmoFlags::PRIVATE_CLONE);
 
     for file_flags in harness.vmofile_rights.valid_combos_with(io::OPEN_RIGHT_WRITABLE) {
         let file = vmo_file(TEST_FILE, TEST_FILE_CONTENTS);
@@ -1179,7 +1186,8 @@ async fn file_get_writable_buffer_with_insufficient_rights() {
     if harness.config.no_get_buffer.unwrap_or_default() {
         return;
     }
-    const VMO_FLAGS: u32 = io::VMO_FLAG_WRITE | io::VMO_FLAG_PRIVATE;
+    const VMO_FLAGS: io::VmoFlags =
+        io::VmoFlags::empty().union(io::VmoFlags::WRITE).union(io::VmoFlags::PRIVATE_CLONE);
 
     for file_flags in harness.vmofile_rights.valid_combos_without(io::OPEN_RIGHT_WRITABLE) {
         let file = vmo_file(TEST_FILE, TEST_FILE_CONTENTS);
@@ -1203,10 +1211,12 @@ async fn file_get_executable_buffer_with_sufficient_rights() {
 
     // We should be able to get an executable VMO in default, exact, and private sharing modes.
     // Note that the fuchsia.io interface requires the connection to have OPEN_RIGHT_READABLE in
-    // addition to OPEN_RIGHT_EXECUTABLE if passing VMO_FLAG_EXEC to the GetBuffer method.
-    for sharing_mode in [0, io::VMO_FLAG_EXACT, io::VMO_FLAG_PRIVATE] {
+    // addition to OPEN_RIGHT_EXECUTABLE if passing VmoFlags::EXECUTE to the GetBuffer method.
+    for sharing_mode in
+        [io::VmoFlags::empty(), io::VmoFlags::SHARED_BUFFER, io::VmoFlags::PRIVATE_CLONE]
+    {
         let file = exec_file(TEST_FILE);
-        let vmo_flags = io::VMO_FLAG_READ | io::VMO_FLAG_EXEC | sharing_mode;
+        let vmo_flags = io::VmoFlags::READ | io::VmoFlags::EXECUTE | sharing_mode;
         let (buffer, _) = create_file_and_get_buffer(
             file,
             &harness,
@@ -1232,18 +1242,18 @@ async fn file_get_executable_buffer_with_insufficient_rights() {
     for file_flags in harness.execfile_rights.valid_combos_without(io::OPEN_RIGHT_EXECUTABLE) {
         let file = exec_file(TEST_FILE);
         assert_eq!(
-            create_file_and_get_buffer(file, &harness, file_flags, io::VMO_FLAG_EXEC)
+            create_file_and_get_buffer(file, &harness, file_flags, io::VmoFlags::EXECUTE)
                 .await
                 .expect_err("Error was expected"),
             zx::Status::ACCESS_DENIED
         );
     }
-    // The fuchsia.io interface additionally specifies that GetBuffer should fail if VMO_FLAG_EXEC
+    // The fuchsia.io interface additionally specifies that GetBuffer should fail if VmoFlags::EXECUTE
     // is specified but connection lacks OPEN_RIGHT_READABLE.
     for file_flags in harness.execfile_rights.valid_combos_without(io::OPEN_RIGHT_READABLE) {
         let file = exec_file(TEST_FILE);
         assert_eq!(
-            create_file_and_get_buffer(file, &harness, file_flags, io::VMO_FLAG_EXEC)
+            create_file_and_get_buffer(file, &harness, file_flags, io::VmoFlags::EXECUTE)
                 .await
                 .expect_err("Error was expected"),
             zx::Status::ACCESS_DENIED
@@ -1251,7 +1261,7 @@ async fn file_get_executable_buffer_with_insufficient_rights() {
     }
 }
 
-// Ensure that passing VMO_FLAG_EXACT to GetBuffer returns the same KOID as the backing VMO.
+// Ensure that passing VmoFlags::SHARED_BUFFER to GetBuffer returns the same KOID as the backing VMO.
 #[fasync::run_singlethreaded(test)]
 async fn file_get_buffer_exact_same_koid() {
     let harness = TestHarness::new().await;
@@ -1272,7 +1282,7 @@ async fn file_get_buffer_exact_same_koid() {
         vmofile_object,
         &harness,
         io::OPEN_RIGHT_READABLE,
-        io::VMO_FLAG_READ | io::VMO_FLAG_EXACT,
+        io::VmoFlags::READ | io::VmoFlags::SHARED_BUFFER,
     )
     .await
     .expect("Failed to create file and obtain buffer");

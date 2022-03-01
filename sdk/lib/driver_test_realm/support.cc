@@ -257,13 +257,23 @@ class FakeBootResolver final : public fidl::WireServer<fuchsia_sys2::ComponentRe
       completer.ReplyError(fuchsia_sys2::wire::ResolverError::kInternal);
       return;
     }
-    auto result = fidl::WireCall(file->client)->GetBuffer(fuchsia_io::wire::kVmoFlagRead);
-    if (!result.ok() || result->s != ZX_OK) {
+    fidl::WireResult result =
+        fidl::WireCall(file->client)->GetBackingMemory(fuchsia_io::wire::VmoFlags::kRead);
+    if (!result.ok()) {
       completer.ReplyError(fuchsia_sys2::wire::ResolverError::kIo);
       return;
     }
-    fuchsia_mem::wire::Data data;
-    data.set_buffer(result->buffer);
+    auto& response = result.value();
+    if (response.result.is_err()) {
+      completer.ReplyError(fuchsia_sys2::wire::ResolverError::kIo);
+      return;
+    }
+    zx::vmo& vmo = response.result.response().vmo;
+    uint64_t size;
+    status = vmo.get_prop_content_size(&size);
+    if (status != ZX_OK) {
+      completer.ReplyError(fuchsia_sys2::wire::ResolverError::kIo);
+    }
 
     fidl::ClientEnd<fuchsia_io::Directory> directory(
         zx::channel(fdio_service_clone(pkg_dir_->GetRemote().channel()->get())));
@@ -279,7 +289,10 @@ class FakeBootResolver final : public fidl::WireServer<fuchsia_sys2::ComponentRe
 
     fuchsia_sys2::wire::Component component(arena);
     component.set_resolved_url(arena, request->component_url);
-    component.set_decl(arena, std::move(data));
+    component.set_decl(arena, fuchsia_mem::wire::Data::WithBuffer(arena, fuchsia_mem::wire::Buffer{
+                                                                             .vmo = std::move(vmo),
+                                                                             .size = size,
+                                                                         }));
     component.set_package(arena, std::move(package));
     completer.ReplySuccess(std::move(component));
   }

@@ -14,7 +14,8 @@ use {
     async_trait::async_trait,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::{
-        self as fio, FilesystemInfo, NodeAttributes, NodeMarker, INO_UNKNOWN, MODE_TYPE_FILE,
+        self as fio, FilesystemInfo, NodeAttributes, NodeMarker, VmoFlags, INO_UNKNOWN,
+        MODE_TYPE_FILE,
     },
     fidl_fuchsia_mem::Buffer,
     fuchsia_syslog::fx_log_err,
@@ -259,7 +260,7 @@ impl VfsFile for FatFile {
         Ok(())
     }
 
-    async fn get_buffer(&self, _flags: u32) -> Result<Buffer, Status> {
+    async fn get_buffer(&self, _flags: VmoFlags) -> Result<Buffer, Status> {
         Err(Status::NOT_SUPPORTED)
     }
 

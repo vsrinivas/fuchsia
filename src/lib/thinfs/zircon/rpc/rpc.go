@@ -725,7 +725,7 @@ func (d *fileWrapper) QueryFilesystem(fidl.Context) (int32, *io.FilesystemInfo, 
 	return int32(zx.ErrNotSupported), nil, nil
 }
 
-func (f *fileWrapper) GetBuffer(_ fidl.Context, flags uint32) (int32, *mem.Buffer, error) {
+func (f *fileWrapper) GetBufferDeprecatedUseGetBackingMemory(_ fidl.Context, flags uint32) (int32, *mem.Buffer, error) {
 	if file, ok := f.file.(fs.FileWithGetBuffer); ok {
 		buf, err := file.GetBuffer(flags)
 		return int32(errorToZx(err)), buf, err

@@ -200,32 +200,35 @@ void DriverHost::Start(StartRequestView request, StartCompleter::Sync& completer
   auto callback = [this, request = std::move(request->driver), completer = completer.ToAsync(),
                    url = std::move(url), converted_message = std::move(converted_message),
                    _ = file.Clone()](
-                      fidl::WireUnownedResult<fio::File::GetBuffer>& result) mutable {
+                      fidl::WireUnownedResult<fio::File::GetBackingMemory>& result) mutable {
     if (!result.ok()) {
       LOGF(ERROR, "Failed to start driver '%s', could not get library VMO: %s", url.data(),
            result.error().FormatDescription().c_str());
       completer.Close(result.status());
       return;
     }
-    auto* response = result.Unwrap();
-    if (response->s != ZX_OK) {
-      LOGF(ERROR, "Failed to start driver '%s', could not get library VMO: %s", url.data(),
-           zx_status_get_string(response->s));
-      completer.Close(response->s);
-      return;
+    auto& response = result.value();
+    switch (response.result.Which()) {
+      case fio::wire::File2GetBackingMemoryResult::Tag::kErr:
+        LOGF(ERROR, "Failed to start driver '%s', could not get library VMO: %s", url.data(),
+             zx_status_get_string(response.result.err()));
+        completer.Close(response.result.err());
+        return;
+      case fio::wire::File2GetBackingMemoryResult::Tag::kResponse:
+        break;
     }
+    zx::vmo& vmo = response.result.response().vmo;
     // Give the driver's VMO a name. We can't fit the entire URL in the name, so
     // use the name of the manifest from the URL.
     auto manifest = GetManifest(url);
-    zx_status_t status =
-        response->buffer->vmo.set_property(ZX_PROP_NAME, manifest.data(), manifest.size());
+    zx_status_t status = vmo.set_property(ZX_PROP_NAME, manifest.data(), manifest.size());
     if (status != ZX_OK) {
       LOGF(ERROR, "Failed to start driver '%s', could not name library VMO: %s", url.data(),
            zx_status_get_string(status));
       completer.Close(status);
       return;
     }
-    auto driver = Driver::Load(std::move(url), std::move(response->buffer->vmo));
+    auto driver = Driver::Load(std::move(url), std::move(vmo));
     if (driver.is_error()) {
       completer.Close(driver.error_value());
       return;
@@ -274,6 +277,7 @@ void DriverHost::Start(StartRequestView request, StartCompleter::Sync& completer
     };
     async::PostTask(driver_dispatcher_, std::move(start_task));
   };
-  file->GetBuffer(fio::wire::kVmoFlagRead | fio::wire::kVmoFlagExec | fio::wire::kVmoFlagPrivate,
-                  std::move(callback));
+  file->GetBackingMemory(fio::wire::VmoFlags::kRead | fio::wire::VmoFlags::kExecute |
+                             fio::wire::VmoFlags::kPrivateClone,
+                         std::move(callback));
 }

@@ -418,7 +418,7 @@ impl<T: 'static + File> FileConnection<T> {
                 self.flags = (self.flags & !OPEN_FLAG_APPEND) | (flags & OPEN_FLAG_APPEND);
                 responder.send(ZX_OK)?;
             }
-            FileRequest::GetBuffer { flags, responder } => {
+            FileRequest::GetBufferDeprecatedUseGetBackingMemory { flags, responder } => {
                 fuchsia_trace::duration!("storage", "File::GetBuffer");
                 let (status, mut buffer) =
                     match self.handle_get_buffer(VmoFlags::from_bits_truncate(flags)).await {
@@ -596,8 +596,7 @@ impl<T: 'static + File> FileConnection<T> {
         flags: VmoFlags,
     ) -> Result<fidl_fuchsia_mem::Buffer, zx::Status> {
         get_buffer_validate_flags(flags, self.flags)?;
-        // TODO(fxbug.dev/88358): Pass the VmoFlags type to get_buffer rather than the raw bits.
-        self.file.get_buffer(flags.bits() as u32).await
+        self.file.get_buffer(flags).await
     }
 }
 
@@ -608,9 +607,9 @@ mod tests {
         assert_matches::assert_matches,
         async_trait::async_trait,
         fidl_fuchsia_io::{
-            FileEvent, FileInfo, FileObject, FileProxy, NodeInfo, Representation,
+            FileEvent, FileInfo, FileObject, FileProxy, NodeInfo, Representation, VmoFlags,
             CLONE_FLAG_SAME_RIGHTS, MODE_TYPE_FILE, NODE_ATTRIBUTE_FLAG_CREATION_TIME,
-            NODE_ATTRIBUTE_FLAG_MODIFICATION_TIME, VMO_FLAG_EXEC, VMO_FLAG_READ,
+            NODE_ATTRIBUTE_FLAG_MODIFICATION_TIME,
         },
         fuchsia_async as fasync, fuchsia_zircon as zx,
         futures::prelude::*,
@@ -625,7 +624,7 @@ mod tests {
         WriteAt { offset: u64, content: Vec<u8> },
         Append { content: Vec<u8> },
         Truncate { length: u64 },
-        GetBuffer { flags: u32 },
+        GetBuffer { flags: VmoFlags },
         GetSize,
         GetAttrs,
         SetAttrs { flags: u32, attrs: NodeAttributes },
@@ -705,7 +704,10 @@ mod tests {
             self.handle_operation(FileOperation::Truncate { length })
         }
 
-        async fn get_buffer(&self, flags: u32) -> Result<fidl_fuchsia_mem::Buffer, zx::Status> {
+        async fn get_buffer(
+            &self,
+            flags: VmoFlags,
+        ) -> Result<fidl_fuchsia_mem::Buffer, zx::Status> {
             self.handle_operation(FileOperation::GetBuffer { flags })?;
             Err(zx::Status::NOT_SUPPORTED)
         }
@@ -940,14 +942,19 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_getbuffer() {
         let env = init_mock_file(Box::new(always_succeed_callback), OPEN_RIGHT_READABLE);
-        let (status, _buffer) = env.proxy.get_buffer(VMO_FLAG_READ).await.unwrap();
-        assert_eq!(zx::Status::from_raw(status), zx::Status::NOT_SUPPORTED);
+        let result = env
+            .proxy
+            .get_backing_memory(VmoFlags::READ)
+            .await
+            .unwrap()
+            .map_err(zx::Status::from_raw);
+        assert_eq!(result, Err(zx::Status::NOT_SUPPORTED));
         let events = env.file.operations.lock().unwrap();
         assert_eq!(
             *events,
             vec![
                 FileOperation::Init { flags: OPEN_RIGHT_READABLE },
-                FileOperation::GetBuffer { flags: VMO_FLAG_READ },
+                FileOperation::GetBuffer { flags: VmoFlags::READ },
             ]
         );
     }
@@ -955,9 +962,13 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_getbuffer_no_perms() {
         let env = init_mock_file(Box::new(always_succeed_callback), 0);
-        let (status, buffer) = env.proxy.get_buffer(VMO_FLAG_READ).await.unwrap();
-        assert_eq!(zx::Status::from_raw(status), zx::Status::ACCESS_DENIED);
-        assert!(buffer.is_none());
+        let result = env
+            .proxy
+            .get_backing_memory(VmoFlags::READ)
+            .await
+            .unwrap()
+            .map_err(zx::Status::from_raw);
+        assert_eq!(result, Err(zx::Status::ACCESS_DENIED));
         let events = env.file.operations.lock().unwrap();
         assert_eq!(*events, vec![FileOperation::Init { flags: 0 },]);
     }
@@ -965,9 +976,13 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_getbuffer_vmo_exec_requires_right_executable() {
         let env = init_mock_file(Box::new(always_succeed_callback), OPEN_RIGHT_READABLE);
-        let (status, buffer) = env.proxy.get_buffer(VMO_FLAG_EXEC).await.unwrap();
-        assert_eq!(zx::Status::from_raw(status), zx::Status::ACCESS_DENIED);
-        assert!(buffer.is_none());
+        let result = env
+            .proxy
+            .get_backing_memory(VmoFlags::EXECUTE)
+            .await
+            .unwrap()
+            .map_err(zx::Status::from_raw);
+        assert_eq!(result, Err(zx::Status::ACCESS_DENIED));
         let events = env.file.operations.lock().unwrap();
         assert_eq!(*events, vec![FileOperation::Init { flags: OPEN_RIGHT_READABLE },]);
     }

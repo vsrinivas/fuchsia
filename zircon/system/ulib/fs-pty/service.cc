@@ -163,8 +163,9 @@ void NullPtyDeviceImpl::SetFlagsDeprecatedUseNode(
   ZX_ASSERT(false);
 }
 
-void NullPtyDeviceImpl::GetBuffer(GetBufferRequestView request,
-                                  GetBufferCompleter::Sync& completer) {
+void NullPtyDeviceImpl::GetBufferDeprecatedUseGetBackingMemory(
+    GetBufferDeprecatedUseGetBackingMemoryRequestView request,
+    GetBufferDeprecatedUseGetBackingMemoryCompleter::Sync& completer) {
   ZX_ASSERT(false);
 }
 

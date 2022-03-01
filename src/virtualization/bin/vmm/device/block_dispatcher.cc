@@ -159,24 +159,33 @@ class VmoBlockDispatcher : public BlockDispatcher {
 };
 
 void CreateVmoBlockDispatcher(async_dispatcher_t* dispatcher, fuchsia::io::FilePtr file,
-                              uint32_t vmo_flags, NestedBlockDispatcherCallback callback) {
-  file->GetBuffer(
-      vmo_flags, [dispatcher, file = std::move(file), vmo_flags, callback = std::move(callback)](
-                     zx_status_t status, fuchsia::mem::BufferPtr buffer) mutable {
-        // If the file is not backed by a vmo, or if we fail to get it, then fall back to a file
-        // block dispatcher.
-        if (status != ZX_OK) {
-          FX_LOGS(INFO) << "Failed to get VMO, falling back to file dispatcher";
-          CreateFileBlockDispatcher(dispatcher, std::move(file), std::move(callback));
-          return;
-        }
-        uintptr_t addr;
-        status = zx::vmar::root_self()->map(vmo_flags, 0, buffer->vmo, 0, buffer->size, &addr);
-        FX_CHECK(status == ZX_OK) << "Failed to map VMO";
-        auto disp = std::make_unique<VmoBlockDispatcher>(std::move(file), std::move(buffer->vmo),
-                                                         buffer->size, addr);
-        callback(buffer->size, kBlockSectorSize, std::move(disp));
-      });
+                              fuchsia::io::VmoFlags vmo_flags,
+                              NestedBlockDispatcherCallback callback) {
+  file->GetBackingMemory(vmo_flags, [dispatcher, file = std::move(file), vmo_flags,
+                                     callback = std::move(callback)](
+                                        fuchsia::io::File2_GetBackingMemory_Result result) mutable {
+    // If the file is not backed by a vmo, or if we fail to get it, then fall back to a file
+    // block dispatcher.
+    if (result.is_err()) {
+      FX_PLOGS(INFO, result.err()) << "Failed to get VMO, falling back to file dispatcher";
+      CreateFileBlockDispatcher(dispatcher, std::move(file), std::move(callback));
+      return;
+    }
+    zx::vmo& vmo = result.response().vmo;
+    uint64_t size;
+    if (zx_status_t status = vmo.get_prop_content_size(&size); status != ZX_OK) {
+      FX_PLOGS(FATAL, status) << "Failed to get VMO size";
+    }
+    uintptr_t addr;
+    // NB: assumes that ZX_VM_* flags equal fuchsia.io.VmoFlags.
+    const zx_vm_option_t vm_options = static_cast<zx_vm_option_t>(vmo_flags);
+    if (zx_status_t status = zx::vmar::root_self()->map(vm_options, 0, vmo, 0, size, &addr);
+        status != ZX_OK) {
+      FX_PLOGS(FATAL, status) << "Failed to map VMO";
+    }
+    auto disp = std::make_unique<VmoBlockDispatcher>(std::move(file), std::move(vmo), size, addr);
+    callback(size, kBlockSectorSize, std::move(disp));
+  });
 }
 
 // Dispatcher that retains writes in-memory and delegates reads to another

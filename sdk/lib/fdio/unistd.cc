@@ -565,10 +565,10 @@ extern "C" __EXPORT zx_status_t _mmap_file(size_t offset, size_t len, zx_vm_opti
   }
 
   // Verify that the ZX_VM_PERM_* flags passed to __mmap_file match the respective constants
-  // from fuchsia.io when calling zxio_vmo_get.
-  static_assert(ZX_VM_PERM_READ == fio::wire::kVmoFlagRead);
-  static_assert(ZX_VM_PERM_WRITE == fio::wire::kVmoFlagWrite);
-  static_assert(ZX_VM_PERM_EXECUTE == fio::wire::kVmoFlagExec);
+  // from zxio when calling zxio_vmo_get.
+  static_assert(ZXIO_VMO_READ == ZX_VM_PERM_READ, "Vmar / Vmo flags should be aligned");
+  static_assert(ZXIO_VMO_WRITE == ZX_VM_PERM_WRITE, "Vmar / Vmo flags should be aligned");
+  static_assert(ZXIO_VMO_EXECUTE == ZX_VM_PERM_EXECUTE, "Vmar / Vmo flags should be aligned");
 
   if (zx_options & (ZX_VM_PERM_WRITE | ZX_VM_PERM_EXECUTE)) {
     // The POSIX standard requires the file to be opened with read permissions regardless of the
@@ -581,13 +581,16 @@ extern "C" __EXPORT zx_status_t _mmap_file(size_t offset, size_t len, zx_vm_opti
     zx_options |= ZX_VM_PERM_READ;
   }
 
-  uint32_t vflags = zx_options | (flags & MAP_PRIVATE ? fio::wire::kVmoFlagPrivate : 0);
+  zxio_vmo_flags_t zxio_flags = zx_options;
+  if (flags & MAP_PRIVATE) {
+    zxio_flags |= ZXIO_VMO_PRIVATE_CLONE;
+  }
 
   zx::vmo vmo;
   size_t size;
   {
     zx_status_t status =
-        zxio_vmo_get(&io->zxio_storage().io, vflags, vmo.reset_and_get_address(), &size);
+        zxio_vmo_get(&io->zxio_storage().io, zxio_flags, vmo.reset_and_get_address(), &size);
     if (status != ZX_OK) {
       return status;
     }

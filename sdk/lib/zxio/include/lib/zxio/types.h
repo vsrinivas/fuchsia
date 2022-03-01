@@ -27,6 +27,29 @@ typedef uint32_t zxio_reopen_flags_t;
 // Request that the object provide a description of itself on the new object.
 #define ZXIO_REOPEN_DESCRIBE ((zxio_reopen_flags_t)1u << 0)
 
+// Flags for VMO retrieval operations ------------------------------------------
+typedef uint32_t zxio_vmo_flags_t;
+
+// Request that the VMO be readable.
+#define ZXIO_VMO_READ ((zxio_vmo_flags_t)1u << 0)
+
+// Request that the VMO be writable.
+#define ZXIO_VMO_WRITE ((zxio_vmo_flags_t)1u << 1)
+
+// Request that the VMO be executable.
+#define ZXIO_VMO_EXECUTE ((zxio_vmo_flags_t)1u << 2)
+
+// Require a copy-on-write clone of the underlying VMO. The request should fail
+// if the VMO cannot be cloned. May not be supplied with
+// `ZXIO_VMO_SHARED_BUFFER`.
+#define ZXIO_VMO_PRIVATE_CLONE ((zxio_vmo_flags_t)1u << 16)
+
+// Require an exact (non-cloned) handle to the underlying VMO. All clients using
+// this flag would get a VMO with the same koid. The request should fail if a
+// handle to the exact VMO cannot be returned. May not be supplied with
+// `ZXIO_VMO_PRIVATE_CLONE`.
+#define ZXIO_VMO_SHARED_BUFFER ((zxio_vmo_flags_t)1u << 17)
+
 // Signals ---------------------------------------------------------------------
 
 // Signals are single bits of information that reflect some state on the

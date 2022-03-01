@@ -59,7 +59,9 @@ class FileConnection : public Connection, public fidl::WireServer<fuchsia_io::Fi
                                  GetFlagsDeprecatedUseNodeCompleter::Sync& completer) final;
   void SetFlagsDeprecatedUseNode(SetFlagsDeprecatedUseNodeRequestView request,
                                  SetFlagsDeprecatedUseNodeCompleter::Sync& completer) final;
-  void GetBuffer(GetBufferRequestView request, GetBufferCompleter::Sync& completer) final;
+  void GetBufferDeprecatedUseGetBackingMemory(
+      GetBufferDeprecatedUseGetBackingMemoryRequestView request,
+      GetBufferDeprecatedUseGetBackingMemoryCompleter::Sync& completer) final;
   void GetBackingMemory(GetBackingMemoryRequestView request,
                         GetBackingMemoryCompleter::Sync& completer) final;
 

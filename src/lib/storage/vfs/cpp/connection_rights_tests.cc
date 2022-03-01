@@ -53,36 +53,43 @@ TEST(ConnectionRightsTest, RightsBehaveAsExpected) {
 
   typedef struct test_row {
    public:
-    uint32_t connection_flags;    // Or'd ZX_FS_RIGHT_* flags for this connection.
-    uint32_t request_flags;       // Or'd fio::wire::kVmoFlag* values.
+    uint32_t connection_flags;  // Or'd ZX_FS_RIGHT_* flags for this connection.
+    fio::wire::VmoFlags request_flags;
     zx_status_t expected_result;  // What we expect FileGetBuffer to return.
   } test_row_t;
 
   test_row_t test_data[] = {
       // If the connection has all rights, then everything should work.
-      {.connection_flags = ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE | ZX_FS_RIGHT_EXECUTABLE,
-       .request_flags = fio::wire::kVmoFlagRead,
-       .expected_result = ZX_OK},
-      {.connection_flags = ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE | ZX_FS_RIGHT_EXECUTABLE,
-       .request_flags = fio::wire::kVmoFlagRead | fio::wire::kVmoFlagWrite,
-       .expected_result = ZX_OK},
-      {.connection_flags = ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE | ZX_FS_RIGHT_EXECUTABLE,
-       .request_flags = fio::wire::kVmoFlagRead | fio::wire::kVmoFlagExec,
-       .expected_result = ZX_OK},
+      {
+          .connection_flags = ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE | ZX_FS_RIGHT_EXECUTABLE,
+          .request_flags = fio::wire::VmoFlags::kRead,
+          .expected_result = ZX_OK,
+      },
+      {
+          .connection_flags = ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE | ZX_FS_RIGHT_EXECUTABLE,
+          .request_flags = fio::wire::VmoFlags::kRead | fio::wire::VmoFlags::kWrite,
+          .expected_result = ZX_OK,
+      },
+      {
+          .connection_flags = ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE | ZX_FS_RIGHT_EXECUTABLE,
+          .request_flags = fio::wire::VmoFlags::kRead | fio::wire::VmoFlags::kExecute,
+          .expected_result = ZX_OK,
+      },
       // If the connection is missing the EXECUTABLE right, then requests with
-      // fio::wire::kVmoFlagExec
-      // should fail.
-      {.connection_flags = ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE,
-       .request_flags = fio::wire::kVmoFlagRead | fio::wire::kVmoFlagExec,
-       .expected_result = ZX_ERR_ACCESS_DENIED},
+      // fio::wire::VmoFlags::kExecute should fail.
+      {
+          .connection_flags = ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE,
+          .request_flags = fio::wire::VmoFlags::kRead | fio::wire::VmoFlags::kExecute,
+          .expected_result = ZX_ERR_ACCESS_DENIED,
+      },
 
       // If the connection is missing the WRITABLE right, then requests with
-      // fio::wire::kVmoFlagWrite
-      // should fail.
-      {.connection_flags = ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_EXECUTABLE,
-       .request_flags = fio::wire::kVmoFlagRead | fio::wire::kVmoFlagWrite,
-       .expected_result = ZX_ERR_ACCESS_DENIED},
-
+      // fio::wire::VmoFlags::kWrite should fail.
+      {
+          .connection_flags = ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_EXECUTABLE,
+          .request_flags = fio::wire::VmoFlags::kRead | fio::wire::VmoFlags::kWrite,
+          .expected_result = ZX_ERR_ACCESS_DENIED,
+      },
   };
 
   {
@@ -97,11 +104,19 @@ TEST(ConnectionRightsTest, RightsBehaveAsExpected) {
 
       // Call FileGetBuffer on the channel with the testcase's request flags. Check that we get the
       // expected result.
-      auto result = fidl::WireCall(file->client)->GetBuffer(row.request_flags);
-      EXPECT_EQ(result.status(), ZX_OK);
+      const fidl::WireResult result =
+          fidl::WireCall(file->client)->GetBackingMemory(row.request_flags);
+      EXPECT_TRUE(result.ok(), "%s", result.FormatDescription().c_str());
+      const auto& response = result.value();
 
       // Verify that the result matches the value in our test table.
-      EXPECT_EQ(result.Unwrap()->s, row.expected_result);
+      if (row.expected_result == ZX_OK) {
+        EXPECT_TRUE(response.result.is_response(), "%s",
+                    zx_status_get_string(response.result.err()));
+      } else {
+        EXPECT_TRUE(response.result.is_err());
+        EXPECT_STATUS(response.result.err(), row.expected_result);
+      }
     }
   }
 

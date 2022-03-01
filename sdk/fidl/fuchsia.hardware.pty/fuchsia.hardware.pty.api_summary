@@ -8,7 +8,7 @@ protocol/member fuchsia.hardware.pty/Device.Describe2(fuchsia.io/ConnectionInfoQ
 protocol/member fuchsia.hardware.pty/Device.GetAttr() -> (int32 s,fuchsia.io/NodeAttributes attributes)
 protocol/member fuchsia.hardware.pty/Device.GetAttributes(fuchsia.io/NodeAttributesQuery query) -> (fuchsia.io/Node2_GetAttributes_Result result)
 protocol/member fuchsia.hardware.pty/Device.GetBackingMemory(fuchsia.io/VmoFlags flags) -> (fuchsia.io/File2_GetBackingMemory_Result result)
-protocol/member fuchsia.hardware.pty/Device.GetBuffer(uint32 flags) -> (int32 s,fuchsia.mem/Buffer:optional buffer)
+protocol/member fuchsia.hardware.pty/Device.GetBufferDeprecatedUseGetBackingMemory(uint32 flags) -> (int32 s,fuchsia.mem/Buffer:optional buffer)
 protocol/member fuchsia.hardware.pty/Device.GetFlags() -> (int32 s,uint32 flags)
 protocol/member fuchsia.hardware.pty/Device.GetFlagsDeprecatedUseNode() -> (int32 s,uint32 flags)
 protocol/member fuchsia.hardware.pty/Device.GetWindowSize() -> (int32 status,fuchsia.hardware.pty/WindowSize size)

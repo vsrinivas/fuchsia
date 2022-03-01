@@ -229,7 +229,8 @@ void FileConnection::SetFlagsDeprecatedUseNode(uint32_t flags,
   callback(ZX_ERR_NOT_SUPPORTED);
 }
 
-void FileConnection::GetBuffer(uint32_t flags, GetBufferCallback callback) {
+void FileConnection::GetBufferDeprecatedUseGetBackingMemory(
+    uint32_t flags, GetBufferDeprecatedUseGetBackingMemoryCallback callback) {
   callback(ZX_ERR_NOT_SUPPORTED, nullptr);
 }
 

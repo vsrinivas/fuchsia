@@ -20,9 +20,12 @@ namespace fpacketsocket = fuchsia_posix_socket_packet;
 
 static_assert(FDIO_CHUNK_SIZE >= PATH_MAX, "FDIO_CHUNK_SIZE must be large enough to contain paths");
 
-static_assert(fio::wire::kVmoFlagRead == ZX_VM_PERM_READ, "Vmar / Vmo flags should be aligned");
-static_assert(fio::wire::kVmoFlagWrite == ZX_VM_PERM_WRITE, "Vmar / Vmo flags should be aligned");
-static_assert(fio::wire::kVmoFlagExec == ZX_VM_PERM_EXECUTE, "Vmar / Vmo flags should be aligned");
+static_assert(static_cast<uint32_t>(fio::wire::VmoFlags::kRead) == ZX_VM_PERM_READ,
+              "Vmar / Vmo flags should be aligned");
+static_assert(static_cast<uint32_t>(fio::wire::VmoFlags::kWrite) == ZX_VM_PERM_WRITE,
+              "Vmar / Vmo flags should be aligned");
+static_assert(static_cast<uint32_t>(fio::wire::VmoFlags::kExecute) == ZX_VM_PERM_EXECUTE,
+              "Vmar / Vmo flags should be aligned");
 
 zx_status_t fdio_validate_path(const char* path, size_t* out_length) {
   if (path == nullptr) {

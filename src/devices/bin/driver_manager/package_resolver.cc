@@ -117,7 +117,8 @@ zx::status<zx::vmo> PackageResolver::LoadDriver(
     const fidl::WireSyncClient<fuchsia_io::Directory>& package_dir,
     const component::FuchsiaPkgUrl& package_url) {
   const uint32_t kFileRights = fio::wire::kOpenRightReadable | fio::wire::kOpenRightExecutable;
-  const uint32_t kDriverVmoFlags = fio::wire::kVmoFlagRead | fio::wire::kVmoFlagExec;
+  const fio::wire::VmoFlags kDriverVmoFlags =
+      fio::wire::VmoFlags::kRead | fio::wire::VmoFlags::kExecute;
 
   // Open and duplicate the driver vmo.
   auto endpoints = fidl::CreateEndpoints<fuchsia_io::File>();
@@ -134,16 +135,19 @@ zx::status<zx::vmo> PackageResolver::LoadDriver(
   }
 
   auto file_client = fidl::BindSyncClient(std::move(endpoints->client));
-  auto file_res = file_client->GetBuffer(kDriverVmoFlags);
-  if (!file_res.ok() || file_res.Unwrap()->s != ZX_OK) {
-    LOGF(ERROR, "Failed to get driver vmo");
+  fidl::WireResult file_res = file_client->GetBackingMemory(kDriverVmoFlags);
+  if (!file_res.ok()) {
+    LOGF(ERROR, "Failed to get driver vmo: %s", file_res.FormatDescription().c_str());
     return zx::error(ZX_ERR_INTERNAL);
   }
-  auto buf = file_res.Unwrap()->buffer.get();
-  if (!buf->vmo.is_valid()) {
-    return zx::error(ZX_ERR_INTERNAL);
+  auto& file_resp = file_res.value();
+  switch (file_resp.result.Which()) {
+    case fio::wire::File2GetBackingMemoryResult::Tag::kErr:
+      LOGF(ERROR, "Failed to get driver vmo: %s", zx_status_get_string(file_resp.result.err()));
+      return zx::error(ZX_ERR_INTERNAL);
+    case fio::wire::File2GetBackingMemoryResult::Tag::kResponse:
+      return zx::ok(std::move(file_resp.result.response().vmo));
   }
-  return zx::ok(std::move(buf->vmo));
 }
 
 }  // namespace internal

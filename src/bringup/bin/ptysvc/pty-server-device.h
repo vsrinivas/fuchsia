@@ -56,7 +56,9 @@ class PtyServerDevice : public fidl::WireServer<fuchsia_hardware_pty::Device> {
                                  GetFlagsDeprecatedUseNodeCompleter::Sync& completer) final;
   void SetFlagsDeprecatedUseNode(SetFlagsDeprecatedUseNodeRequestView request,
                                  SetFlagsDeprecatedUseNodeCompleter::Sync& completer) final;
-  void GetBuffer(GetBufferRequestView request, GetBufferCompleter::Sync& completer) final;
+  void GetBufferDeprecatedUseGetBackingMemory(
+      GetBufferDeprecatedUseGetBackingMemoryRequestView request,
+      GetBufferDeprecatedUseGetBackingMemoryCompleter::Sync& completer) final;
   void GetBackingMemory(GetBackingMemoryRequestView request,
                         GetBackingMemoryCompleter::Sync& completer) final;
 

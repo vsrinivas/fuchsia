@@ -758,7 +758,7 @@ func (fState *fileState) AdvisoryLock(fidl.Context, io.AdvisoryLockRequest) (io.
 	return io.AdvisoryLockingAdvisoryLockResult{}, &zx.Error{Status: zx.ErrNotSupported, Text: fmt.Sprintf("%T", fState)}
 }
 
-func (*fileState) GetBuffer(_ fidl.Context, flags uint32) (int32, *mem.Buffer, error) {
+func (*fileState) GetBufferDeprecatedUseGetBackingMemory(_ fidl.Context, flags uint32) (int32, *mem.Buffer, error) {
 	return int32(zx.ErrNotSupported), nil, nil
 }
 

@@ -21,7 +21,7 @@ use {
     async_trait::async_trait,
     fdio::fdio_sys::{V_IRGRP, V_IROTH, V_IRUSR, V_IWUSR, V_TYPE_FILE},
     fidl::endpoints::ServerEnd,
-    fidl_fuchsia_io::{self as fio, FilesystemInfo, NodeAttributes, NodeMarker},
+    fidl_fuchsia_io::{self as fio, FilesystemInfo, NodeAttributes, NodeMarker, VmoFlags},
     fidl_fuchsia_mem::Buffer,
     fuchsia_async as fasync,
     fuchsia_zircon::{self as zx, Status},
@@ -405,21 +405,21 @@ impl File for FxFile {
     }
 
     // Returns a VMO handle that supports paging.
-    async fn get_buffer(&self, flags: u32) -> Result<Buffer, Status> {
+    async fn get_buffer(&self, flags: VmoFlags) -> Result<Buffer, Status> {
         // We do not support exact/duplicate sharing mode.
-        if flags & fio::VMO_FLAG_EXACT != 0 {
+        if flags.contains(VmoFlags::SHARED_BUFFER) {
             log::error!("get_buffer does not support exact sharing mode!");
             return Err(Status::NOT_SUPPORTED);
         }
-        // We only support the combination of VMO_FLAG_WRITE when a private COW clone is
-        // explicitly specified.  This implicitly restricts any mmap call that attempts
-        // to use MAP_SHARED + PROT_WRITE.
-        if flags & fio::VMO_FLAG_WRITE != 0 && flags & fio::VMO_FLAG_PRIVATE == 0 {
-            log::error!("get_buffer only supports VMO_FLAG_WRITE with VMO_FLAG_PRIVATE!");
+        // We only support the combination of WRITE when a private COW clone is explicitly
+        // specified. This implicitly restricts any mmap call that attempts to use MAP_SHARED +
+        // PROT_WRITE.
+        if flags.contains(VmoFlags::WRITE) && !flags.contains(VmoFlags::PRIVATE_CLONE) {
+            log::error!("get_buffer only supports VmoFlags::WRITE with VmoFlags::PRIVATE_CLONE!");
             return Err(Status::NOT_SUPPORTED);
         }
         // We do not support executable VMO handles.
-        if flags & fio::VMO_FLAG_EXEC != 0 {
+        if flags.contains(VmoFlags::EXECUTE) {
             log::error!("get_buffer does not support execute rights!");
             return Err(Status::NOT_SUPPORTED);
         }
@@ -429,7 +429,7 @@ impl File for FxFile {
 
         let mut child_options = zx::VmoChildOptions::SNAPSHOT_AT_LEAST_ON_WRITE;
         // By default, SNAPSHOT includes WRITE, so we explicitly remove it if not required.
-        if flags & fio::VMO_FLAG_WRITE == 0 {
+        if !flags.contains(VmoFlags::WRITE) {
             child_options |= zx::VmoChildOptions::NO_WRITE
         }
 

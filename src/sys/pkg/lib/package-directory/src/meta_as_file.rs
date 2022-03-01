@@ -7,7 +7,7 @@ use {
     async_trait::async_trait,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::{
-        NodeAttributes, NodeMarker, DIRENT_TYPE_FILE, INO_UNKNOWN, MODE_TYPE_FILE,
+        NodeAttributes, NodeMarker, VmoFlags, DIRENT_TYPE_FILE, INO_UNKNOWN, MODE_TYPE_FILE,
         OPEN_FLAG_APPEND, OPEN_FLAG_CREATE, OPEN_FLAG_CREATE_IF_ABSENT, OPEN_FLAG_TRUNCATE,
         OPEN_RIGHT_EXECUTABLE, OPEN_RIGHT_WRITABLE,
     },
@@ -104,7 +104,7 @@ impl vfs::file::File for MetaAsFile {
         Err(zx::Status::NOT_SUPPORTED)
     }
 
-    async fn get_buffer(&self, _flags: u32) -> Result<fidl_fuchsia_mem::Buffer, zx::Status> {
+    async fn get_buffer(&self, _flags: VmoFlags) -> Result<fidl_fuchsia_mem::Buffer, zx::Status> {
         Err(zx::Status::NOT_SUPPORTED)
     }
 
@@ -149,7 +149,6 @@ mod tests {
         assert_matches::assert_matches,
         fidl_fuchsia_io::{
             DirectoryMarker, FileMarker, DIRENT_TYPE_FILE, OPEN_FLAG_DESCRIBE, OPEN_RIGHT_READABLE,
-            VMO_FLAG_EXACT, VMO_FLAG_PRIVATE, VMO_FLAG_READ,
         },
         fuchsia_pkg_testing::{blobfs::Fake as FakeBlobfs, PackageBuilder},
         futures::stream::StreamExt as _,
@@ -335,8 +334,8 @@ mod tests {
     async fn file_get_buffer() {
         let (_env, meta_as_file) = TestEnv::new().await;
 
-        for sharing_mode in [0, VMO_FLAG_EXACT, VMO_FLAG_PRIVATE] {
-            for flag in [0, VMO_FLAG_READ] {
+        for sharing_mode in [VmoFlags::empty(), VmoFlags::SHARED_BUFFER, VmoFlags::PRIVATE_CLONE] {
+            for flag in [VmoFlags::empty(), VmoFlags::READ] {
                 assert_eq!(
                     File::get_buffer(&meta_as_file, sharing_mode | flag).await.err().unwrap(),
                     zx::Status::NOT_SUPPORTED

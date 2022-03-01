@@ -8,10 +8,9 @@ use {
     async_trait::async_trait,
     fidl::{endpoints::ServerEnd, HandleBased as _},
     fidl_fuchsia_io::{
-        NodeAttributes, NodeMarker, DIRENT_TYPE_FILE, INO_UNKNOWN, MODE_TYPE_FILE,
+        NodeAttributes, NodeMarker, VmoFlags, DIRENT_TYPE_FILE, INO_UNKNOWN, MODE_TYPE_FILE,
         OPEN_FLAG_APPEND, OPEN_FLAG_CREATE, OPEN_FLAG_CREATE_IF_ABSENT, OPEN_FLAG_TRUNCATE,
-        OPEN_RIGHT_EXECUTABLE, OPEN_RIGHT_WRITABLE, VMO_FLAG_EXACT, VMO_FLAG_EXEC,
-        VMO_FLAG_PRIVATE, VMO_FLAG_READ, VMO_FLAG_WRITE,
+        OPEN_RIGHT_EXECUTABLE, OPEN_RIGHT_WRITABLE,
     },
     fuchsia_syslog::fx_log_err,
     fuchsia_zircon as zx,
@@ -154,8 +153,8 @@ impl vfs::file::File for MetaFile {
         Err(zx::Status::NOT_SUPPORTED)
     }
 
-    async fn get_buffer(&self, flags: u32) -> Result<fidl_fuchsia_mem::Buffer, zx::Status> {
-        if flags & (VMO_FLAG_WRITE | VMO_FLAG_EXEC | VMO_FLAG_EXACT) != 0 {
+    async fn get_buffer(&self, flags: VmoFlags) -> Result<fidl_fuchsia_mem::Buffer, zx::Status> {
+        if flags.intersects(VmoFlags::WRITE | VmoFlags::EXECUTE | VmoFlags::SHARED_BUFFER) {
             return Err(zx::Status::NOT_SUPPORTED);
         }
 
@@ -164,7 +163,7 @@ impl vfs::file::File for MetaFile {
             zx::Status::INTERNAL
         })?;
 
-        if flags & VMO_FLAG_PRIVATE != 0 {
+        if flags.contains(VmoFlags::PRIVATE_CLONE) {
             let vmo = vmo
                 .create_child(
                     zx::VmoChildOptions::SNAPSHOT_AT_LEAST_ON_WRITE | zx::VmoChildOptions::NO_WRITE,
@@ -180,7 +179,7 @@ impl vfs::file::File for MetaFile {
             let rights = zx::Rights::BASIC
                 | zx::Rights::MAP
                 | zx::Rights::PROPERTY
-                | if flags & VMO_FLAG_READ != 0 { zx::Rights::READ } else { zx::Rights::NONE };
+                | if flags.contains(VmoFlags::READ) { zx::Rights::READ } else { zx::Rights::NONE };
             let vmo = vmo.duplicate_handle(rights).map_err(|e: zx::Status| {
                 fx_log_err!("Failed to clone VMO handle during get_buffer: {:#}", e);
                 e
@@ -448,11 +447,8 @@ mod tests {
     async fn file_get_buffer_rejects_unsupported_flags() {
         let (_env, meta_file) = TestEnv::new().await;
 
-        for flag in [VMO_FLAG_WRITE, VMO_FLAG_EXEC, VMO_FLAG_EXACT] {
-            assert_eq!(
-                File::get_buffer(&meta_file, flag).await.err().unwrap(),
-                zx::Status::NOT_SUPPORTED
-            );
+        for flag in [VmoFlags::WRITE, VmoFlags::EXECUTE, VmoFlags::SHARED_BUFFER] {
+            assert_eq!(File::get_buffer(&meta_file, flag).await, Err(zx::Status::NOT_SUPPORTED));
         }
     }
 
@@ -460,9 +456,10 @@ mod tests {
     async fn file_get_buffer_private() {
         let (_env, meta_file) = TestEnv::new().await;
 
-        let fidl_fuchsia_mem::Buffer { vmo, size } = File::get_buffer(&meta_file, VMO_FLAG_PRIVATE)
-            .await
-            .expect("get_buffer should succeed");
+        let fidl_fuchsia_mem::Buffer { vmo, size } =
+            File::get_buffer(&meta_file, VmoFlags::PRIVATE_CLONE)
+                .await
+                .expect("get_buffer should succeed");
 
         assert_eq!(size, u64::try_from(TEST_FILE_CONTENTS.len()).unwrap());
         // VMO is readable
@@ -486,7 +483,7 @@ mod tests {
         let (_env, meta_file) = TestEnv::new().await;
 
         let fidl_fuchsia_mem::Buffer { vmo, size } =
-            File::get_buffer(&meta_file, VMO_FLAG_READ).await.expect("get_buffer should succeed");
+            File::get_buffer(&meta_file, VmoFlags::READ).await.expect("get_buffer should succeed");
 
         assert_eq!(size, u64::try_from(TEST_FILE_CONTENTS.len()).unwrap());
         // VMO is readable
