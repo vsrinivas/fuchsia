@@ -1072,7 +1072,7 @@ func verbError(verb, file string, err error) error {
 
 func main() {
 	flag.Usage = func() {
-		fmt.Fprintln(os.Stderr, `Usage: size_checker [--budget-only] [--ignore-per-component-budget] --build-dir BUILD_DIR [--sizes-json-out SIZES_JSON]
+		fmt.Fprintln(os.Stderr, `Usage: size_checker [--budget-only] [--ignore-per-component-budget] --build-dir BUILD_DIR [--sizes-json-out SIZES_JSON] [--report-out REPORT_TXT]
 
 A executable that checks if any component from a build has exceeded its allocated space limit.
 
@@ -1088,6 +1088,9 @@ See //tools/size_checker for more details.`)
 	var ignorePerComponentBudget bool
 	flag.BoolVar(&ignorePerComponentBudget, "ignore-per-component-budget", false,
 		"If set, output will go to stderr only if the total size of components exceeds the total blobFs budget.")
+	var reportPath string
+	flag.StringVar(&reportPath, "report-out", "",
+		"If set, the report will be written to a file rather than to stdout.")
 
 	flag.Parse()
 
@@ -1129,9 +1132,23 @@ See //tools/size_checker for more details.`)
 	}
 	overBudget, report := generateReport(outputSizes, showBudgetOnly, ignorePerComponentBudget, blobFsCapacity)
 
-	if overBudget {
-		log.Fatal(report)
-	} else {
+	if reportPath == "" {
 		log.Println(report)
+	} else {
+		file, err := os.Create(reportPath)
+		if err != nil {
+			log.Fatal(err)
+		}
+		if _, err := file.WriteString(report); err != nil {
+			file.Close()
+			log.Fatal(err)
+		}
+		if err := file.Close(); err != nil {
+			log.Fatal(err)
+		}
+	}
+
+	if overBudget {
+		os.Exit(1)
 	}
 }
