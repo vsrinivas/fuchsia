@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_GRAPHICS_DISPLAY_DRIVERS_AMLOGIC_DISPLAY_AMLOGIC_CLOCK_H_
-#define SRC_GRAPHICS_DISPLAY_DRIVERS_AMLOGIC_DISPLAY_AMLOGIC_CLOCK_H_
+#ifndef SRC_GRAPHICS_DISPLAY_DRIVERS_AMLOGIC_DISPLAY_CLOCK_H_
+#define SRC_GRAPHICS_DISPLAY_DRIVERS_AMLOGIC_DISPLAY_CLOCK_H_
 
 #include <fuchsia/hardware/dsiimpl/c/banjo.h>
 #include <lib/ddk/driver.h>
@@ -18,8 +18,8 @@
 #include <ddktl/device.h>
 #include <hwreg/mmio.h>
 
-#include "dsi.h"
 #include "common.h"
+#include "dsi.h"
 #include "hhi-regs.h"
 #include "vpu-regs.h"
 
@@ -42,16 +42,15 @@ class Clock {
     return pll_cfg_.bitrate;
   }
 
- private:
-  void CalculateLcdTiming(const display_setting_t& disp_setting);
+  static LcdTiming CalculateLcdTiming(const display_setting_t& disp_setting);
+  // This function calculates the required pll configurations needed to generate
+  // the desired lcd clock
+  static zx::status<PllConfig> GenerateHPLL(const display_setting_t& disp_setting);
 
+ private:
   // This function wait for hdmi_pll to lock. The retry algorithm is
   // undocumented and comes from U-Boot.
   zx_status_t PllLockWait();
-
-  // This function calculates the required pll configurations needed to generate
-  // the desired lcd clock
-  zx_status_t GenerateHPLL(const display_setting_t& disp_setting);
 
   std::optional<ddk::MmioBuffer> vpu_mmio_;
   std::optional<ddk::MmioBuffer> hhi_mmio_;
@@ -64,4 +63,4 @@ class Clock {
 
 }  // namespace amlogic_display
 
-#endif  // SRC_GRAPHICS_DISPLAY_DRIVERS_AMLOGIC_DISPLAY_AMLOGIC_CLOCK_H_
+#endif  // SRC_GRAPHICS_DISPLAY_DRIVERS_AMLOGIC_DISPLAY_CLOCK_H_

@@ -23,32 +23,35 @@ constexpr uint32_t kKHZ = 1000;
 #define READ32_VPU_REG(a) vpu_mmio_->Read32(a)
 #define WRITE32_VPU_REG(a, v) vpu_mmio_->Write32(v, a)
 
-void Clock::CalculateLcdTiming(const display_setting_t& d) {
+// static
+LcdTiming Clock::CalculateLcdTiming(const display_setting_t& d) {
+  LcdTiming out;
   // Calculate and store DataEnable horizontal and vertical start/stop times
   const uint32_t de_hstart = d.h_period - d.h_active - 1;
   const uint32_t de_vstart = d.v_period - d.v_active;
-  lcd_timing_.vid_pixel_on = de_hstart;
-  lcd_timing_.vid_line_on = de_vstart;
-  lcd_timing_.de_hs_addr = de_hstart;
-  lcd_timing_.de_he_addr = de_hstart + d.h_active;
-  lcd_timing_.de_vs_addr = de_vstart;
-  lcd_timing_.de_ve_addr = de_vstart + d.v_active - 1;
+  out.vid_pixel_on = de_hstart;
+  out.vid_line_on = de_vstart;
+  out.de_hs_addr = de_hstart;
+  out.de_he_addr = de_hstart + d.h_active;
+  out.de_vs_addr = de_vstart;
+  out.de_ve_addr = de_vstart + d.v_active - 1;
 
   // Calculate and Store HSync horizontal and vertical start/stop times
   const uint32_t hstart = (de_hstart + d.h_period - d.hsync_bp - d.hsync_width) % d.h_period;
   const uint32_t hend = (de_hstart + d.h_period - d.hsync_bp) % d.h_period;
-  lcd_timing_.hs_hs_addr = hstart;
-  lcd_timing_.hs_he_addr = hend;
-  lcd_timing_.hs_vs_addr = 0;
-  lcd_timing_.hs_ve_addr = d.v_period - 1;
+  out.hs_hs_addr = hstart;
+  out.hs_he_addr = hend;
+  out.hs_vs_addr = 0;
+  out.hs_ve_addr = d.v_period - 1;
 
   // Calculate and Store VSync horizontal and vertical start/stop times
-  lcd_timing_.vs_hs_addr = (hstart + d.h_period) % d.h_period;
-  lcd_timing_.vs_he_addr = lcd_timing_.vs_hs_addr;
+  out.vs_hs_addr = (hstart + d.h_period) % d.h_period;
+  out.vs_he_addr = out.vs_hs_addr;
   const uint32_t vstart = (de_vstart + d.v_period - d.vsync_bp - d.vsync_width) % d.v_period;
   const uint32_t vend = (de_vstart + d.v_period - d.vsync_bp) % d.v_period;
-  lcd_timing_.vs_vs_addr = vstart;
-  lcd_timing_.vs_ve_addr = vend;
+  out.vs_vs_addr = vstart;
+  out.vs_ve_addr = vend;
+  return out;
 }
 
 zx_status_t Clock::PllLockWait() {
@@ -76,19 +79,21 @@ zx_status_t Clock::PllLockWait() {
   return ZX_ERR_UNAVAILABLE;
 }
 
-zx_status_t Clock::GenerateHPLL(const display_setting_t& d) {
+// static
+zx::status<PllConfig> Clock::GenerateHPLL(const display_setting_t& d) {
+  PllConfig pll_cfg;
   uint32_t pll_fout;
   // Requested Pixel clock
-  pll_cfg_.fout = d.lcd_clock / kKHZ;  // KHz
+  pll_cfg.fout = d.lcd_clock / kKHZ;  // KHz
   // Desired PLL Frequency based on pixel clock needed
-  pll_fout = pll_cfg_.fout * d.clock_factor;
+  pll_fout = pll_cfg.fout * d.clock_factor;
 
   // Make sure all clocks are within range
   // If these values are not within range, we will not have a valid display
-  if ((pll_cfg_.fout > MAX_PIXEL_CLK_KHZ) || (pll_fout < MIN_PLL_FREQ_KHZ) ||
+  if ((pll_cfg.fout > MAX_PIXEL_CLK_KHZ) || (pll_fout < MIN_PLL_FREQ_KHZ) ||
       (pll_fout > MAX_PLL_FREQ_KHZ)) {
     DISP_ERROR("Calculated clocks out of range!\n");
-    return ZX_ERR_OUT_OF_RANGE;
+    return zx::error(ZX_ERR_OUT_OF_RANGE);
   }
 
   // Now that we have valid frequency ranges, let's calculated all the PLL-related
@@ -108,13 +113,13 @@ zx_status_t Clock::GenerateHPLL(const display_setting_t& d) {
         uint32_t fod1 = fod2 * od1;
         if ((fod1 >= MIN_PLL_VCO_KHZ) && (fod1 <= MAX_PLL_VCO_KHZ)) {
           // within range!
-          pll_cfg_.pll_od1_sel = od1 >> 1;
-          pll_cfg_.pll_od2_sel = od2 >> 1;
-          pll_cfg_.pll_od3_sel = od3 >> 1;
-          pll_cfg_.pll_fout = pll_fout;
+          pll_cfg.pll_od1_sel = od1 >> 1;
+          pll_cfg.pll_od2_sel = od2 >> 1;
+          pll_cfg.pll_od3_sel = od3 >> 1;
+          pll_cfg.pll_fout = pll_fout;
           DISP_TRACE("od1=%d, od2=%d, od3=%d\n", (od1 >> 1), (od2 >> 1), (od3 >> 1));
           DISP_TRACE("pll_fvco=%d\n", fod1);
-          pll_cfg_.pll_fvco = fod1;
+          pll_cfg.pll_fvco = fod1;
           // for simplicity, assume n = 1
           // calculate m such that fin x m = fod1
           uint32_t m;
@@ -122,12 +127,12 @@ zx_status_t Clock::GenerateHPLL(const display_setting_t& d) {
           fod1 = fod1 / 1;
           m = fod1 / FIN_FREQ_KHZ;
           pll_frac = (fod1 % FIN_FREQ_KHZ) * PLL_FRAC_RANGE / FIN_FREQ_KHZ;
-          pll_cfg_.pll_m = m;
-          pll_cfg_.pll_n = 1;
-          pll_cfg_.pll_frac = pll_frac;
+          pll_cfg.pll_m = m;
+          pll_cfg.pll_n = 1;
+          pll_cfg.pll_frac = pll_frac;
           DISP_TRACE("m=%d, n=%d, frac=0x%x\n", m, 1, pll_frac);
-          pll_cfg_.bitrate = pll_fout * kKHZ;  // Hz
-          return ZX_OK;
+          pll_cfg.bitrate = pll_fout * kKHZ;  // Hz
+          return zx::ok(std::move(pll_cfg));
         }
         od1 >>= 1;
       }
@@ -137,7 +142,7 @@ zx_status_t Clock::GenerateHPLL(const display_setting_t& d) {
   }
 
   DISP_ERROR("Could not generate correct PLL values!\n");
-  return ZX_ERR_INTERNAL;
+  return zx::error(ZX_ERR_INTERNAL);
 }
 
 void Clock::Disable() {
@@ -161,9 +166,13 @@ zx_status_t Clock::Enable(const display_setting_t& d) {
   }
 
   // Populate internal LCD timing structure based on predefined tables
-  CalculateLcdTiming(d);
-  GenerateHPLL(d);
+  lcd_timing_ = CalculateLcdTiming(d);
+  auto pll_result = GenerateHPLL(d);
+  if (pll_result.is_error()) {
+    return pll_result.status_value();
+  }
 
+  pll_cfg_ = std::move(pll_result.value());
   uint32_t regVal;
   PllConfig* pll_cfg = &pll_cfg_;
   bool useFrac = !!pll_cfg->pll_frac;
