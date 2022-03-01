@@ -4665,7 +4665,7 @@ TEST(NetDatagramTest, DatagramPartialRecv) {
   ASSERT_EQ(recvmsg(recvfd.get(), &msg, 0), kPartialReadSize);
   ASSERT_EQ(msg.msg_namelen, sizeof(addr));
   ASSERT_EQ(std::string_view(recv_buf, kPartialReadSize), kTestMsg.substr(0, kPartialReadSize));
-  EXPECT_EQ(MSG_TRUNC, msg.msg_flags);
+  EXPECT_EQ(msg.msg_flags, MSG_TRUNC);
 
   // Send the second packet.
   ASSERT_EQ(sendto(sendfd.get(), kTestMsg.data(), kTestMsg.size(), 0,
