@@ -32,7 +32,6 @@ static WIRE_FORMAT_TO_FIDL: Lazy<HashMap<u8, fidl_fuchsia_media::AudioSampleForm
             (VIRTIO_SND_PCM_FMT_S16, fidl_fuchsia_media::AudioSampleFormat::Signed16),
             (VIRTIO_SND_PCM_FMT_S24, fidl_fuchsia_media::AudioSampleFormat::Signed24In32),
             (VIRTIO_SND_PCM_FMT_FLOAT, fidl_fuchsia_media::AudioSampleFormat::Float),
-            (VIRTIO_SND_PCM_FMT_FLOAT64, fidl_fuchsia_media::AudioSampleFormat::Float64),
         ])
     });
 
@@ -93,7 +92,6 @@ pub fn bytes_per_frame(stream_type: fidl_fuchsia_media::AudioStreamType) -> usiz
         fidl_fuchsia_media::AudioSampleFormat::Signed16 => 2 * (stream_type.channels as usize),
         fidl_fuchsia_media::AudioSampleFormat::Signed24In32 => 4 * (stream_type.channels as usize),
         fidl_fuchsia_media::AudioSampleFormat::Float => 4 * (stream_type.channels as usize),
-        fidl_fuchsia_media::AudioSampleFormat::Float64 => 8 * (stream_type.channels as usize),
     }
 }
 
@@ -119,7 +117,6 @@ mod tests {
         assert!(*WIRE_FORMATS_SUPPORTED_BITMASK & (1u64 << VIRTIO_SND_PCM_FMT_S16) != 0);
         assert!(*WIRE_FORMATS_SUPPORTED_BITMASK & (1u64 << VIRTIO_SND_PCM_FMT_S24) != 0);
         assert!(*WIRE_FORMATS_SUPPORTED_BITMASK & (1u64 << VIRTIO_SND_PCM_FMT_FLOAT) != 0);
-        assert!(*WIRE_FORMATS_SUPPORTED_BITMASK & (1u64 << VIRTIO_SND_PCM_FMT_FLOAT64) != 0);
 
         // Sample of formats we don't support.
         assert!(*WIRE_FORMATS_SUPPORTED_BITMASK & (1u64 << VIRTIO_SND_PCM_FMT_MU_LAW) == 0);
@@ -144,10 +141,6 @@ mod tests {
         assert_eq!(
             wire_format_to_fidl(VIRTIO_SND_PCM_FMT_FLOAT),
             Some(fidl_fuchsia_media::AudioSampleFormat::Float)
-        );
-        assert_eq!(
-            wire_format_to_fidl(VIRTIO_SND_PCM_FMT_FLOAT64),
-            Some(fidl_fuchsia_media::AudioSampleFormat::Float64)
         );
 
         // Sample of formats we don't support.
@@ -214,14 +207,6 @@ mod tests {
                 frames_per_second: 48000,
             })
         );
-        assert_eq!(
-            16,
-            bytes_per_frame(AudioStreamType {
-                sample_format: ASF::Float64,
-                channels: 2,
-                frames_per_second: 48000,
-            })
-        );
     }
 
     #[test]
@@ -280,17 +265,6 @@ mod tests {
                 zx::Duration::from_millis(10),
                 AudioStreamType {
                     sample_format: ASF::Float,
-                    channels: 2,
-                    frames_per_second: 48000,
-                }
-            )
-        );
-        assert_eq!(
-            Some(480 * 16),
-            bytes_for_duration(
-                zx::Duration::from_millis(10),
-                AudioStreamType {
-                    sample_format: ASF::Float64,
                     channels: 2,
                     frames_per_second: 48000,
                 }

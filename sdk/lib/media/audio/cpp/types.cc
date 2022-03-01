@@ -18,8 +18,6 @@ uint32_t BytesPerSample(fuchsia::media::AudioSampleFormat sample_format) {
       return sizeof(int32_t);
     case fuchsia::media::AudioSampleFormat::FLOAT:
       return sizeof(float);
-    case fuchsia::media::AudioSampleFormat::FLOAT_64:
-      return sizeof(double);
   }
 }
 

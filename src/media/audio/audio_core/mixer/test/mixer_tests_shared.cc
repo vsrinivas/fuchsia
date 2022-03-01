@@ -100,10 +100,6 @@ std::pair<double, double> SampleFormatToAmplitudes(fuchsia::media::AudioSampleFo
       format_amplitude = kFullScaleFloatInputAmplitude;
       double_amplitude = kFullScaleFloatAccumAmplitude;
       break;
-    case fuchsia::media::AudioSampleFormat::FLOAT_64:
-      format_amplitude = kFullScaleFloat64InputAmplitude;
-      double_amplitude = kFullScaleFloat64AccumAmplitude;
-      break;
     default:
       FX_CHECK(false) << "Unsupported source format";
   }

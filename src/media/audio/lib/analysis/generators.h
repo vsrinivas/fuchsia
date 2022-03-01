@@ -102,7 +102,6 @@ AudioBuffer<SampleFormat> GenerateCosineAudio(
         val = round(val / 256.0) * 256;
         break;
       case fuchsia::media::AudioSampleFormat::FLOAT:
-      case fuchsia::media::AudioSampleFormat::FLOAT_64:
         break;
     }
     for (int32_t chan = 0; chan < format.channels(); chan++) {

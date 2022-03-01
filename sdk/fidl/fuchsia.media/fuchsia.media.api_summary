@@ -202,7 +202,6 @@ protocol/member fuchsia.media/AudioRenderer.SetReferenceClock(zx/handle:<CLOCK,o
 protocol/member fuchsia.media/AudioRenderer.SetUsage(fuchsia.media/AudioRenderUsage usage)
 protocol fuchsia.media/AudioRenderer
 enum/member fuchsia.media/AudioSampleFormat.FLOAT 4
-enum/member fuchsia.media/AudioSampleFormat.FLOAT_64 6
 enum/member fuchsia.media/AudioSampleFormat.SIGNED_16 2
 enum/member fuchsia.media/AudioSampleFormat.SIGNED_24_IN_32 3
 enum/member fuchsia.media/AudioSampleFormat.UNSIGNED_8 1

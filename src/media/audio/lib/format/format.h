@@ -66,8 +66,7 @@ class TypedFormat : public Format {
   M(fuchsia::media::AudioSampleFormat::UNSIGNED_8)      \
   M(fuchsia::media::AudioSampleFormat::SIGNED_16)       \
   M(fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32) \
-  M(fuchsia::media::AudioSampleFormat::FLOAT)           \
-  M(fuchsia::media::AudioSampleFormat::FLOAT_64)
+  M(fuchsia::media::AudioSampleFormat::FLOAT)
 
 }  // namespace media::audio
 

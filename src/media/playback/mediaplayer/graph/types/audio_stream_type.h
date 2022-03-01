@@ -18,7 +18,7 @@ namespace media_player {
 // Describes the type of an audio stream.
 class AudioStreamType : public StreamType {
  public:
-  enum class SampleFormat { kNone, kAny, kUnsigned8, kSigned16, kSigned24In32, kFloat, kFloat64 };
+  enum class SampleFormat { kNone, kAny, kUnsigned8, kSigned16, kSigned24In32, kFloat };
 
   static std::unique_ptr<StreamType> Create(std::unique_ptr<Bytes> encryption_parameters,
                                             const std::string& encoding,

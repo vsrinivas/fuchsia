@@ -66,10 +66,11 @@ class SincSamplerTest : public testing::Test {
       fuchsia::media::AudioSampleFormat::SIGNED_16,
       fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32,
       fuchsia::media::AudioSampleFormat::FLOAT,
-      fuchsia::media::AudioSampleFormat::FLOAT_64,
   };
 
-  static constexpr auto kInvalidFormat = static_cast<fuchsia::media::AudioSampleFormat>(-1);
+  static constexpr fuchsia::media::AudioSampleFormat kInvalidFormat =
+      static_cast<fuchsia::media::AudioSampleFormat>(
+          static_cast<int64_t>(kFormats[std::size(kFormats) - 1]) + 1);
 };
 
 // These formats are supported
@@ -437,10 +438,10 @@ TEST_F(SincSamplerPositionTest, FilterWidth) {
 
 // Test basic position advancing, for integer rate and same-sized source and dest buffers.
 TEST_F(SincSamplerPositionTest, SameFrameRate) {
-  auto mixer = SelectSincSampler(1, 1, 48000, 48000, fuchsia::media::AudioSampleFormat::FLOAT_64);
+  auto mixer = SelectSincSampler(1, 1, 48000, 48000, fuchsia::media::AudioSampleFormat::FLOAT);
   ASSERT_NE(mixer, nullptr);
 
-  std::array<double, 50> source{0.0f};
+  std::array<float, 50> source{0.0f};
   const int64_t source_frames = 20;
   Fixed source_offset = ffl::FromRatio(3, 4);
 

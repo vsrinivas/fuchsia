@@ -19,9 +19,9 @@ namespace {
 // SampleNormalizer converts between uint8/int16/int24-in-32 and our internal float format.
 //
 // Validate uint8->float format conversion
-TEST(SampleNormalizerTest, UInt8) {
+TEST(SampleNormalizerTest, UInt8_Basic) {
   const uint8_t data[] = {0x00, 0x40, 0x80, 0xE0};
-  const float expect[] = {-1.0f, -0.5f, 0.0f, 0.75f};
+  const float expect[] = {-1.0, -0.5, 0, 0.75};
 
   for (auto i = 0u; i < std::size(data); ++i) {
     EXPECT_EQ(mixer::SampleNormalizer<uint8_t>::Read(data + i), expect[i]);
@@ -33,9 +33,9 @@ TEST(SampleNormalizerTest, UInt8) {
 }
 
 // Validate int16->float format conversion
-TEST(SampleNormalizerTest, Int16) {
+TEST(SampleNormalizerTest, Int16_Basic) {
   const int16_t data[] = {std::numeric_limits<int16_t>::min(), -0x4000, 0, 0x6000};
-  const float expect[] = {-1.0f, -0.5f, 0.0f, 0.75f};
+  const float expect[] = {-1.0, -0.5, 0, 0.75};
 
   for (auto i = 0u; i < std::size(data); ++i) {
     EXPECT_EQ(mixer::SampleNormalizer<int16_t>::Read(data + i), expect[i]);
@@ -47,9 +47,9 @@ TEST(SampleNormalizerTest, Int16) {
 }
 
 // Validate int24->float format conversion
-TEST(SampleNormalizerTest, Int24) {
+TEST(SampleNormalizerTest, Int24_Basic) {
   const int32_t data[] = {kMinInt24In32, -0x40000000, 0, 0x60000000};
-  const float expect[] = {-1.0f, -0.5f, 0.0f, 0.75f};
+  const float expect[] = {-1.0, -0.5, 0, 0.75};
 
   for (auto i = 0u; i < std::size(data); ++i) {
     EXPECT_EQ(mixer::SampleNormalizer<int32_t>::Read(data + i), expect[i]);
@@ -61,40 +61,12 @@ TEST(SampleNormalizerTest, Int24) {
 }
 
 // Validate float->float format conversion
-TEST(SampleNormalizerTest, Float32) {
-  const float data[] = {-1.0f, -0.7654321f, 0.0f, 0.97531f, 1.0f};
+TEST(SampleNormalizerTest, Float_Basic) {
+  const float data[] = {-1.0, -0.5, 0, 0.75, 1.0};
 
   for (auto i = 0u; i < std::size(data); ++i) {
-    EXPECT_FLOAT_EQ(mixer::SampleNormalizer<float>::Read(data + i), data[i]);
+    EXPECT_EQ(mixer::SampleNormalizer<float>::Read(data + i), data[i]);
   }
-}
-
-// We do no bounds-checking or clamping of incoming float32 values
-TEST(SampleNormalizerTest, Float32_NoBoundsChecking) {
-  const float kAboveRange = 2.0f;
-  const float kBelowRange = -2.0f;
-
-  EXPECT_FLOAT_EQ(mixer::SampleNormalizer<float>::Read(&kAboveRange), kAboveRange);
-  EXPECT_FLOAT_EQ(mixer::SampleNormalizer<float>::Read(&kBelowRange), kBelowRange);
-}
-
-// Validate double->float format conversion
-TEST(SampleNormalizerTest, Float64) {
-  const double data[] = {-1.0, -0.7654321, 0, 0.975310246, 1.0};
-  const float expect[] = {-1.0f, -0.7654321f, 0.0f, 0.975310246f, 1.0f};
-
-  for (auto i = 0u; i < std::size(data); ++i) {
-    EXPECT_FLOAT_EQ(mixer::SampleNormalizer<double>::Read(data + i), expect[i]);
-  }
-}
-
-// We do no bounds-checking or clamping of incoming float64 values
-TEST(SampleNormalizerTest, Float64_NoBoundsChecking) {
-  const double kAboveRange = 2.0;
-  const double kBelowRange = -2.0;
-
-  EXPECT_FLOAT_EQ(mixer::SampleNormalizer<double>::Read(&kAboveRange), kAboveRange);
-  EXPECT_FLOAT_EQ(mixer::SampleNormalizer<double>::Read(&kBelowRange), kBelowRange);
 }
 
 //

@@ -70,15 +70,6 @@ struct SampleFormatTraits<fuchsia::media::AudioSampleFormat::FLOAT> {
   static constexpr size_t kCharsPerSample = 9;
 };
 
-template <>
-struct SampleFormatTraits<fuchsia::media::AudioSampleFormat::FLOAT_64> {
-  using SampleT = double;
-  static constexpr SampleT kSilentValue = 0;
-  static float ToFloat(SampleT sample) { return static_cast<float>(sample); }
-  static std::string ToString(SampleT sample) { return fxl::StringPrintf("%10.7lf", sample); }
-  static constexpr size_t kCharsPerSample = 10;
-};
-
 }  // namespace media::audio
 
 #endif  // SRC_MEDIA_AUDIO_LIB_FORMAT_TRAITS_H_

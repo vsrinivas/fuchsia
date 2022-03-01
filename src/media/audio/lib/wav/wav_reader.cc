@@ -98,8 +98,7 @@ fpromise::result<std::unique_ptr<WavReader>, zx_status_t> WavReader::Open(
     return fpromise::error(ZX_ERR_IO);
   }
   if (wav_header.bits_per_sample != 8 && wav_header.bits_per_sample != 16 &&
-      wav_header.bits_per_sample != 24 && wav_header.bits_per_sample != 32 &&
-      wav_header.bits_per_sample != 64) {
+      wav_header.bits_per_sample != 24 && wav_header.bits_per_sample != 32) {
     FX_LOGS(WARNING) << "read WAV header failed for " << std::quoted(file_name)
                      << ", unsupported bits_per_sample: " << wav_header.bits_per_sample;
     return fpromise::error(ZX_ERR_IO);

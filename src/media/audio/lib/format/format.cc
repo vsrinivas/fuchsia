@@ -35,7 +35,6 @@ bool Validate(fuchsia::media::AudioStreamType stream_type) {
     case fuchsia::media::AudioSampleFormat::SIGNED_16:
     case fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32:
     case fuchsia::media::AudioSampleFormat::FLOAT:
-    case fuchsia::media::AudioSampleFormat::FLOAT_64:
       break;
     default:
       FX_LOGS(ERROR) << "Bad sample format " << fidl::ToUnderlying(stream_type.sample_format);
@@ -96,11 +95,6 @@ Format::Format(fuchsia::media::AudioStreamType stream_type) : stream_type_(strea
     case fuchsia::media::AudioSampleFormat::FLOAT:
       bytes_per_frame_ = 4;
       valid_bits_per_channel_ = 32;
-      break;
-
-    case fuchsia::media::AudioSampleFormat::FLOAT_64:
-      bytes_per_frame_ = 8;
-      valid_bits_per_channel_ = 64;
       break;
   }
 
