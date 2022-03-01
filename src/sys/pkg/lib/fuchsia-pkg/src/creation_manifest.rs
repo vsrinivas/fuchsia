@@ -102,7 +102,7 @@ impl CreationManifest {
     ///       "lib/mylib.so": "build/system/path/mylib.so"
     ///     },
     ///    "/meta/": {
-    ///      "my_component_manifest.cmx": "other/build/system/path/my_component_manifest.cmx"
+    ///      "my_component_manifest.cml": "other/build/system/path/my_component_manifest.cml"
     ///    }
     /// }"#;
     /// let creation_manifest = CreationManifest::from_json(json_string.as_bytes());
@@ -177,7 +177,7 @@ impl CreationManifest {
     /// # use fuchsia_pkg::CreationManifest;
     /// let fini_string = "\
     ///     lib/mylib.so=build/system/path/mylib.so\n\
-    ///     meta/my_component_manifest.cmx=other/build/system/path/my_component_manifest.cmx\n";
+    ///     meta/my_component_manifest.cml=other/build/system/path/my_component_manifest.cml\n";
     ///
     /// let creation_manifest = CreationManifest::from_pm_fini(fini_string.as_bytes()).unwrap();
     /// ```
