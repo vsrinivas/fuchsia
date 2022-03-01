@@ -349,18 +349,21 @@ void AmlogicDisplay::DisplayControllerImplApplyConfiguration(
 
   zx_status_t status;
   if (display_count == 1 && display_configs[0]->layer_count) {
+    // Setting up OSD may require Vout framebuffer information, which may be
+    // changed on each ApplyConfiguration(), so we need to apply the
+    // configuration to Vout first before initializing the display and OSD.
+    status = vout_->ApplyConfiguration(&display_configs[0]->mode);
+    if (status != ZX_OK) {
+      DISP_ERROR("Could not apply config to Vout! %d\n", status);
+      return;
+    }
+
     if (!fully_initialized()) {
       if ((status = DisplayInit()) != ZX_OK) {
         DISP_ERROR("Display Hardware Initialization failed! %d\n", status);
         ZX_ASSERT(0);
       }
       set_fully_initialized();
-    }
-
-    status = vout_->ApplyConfiguration(&display_configs[0]->mode);
-    if (status != ZX_OK) {
-      DISP_ERROR("Could not apply config to Vout! %d\n", status);
-      return;
     }
 
     // The only way a checked configuration could now be invalid is if display was
