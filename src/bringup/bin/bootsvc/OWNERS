@@ -1,0 +1,6 @@
+# Bootsvc is no longer doing anything and is on the cusp of being removed, so this is to
+# prevent any business logic from being added back to bootsvc.
+set noparent
+
+dahastin@google.com
+abdulla@google.com
