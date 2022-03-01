@@ -7,6 +7,7 @@
 package reboottest
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -24,9 +25,37 @@ const (
 	UncleanReboot
 )
 
-// RebootWithCommand is a test helper that boots a qemu instance then reboots
-// it by issuing cmd.
-func RebootWithCommand(t *testing.T, cmd string, kind ExpectedRebootType, zbi_name string) {
+// Copied from zircon/kernel/include/platform.h
+type HaltAction int
+
+const (
+	Halt HaltAction = iota
+	Reboot
+	RebootBootloader
+	RebootRecovery
+	Shutdown
+)
+
+// Copied from zircon/system/public/zircon/boot/crash-reason.h
+type CrashReason int
+
+const (
+	Invalid CrashReason = iota
+	Unknown
+	NoCrash
+	OOM
+	Panic
+	SoftwareWatchdog
+	UserspaceRootJobTermination
+)
+
+// RebootWithCommand is a test helper that boots a qemu instance, reboots it by issuing |cmd|,
+// and then verifies the results with the following expectations:
+//
+// eKind   - Whether it's expected to be a clean or unclean reboot.
+// eAction - The expected halt action taken.
+// eReason - The expected halt reason.
+func RebootWithCommand(t *testing.T, cmd string, eKind ExpectedRebootType, eAction HaltAction, eReason CrashReason) {
 	e := execDir(t)
 	distro := emulatortest.UnpackFrom(t, filepath.Join(e, "test_data"), emulator.DistributionParams{
 		Emulator: emulator.Qemu,
@@ -53,13 +82,14 @@ func RebootWithCommand(t *testing.T, cmd string, kind ExpectedRebootType, zbi_na
 	// Trigger a reboot in one of the various ways.
 	i.RunCommand(cmd)
 
-	if kind == CleanReboot {
+	if eKind == CleanReboot {
 		// Make sure the file system is notified and unmounts.
 		i.WaitForLogMessage("fshost shutdown complete")
 	}
 
-	// Is the target rebooting?
-	i.WaitForLogMessage("Shutting down debuglog")
+	// The suggested next action and the reason that this halt happened.
+	haltMsg := fmt.Sprintf("platform_halt suggested_action %d reason %d", eAction, eReason)
+	i.WaitForLogMessage(haltMsg)
 
 	// See that the target comes back up.
 	i.WaitForLogMessage("welcome to Zircon")

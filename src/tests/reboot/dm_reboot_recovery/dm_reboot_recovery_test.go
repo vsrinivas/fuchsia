@@ -16,5 +16,5 @@ import (
 // However, in this test environment we have no recovery partition so the
 // system will end up back where it started.
 func TestDmRebootRecovery(t *testing.T) {
-	reboottest.RebootWithCommand(t, "dm reboot-recovery", reboottest.CleanReboot, "fuchsia.zbi")
+	reboottest.RebootWithCommand(t, "dm reboot-recovery", reboottest.CleanReboot, reboottest.RebootRecovery, reboottest.NoCrash)
 }

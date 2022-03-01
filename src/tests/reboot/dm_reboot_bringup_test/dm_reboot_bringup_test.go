@@ -16,5 +16,5 @@ import (
 // doesn't have storage. Bringup must shutdown cleanly without some components
 // that normally live in storage (like PowerManager).
 func TestDmReboot(t *testing.T) {
-	reboottest.RebootWithCommand(t, "dm reboot", reboottest.CleanReboot, "bringup.zbi")
+	reboottest.RebootWithCommand(t, "dm reboot", reboottest.CleanReboot, reboottest.Reboot, reboottest.NoCrash)
 }

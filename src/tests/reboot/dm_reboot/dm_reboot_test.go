@@ -12,5 +12,5 @@ import (
 
 // Test that "dm reboot" will reboot the system.
 func TestDmReboot(t *testing.T) {
-	reboottest.RebootWithCommand(t, "dm reboot", reboottest.CleanReboot, "fuchsia.zbi")
+	reboottest.RebootWithCommand(t, "dm reboot", reboottest.CleanReboot, reboottest.Reboot, reboottest.NoCrash)
 }

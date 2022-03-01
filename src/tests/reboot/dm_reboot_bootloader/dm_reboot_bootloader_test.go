@@ -16,5 +16,5 @@ import (
 // However, in this test environment it will simply reboot and the system will
 // end up back where it started.
 func TestDmRebootBootloader(t *testing.T) {
-	reboottest.RebootWithCommand(t, "dm reboot-bootloader", reboottest.CleanReboot, "fuchsia.zbi")
+	reboottest.RebootWithCommand(t, "dm reboot-bootloader", reboottest.CleanReboot, reboottest.RebootBootloader, reboottest.NoCrash)
 }
