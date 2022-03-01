@@ -680,9 +680,10 @@ bool TestLogOccurrence(CobaltTestAppLogger* logger, SystemClockInterface* clock,
       {{cobalt_registry::kConnectionAttemptsNewMetricId,
         cobalt_registry::kConnectionAttemptsNewConnectionAttemptsPerDeviceCountReportId},
        1},
-      {{cobalt_registry::kErrorOccurredNewMetricId,
-        cobalt_registry::kErrorOccurredNewErrorCountsExperimentReportId},
-       1},
+      // TODO(fxbug.dev/85440): Temporarily disable this test until fxrev.dev/602370 rolls.
+      // {{cobalt_registry::kErrorOccurredNewMetricId,
+      //   cobalt_registry::kErrorOccurredNewErrorCountsExperimentReportId},
+      //  1},
   };
   std::map<std::pair<uint32_t, uint32_t>, uint64_t> expect_no_obs{
       {{cobalt_registry::kFeaturesActiveNewMetricId,
