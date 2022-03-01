@@ -11,7 +11,7 @@ use {
     fidl_fuchsia_bluetooth_sys as sys,
     fuchsia_bluetooth::expectation::{
         asynchronous::{ExpectableExt, ExpectableStateExt},
-        Predicate as P,
+        Predicate,
     },
     fuchsia_bluetooth::{
         constants::INTEGRATION_TIMEOUT,
@@ -61,22 +61,14 @@ async fn test_add_and_commit_identities(
 ) -> Result<(), Error> {
     let bootstrap = bootstrap.aux().clone();
 
-    let access_proxy = access.aux().clone();
-    // We avoid using an assert here because the unwinding causes the ActivatedFakeHost to
-    // panic during the unwind which then just aborts. This provides a much clearer and more
-    // graceful failure case
-    let (initial_devices, _) = access_proxy
-        .watch_peers()
+    let initial_device_empty_pred = Predicate::<AccessState>::predicate(
+        |access| access.peers.is_empty(),
+        "no peers in access state",
+    );
+    let _ = access
+        .when_satisfied(initial_device_empty_pred, INTEGRATION_TIMEOUT)
         .await
-        .ok()
-        .ok_or(format_err!("Missing response to WatchPeers()"))?;
-    if initial_devices != vec![] {
-        return Err(format_err!(
-            "Failed: Initial devices not empty! Expected empty, found: {:?}",
-            initial_devices
-        ));
-    }
-
+        .expect("initial devices not empty!");
     let identity = example_emulator_identity();
 
     let expected_peers: HashSet<PeerId> = identity.bonds.iter().map(|b| b.identifier).collect();
@@ -85,7 +77,7 @@ async fn test_add_and_commit_identities(
     bootstrap.add_identities(&mut identities.into_iter()).context("Error adding identities")?;
     bootstrap.commit().await?.map_err(|e| format_err!("Error committing bonds: {:?}", e))?;
 
-    let pred = P::<AccessState>::predicate(
+    let pred = Predicate::<AccessState>::predicate(
         move |access| expected_peers == access.peers.keys().cloned().collect(),
         "known device identifiers == expected device identifiers",
     );
