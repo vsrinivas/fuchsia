@@ -130,7 +130,7 @@ mod tests {
             Test {
                 profile: fintl::Profile {
                     locales: Some(vec![
-                        fintl::LocaleId { id: "sr-RS".to_string() },
+                        fintl::LocaleId { id: "en-US".to_string() },
                         fintl::LocaleId { id: "nl-NL".to_string() },
                     ]),
                     calendars: Some(vec![fintl::CalendarId {
@@ -143,7 +143,7 @@ mod tests {
                 timestamp_ms: 0,
                 result: vec![
                     "\nA wise one knows the time...\n\n",
-                    "четвртак, 01. јануар 1970. 00:00:00 GMT\n",
+                    "Thursday, January 1, 1970 at 12:00:00 AM GMT\n",
                     "donderdag 1 januari 1970 om 00:00:00 GMT",
                     "\n\nBut is it the 𝒄𝒐𝒓𝒓𝒆𝒄𝒕 time?\n",
                 ]
@@ -153,7 +153,7 @@ mod tests {
             Test {
                 profile: fintl::Profile {
                     locales: Some(vec![
-                        fintl::LocaleId { id: "sr-RS".to_string() },
+                        fintl::LocaleId { id: "en-US".to_string() },
                         fintl::LocaleId { id: "nl-NL".to_string() },
                     ]),
                     calendars: Some(vec![fintl::CalendarId {
@@ -167,22 +167,18 @@ mod tests {
                 },
                 timestamp_ms: 100000000, // About a day after the Unix Epoch
                 result: vec![
-                   "\nA wise one knows the time...\n\n",
-                   "четвртак, 01. јануар 1970. 19:46:40 Северноамеричко пацифичко стандардно време\n",
-                   "donderdag 1 januari 1970 om 19:46:40 Pacific-standaardtijd",
-                   "\n\nBut is it the 𝒄𝒐𝒓𝒓𝒆𝒄𝒕 time?\n",
+                    "\nA wise one knows the time...\n\n",
+                    "Thursday, January 1, 1970 at 7:46:40 PM Pacific Standard Time\n",
+                    "donderdag 1 januari 1970 om 19:46:40 Pacific-standaardtijd",
+                    "\n\nBut is it the 𝒄𝒐𝒓𝒓𝒆𝒄𝒕 time?\n",
                 ]
                 .concat()
                 .to_string(),
             },
             Test {
                 profile: fintl::Profile {
-                    locales: Some(vec![
-                        fintl::LocaleId { id: "en-US".to_string() },
-                    ]),
-                    calendars: Some(vec![fintl::CalendarId {
-                        id: "und-u-ca-hebrew".to_string(),
-                    }]),
+                    locales: Some(vec![fintl::LocaleId { id: "en-US".to_string() }]),
+                    calendars: Some(vec![fintl::CalendarId { id: "und-u-ca-hebrew".to_string() }]),
                     temperature_unit: Some(fintl::TemperatureUnit::Celsius),
                     time_zones: Some(vec![fintl::TimeZoneId {
                         id: "America/New_York".to_string(),
@@ -191,21 +187,19 @@ mod tests {
                 },
                 timestamp_ms: 100000000, // About a day after the Unix Epoch
                 result: vec![
-                   "\nA wise one knows the time...\n\n",
-                   "Thursday, Tevet 23, 5730 at 10:46:40 PM Eastern Standard Time",
-                   "\n\nBut is it the 𝒄𝒐𝒓𝒓𝒆𝒄𝒕 time?\n",
+                    "\nA wise one knows the time...\n\n",
+                    "Thursday, Tevet 23, 5730 at 10:46:40 PM Eastern Standard Time",
+                    "\n\nBut is it the 𝒄𝒐𝒓𝒓𝒆𝒄𝒕 time?\n",
                 ]
                 .concat()
                 .to_string(),
             },
             Test {
                 profile: fintl::Profile {
-                    locales: Some(vec![
-                        fintl::LocaleId { id: "ar-AU-u-ca-hebrew-fw-tuesday-nu-traditio-tz-usnyc".to_string() },
-                    ]),
-                    calendars: Some(vec![fintl::CalendarId {
-                        id: "und-u-ca-islamic".to_string(),
+                    locales: Some(vec![fintl::LocaleId {
+                        id: "ar-AU-u-ca-hebrew-fw-tuesday-nu-traditio-tz-usnyc".to_string(),
                     }]),
+                    calendars: Some(vec![fintl::CalendarId { id: "und-u-ca-islamic".to_string() }]),
                     temperature_unit: Some(fintl::TemperatureUnit::Celsius),
                     time_zones: Some(vec![fintl::TimeZoneId {
                         id: "America/New_York".to_string(),
@@ -214,9 +208,9 @@ mod tests {
                 },
                 timestamp_ms: 100000000, // About a day after the Unix Epoch
                 result: vec![
-                   "\nA wise one knows the time...\n\n",
-                   "الخميس، ٢٣ شوال ١٣٨٩ هـ في ١٠:٤٦:٤٠ م التوقيت الرسمي الشرقي لأمريكا الشمالية",
-                   "\n\nBut is it the 𝒄𝒐𝒓𝒓𝒆𝒄𝒕 time?\n",
+                    "\nA wise one knows the time...\n\n",
+                    "الخميس، ٢٣ شوال ١٣٨٩ هـ في ١٠:٤٦:٤٠ م التوقيت الرسمي الشرقي لأمريكا الشمالية",
+                    "\n\nBut is it the 𝒄𝒐𝒓𝒓𝒆𝒄𝒕 time?\n",
                 ]
                 .concat()
                 .to_string(),
