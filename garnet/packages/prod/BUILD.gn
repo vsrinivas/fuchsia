@@ -186,7 +186,6 @@ group("drivers-system") {
     "//garnet/packages/prod:bluetooth_drivers",
     "//src/connectivity/ppp/drivers",
     "//src/connectivity/telephony/drivers:prod-drivers",
-    "//src/media/drivers",
   ]
 }
 
