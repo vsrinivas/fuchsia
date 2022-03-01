@@ -14,7 +14,6 @@ import 'package:ermine/src/services/settings/task_service.dart';
 import 'package:ermine/src/services/settings/timezone_service.dart';
 import 'package:ermine/src/services/settings/volume_service.dart';
 import 'package:ermine/src/services/settings/wifi_service.dart';
-import 'package:ermine/src/services/shortcuts_service.dart';
 import 'package:ermine/src/states/settings_state.dart';
 import 'package:ermine_utils/ermine_utils.dart';
 import 'package:flutter/material.dart' hide Action;
@@ -217,7 +216,7 @@ class SettingsStateImpl with Disposable implements SettingsState, TaskService {
   final WiFiService wifiService;
 
   SettingsStateImpl({
-    required ShortcutsService shortcutsService,
+    required this.shortcutBindings,
     required this.timezoneService,
     required this.dateTimeService,
     required this.networkService,
@@ -227,8 +226,7 @@ class SettingsStateImpl with Disposable implements SettingsState, TaskService {
     required this.channelService,
     required this.volumeService,
     required this.wifiService,
-  })  : shortcutBindings = shortcutsService.keyboardBindings,
-        _timezones = _loadTimezones(),
+  })  : _timezones = _loadTimezones(),
         _selectedTimezone = timezoneService.timezone.asObservable() {
     dateTimeService.onChanged = updateDateTime;
     timezoneService.onChanged =

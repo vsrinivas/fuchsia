@@ -12,7 +12,6 @@ import 'package:ermine/src/services/settings/task_service.dart';
 import 'package:ermine/src/services/settings/timezone_service.dart';
 import 'package:ermine/src/services/settings/volume_service.dart';
 import 'package:ermine/src/services/settings/wifi_service.dart';
-import 'package:ermine/src/services/shortcuts_service.dart';
 import 'package:ermine/src/states/settings_state_impl.dart';
 import 'package:ermine/src/widgets/quick_settings.dart';
 import 'package:ermine/src/widgets/settings/setting_details.dart';
@@ -86,9 +85,10 @@ abstract class SettingsState implements TaskService {
   String get currentNetwork;
   bool get clientConnectionsEnabled;
 
-  factory SettingsState.from({required ShortcutsService shortcutsService}) {
+  factory SettingsState.from(
+      {required Map<String, Set<String>> shortcutBindings}) {
     return SettingsStateImpl(
-      shortcutsService: shortcutsService,
+      shortcutBindings: shortcutBindings,
       timezoneService: TimezoneService(),
       dateTimeService: DateTimeService(),
       networkService: NetworkAddressService(),

@@ -11,6 +11,7 @@ import 'package:ermine/src/states/view_state.dart';
 import 'package:ermine/src/widgets/app.dart';
 import 'package:ermine/src/widgets/app_view.dart';
 import 'package:ermine/src/widgets/overlays.dart';
+import 'package:ermine/src/widgets/dialogs/dialogs.dart';
 import 'package:ermine_utils/ermine_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -40,7 +41,7 @@ void main() async {
     final controller = StreamController<Locale>();
     final stream = controller.stream.asObservable();
     when(state.locale).thenAnswer((_) => stream.value);
-    when(state.views).thenAnswer((_) => <ViewState>[].asObservable());
+    when(state.views).thenAnswer((_) => <ViewState>[]);
     when(state.overlaysVisible).thenAnswer((_) => false);
     when(state.dialogsVisible).thenAnswer((_) => false);
 
@@ -71,7 +72,7 @@ void main() async {
     when(state.locale).thenAnswer((_) => stream.value);
 
     // Create one view.
-    when(state.views).thenAnswer((_) => [MockViewState()].asObservable());
+    when(state.views).thenAnswer((_) => [MockViewState()]);
     // Show overlays.
     when(state.overlaysVisible).thenAnswer((_) => true);
     when(state.dialogsVisible).thenAnswer((_) => false);
@@ -80,6 +81,29 @@ void main() async {
     await tester.pumpAndSettle();
     expect(find.byKey(ValueKey(AppView)), findsOneWidget);
     expect(find.byKey(ValueKey(Overlays)), findsOneWidget);
+    await controller.close();
+  });
+
+  testWidgets('Dialogs are visible', (tester) async {
+    final controller = StreamController<Locale>();
+    final stream =
+        controller.stream.asObservable(initialValue: Locale('en', 'US'));
+    when(state.locale).thenAnswer((_) => stream.value);
+    when(state.views).thenAnswer((_) => []);
+
+    // Show dialogs.
+    final dialogsVisible = true.asObservable();
+    when(state.overlaysVisible).thenAnswer((_) => false);
+    when(state.dialogsVisible).thenAnswer((_) => dialogsVisible.value);
+
+    await tester.pumpWidget(app);
+    await tester.pumpAndSettle();
+    expect(find.byKey(ValueKey(Dialogs)), findsOneWidget);
+
+    runInAction(() => dialogsVisible.value = false);
+    await tester.pumpAndSettle();
+    expect(find.byKey(ValueKey(Dialogs)), findsNothing);
+
     await controller.close();
   });
 }
