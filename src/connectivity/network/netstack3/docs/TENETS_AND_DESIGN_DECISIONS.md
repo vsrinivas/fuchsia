@@ -64,4 +64,60 @@ reflects the module/feature/component the trait is for.
 See the [DAD implementation] for an example of an implementation defining its
 dependencies through a `Context` trait with narrowly scoped tests.
 
+## Do not assume exclusive access to state
+
+Interfaces/traits defining API boundaries should be written in a way that is
+agnostic to whether or not they have exclusive access to state.
+
+It is okay to assume exclusive access within an API boundary, generally within a
+module such as PMTU, fragmentation and IP devices.
+
+### Background
+
+[Originally in Netstack3], a single structure was passed around to hold the
+state for all of the netstack. Every operation would receive an immutable or
+mutable reference to the state to get or update state as everything was
+implemented assuming a single threaded environment so there was no need for
+locking/shared state.
+
+Note that we are actively working to move away from this. See below.
+
+### Why?
+
+Netstack3 will need to support running in a multi-threaded environment and as a
+result, share state across threads. Assuming exclusive access makes it
+impossible to share the state with other workers/threads that may need
+concurrent access to shared state.
+
+### How?
+
+Use the `with_state` pattern; functions that accept a callback which take a
+reference to state (see Patterns below).
+
+The specific details are to be determined. The work to research/experiment and
+then finally migrate Netstack3 to a world where interior-mutability is the norm
+is captured in <https://fxbug.dev/48578>.
+
+#### Patterns
+```rust
+trait Context {
+    // Do not return mutable references to state from context traits as this
+    // assumes exclusive access.
+    //
+    // Note that when using types like `Rc` and `Arc` with `RefCell` and
+    // `Mutex`/`RwLock`, it is not possible to safely return a reference to
+    // state that is not wrapped in a guard type.
+    fn get_state_mut(&mut self) -> &mut State;
+
+    // Ok to accept a callback that accepts a mutable reference as the shared
+    // state is passed through API boundaries (the `with_state_mut` method)
+    // without assuming exclusive access.
+    //
+    // Note that encoding exclusivity is more powerful and should be preferred
+    // where possible.
+    fn with_state_mut<O, F: FnOnce(&mut State) -> O>(&mut self) -> O;
+}
+```
+
 [DAD implementation]: https://fuchsia-review.googlesource.com/c/fuchsia/+/648202
+[Originally in Netstack3]: https://cs.opensource.google/fuchsia/fuchsia/+/07b825aab40438237b2c47239786aae08c179139:src/connectivity/network/netstack3/
