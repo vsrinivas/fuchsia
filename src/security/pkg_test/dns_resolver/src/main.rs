@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use {
+    argh::{from_env, FromArgs},
     fidl_fuchsia_net::{IpAddress, Ipv4Address},
     fidl_fuchsia_net_name::{LookupRequest, LookupRequestStream, LookupResult},
     fuchsia_async::{
@@ -11,9 +12,18 @@ use {
     },
     fuchsia_component::server::ServiceFs,
     fuchsia_syslog::{fx_log_info, init},
-    security_pkg_test_util::{default_target_config_path, load_config},
+    security_pkg_test_util::load_config,
     std::net::Ipv4Addr,
 };
+
+/// Flags for dns_resolver.
+#[derive(FromArgs, Debug, PartialEq)]
+pub struct Args {
+    /// absolute path to shared test configuration file understood by
+    /// security_pkg_test_util::load_config().
+    #[argh(option)]
+    test_config_path: String,
+}
 
 fn localhost() -> IpAddress {
     IpAddress::Ipv4(Ipv4Address { addr: Ipv4Addr::LOCALHOST.octets() })
@@ -24,8 +34,10 @@ async fn main() {
     init().unwrap();
 
     fx_log_info!("Starting fake DNS component");
+    let args @ Args { test_config_path } = &from_env();
+    fx_log_info!("Initalizing fake DNS component with {:?}", args);
 
-    let pkg_server_host = load_config(default_target_config_path()).update_domain;
+    let pkg_server_host = load_config(test_config_path).update_domain;
 
     let mut fs = ServiceFs::new();
     fs.dir("svc").add_fidl_service(move |mut stream: LookupRequestStream| {

@@ -4,6 +4,7 @@
 
 use {
     anyhow::Result,
+    argh::{from_env, FromArgs},
     fidl::endpoints::{create_endpoints, create_proxy, ServerEnd},
     fidl_fuchsia_io::{
         DirectoryMarker, DirectoryProxy, VmoFlags, MODE_TYPE_DIRECTORY, OPEN_RIGHT_EXECUTABLE,
@@ -29,19 +30,42 @@ use {
         directory::{open_file, open_in_namespace},
         read_file_bytes,
     },
-    security_pkg_test_util::{default_target_config_path, load_config},
+    security_pkg_test_util::load_config,
     std::{convert::TryInto, fs::File},
 };
 
 const PKGFS_PATH: &str = "/pkgfs";
 const DEFAULT_DOMAIN: &str = "fuchsia.com";
 const HELLO_WORLD_PACKAGE_NAME: &str = "hello_world";
-const HELLO_WORLD_V0_META_FAR_PATH: &str = "/pkg/data/assemblies/v0/hello_world/meta.far";
 const HELLO_WORLD_V0_PACKAGED_BINARY_PATH: &str = "bin/hello_world_v0";
-const HELLO_WORLD_V1_META_FAR_PATH: &str = "/pkg/data/assemblies/v1/hello_world/meta.far";
 const HELLO_WORLD_V1_PACKAGED_BINARY_PATH: &str = "bin/hello_world_v1";
-const HELLO_WORLD_V1_UPDATE_FAR_PATH: &str =
-    "/pkg/data/assemblies/access_ota_blob_as_executable_v1/update/update.far";
+
+/// Flags for access_ota_blob_as_executable.
+#[derive(FromArgs, Debug, PartialEq)]
+pub struct Args {
+    /// absolute path to hello world v0 meta.far file used for designating its
+    /// merkle root hash.
+    #[argh(option)]
+    hello_world_v0_meta_far_path: String,
+    /// absolute path to hello world v1 meta.far file used for designating its
+    /// merkle root hash.
+    #[argh(option)]
+    hello_world_v1_meta_far_path: String,
+    /// absolute path to v1 update package (update.far) file used for
+    /// designating its merkle root hash.
+    #[argh(option)]
+    v1_update_far_path: String,
+    /// absolute path to shared test configuration file understood by
+    /// security_pkg_test_util::load_config().
+    #[argh(option)]
+    test_config_path: String,
+
+    /// switch used by rust test runner.
+    #[argh(switch)]
+    // TODO(fxbug.dev/84729)
+    #[allow(unused)]
+    nocapture: bool,
+}
 
 struct ReadableExecutableResult {
     /// Status of attempt to open-as-readable and read.
@@ -362,10 +386,10 @@ async fn get_local_package_server_url() -> String {
     connect_to_protocol::<PackageServer_Marker>().unwrap().get_url().await.unwrap()
 }
 
-async fn get_hello_world_v1_update_merkle() -> Hash {
+async fn get_hello_world_v1_update_merkle(v1_update_far_path: String) -> Hash {
     let (sender, receiver) = channel::<Hash>();
     Task::local(async move {
-        let mut hello_world_v1_update = File::open(HELLO_WORLD_V1_UPDATE_FAR_PATH).unwrap();
+        let mut hello_world_v1_update = File::open(&v1_update_far_path).unwrap();
         let hello_world_v1_update_merkle =
             MerkleTree::from_reader(&mut hello_world_v1_update).unwrap().root();
         sender.send(hello_world_v1_update_merkle).unwrap();
@@ -424,8 +448,18 @@ async fn perform_update(update_url: &str) {
 
 #[fuchsia::test]
 async fn access_ota_blob_as_executable() {
+    fx_log_info!("Starting access_ota_blob_as_executable test");
+    let args @ Args {
+        hello_world_v0_meta_far_path,
+        hello_world_v1_meta_far_path,
+        v1_update_far_path,
+        test_config_path,
+        ..
+    } = &from_env();
+    fx_log_info!("Initalizing access_ota_blob_as_executable with {:?}", args);
+
     // Load test environment configuration.
-    let config = load_config(default_target_config_path());
+    let config = load_config(test_config_path);
 
     // Setup storage capabilities.
     let pkg_resolver_storage_proxy = get_storage_for_component_instance("./pkg-resolver").await;
@@ -447,7 +481,7 @@ async fn access_ota_blob_as_executable() {
                 package_name: HELLO_WORLD_PACKAGE_NAME.to_string(),
                 domain_with_hash: config.update_domain.clone(),
                 domain_without_hash: DEFAULT_DOMAIN.to_string(),
-                local_package_path: HELLO_WORLD_V0_META_FAR_PATH.to_string(),
+                local_package_path: hello_world_v0_meta_far_path.to_string(),
                 packaged_binary_path: HELLO_WORLD_V0_PACKAGED_BINARY_PATH.to_string(),
             },
             selectors: AccessCheckSelectors::all(),
@@ -459,7 +493,7 @@ async fn access_ota_blob_as_executable() {
                 package_name: HELLO_WORLD_PACKAGE_NAME.to_string(),
                 domain_with_hash: config.update_domain.clone(),
                 domain_without_hash: DEFAULT_DOMAIN.to_string(),
-                local_package_path: HELLO_WORLD_V1_META_FAR_PATH.to_string(),
+                local_package_path: hello_world_v1_meta_far_path.to_string(),
                 packaged_binary_path: HELLO_WORLD_V1_PACKAGED_BINARY_PATH.to_string(),
             },
             selectors: AccessCheckSelectors {
@@ -479,7 +513,7 @@ async fn access_ota_blob_as_executable() {
                 package_name: "pkgfs".to_string(),
                 domain_with_hash: config.update_domain.clone(),
                 domain_without_hash: DEFAULT_DOMAIN.to_string(),
-                local_package_path: HELLO_WORLD_V1_META_FAR_PATH.to_string(),
+                local_package_path: hello_world_v1_meta_far_path.to_string(),
                 packaged_binary_path: HELLO_WORLD_V1_PACKAGED_BINARY_PATH.to_string(),
             },
             selectors: AccessCheckSelectors {
@@ -497,7 +531,7 @@ async fn access_ota_blob_as_executable() {
     // Setup package server and perform pre-update access check.
     let (hello_world_v0_access_check_result, update_merkle, package_server_url) = join!(
         hello_world_v0_access_check.perform_access_check(),
-        get_hello_world_v1_update_merkle(),
+        get_hello_world_v1_update_merkle(v1_update_far_path.to_string()),
         get_local_package_server_url()
     );
 

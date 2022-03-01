@@ -8,8 +8,6 @@ use {
     std::fs::read_to_string,
 };
 
-const CONFIG_PATH: &str = "/pkg/data/test_config.json5";
-
 /// Shared configuration file for security package delivery tests.
 #[derive(Serialize, Deserialize)]
 pub struct Config {
@@ -17,12 +15,7 @@ pub struct Config {
     pub update_domain: String,
 }
 
-/// Default path in fuchsia test packages where test the configuration file is
-/// stored.
-pub fn default_target_config_path() -> &'static str {
-    CONFIG_PATH
-}
-
+/// Load shared security package delivery test configuration from file path.
 pub fn load_config(config_path: &str) -> Config {
     from_str(&read_to_string(config_path).unwrap()).unwrap()
 }

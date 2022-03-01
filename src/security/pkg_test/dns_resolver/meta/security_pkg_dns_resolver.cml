@@ -8,6 +8,10 @@
     ],
     program: {
         binary: "bin/security_pkg_dns_resolver",
+        args: [
+            "--test-config-path",
+            "/pkg/data/test_config.json5",
+        ],
     },
     capabilities: [
         { protocol: "fuchsia.net.name.Lookup" },

@@ -11,10 +11,6 @@ import(
 template("access_ota_blob_as_executable") {
   assert(defined(invoker.base_packages),
          "base_packages must be defined for $target_name")
-  assert(defined(invoker.test_binary_name),
-         "test_binary_name must be defined for $target_name")
-  assert(defined(invoker.test_component_manifest),
-         "test_component_manifest must be defined for $target_name")
   assert(defined(invoker.test_config),
          "test_config must be defined for $target_name")
   assert(defined(invoker.root_ssl_cert),
@@ -25,8 +21,6 @@ template("access_ota_blob_as_executable") {
          "pkg_server_key must be defined for $target_name")
 
   assembly_base_packages = invoker.base_packages
-  test_binary_name = invoker.test_binary_name
-  test_component_manifest = invoker.test_component_manifest
   root_ssl_cert = invoker.root_ssl_cert
   pkg_server_certchain = invoker.pkg_server_certchain
   pkg_server_key = invoker.pkg_server_key
@@ -70,37 +64,6 @@ template("access_ota_blob_as_executable") {
     # specify `fvm_truncate_to_length`.
   }
 
-  # Filesystem host for base system.
-  fuchsia_test_component("fshost_v0-component") {
-    component_name = "fshost_v0"
-    manifest = "//src/security/pkg_test/tests/access_ota_blob_as_executable/meta/fshost_v0.cml"
-    deps = [ "//src/security/pkg_test/fshost:fshost-binary" ]
-  }
-
-  # Filesystem host for package server.
-  fuchsia_test_component("fshost_v1-component") {
-    component_name = "fshost_v1"
-    manifest = "//src/security/pkg_test/tests/access_ota_blob_as_executable/meta/fshost_v1.cml"
-    deps = [ "//src/security/pkg_test/fshost:fshost-binary" ]
-  }
-
-  # Fake boot arguments for base system.
-  fuchsia_test_component("fake_boot_arguments_v0-component") {
-    component_name = "fake_boot_arguments_v0"
-    manifest = "//src/security/pkg_test/tests/access_ota_blob_as_executable/meta/fake_boot_arguments_v0.cml"
-    deps = [
-      "//src/security/pkg_test/fake_boot_arguments:fake_boot_arguments-binary",
-    ]
-  }
-
-  fuchsia_test_component("fake_boot_arguments_v1-component") {
-    component_name = "fake_boot_arguments_v1"
-    manifest = "//src/security/pkg_test/tests/access_ota_blob_as_executable/meta/fake_boot_arguments_v1.cml"
-    deps = [
-      "//src/security/pkg_test/fake_boot_arguments:fake_boot_arguments-binary",
-    ]
-  }
-
   # Resources and component for package server configured to serve "v1" OTA.
   resource_group("${test_name}_v1-pkg_server-tls_resources") {
     testonly = true
@@ -115,18 +78,6 @@ template("access_ota_blob_as_executable") {
       },
     ]
   }
-  fuchsia_test_component("${test_name}_v1-pkg_server-component") {
-    component_name = "pkg_server"
-    manifest = "//src/security/pkg_test/tests/access_ota_blob_as_executable/meta/pkg_server.cml"
-    deps = [
-      ":${test_name}_v1-pkg_server-tls_resources",
-      "//src/security/pkg_test/pkg_server:pkg_server-binary",
-
-      # Defined by assemble_security_pkg_test_system("${test_name}_v1").
-      ":${test_name}_v1_tuf_repo_resources",
-      ":${test_name}_v1_update_package_resource",
-    ]
-  }
 
   # Resources that constitute inputs to the test component.
   resource_group("${test_name}_test-resources") {
@@ -139,50 +90,20 @@ template("access_ota_blob_as_executable") {
     ]
   }
 
-  # Top-level test component that composes its own filesystem host, SWD stack, and
-  # package server for receiving OTA.
-  rustc_test("${test_name}-test") {
-    output_name = test_binary_name
-    edition = "2018"
-    source_root = "//src/security/pkg_test/tests/access_ota_blob_as_executable/src/main.rs"
-    data_deps = [
-      ":${test_name}_test-resources",
-      ":${test_name}_v0_system_resources",
-      "//src/security/pkg_test/assemblies/hello_world_v0:meta_far",
-      "//src/security/pkg_test/assemblies/hello_world_v1:meta_far",
-    ]
-    deps = [
-      "//garnet/lib/rust/files_async",
-      "//garnet/lib/rust/io_util",
-      "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
-      "//sdk/fidl/fuchsia.mem:fuchsia.mem-rustc",
-      "//sdk/fidl/fuchsia.pkg:fuchsia.pkg-rustc",
-      "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
-      "//src/lib/fidl/rust/fidl",
-      "//src/lib/fuchsia",
-      "//src/lib/fuchsia-async",
-      "//src/lib/fuchsia-component",
-      "//src/lib/syslog/rust:syslog",
-      "//src/lib/zircon/rust:fuchsia-zircon",
-      "//src/security/pkg_test/pkg_server:test.security.pkg-rustc",
-      "//src/security/pkg_test/util",
-      "//src/sys/pkg/fidl/fuchsia.update.installer:fuchsia.update.installer-rustc",
-      "//src/sys/pkg/lib/fuchsia-hash",
-      "//src/sys/pkg/lib/fuchsia-merkle",
-      "//third_party/rust_crates:anyhow",
-      "//third_party/rust_crates:futures",
-      "//third_party/rust_crates:openat",
-      "//third_party/rust_crates:regex",
-    ]
-    sources = [
-      "//src/security/pkg_test/tests/access_ota_blob_as_executable/src/main.rs",
-    ]
-  }
-
+  # Note: Despite being independent of template parameters, this target must
+  # be templated because `fuchsia_test_package` requires that all
+  # `test_components` be defined in the same build directory due to its use of
+  # `get_target_outputs()`. See
+  # https://gn.googlesource.com/gn/+/main/docs/reference.md#func_get_target_outputs
+  # for details.
   fuchsia_test_component("${test_name}-component") {
-    component_name = test_name
-    manifest = test_component_manifest
-    deps = [ ":${test_name}-test" ]
+    # Note: Test package must include all files designated by cmdline args in
+    # component manifest. See cml and source for details. These files are not
+    # included as explicit deps here because they vary across different
+    # packagings/configurations of the test.
+    component_name = "access_ota_blob_as_executable"
+    manifest = "//src/security/pkg_test/tests/access_ota_blob_as_executable/meta/access_ota_blob_as_executable.cml"
+    deps = [ "//src/security/pkg_test/tests/access_ota_blob_as_executable:access_ota_blob_as_executable-test" ]
   }
 
   fuchsia_test_package("${test_name}-package") {
@@ -190,11 +111,10 @@ template("access_ota_blob_as_executable") {
     test_components = [ ":${test_name}-component" ]
     deps = [
       # Package server configured to serve "v1" OTA update.
-      ":${test_name}_v1-pkg_server-component",
+      "//src/security/pkg_test/tests:pkg_server-v1-component",
 
-      # Filesystem hosts for both test system and package server subsystem.
-      ":fshost_v0-component",
-      ":fshost_v1-component",
+      # Filesystem host for test system.
+      "//src/security/pkg_test/tests:fshost_v0-component",
 
       # Fake services for update flow.
       "//src/security/pkg_test/dns_resolver:security_pkg_dns_resolver-component",
@@ -211,9 +131,23 @@ template("access_ota_blob_as_executable") {
       "//src/connectivity/network/netstack:component",
 
       # Mock SWD component dependencies.
-      ":fake_boot_arguments_v0-component",
-      ":fake_boot_arguments_v1-component",
       "//src/cobalt/bin/testing/mock_cobalt:component_v2",
+      "//src/security/pkg_test/tests:fake_boot_arguments_v0-component",
+
+      #
+      # Test resources that depend on template parameters:
+      #
+
+      # General shared test resources.
+      ":${test_name}_test-resources",
+
+      # System resources for bringing up v0 system.
+      ":${test_name}_v0_system_resources",
+
+      # Package server/update resources for delivering v1 OTA update.
+      ":${test_name}_v1-pkg_server-tls_resources",
+      ":${test_name}_v1_tuf_repo_resources",
+      ":${test_name}_v1_update_package_resource",
     ]
 
     # TODO(fxbug.dev/88453): Complete test dependency composition to eliminate

@@ -13,12 +13,4 @@
             "/pkg/data/assemblies/access_ota_blob_as_executable_v1/repository",
         ],
     },
-    children: [
-        // Use "v1" configuration of child components.
-        {
-            name: "fshost",
-            url: "#meta/fshost_v1.cm",
-            startup: "eager",
-        },
-    ],
 }

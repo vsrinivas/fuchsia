@@ -4,7 +4,7 @@
 
 use {
     anyhow::{Error, Result},
-    argh::FromArgs,
+    argh::{from_env, FromArgs},
     fidl::endpoints::create_proxy,
     fidl_fuchsia_io::{
         DirectoryMarker, DirectoryProxy, CLONE_FLAG_SAME_RIGHTS, OPEN_RIGHT_READABLE,
@@ -152,7 +152,7 @@ async fn main() {
     init().unwrap();
     fx_log_info!("Starting pkg_server");
     let args @ Args { tls_certificate_chain_path, tls_private_key_path, repository_path } =
-        &argh::from_env();
+        &from_env();
     fx_log_info!("Initalizing pkg_server with {:?}", args);
 
     let (url_send, url_recv) = channel();

@@ -19,11 +19,17 @@ rustc_binary("security_pkg_dns_resolver-binary") {
     "//src/lib/fuchsia-component",
     "//src/lib/syslog/rust:syslog",
     "//src/security/pkg_test/util",
+    "//third_party/rust_crates:argh",
   ]
 }
 
 fuchsia_test_component("security_pkg_dns_resolver-component") {
   component_name = "security_pkg_dns_resolver"
+
+  # Note: Test package must include all files designated by cmdline args in
+  # component manifest. See cml and source for details. These files are not
+  # included as explicit deps here because they vary across different
+  # packagings/configurations of the test.
   manifest = "meta/security_pkg_dns_resolver.cml"
   deps = [ ":security_pkg_dns_resolver-binary" ]
 }
