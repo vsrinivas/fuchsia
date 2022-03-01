@@ -11,30 +11,30 @@ namespace test {
 
 // Tests |LocalHostFullName|.
 TEST(MdnsNamesTest, LocalHostFullName) {
-  EXPECT_EQ("test.host.name.local.", MdnsNames::LocalHostFullName("test.host.name"));
-  EXPECT_EQ("test-host-name.local.", MdnsNames::LocalHostFullName("test-host-name"));
+  EXPECT_EQ("test.host.name.local.", MdnsNames::HostFullName("test.host.name"));
+  EXPECT_EQ("test-host-name.local.", MdnsNames::HostFullName("test-host-name"));
 }
 
 // Tests |LocalServiceFullName|.
 TEST(MdnsNamesTest, LocalServiceFullName) {
-  EXPECT_EQ("_printer._tcp.local.", MdnsNames::LocalServiceFullName("_printer._tcp."));
-  EXPECT_EQ("_fuchsia._udp.local.", MdnsNames::LocalServiceFullName("_fuchsia._udp."));
+  EXPECT_EQ("_printer._tcp.local.", MdnsNames::ServiceFullName("_printer._tcp."));
+  EXPECT_EQ("_fuchsia._udp.local.", MdnsNames::ServiceFullName("_fuchsia._udp."));
 }
 
 // Tests |LocalServiceSubtypeFullName|.
 TEST(MdnsNamesTest, LocalServiceSubtypeFullName) {
   EXPECT_EQ("_color._sub._printer._tcp.local.",
-            MdnsNames::LocalServiceSubtypeFullName("_printer._tcp.", "_color"));
+            MdnsNames::ServiceSubtypeFullName("_printer._tcp.", "_color"));
   EXPECT_EQ("_nuc._sub._fuchsia._udp.local.",
-            MdnsNames::LocalServiceSubtypeFullName("_fuchsia._udp.", "_nuc"));
+            MdnsNames::ServiceSubtypeFullName("_fuchsia._udp.", "_nuc"));
 }
 
 // Tests |LocalInstanceFullName|.
 TEST(MdnsNamesTest, LocalInstanceFullName) {
   EXPECT_EQ("Acme Splotchamatic._printer._tcp.local.",
-            MdnsNames::LocalInstanceFullName("Acme Splotchamatic", "_printer._tcp."));
+            MdnsNames::InstanceFullName("Acme Splotchamatic", "_printer._tcp."));
   EXPECT_EQ("My Egg Timer._fuchsia._udp.local.",
-            MdnsNames::LocalInstanceFullName("My Egg Timer", "_fuchsia._udp."));
+            MdnsNames::InstanceFullName("My Egg Timer", "_fuchsia._udp."));
 }
 
 // Tests |ExtractInstanceName|.

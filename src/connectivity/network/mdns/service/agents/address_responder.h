@@ -17,13 +17,14 @@ namespace mdns {
 // Responds to address resolution requests.
 class AddressResponder : public MdnsAgent {
  public:
-  // Creates an |AddressResponder|.
-  AddressResponder(MdnsAgent::Host* host);
+  // Creates an |AddressResponder| that responds to queries for the local host name with local
+  // addresses.
+  explicit AddressResponder(MdnsAgent::Owner* owner);
 
   ~AddressResponder() override;
 
   // MdnsAgent overrides.
-  void Start(const std::string& host_full_name, const MdnsAddresses& addresses) override;
+  void Start(const std::string& local_host_full_name) override;
 
   void ReceiveQuestion(const DnsQuestion& question, const ReplyAddress& reply_address,
                        const ReplyAddress& sender_address) override;

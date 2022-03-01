@@ -22,6 +22,7 @@
 #include "src/connectivity/network/mdns/service/agents/instance_responder.h"
 #include "src/connectivity/network/mdns/service/agents/resource_renewer.h"
 #include "src/connectivity/network/mdns/service/agents/service_instance_resolver.h"
+#include "src/connectivity/network/mdns/service/common/formatters.h"
 #include "src/connectivity/network/mdns/service/common/mdns_addresses.h"
 #include "src/connectivity/network/mdns/service/common/mdns_names.h"
 #include "src/connectivity/network/mdns/service/encoding/dns_formatting.h"
@@ -40,17 +41,16 @@ void Mdns::SetVerbose(bool verbose) {
 }
 
 void Mdns::Start(fuchsia::net::interfaces::WatcherPtr interfaces_watcher,
-                 const std::string& host_name, const MdnsAddresses& addresses,
-                 bool perform_address_probe, fit::closure ready_callback) {
-  FX_DCHECK(!host_name.empty());
+                 const std::string& local_host_name, bool perform_address_probe,
+                 fit::closure ready_callback) {
+  FX_DCHECK(!local_host_name.empty());
   FX_DCHECK(ready_callback);
   FX_DCHECK(state_ == State::kNotStarted);
 
   ready_callback_ = std::move(ready_callback);
   state_ = State::kWaitingForInterfaces;
 
-  original_host_name_ = host_name;
-  addresses_ = &addresses;
+  original_local_host_name_ = local_host_name;
 
   // Create a resource renewer agent to keep resources alive.
   resource_renewer_ = std::make_shared<ResourceRenewer>(this);
@@ -59,16 +59,16 @@ void Mdns::Start(fuchsia::net::interfaces::WatcherPtr interfaces_watcher,
   AddAgent(std::make_shared<AddressResponder>(this));
 
   transceiver_.Start(
-      std::move(interfaces_watcher), *addresses_,
+      std::move(interfaces_watcher),
       [this, perform_address_probe]() {
         // TODO(dalesat): Link changes that create host name conflicts.
         // Once we have a NIC and we've decided on a unique host name, we
         // don't do any more address probes. This means that we could have link
         // changes that cause two hosts with the same name to be on the same
         // subnet. To improve matters, we need to be prepared to change a host
-        // name we've been using for awhile.
+        // name we've been using for a while.
         if (state_ == State::kWaitingForInterfaces && transceiver_.HasInterfaces()) {
-          OnInterfacesStarted(original_host_name_, perform_address_probe);
+          OnInterfacesStarted(original_local_host_name_, perform_address_probe);
         }
       },
       [this](std::unique_ptr<DnsMessage> message, const ReplyAddress& reply_address) {
@@ -87,9 +87,9 @@ void Mdns::Start(fuchsia::net::interfaces::WatcherPtr interfaces_watcher,
           // the question or if the sender's port isn't 5353.
           ReceiveQuestion(*question,
                           (question->unicast_response_ ||
-                           reply_address.socket_address().port() != addresses_->port())
+                           reply_address.socket_address().port() != MdnsAddresses::port())
                               ? reply_address
-                              : addresses_->multicast_reply(),
+                              : ReplyAddress::Multicast(Media::kBoth, IpVersions::kBoth),
                           reply_address);
         }
 
@@ -121,7 +121,7 @@ void Mdns::Start(fuchsia::net::interfaces::WatcherPtr interfaces_watcher,
   // The interface monitor may have already found interfaces. In that case,
   // start the address probe in case we don't get any link change notifications.
   if (state_ == State::kWaitingForInterfaces && transceiver_.HasInterfaces()) {
-    OnInterfacesStarted(original_host_name_, perform_address_probe);
+    OnInterfacesStarted(original_local_host_name_, perform_address_probe);
   }
 }
 
@@ -186,7 +186,7 @@ bool Mdns::PublishServiceInstance(const std::string& service_name, const std::st
   FX_DCHECK(publisher);
   FX_DCHECK(state_ == State::kActive);
 
-  std::string instance_full_name = MdnsNames::LocalInstanceFullName(instance_name, service_name);
+  std::string instance_full_name = MdnsNames::InstanceFullName(instance_name, service_name);
 
   if (instance_responders_by_instance_full_name_.find(instance_full_name) !=
       instance_responders_by_instance_full_name_.end()) {
@@ -233,21 +233,21 @@ bool Mdns::PublishServiceInstance(const std::string& service_name, const std::st
 
 void Mdns::LogTraffic() { transceiver_.LogTraffic(); }
 
-void Mdns::OnInterfacesStarted(const std::string& host_name, bool perform_address_probe) {
+void Mdns::OnInterfacesStarted(const std::string& local_host_name, bool perform_address_probe) {
   if (perform_address_probe) {
-    StartAddressProbe(host_name);
+    StartAddressProbe(local_host_name);
     return;
   }
 
-  RegisterHostName(host_name);
+  RegisterLocalHostName(local_host_name);
   OnReady();
 }
 
-void Mdns::StartAddressProbe(const std::string& host_name) {
+void Mdns::StartAddressProbe(const std::string& local_host_name) {
   state_ = State::kAddressProbeInProgress;
 
-  RegisterHostName(host_name);
-  std::cout << "mDNS: Verifying uniqueness of host name " << host_full_name_ << "\n";
+  RegisterLocalHostName(local_host_name);
+  std::cout << "mDNS: Verifying uniqueness of host name " << local_host_full_name_ << "\n";
 
   // Create an address prober to look for host name conflicts. The address
   // prober removes itself immediately before it calls the callback.
@@ -255,7 +255,7 @@ void Mdns::StartAddressProbe(const std::string& host_name) {
     FX_DCHECK(agents_.empty());
 
     if (!successful) {
-      std::cout << "mDNS: Another host is using name " << host_full_name_ << "\n";
+      std::cout << "mDNS: Another host is using name " << local_host_full_name_ << "\n";
       OnHostNameConflict();
       return;
     }
@@ -266,25 +266,25 @@ void Mdns::StartAddressProbe(const std::string& host_name) {
   // We don't use |AddAgent| here, because agents added that way don't
   // actually participate until we're done probing for host name conflicts.
   agents_.emplace(address_prober);
-  address_prober->Start(host_full_name_, *addresses_);
+  address_prober->Start(local_host_full_name_);
   SendMessages();
 }
 
-void Mdns::RegisterHostName(const std::string& host_name) {
-  host_name_ = host_name;
-  host_full_name_ = MdnsNames::LocalHostFullName(host_name);
-  address_placeholder_ = std::make_shared<DnsResource>(host_full_name_, DnsType::kA);
+void Mdns::RegisterLocalHostName(const std::string& local_host_name) {
+  local_host_name_ = local_host_name;
+  local_host_full_name_ = MdnsNames::HostFullName(local_host_name);
+  address_placeholder_ = std::make_shared<DnsResource>(local_host_full_name_, DnsType::kA);
 }
 
 void Mdns::OnReady() {
-  std::cout << "mDNS: Using unique host name " << host_full_name_ << "\n";
+  std::cout << "mDNS: Using unique host name " << local_host_full_name_ << "\n";
 
   // Start all the agents.
   state_ = State::kActive;
 
   // |resource_renewer_| doesn't need to be started, but we do it
   // anyway in case that changes.
-  resource_renewer_->Start(host_full_name_, *addresses_);
+  resource_renewer_->Start(local_host_full_name_);
 
   for (auto& agent : agents_awaiting_start_) {
     AddAgent(agent);
@@ -301,8 +301,8 @@ void Mdns::OnReady() {
 void Mdns::OnHostNameConflict() {
   // TODO(dalesat): Support other renaming strategies?
   std::ostringstream os;
-  os << original_host_name_ << next_host_name_deduplicator_;
-  ++next_host_name_deduplicator_;
+  os << original_local_host_name_ << next_local_host_name_deduplicator_;
+  ++next_local_host_name_deduplicator_;
 
   StartAddressProbe(os.str());
 }
@@ -316,7 +316,9 @@ void Mdns::PostTaskForTime(MdnsAgent* agent, fit::closure task, zx::time target_
 
 void Mdns::SendQuestion(std::shared_ptr<DnsQuestion> question) {
   FX_DCHECK(question);
-  outbound_message_builders_by_reply_address_[addresses_->multicast_reply()].AddQuestion(question);
+  outbound_message_builders_by_reply_address_[ReplyAddress::Multicast(Media::kBoth,
+                                                                      IpVersions::kBoth)]
+      .AddQuestion(question);
 }
 
 void Mdns::SendResource(std::shared_ptr<DnsResource> resource, MdnsResourceSection section,
@@ -324,7 +326,7 @@ void Mdns::SendResource(std::shared_ptr<DnsResource> resource, MdnsResourceSecti
   FX_DCHECK(resource);
   // |reply_address| should never be the V6 multicast address, because the V4 multicast address
   // is used to indicate a multicast reply.
-  FX_DCHECK(reply_address.socket_address() != addresses_->v6_multicast());
+  FX_DCHECK(reply_address.socket_address() != MdnsAddresses::v6_multicast());
 
   if (section == MdnsResourceSection::kExpired) {
     // Expirations are distributed to local agents. We handle this case
@@ -384,8 +386,8 @@ void Mdns::FlushSentItems() {
 void Mdns::AddAgent(std::shared_ptr<MdnsAgent> agent) {
   if (state_ == State::kActive) {
     agents_.emplace(agent);
-    FX_DCHECK(!host_full_name_.empty());
-    agent->Start(host_full_name_, *addresses_);
+    FX_DCHECK(!local_host_full_name_.empty());
+    agent->Start(local_host_full_name_);
     SendMessages();
   } else {
     agents_awaiting_start_.push_back(agent);
@@ -399,15 +401,37 @@ void Mdns::SendMessages() {
 
 #ifdef MDNS_TRACE
     if (verbose_) {
-      if (reply_address == addresses_->multicast_reply()) {
-        FX_LOGS(INFO) << "Outbound message (multicast): " << message;
-      } else if (reply_address == addresses_->multicast_reply_wired_only()) {
-        FX_LOGS(INFO) << "Outbound message (multicast, wired only): " << message;
-      } else if (reply_address == addresses_->multicast_reply_wireless_only()) {
-        FX_LOGS(INFO) << "Outbound message (multicast, wireless only): " << message;
+      std::ostringstream os;
+
+      if (reply_address.is_multicast_placeholder()) {
+        os << "(multicast)";
       } else {
-        FX_LOGS(INFO) << "Outbound message to " << reply_address << ":" << message;
+        os << "to " << reply_address;
       }
+
+      switch (reply_address.media()) {
+        case Media::kWired:
+          os << ", wired only";
+          break;
+        case Media::kWireless:
+          os << ", wireless only";
+          break;
+        case Media::kBoth:
+          break;
+      }
+
+      switch (reply_address.ip_versions()) {
+        case IpVersions::kV4:
+          os << ", V4 only";
+          break;
+        case IpVersions::kV6:
+          os << ", V6 only";
+          break;
+        case IpVersions::kBoth:
+          break;
+      }
+
+      FX_LOGS(INFO) << "Outbound message " << os.str() << ":" << message;
     }
 #endif  // MDNS_TRACE
 
@@ -421,7 +445,7 @@ void Mdns::ReceiveQuestion(const DnsQuestion& question, const ReplyAddress& repl
                            const ReplyAddress& sender_address) {
   // |reply_address| should never be the V6 multicast address, because the V4 multicast address
   // is used to indicate a multicast reply.
-  FX_DCHECK(reply_address.socket_address() != addresses_->v6_multicast());
+  FX_DCHECK(reply_address.socket_address() != MdnsAddresses::v6_multicast());
 
   // Renewer doesn't need questions.
   DPROHIBIT_AGENT_REMOVAL();

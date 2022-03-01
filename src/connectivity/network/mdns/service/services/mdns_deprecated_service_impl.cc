@@ -1,4 +1,4 @@
-// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -17,41 +17,7 @@
 #include "lib/fidl/cpp/type_converter.h"
 #include "src/connectivity/network/mdns/service/common/mdns_fidl_util.h"
 #include "src/connectivity/network/mdns/service/common/mdns_names.h"
-#include "src/lib/fsl/types/type_converters.h"
-
-namespace fidl {
-
-template <>
-struct TypeConverter<mdns::Media, fuchsia::net::mdns::Media> {
-  static mdns::Media Convert(fuchsia::net::mdns::Media value) {
-    switch (value) {
-      case fuchsia::net::mdns::Media::WIRED:
-        return mdns::Media::kWired;
-      case fuchsia::net::mdns::Media::WIRELESS:
-        return mdns::Media::kWireless;
-      default:
-        FX_DCHECK(value ==
-                  (fuchsia::net::mdns::Media::WIRED | fuchsia::net::mdns::Media::WIRELESS));
-        return mdns::Media::kBoth;
-    }
-  }
-};
-
-template <>
-struct TypeConverter<fuchsia::net::mdns::PublicationCause, mdns::Mdns::PublicationCause> {
-  static fuchsia::net::mdns::PublicationCause Convert(mdns::Mdns::PublicationCause value) {
-    switch (value) {
-      case mdns::Mdns::PublicationCause::kAnnouncement:
-        return fuchsia::net::mdns::PublicationCause::ANNOUNCEMENT;
-      case mdns::Mdns::PublicationCause::kQueryMulticastResponse:
-        return fuchsia::net::mdns::PublicationCause::QUERY_MULTICAST_RESPONSE;
-      case mdns::Mdns::PublicationCause::kQueryUnicastResponse:
-        return fuchsia::net::mdns::PublicationCause::QUERY_UNICAST_RESPONSE;
-    }
-  }
-};
-
-}  // namespace fidl
+#include "src/connectivity/network/mdns/service/common/type_converters.h"
 
 namespace mdns {
 
@@ -151,7 +117,7 @@ void MdnsDeprecatedServiceImpl::PublishServiceInstance(
   }
 
   // TODO(fxbug.dev/56579): Review this approach to conflicts.
-  std::string instance_full_name = MdnsNames::LocalInstanceFullName(instance, service);
+  std::string instance_full_name = MdnsNames::InstanceFullName(instance, service);
 
   // If there's an existing publisher for this full name, destroy it so the new publication
   // supercedes the old one.
@@ -324,7 +290,7 @@ void MdnsDeprecatedServiceImpl::ResponderPublisher::ReportSuccess(bool success) 
 }
 
 void MdnsDeprecatedServiceImpl::ResponderPublisher::GetPublication(
-    Mdns::PublicationCause publication_cause, const std::string& subtype,
+    PublicationCause publication_cause, const std::string& subtype,
     const std::vector<inet::SocketAddress>& source_addresses, GetPublicationCallback callback) {
   if (on_publication_calls_in_progress_ < kMaxOnPublicationCallsInProgress) {
     ++on_publication_calls_in_progress_;
@@ -350,7 +316,7 @@ void MdnsDeprecatedServiceImpl::ResponderPublisher::OnGetPublicationComplete() {
 }
 
 void MdnsDeprecatedServiceImpl::ResponderPublisher::GetPublicationNow(
-    Mdns::PublicationCause publication_cause, const std::string& subtype,
+    PublicationCause publication_cause, const std::string& subtype,
     const std::vector<inet::SocketAddress>& source_addresses, GetPublicationCallback callback) {
   FX_DCHECK(subtype.empty() || MdnsNames::IsValidSubtypeName(subtype));
 

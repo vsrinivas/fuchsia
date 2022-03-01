@@ -39,7 +39,7 @@ int MdnsInterfaceTransceiverV6::SetOptionDisableMulticastLoop() {
 
 int MdnsInterfaceTransceiverV6::SetOptionJoinMulticastGroup() {
   ipv6_mreq param;
-  param.ipv6mr_multiaddr = addresses().v6_multicast().as_sockaddr_in6().sin6_addr;
+  param.ipv6mr_multiaddr = MdnsAddresses::v6_multicast().as_sockaddr_in6().sin6_addr;
   param.ipv6mr_interface = index();
   int result = setsockopt(socket_fd().get(), IPPROTO_IPV6, IPV6_JOIN_GROUP, &param, sizeof(param));
   if (result < 0) {
@@ -133,8 +133,8 @@ int MdnsInterfaceTransceiverV6::SetOptionFamilySpecific() {
 }
 
 int MdnsInterfaceTransceiverV6::Bind() {
-  int result =
-      bind(socket_fd().get(), addresses().v6_bind().as_sockaddr(), addresses().v6_bind().socklen());
+  int result = bind(socket_fd().get(), MdnsAddresses::v6_bind().as_sockaddr(),
+                    MdnsAddresses::v6_bind().socklen());
   if (result < 0) {
     FX_LOGS(ERROR) << "Failed to bind socket to V6 address, " << strerror(errno);
   }
@@ -144,10 +144,10 @@ int MdnsInterfaceTransceiverV6::Bind() {
 
 ssize_t MdnsInterfaceTransceiverV6::SendTo(const void* buffer, size_t size,
                                            const inet::SocketAddress& address) {
-  if (address == addresses().v4_multicast()) {
+  if (address == MdnsAddresses::v4_multicast()) {
     // |v4_multicast| indicates multicast, meaning V6 multicast in this case.
-    return sendto(socket_fd().get(), buffer, size, 0, addresses().v6_multicast().as_sockaddr(),
-                  addresses().v6_multicast().socklen());
+    return sendto(socket_fd().get(), buffer, size, 0, MdnsAddresses::v6_multicast().as_sockaddr(),
+                  MdnsAddresses::v6_multicast().socklen());
   }
 
   return sendto(socket_fd().get(), buffer, size, 0, address.as_sockaddr(), address.socklen());

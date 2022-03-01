@@ -12,24 +12,24 @@
 
 namespace mdns {
 
-InstanceResponder::InstanceResponder(MdnsAgent::Host* host, const std::string& service_name,
+InstanceResponder::InstanceResponder(MdnsAgent::Owner* owner, const std::string& service_name,
                                      const std::string& instance_name, Media media,
                                      Mdns::Publisher* publisher)
-    : MdnsAgent(host),
+    : MdnsAgent(owner),
       service_name_(service_name),
       instance_name_(instance_name),
-      instance_full_name_(MdnsNames::LocalInstanceFullName(instance_name, service_name)),
+      instance_full_name_(MdnsNames::InstanceFullName(instance_name, service_name)),
       media_(media),
       publisher_(publisher) {}
 
 InstanceResponder::~InstanceResponder() {}
 
-void InstanceResponder::Start(const std::string& host_full_name, const MdnsAddresses& addresses) {
-  FX_DCHECK(!host_full_name.empty());
+void InstanceResponder::Start(const std::string& local_host_full_name) {
+  FX_DCHECK(!local_host_full_name.empty());
 
-  MdnsAgent::Start(host_full_name, addresses);
+  MdnsAgent::Start(local_host_full_name);
 
-  host_full_name_ = host_full_name;
+  host_full_name_ = local_host_full_name;
 
   Reannounce();
 }
@@ -49,9 +49,9 @@ void InstanceResponder::ReceiveQuestion(const DnsQuestion& question,
   // there are cases in which we send unicast even though the unicast bit is not set on the question
   // (specifically, when the reply address port isn't 5353). A V4 multicast reply address indicates
   // V4 and V6 multicast.
-  auto publication_cause = reply_address.socket_address() == addresses().v4_multicast()
-                               ? Mdns::PublicationCause::kQueryMulticastResponse
-                               : Mdns::PublicationCause::kQueryUnicastResponse;
+  auto publication_cause = reply_address.socket_address() == MdnsAddresses::v4_multicast()
+                               ? PublicationCause::kQueryMulticastResponse
+                               : PublicationCause::kQueryUnicastResponse;
 
   switch (question.type_) {
     case DnsType::kPtr:
@@ -138,7 +138,7 @@ void InstanceResponder::LogSenderAddress(const ReplyAddress& sender_address) {
 }
 
 void InstanceResponder::SendAnnouncement() {
-  GetAndSendPublication(Mdns::PublicationCause::kAnnouncement, "", multicast_reply());
+  GetAndSendPublication(PublicationCause::kAnnouncement, "", multicast_reply());
 
   for (const std::string& subtype : subtypes_) {
     SendSubtypePtrRecord(subtype, DnsResource::kShortTimeToLive, multicast_reply());
@@ -155,11 +155,11 @@ void InstanceResponder::SendAnnouncement() {
 
 void InstanceResponder::SendAnyServiceResponse(const ReplyAddress& reply_address) {
   auto ptr_resource = std::make_shared<DnsResource>(MdnsNames::kAnyServiceFullName, DnsType::kPtr);
-  ptr_resource->ptr_.pointer_domain_name_ = MdnsNames::LocalServiceFullName(service_name_);
+  ptr_resource->ptr_.pointer_domain_name_ = MdnsNames::ServiceFullName(service_name_);
   SendResource(ptr_resource, MdnsResourceSection::kAnswer, reply_address);
 }
 
-void InstanceResponder::MaybeGetAndSendPublication(Mdns::PublicationCause publication_cause,
+void InstanceResponder::MaybeGetAndSendPublication(PublicationCause publication_cause,
                                                    const std::string& subtype,
                                                    const ReplyAddress& reply_address) {
   if (publisher_ == nullptr) {
@@ -167,7 +167,7 @@ void InstanceResponder::MaybeGetAndSendPublication(Mdns::PublicationCause public
   }
 
   // We only throttle multicast sends.
-  if (publication_cause == Mdns::PublicationCause::kQueryMulticastResponse) {
+  if (publication_cause == PublicationCause::kQueryMulticastResponse) {
     zx::time throttle_state = kThrottleStateIdle;
     auto iter = throttle_state_by_subtype_.find(subtype);
     if (iter != throttle_state_by_subtype_.end()) {
@@ -201,14 +201,14 @@ void InstanceResponder::MaybeGetAndSendPublication(Mdns::PublicationCause public
   GetAndSendPublication(publication_cause, subtype, reply_address);
 }
 
-void InstanceResponder::GetAndSendPublication(Mdns::PublicationCause publication_cause,
+void InstanceResponder::GetAndSendPublication(PublicationCause publication_cause,
                                               const std::string& subtype,
                                               const ReplyAddress& reply_address) {
   if (publisher_ == nullptr) {
     return;
   }
 
-  bool query = publication_cause != Mdns::PublicationCause::kAnnouncement;
+  bool query = publication_cause != PublicationCause::kAnnouncement;
 
   publisher_->GetPublication(
       publication_cause, subtype, sender_addresses_,
@@ -220,7 +220,7 @@ void InstanceResponder::GetAndSendPublication(Mdns::PublicationCause publication
           FlushSentItems();
 
           // A V4 multicast reply address indicates V4 and V6 multicast.
-          if (query && reply_address.socket_address() == addresses().v4_multicast()) {
+          if (query && reply_address.socket_address() == MdnsAddresses::v4_multicast()) {
             throttle_state_by_subtype_[subtype] = now();
             // Remove the entry from |throttle_state_by_subtype_| later to prevent the map from
             // growing indefinitely.
@@ -240,7 +240,7 @@ void InstanceResponder::SendPublication(const Mdns::Publication& publication,
   }
 
   auto ptr_resource =
-      std::make_shared<DnsResource>(MdnsNames::LocalServiceFullName(service_name_), DnsType::kPtr);
+      std::make_shared<DnsResource>(MdnsNames::ServiceFullName(service_name_), DnsType::kPtr);
   ptr_resource->time_to_live_ = publication.ptr_ttl_seconds_;
   ptr_resource->ptr_.pointer_domain_name_ = instance_full_name_;
   SendResource(ptr_resource, MdnsResourceSection::kAnswer, reply_address);
@@ -266,7 +266,7 @@ void InstanceResponder::SendSubtypePtrRecord(const std::string& subtype, uint32_
   FX_DCHECK(!subtype.empty());
 
   auto ptr_resource = std::make_shared<DnsResource>(
-      MdnsNames::LocalServiceSubtypeFullName(service_name_, subtype), DnsType::kPtr);
+      MdnsNames::ServiceSubtypeFullName(service_name_, subtype), DnsType::kPtr);
   ptr_resource->time_to_live_ = ttl;
   ptr_resource->ptr_.pointer_domain_name_ = instance_full_name_;
   SendResource(ptr_resource, MdnsResourceSection::kAnswer, reply_address);
@@ -289,14 +289,7 @@ void InstanceResponder::IdleCheck(const std::string& subtype) {
 }
 
 ReplyAddress InstanceResponder::multicast_reply() const {
-  switch (media_) {
-    case Media::kWired:
-      return addresses().multicast_reply_wired_only();
-    case Media::kWireless:
-      return addresses().multicast_reply_wireless_only();
-    case Media::kBoth:
-      return addresses().multicast_reply();
-  }
+  return ReplyAddress::Multicast(media_, IpVersions::kBoth);
 }
 
 }  // namespace mdns

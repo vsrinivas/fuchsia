@@ -20,14 +20,14 @@ void ServiceInstanceResolverServiceImpl::ResolveServiceInstance(
   if (!MdnsNames::IsValidServiceName(service)) {
     FX_LOGS(ERROR) << "ResolveServiceInstance called with invalid service name " << service
                    << ", closing connection.";
-    Quit();
+    Quit(ZX_ERR_INVALID_ARGS);
     return;
   }
 
   if (!MdnsNames::IsValidInstanceName(instance)) {
     FX_LOGS(ERROR) << "ResolveServiceInstance called with invalid instance name " << instance
                    << ", closing connection.";
-    Quit();
+    Quit(ZX_ERR_INVALID_ARGS);
     return;
   }
 

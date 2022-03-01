@@ -25,7 +25,7 @@ class AddressResponderTest : public AgentTest {
 };
 
 void AddressResponderTest::ExpectAddresses() {
-  auto message = ExpectOutboundMessage(addresses().multicast_reply());
+  auto message = ExpectOutboundMessage(ReplyAddress::Multicast(Media::kBoth, IpVersions::kBoth));
   ExpectAddressPlaceholder(message.get(), MdnsResourceSection::kAnswer);
   ExpectNoOtherQuestionOrResource(message.get());
 }
@@ -35,7 +35,7 @@ TEST_F(AddressResponderTest, Startup) {
   AddressResponder under_test(this);
   SetAgent(under_test);
 
-  under_test.Start(kHostFullName, addresses());
+  under_test.Start(kHostFullName);
   // No initial action.
   ExpectNoOther();
 }
@@ -46,33 +46,37 @@ TEST_F(AddressResponderTest, MulticastRateLimit) {
   SetAgent(under_test);
 
   // Normal startup.
-  under_test.Start(kHostFullName, addresses());
+  under_test.Start(kHostFullName);
   ExpectNoOther();
 
   ReplyAddress sender_address0(
       inet::SocketAddress(192, 168, 1, 1, inet::IpPort::From_uint16_t(5353)),
-      inet::IpAddress(192, 168, 1, 100), Media::kBoth);
+      inet::IpAddress(192, 168, 1, 100), Media::kBoth, IpVersions::kBoth);
   ReplyAddress sender_address1(
       inet::SocketAddress(192, 168, 1, 2, inet::IpPort::From_uint16_t(5353)),
-      inet::IpAddress(192, 168, 1, 100), Media::kBoth);
+      inet::IpAddress(192, 168, 1, 100), Media::kBoth, IpVersions::kBoth);
 
   // First question.
-  under_test.ReceiveQuestion(DnsQuestion(kHostFullName, DnsType::kA), addresses().multicast_reply(),
+  under_test.ReceiveQuestion(DnsQuestion(kHostFullName, DnsType::kA),
+                             ReplyAddress::Multicast(Media::kBoth, IpVersions::kBoth),
                              sender_address0);
   ExpectAddresses();
   ExpectNoOther();
 
   // Second question - answer should be delayed 1s.
-  under_test.ReceiveQuestion(DnsQuestion(kHostFullName, DnsType::kA), addresses().multicast_reply(),
+  under_test.ReceiveQuestion(DnsQuestion(kHostFullName, DnsType::kA),
+                             ReplyAddress::Multicast(Media::kBoth, IpVersions::kBoth),
                              sender_address0);
   ExpectPostTaskForTimeAndInvoke(zx::sec(1), zx::sec(1));
   ExpectAddresses();
   ExpectNoOther();
 
   // Third and fourth questions - one answer, delayed 1s.
-  under_test.ReceiveQuestion(DnsQuestion(kHostFullName, DnsType::kA), addresses().multicast_reply(),
+  under_test.ReceiveQuestion(DnsQuestion(kHostFullName, DnsType::kA),
+                             ReplyAddress::Multicast(Media::kBoth, IpVersions::kBoth),
                              sender_address0);
-  under_test.ReceiveQuestion(DnsQuestion(kHostFullName, DnsType::kA), addresses().multicast_reply(),
+  under_test.ReceiveQuestion(DnsQuestion(kHostFullName, DnsType::kA),
+                             ReplyAddress::Multicast(Media::kBoth, IpVersions::kBoth),
                              sender_address1);
   ExpectPostTaskForTimeAndInvoke(zx::sec(1), zx::sec(1));
   ExpectAddresses();

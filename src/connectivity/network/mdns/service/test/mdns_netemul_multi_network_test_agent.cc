@@ -90,7 +90,7 @@ class TestAgent {
     });
 
     transceiver_.Start(
-        std::move(watcher), addresses_,
+        std::move(watcher),
         // This lambda is called when interface changes are detected.
         [this]() {
           if (sending_) {
@@ -181,7 +181,7 @@ class TestAgent {
   void SendRequest() {
     DnsMessage message;
     message.questions_.push_back(std::make_shared<DnsQuestion>(kInstanceName, DnsType::kAaaa));
-    transceiver_.SendMessage(&message, addresses_.multicast_reply());
+    transceiver_.SendMessage(&message, ReplyAddress::Multicast(Media::kBoth, IpVersions::kBoth));
   }
 
   void Quit(int exit_code) {
@@ -200,11 +200,11 @@ class TestAgent {
   // sending out requests.
   std::string client_name_;
   fuchsia::netemul::sync::BusPtr bus_proxy_;
-  MdnsAddresses addresses_;
   MdnsTransceiver transceiver_;
   sys::ComponentContext* component_context_;
   QuitCallback quit_callback_;
 };
+
 }  // namespace mdns::test
 
 ////////////////////////////////////////////////////////////////////////////////

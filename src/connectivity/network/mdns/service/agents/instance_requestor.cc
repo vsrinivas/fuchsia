@@ -17,10 +17,10 @@ static constexpr zx::duration kMaxQueryInterval = zx::sec(60 * 60);
 
 }  // namespace
 
-InstanceRequestor::InstanceRequestor(MdnsAgent::Host* host, const std::string& service_name)
-    : MdnsAgent(host),
+InstanceRequestor::InstanceRequestor(MdnsAgent::Owner* owner, const std::string& service_name)
+    : MdnsAgent(owner),
       service_name_(service_name),
-      service_full_name_(MdnsNames::LocalServiceFullName(service_name)),
+      service_full_name_(MdnsNames::ServiceFullName(service_name)),
       question_(std::make_shared<DnsQuestion>(service_full_name_, DnsType::kPtr)) {}
 
 InstanceRequestor::~InstanceRequestor() {}
@@ -39,8 +39,8 @@ void InstanceRequestor::RemoveSubscriber(Mdns::Subscriber* subscriber) {
   }
 }
 
-void InstanceRequestor::Start(const std::string& host_full_name, const MdnsAddresses& addresses) {
-  MdnsAgent::Start(host_full_name, addresses);
+void InstanceRequestor::Start(const std::string& local_host_full_name) {
+  MdnsAgent::Start(local_host_full_name);
   SendQuery();
 }
 

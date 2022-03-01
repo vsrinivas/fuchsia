@@ -49,7 +49,7 @@ class MdnsInterfaceTransceiver {
   Media media() const { return media_; }
 
   // Starts the interface transceiver.
-  virtual bool Start(const MdnsAddresses& addresses, InboundMessageCallback callback);
+  virtual bool Start(InboundMessageCallback callback);
 
   // Stops the interface transceiver.
   virtual void Stop();
@@ -84,10 +84,6 @@ class MdnsInterfaceTransceiver {
                            Media media);
 
   const fbl::unique_fd& socket_fd() const { return socket_fd_; }
-  const MdnsAddresses& addresses() const {
-    FX_DCHECK(addresses_);
-    return *addresses_;
-  }
 
   virtual int SetOptionDisableMulticastLoop() = 0;
   virtual int SetOptionJoinMulticastGroup() = 0;
@@ -133,7 +129,6 @@ class MdnsInterfaceTransceiver {
   fsl::FDWaiter fd_waiter_;
   std::vector<uint8_t> inbound_buffer_;
   std::vector<uint8_t> outbound_buffer_;
-  const MdnsAddresses* addresses_;
   InboundMessageCallback inbound_message_callback_;
   std::shared_ptr<DnsResource> address_resource_;
   std::shared_ptr<DnsResource> alternate_address_resource_;

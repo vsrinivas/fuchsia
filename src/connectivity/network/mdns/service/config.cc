@@ -18,21 +18,6 @@ const char kSchema[] = R"({
   "type": "object",
   "additionalProperties": false,
   "properties": {
-    "port": {
-      "type": "integer",
-      "minimum": 1,
-      "maximum": 65535
-    },
-    "v4_multicast_address": {
-      "type": "string",
-      "minLength": 7,
-      "maxLength": 15
-    },
-    "v6_multicast_address": {
-      "type": "string",
-      "minLength": 4,
-      "maxLength": 39
-    },
     "perform_host_name_probe": {
       "type": "boolean"
     },
@@ -79,8 +64,6 @@ const char kSchema[] = R"({
 })";
 
 const char kPortKey[] = "port";
-const char kV4MultcastAddressKey[] = "v4_multicast_address";
-const char kV6MultcastAddressKey[] = "v6_multicast_address";
 const char kPerformHostNameProbeKey[] = "perform_host_name_probe";
 const char kPublicationsKey[] = "publications";
 const char kServiceKey[] = "service";
@@ -97,65 +80,29 @@ const char kMediaValueBoth[] = "both";
 //  static
 const char Config::kConfigDir[] = "/config/data";
 
-void Config::ReadConfigFiles(const std::string& host_name, const std::string& config_dir) {
-  FX_DCHECK(MdnsNames::IsValidHostName(host_name));
+void Config::ReadConfigFiles(const std::string& local_host_name, const std::string& config_dir) {
+  FX_DCHECK(MdnsNames::IsValidHostName(local_host_name));
 
   auto schema_result = json_parser::InitSchema(kSchema);
   FX_CHECK(schema_result.is_ok()) << schema_result.error_value().ToString();
   auto schema = std::move(schema_result.value());
   // |ParseFromDirectory| treats a non-existent directory the same as an empty directory, which
   // is what we want.
-  parser_.ParseFromDirectory(config_dir, [this, &schema, &host_name](rapidjson::Document document) {
-    auto validation_result = json_parser::ValidateSchema(document, schema);
-    if (validation_result.is_error()) {
-      parser_.ReportError(validation_result.error_value());
-      return;
-    }
+  parser_.ParseFromDirectory(
+      config_dir, [this, &schema, &local_host_name](rapidjson::Document document) {
+        auto validation_result = json_parser::ValidateSchema(document, schema);
+        if (validation_result.is_error()) {
+          parser_.ReportError(validation_result.error_value());
+          return;
+        }
 
-    IntegrateDocument(document, host_name);
-  });
+        IntegrateDocument(document, local_host_name);
+      });
 }
 
-void Config::IntegrateDocument(const rapidjson::Document& document, const std::string& host_name) {
+void Config::IntegrateDocument(const rapidjson::Document& document,
+                               const std::string& local_host_name) {
   FX_DCHECK(document.IsObject());
-
-  if (document.HasMember(kPortKey)) {
-    FX_DCHECK(document[kPortKey].IsUint());
-    const unsigned int port = document[kPortKey].GetUint();
-    FX_DCHECK(port >= 1);
-    FX_DCHECK(port <= std::numeric_limits<uint16_t>::max()) << port << " doesn't fit in a uint16";
-    addresses_.SetPort(inet::IpPort::From_uint16_t(static_cast<uint16_t>(port)));
-  }
-
-  if (document.HasMember(kV4MultcastAddressKey)) {
-    FX_DCHECK(document[kV4MultcastAddressKey].IsString());
-    auto address =
-        inet::IpAddress::FromString(document[kV4MultcastAddressKey].GetString(), AF_INET);
-    if (!address.is_valid()) {
-      parser_.ReportError((std::stringstream() << kV4MultcastAddressKey << " value "
-                                               << document[kV4MultcastAddressKey].GetString()
-                                               << " is not a valid IPV4 address.")
-                              .str());
-      return;
-    }
-
-    addresses_.SetMulticastAddress(address);
-  }
-
-  if (document.HasMember(kV6MultcastAddressKey)) {
-    FX_DCHECK(document[kV6MultcastAddressKey].IsString());
-    auto address =
-        inet::IpAddress::FromString(document[kV6MultcastAddressKey].GetString(), AF_INET6);
-    if (!address.is_valid()) {
-      parser_.ReportError((std::stringstream() << kV6MultcastAddressKey << " value "
-                                               << document[kV6MultcastAddressKey].GetString()
-                                               << " is not a valid IPV6 address.")
-                              .str());
-      return;
-    }
-
-    addresses_.SetMulticastAddress(address);
-  }
 
   if (document.HasMember(kPerformHostNameProbeKey)) {
     FX_DCHECK(document[kPerformHostNameProbeKey].IsBool());
@@ -168,7 +115,7 @@ void Config::IntegrateDocument(const rapidjson::Document& document, const std::s
   if (document.HasMember(kPublicationsKey)) {
     FX_DCHECK(document[kPublicationsKey].IsArray());
     for (auto& item : document[kPublicationsKey].GetArray()) {
-      IntegratePublication(item, host_name);
+      IntegratePublication(item, local_host_name);
       if (parser_.HasError()) {
         return;
       }

@@ -17,24 +17,24 @@ struct MdnsNames {
 
   // Constructs a local host name from a simple host name. For example, produces
   // "host.local." from "host".
-  static std::string LocalHostFullName(const std::string& host_name);
+  static std::string HostFullName(const std::string& host_name);
 
   // Constructs a local service name from a simple service name. For example,
   // produces "_foo._tcp.local." from "_foo._tcp.".
-  static std::string LocalServiceFullName(const std::string& service_name);
+  static std::string ServiceFullName(const std::string& service_name);
 
   // Constructs a local service name from a simple service name and subtype.
   // For example, produces "_bar._sub_.foo._tcp.local." from "_foo._tcp." and
   // subtype "_bar".
-  static std::string LocalServiceSubtypeFullName(const std::string& service_name,
-                                                 const std::string& subtype);
+  static std::string ServiceSubtypeFullName(const std::string& service_name,
+                                            const std::string& subtype);
 
   // Constructs a local service instance name from a simple instance name and
   // a simple service name. For example, produces "myfoo._foo._tcp.local." from
   // "myfoo" and "_foo._tcp.". The simple instance name must not end in a ".",
   // and the simple service name must end in ".".
-  static std::string LocalInstanceFullName(const std::string& instance_name,
-                                           const std::string& service_name);
+  static std::string InstanceFullName(const std::string& instance_name,
+                                      const std::string& service_name);
 
   // Extracts the simple instance name from an instance full name given the
   // name of the service. Returns true and deposits the instance name if

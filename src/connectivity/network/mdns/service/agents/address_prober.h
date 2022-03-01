@@ -17,7 +17,7 @@ class AddressProber : public Prober {
   using CompletionCallback = fit::function<void(bool)>;
 
   // Creates an |AddressProber|.
-  AddressProber(MdnsAgent::Host* host, CompletionCallback callback);
+  AddressProber(MdnsAgent::Owner* owner, CompletionCallback callback);
 
   ~AddressProber() override;
 

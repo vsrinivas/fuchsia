@@ -6,15 +6,15 @@
 
 namespace mdns {
 
-AddressProber::AddressProber(MdnsAgent::Host* host, CompletionCallback callback)
-    : Prober(host, DnsType::kA, std::move(callback)) {}
+AddressProber::AddressProber(MdnsAgent::Owner* owner, CompletionCallback callback)
+    : Prober(owner, DnsType::kA, std::move(callback)) {}
 
 AddressProber::~AddressProber() {}
 
-const std::string& AddressProber::ResourceName() { return host_full_name(); }
+const std::string& AddressProber::ResourceName() { return local_host_full_name(); }
 
 void AddressProber::SendProposedResources(MdnsResourceSection section) {
-  SendAddresses(section, addresses().multicast_reply());
+  SendAddresses(section, ReplyAddress::Multicast(Media::kBoth, IpVersions::kBoth));
 }
 
 }  // namespace mdns

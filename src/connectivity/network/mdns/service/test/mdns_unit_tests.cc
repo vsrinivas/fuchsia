@@ -15,7 +15,7 @@ static const std::string kServiceFullName = "_yardapult._tcp.local.";
 static const std::string kInstanceName = "my";
 static const std::string kInstanceFullName = "my._yardapult._tcp.local.";
 static const ReplyAddress kReplyAddress({192, 168, 78, 9, inet::IpPort::From_in_port_t(5353)},
-                                        {192, 168, 1, 1}, Media::kWired);
+                                        {192, 168, 1, 1}, Media::kWired, IpVersions::kBoth);
 
 // Unit tests for the |Mdns| class.
 class MdnsUnitTests : public gtest::RealLoopFixture, public Mdns::Transceiver {
@@ -23,8 +23,8 @@ class MdnsUnitTests : public gtest::RealLoopFixture, public Mdns::Transceiver {
   MdnsUnitTests() : under_test_(*this) {}
 
   //  Mdns::Transceiver implementation.
-  void Start(fuchsia::net::interfaces::WatcherPtr watcher, const MdnsAddresses& addresses,
-             fit::closure link_change_callback, InboundMessageCallback inbound_message_callback,
+  void Start(fuchsia::net::interfaces::WatcherPtr watcher, fit::closure link_change_callback,
+             InboundMessageCallback inbound_message_callback,
              InterfaceTransceiverCreateFunction transceiver_factory) override {
     start_called_ = true;
     link_change_callback_ = std::move(link_change_callback);
@@ -73,8 +73,7 @@ class MdnsUnitTests : public gtest::RealLoopFixture, public Mdns::Transceiver {
 
   // Starts the |Mdns| instance under test.
   void Start(bool perform_address_probe) {
-    under_test_.Start(nullptr, kHostName, addresses_, perform_address_probe,
-                      [this]() { ready_ = true; });
+    under_test_.Start(nullptr, kHostName, perform_address_probe, [this]() { ready_ = true; });
     EXPECT_TRUE(start_called_);
     EXPECT_TRUE(link_change_callback_);
     EXPECT_TRUE(inbound_message_callback_);
@@ -142,7 +141,6 @@ class MdnsUnitTests : public gtest::RealLoopFixture, public Mdns::Transceiver {
 
  private:
   Mdns under_test_;
-  MdnsAddresses addresses_;
   bool has_interfaces_ = false;
   bool start_called_ = false;
   bool stop_called_ = false;
@@ -195,7 +193,7 @@ class Publisher : public Mdns::Publisher {
   // Mdns::Publisher implementation.
   void ReportSuccess(bool success) override {}
 
-  void GetPublication(Mdns::PublicationCause publication_cause, const std::string& subtype,
+  void GetPublication(PublicationCause publication_cause, const std::string& subtype,
                       const std::vector<inet::SocketAddress>& source_addresses,
                       fit::function<void(std::unique_ptr<Mdns::Publication>)> callback) override {
     callback(Mdns::Publication::Create(inet::IpPort::From_in_port_t(5353), {}));
@@ -210,7 +208,7 @@ class NonPublisher : public Mdns::Publisher {
   // Mdns::Publisher implementation.
   void ReportSuccess(bool success) override {}
 
-  void GetPublication(Mdns::PublicationCause publication_cause, const std::string& subtype,
+  void GetPublication(PublicationCause publication_cause, const std::string& subtype,
                       const std::vector<inet::SocketAddress>& source_addresses,
                       fit::function<void(std::unique_ptr<Mdns::Publication>)> callback) override {
     callback(nullptr);
@@ -225,7 +223,7 @@ class AsyncPublisher : public Mdns::Publisher {
   // Mdns::Publisher implementation.
   void ReportSuccess(bool success) override {}
 
-  void GetPublication(Mdns::PublicationCause publication_cause, const std::string& subtype,
+  void GetPublication(PublicationCause publication_cause, const std::string& subtype,
                       const std::vector<inet::SocketAddress>& source_addresses,
                       fit::function<void(std::unique_ptr<Mdns::Publication>)> callback) override {
     get_publication_callback_ = std::move(callback);
@@ -390,8 +388,7 @@ TEST_F(MdnsUnitTests, PublishWiredOnly) {
   EXPECT_TRUE(under_test().PublishServiceInstance(kServiceName, kInstanceName, false, Media::kWired,
                                                   &publisher));
   RunLoopUntilIdle();
-  MdnsAddresses addresses;
-  ExpectSendMessageCalled(addresses.multicast_reply_wired_only());
+  ExpectSendMessageCalled(ReplyAddress::Multicast(Media::kWired, IpVersions::kBoth));
 
   // Clean up.
   under_test().Stop();
@@ -410,8 +407,7 @@ TEST_F(MdnsUnitTests, PublishWirelessOnly) {
   EXPECT_TRUE(under_test().PublishServiceInstance(kServiceName, kInstanceName, false,
                                                   Media::kWireless, &publisher));
   RunLoopUntilIdle();
-  MdnsAddresses addresses;
-  ExpectSendMessageCalled(addresses.multicast_reply_wireless_only());
+  ExpectSendMessageCalled(ReplyAddress::Multicast(Media::kWireless, IpVersions::kBoth));
 
   // Clean up.
   under_test().Stop();
@@ -430,8 +426,7 @@ TEST_F(MdnsUnitTests, PublishBoth) {
   EXPECT_TRUE(under_test().PublishServiceInstance(kServiceName, kInstanceName, false, Media::kBoth,
                                                   &publisher));
   RunLoopUntilIdle();
-  MdnsAddresses addresses;
-  ExpectSendMessageCalled(addresses.multicast_reply());
+  ExpectSendMessageCalled(ReplyAddress::Multicast(Media::kBoth, IpVersions::kBoth));
 
   // Clean up.
   under_test().Stop();

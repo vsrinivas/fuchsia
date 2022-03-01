@@ -21,14 +21,14 @@ namespace mdns {
 class ServiceInstanceResolver : public MdnsAgent {
  public:
   // Creates a |ServiceInstanceResolver|.
-  ServiceInstanceResolver(MdnsAgent::Host* host, const std::string& service,
+  ServiceInstanceResolver(MdnsAgent::Owner* owner, const std::string& service,
                           const std::string& instance, zx::time timeout,
                           Mdns::ResolveServiceInstanceCallback callback);
 
   ~ServiceInstanceResolver() override;
 
   // MdnsAgent overrides.
-  void Start(const std::string& service_instance, const MdnsAddresses& addresses) override;
+  void Start(const std::string& service_instance) override;
 
   void ReceiveResource(const DnsResource& resource, MdnsResourceSection section) override;
 

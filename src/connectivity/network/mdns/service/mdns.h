@@ -31,7 +31,7 @@ class InstanceResponder;
 class ResourceRenewer;
 
 // Implements mDNS.
-class Mdns : public MdnsAgent::Host {
+class Mdns : public MdnsAgent::Owner {
  public:
   // Abstract base class for message transceiver.
   class Transceiver {
@@ -45,7 +45,7 @@ class Mdns : public MdnsAgent::Host {
     virtual ~Transceiver() {}
 
     // Starts the transceiver.
-    virtual void Start(fuchsia::net::interfaces::WatcherPtr watcher, const MdnsAddresses& addresses,
+    virtual void Start(fuchsia::net::interfaces::WatcherPtr watcher,
                        fit::closure link_change_callback,
                        InboundMessageCallback inbound_message_callback,
                        InterfaceTransceiverCreateFunction transceiver_factory) = 0;
@@ -122,12 +122,6 @@ class Mdns : public MdnsAgent::Host {
     friend class Mdns;
   };
 
-  enum class PublicationCause {
-    kAnnouncement,
-    kQueryMulticastResponse,
-    kQueryUnicastResponse,
-  };
-
   // Abstract base class for client-supplied publisher.
   class Publisher {
    public:
@@ -153,7 +147,7 @@ class Mdns : public MdnsAgent::Host {
     virtual void ReportSuccess(bool success) = 0;
 
     // Provides instance information for initial announcements and query
-    // responses relating to the service instance specified in |AddResponder|.
+    // responses relating to the service instance specified in |PublishServiceInstance|.
     // |pubication_type| indicates whether data is requested for an initial announcement
     // or in response to a multicast or unicast query. If the publication relates to
     // a subtype of the service, |subtype| contains the subtype, otherwise it is
@@ -197,16 +191,15 @@ class Mdns : public MdnsAgent::Host {
   // Starts the transceiver. |ready_callback| is called once we're is ready for
   // calls to |ResolveHostName|, |SubscribeToService| and
   // |PublishServiceInstance|.
-  void Start(fuchsia::net::interfaces::WatcherPtr, const std::string& host_name,
-             const MdnsAddresses& addresses, bool perform_address_probe,
-             fit::closure ready_callback);
+  void Start(fuchsia::net::interfaces::WatcherPtr, const std::string& local_host_name,
+             bool perform_address_probe, fit::closure ready_callback);
 
   // Stops the transceiver.
   void Stop();
 
-  // Returns the host name currently in use. May be different than the host name
+  // Returns the local host name currently in use. May be different than the host name
   // passed in to |Start| if address probing detected conflicts.
-  std::string host_name() { return host_name_; }
+  std::string local_host_name() { return local_host_name_; }
 
   // Resolves |host_name| to one or two |IpAddress|es. Must not be called before
   // |Start|'s ready callback is called.
@@ -325,16 +318,16 @@ class Mdns : public MdnsAgent::Host {
   // Starts the address probe or transitions to ready state, depending on
   // |perform_address_probe|. This method is called the first time a transceiver
   // becomes ready.
-  void OnInterfacesStarted(const std::string& host_name, bool perform_address_probe);
+  void OnInterfacesStarted(const std::string& local_host_name, bool perform_address_probe);
 
   // Starts a probe for a conflicting host name. If a conflict is detected, a
   // new name is generated and this method is called again. If no conflict is
-  // detected, |host_full_name_| gets set and the service is ready to start
+  // detected, |local_host_full_name_| gets set and the service is ready to start
   // other agents.
-  void StartAddressProbe(const std::string& host_name);
+  void StartAddressProbe(const std::string& local_host_name);
 
-  // Sets |host_name_|, |host_full_name_| and |address_placeholder_|.
-  void RegisterHostName(const std::string& host_name);
+  // Sets |local_host_name_|, |local_host_name_full_name_| and |address_placeholder_|.
+  void RegisterLocalHostName(const std::string& local_host_name);
 
   // Starts agents and calls the ready callback. This method is called when
   // at least one transceiver is ready and a unique host name has been
@@ -345,7 +338,7 @@ class Mdns : public MdnsAgent::Host {
   // calls |StartAddressProbe| with that name.
   void OnHostNameConflict();
 
-  // MdnsAgent::Host implementation.
+  // MdnsAgent::Owner implementation.
   zx::time now() override;
 
   void PostTaskForTime(MdnsAgent* agent, fit::closure task, zx::time target_time) override;
@@ -383,12 +376,11 @@ class Mdns : public MdnsAgent::Host {
 
   async_dispatcher_t* dispatcher_;
   Transceiver& transceiver_;
-  std::string original_host_name_;
-  const MdnsAddresses* addresses_;
+  std::string original_local_host_name_;
   fit::closure ready_callback_;
-  uint32_t next_host_name_deduplicator_ = 2;
-  std::string host_name_;
-  std::string host_full_name_;
+  uint32_t next_local_host_name_deduplicator_ = 2;
+  std::string local_host_name_;
+  std::string local_host_full_name_;
   State state_ = State::kNotStarted;
   std::priority_queue<TaskQueueEntry> task_queue_;
   zx::time posted_task_time_ = zx::time::infinite();

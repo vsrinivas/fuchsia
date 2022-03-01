@@ -23,13 +23,13 @@ class InstanceResponder : public MdnsAgent {
  public:
   // Creates an |InstanceResponder|. The publisher is consulted to determine
   // how queries are handled.
-  InstanceResponder(MdnsAgent::Host* host, const std::string& service_name,
+  InstanceResponder(MdnsAgent::Owner* owner, const std::string& service_name,
                     const std::string& instance_name, Media media, Mdns::Publisher* publisher);
 
   ~InstanceResponder() override;
 
   // MdnsAgent overrides.
-  void Start(const std::string& host_full_name, const MdnsAddresses& addresses) override;
+  void Start(const std::string& local_host_full_name) override;
 
   void ReceiveQuestion(const DnsQuestion& question, const ReplyAddress& reply_address,
                        const ReplyAddress& sender_address) override;
@@ -62,12 +62,12 @@ class InstanceResponder : public MdnsAgent {
 
   // Calls |GetAndSendPublication| with |query| set to true after first determining if the send
   // should be throttled.
-  void MaybeGetAndSendPublication(Mdns::PublicationCause publication_cause,
-                                  const std::string& subtype, const ReplyAddress& reply_address);
+  void MaybeGetAndSendPublication(PublicationCause publication_cause, const std::string& subtype,
+                                  const ReplyAddress& reply_address);
 
   // Gets an |Mdns::Publication| from |mdns_responder_| and, if not null, sends
   // it. An empty |subtype| indicates no subtype.
-  void GetAndSendPublication(Mdns::PublicationCause publication_cause, const std::string& subtype,
+  void GetAndSendPublication(PublicationCause publication_cause, const std::string& subtype,
                              const ReplyAddress& reply_address);
 
   // Sends a publication. An empty |subtype| indicates no subtype.

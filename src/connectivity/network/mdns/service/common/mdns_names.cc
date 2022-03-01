@@ -108,22 +108,22 @@ class Parser {
 const std::string MdnsNames::kAnyServiceFullName = "_services._dns-sd._udp.local.";
 
 // static
-std::string MdnsNames::LocalHostFullName(const std::string& host_name) {
+std::string MdnsNames::HostFullName(const std::string& host_name) {
   FX_DCHECK(IsValidHostName(host_name));
 
   return Concatenate({&host_name, &kLabelSeparator, &kLocalDomainName});
 }
 
 // static
-std::string MdnsNames::LocalServiceFullName(const std::string& service_name) {
+std::string MdnsNames::ServiceFullName(const std::string& service_name) {
   FX_DCHECK(IsValidServiceName(service_name));
 
   return Concatenate({&service_name, &kLocalDomainName});
 }
 
 // static
-std::string MdnsNames::LocalServiceSubtypeFullName(const std::string& service_name,
-                                                   const std::string& subtype) {
+std::string MdnsNames::ServiceSubtypeFullName(const std::string& service_name,
+                                              const std::string& subtype) {
   FX_DCHECK(IsValidServiceName(service_name));
   FX_DCHECK(IsValidSubtypeName(subtype));
 
@@ -131,8 +131,8 @@ std::string MdnsNames::LocalServiceSubtypeFullName(const std::string& service_na
 }
 
 // static
-std::string MdnsNames::LocalInstanceFullName(const std::string& instance_name,
-                                             const std::string& service_name) {
+std::string MdnsNames::InstanceFullName(const std::string& instance_name,
+                                        const std::string& service_name) {
   FX_DCHECK(IsValidInstanceName(instance_name));
   FX_DCHECK(IsValidServiceName(service_name));
 

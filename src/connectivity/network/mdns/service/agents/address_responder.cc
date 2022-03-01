@@ -10,15 +10,15 @@
 
 namespace mdns {
 
-AddressResponder::AddressResponder(MdnsAgent::Host* host) : MdnsAgent(host) {}
+AddressResponder::AddressResponder(MdnsAgent::Owner* host) : MdnsAgent(host) {}
 
 AddressResponder::~AddressResponder() {}
 
-void AddressResponder::Start(const std::string& host_full_name, const MdnsAddresses& addresses) {
-  FX_DCHECK(!host_full_name.empty());
+void AddressResponder::Start(const std::string& local_host_full_name) {
+  FX_DCHECK(!local_host_full_name.empty());
 
-  MdnsAgent::Start(host_full_name, addresses);
-  host_full_name_ = host_full_name;
+  MdnsAgent::Start(local_host_full_name);
+  host_full_name_ = local_host_full_name;
 }
 
 void AddressResponder::ReceiveQuestion(const DnsQuestion& question,
@@ -33,7 +33,7 @@ void AddressResponder::ReceiveQuestion(const DnsQuestion& question,
 
 void AddressResponder::MaybeSendAddresses(const ReplyAddress& reply_address) {
   // We only throttle multicast sends. A V4 multicast reply address indicates V4 and V6 multicast.
-  if (reply_address.socket_address() == addresses().v4_multicast()) {
+  if (reply_address.socket_address() == MdnsAddresses::v4_multicast()) {
     if (throttle_state_ == kThrottleStatePending) {
       // The send is already happening.
       return;

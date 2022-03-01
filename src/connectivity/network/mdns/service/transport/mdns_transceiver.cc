@@ -18,7 +18,7 @@ MdnsTransceiver::MdnsTransceiver() = default;
 MdnsTransceiver::~MdnsTransceiver() = default;
 
 void MdnsTransceiver::Start(fuchsia::net::interfaces::WatcherPtr watcher,
-                            const MdnsAddresses& addresses, fit::closure link_change_callback,
+                            fit::closure link_change_callback,
                             InboundMessageCallback inbound_message_callback,
                             InterfaceTransceiverCreateFunction transceiver_factory) {
   FX_DCHECK(watcher);
@@ -27,7 +27,6 @@ void MdnsTransceiver::Start(fuchsia::net::interfaces::WatcherPtr watcher,
   FX_DCHECK(transceiver_factory);
 
   interface_watcher_ = std::move(watcher);
-  addresses_ = &addresses;
   link_change_callback_ = std::move(link_change_callback);
   inbound_message_callback_ = [this, callback = std::move(inbound_message_callback)](
                                   std::unique_ptr<DnsMessage> message,
@@ -61,7 +60,7 @@ MdnsInterfaceTransceiver* MdnsTransceiver::GetInterfaceTransceiver(const inet::I
 void MdnsTransceiver::SendMessage(DnsMessage* message, const ReplyAddress& reply_address) {
   FX_DCHECK(message);
 
-  if (reply_address.socket_address() == addresses_->v4_multicast()) {
+  if (reply_address.is_multicast_placeholder()) {
     for (auto& [address, interface] : interface_transceivers_by_address_) {
       FX_DCHECK(interface);
       if (reply_address.media() == Media::kBoth || reply_address.media() == interface->media()) {
@@ -305,7 +304,7 @@ bool MdnsTransceiver::EnsureInterfaceTransceiver(const inet::IpAddress& address,
 
   auto interface_transceiver = transceiver_factory_(address, name, id, media);
 
-  if (!interface_transceiver->Start(*addresses_, inbound_message_callback_.share())) {
+  if (!interface_transceiver->Start(inbound_message_callback_.share())) {
     // Couldn't start the transceiver.
     return result_on_fail;
   }

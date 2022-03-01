@@ -11,11 +11,11 @@
 
 namespace mdns {
 
-HostNameResolver::HostNameResolver(MdnsAgent::Host* host, const std::string& host_name,
+HostNameResolver::HostNameResolver(MdnsAgent::Owner* owner, const std::string& host_name,
                                    zx::time timeout, Mdns::ResolveHostNameCallback callback)
-    : MdnsAgent(host),
+    : MdnsAgent(owner),
       host_name_(host_name),
-      host_full_name_(MdnsNames::LocalHostFullName(host_name)),
+      host_full_name_(MdnsNames::HostFullName(host_name)),
       timeout_(timeout),
       callback_(std::move(callback)) {
   FX_DCHECK(callback_);
@@ -23,11 +23,11 @@ HostNameResolver::HostNameResolver(MdnsAgent::Host* host, const std::string& hos
 
 HostNameResolver::~HostNameResolver() {}
 
-void HostNameResolver::Start(const std::string& host_full_name, const MdnsAddresses& addresses) {
+void HostNameResolver::Start(const std::string& local_host_full_name) {
   // Note that |host_full_name_| is the name we're trying to resolve, not the
-  // name of the local host, which is the (ignored) parameter to this method.
+  // name of the local host, which is the parameter to this method.
 
-  MdnsAgent::Start(host_full_name, addresses);
+  MdnsAgent::Start(local_host_full_name);
 
   SendQuestion(std::make_shared<DnsQuestion>(host_full_name_, DnsType::kA));
   SendQuestion(std::make_shared<DnsQuestion>(host_full_name_, DnsType::kAaaa));

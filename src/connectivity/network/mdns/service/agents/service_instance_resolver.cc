@@ -12,10 +12,11 @@
 
 namespace mdns {
 
-ServiceInstanceResolver::ServiceInstanceResolver(MdnsAgent::Host* host, const std::string& service,
+ServiceInstanceResolver::ServiceInstanceResolver(MdnsAgent::Owner* owner,
+                                                 const std::string& service,
                                                  const std::string& instance, zx::time timeout,
                                                  Mdns::ResolveServiceInstanceCallback callback)
-    : MdnsAgent(host),
+    : MdnsAgent(owner),
       service_(service),
       instance_name_(instance),
       timeout_(timeout),
@@ -48,10 +49,9 @@ void ServiceInstanceResolver::EndOfMessage() {
   }
 }
 
-void ServiceInstanceResolver::Start(const std::string& service_instance,
-                                    const MdnsAddresses& addresses) {
-  MdnsAgent::Start(service_instance, addresses);
-  service_instance_ = MdnsNames::LocalInstanceFullName(instance_name_, service_);
+void ServiceInstanceResolver::Start(const std::string& service_instance) {
+  MdnsAgent::Start(service_instance);
+  service_instance_ = MdnsNames::InstanceFullName(instance_name_, service_);
   SendQuestion(std::make_shared<DnsQuestion>(service_instance_, DnsType::kSrv));
 
   PostTaskForTime(

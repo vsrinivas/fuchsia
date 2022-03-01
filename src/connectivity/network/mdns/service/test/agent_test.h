@@ -17,7 +17,7 @@
 namespace mdns {
 namespace test {
 
-class AgentTest : public ::testing::Test, public MdnsAgent::Host {
+class AgentTest : public ::testing::Test, public MdnsAgent::Owner {
  public:
   AgentTest() {}
 
@@ -28,9 +28,6 @@ class AgentTest : public ::testing::Test, public MdnsAgent::Host {
   // Sets the agent under test. This must be called before the test gets underway, and the agent
   // must survive until the end of the test.
   void SetAgent(const MdnsAgent& agent) { agent_ = &agent; }
-
-  // An instance of |MdnsAddresses| for lookup.
-  const MdnsAddresses& addresses() const { return addresses_; }
 
   // Advances the current time (as returned by |now()|) to |time|. |time| must be greater than
   // or equal to the time currently returned by |now()|.
@@ -107,7 +104,7 @@ class AgentTest : public ::testing::Test, public MdnsAgent::Host {
     }
   };
 
-  // |MdnsAgent::Host| implementation.
+  // |MdnsAgent::Owner| implementation.
  protected:
   zx::time now() override { return now_; }
 
@@ -131,7 +128,6 @@ class AgentTest : public ::testing::Test, public MdnsAgent::Host {
   std::shared_ptr<DnsResource> address_placeholder_ =
       std::make_shared<DnsResource>(kHostFullName, DnsType::kA);
 
-  MdnsAddresses addresses_;
   zx::time now_ = kInitialTime;
 
   std::queue<PostTaskForTimeCall> post_task_for_time_calls_;

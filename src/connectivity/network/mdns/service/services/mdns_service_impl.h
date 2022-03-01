@@ -41,7 +41,7 @@ class MdnsServiceImpl {
     // Mdns::Publisher implementation.
     void ReportSuccess(bool success) override;
 
-    void GetPublication(Mdns::PublicationCause publication_cause, const std::string& subtype,
+    void GetPublication(PublicationCause publication_cause, const std::string& subtype,
                         const std::vector<inet::SocketAddress>& source_addresses,
                         GetPublicationCallback callback) override;
 

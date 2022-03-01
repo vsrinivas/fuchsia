@@ -9,7 +9,7 @@
 
 namespace mdns {
 
-ResourceRenewer::ResourceRenewer(MdnsAgent::Host* host) : MdnsAgent(host) {}
+ResourceRenewer::ResourceRenewer(MdnsAgent::Owner* owner) : MdnsAgent(owner) {}
 
 ResourceRenewer::~ResourceRenewer() { FX_DCHECK(entries_.size() == schedule_.size()); }
 
@@ -68,7 +68,8 @@ void ResourceRenewer::SendRenewals() {
       std::shared_ptr<DnsResource> resource =
           std::make_shared<DnsResource>(entry->name_, entry->type_);
       resource->time_to_live_ = 0;
-      SendResource(resource, MdnsResourceSection::kExpired, addresses().multicast_reply());
+      SendResource(resource, MdnsResourceSection::kExpired,
+                   ReplyAddress::Multicast(Media::kBoth, IpVersions::kBoth));
       EraseEntry(entry);
     } else {
       // Need to query.

@@ -23,7 +23,7 @@ namespace {
 
 static constexpr zx::duration kReadyPollingInterval = zx::sec(1);
 
-std::string GetHostName() {
+std::string GetLocalHostName() {
   char host_name_buffer[HOST_NAME_MAX + 1];
   int result = gethostname(host_name_buffer, sizeof(host_name_buffer));
 
@@ -59,16 +59,16 @@ MdnsServiceImpl::MdnsServiceImpl(sys::ComponentContext* component_context)
 MdnsServiceImpl::~MdnsServiceImpl() {}
 
 void MdnsServiceImpl::Start() {
-  std::string host_name = GetHostName();
+  std::string local_host_name = GetLocalHostName();
 
-  if (host_name == fuchsia::device::DEFAULT_DEVICE_NAME) {
+  if (local_host_name == fuchsia::device::DEFAULT_DEVICE_NAME) {
     // Host name not set. Try again soon.
     async::PostDelayedTask(
         async_get_default_dispatcher(), [this]() { Start(); }, kReadyPollingInterval);
     return;
   }
 
-  config_.ReadConfigFiles(host_name);
+  config_.ReadConfigFiles(local_host_name);
   if (!config_.valid()) {
     FX_LOGS(FATAL) << "Invalid config file(s), terminating: " << config_.error();
     return;
@@ -77,7 +77,7 @@ void MdnsServiceImpl::Start() {
   auto interfaces_state = component_context_->svc()->Connect<fuchsia::net::interfaces::State>();
   fuchsia::net::interfaces::WatcherPtr watcher;
   interfaces_state->GetWatcher(fuchsia::net::interfaces::WatcherOptions(), watcher.NewRequest());
-  mdns_.Start(std::move(watcher), host_name, config_.addresses(), config_.perform_host_name_probe(),
+  mdns_.Start(std::move(watcher), local_host_name, config_.perform_host_name_probe(),
               fit::bind_member<&MdnsServiceImpl::OnReady>(this));
 }
 
@@ -112,7 +112,7 @@ bool MdnsServiceImpl::PublishServiceInstance(
     return false;
   }
 
-  std::string instance_full_name = MdnsNames::LocalInstanceFullName(instance_name, service_name);
+  std::string instance_full_name = MdnsNames::InstanceFullName(instance_name, service_name);
 
   // |Mdns| told us our instance is unique locally, so the full name should
   // not appear in our collection.
@@ -141,7 +141,7 @@ void MdnsServiceImpl::SimplePublisher::ReportSuccess(bool success) {
 }
 
 void MdnsServiceImpl::SimplePublisher::GetPublication(
-    Mdns::PublicationCause publication_cause, const std::string& subtype,
+    PublicationCause publication_cause, const std::string& subtype,
     const std::vector<inet::SocketAddress>& source_addresses, GetPublicationCallback callback) {
   FX_DCHECK(subtype.empty() || MdnsNames::IsValidSubtypeName(subtype));
   callback(publication_->Clone());

@@ -28,10 +28,11 @@ class Config {
   Config() = default;
   ~Config() = default;
 
-  // Reads the config files from |config_dir|. |host_name| is the host name as
+  // Reads the config files from |config_dir|. |local_host_name| is the local host name as
   // defined by the operating system (e.g. the result of posix's |gethostname|).
   // The default value for |config_dir| is "/config/data".
-  void ReadConfigFiles(const std::string& host_name, const std::string& config_dir = kConfigDir);
+  void ReadConfigFiles(const std::string& local_host_name,
+                       const std::string& config_dir = kConfigDir);
 
   // Indicates whether the configuration is valid.
   bool valid() const { return !parser_.HasError(); }
@@ -48,19 +49,16 @@ class Config {
   // Gets the publications.
   const std::vector<Publication>& publications() const { return publications_; }
 
-  // Gets the mDNS addresses.
-  const MdnsAddresses& addresses() const { return addresses_; }
-
  private:
   static const char kConfigDir[];
 
   // Integrates the config file represented by |document| into this
   // configuration.
-  void IntegrateDocument(const rapidjson::Document& document, const std::string& host_name);
+  void IntegrateDocument(const rapidjson::Document& document, const std::string& local_host_name);
 
   // Integrates the publication represented by |value| into this configuration.
   // |value| must be a JSON object.
-  void IntegratePublication(const rapidjson::Value& value, const std::string& host_name);
+  void IntegratePublication(const rapidjson::Value& value, const std::string& local_host_name);
 
   // Sets the value indicating whether a host name probe is required.
   void SetPerformHostNameProbe(bool perform_host_name_probe);
@@ -68,7 +66,6 @@ class Config {
   json::JSONParser parser_;
   std::optional<bool> perform_host_name_probe_;
   std::vector<Publication> publications_;
-  MdnsAddresses addresses_;
 
  public:
   // Disallow copy, assign and move.

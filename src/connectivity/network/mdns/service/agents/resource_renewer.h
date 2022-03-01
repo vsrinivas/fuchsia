@@ -42,7 +42,7 @@ namespace mdns {
 // difficult cleanup issues associated with a persistent renewal scheme.
 class ResourceRenewer : public MdnsAgent {
  public:
-  ResourceRenewer(MdnsAgent::Host* host);
+  explicit ResourceRenewer(MdnsAgent::Owner* owner);
 
   ~ResourceRenewer() override;
 

@@ -13,19 +13,19 @@ namespace mdns {
 // static
 constexpr zx::duration Prober::kMaxProbeInterval = zx::msec(250);
 
-Prober::Prober(MdnsAgent::Host* host, DnsType type, CompletionCallback callback)
-    : MdnsAgent(host), type_(type), callback_(std::move(callback)) {
+Prober::Prober(MdnsAgent::Owner* owner, DnsType type, CompletionCallback callback)
+    : MdnsAgent(owner), type_(type), callback_(std::move(callback)) {
   FX_DCHECK(callback_);
 }
 
 Prober::~Prober() {}
 
-void Prober::Start(const std::string& host_full_name, const MdnsAddresses& addresses) {
-  FX_DCHECK(!host_full_name.empty());
+void Prober::Start(const std::string& local_host_full_name) {
+  FX_DCHECK(!local_host_full_name.empty());
 
-  MdnsAgent::Start(host_full_name, addresses);
+  MdnsAgent::Start(local_host_full_name);
 
-  host_full_name_ = host_full_name;
+  local_host_full_name_ = local_host_full_name;
 
   question_ = std::make_shared<DnsQuestion>(ResourceName(), DnsType::kAny);
   question_->unicast_response_ = true;

@@ -66,7 +66,8 @@ void AgentTest::PostTaskForTime(MdnsAgent* agent, fit::closure task, zx::time ta
 
 void AgentTest::SendQuestion(std::shared_ptr<DnsQuestion> question) {
   EXPECT_NE(nullptr, question);
-  auto& message = outbound_messages_by_reply_address_[addresses_.multicast_reply()];
+  auto& message =
+      outbound_messages_by_reply_address_[ReplyAddress::Multicast(Media::kBoth, IpVersions::kBoth)];
   if (message == nullptr) {
     message = std::make_unique<DnsMessage>();
   }

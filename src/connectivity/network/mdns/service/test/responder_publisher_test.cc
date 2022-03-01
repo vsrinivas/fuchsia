@@ -65,20 +65,20 @@ TEST_F(ResponderPublisherTest, FlowControl) {
       [&deleter_called]() { deleter_called = true; });
 
   // Ask the publisher for a publication and expect that the request is forwarded over FIDL.
-  under_test.GetPublication(Mdns::PublicationCause::kAnnouncement, "1", {},
+  under_test.GetPublication(PublicationCause::kAnnouncement, "1", {},
                             [](std::unique_ptr<Mdns::Publication> publication) {});
   RunLoopUntilIdle();
   EXPECT_EQ(1u, on_publication_calls().size());
 
   // Ask the publisher for a second publication and expect that this one is also forwarded.
-  under_test.GetPublication(Mdns::PublicationCause::kAnnouncement, "2", {},
+  under_test.GetPublication(PublicationCause::kAnnouncement, "2", {},
                             [](std::unique_ptr<Mdns::Publication> publication) {});
   RunLoopUntilIdle();
   EXPECT_EQ(2u, on_publication_calls().size());
 
   // Ask the publisher for a third publication. Expect that it's not forwarded yet, because we
   // haven't responded to either of the first two.
-  under_test.GetPublication(Mdns::PublicationCause::kAnnouncement, "3", {},
+  under_test.GetPublication(PublicationCause::kAnnouncement, "3", {},
                             [](std::unique_ptr<Mdns::Publication> publication) {});
   RunLoopUntilIdle();
   EXPECT_EQ(2u, on_publication_calls().size());
@@ -93,7 +93,7 @@ TEST_F(ResponderPublisherTest, FlowControl) {
 
   // Ask the publisher for a fourth publication. Expect that it's not forwarded yet, because we
   // haven't responded to either of the second and third requests.
-  under_test.GetPublication(Mdns::PublicationCause::kAnnouncement, "4", {},
+  under_test.GetPublication(PublicationCause::kAnnouncement, "4", {},
                             [](std::unique_ptr<Mdns::Publication> publication) {});
   RunLoopUntilIdle();
   EXPECT_EQ(2u, on_publication_calls().size());

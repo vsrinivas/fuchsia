@@ -18,6 +18,7 @@
 
 #include <fbl/unique_fd.h>
 
+#include "src/connectivity/network/mdns/service/common/formatters.h"
 #include "src/connectivity/network/mdns/service/common/mdns_addresses.h"
 #include "src/connectivity/network/mdns/service/encoding/dns_formatting.h"
 #include "src/connectivity/network/mdns/service/encoding/dns_reading.h"
@@ -53,14 +54,12 @@ MdnsInterfaceTransceiver::MdnsInterfaceTransceiver(inet::IpAddress address, cons
 
 MdnsInterfaceTransceiver::~MdnsInterfaceTransceiver() {}
 
-bool MdnsInterfaceTransceiver::Start(const MdnsAddresses& addresses,
-                                     InboundMessageCallback callback) {
+bool MdnsInterfaceTransceiver::Start(InboundMessageCallback callback) {
   FX_DCHECK(callback);
   FX_DCHECK(!socket_fd_.is_valid()) << "Start called when already started.";
 
-  addresses_ = &addresses;
-
-  std::cout << "Starting mDNS on interface " << name_ << " using port " << addresses.port() << "\n";
+  std::cout << "Starting mDNS on interface " << name_ << " using port " << MdnsAddresses::port()
+            << "\n";
 
   socket_fd_ = fbl::unique_fd(socket(address_.family(), SOCK_DGRAM, 0));
 
@@ -100,7 +99,7 @@ void MdnsInterfaceTransceiver::SendMessage(DnsMessage* message,
                                            const inet::SocketAddress& address) {
   FX_DCHECK(message);
   FX_DCHECK(address.is_valid());
-  FX_DCHECK(address.family() == address_.family() || address == addresses_->v4_multicast());
+  FX_DCHECK(address.family() == address_.family() || address == MdnsAddresses::v4_multicast());
 
   FixUpAddresses(&message->answers_);
   FixUpAddresses(&message->authorities_);
@@ -128,7 +127,7 @@ void MdnsInterfaceTransceiver::SendAddress(const std::string& host_full_name) {
   DnsMessage message;
   message.answers_.push_back(GetAddressResource(host_full_name));
 
-  SendMessage(&message, addresses_->v4_multicast());
+  SendMessage(&message, MdnsAddresses::v4_multicast());
 }
 
 void MdnsInterfaceTransceiver::SendAddressGoodbye(const std::string& host_full_name) {
@@ -137,7 +136,7 @@ void MdnsInterfaceTransceiver::SendAddressGoodbye(const std::string& host_full_n
   message.answers_.push_back(MakeAddressResource(host_full_name, address_));
   message.answers_.back()->time_to_live_ = 0;
 
-  SendMessage(&message, addresses_->v4_multicast());
+  SendMessage(&message, MdnsAddresses::v4_multicast());
 }
 
 void MdnsInterfaceTransceiver::LogTraffic() {
@@ -203,7 +202,7 @@ void MdnsInterfaceTransceiver::InboundReady(zx_status_t status, uint32_t events)
   ++messages_received_;
   bytes_received_ += result;
 
-  ReplyAddress reply_address(source_address_storage, address_, media_);
+  ReplyAddress reply_address(source_address_storage, address_, media_, IpVersions());
 
   if (reply_address.socket_address().address() == address_) {
     // This is an outgoing message that's bounced back to us. Drop it.

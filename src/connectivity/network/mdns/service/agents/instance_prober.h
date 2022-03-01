@@ -17,7 +17,7 @@ class InstanceProber : public Prober {
   using CompletionCallback = fit::function<void(bool)>;
 
   // Creates a |InstanceProber|.
-  InstanceProber(MdnsAgent::Host* host, const std::string& service_name,
+  InstanceProber(MdnsAgent::Owner* owner, const std::string& service_name,
                  const std::string& instance_name, inet::IpPort port, CompletionCallback callback);
 
   ~InstanceProber() override;

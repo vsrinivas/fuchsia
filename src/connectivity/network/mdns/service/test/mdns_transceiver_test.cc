@@ -117,9 +117,7 @@ class StubInterfaceTransceiver : public MdnsInterfaceTransceiver {
     return 0;
   }
 
-  bool Start(const MdnsAddresses& addresses, InboundMessageCallback callback) override {
-    return true;
-  }
+  bool Start(InboundMessageCallback callback) override { return true; }
   void Stop() override {}
 };
 
@@ -151,8 +149,7 @@ class MdnsTransceiverTests : public gtest::TestLoopFixture {
     fuchsia::net::interfaces::WatcherPtr watcher;
     ASSERT_OK(binding_->Bind(watcher.NewRequest()));
     transceiver_.Start(
-        std::move(watcher), MdnsAddresses(), []() {}, [](auto, auto) {},
-        StubInterfaceTransceiver::Create);
+        std::move(watcher), []() {}, [](auto, auto) {}, StubInterfaceTransceiver::Create);
   }
 
   void TearDown() override {

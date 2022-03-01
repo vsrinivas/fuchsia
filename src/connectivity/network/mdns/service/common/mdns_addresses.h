@@ -5,61 +5,35 @@
 #ifndef SRC_CONNECTIVITY_NETWORK_MDNS_SERVICE_COMMON_MDNS_ADDRESSES_H_
 #define SRC_CONNECTIVITY_NETWORK_MDNS_SERVICE_COMMON_MDNS_ADDRESSES_H_
 
-#include "src/connectivity/network/mdns/service/common/reply_address.h"
 #include "src/lib/inet/socket_address.h"
 
 namespace mdns {
 
 class MdnsAddresses {
  public:
-  // Sets the port to use. The default is 5353.
-  void SetPort(inet::IpPort port);
-
-  // Sets the V4 or V6 multicast IP address to use. The default for V4 is
-  // 244.0.0.251. The default for V6 is ff02::fb.
-  void SetMulticastAddress(inet::IpAddress address);
-
   // Gets the mDNS port.
-  inet::IpPort port() const { return port_; }
+  static inet::IpPort port() { return kMdnsPort; }
 
   // Gets the V4 multicast socket address.
-  inet::SocketAddress v4_multicast() const { return inet::SocketAddress(v4_multicast_, port_); }
+  static inet::SocketAddress v4_multicast() {
+    return inet::SocketAddress(kV4MulticastAddress, kMdnsPort);
+  }
 
   // Gets the V6 multicast socket address.
-  inet::SocketAddress v6_multicast() const { return inet::SocketAddress(v6_multicast_, port_); }
+  static inet::SocketAddress v6_multicast() {
+    return inet::SocketAddress(kV6MulticastAddress, kMdnsPort);
+  }
 
   // Gets the V4 socket address to bind to.
-  inet::SocketAddress v4_bind() const { return inet::SocketAddress(INADDR_ANY, port_); }
+  static inet::SocketAddress v4_bind() { return inet::SocketAddress(INADDR_ANY, kMdnsPort); }
 
   // Gets the V6 socket address to bind to.
-  inet::SocketAddress v6_bind() const { return inet::SocketAddress(in6addr_any, port_); }
-
-  // Gets the placeholder multicast reply address. This address is used when sending messages and
-  // represents the appropriate reply address based on context.
-  ReplyAddress multicast_reply() const {
-    return ReplyAddress(v4_multicast(), inet::IpAddress(), Media::kBoth);
-  }
-
-  // Gets the placeholder multicast reply address for wired interfaces only. This address is used
-  // when sending messages and represents the appropriate reply address based on context.
-  ReplyAddress multicast_reply_wired_only() const {
-    return ReplyAddress(v4_multicast(), inet::IpAddress(), Media::kWired);
-  }
-
-  // Gets the placeholder multicast reply address for wireless interfaces only. This address is used
-  // when sending messages and represents the appropriate reply address based on context.
-  ReplyAddress multicast_reply_wireless_only() const {
-    return ReplyAddress(v4_multicast(), inet::IpAddress(), Media::kWireless);
-  }
+  static inet::SocketAddress v6_bind() { return inet::SocketAddress(in6addr_any, kMdnsPort); }
 
  private:
-  static const inet::IpPort kDefaultMdnsPort;
-  static const inet::IpAddress kDefaultV4MulticastAddress;
-  static const inet::IpAddress kDefaultV6MulticastAddress;
-
-  inet::IpPort port_ = kDefaultMdnsPort;
-  inet::IpAddress v4_multicast_ = kDefaultV4MulticastAddress;
-  inet::IpAddress v6_multicast_ = kDefaultV6MulticastAddress;
+  static const inet::IpPort kMdnsPort;
+  static const inet::IpAddress kV4MulticastAddress;
+  static const inet::IpAddress kV6MulticastAddress;
 };
 
 }  // namespace mdns

@@ -36,14 +36,6 @@ bool operator==(const Config::Publication& lhs, const Config::Publication& rhs) 
          lhs.media_ == rhs.media_;
 }
 
-static const inet::IpPort kDefaultPort = inet::IpPort::From_uint16_t(5353);
-static const inet::SocketAddress kDefaultV4MulticastAddress(224, 0, 0, 251, kDefaultPort);
-static const inet::SocketAddress kDefaultV6MulticastAddress(0xff02, 0xfb, kDefaultPort);
-static const inet::SocketAddress kDefaultV4BindAddress(INADDR_ANY, kDefaultPort);
-static const inet::SocketAddress kDefaultV6BindAddress(in6addr_any, kDefaultPort);
-static const ReplyAddress kDefaulMulticastReplyAddress(kDefaultV4MulticastAddress,
-                                                       inet::IpAddress(), Media::kBoth);
-
 // Tests behavior when there is no config directory.
 TEST(ConfigTest, NoDir) {
   Config under_test;
@@ -52,12 +44,6 @@ TEST(ConfigTest, NoDir) {
   EXPECT_EQ("", under_test.error());
   EXPECT_TRUE(under_test.perform_host_name_probe());
   EXPECT_TRUE(under_test.publications().empty());
-  EXPECT_EQ(kDefaultPort, under_test.addresses().port());
-  EXPECT_EQ(kDefaultV4MulticastAddress, under_test.addresses().v4_multicast());
-  EXPECT_EQ(kDefaultV6MulticastAddress, under_test.addresses().v6_multicast());
-  EXPECT_EQ(kDefaultV4BindAddress, under_test.addresses().v4_bind());
-  EXPECT_EQ(kDefaultV6BindAddress, under_test.addresses().v6_bind());
-  EXPECT_EQ(kDefaulMulticastReplyAddress, under_test.addresses().multicast_reply());
 
   EXPECT_TRUE(files::DeletePath(kTestDir, true));
 }
@@ -72,12 +58,6 @@ TEST(ConfigTest, Empty) {
   EXPECT_EQ("", under_test.error());
   EXPECT_TRUE(under_test.perform_host_name_probe());
   EXPECT_TRUE(under_test.publications().empty());
-  EXPECT_EQ(kDefaultPort, under_test.addresses().port());
-  EXPECT_EQ(kDefaultV4MulticastAddress, under_test.addresses().v4_multicast());
-  EXPECT_EQ(kDefaultV6MulticastAddress, under_test.addresses().v6_multicast());
-  EXPECT_EQ(kDefaultV4BindAddress, under_test.addresses().v4_bind());
-  EXPECT_EQ(kDefaultV6BindAddress, under_test.addresses().v6_bind());
-  EXPECT_EQ(kDefaulMulticastReplyAddress, under_test.addresses().multicast_reply());
 
   EXPECT_TRUE(files::DeletePath(kTestDir, true));
 }
@@ -86,23 +66,12 @@ TEST(ConfigTest, Empty) {
 TEST(ConfigTest, OneValidFile) {
   EXPECT_TRUE(files::CreateDirectory(kTestDir));
   EXPECT_TRUE(WriteFile("valid", R"({
-    "port": 5454,
-    "v4_multicast_address": "225.1.1.252",
-    "v6_multicast_address": "ff03::fc",
     "perform_host_name_probe": false,
     "publications" : [
       {"service" : "_fuchsia._udp.", "port" : 5353, "perform_probe" : false,
        "text": ["chins=2", "thumbs=10"], "media": "wireless"}
     ]
   })"));
-
-  inet::IpPort expected_port = inet::IpPort::From_uint16_t(5454);
-  inet::SocketAddress expected_v4_multicast_address(225, 1, 1, 252, expected_port);
-  inet::SocketAddress expected_v6_multicast_address(0xff03, 0xfc, expected_port);
-  inet::SocketAddress expected_v4_bind_address(INADDR_ANY, expected_port);
-  inet::SocketAddress expected_v6_bind_address(in6addr_any, expected_port);
-  ReplyAddress expected_multicast_reply_address(expected_v4_multicast_address, inet::IpAddress(),
-                                                Media::kBoth);
 
   Config under_test;
   under_test.ReadConfigFiles(kHostName, kTestDir);
@@ -120,13 +89,6 @@ TEST(ConfigTest, OneValidFile) {
             .perform_probe_ = false,
             .media_ = Media::kWireless}) == under_test.publications()[0]);
   }
-
-  EXPECT_EQ(expected_port, under_test.addresses().port());
-  EXPECT_EQ(expected_v4_multicast_address, under_test.addresses().v4_multicast());
-  EXPECT_EQ(expected_v6_multicast_address, under_test.addresses().v6_multicast());
-  EXPECT_EQ(expected_v4_bind_address, under_test.addresses().v4_bind());
-  EXPECT_EQ(expected_v6_bind_address, under_test.addresses().v6_bind());
-  EXPECT_EQ(expected_multicast_reply_address, under_test.addresses().multicast_reply());
 
   EXPECT_TRUE(files::DeletePath(kTestDir, true));
 }
@@ -186,7 +148,6 @@ TEST(ConfigTest, TwoValidFiles) {
   under_test.ReadConfigFiles(kHostName, kTestDir);
   EXPECT_TRUE(under_test.valid());
   EXPECT_EQ("", under_test.error());
-  EXPECT_EQ(inet::IpPort::From_uint16_t(5353), under_test.addresses().port());
   EXPECT_FALSE(under_test.perform_host_name_probe());
   EXPECT_EQ(2u, under_test.publications().size());
 

@@ -20,13 +20,13 @@ namespace mdns {
 class HostNameResolver : public MdnsAgent {
  public:
   // Creates a |HostNameResolver|.
-  HostNameResolver(MdnsAgent::Host* host, const std::string& host_name, zx::time timeout,
+  HostNameResolver(MdnsAgent::Owner* owner, const std::string& host_name, zx::time timeout,
                    Mdns::ResolveHostNameCallback callback);
 
   ~HostNameResolver() override;
 
   // MdnsAgent overrides.
-  void Start(const std::string& host_full_name, const MdnsAddresses& addresses) override;
+  void Start(const std::string& local_host_full_name) override;
 
   void ReceiveResource(const DnsResource& resource, MdnsResourceSection section) override;
 

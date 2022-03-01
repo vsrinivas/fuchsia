@@ -104,7 +104,7 @@ class MdnsDeprecatedServiceImpl : public fuchsia::net::mdns::Resolver,
     Subscriber& operator=(Subscriber&&) = delete;
   };
 
-  // Publisher for AddResponder.
+  // Publisher for PublishServiceInstance.
   class ResponderPublisher : public Mdns::Publisher {
    public:
     ResponderPublisher(fuchsia::net::mdns::PublicationResponderPtr responder,
@@ -121,7 +121,7 @@ class MdnsDeprecatedServiceImpl : public fuchsia::net::mdns::Resolver,
     // Mdns::Publisher implementation.
     void ReportSuccess(bool success) override;
 
-    void GetPublication(Mdns::PublicationCause publication_cause, const std::string& subtype,
+    void GetPublication(PublicationCause publication_cause, const std::string& subtype,
                         const std::vector<inet::SocketAddress>& source_addresses,
                         GetPublicationCallback callback) override;
 
@@ -131,14 +131,14 @@ class MdnsDeprecatedServiceImpl : public fuchsia::net::mdns::Resolver,
     static constexpr uint32_t kMaxOnPublicationCallsInProgress = 2;
 
     struct Entry {
-      Entry(Mdns::PublicationCause publication_cause, const std::string& subtype,
+      Entry(PublicationCause publication_cause, const std::string& subtype,
             const std::vector<inet::SocketAddress>& source_addresses,
             GetPublicationCallback callback)
           : publication_cause_(publication_cause),
             subtype_(subtype),
             source_addresses_(source_addresses),
             callback_(std::move(callback)) {}
-      Mdns::PublicationCause publication_cause_;
+      PublicationCause publication_cause_;
       std::string subtype_;
       std::vector<inet::SocketAddress> source_addresses_;
       GetPublicationCallback callback_;
@@ -150,7 +150,7 @@ class MdnsDeprecatedServiceImpl : public fuchsia::net::mdns::Resolver,
     // Calls the responder's |OnPublication| method and, if all goes well, calls the callback and
     // |OnGetPublicationComplete|. If the response to |OnPublication| is malformed, this method
     // calls |Unpublish| instead.
-    void GetPublicationNow(Mdns::PublicationCause publication_cause, const std::string& subtype,
+    void GetPublicationNow(PublicationCause publication_cause, const std::string& subtype,
                            const std::vector<inet::SocketAddress>& source_addresses,
                            GetPublicationCallback callback);
 

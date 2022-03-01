@@ -27,8 +27,8 @@ class MdnsTransceiver : public Mdns::Transceiver {
   ~MdnsTransceiver();
 
   //  Mdns::Transceiver implementation.
-  void Start(fuchsia::net::interfaces::WatcherPtr watcher, const MdnsAddresses& addresses,
-             fit::closure link_change_callback, InboundMessageCallback inbound_message_callback,
+  void Start(fuchsia::net::interfaces::WatcherPtr watcher, fit::closure link_change_callback,
+             InboundMessageCallback inbound_message_callback,
              InterfaceTransceiverCreateFunction transceiver_factory) override;
 
   void Stop() override;
@@ -73,11 +73,10 @@ class MdnsTransceiver : public Mdns::Transceiver {
   bool IsLocalInterfaceAddress(const inet::IpAddress& address);
 
   fuchsia::net::interfaces::WatcherPtr interface_watcher_;
-  const MdnsAddresses* addresses_;
   fit::closure link_change_callback_;
   InboundMessageCallback inbound_message_callback_;
   InterfaceTransceiverCreateFunction transceiver_factory_;
-  std::string host_full_name_;
+  std::string local_host_full_name_;
   std::unordered_map<inet::IpAddress, std::unique_ptr<MdnsInterfaceTransceiver>>
       interface_transceivers_by_address_;
   std::unordered_map<uint64_t, net::interfaces::Properties> interface_properties_;

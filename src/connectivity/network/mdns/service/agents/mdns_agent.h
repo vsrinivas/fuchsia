@@ -11,7 +11,7 @@
 
 #include <memory>
 
-#include "src/connectivity/network/mdns/service/common/mdns_addresses.h"
+#include "src/connectivity/network/mdns/service/common/reply_address.h"
 #include "src/connectivity/network/mdns/service/encoding/dns_message.h"
 #include "src/lib/inet/socket_address.h"
 
@@ -24,12 +24,12 @@ enum class MdnsResourceSection { kAnswer, kAuthority, kAdditional, kExpired };
 // Base class for objects that drive mDNS question and record traffic.
 //
 // Agents that have been 'started' receive all inbound questions and resource records via their
-// |ReceiveQuestion| and |ReceiveResource| methods. When the agent host receives an inbound
+// |ReceiveQuestion| and |ReceiveResource| methods. When the agent owner receives an inbound
 // message, it calls those methods for each question and resource in the message. When that's
-// done, the host calls |EndOfMessage| on each agent.
+// done, the owner calls |EndOfMessage| on each agent.
 //
 // Agents may call any of the protected 'Send' methods (|SendQuestion|, |SendResource| and
-// |SendAddresses|) at any time. The host accumulates the questions and resources and sends
+// |SendAddresses|) at any time. The owner accumulates the questions and resources and sends
 // them in messages. Typically, agents don't have to worry about sending messages. Messages
 // are sent for accumulated questions and resources:
 //
@@ -44,9 +44,9 @@ enum class MdnsResourceSection { kAnswer, kAuthority, kAdditional, kExpired };
 //
 class MdnsAgent : public std::enable_shared_from_this<MdnsAgent> {
  public:
-  class Host {
+  class Owner {
    public:
-    virtual ~Host() {}
+    virtual ~Owner() = default;
 
     // Gets the current time.
     virtual zx::time now() = 0;
@@ -84,9 +84,7 @@ class MdnsAgent : public std::enable_shared_from_this<MdnsAgent> {
   // Starts the agent. This method is never called before a shared pointer to
   // the agent is created, so |shared_from_this| is safe to call.
   // Specializations should call this method first.
-  virtual void Start(const std::string& host_full_name, const MdnsAddresses& addresses) {
-    addresses_ = &addresses;
-  }
+  virtual void Start(const std::string& local_host_full_name) { started_ = true; }
 
   // Presents a received question. This agent must not call |RemoveSelf| during
   // a call to this method.
@@ -119,43 +117,40 @@ class MdnsAgent : public std::enable_shared_from_this<MdnsAgent> {
   }
 
  protected:
-  MdnsAgent(Host* host) : host_(host) { FX_DCHECK(host_); }
+  explicit MdnsAgent(Owner* owner) : owner_(owner) { FX_DCHECK(owner_); }
 
-  bool started() const { return addresses_ != nullptr; }
-
-  const MdnsAddresses& addresses() const {
-    FX_DCHECK(addresses_);
-    return *addresses_;
-  }
+  bool started() const { return started_; }
 
   // Gets the current time.
-  zx::time now() { return host_->now(); }
+  zx::time now() { return owner_->now(); }
 
   // Posts a task to be executed at the specified time. Scheduled tasks posted
   // by agents that have since been removed are not executed.
   void PostTaskForTime(fit::closure task, zx::time target_time) {
-    host_->PostTaskForTime(this, std::move(task), target_time);
+    owner_->PostTaskForTime(this, std::move(task), target_time);
   }
 
   // Sends a question to the multicast address.
-  void SendQuestion(std::shared_ptr<DnsQuestion> question) const { host_->SendQuestion(question); }
+  void SendQuestion(std::shared_ptr<DnsQuestion> question) const {
+    owner_->SendQuestion(std::move(question));
+  }
 
   // Sends a resource to the specified address.
   void SendResource(std::shared_ptr<DnsResource> resource, MdnsResourceSection section,
                     const ReplyAddress& reply_address) const {
-    host_->SendResource(resource, section, reply_address);
+    owner_->SendResource(std::move(resource), section, reply_address);
   }
 
   // Sends address resources to the specified address.
   void SendAddresses(MdnsResourceSection section, const ReplyAddress& reply_address) const {
-    host_->SendAddresses(section, reply_address);
+    owner_->SendAddresses(section, reply_address);
   }
 
   // Flushes sent questions and resources by sending the appropriate messages. This method is only
   // needed when questions or resources need to be sent asynchronously with respect to |Start|,
   // |ReceiveQuestion|, |ReceiveResource|, |EndOfMessage|, |Quit| or a task posted using
   // |PostTaskForTime|. See the discussion at the top of the file.
-  void FlushSentItems() { host_->FlushSentItems(); }
+  void FlushSentItems() { owner_->FlushSentItems(); }
 
   // Registers the resource for renewal. Before the resource's TTL expires,
   // an attempt will be made to renew the resource by issuing queries for it.
@@ -168,14 +163,14 @@ class MdnsAgent : public std::enable_shared_from_this<MdnsAgent> {
   // The effect if this call is transient, and there is no way to cancel the
   // renewal. When an agent loses interest in a particular resource, it should
   // simply refrain from renewing the incoming records.
-  void Renew(const DnsResource& resource) const { host_->Renew(resource); }
+  void Renew(const DnsResource& resource) const { owner_->Renew(resource); }
 
   // Removes this agent.
-  void RemoveSelf() { host_->RemoveAgent(shared_from_this()); }
+  void RemoveSelf() { owner_->RemoveAgent(shared_from_this()); }
 
  private:
-  Host* host_;
-  const MdnsAddresses* addresses_ = nullptr;
+  Owner* owner_;
+  bool started_ = false;
   fit::closure on_quit_;
 };
 
