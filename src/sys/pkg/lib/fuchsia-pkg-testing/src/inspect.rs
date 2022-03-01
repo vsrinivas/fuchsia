@@ -8,7 +8,6 @@ use {
 };
 
 /// Get the Inspect `NodeHierarchy` for the component under test running in the nested environment.
-/// Requires observer.cmx injected service.
 pub async fn get_inspect_hierarchy(
     nested_environment_label: &str,
     component_name: &str,
