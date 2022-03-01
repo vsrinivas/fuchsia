@@ -178,11 +178,14 @@ zx_status_t Page::Map() {
   return ret;
 }
 
-void Page::Invalidate() {
-  WaitOnWriteback();
+void Page::Invalidate(bool evict) {
+  if (evict) {
+    file_cache_->Evict(this);
+  }
   bool locked = TryLock();
   ClearUptodate();
   ClearDirtyForIo(false);
+  Unmap();
   if (!locked) {
     Unlock();
   }
@@ -237,9 +240,9 @@ zx_status_t Page::Zero(size_t index, size_t count) {
 
 FileCache::FileCache(VnodeF2fs *vnode) : vnode_(vnode) {}
 FileCache::~FileCache() {
+  CleanupPages();
   {
     std::lock_guard tree_lock(tree_lock_);
-    CleanupPagesUnsafe();
     ZX_DEBUG_ASSERT(page_tree_.is_empty());
   }
 }
@@ -321,6 +324,11 @@ zx::status<bool> FileCache::GetPageUnsafe(const pgoff_t index, fbl::RefPtr<Page>
   return zx::error(ZX_ERR_NOT_FOUND);
 }
 
+zx_status_t FileCache::Evict(Page *page) {
+  std::lock_guard tree_lock(tree_lock_);
+  return EvictUnsafe(page);
+}
+
 zx_status_t FileCache::EvictUnsafe(Page *page) {
   if (!page->InContainer()) {
     return ZX_ERR_NOT_FOUND;
@@ -329,53 +337,64 @@ zx_status_t FileCache::EvictUnsafe(Page *page) {
   return ZX_OK;
 }
 
-void FileCache::CleanupPagesUnsafe(pgoff_t start, pgoff_t end, bool invalidate) {
+void FileCache::CleanupPages(pgoff_t start, pgoff_t end, bool invalidate) {
   pgoff_t prev_key = kPgOffMax;
-  while (!page_tree_.is_empty()) {
-    // Acquire Pages from the the lower bound of |start| to |end|.
-    auto key = (prev_key < kPgOffMax) ? prev_key : start;
-    auto current = page_tree_.lower_bound(key);
-    if (current == page_tree_.end() || current->GetKey() >= end) {
-      break;
-    }
-    if (!current->IsActive()) {
-      // No other reference it |current|. It is safe to release it.
-      prev_key = current->GetKey();
-      EvictUnsafe(&(*current));
-      if (invalidate) {
-        current->Invalidate();
+  std::vector<fbl::RefPtr<Page>> pages;
+  {
+    std::lock_guard tree_lock(tree_lock_);
+    while (!page_tree_.is_empty()) {
+      // Acquire Pages from the the lower bound of |start| to |end|.
+      auto key = (prev_key < kPgOffMax) ? prev_key : start;
+      auto current = page_tree_.lower_bound(key);
+      if (current == page_tree_.end() || current->GetKey() >= end) {
+        break;
       }
-      delete &(*current);
-    } else {
-      auto page = fbl::MakeRefPtrUpgradeFromRaw(&(*current), tree_lock_);
-      // When it is being recycled, we should wait.
-      // Try again.
-      if (page == nullptr) {
-        recycle_cvar_.wait(tree_lock_);
-        continue;
-      }
-      // There are some strong references. It shall be released in fbl_recycle().
-      prev_key = page->GetKey();
-      EvictUnsafe(page.get());
-      if (invalidate) {
-        page->Invalidate();
+      if (!current->IsActive()) {
+        // No other reference it |current|. It is safe to release it.
+        prev_key = current->GetKey();
+        EvictUnsafe(&(*current));
+        if (invalidate) {
+          current->Invalidate(false);
+        }
+        delete &(*current);
       } else {
-        // Wait for it to be written.
-        page->WaitOnWriteback();
+        auto page = fbl::MakeRefPtrUpgradeFromRaw(&(*current), tree_lock_);
+        // When it is being recycled, we should wait.
+        // Try again.
+        if (page == nullptr) {
+          recycle_cvar_.wait(tree_lock_);
+          continue;
+        }
+        // There are some strong references. It shall be released in fbl_recycle().
+        prev_key = page->GetKey();
+        EvictUnsafe(page.get());
+        if (invalidate) {
+          // Since we have already invalidated its address, it is safe to evict it regardless of a
+          // writeback flag. If someone tries to get a Page with the same key as |page|, it will get
+          // a new Page with a new address.
+          page->Invalidate(false);
+        } else {
+          // In this case, we need to wait for it to be written. Just push |page| to |pages|.
+          // After this loop, we wait for them without tree_lock_ held.
+          if (page->IsWriteback()) {
+            pages.push_back(std::move(page));
+          }
+        }
       }
+    }
+  }
+
+  if (pages.size()) {
+    // Waiting for writeback
+    for (auto page : pages) {
+      page->WaitOnWriteback();
     }
   }
 }
 
-void FileCache::InvalidatePages(pgoff_t start, pgoff_t end) {
-  std::lock_guard tree_lock(tree_lock_);
-  CleanupPagesUnsafe(start, end, true);
-}
+void FileCache::InvalidatePages(pgoff_t start, pgoff_t end) { CleanupPages(start, end, true); }
 
-void FileCache::Reset() {
-  std::lock_guard tree_lock(tree_lock_);
-  CleanupPagesUnsafe();
-}
+void FileCache::Reset() { CleanupPages(); }
 
 std::vector<fbl::RefPtr<Page>> FileCache::GetLockedDirtyPagesUnsafe(
     const WritebackOperation &operation) {

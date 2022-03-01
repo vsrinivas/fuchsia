@@ -157,10 +157,13 @@ class Page : public storage::BlockBuffer,
   bool ClearDirtyForIo(bool for_writeback);
 
   // Truncate or punch-a-hole operations call it to invalidate a Page.
-  // It clears PageFlag::kPageUptodate and unmaps |address_|.
-  // If the Page is dirty, it clears PageFlag::kPageDirty, decreases the regarding dirty page count,
-  // and unmaps |address_|.
-  void Invalidate();
+  // By default, it evicts |this| from FileCache unless |evict| is set to false. Thus, a caller MUST
+  // NOT hold FileCache::tree_lock_ before calling it with |evict| set to true.
+  // It clears PageFlag::kPageUptodate and unmaps |address_|. If the Page is dirty, it clears
+  // PageFlag::kPageDirty and decreases the regarding regarding dirty page count.
+  // Note that it does not wait for a writeback Page to be written out. So, a caller ensure that its
+  // block address is invalidated in a dnode or nat entry before calling it.
+  void Invalidate(bool evict = true);
 
   void ZeroUserSegment(uint64_t start, uint64_t end) {
     auto end_offset = safemath::CheckMul(capacity(), static_cast<size_t>(BlockSize()));
@@ -254,6 +257,7 @@ class FileCache {
   VnodeF2fs &GetVnode() const { return *vnode_; }
   // It is only allowed to call it from Page::fbl_recycle.
   void Downgrade(Page *raw_page) __TA_EXCLUDES(tree_lock_);
+  zx_status_t Evict(Page *page) __TA_EXCLUDES(tree_lock_);
 
  private:
   // It returns a set of dirty Pages that meet |operation|. A caller should unlock the Pages.
@@ -263,8 +267,8 @@ class FileCache {
       __TA_REQUIRES(tree_lock_);
   zx_status_t AddPageUnsafe(const fbl::RefPtr<Page> &page) __TA_REQUIRES(tree_lock_);
   zx_status_t EvictUnsafe(Page *page) __TA_REQUIRES(tree_lock_);
-  void CleanupPagesUnsafe(pgoff_t start = 0, pgoff_t end = kPgOffMax, bool invalidate = false)
-      __TA_REQUIRES(tree_lock_);
+  void CleanupPages(pgoff_t start = 0, pgoff_t end = kPgOffMax, bool invalidate = false)
+      __TA_EXCLUDES(tree_lock_);
 
   using PageTreeTraits = fbl::DefaultKeyedObjectTraits<pgoff_t, Page>;
   using PageTree = fbl::WAVLTree<pgoff_t, Page *, PageTreeTraits>;
