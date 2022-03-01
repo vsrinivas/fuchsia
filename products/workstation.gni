@@ -72,7 +72,6 @@ base_package_labels +=
 cache_package_labels += [
   "//src/chromium:chrome_browser",
   "//src/experiences/bin/settings/license:license_settings",
-  "//src/experiences/bin/simple_browser:simple-browser",
   "//src/experiences/session_shells/ermine",
   "//src/experiences/tests/chrome:end_to_end_deps",
   "//src/dart:dart_jit",
