@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/rust/rustc_artifact.gni")
 import("//build/rust/rustc_test.gni")
 import("//build/toolchain/rbe.gni")
 
@@ -10,7 +11,6 @@ import("//build/toolchain/rbe.gni")
 # Parameters
 #
 #   output_name (optional)
-#   name (optional, deprecated)
 #     Name of the crate as defined in its manifest file. If not specified, it is
 #     assumed to be the same as the target name.
 #
@@ -55,7 +55,7 @@ import("//build/toolchain/rbe.gni")
 #   features (optional)
 #     A list of conditional compilation flags to enable. This can be used to set features for crates
 #     built in-tree which are also published to crates.io. This would be passed to rustc as
-#     '--cfg feature=XXX'
+#     '--cfg feature="XXX"'
 #
 #   output_dir (optional)
 #     Directory that the resulting library should be placed in.
@@ -83,13 +83,9 @@ template("rustc_cdylib") {
   if (defined(invoker.with_unit_tests) && invoker.with_unit_tests == true) {
     rustc_test("${target_name}_test") {
       not_needed(invoker, [ "public" ])
-      assert(!(defined(invoker.output_name) && defined(invoker.name)),
-             "Only one of output_name and name may be specified.")
       output_name = invoker.target_name + "_cdylib_test"
       if (defined(invoker.output_name)) {
         output_name = invoker.output_name + "_cdylib_test"
-      } else if (defined(invoker.name)) {
-        output_name = invoker.name + "_cdylib_test"
       }
       forward_variables_from(invoker, "*", [ "output_name" ])
     }
@@ -111,10 +107,23 @@ template("rustc_cdylib") {
     _lib_output_name = invoker.output_name
   }
 
-  shared_library(rustc_target) {
-    crate_type = "cdylib"
+  rustc_artifact(rustc_target) {
+    target_type = "shared_library"
     crate_root = source_root
-    output_name = _lib_output_name
+    crate_name = rustc_target
+    pass_through = {
+      forward_variables_from(invoker,
+                             [
+                               "data_deps",
+                               "output_dir",
+                               "testonly",
+                               "visibility",
+                               "runtime_deps",
+                               "sources",
+                             ])
+      crate_type = "cdylib"
+      output_name = _lib_output_name
+    }
     deps = []
     if (defined(invoker.deps)) {
       deps += invoker.deps
@@ -125,29 +134,11 @@ template("rustc_cdylib") {
       deps += invoker.non_rust_deps
     }
 
+    sources = []
+
     configs = []
     configs = invoker.configs
 
-    # in-tree default in 2018 edition
-    if (defined(invoker.edition)) {
-      assert(invoker.edition == "2015" || invoker.edition == "2018",
-             "Only editions 2015 and 2018 are supported")
-
-      if (invoker.edition == "2015") {
-        configs -= [ "//build/config/rust:edition_2018" ]
-        configs += [ "//build/config/rust:edition_2015" ]
-      }
-    }
-
-    forward_variables_from(invoker,
-                           [
-                             "data_deps",
-                             "output_dir",
-                             "testonly",
-                             "visibility",
-                             "runtime_deps",
-                             "sources",
-                           ])
     inputs = []
     if (defined(invoker.inputs)) {
       inputs = invoker.inputs
@@ -160,6 +151,8 @@ template("rustc_cdylib") {
       # Depend on Rust/RBE scripts and tools
       inputs += rust_rbe_deps
     }
+
+    forward_variables_from(invoker, [ "edition" ])
   }
 
   public_hdrs = []

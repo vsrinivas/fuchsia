@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/rust/rustc_artifact.gni")
 import("//build/rust/rustc_test.gni")
 import("//build/toolchain/rbe.gni")
 import("//build/toolchain/restat.gni")
@@ -153,7 +154,8 @@ template("rustc_macro") {
       _deps += [ "//build/rust:disable_strict_sources_check_allowlist" ]
     }
 
-    rust_proc_macro(proc_macro_target) {
+    rustc_artifact(proc_macro_target) {
+      target_type = "rust_proc_macro"
       configs = []
       configs = invoker.configs
 
@@ -164,7 +166,16 @@ template("rustc_macro") {
                    "force_opt",
                  ])
       crate_root = source_root
-      output_name = crate_name
+      pass_through = {
+        forward_variables_from(invoker,
+                               [
+                                 "data_deps",
+                                 "output_dir",
+                                 "testonly",
+                                 "visibility",
+                               ])
+        output_name = crate_name
+      }
 
       deps = _deps
       if (defined(invoker.deps)) {
@@ -178,25 +189,7 @@ template("rustc_macro") {
 
       sources = _sources
 
-      # in-tree default in 2018 edition
-      if (defined(invoker.edition)) {
-        assert(invoker.edition == "2015" || invoker.edition == "2018",
-               "Only editions 2015 and 2018 are supported")
-
-        if (invoker.edition == "2015") {
-          configs -= [ "//build/config/rust:edition_2018" ]
-          configs += [ "//build/config/rust:edition_2015" ]
-        }
-      }
-
-      forward_variables_from(invoker,
-                             [
-                               "data_deps",
-                               "inputs",
-                               "output_dir",
-                               "testonly",
-                               "visibility",
-                             ])
+      forward_variables_from(invoker, [ "edition" ])
 
       inputs = []
       if (defined(invoker.inputs)) {

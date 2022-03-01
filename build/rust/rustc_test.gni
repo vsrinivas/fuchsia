@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/rust/clippy.gni")
+import("//build/rust/rustc_artifact.gni")
 import("//build/testing/host_test.gni")
 import("//build/toolchain/rbe.gni")
 
@@ -18,7 +19,6 @@ template("rustc_test_internal") {
   not_needed(invoker,
              [
                "version",
-               "edition",
                "testonly",
              ])
 
@@ -72,10 +72,10 @@ template("rustc_test_internal") {
   }
 
   # enable these features for the target
-  features = []
+  _features_rustflags = []
   if (defined(invoker.features)) {
     foreach(i, invoker.features) {
-      features += [ "--cfg=feature=\"${i}\"" ]
+      _features_rustflags += [ "--cfg=feature=\"${i}\"" ]
     }
   }
 
@@ -124,7 +124,7 @@ template("rustc_test_internal") {
                                "sources",
                              ])
       crate_type = "lib"
-      rustflags = features + [ "--test" ]
+      rustflags = _features_rustflags + [ "--test" ]
       if (defined(invoker.test_deps)) {
         if (!defined(deps)) {
           deps = []
@@ -132,21 +132,38 @@ template("rustc_test_internal") {
         deps += invoker.test_deps
       }
     }
+  } else {
+    not_needed([ "_features_rustflags" ])
   }
 
-  executable(exe_target_name) {
-    # anything defined with rustc_test MUST be a test target
-    testonly = true
+  rustc_artifact(exe_target_name) {
+    target_type = "executable"
 
     configs = []
     configs = invoker.configs
 
     crate_root = source_root
-    output_name = crate_name
+    pass_through = {
+      forward_variables_from(invoker,
+                             [
+                               "output_dir",
+                               "visibility",
+                             ])
+      output_name = crate_name
+
+      # anything defined with rustc_test MUST be a test target
+      testonly = true
+    }
     crate_name = crate_name
 
     # tell rustc to compile in the test harness
-    rustflags = features + [ "--test" ]
+    rustflags = [ "--test" ]
+
+    forward_variables_from(invoker,
+                           [
+                             "features",
+                             "edition",
+                           ])
 
     deps = _deps
     if (defined(invoker.deps)) {
@@ -162,9 +179,9 @@ template("rustc_test_internal") {
       deps += invoker.test_deps
     }
 
-    data_deps = []
+    _data_deps = []
     if (defined(invoker.data_deps)) {
-      data_deps = invoker.data_deps
+      _data_deps = invoker.data_deps
     }
     if (is_fuchsia) {
       # Dynamic linking applies to not only to libstd but to libtest as well,
@@ -173,15 +190,15 @@ template("rustc_test_internal") {
       _dynamic_rust_config =
           [ "//build/config/fuchsia:dynamic_rust_standard_library" ]
       if (configs + _dynamic_rust_config - _dynamic_rust_config != configs) {
-        data_deps += [ "//build/toolchain/runtime:shared-rust-libtest-deps" ]
+        _data_deps += [ "//build/toolchain/runtime:shared-rust-libtest-deps" ]
       } else {
-        data_deps += [ "//build/toolchain/runtime:static-rust-libtest-deps" ]
+        _data_deps += [ "//build/toolchain/runtime:static-rust-libtest-deps" ]
       }
 
       deps += [ "//build/rust:rust_test_metadata" ]
       deps += [ "//sdk/lib/syslog/cpp:backend_fuchsia_lib_rust" ]
       if (generate_clippy && !disable_clippy) {
-        gen_deps = [ ":$target_name.clippy" ]
+        pass_through.gen_deps = [ ":$target_name.clippy" ]
       }
       metadata = {
         cmx_patches_walk = [ "//build/rust:rust_test_metadata" ]
@@ -208,25 +225,10 @@ template("rustc_test_internal") {
         }
       }
     }
+    pass_through.data_deps = _data_deps
 
     sources = _sources
 
-    # in-tree default in 2018 edition
-    if (defined(invoker.edition)) {
-      assert(invoker.edition == "2015" || invoker.edition == "2018",
-             "Only editions 2015 and 2018 are supported")
-
-      if (invoker.edition == "2015") {
-        configs -= [ "//build/config/rust:edition_2018" ]
-        configs += [ "//build/config/rust:edition_2015" ]
-      }
-    }
-
-    forward_variables_from(invoker,
-                           [
-                             "output_dir",
-                             "visibility",
-                           ])
     inputs = _local_inputs
     if (enable_rbe && !_use_rbe) {
       # Disable RBE for this target through a fake rustflag,
@@ -313,7 +315,7 @@ template("rustc_test_internal") {
 #   features (optional)
 #     A list of conditional compilation flags to enable. This can be used to set features for crates
 #     built in-tree which are also published to crates.io. This would be passed to rustc as
-#     '--cfg feature=XXX'
+#     '--cfg feature="XXX"'
 #
 #   output_dir (optional)
 #     Directory that the resulting test should be placed in.

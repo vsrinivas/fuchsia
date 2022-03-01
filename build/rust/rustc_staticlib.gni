@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/rust/rustc_artifact.gni")
 import("//build/rust/rustc_test.gni")
 import("//build/toolchain/rbe.gni")
 
@@ -72,7 +73,7 @@ import("//build/toolchain/rbe.gni")
 #   features (optional)
 #     A list of conditional compilation flags to enable. This can be used to set features for crates
 #     built in-tree which are also published to crates.io. This would be passed to rustc as
-#     '--cfg feature=XXX'
+#     '--cfg feature="XXX"'
 #
 #   output_dir (optional)
 #     Directory that the resulting library should be placed in.
@@ -143,13 +144,6 @@ template("rustc_staticlib") {
     source_root = invoker.source_root
   }
 
-  features = []
-  if (defined(invoker.features)) {
-    foreach(i, invoker.features) {
-      features += [ "--cfg=feature=\"${i}\"" ]
-    }
-  }
-
   _sources = []
   _deps = []
 
@@ -170,9 +164,19 @@ template("rustc_staticlib") {
     _deps += [ "//build/rust:disable_strict_sources_check_allowlist" ]
   }
 
-  static_library(rustc_target) {
+  rustc_artifact(rustc_target) {
+    target_type = "static_library"
     crate_root = source_root
-    output_name = rustc_target
+    crate_name = rustc_target
+    pass_through = {
+      forward_variables_from(invoker,
+                             [
+                               "output_dir",
+                               "testonly",
+                               "visibility",
+                             ])
+      output_name = rustc_target
+    }
 
     deps = _deps
     if (defined(invoker.deps)) {
@@ -186,29 +190,15 @@ template("rustc_staticlib") {
       deps += invoker.non_rust_deps
     }
 
-    rustflags = features
+    forward_variables_from(invoker,
+                           [
+                             "features",
+                             "edition",
+                           ])
 
     configs = []
     configs = invoker.configs
 
-    # in-tree default in 2018 edition
-    if (defined(invoker.edition)) {
-      assert(invoker.edition == "2015" || invoker.edition == "2018",
-             "Only editions 2015 and 2018 are supported")
-
-      if (invoker.edition == "2015") {
-        configs -= [ "//build/config/rust:edition_2018" ]
-        configs += [ "//build/config/rust:edition_2015" ]
-      }
-    }
-
-    forward_variables_from(invoker,
-                           [
-                             "inputs",
-                             "output_dir",
-                             "testonly",
-                             "visibility",
-                           ])
     inputs = []
     if (defined(invoker.inputs)) {
       inputs = invoker.inputs

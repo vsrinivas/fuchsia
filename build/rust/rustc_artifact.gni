@@ -1,0 +1,112 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# Common logic for implementing the other rustc_* templates in this directory.
+# Should not be called directly outside of //build/rust.
+#
+# Parameters
+#
+#   target_type
+#     Name of the template or rule to wrap, as a string.
+#
+#   crate_name
+#     Name of the crate as passed to rustc. All dashes will be replaced
+#     with underscores in the crate name: <name_underscored>
+#
+#   crate_root
+#     Location of the crate root (e.g. `src/main.rs` or `src/lib.rs`).
+#
+#   edition (optional)
+#     Edition of the Rust language to be used.
+#     Options are "2015" and "2018". Defaults to "2018".
+#
+#   rustflags
+#     Extra rust compiler flags passed directly to rustc.
+#
+#   features (optional)
+#     A list of conditional compilation flags to enable. This can be used to set features for crates
+#     built in-tree which are also published to crates.io. This would be passed to rustc as
+#     '--cfg feature="XXX"'
+#
+#   configs (optional)
+#     A list of config labels applying to this target.
+#
+#   deps
+#     List of GN targets on which this crate depends.
+#
+#   pass_through
+#     A scope of arguments to pass directly to the underlying wrapped target.
+#     Only the primary target generated will receive these arguments.
+#
+#   metadata (optional)
+#     Metadata to apply to the primary wrapped target.
+#
+#   inputs
+#     List of additional non-source files read by the compiler. These are typically
+#     configuration or test-data files included in the build with the `include_str!`
+#     macro.
+#
+#   sources
+#     List of source files which this crate is allowed to compile.
+#     The Rust compiler discovers source files by following `mod` declarations
+#     starting at the `crate_root`. The discovered source files must match this
+#     list.
+template("rustc_artifact") {
+  # _invoker = invoker
+  # invoker = {
+  # }
+  # invoker = {
+  #   forward_variables_from(_invoker, "*")
+  # }
+
+  # rustc does not support dashes in crate names
+  _crate_name = string_replace(invoker.crate_name, "-", "_")
+  _crate_root = invoker.crate_root
+
+  # enable these features for the target
+  _rustflags = []
+  if (defined(invoker.features)) {
+    foreach(i, invoker.features) {
+      _rustflags += [ "--cfg=feature=\"${i}\"" ]
+    }
+  }
+  if (defined(invoker.rustflags)) {
+    _rustflags += invoker.rustflags
+  }
+
+  target(invoker.target_type, target_name) {
+    crate_root = _crate_root
+    crate_name = _crate_name
+    rustflags = _rustflags
+
+    configs = []
+    configs = invoker.configs
+    deps = invoker.deps
+    inputs = invoker.inputs
+    sources = invoker.sources
+
+    # in-tree default is 2018 edition
+    if (defined(invoker.edition)) {
+      assert(invoker.edition == "2015" || invoker.edition == "2018",
+             "Only editions 2015 and 2018 are supported")
+
+      if (invoker.edition == "2015") {
+        configs -= [ "//build/config/rust:edition_2018" ]
+        configs += [ "//build/config/rust:edition_2015" ]
+      }
+    }
+
+    # _pass_through and not_needed are to workaround https://crbug.com/gn/10
+    _pass_through = invoker.pass_through
+    assert(!defined(_pass_through.metadata))
+    not_needed([ "_pass_through" ])
+
+    if (defined(invoker.metadata)) {
+      metadata = invoker.metadata
+    }
+
+    # pass through these variables unmodified
+    forward_variables_from(invoker.pass_through, "*")
+  }
+}

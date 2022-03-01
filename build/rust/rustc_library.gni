@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/rust/clippy.gni")
+import("//build/rust/rustc_artifact.gni")
 import("//build/rust/rustc_test.gni")
 import("//build/toolchain/rbe.gni")
 
@@ -77,7 +78,7 @@ import("//build/toolchain/rbe.gni")
 #   features (optional)
 #     A list of conditional compilation flags to enable. This can be used to set features for crates
 #     built in-tree which are also published to crates.io. This would be passed to rustc as
-#     '--cfg feature=XXX'
+#     '--cfg feature="XXX"'
 #
 #   output_dir (optional)
 #     Directory that the resulting library should be placed in.
@@ -132,12 +133,6 @@ template("rustc_library") {
     }
   }
 
-  if (defined(invoker.name)) {
-    output_name = invoker.name
-  } else {
-    output_name = target_name
-  }
-
   if (defined(invoker.source_root)) {
     source_root = invoker.source_root
   } else {
@@ -151,10 +146,10 @@ template("rustc_library") {
   }
   _crate_name = string_replace(package_name, "-", "_")
 
-  features = []
+  _features_rustflags = []
   if (defined(invoker.features)) {
     foreach(i, invoker.features) {
-      features += [ "--cfg=feature=\"${i}\"" ]
+      _features_rustflags += [ "--cfg=feature=\"${i}\"" ]
     }
   }
 
@@ -203,14 +198,28 @@ template("rustc_library") {
                                "sources",
                              ])
       crate_type = "lib"
-      rustflags = features
+      rustflags = _features_rustflags
     }
+  } else {
+    not_needed([ "_features_rustflags" ])
   }
 
-  rust_library(target_name) {
+  rustc_artifact(target_name) {
+    target_type = "rust_library"
     crate_root = source_root
     crate_name = _crate_name
-    output_name = _crate_name
+    pass_through = {
+      forward_variables_from(invoker,
+                             [
+                               "data_deps",
+                               "output_dir",
+                               "testonly",
+                               "visibility",
+                             ])
+
+      # TODO: maybe just use target_name instead?
+      output_name = _crate_name
+    }
 
     configs = []
     configs = invoker.configs
@@ -227,27 +236,14 @@ template("rustc_library") {
 
     sources = _sources
 
-    rustflags = features
-
-    # in-tree default in 2018 edition
-    if (defined(invoker.edition)) {
-      assert(invoker.edition == "2015" || invoker.edition == "2018",
-             "Only editions 2015 and 2018 are supported")
-
-      if (invoker.edition == "2015") {
-        configs -= [ "//build/config/rust:edition_2018" ]
-        configs += [ "//build/config/rust:edition_2015" ]
-      }
-    }
-
     forward_variables_from(invoker,
                            [
-                             "data_deps",
-                             "output_dir",
-                             "testonly",
-                             "visibility",
+                             "edition",
+                             "features",
                            ])
+
     inputs = _local_inputs
+    rustflags = []
     if (enable_rbe && !_use_rbe) {
       # Disable RBE for this target through a fake rustflag,
       # that is intercepted by rustc-remote-wrapper.sh.
@@ -263,7 +259,7 @@ template("rustc_library") {
       ]
     }
     if (generate_clippy && !disable_clippy) {
-      gen_deps = [ ":$target_name.clippy" ]
+      pass_through.gen_deps = [ ":$target_name.clippy" ]
       _outputs = get_target_outputs(":$target_name.clippy")
       metadata = {
         rust_source_map = [
