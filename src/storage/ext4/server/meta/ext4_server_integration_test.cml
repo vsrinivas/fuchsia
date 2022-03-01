@@ -1,0 +1,29 @@
+{
+    include: [
+        "//src/storage/testing/driver_test_realm/meta/client.shard.cml",
+        "//src/sys/test_runners/rust/default.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        binary: "bin/ext4_server_integration_test",
+    },
+    children: [
+        {
+            name: "fuchsia_storage_ext4_server",
+            url: "#meta/ext4_readonly.cm",
+        },
+    ],
+    use: [
+        {
+            service: [ "fuchsia.storage.ext4.Service" ],
+            from: "#fuchsia_storage_ext4_server",
+        },
+        {
+            protocol: [ "fuchsia.storage.ext4.Server" ],
+            from: "#fuchsia_storage_ext4_server",
+        },
+        {
+            protocol: [ "fuchsia.process.Launcher" ],
+        },
+    ],
+}

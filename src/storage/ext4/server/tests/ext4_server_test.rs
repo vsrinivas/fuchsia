@@ -12,7 +12,6 @@ use {
     fidl_fuchsia_mem::Buffer,
     fidl_fuchsia_storage_ext4::{MountVmoResult, Server_Marker, ServiceMarker, Success},
     fuchsia_async as fasync,
-    fuchsia_component::client::{launch, launcher},
     fuchsia_runtime::{HandleInfo, HandleType},
     fuchsia_zircon::{self as zx, AsHandleRef, DurationNum},
     io_util,
@@ -31,10 +30,14 @@ const RAMDISK_BLOCK_SIZE: u64 = 1024;
 const RAMDISK_BLOCK_COUNT: u64 = 16 * 1024;
 
 async fn make_ramdisk() -> (RamdiskClient, RemoteBlockClient) {
-    let ramdisk = RamdiskClient::builder(RAMDISK_BLOCK_SIZE, RAMDISK_BLOCK_COUNT)
-        .isolated_dev_root()
-        .build()
-        .expect("RamdiskClientBuilder.build() failed");
+    let mut client = RamdiskClient::builder(RAMDISK_BLOCK_SIZE, RAMDISK_BLOCK_COUNT);
+    ramdevice_client::wait_for_device(
+        "/dev/sys/platform/00:00:2d/ramctl",
+        std::time::Duration::from_secs(30),
+    )
+    .expect("/dev/sys/platform/00:00:2d/ramctl did not appear");
+
+    let ramdisk = client.build().expect("RamdiskClientBuilder.build() failed");
     let remote_block_device = RemoteBlockClient::new(ramdisk.open().expect("ramdisk.open failed"))
         .await
         .expect("new failed");
@@ -214,19 +217,8 @@ async fn ext4_server_mounts_vmo_nested_dirs() -> Result<(), Error> {
 
 #[fasync::run_singlethreaded(test)]
 async fn ext4_unified_service_mounts_vmo() -> Result<(), Error> {
-    // Unified services are still a work in progress. Ideally, the component framework would launch
-    // this component, but this feature is not fully implemented yet.
-    // TODO(mbrunson): Move this to the component manifest when there is direction on how to
-    // implement this kind of test properly.
-    let app = launch(
-        &launcher()?,
-        "fuchsia-pkg://fuchsia.com/ext4_server_integration_tests#meta/ext4_readonly.cmx"
-            .to_string(),
-        None,
-    )?;
-
-    let ext4_service =
-        app.connect_to_service::<ServiceMarker>().expect("Failed to connect to service");
+    let ext4_service = fuchsia_component::client::connect_to_service::<ServiceMarker>()
+        .expect("Failed to connect to service");
     let ext4 = ext4_service.server()?;
 
     let mut file_buf = io::BufReader::new(fs::File::open("/pkg/data/nest.img")?);

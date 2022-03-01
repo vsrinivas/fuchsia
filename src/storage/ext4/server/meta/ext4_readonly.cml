@@ -1,0 +1,25 @@
+{
+    include: [ "syslog/client.shard.cml" ],
+    program: {
+        runner: "elf",
+        binary: "bin/ext4_readonly",
+    },
+    capabilities: [
+        {
+            protocol: [ "fuchsia.storage.ext4.Server" ],
+        },
+        {
+            service: [ "fuchsia.storage.ext4.Service" ],
+        },
+    ],
+    expose: [
+        {
+            protocol: "fuchsia.storage.ext4.Server",
+            from: "self",
+        },
+        {
+            service: "fuchsia.storage.ext4.Service",
+            from: "self",
+        },
+    ],
+}

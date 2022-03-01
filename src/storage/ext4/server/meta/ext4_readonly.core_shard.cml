@@ -1,4 +1,29 @@
 // Copyright 2022 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-{}
+{
+    children: [
+        {
+            name: "fuchsia_storage_ext4_server",
+            url: "fuchsia-pkg://fuchsia.com/ext4_readonly#meta/ext4_readonly.cm",
+        },
+    ],
+    use: [
+        {
+            protocol: "fuchsia.storage.ext4.Server",
+            from: "#fuchsia_storage_ext4_server",
+        },
+    ],
+    offer: [
+        {
+            protocol: "fuchsia.storage.ext4.Server",
+            from: "#fuchsia_storage_ext4_server",
+            to: [ "#session-manager" ],
+        },
+        {
+            protocol: [ "fuchsia.logger.LogSink" ],
+            from: "parent",
+            to: "#fuchsia_storage_ext4_server",
+        },
+    ],
+}

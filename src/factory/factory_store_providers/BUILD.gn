@@ -150,7 +150,7 @@ fuchsia_test_component("factory_store_providers_ext4_test_comp") {
 fuchsia_test_package("factory_store_providers_ext4_tests") {
   test_components = [ ":factory_store_providers_ext4_test_comp" ]
   deps = [
-           "//src/storage/ext4/server:ext4_readonly_comp",
+           "//src/storage/ext4/server:ext4_readonly_comp-v1",
            ":factory_store_providers_comp",
 
            ":factory_store_providers_ext4_tests_config",
