@@ -8,6 +8,7 @@ fidl("fuchsia.hardware.pty") {
   sdk_category = "partner"
   api = "fuchsia.hardware.pty.api"
   public_deps = [
+    "//sdk/fidl/fuchsia.device",
     "//sdk/fidl/fuchsia.io",
     "//sdk/fidl/fuchsia.mem",
   ]

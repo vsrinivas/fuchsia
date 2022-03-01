@@ -57,7 +57,7 @@ class PtyServer : public fbl::RefCounted<PtyServer> {
   void Shutdown();
 
   void AssertWritableSignal() {
-    local_.signal_peer(0, fuchsia_device::wire::kDeviceSignalWritable);
+    local_.signal_peer(0, static_cast<zx_signals_t>(fuchsia_device::wire::DeviceSignal::kWritable));
   }
 
   // Read all outstanding events, and reset the pending signal.

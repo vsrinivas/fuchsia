@@ -4,6 +4,7 @@
 
 #include "remote_v2.h"
 
+#include <fidl/fuchsia.device/cpp/wire.h>
 #include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/zx/channel.h>
 #include <lib/zxio/cpp/vector.h>
@@ -14,6 +15,7 @@
 #include "common_utils.h"
 #include "dirent_iterator.h"
 
+namespace fdevice = fuchsia_device;
 namespace fio = fuchsia_io;
 
 namespace {
@@ -130,7 +132,7 @@ void zxio_remote_v2_wait_begin(zxio_t* io, zxio_signals_t zxio_signals, zx_handl
                                zx_signals_t* out_zx_signals) {
   RemoteV2 rio(io);
   *out_handle = rio.observer()->get();
-  using DeviceSignal = fio::wire::DeviceSignal2;
+  using DeviceSignal = fdevice::wire::DeviceSignal;
   auto device_signal_part = DeviceSignal();
   if (zxio_signals & ZXIO_SIGNAL_READABLE) {
     device_signal_part |= DeviceSignal::kReadable;
@@ -159,7 +161,7 @@ void zxio_remote_v2_wait_begin(zxio_t* io, zxio_signals_t zxio_signals, zx_handl
 void zxio_remote_v2_wait_end(zxio_t* io, zx_signals_t zx_signals,
                              zxio_signals_t* out_zxio_signals) {
   zxio_signals_t zxio_signals = ZXIO_SIGNAL_NONE;
-  using DeviceSignal = fio::wire::DeviceSignal2;
+  using DeviceSignal = fdevice::wire::DeviceSignal;
   // static_cast is a-okay, because |DeviceSignal| values are defined
   // using Zircon ZX_USER_* signals.
   auto device_signal_part = DeviceSignal::TruncatingUnknown(zx_signals);

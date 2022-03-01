@@ -19,6 +19,7 @@
 
 #include "private.h"
 
+namespace fdevice = fuchsia_device;
 namespace fio = fuchsia_io;
 
 namespace {
@@ -424,21 +425,25 @@ void zxio_remote_wait_begin(zxio_t* io, zxio_signals_t zxio_signals, zx_handle_t
   *out_handle = rio.event()->get();
 
   zx_signals_t zx_signals = ZX_SIGNAL_NONE;
-  if (zxio_signals & ZXIO_SIGNAL_READABLE) {
-    zx_signals |= fio::wire::kDeviceSignalReadable;
-  }
-  if (zxio_signals & ZXIO_SIGNAL_OUT_OF_BAND) {
-    zx_signals |= fio::wire::kDeviceSignalOob;
-  }
-  if (zxio_signals & ZXIO_SIGNAL_WRITABLE) {
-    zx_signals |= fio::wire::kDeviceSignalWritable;
-  }
-  if (zxio_signals & ZXIO_SIGNAL_ERROR) {
-    zx_signals |= fio::wire::kDeviceSignalError;
-  }
-  if (zxio_signals & ZXIO_SIGNAL_PEER_CLOSED) {
-    zx_signals |= fio::wire::kDeviceSignalHangup;
-  }
+  zx_signals |= [zxio_signals]() {
+    fdevice::wire::DeviceSignal signals;
+    if (zxio_signals & ZXIO_SIGNAL_READABLE) {
+      signals |= fdevice::wire::DeviceSignal::kReadable;
+    }
+    if (zxio_signals & ZXIO_SIGNAL_OUT_OF_BAND) {
+      signals |= fdevice::wire::DeviceSignal::kOob;
+    }
+    if (zxio_signals & ZXIO_SIGNAL_WRITABLE) {
+      signals |= fdevice::wire::DeviceSignal::kWritable;
+    }
+    if (zxio_signals & ZXIO_SIGNAL_ERROR) {
+      signals |= fdevice::wire::DeviceSignal::kError;
+    }
+    if (zxio_signals & ZXIO_SIGNAL_PEER_CLOSED) {
+      signals |= fdevice::wire::DeviceSignal::kHangup;
+    }
+    return static_cast<zx_signals_t>(signals);
+  }();
   if (zxio_signals & ZXIO_SIGNAL_READ_DISABLED) {
     zx_signals |= ZX_CHANNEL_PEER_CLOSED;
   }
@@ -447,21 +452,23 @@ void zxio_remote_wait_begin(zxio_t* io, zxio_signals_t zxio_signals, zx_handle_t
 
 void zxio_remote_wait_end(zxio_t* io, zx_signals_t zx_signals, zxio_signals_t* out_zxio_signals) {
   zxio_signals_t zxio_signals = ZXIO_SIGNAL_NONE;
-  if (zx_signals & fio::wire::kDeviceSignalReadable) {
-    zxio_signals |= ZXIO_SIGNAL_READABLE;
-  }
-  if (zx_signals & fio::wire::kDeviceSignalOob) {
-    zxio_signals |= ZXIO_SIGNAL_OUT_OF_BAND;
-  }
-  if (zx_signals & fio::wire::kDeviceSignalWritable) {
-    zxio_signals |= ZXIO_SIGNAL_WRITABLE;
-  }
-  if (zx_signals & fio::wire::kDeviceSignalError) {
-    zxio_signals |= ZXIO_SIGNAL_ERROR;
-  }
-  if (zx_signals & fio::wire::kDeviceSignalHangup) {
-    zxio_signals |= ZXIO_SIGNAL_PEER_CLOSED;
-  }
+  [&zxio_signals, signals = fdevice::wire::DeviceSignal::TruncatingUnknown(zx_signals)]() {
+    if (signals & fdevice::wire::DeviceSignal::kReadable) {
+      zxio_signals |= ZXIO_SIGNAL_READABLE;
+    }
+    if (signals & fdevice::wire::DeviceSignal::kOob) {
+      zxio_signals |= ZXIO_SIGNAL_OUT_OF_BAND;
+    }
+    if (signals & fdevice::wire::DeviceSignal::kWritable) {
+      zxio_signals |= ZXIO_SIGNAL_WRITABLE;
+    }
+    if (signals & fdevice::wire::DeviceSignal::kError) {
+      zxio_signals |= ZXIO_SIGNAL_ERROR;
+    }
+    if (signals & fdevice::wire::DeviceSignal::kHangup) {
+      zxio_signals |= ZXIO_SIGNAL_PEER_CLOSED;
+    }
+  }();
   if (zx_signals & ZX_CHANNEL_PEER_CLOSED) {
     zxio_signals |= ZXIO_SIGNAL_READ_DISABLED;
   }

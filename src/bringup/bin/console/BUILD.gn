@@ -45,7 +45,7 @@ source_set("common") {
   ]
 
   deps = [
-    "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
+    "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
     "//sdk/lib/fdio",
     "//src/lib/fxl",
     "//zircon/system/ulib/cmdline",

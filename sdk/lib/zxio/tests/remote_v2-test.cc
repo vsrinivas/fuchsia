@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fidl/fuchsia.device/cpp/wire.h>
 #include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
@@ -17,6 +18,7 @@
 
 namespace {
 
+namespace fdevice = fuchsia_device;
 namespace fio = fuchsia_io;
 
 class TestServerBase : public fidl::WireServer<fio::Node2> {
@@ -210,7 +212,7 @@ TEST_F(RemoteV2, WaitForReadable) {
   ASSERT_NO_FAILURES(StartServer<TestServerBase>());
   zxio_signals_t observed = ZX_SIGNAL_NONE;
   ASSERT_OK(eventpair_on_server_.signal_peer(
-      ZX_SIGNAL_NONE, static_cast<zx_signals_t>(fio::wire::DeviceSignal2::kReadable)));
+      ZX_SIGNAL_NONE, static_cast<zx_signals_t>(fdevice::wire::DeviceSignal::kReadable)));
   ASSERT_OK(zxio_wait_one(&remote_.io, ZXIO_SIGNAL_READABLE, ZX_TIME_INFINITE_PAST, &observed));
   EXPECT_EQ(ZXIO_SIGNAL_READABLE, observed);
 }
@@ -219,7 +221,7 @@ TEST_F(RemoteV2, WaitForWritable) {
   ASSERT_NO_FAILURES(StartServer<TestServerBase>());
   zxio_signals_t observed = ZX_SIGNAL_NONE;
   ASSERT_OK(eventpair_on_server_.signal_peer(
-      ZX_SIGNAL_NONE, static_cast<zx_signals_t>(fio::wire::DeviceSignal2::kWritable)));
+      ZX_SIGNAL_NONE, static_cast<zx_signals_t>(fdevice::wire::DeviceSignal::kWritable)));
   ASSERT_OK(zxio_wait_one(&remote_.io, ZXIO_SIGNAL_WRITABLE, ZX_TIME_INFINITE_PAST, &observed));
   EXPECT_EQ(ZXIO_SIGNAL_WRITABLE, observed);
 }

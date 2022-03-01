@@ -36,11 +36,6 @@ table/member fuchsia.io/ConnectionOptions.protocols fuchsia.io/NodeProtocols
 table/member fuchsia.io/ConnectionOptions.rights_request fuchsia.io/RightsRequest
 table fuchsia.io/ConnectionOptions
 table fuchsia.io/ConnectorInfo
-const fuchsia.io/DEVICE_SIGNAL_ERROR uint32 134217728
-const fuchsia.io/DEVICE_SIGNAL_HANGUP uint32 268435456
-const fuchsia.io/DEVICE_SIGNAL_OOB uint32 33554432
-const fuchsia.io/DEVICE_SIGNAL_READABLE uint32 16777216
-const fuchsia.io/DEVICE_SIGNAL_WRITABLE uint32 67108864
 const fuchsia.io/DIRENT_TYPE_BLOCK_DEVICE uint8 6
 const fuchsia.io/DIRENT_TYPE_DIRECTORY uint8 4
 const fuchsia.io/DIRENT_TYPE_FILE uint8 8
@@ -55,12 +50,6 @@ struct/member fuchsia.io/Device.unused zx/handle:<EVENTPAIR,optional>
 resource struct fuchsia.io/Device
 table/member fuchsia.io/DeviceInfo.unused zx/handle:EVENTPAIR
 resource table fuchsia.io/DeviceInfo
-bits/member fuchsia.io/DeviceSignal2.ERROR 134217728
-bits/member fuchsia.io/DeviceSignal2.HANGUP 268435456
-bits/member fuchsia.io/DeviceSignal2.OOB 33554432
-bits/member fuchsia.io/DeviceSignal2.READABLE 16777216
-bits/member fuchsia.io/DeviceSignal2.WRITABLE 67108864
-strict bits fuchsia.io/DeviceSignal2 uint32
 protocol/member fuchsia.io/Directory.AddInotifyFilter(string:4095 path,fuchsia.io/InotifyWatchMask filter,uint32 watch_descriptor,zx/handle:SOCKET socket) -> ()
 protocol/member fuchsia.io/Directory.AdvisoryLock(fuchsia.io/AdvisoryLockRequest request) -> (fuchsia.io/AdvisoryLocking_AdvisoryLock_Result result)
 protocol/member fuchsia.io/Directory.Clone(uint32 flags,server_end:fuchsia.io/Node object)

@@ -45,7 +45,7 @@ const fuchsia.hardware.pty/EVENT_MASK uint32 15
 const fuchsia.hardware.pty/EVENT_SUSPEND uint32 4
 const fuchsia.hardware.pty/EVENT_WINDOW_SIZE uint32 8
 const fuchsia.hardware.pty/FEATURE_RAW uint32 1
-const fuchsia.hardware.pty/SIGNAL_EVENT uint32 33554432
+const fuchsia.hardware.pty/SIGNAL_EVENT fuchsia.device/DeviceSignal 33554432
 struct/member fuchsia.hardware.pty/WindowSize.height uint32
 struct/member fuchsia.hardware.pty/WindowSize.width uint32
 struct fuchsia.hardware.pty/WindowSize

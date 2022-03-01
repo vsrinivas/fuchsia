@@ -12,6 +12,7 @@
 /// Controlling PTY.
 library fuchsia.hardware.pty;
 
+using fuchsia.device;
 using fuchsia.io;
 using zx;
 
@@ -37,7 +38,8 @@ const EVENT_WINDOW_SIZE uint32 = 8;
 const EVENT_MASK uint32 = 15;
 
 /// When an event is pending, this signal is asserted on the Controlling PTY.
-const SIGNAL_EVENT uint32 = fuchsia.io.DEVICE_SIGNAL_OOB;
+const SIGNAL_EVENT fuchsia.device.DeviceSignal = fuchsia.device.DeviceSignal.OOB;
+
 @discoverable
 protocol Device {
     // Compose from fuchsia.io.File so we can support Read/Write and export

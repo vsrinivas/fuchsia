@@ -10,8 +10,5 @@ fidl("fuchsia.device") {
     "controller.fidl",
     "name-provider.fidl",
   ]
-  public_deps = [
-    "//sdk/fidl/fuchsia.io",
-    "//zircon/vdso/zx",
-  ]
+  public_deps = [ "//zircon/vdso/zx" ]
 }

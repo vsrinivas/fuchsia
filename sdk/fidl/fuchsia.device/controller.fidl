@@ -4,7 +4,6 @@
 library fuchsia.device;
 
 using zx;
-using fuchsia.io;
 
 /// Maxmium length for a device name
 const MAX_DEVICE_NAME_LEN uint64 = 32;
@@ -20,23 +19,19 @@ const MAX_DEVICE_POWER_STATES uint32 = 5;
 const MIN_DEVICE_POWER_STATES uint32 = 2; // D0 & D3COLD
 const MAX_DEVICE_PERFORMANCE_STATES uint32 = 20;
 const MIN_DEVICE_PERFORMANCE_STATES uint32 = 1; // Fully performant state
-
-/// Signal that will be active on a device event handle if the device's read() method
-/// will return data.
-const DEVICE_SIGNAL_READABLE uint32 = fuchsia.io.DEVICE_SIGNAL_READABLE;
-/// Signal that will be active on a device event handle if the device has some out-of-band
-/// mechanism that needs attention.
-/// This is primarily used by the PTY support.
-const DEVICE_SIGNAL_OOB uint32 = fuchsia.io.DEVICE_SIGNAL_OOB;
-/// Signal that will be active on a device event handle if the device's write() method
-/// will accept data.
-const DEVICE_SIGNAL_WRITABLE uint32 = fuchsia.io.DEVICE_SIGNAL_WRITABLE;
-/// Signal that will be active on a device event handle if the device has encountered an error.
-/// This is primarily used by the PTY support.
-const DEVICE_SIGNAL_ERROR uint32 = fuchsia.io.DEVICE_SIGNAL_ERROR;
-/// Signal that will be active on a device event handle if the device has been disconnected.
-/// This is primarily used by the PTY support.
-const DEVICE_SIGNAL_HANGUP uint32 = fuchsia.io.DEVICE_SIGNAL_HANGUP;
+@deprecated("devices will be services in the future")
+type DeviceSignal = strict bits : uint32 {
+    /// Indicates the device is ready for reading.
+    READABLE = 0x01000000; // ZX_USER_SIGNAL_0
+    /// Indicates an out-of-band state transition has occurred.
+    OOB = 0x02000000; // ZX_USER_SIGNAL_1
+    /// Indicates the device is ready for writing.
+    WRITABLE = 0x04000000; // ZX_USER_SIGNAL_2
+    /// Indicates the device has encountered an error state.
+    ERROR = 0x08000000; // ZX_USER_SIGNAL_3
+    /// Indicates the device has hung up on the current connection.
+    HANGUP = 0x10000000; // ZX_USER_SIGNAL_4
+};
 
 type DevicePowerState = strict enum : uint8 {
     /// Mandatory Working state. Device is fully functional, can take I/O,

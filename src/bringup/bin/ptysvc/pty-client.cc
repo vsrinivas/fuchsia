@@ -36,9 +36,8 @@ zx_status_t PtyClient::Read(void* data, size_t count, size_t* out_actual) {
   if (length > 0) {
     *out_actual = length;
     return ZX_OK;
-  } else {
-    return is_peer_closed() ? ZX_ERR_PEER_CLOSED : ZX_ERR_SHOULD_WAIT;
   }
+  return is_peer_closed() ? ZX_ERR_PEER_CLOSED : ZX_ERR_SHOULD_WAIT;
 }
 
 zx_status_t PtyClient::Write(const void* data, size_t count, size_t* out_actual) {
@@ -140,22 +139,21 @@ zx_status_t PtyClient::WriteChunk(const void* buf, size_t count, size_t* actual)
 }
 
 void PtyClient::AdjustSignals() {
-  zx_signals_t to_clear = 0;
-  zx_signals_t to_set = 0;
+  fuchsia_device::wire::DeviceSignal to_clear, to_set;
 
   if (is_active()) {
-    to_set = fuchsia_device::wire::kDeviceSignalWritable;
+    to_set = fuchsia_device::wire::DeviceSignal::kWritable;
   } else {
-    to_clear = fuchsia_device::wire::kDeviceSignalWritable;
+    to_clear = fuchsia_device::wire::DeviceSignal::kWritable;
   }
 
   if (rx_fifo_.is_empty()) {
-    to_clear = fuchsia_device::wire::kDeviceSignalReadable;
+    to_clear = fuchsia_device::wire::DeviceSignal::kReadable;
   } else {
-    to_set = fuchsia_device::wire::kDeviceSignalReadable;
+    to_set = fuchsia_device::wire::DeviceSignal::kReadable;
   }
 
-  local_.signal_peer(to_clear, to_set);
+  local_.signal_peer(static_cast<zx_signals_t>(to_clear), static_cast<zx_signals_t>(to_set));
 }
 
 void PtyClient::Shutdown() { server_->RemoveClient(this); }

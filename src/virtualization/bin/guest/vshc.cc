@@ -120,7 +120,7 @@ class ConsoleIn {
 
       events_ = std::move(info.tty().event);
       pty_event_waiter_.set_object(events_.get());
-      pty_event_waiter_.set_trigger(fpty::wire::kSignalEvent);
+      pty_event_waiter_.set_trigger(static_cast<zx_signals_t>(fpty::wire::kSignalEvent));
       auto status = pty_event_waiter_.Begin(loop_->dispatcher());
       if (status != ZX_OK) {
         std::cerr << "Unable to start the pty event waiter due to: " << status << std::endl;
@@ -160,7 +160,7 @@ class ConsoleIn {
       return;
     }
 
-    FX_DCHECK(signal->observed & fpty::wire::kSignalEvent)
+    FX_DCHECK(signal->observed & static_cast<zx_signals_t>(fpty::wire::kSignalEvent))
         << "Did not receive expected signal. Received: " << signal->observed;
 
     // Even if we exit early due to error still want to queue up the next instance of the handler.

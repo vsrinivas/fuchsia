@@ -4,7 +4,7 @@
 
 #include "fifo.h"
 
-#include <fidl/fuchsia.io/cpp/wire.h>
+#include <fidl/fuchsia.device/cpp/wire.h>
 
 #include <fbl/auto_lock.h>
 
@@ -20,7 +20,7 @@ zx_status_t Fifo::Read(uint8_t* buffer, size_t length, size_t* actual) {
   *actual = count;
 
   if (IsEmptyLocked()) {
-    event_.signal_peer(fuchsia_io::wire::kDeviceSignalReadable, 0);
+    event_.signal_peer(static_cast<zx_signals_t>(fuchsia_device::wire::DeviceSignal::kReadable), 0);
   }
 
   if (count == 0) {
@@ -41,7 +41,7 @@ zx_status_t Fifo::Write(const uint8_t* buffer, size_t length, size_t* actual) {
   *actual = count;
 
   if (!IsEmptyLocked()) {
-    event_.signal_peer(0, fuchsia_io::wire::kDeviceSignalReadable);
+    event_.signal_peer(0, static_cast<zx_signals_t>(fuchsia_device::wire::DeviceSignal::kReadable));
   }
 
   if (count == 0) {

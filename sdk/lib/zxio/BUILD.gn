@@ -91,6 +91,7 @@ source_set("zxio") {
   public_deps = [ ":headers" ]
   public_configs = [ ":zxio_config" ]
   deps = [
+    "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
     "//sdk/fidl/fuchsia.hardware.pty:fuchsia.hardware.pty_llcpp",
     "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
     "//sdk/lib/zxio:inception",

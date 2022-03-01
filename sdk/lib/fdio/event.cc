@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fidl/fuchsia.io/cpp/wire.h>
+#include <fidl/fuchsia.device/cpp/wire.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <lib/zx/event.h>
@@ -19,8 +19,10 @@
 #include "internal.h"
 #include "zxio.h"
 
-#define FDIO_EVENT_READABLE static_cast<zx_signals_t>(fuchsia_io::wire::DeviceSignal2::kReadable)
-#define FDIO_EVENT_WRITABLE static_cast<zx_signals_t>(fuchsia_io::wire::DeviceSignal2::kWritable)
+constexpr auto kSignalReadable =
+    static_cast<zx_signals_t>(fuchsia_device::wire::DeviceSignal::kReadable);
+constexpr auto kSignalWritable =
+    static_cast<zx_signals_t>(fuchsia_device::wire::DeviceSignal::kWritable);
 
 // An implementation of a POSIX eventfd.
 struct fdio_event_t {
@@ -45,12 +47,12 @@ static zx_status_t fdio_event_close(zxio_t* io) {
 static void fdio_event_update_signals(fdio_event_t* event) __TA_REQUIRES(event->lock) {
   zx_signals_t set_mask = ZX_SIGNAL_NONE;
   if (event->value > 0) {
-    set_mask |= FDIO_EVENT_READABLE;
+    set_mask |= kSignalReadable;
   }
   if (event->value < UINT64_MAX - 1) {
-    set_mask |= FDIO_EVENT_WRITABLE;
+    set_mask |= kSignalWritable;
   }
-  zx_status_t status = event->handle.signal(FDIO_EVENT_READABLE | FDIO_EVENT_WRITABLE, set_mask);
+  zx_status_t status = event->handle.signal(kSignalReadable | kSignalWritable, set_mask);
   ZX_ASSERT_MSG(status == ZX_OK, "%s", zx_status_get_string(status));
 }
 
@@ -125,7 +127,7 @@ static zx_status_t fdio_event_writev(zxio_t* io, const zx_iovec_t* vector, size_
     // to be useful. If not, we might need to restructure how we do blocking
     // read and write operations (e.g., by including the "should block" flag in
     // zxio_flags_t.
-    zx_status_t status = event->handle.signal(FDIO_EVENT_WRITABLE, ZX_SIGNAL_NONE);
+    zx_status_t status = event->handle.signal(kSignalWritable, ZX_SIGNAL_NONE);
     ZX_ASSERT_MSG(status == ZX_OK, "%s", zx_status_get_string(status));
 
     return ZX_ERR_SHOULD_WAIT;
@@ -143,10 +145,10 @@ static void fdio_event_wait_begin(zxio_t* io, zxio_signals_t zxio_signals, zx_ha
   fdio_event_t* event = reinterpret_cast<fdio_event_t*>(io);
   zx_signals_t zx_signals = ZX_SIGNAL_NONE;
   if (zxio_signals & ZXIO_SIGNAL_READABLE) {
-    zx_signals |= FDIO_EVENT_READABLE;
+    zx_signals |= kSignalReadable;
   }
   if (zxio_signals & ZXIO_SIGNAL_WRITABLE) {
-    zx_signals |= FDIO_EVENT_WRITABLE;
+    zx_signals |= kSignalWritable;
   }
   *out_handle = event->handle.get();
   *out_zx_signals = zx_signals;
@@ -155,10 +157,10 @@ static void fdio_event_wait_begin(zxio_t* io, zxio_signals_t zxio_signals, zx_ha
 static void fdio_event_wait_end(zxio_t* io, zx_signals_t zx_signals,
                                 zxio_signals_t* out_zxio_signals) {
   zxio_signals_t zxio_signals = ZXIO_SIGNAL_NONE;
-  if (zx_signals & FDIO_EVENT_READABLE) {
+  if (zx_signals & kSignalReadable) {
     zxio_signals |= ZXIO_SIGNAL_READABLE;
   }
-  if (zx_signals & FDIO_EVENT_WRITABLE) {
+  if (zx_signals & kSignalWritable) {
     zxio_signals |= ZXIO_SIGNAL_WRITABLE;
   }
   *out_zxio_signals = zxio_signals;

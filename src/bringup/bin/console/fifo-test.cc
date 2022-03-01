@@ -4,7 +4,7 @@
 
 #include "fifo.h"
 
-#include <fidl/fuchsia.io/cpp/wire.h>
+#include <fidl/fuchsia.device/cpp/wire.h>
 #include <lib/zx/eventpair.h>
 #include <lib/zx/time.h>
 
@@ -13,7 +13,8 @@
 namespace {
 
 bool IsReadable(const zx::eventpair& event) {
-  zx_status_t status = event.wait_one(fuchsia_io::wire::kDeviceSignalReadable, zx::time(), nullptr);
+  zx_status_t status = event.wait_one(
+      static_cast<zx_rights_t>(fuchsia_device::wire::DeviceSignal::kReadable), zx::time(), nullptr);
   return status == ZX_OK;
 }
 
