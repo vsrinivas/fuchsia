@@ -1078,6 +1078,7 @@ rust_library("aes-v0_7_5") {
   crate_name = "aes"
   crate_root = "//third_party/rust_crates/vendor/aes/src/lib.rs"
   output_name = "aes-7d6cffd832fe874d"
+  configs += [ "//build/config/rust:allow_simd" ]
   configs -= [
     "//build/config/rust:edition_2018",
     "//build/config/rust:2018_idioms",

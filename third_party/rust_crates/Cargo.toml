@@ -361,6 +361,9 @@ add_cfgs = []
 #
 # Keep this sorted alphabetically, please.
 
+[gn.package.aes."0.7.5"]
+configs = [ "//build/config/rust:allow_simd" ]
+
 [gn.package.anyhow."1.0.38"]
 # TODO(https://github.com/rust-lang/rust/pull/72981): uncomment when backtrace is stabilized.
 # rustflags = ["--cfg=backtrace"]
