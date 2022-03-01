@@ -32,9 +32,9 @@
 #include <fbl/intrusive_hash_table.h>
 #include <fbl/vector.h>
 
-#include "display-info.h"
-#include "id-map.h"
-#include "image.h"
+#include "src/graphics/display/drivers/display/display-info.h"
+#include "src/graphics/display/drivers/display/id-map.h"
+#include "src/graphics/display/drivers/display/image.h"
 #include "src/graphics/display/drivers/display/util.h"
 #include "src/lib/async-watchdog/watchdog.h"
 

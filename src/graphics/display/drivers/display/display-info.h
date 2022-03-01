@@ -24,7 +24,7 @@
 #include <fbl/string_printf.h>
 #include <fbl/vector.h>
 
-#include "id-map.h"
+#include "src/graphics/display/drivers/display/id-map.h"
 
 namespace display {
 

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "base.h"
+#include "src/graphics/display/drivers/display/tests/base.h"
 
 #include <lib/async/cpp/task.h>
 #include <lib/zx/clock.h>

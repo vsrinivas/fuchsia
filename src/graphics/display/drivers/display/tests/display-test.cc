@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fidl/fuchsia.hardware.display/cpp/markers.h>
 #include <fidl/fuchsia.hardware.display/cpp/wire.h>
 #include <fuchsia/hardware/display/controller/c/banjo.h>
 #include <lib/fidl/llcpp/client_base.h>
@@ -13,10 +14,10 @@
 #include <fbl/auto_lock.h>
 #include <zxtest/zxtest.h>
 
-#include "fidl/fuchsia.hardware.display/cpp/markers.h"
 #include "src/graphics/display/drivers/display/client.h"
 #include "src/graphics/display/drivers/display/controller.h"
 #include "src/graphics/display/drivers/display/util.h"
+
 namespace display {
 
 TEST(DisplayTest, NoOpTest) { EXPECT_OK(ZX_OK); }

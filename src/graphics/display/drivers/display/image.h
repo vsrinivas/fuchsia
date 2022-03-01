@@ -17,9 +17,9 @@
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
 
-#include "fence.h"
-#include "id-map.h"
-#include "util.h"
+#include "src/graphics/display/drivers/display/fence.h"
+#include "src/graphics/display/drivers/display/id-map.h"
+#include "src/graphics/display/drivers/display/util.h"
 
 namespace display {
 

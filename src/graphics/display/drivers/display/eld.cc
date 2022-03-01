@@ -4,7 +4,7 @@
 
 #include "src/graphics/display/drivers/display/eld.h"
 
-#include <src/lib/eld/eld.h>
+#include "src/lib/eld/eld.h"
 
 namespace display {
 
