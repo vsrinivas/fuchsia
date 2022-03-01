@@ -236,10 +236,11 @@ zx_status_t Page::Zero(size_t index, size_t count) {
 }
 
 FileCache::FileCache(VnodeF2fs *vnode) : vnode_(vnode) {}
+
 FileCache::~FileCache() {
+  Reset();
   {
     std::lock_guard tree_lock(tree_lock_);
-    CleanupPagesUnsafe();
     ZX_DEBUG_ASSERT(page_tree_.is_empty());
   }
 }
@@ -329,8 +330,10 @@ zx_status_t FileCache::EvictUnsafe(Page *page) {
   return ZX_OK;
 }
 
-void FileCache::CleanupPagesUnsafe(pgoff_t start, pgoff_t end, bool invalidate) {
+std::vector<fbl::RefPtr<Page>> FileCache::CleanupPagesUnsafe(pgoff_t start, pgoff_t end,
+                                                             bool invalidate) {
   pgoff_t prev_key = kPgOffMax;
+  std::vector<fbl::RefPtr<Page>> pages;
   while (!page_tree_.is_empty()) {
     // Acquire Pages from the the lower bound of |start| to |end|.
     auto key = (prev_key < kPgOffMax) ? prev_key : start;
@@ -354,27 +357,38 @@ void FileCache::CleanupPagesUnsafe(pgoff_t start, pgoff_t end, bool invalidate) 
         recycle_cvar_.wait(tree_lock_);
         continue;
       }
-      // There are some strong references. It shall be released in fbl_recycle().
+      // Keep |page| alive in |pages| to prevent |page| from coming into fbl_recycle().
+      // When a caller resets the reference after doing some necessary work, they will be released.
       prev_key = page->GetKey();
       EvictUnsafe(page.get());
-      if (invalidate) {
-        page->Invalidate();
-      } else {
-        // Wait for it to be written.
-        page->WaitOnWriteback();
-      }
+      pages.push_back(std::move(page));
     }
   }
+  return pages;
 }
 
 void FileCache::InvalidatePages(pgoff_t start, pgoff_t end) {
-  std::lock_guard tree_lock(tree_lock_);
-  CleanupPagesUnsafe(start, end, true);
+  std::vector<fbl::RefPtr<Page>> pages;
+  {
+    std::lock_guard tree_lock(tree_lock_);
+    pages = CleanupPagesUnsafe(start, end, true);
+  }
+  for (auto &page : pages) {
+    // Invalidate acitve Pages.
+    page->Invalidate();
+  }
 }
 
 void FileCache::Reset() {
-  std::lock_guard tree_lock(tree_lock_);
-  CleanupPagesUnsafe();
+  std::vector<fbl::RefPtr<Page>> pages;
+  {
+    std::lock_guard tree_lock(tree_lock_);
+    pages = CleanupPagesUnsafe();
+  }
+  for (auto &page : pages) {
+    // Wait for active Pages to be written.
+    page->WaitOnWriteback();
+  }
 }
 
 std::vector<fbl::RefPtr<Page>> FileCache::GetLockedDirtyPagesUnsafe(

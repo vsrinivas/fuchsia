@@ -91,6 +91,36 @@ TEST_F(FileCacheTest, Map) {
   vn = nullptr;
 }
 
+TEST_F(FileCacheTest, EvictActivePages) {
+  fbl::RefPtr<fs::Vnode> test_file;
+  root_dir_->Create("test", S_IFREG, &test_file);
+  fbl::RefPtr<f2fs::File> vn = fbl::RefPtr<f2fs::File>::Downcast(std::move(test_file));
+  char buf[kPageSize];
+
+  // Make two dirty Pages.
+  FileTester::AppendToFile(vn.get(), buf, kPageSize);
+  FileTester::AppendToFile(vn.get(), buf, kPageSize);
+
+  // Keep the Pages active in Writer after making them be subject to writeback.
+  WritebackOperation op;
+  vn->Writeback(op);
+
+  for (auto i = 0; i < 2; ++i) {
+    fbl::RefPtr<Page> page;
+    vn->GrabCachePage(0, &page);
+    ASSERT_TRUE(page->IsWriteback());
+    Page::PutPage(std::move(page), true);
+  }
+
+  // Invalidate Pages from the 2nd one, which causes flushing all Pages in Writer.
+  // If it waits for Page writeback with FileCache::tree_lock_ held, it results in deadlock.
+  // It happened in FileCache::Invalidate() and FileCache::Reset().
+  // Refer to Bug 94594 for more details.
+  vn->InvalidatePages(1);
+  vn->Close();
+  vn = nullptr;
+}
+
 TEST_F(FileCacheTest, WritebackOperation) {
   fbl::RefPtr<fs::Vnode> test_file;
   root_dir_->Create("test", S_IFREG, &test_file);

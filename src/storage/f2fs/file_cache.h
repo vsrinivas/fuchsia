@@ -146,6 +146,7 @@ class Page : public storage::BlockBuffer,
     }
   }
 
+  // A caller MUST NOT acquire FileCache::tree_lock_ before calling it.
   void WaitOnWriteback();
   bool SetWriteback();
   void ClearWriteback();
@@ -263,7 +264,14 @@ class FileCache {
       __TA_REQUIRES(tree_lock_);
   zx_status_t AddPageUnsafe(const fbl::RefPtr<Page> &page) __TA_REQUIRES(tree_lock_);
   zx_status_t EvictUnsafe(Page *page) __TA_REQUIRES(tree_lock_);
-  void CleanupPagesUnsafe(pgoff_t start = 0, pgoff_t end = kPgOffMax, bool invalidate = false)
+  // It evicts all Pages within the range of |start| to |end|. For inactive Pages, it evicts and
+  // deletes them since no one refers to them. If |invalidate| is set to true, they are invalidated
+  // first. For active Pages, it just evicts and returns them since waiting for writeback of active
+  // Pages with tree_lock_ held can cause deadlock due to the contention between
+  // CleanupPagesUnsafe() and Downgrade(). When a caller resets returned Pages after doing some
+  // necessary work, they will be released.
+  std::vector<fbl::RefPtr<Page>> CleanupPagesUnsafe(pgoff_t start = 0, pgoff_t end = kPgOffMax,
+                                                    bool invalidate = false)
       __TA_REQUIRES(tree_lock_);
 
   using PageTreeTraits = fbl::DefaultKeyedObjectTraits<pgoff_t, Page>;
