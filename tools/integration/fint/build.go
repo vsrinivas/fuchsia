@@ -34,6 +34,9 @@ const (
 
 	// ninjaLogPath is the path to the main ninja log relative to the build directory.
 	ninjaLogPath = ".ninja_log"
+	// ninjaDepsPath is the path to the log of ninja deps relative to the build
+	// directory.
+	ninjaDepsPath = ".ninja_deps"
 
 	// Name of the directory within the build directory that will contain clang
 	// crash reports. This name is configured by the `crash_diagnostics_dir` GN
@@ -240,6 +243,17 @@ func buildImpl(
 			return artifacts, err
 		}
 		if !noop {
+			// Upload additional log files to help with debugging.
+			artifacts.DebugFiles = append(artifacts.DebugFiles, []*fintpb.DebugFile{
+				{
+					Path:       filepath.Join(contextSpec.BuildDir, ninjaLogPath),
+					UploadDest: ninjaLogPath,
+				},
+				{
+					Path:       filepath.Join(contextSpec.BuildDir, ninjaDepsPath),
+					UploadDest: ninjaDepsPath,
+				},
+			}...)
 			artifacts.FailureSummary = ninjaNoopFailureMessage(platform)
 			return artifacts, fmt.Errorf("ninja build did not converge to no-op")
 		}

@@ -184,6 +184,16 @@ func TestBuild(t *testing.T) {
 			expectErr:      true,
 			expectedArtifacts: &fintpb.BuildArtifacts{
 				FailureSummary: ninjaNoopFailureMessage(platform),
+				DebugFiles: []*fintpb.DebugFile{
+					{
+						Path:       filepath.Join(buildDir, ninjaDepsPath),
+						UploadDest: ninjaDepsPath,
+					},
+					{
+						Path:       filepath.Join(buildDir, ninjaLogPath),
+						UploadDest: ninjaLogPath,
+					},
+				},
 			},
 		},
 		{
