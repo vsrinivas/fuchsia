@@ -13,13 +13,23 @@
 
 namespace {
 
-// ReadLock [start_frame, end_frame) stream_name (this-ptr)
+#ifdef NDEBUG
+// These should be false in production builds.
+constexpr bool kLogReadLocks = false;
+constexpr bool kLogTrims = false;
+#else
+// Keep to true in debug builds so we have verbose logs on FX_CHECK failures in tests.
+constexpr bool kLogReadLocks = true;
+constexpr bool kLogTrims = true;
+#endif
+
+// "ReadLock [start_frame, end_frame) stream_name (this-ptr)"
 #define VERBOSE_READ_LOCK_PREFIX                                                              \
   ffl::String::DecRational << "ReadLock [" << dest_frame << ", "                              \
                            << Fixed(dest_frame + Fixed(frame_count)) << ") " << name() << "(" \
                            << static_cast<void*>(this) << ")"
 
-// Trim     [frame] stream_name (this-ptr)
+// "Trim     [frame] stream_name (this-ptr)"
 #define VERBOSE_TRIM_PREFIX                                                       \
   ffl::String::DecRational << "Trim     [" << dest_frame << "] " << name() << "(" \
                            << static_cast<void*>(this) << ")"
@@ -43,12 +53,14 @@ std::optional<ReadableStream::Buffer> ReadableStream::ReadLock(ReadLockContext& 
                                                                Fixed dest_frame,
                                                                int64_t frame_count) {
   TRACE_DURATION("audio", name_for_read_lock_.c_str(), "dest_frame", dest_frame.Integral().Floor(),
-                 "frame.frac", dest_frame.Fraction().raw_value(), "frame_count", frame_count);
+                 "dest_frame.frac", dest_frame.Fraction().raw_value(), "frame_count", frame_count);
 
   // Nested locks are not allowed.
   FX_CHECK(!locked_) << VERBOSE_READ_LOCK_PREFIX << " already locked";
 
-  VERBOSE_LOGS << VERBOSE_READ_LOCK_PREFIX;
+  if constexpr (kLogReadLocks) {
+    VERBOSE_LOGS << VERBOSE_READ_LOCK_PREFIX;
+  }
   DetectTimelineUpdate();
 
   // Once a frame has been consumed, it cannot be locked again.
@@ -61,15 +73,19 @@ std::optional<ReadableStream::Buffer> ReadableStream::ReadLock(ReadLockContext& 
 
   // Check if we can reuse a cached buffer.
   if (auto out = ReadFromCachedBuffer(dest_frame, frame_count); out) {
-    VERBOSE_LOGS << VERBOSE_READ_LOCK_PREFIX << " --> (cached) [" << out->start() << ", "
-                 << out->end() << "]";
+    if constexpr (kLogReadLocks) {
+      VERBOSE_LOGS << VERBOSE_READ_LOCK_PREFIX << " --> (cached) [" << out->start() << ", "
+                   << out->end() << "]";
+    }
     return out;
   }
 
   cached_ = std::nullopt;
   auto buffer = ReadLockImpl(ctx, dest_frame, frame_count);
   if (!buffer) {
-    VERBOSE_LOGS << VERBOSE_READ_LOCK_PREFIX << " --> null";
+    if constexpr (kLogReadLocks) {
+      VERBOSE_LOGS << VERBOSE_READ_LOCK_PREFIX << " --> null";
+    }
     Trim(dest_frame + Fixed(frame_count));
     return std::nullopt;
   }
@@ -101,8 +117,10 @@ std::optional<ReadableStream::Buffer> ReadableStream::ReadLock(ReadLockContext& 
   }
 
   // Ready to lock this buffer.
-  VERBOSE_LOGS << VERBOSE_READ_LOCK_PREFIX << " --> [" << buffer->start() << ", " << buffer->end()
-               << ")";
+  if constexpr (kLogReadLocks) {
+    VERBOSE_LOGS << VERBOSE_READ_LOCK_PREFIX << " --> [" << buffer->start() << ", " << buffer->end()
+                 << ")";
+  }
 
   locked_ = true;
   if (!buffer->cache_this_buffer_) {
@@ -123,14 +141,18 @@ void ReadableStream::Trim(Fixed dest_frame) {
   // Cannot be called while locked.
   FX_CHECK(!locked_) << VERBOSE_TRIM_PREFIX << " already locked";
 
-  VERBOSE_LOGS << VERBOSE_TRIM_PREFIX;
+  if constexpr (kLogTrims) {
+    VERBOSE_LOGS << VERBOSE_TRIM_PREFIX;
+  }
   DetectTimelineUpdate();
 
   // Advance the trim point.
   if (!next_dest_frame_) {
     next_dest_frame_ = dest_frame;
+  } else if (dest_frame <= *next_dest_frame_) {
+    return;  // already trimmed past dest_frame
   } else {
-    next_dest_frame_ = std::max(dest_frame, *next_dest_frame_);
+    next_dest_frame_ = dest_frame;
   }
 
   // Hold onto the cached buffer until it's entirely trimmed. Once the cached buffer
@@ -200,24 +222,7 @@ std::optional<ReadableStream::Buffer> ReadableStream::ForwardBuffer(
   if (!buffer) {
     return std::nullopt;
   }
-
-  auto buffer_start = buffer->start();
-  if (start_frame) {
-    Fixed delta = *start_frame - buffer->start();
-
-    FX_CHECK(delta.Fraction() == Fixed(0))
-        << ffl::String::DecRational << "Cannot advance buffer [" << buffer->start() << ", "
-        << buffer->end() << ") by a fractional amount to " << (*start_frame);
-
-    FX_CHECK(delta < buffer->length())
-        << ffl::String::DecRational << "Cannot advance buffer [" << buffer->start() << ", "
-        << buffer->end() << ") past the end of the buffer to " << (*start_frame);
-
-    buffer_start = *start_frame;
-  }
-
-  //  * (start_frame - buffer->start()).Fraction() == 0
-  //  * (start_frame - buffer->start()) < buffer->length()
+  auto buffer_start = start_frame ? *start_frame : buffer->start();
   return ReadableStream::Buffer(
       // Wrap the buffer with a proxy so we can be notified when the buffer is unlocked.
       buffer_start, buffer->length(), buffer->payload(), false /* don't cache */,

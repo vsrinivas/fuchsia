@@ -327,13 +327,9 @@ class ReadableStream : public BaseStream, public std::enable_shared_from_this<Re
   //    return src->ReadLock(ctx, dest_frame, frame_count);
   //
   // If `start_frame` is specified, the returned buffer's starting frame is set to the
-  // given value. This shrinks the buffer by moving the starting frame forward and while
-  // the last frame is fixed. The new `start_frame` must:
-  //
-  //    * Be integral: (start_frame - buffer->start()).Fraction() == 0
-  //    * Be within the buffer: (start_frame - buffer->start()) < buffer->length()
-  //
-  // This is useful when doing SampleAndHold on a source stream. For example:
+  // given value. The length is kept unchanged. This is useful when doing SampleAndHold
+  // on a source stream and also when the source and destination timelines have the
+  // same rate but are offset by an arbitrary amount. SampleAndHold looks like:
   //
   //     auto buffer = src->ReadLock(ctx, frame, frame_count);
   //     auto start_frame = buffer->start().Ceiling();

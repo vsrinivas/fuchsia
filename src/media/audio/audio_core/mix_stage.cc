@@ -47,8 +47,8 @@ zx::duration LeadTimeForMixer(const Format& format, const Mixer& mixer) {
 // an underflow of some kind.
 // TODO(fxbug.dev/73306): Stop allowing this (change tolerance to 0 and/or remove this altogether),
 // once the system correctly moves position only forward.
-static constexpr bool kAllowPositionRollback = true;
-static constexpr int64_t kDestPosRollbackTolerance = 960;
+constexpr bool kAllowPositionRollback = true;
+constexpr int64_t kDestPosRollbackTolerance = 960;
 
 // Source position errors generally represent only the rate difference between time sources. We
 // reconcile clocks upon every ReadLock call, so even with wildly divergent clocks (+1000ppm vs.
@@ -58,24 +58,25 @@ static constexpr int64_t kDestPosRollbackTolerance = 960;
 //
 // For reference, micro-SRC can smoothly eliminate errors of this duration in less than 1 sec (at
 // kMicroSrcAdjustmentPpmMax). If adjusting a zx::clock, this will take approx. 2 seconds.
-static constexpr zx::duration kMaxErrorThresholdDuration = zx::msec(2);
+constexpr zx::duration kMaxErrorThresholdDuration = zx::msec(2);
 
 // To what extent should jam-synchronizations be logged? Worst-case logging can exceed 100/sec.
 // We log each MixStage's first occurrence; for subsequent instances, depending on audio_core's
 // logging level, we throttle the logging frequency depending on log_level.
 // By default NDEBUG builds are WARNING, and DEBUG builds INFO. To disable jam-sync logging for a
 // certain level, set the interval to 0. To disable all jam-sync logging, set kLogJamSyncs to false.
-static constexpr bool kLogJamSyncs = true;
-static constexpr uint16_t kJamSyncWarningInterval = 200;  // Log 1 of every 200 jam-syncs at WARNING
-static constexpr uint16_t kJamSyncInfoInterval = 20;      // Log 1 of every 20 jam-syncs at INFO
-static constexpr uint16_t kJamSyncTraceInterval = 1;      // Log all remaining jam-syncs at TRACE
+constexpr bool kLogJamSyncs = true;
+constexpr uint16_t kJamSyncWarningInterval = 200;  // Log 1 of every 200 jam-syncs at WARNING
+constexpr uint16_t kJamSyncInfoInterval = 20;      // Log 1 of every 20 jam-syncs at INFO
+constexpr uint16_t kJamSyncTraceInterval = 1;      // Log all remaining jam-syncs at TRACE
 
-static constexpr bool kLogInitialPositionSync = false;
-static constexpr bool kLogDestDiscontinuities = true;
-static constexpr bool kLogRollbacks = false;
+constexpr bool kLogReconciledTimelineFunctions = false;
+constexpr bool kLogInitialPositionSync = false;
+constexpr bool kLogDestDiscontinuities = true;
+constexpr bool kLogRollbacks = false;
 // Use logging strides that are prime, to avoid seeing only certain message cadences.
-static constexpr int kPositionLogStride = 997;
-static constexpr int kLogRollbacksStride = 12343;
+constexpr int kPositionLogStride = 997;
+constexpr int kLogRollbacksStride = 12343;
 
 }  // namespace
 
@@ -267,11 +268,23 @@ void MixStage::ForEachSource(TaskType task_type, Fixed dest_frame) {
       ReconcileClocksAndSetStepSize(source_info, bookkeeping, *source.stream);
       MixStream(*source.mixer, *source.stream);
     } else {
+      // Call this just once: it may be relatively expensive as it requires a lock and
+      // (sometimes) additional computation.
+      TimelineFunction source_ref_time_to_frac_presentation_frame =
+          source.stream->ref_time_to_frac_presentation_frame().timeline_function;
+
+      // If the source is currently paused, the translation from dest to source position
+      // may not be defined, so don't Trim anything.
+      if (!source_ref_time_to_frac_presentation_frame.subject_delta()) {
+        continue;
+      }
+
       auto dest_ref_time = RefTimeAtFracPresentationFrame(dest_frame);
       auto mono_time = reference_clock().MonotonicTimeFromReferenceTime(dest_ref_time);
       auto source_ref_time =
           source.stream->reference_clock().ReferenceTimeFromMonotonicTime(mono_time);
-      auto source_frame = source.stream->FracPresentationFrameAtRefTime(source_ref_time);
+      auto source_frame =  // source.stream->FracPresentationFrameAtRefTime(source_ref_time);
+          Fixed::FromRaw(source_ref_time_to_frac_presentation_frame.Apply(source_ref_time.get()));
       source.stream->Trim(source_frame);
     }
   }
@@ -615,8 +628,11 @@ void MixStage::ReconcileClocksAndSetStepSize(Mixer::SourceInfo& info,
   auto frac_source_frame_to_clock_mono =
       source_ref_to_clock_mono * info.source_ref_clock_to_frac_source_frames.Inverse();
   info.clock_mono_to_frac_source_frames = frac_source_frame_to_clock_mono.Inverse();
-  FX_LOGS(TRACE) << clock::TimelineFunctionToString(info.clock_mono_to_frac_source_frames,
-                                                    "mono-to-frac-source");
+
+  if constexpr (kLogReconciledTimelineFunctions) {
+    FX_LOGS(INFO) << clock::TimelineFunctionToString(info.clock_mono_to_frac_source_frames,
+                                                     "mono-to-frac-source");
+  }
 
   // Assert we can map between local monotonic-time and fractional source frames
   // (neither numerator nor denominator can be zero).
@@ -643,15 +659,12 @@ void MixStage::ReconcileClocksAndSetStepSize(Mixer::SourceInfo& info,
 
   // Compose our transformation from local monotonic-time to dest frames.
   auto dest_frames_to_clock_mono = dest_ref_to_mono * dest_frames_to_dest_ref;
-  FX_LOGS(TRACE) << clock::TimelineFunctionToString(dest_frames_to_clock_mono, "dest-to-mono");
 
   // ComposeDestToSource
   //
   // Compose our transformation from destination frames to source fractional frames (with clocks).
   info.dest_frames_to_frac_source_frames =
       info.clock_mono_to_frac_source_frames * dest_frames_to_clock_mono;
-  FX_LOGS(TRACE) << clock::TimelineFunctionToString(info.dest_frames_to_frac_source_frames,
-                                                    "dest-to-frac-src (with clocks)");
 
   // ComputeFrameRateConversionRatio
   //
@@ -659,8 +672,14 @@ void MixStage::ReconcileClocksAndSetStepSize(Mixer::SourceInfo& info,
   // is applied separately as a subsequent correction factor.
   TimelineRate frac_source_frames_per_dest_frame = TimelineRate::Product(
       dest_frames_to_dest_ref.rate(), info.source_ref_clock_to_frac_source_frames.rate());
-  FX_LOGS(TRACE) << clock::TimelineRateToString(frac_source_frames_per_dest_frame,
-                                                "dest-to-frac-source rate (no clock effects)");
+
+  if constexpr (kLogReconciledTimelineFunctions) {
+    FX_LOGS(INFO) << clock::TimelineFunctionToString(dest_frames_to_clock_mono, "dest-to-mono");
+    FX_LOGS(INFO) << clock::TimelineFunctionToString(info.dest_frames_to_frac_source_frames,
+                                                     "dest-to-frac-src (with clocks)");
+    FX_LOGS(INFO) << clock::TimelineRateToString(frac_source_frames_per_dest_frame,
+                                                 "dest-to-frac-source rate (no clock effects)");
+  }
 
   // Project dest pos "cur_mix_job_.dest_start_frame" into monotonic time as "mono_now_from_dest".
   auto dest_frame = cur_mix_job_.dest_start_frame;
