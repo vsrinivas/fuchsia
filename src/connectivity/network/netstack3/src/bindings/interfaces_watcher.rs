@@ -105,7 +105,6 @@ where
                 features,
                 phy_up,
             }) => {
-                // TODO(https://fxbug.dev/84863): rewrite features in terms of fuchsia.hardware.network.
                 let device_class = if features.contains(fidl_ethernet::Features::LOOPBACK) {
                     fidl_interfaces::DeviceClass::Loopback(fidl_interfaces::Empty)
                 } else if features.contains(fidl_ethernet::Features::WLAN) {
