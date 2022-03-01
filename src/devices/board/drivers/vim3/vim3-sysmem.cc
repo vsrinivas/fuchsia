@@ -21,8 +21,8 @@ static const sysmem_metadata_t sysmem_metadata = {
     .vid = PDEV_VID_AMLOGIC,
     .pid = PDEV_PID_AMLOGIC_A311D,
     .protected_memory_size = 0,
-    // Enough for 4 1920x1088 fullscreen images (1 for virtcon and 3 for scenic).
-    .contiguous_memory_size = 40LL * 1024 * 1024,
+    // Enough for 5 1920x1088 fullscreen images (2 for virtcon and 3 for scenic).
+    .contiguous_memory_size = 50LL * 1024 * 1024,
 };
 
 static const pbus_metadata_t sysmem_metadata_list[] = {{
