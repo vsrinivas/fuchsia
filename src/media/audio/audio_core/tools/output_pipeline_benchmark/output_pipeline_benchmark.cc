@@ -6,6 +6,7 @@
 
 #include <lib/fit/defer.h>
 #include <lib/zx/time.h>
+#include <zircon/compiler.h>
 #include <zircon/device/audio.h>
 
 #include <map>
@@ -311,7 +312,7 @@ void OutputPipelineBenchmark::PrintLegend(zx::duration mix_period) {
       "    and VV is a volume setting:\n"
       "\n"
       "        VM: muted volume\n"
-      "        VC: constant volume\n"
+      "        VC: constant non-unity volume\n"
       "        VS: discrete volume change just before each mix job (\"stepped\")\n"
       "\n",
       mix_period_ms);
@@ -320,6 +321,9 @@ void OutputPipelineBenchmark::PrintLegend(zx::duration mix_period) {
 void OutputPipelineBenchmark::Run(Scenario scenario, int64_t runs_per_scenario,
                                   zx::duration mix_period, perftest::ResultsSet* results,
                                   bool print_summary) {
+  constexpr float kConstantGainDb = -5.0f;
+  constexpr float kAlternateGainDb = -50.0f;
+
   // Create streams for this scenario.
   std::vector<std::shared_ptr<ReadableStream>> streams;
   std::vector<std::shared_ptr<Mixer>> mixers;
@@ -343,27 +347,40 @@ void OutputPipelineBenchmark::Run(Scenario scenario, int64_t runs_per_scenario,
                                              scenario.ToString().c_str(), "nanoseconds")
                       : nullptr);
   int64_t silent = 0;
-
-  if (scenario.volume == VolumeSetting::Muted) {
-    for (auto m : mixers) {
-      m->bookkeeping().gain.SetSourceMute(true);
-    }
-  } else if (scenario.volume == VolumeSetting::Constant) {
-    for (auto m : mixers) {
-      m->bookkeeping().gain.SetSourceGain(0.0f);
-    }
-  }
-
   for (auto iter = 0; iter < runs_per_scenario; iter++) {
-    if (scenario.volume == VolumeSetting::StepChange ||
-        scenario.volume == VolumeSetting::RampChange) {
-      float gain = (iter % 2) == 0 ? 0.0f : -50.0f;
-      for (auto m : mixers) {
-        if (scenario.volume == VolumeSetting::StepChange) {
-          m->bookkeeping().gain.SetSourceGain(gain);
-        } else {
-          m->bookkeeping().gain.SetSourceGainWithRamp(gain, mix_period);
+    std::optional<bool> mute;
+    std::optional<float> gain_db, end_gain_db;
+
+    // For Muted and Constant, we only need to set things up once (iter 0)
+    switch (scenario.volume) {
+      case VolumeSetting::Muted:
+        if (iter == 0) {
+          mute = true;
         }
+        break;
+
+      case VolumeSetting::Constant:
+        if (iter == 0) {
+          gain_db = kConstantGainDb;
+        }
+        break;
+
+      case VolumeSetting::StepChange:
+        gain_db = (iter % 2) == 0 ? kConstantGainDb : kAlternateGainDb;
+        __FALLTHROUGH;
+      case VolumeSetting::RampChange:
+        end_gain_db = (iter % 2) == 0 ? kAlternateGainDb : kConstantGainDb;
+        break;
+    }
+    for (auto m : mixers) {
+      if (mute.has_value()) {
+        m->bookkeeping().gain.SetSourceMute(*mute);
+      }
+      if (gain_db.has_value()) {
+        m->bookkeeping().gain.SetSourceGain(*gain_db);
+      }
+      if (end_gain_db.has_value()) {
+        m->bookkeeping().gain.SetSourceGainWithRamp(*end_gain_db, mix_period);
       }
     }
 

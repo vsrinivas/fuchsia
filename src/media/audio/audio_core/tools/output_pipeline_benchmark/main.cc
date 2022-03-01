@@ -27,6 +27,7 @@ struct Options {
   zx::duration mix_period;
   std::optional<std::string> perftest_json;
   bool enable_pprof = false;
+  bool hide_legend = false;
 };
 
 std::string ToString(const std::vector<OutputPipelineBenchmark::Scenario>& scenarios) {
@@ -53,8 +54,8 @@ const Options kDefaultOptions = {
             OutputPipelineBenchmark::Scenario::FromString("MCU/VR"),
         },
 
-    // Default to 10ms mix periods run 20x, for a total of 2s per scenario.
-    .runs_per_scenario = 20,
+    // Default to 10ms mix periods run 100x, for a total of 1s per scenario.
+    .runs_per_scenario = 100,
     .mix_period = zx::msec(10),
 };
 
@@ -84,6 +85,9 @@ void Usage(const char* prog_name) {
   printf("\n");
   printf("  --enable-pprof=<bool>\n");
   printf("    Save a pprof-compatible log to /tmp/%s.pprof (default: false).\n", prog_name);
+  printf("\n");
+  printf("  --hide-legend\n");
+  printf("    Don't display a verbose explanation of scenario types and other details.\n");
   printf("\n");
   printf("  --help\n");
   printf("    Display this message.\n");
@@ -137,6 +141,8 @@ Options ParseCommandLine(int argc, char** argv) {
     command_line.GetOptionValue("perftest-json", &json);
     opts.perftest_json = json;
   }
+
+  opts.hide_legend = command_line.HasOption("hide-legend");
 
   return opts;
 }
@@ -203,7 +209,10 @@ int main(int argc, char** argv) {
     results = new perftest::ResultsSet();
   }
 
-  benchmark.PrintLegend(opts.mix_period);
+  if (!opts.hide_legend) {
+    benchmark.PrintLegend(opts.mix_period);
+  }
+
   for (auto& scenario : opts.scenarios) {
     benchmark.Run(scenario, opts.runs_per_scenario, opts.mix_period, results, true);
   }
