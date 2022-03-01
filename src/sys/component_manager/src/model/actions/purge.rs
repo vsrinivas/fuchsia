@@ -163,7 +163,7 @@ pub mod tests {
         ActionSet::register(component_a.clone(), ShutdownAction::new())
             .await
             .expect("shutdown failed");
-        // Register delete child action, and wait for it. Component should be purged.
+        // Register purge child action, and wait for it. Component should be purged.
         ActionSet::register(component_root.clone(), PurgeChildAction::new("a:0".into()))
             .await
             .expect("purge failed");
@@ -236,7 +236,7 @@ pub mod tests {
         assert!(is_executing(&component_a).await);
         assert!(is_executing(&component_b).await);
 
-        // Register delete child action, and wait for it. Components should be purged.
+        // Register purge child action, and wait for it. Components should be purged.
         let component_container = test.look_up(vec!["container"].into()).await;
         ActionSet::register(component_container.clone(), ShutdownAction::new())
             .await
@@ -349,7 +349,7 @@ pub mod tests {
     {
         let event = event_stream.wait_until(event_type, vec!["a:0"].into()).await.unwrap();
 
-        // Register delete child action, while `action` is stalled.
+        // Register purge child action, while `action` is stalled.
         let component_root = test.look_up(vec![].into()).await;
         let component_a = match *component_root.lock_state().await {
             InstanceState::Resolved(ref s) => {

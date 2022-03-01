@@ -4,7 +4,7 @@
 
 use {
     crate::model::{
-        actions::{Action, ActionKey, ActionSet, ShutdownAction},
+        actions::{Action, ActionKey, ActionSet, DiscoverAction, ShutdownAction},
         component::{ComponentInstance, InstanceState},
         error::ModelError,
         hooks::{Event, EventPayload},
@@ -57,15 +57,19 @@ async fn do_destroyed(
     if let Some(child) = child {
         if child.instanced_moniker().path().last() != Some(&moniker) {
             // The instance of the child we pulled from our live children does not match the
-            // instance of the child we were asked to delete. This is possible if this
-            // `DestroyChild` action raced with a separate `DestroyChild` action followed by a
-            // `CreateChild` action.
+            // instance of the child we were asked to delete. This is possible if a
+            // `DestroyChild` action was registered twice on the same component, and after the
+            // first action was run a child with the same name was recreated.
             //
             // If there's already a live child with a different instance than what we were asked to
             // destroy, then surely the instance we wanted to destroy is long gone, and we can
             // safely return without doing any work.
             return Ok(());
         }
+
+        // Require the component to be discovered before deleting it so a Destroyed event is always
+        // preceded by a Discovered.
+        ActionSet::register(child.clone(), DiscoverAction::new()).await?;
 
         // For destruction to behave correctly, the component has to be shut down first.
         ActionSet::register(child.clone(), ShutdownAction::new()).await?;
@@ -94,12 +98,18 @@ pub mod tests {
         super::*,
         crate::model::{
             actions::{test_utils::is_destroyed, ActionSet},
+            events::{registry::EventSubscription, stream::EventStream},
+            hooks::EventType,
             testing::{
-                test_helpers::{component_decl_with_test_runner, ActionsTest},
+                test_helpers::{component_decl_with_test_runner, has_live_child, ActionsTest},
                 test_hook::Lifecycle,
             },
         },
+        assert_matches::assert_matches,
+        cm_rust::EventMode,
         cm_rust_testing::ComponentDeclBuilder,
+        fidl_fuchsia_component_decl as fdecl, fuchsia_async as fasync,
+        moniker::ChildMoniker,
     };
 
     #[fuchsia::test]
@@ -272,5 +282,92 @@ pub mod tests {
                 ],
             );
         }
+    }
+
+    async fn setup_destroy_blocks_test_event_stream(
+        test: &ActionsTest,
+        event_types: Vec<EventType>,
+    ) -> EventStream {
+        let events: Vec<_> = event_types.into_iter().map(|e| e.into()).collect();
+        let mut event_source = test
+            .builtin_environment
+            .lock()
+            .await
+            .event_source_factory
+            .create_for_debug()
+            .await
+            .expect("create event source");
+        let event_stream = event_source
+            .subscribe(
+                events
+                    .into_iter()
+                    .map(|event| EventSubscription::new(event, EventMode::Sync))
+                    .collect(),
+            )
+            .await
+            .expect("subscribe to event stream");
+        {
+            event_source.take_static_event_stream("StartComponentTree".to_string()).await;
+        }
+        let model = test.model.clone();
+        fasync::Task::spawn(async move { model.start().await }).detach();
+        event_stream
+    }
+
+    // This test follows the same pattern as purge_registers_discover in actions/purge.rs.
+    #[fuchsia::test]
+    async fn destroy_registers_discover() {
+        let components = vec![("root", ComponentDeclBuilder::new().build())];
+        let test = ActionsTest::new("root", components, None).await;
+        let component_root = test.look_up(vec![].into()).await;
+        // This setup circumvents the registration of the Discover action on component_a.
+        {
+            let mut resolved_state = component_root.lock_resolved_state().await.unwrap();
+            let child = cm_rust::ChildDecl {
+                name: format!("a"),
+                url: format!("test:///a"),
+                startup: fdecl::StartupMode::Lazy,
+                environment: None,
+                on_terminate: None,
+            };
+            assert!(resolved_state.add_child_no_discover(&component_root, &child, None,).await);
+        }
+        let mut event_stream = setup_destroy_blocks_test_event_stream(
+            &test,
+            vec![EventType::Discovered, EventType::Destroyed],
+        )
+        .await;
+
+        let component_root = test.look_up(vec![].into()).await;
+        let component_a = match *component_root.lock_state().await {
+            InstanceState::Resolved(ref s) => {
+                s.get_live_child(&ChildMoniker::from("a")).expect("child a not found")
+            }
+            _ => panic!("not resolved"),
+        };
+
+        // Confirm component is still in New state.
+        {
+            let state = &*component_a.lock_state().await;
+            assert_matches!(state, InstanceState::New);
+        };
+
+        // Register DestroyChild.
+        let nf = {
+            let mut actions = component_root.lock_actions().await;
+            actions.register_no_wait(&component_root, DestroyChildAction::new("a:0".into()))
+        };
+
+        // Wait for Discover action, which should be registered by DestroyChild, followed by
+        // Destroyed.
+        let event =
+            event_stream.wait_until(EventType::Discovered, vec!["a:0"].into()).await.unwrap();
+        event.resume();
+        let event =
+            event_stream.wait_until(EventType::Destroyed, vec!["a:0"].into()).await.unwrap();
+        event.resume();
+        nf.await.unwrap();
+
+        assert!(!has_live_child(&component_root, "a:0").await);
     }
 }

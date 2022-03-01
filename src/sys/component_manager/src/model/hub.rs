@@ -631,7 +631,11 @@ impl Hub {
         let mut instance_map = self.instances.lock().await;
         let parent_instance = match instance_map.get_mut(&parent_moniker) {
             Some(i) => i,
-            // Evidently this a duplicate dispatch of Destroyed.
+            // TODO(fxbug.dev/89503): This failsafe was originally introduce to protect against a
+            // duplicate disptach of Destroyed, which should no longer be possible since it is now
+            // wrapped in an action. However, other races may be possible, such as this Destroyed
+            // arriving before the parent's Discovered. Ideally we should fix all the races and
+            // fail instead.
             None => return Ok(()),
         };
 
@@ -639,12 +643,9 @@ impl Hub {
         // In the children directory, the child's instance id is not used
         let child_entry = instanced_child.to_child_moniker().to_string();
 
-        // TODO: It's possible for the Destroyed event to be dispatched twice if there
-        // are two concurrent `DestroyChild` operations. In such cases we should probably cause
-        // this update to no-op instead of returning an error.
         parent_instance.children_directory.remove_node(&child_entry)?.ok_or_else(|| {
             log::warn!(
-                "child directory {} in parent instance {} was already removed",
+                "child directory {} in parent instance {} was already removed or never added",
                 child_entry,
                 parent_moniker
             );

@@ -130,6 +130,14 @@ pub async fn execution_is_shut_down(component: &ComponentInstance) -> bool {
     execution.runtime.is_none() && execution.is_shut_down()
 }
 
+/// Returns true if the given live child exists.
+pub async fn has_live_child<'a>(component: &'a ComponentInstance, child: &'a str) -> bool {
+    match *component.lock_state().await {
+        InstanceState::Resolved(ref s) => s.get_live_child(&child.into()).is_some(),
+        _ => panic!("not resolved"),
+    }
+}
+
 /// Returns true if the given child (live or deleting) exists.
 pub async fn has_child<'a>(component: &'a ComponentInstance, moniker: &'a str) -> bool {
     match *component.lock_state().await {
