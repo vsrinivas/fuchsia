@@ -45,6 +45,23 @@ namespace amlogic_display {
 namespace {
 constexpr uint32_t kCanvasLittleEndian64Bit = 7;
 constexpr uint32_t kBufferAlignment = 64;
+
+void SetDefaultImageFormatConstraints(sysmem::wire::PixelFormatType format, uint64_t modifier,
+                                      sysmem::wire::ImageFormatConstraints& constraints) {
+  constraints.color_spaces_count = 1;
+  constraints.color_space[0].type = sysmem::wire::ColorSpaceType::kSrgb;
+  constraints.pixel_format = {
+      .type = format,
+      .has_format_modifier = true,
+      .format_modifier =
+          {
+              .value = modifier,
+          },
+  };
+  constraints.bytes_per_row_divisor = kBufferAlignment;
+  constraints.start_offset_divisor = kBufferAlignment;
+}
+
 }  // namespace
 
 zx_status_t AmlogicDisplay::DisplayClampRgbImplSetMinimumRgb(uint8_t minimum_rgb) {
@@ -140,7 +157,7 @@ zx_status_t AmlogicDisplay::DisplayControllerImplImportImage(image_t* image,
     return ZX_ERR_NO_MEMORY;
   }
 
-  if (image->type != IMAGE_TYPE_SIMPLE || !vout_->IsFormatSupported(image->pixel_format)) {
+  if (image->type != IMAGE_TYPE_SIMPLE || !format_support_check_(image->pixel_format)) {
     status = ZX_ERR_INVALID_ARGS;
     return status;
   }
@@ -497,59 +514,52 @@ zx_status_t AmlogicDisplay::DisplayControllerImplSetBufferCollectionConstraints(
   buffer_constraints.heap_permitted_count = 2;
   buffer_constraints.heap_permitted[0] = sysmem::wire::HeapType::kSystemRam;
   buffer_constraints.heap_permitted[1] = sysmem::wire::HeapType::kAmlogicSecure;
-  constraints.image_format_constraints_count = config->type == IMAGE_TYPE_CAPTURE ? 1 : 4;
-  for (uint32_t i = 0; i < constraints.image_format_constraints_count; i++) {
-    sysmem::wire::ImageFormatConstraints& image_constraints =
-        constraints.image_format_constraints[i];
 
-    image_constraints.pixel_format.has_format_modifier = true;
-    image_constraints.color_spaces_count = 1;
-    image_constraints.color_space[0].type = sysmem::wire::ColorSpaceType::kSrgb;
-    if (config->type == IMAGE_TYPE_CAPTURE) {
-      ZX_DEBUG_ASSERT(i == 0);
-      image_constraints.pixel_format.type = sysmem::wire::PixelFormatType::kBgr24;
-      image_constraints.pixel_format.format_modifier.value = sysmem::wire::kFormatModifierLinear;
-      image_constraints.min_coded_width = vout_->display_width();
-      image_constraints.max_coded_width = vout_->display_width();
-      image_constraints.min_coded_height = vout_->display_height();
-      image_constraints.max_coded_height = vout_->display_height();
-      image_constraints.min_bytes_per_row =
-          ZX_ALIGN(vout_->display_width() * ZX_PIXEL_FORMAT_BYTES(ZX_PIXEL_FORMAT_RGB_888),
-                   kBufferAlignment);
-      image_constraints.max_coded_width_times_coded_height =
-          vout_->display_width() * vout_->display_height();
-      buffer_name = "Display capture";
-    } else {
-      // The beginning of ARM linear TE memory is a regular linear image, so we can support it by
-      // ignoring everything after that. We never write to the image, so we don't need to worry
-      // about keeping the TE buffer in sync.
-      ZX_DEBUG_ASSERT(i <= 3);
-      switch (i) {
-        case 0:
-          image_constraints.pixel_format.type = sysmem::wire::PixelFormatType::kBgra32;
-          image_constraints.pixel_format.format_modifier.value =
-              sysmem::wire::kFormatModifierLinear;
-          break;
-        case 1:
-          image_constraints.pixel_format.type = sysmem::wire::PixelFormatType::kBgra32;
-          image_constraints.pixel_format.format_modifier.value =
-              sysmem::wire::kFormatModifierArmLinearTe;
-          break;
-        case 2:
-          image_constraints.pixel_format.type = sysmem::wire::PixelFormatType::kR8G8B8A8;
-          image_constraints.pixel_format.format_modifier.value =
-              sysmem::wire::kFormatModifierArmAfbc16X16;
-          break;
-        case 3:
-          image_constraints.pixel_format.type = sysmem::wire::PixelFormatType::kR8G8B8A8;
-          image_constraints.pixel_format.format_modifier.value =
-              sysmem::wire::kFormatModifierArmAfbc16X16Te;
-          break;
+  if (config->type == IMAGE_TYPE_CAPTURE) {
+    constraints.image_format_constraints_count = 1;
+    sysmem::wire::ImageFormatConstraints& image_constraints =
+        constraints.image_format_constraints[0];
+
+    SetDefaultImageFormatConstraints(sysmem::wire::PixelFormatType::kBgr24,
+                                     sysmem::wire::kFormatModifierLinear, image_constraints);
+    image_constraints.min_coded_width = vout_->display_width();
+    image_constraints.max_coded_width = vout_->display_width();
+    image_constraints.min_coded_height = vout_->display_height();
+    image_constraints.max_coded_height = vout_->display_height();
+    image_constraints.min_bytes_per_row = ZX_ALIGN(
+        vout_->display_width() * ZX_PIXEL_FORMAT_BYTES(ZX_PIXEL_FORMAT_RGB_888), kBufferAlignment);
+    image_constraints.max_coded_width_times_coded_height =
+        vout_->display_width() * vout_->display_height();
+    buffer_name = "Display capture";
+  } else {
+    // TODO(fxbug.dev/94535): Currently the buffer collection constraints are
+    // applied to all displays. If the |vout_| device type changes, then the
+    // existing image formats might not work for the new device type. To resolve
+    // this, the driver should set per-display buffer collection constraints
+    // instead.
+    constraints.image_format_constraints_count = 0;
+    ZX_DEBUG_ASSERT(format_support_check_ != nullptr);
+    if (format_support_check_(ZX_PIXEL_FORMAT_RGB_x888) ||
+        format_support_check_(ZX_PIXEL_FORMAT_ARGB_8888)) {
+      for (const auto format_modifier :
+           {sysmem::wire::kFormatModifierLinear, sysmem::wire::kFormatModifierArmLinearTe}) {
+        const size_t index = constraints.image_format_constraints_count++;
+        auto& image_constraints = constraints.image_format_constraints[index];
+        SetDefaultImageFormatConstraints(sysmem::wire::PixelFormatType::kBgra32, format_modifier,
+                                         image_constraints);
       }
-      buffer_name = "Display";
     }
-    image_constraints.bytes_per_row_divisor = kBufferAlignment;
-    image_constraints.start_offset_divisor = kBufferAlignment;
+    if (format_support_check_(ZX_PIXEL_FORMAT_BGR_888x) ||
+        format_support_check_(ZX_PIXEL_FORMAT_ABGR_8888)) {
+      for (const auto format_modifier : {sysmem::wire::kFormatModifierArmAfbc16X16,
+                                         sysmem::wire::kFormatModifierArmAfbc16X16Te}) {
+        const size_t index = constraints.image_format_constraints_count++;
+        auto& image_constraints = constraints.image_format_constraints[index];
+        SetDefaultImageFormatConstraints(sysmem::wire::PixelFormatType::kR8G8B8A8, format_modifier,
+                                         image_constraints);
+      }
+    }
+    buffer_name = "Display";
   }
 
   // Set priority to 10 to override the Vulkan driver name priority of 5, but be less than most
@@ -827,6 +837,7 @@ zx_status_t AmlogicDisplay::Bind() {
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
+  SetFormatSupportCheck([this](auto format) { return vout_->IsFormatSupported(format); });
 
   display_panel_t display_info;
   size_t actual;

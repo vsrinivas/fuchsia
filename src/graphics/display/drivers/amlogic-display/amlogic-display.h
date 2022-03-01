@@ -136,6 +136,10 @@ class AmlogicDisplay
 
   void Dump() { vout_->Dump(); }
 
+  void SetFormatSupportCheck(fit::function<bool(zx_pixel_format_t)> fn) {
+    format_support_check_ = std::move(fn);
+  }
+
   void SetCanvasForTesting(ddk::AmlogicCanvasProtocolClient canvas) { canvas_ = canvas; }
 
  private:
@@ -220,6 +224,8 @@ class AmlogicDisplay
   ddk::GpioProtocolClient hpd_gpio_{};
   zx::interrupt hpd_irq_;
   thrd_t hpd_thread_;
+
+  fit::function<bool(zx_pixel_format_t format)> format_support_check_ = nullptr;
 };
 
 }  // namespace amlogic_display

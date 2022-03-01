@@ -16,14 +16,44 @@ namespace sysmem = fuchsia_sysmem;
 
 class MockBufferCollection : public fidl::testing::WireTestBase<fuchsia_sysmem::BufferCollection> {
  public:
+  MockBufferCollection(const std::vector<sysmem::wire::PixelFormatType>& pixel_format_types =
+                           {sysmem::wire::PixelFormatType::kBgra32,
+                            sysmem::wire::PixelFormatType::kR8G8B8A8})
+      : supported_pixel_format_types_(pixel_format_types) {}
+
   void SetConstraints(SetConstraintsRequestView request,
                       SetConstraintsCompleter::Sync& _completer) override {
     EXPECT_TRUE(request->constraints.buffer_memory_constraints.inaccessible_domain_supported);
     EXPECT_FALSE(request->constraints.buffer_memory_constraints.cpu_domain_supported);
     EXPECT_EQ(64u, request->constraints.image_format_constraints[0].bytes_per_row_divisor);
-    EXPECT_EQ(4u, request->constraints.image_format_constraints_count);
-    EXPECT_EQ(sysmem::wire::kFormatModifierArmLinearTe,
-              request->constraints.image_format_constraints[1].pixel_format.format_modifier.value);
+
+    bool has_rgba =
+        std::find(supported_pixel_format_types_.begin(), supported_pixel_format_types_.end(),
+                  fuchsia_sysmem::wire::PixelFormatType::kR8G8B8A8) !=
+        supported_pixel_format_types_.end();
+    bool has_bgra =
+        std::find(supported_pixel_format_types_.begin(), supported_pixel_format_types_.end(),
+                  fuchsia_sysmem::wire::PixelFormatType::kBgra32) !=
+        supported_pixel_format_types_.end();
+
+    size_t expected_format_constraints_count = 0u;
+    const auto& image_format_constraints = request->constraints.image_format_constraints;
+    if (has_bgra) {
+      expected_format_constraints_count += 2;
+      EXPECT_TRUE(std::find_if(image_format_constraints.begin(),
+                               image_format_constraints.begin() +
+                                   request->constraints.image_format_constraints_count,
+                               [](const auto& format) {
+                                 return format.pixel_format.format_modifier.value ==
+                                        sysmem::wire::kFormatModifierArmLinearTe;
+                               }) != image_format_constraints.end());
+    }
+    if (has_rgba) {
+      expected_format_constraints_count += 2;
+    }
+
+    EXPECT_EQ(expected_format_constraints_count,
+              request->constraints.image_format_constraints_count);
     set_constraints_called_ = true;
   }
 
@@ -56,6 +86,7 @@ class MockBufferCollection : public fidl::testing::WireTestBase<fuchsia_sysmem::
  private:
   bool set_constraints_called_ = false;
   bool set_name_called_ = false;
+  std::vector<sysmem::wire::PixelFormatType> supported_pixel_format_types_;
 };
 
 class FakeCanvasProtocol : ddk::AmlogicCanvasProtocol<FakeCanvasProtocol> {
@@ -93,10 +124,35 @@ class FakeCanvasProtocol : ddk::AmlogicCanvasProtocol<FakeCanvasProtocol> {
 
 TEST(AmlogicDisplay, SysmemRequirements) {
   amlogic_display::AmlogicDisplay display(nullptr);
+  display.SetFormatSupportCheck([](auto) { return true; });
   zx::channel server_channel, client_channel;
   ASSERT_OK(zx::channel::create(0u, &server_channel, &client_channel));
 
-  MockBufferCollection collection;
+  MockBufferCollection collection(
+      {sysmem::wire::PixelFormatType::kBgra32, sysmem::wire::PixelFormatType::kR8G8B8A8});
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
+
+  image_t image = {};
+  ASSERT_OK(
+      fidl::BindSingleInFlightOnly(loop.dispatcher(), std::move(server_channel), &collection));
+
+  EXPECT_OK(
+      display.DisplayControllerImplSetBufferCollectionConstraints(&image, client_channel.get()));
+
+  loop.RunUntilIdle();
+  EXPECT_TRUE(collection.set_constraints_called());
+  EXPECT_TRUE(collection.set_name_called());
+}
+
+TEST(AmlogicDisplay, SysmemRequirements_BgraOnly) {
+  amlogic_display::AmlogicDisplay display(nullptr);
+  display.SetFormatSupportCheck([](zx_pixel_format_t format) {
+    return format == ZX_PIXEL_FORMAT_RGB_x888 || format == ZX_PIXEL_FORMAT_ARGB_8888;
+  });
+  zx::channel server_channel, client_channel;
+  ASSERT_OK(zx::channel::create(0u, &server_channel, &client_channel));
+
+  MockBufferCollection collection({sysmem::wire::PixelFormatType::kBgra32});
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
   image_t image = {};
@@ -143,10 +199,12 @@ TEST(AmlogicDisplay, FloatToFixed2_10) {
 
 TEST(AmlogicDisplay, NoLeakCaptureCanvas) {
   amlogic_display::AmlogicDisplay display(nullptr);
+  display.SetFormatSupportCheck([](auto) { return true; });
   zx::channel server_channel, client_channel;
   ASSERT_OK(zx::channel::create(0u, &server_channel, &client_channel));
 
-  MockBufferCollection collection;
+  MockBufferCollection collection(
+      {sysmem::wire::PixelFormatType::kBgra32, sysmem::wire::PixelFormatType::kR8G8B8A8});
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
   ASSERT_OK(
