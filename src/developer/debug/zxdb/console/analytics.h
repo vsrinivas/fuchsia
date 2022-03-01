@@ -20,7 +20,7 @@ class Analytics : public analytics::core_dev_tools::Analytics<Analytics> {
 
   // Move some base class methods to private. Users of this class need to call "overloaded"
   // version of these functions that take a session as an argument.
-  using analytics::core_dev_tools::Analytics<Analytics>::Init;
+  using analytics::core_dev_tools::Analytics<Analytics>::InitBotAware;
   using analytics::core_dev_tools::Analytics<Analytics>::IfEnabledSendInvokeEvent;
 
   static constexpr char kToolName[] = "zxdb";

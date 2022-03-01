@@ -70,24 +70,12 @@ namespace analytics::core_dev_tools {
 template <class T>
 class Analytics {
  public:
-  // Init analytics status, and show suitable welcome messages if on the first run.
-  static void Init(AnalyticsOption analytics_option) {
-    internal::PersistentStatus persistent_status(T::kToolName);
-    if (internal::PersistentStatus::IsFirstLaunchOfFirstTool()) {
-      InitFirstRunOfFirstTool(persistent_status);
-    } else if (analytics_option == AnalyticsOption::kSubLaunchFirst) {
-      InitSubLaunchedFirst();
-    } else if (analytics_option == AnalyticsOption::kSubLaunchNormal) {
-      InitSubLaunchedNormal();
-    } else if (persistent_status.IsFirstDirectLaunch()) {
-      InitFirstRunOfOtherTool(persistent_status);
-    } else {
-      InitSubsequentRun();
-    }
-  }
-
   // Same as Init() but will behave differently when run by bot
   static void InitBotAware(AnalyticsOption analytics_option, bool enable_on_bots = false) {
+    if (IsDisabledByEnvironment()) {
+      T::SetRuntimeAnalyticsStatus(AnalyticsStatus::kDisabled);
+      return;
+    }
     BotInfo bot = GetBotInfo();
     if (bot.IsRunByBot()) {
       if (enable_on_bots && (internal::PersistentStatus::IsFirstLaunchOfFirstTool() ||
@@ -195,6 +183,22 @@ class Analytics {
   static constexpr char kEventCategoryAnalytics[] = "analytics";
   static constexpr char kEventActionEnable[] = "manual-enable";
   static constexpr char kEventActionDisable[] = "disable";
+
+  // Init analytics status, and show suitable welcome messages if on the first run.
+  static void Init(AnalyticsOption analytics_option) {
+    internal::PersistentStatus persistent_status(T::kToolName);
+    if (internal::PersistentStatus::IsFirstLaunchOfFirstTool()) {
+      InitFirstRunOfFirstTool(persistent_status);
+    } else if (analytics_option == AnalyticsOption::kSubLaunchFirst) {
+      InitSubLaunchedFirst();
+    } else if (analytics_option == AnalyticsOption::kSubLaunchNormal) {
+      InitSubLaunchedNormal();
+    } else if (persistent_status.IsFirstDirectLaunch()) {
+      InitFirstRunOfOtherTool(persistent_status);
+    } else {
+      InitSubsequentRun();
+    }
+  }
 
   static void InitFirstRunOfFirstTool(internal::PersistentStatus& persistent_status) {
     internal::ToolInfo tool_info{T::kToolName, T::kEnableArgs, T::kDisableArgs, T::kStatusArgs};

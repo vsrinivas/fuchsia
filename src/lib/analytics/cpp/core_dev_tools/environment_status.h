@@ -20,6 +20,8 @@ struct BotInfo {
 // nullptr, nullptr}
 BotInfo GetBotInfo();
 
+bool IsDisabledByEnvironment();
+
 }  // namespace analytics::core_dev_tools
 
 #endif  // SRC_LIB_ANALYTICS_CPP_CORE_DEV_TOOLS_ENVIRONMENT_STATUS_H_

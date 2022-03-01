@@ -17,7 +17,7 @@ using ::analytics::core_dev_tools::GeneralParameters;
 using ::analytics::core_dev_tools::GoogleAnalyticsEvent;
 
 void Analytics::Init(Session& session, AnalyticsOption analytics_option) {
-  Init(analytics_option);
+  InitBotAware(analytics_option, false);
   session.system().settings().SetBool(ClientSettings::System::kEnableAnalytics, enabled_runtime_);
 }
 

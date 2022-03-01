@@ -40,4 +40,6 @@ BotInfo GetBotInfo() {
 
 bool BotInfo::IsRunByBot() const { return environment != nullptr; }
 
+bool IsDisabledByEnvironment() { return std::getenv("FUCHSIA_ANALYTICS_DISABLED") != nullptr; }
+
 }  // namespace analytics::core_dev_tools
