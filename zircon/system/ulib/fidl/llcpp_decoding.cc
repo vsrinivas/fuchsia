@@ -10,20 +10,20 @@ namespace fidl::internal {
 template <FidlWireFormatVersion WireFormatVersion>
 zx_status_t DecodeEtc(const CodingConfig& encoding_configuration, const fidl_type_t* type,
                       void* bytes, uint32_t num_bytes, const fidl_handle_t* handles,
-                      const void* handle_metadata, uint32_t num_handles,
-                      const char** out_error_msg) {
+                      const void* handle_metadata, uint32_t num_handles, const char** out_error_msg,
+                      bool hlcpp_mode) {
   return internal__fidl_decode_impl__may_break<WireFormatVersion>(
       encoding_configuration, type, bytes, num_bytes, handles, handle_metadata, num_handles,
-      out_error_msg, false);
+      out_error_msg, hlcpp_mode);
 }
 
 template zx_status_t DecodeEtc<FIDL_WIRE_FORMAT_VERSION_V1>(
     const CodingConfig& encoding_configuration, const fidl_type_t* type, void* bytes,
     uint32_t num_bytes, const fidl_handle_t* handles, const void* handle_metadata,
-    uint32_t num_handles, const char** out_error_msg);
+    uint32_t num_handles, const char** out_error_msg, bool hlcpp_mode);
 template zx_status_t DecodeEtc<FIDL_WIRE_FORMAT_VERSION_V2>(
     const CodingConfig& encoding_configuration, const fidl_type_t* type, void* bytes,
     uint32_t num_bytes, const fidl_handle_t* handles, const void* handle_metadata,
-    uint32_t num_handles, const char** out_error_msg);
+    uint32_t num_handles, const char** out_error_msg, bool hlcpp_mode);
 
 }  // namespace fidl::internal

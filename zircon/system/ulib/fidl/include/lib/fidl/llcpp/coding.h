@@ -56,8 +56,8 @@ zx_status_t EncodeIovecEtc(const CodingConfig& encoding_configuration, const fid
 template <FidlWireFormatVersion WireFormatVersion>
 zx_status_t DecodeEtc(const CodingConfig& encoding_configuration, const fidl_type_t* type,
                       void* bytes, uint32_t num_bytes, const fidl_handle_t* handles,
-                      const void* handle_metadata, uint32_t num_handles,
-                      const char** out_error_msg);
+                      const void* handle_metadata, uint32_t num_handles, const char** out_error_msg,
+                      bool hlcpp_mode);
 
 }  // namespace internal
 }  // namespace fidl

@@ -9,10 +9,9 @@
 
 namespace fidl::internal {
 
-NaturalDecoder::NaturalDecoder(HLCPPIncomingMessage message)
-    : body_(std::move(message.body_view())), body_offset_(sizeof(fidl_message_header_t)) {}
-
-NaturalDecoder::NaturalDecoder(HLCPPIncomingBody body) : body_(std::move(body)) {}
+NaturalDecoder::NaturalDecoder(fidl::IncomingMessage message)
+    : body_(std::move(message)),
+      body_offset_(message.is_transactional() ? sizeof(fidl_message_header_t) : 0) {}
 
 NaturalDecoder::~NaturalDecoder() = default;
 

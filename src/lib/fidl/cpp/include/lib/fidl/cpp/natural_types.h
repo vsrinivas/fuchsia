@@ -125,14 +125,13 @@ template <typename FidlType>
   ZX_ASSERT(!message.is_transactional());
 
   const fidl_type_t* coding_table = TypeTraits<FidlType>::kCodingTable;
-  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT zx_handle_info_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
-  ::fidl::HLCPPIncomingBody hlcpp_body = ConvertToHLCPPIncomingBody(std::move(message), handles);
-  const char* error_msg = nullptr;
-  zx_status_t status = hlcpp_body.Decode(metadata, coding_table, &error_msg);
-  if (status != ZX_OK) {
-    return ::fitx::error(::fidl::Result::DecodeError(status, error_msg));
+  std::unique_ptr<uint8_t[]> transformed_buffer;
+  message.Decode__Internal_MayBreak(metadata.wire_format_version(), coding_table, false,
+                                    &transformed_buffer, true);
+  if (!message.ok()) {
+    return ::fitx::error(std::move(message));
   }
-  ::fidl::internal::NaturalDecoder decoder{std::move(hlcpp_body)};
+  ::fidl::internal::NaturalDecoder decoder(std::move(message));
   FidlType value{};
   ::fidl::internal::NaturalCodingTraits<FidlType>::Decode(&decoder, &value, 0);
   return ::fitx::ok(std::move(value));

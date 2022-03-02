@@ -480,6 +480,24 @@ class IncomingMessage : public ::fidl::Result {
   // This consumes the |IncomingMessage|.
   void CloseHandles() &&;
 
+  // Decodes the message using |message_type| for the specified |wire_format_version|. If this
+  // operation succeed, |status()| is ok and |bytes()| contains the decoded object.
+  //
+  // On success, the handles owned by |IncomingMessage| are transferred to the decoded bytes.
+  // If a buffer needs to be allocated during decode, |out_transformed_buffer| will contain that
+  // buffer. This buffer will be stored on DecodedMessageBase and stays in scope for the lifetime
+  // of the decoded message, which is responsible for freeing it.
+  //
+  // This method should be used after a read.
+  //
+  // DO NOT RELY ON THIS METHOD.
+  // It is made public temporarily while transitioning the natural type decoder to perform a
+  // 1-pass decode at which point it will go away.
+  void Decode__Internal_MayBreak(internal::WireFormatVersion wire_format_version,
+                                 const fidl_type_t* message_type, bool is_transactional,
+                                 std::unique_ptr<uint8_t[]>* out_transformed_buffer,
+                                 bool hlcpp_mode);
+
  private:
   explicit IncomingMessage(const ::fidl::Result& failure);
   IncomingMessage(const internal::TransportVTable* transport_vtable, uint8_t* bytes,
@@ -528,8 +546,9 @@ class IncomingMessage : public ::fidl::Result {
               std::unique_ptr<uint8_t[]>* out_transformed_buffer) {
     ZX_ASSERT(!is_transactional_);
     ZX_ASSERT(fidl::TypeTraits<FidlType>::kType != nullptr);
-    Decode(wire_format_version, fidl::TypeTraits<FidlType>::kType,
-           fidl::IsFidlTransactionalMessage<FidlType>::value, out_transformed_buffer);
+    Decode__Internal_MayBreak(wire_format_version, fidl::TypeTraits<FidlType>::kType,
+                              fidl::IsFidlTransactionalMessage<FidlType>::value,
+                              out_transformed_buffer, false);
   }
 
   // Release the handle ownership after the message has been converted to its
@@ -557,18 +576,6 @@ class IncomingMessage : public ::fidl::Result {
   //
   // This method should be used after a read.
   void Decode(const fidl_type_t* message_type, std::unique_ptr<uint8_t[]>* out_transformed_buffer);
-
-  // Decodes the message using |message_type| for the specified |wire_format_version|. If this
-  // operation succeed, |status()| is ok and |bytes()| contains the decoded object.
-  //
-  // On success, the handles owned by |IncomingMessage| are transferred to the decoded bytes.
-  // If a buffer needs to be allocated during decode, |out_transformed_buffer| will contain that
-  // buffer. This buffer will be stored on DecodedMessageBase and stays in scope for the lifetime
-  // of the decoded message, which is responsible for freeing it.
-  //
-  // This method should be used after a read.
-  void Decode(internal::WireFormatVersion wire_format_version, const fidl_type_t* message_type,
-              bool is_transactional, std::unique_ptr<uint8_t[]>* out_transformed_buffer);
 
   // Performs basic transactional message header validation and sets the |fidl::Result| fields
   // accordingly.
