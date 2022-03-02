@@ -266,6 +266,7 @@ executable("flatland_mouse_integration_test_bin") {
   deps = [
     ":common_deps_cts",
     ":scenic_realm_builder",
+    "//sdk//fidl/fuchsia.input.report",
     "//sdk//fidl/fuchsia.ui.composition",
     "//sdk//fidl/fuchsia.ui.pointer",
     "//sdk//fidl/fuchsia.ui.pointerinjector",

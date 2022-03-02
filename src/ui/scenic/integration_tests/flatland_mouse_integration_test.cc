@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/input/report/cpp/fidl.h>
 #include <fuchsia/ui/composition/cpp/fidl.h>
 #include <fuchsia/ui/pointer/cpp/fidl.h>
 #include <fuchsia/ui/pointerinjector/cpp/fidl.h>
@@ -35,10 +36,12 @@ using fuc_FlatlandDisplayPtr = fuchsia::ui::composition::FlatlandDisplayPtr;
 using fuc_ViewportProperties = fuchsia::ui::composition::ViewportProperties;
 using fuc_TransformId = fuchsia::ui::composition::TransformId;
 using fuc_ContentId = fuchsia::ui::composition::ContentId;
+using fuv_ViewRefFocused = fuchsia::ui::views::ViewRefFocused;
 using fuv_ViewRefFocusedPtr = fuchsia::ui::views::ViewRefFocusedPtr;
 using fuv_ViewRef = fuchsia::ui::views::ViewRef;
 using fuv_FocusState = fuchsia::ui::views::FocusState;
 using fup_MouseEvent = fuchsia::ui::pointer::MouseEvent;
+using fup_MouseSource = fuchsia::ui::pointer::MouseSource;
 using fup_MouseSourcePtr = fuchsia::ui::pointer::MouseSourcePtr;
 using fupi_Config = fuchsia::ui::pointerinjector::Config;
 using fupi_DispatchPolicy = fuchsia::ui::pointerinjector::DispatchPolicy;
@@ -54,6 +57,7 @@ using fupi_DeviceType = fuchsia::ui::pointerinjector::DeviceType;
 using fupi_Target = fuchsia::ui::pointerinjector::Target;
 using fupi_Viewport = fuchsia::ui::pointerinjector::Viewport;
 using RealmRoot = sys::testing::experimental::RealmRoot;
+using fir_Axis = fuchsia::input::report::Axis;
 
 class FlatlandMouseIntegrationTest : public zxtest::Test, public loop_fixture::RealLoop {
  protected:
@@ -167,6 +171,21 @@ class FlatlandMouseIntegrationTest : public zxtest::Test, public loop_fixture::R
     config.set_device_id(kDeviceId);
     config.set_device_type(fupi_DeviceType::MOUSE);
     config.set_dispatch_policy(dispatch_policy);
+
+    {
+      fir_Axis axis;
+      axis.range.min = -1;
+      axis.range.max = 1;
+      config.set_scroll_v_range(axis);
+    }
+
+    {
+      fir_Axis axis;
+      axis.range.min = -1;
+      axis.range.max = 1;
+      config.set_scroll_h_range(axis);
+    }
+
     if (!buttons.empty()) {
       config.set_buttons(buttons);
     }
@@ -218,6 +237,45 @@ class FlatlandMouseIntegrationTest : public zxtest::Test, public loop_fixture::R
     return {{{0, 0}, {display_width_, display_height_}}};
   }
 
+  fuv_ViewRef CreateChildView(fuc_FlatlandPtr& child_session,
+                              fidl::InterfaceRequest<fup_MouseSource> child_mouse_source,
+                              fidl::InterfaceRequest<fuv_ViewRefFocused> child_focused_ptr) {
+    child_session = realm_->Connect<fuc_Flatland>();
+
+    // Set up the child view watcher.
+    fidl::InterfacePtr<fuc_ChildViewWatcher> child_view_watcher;
+    auto [child_token, parent_token] = scenic::ViewCreationTokenPair::New();
+    fuc_ViewportProperties properties;
+    properties.set_logical_size({kDefaultSize, kDefaultSize});
+
+    const fuc_TransformId kRootTransform{.value = 1};
+    root_session_->CreateTransform(kRootTransform);
+    root_session_->SetRootTransform(kRootTransform);
+
+    const fuc_ContentId kRootContent{.value = 1};
+    root_session_->CreateViewport(kRootContent, std::move(parent_token), std::move(properties),
+                                  child_view_watcher.NewRequest());
+    root_session_->SetContent(kRootTransform, kRootContent);
+
+    BlockingPresent(root_session_);
+
+    // Set up the child view along with its MouseSource and ViewRefFocused channel.
+    fidl::InterfacePtr<fuc_ParentViewportWatcher> parent_viewport_watcher;
+    auto identity = scenic::NewViewIdentityOnCreation();
+    auto child_view_ref = fidl::Clone(identity.view_ref);
+    fuc_ViewBoundProtocols protocols;
+    protocols.set_mouse_source(std::move(child_mouse_source));
+    protocols.set_view_ref_focused(std::move(child_focused_ptr));
+    child_session->CreateView2(std::move(child_token), std::move(identity), std::move(protocols),
+                               parent_viewport_watcher.NewRequest());
+    const fuchsia::ui::composition::TransformId kTransform{.value = 42};
+    child_session->CreateTransform(kTransform);
+    child_session->SetRootTransform(kTransform);
+    BlockingPresent(child_session);
+
+    return child_view_ref;
+  }
+
   fuc_FlatlandPtr root_session_;
 
   fuv_ViewRef root_view_ref_;
@@ -248,7 +306,6 @@ TEST_F(FlatlandMouseIntegrationTest, ChildReceivesFocus_OnMouseLatch) {
   fup_MouseSourcePtr child_mouse_source;
   fuv_ViewRefFocusedPtr child_focused_ptr;
 
-  child_session = realm_->Connect<fuc_Flatland>();
   child_session.set_error_handler([](zx_status_t status) {
     FAIL("Lost connection to Scenic: %s", zx_status_get_string(status));
   });
@@ -259,36 +316,8 @@ TEST_F(FlatlandMouseIntegrationTest, ChildReceivesFocus_OnMouseLatch) {
     FAIL("ViewRefFocused closed with status: %s", zx_status_get_string(status));
   });
 
-  // Set up the child view watcher.
-  fidl::InterfacePtr<fuc_ChildViewWatcher> child_view_watcher;
-  auto [child_token, parent_token] = scenic::ViewCreationTokenPair::New();
-  fuc_ViewportProperties properties;
-  properties.set_logical_size({kDefaultSize, kDefaultSize});
-
-  const fuc_TransformId kRootTransform{.value = 1};
-  root_session_->CreateTransform(kRootTransform);
-  root_session_->SetRootTransform(kRootTransform);
-
-  const fuc_ContentId kRootContent{.value = 1};
-  root_session_->CreateViewport(kRootContent, std::move(parent_token), std::move(properties),
-                                child_view_watcher.NewRequest());
-  root_session_->SetContent(kRootTransform, kRootContent);
-
-  BlockingPresent(root_session_);
-
-  // Set up the child view along with its MouseSource and ViewRefFocused channel.
-  fidl::InterfacePtr<fuc_ParentViewportWatcher> parent_viewport_watcher;
-  auto identity = scenic::NewViewIdentityOnCreation();
-  auto child_view_ref = fidl::Clone(identity.view_ref);
-  fuc_ViewBoundProtocols protocols;
-  protocols.set_mouse_source(child_mouse_source.NewRequest());
-  protocols.set_view_ref_focused(child_focused_ptr.NewRequest());
-  child_session->CreateView2(std::move(child_token), std::move(identity), std::move(protocols),
-                             parent_viewport_watcher.NewRequest());
-  const fuchsia::ui::composition::TransformId kTransform{.value = 42};
-  child_session->CreateTransform(kTransform);
-  child_session->SetRootTransform(kTransform);
-  BlockingPresent(child_session);
+  auto child_view_ref = CreateChildView(child_session, child_mouse_source.NewRequest(),
+                                        child_focused_ptr.NewRequest());
 
   // Listen for input events.
   std::vector<fup_MouseEvent> child_events;
@@ -311,5 +340,183 @@ TEST_F(FlatlandMouseIntegrationTest, ChildReceivesFocus_OnMouseLatch) {
   RunLoopUntil([&child_focused] { return child_focused.has_value(); });
   EXPECT_TRUE(child_focused->focused());
 }
+
+// Send wheel events to scenic ensure client receives wheel events.
+TEST_F(FlatlandMouseIntegrationTest, Wheel) {
+  fuc_FlatlandPtr child_session;
+  fup_MouseSourcePtr child_mouse_source;
+  fuv_ViewRefFocusedPtr child_focused_ptr;
+
+  child_session.set_error_handler([](zx_status_t status) {
+    FAIL("Lost connection to Scenic: %s", zx_status_get_string(status));
+  });
+  child_mouse_source.set_error_handler([](zx_status_t status) {
+    FAIL("Mouse source closed with status: %s", zx_status_get_string(status));
+  });
+  child_focused_ptr.set_error_handler([](zx_status_t status) {
+    FAIL("ViewRefFocused closed with status: %s", zx_status_get_string(status));
+  });
+
+  auto child_view_ref = CreateChildView(child_session, child_mouse_source.NewRequest(),
+                                        child_focused_ptr.NewRequest());
+
+  // Listen for input events.
+  std::vector<fup_MouseEvent> child_events;
+  StartWatchLoop(child_mouse_source, child_events);
+
+  // Inject an input event at (0,0) which is the point of overlap between the parent and the
+  // child.
+  const std::vector<uint8_t> button_vec = {1};
+  RegisterInjector(fidl::Clone(root_view_ref_), fidl::Clone(child_view_ref),
+                   fupi_DispatchPolicy::MOUSE_HOVER_AND_LATCH_IN_TARGET, button_vec,
+                   kIdentityMatrix);
+  Inject(0, 0, fupi_EventPhase::ADD, button_vec);
+  Inject(0, 0, fupi_EventPhase::CHANGE, /* pressed_buttons= */ {},
+         /* scroll_v= */ std::optional<int64_t>(1), /* scroll_h= */ std::optional<int64_t>(-1));
+
+  RunLoopUntil([&child_events] { return child_events.size() == 2u; });
+
+  ASSERT_TRUE(child_events[0].has_pointer_sample());
+  EXPECT_FALSE(child_events[0].pointer_sample().has_scroll_v());
+  EXPECT_FALSE(child_events[0].pointer_sample().has_scroll_h());
+
+  ASSERT_TRUE(child_events[1].has_pointer_sample());
+  ASSERT_TRUE(child_events[1].pointer_sample().has_scroll_v());
+  EXPECT_EQ(child_events[1].pointer_sample().scroll_v(), 1);
+  ASSERT_TRUE(child_events[1].pointer_sample().has_scroll_h());
+  EXPECT_EQ(child_events[1].pointer_sample().scroll_h(), -1);
+}
+
+// Send wheel events in button pressing sequence to scenic ensure client receives correct wheel
+// events.
+TEST_F(FlatlandMouseIntegrationTest, DownWheelUpWheel) {
+  fuc_FlatlandPtr child_session;
+  fup_MouseSourcePtr child_mouse_source;
+  fuv_ViewRefFocusedPtr child_focused_ptr;
+
+  child_session.set_error_handler([](zx_status_t status) {
+    FAIL("Lost connection to Scenic: %s", zx_status_get_string(status));
+  });
+  child_mouse_source.set_error_handler([](zx_status_t status) {
+    FAIL("Mouse source closed with status: %s", zx_status_get_string(status));
+  });
+  child_focused_ptr.set_error_handler([](zx_status_t status) {
+    FAIL("ViewRefFocused closed with status: %s", zx_status_get_string(status));
+  });
+
+  auto child_view_ref = CreateChildView(child_session, child_mouse_source.NewRequest(),
+                                        child_focused_ptr.NewRequest());
+
+  // Listen for input events.
+  std::vector<fup_MouseEvent> child_events;
+  StartWatchLoop(child_mouse_source, child_events);
+
+  // Inject an input event at (0,0) which is the point of overlap between the parent and the
+  // child.
+  const std::vector<uint8_t> button_vec = {1};
+  RegisterInjector(fidl::Clone(root_view_ref_), fidl::Clone(child_view_ref),
+                   fupi_DispatchPolicy::MOUSE_HOVER_AND_LATCH_IN_TARGET, button_vec,
+                   kIdentityMatrix);
+  Inject(0, 0, fupi_EventPhase::ADD, button_vec);
+  Inject(0, 0, fupi_EventPhase::CHANGE, button_vec);
+  Inject(0, 0, fupi_EventPhase::CHANGE, button_vec,
+         /* scroll_v= */ std::optional<int64_t>(1));
+  Inject(0, 0, fupi_EventPhase::CHANGE, /* pressed_buttons= */ {});
+  Inject(0, 0, fupi_EventPhase::CHANGE, /* pressed_buttons= */ {},
+         /* scroll_v= */ std::optional<int64_t>(1));
+
+  RunLoopUntil([&child_events] { return child_events.size() == 5u; });
+
+  ASSERT_TRUE(child_events[0].has_pointer_sample());
+  EXPECT_FALSE(child_events[0].pointer_sample().has_scroll_v());
+  EXPECT_FALSE(child_events[0].pointer_sample().has_scroll_h());
+
+  ASSERT_TRUE(child_events[1].has_pointer_sample());
+  EXPECT_EQ(child_events[1].pointer_sample().pressed_buttons(), button_vec);
+
+  ASSERT_TRUE(child_events[2].has_pointer_sample());
+  ASSERT_TRUE(child_events[2].pointer_sample().has_scroll_v());
+  EXPECT_EQ(child_events[2].pointer_sample().scroll_v(), 1);
+  EXPECT_FALSE(child_events[2].pointer_sample().has_scroll_h());
+  EXPECT_EQ(child_events[2].pointer_sample().pressed_buttons(), button_vec);
+
+  ASSERT_TRUE(child_events[3].has_pointer_sample());
+  EXPECT_FALSE(child_events[3].pointer_sample().has_pressed_buttons());
+  EXPECT_FALSE(child_events[3].pointer_sample().has_scroll_v());
+
+  ASSERT_TRUE(child_events[4].has_pointer_sample());
+  ASSERT_TRUE(child_events[4].pointer_sample().has_scroll_v());
+  EXPECT_EQ(child_events[4].pointer_sample().scroll_v(), 1);
+  EXPECT_FALSE(child_events[4].pointer_sample().has_scroll_h());
+  EXPECT_FALSE(child_events[4].pointer_sample().has_pressed_buttons());
+}
+
+// Send wheel events bundled with button changess to scenic ensure client receives correct wheel
+// events.
+TEST_F(FlatlandMouseIntegrationTest, DownWheelUpWheelBundled) {
+  fuc_FlatlandPtr child_session;
+  fup_MouseSourcePtr child_mouse_source;
+  fuv_ViewRefFocusedPtr child_focused_ptr;
+
+  child_session.set_error_handler([](zx_status_t status) {
+    FAIL("Lost connection to Scenic: %s", zx_status_get_string(status));
+  });
+  child_mouse_source.set_error_handler([](zx_status_t status) {
+    FAIL("Mouse source closed with status: %s", zx_status_get_string(status));
+  });
+  child_focused_ptr.set_error_handler([](zx_status_t status) {
+    FAIL("ViewRefFocused closed with status: %s", zx_status_get_string(status));
+  });
+
+  auto child_view_ref = CreateChildView(child_session, child_mouse_source.NewRequest(),
+                                        child_focused_ptr.NewRequest());
+
+  // Listen for input events.
+  std::vector<fup_MouseEvent> child_events;
+  StartWatchLoop(child_mouse_source, child_events);
+
+  // Inject an input event at (0,0) which is the point of overlap between the parent and the
+  // child.
+  const std::vector<uint8_t> button_vec = {1};
+  RegisterInjector(fidl::Clone(root_view_ref_), fidl::Clone(child_view_ref),
+                   fupi_DispatchPolicy::MOUSE_HOVER_AND_LATCH_IN_TARGET, button_vec,
+                   kIdentityMatrix);
+  Inject(0, 0, fupi_EventPhase::ADD, button_vec);
+  // This event bundled button down and wheel.
+  Inject(0, 0, fupi_EventPhase::CHANGE, button_vec, /* scroll_v= */ std::optional<int64_t>(1));
+  Inject(0, 0, fupi_EventPhase::CHANGE, button_vec, /* scroll_v= */ std::optional<int64_t>(1));
+  // This event bundled button up and wheel.
+  Inject(0, 0, fupi_EventPhase::CHANGE, /* pressed_buttons= */ {},
+         /* scroll_v= */ std::optional<int64_t>(1));
+  Inject(0, 0, fupi_EventPhase::CHANGE, /* pressed_buttons= */ {},
+         /* scroll_v= */ std::optional<int64_t>(1));
+
+  RunLoopUntil([&child_events] { return child_events.size() == 5u; });
+
+  ASSERT_TRUE(child_events[0].has_pointer_sample());
+  EXPECT_FALSE(child_events[0].pointer_sample().has_scroll_v());
+  EXPECT_FALSE(child_events[0].pointer_sample().has_scroll_h());
+
+  ASSERT_TRUE(child_events[1].has_pointer_sample());
+  ASSERT_TRUE(child_events[1].pointer_sample().has_scroll_v());
+  EXPECT_EQ(child_events[1].pointer_sample().scroll_v(), 1);
+  EXPECT_EQ(child_events[1].pointer_sample().pressed_buttons(), button_vec);
+
+  ASSERT_TRUE(child_events[2].has_pointer_sample());
+  ASSERT_TRUE(child_events[2].pointer_sample().has_scroll_v());
+  EXPECT_EQ(child_events[2].pointer_sample().scroll_v(), 1);
+  EXPECT_EQ(child_events[2].pointer_sample().pressed_buttons(), button_vec);
+
+  ASSERT_TRUE(child_events[3].has_pointer_sample());
+  ASSERT_TRUE(child_events[3].pointer_sample().has_scroll_v());
+  EXPECT_EQ(child_events[3].pointer_sample().scroll_v(), 1);
+  EXPECT_FALSE(child_events[3].pointer_sample().has_pressed_buttons());
+
+  ASSERT_TRUE(child_events[4].has_pointer_sample());
+  ASSERT_TRUE(child_events[4].pointer_sample().has_scroll_v());
+  EXPECT_EQ(child_events[4].pointer_sample().scroll_v(), 1);
+  EXPECT_FALSE(child_events[4].pointer_sample().has_pressed_buttons());
+}
+
 }  // namespace
 }  // namespace integration_tests
