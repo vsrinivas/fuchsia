@@ -518,7 +518,6 @@ success("UnionEnvelopeInlining_UnknownHandleValue_Inlined") {
 // Tests decode of a value in a union that can be represented inline in the
 // envelope but is incorrectly using the out of line representation.
 decode_failure("UnionOutOfLineEnvelopeWhenInlineRequired") {
-    bindings_allowlist = [go, dart, rust, llcpp],
     type = EnvelopeInliningTestUnionStruct,
     bytes = {
         v2 = [
@@ -528,6 +527,21 @@ decode_failure("UnionOutOfLineEnvelopeWhenInlineRequired") {
 
             // secondary object
             num(100):8,
+        ],
+    },
+    err = INVALID_INLINE_BIT_IN_ENVELOPE,
+}
+
+// Tests decode of a value in a union that can be represented out of line in
+// the envelope but is incorrectly using the inline representation.
+decode_failure("UnionInlineEnvelopeWhenOutOfLineRequired") {
+    bindings_denylist = [rust, dart],
+    type = EnvelopeInliningTestUnionStruct,
+    bytes = {
+        v2 = [
+            // primary object
+            num(2):8, // ordinal
+            num(8):4, num(0):2, num(1):2, // present
         ],
     },
     err = INVALID_INLINE_BIT_IN_ENVELOPE,
