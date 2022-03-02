@@ -3,13 +3,14 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::Context as _,
-    fuchsia_zircon as zx,
+    fdio::fdio_sys,
+    fuchsia_zircon::{self as zx, AsHandleRef, ObjectType},
     lazy_static::lazy_static,
     std::fmt,
     std::{panic, sync::Once},
 };
 
+const STDOUT_FD: i32 = 1;
 const MAX_LOG_LEVEL: log::Level = log::Level::Info;
 
 lazy_static! {
@@ -24,11 +25,18 @@ pub struct KernelLogger {
 
 impl KernelLogger {
     fn new() -> KernelLogger {
-        let resource = zx::Resource::from(zx::Handle::invalid());
-        let debuglog = zx::DebugLog::create(&resource, zx::DebugLogOpts::empty())
-            .context("Failed to create debuglog object")
-            .unwrap();
-        KernelLogger { debuglog }
+        let debuglog = unsafe {
+            let mut raw_debuglog = zx::sys::ZX_HANDLE_INVALID;
+            let status = fdio_sys::fdio_fd_clone(STDOUT_FD, &mut raw_debuglog);
+            if let Err(s) = zx::Status::ok(status) {
+                // Panic as this failure means that there's no logger initialized.
+                panic!("Unable to get debuglog handle from stdout fd: {}", s);
+            }
+            fuchsia_zircon::Handle::from_raw(raw_debuglog)
+        };
+
+        assert_eq!(debuglog.basic_info().unwrap().object_type, ObjectType::LOG);
+        KernelLogger { debuglog: debuglog.into() }
     }
 
     /// Initialize the global logger to use KernelLogger.
@@ -98,7 +106,14 @@ impl log::Log for KernelLogger {
 
 #[cfg(test)]
 mod tests {
-    use {super::*, fuchsia_zircon::AsHandleRef, log::*, rand::Rng, std::panic};
+    use {
+        super::*,
+        anyhow::Context,
+        fuchsia_zircon::{AsHandleRef, HandleBased},
+        log::*,
+        rand::Rng,
+        std::panic,
+    };
 
     // expect_message_in_debuglog will read the last 10000 messages in zircon's debuglog, looking
     // for a message that equals `sent_msg`. If found, the function returns. If the first 10,000
@@ -129,12 +144,25 @@ mod tests {
         panic!("first 10000 log messages didn't include the one we sent!");
     }
 
+    // Userboot passes component manager a debuglog handle tied to fd 0/1/2, which component
+    // manager now uses to retrieve the debuglog handle. To simulate that, we need to bind
+    // a handle before calling KernelLogger::init().
+    fn init() {
+        let resource = zx::Resource::from(zx::Handle::invalid());
+        let debuglog = zx::DebugLog::create(&resource, zx::DebugLogOpts::empty())
+            .context("Failed to create debuglog object")
+            .unwrap();
+        fdio::bind_to_fd(debuglog.into_handle(), STDOUT_FD).unwrap();
+
+        KernelLogger::init();
+    }
+
     #[test]
     fn log_info_test() {
         let mut rng = rand::thread_rng();
         let logged_value: u64 = rng.gen();
 
-        KernelLogger::init();
+        init();
         info!("log_test {}", logged_value);
 
         expect_message_in_debuglog(format!("[component_manager] INFO: log_test {}", logged_value));
@@ -145,7 +173,7 @@ mod tests {
         let mut rng = rand::thread_rng();
         let logged_value: u64 = rng.gen();
 
-        KernelLogger::init();
+        init();
         warn!("log_test {}", logged_value);
 
         expect_message_in_debuglog(format!("[component_manager] WARN: log_test {}", logged_value));
@@ -156,7 +184,7 @@ mod tests {
         let mut rng = rand::thread_rng();
         let logged_value: u64 = rng.gen();
 
-        KernelLogger::init();
+        init();
         error!("log_test {}", logged_value);
 
         expect_message_in_debuglog(format!("[component_manager] ERROR: log_test {}", logged_value));
@@ -179,7 +207,7 @@ mod tests {
             ));
         }));
 
-        KernelLogger::init();
+        init();
         panic!("panic_test {}", logged_value);
     }
 }
