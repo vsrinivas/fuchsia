@@ -48,17 +48,11 @@ async fn show() {
     assert!(component.resolved.is_some());
     let resolved = component.resolved.as_ref().unwrap();
 
-    let incoming_capabilities = &resolved.incoming_capabilities;
-    assert_eq!(incoming_capabilities.len(), 3);
-
-    let incoming_capability = &incoming_capabilities[0];
-    assert_eq!(incoming_capability, "fuchsia.foo.Bar");
-
-    let incoming_capability = &incoming_capabilities[1];
-    assert_eq!(incoming_capability, "fuchsia.logger.LogSink");
-
-    let incoming_capability = &incoming_capabilities[2];
-    assert_eq!(incoming_capability, "hub");
+    // capabilities are sorted alphabetically
+    assert_eq!(
+        &vec!["fuchsia.foo.Bar", "fuchsia.logger.LogSink", "hub", "pkg"],
+        &resolved.incoming_capabilities
+    );
 
     assert_eq!(resolved.config.len(), 2);
     let field1 = &resolved.config[0];

@@ -15,12 +15,12 @@ use {
     async_trait::async_trait,
     cm_moniker::{InstancedAbsoluteMoniker, InstancedExtendedMoniker},
     cm_rust::{CapabilityName, ComponentDecl},
+    cm_util::io::clone_dir,
     config_encoder::ConfigFields,
     fidl_fuchsia_diagnostics_types as fdiagnostics,
-    fidl_fuchsia_io::{self as fio, DirectoryProxy, NodeProxy},
+    fidl_fuchsia_io::{DirectoryProxy, NodeProxy},
     fidl_fuchsia_sys2 as fsys, fuchsia_trace as trace, fuchsia_zircon as zx,
     futures::{channel::oneshot, future::BoxFuture, lock::Mutex},
-    io_util,
     rand::random,
     routing::component_instance::ComponentInstanceInterface,
     std::{
@@ -299,6 +299,7 @@ pub enum EventPayload {
         resolved_url: String,
         decl: ComponentDecl,
         config: Option<ConfigFields>,
+        package_dir: Option<DirectoryProxy>,
     },
     Started {
         component: WeakComponentInstance,
@@ -333,6 +334,7 @@ impl RuntimeInfo {
                 .as_mut()
                 .and_then(|controller| controller.take_diagnostics_receiver()),
         ));
+
         Self {
             resolved_url,
             package_dir: runtime.namespace.as_ref().and_then(|n| clone_dir(n.package_dir.as_ref())),
@@ -341,12 +343,6 @@ impl RuntimeInfo {
             diagnostics_receiver,
         }
     }
-}
-
-// TODO(fsamuel): We should probably preserve the original error messages
-// instead of dropping them.
-fn clone_dir(dir: Option<&DirectoryProxy>) -> Option<DirectoryProxy> {
-    dir.and_then(|d| io_util::clone_directory(d, fio::CLONE_FLAG_SAME_RIGHTS).ok())
 }
 
 impl fmt::Debug for EventPayload {
@@ -366,7 +362,7 @@ impl fmt::Debug for EventPayload {
             EventPayload::Started { component_decl, .. } => {
                 formatter.field("component_decl", &component_decl).finish()
             }
-            EventPayload::Resolved { component: _, resolved_url, decl, config } => {
+            EventPayload::Resolved { component: _, resolved_url, decl, config, .. } => {
                 formatter.field("resolved_url", resolved_url);
                 formatter.field("decl", decl);
                 formatter.field("config", config).finish()

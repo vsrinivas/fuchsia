@@ -14,6 +14,7 @@ use {
         resolver::Resolver,
     },
     async_trait::async_trait,
+    cm_util::io::clone_dir,
     std::convert::TryFrom,
     std::sync::Arc,
 };
@@ -91,6 +92,10 @@ async fn do_resolve(component: &Arc<ComponentInstance>) -> Result<Component, Mod
                     resolved_url: component_info.resolved_url.clone(),
                     config: component_info.config.clone(),
                     decl: component_info.decl.clone(),
+                    package_dir: component_info
+                        .package
+                        .as_ref()
+                        .and_then(|pkg| clone_dir(Some(&pkg.package_dir))),
                 }),
             );
             component.hooks.dispatch(&event).await?;

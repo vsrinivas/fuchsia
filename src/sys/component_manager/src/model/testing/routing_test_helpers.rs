@@ -493,6 +493,10 @@ impl RoutingTest {
         let mut expected_paths = vec![];
         expected_paths.extend(expected_paths_hs.into_iter());
 
+        // The "pkg" directory has been added to the mocked ResolvedComponent.
+        // We need to test that it exists.
+        expected_paths.push("/pkg".to_string());
+
         // Get the paths in the component's namespace.
         let mut actual_paths: Vec<String> = runner
             .get_namespace(&format!("test:///{}_resolved", component_name))

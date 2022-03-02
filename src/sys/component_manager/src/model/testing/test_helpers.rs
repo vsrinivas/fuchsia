@@ -216,6 +216,16 @@ pub async fn list_directory<'a>(root_proxy: &'a DirectoryProxy) -> Vec<String> {
     items
 }
 
+pub async fn list_sub_directory(parent: &DirectoryProxy, path: &str) -> Vec<String> {
+    let sub_dir = io_util::open_directory(
+        &parent,
+        &Path::new(path),
+        OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+    )
+    .expect("Failed to open directory");
+    list_directory(&sub_dir).await
+}
+
 pub async fn list_directory_recursive<'a>(root_proxy: &'a DirectoryProxy) -> Vec<String> {
     let dir = io_util::clone_directory(&root_proxy, CLONE_FLAG_SAME_RIGHTS)
         .expect("Failed to clone DirectoryProxy");

@@ -21,10 +21,10 @@ use {
     cm_moniker::InstancedAbsoluteMoniker,
     cm_rust::{CapabilityPath, ComponentDecl},
     cm_task_scope::TaskScope,
-    cm_util::channel,
+    cm_util::{channel, io::clone_dir},
     config_encoder::ConfigFields,
     fidl::endpoints::{ProtocolMarker, ServerEnd},
-    fidl_fuchsia_io::{DirectoryProxy, NodeMarker, CLONE_FLAG_SAME_RIGHTS, MODE_TYPE_DIRECTORY},
+    fidl_fuchsia_io::{DirectoryProxy, NodeMarker, MODE_TYPE_DIRECTORY},
     fidl_fuchsia_sys2::LifecycleControllerMarker,
     fuchsia_trace as trace, fuchsia_zircon as zx,
     futures::lock::Mutex,
@@ -323,11 +323,18 @@ impl Hub {
         component_decl: ComponentDecl,
         target_moniker: &InstancedAbsoluteMoniker,
         target: WeakComponentInstance,
+        pkg_dir: Option<DirectoryProxy>,
     ) -> Result<(), ModelError> {
         let tree = DirTree::build_from_uses(route_use_fn, target, component_decl);
         let mut use_dir = pfs::simple();
         tree.install(target_moniker, &mut use_dir)?;
+
+        if let Some(pkg_dir) = pkg_dir {
+            use_dir.add_node("pkg", remote_dir(pkg_dir), target_moniker)?;
+        }
+
         directory.add_node("use", use_dir, target_moniker)?;
+
         Ok(())
     }
 
@@ -461,6 +468,7 @@ impl Hub {
         resolved_url: String,
         component_decl: &'a ComponentDecl,
         config: &Option<ConfigFields>,
+        pkg_dir: Option<&DirectoryProxy>,
     ) -> Result<(), ModelError> {
         let mut instance_map = self.instances.lock().await;
 
@@ -483,6 +491,7 @@ impl Hub {
             component_decl.clone(),
             target_moniker,
             target.clone(),
+            clone_dir(pkg_dir),
         )?;
 
         Self::add_expose_directory(
@@ -538,7 +547,7 @@ impl Hub {
         Self::add_in_directory(
             execution_directory.clone(),
             component_decl.clone(),
-            Self::clone_dir(runtime.package_dir.as_ref()),
+            clone_dir(runtime.package_dir.as_ref()),
             target_moniker,
             target.clone(),
         )?;
@@ -552,13 +561,13 @@ impl Hub {
 
         Self::add_out_directory(
             execution_directory.clone(),
-            Self::clone_dir(runtime.outgoing_dir.as_ref()),
+            clone_dir(runtime.outgoing_dir.as_ref()),
             target_moniker,
         )?;
 
         Self::add_runtime_directory(
             execution_directory.clone(),
-            Self::clone_dir(runtime.runtime_dir.as_ref()),
+            clone_dir(runtime.runtime_dir.as_ref()),
             &target_moniker,
         )?;
 
@@ -684,12 +693,6 @@ impl Hub {
         }
         Ok(())
     }
-
-    // TODO(fsamuel): We should probably preserve the original error messages
-    // instead of dropping them.
-    fn clone_dir(dir: Option<&DirectoryProxy>) -> Option<DirectoryProxy> {
-        dir.and_then(|d| io_util::clone_directory(d, CLONE_FLAG_SAME_RIGHTS).ok())
-    }
 }
 
 #[async_trait]
@@ -722,13 +725,14 @@ impl Hook for Hub {
                 )
                 .await?;
             }
-            Ok(EventPayload::Resolved { component, resolved_url, decl, config, .. }) => {
+            Ok(EventPayload::Resolved { component, resolved_url, decl, config, package_dir }) => {
                 self.on_resolved_async(
                     target_moniker,
                     component,
                     resolved_url.clone(),
                     &decl,
                     &config,
+                    package_dir.as_ref(),
                 )
                 .await?;
             }
@@ -754,8 +758,8 @@ mod tests {
                 testing::{
                     test_helpers::{
                         component_decl_with_test_runner, dir_contains, list_directory,
-                        list_directory_recursive, read_file, TestEnvironmentBuilder,
-                        TestModelResult,
+                        list_directory_recursive, list_sub_directory, read_file,
+                        TestEnvironmentBuilder, TestModelResult,
                     },
                     test_hook::HubInjectionTestHook,
                 },
@@ -995,32 +999,15 @@ mod tests {
         )
         .await;
 
-        let in_dir = io_util::open_directory(
-            &hub_proxy,
-            &Path::new("exec/in"),
-            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
-        )
-        .expect("Failed to open directory");
-        assert_eq!(vec!["hub"], list_directory(&in_dir).await);
+        assert_eq!(vec!["hub", "pkg"], list_sub_directory(&hub_proxy, "exec/in").await);
 
-        let scoped_hub_dir_proxy = io_util::open_directory(
-            &hub_proxy,
-            &Path::new("exec/in/hub"),
-            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
-        )
-        .expect("Failed to open directory");
-        // There are no out or runtime directories because there is no program running.
-        assert_eq!(vec!["old_hub"], list_directory(&scoped_hub_dir_proxy).await);
+        assert_eq!(vec!["fake_file"], list_sub_directory(&hub_proxy, "exec/in/pkg").await);
 
-        let old_hub_dir_proxy = io_util::open_directory(
-            &hub_proxy,
-            &Path::new("exec/in/hub/old_hub/exec"),
-            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
-        )
-        .expect("Failed to open directory");
+        assert_eq!(vec!["old_hub"], list_sub_directory(&hub_proxy, "exec/in/hub").await);
+
         assert_eq!(
             vec!["expose", "in", "out", "resolved_url", "runtime", "start_reason"],
-            list_directory(&old_hub_dir_proxy).await
+            list_sub_directory(&hub_proxy, "exec/in/hub/old_hub/exec").await
         );
     }
 
@@ -1166,18 +1153,13 @@ mod tests {
         )
         .expect("Failed to open directory");
 
-        assert_eq!(vec!["hub"], list_directory(&use_dir).await);
+        assert_eq!(vec!["hub", "pkg"], list_directory(&use_dir).await);
 
-        let hub_dir = io_util::open_directory(
-            &use_dir,
-            &Path::new("hub"),
-            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
-        )
-        .expect("Failed to open directory");
+        assert_eq!(vec!["fake_file"], list_sub_directory(&use_dir, "pkg").await);
 
         assert_eq!(
             vec!["children", "component_type", "debug", "exec", "id", "resolved", "url"],
-            list_directory(&hub_dir).await
+            list_sub_directory(&use_dir, "hub").await
         );
     }
 
@@ -1335,23 +1317,16 @@ mod tests {
         )
         .await;
 
-        let in_dir = io_util::open_directory(
-            &hub_proxy,
-            &Path::new("exec/in"),
-            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
-        )
-        .expect("Failed to open directory");
-        assert_eq!(vec!["data", "hub", "svc"], list_directory(&in_dir).await);
+        assert_eq!(
+            vec!["data", "hub", "pkg", "svc"],
+            list_sub_directory(&hub_proxy, "exec/in").await
+        );
 
-        let scoped_hub_dir_proxy = io_util::open_directory(
-            &hub_proxy,
-            &Path::new("exec/in/hub"),
-            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
-        )
-        .expect("Failed to open directory");
+        assert_eq!(vec!["fake_file"], list_sub_directory(&hub_proxy, "exec/in/pkg").await);
+
         assert_eq!(
             vec!["expose", "in", "out", "resolved_url", "runtime", "start_reason"],
-            list_directory(&scoped_hub_dir_proxy).await
+            list_sub_directory(&hub_proxy, "exec/in/hub").await
         );
     }
 
@@ -1393,7 +1368,9 @@ mod tests {
             OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
         )
         .expect("Failed to open directory");
-        assert_eq!(0, list_directory(&in_dir).await.len());
+        assert_eq!(vec!["pkg"], list_directory(&in_dir).await);
+
+        assert_eq!(vec!["fake_file"], list_sub_directory(&&in_dir, "pkg").await);
     }
 
     #[fuchsia::test]

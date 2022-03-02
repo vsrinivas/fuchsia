@@ -24,14 +24,19 @@ use {
     cm_runner::{Runner, RunnerError},
     cm_rust::{ComponentDecl, ExposeDecl, UseDecl, ValuesData},
     fidl::prelude::*,
-    fidl::{endpoints::ServerEnd, epitaph::ChannelEpitaphExt},
+    fidl::{
+        endpoints::{create_endpoints, ClientEnd, ServerEnd},
+        epitaph::ChannelEpitaphExt,
+    },
     fidl_fidl_examples_routing_echo::{EchoMarker, EchoRequest, EchoRequestStream},
     fidl_fuchsia_component_runner as fcrunner,
     fidl_fuchsia_diagnostics_types::{
         ComponentDiagnostics, ComponentTasks, Task as DiagnosticsTask,
     },
-    fidl_fuchsia_io::{DirectoryMarker, NodeMarker},
-    fuchsia_async as fasync,
+    fidl_fuchsia_io::{
+        DirectoryMarker, NodeMarker, MODE_TYPE_DIRECTORY, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
+    },
+    fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
     fuchsia_zircon::{self as zx, AsHandleRef, HandleBased, Koid},
     futures::{
         channel::oneshot,
@@ -185,10 +190,28 @@ impl MockResolver {
         } else {
             None
         };
+        let (client, server): (ClientEnd<DirectoryMarker>, ServerEnd<DirectoryMarker>) =
+            create_endpoints().unwrap();
+
+        let sub_dir = pseudo_directory!(
+            "fake_file" => read_only_static(b"content"),
+        );
+        sub_dir.open(
+            ExecutionScope::new(),
+            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+            MODE_TYPE_DIRECTORY,
+            vfs::path::Path::dot(),
+            ServerEnd::new(server.into_channel()),
+        );
+
         Ok(ResolvedComponent {
             resolved_url: format!("test:///{}_resolved", name),
             decl: decl.clone(),
-            package: None,
+            package: Some(fsys::Package {
+                package_url: Some("pkg".to_string()),
+                package_dir: Some(client),
+                ..fsys::Package::EMPTY
+            }),
             config_values,
         })
     }
