@@ -209,6 +209,8 @@ RebootReason DetermineRebootReason(const ZirconRebootReason zircon_reason,
         case GracefulRebootReason::kNone:
         case GracefulRebootReason::kNotParseable:
           return RebootReason::kGenericGraceful;
+        case GracefulRebootReason::kOutOfMemory:
+          return RebootReason::kOOM;
         case GracefulRebootReason::kNotSet:
           FX_LOGS(FATAL) << "Graceful reboot reason must be set";
           return RebootReason::kNotParseable;

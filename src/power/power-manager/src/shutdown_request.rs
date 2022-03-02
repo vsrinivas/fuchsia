@@ -22,6 +22,9 @@ impl Into<fpower::SystemPowerState> for ShutdownRequest {
     fn into(self) -> fpower::SystemPowerState {
         match self {
             ShutdownRequest::PowerOff => fpower::SystemPowerState::Poweroff,
+            ShutdownRequest::Reboot(fpower::RebootReason::OutOfMemory) => {
+                fpower::SystemPowerState::RebootKernelInitiated
+            }
             ShutdownRequest::Reboot(_) => fpower::SystemPowerState::Reboot,
             ShutdownRequest::RebootBootloader => fpower::SystemPowerState::RebootBootloader,
             ShutdownRequest::RebootRecovery => fpower::SystemPowerState::RebootRecovery,

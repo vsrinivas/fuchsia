@@ -99,6 +99,11 @@ INSTANTIATE_TEST_SUITE_P(WithVariousRebootReasons, ImminentGracefulRebootWatcher
                                  "ZBI SWAP",
                              },
                              {
+                                 "OutOfMemory",
+                                 RebootReason::OUT_OF_MEMORY,
+                                 "OUT OF MEMORY",
+                             },
+                             {
                                  "NotSupported",
                                  static_cast<RebootReason>(100u),
                                  "NOT SUPPORTED",

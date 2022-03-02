@@ -21,6 +21,7 @@ constexpr char kReasonSysmgrFailure[] = "SYSMGR FAILURE";
 constexpr char kReasonCriticalComponentFailure[] = "CRITICAL COMPONENT FAILURE";
 constexpr char kReasonFdr[] = "FACTORY DATA RESET";
 constexpr char kReasonZbiSwap[] = "ZBI SWAP";
+constexpr char kOutOfMemory[] = "OUT OF MEMORY";
 constexpr char kReasonNotSupported[] = "NOT SUPPORTED";
 constexpr char kReasonNotParseable[] = "NOT PARSEABLE";
 
@@ -50,6 +51,8 @@ std::string ToString(const GracefulRebootReason reason) {
       return kReasonFdr;
     case GracefulRebootReason::kZbiSwap:
       return kReasonZbiSwap;
+    case GracefulRebootReason::kOutOfMemory:
+      return kOutOfMemory;
     case GracefulRebootReason::kNotSupported:
       return kReasonNotSupported;
     case GracefulRebootReason::kNotParseable:
@@ -68,6 +71,7 @@ std::string ToFileContent(const GracefulRebootReason reason) {
     case GracefulRebootReason::kCriticalComponentFailure:
     case GracefulRebootReason::kFdr:
     case GracefulRebootReason::kZbiSwap:
+    case GracefulRebootReason::kOutOfMemory:
     case GracefulRebootReason::kNotSupported:
       return ToString(reason);
     case GracefulRebootReason::kNotSet:
@@ -99,6 +103,8 @@ GracefulRebootReason FromFileContent(const std::string reason) {
     return GracefulRebootReason::kZbiSwap;
   } else if (reason == kReasonNotSupported) {
     return GracefulRebootReason::kNotSupported;
+  } else if (reason == kOutOfMemory) {
+    return GracefulRebootReason::kOutOfMemory;
   }
 
   FX_LOGS(ERROR) << "Invalid persisted graceful reboot reason: " << reason;
@@ -128,6 +134,8 @@ GracefulRebootReason ToGracefulRebootReason(
       return GracefulRebootReason::kFdr;
     case RebootReason::ZBI_SWAP:
       return GracefulRebootReason::kZbiSwap;
+    case RebootReason::OUT_OF_MEMORY:
+      return GracefulRebootReason::kOutOfMemory;
     default:
       return GracefulRebootReason::kNotSupported;
   }

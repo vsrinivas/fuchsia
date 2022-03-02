@@ -43,6 +43,7 @@ protocol fuchsia.hardware.power.statecontrol/RebootMethodsWatcherRegister
 enum/member fuchsia.hardware.power.statecontrol/RebootReason.CRITICAL_COMPONENT_FAILURE 7
 enum/member fuchsia.hardware.power.statecontrol/RebootReason.FACTORY_DATA_RESET 6
 enum/member fuchsia.hardware.power.statecontrol/RebootReason.HIGH_TEMPERATURE 3
+enum/member fuchsia.hardware.power.statecontrol/RebootReason.OUT_OF_MEMORY 10
 enum/member fuchsia.hardware.power.statecontrol/RebootReason.RETRY_SYSTEM_UPDATE 8
 enum/member fuchsia.hardware.power.statecontrol/RebootReason.SESSION_FAILURE 4
 enum/member fuchsia.hardware.power.statecontrol/RebootReason.SYSMGR_FAILURE 5

@@ -28,6 +28,7 @@ enum class GracefulRebootReason {
   kCriticalComponentFailure,
   kFdr,
   kZbiSwap,
+  kOutOfMemory,
   kNotSupported,
   kNotParseable,
 };

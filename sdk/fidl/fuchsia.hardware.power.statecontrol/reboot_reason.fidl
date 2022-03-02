@@ -28,4 +28,7 @@ type RebootReason = strict enum {
 
     /// A boot partition change was effected.
     ZBI_SWAP = 9;
+
+    /// The system hit a critical low threshold of available memory.
+    OUT_OF_MEMORY = 10;
 };
