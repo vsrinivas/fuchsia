@@ -10,7 +10,15 @@ group("examples") {
       "//src/proc/bin/starnix",
       "//src/proc/bin/starsh",
       "//src/proc/examples/wayland:starnix_wayland",
+    ]
+  }
+}
 
+group("tests") {
+  testonly = true
+
+  if (target_cpu == "x64") {
+    deps = [
       # TODO(fxbug.dev/91954): Reenable after switching this test to flatland.
       # "//src/proc/examples/wayland:starnix_wayland_test",
       "//src/proc/tests/android:test_android_distro",
