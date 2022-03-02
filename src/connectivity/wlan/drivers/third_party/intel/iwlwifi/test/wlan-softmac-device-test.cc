@@ -8,7 +8,7 @@
 #include <fuchsia/hardware/wlan/associnfo/cpp/banjo.h>
 #include <fuchsia/hardware/wlan/softmac/cpp/banjo.h>
 #include <fuchsia/wlan/common/c/banjo.h>
-#include <fuchsia/wlan/ieee80211/c/fidl.h>
+#include <fuchsia/wlan/ieee80211/c/banjo.h>
 #include <lib/mock-function/mock-function.h>
 #include <lib/zx/channel.h>
 #include <stdlib.h>
@@ -910,14 +910,14 @@ TEST_F(MacInterfaceTest, SetKeysSupportConfigs) {
 
   // Default cipher configuration for WPA2/3 PTK.  This is data frame protection, required for
   // WPA2/3.
-  key_config->cipher_type = fuchsia_wlan_ieee80211_CipherSuiteType_CCMP_128;
+  key_config->cipher_type = CIPHER_SUITE_TYPE_CCMP_128;
   key_config->key_type = WLAN_KEY_TYPE_PAIRWISE;
   key_config->key_idx = 0;
   ASSERT_EQ(ZX_OK, SetKey(key_config));
 
   // Default cipher configuration for WPA2/3 IGTK.  This is management frame protection, optional
   // for WPA2 and required for WPA3.
-  key_config->cipher_type = fuchsia_wlan_ieee80211_CipherSuiteType_BIP_CMAC_128;
+  key_config->cipher_type = CIPHER_SUITE_TYPE_BIP_CMAC_128;
   key_config->key_type = WLAN_KEY_TYPE_IGTK;
   key_config->key_idx = 1;
   ASSERT_EQ(ZX_OK, SetKey(key_config));
