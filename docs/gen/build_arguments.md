@@ -47,7 +47,7 @@ It will be set below and passed to other toolchains through toolchain_args
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1704
+From //build/config/BUILDCONFIG.gn:1708
 
 ### allow_legacy_data_partition_names
 Set to true to enable legacy data partition names.
@@ -1407,7 +1407,7 @@ This is just added to [`known_variants`](#known_variants).
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1451
+From //build/config/BUILDCONFIG.gn:1455
 
 ### extra_vbmeta_descriptors
 Additional VBMeta Descriptors to add to the vbmeta image during assembly.
@@ -2104,7 +2104,7 @@ Contains the major version number of the ICU library, for dependencies that
 need different configuration based on the library version. Currently this
 is only useful in Fuchsia.
 
-**Current value (from the default):** `"69"`
+**Current value (from the default):** `"70"`
 
 From //third_party/icu/version.gni:9
 
@@ -2463,7 +2463,7 @@ Each element of the list is one variant, which is a scope defining:
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1273
+From //build/config/BUILDCONFIG.gn:1277
 
 ### launch_basemgr_on_boot
 Indicates whether to start basemgr.cmx on boot.
@@ -3810,7 +3810,7 @@ is satisfied if any of the strings matches against the candidate string.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1694
+From //build/config/BUILDCONFIG.gn:1698
 
 ### select_variant_canonical
 *This should never be set as a build argument.*
@@ -3819,7 +3819,7 @@ See //build/toolchain/clang_toolchain.gni for details.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1699
+From //build/config/BUILDCONFIG.gn:1703
 
 ### select_variant_shortcuts
 List of short names for commonly-used variant selectors.  Normally this
@@ -3869,7 +3869,7 @@ a list that can be spliced into [`select_variant`](#select_variant).
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1497
+From //build/config/BUILDCONFIG.gn:1501
 
 ### size_checker_input
 The input to the size checker.
@@ -4211,7 +4211,7 @@ From //build/config/sanitizers/sanitizer_default_options.gni:47
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1481
+From //build/config/BUILDCONFIG.gn:1485
 
 ### universe_package_labels
 If you add package labels to this variable, the packages will be included
