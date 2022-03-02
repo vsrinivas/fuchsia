@@ -17,13 +17,13 @@
 
 using fidl_testing::MessageChecker;
 
-TEST(OutgoingMessage, CreateWithConstructorArgs) {
+TEST(OutgoingMessage, CreateWithInternalIovecConstructorArgs) {
   zx_channel_iovec_t iovecs[1];
   zx_handle_t handles[2];
   fidl_channel_handle_metadata_t handle_metadata[2];
   uint8_t backing_buffer[1];
-  fidl::OutgoingMessage msg =
-      fidl::OutgoingMessage::CreateInternal(fidl::OutgoingMessage::ConstructorArgs{
+  fidl::OutgoingMessage msg = fidl::OutgoingMessage::Create_InternalMayBreak(
+      fidl::OutgoingMessage::InternalIovecConstructorArgs{
           .transport_vtable = &fidl::internal::ChannelTransport::VTable,
           .iovecs = iovecs,
           .iovec_capacity = std::size(iovecs),
@@ -40,6 +40,34 @@ TEST(OutgoingMessage, CreateWithConstructorArgs) {
   EXPECT_EQ(handles, msg.handles());
   EXPECT_EQ(FIDL_TRANSPORT_TYPE_CHANNEL, msg.transport_type());
   EXPECT_EQ(handle_metadata, msg.handle_metadata<fidl::internal::ChannelTransport>());
+}
+
+TEST(OutgoingMessage, CreateWithInternalByteBackedConstructorArgs) {
+  uint8_t bytes[3] = {1, 2, 3};
+  fidl_handle_t handles[2];
+  fidl_channel_handle_metadata_t handle_metadata[2];
+  fidl::OutgoingMessage msg = fidl::OutgoingMessage::Create_InternalMayBreak(
+      fidl::OutgoingMessage::InternalByteBackedConstructorArgs{
+          .transport_vtable = &fidl::internal::ChannelTransport::VTable,
+          .bytes = bytes,
+          .num_bytes = std::size(bytes),
+          .handles = handles,
+          .handle_metadata = reinterpret_cast<fidl_handle_metadata_t*>(handle_metadata),
+          .num_handles = std::size(handles),
+      });
+  // Capacities are stored but not exposed. Actual sizes are zero initialized.
+  EXPECT_EQ(FIDL_TRANSPORT_TYPE_CHANNEL, msg.transport_type());
+  EXPECT_EQ(1u, msg.iovec_actual());
+  EXPECT_NE(nullptr, msg.iovecs());
+  EXPECT_EQ(2u, msg.handle_actual());
+  EXPECT_EQ(handles, msg.handles());
+  EXPECT_EQ(handle_metadata, msg.handle_metadata<fidl::internal::ChannelTransport>());
+
+  auto copied_bytes = msg.CopyBytes();
+  EXPECT_EQ(3u, copied_bytes.size());
+  EXPECT_EQ(1u, copied_bytes.data()[0]);
+  EXPECT_EQ(2u, copied_bytes.data()[1]);
+  EXPECT_EQ(3u, copied_bytes.data()[2]);
 }
 
 TEST(OutgoingMessage, ConstructFromCIovecMessage) {
@@ -415,8 +443,8 @@ TEST(OutgoingMessage, GoodEncodeNoBody) {
   //   zx_handle_t handles[1];
   //   fidl_channel_handle_metadata_t handle_metadata[1];
   uint8_t backing_buffer[16];
-  fidl::OutgoingMessage msg =
-      fidl::OutgoingMessage::CreateInternal(fidl::OutgoingMessage::ConstructorArgs{
+  fidl::OutgoingMessage msg = fidl::OutgoingMessage::Create_InternalMayBreak(
+      fidl::OutgoingMessage::InternalIovecConstructorArgs{
           .transport_vtable = &fidl::internal::ChannelTransport::VTable,
           .iovecs = iovecs,
           .iovec_capacity = std::size(iovecs),
@@ -440,8 +468,8 @@ TEST(OutgoingMessage, GoodEncodeNoBody) {
 TEST(OutgoingMessage, BadEncodeNoBodyBufferTooLarge) {
   zx_channel_iovec_t iovecs[1];
   uint8_t backing_buffer[24];  // Too large for body-less message
-  fidl::OutgoingMessage msg =
-      fidl::OutgoingMessage::CreateInternal(fidl::OutgoingMessage::ConstructorArgs{
+  fidl::OutgoingMessage msg = fidl::OutgoingMessage::Create_InternalMayBreak(
+      fidl::OutgoingMessage::InternalIovecConstructorArgs{
           .transport_vtable = &fidl::internal::ChannelTransport::VTable,
           .iovecs = iovecs,
           .iovec_capacity = std::size(iovecs),

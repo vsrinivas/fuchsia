@@ -64,8 +64,7 @@ void fidl::internal::NaturalClientImpl<
           ::test_bindingsdenylist::
               kOnlyLibfuzzerAndDeps_LibfuzzerNeedsNonemptyProtocol_Ordinal};
   return messenger().TwoWay(
-      nullptr,
-      ::fidl::internal::EncodeTransactionalMessageWithoutValidating(_encoder),
+      ::fidl::internal::EncodeTransactionalMessage(_encoder),
       ::fidl::internal::MakeResponseContext<
           ::fidl::Response<::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
                                LibfuzzerNeedsNonemptyProtocol>,
@@ -86,8 +85,7 @@ void fidl::internal::NaturalClientImpl<
           ::test_bindingsdenylist::
               kOnlyLibfuzzerAndDeps_LibfuzzerNeedsNonemptyProtocol_Ordinal};
   return messenger().TwoWay(
-      nullptr,
-      ::fidl::internal::EncodeTransactionalMessageWithoutValidating(_encoder),
+      ::fidl::internal::EncodeTransactionalMessage(_encoder),
       ::fidl::internal::MakeResponseContext<
           ::fidl::Response<::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
                                LibfuzzerNeedsNonemptyProtocol>,
@@ -125,9 +123,7 @@ void fidl::internal::NaturalCompleterBase<
       _encoder{
           ::test_bindingsdenylist::
               kOnlyLibfuzzerAndDeps_LibfuzzerNeedsNonemptyProtocol_Ordinal};
-  _messenger.SendReply(
-      nullptr,
-      ::fidl::internal::EncodeTransactionalMessageWithoutValidating(_encoder));
+  _messenger.SendReply(::fidl::internal::EncodeTransactionalMessage(_encoder));
 }
 
 #ifdef __Fuchsia__
@@ -248,8 +244,7 @@ namespace test_bindingsdenylist {
       _encoder{::test_bindingsdenylist::
                    kImportsSameNameContext_Unattributed_Ordinal};
   ::fidl::Result result = messenger().OneWay(
-      nullptr,
-      ::fidl::internal::EncodeTransactionalMessageWithoutValidating(_encoder));
+      ::fidl::internal::EncodeTransactionalMessage(_encoder));
   return ::fidl::internal::ToFitxResult(result);
 }
 
@@ -261,8 +256,7 @@ namespace test_bindingsdenylist {
           ::test_bindingsdenylist::
               kImportsSameNameContext_AlwaysAppearsInImportingLibrary_Ordinal};
   ::fidl::Result result = messenger().OneWay(
-      nullptr,
-      ::fidl::internal::EncodeTransactionalMessageWithoutValidating(_encoder));
+      ::fidl::internal::EncodeTransactionalMessage(_encoder));
   return ::fidl::internal::ToFitxResult(result);
 }
 namespace test_bindingsdenylist {
@@ -389,10 +383,8 @@ void fidl::internal::
   ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
       _encoder{::test_bindingsdenylist::kDenyEachBinding_OnlyDenyDart_Ordinal};
   return messenger().TwoWay(
-      &::test_bindingsdenylist::
-          test_bindingsdenylist_DenyEachBindingOnlyDenyDartRequestTable,
-      ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-          _encoder, std::move(payload)),
+      ::fidl::internal::EncodeTransactionalMessage(_encoder,
+                                                   std::move(payload)),
       ::fidl::internal::MakeResponseContext<
           ::fidl::Response<
               ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>,
@@ -410,10 +402,8 @@ void fidl::internal::
   ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
       _encoder{::test_bindingsdenylist::kDenyEachBinding_OnlyDenyDart_Ordinal};
   return messenger().TwoWay(
-      &::test_bindingsdenylist::
-          test_bindingsdenylist_DenyEachBindingOnlyDenyDartRequestTable,
-      ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-          _encoder, std::move(payload)),
+      ::fidl::internal::EncodeTransactionalMessage(_encoder,
+                                                   std::move(payload)),
       ::fidl::internal::MakeResponseContext<
           ::fidl::Response<
               ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>,
@@ -432,10 +422,8 @@ void fidl::internal::
   ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
       _encoder{::test_bindingsdenylist::kDenyEachBinding_OnlyDenyGo_Ordinal};
   return messenger().TwoWay(
-      &::test_bindingsdenylist::
-          test_bindingsdenylist_DenyEachBindingOnlyDenyGoRequestTable,
-      ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-          _encoder, std::move(payload)),
+      ::fidl::internal::EncodeTransactionalMessage(_encoder,
+                                                   std::move(payload)),
       ::fidl::internal::MakeResponseContext<
           ::fidl::Response<
               ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>,
@@ -453,10 +441,8 @@ void fidl::internal::
   ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
       _encoder{::test_bindingsdenylist::kDenyEachBinding_OnlyDenyGo_Ordinal};
   return messenger().TwoWay(
-      &::test_bindingsdenylist::
-          test_bindingsdenylist_DenyEachBindingOnlyDenyGoRequestTable,
-      ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-          _encoder, std::move(payload)),
+      ::fidl::internal::EncodeTransactionalMessage(_encoder,
+                                                   std::move(payload)),
       ::fidl::internal::MakeResponseContext<
           ::fidl::Response<
               ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>,
@@ -478,10 +464,8 @@ void fidl::internal::NaturalClientImpl<
       _encoder{
           ::test_bindingsdenylist::kDenyEachBinding_OnlyDenyLibfuzzer_Ordinal};
   return messenger().TwoWay(
-      &::test_bindingsdenylist::
-          test_bindingsdenylist_DenyEachBindingOnlyDenyLibfuzzerRequestTable,
-      ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-          _encoder, std::move(payload)),
+      ::fidl::internal::EncodeTransactionalMessage(_encoder,
+                                                   std::move(payload)),
       ::fidl::internal::MakeResponseContext<
           ::fidl::Response<
               ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>,
@@ -502,10 +486,8 @@ void fidl::internal::NaturalClientImpl<
       _encoder{
           ::test_bindingsdenylist::kDenyEachBinding_OnlyDenyLibfuzzer_Ordinal};
   return messenger().TwoWay(
-      &::test_bindingsdenylist::
-          test_bindingsdenylist_DenyEachBindingOnlyDenyLibfuzzerRequestTable,
-      ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-          _encoder, std::move(payload)),
+      ::fidl::internal::EncodeTransactionalMessage(_encoder,
+                                                   std::move(payload)),
       ::fidl::internal::MakeResponseContext<
           ::fidl::Response<
               ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>,
@@ -524,10 +506,8 @@ void fidl::internal::
   ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
       _encoder{::test_bindingsdenylist::kDenyEachBinding_OnlyDenyRust_Ordinal};
   return messenger().TwoWay(
-      &::test_bindingsdenylist::
-          test_bindingsdenylist_DenyEachBindingOnlyDenyRustRequestTable,
-      ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-          _encoder, std::move(payload)),
+      ::fidl::internal::EncodeTransactionalMessage(_encoder,
+                                                   std::move(payload)),
       ::fidl::internal::MakeResponseContext<
           ::fidl::Response<
               ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>,
@@ -545,10 +525,8 @@ void fidl::internal::
   ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
       _encoder{::test_bindingsdenylist::kDenyEachBinding_OnlyDenyRust_Ordinal};
   return messenger().TwoWay(
-      &::test_bindingsdenylist::
-          test_bindingsdenylist_DenyEachBindingOnlyDenyRustRequestTable,
-      ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-          _encoder, std::move(payload)),
+      ::fidl::internal::EncodeTransactionalMessage(_encoder,
+                                                   std::move(payload)),
       ::fidl::internal::MakeResponseContext<
           ::fidl::Response<
               ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>,
@@ -570,10 +548,8 @@ void fidl::internal::NaturalClientImpl<
       _encoder{
           ::test_bindingsdenylist::kDenyEachBinding_OnlyDenySyzkaller_Ordinal};
   return messenger().TwoWay(
-      &::test_bindingsdenylist::
-          test_bindingsdenylist_DenyEachBindingOnlyDenySyzkallerRequestTable,
-      ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-          _encoder, std::move(payload)),
+      ::fidl::internal::EncodeTransactionalMessage(_encoder,
+                                                   std::move(payload)),
       ::fidl::internal::MakeResponseContext<
           ::fidl::Response<
               ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>,
@@ -594,10 +570,8 @@ void fidl::internal::NaturalClientImpl<
       _encoder{
           ::test_bindingsdenylist::kDenyEachBinding_OnlyDenySyzkaller_Ordinal};
   return messenger().TwoWay(
-      &::test_bindingsdenylist::
-          test_bindingsdenylist_DenyEachBindingOnlyDenySyzkallerRequestTable,
-      ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-          _encoder, std::move(payload)),
+      ::fidl::internal::EncodeTransactionalMessage(_encoder,
+                                                   std::move(payload)),
       ::fidl::internal::MakeResponseContext<
           ::fidl::Response<
               ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>,
@@ -632,11 +606,8 @@ void fidl::internal::NaturalCompleterBase<
   ::fidl::internal::NaturalServerMessenger _messenger{this};
   ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
       _encoder{::test_bindingsdenylist::kDenyEachBinding_OnlyDenyDart_Ordinal};
-  _messenger.SendReply(
-      &::test_bindingsdenylist::
-          test_bindingsdenylist_DenyEachBindingOnlyDenyDartTopResponseTable,
-      ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-          _encoder, std::move(payload)));
+  _messenger.SendReply(::fidl::internal::EncodeTransactionalMessage(
+      _encoder, std::move(payload)));
 }
 
 void fidl::internal::NaturalCompleterBase<
@@ -646,11 +617,8 @@ void fidl::internal::NaturalCompleterBase<
   ::fidl::internal::NaturalServerMessenger _messenger{this};
   ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
       _encoder{::test_bindingsdenylist::kDenyEachBinding_OnlyDenyGo_Ordinal};
-  _messenger.SendReply(
-      &::test_bindingsdenylist::
-          test_bindingsdenylist_DenyEachBindingOnlyDenyGoTopResponseTable,
-      ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-          _encoder, std::move(payload)));
+  _messenger.SendReply(::fidl::internal::EncodeTransactionalMessage(
+      _encoder, std::move(payload)));
 }
 
 void fidl::internal::NaturalCompleterBase<
@@ -661,11 +629,8 @@ void fidl::internal::NaturalCompleterBase<
   ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
       _encoder{
           ::test_bindingsdenylist::kDenyEachBinding_OnlyDenyLibfuzzer_Ordinal};
-  _messenger.SendReply(
-      &::test_bindingsdenylist::
-          test_bindingsdenylist_DenyEachBindingOnlyDenyLibfuzzerTopResponseTable,
-      ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-          _encoder, std::move(payload)));
+  _messenger.SendReply(::fidl::internal::EncodeTransactionalMessage(
+      _encoder, std::move(payload)));
 }
 
 void fidl::internal::NaturalCompleterBase<
@@ -675,11 +640,8 @@ void fidl::internal::NaturalCompleterBase<
   ::fidl::internal::NaturalServerMessenger _messenger{this};
   ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
       _encoder{::test_bindingsdenylist::kDenyEachBinding_OnlyDenyRust_Ordinal};
-  _messenger.SendReply(
-      &::test_bindingsdenylist::
-          test_bindingsdenylist_DenyEachBindingOnlyDenyRustTopResponseTable,
-      ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-          _encoder, std::move(payload)));
+  _messenger.SendReply(::fidl::internal::EncodeTransactionalMessage(
+      _encoder, std::move(payload)));
 }
 
 void fidl::internal::NaturalCompleterBase<
@@ -690,11 +652,8 @@ void fidl::internal::NaturalCompleterBase<
   ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
       _encoder{
           ::test_bindingsdenylist::kDenyEachBinding_OnlyDenySyzkaller_Ordinal};
-  _messenger.SendReply(
-      &::test_bindingsdenylist::
-          test_bindingsdenylist_DenyEachBindingOnlyDenySyzkallerTopResponseTable,
-      ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-          _encoder, std::move(payload)));
+  _messenger.SendReply(::fidl::internal::EncodeTransactionalMessage(
+      _encoder, std::move(payload)));
 }
 
 #ifdef __Fuchsia__

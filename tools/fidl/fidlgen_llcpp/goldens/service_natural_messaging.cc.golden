@@ -13,8 +13,7 @@ namespace test_service {
   ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
       _encoder{::test_service::kSecondProtocol_MethodOnSecond_Ordinal};
   ::fidl::Result result = messenger().OneWay(
-      nullptr,
-      ::fidl::internal::EncodeTransactionalMessageWithoutValidating(_encoder));
+      ::fidl::internal::EncodeTransactionalMessage(_encoder));
   return ::fidl::internal::ToFitxResult(result);
 }
 namespace test_service {
@@ -96,8 +95,7 @@ namespace test_service {
   ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
       _encoder{::test_service::kFirstProtocol_MethodOnFirst_Ordinal};
   ::fidl::Result result = messenger().OneWay(
-      nullptr,
-      ::fidl::internal::EncodeTransactionalMessageWithoutValidating(_encoder));
+      ::fidl::internal::EncodeTransactionalMessage(_encoder));
   return ::fidl::internal::ToFitxResult(result);
 }
 namespace test_service {

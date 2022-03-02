@@ -188,36 +188,19 @@ class {{ .NaturalEventSender }}
 ::fitx::result<::fidl::Error> {{ $.NaturalWeakEventSender.NoLeading }}::{{ .Name }}(
     {{- if .HasResponsePayload }}{{ .ResponsePayload }} payload{{ end }}) {
   ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport> _encoder{ {{ .OrdinalName }} };
-  ::fidl::Result result = ::fidl::internal::ConvertFromHLCPPOutgoingMessageThen(
-      {{- if .HasResponsePayload -}}
-        &{{ .Response.WireCodingTable }}
-      {{- else -}}
-        nullptr
-      {{- end -}},
-      ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-          _encoder {{- if .HasResponsePayload }}, std::move(payload){{ end }}),
-      [this] (fidl::OutgoingMessage outgoing) {
-        return _inner().SendEvent(outgoing);
-      });
+  auto encoded_message = ::fidl::internal::EncodeTransactionalMessage(
+    _encoder {{- if .HasResponsePayload }}, std::move(payload){{ end }});
+  ::fidl::Result result = _inner().SendEvent(encoded_message);
   return ::fidl::internal::ToFitxResult(result);
 }
 
 ::fitx::result<::fidl::Error> {{ $.NaturalEventSender.NoLeading }}::{{ .Name }}(
     {{- if .HasResponsePayload }}{{ .ResponsePayload }} payload{{ end }}) {
   ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport> _encoder{ {{ .OrdinalName }} };
-  ::fidl::Result result = ::fidl::internal::ConvertFromHLCPPOutgoingMessageThen(
-      {{- if .HasResponsePayload -}}
-        &{{ .Response.WireCodingTable }}
-      {{- else -}}
-        nullptr
-      {{- end -}},
-      ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-          _encoder {{- if .HasResponsePayload }}, std::move(payload){{ end }}),
-      [this] (fidl::OutgoingMessage outgoing) {
-        outgoing.Write(_transport());
-        return ::fidl::Result{outgoing};
-      });
-  return ::fidl::internal::ToFitxResult(result);
+  auto encoded_message = ::fidl::internal::EncodeTransactionalMessage(
+    _encoder {{- if .HasResponsePayload }}, std::move(payload){{ end }});
+  encoded_message.Write(_transport());
+  return ::fidl::internal::ToFitxResult(::fidl::Result{encoded_message});
 }
 
   {{ end }}

@@ -173,13 +173,8 @@ void {{ $.NaturalClientImpl.NoLeading }}::{{ .Name }}(
     {{- template "Method:ClientAsyncRequestArgumentsWithResult:Helper" . }}) const {
   ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport> _encoder{ {{ .OrdinalName }} };
   return messenger().TwoWay(
-      {{- if .HasRequestPayload -}}
-        &{{ .Request.WireCodingTable }}
-      {{- else -}}
-        nullptr
-      {{- end -}},
-      ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-          _encoder {{- if .HasRequestPayload }}, std::move(payload){{ end }}),
+      ::fidl::internal::EncodeTransactionalMessage(
+        _encoder {{- if .HasRequestPayload }}, std::move(payload){{ end }}),
       ::fidl::internal::MakeResponseContext<
           {{ .NaturalResponse }}, {{ .CallbackType }}
       >({{ .OrdinalName }}, std::move(_callback))
@@ -191,13 +186,8 @@ void {{ $.NaturalClientImpl.NoLeading }}::{{ .Name }}(
     {{- template "Method:ClientAsyncRequestArgumentsWithResponse:Helper" . }}) const {
   ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport> _encoder{ {{ .OrdinalName }} };
   return messenger().TwoWay(
-      {{- if .HasRequestPayload -}}
-        &{{ .Request.WireCodingTable }}
-      {{- else -}}
-        nullptr
-      {{- end -}},
-      ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-          _encoder {{- if .HasRequestPayload }}, std::move(payload){{ end }}),
+      ::fidl::internal::EncodeTransactionalMessage(
+        _encoder {{- if .HasRequestPayload }}, std::move(payload){{ end }}),
       ::fidl::internal::MakeResponseContext<
           {{ .NaturalResponse }}, {{ .ClientResponseCallbackType }}
       >({{ .OrdinalName }}, std::move(_callback))
@@ -212,14 +202,8 @@ void {{ $.NaturalClientImpl.NoLeading }}::{{ .Name }}(
 {{ $.NaturalClientImpl.NoLeading }}::{{ .Name }}(
     {{- template "Method:ClientRequestArgumentsOneWay:Helper" . }}) const {
   ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport> _encoder{ {{ .OrdinalName }} };
-  ::fidl::Result result = messenger().OneWay(
-      {{- if .HasRequestPayload -}}
-        &{{ .Request.WireCodingTable }}
-      {{- else -}}
-        nullptr
-      {{- end -}},
-      ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-          _encoder {{- if .HasRequestPayload }}, std::move(payload){{ end }}));
+  ::fidl::Result result = messenger().OneWay(::fidl::internal::EncodeTransactionalMessage(
+    _encoder {{- if .HasRequestPayload }}, std::move(payload){{ end }}));
   return ::fidl::internal::ToFitxResult(result);
 }
 {{ end }}

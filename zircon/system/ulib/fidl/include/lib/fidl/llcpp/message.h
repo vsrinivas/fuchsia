@@ -87,7 +87,7 @@ class OutgoingMessage : public ::fidl::Result {
   // is non-transactional instead of transactional.
   static OutgoingMessage FromEncodedCValue(const fidl_outgoing_msg_t* c_msg);
 
-  struct ConstructorArgs {
+  struct InternalIovecConstructorArgs {
     const internal::TransportVTable* transport_vtable;
     zx_channel_iovec_t* iovecs;
     uint32_t iovec_capacity;
@@ -100,7 +100,27 @@ class OutgoingMessage : public ::fidl::Result {
   // Creates an object which can manage a FIDL message.
   // |args.iovecs|, |args.handles| and |args.backing_buffer| contain undefined data that will be
   // populated during |Encode|.
-  static OutgoingMessage CreateInternal(ConstructorArgs args) { return OutgoingMessage(args); }
+  // Internal-only function that should not be called outside of the FIDL library.
+  static OutgoingMessage Create_InternalMayBreak(InternalIovecConstructorArgs args) {
+    return OutgoingMessage(args);
+  }
+
+  struct InternalByteBackedConstructorArgs {
+    const internal::TransportVTable* transport_vtable;
+    uint8_t* bytes;
+    uint32_t num_bytes;
+    zx_handle_t* handles;
+    fidl_handle_metadata_t* handle_metadata;
+    uint32_t num_handles;
+    bool is_transactional;
+  };
+
+  // Creates an object which can manage a FIDL message or body.
+  // |args.bytes| and |args.handles| should already contain encoded data.
+  // Internal-only function that should not be called outside of the FIDL library.
+  static OutgoingMessage Create_InternalMayBreak(InternalByteBackedConstructorArgs args) {
+    return OutgoingMessage(args);
+  }
 
   // Creates an empty outgoing message representing an error.
   //
@@ -187,9 +207,6 @@ class OutgoingMessage : public ::fidl::Result {
     EncodeImpl(wire_format_version, fidl::TypeTraits<FidlType>::kType, data);
   }
 
-  void Validate__InternalMayBreak(fidl::internal::WireFormatVersion wire_format_version,
-                                  const fidl_type_t* type);
-
   // Various helper functions for writing to other channel-like types.
 
   void Write(internal::AnyUnownedTransport transport, WriteOptions options = {});
@@ -242,7 +259,8 @@ class OutgoingMessage : public ::fidl::Result {
  private:
   friend ::fidl_testing::MessageChecker;
 
-  explicit OutgoingMessage(ConstructorArgs args);
+  explicit OutgoingMessage(InternalIovecConstructorArgs args);
+  explicit OutgoingMessage(InternalByteBackedConstructorArgs args);
   explicit OutgoingMessage(const fidl_outgoing_msg_t* msg, bool is_transactional);
 
   void DecodeImplForCall(const internal::CodingConfig& coding_config,
@@ -673,17 +691,18 @@ class UnownedEncodedMessage final {
   UnownedEncodedMessage(fidl::internal::WireFormatVersion wire_format_version,
                         uint32_t iovec_capacity, uint8_t* backing_buffer,
                         uint32_t backing_buffer_size, FidlType* response)
-      : message_(::fidl::OutgoingMessage::CreateInternal(::fidl::OutgoingMessage::ConstructorArgs{
-            .transport_vtable = &Transport::VTable,
-            .iovecs = iovecs_,
-            .iovec_capacity = iovec_capacity,
-            .handles = handle_storage_.data(),
-            .handle_metadata =
-                reinterpret_cast<fidl_handle_metadata_t*>(handle_metadata_storage_.data()),
-            .handle_capacity = kNumHandles,
-            .backing_buffer = backing_buffer,
-            .backing_buffer_capacity = backing_buffer_size,
-        })),
+      : message_(::fidl::OutgoingMessage::Create_InternalMayBreak(
+            ::fidl::OutgoingMessage::InternalIovecConstructorArgs{
+                .transport_vtable = &Transport::VTable,
+                .iovecs = iovecs_,
+                .iovec_capacity = iovec_capacity,
+                .handles = handle_storage_.data(),
+                .handle_metadata =
+                    reinterpret_cast<fidl_handle_metadata_t*>(handle_metadata_storage_.data()),
+                .handle_capacity = kNumHandles,
+                .backing_buffer = backing_buffer,
+                .backing_buffer_capacity = backing_buffer_size,
+            })),
         wire_format_version_(wire_format_version) {
     ZX_ASSERT(iovec_capacity <= std::size(iovecs_));
     message_.Encode<FidlType>(wire_format_version, response);

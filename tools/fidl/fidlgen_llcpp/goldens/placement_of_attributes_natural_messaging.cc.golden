@@ -14,10 +14,8 @@ namespace test_placementofattributes {
         const {
   ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
       _encoder{::test_placementofattributes::kExampleProtocol_Method_Ordinal};
-  ::fidl::Result result = messenger().OneWay(
-      &::test_placementofattributes::
-          test_placementofattributes_ExampleProtocolMethodRequestTable,
-      ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+  ::fidl::Result result =
+      messenger().OneWay(::fidl::internal::EncodeTransactionalMessage(
           _encoder, std::move(payload)));
   return ::fidl::internal::ToFitxResult(result);
 }

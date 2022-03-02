@@ -15,8 +15,7 @@ namespace test_doccomments {
   ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
       _encoder{::test_doccomments::kInterface_Method_Ordinal};
   ::fidl::Result result = messenger().OneWay(
-      nullptr,
-      ::fidl::internal::EncodeTransactionalMessageWithoutValidating(_encoder));
+      ::fidl::internal::EncodeTransactionalMessage(_encoder));
   return ::fidl::internal::ToFitxResult(result);
 }
 namespace test_doccomments {
@@ -56,12 +55,8 @@ std::optional<::fidl::UnbindInfo> fidl::internal::
     ::test_doccomments::Interface>::OnEvent() {
   ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
       _encoder{::test_doccomments::kInterface_OnEvent_Ordinal};
-  ::fidl::Result result = ::fidl::internal::ConvertFromHLCPPOutgoingMessageThen(
-      nullptr,
-      ::fidl::internal::EncodeTransactionalMessageWithoutValidating(_encoder),
-      [this](fidl::OutgoingMessage outgoing) {
-        return _inner().SendEvent(outgoing);
-      });
+  auto encoded_message = ::fidl::internal::EncodeTransactionalMessage(_encoder);
+  ::fidl::Result result = _inner().SendEvent(encoded_message);
   return ::fidl::internal::ToFitxResult(result);
 }
 
@@ -69,14 +64,9 @@ std::optional<::fidl::UnbindInfo> fidl::internal::
 fidl::internal::NaturalEventSender<::test_doccomments::Interface>::OnEvent() {
   ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
       _encoder{::test_doccomments::kInterface_OnEvent_Ordinal};
-  ::fidl::Result result = ::fidl::internal::ConvertFromHLCPPOutgoingMessageThen(
-      nullptr,
-      ::fidl::internal::EncodeTransactionalMessageWithoutValidating(_encoder),
-      [this](fidl::OutgoingMessage outgoing) {
-        outgoing.Write(_transport());
-        return ::fidl::Result{outgoing};
-      });
-  return ::fidl::internal::ToFitxResult(result);
+  auto encoded_message = ::fidl::internal::EncodeTransactionalMessage(_encoder);
+  encoded_message.Write(_transport());
+  return ::fidl::internal::ToFitxResult(::fidl::Result{encoded_message});
 }
 
 #endif  // __Fuchsia__

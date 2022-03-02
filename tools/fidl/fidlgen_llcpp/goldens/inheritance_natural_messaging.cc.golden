@@ -14,9 +14,8 @@ void fidl::internal::NaturalClientImpl<::test_inheritance::Super>::Foo(
   ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
       _encoder{::test_inheritance::ksuper_foo_Ordinal};
   return messenger().TwoWay(
-      &::test_inheritance::test_inheritance_SuperFooRequestTable,
-      ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-          _encoder, std::move(payload)),
+      ::fidl::internal::EncodeTransactionalMessage(_encoder,
+                                                   std::move(payload)),
       ::fidl::internal::MakeResponseContext<
           ::fidl::Response<::test_inheritance::Super::Foo>,
           ::fidl::ClientCallback<::test_inheritance::Super::Foo>>(
@@ -29,9 +28,8 @@ void fidl::internal::NaturalClientImpl<::test_inheritance::Super>::Foo(
   ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
       _encoder{::test_inheritance::ksuper_foo_Ordinal};
   return messenger().TwoWay(
-      &::test_inheritance::test_inheritance_SuperFooRequestTable,
-      ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-          _encoder, std::move(payload)),
+      ::fidl::internal::EncodeTransactionalMessage(_encoder,
+                                                   std::move(payload)),
       ::fidl::internal::MakeResponseContext<
           ::fidl::Response<::test_inheritance::Super::Foo>,
           ::fidl::ClientResponseCallback<::test_inheritance::Super::Foo>>(
@@ -60,10 +58,8 @@ void fidl::internal::NaturalCompleterBase<::test_inheritance::Super::Foo>::
   ::fidl::internal::NaturalServerMessenger _messenger{this};
   ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
       _encoder{::test_inheritance::ksuper_foo_Ordinal};
-  _messenger.SendReply(
-      &::test_inheritance::test_inheritance_SuperFooTopResponseTable,
-      ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-          _encoder, std::move(payload)));
+  _messenger.SendReply(::fidl::internal::EncodeTransactionalMessage(
+      _encoder, std::move(payload)));
 }
 
 #ifdef __Fuchsia__
@@ -123,9 +119,8 @@ void fidl::internal::NaturalClientImpl<::test_inheritance::Sub>::Foo(
   ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
       _encoder{::test_inheritance::ksub_foo_Ordinal};
   return messenger().TwoWay(
-      &::test_inheritance::test_inheritance_SuperFooRequestTable,
-      ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-          _encoder, std::move(payload)),
+      ::fidl::internal::EncodeTransactionalMessage(_encoder,
+                                                   std::move(payload)),
       ::fidl::internal::MakeResponseContext<
           ::fidl::Response<::test_inheritance::Sub::Foo>,
           ::fidl::ClientCallback<::test_inheritance::Sub::Foo>>(
@@ -138,9 +133,8 @@ void fidl::internal::NaturalClientImpl<::test_inheritance::Sub>::Foo(
   ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
       _encoder{::test_inheritance::ksub_foo_Ordinal};
   return messenger().TwoWay(
-      &::test_inheritance::test_inheritance_SuperFooRequestTable,
-      ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-          _encoder, std::move(payload)),
+      ::fidl::internal::EncodeTransactionalMessage(_encoder,
+                                                   std::move(payload)),
       ::fidl::internal::MakeResponseContext<
           ::fidl::Response<::test_inheritance::Sub::Foo>,
           ::fidl::ClientResponseCallback<::test_inheritance::Sub::Foo>>(
@@ -169,10 +163,8 @@ void fidl::internal::NaturalCompleterBase<::test_inheritance::Sub::Foo>::Reply(
   ::fidl::internal::NaturalServerMessenger _messenger{this};
   ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
       _encoder{::test_inheritance::ksub_foo_Ordinal};
-  _messenger.SendReply(
-      &::test_inheritance::test_inheritance_SuperFooTopResponseTable,
-      ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-          _encoder, std::move(payload)));
+  _messenger.SendReply(::fidl::internal::EncodeTransactionalMessage(
+      _encoder, std::move(payload)));
 }
 
 #ifdef __Fuchsia__

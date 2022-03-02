@@ -86,7 +86,7 @@ OutgoingMessage::OutgoingMessage(const ::fidl::Result& failure)
   ZX_DEBUG_ASSERT(failure.status() != ZX_OK);
 }
 
-OutgoingMessage::OutgoingMessage(ConstructorArgs args)
+OutgoingMessage::OutgoingMessage(InternalIovecConstructorArgs args)
     : fidl::Result(fidl::Result::Ok()),
       transport_vtable_(args.transport_vtable),
       message_({
@@ -101,6 +101,28 @@ OutgoingMessage::OutgoingMessage(ConstructorArgs args)
       handle_capacity_(args.handle_capacity),
       backing_buffer_capacity_(args.backing_buffer_capacity),
       backing_buffer_(args.backing_buffer) {}
+
+OutgoingMessage::OutgoingMessage(InternalByteBackedConstructorArgs args)
+    : fidl::Result(fidl::Result::Ok()),
+      transport_vtable_(args.transport_vtable),
+      message_({
+          .type = FIDL_OUTGOING_MSG_TYPE_IOVEC,
+          .iovec =
+              {
+                  .iovecs = &converted_byte_message_iovec_,
+                  .num_iovecs = 1,
+                  .handles = args.handles,
+                  .handle_metadata = args.handle_metadata,
+                  .num_handles = args.num_handles,
+              },
+      }),
+      iovec_capacity_(1),
+      handle_capacity_(args.num_handles),
+      backing_buffer_capacity_(args.num_bytes),
+      backing_buffer_(args.bytes),
+      converted_byte_message_iovec_(
+          {.buffer = backing_buffer_, .capacity = backing_buffer_capacity_, .reserved = 0}),
+      is_transactional_(args.is_transactional) {}
 
 OutgoingMessage::~OutgoingMessage() {
 #ifdef __Fuchsia__
@@ -202,29 +224,6 @@ void OutgoingMessage::EncodeImpl(fidl::internal::WireFormatVersion wire_format_v
   message_.type = FIDL_OUTGOING_MSG_TYPE_IOVEC;
   message_.iovec.iovecs = &converted_byte_message_iovec_;
   message_.iovec.num_iovecs = 1;
-}
-
-void OutgoingMessage::Validate__InternalMayBreak(
-    fidl::internal::WireFormatVersion wire_format_version, const fidl_type_t* type) {
-  zx_status_t status;
-  auto copied_bytes = CopyBytes();
-  const char* error_msg_out;
-  switch (wire_format_version) {
-    case internal::WireFormatVersion::kV1:
-      status = internal__fidl_validate__v1__may_break(type, copied_bytes.data(),
-                                                      static_cast<uint32_t>(copied_bytes.size()),
-                                                      handle_actual(), &error_msg_out);
-      break;
-    case internal::WireFormatVersion::kV2:
-      status = internal__fidl_validate__v2__may_break(type, copied_bytes.data(),
-                                                      static_cast<uint32_t>(copied_bytes.size()),
-                                                      handle_actual(), &error_msg_out);
-      break;
-    default:
-      __builtin_unreachable();
-  }
-  if (status != ZX_OK)
-    SetResult(Result::EncodeError(status, error_msg_out));
 }
 
 void OutgoingMessage::Write(internal::AnyUnownedTransport transport, WriteOptions options) {

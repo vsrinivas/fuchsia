@@ -182,13 +182,7 @@ void {{ .NaturalCompleterBase.NoLeading }}::Reply(
     {{- template "Method:NaturalReplySignature:Helper" . }}) {
   ::fidl::internal::NaturalServerMessenger _messenger{this};
   ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport> _encoder{ {{ .OrdinalName }} };
-  _messenger.SendReply(
-      {{- if .HasResponsePayload -}}
-        &{{ .Response.WireCodingTable }}
-      {{- else -}}
-        nullptr
-      {{- end -}},
-      ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-          _encoder {{- if .HasResponsePayload }}, std::move(payload){{ end }}));
+  _messenger.SendReply(::fidl::internal::EncodeTransactionalMessage(
+    _encoder {{- if .HasResponsePayload }}, std::move(payload){{ end }}));
 }
 {{- end }}

@@ -5,6 +5,7 @@
 #ifndef SRC_LIB_FIDL_CPP_INCLUDE_LIB_FIDL_CPP_NATURAL_ENCODER_H_
 #define SRC_LIB_FIDL_CPP_INCLUDE_LIB_FIDL_CPP_NATURAL_ENCODER_H_
 
+#include <lib/fidl/coding.h>
 #include <lib/fidl/cpp/message.h>
 #include <lib/fidl/internal.h>
 #include <lib/fidl/llcpp/message.h>
@@ -58,6 +59,23 @@ class NaturalEncoder {
   internal::WireFormatVersion wire_format() { return wire_format_; }
 
  protected:
+  zx_status_t Validate(const fidl_type_t* type, uint32_t offset, const char** out_err_msg) {
+    switch (wire_format_) {
+      case internal::WireFormatVersion::kV1:
+        return internal__fidl_validate__v1__may_break(type, bytes_.data() + offset,
+                                                      static_cast<uint32_t>(bytes_.size() - offset),
+                                                      handle_actual_, out_err_msg);
+        break;
+      case internal::WireFormatVersion::kV2:
+        return internal__fidl_validate__v2__may_break(type, bytes_.data() + offset,
+                                                      static_cast<uint32_t>(bytes_.size() - offset),
+                                                      handle_actual_, out_err_msg);
+        break;
+      default:
+        __builtin_unreachable();
+    }
+  }
+
   const CodingConfig* coding_config_;
   std::vector<uint8_t> bytes_;
   fidl_handle_t* handles_;
@@ -67,7 +85,7 @@ class NaturalEncoder {
   internal::WireFormatVersion wire_format_ = internal::WireFormatVersion::kV2;
 };
 
-// The NaturalMessageEncoder produces an |HLCPPOutgoingMessage|, representing a transactional
+// The NaturalMessageEncoder produces an |OutgoingMessage|, representing a transactional
 // message.
 template <typename Transport>
 class NaturalMessageEncoder final : public NaturalEncoder {
@@ -84,21 +102,32 @@ class NaturalMessageEncoder final : public NaturalEncoder {
 
   ~NaturalMessageEncoder() = default;
 
-  HLCPPOutgoingMessage GetMessage() {
-    for (uint32_t i = 0; i < handle_actual_; i++) {
-      handle_dispositions_[i] = zx_handle_disposition_t{
-          .operation = ZX_HANDLE_OP_MOVE,
-          .handle = handles_[i],
-          .type = handle_metadata_[i].obj_type,
-          .rights = handle_metadata_[i].rights,
-          .result = ZX_OK,
-      };
+  fidl::OutgoingMessage GetMessage(const fidl_type_t* type) {
+    if (type) {
+      const char* err_msg;
+      zx_status_t status = Validate(type, sizeof(fidl_message_header_t), &err_msg);
+      if (status != ZX_OK) {
+        return fidl::OutgoingMessage(fidl::Result::EncodeError(status, err_msg));
+      }
+    } else {
+      // Null type means message header only.
+      if (bytes_.size() != sizeof(fidl_message_header_t) && handle_actual_ == 0) {
+        return fidl::OutgoingMessage(fidl::Result::EncodeError(
+            ZX_ERR_INVALID_ARGS,
+            "message with null type must be a message header with no additional content"));
+      }
     }
-    return HLCPPOutgoingMessage(
-        BytePart(bytes_.data(), static_cast<uint32_t>(bytes_.size()),
-                 static_cast<uint32_t>(bytes_.size())),
-        HandleDispositionPart(handle_dispositions_, static_cast<uint32_t>(handle_actual_),
-                              static_cast<uint32_t>(handle_actual_)));
+
+    return fidl::OutgoingMessage::Create_InternalMayBreak(
+        fidl::OutgoingMessage::InternalByteBackedConstructorArgs{
+            .transport_vtable = &Transport::VTable,
+            .bytes = bytes_.data(),
+            .num_bytes = static_cast<uint32_t>(bytes_.size()),
+            .handles = handles_,
+            .handle_metadata = reinterpret_cast<fidl_handle_metadata_t*>(handle_metadata_),
+            .num_handles = handle_actual_,
+            .is_transactional = true,
+        });
   }
 
   void Reset(uint64_t ordinal) {
@@ -122,7 +151,7 @@ class NaturalMessageEncoder final : public NaturalEncoder {
   }
 };
 
-// The NaturalBodyEncoder produces an |HLCPPOutgoingBody|, representing a transactional message
+// The NaturalBodyEncoder produces an |OutgoingBody|, representing a transactional message
 // body.
 class NaturalBodyEncoder final : public NaturalEncoder {
  public:
@@ -136,7 +165,7 @@ class NaturalBodyEncoder final : public NaturalEncoder {
 
   ~NaturalBodyEncoder() = default;
 
-  fidl::OutgoingMessage GetBody();
+  fidl::OutgoingMessage GetBody(const fidl_type_t* type);
   void Reset();
 
  private:

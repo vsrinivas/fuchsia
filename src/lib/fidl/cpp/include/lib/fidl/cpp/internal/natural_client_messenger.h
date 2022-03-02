@@ -10,7 +10,7 @@
 namespace fidl {
 
 class Result;
-class HLCPPOutgoingMessage;
+class OutgoingMessage;
 
 namespace internal {
 
@@ -31,20 +31,15 @@ class NaturalClientMessenger {
 
   // Sends a two way message.
   //
-  // |type| is used to validate the message.
-  //
   // If error happens during sending, notifies |context| of the error.
   //
   // Otherwise, |context| ownership is passed to |ClientBase|.
-  void TwoWay(const fidl_type_t* type, HLCPPOutgoingMessage&& message,
-              fidl::internal::ResponseContext* context) const;
+  void TwoWay(fidl::OutgoingMessage message, fidl::internal::ResponseContext* context) const;
 
   // Sends a one way message.
   //
   // Any send-time errors are propagated via the return value.
-  //
-  // |type| is used to validate the message.
-  fidl::Result OneWay(const fidl_type_t* type, HLCPPOutgoingMessage&& message) const;
+  fidl::Result OneWay(fidl::OutgoingMessage message) const;
 
  private:
   // The client messaging implementation.

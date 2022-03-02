@@ -12,6 +12,7 @@
 #include <lib/fidl/cpp/natural_types.h>
 #include <lib/fidl/cpp/unified_messaging_declarations.h>
 #include <lib/fidl/llcpp/message.h>
+#include <lib/fidl/llcpp/traits.h>
 #include <lib/fidl/llcpp/transaction.h>
 #include <lib/fidl/llcpp/wire_messaging.h>
 #include <lib/fitx/result.h>
@@ -78,7 +79,7 @@ class MessageBase {
 // This helper function may then be removed, since we could use the public
 // encoding API of the domain object instead of |EncodeWithoutValidating|.
 template <typename Payload = const cpp17::nullopt_t&>
-::fidl::HLCPPOutgoingMessage EncodeTransactionalMessageWithoutValidating(
+fidl::OutgoingMessage EncodeTransactionalMessage(
     ::fidl::internal::NaturalMessageEncoder<fidl::internal::ChannelTransport>& encoder,
     Payload&& payload = cpp17::nullopt) {
   // When the caller omits the |payload| argument, it will default to
@@ -88,9 +89,10 @@ template <typename Payload = const cpp17::nullopt_t&>
     encoder.Alloc(::fidl::internal::NaturalEncodingInlineSize<Payload>(&encoder));
     ::fidl::internal::NaturalCodingTraits<Payload>::Encode(&encoder, &payload,
                                                            sizeof(fidl_message_header_t));
+    return encoder.GetMessage(TypeTraits<Payload>::kCodingTable);
+  } else {
+    return encoder.GetMessage(nullptr);
   }
-
-  return encoder.GetMessage();
 }
 
 inline ::fitx::result<::fidl::Error> ToFitxResult(::fidl::Result result) {

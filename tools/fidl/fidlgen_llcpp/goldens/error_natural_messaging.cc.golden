@@ -14,9 +14,8 @@ void fidl::internal::NaturalClientImpl<::test_error::Example>::Foo(
   ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
       _encoder{::test_error::kExample_foo_Ordinal};
   return messenger().TwoWay(
-      &::test_error::test_error_ExampleFooRequestTable,
-      ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-          _encoder, std::move(payload)),
+      ::fidl::internal::EncodeTransactionalMessage(_encoder,
+                                                   std::move(payload)),
       ::fidl::internal::MakeResponseContext<
           ::fidl::Response<::test_error::Example::Foo>,
           ::fidl::ClientCallback<::test_error::Example::Foo>>(
@@ -29,9 +28,8 @@ void fidl::internal::NaturalClientImpl<::test_error::Example>::Foo(
   ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
       _encoder{::test_error::kExample_foo_Ordinal};
   return messenger().TwoWay(
-      &::test_error::test_error_ExampleFooRequestTable,
-      ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-          _encoder, std::move(payload)),
+      ::fidl::internal::EncodeTransactionalMessage(_encoder,
+                                                   std::move(payload)),
       ::fidl::internal::MakeResponseContext<
           ::fidl::Response<::test_error::Example::Foo>,
           ::fidl::ClientResponseCallback<::test_error::Example::Foo>>(
@@ -60,10 +58,8 @@ void fidl::internal::NaturalCompleterBase<::test_error::Example::Foo>::Reply(
   ::fidl::internal::NaturalServerMessenger _messenger{this};
   ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
       _encoder{::test_error::kExample_foo_Ordinal};
-  _messenger.SendReply(
-      &::test_error::test_error_ExampleFooTopResponseTable,
-      ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-          _encoder, std::move(payload)));
+  _messenger.SendReply(::fidl::internal::EncodeTransactionalMessage(
+      _encoder, std::move(payload)));
 }
 
 #ifdef __Fuchsia__

@@ -17,8 +17,7 @@ void fidl::internal::NaturalClientImpl<
       _encoder{
           ::test_foreigntypeinresponseusedthroughcompose::kTop_GetFoo_Ordinal};
   return messenger().TwoWay(
-      nullptr,
-      ::fidl::internal::EncodeTransactionalMessageWithoutValidating(_encoder),
+      ::fidl::internal::EncodeTransactionalMessage(_encoder),
       ::fidl::internal::MakeResponseContext<
           ::fidl::Response<
               ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>,
@@ -36,8 +35,7 @@ void fidl::internal::NaturalClientImpl<
       _encoder{
           ::test_foreigntypeinresponseusedthroughcompose::kTop_GetFoo_Ordinal};
   return messenger().TwoWay(
-      nullptr,
-      ::fidl::internal::EncodeTransactionalMessageWithoutValidating(_encoder),
+      ::fidl::internal::EncodeTransactionalMessage(_encoder),
       ::fidl::internal::MakeResponseContext<
           ::fidl::Response<
               ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>,
@@ -72,11 +70,8 @@ void fidl::internal::NaturalCompleterBase<
   ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
       _encoder{
           ::test_foreigntypeinresponseusedthroughcompose::kTop_GetFoo_Ordinal};
-  _messenger.SendReply(
-      &::test_foreigntypeinresponseusedthroughcompose::
-          test_middle_MiddleGetFooTopResponseTable,
-      ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-          _encoder, std::move(payload)));
+  _messenger.SendReply(::fidl::internal::EncodeTransactionalMessage(
+      _encoder, std::move(payload)));
 }
 
 #ifdef __Fuchsia__

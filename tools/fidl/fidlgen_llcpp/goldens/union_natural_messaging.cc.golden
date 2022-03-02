@@ -23,8 +23,7 @@ void fidl::internal::NaturalClientImpl<::test_union::TestProtocol>::
           ::test_union::
               kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Ordinal};
   return messenger().TwoWay(
-      nullptr,
-      ::fidl::internal::EncodeTransactionalMessageWithoutValidating(_encoder),
+      ::fidl::internal::EncodeTransactionalMessage(_encoder),
       ::fidl::internal::MakeResponseContext<
           ::fidl::Response<::test_union::TestProtocol::
                                StrictXUnionHenceResponseMayBeStackAllocated>,
@@ -46,8 +45,7 @@ void fidl::internal::NaturalClientImpl<::test_union::TestProtocol>::
           ::test_union::
               kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Ordinal};
   return messenger().TwoWay(
-      nullptr,
-      ::fidl::internal::EncodeTransactionalMessageWithoutValidating(_encoder),
+      ::fidl::internal::EncodeTransactionalMessage(_encoder),
       ::fidl::internal::MakeResponseContext<
           ::fidl::Response<::test_union::TestProtocol::
                                StrictXUnionHenceResponseMayBeStackAllocated>,
@@ -70,8 +68,7 @@ void fidl::internal::NaturalClientImpl<::test_union::TestProtocol>::
           ::test_union::
               kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_Ordinal};
   return messenger().TwoWay(
-      nullptr,
-      ::fidl::internal::EncodeTransactionalMessageWithoutValidating(_encoder),
+      ::fidl::internal::EncodeTransactionalMessage(_encoder),
       ::fidl::internal::MakeResponseContext<
           ::fidl::Response<::test_union::TestProtocol::
                                FlexibleXUnionHenceResponseMustBeHeapAllocated>,
@@ -93,8 +90,7 @@ void fidl::internal::NaturalClientImpl<::test_union::TestProtocol>::
           ::test_union::
               kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_Ordinal};
   return messenger().TwoWay(
-      nullptr,
-      ::fidl::internal::EncodeTransactionalMessageWithoutValidating(_encoder),
+      ::fidl::internal::EncodeTransactionalMessage(_encoder),
       ::fidl::internal::MakeResponseContext<
           ::fidl::Response<::test_union::TestProtocol::
                                FlexibleXUnionHenceResponseMustBeHeapAllocated>,
@@ -134,11 +130,8 @@ void fidl::internal::NaturalCompleterBase<
       _encoder{
           ::test_union::
               kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Ordinal};
-  _messenger.SendReply(
-      &::test_union::
-          test_union_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponseTable,
-      ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-          _encoder, std::move(payload)));
+  _messenger.SendReply(::fidl::internal::EncodeTransactionalMessage(
+      _encoder, std::move(payload)));
 }
 
 void fidl::internal::NaturalCompleterBase<
@@ -153,11 +146,8 @@ void fidl::internal::NaturalCompleterBase<
       _encoder{
           ::test_union::
               kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_Ordinal};
-  _messenger.SendReply(
-      &::test_union::
-          test_union_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponseTable,
-      ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-          _encoder, std::move(payload)));
+  _messenger.SendReply(::fidl::internal::EncodeTransactionalMessage(
+      _encoder, std::move(payload)));
 }
 
 #ifdef __Fuchsia__

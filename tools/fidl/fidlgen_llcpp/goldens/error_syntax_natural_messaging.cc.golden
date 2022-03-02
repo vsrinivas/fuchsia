@@ -23,10 +23,8 @@ void fidl::internal::NaturalClientImpl<
       _encoder{::test_errorsyntax::
                    kExampleUseOfErrorSyntax_ComposedCallWhichMayFail_Ordinal};
   return messenger().TwoWay(
-      &::test_errorsyntax::
-          test_errorsyntax_parent_ParentUsesErrorSyntaxComposedCallWhichMayFailRequestTable,
-      ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-          _encoder, std::move(payload)),
+      ::fidl::internal::EncodeTransactionalMessage(_encoder,
+                                                   std::move(payload)),
       ::fidl::internal::MakeResponseContext<
           ::fidl::Response<::test_errorsyntax::ExampleUseOfErrorSyntax::
                                ComposedCallWhichMayFail>,
@@ -48,10 +46,8 @@ void fidl::internal::NaturalClientImpl<
       _encoder{::test_errorsyntax::
                    kExampleUseOfErrorSyntax_ComposedCallWhichMayFail_Ordinal};
   return messenger().TwoWay(
-      &::test_errorsyntax::
-          test_errorsyntax_parent_ParentUsesErrorSyntaxComposedCallWhichMayFailRequestTable,
-      ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-          _encoder, std::move(payload)),
+      ::fidl::internal::EncodeTransactionalMessage(_encoder,
+                                                   std::move(payload)),
       ::fidl::internal::MakeResponseContext<
           ::fidl::Response<::test_errorsyntax::ExampleUseOfErrorSyntax::
                                ComposedCallWhichMayFail>,
@@ -75,10 +71,8 @@ void fidl::internal::NaturalClientImpl<
       _encoder{::test_errorsyntax::
                    kExampleUseOfErrorSyntax_CallWhichMayFail_Ordinal};
   return messenger().TwoWay(
-      &::test_errorsyntax::
-          test_errorsyntax_ExampleUseOfErrorSyntaxCallWhichMayFailRequestTable,
-      ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-          _encoder, std::move(payload)),
+      ::fidl::internal::EncodeTransactionalMessage(_encoder,
+                                                   std::move(payload)),
       ::fidl::internal::MakeResponseContext<
           ::fidl::Response<
               ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>,
@@ -99,10 +93,8 @@ void fidl::internal::NaturalClientImpl<
       _encoder{::test_errorsyntax::
                    kExampleUseOfErrorSyntax_CallWhichMayFail_Ordinal};
   return messenger().TwoWay(
-      &::test_errorsyntax::
-          test_errorsyntax_ExampleUseOfErrorSyntaxCallWhichMayFailRequestTable,
-      ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-          _encoder, std::move(payload)),
+      ::fidl::internal::EncodeTransactionalMessage(_encoder,
+                                                   std::move(payload)),
       ::fidl::internal::MakeResponseContext<
           ::fidl::Response<
               ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>,
@@ -139,11 +131,8 @@ void fidl::internal::NaturalCompleterBase<
   ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
       _encoder{::test_errorsyntax::
                    kExampleUseOfErrorSyntax_ComposedCallWhichMayFail_Ordinal};
-  _messenger.SendReply(
-      &::test_errorsyntax::
-          test_errorsyntax_parent_ParentUsesErrorSyntaxComposedCallWhichMayFailTopResponseTable,
-      ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-          _encoder, std::move(payload)));
+  _messenger.SendReply(::fidl::internal::EncodeTransactionalMessage(
+      _encoder, std::move(payload)));
 }
 
 void fidl::internal::NaturalCompleterBase<
@@ -155,11 +144,8 @@ void fidl::internal::NaturalCompleterBase<
   ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
       _encoder{::test_errorsyntax::
                    kExampleUseOfErrorSyntax_CallWhichMayFail_Ordinal};
-  _messenger.SendReply(
-      &::test_errorsyntax::
-          test_errorsyntax_ExampleUseOfErrorSyntaxCallWhichMayFailTopResponseTable,
-      ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-          _encoder, std::move(payload)));
+  _messenger.SendReply(::fidl::internal::EncodeTransactionalMessage(
+      _encoder, std::move(payload)));
 }
 
 #ifdef __Fuchsia__

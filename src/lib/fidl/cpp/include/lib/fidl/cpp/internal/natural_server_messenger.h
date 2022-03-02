@@ -10,7 +10,7 @@
 namespace fidl {
 
 class CompleterBase;
-class HLCPPOutgoingMessage;
+class OutgoingMessage;
 
 namespace internal {
 
@@ -26,9 +26,7 @@ class NaturalServerMessenger {
   // Sends a reply.
   //
   // Any send-time errors are notified to |completer_base|.
-  //
-  // |type| is used to validate the message.
-  void SendReply(const fidl_type_t* type, HLCPPOutgoingMessage&& message) const;
+  void SendReply(OutgoingMessage message) const;
 
  private:
   fidl::CompleterBase* completer_base_;

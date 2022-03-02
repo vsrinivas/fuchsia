@@ -16,9 +16,8 @@ void fidl::internal::NaturalClientImpl<::test_anonymous::SomeProtocol>::
   ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
       _encoder{::test_anonymous::kSomeProtocol_SomeMethod_Ordinal};
   return messenger().TwoWay(
-      &::test_anonymous::test_anonymous_SomeProtocolSomeMethodRequestTable,
-      ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-          _encoder, std::move(payload)),
+      ::fidl::internal::EncodeTransactionalMessage(_encoder,
+                                                   std::move(payload)),
       ::fidl::internal::MakeResponseContext<
           ::fidl::Response<::test_anonymous::SomeProtocol::SomeMethod>,
           ::fidl::ClientCallback<::test_anonymous::SomeProtocol::SomeMethod>>(
@@ -33,9 +32,8 @@ void fidl::internal::NaturalClientImpl<::test_anonymous::SomeProtocol>::
   ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
       _encoder{::test_anonymous::kSomeProtocol_SomeMethod_Ordinal};
   return messenger().TwoWay(
-      &::test_anonymous::test_anonymous_SomeProtocolSomeMethodRequestTable,
-      ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-          _encoder, std::move(payload)),
+      ::fidl::internal::EncodeTransactionalMessage(_encoder,
+                                                   std::move(payload)),
       ::fidl::internal::MakeResponseContext<
           ::fidl::Response<::test_anonymous::SomeProtocol::SomeMethod>,
           ::fidl::ClientResponseCallback<
@@ -67,10 +65,8 @@ void fidl::internal::
   ::fidl::internal::NaturalServerMessenger _messenger{this};
   ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
       _encoder{::test_anonymous::kSomeProtocol_SomeMethod_Ordinal};
-  _messenger.SendReply(
-      &::test_anonymous::test_anonymous_SomeProtocolSomeMethodTopResponseTable,
-      ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-          _encoder, std::move(payload)));
+  _messenger.SendReply(::fidl::internal::EncodeTransactionalMessage(
+      _encoder, std::move(payload)));
 }
 
 #ifdef __Fuchsia__

@@ -18,33 +18,22 @@ class GoodMessage {
  public:
   GoodMessage() { fidl_init_txn_header(&content_, 0, kTestOrdinal); }
 
-  fidl::HLCPPOutgoingMessage message() {
-    return fidl::HLCPPOutgoingMessage(
-        fidl::BytePart(reinterpret_cast<uint8_t*>(&content_), sizeof(content_), sizeof(content_)),
-        fidl::HandleDispositionPart());
+  fidl::OutgoingMessage message() {
+    fidl_outgoing_msg_t c_msg = {
+        .type = FIDL_OUTGOING_MSG_TYPE_BYTE,
+        .byte =
+            {
+                .bytes = reinterpret_cast<uint8_t*>(&content_),
+                .num_bytes = sizeof(content_),
+            },
+    };
+    return fidl::OutgoingMessage::FromEncodedCMessage(&c_msg);
   }
 
   const fidl_type_t* type() const { return nullptr; }
 
  private:
   FIDL_ALIGNDECL fidl_message_header_t content_ = {};
-};
-
-// |BadMessage| is a helper to create an invalid FIDL transactional message.
-//
-// Specifically, the message has more bytes than expected (zero arg request).
-class BadMessage {
- public:
-  fidl::HLCPPOutgoingMessage message() {
-    return fidl::HLCPPOutgoingMessage(
-        fidl::BytePart(too_large_.data(), too_large_.size(), too_large_.size()),
-        fidl::HandleDispositionPart());
-  }
-
-  const fidl_type_t* type() const { return nullptr; }
-
- private:
-  FIDL_ALIGNDECL std::array<uint8_t, sizeof(fidl_message_header_t) * 2> too_large_;
 };
 
 #endif  // SRC_LIB_FIDL_CPP_TESTS_DISPATCHER_TEST_MESSAGES_H_

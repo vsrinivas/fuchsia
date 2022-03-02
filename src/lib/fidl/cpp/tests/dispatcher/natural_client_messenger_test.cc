@@ -147,7 +147,7 @@ TEST_F(NaturalClientMessengerTest, TwoWay) {
 
   EXPECT_EQ(0, impl()->GetTransactionCount());
   EXPECT_EQ(0, context().num_errors());
-  messenger().TwoWay(good.type(), good.message(), &context());
+  messenger().TwoWay(good.message(), &context());
   loop().RunUntilIdle();
   EXPECT_EQ(1, impl()->GetTransactionCount());
   EXPECT_FALSE(context().canceled());
@@ -159,32 +159,6 @@ TEST_F(NaturalClientMessengerTest, TwoWay) {
   EXPECT_NE(0, incoming.header()->txid);
 
   impl()->ForgetAsyncTxn(&context());
-}
-
-TEST_F(NaturalClientMessengerTest, TwoWayInvalidMessage) {
-  BadMessage too_large;
-
-  EXPECT_EQ(0, impl()->GetTransactionCount());
-  EXPECT_EQ(0, context().num_errors());
-  messenger().TwoWay(too_large.type(), too_large.message(), &context());
-
-  {
-    fidl::IncomingMessage incoming = impl()->ReadFromServer();
-    EXPECT_STATUS(ZX_ERR_SHOULD_WAIT, incoming.status());
-  }
-
-  loop().RunUntilIdle();
-  EXPECT_EQ(0, impl()->GetTransactionCount());
-  EXPECT_FALSE(context().canceled());
-  EXPECT_EQ(1, context().num_errors());
-  EXPECT_TRUE(context().last_error().has_value());
-  EXPECT_EQ(fidl::Reason::kEncodeError, context().last_error()->reason());
-  EXPECT_STATUS(ZX_ERR_INVALID_ARGS, context().last_error()->status());
-
-  {
-    fidl::IncomingMessage incoming = impl()->ReadFromServer();
-    EXPECT_STATUS(ZX_ERR_PEER_CLOSED, incoming.status());
-  }
 }
 
 TEST_F(NaturalClientMessengerTest, TwoWayUnbound) {
@@ -199,7 +173,7 @@ TEST_F(NaturalClientMessengerTest, TwoWayUnbound) {
   EXPECT_EQ(0, impl()->GetTransactionCount());
   EXPECT_FALSE(context().canceled());
   EXPECT_EQ(0, context().num_errors());
-  messenger().TwoWay(good.type(), good.message(), &context());
+  messenger().TwoWay(good.message(), &context());
   loop().RunUntilIdle();
   EXPECT_EQ(0, impl()->GetTransactionCount());
   EXPECT_TRUE(context().canceled());
@@ -211,7 +185,7 @@ TEST_F(NaturalClientMessengerTest, OneWay) {
   GoodMessage good;
 
   EXPECT_EQ(0, impl()->GetTransactionCount());
-  fidl::Result result = messenger().OneWay(good.type(), good.message());
+  fidl::Result result = messenger().OneWay(good.message());
   loop().RunUntilIdle();
   EXPECT_OK(result.status());
   EXPECT_EQ(0, impl()->GetTransactionCount());
@@ -220,27 +194,6 @@ TEST_F(NaturalClientMessengerTest, OneWay) {
   EXPECT_OK(incoming.status());
   EXPECT_EQ(kTestOrdinal, incoming.header()->ordinal);
   EXPECT_EQ(0, incoming.header()->txid);
-}
-
-TEST_F(NaturalClientMessengerTest, OneWayInvalidMessage) {
-  BadMessage too_large;
-
-  EXPECT_EQ(0, impl()->GetTransactionCount());
-  fidl::Result result = messenger().OneWay(too_large.type(), too_large.message());
-
-  {
-    fidl::IncomingMessage incoming = impl()->ReadFromServer();
-    EXPECT_STATUS(ZX_ERR_SHOULD_WAIT, incoming.status());
-  }
-
-  loop().RunUntilIdle();
-  EXPECT_STATUS(ZX_ERR_INVALID_ARGS, result.status());
-  EXPECT_EQ(0, impl()->GetTransactionCount());
-
-  {
-    fidl::IncomingMessage incoming = impl()->ReadFromServer();
-    EXPECT_STATUS(ZX_ERR_PEER_CLOSED, incoming.status());
-  }
 }
 
 TEST_F(NaturalClientMessengerTest, OneWayUnbound) {
@@ -253,7 +206,7 @@ TEST_F(NaturalClientMessengerTest, OneWayUnbound) {
   EXPECT_STATUS(ZX_ERR_PEER_CLOSED, incoming.status());
 
   EXPECT_EQ(0, impl()->GetTransactionCount());
-  fidl::Result result = messenger().OneWay(good.type(), good.message());
+  fidl::Result result = messenger().OneWay(good.message());
 
   loop().RunUntilIdle();
   EXPECT_EQ(ZX_ERR_CANCELED, result.status());

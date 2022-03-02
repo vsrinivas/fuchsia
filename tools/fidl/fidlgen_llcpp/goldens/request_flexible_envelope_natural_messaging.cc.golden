@@ -22,10 +22,8 @@ void fidl::internal::NaturalClientImpl<
       _encoder{::test_requestflexibleenvelope::
                    kProtocol_RequestStrictResponseFlexible_Ordinal};
   return messenger().TwoWay(
-      &::test_requestflexibleenvelope::
-          test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleRequestTable,
-      ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-          _encoder, std::move(payload)),
+      ::fidl::internal::EncodeTransactionalMessage(_encoder,
+                                                   std::move(payload)),
       ::fidl::internal::MakeResponseContext<
           ::fidl::Response<::test_requestflexibleenvelope::Protocol::
                                RequestStrictResponseFlexible>,
@@ -47,10 +45,8 @@ void fidl::internal::NaturalClientImpl<
       _encoder{::test_requestflexibleenvelope::
                    kProtocol_RequestStrictResponseFlexible_Ordinal};
   return messenger().TwoWay(
-      &::test_requestflexibleenvelope::
-          test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleRequestTable,
-      ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-          _encoder, std::move(payload)),
+      ::fidl::internal::EncodeTransactionalMessage(_encoder,
+                                                   std::move(payload)),
       ::fidl::internal::MakeResponseContext<
           ::fidl::Response<::test_requestflexibleenvelope::Protocol::
                                RequestStrictResponseFlexible>,
@@ -74,10 +70,8 @@ void fidl::internal::NaturalClientImpl<
       _encoder{::test_requestflexibleenvelope::
                    kProtocol_RequestFlexibleResponseStrict_Ordinal};
   return messenger().TwoWay(
-      &::test_requestflexibleenvelope::
-          test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictRequestTable,
-      ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-          _encoder, std::move(payload)),
+      ::fidl::internal::EncodeTransactionalMessage(_encoder,
+                                                   std::move(payload)),
       ::fidl::internal::MakeResponseContext<
           ::fidl::Response<::test_requestflexibleenvelope::Protocol::
                                RequestFlexibleResponseStrict>,
@@ -99,10 +93,8 @@ void fidl::internal::NaturalClientImpl<
       _encoder{::test_requestflexibleenvelope::
                    kProtocol_RequestFlexibleResponseStrict_Ordinal};
   return messenger().TwoWay(
-      &::test_requestflexibleenvelope::
-          test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictRequestTable,
-      ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-          _encoder, std::move(payload)),
+      ::fidl::internal::EncodeTransactionalMessage(_encoder,
+                                                   std::move(payload)),
       ::fidl::internal::MakeResponseContext<
           ::fidl::Response<::test_requestflexibleenvelope::Protocol::
                                RequestFlexibleResponseStrict>,
@@ -140,11 +132,8 @@ void fidl::internal::NaturalCompleterBase<
   ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
       _encoder{::test_requestflexibleenvelope::
                    kProtocol_RequestStrictResponseFlexible_Ordinal};
-  _messenger.SendReply(
-      &::test_requestflexibleenvelope::
-          test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleTopResponseTable,
-      ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-          _encoder, std::move(payload)));
+  _messenger.SendReply(::fidl::internal::EncodeTransactionalMessage(
+      _encoder, std::move(payload)));
 }
 
 void fidl::internal::NaturalCompleterBase<
@@ -155,11 +144,8 @@ void fidl::internal::NaturalCompleterBase<
   ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
       _encoder{::test_requestflexibleenvelope::
                    kProtocol_RequestFlexibleResponseStrict_Ordinal};
-  _messenger.SendReply(
-      &::test_requestflexibleenvelope::
-          test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictTopResponseTable,
-      ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-          _encoder, std::move(payload)));
+  _messenger.SendReply(::fidl::internal::EncodeTransactionalMessage(
+      _encoder, std::move(payload)));
 }
 
 #ifdef __Fuchsia__

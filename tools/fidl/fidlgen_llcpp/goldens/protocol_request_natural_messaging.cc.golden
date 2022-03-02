@@ -20,8 +20,7 @@ void fidl::internal::NaturalClientImpl<::test_protocolrequest::Parent>::
   ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
       _encoder{::test_protocolrequest::kParent_GetChild_Ordinal};
   return messenger().TwoWay(
-      nullptr,
-      ::fidl::internal::EncodeTransactionalMessageWithoutValidating(_encoder),
+      ::fidl::internal::EncodeTransactionalMessage(_encoder),
       ::fidl::internal::MakeResponseContext<
           ::fidl::Response<::test_protocolrequest::Parent::GetChild>,
           ::fidl::ClientCallback<::test_protocolrequest::Parent::GetChild>>(
@@ -34,8 +33,7 @@ void fidl::internal::NaturalClientImpl<::test_protocolrequest::Parent>::
   ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
       _encoder{::test_protocolrequest::kParent_GetChild_Ordinal};
   return messenger().TwoWay(
-      nullptr,
-      ::fidl::internal::EncodeTransactionalMessageWithoutValidating(_encoder),
+      ::fidl::internal::EncodeTransactionalMessage(_encoder),
       ::fidl::internal::MakeResponseContext<
           ::fidl::Response<::test_protocolrequest::Parent::GetChild>,
           ::fidl::ClientResponseCallback<
@@ -51,8 +49,7 @@ void fidl::internal::NaturalClientImpl<::test_protocolrequest::Parent>::
   ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
       _encoder{::test_protocolrequest::kParent_GetChildRequest_Ordinal};
   return messenger().TwoWay(
-      nullptr,
-      ::fidl::internal::EncodeTransactionalMessageWithoutValidating(_encoder),
+      ::fidl::internal::EncodeTransactionalMessage(_encoder),
       ::fidl::internal::MakeResponseContext<
           ::fidl::Response<::test_protocolrequest::Parent::GetChildRequest>,
           ::fidl::ClientCallback<
@@ -67,8 +64,7 @@ void fidl::internal::NaturalClientImpl<::test_protocolrequest::Parent>::
   ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
       _encoder{::test_protocolrequest::kParent_GetChildRequest_Ordinal};
   return messenger().TwoWay(
-      nullptr,
-      ::fidl::internal::EncodeTransactionalMessageWithoutValidating(_encoder),
+      ::fidl::internal::EncodeTransactionalMessage(_encoder),
       ::fidl::internal::MakeResponseContext<
           ::fidl::Response<::test_protocolrequest::Parent::GetChildRequest>,
           ::fidl::ClientResponseCallback<
@@ -82,9 +78,8 @@ fidl::internal::NaturalClientImpl<::test_protocolrequest::Parent>::TakeChild(
     ::test_protocolrequest::ParentTakeChildRequest&& payload) const {
   ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
       _encoder{::test_protocolrequest::kParent_TakeChild_Ordinal};
-  ::fidl::Result result = messenger().OneWay(
-      &::test_protocolrequest::test_protocolrequest_ParentTakeChildRequestTable,
-      ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+  ::fidl::Result result =
+      messenger().OneWay(::fidl::internal::EncodeTransactionalMessage(
           _encoder, std::move(payload)));
   return ::fidl::internal::ToFitxResult(result);
 }
@@ -94,10 +89,8 @@ fidl::internal::NaturalClientImpl<::test_protocolrequest::Parent>::TakeChild(
         ::test_protocolrequest::ParentTakeChildRequestRequest&& payload) const {
   ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
       _encoder{::test_protocolrequest::kParent_TakeChildRequest_Ordinal};
-  ::fidl::Result result = messenger().OneWay(
-      &::test_protocolrequest::
-          test_protocolrequest_ParentTakeChildRequestRequestTable,
-      ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+  ::fidl::Result result =
+      messenger().OneWay(::fidl::internal::EncodeTransactionalMessage(
           _encoder, std::move(payload)));
   return ::fidl::internal::ToFitxResult(result);
 }
@@ -125,11 +118,8 @@ void fidl::internal::
   ::fidl::internal::NaturalServerMessenger _messenger{this};
   ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
       _encoder{::test_protocolrequest::kParent_GetChild_Ordinal};
-  _messenger.SendReply(
-      &::test_protocolrequest::
-          test_protocolrequest_ParentGetChildTopResponseTable,
-      ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-          _encoder, std::move(payload)));
+  _messenger.SendReply(::fidl::internal::EncodeTransactionalMessage(
+      _encoder, std::move(payload)));
 }
 
 void fidl::internal::NaturalCompleterBase<
@@ -138,11 +128,8 @@ void fidl::internal::NaturalCompleterBase<
   ::fidl::internal::NaturalServerMessenger _messenger{this};
   ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
       _encoder{::test_protocolrequest::kParent_GetChildRequest_Ordinal};
-  _messenger.SendReply(
-      &::test_protocolrequest::
-          test_protocolrequest_ParentGetChildRequestTopResponseTable,
-      ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
-          _encoder, std::move(payload)));
+  _messenger.SendReply(::fidl::internal::EncodeTransactionalMessage(
+      _encoder, std::move(payload)));
 }
 
 #ifdef __Fuchsia__

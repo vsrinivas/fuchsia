@@ -104,9 +104,7 @@ class UnionMemberView final {
 class EncodeResult {
  public:
   EncodeResult(const fidl_type_t* type, ::fidl::internal::NaturalBodyEncoder&& storage)
-      : storage_(std::move(storage)), message_(storage_.GetBody()) {
-    message_.Validate__InternalMayBreak(storage_.wire_format(), type);
-  }
+      : storage_(std::move(storage)), message_(storage_.GetBody(type)) {}
 
   ::fidl::OutgoingMessage& message() { return message_; }
 

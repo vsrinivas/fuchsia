@@ -39,10 +39,12 @@ class WireWeakAsyncClientImpl<TestProtocol> : public fidl::internal::ClientImplB
     GoodMessage msg;
     fidl::Result result = _client_base()->MakeSyncCallWith(
         [&](std::shared_ptr<fidl::internal::AnyTransport> transport) {
-          zx_status_t status = zx_channel_write_etc(
-              transport->get<fidl::internal::ChannelTransport>()->get(), 0,
-              static_cast<void*>(msg.message().bytes().data()), msg.message().bytes().actual(),
-              msg.message().handles().data(), msg.message().handles().actual());
+          // The input to this call has no handles.
+          ZX_ASSERT(msg.message().handle_actual() == 0);
+          auto copied_bytes = msg.message().CopyBytes();
+          zx_status_t status =
+              zx_channel_write_etc(transport->get<fidl::internal::ChannelTransport>()->get(), 0,
+                                   copied_bytes.data(), copied_bytes.size(), nullptr, 0);
           EXPECT_OK(status);
           return fidl::Result::Ok();
         });
@@ -70,7 +72,7 @@ class NaturalClientImpl<TestProtocol> : public NaturalClientBase {
 
   void SomeNaturalMethod() const {
     GoodMessage msg;
-    fidl::Result result = messenger().OneWay(msg.type(), msg.message());
+    fidl::Result result = messenger().OneWay(msg.message());
     EXPECT_OK(result.status());
   }
 };
