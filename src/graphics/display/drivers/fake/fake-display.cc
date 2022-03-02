@@ -179,12 +179,11 @@ uint32_t FakeDisplay::DisplayControllerImplCheckConfiguration(
         .width = kWidth,
         .height = kHeight,
     };
-    success = display_configs[0]->layer_list[0]->type == LAYER_TYPE_PRIMARY &&
-              layer.transform_mode == FRAME_TRANSFORM_IDENTITY && layer.image.width == kWidth &&
-              layer.image.height == kHeight &&
-              memcmp(&layer.dest_frame, &frame, sizeof(frame_t)) == 0 &&
-              memcmp(&layer.src_frame, &frame, sizeof(frame_t)) == 0 &&
-              display_configs[0]->cc_flags == 0 && layer.alpha_mode == ALPHA_DISABLE;
+    success =
+        display_configs[0]->layer_list[0]->type == LAYER_TYPE_PRIMARY &&
+        layer.transform_mode == FRAME_TRANSFORM_IDENTITY && layer.image.width == kWidth &&
+        layer.image.height == kHeight && memcmp(&layer.dest_frame, &frame, sizeof(frame_t)) == 0 &&
+        memcmp(&layer.src_frame, &frame, sizeof(frame_t)) == 0 && layer.alpha_mode == ALPHA_DISABLE;
   }
   if (!success) {
     layer_cfg_results[0][0] = CLIENT_MERGE_BASE;

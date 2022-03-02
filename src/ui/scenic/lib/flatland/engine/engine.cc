@@ -179,4 +179,10 @@ Renderables Engine::GetRenderables(TransformHandle root) {
   return std::make_pair(std::move(image_rectangles), std::move(images));
 }
 
+void Engine::SetColorConversionValues(const std::array<float, 9>& matrix,
+                                      const std::array<float, 3>& preoffsets,
+                                      const std::array<float, 3>& postoffsets) {
+  flatland_compositor_->SetColorConversionValues(matrix, preoffsets, postoffsets);
+}
+
 }  // namespace flatland

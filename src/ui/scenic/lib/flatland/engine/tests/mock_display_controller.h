@@ -62,6 +62,9 @@ class MockDisplayController : public fuchsia::hardware::display::testing::Contro
 
   MOCK_METHOD(void, SetDisplayLayers, (uint64_t, ::std::vector<uint64_t>));
 
+  MOCK_METHOD(void, SetDisplayColorConversion,
+              ((uint64_t), (std::array<float, 3>), (std::array<float, 9>), (std::array<float, 3>)));
+
  private:
   void NotImplemented_(const std::string& name) final {}
 

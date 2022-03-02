@@ -600,15 +600,16 @@ TEST_F(DisplayCompositorTest, HardwareFrameCorrectnessTest) {
     // - 1 call to discard the config.
     // - 2 calls to set each layer image
     // - 2 calls to set the layer primary config
-    // - 2 calls to set the layer primary alpha.
     // - 2 calls to set the layer primary positions
+    // - 2 calls to set the layer primary alpha.
+    // - 1 call to SetDisplayColorConversion
     // - 1 call to check the config
     // - 1 call to apply the config
     // - 1 call to GetLatestAppliedConfigStamp
     // - 1 call to DiscardConfig
     // - 2 calls to destroy layer.
     // TODO(fxbug.dev/71264): Use function call counters from display's MockDisplayController.
-    for (uint32_t i = 0; i < 22; i++) {
+    for (uint32_t i = 0; i < 23; i++) {
       mock->WaitForMessage();
     }
   });
@@ -691,6 +692,8 @@ TEST_F(DisplayCompositorTest, HardwareFrameCorrectnessTest) {
     EXPECT_CALL(*mock, SetLayerPrimaryAlpha(layers[i], _, _)).Times(1);
     EXPECT_CALL(*mock, SetLayerImage(layers[i], collection_ids[i], _, _)).Times(1);
   }
+
+  EXPECT_CALL(*mock, SetDisplayColorConversion(_, _, _, _)).Times(1);
 
   EXPECT_CALL(*mock, CheckConfig(false, _))
       .WillOnce(testing::Invoke([&](bool, MockDisplayController::CheckConfigCallback callback) {

@@ -89,6 +89,11 @@ class DisplayCompositor final : public allocation::BufferCollectionImporter,
       scenic_impl::display::Display* display, DisplayInfo info, uint32_t num_vmos,
       fuchsia::sysmem::BufferCollectionInfo_2* out_collection_info);
 
+  // Values needed to adjust the color of the framebuffer as a postprocessing effect.
+  void SetColorConversionValues(const std::array<float, 9>& matrix,
+                                const std::array<float, 3>& preoffsets,
+                                const std::array<float, 3>& postoffsets);
+
  private:
   friend class test::DisplayCompositorSmokeTest;
   friend class test::DisplayCompositorPixelTest;
@@ -233,6 +238,10 @@ class DisplayCompositor final : public allocation::BufferCollectionImporter,
   // See BufferCollectionImportMode definition for what each mode means. by default, we add display
   // constraints as AttachTokens.
   BufferCollectionImportMode import_mode_ = BufferCollectionImportMode::AttemptDisplayConstraints;
+
+  std::array<float, 9> color_conversion_matrix_ = {1, 0, 0, 0, 1, 0, 0, 0, 1};
+  std::array<float, 3> color_conversion_preoffsets_ = {0, 0, 0};
+  std::array<float, 3> color_conversion_postoffsets_ = {0, 0, 0};
 
   // TODO(fxbug.dev/77414): we use a weak ptr to safely post a task that might outlive this
   // DisplayCompositor, see RenderFrame().  This task simulates a vsync callback that we aren't yet

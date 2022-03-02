@@ -46,6 +46,12 @@ class Engine {
   // Returns all renderables reachable from |root|.
   Renderables GetRenderables(TransformHandle root);
 
+  // These values are used to apply a color conversion post processing effect on rendered
+  // content, using the formula matrix * (pixel + preoffset) + postoffset.
+  void SetColorConversionValues(const std::array<float, 9>& matrix,
+                                const std::array<float, 3>& preoffsets,
+                                const std::array<float, 3>& postoffsets);
+
  private:
   std::shared_ptr<flatland::DisplayCompositor> flatland_compositor_;
   std::shared_ptr<flatland::DefaultFlatlandPresenter> flatland_presenter_;

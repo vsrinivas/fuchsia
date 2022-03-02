@@ -535,6 +535,12 @@ void DisplayCompositor::RenderFrame(uint64_t frame_number, zx::time presentation
       hardware_fail = true;
       break;
     }
+    // Apply direct-to-display color conversion here.
+    zx_status_t status =
+        (*display_controller_.get())
+            ->SetDisplayColorConversion(data.display_id, color_conversion_preoffsets_,
+                                        color_conversion_matrix_, color_conversion_postoffsets_);
+    FX_CHECK(status == ZX_OK) << "Could not apply hardware color conversion: " << status;
   }
 
   // Determine whether we need to fall back to GPU composition.  Avoid calling CheckConfig() if we
@@ -838,6 +844,17 @@ allocation::GlobalBufferCollectionId DisplayCompositor::AddDisplay(
   display_engine_data.vmo_count = num_vmos;
   display_engine_data.curr_vmo = 0;
   return collection_id;
+}
+
+void DisplayCompositor::SetColorConversionValues(const std::array<float, 9>& matrix,
+                                                 const std::array<float, 3>& preoffsets,
+                                                 const std::array<float, 3>& postoffsets) {
+  // Lock the whole function.
+  std::unique_lock<std::mutex> lock(lock_);
+  color_conversion_matrix_ = matrix;
+  color_conversion_preoffsets_ = preoffsets;
+  color_conversion_postoffsets_ = postoffsets;
+  renderer_->SetColorConversionValues(matrix, preoffsets, postoffsets);
 }
 
 uint64_t DisplayCompositor::InternalImageId(allocation::GlobalImageId image_id) const {

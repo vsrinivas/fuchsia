@@ -349,10 +349,7 @@ class DisplayCompositorParameterizedPixelTest
 // to be composited directly in hardware. The Astro display controller
 // only handles full screen rects.
 VK_TEST_P(DisplayCompositorParameterizedPixelTest, FullscreenRectangleTest) {
-  // TODO(fxbug.dev/74423): Use Null renderer instead of VkRenderer after moving to prunable
-  // constraints. By using the null renderer, we can demonstrate that the rendering is being done
-  // directly by the display controller hardware, and not the software renderer.
-  auto [escher, renderer] = NewVkRenderer();
+  auto renderer = NewNullRenderer();
   auto display_compositor = std::make_shared<flatland::DisplayCompositor>(
       dispatcher(), display_manager_->default_display_controller(), renderer,
       utils::CreateSysmemAllocatorSyncPtr("display_compositor_pixeltest"),
