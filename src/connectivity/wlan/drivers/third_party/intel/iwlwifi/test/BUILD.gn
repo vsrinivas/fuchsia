@@ -4,11 +4,6 @@
 
 import("//build/components.gni")
 
-# Common configuration for tests.
-config("test_config") {
-  defines = [ "CONFIG_TEST_SIM=1" ]
-}
-
 # Simulated transportation layer -- for unittest code.
 source_set("sim_library") {
   testonly = true
@@ -63,7 +58,6 @@ source_set("sim_library") {
     "//zircon/system/public",
     "//zircon/system/ulib/zxtest",
   ]
-  public_configs = [ ":test_config" ]
 }
 
 # Stub entrypoints for MVM.
