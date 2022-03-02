@@ -62,7 +62,11 @@ class JsonInstance : public FilesystemInstance {
 
   zx::status<> Mount(const std::string& mount_path,
                      const fs_management::MountOptions& options) override {
-    return FsMount(device_path_, mount_path, filesystem_.format(), options, &outgoing_directory_);
+    auto export_root_or = FsMount(device_path_, mount_path, filesystem_.format(), options);
+    if (export_root_or.is_error())
+      return export_root_or.take_error();
+    outgoing_directory_ = std::move(*export_root_or);
+    return zx::ok();
   }
 
   zx::status<> Fsck() override {
@@ -84,13 +88,15 @@ class JsonInstance : public FilesystemInstance {
     return std::get_if<ramdevice_client::RamNand>(&device_);
   }
 
-  zx::unowned_channel GetOutgoingDirectory() const override { return outgoing_directory_.borrow(); }
+  fidl::UnownedClientEnd<fuchsia_io::Directory> GetOutgoingDirectory() const override {
+    return outgoing_directory_.borrow();
+  }
 
  private:
   const JsonFilesystem& filesystem_;
   RamDevice device_;
   std::string device_path_;
-  zx::channel outgoing_directory_;
+  fidl::ClientEnd<fuchsia_io::Directory> outgoing_directory_;
 };
 
 std::unique_ptr<FilesystemInstance> JsonFilesystem::Create(RamDevice device,

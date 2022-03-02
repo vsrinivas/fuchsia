@@ -7,6 +7,7 @@
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
+#include <lib/service/llcpp/service.h>
 #include <lib/zx/vmo.h>
 #include <zircon/device/vfs.h>
 
@@ -26,22 +27,14 @@ namespace blobfs {
 namespace {
 
 namespace fio = fuchsia_io;
-namespace fuchsia_fs = fuchsia_fs;
 
 class QueryServiceTest : public BlobfsWithFvmTest {
  protected:
   fidl::WireSyncClient<fuchsia_fs::Query> ConnectToQueryService() {
-    auto endpoints = fidl::CreateEndpoints<fuchsia_fs::Query>();
-    EXPECT_EQ(endpoints.status_value(), ZX_OK);
-    auto [query_client_end, query_server_end] = *std::move(endpoints);
-
-    std::string query_service_path =
-        std::string("svc/") + fidl::DiscoverableProtocolName<fuchsia_fs::Query>;
-    EXPECT_EQ(
-        fdio_service_connect_at(fs().GetOutgoingDirectory()->get(), query_service_path.c_str(),
-                                query_server_end.TakeChannel().release()),
-        ZX_OK);
-    return fidl::WireSyncClient<fuchsia_fs::Query>(std::move(query_client_end));
+    auto client_end = service::ConnectAt<fuchsia_fs::Query>(
+        fs().GetOutgoingDirectory(), fidl::DiscoverableProtocolDefaultPath<fuchsia_fs::Query>);
+    EXPECT_EQ(client_end.status_value(), ZX_OK);
+    return fidl::WireSyncClient<fuchsia_fs::Query>(std::move(*client_end));
   }
 };
 

@@ -186,6 +186,7 @@ test("blobfs_query_service") {
     "//src/storage/fvm",
     "//src/storage/lib/utils:topological_path",
     "//zircon/system/ulib/fdio-caller",
+    "//zircon/system/ulib/service:service-llcpp",
     "//zircon/system/ulib/zx",
   ]
 }

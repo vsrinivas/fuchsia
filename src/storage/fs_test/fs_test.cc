@@ -276,10 +276,9 @@ zx::status<> FsFormat(const std::string& device_path, fs_management::DiskFormat 
   return zx::ok();
 }
 
-zx::status<> FsMount(const std::string& device_path, const std::string& mount_path,
-                     fs_management::DiskFormat format,
-                     const fs_management::MountOptions& mount_options,
-                     zx::channel* outgoing_directory) {
+zx::status<fidl::ClientEnd<fuchsia_io::Directory>> FsMount(
+    const std::string& device_path, const std::string& mount_path, fs_management::DiskFormat format,
+    const fs_management::MountOptions& mount_options) {
   auto fd = fbl::unique_fd(open(device_path.c_str(), O_RDWR));
   if (!fd) {
     std::cout << "Could not open device: " << device_path << ": errno=" << errno << std::endl;
@@ -300,10 +299,7 @@ zx::status<> FsMount(const std::string& device_path, const std::string& mount_pa
               << " file system: " << result.status_string() << std::endl;
     return result.take_error();
   }
-  auto export_root = std::move(*result).TakeExportRoot();
-  if (outgoing_directory)
-    *outgoing_directory = export_root.TakeChannel();
-  return zx::ok();
+  return zx::ok(std::move(*result).TakeExportRoot());
 }
 
 // Returns device and device path.
@@ -484,8 +480,12 @@ class BlobfsInstance : public FilesystemInstance {
 
   zx::status<> Mount(const std::string& mount_path,
                      const fs_management::MountOptions& options) override {
-    return FsMount(device_path_, mount_path, fs_management::kDiskFormatBlobfs, options,
-                   &outgoing_directory_);
+    auto export_root_or =
+        FsMount(device_path_, mount_path, fs_management::kDiskFormatBlobfs, options);
+    if (export_root_or.is_error())
+      return export_root_or.take_error();
+    outgoing_directory_ = std::move(*export_root_or);
+    return zx::ok();
   }
 
   zx::status<> Fsck() override {
@@ -504,12 +504,14 @@ class BlobfsInstance : public FilesystemInstance {
   ramdevice_client::RamNand* GetRamNand() override {
     return std::get_if<ramdevice_client::RamNand>(&device_);
   }
-  zx::unowned_channel GetOutgoingDirectory() const override { return outgoing_directory_.borrow(); }
+  fidl::UnownedClientEnd<fuchsia_io::Directory> GetOutgoingDirectory() const override {
+    return outgoing_directory_.borrow();
+  }
 
  private:
   RamDevice device_;
   std::string device_path_;
-  zx::channel outgoing_directory_;
+  fidl::ClientEnd<fuchsia_io::Directory> outgoing_directory_;
 };
 
 std::unique_ptr<FilesystemInstance> BlobfsFilesystem::Create(RamDevice device,
@@ -591,26 +593,6 @@ zx::status<> TestFilesystem::Unmount() {
 zx::status<> TestFilesystem::Fsck() { return filesystem_->Fsck(); }
 
 zx::status<std::string> TestFilesystem::DevicePath() const { return filesystem_->DevicePath(); }
-
-fidl::ClientEnd<fuchsia_io::Directory> TestFilesystem::GetSvcDirectory() const {
-  // Get the svc directory for the test filesystem to connect to fuchsia.fs.Query.
-  fidl::UnownedClientEnd<fuchsia_io::Directory> fs_outgoing(GetOutgoingDirectory());
-  zx::channel client, server;
-  zx_status_t status = zx::channel::create(0, &client, &server);
-  if (status != ZX_OK) {
-    std::cout << "warning: failed to create svc handles" << status;
-    return zx::channel();
-  }
-  if (!fidl::WireCall(fs_outgoing)
-           ->Open(fuchsia_io::wire::kOpenFlagDirectory | fuchsia_io::wire::kOpenRightReadable |
-                      fuchsia_io::wire::kOpenRightWritable,
-                  0, "svc", std::move(server))
-           .ok()) {
-    std::cout << "warning: Open failed";
-    return zx::channel();
-  }
-  return fidl::ClientEnd<fuchsia_io::Directory>(std::move(client));
-}
 
 zx::status<fuchsia_io::wire::FilesystemInfo> TestFilesystem::GetFsInfo() const {
   fbl::unique_fd root_fd = fbl::unique_fd(open(mount_path().c_str(), O_RDONLY | O_DIRECTORY));

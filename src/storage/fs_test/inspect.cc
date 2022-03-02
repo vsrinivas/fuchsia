@@ -198,7 +198,7 @@ class InspectTest : public FilesystemTest {
   // All calls to this function *must* be wrapped with ASSERT_NO_FATAL_FAILURE. Failure to do so
   // can result in some test fixture methods segfaulting.
   void UpdateAndValidateSnapshot() {
-    snapshot_ = TakeSnapshot(fs().GetOutgoingDirectory()->get());
+    snapshot_ = TakeSnapshot(fs().GetOutgoingDirectory().channel()->get());
     // Validate the inspect hierarchy. Ensures all nodes/properties exist and are the correct types.
     ASSERT_NO_FATAL_FAILURE(ValidateHierarchy(Root()));
   }
