@@ -351,7 +351,7 @@ fuchsia_component("component-manager-tests-cmp") {
     "//src/lib/process_builder:test_util",
   ]
   component_name = "component_manager_tests"
-  manifest = "meta/component_manager_tests.cmx"
+  manifest = "meta/component_manager_tests.cml"
 }
 
 resource("component_manager_tests_invalid_manifest") {

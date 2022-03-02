@@ -1,0 +1,20 @@
+{
+    include: [
+        "//src/sys/test_runners/rust/default.shard.cml",
+        "//src/sys/test_runners/tmp_storage.shard.cml",
+        "inspect/client.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        binary: "bin/component_manager_test",
+    },
+    use: [
+        {
+            protocol: [
+                "fidl.examples.routing.echo.Echo",
+                "fuchsia.io.Directory",
+                "fuchsia.process.Launcher",
+            ],
+        },
+    ],
+}
