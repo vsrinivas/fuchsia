@@ -151,6 +151,11 @@ class VnodeF2fs : public fs::Vnode,
   void GetExtentInfo(const Extent &i_ext);
   void SetRawExtent(Extent &i_ext);
 
+  void InitNlink() __TA_EXCLUDES(mutex_) {
+    std::lock_guard lock(mutex_);
+    nlink_ = 1;
+  }
+
   void IncNlink() __TA_EXCLUDES(mutex_) {
     std::lock_guard lock(mutex_);
     ++nlink_;

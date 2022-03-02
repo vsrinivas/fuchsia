@@ -42,7 +42,7 @@ zx_status_t Dir::NewInode(uint32_t mode, fbl::RefPtr<VnodeF2fs> *out) {
 
   vnode->SetMode(static_cast<umode_t>(mode));
   vnode->InitSize();
-  vnode->ClearNlink();
+  vnode->InitNlink();
   vnode->InitBlocks();
 
   timespec cur_time;
@@ -103,7 +103,6 @@ zx_status_t Dir::DoCreate(std::string_view name, uint32_t mode, fbl::RefPtr<fs::
   if (!superblock_info.TestOpt(kMountDisableExtIdentify))
     SetColdFile(*vnode);
 
-  vnode->SetFlag(InodeInfoFlag::kIncLink);
   {
     fs::SharedLock rlock(superblock_info.GetFsLock(LockType::kFileOp));
     if (zx_status_t err = AddLink(name, vnode); err != ZX_OK) {

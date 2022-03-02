@@ -321,8 +321,6 @@ zx_status_t Dir::InitInodeMetadata(VnodeF2fs *vnode) {
         Vfs()->GetNodeManager().RemoveInodePage(vnode);
         return err;
       }
-      // TODO: need to check other points for nlink
-      vnode->IncNlink();
     }
 
 #if 0  // porting needed
