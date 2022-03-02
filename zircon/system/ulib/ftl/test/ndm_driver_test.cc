@@ -56,74 +56,79 @@ bool MockDriver::IsEmptyPage(uint32_t page_num, const uint8_t* data, const uint8
   return empty_;
 }
 
-TEST(NdmDriverTest, CheckPageEccError) {
+class NdmDriverTest : public ::testing::Test {
+ public:
+  void SetUp() override {
+    driver.GetNdmDriver(&ndm);
+    ASSERT_NE(nullptr, ndm.data_and_spare_check);
+    ASSERT_NE(nullptr, ndm.read_decode_spare);
+    ASSERT_NE(nullptr, ndm.read_spare);
+
+    if (!(ndm.flags & FSF_FREE_SPARE_ECC)) {
+      // The current NDM driver has "free" decoding of the spare area, so we use the same callback
+      // for read_spare and read_decode_spare and set FSF_FREE_SPARE_ECC. If this flag is ever
+      // unset, these callbacks should be updated to prevent any potential read amplification.
+      ASSERT_NE(ndm.read_spare, ndm.read_decode_spare)
+          << "read_spare and read_decode_spare should have different callbacks if "
+             "FSF_FREE_SPARE_ECC is unset (see NdmBaseDriver::FillNdmDriver for details).";
+    }
+  }
+
   MockDriver driver;
-
   NDMDrvr ndm;
-  driver.GetNdmDriver(&ndm);
-  ASSERT_NE(nullptr, ndm.data_and_spare_check);
+};
 
+TEST_F(NdmDriverTest, CheckPageEccError) {
   driver.set_result(ftl::kNdmUncorrectableEcc);
-
-  int status;
+  int status = -1;
   EXPECT_EQ(ftl::kNdmOk, ndm.data_and_spare_check(0, nullptr, nullptr, &status, &driver));
   EXPECT_EQ(NDM_PAGE_INVALID, status);
 }
 
-TEST(NdmDriverTest, CheckPageFatalError) {
-  MockDriver driver;
-
-  NDMDrvr ndm;
-  driver.GetNdmDriver(&ndm);
-  ASSERT_NE(nullptr, ndm.data_and_spare_check);
-
+TEST_F(NdmDriverTest, CheckPageFatalError) {
   driver.set_result(ftl::kNdmFatalError);
-
-  int status;
-  EXPECT_EQ(ftl::kNdmOk, ndm.data_and_spare_check(0, nullptr, nullptr, &status, &driver));
+  int status = -1;
+  EXPECT_EQ(ftl::kNdmFatalError, ndm.data_and_spare_check(0, nullptr, nullptr, &status, &driver));
+  // Status should not be used in this case, but we check that it was populated regardless to avoid
+  // any erroneous misinterpretation of the original value.
   EXPECT_EQ(NDM_PAGE_INVALID, status);
 }
 
-TEST(NdmDriverTest, CheckPageEmpty) {
-  MockDriver driver;
-
-  NDMDrvr ndm;
-  driver.GetNdmDriver(&ndm);
-  ASSERT_NE(nullptr, ndm.data_and_spare_check);
-
-  int status;
+TEST_F(NdmDriverTest, CheckPageEmpty) {
+  int status = -1;
   EXPECT_EQ(ftl::kNdmOk, ndm.data_and_spare_check(0, nullptr, nullptr, &status, &driver));
   EXPECT_EQ(NDM_PAGE_ERASED, status);
 }
 
-TEST(NdmDriverTest, CheckPageValid) {
-  MockDriver driver;
-
-  NDMDrvr ndm;
-  driver.GetNdmDriver(&ndm);
-  ASSERT_NE(nullptr, ndm.data_and_spare_check);
-
+TEST_F(NdmDriverTest, CheckPageValid) {
   driver.set_result(ftl::kNdmUnsafeEcc);
   driver.set_empty(false);
-
-  int status;
+  int status = -1;
   EXPECT_EQ(ftl::kNdmOk, ndm.data_and_spare_check(0, nullptr, nullptr, &status, &driver));
   EXPECT_EQ(NDM_PAGE_VALID, status);
 }
 
-TEST(NdmDriverTest, CheckPageValidIncompleteWrite) {
-  MockDriver driver;
-
-  NDMDrvr ndm;
-  driver.GetNdmDriver(&ndm);
-  ASSERT_NE(nullptr, ndm.data_and_spare_check);
-
+TEST_F(NdmDriverTest, CheckPageValidIncompleteWrite) {
   driver.set_result(ftl::kNdmUnsafeEcc);
   driver.set_incomplete(true);
-
-  int status;
+  int status = -1;
   EXPECT_EQ(ftl::kNdmOk, ndm.data_and_spare_check(0, nullptr, nullptr, &status, &driver));
   EXPECT_EQ(NDM_PAGE_INVALID, status);
+}
+
+TEST_F(NdmDriverTest, ReadSpareFatalError) {
+  driver.set_result(ftl::kNdmFatalError);
+  EXPECT_EQ(ftl::kNdmFatalError, ndm.read_decode_spare(0, nullptr, &driver));
+}
+
+TEST_F(NdmDriverTest, ReadSpareEccError) {
+  driver.set_result(ftl::kNdmUncorrectableEcc);
+  EXPECT_EQ(ftl::kNdmError, ndm.read_decode_spare(0, nullptr, &driver));
+}
+
+TEST_F(NdmDriverTest, ReadSpareUnsafeEcc) {
+  driver.set_result(ftl::kNdmUnsafeEcc);
+  EXPECT_EQ(ftl::kNdmOk, ndm.read_decode_spare(0, nullptr, &driver));
 }
 
 }  // namespace
