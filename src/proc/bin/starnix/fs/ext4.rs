@@ -6,6 +6,7 @@ use ext4_read_only::parser::Parser as ExtParser;
 use ext4_read_only::readers::{self as ext4_readers, VmoReader as ExtVmoReader};
 use ext4_read_only::structs as ext_structs;
 use fuchsia_zircon as zx;
+use fuchsia_zircon::AsHandleRef;
 use once_cell::sync::OnceCell;
 use std::collections::BTreeMap;
 use std::mem::size_of_val;
@@ -77,14 +78,16 @@ impl FsNodeOps for ExtDirectory {
         node.fs().get_or_create_node(Some(inode_num as ino_t), |inode_num| {
             let entry_type = ext_structs::EntryType::from_u8(entry.e2d_type).map_err(ext_error)?;
             let ops: Box<dyn FsNodeOps> = match entry_type {
-                ext_structs::EntryType::RegularFile => Box::new(ExtFile::new(ext_node.clone())),
+                ext_structs::EntryType::RegularFile => {
+                    Box::new(ExtFile::new(ext_node.clone(), name))
+                }
                 ext_structs::EntryType::Directory => {
                     Box::new(ExtDirectory { inner: ext_node.clone() })
                 }
                 ext_structs::EntryType::SymLink => Box::new(ExtSymlink { inner: ext_node.clone() }),
                 _ => {
                     log::warn!("unhandled ext entry type {:?}", entry_type);
-                    Box::new(ExtFile::new(ext_node.clone()))
+                    Box::new(ExtFile::new(ext_node.clone(), name))
                 }
             };
             let mode = FileMode::from_bits(ext_node.inode.e2di_mode.into());
@@ -104,12 +107,13 @@ impl FsNodeOps for ExtDirectory {
 
 struct ExtFile {
     inner: ExtNode,
+    name: FsString,
     vmo: OnceCell<Arc<zx::Vmo>>,
 }
 
 impl ExtFile {
-    fn new(inner: ExtNode) -> Self {
-        ExtFile { inner, vmo: OnceCell::new() }
+    fn new(inner: ExtNode, name: &FsStr) -> Self {
+        ExtFile { inner, name: name.to_owned(), vmo: OnceCell::new() }
     }
 }
 
@@ -119,6 +123,11 @@ impl FsNodeOps for ExtFile {
             let bytes =
                 self.inner.fs().parser.read_data(self.inner.inode_num).map_err(ext_error)?;
             let vmo = zx::Vmo::create(bytes.len() as u64).map_err(vmo_error)?;
+            let name = [b"ext4:".as_slice(), &self.name].concat();
+            let name_slice = &name[..std::cmp::min(name.len(), zx::sys::ZX_MAX_NAME_LEN - 1)];
+            vmo.set_name(&std::ffi::CString::new(name_slice).unwrap()).unwrap_or_else(|_| {
+                panic!("failed to set_name({:?}) on ext4 vmo", String::from_utf8_lossy(name_slice))
+            });
             vmo.write(&bytes, 0).map_err(vmo_error)?;
             Ok(Arc::new(vmo))
         })?;
