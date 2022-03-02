@@ -1,0 +1,11 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library fuchsia.driver.framework;
+
+/// Struct that represents a node in a device group.
+// TODO(fxb/93766): Support property transformation.
+type DeviceGroupNode = struct {
+    name string:MAX_NODE_NAME_LENGTH;
+    properties vector<NodeProperty>:MAX_PROPERTY_COUNT;
+};

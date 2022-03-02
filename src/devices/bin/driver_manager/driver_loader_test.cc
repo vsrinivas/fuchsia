@@ -60,6 +60,11 @@ class FakeDriverLoaderIndex final : public fidl::WireServer<fuchsia_driver_frame
     completer.ReplySuccess(drivers);
   }
 
+  void AddDeviceGroup(AddDeviceGroupRequestView request,
+                      AddDeviceGroupCompleter::Sync& completer) override {
+    completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
+  }
+
   std::vector<std::string> driver_urls;
 };
 

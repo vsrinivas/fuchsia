@@ -6,6 +6,7 @@ import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.driver.framework") {
   sources = [
+    "device_group.fidl",
     "driver_host.fidl",
     "driver_index.fidl",
     "topology.fidl",

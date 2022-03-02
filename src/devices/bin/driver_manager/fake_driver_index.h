@@ -67,6 +67,11 @@ class FakeDriverIndex final : public fidl::WireServer<fuchsia_driver_framework::
         fidl::VectorView<fuchsia_driver_framework::wire::MatchedDriver>::FromExternal(&driver, 1));
   }
 
+  void AddDeviceGroup(AddDeviceGroupRequestView request,
+                      AddDeviceGroupCompleter::Sync& completer) override {
+    completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
+  }
+
  private:
   fuchsia_driver_framework::wire::MatchedDriver GetMatchedDriver(fidl::AnyArena& arena,
                                                                  MatchResult match) const {

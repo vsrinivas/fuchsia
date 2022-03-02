@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use {
+    crate::device_group::DeviceGroup,
     crate::match_common::node_to_device_property,
     crate::resolved_driver::{load_driver, ResolvedDriver},
     anyhow::{self, Context},
@@ -16,6 +17,7 @@ use {
     serde::Deserialize,
     std::{
         cell::RefCell,
+        collections::HashMap,
         collections::HashSet,
         ops::Deref,
         ops::DerefMut,
@@ -24,6 +26,7 @@ use {
     },
 };
 
+mod device_group;
 mod match_common;
 mod package_resolver;
 mod resolved_driver;
@@ -97,14 +100,22 @@ enum BaseRepo {
 struct Indexer {
     boot_repo: Vec<ResolvedDriver>,
 
-    // base_repo needs to be in a RefCell because it starts out NotResolved,
+    // |base_repo| needs to be in a RefCell because it starts out NotResolved,
     // but will eventually resolve when base packages are available.
     base_repo: RefCell<BaseRepo>,
+
+    // Contains the device groups. This is wrapped in a RefCell since the
+    // device groups are added after the driver index server has started.
+    device_groups: RefCell<HashMap<String, DeviceGroup>>,
 }
 
 impl Indexer {
     fn new(boot_repo: Vec<ResolvedDriver>, base_repo: BaseRepo) -> Indexer {
-        Indexer { boot_repo: boot_repo, base_repo: RefCell::new(base_repo) }
+        Indexer {
+            boot_repo: boot_repo,
+            base_repo: RefCell::new(base_repo),
+            device_groups: RefCell::new(HashMap::new()),
+        }
     }
 
     fn load_base_repo(&self, base_repo: BaseRepo) {
@@ -144,6 +155,14 @@ impl Indexer {
                 return Ok(m);
             }
         }
+
+        let groups = self.device_groups.borrow();
+        for (_, group) in groups.iter() {
+            if let Some(m) = group.matches(&properties) {
+                return Ok(m);
+            }
+        }
+
         Err(Status::NOT_FOUND.into_raw())
     }
 
@@ -160,13 +179,40 @@ impl Indexer {
             BaseRepo::NotResolved(_) => [].iter(),
         };
 
-        Ok(self
+        let mut matched_drivers: Vec<fdf::MatchedDriver> = self
             .boot_repo
             .iter()
             .chain(base_repo_iter)
             .filter_map(|driver| driver.matches(&properties).ok())
             .filter_map(|d| d)
-            .collect())
+            .collect();
+
+        matched_drivers.append(
+            &mut self
+                .device_groups
+                .borrow()
+                .iter()
+                .filter_map(|(_, driver)| driver.matches(&properties))
+                .collect(),
+        );
+
+        Ok(matched_drivers)
+    }
+
+    fn add_device_group(
+        &self,
+        topological_path: String,
+        nodes: Vec<fdf::DeviceGroupNode>,
+    ) -> fdf::DriverIndexAddDeviceGroupResult {
+        let mut device_groups = self.device_groups.borrow_mut();
+
+        if device_groups.contains_key(&topological_path) {
+            return Err(Status::ALREADY_EXISTS.into_raw());
+        }
+
+        device_groups
+            .insert(topological_path.clone(), DeviceGroup::create(topological_path, nodes)?);
+        Ok(())
     }
 
     fn get_driver_info(&self, driver_filter: Vec<String>) -> Vec<fdd::DriverInfo> {
@@ -282,6 +328,12 @@ async fn run_index_server(
                         .send(&mut indexer.match_drivers_v1(args))
                         .or_else(ignore_peer_closed)
                         .context("error responding to MatchDriversV1")?;
+                }
+                DriverIndexRequest::AddDeviceGroup { topological_path, nodes, responder } => {
+                    responder
+                        .send(&mut indexer.add_device_group(topological_path, nodes))
+                        .or_else(ignore_peer_closed)
+                        .context("error responding to AddDeviceGroup")?;
                 }
             }
             Ok(())
@@ -1004,6 +1056,353 @@ mod tests {
                 ..fdf::MatchedCompositeInfo::EMPTY
             });
             assert_eq!(expected_result, result);
+        }
+        .fuse();
+
+        futures::pin_mut!(index_task, test_task);
+        futures::select! {
+            result = index_task => {
+                panic!("Index task finished: {:?}", result);
+            },
+            () = test_task => {},
+        }
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_device_group_match() {
+        let base_repo = BaseRepo::Resolved(std::vec![]);
+
+        let (proxy, stream) =
+            fidl::endpoints::create_proxy_and_stream::<fdf::DriverIndexMarker>().unwrap();
+        let index = Rc::new(Indexer::new(std::vec![], base_repo));
+        let index_task = run_index_server(index.clone(), stream).fuse();
+
+        let test_task = async move {
+            let node_properties = vec![
+                fdf::NodeProperty {
+                    key: Some(fdf::NodePropertyKey::IntValue(1)),
+                    value: Some(fdf::NodePropertyValue::IntValue(200)),
+                    ..fdf::NodeProperty::EMPTY
+                },
+                fdf::NodeProperty {
+                    key: Some(fdf::NodePropertyKey::StringValue("lapwing".to_string())),
+                    value: Some(fdf::NodePropertyValue::StringValue("plover".to_string())),
+                    ..fdf::NodeProperty::EMPTY
+                },
+            ];
+
+            let nodes = &mut [fdf::DeviceGroupNode {
+                name: "whimbrel".to_string(),
+                properties: node_properties,
+            }];
+
+            proxy.add_device_group("test/path", &mut nodes.iter_mut()).await.unwrap().unwrap();
+
+            let device_properties_match = vec![
+                fdf::NodeProperty {
+                    key: Some(fdf::NodePropertyKey::IntValue(1)),
+                    value: Some(fdf::NodePropertyValue::IntValue(200)),
+                    ..fdf::NodeProperty::EMPTY
+                },
+                fdf::NodeProperty {
+                    key: Some(fdf::NodePropertyKey::StringValue("lapwing".to_string())),
+                    value: Some(fdf::NodePropertyValue::StringValue("plover".to_string())),
+                    ..fdf::NodeProperty::EMPTY
+                },
+            ];
+            let match_args = fdf::NodeAddArgs {
+                properties: Some(device_properties_match),
+                ..fdf::NodeAddArgs::EMPTY
+            };
+
+            let result = proxy.match_driver(match_args).await.unwrap().unwrap();
+            assert_eq!(
+                fdf::MatchedDriver::DeviceGroup(fdf::MatchedDeviceGroupInfo {
+                    topological_path: Some("test/path".to_string()),
+                    node_index: Some(0),
+                    num_nodes: Some(1),
+                    node_names: Some(vec!["whimbrel".to_string()]),
+                    ..fdf::MatchedDeviceGroupInfo::EMPTY
+                }),
+                result
+            );
+
+            let device_properties_mismatch = vec![
+                fdf::NodeProperty {
+                    key: Some(fdf::NodePropertyKey::IntValue(1)),
+                    value: Some(fdf::NodePropertyValue::IntValue(200)),
+                    ..fdf::NodeProperty::EMPTY
+                },
+                fdf::NodeProperty {
+                    key: Some(fdf::NodePropertyKey::StringValue("lapwing".to_string())),
+                    value: Some(fdf::NodePropertyValue::StringValue("dotterel".to_string())),
+                    ..fdf::NodeProperty::EMPTY
+                },
+            ];
+            let mismatch_args = fdf::NodeAddArgs {
+                properties: Some(device_properties_mismatch),
+                ..fdf::NodeAddArgs::EMPTY
+            };
+
+            let result = proxy.match_driver(mismatch_args).await.unwrap();
+            assert_eq!(result, Err(Status::NOT_FOUND.into_raw()));
+        }
+        .fuse();
+
+        futures::pin_mut!(index_task, test_task);
+        futures::select! {
+            result = index_task => {
+                panic!("Index task finished: {:?}", result);
+            },
+            () = test_task => {},
+        }
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_device_group_match_v1() {
+        let always_match_rules = bind::compiler::BindRules {
+            instructions: vec![],
+            symbol_table: std::collections::HashMap::new(),
+            use_new_bytecode: true,
+        };
+        let always_match = DecodedRules::new(
+            bind::bytecode_encoder::encode_v2::encode_to_bytecode_v2(always_match_rules).unwrap(),
+        )
+        .unwrap();
+
+        let base_repo = BaseRepo::Resolved(std::vec![ResolvedDriver {
+            component_url: url::Url::parse("fuchsia-pkg://fuchsia.com/package#driver/my-driver.cm")
+                .unwrap(),
+            v1_driver_path: None,
+            bind_rules: always_match,
+            colocate: false,
+            fallback: false,
+        },]);
+
+        let (proxy, stream) =
+            fidl::endpoints::create_proxy_and_stream::<fdf::DriverIndexMarker>().unwrap();
+        let index = Rc::new(Indexer::new(std::vec![], base_repo));
+        let index_task = run_index_server(index.clone(), stream).fuse();
+
+        let test_task = async move {
+            let node_properties = vec![
+                fdf::NodeProperty {
+                    key: Some(fdf::NodePropertyKey::IntValue(1)),
+                    value: Some(fdf::NodePropertyValue::IntValue(200)),
+                    ..fdf::NodeProperty::EMPTY
+                },
+                fdf::NodeProperty {
+                    key: Some(fdf::NodePropertyKey::StringValue("lapwing".to_string())),
+                    value: Some(fdf::NodePropertyValue::StringValue("plover".to_string())),
+                    ..fdf::NodeProperty::EMPTY
+                },
+            ];
+
+            let nodes = &mut [fdf::DeviceGroupNode {
+                name: "whimbrel".to_string(),
+                properties: node_properties,
+            }];
+
+            proxy.add_device_group("test/path", &mut nodes.iter_mut()).await.unwrap().unwrap();
+
+            let device_properties_match = vec![
+                fdf::NodeProperty {
+                    key: Some(fdf::NodePropertyKey::IntValue(1)),
+                    value: Some(fdf::NodePropertyValue::IntValue(200)),
+                    ..fdf::NodeProperty::EMPTY
+                },
+                fdf::NodeProperty {
+                    key: Some(fdf::NodePropertyKey::StringValue("lapwing".to_string())),
+                    value: Some(fdf::NodePropertyValue::StringValue("plover".to_string())),
+                    ..fdf::NodeProperty::EMPTY
+                },
+            ];
+            let match_args = fdf::NodeAddArgs {
+                properties: Some(device_properties_match),
+                ..fdf::NodeAddArgs::EMPTY
+            };
+
+            let result = proxy.match_drivers_v1(match_args).await.unwrap().unwrap();
+            assert_eq!(2, result.len());
+            assert_eq!(
+                vec![
+                    fdf::MatchedDriver::Driver(fdf::MatchedDriverInfo {
+                        url: Some(
+                            "fuchsia-pkg://fuchsia.com/package#driver/my-driver.cm".to_string()
+                        ),
+                        colocate: Some(false),
+                        ..fdf::MatchedDriverInfo::EMPTY
+                    }),
+                    fdf::MatchedDriver::DeviceGroup(fdf::MatchedDeviceGroupInfo {
+                        topological_path: Some("test/path".to_string()),
+                        node_index: Some(0),
+                        num_nodes: Some(1),
+                        node_names: Some(vec!["whimbrel".to_string()]),
+                        ..fdf::MatchedDeviceGroupInfo::EMPTY
+                    })
+                ],
+                result
+            );
+
+            let device_properties_mismatch = vec![
+                fdf::NodeProperty {
+                    key: Some(fdf::NodePropertyKey::IntValue(1)),
+                    value: Some(fdf::NodePropertyValue::IntValue(200)),
+                    ..fdf::NodeProperty::EMPTY
+                },
+                fdf::NodeProperty {
+                    key: Some(fdf::NodePropertyKey::StringValue("lapwing".to_string())),
+                    value: Some(fdf::NodePropertyValue::StringValue("dotterel".to_string())),
+                    ..fdf::NodeProperty::EMPTY
+                },
+            ];
+            let mismatch_args = fdf::NodeAddArgs {
+                properties: Some(device_properties_mismatch),
+                ..fdf::NodeAddArgs::EMPTY
+            };
+
+            let result = proxy.match_drivers_v1(mismatch_args).await.unwrap().unwrap();
+            assert_eq!(1, result.len());
+            assert_eq!(
+                vec![fdf::MatchedDriver::Driver(fdf::MatchedDriverInfo {
+                    url: Some("fuchsia-pkg://fuchsia.com/package#driver/my-driver.cm".to_string()),
+                    colocate: Some(false),
+                    ..fdf::MatchedDriverInfo::EMPTY
+                }),],
+                result
+            );
+        }
+        .fuse();
+
+        futures::pin_mut!(index_task, test_task);
+        futures::select! {
+            result = index_task => {
+                panic!("Index task finished: {:?}", result);
+            },
+            () = test_task => {},
+        }
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_add_device_group_duplicate_path() {
+        let always_match_rules = bind::compiler::BindRules {
+            instructions: vec![],
+            symbol_table: std::collections::HashMap::new(),
+            use_new_bytecode: true,
+        };
+        let always_match = DecodedRules::new(
+            bind::bytecode_encoder::encode_v2::encode_to_bytecode_v2(always_match_rules).unwrap(),
+        )
+        .unwrap();
+
+        let base_repo = BaseRepo::Resolved(std::vec![ResolvedDriver {
+            component_url: url::Url::parse("fuchsia-pkg://fuchsia.com/package#driver/my-driver.cm")
+                .unwrap(),
+            v1_driver_path: None,
+            bind_rules: always_match,
+            colocate: false,
+            fallback: false,
+        },]);
+
+        let (proxy, stream) =
+            fidl::endpoints::create_proxy_and_stream::<fdf::DriverIndexMarker>().unwrap();
+        let index = Rc::new(Indexer::new(std::vec![], base_repo));
+        let index_task = run_index_server(index.clone(), stream).fuse();
+
+        let test_task = async move {
+            let node_properties = vec![
+                fdf::NodeProperty {
+                    key: Some(fdf::NodePropertyKey::IntValue(1)),
+                    value: Some(fdf::NodePropertyValue::IntValue(200)),
+                    ..fdf::NodeProperty::EMPTY
+                },
+                fdf::NodeProperty {
+                    key: Some(fdf::NodePropertyKey::StringValue("lapwing".to_string())),
+                    value: Some(fdf::NodePropertyValue::StringValue("plover".to_string())),
+                    ..fdf::NodeProperty::EMPTY
+                },
+            ];
+
+            let nodes = &mut [fdf::DeviceGroupNode {
+                name: "whimbrel".to_string(),
+                properties: node_properties,
+            }];
+
+            proxy.add_device_group("test/path", &mut nodes.iter_mut()).await.unwrap().unwrap();
+
+            let duplicate_node_properties = vec![fdf::NodeProperty {
+                key: Some(fdf::NodePropertyKey::IntValue(200)),
+                value: Some(fdf::NodePropertyValue::IntValue(2)),
+                ..fdf::NodeProperty::EMPTY
+            }];
+
+            let duplicate_nodes = &mut [fdf::DeviceGroupNode {
+                name: "dunlin".to_string(),
+                properties: duplicate_node_properties,
+            }];
+
+            let result =
+                proxy.add_device_group("test/path", &mut duplicate_nodes.iter_mut()).await.unwrap();
+            assert_eq!(Err(Status::ALREADY_EXISTS.into_raw()), result);
+        }
+        .fuse();
+
+        futures::pin_mut!(index_task, test_task);
+        futures::select! {
+            result = index_task => {
+                panic!("Index task finished: {:?}", result);
+            },
+            () = test_task => {},
+        }
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_add_device_group_duplicate_key() {
+        let always_match_rules = bind::compiler::BindRules {
+            instructions: vec![],
+            symbol_table: std::collections::HashMap::new(),
+            use_new_bytecode: true,
+        };
+        let always_match = DecodedRules::new(
+            bind::bytecode_encoder::encode_v2::encode_to_bytecode_v2(always_match_rules).unwrap(),
+        )
+        .unwrap();
+
+        let base_repo = BaseRepo::Resolved(std::vec![ResolvedDriver {
+            component_url: url::Url::parse("fuchsia-pkg://fuchsia.com/package#driver/my-driver.cm")
+                .unwrap(),
+            v1_driver_path: None,
+            bind_rules: always_match,
+            colocate: false,
+            fallback: false,
+        },]);
+
+        let (proxy, stream) =
+            fidl::endpoints::create_proxy_and_stream::<fdf::DriverIndexMarker>().unwrap();
+        let index = Rc::new(Indexer::new(std::vec![], base_repo));
+        let index_task = run_index_server(index.clone(), stream).fuse();
+
+        let test_task = async move {
+            let node_properties = vec![
+                fdf::NodeProperty {
+                    key: Some(fdf::NodePropertyKey::IntValue(20)),
+                    value: Some(fdf::NodePropertyValue::IntValue(200)),
+                    ..fdf::NodeProperty::EMPTY
+                },
+                fdf::NodeProperty {
+                    key: Some(fdf::NodePropertyKey::IntValue(20)),
+                    value: Some(fdf::NodePropertyValue::StringValue("plover".to_string())),
+                    ..fdf::NodeProperty::EMPTY
+                },
+            ];
+
+            let nodes = &mut [fdf::DeviceGroupNode {
+                name: "whimbrel".to_string(),
+                properties: node_properties,
+            }];
+
+            let result = proxy.add_device_group("test/path", &mut nodes.iter_mut()).await.unwrap();
+            assert_eq!(Err(Status::INVALID_ARGS.into_raw()), result);
         }
         .fuse();
 
