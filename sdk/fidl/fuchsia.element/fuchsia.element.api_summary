@@ -3,7 +3,6 @@ struct/member fuchsia.element/Annotation.value fuchsia.element/AnnotationValue
 resource struct fuchsia.element/Annotation
 protocol/member fuchsia.element/AnnotationController.GetAnnotations() -> (fuchsia.element/AnnotationController_GetAnnotations_Result result)
 protocol/member fuchsia.element/AnnotationController.UpdateAnnotations(vector<fuchsia.element/Annotation>:1024 annotations_to_set,vector<fuchsia.element/AnnotationKey>:1024 annotations_to_delete) -> (fuchsia.element/AnnotationController_UpdateAnnotations_Result result)
-protocol/member fuchsia.element/AnnotationController.WatchAnnotations() -> (fuchsia.element/AnnotationController_WatchAnnotations_Result result)
 protocol fuchsia.element/AnnotationController
 struct/member fuchsia.element/AnnotationController_GetAnnotations_Response.annotations vector<fuchsia.element/Annotation>:1024
 resource struct fuchsia.element/AnnotationController_GetAnnotations_Response
@@ -14,11 +13,6 @@ struct fuchsia.element/AnnotationController_UpdateAnnotations_Response
 union/member fuchsia.element/AnnotationController_UpdateAnnotations_Result.err fuchsia.element/UpdateAnnotationsError
 union/member fuchsia.element/AnnotationController_UpdateAnnotations_Result.response fuchsia.element/AnnotationController_UpdateAnnotations_Response
 strict union fuchsia.element/AnnotationController_UpdateAnnotations_Result
-struct/member fuchsia.element/AnnotationController_WatchAnnotations_Response.annotations vector<fuchsia.element/Annotation>:1024
-resource struct fuchsia.element/AnnotationController_WatchAnnotations_Response
-union/member fuchsia.element/AnnotationController_WatchAnnotations_Result.err fuchsia.element/WatchAnnotationsError
-union/member fuchsia.element/AnnotationController_WatchAnnotations_Result.response fuchsia.element/AnnotationController_WatchAnnotations_Response
-resource strict union fuchsia.element/AnnotationController_WatchAnnotations_Result
 struct/member fuchsia.element/AnnotationKey.namespace string:128
 struct/member fuchsia.element/AnnotationKey.value string:128
 struct fuchsia.element/AnnotationKey
@@ -27,7 +21,6 @@ union/member fuchsia.element/AnnotationValue.text string
 resource strict union fuchsia.element/AnnotationValue
 protocol/member fuchsia.element/Controller.GetAnnotations() -> (fuchsia.element/AnnotationController_GetAnnotations_Result result)
 protocol/member fuchsia.element/Controller.UpdateAnnotations(vector<fuchsia.element/Annotation>:1024 annotations_to_set,vector<fuchsia.element/AnnotationKey>:1024 annotations_to_delete) -> (fuchsia.element/AnnotationController_UpdateAnnotations_Result result)
-protocol/member fuchsia.element/Controller.WatchAnnotations() -> (fuchsia.element/AnnotationController_WatchAnnotations_Result result)
 protocol fuchsia.element/Controller
 enum/member fuchsia.element/GetAnnotationsError.BUFFER_READ_FAILED 1
 strict enum fuchsia.element/GetAnnotationsError uint32
@@ -67,6 +60,4 @@ table/member fuchsia.element/ViewSpec.view_holder_token fuchsia.ui.views/ViewHol
 table/member fuchsia.element/ViewSpec.view_ref fuchsia.ui.views/ViewRef
 table/member fuchsia.element/ViewSpec.viewport_creation_token fuchsia.ui.views/ViewportCreationToken
 resource table fuchsia.element/ViewSpec
-enum/member fuchsia.element/WatchAnnotationsError.BUFFER_READ_FAILED 1
-flexible enum fuchsia.element/WatchAnnotationsError uint32
 library fuchsia.element

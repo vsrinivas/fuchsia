@@ -9,15 +9,11 @@
 //! calling component.
 
 use {
-    crate::annotation::{
-        handle_annotation_controller_stream, AnnotationError, AnnotationHolder, WatchResponder,
-    },
+    crate::annotation::{handle_annotation_controller_stream, AnnotationError, AnnotationHolder},
     crate::element::Element,
     anyhow::{format_err, Error},
     fidl,
-    fidl::endpoints::{
-        create_request_stream, ClientEnd, ControlHandle, Proxy, RequestStream, ServerEnd,
-    },
+    fidl::endpoints::{create_request_stream, ClientEnd, Proxy, ServerEnd},
     fidl::AsHandleRef,
     fidl_connector::Connect,
     fidl_fuchsia_component as fcomponent, fidl_fuchsia_element as felement,
@@ -684,10 +680,11 @@ async fn handle_element_controller_stream(
     annotation_holder: Arc<Mutex<AnnotationHolder>>,
     stream: Option<felement::ControllerRequestStream>,
 ) {
+    // NOTE: Keep this in sync with any changes to handle_annotation_controller_stream().
+
     // TODO(fxbug.dev/83326): Unify this with handle_annotation_controller_stream(), once FIDL
     // provides a mechanism to do so.
     if let Some(mut stream) = stream {
-        let mut watch_subscriber = annotation_holder.lock().await.new_watch_subscriber();
         while let Ok(Some(request)) = stream.try_next().await {
             match request {
                 felement::ControllerRequest::UpdateAnnotations {
@@ -714,16 +711,6 @@ async fn handle_element_controller_stream(
                         Err(_) => unreachable!(),
                     }
                     .ok();
-                }
-                felement::ControllerRequest::WatchAnnotations { responder } => {
-                    if let Err(e) = watch_subscriber
-                        .watch_annotations(WatchResponder::ElementController(responder))
-                    {
-                        // There is already a `WatchAnnotations` request pending for the client. Since the responder gets dropped (TODO(fxbug.dev/94602)), the connection will be closed to indicate unexpected client behavior.
-                        error!("ControllerRequest error: {}. Dropping connection", e);
-                        stream.control_handle().shutdown_with_epitaph(zx::Status::BAD_STATE);
-                        return;
-                    }
                 }
             }
         }

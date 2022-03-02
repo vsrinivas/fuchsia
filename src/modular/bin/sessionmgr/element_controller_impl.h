@@ -31,9 +31,6 @@ class ElementControllerImpl : public fuchsia::element::Controller {
   // |Controller|
   void GetAnnotations(GetAnnotationsCallback callback) override;
 
-  // |Controller|
-  void WatchAnnotations(WatchAnnotationsCallback callback) override;
-
  private:
   // The ID of the story containing the element associated with this controller.
   std::string story_id_;
