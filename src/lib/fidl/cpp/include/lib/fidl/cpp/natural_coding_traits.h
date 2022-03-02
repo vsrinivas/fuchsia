@@ -60,10 +60,18 @@ struct NaturalCodingTraits<bool> {
   static constexpr size_t inline_size_v2 = sizeof(bool);
   static void Encode(NaturalEncoder* encoder, bool* value, size_t offset,
                      cpp17::optional<NaturalHandleInformation> maybe_handle_info = cpp17::nullopt) {
+    if (!(static_cast<uint8_t>(*value) == 0 || static_cast<uint8_t>(*value) == 1)) {
+      encoder->SetError("invalid boolean value");
+      return;
+    }
     *encoder->template GetPtr<bool>(offset) = *value;
   }
   static void Encode(NaturalEncoder* encoder, std::vector<bool>::iterator value, size_t offset,
                      cpp17::optional<NaturalHandleInformation> maybe_handle_info = cpp17::nullopt) {
+    if (!(static_cast<uint8_t>(*value) == 0 || static_cast<uint8_t>(*value) == 1)) {
+      encoder->SetError("invalid boolean value");
+      return;
+    }
     *encoder->template GetPtr<bool>(offset) = *value;
   }
   static void Decode(NaturalDecoder* decoder, bool* value, size_t offset) {

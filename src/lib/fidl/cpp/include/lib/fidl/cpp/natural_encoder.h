@@ -58,6 +58,13 @@ class NaturalEncoder {
 
   internal::WireFormatVersion wire_format() { return wire_format_; }
 
+  void SetError(const char* error) {
+    if (status_ != ZX_OK)
+      return;
+    status_ = ZX_ERR_INVALID_ARGS;
+    error_ = error;
+  }
+
  protected:
   zx_status_t Validate(const fidl_type_t* type, uint32_t offset, const char** out_err_msg) {
     switch (wire_format_) {
@@ -83,6 +90,8 @@ class NaturalEncoder {
   uint32_t handle_capacity_;
   uint32_t handle_actual_ = 0;
   internal::WireFormatVersion wire_format_ = internal::WireFormatVersion::kV2;
+  zx_status_t status_ = ZX_OK;
+  const char* error_ = nullptr;
 };
 
 // The NaturalMessageEncoder produces an |OutgoingMessage|, representing a transactional
@@ -103,6 +112,10 @@ class NaturalMessageEncoder final : public NaturalEncoder {
   ~NaturalMessageEncoder() = default;
 
   fidl::OutgoingMessage GetMessage(const fidl_type_t* type) {
+    if (status_ != ZX_OK) {
+      return fidl::OutgoingMessage(fidl::Result::EncodeError(status_, error_));
+    }
+
     if (type) {
       const char* err_msg;
       zx_status_t status = Validate(type, sizeof(fidl_message_header_t), &err_msg);
