@@ -68,7 +68,7 @@ const DEFAULT_TEST_CONFIG: DhcpTestConfig = DhcpTestConfig {
     server_addr: fidl_ip_v4!("192.168.0.1"),
     managed_addrs: dhcp::configuration::ManagedAddresses {
         // We know this is safe because 25 is less than the size of an IPv4 address in bits.
-        mask: unsafe { dhcp::configuration::SubnetMask::new_unchecked(25) },
+        mask: dhcp::configuration::SubnetMask::new(25),
         pool_range_start: std_ip_v4!("192.168.0.2"),
         pool_range_stop: std_ip_v4!("192.168.0.5"),
     },

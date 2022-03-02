@@ -287,12 +287,13 @@ pub struct SubnetMask {
 }
 
 impl SubnetMask {
-    /// Returns a `SubnetMask` without checking the value.
+    /// Returns a `SubnetMask`.
     ///
     /// # Safety
     ///
-    /// The value must be <= 32 (the size of an IPv4 address in bits).
-    pub const unsafe fn new_unchecked(ones: u8) -> Self {
+    /// Panics if `ones` is > 32 (the size of an IPv4 address in bits).
+    pub const fn new(ones: u8) -> Self {
+        assert!(ones <= 32);
         SubnetMask { ones }
     }
 
@@ -419,13 +420,19 @@ mod tests {
     }
 
     #[test]
-    fn subnet_mask_new_unchecked() {
+    fn subnet_mask_new() {
         for ones in 0..=U32_BITS {
             assert_eq!(
-                unsafe { SubnetMask::new_unchecked(ones) },
+                SubnetMask::new(ones),
                 SubnetMask::try_from(ones).expect("expected a valid subnet mask")
             );
         }
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_catch33() {
+        let _ = SubnetMask::new(33);
     }
 
     #[test]
