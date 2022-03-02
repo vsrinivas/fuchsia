@@ -32,13 +32,15 @@ rustc_binary("rust_bin") {
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:async-trait",
     "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:itertools",
+    "//third_party/rust_crates:lazy_static",
     "//third_party/rust_crates:log",
+    "//third_party/rust_crates:maplit",
     "//third_party/rust_crates:parking_lot",
   ]
 
   test_deps = [
     "//third_party/rust_crates:assert_matches",
-    "//third_party/rust_crates:maplit",
     "//third_party/rust_crates:tempfile",
   ]
 

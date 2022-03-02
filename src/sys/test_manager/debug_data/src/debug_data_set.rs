@@ -198,12 +198,28 @@ mod inner {
         super::*,
         fuchsia_inspect::{ArrayProperty, LazyNode},
         futures::FutureExt,
+        lazy_static::lazy_static,
+        maplit::hashset,
         moniker::ChildMonikerBase,
     };
 
     /// Callback invoked when the DataSet determines that there is or is not any debug data
     /// produced. The parameter is true iff debug data was produced.
     type Callback = Box<dyn 'static + Fn(bool) + Send + Sync>;
+
+    lazy_static! {
+        /// Monikers relative to a top level realm for which we don't collect debug data.
+        /// TODO(fxbug.dev/94274): This is a workaround for Destroy events that are sometimes
+        /// missing. We should either remove this or add a mechanism to specify this
+        /// from test_manager.
+        static ref IGNORED_MONIKERS: HashSet<Vec<ChildMoniker>> = hashset! [
+            vec![
+                ChildMoniker::new("test_wrapper".to_string(), None),
+                ChildMoniker::new("hermetic_resolver".to_string(), None),
+            ]
+        ];
+
+    }
 
     /// A container that tracks the current known state of realms in a debug data set.
     pub(super) struct DebugDataSet {
@@ -362,6 +378,13 @@ mod inner {
             let unparsed_moniker =
                 header.moniker.as_ref().ok_or(anyhow!("Event contained no moniker"))?;
             let moniker = RelativeMoniker::parse(unparsed_moniker)?;
+
+            // check if we should ignore this moniker. Assumes that the given realms are always
+            // direct children of test_manager.
+            if IGNORED_MONIKERS.contains(&moniker.down_path()[1..]) {
+                return Ok(());
+            }
+
             let realm_id = moniker
                 .down_path()
                 .iter()
@@ -620,6 +643,22 @@ mod inner {
                     "test-url-1".to_string() => 1,
                 }
             );
+        }
+
+        #[fuchsia::test]
+        async fn hermetic_resolver_ignored() {
+            let (send, recv) = mpsc::channel(10);
+            let mut set = DebugDataSet::new(send, |got_data| assert!(!got_data));
+            set.add_realm("./test:realm-1".to_string(), "test-url-1".to_string())
+                .expect("add realm");
+            set.handle_event(start_event("./test:realm-1")).await.expect("handle event");
+            set.handle_event(destroy_event("./test:realm-1")).await.expect("handle event");
+            set.handle_event(start_event("./test:realm-1/test_wrapper/hermetic_resolver"))
+                .await
+                .expect("handle event");
+            set.complete_set();
+            // The start event for hermetic resolver should be ignored, and the set should close.
+            assert_eq!(collect_requests_to_count(recv).await, hashmap! {});
         }
 
         #[fuchsia::test]
