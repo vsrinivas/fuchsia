@@ -12,8 +12,9 @@
 
 [package]
 name = "autocfg"
-version = "1.0.0"
+version = "1.0.1"
 authors = ["Josh Stone <cuviper@gmail.com>"]
+exclude = ["/.github/**", "/bors.toml"]
 description = "Automatic cfg for Rust compiler features"
 readme = "README.md"
 keywords = ["rustc", "build", "autoconf"]

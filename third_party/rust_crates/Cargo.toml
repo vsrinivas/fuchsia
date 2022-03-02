@@ -232,6 +232,7 @@ rust_icu_uenum = { version = "2.0.0", default-features = false, features = ["ren
 rust_icu_uloc = { version = "2.0.0", default-features = false, features = ["renaming", "icu_version_in_env", "icu_version_67_plus"] }
 rust_icu_unorm2 = { version = "2.0.0", default-features = false, features = ["renaming", "icu_version_in_env", "icu_version_67_plus"] }
 rust_icu_ustring = { version = "2.0.0", default-features = false, features = ["renaming", "icu_version_in_env"] }
+serde_yaml = "0.8.23"
 smallvec = "1.2"
 tokio-rustls = "0.13.0"
 # TODO(https://fxbug.dev/90312): point to a crates.io version when there is a
@@ -439,6 +440,9 @@ rustflags = [
   "--cfg=libc_non_exhaustive",
   "--cfg=libc_ptr_addr_of",
  ]
+
+[gn.package.indexmap."1.7.0"]
+rustflags = ["--cfg=has_std"]
 
 [gn.package.libc."0.2.116".platform."cfg(target_os = \"freebsd\")"]
 rustflags = ["--cfg=freebsd11"]

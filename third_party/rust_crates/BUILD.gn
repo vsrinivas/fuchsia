@@ -738,6 +738,12 @@ group("serde_repr") {
   deps = [ ":serde_repr-v0_1_7($host_toolchain)" ]
 }
 
+if (current_os == "fuchsia") {
+  group("serde_yaml") {
+    deps = [ ":serde_yaml-v0_8_23" ]
+  }
+}
+
 if (!(current_os == "fuchsia")) {
   group("serial_test") {
     deps = [ ":serial_test-v0_5_1" ]
@@ -4701,7 +4707,7 @@ rust_library("h2-v0_2_5") {
   deps += [ ":futures-sink-v0_3_19" ]
   deps += [ ":futures-util-v0_3_19" ]
   deps += [ ":http-v0_2_4" ]
-  deps += [ ":indexmap-v1_0_2" ]
+  deps += [ ":indexmap-v1_7_0" ]
   deps += [ ":log-v0_4_11" ]
   deps += [ ":slab-v0_4_2" ]
   deps += [ ":tokio-v0_2_21" ]
@@ -4768,6 +4774,30 @@ rust_library("handlebars-v4_2_1") {
     "-Cmetadata=a76c34e7f359eb7e",
     "-Cextra-filename=-a76c34e7f359eb7e",
     "--cfg=feature=\"default\"",
+  ]
+
+  visibility = [ ":*" ]
+}
+
+rust_library("hashbrown-v0_11_2") {
+  crate_name = "hashbrown"
+  crate_root = "//third_party/rust_crates/vendor/hashbrown/src/lib.rs"
+  output_name = "hashbrown-3f4ceb31128bcd3d"
+  configs -= [
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
+  ]
+
+  deps = []
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2018",
+    "-Cmetadata=3f4ceb31128bcd3d",
+    "-Cextra-filename=-3f4ceb31128bcd3d",
+    "--cfg=feature=\"raw\"",
   ]
 
   visibility = [ ":*" ]
@@ -5166,24 +5196,26 @@ rust_library("idna-v0_2_3") {
   visibility = [ ":*" ]
 }
 
-rust_library("indexmap-v1_0_2") {
+rust_library("indexmap-v1_7_0") {
   crate_name = "indexmap"
   crate_root = "//third_party/rust_crates/vendor/indexmap/src/lib.rs"
-  output_name = "indexmap-e44704bec4fb41ed"
+  output_name = "indexmap-701c6bd73c75516d"
   configs -= [
     "//build/config/rust:edition_2018",
     "//build/config/rust:2018_idioms",
   ]
 
   deps = []
+  deps += [ ":hashbrown-v0_11_2" ]
 
   rustenv = []
 
   rustflags = [
     "--cap-lints=allow",
-    "--edition=2015",
-    "-Cmetadata=e44704bec4fb41ed",
-    "-Cextra-filename=-e44704bec4fb41ed",
+    "--edition=2018",
+    "-Cmetadata=701c6bd73c75516d",
+    "-Cextra-filename=-701c6bd73c75516d",
+    "--cfg=has_std",
   ]
 
   visibility = [ ":*" ]
@@ -7133,7 +7165,7 @@ rust_library("petgraph-v0_5_1") {
 
   deps = []
   deps += [ ":fixedbitset-v0_2_0" ]
-  deps += [ ":indexmap-v1_0_2" ]
+  deps += [ ":indexmap-v1_7_0" ]
 
   rustenv = []
 
@@ -9711,6 +9743,33 @@ rust_proc_macro("serde_repr-v0_1_7") {
     "--edition=2018",
     "-Cmetadata=2607863d914a7535",
     "-Cextra-filename=-2607863d914a7535",
+  ]
+
+  visibility = [ ":*" ]
+}
+
+rust_library("serde_yaml-v0_8_23") {
+  crate_name = "serde_yaml"
+  crate_root = "//third_party/rust_crates/vendor/serde_yaml/src/lib.rs"
+  output_name = "serde_yaml-283f398247437007"
+  configs -= [
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
+  ]
+
+  deps = []
+  deps += [ ":indexmap-v1_7_0" ]
+  deps += [ ":ryu-v1_0_3" ]
+  deps += [ ":serde-v1_0_116" ]
+  deps += [ ":yaml-rust-v0_4_5" ]
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2018",
+    "-Cmetadata=283f398247437007",
+    "-Cextra-filename=-283f398247437007",
   ]
 
   visibility = [ ":*" ]
@@ -12613,6 +12672,30 @@ rust_library("xts-mode-v0_4_1") {
     "--edition=2018",
     "-Cmetadata=d1613781edf44aa",
     "-Cextra-filename=-d1613781edf44aa",
+  ]
+
+  visibility = [ ":*" ]
+}
+
+rust_library("yaml-rust-v0_4_5") {
+  crate_name = "yaml_rust"
+  crate_root = "//third_party/rust_crates/vendor/yaml-rust/src/lib.rs"
+  output_name = "yaml_rust-35f1e10c7571231"
+  configs -= [
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
+  ]
+
+  deps = []
+  deps += [ ":linked-hash-map-v0_5_3" ]
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2018",
+    "-Cmetadata=35f1e10c7571231",
+    "-Cextra-filename=-35f1e10c7571231",
   ]
 
   visibility = [ ":*" ]
