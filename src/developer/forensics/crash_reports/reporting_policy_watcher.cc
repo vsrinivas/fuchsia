@@ -33,8 +33,9 @@ void ReportingPolicyWatcher::SetPolicy(const ReportingPolicy policy) {
     return;
   }
 
+  FX_LOGS(INFO) << "Reporting policy changed from " << ToString(policy_) << " to "
+                << ToString(policy);
   policy_ = policy;
-  FX_LOGS(INFO) << "Reporting policy changed to " << ToString(policy_);
 
   for (const auto& on_change : callbacks_) {
     on_change(policy_);
