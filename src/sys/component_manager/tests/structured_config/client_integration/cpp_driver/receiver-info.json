@@ -1,0 +1,10 @@
+{
+    "short_description": "Structured config integration test receiver driver",
+    "manufacturer": "",
+    "families": [],
+    "models": [],
+    "areas": [
+        "DriverFramework",
+        "Test"
+    ]
+}

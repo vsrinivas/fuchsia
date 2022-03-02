@@ -1,0 +1,24 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "//src/sys/component_manager/tests/structured_config/all_config_types.shard.cml",
+        "inspect/client.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        runner: "driver",
+        binary: "driver/structured_config_receiver.so",
+        bind: "meta/bind/receiver.bindbc",
+    },
+    capabilities: [
+        { service: "test.structuredconfig.receiver.shim.ConfigService" },
+    ],
+    expose: [
+        {
+            service: "test.structuredconfig.receiver.shim.ConfigService",
+            from: "self",
+        },
+    ],
+}

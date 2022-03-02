@@ -7,6 +7,7 @@ using fuchsia.component.runner;
 using fuchsia.data;
 using fuchsia.io;
 using fuchsia.url;
+using zx;
 
 const MAX_NAMESPACE_COUNT uint32 = fuchsia.component.runner.MAX_NAMESPACE_COUNT;
 const MAX_CAPABILITY_COUNT uint8 = 64;
@@ -40,6 +41,10 @@ type DriverStartArgs = resource table {
 
     /// Outgoing directory served by the driver.
     6: outgoing_dir server_end:fuchsia.io.Directory;
+
+    // TODO(https://fxbug.dev/94716) add link to reference for the contents
+    /// Configuration passed to the driver.
+    7: config zx.handle:VMO;
 };
 
 /// Protocol through which a driver's lifecycle can be managed.

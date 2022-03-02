@@ -1,0 +1,14 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// This file gets merged into //sdk/lib/driver_test_realm/meta/driver_test_realm.cml in
+// the associated BUILD.gn
+{
+    expose: [
+        {
+            service: "test.structuredconfig.receiver.shim.ConfigService",
+            from: "#pkg-drivers",
+        },
+    ],
+}

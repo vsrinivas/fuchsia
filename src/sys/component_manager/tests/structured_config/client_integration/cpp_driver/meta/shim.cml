@@ -1,0 +1,32 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "//sdk/lib/driver_test_realm/meta/realm_builder.shard.cml",
+        "inspect/client.shard.cml",
+        "sys/component/realm_builder.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        runner: "elf",
+        binary: "bin/structured_config_cpp_driver_shim",
+    },
+    capabilities: [
+        {
+            protocol: [ "test.structuredconfig.receiver.ConfigReceiverPuppet" ],
+        },
+    ],
+    use: [
+        {
+            protocol: "fuchsia.component.Realm",
+            from: "framework",
+        },
+    ],
+    expose: [
+        {
+            protocol: "test.structuredconfig.receiver.ConfigReceiverPuppet",
+            from: "self",
+        },
+    ],
+}

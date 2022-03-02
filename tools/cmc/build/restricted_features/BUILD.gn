@@ -12,6 +12,7 @@ group("services") {
     "//src/devices/tests/*",
     "//src/storage/ext4/server/*",
     "//src/sys/component_manager/tests/services:*",
+    "//src/sys/component_manager/tests/structured_config/client_integration/cpp_driver:*",
     "//tools/cmc:*",
   ]
 }
@@ -22,6 +23,7 @@ group("dynamic_offers") {
     "//sdk/lib/driver_test_realm:*",
     "//src/devices/tests/*",
     "//src/sys/bootstrap:*",
+    "//src/sys/component_manager/tests/structured_config/client_integration/cpp_driver:*",
     "//tools/cmc:*",
   ]
 }
@@ -38,6 +40,7 @@ group("structured_config") {
     "//src/session/bin/session_manager:*",
     "//src/session/examples/hello-world-session:*",
     "//src/sys/component_manager/tests/hub:*",
+    "//src/sys/component_manager/tests/structured_config/client_integration/cpp_driver:*",
     "//src/sys/component_manager/tests/structured_config/client_integration/cpp_elf:*",
     "//src/sys/component_manager/tests/structured_config/client_integration/rust:*",
     "//src/sys/component_manager/tests/structured_config/different_values:*",

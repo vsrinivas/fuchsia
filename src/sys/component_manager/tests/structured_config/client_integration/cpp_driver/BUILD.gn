@@ -1,0 +1,110 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/drivers.gni")
+import("//build/fidl/fidl.gni")
+import("//build/rust/rustc_binary.gni")
+
+fidl("test.structuredconfig.receiver.shim") {
+  sources = [ "shim.test.fidl" ]
+  public_deps = [ "//src/sys/component_manager/tests/structured_config/fidl:test.structuredconfig.receiver" ]
+}
+
+driver_bind_rules("receiver_bind") {
+  disable_autobind = true
+  bind_output = "receiver.bindbc"
+}
+
+fuchsia_driver("receiver_driver") {
+  testonly = true
+  output_name = "structured_config_receiver"
+  sources = [ "receiver.cc" ]
+  deps = [
+    ":receiver_bind",
+    ":test.structuredconfig.receiver.shim_llcpp",
+    "//sdk/lib/sys/cpp:cpp",
+    "//sdk/lib/sys/inspect/cpp",
+    "//src/devices/bind/fuchsia.test:bind.fuchsia.test",
+    "//src/devices/lib/driver2:inspect",
+    "//src/devices/lib/driver2:llcpp",
+    "//src/sys/component_manager/tests/structured_config/fidl:test.structuredconfig.receiver_llcpp",
+    "//zircon/system/ulib/service:service-llcpp",
+  ]
+}
+
+fuchsia_driver_component("receiver_component") {
+  testonly = true
+  component_name = "cpp_driver_receiver"
+  manifest = "meta/receiver.cml"
+  deps = [ ":receiver_driver" ]
+  info = "receiver-info.json"
+  restricted_features = [
+    "structured_config",
+    "services",
+  ]
+}
+
+fuchsia_structured_config_values("values") {
+  testonly = true
+  cm_target = ":receiver_component"
+  values_source = "//src/sys/component_manager/tests/structured_config/client_integration/config/values.json5"
+}
+
+rustc_binary("shim_bin") {
+  testonly = true
+  output_name = "structured_config_cpp_driver_shim"
+  source_root = "shim.rs"
+  sources = [ "shim.rs" ]
+  deps = [
+    ":test.structuredconfig.receiver.shim-rustc",
+    "//garnet/lib/rust/files_async",
+    "//sdk/fidl/fuchsia.driver.test:fuchsia.driver.test-rustc",
+    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
+    "//sdk/lib/driver_test_realm/realm_builder/rust",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//src/lib/fuchsia-component-test",
+    "//src/sys/component_manager/tests/structured_config/fidl:test.structuredconfig.receiver-rustc",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:log",
+  ]
+}
+
+fuchsia_component("shim_component") {
+  testonly = true
+  component_name = "cpp_driver_shim"
+  manifest = "meta/shim.cml"
+  deps = [ ":shim_bin" ]
+}
+
+cmc_merge("realm.cml") {
+  sources = [
+    "//sdk/lib/driver_test_realm/meta/driver_test_realm.cml",
+    "meta/realm.shard.cml",
+  ]
+}
+
+fuchsia_test_component("realm") {
+  manifest = "${target_out_dir}/realm.cml"
+  restricted_features = [
+    "dynamic_offers",
+    "services",
+  ]
+  manifest_deps = [ ":realm.cml" ]
+}
+
+group("cpp_driver") {
+  testonly = true
+  deps = [
+    ":realm",
+    ":receiver_component",
+    ":shim_component",
+    ":values",
+    "//src/devices/bin/driver_host2:component",
+  ]
+}

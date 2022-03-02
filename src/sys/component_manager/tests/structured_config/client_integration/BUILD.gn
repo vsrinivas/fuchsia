@@ -27,6 +27,7 @@ fuchsia_unittest_package("client_integration") {
   manifest = "meta/tests.cml"
   deps = [
     ":test_bin",
+    "cpp_driver",
     "cpp_elf",
     "rust",
   ]

@@ -11,6 +11,8 @@
 #include <lib/fidl/llcpp/server.h>
 #include <lib/fidl/llcpp/wire_messaging.h>
 #include <lib/service/llcpp/service.h>
+#include <zircon/errors.h>
+#include <zircon/rights.h>
 #include <zircon/status.h>
 
 #include <deque>
@@ -234,6 +236,29 @@ zx::status<fidl::ClientEnd<fdf::Driver>> DriverHostComponent::Start(
       .set_program(arena, start_info.program())
       .set_ns(arena, start_info.ns())
       .set_outgoing_dir(std::move(start_info.outgoing_dir()));
+  if (start_info.has_encoded_config()) {
+    if (start_info.encoded_config().is_buffer()) {
+      args.set_config(std::move(start_info.encoded_config().buffer().vmo));
+    } else if (start_info.encoded_config().is_bytes()) {
+      auto vmo_size = start_info.encoded_config().bytes().count();
+      zx::vmo vmo;
+
+      auto status = zx::vmo::create(vmo_size, ZX_RIGHT_TRANSFER | ZX_RIGHT_READ, &vmo);
+      if (status != ZX_OK) {
+        return zx::error(status);
+      }
+
+      status = vmo.write(start_info.encoded_config().bytes().data(), 0, vmo_size);
+      if (status != ZX_OK) {
+        return zx::error(status);
+      }
+
+      args.set_config(std::move(vmo));
+    } else {
+      LOGF(ERROR, "Failed to parse encoded config in start info. Encoding is not buffer or bytes.");
+      return zx::error(ZX_ERR_INVALID_ARGS);
+    }
+  }
   if (auto symbols = node.symbols(); !symbols.empty()) {
     args.set_symbols(arena, symbols);
   }

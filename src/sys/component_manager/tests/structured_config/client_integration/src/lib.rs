@@ -140,3 +140,19 @@ async fn cpp_elf() {
 
     assert_inspect_config("cpp_elf_receiver:root").await;
 }
+
+#[fuchsia::test]
+async fn cpp_driver() {
+    let puppet =
+        fuchsia_component::client::connect_to_protocol_at_path::<ConfigReceiverPuppetMarker>(
+            "/svc/test.structuredconfig.receiver.ConfigReceiverPuppet.cpp_driver",
+        )
+        .unwrap();
+    assert_eq!(
+        puppet.get_config().await.unwrap(),
+        expected_config(),
+        "child must receive expected configuration"
+    );
+
+    assert_inspect_config("cpp_driver_shim/*/driver_test_realm/pkg-drivers*:root").await;
+}

@@ -298,6 +298,7 @@
 //src/media/audio/drivers/usb-audio:usb-audio-driver
 //src/media/audio/drivers/virtual_audio:virtual_audio_driver-driver
 //src/storage/fvm/driver:fuchsia_driver
+//src/sys/component_manager/tests/structured_config/client_integration/cpp_driver:receiver_driver
 //src/ui/backlight/drivers/ti-lp8556:ti-lp8556-driver
 //src/ui/input/drivers/cypress:cypress-driver
 //src/ui/input/drivers/focaltech:focaltech-driver

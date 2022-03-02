@@ -199,6 +199,7 @@ group("drivers-not-templates") {
     "//src/lib/isolated_devmgr:test-device",
     "//src/media/bundles:drivers",
     "//src/storage/fvm/driver:driver",
+    "//src/sys/component_manager/tests/structured_config/client_integration/cpp_driver:receiver_component",
     "//src/ui/bundles:drivers",
     "//zircon/third_party/dev/ethernet/e1000:e1000",
   ]
