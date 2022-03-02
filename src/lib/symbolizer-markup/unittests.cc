@@ -187,9 +187,9 @@ TEST(SymbolizerMarkupTests, BacktraceFrame) {
 
   writer.ExactPcFrame(9, uintptr_t{0xffffffff0000abcd})
       .Newline()
-      .ReturnAddressFrame(10, uintptr_t{0x0000000012345678})
+      .ReturnAddressFrame(10, uintptr_t{0x12345678})
       .Newline()
-      .ReturnAddressFrame(11, uintptr_t{0x0000000055555555});
+      .ReturnAddressFrame(11, uintptr_t{0x55555555});
 
   constexpr std::string_view kExpected = R"""({{{bt:9:0xffffffff0000abcd:pc}}}
 {{{bt:10:0x12345678:ra}}}
@@ -223,12 +223,51 @@ TEST(SymbolizerMarkupTests, Module) {
   std::string markup;
   symbolizer_markup::Writer writer(Sink{markup});
 
-  writer.Module(5, "moduleA", cpp20::as_bytes(cpp20::span{kBuildIdA}))
+  writer.ElfModule(5, "moduleA", cpp20::as_bytes(cpp20::span{kBuildIdA}))
       .Newline()
-      .Module(10, "moduleB", cpp20::as_bytes(cpp20::span{kBuildIdB}));
+      .ElfModule(10, "moduleB", cpp20::as_bytes(cpp20::span{kBuildIdB}));
 
   constexpr std::string_view kExpected = R"""({{{module:5:moduleA:elf:545975394d10a07d}}}
 {{{module:10:moduleB:elf:ba43d6f6911e8723}}})""";
+  EXPECT_EQ(kExpected, markup);
+}
+
+TEST(SymbolizerMarkupTests, LoadImageMmap) {
+  using Perms = symbolizer_markup::MemoryPermissions;
+
+  constexpr Perms kR = {.read = true};
+  constexpr Perms kRW = {.read = true, .write = true};
+  constexpr Perms kRWX = {.read = true, .write = true, .execute = true};
+  constexpr Perms kRX = {.read = true, .execute = true};
+  constexpr Perms kW = {.write = true};
+  constexpr Perms kWX = {.write = true, .execute = true};
+  constexpr Perms kX = {.execute = true};
+
+  std::string markup;
+  symbolizer_markup::Writer writer(Sink{markup});
+
+  writer.LoadImageMmap(uintptr_t{0x1000'0000}, 0x1000, 0, kR, 0x400)
+      .Newline()
+      .LoadImageMmap(uintptr_t{0x2000'0000}, 0x2000, 1, kRW, 0x800)
+      .Newline()
+      .LoadImageMmap(uintptr_t{0x3000'0000}, 0x3000, 2, kRWX, 0xc00)
+      .Newline()
+      .LoadImageMmap(uintptr_t{0x4000'0000}, 0x4000, 3, kRX, 0x1000)
+      .Newline()
+      .LoadImageMmap(uintptr_t{0x5000'0000}, 0x5000, 4, kW, 0x1400)
+      .Newline()
+      .LoadImageMmap(uintptr_t{0x6000'0000}, 0x6000, 5, kWX, 0x1800)
+      .Newline()
+      .LoadImageMmap(uintptr_t{0x7000'0000}, 0x7000, 6, kX, 0x1c00);
+
+  constexpr std::string_view kExpected =
+      R"""({{{mmap:0x10000000:0x1000:load:0:r:0x400}}}
+{{{mmap:0x20000000:0x2000:load:1:rw:0x800}}}
+{{{mmap:0x30000000:0x3000:load:2:rwx:0xc00}}}
+{{{mmap:0x40000000:0x4000:load:3:rx:0x1000}}}
+{{{mmap:0x50000000:0x5000:load:4:w:0x1400}}}
+{{{mmap:0x60000000:0x6000:load:5:wx:0x1800}}}
+{{{mmap:0x70000000:0x7000:load:6:x:0x1c00}}})""";
   EXPECT_EQ(kExpected, markup);
 }
 

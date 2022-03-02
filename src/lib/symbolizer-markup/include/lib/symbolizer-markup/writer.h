@@ -33,6 +33,13 @@ enum class Color {
   kWhite = 37,
 };
 
+// Permissions attached to a region of memory.
+struct MemoryPermissions {
+  bool read = false;
+  bool write = false;
+  bool execute = false;
+};
+
 // Writer emits symbolizer markup. Writing is abstracted by way of Sink, which
 // is any type that is callable with a std::string_view argument.
 //
@@ -146,7 +153,7 @@ class Writer {
   // Emits the markup for a given ELF module.
   //
   // {{{module:$id:$name:elf:$build_id}}}
-  Writer& Module(unsigned int id, std::string_view name, cpp20::span<const std::byte> build_id) {
+  Writer& ElfModule(unsigned int id, std::string_view name, cpp20::span<const std::byte> build_id) {
     return BeginElement(kModule)
         .DecimalField(id)
         .Field(name)
@@ -155,7 +162,34 @@ class Writer {
         .EndElement();
   }
 
-  // TODO(fxbug.dev/91214): Support the "mmap" field.
+  // Emits the markup for the load image of a module. The given permissions
+  // must admit at least one of reading, writing, or execution.
+  //
+  // {{mmap:$start:$size:load:$module_id:$perms:$load_bias}}
+  Writer& LoadImageMmap(uintptr_t start, size_t size, unsigned int module_id,
+                        const MemoryPermissions& perms, uint64_t load_bias) {
+    ZX_ASSERT(perms.read || perms.write || perms.execute);
+    char perm_str[3];
+    size_t perm_size = 0;
+    if (perms.read) {
+      perm_str[perm_size++] = 'r';
+    }
+    if (perms.write) {
+      perm_str[perm_size++] = 'w';
+    }
+    if (perms.execute) {
+      perm_str[perm_size++] = 'x';
+    }
+
+    return BeginElement(kMmap)
+        .HexField(start)
+        .HexField(size)
+        .Field(kLoad)
+        .DecimalField(module_id)
+        .Field({perm_str, perm_size})
+        .HexField(load_bias)
+        .EndElement();
+  }
 
   //
   // Helpers for writing markup fragments.
@@ -194,6 +228,8 @@ class Writer {
   static constexpr std::string_view kData = "data";
   static constexpr std::string_view kDumpfile = "dumpfile";
   static constexpr std::string_view kElf = "elf";
+  static constexpr std::string_view kLoad = "load";
+  static constexpr std::string_view kMmap = "mmap";
   static constexpr std::string_view kModule = "module";
   static constexpr std::string_view kPc = "pc";
   static constexpr std::string_view kRa = "ra";
@@ -248,7 +284,10 @@ class Writer {
 
   Writer& DecimalField(unsigned int n) { return Separator().DecimalDigits(n); }
 
-  Writer& HexField(uintptr_t p) { return Separator().HexDigits(p); }
+  template <typename Uint, typename = std::enable_if_t<std::is_unsigned_v<Uint>>>
+  Writer& HexField(Uint n) {
+    return Separator().HexDigits(n);
+  }
 
   Writer& HexField(cpp20::span<const std::byte> bytes) {
     Separator();
