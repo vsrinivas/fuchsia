@@ -10,6 +10,7 @@ ffx_plugin("ffx_target") {
   plugin_deps = [
     "add:ffx_target_add",
     "bootloader:ffx_bootloader",
+    "clear-preferred-ssh-address:ffx_target_clear_preferred_ssh_address",
     "default:ffx_target_default",
     "echo:ffx_target_echo",
     "flash:ffx_flash",
@@ -20,6 +21,7 @@ ffx_plugin("ffx_target") {
     "reboot:ffx_reboot",
     "remove:ffx_target_remove",
     "repository:ffx_target_repository",
+    "set-preferred-ssh-address:ffx_target_set_preferred_ssh_address",
     "show:ffx_target_show",
     "snapshot:ffx_snapshot",
     "update:ffx_update",
