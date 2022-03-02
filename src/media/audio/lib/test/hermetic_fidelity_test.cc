@@ -868,9 +868,9 @@ void HermeticFidelityTest::Run(
         }
       }
 
-      // In case of device underflows, don't bother testing the remaining frequencies. Also don't
-      // retain the level+sinad vals or consider them for worst-case, since the output is invalid.
-      // TODO(fxbug.dev/80003): Remove workarounds when device-underflow conditions are fixed.
+      // In case of underflows, exit early (don't assess the remaining channels). Also don't retain
+      // level+sinad vals or compare to our worst-case, since the measurements are invalid.
+      // TODO(fxbug.dev/80003): Remove workarounds when underflow conditions are fixed.
       if (DeviceHasUnderflows(device)) {
         break;
       }
@@ -886,18 +886,27 @@ void HermeticFidelityTest::Run(
         curr_level_db[freq.idx] = level_db;
       }
     }
+
+    // In case of underflows, don't bother measuring the rest of the frequency set.
+    // TODO(fxbug.dev/80003): Remove workarounds when underflow conditions are fixed.
+    if (DeviceHasUnderflows(device)) {
+      break;
+    }
   }
 
   if constexpr (kDisplaySummaryResults) {
     DisplaySummaryResults(tc, frequencies_to_test);
   }
 
-  // TODO(fxbug.dev/80003): Skipping checks until underflows are fixed.
+  // Only check results and pass/fail if we made a complete set of measurements without underflows.
+  // If there were underflows, SKIP (don't fail) so it doesn't look like a fidelity regression.
+  // TODO(fxbug.dev/80003): Remove workarounds when underflow conditions are fixed.
   if (DeviceHasUnderflows(device)) {
     GTEST_SKIP() << "Skipping threshold checks due to underflows";
-  } else {
-    VerifyResults(tc, frequencies_to_test);
+    __builtin_unreachable();
   }
+
+  VerifyResults(tc, frequencies_to_test);
 }
 
 template void HermeticFidelityTest::Run<ASF::UNSIGNED_8, ASF::FLOAT>(
