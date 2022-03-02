@@ -29,8 +29,6 @@ namespace blobfs {
 
 Directory::Directory(Blobfs* bs) : Vnode(bs->vfs()), blobfs_(bs) {}
 
-BlobCache& Directory::GetCache() { return blobfs_->GetCache(); }
-
 Directory::~Directory() = default;
 
 zx_status_t Directory::GetNodeInfoForProtocol([[maybe_unused]] fs::VnodeProtocol protocol,
@@ -75,7 +73,7 @@ zx_status_t Directory::Lookup(std::string_view name, fbl::RefPtr<fs::Vnode>* out
     return status;
   }
   fbl::RefPtr<CacheNode> cache_node;
-  if ((status = GetCache().Lookup(digest, &cache_node)) != ZX_OK) {
+  if ((status = blobfs_->GetCache().Lookup(digest, &cache_node)) != ZX_OK) {
     return status;
   }
   auto vnode = fbl::RefPtr<Blob>::Downcast(std::move(cache_node));
@@ -109,7 +107,7 @@ zx_status_t Directory::Create(std::string_view name, uint32_t mode, fbl::RefPtr<
   }
 
   fbl::RefPtr<Blob> vn = fbl::AdoptRef(new Blob(blobfs_, std::move(digest)));
-  if ((status = GetCache().Add(vn)) != ZX_OK) {
+  if ((status = blobfs_->GetCache().Add(vn)) != ZX_OK) {
     return status;
   }
   if ((status = vn->OpenValidating(fs::VnodeConnectionOptions(), nullptr)) != ZX_OK) {
@@ -120,13 +118,9 @@ zx_status_t Directory::Create(std::string_view name, uint32_t mode, fbl::RefPtr<
   return ZX_OK;
 }
 
-#ifdef __Fuchsia__
-
 zx::status<std::string> Directory::GetDevicePath() const {
   return blobfs_->Device()->GetDevicePath();
 }
-
-#endif  // __Fuchsia__
 
 zx_status_t Directory::Unlink(std::string_view name, bool must_be_dir) {
   TRACE_DURATION("blobfs", "Directory::Unlink", "name", name, "must_be_dir", must_be_dir);
@@ -139,7 +133,7 @@ zx_status_t Directory::Unlink(std::string_view name, bool must_be_dir) {
     return status;
   }
   fbl::RefPtr<CacheNode> cache_node;
-  if ((status = GetCache().Lookup(digest, &cache_node)) != ZX_OK) {
+  if ((status = blobfs_->GetCache().Lookup(digest, &cache_node)) != ZX_OK) {
     return status;
   }
   auto vnode = fbl::RefPtr<Blob>::Downcast(std::move(cache_node));
@@ -163,8 +157,6 @@ void Directory::Sync(SyncCallback closure) {
     cb(status);
   });
 }
-
-#ifdef __Fuchsia__
 
 void Directory::HandleFsSpecificMessage(fidl::IncomingMessage& msg, fidl::Transaction* txn) {
   fidl::WireDispatch<fuchsia_blobfs::Blobfs>(this, std::move(msg), txn);
@@ -199,7 +191,5 @@ void Directory::SetCorruptBlobHandler(SetCorruptBlobHandlerRequestView request,
   blobfs_->SetCorruptBlobHandler(std::move(request->handler));
   completer.Reply(ZX_OK);
 }
-
-#endif  // __Fuchsia__
 
 }  // namespace blobfs

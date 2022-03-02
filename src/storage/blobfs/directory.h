@@ -7,10 +7,6 @@
 #ifndef SRC_STORAGE_BLOBFS_DIRECTORY_H_
 #define SRC_STORAGE_BLOBFS_DIRECTORY_H_
 
-#ifndef __Fuchsia__
-#error Fuchsia-only Header
-#endif
-
 #include <fidl/fuchsia.blobfs/cpp/wire.h>
 #include <fidl/fuchsia.io/cpp/wire.h>
 
@@ -29,11 +25,7 @@ namespace blobfs {
 class Blobfs;
 
 // The root directory of blobfs. This directory is a flat container of all blobs in the filesystem.
-#ifdef __Fuchsia__
 class Directory final : public fs::Vnode, fidl::WireServer<fuchsia_blobfs::Blobfs> {
-#else
-class Directory final : public fs::Vnode {
-#endif
  public:
   explicit Directory(Blobfs* bs);
   ~Directory() final;
@@ -62,8 +54,6 @@ class Directory final : public fs::Vnode {
 #endif
 
  private:
-  BlobCache& GetCache();
-
   Blobfs* const blobfs_;
 };
 
