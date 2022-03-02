@@ -1386,6 +1386,10 @@ TEST(VmoTestCase, CacheOpOutOfRange) {
   // Generate a bad cache op that exceeds the range of the vmo.
   EXPECT_EQ(ZX_ERR_OUT_OF_RANGE, vmo.op_range(ZX_VMO_OP_CACHE_CLEAN_INVALIDATE,
                                               zx_system_get_page_size(), UINT64_MAX, nullptr, 0));
+  // Generate a cache op close to integer wrap around
+  EXPECT_EQ(ZX_ERR_OUT_OF_RANGE,
+            vmo.op_range(ZX_VMO_OP_CACHE_CLEAN_INVALIDATE,
+                         UINT64_MAX - zx_system_get_page_size() + 1, 1, nullptr, 0));
 }
 
 TEST(VmoTestCase, CacheFlush) {
