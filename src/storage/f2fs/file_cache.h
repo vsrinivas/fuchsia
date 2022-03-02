@@ -80,10 +80,9 @@ class Page : public storage::BlockBuffer,
   // to a weak pointer. Otherwise, delete |this|.
   void fbl_recycle();
 
-  ino_t GetVnodeId() const;
   pgoff_t GetKey() const { return index_; }
+  pgoff_t GetIndex() const { return GetKey(); }
   VnodeF2fs &GetVnode() const;
-  pgoff_t GetIndex() const { return index_; }
   FileCache &GetFileCache() const;
   // To get a Page, f2fs should call FileCache::GetPage() or FileCache::FindPage() that
   // internally calls Page::GetPage(). It allocates a discardable |vmo_| and commits a page
@@ -157,10 +156,11 @@ class Page : public storage::BlockBuffer,
   bool SetDirty();
   bool ClearDirtyForIo(bool for_writeback);
 
-  // Truncate or punch-a-hole operations call it to invalidate a Page.
-  // It clears PageFlag::kPageUptodate and unmaps |address_|.
-  // If the Page is dirty, it clears PageFlag::kPageDirty, decreases the regarding dirty page count,
-  // and unmaps |address_|.
+  // Truncate and punch-a-hole operations call it to invalidate a Page.
+  // It clears PageFlag::kPageUptodate and unmaps |address_|. If the Page is dirty, it clears
+  // PageFlag::kPageDirty and decreases the regarding regarding dirty page count.
+  // Note that it does not wait for a writeback Page to be written out. So, a caller ensure that its
+  // block address is invalidated in a dnode or nat entry before calling it.
   void Invalidate();
 
   void ZeroUserSegment(uint64_t start, uint64_t end) {
@@ -220,12 +220,14 @@ class Page : public storage::BlockBuffer,
   zx::vmo vmo_;
   storage::Vmoid vmoid_;
   // It indicates FileCache to which |this| belongs.
+  // It is only use for Downgrade() or unit tests.
   FileCache *file_cache_ = nullptr;
   // It is used as the key of |this| in a lookup table (i.e., FileCache::page_tree_).
   // It indicates different information according to the type of FileCache::vnode_ such as file,
   // node, and meta vnodes. For file vnodes, it has file offset. For node vnodes, it indicates the
   // node id. For meta vnode, it points to the block address to which the metadata is written.
   pgoff_t index_ = -1;
+  F2fs *fs_ = nullptr;
 };
 
 class FileCache {
@@ -255,6 +257,7 @@ class FileCache {
   VnodeF2fs &GetVnode() const { return *vnode_; }
   // It is only allowed to call it from Page::fbl_recycle.
   void Downgrade(Page *raw_page) __TA_EXCLUDES(tree_lock_);
+  zx_status_t Evict(Page *page) __TA_EXCLUDES(tree_lock_);
 
  private:
   // It returns a set of dirty Pages that meet |operation|. A caller should unlock the Pages.

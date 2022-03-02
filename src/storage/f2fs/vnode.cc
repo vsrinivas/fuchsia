@@ -527,7 +527,6 @@ void VnodeF2fs::TruncateToSize() {
 // Called at Recycle if nlink_ is zero
 void VnodeF2fs::EvictVnode() {
   SuperblockInfo &superblock_info = Vfs()->GetSuperblockInfo();
-  // TODO: truncate_inode_pages(&inode->i_data, 0);
 
   if (ino_ == superblock_info.GetNodeIno() || ino_ == superblock_info.GetMetaIno())
     return;

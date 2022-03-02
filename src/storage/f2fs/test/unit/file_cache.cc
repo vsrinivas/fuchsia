@@ -308,7 +308,6 @@ TEST_F(FileCacheTest, Basic) {
     ASSERT_EQ(page->Vmo(), ZX_HANDLE_INVALID);
     ASSERT_EQ(page->Data(0), page->GetAddress());
     ASSERT_EQ(page->capacity(), page->BlockSize() / kPageSize);
-    ASSERT_EQ(page->GetVnodeId(), vn->GetKey());
 
     // Sanity checks for interfaces to Page::vmo_.
     memset(w_buf, i, kPageSize);

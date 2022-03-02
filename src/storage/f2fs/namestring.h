@@ -7,9 +7,7 @@
 
 namespace f2fs {
 
-inline bool IsValidNameLength(std::string_view name) {
-  return name.length() <= kMaxNameLen;
-}
+inline bool IsValidNameLength(std::string_view name) { return name.length() <= kMaxNameLen; }
 
 class NameString final {
  public:
