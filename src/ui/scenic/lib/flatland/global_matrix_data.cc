@@ -7,6 +7,9 @@
 #include <lib/syslog/cpp/macros.h>
 
 #include <cmath>
+#include <iterator>
+
+#include "src/ui/lib/escher/geometry/types.h"
 
 #include <glm/gtc/epsilon.hpp>
 #include <glm/gtc/matrix_access.hpp>
@@ -376,6 +379,26 @@ GlobalRectangleVector ComputeGlobalRectangles(
   }
 
   return rectangles;
+}
+
+// static
+void ClearEmptyRectangles(GlobalRectangleVector* rectangles,
+                          std::vector<allocation::ImageMetadata>* images) {
+  FX_DCHECK(rectangles->size() == images->size());
+  auto is_rect_empty = [](const escher::Rectangle2D& rect) {
+    return rect.extent.x == 0 && rect.extent.y == 0;
+  };
+  size_t index = 0;
+  images->erase(
+      std::remove_if(images->begin(), images->end(),
+                     [&index, &is_rect_empty, &rectangles](const allocation::ImageMetadata& image) {
+                       const auto& rect = rectangles->at(index++);
+                       return is_rect_empty(rect);
+                     }),
+      images->end());
+  FX_DCHECK(index == rectangles->size());
+  rectangles->erase(std::remove_if(rectangles->begin(), rectangles->end(), is_rect_empty),
+                    rectangles->end());
 }
 
 }  // namespace flatland

@@ -83,10 +83,10 @@ class DisplayCompositorTestBase : public gtest::RealLoopFixture {
       const auto global_clip_regions = ComputeGlobalTransformClipRegions(
           topology_data.topology_vector, topology_data.parent_indices, global_matrices, snapshot);
 
-      const auto [image_indices, images] = ComputeGlobalImageData(
-          topology_data.topology_vector, topology_data.parent_indices, snapshot);
+      auto [image_indices, images] = ComputeGlobalImageData(topology_data.topology_vector,
+                                                            topology_data.parent_indices, snapshot);
 
-      const auto image_rectangles =
+      auto image_rectangles =
           ComputeGlobalRectangles(SelectAttribute(global_matrices, image_indices),
                                   SelectAttribute(global_sample_regions, image_indices),
                                   SelectAttribute(global_clip_regions, image_indices), images);
@@ -94,9 +94,11 @@ class DisplayCompositorTestBase : public gtest::RealLoopFixture {
       link_system_->UpdateLinks(topology_data.topology_vector, topology_data.live_handles,
                                 global_matrices, /*pixel_scale*/ glm::vec2(1.0), snapshot);
 
+      ClearEmptyRectangles(&image_rectangles, &images);
       FX_DCHECK(image_rectangles.size() == images.size());
-      image_list_per_display.push_back(
-          {.rectangles = image_rectangles, .images = images, .display_id = display_id});
+      image_list_per_display.push_back({.rectangles = std::move(image_rectangles),
+                                        .images = std::move(images),
+                                        .display_id = display_id});
     }
     return image_list_per_display;
   }

@@ -81,6 +81,10 @@ GlobalRectangleVector ComputeGlobalRectangles(const GlobalMatrixVector& matrices
                                               const GlobalTransformClipRegionVector& clip_regions,
                                               const std::vector<allocation::ImageMetadata>& images);
 
+// Clears empty rectangles and the corresponding images from the global structs.
+void ClearEmptyRectangles(GlobalRectangleVector* rectangles,
+                          std::vector<allocation::ImageMetadata>* images);
+
 // Templatized function to retrieve a vector of attributes that correspond to the provided
 // indices, from the original vector.
 template <typename T>

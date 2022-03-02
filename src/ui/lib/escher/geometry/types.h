@@ -45,9 +45,10 @@ struct Rectangle2D {
       : origin(in_origin), extent(in_extent), clockwise_uvs(in_uvs) {
     FX_CHECK(glm::all(glm::greaterThanEqual(extent, vec2(0.f))));
   }
-  const glm::vec2 origin = vec2(0, 0);
-  const glm::vec2 extent = vec2(1, 1);
-  const std::array<vec2, 4> clockwise_uvs = {vec2(0, 0), vec2(1, 0), vec2(1, 1), vec2(0, 1)};
+
+  glm::vec2 origin = vec2(0, 0);
+  glm::vec2 extent = vec2(1, 1);
+  std::array<vec2, 4> clockwise_uvs = {vec2(0, 0), vec2(1, 0), vec2(1, 1), vec2(0, 1)};
 
   bool operator==(const Rectangle2D& other) const {
     // TODO(fxbug.dev/7228): This epsilon should be unified with the one below, along with

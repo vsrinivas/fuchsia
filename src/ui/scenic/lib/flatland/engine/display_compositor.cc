@@ -466,13 +466,15 @@ void DisplayCompositor::ApplyLayerImage(uint32_t layer_id, escher::Rectangle2D r
   FX_DCHECK(buffer_collection_pixel_format_.count(image.collection_id));
   auto pixel_format = buffer_collection_pixel_format_[image.collection_id];
   fuchsia::hardware::display::ImageConfig image_config = {
-      .width = src.width,
-      .height = src.height,
+      .width = image.width,
+      .height = image.height,
       .pixel_format = BufferCollectionPixelFormatToZirconFormat(pixel_format),
       .type = BufferCollectionPixelFormatToImageType(pixel_format)};
 
   (*display_controller_.get())->SetLayerPrimaryConfig(layer_id, image_config);
 
+  FX_DCHECK(src.width && src.height) << "Source frame cannot be empty.";
+  FX_DCHECK(dst.width && dst.height) << "Destination frame cannot be empty.";
   (*display_controller_.get())->SetLayerPrimaryPosition(layer_id, transform, src, dst);
 
   auto alpha_mode = GetAlphaMode(image.blend_mode);

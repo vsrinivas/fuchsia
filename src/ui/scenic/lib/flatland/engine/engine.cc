@@ -26,10 +26,10 @@ static constexpr uint32_t kNumDisplayFramebuffers = 2;
 
 namespace flatland {
 
-Engine::Engine(std::shared_ptr<flatland::DisplayCompositor> flatland_compositor,
-               std::shared_ptr<flatland::DefaultFlatlandPresenter> flatland_presenter,
-               std::shared_ptr<flatland::UberStructSystem> uber_struct_system,
-               std::shared_ptr<flatland::LinkSystem> link_system)
+Engine::Engine(std::shared_ptr<DisplayCompositor> flatland_compositor,
+               std::shared_ptr<DefaultFlatlandPresenter> flatland_presenter,
+               std::shared_ptr<UberStructSystem> uber_struct_system,
+               std::shared_ptr<LinkSystem> link_system)
     : flatland_compositor_(std::move(flatland_compositor)),
       flatland_presenter_(std::move(flatland_presenter)),
       uber_struct_system_(std::move(uber_struct_system)),
@@ -52,13 +52,13 @@ void Engine::RenderScheduledFrame(uint64_t frame_number, zx::time presentation_t
   const auto links = link_system_->GetResolvedTopologyLinks();
   const auto link_system_id = link_system_->GetInstanceId();
 
-  const auto topology_data = flatland::GlobalTopologyData::ComputeGlobalTopologyData(
+  const auto topology_data = GlobalTopologyData::ComputeGlobalTopologyData(
       snapshot, links, link_system_id, display.root_transform());
-  const auto global_matrices = flatland::ComputeGlobalMatrices(
-      topology_data.topology_vector, topology_data.parent_indices, snapshot);
+  const auto global_matrices =
+      ComputeGlobalMatrices(topology_data.topology_vector, topology_data.parent_indices, snapshot);
 
-  const auto [image_indices, images] = flatland::ComputeGlobalImageData(
-      topology_data.topology_vector, topology_data.parent_indices, snapshot);
+  auto [image_indices, images] =
+      ComputeGlobalImageData(topology_data.topology_vector, topology_data.parent_indices, snapshot);
 
   const auto global_image_sample_regions = ComputeGlobalImageSampleRegions(
       topology_data.topology_vector, topology_data.parent_indices, snapshot);
@@ -66,16 +66,16 @@ void Engine::RenderScheduledFrame(uint64_t frame_number, zx::time presentation_t
   const auto global_clip_regions = ComputeGlobalTransformClipRegions(
       topology_data.topology_vector, topology_data.parent_indices, global_matrices, snapshot);
 
-  const auto image_rectangles = flatland::ComputeGlobalRectangles(
-      flatland::SelectAttribute(global_matrices, image_indices),
-      flatland::SelectAttribute(global_image_sample_regions, image_indices),
-      flatland::SelectAttribute(global_clip_regions, image_indices), images);
+  auto image_rectangles =
+      ComputeGlobalRectangles(SelectAttribute(global_matrices, image_indices),
+                              SelectAttribute(global_image_sample_regions, image_indices),
+                              SelectAttribute(global_clip_regions, image_indices), images);
 
   const auto hw_display = display.display();
 
 #if defined(USE_FLATLAND_VERBOSE_LOGGING)
   std::ostringstream str;
-  str << "flatland::Engine::RenderScheduledFrame()\n"
+  str << "Engine::RenderScheduledFrame()\n"
       << "Root transform of global topology: " << topology_data.topology_vector[0]
       << "\nTopologically-sorted transforms and their corresponding parent transforms:";
   for (size_t i = 1; i < topology_data.topology_vector.size(); ++i) {
@@ -116,6 +116,8 @@ void Engine::RenderScheduledFrame(uint64_t frame_number, zx::time presentation_t
                                      /*num_vmos*/ kNumDisplayFramebuffers, &render_target_info);
   }
 
+  ClearEmptyRectangles(&image_rectangles, &images);
+
   flatland_compositor_->RenderFrame(frame_number, presentation_time,
                                     {{.rectangles = std::move(image_rectangles),
                                       .images = std::move(images),
@@ -132,7 +134,7 @@ view_tree::SubtreeSnapshot Engine::GenerateViewTreeSnapshot(
   const auto child_view_watcher_mapping =
       link_system_->GetChildViewWatcherToParentViewportWatcherMapping();
   const auto link_system_id = link_system_->GetInstanceId();
-  auto topology_data = flatland::GlobalTopologyData::ComputeGlobalTopologyData(
+  auto topology_data = GlobalTopologyData::ComputeGlobalTopologyData(
       uber_struct_snapshot, links, link_system_id, root_transform);
 
   const auto matrix_vector = ComputeGlobalMatrices(
@@ -146,8 +148,8 @@ view_tree::SubtreeSnapshot Engine::GenerateViewTreeSnapshot(
 
   const auto view_ref_koids = UberStructSystem::ExtractViewRefKoids(uber_struct_snapshot);
 
-  return flatland::GlobalTopologyData::GenerateViewTreeSnapshot(topology_data, view_ref_koids,
-                                                                child_view_watcher_mapping);
+  return GlobalTopologyData::GenerateViewTreeSnapshot(topology_data, view_ref_koids,
+                                                      child_view_watcher_mapping);
 }
 
 // TODO(fxbug.dev/81842) If we put Screenshot on its own thread, we should make this call thread
@@ -157,13 +159,13 @@ Renderables Engine::GetRenderables(TransformHandle root) {
   const auto links = link_system_->GetResolvedTopologyLinks();
   const auto link_system_id = link_system_->GetInstanceId();
 
-  const auto topology_data = flatland::GlobalTopologyData::ComputeGlobalTopologyData(
-      snapshot, links, link_system_id, root);
-  const auto global_matrices = flatland::ComputeGlobalMatrices(
-      topology_data.topology_vector, topology_data.parent_indices, snapshot);
+  const auto topology_data =
+      GlobalTopologyData::ComputeGlobalTopologyData(snapshot, links, link_system_id, root);
+  const auto global_matrices =
+      ComputeGlobalMatrices(topology_data.topology_vector, topology_data.parent_indices, snapshot);
 
-  const auto [image_indices, images] = flatland::ComputeGlobalImageData(
-      topology_data.topology_vector, topology_data.parent_indices, snapshot);
+  auto [image_indices, images] =
+      ComputeGlobalImageData(topology_data.topology_vector, topology_data.parent_indices, snapshot);
 
   const auto global_image_sample_regions = ComputeGlobalImageSampleRegions(
       topology_data.topology_vector, topology_data.parent_indices, snapshot);
@@ -171,10 +173,12 @@ Renderables Engine::GetRenderables(TransformHandle root) {
   const auto global_clip_regions = ComputeGlobalTransformClipRegions(
       topology_data.topology_vector, topology_data.parent_indices, global_matrices, snapshot);
 
-  const auto image_rectangles = flatland::ComputeGlobalRectangles(
-      flatland::SelectAttribute(global_matrices, image_indices),
-      flatland::SelectAttribute(global_image_sample_regions, image_indices),
-      flatland::SelectAttribute(global_clip_regions, image_indices), images);
+  auto image_rectangles =
+      ComputeGlobalRectangles(SelectAttribute(global_matrices, image_indices),
+                              SelectAttribute(global_image_sample_regions, image_indices),
+                              SelectAttribute(global_clip_regions, image_indices), images);
+
+  ClearEmptyRectangles(&image_rectangles, &images);
 
   return std::make_pair(std::move(image_rectangles), std::move(images));
 }
