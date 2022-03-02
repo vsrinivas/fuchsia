@@ -40,31 +40,23 @@ decompresses it if necessary, and copies it to a fresh
 [vmo][glossary.virtual memory object]. The bootfs
 image contains a read-only filesystem, which userboot then accesses to find an
 executable and its libraries. With these it starts the next process, which is
-[bootsvc][glossary.bootsvc].
+[component manager][component-manager].
 
 Userboot may exit at this point, unless the userboot.shutdown option was given
 on the [kernel command line][kernel-command-line].
 
-Bootsvc, the next process, is [dynamically linked][dynamic-linking] by userboot.
-This makes it a better home than userboot for complex logic, as it can use
-libraries. Because of this bootsvc runs various FIDL services for its children,
+Component manager, the next process, is [dynamically linked][dynamic-linking] by userboot. This
+makes it a better home than userboot for early boot complex logic, as it can use
+libraries. Because of this component manager runs various FIDL services for its children,
 the most notable of which is bootfs, a [FIDL-based filesystem][fuchsia-io]
-backed by the bootfs image that userboot decompressed.
+backed by the bootfs image that userboot decompressed. It also finishes parsing the ZBI and
+decommits unnecessary pages, and uses the extracted information to host item, item factory, and
+argument services.
 
-Aside from hosting various services and the bootfs filesystem, bootsvc’s main
-job is to start the next process, which is [component
-manager][component-manager]. Just like bootsvc, component manager is stored in
-bootfs, which is still the only filesystem available at this point.
-
-Note that all of bootsvc’s responsibilities are currently being moved to
-component manager, and it will eventually be deleted from the system. After this
-happens, userboot will launch component manager directly instead of bootsvc.
-
-Both bootsvc and component manager mark their processes as
-[critical][critical-processes], which means that if something goes wrong with
-either and they crash, the [job][job] that they are in is killed. Both run in
-the root job, which has the special property that if it is killed, the kernel
-force restarts the system.
+Component manager marks its process as [critical][critical-processes], which means that if
+something goes wrong and it crashes, the [job][job] that it is in is killed. As it runs in
+the root job which has the special property that if it is killed the kernel force restarts the
+system, component manager crashing will cause a reboot.
 
 ![A diagram showing that userboot comes first, then bootsvc, then component
 manager](images/userboot-bootsvc-cm.png)

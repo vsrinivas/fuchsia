@@ -473,7 +473,11 @@ to resolve the `PT_INTERP` (dynamic linker) name and any shared library names it
 may request. That service simply looks in the `lib/` directory (under
 `userboot.root`) in the BOOTFS.
 
-Example: `userboot.next=bin/core-tests`
+Arguments to the next program can optionally be specified using a '+' separator
+between the program and individual arguments. The next program name will always
+be provided as the first argument.
+
+Example: `userboot.next=bin/core-tests+arg1+arg2=foo`
 
 ## userboot.root=\<path>
 

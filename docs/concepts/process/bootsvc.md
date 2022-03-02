@@ -1,4 +1,14 @@
-# Bootsvc
+# Bootsvc [Deprecated]
+
+Bootsvc is now a stub which only exists to load component manager. It is possible to
+boot directly into component manager from userboot by passing the following
+[kernel command line argument](/docs/reference/kernel/kernel_cmdline.md):
+
+```
+userboot.next=bin/component_manager+fuchsia-boot:///#meta/root.cm+--config+/boot/config/component_manager+--host_bootfs
+```
+
+---
 
 `bootsvc` is (typically) the first program loaded by usermode (contrast with
 [userboot](userboot.md), which is loaded by the kernel).  `bootsvc` provides

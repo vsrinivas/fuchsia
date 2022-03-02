@@ -123,9 +123,10 @@ which it uses to decompress the item into a fresh VMO.
 
 Next, `userboot` examines the environment strings it received from the
 kernel, which represent the kernel command line.  If there is a string
-`userboot.next=`*file* then *file* will be loaded as the first real user
-process.  If no such option is present, the default *file* is `bin/bootsvc`.
-The files are found in the BOOTFS image.
+`userboot.next=`*file*+*optional_arg1*+*optional_arg2=foo*+... then *file*
+will be loaded as the first real user process with the '+' separated
+arguments passed to it. If no such option is present, the default *file* is
+`bin/bootsvc`.  The files are found in the BOOTFS image.
 
 To load the file, `userboot` implements a full-featured ELF program loader.
 Usually the file being loaded is a dynamically-linked executable with a
