@@ -67,14 +67,13 @@ std::vector<std::string> from_vector_string_view(fidl::VectorView<fidl::StringVi
   // Align the struct pointer to 8 bytes (as required by FIDL)
   size_t header = 2 + checksum_length + 8;
   size_t fidl_struct_size = vmo_content_size - header;
-  void* data = memalign(8, fidl_struct_size);
-  status = config_vmo.read(data, header, fidl_struct_size);
+  std::unique_ptr<uint8_t[]> fidl_struct(new uint8_t[fidl_struct_size]);
+  status = config_vmo.read(fidl_struct.get(), header, fidl_struct_size);
   ZX_ASSERT_MSG(status == ZX_OK, "Could not read FIDL struct from config VMO");
-  uint8_t* fidl_struct = static_cast<uint8_t*>(data);
 
   // Decode the FIDL struct
   fidl::unstable::DecodedMessage<::{{fidl_cpp_namespace}}::wire::Config> decoded(
-    fidl::internal::WireFormatVersion::kV2, fidl_struct, static_cast<uint32_t>(fidl_struct_size));
+    fidl::internal::WireFormatVersion::kV2, fidl_struct.get(), static_cast<uint32_t>(fidl_struct_size));
   ZX_ASSERT_MSG(decoded.ok(), "Could not decode Config FIDL structure");
   ::{{fidl_cpp_namespace}}::wire::Config* fidl_config = decoded.PrimaryObject();
 
@@ -97,9 +96,6 @@ std::vector<std::string> from_vector_string_view(fidl::VectorView<fidl::StringVi
       {{~#unless @last}},{{/unless}}
     {{~/each~}}
   };
-
-  // Free up allocated memory
-  free(data);
 
   return c;
 }
