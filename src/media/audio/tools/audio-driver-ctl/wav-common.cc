@@ -31,7 +31,7 @@ zx_status_t WAVCommon::Initialize(const char* filename, InitMode mode) {
   }
 
   int flags = (mode == InitMode::SOURCE) ? O_RDONLY : O_RDWR | O_CREAT;
-  fd_ = ::open(filename, flags);
+  fd_ = ::open(filename, flags, S_IRUSR | S_IWUSR);
   if (fd_ < 0) {
     printf("Failed to open \"%s\" (res %d)\n", filename, fd_);
     return static_cast<zx_status_t>(fd_);

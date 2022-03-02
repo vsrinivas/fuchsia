@@ -179,7 +179,7 @@ void RawVideoWriter<enabled>::Initialize() {
     file_name_ = kDefaultFilePathName;
     file_name_ += std::to_string(instance_count) + kFileExtension;
   }
-  file_.reset(::open(file_name_.c_str(), O_CREAT | O_WRONLY | O_TRUNC));
+  file_.reset(::open(file_name_.c_str(), O_CREAT | O_WRONLY | O_TRUNC, S_IRUSR | S_IWUSR));
   if (!file_.is_valid()) {
     FX_LOGS(WARNING) << "::open failed for " << std::quoted(file_name_) << ", returned "
                      << file_.get() << ", errno " << errno;

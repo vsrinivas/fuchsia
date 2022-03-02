@@ -138,7 +138,8 @@ int main(int argc, char* argv[]) {
 
   fbl::unique_fd output_file;
   if (!output_file_name.empty()) {
-    int output_file_desc = open(output_file_name.c_str(), O_CREAT | O_WRONLY | O_TRUNC);
+    int output_file_desc =
+        open(output_file_name.c_str(), O_CREAT | O_WRONLY | O_TRUNC, S_IRUSR | S_IWUSR);
     output_file.reset(output_file_desc);
     ZX_ASSERT(output_file.is_valid());
   }

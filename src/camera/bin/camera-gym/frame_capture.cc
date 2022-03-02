@@ -67,7 +67,7 @@ void FrameCapture::Capture(const zx::vmo& vmo, uint32_t coded_width, uint32_t co
 
 void FrameCapture::Archive(std::unique_ptr<uint8_t[]> buffer, uint32_t buffer_size,
                            std::string path_name) {
-  int fd = open(path_name.c_str(), O_WRONLY | O_CREAT);
+  int fd = open(path_name.c_str(), O_WRONLY | O_CREAT, S_IRUSR | S_IWUSR);
   if (fd < 0) {
     FX_LOGS(ERROR) << "Error opening file at " << path_name.c_str() << ": " << strerror(errno);
     return;

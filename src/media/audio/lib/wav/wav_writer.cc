@@ -161,7 +161,7 @@ bool WavWriter<enabled>::Initialize(const char* const file_name,
     file_name_ = file_name;
   }
 
-  int file_desc = open(file_name_.c_str(), O_CREAT | O_WRONLY | O_TRUNC);
+  int file_desc = open(file_name_.c_str(), O_CREAT | O_WRONLY | O_TRUNC, S_IRUSR | S_IWUSR);
   file_.reset(file_desc);
   if (!file_.is_valid()) {
     FX_LOGS(WARNING) << "open failed for " << std::quoted(file_name_) << ", returned " << file_desc
