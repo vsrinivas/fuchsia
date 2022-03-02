@@ -143,6 +143,8 @@ pub struct Target {
     // reference, as the queue only retains a weak reference.
     target_event_synthesizer: Rc<TargetEventSynthesizer>,
     pub(crate) ssh_host_address: RefCell<Option<HostAddr>>,
+    // A user provided address that should be used to SSH.
+    preferred_ssh_address: RefCell<Option<TargetAddr>>,
 }
 
 impl Target {
@@ -172,6 +174,7 @@ impl Target {
             target_event_synthesizer,
             fastboot_interface: RefCell::new(None),
             ssh_host_address: RefCell::new(None),
+            preferred_ssh_address: RefCell::new(None),
         });
         target.target_event_synthesizer.target.replace(Rc::downgrade(&target));
         target
@@ -349,6 +352,7 @@ impl Target {
     /// ssh_address returns the SocketAddr of the next SSH address to connect to for this target.
     ///
     /// The sort algorithm for SSH address priority is in order of:
+    /// - An address that matches the `preferred_ssh_address`.
     /// - Manual addresses first
     ///   - By recency of observation
     /// - Other addresses
@@ -374,6 +378,17 @@ impl Target {
         };
 
         let manual_link_local_recency = |e1: &TargetAddrEntry, e2: &TargetAddrEntry| {
+            // If the user specified a preferred address, then use it.
+            if let Some(preferred_ssh_address) = *self.preferred_ssh_address.borrow() {
+                if e1.addr == preferred_ssh_address {
+                    return Ordering::Less;
+                }
+
+                if e2.addr == preferred_ssh_address {
+                    return Ordering::Greater;
+                }
+            }
+
             match (&e1.addr_type, &e2.addr_type) {
                 // Note: for manually added addresses, they are ordered strictly
                 // by recency, not link-local first.
@@ -794,6 +809,39 @@ impl Target {
             Target::from_identify(identify).map_err(|e| RcsConnectionError::TargetError(e))?;
         target.update_connection_state(move |_| TargetConnectionState::Rcs(rcs));
         Ok(target)
+    }
+
+    /// Sets the preferred SSH address.
+    ///
+    /// Returns true if successful (the `target_addr` exists). Otherwise,
+    /// returns false. If the `target_addr` should be used immediately, then
+    /// callers should invoke `maybe_reconnect` after calling this method.
+    pub fn set_preferred_ssh_address(&self, target_addr: TargetAddr) -> bool {
+        let address_exists = self
+            .addrs
+            .borrow()
+            .iter()
+            .any(|target_addr_entry| target_addr_entry.addr == target_addr);
+
+        if !address_exists {
+            return false;
+        }
+
+        self.preferred_ssh_address.borrow_mut().replace(target_addr);
+        true
+    }
+
+    /// Drops the existing connection (if any) and re-initializes the
+    /// `HostPipe`.
+    pub fn maybe_reconnect(self: &Rc<Self>) {
+        if self.host_pipe.borrow().is_some() {
+            drop(self.host_pipe.take());
+            self.run_host_pipe();
+        }
+    }
+
+    pub fn clear_preferred_ssh_address(&self) {
+        self.preferred_ssh_address.borrow_mut().take();
     }
 
     pub fn run_host_pipe(self: &Rc<Self>) {
@@ -1425,6 +1473,32 @@ mod test {
         assert_eq!(t.addrs().into_iter().next().unwrap(), TargetAddr::from(expected));
     }
 
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_set_preferred_ssh_address() {
+        let target_addr: TargetAddr = ("fe80::2".parse().unwrap(), 1).into();
+        let target = Target::new_with_addr_entries(
+            Some("foo"),
+            vec![TargetAddrEntry::new(target_addr, Utc::now(), TargetAddrType::Ssh)].into_iter(),
+        );
+
+        assert!(target.set_preferred_ssh_address(target_addr));
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_set_preferred_ssh_address_with_non_existent_address() {
+        let target = Target::new_with_addr_entries(
+            Some("foo"),
+            vec![TargetAddrEntry::new(
+                TargetAddr::from(("::1".parse::<IpAddr>().unwrap().into(), 0)),
+                Utc::now(),
+                TargetAddrType::Ssh,
+            )]
+            .into_iter(),
+        );
+
+        assert!(!target.set_preferred_ssh_address(("fe80::2".parse().unwrap(), 1).into()));
+    }
+
     #[test]
     fn test_target_ssh_address_priority() {
         let name = Some("bubba");
@@ -1524,6 +1598,22 @@ mod test {
             Target::new_with_addr_entries(name, addrs.into_iter()).ssh_address(),
             Some("[2000::2]:22".parse().unwrap())
         );
+
+        let preferred_target_addr: TargetAddr = ("fe80::2".parse().unwrap(), 1).into();
+        // User expressed a preferred SSH address. Prefer it over all other
+        // addresses (even manual).
+        let addrs = BTreeSet::from_iter(vec![
+            TargetAddrEntry::new(preferred_target_addr, start.into(), TargetAddrType::Ssh),
+            TargetAddrEntry::new(
+                ("2000::1".parse().unwrap(), 0).into(),
+                (start - Duration::from_secs(1)).into(),
+                TargetAddrType::Manual,
+            ),
+        ]);
+
+        let target = Target::new_with_addr_entries(name, addrs.into_iter());
+        target.set_preferred_ssh_address(preferred_target_addr);
+        assert_eq!(target.ssh_address(), Some("[fe80::2%1]:22".parse().unwrap()));
     }
 
     #[fuchsia_async::run_singlethreaded(test)]

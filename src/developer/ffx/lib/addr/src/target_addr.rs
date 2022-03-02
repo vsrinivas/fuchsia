@@ -55,6 +55,16 @@ impl From<TargetAddrInfo> for TargetAddr {
     }
 }
 
+impl From<TargetIp> for TargetAddr {
+    fn from(t: TargetIp) -> Self {
+        let (addr, scope): (IpAddr, u32) = match t.ip {
+            IpAddress::Ipv6(Ipv6Address { addr }) => (addr.into(), t.scope_id),
+            IpAddress::Ipv4(Ipv4Address { addr }) => (addr.into(), t.scope_id),
+        };
+        (addr, scope).into()
+    }
+}
+
 impl From<&TargetAddrInfo> for TargetAddr {
     fn from(t: &TargetAddrInfo) -> Self {
         let (addr, scope): (IpAddr, u32) = match t {

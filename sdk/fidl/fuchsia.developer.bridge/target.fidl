@@ -147,6 +147,13 @@ type OpenTargetError = strict enum {
     TARGET_NOT_FOUND = 2;
 };
 
+// TODO(https://fxbug.dev/94680): Migrate the method specifc error enums to use
+// this type instead.
+type TargetError = strict enum {
+    /// The specified address does not exist within the target.
+    ADDRESS_NOT_FOUND = 1;
+};
+
 /// A protocol defining a collection of Fuchsia targets. This is used to inspect
 /// and interact with fuchsia targets that the daemon has discovered.
 @discoverable
@@ -210,6 +217,36 @@ protocol Target {
     GetSshAddress() -> (struct {
         address TargetAddrInfo;
     });
+
+    /// Sets the preferred SSH address.
+    ///
+    /// If successful, then all subsequent interactions with the `Target` over
+    /// SSH will leverage the provided `ip`. That is, any existing connection to
+    /// target is severed and a new connection is established using the provided
+    /// `ip`. Note that the specified address is not persisted across daemon
+    /// version changes or restarts.
+    ///
+    /// This method is primarily useful in testing scenarios where a particular
+    /// network interface should be used (e.g. other interfaces may be disabled
+    /// during testing).
+    ///
+    /// Returns:
+    /// * An error if the `ip` does not exist within the target. Otherwise,
+    ///   nothing on success.
+    SetPreferredSshAddress(struct {
+        ip TargetIp;
+    }) -> (struct {}) error TargetError;
+
+    /// Clears an address that was previously configured using
+    /// `SetPreferredSshAddress`.
+    ///
+    /// Any existing connection to the target is severed and a new connection is
+    /// established. The newly selected address is chosen using the standard
+    /// address selection logic.
+    ///
+    /// Returns:
+    /// * Nothing on success.
+    ClearPreferredSshAddress() -> ();
 
     /// Opens a connection to the RemoteControlService for a given
     /// target. If the target is not in a state that allows opening up the

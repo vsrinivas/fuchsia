@@ -89,6 +89,21 @@ impl TargetHandleInner {
                     fuchsia_async::Timer::new(poll_duration).await;
                 }
             }
+            bridge::TargetRequest::SetPreferredSshAddress { ip, responder } => {
+                let mut result = self
+                    .target
+                    .set_preferred_ssh_address(ip.into())
+                    .then(|| ())
+                    .ok_or(bridge::TargetError::AddressNotFound)
+                    .map(|_| self.target.maybe_reconnect());
+
+                responder.send(&mut result).map_err(Into::into)
+            }
+            bridge::TargetRequest::ClearPreferredSshAddress { responder } => {
+                self.target.clear_preferred_ssh_address();
+                self.target.maybe_reconnect();
+                responder.send().map_err(Into::into)
+            }
             bridge::TargetRequest::OpenRemoteControl { remote_control, responder } => {
                 self.target.run_host_pipe();
                 let mut rcs = loop {
