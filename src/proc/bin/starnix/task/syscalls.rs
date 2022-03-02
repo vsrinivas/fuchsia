@@ -283,6 +283,10 @@ pub fn sys_prctl(
             current_task.mm.write_memory(addr, name.to_bytes_with_nul())?;
             Ok(SUCCESS)
         }
+        PR_SET_PTRACER => {
+            not_implemented!("prctl(PR_SET_PTRACER, {})", arg2);
+            Ok(SUCCESS)
+        }
         _ => {
             not_implemented!("prctl: Unknown option: 0x{:x}", option);
             error!(ENOSYS)
