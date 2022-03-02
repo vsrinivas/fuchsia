@@ -213,9 +213,11 @@ int main(int argc, char** argv) {
     benchmark.PrintLegend(opts.mix_period);
   }
 
+  benchmark.PrintHeader();
   for (auto& scenario : opts.scenarios) {
     benchmark.Run(scenario, opts.runs_per_scenario, opts.mix_period, results, true);
   }
+  benchmark.PrintHeader();
 
   if (opts.enable_pprof) {
     ProfilerStop();

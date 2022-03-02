@@ -57,6 +57,7 @@ class OutputPipelineBenchmark {
             CreateOutputPipeline(process_config_, *device_clock_, effects_loader_v2_.get())) {}
 
   void PrintLegend(zx::duration mix_period);
+  void PrintHeader();
 
   // Create inputs for the given scenario, then repeatedly call output_pipeline_->ReadLock
   // until at least min_duration real time has passed.

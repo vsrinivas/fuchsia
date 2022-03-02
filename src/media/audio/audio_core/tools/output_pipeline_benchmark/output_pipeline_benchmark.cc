@@ -276,7 +276,7 @@ void OutputPipelineBenchmark::PrintLegend(zx::duration mix_period) {
   auto mix_period_ms = static_cast<double>(mix_period.get()) / 1e6;
   printf(
       "\n"
-      "    Metrics for a single %.2fms mix job, displayed in the following format:\n"
+      "    Metrics for a single %.2f ms mix job, displayed in the following format:\n"
       "\n"
       "        config(N runs):\n"
       "          stage1\n"
@@ -285,7 +285,7 @@ void OutputPipelineBenchmark::PrintLegend(zx::duration mix_period) {
       "            metric3 [min, 10pp, 50pp, 90pp, max]\n"
       "          ...\n"
       "\n"
-      "    The \"main\" stage covers the full mix job end-to-end, with\n"
+      "    The 'main' stage covers the full mix job end-to-end, with\n"
       "    per-thread breakdowns computed on the main thread. Additional\n"
       "    stages are pipeline-specific. For example, there might be one\n"
       "    stage for each out-of-process effect invoked by the mix job.\n"
@@ -313,9 +313,14 @@ void OutputPipelineBenchmark::PrintLegend(zx::duration mix_period) {
       "\n"
       "        VM: muted volume\n"
       "        VC: constant non-unity volume\n"
-      "        VS: discrete volume change just before each mix job (\"stepped\")\n"
+      "        VS: discrete volume change just before each mix job ('stepped')\n"
+      "        VR: ramping volume change during each mix job\n"
       "\n",
       mix_period_ms);
+}
+
+void OutputPipelineBenchmark::PrintHeader() {
+  printf("\t\t\t  Min         10%%         50%%         90%%         Max\n");
 }
 
 void OutputPipelineBenchmark::Run(Scenario scenario, int64_t runs_per_scenario,
