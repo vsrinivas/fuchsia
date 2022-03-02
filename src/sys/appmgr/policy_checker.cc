@@ -14,6 +14,7 @@ namespace {
 constexpr char kDeprecatedShellAllowList[] = "allowlist/deprecated_shell.txt";
 constexpr char kDeprecatedAmbientReplaceAsExecAllowList[] =
     "allowlist/deprecated_ambient_replace_as_executable.txt";
+constexpr char kAccountManagerAllowList[] = "allowlist/account_manager.txt";
 constexpr char kComponentEventProviderAllowList[] = "allowlist/component_event_provider.txt";
 constexpr char kCpuResourceAllowList[] = "allowlist/cpu_resource.txt";
 constexpr char kCr50AllowList[] = "allowlist/cr50.txt";
@@ -79,6 +80,12 @@ std::optional<SecurityPolicy> PolicyChecker::Check(const SandboxMetadata& sandbo
   if (sandbox.HasFeature("hub") && !CheckHub(pkg_url)) {
     FX_LOGS(ERROR) << "Component " << pkg_url.ToString() << " is not allowed to use "
                    << "hub. go/no-hub";
+    return std::nullopt;
+  }
+  if (sandbox.HasService("fuchsia.identity.account.AccountManager") &&
+      !CheckAccountManager(pkg_url)) {
+    FX_LOGS(ERROR) << "Component " << pkg_url.ToString() << " is not allowed to use "
+                   << "fuchsia.identity.account.AccountManager";
     return std::nullopt;
   }
   if (sandbox.HasService("fuchsia.kernel.CpuResource") && !CheckCpuResource(pkg_url)) {
@@ -183,6 +190,11 @@ std::optional<SecurityPolicy> PolicyChecker::Check(const SandboxMetadata& sandbo
 bool PolicyChecker::CheckDeprecatedAmbientReplaceAsExecutable(const FuchsiaPkgUrl& pkg_url) {
   AllowList deprecated_exec_allowlist(config_, kDeprecatedAmbientReplaceAsExecAllowList);
   return deprecated_exec_allowlist.IsAllowed(pkg_url);
+}
+
+bool PolicyChecker::CheckAccountManager(const FuchsiaPkgUrl& pkg_url) {
+  AllowList account_manager_allowlist(config_, kAccountManagerAllowList);
+  return account_manager_allowlist.IsAllowed(pkg_url);
 }
 
 bool PolicyChecker::CheckComponentEventProvider(const FuchsiaPkgUrl& pkg_url) {
