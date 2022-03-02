@@ -62,12 +62,14 @@ const ARCHIVIST_REALM_PATH: &'static str = "test_wrapper/archivist";
 const ARCHIVIST_FOR_EMBEDDING_URL: &'static str =
     "fuchsia-pkg://fuchsia.com/test_manager#meta/archivist-for-embedding.cm";
 const HERMETIC_TESTS_COLLECTION: &'static str = "tests";
+const HERMETIC_TIER_2_TESTS_COLLECTION: &'static str = "tier-2-tests";
 const SYSTEM_TESTS_COLLECTION: &'static str = "system-tests";
 const CTS_TESTS_COLLECTION: &'static str = "cts-tests";
 
 lazy_static! {
     static ref TEST_TYPE_REALM_MAP: HashMap<&'static str, &'static str> = [
         ("hermetic", HERMETIC_TESTS_COLLECTION),
+        ("hermetic-tier-2", HERMETIC_TIER_2_TESTS_COLLECTION),
         ("system", SYSTEM_TESTS_COLLECTION),
         ("cts", CTS_TESTS_COLLECTION)
     ]

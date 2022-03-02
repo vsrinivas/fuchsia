@@ -75,6 +75,11 @@
             durability: "transient",
         },
         {
+            name: "tier-2-tests",
+            environment: "#test-env",
+            durability: "transient",
+        },
+        {
             name: "system-tests",
             environment: "#test-env",
             durability: "transient",
@@ -138,6 +143,7 @@
             to: [
                 "#system-tests",
                 "#tests",
+                "#tier-2-tests",
             ],
         },
         {
@@ -169,7 +175,10 @@
                 "fuchsia.vulkan.loader.Loader",
             ],
             from: "parent",
-            to: "#tests",
+            to: [
+              "#tests",
+              "#tier-2-tests",
+            ],
         },
         {
             // update https://fuchsia.dev/fuchsia-src/concepts/testing/v2/test_runner_framework#legacy_non-hermetic_tests
@@ -292,6 +301,7 @@
                 "#starnix_unit_test_runner",
                 "#system-tests",
                 "#tests",
+                "#tier-2-tests",
             ],
         },
         {
@@ -327,6 +337,7 @@
             to: [
                 "#system-tests",
                 "#tests",
+                "#tier-2-tests",
             ],
         },
         {
@@ -335,12 +346,17 @@
             to: [
                 "#system-tests",
                 "#tests",
+                "#tier-2-tests",
             ],
         },
         {
             storage: "custom_artifacts",
             from: "self",
-            to: "#tests",
+            to: [
+                "#system-tests",
+                "#tests",
+                "#tier-2-tests",
+            ],
         },
 
         // temporary solution for tests that depend on having admin rights on
@@ -353,6 +369,7 @@
             to: [
                 "#system-tests",
                 "#tests",
+                "#tier-2-tests",
             ],
         },
 
