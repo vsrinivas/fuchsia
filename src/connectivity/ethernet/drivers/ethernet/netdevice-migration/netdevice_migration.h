@@ -107,7 +107,8 @@ class NetdeviceMigration
             // "Devices that do not support scatter-gather DMA may set this to a value smaller than
             // a page size to guarantee compatibility."
             .max_buffer_length = ZX_PAGE_SIZE / 2,
-            .buffer_alignment = ZX_PAGE_SIZE,
+            // NetdeviceMigration has no alignment requirements.
+            .buffer_alignment = 1,
             // Ensures that an rx buffer will always be large enough to the ethernet MTU.
             .min_rx_buffer_length = mtu,
         }),

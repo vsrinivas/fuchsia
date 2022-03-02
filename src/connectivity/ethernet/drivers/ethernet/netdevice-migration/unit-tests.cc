@@ -31,6 +31,7 @@ class NetdeviceMigrationTestHelper {
     std::lock_guard<std::mutex> rx_lock(netdev_.rx_lock_);
     return netdev_.rx_started_;
   }
+  const device_info_t& Info() { return netdev_.info_; }
   const ethernet_ifc_protocol_t& EthernetIfcProto() { return netdev_.ethernet_ifc_proto_; }
   const network_device_impl_protocol_ops_t& NetworkDeviceImplProtoOps() {
     return netdev_.network_device_impl_protocol_ops_;
@@ -253,6 +254,14 @@ class NetdeviceMigrationEthernetDmaSetupTest : public NetdeviceMigrationTest {
     SetUpWithFeatures(ETHERNET_FEATURE_DMA);
   }
 };
+
+TEST_F(NetdeviceMigrationDefaultSetupTest, DeviceInfoPreconditions) {
+  netdevice_migration::NetdeviceMigrationTestHelper helper(Device());
+  const device_info_t& info = helper.Info();
+  // buffer_alignment > max_buffer_length leads to either unnecessary wasting of contiguous memory,
+  // or for the configuration to be rejected altogether.
+  ASSERT_LE(info.buffer_alignment, info.max_buffer_length);
+}
 
 TEST_F(NetdeviceMigrationDefaultSetupTest, LifetimeTest) {
   ASSERT_EQ(Parent().child_count(), 0u);
