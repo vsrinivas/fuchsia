@@ -605,18 +605,29 @@ pub fn read_boto_refresh_token<P: AsRef<Path>>(boto_path: P) -> Result<Option<St
 /// Alert: The refresh token is considered a private secret for the user. Do
 ///        not print the token to a log or otherwise disclose it.
 pub fn write_boto_refresh_token<P: AsRef<Path>>(boto_path: P, token: &str) -> Result<()> {
-    static GS_UPDATE_REFRESH_TOKEN_RE: OnceCell<Regex> = OnceCell::new();
-    let re = GS_UPDATE_REFRESH_TOKEN_RE
-        .get_or_init(|| Regex::new(r#"(\n\s*gs_oauth2_refresh_token\s*=\s*)\S*"#).expect("regex"));
-    let data = fs::read_to_string(boto_path.as_ref()).context("reading .boto file")?;
-    let data = re.replace(&data, format!("${{1}}{}", token).as_str()).to_string();
-    fs::write(boto_path.as_ref(), data).context("Writing .boto file")?;
+    use std::{fs::set_permissions, os::unix::fs::PermissionsExt};
+    let boto_path = boto_path.as_ref();
+    let data = if !boto_path.is_file() {
+        fs::File::create(boto_path).context("Create .boto file")?;
+        const USER_READ_WRITE: u32 = 0o600;
+        let permissions = std::fs::Permissions::from_mode(USER_READ_WRITE);
+        set_permissions(&boto_path, permissions).context("Boto set permissions")?;
+        format!("\ngs_oauth2_refresh_token={}\n", token)
+    } else {
+        static GS_UPDATE_REFRESH_TOKEN_RE: OnceCell<Regex> = OnceCell::new();
+        let re = GS_UPDATE_REFRESH_TOKEN_RE.get_or_init(|| {
+            Regex::new(r#"(\n\s*gs_oauth2_refresh_token\s*=\s*)\S*"#).expect("regex")
+        });
+        let data = fs::read_to_string(boto_path).context("read boto refresh")?;
+        re.replace(&data, format!("${{1}}{}", token).as_str()).to_string()
+    };
+    fs::write(boto_path, data).context("Writing .boto file")?;
     Ok(())
 }
 
 #[cfg(test)]
 mod test {
-    use {super::*, fuchsia_hyper::new_https_client, hyper::StatusCode, tempfile::NamedTempFile};
+    use {super::*, fuchsia_hyper::new_https_client, hyper::StatusCode, tempfile};
 
     #[test]
     fn test_approve_auth_code_url() {
@@ -673,13 +684,20 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_gcs_read_write_refresh_token() {
-        let boto_path = NamedTempFile::new().expect("temp dir");
-        fs::write(&boto_path, "\ngs_oauth2_refresh_token = original\n").expect("write");
-        let refresh_token = read_boto_refresh_token(&boto_path).expect("").expect("original token");
-        assert_eq!(refresh_token, "original");
-        write_boto_refresh_token(&boto_path, "fake-token").expect("write token");
-        let refresh_token = read_boto_refresh_token(&boto_path).expect("boto").expect("token");
-        assert_eq!(refresh_token, "fake-token");
+        let boto_temp = tempfile::TempDir::new().expect("temp dir");
+        let boto_path = boto_temp.path().join(".boto");
+        assert!(!boto_path.is_file());
+        // Test with no .boto file.
+        write_boto_refresh_token(&boto_path, "first-token").expect("write token");
+        assert!(boto_path.is_file());
+        let refresh_token =
+            read_boto_refresh_token(&boto_path).expect("boto").expect("first token");
+        assert_eq!(refresh_token, "first-token");
+        // Test updating existing .boto file.
+        write_boto_refresh_token(&boto_path, "second-token").expect("write token");
+        let refresh_token =
+            read_boto_refresh_token(&boto_path).expect("boto").expect("second token");
+        assert_eq!(refresh_token, "second-token");
     }
 
     // This test is marked "ignore" because it actually downloads from GCS,
