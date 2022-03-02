@@ -9,7 +9,6 @@
 
 #include <memory>
 
-#include <wlan/common/macaddr.h>
 #include <zxtest/zxtest.h>
 
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test/sim-trans.h"
@@ -29,12 +28,8 @@ class SingleApTest : public ::zxtest::Test {
   ~SingleApTest() override;
 
  protected:
-  static constexpr std::array<uint8_t, common::kMacAddrLen> kApAddr = {0x12, 0x34, 0x56,
-                                                                       0x78, 0x9a, 0xbc};
   static constexpr cssid_t kSsid = {.len = 6 /* strlen("MySSID") */, .data = "MySSID"};
   static constexpr wlan_channel_t kChannel = {.primary = 11, .cbw = CHANNEL_BANDWIDTH_CBW20};
-
-  static const common::MacAddr default_macaddr_;
 
   std::shared_ptr<MockDevice> fake_parent_;
   SimTransport sim_trans_;

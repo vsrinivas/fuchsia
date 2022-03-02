@@ -14,8 +14,6 @@ extern "C" {
 
 namespace wlan::testing {
 
-const common::MacAddr SingleApTest::default_macaddr_(kApAddr);
-
 SingleApTest::SingleApTest()
     : fake_parent_(MockDevice::FakeRootParent()), sim_trans_(fake_parent_.get()) {
   // Add a default MVM firmware to the fake DDK.
