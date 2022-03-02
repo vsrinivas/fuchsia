@@ -107,7 +107,8 @@ constexpr size_t kIterCount = 10;
 TEST_P(ThreadingTest, CreateUnlinkExclusive) {
   for (size_t i = 0; i < kIterCount; i++) {
     ASSERT_NO_FATAL_FAILURE((ThreadActionTest<10, 1>([this]() {
-      fbl::unique_fd fd(open(GetPath("exclusive").c_str(), O_RDWR | O_CREAT | O_EXCL));
+      fbl::unique_fd fd(
+          open(GetPath("exclusive").c_str(), O_RDWR | O_CREAT | O_EXCL, S_IRUSR | S_IWUSR));
       if (fd) {
         return close(fd.release()) == 0 ? kSuccess : kUnexpectedFailure;
       } else if (errno == EEXIST) {
@@ -221,7 +222,8 @@ using ThreadingLinkTest = ThreadingTest;
 
 TEST_P(ThreadingLinkTest, LinkExclusive) {
   for (size_t i = 0; i < kIterCount; i++) {
-    fbl::unique_fd fd(open(GetPath("link_start").c_str(), O_RDWR | O_CREAT | O_EXCL));
+    fbl::unique_fd fd(
+        open(GetPath("link_start").c_str(), O_RDWR | O_CREAT | O_EXCL, S_IRUSR | S_IWUSR));
     ASSERT_TRUE(fd);
     ASSERT_EQ(close(fd.release()), 0);
 

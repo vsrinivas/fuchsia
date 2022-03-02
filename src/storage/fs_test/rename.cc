@@ -231,7 +231,7 @@ TEST_P(RenameTest, At) {
   ASSERT_EQ(errno, EBADF);
 
   // Additionally, we shouldn't be able to renameat to a file.
-  int fd = openat(barfd, "filename", O_CREAT | O_RDWR | O_EXCL);
+  int fd = openat(barfd, "filename", O_CREAT | O_RDWR | O_EXCL, S_IRUSR | S_IWUSR);
   ASSERT_GT(fd, 0);
   ASSERT_EQ(renameat(foofd, "baz", fd, "baz"), -1);
   // NOTE: not checking for "ENOTDIR", since ENOTSUPPORTED might be returned instead.
@@ -254,7 +254,7 @@ TEST_P(RenameTest, RenameDirOverFileFails) {
   ASSERT_EQ(mkdir(src_dir.c_str(), 0755), 0);
 
   // Renaming over a file fails.
-  int fd = open(dst.c_str(), O_CREAT | O_RDWR);
+  int fd = open(dst.c_str(), O_CREAT | O_RDWR, S_IRUSR | S_IWUSR);
   ASSERT_GT(fd, 0);
   close(fd);
 
@@ -294,7 +294,7 @@ TEST_P(RenameTest, RenameFileTrailingSlashFails) {
   std::string src_dir = GetPath("a/b/");
   std::string dst = GetPath("a/c");
   ASSERT_EQ(mkdir(GetPath("a").c_str(), 0755), 0);
-  int fd = open(GetPath("a/b").c_str(), O_CREAT | O_RDWR);
+  int fd = open(GetPath("a/b").c_str(), O_CREAT | O_RDWR, S_IRUSR | S_IWUSR);
   ASSERT_GT(fd, 0);
   close(fd);
 
@@ -321,7 +321,7 @@ TEST_P(RenameTest, RenameFileOverDirFails) {
   ASSERT_EQ(mkdir(GetPath("a").c_str(), 0755), 0);
   ASSERT_EQ(mkdir(dst.c_str(), 0755), 0);
 
-  int fd = open(src.c_str(), O_CREAT | O_RDWR);
+  int fd = open(src.c_str(), O_CREAT | O_RDWR, S_IRUSR | S_IWUSR);
   ASSERT_GT(fd, 0);
   close(fd);
 
@@ -335,7 +335,7 @@ TEST_P(RenameTest, RenameFileOverNonexistantDirPathFails) {
   std::string src = GetPath("a/b");
   std::string dst = GetPath("a/c/");
   ASSERT_EQ(mkdir(GetPath("a").c_str(), 0755), 0);
-  int fd = open(src.c_str(), O_CREAT | O_RDWR);
+  int fd = open(src.c_str(), O_CREAT | O_RDWR, S_IRUSR | S_IWUSR);
   ASSERT_GT(fd, 0);
   close(fd);
 
@@ -347,7 +347,7 @@ TEST_P(RenameTest, RenameFileOverNonexistantFilePathSucceeds) {
   std::string src = GetPath("a/b");
   std::string dst = GetPath("a/c");
   ASSERT_EQ(mkdir(GetPath("a").c_str(), 0755), 0);
-  int fd = open(src.c_str(), O_CREAT | O_RDWR);
+  int fd = open(src.c_str(), O_CREAT | O_RDWR, S_IRUSR | S_IWUSR);
   ASSERT_GT(fd, 0);
   close(fd);
 

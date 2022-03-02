@@ -176,7 +176,7 @@ TEST_F(MountTest, ServeExportDirectoryDisallowFileCreationInExportRoot) {
   ASSERT_TRUE(root_fd.is_valid());
 
   // Adding a file is disallowed here...
-  fbl::unique_fd foo_fd(openat(root_fd.get(), "foo", O_CREAT | O_EXCL | O_RDWR));
+  fbl::unique_fd foo_fd(openat(root_fd.get(), "foo", O_CREAT | O_EXCL | O_RDWR, S_IRUSR | S_IWUSR));
   EXPECT_FALSE(foo_fd.is_valid());
 }
 
@@ -186,7 +186,8 @@ TEST_F(MountTest, ServeExportDirectoryAllowFileCreationInDataRoot) {
   ASSERT_TRUE(root_fd.is_valid());
 
   // Adding a file in "root/" is allowed, since "root/" is within the mutable minfs filesystem.
-  fbl::unique_fd foo_fd(openat(root_fd.get(), "root/foo", O_CREAT | O_EXCL | O_RDWR));
+  fbl::unique_fd foo_fd(
+      openat(root_fd.get(), "root/foo", O_CREAT | O_EXCL | O_RDWR, S_IRUSR | S_IWUSR));
   EXPECT_TRUE(foo_fd.is_valid());
 }
 

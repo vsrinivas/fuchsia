@@ -53,7 +53,7 @@ class BufferedFile {
     fs_ = fs;
     bytes_per_write_ = bytes_per_write;
     file_path_ = path;
-    fd_.reset(open(file_path_.c_str(), O_RDWR | O_CREAT));
+    fd_.reset(open(file_path_.c_str(), O_RDWR | O_CREAT, S_IRUSR | S_IWUSR));
     EXPECT_TRUE(fd_);
     buffer_.resize(max_size, 0);
 

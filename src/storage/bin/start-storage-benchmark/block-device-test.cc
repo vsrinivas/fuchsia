@@ -141,7 +141,7 @@ TEST(BlockDeviceTest, StartBlockDeviceFilesystemWorks) {
   ASSERT_OK(root.status_value());
   fbl::unique_fd dir;
   ASSERT_OK(fdio_fd_create(root->TakeChannel().release(), dir.reset_and_get_address()));
-  fbl::unique_fd file(openat(dir.get(), kFileName, O_CREAT | O_RDWR));
+  fbl::unique_fd file(openat(dir.get(), kFileName, O_CREAT | O_RDWR, S_IRUSR | S_IWUSR));
   ASSERT_EQ(pwrite(file.get(), kFileContents.data(), kFileSize, 0), kFileSize);
   std::string contents(kFileSize, 0);
   ASSERT_EQ(pread(file.get(), contents.data(), kFileSize, 0), kFileSize);

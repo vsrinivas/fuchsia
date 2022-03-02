@@ -99,7 +99,7 @@ TEST_P(BlobfsIntegrationTest, Basics) {
     ASSERT_EQ(close(fd.release()), 0);
 
     // We cannot re-open the blob as writable
-    fd.reset(open(info->path, O_RDWR | O_CREAT));
+    fd.reset(open(info->path, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR));
     ASSERT_FALSE(fd) << "Shouldn't be able to re-create blob that exists";
     fd.reset(open(info->path, O_RDWR));
     ASSERT_FALSE(fd) << "Shouldn't be able to re-open blob as writable";
@@ -187,13 +187,13 @@ TEST_P(BlobfsIntegrationTest, UnallocatedBlob) {
   std::unique_ptr<BlobInfo> info = GenerateRandomBlob(fs().mount_path(), 1 << 10);
 
   // We can create a blob with a name.
-  ASSERT_TRUE(fbl::unique_fd(open(info->path, O_CREAT | O_EXCL | O_RDWR)));
+  ASSERT_TRUE(fbl::unique_fd(open(info->path, O_CREAT | O_EXCL | O_RDWR, S_IRUSR | S_IWUSR)));
   // It won't exist if we close it before allocating space.
   ASSERT_FALSE(fbl::unique_fd(open(info->path, O_RDWR)));
   ASSERT_FALSE(fbl::unique_fd(open(info->path, O_RDONLY)));
   // We can "re-use" the name.
   {
-    fbl::unique_fd fd(open(info->path, O_CREAT | O_EXCL | O_RDWR));
+    fbl::unique_fd fd(open(info->path, O_CREAT | O_EXCL | O_RDWR, S_IRUSR | S_IWUSR));
     ASSERT_TRUE(fd);
     ASSERT_EQ(ftruncate(fd.get(), info->size_data), 0);
   }
@@ -202,16 +202,16 @@ TEST_P(BlobfsIntegrationTest, UnallocatedBlob) {
 TEST_P(BlobfsIntegrationTest, NullBlobCreateUnlink) {
   std::unique_ptr<BlobInfo> info = GenerateRandomBlob(fs().mount_path(), 0);
 
-  fbl::unique_fd fd(open(info->path, O_CREAT | O_EXCL | O_RDWR));
+  fbl::unique_fd fd(open(info->path, O_CREAT | O_EXCL | O_RDWR, S_IRUSR | S_IWUSR));
   ASSERT_TRUE(fd);
   ASSERT_EQ(ftruncate(fd.get(), 0), 0);
   std::array<char, 1> buf;
   ASSERT_EQ(read(fd.get(), buf.data(), 1), 0) << "Null Blob should reach EOF immediately";
   ASSERT_EQ(close(fd.release()), 0);
 
-  fd.reset(open(info->path, O_CREAT | O_EXCL | O_RDWR));
+  fd.reset(open(info->path, O_CREAT | O_EXCL | O_RDWR, S_IRUSR | S_IWUSR));
   EXPECT_FALSE(fd) << "Null Blob should already exist";
-  fd.reset(open(info->path, O_CREAT | O_RDWR));
+  fd.reset(open(info->path, O_CREAT | O_RDWR, S_IRUSR | S_IWUSR));
   EXPECT_FALSE(fd) << "Null Blob should not be openable as writable";
 
   fd.reset(open(info->path, O_RDONLY));
@@ -235,7 +235,7 @@ TEST_P(BlobfsIntegrationTest, NullBlobCreateRemount) {
   std::unique_ptr<BlobInfo> info = GenerateRandomBlob(fs().mount_path(), 0);
 
   // Create the null blob.
-  fbl::unique_fd fd(open(info->path, O_CREAT | O_EXCL | O_RDWR));
+  fbl::unique_fd fd(open(info->path, O_CREAT | O_EXCL | O_RDWR, S_IRUSR | S_IWUSR));
   ASSERT_TRUE(fd);
   ASSERT_EQ(ftruncate(fd.get(), 0), 0);
   ASSERT_EQ(close(fd.release()), 0);
@@ -249,14 +249,14 @@ TEST_P(BlobfsIntegrationTest, NullBlobCreateRemount) {
 
 TEST_P(BlobfsIntegrationTest, ExclusiveCreate) {
   std::unique_ptr<BlobInfo> info = GenerateRandomBlob(fs().mount_path(), 1 << 17);
-  fbl::unique_fd fd(open(info->path, O_CREAT | O_EXCL | O_RDWR));
+  fbl::unique_fd fd(open(info->path, O_CREAT | O_EXCL | O_RDWR, S_IRUSR | S_IWUSR));
   ASSERT_TRUE(fd);
 
-  fbl::unique_fd fd2(open(info->path, O_CREAT | O_EXCL | O_RDWR));
+  fbl::unique_fd fd2(open(info->path, O_CREAT | O_EXCL | O_RDWR, S_IRUSR | S_IWUSR));
   EXPECT_FALSE(fd2) << "Should not be able to exclusively create twice";
 
   // But a second open should work.
-  fd2.reset(open(info->path, O_CREAT | O_RDWR));
+  fd2.reset(open(info->path, O_CREAT | O_RDWR, S_IRUSR | S_IWUSR));
   ASSERT_TRUE(fd2);
 }
 
@@ -599,7 +599,7 @@ TEST_P(BlobfsIntegrationTest, WriteAfterUnlink) {
   std::unique_ptr<BlobInfo> info = GenerateRandomBlob(fs().mount_path(), size);
 
   // Partially write out first blob.
-  fbl::unique_fd fd(open(info->path, O_CREAT | O_RDWR));
+  fbl::unique_fd fd(open(info->path, O_CREAT | O_RDWR, S_IRUSR | S_IWUSR));
   ASSERT_TRUE(fd) << "Failed to create blob";
   ASSERT_EQ(0, ftruncate(fd.get(), size));
   ASSERT_EQ(0, StreamAll(write, fd.get(), info->data.get(), size / 2)) << "Failed to write Data";
@@ -641,24 +641,24 @@ TEST_P(BlobfsIntegrationTest, ReadTooLarge) {
 TEST_P(BlobfsIntegrationTest, BadCreation) {
   std::string name(fs().mount_path());
   name.append("/00112233445566778899AABBCCDDEEFFGGHHIIJJKKLLMMNNOOPPQQRRSSTTUUVV");
-  fbl::unique_fd fd(open(name.c_str(), O_CREAT | O_RDWR));
+  fbl::unique_fd fd(open(name.c_str(), O_CREAT | O_RDWR, S_IRUSR | S_IWUSR));
   ASSERT_FALSE(fd) << "Only acceptable pathnames are hex";
 
   name.assign(fs().mount_path());
   name.append("/00112233445566778899AABBCCDDEEFF");
-  fd.reset(open(name.c_str(), O_CREAT | O_RDWR));
+  fd.reset(open(name.c_str(), O_CREAT | O_RDWR, S_IRUSR | S_IWUSR));
   ASSERT_FALSE(fd) << "Only acceptable pathnames are 32 hex-encoded bytes";
 
   std::unique_ptr<BlobInfo> info = GenerateRandomBlob(fs().mount_path(), 1 << 15);
 
-  fd.reset(open(info->path, O_CREAT | O_RDWR));
+  fd.reset(open(info->path, O_CREAT | O_RDWR, S_IRUSR | S_IWUSR));
   ASSERT_TRUE(fd) << "Failed to create blob";
   ASSERT_EQ(-1, ftruncate(fd.get(), 0)) << "Blob without data doesn't match null blob";
 
   // This is the size of the entire disk; we shouldn't fail here as setting blob size
   // has nothing to do with how much space blob will occupy.
   fd.reset();
-  fd.reset(open(info->path, O_CREAT | O_RDWR));
+  fd.reset(open(info->path, O_CREAT | O_RDWR, S_IRUSR | S_IWUSR));
   ASSERT_EQ(
       0, ftruncate(fd.get(), fs().options().device_block_count * fs().options().device_block_size))
       << "Huge blob";
@@ -671,7 +671,7 @@ TEST_P(BlobfsIntegrationTest, BadCreation) {
   ASSERT_FALSE(fd) << "Cannot access partial blob";
 
   // And once more -- let's write everything but the last byte of a blob's data.
-  fd.reset(open(info->path, O_CREAT | O_RDWR));
+  fd.reset(open(info->path, O_CREAT | O_RDWR, S_IRUSR | S_IWUSR));
   ASSERT_TRUE(fd) << "Failed to create blob";
   ASSERT_EQ(0, ftruncate(fd.get(), info->size_data)) << "Failed to allocate blob";
   ASSERT_EQ(0, StreamAll(write, fd.get(), info->data.get(), info->size_data - 1))
@@ -691,7 +691,7 @@ void VerifyCompromised(int fd, const uint8_t* data, size_t size_data) {
 // Creates a blob with the provided Merkle tree + Data, and
 // reads to verify the data.
 void MakeBlobCompromised(BlobInfo* info) {
-  fbl::unique_fd fd(open(info->path, O_CREAT | O_RDWR));
+  fbl::unique_fd fd(open(info->path, O_CREAT | O_RDWR, S_IRUSR | S_IWUSR));
   ASSERT_TRUE(fd) << "Failed to create blob";
   ASSERT_EQ(0, ftruncate(fd.get(), info->size_data));
 
@@ -855,11 +855,11 @@ bool IsReadable(int fd) {
 // Tests that we cannot read from the Blob until it has been fully written.
 TEST_P(BlobfsIntegrationTest, EarlyRead) {
   std::unique_ptr<BlobInfo> info = GenerateRandomBlob(fs().mount_path(), 1 << 17);
-  fbl::unique_fd fd(open(info->path, O_CREAT | O_EXCL | O_RDWR));
+  fbl::unique_fd fd(open(info->path, O_CREAT | O_EXCL | O_RDWR, S_IRUSR | S_IWUSR));
   ASSERT_TRUE(fd);
 
   // A second fd should also not be readable.
-  fbl::unique_fd fd2(open(info->path, O_CREAT | O_RDWR));
+  fbl::unique_fd fd2(open(info->path, O_CREAT | O_RDWR, S_IRUSR | S_IWUSR));
   ASSERT_TRUE(fd2);
 
   ASSERT_FALSE(IsReadable(fd.get())) << "Should not be readable after open";
@@ -907,7 +907,7 @@ void CheckReadable(fbl::unique_fd fd, std::atomic<bool>* result) {
 // Tests that poll() can tell, at some point, when it's ok to read.
 TEST_P(BlobfsIntegrationTest, WaitForRead) {
   std::unique_ptr<BlobInfo> info = GenerateRandomBlob(fs().mount_path(), 1 << 17);
-  fbl::unique_fd fd(open(info->path, O_CREAT | O_EXCL | O_RDWR));
+  fbl::unique_fd fd(open(info->path, O_CREAT | O_EXCL | O_RDWR, S_IRUSR | S_IWUSR));
   ASSERT_TRUE(fd);
 
   {
@@ -931,7 +931,7 @@ TEST_P(BlobfsIntegrationTest, WaitForRead) {
 void UnlinkAndRecreate(const char* path, fbl::unique_fd* fd) {
   ASSERT_EQ(0, unlink(path));
   fd->reset();  // Make sure the file is gone.
-  fd->reset(open(path, O_CREAT | O_RDWR | O_EXCL));
+  fd->reset(open(path, O_CREAT | O_RDWR | O_EXCL, S_IRUSR | S_IWUSR));
   ASSERT_TRUE(*fd) << "Failed to recreate blob";
 }
 
@@ -939,7 +939,7 @@ void UnlinkAndRecreate(const char* path, fbl::unique_fd* fd) {
 TEST_P(BlobfsIntegrationTest, RestartCreation) {
   std::unique_ptr<BlobInfo> info = GenerateRandomBlob(fs().mount_path(), 1 << 17);
 
-  fbl::unique_fd fd(open(info->path, O_CREAT | O_RDWR));
+  fbl::unique_fd fd(open(info->path, O_CREAT | O_RDWR, S_IRUSR | S_IWUSR));
   ASSERT_TRUE(fd) << "Failed to create blob";
 
   // Unlink after first open.
@@ -999,7 +999,7 @@ TEST_P(BlobfsIntegrationTest, PartialWrite) {
   std::unique_ptr<BlobInfo> info_partial = GenerateRandomBlob(fs().mount_path(), size);
 
   // Partially write out first blob.
-  fbl::unique_fd fd_partial(open(info_partial->path, O_CREAT | O_RDWR));
+  fbl::unique_fd fd_partial(open(info_partial->path, O_CREAT | O_RDWR, S_IRUSR | S_IWUSR));
   ASSERT_TRUE(fd_partial) << "Failed to create blob";
   ASSERT_EQ(0, ftruncate(fd_partial.get(), size));
   ASSERT_EQ(0, StreamAll(write, fd_partial.get(), info_partial->data.get(), size / 2))
@@ -1016,7 +1016,7 @@ TEST_P(BlobfsIntegrationTest, PartialWriteSleepyDisk) {
   std::unique_ptr<BlobInfo> info_partial = GenerateRandomBlob(fs().mount_path(), size);
 
   // Partially write out first blob.
-  fbl::unique_fd fd_partial(open(info_partial->path, O_CREAT | O_RDWR));
+  fbl::unique_fd fd_partial(open(info_partial->path, O_CREAT | O_RDWR, S_IRUSR | S_IWUSR));
   ASSERT_TRUE(fd_partial) << "Failed to create blob";
   ASSERT_EQ(0, ftruncate(fd_partial.get(), size));
   ASSERT_EQ(0, StreamAll(write, fd_partial.get(), info_partial->data.get(), size / 2))
@@ -1045,7 +1045,7 @@ TEST_P(BlobfsIntegrationTest, PartialWriteSleepyDisk) {
 TEST_P(BlobfsIntegrationTest, MultipleWrites) {
   std::unique_ptr<BlobInfo> info = GenerateRandomBlob(fs().mount_path(), 1 << 16);
 
-  fbl::unique_fd fd(open(info->path, O_CREAT | O_RDWR));
+  fbl::unique_fd fd(open(info->path, O_CREAT | O_RDWR, S_IRUSR | S_IWUSR));
   ASSERT_TRUE(fd);
 
   ASSERT_EQ(0, ftruncate(fd.get(), info->size_data));
@@ -1083,7 +1083,7 @@ TEST_P(BlobfsIntegrationTest, ReadOnly) {
 
   // We cannot create new blobs
   info = GenerateRandomBlob(fs().mount_path(), 1 << 10);
-  blob_fd.reset(open(info->path, O_CREAT | O_RDWR));
+  blob_fd.reset(open(info->path, O_CREAT | O_RDWR, S_IRUSR | S_IWUSR));
   ASSERT_FALSE(blob_fd);
 }
 
@@ -1241,7 +1241,7 @@ TEST_P(BlobfsIntegrationTest, FailedWrite) {
 
   std::unique_ptr<BlobInfo> info = GenerateRandomBlob(fs().mount_path(), kBlobfsBlockSize);
 
-  fbl::unique_fd fd(open(info->path, O_CREAT | O_RDWR));
+  fbl::unique_fd fd(open(info->path, O_CREAT | O_RDWR, S_IRUSR | S_IWUSR));
   ASSERT_TRUE(fd) << "Failed to create blob";
 
   // Truncate before sleeping the ramdisk. This is so potential FVM updates
@@ -1274,7 +1274,7 @@ TEST_P(BlobfsIntegrationTest, FailedWrite) {
   ASSERT_LT(syncfs(fd.get()), 0);
 
   info = GenerateRandomBlob(fs().mount_path(), kBlobfsBlockSize);
-  fd.reset(open(info->path, O_CREAT | O_RDWR));
+  fd.reset(open(info->path, O_CREAT | O_RDWR, S_IRUSR | S_IWUSR));
   ASSERT_TRUE(fd) << "Failed to create blob";
 
   // On an FVM, truncate may either succeed or fail. If an FVM extend call is necessary,
@@ -1406,7 +1406,7 @@ TEST_F(BlobfsMetricIntegrationTest, CreateAndRead) {
   // both random and small enough that it should not get compressed.
   std::unique_ptr<BlobInfo> info = GenerateRandomBlob(".", 1 << 10);
   {
-    fbl::unique_fd fd(openat(root_fd(), info->path, O_CREAT | O_RDWR));
+    fbl::unique_fd fd(openat(root_fd(), info->path, O_CREAT | O_RDWR, S_IRUSR | S_IWUSR));
     ASSERT_TRUE(fd.is_valid());
     ASSERT_EQ(ftruncate(fd.get(), info->size_data), 0);
     ASSERT_EQ(StreamAll(write, fd.get(), info->data.get(), info->size_data), 0)
@@ -1467,7 +1467,7 @@ TEST_F(BlobfsMetricIntegrationTest, BlobfsInspectTree) {
   // Create a file to increase the used inode count.
   {
     std::unique_ptr<BlobInfo> info = GenerateRandomBlob(".", 1 << 10);
-    fbl::unique_fd fd(openat(root_fd(), info->path, O_CREAT | O_RDWR));
+    fbl::unique_fd fd(openat(root_fd(), info->path, O_CREAT | O_RDWR, S_IRUSR | S_IWUSR));
     ASSERT_TRUE(fd.is_valid());
     ASSERT_EQ(ftruncate(fd.get(), info->size_data), 0);
     ASSERT_EQ(StreamAll(write, fd.get(), info->data.get(), info->size_data), 0)

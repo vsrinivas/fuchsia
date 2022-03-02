@@ -68,7 +68,7 @@ zx::status<> ParseOutputFile(const char* path, ExtractOptions& options) {
     std::cerr << "Image file already exists" << options.output_path << std::endl;
     return zx::error(ZX_ERR_ALREADY_EXISTS);
   }
-  options.output_fd.reset(open(options.output_path.c_str(), O_RDWR | O_CREAT));
+  options.output_fd.reset(open(options.output_path.c_str(), O_RDWR | O_CREAT, S_IRUSR | S_IWUSR));
   if (!options.output_fd) {
     std::cerr << "Failed to open/create image file" << options.output_path << std::endl;
     return zx::error(ZX_ERR_IO);

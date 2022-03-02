@@ -93,7 +93,7 @@ void mmap_crash(const std::string& path, int prot, int flags, DeathTestOp rw) {
 // Fuchsia filesystems will support that - thus, this test may need to be updated or removed.
 TEST_P(MmapSharedWriteTest, Empty) {
   const std::string filename = GetPath("mmap_empty");
-  fbl::unique_fd fd(open(filename.c_str(), O_RDWR | O_CREAT | O_EXCL));
+  fbl::unique_fd fd(open(filename.c_str(), O_RDWR | O_CREAT | O_EXCL, S_IRUSR | S_IWUSR));
   ASSERT_TRUE(fd);
 
   char tmp[] = "this is a temporary buffer";
@@ -110,7 +110,7 @@ TEST_P(MmapSharedWriteTest, Empty) {
 // Test that file writes are propagated to a shared read-only buffer, excluding size changes.
 TEST_P(MmapTest, Readable) {
   const std::string filename = GetPath("mmap_readable");
-  fbl::unique_fd fd(open(filename.c_str(), O_RDWR | O_CREAT | O_EXCL));
+  fbl::unique_fd fd(open(filename.c_str(), O_RDWR | O_CREAT | O_EXCL, S_IRUSR | S_IWUSR));
   ASSERT_TRUE(fd);
 
   char tmp1[] = "this is a temporary buffer";
@@ -142,7 +142,7 @@ TEST_P(MmapTest, Readable) {
 // Fuchsia filesystems will support that - thus, this test may need to be updated or removed.
 TEST_P(MmapSharedWriteTest, ReadableSizeChange) {
   const std::string filename = GetPath("mmap_readable");
-  fbl::unique_fd fd(open(filename.c_str(), O_RDWR | O_CREAT | O_EXCL));
+  fbl::unique_fd fd(open(filename.c_str(), O_RDWR | O_CREAT | O_EXCL, S_IRUSR | S_IWUSR));
   ASSERT_TRUE(fd);
 
   char tmp1[] = "this is a temporary buffer";
@@ -173,7 +173,7 @@ TEST_P(MmapSharedWriteTest, ReadableSizeChange) {
 // Fuchsia filesystems will support that - thus, this test may need to be updated in the future.
 TEST_P(MmapSharedWriteTest, Writable) {
   const std::string filename = GetPath("mmap_writable");
-  fbl::unique_fd fd(open(filename.c_str(), O_RDWR | O_CREAT | O_EXCL));
+  fbl::unique_fd fd(open(filename.c_str(), O_RDWR | O_CREAT | O_EXCL, S_IRUSR | S_IWUSR));
   ASSERT_TRUE(fd);
 
   char tmp1[] = "this is a temporary buffer";
@@ -218,7 +218,7 @@ TEST_P(MmapSharedWriteTest, Writable) {
 // the file has been closed / unlinked / renamed.
 TEST_P(MmapTest, Unlinked) {
   const std::string filename = GetPath("mmap_unlinked");
-  fbl::unique_fd fd(open(filename.c_str(), O_RDWR | O_CREAT | O_EXCL));
+  fbl::unique_fd fd(open(filename.c_str(), O_RDWR | O_CREAT | O_EXCL, S_IRUSR | S_IWUSR));
   ASSERT_TRUE(fd);
 
   char tmp[] = "this is a temporary buffer";
@@ -248,7 +248,7 @@ TEST_P(MmapTest, Unlinked) {
 // Test that MAP_SHARED propagates updates to the file.
 TEST_P(MmapSharedWriteTest, Shared) {
   const std::string filename = GetPath("mmap_shared");
-  fbl::unique_fd fd(open(filename.c_str(), O_RDWR | O_CREAT | O_EXCL));
+  fbl::unique_fd fd(open(filename.c_str(), O_RDWR | O_CREAT | O_EXCL, S_IRUSR | S_IWUSR));
   ASSERT_TRUE(fd);
 
   char tmp[] = "this is a temporary buffer";
@@ -301,7 +301,7 @@ TEST_P(MmapSharedWriteTest, Shared) {
 // separate
 TEST_P(MmapTest, Private) {
   const std::string filename = GetPath("mmap_private");
-  fbl::unique_fd fd(open(filename.c_str(), O_RDWR | O_CREAT | O_EXCL));
+  fbl::unique_fd fd(open(filename.c_str(), O_RDWR | O_CREAT | O_EXCL, S_IRUSR | S_IWUSR));
   ASSERT_TRUE(fd);
 
   char buf[64];
@@ -358,7 +358,7 @@ TEST_P(MmapTest, FailMapDirectory) {
 
 TEST_P(MmapTest, BadPermissions) {
   const std::string myfile = GetPath("myfile");
-  fbl::unique_fd fd(open(myfile.c_str(), O_RDWR | O_CREAT | O_EXCL));
+  fbl::unique_fd fd(open(myfile.c_str(), O_RDWR | O_CREAT | O_EXCL, S_IRUSR | S_IWUSR));
   ASSERT_TRUE(fd);
   ASSERT_EQ(close(fd.release()), 0);
   // Test all cases of MAP_PRIVATE + PROT_WRITE and MAP_SHARED + PROT_READ which require a
@@ -384,7 +384,7 @@ TEST_P(MmapTest, BadPermissions) {
 
 TEST_P(MmapSharedWriteTest, BadPermissions) {
   const std::string myfile = GetPath("myfile");
-  fbl::unique_fd fd(open(myfile.c_str(), O_RDWR | O_CREAT | O_EXCL));
+  fbl::unique_fd fd(open(myfile.c_str(), O_RDWR | O_CREAT | O_EXCL, S_IRUSR | S_IWUSR));
   ASSERT_TRUE(fd);
   ASSERT_EQ(close(fd.release()), 0);
   // Test all cases of MAP_SHARED + PROT_WRITE which require a readable file.
@@ -424,7 +424,7 @@ TEST_P(MmapSharedWriteTest, BadPermissions) {
 // Fuchsia filesystems will support that - thus, this test may need to be updated or removed.
 TEST_P(MmapSharedWriteTest, TruncateAccess) {
   const std::string mmap_truncate = GetPath("mmap_truncate");
-  fbl::unique_fd fd(open(mmap_truncate.c_str(), O_CREAT | O_RDWR));
+  fbl::unique_fd fd(open(mmap_truncate.c_str(), O_CREAT | O_RDWR, S_IRUSR | S_IWUSR));
   ASSERT_TRUE(fd);
 
   constexpr size_t kPageCount = 5;
@@ -462,7 +462,7 @@ TEST_P(MmapSharedWriteTest, TruncateAccess) {
 // Fuchsia filesystems will support that - thus, this test may need to be updated or removed.
 TEST_P(MmapSharedWriteTest, TruncateExtend) {
   const std::string mmap_truncate_extend = GetPath("mmap_truncate_extend");
-  fbl::unique_fd fd(open(mmap_truncate_extend.c_str(), O_CREAT | O_RDWR));
+  fbl::unique_fd fd(open(mmap_truncate_extend.c_str(), O_CREAT | O_RDWR, S_IRUSR | S_IWUSR));
   ASSERT_TRUE(fd);
 
   constexpr size_t kPageCount = 5;
@@ -505,7 +505,7 @@ TEST_P(MmapSharedWriteTest, TruncateExtend) {
 // Fuchsia filesystems will support that - thus, this test may need to be updated or removed.
 TEST_P(MmapSharedWriteTest, TruncateWriteExtend) {
   const std::string mmap_write_extend = GetPath("mmap_write_extend");
-  fbl::unique_fd fd(open(mmap_write_extend.c_str(), O_CREAT | O_RDWR));
+  fbl::unique_fd fd(open(mmap_write_extend.c_str(), O_CREAT | O_RDWR, S_IRUSR | S_IWUSR));
   ASSERT_TRUE(fd);
 
   constexpr size_t kPageCount = 5;
@@ -549,7 +549,7 @@ TEST_P(MmapSharedWriteTest, TruncateWriteExtend) {
 
 TEST_P(MmapTest, Death) {
   const std::string inaccessible = GetPath("inaccessible");
-  fbl::unique_fd fd(open(inaccessible.c_str(), O_RDWR | O_CREAT));
+  fbl::unique_fd fd(open(inaccessible.c_str(), O_RDWR | O_CREAT, S_IRUSR | S_IWUSR));
   ASSERT_TRUE(fd);
   char tmp[] = "this is a temporary buffer";
   ASSERT_EQ(write(fd.get(), tmp, sizeof(tmp)), static_cast<ssize_t>(sizeof(tmp)));

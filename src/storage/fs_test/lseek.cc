@@ -19,7 +19,7 @@ using LseekTest = FilesystemTest;
 
 TEST_P(LseekTest, Position) {
   const std::string filename = GetPath("lseek_position");
-  fbl::unique_fd fd(open(filename.c_str(), O_CREAT | O_RDWR));
+  fbl::unique_fd fd(open(filename.c_str(), O_CREAT | O_RDWR, S_IRUSR | S_IWUSR));
   ASSERT_TRUE(fd);
 
   // File offset initialized to zero.
@@ -52,7 +52,7 @@ TEST_P(LseekTest, Position) {
 
 TEST_P(LseekTest, OutOfBounds) {
   const std::string filename = GetPath("lseek_out_of_bounds");
-  fbl::unique_fd fd(open(filename.c_str(), O_CREAT | O_RDWR));
+  fbl::unique_fd fd(open(filename.c_str(), O_CREAT | O_RDWR, S_IRUSR | S_IWUSR));
   ASSERT_TRUE(fd);
 
   const char* const str = "hello";
@@ -80,7 +80,7 @@ TEST_P(LseekTest, OutOfBounds) {
 
 TEST_P(LseekTest, ZeroFill) {
   const std::string filename = GetPath("lseek_zero_fill");
-  fbl::unique_fd fd(open(filename.c_str(), O_CREAT | O_RDWR));
+  fbl::unique_fd fd(open(filename.c_str(), O_CREAT | O_RDWR, S_IRUSR | S_IWUSR));
   ASSERT_TRUE(fd);
 
   const char* const str = "hello";

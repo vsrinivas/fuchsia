@@ -152,7 +152,7 @@ class MinfsMicroBenchmarkFixture : public fs_test::BaseFilesystemTest {
     // Clear block metrics
     GetBlockMetrics(Reset::kReset, &unused_);
 
-    fbl::unique_fd fd(open(filename, O_CREAT | O_RDWR));
+    fbl::unique_fd fd(open(filename, O_CREAT | O_RDWR, S_IRUSR | S_IWUSR));
     EXPECT_GT(fd.get(), 0);
     SyncAndCompute(&computed, MinfsProperties::SyncKind::kTransactionWithNoData);
     FsProperties().AddCreateCost(&computed);

@@ -195,7 +195,7 @@ TEST_P(AttrTest, ParentModificationTimeUpdatedCorrectly) {
 
   // Create a file in the parent directory
   zx_nanosleep(zx_deadline_after(fs().GetTraits().timestamp_granularity.to_nsecs()));
-  int fd = open(child.c_str(), O_CREAT | O_RDWR);
+  int fd = open(child.c_str(), O_CREAT | O_RDWR, S_IRUSR | S_IWUSR);
   ASSERT_GT(fd, 0);
   ASSERT_EQ(close(fd), 0);
 

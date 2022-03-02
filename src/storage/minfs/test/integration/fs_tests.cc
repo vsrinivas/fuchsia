@@ -281,7 +281,7 @@ TEST_F(MinfsFvmTest, QueryInitialState) {
   for (uint64_t i = 0; i < kExtraNodeCount; i++) {
     const std::string path = GetPath("file_" + std::to_string(i));
 
-    fbl::unique_fd fd(open(path.c_str(), O_CREAT | O_RDWR));
+    fbl::unique_fd fd(open(path.c_str(), O_CREAT | O_RDWR, S_IRUSR | S_IWUSR));
     ASSERT_GT(fd.get(), 0);
     ASSERT_EQ(ftruncate(fd.get(), 30 * 1024), 0);
   }
@@ -304,7 +304,7 @@ TEST_F(MinfsFvmTest, Metrics) {
   ASSERT_EQ(metrics.fs_metrics.create.failure.total_calls, 0ul);
 
   const std::string path = GetPath("test-file");
-  fbl::unique_fd fd(open(path.c_str(), O_CREAT | O_RDWR));
+  fbl::unique_fd fd(open(path.c_str(), O_CREAT | O_RDWR, S_IRUSR | S_IWUSR));
   ASSERT_TRUE(fd);
   metrics_or = GetMetrics();
   ASSERT_EQ(metrics_or.status_value(), ZX_OK);
@@ -314,7 +314,7 @@ TEST_F(MinfsFvmTest, Metrics) {
   ASSERT_NE(metrics.fs_metrics.create.success.total_time_spent, 0ul);
   ASSERT_EQ(metrics.fs_metrics.create.failure.total_time_spent, 0ul);
 
-  fd.reset(open(path.c_str(), O_CREAT | O_RDWR | O_EXCL));
+  fd.reset(open(path.c_str(), O_CREAT | O_RDWR | O_EXCL, S_IRUSR | S_IWUSR));
   ASSERT_FALSE(fd);
   metrics_or = GetMetrics();
   ASSERT_EQ(metrics_or.status_value(), ZX_OK);
@@ -373,7 +373,7 @@ void FillDirectory(const TestFilesystem& fs, int dir_fd, uint32_t max_blocks) {
     std::string path;
     for (int i = 0; i < entries_per_iteration; ++i) {
       path = "file_" + std::to_string(file_count++);
-      fbl::unique_fd fd(openat(dir_fd, path.c_str(), O_CREAT | O_RDWR));
+      fbl::unique_fd fd(openat(dir_fd, path.c_str(), O_CREAT | O_RDWR, S_IRUSR | S_IWUSR));
       ASSERT_TRUE(fd);
     }
 
@@ -441,13 +441,13 @@ TEST_F(MinfsFvmTestWith8MiBSliceSize, FullOperations) {
   fbl::unique_fd mnt_fd = fs().GetRootFd();
   ASSERT_TRUE(mnt_fd);
 
-  fbl::unique_fd big_fd(openat(mnt_fd.get(), big_path, O_CREAT | O_RDWR));
+  fbl::unique_fd big_fd(openat(mnt_fd.get(), big_path, O_CREAT | O_RDWR, S_IRUSR | S_IWUSR));
   ASSERT_TRUE(big_fd);
 
-  fbl::unique_fd med_fd(openat(mnt_fd.get(), med_path, O_CREAT | O_RDWR));
+  fbl::unique_fd med_fd(openat(mnt_fd.get(), med_path, O_CREAT | O_RDWR, S_IRUSR | S_IWUSR));
   ASSERT_TRUE(med_fd);
 
-  fbl::unique_fd sml_fd(openat(mnt_fd.get(), sml_path, O_CREAT | O_RDWR));
+  fbl::unique_fd sml_fd(openat(mnt_fd.get(), sml_path, O_CREAT | O_RDWR, S_IRUSR | S_IWUSR));
   ASSERT_TRUE(sml_fd);
 
   // Write to the big file, filling the partition and leaving 2 blocks unused.
@@ -469,7 +469,7 @@ TEST_F(MinfsFvmTestWith8MiBSliceSize, FullOperations) {
   ASSERT_EQ(lseek(med_fd.get(), 0, SEEK_SET), 0);
 
   // Recreate the big file
-  big_fd.reset(openat(mnt_fd.get(), big_path, O_CREAT | O_RDWR));
+  big_fd.reset(openat(mnt_fd.get(), big_path, O_CREAT | O_RDWR, S_IRUSR | S_IWUSR));
   ASSERT_TRUE(big_fd);
 
   // Write to the big file, filling the partition and leaving at most kMinfsDirect + 1 blocks
@@ -541,7 +541,7 @@ TEST_F(MinfsFvmTestWith8MiBSliceSize, FullOperations) {
   ASSERT_TRUE(big_fd);
 
   // Re-create the small file
-  sml_fd.reset(openat(mnt_fd.get(), sml_path, O_CREAT | O_RDWR));
+  sml_fd.reset(openat(mnt_fd.get(), sml_path, O_CREAT | O_RDWR, S_IRUSR | S_IWUSR));
   ASSERT_TRUE(sml_fd);
 
   // Make sure we now have at least kMinfsDirect + 1 blocks remaining.
@@ -590,7 +590,7 @@ TEST_F(MinfsFvmTestWith8MiBSliceSize, FullOperations) {
   uint64_t block_count;
   ASSERT_NO_FATAL_FAILURE(GetFileBlocks(dir_fd.get(), &block_count));
   ASSERT_EQ(block_count, minfs::kMinfsDirect);
-  fbl::unique_fd tmp_fd(openat(dir_fd.get(), "new_file", O_CREAT | O_RDWR));
+  fbl::unique_fd tmp_fd(openat(dir_fd.get(), "new_file", O_CREAT | O_RDWR, S_IRUSR | S_IWUSR));
   ASSERT_FALSE(tmp_fd);
 
   // Again, try editing nearby blocks to force bad allocation leftovers to be persisted, and
@@ -670,7 +670,7 @@ TEST_P(MinfsTest, UnlinkFail) {
   // Open, write to, and unlink |fd_count| total files without closing them.
   for (unsigned i = 0; i < fd_count; i++) {
     // Since we are unlinking, we can use the same filename for all files.
-    fds[i].reset(open(filename.c_str(), O_CREAT | O_RDWR | O_EXCL));
+    fds[i].reset(open(filename.c_str(), O_CREAT | O_RDWR | O_EXCL, S_IRUSR | S_IWUSR));
     ASSERT_TRUE(fds[i]);
     ASSERT_EQ(write(fds[i].get(), data, sizeof(data)), static_cast<ssize_t>(sizeof(data)));
     ASSERT_EQ(unlink(filename.c_str()), 0);
@@ -685,7 +685,7 @@ TEST_P(MinfsTest, UnlinkFail) {
   ASSERT_EQ(close(fds[last_fd].release()), 0);
 
   // Sync Minfs to ensure all unlink operations complete.
-  fbl::unique_fd fd(open(filename.c_str(), O_CREAT));
+  fbl::unique_fd fd(open(filename.c_str(), O_CREAT, S_IRUSR | S_IWUSR));
   ASSERT_TRUE(fd);
   ASSERT_EQ(syncfs(fd.get()), 0);
 
@@ -735,9 +735,9 @@ TEST_F(MinfsWithoutFvmTest, GetAllocatedRegions) {
   fbl::unique_fd mnt_fd = fs().GetRootFd();
   ASSERT_TRUE(mnt_fd);
 
-  fbl::unique_fd first_fd(openat(mnt_fd.get(), kFirstPath, O_CREAT | O_RDWR));
+  fbl::unique_fd first_fd(openat(mnt_fd.get(), kFirstPath, O_CREAT | O_RDWR, S_IRUSR | S_IWUSR));
   ASSERT_TRUE(first_fd);
-  fbl::unique_fd second_fd(openat(mnt_fd.get(), kSecondPath, O_CREAT | O_RDWR));
+  fbl::unique_fd second_fd(openat(mnt_fd.get(), kSecondPath, O_CREAT | O_RDWR, S_IRUSR | S_IWUSR));
   ASSERT_TRUE(second_fd);
 
   char data[minfs::kMinfsBlockSize];

@@ -24,7 +24,7 @@ TEST_F(BlobfsTest, MaxReservation) {
 
     // Write the blob
     {
-      fbl::unique_fd fd(open(info->path, O_CREAT | O_RDWR));
+      fbl::unique_fd fd(open(info->path, O_CREAT | O_RDWR, S_IRUSR | S_IWUSR));
       ASSERT_TRUE(fd) << "Failed to create blob";
       ASSERT_EQ(ftruncate(fd.get(), info->size_data), 0);
       ASSERT_EQ(StreamAll(write, fd.get(), info->data.get(), info->size_data), 0);

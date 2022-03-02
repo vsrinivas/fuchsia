@@ -28,7 +28,7 @@ int main(int argc, char* argv[]) {
   }
 
   // Verify that a file can be created in the directory.
-  fbl::unique_fd file(openat(dir.get(), "file", O_RDWR | O_CREAT));
+  fbl::unique_fd file(openat(dir.get(), "file", O_RDWR | O_CREAT, S_IRUSR | S_IWUSR));
   if (!file.is_valid()) {
     printf("Failed to open a file in %s: %s", argv[1], strerror(errno));
     return EXIT_FAILURE;

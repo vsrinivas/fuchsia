@@ -359,13 +359,13 @@ TEST_P(AccessTest, TestAccessOpath) {
   ASSERT_EQ(mkdir(dirname.c_str(), 0666), 0);
 
   // Cannot create a file as O_PATH
-  fbl::unique_fd fd(open(filename.c_str(), O_CREAT | O_RDWR | O_PATH));
+  fbl::unique_fd fd(open(filename.c_str(), O_CREAT | O_RDWR | O_PATH, S_IRUSR | S_IWUSR));
   ASSERT_FALSE(fd);
 
   const char* data = "hello";
   const size_t datalen = strlen(data);
 
-  fd.reset(open(filename.c_str(), O_CREAT | O_RDWR));
+  fd.reset(open(filename.c_str(), O_CREAT | O_RDWR, S_IRUSR | S_IWUSR));
   ASSERT_TRUE(fd);
   ASSERT_EQ(write(fd.get(), data, datalen), static_cast<ssize_t>(datalen));
   ASSERT_EQ(close(fd.release()), 0);
@@ -390,7 +390,7 @@ TEST_P(AccessTest, TestAccessOpath) {
 
   // We can pass in a variety of flags to open with O_PATH, and
   // they'll be ignored.
-  fd.reset(open(filename.c_str(), O_RDWR | O_CREAT | O_EXCL | O_TRUNC | O_PATH));
+  fd.reset(open(filename.c_str(), O_RDWR | O_CREAT | O_EXCL | O_TRUNC | O_PATH, S_IRUSR | S_IWUSR));
   ASSERT_TRUE(fd);
   ASSERT_EQ(fstat(fd.get(), &st), 0);
   ASSERT_EQ(st.st_size, static_cast<ssize_t>(datalen));

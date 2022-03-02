@@ -59,7 +59,7 @@ TEST_F(ExecutableMountTest, CanLoadBlobsExecutable) {
   // Create a new blob with random contents on the mounted filesystem.
   std::unique_ptr<BlobInfo> info = GenerateRandomBlob(".", 1 << 16);
 
-  fbl::unique_fd fd(openat(root_fd(), info->path, O_CREAT | O_RDWR));
+  fbl::unique_fd fd(openat(root_fd(), info->path, O_CREAT | O_RDWR, S_IRUSR | S_IWUSR));
   ASSERT_TRUE(fd.is_valid());
 
   ASSERT_EQ(ftruncate(fd.get(), info->size_data), 0);

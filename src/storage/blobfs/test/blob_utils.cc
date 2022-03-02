@@ -119,7 +119,7 @@ void VerifyContents(int fd, const uint8_t* data, size_t data_size) {
 }
 
 void MakeBlob(const BlobInfo& info, fbl::unique_fd* fd) {
-  fd->reset(open(info.path, O_CREAT | O_RDWR));
+  fd->reset(open(info.path, O_CREAT | O_RDWR, S_IRUSR | S_IWUSR));
   ASSERT_TRUE(*fd) << "Open failed: " << strerror(errno);
   ASSERT_EQ(ftruncate(fd->get(), info.size_data), 0);
   ASSERT_EQ(StreamAll(write, fd->get(), info.data.get(), info.size_data), 0);

@@ -29,7 +29,7 @@ class PayloadStreamerTest : public zxtest::Test {
     mktemp(tempfile_name_);
     ASSERT_NE(strlen(tempfile_name_), 0);
 
-    fbl::unique_fd src(open(tempfile_name_, O_RDWR | O_CREAT));
+    fbl::unique_fd src(open(tempfile_name_, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR));
     ASSERT_EQ(write(src.get(), kFileData, sizeof(kFileData)), sizeof(kFileData));
     lseek(src.get(), 0, SEEK_SET);
 

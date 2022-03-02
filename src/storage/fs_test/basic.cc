@@ -65,7 +65,7 @@ TEST_P(BasicTest, Basic) {
 }
 
 TEST_P(BasicTest, UncleanClose) {
-  int fd = open(GetPath("foobar").c_str(), O_CREAT | O_RDWR);
+  int fd = open(GetPath("foobar").c_str(), O_CREAT | O_RDWR, S_IRUSR | S_IWUSR);
   ASSERT_GT(fd, 0);
 
   // Try closing a connection to a file with an "unclean" shutdown,

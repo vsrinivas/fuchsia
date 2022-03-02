@@ -92,7 +92,7 @@ TEST_P(WatcherTest, Add) {
   ASSERT_NO_FATAL_FAILURE(CheckForEmpty(&wb, client));
 
   // Creating a file in the directory should trigger the watcher
-  fbl::unique_fd fd(open(GetPath("dir/foo").c_str(), O_RDWR | O_CREAT));
+  fbl::unique_fd fd(open(GetPath("dir/foo").c_str(), O_RDWR | O_CREAT, S_IRUSR | S_IWUSR));
   ASSERT_TRUE(fd);
   ASSERT_EQ(close(fd.release()), 0);
   ASSERT_NO_FATAL_FAILURE(CheckForEvent(&wb, client, "foo", fio::wire::kWatchEventAdded));
@@ -129,10 +129,10 @@ TEST_P(WatcherTest, Existing) {
   ASSERT_NE(dir, nullptr);
 
   // Create a couple files in the directory
-  fbl::unique_fd fd(open(GetPath("dir/bar").c_str(), O_RDWR | O_CREAT));
+  fbl::unique_fd fd(open(GetPath("dir/bar").c_str(), O_RDWR | O_CREAT, S_IRUSR | S_IWUSR));
   ASSERT_TRUE(fd);
   ASSERT_EQ(close(fd.release()), 0);
-  fd.reset(open(GetPath("dir/foo").c_str(), O_RDWR | O_CREAT));
+  fd.reset(open(GetPath("dir/foo").c_str(), O_RDWR | O_CREAT, S_IRUSR | S_IWUSR));
   ASSERT_TRUE(fd);
   ASSERT_EQ(close(fd.release()), 0);
 
@@ -161,7 +161,7 @@ TEST_P(WatcherTest, Existing) {
 
   // Now, if we choose to add additional files, they'll show up separately
   // with an "ADD" event.
-  fd.reset(open(GetPath("dir/goo").c_str(), O_RDWR | O_CREAT));
+  fd.reset(open(GetPath("dir/goo").c_str(), O_RDWR | O_CREAT, S_IRUSR | S_IWUSR));
   ASSERT_TRUE(fd);
   ASSERT_EQ(close(fd.release()), 0);
   ASSERT_NO_FATAL_FAILURE(CheckForEvent(&wb, client, "goo", fio::wire::kWatchEventAdded));
@@ -222,7 +222,7 @@ TEST_P(WatcherTest, Removed) {
 
   ASSERT_NO_FATAL_FAILURE(CheckForEmpty(&wb, client));
 
-  fbl::unique_fd fd(openat(dirfd(dir), "foo", O_CREAT | O_RDWR | O_EXCL));
+  fbl::unique_fd fd(openat(dirfd(dir), "foo", O_CREAT | O_RDWR | O_EXCL, S_IRUSR | S_IWUSR));
   ASSERT_TRUE(fd);
   ASSERT_EQ(close(fd.release()), 0);
 

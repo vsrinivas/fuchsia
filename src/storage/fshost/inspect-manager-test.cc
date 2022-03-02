@@ -59,7 +59,8 @@ class InspectManagerTest : public zxtest::Test {
 
   void AddFile(const std::string& path, size_t content_size) {
     std::string contents(content_size, 'X');
-    fbl::unique_fd fd(open(fxl::Substitute("$0/$1", kTmpfsPath, path).c_str(), O_RDWR | O_CREAT));
+    fbl::unique_fd fd(open(fxl::Substitute("$0/$1", kTmpfsPath, path).c_str(), O_RDWR | O_CREAT,
+                           S_IRUSR | S_IWUSR));
     ASSERT_TRUE(fd.is_valid());
     ASSERT_EQ(write(fd.get(), contents.c_str(), content_size), content_size);
   }

@@ -82,7 +82,8 @@ TEST_P(UnicodeTest, TestNonUtf8Names) {
 void TestCreateAndDeleteUnicodeFilename(UnicodeTest* test, const char* name) {
   int fd;
 
-  ASSERT_GE(fd = open(test->GetPath(name).c_str(), O_RDWR | O_CREAT), 0) << strerror(errno);
+  ASSERT_GE(fd = open(test->GetPath(name).c_str(), O_RDWR | O_CREAT, S_IRUSR | S_IWUSR), 0)
+      << strerror(errno);
 
   ssize_t result = write(fd, "abc", 4);
   ASSERT_GT(result, 0) << strerror(errno);

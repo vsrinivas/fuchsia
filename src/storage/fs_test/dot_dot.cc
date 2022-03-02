@@ -80,8 +80,8 @@ TEST_P(DotDotTest, DotDotServer) {
   ASSERT_LT(openat(foo_fd, "../../../../../bar", O_RDONLY | O_DIRECTORY), 0);
 
   // Try to create a file named '..'
-  ASSERT_LT(openat(foo_fd, "..", O_RDWR | O_CREAT), 0);
-  ASSERT_LT(openat(foo_fd, ".", O_RDWR | O_CREAT), 0);
+  ASSERT_LT(openat(foo_fd, "..", O_RDWR | O_CREAT, S_IRUSR | S_IWUSR), 0);
+  ASSERT_LT(openat(foo_fd, ".", O_RDWR | O_CREAT, S_IRUSR | S_IWUSR), 0);
 
   // Try to create a directory named '..'
   ASSERT_LT(mkdirat(foo_fd, "..", 0666), 0);

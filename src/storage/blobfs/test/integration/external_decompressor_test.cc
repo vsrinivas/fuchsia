@@ -180,7 +180,7 @@ TEST_F(ExternalDecompressorE2ePagedTest, VerifyRemoteDecompression) {
   // Create a new blob on the mounted filesystem.
   std::unique_ptr<BlobInfo> info = GenerateRealisticBlob(".", kDataSize);
   {
-    fbl::unique_fd fd(openat(root_fd(), info->path, O_CREAT | O_RDWR));
+    fbl::unique_fd fd(openat(root_fd(), info->path, O_CREAT | O_RDWR, S_IRUSR | S_IWUSR));
     ASSERT_TRUE(fd.is_valid());
     ASSERT_EQ(ftruncate(fd.get(), info->size_data), 0);
     ASSERT_EQ(StreamAll(write, fd.get(), info->data.get(), info->size_data), 0)
@@ -206,7 +206,7 @@ TEST_F(ExternalDecompressorE2ePagedTest, VerifyRemoteDecompression) {
 TEST_F(ExternalDecompressorE2ePagedTest, MultiframeDecompression) {
   std::unique_ptr<BlobInfo> info = GenerateRealisticBlob(".", kDataSize);
   {
-    fbl::unique_fd fd(openat(root_fd(), info->path, O_CREAT | O_RDWR));
+    fbl::unique_fd fd(openat(root_fd(), info->path, O_CREAT | O_RDWR, S_IRUSR | S_IWUSR));
     ASSERT_TRUE(fd.is_valid());
     ASSERT_EQ(ftruncate(fd.get(), info->size_data), 0);
     ASSERT_EQ(StreamAll(write, fd.get(), info->data.get(), info->size_data), 0)

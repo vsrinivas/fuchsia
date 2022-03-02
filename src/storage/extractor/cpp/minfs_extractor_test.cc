@@ -122,7 +122,7 @@ void RunMinfsExtraction(fs_test::FilesystemTest* test, bool create_file, bool du
   memset(buffer, 0xf0, sizeof(buffer));
   if (create_file) {
     auto file_path = test->GetPath(kFilename);
-    fbl::unique_fd test_file(open(file_path.c_str(), O_CREAT | O_RDWR));
+    fbl::unique_fd test_file(open(file_path.c_str(), O_CREAT | O_RDWR, S_IRUSR | S_IWUSR));
     ASSERT_EQ(write(test_file.get(), buffer, sizeof(buffer)), static_cast<ssize_t>(sizeof(buffer)));
   }
 
@@ -183,7 +183,7 @@ void LargeFileTestRunner(fs_test::FilesystemTest* test, bool dump_pii) {
   memset(buffer, 0xf0, sizeof(buffer));
   {
     auto file_path = test->GetPath(kFilename);
-    fbl::unique_fd test_file(open(file_path.c_str(), O_CREAT | O_RDWR));
+    fbl::unique_fd test_file(open(file_path.c_str(), O_CREAT | O_RDWR, S_IRUSR | S_IWUSR));
     ASSERT_EQ(write(test_file.get(), buffer, sizeof(buffer)), static_cast<ssize_t>(sizeof(buffer)));
 
     // Write at indirect offset
@@ -265,7 +265,7 @@ void DirectoryTestRunner(fs_test::FilesystemTest* test, bool dump_pii) {
     auto file_path = directory_path;
     file_path.append(kFilename);
 
-    fbl::unique_fd test_file(open(file_path.c_str(), O_CREAT | O_RDWR));
+    fbl::unique_fd test_file(open(file_path.c_str(), O_CREAT | O_RDWR, S_IRUSR | S_IWUSR));
     ASSERT_TRUE(test_file);
     fprintf(stderr, "%s\n", file_path.c_str());
   }

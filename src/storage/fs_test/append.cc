@@ -120,7 +120,7 @@ TEST_P(AppendTest, AppendOnClone) {
   };
 
   const std::string append_clone = GetPath("append_clone");
-  fbl::unique_fd fd(open(append_clone.c_str(), O_RDWR | O_CREAT | O_APPEND));
+  fbl::unique_fd fd(open(append_clone.c_str(), O_RDWR | O_CREAT | O_APPEND, S_IRUSR | S_IWUSR));
   ASSERT_TRUE(fd) << strerror(errno);
   // Verify the file was originally opened as append.
   ASSERT_NO_FATAL_FAILURE(verify_append(fd, Append));
@@ -166,7 +166,8 @@ TEST_P(AppendAtomicTest, MultiThreadedTest) {
   std::thread threads[thread_count()];
   for (int i = 0; i < thread_count(); i++) {
     threads[i] = std::thread([&append_atomic, i]() {
-      fbl::unique_fd fd(open(append_atomic.c_str(), O_WRONLY | O_CREAT | O_APPEND));
+      fbl::unique_fd fd(
+          open(append_atomic.c_str(), O_WRONLY | O_CREAT | O_APPEND, S_IRUSR | S_IWUSR));
       if (!fd) {
         return -1;
       }

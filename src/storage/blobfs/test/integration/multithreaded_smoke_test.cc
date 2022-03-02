@@ -55,7 +55,7 @@ TEST_P(BlobfsMultithreadedSmokeTest, MultithreadedReads) {
   for (int i = 0; i < NumThreads(); ++i) {
     // A fairly sized blob that should get realistically compressed.
     std::unique_ptr<BlobInfo> info = GenerateRealisticBlob(".", kFileSize);
-    fbl::unique_fd fd(openat(root_fd(), info->path, O_CREAT | O_RDWR));
+    fbl::unique_fd fd(openat(root_fd(), info->path, O_CREAT | O_RDWR, S_IRUSR | S_IWUSR));
     ASSERT_TRUE(fd.is_valid());
     ASSERT_EQ(ftruncate(fd.get(), info->size_data), 0);
     ASSERT_EQ(StreamAll(write, fd.get(), info->data.get(), info->size_data), 0)

@@ -122,7 +122,8 @@ TEST_P(SparseTruncateTest, PartialBlockSparse) {
 
   for (size_t i = 0; i < std::size(write_offsets); i++) {
     off_t write_off = write_offsets[i];
-    fbl::unique_fd fd(open(GetPath("truncate-sparse").c_str(), O_CREAT | O_RDWR));
+    fbl::unique_fd fd(
+        open(GetPath("truncate-sparse").c_str(), O_CREAT | O_RDWR, S_IRUSR | S_IWUSR));
     ASSERT_TRUE(fd);
     ASSERT_EQ(lseek(fd.get(), write_off, SEEK_SET), write_off);
     ASSERT_EQ(write(fd.get(), buf, sizeof(buf)), static_cast<ssize_t>(sizeof(buf)))
@@ -142,7 +143,8 @@ TEST_P(SparseTruncateTest, PartialBlockSparse) {
 }
 
 TEST_P(TruncateTest, Errno) {
-  fbl::unique_fd fd(open(GetPath("truncate_errno").c_str(), O_RDWR | O_CREAT | O_EXCL));
+  fbl::unique_fd fd(
+      open(GetPath("truncate_errno").c_str(), O_RDWR | O_CREAT | O_EXCL, S_IRUSR | S_IWUSR));
   ASSERT_TRUE(fd);
 
   ASSERT_EQ(ftruncate(fd.get(), -1), -1);

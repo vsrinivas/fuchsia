@@ -194,7 +194,7 @@ TEST_P(PersistRenameLoopTest, MultipleRenamesCorrectAfterRemount) {
   if (IsDirectory(GetParam())) {
     ASSERT_EQ(mkdir(GetPath(src).c_str(), 0644), 0);
   } else {
-    fbl::unique_fd fd(open(GetPath(src).c_str(), O_RDWR | O_CREAT));
+    fbl::unique_fd fd(open(GetPath(src).c_str(), O_RDWR | O_CREAT, S_IRUSR | S_IWUSR));
     ASSERT_TRUE(fd);
   }
 

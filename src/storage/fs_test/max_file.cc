@@ -130,7 +130,7 @@ TEST_P(MaxFileTest, ReadAfterWriteMaxFileSucceeds) {
 using MaxFileSizeTest = MaxFileTest;
 
 TEST_P(MaxFileSizeTest, WritingToMaxSupportedOffset) {
-  fbl::unique_fd fd(open(GetPath("foo").c_str(), O_CREAT | O_RDWR));
+  fbl::unique_fd fd(open(GetPath("foo").c_str(), O_CREAT | O_RDWR, S_IRUSR | S_IWUSR));
   ASSERT_TRUE(fd);
   ASSERT_EQ(pwrite(fd.get(), "h", 1, fs().GetTraits().max_file_size - 1), 1);
 }
@@ -139,7 +139,7 @@ TEST_P(MaxFileTest, WritingBeyondMaxSupportedOffset) {
   if (!fs().GetTraits().supports_sparse_files) {
     return;
   }
-  fbl::unique_fd fd(open(GetPath("foo").c_str(), O_CREAT | O_RDWR));
+  fbl::unique_fd fd(open(GetPath("foo").c_str(), O_CREAT | O_RDWR, S_IRUSR | S_IWUSR));
   ASSERT_TRUE(fd);
   ASSERT_EQ(pwrite(fd.get(), "h", 1, fs().GetTraits().max_file_size), -1);
 }
@@ -148,7 +148,7 @@ TEST_P(MaxFileTest, TruncatingToMaxSupportedOffset) {
   if (!fs().GetTraits().supports_sparse_files) {
     return;
   }
-  fbl::unique_fd fd(open(GetPath("foo").c_str(), O_CREAT | O_RDWR));
+  fbl::unique_fd fd(open(GetPath("foo").c_str(), O_CREAT | O_RDWR, S_IRUSR | S_IWUSR));
   ASSERT_TRUE(fd);
   ASSERT_EQ(ftruncate(fd.get(), fs().GetTraits().max_file_size), 0);
 }
@@ -158,7 +158,7 @@ TEST_P(MaxFileTest, TruncatingBeyondMaxSupportedOffset) {
       fs().GetTraits().max_file_size == std::numeric_limits<off_t>::max()) {
     return;
   }
-  fbl::unique_fd fd(open(GetPath("foo").c_str(), O_CREAT | O_RDWR));
+  fbl::unique_fd fd(open(GetPath("foo").c_str(), O_CREAT | O_RDWR, S_IRUSR | S_IWUSR));
   ASSERT_TRUE(fd);
   ASSERT_EQ(ftruncate(fd.get(), fs().GetTraits().max_file_size + 1), -1);
 }

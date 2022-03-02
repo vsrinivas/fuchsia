@@ -44,7 +44,7 @@ TEST_P(FragmentationTest, Fragmentation) {
   while (true) {
     std::unique_ptr<BlobInfo> info =
         GenerateRandomBlob(fs().mount_path(), do_small_blob ? kSmallSize : kLargeSize);
-    fbl::unique_fd fd(open(info->path, O_CREAT | O_RDWR));
+    fbl::unique_fd fd(open(info->path, O_CREAT | O_RDWR, S_IRUSR | S_IWUSR));
     ASSERT_TRUE(fd) << "Failed to create blob";
     if (capture_large_blob_storage_space_usage && !do_small_blob) {
       // Record how much space was used by blobfs before writing a large blob.
@@ -81,7 +81,7 @@ TEST_P(FragmentationTest, Fragmentation) {
   std::unique_ptr<BlobInfo> info = GenerateRandomBlob(fs().mount_path(), kLargeSize);
 
   // ... and we don't have space (as we try allocating).
-  fbl::unique_fd fd(open(info->path, O_CREAT | O_RDWR));
+  fbl::unique_fd fd(open(info->path, O_CREAT | O_RDWR, S_IRUSR | S_IWUSR));
   ASSERT_TRUE(fd);
   ASSERT_EQ(0, ftruncate(fd.get(), info->size_data));
   ASSERT_NE(0, StreamAll(write, fd.get(), info->data.get(), info->size_data));
@@ -104,7 +104,7 @@ TEST_P(FragmentationTest, Fragmentation) {
   ASSERT_GE(fs_info.value().total_bytes - fs_info.value().used_bytes,
             large_blob_storage_space_usage);
 
-  fd.reset(open(info->path, O_CREAT | O_RDWR));
+  fd.reset(open(info->path, O_CREAT | O_RDWR, S_IRUSR | S_IWUSR));
   // Now that blobfs supports extents, verify that we can still allocate a large
   // blob, even if it is fragmented.
   ASSERT_EQ(0, ftruncate(fd.get(), info->size_data));

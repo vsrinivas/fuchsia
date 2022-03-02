@@ -232,7 +232,7 @@ int main(int argc, const char** argv) {
   if (*options.output == '\0') {
     out = STDOUT_FILENO;
   } else {
-    out = open(options.output, O_WRONLY | O_CREAT);
+    out = open(options.output, O_WRONLY | O_CREAT, S_IRUSR | S_IWUSR);
     if (out < 0) {
       fprintf(stderr, "Couldn't open output file %s : %d\n", options.output, errno);
       goto done;

@@ -30,7 +30,7 @@ TEST_P(NoSpaceTest, NoSpace) {
   while (true) {
     std::unique_ptr<BlobInfo> info = GenerateRandomBlob(fs().mount_path(), 1 << 17);
 
-    fbl::unique_fd fd(open(info->path, O_CREAT | O_RDWR));
+    fbl::unique_fd fd(open(info->path, O_CREAT | O_RDWR, S_IRUSR | S_IWUSR));
     ASSERT_TRUE(fd) << "Failed to create blob";
     int r = ftruncate(fd.get(), static_cast<off_t>(info->size_data));
     ASSERT_EQ(r, 0);
@@ -41,7 +41,7 @@ TEST_P(NoSpaceTest, NoSpace) {
       // unlink a previously allocated blob of the desired size?
       fd.reset();
       ASSERT_EQ(unlink(last_info->path), 0) << "Unlinking old blob";
-      fd.reset(open(info->path, O_CREAT | O_RDWR));
+      fd.reset(open(info->path, O_CREAT | O_RDWR, S_IRUSR | S_IWUSR));
       ASSERT_TRUE(fd);
       int r = ftruncate(fd.get(), static_cast<off_t>(info->size_data));
       ASSERT_EQ(r, 0);

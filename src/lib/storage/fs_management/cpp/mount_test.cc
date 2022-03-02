@@ -95,7 +95,7 @@ class RamdiskTestFixture : public testing::Test {
 
     fbl::unique_fd root_fd(open(kTestMountPath, O_RDONLY | O_DIRECTORY));
     ASSERT_TRUE(root_fd);
-    fbl::unique_fd fd(openat(root_fd.get(), file_name, O_CREAT | O_RDWR));
+    fbl::unique_fd fd(openat(root_fd.get(), file_name, O_CREAT | O_RDWR, S_IRUSR | S_IWUSR));
     ASSERT_TRUE(fd);
     ASSERT_EQ(write(fd.get(), "hello", 6), 6);
   }
@@ -136,7 +136,7 @@ TEST_F(MountTest, MountReadonly) {
 
   fbl::unique_fd root_fd(open(kTestMountPath, O_RDONLY | O_DIRECTORY));
   ASSERT_TRUE(root_fd);
-  fbl::unique_fd fd(openat(root_fd.get(), file_name, O_CREAT | O_RDWR));
+  fbl::unique_fd fd(openat(root_fd.get(), file_name, O_CREAT | O_RDWR, S_IRUSR | S_IWUSR));
 
   // We can no longer open the file as writable
   ASSERT_FALSE(fd);
@@ -168,7 +168,7 @@ TEST_F(MountTest, MountBlockReadonly) {
   // We can't modify the file.
   fbl::unique_fd root_fd(open(kTestMountPath, O_RDONLY | O_DIRECTORY));
   ASSERT_TRUE(root_fd);
-  fbl::unique_fd fd(openat(root_fd.get(), file_name, O_CREAT | O_RDWR));
+  fbl::unique_fd fd(openat(root_fd.get(), file_name, O_CREAT | O_RDWR, S_IRUSR | S_IWUSR));
   ASSERT_FALSE(fd);
 
   // We can open it as read-only.

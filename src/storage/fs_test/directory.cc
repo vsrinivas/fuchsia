@@ -299,11 +299,13 @@ TEST_P(DirectoryTest, TestDirectoryCreateAlternatingThenDeleteSucceeds) {
 
   for (ssize_t i = 0; i < kNumEntries; i++) {
     // Create the files, leaving them open.
-    fbl::unique_fd fd(open(GetPath(fbl::StringPrintf("a/%zd", i)).c_str(), O_CREAT | O_RDWR));
+    fbl::unique_fd fd(
+        open(GetPath(fbl::StringPrintf("a/%zd", i)).c_str(), O_CREAT | O_RDWR, S_IRUSR | S_IWUSR));
     ASSERT_TRUE(fd) << "a/" << i << ": " << strerror(errno);
     fds.push_back(std::move(fd));
 
-    fd = fbl::unique_fd(open(GetPath(fbl::StringPrintf("b/%zd", i)).c_str(), O_CREAT | O_RDWR));
+    fd = fbl::unique_fd(
+        open(GetPath(fbl::StringPrintf("b/%zd", i)).c_str(), O_CREAT | O_RDWR, S_IRUSR | S_IWUSR));
     ASSERT_TRUE(fd) << "b/" << i << ": " << strerror(errno);
     fds.push_back(std::move(fd));
   }
@@ -375,12 +377,12 @@ TEST_P(DirectoryTest, DirectoryAfterRmdir) {
   // ... Or with the open fd.
   fbl::unique_fd fd(dirfd(dir));
   ASSERT_TRUE(fd);
-  ASSERT_EQ(openat(fd.get(), "file", O_CREAT | O_RDWR), -1)
+  ASSERT_EQ(openat(fd.get(), "file", O_CREAT | O_RDWR, S_IRUSR | S_IWUSR), -1)
       << "Can't make new files in deleted dirs";
   ASSERT_EQ(mkdirat(fd.get(), "dir", 0755), -1) << "Can't make new files in deleted dirs";
 
   // In fact, the "dir" path should still be usable, even as a file!
-  fbl::unique_fd fd2(open(GetPath("dir").c_str(), O_CREAT | O_EXCL | O_RDWR));
+  fbl::unique_fd fd2(open(GetPath("dir").c_str(), O_CREAT | O_EXCL | O_RDWR, S_IRUSR | S_IWUSR));
   ASSERT_TRUE(fd2);
   ASSERT_NO_FATAL_FAILURE(CheckDirectoryContents(dir, {}));
   ASSERT_EQ(close(fd2.release()), 0);
@@ -395,7 +397,7 @@ TEST_P(DirectoryTest, RenameIntoUnlinkedDirectoryFails) {
   ASSERT_EQ(mkdir(GetPath("foo").c_str(), 0755), 0);
   fbl::unique_fd foo_fd(open(GetPath("foo").c_str(), O_RDONLY | O_DIRECTORY, 0644));
   ASSERT_TRUE(foo_fd);
-  fbl::unique_fd baz_fd(open(GetPath("baz").c_str(), O_CREAT | O_RDWR));
+  fbl::unique_fd baz_fd(open(GetPath("baz").c_str(), O_CREAT | O_RDWR, S_IRUSR | S_IWUSR));
   ASSERT_TRUE(baz_fd);
   fbl::unique_fd root_fd(open(GetPath("").c_str(), O_RDONLY | O_DIRECTORY, 0644));
   ASSERT_TRUE(root_fd);

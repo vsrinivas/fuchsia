@@ -37,7 +37,7 @@ TEST_F(SyncFdioTest, Sync) {
   std::unique_ptr<BlobInfo> info = GenerateRandomBlob("", 64);
 
   memmove(info->path, info->path + 1, strlen(info->path));  // Remove leading slash.
-  int file = openat(root_fd(), info->path, O_RDWR | O_CREAT);
+  int file = openat(root_fd(), info->path, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
   EXPECT_TRUE(file >= 1);
 
   // We have not written any data to the file. Blobfs requires the file data to be written so the
@@ -93,7 +93,7 @@ TEST(SyncNandTest, Sync) {
     auto fs = std::move(fs_or).value();
 
     fbl::unique_fd root_fd(open(fs.mount_path().c_str(), O_DIRECTORY));
-    fbl::unique_fd file(openat(root_fd.get(), info->path, O_RDWR | O_CREAT));
+    fbl::unique_fd file(openat(root_fd.get(), info->path, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR));
     ASSERT_TRUE(file.is_valid());
 
     // Write the contents. The file must be truncated before writing to declare its size.

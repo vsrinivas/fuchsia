@@ -88,7 +88,7 @@ TEST_P(MaxInodeTest, UseAllInodes) {
     bool stop = false;
     for (size_t f = 0; f < kFilesPerDirectory; f++) {
       const std::string fname = dname + "/" + std::to_string(f);
-      fbl::unique_fd fd(open(fname.c_str(), O_CREAT | O_RDWR | O_EXCL));
+      fbl::unique_fd fd(open(fname.c_str(), O_CREAT | O_RDWR | O_EXCL, S_IRUSR | S_IWUSR));
       if (!fd) {
         ASSERT_EQ(errno, ENOSPC);
         stop = true;
@@ -150,7 +150,7 @@ TEST_P(MaxDataTest, UseAllData) {
   while (true) {
     std::cout << "Creating 20 MB file " << f << std::endl;
     const std::string fname = GetPath(std::to_string(f));
-    fbl::unique_fd fd(open(fname.c_str(), O_CREAT | O_RDWR | O_EXCL));
+    fbl::unique_fd fd(open(fname.c_str(), O_CREAT | O_RDWR | O_EXCL, S_IRUSR | S_IWUSR));
     if (!fd) {
       ASSERT_EQ(errno, ENOSPC);
       break;

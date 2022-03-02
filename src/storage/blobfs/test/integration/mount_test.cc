@@ -56,7 +56,7 @@ TEST_F(DataMountTest, DataRootHasNoRootDirectoryInIt) {
 }
 
 TEST_F(DataMountTest, DataRootCanHaveBlobsCreated) {
-  fbl::unique_fd foo_fd(openat(root_fd(), kFileName.data(), O_CREAT));
+  fbl::unique_fd foo_fd(openat(root_fd(), kFileName.data(), O_CREAT, S_IRUSR | S_IWUSR));
   ASSERT_TRUE(foo_fd.is_valid());
 }
 
@@ -66,13 +66,13 @@ TEST_F(OutgoingMountTest, OutgoingDirectoryHasRootDirectoryInIt) {
 }
 
 TEST_F(OutgoingMountTest, OutgoingDirectoryIsReadOnly) {
-  fbl::unique_fd no_fd(openat(export_root_fd(), kFileName.data(), O_CREAT));
+  fbl::unique_fd no_fd(openat(export_root_fd(), kFileName.data(), O_CREAT, S_IRUSR | S_IWUSR));
   ASSERT_FALSE(no_fd.is_valid());
 }
 
 TEST_F(OutgoingMountTest, OutgoingDirectoryDataRootCanHaveBlobsCreated) {
   std::string path = std::string(kOutgoingDataRoot) + "/" + kFileName.data();
-  fbl::unique_fd foo_fd(openat(export_root_fd(), path.c_str(), O_CREAT));
+  fbl::unique_fd foo_fd(openat(export_root_fd(), path.c_str(), O_CREAT, S_IRUSR | S_IWUSR));
   ASSERT_TRUE(foo_fd.is_valid());
 }
 
@@ -82,7 +82,7 @@ TEST_F(DataMountTest, CannotLoadBlobsExecutable) {
   // Create a new blob with random contents on the mounted filesystem.
   std::unique_ptr<BlobInfo> info = GenerateRandomBlob(".", 1 << 16);
 
-  fbl::unique_fd fd(openat(root_fd(), info->path, O_CREAT | O_RDWR));
+  fbl::unique_fd fd(openat(root_fd(), info->path, O_CREAT | O_RDWR, S_IRUSR | S_IWUSR));
   ASSERT_TRUE(fd.is_valid());
 
   ASSERT_EQ(ftruncate(fd.get(), info->size_data), 0);
