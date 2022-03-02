@@ -90,6 +90,10 @@ async_dispatcher_t* fdf_dispatcher_get_async_dispatcher(fdf_dispatcher_t* dispat
 // retrieved via `fdf_dispatcher_get_async_dispatcher`, the call will result in a crash.
 fdf_dispatcher_t* fdf_dispatcher_from_async_dispatcher(async_dispatcher_t* async_dispatcher);
 
+// Returns the current thread's dispatcher.
+// This will return NULL if not called from a dispatcher managed thread.
+fdf_dispatcher_t* fdf_dispatcher_get_current_dispatcher();
+
 // Returns the options set for this dispatcher.
 uint32_t fdf_dispatcher_get_options(fdf_dispatcher_t* dispatcher);
 

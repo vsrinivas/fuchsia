@@ -1359,6 +1359,55 @@ TEST_F(DispatcherTest, ShutdownProcessAsyncLoop) {
 }
 
 //
+// Misc tests
+//
+
+TEST_F(DispatcherTest, GetCurrentDispatcherNone) {
+  ASSERT_NULL(fdf_dispatcher_get_current_dispatcher());
+}
+
+TEST_F(DispatcherTest, GetCurrentDispatcher) {
+  const void* driver1 = CreateFakeDriver();
+  fdf_dispatcher_t* dispatcher1;
+  ASSERT_NO_FATAL_FAILURE(CreateDispatcher(0, "scheduler_role", driver1, &dispatcher1));
+
+  const void* driver2 = CreateFakeDriver();
+  fdf_dispatcher_t* dispatcher2;
+  ASSERT_NO_FATAL_FAILURE(CreateDispatcher(0, "scheduler_role", driver2, &dispatcher2));
+
+  // driver1 will wait on a message from driver2, then reply back.
+  auto channel_read1 = std::make_unique<fdf::ChannelRead>(
+      local_ch_, 0,
+      [&](fdf_dispatcher_t* dispatcher, fdf::ChannelRead* channel_read, fdf_status_t status) {
+        ASSERT_OK(status);
+        ASSERT_EQ(dispatcher1, fdf_dispatcher_get_current_dispatcher());
+        // This reply will be reentrant and queued on the async loop.
+        ASSERT_EQ(ZX_OK, fdf_channel_write(local_ch_, 0, nullptr, nullptr, 0, nullptr, 0));
+      });
+  ASSERT_OK(channel_read1->Begin(dispatcher1));
+
+  sync::Completion got_reply;
+  auto channel_read2 = std::make_unique<fdf::ChannelRead>(
+      remote_ch_, 0,
+      [&](fdf_dispatcher_t* dispatcher, fdf::ChannelRead* channel_read, fdf_status_t status) {
+        ASSERT_OK(status);
+        ASSERT_EQ(dispatcher2, fdf_dispatcher_get_current_dispatcher());
+        got_reply.Signal();
+      });
+  ASSERT_OK(channel_read2->Begin(dispatcher2));
+
+  // Write from driver 2 to driver1.
+  ASSERT_OK(async::PostTask(fdf_dispatcher_get_async_dispatcher(dispatcher2), [&] {
+    ASSERT_EQ(dispatcher2, fdf_dispatcher_get_current_dispatcher());
+    // Non-reentrant write.
+    ASSERT_EQ(ZX_OK, fdf_channel_write(remote_ch_, 0, nullptr, nullptr, 0, nullptr, 0));
+  }));
+
+  ASSERT_OK(got_reply.Wait(zx::time::infinite()));
+  ASSERT_OK(fdf_internal_wait_until_dispatcher_idle(dispatcher2));
+}
+
+//
 // Error handling
 //
 

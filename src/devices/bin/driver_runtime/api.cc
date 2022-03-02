@@ -156,3 +156,7 @@ __EXPORT fdf_status_t fdf_internal_wait_until_dispatcher_idle(fdf_dispatcher_t* 
 __EXPORT fdf_status_t fdf_internal_wait_until_all_dispatchers_idle() {
   return driver_runtime::DispatcherCoordinator::WaitUntilDispatchersIdle();
 }
+
+__EXPORT fdf_dispatcher_t* fdf_dispatcher_get_current_dispatcher() {
+  return static_cast<fdf_dispatcher_t*>(driver_context::GetCurrentDispatcher());
+}
