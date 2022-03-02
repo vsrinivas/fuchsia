@@ -5504,13 +5504,14 @@ struct CmsgSocketOption {
   std::string level_str;
   int cmsg_type;
   std::string cmsg_type_str;
+  socklen_t cmsg_size;
   int optname_to_enable_receive;
 };
 
-#define STRINGIFIED_CMSGOPT(lvl, type, optname)                                 \
-  CmsgSocketOption {                                                            \
-    .level = lvl, .level_str = #lvl, .cmsg_type = type, .cmsg_type_str = #type, \
-    .optname_to_enable_receive = optname                                        \
+#define STRINGIFIED_CMSGOPT(lvl, type, size, optname)                                              \
+  CmsgSocketOption {                                                                               \
+    .level = lvl, .level_str = #lvl, .cmsg_type = type, .cmsg_type_str = #type, .cmsg_size = size, \
+    .optname_to_enable_receive = optname                                                           \
   }
 
 using SocketDomainAndOption = std::tuple<sa_family_t, CmsgSocketOption>;
@@ -5695,7 +5696,7 @@ TEST_P(NetDatagramSocketsCmsgRecvTest, FailureDoesNotResetControlLength) {
   EXPECT_EQ(msghdr.msg_controllen, sizeof(control));
 }
 
-TEST_P(NetDatagramSocketsCmsgRecvTest, TruncatedMessage) {
+TEST_P(NetDatagramSocketsCmsgRecvTest, TruncatedMessageMinimumValidSize) {
   // A control message can be truncated if there is at least enough space to store the cmsghdr.
   char control[sizeof(cmsghdr)];
   ASSERT_NO_FATAL_FAILURE(SendAndCheckReceivedMessage(control, sizeof(cmsghdr), [](msghdr& msghdr) {
@@ -5704,10 +5705,11 @@ TEST_P(NetDatagramSocketsCmsgRecvTest, TruncatedMessage) {
     EXPECT_EQ(msghdr.msg_controllen, 0u);
     EXPECT_EQ(CMSG_FIRSTHDR(&msghdr), nullptr);
 #else
-    ASSERT_EQ(msghdr.msg_controllen, sizeof(cmsghdr));
+    ASSERT_EQ(msghdr.msg_controllen, sizeof(control));
+    EXPECT_EQ(msghdr.msg_flags, MSG_CTRUNC);
     cmsghdr* cmsg = CMSG_FIRSTHDR(&msghdr);
     ASSERT_NE(cmsg, nullptr);
-    EXPECT_EQ(cmsg->cmsg_len, sizeof(cmsghdr));
+    EXPECT_EQ(cmsg->cmsg_len, sizeof(control));
     auto const& cmsg_socketopt = std::get<1>(GetParam());
     EXPECT_EQ(cmsg->cmsg_level, cmsg_socketopt.level);
     EXPECT_EQ(cmsg->cmsg_type, cmsg_socketopt.cmsg_type);
@@ -5715,18 +5717,40 @@ TEST_P(NetDatagramSocketsCmsgRecvTest, TruncatedMessage) {
   }));
 }
 
+TEST_P(NetDatagramSocketsCmsgRecvTest, TruncatedMessageByOneByte) {
+  auto const& cmsg_socketopt = std::get<1>(GetParam());
+  char control[CMSG_LEN(cmsg_socketopt.cmsg_size) - 1];
+  ASSERT_NO_FATAL_FAILURE(
+      SendAndCheckReceivedMessage(control, socklen_t(sizeof(control)), [&](msghdr& msghdr) {
+#if defined(__Fuchsia__)
+        // TODO(https://fxbug.dev/86146): Add support for truncated control messages (MSG_CTRUNC).
+        EXPECT_EQ(msghdr.msg_controllen, 0u);
+        EXPECT_EQ(CMSG_FIRSTHDR(&msghdr), nullptr);
+#else
+    ASSERT_EQ(msghdr.msg_controllen, sizeof(control));
+    EXPECT_EQ(msghdr.msg_flags, MSG_CTRUNC);
+    cmsghdr* cmsg = CMSG_FIRSTHDR(&msghdr);
+    ASSERT_NE(cmsg, nullptr);
+    EXPECT_EQ(cmsg->cmsg_len, sizeof(control));
+    EXPECT_EQ(cmsg->cmsg_level, cmsg_socketopt.level);
+    EXPECT_EQ(cmsg->cmsg_type, cmsg_socketopt.cmsg_type);
+#endif
+      }));
+}
+
 INSTANTIATE_TEST_SUITE_P(
     NetDatagramSocketsCmsgRecvTests, NetDatagramSocketsCmsgRecvTest,
     testing::Combine(testing::Values(AF_INET, AF_INET6),
-                     testing::Values(STRINGIFIED_CMSGOPT(SOL_SOCKET, SO_TIMESTAMP, SO_TIMESTAMP),
+                     testing::Values(STRINGIFIED_CMSGOPT(SOL_SOCKET, SO_TIMESTAMP, sizeof(timeval),
+                                                         SO_TIMESTAMP),
                                      STRINGIFIED_CMSGOPT(SOL_SOCKET, SO_TIMESTAMPNS,
-                                                         SO_TIMESTAMPNS))),
+                                                         sizeof(timespec), SO_TIMESTAMPNS))),
     SocketDomainAndOptionToString);
 
 INSTANTIATE_TEST_SUITE_P(NetDatagramSocketsCmsgRecvIPv4Tests, NetDatagramSocketsCmsgRecvTest,
                          testing::Combine(testing::Values(AF_INET),
-                                          testing::Values(STRINGIFIED_CMSGOPT(SOL_IP, IP_TOS,
-                                                                              IP_RECVTOS))),
+                                          testing::Values(STRINGIFIED_CMSGOPT(
+                                              SOL_IP, IP_TOS, sizeof(uint8_t), IP_RECVTOS))),
                          SocketDomainAndOptionToString);
 
 class NetDatagramSocketsCmsgSendTest : public NetDatagramSocketsCmsgTestBase,
@@ -6000,7 +6024,7 @@ TEST_P(NetDatagramSocketsCmsgTimestampNsTest, RecvMsg) {
   char control[CMSG_SPACE(sizeof(timespec)) + 1];
   ASSERT_NO_FATAL_FAILURE(
       SendAndCheckReceivedMessage(control, sizeof(control), [&](msghdr& msghdr) {
-        ASSERT_EQ(msghdr.msg_controllen, CMSG_SPACE(sizeof(timeval)));
+        ASSERT_EQ(msghdr.msg_controllen, CMSG_SPACE(sizeof(timespec)));
         cmsghdr* cmsg = CMSG_FIRSTHDR(&msghdr);
         ASSERT_NE(cmsg, nullptr);
         EXPECT_EQ(cmsg->cmsg_len, CMSG_LEN(sizeof(timespec)));
