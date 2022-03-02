@@ -20,6 +20,7 @@ template("merged_sdk") {
   if (!build_sdk_archives) {
     # This template is a no-op if SDK archives are not emitted.
     group(target_name) {
+      forward_variables_from(invoker, [ "testonly" ])
       deps = invoker.deps
     }
   } else {
@@ -27,9 +28,9 @@ template("merged_sdk") {
     latest_archive = ""
     latest_step = ""
     foreach(dep, invoker.deps) {
-      gen_dir = get_label_info(dep, "target_gen_dir")
+      archive_dir = "${root_out_dir}/sdk/archive"
       name = get_label_info(dep, "name")
-      dep_archive = "$gen_dir/$name.tar.gz"
+      dep_archive = "${archive_dir}/$name.tar.gz"
 
       if (index == 0) {
         latest_archive = dep_archive
@@ -37,12 +38,13 @@ template("merged_sdk") {
         merged_archive = "$target_gen_dir/$target_name.$index.tar.gz"
         step = "${target_name}_merge_${index}"
 
-        compiled_action(step) {
+        action(step) {
           forward_variables_from(invoker, [ "testonly" ])
 
-          tool = "//build/sdk/tools/merge:merge_sdk"
+          #TODO(b/222339823): Switch to Rust merge tool when fixed.
+          script = "//scripts/sdk/merger/merge.py"
 
-          inputs = [
+          sources = [
             dep_archive,
             latest_archive,
           ]
@@ -50,9 +52,9 @@ template("merged_sdk") {
           outputs = [ merged_archive ]
 
           args = [
-            "--base-archive",
+            "--first-archive",
             rebase_path(latest_archive, root_build_dir),
-            "--complement-archive",
+            "--second-archive",
             rebase_path(dep_archive, root_build_dir),
             "--output-archive",
             rebase_path(merged_archive, root_build_dir),
@@ -74,12 +76,25 @@ template("merged_sdk") {
 
     copy(target_name) {
       forward_variables_from(invoker, [ "testonly" ])
+      output_archive = "${root_out_dir}/sdk/archive/${target_name}.tar.gz"
 
       sources = [ latest_archive ]
 
-      outputs = [ "$target_gen_dir/$target_name.tar.gz" ]
+      outputs = [ output_archive ]
 
       public_deps = [ ":$latest_step" ]
+
+      metadata = {
+        sdk_archives = [
+          {
+            name = target_name
+            os = current_os
+            cpu = current_cpu
+            label = get_label_info(":$target_name", "label_with_toolchain")
+            path = rebase_path(output_archive, root_build_dir)
+          },
+        ]
+      }
     }
   }
 }

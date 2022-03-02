@@ -7,6 +7,7 @@
 import("//build/config/build_api_module.gni")
 import("//build/dart/toolchain.gni")
 import("//build/fidl/toolchain.gni")
+import("//build/sdk/merged_sdk.gni")
 import("//build/sdk/sdk.gni")
 import("//build/sdk/sdk_documentation.gni")
 import("//build/sdk/sdk_package.gni")
@@ -71,6 +72,17 @@ group("archives") {
     ":e2e_testing_archive",
     ":fuchsia_dart_archive",
     ":modular_testing_archive",
+  ]
+}
+
+merged_sdk("merged") {
+  testonly = true
+  deps = [
+    ":core",
+    ":core_testing",
+    ":e2e_testing",
+    ":fuchsia_dart",
+    ":modular_testing",
   ]
 }
 
