@@ -66,7 +66,7 @@ err:
 tftp_status file_open_write(const char* filename, size_t len, uint8_t session_timeout_secs,
                             void* cookie) {
   xferdata* xd = cookie;
-  xd->fd = open(filename, O_WRONLY | O_CREAT);
+  xd->fd = open(filename, O_WRONLY | O_CREAT, S_IRUSR | S_IWUSR);
   if (xd->fd < 0) {
     fprintf(stderr, "%s: error: Could not open file %s\n", appname, filename);
     return TFTP_ERR_NOT_FOUND;

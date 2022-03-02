@@ -49,7 +49,7 @@ void ImminentGracefulRebootWatcher::OnReboot(
 
   const size_t timer_id = cobalt_->StartTimer();
 
-  fbl::unique_fd fd(open(path_.c_str(), O_CREAT | O_TRUNC | O_WRONLY));
+  fbl::unique_fd fd(open(path_.c_str(), O_CREAT | O_TRUNC | O_WRONLY, S_IRUSR | S_IWUSR));
   if (!fd.is_valid()) {
     FX_LOGS(INFO) << "Failed to open reboot reason file: " << path_;
     return;

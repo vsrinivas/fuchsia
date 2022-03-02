@@ -126,14 +126,14 @@ TEST_F(StorageMetricsTest, TwoComponents) {
   files::CreateDirectory(files::JoinPath(kPersistentPath, "12345"));
   files::CreateDirectory(files::JoinPath(kPersistentPath, "67890"));
   {
-    fbl::unique_fd fd(
-        open(files::JoinPath(kPersistentPath, "12345/afile").c_str(), O_RDWR | O_CREAT));
+    fbl::unique_fd fd(open(files::JoinPath(kPersistentPath, "12345/afile").c_str(),
+                           O_RDWR | O_CREAT, S_IRUSR | S_IWUSR));
     ASSERT_GE(fd.get(), 0);
     ASSERT_EQ(write(fd.get(), "1", 1), 1);
   }
   {
-    fbl::unique_fd fd(
-        open(files::JoinPath(kPersistentPath, "67890/other").c_str(), O_RDWR | O_CREAT));
+    fbl::unique_fd fd(open(files::JoinPath(kPersistentPath, "67890/other").c_str(),
+                           O_RDWR | O_CREAT, S_IRUSR | S_IWUSR));
     ASSERT_GE(fd.get(), 0);
   }
 
@@ -155,13 +155,13 @@ TEST_F(StorageMetricsTest, CountSubdirectories) {
   files::CreateDirectory(files::JoinPath(kPersistentPath, "12345"));
   files::CreateDirectory(files::JoinPath(kPersistentPath, "12345/subdir"));
   {
-    fbl::unique_fd fd(
-        open(files::JoinPath(kPersistentPath, "12345/afile").c_str(), O_RDWR | O_CREAT));
+    fbl::unique_fd fd(open(files::JoinPath(kPersistentPath, "12345/afile").c_str(),
+                           O_RDWR | O_CREAT, S_IRUSR | S_IWUSR));
     ASSERT_GE(fd.get(), 0);
   }
   {
-    fbl::unique_fd fd(
-        open(files::JoinPath(kPersistentPath, "12345/subdir/other").c_str(), O_RDWR | O_CREAT));
+    fbl::unique_fd fd(open(files::JoinPath(kPersistentPath, "12345/subdir/other").c_str(),
+                           O_RDWR | O_CREAT, S_IRUSR | S_IWUSR));
     ASSERT_GE(fd.get(), 0);
   }
 
@@ -180,8 +180,8 @@ TEST_F(StorageMetricsTest, CountSubdirectories) {
 TEST_F(StorageMetricsTest, IncrementByBlocks) {
   files::CreateDirectory(files::JoinPath(kPersistentPath, "12345"));
   {
-    fbl::unique_fd fd(
-        open(files::JoinPath(kPersistentPath, "12345/afile").c_str(), O_RDWR | O_CREAT));
+    fbl::unique_fd fd(open(files::JoinPath(kPersistentPath, "12345/afile").c_str(),
+                           O_RDWR | O_CREAT, S_IRUSR | S_IWUSR));
     ASSERT_GE(fd.get(), 0);
     ASSERT_EQ(write(fd.get(), "1", 1), 1);
   }
@@ -241,16 +241,18 @@ TEST_F(StorageMetricsTest, MultipleWatchPaths) {
   files::CreateDirectory(files::JoinPath(kPersistentPath, "12345"));
   files::CreateDirectory(files::JoinPath(kCachePath, "12345"));
   {
-    fbl::unique_fd fd(
-        open(files::JoinPath(kPersistentPath, "12345/afile").c_str(), O_RDWR | O_CREAT));
+    fbl::unique_fd fd(open(files::JoinPath(kPersistentPath, "12345/afile").c_str(),
+                           O_RDWR | O_CREAT, S_IRUSR | S_IWUSR));
     ASSERT_GE(fd.get(), 0);
   }
   {
-    fbl::unique_fd fd(open(files::JoinPath(kCachePath, "12345/other").c_str(), O_RDWR | O_CREAT));
+    fbl::unique_fd fd(open(files::JoinPath(kCachePath, "12345/other").c_str(), O_RDWR | O_CREAT,
+                           S_IRUSR | S_IWUSR));
     ASSERT_GE(fd.get(), 0);
   }
   {
-    fbl::unique_fd fd(open(files::JoinPath(kCachePath, "12345/third").c_str(), O_RDWR | O_CREAT));
+    fbl::unique_fd fd(open(files::JoinPath(kCachePath, "12345/third").c_str(), O_RDWR | O_CREAT,
+                           S_IRUSR | S_IWUSR));
     ASSERT_GE(fd.get(), 0);
   }
 
@@ -274,13 +276,13 @@ TEST_F(StorageMetricsTest, RealmNesting) {
   files::CreateDirectory(files::JoinPath(kPersistentPath, "r/sys/r"));
   files::CreateDirectory(files::JoinPath(kPersistentPath, "r/sys/r/admin/67890"));
   {
-    fbl::unique_fd fd(
-        open(files::JoinPath(kPersistentPath, "r/sys/12345/afile").c_str(), O_RDWR | O_CREAT));
+    fbl::unique_fd fd(open(files::JoinPath(kPersistentPath, "r/sys/12345/afile").c_str(),
+                           O_RDWR | O_CREAT, S_IRUSR | S_IWUSR));
     ASSERT_GE(fd.get(), 0);
   }
   {
     fbl::unique_fd fd(open(files::JoinPath(kPersistentPath, "r/sys/r/admin/67890/other").c_str(),
-                           O_RDWR | O_CREAT));
+                           O_RDWR | O_CREAT, S_IRUSR | S_IWUSR));
     ASSERT_GE(fd.get(), 0);
   }
 

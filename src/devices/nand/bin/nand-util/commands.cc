@@ -95,7 +95,7 @@ void ReadBlockByPage(const NandBroker& nand, uint32_t block_num) {
 }
 
 bool Save(const NandBroker& nand, uint32_t first_block, uint32_t count, const char* path) {
-  fbl::unique_fd out(open(path, O_WRONLY | O_CREAT | O_TRUNC));
+  fbl::unique_fd out(open(path, O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR));
   if (!out) {
     printf("Unable to open destination\n");
     return false;

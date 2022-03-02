@@ -127,7 +127,7 @@ void SmartDoorMemoryServer::GetWriter(Token token, ::fidl::InterfaceRequest<Writ
     callback(Memory_GetWriter_Result::WithErr(Error::INVALID_INPUT));
     return;
   }
-  int fd = open(file_path.c_str(), O_WRONLY | O_CREAT | O_TRUNC);
+  int fd = open(file_path.c_str(), O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
   if (fd < 0) {
     callback(Memory_GetWriter_Result::WithErr(Error::INVALID_INPUT));
     return;

@@ -55,7 +55,8 @@ void SystemLogWriter::StartNewFile() {
   file_queue_.push_back(next_file_num);
 
   TRACE_DURATION("feedback:io", "SystemLogWriter::OpenFile");
-  current_file_descriptor_.reset(open(Path(next_file_num).c_str(), O_WRONLY | O_CREAT | O_TRUNC));
+  current_file_descriptor_.reset(
+      open(Path(next_file_num).c_str(), O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR));
 }
 
 void SystemLogWriter::Write() {
