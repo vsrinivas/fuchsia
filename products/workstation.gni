@@ -62,10 +62,7 @@ base_package_labels -= [ "//src/cobalt/bin/app:config" ]
 base_package_labels += [ "//src/cobalt/bin/app:user_config" ]
 
 # Explicitly prefer wired networking on workstation
-base_package_labels -= [
-  "//src/connectivity/management:network_config_default",
-  "//src/connectivity/network/netcfg:config-default",
-]
+base_package_labels -= [ "//src/connectivity/network/netcfg:config-default" ]
 base_package_labels +=
     [ "//src/connectivity/network/netcfg:config-prefer-wired" ]
 

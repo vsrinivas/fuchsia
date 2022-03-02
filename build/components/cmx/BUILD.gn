@@ -180,7 +180,6 @@ group("cmx_allowlist") {
     "//src/connectivity/lowpan/tests:*",
     "//src/connectivity/lowpan/tools/lowpanctl:*",
     "//src/connectivity/lowpan/tools/lowpanctl/test:*",
-    "//src/connectivity/management/reachability:*",
     "//src/connectivity/network/dhcpv6/client:*",
     "//src/connectivity/network/dhcpv6/core:*",
     "//src/connectivity/network/dns:*",

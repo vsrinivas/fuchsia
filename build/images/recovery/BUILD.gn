@@ -87,7 +87,6 @@ recovery_packages = [
   "//build/info:build-info",
   "//garnet/bin/sysmgr",
   "//src/connectivity/location/regulatory_region:regulatory_region",
-  "//src/connectivity/management:network_config_default",
   "//src/connectivity/network",
   "//src/connectivity/network/netcfg:config-default",
   "//src/connectivity/wlan/wlancfg",
