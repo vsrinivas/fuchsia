@@ -19,7 +19,9 @@ use carnelian::{
 };
 use euclid::{point2, size2};
 use fuchsia_async::{self as fasync};
+use fuchsia_watch::PathEvent;
 use fuchsia_zircon::Event;
+use futures::StreamExt;
 use rive_rs::{self as rive};
 use std::path::PathBuf;
 
@@ -724,5 +726,22 @@ async fn do_install(
 
 fn main() -> Result<(), Error> {
     println!("workstation installer: started.");
+    // Before we give control to carnelian, wait until a display driver is bound.
+    fuchsia_async::LocalExecutor::new()
+        .context("Creating executor")?
+        .run_singlethreaded(async move {
+            let mut stream = fuchsia_watch::watch("/dev/class/display-controller")
+                .await
+                .context("Starting watch")?;
+            while let Some(element) = stream.next().await {
+                match element {
+                    PathEvent::Added(_, _) | PathEvent::Existing(_, _) => return Ok(()),
+                    _ => {}
+                }
+            }
+            Err(anyhow!("Didn't find anything"))
+        })
+        .context("Watching for display controller device")?;
+
     App::run(make_app_assistant())
 }
