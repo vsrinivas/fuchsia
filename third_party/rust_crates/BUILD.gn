@@ -502,10 +502,8 @@ group("paste") {
   deps = [ ":paste-v1_0_0($host_toolchain)" ]
 }
 
-if (!(current_os == "fuchsia")) {
-  group("pathdiff") {
-    deps = [ ":pathdiff-v0_2_0" ]
-  }
+group("pathdiff") {
+  deps = [ ":pathdiff-v0_2_1" ]
 }
 
 if (!(current_os == "fuchsia")) {
@@ -6901,24 +6899,26 @@ rust_proc_macro("paste-v1_0_0") {
   visibility = [ ":*" ]
 }
 
-rust_library("pathdiff-v0_2_0") {
+rust_library("pathdiff-v0_2_1") {
   crate_name = "pathdiff"
   crate_root = "//third_party/rust_crates/vendor/pathdiff/src/lib.rs"
-  output_name = "pathdiff-57152bbe2df0a861"
+  output_name = "pathdiff-f92b819d1f19c4a5"
   configs -= [
     "//build/config/rust:edition_2018",
     "//build/config/rust:2018_idioms",
   ]
 
   deps = []
+  deps += [ ":camino-v1_0_5" ]
 
   rustenv = []
 
   rustflags = [
     "--cap-lints=allow",
-    "--edition=2015",
-    "-Cmetadata=57152bbe2df0a861",
-    "-Cextra-filename=-57152bbe2df0a861",
+    "--edition=2018",
+    "-Cmetadata=f92b819d1f19c4a5",
+    "-Cextra-filename=-f92b819d1f19c4a5",
+    "--cfg=feature=\"camino\"",
   ]
 
   visibility = [ ":*" ]

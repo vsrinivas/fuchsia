@@ -3,21 +3,24 @@
 # When uploading crates to the registry Cargo will automatically
 # "normalize" Cargo.toml files for maximal compatibility
 # with all versions of Cargo and also rewrite `path` dependencies
-# to registry (e.g., crates.io) dependencies
+# to registry (e.g., crates.io) dependencies.
 #
-# If you believe there's an error in this file please file an
-# issue against the rust-lang/cargo repository. If you're
-# editing this file be aware that the upstream Cargo.toml
-# will likely look very different (and much more reasonable)
+# If you are reading this file be aware that the original Cargo.toml
+# will likely look very different (and much more reasonable).
+# See Cargo.toml.orig for the original contents.
 
 [package]
+edition = "2018"
 name = "pathdiff"
-version = "0.2.0"
+version = "0.2.1"
 authors = ["Manish Goregaokar <manishsmail@gmail.com>"]
 description = "Library for diffing paths to obtain relative paths"
 documentation = "https://docs.rs/pathdiff/"
 keywords = ["path", "relative"]
 license = "MIT/Apache-2.0"
 repository = "https://github.com/Manishearth/pathdiff"
-
-[dependencies]
+[package.metadata.docs.rs]
+all-features = true
+[dependencies.camino]
+version = "1.0.5"
+optional = true
