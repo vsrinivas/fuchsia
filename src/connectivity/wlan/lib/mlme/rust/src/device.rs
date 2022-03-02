@@ -1094,7 +1094,7 @@ pub(crate) mod test_utils {
         }
     }
 
-    fn fake_discovery_support() -> banjo_common::DiscoverySupport {
+    pub fn fake_discovery_support() -> banjo_common::DiscoverySupport {
         banjo_common::DiscoverySupport {
             scan_offload: banjo_common::ScanOffloadExtension { supported: false },
             probe_response_offload: banjo_common::ProbeResponseOffloadExtension {
@@ -1103,7 +1103,7 @@ pub(crate) mod test_utils {
         }
     }
 
-    fn fake_mac_sublayer_support() -> banjo_common::MacSublayerSupport {
+    pub fn fake_mac_sublayer_support() -> banjo_common::MacSublayerSupport {
         banjo_common::MacSublayerSupport {
             rate_selection_offload: banjo_common::RateSelectionOffloadExtension {
                 supported: false,
@@ -1119,7 +1119,7 @@ pub(crate) mod test_utils {
         }
     }
 
-    fn fake_security_support() -> banjo_common::SecuritySupport {
+    pub fn fake_security_support() -> banjo_common::SecuritySupport {
         banjo_common::SecuritySupport {
             mfp: banjo_common::MfpFeature { supported: false },
             sae: banjo_common::SaeFeature {
@@ -1129,7 +1129,7 @@ pub(crate) mod test_utils {
         }
     }
 
-    fn fake_spectrum_management_support() -> banjo_common::SpectrumManagementSupport {
+    pub fn fake_spectrum_management_support() -> banjo_common::SpectrumManagementSupport {
         banjo_common::SpectrumManagementSupport {
             dfs: banjo_common::DfsFeature { supported: true },
         }

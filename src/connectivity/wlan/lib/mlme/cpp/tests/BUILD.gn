@@ -150,6 +150,7 @@ test("common_tests") {
   output_name = "wlan_common_unittest"
 
   sources = [
+    "features_unittest.cc",
     "moving_average_unittest.cc",
     "rates_elements_unittest.cc",
     "stats_unittest.cc",
@@ -157,6 +158,8 @@ test("common_tests") {
 
   deps = [
     ":test_main",
+    "//sdk/fidl/fuchsia.wlan.common",
+    "//sdk/fidl/fuchsia.wlan.common:fuchsia.wlan.common_banjo_c",
     "//sdk/fidl/fuchsia.wlan.stats",
     "//src/connectivity/wlan/lib/common/cpp:common",
     "//third_party/googletest:gtest",

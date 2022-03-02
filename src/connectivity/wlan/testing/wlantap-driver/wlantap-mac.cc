@@ -16,6 +16,7 @@
 #include <mutex>
 
 #include <wlan/common/channel.h>
+#include <wlan/common/features.h>
 #include <wlan/common/phy.h>
 
 #include "utils.h"
@@ -24,7 +25,6 @@ namespace wlan {
 
 namespace wlantap = ::fuchsia::wlan::tap;
 namespace wlan_common = ::fuchsia::wlan::common;
-namespace wlan_device = ::fuchsia::wlan::device;
 
 namespace {
 
@@ -56,23 +56,24 @@ struct WlantapMacImpl : WlantapMac {
 
   static void WlanSoftmacQueryDiscoverySupport(void* ctx, discovery_support_t* support) {
     auto& self = *static_cast<WlantapMacImpl*>(ctx);
-    *support = ConvertDiscoverySupport(self.phy_config_->discovery_support);
+    wlan::common::ConvertDiscoverySupportToDdk(self.phy_config_->discovery_support, support);
   }
 
   static void WlanSoftmacQueryMacSublayerSupport(void* ctx, mac_sublayer_support_t* support) {
     auto& self = *static_cast<WlantapMacImpl*>(ctx);
-    *support = ConvertMacSublayerSupport(self.phy_config_->mac_sublayer_support);
+    wlan::common::ConvertMacSublayerSupportToDdk(self.phy_config_->mac_sublayer_support, support);
   }
 
   static void WlanSoftmacQuerySecuritySupport(void* ctx, security_support_t* support) {
     auto& self = *static_cast<WlantapMacImpl*>(ctx);
-    *support = ConvertSecuritySupport(self.phy_config_->security_support);
+    wlan::common::ConvertSecuritySupportToDdk(self.phy_config_->security_support, support);
   }
 
   static void WlanSoftmacQuerySpectrumManagementSupport(void* ctx,
                                                         spectrum_management_support_t* support) {
     auto& self = *static_cast<WlantapMacImpl*>(ctx);
-    *support = ConvertSpectrumManagementSupport(self.phy_config_->spectrum_management_support);
+    wlan::common::ConvertSpectrumManagementSupportToDdk(
+        self.phy_config_->spectrum_management_support, support);
   }
 
   static zx_status_t WlanSoftmacStart(void* ctx, const wlan_softmac_ifc_protocol_t* ifc,

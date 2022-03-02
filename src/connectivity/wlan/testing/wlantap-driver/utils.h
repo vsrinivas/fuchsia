@@ -28,12 +28,6 @@ zx_status_t ConvertTapPhyConfig(
     wlan_mac_role_t supported_mac_roles_list[fuchsia_wlan_common_MAX_SUPPORTED_MAC_ROLES],
     uint8_t* supported_mac_roles_count,
     const ::fuchsia::wlan::tap::WlantapPhyConfig& tap_phy_config);
-discovery_support_t ConvertDiscoverySupport(const ::fuchsia::wlan::common::DiscoverySupport& in);
-mac_sublayer_support_t ConvertMacSublayerSupport(
-    const ::fuchsia::wlan::common::MacSublayerSupport& in);
-security_support_t ConvertSecuritySupport(const ::fuchsia::wlan::common::SecuritySupport& in);
-spectrum_management_support_t ConvertSpectrumManagementSupport(
-    const ::fuchsia::wlan::common::SpectrumManagementSupport& in);
 wlan_tx_status_t ConvertTxStatus(const ::fuchsia::wlan::common::WlanTxStatus& in);
 }  // namespace wlan
 
