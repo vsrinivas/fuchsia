@@ -45,6 +45,62 @@ See go/fuchsia-builder-viz. Look for builders whose names end in "-cts".
 
 At minimum, all CTS tests run on the core.x64 image in the Fuchsia emulator.
 
+## How can I tell which version of a CTS test is failing? {#which-test-version}
+
+CQ may run several versions of the same CTS test at a time: The version from
+tip-of-tree, from the latest canary release, and from a previous milestone
+release.
+
+The tip-of-tree version of the test has a package name without a release version.
+For example:
+
+```
+fuchsia-pkg://fuchsia.com/memfs-test-package#meta/memfs-component.cmx
+```
+
+The canary or milestone versions of the test include the release version. For
+example:
+
+```
+fuchsia-pkg://fuchsia.com/memfs-test-package_6.20211109.1.3166058#meta/memfs-component.cmx
+```
+
+
+## How do I reproduce a CTS test failure locally? {#repro}
+
+This depends on the [version](#which-test-version) of the test you'd like to run.
+
+To run the tip-of-tree version locally, you can do:
+
+```sh
+fx set //sdk/cts/tests
+fx test TEST_NAME
+```
+
+For example:
+
+```sh
+fx set //sdk/cts/tests
+fx test memfs-test-package
+```
+
+To run the release version locally, you can do:
+
+```sh
+fx set //sdk/cts/release:tests
+fx test TEST_NAME
+```
+
+For example:
+
+```sh
+fx set //sdk/cts/release:tests
+fx test memfs-test-package_6.20211109.1.3166058
+```
+
+Please see [Run Fuchsia Tests] for more information about how to run
+tests.
+
 ## What do I do if a CTS test is blocking my CL? {#broken-test}
 
 This is a sign that your CL is breaking a part of the platform surface area.
@@ -80,5 +136,6 @@ directory's owners or file a bug in the [CTS bug component].
 
 [CTS bug component]: https://bugs.fuchsia.dev/p/fuchsia/templates/detail?saved=1&template=Fuchsia%20Compatibility%20Test%20Suite%20%28CTS%29&ts=1627669234
 [CTS overview]: /docs/development/testing/cts/overview.md
+[Run Fuchsia Tests]: /docs/development/testing/run_fuchsia_tests.md
 [//sdk/cts/examples]: https://fuchsia.googlesource.com/fuchsia/+/refs/heads/main/sdk/cts/examples/
 [//sdk/cts/tests]: https://fuchsia.googlesource.com/fuchsia/+/refs/heads/main/sdk/cts/tests/
