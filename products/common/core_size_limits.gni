@@ -12,8 +12,6 @@
 # percentile of CLs. Exceeding the creep limits does not yet block submission:
 # see fxbug.dev/79053.
 
-blobfs_capacity = "10485760000"  # 10000 MiB
-
 size_checker_input = {
   icu_data = [ "icudtl.dat" ]
   icu_data_limit = 18460180  # 17.604 MiB
