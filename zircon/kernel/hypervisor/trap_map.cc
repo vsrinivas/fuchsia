@@ -85,14 +85,7 @@ zx_status_t TrapMap::InsertTrap(uint32_t kind, zx_gpaddr_t addr, size_t len,
   if (traps == nullptr) {
     return ZX_ERR_INVALID_ARGS;
   }
-  auto iter = traps->find(addr);
-  if (iter.IsValid()) {
-    dprintf(INFO,
-            "Trap for kind %u (addr %#lx len %lu key %lu) already exists "
-            "(addr %#lx len %lu key %lu)\n",
-            kind, addr, len, key, iter->addr(), iter->len(), iter->key());
-    return ZX_ERR_ALREADY_EXISTS;
-  }
+
   fbl::AllocChecker ac;
   ktl::unique_ptr<Trap> range(new (&ac) Trap(kind, addr, len, ktl::move(port), key));
   if (!ac.check()) {
@@ -102,9 +95,13 @@ zx_status_t TrapMap::InsertTrap(uint32_t kind, zx_gpaddr_t addr, size_t len,
   if (status != ZX_OK) {
     return status;
   }
-  {
-    Guard<SpinLock, IrqSave> guard{&lock_};
-    traps->insert(ktl::move(range));
+
+  Guard<SpinLock, IrqSave> guard{&lock_};
+  bool inserted = traps->insert_or_find(ktl::move(range));
+  if (!inserted) {
+    dprintf(INFO, "hypervisor: Trap for kind %u (addr %#lx len %lu key %lu) already exists\n", kind,
+            addr, len, key);
+    return ZX_ERR_ALREADY_EXISTS;
   }
   return ZX_OK;
 }
@@ -114,16 +111,21 @@ zx_status_t TrapMap::FindTrap(uint32_t kind, zx_gpaddr_t addr, Trap** trap) {
   if (traps == nullptr) {
     return ZX_ERR_INVALID_ARGS;
   }
-  TrapTree::iterator iter;
+
+  Trap* found;
   {
     Guard<SpinLock, IrqSave> guard{&lock_};
-    iter = traps->upper_bound(addr);
+    auto iter = --traps->upper_bound(addr);
+    if (!iter.IsValid()) {
+      return ZX_ERR_NOT_FOUND;
+    }
+    found = &*iter;
   }
-  --iter;
-  if (!iter.IsValid() || !iter->Contains(addr)) {
+  if (!found->Contains(addr)) {
     return ZX_ERR_NOT_FOUND;
   }
-  *trap = const_cast<Trap*>(&*iter);
+
+  *trap = found;
   return ZX_OK;
 }
 
