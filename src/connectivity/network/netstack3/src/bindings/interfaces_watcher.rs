@@ -185,7 +185,6 @@ struct EventQueue {
 
 impl EventQueue {
     /// Creates a queue with all the existing [`Properties`] and an [`Event::Idle`].
-    // TODO(https://fxbug.dev/84866): Make `existing` an `ExactSizeIterator`.
     fn existing(
         existing: impl IntoIterator<Item = fidl_interfaces_ext::Properties>,
     ) -> Result<Self, zx::Status> {

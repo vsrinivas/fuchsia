@@ -215,7 +215,7 @@ impl<'a, K: EntryKey, T> Entry<'a, K, T> {
 ///
 /// Wraps an iterator of type `I`, keeping track of the number of elements it
 /// is expected to produce.
-pub struct SizeAugmentedIterator<I> {
+struct SizeAugmentedIterator<I> {
     wrapped: I,
     remaining: usize,
 }
@@ -281,7 +281,8 @@ impl<K: IdMapCollectionKey, T> IdMapCollection<K, T> {
 
     /// Returns `true` if the `IdMapCollection` holds no items.
     pub fn is_empty(&self) -> bool {
-        self.data.iter().all(|d| d.is_empty())
+        let Self { count, data: _, _marker } = self;
+        *count == 0
     }
 
     /// Returns a reference to the item indexed by `key`, or `None` if the `key`
