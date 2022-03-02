@@ -535,7 +535,7 @@ decode_failure("UnionOutOfLineEnvelopeWhenInlineRequired") {
 // Tests decode of a value in a union that can be represented out of line in
 // the envelope but is incorrectly using the inline representation.
 decode_failure("UnionInlineEnvelopeWhenOutOfLineRequired") {
-    bindings_denylist = [rust, dart],
+    bindings_denylist = [dart],
     type = EnvelopeInliningTestUnionStruct,
     bytes = {
         v2 = [

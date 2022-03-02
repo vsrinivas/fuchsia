@@ -3146,17 +3146,17 @@ macro_rules! fidl_table {
                                 Ok(())
                             };
                             let member_inline_size = decoder.inline_size_of::<$member_ty>();
+                            match decoder.context().wire_format_version {
+                                $crate::encoding::WireFormatVersion::V2 =>
+                                    if inlined != (member_inline_size <= 4) {
+                                        return Err($crate::Error::InvalidInlineBitInEnvelope);
+                                    },
+                                _ => (),
+                            };
                             if inlined {
                                 decoder.check_inline_envelope_padding(next_offset, member_inline_size)?;
                                 decode_inner(decoder, next_offset)?;
                             } else {
-                                match decoder.context().wire_format_version {
-                                    $crate::encoding::WireFormatVersion::V2 =>
-                                        if member_inline_size <= 4 {
-                                            return Err($crate::Error::InvalidInlineBitInEnvelope);
-                                        },
-                                    _ => (),
-                                };
                                 decoder.read_out_of_line(member_inline_size, decode_inner)?;
                                 if decoder.next_out_of_line() != (next_out_of_line + (num_bytes as usize)) {
                                     return Err($crate::Error::InvalidNumBytesInEnvelope);
@@ -3363,18 +3363,18 @@ where
                 ordinal => panic!("unexpected ordinal {:?}", ordinal),
             }
         };
+        match decoder.context().wire_format_version {
+            WireFormatVersion::V2 => {
+                if inlined != (member_inline_size <= 4) {
+                    return Err(Error::InvalidInlineBitInEnvelope);
+                }
+            }
+            _ => (),
+        };
         if inlined {
             decoder.check_inline_envelope_padding(offset + 8, member_inline_size)?;
             decode_inner(decoder, offset + 8)?;
         } else {
-            match decoder.context().wire_format_version {
-                WireFormatVersion::V2 => {
-                    if member_inline_size <= 4 {
-                        return Err(Error::InvalidInlineBitInEnvelope);
-                    }
-                }
-                _ => (),
-            };
             decoder.read_out_of_line(member_inline_size, decode_inner)?;
             if decoder.next_out_of_line() != (next_out_of_line + (num_bytes as usize)) {
                 return Err(Error::InvalidNumBytesInEnvelope);
@@ -3600,17 +3600,17 @@ macro_rules! fidl_union {
                     }
                     Ok(())
                 };
+                match decoder.context().wire_format_version {
+                    $crate::encoding::WireFormatVersion::V2 =>
+                        if inlined != (member_inline_size <= 4) {
+                            return Err($crate::Error::InvalidInlineBitInEnvelope);
+                        },
+                    _ => (),
+                };
                 if inlined {
                     decoder.check_inline_envelope_padding(offset + 8, member_inline_size)?;
                     decode_inner(decoder, offset + 8)?;
                 } else {
-                    match decoder.context().wire_format_version {
-                        $crate::encoding::WireFormatVersion::V2 =>
-                            if member_inline_size <= 4 {
-                                return Err($crate::Error::InvalidInlineBitInEnvelope);
-                            },
-                        _ => (),
-                    };
                     decoder.read_out_of_line(member_inline_size, decode_inner)?;
                     if decoder.next_out_of_line() != (next_out_of_line + (num_bytes as usize)) {
                         return Err($crate::Error::InvalidNumBytesInEnvelope);

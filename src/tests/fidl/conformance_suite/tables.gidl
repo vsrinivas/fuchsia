@@ -207,7 +207,7 @@ decode_failure("TableOutOfLineEnvelopeWhenInlineRequired") {
 // Tests decode of a value in a table that can be represented out of line in
 // the envelope but is incorrectly using the inline representation.
 decode_failure("TableInlineEnvelopeWhenOutOfLineRequired") {
-    bindings_denylist = [rust, dart],
+    bindings_denylist = [dart],
     type = TableFieldOutOfLineStruct,
     bytes = {
         v2 = [
