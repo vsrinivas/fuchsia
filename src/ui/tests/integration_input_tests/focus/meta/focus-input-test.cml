@@ -1,0 +1,25 @@
+{
+    include: [
+        "//src/sys/test_manager/system-test.shard.cml",
+        "//src/sys/test_runners/gtest/default.shard.cml",
+        "sys/component/realm_builder.shard.cml",
+    ],
+    program: {
+        binary: "bin/focus-input-test",
+    },
+    offer: [
+        {
+            // Offer capabilities needed by components in this test realm.
+            // Keep it minimal, describe only what's actually needed.
+            // TODO(fxbug.dev/81446): Remove this list.
+            protocol: [
+                "fuchsia.scheduler.ProfileProvider",
+                "fuchsia.sysmem.Allocator",
+                "fuchsia.tracing.provider.Registry",
+                "fuchsia.vulkan.loader.Loader",
+            ],
+            from: "parent",
+            to: "#realm_builder",
+        },
+    ],
+}
