@@ -453,7 +453,7 @@ void MediaApp::DisplayConfigurationSettings() {
                            return usage == usage_string_and_usage.second;
                          });
   CLI_CHECK(it != kRenderUsageOptions.cend(), "no RenderUsage found");
-  auto usage_str = it->first;
+  auto usage_str = ultrasound_ ? "ULTRASOUND" : it->first;
 
   printf("\nAudioRenderer configured for %d-channel %s at %u Hz with the %s usage", num_channels_,
          SampleFormatToString(sample_format_), frame_rate_, usage_str);
