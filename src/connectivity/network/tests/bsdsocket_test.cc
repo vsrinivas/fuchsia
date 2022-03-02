@@ -4635,49 +4635,48 @@ TEST(NetDatagramTest, DatagramPartialRecv) {
 
   fbl::unique_fd sendfd;
   ASSERT_TRUE(sendfd = fbl::unique_fd(socket(AF_INET, SOCK_DGRAM, 0))) << strerror(errno);
-  ASSERT_EQ(sendto(sendfd.get(), kTestMsg.data(), kTestMsg.size(), 0,
-                   reinterpret_cast<sockaddr*>(&addr), addrlen),
-            ssize_t(kTestMsg.size()));
 
-  char recv_buf[kTestMsg.size()];
+  auto check_recv = [&sendfd, &recvfd, &kTestMsg, &addr, &addrlen](
+                        size_t recv_buf_size, int flags, ssize_t expected_recvmsg_returnvalue,
+                        int expected_msg_flags) {
+    char recv_buf[kTestMsg.size()];
 
-  // Read only first 2 bytes of the message. recv() is expected to discard the
-  // rest.
-  const int kPartialReadSize = 2;
-
-  iovec iov = {
-      .iov_base = recv_buf,
-      .iov_len = kPartialReadSize,
+    iovec iov = {
+        .iov_base = recv_buf,
+        .iov_len = recv_buf_size,
+    };
+    // TODO(https://github.com/google/sanitizers/issues/1455): The size of this
+    // array should be 0 or 1, but ASAN's recvmsg interceptor incorrectly encodes
+    // that recvmsg writes [msg_name:][:msg_namelen'] (prime indicates value
+    // after recvmsg returns), while the actual behavior is that
+    // [msg_name:][:min(msg_namelen, msg_namelen'] is written.
+    uint8_t from[sizeof(addr) + 1];
+    msghdr msg = {
+        .msg_name = from,
+        .msg_namelen = sizeof(from),
+        .msg_iov = &iov,
+        .msg_iovlen = 1,
+    };
+    ASSERT_EQ(sendto(sendfd.get(), kTestMsg.data(), kTestMsg.size(), 0,
+                     reinterpret_cast<sockaddr*>(&addr), addrlen),
+              ssize_t(kTestMsg.size()));
+    ASSERT_EQ(recvmsg(recvfd.get(), &msg, flags), expected_recvmsg_returnvalue);
+    ASSERT_EQ(msg.msg_namelen, sizeof(addr));
+    ASSERT_EQ(std::string_view(recv_buf, recv_buf_size), kTestMsg.substr(0, recv_buf_size));
+    ASSERT_EQ(msg.msg_flags, expected_msg_flags);
   };
-  // TODO(https://github.com/google/sanitizers/issues/1455): The size of this
-  // array should be 0 or 1, but ASAN's recvmsg interceptor incorrectly encodes
-  // that recvmsg writes [msg_name:][:msg_namelen'] (prime indicates value
-  // after recvmsg returns), while the actual behavior is that
-  // [msg_name:][:min(msg_namelen, msg_namelen'] is written.
-  uint8_t from[sizeof(addr) + 1];
-  msghdr msg = {
-      .msg_name = from,
-      .msg_namelen = sizeof(from),
-      .msg_iov = &iov,
-      .msg_iovlen = 1,
-  };
 
-  ASSERT_EQ(recvmsg(recvfd.get(), &msg, 0), kPartialReadSize);
-  ASSERT_EQ(msg.msg_namelen, sizeof(addr));
-  ASSERT_EQ(std::string_view(recv_buf, kPartialReadSize), kTestMsg.substr(0, kPartialReadSize));
-  EXPECT_EQ(msg.msg_flags, MSG_TRUNC);
+  // Partial read returns partial length and `MSG_TRUNC`.
+  ASSERT_NO_FATAL_FAILURE(check_recv(kTestMsg.size() - 1, 0, kTestMsg.size() - 1, MSG_TRUNC));
 
-  // Send the second packet.
-  ASSERT_EQ(sendto(sendfd.get(), kTestMsg.data(), kTestMsg.size(), 0,
-                   reinterpret_cast<sockaddr*>(&addr), addrlen),
-            ssize_t(kTestMsg.size()));
+  // Partial read with `MSG_TRUNC` flags returns full message length and
+  // `MSG_TRUNC`.
+  ASSERT_NO_FATAL_FAILURE(
+      check_recv(kTestMsg.size() - 1, MSG_TRUNC, ssize_t(kTestMsg.size()), MSG_TRUNC));
 
-  // Read the whole packet now.
-  recv_buf[0] = 0;
-  iov.iov_len = sizeof(recv_buf);
-  ASSERT_EQ(recvmsg(recvfd.get(), &msg, 0), ssize_t(kTestMsg.size()));
-  ASSERT_EQ(std::string_view(recv_buf, kTestMsg.size()), kTestMsg);
-  EXPECT_EQ(msg.msg_flags, 0);
+  // Full read always returns full length and no `MSG_TRUNC`.
+  ASSERT_NO_FATAL_FAILURE(check_recv(kTestMsg.size(), 0, ssize_t(kTestMsg.size()), 0));
+  ASSERT_NO_FATAL_FAILURE(check_recv(kTestMsg.size(), MSG_TRUNC, ssize_t(kTestMsg.size()), 0));
 
   EXPECT_EQ(close(sendfd.release()), 0) << strerror(errno);
   EXPECT_EQ(close(recvfd.release()), 0) << strerror(errno);
