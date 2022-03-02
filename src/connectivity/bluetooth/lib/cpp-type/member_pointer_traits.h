@@ -43,11 +43,17 @@ class MemberPointerTraits<PointerToMember> {
     // impossible that a compiler may use different padding around members that are not accessed in
     // this function than it uses elsewhere. For now, it's safest to use this _only_ with
     // [[gnu::packed]] classes.
-    ClassType temporary{};  // Value initialization in case of const members
+    const ClassType temporary{};  // Value initialization in case of const members
 
     // Conversion to void* then char* is excepted from UB by § 6.8 [basic.life] ¶ 6.4.
     const void* const base = std::addressof(temporary);
-    const void* const member = std::addressof(temporary.*PointerToMember);
+
+    // TODO(https://fxbug.dev/46637): this may form a reference to a misaligned field, which is UB.
+    const void* const member =
+        [](const ClassType* temporary) __attribute__((no_sanitize("alignment"))) {
+      return std::addressof(temporary->*PointerToMember);
+    }
+    (&temporary);
 
     // This void* to pointer-to-object conversion is undefined behavior if this function were
     // constexpr per § 8.20 [expr.const] ¶ 2.13.
