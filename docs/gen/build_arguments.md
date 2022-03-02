@@ -110,21 +110,21 @@ From //build/security.gni:140
 
 **Current value (from the default):** `"DEPRECATED"`
 
-From //build/images/vbmeta.gni:39
+From //build/images/vbmeta.gni:41
 
 ### avb_atx_metadata
 AVB metadata which will be used to validate public key
 
 **Current value (from the default):** `""`
 
-From //build/images/vbmeta.gni:18
+From //build/images/vbmeta.gni:20
 
 ### avb_key
 a key which will be used to sign VBMETA and images for AVB
 
 **Current value (from the default):** `""`
 
-From //build/images/vbmeta.gni:15
+From //build/images/vbmeta.gni:17
 
 ### base_driver_package_labels
 If you add fuchsia_driver_package labels to this variable, any drivers in these packages will
@@ -223,7 +223,19 @@ Maximum allowable contents for the /blob in a release mode build for
 both slot A and slot B of the system.
 Zero means no limit.
 
-**Current value (from the default):** `"0"`
+**Current value for `target_cpu = "arm64"`:** `"10485760000"`
+
+From //boards/arm64.gni:12
+
+**Overridden from the default:** `"0"`
+
+From //build/images/filesystem_limits.gni:15
+
+**Current value for `target_cpu = "x64"`:** `"10485760000"`
+
+From //boards/x64.gni:14
+
+**Overridden from the default:** `"0"`
 
 From //build/images/filesystem_limits.gni:15
 
@@ -280,7 +292,7 @@ A list of binary labels to include in the ZBI.
 
 **Current value for `target_cpu = "arm64"`:** `["//src/connectivity/ethernet/drivers/virtio:virtio_ethernet", "//src/devices/block/drivers/virtio:virtio_block", "//src/devices/block/drivers/virtio:virtio_scsi", "//src/devices/misc/drivers/virtio-rng:virtio_rng", "//src/devices/misc/drivers/virtio-socket:virtio_socket", "//src/devices/serial/drivers/virtio-console:virtio_console", "//src/graphics/drivers/misc:goldfish_fuchsia_drivers", "//src/graphics/display/drivers/goldfish-display", "//src/graphics/drivers/virtio:virtio_gpu", "//src/ui/input/drivers/virtio:virtio_input", "//src/ui/input/drivers/goldfish_sensor:sensor_driver", "//src/devices/block/drivers/ahci", "//src/devices/board/drivers/qemu-arm64", "//src/devices/rtc/drivers/pl031-rtc", "//src/graphics/display/drivers/fake:fake-display", "//src/devices/bus/drivers/pci:bus-pci", "//src/devices/usb/drivers/xhci", "//src/power/power-manager:base_config", "//src/security/policy/zxcrypt:null"]`
 
-From //boards/arm64.gni:19
+From //boards/arm64.gni:21
 
 **Overridden from the default:** `[]`
 
@@ -288,7 +300,7 @@ From //build/board.gni:28
 
 **Current value for `target_cpu = "x64"`:** `["//src/devices/block/drivers/ahci", "//src/devices/block/drivers/mbr", "//src/devices/block/drivers/nvme", "//src/devices/block/drivers/pci-sdhci", "//src/devices/block/drivers/sdhci", "//src/devices/board/drivers/x86:platform-bus-x86", "//src/devices/bus/drivers/pci:bus-pci", "//src/devices/i2c/drivers/intel-i2c", "//src/devices/rtc/drivers/intel-rtc", "//src/devices/spi/drivers/intel-gspi", "//src/devices/tpm/drivers/tpm", "//src/devices/usb/drivers/xhci", "//src/graphics/display/drivers/intel-i915", "//src/media/audio/drivers/codecs/alc5514", "//src/media/audio/drivers/codecs/alc5663", "//src/media/audio/drivers/codecs/max98373", "//src/media/audio/drivers/codecs/max98927", "//src/media/audio/drivers/intel-hda/codecs/hdmi:hdmi-audio-codec", "//src/media/audio/drivers/intel-hda/codecs/realtek:realtek-audio-codec", "//src/media/audio/drivers/intel-hda/controller:intel-hda", "//src/ui/input/drivers/i2c-hid", "//src/ui/input/drivers/pc-ps2", "//src/devices/bin/acpidump", "//src/devices/pci/bin:bootfs", "//src/media/audio/bin/ihda", "//src/power/power-manager:base_config", "//src/security/policy/zxcrypt:null", "//src/connectivity/ethernet/drivers/realtek-8111", "//src/devices/serial/drivers/uart16550", "//src/graphics/display/drivers/simple:simple.amd-kaveri", "//src/graphics/display/drivers/simple:simple.nv", "//zircon/third_party/dev/ethernet/e1000", "//boards/kernel_cmdline:serial-legacy", "//src/connectivity/ethernet/drivers/virtio:virtio_ethernet", "//src/devices/block/drivers/virtio:virtio_block", "//src/devices/block/drivers/virtio:virtio_scsi", "//src/devices/misc/drivers/virtio-rng:virtio_rng", "//src/devices/misc/drivers/virtio-socket:virtio_socket", "//src/devices/serial/drivers/virtio-console:virtio_console", "//src/graphics/drivers/misc:goldfish_fuchsia_drivers", "//src/graphics/display/drivers/goldfish-display", "//src/graphics/drivers/virtio:virtio_gpu", "//src/ui/input/drivers/virtio:virtio_input", "//src/ui/input/drivers/goldfish_sensor:sensor_driver", "//src/graphics/display/drivers/simple:simple.bochs", "//src/graphics/display/drivers/simple:simple.gga", "//src/graphics/display/drivers/simple:simple.intel", "//src/graphics/display/drivers/simple:simple.vmware", "//src/media/audio/drivers/intel-hda/codecs/qemu:qemu-audio-codec"]`
 
-From //boards/x64.gni:36
+From //boards/x64.gni:38
 
 **Overridden from the default:** `[]`
 
@@ -341,7 +353,7 @@ DEPRECATED:  Remove when no boards set a value for these.
 
 **Current value (from the default):** `[]`
 
-From //build/images/vbmeta.gni:38
+From //build/images/vbmeta.gni:40
 
 ### board_fastboot_unlock_credentials
 A list of paths to the unlock credentials file necessary to unlock this
@@ -390,7 +402,7 @@ board definition rather than the product definition.
 
 **Current value for `target_cpu = "arm64"`:** `["//src/hwinfo:default_board_config", "//src/power/thermd", "//src/power/thermd:config", "//src/devices/sysmem/bin/sysmem_connector", "//src/graphics/bin/vulkan_loader"]`
 
-From //boards/arm64.gni:31
+From //boards/arm64.gni:33
 
 **Overridden from the default:** `[]`
 
@@ -409,7 +421,7 @@ A list of binary labels to include in the recovery ZBI.
 
 **Current value for `target_cpu = "arm64"`:** `["//src/connectivity/ethernet/drivers/virtio:virtio_ethernet", "//src/devices/block/drivers/virtio:virtio_block", "//src/devices/block/drivers/virtio:virtio_scsi", "//src/devices/misc/drivers/virtio-rng:virtio_rng", "//src/devices/misc/drivers/virtio-socket:virtio_socket", "//src/devices/serial/drivers/virtio-console:virtio_console", "//src/graphics/drivers/misc:goldfish_fuchsia_drivers", "//src/graphics/display/drivers/goldfish-display", "//src/graphics/drivers/virtio:virtio_gpu", "//src/ui/input/drivers/virtio:virtio_input", "//src/ui/input/drivers/goldfish_sensor:sensor_driver", "//src/devices/block/drivers/ahci", "//src/devices/board/drivers/qemu-arm64", "//src/devices/rtc/drivers/pl031-rtc", "//src/graphics/display/drivers/fake:fake-display", "//src/devices/bus/drivers/pci:bus-pci", "//src/devices/usb/drivers/xhci", "//src/power/power-manager:base_config", "//src/security/policy/zxcrypt:null"]`
 
-From //boards/arm64.gni:23
+From //boards/arm64.gni:25
 
 **Overridden from the default:** `[]`
 
@@ -417,7 +429,7 @@ From //build/board.gni:39
 
 **Current value for `target_cpu = "x64"`:** `["//src/devices/block/drivers/ahci", "//src/devices/block/drivers/mbr", "//src/devices/block/drivers/nvme", "//src/devices/block/drivers/pci-sdhci", "//src/devices/block/drivers/sdhci", "//src/devices/board/drivers/x86:platform-bus-x86", "//src/devices/bus/drivers/pci:bus-pci", "//src/devices/i2c/drivers/intel-i2c", "//src/devices/rtc/drivers/intel-rtc", "//src/devices/spi/drivers/intel-gspi", "//src/devices/tpm/drivers/tpm", "//src/devices/usb/drivers/xhci", "//src/graphics/display/drivers/intel-i915", "//src/media/audio/drivers/codecs/alc5514", "//src/media/audio/drivers/codecs/alc5663", "//src/media/audio/drivers/codecs/max98373", "//src/media/audio/drivers/codecs/max98927", "//src/media/audio/drivers/intel-hda/codecs/hdmi:hdmi-audio-codec", "//src/media/audio/drivers/intel-hda/codecs/realtek:realtek-audio-codec", "//src/media/audio/drivers/intel-hda/controller:intel-hda", "//src/ui/input/drivers/i2c-hid", "//src/ui/input/drivers/pc-ps2", "//src/devices/bin/acpidump", "//src/devices/pci/bin:bootfs", "//src/media/audio/bin/ihda", "//src/power/power-manager:base_config", "//src/security/policy/zxcrypt:null", "//src/connectivity/ethernet/drivers/realtek-8111", "//src/devices/serial/drivers/uart16550", "//src/graphics/display/drivers/simple:simple.amd-kaveri", "//src/graphics/display/drivers/simple:simple.nv", "//zircon/third_party/dev/ethernet/e1000", "//boards/kernel_cmdline:serial-legacy", "//src/connectivity/ethernet/drivers/virtio:virtio_ethernet", "//src/devices/block/drivers/virtio:virtio_block", "//src/devices/block/drivers/virtio:virtio_scsi", "//src/devices/misc/drivers/virtio-rng:virtio_rng", "//src/devices/misc/drivers/virtio-socket:virtio_socket", "//src/devices/serial/drivers/virtio-console:virtio_console", "//src/graphics/drivers/misc:goldfish_fuchsia_drivers", "//src/graphics/display/drivers/goldfish-display", "//src/graphics/drivers/virtio:virtio_gpu", "//src/ui/input/drivers/virtio:virtio_input", "//src/ui/input/drivers/goldfish_sensor:sensor_driver", "//src/graphics/display/drivers/simple:simple.bochs", "//src/graphics/display/drivers/simple:simple.gga", "//src/graphics/display/drivers/simple:simple.intel", "//src/graphics/display/drivers/simple:simple.vmware", "//src/media/audio/drivers/intel-hda/codecs/qemu:qemu-audio-codec"]`
 
-From //boards/x64.gni:37
+From //boards/x64.gni:39
 
 **Overridden from the default:** `[]`
 
@@ -443,7 +455,7 @@ A list of binary labels to include in the system_image package.
 
 **Current value for `target_cpu = "arm64"`:** `["//garnet/packages/prod:drivers-system", "//garnet/packages/prod:wlan_drivers", "//src/media/audio/bundles:virtual_audio_driver"]`
 
-From //boards/arm64.gni:25
+From //boards/arm64.gni:27
 
 **Overridden from the default:** `[]`
 
@@ -477,7 +489,7 @@ A list of binary labels to include in the zedboot ZBI.
 
 **Current value for `target_cpu = "arm64"`:** `["//src/connectivity/ethernet/drivers/virtio:virtio_ethernet", "//src/devices/block/drivers/virtio:virtio_block", "//src/devices/block/drivers/virtio:virtio_scsi", "//src/devices/misc/drivers/virtio-rng:virtio_rng", "//src/devices/misc/drivers/virtio-socket:virtio_socket", "//src/devices/serial/drivers/virtio-console:virtio_console", "//src/graphics/drivers/misc:goldfish_fuchsia_drivers", "//src/graphics/display/drivers/goldfish-display", "//src/graphics/drivers/virtio:virtio_gpu", "//src/ui/input/drivers/virtio:virtio_input", "//src/ui/input/drivers/goldfish_sensor:sensor_driver", "//src/devices/block/drivers/ahci", "//src/devices/board/drivers/qemu-arm64", "//src/devices/rtc/drivers/pl031-rtc", "//src/graphics/display/drivers/fake:fake-display", "//src/devices/bus/drivers/pci:bus-pci", "//src/devices/usb/drivers/xhci", "//src/power/power-manager:base_config", "//src/security/policy/zxcrypt:null"]`
 
-From //boards/arm64.gni:21
+From //boards/arm64.gni:23
 
 **Overridden from the default:** `[]`
 
@@ -485,7 +497,7 @@ From //build/board.gni:36
 
 **Current value for `target_cpu = "x64"`:** `["//src/devices/block/drivers/ahci", "//src/devices/block/drivers/mbr", "//src/devices/block/drivers/nvme", "//src/devices/block/drivers/pci-sdhci", "//src/devices/block/drivers/sdhci", "//src/devices/board/drivers/x86:platform-bus-x86", "//src/devices/bus/drivers/pci:bus-pci", "//src/devices/i2c/drivers/intel-i2c", "//src/devices/rtc/drivers/intel-rtc", "//src/devices/spi/drivers/intel-gspi", "//src/devices/tpm/drivers/tpm", "//src/devices/usb/drivers/xhci", "//src/graphics/display/drivers/intel-i915", "//src/media/audio/drivers/codecs/alc5514", "//src/media/audio/drivers/codecs/alc5663", "//src/media/audio/drivers/codecs/max98373", "//src/media/audio/drivers/codecs/max98927", "//src/media/audio/drivers/intel-hda/codecs/hdmi:hdmi-audio-codec", "//src/media/audio/drivers/intel-hda/codecs/realtek:realtek-audio-codec", "//src/media/audio/drivers/intel-hda/controller:intel-hda", "//src/ui/input/drivers/i2c-hid", "//src/ui/input/drivers/pc-ps2", "//src/devices/bin/acpidump", "//src/devices/pci/bin:bootfs", "//src/media/audio/bin/ihda", "//src/power/power-manager:base_config", "//src/security/policy/zxcrypt:null", "//src/connectivity/ethernet/drivers/realtek-8111", "//src/devices/serial/drivers/uart16550", "//src/graphics/display/drivers/simple:simple.amd-kaveri", "//src/graphics/display/drivers/simple:simple.nv", "//zircon/third_party/dev/ethernet/e1000", "//boards/kernel_cmdline:serial-legacy", "//src/connectivity/ethernet/drivers/virtio:virtio_ethernet", "//src/devices/block/drivers/virtio:virtio_block", "//src/devices/block/drivers/virtio:virtio_scsi", "//src/devices/misc/drivers/virtio-rng:virtio_rng", "//src/devices/misc/drivers/virtio-socket:virtio_socket", "//src/devices/serial/drivers/virtio-console:virtio_console", "//src/graphics/drivers/misc:goldfish_fuchsia_drivers", "//src/graphics/display/drivers/goldfish-display", "//src/graphics/drivers/virtio:virtio_gpu", "//src/ui/input/drivers/virtio:virtio_input", "//src/ui/input/drivers/goldfish_sensor:sensor_driver", "//src/graphics/display/drivers/simple:simple.bochs", "//src/graphics/display/drivers/simple:simple.gga", "//src/graphics/display/drivers/simple:simple.intel", "//src/graphics/display/drivers/simple:simple.vmware", "//src/media/audio/drivers/intel-hda/codecs/qemu:qemu-audio-codec"]`
 
-From //boards/x64.gni:38
+From //boards/x64.gni:40
 
 **Overridden from the default:** `[]`
 
@@ -1425,7 +1437,7 @@ extra_vbmeta_descriptors = [{
 
 **Current value (from the default):** `false`
 
-From //build/images/vbmeta.gni:35
+From //build/images/vbmeta.gni:37
 
 ### extract_minfs_metadata_on_corruption
 If extract_minfs_metadata_on_corruption is true, fshost extracts minfs metadata on finding it
@@ -2612,7 +2624,7 @@ Maximum allowable size for fuchsia.zbi
 
 **Current value for `target_cpu = "arm64"`:** `16777216`
 
-From //boards/arm64.gni:39
+From //boards/arm64.gni:41
 
 **Overridden from the default:** `0`
 
@@ -2635,7 +2647,7 @@ Maximum allowable size for zedboot.zbi
 
 **Current value for `target_cpu = "arm64"`:** `16777216`
 
-From //boards/arm64.gni:40
+From //boards/arm64.gni:42
 
 **Overridden from the default:** `0`
 
@@ -4404,7 +4416,7 @@ and the paving script will pave vbmeta images to the target device.
 
 **Current value (from the default):** `false`
 
-From //build/images/vbmeta.gni:12
+From //build/images/vbmeta.gni:14
 
 ### use_vboot
 Use vboot images
@@ -4765,7 +4777,7 @@ Partition name from where image will be verified
 
 **Current value (from the default):** `"zircon"`
 
-From //build/images/vbmeta.gni:21
+From //build/images/vbmeta.gni:23
 
 ### zx_assert_level
 Controls which asserts are enabled.
