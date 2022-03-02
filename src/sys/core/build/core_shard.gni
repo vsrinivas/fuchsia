@@ -2,6 +2,42 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+# Defines a core realm shard.
+#
+# This template defines a core realm shard, a cml manifest that
+# is optionally included in the core component.
+#
+# The shard target must be included in one of the following GN argument arrays:
+#
+#   * core_realm_shards
+#   * board_core_realm_shards
+#   * fuchsia_base.extra_core_realm_shards
+#
+# Example:
+#
+# BUILD.gn
+# ```
+# core_shard("foo") {
+#   shard_file = "foo.core_shard.cml"
+# }
+# ```
+#
+# product.gni
+# ```
+# core_realm_shards += [ "//path/to/foo" ]
+# ```
+#
+# See https://fuchsia.dev/fuchsia-src/contribute/governance/rfcs/0089_core_realm_variations
+# for more details.
+#
+# Parameters
+#
+#   shard_file (required)
+#     Component manifest file.
+#     Type: path
+#
+# All other parameters are forwarded to the generated `group` target.
+#
 template("core_shard") {
   assert(
       defined(invoker.shard_file),
@@ -14,6 +50,7 @@ template("core_shard") {
   }
 
   group(target_name) {
+    forward_variables_from(invoker, "*", [ "shard_file" ])
     metadata = {
       shard_files = [ rebase_path(invoker.shard_file, root_build_dir) ]
     }
