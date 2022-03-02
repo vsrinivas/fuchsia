@@ -193,7 +193,7 @@ TEST(ResolveGlobs, ResolveGlobsMultipleMatches) {
                                           existing_dir_glob,  // matches existing_dir_path.
                                           existing_file_path};
   ASSERT_EQ(0, MkDirAll(existing_dir_path));
-  const int existing_file_fd = open(existing_file_path.c_str(), O_CREAT);
+  const int existing_file_fd = open(existing_file_path.c_str(), O_CREAT, S_IRUSR | S_IWUSR);
   ASSERT_NE(-1, existing_file_fd, "%s", strerror(errno));
   ASSERT_NE(-1, close(existing_file_fd), "%s", strerror(errno));
   fbl::Vector<fbl::String> resolved;

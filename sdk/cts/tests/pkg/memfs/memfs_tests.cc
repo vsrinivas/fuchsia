@@ -48,7 +48,7 @@ TEST(MemfsTests, TestMemfsBasic) {
 
   // Create a file
   const char* filename = "file-a";
-  fd = openat(dirfd(d), filename, O_CREAT | O_RDWR);
+  fd = openat(dirfd(d), filename, O_CREAT | O_RDWR, S_IRUSR | S_IWUSR);
   ASSERT_GE(fd, 0);
   const char* data = "hello";
   size_t datalen = strlen(data);
@@ -89,7 +89,7 @@ TEST(MemfsTests, TestMemfsAppend) {
 
   // Create a file
   const char* filename = "file-a";
-  fd = openat(dirfd(d), filename, O_CREAT | O_RDWR | O_APPEND);
+  fd = openat(dirfd(d), filename, O_CREAT | O_RDWR | O_APPEND, S_IRUSR | S_IWUSR);
   ASSERT_GE(fd, 0);
   const char* data = "hello";
   size_t datalen = strlen(data);
@@ -127,7 +127,7 @@ TEST(MemfsTests, TestMemfsInstall) {
 
   // Create a file
   const char* filename = "file-a";
-  fd = openat(dirfd(d), filename, O_CREAT | O_RDWR);
+  fd = openat(dirfd(d), filename, O_CREAT | O_RDWR, S_IRUSR | S_IWUSR);
   ASSERT_GE(fd, 0);
   const char* data = "hello";
   size_t datalen = strlen(data);
@@ -192,7 +192,7 @@ TEST(MemfsTests, TestMemfsCloseDuringAccess) {
                   [](void* arg) {
                     thread_args* args = reinterpret_cast<thread_args*>(arg);
                     DIR* d = args->d;
-                    int fd = openat(dirfd(d), "foo", O_CREAT | O_RDWR);
+                    int fd = openat(dirfd(d), "foo", O_CREAT | O_RDWR, S_IRUSR | S_IWUSR);
                     while (true) {
                       if (close(fd)) {
                         return errno == EPIPE ? 0 : -1;
@@ -219,7 +219,7 @@ TEST(MemfsTests, TestMemfsCloseDuringAccess) {
 
     // Now that the filesystem has terminated, we should be
     // unable to access it.
-    ASSERT_LT(openat(dirfd(d), "foo", O_CREAT | O_RDWR), 0);
+    ASSERT_LT(openat(dirfd(d), "foo", O_CREAT | O_RDWR, S_IRUSR | S_IWUSR), 0);
     ASSERT_EQ(errno, EPIPE, "Expected connection to remote server to be closed");
 
     // Since the filesystem has terminated, this will
@@ -249,7 +249,7 @@ TEST(MemfsTests, TestMemfsOverflow) {
   // Values provided mimic the bug reported by syzkaller (fxbug.dev/33581).
   uint8_t buf[4096];
   memset(buf, 'a', sizeof(buf));
-  fbl::unique_fd fd(openat(dirfd(d), "file", O_CREAT | O_RDWR));
+  fbl::unique_fd fd(openat(dirfd(d), "file", O_CREAT | O_RDWR, S_IRUSR | S_IWUSR));
   ASSERT_TRUE(fd);
   ASSERT_EQ(pwrite(fd.get(), buf, 199, 0), 199);
   ASSERT_EQ(pwrite(fd.get(), buf, 226, 0xfffffffffffff801), -1);
@@ -277,7 +277,7 @@ TEST(MemfsTests, TestMemfsDetachLinkedFilesystem) {
   ASSERT_NOT_NULL(d);
 
   // Leave a regular file.
-  fbl::unique_fd fd(openat(dirfd(d), "file", O_CREAT | O_RDWR));
+  fbl::unique_fd fd(openat(dirfd(d), "file", O_CREAT | O_RDWR, S_IRUSR | S_IWUSR));
   ASSERT_TRUE(fd);
 
   // Leave an empty subdirectory.

@@ -183,8 +183,9 @@ static int cp_here(const char* src_name, const char* dest_name, bool dest_exists
     fprintf(stderr, "cp: cannot open '%s'\n", src_name);
     return fdi;
   }
-  if ((fdo = open(dest_name, O_WRONLY | O_CREAT)) < 0) {
-    if (!force || unlink(dest_name) != 0 || (fdo = open(dest_name, O_WRONLY | O_CREAT)) < 0) {
+  if ((fdo = open(dest_name, O_WRONLY | O_CREAT, S_IRUSR | S_IWUSR)) < 0) {
+    if (!force || unlink(dest_name) != 0 ||
+        (fdo = open(dest_name, O_WRONLY | O_CREAT, S_IRUSR | S_IWUSR)) < 0) {
       fprintf(stderr, "cp: cannot open '%s'\n", dest_name);
       close(fdi);
       return fdo;

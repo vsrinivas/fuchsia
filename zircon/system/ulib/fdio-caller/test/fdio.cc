@@ -78,7 +78,7 @@ class Harness {
     ASSERT_EQ(fdio_fd_create(memfs_->root().release(), &fd), ZX_OK);
     fbl::unique_fd dir(fd);
     ASSERT_TRUE(dir);
-    fd_.reset(openat(dir.get(), "my-file", O_CREAT | O_RDWR));
+    fd_.reset(openat(dir.get(), "my-file", O_CREAT | O_RDWR, S_IRUSR | S_IWUSR));
     ASSERT_TRUE(fd_);
   }
 

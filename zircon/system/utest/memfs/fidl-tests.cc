@@ -42,7 +42,7 @@ TEST(FidlTests, TestFidlBasic) {
 
   // Create a file
   const char* filename = "file-a";
-  fd.reset(openat(fd.get(), filename, O_CREAT | O_RDWR));
+  fd.reset(openat(fd.get(), filename, O_CREAT | O_RDWR, S_IRUSR | S_IWUSR));
   ASSERT_GE(fd.get(), 0);
   const char* data = "hello";
   ssize_t datalen = strlen(data);
@@ -77,7 +77,7 @@ TEST(FidlTests, TestFidlOpenReadOnly) {
 
   // Create a file
   const char* filename = "file-ro";
-  fd.reset(openat(fd.get(), filename, O_CREAT | O_RDWR));
+  fd.reset(openat(fd.get(), filename, O_CREAT | O_RDWR, S_IRUSR | S_IWUSR));
   ASSERT_GE(fd.get(), 0);
   fd.reset();
 

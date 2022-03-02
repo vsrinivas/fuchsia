@@ -54,7 +54,7 @@ void SetLogSettings(const syslog::LogSettings& settings) {
 
   if (g_log_settings.log_file != settings.log_file) {
     if (!settings.log_file.empty()) {
-      int fd = open(settings.log_file.c_str(), O_WRONLY | O_CREAT | O_APPEND);
+      int fd = open(settings.log_file.c_str(), O_WRONLY | O_CREAT | O_APPEND, S_IRUSR | S_IWUSR);
       if (fd < 0) {
         std::cerr << "Could not open log file: " << settings.log_file << " (" << strerror(errno)
                   << ")" << std::endl;

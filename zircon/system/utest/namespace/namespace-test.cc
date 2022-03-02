@@ -217,7 +217,7 @@ TEST(NamespaceTest, Chdir) {
   ASSERT_EQ(closedir(dir), 0);
 
   // Try doing some basic file ops within the namespace
-  fbl::unique_fd fd(open("fake/tmp/newfile", O_CREAT | O_RDWR | O_EXCL));
+  fbl::unique_fd fd(open("fake/tmp/newfile", O_CREAT | O_RDWR | O_EXCL, S_IRUSR | S_IWUSR));
   ASSERT_GT(fd.get(), 0);
   ASSERT_GT(write(fd.get(), "hello", strlen("hello")), 0);
   ASSERT_EQ(close(fd.release()), 0);
