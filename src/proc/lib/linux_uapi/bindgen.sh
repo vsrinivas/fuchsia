@@ -39,8 +39,16 @@ PATH="$PWD/prebuilt/third_party/rust/linux-x64/bin:$PATH" \
   -I src/proc/lib/linux_uapi/stub \
   -nostdlibinc
 
-# TODO: Figure out how to get bindgen to derive AsBytes and FromBytes.
-#       See https://github.com/rust-lang/rust-bindgen/issues/1089
+# TODO(https://github.com/rust-lang/rust-bindgen/issues/2170): Remove in favor of bindgen support
+# for custom derives.
 sed -i \
   's/derive(Debug, Default, Copy, Clone)/derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)/' \
+  src/proc/lib/linux_uapi/src/x86_64.rs
+
+# If the first line matches the expected derive expression, consume another line and do a search
+# and replace for the expected identifier, rewriting the derive expression to include `FromBytes`.
+# TODO(https://github.com/rust-lang/rust-bindgen/issues/2170): Remove in favor of bindgen support
+# for custom derives.
+sed -i \
+  '/#\[derive(Copy, Clone)\]/ { N; s/.*\n\(pub \(struct\|union\) binder_transaction_data\)/#[derive(Copy, Clone, FromBytes)]\n\1/; p; d; }' \
   src/proc/lib/linux_uapi/src/x86_64.rs

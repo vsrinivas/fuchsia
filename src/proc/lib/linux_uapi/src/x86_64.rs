@@ -2482,7 +2482,7 @@ pub const transaction_flags_TF_STATUS_CODE: transaction_flags = 8;
 pub const transaction_flags_TF_ACCEPT_FDS: transaction_flags = 16;
 pub type transaction_flags = crate::x86_64_types::c_uint;
 #[repr(C)]
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, FromBytes)]
 pub struct binder_transaction_data {
     pub target: binder_transaction_data__bindgen_ty_1,
     pub cookie: binder_uintptr_t,
@@ -2495,7 +2495,7 @@ pub struct binder_transaction_data {
     pub data: binder_transaction_data__bindgen_ty_2,
 }
 #[repr(C)]
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, FromBytes)]
 pub union binder_transaction_data__bindgen_ty_1 {
     pub handle: __u32,
     pub ptr: binder_uintptr_t,
@@ -2510,7 +2510,7 @@ impl Default for binder_transaction_data__bindgen_ty_1 {
     }
 }
 #[repr(C)]
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, FromBytes)]
 pub union binder_transaction_data__bindgen_ty_2 {
     pub ptr: binder_transaction_data__bindgen_ty_2__bindgen_ty_1,
     pub buf: [__u8; 8usize],
@@ -2540,7 +2540,7 @@ impl Default for binder_transaction_data {
     }
 }
 #[repr(C)]
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, FromBytes)]
 pub struct binder_transaction_data_secctx {
     pub transaction_data: binder_transaction_data,
     pub secctx: binder_uintptr_t,
@@ -2555,7 +2555,7 @@ impl Default for binder_transaction_data_secctx {
     }
 }
 #[repr(C)]
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, FromBytes)]
 pub struct binder_transaction_data_sg {
     pub transaction_data: binder_transaction_data,
     pub buffers_size: binder_size_t,
