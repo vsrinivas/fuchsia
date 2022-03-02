@@ -4,6 +4,7 @@
 {
     include: [
         "//src/lib/fuchsia-component-test/meta/fuchsia_component_test.shard.cml",
+        "//src/sys/test_manager/hermetic-tier-2-test.shard.cml",
         "//src/sys/test_runners/rust/default.shard.cml",
         "inspect/client.shard.cml",
     ],
