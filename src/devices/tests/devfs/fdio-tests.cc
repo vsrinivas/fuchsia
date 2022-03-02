@@ -3,15 +3,10 @@
 // found in the LICENSE file.
 
 #include <fcntl.h>
-#include <unistd.h>
+#include <lib/fdio/fd.h>
+#include <lib/zx/handle.h>
 
 #include <fbl/unique_fd.h>
-#include <lib/fdio/limits.h>
-#include <lib/fdio/fd.h>
-#include <lib/fdio/fdio.h>
-#include <lib/fdio/directory.h>
-#include <zircon/processargs.h>
-#include <zircon/syscalls.h>
 #include <zxtest/zxtest.h>
 
 namespace {
@@ -19,21 +14,17 @@ namespace {
 TEST(FdioTestCase, DeviceClone) {
   fbl::unique_fd fd(open("/dev/zero", O_RDONLY));
 
-  zx_handle_t handle = ZX_HANDLE_INVALID;
-  zx_status_t status = fdio_fd_clone(fd.get(), &handle);
-  ASSERT_OK(status);
-  ASSERT_NE(handle, ZX_HANDLE_INVALID);
-  zx_handle_close(handle);
+  zx::handle handle;
+  ASSERT_OK(fdio_fd_clone(fd.get(), handle.reset_and_get_address()));
+  ASSERT_NE(handle.get(), ZX_HANDLE_INVALID);
 }
 
 TEST(FdioTestCase, DeviceTransfer) {
   fbl::unique_fd fd(open("/dev/zero", O_RDONLY));
 
-  zx_handle_t handle = ZX_HANDLE_INVALID;
-  zx_status_t status = fdio_fd_transfer(fd.release(), &handle);
-  ASSERT_OK(status);
-  ASSERT_NE(handle, ZX_HANDLE_INVALID);
-  zx_handle_close(handle);
+  zx::handle handle;
+  ASSERT_OK(fdio_fd_transfer(fd.release(), handle.reset_and_get_address()));
+  ASSERT_NE(handle.get(), ZX_HANDLE_INVALID);
 }
 
 }  // namespace
