@@ -71,6 +71,25 @@ impl From<Protection> for fidl_sme::Protection {
     }
 }
 
+impl From<fidl_sme::Protection> for Protection {
+    fn from(protection: fidl_sme::Protection) -> Self {
+        match protection {
+            fidl_sme::Protection::Unknown => Protection::Unknown,
+            fidl_sme::Protection::Open => Protection::Open,
+            fidl_sme::Protection::Wep => Protection::Wep,
+            fidl_sme::Protection::Wpa1 => Protection::Wpa1,
+            fidl_sme::Protection::Wpa1Wpa2PersonalTkipOnly => Protection::Wpa1Wpa2PersonalTkipOnly,
+            fidl_sme::Protection::Wpa2PersonalTkipOnly => Protection::Wpa2PersonalTkipOnly,
+            fidl_sme::Protection::Wpa1Wpa2Personal => Protection::Wpa1Wpa2Personal,
+            fidl_sme::Protection::Wpa2Personal => Protection::Wpa2Personal,
+            fidl_sme::Protection::Wpa2Wpa3Personal => Protection::Wpa2Wpa3Personal,
+            fidl_sme::Protection::Wpa3Personal => Protection::Wpa3Personal,
+            fidl_sme::Protection::Wpa2Enterprise => Protection::Wpa2Enterprise,
+            fidl_sme::Protection::Wpa3Enterprise => Protection::Wpa3Enterprise,
+        }
+    }
+}
+
 impl fmt::Display for Protection {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
@@ -1114,5 +1133,54 @@ mod tests {
             assert_eq!(op.bytes(), &vht_op[..]);
         });
         assert_eq!(bss.raw_vht_op().map(|op| op.bytes.to_vec()), Some(vht_op));
+    }
+
+    #[test]
+    fn test_protection_conversions() {
+        assert_eq!(
+            Protection::Unknown,
+            Protection::from(fidl_sme::Protection::from(Protection::Unknown))
+        );
+        assert_eq!(
+            Protection::Open,
+            Protection::from(fidl_sme::Protection::from(Protection::Open))
+        );
+        assert_eq!(Protection::Wep, Protection::from(fidl_sme::Protection::from(Protection::Wep)));
+        assert_eq!(
+            Protection::Wpa1,
+            Protection::from(fidl_sme::Protection::from(Protection::Wpa1))
+        );
+        assert_eq!(
+            Protection::Wpa1Wpa2PersonalTkipOnly,
+            Protection::from(fidl_sme::Protection::from(Protection::Wpa1Wpa2PersonalTkipOnly))
+        );
+        assert_eq!(
+            Protection::Wpa2PersonalTkipOnly,
+            Protection::from(fidl_sme::Protection::from(Protection::Wpa2PersonalTkipOnly))
+        );
+        assert_eq!(
+            Protection::Wpa1Wpa2Personal,
+            Protection::from(fidl_sme::Protection::from(Protection::Wpa1Wpa2Personal))
+        );
+        assert_eq!(
+            Protection::Wpa2Personal,
+            Protection::from(fidl_sme::Protection::from(Protection::Wpa2Personal))
+        );
+        assert_eq!(
+            Protection::Wpa2Wpa3Personal,
+            Protection::from(fidl_sme::Protection::from(Protection::Wpa2Wpa3Personal))
+        );
+        assert_eq!(
+            Protection::Wpa3Personal,
+            Protection::from(fidl_sme::Protection::from(Protection::Wpa3Personal))
+        );
+        assert_eq!(
+            Protection::Wpa2Enterprise,
+            Protection::from(fidl_sme::Protection::from(Protection::Wpa2Enterprise))
+        );
+        assert_eq!(
+            Protection::Wpa3Enterprise,
+            Protection::from(fidl_sme::Protection::from(Protection::Wpa3Enterprise))
+        );
     }
 }
