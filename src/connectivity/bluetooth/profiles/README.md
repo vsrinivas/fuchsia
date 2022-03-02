@@ -1,7 +1,7 @@
 # Bluetooth Profiles
 
 The components here support various Bluetooth Profiles [defined by the
-Bluetotoh SIG](https://www.bluetooth.com/specifications/profiles-overview/).
+Bluetooth SIG](https://www.bluetooth.com/specifications/profiles-overview/).
 
 ## Audio Profiles
 
@@ -18,8 +18,8 @@ To operate as an A2DP sink exclusively (for example, for a speaker or
 headphones), include these packages in your configuration:
 
 ```
-//src/connectvity/bluetooth/profiles/bt-a2dp-sink
-//src/connectvity/bluetooth/profiles/bt-a2dp-sink:startup_config
+//src/connectivity/bluetooth/profiles/bt-a2dp-sink
+//src/connectivity/bluetooth/profiles/bt-a2dp-sink:startup_config
 //src/media/audio/bundles:services
 //src/media/playback/mediaplayer
 //src/media/playback/mediaplayer:audio_consumer_config
@@ -30,12 +30,12 @@ documentation](bt-a2dp-sink/README.md).
 
 ### A2DP source exclusively
 
-To operate as an A2DP sink exclusively (for example, for a speaker or
-headphones), include these packages in your configuration:
+To operate as an A2DP source exclusively (for example, for a phone or
+music player), include these packages in your configuration:
 
 ```
-//src/connectvity/bluetooth/profiles/bt-a2dp-source
-//src/connectvity/bluetooth/profiles/bt-a2dp-source:startup_config
+//src/connectivity/bluetooth/profiles/bt-a2dp:source-only
+//src/connectivity/bluetooth/profiles/bt-a2dp:eager_core_shard
 //src/media/audio
 //src/media/codec:codec_factory
 //src/media/codec:codec_runner_sw_sbc
@@ -63,13 +63,11 @@ this service and the required components to run sink and source, add these packa
 in your configuration:
 
 ```
-//src/connectivity/bluetooth/profiles/bt-a2dp-manager
-//src/connectivity/bluetooth/profiles/bt-a2dp-manager:startup_config
-//src/connectvity/bluetooth/profiles/bt-a2dp-sink
+//src/connectivity/bluetooth/profiles/bt-a2dp
+//src/connectivity/bluetooth/profiles/bt-a2dp:lazy_core_shard
 //src/media/audio/bundles:services
 //src/media/playback/mediaplayer
 //src/media/playback/mediaplayer:audio_consumer_config
-//src/connectvity/bluetooth/profiles/bt-a2dp-source
 //src/media/audio
 //src/media/codec:codec_factory
 //src/media/codec:codec_runner_sw_sbc
