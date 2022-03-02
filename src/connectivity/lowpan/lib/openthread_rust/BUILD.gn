@@ -64,6 +64,7 @@ rustc_library("openthread") {
     "src/ot/types/extended_pan_id.rs",
     "src/ot/types/external_route_config.rs",
     "src/ot/types/ipv6.rs",
+    "src/ot/types/leader_data.rs",
     "src/ot/types/link_mode.rs",
     "src/ot/types/log_region.rs",
     "src/ot/types/mod.rs",
