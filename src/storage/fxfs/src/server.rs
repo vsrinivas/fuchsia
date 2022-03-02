@@ -9,6 +9,7 @@ use {
             filesystem::{Filesystem, Info, OpenFxFilesystem},
             volume::root_volume,
         },
+        serialized_types::LATEST_VERSION,
         server::volume::FxVolumeAndRoot,
     },
     anyhow::{Context, Error},
@@ -229,8 +230,8 @@ impl FsInspect for FxfsServer {
             id: self.unique_id.get_koid().unwrap().raw_koid(),
             fs_type: VFS_TYPE_FXFS.into(),
             name: FXFS_INFO_NAME.into(),
-            version_major: 0,        // TODO(fxbug.dev/93770)
-            version_minor: 0,        // TODO(fxbug.dev/93770)
+            version_major: LATEST_VERSION.major.into(),
+            version_minor: LATEST_VERSION.minor.into(),
             oldest_minor_version: 0, // TODO(fxbug.dev/93770)
             block_size: self.fs.get_info().block_size.into(),
             max_filename_length: MAX_FILENAME,
