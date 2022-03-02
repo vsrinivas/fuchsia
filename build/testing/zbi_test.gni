@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/images/vbmeta.gni")
 import("//build/testing/zbi_test_success.gni")
 import("//build/zbi/zbi.gni")
 import("//build/zbi/zbi_input.gni")
@@ -12,6 +13,9 @@ import("//build/zbi/zbi_input.gni")
 # should be used in deps.  The actual zbi() target is defined as
 # "$target_name.zbi" so that e.g. get_target_outputs(":$target_name.zbi")
 # can be used.
+#
+# If `use_vbmeta` is true, an associated VBMeta image (of the same base name)
+# will be output alongside the ZBI.
 #
 # Parameters
 #
@@ -122,21 +126,21 @@ template("zbi_test") {
 
   group_deps += [ ":$zbi_target" ]
 
-  output_file = target_name
+  output_zbi = target_name
   if (defined(invoker.output_name)) {
-    output_file = invoker.output_name
+    output_zbi = invoker.output_name
   }
   if (defined(invoker.output_extension)) {
     if (invoker.output_extension != "") {
-      output_file += ".${invoker.output_extension}"
+      output_zbi += ".${invoker.output_extension}"
     }
   } else {
-    output_file += ".zbi"
+    output_zbi += ".zbi"
   }
   if (defined(invoker.output_dir)) {
-    output_file = "${invoker.output_dir}/$output_file"
+    output_zbi = "${invoker.output_dir}/$output_zbi"
   } else {
-    output_file = "$target_out_dir/$output_file"
+    output_zbi = "$target_out_dir/$output_zbi"
   }
 
   if (defined(invoker.device_types)) {
@@ -146,6 +150,20 @@ template("zbi_test") {
       "AEMU",
       "QEMU",
     ]
+  }
+
+  if (use_vbmeta) {
+    vbmeta_target = "${target_name}.vbmeta"
+    vbmeta(vbmeta_target) {
+      forward_variables_from(invoker, [ "visibility" ])
+      testonly = true
+      zbi = ":$zbi_target"
+    }
+
+    vbmeta_outputs = get_target_outputs(":${vbmeta_target}")
+    output_vbmeta = vbmeta_outputs[0]
+
+    group_deps += [ ":${vbmeta_target}" ]
   }
 
   group(main_target) {
@@ -172,7 +190,10 @@ template("zbi_test") {
                                               [ "disabled" ] != invoker.tags
           name = main_target
           label = get_label_info(":$target_name", "label_with_toolchain")
-          path = rebase_path(output_file, root_build_dir)
+          path = rebase_path(output_zbi, root_build_dir)
+          if (use_vbmeta) {
+            vbmeta = rebase_path(output_vbmeta, root_build_dir)
+          }
           bootserver_netboot = [ "--boot" ]
           success_string = zbi_test_success_string
           device_types = _device_types

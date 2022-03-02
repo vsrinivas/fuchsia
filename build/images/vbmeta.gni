@@ -6,6 +6,8 @@
 # See [this document](https://android.googlesource.com/platform/external/avb/+/HEAD/README.md)
 # for more information.
 
+import("//build/compiled_action.gni")
+
 declare_args() {
   # If true, then a vbmeta image will be generated for provided ZBI
   # and the paving script will pave vbmeta images to the target device.
@@ -44,3 +46,55 @@ not_needed([
              "board_extra_vbmeta_images",
              "avb_algorithm",
            ])
+
+# Creates a VBMeta image from a given ZBI.
+#
+# The image is created next to provided ZBI at "${zbi_path}.vbmeta".
+#
+# Parameters
+#
+#   * zbi
+#     - Required: Label of the associated ZBI target. Must be defined within
+#       the same file as the vbmeta() target.
+#     - Type: label
+#
+#   * testonly, visibility
+#     - Optional: The usual GN meanings.
+#
+template("vbmeta") {
+  assert(defined(invoker.zbi), "`zbi` must be defined")
+
+  zbi_outputs = get_target_outputs(invoker.zbi)
+  zbi_path = zbi_outputs[0]
+  output_vbmeta = zbi_path + ".vbmeta"
+
+  compiled_action(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visibility",
+                           ])
+
+    tool = "//src/lib/assembly/vbmeta:bin"
+    tool_output_name = "vbmeta"
+
+    sources = [
+      avb_atx_metadata,
+      avb_key,
+      zbi_path,
+    ]
+    outputs = [ output_vbmeta ]
+
+    args = [
+      "--zbi",
+      rebase_path(zbi_path, root_build_dir),
+      "--private-key-pem",
+      rebase_path(avb_key, root_build_dir),
+      "--public-key-metadata",
+      rebase_path(avb_atx_metadata, root_build_dir),
+      "--output",
+      rebase_path(output_vbmeta, root_build_dir),
+    ]
+    deps = [ invoker.zbi ]
+  }
+}
