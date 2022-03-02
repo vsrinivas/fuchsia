@@ -2,17 +2,20 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'package:ermine/src/states/app_state.dart';
-import 'package:ermine/src/widgets/dialogs/dialog.dart';
-import 'package:ermine/src/widgets/dialogs/password_prompt.dart';
+import 'package:ermine_dialogs/src/dialog.dart';
+import 'package:ermine_dialogs/src/password_prompt.dart';
 import 'package:flutter/material.dart';
 import 'package:mobx/mobx.dart';
 
 /// Displays dialogs sequentially.
 class Dialogs extends StatelessWidget {
-  final AppState app;
+  /// List of [DialogInfo] to show dialogs sequenctially one after another.
+  final List<DialogInfo> dialogs;
 
-  const Dialogs(this.app);
+  /// Callback when the last dialog has been dismissed.
+  final VoidCallback? onClose;
+
+  const Dialogs(this.dialogs, {this.onClose});
 
   @override
   Widget build(BuildContext context) {
@@ -27,18 +30,17 @@ class Dialogs extends StatelessWidget {
 
   // Shows all dialogs sequentially.
   void _showAllDialogs(BuildContext context, [int index = 0]) async {
-    if (index >= app.dialogs.length) {
+    if (index >= dialogs.length) {
       runInAction(() {
-        app.dialogs.clear();
-        // Hiding overlays should restore focus to child views.
-        app.hideOverlay();
+        dialogs.clear();
+        onClose?.call();
       });
       return;
     }
     final _formState = GlobalKey<FormState>();
     bool validate() => _formState.currentState?.validate() ?? false;
 
-    final dialog = app.dialogs[index];
+    final dialog = dialogs[index];
     final result = await showDialog<String?>(
         context: context,
         builder: (context) {

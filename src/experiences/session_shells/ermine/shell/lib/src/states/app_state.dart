@@ -12,7 +12,7 @@ import 'package:ermine/src/services/startup_service.dart';
 import 'package:ermine/src/states/app_state_impl.dart';
 import 'package:ermine/src/states/settings_state.dart';
 import 'package:ermine/src/states/view_state.dart';
-import 'package:ermine/src/widgets/dialogs/dialog.dart' as ermine;
+import 'package:ermine_dialogs/ermine_dialogs.dart';
 import 'package:flutter/material.dart' hide Action, AppBar;
 import 'package:fuchsia_scenic/views.dart';
 
@@ -35,7 +35,7 @@ abstract class AppState {
   bool get viewsVisible;
   ViewState get topView;
   ViewState? get switchTarget;
-  List<ermine.DialogInfo> get dialogs;
+  List<DialogInfo> get dialogs;
   List<ViewState> get views;
   Map<String, List<String>> get errors;
   Locale? get locale;

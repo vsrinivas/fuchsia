@@ -79,6 +79,7 @@ dart_library("lib") {
     "//sdk/fidl/fuchsia.ui.scenic",
     "//sdk/fidl/fuchsia.ui.views",
     "//sdk/fidl/fuchsia.update.channelcontrol",
+    "//src/experiences/session_shells/ermine/dialogs:ermine_dialogs",
     "//src/experiences/session_shells/ermine/internationalization",
     "//src/experiences/session_shells/ermine/utils:ermine_utils",
     "//third_party/dart-pkg/git/flutter/packages/flutter",

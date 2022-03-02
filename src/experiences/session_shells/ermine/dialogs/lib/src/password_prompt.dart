@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 import 'package:ermine_utils/ermine_utils.dart';
-import 'package:ermine/src/widgets/dialogs/dialog.dart';
+import 'package:ermine_dialogs/src/dialog.dart';
 import 'package:internationalization/strings.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_mobx/flutter_mobx.dart';

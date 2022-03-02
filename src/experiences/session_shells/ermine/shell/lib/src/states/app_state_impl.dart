@@ -16,7 +16,7 @@ import 'package:ermine/src/states/app_state.dart';
 import 'package:ermine/src/states/settings_state.dart';
 import 'package:ermine/src/states/view_state.dart';
 import 'package:ermine/src/states/view_state_impl.dart';
-import 'package:ermine/src/widgets/dialogs/dialog.dart';
+import 'package:ermine_dialogs/ermine_dialogs.dart';
 import 'package:ermine_utils/ermine_utils.dart';
 import 'package:flutter/material.dart' hide Action;
 import 'package:fuchsia_inspect/inspect.dart';

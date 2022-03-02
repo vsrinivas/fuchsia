@@ -11,7 +11,7 @@ import 'package:ermine/src/states/view_state.dart';
 import 'package:ermine/src/widgets/app.dart';
 import 'package:ermine/src/widgets/app_view.dart';
 import 'package:ermine/src/widgets/overlays.dart';
-import 'package:ermine/src/widgets/dialogs/dialogs.dart';
+import 'package:ermine_dialogs/ermine_dialogs.dart';
 import 'package:ermine_utils/ermine_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';

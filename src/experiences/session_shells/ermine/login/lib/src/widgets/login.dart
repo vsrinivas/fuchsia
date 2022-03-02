@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+import 'package:ermine_dialogs/ermine_dialogs.dart';
 import 'package:ermine_utils/ermine_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_mobx/flutter_mobx.dart';
@@ -133,7 +134,7 @@ class Login extends StatelessWidget {
                     width: kOobeBodyFieldWidth,
                     child: TextButton(
                       style: TextButton.styleFrom(padding: EdgeInsets.zero),
-                      onPressed: () => _confirmFactoryReset(context),
+                      onPressed: _confirmFactoryReset,
                       child: Container(
                         padding: EdgeInsets.only(bottom: 1),
                         decoration: BoxDecoration(
@@ -159,29 +160,16 @@ class Login extends StatelessWidget {
 
   bool _validate() => _formState.currentState?.validate() ?? false;
 
-  void _confirmFactoryReset(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: SizedBox(
-          width: 672,
-          child: Text(Strings.factoryDataResetPrompt),
-        ),
-        actions: [
-          OutlinedButton(
-            child: Text(Strings.cancel.toUpperCase()),
-            onPressed: () => Navigator.pop(context, false),
-          ),
-          ElevatedButton(
-            child: Text(Strings.eraseAndReset.toUpperCase()),
-            onPressed: () => Navigator.pop(context, true),
-          ),
-        ],
-      ),
-    ).then((erase) {
-      if (erase) {
-        oobe.factoryReset();
-      }
-    });
+  void _confirmFactoryReset() {
+    oobe.showDialog(AlertDialogInfo(
+      title: Strings.eraseAndReset,
+      body: Strings.factoryDataResetPrompt,
+      actions: [Strings.cancel, Strings.eraseAndReset],
+      onAction: (action) {
+        if (action == Strings.eraseAndReset) {
+          oobe.factoryReset();
+        }
+      },
+    ));
   }
 }

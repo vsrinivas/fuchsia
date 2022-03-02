@@ -4,6 +4,7 @@
 
 import 'dart:ui';
 
+import 'package:ermine_dialogs/ermine_dialogs.dart';
 import 'package:ermine_utils/ermine_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -49,9 +50,19 @@ class OobeApp extends StatelessWidget {
           return Material(
             type: MaterialType.canvas,
             child: Observer(builder: (_) {
-              return oobe.hasAccount
-                  ? WidgetFactory.create(() => Login(oobe))
-                  : WidgetFactory.create(() => Oobe(oobe));
+              return Stack(
+                fit: StackFit.expand,
+                children: <Widget>[
+                  if (oobe.hasAccount)
+                    WidgetFactory.create(() => Login(oobe))
+                  else
+                    WidgetFactory.create(() => Oobe(oobe)),
+
+                  // Dialogs.
+                  if (oobe.dialogs.isNotEmpty)
+                    WidgetFactory.create(() => Dialogs(oobe.dialogs))
+                ],
+              );
             }),
           );
         }),

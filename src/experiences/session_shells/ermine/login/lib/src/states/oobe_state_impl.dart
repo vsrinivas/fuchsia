@@ -6,6 +6,7 @@ import 'dart:convert' show json;
 import 'dart:io';
 import 'dart:ui';
 
+import 'package:ermine_dialogs/ermine_dialogs.dart';
 import 'package:ermine_utils/ermine_utils.dart';
 import 'package:flutter/services.dart';
 import 'package:fuchsia_inspect/inspect.dart';
@@ -228,6 +229,14 @@ class OobeStateImpl with Disposable implements OobeState {
   @override
   bool get wait => _wait.value;
   final _wait = false.asObservable();
+
+  @override
+  final dialogs = <DialogInfo>[].asObservable();
+
+  @override
+  void showDialog(DialogInfo dialog) {
+    runInAction(() => dialogs.add(dialog));
+  }
 
   @override
   void setCurrentChannel(String channel) => runInAction(() async {
