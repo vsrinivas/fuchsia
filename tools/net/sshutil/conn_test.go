@@ -52,20 +52,29 @@ func setUpConn(
 	return conn, server
 }
 
+// replyOKOnRequest returns a function suitable for passing as the `onRequest`
+// parameter to `setUpConn`. The resulting connection will return an OK reply
+// with an empty payload to every request.
+func replyOKOnRequest(t *testing.T) func(ssh.Channel, *ssh.Request) {
+	return func(_ ssh.Channel, req *ssh.Request) {
+		if err := req.Reply(true, nil); err != nil && !errors.Is(err, io.EOF) {
+			t.Error(err)
+		}
+	}
+}
+
 func TestKeepalive(t *testing.T) {
 	ctx := context.Background()
 
 	t.Run("sends pings when timer fires", func(t *testing.T) {
 		requestsReceived := make(chan *ssh.Request, 1)
 
-		conn, _ := setUpConn(ctx, t, nil, func(_ ssh.Channel, req *ssh.Request) {
+		conn, _ := setUpConn(ctx, t, nil, func(ch ssh.Channel, req *ssh.Request) {
 			if !req.WantReply {
 				t.Errorf("keepalive pings must have WantReply set")
 			}
 			requestsReceived <- req
-			if err := req.Reply(true, nil); err != nil && !errors.Is(err, io.EOF) {
-				t.Error(err)
-			}
+			replyOKOnRequest(t)(ch, req)
 		})
 
 		// Sending on this channel triggers a keepalive ping.
@@ -82,11 +91,7 @@ func TestKeepalive(t *testing.T) {
 	})
 
 	t.Run("disconnects conn if keepalive times out", func(t *testing.T) {
-		conn, _ := setUpConn(ctx, t, nil, func(_ ssh.Channel, req *ssh.Request) {
-			if err := req.Reply(true, nil); err != nil {
-				t.Error(err)
-			}
-		})
+		conn, _ := setUpConn(ctx, t, nil, replyOKOnRequest(t))
 
 		// Sending on this channel triggers the timeout handling mechanism for
 		// the next keepalive ping.
@@ -108,11 +113,7 @@ func TestKeepalive(t *testing.T) {
 	})
 
 	t.Run("disconnects conn if keepalive fails", func(t *testing.T) {
-		conn, server := setUpConn(ctx, t, nil, func(_ ssh.Channel, req *ssh.Request) {
-			if err := req.Reply(true, nil); err != nil {
-				t.Error(err)
-			}
-		})
+		conn, server := setUpConn(ctx, t, nil, replyOKOnRequest(t))
 
 		session, err := conn.mu.client.NewSession()
 		if err != nil {
@@ -139,11 +140,7 @@ func TestKeepalive(t *testing.T) {
 	})
 
 	t.Run("stops sending when conn is closed", func(t *testing.T) {
-		conn, _ := setUpConn(ctx, t, nil, func(_ ssh.Channel, req *ssh.Request) {
-			if err := req.Reply(true, nil); err != nil {
-				t.Error(err)
-			}
-		})
+		conn, _ := setUpConn(ctx, t, nil, replyOKOnRequest(t))
 
 		keepaliveComplete := make(chan struct{})
 		session, err := conn.mu.client.NewSession()
