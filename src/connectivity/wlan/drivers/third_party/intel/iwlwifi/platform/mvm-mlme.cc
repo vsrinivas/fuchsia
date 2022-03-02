@@ -74,6 +74,8 @@ extern "C" {
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/rcu.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/scoped_utils.h"
 
+#define IWLWIFI_IF_DELETE_TIMEOUT (ZX_MSEC(100))  // Interface create waiting for delete to complete.
+
 ////////////////////////////////////  Helper Functions  ////////////////////////////////////////////
 
 //
@@ -565,6 +567,8 @@ void mac_release(void* ctx) {
     mvmvif->mlme_channel = ZX_HANDLE_INVALID;
   }
 
+  mvmvif->mvm->if_delete_in_progress = false;
+  sync_completion_signal(&mvmvif->mvm->wait_for_delete);
   free(mvmvif);
 }
 
@@ -616,6 +620,15 @@ zx_status_t phy_create_iface(void* ctx, const wlanphy_impl_create_iface_req_t* r
   if (!out_iface_id) {
     IWL_ERR(mvm, "out_iface_id pointer is not given\n");
     return ZX_ERR_INVALID_ARGS;
+  }
+
+  // wait for IF delete to complete for up to 50 msecs.
+  if (mvm->if_delete_in_progress) {
+    ret = sync_completion_wait(&mvm->wait_for_delete, IWLWIFI_IF_DELETE_TIMEOUT);
+    if (ret != ZX_OK) {
+      IWL_ERR(mvm, "IF delete is still in progress, create failed");
+      return ret;
+    }
   }
 
   auto lock = std::lock_guard(mvm->mutex);
@@ -735,6 +748,10 @@ zx_status_t phy_destroy_iface(void* ctx, uint16_t id) {
       IWL_ERR(mvm, "the interface id (%d) has no MAC context\n", id);
       return ZX_ERR_NOT_FOUND;
     }
+
+    // To serialize IF delete and create.  phy_create_iface() waits until
+    // this flag is cleared before proceeeding. This flag is cleared in mac_stop().
+    mvm->if_delete_in_progress = true;
 
     // Unlink the 'mvmvif' from the 'mvm'. The zxdev will be removed in mac_unbind(),
     // and the memory of 'mvmvif' will be freed in mac_release().

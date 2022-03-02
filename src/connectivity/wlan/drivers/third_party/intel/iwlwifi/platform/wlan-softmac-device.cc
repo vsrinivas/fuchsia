@@ -202,7 +202,6 @@ void WlanSoftmacDevice::DdkInit(ddk::InitTxn txn) {
 void WlanSoftmacDevice::DdkRelease() {
   IWL_DEBUG_INFO(this, "Releasing iwlwifi mac-device\n");
   mac_release(mvmvif_);
-
   delete this;
 }
 

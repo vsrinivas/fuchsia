@@ -18,4 +18,4 @@ zx_status_t HandleScanAbort(struct iwl_trans* trans, struct iwl_host_cmd* cmd);
 
 }  // namespace wlan::testing
 
-#endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_TEST_SIM_MCC_UPDATE_H_
+#endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_TEST_SIM_SCAN_H_
