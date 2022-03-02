@@ -351,7 +351,7 @@ Verify that instances of the server and client were also created as child
 components using `ffx component show`:
 
 ```posix-terminal
-​​ffx component show echo
+ffx component show echo
 ```
 
 ```none {:.devsite-disable-click-to-copy}
