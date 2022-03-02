@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 {
     include: [
+        "//src/sys/test_manager/hermetic-tier-2-test.shard.cml",
         "//src/sys/test_runners/rust/default.shard.cml",
         "inspect/client.shard.cml",
         "sys/component/realm_builder.shard.cml",
