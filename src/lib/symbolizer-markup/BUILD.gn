@@ -1,0 +1,41 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/test.gni")
+
+config("includes") {
+  include_dirs = [ "include" ]
+}
+
+source_set("symbolizer-markup") {
+  public = [ "include/lib/symbolizer-markup/writer.h" ]
+  sources = []
+
+  public_deps = [
+    "//sdk/lib/fit",
+    "//sdk/lib/stdcompat",
+    "//zircon/system/public",
+  ]
+
+  deps = [
+    "//sdk/lib/fit",
+    "//sdk/lib/stdcompat",
+  ]
+
+  public_configs = [ ":includes" ]
+}
+
+test("symbolizer-markup-unittests") {
+  sources = [ "unittests.cc" ]
+  deps = [
+    ":symbolizer-markup",
+    "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gtest",
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":symbolizer-markup-unittests($host_toolchain)" ]
+}
