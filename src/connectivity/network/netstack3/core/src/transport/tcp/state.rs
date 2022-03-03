@@ -4,7 +4,7 @@
 
 //! TCP state machine per [RFC 793](https://tools.ietf.org/html/rfc793).
 
-use super::{
+use crate::transport::tcp::{
     segment::{Payload, Segment},
     seqnum::{SeqNum, WindowSize},
     Control, UserError,

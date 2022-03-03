@@ -8,7 +8,7 @@ use core::{convert::TryFrom as _, num::TryFromIntError, ops::Range};
 
 use packet::{Fragment, FragmentedByteSlice};
 
-use super::{
+use crate::transport::tcp::{
     seqnum::{SeqNum, WindowSize},
     Control,
 };
