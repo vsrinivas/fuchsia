@@ -124,8 +124,8 @@ mod tests {
             at::BluetoothHFIndicator::EnhancedSafety,
         ]);
 
-        // Battery level is not within the range [0,5].
-        let cmd = at::Command::Biev { anum: at::BluetoothHFIndicator::BatteryLevel, value: 6 };
+        // Battery level is not within the range [0,100].
+        let cmd = at::Command::Biev { anum: at::BluetoothHFIndicator::BatteryLevel, value: 105 };
         let req = proc.hf_update(cmd, &mut state);
         let expected = vec![at::Response::Error];
         assert_matches!(req, ProcedureRequest::SendMessages(m) if m == expected);
@@ -141,11 +141,11 @@ mod tests {
             at::BluetoothHFIndicator::EnhancedSafety,
         ]);
 
-        let cmd = at::Command::Biev { anum: at::BluetoothHFIndicator::BatteryLevel, value: 1 };
+        let cmd = at::Command::Biev { anum: at::BluetoothHFIndicator::BatteryLevel, value: 30 };
         let req = proc.hf_update(cmd, &mut state);
         let update = match req {
             ProcedureRequest::Request(SlcRequest::SendHfIndicator {
-                indicator: HfIndicator::BatteryLevel(1),
+                indicator: HfIndicator::BatteryLevel(30),
                 response,
             }) => response(),
             x => panic!("Expected SendHFInd request but got: {:?}", x),

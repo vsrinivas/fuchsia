@@ -30,7 +30,7 @@ use crate::{
     config::AudioGatewayFeatureSupport,
     error::Error,
     inspect::{CallManagerInspect, HfpInspect},
-    peer::{indicators::battery_level_to_indicator_value, ConnectionBehavior, Peer, PeerImpl},
+    peer::{indicators::battery_level_to_battchg_value, ConnectionBehavior, Peer, PeerImpl},
 };
 
 pub enum Event {
@@ -165,7 +165,7 @@ impl Hfp {
         };
 
         if let Some(level_percent) = update.level() {
-            self.report_battery_level(battery_level_to_indicator_value(level_percent)).await;
+            self.report_battery_level(battery_level_to_battchg_value(level_percent)).await;
         }
     }
 

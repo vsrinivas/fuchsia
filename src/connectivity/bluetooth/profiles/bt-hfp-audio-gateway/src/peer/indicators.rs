@@ -21,8 +21,12 @@ pub(crate) const BATT_CHG_INDICATOR_INDEX: usize = 7;
 
 /// The battchg indicator values range from [0, 5].
 /// See HFP v1.8 Section 4.34.2.
+const MAX_BATTCHG_VALUE: u8 = 5;
+
+/// The battery charge indicators from HF Indicator Update range from 0-100
+/// See Bluetooth Assigned Numbers for Hands Free Profile
 const MIN_BATTERY_INDICATOR_VALUE: u8 = 0;
-const MAX_BATTERY_INDICATOR_VALUE: u8 = 5;
+const MAX_BATTERY_INDICATOR_VALUE: u8 = 100;
 
 /// The supported HF indicators.
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -214,17 +218,17 @@ impl From<AgIndicator> for AgUpdate {
 }
 
 /// Returns the indicator battery level from the provided battery `level_percent`.
-/// Indicator battery levels range from [0, MAX_BATTERY_INDICATOR_VALUE].
-pub fn battery_level_to_indicator_value(level_percent: u8) -> u8 {
+/// Indicator battery levels range from [0, MAX_BATTCHG_VALUE].
+pub fn battery_level_to_battchg_value(level_percent: u8) -> u8 {
     // In practice, this will never happen because the battery-client clamps the percentage to the
     // range [0, 100].
     if level_percent >= 100 {
         warn!("Received level_percent greater than 100: {:?}", level_percent);
-        return MAX_BATTERY_INDICATOR_VALUE;
+        return MAX_BATTCHG_VALUE;
     }
 
-    // This returns a scaled indicator value in the range [0, MAX_BATTERY_INDICATOR_VALUE].
-    let indicator_float: f32 = level_percent as f32 / 100.0 * MAX_BATTERY_INDICATOR_VALUE as f32;
+    // This returns a scaled indicator value in the range [0, MAX_BATTCHG_VALUE].
+    let indicator_float: f32 = level_percent as f32 / 100.0 * MAX_BATTCHG_VALUE as f32;
     indicator_float.round() as u8
 }
 
@@ -358,7 +362,7 @@ mod tests {
                 .update_indicator_value(at::BluetoothHFIndicator::BatteryLevel, battery_too_low),
             Err(())
         );
-        let battery_too_high = 10;
+        let battery_too_high = 110;
         assert_matches!(
             hf_indicators
                 .update_indicator_value(at::BluetoothHFIndicator::BatteryLevel, battery_too_high),
@@ -384,7 +388,7 @@ mod tests {
         // Default is no indicators set. Therefore any updates are errors.
         let mut hf_indicators = HfIndicators::default();
 
-        let valid_battery = 3;
+        let valid_battery = 30;
         assert_matches!(
             hf_indicators
                 .update_indicator_value(at::BluetoothHFIndicator::BatteryLevel, valid_battery),
@@ -414,11 +418,11 @@ mod tests {
             at::BluetoothHFIndicator::EnhancedSafety,
         ]);
 
-        let valid_battery = 5;
+        let valid_battery = 30;
         assert_matches!(
             hf_indicators
                 .update_indicator_value(at::BluetoothHFIndicator::BatteryLevel, valid_battery),
-            Ok(HfIndicator::BatteryLevel(5))
+            Ok(HfIndicator::BatteryLevel(30))
         );
         assert_eq!(hf_indicators.battery_level.value, Some(valid_battery as u8));
 
@@ -541,29 +545,29 @@ mod tests {
     }
 
     #[test]
-    fn level_percent_to_indicator_value() {
+    fn level_percent_to_battchg_value() {
         let level_percent = 0;
-        assert_eq!(battery_level_to_indicator_value(level_percent), 0);
+        assert_eq!(battery_level_to_battchg_value(level_percent), 0);
         let level_percent = 24;
-        assert_eq!(battery_level_to_indicator_value(level_percent), 1);
+        assert_eq!(battery_level_to_battchg_value(level_percent), 1);
         let level_percent = 30;
-        assert_eq!(battery_level_to_indicator_value(level_percent), 2);
+        assert_eq!(battery_level_to_battchg_value(level_percent), 2);
         let level_percent = 40;
-        assert_eq!(battery_level_to_indicator_value(level_percent), 2);
+        assert_eq!(battery_level_to_battchg_value(level_percent), 2);
         let level_percent = 50;
-        assert_eq!(battery_level_to_indicator_value(level_percent), 3);
+        assert_eq!(battery_level_to_battchg_value(level_percent), 3);
         let level_percent = 60;
-        assert_eq!(battery_level_to_indicator_value(level_percent), 3);
+        assert_eq!(battery_level_to_battchg_value(level_percent), 3);
         let level_percent = 70;
-        assert_eq!(battery_level_to_indicator_value(level_percent), 4);
+        assert_eq!(battery_level_to_battchg_value(level_percent), 4);
         let level_percent = 80;
-        assert_eq!(battery_level_to_indicator_value(level_percent), 4);
+        assert_eq!(battery_level_to_battchg_value(level_percent), 4);
         let level_percent = 90;
-        assert_eq!(battery_level_to_indicator_value(level_percent), 5);
+        assert_eq!(battery_level_to_battchg_value(level_percent), 5);
         let level_percent = 100;
-        assert_eq!(battery_level_to_indicator_value(level_percent), 5);
+        assert_eq!(battery_level_to_battchg_value(level_percent), 5);
         // While unexpected, the conversion is still resilient and returns the max.
         let level_percent = 110;
-        assert_eq!(battery_level_to_indicator_value(level_percent), 5);
+        assert_eq!(battery_level_to_battchg_value(level_percent), 5);
     }
 }
