@@ -200,7 +200,7 @@ fuchsia_unittest_component("fuchsia-zircon-status-component") {
 
 fuchsia_unittest_component("fuchsia-zircon-tests-component") {
   component_name = "fuchsia-zircon-tests"
-  manifest = "meta/fuchsia_zircon_tests.cmx"
+  manifest = "meta/fuchsia_zircon_tests.cml"
   deps = [ ":fuchsia-zircon-unittests" ]
 }
 
