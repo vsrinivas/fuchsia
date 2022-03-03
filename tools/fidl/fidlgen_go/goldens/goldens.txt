@@ -38,5 +38,6 @@ transitive_dependencies_compose.go.golden
 type_aliases.go.golden
 union.go.golden
 union_sandwich.go.golden
+unknown_interactions.go.golden
 vectors.go.golden
 versions.go.golden

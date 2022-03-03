@@ -100,8 +100,12 @@ impl ExampleSynchronousProxy {
         mut s: &str,
         ___deadline: zx::Time,
     ) -> Result<(ExampleFooResult), fidl::Error> {
-        let _value: (ExampleFooResultHandleWrapper) =
-            self.client.send_query(&mut (s), 0xf5f1179dc411e44, ___deadline)?;
+        let _value: (ExampleFooResultHandleWrapper) = self.client.send_query(
+            &mut (s),
+            0xf5f1179dc411e44,
+            fidl::encoding::DynamicFlags::empty(),
+            ___deadline,
+        )?;
         Ok(_value.map(|_value| _value.0))
     }
 }
@@ -155,7 +159,11 @@ impl ExampleProxyInterface for ExampleProxy {
         ) -> Result<(ExampleFooResult), fidl::Error> {
             result.map(|_value| _value.map(|_value| _value.0))
         }
-        let send_result = self.client.call_send_raw_query(&mut (s), 0xf5f1179dc411e44);
+        let send_result = self.client.call_send_raw_query(
+            &mut (s),
+            0xf5f1179dc411e44,
+            fidl::encoding::DynamicFlags::empty(),
+        );
         QueryResponseFut(match send_result {
             Ok(res_fut) => future::maybe_done(
                 res_fut.and_then(|buf| decode_transaction_body_fut(buf, transform)),
@@ -342,7 +350,11 @@ impl ExampleEncoder {
         tx_id: u32,
         mut in_s: &str,
     ) -> Result<(), fidl::Error> {
-        let header = fidl::encoding::TransactionHeader::new(tx_id, 0xf5f1179dc411e44);
+        let header = fidl::encoding::TransactionHeader::new(
+            tx_id,
+            0xf5f1179dc411e44,
+            fidl::encoding::DynamicFlags::empty(),
+        );
         let mut body = ((in_s),);
         let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
         fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.error/ExampleFooRequest");
@@ -357,7 +369,11 @@ impl ExampleEncoder {
         tx_id: u32,
         mut in_result: &mut ExampleFooResult,
     ) -> Result<(), fidl::Error> {
-        let header = fidl::encoding::TransactionHeader::new(tx_id, 0xf5f1179dc411e44);
+        let header = fidl::encoding::TransactionHeader::new(
+            tx_id,
+            0xf5f1179dc411e44,
+            fidl::encoding::DynamicFlags::empty(),
+        );
         let mut body = ((in_result),);
         let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
 
@@ -448,7 +464,11 @@ impl ExampleFooResponder {
         let mut response = (_result);
 
         let mut msg = fidl::encoding::TransactionMessage {
-            header: fidl::encoding::TransactionHeader::new(self.tx_id, self.ordinal),
+            header: fidl::encoding::TransactionHeader::new(
+                self.tx_id,
+                self.ordinal,
+                fidl::encoding::DynamicFlags::empty(),
+            ),
             body: &mut response,
         };
 

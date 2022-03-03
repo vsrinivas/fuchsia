@@ -249,11 +249,13 @@ mod tests {
     #[test]
     fn verify_fidl_vec_response_overhead() {
         let vec_response_overhead = {
-            use fidl::encoding::{TransactionHeader, TransactionMessage};
+            use fidl::encoding::{DynamicFlags, TransactionHeader, TransactionMessage};
 
             let mut nop: Vec<()> = vec![];
-            let mut msg =
-                TransactionMessage { header: TransactionHeader::new(0, 0), body: &mut nop };
+            let mut msg = TransactionMessage {
+                header: TransactionHeader::new(0, 0, DynamicFlags::empty()),
+                body: &mut nop,
+            };
 
             fidl::encoding::with_tls_encoded(&mut msg, |bytes, _handles| {
                 Result::<_, fidl::Error>::Ok(bytes.len())

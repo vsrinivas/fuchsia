@@ -1,0 +1,73 @@
+<link rel="stylesheet" href="../style.css" />
+
+[TOC]
+# test.unknowninteractions
+
+
+## **PROTOCOLS**
+
+## Example {#Example}
+*Defined in [test.unknowninteractions/example.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/unknown_interactions/example.test.fidl;l=7)*
+
+### FlexibleEvent {#Example.FlexibleEvent}
+
+
+
+#### Response {#Example.FlexibleEvent_Response}
+
+&lt;EMPTY&gt;
+
+### FlexibleOneWay {#Example.FlexibleOneWay}
+
+
+#### Request {#Example.FlexibleOneWay_Request}
+
+&lt;EMPTY&gt;
+
+
+### FlexibleTwoWay {#Example.FlexibleTwoWay}
+
+
+#### Request {#Example.FlexibleTwoWay_Request}
+
+&lt;EMPTY&gt;
+
+
+#### Response {#Example.FlexibleTwoWay_Response}
+
+&lt;EMPTY&gt;
+
+### StrictEvent {#Example.StrictEvent}
+
+
+
+#### Response {#Example.StrictEvent_Response}
+
+&lt;EMPTY&gt;
+
+### StrictOneWay {#Example.StrictOneWay}
+
+
+#### Request {#Example.StrictOneWay_Request}
+
+&lt;EMPTY&gt;
+
+
+### StrictTwoWay {#Example.StrictTwoWay}
+
+
+#### Request {#Example.StrictTwoWay_Request}
+
+&lt;EMPTY&gt;
+
+
+#### Response {#Example.StrictTwoWay_Response}
+
+&lt;EMPTY&gt;
+
+
+
+
+
+
+

@@ -53,6 +53,10 @@ void Usage(std::string_view argv0) {
 bool Format(const fidl::SourceFile& source_file, fidl::Reporter* reporter, std::string& output) {
   fidl::Lexer lexer(source_file, reporter);
   fidl::ExperimentalFlags experimental_flags;
+  // TODO(fxbug.dev/88366): unknown interaction flag hardcoded on in the
+  // formatter so formatter works with unknown interaction modifiers without
+  // adding flags.
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kUnknownInteractions);
 
   auto formatter = fidl::fmt::NewFormatter(100, reporter);
   auto result = formatter.Format(source_file, experimental_flags);

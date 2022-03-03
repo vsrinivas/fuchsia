@@ -109,6 +109,24 @@ void JSONGenerator::Generate(types::Nullability value) {
   }
 }
 
+void JSONGenerator::Generate(types::Strictness value) {
+  EmitBoolean(value == types::Strictness::kStrict);
+}
+
+void JSONGenerator::Generate(types::Openness value) {
+  switch (value) {
+    case types::Openness::kOpen:
+      EmitString("open");
+      break;
+    case types::Openness::kAjar:
+      EmitString("ajar");
+      break;
+    case types::Openness::kClosed:
+      EmitString("closed");
+      break;
+  }
+}
+
 void JSONGenerator::Generate(const raw::Identifier& value) { EmitString(value.span().data()); }
 
 void JSONGenerator::Generate(const flat::LiteralConstant& value) {
@@ -292,7 +310,7 @@ void JSONGenerator::Generate(const flat::Bits& value) {
     EmitObjectKey("mask");
     EmitNumeric(value.mask, kAsString);
     GenerateObjectMember("members", value.members);
-    GenerateObjectMember("strict", value.strictness == types::Strictness::kStrict);
+    GenerateObjectMember("strict", value.strictness);
   });
 }
 
@@ -329,7 +347,7 @@ void JSONGenerator::Generate(const flat::Enum& value) {
     GenerateObjectMember("type", value.type->name);
     GenerateExperimentalMaybeFromTypeAlias(value.subtype_ctor->resolved_params);
     GenerateObjectMember("members", value.members);
-    GenerateObjectMember("strict", value.strictness == types::Strictness::kStrict);
+    GenerateObjectMember("strict", value.strictness);
     if (value.strictness == types::Strictness::kFlexible) {
       if (value.unknown_value_signed) {
         GenerateObjectMember("maybe_unknown_value", value.unknown_value_signed.value());
@@ -356,6 +374,8 @@ void JSONGenerator::Generate(const flat::Protocol& value) {
     GenerateObjectMember("location", NameSpan(value.name));
     if (!value.attributes->Empty())
       GenerateObjectMember("maybe_attributes", value.attributes);
+    if (experimental_flags_.IsFlagEnabled(ExperimentalFlags::Flag::kUnknownInteractions))
+      GenerateObjectMember("openness", value.openness);
     GenerateObjectMember("composed_protocols", value.composed_protocols);
     GenerateObjectMember("methods", value.all_methods);
   });
@@ -376,6 +396,8 @@ void JSONGenerator::Generate(const flat::Protocol::MethodWithInfo& method_with_i
   GenerateObject([&]() {
     GenerateObjectMember("ordinal", value.generated_ordinal64, Position::kFirst);
     GenerateObjectMember("name", value.name);
+    if (experimental_flags_.IsFlagEnabled(ExperimentalFlags::Flag::kUnknownInteractions))
+      GenerateObjectMember("strict", value.strictness);
     GenerateObjectMember("location", NameSpan(value.name));
     GenerateObjectMember("has_request", value.has_request);
     if (!value.attributes->Empty())
@@ -606,7 +628,7 @@ void JSONGenerator::Generate(const flat::Table& value) {
     if (!value.attributes->Empty())
       GenerateObjectMember("maybe_attributes", value.attributes);
     GenerateObjectMember("members", value.members);
-    GenerateObjectMember("strict", value.strictness == types::Strictness::kStrict);
+    GenerateObjectMember("strict", value.strictness);
     GenerateObjectMember("resource", value.resourceness == types::Resourceness::kResource);
     GenerateTypeShapes(value);
   });
@@ -660,7 +682,7 @@ void JSONGenerator::Generate(const flat::Union& value) {
     if (!value.attributes->Empty())
       GenerateObjectMember("maybe_attributes", value.attributes);
     GenerateObjectMember("members", value.members);
-    GenerateObjectMember("strict", value.strictness == types::Strictness::kStrict);
+    GenerateObjectMember("strict", value.strictness);
     GenerateObjectMember("resource", value.resourceness == types::Resourceness::kResource);
     GenerateTypeShapes(value);
   });

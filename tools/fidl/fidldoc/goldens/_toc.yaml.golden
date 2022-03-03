@@ -85,6 +85,8 @@ toc:
     path: /test.union
   - title: test.unionsandwich
     path: /test.unionsandwich
+  - title: test.unknowninteractions
+    path: /test.unknowninteractions
   - title: test.vectors
     path: /test.vectors
   - title: test.versions

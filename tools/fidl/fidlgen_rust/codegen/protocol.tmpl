@@ -166,6 +166,7 @@ impl {{ $protocol.Name }}SynchronousProxy {
 				{{- end -}}
 				),
 				{{ $method.Ordinal | printf "%#x" }},
+				{{ $method.DynamicFlags }},
 				___deadline,
 			)?;
 			Ok({{ template "ResponseValue" $method }})
@@ -176,6 +177,7 @@ impl {{ $protocol.Name }}SynchronousProxy {
 				{{- end -}}
 				),
 				{{ $method.Ordinal | printf "%#x" }},
+				{{ $method.DynamicFlags }},
 			)
 		{{- end -}}
 	}
@@ -285,7 +287,7 @@ impl {{ $protocol.Name}}ProxyInterface for {{ $protocol.Name}}Proxy {
 			{{- if (ne $index 0) -}}, {{ end -}}
 			{{- template "WrappedName" $request -}}
 		{{- end -}}
-		), {{ $method.Ordinal | printf "%#x" }});
+		), {{ $method.Ordinal | printf "%#x" }}, {{ $method.DynamicFlags }});
 		QueryResponseFut(match send_result {
             Ok(res_fut) => {
                 future::maybe_done(res_fut.and_then(|buf| decode_transaction_body_fut(buf, transform)))
@@ -304,7 +306,7 @@ impl {{ $protocol.Name}}ProxyInterface for {{ $protocol.Name}}Proxy {
 		{{- if ne $index 0 }}, {{ end -}}
 		{{- template "WrappedName" $request -}}
 		{{- end -}}
-	), {{ $method.Ordinal | printf "%#x" }})
+	), {{ $method.Ordinal | printf "%#x" }}, {{ $method.DynamicFlags }})
 	}
 	{{- end -}}
 	{{- end -}}
@@ -644,7 +646,7 @@ impl {{ $protocol.Name }}Encoder {
 			{{- else -}}
 			0,
 			{{- end -}}
-			{{ $method.Ordinal | printf "%#x" }});
+			{{ $method.Ordinal | printf "%#x" }}, {{ $method.DynamicFlags }});
 		let mut body = (
 			{{- range $index, $param := $method.Request -}}
 			{{- if .HasHandleMetadata -}}
@@ -679,7 +681,7 @@ impl {{ $protocol.Name }}Encoder {
 			{{- else -}}
 			0,
 			{{- end -}}
-			{{ $method.Ordinal | printf "%#x" }});
+			{{ $method.Ordinal | printf "%#x" }}, {{ $method.DynamicFlags }});
 		let mut body = (
 			{{- range $index, $param := $method.Response -}}
 			{{- if .HasHandleMetadata -}}
@@ -733,7 +735,8 @@ impl {{ $protocol.Name }}ControlHandle {
 		);
 
 		let mut msg = fidl::encoding::TransactionMessage {
-			header: fidl::encoding::TransactionHeader::new(0, {{ $method.Ordinal | printf "%#x" }}),
+			header: fidl::encoding::TransactionHeader::new(0, {{ $method.Ordinal | printf "%#x" -}}
+			, {{ $method.DynamicFlags }}),
 			body: &mut response,
 		};
 
@@ -865,7 +868,9 @@ impl {{ $protocol.Name }}{{ $method.CamelName }}Responder {
 		);
 
 		let mut msg = fidl::encoding::TransactionMessage {
-			header: fidl::encoding::TransactionHeader::new(self.tx_id, self.ordinal),
+			header: fidl::encoding::TransactionHeader::new(
+				self.tx_id, self.ordinal, {{ $method.DynamicFlags }},
+			),
 			body: &mut response,
 		};
 

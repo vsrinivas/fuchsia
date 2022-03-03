@@ -1,0 +1,126 @@
+{
+  "version": "0.0.1",
+  "name": "test.unknowninteractions",
+  "library_dependencies": [],
+  "bits_declarations": [],
+  "const_declarations": [],
+  "enum_declarations": [],
+  "experimental_resource_declarations": [],
+  "interface_declarations": [
+    {
+      "name": "test.unknowninteractions/Example",
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/unknown_interactions/example.test.fidl",
+        "line": 7,
+        "column": 15,
+        "length": 7
+      },
+      "openness": "open",
+      "composed_protocols": [],
+      "methods": [
+        {
+          "ordinal": 2276912608357927194,
+          "name": "StrictOneWay",
+          "strict": true,
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/unknown_interactions/example.test.fidl",
+            "line": 8,
+            "column": 12,
+            "length": 12
+          },
+          "has_request": true,
+          "has_response": false,
+          "is_composed": false,
+          "has_error": false
+        },
+        {
+          "ordinal": 2309537410782500280,
+          "name": "FlexibleOneWay",
+          "strict": false,
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/unknown_interactions/example.test.fidl",
+            "line": 9,
+            "column": 14,
+            "length": 14
+          },
+          "has_request": true,
+          "has_response": false,
+          "is_composed": false,
+          "has_error": false
+        },
+        {
+          "ordinal": 4530909159434307973,
+          "name": "StrictTwoWay",
+          "strict": true,
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/unknown_interactions/example.test.fidl",
+            "line": 11,
+            "column": 12,
+            "length": 12
+          },
+          "has_request": true,
+          "has_response": true,
+          "is_composed": false,
+          "has_error": false
+        },
+        {
+          "ordinal": 9070032238358100524,
+          "name": "FlexibleTwoWay",
+          "strict": false,
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/unknown_interactions/example.test.fidl",
+            "line": 12,
+            "column": 14,
+            "length": 14
+          },
+          "has_request": true,
+          "has_response": true,
+          "is_composed": false,
+          "has_error": false
+        },
+        {
+          "ordinal": 2942732192976592869,
+          "name": "StrictEvent",
+          "strict": true,
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/unknown_interactions/example.test.fidl",
+            "line": 14,
+            "column": 15,
+            "length": 11
+          },
+          "has_request": false,
+          "has_response": true,
+          "is_composed": false,
+          "has_error": false
+        },
+        {
+          "ordinal": 2065245206460174394,
+          "name": "FlexibleEvent",
+          "strict": false,
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/unknown_interactions/example.test.fidl",
+            "line": 15,
+            "column": 17,
+            "length": 13
+          },
+          "has_request": false,
+          "has_response": true,
+          "is_composed": false,
+          "has_error": false
+        }
+      ]
+    }
+  ],
+  "service_declarations": [],
+  "struct_declarations": [],
+  "external_struct_declarations": [],
+  "table_declarations": [],
+  "union_declarations": [],
+  "type_alias_declarations": [],
+  "declaration_order": [
+    "test.unknowninteractions/Example"
+  ],
+  "declarations": {
+    "test.unknowninteractions/Example": "interface"
+  }
+}

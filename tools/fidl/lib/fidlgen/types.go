@@ -891,10 +891,19 @@ func EmptyStructMember(name string) StructMember {
 	}
 }
 
+type Openness string
+
+const (
+	Open   Openness = "open"
+	Ajar   Openness = "ajar"
+	Closed Openness = "closed"
+)
+
 // Protocol represents the declaration of a FIDL protocol.
 type Protocol struct {
 	Decl
-	Methods []Method `json:"methods"`
+	Openness Openness `json:"openness,omitempty"`
+	Methods  []Method `json:"methods"`
 }
 
 func (d *Protocol) GetServiceName() string {
@@ -936,19 +945,23 @@ type ServiceMember struct {
 // Method represents the declaration of a FIDL method.
 type Method struct {
 	Attributes
-	Ordinal         uint64     `json:"ordinal"`
-	Name            Identifier `json:"name"`
-	IsComposed      bool       `json:"is_composed"`
-	HasRequest      bool       `json:"has_request"`
-	RequestPayload  *Type      `json:"maybe_request_payload,omitempty"`
-	RequestPadding  bool       `json:"maybe_request_has_padding,omitempty"`
-	RequestFlexible bool       `json:"experimental_maybe_request_has_flexible_envelope,omitempty"`
-	HasResponse     bool       `json:"has_response"`
-	ResponsePayload *Type      `json:"maybe_response_payload,omitempty"`
-	HasError        bool       `json:"has_error"`
-	ResultType      *Type      `json:"maybe_response_result_type,omitempty"`
-	ValueType       *Type      `json:"maybe_response_success_type,omitempty"`
-	ErrorType       *Type      `json:"maybe_response_err_type,omitempty"`
+	Ordinal uint64     `json:"ordinal"`
+	Name    Identifier `json:"name"`
+	// TODO(fxbug.dev/88366): make "strict" required once fidlc always provides
+	// it.  It's currently gated by unknown_interactions and should not default
+	// to false when not provided.
+	MaybeStrict     *bool `json:"strict,omitempty"`
+	IsComposed      bool  `json:"is_composed"`
+	HasRequest      bool  `json:"has_request"`
+	RequestPayload  *Type `json:"maybe_request_payload,omitempty"`
+	RequestPadding  bool  `json:"maybe_request_has_padding,omitempty"`
+	RequestFlexible bool  `json:"experimental_maybe_request_has_flexible_envelope,omitempty"`
+	HasResponse     bool  `json:"has_response"`
+	ResponsePayload *Type `json:"maybe_response_payload,omitempty"`
+	HasError        bool  `json:"has_error"`
+	ResultType      *Type `json:"maybe_response_result_type,omitempty"`
+	ValueType       *Type `json:"maybe_response_success_type,omitempty"`
+	ErrorType       *Type `json:"maybe_response_err_type,omitempty"`
 }
 
 // GetRequestPayloadIdentifier retrieves the identifier that points to the
@@ -967,6 +980,14 @@ func (m *Method) GetResponsePayloadIdentifier() (EncodedCompoundIdentifier, bool
 		return "", false
 	}
 	return m.ResponsePayload.Identifier, true
+}
+
+// Helper for getting whether the method is strict. Strict is optional while unknown interactions
+// are experimental, and if strict is missing it should be treated as true.
+// TODO(fxbug.dev/88366): replace this method with direct access to the Strict field, once it is
+// required.
+func (m *Method) IsStrict() bool {
+	return m.MaybeStrict == nil || *m.MaybeStrict
 }
 
 // IsTransitional returns whether this method has the `Transitional` attribute.

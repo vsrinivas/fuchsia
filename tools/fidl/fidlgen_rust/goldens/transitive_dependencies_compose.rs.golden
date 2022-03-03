@@ -65,8 +65,12 @@ impl TopSynchronousProxy {
         TopEvent::decode(self.client.wait_for_event(deadline)?)
     }
     pub fn r#get_foo(&self, ___deadline: zx::Time) -> Result<(fidl_test_bottom::Foo), fidl::Error> {
-        let _value: (fidl_test_bottom::Foo,) =
-            self.client.send_query(&mut (), 0x245770d9d719c667, ___deadline)?;
+        let _value: (fidl_test_bottom::Foo,) = self.client.send_query(
+            &mut (),
+            0x245770d9d719c667,
+            fidl::encoding::DynamicFlags::empty(),
+            ___deadline,
+        )?;
         Ok(_value.0)
     }
 }
@@ -120,7 +124,11 @@ impl TopProxyInterface for TopProxy {
         ) -> Result<(fidl_test_bottom::Foo), fidl::Error> {
             result.map(|_value| _value.0)
         }
-        let send_result = self.client.call_send_raw_query(&mut (), 0x245770d9d719c667);
+        let send_result = self.client.call_send_raw_query(
+            &mut (),
+            0x245770d9d719c667,
+            fidl::encoding::DynamicFlags::empty(),
+        );
         QueryResponseFut(match send_result {
             Ok(res_fut) => future::maybe_done(
                 res_fut.and_then(|buf| decode_transaction_body_fut(buf, transform)),
@@ -305,7 +313,11 @@ impl TopEncoder {
         out_handles: &'a mut Vec<fidl::HandleDisposition<'static>>,
         tx_id: u32,
     ) -> Result<(), fidl::Error> {
-        let header = fidl::encoding::TransactionHeader::new(tx_id, 0x245770d9d719c667);
+        let header = fidl::encoding::TransactionHeader::new(
+            tx_id,
+            0x245770d9d719c667,
+            fidl::encoding::DynamicFlags::empty(),
+        );
         let mut body = ();
         let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
         fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.transitivedependenciescompose/TopGetFooRequest");
@@ -320,7 +332,11 @@ impl TopEncoder {
         tx_id: u32,
         mut in_foo: &mut fidl_test_bottom::Foo,
     ) -> Result<(), fidl::Error> {
-        let header = fidl::encoding::TransactionHeader::new(tx_id, 0x245770d9d719c667);
+        let header = fidl::encoding::TransactionHeader::new(
+            tx_id,
+            0x245770d9d719c667,
+            fidl::encoding::DynamicFlags::empty(),
+        );
         let mut body = ((in_foo),);
         let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
 
@@ -411,7 +427,11 @@ impl TopGetFooResponder {
         let mut response = (foo);
 
         let mut msg = fidl::encoding::TransactionMessage {
-            header: fidl::encoding::TransactionHeader::new(self.tx_id, self.ordinal),
+            header: fidl::encoding::TransactionHeader::new(
+                self.tx_id,
+                self.ordinal,
+                fidl::encoding::DynamicFlags::empty(),
+            ),
             body: &mut response,
         };
 

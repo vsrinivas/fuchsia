@@ -38,5 +38,6 @@ transitive_dependencies_compose.syz.txt.golden
 type_aliases.syz.txt.golden
 union.syz.txt.golden
 union_sandwich.syz.txt.golden
+unknown_interactions.syz.txt.golden
 vectors.syz.txt.golden
 versions.syz.txt.golden

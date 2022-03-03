@@ -90,3 +90,7 @@ union.cc.golden
 union.h.golden
 union_decode_encode.cc.golden
 union_decode_encode.h.golden
+unknown_interactions.cc.golden
+unknown_interactions.h.golden
+unknown_interactions_decode_encode.cc.golden
+unknown_interactions_decode_encode.h.golden

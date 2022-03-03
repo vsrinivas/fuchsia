@@ -8,8 +8,8 @@ use {
     crate::{
         create_trace_provider,
         encoding::{
-            decode_transaction_header, Decodable, Decoder, Encodable, Encoder, EpitaphBody,
-            TransactionHeader, TransactionMessage,
+            decode_transaction_header, Decodable, Decoder, DynamicFlags, Encodable, Encoder,
+            EpitaphBody, TransactionHeader, TransactionMessage,
         },
         handle::{AsyncChannel, HandleDisposition, MessageBufEtc},
         Error,
@@ -203,8 +203,16 @@ impl Client {
     }
 
     /// Send an encodable message without expecting a response.
-    pub fn send<T: Encodable>(&self, body: &mut T, ordinal: u64) -> Result<(), Error> {
-        let msg = &mut TransactionMessage { header: TransactionHeader::new(0, ordinal), body };
+    pub fn send<T: Encodable>(
+        &self,
+        body: &mut T,
+        ordinal: u64,
+        dynamic_flags: DynamicFlags,
+    ) -> Result<(), Error> {
+        let msg = &mut TransactionMessage {
+            header: TransactionHeader::new(0, ordinal, dynamic_flags),
+            body,
+        };
         crate::encoding::with_tls_encoded(msg, |bytes, handles| {
             self.send_raw_msg(&**bytes, handles)
         })
@@ -215,10 +223,11 @@ impl Client {
         &self,
         msg: &mut E,
         ordinal: u64,
+        dynamic_flags: DynamicFlags,
     ) -> QueryResponseFut<D> {
         let send_result = self.send_raw_query(|tx_id, bytes, handles| {
             let msg = &mut TransactionMessage {
-                header: TransactionHeader::new(tx_id.as_raw_id(), ordinal),
+                header: TransactionHeader::new(tx_id.as_raw_id(), ordinal, dynamic_flags),
                 body: msg,
             };
             Encoder::encode(bytes, handles, msg)?;
@@ -241,10 +250,11 @@ impl Client {
         &self,
         msg: &mut E,
         ordinal: u64,
+        dynamic_flags: DynamicFlags,
     ) -> Result<MessageResponse, Error> {
         self.send_raw_query(|tx_id, bytes, handles| {
             let msg = &mut TransactionMessage {
-                header: TransactionHeader::new(tx_id.as_raw_id(), ordinal),
+                header: TransactionHeader::new(tx_id.as_raw_id(), ordinal, dynamic_flags),
                 body: msg,
             };
             Encoder::encode(bytes, handles, msg)?;
@@ -790,12 +800,19 @@ pub mod sync {
         }
 
         /// Send a new message.
-        pub fn send<E: Encodable>(&self, msg: &mut E, ordinal: u64) -> Result<(), Error> {
+        pub fn send<E: Encodable>(
+            &self,
+            msg: &mut E,
+            ordinal: u64,
+            dynamic_flags: DynamicFlags,
+        ) -> Result<(), Error> {
             let mut write_bytes = Vec::new();
             let mut write_handles = Vec::new();
 
-            let msg =
-                &mut TransactionMessage { header: TransactionHeader::new(0, ordinal), body: msg };
+            let msg = &mut TransactionMessage {
+                header: TransactionHeader::new(0, ordinal, dynamic_flags),
+                body: msg,
+            };
             Encoder::encode(&mut write_bytes, &mut write_handles, msg)?;
             self.channel
                 .write_etc(&mut write_bytes, &mut write_handles)
@@ -808,13 +825,16 @@ pub mod sync {
             &self,
             msg: &mut E,
             ordinal: u64,
+            dynamic_flags: DynamicFlags,
             deadline: zx::Time,
         ) -> Result<D, Error> {
             let mut write_bytes = Vec::new();
             let mut write_handles = Vec::new();
 
-            let msg =
-                &mut TransactionMessage { header: TransactionHeader::new(0, ordinal), body: msg };
+            let msg = &mut TransactionMessage {
+                header: TransactionHeader::new(0, ordinal, dynamic_flags),
+                body: msg,
+            };
             Encoder::encode(&mut write_bytes, &mut write_handles, msg)?;
 
             let mut buf = zx::MessageBufEtc::new();
@@ -938,7 +958,9 @@ mod tests {
     fn sync_client() -> Result<(), Error> {
         let (client_end, server_end) = zx::Channel::create().context("chan create")?;
         let client = sync::Client::new(client_end, "test_protocol");
-        client.send(&mut SEND_DATA.clone(), SEND_ORDINAL).context("sending")?;
+        client
+            .send(&mut SEND_DATA.clone(), SEND_ORDINAL, DynamicFlags::empty())
+            .context("sending")?;
         let mut received = MessageBufEtc::new();
         server_end.read_etc(&mut received).context("reading")?;
         let one_way_tx_id = 0;
@@ -960,12 +982,16 @@ mod tests {
             let (buf, _handles) = received.split_mut();
             let (header, _body_bytes) = decode_transaction_header(buf).expect("server decode");
             assert_eq!(header.ordinal(), SEND_ORDINAL);
-            send_transaction(TransactionHeader::new(header.tx_id(), header.ordinal()), &server_end);
+            send_transaction(
+                TransactionHeader::new(header.tx_id(), header.ordinal(), DynamicFlags::empty()),
+                &server_end,
+            );
         });
         let response_data = client
             .send_query::<u8, u8>(
                 &mut SEND_DATA.clone(),
                 SEND_ORDINAL,
+                DynamicFlags::empty(),
                 zx::Time::after(5.seconds()),
             )
             .context("sending query")?;
@@ -989,15 +1015,22 @@ mod tests {
             assert_ne!(header.tx_id(), 0);
             assert_eq!(header.ordinal(), SEND_ORDINAL);
             // First, send an event.
-            send_transaction(TransactionHeader::new(0, EVENT_ORDINAL), &server_end);
+            send_transaction(
+                TransactionHeader::new(0, EVENT_ORDINAL, DynamicFlags::empty()),
+                &server_end,
+            );
             // Then send the reply. The kernel should pick the correct message to deliver based
             // on the tx_id.
-            send_transaction(TransactionHeader::new(header.tx_id(), header.ordinal()), &server_end);
+            send_transaction(
+                TransactionHeader::new(header.tx_id(), header.ordinal(), DynamicFlags::empty()),
+                &server_end,
+            );
         });
         let response_data = client
             .send_query::<u8, u8>(
                 &mut SEND_DATA.clone(),
                 SEND_ORDINAL,
+                DynamicFlags::empty(),
                 zx::Time::after(5.seconds()),
             )
             .context("sending query")?;
@@ -1028,8 +1061,14 @@ mod tests {
             assert!(result.is_ok());
         });
 
-        send_transaction(TransactionHeader::new(0, EVENT_ORDINAL), &server_end);
-        send_transaction(TransactionHeader::new(0, EVENT_ORDINAL), &server_end);
+        send_transaction(
+            TransactionHeader::new(0, EVENT_ORDINAL, DynamicFlags::empty()),
+            &server_end,
+        );
+        send_transaction(
+            TransactionHeader::new(0, EVENT_ORDINAL, DynamicFlags::empty()),
+            &server_end,
+        );
 
         assert!(thread1.join().is_ok());
         assert!(thread2.join().is_ok());
@@ -1044,7 +1083,7 @@ mod tests {
         // Close the server channel.
         drop(server_end);
         assert_matches!(
-            client.send(&mut SEND_DATA.clone(), SEND_ORDINAL),
+            client.send(&mut SEND_DATA.clone(), SEND_ORDINAL, DynamicFlags::empty()),
             Err(crate::Error::ClientChannelClosed {
                 status: zx_status::Status::PEER_CLOSED,
                 protocol_name: "test_protocol",
@@ -1064,7 +1103,7 @@ mod tests {
             .close_with_epitaph(zx_status::Status::UNAVAILABLE)
             .expect("failed to write epitaph");
         assert_matches!(
-            client.send(&mut SEND_DATA.clone(), SEND_ORDINAL),
+            client.send(&mut SEND_DATA.clone(), SEND_ORDINAL, DynamicFlags::empty()),
             Err(crate::Error::ClientChannelClosed {
                 status: zx_status::Status::PEER_CLOSED,
                 protocol_name: "test_protocol",
@@ -1092,7 +1131,9 @@ mod tests {
             .on_timeout(300.millis().after_now(), || panic!("did not receive message in time!"));
 
         let sender = fasync::Timer::new(100.millis().after_now()).map(|()| {
-            client.send(&mut SEND_DATA.clone(), SEND_ORDINAL).expect("failed to send msg");
+            client
+                .send(&mut SEND_DATA.clone(), SEND_ORDINAL, DynamicFlags::empty())
+                .expect("failed to send msg");
         });
 
         join!(receiver, sender);
@@ -1112,7 +1153,7 @@ mod tests {
             assert_eq!(buffer.bytes(), expected_sent_bytes(two_way_tx_id));
 
             let (bytes, handles) = (&mut vec![], &mut vec![]);
-            let header = TransactionHeader::new(two_way_tx_id as u32, 42);
+            let header = TransactionHeader::new(two_way_tx_id as u32, 42, DynamicFlags::empty());
             encode_transaction(header, bytes, handles);
             server.write_etc(bytes, handles).expect("Server channel write failed");
         };
@@ -1122,7 +1163,7 @@ mod tests {
             .on_timeout(300.millis().after_now(), || panic!("did not receiver message in time!"));
 
         let sender = client
-            .send_query::<u8, u8>(&mut SEND_DATA.clone(), SEND_ORDINAL)
+            .send_query::<u8, u8>(&mut SEND_DATA.clone(), SEND_ORDINAL, DynamicFlags::empty())
             .map_ok(|x| assert_eq!(x, SEND_DATA))
             .unwrap_or_else(|e| panic!("fidl error: {:?}", e));
 
@@ -1152,7 +1193,8 @@ mod tests {
             .on_timeout(300.millis().after_now(), || panic!("did not receive message in time!"));
 
         let sender = async move {
-            let result = client.send_query::<u8, u8>(&mut 55, 42 << 32).await;
+            let result =
+                client.send_query::<u8, u8>(&mut 55, 42 << 32, DynamicFlags::empty()).await;
             assert_matches!(
                 result,
                 Err(crate::Error::ClientChannelClosed {
@@ -1257,7 +1299,7 @@ mod tests {
         // Send the event from the server
         let server = AsyncChannel::from_channel(server_end).unwrap();
         let (bytes, handles) = (&mut vec![], &mut vec![]);
-        let header = TransactionHeader::new(0, 5);
+        let header = TransactionHeader::new(0, 5, DynamicFlags::empty());
         encode_transaction(header, bytes, handles);
         server.write_etc(bytes, handles).expect("Server channel write failed");
         drop(server);
@@ -1293,7 +1335,7 @@ mod tests {
         // Send the event from the server
         let server = AsyncChannel::from_channel(server_end).unwrap();
         let (bytes, handles) = (&mut vec![], &mut vec![]);
-        let header = TransactionHeader::new(0, 5);
+        let header = TransactionHeader::new(0, 5, DynamicFlags::empty());
         encode_transaction(header, bytes, handles);
         server.write_etc(bytes, handles).expect("Server channel write failed");
         drop(server);
@@ -1345,6 +1387,7 @@ mod tests {
             &crate::encoding::Context {
                 wire_format_version: crate::encoding::WireFormatVersion::V1,
             },
+            DynamicFlags::empty(),
             0,
         );
         encode_transaction(header, bytes, handles);
@@ -1380,7 +1423,8 @@ mod tests {
         let mut response_future = client
             .send_raw_query(|tx_id, bytes, handles| {
                 response_txid = tx_id;
-                let header = TransactionHeader::new(response_txid.as_raw_id(), 42);
+                let header =
+                    TransactionHeader::new(response_txid.as_raw_id(), 42, DynamicFlags::empty());
                 encode_transaction(header, bytes, handles);
                 Ok(())
             })
@@ -1397,7 +1441,7 @@ mod tests {
         assert_eq!(event_waker_count.get(), 0);
 
         // next, simulate an event coming in
-        send_transaction(TransactionHeader::new(0, 5), &server_end);
+        send_transaction(TransactionHeader::new(0, 5, DynamicFlags::empty()), &server_end);
 
         // get event loop to deliver readiness notifications to channels
         let _ = executor.run_until_stalled(&mut future::pending::<()>());
@@ -1412,7 +1456,10 @@ mod tests {
         assert!(event_receiver.poll_next_unpin(event_cx).is_ready());
 
         // next, simulate a response coming in
-        send_transaction(TransactionHeader::new(response_txid.as_raw_id(), 42), &server_end);
+        send_transaction(
+            TransactionHeader::new(response_txid.as_raw_id(), 42, DynamicFlags::empty()),
+            &server_end,
+        );
 
         // get event loop to deliver readiness notifications to channels
         let _ = executor.run_until_stalled(&mut future::pending::<()>());
@@ -1436,7 +1483,7 @@ mod tests {
         let response1_cx = &mut Context::from_waker(&response1_waker);
         let mut response1_future = client
             .send_raw_query(|tx_id, bytes, handles| {
-                let header = TransactionHeader::new(tx_id.as_raw_id(), 42);
+                let header = TransactionHeader::new(tx_id.as_raw_id(), 42, DynamicFlags::empty());
                 encode_transaction(header, bytes, handles);
                 Ok(())
             })
@@ -1453,7 +1500,7 @@ mod tests {
         let response2_cx = &mut Context::from_waker(&response2_waker);
         let mut response2_future = client
             .send_raw_query(|tx_id, bytes, handles| {
-                let header = TransactionHeader::new(tx_id.as_raw_id(), 42);
+                let header = TransactionHeader::new(tx_id.as_raw_id(), 42, DynamicFlags::empty());
                 encode_transaction(header, bytes, handles);
                 Ok(())
             })
@@ -1519,12 +1566,12 @@ mod tests {
         let client = Client::new(client_end, "test_protocol");
 
         // first simulate an event coming in, even though nothing has polled
-        send_transaction(TransactionHeader::new(0, 5), &server_end);
+        send_transaction(TransactionHeader::new(0, 5, DynamicFlags::empty()), &server_end);
 
         // next, poll on a response
         let (response_waker, _response_waker_count) = new_count_waker();
         let response_cx = &mut Context::from_waker(&response_waker);
-        let mut response_future = client.send_query::<u8, u8>(&mut 55, 42);
+        let mut response_future = client.send_query::<u8, u8>(&mut 55, 42, DynamicFlags::empty());
         assert!(response_future.poll_unpin(response_cx).is_pending());
 
         // then, make sure we can still take the event receiver without panicking
@@ -1577,13 +1624,23 @@ mod tests {
             // Assert that each action reports the epitaph.
             for (index, action) in two_actions.iter().enumerate() {
                 let err = match action {
-                    SendMsg => client.send(&mut SEND_DATA.clone(), SEND_ORDINAL).err(),
+                    SendMsg => client
+                        .send(&mut SEND_DATA.clone(), SEND_ORDINAL, DynamicFlags::empty())
+                        .err(),
                     SendQuery => client
-                        .send_query::<u8, u8>(&mut SEND_DATA.clone(), SEND_ORDINAL)
+                        .send_query::<u8, u8>(
+                            &mut SEND_DATA.clone(),
+                            SEND_ORDINAL,
+                            DynamicFlags::empty(),
+                        )
                         .await
                         .err(),
                     CheckQuery => client
-                        .send_query::<u8, u8>(&mut SEND_DATA.clone(), SEND_ORDINAL)
+                        .send_query::<u8, u8>(
+                            &mut SEND_DATA.clone(),
+                            SEND_ORDINAL,
+                            DynamicFlags::empty(),
+                        )
                         .check()
                         .err(),
                     RecvEvent => event_receiver.next().await.unwrap().err(),
@@ -1623,7 +1680,11 @@ mod tests {
         let server = AsyncChannel::from_channel(server_end).unwrap();
 
         // Sending works, and checking when a message successfully sends returns itself.
-        let active_fut = client.send_query::<u8, u8>(&mut SEND_DATA.clone(), SEND_ORDINAL);
+        let active_fut = client.send_query::<u8, u8>(
+            &mut SEND_DATA.clone(),
+            SEND_ORDINAL,
+            DynamicFlags::empty(),
+        );
 
         let mut checked_fut = active_fut.check().expect("failed to check future");
 
@@ -1634,7 +1695,7 @@ mod tests {
         assert_eq!(buffer.bytes(), expected_sent_bytes(two_way_tx_id));
 
         let (bytes, handles) = (&mut vec![], &mut vec![]);
-        let header = TransactionHeader::new(two_way_tx_id as u32, 42);
+        let header = TransactionHeader::new(two_way_tx_id as u32, 42, DynamicFlags::empty());
         encode_transaction(header, bytes, handles);
         server.write_etc(bytes, handles).expect("Server channel write failed");
 
@@ -1646,7 +1707,11 @@ mod tests {
         // Close the server channel, meaning the next query will fail before it even starts.
         drop(server);
 
-        let query_fut = client.send_query::<u8, u8>(&mut SEND_DATA.clone(), SEND_ORDINAL);
+        let query_fut = client.send_query::<u8, u8>(
+            &mut SEND_DATA.clone(),
+            SEND_ORDINAL,
+            DynamicFlags::empty(),
+        );
 
         // This should be an error, because the server end is closed.
         query_fut.check().expect_err("Didn't make an error on check");
@@ -1674,7 +1739,11 @@ mod tests {
         {
             // Create a send future to insert a message interest but drop it
             // before a response can be received.
-            let _sender = client.send_query::<u8, u8>(&mut SEND_DATA.clone(), SEND_ORDINAL);
+            let _sender = client.send_query::<u8, u8>(
+                &mut SEND_DATA.clone(),
+                SEND_ORDINAL,
+                DynamicFlags::empty(),
+            );
         }
 
         assert!(client.into_channel().is_err());
@@ -1694,7 +1763,7 @@ mod tests {
             assert_eq!(buffer.bytes(), expected_sent_bytes(two_way_tx_id));
 
             let (bytes, handles) = (&mut vec![], &mut vec![]);
-            let header = TransactionHeader::new(two_way_tx_id as u32, 42);
+            let header = TransactionHeader::new(two_way_tx_id as u32, 42, DynamicFlags::empty());
             encode_transaction(header, bytes, handles);
             server.write_etc(bytes, handles).expect("Server channel write failed");
         };
@@ -1704,7 +1773,7 @@ mod tests {
             .on_timeout(300.millis().after_now(), || panic!("did not receiver message in time!"));
 
         let sender = client
-            .send_query::<u8, u8>(&mut SEND_DATA.clone(), SEND_ORDINAL)
+            .send_query::<u8, u8>(&mut SEND_DATA.clone(), SEND_ORDINAL, DynamicFlags::empty())
             .map_ok(|x| assert_eq!(x, SEND_DATA))
             .unwrap_or_else(|e| panic!("fidl error: {:?}", e));
 

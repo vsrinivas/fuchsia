@@ -147,6 +147,7 @@ type Protocol struct {
 	fidlgen.Protocol
 	ECI          EncodedCompoundIdentifier
 	Name         string
+	Openness     fidlgen.Openness
 	Methods      []Method
 	ProtocolName string
 }
@@ -155,6 +156,7 @@ type Method struct {
 	fidlgen.Method
 	Ordinal        uint64
 	Name           string
+	Strict         bool
 	CamelName      string
 	HasRequest     bool
 	Request        []Parameter
@@ -162,6 +164,13 @@ type Method struct {
 	Response       []Parameter
 	Result         *Result
 	IsTransitional bool
+}
+
+func (m *Method) DynamicFlags() string {
+	if m.Strict {
+		return "fidl::encoding::DynamicFlags::empty()"
+	}
+	return "fidl::encoding::DynamicFlags::FLEXIBLE"
 }
 
 type Parameter struct {
@@ -891,6 +900,7 @@ func (c *compiler) compileProtocol(val fidlgen.Protocol) Protocol {
 		Protocol:     val,
 		ECI:          val.Name,
 		Name:         c.compileCamelCompoundIdentifier(val.Name),
+		Openness:     val.Openness,
 		Methods:      []Method{},
 		ProtocolName: strings.Trim(val.GetServiceName(), "\""),
 	}
@@ -933,6 +943,7 @@ func (c *compiler) compileProtocol(val fidlgen.Protocol) Protocol {
 			Method:         v,
 			Ordinal:        v.Ordinal,
 			Name:           name,
+			Strict:         v.IsStrict(),
 			CamelName:      camelName,
 			HasRequest:     v.HasRequest,
 			Request:        compiledRequestParameterList,

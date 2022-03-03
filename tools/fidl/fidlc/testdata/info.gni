@@ -442,6 +442,10 @@ fidl_testdata_info = [
     ]
   },
   {
+    name = "unknown_interactions"
+    target = "//tools/fidl/fidlc/testdata/unknown_interactions:test.unknowninteractions"
+  },
+  {
     name = "vectors"
     target = "//tools/fidl/fidlc/testdata:test.vectors"
     denylist = [

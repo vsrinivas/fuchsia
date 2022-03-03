@@ -118,7 +118,12 @@ impl ExampleUseOfErrorSyntaxSynchronousProxy {
     > {
         let _value: (
             fidl_test_errorsyntax_parent::ParentUsesErrorSyntaxComposedCallWhichMayFailResult,
-        ) = self.client.send_query(&mut (s), 0x3179cf8f46814221, ___deadline)?;
+        ) = self.client.send_query(
+            &mut (s),
+            0x3179cf8f46814221,
+            fidl::encoding::DynamicFlags::empty(),
+            ___deadline,
+        )?;
         Ok(_value.0)
     }
     pub fn r#call_which_may_fail(
@@ -127,7 +132,12 @@ impl ExampleUseOfErrorSyntaxSynchronousProxy {
         ___deadline: zx::Time,
     ) -> Result<(ExampleUseOfErrorSyntaxCallWhichMayFailResult), fidl::Error> {
         let _value: (ExampleUseOfErrorSyntaxCallWhichMayFailResultHandleWrapper) =
-            self.client.send_query(&mut (s), 0x3424ff83ce3004a2, ___deadline)?;
+            self.client.send_query(
+                &mut (s),
+                0x3424ff83ce3004a2,
+                fidl::encoding::DynamicFlags::empty(),
+                ___deadline,
+            )?;
         Ok(_value.map(|_value| _value.0))
     }
 }
@@ -203,7 +213,11 @@ impl ExampleUseOfErrorSyntaxProxyInterface for ExampleUseOfErrorSyntaxProxy {
         > {
             result.map(|_value| _value.0)
         }
-        let send_result = self.client.call_send_raw_query(&mut (s), 0x3179cf8f46814221);
+        let send_result = self.client.call_send_raw_query(
+            &mut (s),
+            0x3179cf8f46814221,
+            fidl::encoding::DynamicFlags::empty(),
+        );
         QueryResponseFut(match send_result {
             Ok(res_fut) => future::maybe_done(
                 res_fut.and_then(|buf| decode_transaction_body_fut(buf, transform)),
@@ -222,7 +236,11 @@ impl ExampleUseOfErrorSyntaxProxyInterface for ExampleUseOfErrorSyntaxProxy {
         ) -> Result<(ExampleUseOfErrorSyntaxCallWhichMayFailResult), fidl::Error> {
             result.map(|_value| _value.map(|_value| _value.0))
         }
-        let send_result = self.client.call_send_raw_query(&mut (s), 0x3424ff83ce3004a2);
+        let send_result = self.client.call_send_raw_query(
+            &mut (s),
+            0x3424ff83ce3004a2,
+            fidl::encoding::DynamicFlags::empty(),
+        );
         QueryResponseFut(match send_result {
             Ok(res_fut) => future::maybe_done(
                 res_fut.and_then(|buf| decode_transaction_body_fut(buf, transform)),
@@ -448,7 +466,11 @@ impl ExampleUseOfErrorSyntaxEncoder {
         tx_id: u32,
         mut in_s: &str,
     ) -> Result<(), fidl::Error> {
-        let header = fidl::encoding::TransactionHeader::new(tx_id, 0x3179cf8f46814221);
+        let header = fidl::encoding::TransactionHeader::new(
+            tx_id,
+            0x3179cf8f46814221,
+            fidl::encoding::DynamicFlags::empty(),
+        );
         let mut body = ((in_s),);
         let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
         fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.errorsyntax/ExampleUseOfErrorSyntaxComposedCallWhichMayFailRequest");
@@ -463,7 +485,11 @@ impl ExampleUseOfErrorSyntaxEncoder {
         tx_id: u32,
         mut in_result: &mut fidl_test_errorsyntax_parent::ParentUsesErrorSyntaxComposedCallWhichMayFailResult,
     ) -> Result<(), fidl::Error> {
-        let header = fidl::encoding::TransactionHeader::new(tx_id, 0x3179cf8f46814221);
+        let header = fidl::encoding::TransactionHeader::new(
+            tx_id,
+            0x3179cf8f46814221,
+            fidl::encoding::DynamicFlags::empty(),
+        );
         let mut body = ((in_result),);
         let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
 
@@ -480,7 +506,11 @@ impl ExampleUseOfErrorSyntaxEncoder {
         tx_id: u32,
         mut in_s: &str,
     ) -> Result<(), fidl::Error> {
-        let header = fidl::encoding::TransactionHeader::new(tx_id, 0x3424ff83ce3004a2);
+        let header = fidl::encoding::TransactionHeader::new(
+            tx_id,
+            0x3424ff83ce3004a2,
+            fidl::encoding::DynamicFlags::empty(),
+        );
         let mut body = ((in_s),);
         let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
         fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.errorsyntax/ExampleUseOfErrorSyntaxCallWhichMayFailRequest");
@@ -495,7 +525,11 @@ impl ExampleUseOfErrorSyntaxEncoder {
         tx_id: u32,
         mut in_result: &mut ExampleUseOfErrorSyntaxCallWhichMayFailResult,
     ) -> Result<(), fidl::Error> {
-        let header = fidl::encoding::TransactionHeader::new(tx_id, 0x3424ff83ce3004a2);
+        let header = fidl::encoding::TransactionHeader::new(
+            tx_id,
+            0x3424ff83ce3004a2,
+            fidl::encoding::DynamicFlags::empty(),
+        );
         let mut body = ((in_result),);
         let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
 
@@ -592,7 +626,11 @@ impl ExampleUseOfErrorSyntaxComposedCallWhichMayFailResponder {
         let mut response = (result);
 
         let mut msg = fidl::encoding::TransactionMessage {
-            header: fidl::encoding::TransactionHeader::new(self.tx_id, self.ordinal),
+            header: fidl::encoding::TransactionHeader::new(
+                self.tx_id,
+                self.ordinal,
+                fidl::encoding::DynamicFlags::empty(),
+            ),
             body: &mut response,
         };
 
@@ -679,7 +717,11 @@ impl ExampleUseOfErrorSyntaxCallWhichMayFailResponder {
         let mut response = (_result);
 
         let mut msg = fidl::encoding::TransactionMessage {
-            header: fidl::encoding::TransactionHeader::new(self.tx_id, self.ordinal),
+            header: fidl::encoding::TransactionHeader::new(
+                self.tx_id,
+                self.ordinal,
+                fidl::encoding::DynamicFlags::empty(),
+            ),
             body: &mut response,
         };
 

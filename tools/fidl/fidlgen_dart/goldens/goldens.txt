@@ -78,6 +78,8 @@ union_async.dart.golden
 union_sandwich_async.dart.golden
 union_sandwich_test.dart.golden
 union_test.dart.golden
+unknown_interactions_async.dart.golden
+unknown_interactions_test.dart.golden
 vectors_async.dart.golden
 vectors_test.dart.golden
 versions_async.dart.golden

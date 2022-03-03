@@ -181,10 +181,10 @@ pub struct Context {
 impl Context {
     /// Returns the header flags to set when encoding with this context.
     #[inline]
-    fn header_flags(&self) -> HeaderFlags {
+    fn at_rest_flags(&self) -> AtRestFlags {
         match self.wire_format_version {
-            WireFormatVersion::V1 => HeaderFlags::empty(),
-            WireFormatVersion::V2 => HeaderFlags::USE_V2_WIRE_FORMAT,
+            WireFormatVersion::V1 => AtRestFlags::empty(),
+            WireFormatVersion::V2 => AtRestFlags::USE_V2_WIRE_FORMAT,
         }
     }
 }
@@ -3647,8 +3647,12 @@ pub struct UnknownData {
 pub struct TransactionHeader {
     /// Transaction ID which identifies a request-response pair
     tx_id: u32,
-    /// Flags set for this message. MUST NOT be validated by bindings
-    flags: [u8; 3],
+    /// Flags set for this message. MUST NOT be validated by bindings. Usually
+    /// temporarily during migrations.
+    at_rest_flags: [u8; 2],
+    /// Flags used for dynamically interpreting the request if it is unknown to
+    /// the receiver.
+    dynamic_flags: u8,
     /// Magic number indicating the message's wire format. Two sides with
     /// different magic numbers are incompatible with each other.
     magic_number: u8,
@@ -3673,10 +3677,15 @@ fidl_struct_copy! {
             offset_v1: 0,
             offset_v2: 0,
         },
-        flags {
-            ty: [u8; 3],
+        at_rest_flags {
+            ty: [u8; 2],
             offset_v1: 4,
             offset_v2: 4,
+        },
+        dynamic_flags {
+            ty: u8,
+            offset_v1: 6,
+            offset_v2: 6,
         },
         magic_number {
             ty: u8,
@@ -3698,11 +3707,8 @@ fidl_struct_copy! {
 }
 
 bitflags! {
-    /// Bitflags type for transaction header flags.
-    // TODO(fxbug.dev/45252): Refactor to account for the distinction between
-    // at-rest flags and dynamic flags (see RFC-0120 "Standalone use of the FIDL
-    // wire format" and fxrev.dev/534921 "Handling unknown interactions").
-    pub struct HeaderFlags: u32 {
+    /// Bitflags type for transaction header at-rest flags.
+    pub struct AtRestFlags: u16 {
         /// Empty placeholder since empty bitflags are not allowed. Should be
         /// removed once any new header flags are defined.
         #[deprecated = "Placeholder since empty bitflags are not allowed."]
@@ -3718,24 +3724,50 @@ bitflags! {
     }
 }
 
-impl Into<[u8; 3]> for HeaderFlags {
+bitflags! {
+    /// Bitflags type to flags that aid in dynamically identifying features of
+    /// the request.
+    pub struct DynamicFlags: u8 {
+        /// Indicates that the request is for a flexible method.
+        const FLEXIBLE = 0x80;
+    }
+}
+
+impl Into<[u8; 2]> for AtRestFlags {
     #[inline]
-    fn into(self) -> [u8; 3] {
-        let bytes = self.bits.to_le_bytes();
-        [bytes[0], bytes[1], bytes[2]]
+    fn into(self) -> [u8; 2] {
+        self.bits.to_le_bytes()
     }
 }
 
 impl TransactionHeader {
     /// Creates a new transaction header with the default encode context and magic number.
     #[inline]
-    pub fn new(tx_id: u32, ordinal: u64) -> Self {
-        TransactionHeader::new_full(tx_id, ordinal, &default_encode_context(), MAGIC_NUMBER_INITIAL)
+    pub fn new(tx_id: u32, ordinal: u64, dynamic_flags: DynamicFlags) -> Self {
+        TransactionHeader::new_full(
+            tx_id,
+            ordinal,
+            &default_encode_context(),
+            dynamic_flags,
+            MAGIC_NUMBER_INITIAL,
+        )
     }
     /// Creates a new transaction header with a specific context and magic number.
     #[inline]
-    pub fn new_full(tx_id: u32, ordinal: u64, context: &Context, magic_number: u8) -> Self {
-        TransactionHeader { tx_id, flags: context.header_flags().into(), magic_number, ordinal }
+    pub fn new_full(
+        tx_id: u32,
+        ordinal: u64,
+        context: &Context,
+        dynamic_flags: DynamicFlags,
+        magic_number: u8,
+    ) -> Self {
+        TransactionHeader {
+            tx_id,
+            at_rest_flags: context.at_rest_flags().into(),
+            dynamic_flags: dynamic_flags.bits,
+            magic_number,
+            ordinal,
+        }
     }
     /// Returns the header's transaction id.
     #[inline]
@@ -3759,11 +3791,16 @@ impl TransactionHeader {
         self.magic_number
     }
 
-    /// Returns the header's flags as a `HeaderFlags` value.
+    /// Returns the header's migration flags as a `AtRestFlags` value.
     #[inline]
-    pub fn flags(&self) -> HeaderFlags {
-        let bytes = [self.flags[0], self.flags[1], self.flags[2], 0];
-        HeaderFlags::from_bits_truncate(u32::from_le_bytes(bytes))
+    pub fn at_rest_flags(&self) -> AtRestFlags {
+        AtRestFlags::from_bits_truncate(u16::from_le_bytes(self.at_rest_flags))
+    }
+
+    /// Returns the header's dynamic flags as a `DynamicFlags` value.
+    #[inline]
+    pub fn dynamic_flags(&self) -> DynamicFlags {
+        DynamicFlags::from_bits_truncate(self.dynamic_flags)
     }
 
     /// Returns the context to use for decoding the message body associated with
@@ -3771,7 +3808,7 @@ impl TransactionHeader {
     /// controls dynamic behavior in the read path.
     #[inline]
     pub fn decoding_context(&self) -> Context {
-        if self.flags().contains(HeaderFlags::USE_V2_WIRE_FORMAT) {
+        if self.at_rest_flags().contains(AtRestFlags::USE_V2_WIRE_FORMAT) {
             Context { wire_format_version: WireFormatVersion::V2 }
         } else {
             Context { wire_format_version: WireFormatVersion::V1 }
@@ -3855,7 +3892,7 @@ pub struct PersistentHeader {
     /// different magic numbers are incompatible with each other.
     magic_number: u8,
     /// "At rest" flags set for this message. MUST NOT be validated by bindings.
-    flags: [u8; 2],
+    at_rest_flags: [u8; 2],
     /// Reserved bytes. Must be zero.
     reserved: [u8; 4],
 }
@@ -3873,7 +3910,7 @@ fidl_struct_copy! {
             offset_v1: 1,
             offset_v2: 1,
         },
-        flags {
+        at_rest_flags {
             ty: [u8; 2],
             offset_v1: 2,
             offset_v2: 2,
@@ -3901,10 +3938,12 @@ impl PersistentHeader {
     /// Creates a new `PersistentHeader` with a specific context and magic number.
     #[inline]
     pub fn new_full(context: &Context, magic_number: u8) -> Self {
-        // Flags contains 2 at-rest flag bytes and 1 dynamic flag byte.
-        let flags: [u8; 3] = context.header_flags().into();
-        let at_rest_flags = [flags[0], flags[1]];
-        PersistentHeader { disambiguator: 0, magic_number, flags: at_rest_flags, reserved: [0; 4] }
+        PersistentHeader {
+            disambiguator: 0,
+            magic_number,
+            at_rest_flags: context.at_rest_flags().into(),
+            reserved: [0; 4],
+        }
     }
     /// Returns the magic number.
     #[inline]
@@ -3915,17 +3954,15 @@ impl PersistentHeader {
     // TODO(fxbug.dev/45252): Once HeaderFlags is refactored this should
     // return a more precise type, named something like AtRestFlags.
     #[inline]
-    pub fn flags(&self) -> HeaderFlags {
-        let dynamic_flag_byte = 0;
-        let bytes = [self.flags[0], self.flags[1], dynamic_flag_byte, 0];
-        HeaderFlags::from_bits_truncate(u32::from_le_bytes(bytes))
+    pub fn at_rest_flags(&self) -> AtRestFlags {
+        AtRestFlags::from_bits_truncate(u16::from_le_bytes(self.at_rest_flags))
     }
     /// Returns the context to use for decoding the message body associated with
     /// this header. During migrations, this is dependent on `self.flags()` and
     /// controls dynamic behavior in the read path.
     #[inline]
     pub fn decoding_context(&self) -> Context {
-        if self.flags().contains(HeaderFlags::USE_V2_WIRE_FORMAT) {
+        if self.at_rest_flags().contains(AtRestFlags::USE_V2_WIRE_FORMAT) {
             Context { wire_format_version: WireFormatVersion::V2 }
         } else {
             Context { wire_format_version: WireFormatVersion::V1 }
@@ -4090,7 +4127,7 @@ pub fn decode_persistent_header(bytes: &[u8]) -> Result<PersistentHeader> {
             Ok(PersistentHeader {
                 disambiguator: 0,
                 magic_number: header.magic_number,
-                flags: [header.flags[0], header.flags[1]],
+                at_rest_flags: header.at_rest_flags,
                 reserved: [0; 4],
             })
         }
@@ -5049,7 +5086,13 @@ mod test {
     #[test]
     fn encode_decode_transaction_msg() {
         for ctx in CONTEXTS {
-            let header = TransactionHeader { tx_id: 4, ordinal: 6, flags: [0; 3], magic_number: 1 };
+            let header = TransactionHeader {
+                tx_id: 4,
+                ordinal: 6,
+                at_rest_flags: [0; 2],
+                dynamic_flags: 0,
+                magic_number: 1,
+            };
             let body = "hello".to_string();
 
             let start = &mut TransactionMessage { header, body: &mut body.clone() };
@@ -5069,12 +5112,18 @@ mod test {
     }
 
     #[test]
-    fn direct_encode_transaction_header() {
+    fn direct_encode_transaction_header_strict() {
         let bytes = &[
             0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, //
             0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, //
         ];
-        let mut header = TransactionHeader { tx_id: 4, ordinal: 6, flags: [0; 3], magic_number: 1 };
+        let mut header = TransactionHeader {
+            tx_id: 4,
+            ordinal: 6,
+            at_rest_flags: [0; 2],
+            dynamic_flags: DynamicFlags::empty().bits,
+            magic_number: 1,
+        };
 
         for ctx in CONTEXTS {
             encode_assert_bytes(ctx, &mut header, bytes);
@@ -5082,12 +5131,58 @@ mod test {
     }
 
     #[test]
-    fn direct_decode_transaction_header() {
+    fn direct_decode_transaction_header_strict() {
         let bytes = &[
             0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, //
             0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, //
         ];
-        let header = TransactionHeader { tx_id: 4, ordinal: 6, flags: [0; 3], magic_number: 1 };
+        let header = TransactionHeader {
+            tx_id: 4,
+            ordinal: 6,
+            at_rest_flags: [0; 2],
+            dynamic_flags: DynamicFlags::empty().bits,
+            magic_number: 1,
+        };
+
+        for ctx in DECODE_ONLY_CONTEXTS {
+            let mut out = TransactionHeader::new_empty();
+            Decoder::decode_with_context(ctx, bytes, &mut [], &mut out).expect("Decoding failed");
+            assert_eq!(out, header);
+        }
+    }
+
+    #[test]
+    fn direct_encode_transaction_header_flexible() {
+        let bytes = &[
+            0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x01, //
+            0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, //
+        ];
+        let mut header = TransactionHeader {
+            tx_id: 4,
+            ordinal: 6,
+            at_rest_flags: [0; 2],
+            dynamic_flags: DynamicFlags::FLEXIBLE.bits,
+            magic_number: 1,
+        };
+
+        for ctx in CONTEXTS {
+            encode_assert_bytes(ctx, &mut header, bytes);
+        }
+    }
+
+    #[test]
+    fn direct_decode_transaction_header_flexible() {
+        let bytes = &[
+            0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x01, //
+            0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, //
+        ];
+        let header = TransactionHeader {
+            tx_id: 4,
+            ordinal: 6,
+            at_rest_flags: [0; 2],
+            dynamic_flags: DynamicFlags::FLEXIBLE.bits,
+            magic_number: 1,
+        };
 
         for ctx in DECODE_ONLY_CONTEXTS {
             let mut out = TransactionHeader::new_empty();

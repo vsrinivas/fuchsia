@@ -11,8 +11,10 @@ fidl("fidl.rust.test.external") {
   sources = [
     "data_types.test.fidl",
     "handle_rights.test.fidl",
+    "unknown_interactions.test.fidl",
   ]
   public_deps = [ "//zircon/vdso/zx" ]
+  experimental_flags = [ "unknown_interactions" ]
 }
 
 rustc_test("fidl_rust_external_tests_bin") {
@@ -34,6 +36,7 @@ rustc_test("fidl_rust_external_tests_bin") {
     "src/lib.rs",
     "src/persistence.rs",
     "src/stream_handler_test.rs",
+    "src/unknown_interactions.rs",
   ]
 }
 

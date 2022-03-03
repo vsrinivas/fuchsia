@@ -64,7 +64,12 @@ impl Super_SynchronousProxy {
         Super_Event::decode(self.client.wait_for_event(deadline)?)
     }
     pub fn r#foo(&self, mut s: &str, ___deadline: zx::Time) -> Result<(i64), fidl::Error> {
-        let _value: (i64,) = self.client.send_query(&mut (s), 0x68a61c2a230db8b8, ___deadline)?;
+        let _value: (i64,) = self.client.send_query(
+            &mut (s),
+            0x68a61c2a230db8b8,
+            fidl::encoding::DynamicFlags::empty(),
+            ___deadline,
+        )?;
         Ok(_value.0)
     }
 }
@@ -116,7 +121,11 @@ impl Super_ProxyInterface for Super_Proxy {
         fn transform(result: Result<(i64,), fidl::Error>) -> Result<(i64), fidl::Error> {
             result.map(|_value| _value.0)
         }
-        let send_result = self.client.call_send_raw_query(&mut (s), 0x68a61c2a230db8b8);
+        let send_result = self.client.call_send_raw_query(
+            &mut (s),
+            0x68a61c2a230db8b8,
+            fidl::encoding::DynamicFlags::empty(),
+        );
         QueryResponseFut(match send_result {
             Ok(res_fut) => future::maybe_done(
                 res_fut.and_then(|buf| decode_transaction_body_fut(buf, transform)),
@@ -303,7 +312,11 @@ impl Super_Encoder {
         tx_id: u32,
         mut in_s: &str,
     ) -> Result<(), fidl::Error> {
-        let header = fidl::encoding::TransactionHeader::new(tx_id, 0x68a61c2a230db8b8);
+        let header = fidl::encoding::TransactionHeader::new(
+            tx_id,
+            0x68a61c2a230db8b8,
+            fidl::encoding::DynamicFlags::empty(),
+        );
         let mut body = ((in_s),);
         let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
         fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.inheritance/superFooRequest");
@@ -318,7 +331,11 @@ impl Super_Encoder {
         tx_id: u32,
         mut in_y: i64,
     ) -> Result<(), fidl::Error> {
-        let header = fidl::encoding::TransactionHeader::new(tx_id, 0x68a61c2a230db8b8);
+        let header = fidl::encoding::TransactionHeader::new(
+            tx_id,
+            0x68a61c2a230db8b8,
+            fidl::encoding::DynamicFlags::empty(),
+        );
         let mut body = ((in_y),);
         let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
 
@@ -406,7 +423,11 @@ impl Super_FooResponder {
         let mut response = (y);
 
         let mut msg = fidl::encoding::TransactionMessage {
-            header: fidl::encoding::TransactionHeader::new(self.tx_id, self.ordinal),
+            header: fidl::encoding::TransactionHeader::new(
+                self.tx_id,
+                self.ordinal,
+                fidl::encoding::DynamicFlags::empty(),
+            ),
             body: &mut response,
         };
 
@@ -463,7 +484,12 @@ impl SubSynchronousProxy {
         SubEvent::decode(self.client.wait_for_event(deadline)?)
     }
     pub fn r#foo(&self, mut s: &str, ___deadline: zx::Time) -> Result<(i64), fidl::Error> {
-        let _value: (i64,) = self.client.send_query(&mut (s), 0x68a61c2a230db8b8, ___deadline)?;
+        let _value: (i64,) = self.client.send_query(
+            &mut (s),
+            0x68a61c2a230db8b8,
+            fidl::encoding::DynamicFlags::empty(),
+            ___deadline,
+        )?;
         Ok(_value.0)
     }
 }
@@ -515,7 +541,11 @@ impl SubProxyInterface for SubProxy {
         fn transform(result: Result<(i64,), fidl::Error>) -> Result<(i64), fidl::Error> {
             result.map(|_value| _value.0)
         }
-        let send_result = self.client.call_send_raw_query(&mut (s), 0x68a61c2a230db8b8);
+        let send_result = self.client.call_send_raw_query(
+            &mut (s),
+            0x68a61c2a230db8b8,
+            fidl::encoding::DynamicFlags::empty(),
+        );
         QueryResponseFut(match send_result {
             Ok(res_fut) => future::maybe_done(
                 res_fut.and_then(|buf| decode_transaction_body_fut(buf, transform)),
@@ -702,7 +732,11 @@ impl SubEncoder {
         tx_id: u32,
         mut in_s: &str,
     ) -> Result<(), fidl::Error> {
-        let header = fidl::encoding::TransactionHeader::new(tx_id, 0x68a61c2a230db8b8);
+        let header = fidl::encoding::TransactionHeader::new(
+            tx_id,
+            0x68a61c2a230db8b8,
+            fidl::encoding::DynamicFlags::empty(),
+        );
         let mut body = ((in_s),);
         let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
         fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.inheritance/subFooRequest");
@@ -717,7 +751,11 @@ impl SubEncoder {
         tx_id: u32,
         mut in_y: i64,
     ) -> Result<(), fidl::Error> {
-        let header = fidl::encoding::TransactionHeader::new(tx_id, 0x68a61c2a230db8b8);
+        let header = fidl::encoding::TransactionHeader::new(
+            tx_id,
+            0x68a61c2a230db8b8,
+            fidl::encoding::DynamicFlags::empty(),
+        );
         let mut body = ((in_y),);
         let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
 
@@ -805,7 +843,11 @@ impl SubFooResponder {
         let mut response = (y);
 
         let mut msg = fidl::encoding::TransactionMessage {
-            header: fidl::encoding::TransactionHeader::new(self.tx_id, self.ordinal),
+            header: fidl::encoding::TransactionHeader::new(
+                self.tx_id,
+                self.ordinal,
+                fidl::encoding::DynamicFlags::empty(),
+            ),
             body: &mut response,
         };
 

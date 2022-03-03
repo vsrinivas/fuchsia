@@ -80,6 +80,8 @@ union.json.golden
 union.tables.c.golden
 union_sandwich.json.golden
 union_sandwich.tables.c.golden
+unknown_interactions.json.golden
+unknown_interactions.tables.c.golden
 vectors.json.golden
 vectors.tables.c.golden
 versions.json.golden

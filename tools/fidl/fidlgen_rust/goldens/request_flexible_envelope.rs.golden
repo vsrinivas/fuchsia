@@ -176,8 +176,12 @@ impl ProtocolSynchronousProxy {
         mut s: &mut StrictFoo,
         ___deadline: zx::Time,
     ) -> Result<(FlexibleFoo), fidl::Error> {
-        let _value: (FlexibleFoo,) =
-            self.client.send_query(&mut (s), 0x9b8c7d3d118df13, ___deadline)?;
+        let _value: (FlexibleFoo,) = self.client.send_query(
+            &mut (s),
+            0x9b8c7d3d118df13,
+            fidl::encoding::DynamicFlags::empty(),
+            ___deadline,
+        )?;
         Ok(_value.0)
     }
     pub fn r#request_flexible_response_strict(
@@ -185,8 +189,12 @@ impl ProtocolSynchronousProxy {
         mut s: &mut FlexibleFoo,
         ___deadline: zx::Time,
     ) -> Result<(StrictFoo), fidl::Error> {
-        let _value: (StrictFoo,) =
-            self.client.send_query(&mut (s), 0x480c77690533acb7, ___deadline)?;
+        let _value: (StrictFoo,) = self.client.send_query(
+            &mut (s),
+            0x480c77690533acb7,
+            fidl::encoding::DynamicFlags::empty(),
+            ___deadline,
+        )?;
         Ok(_value.0)
     }
 }
@@ -252,7 +260,11 @@ impl ProtocolProxyInterface for ProtocolProxy {
         ) -> Result<(FlexibleFoo), fidl::Error> {
             result.map(|_value| _value.0)
         }
-        let send_result = self.client.call_send_raw_query(&mut (s), 0x9b8c7d3d118df13);
+        let send_result = self.client.call_send_raw_query(
+            &mut (s),
+            0x9b8c7d3d118df13,
+            fidl::encoding::DynamicFlags::empty(),
+        );
         QueryResponseFut(match send_result {
             Ok(res_fut) => future::maybe_done(
                 res_fut.and_then(|buf| decode_transaction_body_fut(buf, transform)),
@@ -270,7 +282,11 @@ impl ProtocolProxyInterface for ProtocolProxy {
         ) -> Result<(StrictFoo), fidl::Error> {
             result.map(|_value| _value.0)
         }
-        let send_result = self.client.call_send_raw_query(&mut (s), 0x480c77690533acb7);
+        let send_result = self.client.call_send_raw_query(
+            &mut (s),
+            0x480c77690533acb7,
+            fidl::encoding::DynamicFlags::empty(),
+        );
         QueryResponseFut(match send_result {
             Ok(res_fut) => future::maybe_done(
                 res_fut.and_then(|buf| decode_transaction_body_fut(buf, transform)),
@@ -499,7 +515,11 @@ impl ProtocolEncoder {
         tx_id: u32,
         mut in_s: &mut StrictFoo,
     ) -> Result<(), fidl::Error> {
-        let header = fidl::encoding::TransactionHeader::new(tx_id, 0x9b8c7d3d118df13);
+        let header = fidl::encoding::TransactionHeader::new(
+            tx_id,
+            0x9b8c7d3d118df13,
+            fidl::encoding::DynamicFlags::empty(),
+        );
         let mut body = ((in_s),);
         let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
         fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.requestflexibleenvelope/ProtocolRequestStrictResponseFlexibleRequest");
@@ -514,7 +534,11 @@ impl ProtocolEncoder {
         tx_id: u32,
         mut in_f: &mut FlexibleFoo,
     ) -> Result<(), fidl::Error> {
-        let header = fidl::encoding::TransactionHeader::new(tx_id, 0x9b8c7d3d118df13);
+        let header = fidl::encoding::TransactionHeader::new(
+            tx_id,
+            0x9b8c7d3d118df13,
+            fidl::encoding::DynamicFlags::empty(),
+        );
         let mut body = ((in_f),);
         let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
 
@@ -531,7 +555,11 @@ impl ProtocolEncoder {
         tx_id: u32,
         mut in_s: &mut FlexibleFoo,
     ) -> Result<(), fidl::Error> {
-        let header = fidl::encoding::TransactionHeader::new(tx_id, 0x480c77690533acb7);
+        let header = fidl::encoding::TransactionHeader::new(
+            tx_id,
+            0x480c77690533acb7,
+            fidl::encoding::DynamicFlags::empty(),
+        );
         let mut body = ((in_s),);
         let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
         fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.requestflexibleenvelope/ProtocolRequestFlexibleResponseStrictRequest");
@@ -546,7 +574,11 @@ impl ProtocolEncoder {
         tx_id: u32,
         mut in_f: &mut StrictFoo,
     ) -> Result<(), fidl::Error> {
-        let header = fidl::encoding::TransactionHeader::new(tx_id, 0x480c77690533acb7);
+        let header = fidl::encoding::TransactionHeader::new(
+            tx_id,
+            0x480c77690533acb7,
+            fidl::encoding::DynamicFlags::empty(),
+        );
         let mut body = ((in_f),);
         let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
 
@@ -634,7 +666,11 @@ impl ProtocolRequestStrictResponseFlexibleResponder {
         let mut response = (f);
 
         let mut msg = fidl::encoding::TransactionMessage {
-            header: fidl::encoding::TransactionHeader::new(self.tx_id, self.ordinal),
+            header: fidl::encoding::TransactionHeader::new(
+                self.tx_id,
+                self.ordinal,
+                fidl::encoding::DynamicFlags::empty(),
+            ),
             body: &mut response,
         };
 
@@ -712,7 +748,11 @@ impl ProtocolRequestFlexibleResponseStrictResponder {
         let mut response = (f);
 
         let mut msg = fidl::encoding::TransactionMessage {
-            header: fidl::encoding::TransactionHeader::new(self.tx_id, self.ordinal),
+            header: fidl::encoding::TransactionHeader::new(
+                self.tx_id,
+                self.ordinal,
+                fidl::encoding::DynamicFlags::empty(),
+            ),
             body: &mut response,
         };
 

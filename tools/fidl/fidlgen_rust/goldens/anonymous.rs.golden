@@ -585,6 +585,7 @@ impl SomeProtocolSynchronousProxy {
         let _value: (SomeProtocolSomeMethodResultHandleWrapper) = self.client.send_query(
             &mut (union_member, table_member),
             0x22ea52ec7a5146d8,
+            fidl::encoding::DynamicFlags::empty(),
             ___deadline,
         )?;
         Ok(_value.map(|_value| _value.0))
@@ -648,8 +649,11 @@ impl SomeProtocolProxyInterface for SomeProtocolProxy {
         ) -> Result<(SomeProtocolSomeMethodResult), fidl::Error> {
             result.map(|_value| _value.map(|_value| _value.0))
         }
-        let send_result =
-            self.client.call_send_raw_query(&mut (union_member, table_member), 0x22ea52ec7a5146d8);
+        let send_result = self.client.call_send_raw_query(
+            &mut (union_member, table_member),
+            0x22ea52ec7a5146d8,
+            fidl::encoding::DynamicFlags::empty(),
+        );
         QueryResponseFut(match send_result {
             Ok(res_fut) => future::maybe_done(
                 res_fut.and_then(|buf| decode_transaction_body_fut(buf, transform)),
@@ -847,7 +851,11 @@ impl SomeProtocolEncoder {
         mut in_union_member: &mut UnionMember,
         mut in_table_member: TableMember,
     ) -> Result<(), fidl::Error> {
-        let header = fidl::encoding::TransactionHeader::new(tx_id, 0x22ea52ec7a5146d8);
+        let header = fidl::encoding::TransactionHeader::new(
+            tx_id,
+            0x22ea52ec7a5146d8,
+            fidl::encoding::DynamicFlags::empty(),
+        );
         let mut body = ((in_union_member), (in_table_member));
         let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
         fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.anonymous/SomeProtocolSomeMethodRequest");
@@ -862,7 +870,11 @@ impl SomeProtocolEncoder {
         tx_id: u32,
         mut in_result: &mut SomeProtocolSomeMethodResult,
     ) -> Result<(), fidl::Error> {
-        let header = fidl::encoding::TransactionHeader::new(tx_id, 0x22ea52ec7a5146d8);
+        let header = fidl::encoding::TransactionHeader::new(
+            tx_id,
+            0x22ea52ec7a5146d8,
+            fidl::encoding::DynamicFlags::empty(),
+        );
         let mut body = ((in_result),);
         let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
 
@@ -953,7 +965,11 @@ impl SomeProtocolSomeMethodResponder {
         let mut response = (_result);
 
         let mut msg = fidl::encoding::TransactionMessage {
-            header: fidl::encoding::TransactionHeader::new(self.tx_id, self.ordinal),
+            header: fidl::encoding::TransactionHeader::new(
+                self.tx_id,
+                self.ordinal,
+                fidl::encoding::DynamicFlags::empty(),
+            ),
             body: &mut response,
         };
 

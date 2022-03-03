@@ -306,8 +306,12 @@ impl SimpleProtocolSynchronousProxy {
         mut b: i32,
         ___deadline: zx::Time,
     ) -> Result<(i32), fidl::Error> {
-        let _value: (i32,) =
-            self.client.send_query(&mut (a, b), 0x7ee19cf19ae30276, ___deadline)?;
+        let _value: (i32,) = self.client.send_query(
+            &mut (a, b),
+            0x7ee19cf19ae30276,
+            fidl::encoding::DynamicFlags::empty(),
+            ___deadline,
+        )?;
         Ok(_value.0)
     }
 }
@@ -359,7 +363,11 @@ impl SimpleProtocolProxyInterface for SimpleProtocolProxy {
         fn transform(result: Result<(i32,), fidl::Error>) -> Result<(i32), fidl::Error> {
             result.map(|_value| _value.0)
         }
-        let send_result = self.client.call_send_raw_query(&mut (a, b), 0x7ee19cf19ae30276);
+        let send_result = self.client.call_send_raw_query(
+            &mut (a, b),
+            0x7ee19cf19ae30276,
+            fidl::encoding::DynamicFlags::empty(),
+        );
         QueryResponseFut(match send_result {
             Ok(res_fut) => future::maybe_done(
                 res_fut.and_then(|buf| decode_transaction_body_fut(buf, transform)),
@@ -550,7 +558,11 @@ impl SimpleProtocolEncoder {
         mut in_a: i32,
         mut in_b: i32,
     ) -> Result<(), fidl::Error> {
-        let header = fidl::encoding::TransactionHeader::new(tx_id, 0x7ee19cf19ae30276);
+        let header = fidl::encoding::TransactionHeader::new(
+            tx_id,
+            0x7ee19cf19ae30276,
+            fidl::encoding::DynamicFlags::empty(),
+        );
         let mut body = ((in_a), (in_b));
         let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
         fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.nullable/SimpleProtocolAddRequest");
@@ -565,7 +577,11 @@ impl SimpleProtocolEncoder {
         tx_id: u32,
         mut in_sum: i32,
     ) -> Result<(), fidl::Error> {
-        let header = fidl::encoding::TransactionHeader::new(tx_id, 0x7ee19cf19ae30276);
+        let header = fidl::encoding::TransactionHeader::new(
+            tx_id,
+            0x7ee19cf19ae30276,
+            fidl::encoding::DynamicFlags::empty(),
+        );
         let mut body = ((in_sum),);
         let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
 
@@ -653,7 +669,11 @@ impl SimpleProtocolAddResponder {
         let mut response = (sum);
 
         let mut msg = fidl::encoding::TransactionMessage {
-            header: fidl::encoding::TransactionHeader::new(self.tx_id, self.ordinal),
+            header: fidl::encoding::TransactionHeader::new(
+                self.tx_id,
+                self.ordinal,
+                fidl::encoding::DynamicFlags::empty(),
+            ),
             body: &mut response,
         };
 

@@ -742,6 +742,15 @@
                 "name": {
                     "$ref": "#/definitions/compound-identifier",
                     "description": "Name of the protocol"
+                },
+                "openness": {
+                    "description": "Which kinds of unknown interactions the protocol supports",
+                    "enum": [
+                        "open",
+                        "ajar",
+                        "closed"
+                    ],
+                    "type": "string"
                 }
             },
             "required": [
@@ -809,6 +818,10 @@
                 "ordinal": {
                     "$ref": "#/definitions/ordinal",
                     "description": "Ordinal number of the protocol method"
+                },
+                "strict": {
+                    "description": "Flag indicating whether the method supports unknown interactions",
+                    "type": "boolean"
                 }
             },
             "required": [

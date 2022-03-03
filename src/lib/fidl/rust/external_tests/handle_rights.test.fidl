@@ -5,56 +5,56 @@ library fidl.rust.test.external;
 
 using zx;
 
-protocol SendHandleProtocol {
-    SendHandleReducedRights(resource struct {
+closed protocol SendHandleProtocol {
+    strict SendHandleReducedRights(resource struct {
         h zx.handle:<EVENT, zx.rights.TRANSFER>;
     });
-    SendHandleSameRights(resource struct {
+    strict SendHandleSameRights(resource struct {
         h zx.handle:EVENT;
     });
 };
 
-protocol EchoHandleProtocol {
-    EchoHandleRequestResponseReducedRights(resource struct {
+closed protocol EchoHandleProtocol {
+    strict EchoHandleRequestResponseReducedRights(resource struct {
         h zx.handle:<EVENT, zx.rights.TRANSFER | zx.rights.DUPLICATE>;
     }) -> (resource struct {
         h zx.handle:<EVENT, zx.rights.TRANSFER>;
     });
 
-    EchoHandleRequestReducedRights(resource struct {
+    strict EchoHandleRequestReducedRights(resource struct {
         h zx.handle:<EVENT, zx.rights.TRANSFER>;
     }) -> (resource struct {
         h zx.handle:EVENT;
     });
-    EchoHandleRequestSameRights(resource struct {
+    strict EchoHandleRequestSameRights(resource struct {
         h zx.handle:EVENT;
     }) -> (resource struct {
         h zx.handle:EVENT;
     });
 
-    EchoHandleResponseReducedRights(resource struct {
+    strict EchoHandleResponseReducedRights(resource struct {
         h zx.handle:EVENT;
     }) -> (resource struct {
         h zx.handle:<EVENT, zx.rights.TRANSFER>;
     });
-    EchoHandleResponseSameRights(resource struct {
+    strict EchoHandleResponseSameRights(resource struct {
         h zx.handle:EVENT;
     }) -> (resource struct {
         h zx.handle:EVENT;
     });
 };
 
-protocol PushEventProtocol {
-    -> PushEventReducedRights(resource struct {
+closed protocol PushEventProtocol {
+    strict -> PushEventReducedRights(resource struct {
         h zx.handle:<EVENT, zx.rights.TRANSFER>;
     });
-    -> PushEventSameRights(resource struct {
+    strict -> PushEventSameRights(resource struct {
         h zx.handle:EVENT;
     });
 };
 
-protocol ErrorSyntaxProtocol {
-    TestErrorSyntax() -> (resource struct {
+closed protocol ErrorSyntaxProtocol {
+    strict TestErrorSyntax() -> (resource struct {
         h zx.handle:<EVENT, zx.rights.TRANSFER>;
     }) error uint32;
 };

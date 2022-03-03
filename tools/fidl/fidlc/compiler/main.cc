@@ -508,7 +508,7 @@ int compile(fidl::Reporter* reporter, std::string library_name, std::string dep_
         break;
       }
       case Behavior::kJSON: {
-        fidl::JSONGenerator generator(&all_libraries);
+        fidl::JSONGenerator generator(&all_libraries, experimental_flags);
         Write(generator.Produce(), file_path);
         break;
       }

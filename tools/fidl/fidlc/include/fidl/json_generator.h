@@ -11,6 +11,7 @@
 #include <string_view>
 #include <vector>
 
+#include "experimental_flags.h"
 #include "flat/compiler.h"
 #include "flat_ast.h"
 #include "json_writer.h"
@@ -55,8 +56,10 @@ class JSONGenerator : public utils::JsonWriter<JSONGenerator> {
   using utils::JsonWriter<JSONGenerator>::Generate;
   using utils::JsonWriter<JSONGenerator>::GenerateArray;
 
-  explicit JSONGenerator(const flat::Libraries* all_libraries)
-      : JsonWriter(json_file_), all_libraries_(all_libraries) {}
+  explicit JSONGenerator(const flat::Libraries* all_libraries, ExperimentalFlags experimental_flags)
+      : JsonWriter(json_file_),
+        all_libraries_(all_libraries),
+        experimental_flags_(experimental_flags) {}
 
   ~JSONGenerator() = default;
 
@@ -69,6 +72,8 @@ class JSONGenerator : public utils::JsonWriter<JSONGenerator> {
 
   void Generate(types::HandleSubtype value);
   void Generate(types::Nullability value);
+  void Generate(types::Strictness value);
+  void Generate(types::Openness value);
 
   void Generate(const raw::Identifier& value);
   void Generate(const flat::AttributeArg& value);
@@ -152,6 +157,7 @@ class JSONGenerator : public utils::JsonWriter<JSONGenerator> {
 
   const flat::Libraries* all_libraries_;
   std::ostringstream json_file_;
+  const ExperimentalFlags experimental_flags_;
 };
 
 }  // namespace fidl
