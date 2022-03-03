@@ -104,24 +104,32 @@ if (current_os == "linux") {
     deps = [ "." ]
   }
 
-  test("linux-static-pie-test") {
-    disable_syslog_backend = true
-    sources = [ "linux-static-pie-test.cc" ]
-    configs -= [
-      "//build/config/linux:default-pie",
-      "//build/config/linux:implicit-host-libs",
-    ]
-    configs += [ ":linux-static-pie.config" ]
-    cflags = [ "-fPIE" ]
-    ldflags = [
-      "-nostartfiles",
-      "-nostdlib++",
-      "-static-pie",
-      "-nolibc",
-    ]
-    deps = [ ":linux-static-pie" ]
+  if (current_toolchain == host_toolchain) {
+    host_test("linux-static-pie-test") {
+      deps = [ ":linux-static-pie-test(//build/toolchain:linux_$host_cpu)" ]
+      binary_path = get_label_info(deps[0], "root_out_dir") + "/" +
+                    get_label_info(deps[0], "name")
+    }
+  } else {
+    test("linux-static-pie-test") {
+      disable_syslog_backend = true
+      sources = [ "linux-static-pie-test.cc" ]
+      configs -= [
+        "//build/config/linux:default-pie",
+        "//build/config/linux:implicit-host-libs",
+      ]
+      configs += [ ":linux-static-pie.config" ]
+      cflags = [ "-fPIE" ]
+      ldflags = [
+        "-nostartfiles",
+        "-nostdlib++",
+        "-static-pie",
+        "-nolibc",
+      ]
+      deps = [ ":linux-static-pie" ]
 
-    exclude_toolchain_tags = [ "instrumented" ]
+      exclude_toolchain_tags = [ "instrumented" ]
+    }
   }
 }
 
@@ -239,6 +247,6 @@ group("tests") {
   ]
 
   if (host_os == "linux") {
-    deps += [ ":linux-static-pie-test(//build/toolchain:linux_$host_cpu)" ]
+    deps += [ ":linux-static-pie-test($host_toolchain)" ]
   }
 }
