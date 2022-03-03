@@ -83,7 +83,7 @@ zx_status_t ChromiumosEcLpc::Bind() {
       fidl::DiscoverableProtocolName<fuchsia_hardware_acpi::Device>,
       fbl::MakeRefCounted<fs::Service>(
           [this](fidl::ServerEnd<fuchsia_hardware_acpi::Device> request) mutable {
-            return DdkConnectFidlProtocol(std::move(request));
+            return DdkConnectFragmentFidlProtocol("acpi", std::move(request));
           }));
 
   auto endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
