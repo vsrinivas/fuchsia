@@ -86,8 +86,6 @@
                 "fuchsia.media.UsageGainReporter",
                 "fuchsia.media.UsageReporter",
                 "fuchsia.mediacodec.CodecFactory",
-                "fuchsia.memory.Monitor",
-                "fuchsia.memorypressure.Provider",
                 "fuchsia.net.http.Loader",
                 "fuchsia.net.interfaces.State",
                 "fuchsia.net.mdns.Publisher",
@@ -142,6 +140,15 @@
                 "google.deviceproperty.Reader",
                 "google.deviceproperty.Writer",
                 "google.flashts.Reader",
+            ],
+            from: "parent",
+            to: "#session",
+        },
+        {
+            // Routed to session-manager via memory_monitor.core_shard.cml.
+            protocol: [
+                "fuchsia.memory.Monitor",
+                "fuchsia.memorypressure.Provider",
             ],
             from: "parent",
             to: "#session",

@@ -44,14 +44,6 @@
             to: "#session-manager",
         },
         {
-            protocol: [
-                "fuchsia.memory.Monitor",
-                "fuchsia.memorypressure.Provider",
-            ],
-            from: "#memory_monitor",
-            to: "#session-manager",
-        },
-        {
             protocol: "fuchsia.ui.brightness.Control",
             from: "#brightness_manager",
             to: "#session-manager",
