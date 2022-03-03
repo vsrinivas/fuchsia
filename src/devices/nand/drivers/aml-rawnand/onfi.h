@@ -30,6 +30,8 @@ static constexpr uint32_t NAND_CMD_SEQIN = 0x80;
 static constexpr uint32_t NAND_CMD_READID = 0x90;
 static constexpr uint32_t NAND_CMD_ERASE2 = 0xd0;
 static constexpr uint32_t NAND_CMD_RESET = 0xff;
+// If non-zero, the control parameter is interpreted as the length of the idle period (in
+// nanoseconds) to insert before waiting for the command queue to be empty.
 static constexpr int32_t NAND_CMD_NONE = -1;
 
 // Extended commands for large page devices.
@@ -41,6 +43,10 @@ static constexpr uint32_t NAND_STATUS_FAIL_N1 = 0x02;
 static constexpr uint32_t NAND_STATUS_TRUE_READY = 0x20;
 static constexpr uint32_t NAND_STATUS_READY = 0x40;
 static constexpr uint32_t NAND_STATUS_WP = 0x80;
+
+// Timings defined in the ONFI spec.
+static constexpr zx::duration tWB = zx::nsec(100);  // WE_n high to R/B_n low.
+static constexpr zx::duration tWHR = zx::nsec(80);  // Host output cycle to chip output cycle.
 
 struct nand_timings {
   uint32_t tRC_min;
@@ -55,6 +61,7 @@ struct polling_timing_t {
 
 struct polling_timings_t {
   polling_timing_t cmd_flush;
+  polling_timing_t read;
   polling_timing_t write;
   polling_timing_t erase;
 };
@@ -66,7 +73,8 @@ struct nand_chip_table {
   const char* device_name;
   struct nand_timings timings;
   polling_timings_t polling_timings;
-  uint32_t chip_delay_us;  // Delay us after enqueuing command.
+  // Delay after issuing RESET and READID; not to be used for other commands.
+  uint32_t chip_delay_us;
   // extended_id_nand -> pagesize, erase blocksize, OOB size
   // could vary given the same device id.
   bool extended_id_nand;
@@ -88,8 +96,7 @@ class Onfi {
                            uint32_t capacity_mb, uint32_t chip_delay_us, int buswidth_16);
 
   // Generic wait function used by both program (write) and erase functionality.
-  virtual zx_status_t OnfiWait(zx::duration timeout, zx::duration first_interval,
-                               zx::duration polling_interval);
+  virtual zx_status_t OnfiWait(zx::duration timeout, zx::duration polling_interval);
 
   // Sets the device-specific functions to send a command and read a byte.
   void Init(fit::function<void(int32_t cmd, uint32_t ctrl)> cmd_ctrl,

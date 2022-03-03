@@ -22,9 +22,10 @@ static struct nand_chip_table nand_chip_table[] = {
      "MT29F4G08ABAEA",
      {20, 16, 15},
      {.cmd_flush = {.min = zx::usec(130), .interval = zx::usec(10)},
+      .read = {.min = zx::usec(20), .interval = zx::usec(20)},
       .write = {.min = zx::usec(320), .interval = zx::usec(20)},
       .erase = {.min = zx::msec(2), .interval = zx::usec(100)}},
-     25,
+     50,
      true,
      512,
      0,
@@ -37,6 +38,7 @@ static struct nand_chip_table nand_chip_table[] = {
      "K9F4G08U0F",
      {25, 20, 15},
      {.cmd_flush = {.min = zx::usec(130), .interval = zx::usec(10)},
+      .read = {.min = zx::usec(20), .interval = zx::usec(20)},
       .write = {.min = zx::usec(320), .interval = zx::usec(20)},
       .erase = {.min = zx::msec(2), .interval = zx::usec(100)}},
      30,
@@ -52,9 +54,10 @@ static struct nand_chip_table nand_chip_table[] = {
      "TC58NVG2S0F",
      {25, 20, 25},
      {.cmd_flush = {.min = zx::usec(130), .interval = zx::usec(10)},
+      .read = {.min = zx::usec(20), .interval = zx::usec(20)},
       .write = {.min = zx::usec(320), .interval = zx::usec(20)},
       .erase = {.min = zx::msec(2), .interval = zx::usec(100)}},
-     25,
+     50,
      true,
      512,
      0,
@@ -78,19 +81,20 @@ void Onfi::Init(fit::function<void(int32_t cmd, uint32_t ctrl)> cmd_ctrl,
   read_byte_ = std::move(read_byte);
 }
 
-zx_status_t Onfi::OnfiWait(zx::duration timeout, zx::duration first_interval,
-                           zx::duration polling_interval) {
+zx_status_t Onfi::OnfiWait(zx::duration timeout, zx::duration polling_interval) {
+  // Wait for the command queue to be empty, then delay to let R/B_n go low before sending another
+  // command.
+  cmd_ctrl_(NAND_CMD_NONE, tWB.to_nsecs());
+
   zx::duration total_time;
   uint8_t cmd_status;
 
   cmd_ctrl_(NAND_CMD_STATUS, NAND_CTRL_CLE | NAND_CTRL_CHANGE);
-  cmd_ctrl_(NAND_CMD_NONE, NAND_NCE | NAND_CTRL_CHANGE);
-  bool first = true;
+  cmd_ctrl_(NAND_CMD_NONE, 0);
+
   while (!((cmd_status = read_byte_()) & NAND_STATUS_READY)) {
-    zx::duration sleep_interval = first ? first_interval : polling_interval;
-    first = false;
-    zx::nanosleep(zx::deadline_after(sleep_interval));
-    total_time += sleep_interval;
+    zx::nanosleep(zx::deadline_after(polling_interval));
+    total_time += polling_interval;
     if (total_time > timeout) {
       break;
     }
@@ -118,7 +122,10 @@ void Onfi::OnfiCommand(uint32_t command, int32_t column, int32_t page_addr, uint
         column >>= 1;
       cmd_ctrl_(column, ctrl);
       ctrl &= ~NAND_CTRL_CHANGE;
-      cmd_ctrl_(column >> 8, ctrl);
+
+      // READID only requires a single address byte.
+      if (command != NAND_CMD_READID)
+        cmd_ctrl_(column >> 8, ctrl);
     }
     if (page_addr != -1) {
       cmd_ctrl_(page_addr, ctrl);
@@ -127,24 +134,25 @@ void Onfi::OnfiCommand(uint32_t command, int32_t column, int32_t page_addr, uint
       if (capacity_mb > 128)
         cmd_ctrl_(page_addr >> 16, NAND_NCE | NAND_ALE);
     }
-  }
-  cmd_ctrl_(NAND_CMD_NONE, NAND_NCE | NAND_CTRL_CHANGE);
 
-  if (command == NAND_CMD_ERASE1 || command == NAND_CMD_ERASE2 || command == NAND_CMD_SEQIN ||
-      command == NAND_CMD_PAGEPROG)
-    return;
+    // Issue READSTART only if READ0 has a column and/or page address. READ0 without an address is
+    // issued after polling the status register, in which case it should not be accompanied by a
+    // READSTART.
+    if (command == NAND_CMD_READ0) {
+      cmd_ctrl_(NAND_CMD_READSTART, NAND_NCE | NAND_CLE | NAND_CTRL_CHANGE);
+    }
+  }
+
   if (command == NAND_CMD_RESET) {
     usleep(chip_delay_us);
     cmd_ctrl_(NAND_CMD_STATUS, NAND_NCE | NAND_CLE | NAND_CTRL_CHANGE);
-    cmd_ctrl_(NAND_CMD_NONE, NAND_NCE | NAND_CTRL_CHANGE);
     /* We have to busy loop until ready */
     while (!(read_byte_() & NAND_STATUS_READY))
       ;
     return;
   }
-  if (command == NAND_CMD_READ0) {
-    cmd_ctrl_(NAND_CMD_READSTART, NAND_NCE | NAND_CLE | NAND_CTRL_CHANGE);
-    cmd_ctrl_(NAND_CMD_NONE, NAND_NCE | NAND_CTRL_CHANGE);
+
+  if (command == NAND_CMD_READID) {
+    usleep(chip_delay_us);
   }
-  usleep(chip_delay_us);
 }

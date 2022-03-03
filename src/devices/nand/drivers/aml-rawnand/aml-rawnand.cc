@@ -9,7 +9,6 @@
 #include <algorithm>
 #include <memory>
 
-#include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>
 
@@ -175,13 +174,20 @@ static int AmlGetEccStrength(uint32_t ecc_mode) {
   return ecc_strength;
 }
 
-void AmlRawNand::AmlCmdIdle(uint32_t time) {
-  uint32_t cmd = chip_select_ | AML_CMD_IDLE | (time & 0x3ff);
+void AmlRawNand::AmlCmdIdle(uint32_t nand_bus_cycles) {
+  uint32_t cmd = chip_select_ | AML_CMD_IDLE | (nand_bus_cycles & 0x3ff);
   mmio_nandreg_.Write32(cmd, P_NAND_CMD);
 }
 
-zx_status_t AmlRawNand::AmlWaitCmdFinish(zx::duration timeout, zx::duration first_interval,
-                                         zx::duration polling_interval) {
+void AmlRawNand::AmlCmdIdle(zx::duration duration) {
+  // Convert the given duration to a number of NAND bus cycles, rounded up.
+  const int64_t cycles =
+      ((duration + nand_cycle_time_).to_nsecs() - 1) / nand_cycle_time_.to_nsecs();
+  AmlCmdIdle(static_cast<uint32_t>(std::clamp<int64_t>(cycles, 0, UINT32_MAX)));
+}
+
+zx_status_t AmlRawNand::AmlWaitCmdQueueEmpty(zx::duration timeout, zx::duration first_interval,
+                                             zx::duration polling_interval) {
   zx_status_t ret = ZX_OK;
   zx::duration total_time;
 
@@ -204,6 +210,26 @@ zx_status_t AmlRawNand::AmlWaitCmdFinish(zx::duration timeout, zx::duration firs
   if (ret == ZX_ERR_TIMED_OUT)
     zxlogf(ERROR, "wait for empty cmd FIFO time out");
   return ret;
+}
+
+zx_status_t AmlRawNand::AmlWaitCmdFinish(zx::duration timeout, zx::duration first_interval,
+                                         zx::duration polling_interval) {
+  // TODO(fxb/94715): We don't need to wait for the queue to be empty here, just for enough space
+  // available for the two idle commands below.
+  // The queue could be full when this is called, so wait for it to be empty before writing the idle
+  // commands.
+  zx_status_t status = AmlWaitCmdQueueEmpty(timeout, first_interval, polling_interval);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  // The controller stores the commands from the queue, a next command, and the current command
+  // running on the bus. By enqueuing two idle commands then waiting for the queue to be empty, we
+  // can be sure that the bus is idle and going to stay idle after this method returns.
+  AmlCmdIdle(0);
+  AmlCmdIdle(0);
+
+  return AmlWaitCmdQueueEmpty(timeout, first_interval, polling_interval);
 }
 
 void AmlRawNand::AmlCmdSeed(uint32_t seed) {
@@ -255,15 +281,6 @@ void AmlRawNand::AmlCmdN2MPage0() {
   uint32_t cmd = CMDRWGEN(AML_CMD_N2M, kPage0RandMode, kPage0BchMode, kPage0ShortpageMode,
                           kPage0EccPageSize / 8, kPage0NumEccPages);
   mmio_nandreg_.Write32(cmd, P_NAND_CMD);
-}
-
-zx_status_t AmlRawNand::AmlWaitDmaFinish() {
-  AmlCmdIdle(0);
-  AmlCmdIdle(0);
-  // This timeout was 1048 seconds. Make this 1 second, similar
-  // to other codepaths where we wait for the cmd fifo to drain.
-  return AmlWaitCmdFinish(zx::msec(CMD_FINISH_TIMEOUT_MS), polling_timings_.cmd_flush.min,
-                          polling_timings_.cmd_flush.interval);
 }
 
 void* AmlRawNand::AmlInfoPtr(int i) {
@@ -374,43 +391,50 @@ zx_status_t AmlRawNand::AmlGetECCCorrections(int ecc_pages, uint32_t nand_page,
   return ZX_OK;
 }
 
-zx_status_t AmlRawNand::AmlCheckECCPages(int ecc_pages) {
-  struct AmlInfoFormat* info;
+// The ECC page descriptors are processed in the order that they are stored in memory. Therefore,
+// DMA is done when the final page has been marked complete.
+zx_status_t AmlRawNand::AmlCheckECCPages(int ecc_pages, int ecc_pagesize) {
+  ZX_ASSERT(ecc_pages > 0);
 
-  for (int i = 0; i < ecc_pages; i++) {
-    info = reinterpret_cast<struct AmlInfoFormat*>(AmlInfoPtr(i));
-    if (info->ecc.completed == 0)
-      return ZX_ERR_IO;
+  const volatile uint8_t* ecc_status =
+      &reinterpret_cast<AmlInfoFormat*>(AmlInfoPtr(ecc_pages - 1))->ecc.raw_value;
+
+  AmlInfoFormat::ecc_sta ecc{.raw_value = *ecc_status};
+  for (; ecc.completed == 0; ecc.raw_value = *ecc_status) {
+    // Sleep for the approximate time it takes for a single ECC page to be transferred on the bus.
+    zx::nanosleep(zx::deadline_after(nand_cycle_time_ * ecc_pagesize));
   }
   return ZX_OK;
 }
 
-zx_status_t AmlRawNand::AmlQueueRB() {
+void AmlRawNand::AmlQueueRB() {
   uint32_t cmd;
-  zx_status_t status;
 
-  mmio_nandreg_.SetBits32((1 << 21), P_NAND_CFG);
-  AmlCmdIdle(NAND_TWB_TIME_CYCLE);
+  // Must wait t_WB after READSTART before issuing another command.
+  AmlCmdIdle(tWB);
+
+  // The RB IO command tells the controller to start periodically reading status bytes from the
+  // chip. A status command must be issued before RB IO for the chip to reply with the status
+  // register value in response to these reads.
   cmd = chip_select_ | AML_CMD_CLE | (NAND_CMD_STATUS & 0xff);
   mmio_nandreg_.Write32(cmd, P_NAND_CMD);
-  AmlCmdIdle(NAND_TWB_TIME_CYCLE);
-  cmd = AML_CMD_RB | AML_CMD_IO6 | (1 << 16) | (0x18 & 0x1f);
+
+  // Must wait t_WHR after STATUS before reading from the chip.
+  AmlCmdIdle(tWHR);
+
+  cmd = AML_CMD_RB | AML_CMD_IO6 | (0x18 & 0x1f);
   mmio_nandreg_.Write32(cmd, P_NAND_CMD);
-  AmlCmdIdle(2);
-
-  zx::time timestamp;
-  status = irq_.wait(&timestamp);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: IRQ wait failed", __func__);
-    return status;
-  }
-
-  return status;
 }
 
 void AmlRawNand::AmlCmdCtrl(int32_t cmd, uint32_t ctrl) {
-  if (cmd == NAND_CMD_NONE)
+  if (cmd == NAND_CMD_NONE) {
+    if (ctrl > 0) {
+      AmlCmdIdle(zx::nsec(ctrl));
+    }
+    AmlWaitCmdFinish(zx::msec(CMD_FINISH_TIMEOUT_MS), zx::usec(10), zx::usec(10));
     return;
+  }
+
   if (ctrl & NAND_CLE)
     cmd = chip_select_ | AML_CMD_CLE | (cmd & 0xff);
   else
@@ -424,8 +448,6 @@ uint8_t AmlRawNand::AmlReadByte() {
 
   AmlCmdIdle(NAND_TWB_TIME_CYCLE);
 
-  AmlCmdIdle(0);
-  AmlCmdIdle(0);
   AmlWaitCmdFinish(zx::msec(CMD_FINISH_TIMEOUT_MS), zx::usec(10), zx::usec(10));
   return mmio_nandreg_.Read<uint8_t>(P_NAND_BUF);
 }
@@ -458,19 +480,21 @@ void AmlRawNand::AmlSetClockRate(uint32_t clk_freq) {
 }
 
 void AmlRawNand::AmlClockInit() {
-  uint32_t sys_clk_rate, bus_cycle, bus_timing;
+  uint32_t sys_clk_rate_mhz, bus_cycle, bus_timing;
 
-  sys_clk_rate = 200;
-  AmlSetClockRate(sys_clk_rate);
+  sys_clk_rate_mhz = 200;
+  AmlSetClockRate(sys_clk_rate_mhz);
   bus_cycle = 6;
   bus_timing = bus_cycle + 1;
   NandctrlSetCfg(0);
   NandctrlSetTimingAsync(bus_timing, (bus_cycle - 1));
   NandctrlSendCmd(1 << 31);
+
+  nand_cycle_time_ = zx::nsec((bus_cycle * kMicrosecondsToNanoseconds) / sys_clk_rate_mhz);
 }
 
 void AmlRawNand::AmlAdjustTimings(uint32_t tRC_min, uint32_t tREA_max, uint32_t RHOH_min) {
-  int sys_clk_rate, bus_cycle, bus_timing;
+  uint32_t sys_clk_rate_mhz, bus_cycle, bus_timing;
   // NAND timing defaults.
   static constexpr uint32_t TreaMaxDefault = 20;
   static constexpr uint32_t RhohMinDefault = 15;
@@ -480,17 +504,22 @@ void AmlRawNand::AmlAdjustTimings(uint32_t tRC_min, uint32_t tREA_max, uint32_t 
   if (!RHOH_min)
     RHOH_min = RhohMinDefault;
   if (tREA_max > 30)
-    sys_clk_rate = 112;
+    sys_clk_rate_mhz = 112;
   else if (tREA_max > 16)
-    sys_clk_rate = 200;
+    sys_clk_rate_mhz = 200;
   else
-    sys_clk_rate = 250;
-  AmlSetClockRate(sys_clk_rate);
+    sys_clk_rate_mhz = 250;
+  AmlSetClockRate(sys_clk_rate_mhz);
   bus_cycle = 6;
   bus_timing = bus_cycle + 1;
   NandctrlSetCfg(0);
   NandctrlSetTimingAsync(bus_timing, (bus_cycle - 1));
   NandctrlSendCmd(1 << 31);
+
+  // Check the math for two common clock rates.
+  static_assert(((6 * kMicrosecondsToNanoseconds) / 200) == 30);
+  static_assert(((6 * kMicrosecondsToNanoseconds) / 250) == 24);
+  nand_cycle_time_ = zx::nsec((bus_cycle * kMicrosecondsToNanoseconds) / sys_clk_rate_mhz);
 }
 
 namespace {
@@ -528,7 +557,7 @@ zx_status_t AmlRawNand::RawNandReadPageHwecc(uint32_t nand_page, uint8_t* data, 
   zx_status_t status;
   uint32_t ecc_pagesize;
   uint32_t ecc_pages;
-  bool erased;
+  bool erased = false;
   bool page0 = IsPage0NandPage(nand_page);
 
   if (!page0) {
@@ -544,12 +573,31 @@ zx_status_t AmlRawNand::RawNandReadPageHwecc(uint32_t nand_page, uint8_t* data, 
     return ZX_ERR_CANCELED;
   }
 
+  if ((status = AmlRawNandAllocBufs()) != ZX_OK)
+    return status;
+
+  // Zero out the ECC page descriptors in case the completed bit is still set from a previous
+  // operation.
+  memset(info_buffer().virt(), 0, ecc_pages * sizeof(AmlInfoFormat));
+
+  SelectChip();
+
+  // A large number of commands are being enqueued after this point, so make sure the queue is
+  // empty beforehand.
+  AmlWaitCmdQueueEmpty(zx::msec(CMD_FINISH_TIMEOUT_MS), polling_timings_.cmd_flush.min,
+                       polling_timings_.cmd_flush.interval);
+
   // Send the page address into the controller.
   onfi_->OnfiCommand(NAND_CMD_READ0, 0x00, nand_page, static_cast<uint32_t>(chipsize_), chip_delay_,
                      (controller_params_.options & NAND_BUSWIDTH_16));
 
-  if (zx_status_t status = AmlRawNandAllocBufs(); status != ZX_OK)
-    return status;
+  AmlQueueRB();
+
+  // As per section 5.14 of the ONFI specification, another READ0 command must be issued after
+  // reading the status register. tRR delay is probably not required due to the extra read
+  // command.
+  onfi_->OnfiCommand(NAND_CMD_READ0, -1, -1, static_cast<uint32_t>(chipsize_), chip_delay_,
+                     (controller_params_.options & NAND_BUSWIDTH_16));
 
   mmio_nandreg_.Write32(GENCMDDADDRL(AML_CMD_ADL, buffers_->data_buf_paddr), P_NAND_CMD);
   mmio_nandreg_.Write32(GENCMDDADDRH(AML_CMD_ADH, buffers_->data_buf_paddr), P_NAND_CMD);
@@ -567,17 +615,10 @@ zx_status_t AmlRawNand::RawNandReadPageHwecc(uint32_t nand_page, uint8_t* data, 
     AmlCmdN2MPage0();
   }
 
-  status = AmlWaitDmaFinish();
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: AmlWaitDmaFinish failed %d", __func__, status);
-    return status;
-  }
-  status = AmlQueueRB();
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: AmlQueueRB failed %d", __func__, status);
-    return ZX_ERR_INTERNAL;
-  }
-  status = AmlCheckECCPages(ecc_pages);
+  // Waiting for the command queue to be empty here does not work. The controller seems to continue
+  // processing ECC after the N2M command is off the queue, so poll the completed bit here to find
+  // out when DMA is really done.
+  status = AmlCheckECCPages(ecc_pages, ecc_pagesize);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: AmlCheckECCPages failed %d", __func__, status);
     return status;
@@ -684,22 +725,17 @@ zx_status_t AmlRawNand::RawNandWritePageHwecc(const uint8_t* data, size_t data_s
     AmlCmdM2NPage0();
   }
 
-  status = AmlWaitDmaFinish();
+  status = AmlWaitCmdFinish(zx::msec(CMD_FINISH_TIMEOUT_MS), polling_timings_.cmd_flush.min,
+                            polling_timings_.cmd_flush.interval);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: error from wait_dma_finish", __func__);
     return status;
   }
   onfi_->OnfiCommand(NAND_CMD_PAGEPROG, -1, -1, static_cast<uint32_t>(chipsize_), chip_delay_,
                      (controller_params_.options & NAND_BUSWIDTH_16));
-  status = onfi_->OnfiWait(zx::msec(AML_WRITE_PAGE_TIMEOUT), polling_timings_.write.min,
-                           polling_timings_.write.interval);
-
-  return status;
+  return onfi_->OnfiWait(zx::msec(AML_WRITE_PAGE_TIMEOUT_MS), polling_timings_.write.interval);
 }
 
 zx_status_t AmlRawNand::RawNandEraseBlock(uint32_t nand_page) {
-  zx_status_t status;
-
   // nandblock has to be erasesize_ aligned.
   if (nand_page % erasesize_pages_) {
     zxlogf(ERROR, "%s: NAND block %u must be a erasesize_pages (%u) multiple", __func__, nand_page,
@@ -716,9 +752,7 @@ zx_status_t AmlRawNand::RawNandEraseBlock(uint32_t nand_page) {
                      (controller_params_.options & NAND_BUSWIDTH_16));
   onfi_->OnfiCommand(NAND_CMD_ERASE2, -1, -1, static_cast<uint32_t>(chipsize_), chip_delay_,
                      (controller_params_.options & NAND_BUSWIDTH_16));
-  status = onfi_->OnfiWait(zx::msec(AML_ERASE_BLOCK_TIMEOUT), polling_timings_.erase.min,
-                           polling_timings_.erase.interval);
-  return status;
+  return onfi_->OnfiWait(zx::msec(AML_ERASE_BLOCK_TIMEOUT_MS), polling_timings_.erase.interval);
 }
 
 zx_status_t AmlRawNand::AmlGetFlashType() {
@@ -789,6 +823,7 @@ zx_status_t AmlRawNand::AmlGetFlashType() {
   // chip_delay is used OnfiCommand(), after sending down some commands
   // to the NAND chip.
   chip_delay_ = nand_chip->chip_delay_us;
+  nand_timings_ = nand_chip->timings;
   zxlogf(INFO,
          "NAND %s %s: chip size = %lu(GB), page size = %u, oob size = %u\n"
          "eraseblock size = %u, chip delay (us) = %u\n",
