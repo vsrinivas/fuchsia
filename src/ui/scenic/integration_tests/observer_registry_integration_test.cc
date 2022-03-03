@@ -174,6 +174,22 @@ void AssertViewTreeSnapshot(const fuog_ViewTreeSnapshot& snapshot,
   }
 }
 
+bool CheckViewExistsInSnapshot(const fuog_ViewTreeSnapshot& snapshot, zx_koid_t view_ref_koid) {
+  auto it = std::find_if(
+      snapshot.views().begin(), snapshot.views().end(),
+      [view_ref_koid](const auto& view) { return view.view_ref_koid() == view_ref_koid; });
+  return it != snapshot.views().end();
+}
+
+// Returns the iterator to the first fuog_ViewTreeSnapshot in |updates| having |view_ref_koid|
+// present.
+std::vector<fuog_ViewTreeSnapshot>::const_iterator GetFirstSnapshotWithView(
+    const std::vector<fuog_ViewTreeSnapshot>& updates, zx_koid_t view_ref_koid) {
+  return std::find_if(updates.begin(), updates.end(), [view_ref_koid](auto& snapshot) {
+    return CheckViewExistsInSnapshot(snapshot, view_ref_koid);
+  });
+}
+
 // Test fixture that sets up an environment with Registry protocol we can connect to. This test
 // fixture is used for tests where the view nodes are created by Flatland instances.
 class FlatlandObserverRegistryIntegrationTest : public zxtest::Test,
@@ -427,45 +443,63 @@ TEST_F(FlatlandObserverRegistryIntegrationTest, ClientReceivesTopologyUpdatesFor
 
   EXPECT_FALSE(geometry_result->has_error());
 
-  // The total number of updates generated is equal to the number of |Present| calls made.
   ASSERT_TRUE(geometry_result->has_updates());
-  ASSERT_EQ(geometry_result->updates().size(), 5UL);
 
   auto root_view_ref_koid = ExtractKoid(root_view_ref_);
   auto parent_view_ref_koid = ExtractKoid(parent_view_ref);
   auto child_view_ref_koid = ExtractKoid(child_view_ref);
 
   // This snapshot captures the state of the view tree when the scene only has the root_view.
-  AssertViewTreeSnapshot(geometry_result->updates()[0],
-                         ViewBuilder().AddView(root_view_ref_koid, {}).Build());
+  {
+    auto snapshot_iter = GetFirstSnapshotWithView(geometry_result->updates(), root_view_ref_koid);
+    ASSERT_TRUE(snapshot_iter != geometry_result->updates().end());
+    AssertViewTreeSnapshot(*snapshot_iter, ViewBuilder().AddView(root_view_ref_koid, {}).Build());
+  }
 
   // This snapshot captures the state of the view tree when parent_view gets connected to the
   // root_view.
-  AssertViewTreeSnapshot(
-      geometry_result->updates()[1],
-      ViewBuilder()
-          .AddView(root_view_ref_koid, {static_cast<uint32_t>(parent_view_ref_koid)})
-          .AddView(parent_view_ref_koid, {})
-          .Build());
+  {
+    auto snapshot_iter = GetFirstSnapshotWithView(geometry_result->updates(), parent_view_ref_koid);
+    ASSERT_TRUE(snapshot_iter != geometry_result->updates().end());
+    AssertViewTreeSnapshot(
+        *snapshot_iter,
+        ViewBuilder()
+            .AddView(root_view_ref_koid, {static_cast<uint32_t>(parent_view_ref_koid)})
+            .AddView(parent_view_ref_koid, {})
+            .Build());
+  }
 
   // This snapshot captures the state of the view tree when child_view gets connected to the
   // parent_view.
-  AssertViewTreeSnapshot(
-      geometry_result->updates()[3],
-      ViewBuilder()
-          .AddView(root_view_ref_koid, {static_cast<uint32_t>(parent_view_ref_koid)})
-          .AddView(parent_view_ref_koid, {static_cast<uint32_t>(child_view_ref_koid)})
-          .AddView(child_view_ref_koid, {})
-          .Build());
+  {
+    auto snapshot_iter = GetFirstSnapshotWithView(geometry_result->updates(), child_view_ref_koid);
+    ASSERT_TRUE(snapshot_iter != geometry_result->updates().end());
+    AssertViewTreeSnapshot(
+        *snapshot_iter,
+        ViewBuilder()
+            .AddView(root_view_ref_koid, {static_cast<uint32_t>(parent_view_ref_koid)})
+            .AddView(parent_view_ref_koid, {static_cast<uint32_t>(child_view_ref_koid)})
+            .AddView(child_view_ref_koid, {})
+            .Build());
+  }
 
   // This snapshot captures the state of the view tree when child_view detaches from the
   // parent_view.
-  AssertViewTreeSnapshot(
-      geometry_result->updates()[4],
-      ViewBuilder()
-          .AddView(root_view_ref_koid, {static_cast<uint32_t>(parent_view_ref_koid)})
-          .AddView(parent_view_ref_koid, {})
-          .Build());
+  {
+    // Updates are reversed to find the snapshot having only the root_view and parent_view after the
+    // child_view gets connected. This represents child_view getting disconnected.
+    std::reverse(geometry_result->mutable_updates()->begin(),
+                 geometry_result->mutable_updates()->end());
+    auto snapshot_iter = GetFirstSnapshotWithView(geometry_result->updates(), parent_view_ref_koid);
+    ASSERT_TRUE(snapshot_iter != geometry_result->updates().end());
+
+    AssertViewTreeSnapshot(
+        *snapshot_iter,
+        ViewBuilder()
+            .AddView(root_view_ref_koid, {static_cast<uint32_t>(parent_view_ref_koid)})
+            .AddView(parent_view_ref_koid, {})
+            .Build());
+  }
 }
 
 TEST_F(FlatlandObserverRegistryIntegrationTest, ClientReceivesLayoutUpdatesForFlatland) {
@@ -511,32 +545,42 @@ TEST_F(FlatlandObserverRegistryIntegrationTest, ClientReceivesLayoutUpdatesForFl
 
   EXPECT_FALSE(geometry_result->has_error());
 
-  // The total number of updates generated is equal to the number of |Present| calls made.
   ASSERT_TRUE(geometry_result->has_updates());
-  ASSERT_EQ(geometry_result->updates().size(), 3UL);
 
   auto root_view_ref_koid = ExtractKoid(root_view_ref_);
   auto child_view_ref_koid = ExtractKoid(view_ref);
 
   // This snapshot captures the state of the view tree when the root view sets the logical size
   // of the viewport as {|kDefaultSize|,|kDefaultSize|}.
-  AssertViewTreeSnapshot(
-      geometry_result->updates()[1],
-      ViewBuilder()
-          .AddView(root_view_ref_koid, {static_cast<uint32_t>(child_view_ref_koid)},
-                   std::make_pair(display_width_, display_height_))
-          .AddView(child_view_ref_koid, {}, std::make_pair(kDefaultSize, kDefaultSize))
-          .Build());
+  {
+    // The first snapshot having the child view should represent the state where the layout size of
+    // the child view is {|kDefaultSize|,|kDefaultSize|}.
+    auto snapshot_iter = GetFirstSnapshotWithView(geometry_result->updates(), child_view_ref_koid);
+    AssertViewTreeSnapshot(
+        *snapshot_iter,
+        ViewBuilder()
+            .AddView(root_view_ref_koid, {static_cast<uint32_t>(child_view_ref_koid)},
+                     std::make_pair(display_width_, display_height_))
+            .AddView(child_view_ref_koid, {}, std::make_pair(kDefaultSize, kDefaultSize))
+            .Build());
+  }
 
   // This snapshot captures the state of the view tree when the root view sets the logical size
   // of the viewport as {|width|,|height|}.
-  AssertViewTreeSnapshot(
-      geometry_result->updates()[2],
-      ViewBuilder()
-          .AddView(root_view_ref_koid, {static_cast<uint32_t>(child_view_ref_koid)},
-                   std::make_pair(display_width_, display_height_))
-          .AddView(child_view_ref_koid, {}, std::make_pair(width, height))
-          .Build());
+  {
+    // The last snapshot having the child view should represent the state where the layout size of
+    // the child view is {|kDefaultSize|,|kDefaultSize|}.
+    std::reverse(geometry_result->mutable_updates()->begin(),
+                 geometry_result->mutable_updates()->end());
+    auto snapshot_iter = GetFirstSnapshotWithView(geometry_result->updates(), child_view_ref_koid);
+    AssertViewTreeSnapshot(
+        *snapshot_iter,
+        ViewBuilder()
+            .AddView(root_view_ref_koid, {static_cast<uint32_t>(child_view_ref_koid)},
+                     std::make_pair(display_width_, display_height_))
+            .AddView(child_view_ref_koid, {}, std::make_pair(width, height))
+            .Build());
+  }
 }
 
 // A view present in a fuog_ViewTreeSnapshot must be present in the view tree and should be
@@ -586,18 +630,16 @@ TEST_F(FlatlandObserverRegistryIntegrationTest, ChildRequestsFocusAfterConnectin
 
   RunLoopUntil([&geometry_result] { return geometry_result.has_value(); });
 
-  // The total number of updates generated is equal to the number of |Present| calls made.
   ASSERT_TRUE(geometry_result->has_updates());
   ASSERT_FALSE(geometry_result->has_error());
-  ASSERT_EQ(geometry_result->updates().size(), 2UL);
 
   // This snapshot captures the state of the view tree when the child view gets connected to the
   // root view.
-  auto& snapshot = geometry_result->updates()[1];
-  auto& root_view_descriptor = snapshot.views()[0];
-  auto& children = root_view_descriptor.children();
-
   auto child_view_ref_koid = ExtractKoid(child_view_ref);
+  auto snapshot = GetFirstSnapshotWithView(geometry_result->updates(), child_view_ref_koid);
+  ASSERT_TRUE(snapshot != geometry_result->updates().end());
+  auto& root_view_descriptor = snapshot->views()[0];
+  auto& children = root_view_descriptor.children();
 
   // Root view moves focus to the child view after it shows up in the fuog_ViewTreeSnapshot.
   std::optional<bool> request_processed = false;
@@ -683,42 +725,62 @@ TEST_F(GfxObserverRegistryIntegrationTest, ClientReceivesHierarchyUpdatesForGfx)
 
   EXPECT_FALSE(geometry_result->has_error());
 
-  // The total number of updates generated is equal to the number of |Present| calls made.
   ASSERT_TRUE(geometry_result->has_updates());
-  ASSERT_EQ(geometry_result->updates().size(), 5UL);
 
   auto parent_view_ref_koid = ExtractKoid(parent_view_ref_copy);
   auto child_view_ref_koid = ExtractKoid(child_view_ref_copy);
 
   // This snapshot captures the state of the view tree when the scene only has the root_view.
-  AssertViewTreeSnapshot(geometry_result->updates()[0],
-                         ViewBuilder().AddView(std::nullopt, {}).Build());
+  {
+    // The snapshot update just before the parent gets connected represents the state of the view
+    // tree when only the root_view is present.
+    auto snapshot_iter = GetFirstSnapshotWithView(geometry_result->updates(), parent_view_ref_koid);
+    ASSERT_TRUE(snapshot_iter != geometry_result->updates().begin());
+    snapshot_iter--;
+    AssertViewTreeSnapshot(*snapshot_iter, ViewBuilder().AddView(std::nullopt, {}).Build());
+  }
 
   // This snapshot captures the state of the view tree when parent_view gets connected to the
   // root_view.
-  AssertViewTreeSnapshot(geometry_result->updates()[1],
-                         ViewBuilder()
-                             .AddView(std::nullopt, {static_cast<uint32_t>(parent_view_ref_koid)})
-                             .AddView(parent_view_ref_koid, {})
-                             .Build());
+  {
+    auto snapshot_iter = GetFirstSnapshotWithView(geometry_result->updates(), parent_view_ref_koid);
+    ASSERT_TRUE(snapshot_iter != geometry_result->updates().end());
+    AssertViewTreeSnapshot(*snapshot_iter,
+                           ViewBuilder()
+                               .AddView(std::nullopt, {static_cast<uint32_t>(parent_view_ref_koid)})
+                               .AddView(parent_view_ref_koid, {})
+                               .Build());
+  }
 
   // This snapshot captures the state of the view tree when child_view gets connected to the
   // parent_view.
-  AssertViewTreeSnapshot(
-      geometry_result->updates()[3],
-      ViewBuilder()
-          .AddView(std::nullopt, {static_cast<uint32_t>(parent_view_ref_koid)})
-          .AddView(parent_view_ref_koid, {static_cast<uint32_t>(child_view_ref_koid)})
-          .AddView(child_view_ref_koid, {})
-          .Build());
+  {
+    auto snapshot_iter = GetFirstSnapshotWithView(geometry_result->updates(), child_view_ref_koid);
+    ASSERT_TRUE(snapshot_iter != geometry_result->updates().end());
+    AssertViewTreeSnapshot(
+        *snapshot_iter,
+        ViewBuilder()
+            .AddView(std::nullopt, {static_cast<uint32_t>(parent_view_ref_koid)})
+            .AddView(parent_view_ref_koid, {static_cast<uint32_t>(child_view_ref_koid)})
+            .AddView(child_view_ref_koid, {})
+            .Build());
+  }
 
   // This snapshot captures the state of the view tree when child_view detaches from the
   // parent_view.
-  AssertViewTreeSnapshot(geometry_result->updates()[4],
-                         ViewBuilder()
-                             .AddView(std::nullopt, {static_cast<uint32_t>(parent_view_ref_koid)})
-                             .AddView(parent_view_ref_koid, {})
-                             .Build());
+  {
+    // Updates are reversed to find the snapshot having only the root_view and parent_view after the
+    // child_view gets connected. This represents child_view getting disconnected.
+    std::reverse(geometry_result->mutable_updates()->begin(),
+                 geometry_result->mutable_updates()->end());
+    auto snapshot_iter = GetFirstSnapshotWithView(geometry_result->updates(), parent_view_ref_koid);
+    ASSERT_TRUE(snapshot_iter != geometry_result->updates().end());
+    AssertViewTreeSnapshot(*snapshot_iter,
+                           ViewBuilder()
+                               .AddView(std::nullopt, {static_cast<uint32_t>(parent_view_ref_koid)})
+                               .AddView(parent_view_ref_koid, {})
+                               .Build());
+  }
 }
 
 }  // namespace integration_tests
