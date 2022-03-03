@@ -145,19 +145,7 @@ zx_status_t acpi_suspend(uint8_t requested_state, bool enable_wake, uint8_t susp
       return ZX_OK;
     }
     case DEVICE_SUSPEND_REASON_REBOOT:
-      if (suspend_reason == DEVICE_SUSPEND_REASON_REBOOT_BOOTLOADER) {
-        reboot_bootloader();
-      } else if (suspend_reason == DEVICE_SUSPEND_REASON_REBOOT_RECOVERY) {
-        reboot_recovery();
-      } else if (suspend_reason == DEVICE_SUSPEND_REASON_REBOOT_KERNEL_INITIATED) {
-        // will cause fallback behavior
-        return ZX_ERR_NOT_SUPPORTED;
-      } else {
-        reboot();
-      }
-      // Kill this driver so that the IPC channel gets closed; devmgr will
-      // perform a fallback that should shutdown or reboot the machine.
-      exit(0);
+      return ZX_ERR_NOT_SUPPORTED;
     case DEVICE_SUSPEND_REASON_POWEROFF:
       poweroff();
       exit(0);
