@@ -252,9 +252,13 @@ TEST_P(VkGbmImportWithParam, ImportImageCopy) {
 
     auto mod_list_create_info = vk::ImageDrmFormatModifierListCreateInfoEXT();
     auto mod_explicit_info = vk::ImageDrmFormatModifierExplicitCreateInfoEXT();
-    auto subresource_layouts = std::array<vk::SubresourceLayout, 1>(
-        {vk::SubresourceLayout(gbm_bo_get_offset(dst_bo.get(), 0), 0 /*size*/,
-                               gbm_bo_get_stride_for_plane(dst_bo.get(), 0))});
+
+    std::vector<vk::SubresourceLayout> subresource_layouts;
+    for (int i = 0; i < gbm_bo_get_plane_count(dst_bo.get()); i++) {
+      subresource_layouts.push_back(
+          {vk::SubresourceLayout(gbm_bo_get_offset(dst_bo.get(), i), 0 /*size*/,
+                                 gbm_bo_get_stride_for_plane(dst_bo.get(), i))});
+    }
 
     auto external_create_info = vk::ExternalMemoryImageCreateInfo().setHandleTypes(
         vk::ExternalMemoryHandleTypeFlagBitsKHR::eOpaqueFd);

@@ -104,8 +104,10 @@ TEST_P(MagmaGbmTestWithUsage, Create) {
 
   if (usage & GBM_BO_USE_LINEAR) {
     EXPECT_EQ(DRM_FORMAT_MOD_LINEAR, gbm_bo_get_modifier(bo));
-  } else {
+  } else if (usage & GBM_BO_USE_SCANOUT) {
     EXPECT_EQ(I915_FORMAT_MOD_Y_TILED, gbm_bo_get_modifier(bo));
+  } else {
+    EXPECT_EQ(I915_FORMAT_MOD_Y_TILED_CCS, gbm_bo_get_modifier(bo));
   }
 
   gbm_bo_destroy(bo);
@@ -119,8 +121,10 @@ TEST_P(MagmaGbmTestWithUsage, Write) {
 
   if (usage & GBM_BO_USE_LINEAR) {
     EXPECT_EQ(DRM_FORMAT_MOD_LINEAR, gbm_bo_get_modifier(bo));
-  } else {
+  } else if (usage & GBM_BO_USE_SCANOUT) {
     EXPECT_EQ(I915_FORMAT_MOD_Y_TILED, gbm_bo_get_modifier(bo));
+  } else {
+    GTEST_SKIP();
   }
 
   {
@@ -213,7 +217,7 @@ TEST_P(MagmaGbmTestWithUsage, Import) {
 
     EXPECT_EQ(gbm_bo_get_width(bo), gbm_bo_get_width(bo2));
     EXPECT_EQ(gbm_bo_get_height(bo), gbm_bo_get_height(bo2));
-    EXPECT_EQ(kImportStride, gbm_bo_get_stride(bo2));
+    EXPECT_EQ(gbm_bo_get_stride(bo), gbm_bo_get_stride(bo2));
     EXPECT_EQ(gbm_bo_get_format(bo), gbm_bo_get_format(bo2));
     EXPECT_EQ(gbm_bo_get_modifier(bo), gbm_bo_get_modifier(bo2));
     EXPECT_NE(DRM_FORMAT_MOD_INVALID, gbm_bo_get_modifier(bo2));
