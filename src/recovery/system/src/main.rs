@@ -2,6 +2,21 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#[cfg(feature = "http_setup_server")]
+mod button;
+mod fdr;
+#[cfg(feature = "http_setup_server")]
+mod keyboard;
+#[cfg(feature = "http_setup_server")]
+mod keys;
+#[cfg(feature = "http_setup_server")]
+mod ota;
+mod proxy_view_assistant;
+#[cfg(feature = "http_setup_server")]
+mod setup;
+#[cfg(feature = "http_setup_server")]
+mod storage;
+
 use anyhow::{format_err, Error};
 use argh::FromArgs;
 use carnelian::{
@@ -15,12 +30,17 @@ use carnelian::{
             RasterFacet, RiveFacet, TextFacetOptions, TextHorizontalAlignment,
             TextVerticalAlignment,
         },
+        layout::{
+            CrossAxisAlignment, Flex, FlexOptions, MainAxisAlignment, MainAxisSize, Stack,
+            StackOptions,
+        },
         scene::{Scene, SceneBuilder},
     },
     App, AppAssistant, AppAssistantPtr, AppSender, AssistantCreatorFunc, Coord, LocalBoxFuture,
     MessageTarget, Point, Size, ViewAssistant, ViewAssistantContext, ViewAssistantPtr, ViewKey,
 };
-use euclid::{point2, size2, vec2};
+use euclid::size2;
+use fdr::{FactoryResetState, ResetEvent};
 use fidl_fuchsia_input_report::ConsumerControlButton;
 use fidl_fuchsia_recovery::FactoryResetMarker;
 use fidl_fuchsia_recovery_policy::FactoryResetMarker as FactoryResetPolicyMarker;
@@ -38,34 +58,25 @@ const BG_COLOR: Color = Color::white();
 const HEADING_COLOR: Color = Color::new();
 const BODY_COLOR: Color = Color { r: 0x7e, g: 0x86, b: 0x8d, a: 0xff };
 const COUNTDOWN_COLOR: Color = Color { r: 0x42, g: 0x85, b: 0xf4, a: 0xff };
-
 #[cfg(feature = "http_setup_server")]
-mod button;
+const BUTTON_BORDER: f32 = 7.0;
 #[cfg(feature = "http_setup_server")]
-mod keyboard;
+// Space added to between rows can have any width.
+const SPACE_WIDTH: f32 = 10.0;
 #[cfg(feature = "http_setup_server")]
-mod keys;
-#[cfg(feature = "http_setup_server")]
-mod ota;
-#[cfg(feature = "http_setup_server")]
-mod setup;
-#[cfg(feature = "http_setup_server")]
-mod storage;
-
-mod fdr;
-mod proxy_view_assistant;
+// Nice space for text below a button
+const SPACE_HEIGHT: f32 = 10.0;
 
 #[cfg(feature = "http_setup_server")]
 use crate::{
     button::{Button, ButtonMessages},
     keyboard::{KeyboardMessages, KeyboardViewAssistant},
-    proxy_view_assistant::ProxyMessages,
     setup::SetupEvent,
 };
 
+#[cfg(feature = "http_setup_server")]
+use crate::proxy_view_assistant::ProxyMessages;
 use crate::proxy_view_assistant::ProxyViewAssistant;
-
-use fdr::{FactoryResetState, ResetEvent};
 
 fn raster_for_circle(center: Point, radius: Coord, render_context: &mut RenderContext) -> Raster {
     let path = path_for_circle(center, radius, render_context);
@@ -99,10 +110,11 @@ enum RecoveryMessages {
 }
 
 const RECOVERY_MODE_HEADLINE: &'static str = "Recovery mode";
-const RECOVERY_MODE_BODY: &'static str = "Press and hold both volume keys to factory reset.";
+const RECOVERY_MODE_BODY: &'static str = "\nPress and hold both volume keys to factory reset.";
 
 const COUNTDOWN_MODE_HEADLINE: &'static str = "Factory reset device";
-const COUNTDOWN_MODE_BODY: &'static str = "Continue holding the keys to the end of the countdown. \
+const COUNTDOWN_MODE_BODY: &'static str =
+    "\nContinue holding the keys to the end of the countdown. \
 This will wipe all of your data from this device and reset it to factory settings.";
 
 #[cfg(feature = "http_setup_server")]
@@ -178,6 +190,7 @@ impl AppAssistant for RecoveryAppAssistant {
 #[cfg(feature = "http_setup_server")]
 struct RenderResources {
     scene: Scene,
+    #[cfg(feature = "http_setup_server")]
     buttons: Vec<Button>,
 }
 
@@ -194,133 +207,250 @@ impl RenderResources {
         heading: &str,
         body: Option<&str>,
         countdown_ticks: u8,
-        #[cfg(feature = "http_setup_server")] focus_connect_button: bool,
+        #[cfg(feature = "http_setup_server")] _focus_connect_button: bool,
+        #[cfg(feature = "http_setup_server")] wifi_ssid: &Option<String>,
+        #[cfg(feature = "http_setup_server")] wifi_password: &Option<String>,
         face: &FontFace,
         is_counting_down: bool,
     ) -> Self {
         let min_dimension = target_size.width.min(target_size.height);
         let logo_edge = min_dimension * 0.24;
         let text_size = min_dimension / 10.0;
-        let top_margin = 0.255;
         let body_text_size = min_dimension / 18.0;
+        #[cfg(feature = "http_setup_server")]
+        let button_text_size = min_dimension / 14.0;
         let countdown_text_size = min_dimension / 6.0;
+        #[cfg(feature = "http_setup_server")]
+        let mut buttons: Vec<Button> = Vec::new();
 
         let mut builder = SceneBuilder::new().background_color(BG_COLOR).round_scene_corners(true);
+        builder.group().column().max_size().main_align(MainAxisAlignment::Start).contents(
+            |builder| {
+                let logo_size: Size = size2(logo_edge, logo_edge);
+                builder.space(size2(min_dimension, 50.0));
 
-        let logo_size: Size = size2(logo_edge, logo_edge);
-        // Calculate position for centering the logo image
-        let logo_position = {
-            let x = target_size.width / 2.0 - logo_edge / 2.0;
-            let y = top_margin * target_size.height - logo_edge / 2.0;
-            point2(x, y)
-        };
+                if is_counting_down {
+                    // Centre the circle and countdown in the screen
+                    builder.start_group(
+                        "circle_and_countdown_row",
+                        Flex::with_options_ptr(FlexOptions::row(
+                            MainAxisSize::Max,
+                            MainAxisAlignment::Center,
+                            CrossAxisAlignment::End,
+                        )),
+                    );
 
-        if is_counting_down {
-            let countdown_position = logo_position + vec2(logo_edge / 2.0, logo_edge / 2.0);
-            let circle = raster_for_circle(countdown_position, logo_edge / 2.0, render_context);
-            let circle_facet = RasterFacet::new(
-                circle,
-                Style {
-                    fill_rule: FillRule::NonZero,
-                    fill: Fill::Solid(COUNTDOWN_COLOR),
-                    blend_mode: BlendMode::Over,
-                },
-                logo_size,
-            );
+                    // Stack the circle and text
+                    builder.start_group(
+                        "circle_stack",
+                        Stack::with_options_ptr(StackOptions {
+                            expand: false,
+                            alignment: carnelian::scene::layout::Alignment::center(),
+                        }),
+                    );
 
-            builder.text(
-                face.clone(),
-                &format!("{}", countdown_ticks),
-                countdown_text_size,
-                countdown_position,
-                TextFacetOptions {
-                    color: Color::white(),
-                    horizontal_alignment: TextHorizontalAlignment::Center,
-                    vertical_alignment: TextVerticalAlignment::Center,
-                    visual: true,
-                    ..TextFacetOptions::default()
-                },
-            );
-            let _ = builder.facet(Box::new(circle_facet));
-        } else {
-            if let Some(file) = file {
-                builder.facet_at_location(
-                    Box::new(
-                        RiveFacet::new_from_file(logo_size, &file, None).expect("facet_from_file"),
-                    ),
-                    logo_position,
+                    // Place countdown text
+                    builder.text(
+                        face.clone(),
+                        &format!("{}", countdown_ticks),
+                        countdown_text_size,
+                        Point::zero(),
+                        TextFacetOptions {
+                            color: Color::green(),
+                            horizontal_alignment: TextHorizontalAlignment::Center,
+                            vertical_alignment: TextVerticalAlignment::Bottom,
+                            visual: true,
+                            ..TextFacetOptions::default()
+                        },
+                    );
+
+                    let circle = raster_for_circle(
+                        Point::new(logo_edge / 2.0, logo_edge / 2.0),
+                        logo_edge / 2.0,
+                        render_context,
+                    );
+                    let circle_facet = RasterFacet::new(
+                        circle,
+                        Style {
+                            fill_rule: FillRule::NonZero,
+                            fill: Fill::Solid(COUNTDOWN_COLOR),
+                            blend_mode: BlendMode::Over,
+                        },
+                        logo_size,
+                    );
+                    builder.facet(Box::new(circle_facet));
+
+                    builder.end_group(); // circle_stack
+                    builder.end_group(); // circle_and_countdown_row
+                } else {
+                    if let Some(file) = file {
+                        // Centre the logo
+                        builder.start_group(
+                            "logo_row",
+                            Flex::with_options_ptr(FlexOptions::row(
+                                MainAxisSize::Max,
+                                MainAxisAlignment::Center,
+                                CrossAxisAlignment::End,
+                            )),
+                        );
+
+                        let facet = RiveFacet::new_from_file(logo_size, &file, None)
+                            .expect("facet_from_file");
+                        builder.facet(Box::new(facet));
+                        builder.end_group(); // logo_row
+                    }
+                }
+
+                builder.space(size2(min_dimension, 50.0));
+                builder.text(
+                    face.clone(),
+                    &heading,
+                    text_size,
+                    Point::zero(),
+                    TextFacetOptions {
+                        horizontal_alignment: TextHorizontalAlignment::Center,
+                        color: HEADING_COLOR,
+                        ..TextFacetOptions::default()
+                    },
                 );
-            }
-        }
 
-        let heading_text_location =
-            point2(target_size.width / 2.0, logo_position.y + logo_size.height + text_size);
-        builder.text(
-            face.clone(),
-            &heading,
-            text_size,
-            heading_text_location,
-            TextFacetOptions {
-                horizontal_alignment: TextHorizontalAlignment::Center,
-                color: HEADING_COLOR,
-                ..TextFacetOptions::default()
+                let wrap_width = target_size.width * 0.8;
+
+                if let Some(body) = body {
+                    builder.text(
+                        face.clone(),
+                        &body,
+                        body_text_size,
+                        Point::zero(),
+                        TextFacetOptions {
+                            horizontal_alignment: TextHorizontalAlignment::Left,
+                            color: BODY_COLOR,
+                            max_width: Some(wrap_width),
+                            ..TextFacetOptions::default()
+                        },
+                    );
+                }
+
+                // Add the WiFi connection buttons.
+                #[cfg(feature = "http_setup_server")]
+                if !is_counting_down {
+                    builder.space(size2(min_dimension, 50.0));
+                    builder.start_group(
+                        "button_row",
+                        Flex::with_options_ptr(FlexOptions::row(
+                            MainAxisSize::Max,
+                            MainAxisAlignment::SpaceEvenly,
+                            CrossAxisAlignment::End,
+                        )),
+                    );
+
+                    let button_text = WIFI_SSID;
+                    let info_text = if let Some(wifi_ssid) = wifi_ssid.as_ref() {
+                        wifi_ssid
+                    } else {
+                        "<No Network Name>"
+                    };
+                    RenderResources::build_button_group(
+                        face,
+                        body_text_size,
+                        button_text_size,
+                        &mut buttons,
+                        builder,
+                        wrap_width,
+                        &button_text,
+                        info_text,
+                    );
+
+                    let button_text = WIFI_PASSWORD;
+                    let info_text =
+                        if wifi_password.is_some() && !wifi_password.as_ref().unwrap().is_empty() {
+                            "********"
+                        } else {
+                            "<No Password>"
+                        };
+                    RenderResources::build_button_group(
+                        face,
+                        body_text_size,
+                        button_text_size,
+                        &mut buttons,
+                        builder,
+                        wrap_width,
+                        &button_text,
+                        info_text,
+                    );
+
+                    let button_text = WIFI_CONNECT;
+                    let info_text = "Not Connected";
+                    RenderResources::build_button_group(
+                        face,
+                        body_text_size,
+                        button_text_size,
+                        &mut buttons,
+                        builder,
+                        wrap_width,
+                        &button_text,
+                        info_text,
+                    );
+
+                    // End row button_row
+                    builder.end_group();
+                }
             },
         );
 
-        if let Some(body) = body {
-            let margin = 0.23;
-            let body_x = target_size.width * margin;
-            let wrap_width = target_size.width - 2.0 * body_x;
-            builder.text(
-                face.clone(),
-                &body,
-                body_text_size,
-                point2(body_x, heading_text_location.y + text_size + body_text_size),
-                TextFacetOptions {
-                    horizontal_alignment: TextHorizontalAlignment::Left,
-                    color: BODY_COLOR,
-                    max_width: Some(wrap_width),
-                    ..TextFacetOptions::default()
-                },
-            );
-        }
-
+        let mut scene = builder.build();
+        scene.layout(target_size);
         #[cfg(feature = "http_setup_server")]
         {
-            let button_text_size = min_dimension / 14.0;
-            let buttons_y = min_dimension - button_text_size * 2.0;
-            let mut buttons: Vec<Button> = Vec::new();
-
-            if !is_counting_down {
-                buttons.push(
-                    Button::new(WIFI_SSID, button_text_size, 7.0, &mut builder).expect(WIFI_SSID),
-                );
-                buttons.push(
-                    Button::new(WIFI_PASSWORD, button_text_size, 7.0, &mut builder)
-                        .expect(WIFI_PASSWORD),
-                );
-                buttons.push(
-                    Button::new(WIFI_CONNECT, button_text_size, 7.0, &mut builder)
-                        .expect(WIFI_CONNECT),
-                );
+            if buttons.len() >= 3 {
+                buttons[0].set_focused(&mut scene, true);
+                buttons[1].set_focused(&mut scene, true);
+                buttons[2].set_focused(&mut scene, wifi_ssid.is_some());
             }
-
-            let mut scene = builder.build();
-            let mut x = 40.0;
-            for i in 0..buttons.len() {
-                buttons[i].set_location(&mut scene, point2(x, buttons_y));
-                // Set all buttons focus to true apart from button 2
-                buttons[i].set_focused(&mut scene, true);
-                if i == 2 {
-                    buttons[i].set_focused(&mut scene, focus_connect_button);
-                }
-                x += buttons[i].get_size(&mut scene).width + 50.0;
-            }
-
             Self { scene, buttons }
         }
+
         #[cfg(not(feature = "http_setup_server"))]
-        Self { scene: builder.build() }
+        Self { scene }
+    }
+
+    #[cfg(feature = "http_setup_server")]
+    fn build_button_group(
+        face: &FontFace,
+        body_text_size: f32,
+        button_text_size: f32,
+        buttons: &mut Vec<Button>,
+        builder: &mut SceneBuilder,
+        wrap_width: f32,
+        button_text: &&str,
+        info_text: &str,
+    ) {
+        builder.start_group(
+            &("button_group_".to_owned() + button_text),
+            Flex::with_options_ptr(FlexOptions::column(
+                MainAxisSize::Min,
+                MainAxisAlignment::SpaceEvenly,
+                CrossAxisAlignment::Center,
+            )),
+        );
+        buttons.push(
+            Button::new(button_text, button_text_size, BUTTON_BORDER, builder).expect(button_text),
+        );
+        builder.space(size2(SPACE_WIDTH, SPACE_HEIGHT));
+        builder.text(
+            face.clone(),
+            info_text,
+            body_text_size,
+            Point::zero(),
+            TextFacetOptions {
+                horizontal_alignment: TextHorizontalAlignment::Left,
+                color: BODY_COLOR,
+                max_width: Some(wrap_width),
+                ..TextFacetOptions::default()
+            },
+        );
+        // End column button_group_password
+        builder.end_group();
     }
 }
 
@@ -356,7 +486,7 @@ impl RecoveryViewAssistant {
         let face = load_font(PathBuf::from("/pkg/data/fonts/Roboto-Regular.ttf"))?;
         Ok(RecoveryViewAssistant {
             face,
-            heading: heading,
+            heading,
             body,
             fdr_restriction,
             reset_state_machine: fdr::FactoryResetStateMachine::new(),
@@ -462,7 +592,7 @@ impl RecoveryViewAssistant {
                     MessageTarget::View(view_key),
                     make_message(RecoveryMessages::ResetFailed),
                 );
-                eprintln!("recovery: Error occurred : {}", error);
+                eprintln!("recovery: Error occurred : {:?}", error);
             }
         };
     }
@@ -581,68 +711,55 @@ impl RecoveryViewAssistant {
     }
 
     #[cfg(feature = "http_setup_server")]
-    fn handle_keyboard_message(&mut self, message: carnelian::Message) {
-        if let Some(message) = message.downcast_ref::<KeyboardMessages>() {
-            match message {
-                KeyboardMessages::NoInput => {}
-                KeyboardMessages::Result(WIFI_SSID, result) => {
-                    self.wifi_ssid = if result.len() == 0 { None } else { Some(result.clone()) };
-                }
-                KeyboardMessages::Result(WIFI_PASSWORD, result) => {
-                    // Allow empty passwords
-                    self.wifi_password = Some(result.clone());
-                }
-                KeyboardMessages::Result(_, _) => {}
+    fn handle_keyboard_message(&mut self, message: &KeyboardMessages) {
+        match message {
+            KeyboardMessages::NoInput => {}
+            KeyboardMessages::Result(WIFI_SSID, result) => {
+                self.wifi_ssid = if result.len() == 0 { None } else { Some(result.clone()) };
+                self.render_resources = None;
             }
-            if let Some(resources) = self.render_resources.as_mut() {
-                let scene = &mut resources.scene;
-                if resources.buttons.len() >= 3 {
-                    let button = &mut resources.buttons[2];
-                    button.set_focused(
-                        scene,
-                        self.wifi_ssid.is_some() && self.wifi_password.is_some(),
-                    );
-                }
+            KeyboardMessages::Result(WIFI_PASSWORD, result) => {
+                // Allow empty passwords
+                self.wifi_password = Some(result.clone());
+                self.render_resources = None;
             }
-        } else if let Some(message) = message.downcast_ref::<ButtonMessages>() {
-            match message {
-                ButtonMessages::Pressed(_, label) => {
-                    if label == WIFI_CONNECT {
-                        if let (Some(ssid), Some(password)) = (&self.wifi_ssid, &self.wifi_password)
-                        {
-                            fasync::Task::local(connect_to_wifi(ssid.clone(), password.clone()))
-                                .detach();
+            KeyboardMessages::Result(_, _) => {}
+        }
+    }
+
+    #[cfg(feature = "http_setup_server")]
+    fn handle_button_message(&mut self, message: &ButtonMessages) {
+        match message {
+            ButtonMessages::Pressed(_, label) => {
+                let mut entry_text = String::new();
+                let mut field_text = "";
+                match label.as_ref() {
+                    WIFI_SSID => {
+                        field_text = WIFI_SSID;
+                        if let Some(ssid) = &self.wifi_ssid {
+                            entry_text = ssid.clone();
                         }
-                    } else {
-                        let mut entry_text = String::new();
-                        let mut field_text = "";
-                        match label.as_ref() {
-                            WIFI_SSID => {
-                                field_text = WIFI_SSID;
-                                if let Some(ssid) = &self.wifi_ssid {
-                                    entry_text = ssid.clone();
-                                }
-                            }
-                            WIFI_PASSWORD => {
-                                field_text = WIFI_PASSWORD;
-                                if let Some(password) = &self.wifi_password {
-                                    entry_text = password.clone();
-                                }
-                            }
-                            _ => {}
-                        }
-                        // Fire up a new keyboard
-                        let mut view_assistant_ptr = Box::new(
-                            KeyboardViewAssistant::new(self.app_sender.clone(), self.view_key)
-                                .unwrap(),
-                        );
-                        view_assistant_ptr.set_field_name(field_text);
-                        view_assistant_ptr.set_text_field(entry_text);
-                        self.app_sender.queue_message(
-                            MessageTarget::View(self.view_key),
-                            make_message(ProxyMessages::NewViewAssistant(Some(view_assistant_ptr))),
-                        );
                     }
+                    WIFI_PASSWORD => {
+                        field_text = WIFI_PASSWORD;
+                        if let Some(password) = &self.wifi_password {
+                            entry_text = password.clone();
+                        }
+                    }
+                    WIFI_CONNECT => {}
+                    _ => {}
+                }
+                if !field_text.is_empty() {
+                    // Fire up a new keyboard
+                    let mut keyboard = Box::new(
+                        KeyboardViewAssistant::new(self.app_sender.clone(), self.view_key).unwrap(),
+                    );
+                    keyboard.set_field_name(field_text);
+                    keyboard.set_text_field(entry_text);
+                    self.app_sender.queue_message(
+                        MessageTarget::View(self.view_key),
+                        make_message(ProxyMessages::NewViewAssistant(Some(keyboard))),
+                    );
                 }
             }
         }
@@ -673,9 +790,11 @@ impl ViewAssistant for RecoveryViewAssistant {
                 self.body.as_ref().map(Borrow::borrow),
                 self.countdown_ticks,
                 #[cfg(feature = "http_setup_server")]
-                {
-                    self.wifi_ssid.is_some() && self.wifi_password.is_some()
-                },
+                self.wifi_ssid.is_some(),
+                #[cfg(feature = "http_setup_server")]
+                &self.wifi_ssid,
+                #[cfg(feature = "http_setup_server")]
+                &self.wifi_password,
                 &self.face,
                 self.reset_state_machine.is_counting_down(),
             ));
@@ -692,7 +811,13 @@ impl ViewAssistant for RecoveryViewAssistant {
             self.handle_recovery_message(message);
         } else if cfg!(feature = "http_setup_server") {
             #[cfg(feature = "http_setup_server")]
-            self.handle_keyboard_message(message);
+            if let Some(message) = message.downcast_ref::<ButtonMessages>() {
+                self.handle_button_message(message);
+            } else if let Some(message) = message.downcast_ref::<KeyboardMessages>() {
+                self.handle_keyboard_message(message);
+            } else {
+                println!("Unknown message received: {:#?}", message);
+            }
         }
     }
 
@@ -802,12 +927,6 @@ impl ViewAssistant for RecoveryViewAssistant {
 
         Ok(())
     }
-}
-
-#[cfg(feature = "http_setup_server")]
-async fn connect_to_wifi(_ssid: String, _password: String) {
-    // TODO(kpt): This is a place holder for the real WiFi connection when it is written
-    println!("Connect to WiFi");
 }
 
 /// Determines whether or not fdr is enabled.
