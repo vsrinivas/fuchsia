@@ -1196,25 +1196,25 @@ pub(crate) mod testutil {
     }
 
     #[derive(Debug)]
-    struct PendingFrameData<ContextId, Meta> {
-        dst_context: ContextId,
+    struct PendingFrameData<CtxId, Meta> {
+        dst_context: CtxId,
         meta: Meta,
         frame: Vec<u8>,
     }
 
-    type PendingFrame<ContextId, Meta> = InstantAndData<PendingFrameData<ContextId, Meta>>;
+    type PendingFrame<CtxId, Meta> = InstantAndData<PendingFrameData<CtxId, Meta>>;
 
     /// A dummy network, composed of many `DummyCtx`s.
     ///
-    /// Provides a utility to have many contexts keyed by `ContextId` that can
+    /// Provides a utility to have many contexts keyed by `CtxId` that can
     /// exchange frames.
-    pub(crate) struct DummyNetwork<ContextId, S, TimerId, SendMeta, RecvMeta, Links>
+    pub(crate) struct DummyNetwork<CtxId, S, TimerId, SendMeta, RecvMeta, Links>
     where
-        Links: DummyNetworkLinks<S, SendMeta, RecvMeta, ContextId>,
+        Links: DummyNetworkLinks<S, SendMeta, RecvMeta, CtxId>,
     {
-        contexts: HashMap<ContextId, DummyCtx<S, TimerId, SendMeta>>,
+        contexts: HashMap<CtxId, DummyCtx<S, TimerId, SendMeta>>,
         current_time: DummyInstant,
-        pending_frames: BinaryHeap<PendingFrame<ContextId, RecvMeta>>,
+        pending_frames: BinaryHeap<PendingFrame<CtxId, RecvMeta>>,
         links: Links,
     }
 
@@ -1225,29 +1225,29 @@ pub(crate) mod testutil {
     /// frame's sending metadata - including its context, local state, and
     /// `SendMeta` - to the set of appropriate receivers, each represented by a
     /// context ID, receive metadata, and latency.
-    pub(crate) trait DummyNetworkLinks<S, SendMeta, RecvMeta, ContextId> {
+    pub(crate) trait DummyNetworkLinks<S, SendMeta, RecvMeta, CtxId> {
         fn map_link(
             &self,
-            ctx: ContextId,
+            ctx: CtxId,
             state: &S,
             meta: SendMeta,
-        ) -> Vec<(ContextId, RecvMeta, Option<Duration>)>;
+        ) -> Vec<(CtxId, RecvMeta, Option<Duration>)>;
     }
 
     impl<
             S,
             SendMeta,
             RecvMeta,
-            ContextId,
-            F: Fn(ContextId, &S, SendMeta) -> Vec<(ContextId, RecvMeta, Option<Duration>)>,
-        > DummyNetworkLinks<S, SendMeta, RecvMeta, ContextId> for F
+            CtxId,
+            F: Fn(CtxId, &S, SendMeta) -> Vec<(CtxId, RecvMeta, Option<Duration>)>,
+        > DummyNetworkLinks<S, SendMeta, RecvMeta, CtxId> for F
     {
         fn map_link(
             &self,
-            ctx: ContextId,
+            ctx: CtxId,
             state: &S,
             meta: SendMeta,
-        ) -> Vec<(ContextId, RecvMeta, Option<Duration>)> {
+        ) -> Vec<(CtxId, RecvMeta, Option<Duration>)> {
             (self)(ctx, state, meta)
         }
     }
@@ -1286,17 +1286,17 @@ pub(crate) mod testutil {
     #[derive(Debug)]
     pub(crate) struct LoopLimitReachedError;
 
-    impl<ContextId, S, TimerId, SendMeta, RecvMeta, Links>
-        DummyNetwork<ContextId, S, TimerId, SendMeta, RecvMeta, Links>
+    impl<CtxId, S, TimerId, SendMeta, RecvMeta, Links>
+        DummyNetwork<CtxId, S, TimerId, SendMeta, RecvMeta, Links>
     where
-        ContextId: Eq + Hash + Copy + Debug,
+        CtxId: Eq + Hash + Copy + Debug,
         TimerId: Copy,
-        Links: DummyNetworkLinks<S, SendMeta, RecvMeta, ContextId>,
+        Links: DummyNetworkLinks<S, SendMeta, RecvMeta, CtxId>,
     {
         /// Creates a new `DummyNetwork`.
         ///
         /// Creates a new `DummyNetwork` with the collection of `DummyCtx`s in
-        /// `contexts`. `Ctx`s are named by type parameter `ContextId`.
+        /// `contexts`. `Ctx`s are named by type parameter `CtxId`.
         ///
         /// # Panics
         ///
@@ -1305,7 +1305,7 @@ pub(crate) mod testutil {
         /// events already attached to them, because `DummyNetwork` maintains
         /// all the internal timers in dispatchers in sync to enable synchronous
         /// simulation steps.
-        pub(crate) fn new<I: IntoIterator<Item = (ContextId, DummyCtx<S, TimerId, SendMeta>)>>(
+        pub(crate) fn new<I: IntoIterator<Item = (CtxId, DummyCtx<S, TimerId, SendMeta>)>>(
             contexts: I,
             links: Links,
         ) -> Self {
@@ -1333,7 +1333,7 @@ pub(crate) mod testutil {
         }
 
         /// Retrieves a `DummyCtx` named `context`.
-        pub(crate) fn context<K: Into<ContextId>>(
+        pub(crate) fn context<K: Into<CtxId>>(
             &mut self,
             context: K,
         ) -> &mut DummyCtx<S, TimerId, SendMeta> {
@@ -1449,7 +1449,7 @@ pub(crate) mod testutil {
         /// ordered by their scheduled delivery time given by the latency result
         /// provided by `links`.
         fn collect_frames(&mut self) {
-            let all_frames: Vec<(ContextId, Vec<(SendMeta, Vec<u8>)>)> = self
+            let all_frames: Vec<(CtxId, Vec<(SendMeta, Vec<u8>)>)> = self
                 .contexts
                 .iter_mut()
                 .filter_map(|(n, ctx)| {
