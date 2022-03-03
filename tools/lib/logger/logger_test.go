@@ -9,7 +9,9 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"reflect"
 	"regexp"
+	"sort"
 	"testing"
 
 	"go.fuchsia.dev/fuchsia/tools/lib/color"
@@ -126,5 +128,27 @@ func TestCustomPrefix(t *testing.T) {
 		errBytes)
 	if err != nil || !matched {
 		t.Fatalf("Stderr output was not as expected. Got: %s", errBytes)
+	}
+}
+
+func TestAllLevels(t *testing.T) {
+	allLevels := AllLevels()
+
+	if len(allLevels) != len(levelToName) {
+		t.Fatalf("len(allLevels) = %d, want %d", len(allLevels), len(levelToName))
+	}
+
+	levelToNameViaAllLevels := make(map[LogLevel]string)
+
+	for _, level := range allLevels {
+		levelToNameViaAllLevels[level] = level.String()
+	}
+
+	if !reflect.DeepEqual(levelToNameViaAllLevels, levelToName) {
+		t.Fatalf("levelToNameViaAllLevels = %#v, want %#v", levelToNameViaAllLevels, levelToName)
+	}
+
+	if !sort.SliceIsSorted(allLevels, func(i, j int) bool { return allLevels[i] < allLevels[j] }) {
+		t.Fatalf("expected allLevels to be sorted; allLevels = %#v", allLevels)
 	}
 }

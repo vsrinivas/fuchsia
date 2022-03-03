@@ -11,6 +11,7 @@ import (
 	"io"
 	goLog "log"
 	"os"
+	"sort"
 
 	"go.fuchsia.dev/fuchsia/tools/lib/color"
 )
@@ -69,6 +70,18 @@ func init() {
 	for level, name := range levelToName {
 		nameToLevel[name] = level
 	}
+}
+
+// AllLevels enumerates all log levels.
+func AllLevels() []LogLevel {
+	var levels []LogLevel
+	for level := range levelToName {
+		levels = append(levels, level)
+	}
+	sort.Slice(levels, func(i, j int) bool {
+		return levels[i] < levels[j]
+	})
+	return levels
 }
 
 // Copied from Go log so callers don't need to also import log.
