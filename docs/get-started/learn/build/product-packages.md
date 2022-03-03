@@ -130,8 +130,9 @@ Note: For more details on the package development workflow, see
 
 ## Exercise: Customize the build
 
-In this exercise, you'll customize the build with additional packages and
-ultimately define your own product configuration to encapsulate these changes.
+In this exercise, you'll customize the `workstation` build by temporarily
+including additional packages in the universe package set — making them
+available to the target device.
 
 ### Add packages to the build
 
@@ -245,7 +246,12 @@ You should see the following output in the device logs:
 [hello-world-cpp][I] Hello, World!
 ```
 
-### Create a new build product
+## Exercise: Create a new build product
+
+In this next exercise, you'll encapsulate these additional packages into a new
+product configuration that extends `workstation`.
+
+### Declare the product configuration
 
 Create a new directory under `//vendor` called `fuchsia-codelab`:
 
