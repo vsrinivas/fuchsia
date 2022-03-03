@@ -756,4 +756,42 @@ TEST(StreamTestCase, ShrinkGuard) {
   supply_pages_thread.join();
 }
 
+// Regression test for fxbug.dev/94454. Writing to an offset that requires expansion should not
+// result in an overflow when computing the new required VMO size.
+TEST(StreamTestCase, ExpandOverflow) {
+  zx::vmo vmo;
+  ASSERT_OK(zx::vmo::create(zx_system_get_page_size(), ZX_VMO_RESIZABLE, &vmo));
+
+  zx::stream stream;
+  ASSERT_OK(zx::stream::create(ZX_STREAM_MODE_WRITE, vmo, 0, &stream));
+
+  char buffer[] = "AAAA";
+  zx_iovec_t vec = {
+      .buffer = buffer,
+      .capacity = 4,
+  };
+
+  size_t actual = 0u;
+  // This write will require a content size of 0xfffffffffffffffc, which when rounded up to the page
+  // boundary to compute the VMO size will overflow. So content expansion should fail.
+  EXPECT_EQ(ZX_ERR_OUT_OF_RANGE, stream.writev_at(0, 0xfffffffffffffff8, &vec, 1, &actual));
+  EXPECT_EQ(0, actual);
+
+  // Verify the VMO and content sizes.
+  uint64_t vmo_size;
+  ASSERT_OK(vmo.get_size(&vmo_size));
+  EXPECT_EQ(zx_system_get_page_size(), vmo_size);
+
+  uint64_t content_size;
+  ASSERT_OK(vmo.get_prop_content_size(&content_size));
+  EXPECT_EQ(zx_system_get_page_size(), content_size);
+
+  // Verify that a subsequent resize succeeds.
+  EXPECT_OK(vmo.set_size(2 * zx_system_get_page_size()));
+  ASSERT_OK(vmo.get_size(&vmo_size));
+  EXPECT_EQ(2 * zx_system_get_page_size(), vmo_size);
+  ASSERT_OK(vmo.get_prop_content_size(&content_size));
+  EXPECT_EQ(2 * zx_system_get_page_size(), content_size);
+}
+
 }  // namespace

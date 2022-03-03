@@ -9,6 +9,7 @@
 
 #include <lib/user_copy/user_iovec.h>
 #include <lib/user_copy/user_ptr.h>
+#include <lib/zx/status.h>
 #include <sys/types.h>
 #include <zircon/rights.h>
 #include <zircon/types.h>
@@ -72,9 +73,11 @@ class VmObjectDispatcher final : public SoloDispatcher<VmObjectDispatcher, ZX_DE
   zx_status_t SetContentSize(uint64_t);
   uint64_t GetContentSize() const;
 
-  // Returns the actual content size after attempting to resize the VMO to fit
-  // the requested content size.
-  uint64_t ExpandContentIfNeeded(uint64_t requested_content_size, uint64_t zero_until_offset);
+  // Attempts to resize the VMO to fit the |requested_content_size|. Returns the actual content size
+  // upon success, since the content size might have been expanded to partially accommodate
+  // |requested_content_size|. Otherwise returns the failure status.
+  zx::status<uint64_t> ExpandContentIfNeeded(uint64_t requested_content_size,
+                                             uint64_t zero_until_offset);
 
   const fbl::RefPtr<VmObject>& vmo() const { return vmo_; }
   zx_koid_t pager_koid() const { return pager_koid_; }

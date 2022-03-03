@@ -217,40 +217,41 @@ uint64_t VmObjectDispatcher::GetContentSize() const {
   return content_size_;
 }
 
-uint64_t VmObjectDispatcher::ExpandContentIfNeeded(uint64_t requested_content_size,
-                                                   uint64_t zero_until_offset) {
+zx::status<uint64_t> VmObjectDispatcher::ExpandContentIfNeeded(uint64_t requested_content_size,
+                                                               uint64_t zero_until_offset) {
   canary_.Assert();
 
   Guard<Mutex> guard{&content_size_lock_};
   if (requested_content_size <= content_size_) {
-    return content_size_;
+    return zx::ok(content_size_);
   }
 
   uint64_t previous_content_size = content_size_;
 
-  do {
-    uint64_t required_vmo_size = ROUNDUP(requested_content_size, PAGE_SIZE);
-    uint64_t current_vmo_size = vmo_->size();
-    if (required_vmo_size <= current_vmo_size) {
-      content_size_ = requested_content_size;
-      break;
-    }
+  uint64_t required_vmo_size = ROUNDUP(requested_content_size, PAGE_SIZE);
+  // Overflow when rounding up.
+  if (required_vmo_size < requested_content_size) {
+    return zx::error(ZX_ERR_OUT_OF_RANGE);
+  }
 
+  uint64_t current_vmo_size = vmo_->size();
+  if (required_vmo_size > current_vmo_size) {
     zx_status_t status = vmo_->Resize(required_vmo_size);
     if (status != ZX_OK) {
       content_size_ = current_vmo_size;
-      break;
+    } else {
+      content_size_ = requested_content_size;
     }
-
+  } else {
     content_size_ = requested_content_size;
-  } while (false);
+  }
 
   zero_until_offset = ktl::min(content_size_, zero_until_offset);
   if (zero_until_offset > previous_content_size) {
     vmo_->ZeroRange(previous_content_size, zero_until_offset - previous_content_size);
   }
 
-  return content_size_;
+  return zx::ok(content_size_);
 }
 
 zx_status_t VmObjectDispatcher::RangeOp(uint32_t op, uint64_t offset, uint64_t size,
