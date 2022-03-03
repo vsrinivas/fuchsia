@@ -39,7 +39,7 @@ void ScreenshotManager::CreateClient(
         auto display = flatland_manager_->GetPrimaryFlatlandDisplayForRendering();
         FX_DCHECK(display);
 
-        return engine_->GetRenderables(display->root_transform());
+        return engine_->GetRenderables(*display);
       });
 
   screenshot_clients_[id] = std::move(screenshot);

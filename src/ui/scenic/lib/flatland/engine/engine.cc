@@ -116,7 +116,7 @@ void Engine::RenderScheduledFrame(uint64_t frame_number, zx::time presentation_t
                                      /*num_vmos*/ kNumDisplayFramebuffers, &render_target_info);
   }
 
-  ClearEmptyRectangles(&image_rectangles, &images);
+  CullRectangles(&image_rectangles, &images, hw_display->width_in_px(), hw_display->height_in_px());
 
   flatland_compositor_->RenderFrame(frame_number, presentation_time,
                                     {{.rectangles = std::move(image_rectangles),
@@ -154,7 +154,9 @@ view_tree::SubtreeSnapshot Engine::GenerateViewTreeSnapshot(
 
 // TODO(fxbug.dev/81842) If we put Screenshot on its own thread, we should make this call thread
 // safe.
-Renderables Engine::GetRenderables(TransformHandle root) {
+Renderables Engine::GetRenderables(const FlatlandDisplay& display) {
+  TransformHandle root = display.root_transform();
+
   const auto snapshot = uber_struct_system_->Snapshot();
   const auto links = link_system_->GetResolvedTopologyLinks();
   const auto link_system_id = link_system_->GetInstanceId();
@@ -178,7 +180,8 @@ Renderables Engine::GetRenderables(TransformHandle root) {
                               SelectAttribute(global_image_sample_regions, image_indices),
                               SelectAttribute(global_clip_regions, image_indices), images);
 
-  ClearEmptyRectangles(&image_rectangles, &images);
+  const auto hw_display = display.display();
+  CullRectangles(&image_rectangles, &images, hw_display->width_in_px(), hw_display->height_in_px());
 
   return std::make_pair(std::move(image_rectangles), std::move(images));
 }

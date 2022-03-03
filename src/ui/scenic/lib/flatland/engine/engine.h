@@ -43,8 +43,8 @@ class Engine {
   // |FlatlandManager::GetPrimaryFlatlandDisplayForRendering|.
   view_tree::SubtreeSnapshot GenerateViewTreeSnapshot(const TransformHandle& root_transform) const;
 
-  // Returns all renderables reachable from |root|.
-  Renderables GetRenderables(TransformHandle root);
+  // Returns all renderables reachable from the display's root transform.
+  Renderables GetRenderables(const FlatlandDisplay& display);
 
   // These values are used to apply a color conversion post processing effect on rendered
   // content, using the formula matrix * (pixel + preoffset) + postoffset.

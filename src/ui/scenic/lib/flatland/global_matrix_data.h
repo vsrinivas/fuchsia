@@ -6,6 +6,7 @@
 #define SRC_UI_SCENIC_LIB_FLATLAND_GLOBAL_MATRIX_DATA_H_
 
 #include "src/ui/lib/escher/geometry/types.h"
+#include "src/ui/scenic/lib/flatland/global_image_data.h"
 #include "src/ui/scenic/lib/flatland/global_topology_data.h"
 #include "src/ui/scenic/lib/flatland/transform_handle.h"
 #include "src/ui/scenic/lib/flatland/uber_struct.h"
@@ -81,9 +82,13 @@ GlobalRectangleVector ComputeGlobalRectangles(const GlobalMatrixVector& matrices
                                               const GlobalTransformClipRegionVector& clip_regions,
                                               const std::vector<allocation::ImageMetadata>& images);
 
-// Clears empty rectangles and the corresponding images from the global structs.
-void ClearEmptyRectangles(GlobalRectangleVector* rectangles,
-                          std::vector<allocation::ImageMetadata>* images);
+// Simple culling algorithm that checks if any of the input rectangles cover the entire display,
+// and if so, culls all rectangles that came before them (since rectangles are implicitly sorted
+// according to depth, with the first entry being the furthest back, this has the effect of
+// eliminating all rectangles behind the full-screen one). Also culls any rectangle that has
+// no size (0,0).
+void CullRectangles(GlobalRectangleVector* rectangles_in_out, GlobalImageVector* images_in_out,
+                    uint64_t display_width, uint64_t display_height);
 
 // Templatized function to retrieve a vector of attributes that correspond to the provided
 // indices, from the original vector.

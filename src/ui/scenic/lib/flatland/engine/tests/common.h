@@ -94,11 +94,12 @@ class DisplayCompositorTestBase : public gtest::RealLoopFixture {
       link_system_->UpdateLinks(topology_data.topology_vector, topology_data.live_handles,
                                 global_matrices, /*pixel_scale*/ glm::vec2(1.0), snapshot);
 
-      ClearEmptyRectangles(&image_rectangles, &images);
+      CullRectangles(&image_rectangles, &images, display_data.first.dimensions.x,
+                     display_data.first.dimensions.y);
       FX_DCHECK(image_rectangles.size() == images.size());
-      image_list_per_display.push_back({.rectangles = std::move(image_rectangles),
-                                        .images = std::move(images),
-                                        .display_id = display_id});
+
+      image_list_per_display.push_back(
+          {.rectangles = image_rectangles, .images = images, .display_id = display_id});
     }
     return image_list_per_display;
   }

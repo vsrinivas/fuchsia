@@ -381,24 +381,58 @@ GlobalRectangleVector ComputeGlobalRectangles(
   return rectangles;
 }
 
-// static
-void ClearEmptyRectangles(GlobalRectangleVector* rectangles,
-                          std::vector<allocation::ImageMetadata>* images) {
-  FX_DCHECK(rectangles->size() == images->size());
-  auto is_rect_empty = [](const escher::Rectangle2D& rect) {
-    return rect.extent.x == 0 && rect.extent.y == 0;
+void CullRectangles(GlobalRectangleVector* rectangles_in_out, GlobalImageVector* images_in_out,
+                    uint64_t display_width, uint64_t display_height) {
+  FX_DCHECK(rectangles_in_out && images_in_out);
+  FX_DCHECK(rectangles_in_out->size() == images_in_out->size());
+  unsigned length = rectangles_in_out->size();
+
+  auto is_occluder = [display_width, display_height](
+                         const escher::Rectangle2D& rectangle,
+                         const allocation::ImageMetadata& image) -> bool {
+    // Only cull if the rect is opaque.
+    auto is_opaque = image.blend_mode == fuchsia::ui::composition::BlendMode::SRC;
+
+    // If the rect is full screen (or larger), and opaque, clear the output vectors.
+    return (is_opaque && rectangle.origin.x <= 0 && rectangle.origin.y <= 0 &&
+            rectangle.extent.x >= display_width && rectangle.extent.y >= display_height);
   };
-  size_t index = 0;
-  images->erase(
-      std::remove_if(images->begin(), images->end(),
-                     [&index, &is_rect_empty, &rectangles](const allocation::ImageMetadata& image) {
-                       const auto& rect = rectangles->at(index++);
-                       return is_rect_empty(rect);
-                     }),
-      images->end());
-  FX_DCHECK(index == rectangles->size());
-  rectangles->erase(std::remove_if(rectangles->begin(), rectangles->end(), is_rect_empty),
-                    rectangles->end());
+
+  // Find the index of the last occluder.
+  unsigned i = 0, occluder_index = 0;
+  for (; i < length; i++) {
+    if (is_occluder((*rectangles_in_out)[i], (*images_in_out)[i])) {
+      occluder_index = i;
+    }
+  }
+
+  // Move all of the remaining renderable data into the output vectors. Entries get erased
+  // if they occur before the last occluder index, or if the rectangle at that entry is empty.
+  {
+    auto is_rect_empty = [](const escher::Rectangle2D& rect) {
+      return rect.extent.x <= 0.f && rect.extent.y <= 0.f;
+    };
+
+    unsigned index = 0;
+    images_in_out->erase(
+        std::remove_if(images_in_out->begin(), images_in_out->end(),
+                       [&index, &occluder_index, &is_rect_empty,
+                        &rectangles_in_out](const allocation::ImageMetadata& image) {
+                         auto curr_index = index++;
+                         return curr_index < occluder_index ||
+                                is_rect_empty((*rectangles_in_out)[curr_index]);
+                       }),
+        images_in_out->end());
+
+    index = 0;
+    rectangles_in_out->erase(
+        std::remove_if(rectangles_in_out->begin(), rectangles_in_out->end(),
+                       [&index, &occluder_index, &is_rect_empty](const escher::Rectangle2D& rect) {
+                         auto curr_index = index++;
+                         return curr_index < occluder_index || is_rect_empty(rect);
+                       }),
+        rectangles_in_out->end());
+  }
 }
 
 }  // namespace flatland

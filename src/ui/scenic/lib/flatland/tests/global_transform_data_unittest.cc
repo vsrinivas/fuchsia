@@ -675,6 +675,229 @@ TEST(GlobalTransformClipTest, ComplicatedGraphClipRegions) {
   }
 }
 
+// Make sure that if you have empty vectors in, you get empty vectors out.
+TEST(GlobalCullRectanglesTest, EmptyTest) {
+  uint64_t display_width = 1000;
+  uint64_t display_height = 500;
+
+  GlobalRectangleVector rects;
+  GlobalImageVector images;
+  CullRectangles(&rects, &images, display_width, display_height);
+  EXPECT_EQ(rects.size(), 0U);
+  EXPECT_EQ(images.size(), 0U);
+}
+
+// Make sure rects with 0 size get culled.
+TEST(GlobalCullRectanglesTest, EmptySizeTest) {
+  uint64_t display_width = 1000;
+  uint64_t display_height = 500;
+
+  // Three rects. First and last have zero size.
+  GlobalRectangleVector rects = {escher::Rectangle2D(glm::vec2(0, 0), glm::vec2(0, 0)),
+                                 escher::Rectangle2D(glm::vec2(0, 0), glm::vec2(20, 20)),
+                                 escher::Rectangle2D(glm::vec2(0, 0), glm::vec2(0, 0))};
+
+  GlobalImageVector images;
+  images.resize(3);
+  for (uint32_t i = 0; i < images.size(); i++) {
+    images[i].identifier = i;
+  }
+
+  CullRectangles(&rects, &images, display_width, display_height);
+  EXPECT_EQ(rects.size(), 1U);
+  EXPECT_EQ(images.size(), 1U);
+  EXPECT_EQ(images[0].identifier, 1U);
+  EXPECT_EQ(rects[0], escher::Rectangle2D(glm::vec2(0, 0), glm::vec2(20, 20)));
+}
+
+// Make sure that if you have a single rect/image pair, you get back exactly what you put in.
+TEST(GlobalCullRectanglesTest, SingleTest) {
+  uint64_t display_width = 1000;
+  uint64_t display_height = 500;
+
+  GlobalRectangleVector rects = {
+      escher::Rectangle2D(glm::vec2(0, 0), glm::vec2(display_width, display_height))};
+  GlobalImageVector images = {allocation::ImageMetadata()};
+  images[0].identifier = 20;
+
+  CullRectangles(&rects, &images, display_width, display_height);
+  EXPECT_EQ(rects.size(), 1U);
+  EXPECT_EQ(images.size(), 1U);
+  EXPECT_EQ(images[0].identifier, 20U);
+  EXPECT_EQ(rects[0],
+            escher::Rectangle2D(glm::vec2(0, 0), glm::vec2(display_width, display_height)));
+}
+
+// If a full screen rect comes last, everything before it should be culled, and it should be the
+// only output renderable.
+TEST(GlobalCullRectanglesTest, FullScreenRectIsLast) {
+  uint64_t display_width = 1000;
+  uint64_t display_height = 500;
+
+  GlobalRectangleVector rects = {
+      escher::Rectangle2D(glm::vec2(10, 20), glm::vec2(30, 40)),
+      escher::Rectangle2D(glm::vec2(60, 100), glm::vec2(300, 200)),
+      escher::Rectangle2D(glm::vec2(0, 0), glm::vec2(display_width, display_height))};
+  GlobalImageVector images = {allocation::ImageMetadata(), allocation::ImageMetadata(),
+                              allocation::ImageMetadata()};
+  images[2].identifier = 2;
+
+  CullRectangles(&rects, &images, display_width, display_height);
+  EXPECT_EQ(rects.size(), 1U);
+  EXPECT_EQ(images.size(), 1U);
+  EXPECT_EQ(images[0].identifier, 2U);
+  EXPECT_EQ(rects[0],
+            escher::Rectangle2D(glm::vec2(0, 0), glm::vec2(display_width, display_height)));
+}
+
+// If a full-screen rect is first, the otuput should match the input exactly.
+TEST(GlobalCullRectanglesTest, FullScreenRectIsFirst) {
+  uint64_t display_width = 1000;
+  uint64_t display_height = 500;
+
+  GlobalRectangleVector rects = {
+      escher::Rectangle2D(glm::vec2(0, 0), glm::vec2(display_width, display_height)),
+      escher::Rectangle2D(glm::vec2(10, 20), glm::vec2(30, 40)),
+      escher::Rectangle2D(glm::vec2(60, 100), glm::vec2(300, 200))};
+  GlobalImageVector images = {allocation::ImageMetadata(), allocation::ImageMetadata(),
+                              allocation::ImageMetadata()};
+  for (uint32_t i = 0; i < images.size(); i++) {
+    images[i].identifier = i;
+  }
+
+  auto expected_rects = rects;
+  auto expeted_images = images;
+
+  CullRectangles(&rects, &images, display_width, display_height);
+  EXPECT_EQ(rects.size(), 3U);
+  EXPECT_EQ(images.size(), 3U);
+  for (uint32_t i = 0; i < 3U; i++) {
+    EXPECT_EQ(rects[i], expected_rects[i]);
+    EXPECT_EQ(images[i], expeted_images[i]);
+  }
+}
+
+// If a full-screen rect is in the middle. we should see in the output everything starting
+// from that fullscreen rect.
+TEST(GlobalCullRectanglesTest, FullScreenRectIsMiddle) {
+  uint64_t display_width = 1000;
+  uint64_t display_height = 500;
+
+  GlobalRectangleVector rects = {
+      escher::Rectangle2D(glm::vec2(10, 20), glm::vec2(30, 40)),
+      escher::Rectangle2D(glm::vec2(0, 0), glm::vec2(display_width, display_height)),
+      escher::Rectangle2D(glm::vec2(60, 100), glm::vec2(300, 200))};
+  GlobalImageVector images = {allocation::ImageMetadata(), allocation::ImageMetadata(),
+                              allocation::ImageMetadata()};
+  images[1].identifier = 3;
+  images[2].identifier = 5;
+
+  GlobalRectangleVector expected_rects = {
+      escher::Rectangle2D(glm::vec2(0, 0), glm::vec2(display_width, display_height)),
+      escher::Rectangle2D(glm::vec2(60, 100), glm::vec2(300, 200))};
+  GlobalImageVector expected_images = {images[1], images[2]};
+
+  CullRectangles(&rects, &images, display_width, display_height);
+  EXPECT_EQ(rects.size(), 2U);
+  EXPECT_EQ(images.size(), 2U);
+
+  for (uint32_t i = 0; i < 2U; i++) {
+    EXPECT_EQ(rects[i], expected_rects[i]);
+    EXPECT_EQ(images[i], expected_images[i]);
+  }
+}
+
+// If we have multiple fullscreen rects, everything before the last fullscreen rect should still be
+// culled.
+TEST(GlobalCullRectanglesTest, MultipleFullScreenRects) {
+  uint64_t display_width = 1000;
+  uint64_t display_height = 500;
+
+  GlobalRectangleVector rects = {
+      escher::Rectangle2D(glm::vec2(10, 20), glm::vec2(30, 40)),
+      escher::Rectangle2D(glm::vec2(0, 0), glm::vec2(display_width, display_height)),
+      escher::Rectangle2D(glm::vec2(60, 100), glm::vec2(300, 200)),
+      escher::Rectangle2D(glm::vec2(0, 0), glm::vec2(display_width, display_height)),
+      escher::Rectangle2D(glm::vec2(60, 100), glm::vec2(150, 90)),
+      escher::Rectangle2D(glm::vec2(70, 15), glm::vec2(75, 55)),
+      escher::Rectangle2D(glm::vec2(0, 0), glm::vec2(display_width, display_height)),
+      escher::Rectangle2D(glm::vec2(80, 110), glm::vec2(900, 350))};
+  GlobalImageVector images = {allocation::ImageMetadata(), allocation::ImageMetadata(),
+                              allocation::ImageMetadata(), allocation::ImageMetadata(),
+                              allocation::ImageMetadata(), allocation::ImageMetadata(),
+                              allocation::ImageMetadata(), allocation::ImageMetadata()};
+  images[6].identifier = 6;
+  images[7].identifier = 7;
+
+  GlobalRectangleVector expected_rects = {
+      escher::Rectangle2D(glm::vec2(0, 0), glm::vec2(display_width, display_height)),
+      escher::Rectangle2D(glm::vec2(80, 110), glm::vec2(900, 350))};
+  GlobalImageVector expected_images = {images[6], images[7]};
+
+  CullRectangles(&rects, &images, display_width, display_height);
+  EXPECT_EQ(rects.size(), 2U);
+  EXPECT_EQ(images.size(), 2U);
+
+  for (uint32_t i = 0; i < 2U; i++) {
+    EXPECT_EQ(rects[i], expected_rects[i]);
+    EXPECT_EQ(images[i], expected_images[i]);
+  }
+}
+
+// Test where there are multiple fullscreen rects, but one of them is transparent, so
+// it should not cull the rects behind it.
+TEST(GlobalCullRectanglesTest, MultipleFullScreenRectsWithTransparency) {
+  uint64_t display_width = 1000;
+  uint64_t display_height = 500;
+
+  auto transparent_image_data = allocation::ImageMetadata();
+  transparent_image_data.blend_mode = fuchsia::ui::composition::BlendMode::SRC_OVER;
+
+  // There are full screen rects at indices [1, 3, and 6]. Indices 3 and 6 are transparent,
+  // but 1 is not. So we should ultimately only cull the rect at index 0, leaving 7 output
+  // rects in total.
+  GlobalRectangleVector rects = {
+      escher::Rectangle2D(glm::vec2(10, 20), glm::vec2(30, 40)),
+      escher::Rectangle2D(glm::vec2(0, 0), glm::vec2(display_width, display_height)),
+      escher::Rectangle2D(glm::vec2(60, 100), glm::vec2(300, 200)),
+      escher::Rectangle2D(glm::vec2(0, 0), glm::vec2(display_width, display_height)),
+      escher::Rectangle2D(glm::vec2(60, 100), glm::vec2(150, 90)),
+      escher::Rectangle2D(glm::vec2(70, 15), glm::vec2(75, 55)),
+      escher::Rectangle2D(glm::vec2(0, 0), glm::vec2(display_width, display_height)),
+      escher::Rectangle2D(glm::vec2(80, 110), glm::vec2(900, 350))};
+  GlobalImageVector images = {allocation::ImageMetadata(), allocation::ImageMetadata(),
+                              allocation::ImageMetadata(), transparent_image_data,
+                              allocation::ImageMetadata(), allocation::ImageMetadata(),
+                              transparent_image_data,      allocation::ImageMetadata()};
+
+  for (uint32_t i = 0; i < images.size(); i++) {
+    images[i].identifier = i;
+  }
+
+  GlobalRectangleVector expected_rects = {
+      escher::Rectangle2D(glm::vec2(0, 0), glm::vec2(display_width, display_height)),
+      escher::Rectangle2D(glm::vec2(60, 100), glm::vec2(300, 200)),
+      escher::Rectangle2D(glm::vec2(0, 0), glm::vec2(display_width, display_height)),
+      escher::Rectangle2D(glm::vec2(60, 100), glm::vec2(150, 90)),
+      escher::Rectangle2D(glm::vec2(70, 15), glm::vec2(75, 55)),
+      escher::Rectangle2D(glm::vec2(0, 0), glm::vec2(display_width, display_height)),
+      escher::Rectangle2D(glm::vec2(80, 110), glm::vec2(900, 350))};
+
+  GlobalImageVector expected_images;
+  for (uint32_t i = 0; i < 7; i++) {
+    expected_images.push_back(images[i + 1]);
+  }
+
+  CullRectangles(&rects, &images, display_width, display_height);
+  EXPECT_EQ(rects.size(), 7U);
+  EXPECT_EQ(images.size(), 7U);
+
+  for (uint32_t i = 0; i < 7U; i++) {
+    EXPECT_EQ(rects[i], expected_rects[i]);
+    EXPECT_EQ(images[i], expected_images[i]);
+  }
+}
+
 }  // namespace test
 }  // namespace flatland
 

@@ -43,16 +43,16 @@ class Display {
   void Unclaim();
 
   // The display's ID in the context of the DisplayManager's DisplayController.
-  uint64_t display_id() { return display_id_; }
-  uint32_t width_in_px() { return width_in_px_; }
-  uint32_t height_in_px() { return height_in_px_; }
+  uint64_t display_id() const { return display_id_; }
+  uint32_t width_in_px() const { return width_in_px_; }
+  uint32_t height_in_px() const { return height_in_px_; }
 
   // TODO(fxbug.dev/71410): Remove all references to zx_pixel_format_t.
   const std::vector<zx_pixel_format_t>& pixel_formats() const { return pixel_formats_; }
 
   // Event signaled by DisplayManager when ownership of the display
   // changes. This event backs Scenic's GetDisplayOwnershipEvent API.
-  const zx::event& ownership_event() { return ownership_event_; }
+  const zx::event& ownership_event() const { return ownership_event_; }
 
   // Called by DisplayManager, other users of Display should probably not call this.  Except tests.
   void OnVsync(zx::time timestamp, fuchsia::hardware::display::ConfigStamp applied_config_stamp);

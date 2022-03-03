@@ -45,6 +45,7 @@ struct Rectangle2D {
       : origin(in_origin), extent(in_extent), clockwise_uvs(in_uvs) {
     FX_CHECK(glm::all(glm::greaterThanEqual(extent, vec2(0.f))));
   }
+  Rectangle2D() = default;
 
   glm::vec2 origin = vec2(0, 0);
   glm::vec2 extent = vec2(1, 1);
