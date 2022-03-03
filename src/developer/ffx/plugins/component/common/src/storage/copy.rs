@@ -3,11 +3,10 @@
 // found in the LICENSE file.
 
 use {
-    crate::{RemotePath, REMOTE_PATH_HELP},
+    super::{RemotePath, REMOTE_PATH_HELP},
     anyhow::Result,
     component_hub::io::Directory,
     errors::{ffx_bail, ffx_error},
-    ffx_component_storage_args::CopyArgs,
     fidl::endpoints::create_proxy,
     fidl_fuchsia_io as fio,
     fidl_fuchsia_sys2::StorageAdminProxy,
@@ -15,11 +14,19 @@ use {
     std::path::PathBuf,
 };
 
-pub async fn copy(storage_admin: StorageAdminProxy, args: CopyArgs) -> Result<()> {
-    copy_cmd(storage_admin, args.source_path, args.destination_path).await
-}
-
-async fn copy_cmd(
+/// Transfer a file between the host machine and the Fuchsia device.
+/// Can be used to upload a file to or from the Fuchsia device.
+///
+/// To connect to a StorageAdminProxy, use a RemoteControlProxy with the right selector:
+/// data: "core:expose:fuchsia.sys2.StorageAdmin"
+/// cache: "core:expose:fuchsia.sys2.StorageAdmin.cache"
+/// temp: "core:expose:fuchsia.sys2.StorageAdmin.tmp"
+///
+/// # Arguments
+/// * `storage_admin`: The StorageAdminProxy.
+/// * `source_path`: The path to a file on the host machine to be uploaded to the device or to a file on the device to be downloaded on the host machine
+/// * `destination_path`: The path and filename on the target component or the host machine where to save the file
+pub async fn copy(
     storage_admin: StorageAdminProxy,
     source_path: String,
     destination_path: String,
@@ -74,38 +81,14 @@ async fn copy_cmd(
 mod test {
     use {
         super::*,
-        crate::test::setup_oneshot_fake_storage_admin,
-        fidl::endpoints::{RequestStream, ServerEnd},
-        fidl::handle::AsyncChannel,
+        crate::storage::test::{node_to_file, setup_fake_storage_admin},
         fidl_fuchsia_io::*,
-        fidl_fuchsia_sys2::StorageAdminRequest,
         futures::TryStreamExt,
         std::fs::{read, write},
         tempfile::tempdir,
     };
 
     const DATA: [u8; 4] = [0x0, 0x1, 0x2, 0x3];
-
-    pub fn node_to_directory(object: ServerEnd<NodeMarker>) -> DirectoryRequestStream {
-        DirectoryRequestStream::from_channel(
-            AsyncChannel::from_channel(object.into_channel()).unwrap(),
-        )
-    }
-
-    pub fn node_to_file(object: ServerEnd<NodeMarker>) -> FileRequestStream {
-        FileRequestStream::from_channel(AsyncChannel::from_channel(object.into_channel()).unwrap())
-    }
-
-    fn setup_fake_storage_admin(expected_id: &'static str) -> StorageAdminProxy {
-        setup_oneshot_fake_storage_admin(move |req| match req {
-            StorageAdminRequest::OpenComponentStorageById { id, object, responder, .. } => {
-                assert_eq!(expected_id, id);
-                setup_fake_directory(node_to_directory(object));
-                responder.send(&mut Ok(())).unwrap();
-            }
-            _ => panic!("got unexpected {:?}", req),
-        })
-    }
 
     // TODO(xbhatnag): Replace this mock with something more robust like VFS.
     // Currently VFS is not cross-platform.
@@ -199,10 +182,10 @@ mod test {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_copy_host_to_device() -> Result<()> {
         let dir = tempdir().unwrap();
-        let storage_admin = setup_fake_storage_admin("123456");
+        let storage_admin = setup_fake_storage_admin("123456", setup_fake_directory);
         let from_host_filepath = dir.path().join("from_host");
         write(&from_host_filepath, &DATA).unwrap();
-        copy_cmd(
+        copy(
             storage_admin,
             from_host_filepath.display().to_string(),
             "123456::from_host".to_string(),
@@ -213,14 +196,10 @@ mod test {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_copy_device_to_host() -> Result<()> {
         let dir = tempdir().unwrap();
-        let storage_admin = setup_fake_storage_admin("123456");
+        let storage_admin = setup_fake_storage_admin("123456", setup_fake_directory);
         let dest_filepath = dir.path().join("from_device");
-        copy_cmd(
-            storage_admin,
-            "123456::from_device".to_string(),
-            dest_filepath.display().to_string(),
-        )
-        .await?;
+        copy(storage_admin, "123456::from_device".to_string(), dest_filepath.display().to_string())
+            .await?;
         let data = read(dest_filepath).unwrap();
         assert_eq!(data, DATA);
         Ok(())

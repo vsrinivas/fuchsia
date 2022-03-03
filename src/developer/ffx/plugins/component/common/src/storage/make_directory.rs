@@ -3,24 +3,26 @@
 // found in the LICENSE file.
 
 use {
-    crate::RemotePath,
+    super::RemotePath,
     anyhow::Result,
     component_hub::io::Directory,
     errors::{ffx_bail, ffx_error},
-    ffx_component_storage_args::MakeDirectoryArgs,
     fidl::endpoints::create_proxy,
     fidl_fuchsia_io as fio,
     fidl_fuchsia_sys2::StorageAdminProxy,
 };
 
-pub async fn make_directory(
-    storage_admin: StorageAdminProxy,
-    args: MakeDirectoryArgs,
-) -> Result<()> {
-    make_directory_cmd(storage_admin, args.path).await
-}
-
-async fn make_directory_cmd(storage_admin: StorageAdminProxy, path: String) -> Result<()> {
+/// Create a new directory in a component's storage.
+///
+/// To connect to a StorageAdminProxy, use a RemoteControlProxy with the right selector:
+///     data: "core:expose:fuchsia.sys2.StorageAdmin"
+///     cache: "core:expose:fuchsia.sys2.StorageAdmin.cache"
+///     temp: "core:expose:fuchsia.sys2.StorageAdmin.tmp"
+///
+/// # Arguments
+/// * `storage_admin`: The StorageAdminProxy
+/// * `path`: The name of a new directory on the target component
+pub async fn make_directory(storage_admin: StorageAdminProxy, path: String) -> Result<()> {
     let remote_path = RemotePath::parse(&path)?;
 
     let (dir_proxy, server) = create_proxy::<fio::DirectoryMarker>()?;
@@ -54,30 +56,10 @@ async fn make_directory_cmd(storage_admin: StorageAdminProxy, path: String) -> R
 mod test {
     use {
         super::*,
-        crate::test::setup_oneshot_fake_storage_admin,
-        fidl::endpoints::{RequestStream, ServerEnd},
-        fidl::handle::AsyncChannel,
+        crate::storage::test::{node_to_directory, setup_fake_storage_admin},
         fidl_fuchsia_io::*,
-        fidl_fuchsia_sys2::StorageAdminRequest,
         futures::TryStreamExt,
     };
-
-    pub fn node_to_directory(object: ServerEnd<NodeMarker>) -> DirectoryRequestStream {
-        DirectoryRequestStream::from_channel(
-            AsyncChannel::from_channel(object.into_channel()).unwrap(),
-        )
-    }
-
-    fn setup_fake_storage_admin(expected_id: &'static str) -> StorageAdminProxy {
-        setup_oneshot_fake_storage_admin(move |req| match req {
-            StorageAdminRequest::OpenComponentStorageById { id, object, responder, .. } => {
-                assert_eq!(expected_id, id);
-                setup_fake_directory(node_to_directory(object));
-                responder.send(&mut Ok(())).unwrap();
-            }
-            _ => panic!("got unexpected {:?}", req),
-        })
-    }
 
     // TODO(xbhatnag): Replace this mock with something more robust like VFS.
     // Currently VFS is not cross-platform.
@@ -122,7 +104,7 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_make_directory() -> Result<()> {
-        let storage_admin = setup_fake_storage_admin("123456");
-        make_directory_cmd(storage_admin, "123456::test".to_string()).await
+        let storage_admin = setup_fake_storage_admin("123456", setup_fake_directory);
+        make_directory(storage_admin, "123456::test".to_string()).await
     }
 }

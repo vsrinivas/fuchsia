@@ -3,20 +3,22 @@
 // found in the LICENSE file.
 
 use {
-    crate::RemotePath, anyhow::Result, component_hub::io::Directory, errors::ffx_error,
-    ffx_component_storage_args::ListArgs, fidl::endpoints::create_proxy, fidl_fuchsia_io as fio,
-    fidl_fuchsia_sys2::StorageAdminProxy,
+    super::RemotePath, anyhow::Result, component_hub::io::Directory, errors::ffx_error,
+    fidl::endpoints::create_proxy, fidl_fuchsia_io as fio, fidl_fuchsia_sys2::StorageAdminProxy,
 };
 
-pub async fn list(storage_admin: StorageAdminProxy, args: ListArgs) -> Result<()> {
-    list_cmd(storage_admin, args.path, &mut std::io::stdout()).await
-}
-
-async fn list_cmd<W: std::io::Write>(
-    storage_admin: StorageAdminProxy,
-    path: String,
-    mut writer: W,
-) -> Result<()> {
+/// List all directories and files in a component's storage.
+/// Returns a vector of names of the directories and files as strings.
+///
+/// To connect to a StorageAdminProxy, use a RemoteControlProxy with the right selector:
+/// data: "core:expose:fuchsia.sys2.StorageAdmin"
+/// cache: "core:expose:fuchsia.sys2.StorageAdmin.cache"
+/// temp: "core:expose:fuchsia.sys2.StorageAdmin.tmp"
+///
+/// # Arguments
+/// * `storage_admin`: The StorageAdminProxy
+/// * `path`: A path on the target component
+pub async fn list(storage_admin: StorageAdminProxy, path: String) -> Result<Vec<String>> {
     let remote_path = RemotePath::parse(&path)?;
 
     let (dir_proxy, server) = create_proxy::<fio::DirectoryMarker>()?;
@@ -34,11 +36,7 @@ async fn list_cmd<W: std::io::Write>(
         storage_dir.open_dir_readable(remote_path.relative_path)?
     };
 
-    let entries = dir.entries().await?;
-    for entry in entries {
-        writeln!(writer, "{}", entry)?;
-    }
-    Ok(())
+    dir.entries().await
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -47,12 +45,7 @@ async fn list_cmd<W: std::io::Write>(
 #[cfg(test)]
 mod test {
     use {
-        super::*,
-        crate::test::setup_oneshot_fake_storage_admin,
-        fidl::endpoints::{RequestStream, ServerEnd},
-        fidl::handle::AsyncChannel,
-        fidl_fuchsia_io::*,
-        fidl_fuchsia_sys2::StorageAdminRequest,
+        super::*, crate::storage::test::setup_fake_storage_admin, fidl_fuchsia_io::*,
         futures::TryStreamExt,
     };
 
@@ -73,23 +66,6 @@ mod test {
             }
         }
         bytes
-    }
-
-    pub fn node_to_directory(object: ServerEnd<NodeMarker>) -> DirectoryRequestStream {
-        DirectoryRequestStream::from_channel(
-            AsyncChannel::from_channel(object.into_channel()).unwrap(),
-        )
-    }
-
-    fn setup_fake_storage_admin(expected_id: &'static str) -> StorageAdminProxy {
-        setup_oneshot_fake_storage_admin(move |req| match req {
-            StorageAdminRequest::OpenComponentStorageById { id, object, responder, .. } => {
-                assert_eq!(expected_id, id);
-                setup_fake_directory(node_to_directory(object));
-                responder.send(&mut Ok(())).unwrap();
-            }
-            _ => panic!("got unexpected {:?}", req),
-        })
     }
 
     // TODO(xbhatnag): Replace this mock with something more robust like VFS.
@@ -129,13 +105,10 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_list_root() -> Result<()> {
-        let mut output_utf8 = Vec::new();
-        let storage_admin = setup_fake_storage_admin("123456");
-        list_cmd(storage_admin, "123456::.".to_string(), &mut output_utf8).await?;
+        let storage_admin = setup_fake_storage_admin("123456", setup_fake_directory);
+        let dir_entries = list(storage_admin, "123456::.".to_string()).await?;
 
-        let output = String::from_utf8(output_utf8).expect("Invalid UTF-8 bytes");
-        assert!(output.contains("foo"));
-        assert!(output.contains("bar"));
+        assert_eq!(dir_entries, vec!["bar", "foo"]);
         Ok(())
     }
 }

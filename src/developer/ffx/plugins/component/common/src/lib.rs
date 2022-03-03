@@ -11,6 +11,8 @@ use {
     fuchsia_zircon_status::Status,
 };
 
+pub mod storage;
+
 pub const SELECTOR_FORMAT_HELP: &str =
     "Selector format: <component moniker>:(in|out|exposed)[:<service name>].
 Wildcards may be used anywhere in the selector.
