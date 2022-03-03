@@ -293,6 +293,13 @@ class FidlControlDataProcessor {
       const uint8_t tos = control_data.tos();
       total += StoreControlMessage(IPPROTO_IP, IP_TOS, &tos, sizeof(tos));
     }
+    if (control_data.has_ttl()) {
+      // Even though the ttl class can be encoded in a single byte, Linux returns it as an `int`
+      // when it is received as a control message.
+      // https://github.com/torvalds/linux/blob/7e57714cd0a/net/ipv4/ip_sockglue.c#L67
+      const int ttl = static_cast<int>(control_data.ttl());
+      total += StoreControlMessage(IPPROTO_IP, IP_TTL, &ttl, sizeof(ttl));
+    }
     return total;
   }
 
@@ -1204,6 +1211,13 @@ struct BaseNetworkSocket : public BaseSocket<T> {
                   .allow_char = true,
               };
             });
+          case IP_RECVTTL:
+            return proc.Process(client()->GetIpReceiveTtl(), [](const auto& response) {
+              return PartialCopy{
+                  .value = response.value,
+                  .allow_char = true,
+              };
+            });
           case IP_MULTICAST_TTL:
             return proc.Process(client()->GetIpMulticastTtl(), [](const auto& response) {
               return PartialCopy{
@@ -1398,6 +1412,9 @@ struct BaseNetworkSocket : public BaseSocket<T> {
           case IP_TTL:
             return proc.Process<OptionalUint8CharAllowed>(
                 [this](OptionalUint8CharAllowed value) { return client()->SetIpTtl(value.inner); });
+          case IP_RECVTTL:
+            return proc.Process<IntOrChar>(
+                [this](IntOrChar value) { return client()->SetIpReceiveTtl(value.value != 0); });
           case IP_TOS:
             if (optlen == 0) {
               return SockOptResult::Ok();

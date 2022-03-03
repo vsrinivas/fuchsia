@@ -235,6 +235,15 @@ protocol BaseNetworkSocket {
         value bool;
     }) error fuchsia.posix.Errno;
 
+    /// Set `SOL_IP` -> `IP_RECVTTL`.
+    SetIpReceiveTtl(struct {
+        value bool;
+    }) -> (struct {}) error fuchsia.posix.Errno;
+    /// Get `SOL_IP` -> `IP_RECVTTL`.
+    GetIpReceiveTtl() -> (struct {
+        value bool;
+    }) error fuchsia.posix.Errno;
+
     /// Set `SOL_IP` -> `IP_MULTICAST_IF`.
     SetIpMulticastInterface(struct {
         iface fuchsia.net.interface_id;
@@ -429,10 +438,15 @@ type NetworkSocketRecvControlData = table {
     ///
     /// These match POSIX `SOL_IP` control messages.
     2: ip @generated_name("IpRecvControlData") table {
-        /// The Type Of Service of a packet that was received.
+        /// The Type of Service value found in a received packet's IPv4 header.
         ///
         /// Present if the `SOL_IP` -> `IP_RECVTOS` option is enabled.
         1: tos uint8;
+
+        /// The Time to Live value found in a received packet's IPv4 header.
+        ///
+        /// Present if the `SOL_IP` -> `IP_RECVTTL` option is enabled.
+        2: ttl uint8;
     };
 };
 

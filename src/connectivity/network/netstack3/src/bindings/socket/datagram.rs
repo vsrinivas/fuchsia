@@ -1441,6 +1441,15 @@ where
                         } => {
                             responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
                         }
+                        fposix_socket::DatagramSocketRequest::SetIpReceiveTtl {
+                            value: _,
+                            responder,
+                        } => {
+                            responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
+                        }
+                        fposix_socket::DatagramSocketRequest::GetIpReceiveTtl { responder } => {
+                            responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
+                        }
                         fposix_socket::DatagramSocketRequest::SetIpPacketInfo {
                             value: _,
                             responder,

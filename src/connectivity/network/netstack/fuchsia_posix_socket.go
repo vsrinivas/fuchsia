@@ -1040,6 +1040,16 @@ func (ep *endpoint) GetIpReceiveTypeOfService(fidl.Context) (socket.BaseNetworkS
 	return socket.BaseNetworkSocketGetIpReceiveTypeOfServiceResultWithResponse(socket.BaseNetworkSocketGetIpReceiveTypeOfServiceResponse{Value: value}), nil
 }
 
+func (ep *endpoint) SetIpReceiveTtl(_ fidl.Context, value bool) (socket.BaseNetworkSocketSetIpReceiveTtlResult, error) {
+	ep.ep.SocketOptions().SetReceiveTTL(value)
+	return socket.BaseNetworkSocketSetIpReceiveTtlResultWithResponse(socket.BaseNetworkSocketSetIpReceiveTtlResponse{}), nil
+}
+
+func (ep *endpoint) GetIpReceiveTtl(fidl.Context) (socket.BaseNetworkSocketGetIpReceiveTtlResult, error) {
+	value := ep.ep.SocketOptions().GetReceiveTTL()
+	return socket.BaseNetworkSocketGetIpReceiveTtlResultWithResponse(socket.BaseNetworkSocketGetIpReceiveTtlResponse{Value: value}), nil
+}
+
 func (ep *endpoint) SetIpPacketInfo(_ fidl.Context, value bool) (socket.BaseNetworkSocketSetIpPacketInfoResult, error) {
 	ep.ep.SocketOptions().SetReceivePacketInfo(value)
 	return socket.BaseNetworkSocketSetIpPacketInfoResultWithResponse(socket.BaseNetworkSocketSetIpPacketInfoResponse{}), nil
@@ -1804,6 +1814,9 @@ func (s *datagramSocket) ipControlMessagesToFIDL(cmsg tcpip.ReceivableControlMes
 	var controlData socket.IpRecvControlData
 	if s.ep.SocketOptions().GetReceiveTOS() && cmsg.HasTOS {
 		controlData.SetTos(cmsg.TOS)
+	}
+	if cmsg.HasTTL {
+		controlData.SetTtl(cmsg.TTL)
 	}
 	return controlData
 }

@@ -712,6 +712,13 @@ INSTANTIATE_TEST_SUITE_P(
                              .valid_values = {1, 2, 15, 255},
                              .invalid_values = {-2, 0, 256},
                          },
+                         IntSocketOption{
+                             .option = STRINGIFIED_SOCKOPT(IPPROTO_IP, IP_RECVTTL),
+                             .is_boolean = true,
+                             .default_value = 0,
+                             .valid_values = kBooleanOptionValidValues,
+                             .invalid_values = {},
+                         },
                          IntSocketOption {
                            .option = STRINGIFIED_SOCKOPT(IPPROTO_IPV6, IPV6_MULTICAST_LOOP),
                            .is_boolean = true, .default_value = 1,
@@ -5747,11 +5754,13 @@ INSTANTIATE_TEST_SUITE_P(
                                                          sizeof(timespec), SO_TIMESTAMPNS))),
     SocketDomainAndOptionToString);
 
-INSTANTIATE_TEST_SUITE_P(NetDatagramSocketsCmsgRecvIPv4Tests, NetDatagramSocketsCmsgRecvTest,
-                         testing::Combine(testing::Values(AF_INET),
-                                          testing::Values(STRINGIFIED_CMSGOPT(
-                                              SOL_IP, IP_TOS, sizeof(uint8_t), IP_RECVTOS))),
-                         SocketDomainAndOptionToString);
+INSTANTIATE_TEST_SUITE_P(
+    NetDatagramSocketsCmsgRecvIPv4Tests, NetDatagramSocketsCmsgRecvTest,
+    testing::Combine(testing::Values(AF_INET),
+                     testing::Values(STRINGIFIED_CMSGOPT(SOL_IP, IP_TOS, sizeof(uint8_t),
+                                                         IP_RECVTOS),
+                                     STRINGIFIED_CMSGOPT(SOL_IP, IP_TTL, sizeof(int), IP_RECVTTL))),
+    SocketDomainAndOptionToString);
 
 class NetDatagramSocketsCmsgSendTest : public NetDatagramSocketsCmsgTestBase,
                                        public testing::WithParamInterface<sa_family_t> {
@@ -6197,6 +6206,70 @@ TEST_F(NetDatagramSocketsCmsgIpTosTest, SendCmsg) {
         EXPECT_EQ(recv_tos, tos);
 #endif
         EXPECT_EQ(CMSG_NXTHDR(&recv_msghdr, cmsg), nullptr);
+      }));
+}
+
+class NetDatagramSocketsCmsgIpTtlTest : public NetDatagramSocketsCmsgTestBase {
+ protected:
+  void SetUp() override {
+    ASSERT_NO_FATAL_FAILURE(SetUpDatagramSockets(AF_INET));
+
+    // Enable receiving IP_TTL control message.
+    constexpr int kOne = 1;
+    ASSERT_EQ(setsockopt(bound().get(), SOL_IP, IP_RECVTTL, &kOne, sizeof(kOne)), 0)
+        << strerror(errno);
+  }
+
+  void TearDown() override {
+    if (!IsSkipped()) {
+      EXPECT_NO_FATAL_FAILURE(TearDownDatagramSockets());
+    }
+  }
+};
+
+TEST_F(NetDatagramSocketsCmsgIpTtlTest, RecvCmsg) {
+  constexpr int kTtl = 42;
+  ASSERT_EQ(setsockopt(connected().get(), SOL_IP, IP_TTL, &kTtl, sizeof(kTtl)), 0)
+      << strerror(errno);
+
+  char control[CMSG_SPACE(sizeof(kTtl)) + 1];
+  ASSERT_NO_FATAL_FAILURE(
+      SendAndCheckReceivedMessage(control, sizeof(control), [kTtl](msghdr& msghdr) {
+        EXPECT_EQ(msghdr.msg_controllen, CMSG_SPACE(sizeof(kTtl)));
+        cmsghdr* cmsg = CMSG_FIRSTHDR(&msghdr);
+        ASSERT_NE(cmsg, nullptr);
+        EXPECT_EQ(cmsg->cmsg_len, CMSG_LEN(sizeof(kTtl)));
+        EXPECT_EQ(cmsg->cmsg_level, SOL_IP);
+        EXPECT_EQ(cmsg->cmsg_type, IP_TTL);
+        int recv_ttl;
+        memcpy(&recv_ttl, CMSG_DATA(cmsg), sizeof(recv_ttl));
+        EXPECT_EQ(recv_ttl, kTtl);
+        EXPECT_EQ(CMSG_NXTHDR(&msghdr, cmsg), nullptr);
+      }));
+}
+
+TEST_F(NetDatagramSocketsCmsgIpTtlTest, RecvCmsgUnalignedControlBuffer) {
+  constexpr int kDefaultTTL = 64;
+  char control[CMSG_SPACE(sizeof(kDefaultTTL)) + 1];
+  ASSERT_NO_FATAL_FAILURE(
+      SendAndCheckReceivedMessage(control + 1, sizeof(control), [kDefaultTTL](msghdr& msghdr) {
+        EXPECT_EQ(msghdr.msg_controllen, CMSG_SPACE(sizeof(kDefaultTTL)));
+
+        // Fetch back the control buffer and confirm it is unaligned.
+        cmsghdr* unaligned_cmsg = CMSG_FIRSTHDR(&msghdr);
+        ASSERT_NE(unaligned_cmsg, nullptr);
+        ASSERT_NE(reinterpret_cast<uintptr_t>(unaligned_cmsg) % alignof(cmsghdr), 0u);
+
+        // Copy the content to a properly aligned variable.
+        char aligned_cmsg[CMSG_SPACE(sizeof(kDefaultTTL))];
+        memcpy(&aligned_cmsg, unaligned_cmsg, sizeof(aligned_cmsg));
+        cmsghdr* cmsg = reinterpret_cast<cmsghdr*>(aligned_cmsg);
+        EXPECT_EQ(cmsg->cmsg_len, CMSG_LEN(sizeof(kDefaultTTL)));
+        EXPECT_EQ(cmsg->cmsg_level, SOL_IP);
+        EXPECT_EQ(cmsg->cmsg_type, IP_TTL);
+        int recv_ttl;
+        memcpy(&recv_ttl, CMSG_DATA(cmsg), sizeof(recv_ttl));
+        EXPECT_EQ(recv_ttl, kDefaultTTL);
       }));
 }
 
