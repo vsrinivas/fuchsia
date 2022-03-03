@@ -43,6 +43,10 @@ static uint64_t SysmemModifierToDrmModifier(uint64_t modifier) {
     case fuchsia_sysmem::wire::kFormatModifierIntelI915YTiled:
     case fuchsia_sysmem::wire::kFormatModifierIntelI915YfTiled:
       return modifier;
+    case fuchsia_sysmem::wire::kFormatModifierIntelI915YTiledCcs:
+      return I915_FORMAT_MOD_Y_TILED_CCS;
+    case fuchsia_sysmem::wire::kFormatModifierIntelI915YfTiledCcs:
+      return I915_FORMAT_MOD_Yf_TILED_CCS;
     case fuchsia_sysmem::wire::kFormatModifierArmLinearTe:
       // No DRM format modifier available.
       return DRM_FORMAT_MOD_INVALID;
@@ -76,7 +80,7 @@ class VulkanImageCreator {
   vk::PhysicalDeviceLimits GetPhysicalDeviceLimits();
 
   // Creates the buffer collection and sets constraints.
-  vk::Result CreateCollection(vk::ImageCreateInfo* image_create_info,
+  vk::Result CreateCollection(vk::ImageConstraintsInfoFUCHSIA* image_create_info,
                               fuchsia_sysmem::wire::PixelFormatType format,
                               std::vector<uint64_t>& modifiers);
 
@@ -85,6 +89,16 @@ class VulkanImageCreator {
 
   // Scenic is used if client asks for presentable images.
   bool use_scenic() { return scenic_allocator_.is_valid(); }
+
+  void GetFormatFeatures(vk::Format format, bool linear_tiling,
+                         vk::FormatFeatureFlags* features_out) {
+    auto result = physical_device_.getFormatProperties(format);
+    if (linear_tiling) {
+      *features_out = result.linearTilingFeatures;
+    } else {
+      *features_out = result.optimalTilingFeatures;
+    }
+  }
 
  private:
   vk::DispatchLoaderDynamic loader_;
@@ -154,7 +168,7 @@ vk::Result VulkanImageCreator::InitVulkan(uint32_t physical_device_index) {
       return vk::Result::eErrorInitializationFailed;
     }
 
-    std::array<const char*, 1> device_extensions{VK_FUCHSIA_BUFFER_COLLECTION_X_EXTENSION_NAME};
+    std::array<const char*, 1> device_extensions{VK_FUCHSIA_BUFFER_COLLECTION_EXTENSION_NAME};
 
     const float queue_priority = 0.0f;
     auto queue_create_info = vk::DeviceQueueCreateInfo()
@@ -282,9 +296,9 @@ vk::PhysicalDeviceLimits VulkanImageCreator::GetPhysicalDeviceLimits() {
   return props.limits;
 }
 
-vk::Result VulkanImageCreator::CreateCollection(vk::ImageCreateInfo* image_create_info,
-                                                fuchsia_sysmem::wire::PixelFormatType format,
-                                                std::vector<uint64_t>& modifiers) {
+vk::Result VulkanImageCreator::CreateCollection(
+    vk::ImageConstraintsInfoFUCHSIA* image_constraints_info,
+    fuchsia_sysmem::wire::PixelFormatType format, std::vector<uint64_t>& modifiers) {
   assert(device_);
 
   if (use_scenic()) {
@@ -314,14 +328,14 @@ vk::Result VulkanImageCreator::CreateCollection(vk::ImageCreateInfo* image_creat
   }
 
   // Set vulkan constraints.
-  vk::UniqueHandle<vk::BufferCollectionFUCHSIAX, vk::DispatchLoaderDynamic> vk_collection;
+  vk::UniqueHandle<vk::BufferCollectionFUCHSIA, vk::DispatchLoaderDynamic> vk_collection;
 
   {
-    auto collection_create_info = vk::BufferCollectionCreateInfoFUCHSIAX().setCollectionToken(
+    auto collection_create_info = vk::BufferCollectionCreateInfoFUCHSIA().setCollectionToken(
         vulkan_token_.TakeClientEnd().TakeChannel().release());
 
-    auto result = device_->createBufferCollectionFUCHSIAXUnique(collection_create_info,
-                                                                nullptr /*pAllocator*/, loader_);
+    auto result = device_->createBufferCollectionFUCHSIAUnique(collection_create_info,
+                                                               nullptr /*pAllocator*/, loader_);
     if (result.result != vk::Result::eSuccess) {
       LOG_VERBOSE("Failed to create buffer collection: %d", result.result);
       return result.result;
@@ -333,13 +347,7 @@ vk::Result VulkanImageCreator::CreateCollection(vk::ImageCreateInfo* image_creat
   assert(vk_collection);
 
   {
-    auto image_constraints_info = vk::ImageConstraintsInfoFUCHSIAX()
-                                      .setCreateInfoCount(1)
-                                      .setPCreateInfos(image_create_info)
-                                      .setMinBufferCount(1)
-                                      .setMaxBufferCount(1);
-
-    auto result = device_->setBufferCollectionImageConstraintsFUCHSIAX(
+    auto result = device_->setBufferCollectionImageConstraintsFUCHSIA(
         vk_collection.get(), image_constraints_info, loader_);
     if (result != vk::Result::eSuccess) {
       LOG_VERBOSE("Failed to set constraints: %s", vk::to_string(result).data());
@@ -386,14 +394,15 @@ vk::Result VulkanImageCreator::CreateCollection(vk::ImageCreateInfo* image_creat
         .image_format_constraints_count = to_uint32(modifiers.size()),
     };
 
+    const auto& image_create_info = image_constraints_info->pFormatConstraints[0].imageCreateInfo;
     for (uint32_t index = 0; index < modifiers.size(); index++) {
       fuchsia_sysmem::wire::ImageFormatConstraints& image_constraints =
           constraints.image_format_constraints[index];
       image_constraints = fuchsia_sysmem::wire::ImageFormatConstraints();
-      image_constraints.min_coded_width = image_create_info->extent.width;
-      image_constraints.min_coded_height = image_create_info->extent.height;
-      image_constraints.max_coded_width = image_create_info->extent.width;
-      image_constraints.max_coded_height = image_create_info->extent.height;
+      image_constraints.min_coded_width = image_create_info.extent.width;
+      image_constraints.min_coded_height = image_create_info.extent.height;
+      image_constraints.max_coded_width = image_create_info.extent.width;
+      image_constraints.max_coded_height = image_create_info.extent.height;
       image_constraints.min_bytes_per_row = 0;  // Rely on Vulkan to specify
       image_constraints.color_spaces_count = 1;
       image_constraints.color_space[0].type = fuchsia_sysmem::wire::ColorSpaceType::kSrgb;
@@ -571,6 +580,10 @@ static uint64_t DrmModifierToSysmemModifier(uint64_t modifier) {
       return fuchsia_sysmem::wire::kFormatModifierIntelI915YTiled;
     case I915_FORMAT_MOD_Yf_TILED:
       return fuchsia_sysmem::wire::kFormatModifierIntelI915YfTiled;
+    case I915_FORMAT_MOD_Y_TILED_CCS:
+      return fuchsia_sysmem::wire::kFormatModifierIntelI915YTiledCcs;
+    case I915_FORMAT_MOD_Yf_TILED_CCS:
+      return fuchsia_sysmem::wire::kFormatModifierIntelI915YfTiledCcs;
   }
   LOG_VERBOSE("Unhandle DRM modifier: %#lx", modifier);
   return fuchsia_sysmem::wire::kFormatModifierInvalid;
@@ -588,7 +601,8 @@ magma_status_t CreateDrmImage(uint32_t physical_device_index,
   assert(image_info_out);
   assert(vmo_out);
 
-  if (create_info->flags & ~MAGMA_IMAGE_CREATE_FLAGS_PRESENTABLE) {
+  if (static_cast<uint32_t>(create_info->flags) &
+      ~(MAGMA_IMAGE_CREATE_FLAGS_PRESENTABLE | MAGMA_IMAGE_CREATE_FLAGS_VULKAN_USAGE)) {
     LOG_VERBOSE("Invalid flags: %#lx", create_info->flags);
     return MAGMA_STATUS_INVALID_ARGS;
   }
@@ -665,10 +679,46 @@ magma_status_t CreateDrmImage(uint32_t physical_device_index,
     return MAGMA_STATUS_INTERNAL_ERROR;
   }
 
-  vk::ImageUsageFlags usage =
-      vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eTransferDst |
-      vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eStorage |
-      vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eInputAttachment;
+  vk::ImageUsageFlags vk_usage = {};
+  vk::FormatFeatureFlags vk_format_features = {};
+  {
+    // If linear isn't requested, assume we'll get a tiled format modifier.
+    bool linear_tiling = sysmem_modifiers.size() == 1 &&
+                         sysmem_modifiers[0] == fuchsia_sysmem::wire::kFormatModifierLinear;
+
+    image_creator.GetFormatFeatures(vk_format, linear_tiling, &vk_format_features);
+  }
+
+  if (create_info->flags & MAGMA_IMAGE_CREATE_FLAGS_VULKAN_USAGE) {
+    // Use the Vulkan usage as provided by the client.
+    // Don't bother checking these against the supported format features.
+    vk_usage = static_cast<vk::ImageUsageFlags>(create_info->flags >> 32);
+  } else {
+    // For non-ICD clients like GBM, the client API has no fine grained usage.
+    // To maximize compatibility, we pass as many usages as make sense given the format features.
+    if (vk_format_features & vk::FormatFeatureFlagBits::eTransferSrc) {
+      vk_usage |= vk::ImageUsageFlagBits::eTransferSrc;
+    }
+    if (vk_format_features & vk::FormatFeatureFlagBits::eTransferDst) {
+      vk_usage |= vk::ImageUsageFlagBits::eTransferDst;
+    }
+    if (vk_format_features & vk::FormatFeatureFlagBits::eSampledImage) {
+      vk_usage |= vk::ImageUsageFlagBits::eSampled;
+    }
+    if (vk_format_features & vk::FormatFeatureFlagBits::eStorageImage) {
+      vk_usage |= vk::ImageUsageFlagBits::eStorage;
+    }
+    if (vk_format_features & vk::FormatFeatureFlagBits::eColorAttachment) {
+      vk_usage |= vk::ImageUsageFlagBits::eColorAttachment;
+      vk_usage |= vk::ImageUsageFlagBits::eInputAttachment;
+    }
+    if (vk_format_features & vk::FormatFeatureFlagBits::eDepthStencilAttachment) {
+      vk_usage |= vk::ImageUsageFlagBits::eDepthStencilAttachment;
+      vk_usage |= vk::ImageUsageFlagBits::eInputAttachment;
+    }
+    // No format features apply here.
+    vk_usage |= vk::ImageUsageFlagBits::eTransientAttachment;
+  }
 
   auto image_create_info = vk::ImageCreateInfo()
                                .setFormat(vk_format)
@@ -678,10 +728,34 @@ magma_status_t CreateDrmImage(uint32_t physical_device_index,
                                .setExtent({create_info->width, create_info->height, 1})
                                .setTiling(vk::ImageTiling::eOptimal)
                                .setSharingMode(vk::SharingMode::eExclusive)
-                               .setUsage(usage);
+                               .setUsage(vk_usage);
+
+  const vk::SysmemColorSpaceFUCHSIA kRgbColorSpace = {
+      static_cast<uint32_t>(fuchsia_sysmem::wire::ColorSpaceType::kSrgb)};
+  const vk::SysmemColorSpaceFUCHSIA kYuvColorSpace = {
+      static_cast<uint32_t>(fuchsia_sysmem::wire::ColorSpaceType::kRec709)};
+
+  bool isYuvFormat = vk_format == vk::Format::eG8B8G8R8422Unorm ||
+                     vk_format == vk::Format::eG8B8R82Plane420Unorm ||
+                     vk_format == vk::Format::eG8B8R83Plane420Unorm;
+
+  auto format_info = vk::ImageFormatConstraintsInfoFUCHSIA()
+                         .setImageCreateInfo(image_create_info)
+                         .setRequiredFormatFeatures(vk_format_features)
+                         .setSysmemPixelFormat({})
+                         .setColorSpaceCount(1u)
+                         .setPColorSpaces(isYuvFormat ? &kYuvColorSpace : &kRgbColorSpace);
+
+  auto image_constraints =
+      vk::ImageConstraintsInfoFUCHSIA()
+          .setFlags({})
+          .setFormatConstraints(format_info)
+          .setBufferCollectionConstraints(
+              vk::BufferCollectionConstraintsInfoFUCHSIA().setMinBufferCount(1u).setMaxBufferCount(
+                  1u));
 
   vk::Result result =
-      image_creator.CreateCollection(&image_create_info, sysmem_format, sysmem_modifiers);
+      image_creator.CreateCollection(&image_constraints, sysmem_format, sysmem_modifiers);
   if (result != vk::Result::eSuccess) {
     LOG_VERBOSE("Failed to create collection: %s", vk::to_string(result).data());
     return MagmaStatus(result);
