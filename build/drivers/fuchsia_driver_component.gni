@@ -46,6 +46,10 @@ import("//tools/cmc/build/cmc.gni")
 #     This only affects drivers with automatically generated manifests.
 #     Type: bool
 #     Default: false
+#   uses_profiles (optional)
+#     If this is true, the driver will be given access to the profile provider service.
+#     Type: bool
+#     Default: false
 #   info (mandatory for //src and //zircon)
 #     Name of the file containing the driver information file.
 #     Type: file
@@ -107,6 +111,9 @@ template("fuchsia_driver_component") {
         }
         if (defined(invoker.root_resource) && invoker.root_resource) {
           args += [ "--root_resource" ]
+        }
+        if (defined(invoker.uses_profiles) && invoker.uses_profiles) {
+          args += [ "--profile_provider" ]
         }
       }
 

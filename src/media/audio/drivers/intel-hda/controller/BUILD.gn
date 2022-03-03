@@ -112,6 +112,7 @@ fuchsia_driver_component("intel-hda") {
   deps = [ ":intel-hda-driver" ]
   info = "intel-hda-info.json"
   colocate = true
+  uses_profiles = true
 }
 
 test("controller_test") {

@@ -90,6 +90,7 @@ fuchsia_driver_component("xhci") {
     ":xhci-driver",
   ]
   colocate = true
+  uses_profiles = true
 }
 
 fuchsia_driver_component("xhci-dfv2") {
@@ -100,6 +101,7 @@ fuchsia_driver_component("xhci-dfv2") {
     ":xhci-driver",
   ]
   colocate = true
+  uses_profiles = true
 }
 
 source_set("test-libs") {

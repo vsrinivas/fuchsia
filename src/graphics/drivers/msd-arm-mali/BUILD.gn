@@ -22,6 +22,7 @@ fuchsia_driver_component("msd_arm") {
   info = "msd_arm-info.json"
   colocate = true
   root_resource = true
+  uses_profiles = true
 }
 
 fuchsia_driver("msd_arm_test-driver") {

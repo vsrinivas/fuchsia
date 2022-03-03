@@ -41,6 +41,12 @@ def main():
         '--root_resource',
         action='store_true',
         help='Whether or not to give the driver access to the root resource')
+    parser.add_argument(
+        '--profile_provider',
+        action='store_true',
+        help=
+        'Whether or not to give the driver access to fuchsia.scheduler.ProfileProvider',
+    )
     args = parser.parse_args()
 
     distribution_manifest = json.load(args.distribution_manifest_file)
@@ -119,6 +125,9 @@ def main():
 
     if args.root_resource:
         manifest['use'].append({'protocol': "fuchsia.boot.RootResource"})
+    if args.profile_provider:
+        manifest['use'].append(
+            {'protocol': "fuchsia.scheduler.ProfileProvider"})
 
     json_manifest = json.dumps(manifest)
     args.output.write(json_manifest)

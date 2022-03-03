@@ -31,6 +31,7 @@ fuchsia_driver_component("msd_vsi") {
   deps = [ ":msd_vsi-driver" ]
   colocate = true
   root_resource = true
+  uses_profiles = true
 }
 
 fuchsia_driver("msd_vsi_test-driver") {

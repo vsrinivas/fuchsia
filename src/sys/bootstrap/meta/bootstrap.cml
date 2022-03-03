@@ -359,8 +359,10 @@
             protocol: [ "fuchsia.scheduler.ProfileProvider" ],
             from: "#svchost",
             to: [
+                "#boot-drivers",
                 "#decompressor",
                 "#fshost",
+                "#pkg-drivers",
             ],
         },
         {
