@@ -217,14 +217,6 @@ func TestFuchsiaNetStack(t *testing.T) {
 			} else if got != want {
 				t.Errorf("got ns.stack.NICForwarding(%d, %d) = %t, want = %t", nicID, netProto, got, want)
 			}
-
-			resp, err := ni.GetInterfaceIpForwarding(context.Background(), uint64(nicID), ipVersion)
-			if err != nil {
-				t.Fatalf("ni.GetInterfaceIpForwarding(_, uint64(%d), %d): %s", nicID, ipVersion, err)
-			}
-			if diff := cmp.Diff(stack.StackGetInterfaceIpForwardingResultWithResponse(stack.StackGetInterfaceIpForwardingResponse{Enabled: want}), resp); diff != "" {
-				t.Errorf("ni.GetInterfaceIpForwarding(_, uint64(%d), %d) mismatch (-want +got):\n%s", nicID, ipVersion, diff)
-			}
 		}
 
 		checkAllForwarding := func(want bool) {
@@ -263,45 +255,29 @@ func TestFuchsiaNetStack(t *testing.T) {
 		setInterfaceForwarding := func(nicID tcpip.NICID, ipVersion net.IpVersion, enabled bool) {
 			t.Helper()
 
-			resp, err := ni.SetInterfaceIpForwarding(context.Background(), uint64(nicID), ipVersion, enabled)
+			resp, err := ni.SetInterfaceIpForwardingDeprecated(context.Background(), uint64(nicID), ipVersion, enabled)
 			if err != nil {
-				t.Fatalf("ni.SetInterfaceIpForwarding(_, uint64(%d), %d, %t): %s", nicID, ipVersion, enabled, err)
+				t.Fatalf("ni.SetInterfaceIpForwardingDeprecated(_, uint64(%d), %d, %t): %s", nicID, ipVersion, enabled, err)
 			}
-			if diff := cmp.Diff(stack.StackSetInterfaceIpForwardingResultWithResponse(stack.StackSetInterfaceIpForwardingResponse{}), resp); diff != "" {
-				t.Fatalf("ni.SetInterfaceIpForwarding(_, %d, %d, %t) mismatch (-want +got):\n%s", nicID, ipVersion, enabled, diff)
+			if diff := cmp.Diff(stack.StackSetInterfaceIpForwardingDeprecatedResultWithResponse(stack.StackSetInterfaceIpForwardingDeprecatedResponse{}), resp); diff != "" {
+				t.Fatalf("ni.SetInterfaceIpForwardingDeprecated(_, %d, %d, %t) mismatch (-want +got):\n%s", nicID, ipVersion, enabled, diff)
 			}
 		}
 
 		// Forwarding should initially be disabled.
 		checkAllForwarding(false)
 
-		// We should be able to control forwarding of all interfaces.
-		if err := ni.EnableIpForwarding(context.Background()); err != nil {
-			t.Fatalf("ni.EnableIpForwarding(_): %s", err)
-		}
-		checkAllForwarding(true)
-		if err := ni.DisableIpForwarding(context.Background()); err != nil {
-			t.Fatalf("ni.DisableIpForwarding(_): %s", err)
-		}
-		checkAllForwarding(false)
-
 		// We should be able to enable forwarding on a single interface.
 		setInterfaceForwarding(ifs1.nicid, net.IpVersionV4, true)
 		checkAllForwardingExcept(false, ifs1.nicid, net.IpVersionV4)
 
-		if err := ni.EnableIpForwarding(context.Background()); err != nil {
-			t.Fatalf("ni.EnableIpForwarding(_): %s", err)
-		}
-		checkAllForwarding(true)
+		setInterfaceForwarding(ifs1.nicid, net.IpVersionV6, true)
+		setInterfaceForwarding(ifs2.nicid, net.IpVersionV4, true)
+		setInterfaceForwarding(ifs2.nicid, net.IpVersionV6, true)
 
 		// We should be able to disable forwarding on a single interface.
-		setInterfaceForwarding(ifs2.nicid, net.IpVersionV6, false)
-		checkAllForwardingExcept(true, ifs2.nicid, net.IpVersionV6)
-
-		if err := ni.DisableIpForwarding(context.Background()); err != nil {
-			t.Fatalf("ni.DisableIpForwarding(_): %s", err)
-		}
-		checkAllForwarding(false)
+		setInterfaceForwarding(ifs1.nicid, net.IpVersionV4, false)
+		checkAllForwardingExcept(true, ifs1.nicid, net.IpVersionV4)
 	})
 
 	t.Run("Remove loopback interface", func(t *testing.T) {

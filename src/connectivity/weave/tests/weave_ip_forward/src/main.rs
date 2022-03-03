@@ -190,8 +190,6 @@ async fn run_fuchsia_node() -> Result<(), Error> {
 
     fx_log_info!("{}", t.printstd());
 
-    let () = stack.enable_ip_forwarding().await.context("failed to enable ip forwarding")?;
-
     let bus = BusConnection::new(FUCHSIA_NODE_NAME)?;
     fx_log_info!("waiting for server to finish...");
     let () = bus.wait_for_event(vec![WEAVE_SERVER_NODE_DONE, WPAN_SERVER_NODE_DONE]).await?;

@@ -72,7 +72,8 @@
                                     "-e",
                                     "weave-f-ep",
                                     "-i",
-                                    "fdce:da10:7616:6::abcd"
+                                    "fdce:da10:7616:6::abcd",
+                                    "--enable-ipv6-forwarding"
                                 ],
                                 "url": "fuchsia-pkg://fuchsia.com/weave-ip-fwd-tests#meta/netstack-cfg.cmx"
                             },
@@ -81,7 +82,8 @@
                                     "-e",
                                     "wlan-f-ep",
                                     "-i",
-                                    "fdce:da10:7616:1::abcd"
+                                    "fdce:da10:7616:1::abcd",
+                                    "--enable-ipv6-forwarding"
                                 ],
                                 "url": "fuchsia-pkg://fuchsia.com/weave-ip-fwd-tests#meta/netstack-cfg.cmx"
                             },
@@ -90,7 +92,8 @@
                                     "-e",
                                     "wpan-f-ep",
                                     "-i",
-                                    "fdd3:b786:54dc::abcd"
+                                    "fdd3:b786:54dc::abcd",
+                                    "--enable-ipv6-forwarding"
                                 ],
                                 "url": "fuchsia-pkg://fuchsia.com/weave-ip-fwd-tests#meta/netstack-cfg.cmx"
                             }

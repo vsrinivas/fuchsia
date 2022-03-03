@@ -218,10 +218,11 @@ class FakeNetstack : public fuchsia::net::stack::testing::Stack_TestBase,
   }
 
   // fuchsia::net::stack::Stack interface definitions.
-  void SetInterfaceIpForwarding(uint64_t id, fuchsia::net::IpVersion ip_version, bool enabled,
-                                SetInterfaceIpForwardingCallback callback) override {
-    fuchsia::net::stack::Stack_SetInterfaceIpForwarding_Result result;
-    fuchsia::net::stack::Stack_SetInterfaceIpForwarding_Response response;
+  void SetInterfaceIpForwardingDeprecated(
+      uint64_t id, fuchsia::net::IpVersion ip_version, bool enabled,
+      SetInterfaceIpForwardingDeprecatedCallback callback) override {
+    fuchsia::net::stack::Stack_SetInterfaceIpForwardingDeprecated_Result result;
+    fuchsia::net::stack::Stack_SetInterfaceIpForwardingDeprecated_Response response;
 
     EXPECT_EQ(ip_version, fuchsia::net::IpVersion::V6);
     EXPECT_TRUE(enabled);

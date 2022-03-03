@@ -10,6 +10,7 @@ use anyhow::Context as _;
 use fidl_fuchsia_net as fnet;
 use fidl_fuchsia_net_ext as fnet_ext;
 use fidl_fuchsia_net_filter as fnetfilter;
+use fidl_fuchsia_net_interfaces_admin as finterfaces_admin;
 use fidl_fuchsia_net_interfaces_ext as fnet_interfaces_ext;
 use fidl_fuchsia_net_stack as fnet_stack;
 use fidl_fuchsia_net_stack_ext::FidlReturn as _;
@@ -1033,11 +1034,6 @@ async fn setup_masquerate_nat_network<'a, E: netemul::Endpoint>(
         .create_netstack_realm::<Netstack2, _>(format!("{}_router", name))
         .expect("failed to create router_realm");
 
-    let stack = router_realm
-        .connect_to_protocol::<fnet_stack::StackMarker>()
-        .expect("failed to connect to netstack");
-    let () = stack.enable_ip_forwarding().await.expect("failed to enable ip forwarding");
-
     async fn configure_host_network<'a, E: netemul::Endpoint>(
         sandbox: &'a netemul::TestSandbox,
         name: &str,
@@ -1068,6 +1064,28 @@ async fn setup_masquerate_nat_network<'a, E: netemul::Endpoint>(
             )
             .await
             .expect("router failed to join network");
+
+        let gen_forwarding_config = |forwarding| finterfaces_admin::Configuration {
+            ipv4: Some(finterfaces_admin::Ipv4Configuration {
+                forwarding: Some(forwarding),
+                ..finterfaces_admin::Ipv4Configuration::EMPTY
+            }),
+            ipv6: Some(finterfaces_admin::Ipv6Configuration {
+                forwarding: Some(forwarding),
+                ..finterfaces_admin::Ipv6Configuration::EMPTY
+            }),
+            ..finterfaces_admin::Configuration::EMPTY
+        };
+
+        assert_eq!(
+            router_ep
+                .control()
+                .set_configuration(gen_forwarding_config(true))
+                .await
+                .expect("set_configuration FIDL error")
+                .expect("error setting configuration"),
+            gen_forwarding_config(false)
+        );
 
         let host_ep = host_realm
             .join_network::<E, _>(

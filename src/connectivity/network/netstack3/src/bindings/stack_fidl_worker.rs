@@ -12,7 +12,6 @@ use super::{
     MutableDeviceState as _,
 };
 
-use fidl::prelude::*;
 use fidl_fuchsia_net as fidl_net;
 use fidl_fuchsia_net_stack::{
     self as fidl_net_stack, ForwardingEntry, StackRequest, StackRequestStream,
@@ -117,23 +116,7 @@ where
                             &mut worker.lock_worker().await.fidl_del_forwarding_entry(subnet)
                         );
                     }
-                    StackRequest::EnableIpForwarding { responder } => {
-                        // TODO(https://fxbug.dev/76987): Support enabling IP forwarding.
-                        let () = responder
-                            .control_handle()
-                            .shutdown_with_epitaph(fuchsia_zircon::Status::NOT_SUPPORTED);
-                    }
-                    StackRequest::DisableIpForwarding { responder } => {
-                        // TODO(https://fxbug.dev/76987): Support disabling IP forwarding.
-                        let () = responder
-                            .control_handle()
-                            .shutdown_with_epitaph(fuchsia_zircon::Status::NOT_SUPPORTED);
-                    }
-                    StackRequest::GetInterfaceIpForwarding { id: _, ip_version: _, responder } => {
-                        // TODO(https://fxbug.dev/76987): Support querying per-NIC forwarding.
-                        responder_send!(responder, &mut Err(fidl_net_stack::Error::NotSupported));
-                    }
-                    StackRequest::SetInterfaceIpForwarding {
+                    StackRequest::SetInterfaceIpForwardingDeprecated {
                         id: _,
                         ip_version: _,
                         enabled: _,

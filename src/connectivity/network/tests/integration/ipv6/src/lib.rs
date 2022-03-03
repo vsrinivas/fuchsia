@@ -7,6 +7,7 @@
 use std::mem::size_of;
 
 use fidl_fuchsia_net as net;
+use fidl_fuchsia_net_interfaces_admin as finterfaces_admin;
 use fidl_fuchsia_net_stack as net_stack;
 use fuchsia_async::{DurationExt as _, TimeoutExt as _};
 use fuchsia_zircon as zx;
@@ -158,6 +159,26 @@ async fn consistent_initial_ipv6_addrs<E: netemul::Endpoint>(name: &str) {
     assert_eq!(first_run_addrs, second_run_addrs);
 }
 
+/// Enables IPv6 forwarding configuration.
+async fn enable_ipv6_forwarding(iface: &netemul::TestInterface<'_>) {
+    let config_with_ipv6_forwarding_set = |forwarding| finterfaces_admin::Configuration {
+        ipv6: Some(finterfaces_admin::Ipv6Configuration {
+            forwarding: Some(forwarding),
+            ..finterfaces_admin::Ipv6Configuration::EMPTY
+        }),
+        ..finterfaces_admin::Configuration::EMPTY
+    };
+
+    let configuration = iface
+        .control()
+        .set_configuration(config_with_ipv6_forwarding_set(true))
+        .await
+        .expect("set_configuration FIDL error")
+        .expect("error setting configuration");
+
+    assert_eq!(configuration, config_with_ipv6_forwarding_set(false))
+}
+
 /// Tests that `EXPECTED_ROUTER_SOLICIATIONS` Router Solicitation messages are transmitted
 /// when the interface is brought up.
 #[variants_test]
@@ -172,14 +193,11 @@ async fn sends_router_solicitations<E: netemul::Endpoint>(
     let name = name.as_str();
 
     let sandbox = netemul::TestSandbox::new().expect("failed to create sandbox");
-    let (_network, realm, _netstack, _iface, fake_ep) =
+    let (_network, _realm, _netstack, iface, fake_ep) =
         setup_network::<E>(&sandbox, name).await.expect("error setting up network");
 
     if forwarding {
-        let stack = realm
-            .connect_to_protocol::<net_stack::StackMarker>()
-            .expect("failed to get stack proxy");
-        let () = stack.enable_ip_forwarding().await.expect("error enabling IP forwarding");
+        enable_ipv6_forwarding(&iface).await;
     }
 
     // Make sure exactly `EXPECTED_ROUTER_SOLICIATIONS` RS messages are transmitted
@@ -297,10 +315,7 @@ async fn slaac_with_privacy_extensions<E: netemul::Endpoint>(
         setup_network::<E>(&sandbox, name).await.expect("error setting up network");
 
     if forwarding {
-        let stack = realm
-            .connect_to_protocol::<net_stack::StackMarker>()
-            .expect("failed to get stack proxy");
-        let () = stack.enable_ip_forwarding().await.expect("error enabling IP forwarding");
+        enable_ipv6_forwarding(&iface).await;
     }
 
     // Wait for a Router Solicitation.
@@ -761,7 +776,7 @@ async fn on_and_off_link_route_discovery<E: netemul::Endpoint>(
         realm.connect_to_protocol::<net_stack::StackMarker>().expect("failed to get stack proxy");
 
     if forwarding {
-        let () = stack.enable_ip_forwarding().await.expect("error enabling IP forwarding");
+        enable_ipv6_forwarding(&iface).await;
     }
 
     let options = [

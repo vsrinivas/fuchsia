@@ -6,7 +6,9 @@
 
 use std::collections::HashMap;
 
+use fidl_fuchsia_net as fnet;
 use fidl_fuchsia_net_ext::{IntoExt as _, NetTypesIpAddressExt};
+use fidl_fuchsia_net_interfaces_admin as finterfaces_admin;
 use fidl_fuchsia_net_stack as fnet_stack;
 use fidl_fuchsia_net_stack_ext::{exec_fidl, FidlReturn as _};
 use fidl_fuchsia_netemul as fnetemul;
@@ -671,7 +673,7 @@ async fn disable_interface_loopback<N: Netstack>(name: &str) {
 }
 
 enum ForwardingConfiguration {
-    All,
+    BothIfaces(fidl_fuchsia_net::IpVersion),
     Iface1Only(fidl_fuchsia_net::IpVersion),
     Iface2Only(fidl_fuchsia_net::IpVersion),
 }
@@ -729,7 +731,7 @@ fn test_forwarding_v6(
 #[test_case(
     "v4_all_forward_icmp_v4",
     test_forwarding_v4(
-        Some(ForwardingConfiguration::All),
+        Some(ForwardingConfiguration::BothIfaces(fidl_fuchsia_net::IpVersion::V4)),
         true,
     ); "v4_all_forward_icmp_v4")]
 #[test_case(
@@ -759,7 +761,7 @@ fn test_forwarding_v6(
 #[test_case(
     "v6_all_forward_icmp_v6",
     test_forwarding_v6(
-        Some(ForwardingConfiguration::All),
+        Some(ForwardingConfiguration::BothIfaces(fidl_fuchsia_net::IpVersion::V6)),
         true,
     ); "v6_all_forward_icmp_v6")]
 #[test_case(
@@ -829,31 +831,45 @@ async fn test_forwarding<E: netemul::Endpoint, I: IcmpIpExt>(
     let (_net1, fake_ep1, iface1) = net_ep_iface(1, iface1_addr).await;
     let (_net2, fake_ep2, iface2) = net_ep_iface(2, iface2_addr).await;
 
-    if let Some(config) = forwarding_config {
-        let stack = realm
-            .connect_to_protocol::<fnet_stack::StackMarker>()
-            .expect("error connecting to stack");
+    async fn enable_ip_forwarding(iface: &netemul::TestInterface<'_>, ip_version: fnet::IpVersion) {
+        let config_with_ip_forwarding_set = |ip_version, forwarding| match ip_version {
+            fnet::IpVersion::V4 => finterfaces_admin::Configuration {
+                ipv4: Some(finterfaces_admin::Ipv4Configuration {
+                    forwarding: Some(forwarding),
+                    ..finterfaces_admin::Ipv4Configuration::EMPTY
+                }),
+                ..finterfaces_admin::Configuration::EMPTY
+            },
+            fnet::IpVersion::V6 => finterfaces_admin::Configuration {
+                ipv6: Some(finterfaces_admin::Ipv6Configuration {
+                    forwarding: Some(forwarding),
+                    ..finterfaces_admin::Ipv6Configuration::EMPTY
+                }),
+                ..finterfaces_admin::Configuration::EMPTY
+            },
+        };
 
+        let configuration = iface
+            .control()
+            .set_configuration(config_with_ip_forwarding_set(ip_version, true))
+            .await
+            .expect("set_configuration FIDL error")
+            .expect("error setting configuration");
+
+        assert_eq!(configuration, config_with_ip_forwarding_set(ip_version, false))
+    }
+
+    if let Some(config) = forwarding_config {
         match config {
-            ForwardingConfiguration::All => {
-                let () = stack
-                    .enable_ip_forwarding()
-                    .await
-                    .expect("error enabling IP forwarding request");
+            ForwardingConfiguration::BothIfaces(ip_version) => {
+                enable_ip_forwarding(&iface1, ip_version).await;
+                enable_ip_forwarding(&iface2, ip_version).await;
             }
             ForwardingConfiguration::Iface1Only(ip_version) => {
-                let () = stack
-                    .set_interface_ip_forwarding(iface1.id(), ip_version, true)
-                    .await
-                    .expect("set_interface_ip_forwarding FIDL error for iface1")
-                    .expect("error enabling IP forwarding on iface1");
+                enable_ip_forwarding(&iface1, ip_version).await;
             }
             ForwardingConfiguration::Iface2Only(ip_version) => {
-                let () = stack
-                    .set_interface_ip_forwarding(iface2.id(), ip_version, true)
-                    .await
-                    .expect("set_interface_ip_forwarding FIDL error for iface2")
-                    .expect("error enabling IP forwarding on iface2");
+                enable_ip_forwarding(&iface2, ip_version).await;
             }
         }
     }

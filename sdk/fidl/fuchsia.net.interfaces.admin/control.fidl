@@ -8,6 +8,23 @@ using fuchsia.net;
 using fuchsia.hardware.network;
 using fuchsia.net.interfaces;
 
+/// The configuration for an interface.
+type Configuration = table {
+    /// The IPv4 configuration for an interface.
+    1: ipv4 @generated_name("Ipv4Configuration") table {
+        /// Controls whether or not IPv4 packets may be forwarded if not
+        /// destined to the host.
+        1: forwarding bool;
+    };
+
+    /// The IPv6 configuration for an interface.
+    2: ipv6 @generated_name("Ipv6Configuration") table {
+        /// Controls whether or not incoming IPv6 packets may be forwarded if
+        /// not destined to the host.
+        1: forwarding bool;
+    };
+};
+
 /// Provides control over an interface.
 ///
 /// This protocol encodes the underlying interface's lifetime in both
@@ -54,6 +71,35 @@ protocol Control {
     GetId() -> (struct {
         id fuchsia.net.interface_id;
     });
+
+    /// Sets the configuration for the interface.
+    ///
+    /// Only set fields that are supported in the provided [`Configuration`]
+    /// will be set; unset fields will be left unmodified. The server will
+    /// return a [`Configuration`] which holds the previous configuration for
+    /// fields that the interface supports and set, even if the call did not
+    /// update the configuration's value.
+    ///
+    /// + request `config` the configuration fields to update on the interface.
+    /// - response `previous_config` a snapshot of the interface's previous
+    ///   configuration. Only supported fields present in `config` will be set.
+    SetConfiguration(struct {
+        config Configuration;
+    }) -> (struct {
+        previous_config Configuration;
+    }) error flexible enum {};
+
+    /// Gets a snapshot of the interface's configuration.
+    ///
+    /// The server will populate the returned [`Configuration`] with the
+    /// configuration for features/protocols that the interface supports. That
+    /// is, fields for unsupported configurations will be unset in the returned
+    /// [`Configuration`].
+    ///
+    /// - response `config` a snapshot of the interface's configuration.
+    GetConfiguration() -> (struct {
+        config Configuration;
+    }) error flexible enum {};
 
     /// Enables the interface.
     ///

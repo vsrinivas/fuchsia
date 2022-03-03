@@ -162,7 +162,7 @@ type ifState struct {
 	observer link.Observer
 	nicid    tcpip.NICID
 	mu       struct {
-		sync.Mutex
+		sync.RWMutex
 		adminUp, linkOnline bool
 		// metric is used by default for routes that originate from this NIC.
 		metric routes.Metric

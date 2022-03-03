@@ -7,7 +7,6 @@ use std::{
     net::{TcpListener, TcpStream},
 };
 
-use fidl_fuchsia_net_stack::StackMarker;
 use fidl_fuchsia_netemul_sync::{BusMarker, BusProxy, Event, SyncManagerMarker};
 use fuchsia_async as fasync;
 use fuchsia_component::client;
@@ -71,10 +70,6 @@ impl BusConnection {
 }
 
 async fn run_router() -> Result<(), Error> {
-    let stack =
-        client::connect_to_protocol::<StackMarker>().context("failed to connect to netstack")?;
-    let () = stack.enable_ip_forwarding().await.context("failed to enable ip forwarding")?;
-
     let bus = BusConnection::new(ROUTER_NAME)?;
     log::info!("Waiting for server to finish...");
     let () = bus.wait_for_event(SERVER_DONE).await?;

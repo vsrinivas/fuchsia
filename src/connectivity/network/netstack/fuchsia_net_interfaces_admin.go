@@ -259,15 +259,18 @@ type adminControlImpl struct {
 	isStrongRef bool
 }
 
-func (ci *adminControlImpl) Enable(fidl.Context) (admin.ControlEnableResult, error) {
+func (ci *adminControlImpl) getNICContext() *ifState {
 	nicInfo, ok := ci.ns.stack.NICInfo()[ci.nicid]
 	if !ok {
 		// All serving control channels must be canceled before removing NICs from
 		// the stack, this is a violation of that invariant.
 		panic(fmt.Sprintf("NIC %d not found", ci.nicid))
 	}
+	return nicInfo.Context.(*ifState)
+}
 
-	wasEnabled, err := nicInfo.Context.(*ifState).setState(true /* enabled */)
+func (ci *adminControlImpl) Enable(fidl.Context) (admin.ControlEnableResult, error) {
+	wasEnabled, err := ci.getNICContext().setState(true /* enabled */)
 	if err != nil {
 		// The only known error path that causes this failure is failure from the
 		// device layers, which all mean we're possible racing with shutdown.
@@ -282,14 +285,7 @@ func (ci *adminControlImpl) Enable(fidl.Context) (admin.ControlEnableResult, err
 }
 
 func (ci *adminControlImpl) Disable(fidl.Context) (admin.ControlDisableResult, error) {
-	nicInfo, ok := ci.ns.stack.NICInfo()[ci.nicid]
-	if !ok {
-		// All serving control channels must be canceled before removing NICs from
-		// the stack, this is a violation of that invariant.
-		panic(fmt.Sprintf("NIC %d not found", ci.nicid))
-	}
-
-	wasEnabled, err := nicInfo.Context.(*ifState).setState(false /* enabled */)
+	wasEnabled, err := ci.getNICContext().setState(false /* enabled */)
 	if err != nil {
 		// The only known error path that causes this failure is failure from the
 		// device layers, which all mean we're possible racing with shutdown.
@@ -317,13 +313,7 @@ func (ci *adminControlImpl) AddAddress(_ fidl.Context, interfaceAddr net.Interfa
 	protocolAddr := interfaceAddressToProtocolAddress(interfaceAddr)
 	addr := protocolAddr.AddressWithPrefix.Address
 
-	nicInfo, ok := ci.ns.stack.NICInfo()[ci.nicid]
-	if !ok {
-		// All serving control channels must be canceled before removing NICs from
-		// the stack, this is a violation of that invariant.
-		panic(fmt.Sprintf("NIC %d not found", ci.nicid))
-	}
-	ifs := nicInfo.Context.(*ifState)
+	ifs := ci.getNICContext()
 
 	ctx, cancel := context.WithCancel(context.Background())
 	impl := &adminAddressStateProviderImpl{
@@ -465,6 +455,96 @@ func (ci *adminControlImpl) RemoveAddress(_ fidl.Context, address net.InterfaceA
 
 func (ci *adminControlImpl) GetId(fidl.Context) (uint64, error) {
 	return uint64(ci.nicid), nil
+}
+
+// setIPForwardingLocked sets the IP forwarding configuration for the interface.
+//
+// The caller must bold the interface's write lock.
+func (ci *adminControlImpl) setIPForwardingLocked(netProto tcpip.NetworkProtocolNumber, enabled bool) bool {
+	switch prevEnabled, err := ci.ns.stack.SetNICForwarding(tcpip.NICID(ci.nicid), netProto, enabled); err.(type) {
+	case nil:
+		return prevEnabled
+	case *tcpip.ErrUnknownNICID:
+		// Impossible as this Control should be invalid if the interface is not
+		// recognized.
+		panic(fmt.Sprintf("got UnknownNICID error when Control is still valid from ni.ns.stack.SetNICForwarding(tcpip.NICID(%d), %d, %t) = %s", ci.nicid, netProto, enabled, err))
+	default:
+		panic(fmt.Sprintf("ni.ns.stack.SetNICForwarding(tcpip.NICID(%d), %d, %t): %s", ci.nicid, netProto, enabled, err))
+	}
+}
+
+func (ci *adminControlImpl) SetConfiguration(_ fidl.Context, config admin.Configuration) (admin.ControlSetConfigurationResult, error) {
+	ifs := ci.getNICContext()
+	ifs.mu.Lock()
+	defer ifs.mu.Unlock()
+
+	var previousConfig admin.Configuration
+
+	if config.HasIpv4() {
+		var previousIpv4Config admin.Ipv4Configuration
+		ipv4Config := config.Ipv4
+
+		if ipv4Config.HasForwarding() {
+			previousIpv4Config.SetForwarding(ci.setIPForwardingLocked(ipv4.ProtocolNumber, ipv4Config.Forwarding))
+		}
+
+		previousConfig.SetIpv4(previousIpv4Config)
+	}
+
+	if config.HasIpv6() {
+		var previousIpv6Config admin.Ipv6Configuration
+		ipv6Config := config.Ipv6
+
+		if ipv6Config.HasForwarding() {
+			previousIpv6Config.SetForwarding(ci.setIPForwardingLocked(ipv6.ProtocolNumber, ipv6Config.Forwarding))
+		}
+
+		previousConfig.SetIpv6(previousIpv6Config)
+	}
+
+	return admin.ControlSetConfigurationResultWithResponse(admin.ControlSetConfigurationResponse{
+		PreviousConfig: previousConfig,
+	}), nil
+}
+
+// getIPForwardingLocked gets the IP forwarding configuration for the interface.
+//
+// The caller must bold the interface's read lock.
+func (ci adminControlImpl) getIPForwardingRLocked(netProto tcpip.NetworkProtocolNumber) bool {
+	switch enabled, err := ci.ns.stack.NICForwarding(tcpip.NICID(ci.nicid), netProto); err.(type) {
+	case nil:
+		return enabled
+	case *tcpip.ErrUnknownNICID:
+		// Impossible as this Control should be invalid if the interface is not
+		// recognized.
+		panic(fmt.Sprintf("got UnknownNICID error when Control is still valid from ni.ns.stack.NICForwarding(tcpip.NICID(%d), %d) = %s", ci.nicid, netProto, err))
+	default:
+		panic(fmt.Sprintf("ni.ns.stack.NICForwarding(tcpip.NICID(%d), %d): %s", ci.nicid, netProto, err))
+	}
+}
+
+func (ci *adminControlImpl) GetConfiguration(fidl.Context) (admin.ControlGetConfigurationResult, error) {
+	ifs := ci.getNICContext()
+	ifs.mu.RLock()
+	defer ifs.mu.RUnlock()
+
+	var config admin.Configuration
+
+	{
+		var ipv4Config admin.Ipv4Configuration
+		ipv4Config.SetForwarding(ci.getIPForwardingRLocked(ipv4.ProtocolNumber))
+		config.SetIpv4(ipv4Config)
+	}
+
+	{
+		var ipv6Config admin.Ipv6Configuration
+		ipv6Config.SetForwarding(ci.getIPForwardingRLocked(ipv6.ProtocolNumber))
+		config.SetIpv6(ipv6Config)
+	}
+
+	return admin.ControlGetConfigurationResultWithResponse(admin.ControlGetConfigurationResponse{
+		Config: config,
+	}), nil
 }
 
 type adminControlCollection struct {

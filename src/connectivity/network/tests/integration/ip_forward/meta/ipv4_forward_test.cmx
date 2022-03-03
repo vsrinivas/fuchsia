@@ -37,7 +37,8 @@
                                     "-e",
                                     "router-client",
                                     "-i",
-                                    "192.168.1.1/24"
+                                    "192.168.1.1/24",
+                                    "--enable-ipv4-forwarding"
                                 ],
                                 "url": "fuchsia-pkg://fuchsia.com/netemul-ip-forward-tests#meta/netstack-cfg.cmx"
                             },
@@ -46,7 +47,8 @@
                                     "-e",
                                     "router-server",
                                     "-i",
-                                    "192.168.0.1/24"
+                                    "192.168.0.1/24",
+                                    "--enable-ipv4-forwarding"
                                 ],
                                 "url": "fuchsia-pkg://fuchsia.com/netemul-ip-forward-tests#meta/netstack-cfg.cmx"
                             }

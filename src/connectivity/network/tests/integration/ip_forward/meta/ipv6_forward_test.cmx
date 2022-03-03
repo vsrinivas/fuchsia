@@ -37,7 +37,8 @@
                                     "-e",
                                     "router-client",
                                     "-i",
-                                    "fd00:0:0:1::1/64"
+                                    "fd00:0:0:1::1/64",
+                                    "--enable-ipv6-forwarding"
                                 ],
                                 "url": "fuchsia-pkg://fuchsia.com/netemul-ip-forward-tests#meta/netstack-cfg.cmx"
                             },
@@ -46,7 +47,8 @@
                                     "-e",
                                     "router-server",
                                     "-i",
-                                    "fd00:0:0:2::1/64"
+                                    "fd00:0:0:2::1/64",
+                                    "--enable-ipv6-forwarding"
                                 ],
                                 "url": "fuchsia-pkg://fuchsia.com/netemul-ip-forward-tests#meta/netstack-cfg.cmx"
                             }

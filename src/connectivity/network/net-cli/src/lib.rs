@@ -101,9 +101,6 @@ pub async fn do_root<C: NetCliDepsConnector>(
                 .await
                 .context("failed during filter command")
         }
-        CommandEnum::IpFwd(opts::IpFwd { ip_fwd_cmd: cmd }) => {
-            do_ip_fwd(cmd, connector).await.context("failed during ip-fwd command")
-        }
         CommandEnum::Log(opts::Log { log_cmd: cmd }) => {
             do_log(cmd, connector).await.context("failed during log command")
         }
@@ -206,6 +203,48 @@ where
     Ok(control)
 }
 
+fn configuration_with_ip_forwarding_set(
+    ip_version: fnet::IpVersion,
+    forwarding: bool,
+) -> finterfaces_admin::Configuration {
+    match ip_version {
+        fnet::IpVersion::V4 => finterfaces_admin::Configuration {
+            ipv4: Some(finterfaces_admin::Ipv4Configuration {
+                forwarding: Some(forwarding),
+                ..finterfaces_admin::Ipv4Configuration::EMPTY
+            }),
+            ..finterfaces_admin::Configuration::EMPTY
+        },
+        fnet::IpVersion::V6 => finterfaces_admin::Configuration {
+            ipv6: Some(finterfaces_admin::Ipv6Configuration {
+                forwarding: Some(forwarding),
+                ..finterfaces_admin::Ipv6Configuration::EMPTY
+            }),
+            ..finterfaces_admin::Configuration::EMPTY
+        },
+    }
+}
+
+fn extract_ip_forwarding(
+    finterfaces_admin::Configuration {
+        ipv4: ipv4_config, ipv6: ipv6_config, ..
+    }: finterfaces_admin::Configuration,
+    ip_version: fnet::IpVersion,
+) -> Result<bool, Error> {
+    match ip_version {
+        fnet::IpVersion::V4 => {
+            let finterfaces_admin::Ipv4Configuration { forwarding, .. } =
+                ipv4_config.context("get IPv4 configuration")?;
+            forwarding.context("get IPv4 forwarding configuration")
+        }
+        fnet::IpVersion::V6 => {
+            let finterfaces_admin::Ipv6Configuration { forwarding, .. } =
+                ipv6_config.context("get IPv6 configuration")?;
+            forwarding.context("get IPv6 forwarding configuration")
+        }
+    }
+}
+
 async fn do_if<W: std::io::Write, C: NetCliDepsConnector>(
     mut out: W,
     cmd: opts::IfEnum,
@@ -299,34 +338,52 @@ async fn do_if<W: std::io::Write, C: NetCliDepsConnector>(
                 }
             }
         }
-        opts::IfEnum::IpForward(opts::IfIpForward { cmd }) => {
-            let stack = connect_with_context::<fstack::StackMarker, _>(connector).await?;
-            match cmd {
-                opts::IfIpForwardEnum::Show(opts::IfIpForwardShow { interface, ip_version }) => {
-                    let id = interface.find_nicid(connector).await?;
-                    let enabled = fstack_ext::exec_fidl!(
-                        stack.get_interface_ip_forwarding(id, ip_version),
-                        "error getting interface IP forwarding"
-                    )?;
-                    info!("IP forwarding for {:?} is {} on interface {}", ip_version, enabled, id);
-                }
-                opts::IfIpForwardEnum::Set(opts::IfIpForwardSet {
-                    interface,
+        opts::IfEnum::IpForward(opts::IfIpForward { cmd }) => match cmd {
+            opts::IfIpForwardEnum::Show(opts::IfIpForwardShow { interface, ip_version }) => {
+                let id = interface.find_nicid(connector).await.context("find nicid")?;
+                let control = get_control(connector, id).await.context("get control")?;
+                let configuration = control
+                    .get_configuration()
+                    .await
+                    .map_err(anyhow::Error::new)
+                    .and_then(|res| {
+                        res.map_err(|e: finterfaces_admin::ControlGetConfigurationError| {
+                            anyhow::anyhow!("{:?}", e)
+                        })
+                    })
+                    .context("get configuration")?;
+
+                info!(
+                    "IP forwarding for {:?} is {} on interface {}",
+                    ip_version,
+                    extract_ip_forwarding(configuration, ip_version)
+                        .context("extract IP forwarding configuration")?,
+                    id
+                );
+            }
+            opts::IfIpForwardEnum::Set(opts::IfIpForwardSet { interface, ip_version, enable }) => {
+                let id = interface.find_nicid(connector).await.context("find nicid")?;
+                let control = get_control(connector, id).await.context("get control")?;
+                let prev_config = control
+                    .set_configuration(configuration_with_ip_forwarding_set(ip_version, enable))
+                    .await
+                    .map_err(anyhow::Error::new)
+                    .and_then(|res| {
+                        res.map_err(|e: finterfaces_admin::ControlSetConfigurationError| {
+                            anyhow::anyhow!("{:?}", e)
+                        })
+                    })
+                    .context("set configuration")?;
+                info!(
+                    "IP forwarding for {:?} set to {} on interface {}; previously set to {}",
                     ip_version,
                     enable,
-                }) => {
-                    let id = interface.find_nicid(connector).await?;
-                    let () = fstack_ext::exec_fidl!(
-                        stack.set_interface_ip_forwarding(id, ip_version, enable),
-                        "error setting interface IP forwarding"
-                    )?;
-                    info!(
-                        "IP forwarding for {:?} set to {} on interface {}",
-                        ip_version, enable, id
-                    );
-                }
+                    id,
+                    extract_ip_forwarding(prev_config, ip_version)
+                        .context("extract IP forwarding configuration")?
+                );
             }
-        }
+        },
         opts::IfEnum::Enable(opts::IfEnable { interface }) => {
             let id = interface.find_nicid(connector).await?;
             let control = get_control(connector, id).await?;
@@ -659,30 +716,6 @@ async fn do_filter<C: NetCliDepsConnector, W: std::io::Write>(
                 "error setting RDR rules"
             )?;
             info!("successfully set RDR rules");
-        }
-    }
-    Ok(())
-}
-
-async fn do_ip_fwd<C: NetCliDepsConnector>(
-    cmd: opts::IpFwdEnum,
-    connector: &C,
-) -> Result<(), Error> {
-    let stack = connect_with_context::<fstack::StackMarker, _>(connector).await?;
-    match cmd {
-        opts::IpFwdEnum::Enable(opts::IpFwdEnable {}) => {
-            let () = stack
-                .enable_ip_forwarding()
-                .await
-                .context("fuchsia.net.stack/Stack.EnableIpForwarding FIDL error")?;
-            info!("Enabled IP forwarding");
-        }
-        opts::IpFwdEnum::Disable(opts::IpFwdDisable {}) => {
-            let () = stack
-                .disable_ip_forwarding()
-                .await
-                .context("fuchsia.net.stack/Stack.DisableIpForwarding FIDL error")?;
-            info!("Disabled IP forwarding");
         }
     }
     Ok(())
@@ -1400,66 +1433,100 @@ mod tests {
         assert_eq!(vec![10, 100], shortlist_interfaces_by_nicid("001"));
     }
 
+    #[test_case(fnet::IpVersion::V4, true ; "IPv4 enable routing")]
+    #[test_case(fnet::IpVersion::V4, false ; "IPv4 disable routing")]
+    #[test_case(fnet::IpVersion::V6, true ; "IPv6 enable routing")]
+    #[test_case(fnet::IpVersion::V6, false ; "IPv6 disable routing")]
     #[fasync::run_singlethreaded(test)]
-    async fn if_ip_forward() {
-        const IP_FORWARD: bool = true;
+    async fn if_ip_forward(ip_version: fnet::IpVersion, enable: bool) {
+        let interface1 = TestInterface { nicid: 1, name: "interface1" };
+        let (debug_interfaces, mut requests) =
+            fidl::endpoints::create_proxy_and_stream::<fdebug::InterfacesMarker>().unwrap();
+        let connector =
+            TestConnector { debug_interfaces: Some(debug_interfaces), ..Default::default() };
 
-        let (stack_controller, mut stack_requests) =
-            fidl::endpoints::create_proxy_and_stream::<fstack::StackMarker>().unwrap();
-        let connector = TestConnector { stack: Some(stack_controller), ..Default::default() };
+        let requests_fut = async {
+            let (id, control, _control_handle) = requests
+                .next()
+                .await
+                .expect("debug request stream not ended")
+                .expect("debug request stream not error")
+                .into_get_admin()
+                .expect("get admin request");
+            assert_eq!(id, interface1.nicid);
 
+            let mut control: finterfaces_admin::ControlRequestStream =
+                control.into_stream().expect("control request stream");
+            let (configuration, responder) = control
+                .next()
+                .await
+                .expect("control request stream not ended")
+                .expect("control request stream not error")
+                .into_set_configuration()
+                .expect("set configuration request");
+            assert_eq!(
+                extract_ip_forwarding(configuration, ip_version)
+                    .expect("extract IP forwarding configuration"),
+                enable
+            );
+            // net-cli does not check the returned configuration so we do not
+            // return a populated one.
+            let () = responder
+                .send(&mut Ok(finterfaces_admin::Configuration::EMPTY))
+                .expect("responder.send should succeed");
+            Ok(())
+        };
         let do_if_fut = do_if(
             std::io::sink(),
             opts::IfEnum::IpForward(opts::IfIpForward {
                 cmd: opts::IfIpForwardEnum::Set(opts::IfIpForwardSet {
-                    interface: INTERFACE_ID.into(),
-                    ip_version: IP_VERSION,
-                    enable: IP_FORWARD,
+                    interface: interface1.identifier(false /* use_ifname */),
+                    ip_version,
+                    enable,
                 }),
             }),
             &connector,
         );
-        let requests_fut = async {
-            let (got_interface_id, got_ip_version, got_enable, responder) = stack_requests
-                .try_next()
-                .await
-                .expect("stack FIDL error")
-                .expect("request stream should not have ended")
-                .into_set_interface_ip_forwarding()
-                .expect("request should be of type SetInterfaceIpForwarding");
-            assert_eq!(got_interface_id, INTERFACE_ID);
-            assert_eq!(got_ip_version, IP_VERSION);
-            assert_eq!(got_enable, IP_FORWARD);
-            let () = responder.send(&mut Ok(())).expect("responder.send should succeed");
-            Ok(())
-        };
+        // TODO(https://fxbug.dev/94575): Assert tool output.
         let ((), ()) = futures::future::try_join(do_if_fut, requests_fut)
             .await
             .expect("setting interface ip forwarding should succeed");
 
+        let requests_fut = async {
+            let (id, control, _control_handle) = requests
+                .next()
+                .await
+                .expect("debug request stream not ended")
+                .expect("debug request stream not error")
+                .into_get_admin()
+                .expect("get admin request");
+            assert_eq!(id, interface1.nicid);
+
+            let mut control: finterfaces_admin::ControlRequestStream =
+                control.into_stream().expect("control request stream");
+            let responder = control
+                .next()
+                .await
+                .expect("control request stream not ended")
+                .expect("control request stream not error")
+                .into_get_configuration()
+                .expect("get configuration request");
+            let () = responder
+                .send(&mut Ok(configuration_with_ip_forwarding_set(ip_version, enable)))
+                .expect("responder.send should succeed");
+            Ok(())
+        };
         let do_if_fut = do_if(
             std::io::sink(),
             opts::IfEnum::IpForward(opts::IfIpForward {
                 cmd: opts::IfIpForwardEnum::Show(opts::IfIpForwardShow {
-                    interface: INTERFACE_ID.into(),
-                    ip_version: IP_VERSION,
+                    interface: interface1.identifier(false /* use_ifname */),
+                    ip_version,
                 }),
             }),
             &connector,
         );
-        let requests_fut = async {
-            let (got_interface_id, got_ip_version, responder) = stack_requests
-                .try_next()
-                .await
-                .expect("stack FIDL error")
-                .expect("request stream should not have ended")
-                .into_get_interface_ip_forwarding()
-                .expect("request should be of type InterfaceIpForwarding");
-            assert_eq!(got_interface_id, INTERFACE_ID);
-            assert_eq!(got_ip_version, IP_VERSION);
-            let () = responder.send(&mut Ok(true)).expect("responder.send should succeed");
-            Ok(())
-        };
+        // TODO(https://fxbug.dev/94575): Assert tool output.
         let ((), ()) = futures::future::try_join(do_if_fut, requests_fut)
             .await
             .expect("getting interface ip forwarding should succeed");
@@ -2677,50 +2744,6 @@ mac             -
         let ((), ()) = futures::future::try_join(neigh, neigh_succeeds)
             .await
             .expect("neigh config update should succeed");
-    }
-
-    #[fasync::run_singlethreaded(test)]
-    async fn ip_fwd_enable() {
-        let (stack, mut requests) =
-            fidl::endpoints::create_proxy_and_stream::<fstack::StackMarker>()
-                .expect("creating a request stream and proxy for testing should succeed");
-        let connector = TestConnector { stack: Some(stack), ..Default::default() };
-        let op = do_ip_fwd(opts::IpFwdEnum::Enable(opts::IpFwdEnable {}), &connector);
-        let op_succeeds = async {
-            let responder = requests
-                .try_next()
-                .await
-                .expect("ip-fwd FIDL error")
-                .expect("request stream should not have ended")
-                .into_enable_ip_forwarding()
-                .expect("request should be of type EnableIpForwarding");
-            let () = responder.send().expect("responder.send should succeed");
-            Ok(())
-        };
-        let ((), ()) =
-            futures::future::try_join(op, op_succeeds).await.expect("fwd enable should succeed");
-    }
-
-    #[fasync::run_singlethreaded(test)]
-    async fn ip_fwd_disable() {
-        let (stack, mut requests) =
-            fidl::endpoints::create_proxy_and_stream::<fstack::StackMarker>()
-                .expect("creating a request stream and proxy for testing should succeed");
-        let connector = TestConnector { stack: Some(stack), ..Default::default() };
-        let op = do_ip_fwd(opts::IpFwdEnum::Disable(opts::IpFwdDisable {}), &connector);
-        let op_succeeds = async {
-            let responder = requests
-                .try_next()
-                .await
-                .expect("fwd FIDL error")
-                .expect("request stream should not have ended")
-                .into_disable_ip_forwarding()
-                .expect("request should be of type DisableIpForwarding");
-            let () = responder.send().expect("responder.send should succeed");
-            Ok(())
-        };
-        let ((), ()) =
-            futures::future::try_join(op, op_succeeds).await.expect("fwd disable should succeed");
     }
 
     #[test_case(opts::dhcpd::DhcpdEnum::Get(opts::dhcpd::Get {

@@ -75,7 +75,7 @@ pub trait NetworkInterface: Send + Sync {
     fn take_event_stream(&self) -> BoxStream<'_, Result<NetworkInterfaceEvent, Error>>;
 
     /// Set the ipv6 packet forwarding for lowpan interface
-    fn set_ipv6_forwarding_enabled(&self, enabled: bool) -> Result<(), Error>;
+    async fn set_ipv6_forwarding_enabled(&self, enabled: bool) -> Result<(), Error>;
 }
 
 use futures::channel::mpsc;
@@ -164,7 +164,7 @@ impl NetworkInterface for DummyNetworkInterface {
         self.event_receiver.lock().take().expect("take_event_stream called twice").boxed()
     }
 
-    fn set_ipv6_forwarding_enabled(&self, _enabled: bool) -> Result<(), Error> {
+    async fn set_ipv6_forwarding_enabled(&self, _enabled: bool) -> Result<(), Error> {
         Ok(())
     }
 }

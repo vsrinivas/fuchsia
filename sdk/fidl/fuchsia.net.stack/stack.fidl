@@ -113,22 +113,10 @@ protocol Stack {
         entry ForwardingEntry;
     }) -> (struct {}) error Error;
 
-    /// Enable IP Forwarding for all interfaces and IP versions.
-    EnableIpForwarding() -> ();
-
-    /// Disable IP Forwarding for all interfaces and IP versions.
-    DisableIpForwarding() -> ();
-
-    /// Returns the IP forwarding state for an interface.
-    GetInterfaceIpForwarding(struct {
-        id fuchsia.net.interface_id;
-        ip_version fuchsia.net.IpVersion;
-    }) -> (struct {
-        enabled bool;
-    }) error Error;
-
     /// Sets the IP forwarding state for an interface.
-    SetInterfaceIpForwarding(struct {
+    // TODO(https://fxbug.dev/94475): Remove this.
+    @deprecated("Use fuchsia.net.interfaces.admin/Control.SetConfiguration")
+    SetInterfaceIpForwardingDeprecated(struct {
         id fuchsia.net.interface_id;
         ip_version fuchsia.net.IpVersion;
         enabled bool;

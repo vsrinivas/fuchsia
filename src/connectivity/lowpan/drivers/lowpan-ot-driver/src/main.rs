@@ -216,6 +216,7 @@ impl Config {
 
         netif
             .set_ipv6_forwarding_enabled(true)
+            .await
             .expect("Unable to enable ipv6 packet forwarding on lowapn interface");
 
         // TODO (fxbug.dev/94129): Handle removal/re-add of backbone interface device

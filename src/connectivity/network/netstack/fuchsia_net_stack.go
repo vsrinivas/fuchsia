@@ -26,8 +26,6 @@ import (
 	"fidl/fuchsia/netstack"
 
 	"gvisor.dev/gvisor/pkg/tcpip"
-	"gvisor.dev/gvisor/pkg/tcpip/network/ipv4"
-	"gvisor.dev/gvisor/pkg/tcpip/network/ipv6"
 )
 
 var _ stack.StackWithCtx = (*stackImpl)(nil)
@@ -268,55 +266,31 @@ func (ni *stackImpl) DelForwardingEntry(_ fidl.Context, entry stack.ForwardingEn
 	return ni.ns.delForwardingEntry(entry), nil
 }
 
-func (ni *stackImpl) EnableIpForwarding(fidl.Context) error {
-	for _, protocol := range []tcpip.NetworkProtocolNumber{
-		ipv4.ProtocolNumber,
-		ipv6.ProtocolNumber,
-	} {
-		ni.ns.stack.SetForwardingDefaultAndAllNICs(protocol, true)
-	}
-	return nil
-}
-
-func (ni *stackImpl) DisableIpForwarding(fidl.Context) error {
-	for _, protocol := range []tcpip.NetworkProtocolNumber{
-		ipv4.ProtocolNumber,
-		ipv6.ProtocolNumber,
-	} {
-		ni.ns.stack.SetForwardingDefaultAndAllNICs(protocol, false)
-	}
-	return nil
-}
-
-func (ni *stackImpl) GetInterfaceIpForwarding(_ fidl.Context, id uint64, ip net.IpVersion) (stack.StackGetInterfaceIpForwardingResult, error) {
+// TODO(https://fxbug.dev/94475): Remove this.
+func (ni *stackImpl) SetInterfaceIpForwardingDeprecated(_ fidl.Context, id uint64, ip net.IpVersion, enabled bool) (stack.StackSetInterfaceIpForwardingDeprecatedResult, error) {
 	netProto, ok := fidlconv.ToTCPIPNetProto(ip)
 	if !ok {
-		return stack.StackGetInterfaceIpForwardingResultWithErr(stack.ErrorInvalidArgs), nil
+		return stack.StackSetInterfaceIpForwardingDeprecatedResultWithErr(stack.ErrorInvalidArgs), nil
 	}
 
-	switch enabled, err := ni.ns.stack.NICForwarding(tcpip.NICID(id), netProto); err.(type) {
-	case nil:
-		return stack.StackGetInterfaceIpForwardingResultWithResponse(stack.StackGetInterfaceIpForwardingResponse{Enabled: enabled}), nil
-	case *tcpip.ErrUnknownNICID:
-		return stack.StackGetInterfaceIpForwardingResultWithErr(stack.ErrorNotFound), nil
-	default:
-		panic(fmt.Sprintf("ni.ns.stack.SetNICForwarding(tcpip.NICID(%d), %d, %t): %s", id, netProto, enabled, err))
-	}
-}
-
-func (ni *stackImpl) SetInterfaceIpForwarding(_ fidl.Context, id uint64, ip net.IpVersion, enabled bool) (stack.StackSetInterfaceIpForwardingResult, error) {
-	netProto, ok := fidlconv.ToTCPIPNetProto(ip)
+	nicInfo, ok := ni.ns.stack.NICInfo()[tcpip.NICID(id)]
 	if !ok {
-		return stack.StackSetInterfaceIpForwardingResultWithErr(stack.ErrorInvalidArgs), nil
+		return stack.StackSetInterfaceIpForwardingDeprecatedResultWithErr(stack.ErrorNotFound), nil
 	}
+
+	// Lock the interface to synchronize changes with
+	// fuchsia.net.interfaces.admin/Control.{Set,Get}Configuration.
+	ifs := nicInfo.Context.(*ifState)
+	ifs.mu.Lock()
+	defer ifs.mu.Unlock()
 
 	// We ignore the returned previous forwarding configuration as this FIDL
 	// method has no use for it.
 	switch _, err := ni.ns.stack.SetNICForwarding(tcpip.NICID(id), netProto, enabled); err.(type) {
 	case nil:
-		return stack.StackSetInterfaceIpForwardingResultWithResponse(stack.StackSetInterfaceIpForwardingResponse{}), nil
+		return stack.StackSetInterfaceIpForwardingDeprecatedResultWithResponse(stack.StackSetInterfaceIpForwardingDeprecatedResponse{}), nil
 	case *tcpip.ErrUnknownNICID:
-		return stack.StackSetInterfaceIpForwardingResultWithErr(stack.ErrorNotFound), nil
+		return stack.StackSetInterfaceIpForwardingDeprecatedResultWithErr(stack.ErrorNotFound), nil
 	default:
 		panic(fmt.Sprintf("ni.ns.stack.SetNICForwarding(tcpip.NICID(%d), %d, %t): %s", id, netProto, enabled, err))
 	}

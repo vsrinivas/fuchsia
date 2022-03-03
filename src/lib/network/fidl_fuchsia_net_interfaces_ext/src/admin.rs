@@ -166,7 +166,28 @@ impl Control {
         self.or_terminal_event(self.proxy.remove_address(address)).await
     }
 
-    /// Cals Enable on the proxy.
+    /// Calls SetConfiguration on the proxy.
+    pub async fn set_configuration(
+        &self,
+        config: fnet_interfaces_admin::Configuration,
+    ) -> Result<
+        fnet_interfaces_admin::ControlSetConfigurationResult,
+        TerminalError<fnet_interfaces_admin::InterfaceRemovedReason>,
+    > {
+        self.or_terminal_event(self.proxy.set_configuration(config)).await
+    }
+
+    /// Calls GetConfiguration on the proxy.
+    pub async fn get_configuration(
+        &self,
+    ) -> Result<
+        fnet_interfaces_admin::ControlGetConfigurationResult,
+        TerminalError<fnet_interfaces_admin::InterfaceRemovedReason>,
+    > {
+        self.or_terminal_event(self.proxy.get_configuration()).await
+    }
+
+    /// Calls Enable on the proxy.
     pub async fn enable(
         &self,
     ) -> Result<
@@ -176,7 +197,7 @@ impl Control {
         self.or_terminal_event(self.proxy.enable()).await
     }
 
-    /// Cals Disable on the proxy.
+    /// Calls Disable on the proxy.
     pub async fn disable(
         &self,
     ) -> Result<
