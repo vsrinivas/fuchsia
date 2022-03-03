@@ -15,15 +15,15 @@ the Fuchsia SDK.
 FEMU is based on the
 [Android Emulator (AEMU)](https://developer.android.com/studio/run/emulator){:.external},
 which is a fork of [QEMU](https://www.qemu.org/){:.external} – in some
-instances, such as [emulating Zircon](#emulating-zircon), you need to use QEMU
-instead.
+instances, such as [debugging the Zircon kernel](#debugging-zircon-kernel), you
+should use QEMU instead.
 
 Due to legacy issues, there may be references to AEMU in the code and
 documentation.
 
-### Emulating Zircon {#emulating-zircon}
+### Debugging Zircon Kernel {#debugging-zircon-kernel}
 
-If you only want to emulate Zircon, you must use `fx qemu` instead. Read
+If you want to debug the Zircon kernel, you should use `fx qemu` instead. Read
 [Debugging the Kernel using QEMU](/docs/development/debugging/qemu.md) to learn
 more. This is for kernel developers. Most Fuchsia developers do not need to use
 this workflow.
