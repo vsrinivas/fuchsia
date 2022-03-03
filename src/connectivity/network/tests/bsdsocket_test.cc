@@ -5762,6 +5762,13 @@ INSTANTIATE_TEST_SUITE_P(
                                      STRINGIFIED_CMSGOPT(SOL_IP, IP_TTL, sizeof(int), IP_RECVTTL))),
     SocketDomainAndOptionToString);
 
+INSTANTIATE_TEST_SUITE_P(NetDatagramSocketsCmsgRecvIPv6Tests, NetDatagramSocketsCmsgRecvTest,
+                         testing::Combine(testing::Values(AF_INET6),
+                                          testing::Values(STRINGIFIED_CMSGOPT(SOL_IPV6, IPV6_TCLASS,
+                                                                              sizeof(int),
+                                                                              IPV6_RECVTCLASS))),
+                         SocketDomainAndOptionToString);
+
 class NetDatagramSocketsCmsgSendTest : public NetDatagramSocketsCmsgTestBase,
                                        public testing::WithParamInterface<sa_family_t> {
  protected:
@@ -6270,6 +6277,73 @@ TEST_F(NetDatagramSocketsCmsgIpTtlTest, RecvCmsgUnalignedControlBuffer) {
         int recv_ttl;
         memcpy(&recv_ttl, CMSG_DATA(cmsg), sizeof(recv_ttl));
         EXPECT_EQ(recv_ttl, kDefaultTTL);
+      }));
+}
+
+class NetDatagramSocketsCmsgIpv6TClassTest : public NetDatagramSocketsCmsgTestBase {
+ protected:
+  void SetUp() override {
+    ASSERT_NO_FATAL_FAILURE(SetUpDatagramSockets(AF_INET6));
+
+    // Enable receiving IPV6_TCLASS control message.
+    constexpr int kOne = 1;
+    ASSERT_EQ(setsockopt(bound().get(), SOL_IPV6, IPV6_RECVTCLASS, &kOne, sizeof(kOne)), 0)
+        << strerror(errno);
+  }
+
+  void TearDown() override {
+    if (!IsSkipped()) {
+      EXPECT_NO_FATAL_FAILURE(TearDownDatagramSockets());
+    }
+  }
+};
+
+TEST_F(NetDatagramSocketsCmsgIpv6TClassTest, RecvCmsg) {
+  constexpr int kTClass = 42;
+  ASSERT_EQ(setsockopt(connected().get(), SOL_IPV6, IPV6_TCLASS, &kTClass, sizeof(kTClass)), 0)
+      << strerror(errno);
+
+  char control[CMSG_SPACE(sizeof(kTClass)) + 1];
+  ASSERT_NO_FATAL_FAILURE(
+      SendAndCheckReceivedMessage(control, sizeof(control), [kTClass](msghdr& msghdr) {
+        EXPECT_EQ(msghdr.msg_controllen, CMSG_SPACE(sizeof(kTClass)));
+        cmsghdr* cmsg = CMSG_FIRSTHDR(&msghdr);
+        ASSERT_NE(cmsg, nullptr);
+        EXPECT_EQ(cmsg->cmsg_len, CMSG_LEN(sizeof(kTClass)));
+        EXPECT_EQ(cmsg->cmsg_level, SOL_IPV6);
+        EXPECT_EQ(cmsg->cmsg_type, IPV6_TCLASS);
+        uint8_t recv_tclass;
+        memcpy(&recv_tclass, CMSG_DATA(cmsg), sizeof(recv_tclass));
+        EXPECT_EQ(recv_tclass, kTClass);
+        EXPECT_EQ(CMSG_NXTHDR(&msghdr, cmsg), nullptr);
+      }));
+}
+
+TEST_F(NetDatagramSocketsCmsgIpv6TClassTest, RecvCmsgUnalignedControlBuffer) {
+  constexpr int kTClass = 42;
+  ASSERT_EQ(setsockopt(connected().get(), SOL_IPV6, IPV6_TCLASS, &kTClass, sizeof(kTClass)), 0)
+      << strerror(errno);
+
+  char control[CMSG_SPACE(sizeof(kTClass)) + 1];
+  ASSERT_NO_FATAL_FAILURE(
+      SendAndCheckReceivedMessage(control + 1, sizeof(control), [kTClass](msghdr& msghdr) {
+        EXPECT_EQ(msghdr.msg_controllen, CMSG_SPACE(sizeof(kTClass)));
+
+        // Fetch back the control buffer and confirm it is unaligned.
+        cmsghdr* unaligned_cmsg = CMSG_FIRSTHDR(&msghdr);
+        ASSERT_NE(unaligned_cmsg, nullptr);
+        ASSERT_NE(reinterpret_cast<uintptr_t>(unaligned_cmsg) % alignof(cmsghdr), 0u);
+
+        // Copy the content to a properly aligned variable.
+        char aligned_cmsg[CMSG_SPACE(sizeof(kTClass))];
+        memcpy(&aligned_cmsg, unaligned_cmsg, sizeof(aligned_cmsg));
+        cmsghdr* cmsg = reinterpret_cast<cmsghdr*>(aligned_cmsg);
+        EXPECT_EQ(cmsg->cmsg_len, CMSG_LEN(sizeof(kTClass)));
+        EXPECT_EQ(cmsg->cmsg_level, SOL_IPV6);
+        EXPECT_EQ(cmsg->cmsg_type, IPV6_TCLASS);
+        uint8_t recv_tclass;
+        memcpy(&recv_tclass, CMSG_DATA(cmsg), sizeof(recv_tclass));
+        EXPECT_EQ(recv_tclass, kTClass);
       }));
 }
 

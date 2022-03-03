@@ -1812,11 +1812,19 @@ func (s *datagramSocket) socketControlMessagesToFIDL(cmsg tcpip.ReceivableContro
 
 func (s *datagramSocket) ipControlMessagesToFIDL(cmsg tcpip.ReceivableControlMessages) socket.IpRecvControlData {
 	var controlData socket.IpRecvControlData
-	if s.ep.SocketOptions().GetReceiveTOS() && cmsg.HasTOS {
+	if cmsg.HasTOS {
 		controlData.SetTos(cmsg.TOS)
 	}
 	if cmsg.HasTTL {
 		controlData.SetTtl(cmsg.TTL)
+	}
+	return controlData
+}
+
+func (s *datagramSocket) ipv6ControlMessagesToFIDL(cmsg tcpip.ReceivableControlMessages) socket.Ipv6RecvControlData {
+	var controlData socket.Ipv6RecvControlData
+	if cmsg.HasTClass {
+		controlData.SetTclass(uint8(cmsg.TClass))
 	}
 	return controlData
 }
@@ -1828,6 +1836,9 @@ func (s *datagramSocket) networkSocketControlMessagesToFIDL(cmsg tcpip.Receivabl
 	}
 	if ipControlData := s.ipControlMessagesToFIDL(cmsg); ipControlData != (socket.IpRecvControlData{}) {
 		controlData.SetIp(ipControlData)
+	}
+	if ipv6ControlData := s.ipv6ControlMessagesToFIDL(cmsg); ipv6ControlData != (socket.Ipv6RecvControlData{}) {
+		controlData.SetIpv6(ipv6ControlData)
 	}
 	return controlData
 }

@@ -448,6 +448,16 @@ type NetworkSocketRecvControlData = table {
         /// Present if the `SOL_IP` -> `IP_RECVTTL` option is enabled.
         2: ttl uint8;
     };
+
+    /// IPv6 level ancillary data.
+    ///
+    /// These match POSIX `SOL_IPV6` control messages.
+    3: ipv6 @generated_name("Ipv6RecvControlData") table {
+        /// The Traffic Class of a packet that was received.
+        ///
+        /// Present if the `SOL_IPV6` -> `IPV6_RECVTCLASS` option is enabled.
+        1: tclass uint8;
+    };
 };
 
 /// Socket level ancillary data that can be sent.

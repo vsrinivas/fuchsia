@@ -242,6 +242,9 @@ class FidlControlDataProcessor {
     if (control_data.has_ip()) {
       total += Store(control_data.ip());
     }
+    if (control_data.has_ipv6()) {
+      total += Store(control_data.ipv6());
+    }
     return total;
   }
 
@@ -299,6 +302,18 @@ class FidlControlDataProcessor {
       // https://github.com/torvalds/linux/blob/7e57714cd0a/net/ipv4/ip_sockglue.c#L67
       const int ttl = static_cast<int>(control_data.ttl());
       total += StoreControlMessage(IPPROTO_IP, IP_TTL, &ttl, sizeof(ttl));
+    }
+    return total;
+  }
+
+  socklen_t Store(fsocket::wire::Ipv6RecvControlData const& control_data) {
+    socklen_t total = 0;
+    if (control_data.has_tclass()) {
+      // Even though the traffic class can be encoded in a single byte, Linux returns it as an `int`
+      // when it is received as a control message.
+      // https://github.com/torvalds/linux/blob/7e57714cd0a/include/net/ipv6.h#L968
+      const int tclass = static_cast<int>(control_data.tclass());
+      total += StoreControlMessage(IPPROTO_IPV6, IPV6_TCLASS, &tclass, sizeof(tclass));
     }
     return total;
   }
