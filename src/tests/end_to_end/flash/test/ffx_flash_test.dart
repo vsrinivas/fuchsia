@@ -140,7 +140,7 @@ void main() {
       nodename,
       'target',
       'flash',
-      '--ssh-key',
+      '--authorized-keys',
       publicKeyPath,
       flashJSONPath
     ];
