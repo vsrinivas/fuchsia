@@ -154,9 +154,11 @@ async fn build_input_pipeline_assembly(
     let mut assembly = InputPipelineAssembly::new();
     let (sender, mut receiver) = futures::channel::mpsc::channel(0);
     {
+        // Keep this handler first because it keeps performance measurement counters
+        // for the rest of the pipeline at entry.
+        assembly = add_inspect_handler(node.create_child("input_pipeline_entry"), assembly);
         assembly = assembly.add_display_ownership(display_ownership_event);
         assembly = add_modifier_handler(assembly);
-        assembly = add_inspect_handler(node.create_child("input_pipeline_entry"), assembly);
         // Add the text settings handler early in the pipeline to use the
         // keymap settings in the remainder of the pipeline.
         assembly = add_text_settings_handler(assembly);
@@ -192,6 +194,9 @@ async fn build_input_pipeline_assembly(
             assembly = locked_scene_manager.add_mouse_handler(sender, assembly).await;
         }
 
+        // Keep this handler last because it keeps performance measurement counters
+        // for the rest of the pipeline at exit.  We compare these values to the
+        // values at entry.
         assembly = add_inspect_handler(node.create_child("input_pipeline_exit"), assembly);
     }
 
