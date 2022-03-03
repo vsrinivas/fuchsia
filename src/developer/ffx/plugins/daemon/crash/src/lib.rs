@@ -4,7 +4,7 @@
 
 use {
     anyhow::Result, ffx_core::ffx_plugin, ffx_crash_args::CrashCommand,
-    fidl_fuchsia_developer_bridge::TestingProxy,
+    fidl_fuchsia_developer_ffx::TestingProxy,
 };
 
 #[ffx_plugin(TestingProxy = "daemon::protocol")]
@@ -17,7 +17,7 @@ pub async fn crash(testing_proxy: TestingProxy, _cmd: CrashCommand) -> Result<()
 mod test {
     use {
         super::*,
-        fidl_fuchsia_developer_bridge::TestingRequest,
+        fidl_fuchsia_developer_ffx::TestingRequest,
         std::sync::atomic::{AtomicBool, Ordering},
     };
 

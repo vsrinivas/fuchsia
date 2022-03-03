@@ -10,7 +10,7 @@ use ffx_emulator_engines::{
     clean_up_instance_dir, get_all_instances, get_instance_dir, serialization::read_from_disk,
 };
 use ffx_emulator_stop_args::StopCommand;
-use fidl_fuchsia_developer_bridge::TargetCollectionProxy;
+use fidl_fuchsia_developer_ffx::TargetCollectionProxy;
 use std::path::PathBuf;
 
 async fn attempt_stop(instance_dir: &PathBuf, proxy: &TargetCollectionProxy) -> Result<()> {

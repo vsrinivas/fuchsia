@@ -18,7 +18,7 @@ use {
     },
     anyhow::Result,
     async_trait::async_trait,
-    fidl_fuchsia_developer_bridge::FastbootProxy,
+    fidl_fuchsia_developer_ffx::FastbootProxy,
     serde::{Deserialize, Serialize},
     std::convert::From,
     std::io::Write,

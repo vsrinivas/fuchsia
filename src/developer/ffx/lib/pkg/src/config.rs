@@ -5,7 +5,7 @@
 use {
     anyhow::{anyhow, Context, Result},
     ffx_config::{self, ConfigLevel},
-    fidl_fuchsia_developer_bridge_ext::{RepositorySpec, RepositoryTarget},
+    fidl_fuchsia_developer_ffx_ext::{RepositorySpec, RepositoryTarget},
     percent_encoding::{percent_decode_str, percent_encode, AsciiSet, CONTROLS},
     serde_json::Value,
     std::collections::HashMap,

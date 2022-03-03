@@ -11,7 +11,7 @@ use {
     ffx_daemon_target::zedboot::{reboot, reboot_to_bootloader, reboot_to_recovery},
     fidl::endpoints::ServerEnd,
     fidl::Error,
-    fidl_fuchsia_developer_bridge::{
+    fidl_fuchsia_developer_ffx::{
         self as bridge, RebootListenerRequest, TargetRebootError, TargetRebootResponder,
         TargetRebootState,
     },
@@ -232,7 +232,7 @@ mod tests {
         super::*,
         anyhow::anyhow,
         fidl::endpoints::{create_proxy_and_stream, RequestStream},
-        fidl_fuchsia_developer_bridge::{
+        fidl_fuchsia_developer_ffx::{
             FastbootMarker, FastbootProxy, FastbootRequest, TargetMarker, TargetProxy,
             TargetRequest,
         },

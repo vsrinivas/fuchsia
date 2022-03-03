@@ -7,8 +7,8 @@ use {
     errors::ffx_bail,
     ffx_core::ffx_plugin,
     ffx_target_repository_register_args::RegisterCommand,
-    fidl_fuchsia_developer_bridge::{RepositoryRegistryProxy, RepositoryTarget},
-    fidl_fuchsia_developer_bridge_ext::RepositoryError,
+    fidl_fuchsia_developer_ffx::{RepositoryRegistryProxy, RepositoryTarget},
+    fidl_fuchsia_developer_ffx_ext::RepositoryError,
 };
 
 #[ffx_plugin("ffx_repository", RepositoryRegistryProxy = "daemon::protocol")]
@@ -78,7 +78,7 @@ mod test {
     use super::*;
     use {
         ffx_config::ConfigLevel,
-        fidl_fuchsia_developer_bridge::{
+        fidl_fuchsia_developer_ffx::{
             RepositoryError, RepositoryRegistryRequest, RepositoryStorageType,
         },
         fuchsia_async as fasync,

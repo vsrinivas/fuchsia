@@ -6,7 +6,7 @@ use {
     async_trait::async_trait,
     ffx_stream_util::TryStreamUtilExt,
     fidl::endpoints::ProtocolMarker,
-    fidl_fuchsia_developer_bridge as bridge,
+    fidl_fuchsia_developer_ffx as bridge,
     fuchsia_async::Task,
     futures::TryStreamExt,
     protocols::prelude::*,

@@ -7,8 +7,8 @@ use {
     errors::ffx_bail,
     ffx_core::ffx_plugin,
     ffx_target_repository_deregister_args::DeregisterCommand,
-    fidl_fuchsia_developer_bridge::RepositoryRegistryProxy,
-    fidl_fuchsia_developer_bridge_ext::RepositoryError,
+    fidl_fuchsia_developer_ffx::RepositoryRegistryProxy,
+    fidl_fuchsia_developer_ffx_ext::RepositoryError,
 };
 
 #[ffx_plugin("ffx_repository", RepositoryRegistryProxy = "daemon::protocol")]
@@ -71,7 +71,7 @@ async fn deregister(
 mod test {
     use super::*;
     use {
-        fidl_fuchsia_developer_bridge::{RepositoryError, RepositoryRegistryRequest},
+        fidl_fuchsia_developer_ffx::{RepositoryError, RepositoryRegistryRequest},
         fuchsia_async as fasync,
         futures::channel::oneshot::{channel, Receiver},
     };

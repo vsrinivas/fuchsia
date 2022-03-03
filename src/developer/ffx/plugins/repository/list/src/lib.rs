@@ -8,8 +8,8 @@ use {
     ffx_repository_list_args::ListCommand,
     ffx_writer::Writer,
     fidl,
-    fidl_fuchsia_developer_bridge::{RepositoryIteratorMarker, RepositoryRegistryProxy},
-    fidl_fuchsia_developer_bridge_ext::{RepositoryConfig, RepositorySpec},
+    fidl_fuchsia_developer_ffx::{RepositoryIteratorMarker, RepositoryRegistryProxy},
+    fidl_fuchsia_developer_ffx_ext::{RepositoryConfig, RepositorySpec},
     prettytable::{cell, format::TableFormat, row, table, Table},
     std::convert::TryInto,
 };
@@ -121,7 +121,7 @@ fn print_table(
 mod test {
     use super::*;
     use {
-        fidl_fuchsia_developer_bridge::{
+        fidl_fuchsia_developer_ffx::{
             FileSystemRepositorySpec, PmRepositorySpec, RepositoryConfig,
             RepositoryIteratorRequest, RepositoryRegistryProxy, RepositoryRegistryRequest,
             RepositorySpec,

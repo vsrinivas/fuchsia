@@ -6,7 +6,7 @@ use {
     anyhow::Result,
     ffx_core::ffx_plugin,
     ffx_echo_args::EchoCommand,
-    fidl_fuchsia_developer_bridge::EchoProxy,
+    fidl_fuchsia_developer_ffx::EchoProxy,
     std::io::{stdout, Write},
 };
 
@@ -28,7 +28,7 @@ async fn echo_impl<W: Write>(echo_proxy: EchoProxy, cmd: EchoCommand, mut writer
 
 #[cfg(test)]
 mod test {
-    use {super::*, anyhow::Context, fidl_fuchsia_developer_bridge::EchoRequest};
+    use {super::*, anyhow::Context, fidl_fuchsia_developer_ffx::EchoRequest};
 
     fn setup_fake_service() -> EchoProxy {
         setup_fake_echo_proxy(|req| match req {

@@ -226,7 +226,7 @@ mod test {
     use crate::{DaemonProtocolProvider, FidlProtocol, FidlStreamHandler};
     use async_trait::async_trait;
     use fidl::endpoints::DiscoverableProtocolMarker;
-    use fidl_fuchsia_developer_bridge as bridge;
+    use fidl_fuchsia_developer_ffx as bridge;
     use fidl_fuchsia_diagnostics as diagnostics;
     use fidl_fuchsia_ffx_test as ffx_test;
 

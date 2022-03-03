@@ -16,7 +16,7 @@ use {
     ffx_metrics::{add_ffx_launch_and_timing_events, init_metrics_svc},
     ffx_writer::Writer,
     fidl::endpoints::{create_proxy, ProtocolMarker},
-    fidl_fuchsia_developer_bridge::{
+    fidl_fuchsia_developer_ffx::{
         DaemonError, DaemonProxy, FastbootMarker, FastbootProxy, TargetCollectionMarker,
         TargetMarker, TargetProxy, TargetQuery, VersionInfo,
     },
@@ -442,7 +442,7 @@ mod test {
     use async_lock::Mutex;
     use async_net::unix::UnixListener;
     use fidl::endpoints::{ClientEnd, ProtocolMarker, RequestStream};
-    use fidl_fuchsia_developer_bridge::{DaemonMarker, DaemonRequest, DaemonRequestStream};
+    use fidl_fuchsia_developer_ffx::{DaemonMarker, DaemonRequest, DaemonRequestStream};
     use fidl_fuchsia_overnet::{ServiceProviderRequest, ServiceProviderRequestStream};
     use fuchsia_async::Task;
     use futures::AsyncReadExt;

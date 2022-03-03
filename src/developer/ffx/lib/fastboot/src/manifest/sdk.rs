@@ -15,7 +15,7 @@ use {
     },
     anyhow::{bail, Result},
     async_trait::async_trait,
-    fidl_fuchsia_developer_bridge::FastbootProxy,
+    fidl_fuchsia_developer_ffx::FastbootProxy,
     fms::Entries,
     sdk_metadata::{Metadata, OemFile, Partition, Product},
     std::convert::{From, TryFrom, TryInto},

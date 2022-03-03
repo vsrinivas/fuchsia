@@ -7,7 +7,7 @@ use {
     errors::FfxError,
     ffx_core::ffx_plugin,
     ffx_wait_args::WaitCommand,
-    fidl_fuchsia_developer_bridge::{DaemonError, TargetProxy},
+    fidl_fuchsia_developer_ffx::{DaemonError, TargetProxy},
     std::time::Duration,
     timeout::timeout,
 };

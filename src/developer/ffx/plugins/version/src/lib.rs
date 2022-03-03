@@ -7,7 +7,7 @@ use {
     chrono::{Local, Offset, TimeZone},
     ffx_core::ffx_plugin,
     ffx_version_args::VersionCommand,
-    fidl_fuchsia_developer_bridge::{self as bridge, VersionInfo},
+    fidl_fuchsia_developer_ffx::{self as bridge, VersionInfo},
     std::fmt::Display,
     std::io::Write,
     std::time::Duration,
@@ -90,7 +90,7 @@ mod test {
     use {
         super::*,
         chrono::Utc,
-        fidl_fuchsia_developer_bridge::DaemonRequest,
+        fidl_fuchsia_developer_ffx::DaemonRequest,
         futures::TryStreamExt,
         futures::{
             channel::oneshot::{self, Receiver},

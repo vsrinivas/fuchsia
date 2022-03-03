@@ -10,7 +10,7 @@ use {
     async_trait::async_trait,
     diagnostics::{get_streaming_min_timestamp, run_diagnostics_streaming},
     ffx_daemon_target::logger::streamer::{DiagnosticsStreamer, GenericDiagnosticsStreamer},
-    fidl_fuchsia_developer_bridge as bridge,
+    fidl_fuchsia_developer_ffx as bridge,
     fuchsia_async::{futures::FutureExt, TimeoutExt},
     protocols::prelude::*,
     std::sync::Arc,

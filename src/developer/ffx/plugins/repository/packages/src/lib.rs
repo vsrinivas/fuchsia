@@ -11,11 +11,11 @@ use {
         ListSubcommand, PackagesCommand, PackagesSubcommand, ShowSubCommand,
     },
     fidl,
-    fidl_fuchsia_developer_bridge::{
+    fidl_fuchsia_developer_ffx::{
         ListFields, PackageEntryIteratorMarker, RepositoryPackagesIteratorMarker,
         RepositoryRegistryProxy,
     },
-    fidl_fuchsia_developer_bridge_ext::RepositoryError,
+    fidl_fuchsia_developer_ffx_ext::RepositoryError,
     humansize::{file_size_opts, FileSize},
     prettytable::{cell, format::TableFormat, row, Row, Table},
     std::{
@@ -225,11 +225,11 @@ async fn list_impl<W: Write>(
 
 #[cfg(test)]
 mod test {
-    use fidl_fuchsia_developer_bridge::PackageEntryIteratorRequest;
+    use fidl_fuchsia_developer_ffx::PackageEntryIteratorRequest;
 
     use super::*;
     use {
-        fidl_fuchsia_developer_bridge::{
+        fidl_fuchsia_developer_ffx::{
             PackageEntry, RepositoryPackage, RepositoryPackagesIteratorRequest,
             RepositoryRegistryRequest,
         },

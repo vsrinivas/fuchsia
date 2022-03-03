@@ -7,7 +7,7 @@ use {
     anyhow::Result,
     bytes::{Bytes, BytesMut},
     camino::{Utf8Component, Utf8Path, Utf8PathBuf},
-    fidl_fuchsia_developer_bridge_ext::RepositorySpec,
+    fidl_fuchsia_developer_ffx_ext::RepositorySpec,
     futures::{
         io::SeekFrom,
         ready,

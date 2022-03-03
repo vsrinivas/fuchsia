@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use fidl_fuchsia_developer_bridge::{DaemonError, OpenTargetError, TunnelError};
+use fidl_fuchsia_developer_ffx::{DaemonError, OpenTargetError, TunnelError};
 
 /// The ffx main function expects a anyhow::Result from ffx plugins. If the Result is an Err it be
 /// downcast to FfxError, and if successful this error is presented as a user-readable error. All

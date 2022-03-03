@@ -18,7 +18,7 @@ use {
         lock::lock,
         unlock::unlock,
     },
-    fidl_fuchsia_developer_bridge::FastbootProxy,
+    fidl_fuchsia_developer_ffx::FastbootProxy,
     std::io::{stdin, stdout, Write},
 };
 

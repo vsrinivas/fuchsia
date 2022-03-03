@@ -4,8 +4,7 @@
 
 use {
     anyhow::Result, errors::ffx_bail, ffx_core::ffx_plugin,
-    ffx_repository_remove_args::RemoveCommand,
-    fidl_fuchsia_developer_bridge::RepositoryRegistryProxy,
+    ffx_repository_remove_args::RemoveCommand, fidl_fuchsia_developer_ffx::RepositoryRegistryProxy,
 };
 
 #[ffx_plugin("ffx_repository", RepositoryRegistryProxy = "daemon::protocol")]
@@ -21,7 +20,7 @@ pub async fn remove(cmd: RemoveCommand, repos: RepositoryRegistryProxy) -> Resul
 mod test {
     use super::*;
     use {
-        fidl_fuchsia_developer_bridge::RepositoryRegistryRequest, fuchsia_async as fasync,
+        fidl_fuchsia_developer_ffx::RepositoryRegistryRequest, fuchsia_async as fasync,
         futures::channel::oneshot::channel,
     };
 

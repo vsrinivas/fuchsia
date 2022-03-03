@@ -6,8 +6,8 @@ use {
     anyhow::{Context as _, Result},
     ffx_core::ffx_plugin,
     ffx_repository_server_stop_args::StopCommand,
-    fidl_fuchsia_developer_bridge::RepositoryRegistryProxy,
-    fidl_fuchsia_developer_bridge_ext::RepositoryError,
+    fidl_fuchsia_developer_ffx::RepositoryRegistryProxy,
+    fidl_fuchsia_developer_ffx_ext::RepositoryError,
 };
 
 #[ffx_plugin("ffx_repository", RepositoryRegistryProxy = "daemon::protocol")]
@@ -22,8 +22,8 @@ pub async fn stop(_cmd: StopCommand, repos: RepositoryRegistryProxy) -> Result<(
 #[cfg(test)]
 mod tests {
     use {
-        super::*, fidl_fuchsia_developer_bridge::RepositoryRegistryRequest,
-        fuchsia_async as fasync, futures::channel::oneshot::channel,
+        super::*, fidl_fuchsia_developer_ffx::RepositoryRegistryRequest, fuchsia_async as fasync,
+        futures::channel::oneshot::channel,
     };
 
     #[fasync::run_singlethreaded(test)]

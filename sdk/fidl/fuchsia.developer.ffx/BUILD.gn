@@ -4,7 +4,7 @@
 
 import("//build/fidl/fidl.gni")
 
-fidl("fuchsia.developer.bridge") {
+fidl("fuchsia.developer.ffx") {
   sdk_category = "internal"
   sources = [
     "daemon.fidl",
@@ -30,10 +30,9 @@ fidl("fuchsia.developer.bridge") {
     "//zircon/vdso/zx",
   ]
 
-  # XXX(awdavies): Figure out whether or not to fuzz.
   fuzzers = [
     {
-      protocol = "fidl.developer.bridge.Daemon"
+      protocol = "fidl.developer.ffx.Daemon"
     },
   ]
 }

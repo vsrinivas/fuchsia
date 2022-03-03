@@ -541,7 +541,7 @@ mod test {
 
         async fn stream_entries(
             &self,
-            _stream_mode: fidl_fuchsia_developer_bridge::StreamMode,
+            _stream_mode: fidl_fuchsia_developer_ffx::StreamMode,
             _start_ts: Option<Timestamp>,
         ) -> Result<SessionStream> {
             panic!("unexpected stream_entries call");

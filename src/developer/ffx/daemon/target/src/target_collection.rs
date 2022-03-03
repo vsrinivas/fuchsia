@@ -10,7 +10,7 @@ use {
     bridge::DaemonError,
     ffx_daemon_core::events::{self, EventSynthesizer},
     ffx_daemon_events::{DaemonEvent, TargetEvent, TargetInfo},
-    fidl_fuchsia_developer_bridge as bridge,
+    fidl_fuchsia_developer_ffx as bridge,
     std::cell::RefCell,
     std::collections::HashMap,
     std::fmt::Debug,

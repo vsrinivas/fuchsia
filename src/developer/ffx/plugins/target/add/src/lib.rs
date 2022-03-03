@@ -7,7 +7,7 @@ use {
     errors::ffx_error,
     ffx_core::ffx_plugin,
     ffx_target_add_args::AddCommand,
-    fidl_fuchsia_developer_bridge::{self as bridge, TargetCollectionProxy},
+    fidl_fuchsia_developer_ffx::{self as bridge, TargetCollectionProxy},
     fidl_fuchsia_net as net,
     netext::parse_address_parts,
     std::net::IpAddr,

@@ -13,7 +13,7 @@ use crate::enumerations::{
 };
 use anyhow::Result;
 use async_trait::async_trait;
-use fidl_fuchsia_developer_bridge as bridge;
+use fidl_fuchsia_developer_ffx as bridge;
 use sdk_metadata::{AudioDevice, DataAmount, PointingDevice, Screen};
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, path::PathBuf, time::Duration};

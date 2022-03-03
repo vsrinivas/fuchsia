@@ -4,7 +4,7 @@
 
 use {
     anyhow::Result, ffx_core::ffx_plugin, ffx_target_remove_args::RemoveCommand,
-    fidl_fuchsia_developer_bridge::TargetCollectionProxy,
+    fidl_fuchsia_developer_ffx::TargetCollectionProxy,
 };
 
 #[ffx_plugin(TargetCollectionProxy = "daemon::protocol")]
@@ -32,7 +32,7 @@ pub async fn remove_impl<W: std::io::Write>(
 #[cfg(test)]
 mod test {
     use super::*;
-    use fidl_fuchsia_developer_bridge as bridge;
+    use fidl_fuchsia_developer_ffx as bridge;
 
     fn setup_fake_target_collection_proxy<T: 'static + Fn(String) -> bool + Send>(
         test: T,

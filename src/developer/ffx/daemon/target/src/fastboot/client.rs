@@ -14,7 +14,7 @@ use {
     fastboot::UploadProgressListener as _,
     ffx_daemon_events::{TargetConnectionState, TargetEvent},
     fidl::Error as FidlError,
-    fidl_fuchsia_developer_bridge::{
+    fidl_fuchsia_developer_ffx::{
         FastbootError, FastbootRequest, FastbootRequestStream, RebootListenerProxy,
     },
     fidl_fuchsia_developer_remotecontrol::RemoteControlProxy,
@@ -366,7 +366,7 @@ mod test {
         super::*,
         fastboot::reply::Reply,
         fidl::endpoints::{create_endpoints, create_proxy_and_stream},
-        fidl_fuchsia_developer_bridge::{
+        fidl_fuchsia_developer_ffx::{
             FastbootError, FastbootMarker, FastbootProxy, RebootListenerMarker,
             RebootListenerRequest, UploadProgressListenerMarker,
         },

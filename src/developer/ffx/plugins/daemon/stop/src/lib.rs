@@ -4,7 +4,7 @@
 
 use {
     anyhow::Result, ffx_core::ffx_plugin, ffx_daemon_stop_args::StopCommand,
-    fidl_fuchsia_developer_bridge as bridge,
+    fidl_fuchsia_developer_ffx as bridge,
 };
 
 #[ffx_plugin()]
@@ -27,7 +27,7 @@ async fn stop_impl<W: std::io::Write>(
 
 #[cfg(test)]
 mod test {
-    use {super::*, anyhow::Context, fidl_fuchsia_developer_bridge::DaemonRequest};
+    use {super::*, anyhow::Context, fidl_fuchsia_developer_ffx::DaemonRequest};
 
     fn setup_fake_daemon_server() -> bridge::DaemonProxy {
         setup_fake_daemon_proxy(|req| match req {

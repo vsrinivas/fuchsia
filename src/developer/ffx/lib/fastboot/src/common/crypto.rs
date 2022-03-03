@@ -13,7 +13,7 @@ use {
     chrono::Utc,
     errors::{ffx_bail, ffx_error},
     fidl::endpoints::create_endpoints,
-    fidl_fuchsia_developer_bridge::{FastbootProxy, UploadProgressListenerMarker},
+    fidl_fuchsia_developer_ffx::{FastbootProxy, UploadProgressListenerMarker},
     futures::{prelude::*, try_join},
     ring::{
         rand,

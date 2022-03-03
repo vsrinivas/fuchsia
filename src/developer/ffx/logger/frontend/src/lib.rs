@@ -11,7 +11,7 @@ use {
     ffx_log_data::{EventType, LogData, LogEntry},
     ffx_log_utils::{run_logging_pipeline, OrderedBatchPipeline},
     fidl::endpoints::{create_proxy, ServerEnd},
-    fidl_fuchsia_developer_bridge::{
+    fidl_fuchsia_developer_ffx::{
         DaemonDiagnosticsStreamParameters, DiagnosticsProxy, DiagnosticsStreamError, LogSession,
         SessionSpec, StreamMode, TimeBound,
     },
@@ -306,7 +306,7 @@ mod test {
         super::*,
         diagnostics_data::Timestamp,
         ffx_log_test_utils::{setup_fake_archive_iterator, FakeArchiveIteratorResponse},
-        fidl_fuchsia_developer_bridge::{DiagnosticsMarker, DiagnosticsRequest},
+        fidl_fuchsia_developer_ffx::{DiagnosticsMarker, DiagnosticsRequest},
         fidl_fuchsia_developer_remotecontrol::ArchiveIteratorError,
         fuchsia_async::futures::TryStreamExt,
         std::sync::Arc,

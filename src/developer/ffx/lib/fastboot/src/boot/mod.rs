@@ -6,7 +6,7 @@ use {
     crate::common::{file::FileResolver, map_fidl_error, stage_file},
     anyhow::{anyhow, Result},
     byteorder::{ByteOrder, LittleEndian},
-    fidl_fuchsia_developer_bridge::FastbootProxy,
+    fidl_fuchsia_developer_ffx::FastbootProxy,
     std::convert::TryInto,
     std::fs::{metadata, File},
     std::io::{BufRead, BufReader, BufWriter, Read, Write},

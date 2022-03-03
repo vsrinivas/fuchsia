@@ -7,7 +7,7 @@ use {
     errors::ffx_bail,
     ffx_core::ffx_plugin,
     ffx_target_forward_tcp_args::TcpCommand,
-    fidl_fuchsia_developer_bridge as bridge,
+    fidl_fuchsia_developer_ffx as bridge,
 };
 
 #[ffx_plugin(bridge::TunnelProxy = "daemon::protocol")]

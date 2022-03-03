@@ -9,7 +9,7 @@ use {
     ffx_core::ffx_plugin,
     ffx_fastboot::common::{cmd::OemFile, from_manifest},
     ffx_flash_args::FlashCommand,
-    fidl_fuchsia_developer_bridge::FastbootProxy,
+    fidl_fuchsia_developer_ffx::FastbootProxy,
     std::io::{stdout, Write},
     std::path::Path,
 };

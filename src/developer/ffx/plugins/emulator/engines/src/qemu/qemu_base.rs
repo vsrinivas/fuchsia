@@ -18,7 +18,7 @@ use ffx_emulator_config::{
     ConsoleType, DeviceConfig, EmulatorConfiguration, EmulatorEngine, GuestConfig, LogLevel,
     NetworkingMode,
 };
-use fidl_fuchsia_developer_bridge as bridge;
+use fidl_fuchsia_developer_ffx as bridge;
 use shared_child::SharedChild;
 use std::{
     fs, fs::File, io::Write, ops::Sub, path::PathBuf, process::Command, str, sync::Arc,

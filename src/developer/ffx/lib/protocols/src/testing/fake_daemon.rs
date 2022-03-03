@@ -14,7 +14,7 @@ use {
     ffx_daemon_target::target_collection::TargetCollection,
     fidl::endpoints::{DiscoverableProtocolMarker, ProtocolMarker, Proxy, Request, RequestStream},
     fidl::server::ServeInner,
-    fidl_fuchsia_developer_bridge as bridge, fidl_fuchsia_developer_remotecontrol as rcs,
+    fidl_fuchsia_developer_ffx as bridge, fidl_fuchsia_developer_remotecontrol as rcs,
     fidl_fuchsia_diagnostics as diagnostics,
     futures::future::LocalBoxFuture,
     futures::prelude::*,

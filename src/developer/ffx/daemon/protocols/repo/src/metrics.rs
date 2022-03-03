@@ -4,7 +4,7 @@
 
 use {
     analytics::add_custom_event,
-    fidl_fuchsia_developer_bridge_ext::RepositorySpec,
+    fidl_fuchsia_developer_ffx_ext::RepositorySpec,
     fuchsia_async::{self, TimeoutExt as _},
     std::{collections::BTreeMap, time::Duration},
 };

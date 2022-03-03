@@ -6,7 +6,7 @@ use {
     crate::common::{is_locked, lock_device, prepare, verify_variable_value},
     anyhow::Result,
     errors::ffx_bail,
-    fidl_fuchsia_developer_bridge::FastbootProxy,
+    fidl_fuchsia_developer_ffx::FastbootProxy,
     std::io::Write,
 };
 

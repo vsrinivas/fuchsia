@@ -8,7 +8,7 @@ use {
     anyhow::Result,
     async_trait::async_trait,
     ffx_writer::Writer,
-    fidl_fuchsia_developer_bridge::{DaemonProxy, FastbootProxy, TargetProxy, VersionInfo},
+    fidl_fuchsia_developer_ffx::{DaemonProxy, FastbootProxy, TargetProxy, VersionInfo},
     fidl_fuchsia_developer_remotecontrol::RemoteControlProxy,
 };
 

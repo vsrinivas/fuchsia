@@ -10,12 +10,11 @@ ffx_plugin("ffx_target_repository_register") {
   with_unit_tests = true
   deps = [
     "//sdk/fidl/fuchsia.net:fuchsia.net-rustc",
-    "//src/developer/ffx/lib/fidl-fuchsia-developer-bridge-ext",
+    "//src/developer/ffx/lib/fidl-fuchsia-developer-ffx-ext",
     "//src/developer/ffx/lib/pkg",
     "//third_party/rust_crates:futures",
   ]
-  args_deps =
-      [ "//sdk/fidl/fuchsia.developer.bridge:fuchsia.developer.bridge-rustc" ]
+  args_deps = [ "//sdk/fidl/fuchsia.developer.ffx:fuchsia.developer.ffx-rustc" ]
 
   args_sources = [ "src/args.rs" ]
 

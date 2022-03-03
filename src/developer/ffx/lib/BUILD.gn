@@ -11,7 +11,7 @@ if (is_host) {
     "doctor_utils",
     "errors",
     "fastboot",
-    "fidl-fuchsia-developer-bridge-ext",
+    "fidl-fuchsia-developer-ffx-ext",
     "fms",
     "isolate",
     "metrics",

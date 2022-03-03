@@ -1,7 +1,7 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-library fuchsia.developer.bridge;
+library fuchsia.developer.ffx;
 
 const MAX_GIT_COMMIT_LENGTH uint16 = 40;
 const MAX_BUILD_VERSION_LENGTH uint16 = 100;

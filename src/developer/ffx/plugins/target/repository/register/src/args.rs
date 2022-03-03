@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {argh::FromArgs, ffx_core::ffx_command, fidl_fuchsia_developer_bridge::RepositoryStorageType};
+use {argh::FromArgs, ffx_core::ffx_command, fidl_fuchsia_developer_ffx::RepositoryStorageType};
 
 #[ffx_command()]
 #[derive(FromArgs, PartialEq, Debug)]

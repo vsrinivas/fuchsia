@@ -426,7 +426,7 @@ fn generate_daemon_protocol_proxy(
                         fidl_result
                         .map(|_| ())
                         .map_err(|e| match e {
-                            fidl_fuchsia_developer_bridge::DaemonError::ProtocolNotFound =>
+                            fidl_fuchsia_developer_ffx::DaemonError::ProtocolNotFound =>
                                 errors::ffx_error!(
                                     format!(
 "The daemon protocol '{}' did not match any protocols on the daemon
@@ -435,7 +435,7 @@ If you are not developing this plugin or the protocol it connects to, then this 
 Please report it at http://fxbug.dev/new/ffx+User+Bug.",
                                         svc_name)
                                     ).into(),
-                            fidl_fuchsia_developer_bridge::DaemonError::ProtocolOpenError =>
+                            fidl_fuchsia_developer_ffx::DaemonError::ProtocolOpenError =>
                                 errors::ffx_error!(
                                     format!(
 "The daemon protocol '{}' failed to open on the daemon.

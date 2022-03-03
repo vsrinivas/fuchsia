@@ -14,7 +14,7 @@ use {
     ffx_doctor_args::DoctorCommand,
     fidl::endpoints::create_proxy,
     fidl::endpoints::ProtocolMarker,
-    fidl_fuchsia_developer_bridge::{
+    fidl_fuchsia_developer_ffx::{
         DaemonProxy, TargetCollectionMarker, TargetCollectionProxy, TargetCollectionReaderMarker,
         TargetCollectionReaderRequest, TargetInfo, TargetMarker, TargetQuery, TargetState,
         VersionInfo,
@@ -823,7 +823,7 @@ mod test {
         fidl::endpoints::RequestStream,
         fidl::endpoints::{spawn_local_stream_handler, ProtocolMarker, Request, ServerEnd},
         fidl::Channel,
-        fidl_fuchsia_developer_bridge::{
+        fidl_fuchsia_developer_ffx::{
             DaemonRequest, OpenTargetError, RemoteControlState, TargetCollectionRequest,
             TargetCollectionRequestStream, TargetRequest, TargetType,
         },

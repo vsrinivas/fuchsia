@@ -8,7 +8,7 @@ use {
     ffx_daemon_target::{fastboot::find_devices, FASTBOOT_CHECK_INTERVAL},
     ffx_stream_util::TryStreamUtilExt,
     fidl::endpoints::ProtocolMarker,
-    fidl_fuchsia_developer_bridge as bridge,
+    fidl_fuchsia_developer_ffx as bridge,
     fuchsia_async::Task,
     futures::TryStreamExt,
     protocols::prelude::*,

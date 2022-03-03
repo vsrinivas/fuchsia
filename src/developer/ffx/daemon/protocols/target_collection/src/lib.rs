@@ -15,7 +15,7 @@ use {
     ffx_daemon_target::target_collection::TargetCollection,
     ffx_stream_util::TryStreamUtilExt,
     fidl::endpoints::ProtocolMarker,
-    fidl_fuchsia_developer_bridge as bridge,
+    fidl_fuchsia_developer_ffx as bridge,
     fuchsia_async::futures::TryStreamExt,
     protocols::prelude::*,
     std::net::SocketAddr,

@@ -6,7 +6,7 @@ use {
     anyhow::{anyhow, Result},
     async_trait::async_trait,
     ffx_daemon::{find_and_connect, get_socket, is_daemon_running, spawn_daemon},
-    fidl_fuchsia_developer_bridge::DaemonProxy,
+    fidl_fuchsia_developer_ffx::DaemonProxy,
     fuchsia_async::Timer,
     std::process::Command,
     std::time::Duration,

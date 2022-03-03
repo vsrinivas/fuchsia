@@ -14,8 +14,8 @@ use {
     chrono::{DateTime, Utc},
     ffx_daemon_core::events::{self, EventSynthesizer},
     ffx_daemon_events::{FastbootInterface, TargetConnectionState, TargetEvent, TargetInfo},
-    fidl_fuchsia_developer_bridge as bridge,
-    fidl_fuchsia_developer_bridge::TargetState,
+    fidl_fuchsia_developer_ffx as bridge,
+    fidl_fuchsia_developer_ffx::TargetState,
     fidl_fuchsia_developer_remotecontrol::{IdentifyHostResponse, RemoteControlProxy},
     fidl_fuchsia_net::{
         InterfaceAddress, IpAddress, Ipv4Address, Ipv4AddressWithPrefix, Ipv6Address,

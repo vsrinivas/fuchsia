@@ -11,7 +11,7 @@ use {
     async_io::Async,
     async_lock::Mutex,
     async_net::UdpSocket,
-    fidl_fuchsia_developer_bridge as bridge,
+    fidl_fuchsia_developer_ffx as bridge,
     fidl_fuchsia_net::{IpAddress, Ipv4Address, Ipv6Address},
     fuchsia_async::{Task, Timer},
     futures::FutureExt,

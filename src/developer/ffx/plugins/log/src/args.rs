@@ -8,7 +8,7 @@ use {
     chrono_english::{parse_date_string, Dialect},
     diagnostics_data::Severity,
     ffx_core::ffx_command,
-    fidl_fuchsia_developer_bridge::SessionSpec,
+    fidl_fuchsia_developer_ffx::SessionSpec,
     fidl_fuchsia_diagnostics::{Interest, LogInterestSelector, Severity as FidlSeverity},
     selectors::{self, VerboseError},
     std::time::Duration,

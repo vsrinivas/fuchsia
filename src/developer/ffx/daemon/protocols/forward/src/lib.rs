@@ -5,7 +5,7 @@ use {
     anyhow::{Context as _, Result},
     async_net::TcpListener,
     async_trait::async_trait,
-    fidl, fidl_fuchsia_developer_bridge as bridge, fidl_fuchsia_developer_remotecontrol as rcs,
+    fidl, fidl_fuchsia_developer_ffx as bridge, fidl_fuchsia_developer_remotecontrol as rcs,
     fidl_fuchsia_net::SocketAddress,
     fidl_fuchsia_net_ext::SocketAddress as SocketAddressExt,
     futures::{future::join, AsyncReadExt as _, AsyncWriteExt as _, StreamExt as _},

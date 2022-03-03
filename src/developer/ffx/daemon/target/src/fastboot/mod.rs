@@ -23,7 +23,7 @@ use {
     ffx_config::get,
     ffx_daemon_events::FastbootInterface,
     fidl::endpoints::ClientEnd,
-    fidl_fuchsia_developer_bridge::{
+    fidl_fuchsia_developer_ffx::{
         FastbootRequestStream, UploadProgressListenerMarker, UploadProgressListenerProxy,
         VariableListenerMarker, VariableListenerProxy,
     },

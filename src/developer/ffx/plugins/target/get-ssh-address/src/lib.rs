@@ -7,7 +7,7 @@ use {
     errors::FfxError,
     ffx_core::ffx_plugin,
     ffx_get_ssh_address_args::GetSshAddressCommand,
-    fidl_fuchsia_developer_bridge::{
+    fidl_fuchsia_developer_ffx::{
         DaemonError, TargetAddrInfo, TargetCollectionProxy, TargetMarker, TargetQuery,
     },
     fidl_fuchsia_net::{IpAddress, Ipv4Address, Ipv6Address},

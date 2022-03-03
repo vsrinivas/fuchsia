@@ -11,7 +11,7 @@ use {
     ffx_daemon_target::target::Target,
     ffx_stream_util::TryStreamUtilExt,
     fidl::endpoints::ServerEnd,
-    fidl_fuchsia_developer_bridge::{self as bridge},
+    fidl_fuchsia_developer_ffx::{self as bridge},
     fuchsia_async::{
         futures::{FutureExt, TryStreamExt},
         TimeoutExt,

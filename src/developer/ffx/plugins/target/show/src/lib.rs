@@ -9,7 +9,7 @@ use {
     ffx_core::ffx_plugin,
     ffx_target_show_args as args,
     fidl_fuchsia_buildinfo::ProviderProxy,
-    fidl_fuchsia_developer_bridge::{TargetAddrInfo, TargetProxy},
+    fidl_fuchsia_developer_ffx::{TargetAddrInfo, TargetProxy},
     fidl_fuchsia_feedback::{DeviceIdProviderProxy, LastRebootInfoProviderProxy},
     fidl_fuchsia_hwinfo::{Architecture, BoardProxy, DeviceProxy, ProductProxy},
     fidl_fuchsia_intl::RegulatoryDomain,
@@ -377,7 +377,7 @@ async fn gather_last_reboot_info_show(
 mod tests {
     use super::*;
     use fidl_fuchsia_buildinfo::{BuildInfo, ProviderRequest};
-    use fidl_fuchsia_developer_bridge::{TargetAddrInfo, TargetInfo, TargetIp, TargetRequest};
+    use fidl_fuchsia_developer_ffx::{TargetAddrInfo, TargetInfo, TargetIp, TargetRequest};
     use fidl_fuchsia_feedback::{
         DeviceIdProviderRequest, LastReboot, LastRebootInfoProviderRequest, RebootReason,
     };

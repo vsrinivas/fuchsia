@@ -19,7 +19,7 @@ use {
     ffx_metrics::{add_daemon_launch_event, add_daemon_metrics_event},
     ffx_stream_util::TryStreamUtilExt,
     fidl::endpoints::{ClientEnd, DiscoverableProtocolMarker, ProtocolMarker, RequestStream},
-    fidl_fuchsia_developer_bridge::{
+    fidl_fuchsia_developer_ffx::{
         self as bridge, DaemonError, DaemonMarker, DaemonRequest, DaemonRequestStream,
         RepositoryRegistryMarker, TargetCollectionMarker,
     },
@@ -661,7 +661,7 @@ mod test {
         super::*,
         addr::TargetAddr,
         assert_matches::assert_matches,
-        fidl_fuchsia_developer_bridge::{DaemonMarker, DaemonProxy},
+        fidl_fuchsia_developer_ffx::{DaemonMarker, DaemonProxy},
         fidl_fuchsia_developer_remotecontrol::RemoteControlMarker,
         fidl_fuchsia_overnet_protocol::PeerDescription,
         fuchsia_async::Task,

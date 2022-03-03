@@ -81,7 +81,7 @@ async fn knock<W: Write>(
 mod test {
     use {
         super::*, fidl::endpoints::RequestStream, fidl::handle::AsyncChannel,
-        fidl_fuchsia_developer_bridge::DaemonRequestStream, futures::TryStreamExt,
+        fidl_fuchsia_developer_ffx::DaemonRequestStream, futures::TryStreamExt,
     };
 
     fn setup_fake_daemon_service(mut stream: DaemonRequestStream) {

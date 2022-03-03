@@ -9,7 +9,7 @@ use {
     diagnostics_data::Timestamp,
     ffx_daemon_target::logger::streamer::{DiagnosticsStreamer, SessionStream},
     fidl::endpoints::ServerEnd,
-    fidl_fuchsia_developer_bridge::{
+    fidl_fuchsia_developer_ffx::{
         DaemonDiagnosticsStreamParameters, DiagnosticsStreamError, TimeBound,
     },
     fidl_fuchsia_developer_remotecontrol::{

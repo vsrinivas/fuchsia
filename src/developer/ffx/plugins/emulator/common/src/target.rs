@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use anyhow::Result;
-use fidl_fuchsia_developer_bridge as bridge;
+use fidl_fuchsia_developer_ffx as bridge;
 use fidl_fuchsia_net as net;
 use std::time::Duration;
 use timeout::timeout;
@@ -65,7 +65,7 @@ pub async fn is_active(collection_proxy: &bridge::TargetCollectionProxy, name: &
 #[cfg(test)]
 mod test {
     use super::*;
-    use fidl_fuchsia_developer_bridge::{TargetCollectionProxy, TargetCollectionRequest};
+    use fidl_fuchsia_developer_ffx::{TargetCollectionProxy, TargetCollectionRequest};
     use fuchsia_async::futures::TryStreamExt;
 
     fn setup_fake_target_proxy<R: 'static>(mut handle_request: R) -> TargetCollectionProxy

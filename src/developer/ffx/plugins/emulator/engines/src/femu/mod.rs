@@ -10,7 +10,7 @@ use anyhow::{bail, Context, Result};
 use async_trait::async_trait;
 use ffx_emulator_common::{config, config::FfxConfigWrapper, process};
 use ffx_emulator_config::{EmulatorConfiguration, EmulatorEngine, EngineType};
-use fidl_fuchsia_developer_bridge as bridge;
+use fidl_fuchsia_developer_ffx as bridge;
 use serde::{Deserialize, Serialize};
 use std::{env, path::PathBuf, process::Command};
 

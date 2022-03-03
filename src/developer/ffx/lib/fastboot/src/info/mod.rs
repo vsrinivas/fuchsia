@@ -6,9 +6,7 @@ use {
     crate::common::prepare,
     anyhow::{anyhow, Result},
     fidl::endpoints::{create_endpoints, ServerEnd},
-    fidl_fuchsia_developer_bridge::{
-        FastbootProxy, VariableListenerMarker, VariableListenerRequest,
-    },
+    fidl_fuchsia_developer_ffx::{FastbootProxy, VariableListenerMarker, VariableListenerRequest},
     futures::prelude::*,
     futures::try_join,
     std::io::Write,

@@ -9,7 +9,7 @@ use ffx_core::ffx_plugin;
 use ffx_emulator_common::config::FfxConfigWrapper;
 use ffx_emulator_engines::EngineBuilder;
 use ffx_emulator_start_args::StartCommand;
-use fidl_fuchsia_developer_bridge::TargetCollectionProxy;
+use fidl_fuchsia_developer_ffx::TargetCollectionProxy;
 
 mod pbm;
 

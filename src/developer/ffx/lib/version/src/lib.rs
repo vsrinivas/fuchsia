@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use fidl_fuchsia_developer_bridge::VersionInfo;
+use fidl_fuchsia_developer_ffx::VersionInfo;
 use std::ffi::CString;
 
 const fn default_version_value() -> [u8; 64] {

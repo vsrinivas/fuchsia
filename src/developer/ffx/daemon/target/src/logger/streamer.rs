@@ -10,7 +10,7 @@ use {
     diagnostics_data::Timestamp,
     ffx_config::get,
     ffx_log_data::{LogData, LogEntry},
-    fidl_fuchsia_developer_bridge::StreamMode,
+    fidl_fuchsia_developer_ffx::StreamMode,
     futures::{
         channel::oneshot,
         future::{LocalBoxFuture, Shared},

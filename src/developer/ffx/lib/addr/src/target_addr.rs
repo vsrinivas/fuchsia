@@ -4,7 +4,7 @@
 
 use {
     anyhow::*,
-    fidl_fuchsia_developer_bridge::{TargetAddrInfo, TargetIp},
+    fidl_fuchsia_developer_ffx::{TargetAddrInfo, TargetIp},
     fidl_fuchsia_net::{IpAddress, Ipv4Address, Ipv6Address},
     netext::{scope_id_to_name, IsLocalAddr},
     std::cmp::Ordering,

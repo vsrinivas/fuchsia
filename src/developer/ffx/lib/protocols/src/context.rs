@@ -9,7 +9,7 @@ use {
     ffx_daemon_events::{DaemonEvent, TargetEvent},
     ffx_daemon_target::{target::Target, target_collection::TargetCollection},
     fidl::endpoints::Proxy,
-    fidl_fuchsia_developer_bridge as bridge,
+    fidl_fuchsia_developer_ffx as bridge,
     fidl_fuchsia_developer_remotecontrol::RemoteControlProxy,
     fidl_fuchsia_diagnostics as diagnostics,
     selectors::{self, VerboseError},

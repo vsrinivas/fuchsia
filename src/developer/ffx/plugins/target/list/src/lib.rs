@@ -9,7 +9,7 @@ use {
     ffx_core::ffx_plugin,
     ffx_list_args::ListCommand,
     ffx_writer::Writer,
-    fidl_fuchsia_developer_bridge::{
+    fidl_fuchsia_developer_ffx::{
         TargetCollectionProxy, TargetCollectionReaderMarker, TargetCollectionReaderRequest,
         TargetQuery,
     },
@@ -78,8 +78,8 @@ mod test {
         super::*,
         addr::TargetAddr,
         ffx_list_args::Format,
-        fidl_fuchsia_developer_bridge as bridge,
-        fidl_fuchsia_developer_bridge::{
+        fidl_fuchsia_developer_ffx as bridge,
+        fidl_fuchsia_developer_ffx::{
             RemoteControlState, TargetInfo as FidlTargetInfo, TargetState, TargetType,
         },
         regex::Regex,

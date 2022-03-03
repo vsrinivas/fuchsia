@@ -6,7 +6,7 @@ use {
     anyhow::{Context as _, Result},
     ffx_core::ffx_plugin,
     ffx_target_clear_preferred_ssh_address_args::ClearPreferredSshAddressCommand,
-    fidl_fuchsia_developer_bridge as bridge,
+    fidl_fuchsia_developer_ffx as bridge,
 };
 
 #[ffx_plugin()]

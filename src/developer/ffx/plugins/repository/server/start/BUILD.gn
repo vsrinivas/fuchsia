@@ -13,7 +13,7 @@ ffx_plugin("ffx_repository_server_start") {
   sources = [ "src/lib.rs" ]
 
   deps = [
-    "//src/developer/ffx/lib/fidl-fuchsia-developer-bridge-ext",
+    "//src/developer/ffx/lib/fidl-fuchsia-developer-ffx-ext",
     "//src/developer/ffx/lib/pkg",
     "//src/lib/network/fidl_fuchsia_net_ext",
   ]

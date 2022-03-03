@@ -16,7 +16,7 @@ pub mod test {
     use anyhow::Result;
     use async_trait::async_trait;
     use fidl::endpoints::{create_proxy_and_stream, Proxy};
-    use fidl_fuchsia_developer_bridge::{FastbootProxy, FastbootRequest};
+    use fidl_fuchsia_developer_ffx::{FastbootProxy, FastbootRequest};
     use std::default::Default;
     use std::io::Write;
     use std::path::{Path, PathBuf};

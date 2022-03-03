@@ -19,7 +19,7 @@ use {
         endpoints::{create_endpoints, ServerEnd},
         Error as FidlError,
     },
-    fidl_fuchsia_developer_bridge::{
+    fidl_fuchsia_developer_ffx::{
         FastbootProxy, RebootListenerMarker, RebootListenerRequest, UploadProgressListenerMarker,
         UploadProgressListenerRequest,
     },

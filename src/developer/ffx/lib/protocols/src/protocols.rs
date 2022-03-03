@@ -293,7 +293,7 @@ mod tests {
     use super::*;
     use crate::testing::FakeDaemonBuilder;
     use anyhow::anyhow;
-    use fidl_fuchsia_developer_bridge as bridge;
+    use fidl_fuchsia_developer_ffx as bridge;
     use fidl_fuchsia_ffx_test as ffx_test;
     use std::sync::atomic::{AtomicU64, Ordering};
 

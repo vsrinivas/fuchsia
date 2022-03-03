@@ -6,7 +6,7 @@ use {
     anyhow::{Context, Result},
     ffx_core::ffx_plugin,
     ffx_target_repository_list_args::ListCommand,
-    fidl_fuchsia_developer_bridge::{RepositoryRegistryProxy, RepositoryStorageType},
+    fidl_fuchsia_developer_ffx::{RepositoryRegistryProxy, RepositoryStorageType},
     prettytable::{cell, row, Table},
     std::{
         collections::HashMap,
@@ -79,7 +79,7 @@ async fn list_impl<W: Write>(
 mod test {
     use super::*;
     use {
-        fidl_fuchsia_developer_bridge::{
+        fidl_fuchsia_developer_ffx::{
             RepositoryRegistryRequest, RepositoryTarget, RepositoryTargetsIteratorRequest,
         },
         fuchsia_async as fasync,

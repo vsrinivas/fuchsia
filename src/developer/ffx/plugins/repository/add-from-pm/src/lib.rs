@@ -7,8 +7,8 @@ use {
     errors::ffx_bail,
     ffx_core::ffx_plugin,
     ffx_repository_add_from_pm_args::AddFromPmCommand,
-    fidl_fuchsia_developer_bridge::RepositoryRegistryProxy,
-    fidl_fuchsia_developer_bridge_ext::{RepositoryError, RepositorySpec},
+    fidl_fuchsia_developer_ffx::RepositoryRegistryProxy,
+    fidl_fuchsia_developer_ffx_ext::{RepositoryError, RepositorySpec},
     std::convert::TryInto,
 };
 
@@ -34,9 +34,7 @@ pub async fn add_from_pm(cmd: AddFromPmCommand, repos: RepositoryRegistryProxy) 
 mod test {
     use super::*;
     use {
-        fidl_fuchsia_developer_bridge::{
-            PmRepositorySpec, RepositoryRegistryRequest, RepositorySpec,
-        },
+        fidl_fuchsia_developer_ffx::{PmRepositorySpec, RepositoryRegistryRequest, RepositorySpec},
         fuchsia_async as fasync,
         futures::channel::oneshot::channel,
     };

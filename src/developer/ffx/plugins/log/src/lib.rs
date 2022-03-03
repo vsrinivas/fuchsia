@@ -15,7 +15,7 @@ use {
     ffx_log_data::{EventType, LogData, LogEntry},
     ffx_log_frontend::{exec_log_cmd, LogCommandParameters, LogFormatter},
     ffx_writer::Writer,
-    fidl_fuchsia_developer_bridge::{DiagnosticsProxy, StreamMode, TimeBound},
+    fidl_fuchsia_developer_ffx::{DiagnosticsProxy, StreamMode, TimeBound},
     fidl_fuchsia_developer_remotecontrol::{ArchiveIteratorError, RemoteControlProxy},
     fidl_fuchsia_diagnostics::LogSettingsProxy,
     fuchsia_async::futures::{AsyncWrite, AsyncWriteExt},
@@ -568,7 +568,7 @@ mod test {
         errors::ResultExt as _,
         ffx_log_args::DumpCommand,
         ffx_log_test_utils::{setup_fake_archive_iterator, FakeArchiveIteratorResponse},
-        fidl_fuchsia_developer_bridge::{
+        fidl_fuchsia_developer_ffx::{
             DaemonDiagnosticsStreamParameters, DiagnosticsRequest, LogSession, SessionSpec,
         },
         fidl_fuchsia_developer_remotecontrol::{

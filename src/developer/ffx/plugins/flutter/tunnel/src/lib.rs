@@ -10,7 +10,7 @@ use {
     ffx_flutter_tunnel_args::TunnelCommand,
     ffx_flutter_tunnel_ctrlc::wait_for_kill,
     ffx_inspect_common::DiagnosticsBridgeProvider,
-    fidl_fuchsia_developer_bridge::{DaemonError, TargetAddrInfo, TargetProxy},
+    fidl_fuchsia_developer_ffx::{DaemonError, TargetAddrInfo, TargetProxy},
     fidl_fuchsia_developer_remotecontrol::{RemoteControlProxy, RemoteDiagnosticsBridgeProxy},
     fidl_fuchsia_net::{IpAddress, Ipv4Address, Ipv6Address},
     iquery::commands::Command as iq_cmd,

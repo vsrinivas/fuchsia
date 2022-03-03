@@ -26,11 +26,11 @@ rustc_library("pkg") {
 
   deps = [
     "//garnet/lib/rust/io_util",
-    "//sdk/fidl/fuchsia.developer.bridge:fuchsia.developer.bridge-rustc",
+    "//sdk/fidl/fuchsia.developer.ffx:fuchsia.developer.ffx-rustc",
     "//sdk/fidl/fuchsia.pkg:fuchsia.pkg-rustc",
     "//src/developer/ffx/config:lib",
     "//src/developer/ffx/lib/errors:lib",
-    "//src/developer/ffx/lib/fidl-fuchsia-developer-bridge-ext",
+    "//src/developer/ffx/lib/fidl-fuchsia-developer-ffx-ext",
     "//src/developer/ffx/lib/timeout:lib",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-hyper",

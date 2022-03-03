@@ -7,8 +7,8 @@ use {
     errors::ffx_bail,
     ffx_core::ffx_plugin,
     ffx_repository_server_start_args::StartCommand,
-    fidl_fuchsia_developer_bridge::RepositoryRegistryProxy,
-    fidl_fuchsia_developer_bridge_ext::RepositoryError,
+    fidl_fuchsia_developer_ffx::RepositoryRegistryProxy,
+    fidl_fuchsia_developer_ffx_ext::RepositoryError,
     fidl_fuchsia_net_ext::SocketAddress,
 };
 
@@ -42,7 +42,7 @@ pub async fn start(_cmd: StartCommand, repos: RepositoryRegistryProxy) -> Result
 mod tests {
     use {
         super::*,
-        fidl_fuchsia_developer_bridge::{RepositoryError, RepositoryRegistryRequest},
+        fidl_fuchsia_developer_ffx::{RepositoryError, RepositoryRegistryRequest},
         fuchsia_async as fasync,
         futures::channel::oneshot::channel,
         std::net::Ipv4Addr,

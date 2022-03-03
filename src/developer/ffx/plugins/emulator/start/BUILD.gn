@@ -14,7 +14,7 @@ if (is_host) {
       "//src/developer/ffx/plugins/emulator/configuration:ffx_emulator_config",
     ]
     deps = [
-      "//sdk/fidl/fuchsia.developer.bridge:fuchsia.developer.bridge-rustc",
+      "//sdk/fidl/fuchsia.developer.ffx:fuchsia.developer.ffx-rustc",
       "//src/developer/ffx/lib/errors:lib",
       "//src/developer/ffx/lib/fms:lib",
       "//src/developer/ffx/lib/pbms:lib",

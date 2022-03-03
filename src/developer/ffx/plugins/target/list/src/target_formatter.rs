@@ -6,7 +6,7 @@ use {
     addr::TargetAddr,
     anyhow::{anyhow, Error, Result},
     ffx_list_args::Format,
-    fidl_fuchsia_developer_bridge as bridge,
+    fidl_fuchsia_developer_ffx as bridge,
     netext::IsLocalAddr,
     serde::Serialize,
     serde_json::json,

@@ -7,7 +7,7 @@ use {
     async_fs::File,
     async_lock::{Mutex, MutexGuard},
     async_trait::async_trait,
-    fidl_fuchsia_developer_bridge as bridge, fidl_fuchsia_tracing_controller as trace,
+    fidl_fuchsia_developer_ffx as bridge, fidl_fuchsia_tracing_controller as trace,
     fuchsia_async::Task,
     futures::prelude::*,
     futures::task::{Context as FutContext, Poll},

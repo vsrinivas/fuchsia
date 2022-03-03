@@ -19,7 +19,7 @@ use {
     async_trait::async_trait,
     chrono::Utc,
     errors::{ffx_bail, ffx_error},
-    fidl_fuchsia_developer_bridge::FastbootProxy,
+    fidl_fuchsia_developer_ffx::FastbootProxy,
     fms::Entries,
     sdk_metadata::{Metadata, ProductBundleV1},
     serde::{Deserialize, Serialize},

@@ -6,7 +6,7 @@ use {
     crate::common::{crypto::unlock_device, file::FileResolver, is_locked, MISSING_CREDENTIALS},
     anyhow::Result,
     errors::ffx_bail,
-    fidl_fuchsia_developer_bridge::FastbootProxy,
+    fidl_fuchsia_developer_ffx::FastbootProxy,
     std::io::Write,
 };
 

@@ -4,7 +4,7 @@
 
 use {
     camino::Utf8PathBuf,
-    fidl_fuchsia_developer_bridge as fidl,
+    fidl_fuchsia_developer_ffx as fidl,
     serde::{Deserialize, Serialize},
     std::convert::{TryFrom, TryInto},
     thiserror::Error,

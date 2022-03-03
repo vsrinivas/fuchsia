@@ -6,7 +6,7 @@ use {
     anyhow::{Context as _, Result},
     ffx_core::ffx_plugin,
     ffx_target_set_preferred_ssh_address_args::SetPreferredSshAddressCommand,
-    fidl_fuchsia_developer_bridge as bridge, fidl_fuchsia_net as fnet,
+    fidl_fuchsia_developer_ffx as bridge, fidl_fuchsia_net as fnet,
 };
 
 #[ffx_plugin()]
