@@ -426,7 +426,8 @@ zx_status_t VulkanImageCreator::GetImageInfo(uint32_t width, uint32_t height, zx
     return unbind_info->status();
   }
 
-  collection_->Close();
+  auto call_result = collection_->Close();
+  ZX_ASSERT(call_result.ok());
 
   // Run the loop to ensure local unbind completes.
   collection_.AsyncTeardown();
