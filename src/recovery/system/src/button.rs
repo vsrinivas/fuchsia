@@ -39,7 +39,7 @@ pub struct Button {
     fg_color_disabled: Color,
     tracking_pointer: Option<input::pointer::PointerId>,
     active: bool,
-    focused: bool,
+    focused: Option<bool>,
     label_text: String,
     face: FontFace,
     background: FacetId,
@@ -85,7 +85,7 @@ impl Button {
             bg_color_disabled: Color::from_hash_code("#C0C0C0")?,
             tracking_pointer: None,
             active: false,
-            focused: false,
+            focused: None,
             label_text: text.to_string(),
             face,
             background,
@@ -97,20 +97,12 @@ impl Button {
     }
 
     #[allow(unused)]
-    pub fn set_location(&mut self, scene: &mut Scene, location: Point) {
-        scene.set_facet_location(&self.background, location);
-        scene.set_facet_size(&self.background, self.bg_size);
-        scene.set_facet_location(&self.label, location);
-        scene.set_facet_size(&self.label, self.bg_size);
-    }
-
-    #[allow(unused)]
     pub fn get_size(&self, scene: &mut Scene) -> Size {
         scene.get_facet_size(&self.background)
     }
 
     fn update_button_bg_color(&mut self, scene: &mut Scene) {
-        let (label_color, color) = if self.focused {
+        let (label_color, color) = if let Some(true) = self.focused {
             if self.active {
                 (self.fg_color, self.bg_color_active)
             } else {
@@ -131,8 +123,8 @@ impl Button {
     }
 
     pub fn set_focused(&mut self, scene: &mut Scene, focused: bool) {
-        if focused != self.focused {
-            self.focused = focused;
+        if self.focused.is_none() || focused != self.focused.unwrap() {
+            self.focused = Some(focused);
             self.active = false;
             self.update_button_bg_color(scene);
             if !focused {
@@ -147,19 +139,15 @@ impl Button {
         context: &mut ViewAssistantContext,
         pointer_event: &input::pointer::Event,
     ) {
-        //println!("Button: handle_pointer_event");
-        if !self.focused {
+        if self.focused.is_none() || !self.focused.unwrap() {
             return;
         }
-        //println!("Button: handle_pointer_event - focused");
 
         let bounds = scene.get_facet_bounds(&self.background);
 
         if self.tracking_pointer.is_none() {
-            //println!("Button self.tracking_pointer.is_none");
             match pointer_event.phase {
                 input::pointer::Phase::Down(location) => {
-                    //println!("Button checking if {:#?} is in {:#?}", location, bounds);
                     self.set_active(scene, bounds.contains(location.to_f32()));
                     if self.active {
                         self.tracking_pointer = Some(pointer_event.pointer_id.clone());
@@ -168,17 +156,14 @@ impl Button {
                 _ => (),
             }
         } else {
-            //println!("Button self.tracking_pointer.is_some");
             if let Some(tracking_pointer) = self.tracking_pointer.as_ref() {
                 if tracking_pointer == &pointer_event.pointer_id {
                     match pointer_event.phase {
                         input::pointer::Phase::Moved(location) => {
-                            //println!("Button checking if {:#?} is in {:#?}", location, bounds);
                             self.set_active(scene, bounds.contains(location.to_f32()));
                         }
                         input::pointer::Phase::Up => {
                             if self.active {
-                                //println!("Button: Pressed");
                                 context.queue_message(make_message(ButtonMessages::Pressed(
                                     Time::get_monotonic(),
                                     self.label_text.clone(),
