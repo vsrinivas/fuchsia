@@ -329,7 +329,6 @@ typedef struct {
 
 enum {
   MAGMA_IMAGE_CREATE_FLAGS_PRESENTABLE = 1,
-  MAGMA_IMAGE_CREATE_FLAGS_VULKAN_USAGE = 1 << 1,
 };
 
 typedef struct {
@@ -339,8 +338,6 @@ typedef struct {
   uint64_t drm_format_modifiers[MAGMA_MAX_DRM_FORMAT_MODIFIERS];
   uint32_t width;
   uint32_t height;
-  // If MAGMA_IMAGE_CREATE_FLAGS_VULKAN_USAGE is provided, Vulkan usage flags
-  // should be provided in the upper 32 bits.
   uint64_t flags;
 } magma_image_create_info_t;
 

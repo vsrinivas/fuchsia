@@ -133,7 +133,6 @@ TEST_F(MagmaImageTesting, IntelMany) {
       .drm_format = kFormat,
       .drm_format_modifiers = {DRM_FORMAT_MOD_LINEAR, I915_FORMAT_MOD_X_TILED,
                                I915_FORMAT_MOD_Y_TILED, I915_FORMAT_MOD_Yf_TILED,
-                               I915_FORMAT_MOD_Y_TILED_CCS, I915_FORMAT_MOD_Yf_TILED_CCS,
                                DRM_FORMAT_MOD_INVALID},
       .width = kWidth,
       .height = kHeight,
@@ -147,7 +146,7 @@ TEST_F(MagmaImageTesting, IntelMany) {
 #if defined(__aarch64__)
   EXPECT_EQ(DRM_FORMAT_MOD_LINEAR, image_info.drm_format_modifier);
 #else
-  EXPECT_EQ(I915_FORMAT_MOD_Y_TILED_CCS, image_info.drm_format_modifier);
+  EXPECT_EQ(I915_FORMAT_MOD_Y_TILED, image_info.drm_format_modifier);
 #endif
   EXPECT_EQ(7680u, image_info.plane_strides[0]);
   EXPECT_EQ(0u, image_info.plane_offsets[0]);
@@ -175,7 +174,7 @@ TEST_F(MagmaImageTesting, Any) {
 #if defined(__aarch64__)
   EXPECT_EQ(DRM_FORMAT_MOD_INVALID, image_info.drm_format_modifier);
 #else
-  EXPECT_EQ(I915_FORMAT_MOD_Y_TILED_CCS, image_info.drm_format_modifier);
+  EXPECT_EQ(I915_FORMAT_MOD_Y_TILED, image_info.drm_format_modifier);
 #endif
   EXPECT_EQ(7680u, image_info.plane_strides[0]);
   EXPECT_EQ(0u, image_info.plane_offsets[0]);
@@ -203,102 +202,11 @@ TEST_F(MagmaImageTesting, Presentable) {
 #if defined(__aarch64__)
   EXPECT_EQ(DRM_FORMAT_MOD_INVALID, image_info.drm_format_modifier);
 #else
-  // Presentable doesn't handle CCS yet
-  EXPECT_EQ(image_info.drm_format_modifier, I915_FORMAT_MOD_Y_TILED);
+  if (image_info.drm_format_modifier != I915_FORMAT_MOD_Y_TILED)
+    EXPECT_EQ(image_info.drm_format_modifier, I915_FORMAT_MOD_X_TILED);
 #endif
   EXPECT_EQ(7680u, image_info.plane_strides[0]);
   EXPECT_EQ(0u, image_info.plane_offsets[0]);
   EXPECT_EQ(get_expected_coherency_domain(), image_info.coherency_domain);
   EXPECT_TRUE(token);
-}
-
-TEST_F(MagmaImageTesting, VulkanUsageColorAttachment) {
-  uint32_t physical_device_index = 0;
-  magma_image_info_t image_info = {};
-  zx::vmo buffer;
-  zx::eventpair token;
-
-  enum {
-    VK_IMAGE_USAGE_TRANSFER_SRC_BIT = 0x00000001,
-    VK_IMAGE_USAGE_TRANSFER_DST_BIT = 0x00000002,
-    VK_IMAGE_USAGE_SAMPLED_BIT = 0x00000004,
-    VK_IMAGE_USAGE_STORAGE_BIT = 0x00000008,
-    VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT = 0x00000010,
-    VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT = 0x00000020,
-    VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT = 0x00000040,
-    VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT = 0x00000080,
-  };
-
-  constexpr uint64_t kUsage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT |
-                              VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT |
-                              VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT |
-                              VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT;
-
-  magma_image_create_info_t create_info = {
-      .drm_format = kFormat,
-      .drm_format_modifiers = {DRM_FORMAT_MOD_INVALID},
-      .width = kWidth,
-      .height = kHeight,
-      .flags = MAGMA_IMAGE_CREATE_FLAGS_PRESENTABLE | MAGMA_IMAGE_CREATE_FLAGS_VULKAN_USAGE |
-               (kUsage << 32),
-  };
-
-  ASSERT_EQ(MAGMA_STATUS_OK, magma_image::CreateDrmImage(physical_device_index, &create_info,
-                                                         &image_info, &buffer, &token));
-
-#if defined(__aarch64__)
-  EXPECT_EQ(DRM_FORMAT_MOD_INVALID, image_info.drm_format_modifier);
-#else
-  // Presentable doesn't handle CCS yet
-  EXPECT_EQ(image_info.drm_format_modifier, I915_FORMAT_MOD_Y_TILED);
-#endif
-  EXPECT_EQ(7680u, image_info.plane_strides[0]);
-  EXPECT_EQ(0u, image_info.plane_offsets[0]);
-  EXPECT_EQ(get_expected_coherency_domain(), image_info.coherency_domain);
-  EXPECT_TRUE(token);
-}
-
-TEST_F(MagmaImageTesting, VulkanUsageDepthAttachment) {
-  uint32_t physical_device_index = 0;
-  magma_image_info_t image_info = {};
-  zx::vmo buffer;
-  zx::eventpair token;
-
-  enum {
-    VK_IMAGE_USAGE_TRANSFER_SRC_BIT = 0x00000001,
-    VK_IMAGE_USAGE_TRANSFER_DST_BIT = 0x00000002,
-    VK_IMAGE_USAGE_SAMPLED_BIT = 0x00000004,
-    VK_IMAGE_USAGE_STORAGE_BIT = 0x00000008,
-    VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT = 0x00000010,
-    VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT = 0x00000020,
-    VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT = 0x00000040,
-    VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT = 0x00000080,
-  };
-
-  constexpr uint64_t kUsage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT |
-                              VK_IMAGE_USAGE_SAMPLED_BIT |
-                              VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT |
-                              VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT |
-                              VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT;
-
-  magma_image_create_info_t create_info = {
-      .drm_format = kFormat,
-      .drm_format_modifiers = {DRM_FORMAT_MOD_INVALID},
-      .width = kWidth,
-      .height = kHeight,
-      .flags = MAGMA_IMAGE_CREATE_FLAGS_VULKAN_USAGE | (kUsage << 32),
-  };
-
-  ASSERT_EQ(MAGMA_STATUS_OK, magma_image::CreateDrmImage(physical_device_index, &create_info,
-                                                         &image_info, &buffer, &token));
-
-#if defined(__aarch64__)
-  EXPECT_EQ(DRM_FORMAT_MOD_INVALID, image_info.drm_format_modifier);
-#else
-  EXPECT_EQ(image_info.drm_format_modifier, I915_FORMAT_MOD_Y_TILED);
-#endif
-  EXPECT_EQ(7680u, image_info.plane_strides[0]);
-  EXPECT_EQ(0u, image_info.plane_offsets[0]);
-  EXPECT_EQ(get_expected_coherency_domain(), image_info.coherency_domain);
-  EXPECT_FALSE(token);
 }
