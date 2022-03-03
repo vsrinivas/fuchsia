@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/fpromise/promise.h>
+#include <lib/fpromise/single_threaded_executor.h>
+
 #include <gtest/gtest.h>
 
 #include "src/virtualization/bin/vmm/device/block.h"
@@ -16,15 +19,18 @@ using BufVector = std::vector<uint8_t>;
 // Read only dispatcher that returns blocks containing a single byte.
 class StaticDispatcher : public BlockDispatcher {
  public:
-  void Sync(Callback callback) override { callback(ZX_OK); }
-
-  void ReadAt(void* data, uint64_t size, uint64_t off, Callback callback) override {
-    memset(data, value_, size);
-    callback(ZX_OK);
+  fpromise::promise<void, zx_status_t> Sync() override {
+    return fpromise::make_result_promise<void, zx_status_t>(fpromise::ok());
   }
 
-  void WriteAt(const void* data, uint64_t size, uint64_t off, Callback callback) override {
-    callback(ZX_ERR_NOT_SUPPORTED);
+  fpromise::promise<void, zx_status_t> ReadAt(void* data, uint64_t size, uint64_t off) override {
+    memset(data, value_, size);
+    return fpromise::make_result_promise<void, zx_status_t>(fpromise::ok());
+  }
+
+  fpromise::promise<void, zx_status_t> WriteAt(const void* data, uint64_t size,
+                                               uint64_t off) override {
+    return fpromise::make_error_promise(ZX_ERR_NOT_SUPPORTED);
   }
 
  private:
@@ -51,18 +57,18 @@ std::unique_ptr<BlockDispatcher> CreateDispatcher() {
 TEST(VolatileWriteBlockDispatcherTest, WriteBlock) {
   auto disp = CreateDispatcher();
 
-  zx_status_t status;
+  fit::result<void, zx_status_t> result;
   fidl::VectorPtr<uint8_t> buf(kBlockSectorSize);
-  disp->ReadAt(buf->data(), buf->size(), 0, [&status](zx_status_t s) { status = s; });
-  ASSERT_EQ(ZX_OK, status);
+  result = fpromise::run_single_threaded(disp->ReadAt(buf->data(), buf->size(), 0));
+  ASSERT_TRUE(result.is_ok());
   ASSERT_BLOCK_VALUE(buf->data(), buf->size(), 0xab);
 
   fidl::VectorPtr<uint8_t> write_buf(BufVector(kBlockSectorSize, 0xbe));
-  disp->WriteAt(write_buf->data(), write_buf->size(), 0, [&status](zx_status_t s) { status = s; });
-  ASSERT_EQ(ZX_OK, status);
+  result = fpromise::run_single_threaded(disp->WriteAt(write_buf->data(), write_buf->size(), 0));
+  ASSERT_TRUE(result.is_ok());
 
-  disp->ReadAt(buf->data(), buf->size(), 0, [&status](zx_status_t s) { status = s; });
-  ASSERT_EQ(ZX_OK, status);
+  result = fpromise::run_single_threaded(disp->ReadAt(buf->data(), buf->size(), 0));
+  ASSERT_TRUE(result.is_ok());
   ASSERT_BLOCK_VALUE(buf->data(), buf->size(), 0xbe);
 }
 
@@ -71,16 +77,16 @@ TEST(VolatileWriteBlockDispatcherTest, WriteBlockComplex) {
 
   // Write blocks 0 & 2, blocks 1 & 3 will hit the static dispatcher.
   fidl::VectorPtr<uint8_t> write_buf(BufVector(kBlockSectorSize, 0xbe));
-  zx_status_t status;
-  disp->WriteAt(write_buf->data(), write_buf->size(), 0, [&status](zx_status_t s) { status = s; });
-  ASSERT_EQ(ZX_OK, status);
-  disp->WriteAt(write_buf->data(), write_buf->size(), kBlockSectorSize * 2,
-                [&status](zx_status_t s) { status = s; });
-  ASSERT_EQ(ZX_OK, status);
+  fit::result<void, zx_status_t> result;
+  result = fpromise::run_single_threaded(disp->WriteAt(write_buf->data(), write_buf->size(), 0));
+  ASSERT_TRUE(result.is_ok());
+  result = fpromise::run_single_threaded(
+      disp->WriteAt(write_buf->data(), write_buf->size(), kBlockSectorSize * 2));
+  ASSERT_TRUE(result.is_ok());
 
   fidl::VectorPtr<uint8_t> buf(kBlockSectorSize * 4);
-  disp->ReadAt(buf->data(), buf->size(), 0, [&status](zx_status_t s) { status = s; });
-  ASSERT_EQ(ZX_OK, status);
+  result = fpromise::run_single_threaded(disp->ReadAt(buf->data(), buf->size(), 0));
+  ASSERT_TRUE(result.is_ok());
   ASSERT_BLOCK_VALUE(buf->data(), kBlockSectorSize, 0xbe);
   ASSERT_BLOCK_VALUE(buf->data() + kBlockSectorSize, kBlockSectorSize, 0xab);
   ASSERT_BLOCK_VALUE(buf->data() + kBlockSectorSize * 2, kBlockSectorSize, 0xbe);
@@ -90,18 +96,22 @@ TEST(VolatileWriteBlockDispatcherTest, WriteBlockComplex) {
 TEST(VolatileWriteBlockDispatcherTest, BadRequest) {
   auto disp = CreateDispatcher();
 
-  zx_status_t status;
-  disp->ReadAt(nullptr, kBlockSectorSize, 1, [&status](zx_status_t s) { status = s; });
-  EXPECT_EQ(ZX_ERR_INVALID_ARGS, status);
+  fit::result<void, zx_status_t> result;
+  result = fpromise::run_single_threaded(disp->ReadAt(nullptr, kBlockSectorSize, 1));
+  ASSERT_TRUE(result.is_error());
+  EXPECT_EQ(ZX_ERR_INVALID_ARGS, result.error());
 
-  disp->ReadAt(nullptr, kBlockSectorSize - 1, 0, [&status](zx_status_t s) { status = s; });
-  EXPECT_EQ(ZX_ERR_INVALID_ARGS, status);
+  result = fpromise::run_single_threaded(disp->ReadAt(nullptr, kBlockSectorSize - 1, 0));
+  ASSERT_TRUE(result.is_error());
+  EXPECT_EQ(ZX_ERR_INVALID_ARGS, result.error());
 
-  disp->WriteAt(nullptr, kBlockSectorSize, 1, [&status](zx_status_t s) { status = s; });
-  EXPECT_EQ(ZX_ERR_INVALID_ARGS, status);
+  result = fpromise::run_single_threaded(disp->WriteAt(nullptr, kBlockSectorSize, 1));
+  ASSERT_TRUE(result.is_error());
+  EXPECT_EQ(ZX_ERR_INVALID_ARGS, result.error());
 
-  disp->WriteAt(nullptr, kBlockSectorSize - 1, 0, [&status](zx_status_t s) { status = s; });
-  EXPECT_EQ(ZX_ERR_INVALID_ARGS, status);
+  result = fpromise::run_single_threaded(disp->WriteAt(nullptr, kBlockSectorSize - 1, 0));
+  ASSERT_TRUE(result.is_error());
+  EXPECT_EQ(ZX_ERR_INVALID_ARGS, result.error());
 }
 
 }  // namespace

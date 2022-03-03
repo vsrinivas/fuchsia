@@ -6,6 +6,7 @@
 #define SRC_VIRTUALIZATION_BIN_VMM_DEVICE_QCOW_H_
 
 #include <endian.h>
+#include <lib/fpromise/promise.h>
 
 #include "src/virtualization/bin/vmm/device/block_dispatcher.h"
 
@@ -110,14 +111,14 @@ class QcowFile {
   size_t cluster_size() const { return 1u << header_.cluster_bits; }
 
   // Load the file header and verifiy the image is a valid QCOW file.
-  void Load(BlockDispatcher* disp, BlockDispatcher::Callback callback);
+  fpromise::promise<void, zx_status_t> Load(BlockDispatcher* disp);
 
   // Read |size| bytes at |off| from within the file.
   //
   // It is not an error for a read to cross an unmapped cluster. The section of
   // |data| for the unmapped cluster will be left unmodified.
-  void ReadAt(BlockDispatcher* disp, void* data, uint64_t size, uint64_t off,
-              BlockDispatcher::Callback callback);
+  fpromise::promise<void, zx_status_t> ReadAt(BlockDispatcher* disp, void* data, uint64_t size,
+                                              uint64_t off);
 
  private:
   QcowHeader header_;
@@ -125,7 +126,7 @@ class QcowFile {
   class LookupTable;
   std::unique_ptr<LookupTable> lookup_table_;
 
-  void LoadLookupTable(BlockDispatcher* disp, BlockDispatcher::Callback callback);
+  fpromise::promise<void, zx_status_t> LoadLookupTable(BlockDispatcher* disp);
 };
 
 #endif  // SRC_VIRTUALIZATION_BIN_VMM_DEVICE_QCOW_H_

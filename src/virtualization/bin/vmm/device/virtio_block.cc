@@ -4,6 +4,7 @@
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/async/cpp/executor.h>
 #include <lib/fit/defer.h>
 #include <lib/syslog/cpp/log_settings.h>
 #include <lib/trace-provider/provider.h>
@@ -130,7 +131,8 @@ class Request : public fbl::RefCounted<Request> {
 // Stream for request queue.
 class RequestStream : public StreamBase {
  public:
-  explicit RequestStream(async_dispatcher_t* dispatcher) : watchdog_(dispatcher) {}
+  RequestStream(async_dispatcher_t* dispatcher, async::Executor& executor)
+      : watchdog_(dispatcher), executor_(executor) {}
 
   void Init(std::unique_ptr<BlockDispatcher> disp, const std::string& id, const PhysMem& phys_mem,
             VirtioQueue::InterruptFn interrupt) {
@@ -205,6 +207,7 @@ class RequestStream : public StreamBase {
 
   // TODO(fxbug.dev/87089): Consider if this is valuable enough to keep long term.
   RequestWatchdog<Request::RequestPrinter> watchdog_;
+  async::Executor& executor_;
 
   void DoRead(fbl::RefPtr<Request> request, uint64_t off) {
     TRACE_DURATION("machina", "RequestStream::DoRead");
@@ -215,16 +218,17 @@ class RequestStream : public StreamBase {
         continue;
       }
       const trace_async_id_t nonce = TRACE_NONCE();
-      auto callback = [request, nonce, size](zx_status_t status) {
-        TRACE_DURATION("machina", "RequestStream::DoRead Callback");
-        if (status != ZX_OK) {
-          request->SetStatus(VIRTIO_BLK_S_IOERR);
-        }
-        request->AddUsed(size);
-        TRACE_FLOW_END("machina", "block:read-at", nonce);
-      };
       TRACE_FLOW_BEGIN("machina", "block:read-at", nonce, "size", size, "off", off);
-      dispatcher_->ReadAt(desc_.addr, size, off, callback);
+      executor_.schedule_task(
+          dispatcher_->ReadAt(desc_.addr, size, off)
+              .then([nonce, size, request](const fit::result<void, zx_status_t>& result) {
+                TRACE_DURATION("machina", "RequestStream::DoRead completion");
+                TRACE_FLOW_END("machina", "block:read-at", nonce);
+                if (result.is_error()) {
+                  request->SetStatus(VIRTIO_BLK_S_IOERR);
+                }
+                request->AddUsed(size);
+              }));
       off += size;
     }
   }
@@ -238,15 +242,16 @@ class RequestStream : public StreamBase {
         continue;
       }
       const trace_async_id_t nonce = TRACE_NONCE();
-      auto callback = [request, nonce](zx_status_t status) {
-        TRACE_DURATION("machina", "RequestStream::DoWrite Callback");
-        if (status != ZX_OK) {
-          request->SetStatus(VIRTIO_BLK_S_IOERR);
-        }
-        TRACE_FLOW_END("machina", "block:write-at", nonce);
-      };
       TRACE_FLOW_BEGIN("machina", "block:write-at", nonce, "size", size, "off", off);
-      dispatcher_->WriteAt(desc_.addr, size, off, callback);
+      executor_.schedule_task(
+          dispatcher_->WriteAt(desc_.addr, size, off)
+              .then([nonce, request](const fit::result<void, zx_status_t>& result) {
+                TRACE_DURATION("machina", "RequestStream::DoWrite completion");
+                TRACE_FLOW_END("machina", "block:write-at", nonce);
+                if (result.is_error()) {
+                  request->SetStatus(VIRTIO_BLK_S_IOERR);
+                }
+              }));
       off += size;
     }
   }
@@ -254,15 +259,15 @@ class RequestStream : public StreamBase {
   void DoSync(fbl::RefPtr<Request> request) {
     TRACE_DURATION("machina", "RequestStream::DoSync");
     const trace_async_id_t nonce = TRACE_NONCE();
-    auto callback = [request, nonce](zx_status_t status) {
-      TRACE_DURATION("machina", "RequestStream::DoSync Callback");
-      if (status != ZX_OK) {
-        request->SetStatus(VIRTIO_BLK_S_IOERR);
-      }
-      TRACE_FLOW_END("machina", "block:sync", nonce);
-    };
     TRACE_FLOW_BEGIN("machina", "block:sync", nonce);
-    dispatcher_->Sync(callback);
+    executor_.schedule_task(
+        dispatcher_->Sync().then([nonce, request](const fit::result<void, zx_status_t>& result) {
+          TRACE_DURATION("machina", "RequestStream::DoSync completion");
+          TRACE_FLOW_END("machina", "block:sync", nonce);
+          if (result.is_error()) {
+            request->SetStatus(VIRTIO_BLK_S_IOERR);
+          }
+        }));
     while (request->NextDescriptor(&desc_, false /* writable */)) {
     }
   }
@@ -294,7 +299,10 @@ class VirtioBlockImpl : public DeviceBase<VirtioBlockImpl>,
                         public fuchsia::virtualization::hardware::VirtioBlock {
  public:
   VirtioBlockImpl(sys::ComponentContext* context, async_dispatcher_t* dispatcher)
-      : DeviceBase(context), dispatcher_(dispatcher), request_stream_(dispatcher) {}
+      : DeviceBase(context),
+        dispatcher_(dispatcher),
+        executor_(dispatcher_),
+        request_stream_(dispatcher, executor_) {}
 
   // |fuchsia::virtualization::hardware::VirtioDevice|
   void NotifyQueue(uint16_t queue) override {
@@ -344,9 +352,11 @@ class VirtioBlockImpl : public DeviceBase<VirtioBlockImpl>,
     }
 
     if (format == fuchsia::virtualization::BlockFormat::QCOW) {
-      nested = [nested = std::move(nested)](uint64_t capacity, uint32_t block_size,
-                                            std::unique_ptr<BlockDispatcher> disp) mutable {
-        CreateQcowBlockDispatcher(std::move(disp), std::move(nested));
+      async::Executor& executor = executor_;
+      nested = [&executor, nested = std::move(nested)](
+                   uint64_t capacity, uint32_t block_size,
+                   std::unique_ptr<BlockDispatcher> disp) mutable {
+        CreateQcowBlockDispatcher(std::move(disp), executor, std::move(nested));
       };
     }
 
@@ -377,6 +387,7 @@ class VirtioBlockImpl : public DeviceBase<VirtioBlockImpl>,
 
   async_dispatcher_t* dispatcher_;
   bool read_only_;
+  async::Executor executor_;
   RequestStream request_stream_;
 };
 

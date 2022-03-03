@@ -153,7 +153,9 @@ source_set("block") {
   public_deps = [
     ":lib",
     "//sdk/fidl/fuchsia.io",
+    "//sdk/lib/fit-promise",
     "//sdk/lib/syslog/cpp",
+    "//src/lib/fuchsia-async/cpp",
     "//src/lib/storage/block_client/cpp",
     "//zircon/system/ulib/bitmap",
     "//zircon/system/ulib/trace",
@@ -546,6 +548,7 @@ executable("device_unittests") {
   deps = [
     ":block",
     ":qcow_test_data",
+    "//sdk/lib/fit-promise",
     "//sdk/lib/syslog/cpp",
     "//src/lib/fxl/test:gtest_main",
     "//zircon/system/ulib/async:async-cpp",

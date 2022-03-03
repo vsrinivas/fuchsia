@@ -5,10 +5,13 @@
 #include "src/virtualization/bin/vmm/device/block_dispatcher.h"
 
 #include <lib/async/cpp/task.h>
+#include <lib/fpromise/promise.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/trace/event.h>
 #include <lib/zx/vmo.h>
 #include <zircon/status.h>
+
+#include <vector>
 
 #include <bitmap/rle-bitmap.h>
 #include <safemath/checked_math.h>
@@ -34,70 +37,86 @@ class FileBlockDispatcher : public BlockDispatcher {
       : file_(std::move(file)), queue_(dispatcher, kMaxInFlightRequests) {}
 
  private:
-  void Sync(Callback callback) override {
+  fpromise::promise<void, zx_status_t> Sync() override {
     TRACE_DURATION("machina", "FileBlockDispatcher::Sync");
-    queue_.Dispatch([this, callback = std::move(callback)](RequestQueue::Request request) mutable {
-      file_->Sync([request = std::move(request),
-                   callback = std::move(callback)](fuchsia::io::Node2_Sync_Result result) mutable {
-        if (result.is_err()) {
-          callback(result.err());
-        } else {
-          callback(ZX_OK);
-        }
-      });
-    });
+    fpromise::bridge<void, zx_status_t> bridge;
+    queue_.Dispatch(
+        [this, completer = std::move(bridge.completer)](RequestQueue::Request request) mutable {
+          file_->Sync([request = std::move(request), completer = std::move(completer)](
+                          fuchsia::io::Node2_Sync_Result result) mutable {
+            if (result.is_err()) {
+              completer.complete_error(result.err());
+            } else {
+              completer.complete_ok();
+            }
+          });
+        });
+    return bridge.consumer.promise_or(fpromise::error(ZX_ERR_CANCELED));
   }
 
-  void ReadAt(void* data, uint64_t size, uint64_t off, Callback callback) override {
+  fpromise::promise<void, zx_status_t> ReadAt(void* data, uint64_t size, uint64_t off) override {
     TRACE_DURATION("machina", "FileBlockDispatcher::ReadAt", "size", size, "off", off);
-    auto io_guard = fbl::MakeRefCounted<IoGuard>(std::move(callback));
     auto addr = static_cast<uint8_t*>(data);
+    std::vector<fpromise::promise<void, zx_status_t>> promises;
     for (uint64_t at = 0; at < size; at += fuchsia::io::MAX_BUF) {
+      fpromise::bridge<void, zx_status_t> bridge;
       auto len = std::min<uint64_t>(size - at, fuchsia::io::MAX_BUF);
-      queue_.Dispatch([this, io_guard, len, addr, at, off](RequestQueue::Request request) mutable {
+      queue_.Dispatch([this, completer = std::move(bridge.completer), len, addr, at,
+                       off](RequestQueue::Request request) mutable {
         auto read_complete =
-            [io_guard = std::move(io_guard), len, begin = addr + at,
+            [completer = std::move(completer), len, begin = addr + at,
              request = std::move(request)](fuchsia::io::File2_ReadAt_Result result) mutable {
               if (result.is_err()) {
-                io_guard->SetStatus(result.err());
+                completer.complete_error(result.err());
               } else {
                 const std::vector<uint8_t>& buf = result.response().data;
                 if (buf.size() != len) {
-                  io_guard->SetStatus(ZX_ERR_IO);
+                  completer.complete_error(ZX_ERR_IO);
                 } else {
                   memcpy(begin, buf.data(), buf.size());
+                  completer.complete_ok();
                 }
               }
             };
         file_->ReadAt(len, off + at, std::move(read_complete));
       });
+      promises.emplace_back(bridge.consumer.promise_or(fpromise::error(ZX_ERR_CANCELED)));
     }
+
+    return JoinAndFlattenPromises(std::move(promises));
   }
 
-  void WriteAt(const void* data, uint64_t size, uint64_t off, Callback callback) override {
+  fpromise::promise<void, zx_status_t> WriteAt(const void* data, uint64_t size,
+                                               uint64_t off) override {
     TRACE_DURATION("machina", "FileBlockDispatcher::WriteAt", "size", size, "off", off);
-    auto io_guard = fbl::MakeRefCounted<IoGuard>(std::move(callback));
     auto addr = static_cast<const uint8_t*>(data);
+    std::vector<fpromise::promise<void, zx_status_t>> promises;
     for (uint64_t at = 0; at < size; at += fuchsia::io::MAX_BUF) {
+      fpromise::bridge<void, zx_status_t> bridge;
       // Make a copy of the data.
       auto len = std::min<uint64_t>(size - at, fuchsia::io::MAX_BUF);
       auto begin = addr + at;
       std::vector<uint8_t> buf(begin, begin + len);
 
       // Enqueue the request.
-      queue_.Dispatch([this, io_guard, len, off, at,
+      queue_.Dispatch([this, completer = std::move(bridge.completer), len, off, at,
                        buf = std::move(buf)](RequestQueue::Request request) mutable {
-        auto write_complete = [io_guard = std::move(io_guard), len, request = std::move(request)](
+        auto write_complete = [completer = std::move(completer), len, request = std::move(request)](
                                   fuchsia::io::File2_WriteAt_Result result) mutable {
           if (result.is_err()) {
-            io_guard->SetStatus(result.err());
+            completer.complete_error(result.err());
           } else if (result.response().actual_count != len) {
-            io_guard->SetStatus(ZX_ERR_IO);
+            completer.complete_error(ZX_ERR_IO);
+          } else {
+            completer.complete_ok();
           }
         };
         file_->WriteAt(std::move(buf), off + at, std::move(write_complete));
       });
+      promises.emplace_back(bridge.consumer.promise_or(fpromise::error(ZX_ERR_CANCELED)));
     }
+
+    return JoinAndFlattenPromises(std::move(promises));
   }
 
   fuchsia::io::FilePtr file_;
@@ -126,35 +145,37 @@ class VmoBlockDispatcher : public BlockDispatcher {
   const size_t vmo_size_;
   const uintptr_t vmar_addr_;
 
-  void Sync(Callback callback) override {
+  fpromise::promise<void, zx_status_t> Sync() override {
     TRACE_DURATION("machina", "VmoBlockDispatcher::Sync");
-    file_->Sync([callback = std::move(callback)](fuchsia::io::Node2_Sync_Result result) mutable {
-      if (result.is_err()) {
-        callback(result.err());
-      } else {
-        callback(ZX_OK);
-      }
-    });
+    fpromise::bridge<void, zx_status_t> bridge;
+    file_->Sync(
+        [completer = std::move(bridge.completer)](fuchsia::io::Node2_Sync_Result result) mutable {
+          if (result.is_err()) {
+            completer.complete_error(result.err());
+          } else {
+            completer.complete_ok();
+          }
+        });
+    return bridge.consumer.promise_or(fpromise::error(ZX_ERR_CANCELED));
   }
 
-  void ReadAt(void* data, uint64_t size, uint64_t off, Callback callback) override {
+  fpromise::promise<void, zx_status_t> ReadAt(void* data, uint64_t size, uint64_t off) override {
     TRACE_DURATION("machina", "VmoBlockDispatcher::ReadAt", "size", size, "off", off);
     if (size + off < size || size + off > vmo_size_) {
-      callback(ZX_ERR_OUT_OF_RANGE);
-      return;
+      return fpromise::make_error_promise(ZX_ERR_OUT_OF_RANGE);
     }
     memcpy(data, reinterpret_cast<const void*>(vmar_addr_ + off), size);
-    callback(ZX_OK);
+    return fpromise::make_result_promise<void, zx_status_t>(fpromise::ok());
   }
 
-  void WriteAt(const void* data, uint64_t size, uint64_t off, Callback callback) override {
+  fpromise::promise<void, zx_status_t> WriteAt(const void* data, uint64_t size,
+                                               uint64_t off) override {
     TRACE_DURATION("machina", "VmoBlockDispatcher::WriteAt", "size", size, "off", off);
     if (size + off < size || size + off > vmo_size_) {
-      callback(ZX_ERR_OUT_OF_RANGE);
-      return;
+      return fpromise::make_error_promise(ZX_ERR_OUT_OF_RANGE);
     }
     memcpy(reinterpret_cast<void*>(vmar_addr_ + off), data, size);
-    callback(ZX_OK);
+    return fpromise::make_result_promise<void, zx_status_t>(fpromise::ok());
   }
 };
 
@@ -201,21 +222,20 @@ class VolatileWriteBlockDispatcher : public BlockDispatcher {
     FX_CHECK(status == ZX_OK) << "Failed to unmap VMO";
   }
 
-  void Sync(Callback callback) override {
+  fpromise::promise<void, zx_status_t> Sync() override {
     TRACE_DURATION("machina", "VolatileWriteBlockDispatcher::Sync");
     // Writes are synchronous, so sync is a no-op.
-    callback(ZX_OK);
+    return fpromise::make_result_promise<void, zx_status_t>(fpromise::ok());
   }
 
-  void ReadAt(void* data, uint64_t size, uint64_t off, Callback callback) override {
+  fpromise::promise<void, zx_status_t> ReadAt(void* data, uint64_t size, uint64_t off) override {
     TRACE_DURATION("machina", "VolatileWriteBlockDispatcher::ReadAt", "size", size, "off", off);
     if (!IsAccessValid(size, off)) {
-      callback(ZX_ERR_INVALID_ARGS);
-      return;
+      return fpromise::make_error_promise(ZX_ERR_INVALID_ARGS);
     }
 
-    auto io_guard = fbl::MakeRefCounted<IoGuard>(std::move(callback));
     auto addr = static_cast<uint8_t*>(data);
+    std::vector<fpromise::promise<void, zx_status_t>> promises;
     while (size > 0) {
       size_t sector = off / kBlockSectorSize;
       size_t num_sectors = size / kBlockSectorSize;
@@ -232,12 +252,7 @@ class VolatileWriteBlockDispatcher : public BlockDispatcher {
       FX_CHECK(read_size > 0);
       if (unallocated) {
         // Not Allocated, delegate to dispatcher.
-        auto callback = [io_guard](zx_status_t status) {
-          if (status != ZX_OK) {
-            io_guard->SetStatus(status);
-          }
-        };
-        disp_->ReadAt(addr, read_size, off, callback);
+        promises.emplace_back(disp_->ReadAt(addr, read_size, off));
       } else {
         // Region is at least partially cached.
         auto mapped_addr = reinterpret_cast<const void*>(vmar_addr_ + off);
@@ -249,26 +264,27 @@ class VolatileWriteBlockDispatcher : public BlockDispatcher {
       FX_CHECK(size >= read_size);
       size -= read_size;
     }
+
+    return JoinAndFlattenPromises(std::move(promises));
   }
 
-  void WriteAt(const void* data, uint64_t size, uint64_t off, Callback callback) override {
+  fpromise::promise<void, zx_status_t> WriteAt(const void* data, uint64_t size,
+                                               uint64_t off) override {
     TRACE_DURATION("machina", "VolatileWriteBlockDispatcher::WriteAt", "size", size, "off", off);
     if (!IsAccessValid(size, off)) {
-      callback(ZX_ERR_INVALID_ARGS);
-      return;
+      return fpromise::make_error_promise(ZX_ERR_INVALID_ARGS);
     }
 
     size_t sector = off / kBlockSectorSize;
     size_t num_sectors = size / kBlockSectorSize;
     zx_status_t status = bitmap_.Set(sector, sector + num_sectors);
     if (status != ZX_OK) {
-      callback(status);
-      return;
+      return fpromise::make_error_promise(status);
     }
 
     auto mapped_addr = reinterpret_cast<void*>(vmar_addr_ + off);
     memcpy(mapped_addr, data, size);
-    callback(ZX_OK);
+    return fpromise::make_result_promise<void, zx_status_t>(fpromise::ok());
   }
 
  private:
@@ -315,35 +331,36 @@ class QcowBlockDispatcher : public BlockDispatcher {
   std::unique_ptr<BlockDispatcher> disp_;
   std::unique_ptr<QcowFile> file_;
 
-  void Sync(Callback callback) override {
+  fpromise::promise<void, zx_status_t> Sync() override {
     // Writes are not supported, so sync is a no-op.
     TRACE_DURATION("machina", "QcowBlockDispatcher::Sync");
-    callback(ZX_OK);
+    return fpromise::make_result_promise<void, zx_status_t>(fpromise::ok());
   }
 
-  void ReadAt(void* data, uint64_t size, uint64_t off, Callback callback) override {
+  fpromise::promise<void, zx_status_t> ReadAt(void* data, uint64_t size, uint64_t off) override {
     TRACE_DURATION("machina", "QcowBlockDispatcher::ReadAt", "size", size, "off", off);
-    file_->ReadAt(disp_.get(), data, size, off, std::move(callback));
+    return file_->ReadAt(disp_.get(), data, size, off);
   }
 
-  void WriteAt(const void* data, uint64_t size, uint64_t off, Callback callback) override {
+  fpromise::promise<void, zx_status_t> WriteAt(const void* data, uint64_t size,
+                                               uint64_t off) override {
     TRACE_DURATION("machina", "QcowBlockDispatcher::WriteAt", "size", size, "off", off);
-    callback(ZX_ERR_NOT_SUPPORTED);
+    return fpromise::make_error_promise(ZX_ERR_NOT_SUPPORTED);
   }
 };
 
-void CreateQcowBlockDispatcher(std::unique_ptr<BlockDispatcher> base,
+void CreateQcowBlockDispatcher(std::unique_ptr<BlockDispatcher> base, fpromise::executor& executor,
                                NestedBlockDispatcherCallback callback) {
   auto base_ptr = base.get();
   auto file = std::make_unique<QcowFile>();
   auto file_ptr = file.get();
-  auto load = [base = std::move(base), file = std::move(file),
-               callback = std::move(callback)](zx_status_t status) mutable {
-    uint64_t capacity = file->size();
-    auto disp = std::make_unique<QcowBlockDispatcher>(std::move(base), std::move(file));
-    callback(capacity, kBlockSectorSize, std::move(disp));
-  };
-  file_ptr->Load(base_ptr, std::move(load));
+  executor.schedule_task(file_ptr->Load(base_ptr).then(
+      [base = std::move(base), file = std::move(file),
+       callback = std::move(callback)](const fit::result<void, zx_status_t>& result) mutable {
+        uint64_t capacity = file->size();
+        auto disp = std::make_unique<QcowBlockDispatcher>(std::move(base), std::move(file));
+        callback(capacity, kBlockSectorSize, std::move(disp));
+      }));
 }
 
 // Dispatcher that fulfills block requests using Block IO.
@@ -368,18 +385,20 @@ class RemoteBlockDispatcher : public BlockDispatcher {
   uint32_t block_size_;
   const PhysMem& phys_mem_;
 
-  void Sync(Callback callback) override {
+  fpromise::promise<void, zx_status_t> Sync() override {
     TRACE_DURATION("machina", "RemoteBlockDispatcher::Sync");
 
     block_fifo_request_t request{.opcode = BLOCKIO_FLUSH};
     zx_status_t status = device_->FifoTransaction(&request, 1);
     if (status != ZX_OK) {
       FX_PLOGS(ERROR, status) << "Failed to send sync request";
+      return fpromise::make_error_promise(status);
+    } else {
+      return fpromise::make_result_promise<void, zx_status_t>(fpromise::ok());
     }
-    callback(status);
   }
 
-  void ReadAt(void* data, uint64_t size, uint64_t off, Callback callback) override {
+  fpromise::promise<void, zx_status_t> ReadAt(void* data, uint64_t size, uint64_t off) override {
     TRACE_DURATION("machina", "RemoteBlockDispatcher::ReadAt", "size", size, "off", off);
     block_fifo_request_t request{
         .opcode = BLOCKIO_READ,
@@ -392,11 +411,14 @@ class RemoteBlockDispatcher : public BlockDispatcher {
     if (status != ZX_OK) {
       FX_PLOGS(ERROR, status) << "Failed to send read request of " << size << " at " << off
                               << " block " << block_size_;
+      return fpromise::make_error_promise(status);
+    } else {
+      return fpromise::make_result_promise<void, zx_status_t>(fpromise::ok());
     }
-    callback(status);
   }
 
-  void WriteAt(const void* data, uint64_t size, uint64_t off, Callback callback) override {
+  fpromise::promise<void, zx_status_t> WriteAt(const void* data, uint64_t size,
+                                               uint64_t off) override {
     TRACE_DURATION("machina", "RemoteBlockDispatcher::WriteAt", "size", size, "off", off);
     block_fifo_request_t request{
         .opcode = BLOCKIO_WRITE,
@@ -409,8 +431,10 @@ class RemoteBlockDispatcher : public BlockDispatcher {
     if (status != ZX_OK) {
       FX_PLOGS(ERROR, status) << "Failed to send write request of " << size << " at " << off
                               << " block " << block_size_;
+      return fpromise::make_error_promise(status);
+    } else {
+      return fpromise::make_result_promise<void, zx_status_t>(fpromise::ok());
     }
-    callback(status);
   }
 };
 
@@ -432,4 +456,20 @@ void CreateRemoteBlockDispatcher(zx::channel client, const PhysMem& phys_mem,
   auto disp = std::make_unique<RemoteBlockDispatcher>(std::move(device), std::move(id),
                                                       block_info.block_size, phys_mem);
   callback(capacity, block_info.block_size, std::move(disp));
+}
+
+fpromise::promise<void, zx_status_t> JoinAndFlattenPromises(
+    std::vector<fpromise::promise<void, zx_status_t>> promises) {
+  return fpromise::join_promise_vector(std::move(promises))
+      .then([](const fit::result<std::vector<fit::result<void, zx_status_t>>>& results)
+                -> fit::result<void, zx_status_t> {
+        // Join never returns an error (any errors of the input promise are in the result vector).
+        FX_CHECK(results.is_ok()) << "join_promise_vector is expected to never fail";
+        for (const auto& result : results.value()) {
+          if (result.is_error()) {
+            return result;
+          }
+        }
+        return fpromise::ok();
+      });
 }

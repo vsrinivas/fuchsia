@@ -6,35 +6,25 @@
 #define SRC_VIRTUALIZATION_BIN_VMM_DEVICE_BLOCK_DISPATCHER_H_
 
 #include <fuchsia/io/cpp/fidl.h>
+#include <lib/fpromise/bridge.h>
+#include <lib/fpromise/promise.h>
+#include <zircon/errors.h>
 
 #include <fbl/ref_counted.h>
 
 #include "src/virtualization/bin/vmm/device/phys_mem.h"
 
 // An abstraction around a data source for a block device.
-struct BlockDispatcher {
+class BlockDispatcher {
+ public:
   virtual ~BlockDispatcher() = default;
 
   using Callback = fit::function<void(zx_status_t)>;
-  virtual void Sync(Callback callback) = 0;
-  virtual void ReadAt(void* data, uint64_t size, uint64_t off, Callback callback) = 0;
-  virtual void WriteAt(const void* data, uint64_t size, uint64_t off, Callback callback) = 0;
-};
 
-// Guards an IO operation.
-//
-// This class ensures that the given IO callback will be invoked on destruction
-// and can be used to wait for mutliple IO operations to complete.
-class IoGuard : public fbl::RefCounted<IoGuard> {
- public:
-  explicit IoGuard(BlockDispatcher::Callback callback) : callback_(std::move(callback)) {}
-  ~IoGuard() { callback_(status_); }
-
-  void SetStatus(zx_status_t status) { status_ = status; }
-
- private:
-  BlockDispatcher::Callback callback_;
-  zx_status_t status_ = ZX_OK;
+  virtual fpromise::promise<void, zx_status_t> Sync() = 0;
+  virtual fpromise::promise<void, zx_status_t> ReadAt(void* data, uint64_t size, uint64_t off) = 0;
+  virtual fpromise::promise<void, zx_status_t> WriteAt(const void* data, uint64_t size,
+                                                       uint64_t off) = 0;
 };
 
 // Allows one BlockDispatcher to be nested within another.
@@ -70,11 +60,20 @@ void CreateVolatileWriteBlockDispatcher(uint64_t capacity, uint32_t block_size,
 
 // Creates a BlockDispatcher based on another BlockDispatcher that is a QCOW
 // image.
-void CreateQcowBlockDispatcher(std::unique_ptr<BlockDispatcher> base,
+void CreateQcowBlockDispatcher(std::unique_ptr<BlockDispatcher> base, fpromise::executor& executor,
                                NestedBlockDispatcherCallback callback);
 
 // Creates a BlockDispatcher based on fuchsia.hardware.block.Block.
 void CreateRemoteBlockDispatcher(zx::channel client, const PhysMem& phys_mem,
                                  NestedBlockDispatcherCallback callback);
+
+// Joins on the vector of promises and returns a promise that returns ok if all the input promises
+// complete successfully. If any promise completes with an error, that error will be provided by
+// the returned promise.
+//
+// If multiple input promises complete with an error it is undefined which error will be surfaced
+// here.
+fpromise::promise<void, zx_status_t> JoinAndFlattenPromises(
+    std::vector<fpromise::promise<void, zx_status_t>> promises);
 
 #endif  // SRC_VIRTUALIZATION_BIN_VMM_DEVICE_BLOCK_DISPATCHER_H_

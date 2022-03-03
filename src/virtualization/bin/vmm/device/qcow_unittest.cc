@@ -4,8 +4,11 @@
 
 #include "src/virtualization/bin/vmm/device/qcow.h"
 
+#include <lib/fpromise/promise.h>
+#include <lib/fpromise/single_threaded_executor.h>
 #include <lib/syslog/cpp/macros.h>
 #include <sys/stat.h>
+#include <zircon/types.h>
 
 #include <iterator>
 
@@ -25,19 +28,29 @@ class FdBlockDispatcher : public BlockDispatcher {
  private:
   int fd_;
 
-  void Sync(Callback callback) override {
+  fpromise::promise<void, zx_status_t> Sync() override {
     int ret = fsync(fd_);
-    callback(ret < 0 ? ZX_ERR_IO : ZX_OK);
+    if (ret < 0) {
+      return fpromise::make_error_promise(ZX_ERR_IO);
+    }
+    return fpromise::make_result_promise<void, zx_status_t>(fpromise::ok());
   }
 
-  void ReadAt(void* data, uint64_t size, uint64_t off, Callback callback) override {
+  fpromise::promise<void, zx_status_t> ReadAt(void* data, uint64_t size, uint64_t off) override {
     ssize_t ret = pread(fd_, data, size, off);
-    callback(ret < 0 ? ZX_ERR_IO : ZX_OK);
+    if (ret < 0) {
+      return fpromise::make_error_promise(ZX_ERR_IO);
+    }
+    return fpromise::make_result_promise<void, zx_status_t>(fpromise::ok());
   }
 
-  void WriteAt(const void* data, uint64_t size, uint64_t off, Callback callback) override {
+  fpromise::promise<void, zx_status_t> WriteAt(const void* data, uint64_t size,
+                                               uint64_t off) override {
     ssize_t ret = pwrite(fd_, data, size, off);
-    callback(ret < 0 ? ZX_ERR_IO : ZX_OK);
+    if (ret < 0) {
+      return fpromise::make_error_promise(ZX_ERR_IO);
+    }
+    return fpromise::make_result_promise<void, zx_status_t>(fpromise::ok());
   }
 };
 
@@ -117,16 +130,15 @@ class QcowTest : public testing::Test {
 
   zx_status_t Load() {
     FdBlockDispatcher disp(fd_.get());
-    zx_status_t status;
-    file_.Load(&disp, [&status](zx_status_t s) { status = s; });
-    return status;
+    fit::result<void, zx_status_t> result = fpromise::run_single_threaded(file_.Load(&disp));
+    return result.is_ok() ? ZX_OK : result.error();
   }
 
   zx_status_t ReadAt(void* data, uint64_t size) {
     FdBlockDispatcher disp(fd_.get());
-    zx_status_t status;
-    file_.ReadAt(&disp, data, size, 0, [&status](zx_status_t s) { status = s; });
-    return status;
+    fit::result<void, zx_status_t> result =
+        fpromise::run_single_threaded(file_.ReadAt(&disp, data, size, 0));
+    return result.is_ok() ? ZX_OK : result.error();
   }
 
  protected:
