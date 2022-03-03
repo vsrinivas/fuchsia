@@ -612,7 +612,14 @@ pub fn write_boto_refresh_token<P: AsRef<Path>>(boto_path: P, token: &str) -> Re
         const USER_READ_WRITE: u32 = 0o600;
         let permissions = std::fs::Permissions::from_mode(USER_READ_WRITE);
         set_permissions(&boto_path, permissions).context("Boto set permissions")?;
-        format!("\ngs_oauth2_refresh_token={}\n", token)
+        format!(
+            "# This file was created by the Fuchsia GCS lib.\
+            \n[GSUtil]\
+            \ngs_oauth2_refresh_token = {}\
+            \ndefault_project_id =\
+            \n",
+            token
+        )
     } else {
         static GS_UPDATE_REFRESH_TOKEN_RE: OnceCell<Regex> = OnceCell::new();
         let re = GS_UPDATE_REFRESH_TOKEN_RE.get_or_init(|| {
