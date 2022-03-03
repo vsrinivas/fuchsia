@@ -111,12 +111,6 @@ class AmlRawNand : public DeviceType, public ddk::RawNandProtocol<AmlRawNand, dd
   // These functions require complicated hardware interaction so need to be
   // overridden or called differently in tests.
 
-  // Waits until a read completes.
-  virtual zx_status_t AmlQueueRB();
-
-  // Waits until DMA has transfered data into or out of the NAND buffers.
-  virtual zx_status_t AmlWaitDmaFinish();
-
   // Reads a single status byte from a NAND register. Used during initialization
   // to query the chip information and settings.
   virtual uint8_t AmlReadByte();
@@ -136,6 +130,8 @@ class AmlRawNand : public DeviceType, public ddk::RawNandProtocol<AmlRawNand, dd
   const zx::bti& bti() const { return bti_; }
 
  private:
+  static constexpr uint32_t kMicrosecondsToNanoseconds = 1'000;
+
   std::unique_ptr<Onfi> onfi_;
 
   struct Buffers {
@@ -169,12 +165,27 @@ class AmlRawNand : public DeviceType, public ddk::RawNandProtocol<AmlRawNand, dd
   } stats;
 
   polling_timings_t polling_timings_ = {};
+  nand_timings nand_timings_ = {};
 
+  // The duration of a single NAND bus cycle based on the controller clock rate and timing settings.
+  // Initialized by AmlClockInit().
+  zx::duration nand_cycle_time_;
+
+  // Issues an idle command for one NAND cycle, using chip_select_ to assert CE_n.
+  void SelectChip() { AmlCmdIdle(0); }
   void AmlCmdCtrl(int32_t cmd, uint32_t ctrl);
   void NandctrlSetCfg(uint32_t val);
   void NandctrlSetTimingAsync(int bus_tim, int bus_cyc);
   void NandctrlSendCmd(uint32_t cmd);
-  void AmlCmdIdle(uint32_t time);
+  void AmlCmdIdle(uint32_t nand_bus_cycles);
+  void AmlCmdIdle(zx::duration duration);
+  void AmlQueueRB();
+  // Waits for all outstanding commands to be sent to the controller. More commands may be enqueued
+  // after this returns successfully, but the bus may not be idle at that point.
+  zx_status_t AmlWaitCmdQueueEmpty(zx::duration timeout, zx::duration first_interval,
+                                   zx::duration polling_interval);
+  // Waits for all outstanding commands to be sent to the controller and for the controller and bus
+  // to be idle. This is safe to call even if the command queue is full.
   zx_status_t AmlWaitCmdFinish(zx::duration timeout, zx::duration first_interval,
                                zx::duration polling_interval);
   void AmlCmdSeed(uint32_t seed);
@@ -194,7 +205,7 @@ class AmlRawNand : public DeviceType, public ddk::RawNandProtocol<AmlRawNand, dd
   // those should completely fail ECC.
   zx_status_t AmlGetECCCorrections(int ecc_pages, uint32_t nand_page, uint32_t* ecc_corrected,
                                    bool* erased) __TA_REQUIRES(mutex_);
-  zx_status_t AmlCheckECCPages(int ecc_pages) __TA_REQUIRES(mutex_);
+  zx_status_t AmlCheckECCPages(int ecc_pages, int ecc_pagesize) __TA_REQUIRES(mutex_);
   void AmlSetClockRate(uint32_t clk_freq);
   void AmlClockInit();
   void AmlAdjustTimings(uint32_t tRC_min, uint32_t tREA_max, uint32_t RHOH_min);

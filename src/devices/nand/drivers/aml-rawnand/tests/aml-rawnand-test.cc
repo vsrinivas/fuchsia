@@ -67,6 +67,7 @@ constexpr uint8_t kPage0Data[] = {
 struct NandPage {
   std::vector<uint8_t> data;
   std::vector<AmlInfoFormat> info;
+  bool ecc_fail = false;
 
   // Initializes in a valid state to allow successful reads.
   NandPage(size_t ecc_pages) : data(kTestNandWriteSize), info(ecc_pages) {
@@ -92,26 +93,42 @@ NandPage NandPage0(bool rand_mode) {
   return page0;
 }
 
+NandPage NandPage0Invalid(bool rand_mode) {
+  NandPage page0 = NandPage0(kPage0NumEccPages);
+  page0.ecc_fail = true;
+  return page0;
+}
+
 // A stub Onfi implementation that just tracks the most recent command.
 class StubOnfi : public Onfi {
  public:
   void OnfiCommand(uint32_t command, int32_t column, int32_t page_addr, uint32_t capacity_mb,
                    uint32_t chip_delay_us, int buswidth_16) override {
     last_command_ = command;
-    last_page_address_ = page_addr;
+    // The final command before reading page data is READ0 with no column/page address. Don't accept
+    // -1 as an address in this case.
+    if (command != NAND_CMD_READ0 || page_addr != -1) {
+      last_page_address_ = page_addr;
+    }
+
+    command_callback_(command);
   }
 
-  zx_status_t OnfiWait(zx::duration timeout, zx::duration first_interval,
-                       zx::duration polling_interval) override {
+  zx_status_t OnfiWait(zx::duration timeout, zx::duration polling_interval) override {
     return ZX_OK;
   }
 
   uint32_t last_command() const { return last_command_; }
   int32_t last_page_address() const { return last_page_address_; }
 
+  void set_command_callback(fit::function<void(uint32_t)> command_callback) {
+    command_callback_ = std::move(command_callback);
+  }
+
  private:
   uint32_t last_command_ = 0;
   int32_t last_page_address_ = 0;
+  fit::function<void(int32_t)> command_callback_;
 };
 
 // Provides the necessary support to make AmlRawNand testable.
@@ -157,7 +174,7 @@ class FakeAmlRawNand : public AmlRawNand {
     nand->stub_onfi_ = stub_onfi_raw;
 
     // Initialize the AmlRawNand with some parameters taken from a real device.
-    nand->PrepareForInit(page0_valid_copy);
+    nand->PrepareForInit(page0_valid_copy, *stub_onfi_raw);
     zx_status_t status = nand->Init();
     EXPECT_OK(status);
     if (status != ZX_OK) {
@@ -220,6 +237,13 @@ class FakeAmlRawNand : public AmlRawNand {
     const auto info_addr = info_buffer().phys();
     EXPECT_NE(0, data_addr);
     EXPECT_NE(0, info_addr);
+    if (command == kDefaultReadCommand || command == kPage0ReadCommand) {
+      command_register.ExpectWrite(AML_CMD_IDLE | NAND_CE0);
+      command_register.ExpectWrite(AML_CMD_IDLE | NAND_CE0 | 4);
+      command_register.ExpectWrite(NAND_CE0 | AML_CMD_CLE | NAND_CMD_STATUS);
+      command_register.ExpectWrite(AML_CMD_IDLE | NAND_CE0 | 3);
+      command_register.ExpectWrite(AML_CMD_RB | AML_CMD_IO6 | 0x18);
+    }
     command_register.ExpectWrite(AML_CMD_ADL | (data_addr & 0xFFFF));
     command_register.ExpectWrite(AML_CMD_ADH | ((data_addr >> 16) & 0xFFFF));
     command_register.ExpectWrite(AML_CMD_AIL | (info_addr & 0xFFFF));
@@ -237,26 +261,16 @@ class FakeAmlRawNand : public AmlRawNand {
 
     // Finally we expect the actual read/write command.
     command_register.ExpectWrite(command);
+
+    if (command == kDefaultWriteCommand || command == kPage0WriteCommand) {
+      command_register.ExpectWrite(AML_CMD_IDLE | NAND_CE0);
+      command_register.ExpectWrite(AML_CMD_IDLE | NAND_CE0);
+    }
   }
 
   using AmlRawNand::bti;
 
  protected:
-  zx_status_t AmlQueueRB() override { return ZX_OK; }
-
-  zx_status_t AmlWaitDmaFinish() override {
-    switch (stub_onfi_->last_command()) {
-      case NAND_CMD_READ0:
-        return PerformFakeRead(stub_onfi_->last_page_address());
-      case NAND_CMD_SEQIN:
-        return PerformFakeWrite(stub_onfi_->last_page_address());
-    }
-
-    ADD_FAILURE("AmlWaitDmaFinish() called with unknown Onfi command 0x%02X",
-                stub_onfi_->last_command());
-    return ZX_ERR_INTERNAL;
-  }
-
   uint8_t AmlReadByte() override {
     if (fake_read_bytes_.empty()) {
       ADD_FAILURE("AmlReadByte() called with no fake bytes ready");
@@ -285,7 +299,9 @@ class FakeAmlRawNand : public AmlRawNand {
 
   // Sets up the necessary fake page and byte reads to successfully initialize
   // the AmlRawNand object.
-  void PrepareForInit(uint32_t page0_valid_copy) {
+  void PrepareForInit(uint32_t page0_valid_copy, StubOnfi& onfi) {
+    onfi.set_command_callback([&](int32_t command) { NandCommand(command); });
+
     // First we read the first 2 ID bytes.
     QueueFakeNandByteRead(kTestNandManufacturerId);
     QueueFakeNandByteRead(kTestNandDeviceId);
@@ -305,7 +321,8 @@ class FakeAmlRawNand : public AmlRawNand {
     // This is to make sure that test does not panic when AmlRawNand is iterating through
     // the 8 copies.
     for (uint32_t i = 0; i < 8; i++) {
-      SetFakePage(i * 128, i == page0_valid_copy ? NandPage0(rand_mode_) : NandPage());
+      SetFakePage(i * 128,
+                  i == page0_valid_copy ? NandPage0(rand_mode_) : NandPage0Invalid(rand_mode_));
     }
   }
 
@@ -316,7 +333,7 @@ class FakeAmlRawNand : public AmlRawNand {
       return ZX_ERR_INTERNAL;
     }
 
-    const NandPage& page = iter->second;
+    NandPage& page = iter->second;
 
     const size_t data_bytes = page.data.size() * sizeof(page.data[0]);
     const size_t info_bytes = page.info.size() * sizeof(page.info[0]);
@@ -329,6 +346,14 @@ class FakeAmlRawNand : public AmlRawNand {
     if (info_buffer().size() < info_bytes) {
       ADD_FAILURE("Fake page info size is larger than the buffer");
       return ZX_ERR_BUFFER_TOO_SMALL;
+    }
+
+    for (auto& info_block : page.info) {
+      info_block.ecc.completed = 1;
+      if (page.ecc_fail) {
+        info_block.ecc.eccerr_cnt = 0x3f;
+        info_block.zero_bits = 0x3f;
+      }
     }
 
     memcpy(data_buffer().virt(), &page.data[0], data_bytes);
@@ -377,6 +402,17 @@ class FakeAmlRawNand : public AmlRawNand {
     }
 
     return ZX_OK;
+  }
+
+  void NandCommand(int32_t command) {
+    switch (command) {
+      case NAND_CMD_READ0:
+        PerformFakeRead(stub_onfi_->last_page_address());
+        break;
+      case NAND_CMD_SEQIN:
+        PerformFakeWrite(stub_onfi_->last_page_address());
+        break;
+    }
   }
 
   bool rand_mode_;
