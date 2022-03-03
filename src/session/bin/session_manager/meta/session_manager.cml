@@ -54,7 +54,6 @@
                 "fuchsia.bluetooth.le.Peripheral",
                 "fuchsia.bluetooth.sys.Access",
                 "fuchsia.bluetooth.sys.Bootstrap",
-                "fuchsia.buildinfo.Provider",
                 "fuchsia.camera3.DeviceWatcher",
                 "fuchsia.castauth.CastKeySigner",
                 "fuchsia.cobalt.SystemDataUpdater",
@@ -136,6 +135,12 @@
                 "google.deviceproperty.Writer",
                 "google.flashts.Reader",
             ],
+            from: "parent",
+            to: "#session",
+        },
+        {
+            // Routed to session-manager via build_info.core_shard.cml.
+            protocol: [ "fuchsia.buildinfo.Provider" ],
             from: "parent",
             to: "#session",
         },

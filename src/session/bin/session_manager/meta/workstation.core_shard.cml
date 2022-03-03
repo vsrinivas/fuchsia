@@ -29,11 +29,6 @@
             to: "#session-manager",
         },
         {
-            protocol: "fuchsia.buildinfo.Provider",
-            from: "#build-info",
-            to: "#session-manager",
-        },
-        {
             protocol: "fuchsia.power.battery.BatteryManager",
             from: "#battery_manager",
             to: "#session-manager",
