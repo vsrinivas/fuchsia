@@ -48,7 +48,7 @@ if (is_efi_toolchain) {
   # This is the top config for all code in the efi_toolchain.
   config("efi_config") {
     configs = [
-      "//build/config/zircon:standalone",
+      "//zircon/kernel:standalone",
       "//build/config/sanitizers:no_sanitizers",
 
       # TODO: "//zircon/kernel:warnings",
