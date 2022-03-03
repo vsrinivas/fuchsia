@@ -30,6 +30,24 @@ static constexpr size_t kMaxBufSectors = fuchsia::io::MAX_BUF / kBlockSectorSize
 // If we exceed this, we will start queueing new requests until earlier requests complete.
 constexpr size_t kMaxInFlightRequests = 64;
 
+fpromise::promise<void, zx_status_t> BlockDispatcher::ReadBatch(
+    const std::vector<BlockDispatcher::Request>& requests) {
+  std::vector<fpromise::promise<void, zx_status_t>> promises;
+  for (const auto& request : requests) {
+    promises.emplace_back(ReadAt(request.data, request.size, request.off));
+  }
+  return JoinAndFlattenPromises(std::move(promises));
+}
+
+fpromise::promise<void, zx_status_t> BlockDispatcher::WriteBatch(
+    const std::vector<BlockDispatcher::Request>& requests) {
+  std::vector<fpromise::promise<void, zx_status_t>> promises;
+  for (const auto& request : requests) {
+    promises.emplace_back(WriteAt(request.data, request.size, request.off));
+  }
+  return JoinAndFlattenPromises(std::move(promises));
+}
+
 // Dispatcher that fulfills block requests using Fuchsia IO.
 class FileBlockDispatcher : public BlockDispatcher {
  public:

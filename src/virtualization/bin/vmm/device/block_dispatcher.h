@@ -22,9 +22,20 @@ class BlockDispatcher {
   using Callback = fit::function<void(zx_status_t)>;
 
   virtual fpromise::promise<void, zx_status_t> Sync() = 0;
+
   virtual fpromise::promise<void, zx_status_t> ReadAt(void* data, uint64_t size, uint64_t off) = 0;
   virtual fpromise::promise<void, zx_status_t> WriteAt(const void* data, uint64_t size,
                                                        uint64_t off) = 0;
+
+  struct Request {
+    void* data;
+    uint64_t size;
+    uint64_t off;
+  };
+  // ReadBatch/WriteBatch have a default implementation that simply calls ReadAt/WriteAt so
+  // dispatchers that don't benefit from batching requests do not have to implement these methods.
+  virtual fpromise::promise<void, zx_status_t> ReadBatch(const std::vector<Request>& requests);
+  virtual fpromise::promise<void, zx_status_t> WriteBatch(const std::vector<Request>& requests);
 };
 
 // Allows one BlockDispatcher to be nested within another.

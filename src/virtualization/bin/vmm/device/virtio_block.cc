@@ -10,6 +10,8 @@
 #include <lib/trace-provider/provider.h>
 #include <lib/trace/event.h>
 
+#include <vector>
+
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
 #include <virtio/block.h>
@@ -205,55 +207,68 @@ class RequestStream : public StreamBase {
   std::unique_ptr<BlockDispatcher> dispatcher_;
   std::string id_;
 
+  // Retain a buffer here that will be used to store the set of requests sent to the
+  // BlockDispatcher for fulfillment. This is simply to avoid constant reallocations.
+  std::vector<BlockDispatcher::Request> request_buffer_;
+
   // TODO(fxbug.dev/87089): Consider if this is valuable enough to keep long term.
   RequestWatchdog<Request::RequestPrinter> watchdog_;
   async::Executor& executor_;
 
   void DoRead(fbl::RefPtr<Request> request, uint64_t off) {
     TRACE_DURATION("machina", "RequestStream::DoRead");
+    FX_CHECK(request_buffer_.empty())
+        << "Consumers are required to clear request_buffer_ after use";
     while (request->NextDescriptor(&desc_, true /* writable */)) {
       const uint32_t size = desc_.len;
       if (size % kBlockSectorSize != 0) {
         request->SetStatus(VIRTIO_BLK_S_IOERR);
         continue;
       }
-      const trace_async_id_t nonce = TRACE_NONCE();
-      TRACE_FLOW_BEGIN("machina", "block:read-at", nonce, "size", size, "off", off);
-      executor_.schedule_task(
-          dispatcher_->ReadAt(desc_.addr, size, off)
-              .then([nonce, size, request](const fit::result<void, zx_status_t>& result) {
-                TRACE_DURATION("machina", "RequestStream::DoRead completion");
-                TRACE_FLOW_END("machina", "block:read-at", nonce);
-                if (result.is_error()) {
-                  request->SetStatus(VIRTIO_BLK_S_IOERR);
-                }
-                request->AddUsed(size);
-              }));
+      request_buffer_.push_back({.data = desc_.addr, .size = size, .off = off});
+      request->AddUsed(size);
       off += size;
     }
+
+    const trace_async_id_t nonce = TRACE_NONCE();
+    TRACE_FLOW_BEGIN("machina", "block:read-batch", nonce);
+    executor_.schedule_task(
+        dispatcher_->ReadBatch(request_buffer_)
+            .then([nonce, request](const fit::result<void, zx_status_t>& result) mutable {
+              TRACE_DURATION("machina", "RequestStream::DoWrite completion");
+              TRACE_FLOW_END("machina", "block:read-batch", nonce);
+              if (result.is_error()) {
+                request->SetStatus(VIRTIO_BLK_S_IOERR);
+              }
+            }));
+    request_buffer_.clear();
   }
 
   void DoWrite(fbl::RefPtr<Request> request, uint64_t off) {
     TRACE_DURATION("machina", "RequestStream::DoWrite");
+    FX_CHECK(request_buffer_.empty())
+        << "Consumers are required to clear request_buffer_ after use";
     while (request->NextDescriptor(&desc_, false /* writable */)) {
       const uint32_t size = desc_.len;
       if (size % kBlockSectorSize != 0) {
         request->SetStatus(VIRTIO_BLK_S_IOERR);
         continue;
       }
-      const trace_async_id_t nonce = TRACE_NONCE();
-      TRACE_FLOW_BEGIN("machina", "block:write-at", nonce, "size", size, "off", off);
-      executor_.schedule_task(
-          dispatcher_->WriteAt(desc_.addr, size, off)
-              .then([nonce, request](const fit::result<void, zx_status_t>& result) {
-                TRACE_DURATION("machina", "RequestStream::DoWrite completion");
-                TRACE_FLOW_END("machina", "block:write-at", nonce);
-                if (result.is_error()) {
-                  request->SetStatus(VIRTIO_BLK_S_IOERR);
-                }
-              }));
+      request_buffer_.emplace_back(BlockDispatcher::Request{desc_.addr, size, off});
       off += size;
     }
+    const trace_async_id_t nonce = TRACE_NONCE();
+    TRACE_FLOW_BEGIN("machina", "block:write-batch", nonce);
+    executor_.schedule_task(
+        dispatcher_->WriteBatch(request_buffer_)
+            .then([nonce, request](const fit::result<void, zx_status_t>& result) {
+              TRACE_DURATION("machina", "RequestStream::DoWrite completion");
+              TRACE_FLOW_END("machina", "block:write-batch", nonce);
+              if (result.is_error()) {
+                request->SetStatus(VIRTIO_BLK_S_IOERR);
+              }
+            }));
+    request_buffer_.clear();
   }
 
   void DoSync(fbl::RefPtr<Request> request) {
