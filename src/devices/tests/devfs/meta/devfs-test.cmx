@@ -1,0 +1,13 @@
+{
+    "include": [
+        "syslog/client.shard.cmx"
+    ],
+    "program": {
+        "binary": "test/devfs"
+    },
+    "sandbox": {
+        "features": [
+            "deprecated-shell"
+        ]
+    }
+}

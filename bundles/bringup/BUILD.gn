@@ -22,7 +22,6 @@ group("tests") {
     # The devcoordinator-namespace-test assumes the root filesystem and can't be
     # migrated as packages are given their own local filesystem.
     "//src/devices/tests/devcoordinator-namespace:devcoordinator-namespace-bootfs-test",
-    "//src/devices/tests/devfs:devfs-bootfs-test",
     "//src/devices/usb/tests/usb:usb-bootfs-test",  # HW-required.
     "//src/zircon/tests/entropy:entropy-bootfs-test",
     "//src/zircon/tests/exception:exception-bootfs-test",

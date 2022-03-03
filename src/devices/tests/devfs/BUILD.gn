@@ -2,8 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/components.gni")
 import("//build/test.gni")
-import("//build/testing/bootfs_test.gni")
 
 test("devfs") {
   sources = [
@@ -19,7 +19,12 @@ test("devfs") {
   ]
 }
 
-bootfs_test("devfs-bootfs-test") {
-  name = "devfs"
+fuchsia_unittest_package("devfs-test") {
+  manifest = "meta/devfs-test.cmx"
   deps = [ ":devfs" ]
+}
+
+group("tests") {
+  testonly = true
+  public_deps = [ ":devfs-test" ]
 }

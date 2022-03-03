@@ -284,6 +284,7 @@ group("cmx_allowlist") {
     "//src/devices/sysmem/tests/sysmem/fuzz:*",
     "//src/devices/sysmem/tools:*",
     "//src/devices/testing/syslog:*",
+    "//src/devices/tests/devfs:*",
     "//src/devices/tests/fx-logger:*",
     "//src/devices/usb/bin/lsusb:*",
     "//src/devices/usb/tests/usb-hci-test:*",
