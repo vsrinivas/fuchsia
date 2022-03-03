@@ -13,3 +13,7 @@ Different from //sdk/lib/fidl/cpp, this library has an explicit "include" folder
 that hosts the headers. This is desirable because we avoid exposing the entire
 "//src" tree available for inclusion otherwise. Given enough time, we should
 migrate libraries in //sdk to use a dedicated "include" folder too.
+
+## Design
+
+See [structure of unified C++ FIDL bindings](docs/structure-of-unified-cpp-fidl-bindings.md).
