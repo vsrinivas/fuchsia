@@ -819,7 +819,7 @@
 
 ## **ENUMS**
 
-### ErrorEnum [strict](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute} {#ErrorEnum}
+### ErrorEnum [strict](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute} {#ErrorEnum data-text="ErrorEnum"}
 Type: <code>uint32</code>
 
 *Defined in [test.protocols/protocols.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/protocols.test.fidl;l=46)*
@@ -838,7 +838,7 @@ Type: <code>uint32</code>
         </tr>
 </table>
 
-### obj_type [strict](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute} {#obj_type}
+### obj_type [strict](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute} {#obj_type data-text="obj_type"}
 Type: <code>uint32</code>
 
 *Defined in [test.protocols/protocols.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/protocols.test.fidl;l=6)*

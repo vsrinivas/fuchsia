@@ -8,7 +8,7 @@
 
 ## **ENUMS**
 
-### MyEmptyFlexibleEnum [flexible](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute} {#MyEmptyFlexibleEnum}
+### MyEmptyFlexibleEnum [flexible](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute} {#MyEmptyFlexibleEnum data-text="MyEmptyFlexibleEnum"}
 Type: <code>uint32</code>
 
 *Defined in [test.enum/enum.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/enum.test.fidl;l=20)*
@@ -17,7 +17,7 @@ Type: <code>uint32</code>
     <tr><th>Name</th><th>Value</th><th>Description</th></tr>
 </table>
 
-### MyFlexibleEnum [flexible](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute} {#MyFlexibleEnum}
+### MyFlexibleEnum [flexible](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute} {#MyFlexibleEnum data-text="MyFlexibleEnum"}
 Type: <code>uint32</code>
 
 *Defined in [test.enum/enum.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/enum.test.fidl;l=8)*
@@ -36,7 +36,7 @@ Type: <code>uint32</code>
         </tr>
 </table>
 
-### MyFlexibleEnumWithCustomUnknown [flexible](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute} {#MyFlexibleEnumWithCustomUnknown}
+### MyFlexibleEnumWithCustomUnknown [flexible](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute} {#MyFlexibleEnumWithCustomUnknown data-text="MyFlexibleEnumWithCustomUnknown"}
 Type: <code>uint32</code>
 
 *Defined in [test.enum/enum.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/enum.test.fidl;l=13)*
@@ -60,7 +60,7 @@ Type: <code>uint32</code>
         </tr>
 </table>
 
-### MyStrictEnum [strict](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute} {#MyStrictEnum}
+### MyStrictEnum [strict](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute} {#MyStrictEnum data-text="MyStrictEnum"}
 Type: <code>uint32</code>
 
 *Defined in [test.enum/enum.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/enum.test.fidl;l=3)*

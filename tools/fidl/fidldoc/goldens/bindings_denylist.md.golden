@@ -523,7 +523,7 @@
 
 ## **ENUMS**
 
-### OnlyDart [strict](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute} {#OnlyDart}
+### OnlyDart [strict](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute} {#OnlyDart data-text="OnlyDart"}
 Type: <code>uint32</code>
 
 *Defined in [test.bindingsdenylist/example.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl;l=19)*

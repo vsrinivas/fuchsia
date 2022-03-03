@@ -64,7 +64,7 @@
 
 ## **ENUMS**
 
-### obj_type [strict](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute} {#obj_type}
+### obj_type [strict](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute} {#obj_type data-text="obj_type"}
 Type: <code>uint32</code>
 
 *Defined in [test.handlesintypes/handles_in_types.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/handles_in_types.test.fidl;l=6)*

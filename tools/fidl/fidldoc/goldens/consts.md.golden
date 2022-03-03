@@ -8,7 +8,7 @@
 
 ## **ENUMS**
 
-### EnumType [strict](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute} {#EnumType}
+### EnumType [strict](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute} {#EnumType data-text="EnumType"}
 Type: <code>int32</code>
 
 *Defined in [test.consts/consts.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/consts.test.fidl;l=14)*

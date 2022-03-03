@@ -56,7 +56,7 @@
 
 ## **ENUMS**
 
-### MyFlexibleEnum [flexible](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute} {#MyFlexibleEnum}
+### MyFlexibleEnum [flexible](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute} {#MyFlexibleEnum data-text="MyFlexibleEnum"}
 Type: <code>uint32</code>
 
 *Defined in [test.doccomments/doc_comments.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/doc_comments.test.fidl;l=57)*
@@ -81,7 +81,7 @@ Type: <code>uint32</code>
         </tr>
 </table>
 
-### MyStrictEnum [strict](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute} {#MyStrictEnum}
+### MyStrictEnum [strict](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute} {#MyStrictEnum data-text="MyStrictEnum"}
 Type: <code>uint32</code>
 
 *Defined in [test.doccomments/doc_comments.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/doc_comments.test.fidl;l=42)*

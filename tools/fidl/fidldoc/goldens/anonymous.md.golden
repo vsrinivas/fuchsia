@@ -108,7 +108,7 @@
 
 ## **ENUMS**
 
-### Op [flexible](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute} {#Op}
+### Op [flexible](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute} {#Op data-text="Op"}
 Type: <code>uint32</code>
 
 *Defined in [test.anonymous/anonymous.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/anonymous.test.fidl;l=7)*
@@ -132,7 +132,7 @@ Type: <code>uint32</code>
         </tr>
 </table>
 
-### SomeProtocol_SomeMethod_Error [flexible](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute} {#SomeProtocol_SomeMethod_Error}
+### SomeProtocol_SomeMethod_Error [flexible](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute} {#SomeProtocol_SomeMethod_Error data-text="SomeProtocol_SomeMethod_Error"}
 Type: <code>uint32</code>
 
 *Defined in [test.anonymous/anonymous.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/anonymous.test.fidl;l=42)*

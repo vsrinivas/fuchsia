@@ -44,7 +44,7 @@
 
 ## **ENUMS**
 
-### ExampleEnum [strict](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute} {#ExampleEnum}
+### ExampleEnum [strict](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute} {#ExampleEnum data-text="ExampleEnum"}
 Type: <code>uint32</code>
 
 *Defined in [test.placementofattributes/example.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/placement_of_attributes/example.test.fidl;l=16)*
