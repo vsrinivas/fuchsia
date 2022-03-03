@@ -211,9 +211,12 @@ class CloneTest : public zxtest::Test {
 
     if (request->flags & fio::wire::kOpenFlagDescribe) {
       fio::wire::FileObject file_object;
-      fidl::WireSendEvent(binding_ref)
-          ->OnOpen(ZX_OK, fio::wire::NodeInfo::WithFile(
-                              fidl::ObjectView<fio::wire::FileObject>::FromExternal(&file_object)));
+      const fidl::Result result =
+          fidl::WireSendEvent(binding_ref)
+              ->OnOpen(ZX_OK,
+                       fio::wire::NodeInfo::WithFile(
+                           fidl::ObjectView<fio::wire::FileObject>::FromExternal(&file_object)));
+      ASSERT_TRUE(result.ok(), "%s", result.FormatDescription().c_str());
     }
   }
 
