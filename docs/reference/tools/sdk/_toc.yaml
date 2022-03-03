@@ -20,8 +20,6 @@ toc:
   section:
   - title: "symbol-index"
     path: /reference/tools/sdk/symbol-index.md
-  - title: "symbolize"
-    path: /reference/tools/sdk/symbolize.md
   - title: "symbolizer"
     path: /reference/tools/sdk/symbolizer.md
   - title: "triage"
