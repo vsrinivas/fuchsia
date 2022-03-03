@@ -15,8 +15,10 @@ class Server final : public fidl::WireServer<fidl_test::Example> {
 };
 
 void client(fidl::WireClient<fidl_test::Example> client) {
-  client->ExistingMethod();
-  client->OldMethod();
+  auto result1 = client->ExistingMethod();
+  ZX_ASSERT(result1.ok());
+  auto result2 = client->OldMethod();
+  ZX_ASSERT(result2.ok());
 }
 // [END contents]
 

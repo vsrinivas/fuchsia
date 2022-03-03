@@ -17,8 +17,10 @@ class SyncEventHandler : public fidl::WireSyncEventHandler<fidl_test::Example> {
 };
 
 void sendEvents(fidl::ServerBindingRef<fidl_test::Example> server) {
-  fidl::WireSendEvent(server)->OnExistingEvent();
-  fidl::WireSendEvent(server)->OnNewEvent();
+  auto result1 = fidl::WireSendEvent(server)->OnExistingEvent();
+  ZX_ASSERT(result1.ok());
+  auto result2 = fidl::WireSendEvent(server)->OnNewEvent();
+  ZX_ASSERT(result2.ok());
 }
 // [END contents]
 

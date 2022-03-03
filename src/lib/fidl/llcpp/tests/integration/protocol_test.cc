@@ -156,7 +156,8 @@ TEST(MagicNumberTest, EventWrite) {
   auto endpoints = fidl::CreateEndpoints<test::Frobinator>();
   ASSERT_EQ(endpoints.status_value(), ZX_OK);
   std::string s = "hi";
-  fidl::WireSendEvent(endpoints->server)->Hrob(fidl::StringView::FromExternal(s));
+  auto result = fidl::WireSendEvent(endpoints->server)->Hrob(fidl::StringView::FromExternal(s));
+  ASSERT_OK(result.status());
   char bytes[ZX_CHANNEL_MAX_MSG_BYTES];
   zx_handle_info_t handle_infos[ZX_CHANNEL_MAX_MSG_HANDLES];
 

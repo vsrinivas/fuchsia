@@ -72,7 +72,8 @@ bool SendEventBenchmark(perftest::RepeatState* state, BuilderFunc builder) {
 
     state->NextStep();  // End: Setup. Begin: SendEvent.
 
-    fidl::WireSendEvent(endpoints->server)->Send(std::move(aligned_value));
+    auto result = fidl::WireSendEvent(endpoints->server)->Send(std::move(aligned_value));
+    ZX_ASSERT(result.ok());
 
     {
       std::unique_lock<std::mutex> lock(mu);
