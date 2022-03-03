@@ -13,6 +13,7 @@ import 'dart:io';
 import 'package:fuchsia/fuchsia.dart' as fuchsia;
 import 'package:test_api/src/backend/declarer.dart';
 import 'package:test_api/src/backend/group.dart';
+import 'package:test_api/src/backend/invoker.dart';
 import 'package:test_api/src/backend/operating_system.dart';
 import 'package:test_api/src/backend/runtime.dart';
 import 'package:test_api/src/backend/suite_platform.dart';
@@ -109,7 +110,11 @@ Future<int> runFuchsiaTests(
     ExpandedReporter.watch(engine, PrintSink(),
         color: false, printPath: false, printPlatform: false);
 
-    return await engine.run() ? 0 : 1;
+    final success = await runZoned(() => Invoker.guard(engine.run),
+            zoneValues: {#test.declarer: declarer}) ??
+        false;
+
+    return success ? 0 : 1;
   });
 }
 
