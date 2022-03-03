@@ -486,6 +486,27 @@ impl Task {
         })
     }
 
+    /// Checks whether the task has a child task identified by `selector`. A task is a child
+    /// if it was created by one of the threads in the thread group but does not belong to the
+    /// thread group (different process).
+    pub fn has_child(&self, selector: TaskSelector) -> bool {
+        let children = self.children.read();
+        let thread_group_tasks = self.thread_group.tasks.read();
+        match selector {
+            TaskSelector::Any => {
+                for child_tid in &*children {
+                    if !thread_group_tasks.contains(&child_tid) {
+                        return true;
+                    }
+                }
+                return false;
+            }
+            TaskSelector::Pid(pid) => {
+                return children.get(&pid).is_some() && !thread_group_tasks.contains(&pid);
+            }
+        }
+    }
+
     fn remove_child(&self, pid: pid_t) {
         self.children.write().remove(&pid);
     }

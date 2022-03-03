@@ -347,6 +347,11 @@ fn wait_on_pid(
         if let Some(zombie) = current_task.get_zombie_child(selector, options & WNOWAIT == 0) {
             return Ok(Some(zombie));
         }
+
+        if !current_task.has_child(selector) {
+            return error!(ECHILD);
+        }
+
         if options & WNOHANG != 0 {
             return Ok(None);
         }
@@ -1023,14 +1028,15 @@ mod tests {
     }
 
     #[test]
-    fn test_eintr_when_no_zombie() {
+    fn test_echild_when_no_zombie() {
         let (_kernel, current_task) = create_kernel_and_task();
         // Send the signal to the task.
         assert!(
             sys_kill(&current_task, current_task.get_pid(), UncheckedSignal::from(SIGCHLD)).is_ok()
         );
-        // Verify that EINTR is returned because there is no zombie task.
-        assert_eq!(wait_on_pid(&current_task, TaskSelector::Any, 0), Err(EINTR));
+        // Verify that ECHILD is returned because there is no zombie task and no children to block
+        // waiting for.
+        assert_eq!(wait_on_pid(&current_task, TaskSelector::Any, 0), Err(ECHILD));
     }
 
     #[test]
