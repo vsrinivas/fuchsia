@@ -393,7 +393,7 @@ void MediaApp::ConfigureAudioRendererPts() {
 
   if (timestamp_packets_) {
     packet_num_to_pts_ = std::make_unique<TimelineFunction>(
-        first_pkt_pts_.value_or(media_start_pts_.value_or(0)), 0,
+        first_packet_pts_.value_or(media_start_pts_.value_or(0)), 0,
         static_cast<uint64_t>(frames_per_packet_) * pts_units_numerator_.value_or(1'000'000'000),
         static_cast<uint64_t>(frame_rate_) * pts_units_denominator_.value_or(1));
   }
@@ -532,17 +532,24 @@ void MediaApp::DisplayConfigurationSettings() {
       break;
   }
 
-  printf(".\nThe renderer will transport data using %u %stimestamped buffer sections of %u frames",
-         total_mappable_packets_, (timestamp_packets_ ? "" : "non-"), frames_per_packet_);
+  printf(
+      ".\nThe renderer will transport data using %u %s buffer sections of %u frames, "
+      "across %u payload buffers",
+      total_mappable_packets_, (timestamp_packets_ ? "timestamped" : "non-timestamped"),
+      frames_per_packet_, num_payload_buffers_);
+
   if (online_) {
     printf(",\nusing strict timing for flow control (online mode)");
   } else {
     printf(",\nusing previous packet completions for flow control (contiguous mode)");
   }
-  printf(".\nPlayback will start at %s reference time, at media PTS %s",
-         set_ref_start_time_ ? "a specific" : "an unspecified ('NO_TIMESTAMP')",
-         media_start_pts_.has_value() ? std::to_string(media_start_pts_.value()).c_str()
-                                      : "'NO_TIMESTAMP'");
+
+  auto media_time_str =
+      RefTimeStrFromZxTime(zx::time(media_start_pts_.value_or(fuchsia::media::NO_TIMESTAMP)));
+  printf(
+      ".\nSignal will play at %s ref_time, and media_time %s, for %.3f seconds",
+      specify_ref_start_time_ ? "a specific (to-be-determined)" : "an unspecified ('NO_TIMESTAMP')",
+      media_time_str.c_str(), duration_secs_);
   if (timestamp_packets_ || media_start_pts_.has_value()) {
     printf(",\nusing a timestamp unit of (%u / %u) per second",
            pts_units_numerator_.value_or(1'000'000'000), pts_units_denominator_.value_or(1));
@@ -657,8 +664,6 @@ void MediaApp::Play() {
   target_online_send_first_packet_ref_time_ = ref_now - target_duration_outstanding;
 
   reference_start_time_ = ref_now + kPlayStartupDelay + min_lead_time_;
-  zx::time requested_ref_start_time =
-      set_ref_start_time_ ? reference_start_time_ : zx::time(fuchsia::media::NO_TIMESTAMP);
   auto media_start_pts = media_start_pts_.value_or(fuchsia::media::NO_TIMESTAMP);
 
   if (verbose_) {
@@ -666,7 +671,8 @@ void MediaApp::Play() {
     CLI_CHECK(mono_time_result.is_ok(), "Could not convert ref_time to mono_time");
     auto mono_now = mono_time_result.take_value();
 
-    auto requested_ref_str = RefTimeStrFromZxTime(requested_ref_start_time);
+    auto requested_ref_str = RefTimeStrFromZxTime(
+        specify_ref_start_time_ ? reference_start_time_ : zx::time(fuchsia::media::NO_TIMESTAMP));
     auto requested_media_str = RefTimeStrFromZxTime(zx::time{media_start_pts});
     auto ref_now_str = RefTimeMsStrFromZxTime(ref_now);
     auto mono_now_str = RefTimeMsStrFromZxTime(mono_now);
@@ -705,7 +711,7 @@ void MediaApp::Play() {
     reference_start_time_ = zx::time(actual_ref_start);
   };
 
-  audio_renderer_->Play(requested_ref_start_time.get(), media_start_pts, play_completion_func);
+  audio_renderer_->Play(reference_start_time_.get(), media_start_pts, play_completion_func);
   set_playing();
 
   if (online_) {
@@ -892,8 +898,8 @@ void MediaApp::WriteAudioIntoBuffer(SampleType* audio_buffer, uint32_t num_frame
   }
 }
 
-constexpr zx::duration kPktCompleteToleranceDuration = zx::msec(50);
-constexpr uint64_t kPktCompleteTolerance = 5;
+constexpr zx::duration kPacketCompleteToleranceDuration = zx::msec(50);
+constexpr uint64_t kPacketCompleteTolerance = 5;
 
 bool MediaApp::CheckPayloadSpace() {
   if (num_packets_completed_ > 0 && num_packets_sent_ <= num_packets_completed_) {
@@ -921,8 +927,9 @@ bool MediaApp::CheckPayloadSpace() {
   auto elapsed_time_sec = static_cast<double>(num_frames_completed_) / frame_rate_;
   // Check whether payload buffer is staying at approx the same fullness.
   if (num_packets_completed_ > 0 &&
-      actual_packets_outstanding + kPktCompleteTolerance <= target_num_packets_outstanding_ &&
-      actual_duration_outstanding + kPktCompleteToleranceDuration <= target_duration_outstanding) {
+      actual_packets_outstanding + kPacketCompleteTolerance <= target_num_packets_outstanding_ &&
+      actual_duration_outstanding + kPacketCompleteToleranceDuration <=
+          target_duration_outstanding) {
     printf(
         "\n? %4lu packets outstanding (%ld msec); expected %4u (%ld msec); total elapsed %f sec: "
         "are we completing faster than sending?\n\n",
@@ -932,8 +939,9 @@ bool MediaApp::CheckPayloadSpace() {
     return false;
   }
   if (num_packets_completed_ > 0 &&
-      target_num_packets_outstanding_ + kPktCompleteTolerance <= actual_packets_outstanding &&
-      target_duration_outstanding + kPktCompleteToleranceDuration <= actual_duration_outstanding) {
+      target_num_packets_outstanding_ + kPacketCompleteTolerance <= actual_packets_outstanding &&
+      target_duration_outstanding + kPacketCompleteToleranceDuration <=
+          actual_duration_outstanding) {
     printf(
         "\n? %4lu packets outstanding (%ld msec); expected %4u (%ld msec); total elapsed %f sec: "
         "are we sending faster than completing?\n\n",

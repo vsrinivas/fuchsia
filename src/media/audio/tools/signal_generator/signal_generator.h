@@ -86,11 +86,12 @@ class MediaApp {
 
   void set_clock_type(ClockType type) { clock_type_ = type; }
   void adjust_clock_rate(int32_t rate_adjustment) { clock_rate_adjustment_ = rate_adjustment; }
-
-  void set_ref_start_time(bool set_ref_time) { set_ref_start_time_ = set_ref_time; }
+  void specify_ref_start_time(bool specify_ref_start_time) {
+    specify_ref_start_time_ = specify_ref_start_time;
+  }
   void set_media_start_pts(int64_t media_start_pts) { media_start_pts_ = media_start_pts; }
-  void use_pkt_pts(bool use_pts) { timestamp_packets_ = use_pts; }
-  void set_pkt_start_pts(int64_t pkt_pts_start) { first_pkt_pts_ = pkt_pts_start; }
+  void use_packet_pts(bool use_pts) { timestamp_packets_ = use_pts; }
+  void set_packet_start_pts(int64_t packet_pts_start) { first_packet_pts_ = packet_pts_start; }
   void set_pts_units(uint32_t numerator, uint32_t denominator) {
     pts_units_numerator_ = numerator;
     pts_units_denominator_ = denominator;
@@ -206,23 +207,23 @@ class MediaApp {
 
   zx::clock reference_clock_;
   ClockType clock_type_ = ClockType::Default;
-  std::optional<int32_t> clock_rate_adjustment_ = std::nullopt;
+  std::optional<int32_t> clock_rate_adjustment_;
 
   async::TaskClosureMethod<MediaApp, &MediaApp::OnSendPacketTimer> online_send_packet_timer_{this};
 
   zx::time target_online_send_packet_ref_time_;
   zx::duration online_send_packet_ref_period_;
 
-  bool set_ref_start_time_ = false;
+  bool specify_ref_start_time_ = false;
   zx::time reference_start_time_;
 
-  std::optional<int64_t> media_start_pts_ = std::nullopt;
+  std::optional<int64_t> media_start_pts_;
 
   bool timestamp_packets_ = false;
-  std::optional<int64_t> first_pkt_pts_ = std::nullopt;
+  std::optional<int64_t> first_packet_pts_;
   std::optional<uint32_t> pts_units_numerator_;
   std::optional<uint32_t> pts_units_denominator_;
-  std::optional<float> pts_continuity_threshold_secs_ = std::nullopt;
+  std::optional<float> pts_continuity_threshold_secs_;
   std::unique_ptr<TimelineFunction> packet_num_to_pts_;
 
   bool online_;
@@ -231,18 +232,18 @@ class MediaApp {
   // value: the hypothetical reference time when we would have sent the first packet.
   zx::time target_online_send_first_packet_ref_time_;
 
-  std::optional<std::string> file_name_ = std::nullopt;
+  std::optional<std::string> file_name_;
   media::audio::WavWriter<> wav_writer_;
   bool wav_writer_initialized_ = false;
 
-  std::optional<float> stream_gain_db_ = std::nullopt;
-  std::optional<bool> stream_mute_ = std::nullopt;
+  std::optional<float> stream_gain_db_;
+  std::optional<bool> stream_mute_;
 
-  std::optional<float> ramp_target_gain_db_ = std::nullopt;
+  std::optional<float> ramp_target_gain_db_;
   zx_duration_t ramp_duration_nsec_;
 
-  std::optional<float> usage_gain_db_ = std::nullopt;
-  std::optional<float> usage_volume_ = std::nullopt;
+  std::optional<float> usage_gain_db_;
+  std::optional<float> usage_volume_;
 
   // To produce pink noise, we first generate white noise then run it through a "pinking" filter to
   // progressively attenuate high frequencies.

@@ -58,7 +58,7 @@ constexpr char kRefStartTimeSwitch[] = "ref-start";
 constexpr char kMediaStartPtsSwitch[] = "media-start";
 constexpr char kMediaStartPtsDefault[] = "0";
 
-constexpr char kPacketPtsSwitch[] = "packet-pts";
+constexpr char kUsePacketPtsSwitch[] = "packet-pts";
 constexpr char kPtsUnitSwitch[] = "pts-unit";
 constexpr char kPtsContinuityThresholdSwitch[] = "pts-threshold";
 constexpr char kPtsContinuityThresholdDefaultSecs[] = "0.000125";
@@ -176,16 +176,17 @@ void usage(const char* prog_name) {
          ZX_CLOCK_UPDATE_MIN_RATE_ADJUST, ZX_CLOCK_UPDATE_MAX_RATE_ADJUST, kClockRateDefault,
          kCustomClockSwitch);
 
-  printf("\n    By default, submit data in non-timestamped buffers of %s frames and %s VMO,\n",
+  printf("\n    By default, submit data in non-timestamped packets of %s frames and %s VMO,\n",
          kFramesPerPacketDefault, kNumPayloadBuffersDefault);
   printf("    without specifying a precise reference time or PTS for the start of playback\n");
   printf("  --%s\t\t   Specify a reference time for playback start\n", kRefStartTimeSwitch);
   printf("  --%s[=<PTS>]\t   Specify a PTS value for playback start (%s if no value is provided)\n",
          kMediaStartPtsSwitch, kMediaStartPtsDefault);
-  printf("  --%s[=PTS]\t   Apply timestamps to packets (Start PTS, if no value is provided)\n",
-         kPacketPtsSwitch);
+  printf("  --%s[=<PTS>]\t   Apply timestamps to packets, starting with the provided value\n",
+         kUsePacketPtsSwitch);
+  printf("\t\t\t   If no value is specified, the PTS for playback start will be used.\n");
   printf("  --%s=<NUMER/DENOM> Set PTS units per second. If not set, '--%s' and '--%s'\n",
-         kPtsUnitSwitch, kMediaStartPtsSwitch, kPacketPtsSwitch);
+         kPtsUnitSwitch, kMediaStartPtsSwitch, kUsePacketPtsSwitch);
   printf("\t\t\t   use the PTS unit 1 nanosecond (1'000'000'000 / 1)\n");
   printf(
       "  --%s[=<SECS>] Set PTS discontinuity threshold, in seconds (%s if flag but no "
@@ -204,10 +205,9 @@ void usage(const char* prog_name) {
   printf("\t\t\t   This simulates playback from an external source, such as a network.\n");
   printf("\t\t\t   (This doubles the payload buffer space requirement mentioned above.)\n");
 
-  printf(
-      "\n    By default, do not set AudioRenderer gain/mute (unity %.1f dB, unmuted, no ramping)\n",
-      kUnityGainDb);
-  printf("  --%s[=<GAIN_DB>]\t   Set stream gain, in dB (min %.1f, max %.1f, default %s)\n",
+  printf("\n    By default, do not set AudioRenderer gain/mute (unity %.1f dB, unmuted, no ramp)\n",
+         kUnityGainDb);
+  printf("  --%s[=<GAIN_DB>]\t   Set stream gain (dB; min %.1f, max %.1f, default %s)\n",
          kStreamGainSwitch, fuchsia::media::audio::MUTED_GAIN_DB,
          fuchsia::media::audio::MAX_GAIN_DB, kStreamGainDefaultDb);
   printf(
@@ -384,7 +384,7 @@ int main(int argc, const char** argv) {
   }
 
   // Handle timestamp usage
-  media_app.set_ref_start_time(command_line.HasOption(kRefStartTimeSwitch));
+  media_app.specify_ref_start_time(command_line.HasOption(kRefStartTimeSwitch));
 
   std::string pts_start_str;
   if (command_line.GetOptionValue(kMediaStartPtsSwitch, &pts_start_str)) {
@@ -395,12 +395,12 @@ int main(int argc, const char** argv) {
   }
 
   // Check whether we apply timestamps to each packet (otherwise use NO_TIMESTAMP)
-  std::string pkt_pts_start_str;
-  if (command_line.GetOptionValue(kPacketPtsSwitch, &pkt_pts_start_str)) {
-    if (pts_start_str != "") {
-      media_app.set_pkt_start_pts(std::stoi(pkt_pts_start_str));
+  std::string packet_pts_start_str;
+  if (command_line.GetOptionValue(kUsePacketPtsSwitch, &packet_pts_start_str)) {
+    if (packet_pts_start_str != "") {
+      media_app.set_packet_start_pts(std::stoi(packet_pts_start_str));
     }
-    media_app.use_pkt_pts(true);
+    media_app.use_packet_pts(true);
   }
 
   // Check whether a PTS unit was specified (otherwise assume 1'000'000'000 per second)
@@ -455,23 +455,19 @@ int main(int argc, const char** argv) {
   }
 
   // Handle stream gain
-  if (command_line.HasOption(kStreamGainSwitch)) {
-    std::string stream_gain_str;
-    command_line.GetOptionValue(kStreamGainSwitch, &stream_gain_str);
+  std::string stream_gain_str;
+  if (command_line.GetOptionValue(kStreamGainSwitch, &stream_gain_str)) {
     if (stream_gain_str == "") {
       stream_gain_str = kStreamGainDefaultDb;
     }
-
     media_app.set_stream_gain(std::stof(stream_gain_str));
   }
 
-  if (command_line.HasOption(kStreamMuteSwitch)) {
-    std::string stream_mute_str;
-    command_line.GetOptionValue(kStreamMuteSwitch, &stream_mute_str);
+  std::string stream_mute_str;
+  if (command_line.GetOptionValue(kStreamMuteSwitch, &stream_mute_str)) {
     if (stream_mute_str == "") {
       stream_mute_str = kStreamMuteDefault;
     }
-
     media_app.set_stream_mute(fxl::StringToNumber<uint32_t>(stream_mute_str) != 0);
   }
 
@@ -509,7 +505,6 @@ int main(int argc, const char** argv) {
     if (usage_volume_str == "") {
       usage_volume_str = kRenderUsageVolumeDefault;
     }
-
     media_app.set_usage_volume(std::stof(usage_volume_str));
   }
   if (command_line.HasOption(kRenderUsageGainSwitch)) {
@@ -518,7 +513,6 @@ int main(int argc, const char** argv) {
     if (usage_gain_str == "") {
       usage_gain_str = kRenderUsageGainDefaultDb;
     }
-
     media_app.set_usage_gain(std::stof(usage_gain_str));
   }
 
@@ -529,7 +523,6 @@ int main(int argc, const char** argv) {
     if (save_file_str == "") {
       save_file_str = kSaveToFileDefaultName;
     }
-
     media_app.set_save_file_name(save_file_str);
   }
 
