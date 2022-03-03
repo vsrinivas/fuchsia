@@ -46,8 +46,6 @@ source_set("lib") {
     "crash_listener.h",
     "guest.cc",
     "guest.h",
-    "linux_component.cc",
-    "linux_component.h",
     "linux_runner.cc",
     "linux_runner.h",
     "log_collector.cc",
