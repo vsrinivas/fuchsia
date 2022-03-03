@@ -427,7 +427,8 @@ TEST_F(TestMagmaFidl, BufferRangeOp) {
 TEST_F(TestMagmaFidl, FlowControl) {
   // Without flow control, this will trigger a policy exception (too many channel messages)
   // or an OOM.
-  primary_->EnableFlowControl();
+  auto result = primary_->EnableFlowControl();
+  ZX_ASSERT(result.ok());
 
   constexpr uint32_t kIterations = 10000 / 2;
 
