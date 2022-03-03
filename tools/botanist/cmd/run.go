@@ -232,6 +232,10 @@ func (r *RunCommand) execute(ctx context.Context, args []string) error {
 	// TODO(rudymathu): Remove this once stability is achieved.
 	r.zirconArgs = append(r.zirconArgs, "driver.usb_mass_storage.disable")
 
+	// TODO(https://fxbug.dev/88370#c74): Remove this once CDC-ether flakiness
+	// has been resolved.
+	r.zirconArgs = append(r.zirconArgs, "driver.usb_cdc.log=debug")
+
 	// Parse targets out from the target configuration file.
 	targetSlice, err := r.deriveTargetsFromFile(ctx)
 	if err != nil {
