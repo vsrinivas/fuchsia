@@ -181,15 +181,5 @@
             "exclusive": false,
             "localizedDescription": "increaseVolumeKeyboardShortcut"
         }
-    ],
-    "logout": [
-        {
-            "char": "q",
-            "chord": "Shift + Ctrl + q",
-            "description": "Logout",
-            "exclusive": true,
-            "modifier": "shift + control",
-            "localizedDescription": "logoutKeyboardShortcut"
-        }
     ]
 }
