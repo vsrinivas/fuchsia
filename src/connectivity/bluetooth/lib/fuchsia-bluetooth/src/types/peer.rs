@@ -106,7 +106,7 @@ impl fmt::Display for Peer {
         writeln!(fmt, "\tConnected:\t{}", self.connected)?;
         writeln!(fmt, "\tBonded:\t\t{}", self.bonded)?;
         writeln!(fmt, "\tLE Services:\t{:?}", names_from_services(&self.le_services))?;
-        writeln!(fmt, "\tBR/EDR Services:\t{:?}", names_from_services(&self.bredr_services))?;
+        writeln!(fmt, "\tBR/EDR Serv.:\t{:?}", names_from_services(&self.bredr_services))?;
         Ok(())
     }
 }

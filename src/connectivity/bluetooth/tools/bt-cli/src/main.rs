@@ -18,6 +18,7 @@ use {
     },
     parking_lot::Mutex,
     pin_utils::pin_mut,
+    prettytable::{cell, format, row, Row, Table},
     regex::Regex,
     rustyline::{error::ReadlineError, CompletionType, Config, EditMode, Editor},
     std::{
@@ -125,7 +126,7 @@ fn cmp_peers(a: &Peer, b: &Peer) -> Ordering {
     (a.connected, a.bonded).cmp(&(b.connected, b.bonded))
 }
 
-fn get_peers<'a>(args: &'a [&'a str], state: &Mutex<State>) -> String {
+fn get_peers<'a>(args: &'a [&'a str], state: &Mutex<State>, full_details: bool) -> String {
     let find = match args.len() {
         0 => "",
         1 => args[0],
@@ -138,7 +139,29 @@ fn get_peers<'a>(args: &'a [&'a str], state: &Mutex<State>) -> String {
     let mut peers: Vec<&Peer> = state.peers.values().filter(|p| match_peer(&find, p)).collect();
     peers.sort_by(|a, b| cmp_peers(&*a, &*b));
     let matched = format!("Showing {}/{} peers\n", peers.len(), state.peers.len());
-    String::from_iter(std::iter::once(matched).chain(peers.iter().map(|p| p.to_string())))
+
+    if full_details {
+        return String::from_iter(
+            std::iter::once(matched).chain(peers.iter().map(|p| p.to_string())),
+        );
+    }
+
+    // Create table of results
+    let mut table = Table::new();
+    table.set_format(*format::consts::FORMAT_NO_BORDER);
+    let _ = table.set_titles(row![
+        "PeerId",
+        "Address",
+        "Technology",
+        "Name",
+        "Appearance",
+        "Connected",
+        "Bonded",
+    ]);
+    for val in peers.into_iter() {
+        let _ = table.add_row(peer_to_table_row(val));
+    }
+    [matched, format!("{}", table)].join("\n")
 }
 
 /// Get the string representation of a peer from either an identifier or address
@@ -150,6 +173,19 @@ fn get_peer<'a>(args: &'a [&'a str], state: &Mutex<State>) -> String {
     to_identifier(state, args[0])
         .and_then(|id| state.lock().peers.get(&id).map(|peer| peer.to_string()))
         .unwrap_or_else(|| String::from("No known peer"))
+}
+
+/// Returns basic peer information formatted as a prettytable Row
+fn peer_to_table_row(peer: &Peer) -> Row {
+    row![
+        peer.id.to_string(),
+        peer.address.to_string(),
+        format! {"{:?}", peer.technology},
+        peer.name.as_ref().map_or("".to_string(), |x| format!("{:?}", x)),
+        peer.appearance.as_ref().map_or("".to_string(), |x| format!("{:?}", x)),
+        peer.connected.to_string(),
+        peer.bonded.to_string(),
+    ]
 }
 
 async fn set_discovery(
@@ -461,7 +497,8 @@ async fn handle_cmd(
         Cmd::StopDiscovery => set_discovery(false, &state, &access_svc).await,
         Cmd::Discoverable => set_discoverable(true, &access_svc, &state).await,
         Cmd::NotDiscoverable => set_discoverable(false, &access_svc, &state).await,
-        Cmd::GetPeers => Ok(get_peers(args, &state)),
+        Cmd::GetPeers => Ok(get_peers(args, &state, false)),
+        Cmd::ShowPeers => Ok(get_peers(args, &state, true)),
         Cmd::GetPeer => Ok(get_peer(args, &state)),
         Cmd::GetAdapters => get_hosts(&state).await,
         Cmd::SetActiveAdapter => set_active_host(args, &host_svc).await,
@@ -722,7 +759,7 @@ mod tests {
     }
 
     #[test]
-    fn test_get_peers() {
+    fn test_get_peers_full_details() {
         let mut state = State::new();
         let _ = state.peers.insert(
             PeerId(0xabcd),
@@ -738,12 +775,62 @@ mod tests {
         );
         let state = Mutex::new(state);
 
+        let get_peers =
+            |args: &[&str], state: &Mutex<State>| -> String { get_peers(args, state, true) };
+
+        // Fields for detailed view of peers
+        let fields = Regex::new(r"Id(?s).*Address(?s).*Technology(?s).*Name(?s).*Appearance(?s).*Connected(?s).*Bonded(?s).*LE Services(?s).*BR/EDR Serv\.").unwrap();
+
         // Empty arguments matches everything
+        assert!(fields.is_match(&get_peers(&[], &state)));
         assert!(get_peers(&[], &state).contains("2/2 peers"));
         assert!(get_peers(&[], &state).contains("01:23:45"));
         assert!(get_peers(&[], &state).contains("AD:DE:7E"));
 
         // No matches prints nothing.
+        assert!(!fields.is_match(&get_peers(&["nomatch"], &state)));
+        assert!(get_peers(&["nomatch"], &state).contains("0/2 peers"));
+        assert!(!get_peers(&["nomatch"], &state).contains("01:23:45"));
+        assert!(!get_peers(&["nomatch"], &state).contains("AD:DE:7E"));
+
+        // We can match either one
+        assert!(get_peers(&["01:23"], &state).contains("1/2 peers"));
+        assert!(get_peers(&["01:23"], &state).contains("01:23:45"));
+        assert!(get_peers(&["abcd"], &state).contains("1/2 peers"));
+        assert!(get_peers(&["beef"], &state).contains("AD:DE:7E"));
+    }
+
+    #[test]
+    fn test_get_peers_less_details() {
+        let mut state = State::new();
+        let _ = state.peers.insert(
+            PeerId(0xabcd),
+            named_peer(PeerId(0xabcd), Address::Public([0xAB, 0x89, 0x67, 0x45, 0x23, 0x01]), None),
+        );
+        let _ = state.peers.insert(
+            PeerId(0xbeef),
+            named_peer(
+                PeerId(0xbeef),
+                Address::Public([0x11, 0x00, 0x55, 0x7E, 0xDE, 0xAD]),
+                Some("Sapphire".to_string()),
+            ),
+        );
+        let state = Mutex::new(state);
+
+        let get_peers =
+            |args: &[&str], state: &Mutex<State>| -> String { get_peers(args, state, false) };
+
+        // Fields for table view of peers
+        let fields = Regex::new(r"PeerId[ \t]*\|[ \t]*Address[ \t]*\|[ \t]*Technology[ \t]*\|[ \t]*Name[ \t]*\|[ \t]*Appearance[ \t]*\|[ \t]*Connected[ \t]*\|[ \t]*Bonded").unwrap();
+
+        // Empty arguments matches everything
+        assert!(fields.is_match(&get_peers(&[], &state)));
+        assert!(get_peers(&[], &state).contains("2/2 peers"));
+        assert!(get_peers(&[], &state).contains("01:23:45"));
+        assert!(get_peers(&[], &state).contains("AD:DE:7E"));
+
+        // No matches prints nothing.
+        assert!(!fields.is_match(&get_peers(&["nomatch"], &state)));
         assert!(get_peers(&["nomatch"], &state).contains("0/2 peers"));
         assert!(!get_peers(&["nomatch"], &state).contains("01:23:45"));
         assert!(!get_peers(&["nomatch"], &state).contains("AD:DE:7E"));

@@ -22,6 +22,7 @@ rustc_binary("bin") {
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:parking_lot",
     "//third_party/rust_crates:pin-utils",
+    "//third_party/rust_crates:prettytable-rs",
     "//third_party/rust_crates:regex",
     "//third_party/rust_crates:thiserror",
     "//third_party/rust_crates/compat/rustyline",
