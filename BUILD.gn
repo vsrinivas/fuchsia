@@ -1064,6 +1064,7 @@ group("default") {
   deps = [
     "//:create-all-drivers-doc",
     "//:host",
+    "//:test-list",
     "//build/images:packages",
     "//build/input:build_only",
     "//build/zircon/zbi_tests",
