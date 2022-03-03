@@ -2,6 +2,8 @@
 {% set rfcid = "RFC-0000" %}
 {% include "docs/contribute/governance/rfcs/_common/_rfc_header.md" %}
 # {{ rfc.name }}: {{ rfc.title }}
+{# Fuchsia RFCs use templates to display various fields from _rfcs.yaml. View the #}
+{# fully rendered RFCs at https://fuchsia.dev/fuchsia-src/contribute/governance/rfcs #}
 <!-- SET the `rfcid` VAR ABOVE. DO NOT EDIT ANYTHING ELSE ABOVE THIS LINE. -->
 
 <!-- mdformat on -->
