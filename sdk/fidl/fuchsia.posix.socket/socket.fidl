@@ -313,6 +313,15 @@ protocol BaseNetworkSocket {
         value uint8;
     }) error fuchsia.posix.Errno;
 
+    /// Set `SOL_IPV6` -> `IPV6_RECVHOPLIMIT`.
+    SetIpv6ReceiveHopLimit(struct {
+        value bool;
+    }) -> (struct {}) error fuchsia.posix.Errno;
+    /// Get `SOL_IPV6` -> `IPV6_RECVHOPLIMIT`.
+    GetIpv6ReceiveHopLimit() -> (struct {
+        value bool;
+    }) error fuchsia.posix.Errno;
+
     /// Set `SOL_IPV6` -> `IPV6_MULTICAST_HOPS`.
     // [0, 255] but unset means kernel default, which is 1.
     // https://github.com/torvalds/linux/blob/6f38be8f2cc/net/ipv6/ipv6_sockglue.c#L751-L760
@@ -457,6 +466,11 @@ type NetworkSocketRecvControlData = table {
         ///
         /// Present if the `SOL_IPV6` -> `IPV6_RECVTCLASS` option is enabled.
         1: tclass uint8;
+
+        /// The Hop Limit of a packet that was received.
+        ///
+        /// Present if the `SOL_IPV6` -> `IPV6_RECVHOPLIMIT` option is enabled.
+        2: hoplimit uint8;
     };
 };
 

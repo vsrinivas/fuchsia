@@ -1430,6 +1430,17 @@ where
                         } => {
                             responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
                         }
+                        fposix_socket::DatagramSocketRequest::SetIpv6ReceiveHopLimit {
+                            value: _,
+                            responder,
+                        } => {
+                            responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
+                        }
+                        fposix_socket::DatagramSocketRequest::GetIpv6ReceiveHopLimit {
+                            responder,
+                        } => {
+                            responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
+                        }
                         fposix_socket::DatagramSocketRequest::SetIpReceiveTypeOfService {
                             value: _,
                             responder,

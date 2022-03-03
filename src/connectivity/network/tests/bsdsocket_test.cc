@@ -763,6 +763,13 @@ INSTANTIATE_TEST_SUITE_P(
                              .invalid_values = {-2, 256},
                          },
                          IntSocketOption{
+                             .option = STRINGIFIED_SOCKOPT(IPPROTO_IPV6, IPV6_RECVHOPLIMIT),
+                             .is_boolean = true,
+                             .default_value = 0,
+                             .valid_values = kBooleanOptionValidValues,
+                             .invalid_values = {},
+                         },
+                         IntSocketOption{
                              .option = STRINGIFIED_SOCKOPT(SOL_SOCKET, SO_NO_CHECK),
                              .is_boolean = true,
                              .default_value = 0,
@@ -5762,12 +5769,14 @@ INSTANTIATE_TEST_SUITE_P(
                                      STRINGIFIED_CMSGOPT(SOL_IP, IP_TTL, sizeof(int), IP_RECVTTL))),
     SocketDomainAndOptionToString);
 
-INSTANTIATE_TEST_SUITE_P(NetDatagramSocketsCmsgRecvIPv6Tests, NetDatagramSocketsCmsgRecvTest,
-                         testing::Combine(testing::Values(AF_INET6),
-                                          testing::Values(STRINGIFIED_CMSGOPT(SOL_IPV6, IPV6_TCLASS,
-                                                                              sizeof(int),
-                                                                              IPV6_RECVTCLASS))),
-                         SocketDomainAndOptionToString);
+INSTANTIATE_TEST_SUITE_P(
+    NetDatagramSocketsCmsgRecvIPv6Tests, NetDatagramSocketsCmsgRecvTest,
+    testing::Combine(testing::Values(AF_INET6),
+                     testing::Values(STRINGIFIED_CMSGOPT(SOL_IPV6, IPV6_TCLASS, sizeof(int),
+                                                         IPV6_RECVTCLASS),
+                                     STRINGIFIED_CMSGOPT(SOL_IPV6, IPV6_HOPLIMIT, sizeof(int),
+                                                         IPV6_RECVHOPLIMIT))),
+    SocketDomainAndOptionToString);
 
 class NetDatagramSocketsCmsgSendTest : public NetDatagramSocketsCmsgTestBase,
                                        public testing::WithParamInterface<sa_family_t> {
@@ -6344,6 +6353,71 @@ TEST_F(NetDatagramSocketsCmsgIpv6TClassTest, RecvCmsgUnalignedControlBuffer) {
         uint8_t recv_tclass;
         memcpy(&recv_tclass, CMSG_DATA(cmsg), sizeof(recv_tclass));
         EXPECT_EQ(recv_tclass, kTClass);
+      }));
+}
+
+class NetDatagramSocketsCmsgIpv6HopLimitTest : public NetDatagramSocketsCmsgTestBase {
+ protected:
+  void SetUp() override {
+    ASSERT_NO_FATAL_FAILURE(SetUpDatagramSockets(AF_INET6));
+
+    // Enable receiving IPV6_HOPLIMIT control message.
+    constexpr int kOne = 1;
+    ASSERT_EQ(setsockopt(bound().get(), SOL_IPV6, IPV6_RECVHOPLIMIT, &kOne, sizeof(kOne)), 0)
+        << strerror(errno);
+  }
+
+  void TearDown() override {
+    if (!IsSkipped()) {
+      EXPECT_NO_FATAL_FAILURE(TearDownDatagramSockets());
+    }
+  }
+};
+
+TEST_F(NetDatagramSocketsCmsgIpv6HopLimitTest, RecvCmsg) {
+  constexpr int kHopLimit = 42;
+  ASSERT_EQ(
+      setsockopt(connected().get(), SOL_IPV6, IPV6_UNICAST_HOPS, &kHopLimit, sizeof(kHopLimit)), 0)
+      << strerror(errno);
+
+  char control[CMSG_SPACE(sizeof(kHopLimit)) + 1];
+  ASSERT_NO_FATAL_FAILURE(
+      SendAndCheckReceivedMessage(control, sizeof(control), [kHopLimit](msghdr& msghdr) {
+        EXPECT_EQ(msghdr.msg_controllen, CMSG_SPACE(sizeof(kHopLimit)));
+        cmsghdr* cmsg = CMSG_FIRSTHDR(&msghdr);
+        ASSERT_NE(cmsg, nullptr);
+        EXPECT_EQ(cmsg->cmsg_len, CMSG_LEN(sizeof(kHopLimit)));
+        EXPECT_EQ(cmsg->cmsg_level, SOL_IPV6);
+        EXPECT_EQ(cmsg->cmsg_type, IPV6_HOPLIMIT);
+        uint8_t recv_hoplimit;
+        memcpy(&recv_hoplimit, CMSG_DATA(cmsg), sizeof(recv_hoplimit));
+        EXPECT_EQ(recv_hoplimit, kHopLimit);
+        EXPECT_EQ(CMSG_NXTHDR(&msghdr, cmsg), nullptr);
+      }));
+}
+
+TEST_F(NetDatagramSocketsCmsgIpv6HopLimitTest, RecvCmsgUnalignedControlBuffer) {
+  constexpr int kDefaultHopLimit = 64;
+  char control[CMSG_SPACE(sizeof(kDefaultHopLimit)) + 1];
+  ASSERT_NO_FATAL_FAILURE(
+      SendAndCheckReceivedMessage(control + 1, sizeof(control), [kDefaultHopLimit](msghdr& msghdr) {
+        EXPECT_EQ(msghdr.msg_controllen, CMSG_SPACE(sizeof(kDefaultHopLimit)));
+
+        // Fetch back the control buffer and confirm it is unaligned.
+        cmsghdr* unaligned_cmsg = CMSG_FIRSTHDR(&msghdr);
+        ASSERT_NE(unaligned_cmsg, nullptr);
+        ASSERT_NE(reinterpret_cast<uintptr_t>(unaligned_cmsg) % alignof(cmsghdr), 0u);
+
+        // Copy the content to a properly aligned variable.
+        char aligned_cmsg[CMSG_SPACE(sizeof(kDefaultHopLimit))];
+        memcpy(&aligned_cmsg, unaligned_cmsg, sizeof(aligned_cmsg));
+        cmsghdr* cmsg = reinterpret_cast<cmsghdr*>(aligned_cmsg);
+        EXPECT_EQ(cmsg->cmsg_len, CMSG_LEN(sizeof(kDefaultHopLimit)));
+        EXPECT_EQ(cmsg->cmsg_level, SOL_IPV6);
+        EXPECT_EQ(cmsg->cmsg_type, IPV6_HOPLIMIT);
+        uint8_t recv_hoplimit;
+        memcpy(&recv_hoplimit, CMSG_DATA(cmsg), sizeof(recv_hoplimit));
+        EXPECT_EQ(recv_hoplimit, kDefaultHopLimit);
       }));
 }
 

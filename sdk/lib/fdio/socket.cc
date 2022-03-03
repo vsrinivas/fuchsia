@@ -315,6 +315,13 @@ class FidlControlDataProcessor {
       const int tclass = static_cast<int>(control_data.tclass());
       total += StoreControlMessage(IPPROTO_IPV6, IPV6_TCLASS, &tclass, sizeof(tclass));
     }
+    if (control_data.has_hoplimit()) {
+      // Even though the hop limit can be encoded in a single byte, Linux returns it as an `int`
+      // when it is received as a control message.
+      // https://github.com/torvalds/linux/blob/7e57714cd0a/net/ipv6/datagram.c#L622
+      const int hoplimit = static_cast<int>(control_data.hoplimit());
+      total += StoreControlMessage(IPPROTO_IPV6, IPV6_HOPLIMIT, &hoplimit, sizeof(hoplimit));
+    }
     return total;
   }
 
@@ -1314,6 +1321,13 @@ struct BaseNetworkSocket : public BaseSocket<T> {
                   .allow_char = false,
               };
             });
+          case IPV6_RECVHOPLIMIT:
+            return proc.Process(client()->GetIpv6ReceiveHopLimit(), [](const auto& response) {
+              return PartialCopy{
+                  .value = response.value,
+                  .allow_char = false,
+              };
+            });
           default:
             return SockOptResult::Errno(ENOPROTOOPT);
         }
@@ -1488,6 +1502,9 @@ struct BaseNetworkSocket : public BaseSocket<T> {
           case IPV6_RECVTCLASS:
             return proc.Process<bool>(
                 [this](bool value) { return client()->SetIpv6ReceiveTrafficClass(value); });
+          case IPV6_RECVHOPLIMIT:
+            return proc.Process<bool>(
+                [this](bool value) { return client()->SetIpv6ReceiveHopLimit(value); });
           default:
             return SockOptResult::Errno(ENOPROTOOPT);
         }
