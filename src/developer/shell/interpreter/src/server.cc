@@ -208,7 +208,9 @@ std::shared_ptr<ObjectFieldSchema> ServerInterpreterContext::GetObjectFieldSchem
 // - ServerInterpreter -----------------------------------------------------------------------------
 
 void ServerInterpreter::EmitError(ExecutionContext* context, std::string error_message) {
-  service_->OnError((context == nullptr) ? 0 : context->id(), std::move(error_message));
+  auto result =
+      service_->OnError((context == nullptr) ? 0 : context->id(), std::move(error_message));
+  ZX_ASSERT(result.ok());
   if (context != nullptr) {
     context->set_has_errors();
   }
@@ -224,46 +226,58 @@ void ServerInterpreter::EmitError(ExecutionContext* context, NodeId node_id,
   fuchsia_shell::wire::NodeId fidl_node_id{.file_id = node_id.file_id, .node_id = node_id.node_id};
   locations[0].set_node_id(allocator, std::move(fidl_node_id));
 
-  service_->OnError(context->id(), std::move(locations), std::move(error_message));
+  auto result = service_->OnError(context->id(), std::move(locations), std::move(error_message));
+  ZX_ASSERT(result.ok());
   context->set_has_errors();
 }
 
 void ServerInterpreter::DumpDone(ExecutionContext* context) {
   FX_DCHECK(context != nullptr);
-  service_->OnDumpDone(context->id());
+  auto result = service_->OnDumpDone(context->id());
+  ZX_ASSERT(result.ok());
 }
 
 void ServerInterpreter::ContextDone(ExecutionContext* context) {
   FX_DCHECK(context != nullptr);
-  service_->OnExecutionDone(context->id(), fuchsia_shell::wire::ExecuteResult::kOk);
+  auto result = service_->OnExecutionDone(context->id(), fuchsia_shell::wire::ExecuteResult::kOk);
+  ZX_ASSERT(result.ok());
 }
 
 void ServerInterpreter::ContextDoneWithAnalysisError(ExecutionContext* context) {
   FX_DCHECK(context != nullptr);
-  service_->OnExecutionDone(context->id(), fuchsia_shell::wire::ExecuteResult::kAnalysisError);
+  auto result =
+      service_->OnExecutionDone(context->id(), fuchsia_shell::wire::ExecuteResult::kAnalysisError);
+  ZX_ASSERT(result.ok());
 }
 
 void ServerInterpreter::ContextDoneWithExecutionError(ExecutionContext* context) {
   FX_DCHECK(context != nullptr);
-  service_->OnExecutionDone(context->id(), fuchsia_shell::wire::ExecuteResult::kExecutionError);
+  auto result =
+      service_->OnExecutionDone(context->id(), fuchsia_shell::wire::ExecuteResult::kExecutionError);
+  ZX_ASSERT(result.ok());
 }
 
 void ServerInterpreter::TextResult(ExecutionContext* context, std::string_view text) {
   constexpr size_t kMaxResultSize = 65400;
   size_t offset = 0;
   while (text.size() - offset > kMaxResultSize) {
-    service_->OnTextResult(context->id(), std::string(text.data() + offset, kMaxResultSize),
-                           /*partial_result=*/true);
+    auto result =
+        service_->OnTextResult(context->id(), std::string(text.data() + offset, kMaxResultSize),
+                               /*partial_result=*/true);
+    ZX_ASSERT(result.ok());
     offset += kMaxResultSize;
   }
-  service_->OnTextResult(context->id(), std::string(text.data() + offset, text.size() - offset),
-                         /*partial_result=*/false);
+  auto result =
+      service_->OnTextResult(context->id(), std::string(text.data() + offset, text.size() - offset),
+                             /*partial_result=*/false);
+  ZX_ASSERT(result.ok());
 }
 
 void ServerInterpreter::Result(ExecutionContext* context, const Value& result) {
   SerializeHelper helper;
   helper.Set(result);
-  service_->OnResult(context->id(), helper.nodes(), false);
+  auto call_result = service_->OnResult(context->id(), helper.nodes(), false);
+  ZX_ASSERT(call_result.ok());
 }
 
 void ServerInterpreter::CreateServerContext(ExecutionContext* context) {
