@@ -741,6 +741,18 @@ impl IpLayerTimerId {
     }
 }
 
+impl From<FragmentCacheKey<Ipv4Addr>> for IpLayerTimerId {
+    fn from(timer: FragmentCacheKey<Ipv4Addr>) -> IpLayerTimerId {
+        IpLayerTimerId::ReassemblyTimeoutv4(timer)
+    }
+}
+
+impl From<FragmentCacheKey<Ipv6Addr>> for IpLayerTimerId {
+    fn from(timer: FragmentCacheKey<Ipv6Addr>) -> IpLayerTimerId {
+        IpLayerTimerId::ReassemblyTimeoutv6(timer)
+    }
+}
+
 /// Handle a timer event firing in the IP layer.
 pub(crate) fn handle_timer<D: EventDispatcher>(ctx: &mut Ctx<D>, id: IpLayerTimerId) {
     match id {
@@ -2227,10 +2239,8 @@ pub(crate) fn dispatch_receive_ip_packet_name<I: Ip>() -> &'static str {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     use alloc::vec;
-    use core::{convert::TryFrom, num::NonZeroU16};
+    use core::{convert::TryFrom, num::NonZeroU16, time::Duration};
 
     use net_types::{
         ip::{Ipv4Addr, Ipv6Addr},
@@ -2252,9 +2262,10 @@ mod tests {
     use rand::Rng;
     use specialize_ip_macro::ip_test;
 
+    use super::*;
     use crate::{
-        context::testutil::DummyInstant,
-        device::{receive_frame, FrameDestination},
+        context::testutil::{DummyInstant, DummyTimerCtxExt as _},
+        device::{receive_frame, testutil::receive_frame_or_panic, FrameDestination},
         ip::device::set_routing_enabled,
         testutil::*,
         {assert_empty, DeviceId, Mac, StackStateBuilder},
@@ -2724,7 +2735,10 @@ mod tests {
     }
 
     #[ip_test]
-    fn test_ip_packet_reassembly_timer<I: Ip + TestIpExt>() {
+    fn test_ip_packet_reassembly_timer<I: Ip + TestIpExt>()
+    where
+        IpLayerTimerId: From<FragmentCacheKey<I::Addr>>,
+    {
         let mut ctx = DummyEventDispatcherBuilder::from_config(I::DUMMY_CONFIG).build();
         let device = DeviceId::new_ethernet(0);
         let fragment_id = 5;
@@ -2736,7 +2750,15 @@ mod tests {
         process_ip_fragment::<I, _>(&mut ctx, device, fragment_id, 0, 3);
 
         // Make sure a timer got added.
-        assert_eq!(ctx.dispatcher.timer_events().count(), 1);
+        ctx.dispatcher.timer_ctx().assert_timers_installed([(
+            IpLayerTimerId::from(FragmentCacheKey::new(
+                I::DUMMY_CONFIG.remote_ip.get(),
+                I::DUMMY_CONFIG.local_ip.get(),
+                fragment_id.into(),
+            ))
+            .into(),
+            ..,
+        )]);
 
         // Process fragment #1
         process_ip_fragment::<I, _>(&mut ctx, device, fragment_id, 1, 3);
@@ -2748,12 +2770,12 @@ mod tests {
             u32::from(fragment_id),
         );
         assert_eq!(
-            trigger_next_timer(&mut ctx).unwrap(),
+            ctx.trigger_next_timer(crate::handle_timer).unwrap(),
             IpLayerTimerId::new_reassembly_timer_id(key)
         );
 
-        // Make sure no other times exist..
-        assert_empty(ctx.dispatcher.timer_events());
+        // Make sure no other timers exist.
+        ctx.dispatcher.timer_ctx().assert_no_timers_installed();
 
         // Process fragment #2
         process_ip_fragment::<I, _>(&mut ctx, device, fragment_id, 2, 3);
@@ -2785,14 +2807,7 @@ mod tests {
         set_routing_enabled::<_, I>(&mut alice, device, true)
             .expect("error setting routing enabled");
         let bob = DummyEventDispatcherBuilder::from_config(dummy_config).build();
-        let contexts = vec![(a.clone(), alice), (b.clone(), bob)].into_iter();
-        let mut net = DummyNetwork::new(contexts, move |net, _device_id| {
-            if *net == a {
-                vec![(b.clone(), device, None)]
-            } else {
-                vec![(a.clone(), device, None)]
-            }
-        });
+        let mut net = crate::context::testutil::new_legacy_simple_dummy_network(a, alice, b, bob);
         let fragment_id = 5;
 
         // Test that packets only get reassembled and dispatched at the
@@ -2804,11 +2819,11 @@ mod tests {
         // Process fragment #0
         process_ip_fragment::<I, _>(&mut net.context("alice"), device, fragment_id, 0, 3);
         // Make sure the packet got sent from alice to bob
-        assert!(!net.step().is_idle());
+        assert!(!net.step(receive_frame_or_panic, crate::handle_timer).is_idle());
 
         // Process fragment #1
         process_ip_fragment::<I, _>(&mut net.context("alice"), device, fragment_id, 1, 3);
-        assert!(!net.step().is_idle());
+        assert!(!net.step(receive_frame_or_panic, crate::handle_timer).is_idle());
 
         // Make sure no packets got dispatched yet.
         assert_eq!(
@@ -2822,7 +2837,7 @@ mod tests {
 
         // Process fragment #2
         process_ip_fragment::<I, _>(&mut net.context("alice"), device, fragment_id, 2, 3);
-        assert!(!net.step().is_idle());
+        assert!(!net.step(receive_frame_or_panic, crate::handle_timer).is_idle());
 
         // Make sure the packet finally got dispatched now that the final
         // fragment has been received by bob.
@@ -2836,7 +2851,7 @@ mod tests {
         );
 
         // Make sure there are no more events.
-        assert!(net.step().is_idle());
+        assert!(net.step(receive_frame_or_panic, crate::handle_timer).is_idle());
     }
 
     #[test]
@@ -3404,9 +3419,18 @@ mod tests {
         receive_ipv6_packet(&mut ctx, device, frame_dst, buf.clone());
         assert_eq!(get_counter_val(&mut ctx, "dispatch_receive_ipv6_packet"), 0);
 
-        // Make sure all timers are done (initial DAD to complete on the
-        // interface).
-        trigger_timers_until(&mut ctx, |_| false);
+        // Wait until DAD is complete. Arbitrarily choose a year in the future
+        // as a time after which we're confident DAD will be complete. We can't
+        // run until there are no timers because some timers will always exist
+        // for background tasks.
+        //
+        // TODO(https://fxbug.dev/48578): Once this test is contextified, use a
+        // more precise condition to ensure that DAD is complete.
+        let now = ctx.now();
+        let _: Vec<_> = ctx.trigger_timers_until_instant(
+            now + Duration::from_secs(60 * 60 * 24 * 365),
+            crate::handle_timer,
+        );
 
         // Received packet should have been dispatched.
         receive_ipv6_packet(&mut ctx, device, frame_dst, buf);
@@ -3429,7 +3453,10 @@ mod tests {
 
         // Make sure all timers are done (DAD to complete on the interface due
         // to new IP).
-        trigger_timers_until(&mut ctx, |_| false);
+        //
+        // TODO(https://fxbug.dev/48578): Once this test is contextified, use a
+        // more precise condition to ensure that DAD is complete.
+        let _: Vec<_> = ctx.trigger_timers_until_instant(DummyInstant::LATEST, crate::handle_timer);
 
         // Received packet should have been dispatched.
         receive_ipv6_packet(&mut ctx, device, frame_dst, buf);

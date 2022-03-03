@@ -23,6 +23,7 @@ use packet_formats::{
 };
 
 use crate::{
+    context::testutil::DummyTimerCtxExt,
     testutil::{DummyCtx, DummyEventDispatcher},
     Ctx, DeviceId, TimerId,
 };
@@ -313,7 +314,7 @@ fn dispatch(ctx: &mut DummyCtx, device_id: DeviceId, action: FuzzAction) {
             crate::receive_frame(ctx, device_id, buf).expect("error receiving frame")
         }
         AdvanceTime(SmallDuration(duration)) => {
-            let _: Vec<TimerId> = crate::testutil::run_for(ctx, duration);
+            let _: Vec<TimerId> = ctx.trigger_timers_for(duration, crate::handle_timer);
         }
     }
 }

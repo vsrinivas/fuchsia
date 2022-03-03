@@ -1289,7 +1289,7 @@ mod tests {
                     (*name, ctx)
                 })
             },
-            |ctx: &str, _state: &DummyArpCtx, _meta| {
+            |ctx: &str, _meta| {
                 host_iter
                     .clone()
                     .filter_map(|cfg| {
@@ -1340,15 +1340,18 @@ mod tests {
         );
 
         // Step once to deliver the ARP request to the remotes.
-        let res = network.step::<ArpTimerFrameHandler<EthernetLinkDevice, Ipv4Addr>>();
-        assert_eq!(res.timers_fired(), 0);
+        let res = network.step(
+            <ArpTimerFrameHandler<_, _> as FrameHandler<_, _, _>>::handle_frame,
+            TimerHandler::handle_timer,
+        );
+        assert_eq!(res.timers_fired, 0);
 
         // Our faked broadcast network should deliver frames to every host other
         // than the sender itself. These should include all non-participating remotes
         // and either the local or the participating remote, depending on who is
         // sending the packet.
         let expected_frames_sent_bcast = other_remote_cfgs.len() + 1;
-        assert_eq!(res.frames_sent(), expected_frames_sent_bcast);
+        assert_eq!(res.frames_sent, expected_frames_sent_bcast);
 
         // The requested remote should have populated its ARP cache with the local's
         // information.
@@ -1392,9 +1395,12 @@ mod tests {
         });
 
         // Step once to deliver the ARP response to the local.
-        let res = network.step::<ArpTimerFrameHandler<EthernetLinkDevice, Ipv4Addr>>();
-        assert_eq!(res.timers_fired(), 0);
-        assert_eq!(res.frames_sent(), expected_frames_sent_bcast);
+        let res = network.step(
+            <ArpTimerFrameHandler<_, _> as FrameHandler<_, _, _>>::handle_frame,
+            TimerHandler::handle_timer,
+        );
+        assert_eq!(res.timers_fired, 0);
+        assert_eq!(res.frames_sent, expected_frames_sent_bcast);
 
         // The local should have populated its cache with the remote's
         // information.

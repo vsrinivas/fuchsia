@@ -2352,9 +2352,7 @@ mod tests {
             socket::testutil::DummyIpSocketCtx,
             DummyDeviceId,
         },
-        testutil::{
-            get_counter_val, DummyEventDispatcherBuilder, DUMMY_CONFIG_V4, DUMMY_CONFIG_V6,
-        },
+        testutil::{get_counter_val, DUMMY_CONFIG_V4, DUMMY_CONFIG_V6},
         transport::udp::UdpStateBuilder,
         StackStateBuilder,
     };
@@ -2466,8 +2464,8 @@ mod tests {
         modify_packet_builder(&mut pb);
         let buffer = Buf::new(body, ..).encapsulate(pb).serialize_vec_outer().unwrap();
 
-        let mut ctx = DummyEventDispatcherBuilder::from_config(I::DUMMY_CONFIG)
-            .build_with_modifications(modify_stack_state_builder);
+        let mut ctx =
+            I::DUMMY_CONFIG.into_builder().build_with_modifications(modify_stack_state_builder);
 
         let device = DeviceId::new_ethernet(0);
         set_routing_enabled::<_, I>(&mut ctx, device, true).expect("error setting routing enabled");
@@ -3021,10 +3019,13 @@ mod tests {
 
         const LOCAL_CTX_NAME: &str = "alice";
         const REMOTE_CTX_NAME: &str = "bob";
-        let mut net = crate::testutil::new_dummy_network_from_config(
+        let local = I::DUMMY_CONFIG.into_builder().build();
+        let remote = I::DUMMY_CONFIG.swap().into_builder().build();
+        let mut net = crate::context::testutil::new_legacy_simple_dummy_network(
             LOCAL_CTX_NAME,
+            local,
             REMOTE_CTX_NAME,
-            config.clone(),
+            remote,
         );
 
         let icmp_id = 13;
@@ -3052,7 +3053,7 @@ mod tests {
         )
         .unwrap();
 
-        net.run_until_idle().unwrap();
+        net.run_until_idle(crate::device::testutil::receive_frame_or_panic, crate::handle_timer);
 
         assert_eq!(
             get_counter_val(

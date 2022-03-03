@@ -1169,8 +1169,8 @@ impl<D: EventDispatcher> NdpPacketHandler<DeviceId> for Ctx<D> {
 pub(crate) mod testutil {
     use net_types::ip::{Ipv4, Ipv6};
 
+    use super::*;
     use crate::{
-        device::DeviceId,
         ip::device::state::{IpDeviceState, IpDeviceStateIpExt},
         Ctx, EventDispatcher,
     };
@@ -1200,6 +1200,15 @@ pub(crate) mod testutil {
         ) -> &IpDeviceState<D::Instant, Ipv6> {
             crate::ip::device::get_ipv6_device_state(ctx, device)
         }
+    }
+
+    /// Calls [`receive_frame`], panicking on error.
+    pub(crate) fn receive_frame_or_panic<B: BufferMut, D: BufferDispatcher<B>>(
+        ctx: &mut Ctx<D>,
+        device: DeviceId,
+        buffer: B,
+    ) {
+        crate::device::receive_frame(ctx, device, buffer).unwrap()
     }
 }
 

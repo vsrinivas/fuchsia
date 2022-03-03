@@ -485,6 +485,7 @@ pub(crate) mod testutil {
         collections::{BinaryHeap, HashMap},
         format,
         string::String,
+        vec,
         vec::Vec,
     };
     use core::{
@@ -500,6 +501,7 @@ pub(crate) mod testutil {
     use super::*;
     use crate::{
         data_structures::ref_counted_hash_map::{InsertResult, RefCountedHashSet, RemoveResult},
+        device::DeviceId,
         testutil::FakeCryptoRng,
         Instant,
     };
@@ -512,7 +514,7 @@ pub(crate) mod testutil {
     }
 
     impl DummyInstant {
-        const LATEST: DummyInstant = DummyInstant { offset: Duration::MAX };
+        pub(crate) const LATEST: DummyInstant = DummyInstant { offset: Duration::MAX };
 
         fn saturating_add(self, dur: Duration) -> DummyInstant {
             DummyInstant { offset: self.offset.saturating_add(dur) }
@@ -662,6 +664,19 @@ pub(crate) mod testutil {
 
     pub(crate) trait DummyInstantRange: Debug {
         fn contains(&self, i: DummyInstant) -> bool;
+
+        /// Converts `&self` to a type-erased trait object reference.
+        ///
+        /// This makes it more ergonomic to construct a `&dyn
+        /// DummyInstantRange`, which is necessary in order to use different
+        /// range types in a context in which a single concrete type is
+        /// expected.
+        fn as_dyn(&self) -> &dyn DummyInstantRange
+        where
+            Self: Sized,
+        {
+            self
+        }
     }
 
     impl DummyInstantRange for DummyInstant {
@@ -673,6 +688,14 @@ pub(crate) mod testutil {
     impl<B: RangeBounds<DummyInstant> + Debug> DummyInstantRange for B {
         fn contains(&self, i: DummyInstant) -> bool {
             RangeBounds::contains(self, &i)
+        }
+    }
+
+    // This impl is necessary in order to allow passing different range types
+    // to `assert_timers_installed` and friends in a single call.
+    impl<'a> DummyInstantRange for &'a dyn DummyInstantRange {
+        fn contains(&self, i: DummyInstant) -> bool {
+            <dyn DummyInstantRange as DummyInstantRange>::contains(*self, i)
         }
     }
 
@@ -697,6 +720,41 @@ pub(crate) mod testutil {
             &self,
             timers: I,
         ) {
+            self.assert_timers_installed_inner(timers, true);
+        }
+
+        /// Asserts that `self` contains at least the timers in `timers`.
+        ///
+        /// Like [`assert_timers_installed`], but only asserts that `timers` is
+        /// a subset of the timers installed; other timers may be installed in
+        /// addition to those in `timers`.
+        #[track_caller]
+        pub(crate) fn assert_some_timers_installed<
+            R: DummyInstantRange,
+            I: IntoIterator<Item = (Id, R)>,
+        >(
+            &self,
+            timers: I,
+        ) {
+            self.assert_timers_installed_inner(timers, false);
+        }
+
+        /// Asserts that no timers are installed.
+        ///
+        /// # Panics
+        ///
+        /// Panics if any timers are installed.
+        #[track_caller]
+        pub(crate) fn assert_no_timers_installed(&self) {
+            self.assert_timers_installed::<DummyInstant, _>([]);
+        }
+
+        #[track_caller]
+        fn assert_timers_installed_inner<R: DummyInstantRange, I: IntoIterator<Item = (Id, R)>>(
+            &self,
+            timers: I,
+            exact: bool,
+        ) {
             let mut timers = timers.into_iter().fold(HashMap::new(), |mut timers, (id, range)| {
                 assert_matches!(timers.insert(id, range), None);
                 timers
@@ -714,7 +772,11 @@ pub(crate) mod testutil {
             // `timers`).
             for InstantAndData(instant, id) in self.timers.iter().cloned() {
                 match timers.remove(&id) {
-                    None => errors.push(Error::UnexpectedButPresent { id, instant }),
+                    None => {
+                        if exact {
+                            errors.push(Error::UnexpectedButPresent { id, instant })
+                        }
+                    }
                     Some(range) => {
                         if !range.contains(instant) {
                             errors.push(Error::UnexpectedInstant { id, range, instant })
@@ -746,15 +808,6 @@ pub(crate) mod testutil {
                 }
                 panic!("{}", s);
             }
-        }
-
-        /// Asserts that no timers are installed.
-        ///
-        /// # Panics
-        ///
-        /// Panics if any timers are installed.
-        pub(crate) fn assert_no_timers_installed(&self) {
-            self.assert_timers_installed::<DummyInstant, _>([]);
         }
     }
 
@@ -1019,10 +1072,6 @@ pub(crate) mod testutil {
     }
 
     impl<T: AsRef<DummyCounterCtx>> CounterContext for T {
-        // TODO(rheacock): This is tricky because it's used in test only macro
-        // code so the compiler thinks `key` is unused. Remove this when this is
-        // no longer a problem.
-        #[allow(unused)]
         fn increment_counter(&self, key: &'static str) {
             self.as_ref().increment_counter(key);
         }
@@ -1049,6 +1098,11 @@ pub(crate) mod testutil {
         fn default() -> DummyCtx<S, Id, Meta> {
             DummyCtx::with_state(S::default())
         }
+    }
+
+    impl<S, Id, Meta> DummyNetworkContext for DummyCtx<S, Id, Meta> {
+        type TimerId = Id;
+        type SendMeta = Meta;
     }
 
     impl<S, Id, Meta> DummyCtx<S, Id, Meta> {
@@ -1108,6 +1162,10 @@ pub(crate) mod testutil {
 
         pub(crate) fn timer_ctx(&self) -> &DummyTimerCtx<Id> {
             &self.timers
+        }
+
+        pub(crate) fn timer_ctx_mut(&mut self) -> &mut DummyTimerCtx<Id> {
+            &mut self.timers
         }
     }
 
@@ -1196,26 +1254,34 @@ pub(crate) mod testutil {
     }
 
     #[derive(Debug)]
-    struct PendingFrameData<CtxId, Meta> {
-        dst_context: CtxId,
-        meta: Meta,
-        frame: Vec<u8>,
+    pub(crate) struct PendingFrameData<CtxId, Meta> {
+        pub(crate) dst_context: CtxId,
+        pub(crate) meta: Meta,
+        pub(crate) frame: Vec<u8>,
     }
 
-    type PendingFrame<CtxId, Meta> = InstantAndData<PendingFrameData<CtxId, Meta>>;
+    pub(crate) type PendingFrame<CtxId, Meta> = InstantAndData<PendingFrameData<CtxId, Meta>>;
 
     /// A dummy network, composed of many `DummyCtx`s.
     ///
     /// Provides a utility to have many contexts keyed by `CtxId` that can
     /// exchange frames.
-    pub(crate) struct DummyNetwork<CtxId, S, TimerId, SendMeta, RecvMeta, Links>
+    pub(crate) struct DummyNetwork<CtxId, RecvMeta, Ctx: DummyNetworkContext, Links>
     where
-        Links: DummyNetworkLinks<S, SendMeta, RecvMeta, CtxId>,
+        Links: DummyNetworkLinks<Ctx::SendMeta, RecvMeta, CtxId>,
     {
-        contexts: HashMap<CtxId, DummyCtx<S, TimerId, SendMeta>>,
+        contexts: HashMap<CtxId, Ctx>,
         current_time: DummyInstant,
         pending_frames: BinaryHeap<PendingFrame<CtxId, RecvMeta>>,
         links: Links,
+    }
+
+    /// A context which can be used with a [`DummyNetwork`].
+    pub(crate) trait DummyNetworkContext {
+        /// The type of timer IDs installed by this context.
+        type TimerId;
+        /// The type of metadata associated with frames sent by this context.
+        type SendMeta;
     }
 
     /// A set of links in a `DummyNetwork`.
@@ -1223,61 +1289,43 @@ pub(crate) mod testutil {
     /// A `DummyNetworkLinks` represents the set of links in a `DummyNetwork`.
     /// It exposes the link information by providing the ability to map from a
     /// frame's sending metadata - including its context, local state, and
-    /// `SendMeta` - to the set of appropriate receivers, each represented by a
-    /// context ID, receive metadata, and latency.
-    pub(crate) trait DummyNetworkLinks<S, SendMeta, RecvMeta, CtxId> {
-        fn map_link(
-            &self,
-            ctx: CtxId,
-            state: &S,
-            meta: SendMeta,
-        ) -> Vec<(CtxId, RecvMeta, Option<Duration>)>;
+    /// `SendMeta` - to the set of appropriate receivers, each represented by
+    /// a context ID, receive metadata, and latency.
+    pub(crate) trait DummyNetworkLinks<SendMeta, RecvMeta, CtxId> {
+        fn map_link(&self, ctx: CtxId, meta: SendMeta) -> Vec<(CtxId, RecvMeta, Option<Duration>)>;
     }
 
     impl<
-            S,
             SendMeta,
             RecvMeta,
             CtxId,
-            F: Fn(CtxId, &S, SendMeta) -> Vec<(CtxId, RecvMeta, Option<Duration>)>,
-        > DummyNetworkLinks<S, SendMeta, RecvMeta, CtxId> for F
+            F: Fn(CtxId, SendMeta) -> Vec<(CtxId, RecvMeta, Option<Duration>)>,
+        > DummyNetworkLinks<SendMeta, RecvMeta, CtxId> for F
     {
-        fn map_link(
-            &self,
-            ctx: CtxId,
-            state: &S,
-            meta: SendMeta,
-        ) -> Vec<(CtxId, RecvMeta, Option<Duration>)> {
-            (self)(ctx, state, meta)
+        fn map_link(&self, ctx: CtxId, meta: SendMeta) -> Vec<(CtxId, RecvMeta, Option<Duration>)> {
+            (self)(ctx, meta)
         }
     }
 
     /// The result of a single step in a `DummyNetwork`
     #[derive(Debug)]
     pub(crate) struct StepResult {
-        _time_delta: Duration,
-        timers_fired: usize,
-        frames_sent: usize,
+        pub(crate) timers_fired: usize,
+        pub(crate) frames_sent: usize,
     }
 
     impl StepResult {
-        fn new(time_delta: Duration, timers_fired: usize, frames_sent: usize) -> Self {
-            Self { _time_delta: time_delta, timers_fired, frames_sent }
+        fn new(timers_fired: usize, frames_sent: usize) -> Self {
+            Self { timers_fired, frames_sent }
         }
 
         fn new_idle() -> Self {
-            Self::new(Duration::from_millis(0), 0, 0)
+            Self::new(0, 0)
         }
 
-        /// Returns the number of frames dispatched to their destinations in the
-        /// last step.
-        pub(crate) fn frames_sent(&self) -> usize {
-            self.frames_sent
-        }
-
-        /// Returns the number of timers fired in the last step.
-        pub(crate) fn timers_fired(&self) -> usize {
-            self.timers_fired
+        /// Returns `true` if the last step did not perform any operations.
+        pub(crate) fn is_idle(&self) -> bool {
+            return self.timers_fired == 0 && self.frames_sent == 0;
         }
     }
 
@@ -1286,12 +1334,15 @@ pub(crate) mod testutil {
     #[derive(Debug)]
     pub(crate) struct LoopLimitReachedError;
 
-    impl<CtxId, S, TimerId, SendMeta, RecvMeta, Links>
-        DummyNetwork<CtxId, S, TimerId, SendMeta, RecvMeta, Links>
+    impl<CtxId, RecvMeta, Ctx, Links> DummyNetwork<CtxId, RecvMeta, Ctx, Links>
     where
         CtxId: Eq + Hash + Copy + Debug,
-        TimerId: Copy,
-        Links: DummyNetworkLinks<S, SendMeta, RecvMeta, CtxId>,
+        Ctx: DummyNetworkContext
+            + AsRef<DummyTimerCtx<Ctx::TimerId>>
+            + AsMut<DummyTimerCtx<Ctx::TimerId>>
+            + AsMut<DummyFrameCtx<Ctx::SendMeta>>,
+        Ctx::TimerId: Copy,
+        Links: DummyNetworkLinks<Ctx::SendMeta, RecvMeta, CtxId>,
     {
         /// Creates a new `DummyNetwork`.
         ///
@@ -1305,46 +1356,62 @@ pub(crate) mod testutil {
         /// events already attached to them, because `DummyNetwork` maintains
         /// all the internal timers in dispatchers in sync to enable synchronous
         /// simulation steps.
-        pub(crate) fn new<I: IntoIterator<Item = (CtxId, DummyCtx<S, TimerId, SendMeta>)>>(
-            contexts: I,
-            links: Links,
-        ) -> Self {
-            let mut ret = Self {
-                contexts: contexts.into_iter().collect(),
-                current_time: DummyInstant::default(),
-                pending_frames: BinaryHeap::new(),
-                links,
-            };
+        pub(crate) fn new<I: IntoIterator<Item = (CtxId, Ctx)>>(contexts: I, links: Links) -> Self {
+            let mut contexts = contexts.into_iter().collect::<HashMap<_, _>>();
+            // Take the current time to be the latest of the times of any of the
+            // contexts. This ensures that no context has state which is based
+            // on having observed a time in the future, which could cause bugs.
+            // For any contexts which have a time further in the past, it will
+            // appear as though time has jumped forwards, but that's fine. The
+            // only way that this could be a problem would be if a timer were
+            // installed which should have fired in the interim (code might
+            // become buggy in this case). However, we assert below that no
+            // timers are installed.
+            let latest_time = contexts
+                .iter()
+                .map(|(_, ctx)| ctx.as_ref().instant.time)
+                .max()
+                // If `max` returns `None`, it means that we were called with no
+                // contexts. That's kind of silly, but whatever - arbitrarily
+                // choose the current time as the epoch.
+                .unwrap_or(DummyInstant::default());
 
-            // We can't guarantee that all contexts are safely running their
-            // timers together if we receive a context with any timers already
-            // set.
             assert!(
-                !ret.contexts.iter().any(|(_, ctx)| { !ctx.timers.timers.is_empty() }),
+                !contexts.iter().any(|(_, ctx)| { !ctx.as_ref().timers.is_empty() }),
                 "can't start network with contexts that already have timers set"
             );
 
-            // Synchronize all dispatchers' current time to the same value.
-            for (_, ctx) in ret.contexts.iter_mut() {
-                ctx.timers.instant.time = ret.current_time;
+            // Synchronize all contexts' current time to the latest time of any
+            // of the contexts. See comment above for more details.
+            for (_, ctx) in contexts.iter_mut() {
+                AsMut::<DummyTimerCtx<_>>::as_mut(ctx).instant.time = latest_time;
             }
 
-            ret
+            Self { contexts, current_time: latest_time, pending_frames: BinaryHeap::new(), links }
         }
 
         /// Retrieves a `DummyCtx` named `context`.
-        pub(crate) fn context<K: Into<CtxId>>(
-            &mut self,
-            context: K,
-        ) -> &mut DummyCtx<S, TimerId, SendMeta> {
+        pub(crate) fn context<K: Into<CtxId>>(&mut self, context: K) -> &mut Ctx {
             self.contexts.get_mut(&context.into()).unwrap()
+        }
+
+        /// Iterates over pending frames in an arbitrary order.
+        pub(crate) fn iter_pending_frames(
+            &self,
+        ) -> impl Iterator<Item = &PendingFrame<CtxId, RecvMeta>> {
+            self.pending_frames.iter()
+        }
+
+        /// Drops all pending frames; they will not be delivered.
+        pub(crate) fn drop_pending_frames(&mut self) {
+            self.pending_frames.clear();
         }
 
         /// Performs a single step in network simulation.
         ///
-        /// `step` performs a single logical step in the collection of
-        /// `Ctx`s held by this `DummyNetwork`. A single step consists of
-        /// the following operations:
+        /// `step` performs a single logical step in the collection of `Ctx`s
+        /// held by this `DummyNetwork`. A single step consists of the following
+        /// operations:
         ///
         /// - All pending frames, kept in each `DummyCtx`, are mapped to their
         ///   destination context/device pairs and moved to an internal
@@ -1354,9 +1421,9 @@ pub(crate) mod testutil {
         ///   event to trigger. The simulation time is updated to the new time.
         /// - All scheduled frames whose deadline is less than or equal to the
         ///   new simulation time are sent to their destinations, handled using
-        ///   the `FH` type parameter.
+        ///   `handle_frame`.
         /// - All timer events whose deadline is less than or equal to the new
-        ///   simulation time are fired.
+        ///   simulation time are fired, handled using `handle_timer`.
         ///
         /// If any new events are created during the operation of frames or
         /// timers, they **will not** be taken into account in the current
@@ -1373,13 +1440,15 @@ pub(crate) mod testutil {
         /// panic when trying to route frames to their context/device
         /// destinations.
         pub(crate) fn step<
-            FH: FrameHandler<DummyCtx<S, TimerId, SendMeta>, RecvMeta, Buf<Vec<u8>>>,
+            FH: FnMut(&mut Ctx, RecvMeta, Buf<Vec<u8>>),
+            FT: FnMut(&mut Ctx, Ctx::TimerId),
         >(
             &mut self,
+            mut handle_frame: FH,
+            mut handle_timer: FT,
         ) -> StepResult
         where
-            DummyCtx<S, TimerId, SendMeta>: TimerHandler<TimerId>,
-            TimerId: core::fmt::Debug,
+            Ctx::TimerId: core::fmt::Debug,
         {
             self.collect_frames();
 
@@ -1392,11 +1461,11 @@ pub(crate) mod testutil {
             // This assertion holds the contract that `next_step` does not
             // return a time in the past.
             assert!(next_step >= self.current_time);
-            let mut ret = StepResult::new(next_step.duration_since(self.current_time), 0, 0);
+            let mut ret = StepResult::new(0, 0);
             // Move time forward:
             self.current_time = next_step;
             for (_, ctx) in self.contexts.iter_mut() {
-                ctx.timers.instant.time = next_step;
+                AsMut::<DummyTimerCtx<_>>::as_mut(ctx).instant.time = next_step;
             }
 
             // Dispatch all pending frames:
@@ -1408,7 +1477,7 @@ pub(crate) mod testutil {
                 }
                 // We can unwrap because we just peeked.
                 let frame = self.pending_frames.pop().unwrap().1;
-                FH::handle_frame(
+                handle_frame(
                     self.context(frame.dst_context),
                     frame.meta,
                     Buf::new(frame.frame, ..),
@@ -1421,24 +1490,48 @@ pub(crate) mod testutil {
                 // We have to collect the timers before dispatching them, to
                 // avoid an infinite loop in case handle_timer schedules another
                 // timer for the same or older DummyInstant.
-                let mut timers = Vec::<TimerId>::new();
-                while let Some(InstantAndData(t, id)) = ctx.timers.timers.peek() {
+                let mut timers = Vec::<Ctx::TimerId>::new();
+                while let Some(InstantAndData(t, id)) = ctx.as_ref().timers.peek() {
                     // TODO(https://github.com/rust-lang/rust/issues/53667):
                     // Remove this break once let_chains is stable.
-                    if *t > ctx.now() {
+                    if *t > ctx.as_ref().now() {
                         break;
                     }
                     timers.push(*id);
-                    assert_ne!(ctx.timers.timers.pop(), None);
+                    assert_ne!(AsMut::<DummyTimerCtx<_>>::as_mut(ctx).timers.pop(), None);
                 }
 
                 for t in timers {
-                    ctx.handle_timer(t);
+                    handle_timer(ctx, t);
                     ret.timers_fired += 1;
                 }
             }
 
             ret
+        }
+
+        /// Runs the network until it is starved of events.
+        ///
+        /// # Panics
+        ///
+        /// Panics if 1,000,000 steps are performed without becoming idle.
+        /// Also panics under the same conditions as [`step`].
+        pub(crate) fn run_until_idle<
+            FH: FnMut(&mut Ctx, RecvMeta, Buf<Vec<u8>>) + Copy,
+            FT: FnMut(&mut Ctx, Ctx::TimerId) + Copy,
+        >(
+            &mut self,
+            handle_frame: FH,
+            handle_timer: FT,
+        ) where
+            Ctx::TimerId: core::fmt::Debug,
+        {
+            for _ in 0..1_000_000 {
+                if self.step(handle_frame, handle_timer).is_idle() {
+                    return;
+                }
+            }
+            panic!("DummyNetwork seems to have gotten stuck in a loop.");
         }
 
         /// Collects all queued frames.
@@ -1448,26 +1541,25 @@ pub(crate) mod testutil {
         /// collected frames are queued for dispatching in the `DummyNetwork`,
         /// ordered by their scheduled delivery time given by the latency result
         /// provided by `links`.
-        fn collect_frames(&mut self) {
-            let all_frames: Vec<(CtxId, Vec<(SendMeta, Vec<u8>)>)> = self
+        pub(crate) fn collect_frames(&mut self) {
+            let all_frames: Vec<(CtxId, Vec<(Ctx::SendMeta, Vec<u8>)>)> = self
                 .contexts
                 .iter_mut()
                 .filter_map(|(n, ctx)| {
-                    if ctx.frames.frames.is_empty() {
+                    let ctx: &mut DummyFrameCtx<_> = ctx.as_mut();
+                    if ctx.frames.is_empty() {
                         None
                     } else {
-                        Some((n.clone(), ctx.frames.frames.drain(..).collect()))
+                        Some((n.clone(), ctx.frames.drain(..).collect()))
                     }
                 })
                 .collect();
 
             for (src_context, frames) in all_frames.into_iter() {
                 for (send_meta, frame) in frames.into_iter() {
-                    for (dst_context, recv_meta, latency) in self.links.map_link(
-                        src_context,
-                        self.contexts.get(&src_context).unwrap().get_ref(),
-                        send_meta,
-                    ) {
+                    for (dst_context, recv_meta, latency) in
+                        self.links.map_link(src_context, send_meta)
+                    {
                         self.pending_frames.push(PendingFrame::new(
                             self.current_time + latency.unwrap_or(Duration::from_millis(0)),
                             PendingFrameData { frame: frame.clone(), dst_context, meta: recv_meta },
@@ -1487,7 +1579,7 @@ pub(crate) mod testutil {
             let next_timer = self
                 .contexts
                 .iter()
-                .filter_map(|(_, ctx)| match ctx.timers.timers.peek() {
+                .filter_map(|(_, ctx)| match ctx.as_ref().timers.peek() {
                     Some(tmr) => Some(tmr.0),
                     None => None,
                 })
@@ -1504,6 +1596,33 @@ pub(crate) mod testutil {
             }
             .map(|t| t.max(self.current_time))
         }
+    }
+
+    /// Creates a new [`DummyNetwork`] of legacy [`Ctx`] contexts in a simple
+    /// two-host configuration.
+    ///
+    /// Two hosts are created with the given names. Packets emitted by one
+    /// arrive at the other and vice-versa.
+    pub(crate) fn new_legacy_simple_dummy_network<CtxId: Copy + Debug + Hash + Eq>(
+        a_id: CtxId,
+        a: crate::testutil::DummyCtx,
+        b_id: CtxId,
+        b: crate::testutil::DummyCtx,
+    ) -> DummyNetwork<
+        CtxId,
+        DeviceId,
+        crate::testutil::DummyCtx,
+        impl DummyNetworkLinks<DeviceId, DeviceId, CtxId>,
+    > {
+        let contexts = vec![(a_id, a), (b_id, b)].into_iter();
+        let device_id = DeviceId::new_ethernet(0);
+        DummyNetwork::new(contexts, move |net, _device_id: DeviceId| {
+            if net == a_id {
+                vec![(b_id, device_id, None)]
+            } else {
+                vec![(a_id, device_id, None)]
+            }
+        })
     }
 
     mod tests {

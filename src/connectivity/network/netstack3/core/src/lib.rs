@@ -326,6 +326,12 @@ impl From<Ipv6DeviceTimerId<DeviceId>> for TimerId {
     }
 }
 
+impl From<IpLayerTimerId> for TimerId {
+    fn from(id: IpLayerTimerId) -> TimerId {
+        TimerId(TimerIdInner::IpLayer(id))
+    }
+}
+
 impl_timer_context!(TimerId, DeviceLayerTimerId, TimerId(TimerIdInner::DeviceLayer(id)), id);
 impl_timer_context!(
     TimerId,

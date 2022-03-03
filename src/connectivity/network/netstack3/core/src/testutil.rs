@@ -6,38 +6,38 @@
 
 use alloc::{
     borrow::ToOwned,
-    collections::{BinaryHeap, HashMap},
+    collections::HashMap,
     string::{String, ToString},
     vec,
     vec::Vec,
 };
-use core::{fmt::Debug, hash::Hash, time::Duration};
+use core::{fmt::Debug, time::Duration};
 
-use assert_matches::assert_matches;
-use log::{debug, trace};
 use net_types::{
     ethernet::Mac,
     ip::{AddrSubnet, Ip, IpAddr, IpAddress, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr, Subnet, SubnetEither},
     SpecifiedAddr, UnicastAddr, Witness,
 };
-use packet::{Buf, BufferMut, Serializer};
+use packet::{BufferMut, Serializer};
 use packet_formats::ip::IpProto;
 use rand::{self, CryptoRng, Rng as _, RngCore, SeedableRng};
 use rand_xorshift::XorShiftRng;
 
 use crate::{
     context::{
-        testutil::{DummyInstant, InstantAndData},
-        InstantContext, RngContext, TimerContext,
+        testutil::{
+            DummyFrameCtx, DummyInstant, DummyNetworkContext, DummyTimerCtx, InstantAndData,
+        },
+        FrameContext as _, InstantContext, RngContext, TimerContext,
     },
     device::{DeviceId, DeviceLayerEventDispatcher},
-    handle_timer,
     ip::{
         icmp::{BufferIcmpContext, IcmpConnId, IcmpContext, IcmpIpExt},
         socket::IpSockCreationError,
+        EntryDest, EntryEither,
     },
     transport::udp::{BufferUdpContext, UdpContext},
-    Ctx, EntryDest, EntryEither, EventDispatcher, Instant, StackStateBuilder, TimerId,
+    {Ctx, EventDispatcher, StackStateBuilder, TimerId},
 };
 
 /// Utilities to allow running benchmarks as tests.
@@ -225,72 +225,6 @@ pub(crate) fn set_logger_for_test() {
     }
 }
 
-/// Skip current time forward to trigger the next timer event.
-///
-/// Returns the `TimerId` if a timer was triggered, `None` if there were no
-/// timers waiting to be triggered.
-pub(crate) fn trigger_next_timer(ctx: &mut DummyCtx) -> Option<TimerId> {
-    match ctx.dispatcher.timer_events.pop() {
-        Some(InstantAndData(t, id)) => {
-            ctx.dispatcher.current_time = t;
-            handle_timer(ctx, id);
-            Some(id)
-        }
-        None => None,
-    }
-}
-
-/// Skip current time forward by `duration`, triggering all timer events until
-/// then, inclusive.
-///
-/// Returns the `TimerId` of the timer events triggered.
-pub(crate) fn run_for(ctx: &mut DummyCtx, duration: Duration) -> Vec<TimerId> {
-    let end_time = ctx.dispatcher.now() + duration;
-    let mut timer_ids = Vec::new();
-
-    while let Some(tmr) = ctx.dispatcher.timer_events.peek() {
-        if tmr.0 > end_time {
-            break;
-        }
-
-        let timer_id = trigger_next_timer(ctx);
-        assert_matches!(timer_id, Some(_));
-        timer_ids.push(timer_id.unwrap());
-    }
-
-    assert!(ctx.dispatcher.now() <= end_time);
-    ctx.dispatcher.current_time = end_time;
-
-    timer_ids
-}
-
-/// Trigger timer events until`f` callback returns true or passes the max
-/// number of iterations.
-///
-/// `trigger_timers_until` always calls `f` on the first timer event, as the
-/// timer_events is dynamically updated. As soon as `f` returns true or
-/// 1,000,000 timer events have been triggered, `trigger_timers_until` will
-/// exit.
-///
-/// Please note, the caller is expected to pass in an `f` which could return
-/// true to exit `trigger_timer_until`. 1,000,000 limit is set to avoid an
-/// endless loop.
-pub(crate) fn trigger_timers_until<F: Fn(&TimerId) -> bool>(ctx: &mut DummyCtx, f: F) {
-    for _ in 0..1_000_000 {
-        let InstantAndData(t, id) = if let Some(t) = ctx.dispatcher.timer_events.pop() {
-            t
-        } else {
-            return;
-        };
-
-        ctx.dispatcher.current_time = t;
-        handle_timer(ctx, id);
-        if f(&id) {
-            break;
-        }
-    }
-}
-
 /// Get the counter value for a `key`.
 pub(crate) fn get_counter_val(ctx: &DummyCtx, key: &str) -> usize {
     *ctx.state.test_counters.borrow().get(key)
@@ -404,6 +338,11 @@ impl<A: IpAddress> DummyEventDispatcherConfig<A> {
             remote_ip: self.local_ip,
             remote_mac: self.local_mac,
         }
+    }
+
+    /// Shorthand for `DummyEventDispatcherBuilder::from_config(self)`.
+    pub(crate) fn into_builder(self) -> DummyEventDispatcherBuilder {
+        DummyEventDispatcherBuilder::from_config(self)
     }
 }
 
@@ -612,39 +551,39 @@ pub(crate) fn add_arp_or_ndp_table_entry<A: IpAddress>(
     }
 }
 
-type PendingTimer = InstantAndData<TimerId>;
-
 /// A dummy `EventDispatcher` used for testing.
 ///
 /// A `DummyEventDispatcher` implements the `EventDispatcher` interface for
 /// testing purposes. It provides facilities to inspect the history of what
 /// events have been emitted to the system.
+#[derive(Default)]
 pub(crate) struct DummyEventDispatcher {
-    frames_sent: Vec<(DeviceId, Vec<u8>)>,
-    timer_events: BinaryHeap<PendingTimer>,
-    current_time: DummyInstant,
-    rng: FakeCryptoRng<XorShiftRng>,
+    ctx: crate::context::testutil::DummyCtx<(), TimerId, DeviceId>,
     icmpv4_replies: HashMap<IcmpConnId<Ipv4>, Vec<(u16, Vec<u8>)>>,
     icmpv6_replies: HashMap<IcmpConnId<Ipv6>, Vec<(u16, Vec<u8>)>>,
 }
 
-impl Default for DummyEventDispatcher {
-    fn default() -> DummyEventDispatcher {
-        DummyEventDispatcher {
-            frames_sent: Default::default(),
-            timer_events: Default::default(),
-            current_time: Default::default(),
-            rng: FakeCryptoRng(new_rng(0)),
-            icmpv4_replies: Default::default(),
-            icmpv6_replies: Default::default(),
-        }
+impl AsRef<DummyTimerCtx<TimerId>> for DummyCtx {
+    fn as_ref(&self) -> &DummyTimerCtx<TimerId> {
+        self.dispatcher.ctx.timer_ctx()
     }
 }
 
-impl DummyEventDispatcher {
-    pub(crate) fn rng(&self) -> &FakeCryptoRng<XorShiftRng> {
-        &self.rng
+impl AsMut<DummyTimerCtx<TimerId>> for DummyCtx {
+    fn as_mut(&mut self) -> &mut DummyTimerCtx<TimerId> {
+        self.dispatcher.ctx.timer_ctx_mut()
     }
+}
+
+impl AsMut<DummyFrameCtx<DeviceId>> for DummyCtx {
+    fn as_mut(&mut self) -> &mut DummyFrameCtx<DeviceId> {
+        self.dispatcher.ctx.as_mut()
+    }
+}
+
+impl DummyNetworkContext for DummyCtx {
+    type TimerId = TimerId;
+    type SendMeta = DeviceId;
 }
 
 pub(crate) trait TestutilIpExt: Ip {
@@ -671,15 +610,11 @@ impl TestutilIpExt for Ipv6 {
 
 impl DummyEventDispatcher {
     pub(crate) fn frames_sent(&self) -> &[(DeviceId, Vec<u8>)] {
-        &self.frames_sent
+        &self.ctx.frames()
     }
 
-    /// Get an ordered list of all scheduled timer events
-    pub(crate) fn timer_events(&self) -> impl Iterator<Item = (&'_ DummyInstant, &'_ TimerId)> {
-        // TODO(joshlf): `iter` doesn't actually guarantee an ordering, so this
-        // is a bug. We plan on removing this soon once we migrate to using the
-        // utilities in the `context` module, so this is left as-is.
-        self.timer_events.iter().map(|t| (&t.0, &t.1))
+    pub(crate) fn timer_ctx(&self) -> &DummyTimerCtx<TimerId> {
+        self.ctx.timer_ctx()
     }
 
     /// Takes all the received ICMP replies for a given `conn`.
@@ -741,9 +676,7 @@ impl<B: BufferMut> DeviceLayerEventDispatcher<B> for DummyEventDispatcher {
         device: DeviceId,
         frame: S,
     ) -> Result<(), S> {
-        let frame = frame.serialize_vec_outer().map_err(|(_, ser)| ser)?;
-        self.frames_sent.push((device, frame.as_ref().to_vec()));
-        Ok(())
+        self.ctx.send_frame(device, frame)
     }
 }
 
@@ -751,7 +684,7 @@ impl InstantContext for DummyEventDispatcher {
     type Instant = DummyInstant;
 
     fn now(&self) -> DummyInstant {
-        self.current_time
+        self.ctx.timer_ctx().now()
     }
 }
 
@@ -759,415 +692,34 @@ impl RngContext for DummyEventDispatcher {
     type Rng = FakeCryptoRng<XorShiftRng>;
 
     fn rng(&self) -> &FakeCryptoRng<XorShiftRng> {
-        &self.rng
+        self.ctx.rng()
     }
 
     fn rng_mut(&mut self) -> &mut FakeCryptoRng<XorShiftRng> {
-        &mut self.rng
+        self.ctx.rng_mut()
     }
 }
 
 impl TimerContext<TimerId> for DummyEventDispatcher {
     fn schedule_timer(&mut self, duration: Duration, id: TimerId) -> Option<DummyInstant> {
-        self.schedule_timer_instant(self.current_time + duration, id)
+        self.ctx.timer_ctx_mut().schedule_timer(duration, id)
     }
 
     fn schedule_timer_instant(&mut self, time: DummyInstant, id: TimerId) -> Option<DummyInstant> {
-        let ret = self.cancel_timer(id);
-        self.timer_events.push(PendingTimer::new(time, id));
-        ret
+        self.ctx.timer_ctx_mut().schedule_timer_instant(time, id)
     }
 
     fn cancel_timer(&mut self, id: TimerId) -> Option<DummyInstant> {
-        let mut r: Option<DummyInstant> = None;
-        // NOTE(brunodalbo): cancelling timers can be made a faster than this
-        //  if we kept two data structures and TimerId was Hashable.
-        self.timer_events = self
-            .timer_events
-            .drain()
-            .filter(|t| {
-                if t.1 == id {
-                    r = Some(t.0);
-                    false
-                } else {
-                    true
-                }
-            })
-            .collect::<Vec<_>>()
-            .into();
-        r
+        self.ctx.timer_ctx_mut().cancel_timer(id)
     }
 
-    fn cancel_timers_with<F: FnMut(&TimerId) -> bool>(&mut self, mut f: F) {
-        self.timer_events =
-            self.timer_events.drain().filter(|t| !f(&t.1)).collect::<Vec<_>>().into();
+    fn cancel_timers_with<F: FnMut(&TimerId) -> bool>(&mut self, f: F) {
+        self.ctx.timer_ctx_mut().cancel_timers_with(f);
     }
 
     fn scheduled_instant(&self, id: TimerId) -> Option<DummyInstant> {
-        self.timer_events.iter().find_map(|x| if x.1 == id { Some(x.0) } else { None })
+        self.ctx.timer_ctx().scheduled_instant(id)
     }
-}
-
-#[derive(Debug)]
-struct PendingFrameData<N> {
-    data: Vec<u8>,
-    dst_context: N,
-    dst_device: DeviceId,
-}
-
-type PendingFrame<N> = InstantAndData<PendingFrameData<N>>;
-
-/// A dummy network, composed of many `Ctx`s backed by
-/// `DummyEventDispatcher`s.
-///
-/// Provides a quick utility to have many contexts keyed by `N` that can
-/// exchange frames between their interfaces, which are mapped by `mapper`.
-/// `mapper` also provides the option to return a `Duration` parameter that is
-/// interpreted as a delivery latency for a given packet.
-pub(crate) struct DummyNetwork<
-    N: Eq + Hash + Clone,
-    F: Fn(&N, DeviceId) -> Vec<(N, DeviceId, Option<Duration>)>,
-> {
-    contexts: HashMap<N, DummyCtx>,
-    mapper: F,
-    current_time: DummyInstant,
-    pending_frames: BinaryHeap<PendingFrame<N>>,
-}
-
-/// The result of a single step in a `DummyNetwork`
-#[derive(Debug)]
-pub(crate) struct StepResult {
-    _time_delta: Duration,
-    timers_fired: usize,
-    frames_sent: usize,
-}
-
-impl StepResult {
-    fn new(time_delta: Duration, timers_fired: usize, frames_sent: usize) -> Self {
-        Self { _time_delta: time_delta, timers_fired, frames_sent }
-    }
-
-    fn new_idle() -> Self {
-        Self::new(Duration::from_millis(0), 0, 0)
-    }
-
-    /// Returns `true` if the last step did not perform any operations.
-    pub(crate) fn is_idle(&self) -> bool {
-        return self.timers_fired == 0 && self.frames_sent == 0;
-    }
-
-    /// Returns the number of frames dispatched to their destinations in the
-    /// last step.
-    pub(crate) fn frames_sent(&self) -> usize {
-        self.frames_sent
-    }
-
-    /// Returns the number of timers fired in the last step.
-    pub(crate) fn timers_fired(&self) -> usize {
-        self.timers_fired
-    }
-}
-
-/// Error type that marks that one of the `run_until` family of functions
-/// reached a maximum number of iterations.
-#[derive(Debug)]
-pub(crate) struct LoopLimitReachedError;
-
-impl<N, F> DummyNetwork<N, F>
-where
-    N: Eq + Hash + Clone + core::fmt::Debug,
-    F: Fn(&N, DeviceId) -> Vec<(N, DeviceId, Option<Duration>)>,
-{
-    /// Creates a new `DummyNetwork`.
-    ///
-    /// Creates a new `DummyNetwork` with the collection of `Ctx`s in
-    /// `contexts`. `Ctx`s are named by type parameter `N`. `mapper` is used
-    /// to route frames from one pair of (named `Ctx`, `DeviceId`) to
-    /// another.
-    ///
-    /// # Panics
-    ///
-    /// `mapper` must map to a valid name, otherwise calls to `step` will panic.
-    ///
-    /// Calls to `new` will panic if given a `Ctx` with timer events.
-    /// `Ctx`s given to `DummyNetwork` **must not** have any timer events
-    /// already attached to them, because `DummyNetwork` maintains all the
-    /// internal timers in dispatchers in sync to enable synchronous simulation
-    /// steps.
-    pub(crate) fn new<I: Iterator<Item = (N, DummyCtx)>>(contexts: I, mapper: F) -> Self {
-        let mut ret = Self {
-            contexts: contexts.collect(),
-            mapper,
-            current_time: DummyInstant::default(),
-            pending_frames: BinaryHeap::new(),
-        };
-
-        // We can't guarantee that all contexts are safely running their timers
-        // together if we receive a context with any timers already set.
-        assert!(
-            !ret.contexts.iter().any(|(_n, ctx)| { !ctx.dispatcher.timer_events.is_empty() }),
-            "can't start network with contexts that already have timers set"
-        );
-
-        // Synchronize all dispatchers' current time to the same value.
-        for (_, ctx) in ret.contexts.iter_mut() {
-            ctx.dispatcher.current_time = ret.current_time;
-        }
-
-        ret
-    }
-
-    /// Retrieves a `Ctx` named `context`.
-    pub(crate) fn context<K: Into<N>>(&mut self, context: K) -> &mut DummyCtx {
-        self.contexts.get_mut(&context.into()).unwrap()
-    }
-
-    /// Performs a single step in network simulation.
-    ///
-    /// `step` performs a single logical step in the collection of `Ctx`s
-    /// held by this `DummyNetwork`. A single step consists of the following
-    /// operations:
-    ///
-    /// - All pending frames, kept in `frames_sent` of `DummyEventDispatcher`
-    /// are mapped to their destination `Ctx`/`DeviceId` pairs and moved to
-    /// an internal collection of pending frames.
-    /// - The collection of pending timers and scheduled frames is inspected and
-    /// a simulation time step is retrieved, which will cause a next event
-    /// to trigger. The simulation time is updated to the new time.
-    /// - All scheduled frames whose deadline is less than or equal to the new
-    /// simulation time are sent to their destinations.
-    /// - All timer events whose deadline is less than or equal to the new
-    /// simulation time are fired.
-    ///
-    /// If any new events are created during the operation of frames or timers,
-    /// they **will not** be taken into account in the current `step`. That is,
-    /// `step` collects all the pending events before dispatching them, ensuring
-    /// that an infinite loop can't be created as a side effect of calling
-    /// `step`.
-    ///
-    /// The return value of `step` indicates which of the operations were
-    /// performed.
-    ///
-    /// # Panics
-    ///
-    /// If `DummyNetwork` was set up with a bad `mapper`, calls to `step` may
-    /// panic when trying to route frames to their `Ctx`/`DeviceId`
-    /// destinations.
-    pub(crate) fn step(&mut self) -> StepResult {
-        self.collect_frames();
-
-        let next_step = if let Some(t) = self.next_step() {
-            t
-        } else {
-            return StepResult::new_idle();
-        };
-
-        // This assertion holds the contract that `next_step` does not return
-        // a time in the past.
-        assert!(next_step >= self.current_time);
-        let mut ret = StepResult::new(next_step.duration_since(self.current_time), 0, 0);
-
-        // Move time forward.
-        trace!("testutil::DummyNetwork::step: current time = {:?}", next_step);
-        self.current_time = next_step;
-        for (_, ctx) in self.contexts.iter_mut() {
-            ctx.dispatcher.current_time = next_step;
-        }
-
-        // Dispatch all pending frames.
-        while let Some(InstantAndData(t, _)) = self.pending_frames.peek() {
-            // TODO(brunodalbo): remove this break once let_chains is stable
-            if *t > self.current_time {
-                break;
-            }
-
-            // We can unwrap because we just peeked.
-            let mut frame = self.pending_frames.pop().unwrap().1;
-            crate::receive_frame(
-                self.context(frame.dst_context),
-                frame.dst_device,
-                Buf::new(&mut frame.data, ..),
-            )
-            .expect("error receiving frame");
-            ret.frames_sent += 1;
-        }
-
-        // Dispatch all pending timers.
-        for (_n, ctx) in self.contexts.iter_mut() {
-            // We have to collect the timers before dispatching them, to avoid
-            // an infinite loop in case handle_timer schedules another timer
-            // for the same or older DummyInstant.
-            let mut timers = Vec::<TimerId>::new();
-            while let Some(InstantAndData(t, id)) = ctx.dispatcher.timer_events.peek() {
-                // TODO(brunodalbo): remove this break once let_chains is stable
-                if *t > self.current_time {
-                    break;
-                }
-                timers.push(*id);
-                assert_ne!(ctx.dispatcher.timer_events.pop(), None);
-            }
-
-            for t in timers {
-                crate::handle_timer(ctx, t);
-                ret.timers_fired += 1;
-            }
-        }
-
-        ret
-    }
-
-    /// Collects all queued frames.
-    ///
-    /// Collects all pending frames and schedules them for delivery to the
-    /// destination `Ctx`/`DeviceId` based on the result of `mapper`. The
-    /// collected frames are queued for dispatching in the `DummyNetwork`,
-    /// ordered by their scheduled delivery time given by the latency result
-    /// provided by `mapper`.
-    fn collect_frames(&mut self) {
-        let all_frames: Vec<(N, Vec<(DeviceId, Vec<u8>)>)> = self
-            .contexts
-            .iter_mut()
-            .filter_map(|(n, ctx)| {
-                if ctx.dispatcher.frames_sent.is_empty() {
-                    None
-                } else {
-                    Some((n.clone(), ctx.dispatcher.frames_sent.drain(..).collect()))
-                }
-            })
-            .collect();
-
-        for (n, frames) in all_frames.into_iter() {
-            for (device_id, frame) in frames.into_iter() {
-                for (dst_context, dst_device, latency) in (self.mapper)(&n, device_id) {
-                    self.pending_frames.push(PendingFrame::new(
-                        self.current_time + latency.unwrap_or(Duration::from_millis(0)),
-                        PendingFrameData::<N> { data: frame.clone(), dst_context, dst_device },
-                    ));
-                }
-            }
-        }
-    }
-
-    /// Calculates the next `DummyInstant` when events are available.
-    ///
-    /// Returns the smallest `DummyInstant` greater than or equal to
-    /// `current_time` for which an event is available. If no events are
-    /// available, returns `None`.
-    fn next_step(&mut self) -> Option<DummyInstant> {
-        self.collect_frames();
-
-        // Get earliest timer in all contexts.
-        let next_timer = self
-            .contexts
-            .iter()
-            .filter_map(|(_n, ctx)| match ctx.dispatcher.timer_events.peek() {
-                Some(tmr) => Some(tmr.0),
-                None => None,
-            })
-            .min();
-        // Get the instant for the next packet.
-        let next_packet_due = self.pending_frames.peek().map(|t| t.0);
-
-        // Return the earliest of them both, and protect against returning a
-        // time in the past.
-        match next_timer {
-            Some(t) if next_packet_due.is_some() => Some(t).min(next_packet_due),
-            Some(t) => Some(t),
-            None => next_packet_due,
-        }
-        .map(|t| t.max(self.current_time))
-    }
-
-    /// Runs the dummy network simulation until it is starved of events.
-    ///
-    /// Runs `step` until it returns a `StepResult` where `is_idle` is `true` or
-    /// a total of 1,000,000 steps is performed. The imposed limit in steps is
-    /// there to prevent the call from blocking; reaching that limit should be
-    /// considered a logic error.
-    ///
-    /// # Panics
-    ///
-    /// See [`step`] for possible panic conditions.
-    pub(crate) fn run_until_idle(&mut self) -> Result<(), LoopLimitReachedError> {
-        for _ in 0..1_000_000 {
-            if self.step().is_idle() {
-                return Ok(());
-            }
-        }
-        debug!("DummyNetwork seems to have gotten stuck in a loop.");
-        Err(LoopLimitReachedError)
-    }
-
-    /// Runs the dummy network simulation until it is starved of events or
-    /// `stop` returns `true`.
-    ///
-    /// Runs `step` until it returns a `StepResult` where `is_idle` is `true` or
-    /// the provided function `stop` returns `true`, or a total of 1,000,000
-    /// steps is performed. The imposed limit in steps is there to prevent the
-    /// call from blocking; reaching that limit should be considered a logic
-    /// error.
-    ///
-    /// # Panics
-    ///
-    /// See [`step`] for possible panic conditions.
-    pub(crate) fn run_until_idle_or<S: Fn(&mut Self) -> bool>(
-        &mut self,
-        stop: S,
-    ) -> Result<(), LoopLimitReachedError> {
-        for _ in 0..1_000_000 {
-            if self.step().is_idle() {
-                return Ok(());
-            } else if stop(self) {
-                return Ok(());
-            }
-        }
-        debug!("DummyNetwork seems to have gotten stuck in a loop.");
-        Err(LoopLimitReachedError)
-    }
-}
-
-/// Convenience function to create `DummyNetwork`s
-///
-/// `new_dummy_network_from_config` creates a `DummyNetwork` with two `Ctx`s
-/// named `a` and `b`. `Ctx` `a` is created from the configuration provided
-/// in `cfg`, and `Ctx` `b` is created from the symmetric configuration
-/// generated by `DummyEventDispatcherConfig::swap`. A default `mapper` function
-/// is provided that maps all frames from (`a`, ethernet device `1`) to
-/// (`b`, ethernet device `1`) and vice-versa.
-pub(crate) fn new_dummy_network_from_config_with_latency<A: IpAddress, N>(
-    a: N,
-    b: N,
-    cfg: DummyEventDispatcherConfig<A>,
-    latency: Option<Duration>,
-) -> DummyNetwork<N, impl Fn(&N, DeviceId) -> Vec<(N, DeviceId, Option<Duration>)>>
-where
-    N: Eq + Hash + Clone + core::fmt::Debug,
-{
-    let bob = DummyEventDispatcherBuilder::from_config(cfg.swap()).build();
-    let alice = DummyEventDispatcherBuilder::from_config(cfg).build();
-    let contexts = vec![(a.clone(), alice), (b.clone(), bob)].into_iter();
-    DummyNetwork::<N, _>::new(contexts, move |net, _device_id| {
-        if *net == a {
-            vec![(b.clone(), DeviceId::new_ethernet(0), latency)]
-        } else {
-            vec![(a.clone(), DeviceId::new_ethernet(0), latency)]
-        }
-    })
-}
-
-/// Convenience function to create `DummyNetwork`s with no latency
-///
-/// Creates a `DummyNetwork` by calling
-/// [`new_dummy_network_from_config_with_latency`] with `latency` set to `None`.
-pub(crate) fn new_dummy_network_from_config<A: IpAddress, N>(
-    a: N,
-    b: N,
-    cfg: DummyEventDispatcherConfig<A>,
-) -> DummyNetwork<N, impl Fn(&N, DeviceId) -> Vec<(N, DeviceId, Option<Duration>)>>
-where
-    N: Eq + Hash + Clone + core::fmt::Debug,
-{
-    new_dummy_network_from_config_with_latency(a, b, cfg, None)
 }
 
 #[cfg(test)]
@@ -1180,12 +732,23 @@ mod tests {
     use specialize_ip_macro::{ip_test, specialize_ip_address};
 
     use super::*;
-    use crate::{assert_empty, ip::socket::BufferIpSocketHandler, TimerIdInner};
+    use crate::{
+        assert_empty,
+        context::testutil::{DummyNetwork, DummyNetworkLinks},
+        device::testutil::receive_frame_or_panic,
+        ip::socket::BufferIpSocketHandler,
+        TimerIdInner,
+    };
 
     #[test]
     fn test_dummy_network_transmits_packets() {
         set_logger_for_test();
-        let mut net = new_dummy_network_from_config("alice", "bob", DUMMY_CONFIG_V4);
+        let mut net = crate::context::testutil::new_legacy_simple_dummy_network(
+            "alice",
+            DUMMY_CONFIG_V4.into_builder().build(),
+            "bob",
+            DUMMY_CONFIG_V4.swap().into_builder().build(),
+        );
 
         // Alice sends Bob a ping.
 
@@ -1211,17 +774,22 @@ mod tests {
         .unwrap();
 
         // Send from Alice to Bob.
-        assert_eq!(net.step().frames_sent(), 1);
+        assert_eq!(net.step(receive_frame_or_panic, crate::handle_timer).frames_sent, 1);
         // Respond from Bob to Alice.
-        assert_eq!(net.step().frames_sent(), 1);
+        assert_eq!(net.step(receive_frame_or_panic, crate::handle_timer).frames_sent, 1);
         // Should've starved all events.
-        assert!(net.step().is_idle());
+        assert!(net.step(receive_frame_or_panic, crate::handle_timer).is_idle());
     }
 
     #[test]
     fn test_dummy_network_timers() {
         set_logger_for_test();
-        let mut net = new_dummy_network_from_config(1, 2, DUMMY_CONFIG_V4);
+        let mut net = crate::context::testutil::new_legacy_simple_dummy_network(
+            1,
+            DUMMY_CONFIG_V4.into_builder().build(),
+            2,
+            DUMMY_CONFIG_V4.swap().into_builder().build(),
+        );
 
         assert_eq!(
             net.context(1)
@@ -1263,38 +831,43 @@ mod tests {
         // No timers fired before.
         assert_eq!(get_counter_val(net.context(1), "timer::nop"), 0);
         assert_eq!(get_counter_val(net.context(2), "timer::nop"), 0);
-        assert_eq!(net.step().timers_fired(), 1);
+        assert_eq!(net.step(receive_frame_or_panic, crate::handle_timer).timers_fired, 1);
         // Only timer in context 1 should have fired.
         assert_eq!(get_counter_val(net.context(1), "timer::nop"), 1);
         assert_eq!(get_counter_val(net.context(2), "timer::nop"), 0);
-        assert_eq!(net.step().timers_fired(), 1);
+        assert_eq!(net.step(receive_frame_or_panic, crate::handle_timer).timers_fired, 1);
         // Only timer in context 2 should have fired.
         assert_eq!(get_counter_val(net.context(1), "timer::nop"), 1);
         assert_eq!(get_counter_val(net.context(2), "timer::nop"), 1);
-        assert_eq!(net.step().timers_fired(), 1);
+        assert_eq!(net.step(receive_frame_or_panic, crate::handle_timer).timers_fired, 1);
         // Only timer in context 2 should have fired.
         assert_eq!(get_counter_val(net.context(1), "timer::nop"), 1);
         assert_eq!(get_counter_val(net.context(2), "timer::nop"), 2);
-        assert_eq!(net.step().timers_fired(), 1);
+        assert_eq!(net.step(receive_frame_or_panic, crate::handle_timer).timers_fired, 1);
         // Only timer in context 1 should have fired.
         assert_eq!(get_counter_val(net.context(1), "timer::nop"), 2);
         assert_eq!(get_counter_val(net.context(2), "timer::nop"), 2);
-        assert_eq!(net.step().timers_fired(), 2);
+        assert_eq!(net.step(receive_frame_or_panic, crate::handle_timer).timers_fired, 2);
         // Both timers have fired at the same time.
         assert_eq!(get_counter_val(net.context(1), "timer::nop"), 3);
         assert_eq!(get_counter_val(net.context(2), "timer::nop"), 3);
 
-        assert!(net.step().is_idle());
+        assert!(net.step(receive_frame_or_panic, crate::handle_timer).is_idle());
         // Check that current time on contexts tick together.
-        let t1 = net.context(1).dispatcher.current_time;
-        let t2 = net.context(2).dispatcher.current_time;
+        let t1 = net.context(1).now();
+        let t2 = net.context(2).now();
         assert_eq!(t1, t2);
     }
 
     #[test]
     fn test_dummy_network_until_idle() {
         set_logger_for_test();
-        let mut net = new_dummy_network_from_config(1, 2, DUMMY_CONFIG_V4);
+        let mut net = crate::context::testutil::new_legacy_simple_dummy_network(
+            1,
+            DUMMY_CONFIG_V4.into_builder().build(),
+            2,
+            DUMMY_CONFIG_V4.swap().into_builder().build(),
+        );
         assert_eq!(
             net.context(1)
                 .dispatcher
@@ -1314,53 +887,33 @@ mod tests {
             None
         );
 
-        net.run_until_idle_or(|net| {
-            get_counter_val(net.context(1), "timer::nop") == 1
-                && get_counter_val(net.context(2), "timer::nop") == 1
-        })
-        .unwrap();
+        while !net.step(receive_frame_or_panic, crate::handle_timer).is_idle()
+            && (get_counter_val(net.context(1), "timer::nop") < 1
+                || get_counter_val(net.context(2), "timer::nop") < 1)
+        {}
         // Assert that we stopped before all times were fired, meaning we can
         // step again.
-        assert_eq!(net.step().timers_fired(), 1);
-    }
-
-    #[test]
-    fn test_instant_and_data() {
-        // Verify implementation of InstantAndData to be used as a complex type
-        // in a BinaryHeap.
-        let mut heap = BinaryHeap::<InstantAndData<usize>>::new();
-        let now = DummyInstant::default();
-
-        fn new_data(time: DummyInstant, id: usize) -> InstantAndData<usize> {
-            InstantAndData::new(time, id)
-        }
-
-        heap.push(new_data(now + Duration::from_secs(1), 1));
-        heap.push(new_data(now + Duration::from_secs(2), 2));
-
-        // Earlier timer is popped first.
-        assert_eq!(heap.pop().unwrap().1, 1);
-        assert_eq!(heap.pop().unwrap().1, 2);
-        assert_eq!(heap.pop(), None);
-
-        heap.push(new_data(now + Duration::from_secs(1), 1));
-        heap.push(new_data(now + Duration::from_secs(1), 1));
-
-        // Can pop twice with identical data.
-        assert_eq!(heap.pop().unwrap().1, 1);
-        assert_eq!(heap.pop().unwrap().1, 1);
-        assert_eq!(heap.pop(), None);
+        assert_eq!(net.step(receive_frame_or_panic, crate::handle_timer).timers_fired, 1);
     }
 
     #[test]
     fn test_delayed_packets() {
         set_logger_for_test();
         // Create a network that takes 5ms to get any packet to go through.
-        let mut net = new_dummy_network_from_config_with_latency(
-            "alice",
-            "bob",
-            DUMMY_CONFIG_V4,
-            Some(Duration::from_millis(5)),
+        let latency = Duration::from_millis(5);
+        let device_id = DeviceId::new_ethernet(0);
+        let mut net = DummyNetwork::new(
+            [
+                ("alice", DUMMY_CONFIG_V4.into_builder().build()),
+                ("bob", DUMMY_CONFIG_V4.swap().into_builder().build()),
+            ],
+            move |net: &'static str, _device_id: DeviceId| {
+                if net == "alice" {
+                    vec![("bob", device_id, Some(latency))]
+                } else {
+                    vec![("alice", device_id, Some(latency))]
+                }
+            },
         );
 
         // Alice sends Bob a ping.
@@ -1410,15 +963,13 @@ mod tests {
         // - Bob's timer expires at t = 7
         // - Alice receives Bob's response and Bob's last timer fires at t = 10
 
-        fn assert_full_state<F>(
-            net: &mut DummyNetwork<&'static str, F>,
+        fn assert_full_state<'a, L: DummyNetworkLinks<DeviceId, DeviceId, &'a str>>(
+            net: &mut DummyNetwork<&'a str, DeviceId, DummyCtx, L>,
             alice_nop: usize,
             bob_nop: usize,
             bob_echo_request: usize,
             alice_echo_response: usize,
-        ) where
-            F: Fn(&&'static str, DeviceId) -> Vec<(&'static str, DeviceId, Option<Duration>)>,
-        {
+        ) {
             let alice = net.context("alice");
             assert_eq!(get_counter_val(alice, "timer::nop"), alice_nop);
             assert_eq!(get_counter_val(alice, "<IcmpIpTransportContext as BufferIpTransportContext<Ipv4>>::receive_ip_packet::echo_reply"),
@@ -1432,19 +983,19 @@ mod tests {
             );
         }
 
-        assert_eq!(net.step().timers_fired(), 1);
+        assert_eq!(net.step(receive_frame_or_panic, crate::handle_timer).timers_fired, 1);
         assert_full_state(&mut net, 1, 0, 0, 0);
-        assert_eq!(net.step().frames_sent(), 1);
+        assert_eq!(net.step(receive_frame_or_panic, crate::handle_timer).frames_sent, 1);
         assert_full_state(&mut net, 1, 0, 1, 0);
-        assert_eq!(net.step().timers_fired(), 1);
+        assert_eq!(net.step(receive_frame_or_panic, crate::handle_timer).timers_fired, 1);
         assert_full_state(&mut net, 1, 1, 1, 0);
-        let step = net.step();
-        assert_eq!(step.frames_sent(), 1);
-        assert_eq!(step.timers_fired(), 1);
+        let step = net.step(receive_frame_or_panic, crate::handle_timer);
+        assert_eq!(step.frames_sent, 1);
+        assert_eq!(step.timers_fired, 1);
         assert_full_state(&mut net, 1, 2, 1, 1);
 
         // Should've starved all events.
-        assert!(net.step().is_idle());
+        assert!(net.step(receive_frame_or_panic, crate::handle_timer).is_idle());
     }
 
     #[ip_test]
@@ -1485,9 +1036,6 @@ mod tests {
 
         let device_builder_id = 0;
         let device = DeviceId::new_ethernet(device_builder_id);
-        let a = "alice";
-        let b = "bob";
-        let c = "calvin";
         let mac_a = UnicastAddr::new(Mac::new([2, 3, 4, 5, 6, 7])).unwrap();
         let mac_b = UnicastAddr::new(Mac::new([2, 3, 4, 5, 6, 8])).unwrap();
         let mac_c = UnicastAddr::new(Mac::new([2, 3, 4, 5, 6, 9])).unwrap();
@@ -1507,21 +1055,21 @@ mod tests {
         add_arp_or_ndp_table_entry(&mut bob, device_builder_id, ip_c.get(), mac_c);
         add_arp_or_ndp_table_entry(&mut calvin, device_builder_id, ip_a.get(), mac_a);
         add_arp_or_ndp_table_entry(&mut calvin, device_builder_id, ip_b.get(), mac_b);
-        let contexts =
-            vec![(a.clone(), alice.build()), (b.clone(), bob.build()), (c.clone(), calvin.build())]
-                .into_iter();
-        let mut net = DummyNetwork::new(contexts, move |net, _| match *net {
-            "alice" => vec![(b.clone(), device, None), (c.clone(), device, None)],
-            "bob" => vec![(a.clone(), device, None)],
-            "calvin" => Vec::new(),
-            _ => unreachable!(),
-        });
+        let mut net = DummyNetwork::new(
+            [("alice", alice.build()), ("bob", bob.build()), ("calvin", calvin.build())],
+            move |net: &'static str, _device_id: DeviceId| match net {
+                "alice" => vec![("bob", device, None), ("calvin", device, None)],
+                "bob" => vec![("alice", device, None)],
+                "calvin" => Vec::new(),
+                _ => unreachable!(),
+            },
+        );
 
         net.collect_frames();
         assert_empty(net.context("alice").dispatcher.frames_sent().iter());
         assert_empty(net.context("bob").dispatcher.frames_sent().iter());
         assert_empty(net.context("calvin").dispatcher.frames_sent().iter());
-        assert_empty(net.pending_frames.iter());
+        assert_empty(net.iter_pending_frames());
 
         // Bob and Calvin should get any packet sent by Alice.
 
@@ -1529,51 +1077,48 @@ mod tests {
         assert_eq!(net.context("alice").dispatcher.frames_sent().len(), 1);
         assert_empty(net.context("bob").dispatcher.frames_sent().iter());
         assert_empty(net.context("calvin").dispatcher.frames_sent().iter());
-        assert_empty(net.pending_frames.iter());
+        assert_empty(net.iter_pending_frames());
         net.collect_frames();
         assert_empty(net.context("alice").dispatcher.frames_sent().iter());
         assert_empty(net.context("bob").dispatcher.frames_sent().iter());
         assert_empty(net.context("calvin").dispatcher.frames_sent().iter());
-        assert_eq!(net.pending_frames.len(), 2);
+        assert_eq!(net.iter_pending_frames().count(), 2);
         assert!(net
-            .pending_frames
-            .iter()
-            .any(|InstantAndData(_, x)| (x.dst_context == b) && (x.dst_device == device)));
+            .iter_pending_frames()
+            .any(|InstantAndData(_, x)| (x.dst_context == "bob") && (x.meta == device)));
         assert!(net
-            .pending_frames
-            .iter()
-            .any(|InstantAndData(_, x)| (x.dst_context == c) && (x.dst_device == device)));
+            .iter_pending_frames()
+            .any(|InstantAndData(_, x)| (x.dst_context == "calvin") && (x.meta == device)));
 
         // Only Alice should get packets sent by Bob.
 
-        net.pending_frames = BinaryHeap::new();
+        net.drop_pending_frames();
         send_packet(net.context("bob"), ip_b, ip_a, device);
         assert_empty(net.context("alice").dispatcher.frames_sent().iter());
         assert_eq!(net.context("bob").dispatcher.frames_sent().len(), 1);
         assert_empty(net.context("calvin").dispatcher.frames_sent().iter());
-        assert_empty(net.pending_frames.iter());
+        assert_empty(net.iter_pending_frames());
         net.collect_frames();
         assert_empty(net.context("alice").dispatcher.frames_sent().iter());
         assert_empty(net.context("bob").dispatcher.frames_sent().iter());
         assert_empty(net.context("calvin").dispatcher.frames_sent().iter());
-        assert_eq!(net.pending_frames.len(), 1);
+        assert_eq!(net.iter_pending_frames().count(), 1);
         assert!(net
-            .pending_frames
-            .iter()
-            .any(|InstantAndData(_, x)| (x.dst_context == a) && (x.dst_device == device)));
+            .iter_pending_frames()
+            .any(|InstantAndData(_, x)| (x.dst_context == "alice") && (x.meta == device)));
 
         // No one gets packets sent by Calvin.
 
-        net.pending_frames = BinaryHeap::new();
+        net.drop_pending_frames();
         send_packet(net.context("calvin"), ip_c, ip_a, device);
         assert_empty(net.context("alice").dispatcher.frames_sent().iter());
         assert_empty(net.context("bob").dispatcher.frames_sent().iter());
         assert_eq!(net.context("calvin").dispatcher.frames_sent().len(), 1);
-        assert_empty(net.pending_frames.iter());
+        assert_empty(net.iter_pending_frames());
         net.collect_frames();
         assert_empty(net.context("alice").dispatcher.frames_sent().iter());
         assert_empty(net.context("bob").dispatcher.frames_sent().iter());
         assert_empty(net.context("calvin").dispatcher.frames_sent().iter());
-        assert_empty(net.pending_frames.iter());
+        assert_empty(net.iter_pending_frames());
     }
 }
