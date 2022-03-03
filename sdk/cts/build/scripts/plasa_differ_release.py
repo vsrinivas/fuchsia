@@ -89,6 +89,10 @@ def prepare_release():
                 os.remove(dest)
             except OSError:
                 pass
+            # Since dest may include directory path components, ensure that
+            # that directory path exists before copying.  Else, FileNotFoundError
+            # ensues.
+            os.makedirs(os.path.dirname(dest), exist_ok=True)
             shutil.copyfile(orig, dest)
 
             orig_relpath = os.path.relpath(orig, args.build_root)

@@ -63,15 +63,20 @@ template("cts_signature_tests") {
         ]
         deps = [ "//sdk:plasa($target_toolchain)" ]
         inputs = [ "$root_build_dir/manifest.plasa.json" ]
+
+        # Always rebase paths relative to the root build directory, to ensure
+        # that the scripts operate with paths relative to the root build dir.
+        # Else the scripts may fail to open paths in environments where they
+        # do not have access to parent directories.
         args = [
           "--plasa_manifest",
-          rebase_path("$root_build_dir/manifest.plasa.json"),
+          rebase_path("$root_build_dir/manifest.plasa.json", root_build_dir),
           "--plasa_root",
-          rebase_path("$root_build_dir/cts/plasa"),
+          rebase_path("$root_build_dir/cts/plasa", root_build_dir),
           "--fragments_root",
-          rebase_path("$root_build_dir/cts/plasa/fragments"),
+          rebase_path("$root_build_dir/cts/plasa/fragments", root_build_dir),
           "--build_root",
-          rebase_path("$root_build_dir"),
+          rebase_path("$root_build_dir", root_build_dir),
           "--depfile",
           rebase_path(depfile, root_build_dir),
         ]
