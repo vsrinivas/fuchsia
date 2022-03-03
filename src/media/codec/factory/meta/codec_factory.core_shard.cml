@@ -52,5 +52,10 @@
             from: "parent",
             to: "#codec_factory",
         },
+        {
+            protocol: [ "fuchsia.mediacodec.CodecFactory" ],
+            from: "#codec_factory",
+            to: "#session-manager",
+        },
     ],
 }

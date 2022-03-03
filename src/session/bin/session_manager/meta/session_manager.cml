@@ -85,7 +85,6 @@
                 "fuchsia.media.sounds.Player",
                 "fuchsia.media.UsageGainReporter",
                 "fuchsia.media.UsageReporter",
-                "fuchsia.mediacodec.CodecFactory",
                 "fuchsia.net.http.Loader",
                 "fuchsia.net.interfaces.State",
                 "fuchsia.net.mdns.Publisher",
@@ -137,6 +136,12 @@
                 "google.deviceproperty.Writer",
                 "google.flashts.Reader",
             ],
+            from: "parent",
+            to: "#session",
+        },
+        {
+            // Routed to session-manager via codec_factory.core_shard.cml.
+            protocol: [ "fuchsia.mediacodec.CodecFactory" ],
             from: "parent",
             to: "#session",
         },
