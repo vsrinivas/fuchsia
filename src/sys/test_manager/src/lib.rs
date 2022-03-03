@@ -207,13 +207,8 @@ impl TestRunBuilder {
         let (stop_sender, mut stop_recv) = oneshot::channel::<()>();
         let (event_sender, event_recv) = mpsc::channel::<RunEvent>(16);
 
-        // TODO(fxbug.dev/93350) reenable sending debug data over RunController. This is disabled
-        // for now as debug data collection relies on inspecting component lifecycle events to
-        // drain connections to DebugData, but we are observing missing events. We'll need to send
-        // this over RunController before coverage can be pulled from ffx test instead of over SCP.
-        // The infrastructure to collect debug data is left in place so that SCP still works, and
-        // to aid debugging missing events.
-        let debug_event_task = send_debug_data_if_produced(
+        let debug_event_fut = send_debug_data_if_produced(
+            event_sender.clone(),
             debug_controller.take_event_stream(),
             debug_iterator,
             &inspect_node,
@@ -246,7 +241,9 @@ impl TestRunBuilder {
             inspect_node_ref.set_execution_state(self_diagnostics::RunExecutionState::Complete);
         };
 
-        let (remote, remote_handle) = run_suites_fut.remote_handle();
+        let (remote, remote_handle) = futures::future::join(debug_event_fut, run_suites_fut)
+            .map(|((), ())| ())
+            .remote_handle();
 
         let ((), ()) = futures::future::join(
             remote,
@@ -269,18 +266,19 @@ impl TestRunBuilder {
         {
             warn!("Error waiting for the RunController channel to close: {:?}", e);
         }
-        debug_event_task.await;
     }
 }
 
 async fn send_debug_data_if_produced(
+    mut event_sender: mpsc::Sender<RunEvent>,
     mut controller_events: ftest_internal::DebugDataSetControllerEventStream,
-    _debug_iterator: ClientEnd<ftest_manager::DebugDataIteratorMarker>,
+    debug_iterator: ClientEnd<ftest_manager::DebugDataIteratorMarker>,
     inspect_node: &self_diagnostics::RunInspectNode,
 ) {
     inspect_node.set_debug_data_state(self_diagnostics::DebugDataState::PendingDebugDataProduced);
     match controller_events.next().await {
         Some(Ok(ftest_internal::DebugDataSetControllerEvent::OnDebugDataProduced {})) => {
+            let _ = event_sender.send(RunEvent::debug_data(debug_iterator).into()).await;
             inspect_node.set_debug_data_state(self_diagnostics::DebugDataState::DebugDataProduced);
         }
         Some(Err(_)) | None => {
