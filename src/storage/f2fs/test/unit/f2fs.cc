@@ -169,11 +169,9 @@ TEST(F2fsTest, CreateFsAndRootException) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
   zx::channel outgoing_server = zx::channel(zx_take_startup_handle(PA_DIRECTORY_REQUEST));
-  zx::channel root_server = zx::channel(zx_take_startup_handle(FS_HANDLE_ROOT_ID));
 
   fidl::ServerEnd<fuchsia_io::Directory> export_root =
       fidl::ServerEnd<fuchsia_io::Directory>(std::move(outgoing_server));
-  f2fs::ServeLayout serve_layout = f2fs::ServeLayout::kExportDirectory;
 
   auto on_unmount = [&loop]() {
     loop.Quit();
@@ -181,7 +179,7 @@ TEST(F2fsTest, CreateFsAndRootException) {
   };
 
   auto fs_or = CreateFsAndRoot(MountOptions{}, loop.dispatcher(), std::move(bc),
-                               std::move(export_root), std::move(on_unmount), serve_layout);
+                               std::move(export_root), std::move(on_unmount));
   ASSERT_EQ(fs_or.error_value(), ZX_ERR_OUT_OF_RANGE);
 }
 

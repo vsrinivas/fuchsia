@@ -114,8 +114,7 @@ zx::status<std::unique_ptr<F2fs>> CreateFsAndRoot(const MountOptions& mount_opti
                                                   async_dispatcher_t* dispatcher,
                                                   std::unique_ptr<f2fs::Bcache> bcache,
                                                   fidl::ServerEnd<fuchsia_io::Directory> root,
-                                                  fit::closure on_unmount,
-                                                  ServeLayout serve_layout) {
+                                                  fit::closure on_unmount) {
 #else   // __Fuchsia__
 zx::status<std::unique_ptr<F2fs>> CreateFsAndRoot(const MountOptions& mount_options,
                                                   std::unique_ptr<f2fs::Bcache> bcache) {
@@ -146,48 +145,38 @@ zx::status<std::unique_ptr<F2fs>> CreateFsAndRoot(const MountOptions& mount_opti
 #ifdef __Fuchsia__
   fs->SetUnmountCallback(std::move(on_unmount));
 
-  fbl::RefPtr<fs::Vnode> export_root;
-  switch (serve_layout) {
-    case ServeLayout::kDataRootOnly:
-      export_root = std::move(data_root);
-      break;
-    case ServeLayout::kExportDirectory:
-      auto outgoing = fbl::MakeRefCounted<fs::PseudoDir>(fs.get());
-      outgoing->AddEntry("root", std::move(data_root));
+  auto outgoing = fbl::MakeRefCounted<fs::PseudoDir>(fs.get());
+  outgoing->AddEntry("root", std::move(data_root));
 
-      auto svc_dir = fbl::MakeRefCounted<fs::PseudoDir>(fs.get());
-      outgoing->AddEntry("svc", svc_dir);
+  auto svc_dir = fbl::MakeRefCounted<fs::PseudoDir>(fs.get());
+  outgoing->AddEntry("svc", svc_dir);
 
-      auto query_svc = fbl::MakeRefCounted<fs::QueryService>(fs.get());
-      svc_dir->AddEntry(fidl::DiscoverableProtocolName<fuchsia_fs::Query>, query_svc);
-      fs->SetQueryService(std::move(query_svc));
+  auto query_svc = fbl::MakeRefCounted<fs::QueryService>(fs.get());
+  svc_dir->AddEntry(fidl::DiscoverableProtocolName<fuchsia_fs::Query>, query_svc);
+  fs->SetQueryService(std::move(query_svc));
 
-      auto admin_svc = fbl::MakeRefCounted<AdminService>(fs->dispatcher(), fs.get());
-      svc_dir->AddEntry(fidl::DiscoverableProtocolName<fuchsia_fs::Admin>, admin_svc);
-      fs->SetAdminService(std::move(admin_svc));
+  auto admin_svc = fbl::MakeRefCounted<AdminService>(fs->dispatcher(), fs.get());
+  svc_dir->AddEntry(fidl::DiscoverableProtocolName<fuchsia_fs::Admin>, admin_svc);
+  fs->SetAdminService(std::move(admin_svc));
 
-      fs->GetInspectTree().Initialize();
+  fs->GetInspectTree().Initialize();
 
-      inspect::TreeHandlerSettings settings{
-          .snapshot_behavior = inspect::TreeServerSendPreference::Frozen(
-              inspect::TreeServerSendPreference::Type::DeepCopy)};
+  inspect::TreeHandlerSettings settings{.snapshot_behavior =
+                                            inspect::TreeServerSendPreference::Frozen(
+                                                inspect::TreeServerSendPreference::Type::DeepCopy)};
 
-      auto inspect_tree = fbl::MakeRefCounted<fs::Service>(
-          [connector = inspect::MakeTreeHandler(&fs->GetInspectTree().GetInspector(), dispatcher,
-                                                settings)](zx::channel chan) mutable {
-            connector(fidl::InterfaceRequest<fuchsia::inspect::Tree>(std::move(chan)));
-            return ZX_OK;
-          });
+  auto inspect_tree = fbl::MakeRefCounted<fs::Service>(
+      [connector = inspect::MakeTreeHandler(&fs->GetInspectTree().GetInspector(), dispatcher,
+                                            settings)](zx::channel chan) mutable {
+        connector(fidl::InterfaceRequest<fuchsia::inspect::Tree>(std::move(chan)));
+        return ZX_OK;
+      });
 
-      auto diagnostics_dir = fbl::MakeRefCounted<fs::PseudoDir>(fs.get());
-      outgoing->AddEntry("diagnostics", diagnostics_dir);
-      diagnostics_dir->AddEntry(fuchsia::inspect::Tree::Name_, inspect_tree);
+  auto diagnostics_dir = fbl::MakeRefCounted<fs::PseudoDir>(fs.get());
+  outgoing->AddEntry("diagnostics", diagnostics_dir);
+  diagnostics_dir->AddEntry(fuchsia::inspect::Tree::Name_, inspect_tree);
 
-      export_root = std::move(outgoing);
-      break;
-  }
-
-  if (zx_status_t status = fs->ServeDirectory(std::move(export_root), std::move(root));
+  if (zx_status_t status = fs->ServeDirectory(std::move(outgoing), std::move(root));
       status != ZX_OK) {
     FX_LOGS(ERROR) << "failed to establish mount_channel" << status;
     return zx::error(status);

@@ -85,15 +85,6 @@
 
 namespace f2fs {
 
-enum class ServeLayout {
-  // The root of the filesystem is exposed directly.
-  kDataRootOnly,
-
-  // Expose a pseudo-directory with the filesystem root located at "svc/root".
-  // TODO(fxbug.dev/34531): Also expose an administration service under "svc/fuchsia.fs.Admin".
-  kExportDirectory
-};
-
 zx_status_t LoadSuperblock(f2fs::Bcache *bc, Superblock *out_info);
 zx_status_t LoadSuperblock(f2fs::Bcache *bc, Superblock *out_info, block_t bno);
 
@@ -102,8 +93,7 @@ zx::status<std::unique_ptr<F2fs>> CreateFsAndRoot(const MountOptions &mount_opti
                                                   async_dispatcher_t *dispatcher,
                                                   std::unique_ptr<f2fs::Bcache> bcache,
                                                   fidl::ServerEnd<fuchsia_io::Directory> root,
-                                                  fit::closure on_unmount,
-                                                  ServeLayout serve_layout);
+                                                  fit::closure on_unmount);
 
 using SyncCallback = fs::Vnode::SyncCallback;
 #else   // __Fuchsia__

@@ -37,26 +37,13 @@ const MountOpt default_option[] = {
 zx_status_t Mount(const MountOptions &options, std::unique_ptr<f2fs::Bcache> bc) {
 #ifdef __Fuchsia__
   zx::channel outgoing_server = zx::channel(zx_take_startup_handle(PA_DIRECTORY_REQUEST));
-  zx::channel root_server = zx::channel(zx_take_startup_handle(FS_HANDLE_ROOT_ID));
 
-  if (outgoing_server.is_valid() && root_server.is_valid()) {
-    FX_LOGS(ERROR) << "both PA_DIRECTORY_REQUEST and FS_HANDLE_ROOT_ID provided - need one or the "
-                      "other.";
-    return ZX_ERR_BAD_STATE;
-  }
-
-  fidl::ServerEnd<fuchsia_io::Directory> export_root;
-  f2fs::ServeLayout serve_layout;
-  if (outgoing_server.is_valid()) {
-    export_root = fidl::ServerEnd<fuchsia_io::Directory>(std::move(outgoing_server));
-    serve_layout = f2fs::ServeLayout::kExportDirectory;
-  } else if (root_server.is_valid()) {
-    export_root = fidl::ServerEnd<fuchsia_io::Directory>(std::move(root_server));
-    serve_layout = f2fs::ServeLayout::kDataRootOnly;
-  } else {
+  if (!outgoing_server.is_valid()) {
     FX_LOGS(ERROR) << "could not get startup handle to serve on";
     return ZX_ERR_BAD_STATE;
   }
+
+  auto export_root = fidl::ServerEnd<fuchsia_io::Directory>(std::move(outgoing_server));
 
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   trace::TraceProviderWithFdio trace_provider(loop.dispatcher());
@@ -67,7 +54,7 @@ zx_status_t Mount(const MountOptions &options, std::unique_ptr<f2fs::Bcache> bc)
   };
 
   auto fs_or = CreateFsAndRoot(options, loop.dispatcher(), std::move(bc), std::move(export_root),
-                               std::move(on_unmount), serve_layout);
+                               std::move(on_unmount));
   if (fs_or.is_error()) {
     FX_LOGS(ERROR) << "failed to create filesystem object " << fs_or.status_string();
     return EXIT_FAILURE;
