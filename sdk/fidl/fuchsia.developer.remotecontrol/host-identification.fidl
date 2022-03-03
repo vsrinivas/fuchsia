@@ -17,7 +17,7 @@ type IdentifyHostResponse = table {
     // rendering it not helpful for connecting to the device. If this field is
     // for identification, the scope ID can serve as additional information,
     // but may tempt its use for connection, which might be incorrect.
-    1: addresses vector<fuchsia.net.Subnet>:MAX;
+    1: addresses vector<fuchsia.net.InterfaceAddress>:MAX;
     2: nodename string:fuchsia.device.DEVICE_NAME_MAX;
     // UTC timestamp of the target's time of boot, in nanoseconds.
     3: boot_timestamp_nanos uint64;

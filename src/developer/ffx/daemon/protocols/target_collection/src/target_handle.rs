@@ -241,14 +241,14 @@ mod tests {
                             while let Ok(Some(req)) = stream.try_next().await {
                                 match req {
                                     fidl_rcs::RemoteControlRequest::IdentifyHost { responder } => {
-                                        let addrs = vec![fidl_fuchsia_net::Subnet {
-                                            addr: fidl_fuchsia_net::IpAddress::Ipv4(
-                                                fidl_fuchsia_net::Ipv4Address {
+                                        let addrs = vec![fidl_fuchsia_net::InterfaceAddress::Ipv4(
+                                            fidl_fuchsia_net::Ipv4AddressWithPrefix {
+                                                addr: fidl_fuchsia_net::Ipv4Address {
                                                     addr: [192, 168, 1, 2],
                                                 },
-                                            ),
-                                            prefix_len: 24,
-                                        }];
+                                                prefix_len: 24,
+                                            },
+                                        )];
                                         let nodename = Some(nodename.clone());
                                         responder
                                             .send(&mut Ok(fidl_rcs::IdentifyHostResponse {

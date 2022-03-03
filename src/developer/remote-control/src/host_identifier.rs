@@ -4,7 +4,7 @@
 use {
     anyhow::{Context as _, Result},
     fidl_fuchsia_buildinfo as buildinfo, fidl_fuchsia_developer_remotecontrol as rcs,
-    fidl_fuchsia_device as fdevice, fidl_fuchsia_hwinfo as hwinfo, fidl_fuchsia_net as fnet,
+    fidl_fuchsia_device as fdevice, fidl_fuchsia_hwinfo as hwinfo,
     fidl_fuchsia_net_interfaces as fnet_interfaces,
     fidl_fuchsia_net_interfaces_ext as fnet_interfaces_ext, fuchsia_zircon as zx,
     tracing::*,
@@ -83,23 +83,9 @@ impl HostIdentifier {
                          has_default_ipv4_route: _,
                          has_default_ipv6_route: _,
                      }| {
-                        addresses.into_iter().map(
-                            |fnet_interfaces_ext::Address { value, valid_until: _ }| match value {
-                                fnet::InterfaceAddress::Ipv4(fnet::Ipv4AddressWithPrefix {
-                                    addr,
-                                    prefix_len,
-                                }) => {
-                                    fnet::Subnet { addr: fnet::IpAddress::Ipv4(addr), prefix_len }
-                                }
-                                fnet::InterfaceAddress::Ipv6(addr) => fnet::Subnet {
-                                    addr: fnet::IpAddress::Ipv6(addr),
-                                    // TODO(https://fxbug.dev/94339): this is a bogus value added
-                                    // to appease the API; it is not used and should be removed from
-                                    // the FIDL.
-                                    prefix_len: 128,
-                                },
-                            },
-                        )
+                        addresses
+                            .into_iter()
+                            .map(|fnet_interfaces_ext::Address { value, valid_until: _ }| value)
                     },
                 )
                 .collect(),
