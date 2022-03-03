@@ -5640,9 +5640,9 @@ class NetDatagramSocketsCmsgRecvTest : public NetDatagramSocketsCmsgTestBase,
     ASSERT_NO_FATAL_FAILURE(SetUpDatagramSockets(domain));
 
     // Enable the specified socket option.
-    const int optval = 1;
+    constexpr int kOne = 1;
     ASSERT_EQ(setsockopt(bound().get(), cmsg_sockopt.level, cmsg_sockopt.optname_to_enable_receive,
-                         &optval, sizeof(optval)),
+                         &kOne, sizeof(kOne)),
               0)
         << strerror(errno);
   }
@@ -5661,6 +5661,42 @@ TEST_P(NetDatagramSocketsCmsgRecvTest, NullPtrNoControlMessages) {
     EXPECT_EQ(msghdr.msg_controllen, 0u);
     EXPECT_EQ(CMSG_FIRSTHDR(&msghdr), nullptr);
   }));
+}
+
+TEST_P(NetDatagramSocketsCmsgRecvTest, DisableReceiveSocketOption) {
+  // The SetUp enables the receival of the parametrized control message. Confirm that we initially
+  // receive the control message, and then check that disabling the receive option does exactly
+  // just that.
+  auto const& cmsg_sockopt = std::get<1>(GetParam());
+
+  {
+    char control[CMSG_SPACE(cmsg_sockopt.cmsg_size) + 1];
+    ASSERT_NO_FATAL_FAILURE(SendAndCheckReceivedMessage(
+        control, socklen_t(sizeof(control)), [cmsg_sockopt](msghdr& msghdr) {
+          EXPECT_EQ(msghdr.msg_controllen, CMSG_SPACE(cmsg_sockopt.cmsg_size));
+          cmsghdr* cmsg = CMSG_FIRSTHDR(&msghdr);
+          ASSERT_NE(cmsg, nullptr);
+          EXPECT_EQ(cmsg->cmsg_len, CMSG_LEN(cmsg_sockopt.cmsg_size));
+          EXPECT_EQ(cmsg->cmsg_level, cmsg_sockopt.level);
+          EXPECT_EQ(cmsg->cmsg_type, cmsg_sockopt.cmsg_type);
+          EXPECT_EQ(CMSG_NXTHDR(&msghdr, cmsg), nullptr);
+        }));
+  }
+
+  constexpr int kZero = 0;
+  ASSERT_EQ(setsockopt(bound().get(), cmsg_sockopt.level, cmsg_sockopt.optname_to_enable_receive,
+                       &kZero, sizeof(kZero)),
+            0)
+      << strerror(errno);
+
+  {
+    char control[CMSG_SPACE(cmsg_sockopt.cmsg_size) + 1];
+    ASSERT_NO_FATAL_FAILURE(
+        SendAndCheckReceivedMessage(control, socklen_t(sizeof(control)), [](msghdr& msghdr) {
+          EXPECT_EQ(msghdr.msg_controllen, 0u);
+          EXPECT_EQ(CMSG_FIRSTHDR(&msghdr), nullptr);
+        }));
+  }
 }
 
 TEST_P(NetDatagramSocketsCmsgRecvTest, NullControlBuffer) {
@@ -5936,8 +5972,8 @@ class NetDatagramSocketsCmsgTimestampTest : public NetDatagramSocketsCmsgTestBas
     ASSERT_NO_FATAL_FAILURE(SetUpDatagramSockets(GetParam()));
 
     // Enable receiving SO_TIMESTAMP control message.
-    const int optval = 1;
-    ASSERT_EQ(setsockopt(bound().get(), SOL_SOCKET, SO_TIMESTAMP, &optval, sizeof(optval)), 0)
+    constexpr int kOne = 1;
+    ASSERT_EQ(setsockopt(bound().get(), SOL_SOCKET, SO_TIMESTAMP, &kOne, sizeof(kOne)), 0)
         << strerror(errno);
   }
 
@@ -6023,8 +6059,8 @@ class NetDatagramSocketsCmsgTimestampNsTest : public NetDatagramSocketsCmsgTestB
     ASSERT_NO_FATAL_FAILURE(SetUpDatagramSockets(GetParam()));
 
     // Enable receiving SO_TIMESTAMPNS control message.
-    const int optval = 1;
-    ASSERT_EQ(setsockopt(bound().get(), SOL_SOCKET, SO_TIMESTAMPNS, &optval, sizeof(optval)), 0)
+    constexpr int kOne = 1;
+    ASSERT_EQ(setsockopt(bound().get(), SOL_SOCKET, SO_TIMESTAMPNS, &kOne, sizeof(kOne)), 0)
         << strerror(errno);
   }
 
@@ -6125,8 +6161,8 @@ class NetDatagramSocketsCmsgIpTosTest : public NetDatagramSocketsCmsgTestBase {
     ASSERT_NO_FATAL_FAILURE(SetUpDatagramSockets(AF_INET));
 
     // Enable receiving IP_TOS control message.
-    const int optval = 1;
-    ASSERT_EQ(setsockopt(bound().get(), SOL_IP, IP_RECVTOS, &optval, sizeof(optval)), 0)
+    constexpr int kOne = 1;
+    ASSERT_EQ(setsockopt(bound().get(), SOL_IP, IP_RECVTOS, &kOne, sizeof(kOne)), 0)
         << strerror(errno);
   }
 
