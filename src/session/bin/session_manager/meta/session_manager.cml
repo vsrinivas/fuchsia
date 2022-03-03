@@ -128,11 +128,8 @@
                 "fuchsia.ui.policy.DisplayBacklight",
                 "fuchsia.ui.shortcut.Registry",
                 "fuchsia.ultrasound.Factory",
-                "fuchsia.update.channel.Provider",
-                "fuchsia.update.channelcontrol.ChannelControl",
                 "fuchsia.update.config.OptOut",
                 "fuchsia.update.config.OptOutAdmin",
-                "fuchsia.update.Manager",
                 "fuchsia.weave.FactoryDataManager",
                 "fuchsia.weave.Provisioner",
                 "fuchsia.weave.Signer",
@@ -145,6 +142,17 @@
                 "google.deviceproperty.Reader",
                 "google.deviceproperty.Writer",
                 "google.flashts.Reader",
+            ],
+            from: "parent",
+            to: "#session",
+        },
+        {
+            // Routed to session-manager via omaha_client_service.core_shard.cml or
+            // system_update_checker.core_shard.cml.
+            protocol: [
+                "fuchsia.update.channel.Provider",
+                "fuchsia.update.channelcontrol.ChannelControl",
+                "fuchsia.update.Manager",
             ],
             from: "parent",
             to: "#session",

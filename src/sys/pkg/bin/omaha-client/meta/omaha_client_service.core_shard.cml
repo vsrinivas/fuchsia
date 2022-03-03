@@ -97,5 +97,14 @@
             from: "parent",
             to: "#omaha-client-service",
         },
+        {
+            protocol: [
+                "fuchsia.update.channel.Provider",
+                "fuchsia.update.channelcontrol.ChannelControl",
+                "fuchsia.update.Manager",
+            ],
+            from: "#omaha-client-service",
+            to: "#session-manager",
+        },
     ],
 }

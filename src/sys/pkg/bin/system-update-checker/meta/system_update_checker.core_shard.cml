@@ -80,5 +80,14 @@
             from: "parent",
             to: "#system-update-checker",
         },
+        {
+            protocol: [
+                "fuchsia.update.channel.Provider",
+                "fuchsia.update.channelcontrol.ChannelControl",
+                "fuchsia.update.Manager",
+            ],
+            from: "#system-update-checker",
+            to: "#session-manager",
+        },
     ],
 }
