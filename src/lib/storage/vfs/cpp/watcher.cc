@@ -4,24 +4,11 @@
 
 #include "src/lib/storage/vfs/cpp/watcher.h"
 
-#include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
-#include <unistd.h>
 
 #include <memory>
 #include <string_view>
-
-#ifdef __Fuchsia__
-#include <fidl/fuchsia.io/cpp/wire.h>
-#include <zircon/device/vfs.h>
-#include <zircon/syscalls.h>
-
-#include <fbl/auto_lock.h>
-#endif
-
-#include <lib/zx/channel.h>
-
 #include <utility>
 
 #include <fbl/alloc_checker.h>
@@ -36,10 +23,12 @@ namespace fs {
 WatcherContainer::WatcherContainer() = default;
 WatcherContainer::~WatcherContainer() = default;
 
-WatcherContainer::VnodeWatcher::VnodeWatcher(zx::channel h, uint32_t mask)
-    : h(std::move(h)), mask(mask & ~(fio::wire::kWatchMaskExisting | fio::wire::kWatchMaskIdle)) {}
+WatcherContainer::VnodeWatcher::VnodeWatcher(
+    fidl::ServerEnd<fuchsia_io::DirectoryWatcher> server_end, fuchsia_io::wire::WatchMask mask)
+    : server_end(std::move(server_end)),
+      mask(mask & ~(fio::wire::WatchMask::kExisting | fio::wire::WatchMask::kIdle)) {}
 
-WatcherContainer::VnodeWatcher::~VnodeWatcher() {}
+WatcherContainer::VnodeWatcher::~VnodeWatcher() = default;
 
 // Transmission buffer for sending directory watcher notifications to clients. Allows enqueueing
 // multiple messages in a buffer before sending an IPC message to a client.
@@ -48,65 +37,63 @@ class WatchBuffer {
   DISALLOW_COPY_ASSIGN_AND_MOVE(WatchBuffer);
   WatchBuffer() = default;
 
-  zx_status_t AddMsg(const zx::channel& c, unsigned event, std::string_view name);
-  zx_status_t Send(const zx::channel& c);
+  zx_status_t AddMsg(const fidl::ServerEnd<fuchsia_io::DirectoryWatcher>& server_end,
+                     fio::wire::WatchEvent event, std::string_view name) {
+    size_t slen = name.length();
+    size_t mlen = sizeof(vfs_watch_msg_t) + slen;
+    if (mlen + watch_buf_size_ > sizeof(watch_buf_)) {
+      // This message won't fit in the watch_buf; transmit first.
+      zx_status_t status = Send(server_end);
+      if (status != ZX_OK) {
+        return status;
+      }
+    }
+    vfs_watch_msg_t& vmsg = *reinterpret_cast<vfs_watch_msg_t*>(&watch_buf_[watch_buf_size_]);
+    vmsg.event = static_cast<uint8_t>(event);
+    vmsg.len = static_cast<uint8_t>(slen);
+    memcpy(vmsg.name, name.data(), slen);
+    watch_buf_size_ += mlen;
+    return ZX_OK;
+  }
+  zx_status_t Send(const fidl::ServerEnd<fuchsia_io::DirectoryWatcher>& server_end) {
+    if (watch_buf_size_ > 0) {
+      // Only write if we have something to write
+      zx_status_t status = server_end.channel().write(
+          0, watch_buf_, static_cast<uint32_t>(watch_buf_size_), nullptr, 0);
+      watch_buf_size_ = 0;
+      if (status != ZX_OK) {
+        return status;
+      }
+    }
+    return ZX_OK;
+  }
 
  private:
   size_t watch_buf_size_ = 0;
   char watch_buf_[fio::wire::kMaxBuf]{};
 };
 
-zx_status_t WatchBuffer::AddMsg(const zx::channel& c, unsigned event, std::string_view name) {
-  size_t slen = name.length();
-  size_t mlen = sizeof(vfs_watch_msg_t) + slen;
-  if (mlen + watch_buf_size_ > sizeof(watch_buf_)) {
-    // This message won't fit in the watch_buf; transmit first.
-    zx_status_t status = Send(c);
-    if (status != ZX_OK) {
-      return status;
-    }
-  }
-  vfs_watch_msg_t* vmsg =
-      reinterpret_cast<vfs_watch_msg_t*>((uintptr_t)watch_buf_ + watch_buf_size_);
-  vmsg->event = static_cast<uint8_t>(event);
-  vmsg->len = static_cast<uint8_t>(slen);
-  memcpy(vmsg->name, name.data(), slen);
-  watch_buf_size_ += mlen;
-  return ZX_OK;
-}
-
-zx_status_t WatchBuffer::Send(const zx::channel& c) {
-  if (watch_buf_size_ > 0) {
-    // Only write if we have something to write
-    zx_status_t status = c.write(0, watch_buf_, static_cast<uint32_t>(watch_buf_size_), nullptr, 0);
-    watch_buf_size_ = 0;
-    if (status != ZX_OK) {
-      return status;
-    }
-  }
-  return ZX_OK;
-}
-
-zx_status_t WatcherContainer::WatchDir(Vfs* vfs, Vnode* vn, uint32_t mask, uint32_t options,
-                                       zx::channel channel) {
-  if ((mask & fio::wire::kWatchMaskAll) == 0) {
+zx_status_t WatcherContainer::WatchDir(Vfs* vfs, Vnode* vn, fio::wire::WatchMask mask,
+                                       uint32_t options,
+                                       fidl::ServerEnd<fuchsia_io::DirectoryWatcher> server_end) {
+  if (!mask) {
     // No events to watch
     return ZX_ERR_INVALID_ARGS;
   }
 
   fbl::AllocChecker ac;
-  std::unique_ptr<VnodeWatcher> watcher(new (&ac) VnodeWatcher(std::move(channel), mask));
+  std::unique_ptr<VnodeWatcher> watcher(new (&ac) VnodeWatcher(std::move(server_end), mask));
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
 
-  if (mask & fio::wire::kWatchMaskExisting) {
+  if (mask & fio::wire::WatchMask::kExisting) {
     VdirCookie dircookie;
     memset(&dircookie, 0, sizeof(dircookie));
     char readdir_buf[FDIO_CHUNK_SIZE];
     WatchBuffer wb;
     {
-      // Send "fio::wire::kWatchEventExisting" for all entries in readdir.
+      // Send "fio::wire::WatchEvent::kExisting" for all entries in readdir.
       while (true) {
         size_t actual;
         zx_status_t status =
@@ -114,28 +101,27 @@ zx_status_t WatcherContainer::WatchDir(Vfs* vfs, Vnode* vn, uint32_t mask, uint3
         if (status != ZX_OK || actual == 0) {
           break;
         }
-        void* ptr = readdir_buf;
+        char* ptr = readdir_buf;
         while (actual >= sizeof(vdirent_t)) {
           auto dirent = reinterpret_cast<vdirent_t*>(ptr);
           if (dirent->name[0]) {
-            wb.AddMsg(watcher->h, fio::wire::kWatchEventExisting,
+            wb.AddMsg(watcher->server_end, fio::wire::WatchEvent::kExisting,
                       std::string_view(dirent->name, dirent->size));
           }
           size_t entry_len = dirent->size + sizeof(vdirent_t);
           ZX_ASSERT(entry_len <= actual);  // Prevent underflow
           actual -= entry_len;
-          ptr = reinterpret_cast<void*>(static_cast<uintptr_t>(entry_len) +
-                                        reinterpret_cast<uintptr_t>(ptr));
+          ptr += entry_len;
         }
       }
     }
 
-    // Send fio::wire::kWatchEventIdle to signify that readdir has completed.
-    if (mask & fio::wire::kWatchMaskIdle) {
-      wb.AddMsg(watcher->h, fio::wire::kWatchEventIdle, "");
+    // Send fio::wire::WatchEvent::kIdle to signify that readdir has completed.
+    if (mask & fio::wire::WatchMask::kIdle) {
+      wb.AddMsg(watcher->server_end, fio::wire::WatchEvent::kIdle, "");
     }
 
-    wb.Send(watcher->h);
+    wb.Send(watcher->server_end);
   }
 
   std::lock_guard lock(lock_);
@@ -143,7 +129,7 @@ zx_status_t WatcherContainer::WatchDir(Vfs* vfs, Vnode* vn, uint32_t mask, uint3
   return ZX_OK;
 }
 
-void WatcherContainer::Notify(std::string_view name, unsigned event) {
+void WatcherContainer::Notify(std::string_view name, fio::wire::WatchEvent event) {
   if (name.length() > fio::wire::kMaxFilename) {
     return;
   }
@@ -162,12 +148,13 @@ void WatcherContainer::Notify(std::string_view name, unsigned event) {
   memcpy(vmsg->name, name.data(), name.length());
 
   for (auto it = watch_list_.begin(); it != watch_list_.end();) {
-    if (!(it->mask & (1 << event))) {
+    if (!(it->mask & static_cast<fio::wire::WatchMask>(1 << static_cast<uint8_t>(event)))) {
       ++it;
       continue;
     }
 
-    zx_status_t status = it->h.write(0, msg, static_cast<uint32_t>(msg_length), nullptr, 0);
+    zx_status_t status =
+        it->server_end.channel().write(0, msg, static_cast<uint32_t>(msg_length), nullptr, 0);
     if (status < 0) {
       // Lazily remove watchers when their handles cannot accept incoming watch messages.
       auto to_remove = it;

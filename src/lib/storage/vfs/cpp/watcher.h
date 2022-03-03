@@ -29,11 +29,12 @@ class WatcherContainer {
   WatcherContainer();
   ~WatcherContainer();
 
-  zx_status_t WatchDir(Vfs* vfs, Vnode* vn, uint32_t mask, uint32_t options, zx::channel watcher);
+  zx_status_t WatchDir(Vfs* vfs, Vnode* vn, fuchsia_io::wire::WatchMask mask, uint32_t options,
+                       fidl::ServerEnd<fuchsia_io::DirectoryWatcher> server_end);
 
   // Notifies all VnodeWatchers in the watch list, if their mask indicates they are interested in
   // the incoming event.
-  void Notify(std::string_view name, unsigned event);
+  void Notify(std::string_view name, fuchsia_io::wire::WatchEvent event);
 
  private:
   DISALLOW_COPY_ASSIGN_AND_MOVE(WatcherContainer);
@@ -41,11 +42,12 @@ class WatcherContainer {
   // A simple structure which holds a channel to a watching client, as well as a mask of signals
   // they are interested in hearing about.
   struct VnodeWatcher : public fbl::DoublyLinkedListable<std::unique_ptr<VnodeWatcher>> {
-    VnodeWatcher(zx::channel h, uint32_t mask);
+    VnodeWatcher(fidl::ServerEnd<fuchsia_io::DirectoryWatcher> server_end,
+                 fuchsia_io::wire::WatchMask mask);
     ~VnodeWatcher();
 
-    zx::channel h;
-    uint32_t mask;
+    fidl::ServerEnd<fuchsia_io::DirectoryWatcher> server_end;
+    fuchsia_io::WatchMask mask;
   };
 
   std::mutex lock_;

@@ -31,9 +31,8 @@ use crate::{
 use {
     fidl::Event,
     fidl_fuchsia_io::{
-        DIRENT_TYPE_DIRECTORY, DIRENT_TYPE_FILE, INO_UNKNOWN, OPEN_FLAG_CREATE, OPEN_FLAG_DESCRIBE,
-        OPEN_FLAG_DIRECTORY, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE, WATCH_MASK_ADDED,
-        WATCH_MASK_EXISTING, WATCH_MASK_REMOVED,
+        WatchMask, DIRENT_TYPE_DIRECTORY, DIRENT_TYPE_FILE, INO_UNKNOWN, OPEN_FLAG_CREATE,
+        OPEN_FLAG_DESCRIBE, OPEN_FLAG_DIRECTORY, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
     },
     std::sync::{
         atomic::{AtomicU8, Ordering},
@@ -263,7 +262,7 @@ fn rename_within_directory_with_watchers() {
 
     test_server_client(OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE, root, |proxy| async move {
         let watcher_client = {
-            let mask = WATCH_MASK_EXISTING | WATCH_MASK_ADDED | WATCH_MASK_REMOVED;
+            let mask = WatchMask::EXISTING | WatchMask::ADDED | WatchMask::REMOVED;
 
             let watcher_client = assert_watch!(proxy, mask);
 
@@ -331,7 +330,7 @@ fn rename_across_directories_with_watchers() {
 
         let etc_token = assert_get_token!(&etc);
 
-        let watchers_mask = WATCH_MASK_EXISTING | WATCH_MASK_ADDED | WATCH_MASK_REMOVED;
+        let watchers_mask = WatchMask::EXISTING | WatchMask::ADDED | WatchMask::REMOVED;
 
         let tmp_watcher = {
             let watcher = assert_watch!(tmp, watchers_mask);
@@ -394,7 +393,7 @@ fn rename_across_directories_twice_with_watchers() {
         let etc_token = assert_get_token!(&etc);
         let tmp_token = assert_get_token!(&tmp);
 
-        let watchers_mask = WATCH_MASK_EXISTING | WATCH_MASK_ADDED | WATCH_MASK_REMOVED;
+        let watchers_mask = WatchMask::EXISTING | WatchMask::ADDED | WatchMask::REMOVED;
 
         let etc_watcher = {
             let watcher = assert_watch!(etc, watchers_mask);
@@ -448,7 +447,7 @@ fn rename_into_self_with_watchers() {
 
     test_server_client(OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE, root, |proxy| async move {
         let watcher_client = {
-            let mask = WATCH_MASK_EXISTING | WATCH_MASK_ADDED | WATCH_MASK_REMOVED;
+            let mask = WatchMask::EXISTING | WatchMask::ADDED | WatchMask::REMOVED;
 
             let watcher_client = assert_watch!(proxy, mask);
 

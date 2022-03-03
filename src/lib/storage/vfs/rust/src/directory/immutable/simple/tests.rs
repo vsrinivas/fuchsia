@@ -36,12 +36,11 @@ use {
     fidl::endpoints::{create_proxy, Proxy},
     fidl_fuchsia_io::{
         DirectoryEvent, DirectoryMarker, DirectoryObject, DirectoryProxy, FileEvent, FileMarker,
-        NodeAttributes, NodeInfo, DIRENT_TYPE_DIRECTORY, DIRENT_TYPE_FILE, INO_UNKNOWN,
+        NodeAttributes, NodeInfo, WatchMask, DIRENT_TYPE_DIRECTORY, DIRENT_TYPE_FILE, INO_UNKNOWN,
         MAX_FILENAME, MODE_TYPE_DIRECTORY, OPEN_FLAG_DESCRIBE, OPEN_FLAG_DIRECTORY,
         OPEN_FLAG_NODE_REFERENCE, OPEN_FLAG_NOT_DIRECTORY, OPEN_FLAG_POSIX_DEPRECATED,
         OPEN_FLAG_POSIX_EXECUTABLE, OPEN_FLAG_POSIX_WRITABLE, OPEN_RIGHT_EXECUTABLE,
-        OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE, WATCH_MASK_ADDED, WATCH_MASK_EXISTING,
-        WATCH_MASK_IDLE, WATCH_MASK_REMOVED,
+        OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
     },
     fuchsia_async::{self as fasync, TestExecutor},
     fuchsia_zircon::{
@@ -1360,7 +1359,7 @@ fn in_tree_move_file() {
 #[test]
 fn watch_empty() {
     run_server_client(OPEN_RIGHT_READABLE, simple(), |root| async move {
-        let mask = WATCH_MASK_EXISTING | WATCH_MASK_IDLE | WATCH_MASK_ADDED | WATCH_MASK_REMOVED;
+        let mask = WatchMask::EXISTING | WatchMask::IDLE | WatchMask::ADDED | WatchMask::REMOVED;
         let watcher_client = assert_watch!(root, mask);
 
         assert_watcher_one_message_watched_events!(watcher_client, { EXISTING, "." });
@@ -1384,7 +1383,7 @@ fn watch_non_empty() {
     };
 
     run_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
-        let mask = WATCH_MASK_EXISTING | WATCH_MASK_IDLE | WATCH_MASK_ADDED | WATCH_MASK_REMOVED;
+        let mask = WatchMask::EXISTING | WatchMask::IDLE | WatchMask::ADDED | WatchMask::REMOVED;
         let watcher_client = assert_watch!(root, mask);
 
         assert_watcher_one_message_watched_events!(
@@ -1413,7 +1412,7 @@ fn watch_two_watchers() {
     };
 
     run_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
-        let mask = WATCH_MASK_EXISTING | WATCH_MASK_IDLE | WATCH_MASK_ADDED | WATCH_MASK_REMOVED;
+        let mask = WatchMask::EXISTING | WatchMask::IDLE | WatchMask::ADDED | WatchMask::REMOVED;
         let watcher1_client = assert_watch!(root, mask);
 
         assert_watcher_one_message_watched_events!(
@@ -1462,7 +1461,7 @@ fn watch_addition() {
         let etc_proxy = open_get_directory_proxy_assert_ok!(&root, flags, "etc");
 
         let watch_mask =
-            WATCH_MASK_EXISTING | WATCH_MASK_IDLE | WATCH_MASK_ADDED | WATCH_MASK_REMOVED;
+            WatchMask::EXISTING | WatchMask::IDLE | WatchMask::ADDED | WatchMask::REMOVED;
         let watcher = assert_watch!(etc_proxy, watch_mask);
 
         assert_watcher_one_message_watched_events!(
@@ -1508,7 +1507,7 @@ fn watch_removal() {
         let etc_proxy = open_get_directory_proxy_assert_ok!(&root, flags, "etc");
 
         let watch_mask =
-            WATCH_MASK_EXISTING | WATCH_MASK_IDLE | WATCH_MASK_ADDED | WATCH_MASK_REMOVED;
+            WatchMask::EXISTING | WatchMask::IDLE | WatchMask::ADDED | WatchMask::REMOVED;
         let watcher = assert_watch!(etc_proxy, watch_mask);
 
         assert_watcher_one_message_watched_events!(
@@ -1551,7 +1550,7 @@ fn watch_with_mask() {
     };
 
     run_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
-        let mask = WATCH_MASK_IDLE | WATCH_MASK_ADDED | WATCH_MASK_REMOVED;
+        let mask = WatchMask::IDLE | WatchMask::ADDED | WatchMask::REMOVED;
         let watcher_client = assert_watch!(root, mask);
 
         assert_watcher_one_message_watched_events!(watcher_client, { IDLE, vec![] });
@@ -1604,7 +1603,7 @@ fn watch_addition_with_two_scopes() {
             open_as_file_assert_err!(&etc2_proxy, flags, "fstab", Status::NOT_FOUND);
             open_as_vmo_file_assert_content!(&etc2_proxy, flags, "passwd", "[redacted]");
 
-            let mask = WATCH_MASK_ADDED | WATCH_MASK_REMOVED;
+            let mask = WatchMask::ADDED | WatchMask::REMOVED;
             let watcher1_client = assert_watch!(etc1_proxy, mask);
             let watcher2_client = assert_watch!(etc2_proxy, mask);
 

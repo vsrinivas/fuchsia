@@ -8,11 +8,7 @@
 //! of this abstraction.
 
 use {
-    fidl_fuchsia_io::{
-        MAX_FILENAME, WATCH_EVENT_ADDED, WATCH_EVENT_DELETED, WATCH_EVENT_EXISTING,
-        WATCH_EVENT_IDLE, WATCH_EVENT_REMOVED, WATCH_MASK_ADDED, WATCH_MASK_DELETED,
-        WATCH_MASK_EXISTING, WATCH_MASK_IDLE, WATCH_MASK_REMOVED,
-    },
+    fidl_fuchsia_io::{WatchEvent, WatchMask, MAX_FILENAME},
     static_assertions::assert_eq_size,
 };
 
@@ -22,15 +18,15 @@ use {
 /// [`Self::mask()`] methods.
 pub trait EventProducer {
     /// Returns a mask that represents the type of events this producer can generate, as one of the
-    /// `fidl_fuchsia_io::WATCH_MASK_*` constants.  There might be only one bit set and it should
+    /// `fidl_fuchsia_io::WatchMask::*` constants.  There might be only one bit set and it should
     /// correspond to the event returned by the [`Self::event()`] method.  It is a duplication, but it
     /// helps the callers that need both masks and event IDs.
-    fn mask(&self) -> u32;
+    fn mask(&self) -> WatchMask;
 
     /// Returns an event ID this event producer will use to populate the buffers, as one of the
-    /// `fidl_fuchsia_io::WATCH_EVENT_*` constants.  Must match what [`Self::mask()`], returns, see
+    /// `fidl_fuchsia_io::WatchEvent::*` constants.  Must match what [`Self::mask()`], returns, see
     /// there for details.
-    fn event(&self) -> u8;
+    fn event(&self) -> WatchEvent;
 
     /// Checks if this producer can create another buffer, returning `true` if it can.  This method
     /// does not actually need to construct the buffer just yet, as an optimization if it will not
@@ -48,21 +44,21 @@ pub trait EventProducer {
 
 /// Common mechanism used by both [`StaticVecEventProducer`] and, later, [`SinkEventProducer`].
 struct CachingEventProducer {
-    mask: u32,
-    event: u8,
+    mask: WatchMask,
+    event: WatchEvent,
     current_buffer: Option<Vec<u8>>,
 }
 
 impl CachingEventProducer {
-    fn new(mask: u32, event: u8) -> Self {
+    fn new(mask: WatchMask, event: WatchEvent) -> Self {
         CachingEventProducer { mask, event, current_buffer: None }
     }
 
-    fn mask(&self) -> u32 {
+    fn mask(&self) -> WatchMask {
         self.mask
     }
 
-    fn event(&self) -> u8 {
+    fn event(&self) -> WatchEvent {
         self.event
     }
 
@@ -75,7 +71,7 @@ impl CachingEventProducer {
     /// necessary.  It's 'u8' argument is the event ID used by this producer.
     fn buffer<FillBuffer>(&mut self, fill_buffer: FillBuffer) -> Vec<u8>
     where
-        FillBuffer: FnOnce(u8) -> Vec<u8>,
+        FillBuffer: FnOnce(WatchEvent) -> Vec<u8>,
     {
         match &self.current_buffer {
             Some(buf) => buf.clone(),
@@ -98,31 +94,31 @@ pub struct StaticVecEventProducer {
 
 impl StaticVecEventProducer {
     /// Constructs a new [`EventProducer`] that is producing names form the specified list,
-    /// building events of type `WATCH_EVENT_ADDED`.  `names` is not allowed to be empty.
+    /// building events of type `WatchEvent::Added`.  `names` is not allowed to be empty.
     pub fn added(names: Vec<String>) -> Self {
-        Self::new(WATCH_MASK_ADDED, WATCH_EVENT_ADDED, names)
+        Self::new(WatchMask::ADDED, WatchEvent::Added, names)
     }
 
     /// Constructs a new [`EventProducer`] that is producing names form the specified list,
-    /// building events of type `WATCH_EVENT_REMOVED`.  `names` is not allowed to be empty.
+    /// building events of type `WatchEvent::Removed`.  `names` is not allowed to be empty.
     pub fn removed(names: Vec<String>) -> Self {
-        Self::new(WATCH_MASK_REMOVED, WATCH_EVENT_REMOVED, names)
+        Self::new(WatchMask::REMOVED, WatchEvent::Removed, names)
     }
 
     /// Constructs a new [`EventProducer`] that is producing names form the specified list,
-    /// building events of type `WATCH_EVENT_EXISTING`.  `names` is not allowed to be empty.
+    /// building events of type `WatchEvent::Existing`.  `names` is not allowed to be empty.
     pub fn existing(names: Vec<String>) -> Self {
-        Self::new(WATCH_MASK_EXISTING, WATCH_EVENT_EXISTING, names)
+        Self::new(WatchMask::EXISTING, WatchEvent::Existing, names)
     }
 
-    fn new(mask: u32, event: u8, names: Vec<String>) -> Self {
+    fn new(mask: WatchMask, event: WatchEvent, names: Vec<String>) -> Self {
         debug_assert!(!names.is_empty());
         Self { cache: CachingEventProducer::new(mask, event), names, next: 0 }
     }
 
     // Can not use `&mut self` here as it would "lock" the whole object disallowing the
     // `self.cache.buffer()` call where we want to pass this method in a closure.
-    fn fill_buffer(event: u8, next: &mut usize, names: &mut Vec<String>) -> Vec<u8> {
+    fn fill_buffer(event: WatchEvent, next: &mut usize, names: &mut Vec<String>) -> Vec<u8> {
         let mut buffer = vec![];
 
         while *next < names.len() {
@@ -137,11 +133,11 @@ impl StaticVecEventProducer {
 }
 
 impl EventProducer for StaticVecEventProducer {
-    fn mask(&self) -> u32 {
+    fn mask(&self) -> WatchMask {
         self.cache.mask()
     }
 
-    fn event(&self) -> u8 {
+    fn event(&self) -> WatchEvent {
         self.cache.event()
     }
 
@@ -167,35 +163,35 @@ pub struct SingleNameEventProducer {
 
 impl SingleNameEventProducer {
     /// Constructs a new [`SingleNameEventProducer`] that will produce an event for one name of
-    /// type `WATCH_EVENT_DELETED`.
+    /// type `WatchEvent::Deleted`.
     pub fn deleted(name: &str) -> Self {
-        Self::new(WATCH_MASK_DELETED, WATCH_EVENT_DELETED, name)
+        Self::new(WatchMask::DELETED, WatchEvent::Deleted, name)
     }
 
     /// Constructs a new [`SingleNameEventProducer`] that will produce an event for one name of
-    /// type `WATCH_EVENT_ADDED`.
+    /// type `WatchEvent::Added`.
     pub fn added(name: &str) -> Self {
-        Self::new(WATCH_MASK_ADDED, WATCH_EVENT_ADDED, name)
+        Self::new(WatchMask::ADDED, WatchEvent::Added, name)
     }
 
     /// Constructs a new [`SingleNameEventProducer`] that will produce an event for one name of
-    /// type `WATCH_EVENT_REMOVED`.
+    /// type `WatchEvent::Removed`.
     pub fn removed(name: &str) -> Self {
-        Self::new(WATCH_MASK_REMOVED, WATCH_EVENT_REMOVED, name)
+        Self::new(WatchMask::REMOVED, WatchEvent::Removed, name)
     }
 
     /// Constructs a new [`SingleNameEventProducer`] that will produce an event for one name of
-    /// type `WATCH_EVENT_EXISTING`.
+    /// type `WatchEvent::Existing`.
     pub fn existing(name: &str) -> Self {
-        Self::new(WATCH_MASK_EXISTING, WATCH_EVENT_EXISTING, name)
+        Self::new(WatchMask::EXISTING, WatchEvent::Existing, name)
     }
 
-    /// Constructs a new [`SingleNameEventProducer`] that will produce an `WATCH_EVENT_IDLE` event.
+    /// Constructs a new [`SingleNameEventProducer`] that will produce an `WatchEvent::Idle` event.
     pub fn idle() -> Self {
-        Self::new(WATCH_MASK_IDLE, WATCH_EVENT_IDLE, "")
+        Self::new(WatchMask::IDLE, WatchEvent::Idle, "")
     }
 
-    fn new(mask: u32, event: u8, name: &str) -> Self {
+    fn new(mask: WatchMask, event: WatchEvent, name: &str) -> Self {
         let mut buffer = vec![];
         encode_name(&mut buffer, event, name);
 
@@ -204,11 +200,11 @@ impl SingleNameEventProducer {
 }
 
 impl EventProducer for SingleNameEventProducer {
-    fn mask(&self) -> u32 {
+    fn mask(&self) -> WatchMask {
         self.producer.mask()
     }
 
-    fn event(&self) -> u8 {
+    fn event(&self) -> WatchEvent {
         self.producer.event()
     }
 
@@ -221,7 +217,7 @@ impl EventProducer for SingleNameEventProducer {
     }
 }
 
-pub(crate) fn encode_name(buffer: &mut Vec<u8>, event: u8, name: &str) -> bool {
+pub(crate) fn encode_name(buffer: &mut Vec<u8>, event: WatchEvent, name: &str) -> bool {
     if buffer.len() + (2 + name.len()) > fidl_fuchsia_io::MAX_BUF as usize {
         return false;
     }
@@ -229,7 +225,7 @@ pub(crate) fn encode_name(buffer: &mut Vec<u8>, event: u8, name: &str) -> bool {
     // We are going to encode the file name length as u8.
     debug_assert!(u8::max_value() as u64 >= MAX_FILENAME);
 
-    buffer.push(event);
+    buffer.push(event.into_primitive());
     buffer.push(name.len() as u8);
     buffer.extend_from_slice(name.as_bytes());
     true
@@ -243,22 +239,22 @@ enum SingleBufferEventProducerState {
 
 /// An event producer for an event that has one buffer of data.
 pub struct SingleBufferEventProducer {
-    mask: u32,
-    event: u8,
+    mask: WatchMask,
+    event: WatchEvent,
     buffer: Vec<u8>,
     state: SingleBufferEventProducerState,
 }
 
 impl SingleBufferEventProducer {
     /// Constructs a new [`SingleBufferEventProducer`] that will produce an event for one name of
-    /// type `WATCH_EVENT_EXISTING`.
+    /// type `WatchEvent::Existing`.
     pub fn existing(buffer: Vec<u8>) -> Self {
         assert_eq_size!(usize, u64);
         debug_assert!(buffer.len() as u64 <= fidl_fuchsia_io::MAX_BUF);
-        Self::new(WATCH_MASK_EXISTING, WATCH_EVENT_EXISTING, buffer)
+        Self::new(WatchMask::EXISTING, WatchEvent::Existing, buffer)
     }
 
-    fn new(mask: u32, event: u8, buffer: Vec<u8>) -> Self {
+    fn new(mask: WatchMask, event: WatchEvent, buffer: Vec<u8>) -> Self {
         assert_eq_size!(usize, u64);
         debug_assert!(buffer.len() as u64 <= fidl_fuchsia_io::MAX_BUF);
         Self { mask, event, buffer, state: SingleBufferEventProducerState::Start }
@@ -266,11 +262,11 @@ impl SingleBufferEventProducer {
 }
 
 impl EventProducer for SingleBufferEventProducer {
-    fn mask(&self) -> u32 {
+    fn mask(&self) -> WatchMask {
         self.mask
     }
 
-    fn event(&self) -> u8 {
+    fn event(&self) -> WatchEvent {
         self.event
     }
 

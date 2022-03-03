@@ -12,7 +12,7 @@ use crate::{
         connection::io1::DerivedConnection,
         dirents_sink,
         entry::{DirectoryEntry, EntryInfo},
-        entry_container::Directory,
+        entry_container::{Directory, DirectoryWatcher},
         helper::DirectlyMutable,
         immutable::connection::io1::ImmutableConnection,
         mutable::connection::io1::MutableConnection,
@@ -32,10 +32,9 @@ use {
     async_trait::async_trait,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::{
-        NodeAttributes, NodeMarker, DIRENT_TYPE_DIRECTORY, MODE_TYPE_DIRECTORY,
+        NodeAttributes, NodeMarker, WatchMask, DIRENT_TYPE_DIRECTORY, MODE_TYPE_DIRECTORY,
         OPEN_FLAG_CREATE_IF_ABSENT,
     },
-    fuchsia_async::Channel,
     fuchsia_zircon::Status,
     parking_lot::Mutex,
     static_assertions::assert_eq_size,
@@ -58,7 +57,7 @@ use {
 /// [`crate::directory::helper::DirectlyMutable::add_entry()`] and
 /// [`crate::directory::helper::DirectlyMutable::remove_entry`] methods, and, depending on the
 /// connection been used (see [`ImmutableConnection`] or [`MutableConnection`])
-/// it may also allow the clients to modify the entries as well.  This is a common implemmentation
+/// it may also allow the clients to modify the entries as well.  This is a common implementation
 /// for [`mod@crate::directory::immutable::simple`] and [`mod@crate::directory::mutable::simple`].
 pub struct Simple<Connection>
 where
@@ -77,13 +76,13 @@ where
     //     impl<Connection> DirectoryEntry for Simple<Connection>
     //     where
     //         Connection: DerivedConnection + 'static,
-    //         Arc<Self>: IsConvertableTo<
+    //         Arc<Self>: IsConvertibleTo<
     //             Type = Arc<
     //                 <Connection as DerivedConnection>::Directory
     //             >
     //         >
     //
-    // The problem is that I do not know how to write this `IsConvertableTo` trait.  Compiler seems
+    // The problem is that I do not know how to write this `IsConvertibleTo` trait.  Compiler seems
     // to be following some special rules when you say `A as Arc<B>` (when `A` is an `Arc`), as it
     // allows subtyping, but I do not know how to express the same constraint.
     mutable: bool,
@@ -305,8 +304,8 @@ where
     fn register_watcher(
         self: Arc<Self>,
         scope: ExecutionScope,
-        mask: u32,
-        channel: Channel,
+        mask: WatchMask,
+        watcher: DirectoryWatcher,
     ) -> Result<(), Status> {
         let mut this = self.inner.lock();
 
@@ -315,7 +314,7 @@ where
             iter::once(&".".to_string()).chain(entry_names).cloned().collect()
         });
 
-        let controller = this.watchers.add(scope, self.clone(), mask, channel);
+        let controller = this.watchers.add(scope, self.clone(), mask, watcher);
         controller.send_event(&mut names);
         controller.send_event(&mut SingleNameEventProducer::idle());
 

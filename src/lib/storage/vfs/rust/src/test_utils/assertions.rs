@@ -10,10 +10,9 @@ pub mod reexport {
         crate::directory::test_utils::DirentsSameInodeBuilder,
         fidl_fuchsia_io::{
             DirectoryEvent, DirectoryMarker, DirectoryObject, FileEvent, FileMarker, FileObject,
-            NodeInfo, SeekOrigin, Service, Vmofile, DIRENT_TYPE_BLOCK_DEVICE,
+            NodeInfo, SeekOrigin, Service, Vmofile, WatchEvent, DIRENT_TYPE_BLOCK_DEVICE,
             DIRENT_TYPE_DIRECTORY, DIRENT_TYPE_FILE, DIRENT_TYPE_SERVICE, DIRENT_TYPE_SOCKET,
             DIRENT_TYPE_UNKNOWN, INO_UNKNOWN, OPEN_FLAG_DESCRIBE, OPEN_RIGHT_READABLE,
-            WATCH_EVENT_ADDED, WATCH_EVENT_EXISTING, WATCH_EVENT_IDLE, WATCH_EVENT_REMOVED,
         },
         fidl_fuchsia_mem::Buffer,
         fuchsia_zircon::{MessageBuf, Status},

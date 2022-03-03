@@ -42,8 +42,7 @@ class Server final : public fidl::testing::WireTestBase<fuchsia_io::Directory> {
   }
 
   void Describe(DescribeRequestView request, DescribeCompleter::Sync& completer) override {
-    fuchsia_io::wire::DirectoryObject directory;
-    completer.Reply(fuchsia_io::wire::NodeInfo::WithDirectory(std::move(directory)));
+    completer.Reply(fuchsia_io::wire::NodeInfo::WithDirectory({}));
   }
 
   void Watch(WatchRequestView request, WatchCompleter::Sync& completer) override {
@@ -58,7 +57,8 @@ TEST(WatcherTest, WatchInvalidCallback) {
   auto endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
   ASSERT_OK(endpoints.status_value());
 
-  Server server([](uint32_t mask, uint32_t options, zx::channel watcher,
+  Server server([](fuchsia_io::wire::WatchMask mask, uint32_t options,
+                   fidl::ServerEnd<fuchsia_io::DirectoryWatcher> watcher,
                    fidl::WireServer<fuchsia_io::Directory>::WatchCompleter::Sync& completer) {});
 
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
@@ -79,30 +79,31 @@ TEST(WatcherTest, Smoke) {
   auto endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
   ASSERT_OK(endpoints.status_value());
 
-  Server server([](uint32_t mask, uint32_t options, zx::channel watcher,
+  Server server([](fuchsia_io::wire::WatchMask mask, uint32_t options,
+                   fidl::ServerEnd<fuchsia_io::DirectoryWatcher> watcher,
                    fidl::WireServer<fuchsia_io::Directory>::WatchCompleter::Sync& completer) {
     uint8_t bytes[fuchsia_io::wire::kMaxBuf];
     auto it = std::begin(bytes);
 
     {
       constexpr char name[] = "unsupported";
-      *it++ = fuchsia_io::wire::kWatchEventIdle + 1;
+      *it++ = static_cast<uint8_t>(fuchsia_io::wire::WatchEvent::kIdle) + 1;
       *it++ = sizeof(name);
       it = std::copy(std::cbegin(name), std::cend(name), it);
     }
     {
       constexpr char name[] = "valid";
-      *it++ = fuchsia_io::wire::kWatchEventAdded;
+      *it++ = static_cast<uint8_t>(fuchsia_io::wire::WatchEvent::kAdded);
       *it++ = sizeof(name);
       it = std::copy(std::cbegin(name), std::cend(name), it);
     }
     {
       // Incomplete; event without name.
-      *it++ = fuchsia_io::wire::kWatchEventAdded;
+      *it++ = static_cast<uint8_t>(fuchsia_io::wire::WatchEvent::kAdded);
       *it++ = 1;
     }
 
-    completer.Reply(watcher.write(
+    completer.Reply(watcher.channel().write(
         0, bytes, static_cast<uint32_t>(std::distance(std::begin(bytes), it)), nullptr, 0));
   });
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);

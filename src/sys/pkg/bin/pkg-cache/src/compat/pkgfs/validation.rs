@@ -7,10 +7,10 @@ use {
     async_trait::async_trait,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::{
-        NodeAttributes, NodeMarker, DIRENT_TYPE_DIRECTORY, INO_UNKNOWN, MODE_TYPE_DIRECTORY,
-        OPEN_FLAG_APPEND, OPEN_FLAG_CREATE, OPEN_FLAG_CREATE_IF_ABSENT, OPEN_FLAG_POSIX_DEPRECATED,
-        OPEN_FLAG_POSIX_EXECUTABLE, OPEN_FLAG_POSIX_WRITABLE, OPEN_FLAG_TRUNCATE,
-        OPEN_RIGHT_EXECUTABLE, OPEN_RIGHT_WRITABLE,
+        NodeAttributes, NodeMarker, WatchMask, DIRENT_TYPE_DIRECTORY, INO_UNKNOWN,
+        MODE_TYPE_DIRECTORY, OPEN_FLAG_APPEND, OPEN_FLAG_CREATE, OPEN_FLAG_CREATE_IF_ABSENT,
+        OPEN_FLAG_POSIX_DEPRECATED, OPEN_FLAG_POSIX_EXECUTABLE, OPEN_FLAG_POSIX_WRITABLE,
+        OPEN_FLAG_TRUNCATE, OPEN_RIGHT_EXECUTABLE, OPEN_RIGHT_WRITABLE,
     },
     fuchsia_zircon as zx,
     std::{
@@ -123,8 +123,8 @@ impl vfs::directory::entry_container::Directory for Validation {
     fn register_watcher(
         self: Arc<Self>,
         _: ExecutionScope,
-        _: u32,
-        _: fidl::AsyncChannel,
+        _: WatchMask,
+        _: vfs::directory::entry_container::DirectoryWatcher,
     ) -> Result<(), zx::Status> {
         Err(zx::Status::NOT_SUPPORTED)
     }
@@ -155,11 +155,11 @@ mod tests {
         super::*,
         assert_matches::assert_matches,
         blobfs_ramdisk::BlobfsRamdisk,
-        fidl::{AsyncChannel, Channel},
         fidl_fuchsia_io::{
             DirectoryMarker, FileMarker, DIRENT_TYPE_FILE, OPEN_FLAG_DESCRIBE, OPEN_RIGHT_READABLE,
         },
         futures::stream::StreamExt as _,
+        std::convert::TryInto as _,
         vfs::directory::{entry::DirectoryEntry, entry_container::Directory},
     };
 
@@ -318,12 +318,14 @@ mod tests {
     async fn directory_register_watcher_not_supported() {
         let (_env, validation) = TestEnv::new().await;
 
+        let (_client, server) = fidl::endpoints::create_endpoints().unwrap();
+
         assert_eq!(
             Directory::register_watcher(
                 Arc::new(validation),
                 ExecutionScope::new(),
-                0,
-                AsyncChannel::from_channel(Channel::create().unwrap().0).unwrap()
+                WatchMask::empty(),
+                server.try_into().unwrap(),
             ),
             Err(zx::Status::NOT_SUPPORTED)
         );

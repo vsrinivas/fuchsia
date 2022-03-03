@@ -10,7 +10,7 @@ use super::{WatcherCommand, WatcherEvent};
 
 use crate::{
     directory::{
-        entry_container::Directory,
+        entry_container::{Directory, DirectoryWatcher},
         traversal_position::TraversalPosition,
         watchers::{
             event_producers::{SingleNameEventProducer, StaticVecEventProducer},
@@ -21,8 +21,7 @@ use crate::{
 };
 
 use {
-    fidl_fuchsia_io::WATCH_MASK_EXISTING,
-    fuchsia_async::Channel,
+    fidl_fuchsia_io::WatchMask,
     futures::{
         channel::mpsc::UnboundedReceiver,
         select,
@@ -49,13 +48,13 @@ pub(super) async fn run<WatcherEvents>(
         select! {
             o_command = commands.next() => match o_command {
                 Some(command) => match command {
-                    WatcherCommand::RegisterWatcher { scope, mask, channel } => {
+                    WatcherCommand::RegisterWatcher { scope, mask, watcher } => {
                         handle_register_watcher(
                                 &mut watchers,
                                 directory.clone(),
                                 scope.clone(),
                                 mask,
-                                channel,
+                                watcher,
                         ).await;
                     },
                     WatcherCommand::UnregisterWatcher { key } => {
@@ -86,17 +85,17 @@ async fn handle_register_watcher(
     watchers: &mut Watchers,
     directory: Arc<dyn Directory>,
     scope: ExecutionScope,
-    mask: u32,
-    channel: Channel,
+    mask: WatchMask,
+    watcher: DirectoryWatcher,
 ) {
     // Optimize the case when we do not need to send the list of existing entries.
-    if mask & WATCH_MASK_EXISTING == 0 {
-        let controller = watchers.add(scope, directory, mask, channel);
+    if !mask.contains(WatchMask::EXISTING) {
+        let controller = watchers.add(scope, directory, mask, watcher);
         controller.send_event(&mut SingleNameEventProducer::idle());
         return;
     }
 
-    let controller = watchers.add(scope, directory.clone(), mask, channel);
+    let controller = watchers.add(scope, directory.clone(), mask, watcher);
 
     // We will use `directory.read_dirents` to produce up to one full buffer of entry names, that
     // we will send to the new watcher.  `pos` will be used to remember the position in the listing
@@ -152,7 +151,7 @@ mod single_buffer {
         watchers::event_producers::{encode_name, SingleBufferEventProducer},
     };
 
-    use {fidl_fuchsia_io::WATCH_EVENT_EXISTING, std::any::Any};
+    use {fidl_fuchsia_io::WatchEvent, std::any::Any};
 
     pub(super) fn existing() -> Box<Sink> {
         Box::new(Sink { buffer: vec![] })
@@ -164,7 +163,7 @@ mod single_buffer {
     /// used to send this buffer to all the watcher, and to get back a [`Sink`] that would continue
     /// the traversal.
     ///
-    /// It only supports producing events of type WATCH_EVENT_EXISTING, as this is the only case
+    /// It only supports producing events of type WatchEvent::Existing, as this is the only case
     /// where a lazy directory will use it.
     pub(super) struct Sink {
         buffer: Vec<u8>,
@@ -178,7 +177,7 @@ mod single_buffer {
         ) -> dirents_sink::AppendResult {
             use dirents_sink::AppendResult;
 
-            if encode_name(&mut self.buffer, WATCH_EVENT_EXISTING, name) {
+            if encode_name(&mut self.buffer, WatchEvent::Existing, name) {
                 AppendResult::Ok(self)
             } else {
                 AppendResult::Sealed(Sealed::new(self.buffer))

@@ -45,11 +45,11 @@ namespace libdriver_integration_test {
 
 class IntegrationTest : public testing::Test {
  public:
-  static void SetUpTestCase();
-  static void TearDownTestCase();
+  static void SetUpTestSuite();
+  static void TearDownTestSuite();
 
   IntegrationTest();
-  ~IntegrationTest();
+  ~IntegrationTest() override;
 
   void SetUp() override;
 
@@ -64,41 +64,41 @@ class IntegrationTest : public testing::Test {
 
   // Convenience method on top of ExpectBind for having bind create a child
   // and return success.
-  Promise<void> CreateFirstChild(std::unique_ptr<RootMockDevice>* root_mock_device,
-                                 std::unique_ptr<MockDevice>* child_device);
+  static Promise<void> CreateFirstChild(std::unique_ptr<RootMockDevice>* root_mock_device,
+                                        std::unique_ptr<MockDevice>* child_device);
 
   // Convenience method on top of ExpectUnbind and ExpectRelease for having
   // unbind invoke device_remove(), with the belief that that will drop the
   // last reference to the device and Release() will be called.
-  Promise<void> ExpectUnbindThenRelease(const std::unique_ptr<MockDevice>& device);
+  static Promise<void> ExpectUnbindThenRelease(const std::unique_ptr<MockDevice>& device);
 
   // Initializes |root_mock_device| and returns a promise that will be complete after
   // the root mock device's bind hook has been called.  The bind hook will
   // perform the given |actions|.
-  Promise<void> ExpectBind(std::unique_ptr<RootMockDevice>* root_mock_device,
-                           BindOnce::Callback actions_callback);
+  static Promise<void> ExpectBind(std::unique_ptr<RootMockDevice>* root_mock_device,
+                                  BindOnce::Callback actions_callback);
 
   // Returns a promise that will be complete after the device invokes its
   // unbind() hook and performs the given |actions|.  |device| must outlive
   // this promise.
-  Promise<void> ExpectUnbind(const std::unique_ptr<MockDevice>& device,
-                             UnbindOnce::Callback actions_callback);
+  static Promise<void> ExpectUnbind(const std::unique_ptr<MockDevice>& device,
+                                    UnbindOnce::Callback actions_callback);
 
   // Returns a promise that will be complete after the device invokes its
   // open() hook and performs the given |actions|.  |device| must outlive
   // this promise.
-  Promise<void> ExpectOpen(const std::unique_ptr<MockDevice>& device,
-                           OpenOnce::Callback actions_callback);
+  static Promise<void> ExpectOpen(const std::unique_ptr<MockDevice>& device,
+                                  OpenOnce::Callback actions_callback);
 
   // Returns a promise that will be complete after the device invokes its
   // close() hook and performs the given |actions|.  |device| must outlive
   // this promise.
-  Promise<void> ExpectClose(const std::unique_ptr<MockDevice>& device,
-                            CloseOnce::Callback actions_callback);
+  static Promise<void> ExpectClose(const std::unique_ptr<MockDevice>& device,
+                                   CloseOnce::Callback actions_callback);
 
   // Returns a promise that will be complete after the device invokes its
   // release() hook. |device| must outive this promise.
-  Promise<void> ExpectRelease(const std::unique_ptr<MockDevice>& device);
+  static Promise<void> ExpectRelease(const std::unique_ptr<MockDevice>& device);
 
   // Performs an open of the given |path| relative to the devfs, and puts the
   // connection into |client|.  The promise returned completes when the open
@@ -115,7 +115,7 @@ class IntegrationTest : public testing::Test {
 
   // Joins two promises and collapses the results such that if either failed
   // the returned promise fails.
-  auto JoinPromises(Promise<void> promise1, Promise<void> promise2) {
+  static auto JoinPromises(Promise<void> promise1, Promise<void> promise2) {
     return join_promises(std::move(promise1), std::move(promise2))
         .then([](fpromise::result<std::tuple<Result<void>, Result<void>>>& wrapped_results)
                   -> Result<void> {
@@ -129,7 +129,7 @@ class IntegrationTest : public testing::Test {
   }
 
   // Run the given promise and transform its error case into a test failure.
-  void RunPromise(Promise<void> promise);
+  static void RunPromise(Promise<void> promise);
 
  protected:
   static void DoSetup();

@@ -142,8 +142,9 @@ class VnodeF2fs : public fs::Vnode,
   zx_status_t WriteBegin(size_t pos, size_t len, fbl::RefPtr<Page> *page);
 
 #ifdef __Fuchsia__
-  void Notify(std::string_view name, unsigned event) final;
-  zx_status_t WatchDir(fs::Vfs *vfs, uint32_t mask, uint32_t options, zx::channel watcher) final;
+  void Notify(std::string_view name, fuchsia_io::wire::WatchEvent event) final;
+  zx_status_t WatchDir(fs::Vfs *vfs, fuchsia_io::wire::WatchMask mask, uint32_t options,
+                       fidl::ServerEnd<fuchsia_io::DirectoryWatcher> watcher) final;
 #endif  // __Fuchsia__
 
   void MarkInodeDirty() __TA_EXCLUDES(mutex_);

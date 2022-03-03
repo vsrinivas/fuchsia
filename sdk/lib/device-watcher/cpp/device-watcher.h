@@ -48,6 +48,8 @@ class DirWatcher {
   static zx_status_t Create(fbl::unique_fd dir_fd, std::unique_ptr<DirWatcher>* out_dir_watcher);
 
   // Users should call Create instead. This is public for make_unique.
+  // TODO(https://fxbug.dev/89042): this should be a `fidl::ClientEnd<fuchsia_io::DirectoryWatcher>`
+  // once LLCPP is in the SDK.
   explicit DirWatcher(zx::channel client) : client_(std::move(client)) {}
 
   // Returns ZX_OK if |filename| is removed from the directory before the given timeout elapses.

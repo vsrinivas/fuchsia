@@ -629,9 +629,11 @@ zx_status_t VnodeMinfs::SetAttributes(fs::VnodeAttributesUpdate attr) {
 VnodeMinfs::VnodeMinfs(Minfs* fs) : Vnode(fs), fs_(fs) {}
 
 #ifdef __Fuchsia__
-void VnodeMinfs::Notify(std::string_view name, unsigned event) { watcher_.Notify(name, event); }
-zx_status_t VnodeMinfs::WatchDir(fs::Vfs* vfs, uint32_t mask, uint32_t options,
-                                 zx::channel watcher) {
+void VnodeMinfs::Notify(std::string_view name, fuchsia_io::wire::WatchEvent event) {
+  watcher_.Notify(name, event);
+}
+zx_status_t VnodeMinfs::WatchDir(fs::Vfs* vfs, fuchsia_io::wire::WatchMask mask, uint32_t options,
+                                 fidl::ServerEnd<fuchsia_io::DirectoryWatcher> watcher) {
   return watcher_.WatchDir(vfs, this, mask, options, std::move(watcher));
 }
 

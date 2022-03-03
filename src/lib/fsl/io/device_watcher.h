@@ -5,6 +5,7 @@
 #ifndef SRC_LIB_FSL_IO_DEVICE_WATCHER_H_
 #define SRC_LIB_FSL_IO_DEVICE_WATCHER_H_
 
+#include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/fit/function.h>
 #include <lib/zx/channel.h>
@@ -84,16 +85,15 @@ class FXL_EXPORT DeviceWatcher {
       async_dispatcher_t* dispatcher = nullptr);
 
  private:
-  DeviceWatcher(async_dispatcher_t* dispatcher, fbl::unique_fd dir_fd, zx::channel dir_watch,
+  DeviceWatcher(async_dispatcher_t* dispatcher, fbl::unique_fd dir_fd,
+                fidl::ClientEnd<fuchsia_io::DirectoryWatcher> dir_watcher,
                 ExistsCallback exists_callback, IdleCallback idle_callback);
-
-  static void ListDevices(fxl::WeakPtr<DeviceWatcher> weak, int dir_fd);
 
   void Handler(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
                const zx_packet_signal* signal);
 
   fbl::unique_fd dir_fd_;
-  zx::channel dir_watch_;
+  fidl::ClientEnd<fuchsia_io::DirectoryWatcher> dir_watcher_;
   ExistsCallback exists_callback_;
   IdleCallback idle_callback_;
   async::WaitMethod<DeviceWatcher, &DeviceWatcher::Handler> wait_;

@@ -4,7 +4,10 @@
 
 //! A task that is run to process communication with an individual watcher.
 
-use crate::{directory::watchers::event_producers::EventProducer, execution_scope::ExecutionScope};
+use crate::{
+    directory::{entry_container::DirectoryWatcher, watchers::event_producers::EventProducer},
+    execution_scope::ExecutionScope,
+};
 
 use {
     fuchsia_async::Channel,
@@ -12,7 +15,6 @@ use {
     futures::{
         channel::mpsc::{self, UnboundedSender},
         select,
-        stream::StreamExt,
         task::{Context, Poll},
         Future, FutureExt,
     },
@@ -26,20 +28,22 @@ use {
 /// of a failure.
 pub(crate) fn new(
     scope: ExecutionScope,
-    mask: u32,
-    channel: Channel,
+    mask: fidl_fuchsia_io::WatchMask,
+    watcher: DirectoryWatcher,
     done: impl FnOnce() + Send + 'static,
 ) -> Controller {
+    use futures::StreamExt as _;
+
     let (sender, mut receiver) = mpsc::unbounded();
 
     let task = async move {
         let mut buf = MessageBuf::new();
-        let mut recv_msg = channel.recv_msg(&mut buf).fuse();
+        let mut recv_msg = watcher.channel().recv_msg(&mut buf).fuse();
         loop {
             select! {
                 command = receiver.next() => match command {
                     Some(Command::Send(buffer)) => {
-                        let success = handle_send(&channel, buffer);
+                        let success = handle_send(watcher.channel(), buffer);
                         if !success {
                             break;
                         }
@@ -63,7 +67,7 @@ pub(crate) fn new(
 }
 
 pub struct Controller {
-    mask: u32,
+    mask: fidl_fuchsia_io::WatchMask,
     commands: UnboundedSender<Command>,
 }
 
@@ -71,8 +75,12 @@ impl Controller {
     /// Sends a buffer to the connected watcher.  `mask` specifies the type of the event the buffer
     /// is for.  If the watcher mask does not include the event specified by the `mask` then the
     /// buffer is not sent and `buffer` is not even invoked.
-    pub(crate) fn send_buffer(&self, mask: u32, buffer: impl FnOnce() -> Vec<u8>) {
-        if self.mask & mask == 0 {
+    pub(crate) fn send_buffer(
+        &self,
+        mask: fidl_fuchsia_io::WatchMask,
+        buffer: impl FnOnce() -> Vec<u8>,
+    ) {
+        if !self.mask.intersects(mask) {
             return;
         }
 
@@ -92,7 +100,7 @@ impl Controller {
     /// used and `false` is returned.  If the producers mask and the watcher mask overlap, then
     /// `true` is returned (even if the producer did not generate a single buffer).
     pub fn send_event(&self, producer: &mut dyn EventProducer) -> bool {
-        if self.mask & producer.mask() == 0 {
+        if !self.mask.intersects(producer.mask()) {
             return false;
         }
 

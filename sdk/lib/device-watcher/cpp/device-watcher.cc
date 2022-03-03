@@ -4,7 +4,6 @@
 
 #include "device-watcher.h"
 
-#include <errno.h>
 #include <fcntl.h>
 #include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/fdio/cpp/caller.h>
@@ -27,18 +26,17 @@ namespace fio = fuchsia_io;
 __EXPORT
 zx_status_t DirWatcher::Create(fbl::unique_fd dir_fd,
                                std::unique_ptr<DirWatcher>* out_dir_watcher) {
-  zx::channel client, server;
-  zx_status_t status = zx::channel::create(0, &client, &server);
-  if (status != ZX_OK) {
-    return status;
+  zx::status endpoints = fidl::CreateEndpoints<fio::DirectoryWatcher>();
+  if (endpoints.is_error()) {
+    return endpoints.status_value();
   }
   fdio_cpp::FdioCaller caller(std::move(dir_fd));
   auto result = fidl::WireCall(fidl::UnownedClientEnd<fio::Directory>(caller.borrow_channel()))
-                    ->Watch(fio::wire::kWatchMaskRemoved, 0, zx::channel(server.release()));
+                    ->Watch(fio::wire::WatchMask::kRemoved, 0, std::move(endpoints->server));
   if (!result.ok()) {
     return result.status();
   }
-  *out_dir_watcher = std::make_unique<DirWatcher>(std::move(client));
+  *out_dir_watcher = std::make_unique<DirWatcher>(endpoints->client.TakeChannel());
   return ZX_OK;
 }
 
@@ -66,7 +64,7 @@ zx_status_t DirWatcher::WaitForRemoval(const fbl::String& filename, zx::duration
     if (status != ZX_OK) {
       return status;
     }
-    if (buf[0] != fio::wire::kWatchEventRemoved) {
+    if (static_cast<fio::wire::WatchEvent>(buf[0]) != fio::wire::WatchEvent::kRemoved) {
       continue;
     }
     if (filename.length() == 0) {

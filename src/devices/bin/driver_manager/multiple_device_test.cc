@@ -494,13 +494,14 @@ TEST_F(MultipleDeviceTestCase, DevfsWatcherCleanup) {
   ASSERT_FALSE(devfs_has_watchers(root_node));
 
   // Create the watcher and make sure it's been registered.
-  zx::channel local, remote;
-  ASSERT_OK(zx::channel::create(0, &local, &remote));
-  ASSERT_OK(devfs_watch(root_node, std::move(remote), fuchsia_io::wire::kWatchMaskAdded));
+  zx::status endpoints = fidl::CreateEndpoints<fuchsia_io::DirectoryWatcher>();
+  ASSERT_OK(endpoints.status_value());
+  ASSERT_OK(
+      devfs_watch(root_node, std::move(endpoints->server), fuchsia_io::wire::WatchMask::kAdded));
   ASSERT_TRUE(devfs_has_watchers(root_node));
 
   // Free our channel and make sure it gets de-registered.
-  local.reset();
+  endpoints->client.reset();
   coordinator_loop()->RunUntilIdle();
   ASSERT_FALSE(devfs_has_watchers(root_node));
 }

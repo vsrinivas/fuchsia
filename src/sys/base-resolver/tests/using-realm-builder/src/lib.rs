@@ -7,8 +7,8 @@ use {
     async_trait::async_trait,
     blobfs_ramdisk::BlobfsRamdisk,
     fidl_fuchsia_io::{
-        NodeMarker, OPEN_RIGHT_EXECUTABLE, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE, RX_STAR_DIR,
-        R_STAR_DIR,
+        NodeMarker, WatchMask, OPEN_RIGHT_EXECUTABLE, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
+        RX_STAR_DIR, R_STAR_DIR,
     },
     fidl_fuchsia_sys2::*,
     fuchsia_component_test::new::{
@@ -313,8 +313,8 @@ impl vfs::directory::entry_container::Directory for MinfsSyncOnOpenSelf {
     fn register_watcher(
         self: Arc<Self>,
         _: ExecutionScope,
-        _: u32,
-        _: fidl::AsyncChannel,
+        _: WatchMask,
+        _: vfs::directory::entry_container::DirectoryWatcher,
     ) -> Result<(), zx::Status> {
         Err(zx::Status::NOT_SUPPORTED)
     }

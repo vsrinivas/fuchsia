@@ -20,9 +20,8 @@ VnodeF2fs::VnodeF2fs(F2fs *fs, ino_t ino) : Vnode(fs), ino_(ino) {}
 fs::VnodeProtocolSet VnodeF2fs::GetProtocols() const {
   if (IsDir()) {
     return fs::VnodeProtocol::kDirectory;
-  } else {
-    return fs::VnodeProtocol::kFile;
   }
+  return fs::VnodeProtocol::kFile;
 }
 
 void VnodeF2fs::SetMode(const umode_t &mode) { mode_ = mode; }
@@ -468,10 +467,11 @@ zx_status_t VnodeF2fs::TruncateBlocks(uint64_t from) {
         return err;
       }
 
-      if (IsInode(*(dn.node_page)))
+      if (IsInode(*(dn.node_page))) {
         count = kAddrsPerInode;
-      else
+      } else {
         count = kAddrsPerBlock;
+      }
 
       count -= dn.ofs_in_node;
       ZX_ASSERT(count >= 0);
@@ -630,10 +630,12 @@ bool VnodeF2fs::NeedToSyncDir() {
 }
 
 #ifdef __Fuchsia__
-void VnodeF2fs::Notify(std::string_view name, unsigned event) { watcher_.Notify(name, event); }
+void VnodeF2fs::Notify(std::string_view name, fuchsia_io::wire::WatchEvent event) {
+  watcher_.Notify(name, event);
+}
 
-zx_status_t VnodeF2fs::WatchDir(fs::Vfs *vfs, uint32_t mask, uint32_t options,
-                                zx::channel watcher) {
+zx_status_t VnodeF2fs::WatchDir(fs::Vfs *vfs, fuchsia_io::wire::WatchMask mask, uint32_t options,
+                                fidl::ServerEnd<fuchsia_io::DirectoryWatcher> watcher) {
   return watcher_.WatchDir(vfs, this, mask, options, std::move(watcher));
 }
 #endif  // __Fuchsia__

@@ -4,6 +4,7 @@
 
 #include <dirent.h>
 #include <fcntl.h>
+#include <fidl/fuchsia.device/cpp/wire.h>
 #include <fidl/fuchsia.hardware.pty/cpp/wire.h>
 #include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/zx/channel.h>
@@ -1156,7 +1157,7 @@ zx_status_t zxio_remote_watch_directory(zxio_t* io, zxio_watch_directory_cb cb, 
 
   const fidl::WireResult result =
       fidl::WireCall(fidl::UnownedClientEnd<fio::Directory>(rio.control()))
-          ->Watch(fio::wire::kWatchMaskAll, 0, endpoints->client.TakeChannel());
+          ->Watch(fio::wire::WatchMask::kMask, 0, std::move(endpoints->server));
 
   if (zx_status_t status = result.status(); status != ZX_OK) {
     return status;
@@ -1168,11 +1169,11 @@ zx_status_t zxio_remote_watch_directory(zxio_t* io, zxio_watch_directory_cb cb, 
   for (;;) {
     uint8_t bytes[fio::wire::kMaxBuf + 1];  // Extra byte for temporary null terminator.
     uint32_t num_bytes;
-    zx_status_t status = endpoints->server.channel().read_etc(0, &bytes, nullptr, sizeof(bytes), 0,
+    zx_status_t status = endpoints->client.channel().read_etc(0, &bytes, nullptr, sizeof(bytes), 0,
                                                               &num_bytes, nullptr);
     if (status != ZX_OK) {
       if (status == ZX_ERR_SHOULD_WAIT) {
-        status = endpoints->server.channel().wait_one(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
+        status = endpoints->client.channel().wait_one(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
                                                       zx::time(deadline), nullptr);
         if (status != ZX_OK) {
           return status;
@@ -1190,7 +1191,7 @@ zx_status_t zxio_remote_watch_directory(zxio_t* io, zxio_watch_directory_cb cb, 
         break;
       }
 
-      uint8_t wire_event = *it++;
+      fio::wire::WatchEvent wire_event = static_cast<fio::wire::WatchEvent>(*it++);
       uint8_t len = *it++;
       uint8_t* name = it;
 
@@ -1201,14 +1202,14 @@ zx_status_t zxio_remote_watch_directory(zxio_t* io, zxio_watch_directory_cb cb, 
 
       zxio_watch_directory_event_t event;
       switch (wire_event) {
-        case fio::wire::kWatchEventAdded:
-        case fio::wire::kWatchEventExisting:
+        case fio::wire::WatchEvent::kAdded:
+        case fio::wire::WatchEvent::kExisting:
           event = ZXIO_WATCH_EVENT_ADD_FILE;
           break;
-        case fio::wire::kWatchEventRemoved:
+        case fio::wire::WatchEvent::kRemoved:
           event = ZXIO_WATCH_EVENT_REMOVE_FILE;
           break;
-        case fio::wire::kWatchEventIdle:
+        case fio::wire::WatchEvent::kIdle:
           event = ZXIO_WATCH_EVENT_WAITING;
           break;
         default:

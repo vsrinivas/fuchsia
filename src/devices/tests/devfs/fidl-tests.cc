@@ -131,11 +131,11 @@ using watch_buffer_t = struct {
   size_t size;
 };
 
-void CheckLocalEvent(watch_buffer_t* wb, const char** name, uint8_t* event) {
+void CheckLocalEvent(watch_buffer_t* wb, const char** name, fio::WatchEvent* event) {
   ASSERT_NOT_NULL(wb->ptr);
 
   // Used a cached event
-  *event = wb->ptr[0];
+  *event = static_cast<fio::WatchEvent>(wb->ptr[0]);
   ASSERT_LT(static_cast<size_t>(wb->ptr[1]), sizeof(wb->name_buf));
   memcpy(wb->name_buf, wb->ptr + 2, wb->ptr[1]);
   wb->name_buf[wb->ptr[1]] = 0;
@@ -149,13 +149,14 @@ void CheckLocalEvent(watch_buffer_t* wb, const char** name, uint8_t* event) {
 
 // Read the next event off the channel.  Storage for |*name| will be reused
 // between calls.
-void ReadEvent(watch_buffer_t* wb, const zx::channel& c, const char** name, uint8_t* event) {
+void ReadEvent(watch_buffer_t* wb, const fidl::ClientEnd<fio::DirectoryWatcher>& client_end,
+               const char** name, fio::WatchEvent* event) {
   if (wb->ptr == nullptr) {
     zx_signals_t observed;
-    ASSERT_OK(c.wait_one(ZX_CHANNEL_READABLE, zx::time::infinite(), &observed));
+    ASSERT_OK(client_end.channel().wait_one(ZX_CHANNEL_READABLE, zx::time::infinite(), &observed));
     ASSERT_EQ(observed & ZX_CHANNEL_READABLE, ZX_CHANNEL_READABLE);
     uint32_t actual;
-    ASSERT_OK(c.read(0, wb->buf, nullptr, sizeof(wb->buf), 0, &actual, nullptr));
+    ASSERT_OK(client_end.channel().read(0, wb->buf, nullptr, sizeof(wb->buf), 0, &actual, nullptr));
     wb->size = actual;
     wb->ptr = wb->buf;
   }
@@ -166,15 +167,14 @@ TEST(FidlTestCase, DirectoryWatcherExisting) {
   zx::status endpoints = fidl::CreateEndpoints<fio::Directory>();
   ASSERT_OK(endpoints.status_value());
 
-  // Channel pair for directory watch events
-  zx::channel watcher, remote_watcher;
-  ASSERT_OK(zx::channel::create(0, &watcher, &remote_watcher));
+  zx::status watcher_endpoints = fidl::CreateEndpoints<fio::DirectoryWatcher>();
+  ASSERT_OK(watcher_endpoints.status_value());
 
   ASSERT_OK(fdio_service_connect("/dev/class", endpoints->server.channel().release()));
 
   const fidl::WireResult result =
       fidl::WireCall(endpoints->client)
-          ->Watch(fio::wire::kWatchMaskAll, 0, std::move(remote_watcher));
+          ->Watch(fio::wire::WatchMask::kMask, 0, std::move(watcher_endpoints->server));
   ASSERT_OK(result.status());
   const auto& response = result.value();
   ASSERT_OK(response.s);
@@ -183,13 +183,13 @@ TEST(FidlTestCase, DirectoryWatcherExisting) {
   // We should see nothing but EXISTING events until we see an IDLE event
   while (true) {
     const char* name = nullptr;
-    uint8_t event = 0;
-    ASSERT_NO_FAILURES(ReadEvent(&wb, watcher, &name, &event));
-    if (event == fio::wire::kWatchEventIdle) {
+    fio::wire::WatchEvent event;
+    ASSERT_NO_FAILURES(ReadEvent(&wb, watcher_endpoints->client, &name, &event));
+    if (event == fio::wire::WatchEvent::kIdle) {
       ASSERT_STREQ(name, "");
       break;
     }
-    ASSERT_EQ(event, fio::wire::kWatchEventExisting);
+    ASSERT_EQ(event, fio::wire::WatchEvent::kExisting);
     ASSERT_STRNE(name, "");
   }
 }
@@ -198,19 +198,18 @@ TEST(FidlTestCase, DirectoryWatcherWithClosedHalf) {
   zx::status endpoints = fidl::CreateEndpoints<fio::Directory>();
   ASSERT_OK(endpoints.status_value());
 
-  // Channel pair for directory watch events
-  zx::channel watcher, remote_watcher;
-  ASSERT_OK(zx::channel::create(0, &watcher, &remote_watcher));
-
   ASSERT_OK(fdio_service_connect("/dev/class", endpoints->server.channel().release()));
 
-  // Close our end of the watcher before devmgr gets its end.
-  watcher.reset();
-
   {
+    zx::status watcher_endpoints = fidl::CreateEndpoints<fio::DirectoryWatcher>();
+    ASSERT_OK(watcher_endpoints.status_value());
+
+    // Close our end of the watcher before devmgr gets its end.
+    watcher_endpoints->client.reset();
+
     const fidl::WireResult result =
         fidl::WireCall(endpoints->client)
-            ->Watch(fio::wire::kWatchMaskAll, 0, std::move(remote_watcher));
+            ->Watch(fio::wire::WatchMask::kMask, 0, std::move(watcher_endpoints->server));
     ASSERT_OK(result.status());
     const auto& response = result.value();
     ASSERT_OK(response.s);
@@ -219,20 +218,22 @@ TEST(FidlTestCase, DirectoryWatcherWithClosedHalf) {
 
   {
     // Create a new watcher, and see if it's functional at all
-    ASSERT_OK(zx::channel::create(0, &watcher, &remote_watcher));
+    zx::status watcher_endpoints = fidl::CreateEndpoints<fio::DirectoryWatcher>();
+    ASSERT_OK(watcher_endpoints.status_value());
+
     const fidl::WireResult result =
         fidl::WireCall(endpoints->client)
-            ->Watch(fio::wire::kWatchMaskAll, 0, std::move(remote_watcher));
+            ->Watch(fio::wire::WatchMask::kMask, 0, std::move(watcher_endpoints->server));
     ASSERT_OK(result.status());
     const auto& response = result.value();
     ASSERT_OK(response.s);
-  }
 
-  watch_buffer_t wb = {};
-  const char* name = nullptr;
-  uint8_t event = 0;
-  ASSERT_NO_FAILURES(ReadEvent(&wb, watcher, &name, &event));
-  ASSERT_EQ(event, fio::wire::kWatchEventExisting);
+    watch_buffer_t wb = {};
+    const char* name = nullptr;
+    fio::wire::WatchEvent event;
+    ASSERT_NO_FAILURES(ReadEvent(&wb, watcher_endpoints->client, &name, &event));
+    ASSERT_EQ(event, fio::wire::WatchEvent::kExisting);
+  }
 }
 
 }  // namespace

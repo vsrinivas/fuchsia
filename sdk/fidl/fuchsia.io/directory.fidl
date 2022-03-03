@@ -129,49 +129,46 @@ const DIRENT_TYPE_SERVICE uint8 = 16;
 /// from Readdir and GetAttr.
 const INO_UNKNOWN uint64 = 0xFFFFFFFFFFFFFFFF;
 
-/// Indicates the directory being watched has been deleted.
-const WATCH_EVENT_DELETED uint8 = 0;
-/// Indicates a node has been created (either new or moved) into a directory.
-const WATCH_EVENT_ADDED uint8 = 1;
-/// Identifies a node has been removed (either deleted or moved) from the directory.
-const WATCH_EVENT_REMOVED uint8 = 2;
-/// Identifies a node already existed in the directory when watching started.
-const WATCH_EVENT_EXISTING uint8 = 3;
-/// Identifies that no more `WATCH_EVENT_EXISTING` events will be sent.
-const WATCH_EVENT_IDLE uint8 = 4;
-
-/// Used by `Directory.Watch`. Requests transmission of `WATCH_EVENT_DELETED`.
-const WATCH_MASK_DELETED uint32 = 0x00000001;
-/// Used by `Directory.Watch`. Requests transmission of `WATCH_EVENT_ADDED`.
-const WATCH_MASK_ADDED uint32 = 0x00000002;
-/// Used by `Directory.Watch`. Requests transmission of `WATCH_EVENT_REMOVED`.
-const WATCH_MASK_REMOVED uint32 = 0x00000004;
-/// Used by `Directory.Watch`. Requests transmission of `WATCH_EVENT_EXISTING`.
-const WATCH_MASK_EXISTING uint32 = 0x00000008;
-/// Used by `Directory.Watch`. Requests transmission of `WATCH_EVENT_IDLE`.
-const WATCH_MASK_IDLE uint32 = 0x00000010;
-/// Used by `Directory.Watch`. Requests transmission of all watcher events.
-const WATCH_MASK_ALL uint32 = 0x0000001F;
-
-// TODO(fxbug.dev/7903): Unused.
-/// WatchedEvent describes events returned from a DirectoryWatcher.
-type WatchedEvent = struct {
-    event uint8;
-    len uint8;
-    name vector<uint8>:MAX_FILENAME;
-};
-
-// TODO(fxbug.dev/7903): Unused.
 /// DirectoryWatcher transmits messages from a filesystem server
 /// about events happening in the filesystem. Clients can register
 /// new watchers using the `Directory.Watch` method, where they can
 /// filter which events they want to receive notifications for.
-protocol DirectoryWatcher {
-    // TODO(smklein): Convert this to a vector of WatchedEvents, when possible.
-    @selector("fuchsia.io1/DirectoryWatcher.OnEvent")
-    OnEvent(struct {
-        events vector<uint8>:MAX_BUF;
-    });
+///
+/// The DirectoryWatcher will send messages of the form:
+/// ```
+/// struct {
+///   uint8 event;
+///   uint8 len;
+///   char name[];
+/// };
+/// ```
+/// Where names are NOT null-terminated.
+protocol DirectoryWatcher {};
+
+type WatchEvent = strict enum : uint8 {
+    /// Indicates the directory being watched has been deleted.
+    DELETED = 0;
+    /// Indicates a node has been created (either new or moved) into a directory.
+    ADDED = 1;
+    /// Identifies a node has been removed (either deleted or moved) from the directory.
+    REMOVED = 2;
+    /// Identifies a node already existed in the directory when watching started.
+    EXISTING = 3;
+    /// Identifies that no more `EXISTING` events will be sent.
+    IDLE = 4;
+};
+
+type WatchMask = strict bits : uint32 {
+    /// Used by `Directory.Watch`. Requests transmission of `WatchEvent.DELETED`.
+    DELETED = 0x00000001;
+    /// Used by `Directory.Watch`. Requests transmission of `WatchEvent.ADDED`.
+    ADDED = 0x00000002;
+    /// Used by `Directory.Watch`. Requests transmission of `WatchEvent.REMOVED`.
+    REMOVED = 0x00000004;
+    /// Used by `Directory.Watch`. Requests transmission of `WatchEvent.EXISTING`.
+    EXISTING = 0x00000008;
+    /// Used by `Directory.Watch`. Requests transmission of `WatchEvent.IDLE`.
+    IDLE = 0x00000010;
 };
 
 protocol Directory {
@@ -295,31 +292,17 @@ protocol Directory1 {
         s zx.status;
     });
 
-    // TODO(smklein): When stablized, remove the "This API is unstable" comment
     /// Watches a directory, receiving events of added messages on the
     /// watcher request channel.
     ///
-    /// The `watcher` handle will send messages of the form:
-    /// ```
-    /// struct {
-    ///   uint8 event;
-    ///   uint8 len;
-    ///   char name[];
-    /// };
-    /// ```
-    /// Where names are NOT null-terminated.
-    ///
-    /// This API is unstable; in the future, watcher will be a `DirectoryWatcher` client.
-    ///
-    /// Mask specifies a bitmask of events to observe.
     /// Options must be zero; it is reserved.
     ///
     /// This method does not require any rights, similar to ReadDirents.
     @selector("fuchsia.io1/Directory.Watch")
     Watch(resource struct {
-        mask uint32;
+        mask WatchMask;
         options uint32;
-        watcher zx.handle:CHANNEL;
+        watcher server_end:DirectoryWatcher;
     }) -> (struct {
         s zx.status;
     });

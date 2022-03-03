@@ -26,31 +26,31 @@ TEST_F(ServiceWatcherTest, Begin) {
   auto service_aggregate = OpenServiceAggregateIn<fuchsia::examples::EchoService>(ns());
   ASSERT_TRUE(service_aggregate.is_valid());
 
-  std::vector<std::pair<uint8_t, std::string>> instances;
-  ServiceWatcher watcher([&instances](uint8_t event, std::string instance) {
-    instances.emplace_back(std::make_pair(event, instance));
+  std::vector<std::pair<fuchsia::io::WatchEvent, std::string>> instances;
+  ServiceWatcher watcher([&instances](fuchsia::io::WatchEvent event, std::string instance) {
+    instances.emplace_back(std::make_pair(event, std::move(instance)));
   });
   zx_status_t status = watcher.Begin(service_aggregate, loop().dispatcher());
   ASSERT_EQ(ZX_OK, status);
 
   ASSERT_TRUE(loop().RunUntilIdle());
   EXPECT_THAT(instances, ::testing::UnorderedElementsAre(
-                             std::make_pair(fuchsia::io::WATCH_EVENT_EXISTING, "default"),
-                             std::make_pair(fuchsia::io::WATCH_EVENT_EXISTING, "my_instance")));
+                             std::make_pair(fuchsia::io::WatchEvent::EXISTING, "default"),
+                             std::make_pair(fuchsia::io::WatchEvent::EXISTING, "my_instance")));
 
   instances.clear();
   int ret = MkDir("/fuchsia.examples.EchoService/added");
   ASSERT_EQ(0, ret);
   ASSERT_TRUE(loop().RunUntilIdle());
   EXPECT_THAT(instances, ::testing::UnorderedElementsAre(
-                             std::make_pair(fuchsia::io::WATCH_EVENT_ADDED, "added")));
+                             std::make_pair(fuchsia::io::WatchEvent::ADDED, "added")));
 
   instances.clear();
   ret = RmDir("/fuchsia.examples.EchoService/added");
   ASSERT_EQ(0, ret);
   ASSERT_TRUE(loop().RunUntilIdle());
   EXPECT_THAT(instances, ::testing::UnorderedElementsAre(
-                             std::make_pair(fuchsia::io::WATCH_EVENT_REMOVED, "added")));
+                             std::make_pair(fuchsia::io::WatchEvent::REMOVED, "added")));
 
   status = watcher.Cancel();
   ASSERT_EQ(ZX_OK, status);

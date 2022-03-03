@@ -16,11 +16,11 @@ use {
     async_utils::async_once::Once,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::{
-        FileProxy, NodeAttributes, NodeMarker, VmoFlags, DIRENT_TYPE_DIRECTORY, INO_UNKNOWN,
-        MODE_TYPE_DIRECTORY, MODE_TYPE_FILE, MODE_TYPE_MASK, OPEN_FLAG_APPEND, OPEN_FLAG_CREATE,
-        OPEN_FLAG_CREATE_IF_ABSENT, OPEN_FLAG_DIRECTORY, OPEN_FLAG_NODE_REFERENCE,
-        OPEN_FLAG_POSIX_DEPRECATED, OPEN_FLAG_POSIX_EXECUTABLE, OPEN_FLAG_POSIX_WRITABLE,
-        OPEN_FLAG_TRUNCATE, OPEN_RIGHT_WRITABLE,
+        FileProxy, NodeAttributes, NodeMarker, VmoFlags, WatchMask, DIRENT_TYPE_DIRECTORY,
+        INO_UNKNOWN, MODE_TYPE_DIRECTORY, MODE_TYPE_FILE, MODE_TYPE_MASK, OPEN_FLAG_APPEND,
+        OPEN_FLAG_CREATE, OPEN_FLAG_CREATE_IF_ABSENT, OPEN_FLAG_DIRECTORY,
+        OPEN_FLAG_NODE_REFERENCE, OPEN_FLAG_POSIX_DEPRECATED, OPEN_FLAG_POSIX_EXECUTABLE,
+        OPEN_FLAG_POSIX_WRITABLE, OPEN_FLAG_TRUNCATE, OPEN_RIGHT_WRITABLE,
     },
     fuchsia_archive::AsyncReader,
     fuchsia_pkg::MetaContents,
@@ -314,8 +314,8 @@ impl vfs::directory::entry_container::Directory for RootDir {
     fn register_watcher(
         self: Arc<Self>,
         _: ExecutionScope,
-        _: u32,
-        _: fidl::AsyncChannel,
+        _: WatchMask,
+        _: vfs::directory::entry_container::DirectoryWatcher,
     ) -> Result<(), zx::Status> {
         Err(zx::Status::NOT_SUPPORTED)
     }
@@ -360,7 +360,6 @@ mod tests {
         super::*,
         assert_matches::assert_matches,
         fidl::endpoints::{create_proxy, Proxy as _},
-        fidl::{AsyncChannel, Channel},
         fidl_fuchsia_io::{
             DirectoryMarker, FileMarker, DIRENT_TYPE_FILE, MODE_TYPE_DIRECTORY, MODE_TYPE_FILE,
             OPEN_FLAG_DESCRIBE, OPEN_RIGHT_EXECUTABLE, OPEN_RIGHT_READABLE,
@@ -368,6 +367,7 @@ mod tests {
         fuchsia_pkg_testing::{blobfs::Fake as FakeBlobfs, PackageBuilder},
         futures::stream::StreamExt as _,
         proptest::{prelude::ProptestConfig, prop_assert, proptest},
+        std::convert::TryInto as _,
         vfs::directory::{entry::DirectoryEntry, entry_container::Directory},
     };
 
@@ -545,12 +545,14 @@ mod tests {
     async fn directory_register_watcher_not_supported() {
         let (_env, root_dir) = TestEnv::new().await;
 
+        let (_client, server) = fidl::endpoints::create_endpoints().unwrap();
+
         assert_eq!(
             Directory::register_watcher(
                 Arc::new(root_dir),
                 ExecutionScope::new(),
-                0,
-                AsyncChannel::from_channel(Channel::create().unwrap().0).unwrap()
+                WatchMask::empty(),
+                server.try_into().unwrap(),
             ),
             Err(zx::Status::NOT_SUPPORTED)
         );

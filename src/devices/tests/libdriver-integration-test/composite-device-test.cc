@@ -6,11 +6,9 @@
 #include <fuchsia/device/test/cpp/fidl.h>
 #include <lib/ddk/platform-defs.h>
 #include <zircon/status.h>
-#include <zircon/syscalls.h>
 
 #include <memory>
 
-#include <fbl/unique_fd.h>
 #include <gtest/gtest.h>
 
 #include "integration-test.h"
@@ -19,13 +17,13 @@ namespace libdriver_integration_test {
 
 class CompositeDeviceTest : public IntegrationTest {
  public:
-  static void SetUpTestCase() { DoSetup(); }
+  static void SetUpTestSuite() { DoSetup(); }
 
  protected:
   // Create the fragments for the well-known composite that the mock sysdev creates.
-  Promise<void> CreateFragmentDevices(std::unique_ptr<RootMockDevice>* root_device,
-                                      std::unique_ptr<MockDevice>* child1_device,
-                                      std::unique_ptr<MockDevice>* child2_device) {
+  static Promise<void> CreateFragmentDevices(std::unique_ptr<RootMockDevice>* root_device,
+                                             std::unique_ptr<MockDevice>* child1_device,
+                                             std::unique_ptr<MockDevice>* child2_device) {
     fpromise::bridge<void, Error> child1_bridge;
     fpromise::bridge<void, Error> child2_bridge;
     return ExpectBind(root_device,
@@ -82,7 +80,7 @@ TEST_F(CompositeDeviceTest, CreateTest) {
   RunPromise(std::move(promise));
 }
 
-// TODO(fxbug.dev/8452): Re-enable once flake is fixed.
+// TODO(https://fxbug.dev/8452): Re-enable once flake is fixed.
 //
 // This test creates the well-known composite, and force binds a test driver
 // stack to the composite.  It then forces one of the fragments to unbind.

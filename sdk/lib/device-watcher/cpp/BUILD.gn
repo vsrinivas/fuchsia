@@ -7,7 +7,7 @@ import("//build/cpp/sdk_shared_library.gni")
 import("//build/test.gni")
 
 sdk_shared_library("cpp") {
-  # TODO(fxbug.dev/89042): C++ does not have a stable API and this library
+  # TODO(https://fxbug.dev/89042): C++ does not have a stable API and this library
   # should be an sdk_source_set once LLCPP is in the SDK.
   category = "experimental"
   sdk_name = "device-watcher"

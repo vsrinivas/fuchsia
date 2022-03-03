@@ -113,9 +113,8 @@ void BlockWatcher::Thread() {
       buf_span = cpp20::span(buf_span.data(), buf_span.size() + 1);
       buf_span.back() = 0;
       selected->ProcessWatchMessages(
-          buf_span, [this](Watcher& watcher, int dirfd, int event, const char* name) {
-            return Callback(watcher, dirfd, event, name);
-          });
+          buf_span, [this](Watcher& watcher, int dirfd, fio::wire::WatchEvent event,
+                           const char* name) { return Callback(watcher, dirfd, event, name); });
 
       // reset the buffer for the next read.
       buf_span = cpp20::span(buf, std::size(buf) - 1);
@@ -222,9 +221,10 @@ zx_status_t BlockWatcher::Resume() {
   return ZX_OK;
 }
 
-bool BlockWatcher::Callback(Watcher& watcher, int dirfd, int event, const char* name) {
-  if (event != fio::wire::kWatchEventAdded && event != fio::wire::kWatchEventExisting &&
-      event != fio::wire::kWatchEventIdle) {
+bool BlockWatcher::Callback(Watcher& watcher, int dirfd, fio::wire::WatchEvent event,
+                            const char* name) {
+  if (event != fio::wire::WatchEvent::kAdded && event != fio::wire::WatchEvent::kExisting &&
+      event != fio::wire::WatchEvent::kIdle) {
     return false;
   }
 
@@ -232,7 +232,7 @@ bool BlockWatcher::Callback(Watcher& watcher, int dirfd, int event, const char* 
   // Note that WATCH_EVENT_EXISTING is only received on the first run of the watcher,
   // so we don't need to worry about ignoring it on subsequent runs.
   std::lock_guard guard(lock_);
-  if (event == fio::wire::kWatchEventIdle && pause_count_ > 0) {
+  if (event == fio::wire::WatchEvent::kIdle && pause_count_ > 0) {
     return true;
   }
   // If we lost the race and the watcher was paused sometime between

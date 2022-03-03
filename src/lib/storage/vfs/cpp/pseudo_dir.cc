@@ -45,10 +45,12 @@ zx_status_t PseudoDir::Lookup(std::string_view name, fbl::RefPtr<fs::Vnode>* out
   return ZX_ERR_NOT_FOUND;
 }
 
-void PseudoDir::Notify(std::string_view name, unsigned event) { watcher_.Notify(name, event); }
+void PseudoDir::Notify(std::string_view name, fio::wire::WatchEvent event) {
+  watcher_.Notify(name, event);
+}
 
-zx_status_t PseudoDir::WatchDir(fs::Vfs* vfs, uint32_t mask, uint32_t options,
-                                zx::channel watcher) {
+zx_status_t PseudoDir::WatchDir(fs::Vfs* vfs, fio::wire::WatchMask mask, uint32_t options,
+                                fidl::ServerEnd<fuchsia_io::DirectoryWatcher> watcher) {
   return watcher_.WatchDir(vfs, this, mask, options, std::move(watcher));
 }
 
@@ -107,7 +109,7 @@ zx_status_t PseudoDir::AddEntry(fbl::String name, fbl::RefPtr<fs::Vnode> vn) {
     return ZX_ERR_ALREADY_EXISTS;
   }
 
-  Notify(name, fio::wire::kWatchEventAdded);
+  Notify(name, fio::wire::WatchEvent::kAdded);
   auto entry = std::make_unique<Entry>(next_node_id_++, std::move(name), std::move(vn));
   entries_by_name_.insert(entry.get());
   entries_by_id_.insert(std::move(entry));
@@ -121,7 +123,7 @@ zx_status_t PseudoDir::RemoveEntry(std::string_view name) {
   if (it != entries_by_name_.end()) {
     entries_by_name_.erase(it);
     entries_by_id_.erase(it->id());
-    Notify(name, fio::wire::kWatchEventRemoved);
+    Notify(name, fio::wire::WatchEvent::kRemoved);
     return ZX_OK;
   }
 
@@ -135,7 +137,7 @@ zx_status_t PseudoDir::RemoveEntry(std::string_view name, fs::Vnode* vn) {
   if (it != entries_by_name_.end() && it->node().get() == vn) {
     entries_by_name_.erase(it);
     entries_by_id_.erase(it->id());
-    Notify(name, fio::wire::kWatchEventRemoved);
+    Notify(name, fio::wire::WatchEvent::kRemoved);
     return ZX_OK;
   }
 
@@ -146,7 +148,7 @@ void PseudoDir::RemoveAllEntries() {
   std::lock_guard lock(mutex_);
 
   for (auto& entry : entries_by_name_) {
-    Notify(entry.name(), fio::wire::kWatchEventRemoved);
+    Notify(entry.name(), fio::wire::WatchEvent::kRemoved);
   }
   entries_by_name_.clear();
   entries_by_id_.clear();

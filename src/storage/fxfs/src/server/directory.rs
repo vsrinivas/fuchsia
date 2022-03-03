@@ -26,12 +26,10 @@ use {
     fdio::fdio_sys::{V_IRGRP, V_IROTH, V_IRWXU, V_IXGRP, V_IXOTH, V_TYPE_DIR},
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::{
-        self as fio, FilesystemInfo, NodeAttributes, NodeMarker, MODE_TYPE_BLOCK_DEVICE,
+        self as fio, FilesystemInfo, NodeAttributes, NodeMarker, WatchMask, MODE_TYPE_BLOCK_DEVICE,
         MODE_TYPE_DIRECTORY, MODE_TYPE_FILE, MODE_TYPE_MASK, MODE_TYPE_SERVICE, MODE_TYPE_SOCKET,
         OPEN_FLAG_CREATE, OPEN_FLAG_CREATE_IF_ABSENT, OPEN_FLAG_DIRECTORY, OPEN_FLAG_NOT_DIRECTORY,
-        WATCH_MASK_EXISTING,
     },
-    fuchsia_async as fasync,
     fuchsia_zircon::Status,
     std::{
         any::Any,
@@ -42,7 +40,7 @@ use {
         directory::{
             dirents_sink::{self, AppendResult, Sink},
             entry::{DirectoryEntry, EntryInfo},
-            entry_container::{Directory, MutableDirectory},
+            entry_container::{Directory, DirectoryWatcher, MutableDirectory},
             mutable::connection::io1::MutableConnection,
             traversal_position::TraversalPosition,
             watchers::{event_producers::SingleNameEventProducer, Watchers},
@@ -551,12 +549,12 @@ impl Directory for FxDirectory {
     fn register_watcher(
         self: Arc<Self>,
         scope: ExecutionScope,
-        mask: u32,
-        channel: fasync::Channel,
+        mask: WatchMask,
+        watcher: DirectoryWatcher,
     ) -> Result<(), Status> {
         let controller =
-            self.watchers.lock().unwrap().add(scope.clone(), self.clone(), mask, channel);
-        if mask & WATCH_MASK_EXISTING != 0 && !self.is_deleted() {
+            self.watchers.lock().unwrap().add(scope.clone(), self.clone(), mask, watcher);
+        if mask.contains(WatchMask::EXISTING) && !self.is_deleted() {
             scope.spawn(async move {
                 let layer_set = self.store().tree().layer_set();
                 let mut merger = layer_set.merger();

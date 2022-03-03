@@ -538,7 +538,8 @@ class _DirConnection extends Directory {
   }
 
   @override
-  Future<int> watch(int mask, int options, Channel watcher) async {
+  Future<int> watch(WatchMask mask, int options,
+      fidl.InterfaceRequest<DirectoryWatcher> watcher) async {
     return ZX.ERR_NOT_SUPPORTED;
   }
 

@@ -370,7 +370,7 @@ mod tests {
             directory::{
                 dirents_sink,
                 entry::{DirectoryEntry, EntryInfo},
-                entry_container::*,
+                entry_container::{Directory, DirectoryWatcher},
                 traversal_position::TraversalPosition,
             },
             filesystem::{Filesystem, FilesystemRename},
@@ -379,7 +379,7 @@ mod tests {
         },
         async_trait::async_trait,
         fidl_fuchsia_io::{
-            DirectoryMarker, DirectoryProxy, NodeAttributes, DIRENT_TYPE_DIRECTORY,
+            DirectoryMarker, DirectoryProxy, NodeAttributes, WatchMask, DIRENT_TYPE_DIRECTORY,
             NODE_ATTRIBUTE_FLAG_CREATION_TIME, NODE_ATTRIBUTE_FLAG_MODIFICATION_TIME,
             OPEN_RIGHT_READABLE,
         },
@@ -448,8 +448,8 @@ mod tests {
         fn register_watcher(
             self: Arc<Self>,
             _scope: ExecutionScope,
-            _mask: u32,
-            _channel: fasync::Channel,
+            _mask: WatchMask,
+            _watcher: DirectoryWatcher,
         ) -> Result<(), Status> {
             panic!("Not implemented");
         }

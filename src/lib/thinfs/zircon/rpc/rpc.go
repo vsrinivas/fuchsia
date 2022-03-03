@@ -442,7 +442,7 @@ func (d *directoryWrapper) Link(_ fidl.Context, src string, token zx.Handle, dst
 	return int32(zx.ErrNotSupported), nil
 }
 
-func (d *directoryWrapper) Watch(_ fidl.Context, mask uint32, options uint32, watcher zx.Channel) (int32, error) {
+func (d *directoryWrapper) Watch(_ fidl.Context, mask io.WatchMask, options uint32, watcher io.DirectoryWatcherWithCtxInterfaceRequest) (int32, error) {
 	watcher.Close()
 	return int32(zx.ErrNotSupported), nil
 }

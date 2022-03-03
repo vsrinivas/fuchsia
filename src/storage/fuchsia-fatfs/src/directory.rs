@@ -14,11 +14,10 @@ use {
     fatfs::validate_filename,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::{
-        self as fio, FilesystemInfo, NodeAttributes, NodeMarker, DIRENT_TYPE_DIRECTORY,
+        self as fio, FilesystemInfo, NodeAttributes, NodeMarker, WatchMask, DIRENT_TYPE_DIRECTORY,
         DIRENT_TYPE_FILE, INO_UNKNOWN, MODE_TYPE_DIRECTORY, MODE_TYPE_MASK, OPEN_FLAG_CREATE,
-        OPEN_FLAG_CREATE_IF_ABSENT, OPEN_FLAG_DIRECTORY, WATCH_MASK_EXISTING,
+        OPEN_FLAG_CREATE_IF_ABSENT, OPEN_FLAG_DIRECTORY,
     },
-    fuchsia_async as fasync,
     fuchsia_zircon::Status,
     libc::{S_IRUSR, S_IWUSR},
     std::{
@@ -37,7 +36,7 @@ use {
             connection::io1::DerivedConnection,
             dirents_sink::{self, AppendResult, Sink},
             entry::{DirectoryEntry, EntryInfo},
-            entry_container::{Directory, MutableDirectory},
+            entry_container::{Directory, DirectoryWatcher, MutableDirectory},
             traversal_position::TraversalPosition,
             watchers::{
                 event_producers::{SingleNameEventProducer, StaticVecEventProducer},
@@ -658,15 +657,15 @@ impl Directory for FatDirectory {
     fn register_watcher(
         self: Arc<Self>,
         scope: ExecutionScope,
-        mask: u32,
-        channel: fasync::Channel,
+        mask: WatchMask,
+        watcher: DirectoryWatcher,
     ) -> Result<(), Status> {
         let fs_lock = self.filesystem.lock().unwrap();
         let mut data = self.data.write().unwrap();
         let is_deleted = data.deleted;
         let is_root = data.parent.is_none();
-        let controller = data.watchers.add(scope, self.clone(), mask, channel);
-        if mask & WATCH_MASK_EXISTING != 0 && !is_deleted {
+        let controller = data.watchers.add(scope, self.clone(), mask, watcher);
+        if mask.contains(WatchMask::EXISTING) && !is_deleted {
             let entries = {
                 let dir = self.borrow_dir(&fs_lock)?;
                 let synthesized_dot = if is_root {

@@ -78,7 +78,7 @@ protocol/member fuchsia.io/Directory.Sync() -> (fuchsia.io/Node2_Sync_Result res
 protocol/member fuchsia.io/Directory.SyncDeprecated() -> (int32 s)
 protocol/member fuchsia.io/Directory.Unlink(string:255 name,fuchsia.io/UnlinkOptions options) -> (fuchsia.io/Directory2_Unlink_Result result)
 protocol/member fuchsia.io/Directory.UpdateAttributes(fuchsia.io/NodeAttributes2 attributes) -> (fuchsia.io/Node2_UpdateAttributes_Result result)
-protocol/member fuchsia.io/Directory.Watch(uint32 mask,uint32 options,zx/handle:CHANNEL watcher) -> (int32 s)
+protocol/member fuchsia.io/Directory.Watch(fuchsia.io/WatchMask mask,uint32 options,server_end:fuchsia.io/DirectoryWatcher watcher) -> (int32 s)
 protocol fuchsia.io/Directory
 protocol/member fuchsia.io/Directory1.Clone(uint32 flags,server_end:fuchsia.io/Node object)
 protocol/member fuchsia.io/Directory1.Close() -> (fuchsia.io/Node2_Close_Result result)
@@ -102,7 +102,7 @@ protocol/member fuchsia.io/Directory1.SetFlags(uint32 flags) -> (int32 s)
 protocol/member fuchsia.io/Directory1.Sync() -> (fuchsia.io/Node2_Sync_Result result)
 protocol/member fuchsia.io/Directory1.SyncDeprecated() -> (int32 s)
 protocol/member fuchsia.io/Directory1.UpdateAttributes(fuchsia.io/NodeAttributes2 attributes) -> (fuchsia.io/Node2_UpdateAttributes_Result result)
-protocol/member fuchsia.io/Directory1.Watch(uint32 mask,uint32 options,zx/handle:CHANNEL watcher) -> (int32 s)
+protocol/member fuchsia.io/Directory1.Watch(fuchsia.io/WatchMask mask,uint32 options,server_end:fuchsia.io/DirectoryWatcher watcher) -> (int32 s)
 protocol fuchsia.io/Directory1
 protocol/member fuchsia.io/Directory2.AddInotifyFilter(string:4095 path,fuchsia.io/InotifyWatchMask filter,uint32 watch_descriptor,zx/handle:SOCKET socket) -> ()
 protocol/member fuchsia.io/Directory2.AdvisoryLock(fuchsia.io/AdvisoryLockRequest request) -> (fuchsia.io/AdvisoryLocking_AdvisoryLock_Result result)
@@ -141,7 +141,6 @@ union/member fuchsia.io/DirectoryIterator_GetNext_Result.err int32
 union/member fuchsia.io/DirectoryIterator_GetNext_Result.response fuchsia.io/DirectoryIterator_GetNext_Response
 strict union fuchsia.io/DirectoryIterator_GetNext_Result
 struct fuchsia.io/DirectoryObject
-protocol/member fuchsia.io/DirectoryWatcher.OnEvent(vector<uint8>:8192 events)
 protocol fuchsia.io/DirectoryWatcher
 protocol/member fuchsia.io/File.AdvisoryLock(fuchsia.io/AdvisoryLockRequest request) -> (fuchsia.io/AdvisoryLocking_AdvisoryLock_Result result)
 protocol/member fuchsia.io/File.Clone(uint32 flags,server_end:fuchsia.io/Node object)
@@ -530,21 +529,18 @@ struct/member fuchsia.io/Vmofile.length uint64
 struct/member fuchsia.io/Vmofile.offset uint64
 struct/member fuchsia.io/Vmofile.vmo zx/handle:VMO
 resource struct fuchsia.io/Vmofile
-const fuchsia.io/WATCH_EVENT_ADDED uint8 1
-const fuchsia.io/WATCH_EVENT_DELETED uint8 0
-const fuchsia.io/WATCH_EVENT_EXISTING uint8 3
-const fuchsia.io/WATCH_EVENT_IDLE uint8 4
-const fuchsia.io/WATCH_EVENT_REMOVED uint8 2
-const fuchsia.io/WATCH_MASK_ADDED uint32 2
-const fuchsia.io/WATCH_MASK_ALL uint32 31
-const fuchsia.io/WATCH_MASK_DELETED uint32 1
-const fuchsia.io/WATCH_MASK_EXISTING uint32 8
-const fuchsia.io/WATCH_MASK_IDLE uint32 16
-const fuchsia.io/WATCH_MASK_REMOVED uint32 4
 const fuchsia.io/W_STAR_DIR fuchsia.io/Operations 485
-struct/member fuchsia.io/WatchedEvent.event uint8
-struct/member fuchsia.io/WatchedEvent.len uint8
-struct/member fuchsia.io/WatchedEvent.name vector<uint8>:255
-struct fuchsia.io/WatchedEvent
+enum/member fuchsia.io/WatchEvent.ADDED 1
+enum/member fuchsia.io/WatchEvent.DELETED 0
+enum/member fuchsia.io/WatchEvent.EXISTING 3
+enum/member fuchsia.io/WatchEvent.IDLE 4
+enum/member fuchsia.io/WatchEvent.REMOVED 2
+strict enum fuchsia.io/WatchEvent uint8
+bits/member fuchsia.io/WatchMask.ADDED 2
+bits/member fuchsia.io/WatchMask.DELETED 1
+bits/member fuchsia.io/WatchMask.EXISTING 8
+bits/member fuchsia.io/WatchMask.IDLE 16
+bits/member fuchsia.io/WatchMask.REMOVED 4
+strict bits fuchsia.io/WatchMask uint32
 const fuchsia.io/X_STAR_DIR fuchsia.io/Operations 201
 library fuchsia.io

@@ -27,9 +27,8 @@ use crate::{
 use {
     async_trait::async_trait,
     fidl_fuchsia_io::{
-        DIRENT_TYPE_DIRECTORY, DIRENT_TYPE_FILE, INO_UNKNOWN, OPEN_FLAG_DESCRIBE,
-        OPEN_RIGHT_READABLE, WATCH_MASK_ADDED, WATCH_MASK_EXISTING, WATCH_MASK_IDLE,
-        WATCH_MASK_REMOVED,
+        WatchMask, DIRENT_TYPE_DIRECTORY, DIRENT_TYPE_FILE, INO_UNKNOWN, OPEN_FLAG_DESCRIBE,
+        OPEN_RIGHT_READABLE,
     },
     fuchsia_async::TestExecutor,
     fuchsia_zircon::Status,
@@ -460,7 +459,7 @@ fn watch_empty() {
 
     let root = lazy_with_watchers(scope.clone(), Entries::new(vec![], not_found), watcher_stream);
     test_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
-        let mask = WATCH_MASK_EXISTING | WATCH_MASK_IDLE | WATCH_MASK_ADDED | WATCH_MASK_REMOVED;
+        let mask = WatchMask::EXISTING | WatchMask::IDLE | WatchMask::ADDED | WatchMask::REMOVED;
         let watcher_client = assert_watch!(root, mask);
 
         assert_watcher_one_message_watched_events!(watcher_client, { IDLE, vec![] });
@@ -488,7 +487,7 @@ fn watch_non_empty() {
     let root = lazy_with_watchers(scope.clone(), Entries::new(entries, not_found), watcher_stream);
 
     test_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
-        let mask = WATCH_MASK_EXISTING | WATCH_MASK_IDLE | WATCH_MASK_ADDED | WATCH_MASK_REMOVED;
+        let mask = WatchMask::EXISTING | WatchMask::IDLE | WatchMask::ADDED | WatchMask::REMOVED;
         let watcher_client = assert_watch!(root, mask);
 
         assert_watcher_one_message_watched_events!(
@@ -523,7 +522,7 @@ fn watch_two_watchers() {
     let root = lazy_with_watchers(scope.clone(), Entries::new(entries, not_found), watcher_stream);
 
     test_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
-        let mask = WATCH_MASK_EXISTING | WATCH_MASK_IDLE | WATCH_MASK_ADDED | WATCH_MASK_REMOVED;
+        let mask = WatchMask::EXISTING | WatchMask::IDLE | WatchMask::ADDED | WatchMask::REMOVED;
         let watcher1_client = assert_watch!(root, mask);
 
         assert_watcher_one_message_watched_events!(
@@ -570,7 +569,7 @@ fn watch_with_mask() {
     let root = lazy_with_watchers(scope.clone(), Entries::new(entries, not_found), watcher_stream);
 
     test_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
-        let mask = WATCH_MASK_IDLE | WATCH_MASK_ADDED | WATCH_MASK_REMOVED;
+        let mask = WatchMask::IDLE | WatchMask::ADDED | WatchMask::REMOVED;
         let watcher_client = assert_watch!(root, mask);
 
         assert_watcher_one_message_watched_events!(watcher_client, { IDLE, vec![] });
@@ -594,7 +593,7 @@ fn watch_addition() {
     let root = lazy_with_watchers(scope.clone(), Entries::new(entries, not_found), watcher_stream);
 
     test_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
-        let mask = WATCH_MASK_ADDED | WATCH_MASK_REMOVED;
+        let mask = WatchMask::ADDED | WatchMask::REMOVED;
         let watcher_client = assert_watch!(root, mask);
 
         watcher_sender
@@ -637,7 +636,7 @@ fn watch_removal() {
     let root = lazy_with_watchers(scope.clone(), Entries::new(entries, not_found), watcher_stream);
 
     test_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
-        let mask = WATCH_MASK_ADDED | WATCH_MASK_REMOVED;
+        let mask = WatchMask::ADDED | WatchMask::REMOVED;
         let watcher_client = assert_watch!(root, mask);
 
         watcher_sender
@@ -679,7 +678,7 @@ fn watch_watcher_stream_closed() {
     let root = lazy_with_watchers(scope.clone(), Entries::new(entries, not_found), watcher_stream);
 
     test_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
-        let mask = WATCH_MASK_EXISTING | WATCH_MASK_IDLE;
+        let mask = WatchMask::EXISTING | WatchMask::IDLE;
         assert_watch_err!(root, mask, Status::NOT_SUPPORTED);
 
         assert_close!(root);
@@ -704,7 +703,7 @@ fn watch_close_watcher_stream() {
     let root = lazy_with_watchers(scope.clone(), Entries::new(entries, not_found), watcher_stream);
 
     test_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
-        let mask = WATCH_MASK_ADDED | WATCH_MASK_REMOVED;
+        let mask = WatchMask::ADDED | WatchMask::REMOVED;
         let watcher_client = assert_watch!(root, mask);
 
         watcher_sender

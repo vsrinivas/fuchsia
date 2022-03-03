@@ -20,9 +20,12 @@ VnodeDir::~VnodeDir() = default;
 
 fs::VnodeProtocolSet VnodeDir::GetProtocols() const { return fs::VnodeProtocol::kDirectory; }
 
-void VnodeDir::Notify(std::string_view name, unsigned event) { watcher_.Notify(name, event); }
+void VnodeDir::Notify(std::string_view name, fuchsia_io::wire::WatchEvent event) {
+  watcher_.Notify(name, event);
+}
 
-zx_status_t VnodeDir::WatchDir(fs::Vfs* vfs, uint32_t mask, uint32_t options, zx::channel watcher) {
+zx_status_t VnodeDir::WatchDir(fs::Vfs* vfs, fuchsia_io::wire::WatchMask mask, uint32_t options,
+                               fidl::ServerEnd<fuchsia_io::DirectoryWatcher> watcher) {
   return watcher_.WatchDir(vfs, this, mask, options, std::move(watcher));
 }
 

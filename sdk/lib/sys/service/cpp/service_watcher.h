@@ -5,6 +5,7 @@
 #ifndef LIB_SYS_SERVICE_CPP_SERVICE_WATCHER_H_
 #define LIB_SYS_SERVICE_CPP_SERVICE_WATCHER_H_
 
+#include <fuchsia/io/cpp/fidl.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/zx/channel.h>
 
@@ -21,11 +22,11 @@ class ServiceWatcher final {
  public:
   // A callback to be invoked when service instances are added or removed.
   //
-  // |event| will be either fuchsia::io::WATCH_MASK_EXISTING, if an instance was
-  // existing at the beginning, fuchsia::io::WATCH_EVENT_ADDED, if an instance
-  // was added, or fuchsia::io::WATCH_EVENT_REMOVED, if an instance was removed.
+  // |event| will be either fuchsia::io::WatchMask::EXISTING, if an instance was
+  // existing at the beginning, fuchsia::io::WatchEvent::ADDED, if an instance
+  // was added, or fuchsia::io::WatchEvent::REMOVED, if an instance was removed.
   // |instance| will be the name of the instance associated with the event.
-  using Callback = fit::function<void(uint8_t event, std::string instance)>;
+  using Callback = fit::function<void(fuchsia::io::WatchEvent event, std::string instance)>;
 
   // Constructs a watcher for service instances.
   //

@@ -8,8 +8,6 @@
 #include <lib/async/cpp/executor.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/fdio/directory.h>
-#include <lib/fdio/fd.h>
-#include <lib/fdio/fdio.h>
 #include <lib/fdio/unsafe.h>
 #include <lib/fpromise/bridge.h>
 #include <zircon/boot/image.h>
@@ -20,7 +18,7 @@ namespace libdriver_integration_test {
 async::Loop IntegrationTest::loop_{&kAsyncLoopConfigNoAttachToCurrentThread};
 IntegrationTest::IsolatedDevmgr IntegrationTest::devmgr_;
 
-void IntegrationTest::SetUpTestCase() { DoSetup(); }
+void IntegrationTest::SetUpTestSuite() { DoSetup(); }
 
 void IntegrationTest::DoSetup() {
   // Set up the isolated devmgr instance for this test suite.  Note that we
@@ -33,9 +31,9 @@ void IntegrationTest::DoSetup() {
   ASSERT_EQ(status, ZX_OK) << "failed to create IsolatedDevmgr";
 }
 
-void IntegrationTest::TearDownTestCase() { IntegrationTest::devmgr_.reset(); }
+void IntegrationTest::TearDownTestSuite() { IntegrationTest::devmgr_.reset(); }
 
-IntegrationTest::IntegrationTest() {}
+IntegrationTest::IntegrationTest() = default;
 
 void IntegrationTest::SetUp() {
   // We do this in SetUp() rather than the ctor, since gtest cannot assert in
@@ -195,11 +193,12 @@ namespace {
 
 class AsyncWatcher {
  public:
-  AsyncWatcher(std::string path, zx::channel watcher, fidl::InterfacePtr<fuchsia::io::Node> node)
+  AsyncWatcher(std::string path, fidl::InterfaceHandle<fuchsia::io::DirectoryWatcher> watcher,
+               fidl::InterfacePtr<fuchsia::io::Node> node)
       : path_(std::move(path)),
         watcher_(std::move(watcher)),
         connections_{std::move(node), {}},
-        wait_(watcher_.get(), ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED, 0,
+        wait_(watcher_.channel().get(), ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED, 0,
               fit::bind_member(this, &AsyncWatcher::WatcherChanged)) {}
 
   void WatcherChanged(async_dispatcher_t* dispatcher, async::Wait* wait, zx_status_t status,
@@ -222,7 +221,7 @@ class AsyncWatcher {
 
  private:
   std::string path_;
-  zx::channel watcher_;
+  fidl::InterfaceHandle<fuchsia::io::DirectoryWatcher> watcher_;
   Connections connections_;
 
   async::Wait wait_;
@@ -241,7 +240,7 @@ void AsyncWatcher::WatcherChanged(async_dispatcher_t* dispatcher, async::Wait* w
   if (signal->observed & ZX_CHANNEL_READABLE) {
     char buf[fuchsia::io::MAX_BUF + 1];
     uint32_t bytes_read;
-    status = watcher_.read(0, buf, nullptr, sizeof(buf) - 1, 0, &bytes_read, nullptr);
+    status = watcher_.channel().read(0, buf, nullptr, sizeof(buf) - 1, 0, &bytes_read, nullptr);
     if (status != ZX_OK) {
       return error("watcher read error");
     }
@@ -274,10 +273,9 @@ void AsyncWatcher::WatcherChanged(async_dispatcher_t* dispatcher, async::Wait* w
 }
 
 void WaitForPath(const fidl::InterfacePtr<fuchsia::io::Directory>& dir,
-                 async_dispatcher_t* dispatcher, std::string path,
+                 async_dispatcher_t* dispatcher, const std::string& path,
                  fpromise::completer<void, IntegrationTest::Error> completer) {
-  zx::channel watcher, remote;
-  ASSERT_EQ(zx::channel::create(0, &watcher, &remote), ZX_OK);
+  fidl::InterfaceHandle<fuchsia::io::DirectoryWatcher> watcher;
 
   fidl::InterfacePtr<fuchsia::io::Node> last_dir;
   std::string filename;
@@ -296,11 +294,12 @@ void WaitForPath(const fidl::InterfacePtr<fuchsia::io::Directory>& dir,
     filename = path;
   }
 
+  fidl::InterfaceRequest<fuchsia::io::DirectoryWatcher> request = watcher.NewRequest();
   auto async_watcher =
       std::make_unique<AsyncWatcher>(std::move(filename), std::move(watcher), std::move(last_dir));
   auto& events = async_watcher->connections().node.events();
   events.OnOpen = [dispatcher, async_watcher = std::move(async_watcher),
-                   completer = std::move(completer), remote = std::move(remote)](
+                   completer = std::move(completer), request = std::move(request)](
                       zx_status_t status, std::unique_ptr<fuchsia::io::NodeInfo> info) mutable {
     if (status != ZX_OK) {
       completer.complete_error("Failed to open directory");
@@ -310,19 +309,19 @@ void WaitForPath(const fidl::InterfacePtr<fuchsia::io::Directory>& dir,
     auto& dir = async_watcher->connections().directory;
     dir.Bind(async_watcher->connections().node.Unbind().TakeChannel(), dispatcher);
 
-    dir->Watch(fuchsia::io::WATCH_MASK_ADDED | fuchsia::io::WATCH_MASK_EXISTING, 0,
-               std::move(remote),
+    dir->Watch(fuchsia::io::WatchMask::ADDED | fuchsia::io::WatchMask::EXISTING, 0,
+               std::move(request),
                [dispatcher, async_watcher = std::move(async_watcher),
                 completer = std::move(completer)](zx_status_t status) mutable {
-                 if (status == ZX_OK) {
-                   status = async_watcher->Begin(dispatcher, std::move(completer));
-                   if (status == ZX_OK) {
-                     // The async_watcher will clean this up
-                     __UNUSED auto ptr = async_watcher.release();
-                     return;
-                   }
+                 if (status != ZX_OK) {
+                   completer.complete_error("watcher failed");
+                   return;
                  }
-                 completer.complete_error("watcher failed");
+                 status = async_watcher->Begin(dispatcher, std::move(completer));
+                 if (status == ZX_OK) {
+                   // The async_watcher will clean this up
+                   __UNUSED auto ptr = async_watcher.release();
+                 }
                });
   };
 }

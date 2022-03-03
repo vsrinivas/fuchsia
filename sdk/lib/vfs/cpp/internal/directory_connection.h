@@ -54,7 +54,9 @@ class DirectoryConnection final : public Connection, public fuchsia::io::Directo
               RenameCallback callback) override;
   void Link(std::string src, zx::handle dst_parent_token, std::string dst,
             LinkCallback callback) override;
-  void Watch(uint32_t mask, uint32_t options, zx::channel watcher, WatchCallback callback) override;
+  void Watch(fuchsia::io::WatchMask mask, uint32_t options,
+             fidl::InterfaceRequest<fuchsia::io::DirectoryWatcher> watcher,
+             WatchCallback callback) override;
   void GetFlags(GetFlagsCallback callback) override;
   void SetFlags(uint32_t flags, SetFlagsCallback callback) override;
   void QueryFilesystem(QueryFilesystemCallback callback) override {

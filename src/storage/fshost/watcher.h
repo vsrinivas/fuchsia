@@ -36,7 +36,8 @@ class Watcher {
 
   static std::vector<Watcher> CreateWatchers();
 
-  using WatcherCallback = fit::function<bool(Watcher&, int, int, const char*)>;
+  using WatcherCallback =
+      fit::function<bool(Watcher&, int, fuchsia_io::wire::WatchEvent, const char*)>;
   using AddDeviceCallback =
       fit::function<zx_status_t(BlockDeviceManager&, FilesystemMounter*, fbl::unique_fd)>;
 

@@ -62,9 +62,9 @@ zx_status_t Watcher::ReinitWatcher() {
     return status;
   }
 
-  auto mask = fio::wire::kWatchMaskAll;
+  auto mask = fio::wire::WatchMask::kMask;
   if (ignore_existing_) {
-    mask &= ~fio::wire::kWatchMaskExisting;
+    mask &= ~fio::wire::WatchMask::kExisting;
   }
   auto result =
       fidl::WireCall<fio::Directory>(caller_.channel())->Watch(mask, 0, std::move(server));
@@ -84,7 +84,7 @@ zx_status_t Watcher::ReinitWatcher() {
 void Watcher::ProcessWatchMessages(cpp20::span<uint8_t> buf, WatcherCallback callback) {
   uint8_t* iter = buf.begin();
   while (iter + 2 <= buf.end()) {
-    uint8_t event = *iter++;
+    fio::wire::WatchEvent event = static_cast<fio::wire::WatchEvent>(*iter++);
     uint8_t name_len = *iter++;
 
     if (iter + name_len > buf.end()) {
@@ -102,7 +102,7 @@ void Watcher::ProcessWatchMessages(cpp20::span<uint8_t> buf, WatcherCallback cal
       ignore_existing_ = true;
       return;
     }
-    if (event == fio::wire::kWatchEventIdle) {
+    if (event == fio::wire::WatchEvent::kIdle) {
       // WATCH_EVENT_IDLE - but the watcher is not paused. Finish processing this set of messages,
       // but set ignore_existing_ to indicate that we should start checking for the pause signal.
       ignore_existing_ = true;

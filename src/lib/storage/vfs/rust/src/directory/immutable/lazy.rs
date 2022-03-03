@@ -15,7 +15,7 @@ use crate::{
         connection::io1::DerivedConnection,
         dirents_sink,
         entry::{DirectoryEntry, EntryInfo},
-        entry_container::Directory,
+        entry_container::{Directory, DirectoryWatcher},
         immutable::connection::io1::ImmutableConnection,
         traversal_position::TraversalPosition,
     },
@@ -27,9 +27,9 @@ use {
     async_trait::async_trait,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::{
-        NodeAttributes, NodeMarker, DIRENT_TYPE_DIRECTORY, INO_UNKNOWN, MODE_TYPE_DIRECTORY,
+        NodeAttributes, NodeMarker, WatchMask, DIRENT_TYPE_DIRECTORY, INO_UNKNOWN,
+        MODE_TYPE_DIRECTORY,
     },
-    fuchsia_async::Channel,
     fuchsia_zircon::Status,
     futures::{
         channel::mpsc::{self, UnboundedSender},
@@ -117,7 +117,7 @@ where
 /// names information.  The connection object will hold on to this stream, using it to populate
 /// `ReadDirents` requests and destroying the stream when `Rewind` is called.
 ///
-/// `watcher_events` is a stream of events that when occure are forwarded to all the connected
+/// `watcher_events` is a stream of events that when occur are forwarded to all the connected
 /// watchers.  They are values of type [`WatcherEvent`].  If this stream reaches it's end existing
 /// watcher connections will be closed and any new watchers will not be able to connect to the node
 /// - they will receive a NOT_SUPPORTED error.
@@ -128,18 +128,18 @@ pub struct Lazy<T: LazyDirectory> {
 }
 
 enum WatcherCommand {
-    RegisterWatcher { scope: ExecutionScope, mask: u32, channel: Channel },
+    RegisterWatcher { scope: ExecutionScope, mask: WatchMask, watcher: DirectoryWatcher },
     UnregisterWatcher { key: usize },
 }
 
 impl Debug for WatcherCommand {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), fmt::Error> {
         match self {
-            WatcherCommand::RegisterWatcher { scope: _, mask, channel } => f
+            WatcherCommand::RegisterWatcher { scope: _, mask, watcher } => f
                 .debug_struct("WatcherCommand::RegisterWatcher")
                 .field("scope", &format_args!("_"))
                 .field("mask", &mask)
-                .field("channel", &channel)
+                .field("watcher", &watcher)
                 .finish(),
             WatcherCommand::UnregisterWatcher { key } => {
                 f.debug_struct("WatcherCommand::UnregisterWatcher").field("key", &key).finish()
@@ -172,7 +172,7 @@ impl<T: LazyDirectory> Lazy<T> {
         let task = watchers_task::run(dir.clone(), command_receiver, watcher_events);
 
         // If we failed to start the watchers task, `command_receiver` will be closed and the
-        // directory will effectivly stop supporting watchers.  This should only happen if the
+        // directory will effectively stop supporting watchers.  This should only happen if the
         // executor is shutting down.  There is nothing useful we can do with this error.
         let _ = scope.spawn(task);
 
@@ -229,13 +229,13 @@ impl<T: LazyDirectory> Directory for Lazy<T> {
     fn register_watcher(
         self: Arc<Self>,
         scope: ExecutionScope,
-        mask: u32,
-        channel: Channel,
+        mask: WatchMask,
+        watcher: DirectoryWatcher,
     ) -> Result<(), Status> {
         // Failure to send a command may indicate that the directory does not support watchers, or
         // that the executor shutdown is in progress.  In any case the error can be ignored.
         self.watchers
-            .unbounded_send(WatcherCommand::RegisterWatcher { scope, mask, channel })
+            .unbounded_send(WatcherCommand::RegisterWatcher { scope, mask, watcher })
             .map_err(|_| Status::NOT_SUPPORTED)
     }
 

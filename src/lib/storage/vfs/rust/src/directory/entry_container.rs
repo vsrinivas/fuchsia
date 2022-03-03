@@ -13,11 +13,43 @@ use crate::{
 
 use {
     async_trait::async_trait,
-    fidl_fuchsia_io::{FilesystemInfo, NodeAttributes},
-    fuchsia_async::Channel,
+    fidl_fuchsia_io::{FilesystemInfo, NodeAttributes, WatchMask},
     fuchsia_zircon::Status,
     std::{any::Any, sync::Arc},
 };
+
+mod private {
+    use std::convert::TryFrom;
+
+    /// A type-preserving wrapper around [`fuchsia_async::Channel`].
+    #[derive(Debug)]
+    pub struct DirectoryWatcher {
+        channel: fuchsia_async::Channel,
+    }
+
+    impl DirectoryWatcher {
+        /// Provides access to the underlying channel.
+        pub fn channel(&self) -> &fuchsia_async::Channel {
+            let Self { channel } = self;
+            channel
+        }
+    }
+
+    impl TryFrom<fidl::endpoints::ServerEnd<fidl_fuchsia_io::DirectoryWatcherMarker>>
+        for DirectoryWatcher
+    {
+        type Error = fuchsia_zircon::Status;
+
+        fn try_from(
+            server_end: fidl::endpoints::ServerEnd<fidl_fuchsia_io::DirectoryWatcherMarker>,
+        ) -> Result<Self, Self::Error> {
+            let channel = fuchsia_async::Channel::from_channel(server_end.into_channel())?;
+            Ok(Self { channel })
+        }
+    }
+}
+
+pub use private::DirectoryWatcher;
 
 /// All directories implement this trait.  If a directory can be modified it should
 /// also implement the `MutableDirectory` trait.
@@ -37,8 +69,8 @@ pub trait Directory: DirectoryEntry {
     fn register_watcher(
         self: Arc<Self>,
         scope: ExecutionScope,
-        mask: u32,
-        channel: Channel,
+        mask: WatchMask,
+        watcher: DirectoryWatcher,
     ) -> Result<(), Status>;
 
     /// Unregister a watcher from this directory. The watcher should no longer

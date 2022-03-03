@@ -61,8 +61,9 @@ struct Devnode : public fbl::DoublyLinkedListable<Devnode*> {
 // callbacks from the dispatcher should be run on the thread that calls `devfs_init`.
 void devfs_init(const fbl::RefPtr<Device>& device, async_dispatcher_t* dispatcher);
 
-// Watches the devfs directory `dn`, and sends events to `watcher`.
-zx_status_t devfs_watch(Devnode* dn, zx::channel h, uint32_t mask);
+// Watches the devfs directory `dn`, and sends events to `server_end`.
+zx_status_t devfs_watch(Devnode* dn, fidl::ServerEnd<fuchsia_io::DirectoryWatcher> server_end,
+                        fuchsia_io::wire::WatchMask mask);
 
 // Borrows the channel connected to the root of devfs.
 zx::unowned_channel devfs_root_borrow();

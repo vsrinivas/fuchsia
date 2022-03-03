@@ -5,8 +5,11 @@
 use crate::{
     common::{inherit_rights_for_clone, send_on_open_with_error, IntoAny, GET_FLAGS_VISIBLE},
     directory::{
-        common::check_child_connection_flags, connection::util::OpenDirectory,
-        entry::DirectoryEntry, entry_container::Directory, read_dirents,
+        common::check_child_connection_flags,
+        connection::util::OpenDirectory,
+        entry::DirectoryEntry,
+        entry_container::{Directory, DirectoryWatcher},
+        read_dirents,
         traversal_position::TraversalPosition,
     },
     execution_scope::ExecutionScope,
@@ -18,16 +21,16 @@ use {
     fidl::{endpoints::ServerEnd, Handle},
     fidl_fuchsia_io::{
         DirectoryObject, DirectoryRequest, DirectoryRequestStream, NodeAttributes, NodeInfo,
-        NodeMarker, INO_UNKNOWN, OPEN_FLAG_CREATE, OPEN_FLAG_CREATE_IF_ABSENT, OPEN_FLAG_DIRECTORY,
-        OPEN_FLAG_NODE_REFERENCE, OPEN_FLAG_NOT_DIRECTORY, OPEN_RIGHT_WRITABLE,
+        NodeMarker, WatchMask, INO_UNKNOWN, OPEN_FLAG_CREATE, OPEN_FLAG_CREATE_IF_ABSENT,
+        OPEN_FLAG_DIRECTORY, OPEN_FLAG_NODE_REFERENCE, OPEN_FLAG_NOT_DIRECTORY,
+        OPEN_RIGHT_WRITABLE,
     },
-    fuchsia_async::Channel,
     fuchsia_zircon::{
         sys::{ZX_ERR_INVALID_ARGS, ZX_ERR_NOT_SUPPORTED, ZX_OK},
         Status,
     },
     futures::{channel::oneshot, future::BoxFuture, select, StreamExt},
-    std::{default::Default, sync::Arc},
+    std::{convert::TryInto as _, default::Default, sync::Arc},
 };
 
 /// Return type for `BaseConnection::handle_request` and [`DerivedConnection::handle_request`].
@@ -306,8 +309,9 @@ where
                 if options != 0 {
                     responder.send(ZX_ERR_INVALID_ARGS)?;
                 } else {
-                    let channel = Channel::from_channel(watcher)?;
-                    self.handle_watch(mask, channel, |status| responder.send(status.into_raw()))?;
+                    self.handle_watch(mask, watcher.try_into()?, |status| {
+                        responder.send(status.into_raw())
+                    })?;
                 }
             }
             DirectoryRequest::QueryFilesystem { responder } => {
@@ -473,8 +477,8 @@ where
 
     fn handle_watch<R>(
         &mut self,
-        mask: u32,
-        channel: Channel,
+        mask: WatchMask,
+        watcher: DirectoryWatcher,
         responder: R,
     ) -> Result<(), fidl::Error>
     where
@@ -483,7 +487,7 @@ where
         let directory = self.directory.clone();
         responder(
             directory
-                .register_watcher(self.scope.clone(), mask, channel)
+                .register_watcher(self.scope.clone(), mask, watcher)
                 .err()
                 .unwrap_or(Status::OK),
         )

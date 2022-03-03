@@ -9,27 +9,18 @@
 #include <lib/async/cpp/wait.h>
 #include <lib/ddk/driver.h>
 #include <lib/fdio/directory.h>
-#include <lib/fidl/coding.h>
 #include <lib/fidl/cpp/message_part.h>
-#include <lib/fidl/llcpp/traits.h>
-#include <lib/fidl/txn_header.h>
 #include <lib/memfs/cpp/vnode.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 #include <zircon/device/vfs.h>
-#include <zircon/fidl.h>
-#include <zircon/status.h>
-#include <zircon/syscalls.h>
 #include <zircon/types.h>
 
-#include <algorithm>
 #include <memory>
 
 #include <fbl/string_buffer.h>
 
 #include "coordinator.h"
-#include "src/devices/lib/log/log.h"
 
 namespace {
 
@@ -57,7 +48,9 @@ zx::channel g_devfs_root;
 
 struct Watcher : fbl::DoublyLinkedListable<std::unique_ptr<Watcher>,
                                            fbl::NodeOptions::AllowRemoveFromContainer> {
-  Watcher(Devnode* dn, zx::channel ch, uint32_t mask);
+  Watcher(Devnode* dn, fidl::ServerEnd<fuchsia_io::DirectoryWatcher> server_end,
+          fio::wire::WatchMask mask)
+      : devnode(dn), server_end(std::move(server_end)), mask(mask) {}
 
   Watcher(const Watcher&) = delete;
   Watcher& operator=(const Watcher&) = delete;
@@ -69,13 +62,10 @@ struct Watcher : fbl::DoublyLinkedListable<std::unique_ptr<Watcher>,
                           const zx_packet_signal_t* signal);
 
   Devnode* devnode = nullptr;
-  zx::channel handle;
-  uint32_t mask = 0;
+  fidl::ServerEnd<fuchsia_io::DirectoryWatcher> server_end;
+  fio::wire::WatchMask mask;
   async::WaitMethod<Watcher, &Watcher::HandleChannelClose> channel_close_wait{this};
 };
-
-Watcher::Watcher(Devnode* dn, zx::channel ch, uint32_t mask)
-    : devnode(dn), handle(std::move(ch)), mask(mask) {}
 
 void Watcher::HandleChannelClose(async_dispatcher_t* dispatcher, async::WaitBase* wait,
                                  zx_status_t status, const zx_packet_signal_t* signal) {
@@ -90,7 +80,7 @@ class DcIostate : public fbl::DoublyLinkedListable<DcIostate*>,
                   public fidl::WireServer<fuchsia_io::Directory> {
  public:
   explicit DcIostate(Devnode* dn, async_dispatcher_t* dispatcher);
-  ~DcIostate();
+  ~DcIostate() override;
 
   static void Bind(std::unique_ptr<DcIostate> ios, fidl::ServerEnd<fio::Node> request);
   // Remove this DcIostate from its devnode
@@ -204,7 +194,8 @@ bool devnode_is_local(Devnode* dn) {
 // Notify a single watcher about the given operation and path.  On failure,
 // frees the watcher.  This can only be called on a watcher that has not yet
 // been added to a Devnode's watchers list.
-void devfs_notify_single(std::unique_ptr<Watcher>* watcher, const fbl::String& name, unsigned op) {
+void devfs_notify_single(std::unique_ptr<Watcher>* watcher, const fbl::String& name,
+                         fio::wire::WatchEvent op) {
   size_t len = name.length();
   if (!*watcher || len > fio::wire::kMaxFilename) {
     return;
@@ -219,18 +210,18 @@ void devfs_notify_single(std::unique_ptr<Watcher>* watcher, const fbl::String& n
   memcpy(msg + 2, name.c_str(), len);
 
   // convert to mask
-  op = (1u << op);
+  fio::wire::WatchMask mask = static_cast<fio::wire::WatchMask>(1u << static_cast<uint8_t>(op));
 
-  if (!((*watcher)->mask & op)) {
+  if (!((*watcher)->mask & mask)) {
     return;
   }
 
-  if ((*watcher)->handle.write(0, msg, msg_len, nullptr, 0) != ZX_OK) {
+  if ((*watcher)->server_end.channel().write(0, msg, msg_len, nullptr, 0) != ZX_OK) {
     watcher->reset();
   }
 }
 
-void devfs_notify(Devnode* dn, std::string_view name, unsigned op) {
+void devfs_notify(Devnode* dn, std::string_view name, fio::wire::WatchEvent op) {
   if (dn->watchers.is_empty()) {
     return;
   }
@@ -247,7 +238,7 @@ void devfs_notify(Devnode* dn, std::string_view name, unsigned op) {
   memcpy(msg + 2, name.data(), len);
 
   // convert to mask
-  op = (1u << op);
+  fio::wire::WatchMask mask = static_cast<fio::wire::WatchMask>(1u << static_cast<uint8_t>(op));
 
   for (auto itr = dn->watchers.begin(); itr != dn->watchers.end();) {
     auto& cur = *itr;
@@ -255,11 +246,11 @@ void devfs_notify(Devnode* dn, std::string_view name, unsigned op) {
     // may erase the current element from the list.
     ++itr;
 
-    if (!(cur.mask & op)) {
+    if (!(cur.mask & mask)) {
       continue;
     }
 
-    if (cur.handle.write(0, msg, msg_len, nullptr, 0) != ZX_OK) {
+    if (cur.server_end.channel().write(0, msg, msg_len, nullptr, 0) != ZX_OK) {
       dn->watchers.erase(cur);
       // The Watcher is free'd here
     }
@@ -285,23 +276,24 @@ Devnode* devfs_proto_node(uint32_t protocol_id) {
   return nullptr;
 }
 
-zx_status_t devfs_watch(Devnode* dn, zx::channel h, uint32_t mask) {
-  auto watcher = std::make_unique<Watcher>(dn, std::move(h), mask);
+zx_status_t devfs_watch(Devnode* dn, fidl::ServerEnd<fio::DirectoryWatcher> server_end,
+                        fio::wire::WatchMask mask) {
+  auto watcher = std::make_unique<Watcher>(dn, std::move(server_end), mask);
   if (watcher == nullptr) {
     return ZX_ERR_NO_MEMORY;
   }
 
   // If the watcher has asked for all existing entries, send it all of them
   // followed by the end-of-existing marker (IDLE).
-  if (mask & fio::wire::kWatchMaskExisting) {
+  if (mask & fio::wire::WatchMask::kExisting) {
     for (const auto& child : dn->children) {
       if (child.device && (child.device->flags & DEV_CTX_INVISIBLE)) {
         continue;
       }
       // TODO: send multiple per write
-      devfs_notify_single(&watcher, child.name, fio::wire::kWatchEventExisting);
+      devfs_notify_single(&watcher, child.name, fio::wire::WatchEvent::kExisting);
     }
-    devfs_notify_single(&watcher, "", fio::wire::kWatchEventIdle);
+    devfs_notify_single(&watcher, "", fio::wire::WatchEvent::kIdle);
   }
 
   // Watcher may have been freed by devfs_notify_single, so check before
@@ -310,7 +302,7 @@ zx_status_t devfs_watch(Devnode* dn, zx::channel h, uint32_t mask) {
     dn->watchers.push_front(std::move(watcher));
 
     Watcher& watcher_ref = dn->watchers.front();
-    watcher_ref.channel_close_wait.set_object(watcher_ref.handle.get());
+    watcher_ref.channel_close_wait.set_object(watcher_ref.server_end.channel().get());
     watcher_ref.channel_close_wait.set_trigger(ZX_CHANNEL_PEER_CLOSED);
     watcher_ref.channel_close_wait.Begin(g_dispatcher);
   }
@@ -503,7 +495,7 @@ void devfs_remove(Devnode* dn) {
 
   // notify own file watcher
   if ((dn->device == nullptr) || !(dn->device->flags & DEV_CTX_INVISIBLE)) {
-    devfs_notify(dn, "", fio::wire::kWatchEventDeleted);
+    devfs_notify(dn, "", fio::wire::WatchEvent::kDeleted);
   }
 
   // disconnect from device and notify parent/link directory watchers
@@ -513,7 +505,7 @@ void devfs_remove(Devnode* dn) {
 
       if ((dn->device->parent() != nullptr) && (dn->device->parent()->self != nullptr) &&
           !(dn->device->flags & DEV_CTX_INVISIBLE)) {
-        devfs_notify(dn->device->parent()->self, dn->name, fio::wire::kWatchEventRemoved);
+        devfs_notify(dn->device->parent()->self, dn->name, fio::wire::WatchEvent::kRemoved);
       }
     }
     if (dn->device->link == dn) {
@@ -521,7 +513,7 @@ void devfs_remove(Devnode* dn) {
 
       if (!(dn->device->flags & DEV_CTX_INVISIBLE)) {
         Devnode* dir = devfs_proto_node(dn->device->protocol_id());
-        devfs_notify(dir, dn->name, fio::wire::kWatchEventRemoved);
+        devfs_notify(dir, dn->name, fio::wire::WatchEvent::kRemoved);
       }
     }
     dn->device = nullptr;
@@ -569,10 +561,10 @@ void DcIostate::DetachFromDevnode() {
 void devfs_advertise(const fbl::RefPtr<Device>& dev) {
   if (dev->link) {
     Devnode* dir = devfs_proto_node(dev->protocol_id());
-    devfs_notify(dir, dev->link->name, fio::wire::kWatchEventAdded);
+    devfs_notify(dir, dev->link->name, fio::wire::WatchEvent::kAdded);
   }
   if (dev->self->parent) {
-    devfs_notify(dev->self->parent, dev->self->name, fio::wire::kWatchEventAdded);
+    devfs_notify(dev->self->parent, dev->self->name, fio::wire::WatchEvent::kAdded);
   }
 }
 
@@ -580,12 +572,12 @@ void devfs_advertise(const fbl::RefPtr<Device>& dev) {
 void devfs_advertise_modified(const fbl::RefPtr<Device>& dev) {
   if (dev->link) {
     Devnode* dir = devfs_proto_node(dev->protocol_id());
-    devfs_notify(dir, dev->link->name, fio::wire::kWatchEventRemoved);
-    devfs_notify(dir, dev->link->name, fio::wire::kWatchEventAdded);
+    devfs_notify(dir, dev->link->name, fio::wire::WatchEvent::kRemoved);
+    devfs_notify(dir, dev->link->name, fio::wire::WatchEvent::kAdded);
   }
   if (dev->self->parent) {
-    devfs_notify(dev->self->parent, dev->self->name, fio::wire::kWatchEventRemoved);
-    devfs_notify(dev->self->parent, dev->self->name, fio::wire::kWatchEventAdded);
+    devfs_notify(dev->self->parent, dev->self->name, fio::wire::WatchEvent::kRemoved);
+    devfs_notify(dev->self->parent, dev->self->name, fio::wire::WatchEvent::kAdded);
   }
 }
 
@@ -676,7 +668,7 @@ zx_status_t devfs_connect(const Device* dev, fidl::ServerEnd<fio::Node> client_r
 }
 
 void devfs_connect_diagnostics(fidl::UnownedClientEnd<fio::Directory> h) {
-  diagnostics_channel = std::make_optional<fidl::UnownedClientEnd<fio::Directory>>(std::move(h));
+  diagnostics_channel = std::make_optional<fidl::UnownedClientEnd<fio::Directory>>(h);
 }
 
 void DcIostate::Open(OpenRequestView request, OpenCompleter::Sync& completer) {
@@ -706,7 +698,7 @@ void DcIostate::QueryFilesystem(QueryFilesystemRequestView request,
 
 void DcIostate::Watch(WatchRequestView request, WatchCompleter::Sync& completer) {
   zx_status_t status;
-  if (request->mask & (~fio::wire::kWatchMaskAll) || request->options != 0) {
+  if (!request->mask || request->options != 0) {
     status = ZX_ERR_INVALID_ARGS;
   } else {
     status = devfs_watch(devnode_, std::move(request->watcher), request->mask);
@@ -886,7 +878,7 @@ zx_status_t devfs_export(Devnode* dn, fidl::ClientEnd<fuchsia_io::Directory> ser
   dn = prev_dn;
   walk([&out, &dn](std::string_view name) {
     out.push_back(devfs_mkdir(dn, name));
-    devfs_notify(dn, name, fio::wire::kWatchEventAdded);
+    devfs_notify(dn, name, fio::wire::WatchEvent::kAdded);
     dn = out.back().get();
     return true;
   });
@@ -902,7 +894,7 @@ zx_status_t devfs_export(Devnode* dn, fidl::ClientEnd<fuchsia_io::Directory> ser
       return status;
     }
     out.push_back(devfs_mkdir(dir, name));
-    devfs_notify(dir, name, fio::wire::kWatchEventAdded);
+    devfs_notify(dir, name, fio::wire::WatchEvent::kAdded);
 
     // Clone the service node for the entry in the protocol directory.
     auto endpoints = fidl::CreateEndpoints<fio::Node>();

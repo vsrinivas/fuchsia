@@ -51,7 +51,7 @@ void DirectoryConnection::Describe(DescribeCallback callback) {
 
 void DirectoryConnection::Describe2(fuchsia::io::ConnectionInfoQuery query,
                                     Describe2Callback callback) {
-  Connection::Describe2(vn_, std::move(query), std::move(callback));
+  Connection::Describe2(vn_, query, std::move(callback));
 }
 
 void DirectoryConnection::SyncDeprecated(SyncDeprecatedCallback callback) {
@@ -113,7 +113,8 @@ void DirectoryConnection::Link(std::string src, zx::handle dst_parent_token, std
   callback(ZX_ERR_NOT_SUPPORTED);
 }
 
-void DirectoryConnection::Watch(uint32_t mask, uint32_t options, zx::channel watcher,
+void DirectoryConnection::Watch(fuchsia::io::WatchMask mask, uint32_t options,
+                                fidl::InterfaceRequest<fuchsia::io::DirectoryWatcher> watcher,
                                 WatchCallback callback) {
   // TODO: Implement watch.
   callback(ZX_ERR_NOT_SUPPORTED);

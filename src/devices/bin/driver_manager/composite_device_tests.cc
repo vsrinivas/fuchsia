@@ -6,13 +6,13 @@
 #include <lib/ddk/binding.h>
 #include <lib/ddk/driver.h>
 
+#include <utility>
 #include <vector>
 
 #include <fbl/vector.h>
 #include <zxtest/zxtest.h>
 
 #include "multiple_device_test.h"
-#include "src/devices/lib/log/log.h"
 
 namespace fio = fuchsia_io;
 
@@ -22,7 +22,7 @@ class FidlTransaction : public fidl::Transaction {
  public:
   FidlTransaction(FidlTransaction&&) = default;
   explicit FidlTransaction(zx_txid_t transaction_id, zx::unowned_channel channel)
-      : txid_(transaction_id), channel_(channel) {}
+      : txid_(transaction_id), channel_(std::move(channel)) {}
 
   std::unique_ptr<fidl::Transaction> TakeOwnership() override {
     return std::make_unique<FidlTransaction>(std::move(*this));
@@ -140,7 +140,7 @@ void BindCompositeDefineComposite(const fbl::RefPtr<Device>& platform_bus,
         .arg = protocol.arg,
         .debug = always.debug,
     };
-    fragments.push_back(std::move(fragment));
+    fragments.push_back(fragment);
   }
 
   std::vector<fuchsia_device_manager::wire::DeviceProperty> props_list = {};
@@ -158,7 +158,7 @@ void BindCompositeDefineComposite(const fbl::RefPtr<Device>& platform_bus,
         .key = metadata[i].type,
         .data = ::fidl::VectorView<uint8_t>::FromExternal(
             reinterpret_cast<uint8_t*>(const_cast<void*>(metadata[i].data)), metadata[i].length)};
-    metadata_list.emplace_back(std::move(meta));
+    metadata_list.emplace_back(meta);
   }
 
   fuchsia_device_manager::wire::CompositeDeviceDescriptor comp_desc = {
@@ -173,9 +173,8 @@ void BindCompositeDefineComposite(const fbl::RefPtr<Device>& platform_bus,
   };
 
   Coordinator* coordinator = platform_bus->coordinator;
-  ASSERT_EQ(
-      coordinator->device_manager()->AddCompositeDevice(platform_bus, name, std::move(comp_desc)),
-      expected_status);
+  ASSERT_EQ(coordinator->device_manager()->AddCompositeDevice(platform_bus, name, comp_desc),
+            expected_status);
 }
 
 class CompositeTestCase : public MultipleDeviceTestCase {
@@ -247,69 +246,62 @@ class CompositeAddOrderTestCase : public CompositeTestCase {
 
 class CompositeAddOrderSharedFragmentTestCase : public CompositeAddOrderTestCase {
  public:
-  enum class DevNum {
-    DEV1 = 1,
-    DEV2,
-  };
-  void ExecuteSharedFragmentTest(AddLocation dev1Add, AddLocation dev2Add);
-};
+  void ExecuteSharedFragmentTest(AddLocation dev1_add, AddLocation dev2_add) {
+    size_t device_indexes[3];
+    uint32_t protocol_id[] = {
+        ZX_PROTOCOL_GPIO,
+        ZX_PROTOCOL_I2C,
+        ZX_PROTOCOL_ETHERNET,
+    };
+    static_assert(std::size(protocol_id) == std::size(device_indexes));
 
-void CompositeAddOrderSharedFragmentTestCase::ExecuteSharedFragmentTest(AddLocation dev1_add,
-                                                                        AddLocation dev2_add) {
-  size_t device_indexes[3];
-  uint32_t protocol_id[] = {
-      ZX_PROTOCOL_GPIO,
-      ZX_PROTOCOL_I2C,
-      ZX_PROTOCOL_ETHERNET,
-  };
-  static_assert(std::size(protocol_id) == std::size(device_indexes));
+    const char* kCompositeDev1Name = "composite-dev1";
+    const char* kCompositeDev2Name = "composite-dev2";
+    auto do_add = [&](const char* devname) {
+      ASSERT_NO_FATAL_FAILURE(BindCompositeDefineComposite(platform_bus()->device, protocol_id,
+                                                           std::size(protocol_id),
+                                                           nullptr /* props */, 0, devname));
+    };
 
-  const char* kCompositeDev1Name = "composite-dev1";
-  const char* kCompositeDev2Name = "composite-dev2";
-  auto do_add = [&](const char* devname) {
-    ASSERT_NO_FATAL_FAILURE(BindCompositeDefineComposite(platform_bus()->device, protocol_id,
-                                                         std::size(protocol_id),
-                                                         nullptr /* props */, 0, devname));
-  };
-
-  if (dev1_add == AddLocation::BEFORE) {
-    ASSERT_NO_FATAL_FAILURE(do_add(kCompositeDev1Name));
-  }
-
-  if (dev2_add == AddLocation::BEFORE) {
-    ASSERT_NO_FATAL_FAILURE(do_add(kCompositeDev2Name));
-  }
-  // Add the devices to construct the composite out of.
-  for (size_t i = 0; i < std::size(device_indexes); ++i) {
-    char name[32];
-    snprintf(name, sizeof(name), "device-%zu", i);
-    ASSERT_NO_FATAL_FAILURE(
-        AddDevice(platform_bus()->device, name, protocol_id[i], "", &device_indexes[i]));
-    if (i == 0 && dev1_add == AddLocation::MIDDLE) {
+    if (dev1_add == AddLocation::BEFORE) {
       ASSERT_NO_FATAL_FAILURE(do_add(kCompositeDev1Name));
     }
-    if (i == 0 && dev2_add == AddLocation::MIDDLE) {
+
+    if (dev2_add == AddLocation::BEFORE) {
       ASSERT_NO_FATAL_FAILURE(do_add(kCompositeDev2Name));
     }
-  }
+    // Add the devices to construct the composite out of.
+    for (size_t i = 0; i < std::size(device_indexes); ++i) {
+      char name[32];
+      snprintf(name, sizeof(name), "device-%zu", i);
+      ASSERT_NO_FATAL_FAILURE(
+          AddDevice(platform_bus()->device, name, protocol_id[i], "", &device_indexes[i]));
+      if (i == 0 && dev1_add == AddLocation::MIDDLE) {
+        ASSERT_NO_FATAL_FAILURE(do_add(kCompositeDev1Name));
+      }
+      if (i == 0 && dev2_add == AddLocation::MIDDLE) {
+        ASSERT_NO_FATAL_FAILURE(do_add(kCompositeDev2Name));
+      }
+    }
 
-  if (dev1_add == AddLocation::AFTER) {
-    ASSERT_NO_FATAL_FAILURE(do_add(kCompositeDev1Name));
-  }
+    if (dev1_add == AddLocation::AFTER) {
+      ASSERT_NO_FATAL_FAILURE(do_add(kCompositeDev1Name));
+    }
 
-  DeviceState composite1, composite2;
-  size_t fragment_device1_indexes[std::size(device_indexes)];
-  size_t fragment_device2_indexes[std::size(device_indexes)];
-  ASSERT_NO_FATAL_FAILURE(CheckCompositeCreation(kCompositeDev1Name, device_indexes,
-                                                 std::size(device_indexes),
-                                                 fragment_device1_indexes, &composite1));
-  if (dev2_add == AddLocation::AFTER) {
-    ASSERT_NO_FATAL_FAILURE(do_add(kCompositeDev2Name));
+    DeviceState composite1, composite2;
+    size_t fragment_device1_indexes[std::size(device_indexes)];
+    size_t fragment_device2_indexes[std::size(device_indexes)];
+    ASSERT_NO_FATAL_FAILURE(CheckCompositeCreation(kCompositeDev1Name, device_indexes,
+                                                   std::size(device_indexes),
+                                                   fragment_device1_indexes, &composite1));
+    if (dev2_add == AddLocation::AFTER) {
+      ASSERT_NO_FATAL_FAILURE(do_add(kCompositeDev2Name));
+    }
+    ASSERT_NO_FATAL_FAILURE(CheckCompositeCreation(kCompositeDev2Name, device_indexes,
+                                                   std::size(device_indexes),
+                                                   fragment_device2_indexes, &composite2));
   }
-  ASSERT_NO_FATAL_FAILURE(CheckCompositeCreation(kCompositeDev2Name, device_indexes,
-                                                 std::size(device_indexes),
-                                                 fragment_device2_indexes, &composite2));
-}
+};
 
 void CompositeAddOrderTestCase::ExecuteTest(AddLocation add) {
   size_t device_indexes[3];
@@ -788,12 +780,12 @@ TEST_F(CompositeTestCase, ResumeOrder) {
 
 // Make sure we receive devfs notifications when composite devices appear
 TEST_F(CompositeTestCase, DevfsNotifications) {
-  zx::channel watcher;
+  fidl::ClientEnd<fuchsia_io::DirectoryWatcher> client_end;
   {
-    zx::channel remote;
-    ASSERT_OK(zx::channel::create(0, &watcher, &remote));
-    ASSERT_OK(devfs_watch(coordinator().root_device()->self, std::move(remote),
-                          fio::wire::kWatchMaskAdded));
+    zx::status server = fidl::CreateEndpoints<fuchsia_io::DirectoryWatcher>(&client_end);
+    ASSERT_OK(server.status_value());
+    ASSERT_OK(devfs_watch(coordinator().root_device()->self, std::move(server.value()),
+                          fio::wire::WatchMask::kAdded));
   }
 
   size_t device_indexes[2];
@@ -823,9 +815,9 @@ TEST_F(CompositeTestCase, DevfsNotifications) {
 
   uint8_t msg[fio::wire::kMaxFilename + 2];
   uint32_t msg_len = 0;
-  ASSERT_OK(watcher.read(0, msg, nullptr, sizeof(msg), 0, &msg_len, nullptr));
+  ASSERT_OK(client_end.channel().read(0, msg, nullptr, sizeof(msg), 0, &msg_len, nullptr));
   ASSERT_EQ(msg_len, 2 + strlen(kCompositeDevName));
-  ASSERT_EQ(msg[0], fio::wire::kWatchEventAdded);
+  ASSERT_EQ(static_cast<fio::wire::WatchEvent>(msg[0]), fio::wire::WatchEvent::kAdded);
   ASSERT_EQ(msg[1], strlen(kCompositeDevName));
   ASSERT_BYTES_EQ(reinterpret_cast<const uint8_t*>(kCompositeDevName), msg + 2, msg[1]);
 }
@@ -881,7 +873,7 @@ class CompositeMetadataTestCase : public CompositeTestCase {
 
   void AddCompositeDevice(AddLocation add = AddLocation::BEFORE);
 
-  void VerifyMetadata(void* data, size_t len) {
+  static void VerifyMetadata(void* data, size_t len) {
     ASSERT_EQ(strlen(kMetadataStr) + 1, len);
     ASSERT_BYTES_EQ(data, kMetadataStr, len);
   }
@@ -1141,8 +1133,7 @@ TEST_F(CompositeTestCase, FragmentDeviceInit) {
     coordinator_loop()->RunUntilIdle();
   }
 
-  for (size_t i = 0; i < std::size(device_indexes); ++i) {
-    auto index = device_indexes[i];
+  for (uint64_t index : device_indexes) {
     // Check that the fragment isn't being bound yet.
     ASSERT_FALSE(device(index)->HasPendingMessages());
 

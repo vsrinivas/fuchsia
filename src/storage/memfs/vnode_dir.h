@@ -27,8 +27,9 @@ class VnodeDir final : public Vnode {
   zx_status_t CreateFromVmo(std::string_view name, zx_handle_t vmo, zx_off_t off, zx_off_t len);
 
   // Use the watcher container to implement a directory watcher
-  void Notify(std::string_view name, unsigned event) final;
-  zx_status_t WatchDir(fs::Vfs* vfs, uint32_t mask, uint32_t options, zx::channel watcher) final;
+  void Notify(std::string_view name, fuchsia_io::wire::WatchEvent event) final;
+  zx_status_t WatchDir(fs::Vfs* vfs, fuchsia_io::wire::WatchMask mask, uint32_t options,
+                       fidl::ServerEnd<fuchsia_io::DirectoryWatcher> watcher) final;
 
   // Vnode overrides.
   //

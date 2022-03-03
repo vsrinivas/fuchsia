@@ -270,7 +270,7 @@ mod tests {
             directory::{
                 dirents_sink,
                 entry::{DirectoryEntry, EntryInfo},
-                entry_container::{Directory, MutableDirectory},
+                entry_container::{Directory, DirectoryWatcher, MutableDirectory},
                 traversal_position::TraversalPosition,
             },
             execution_scope::ExecutionScope,
@@ -281,8 +281,9 @@ mod tests {
         use {
             async_trait::async_trait,
             fidl::endpoints::ServerEnd,
-            fidl_fuchsia_io::{NodeAttributes, NodeMarker, DIRENT_TYPE_DIRECTORY, INO_UNKNOWN},
-            fuchsia_async::Channel,
+            fidl_fuchsia_io::{
+                NodeAttributes, NodeMarker, WatchMask, DIRENT_TYPE_DIRECTORY, INO_UNKNOWN,
+            },
             fuchsia_zircon::Status,
             std::sync::Arc,
         };
@@ -324,8 +325,8 @@ mod tests {
             fn register_watcher(
                 self: Arc<Self>,
                 _scope: ExecutionScope,
-                _mask: u32,
-                _channel: Channel,
+                _mask: WatchMask,
+                _watcher: DirectoryWatcher,
             ) -> Result<(), Status> {
                 panic!("Not implemented!")
             }

@@ -228,7 +228,11 @@ class Vnode : public VnodeRefCounted<Vnode>, public fbl::Recyclable<Vnode> {
   // The returned variant in |info| should correspond to the |protocol|.
   zx_status_t GetNodeInfo(Rights rights, VnodeRepresentation* info);
 
-  virtual zx_status_t WatchDir(Vfs* vfs, uint32_t mask, uint32_t options, zx::channel watcher);
+  // Invoked by the VFS layer whenever files are added or removed.
+  virtual void Notify(std::string_view name, fuchsia_io::wire::WatchEvent event);
+
+  virtual zx_status_t WatchDir(Vfs* vfs, fuchsia_io::wire::WatchMask mask, uint32_t options,
+                               fidl::ServerEnd<fuchsia_io::DirectoryWatcher> watcher);
 
   // Create a |zx::stream| for reading and writing this vnode.
   //
@@ -350,9 +354,6 @@ class Vnode : public VnodeRefCounted<Vnode>, public fbl::Recyclable<Vnode> {
 
   // Creates a hard link to the 'target' vnode with a provided name in vndir
   virtual zx_status_t Link(std::string_view name, fbl::RefPtr<Vnode> target);
-
-  // Invoked by the VFS layer whenever files are added or removed.
-  virtual void Notify(std::string_view name, unsigned event);
 
   // Called when the Vfs associated with this node is shutting down. The associated VFS will still
   // be valid at the time of the call.

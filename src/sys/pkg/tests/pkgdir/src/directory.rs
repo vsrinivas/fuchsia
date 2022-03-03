@@ -9,8 +9,8 @@ use {
     fidl_fuchsia_io::{
         ConnectorInfo, DirectoryInfo, DirectoryObject, DirectoryProxy, FileInfo, FileObject,
         NodeEvent, NodeInfo, NodeMarker, NodeProxy, Representation, Service, UnlinkOptions,
-        CLONE_FLAG_SAME_RIGHTS, MODE_TYPE_BLOCK_DEVICE, MODE_TYPE_DIRECTORY, MODE_TYPE_FILE,
-        MODE_TYPE_SERVICE, MODE_TYPE_SOCKET, OPEN_FLAG_APPEND, OPEN_FLAG_CREATE,
+        WatchMask, CLONE_FLAG_SAME_RIGHTS, MODE_TYPE_BLOCK_DEVICE, MODE_TYPE_DIRECTORY,
+        MODE_TYPE_FILE, MODE_TYPE_SERVICE, MODE_TYPE_SOCKET, OPEN_FLAG_APPEND, OPEN_FLAG_CREATE,
         OPEN_FLAG_CREATE_IF_ABSENT, OPEN_FLAG_DESCRIBE, OPEN_FLAG_DIRECTORY,
         OPEN_FLAG_NODE_REFERENCE, OPEN_FLAG_NOT_DIRECTORY, OPEN_FLAG_NO_REMOTE,
         OPEN_FLAG_POSIX_EXECUTABLE, OPEN_FLAG_POSIX_WRITABLE, OPEN_FLAG_TRUNCATE,
@@ -1487,9 +1487,9 @@ async fn assert_unsupported_directory_calls(
     );
 
     // Verify watch() is not supported.
-    let (h0, _h1) = zx::Channel::create().unwrap();
+    let (_client, server) = fidl::endpoints::create_endpoints().unwrap();
     assert_eq!(
-        zx::Status::from_raw(parent.watch(0, 0, h0).await.unwrap()),
+        zx::Status::from_raw(parent.watch(WatchMask::empty(), 0, server).await.unwrap()),
         zx::Status::NOT_SUPPORTED
     );
 

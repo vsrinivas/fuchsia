@@ -282,8 +282,9 @@ class VnodeMinfs : public fs::Vnode,
   zx::status<> InitVmo();
 
   // Use the watcher container to implement a directory watcher
-  void Notify(std::string_view name, unsigned event) final;
-  zx_status_t WatchDir(fs::Vfs* vfs, uint32_t mask, uint32_t options, zx::channel watcher) final;
+  void Notify(std::string_view name, fuchsia_io::wire::WatchEvent event) final;
+  zx_status_t WatchDir(fs::Vfs* vfs, fuchsia_io::wire::WatchMask mask, uint32_t options,
+                       fidl::ServerEnd<fuchsia_io::DirectoryWatcher> watcher) final;
 #endif
 
   Minfs* const fs_;

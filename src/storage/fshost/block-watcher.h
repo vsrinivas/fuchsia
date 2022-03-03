@@ -6,6 +6,7 @@
 #define SRC_STORAGE_FSHOST_BLOCK_WATCHER_H_
 
 #include <fidl/fuchsia.fshost/cpp/wire.h>
+#include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/stdcompat/span.h>
 
@@ -45,7 +46,7 @@ class BlockWatcher {
   void Thread();
 
   // Returns true if we received a WATCH_EVENT_IDLE and the watcher is paused.
-  bool Callback(Watcher& watcher, int dirfd, int event, const char* name);
+  bool Callback(Watcher& watcher, int dirfd, fuchsia_io::wire::WatchEvent event, const char* name);
 
   // Returns kSignalWatcherPaused if the watcher is paused, ZX_CHANNEL_PEER_CLOSED if the watcher
   // channel was closed, and ZX_CHANNEL_READABLE if data was read, and 0 if some other error

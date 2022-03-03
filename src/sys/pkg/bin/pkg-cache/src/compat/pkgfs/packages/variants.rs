@@ -8,10 +8,10 @@ use {
     async_trait::async_trait,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::{
-        NodeAttributes, NodeMarker, DIRENT_TYPE_DIRECTORY, INO_UNKNOWN, MODE_TYPE_DIRECTORY,
-        OPEN_FLAG_APPEND, OPEN_FLAG_CREATE, OPEN_FLAG_CREATE_IF_ABSENT, OPEN_FLAG_POSIX_DEPRECATED,
-        OPEN_FLAG_POSIX_EXECUTABLE, OPEN_FLAG_POSIX_WRITABLE, OPEN_FLAG_TRUNCATE,
-        OPEN_RIGHT_WRITABLE,
+        NodeAttributes, NodeMarker, WatchMask, DIRENT_TYPE_DIRECTORY, INO_UNKNOWN,
+        MODE_TYPE_DIRECTORY, OPEN_FLAG_APPEND, OPEN_FLAG_CREATE, OPEN_FLAG_CREATE_IF_ABSENT,
+        OPEN_FLAG_POSIX_DEPRECATED, OPEN_FLAG_POSIX_EXECUTABLE, OPEN_FLAG_POSIX_WRITABLE,
+        OPEN_FLAG_TRUNCATE, OPEN_RIGHT_WRITABLE,
     },
     fuchsia_hash::Hash,
     fuchsia_pkg::PackageVariant,
@@ -27,7 +27,7 @@ use {
             connection::io1::DerivedConnection,
             dirents_sink,
             entry::{DirectoryEntry, EntryInfo},
-            entry_container::Directory,
+            entry_container::{Directory, DirectoryWatcher},
             immutable::connection::io1::ImmutableConnection,
             traversal_position::TraversalPosition,
         },
@@ -168,8 +168,8 @@ impl Directory for PkgfsPackagesVariants {
     fn register_watcher(
         self: Arc<Self>,
         _: ExecutionScope,
-        _: u32,
-        _: fidl::AsyncChannel,
+        _: WatchMask,
+        _: DirectoryWatcher,
     ) -> Result<(), zx::Status> {
         Err(zx::Status::NOT_SUPPORTED)
     }

@@ -65,8 +65,9 @@ class PseudoDir : public Vnode {
   VnodeProtocolSet GetProtocols() const final;
   zx_status_t GetAttributes(fs::VnodeAttributes* a) final;
   zx_status_t Lookup(std::string_view name, fbl::RefPtr<fs::Vnode>* out) final;
-  void Notify(std::string_view name, unsigned event) final;
-  zx_status_t WatchDir(fs::Vfs* vfs, uint32_t mask, uint32_t options, zx::channel watcher) final;
+  void Notify(std::string_view name, fuchsia_io::wire::WatchEvent event) final;
+  zx_status_t WatchDir(fs::Vfs* vfs, fuchsia_io::wire::WatchMask mask, uint32_t options,
+                       fidl::ServerEnd<fuchsia_io::DirectoryWatcher> watcher) final;
   zx_status_t Readdir(VdirCookie* cookie, void* dirents, size_t len, size_t* out_actual) final;
   zx_status_t GetNodeInfoForProtocol(VnodeProtocol protocol, Rights rights,
                                      VnodeRepresentation* info) final;

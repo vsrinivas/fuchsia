@@ -11,13 +11,10 @@
 #[doc(hidden)]
 pub mod reexport {
     pub use {
-        fidl_fuchsia_io::{
-            WatchedEvent, WATCH_EVENT_ADDED, WATCH_EVENT_EXISTING, WATCH_EVENT_IDLE,
-            WATCH_EVENT_REMOVED, WATCH_MASK_ADDED, WATCH_MASK_EXISTING, WATCH_MASK_IDLE,
-            WATCH_MASK_REMOVED,
-        },
+        fidl,
+        fidl_fuchsia_io::{WatchEvent, WatchMask},
         fuchsia_async::Channel,
-        fuchsia_zircon::{self as zx, MessageBuf, Status},
+        fuchsia_zircon::{MessageBuf, Status},
     };
 }
 
@@ -30,7 +27,7 @@ use {
     byteorder::{LittleEndian, WriteBytesExt},
     fidl_fuchsia_io::{DirectoryMarker, DirectoryProxy, MAX_FILENAME},
     futures::Future,
-    std::{io::Write, sync::Arc},
+    std::{convert::TryInto as _, io::Write, sync::Arc},
 };
 
 pub use run::{run_client, test_client};
@@ -86,7 +83,7 @@ impl DirentsSameInodeBuilder {
         );
 
         self.expected.write_u64::<LittleEndian>(self.inode).unwrap();
-        self.expected.write_u8(name.len() as u8).unwrap();
+        self.expected.write_u8(name.len().try_into().unwrap()).unwrap();
         self.expected.write_u8(type_).unwrap();
         self.expected.write(name).unwrap();
 
@@ -134,26 +131,25 @@ macro_rules! open_as_vmo_file_assert_content {
 #[macro_export]
 macro_rules! assert_watch {
     ($proxy:expr, $mask:expr) => {{
-        use $crate::directory::test_utils::reexport::{zx, Channel, Status};
+        use $crate::directory::test_utils::reexport::{fidl, Channel, Status};
 
-        let (watcher_client, watcher_server) = zx::Channel::create().unwrap();
-        let watcher_client = Channel::from_channel(watcher_client).unwrap();
+        let (client, server) = fidl::endpoints::create_endpoints().unwrap();
 
-        let status = $proxy.watch($mask, 0, watcher_server).await.expect("watch failed");
+        let status = $proxy.watch($mask, 0, server).await.expect("watch failed");
         assert_eq!(Status::from_raw(status), Status::OK);
 
-        watcher_client
+        Channel::from_channel(client.into_channel()).unwrap()
     }};
 }
 
 #[macro_export]
 macro_rules! assert_watch_err {
     ($proxy:expr, $mask:expr, $expected_status:expr) => {{
-        use $crate::directory::test_utils::reexport::{zx, Status};
+        use $crate::directory::test_utils::reexport::{fidl, Status};
 
-        let (_watcher_client, watcher_server) = zx::Channel::create().unwrap();
+        let (_client, server) = fidl::endpoints::create_endpoints().unwrap();
 
-        let status = $proxy.watch($mask, 0, watcher_server).await.expect("watch failed");
+        let status = $proxy.watch($mask, 0, server).await.expect("watch failed");
         assert_eq!(Status::from_raw(status), $expected_status);
     }};
 }
@@ -162,8 +158,8 @@ macro_rules! assert_watch_err {
 macro_rules! assert_watcher_one_message_watched_events {
     ($watcher:expr, $( { $type:tt, $name:expr $(,)* } ),* $(,)*) => {{
         #[allow(unused)]
-        use $crate::directory::test_utils::reexport::{MessageBuf, WATCH_EVENT_EXISTING,
-            WATCH_EVENT_IDLE, WATCH_EVENT_ADDED, WATCH_EVENT_REMOVED};
+        use $crate::directory::test_utils::reexport::{MessageBuf, WatchEvent};
+        use std::convert::TryInto as _;
 
         let mut buf = MessageBuf::new();
         $watcher.recv_msg(&mut buf).await.unwrap();
@@ -185,8 +181,8 @@ macro_rules! assert_watcher_one_message_watched_events {
             let name = Vec::<u8>::from($name);
             assert!(name.len() <= std::u8::MAX as usize);
 
-            expected.push(type_);
-            expected.push(name.len() as u8);
+            expected.push(type_.into_primitive());
+            expected.push(name.len().try_into().unwrap());
             expected.extend_from_slice(&name);
         })*
 
@@ -200,8 +196,8 @@ macro_rules! assert_watcher_one_message_watched_events {
                 String::from_utf8_lossy(expected), String::from_utf8_lossy(&bytes));
     }};
 
-    (@expand_event_type EXISTING) => { WATCH_EVENT_EXISTING };
-    (@expand_event_type IDLE) => { WATCH_EVENT_IDLE };
-    (@expand_event_type ADDED) => { WATCH_EVENT_ADDED };
-    (@expand_event_type REMOVED) => { WATCH_EVENT_REMOVED };
+    (@expand_event_type EXISTING) => { WatchEvent::Existing };
+    (@expand_event_type IDLE) => { WatchEvent::Idle };
+    (@expand_event_type ADDED) => { WatchEvent::Added };
+    (@expand_event_type REMOVED) => { WatchEvent::Removed };
 }

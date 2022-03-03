@@ -64,7 +64,8 @@ void Vnode::HandleFsSpecificMessage(fidl::IncomingMessage& msg, fidl::Transactio
   txn->Close(ZX_ERR_NOT_SUPPORTED);
 }
 
-zx_status_t Vnode::WatchDir(Vfs* vfs, uint32_t mask, uint32_t options, zx::channel watcher) {
+zx_status_t Vnode::WatchDir(Vfs* vfs, fio::wire::WatchMask mask, uint32_t options,
+                            fidl::ServerEnd<fuchsia_io::DirectoryWatcher> watcher) {
   return ZX_ERR_NOT_SUPPORTED;
 }
 
@@ -108,9 +109,9 @@ zx_status_t Vnode::GetNodeInfo(Rights rights, VnodeRepresentation* info) {
   return ZX_OK;
 }
 
-#endif  // __Fuchsia__
+void Vnode::Notify(std::string_view name, fuchsia_io::wire::WatchEvent event) {}
 
-void Vnode::Notify(std::string_view name, unsigned event) {}
+#endif  // __Fuchsia__
 
 void Vnode::WillDestroyVfs() {
   std::lock_guard lock(mutex_);

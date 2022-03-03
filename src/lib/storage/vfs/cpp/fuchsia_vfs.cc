@@ -120,7 +120,7 @@ zx_status_t FuchsiaVfs::Unlink(fbl::RefPtr<Vnode> vndir, std::string_view name, 
   if (zx_status_t s = Vfs::Unlink(vndir, name, must_be_dir); s != ZX_OK)
     return s;
 
-  vndir->Notify(name, fio::wire::kWatchEventRemoved);
+  vndir->Notify(name, fio::wire::WatchEvent::kRemoved);
   return ZX_OK;
 }
 
@@ -179,7 +179,7 @@ zx_status_t FuchsiaVfs::EnsureExists(fbl::RefPtr<Vnode> vndir, std::string_view 
       s != ZX_OK)
     return s;
 
-  vndir->Notify(path, fio::wire::kWatchEventAdded);
+  vndir->Notify(path, fio::wire::WatchEvent::kAdded);
   return ZX_OK;
 }
 
@@ -231,8 +231,8 @@ zx_status_t FuchsiaVfs::Rename(zx::event token, fbl::RefPtr<Vnode> oldparent,
   if (r != ZX_OK) {
     return r;
   }
-  oldparent->Notify(oldStr, fio::wire::kWatchEventRemoved);
-  newparent->Notify(newStr, fio::wire::kWatchEventAdded);
+  oldparent->Notify(oldStr, fio::wire::WatchEvent::kRemoved);
+  newparent->Notify(newStr, fio::wire::WatchEvent::kAdded);
   return ZX_OK;
 }
 
@@ -280,7 +280,7 @@ zx_status_t FuchsiaVfs::Link(zx::event token, fbl::RefPtr<Vnode> oldparent, std:
   if (r != ZX_OK) {
     return r;
   }
-  newparent->Notify(newStr, fio::wire::kWatchEventAdded);
+  newparent->Notify(newStr, fio::wire::WatchEvent::kAdded);
   return ZX_OK;
 }
 
