@@ -247,7 +247,7 @@ static inline void write_ctl(uint32_t val) { reg_procs.write_ctl(val); }
 
 static inline void write_cval(uint64_t val) { reg_procs.write_cval(val); }
 
-static inline void write_tval(uint32_t val) { reg_procs.write_tval(val); }
+__UNUSED static inline void write_tval(uint32_t val) { reg_procs.write_tval(val); }
 
 static zx_ticks_t read_ct() {
   zx_ticks_t cntpct = static_cast<zx_ticks_t>(reg_procs.read_ct());
@@ -440,15 +440,6 @@ static void arm_generic_timer_init_secondary_cpu(uint level) {
 // secondary cpu initialize the timer just before the kernel starts with interrupts enabled
 LK_INIT_HOOK_FLAGS(arm_generic_timer_init_secondary_cpu, arm_generic_timer_init_secondary_cpu,
                    LK_INIT_LEVEL_THREADING - 1, LK_INIT_FLAG_SECONDARY_CPUS)
-
-static void arm_generic_timer_resume_cpu(uint level) {
-  // Always trigger a timer interrupt on each cpu for now
-  write_tval(0);
-  write_ctl(1);
-}
-
-LK_INIT_HOOK_FLAGS(arm_generic_timer_resume_cpu, arm_generic_timer_resume_cpu,
-                   LK_INIT_LEVEL_PLATFORM, LK_INIT_FLAG_CPU_RESUME)
 
 void ArmGenericTimerInit(const dcfg_arm_generic_timer_driver_t& config) {
   uint32_t irq_phys = config.irq_phys;

@@ -44,8 +44,6 @@
 #include <arch/arm64.h>
 #define IFRAME_PC(frame) ((frame)->elr)
 
-static SpinLock gicd_lock;
-
 // Values read from the config.
 vaddr_t arm_gicv2_gic_base = 0;
 static uint64_t mmio_phys = 0;
@@ -65,8 +63,6 @@ static zx_status_t arm_gic_init();
 
 static zx_status_t gic_configure_interrupt(unsigned int vector, enum interrupt_trigger_mode tm,
                                            enum interrupt_polarity pol);
-
-static void suspend_resume_fiq(bool resume_gicc, bool resume_gicd) {}
 
 static uint32_t read_gicd_targetsr(int target_reg) { return GICREG(0, GICD_ITARGETSR(target_reg)); }
 
@@ -120,35 +116,6 @@ static void gic_init_percpu_early() {
   GICREG(0, GICC_CTLR) = 0x201;  // EnableGrp1 and EOImodeNS
   GICREG(0, GICC_PMR) = 0xff;    // unmask interrupts at all priority levels
 }
-
-// TODO(fxbug.dev/38135): This function is potentially unused and may be removable.
-[[maybe_unused]] static void arm_gic_suspend_cpu(uint level) { suspend_resume_fiq(false, false); }
-
-// TODO(fxbug.dev/38135): This function is potentially unused and may be removable.
-[[maybe_unused]] static void arm_gic_resume_cpu(uint level) {
-  interrupt_saved_state_t state;
-  bool resume_gicd = false;
-
-  gicd_lock.AcquireIrqSave(state);
-  if (!(GICREG(0, GICD_CTLR) & 1)) {
-    dprintf(SPEW, "%s: distributor is off, calling arm_gic_init instead\n", __func__);
-    arm_gic_init();
-    resume_gicd = true;
-  } else {
-    gic_init_percpu_early();
-  }
-  gicd_lock.ReleaseIrqRestore(state);
-  suspend_resume_fiq(true, resume_gicd);
-}
-
-// disable for now. we will need to add suspend/resume support to dev/pdev for this to work
-#if 0
-LK_INIT_HOOK_FLAGS(arm_gic_suspend_cpu, arm_gic_suspend_cpu,
-                   LK_INIT_LEVEL_PLATFORM, LK_INIT_FLAG_CPU_SUSPEND);
-
-LK_INIT_HOOK_FLAGS(arm_gic_resume_cpu, arm_gic_resume_cpu,
-                   LK_INIT_LEVEL_PLATFORM, LK_INIT_FLAG_CPU_RESUME);
-#endif
 
 static unsigned int arm_gic_max_cpu() { return (GICREG(0, GICD_TYPER) >> 5) & 0x7; }
 
