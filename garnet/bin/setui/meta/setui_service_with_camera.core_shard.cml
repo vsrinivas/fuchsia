@@ -2,5 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// TODO(fxb/94340): temporarily empty contents for migration.
-{}
+// TODO(fxbug.dev/94340): temporarily duplicate setui_service core shard for migration.
+{
+    include: [ "//garnet/bin/setui/meta/setui_service.core_shard.cml" ],
+}

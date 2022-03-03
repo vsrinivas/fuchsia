@@ -1,6 +1,13 @@
 // Copyright 2022 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-
-// TODO(fxb/94340): temporarily empty contents for migration.
-{}
+{
+    include: [ "//garnet/bin/setui/meta/setui_service_base.core_shard.cml" ],
+    children: [
+        {
+            name: "setui_service",
+            url: "fuchsia-pkg://fuchsia.com/setui_service#meta/setui_service.cm",
+            on_terminate: "reboot",
+        },
+    ],
+}

@@ -45,11 +45,6 @@
             startup: "eager",
         },
         {
-            name: "setui_service",
-            url: "fuchsia-pkg://fuchsia.com/setui_service#meta/setui_service.cm",
-            on_terminate: "reboot",
-        },
-        {
             name: "bluetooth-core",
             url: "fuchsia-pkg://fuchsia.com/bt-init#meta/bt-init.cm",
         },
@@ -199,38 +194,6 @@
     // Protocols offered from `self` are routed from the v1 sys realm.
     offer: [
         {
-            storage: "data",
-            from: "self",
-            to: "#setui_service",
-        },
-        {
-            directory: "config-data",
-            from: "parent",
-            to: [ "#setui_service" ],
-            subdir: "setui_service",
-        },
-        {
-            protocol: [
-                "fuchsia.camera3.DeviceWatcher",
-                "fuchsia.media.AudioCore",
-                "fuchsia.media.sessions2.Discovery",
-                "fuchsia.media.UsageReporter",
-                "fuchsia.recovery.policy.Device",
-                "fuchsia.tracing.provider.Registry",
-                "fuchsia.ui.policy.DeviceListenerRegistry",
-            ],
-            from: "self",
-            to: "#setui_service",
-            dependency: "weak_for_migration",
-        },
-        {
-            directory: "dev",
-            from: "parent",
-            as: "dev-light",
-            to: "#setui_service",
-            subdir: "class/light",
-        },
-        {
             protocol: "fuchsia.sys2.ComponentResolver",
             from: "parent",
             to: [ "#universe-resolver" ],
@@ -261,11 +224,6 @@
             to: [ "#cobalt" ],
         },
         {
-            protocol: "fuchsia.ui.brightness.Control",
-            from: "#brightness_manager",
-            to: [ "#setui_service" ],
-        },
-        {
             directory: "dev",
             from: "parent",
             as: "dev-sysmem",
@@ -282,11 +240,6 @@
             protocol: [ "fuchsia.pkg.FontResolver" ],
             from: "#pkg-resolver",
             to: "#font_provider",
-        },
-        {
-            protocol: "fuchsia.stash.Store",
-            from: "#stash",
-            to: "#setui_service",
         },
         {
             protocol: [ "fuchsia.device.NameProvider" ],
@@ -502,7 +455,6 @@
                 "#remote-control",
                 "#sampler",
                 "#session-manager",
-                "#setui_service",
                 "#soundplayer",
                 "#ssh-key-manager",
                 "#starnix_manager",
@@ -690,7 +642,6 @@
             to: [
                 "#brightness_manager",
                 "#session-manager",
-                "#setui_service",
             ],
             subdir: "class/input-report",
         },
@@ -800,10 +751,7 @@
         {
             protocol: "fuchsia.hardware.power.statecontrol.Admin",
             from: "parent",
-            to: [
-                "#session-manager",
-                "#setui_service",
-            ],
+            to: "#session-manager",
         },
         {
             protocol: [
@@ -859,11 +807,6 @@
             storage: [ "cache" ],
             from: "self",
             to: "#regulatory_region",
-        },
-        {
-            protocol: "fuchsia.media.sounds.Player",
-            from: "#soundplayer",
-            to: [ "#setui_service" ],
         },
         {
             storage: "cache",

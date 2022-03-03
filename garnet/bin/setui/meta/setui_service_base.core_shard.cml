@@ -1,0 +1,91 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    use: [
+        {
+            protocol: [
+                "fuchsia.settings.Accessibility",
+                "fuchsia.settings.Audio",
+                "fuchsia.settings.Display",
+                "fuchsia.settings.DoNotDisturb",
+                "fuchsia.settings.FactoryReset",
+                "fuchsia.settings.Input",
+                "fuchsia.settings.Intl",
+                "fuchsia.settings.Keyboard",
+                "fuchsia.settings.Light",
+                "fuchsia.settings.NightMode",
+                "fuchsia.settings.policy.VolumePolicyController",
+                "fuchsia.settings.Privacy",
+                "fuchsia.settings.Setup",
+            ],
+            from: "#setui_service",
+        },
+    ],
+    offer: [
+        {
+            storage: "data",
+            from: "self",
+            to: "#setui_service",
+        },
+        {
+            directory: "config-data",
+            from: "parent",
+            to: "#setui_service",
+            subdir: "setui_service",
+        },
+        {
+            directory: "dev",
+            from: "parent",
+            as: "dev-light",
+            to: "#setui_service",
+            subdir: "class/light",
+        },
+        {
+            directory: "dev",
+            from: "parent",
+            as: "dev-input-report",
+            to: "#setui_service",
+            subdir: "class/input-report",
+        },
+        {
+            protocol: [
+                "fuchsia.camera3.DeviceWatcher",
+                "fuchsia.media.AudioCore",
+                "fuchsia.media.sessions2.Discovery",
+                "fuchsia.media.UsageReporter",
+                "fuchsia.recovery.policy.Device",
+                "fuchsia.tracing.provider.Registry",
+                "fuchsia.ui.policy.DeviceListenerRegistry",
+            ],
+            from: "self",
+            to: "#setui_service",
+            dependency: "weak_for_migration",
+        },
+        {
+            protocol: "fuchsia.ui.brightness.Control",
+            from: "#brightness_manager",
+            to: "#setui_service",
+        },
+        {
+            protocol: "fuchsia.stash.Store",
+            from: "#stash",
+            to: "#setui_service",
+        },
+        {
+            protocol: "fuchsia.logger.LogSink",
+            from: "parent",
+            to: "#setui_service",
+        },
+        {
+            protocol: "fuchsia.hardware.power.statecontrol.Admin",
+            from: "parent",
+            to: "#setui_service",
+        },
+        {
+            protocol: "fuchsia.media.sounds.Player",
+            from: "#soundplayer",
+            to: "#setui_service",
+        },
+    ],
+}
