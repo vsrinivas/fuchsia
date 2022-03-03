@@ -5,7 +5,7 @@
 import("//build/components.gni")
 
 fuchsia_component("vm-stress-test") {
-  manifest = "meta/vm-stress-test.cmx"
+  manifest = "meta/vm-stress-test.cml"
   deps = [ "//src/zircon/bin/kstress" ]
 }
 

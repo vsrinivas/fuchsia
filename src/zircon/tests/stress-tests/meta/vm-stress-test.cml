@@ -1,0 +1,18 @@
+{
+    include: [
+        "//sdk/lib/inspect/client.shard.cml",
+        "//sdk/lib/syslog/client.shard.cml",
+        "//src/sys/test_manager/system-test.shard.cml",
+        "//src/sys/test_runners/elf/default.shard.cml",
+    ],
+    program: {
+        binary: "bin/kstress",
+        args: [
+            "-t",
+            "21600",
+        ],
+    },
+    use: [
+        { protocol: "fuchsia.boot.RootResource" },
+    ],
+}
