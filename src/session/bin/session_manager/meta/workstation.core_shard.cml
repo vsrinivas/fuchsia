@@ -29,11 +29,6 @@
             to: "#session-manager",
         },
         {
-            protocol: "fuchsia.wlan.policy.ClientProvider",
-            from: "#wlancfg",
-            to: "#session-manager",
-        },
-        {
             protocol: "fuchsia.buildinfo.Provider",
             from: "#build-info",
             to: "#session-manager",
