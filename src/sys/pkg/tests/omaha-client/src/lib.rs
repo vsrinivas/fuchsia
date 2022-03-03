@@ -116,7 +116,7 @@ struct Proxies {
 
 struct TestEnvBuilder {
     // Set one of responses, responses_and_metadata.
-    responses: Vec<ResponseAndMetadata>,
+    responses_by_appid: Vec<(String, ResponseAndMetadata)>,
     version: String,
     installer: Option<MockUpdateInstallerService>,
     paver: Option<MockPaverService>,
@@ -127,7 +127,10 @@ struct TestEnvBuilder {
 impl TestEnvBuilder {
     fn new() -> Self {
         Self {
-            responses: vec![ResponseAndMetadata::default()],
+            responses_by_appid: vec![(
+                "integration-test-appid".to_string(),
+                ResponseAndMetadata::default(),
+            )],
             version: "0.1.2.3".to_string(),
             installer: None,
             paver: None,
@@ -136,18 +139,21 @@ impl TestEnvBuilder {
         }
     }
 
-    fn responses(self, responses: impl IntoIterator<Item = OmahaResponse>) -> Self {
+    fn default_with_response(self, response: OmahaResponse) -> Self {
         Self {
-            responses: responses
-                .into_iter()
-                .map(|response| ResponseAndMetadata { response, ..Default::default() })
-                .collect(),
+            responses_by_appid: vec![(
+                "integration-test-appid".to_string(),
+                ResponseAndMetadata { response, ..Default::default() },
+            )],
             ..self
         }
     }
 
-    fn responses_and_metadata(self, responses_and_metadata: Vec<ResponseAndMetadata>) -> Self {
-        Self { responses: responses_and_metadata, ..self }
+    fn responses_and_metadata(
+        self,
+        responses_by_appid: Vec<(String, ResponseAndMetadata)>,
+    ) -> Self {
+        Self { responses_by_appid, ..self }
     }
 
     fn version(self, version: impl Into<String>) -> Self {
@@ -189,7 +195,7 @@ impl TestEnvBuilder {
         fs.dir("config").add_remote("data", config_data);
         fs.dir("config").add_remote("build-info", build_info);
 
-        let server = OmahaServer::new_with_metadata(self.responses);
+        let server = OmahaServer::new_with_metadata(self.responses_by_appid);
         let url = server.clone().start().expect("start server");
         mounts.write_url(url);
         mounts.write_appid("integration-test-appid");
@@ -764,7 +770,7 @@ async fn omaha_client_update(mut env: TestEnv, platform_metrics: TreeAssertion) 
 
 #[fasync::run_singlethreaded(test)]
 async fn test_omaha_client_update() {
-    let env = TestEnvBuilder::new().responses(vec![OmahaResponse::Update]).build().await;
+    let env = TestEnvBuilder::new().default_with_response(OmahaResponse::Update).build().await;
     omaha_client_update(
         env,
         tree_assertion!(
@@ -790,23 +796,26 @@ async fn test_omaha_client_update() {
 async fn test_omaha_client_update_multi_app() {
     let env = TestEnvBuilder::new()
         .responses_and_metadata(vec![
-            ResponseAndMetadata {
-                response: OmahaResponse::Update,
-                app_id: "integration-test-appid".to_string(),
-                ..Default::default()
-            },
-            ResponseAndMetadata {
-                response: OmahaResponse::NoUpdate,
-                app_id: "foo".to_string(),
-                version: "0.0.0.1".to_string(),
-                ..Default::default()
-            },
-            ResponseAndMetadata {
-                response: OmahaResponse::NoUpdate,
-                app_id: "bar".to_string(),
-                version: "0.0.0.1".to_string(),
-                ..Default::default()
-            },
+            (
+                "integration-test-appid".to_string(),
+                ResponseAndMetadata { response: OmahaResponse::Update, ..Default::default() },
+            ),
+            (
+                "foo".to_string(),
+                ResponseAndMetadata {
+                    response: OmahaResponse::NoUpdate,
+                    version: "0.0.0.1".to_string(),
+                    ..Default::default()
+                },
+            ),
+            (
+                "bar".to_string(),
+                ResponseAndMetadata {
+                    response: OmahaResponse::NoUpdate,
+                    version: "0.0.0.1".to_string(),
+                    ..Default::default()
+                },
+            ),
         ])
         .eager_package_config(json!(
         {
@@ -873,7 +882,7 @@ async fn test_omaha_client_attempt_monitor_update_progress_with_mock_installer()
     let (mut sender, receiver) = mpsc::channel(0);
     let installer = MockUpdateInstallerService::builder().states_receiver(receiver).build();
     let env = TestEnvBuilder::new()
-        .responses(vec![OmahaResponse::Update])
+        .default_with_response(OmahaResponse::Update)
         .installer(installer)
         .build()
         .await;
@@ -987,7 +996,7 @@ async fn test_omaha_client_update_progress_with_mock_installer() {
     let (mut sender, receiver) = mpsc::channel(0);
     let installer = MockUpdateInstallerService::builder().states_receiver(receiver).build();
     let env = TestEnvBuilder::new()
-        .responses(vec![OmahaResponse::Update])
+        .default_with_response(OmahaResponse::Update)
         .installer(installer)
         .build()
         .await;
@@ -1102,7 +1111,7 @@ async fn test_omaha_client_installation_deferred() {
                 }))
                 .build(),
         )
-        .responses(vec![OmahaResponse::Update])
+        .default_with_response(OmahaResponse::Update)
         .build()
         .await;
 
@@ -1187,7 +1196,7 @@ async fn test_omaha_client_installation_deferred() {
 
 #[fasync::run_singlethreaded(test)]
 async fn test_omaha_client_update_error() {
-    let env = TestEnvBuilder::new().responses(vec![OmahaResponse::Update]).build().await;
+    let env = TestEnvBuilder::new().default_with_response(OmahaResponse::Update).build().await;
 
     let mut stream = env.check_now().await;
     expect_states(
@@ -1334,7 +1343,8 @@ async fn do_nop_update_check(env: &TestEnv) {
 
 #[fasync::run_singlethreaded(test)]
 async fn test_omaha_client_invalid_response() {
-    let env = TestEnvBuilder::new().responses(vec![OmahaResponse::InvalidResponse]).build().await;
+    let env =
+        TestEnvBuilder::new().default_with_response(OmahaResponse::InvalidResponse).build().await;
 
     do_failed_update_check(&env).await;
 
@@ -1353,7 +1363,7 @@ async fn test_omaha_client_invalid_response() {
 
 #[fasync::run_singlethreaded(test)]
 async fn test_omaha_client_invalid_url() {
-    let env = TestEnvBuilder::new().responses(vec![OmahaResponse::InvalidURL]).build().await;
+    let env = TestEnvBuilder::new().default_with_response(OmahaResponse::InvalidURL).build().await;
 
     let mut stream = env.check_now().await;
     expect_states(
@@ -1430,7 +1440,7 @@ async fn test_omaha_client_policy_config_inspect() {
 
 #[fasync::run_singlethreaded(test)]
 async fn test_omaha_client_perform_pending_reboot_after_out_of_space() {
-    let env = TestEnvBuilder::new().responses(vec![OmahaResponse::Update]).build().await;
+    let env = TestEnvBuilder::new().default_with_response(OmahaResponse::Update).build().await;
 
     // We should be able to get the update package just fine
     env.proxies
@@ -1516,7 +1526,7 @@ fn assert_signature(report: CrashReport, expected_signature: &str) {
 async fn test_crash_report_installation_error() {
     let (hook, mut recv) = ThrottleHook::new(Ok(()));
     let env = TestEnvBuilder::new()
-        .responses(vec![OmahaResponse::Update])
+        .default_with_response(OmahaResponse::Update)
         .installer(MockUpdateInstallerService::with_response(Err(
             UpdateNotStartedReason::AlreadyInProgress,
         )))
@@ -1554,7 +1564,7 @@ async fn test_crash_report_installation_error() {
 async fn test_crash_report_consecutive_failed_update_checks() {
     let (hook, mut recv) = ThrottleHook::new(Ok(()));
     let env = TestEnvBuilder::new()
-        .responses(vec![OmahaResponse::InvalidResponse])
+        .default_with_response(OmahaResponse::InvalidResponse)
         .crash_reporter(MockCrashReporterService::new(hook))
         .build()
         .await;
@@ -1577,7 +1587,7 @@ async fn test_crash_report_consecutive_failed_update_checks() {
 async fn test_update_check_sets_updatedisabled_when_opted_out() {
     use mock_omaha_server::UpdateCheckAssertion;
 
-    let env = TestEnvBuilder::new().responses(vec![OmahaResponse::NoUpdate]).build().await;
+    let env = TestEnvBuilder::new().default_with_response(OmahaResponse::NoUpdate).build().await;
 
     // The default is to enable updates.
     env.server.set_all_update_check_assertions(Some(UpdateCheckAssertion::UpdatesEnabled));

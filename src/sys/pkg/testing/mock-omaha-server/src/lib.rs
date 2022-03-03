@@ -13,10 +13,10 @@ use {
         service::{make_service_fn, service_fn},
         Body, Method, Request, Response, StatusCode,
     },
-    itertools::zip_eq,
     parking_lot::Mutex,
     serde_json::json,
     std::{
+        collections::HashMap,
         convert::Infallible,
         net::{Ipv4Addr, SocketAddr},
         str::FromStr,
@@ -43,7 +43,6 @@ pub struct ResponseAndMetadata {
     pub response: OmahaResponse,
     pub merkle: Hash,
     pub check_assertion: Option<UpdateCheckAssertion>,
-    pub app_id: String,
     pub version: String,
 }
 
@@ -56,7 +55,6 @@ impl Default for ResponseAndMetadata {
             )
             .unwrap(),
             check_assertion: None,
-            app_id: "integration-test-appid".to_string(),
             version: "0.1.2.3".to_string(),
         }
     }
@@ -65,12 +63,12 @@ impl Default for ResponseAndMetadata {
 /// Shared state.
 #[derive(Clone, Debug)]
 struct Inner {
-    responses_and_metadata: Vec<ResponseAndMetadata>,
+    responses_by_appid: HashMap<String, ResponseAndMetadata>,
 }
 
 impl Inner {
     pub fn num_apps(&self) -> usize {
-        self.responses_and_metadata.len()
+        self.responses_by_appid.len()
     }
 }
 
@@ -87,8 +85,11 @@ pub enum UpdateCheckAssertion {
 
 impl OmahaServerBuilder {
     /// Sets the server's response to update checks
-    pub fn set(mut self, responses_and_metadata: Vec<ResponseAndMetadata>) -> Self {
-        self.inner.responses_and_metadata = responses_and_metadata;
+    pub fn set(
+        mut self,
+        responses_by_appid: impl IntoIterator<Item = (String, ResponseAndMetadata)>,
+    ) -> Self {
+        self.inner.responses_by_appid = responses_by_appid.into_iter().collect();
         self
     }
 
@@ -105,45 +106,30 @@ impl OmahaServer {
     /// * no special request assertions beyond the defaults
     pub fn builder() -> OmahaServerBuilder {
         OmahaServerBuilder {
-            inner: Inner { responses_and_metadata: vec![ResponseAndMetadata::default()] },
+            inner: Inner {
+                responses_by_appid: HashMap::from([(
+                    "integration-test-appid".to_string(),
+                    ResponseAndMetadata::default(),
+                )]),
+            },
         }
     }
 
-    pub fn new(responses: Vec<OmahaResponse>) -> Self {
+    pub fn new(responses: Vec<(String, OmahaResponse)>) -> Self {
         Self::builder()
-            .set(
-                responses
-                    .iter()
-                    .map(|response| ResponseAndMetadata {
-                        response: *response,
-                        ..Default::default()
-                    })
-                    .collect(),
-            )
+            .set(responses.into_iter().map(|(appid, response)| {
+                (appid, ResponseAndMetadata { response, ..Default::default() })
+            }))
             .build()
     }
 
-    pub fn new_with_hash(responses: Vec<OmahaResponse>, merkles: Vec<Hash>) -> Self {
-        Self::builder()
-            .set(
-                zip_eq(responses, merkles)
-                    .map(|(response, merkle)| ResponseAndMetadata {
-                        response,
-                        merkle,
-                        ..Default::default()
-                    })
-                    .collect(),
-            )
-            .build()
-    }
-
-    pub fn new_with_metadata(responses_and_metadata: Vec<ResponseAndMetadata>) -> Self {
-        Self::builder().set(responses_and_metadata).build()
+    pub fn new_with_metadata(responses_by_appid: Vec<(String, ResponseAndMetadata)>) -> Self {
+        Self::builder().set(responses_by_appid).build()
     }
 
     /// Sets the special assertion to make on any future update check requests
     pub fn set_all_update_check_assertions(&self, value: Option<UpdateCheckAssertion>) {
-        for response_and_metadata in self.inner.lock().responses_and_metadata.iter_mut() {
+        for response_and_metadata in self.inner.lock().responses_by_appid.values_mut() {
             response_and_metadata.check_assertion = value;
         }
     }
@@ -216,8 +202,7 @@ async fn handle_omaha_request(
         .iter()
         .map(|app| {
             let appid = app.get("appid").unwrap();
-            let expected =
-                inner.responses_and_metadata.iter().find(|r| &r.app_id == appid).unwrap();
+            let expected = &inner.responses_by_appid[appid.as_str().unwrap()];
 
             let version = app.get("version").unwrap();
             assert_eq!(version, &expected.version);
@@ -365,38 +350,24 @@ mod tests {
     };
 
     #[fasync::run_singlethreaded(test)]
-    #[should_panic(expected = "reached end of one iterator before the other")]
-    // TODO(fxbug.dev/88496): delete the below
-    #[cfg_attr(feature = "variant_asan", ignore)]
-    async fn test_invalid_construction() {
-        // This is invalid because len(responses) == 2, but len(merkles) == 1.
-        let _ = OmahaServer::new_with_hash(
-            vec![OmahaResponse::NoUpdate, OmahaResponse::NoUpdate],
-            vec![Hash::from_str(
-                "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
-            )
-            .unwrap()],
-        )
-        .start()
-        .context("starting server")
-        .expect("start server");
-    }
-
-    #[fasync::run_singlethreaded(test)]
     async fn test_server_replies() -> Result<(), Error> {
         let server = OmahaServer::new_with_metadata(vec![
-            ResponseAndMetadata {
-                response: OmahaResponse::NoUpdate,
-                app_id: "integration-test-appid-1".to_string(),
-                version: "0.0.0.1".to_string(),
-                ..Default::default()
-            },
-            ResponseAndMetadata {
-                response: OmahaResponse::NoUpdate,
-                app_id: "integration-test-appid-2".to_string(),
-                version: "0.0.0.2".to_string(),
-                ..Default::default()
-            },
+            (
+                "integration-test-appid-1".to_string(),
+                ResponseAndMetadata {
+                    response: OmahaResponse::NoUpdate,
+                    version: "0.0.0.1".to_string(),
+                    ..Default::default()
+                },
+            ),
+            (
+                "integration-test-appid-2".to_string(),
+                ResponseAndMetadata {
+                    response: OmahaResponse::NoUpdate,
+                    version: "0.0.0.2".to_string(),
+                    ..Default::default()
+                },
+            ),
         ])
         .start()
         .context("starting server")?;

@@ -23,7 +23,7 @@ use {
     futures::prelude::*,
     http::uri::Uri,
     isolated_ota::{download_and_apply_update, OmahaConfig, UpdateError},
-    mock_omaha_server::{OmahaResponse, OmahaServer},
+    mock_omaha_server::{OmahaResponse, OmahaServer, ResponseAndMetadata},
     mock_paver::{hooks as mphooks, MockPaverService, MockPaverServiceBuilder, PaverEvent},
     serde_json::json,
     std::{
@@ -231,7 +231,10 @@ impl TestEnv {
             OmahaState::Disabled => Ok(None),
             OmahaState::Manual(cfg) => Ok(Some(cfg)),
             OmahaState::Auto(response) => {
-                let server = OmahaServer::new_with_hash(vec![response], vec![merkle]);
+                let server = OmahaServer::new_with_metadata(vec![(
+                    "integration-test-appid".to_string(),
+                    ResponseAndMetadata { response, merkle, ..Default::default() },
+                )]);
                 let addr = server.start().context("Starting omaha server")?;
                 let config =
                     OmahaConfig { app_id: "integration-test-appid".to_owned(), server_url: addr };
