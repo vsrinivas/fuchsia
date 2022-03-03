@@ -42,6 +42,38 @@
             <td><a href="{{ cs_url }}{{ sys.board_driver_location}}"><code>/{{ sys.board_driver_location }}</code></a></td>
           </tr>
           {%- endif %}
+          {%- if sys.name|length %}
+            {%- set found=false %}
+            {%- set printed=false %}
+            {%- for driver in drivers.drivers_documentation %}
+              {%- if driver.supported_system_configurations %}
+                {%- for sysd in driver.supported_system_configurations %}
+                  {%- if sysd == sys.name %}
+                    {%- set found=true %}
+                    {% if found and printed == false %}
+                    <tr>
+                      <td>Drivers</td>
+                      <td>
+                        <ul class="driver-sys-list-outer">
+                    {%- set printed=true %}
+                    {%- endif %}
+                    <li>
+                    {%- if driver.areas %}
+                    <ul class="driver-sys-list-inner">
+                    {%- for area in driver.areas %}
+                    <li>{{ area }}</li>
+                    {%- endfor %}
+                    </ul>
+                    <a href="{{driver_page }}{{ driver.name }}">{{ driver.name }}</a></li>
+                    {%- endif %}
+                          {%- endif %}
+                 {%- endfor %}
+              {%- endif %}
+            {%- endfor %}
+              </ul>
+            </td>
+          </tr>
+          {%- endif %}
         </tbody>
       </table>
     </td>

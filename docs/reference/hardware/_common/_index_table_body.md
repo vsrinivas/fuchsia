@@ -66,6 +66,19 @@
             </td>
           </tr>
           {%- endif %}
+          {%- if driver.supported_system_configurations %}
+          <tr>
+            <td title="Supported Fuchsia system configurations for the driver.">
+              Supported system configurations {{info_icon}}</td>
+            <td>
+              <ul class="comma-list">
+                {%- for sys in driver.supported_system_configurations %}
+                <li><a href="{{sys_config_page }}{{ sys|lower }}">{{ sys }}</a></li>
+                {%- endfor %}
+              </ul>
+            </td>
+          </tr>
+          {%- endif %}
           {%- if driver.path %}
           <tr>
             <td title="The path in the Fuchsia source tree where the driver

@@ -9,6 +9,7 @@
 {%- set system_config_dir = "docs/reference/hardware/" %}
 {%- set system_config_yaml_file = "_supported_sys_config.yaml" %}
 {%- set architecture_yaml_file = "_supported_cpu_architecture.yaml" %}
+{%- set driver_page = "/docs/reference/hardware/drivers#" %}
 
 {%- set sysconfig | yamlloads %}
 {% include "docs/reference/hardware/_supported_sys_config.yaml" %}
@@ -18,6 +19,10 @@
 {% include "docs/reference/hardware/_supported_cpu_architecture.yaml" %}
 {%- endset %}
 
+{%- set drivers | yamlloads %}
+{% include "reference/drivers/all_drivers_doc.yaml" %}
+{%- endset %}
+
 {% comment %}
 {%- set epitaphs | yamlloads %}
 {% include "docs/reference/hardware/_supported_sys_config_epitaphs.yaml" %}
@@ -25,22 +30,27 @@
 {% endcomment %}
 
 <style>
-.comma-list {
+.driver-sys-list-outer, .driver-sys-list-inner {
   display: inline;
   list-style: none;
   padding: 0px;
 }
 
-.comma-list li {
+.driver-sys-list-outer li, .driver-sys-list-inner li {
   display: inline;
 }
 
-.comma-list li::after {
-  content: ", ";
+.driver-sys-list-outer li::after {
+    content: "\a";
+    white-space: pre;
 }
 
-.comma-list li:last-child::after {
-    content: "";
+.driver-sys-list-inner li::after {
+  content: ",";
+}
+
+.driver-sys-list-inner li:last-child::after {
+    content: ":";
 }
 
 table {

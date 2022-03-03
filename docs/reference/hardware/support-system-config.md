@@ -7,7 +7,7 @@ The list of Fuchsia supported system configurations is generated from the
 information in the following files:
 /docs/reference/hardware/_supported_sys_config.yaml
 
-Since this page is generated from on a template, the full page is best viewed at
+Since this page is generated from a template, the full page is best viewed at
 http://www.fuchsia.dev/fuchsia-src/reference/hardware/supported-system-config
 {% endcomment %}
 
