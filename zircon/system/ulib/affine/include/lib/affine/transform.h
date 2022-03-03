@@ -131,17 +131,9 @@ class Transform {
   static Transform Compose(const Transform& bc, const Transform& ab, Exact exact = Exact::Yes);
 
  private:
-  // TODO(https://fxbug.dev/41888): overflow here is undefined behavior.
-  __attribute__((no_sanitize("signed-integer-overflow"))) static inline int64_t AddUnchecked(
-      int64_t a, int64_t b) {
-    return a + b;
-  }
+  static inline int64_t AddUnchecked(int64_t a, int64_t b) { return a + b; }
 
-  // TODO(https://fxbug.dev/41888): overflow here is undefined behavior.
-  __attribute__((no_sanitize("signed-integer-overflow"))) static inline int64_t SubUnchecked(
-      int64_t a, int64_t b) {
-    return a - b;
-  }
+  static inline int64_t SubUnchecked(int64_t a, int64_t b) { return a - b; }
 
   int64_t a_offset_ = 0;
   int64_t b_offset_ = 0;

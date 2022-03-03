@@ -166,17 +166,27 @@ TEST(TransformTestCase, Apply) {
       switch (method) {
         case Method::Static:
           res_sat = Transform::Apply(T.a_offset(), T.b_offset(), T.ratio(), V.val);
-          res_nosat = Transform::Apply<Saturate::No>(T.a_offset(), T.b_offset(), T.ratio(), V.val);
+          // Avoid creating UB by skipping non-saturating transformations that overflow.
+          if (V.expect_ovfl == Ovfl::No) {
+            res_nosat =
+                Transform::Apply<Saturate::No>(T.a_offset(), T.b_offset(), T.ratio(), V.val);
+          }
           break;
 
         case Method::Object:
           res_sat = T.Apply(V.val);
-          res_nosat = T.Apply<Saturate::No>(V.val);
+          // Avoid creating UB by skipping non-saturating transformations that overflow.
+          if (V.expect_ovfl == Ovfl::No) {
+            res_nosat = T.Apply<Saturate::No>(V.val);
+          }
           break;
 
         case Method::Operator:
           res_sat = T(V.val);
-          res_nosat = T.operator()<Saturate::No>(V.val);
+          // Avoid creating UB by skipping non-saturating transformations that overflow.
+          if (V.expect_ovfl == Ovfl::No) {
+            res_nosat = T.operator()<Saturate::No>(V.val);
+          }
           break;
       }
 
