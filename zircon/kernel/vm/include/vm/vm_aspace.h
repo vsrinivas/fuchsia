@@ -292,15 +292,6 @@ class VmAspace : public fbl::DoublyLinkedListable<VmAspace*>, public fbl::RefCou
   // harvests.
   uint32_t pt_harvest_since_active_ TA_GUARDED(AspaceListLock::Get()) = 0;
 
-  // TODO(fxbug.dev/76417): Remove this once bug has been resolved.
-  // To help track down a flake we record a backtrace at the point the aspace is destroyed. The
-  // backtrace gets printed out if the aspace is attempted to be used. This allows correlating why
-  // the aspace was destroyed at the point we know the flake has happened.
-  // Due to the extra memory required this is restricted to debug builds only.
-#ifdef DEBUG_ASSERT_IMPLEMENTED
-  Backtrace destroyed_bt_;
-#endif
-
   DECLARE_SINGLETON_MUTEX(AspaceListLock);
   static fbl::DoublyLinkedList<VmAspace*> aspaces_list_ TA_GUARDED(AspaceListLock::Get());
 

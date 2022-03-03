@@ -76,17 +76,6 @@ zx_status_t VmAddressRegion::CreateSubVmarInternal(size_t offset, size_t size, u
 
   Guard<Mutex> guard{aspace_->lock()};
   if (state_ != LifeCycleState::ALIVE) {
-    // fxbug.dev/76417 This extra logging is to help down a rare flake and should be removed once
-    // this bug is resolved.
-    {
-      printf("Attempted %s on a non-alive vmar:\n", __FUNCTION__);
-      // Separately dump this VMAR in case it has been disconnected from the parent aspace and does
-      // not appear in the verbose aspace_->DumpLocked afterwards.
-      DumpLocked(1, false);
-      printf("Parent aspace information:\n");
-      aspace_->DumpLocked(true);
-    }
-
     return ZX_ERR_BAD_STATE;
   }
 

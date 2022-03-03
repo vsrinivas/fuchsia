@@ -271,12 +271,6 @@ zx_status_t VmAspace::Destroy() {
   }
   aspace_destroyed_ = true;
 
-  // TODO(fxbug.dev/76417): Remove this once bug has been resolved.
-  // See description on destroyed_bt_ for more details.
-#ifdef DEBUG_ASSERT_IMPLEMENTED
-  Thread::Current::GetBacktrace(destroyed_bt_);
-#endif
-
   root_vmar_.reset();
 
   return ZX_OK;
@@ -645,14 +639,6 @@ void VmAspace::DumpLocked(bool verbose) const {
     AssertHeld(root_vmar_->lock_ref());
     root_vmar_->DumpLocked(1, verbose);
   }
-  // TODO(fxbug.dev/76417): Remove this once bug has been resolved.
-  // See description on destroyed_bt_ for more details.
-#ifdef DEBUG_ASSERT_IMPLEMENTED
-  if (verbose && aspace_destroyed_) {
-    printf("Backtrace at point aspace was marked destroyed:\n");
-    destroyed_bt_.Print();
-  }
-#endif
 }
 
 bool VmAspace::EnumerateChildren(VmEnumerator* ve) {
