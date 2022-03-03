@@ -20,7 +20,19 @@
 namespace {
 
 #define CHECK_TRUE_ERRNO(true_condition) FX_CHECK(true_condition) << strerror(errno)
-#define CHECK_ZERO_ERRNO(zero_condition) CHECK_TRUE_ERRNO((zero_condition) == 0)
+#define CHECK_ZERO_ERRNO(value)                                                          \
+  do {                                                                                   \
+    auto c = (value);                                                                    \
+    FX_CHECK(c == 0) << "expected zero, got " << c << " with errno " << strerror(errno); \
+  } while (0)
+
+#define CHECK_POSITIVE(value)                            \
+  do {                                                   \
+    if (auto c = (value); c <= 0) {                      \
+      FX_CHECK(c != 0) << "expected nonzero, got " << c; \
+      FX_LOGS(FATAL) << strerror(errno);                 \
+    }                                                    \
+  } while (0)
 
 template <typename T>
 class AddrStorage {
@@ -124,12 +136,12 @@ bool TcpWriteRead(perftest::RepeatState* state, size_t transfer) {
   while (state->KeepRunning()) {
     for (size_t sent = 0; sent < transfer;) {
       ssize_t wr = write(client_sock.get(), send_bytes.data() + sent, transfer - sent);
-      CHECK_TRUE_ERRNO(wr > 0);
+      CHECK_POSITIVE(wr);
       sent += wr;
     }
     for (size_t recv = 0; recv < transfer;) {
       ssize_t rd = read(server_sock.get(), recv_bytes.data() + recv, transfer - recv);
-      CHECK_TRUE_ERRNO(rd > 0);
+      CHECK_POSITIVE(rd);
       recv += rd;
     }
   }
@@ -167,12 +179,12 @@ bool UdpWriteRead(perftest::RepeatState* state, size_t message_size) {
   state->SetBytesProcessedPerRun(message_size);
   while (state->KeepRunning()) {
     ssize_t wr = write(client_sock.get(), send_bytes.data(), send_bytes.size());
-    CHECK_TRUE_ERRNO(wr > 0);
+    CHECK_TRUE_ERRNO(wr >= 0);
     FX_CHECK(static_cast<size_t>(wr) == send_bytes.size())
         << "wrote " << wr << " expected " << send_bytes.size();
 
     ssize_t rd = read(server_sock.get(), recv_bytes.data(), recv_bytes.size());
-    CHECK_TRUE_ERRNO(rd > 0);
+    CHECK_TRUE_ERRNO(rd >= 0);
     FX_CHECK(static_cast<size_t>(rd) == recv_bytes.size())
         << "read " << rd << " expected " << send_bytes.size();
   }
