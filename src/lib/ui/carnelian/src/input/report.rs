@@ -8,7 +8,7 @@ use crate::{
         Config,
     },
     drawing::DisplayRotation,
-    geometry::LimitToBounds,
+    geometry::{IntVector, LimitToBounds},
     input::{
         consumer_control, input3_key_to_hid_usage, keyboard, mouse, touch, Button, ButtonSet,
         DeviceId, Event, EventType, Modifiers,
@@ -219,7 +219,23 @@ impl<'a> InputReportHandler<'a> {
                 mouse::Phase::Up(Button(*button)),
             )
         });
-        let events = newly_pressed.chain(move_event).chain(released).collect();
+
+        let wheel_v = mouse.scroll_v.unwrap_or(0) as i32;
+        let wheel_h = mouse.scroll_h.unwrap_or(0) as i32;
+        let wheel = if wheel_v != 0 || wheel_h != 0 {
+            Some(mouse::create_event(
+                event_time,
+                device_id,
+                &button_set,
+                new_cursor_position,
+                &transform,
+                mouse::Phase::Wheel(IntVector::new(wheel_h, wheel_v)),
+            ))
+        } else {
+            None
+        };
+
+        let events = newly_pressed.chain(move_event).chain(wheel).chain(released).collect();
         self.pressed_mouse_buttons = pressed_buttons;
         events
     }

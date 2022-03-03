@@ -225,6 +225,7 @@ mod input_report_tests {
                     mouse::Phase::Up(button) => {
                         assert!(button.is_primary());
                     }
+                    mouse::Phase::Wheel(_) => (),
                 },
                 _ => (),
             }
@@ -401,6 +402,7 @@ mod scenic_input_tests {
                     mouse::Phase::Up(button) => {
                         assert!(button.is_primary());
                     }
+                    mouse::Phase::Wheel(_) => (),
                 },
                 _ => (),
             }

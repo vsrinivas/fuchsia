@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use crate::{
+    geometry::IntVector,
     input::{mouse, touch, Button, ButtonSet, DeviceId, Event, EventType},
     IntPoint, IntSize,
 };
@@ -75,7 +76,23 @@ impl FlatlandMouseInputHandler {
                 mouse::Phase::Up(Button(*button)),
             )
         });
-        let events = newly_pressed.chain(move_event).chain(released).collect();
+
+        let wheel_v = pointer_sample.scroll_v.unwrap_or(0) as i32;
+        let wheel_h = pointer_sample.scroll_h.unwrap_or(0) as i32;
+        let wheel = if wheel_v != 0 || wheel_h != 0 {
+            Some(mouse::create_event(
+                event_time,
+                device_id,
+                &button_set,
+                new_cursor_position,
+                &transform,
+                mouse::Phase::Wheel(IntVector::new(wheel_h, wheel_v)),
+            ))
+        } else {
+            None
+        };
+
+        let events = newly_pressed.chain(move_event).chain(wheel).chain(released).collect();
         self.pressed_mouse_buttons = pressed_buttons;
         events
     }

@@ -103,6 +103,7 @@ pub struct TerminalScene {
     hide_scroll_thumb_timer: HideScrollThumbTimer,
 }
 
+#[derive(Debug, PartialEq)]
 pub enum PointerEventResponse {
     /// Indicates that the pointer event resulted in the user wanting to scroll the grid
     ScrollLines(isize),
@@ -159,33 +160,45 @@ impl TerminalScene {
     ) -> Option<PointerEventResponse> {
         let location = event.location.to_f32();
 
-        // Let the scroll bar handle the event if it is currently
-        // tracking the mouse pointer or if the location is in the
-        // scroll bar frame.
-        let result = if self.scroll_bar.is_tracking() || self.scroll_bar.frame.contains(location) {
-            self.hide_scroll_thumb_timer.cancel();
-            self.handle_primary_pointer_event_for_scroll_bar(&event)
-        } else {
-            None
-        };
+        match event.phase {
+            input::mouse::Phase::Wheel(delta) => {
+                // Flatland reports dents of wheel rotated, it can use to scroll lines directly.
+                if delta.y != 0 {
+                    return Some(PointerEventResponse::ScrollLines(delta.y as isize));
+                }
+                None
+            }
+            _ => {
+                // Let the scroll bar handle the event if it is currently
+                // tracking the mouse pointer or if the location is in the
+                // scroll bar frame.
+                let result =
+                    if self.scroll_bar.is_tracking() || self.scroll_bar.frame.contains(location) {
+                        self.hide_scroll_thumb_timer.cancel();
+                        self.handle_primary_pointer_event_for_scroll_bar(&event)
+                    } else {
+                        None
+                    };
 
-        // Schedule hiding of the scroll thumb if not already scheduled,
-        // and we are not tracking the mouse, and the location of the
-        // mouse is outside the scroll bar frame.
-        if !self.scroll_bar.is_tracking() && !self.scroll_bar.frame.contains(location) {
-            if !self.hide_scroll_thumb_timer.is_scheduled() {
-                self.hide_scroll_thumb_timer.schedule();
+                // Schedule hiding of the scroll thumb if not already scheduled,
+                // and we are not tracking the mouse, and the location of the
+                // mouse is outside the scroll bar frame.
+                if !self.scroll_bar.is_tracking() && !self.scroll_bar.frame.contains(location) {
+                    if !self.hide_scroll_thumb_timer.is_scheduled() {
+                        self.hide_scroll_thumb_timer.schedule();
+                    }
+                }
+
+                // Update dimming state when mouse location changes.
+                self.scroll_bar.dim_thumb = !self.scroll_bar.thumb_contains(location);
+
+                // Invalidate the scroll thumb after processing mouse events in
+                // case the event caused the thumb to change.
+                self.scroll_bar.invalidate_thumb();
+
+                result
             }
         }
-
-        // Update dimming state when mouse location changes.
-        self.scroll_bar.dim_thumb = !self.scroll_bar.thumb_contains(location);
-
-        // Invalidate the scroll thumb after processing mouse events in
-        // case the event caused the thumb to change.
-        self.scroll_bar.invalidate_thumb();
-
-        result
     }
 
     pub fn handle_touch_event(
@@ -345,7 +358,10 @@ impl Default for ScrollContext {
 
 #[cfg(test)]
 mod tests {
-    use {super::*, carnelian::Point};
+    use super::*;
+    use carnelian::{geometry::IntVector, Point};
+    use euclid::point2;
+    use std::collections::HashSet;
 
     #[test]
     fn calculate_difference_in_display_offset_no_change() {
@@ -474,5 +490,30 @@ mod tests {
 
         scene.update_size(Size::new(100.0, 1000.0), Size::new(10.0, 5.0));
         assert_eq!(scene.scroll_bar.content_offset, 50.0);
+    }
+
+    #[test]
+    fn scroll_down() {
+        let mut scene = TerminalScene::default();
+
+        // originally frame is much bigger than content so there is no offset
+        scene.update_size(Size::zero(), Size::new(10.0, 10.0));
+        let scroll_context = ScrollContext { history: 10, visible_lines: 10, display_offset: 10 };
+        scene.update_scroll_context(scroll_context);
+
+        let mut ctx = ViewAssistantContext::new_for_testing();
+
+        let resp = scene.handle_mouse_event(
+            &input::mouse::Event {
+                buttons: input::ButtonSet::new(&HashSet::new()),
+                phase: input::mouse::Phase::Wheel(IntVector::new(
+                    0, /* wheel_h */
+                    1, /* wheel_v */
+                )),
+                location: point2(5, 5),
+            },
+            &mut ctx,
+        );
+        assert_eq!(resp, Some(PointerEventResponse::ScrollLines(1)));
     }
 }

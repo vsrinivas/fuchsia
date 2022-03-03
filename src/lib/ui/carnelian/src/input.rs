@@ -109,12 +109,14 @@ impl Modifiers {
 
 pub mod mouse {
     use super::*;
+    use crate::geometry::IntVector;
 
     #[derive(Debug, PartialEq, Clone)]
     pub enum Phase {
         Down(Button),
         Up(Button),
         Moved,
+        Wheel(IntVector),
     }
 
     #[derive(Debug, PartialEq, Clone)]
@@ -264,6 +266,7 @@ pub mod pointer {
                         None
                     }
                 }
+                mouse::Phase::Wheel(_) => None,
             }
             .and_then(|phase| Some(Self { phase, pointer_id: PointerId::Mouse(device_id.clone()) }))
         }
