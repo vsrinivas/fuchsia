@@ -29,8 +29,6 @@ const _FIDL_TRACE_BINDINGS_RUST: u32 = 6;
 bitflags! {
     pub struct ExampleBits: u32 {
         const MEMBER = 1;
-        #[deprecated = "Bits constants now use SCREAMING_SNAKE_CASE, change this to MEMBER"]
-        const Member = 1;
     }
 }
 

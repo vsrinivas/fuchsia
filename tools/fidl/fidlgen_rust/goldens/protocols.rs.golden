@@ -29,11 +29,7 @@ const _FIDL_TRACE_BINDINGS_RUST: u32 = 6;
 bitflags! {
     pub struct Rights: u32 {
         const TRANSFER = 1;
-        #[deprecated = "Bits constants now use SCREAMING_SNAKE_CASE, change this to TRANSFER"]
-        const Transfer = 1;
         const DUPLICATE = 2;
-        #[deprecated = "Bits constants now use SCREAMING_SNAKE_CASE, change this to DUPLICATE"]
-        const Duplicate = 2;
     }
 }
 

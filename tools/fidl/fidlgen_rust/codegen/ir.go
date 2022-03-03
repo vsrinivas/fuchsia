@@ -27,9 +27,8 @@ type Bits struct {
 
 type BitsMember struct {
 	fidlgen.BitsMember
-	Name       string
-	LegacyName string
-	Value      string
+	Name  string
+	Value string
 }
 
 type Const struct {
@@ -792,9 +791,7 @@ func (c *compiler) compileBits(val fidlgen.Bits) Bits {
 	for _, v := range val.Members {
 		e.Members = append(e.Members, BitsMember{
 			BitsMember: v,
-			// TODO(fxbug.dev/47034) Should be SCREAMING_SNAKE_CASE.
 			Name:       compileScreamingSnakeIdentifier(v.Name),
-			LegacyName: compileCamelIdentifier(v.Name),
 			Value:      c.compileConstant(v.Value, val.Type),
 		})
 	}

@@ -35,20 +35,10 @@ bitflags! {
         ///
         /// MY_FIRST_BIT member comment #3
         const MY_FIRST_BIT = 1;
-        /// MY_FIRST_BIT member comment #1
-        ///
-        /// MY_FIRST_BIT member comment #3
-        #[deprecated = "Bits constants now use SCREAMING_SNAKE_CASE, change this to MY_FIRST_BIT"]
-        const MyFirstBit = 1;
         /// MY_OTHER_BIT member comment #1
         ///
         /// MY_OTHER_BIT member comment #3
         const MY_OTHER_BIT = 2;
-        /// MY_OTHER_BIT member comment #1
-        ///
-        /// MY_OTHER_BIT member comment #3
-        #[deprecated = "Bits constants now use SCREAMING_SNAKE_CASE, change this to MY_OTHER_BIT"]
-        const MyOtherBit = 2;
     }
 }
 
@@ -81,20 +71,10 @@ bitflags! {
         ///
         /// MY_FIRST_BIT member comment #3
         const MY_FIRST_BIT = 1;
-        /// MY_FIRST_BIT member comment #1
-        ///
-        /// MY_FIRST_BIT member comment #3
-        #[deprecated = "Bits constants now use SCREAMING_SNAKE_CASE, change this to MY_FIRST_BIT"]
-        const MyFirstBit = 1;
         /// MY_OTHER_BIT member comment #1
         ///
         /// MY_OTHER_BIT member comment #3
         const MY_OTHER_BIT = 2;
-        /// MY_OTHER_BIT member comment #1
-        ///
-        /// MY_OTHER_BIT member comment #3
-        #[deprecated = "Bits constants now use SCREAMING_SNAKE_CASE, change this to MY_OTHER_BIT"]
-        const MyOtherBit = 2;
     }
 }
 

@@ -207,7 +207,7 @@ mod test {
         assert!(output.contains("source_states: Some"));
         assert!(output.contains("toggle_flags: Some"));
         assert!(output.contains("camera"));
-        assert!(output.contains("Available"));
+        assert!(output.contains("AVAILABLE"));
         Ok(())
     }
 }

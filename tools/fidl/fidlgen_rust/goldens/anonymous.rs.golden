@@ -29,11 +29,7 @@ const _FIDL_TRACE_BINDINGS_RUST: u32 = 6;
 bitflags! {
     pub struct BitsMember: u32 {
         const BIT_ONE = 1;
-        #[deprecated = "Bits constants now use SCREAMING_SNAKE_CASE, change this to BIT_ONE"]
-        const BitOne = 1;
         const BIT_TWO = 2;
-        #[deprecated = "Bits constants now use SCREAMING_SNAKE_CASE, change this to BIT_TWO"]
-        const BitTwo = 2;
     }
 }
 
@@ -63,8 +59,6 @@ fidl_bits! {
 bitflags! {
     pub struct Flags: u16 {
         const INLINE = 1;
-        #[deprecated = "Bits constants now use SCREAMING_SNAKE_CASE, change this to INLINE"]
-        const Inline = 1;
     }
 }
 

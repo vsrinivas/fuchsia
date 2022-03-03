@@ -28,11 +28,7 @@ use {
 bitflags! {
     pub struct BitsType: u32 {
         const VALUE = 1;
-        #[deprecated = "Bits constants now use SCREAMING_SNAKE_CASE, change this to VALUE"]
-        const Value = 1;
         const TRUE_ = 2;
-        #[deprecated = "Bits constants now use SCREAMING_SNAKE_CASE, change this to TRUE_"]
-        const True_ = 2;
     }
 }
 
