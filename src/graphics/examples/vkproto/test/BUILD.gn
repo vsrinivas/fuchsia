@@ -8,7 +8,7 @@ import("//src/graphics/lib/magma/gnbuild/magma.gni")
 
 fuchsia_component("vkproto_test") {
   testonly = true
-  manifest = "meta/vkproto_test.cmx"
+  manifest = "meta/vkproto_test.cml"
   deps = [
     ":bin",
     "//src/graphics/examples/vkproto:shaders",

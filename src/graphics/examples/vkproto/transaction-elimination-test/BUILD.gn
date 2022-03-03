@@ -8,7 +8,7 @@ import("//src/graphics/lib/magma/gnbuild/magma.gni")
 
 fuchsia_component("transaction_elimination_test") {
   testonly = true
-  manifest = "meta/transaction-elimination-test.cmx"
+  manifest = "meta/transaction-elimination-test.cml"
   deps = [
     ":bin",
     "//src/graphics/examples/vkproto:shaders",

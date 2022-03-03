@@ -1,9 +1,0 @@
-{
-    "include": [
-        "//src/lib/vulkan/test-application.shard.cmx",
-        "syslog/client.shard.cmx"
-    ],
-    "program": {
-        "binary": "bin/vkproto-driver-tests"
-    }
-}

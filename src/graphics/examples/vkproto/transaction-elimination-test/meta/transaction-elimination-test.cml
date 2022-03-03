@@ -1,0 +1,23 @@
+{
+    include: [
+        "//src/sys/test_manager/system-test.shard.cml",
+        "//src/sys/test_runners/gtest/default.shard.cml",
+        "syslog/client.shard.cml",
+        "vulkan/client.shard.cml",
+    ],
+    program: {
+        binary: "bin/transaction-elimination-test",
+    },
+    use: [
+        {
+            directory: "dev-gpu",
+            rights: [ "r*" ],
+            path: "/dev/class/gpu",
+        },
+        {
+            directory: "dev-gpu-performance-counters",
+            rights: [ "r*" ],
+            path: "/dev/class/gpu-performance-counters",
+        },
+    ],
+}
