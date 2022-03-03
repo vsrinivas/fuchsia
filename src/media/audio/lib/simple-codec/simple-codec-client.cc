@@ -74,7 +74,8 @@ zx_status_t SimpleCodecClient::SetProtocol(ddk::CodecProtocolClient proto_client
   signal_processing_ =
       fidl::WireSyncClient<fuchsia_hardware_audio_signalprocessing::SignalProcessing>(
           std::move(endpoints->client));
-  codec_.sync()->SignalProcessingConnect(std::move(endpoints->server));
+  auto result = codec_.sync()->SignalProcessingConnect(std::move(endpoints->server));
+  ZX_ASSERT(result.ok());
   auto pes = signal_processing_->GetElements();
   if (!pes.ok() || pes->result.is_err()) {
     return ZX_OK;  // We allow servers not supporting signal processing.
