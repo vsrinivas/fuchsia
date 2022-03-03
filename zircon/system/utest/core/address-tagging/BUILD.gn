@@ -6,6 +6,7 @@ source_set("address-tagging") {
   testonly = true
   sources = [ "address-tagging-test.cc" ]
   deps = [
+    "//zircon/system/ulib/elf-psabi",
     "//zircon/system/ulib/test-utils",
     "//zircon/system/ulib/zircon-internal",
     "//zircon/system/ulib/zxtest",
