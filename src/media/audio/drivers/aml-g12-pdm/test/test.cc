@@ -21,6 +21,16 @@ namespace audio::aml_g12 {
 
 namespace audio_fidl = fuchsia_hardware_audio;
 
+fidl::WireSyncClient<audio_fidl::StreamConfig> GetStreamClient(
+    fidl::ClientEnd<audio_fidl::Device> client) {
+  auto client_wrap = fidl::BindSyncClient(std::move(client));
+  fidl::WireResult<audio_fidl::Device::GetChannel> channel_wrap = client_wrap->GetChannel();
+  if (channel_wrap.status() != ZX_OK) {
+    return {};
+  }
+  return fidl::WireSyncClient<audio_fidl::StreamConfig>(std::move(channel_wrap->channel));
+}
+
 class FakeMmio {
  public:
   FakeMmio() {
@@ -89,10 +99,8 @@ struct AudioStreamInTest : public inspect::InspectTestHelper, public zxtest::Tes
     tester_.SetMetadata(DEVICE_METADATA_PRIVATE, &metadata, sizeof(metadata));
 
     auto stream = audio::SimpleAudioStream::Create<TestAudioStreamIn>();
-    auto client_wrap = fidl::BindSyncClient(tester_.FidlClient<audio_fidl::Device>());
-    fidl::WireResult<audio_fidl::Device::GetChannel> ch = client_wrap->GetChannel();
-    ASSERT_EQ(ch.status(), ZX_OK);
-    fidl::WireSyncClient<audio_fidl::StreamConfig> client(std::move(ch->channel));
+    auto stream_client = GetStreamClient(tester_.FidlClient<audio_fidl::Device>());
+    ASSERT_TRUE(stream_client.is_valid());
     auto endpoints = fidl::CreateEndpoints<audio_fidl::RingBuffer>();
     ASSERT_OK(endpoints.status_value());
     auto [local, remote] = *std::move(endpoints);
@@ -104,7 +112,7 @@ struct AudioStreamInTest : public inspect::InspectTestHelper, public zxtest::Tes
     audio_fidl::wire::Format format(allocator);
     format.set_pcm_format(allocator, std::move(pcm_format));
 
-    client->CreateRingBuffer(std::move(format), std::move(remote));
+    stream_client->CreateRingBuffer(std::move(format), std::move(remote));
 
     auto vmo = fidl::WireCall<audio_fidl::RingBuffer>(local)->GetVmo(frames_req, 0);
     ASSERT_OK(vmo.status());
@@ -143,11 +151,8 @@ TEST_F(AudioStreamInTest, Inspect) {
   auto server = audio::SimpleAudioStream::Create<TestAudioStreamIn>();
   ASSERT_NOT_NULL(server);
 
-  fidl::WireSyncClient<audio_fidl::Device> client_wrap(tester_.FidlClient<audio_fidl::Device>());
-  fidl::WireResult<audio_fidl::Device::GetChannel> channel_wrap = client_wrap->GetChannel();
-  ASSERT_EQ(channel_wrap.status(), ZX_OK);
-
-  fidl::WireSyncClient<audio_fidl::StreamConfig> client(std::move(channel_wrap->channel));
+  auto stream_client = GetStreamClient(tester_.FidlClient<audio_fidl::Device>());
+  ASSERT_TRUE(stream_client.is_valid());
 
   audio_fidl::wire::PcmFormat pcm_format = GetDefaultPcmFormat();
 
@@ -159,7 +164,7 @@ TEST_F(AudioStreamInTest, Inspect) {
   ASSERT_OK(endpoints.status_value());
   auto [local, remote] = *std::move(endpoints);
 
-  client->CreateRingBuffer(std::move(format), std::move(remote));
+  stream_client->CreateRingBuffer(std::move(format), std::move(remote));
 
   auto props = fidl::WireCall<audio_fidl::RingBuffer>(local)->GetProperties();
   ASSERT_OK(props.status());

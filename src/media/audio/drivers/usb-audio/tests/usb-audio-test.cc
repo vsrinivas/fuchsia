@@ -33,6 +33,16 @@ audio_fidl::wire::PcmFormat GetDefaultPcmFormat() {
   return format;
 }
 
+fidl::WireSyncClient<audio_fidl::StreamConfig> GetStreamClient(
+    fidl::ClientEnd<audio_fidl::Device> client) {
+  auto client_wrap = fidl::BindSyncClient(std::move(client));
+  fidl::WireResult<audio_fidl::Device::GetChannel> channel_wrap = client_wrap->GetChannel();
+  if (channel_wrap.status() != ZX_OK) {
+    return {};
+  }
+  return fidl::WireSyncClient<audio_fidl::StreamConfig>(std::move(channel_wrap->channel));
+}
+
 class FakeDevice;
 using FakeDeviceType = ddk::Device<FakeDevice>;
 
@@ -285,11 +295,10 @@ TEST(UsbAudioTest, GetStreamProperties) {
   ASSERT_OK(fake_device.Bind());
   ASSERT_OK(UsbAudioDevice::DriverBind(fake_device.dev()));
 
-  fidl::WireSyncClient<audio_fidl::Device> client(std::move(tester.FidlClient()));
-  fidl::WireResult<audio_fidl::Device::GetChannel> ch = client->GetChannel();
-  ASSERT_EQ(ch.status(), ZX_OK);
+  auto stream_client = GetStreamClient(std::move(tester.FidlClient()));
+  ASSERT_TRUE(stream_client.is_valid());
 
-  auto result = fidl::WireCall<audio_fidl::StreamConfig>(ch->channel)->GetProperties();
+  auto result = stream_client->GetProperties();
   ASSERT_OK(result.status());
 
   ASSERT_EQ(result->properties.clock_domain(), 0);
@@ -329,21 +338,19 @@ TEST(UsbAudioTest, SetAndGetGain) {
   ASSERT_OK(fake_device.Bind());
   ASSERT_OK(UsbAudioDevice::DriverBind(fake_device.dev()));
 
-  fidl::WireSyncClient<audio_fidl::Device> client(std::move(tester.FidlClient()));
-  fidl::WireResult<audio_fidl::Device::GetChannel> ch = client->GetChannel();
-  ASSERT_EQ(ch.status(), ZX_OK);
+  auto stream_client = GetStreamClient(std::move(tester.FidlClient()));
+  ASSERT_TRUE(stream_client.is_valid());
 
   constexpr float kTestGain = -12.f;
   {
     fidl::Arena allocator;
     audio_fidl::wire::GainState gain_state(allocator);
     gain_state.set_gain_db(kTestGain);
-    auto status =
-        fidl::WireCall<audio_fidl::StreamConfig>(ch->channel)->SetGain(std::move(gain_state));
+    auto status = stream_client->SetGain(std::move(gain_state));
     ASSERT_OK(status.status());
   }
 
-  auto gain_state = fidl::WireCall<audio_fidl::StreamConfig>(ch->channel)->WatchGainState();
+  auto gain_state = stream_client->WatchGainState();
   ASSERT_OK(gain_state.status());
 
   ASSERT_EQ(kTestGain, gain_state->gain_state.gain_db());
@@ -359,13 +366,10 @@ TEST(UsbAudioTest, Enumerate) {
   ASSERT_OK(fake_device.Bind());
   ASSERT_OK(UsbAudioDevice::DriverBind(fake_device.dev()));
 
-  fidl::WireSyncClient<audio_fidl::Device> client_wrap(std::move(tester.FidlClient()));
-  fidl::WireResult<audio_fidl::Device::GetChannel> ch = client_wrap->GetChannel();
-  ASSERT_EQ(ch.status(), ZX_OK);
+  auto stream_client = GetStreamClient(std::move(tester.FidlClient()));
+  ASSERT_TRUE(stream_client.is_valid());
 
-  fidl::WireSyncClient<audio_fidl::StreamConfig> client(std::move(ch->channel));
-
-  auto ret = client->GetSupportedFormats();
+  auto ret = stream_client->GetSupportedFormats();
   auto& supported_formats = ret->supported_formats;
   ASSERT_EQ(2, supported_formats.count());
 
@@ -404,11 +408,8 @@ TEST(UsbAudioTest, CreateRingBuffer) {
   ASSERT_OK(fake_device.Bind());
   ASSERT_OK(UsbAudioDevice::DriverBind(fake_device.dev()));
 
-  fidl::WireSyncClient<audio_fidl::Device> client_wrap(std::move(tester.FidlClient()));
-  fidl::WireResult<audio_fidl::Device::GetChannel> ch = client_wrap->GetChannel();
-  ASSERT_EQ(ch.status(), ZX_OK);
-
-  fidl::WireSyncClient<audio_fidl::StreamConfig> client(std::move(ch->channel));
+  auto stream_client = GetStreamClient(std::move(tester.FidlClient()));
+  ASSERT_TRUE(stream_client.is_valid());
 
   auto endpoints = fidl::CreateEndpoints<audio_fidl::RingBuffer>();
   ASSERT_OK(endpoints.status_value());
@@ -417,7 +418,7 @@ TEST(UsbAudioTest, CreateRingBuffer) {
   fidl::Arena allocator;
   audio_fidl::wire::Format format(allocator);
   format.set_pcm_format(allocator, GetDefaultPcmFormat());
-  client->CreateRingBuffer(std::move(format), std::move(remote));
+  stream_client->CreateRingBuffer(std::move(format), std::move(remote));
 
   fake_device.DdkAsyncRemove();
   EXPECT_TRUE(tester.Ok());
@@ -431,9 +432,8 @@ TEST(UsbAudioTest, DISABLED_RingBufferPropertiesAndStartOk) {
   ASSERT_OK(fake_device.Bind());
   ASSERT_OK(UsbAudioDevice::DriverBind(fake_device.dev()));
 
-  fidl::WireSyncClient<audio_fidl::Device> client(std::move(tester.FidlClient()));
-  fidl::WireResult<audio_fidl::Device::GetChannel> ch = client->GetChannel();
-  ASSERT_EQ(ch.status(), ZX_OK);
+  auto stream_client = GetStreamClient(std::move(tester.FidlClient()));
+  ASSERT_TRUE(stream_client.is_valid());
 
   auto endpoints = fidl::CreateEndpoints<audio_fidl::RingBuffer>();
   ASSERT_OK(endpoints.status_value());
@@ -442,8 +442,7 @@ TEST(UsbAudioTest, DISABLED_RingBufferPropertiesAndStartOk) {
   fidl::Arena allocator;
   audio_fidl::wire::Format format(allocator);
   format.set_pcm_format(allocator, GetDefaultPcmFormat());
-  auto rb = fidl::WireCall<audio_fidl::StreamConfig>(ch->channel)
-                ->CreateRingBuffer(std::move(format), std::move(remote));
+  auto rb = stream_client->CreateRingBuffer(std::move(format), std::move(remote));
   ASSERT_OK(rb.status());
 
   auto result = fidl::WireCall<audio_fidl::RingBuffer>(local)->GetProperties();
@@ -488,9 +487,8 @@ TEST(UsbAudioTest, DISABLED_RingBufferStartBeforeGetVmo) {
   ASSERT_OK(fake_device.Bind());
   ASSERT_OK(UsbAudioDevice::DriverBind(fake_device.dev()));
 
-  fidl::WireSyncClient<audio_fidl::Device> client(std::move(tester.FidlClient()));
-  fidl::WireResult<audio_fidl::Device::GetChannel> ch = client->GetChannel();
-  ASSERT_EQ(ch.status(), ZX_OK);
+  auto stream_client = GetStreamClient(std::move(tester.FidlClient()));
+  ASSERT_TRUE(stream_client.is_valid());
 
   auto endpoints = fidl::CreateEndpoints<audio_fidl::RingBuffer>();
   ASSERT_OK(endpoints.status_value());
@@ -499,8 +497,7 @@ TEST(UsbAudioTest, DISABLED_RingBufferStartBeforeGetVmo) {
   fidl::Arena allocator;
   audio_fidl::wire::Format format(allocator);
   format.set_pcm_format(allocator, GetDefaultPcmFormat());
-  auto rb = fidl::WireCall<audio_fidl::StreamConfig>(ch->channel)
-                ->CreateRingBuffer(std::move(format), std::move(remote));
+  auto rb = stream_client->CreateRingBuffer(std::move(format), std::move(remote));
   ASSERT_OK(rb.status());
 
   // Start() before GetVmo() must result in channel closure
@@ -519,9 +516,8 @@ TEST(UsbAudioTest, DISABLED_RingBufferStartWhileStarted) {
   ASSERT_OK(fake_device.Bind());
   ASSERT_OK(UsbAudioDevice::DriverBind(fake_device.dev()));
 
-  fidl::WireSyncClient<audio_fidl::Device> client(std::move(tester.FidlClient()));
-  fidl::WireResult<audio_fidl::Device::GetChannel> ch = client->GetChannel();
-  ASSERT_EQ(ch.status(), ZX_OK);
+  auto stream_client = GetStreamClient(std::move(tester.FidlClient()));
+  ASSERT_TRUE(stream_client.is_valid());
 
   auto endpoints = fidl::CreateEndpoints<audio_fidl::RingBuffer>();
   ASSERT_OK(endpoints.status_value());
@@ -530,8 +526,7 @@ TEST(UsbAudioTest, DISABLED_RingBufferStartWhileStarted) {
   fidl::Arena allocator;
   audio_fidl::wire::Format format(allocator);
   format.set_pcm_format(allocator, GetDefaultPcmFormat());
-  auto rb = fidl::WireCall<audio_fidl::StreamConfig>(ch->channel)
-                ->CreateRingBuffer(std::move(format), std::move(remote));
+  auto rb = stream_client->CreateRingBuffer(std::move(format), std::move(remote));
   ASSERT_OK(rb.status());
 
   auto vmo = fidl::WireCall<audio_fidl::RingBuffer>(local)->GetVmo(kTestFrameRate, 0);
@@ -572,9 +567,8 @@ TEST(UsbAudioTest, DISABLED_RingBufferStopBeforeGetVmo) {
   ASSERT_OK(fake_device.Bind());
   ASSERT_OK(UsbAudioDevice::DriverBind(fake_device.dev()));
 
-  fidl::WireSyncClient<audio_fidl::Device> client(std::move(tester.FidlClient()));
-  fidl::WireResult<audio_fidl::Device::GetChannel> ch = client->GetChannel();
-  ASSERT_EQ(ch.status(), ZX_OK);
+  auto stream_client = GetStreamClient(std::move(tester.FidlClient()));
+  ASSERT_TRUE(stream_client.is_valid());
 
   auto endpoints = fidl::CreateEndpoints<audio_fidl::RingBuffer>();
   ASSERT_OK(endpoints.status_value());
@@ -583,8 +577,7 @@ TEST(UsbAudioTest, DISABLED_RingBufferStopBeforeGetVmo) {
   fidl::Arena allocator;
   audio_fidl::wire::Format format(allocator);
   format.set_pcm_format(allocator, GetDefaultPcmFormat());
-  auto rb = fidl::WireCall<audio_fidl::StreamConfig>(ch->channel)
-                ->CreateRingBuffer(std::move(format), std::move(remote));
+  auto rb = stream_client->CreateRingBuffer(std::move(format), std::move(remote));
   ASSERT_OK(rb.status());
 
   // Stop() before GetVmo() must result in channel closure
@@ -602,9 +595,8 @@ TEST(UsbAudioTest, RingBufferStopWhileStopped) {
   ASSERT_OK(fake_device.Bind());
   ASSERT_OK(UsbAudioDevice::DriverBind(fake_device.dev()));
 
-  fidl::WireSyncClient<audio_fidl::Device> client(std::move(tester.FidlClient()));
-  fidl::WireResult<audio_fidl::Device::GetChannel> ch = client->GetChannel();
-  ASSERT_EQ(ch.status(), ZX_OK);
+  auto stream_client = GetStreamClient(std::move(tester.FidlClient()));
+  ASSERT_TRUE(stream_client.is_valid());
 
   auto endpoints = fidl::CreateEndpoints<audio_fidl::RingBuffer>();
   ASSERT_OK(endpoints.status_value());
@@ -613,8 +605,7 @@ TEST(UsbAudioTest, RingBufferStopWhileStopped) {
   fidl::Arena allocator;
   audio_fidl::wire::Format format(allocator);
   format.set_pcm_format(allocator, GetDefaultPcmFormat());
-  auto rb = fidl::WireCall<audio_fidl::StreamConfig>(ch->channel)
-                ->CreateRingBuffer(std::move(format), std::move(remote));
+  auto rb = stream_client->CreateRingBuffer(std::move(format), std::move(remote));
   ASSERT_OK(rb.status());
 
   auto vmo = fidl::WireCall<audio_fidl::RingBuffer>(local)->GetVmo(kTestFrameRate, 0);
@@ -638,9 +629,8 @@ TEST(UsbAudioTest, Unplug) {
   ASSERT_OK(fake_device.Bind());
   ASSERT_OK(UsbAudioDevice::DriverBind(fake_device.dev()));
 
-  fidl::WireSyncClient<audio_fidl::Device> client(std::move(tester.FidlClient()));
-  fidl::WireResult<audio_fidl::Device::GetChannel> ch = client->GetChannel();
-  ASSERT_EQ(ch.status(), ZX_OK);
+  auto stream_client = GetStreamClient(std::move(tester.FidlClient()));
+  ASSERT_TRUE(stream_client.is_valid());
 
   auto endpoints = fidl::CreateEndpoints<audio_fidl::RingBuffer>();
   ASSERT_OK(endpoints.status_value());
@@ -649,8 +639,7 @@ TEST(UsbAudioTest, Unplug) {
   fidl::Arena allocator;
   audio_fidl::wire::Format format(allocator);
   format.set_pcm_format(allocator, GetDefaultPcmFormat());
-  auto rb = fidl::WireCall<audio_fidl::StreamConfig>(ch->channel)
-                ->CreateRingBuffer(std::move(format), std::move(remote));
+  auto rb = stream_client->CreateRingBuffer(std::move(format), std::move(remote));
   ASSERT_OK(rb.status());
 
   auto result = fidl::WireCall<audio_fidl::RingBuffer>(local)->GetProperties();
@@ -681,7 +670,7 @@ TEST(UsbAudioTest, Unplug) {
   }
   th.join();
 
-  auto properties = fidl::WireCall<audio_fidl::StreamConfig>(ch->channel)->GetProperties();
+  auto properties = stream_client->GetProperties();
   ASSERT_EQ(ZX_ERR_PEER_CLOSED, properties.status());
 
   fake_device.DdkAsyncRemove();

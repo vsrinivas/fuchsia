@@ -26,6 +26,16 @@ constexpr float kTestGain2 = -15.f;
 constexpr float kTestMinGain = -20.f;
 constexpr float kTestMaxGain = -10.f;
 constexpr float kTestGainStep = 2.f;
+
+fidl::WireSyncClient<audio_fidl::StreamConfig> GetStreamClient(
+    fidl::ClientEnd<audio_fidl::Device> client) {
+  auto client_wrap = fidl::BindSyncClient(std::move(client));
+  fidl::WireResult<audio_fidl::Device::GetChannel> channel_wrap = client_wrap->GetChannel();
+  if (channel_wrap.status() != ZX_OK) {
+    return {};
+  }
+  return fidl::WireSyncClient<audio_fidl::StreamConfig>(std::move(channel_wrap->channel));
+}
 }  // namespace
 
 namespace audio::intel_hda {
@@ -142,11 +152,10 @@ TEST(HdaStreamTest, GetStreamPropertiesDefaults) {
   ASSERT_OK(codec->ActivateStream(stream));
   ASSERT_OK(stream->Bind());
 
-  auto client_wrap = fidl::BindSyncClient(tester.FidlClient<audio_fidl::Device>());
-  fidl::WireResult<audio_fidl::Device::GetChannel> ch = client_wrap->GetChannel();
-  ASSERT_EQ(ch.status(), ZX_OK);
+  auto stream_client = GetStreamClient(tester.FidlClient<audio_fidl::Device>());
+  ASSERT_TRUE(stream_client.is_valid());
 
-  auto result = fidl::WireCall<audio_fidl::StreamConfig>(ch->channel)->GetProperties();
+  auto result = stream_client->GetProperties();
   ASSERT_OK(result.status());
   const char* kManufacturer = "<unknown>";
   ASSERT_BYTES_EQ(result->properties.manufacturer().data(), kManufacturer, strlen(kManufacturer));
@@ -179,20 +188,18 @@ TEST(HdaStreamTest, SetAndGetGainDefaults) {
   ASSERT_OK(codec->ActivateStream(stream));
   ASSERT_OK(stream->Bind());
 
-  auto client_wrap = fidl::BindSyncClient(tester.FidlClient<audio_fidl::Device>());
-  fidl::WireResult<audio_fidl::Device::GetChannel> ch = client_wrap->GetChannel();
-  ASSERT_EQ(ch.status(), ZX_OK);
+  auto stream_client = GetStreamClient(tester.FidlClient<audio_fidl::Device>());
+  ASSERT_TRUE(stream_client.is_valid());
 
   {
     {
       fidl::Arena allocator;
       audio_fidl::wire::GainState gain_state(allocator);
       gain_state.set_gain_db(kTestGain);
-      auto status =
-          fidl::WireCall<audio_fidl::StreamConfig>(ch->channel)->SetGain(std::move(gain_state));
+      auto status = stream_client->SetGain(std::move(gain_state));
       EXPECT_OK(status.status());
     }
-    auto gain_state = fidl::WireCall<audio_fidl::StreamConfig>(ch->channel)->WatchGainState();
+    auto gain_state = stream_client->WatchGainState();
     EXPECT_OK(gain_state.status());
     EXPECT_EQ(0, gain_state->gain_state.gain_db());  // Gain was not changed, default range is 0.
   }
@@ -215,11 +222,10 @@ TEST(HdaStreamTest, WatchPlugStateDefaults) {
   ASSERT_OK(codec->ActivateStream(stream));
   ASSERT_OK(stream->Bind());
 
-  auto client_wrap = fidl::BindSyncClient(tester.FidlClient<audio_fidl::Device>());
-  fidl::WireResult<audio_fidl::Device::GetChannel> ch = client_wrap->GetChannel();
-  ASSERT_EQ(ch.status(), ZX_OK);
+  auto stream_client = GetStreamClient(tester.FidlClient<audio_fidl::Device>());
+  ASSERT_TRUE(stream_client.is_valid());
 
-  auto state = fidl::WireCall<audio_fidl::StreamConfig>(ch->channel)->WatchPlugState();
+  auto state = stream_client->WatchPlugState();
   ASSERT_OK(state.status());
   ASSERT_TRUE(state->plug_state.plugged());
 
@@ -279,11 +285,10 @@ TEST(HdaStreamTest, GetStreamProperties) {
   ASSERT_OK(codec->ActivateStream(stream));
   ASSERT_OK(stream->Bind());
 
-  auto client_wrap = fidl::BindSyncClient(tester.FidlClient<audio_fidl::Device>());
-  fidl::WireResult<audio_fidl::Device::GetChannel> ch = client_wrap->GetChannel();
-  ASSERT_EQ(ch.status(), ZX_OK);
+  auto stream_client = GetStreamClient(tester.FidlClient<audio_fidl::Device>());
+  ASSERT_TRUE(stream_client.is_valid());
 
-  auto result = fidl::WireCall<audio_fidl::StreamConfig>(ch->channel)->GetProperties();
+  auto result = stream_client->GetProperties();
   ASSERT_OK(result.status());
   ASSERT_BYTES_EQ(result->properties.manufacturer().data(), kTestString, strlen(kTestString));
   ASSERT_BYTES_EQ(result->properties.product().data(), kTestString, strlen(kTestString));
@@ -316,35 +321,32 @@ TEST(HdaStreamTest, SetAndGetGain) {
   ASSERT_OK(codec->ActivateStream(stream));
   ASSERT_OK(stream->Bind());
 
-  auto client_wrap = fidl::BindSyncClient(tester.FidlClient<audio_fidl::Device>());
-  fidl::WireResult<audio_fidl::Device::GetChannel> ch = client_wrap->GetChannel();
-  ASSERT_EQ(ch.status(), ZX_OK);
+  auto stream_client = GetStreamClient(tester.FidlClient<audio_fidl::Device>());
+  ASSERT_TRUE(stream_client.is_valid());
 
   {
     {
       fidl::Arena allocator;
       audio_fidl::wire::GainState gain_state(allocator);
       gain_state.set_gain_db(kTestGain);
-      auto status =
-          fidl::WireCall<audio_fidl::StreamConfig>(ch->channel)->SetGain(std::move(gain_state));
+      auto status = stream_client->SetGain(std::move(gain_state));
       EXPECT_OK(status.status());
     }
-    auto gain_state = fidl::WireCall<audio_fidl::StreamConfig>(ch->channel)->WatchGainState();
+    auto gain_state = stream_client->WatchGainState();
     EXPECT_OK(gain_state.status());
     EXPECT_EQ(kTestGain, gain_state->gain_state.gain_db());
   }
 
   {
     std::thread th([&] {
-      auto gain_state = fidl::WireCall<audio_fidl::StreamConfig>(ch->channel)->WatchGainState();
+      auto gain_state = stream_client->WatchGainState();
       EXPECT_OK(gain_state.status());
       EXPECT_EQ(kTestGain2, gain_state->gain_state.gain_db());
     });
     fidl::Arena allocator;
     audio_fidl::wire::GainState gain_state(allocator);
     gain_state.set_gain_db(kTestGain2);
-    auto status =
-        fidl::WireCall<audio_fidl::StreamConfig>(ch->channel)->SetGain(std::move(gain_state));
+    auto status = stream_client->SetGain(std::move(gain_state));
     EXPECT_OK(status.status());
     th.join();
   }
@@ -367,17 +369,16 @@ TEST(HdaStreamTest, WatchPlugState) {
   ASSERT_OK(codec->ActivateStream(stream));
   ASSERT_OK(stream->Bind());
 
-  auto client_wrap = fidl::BindSyncClient(tester.FidlClient<audio_fidl::Device>());
-  fidl::WireResult<audio_fidl::Device::GetChannel> ch = client_wrap->GetChannel();
-  ASSERT_EQ(ch.status(), ZX_OK);
+  auto stream_client = GetStreamClient(tester.FidlClient<audio_fidl::Device>());
+  ASSERT_TRUE(stream_client.is_valid());
   {
-    auto state = fidl::WireCall<audio_fidl::StreamConfig>(ch->channel)->WatchPlugState();
+    auto state = stream_client->WatchPlugState();
     ASSERT_OK(state.status());
     EXPECT_TRUE(state->plug_state.plugged());
   }
   {
     std::thread th([&] {
-      auto state = fidl::WireCall<audio_fidl::StreamConfig>(ch->channel)->WatchPlugState();
+      auto state = stream_client->WatchPlugState();
       ASSERT_OK(state.status());
       EXPECT_FALSE(state->plug_state.plugged());
       EXPECT_EQ(state->plug_state.plug_state_time(), kTestTime);
