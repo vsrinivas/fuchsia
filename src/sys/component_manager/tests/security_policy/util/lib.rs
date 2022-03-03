@@ -37,7 +37,7 @@ pub async fn start_policy_test(
             EventMode::Async,
         )])
         .await?;
-    event_source.start_component_tree().await;
+    test.start_component_tree().await.unwrap();
 
     // Wait for the root component to be started so we can connect to its Realm service through the
     // hub.

@@ -41,7 +41,7 @@ pub struct Model {
     /// The instance representing the root component. Owned by `top_instance`, but cached here for
     /// efficiency.
     root: Arc<ComponentInstance>,
-    _context: Arc<ModelContext>,
+    context: Arc<ModelContext>,
 }
 
 impl Model {
@@ -54,11 +54,8 @@ impl Model {
             Arc::downgrade(&params.top_instance),
             params.root_component_url,
         );
-        let model = Arc::new(Model {
-            root: root.clone(),
-            _context: context,
-            top_instance: params.top_instance,
-        });
+        let model =
+            Arc::new(Model { root: root.clone(), context, top_instance: params.top_instance });
         model.top_instance.init(root).await;
         Ok(model)
     }
@@ -104,13 +101,19 @@ impl Model {
             // This returns a Future that does not need to be polled.
             let _ = actions.register_no_wait(&self.root, DiscoverAction::new());
         }
-        if let Err(e) = self.start_instance(&AbsoluteMoniker::root(), &StartReason::Root).await {
-            // If we fail to start the root, but the root is being shutdown, that's ok. The
-            // system is tearing down, so it doesn't matter any more if we never got everything
-            // started that we wanted to.
-            let action_set = self.root.lock_actions().await;
-            if !action_set.contains(&ActionKey::Shutdown) {
-                panic!("failed to start root component {}: {:?}", self.root.component_url, e);
+
+        // In debug mode, we don't start the component root. It must be started manually from
+        // the lifecycle controller.
+        if !self.context.runtime_config().debug {
+            if let Err(e) = self.start_instance(&AbsoluteMoniker::root(), &StartReason::Root).await
+            {
+                // If we fail to start the root, but the root is being shutdown, that's ok. The
+                // system is tearing down, so it doesn't matter any more if we never got everything
+                // started that we wanted to.
+                let action_set = self.root.lock_actions().await;
+                if !action_set.contains(&ActionKey::Shutdown) {
+                    panic!("failed to start root component {}: {:?}", self.root.component_url, e);
+                }
             }
         }
     }

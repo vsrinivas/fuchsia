@@ -34,7 +34,7 @@ async fn start_nested_cm_and_wait_for_clean_stop(root_url: &str, moniker_to_wait
         .await
         .unwrap();
 
-    event_source.start_component_tree().await;
+    instance.start_component_tree().await.unwrap();
 
     // Expect the component to stop
     EventMatcher::ok()

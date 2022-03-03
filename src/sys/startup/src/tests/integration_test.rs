@@ -27,7 +27,7 @@ async fn integration_test() {
         .subscribe(vec![EventSubscription::new(vec![CapabilityRouted::NAME], EventMode::Sync)])
         .await
         .unwrap();
-    event_source.start_component_tree().await;
+    test.start_component_tree().await.unwrap();
 
     let event = EventMatcher::ok()
         .moniker_regex("./startup")

@@ -2407,7 +2407,6 @@ pub mod tests {
             )
             .await
             .expect("subscribe to event stream");
-        event_source.start_component_tree().await;
 
         let model = test.model.clone();
         let (f, bind_handle) = async move {
@@ -2466,7 +2465,6 @@ pub mod tests {
             .await
             .expect("couldn't susbscribe to event stream");
 
-        event_source.start_component_tree().await;
         let a_moniker: InstancedAbsoluteMoniker = vec!["a:0"].into();
         let b_moniker: InstancedAbsoluteMoniker = vec!["a:0", "b:0"].into();
 

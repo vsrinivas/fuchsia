@@ -69,7 +69,7 @@ async fn destroy() {
         .subscribe_and_expect(&mut event_source)
         .await
         .unwrap();
-    event_source.start_component_tree().await;
+    instance.start_component_tree().await.unwrap();
 
     // Assert the expected lifecycle events. The leaves can be stopped/purged in either order.
     expectation.await.unwrap();
@@ -110,7 +110,7 @@ async fn destroy_and_recreate() {
         .await
         .unwrap();
 
-    event_source.start_component_tree().await;
+    instance.start_component_tree().await.unwrap();
 
     EventSequence::new()
         .has_subset(

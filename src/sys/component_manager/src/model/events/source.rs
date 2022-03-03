@@ -22,7 +22,6 @@ use {
     },
     async_trait::async_trait,
     cm_moniker::InstancedExtendedMoniker,
-    cm_rust::EventMode,
     cm_task_scope::TaskScope,
     cm_util::channel,
     fidl::endpoints::ServerEnd,
@@ -58,20 +57,6 @@ impl EventSource {
         registry: Weak<EventRegistry>,
         stream_provider: Weak<EventStreamProvider>,
     ) -> Result<Self, ModelError> {
-        // TODO(fxbug.dev/48245): this shouldn't be done for any EventSource. Only for tests.
-        if let (SubscriptionType::AboveRoot, ExecutionMode::Debug) =
-            (&options.subscription_type, &options.execution_mode)
-        {
-            let stream_provider =
-                stream_provider.upgrade().ok_or(EventsError::StreamProviderNotFound)?;
-            stream_provider
-                .create_static_event_stream(
-                    &InstancedExtendedMoniker::ComponentManager,
-                    "StartComponentTree".to_string(),
-                    vec![EventSubscription::new("resolved".into(), EventMode::Sync)],
-                )
-                .await?;
-        }
         Ok(Self { registry, stream_provider, model, options })
     }
 
@@ -87,12 +72,6 @@ impl EventSource {
             stream_provider,
         )
         .await
-    }
-
-    /// Drops the `Resolved` event stream, thereby permitting components within the
-    /// realm to be started.
-    pub async fn start_component_tree(&mut self) {
-        self.take_static_event_stream("StartComponentTree".to_string()).await;
     }
 
     /// Subscribes to events provided in the `events` vector.

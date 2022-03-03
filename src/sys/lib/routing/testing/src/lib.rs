@@ -19,7 +19,7 @@ use {
         OfferDecl, OfferDirectoryDecl, OfferEventDecl, OfferProtocolDecl, OfferRunnerDecl,
         OfferServiceDecl, OfferSource, OfferTarget, ProgramDecl, ProtocolDecl, RegistrationSource,
         RunnerDecl, RunnerRegistration, ServiceDecl, UseDecl, UseDirectoryDecl, UseEventDecl,
-        UseEventStreamDeprecatedDecl, UseProtocolDecl, UseServiceDecl, UseSource,
+        UseProtocolDecl, UseServiceDecl, UseSource,
     },
     cm_rust_testing::{
         ChildDeclBuilder, ComponentDeclBuilder, DirectoryDeclBuilder, EnvironmentDeclBuilder,
@@ -142,7 +142,6 @@ pub enum CheckUse {
     },
     Event {
         request: EventSubscription,
-        start_component_tree: bool,
         expected_res: ExpectedResult,
     },
 }
@@ -2404,13 +2403,6 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         mode: cm_rust::EventMode::Sync,
                         dependency_type: DependencyType::Strong,
                     }))
-                    .use_(UseDecl::EventStreamDeprecated(UseEventStreamDeprecatedDecl {
-                        name: CapabilityName::try_from("StartComponentTree").unwrap(),
-                        subscriptions: vec![cm_rust::EventSubscription {
-                            event_name: "resolved".into(),
-                            mode: cm_rust::EventMode::Sync,
-                        }],
-                    }))
                     .build(),
             ),
         ];
@@ -2427,7 +2419,6 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                 vec!["b"].into(),
                 CheckUse::Event {
                     request: EventSubscription::new("capability_requested".into(), EventMode::Sync),
-                    start_component_tree: false,
                     expected_res: ExpectedResult::Ok,
                 },
             )
@@ -2437,7 +2428,6 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                 vec!["b"].into(),
                 CheckUse::Event {
                     request: EventSubscription::new("started".into(), EventMode::Sync),
-                    start_component_tree: true,
                     expected_res: ExpectedResult::Ok,
                 },
             )
@@ -2497,13 +2487,6 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         mode: cm_rust::EventMode::Sync,
                         dependency_type: DependencyType::Strong,
                     }))
-                    .use_(UseDecl::EventStreamDeprecated(UseEventStreamDeprecatedDecl {
-                        name: CapabilityName::try_from("StartComponentTree").unwrap(),
-                        subscriptions: vec![cm_rust::EventSubscription {
-                            event_name: "resolved".into(),
-                            mode: cm_rust::EventMode::Sync,
-                        }],
-                    }))
                     .build(),
             ),
         ];
@@ -2523,7 +2506,6 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         "capability_requested_from_parent".into(),
                         EventMode::Sync,
                     ),
-                    start_component_tree: true,
                     expected_res: ExpectedResult::Ok,
                 },
             )
@@ -2584,13 +2566,6 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         mode: cm_rust::EventMode::Sync,
                         dependency_type: DependencyType::Strong,
                     }))
-                    .use_(UseDecl::EventStreamDeprecated(UseEventStreamDeprecatedDecl {
-                        name: CapabilityName::try_from("StartComponentTree").unwrap(),
-                        subscriptions: vec![cm_rust::EventSubscription {
-                            event_name: "resolved".into(),
-                            mode: cm_rust::EventMode::Sync,
-                        }],
-                    }))
                     .build(),
             ),
         ];
@@ -2607,7 +2582,6 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                 vec!["b"].into(),
                 CheckUse::Event {
                     request: EventSubscription::new("started".into(), EventMode::Sync),
-                    start_component_tree: true,
                     expected_res: ExpectedResult::Ok,
                 },
             )
@@ -2729,13 +2703,6 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                     mode: cm_rust::EventMode::Sync,
                     dependency_type: DependencyType::Strong,
                 }))
-                .use_(UseDecl::EventStreamDeprecated(UseEventStreamDeprecatedDecl {
-                    name: CapabilityName::try_from("StartComponentTree").unwrap(),
-                    subscriptions: vec![cm_rust::EventSubscription {
-                        event_name: "resolved".into(),
-                        mode: cm_rust::EventMode::Sync,
-                    }],
-                }))
                 .build(),
         )];
 
@@ -2751,7 +2718,6 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                 vec!["b", "c"].into(),
                 CheckUse::Event {
                     request: EventSubscription::new("started".into(), EventMode::Sync),
-                    start_component_tree: false,
                     expected_res: ExpectedResult::Ok,
                 },
             )
@@ -2761,7 +2727,6 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                 vec!["b", "c"].into(),
                 CheckUse::Event {
                     request: EventSubscription::new("destroyed".into(), EventMode::Sync),
-                    start_component_tree: false,
                     expected_res: ExpectedResult::Ok,
                 },
             )
@@ -2771,7 +2736,6 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                 vec!["b", "c"].into(),
                 CheckUse::Event {
                     request: EventSubscription::new("stopped".into(), EventMode::Sync),
-                    start_component_tree: true,
                     expected_res: ExpectedResult::Err(zx::Status::UNAVAILABLE),
                 },
             )
@@ -2842,13 +2806,6 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         target_name: "resolved".into(),
                         filter: None,
                         mode: cm_rust::EventMode::Sync,
-                    }))
-                    .use_(UseDecl::EventStreamDeprecated(UseEventStreamDeprecatedDecl {
-                        name: CapabilityName::try_from("StartComponentTree").unwrap(),
-                        subscriptions: vec![cm_rust::EventSubscription {
-                            event_name: "resolved".into(),
-                            mode: cm_rust::EventMode::Sync,
-                        }],
                     }))
                     .offer(OfferDecl::Protocol(OfferProtocolDecl {
                         source: OfferSource::Parent,
@@ -2921,13 +2878,6 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         filter: None,
                         mode: cm_rust::EventMode::Sync,
                     }))
-                    .use_(UseDecl::EventStreamDeprecated(UseEventStreamDeprecatedDecl {
-                        name: CapabilityName::try_from("StartComponentTree").unwrap(),
-                        subscriptions: vec![cm_rust::EventSubscription {
-                            event_name: "resolved".into(),
-                            mode: cm_rust::EventMode::Sync,
-                        }],
-                    }))
                     .build(),
             ),
             (
@@ -2957,13 +2907,6 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         filter: None,
                         mode: cm_rust::EventMode::Sync,
                     }))
-                    .use_(UseDecl::EventStreamDeprecated(UseEventStreamDeprecatedDecl {
-                        name: CapabilityName::try_from("StartComponentTree").unwrap(),
-                        subscriptions: vec![cm_rust::EventSubscription {
-                            event_name: "resolved".into(),
-                            mode: cm_rust::EventMode::Sync,
-                        }],
-                    }))
                     .build(),
             ),
         ];
@@ -2980,7 +2923,6 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                 vec!["b"].into(),
                 CheckUse::Event {
                     request: EventSubscription::new("directory_ready_foo".into(), EventMode::Sync),
-                    start_component_tree: true,
                     expected_res: ExpectedResult::Ok,
                 },
             )
@@ -2993,7 +2935,6 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         "directory_ready_foo_bar".into(),
                         EventMode::Sync,
                     ),
-                    start_component_tree: true,
                     expected_res: ExpectedResult::Ok,
                 },
             )
@@ -3003,7 +2944,6 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                 vec!["b", "d"].into(),
                 CheckUse::Event {
                     request: EventSubscription::new("directory_ready_baz".into(), EventMode::Sync),
-                    start_component_tree: true,
                     expected_res: ExpectedResult::Err(zx::Status::UNAVAILABLE),
                 },
             )
@@ -3107,7 +3047,6 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         "directory_ready_foo_bar".into(),
                         EventMode::Sync,
                     ),
-                    start_component_tree: true,
                     expected_res: ExpectedResult::Err(zx::Status::UNAVAILABLE),
                 },
             )
@@ -3192,13 +3131,6 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         filter: None,
                         mode: cm_rust::EventMode::Sync,
                     }))
-                    .use_(UseDecl::EventStreamDeprecated(UseEventStreamDeprecatedDecl {
-                        name: CapabilityName::try_from("StartComponentTree").unwrap(),
-                        subscriptions: vec![cm_rust::EventSubscription {
-                            event_name: "resolved".into(),
-                            mode: cm_rust::EventMode::Sync,
-                        }],
-                    }))
                     .build(),
             ),
         ];
@@ -3218,7 +3150,6 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         "directory_ready_foo_bar".into(),
                         EventMode::Async,
                     ),
-                    start_component_tree: false,
                     expected_res: ExpectedResult::Ok,
                 },
             )
@@ -3231,7 +3162,6 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         "directory_ready_foo_bar".into(),
                         EventMode::Sync,
                     ),
-                    start_component_tree: true,
                     expected_res: ExpectedResult::Err(zx::Status::UNAVAILABLE),
                 },
             )
@@ -3286,7 +3216,6 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                 vec![].into(),
                 CheckUse::Event {
                     request: EventSubscription::new("directory_ready".into(), EventMode::Async),
-                    start_component_tree: false,
                     expected_res: ExpectedResult::Ok,
                 },
             )
@@ -3297,7 +3226,6 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                 vec![].into(),
                 CheckUse::Event {
                     request: EventSubscription::new("unregistered".into(), EventMode::Async),
-                    start_component_tree: true,
                     expected_res: ExpectedResult::Err(zx::Status::UNAVAILABLE),
                 },
             )
@@ -3718,13 +3646,6 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         filter: None,
                         mode: cm_rust::EventMode::Sync,
                     }))
-                    .use_(UseDecl::EventStreamDeprecated(UseEventStreamDeprecatedDecl {
-                        name: CapabilityName::try_from("StartComponentTree").unwrap(),
-                        subscriptions: vec![cm_rust::EventSubscription {
-                            event_name: "resolved".into(),
-                            mode: cm_rust::EventMode::Sync,
-                        }],
-                    }))
                     .build(),
             ),
         ];
@@ -3769,7 +3690,6 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         "capability_requested".into(),
                         EventMode::Async,
                     ),
-                    start_component_tree: false,
                     expected_res: ExpectedResult::Ok,
                 },
             )
@@ -3780,7 +3700,6 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                 vec!["b"].into(),
                 CheckUse::Event {
                     request: EventSubscription::new("started".into(), EventMode::Async),
-                    start_component_tree: true,
                     expected_res: ExpectedResult::Err(zx::Status::ACCESS_DENIED),
                 },
             )

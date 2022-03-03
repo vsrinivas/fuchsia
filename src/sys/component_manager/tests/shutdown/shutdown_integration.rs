@@ -12,7 +12,7 @@ async fn test() {
     .await
     .unwrap();
 
-    test.connect_to_event_source().await.unwrap().start_component_tree().await;
+    test.start_component_tree().await.unwrap();
 
     test.component_manager_app
         .wait()

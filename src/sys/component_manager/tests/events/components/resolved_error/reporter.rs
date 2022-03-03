@@ -24,8 +24,6 @@ async fn main() {
         .await
         .unwrap();
 
-    event_source.start_component_tree().await;
-
     // This will trigger the resolution of the child.
     let realm = connect_to_protocol::<fcomponent::RealmMarker>().unwrap();
     let mut child_ref = fdecl::ChildRef { name: "child_a".to_string(), collection: None };

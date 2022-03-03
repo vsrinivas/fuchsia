@@ -585,6 +585,5 @@ pub async fn new_event_stream(
         )
         .await
         .expect("subscribe to event stream");
-    event_source.start_component_tree().await;
     (event_source, event_stream)
 }

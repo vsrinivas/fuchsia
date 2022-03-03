@@ -423,8 +423,9 @@ impl BuiltinEnvironment {
     ) -> Result<BuiltinEnvironment, Error> {
         let execution_mode = if runtime_config.debug {
             warn!(
-                "Component Manager is in debug mode. In this mode, the component tree will not \
-                be started until the static event stream `StartComponentTree` is dropped."
+                "Component Manager is in debug mode. In this mode, the root component will not \
+                be started. Use the LifecycleController protocol in the hub to start the root \
+                component."
             );
             ExecutionMode::Debug
         } else {

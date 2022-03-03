@@ -23,7 +23,7 @@ async fn scoped_instances(root_component: &'static str) {
         .await
         .unwrap();
 
-    event_source.start_component_tree().await;
+    test.start_component_tree().await.unwrap();
 
     EventMatcher::ok()
         .stop(Some(ExitStatusMatcher::Clean))

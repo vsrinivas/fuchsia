@@ -31,7 +31,7 @@ async fn base_resolver_appmgr_bridge_test() {
         .await
         .unwrap();
 
-    event_source.start_component_tree().await;
+    instance.start_component_tree().await.unwrap();
 
     // Expect realm builder root to start
     EventMatcher::ok().moniker_regex(".").expect_match::<Started>(&mut event_stream).await;
@@ -67,7 +67,7 @@ async fn base_resolver_disabled_test() {
         .await
         .unwrap();
 
-    event_source.start_component_tree().await;
+    instance.start_component_tree().await.unwrap();
 
     // Expect the root component to be bound to
     let _ = EventMatcher::ok()

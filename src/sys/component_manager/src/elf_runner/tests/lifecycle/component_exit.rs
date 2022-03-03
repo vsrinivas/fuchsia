@@ -26,7 +26,6 @@ async fn test_exit_detection() {
         .subscribe(vec![EventSubscription::new(vec![events::Stopped::NAME], EventMode::Async)])
         .await
         .unwrap();
-    event_source.start_component_tree().await;
 
     let collection_name = String::from("test-collection");
 
@@ -68,7 +67,6 @@ async fn test_exit_after_rendezvous() {
     let capability_requested_event_stream =
         event_source.take_static_event_stream("EventStream").await.unwrap();
     let rendezvous_service = RendezvousService::new(capability_requested_event_stream);
-    event_source.start_component_tree().await;
 
     // Launch the component under test.
     let collection_name = String::from("test-collection");
@@ -83,7 +81,7 @@ async fn test_exit_after_rendezvous() {
 
     instance.connect_to_binder().unwrap();
 
-    let target_moniker = format!("./{}:{}:*", collection_name, instance.child_name());
+    let target_moniker = format!("./{}:{}", collection_name, instance.child_name());
 
     // First, ensure that component has started.
     EventMatcher::ok()

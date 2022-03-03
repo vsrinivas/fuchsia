@@ -40,7 +40,7 @@ async fn wait_for_clean_stop(cm: RealmInstance, moniker_to_wait_on: &str) {
         .await
         .unwrap();
 
-    event_source.start_component_tree().await;
+    cm.start_component_tree().await.unwrap();
 
     // Expect the component to stop
     EventMatcher::ok()

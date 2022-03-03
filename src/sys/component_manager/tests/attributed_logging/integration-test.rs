@@ -52,6 +52,6 @@ async fn check_logsink_requested() {
         .await
         .unwrap();
 
-    event_source.start_component_tree().await;
+    instance.start_component_tree().await.unwrap();
     expected.await.unwrap();
 }

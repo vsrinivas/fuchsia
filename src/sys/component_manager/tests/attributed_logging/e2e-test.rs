@@ -101,6 +101,6 @@ async fn verify_routing_failure_messages() {
         .await
         .unwrap();
 
-    event_source.start_component_tree().await;
+    test_env.start_component_tree().await.unwrap();
     expected.await.unwrap();
 }

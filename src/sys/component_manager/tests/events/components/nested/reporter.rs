@@ -2,24 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use component_events::{
-    events::{Event, EventMode, EventSource, EventSubscription, Started},
-    matcher::EventMatcher,
-    sequence::*,
-};
+use component_events::{events::EventSource, matcher::EventMatcher, sequence::*};
 
 #[fuchsia::component(logging_tags = ["nested_reporter"])]
 async fn main() {
     // Track all the starting child components.
     let event_source = EventSource::new().unwrap();
-    let event_stream = event_source
-        .subscribe(vec![EventSubscription::new(vec![Started::NAME], EventMode::Async)])
-        .await
-        .unwrap();
-    event_source.start_component_tree().await;
+    let event_stream = event_source.take_static_event_stream("StartedEventStream").await.unwrap();
 
     EventSequence::new()
-        .all_of(
+        .has_subset(
             vec![
                 EventMatcher::ok().moniker_regex("./child_a"),
                 EventMatcher::ok().moniker_regex("./child_b"),

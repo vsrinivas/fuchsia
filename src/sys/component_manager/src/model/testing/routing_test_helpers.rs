@@ -842,16 +842,10 @@ impl RoutingTestModel for RoutingTest {
                     .await;
                 }
             }
-            CheckUse::Event { request, start_component_tree, expected_res } => {
+            CheckUse::Event { request, expected_res } => {
                 // Fails if the component did not use the protocol EventSource or if the event is
                 // not allowed.
-                capability_util::subscribe_to_event_stream(
-                    &namespace,
-                    expected_res,
-                    request,
-                    start_component_tree,
-                )
-                .await;
+                capability_util::subscribe_to_event_stream(&namespace, expected_res, request).await;
             }
         }
     }
@@ -1195,9 +1189,8 @@ pub mod capability_util {
         namespace: &ManagedNamespace,
         expected_res: ExpectedResult,
         event: ::routing::event::EventSubscription,
-        start_component_tree: bool,
     ) {
-        let res = subscribe_to_event(namespace, event, start_component_tree).await;
+        let res = subscribe_to_event(namespace, event).await;
         match (res, expected_res) {
             (Err(e), ExpectedResult::Ok) => {
                 panic!("unexpected failure {}", e);
@@ -1212,7 +1205,6 @@ pub mod capability_util {
     pub async fn subscribe_to_event(
         namespace: &ManagedNamespace,
         event: ::routing::event::EventSubscription,
-        start_component_tree: bool,
     ) -> Result<fsys::EventStreamRequestStream, anyhow::Error> {
         let event_source_path = CapabilityPath::try_from("/svc/fuchsia.sys2.EventSource").unwrap();
         let event_source_proxy =
@@ -1235,12 +1227,6 @@ pub mod capability_util {
         subscribe_future
             .await?
             .map_err(|error| format_err!("Unable to subscribe to event stream: {:?}", error))?;
-        if start_component_tree {
-            event_source_proxy
-                .take_static_event_stream("StartComponentTree")
-                .await?
-                .map_err(|error| format_err!("Unable to take static event stream: {:?}", error))?;
-        }
         Ok(stream)
     }
 

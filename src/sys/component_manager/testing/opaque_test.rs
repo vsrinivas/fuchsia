@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::{Context as _, Error},
+    anyhow::{format_err, Context as _, Error},
     component_events::events::EventSource,
     fidl_fuchsia_io::DirectoryProxy,
     fidl_fuchsia_sys::{
@@ -105,6 +105,21 @@ impl OpaqueTest {
     pub async fn connect_to_event_source(&self) -> Result<EventSource, Error> {
         let path = self.get_component_manager_path();
         connect_to_event_source(&path).await
+    }
+
+    /// Connects to the `fuchsia.sys2.LifecycleController` protocol exposed by
+    /// component manager and attempts to start the root component.
+    pub async fn start_component_tree(&self) -> Result<(), Error> {
+        let mut debug_path = self.get_hub_v2_path();
+        debug_path.push("debug");
+        let debug_path = debug_path.display().to_string();
+        let lifecycle_controller =
+            connect_to_protocol_at::<fsys::LifecycleControllerMarker>(&debug_path)?;
+        lifecycle_controller
+            .start("./")
+            .await?
+            .map_err(|e| format_err!("Starting root component failed: {:?}", e))?;
+        Ok(())
     }
 }
 

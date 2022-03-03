@@ -133,9 +133,8 @@ impl Into<zx::Status> for CreateRealmError {
                 ) => zx::Status::INTERNAL,
                 fcomponent::error::Error::DestroyWaiterTaken
                 | fcomponent::error::Error::MissingSource
-                | fcomponent::error::Error::LegacyChildrenUnsupportedInNestedComponentManager => {
-                    zx::Status::INTERNAL
-                }
+                | fcomponent::error::Error::LegacyChildrenUnsupportedInNestedComponentManager
+                | fcomponent::error::Error::CannotStartRootComponent(_) => zx::Status::INTERNAL,
             },
         }
     }

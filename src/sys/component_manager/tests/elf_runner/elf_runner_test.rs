@@ -33,7 +33,7 @@ async fn run_single_test(url: &str) {
         .await
         .unwrap();
 
-    event_source.start_component_tree().await;
+    instance.start_component_tree().await.unwrap();
 
     EventMatcher::ok()
         .stop(Some(ExitStatusMatcher::Clean))

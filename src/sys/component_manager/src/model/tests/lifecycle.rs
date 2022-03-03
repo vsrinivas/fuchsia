@@ -97,7 +97,6 @@ async fn bind_concurrent() {
         .expect("create event source");
 
     let mut event_stream = event_source.subscribe(events).await.expect("subscribe to event stream");
-    event_source.start_component_tree().await;
 
     // Start the "system", pausing before it starts.
     let model_copy = model.clone();
@@ -405,7 +404,6 @@ async fn bind_action_sequence() {
         )
         .await
         .expect("subscribe to event stream");
-    event_source.start_component_tree().await;
 
     // Child of root should start out discovered but not resolved yet.
     let m = InstancedAbsoluteMoniker::new(vec!["system:0".into()]);

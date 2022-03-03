@@ -330,9 +330,6 @@ pub mod tests {
             )
             .await
             .expect("subscribe to event stream");
-        {
-            event_source.take_static_event_stream("StartComponentTree".to_string()).await;
-        }
         let model = test.model.clone();
         fasync::Task::spawn(async move { model.start().await }).detach();
         event_stream

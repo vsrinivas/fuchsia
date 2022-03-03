@@ -118,10 +118,6 @@ impl EventSource {
         Ok(EventStream::new(server_end.into_stream()?))
     }
 
-    pub async fn start_component_tree(self) {
-        self.drop_event_stream(&START_COMPONENT_TREE_STREAM).await
-    }
-
     pub async fn take_static_event_stream(&self, name: &str) -> Result<EventStream, Error> {
         let server_end = self
             .proxy

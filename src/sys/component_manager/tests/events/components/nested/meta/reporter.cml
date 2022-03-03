@@ -1,8 +1,5 @@
 {
-    include: [
-        "//src/sys/component_manager/testing/meta/start_component_tree.shard.cml",
-        "syslog/client.shard.cml",
-    ],
+    include: [ "syslog/client.shard.cml" ],
     program: {
         runner: "elf",
         binary: "bin/nested_reporter",
@@ -29,6 +26,18 @@
             event: [ "started" ],
             from: "framework",
             modes: [ "async" ],
+        },
+        {
+            protocol: [ "fuchsia.sys2.EventSource" ],
+        },
+        {
+            event_stream_deprecated: "StartedEventStream",
+            subscriptions: [
+                {
+                    event: "started",
+                    mode: "async",
+                },
+            ],
         },
     ],
 }

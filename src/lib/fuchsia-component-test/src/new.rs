@@ -11,7 +11,7 @@ use {
     },
     fidl_fuchsia_component as fcomponent, fidl_fuchsia_component_decl as fdecl,
     fidl_fuchsia_component_test as ftest, fidl_fuchsia_data as fdata, fidl_fuchsia_io as fio,
-    fidl_fuchsia_mem as fmem, fuchsia_async as fasync,
+    fidl_fuchsia_mem as fmem, fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
     fuchsia_component::client as fclient,
     fuchsia_zircon as zx,
     futures::{future::BoxFuture, lock::Mutex},
@@ -541,6 +541,22 @@ impl RealmInstance {
         let destroy_waiter = self.root.take_destroy_waiter();
         drop(self);
         destroy_waiter.await.map_err(Error::FailedToDestroyChild)?;
+        Ok(())
+    }
+
+    /// Connects to the `fuchsia.sys2.LifecycleController` protocol exposed by a nested
+    /// component manager and attempts to start the root component. This should only be used
+    /// when a realm is built in a nested component manager in debug mode.
+    pub async fn start_component_tree(&self) -> Result<(), Error> {
+        let lifecycle_controller = self
+            .root
+            .connect_to_named_protocol_at_exposed_dir::<fsys::LifecycleControllerMarker>(
+                "hub/debug/fuchsia.sys2.LifecycleController",
+            )
+            .map_err(|e| Error::CannotStartRootComponent(e))?;
+        lifecycle_controller.start("./").await?.map_err(|e| {
+            Error::CannotStartRootComponent(format_err!("received error status: {:?}", e))
+        })?;
         Ok(())
     }
 }

@@ -264,13 +264,6 @@ async fn capability_requested_event_at_parent() {
                     filter: None,
                     mode: cm_rust::EventMode::Sync,
                 }))
-                .use_(UseDecl::EventStreamDeprecated(UseEventStreamDeprecatedDecl {
-                    name: CapabilityName::try_from("StartComponentTree").unwrap(),
-                    subscriptions: vec![cm_rust::EventSubscription {
-                        event_name: "resolved".into(),
-                        mode: cm_rust::EventMode::Sync,
-                    }],
-                }))
                 .add_lazy_child("b")
                 .build(),
         ),
@@ -298,7 +291,6 @@ async fn capability_requested_event_at_parent() {
     let mut event_stream = capability_util::subscribe_to_event(
         &namespace_root,
         EventSubscription::new("capability_requested".into(), EventMode::Async),
-        true,
     )
     .await
     .unwrap();
@@ -1632,13 +1624,6 @@ async fn use_runner_from_environment_failed() {
                     filter: None,
                     mode: cm_rust::EventMode::Async,
                 }))
-                .use_(UseDecl::EventStreamDeprecated(UseEventStreamDeprecatedDecl {
-                    name: CapabilityName::try_from("StartComponentTree").unwrap(),
-                    subscriptions: vec![cm_rust::EventSubscription {
-                        event_name: "stopped".into(),
-                        mode: cm_rust::EventMode::Async,
-                    }],
-                }))
                 .use_(UseDecl::Protocol(UseProtocolDecl {
                     dependency_type: DependencyType::Strong,
                     source: UseSource::Parent,
@@ -1711,7 +1696,6 @@ async fn use_runner_from_environment_failed() {
     let mut event_stream = capability_util::subscribe_to_event(
         &namespace_root,
         EventSubscription::new("stopped".into(), EventMode::Async),
-        true,
     )
     .await
     .unwrap();
