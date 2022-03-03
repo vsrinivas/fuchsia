@@ -10,7 +10,7 @@ use {
     serde_json::Value,
     std::{
         fmt,
-        fs::File,
+        fs::{File, OpenOptions},
         io::{BufReader, BufWriter},
         path::Path,
     },
@@ -26,9 +26,13 @@ impl FileBacked {
         P: AsRef<Path>,
     {
         match path {
-            Some(p) => {
-                File::open(&p).map(|f| Some(BufReader::new(f))).context("opening read buffer")
-            }
+            Some(p) => OpenOptions::new()
+                .read(true)
+                .write(true)
+                .create(true)
+                .open(&p)
+                .map(|f| Some(BufReader::new(f)))
+                .context("opening read buffer"),
             None => Ok(None),
         }
     }

@@ -4,12 +4,11 @@
 
 import("//build/compiled_action.gni")
 
-# These files are created by the 'ffx_env_for_build` target in the BUILD.gn
-# in this folder, and need to be kept in sync with that.
+# This file is created by '//src/developer/ffx/build:ffx_env_config'
+# and needs to be kept in sync with that.
 ffx_env_for_build_label =
     "//src/developer/ffx/build:ffx_env_config($host_toolchain)"
 ffx_env_config = root_build_dir + "/.ffx.env"
-ffx_env_build_config = root_build_dir + "/.ffx.build_config"
 
 sdk_host_tools_label = "//sdk:host_tools.modular($host_toolchain)"
 sdk_host_tools_manifest = get_label_info(sdk_host_tools_label, "root_out_dir") +
@@ -139,9 +138,20 @@ template("ffx_action") {
                            ])
 
     # Use a builddir-specific environment, not the user's own environment.
+    _ffx_config = [
+      "analytics.disabled=true",
+      "sdk.root=" + rebase_path(root_build_dir, root_build_dir),
+      "sdk.type=in-tree",
+      "sdk.module=host_tools.modular",
+    ]
+
+    # Pass the ffx config at runtime. ffx checks that it has read and write access to the
+    # config files which causes hermetic actions error if using a global ffx config file.
     args = [
              "--env",
              rebase_path(ffx_env_config, root_build_dir),
+             "--config",
+             string_join(",", _ffx_config),
            ] + invoker.args
 
     deps = [
@@ -154,7 +164,6 @@ template("ffx_action") {
 
     inputs += [
       ffx_env_config,
-      ffx_env_build_config,
       sdk_host_tools_manifest,
     ]
 
