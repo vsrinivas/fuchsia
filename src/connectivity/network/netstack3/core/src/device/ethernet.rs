@@ -43,7 +43,7 @@ use crate::{
     ip::device::state::{
         AddrConfig, AddrConfigType, AddressState, IpDeviceState, Ipv6AddressEntry, SlaacConfig,
     },
-    Ctx, EventDispatcher,
+    Ctx, EventDispatcher, Ipv6DeviceConfiguration,
 };
 
 const ETHERNET_MAX_PENDING_FRAMES: usize = 10;
@@ -863,6 +863,10 @@ impl<C: EthernetIpLinkDeviceContext> NdpContext<EthernetLinkDevice> for C {
         device_id: Self::DeviceId,
     ) -> &mut IpDeviceState<Self::Instant, Ipv6> {
         &mut self.get_state_mut_with(device_id).ip.ipv6.ip_state
+    }
+
+    fn get_ip_device_configuration(&self, device_id: Self::DeviceId) -> &Ipv6DeviceConfiguration {
+        &self.get_state_with(device_id).ip.ipv6.config
     }
 
     fn send_ipv6_frame<S: Serializer<Buffer = EmptyBuf>>(

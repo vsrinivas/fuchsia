@@ -69,7 +69,7 @@ use crate::{
     ip::device::state::{
         AddrConfig, AddrConfigType, AddressState, IpDeviceState, SlaacConfig, TemporarySlaacConfig,
     },
-    Instant,
+    Instant, Ipv6DeviceConfiguration,
 };
 
 /// The IP packet hop limit for all NDP packets.
@@ -324,6 +324,9 @@ pub(crate) trait NdpContext<D: LinkDevice>:
         &mut self,
         device_id: Self::DeviceId,
     ) -> &mut IpDeviceState<Self::Instant, Ipv6>;
+
+    /// Gets the IP device configuration for this device.
+    fn get_ip_device_configuration(&self, device_id: Self::DeviceId) -> &Ipv6DeviceConfiguration;
 
     /// Gets a non-tentative global or link-local address.
     ///
@@ -1000,7 +1003,11 @@ fn handle_timer<D: LinkDevice, C: NdpContext<D>>(ctx: &mut C, id: NdpTimerId<D, 
 /// Computes REGEN_ADVANCE as specified in [RFC 8981 Section 3.8].
 ///
 /// [RFC 8981 Section 3.8]: http://tools.ietf.org/html/rfc8981#section-3.8
-fn regen_advance(temp_idgen_retries: u8, retrans_timer: Duration) -> NonZeroDuration {
+fn regen_advance(
+    temp_idgen_retries: u8,
+    retrans_timer: Duration,
+    dad_transmits: u8,
+) -> NonZeroDuration {
     const TWO_SECONDS: NonZeroDuration = NonZeroDuration::from_nonzero_secs(
         // TODO(https://github.com/rust-lang/rust/issues/67441): Remove unsafe
         // once const Option::unwrap is stablized
@@ -1014,9 +1021,7 @@ fn regen_advance(temp_idgen_retries: u8, retrans_timer: Duration) -> NonZeroDura
     // Durations, there is no need to apply scale factors.
     TWO_SECONDS
         + retrans_timer
-            // TODO(https://fxbug.dev/21428): Use the device value for
-            // DUP_ADDR_DETECT_TRANSMITS instead of the default.
-            .checked_mul(u32::from(temp_idgen_retries) * u32::from(DUP_ADDR_DETECT_TRANSMITS))
+            .checked_mul(u32::from(temp_idgen_retries) * u32::from(dad_transmits))
             .unwrap_or(Duration::ZERO)
 }
 
@@ -1767,6 +1772,7 @@ fn apply_slaac_update<'a, D: LinkDevice, C: NdpContext<D>>(
             SlaacConfig::Static { valid_until: _ } => None,
             SlaacConfig::Temporary(_) => {
                 preferred_for.and_then(|preferred_for| {
+                    let device_config = ctx.get_ip_device_configuration(device_id);
                     let state = ctx.get_state_with(device_id);
                     state.config.get_temporary_address_configuration().and_then(
                         |TemporarySlaacAddressConfiguration {
@@ -1775,8 +1781,12 @@ fn apply_slaac_update<'a, D: LinkDevice, C: NdpContext<D>>(
                              temp_valid_lifetime: _,
                              secret_key: _,
                          }| {
-                            let regen_advance =
-                                regen_advance(*temp_idgen_retries, state.retrans_timer).get();
+                            let regen_advance = regen_advance(
+                                *temp_idgen_retries,
+                                state.retrans_timer,
+                                device_config.dad_transmits.map_or(0, NonZeroU8::get),
+                            )
+                            .get();
                             // Per RFC 8981 Section 3.6:
                             //
                             //   Hosts following this specification SHOULD
@@ -2059,6 +2069,7 @@ fn add_slaac_addr_sub<'a, D: LinkDevice, C: NdpContext<D>>(
         SlaacInitConfig::Temporary { dad_count } => {
             let per_attempt_random_seed = ctx.rng_mut().next_u64();
             let state = ctx.get_state_with(device_id);
+            let device_config = ctx.get_ip_device_configuration(device_id);
             let temporary_address_config = match state.config.get_temporary_address_configuration()
             {
                 Some(temporary_address_config) => temporary_address_config,
@@ -2085,9 +2096,12 @@ fn add_slaac_addr_sub<'a, D: LinkDevice, C: NdpContext<D>>(
             let valid_for =
                 core::cmp::min(prefix_valid_for, temporary_address_config.temp_valid_lifetime);
 
-            let regen_advance =
-                regen_advance(temporary_address_config.temp_idgen_retries, state.retrans_timer)
-                    .get();
+            let regen_advance = regen_advance(
+                temporary_address_config.temp_idgen_retries,
+                state.retrans_timer,
+                device_config.dad_transmits.map_or(0, NonZeroU8::get),
+            )
+            .get();
 
             let address = {
                 // RFC 8981 Section 3.3.3 specifies that
@@ -7707,6 +7721,13 @@ mod tests {
         let device_id = device.try_into().unwrap();
         crate::device::initialize_device(&mut ctx, device);
 
+        // Enable DAD for future IPs.
+        crate::device::set_ipv6_configuration(&mut ctx, device, {
+            let mut config = crate::device::Ipv6DeviceConfiguration::default();
+            config.dad_transmits = NonZeroU8::new(1);
+            config
+        });
+
         let router_mac = config.remote_mac;
         let router_ip = router_mac.to_ipv6_link_local().addr().get();
         let src_ip = config.local_ip;
@@ -7730,10 +7751,9 @@ mod tests {
         );
         ctx.set_configuration(device_id, config.clone());
 
-        // Set a large value for the retransmit period. This won't matter for
-        // DAD because DAD is disabled. This forces REGEN_ADVANCE to be large,
-        // which increases the window between when an address is regenerated and
-        // when it becomes deprecated.
+        // Set a large value for the retransmit period. This forces
+        // REGEN_ADVANCE to be large, which increases the window between when an
+        // address is regenerated and when it becomes deprecated.
         StateContext::<NdpState<EthernetLinkDevice>, _>::get_state_mut_with(&mut ctx, device_id)
             .set_retrans_timer(max_preferred_lifetime / 4);
 
@@ -7764,8 +7784,17 @@ mod tests {
             ))
             .unwrap();
 
-        let before_regen = regen_at - ctx.now() - Duration::from_secs(10);
-        assert_eq!(ctx.trigger_timers_for(before_regen, crate::handle_timer), vec![]);
+        let before_regen = regen_at - Duration::from_secs(10);
+        // The only events that run before regen should be the DAD timers for
+        // the static and temporary address that were created earlier.
+        assert_eq!(
+            ctx.trigger_timers_until_instant(before_regen, crate::handle_timer),
+            get_matching_slaac_address_entries(&ctx, device, |entry| {
+                entry.addr_sub().subnet() == subnet
+            })
+            .map(|entry| dad_timer_id(device_id, entry.addr_sub().addr()))
+            .collect::<Vec<_>>()
+        );
 
         let preferred_until = ctx
             .scheduled_instant(NdpTimerId::new_deprecate_slaac_address(
