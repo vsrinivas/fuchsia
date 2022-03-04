@@ -4,7 +4,7 @@
 
 use {
     anyhow::{format_err, Context, Error},
-    fidl::endpoints::ServerEnd,
+    fidl::endpoints::{create_proxy, ServerEnd},
     fidl_fuchsia_component_runner as fcrunner, fidl_fuchsia_data as fdata, fidl_fuchsia_io as fio,
     fidl_fuchsia_sys as fsysv1, fuchsia_async as fasync,
     fuchsia_component::client::connect_to_protocol,
@@ -195,6 +195,35 @@ impl Runner {
         let id: u64 = rand::thread_rng().gen();
         let realm_label = format!("v2-bridge-{}", id);
         let parent_env = connect_to_protocol::<fsysv1::EnvironmentMarker>()?;
+
+        // If we're running in a hermetic test environment we won't be able to use the fuchsia.sys
+        // protocols, and legacy components will thus be unavailable. Let's exercise these
+        // protocols now, so we have a predictable failure point.
+
+        let (services_dir_proxy, services_dir_server_end) = create_proxy::<fio::DirectoryMarker>()?;
+        let res1 = parent_env.get_directory(services_dir_server_end.into_channel());
+        let res2 = services_dir_proxy.describe().await;
+        let loader_proxy = connect_to_protocol::<fsysv1::LoaderMarker>()?;
+        let res3 = loader_proxy.load_url("fuchsia-pkg://fuchsia.com/test_manager").await;
+        if res1.is_err() || res2.is_err() || res3.is_err() {
+            error!(
+                "unable to run component ({}): legacy components are unsupported in hermetic tests",
+                legacy_url
+            );
+            if let Err(err) = res1 {
+                info!("failed to call get_directory on fuchsia.sys.Environment: {:?}", err);
+            }
+            if let Err(err) = res2 {
+                info!(
+                    "failed to describe the directory returned by fuchsia.sys.Environment: {:?}",
+                    err
+                );
+            }
+            if let Err(err) = res3 {
+                info!("failed to use fuchsia.sys.Loader: {:?}", err);
+            }
+            return Ok(());
+        }
 
         let legacy_component = legacy_component_lib::LegacyComponent::run(
             legacy_url,
