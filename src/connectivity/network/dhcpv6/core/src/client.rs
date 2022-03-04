@@ -2641,7 +2641,7 @@ impl<R: Rng> ClientStateMachine<R> {
         )
     }
 
-    /// Starts the client in Statelful mode, as defined in [RFC 8415, Section 6.2].
+    /// Starts the client in Stateful mode, as defined in [RFC 8415, Section 6.2].
     /// The client exchanges messages with servers to obtain addresses in
     /// `configured_addresses`, and the configuration information in
     /// `options_to_request`.
