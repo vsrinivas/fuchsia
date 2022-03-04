@@ -395,11 +395,14 @@ void PageQueues::RotatePagerBackedQueues(AgeReason reason) {
     // enforce a deadline. However, we can assume there might be a bug and start making noise to
     // inform the user if we have waited multiples of the expected maximum aging interval, since
     // that implies we are starting to lose the requested fidelity of age information.
+    int64_t timeouts = 0;
     while (mru_semaphore_.Wait(Deadline::after(max_mru_rotate_time_, TimerSlack::none())) ==
            ZX_ERR_TIMED_OUT) {
-      printf("[pq] WARNING: Waited %" PRIi64
-             " seconds for LRU thread, aging is presently stalled\n",
-             max_mru_rotate_time_ / ZX_SEC(1));
+      timeouts++;
+      printf("[pq] WARNING: Waited %" PRIi64 " seconds for LRU thread, MRU semaphore %" PRIu64
+             ",aging is presently stalled\n",
+             (max_mru_rotate_time_ * timeouts) / ZX_SEC(1), mru_semaphore_.count());
+      Dump();
     }
   }
 
@@ -610,10 +613,24 @@ ktl::optional<PageQueues::VmoBacklink> PageQueues::ProcessDontNeedAndLruQueues(u
   // it should continue to be true.
   ASSERT(target_gen <= mru_gen_.load(ktl::memory_order_relaxed) - (kNumActiveQueues - 1));
 
+  // Calculate a truly worst case loop iteration count based on every page being in either the LRU
+  // queue or the wrong DontNeed queue. Further we assume a single page per iteration to give some
+  // additional buffer, even though multiple pages should be processed per iteration.
+  ActiveInactiveCounts active_inactive = GetActiveInactiveCounts();
+  const uint64_t max_dont_need_iterations = page_queue_counts_[PageQueuePagerBackedDontNeedA] +
+                                            page_queue_counts_[PageQueuePagerBackedDontNeedB] + 1;
+  const uint64_t max_lru_iterations = active_inactive.active + active_inactive.inactive + 1;
+  // Loop iteration counting is just for diagnostic purposes.
+  uint64_t loop_iterations = 0;
+
   // Process the DontNeed queue first.
   const uint64_t prev_gen = dont_need_queue_gen();
   while (true) {
     VM_KTRACE_DURATION(2, "ProcessDontNeedQueue");
+    if (loop_iterations++ == max_dont_need_iterations) {
+      printf("[pq]: WARNING: %s exceeded expected max DontNeed loop iterations %" PRIu64 "\n",
+             __FUNCTION__, max_dont_need_iterations);
+    }
     auto optional_backlink = ProcessQueueHelper(ProcessingQueue::DontNeed, prev_gen + 1, peek);
     if (optional_backlink != ktl::nullopt) {
       return optional_backlink;
@@ -638,9 +655,15 @@ ktl::optional<PageQueues::VmoBacklink> PageQueues::ProcessDontNeedAndLruQueues(u
     }
   }
 
+  // Reset diagnostic counter for the new loop.
+  loop_iterations = 0;
   // Process the lru queue to reach target_gen.
   while (lru_gen_.load(ktl::memory_order_relaxed) < target_gen) {
     VM_KTRACE_DURATION(2, "ProcessLruQueue");
+    if (loop_iterations++ == max_lru_iterations) {
+      printf("[pq]: WARNING: %s exceeded expected max DontNeed loop iterations %" PRIu64 "\n",
+             __FUNCTION__, max_lru_iterations);
+    }
     auto optional_backlink = ProcessQueueHelper(ProcessingQueue::Lru, target_gen, peek);
     if (optional_backlink != ktl::nullopt) {
       return optional_backlink;
@@ -1084,7 +1107,14 @@ ktl::optional<PageQueues::VmoContainerBacklink> PageQueues::GetCowWithReplaceabl
   //  * complain on excessive lifetime duration of StackOwnedLoanedPagesInterval, probably during
   //    destructor, but consider if there's any cheap and simple enough way to complain if it's just
   //    existing too long without any pre-existing calls on it.
+  uint loop_iterations = 0;
   while (true) {
+    // Warn on excessive iterations. The threshold is chosen to be quite high since this isn't
+    // intending to check some strict finite bound, but rather to find pathological bugs where this
+    // is infinite looping and monopolizing the lock_.
+    if (loop_iterations++ == 200) {
+      printf("[pq]: WARNING: %s appears to be looping excessively\n", __FUNCTION__);
+    }
     // This is just for asserting that we don't end up trying to wait when we didn't intend to.
     bool wait_on_stack_ownership = false;
     {  // scope guard
