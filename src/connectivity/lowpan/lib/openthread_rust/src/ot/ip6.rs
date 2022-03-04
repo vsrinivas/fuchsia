@@ -8,16 +8,16 @@ use crate::prelude_internal::*;
 #[derive(Debug, Copy, Clone, Eq, Ord, PartialOrd, PartialEq, num_derive::FromPrimitive)]
 pub enum Icmp6EchoMode {
     /// ICMPv6 Echo processing enabled for unicast and multicast requests.
-    HandleAll = otIcmp6EchoMode_OT_ICMP6_ECHO_HANDLER_ALL as isize,
+    HandleAll = OT_ICMP6_ECHO_HANDLER_ALL as isize,
 
     /// ICMPv6 Echo processing disabled.
-    HandleDisabled = otIcmp6EchoMode_OT_ICMP6_ECHO_HANDLER_DISABLED as isize,
+    HandleDisabled = OT_ICMP6_ECHO_HANDLER_DISABLED as isize,
 
     /// ICMPv6 Echo processing enabled only for multicast requests only.
-    HandleMulticastOnly = otIcmp6EchoMode_OT_ICMP6_ECHO_HANDLER_MULTICAST_ONLY as isize,
+    HandleMulticastOnly = OT_ICMP6_ECHO_HANDLER_MULTICAST_ONLY as isize,
 
     /// ICMPv6 Echo processing enabled only for unicast requests only.
-    HandleUnicastOnly = otIcmp6EchoMode_OT_ICMP6_ECHO_HANDLER_UNICAST_ONLY as isize,
+    HandleUnicastOnly = OT_ICMP6_ECHO_HANDLER_UNICAST_ONLY as isize,
 }
 
 impl From<otIcmp6EchoMode> for Icmp6EchoMode {

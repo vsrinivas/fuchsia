@@ -74,7 +74,6 @@ where
         }
     }
 }
-pub const OPENTHREAD_CONFIG_BORDER_ROUTER_ENABLE: u32 = 1;
 pub const OT_LOG_LEVEL_NONE: u32 = 0;
 pub const OT_LOG_LEVEL_CRIT: u32 = 1;
 pub const OT_LOG_LEVEL_WARN: u32 = 2;
@@ -140,33 +139,7 @@ pub const OT_COMMISSIONING_PASSPHRASE_MAX_SIZE: u32 = 255;
 pub const OT_PROVISIONING_URL_MAX_SIZE: u32 = 64;
 pub const OT_STEERING_DATA_MAX_LENGTH: u32 = 16;
 pub const OT_JOINER_MAX_PSKD_LENGTH: u32 = 32;
-pub const OPENTHREAD_CONFIG_BORDER_AGENT_ENABLE: u32 = 1;
-pub const OPENTHREAD_CONFIG_BORDER_ROUTING_ENABLE: u32 = 0;
-pub const OPENTHREAD_CONFIG_BACKBONE_ROUTER_ENABLE: u32 = 0;
-pub const OPENTHREAD_CONFIG_SRP_SERVER_ENABLE: u32 = 1;
-pub const OPENTHREAD_CONFIG_ECDSA_ENABLE: u32 = 1;
-pub const OPENTHREAD_CONFIG_TCP_ENABLE: u32 = 0;
-pub const OPENTHREAD_CONFIG_CHANNEL_MANAGER_ENABLE: u32 = 0;
-pub const OPENTHREAD_CONFIG_CHANNEL_MONITOR_ENABLE: u32 = 0;
-pub const OPENTHREAD_CONFIG_CHILD_SUPERVISION_ENABLE: u32 = 1;
-pub const OPENTHREAD_CONFIG_DTLS_ENABLE: u32 = 1;
-pub const OPENTHREAD_CONFIG_JAM_DETECTION_ENABLE: u32 = 1;
-pub const OPENTHREAD_CONFIG_JOINER_ENABLE: u32 = 1;
-pub const OPENTHREAD_CONFIG_COMMISSIONER_ENABLE: u32 = 1;
-pub const OPENTHREAD_CONFIG_NCP_HDLC_ENABLE: u32 = 0;
 pub const OPENTHREAD_PLATFORM_POSIX: u32 = 0;
-pub const OPENTHREAD_CONFIG_TMF_NETDATA_SERVICE_ENABLE: u32 = 1;
-pub const OPENTHREAD_CONFIG_MAC_FILTER_ENABLE: u32 = 1;
-pub const OPENTHREAD_CONFIG_IP6_SLAAC_ENABLE: u32 = 1;
-pub const OPENTHREAD_CONFIG_DIAG_ENABLE: u32 = 1;
-pub const OPENTHREAD_CONFIG_MLE_STEERING_DATA_SET_OOB_ENABLE: u32 = 1;
-pub const OPENTHREAD_CONFIG_POSIX_SETTINGS_PATH: &'static [u8; 13usize] = b"/data/thread\0";
-pub const OPENTHREAD_CONFIG_PLATFORM_RADIO_COEX_ENABLE: u32 = 1;
-pub const OPENTHREAD_CONFIG_LOG_LEVEL_DYNAMIC_ENABLE: u32 = 1;
-pub const OPENTHREAD_CONFIG_LOG_LEVEL: u32 = 3;
-pub const OPENTHREAD_CONFIG_MAC_JOIN_BEACON_VERSION: u32 = 1;
-pub const OPENTHREAD_CONFIG_IP6_MAX_EXT_MCAST_ADDRS: u32 = 8;
-pub const OPENTHREAD_CONFIG_MLE_MAX_CHILDREN: u32 = 64;
 pub const OT_DNS_MAX_NAME_SIZE: u32 = 255;
 pub const OT_DNS_MAX_LABEL_SIZE: u32 = 64;
 pub const OT_DNS_TXT_KEY_MIN_LENGTH: u32 = 1;
@@ -195,83 +168,83 @@ pub const OT_TCP_LISTENER_TCB_NUM_PTR: u32 = 3;
 pub const OT_CHILD_IP6_ADDRESS_ITERATOR_INIT: u32 = 0;
 pub type __darwin_size_t = ::std::os::raw::c_ulong;
 #[doc = " No error."]
-pub const otError_OT_ERROR_NONE: otError = 0;
+pub const OT_ERROR_NONE: otError = 0;
 #[doc = " Operational failed."]
-pub const otError_OT_ERROR_FAILED: otError = 1;
+pub const OT_ERROR_FAILED: otError = 1;
 #[doc = " Message was dropped."]
-pub const otError_OT_ERROR_DROP: otError = 2;
+pub const OT_ERROR_DROP: otError = 2;
 #[doc = " Insufficient buffers."]
-pub const otError_OT_ERROR_NO_BUFS: otError = 3;
+pub const OT_ERROR_NO_BUFS: otError = 3;
 #[doc = " No route available."]
-pub const otError_OT_ERROR_NO_ROUTE: otError = 4;
+pub const OT_ERROR_NO_ROUTE: otError = 4;
 #[doc = " Service is busy and could not service the operation."]
-pub const otError_OT_ERROR_BUSY: otError = 5;
+pub const OT_ERROR_BUSY: otError = 5;
 #[doc = " Failed to parse message."]
-pub const otError_OT_ERROR_PARSE: otError = 6;
+pub const OT_ERROR_PARSE: otError = 6;
 #[doc = " Input arguments are invalid."]
-pub const otError_OT_ERROR_INVALID_ARGS: otError = 7;
+pub const OT_ERROR_INVALID_ARGS: otError = 7;
 #[doc = " Security checks failed."]
-pub const otError_OT_ERROR_SECURITY: otError = 8;
+pub const OT_ERROR_SECURITY: otError = 8;
 #[doc = " Address resolution requires an address query operation."]
-pub const otError_OT_ERROR_ADDRESS_QUERY: otError = 9;
+pub const OT_ERROR_ADDRESS_QUERY: otError = 9;
 #[doc = " Address is not in the source match table."]
-pub const otError_OT_ERROR_NO_ADDRESS: otError = 10;
+pub const OT_ERROR_NO_ADDRESS: otError = 10;
 #[doc = " Operation was aborted."]
-pub const otError_OT_ERROR_ABORT: otError = 11;
+pub const OT_ERROR_ABORT: otError = 11;
 #[doc = " Function or method is not implemented."]
-pub const otError_OT_ERROR_NOT_IMPLEMENTED: otError = 12;
+pub const OT_ERROR_NOT_IMPLEMENTED: otError = 12;
 #[doc = " Cannot complete due to invalid state."]
-pub const otError_OT_ERROR_INVALID_STATE: otError = 13;
+pub const OT_ERROR_INVALID_STATE: otError = 13;
 #[doc = " No acknowledgment was received after macMaxFrameRetries (IEEE 802.15.4-2006)."]
-pub const otError_OT_ERROR_NO_ACK: otError = 14;
+pub const OT_ERROR_NO_ACK: otError = 14;
 #[doc = " A transmission could not take place due to activity on the channel, i.e., the CSMA-CA mechanism has failed"]
 #[doc = " (IEEE 802.15.4-2006)."]
-pub const otError_OT_ERROR_CHANNEL_ACCESS_FAILURE: otError = 15;
+pub const OT_ERROR_CHANNEL_ACCESS_FAILURE: otError = 15;
 #[doc = " Not currently attached to a Thread Partition."]
-pub const otError_OT_ERROR_DETACHED: otError = 16;
+pub const OT_ERROR_DETACHED: otError = 16;
 #[doc = " FCS check failure while receiving."]
-pub const otError_OT_ERROR_FCS: otError = 17;
+pub const OT_ERROR_FCS: otError = 17;
 #[doc = " No frame received."]
-pub const otError_OT_ERROR_NO_FRAME_RECEIVED: otError = 18;
+pub const OT_ERROR_NO_FRAME_RECEIVED: otError = 18;
 #[doc = " Received a frame from an unknown neighbor."]
-pub const otError_OT_ERROR_UNKNOWN_NEIGHBOR: otError = 19;
+pub const OT_ERROR_UNKNOWN_NEIGHBOR: otError = 19;
 #[doc = " Received a frame from an invalid source address."]
-pub const otError_OT_ERROR_INVALID_SOURCE_ADDRESS: otError = 20;
+pub const OT_ERROR_INVALID_SOURCE_ADDRESS: otError = 20;
 #[doc = " Received a frame filtered by the address filter (allowlisted or denylisted)."]
-pub const otError_OT_ERROR_ADDRESS_FILTERED: otError = 21;
+pub const OT_ERROR_ADDRESS_FILTERED: otError = 21;
 #[doc = " Received a frame filtered by the destination address check."]
-pub const otError_OT_ERROR_DESTINATION_ADDRESS_FILTERED: otError = 22;
+pub const OT_ERROR_DESTINATION_ADDRESS_FILTERED: otError = 22;
 #[doc = " The requested item could not be found."]
-pub const otError_OT_ERROR_NOT_FOUND: otError = 23;
+pub const OT_ERROR_NOT_FOUND: otError = 23;
 #[doc = " The operation is already in progress."]
-pub const otError_OT_ERROR_ALREADY: otError = 24;
+pub const OT_ERROR_ALREADY: otError = 24;
 #[doc = " The creation of IPv6 address failed."]
-pub const otError_OT_ERROR_IP6_ADDRESS_CREATION_FAILURE: otError = 26;
+pub const OT_ERROR_IP6_ADDRESS_CREATION_FAILURE: otError = 26;
 #[doc = " Operation prevented by mode flags"]
-pub const otError_OT_ERROR_NOT_CAPABLE: otError = 27;
+pub const OT_ERROR_NOT_CAPABLE: otError = 27;
 #[doc = " Coap response or acknowledgment or DNS, SNTP response not received."]
-pub const otError_OT_ERROR_RESPONSE_TIMEOUT: otError = 28;
+pub const OT_ERROR_RESPONSE_TIMEOUT: otError = 28;
 #[doc = " Received a duplicated frame."]
-pub const otError_OT_ERROR_DUPLICATED: otError = 29;
+pub const OT_ERROR_DUPLICATED: otError = 29;
 #[doc = " Message is being dropped from reassembly list due to timeout."]
-pub const otError_OT_ERROR_REASSEMBLY_TIMEOUT: otError = 30;
+pub const OT_ERROR_REASSEMBLY_TIMEOUT: otError = 30;
 #[doc = " Message is not a TMF Message."]
-pub const otError_OT_ERROR_NOT_TMF: otError = 31;
+pub const OT_ERROR_NOT_TMF: otError = 31;
 #[doc = " Received a non-lowpan data frame."]
-pub const otError_OT_ERROR_NOT_LOWPAN_DATA_FRAME: otError = 32;
+pub const OT_ERROR_NOT_LOWPAN_DATA_FRAME: otError = 32;
 #[doc = " The link margin was too low."]
-pub const otError_OT_ERROR_LINK_MARGIN_LOW: otError = 34;
+pub const OT_ERROR_LINK_MARGIN_LOW: otError = 34;
 #[doc = " Input (CLI) command is invalid."]
-pub const otError_OT_ERROR_INVALID_COMMAND: otError = 35;
+pub const OT_ERROR_INVALID_COMMAND: otError = 35;
 #[doc = " Special error code used to indicate success/error status is pending and not yet known."]
 #[doc = ""]
-pub const otError_OT_ERROR_PENDING: otError = 36;
+pub const OT_ERROR_PENDING: otError = 36;
 #[doc = " Request rejected."]
-pub const otError_OT_ERROR_REJECTED: otError = 37;
+pub const OT_ERROR_REJECTED: otError = 37;
 #[doc = " The number of defined errors."]
-pub const otError_OT_NUM_ERRORS: otError = 38;
+pub const OT_NUM_ERRORS: otError = 38;
 #[doc = " Generic error (should not use)."]
-pub const otError_OT_ERROR_GENERIC: otError = 255;
+pub const OT_ERROR_GENERIC: otError = 255;
 #[doc = " This enumeration represents error codes used throughout OpenThread."]
 #[doc = ""]
 pub type otError = ::std::os::raw::c_uint;
@@ -289,51 +262,51 @@ pub type va_list = __builtin_va_list;
 #[doc = ""]
 pub type otLogLevel = ::std::os::raw::c_int;
 #[doc = "< OpenThread API"]
-pub const otLogRegion_OT_LOG_REGION_API: otLogRegion = 1;
+pub const OT_LOG_REGION_API: otLogRegion = 1;
 #[doc = "< MLE"]
-pub const otLogRegion_OT_LOG_REGION_MLE: otLogRegion = 2;
+pub const OT_LOG_REGION_MLE: otLogRegion = 2;
 #[doc = "< EID-to-RLOC mapping."]
-pub const otLogRegion_OT_LOG_REGION_ARP: otLogRegion = 3;
+pub const OT_LOG_REGION_ARP: otLogRegion = 3;
 #[doc = "< Network Data"]
-pub const otLogRegion_OT_LOG_REGION_NET_DATA: otLogRegion = 4;
+pub const OT_LOG_REGION_NET_DATA: otLogRegion = 4;
 #[doc = "< ICMPv6"]
-pub const otLogRegion_OT_LOG_REGION_ICMP: otLogRegion = 5;
+pub const OT_LOG_REGION_ICMP: otLogRegion = 5;
 #[doc = "< IPv6"]
-pub const otLogRegion_OT_LOG_REGION_IP6: otLogRegion = 6;
+pub const OT_LOG_REGION_IP6: otLogRegion = 6;
 #[doc = "< TCP"]
-pub const otLogRegion_OT_LOG_REGION_TCP: otLogRegion = 7;
+pub const OT_LOG_REGION_TCP: otLogRegion = 7;
 #[doc = "< IEEE 802.15.4 MAC"]
-pub const otLogRegion_OT_LOG_REGION_MAC: otLogRegion = 8;
+pub const OT_LOG_REGION_MAC: otLogRegion = 8;
 #[doc = "< Memory"]
-pub const otLogRegion_OT_LOG_REGION_MEM: otLogRegion = 9;
+pub const OT_LOG_REGION_MEM: otLogRegion = 9;
 #[doc = "< NCP"]
-pub const otLogRegion_OT_LOG_REGION_NCP: otLogRegion = 10;
+pub const OT_LOG_REGION_NCP: otLogRegion = 10;
 #[doc = "< Mesh Commissioning Protocol"]
-pub const otLogRegion_OT_LOG_REGION_MESH_COP: otLogRegion = 11;
+pub const OT_LOG_REGION_MESH_COP: otLogRegion = 11;
 #[doc = "< Network Diagnostic"]
-pub const otLogRegion_OT_LOG_REGION_NET_DIAG: otLogRegion = 12;
+pub const OT_LOG_REGION_NET_DIAG: otLogRegion = 12;
 #[doc = "< Platform"]
-pub const otLogRegion_OT_LOG_REGION_PLATFORM: otLogRegion = 13;
+pub const OT_LOG_REGION_PLATFORM: otLogRegion = 13;
 #[doc = "< CoAP"]
-pub const otLogRegion_OT_LOG_REGION_COAP: otLogRegion = 14;
+pub const OT_LOG_REGION_COAP: otLogRegion = 14;
 #[doc = "< CLI"]
-pub const otLogRegion_OT_LOG_REGION_CLI: otLogRegion = 15;
+pub const OT_LOG_REGION_CLI: otLogRegion = 15;
 #[doc = "< OpenThread Core"]
-pub const otLogRegion_OT_LOG_REGION_CORE: otLogRegion = 16;
+pub const OT_LOG_REGION_CORE: otLogRegion = 16;
 #[doc = "< Utility module"]
-pub const otLogRegion_OT_LOG_REGION_UTIL: otLogRegion = 17;
+pub const OT_LOG_REGION_UTIL: otLogRegion = 17;
 #[doc = "< Backbone Router (available since Thread 1.2)"]
-pub const otLogRegion_OT_LOG_REGION_BBR: otLogRegion = 18;
+pub const OT_LOG_REGION_BBR: otLogRegion = 18;
 #[doc = "< Multicast Listener Registration (available since Thread 1.2)"]
-pub const otLogRegion_OT_LOG_REGION_MLR: otLogRegion = 19;
+pub const OT_LOG_REGION_MLR: otLogRegion = 19;
 #[doc = "< Domain Unicast Address (available since Thread 1.2)"]
-pub const otLogRegion_OT_LOG_REGION_DUA: otLogRegion = 20;
+pub const OT_LOG_REGION_DUA: otLogRegion = 20;
 #[doc = "< Border Router"]
-pub const otLogRegion_OT_LOG_REGION_BR: otLogRegion = 21;
+pub const OT_LOG_REGION_BR: otLogRegion = 21;
 #[doc = "< Service Registration Protocol (SRP)"]
-pub const otLogRegion_OT_LOG_REGION_SRP: otLogRegion = 22;
+pub const OT_LOG_REGION_SRP: otLogRegion = 22;
 #[doc = "< DNS"]
-pub const otLogRegion_OT_LOG_REGION_DNS: otLogRegion = 23;
+pub const OT_LOG_REGION_DNS: otLogRegion = 23;
 #[doc = " This enumeration represents log regions."]
 #[doc = ""]
 pub type otLogRegion = ::std::os::raw::c_uint;
@@ -369,7 +342,7 @@ extern "C" {
     );
 }
 #[repr(C)]
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Default, Copy, Clone)]
 pub struct otInstance {
     _unused: [u8; 0],
 }
@@ -651,11 +624,11 @@ extern "C" {
     ) -> otError;
 }
 #[doc = "< Border agent role is disabled."]
-pub const otBorderAgentState_OT_BORDER_AGENT_STATE_STOPPED: otBorderAgentState = 0;
+pub const OT_BORDER_AGENT_STATE_STOPPED: otBorderAgentState = 0;
 #[doc = "< Border agent is started."]
-pub const otBorderAgentState_OT_BORDER_AGENT_STATE_STARTED: otBorderAgentState = 1;
+pub const OT_BORDER_AGENT_STATE_STARTED: otBorderAgentState = 1;
 #[doc = "< Border agent is connected with external commissioner."]
-pub const otBorderAgentState_OT_BORDER_AGENT_STATE_ACTIVE: otBorderAgentState = 2;
+pub const OT_BORDER_AGENT_STATE_ACTIVE: otBorderAgentState = 2;
 #[doc = " This enumeration defines the Border Agent state."]
 #[doc = ""]
 pub type otBorderAgentState = ::std::os::raw::c_uint;
@@ -678,7 +651,7 @@ extern "C" {
     pub fn otBorderAgentGetUdpPort(aInstance: *mut otInstance) -> u16;
 }
 #[repr(C)]
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Default, Copy, Clone)]
 pub struct otMessage {
     _unused: [u8; 0],
 }
@@ -729,11 +702,11 @@ pub struct otBufferInfo {
     pub mApplicationCoapBuffers: u16,
 }
 #[doc = "< Low priority level."]
-pub const otMessagePriority_OT_MESSAGE_PRIORITY_LOW: otMessagePriority = 0;
+pub const OT_MESSAGE_PRIORITY_LOW: otMessagePriority = 0;
 #[doc = "< Normal priority level."]
-pub const otMessagePriority_OT_MESSAGE_PRIORITY_NORMAL: otMessagePriority = 1;
+pub const OT_MESSAGE_PRIORITY_NORMAL: otMessagePriority = 1;
 #[doc = "< High priority level."]
-pub const otMessagePriority_OT_MESSAGE_PRIORITY_HIGH: otMessagePriority = 2;
+pub const OT_MESSAGE_PRIORITY_HIGH: otMessagePriority = 2;
 #[doc = " This enumeration defines the OpenThread message priority levels."]
 #[doc = ""]
 pub type otMessagePriority = ::std::os::raw::c_uint;
@@ -1016,20 +989,20 @@ extern "C" {
     pub fn otMessageGetBufferInfo(aInstance: *mut otInstance, aBufferInfo: *mut otBufferInfo);
 }
 #[doc = "< Key Type: Raw Data."]
-pub const otCryptoKeyType_OT_CRYPTO_KEY_TYPE_RAW: otCryptoKeyType = 0;
+pub const OT_CRYPTO_KEY_TYPE_RAW: otCryptoKeyType = 0;
 #[doc = "< Key Type: AES."]
-pub const otCryptoKeyType_OT_CRYPTO_KEY_TYPE_AES: otCryptoKeyType = 1;
+pub const OT_CRYPTO_KEY_TYPE_AES: otCryptoKeyType = 1;
 #[doc = "< Key Type: HMAC."]
-pub const otCryptoKeyType_OT_CRYPTO_KEY_TYPE_HMAC: otCryptoKeyType = 2;
+pub const OT_CRYPTO_KEY_TYPE_HMAC: otCryptoKeyType = 2;
 #[doc = " This enumeration defines the key types."]
 #[doc = ""]
 pub type otCryptoKeyType = ::std::os::raw::c_uint;
 #[doc = "< Key Algorithm: Vendor Defined."]
-pub const otCryptoKeyAlgorithm_OT_CRYPTO_KEY_ALG_VENDOR: otCryptoKeyAlgorithm = 0;
+pub const OT_CRYPTO_KEY_ALG_VENDOR: otCryptoKeyAlgorithm = 0;
 #[doc = "< Key Algorithm: AES ECB."]
-pub const otCryptoKeyAlgorithm_OT_CRYPTO_KEY_ALG_AES_ECB: otCryptoKeyAlgorithm = 1;
+pub const OT_CRYPTO_KEY_ALG_AES_ECB: otCryptoKeyAlgorithm = 1;
 #[doc = "< Key Algorithm: HMAC SHA-256."]
-pub const otCryptoKeyAlgorithm_OT_CRYPTO_KEY_ALG_HMAC_SHA_256: otCryptoKeyAlgorithm = 2;
+pub const OT_CRYPTO_KEY_ALG_HMAC_SHA_256: otCryptoKeyAlgorithm = 2;
 #[doc = " This enumeration defines the key algorithms."]
 #[doc = ""]
 pub type otCryptoKeyAlgorithm = ::std::os::raw::c_uint;
@@ -1047,9 +1020,9 @@ pub const OT_CRYPTO_KEY_USAGE_SIGN_HASH: ::std::os::raw::c_uint = 8;
 #[doc = ""]
 pub type _bindgen_ty_2 = ::std::os::raw::c_uint;
 #[doc = "< Key Persistence: Key is volatile."]
-pub const otCryptoKeyStorage_OT_CRYPTO_KEY_STORAGE_VOLATILE: otCryptoKeyStorage = 0;
+pub const OT_CRYPTO_KEY_STORAGE_VOLATILE: otCryptoKeyStorage = 0;
 #[doc = "< Key Persistence: Key is persistent."]
-pub const otCryptoKeyStorage_OT_CRYPTO_KEY_STORAGE_PERSISTENT: otCryptoKeyStorage = 1;
+pub const OT_CRYPTO_KEY_STORAGE_PERSISTENT: otCryptoKeyStorage = 1;
 #[doc = " This enumeration defines the key storage types."]
 #[doc = ""]
 pub type otCryptoKeyStorage = ::std::os::raw::c_uint;
@@ -1624,9 +1597,9 @@ impl Default for otMacKeyMaterial {
     }
 }
 #[doc = "< Use Literal Keys."]
-pub const otRadioKeyType_OT_KEY_TYPE_LITERAL_KEY: otRadioKeyType = 0;
+pub const OT_KEY_TYPE_LITERAL_KEY: otRadioKeyType = 0;
 #[doc = "< Use Reference to Key."]
-pub const otRadioKeyType_OT_KEY_TYPE_KEY_REF: otRadioKeyType = 1;
+pub const OT_KEY_TYPE_KEY_REF: otRadioKeyType = 1;
 #[doc = " This enumeration defines constants about key types."]
 #[doc = ""]
 pub type otRadioKeyType = ::std::os::raw::c_uint;
@@ -1859,11 +1832,11 @@ impl Default for otRadioFrame {
         }
     }
 }
-pub const otRadioState_OT_RADIO_STATE_DISABLED: otRadioState = 0;
-pub const otRadioState_OT_RADIO_STATE_SLEEP: otRadioState = 1;
-pub const otRadioState_OT_RADIO_STATE_RECEIVE: otRadioState = 2;
-pub const otRadioState_OT_RADIO_STATE_TRANSMIT: otRadioState = 3;
-pub const otRadioState_OT_RADIO_STATE_INVALID: otRadioState = 255;
+pub const OT_RADIO_STATE_DISABLED: otRadioState = 0;
+pub const OT_RADIO_STATE_SLEEP: otRadioState = 1;
+pub const OT_RADIO_STATE_RECEIVE: otRadioState = 2;
+pub const OT_RADIO_STATE_TRANSMIT: otRadioState = 3;
+pub const OT_RADIO_STATE_INVALID: otRadioState = 255;
 #[doc = " This structure represents the state of a radio."]
 #[doc = " Initially, a radio is in the Disabled state."]
 pub type otRadioState = ::std::os::raw::c_uint;
@@ -4076,6 +4049,15 @@ impl otExternalRouteConfig {
         __bindgen_bitfield_unit
     }
 }
+#[doc = "< Low route preference."]
+pub const OT_ROUTE_PREFERENCE_LOW: otRoutePreference = -1;
+#[doc = "< Medium route preference."]
+pub const OT_ROUTE_PREFERENCE_MED: otRoutePreference = 0;
+#[doc = "< High route preference."]
+pub const OT_ROUTE_PREFERENCE_HIGH: otRoutePreference = 1;
+#[doc = " Defines valid values for `mPreference` in `otExternalRouteConfig` and `otBorderRouterConfig`."]
+#[doc = ""]
+pub type otRoutePreference = ::std::os::raw::c_int;
 #[doc = " This structure represents a Server configuration."]
 #[doc = ""]
 #[repr(C)]
@@ -4903,77 +4885,117 @@ extern "C" {
     );
 }
 #[doc = "< Confirmable"]
-pub const otCoapType_OT_COAP_TYPE_CONFIRMABLE: otCoapType = 0;
+pub const OT_COAP_TYPE_CONFIRMABLE: otCoapType = 0;
 #[doc = "< Non-confirmable"]
-pub const otCoapType_OT_COAP_TYPE_NON_CONFIRMABLE: otCoapType = 1;
+pub const OT_COAP_TYPE_NON_CONFIRMABLE: otCoapType = 1;
 #[doc = "< Acknowledgment"]
-pub const otCoapType_OT_COAP_TYPE_ACKNOWLEDGMENT: otCoapType = 2;
+pub const OT_COAP_TYPE_ACKNOWLEDGMENT: otCoapType = 2;
 #[doc = "< Reset"]
-pub const otCoapType_OT_COAP_TYPE_RESET: otCoapType = 3;
+pub const OT_COAP_TYPE_RESET: otCoapType = 3;
 #[doc = " CoAP Type values (2 bit unsigned integer)."]
 #[doc = ""]
 pub type otCoapType = ::std::os::raw::c_uint;
 #[doc = "< Empty message code"]
-pub const otCoapCode_OT_COAP_CODE_EMPTY: otCoapCode = 0;
+pub const OT_COAP_CODE_EMPTY: otCoapCode = 0;
 #[doc = "< Get"]
-pub const otCoapCode_OT_COAP_CODE_GET: otCoapCode = 1;
+pub const OT_COAP_CODE_GET: otCoapCode = 1;
 #[doc = "< Post"]
-pub const otCoapCode_OT_COAP_CODE_POST: otCoapCode = 2;
+pub const OT_COAP_CODE_POST: otCoapCode = 2;
 #[doc = "< Put"]
-pub const otCoapCode_OT_COAP_CODE_PUT: otCoapCode = 3;
+pub const OT_COAP_CODE_PUT: otCoapCode = 3;
 #[doc = "< Delete"]
-pub const otCoapCode_OT_COAP_CODE_DELETE: otCoapCode = 4;
+pub const OT_COAP_CODE_DELETE: otCoapCode = 4;
 #[doc = "< 2.00"]
-pub const otCoapCode_OT_COAP_CODE_RESPONSE_MIN: otCoapCode = 64;
+pub const OT_COAP_CODE_RESPONSE_MIN: otCoapCode = 64;
 #[doc = "< Created"]
-pub const otCoapCode_OT_COAP_CODE_CREATED: otCoapCode = 65;
+pub const OT_COAP_CODE_CREATED: otCoapCode = 65;
 #[doc = "< Deleted"]
-pub const otCoapCode_OT_COAP_CODE_DELETED: otCoapCode = 66;
+pub const OT_COAP_CODE_DELETED: otCoapCode = 66;
 #[doc = "< Valid"]
-pub const otCoapCode_OT_COAP_CODE_VALID: otCoapCode = 67;
+pub const OT_COAP_CODE_VALID: otCoapCode = 67;
 #[doc = "< Changed"]
-pub const otCoapCode_OT_COAP_CODE_CHANGED: otCoapCode = 68;
+pub const OT_COAP_CODE_CHANGED: otCoapCode = 68;
 #[doc = "< Content"]
-pub const otCoapCode_OT_COAP_CODE_CONTENT: otCoapCode = 69;
+pub const OT_COAP_CODE_CONTENT: otCoapCode = 69;
 #[doc = "< RFC7959 Continue"]
-pub const otCoapCode_OT_COAP_CODE_CONTINUE: otCoapCode = 95;
+pub const OT_COAP_CODE_CONTINUE: otCoapCode = 95;
 #[doc = "< Bad Request"]
-pub const otCoapCode_OT_COAP_CODE_BAD_REQUEST: otCoapCode = 128;
+pub const OT_COAP_CODE_BAD_REQUEST: otCoapCode = 128;
 #[doc = "< Unauthorized"]
-pub const otCoapCode_OT_COAP_CODE_UNAUTHORIZED: otCoapCode = 129;
+pub const OT_COAP_CODE_UNAUTHORIZED: otCoapCode = 129;
 #[doc = "< Bad Option"]
-pub const otCoapCode_OT_COAP_CODE_BAD_OPTION: otCoapCode = 130;
+pub const OT_COAP_CODE_BAD_OPTION: otCoapCode = 130;
 #[doc = "< Forbidden"]
-pub const otCoapCode_OT_COAP_CODE_FORBIDDEN: otCoapCode = 131;
+pub const OT_COAP_CODE_FORBIDDEN: otCoapCode = 131;
 #[doc = "< Not Found"]
-pub const otCoapCode_OT_COAP_CODE_NOT_FOUND: otCoapCode = 132;
+pub const OT_COAP_CODE_NOT_FOUND: otCoapCode = 132;
 #[doc = "< Method Not Allowed"]
-pub const otCoapCode_OT_COAP_CODE_METHOD_NOT_ALLOWED: otCoapCode = 133;
+pub const OT_COAP_CODE_METHOD_NOT_ALLOWED: otCoapCode = 133;
 #[doc = "< Not Acceptable"]
-pub const otCoapCode_OT_COAP_CODE_NOT_ACCEPTABLE: otCoapCode = 134;
+pub const OT_COAP_CODE_NOT_ACCEPTABLE: otCoapCode = 134;
 #[doc = "< RFC7959 Request Entity Incomplete"]
-pub const otCoapCode_OT_COAP_CODE_REQUEST_INCOMPLETE: otCoapCode = 136;
+pub const OT_COAP_CODE_REQUEST_INCOMPLETE: otCoapCode = 136;
 #[doc = "< Precondition Failed"]
-pub const otCoapCode_OT_COAP_CODE_PRECONDITION_FAILED: otCoapCode = 140;
+pub const OT_COAP_CODE_PRECONDITION_FAILED: otCoapCode = 140;
 #[doc = "< Request Entity Too Large"]
-pub const otCoapCode_OT_COAP_CODE_REQUEST_TOO_LARGE: otCoapCode = 141;
+pub const OT_COAP_CODE_REQUEST_TOO_LARGE: otCoapCode = 141;
 #[doc = "< Unsupported Content-Format"]
-pub const otCoapCode_OT_COAP_CODE_UNSUPPORTED_FORMAT: otCoapCode = 143;
+pub const OT_COAP_CODE_UNSUPPORTED_FORMAT: otCoapCode = 143;
 #[doc = "< Internal Server Error"]
-pub const otCoapCode_OT_COAP_CODE_INTERNAL_ERROR: otCoapCode = 160;
+pub const OT_COAP_CODE_INTERNAL_ERROR: otCoapCode = 160;
 #[doc = "< Not Implemented"]
-pub const otCoapCode_OT_COAP_CODE_NOT_IMPLEMENTED: otCoapCode = 161;
+pub const OT_COAP_CODE_NOT_IMPLEMENTED: otCoapCode = 161;
 #[doc = "< Bad Gateway"]
-pub const otCoapCode_OT_COAP_CODE_BAD_GATEWAY: otCoapCode = 162;
+pub const OT_COAP_CODE_BAD_GATEWAY: otCoapCode = 162;
 #[doc = "< Service Unavailable"]
-pub const otCoapCode_OT_COAP_CODE_SERVICE_UNAVAILABLE: otCoapCode = 163;
+pub const OT_COAP_CODE_SERVICE_UNAVAILABLE: otCoapCode = 163;
 #[doc = "< Gateway Timeout"]
-pub const otCoapCode_OT_COAP_CODE_GATEWAY_TIMEOUT: otCoapCode = 164;
+pub const OT_COAP_CODE_GATEWAY_TIMEOUT: otCoapCode = 164;
 #[doc = "< Proxying Not Supported"]
-pub const otCoapCode_OT_COAP_CODE_PROXY_NOT_SUPPORTED: otCoapCode = 165;
+pub const OT_COAP_CODE_PROXY_NOT_SUPPORTED: otCoapCode = 165;
 #[doc = " CoAP Code values."]
 #[doc = ""]
 pub type otCoapCode = ::std::os::raw::c_uint;
+#[doc = "< If-Match"]
+pub const OT_COAP_OPTION_IF_MATCH: otCoapOptionType = 1;
+#[doc = "< Uri-Host"]
+pub const OT_COAP_OPTION_URI_HOST: otCoapOptionType = 3;
+#[doc = "< ETag"]
+pub const OT_COAP_OPTION_E_TAG: otCoapOptionType = 4;
+#[doc = "< If-None-Match"]
+pub const OT_COAP_OPTION_IF_NONE_MATCH: otCoapOptionType = 5;
+#[doc = "< Observe [RFC7641]"]
+pub const OT_COAP_OPTION_OBSERVE: otCoapOptionType = 6;
+#[doc = "< Uri-Port"]
+pub const OT_COAP_OPTION_URI_PORT: otCoapOptionType = 7;
+#[doc = "< Location-Path"]
+pub const OT_COAP_OPTION_LOCATION_PATH: otCoapOptionType = 8;
+#[doc = "< Uri-Path"]
+pub const OT_COAP_OPTION_URI_PATH: otCoapOptionType = 11;
+#[doc = "< Content-Format"]
+pub const OT_COAP_OPTION_CONTENT_FORMAT: otCoapOptionType = 12;
+#[doc = "< Max-Age"]
+pub const OT_COAP_OPTION_MAX_AGE: otCoapOptionType = 14;
+#[doc = "< Uri-Query"]
+pub const OT_COAP_OPTION_URI_QUERY: otCoapOptionType = 15;
+#[doc = "< Accept"]
+pub const OT_COAP_OPTION_ACCEPT: otCoapOptionType = 17;
+#[doc = "< Location-Query"]
+pub const OT_COAP_OPTION_LOCATION_QUERY: otCoapOptionType = 20;
+#[doc = "< Block2 (RFC7959)"]
+pub const OT_COAP_OPTION_BLOCK2: otCoapOptionType = 23;
+#[doc = "< Block1 (RFC7959)"]
+pub const OT_COAP_OPTION_BLOCK1: otCoapOptionType = 27;
+#[doc = "< Size2 (RFC7959)"]
+pub const OT_COAP_OPTION_SIZE2: otCoapOptionType = 28;
+#[doc = "< Proxy-Uri"]
+pub const OT_COAP_OPTION_PROXY_URI: otCoapOptionType = 35;
+#[doc = "< Proxy-Scheme"]
+pub const OT_COAP_OPTION_PROXY_SCHEME: otCoapOptionType = 39;
+#[doc = "< Size1"]
+pub const OT_COAP_OPTION_SIZE1: otCoapOptionType = 60;
+#[doc = " CoAP Option Numbers"]
+pub type otCoapOptionType = ::std::os::raw::c_uint;
 #[doc = " This structure represents a CoAP option."]
 #[doc = ""]
 #[repr(C)]
@@ -5006,97 +5028,70 @@ impl Default for otCoapOptionIterator {
     }
 }
 #[doc = " text/plain; charset=utf-8: [RFC2046][RFC3676][RFC5147]"]
-pub const otCoapOptionContentFormat_OT_COAP_OPTION_CONTENT_FORMAT_TEXT_PLAIN:
-    otCoapOptionContentFormat = 0;
+pub const OT_COAP_OPTION_CONTENT_FORMAT_TEXT_PLAIN: otCoapOptionContentFormat = 0;
 #[doc = " application/cose; cose-type=\"cose-encrypt0\": [RFC8152]"]
-pub const otCoapOptionContentFormat_OT_COAP_OPTION_CONTENT_FORMAT_COSE_ENCRYPT0:
-    otCoapOptionContentFormat = 16;
+pub const OT_COAP_OPTION_CONTENT_FORMAT_COSE_ENCRYPT0: otCoapOptionContentFormat = 16;
 #[doc = " application/cose; cose-type=\"cose-mac0\": [RFC8152]"]
-pub const otCoapOptionContentFormat_OT_COAP_OPTION_CONTENT_FORMAT_COSE_MAC0:
-    otCoapOptionContentFormat = 17;
+pub const OT_COAP_OPTION_CONTENT_FORMAT_COSE_MAC0: otCoapOptionContentFormat = 17;
 #[doc = " application/cose; cose-type=\"cose-sign1\": [RFC8152]"]
-pub const otCoapOptionContentFormat_OT_COAP_OPTION_CONTENT_FORMAT_COSE_SIGN1:
-    otCoapOptionContentFormat = 18;
+pub const OT_COAP_OPTION_CONTENT_FORMAT_COSE_SIGN1: otCoapOptionContentFormat = 18;
 #[doc = " application/link-format: [RFC6690]"]
-pub const otCoapOptionContentFormat_OT_COAP_OPTION_CONTENT_FORMAT_LINK_FORMAT:
-    otCoapOptionContentFormat = 40;
+pub const OT_COAP_OPTION_CONTENT_FORMAT_LINK_FORMAT: otCoapOptionContentFormat = 40;
 #[doc = " application/xml: [RFC3023]"]
-pub const otCoapOptionContentFormat_OT_COAP_OPTION_CONTENT_FORMAT_XML: otCoapOptionContentFormat =
-    41;
+pub const OT_COAP_OPTION_CONTENT_FORMAT_XML: otCoapOptionContentFormat = 41;
 #[doc = " application/octet-stream: [RFC2045][RFC2046]"]
-pub const otCoapOptionContentFormat_OT_COAP_OPTION_CONTENT_FORMAT_OCTET_STREAM:
-    otCoapOptionContentFormat = 42;
+pub const OT_COAP_OPTION_CONTENT_FORMAT_OCTET_STREAM: otCoapOptionContentFormat = 42;
 #[doc = " application/exi:"]
 #[doc = " [\"Efficient XML Interchange (EXI) Format 1.0 (Second Edition)\", February 2014]"]
-pub const otCoapOptionContentFormat_OT_COAP_OPTION_CONTENT_FORMAT_EXI: otCoapOptionContentFormat =
-    47;
+pub const OT_COAP_OPTION_CONTENT_FORMAT_EXI: otCoapOptionContentFormat = 47;
 #[doc = " application/json: [RFC7159]"]
-pub const otCoapOptionContentFormat_OT_COAP_OPTION_CONTENT_FORMAT_JSON: otCoapOptionContentFormat =
-    50;
+pub const OT_COAP_OPTION_CONTENT_FORMAT_JSON: otCoapOptionContentFormat = 50;
 #[doc = " application/json-patch+json: [RFC6902]"]
-pub const otCoapOptionContentFormat_OT_COAP_OPTION_CONTENT_FORMAT_JSON_PATCH_JSON:
-    otCoapOptionContentFormat = 51;
+pub const OT_COAP_OPTION_CONTENT_FORMAT_JSON_PATCH_JSON: otCoapOptionContentFormat = 51;
 #[doc = " application/merge-patch+json: [RFC7396]"]
-pub const otCoapOptionContentFormat_OT_COAP_OPTION_CONTENT_FORMAT_MERGE_PATCH_JSON:
-    otCoapOptionContentFormat = 52;
+pub const OT_COAP_OPTION_CONTENT_FORMAT_MERGE_PATCH_JSON: otCoapOptionContentFormat = 52;
 #[doc = " application/cbor: [RFC7049]"]
-pub const otCoapOptionContentFormat_OT_COAP_OPTION_CONTENT_FORMAT_CBOR: otCoapOptionContentFormat =
-    60;
+pub const OT_COAP_OPTION_CONTENT_FORMAT_CBOR: otCoapOptionContentFormat = 60;
 #[doc = " application/cwt: [RFC8392]"]
-pub const otCoapOptionContentFormat_OT_COAP_OPTION_CONTENT_FORMAT_CWT: otCoapOptionContentFormat =
-    61;
+pub const OT_COAP_OPTION_CONTENT_FORMAT_CWT: otCoapOptionContentFormat = 61;
 #[doc = " application/cose; cose-type=\"cose-encrypt\": [RFC8152]"]
-pub const otCoapOptionContentFormat_OT_COAP_OPTION_CONTENT_FORMAT_COSE_ENCRYPT:
-    otCoapOptionContentFormat = 96;
+pub const OT_COAP_OPTION_CONTENT_FORMAT_COSE_ENCRYPT: otCoapOptionContentFormat = 96;
 #[doc = " application/cose; cose-type=\"cose-mac\": [RFC8152]"]
-pub const otCoapOptionContentFormat_OT_COAP_OPTION_CONTENT_FORMAT_COSE_MAC:
-    otCoapOptionContentFormat = 97;
+pub const OT_COAP_OPTION_CONTENT_FORMAT_COSE_MAC: otCoapOptionContentFormat = 97;
 #[doc = " application/cose; cose-type=\"cose-sign\": [RFC8152]"]
-pub const otCoapOptionContentFormat_OT_COAP_OPTION_CONTENT_FORMAT_COSE_SIGN:
-    otCoapOptionContentFormat = 98;
+pub const OT_COAP_OPTION_CONTENT_FORMAT_COSE_SIGN: otCoapOptionContentFormat = 98;
 #[doc = " application/cose-key: [RFC8152]"]
-pub const otCoapOptionContentFormat_OT_COAP_OPTION_CONTENT_FORMAT_COSE_KEY:
-    otCoapOptionContentFormat = 101;
+pub const OT_COAP_OPTION_CONTENT_FORMAT_COSE_KEY: otCoapOptionContentFormat = 101;
 #[doc = " application/cose-key-set: [RFC8152]"]
-pub const otCoapOptionContentFormat_OT_COAP_OPTION_CONTENT_FORMAT_COSE_KEY_SET:
-    otCoapOptionContentFormat = 102;
+pub const OT_COAP_OPTION_CONTENT_FORMAT_COSE_KEY_SET: otCoapOptionContentFormat = 102;
 #[doc = " application/senml+json: [RFC8428]"]
-pub const otCoapOptionContentFormat_OT_COAP_OPTION_CONTENT_FORMAT_SENML_JSON:
-    otCoapOptionContentFormat = 110;
+pub const OT_COAP_OPTION_CONTENT_FORMAT_SENML_JSON: otCoapOptionContentFormat = 110;
 #[doc = " application/sensml+json: [RFC8428]"]
-pub const otCoapOptionContentFormat_OT_COAP_OPTION_CONTENT_FORMAT_SENSML_JSON:
-    otCoapOptionContentFormat = 111;
+pub const OT_COAP_OPTION_CONTENT_FORMAT_SENSML_JSON: otCoapOptionContentFormat = 111;
 #[doc = " application/senml+cbor: [RFC8428]"]
-pub const otCoapOptionContentFormat_OT_COAP_OPTION_CONTENT_FORMAT_SENML_CBOR:
-    otCoapOptionContentFormat = 112;
+pub const OT_COAP_OPTION_CONTENT_FORMAT_SENML_CBOR: otCoapOptionContentFormat = 112;
 #[doc = " application/sensml+cbor: [RFC8428]"]
-pub const otCoapOptionContentFormat_OT_COAP_OPTION_CONTENT_FORMAT_SENSML_CBOR:
-    otCoapOptionContentFormat = 113;
+pub const OT_COAP_OPTION_CONTENT_FORMAT_SENSML_CBOR: otCoapOptionContentFormat = 113;
 #[doc = " application/senml-exi: [RFC8428]"]
-pub const otCoapOptionContentFormat_OT_COAP_OPTION_CONTENT_FORMAT_SENML_EXI:
-    otCoapOptionContentFormat = 114;
+pub const OT_COAP_OPTION_CONTENT_FORMAT_SENML_EXI: otCoapOptionContentFormat = 114;
 #[doc = " application/sensml-exi: [RFC8428]"]
-pub const otCoapOptionContentFormat_OT_COAP_OPTION_CONTENT_FORMAT_SENSML_EXI:
-    otCoapOptionContentFormat = 115;
+pub const OT_COAP_OPTION_CONTENT_FORMAT_SENSML_EXI: otCoapOptionContentFormat = 115;
 #[doc = " application/coap-group+json: [RFC7390]"]
-pub const otCoapOptionContentFormat_OT_COAP_OPTION_CONTENT_FORMAT_COAP_GROUP_JSON:
-    otCoapOptionContentFormat = 256;
+pub const OT_COAP_OPTION_CONTENT_FORMAT_COAP_GROUP_JSON: otCoapOptionContentFormat = 256;
 #[doc = " application/senml+xml: [RFC8428]"]
-pub const otCoapOptionContentFormat_OT_COAP_OPTION_CONTENT_FORMAT_SENML_XML:
-    otCoapOptionContentFormat = 310;
+pub const OT_COAP_OPTION_CONTENT_FORMAT_SENML_XML: otCoapOptionContentFormat = 310;
 #[doc = " application/sensml+xml: [RFC8428]"]
-pub const otCoapOptionContentFormat_OT_COAP_OPTION_CONTENT_FORMAT_SENSML_XML:
-    otCoapOptionContentFormat = 311;
+pub const OT_COAP_OPTION_CONTENT_FORMAT_SENSML_XML: otCoapOptionContentFormat = 311;
 #[doc = " CoAP Content Format codes.  The full list is documented at"]
 #[doc = " https://www.iana.org/assignments/core-parameters/core-parameters.xhtml#content-formats"]
 pub type otCoapOptionContentFormat = ::std::os::raw::c_uint;
-pub const otCoapBlockSzx_OT_COAP_OPTION_BLOCK_SZX_16: otCoapBlockSzx = 0;
-pub const otCoapBlockSzx_OT_COAP_OPTION_BLOCK_SZX_32: otCoapBlockSzx = 1;
-pub const otCoapBlockSzx_OT_COAP_OPTION_BLOCK_SZX_64: otCoapBlockSzx = 2;
-pub const otCoapBlockSzx_OT_COAP_OPTION_BLOCK_SZX_128: otCoapBlockSzx = 3;
-pub const otCoapBlockSzx_OT_COAP_OPTION_BLOCK_SZX_256: otCoapBlockSzx = 4;
-pub const otCoapBlockSzx_OT_COAP_OPTION_BLOCK_SZX_512: otCoapBlockSzx = 5;
-pub const otCoapBlockSzx_OT_COAP_OPTION_BLOCK_SZX_1024: otCoapBlockSzx = 6;
+pub const OT_COAP_OPTION_BLOCK_SZX_16: otCoapBlockSzx = 0;
+pub const OT_COAP_OPTION_BLOCK_SZX_32: otCoapBlockSzx = 1;
+pub const OT_COAP_OPTION_BLOCK_SZX_64: otCoapBlockSzx = 2;
+pub const OT_COAP_OPTION_BLOCK_SZX_128: otCoapBlockSzx = 3;
+pub const OT_COAP_OPTION_BLOCK_SZX_256: otCoapBlockSzx = 4;
+pub const OT_COAP_OPTION_BLOCK_SZX_512: otCoapBlockSzx = 5;
+pub const OT_COAP_OPTION_BLOCK_SZX_1024: otCoapBlockSzx = 6;
 #[doc = " CoAP Block Size Exponents"]
 pub type otCoapBlockSzx = ::std::os::raw::c_uint;
 #[doc = " This function pointer is called when a CoAP response is received or on the request timeout."]
@@ -6686,6 +6681,89 @@ impl Default for otOperationalDatasetTlvs {
         }
     }
 }
+#[doc = "< meshcop Channel TLV"]
+pub const OT_MESHCOP_TLV_CHANNEL: otMeshcopTlvType = 0;
+#[doc = "< meshcop Pan Id TLV"]
+pub const OT_MESHCOP_TLV_PANID: otMeshcopTlvType = 1;
+#[doc = "< meshcop Extended Pan Id TLV"]
+pub const OT_MESHCOP_TLV_EXTPANID: otMeshcopTlvType = 2;
+#[doc = "< meshcop Network Name TLV"]
+pub const OT_MESHCOP_TLV_NETWORKNAME: otMeshcopTlvType = 3;
+#[doc = "< meshcop PSKc TLV"]
+pub const OT_MESHCOP_TLV_PSKC: otMeshcopTlvType = 4;
+#[doc = "< meshcop Network Key TLV"]
+pub const OT_MESHCOP_TLV_NETWORKKEY: otMeshcopTlvType = 5;
+#[doc = "< meshcop Network Key Sequence TLV"]
+pub const OT_MESHCOP_TLV_NETWORK_KEY_SEQUENCE: otMeshcopTlvType = 6;
+#[doc = "< meshcop Mesh Local Prefix TLV"]
+pub const OT_MESHCOP_TLV_MESHLOCALPREFIX: otMeshcopTlvType = 7;
+#[doc = "< meshcop Steering Data TLV"]
+pub const OT_MESHCOP_TLV_STEERING_DATA: otMeshcopTlvType = 8;
+#[doc = "< meshcop Border Agent Locator TLV"]
+pub const OT_MESHCOP_TLV_BORDER_AGENT_RLOC: otMeshcopTlvType = 9;
+#[doc = "< meshcop Commissioner ID TLV"]
+pub const OT_MESHCOP_TLV_COMMISSIONER_ID: otMeshcopTlvType = 10;
+#[doc = "< meshcop Commissioner Session ID TLV"]
+pub const OT_MESHCOP_TLV_COMM_SESSION_ID: otMeshcopTlvType = 11;
+#[doc = "< meshcop Security Policy TLV"]
+pub const OT_MESHCOP_TLV_SECURITYPOLICY: otMeshcopTlvType = 12;
+#[doc = "< meshcop Get TLV"]
+pub const OT_MESHCOP_TLV_GET: otMeshcopTlvType = 13;
+#[doc = "< meshcop Active Timestamp TLV"]
+pub const OT_MESHCOP_TLV_ACTIVETIMESTAMP: otMeshcopTlvType = 14;
+#[doc = "< meshcop Commissioner UDP Port TLV"]
+pub const OT_MESHCOP_TLV_COMMISSIONER_UDP_PORT: otMeshcopTlvType = 15;
+#[doc = "< meshcop State TLV"]
+pub const OT_MESHCOP_TLV_STATE: otMeshcopTlvType = 16;
+#[doc = "< meshcop Joiner DTLS Encapsulation TLV"]
+pub const OT_MESHCOP_TLV_JOINER_DTLS: otMeshcopTlvType = 17;
+#[doc = "< meshcop Joiner UDP Port TLV"]
+pub const OT_MESHCOP_TLV_JOINER_UDP_PORT: otMeshcopTlvType = 18;
+#[doc = "< meshcop Joiner IID TLV"]
+pub const OT_MESHCOP_TLV_JOINER_IID: otMeshcopTlvType = 19;
+#[doc = "< meshcop Joiner Router Locator TLV"]
+pub const OT_MESHCOP_TLV_JOINER_RLOC: otMeshcopTlvType = 20;
+#[doc = "< meshcop Joiner Router KEK TLV"]
+pub const OT_MESHCOP_TLV_JOINER_ROUTER_KEK: otMeshcopTlvType = 21;
+#[doc = "< meshcop Provisioning URL TLV"]
+pub const OT_MESHCOP_TLV_PROVISIONING_URL: otMeshcopTlvType = 32;
+#[doc = "< meshcop Vendor Name TLV"]
+pub const OT_MESHCOP_TLV_VENDOR_NAME_TLV: otMeshcopTlvType = 33;
+#[doc = "< meshcop Vendor Model TLV"]
+pub const OT_MESHCOP_TLV_VENDOR_MODEL_TLV: otMeshcopTlvType = 34;
+#[doc = "< meshcop Vendor SW Version TLV"]
+pub const OT_MESHCOP_TLV_VENDOR_SW_VERSION_TLV: otMeshcopTlvType = 35;
+#[doc = "< meshcop Vendor Data TLV"]
+pub const OT_MESHCOP_TLV_VENDOR_DATA_TLV: otMeshcopTlvType = 36;
+#[doc = "< meshcop Vendor Stack Version TLV"]
+pub const OT_MESHCOP_TLV_VENDOR_STACK_VERSION_TLV: otMeshcopTlvType = 37;
+#[doc = "< meshcop UDP encapsulation TLV"]
+pub const OT_MESHCOP_TLV_UDP_ENCAPSULATION_TLV: otMeshcopTlvType = 48;
+#[doc = "< meshcop IPv6 address TLV"]
+pub const OT_MESHCOP_TLV_IPV6_ADDRESS_TLV: otMeshcopTlvType = 49;
+#[doc = "< meshcop Pending Timestamp TLV"]
+pub const OT_MESHCOP_TLV_PENDINGTIMESTAMP: otMeshcopTlvType = 51;
+#[doc = "< meshcop Delay Timer TLV"]
+pub const OT_MESHCOP_TLV_DELAYTIMER: otMeshcopTlvType = 52;
+#[doc = "< meshcop Channel Mask TLV"]
+pub const OT_MESHCOP_TLV_CHANNELMASK: otMeshcopTlvType = 53;
+#[doc = "< meshcop Count TLV"]
+pub const OT_MESHCOP_TLV_COUNT: otMeshcopTlvType = 54;
+#[doc = "< meshcop Period TLV"]
+pub const OT_MESHCOP_TLV_PERIOD: otMeshcopTlvType = 55;
+#[doc = "< meshcop Scan Duration TLV"]
+pub const OT_MESHCOP_TLV_SCAN_DURATION: otMeshcopTlvType = 56;
+#[doc = "< meshcop Energy List TLV"]
+pub const OT_MESHCOP_TLV_ENERGY_LIST: otMeshcopTlvType = 57;
+#[doc = "< meshcop Discovery Request TLV"]
+pub const OT_MESHCOP_TLV_DISCOVERYREQUEST: otMeshcopTlvType = 128;
+#[doc = "< meshcop Discovery Response TLV"]
+pub const OT_MESHCOP_TLV_DISCOVERYRESPONSE: otMeshcopTlvType = 129;
+#[doc = "< meshcop Joiner Advertisement TLV"]
+pub const OT_MESHCOP_TLV_JOINERADVERTISEMENT: otMeshcopTlvType = 241;
+#[doc = " This enumeration represents meshcop TLV types."]
+#[doc = ""]
+pub type otMeshcopTlvType = ::std::os::raw::c_uint;
 #[doc = " This function pointer is called when a response to a MGMT_SET request is received or times out."]
 #[doc = ""]
 #[doc = " @param[in]  aResult   A result of the operation."]
@@ -6988,12 +7066,12 @@ extern "C" {
         aDataset: *mut otOperationalDataset,
     ) -> otError;
 }
-pub const otJoinerState_OT_JOINER_STATE_IDLE: otJoinerState = 0;
-pub const otJoinerState_OT_JOINER_STATE_DISCOVER: otJoinerState = 1;
-pub const otJoinerState_OT_JOINER_STATE_CONNECT: otJoinerState = 2;
-pub const otJoinerState_OT_JOINER_STATE_CONNECTED: otJoinerState = 3;
-pub const otJoinerState_OT_JOINER_STATE_ENTRUST: otJoinerState = 4;
-pub const otJoinerState_OT_JOINER_STATE_JOINED: otJoinerState = 5;
+pub const OT_JOINER_STATE_IDLE: otJoinerState = 0;
+pub const OT_JOINER_STATE_DISCOVER: otJoinerState = 1;
+pub const OT_JOINER_STATE_CONNECT: otJoinerState = 2;
+pub const OT_JOINER_STATE_CONNECTED: otJoinerState = 3;
+pub const OT_JOINER_STATE_ENTRUST: otJoinerState = 4;
+pub const OT_JOINER_STATE_JOINED: otJoinerState = 5;
 #[doc = " This enumeration defines the Joiner State."]
 #[doc = ""]
 pub type otJoinerState = ::std::os::raw::c_uint;
@@ -7123,19 +7201,19 @@ extern "C" {
     pub fn otJoinerStateToString(aState: otJoinerState) -> *const ::std::os::raw::c_char;
 }
 #[doc = "< Commissioner role is disabled."]
-pub const otCommissionerState_OT_COMMISSIONER_STATE_DISABLED: otCommissionerState = 0;
+pub const OT_COMMISSIONER_STATE_DISABLED: otCommissionerState = 0;
 #[doc = "< Currently petitioning to become a Commissioner."]
-pub const otCommissionerState_OT_COMMISSIONER_STATE_PETITION: otCommissionerState = 1;
+pub const OT_COMMISSIONER_STATE_PETITION: otCommissionerState = 1;
 #[doc = "< Commissioner role is active."]
-pub const otCommissionerState_OT_COMMISSIONER_STATE_ACTIVE: otCommissionerState = 2;
+pub const OT_COMMISSIONER_STATE_ACTIVE: otCommissionerState = 2;
 #[doc = " This enumeration defines the Commissioner State."]
 #[doc = ""]
 pub type otCommissionerState = ::std::os::raw::c_uint;
-pub const otCommissionerJoinerEvent_OT_COMMISSIONER_JOINER_START: otCommissionerJoinerEvent = 0;
-pub const otCommissionerJoinerEvent_OT_COMMISSIONER_JOINER_CONNECTED: otCommissionerJoinerEvent = 1;
-pub const otCommissionerJoinerEvent_OT_COMMISSIONER_JOINER_FINALIZE: otCommissionerJoinerEvent = 2;
-pub const otCommissionerJoinerEvent_OT_COMMISSIONER_JOINER_END: otCommissionerJoinerEvent = 3;
-pub const otCommissionerJoinerEvent_OT_COMMISSIONER_JOINER_REMOVED: otCommissionerJoinerEvent = 4;
+pub const OT_COMMISSIONER_JOINER_START: otCommissionerJoinerEvent = 0;
+pub const OT_COMMISSIONER_JOINER_CONNECTED: otCommissionerJoinerEvent = 1;
+pub const OT_COMMISSIONER_JOINER_FINALIZE: otCommissionerJoinerEvent = 2;
+pub const OT_COMMISSIONER_JOINER_END: otCommissionerJoinerEvent = 3;
+pub const OT_COMMISSIONER_JOINER_REMOVED: otCommissionerJoinerEvent = 4;
 #[doc = " This enumeration defines a Joiner Event on the Commissioner."]
 #[doc = ""]
 pub type otCommissionerJoinerEvent = ::std::os::raw::c_uint;
@@ -7256,11 +7334,11 @@ impl Default for otJoinerPskd {
     }
 }
 #[doc = "< Accept any Joiner (no EUI64 or Discerner is specified)."]
-pub const otJoinerInfoType_OT_JOINER_INFO_TYPE_ANY: otJoinerInfoType = 0;
+pub const OT_JOINER_INFO_TYPE_ANY: otJoinerInfoType = 0;
 #[doc = "< Joiner EUI-64 is specified (`mSharedId.mEui64` in `otJoinerInfo`)."]
-pub const otJoinerInfoType_OT_JOINER_INFO_TYPE_EUI64: otJoinerInfoType = 1;
+pub const OT_JOINER_INFO_TYPE_EUI64: otJoinerInfoType = 1;
 #[doc = "< Joiner Discerner is specified (`mSharedId.mDiscerner` in `otJoinerInfo`)."]
-pub const otJoinerInfoType_OT_JOINER_INFO_TYPE_DISCERNER: otJoinerInfoType = 2;
+pub const OT_JOINER_INFO_TYPE_DISCERNER: otJoinerInfoType = 2;
 #[doc = " This enumeration defines a Joiner Info Type."]
 #[doc = ""]
 pub type otJoinerInfoType = ::std::os::raw::c_uint;
@@ -7906,20 +7984,20 @@ extern "C" {
     pub fn otDnsIsNameCompressionEnabled() -> bool;
 }
 #[doc = "< Indicates the flag is not specified."]
-pub const otDnsRecursionFlag_OT_DNS_FLAG_UNSPECIFIED: otDnsRecursionFlag = 0;
+pub const OT_DNS_FLAG_UNSPECIFIED: otDnsRecursionFlag = 0;
 #[doc = "< Indicates DNS name server can resolve the query recursively."]
-pub const otDnsRecursionFlag_OT_DNS_FLAG_RECURSION_DESIRED: otDnsRecursionFlag = 1;
+pub const OT_DNS_FLAG_RECURSION_DESIRED: otDnsRecursionFlag = 1;
 #[doc = "< Indicates DNS name server can not resolve the query recursively."]
-pub const otDnsRecursionFlag_OT_DNS_FLAG_NO_RECURSION: otDnsRecursionFlag = 2;
+pub const OT_DNS_FLAG_NO_RECURSION: otDnsRecursionFlag = 2;
 #[doc = " This enumeration type represents the \"Recursion Desired\" (RD) flag in an `otDnsQueryConfig`."]
 #[doc = ""]
 pub type otDnsRecursionFlag = ::std::os::raw::c_uint;
 #[doc = "< NAT64 mode is not specified. Use default NAT64 mode."]
-pub const otDnsNat64Mode_OT_DNS_NAT64_UNSPECIFIED: otDnsNat64Mode = 0;
+pub const OT_DNS_NAT64_UNSPECIFIED: otDnsNat64Mode = 0;
 #[doc = "< Allow NAT64 address translation during DNS client address resolution."]
-pub const otDnsNat64Mode_OT_DNS_NAT64_ALLOW: otDnsNat64Mode = 1;
+pub const OT_DNS_NAT64_ALLOW: otDnsNat64Mode = 1;
 #[doc = "< Do not allow NAT64 address translation during DNS client address resolution."]
-pub const otDnsNat64Mode_OT_DNS_NAT64_DISALLOW: otDnsNat64Mode = 2;
+pub const OT_DNS_NAT64_DISALLOW: otDnsNat64Mode = 2;
 #[doc = " This enumeration type represents the NAT64 mode in an `otDnsQueryConfig`."]
 #[doc = ""]
 #[doc = " The NAT64 mode indicates whether to allow or disallow NAT64 address translation during DNS client address resolution."]
@@ -8545,13 +8623,13 @@ impl Default for otDnssdHostInfo {
     }
 }
 #[doc = "< Service type unspecified."]
-pub const otDnssdQueryType_OT_DNSSD_QUERY_TYPE_NONE: otDnssdQueryType = 0;
+pub const OT_DNSSD_QUERY_TYPE_NONE: otDnssdQueryType = 0;
 #[doc = "< Service type browse service."]
-pub const otDnssdQueryType_OT_DNSSD_QUERY_TYPE_BROWSE: otDnssdQueryType = 1;
+pub const OT_DNSSD_QUERY_TYPE_BROWSE: otDnssdQueryType = 1;
 #[doc = "< Service type resolve service instance."]
-pub const otDnssdQueryType_OT_DNSSD_QUERY_TYPE_RESOLVE: otDnssdQueryType = 2;
+pub const OT_DNSSD_QUERY_TYPE_RESOLVE: otDnssdQueryType = 2;
 #[doc = "< Service type resolve hostname."]
-pub const otDnssdQueryType_OT_DNSSD_QUERY_TYPE_RESOLVE_HOST: otDnssdQueryType = 3;
+pub const OT_DNSSD_QUERY_TYPE_RESOLVE_HOST: otDnssdQueryType = 3;
 #[doc = " This enumeration specifies a DNS-SD query type."]
 #[doc = ""]
 pub type otDnssdQueryType = ::std::os::raw::c_uint;
@@ -8647,6 +8725,32 @@ extern "C" {
     #[doc = ""]
     pub fn otHeapFree(aPointer: *mut ::std::os::raw::c_void);
 }
+#[doc = "< Destination Unreachable"]
+pub const OT_ICMP6_TYPE_DST_UNREACH: otIcmp6Type = 1;
+#[doc = "< Packet To Big"]
+pub const OT_ICMP6_TYPE_PACKET_TO_BIG: otIcmp6Type = 2;
+#[doc = "< Time Exceeded"]
+pub const OT_ICMP6_TYPE_TIME_EXCEEDED: otIcmp6Type = 3;
+#[doc = "< Parameter Problem"]
+pub const OT_ICMP6_TYPE_PARAMETER_PROBLEM: otIcmp6Type = 4;
+#[doc = "< Echo Request"]
+pub const OT_ICMP6_TYPE_ECHO_REQUEST: otIcmp6Type = 128;
+#[doc = "< Echo Reply"]
+pub const OT_ICMP6_TYPE_ECHO_REPLY: otIcmp6Type = 129;
+#[doc = "< Router Solicitation"]
+pub const OT_ICMP6_TYPE_ROUTER_SOLICIT: otIcmp6Type = 133;
+#[doc = "< Router Advertisement"]
+pub const OT_ICMP6_TYPE_ROUTER_ADVERT: otIcmp6Type = 134;
+#[doc = " ICMPv6 Message Types"]
+#[doc = ""]
+pub type otIcmp6Type = ::std::os::raw::c_uint;
+#[doc = "< Destination Unreachable No Route"]
+pub const OT_ICMP6_CODE_DST_UNREACH_NO_ROUTE: otIcmp6Code = 0;
+#[doc = "< Fragment Reassembly Time Exceeded"]
+pub const OT_ICMP6_CODE_FRAGM_REAS_TIME_EX: otIcmp6Code = 1;
+#[doc = " ICMPv6 Message Codes"]
+#[doc = ""]
+pub type otIcmp6Code = ::std::os::raw::c_uint;
 #[doc = " @struct otIcmp6Header"]
 #[doc = ""]
 #[doc = " This structure represents an ICMPv6 header."]
@@ -8725,13 +8829,13 @@ impl Default for otIcmp6Handler {
     }
 }
 #[doc = "< ICMPv6 Echo processing disabled"]
-pub const otIcmp6EchoMode_OT_ICMP6_ECHO_HANDLER_DISABLED: otIcmp6EchoMode = 0;
+pub const OT_ICMP6_ECHO_HANDLER_DISABLED: otIcmp6EchoMode = 0;
 #[doc = "< ICMPv6 Echo processing enabled only for unicast requests only"]
-pub const otIcmp6EchoMode_OT_ICMP6_ECHO_HANDLER_UNICAST_ONLY: otIcmp6EchoMode = 1;
+pub const OT_ICMP6_ECHO_HANDLER_UNICAST_ONLY: otIcmp6EchoMode = 1;
 #[doc = "< ICMPv6 Echo processing enabled only for multicast requests only"]
-pub const otIcmp6EchoMode_OT_ICMP6_ECHO_HANDLER_MULTICAST_ONLY: otIcmp6EchoMode = 2;
+pub const OT_ICMP6_ECHO_HANDLER_MULTICAST_ONLY: otIcmp6EchoMode = 2;
 #[doc = "< ICMPv6 Echo processing enabled for unicast and multicast requests"]
-pub const otIcmp6EchoMode_OT_ICMP6_ECHO_HANDLER_ALL: otIcmp6EchoMode = 3;
+pub const OT_ICMP6_ECHO_HANDLER_ALL: otIcmp6EchoMode = 3;
 #[doc = " ICMPv6 Echo Reply Modes"]
 #[doc = ""]
 pub type otIcmp6EchoMode = ::std::os::raw::c_uint;
@@ -8919,13 +9023,35 @@ extern "C" {
     #[doc = ""]
     pub fn otJamDetectionGetHistoryBitmap(aInstance: *mut otInstance) -> u64;
 }
+#[doc = " This structure represents link-specific information for messages received from the Thread radio."]
+#[doc = ""]
+#[repr(C)]
+#[derive(Debug, Default, Copy, Clone)]
+pub struct otThreadLinkInfo {
+    #[doc = "< Source PAN ID"]
+    pub mPanId: u16,
+    #[doc = "< 802.15.4 Channel"]
+    pub mChannel: u8,
+    #[doc = "< Received Signal Strength in dBm."]
+    pub mRss: i8,
+    #[doc = "< Link Quality Indicator for a received message."]
+    pub mLqi: u8,
+    #[doc = "< Indicates whether or not link security is enabled."]
+    pub mLinkSecurity: bool,
+    #[doc = "< The time sync sequence."]
+    pub mTimeSyncSeq: u8,
+    #[doc = "< The time offset to the Thread network time, in microseconds."]
+    pub mNetworkTimeOffset: i64,
+    #[doc = "< Radio link type."]
+    pub mRadioType: u8,
+}
 pub type otMacFilterIterator = u8;
 #[doc = "< Address filter is disabled."]
-pub const otMacFilterAddressMode_OT_MAC_FILTER_ADDRESS_MODE_DISABLED: otMacFilterAddressMode = 0;
+pub const OT_MAC_FILTER_ADDRESS_MODE_DISABLED: otMacFilterAddressMode = 0;
 #[doc = "< Allowlist address filter mode is enabled."]
-pub const otMacFilterAddressMode_OT_MAC_FILTER_ADDRESS_MODE_ALLOWLIST: otMacFilterAddressMode = 1;
+pub const OT_MAC_FILTER_ADDRESS_MODE_ALLOWLIST: otMacFilterAddressMode = 1;
 #[doc = "< Denylist address filter mode is enabled."]
-pub const otMacFilterAddressMode_OT_MAC_FILTER_ADDRESS_MODE_DENYLIST: otMacFilterAddressMode = 2;
+pub const OT_MAC_FILTER_ADDRESS_MODE_DENYLIST: otMacFilterAddressMode = 2;
 #[doc = " Defines address mode of the mac filter."]
 #[doc = ""]
 pub type otMacFilterAddressMode = ::std::os::raw::c_uint;
@@ -10512,15 +10638,15 @@ extern "C" {
     pub fn otNcpRegisterLegacyHandlers(aHandlers: *const otNcpLegacyHandlers);
 }
 #[doc = "< The Thread stack is disabled."]
-pub const otDeviceRole_OT_DEVICE_ROLE_DISABLED: otDeviceRole = 0;
+pub const OT_DEVICE_ROLE_DISABLED: otDeviceRole = 0;
 #[doc = "< Not currently participating in a Thread network/partition."]
-pub const otDeviceRole_OT_DEVICE_ROLE_DETACHED: otDeviceRole = 1;
+pub const OT_DEVICE_ROLE_DETACHED: otDeviceRole = 1;
 #[doc = "< The Thread Child role."]
-pub const otDeviceRole_OT_DEVICE_ROLE_CHILD: otDeviceRole = 2;
+pub const OT_DEVICE_ROLE_CHILD: otDeviceRole = 2;
 #[doc = "< The Thread Router role."]
-pub const otDeviceRole_OT_DEVICE_ROLE_ROUTER: otDeviceRole = 3;
+pub const OT_DEVICE_ROLE_ROUTER: otDeviceRole = 3;
 #[doc = "< The Thread Leader role."]
-pub const otDeviceRole_OT_DEVICE_ROLE_LEADER: otDeviceRole = 4;
+pub const OT_DEVICE_ROLE_LEADER: otDeviceRole = 4;
 #[doc = " Represents a Thread device role."]
 #[doc = ""]
 pub type otDeviceRole = ::std::os::raw::c_uint;
@@ -12084,11 +12210,11 @@ extern "C" {
     ) -> otError;
 }
 #[doc = "< The device hasn't attached to a network."]
-pub const otNetworkTimeStatus_OT_NETWORK_TIME_UNSYNCHRONIZED: otNetworkTimeStatus = -1;
+pub const OT_NETWORK_TIME_UNSYNCHRONIZED: otNetworkTimeStatus = -1;
 #[doc = "< The device hasn’t received time sync for more than two periods time."]
-pub const otNetworkTimeStatus_OT_NETWORK_TIME_RESYNC_NEEDED: otNetworkTimeStatus = 0;
+pub const OT_NETWORK_TIME_RESYNC_NEEDED: otNetworkTimeStatus = 0;
 #[doc = "< The device network time is synchronized."]
-pub const otNetworkTimeStatus_OT_NETWORK_TIME_SYNCHRONIZED: otNetworkTimeStatus = 1;
+pub const OT_NETWORK_TIME_SYNCHRONIZED: otNetworkTimeStatus = 1;
 #[doc = " This enumeration represents OpenThread time synchronization status."]
 #[doc = ""]
 pub type otNetworkTimeStatus = ::std::os::raw::c_int;
@@ -12788,16 +12914,16 @@ extern "C" {
     #[doc = ""]
     pub fn otPlatReset(aInstance: *mut otInstance);
 }
-pub const otPlatResetReason_OT_PLAT_RESET_REASON_POWER_ON: otPlatResetReason = 0;
-pub const otPlatResetReason_OT_PLAT_RESET_REASON_EXTERNAL: otPlatResetReason = 1;
-pub const otPlatResetReason_OT_PLAT_RESET_REASON_SOFTWARE: otPlatResetReason = 2;
-pub const otPlatResetReason_OT_PLAT_RESET_REASON_FAULT: otPlatResetReason = 3;
-pub const otPlatResetReason_OT_PLAT_RESET_REASON_CRASH: otPlatResetReason = 4;
-pub const otPlatResetReason_OT_PLAT_RESET_REASON_ASSERT: otPlatResetReason = 5;
-pub const otPlatResetReason_OT_PLAT_RESET_REASON_OTHER: otPlatResetReason = 6;
-pub const otPlatResetReason_OT_PLAT_RESET_REASON_UNKNOWN: otPlatResetReason = 7;
-pub const otPlatResetReason_OT_PLAT_RESET_REASON_WATCHDOG: otPlatResetReason = 8;
-pub const otPlatResetReason_OT_PLAT_RESET_REASON_COUNT: otPlatResetReason = 9;
+pub const OT_PLAT_RESET_REASON_POWER_ON: otPlatResetReason = 0;
+pub const OT_PLAT_RESET_REASON_EXTERNAL: otPlatResetReason = 1;
+pub const OT_PLAT_RESET_REASON_SOFTWARE: otPlatResetReason = 2;
+pub const OT_PLAT_RESET_REASON_FAULT: otPlatResetReason = 3;
+pub const OT_PLAT_RESET_REASON_CRASH: otPlatResetReason = 4;
+pub const OT_PLAT_RESET_REASON_ASSERT: otPlatResetReason = 5;
+pub const OT_PLAT_RESET_REASON_OTHER: otPlatResetReason = 6;
+pub const OT_PLAT_RESET_REASON_UNKNOWN: otPlatResetReason = 7;
+pub const OT_PLAT_RESET_REASON_WATCHDOG: otPlatResetReason = 8;
+pub const OT_PLAT_RESET_REASON_COUNT: otPlatResetReason = 9;
 #[doc = " Enumeration of possible reset reason codes."]
 #[doc = ""]
 #[doc = " These are in the same order as the Spinel reset reason codes."]
@@ -12834,7 +12960,7 @@ extern "C" {
 #[doc = ""]
 #[doc = " @note The `ON` power state only determines the MCU's power mode and is not related to radio's state."]
 #[doc = ""]
-pub const otPlatMcuPowerState_OT_PLAT_MCU_POWER_STATE_ON: otPlatMcuPowerState = 0;
+pub const OT_PLAT_MCU_POWER_STATE_ON: otPlatMcuPowerState = 0;
 #[doc = " NCP's MCU can enter low-power (energy-saving) state."]
 #[doc = ""]
 #[doc = " When the NCP's desired power state is set to `LOW_POWER`, host is expected to \"poke\" the NCP (e.g., an external"]
@@ -12849,13 +12975,13 @@ pub const otPlatMcuPowerState_OT_PLAT_MCU_POWER_STATE_ON: otPlatMcuPowerState = 
 #[doc = " @note The `LOW_POWER` power state only determines the MCU's power mode and is not related to radio's state"]
 #[doc = " (radio is managed by OpenThread core and device role, e.g., device being sleepy or not."]
 #[doc = ""]
-pub const otPlatMcuPowerState_OT_PLAT_MCU_POWER_STATE_LOW_POWER: otPlatMcuPowerState = 1;
+pub const OT_PLAT_MCU_POWER_STATE_LOW_POWER: otPlatMcuPowerState = 1;
 #[doc = " NCP is fully off."]
 #[doc = ""]
 #[doc = " An NCP hardware reset (via a RESET pin) is required to bring the NCP back to `SPINEL_MCU_POWER_STATE_ON`."]
 #[doc = " RAM is not retained after reset."]
 #[doc = ""]
-pub const otPlatMcuPowerState_OT_PLAT_MCU_POWER_STATE_OFF: otPlatMcuPowerState = 2;
+pub const OT_PLAT_MCU_POWER_STATE_OFF: otPlatMcuPowerState = 2;
 #[doc = " Enumeration of micro-controller's power states."]
 #[doc = ""]
 #[doc = " These values are used for NCP configuration when `OPENTHREAD_CONFIG_NCP_ENABLE_MCU_POWER_STATE_CONTROL` is enabled."]
@@ -13500,11 +13626,11 @@ impl Default for otUdpSocket {
     }
 }
 #[doc = "< Unspecified network interface."]
-pub const otNetifIdentifier_OT_NETIF_UNSPECIFIED: otNetifIdentifier = 0;
+pub const OT_NETIF_UNSPECIFIED: otNetifIdentifier = 0;
 #[doc = "< The Thread interface."]
-pub const otNetifIdentifier_OT_NETIF_THREAD: otNetifIdentifier = 1;
+pub const OT_NETIF_THREAD: otNetifIdentifier = 1;
 #[doc = "< The Backbone interface."]
-pub const otNetifIdentifier_OT_NETIF_BACKBONE: otNetifIdentifier = 2;
+pub const OT_NETIF_BACKBONE: otNetifIdentifier = 2;
 #[doc = " This enumeration defines the OpenThread network interface identifiers."]
 #[doc = ""]
 pub type otNetifIdentifier = ::std::os::raw::c_uint;
@@ -14015,21 +14141,21 @@ extern "C" {
     pub fn otSntpClientSetUnixEra(aInstance: *mut otInstance, aUnixEra: u32);
 }
 #[doc = "< Item to be added/registered."]
-pub const otSrpClientItemState_OT_SRP_CLIENT_ITEM_STATE_TO_ADD: otSrpClientItemState = 0;
+pub const OT_SRP_CLIENT_ITEM_STATE_TO_ADD: otSrpClientItemState = 0;
 #[doc = "< Item is being added/registered."]
-pub const otSrpClientItemState_OT_SRP_CLIENT_ITEM_STATE_ADDING: otSrpClientItemState = 1;
+pub const OT_SRP_CLIENT_ITEM_STATE_ADDING: otSrpClientItemState = 1;
 #[doc = "< Item to be refreshed (re-register to renew lease)."]
-pub const otSrpClientItemState_OT_SRP_CLIENT_ITEM_STATE_TO_REFRESH: otSrpClientItemState = 2;
+pub const OT_SRP_CLIENT_ITEM_STATE_TO_REFRESH: otSrpClientItemState = 2;
 #[doc = "< Item is being refreshed."]
-pub const otSrpClientItemState_OT_SRP_CLIENT_ITEM_STATE_REFRESHING: otSrpClientItemState = 3;
+pub const OT_SRP_CLIENT_ITEM_STATE_REFRESHING: otSrpClientItemState = 3;
 #[doc = "< Item to be removed."]
-pub const otSrpClientItemState_OT_SRP_CLIENT_ITEM_STATE_TO_REMOVE: otSrpClientItemState = 4;
+pub const OT_SRP_CLIENT_ITEM_STATE_TO_REMOVE: otSrpClientItemState = 4;
 #[doc = "< Item is being removed."]
-pub const otSrpClientItemState_OT_SRP_CLIENT_ITEM_STATE_REMOVING: otSrpClientItemState = 5;
+pub const OT_SRP_CLIENT_ITEM_STATE_REMOVING: otSrpClientItemState = 5;
 #[doc = "< Item is registered with server."]
-pub const otSrpClientItemState_OT_SRP_CLIENT_ITEM_STATE_REGISTERED: otSrpClientItemState = 6;
+pub const OT_SRP_CLIENT_ITEM_STATE_REGISTERED: otSrpClientItemState = 6;
 #[doc = "< Item is removed."]
-pub const otSrpClientItemState_OT_SRP_CLIENT_ITEM_STATE_REMOVED: otSrpClientItemState = 7;
+pub const OT_SRP_CLIENT_ITEM_STATE_REMOVED: otSrpClientItemState = 7;
 #[doc = " This enumeration specifies an SRP client item (service or host info) state."]
 #[doc = ""]
 pub type otSrpClientItemState = ::std::os::raw::c_uint;
@@ -14815,18 +14941,18 @@ pub const OT_SRP_SERVER_FLAGS_ANY_TYPE_ACTIVE_SERVICE: ::std::os::raw::c_uint = 
 pub const OT_SRP_SERVER_FLAGS_ANY_TYPE_DELETED_SERVICE: ::std::os::raw::c_uint = 7;
 pub type _bindgen_ty_14 = ::std::os::raw::c_uint;
 #[doc = "< The SRP server is disabled."]
-pub const otSrpServerState_OT_SRP_SERVER_STATE_DISABLED: otSrpServerState = 0;
+pub const OT_SRP_SERVER_STATE_DISABLED: otSrpServerState = 0;
 #[doc = "< The SRP server is running."]
-pub const otSrpServerState_OT_SRP_SERVER_STATE_RUNNING: otSrpServerState = 1;
+pub const OT_SRP_SERVER_STATE_RUNNING: otSrpServerState = 1;
 #[doc = "< The SRP server is stopped."]
-pub const otSrpServerState_OT_SRP_SERVER_STATE_STOPPED: otSrpServerState = 2;
+pub const OT_SRP_SERVER_STATE_STOPPED: otSrpServerState = 2;
 #[doc = " Represents the state of an SRP server"]
 #[doc = ""]
 pub type otSrpServerState = ::std::os::raw::c_uint;
 #[doc = "< Unicast address mode."]
-pub const otSrpServerAddressMode_OT_SRP_SERVER_ADDRESS_MODE_UNICAST: otSrpServerAddressMode = 0;
+pub const OT_SRP_SERVER_ADDRESS_MODE_UNICAST: otSrpServerAddressMode = 0;
 #[doc = "< Anycast address mode."]
-pub const otSrpServerAddressMode_OT_SRP_SERVER_ADDRESS_MODE_ANYCAST: otSrpServerAddressMode = 1;
+pub const OT_SRP_SERVER_ADDRESS_MODE_ANYCAST: otSrpServerAddressMode = 1;
 #[doc = " This enumeration represents the address mode used by the SRP server."]
 #[doc = ""]
 #[doc = " Address mode specifies how the address and port number are determined by the SRP server and how this info is"]
@@ -15416,11 +15542,11 @@ pub type otTcpReceiveAvailable = ::std::option::Option<
         aBytesRemaining: usize,
     ),
 >;
-pub const otTcpDisconnectedReason_OT_TCP_DISCONNECTED_REASON_NORMAL: otTcpDisconnectedReason = 0;
-pub const otTcpDisconnectedReason_OT_TCP_DISCONNECTED_REASON_REFUSED: otTcpDisconnectedReason = 1;
-pub const otTcpDisconnectedReason_OT_TCP_DISCONNECTED_REASON_RESET: otTcpDisconnectedReason = 2;
-pub const otTcpDisconnectedReason_OT_TCP_DISCONNECTED_REASON_TIME_WAIT: otTcpDisconnectedReason = 3;
-pub const otTcpDisconnectedReason_OT_TCP_DISCONNECTED_REASON_TIMED_OUT: otTcpDisconnectedReason = 4;
+pub const OT_TCP_DISCONNECTED_REASON_NORMAL: otTcpDisconnectedReason = 0;
+pub const OT_TCP_DISCONNECTED_REASON_REFUSED: otTcpDisconnectedReason = 1;
+pub const OT_TCP_DISCONNECTED_REASON_RESET: otTcpDisconnectedReason = 2;
+pub const OT_TCP_DISCONNECTED_REASON_TIME_WAIT: otTcpDisconnectedReason = 3;
+pub const OT_TCP_DISCONNECTED_REASON_TIMED_OUT: otTcpDisconnectedReason = 4;
 pub type otTcpDisconnectedReason = ::std::os::raw::c_uint;
 #[doc = " This callback indicates that the connection was broken and should no longer"]
 #[doc = " be used, or that a connection has entered the TIME-WAIT state."]
@@ -15797,14 +15923,11 @@ extern "C" {
     pub fn otTcpEndpointDeinitialize(aEndpoint: *mut otTcpEndpoint) -> otError;
 }
 #[doc = "< Accept the incoming connection."]
-pub const otTcpIncomingConnectionAction_OT_TCP_INCOMING_CONNECTION_ACTION_ACCEPT:
-    otTcpIncomingConnectionAction = 0;
+pub const OT_TCP_INCOMING_CONNECTION_ACTION_ACCEPT: otTcpIncomingConnectionAction = 0;
 #[doc = "< Defer (silently ignore) the incoming connection."]
-pub const otTcpIncomingConnectionAction_OT_TCP_INCOMING_CONNECTION_ACTION_DEFER:
-    otTcpIncomingConnectionAction = 1;
+pub const OT_TCP_INCOMING_CONNECTION_ACTION_DEFER: otTcpIncomingConnectionAction = 1;
 #[doc = "< Refuse the incoming connection."]
-pub const otTcpIncomingConnectionAction_OT_TCP_INCOMING_CONNECTION_ACTION_REFUSE:
-    otTcpIncomingConnectionAction = 2;
+pub const OT_TCP_INCOMING_CONNECTION_ACTION_REFUSE: otTcpIncomingConnectionAction = 2;
 #[doc = " This enumeration defines incoming connection actions."]
 #[doc = ""]
 #[doc = " This is used in otTcpAcceptReady() callback."]
@@ -16135,10 +16258,10 @@ impl otChildInfo {
     }
 }
 pub type otChildIp6AddressIterator = u16;
-pub const otCacheEntryState_OT_CACHE_ENTRY_STATE_CACHED: otCacheEntryState = 0;
-pub const otCacheEntryState_OT_CACHE_ENTRY_STATE_SNOOPED: otCacheEntryState = 1;
-pub const otCacheEntryState_OT_CACHE_ENTRY_STATE_QUERY: otCacheEntryState = 2;
-pub const otCacheEntryState_OT_CACHE_ENTRY_STATE_RETRY_QUERY: otCacheEntryState = 3;
+pub const OT_CACHE_ENTRY_STATE_CACHED: otCacheEntryState = 0;
+pub const OT_CACHE_ENTRY_STATE_SNOOPED: otCacheEntryState = 1;
+pub const OT_CACHE_ENTRY_STATE_QUERY: otCacheEntryState = 2;
+pub const OT_CACHE_ENTRY_STATE_RETRY_QUERY: otCacheEntryState = 3;
 #[doc = " This enumeration defines the EID cache entry state."]
 #[doc = ""]
 pub type otCacheEntryState = ::std::os::raw::c_uint;
@@ -16769,15 +16892,15 @@ extern "C" {
     ) -> otError;
 }
 #[doc = "< A child is being added."]
-pub const otNeighborTableEvent_OT_NEIGHBOR_TABLE_EVENT_CHILD_ADDED: otNeighborTableEvent = 0;
+pub const OT_NEIGHBOR_TABLE_EVENT_CHILD_ADDED: otNeighborTableEvent = 0;
 #[doc = "< A child is being removed."]
-pub const otNeighborTableEvent_OT_NEIGHBOR_TABLE_EVENT_CHILD_REMOVED: otNeighborTableEvent = 1;
+pub const OT_NEIGHBOR_TABLE_EVENT_CHILD_REMOVED: otNeighborTableEvent = 1;
 #[doc = "< An existing child's mode is changed."]
-pub const otNeighborTableEvent_OT_NEIGHBOR_TABLE_EVENT_CHILD_MODE_CHANGED: otNeighborTableEvent = 2;
+pub const OT_NEIGHBOR_TABLE_EVENT_CHILD_MODE_CHANGED: otNeighborTableEvent = 2;
 #[doc = "< A router is being added."]
-pub const otNeighborTableEvent_OT_NEIGHBOR_TABLE_EVENT_ROUTER_ADDED: otNeighborTableEvent = 3;
+pub const OT_NEIGHBOR_TABLE_EVENT_ROUTER_ADDED: otNeighborTableEvent = 3;
 #[doc = "< A router is being removed."]
-pub const otNeighborTableEvent_OT_NEIGHBOR_TABLE_EVENT_ROUTER_REMOVED: otNeighborTableEvent = 4;
+pub const OT_NEIGHBOR_TABLE_EVENT_ROUTER_REMOVED: otNeighborTableEvent = 4;
 #[doc = " This enumeration defines the constants used in `otNeighborTableCallback` to indicate changes in neighbor table."]
 #[doc = ""]
 pub type otNeighborTableEvent = ::std::os::raw::c_uint;

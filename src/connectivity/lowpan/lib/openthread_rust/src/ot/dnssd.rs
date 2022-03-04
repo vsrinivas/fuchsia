@@ -31,16 +31,16 @@ pub fn dnssd_split_txt(txt: &str) -> impl Iterator<Item = &'_ str> {
 #[allow(missing_docs)]
 pub enum DnssdQueryType {
     /// Functional equivalent of [`otsys::otDnsQueryType_OT_DNSSD_QUERY_TYPE_NONE`](crate::otsys::otDnsQueryType_OT_DNSSD_QUERY_TYPE_NONE).
-    None = otDnssdQueryType_OT_DNSSD_QUERY_TYPE_NONE as isize,
+    None = OT_DNSSD_QUERY_TYPE_NONE as isize,
 
     /// Functional equivalent of [`otsys::otDnsQueryType_OT_DNSSD_QUERY_TYPE_BROWSE`](crate::otsys::otDnsQueryType_OT_DNSSD_QUERY_TYPE_BROWSE).
-    Browse = otDnssdQueryType_OT_DNSSD_QUERY_TYPE_BROWSE as isize,
+    Browse = OT_DNSSD_QUERY_TYPE_BROWSE as isize,
 
     /// Functional equivalent of [`otsys::otDnsQueryType_OT_DNSSD_QUERY_TYPE_RESOLVE`](crate::otsys::otDnsQueryType_OT_DNSSD_QUERY_TYPE_RESOLVE).
-    ResolveService = otDnssdQueryType_OT_DNSSD_QUERY_TYPE_RESOLVE as isize,
+    ResolveService = OT_DNSSD_QUERY_TYPE_RESOLVE as isize,
 
     /// Functional equivalent of [`otsys::otDnsQueryType_OT_DNSSD_QUERY_TYPE_RESOLVE_HOST`](crate::otsys::otDnsQueryType_OT_DNSSD_QUERY_TYPE_RESOLVE_HOST).
-    ResolveHost = otDnssdQueryType_OT_DNSSD_QUERY_TYPE_RESOLVE_HOST as isize,
+    ResolveHost = OT_DNSSD_QUERY_TYPE_RESOLVE_HOST as isize,
 }
 
 /// Functional equivalent of `otDnssdQuery`

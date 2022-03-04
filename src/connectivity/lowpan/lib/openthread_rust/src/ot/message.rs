@@ -14,18 +14,18 @@ use std::marker::PhantomData;
 #[derive(Debug, Copy, Clone, Eq, Ord, PartialOrd, PartialEq, FromPrimitive)]
 pub enum Priority {
     /// Low message priority.
-    /// Equivalent to [`crate::otsys::otMessagePriority_OT_MESSAGE_PRIORITY_LOW`]
-    Low = otMessagePriority_OT_MESSAGE_PRIORITY_LOW as isize,
+    /// Equivalent to [`crate::otsys::OT_MESSAGE_PRIORITY_LOW`]
+    Low = OT_MESSAGE_PRIORITY_LOW as isize,
 
     /// Normal message priority.
-    /// Equivalent to [`crate::otsys::otMessagePriority_OT_MESSAGE_PRIORITY_NORMAL`]
+    /// Equivalent to [`crate::otsys::OT_MESSAGE_PRIORITY_NORMAL`]
     ///
     /// This is the default priority.
-    Normal = otMessagePriority_OT_MESSAGE_PRIORITY_NORMAL as isize,
+    Normal = OT_MESSAGE_PRIORITY_NORMAL as isize,
 
     /// High message priority.
-    /// Equivalent to [`crate::otsys::otMessagePriority_OT_MESSAGE_PRIORITY_HIGH`]
-    High = otMessagePriority_OT_MESSAGE_PRIORITY_HIGH as isize,
+    /// Equivalent to [`crate::otsys::OT_MESSAGE_PRIORITY_HIGH`]
+    High = OT_MESSAGE_PRIORITY_HIGH as isize,
 }
 
 impl Default for Priority {
@@ -187,7 +187,7 @@ impl Default for Settings {
     fn default() -> Self {
         Settings(otMessageSettings {
             mLinkSecurityEnabled: true,
-            mPriority: otMessagePriority_OT_MESSAGE_PRIORITY_NORMAL.try_into().unwrap(),
+            mPriority: OT_MESSAGE_PRIORITY_NORMAL.try_into().unwrap(),
         })
     }
 }

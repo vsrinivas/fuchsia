@@ -12,20 +12,20 @@ use num_derive::FromPrimitive;
 #[derive(Debug, Copy, Clone, Eq, Ord, PartialOrd, PartialEq, FromPrimitive)]
 #[allow(missing_docs)]
 pub enum DeviceRole {
-    /// Functional equivalent of [`otsys::otDeviceRole_OT_DEVICE_ROLE_DISABLED`](crate::otsys::otDeviceRole_OT_DEVICE_ROLE_DISABLED).
-    Disabled = otDeviceRole_OT_DEVICE_ROLE_DISABLED as isize,
+    /// Functional equivalent of [`otsys::OT_DEVICE_ROLE_DISABLED`](crate::otsys::OT_DEVICE_ROLE_DISABLED).
+    Disabled = OT_DEVICE_ROLE_DISABLED as isize,
 
-    /// Functional equivalent of [`otsys::otDeviceRole_OT_DEVICE_ROLE_DETACHED`](crate::otsys::otDeviceRole_OT_DEVICE_ROLE_DETACHED).
-    Detached = otDeviceRole_OT_DEVICE_ROLE_DETACHED as isize,
+    /// Functional equivalent of [`otsys::OT_DEVICE_ROLE_DETACHED`](crate::otsys::OT_DEVICE_ROLE_DETACHED).
+    Detached = OT_DEVICE_ROLE_DETACHED as isize,
 
-    /// Functional equivalent of [`otsys::otDeviceRole_OT_DEVICE_ROLE_CHILD`](crate::otsys::otDeviceRole_OT_DEVICE_ROLE_CHILD).
-    Child = otDeviceRole_OT_DEVICE_ROLE_CHILD as isize,
+    /// Functional equivalent of [`otsys::OT_DEVICE_ROLE_CHILD`](crate::otsys::OT_DEVICE_ROLE_CHILD).
+    Child = OT_DEVICE_ROLE_CHILD as isize,
 
-    /// Functional equivalent of [`otsys::otDeviceRole_OT_DEVICE_ROLE_ROUTER`](crate::otsys::otDeviceRole_OT_DEVICE_ROLE_ROUTER).
-    Router = otDeviceRole_OT_DEVICE_ROLE_ROUTER as isize,
+    /// Functional equivalent of [`otsys::OT_DEVICE_ROLE_ROUTER`](crate::otsys::OT_DEVICE_ROLE_ROUTER).
+    Router = OT_DEVICE_ROLE_ROUTER as isize,
 
-    /// Functional equivalent of [`otsys::otDeviceRole_OT_DEVICE_ROLE_LEADER`](crate::otsys::otDeviceRole_OT_DEVICE_ROLE_LEADER).
-    Leader = otDeviceRole_OT_DEVICE_ROLE_LEADER as isize,
+    /// Functional equivalent of [`otsys::OT_DEVICE_ROLE_LEADER`](crate::otsys::OT_DEVICE_ROLE_LEADER).
+    Leader = OT_DEVICE_ROLE_LEADER as isize,
 }
 
 impl From<otDeviceRole> for DeviceRole {

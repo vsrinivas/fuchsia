@@ -515,14 +515,14 @@ impl From<SockAddr> for std::net::SocketAddr {
 #[derive(Debug, Copy, Clone, Eq, Ord, PartialOrd, PartialEq, num_derive::FromPrimitive)]
 #[allow(missing_docs)]
 pub enum NetifIdentifier {
-    /// Functional equivalent of [`otsys::otNetifIdentifier_OT_NETIF_BACKBONE`](crate::otsys::otNetifIdentifier_OT_NETIF_BACKBONE).
-    Backbone = otNetifIdentifier_OT_NETIF_BACKBONE as isize,
+    /// Functional equivalent of [`otsys::OT_NETIF_BACKBONE`](crate::otsys::OT_NETIF_BACKBONE).
+    Backbone = OT_NETIF_BACKBONE as isize,
 
-    /// Functional equivalent of [`otsys::otNetifIdentifier_OT_NETIF_THREAD`](crate::otsys::otNetifIdentifier_OT_NETIF_THREAD).
-    Thread = otNetifIdentifier_OT_NETIF_THREAD as isize,
+    /// Functional equivalent of [`otsys::OT_NETIF_THREAD`](crate::otsys::OT_NETIF_THREAD).
+    Thread = OT_NETIF_THREAD as isize,
 
-    /// Functional equivalent of [`otsys::otNetifIdentifier_OT_NETIF_UNSPECIFIED`](crate::otsys::otNetifIdentifier_OT_NETIF_UNSPECIFIED).
-    Unspecified = otNetifIdentifier_OT_NETIF_UNSPECIFIED as isize,
+    /// Functional equivalent of [`otsys::OT_NETIF_UNSPECIFIED`](crate::otsys::OT_NETIF_UNSPECIFIED).
+    Unspecified = OT_NETIF_UNSPECIFIED as isize,
 }
 
 impl From<otNetifIdentifier> for NetifIdentifier {

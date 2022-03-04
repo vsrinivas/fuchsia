@@ -8,25 +8,24 @@ use crate::prelude_internal::*;
 ///
 /// Functional equivalent of [`otsys::otJoinerState`](crate::otsys::otJoinerState).
 #[derive(Debug, Copy, Clone, Eq, Ord, PartialOrd, PartialEq, num_derive::FromPrimitive)]
-#[allow(missing_docs)]
 pub enum JoinerState {
-    /// Functional equivalent of [`otsys::otJoinerState_OT_JOINER_STATE_IDLE`](crate::otsys::otJoinerState_OT_JOINER_STATE_IDLE).
-    Idle = otJoinerState_OT_JOINER_STATE_IDLE as isize,
+    /// Functional equivalent of [`otsys::OT_JOINER_STATE_IDLE`](crate::otsys::OT_JOINER_STATE_IDLE).
+    Idle = OT_JOINER_STATE_IDLE as isize,
 
-    /// Functional equivalent of [`otsys::otJoinerState_OT_JOINER_STATE_DISCOVER`](crate::otsys::otJoinerState_OT_JOINER_STATE_DISCOVER).
-    Discover = otJoinerState_OT_JOINER_STATE_DISCOVER as isize,
+    /// Functional equivalent of [`otsys::OT_JOINER_STATE_DISCOVER`](crate::otsys::OT_JOINER_STATE_DISCOVER).
+    Discover = OT_JOINER_STATE_DISCOVER as isize,
 
-    /// Functional equivalent of [`otsys::otJoinerState_OT_JOINER_STATE_CONNECT`](crate::otsys::otJoinerState_OT_JOINER_STATE_CONNECT).
-    Connect = otJoinerState_OT_JOINER_STATE_CONNECT as isize,
+    /// Functional equivalent of [`otsys::OT_JOINER_STATE_CONNECT`](crate::otsys::OT_JOINER_STATE_CONNECT).
+    Connect = OT_JOINER_STATE_CONNECT as isize,
 
-    /// Functional equivalent of [`otsys::otJoinerState_OT_JOINER_STATE_CONNECTED`](crate::otsys::otJoinerState_OT_JOINER_STATE_CONNECTED).
-    Connected = otJoinerState_OT_JOINER_STATE_CONNECTED as isize,
+    /// Functional equivalent of [`otsys::OT_JOINER_STATE_CONNECTED`](crate::otsys::OT_JOINER_STATE_CONNECTED).
+    Connected = OT_JOINER_STATE_CONNECTED as isize,
 
-    /// Functional equivalent of [`otsys::otJoinerState_OT_JOINER_STATE_ENTRUST`](crate::otsys::otJoinerState_OT_JOINER_STATE_ENTRUST).
-    Entrust = otJoinerState_OT_JOINER_STATE_ENTRUST as isize,
+    /// Functional equivalent of [`otsys::OT_JOINER_STATE_ENTRUST`](crate::otsys::OT_JOINER_STATE_ENTRUST).
+    Entrust = OT_JOINER_STATE_ENTRUST as isize,
 
-    /// Functional equivalent of [`otsys::otJoinerState_OT_JOINER_STATE_JOINED`](crate::otsys::otJoinerState_OT_JOINER_STATE_JOINED).
-    Joined = otJoinerState_OT_JOINER_STATE_JOINED as isize,
+    /// Functional equivalent of [`otsys::OT_JOINER_STATE_JOINED`](crate::otsys::OT_JOINER_STATE_JOINED).
+    Joined = OT_JOINER_STATE_JOINED as isize,
 }
 
 impl From<otJoinerState> for JoinerState {

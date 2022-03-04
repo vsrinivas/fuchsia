@@ -433,9 +433,9 @@ impl SrpServer for Instance {
     fn srp_server_is_enabled(&self) -> bool {
         #[allow(non_upper_case_globals)]
         match unsafe { otSrpServerGetState(self.as_ot_ptr()) } {
-            otSrpServerState_OT_SRP_SERVER_STATE_DISABLED => false,
-            otSrpServerState_OT_SRP_SERVER_STATE_RUNNING => true,
-            otSrpServerState_OT_SRP_SERVER_STATE_STOPPED => true,
+            OT_SRP_SERVER_STATE_DISABLED => false,
+            OT_SRP_SERVER_STATE_RUNNING => true,
+            OT_SRP_SERVER_STATE_STOPPED => true,
             _ => panic!("Unexpected value from otSrpServerGetState"),
         }
     }
@@ -443,9 +443,9 @@ impl SrpServer for Instance {
     fn srp_server_is_running(&self) -> bool {
         #[allow(non_upper_case_globals)]
         match unsafe { otSrpServerGetState(self.as_ot_ptr()) } {
-            otSrpServerState_OT_SRP_SERVER_STATE_DISABLED => false,
-            otSrpServerState_OT_SRP_SERVER_STATE_RUNNING => true,
-            otSrpServerState_OT_SRP_SERVER_STATE_STOPPED => false,
+            OT_SRP_SERVER_STATE_DISABLED => false,
+            OT_SRP_SERVER_STATE_RUNNING => true,
+            OT_SRP_SERVER_STATE_STOPPED => false,
             _ => panic!("Unexpected value from otSrpServerGetState"),
         }
     }

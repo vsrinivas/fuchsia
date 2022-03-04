@@ -43,13 +43,20 @@ $RUST_BINDGEN \
 	"${PLATGEN_H}" \
 	-o src/bindings.rs \
 	--raw-line "${RAW_LINES}" \
+	--verbose \
 	--size_t-is-usize \
 	--no-layout-tests \
 	--with-derive-default \
+	--opaque-type "otInstance" \
+	--opaque-type "otMessage" \
+  --no-prepend-enum-name \
 	--allowlist-function "ot[A-Z].*" \
+	--allowlist-type "ot[A-Z].*" \
+	--allowlist-var "ot[A-Z].*" \
 	--allowlist-var "OT_[A-Z].*" \
 	--allowlist-var "OPENTHREAD_[A-Z].*" \
-	--allowlist-var "SPINEL_[A-Z].*" \
+	--blocklist-item "OPENTHREAD_CONFIG_.*" \
+	--blocklist-item "OPENTHREAD_PLATFORM_.*" \
 	-- \
 	-D 'OPENTHREAD_CONFIG_FILE=<openthread-config-fuchsia.h>' \
 	-I "${OT_INCLUDE_DIR}" \
