@@ -7,6 +7,9 @@ library test.transport;
 using zx;
 
 @transport("Driver")
+protocol EmptyProtocol {};
+
+@transport("Driver")
 protocol TwoWayTest {
     TwoWay(struct {
         payload uint32;

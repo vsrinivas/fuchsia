@@ -23,11 +23,13 @@ test("fidl_driver_transport_tests_bin") {
     "api_test.cc",
     "async_driver_client_end_test.cc",
     "async_two_way_test.cc",
+    "client_test.cc",
     "death_test_helper.cc",
     "death_test_helper.h",
     "one_way_test.cc",
     "scoped_fake_driver.h",
     "server_on_unbound_helper.h",
+    "server_test.cc",
     "sync_two_way_test.cc",
     "sync_zircon_handle_test.cc",
   ]
