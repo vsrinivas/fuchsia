@@ -283,7 +283,7 @@ impl Task {
         }
 
         if clone_thread != clone_vm {
-            not_implemented!("CLONE_VM without CLONE_THRAED is not implemented");
+            not_implemented!("CLONE_VM without CLONE_THREAD is not implemented");
             return error!(ENOSYS);
         }
 
@@ -318,12 +318,14 @@ impl Task {
             create_zircon_process(kernel, pid, &comm)?
         };
 
+        let parent_pid = if clone_thread { self.parent } else { self.id };
+
         let child = Self::new(
             pid,
             comm.clone(),
             self.argv.read().clone(),
             thread_group,
-            self.id,
+            parent_pid,
             thread,
             files,
             mm,
@@ -902,9 +904,9 @@ impl cmp::Eq for Task {}
 
 #[cfg(test)]
 mod test {
-    use fuchsia_async as fasync;
-
+    use super::*;
     use crate::testing::*;
+    use fuchsia_async as fasync;
 
     #[fasync::run_singlethreaded(test)]
     async fn test_tid_allocation() {
@@ -918,5 +920,33 @@ mod test {
         assert_eq!(pids.get_task(1).unwrap().get_tid(), 1);
         assert_eq!(pids.get_task(2).unwrap().get_tid(), 2);
         assert!(pids.get_task(3).is_none());
+    }
+
+    #[test]
+    fn test_clone_pid_and_parent_pid() {
+        let (_kernel, current_task) = create_kernel_and_task();
+        let thread = current_task
+            .clone_task(
+                (CLONE_THREAD | CLONE_VM | CLONE_SIGHAND) as u64,
+                UserRef::new(UserAddress::default()),
+                UserRef::new(UserAddress::default()),
+            )
+            .expect("clone thread");
+        *thread.exit_code.lock() = Some(0);
+        assert_eq!(current_task.get_pid(), thread.get_pid());
+        assert_ne!(current_task.get_tid(), thread.get_tid());
+        assert_eq!(current_task.parent, thread.parent);
+
+        let child_task = current_task
+            .clone_task(
+                0,
+                UserRef::new(UserAddress::default()),
+                UserRef::new(UserAddress::default()),
+            )
+            .expect("clone process");
+        *child_task.exit_code.lock() = Some(0);
+        assert_ne!(current_task.get_pid(), child_task.get_pid());
+        assert_ne!(current_task.get_tid(), child_task.get_tid());
+        assert_eq!(current_task.get_pid(), child_task.parent);
     }
 }
