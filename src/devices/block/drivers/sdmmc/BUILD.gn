@@ -28,7 +28,9 @@ fuchsia_driver("sdmmc-driver") {
     "sdio-function-device.cc",
     "sdmmc-block-device.cc",
     "sdmmc-device.cc",
+    "sdmmc-partition-device.cc",
     "sdmmc-root-device.cc",
+    "sdmmc-rpmb-device.cc",
   ]
   deps = [
     ":sdmmc-bind",
@@ -88,6 +90,8 @@ test("sdmmc-test-bin") {
     "sdmmc-block-device-test.cc",
     "sdmmc-block-device.cc",
     "sdmmc-device.cc",
+    "sdmmc-partition-device.cc",
+    "sdmmc-rpmb-device.cc",
   ]
   deps = [
     ":sdmmc-bind",

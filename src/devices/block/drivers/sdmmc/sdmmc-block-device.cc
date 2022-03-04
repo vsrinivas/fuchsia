@@ -5,7 +5,6 @@
 #include "sdmmc-block-device.h"
 
 #include <fidl/fuchsia.io/cpp/wire.h>
-#include <inttypes.h>
 #include <lib/ddk/debug.h>
 #include <lib/fidl-async/cpp/bind.h>
 #include <lib/fit/defer.h>
@@ -16,6 +15,9 @@
 
 #include <ddktl/fidl.h>
 #include <fbl/alloc_checker.h>
+
+#include "sdmmc-partition-device.h"
+#include "sdmmc-rpmb-device.h"
 
 namespace {
 
@@ -37,171 +39,6 @@ inline void BlockComplete(sdmmc::BlockOperation& txn, zx_status_t status) {
 }  // namespace
 
 namespace sdmmc {
-
-zx_status_t PartitionDevice::AddDevice() {
-  switch (partition_) {
-    case USER_DATA_PARTITION:
-      return DdkAdd("user");
-    case BOOT_PARTITION_1:
-      return DdkAdd("boot1");
-    case BOOT_PARTITION_2:
-      return DdkAdd("boot2");
-    default:
-      return ZX_ERR_NOT_SUPPORTED;
-  }
-}
-
-zx_off_t PartitionDevice::DdkGetSize() { return block_info_.block_count * block_info_.block_size; }
-
-zx_status_t PartitionDevice::DdkGetProtocol(uint32_t proto_id, void* out) {
-  auto* proto = reinterpret_cast<ddk::AnyProtocol*>(out);
-  switch (proto_id) {
-    case ZX_PROTOCOL_BLOCK_IMPL: {
-      proto->ops = &block_impl_protocol_ops_;
-      proto->ctx = this;
-      return ZX_OK;
-    }
-    case ZX_PROTOCOL_BLOCK_PARTITION: {
-      if (partition_ == USER_DATA_PARTITION) {
-        return ZX_ERR_NOT_SUPPORTED;
-      }
-
-      proto->ops = &block_partition_protocol_ops_;
-      proto->ctx = this;
-      return ZX_OK;
-    }
-    default:
-      return ZX_ERR_NOT_SUPPORTED;
-  }
-}
-
-void PartitionDevice::BlockImplQuery(block_info_t* info_out, size_t* block_op_size_out) {
-  memcpy(info_out, &block_info_, sizeof(*info_out));
-  *block_op_size_out = BlockOperation::OperationSize(sizeof(block_op_t));
-}
-
-void PartitionDevice::BlockImplQueue(block_op_t* btxn, block_impl_queue_callback completion_cb,
-                                     void* cookie) {
-  BlockOperation txn(btxn, completion_cb, cookie, sizeof(block_op_t));
-  txn.private_storage()->partition = partition_;
-  txn.private_storage()->block_count = block_info_.block_count;
-  sdmmc_parent_->Queue(std::move(txn));
-}
-
-zx_status_t PartitionDevice::BlockPartitionGetGuid(guidtype_t guid_type, guid_t* out_guid) {
-  ZX_DEBUG_ASSERT(partition_ != USER_DATA_PARTITION);
-
-  constexpr uint8_t kGuidEmmcBoot1Value[] = GUID_EMMC_BOOT1_VALUE;
-  constexpr uint8_t kGuidEmmcBoot2Value[] = GUID_EMMC_BOOT2_VALUE;
-
-  switch (guid_type) {
-    case GUIDTYPE_TYPE:
-      if (partition_ == BOOT_PARTITION_1) {
-        memcpy(&out_guid->data1, kGuidEmmcBoot1Value, GUID_LENGTH);
-      } else {
-        memcpy(&out_guid->data1, kGuidEmmcBoot2Value, GUID_LENGTH);
-      }
-      return ZX_OK;
-    case GUIDTYPE_INSTANCE:
-      return ZX_ERR_NOT_SUPPORTED;
-    default:
-      return ZX_ERR_INVALID_ARGS;
-  }
-}
-
-zx_status_t PartitionDevice::BlockPartitionGetName(char* out_name, size_t capacity) {
-  ZX_DEBUG_ASSERT(partition_ != USER_DATA_PARTITION);
-  if (capacity <= strlen(name())) {
-    return ZX_ERR_BUFFER_TOO_SMALL;
-  }
-
-  strlcpy(out_name, name(), capacity);
-
-  return ZX_OK;
-}
-
-zx_status_t RpmbDevice::Create(zx_device_t* parent, SdmmcBlockDevice* sdmmc,
-                               const std::array<uint8_t, SDMMC_CID_SIZE>& cid,
-                               const std::array<uint8_t, MMC_EXT_CSD_SIZE>& ext_csd) {
-  auto device = std::make_unique<RpmbDevice>(parent, sdmmc, cid, ext_csd);
-
-  if (auto status = device->loop_.StartThread("sdmmc-rpmb-thread"); status != ZX_OK) {
-    zxlogf(ERROR, "failed to start RPMB thread: %d", status);
-    return status;
-  }
-  device->outgoing_.emplace(device->loop_.dispatcher());
-  device->outgoing_->svc_dir()->AddEntry(
-      fidl::DiscoverableProtocolName<fuchsia_hardware_rpmb::Rpmb>,
-      fbl::MakeRefCounted<fs::Service>(
-          [device = device.get()](fidl::ServerEnd<fuchsia_hardware_rpmb::Rpmb> request) mutable {
-            auto status = fidl::BindSingleInFlightOnly(device->loop_.dispatcher(),
-                                                       std::move(request), device);
-            if (status != ZX_OK) {
-              zxlogf(ERROR, "failed to bind channel: %d", status);
-            }
-            return status;
-          }));
-
-  auto endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
-  if (endpoints.is_error()) {
-    return endpoints.status_value();
-  }
-
-  auto status = device->outgoing_->Serve(std::move(endpoints->server));
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "Failed to service the outoing directory");
-    return status;
-  }
-
-  std::array offers = {
-      fidl::DiscoverableProtocolName<fuchsia_hardware_rpmb::Rpmb>,
-  };
-
-  status = device->DdkAdd(ddk::DeviceAddArgs("rpmb")
-                              .set_flags(DEVICE_ADD_MUST_ISOLATE)
-                              .set_fidl_protocol_offers(offers)
-                              .set_outgoing_dir(endpoints->client.TakeChannel()));
-
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "failed to add RPMB partition device: %d", status);
-    return status;
-  }
-
-  __UNUSED auto* dummy1 = device.release();
-  return ZX_OK;
-}
-
-void RpmbDevice::GetDeviceInfo(GetDeviceInfoRequestView request,
-                               GetDeviceInfoCompleter::Sync& completer) {
-  using DeviceInfo = fuchsia_hardware_rpmb::wire::DeviceInfo;
-  using EmmcDeviceInfo = fuchsia_hardware_rpmb::wire::EmmcDeviceInfo;
-
-  EmmcDeviceInfo emmc_info = {};
-  memcpy(emmc_info.cid.data(), cid_.data(), cid_.size() * sizeof(cid_[0]));
-  emmc_info.rpmb_size = rpmb_size_;
-  emmc_info.reliable_write_sector_count = reliable_write_sector_count_;
-
-  auto emmc_info_ptr = fidl::ObjectView<EmmcDeviceInfo>::FromExternal(&emmc_info);
-
-  completer.ToAsync().Reply(DeviceInfo::WithEmmcInfo(emmc_info_ptr));
-}
-
-void RpmbDevice::Request(RequestRequestView request, RequestCompleter::Sync& completer) {
-  RpmbRequestInfo info = {
-      .tx_frames = std::move(request->request.tx_frames),
-      .completer = completer.ToAsync(),
-  };
-
-  if (request->request.rx_frames) {
-    info.rx_frames = {
-        .vmo = std::move(request->request.rx_frames->vmo),
-        .offset = request->request.rx_frames->offset,
-        .size = request->request.rx_frames->size,
-    };
-  }
-
-  sdmmc_parent_->RpmbQueue(std::move(info));
-}
 
 zx_status_t SdmmcBlockDevice::Create(zx_device_t* parent, const SdmmcDevice& sdmmc,
                                      std::unique_ptr<SdmmcBlockDevice>* out_dev) {

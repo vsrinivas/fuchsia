@@ -22,6 +22,9 @@
 #include <zxtest/zxtest.h>
 
 #include "fake-sdmmc-device.h"
+#include "sdmmc-partition-device.h"
+#include "sdmmc-rpmb-device.h"
+#include "sdmmc-types.h"
 #include "src/devices/testing/mock-ddk/mock-device.h"
 
 namespace sdmmc {
