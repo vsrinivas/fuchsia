@@ -12,14 +12,12 @@ use {
     cm_moniker::InstancedChildMoniker,
     cm_rust::{
         CapabilityDecl, CapabilityName, ChildRef, CollectionDecl, DependencyType, EnvironmentDecl,
-        ExposeDecl, OfferDecl, OfferDeclCommon, OfferDirectoryDecl, OfferProtocolDecl,
-        OfferResolverDecl, OfferRunnerDecl, OfferServiceDecl, OfferSource, OfferStorageDecl,
-        OfferTarget, RegistrationDeclCommon, RegistrationSource, SourceName,
-        StorageDirectorySource, UseDecl, UseDirectoryDecl, UseEventDecl, UseProtocolDecl,
-        UseServiceDecl, UseSource,
+        ExposeDecl, OfferDecl, OfferDirectoryDecl, OfferProtocolDecl, OfferResolverDecl,
+        OfferRunnerDecl, OfferServiceDecl, OfferSource, OfferStorageDecl, OfferTarget,
+        RegistrationDeclCommon, RegistrationSource, StorageDirectorySource, UseDecl,
+        UseDirectoryDecl, UseEventDecl, UseProtocolDecl, UseServiceDecl, UseSource,
     },
     futures::future::select_all,
-    maplit::hashset,
     moniker::ChildMonikerBase,
     std::collections::{HashMap, HashSet},
     std::fmt,
@@ -45,62 +43,6 @@ impl Action for ShutdownAction {
     fn key(&self) -> ActionKey {
         ActionKey::Shutdown
     }
-}
-
-/// A DependencyNode represents a provider or user of a capability. This
-/// may be either a component or a component collection.
-#[derive(Debug, PartialEq, Eq, Hash, Clone, PartialOrd, Ord)]
-enum DependencyNode {
-    Parent,
-    Child(String),
-    Collection(String),
-}
-
-impl DependencyNode {
-    fn from_offer_target(target: &OfferTarget) -> Self {
-        match target {
-            OfferTarget::Child(ChildRef { name, collection: None }) => {
-                DependencyNode::Child(name.clone())
-            }
-            OfferTarget::Child(ChildRef { collection: Some(_), .. }) => {
-                // TODO(fxbug.dev/84678): It's safe to not support dynamic
-                // children here, because the shutdown logic only sees
-                // `OfferDecl`s listed in the static `ComponentDecl`, which
-                // doesn't include dynamic offers. So effectively, dynamic
-                // offers are ignored. We'll need to properly support dynamic
-                // children once dynamic offers are read by the shutdown logic.
-                panic!(
-                    "A dynamic child appeared in an OfferDecl contained in a ComponentDecl: {:?}",
-                    target
-                )
-            }
-            OfferTarget::Collection(collection) => DependencyNode::Collection(collection.clone()),
-        }
-    }
-}
-
-/// Examines a group of StorageDecls looking for one whose name matches the
-/// String passed in and whose source is a child. `None` is returned if either
-/// no declaration has the specified name or the declaration represents an
-/// offer from Self or Parent.
-fn find_storage_provider(
-    capabilities: &Vec<CapabilityDecl>,
-    name: &CapabilityName,
-) -> Option<String> {
-    for decl in capabilities {
-        match decl {
-            CapabilityDecl::Storage(decl) if &decl.name == name => match &decl.source {
-                StorageDirectorySource::Child(child) => {
-                    return Some(child.to_string());
-                }
-                StorageDirectorySource::Self_ | StorageDirectorySource::Parent => {
-                    return None;
-                }
-            },
-            _ => {}
-        }
-    }
-    None
 }
 
 async fn shutdown_component(target: ShutdownInfo) -> Result<ParentOrChildMoniker, ModelError> {
@@ -314,6 +256,12 @@ pub enum ParentOrChildMoniker {
     ChildMoniker(InstancedChildMoniker),
 }
 
+impl From<InstancedChildMoniker> for ParentOrChildMoniker {
+    fn from(moniker: InstancedChildMoniker) -> Self {
+        ParentOrChildMoniker::ChildMoniker(moniker)
+    }
+}
+
 /// Used to track information during the shutdown process. The dependents
 /// are all the component which must stop before the component represented
 /// by this struct.
@@ -362,20 +310,16 @@ pub trait Component {
     /// Returns metadata about each child of this component.
     fn children(&self) -> Vec<Child>;
 
-    /// Filters `offers()` down to remove any runtime-created dynamic offers.
-    fn static_offers(&self) -> Vec<OfferDecl> {
-        self.offers()
-            .into_iter()
-            .filter(|o| {
-                !matches!(o.target(), OfferTarget::Child(ChildRef { name: _, collection: Some(_) }))
-            })
-            .collect()
-    }
-
-    /// Filters `children()` down to remove any runtime-created dynamic children
-    /// (i.e., children in collections).
-    fn static_children(&self) -> Vec<Child> {
-        self.children().into_iter().filter(|o| o.moniker.collection().is_none()).collect()
+    /// Returns the live child that has the given `name` and `collection`, or
+    /// returns `None` if none match. In the case of dynamic children, it's
+    /// possible for multiple children to match a given `name` and `collection`,
+    /// but at most one of them can be live.
+    fn find_live_child(&self, name: &String, collection: &Option<String>) -> Option<Child> {
+        self.children().into_iter().find(|child| {
+            child.moniker.name() == name
+                && child.moniker.collection() == collection.as_ref().map(|s| s.as_str())
+                && child.is_live
+        })
     }
 }
 
@@ -397,100 +341,97 @@ pub struct Child {
     pub is_live: bool,
 }
 
-/// Given a set of DependencyNodes, find all the matching ParentOrChildMonikers in the supplied
-/// Component.
-fn get_shutdown_monikers(
-    nodes: &HashSet<DependencyNode>,
-    component_state: &impl Component,
-) -> HashSet<ParentOrChildMoniker> {
-    let mut deps: HashSet<ParentOrChildMoniker> = HashSet::new();
-    let all_children = component_state.children();
-
-    for node in nodes {
-        match node {
-            DependencyNode::Child(name) => {
-                deps.insert(ParentOrChildMoniker::ChildMoniker(
-                    InstancedChildMoniker::static_child(name.clone()),
-                ));
-            }
-            DependencyNode::Collection(name) => {
-                for c in &all_children {
-                    match c.moniker.collection() {
-                        Some(m) => {
-                            if m == name {
-                                deps.insert(ParentOrChildMoniker::ChildMoniker(c.moniker.clone()));
-                            }
-                        }
-                        None => {}
-                    }
-                }
-            }
-            DependencyNode::Parent => {
-                deps.insert(ParentOrChildMoniker::Parent);
-            }
-        }
-    }
-    deps
-}
-
-/// Maps a dependency node (parent, child or collection) to the nodes that depend on it.
-type DependencyMap = HashMap<DependencyNode, HashSet<DependencyNode>>;
-
 /// For a given Component, identify capability dependencies between the
 /// component itself and its children. A map is returned which maps from a
 /// "source" component (represented by a `ParentOrChildMoniker`) to a set of
 /// "target" components to which the source component provides capabilities. The
 /// targets must be shut down before the source.
-///
-/// This function panics if there is a capability routing where either the
-/// source or target is not present among the Component's children. Panics are
-/// not expected because Component should be validated before this function is
-/// called.
 pub fn process_component_dependencies(
     instance: &impl Component,
 ) -> HashMap<ParentOrChildMoniker, HashSet<ParentOrChildMoniker>> {
-    let mut dependency_map: DependencyMap = instance
-        .static_children()
-        .iter()
-        .map(|c| (DependencyNode::Child(c.moniker.name().to_string()), HashSet::new()))
-        .collect();
-    dependency_map.extend(
-        instance
-            .collections()
-            .iter()
-            .map(|c| (DependencyNode::Collection(c.name.clone()), HashSet::new())),
-    );
-    dependency_map.insert(DependencyNode::Parent, HashSet::new());
+    // We build up the set of (source, target) dependency edges from a variety
+    // of sources.
+    let mut edges = HashSet::new();
+    edges.extend(get_dependencies_from_offers(instance).into_iter());
+    edges.extend(get_dependencies_from_environments(instance).into_iter());
+    edges.extend(get_dependencies_from_uses(instance).into_iter());
 
-    get_dependencies_from_offers(instance, &mut dependency_map);
-    get_dependencies_from_environments(instance, &mut dependency_map);
-    get_dependencies_from_uses(instance, &mut dependency_map);
+    // Next, we want to find any children that `self` transitively depends on,
+    // either directly or through other children. Any child that `self` doesn't
+    // transitively depend on implicitly depends on `self`.
+    //
+    // TODO(82689): This logic is likely unnecessary, as it deals with children
+    // that have no direct dependency links with their parent.
+    let self_dependencies_closure = dependency_closure(&edges, ParentOrChildMoniker::Parent);
+    let implicit_edges = instance.children().into_iter().filter_map(|child| {
+        let moniker = child.moniker.into();
+        if self_dependencies_closure.contains(&moniker) {
+            None
+        } else {
+            Some((ParentOrChildMoniker::Parent, moniker))
+        }
+    });
 
-    let mut expanded = HashMap::new();
+    edges.extend(implicit_edges);
 
-    for (source, targets) in dependency_map {
-        let expanded_targets = get_shutdown_monikers(&targets, instance);
+    let mut dependency_map = HashMap::new();
+    dependency_map.insert(ParentOrChildMoniker::Parent, HashSet::new());
 
-        let singleton_source = hashset![source];
-        // The shutdown target may be a collection, if so this will expand
-        // the collection out into a list of all its members, otherwise it
-        // contains a single component.
-        let matching_sources: Vec<_> =
-            get_shutdown_monikers(&singleton_source, instance).into_iter().collect();
-        for source in matching_sources {
-            expanded.insert(source.clone(), expanded_targets.clone());
+    for child in instance.children() {
+        dependency_map.insert(child.moniker.into(), HashSet::new());
+    }
+
+    for (source, target) in edges {
+        match dependency_map.get_mut(&source) {
+            Some(targets) => {
+                targets.insert(target);
+            }
+            None => {
+                log::error!(
+                    "ignoring dependency edge from {:?} to {:?}, where source doesn't exist",
+                    source,
+                    target
+                );
+            }
         }
     }
 
-    expanded
+    dependency_map
 }
 
-/// Loops through all the use declarations to determine if parents depend on child capabilities,
-/// and vice-versa.
-fn get_dependencies_from_uses(instance: &impl Component, dependency_map: &mut DependencyMap) {
-    // First, find all the children that the parent has a strong dependency on and add them to our
-    // dependency map
-    let mut children_the_parent_depends_on = HashSet::new();
+/// Given a dependency graph represented as a set of `edges`, find the set of
+/// all nodes that the `start` node depends on, directly or indirectly. This
+/// includes `start` itself.
+fn dependency_closure(
+    edges: &HashSet<(ParentOrChildMoniker, ParentOrChildMoniker)>,
+    start: ParentOrChildMoniker,
+) -> HashSet<ParentOrChildMoniker> {
+    let mut res = HashSet::new();
+    res.insert(start);
+    loop {
+        let mut entries_added = false;
+
+        for (source, target) in edges {
+            if !res.contains(target) {
+                continue;
+            }
+            if res.insert(source.clone()) {
+                entries_added = true
+            }
+        }
+        if !entries_added {
+            return res;
+        }
+    }
+}
+
+/// Return the set of dependency relationships that can be derived from the
+/// component's use declarations. For use declarations, `self` is always the
+/// target.
+fn get_dependencies_from_uses(
+    instance: &impl Component,
+) -> HashSet<(ParentOrChildMoniker, ParentOrChildMoniker)> {
+    let mut edges = HashSet::new();
     for use_ in &instance.uses() {
         let child_name = match use_ {
             UseDecl::Service(UseServiceDecl { source: UseSource::Child(name), .. })
@@ -514,194 +455,65 @@ fn get_dependencies_from_uses(instance: &impl Component, dependency_map: &mut De
             UseDecl::Protocol(UseProtocolDecl { dependency_type, .. })
             | UseDecl::Service(UseServiceDecl { dependency_type, .. })
             | UseDecl::Directory(UseDirectoryDecl { dependency_type, .. })
-            | UseDecl::Event(UseEventDecl { dependency_type, .. })
+            | UseDecl::Event(UseEventDecl { dependency_type, .. }) => {
                 if dependency_type == &DependencyType::Weak
-                    || dependency_type == &DependencyType::WeakForMigration =>
-            {
-                // Weak dependencies are ignored when determining shutdown ordering
-                continue;
-            }
-            _ => {
-                // Any other capability type cannot be marked as weak, so we can proceed
-            }
-        }
-        children_the_parent_depends_on.insert(DependencyNode::Child(child_name.clone()));
-    }
-    for child_node in children_the_parent_depends_on.iter() {
-        match dependency_map.get_mut(&child_node) {
-            Some(targets) => {
-                targets.insert(DependencyNode::Parent);
-            }
-            _ => {
-                panic!("A dependency went off the map!");
-            }
-        }
-    }
-
-    // TODO(82689): the rest of this function is likely unnecessary, as it deals with children that
-    // have no direct dependency links with their parent
-
-    // Next, we want to find any children that the parent transitively depends on through other
-    // children, as we'll need to keep those around. These dependencies will be added by the
-    // `get_dependencies_from_offers` function, so we don't need to add the dependencies here, but
-    // we do need to know which children to not add as dependents of the parent.
-    let mut children_the_parent_transitively_depends_on = children_the_parent_depends_on;
-    let mut last_loop_added_dependencies = true;
-    while last_loop_added_dependencies {
-        last_loop_added_dependencies = false;
-        for offer in &instance.static_offers() {
-            match offer {
-                OfferDecl::Protocol(OfferProtocolDecl { dependency_type, .. })
-                | OfferDecl::Directory(OfferDirectoryDecl { dependency_type, .. })
-                    if dependency_type == &DependencyType::Weak
-                        || dependency_type == &DependencyType::WeakForMigration =>
+                    || dependency_type == &DependencyType::WeakForMigration
                 {
                     // Weak dependencies are ignored when determining shutdown ordering
                     continue;
                 }
-                _ => {
-                    // Any other capability type cannot be marked as weak, so we can proceed
+            }
+            UseDecl::Storage(_) | UseDecl::EventStreamDeprecated(_) | UseDecl::EventStream(_) => {
+                // Any other capability type cannot be marked as weak, so we can proceed
+            }
+        }
+
+        let child = match instance.find_live_child(child_name, &None) {
+            Some(child) => child.moniker.clone().into(),
+            None => {
+                log::error!("use source doesn't exist: (name: {:?})", child_name);
+                continue;
+            }
+        };
+
+        edges.insert((child, ParentOrChildMoniker::Parent));
+    }
+    edges
+}
+
+/// Return the set of dependency relationships that can be derived from the
+/// component's offer declarations. This includes both static and dynamic offers.
+fn get_dependencies_from_offers(
+    instance: &impl Component,
+) -> HashSet<(ParentOrChildMoniker, ParentOrChildMoniker)> {
+    let mut edges = HashSet::new();
+
+    for offer_decl in instance.offers() {
+        if let Some((sources, targets)) = get_dependency_from_offer(instance, &offer_decl) {
+            for source in sources.iter() {
+                for target in targets.iter() {
+                    edges.insert((source.clone(), target.clone()));
                 }
             }
-            let offer_target_node = DependencyNode::from_offer_target(offer.target());
-            if children_the_parent_transitively_depends_on.contains(&offer_target_node) {
-                // The target for this is in our transitive dependency set, so we also
-                // transitively depend on the source
-                let offer_source_node = match offer.source() {
-                    OfferSource::Child(ChildRef { name: source_name, collection: None }) => {
-                        DependencyNode::Child(source_name.clone())
-                    }
-                    OfferSource::Child(ChildRef { collection: Some(_), .. }) => {
-                        // TODO(fxbug.dev/84678): It's safe to not support
-                        // dynamic children here, because the shutdown logic
-                        // only sees `OfferDecl`s listed in the static
-                        // `ComponentDecl`, which doesn't include dynamic
-                        // offers. So effectively, dynamic offers are ignored.
-                        // We'll need to properly support dynamic children once
-                        // dynamic offers are read by the shutdown logic.
-                        panic!(
-                            "A dynamic child appeared in an OfferDecl contained in a \
-                            ComponentDecl: {:?}",
-                            offer
-                        )
-                    }
-                    OfferSource::Collection(name) => DependencyNode::Collection(name.clone()),
-                    OfferSource::Capability(name) => {
-                        // The only valid use for an OfferSource::Capability today is for a storage
-                        // capability declaration, and its presence should be enforced by manifest
-                        // validation.
-                        if let Some(s) = find_storage_source(instance, name) {
-                            s
-                        } else {
-                            continue;
-                        }
-                    }
-                    OfferSource::Framework => {
-                        // The framework outlives all components, so it doesn't matter if we
-                        // transitively depend on it. Proceed to the next offer.
-                        continue;
-                    }
-                    OfferSource::Parent => {
-                        // It's irrelevant if we transitively depend on our parent (the child's
-                        // grand-parent). Shutdown ordering between us and our parent is handled in
-                        // the parent's shutdown ordering logic. Proceed to the next offer.
-                        continue;
-                    }
-                    OfferSource::Self_ => {
-                        if let Some(s) = find_storage_source(instance, offer.source_name()) {
-                            s
-                        } else {
-                            // If the `offer` was not for storage, it should be impossible to get
-                            // here since that would indicate a cycle. Therefore, getting here
-                            // implies that the storage source was the parent, in which case
-                            // there's no dependency to add.
-                            continue;
-                        }
-                    }
-                };
-                last_loop_added_dependencies |=
-                    children_the_parent_transitively_depends_on.insert(offer_source_node);
-            }
         }
     }
-
-    // Finally, any children that the parent doesn't depend on either transitively or directly are
-    // made the parent's dependents.
-    let mut parent_dependents = dependency_map
-        .remove(&DependencyNode::Parent)
-        .expect("Parent was not found in the dependency_map");
-    for (source, targets) in dependency_map.iter() {
-        if children_the_parent_transitively_depends_on.contains(source) {
-            continue;
-        }
-        if !targets.contains(&DependencyNode::Parent) {
-            parent_dependents.insert(source.clone());
-        }
-    }
-    dependency_map.insert(DependencyNode::Parent, parent_dependents);
+    edges
 }
 
-fn find_storage_source(instance: &impl Component, name: &CapabilityName) -> Option<DependencyNode> {
-    instance
-        .capabilities()
-        .into_iter()
-        .find_map(|c| match c {
-            CapabilityDecl::Storage(s) if &s.name == name => Some(s),
-            _ => None,
-        })
-        .map(|s| match &s.source {
-            StorageDirectorySource::Parent => {
-                // See comment for OfferSource::Parent
-                None
-            }
-            StorageDirectorySource::Self_ => {
-                // See comment for OfferSource::Self_
-                panic!("dependency cycle detected when processing transitive child dependencies");
-            }
-            StorageDirectorySource::Child(name) => Some(DependencyNode::Child(name.clone())),
-        })
-        .flatten()
-}
-
-/// Loops through all the offer declarations to determine which siblings
-/// provide capabilities to other siblings.
-fn get_dependencies_from_offers(instance: &impl Component, dependency_map: &mut DependencyMap) {
-    for dep in &instance.static_offers() {
-        // Identify the source and target of the offer, if this offer is
-        // actually relevant to shutdown order.
-        if let Some((capability_provider, capability_target)) =
-            get_dependency_from_offer(instance, dep)
-        {
-            if !dependency_map.contains_key(&capability_target) {
-                panic!(
-                    "This capability routing seems invalid, the target \
-                     does not exist in this component. Source: {:?} Target: {:?}",
-                    capability_provider, capability_target,
-                );
-            }
-
-            let sibling_deps = dependency_map.get_mut(&capability_provider).expect(&format!(
-                "This capability routing seems invalid, the source \
-                 does not exist in this component. Source: {:?} Target: {:?}",
-                capability_provider, capability_target,
-            ));
-            sibling_deps.insert(capability_target);
-        }
-    }
-}
-
-/// Extracts a (capability_provider, capability_target) pair from a single
-/// `OfferDecl`, or returns `None` if the offer has no impact on shutdown
-/// ordering. The `Component` provides context that may be necessary to
-/// understand the `OfferDecl`.
+/// Extracts a list of sources and a list of targets from a single `OfferDecl`,
+/// or returns `None` if the offer has no impact on shutdown ordering. The
+/// `Component` provides context that may be necessary to understand the
+/// `OfferDecl`. Note that a single offer can have multiple sources/targets; for
+/// instance, targeting a collection targets all the children within that
+/// collection.
 fn get_dependency_from_offer(
     instance: &impl Component,
     offer_decl: &OfferDecl,
-) -> Option<(DependencyNode, DependencyNode)> {
+) -> Option<(Vec<ParentOrChildMoniker>, Vec<ParentOrChildMoniker>)> {
     // We only care about dependencies where the provider of the dependency is
-    // another child, otherwise the capability comes from the parent or
-    // component manager itself in which case the relationship is not relevant
-    // for ordering here.
+    // `self` or another child, otherwise the capability comes from the parent
+    // or component manager itself in which case the relationship is not
+    // relevant for ordering here.
     match offer_decl {
         OfferDecl::Protocol(OfferProtocolDecl {
             dependency_type: DependencyType::Strong,
@@ -718,40 +530,7 @@ fn get_dependency_from_offer(
         })
         | OfferDecl::Runner(OfferRunnerDecl { source, target, .. })
         | OfferDecl::Resolver(OfferResolverDecl { source, target, .. }) => {
-            match source {
-                OfferSource::Child(ChildRef { name: source_name, collection: None }) => Some((
-                    DependencyNode::Child(source_name.clone()),
-                    DependencyNode::from_offer_target(target),
-                )),
-                OfferSource::Child(ChildRef { collection: Some(_), .. }) => {
-                    // TODO(fxbug.dev/84678): It's safe to not support dynamic
-                    // children here, because the shutdown logic only sees
-                    // `OfferDecl`s listed in the static `ComponentDecl`, which
-                    // doesn't include dynamic offers. So effectively, dynamic
-                    // offers are ignored. We'll need to properly support
-                    // dynamic children once dynamic offers are read by the
-                    // shutdown logic.
-                    panic!(
-                        "A dynamic child appeared in an OfferDecl contained in a ComponentDecl: \
-                        {:?}",
-                        offer_decl
-                    )
-                }
-                OfferSource::Collection(_) => {
-                    // TODO(fxbug.dev/84766): Consider services routed from
-                    // collections in shutdown order.
-                    None
-                }
-                OfferSource::Framework
-                | OfferSource::Parent
-                | OfferSource::Self_
-                | OfferSource::Capability(_) => {
-                    // Capabilities offered by the parent, routed in from the
-                    // component, or provided by the framework (based on some
-                    // other capability) are not relevant.
-                    None
-                }
-            }
+            Some((find_offer_sources(instance, source), find_offer_targets(instance, target)))
         }
 
         OfferDecl::Protocol(OfferProtocolDecl {
@@ -773,14 +552,9 @@ fn get_dependency_from_offer(
             source_name,
             target,
             ..
-        }) => find_storage_provider(&instance.capabilities(), &source_name).map(
-            |storage_source_child_name| {
-                (
-                    DependencyNode::Child(storage_source_child_name),
-                    DependencyNode::from_offer_target(target),
-                )
-            },
-        ),
+        }) => {
+            Some((find_storage_source(instance, source_name), find_offer_targets(instance, target)))
+        }
         OfferDecl::Storage(OfferStorageDecl {
             source:
                 OfferSource::Child(_)
@@ -809,84 +583,194 @@ fn get_dependency_from_offer(
     }
 }
 
-/// Add the provider of an environment registration to the map of environments
-/// to components that provide something to the environment.
-fn add_env_provider<T>(
-    decls: &Vec<T>,
-    env_name: String,
-    tracking_map: &mut HashMap<&String, Vec<String>>,
-) where
-    T: RegistrationDeclCommon,
-{
-    for decl in decls {
-        match decl.source() {
-            RegistrationSource::Child(source_child) => {
-                tracking_map.get_mut(&env_name).unwrap().push(source_child.to_string());
+/// Given a `Component` instance and an `OfferSource`, return the names of
+/// components that match that `source`.
+fn find_offer_sources(
+    instance: &impl Component,
+    source: &OfferSource,
+) -> Vec<ParentOrChildMoniker> {
+    match source {
+        OfferSource::Child(ChildRef { name, collection }) => {
+            match instance.find_live_child(name, collection) {
+                Some(child) => vec![child.moniker.clone().into()],
+                None => {
+                    log::error!(
+                        "offer source doesn't exist: (name: {:?}, collection: {:?})",
+                        name,
+                        collection
+                    );
+                    vec![]
+                }
             }
-            RegistrationSource::Parent | RegistrationSource::Self_ => {}
+        }
+        OfferSource::Self_ => vec![ParentOrChildMoniker::Parent],
+        OfferSource::Collection(_) => {
+            // TODO(fxbug.dev/84766): Consider services routed from collections
+            // in shutdown order.
+            vec![]
+        }
+        OfferSource::Parent | OfferSource::Framework => {
+            // Capabilities offered by the parent or provided by the framework
+            // (based on some other capability) are not relevant.
+            vec![]
+        }
+        OfferSource::Capability(_) => {
+            // OfferSource::Capability(_) is used for the `StorageAdmin`
+            // capability. This capability is implemented by component_manager,
+            // and is therefore similar to a Framework capability, but it also
+            // depends on the underlying storage that's being administrated. In
+            // theory, we could add an edge from the source of that storage to
+            // the target of the`StorageAdmin` capability... but honestly it's
+            // very complex and confusing and doesn't seem worth it.
+            //
+            // We may want to reconsider this someday.
+            vec![]
         }
     }
 }
 
-/// Loops through all the child and collection declarations to determine what siblings provide
-/// capabilities to other siblings through an environment.
+/// Given a `Component` and the name of a storage capability, return the names
+/// of components that act as a source for that storage.
+///
+/// The return value will have at most one entry in it, but it is returned in a
+/// Vec for consistency with the other `find_*` methods.
+fn find_storage_source(
+    instance: &impl Component,
+    name: &CapabilityName,
+) -> Vec<ParentOrChildMoniker> {
+    let decl = instance.capabilities().into_iter().find_map(|decl| match decl {
+        CapabilityDecl::Storage(decl) if &decl.name == name => Some(decl),
+        _ => None,
+    });
+
+    let decl = match decl {
+        Some(d) => d,
+        None => {
+            log::error!("could not find storage capability named {:?}", name,);
+            return vec![];
+        }
+    };
+
+    match decl.source {
+        StorageDirectorySource::Child(child_name) => {
+            match instance.find_live_child(&child_name, &None) {
+                Some(child) => vec![child.moniker.clone().into()],
+                None => {
+                    log::error!(
+                        "source for storage capability {:?} doesn't exist: (name: {:?})",
+                        name,
+                        child_name,
+                    );
+                    vec![]
+                }
+            }
+        }
+        StorageDirectorySource::Self_ => vec![ParentOrChildMoniker::Parent],
+
+        // Storage from the parent is not relevant to shutdown order.
+        StorageDirectorySource::Parent => vec![],
+    }
+}
+
+/// Given a `Component` instance and an `OfferTarget`, return the names of
+/// components that match that `target`.
+fn find_offer_targets(
+    instance: &impl Component,
+    target: &OfferTarget,
+) -> Vec<ParentOrChildMoniker> {
+    match target {
+        OfferTarget::Child(ChildRef { name, collection }) => {
+            match instance.find_live_child(name, collection) {
+                Some(child) => vec![child.moniker.into()],
+                None => {
+                    log::error!(
+                        "offer target doesn't exist: (name: {:?}, collection: {:?})",
+                        name,
+                        collection
+                    );
+                    vec![]
+                }
+            }
+        }
+        OfferTarget::Collection(collection) => instance
+            .children()
+            .into_iter()
+            .filter(|child| child.moniker.collection() == Some(collection))
+            .map(|child| child.moniker.into())
+            .collect(),
+    }
+}
+
+/// Return the set of dependency relationships that can be derived from the
+/// component's environment configuration. Children assigned to an environment
+/// depend on components that contribute to that environment.
 fn get_dependencies_from_environments(
     instance: &impl Component,
-    dependency_map: &mut DependencyMap,
-) {
-    let mut env_source_children = HashMap::new();
+) -> HashSet<(ParentOrChildMoniker, ParentOrChildMoniker)> {
+    let env_to_sources: HashMap<String, HashSet<ParentOrChildMoniker>> = instance
+        .environments()
+        .into_iter()
+        .map(|env| {
+            let sources = find_environment_sources(instance, &env);
+            (env.name, sources)
+        })
+        .collect();
 
-    let environments = instance.environments();
-    for env in &environments {
-        env_source_children.insert(&env.name, vec![]);
-        for source in env.get_dependency_sources() {
-            match source {
-                cm_rust::DependencySource::Runner { registry: runners } => {
-                    add_env_provider(runners, env.name.clone(), &mut env_source_children);
+    let mut res = HashSet::new();
+    for child in &instance.children() {
+        if let Some(env_name) = &child.environment_name {
+            if let Some(source_children) = env_to_sources.get(env_name) {
+                for source in source_children {
+                    res.insert((source.clone(), child.moniker.clone().into()));
                 }
-
-                cm_rust::DependencySource::Resolver { registry: resolvers } => {
-                    add_env_provider(resolvers, env.name.clone(), &mut env_source_children);
-                }
-
-                cm_rust::DependencySource::Debug { registry: debug_capabilities } => {
-                    add_env_provider(
-                        debug_capabilities,
-                        env.name.clone(),
-                        &mut env_source_children,
-                    );
-                }
+            } else {
+                log::error!(
+                    "environment `{}` from child `{}` is not a valid environment",
+                    env_name,
+                    child.moniker
+                )
             }
         }
     }
+    res
+}
 
-    for dest_child in &instance.static_children() {
-        if let Some(env_name) = dest_child.environment_name.as_ref() {
-            for source_child in env_source_children.get(env_name).expect(&format!(
-                "environment `{}` from child `{}` is not a valid environment",
-                env_name,
-                dest_child.moniker.name(),
-            )) {
-                dependency_map
-                    .entry(DependencyNode::Child((*source_child).clone()))
-                    .or_insert(HashSet::new())
-                    .insert(DependencyNode::Child(dest_child.moniker.name().to_string()));
+/// Given a `Component` instance and an environment, return the names of
+/// components that provide runners, resolvers, or debug_capabilities for that
+/// environment.
+fn find_environment_sources(
+    instance: &impl Component,
+    env: &EnvironmentDecl,
+) -> HashSet<ParentOrChildMoniker> {
+    // Get all the `RegistrationSources` for the runners, resolvers, and
+    // debug_capabilities in this environment.
+    let registration_sources = env
+        .runners
+        .iter()
+        .map(|r| &r.source)
+        .chain(env.resolvers.iter().map(|r| &r.source))
+        .chain(env.debug_capabilities.iter().map(|r| r.source()));
+
+    // Turn the shutdown-relevant sources into `ParentOrChildMoniker`s.
+    registration_sources
+        .flat_map(|source| match source {
+            RegistrationSource::Self_ => vec![ParentOrChildMoniker::Parent],
+            RegistrationSource::Child(child_name) => {
+                match instance.find_live_child(&child_name, &None) {
+                    Some(child) => vec![child.moniker.into()],
+                    None => {
+                        log::error!(
+                            "source for environment {:?} doesn't exist: (name: {:?})",
+                            env.name,
+                            child_name,
+                        );
+                        vec![]
+                    }
+                }
             }
-        }
-    }
-    for dest_collection in &instance.collections() {
-        if let Some(env_name) = dest_collection.environment.as_ref() {
-            for source_child in env_source_children.get(env_name).expect(&format!(
-                "environment `{}` from collection `{}` is not a valid environment",
-                env_name, dest_collection.name,
-            )) {
-                dependency_map
-                    .entry(DependencyNode::Child((*source_child).clone()))
-                    .or_insert(HashSet::new())
-                    .insert(DependencyNode::Collection(dest_collection.name.clone()));
-            }
-        }
-    }
+            RegistrationSource::Parent => vec![],
+        })
+        .collect()
 }
 
 #[cfg(test)]
@@ -920,10 +804,11 @@ mod tests {
         cm_rust_testing::{
             ChildDeclBuilder, CollectionDeclBuilder, ComponentDeclBuilder, EnvironmentDeclBuilder,
         },
-        fidl_fuchsia_component_decl as fdecl,
-        maplit::{hashmap, hashset},
+        cm_types::AllowedOffers,
+        fidl_fuchsia_component as fcomponent, fidl_fuchsia_component_decl as fdecl,
+        maplit::{btreeset, hashmap, hashset},
         moniker::ChildMoniker,
-        std::collections::HashMap,
+        std::collections::{BTreeSet, HashMap},
         std::{convert::TryFrom, sync::Weak},
         test_case::test_case,
     };
@@ -987,7 +872,7 @@ mod tests {
     /// Returns a `ParentOrChildMoniker` for a child by parsing the moniker.
     /// Panics if the moniker is malformed.
     fn child(moniker: &str) -> ParentOrChildMoniker {
-        ParentOrChildMoniker::ChildMoniker(InstancedChildMoniker::from(moniker))
+        InstancedChildMoniker::from(moniker).into()
     }
 
     #[test]
@@ -1513,6 +1398,345 @@ mod tests {
         )
     }
 
+    #[test]
+    fn test_dynamic_offers_within_collection() {
+        let decl = ComponentDeclBuilder::new()
+            .add_lazy_child("childA")
+            .add_transient_collection("coll")
+            .offer(OfferDecl::Directory(OfferDirectoryDecl {
+                source: OfferSource::Child(ChildRef {
+                    name: "childA".to_string(),
+                    collection: None,
+                }),
+                target: OfferTarget::Collection("coll".to_string()),
+                source_name: "some_dir".into(),
+                target_name: "some_dir".into(),
+                dependency_type: DependencyType::Strong,
+                rights: None,
+                subdir: None,
+            }))
+            .build();
+
+        let instance = FakeComponent {
+            decl,
+            dynamic_children: vec![
+                Child { moniker: "coll:dyn1:1".into(), environment_name: None, is_live: true },
+                Child { moniker: "coll:dyn2:2".into(), environment_name: None, is_live: true },
+                Child { moniker: "coll:dyn3:3".into(), environment_name: None, is_live: true },
+                Child { moniker: "coll:dyn4:4".into(), environment_name: None, is_live: true },
+            ],
+            dynamic_offers: vec![
+                OfferDecl::Protocol(OfferProtocolDecl {
+                    source: OfferSource::Child(ChildRef {
+                        name: "dyn1".to_string(),
+                        collection: Some("coll".to_string()),
+                    }),
+                    target: OfferTarget::Child(ChildRef {
+                        name: "dyn2".to_string(),
+                        collection: Some("coll".to_string()),
+                    }),
+                    source_name: "test.protocol".into(),
+                    target_name: "test.protocol".into(),
+                    dependency_type: DependencyType::Strong,
+                }),
+                OfferDecl::Protocol(OfferProtocolDecl {
+                    source: OfferSource::Child(ChildRef {
+                        name: "dyn1".to_string(),
+                        collection: Some("coll".to_string()),
+                    }),
+                    target: OfferTarget::Child(ChildRef {
+                        name: "dyn3".to_string(),
+                        collection: Some("coll".to_string()),
+                    }),
+                    source_name: "test.protocol".into(),
+                    target_name: "test.protocol".into(),
+                    dependency_type: DependencyType::Strong,
+                }),
+            ],
+        };
+
+        pretty_assertions::assert_eq!(
+            hashmap! {
+                ParentOrChildMoniker::Parent => hashset![
+                    child("childA:0"),
+                    child("coll:dyn1:1"),
+                    child("coll:dyn2:2"),
+                    child("coll:dyn3:3"),
+                    child("coll:dyn4:4"),
+                ],
+                child("childA:0") => hashset![
+                    child("coll:dyn1:1"),
+                    child("coll:dyn2:2"),
+                    child("coll:dyn3:3"),
+                    child("coll:dyn4:4"),
+                ],
+                child("coll:dyn1:1") => hashset![child("coll:dyn2:2"), child("coll:dyn3:3")],
+                child("coll:dyn2:2") => hashset![],
+                child("coll:dyn3:3") => hashset![],
+                child("coll:dyn4:4") => hashset![],
+            },
+            process_component_dependencies(&instance)
+        )
+    }
+
+    #[test]
+    fn test_dynamic_offers_between_collections() {
+        let decl = ComponentDeclBuilder::new()
+            .add_transient_collection("coll1")
+            .add_transient_collection("coll2")
+            .build();
+
+        let instance = FakeComponent {
+            decl,
+            dynamic_children: vec![
+                Child { moniker: "coll1:dyn1:1".into(), environment_name: None, is_live: true },
+                Child { moniker: "coll1:dyn2:2".into(), environment_name: None, is_live: true },
+                Child { moniker: "coll2:dyn1:3".into(), environment_name: None, is_live: true },
+                Child { moniker: "coll2:dyn2:4".into(), environment_name: None, is_live: true },
+            ],
+            dynamic_offers: vec![
+                OfferDecl::Protocol(OfferProtocolDecl {
+                    source: OfferSource::Child(ChildRef {
+                        name: "dyn1".to_string(),
+                        collection: Some("coll1".to_string()),
+                    }),
+                    target: OfferTarget::Child(ChildRef {
+                        name: "dyn1".to_string(),
+                        collection: Some("coll2".to_string()),
+                    }),
+                    source_name: "test.protocol".into(),
+                    target_name: "test.protocol".into(),
+                    dependency_type: DependencyType::Strong,
+                }),
+                OfferDecl::Protocol(OfferProtocolDecl {
+                    source: OfferSource::Child(ChildRef {
+                        name: "dyn2".to_string(),
+                        collection: Some("coll2".to_string()),
+                    }),
+                    target: OfferTarget::Child(ChildRef {
+                        name: "dyn1".to_string(),
+                        collection: Some("coll1".to_string()),
+                    }),
+                    source_name: "test.protocol".into(),
+                    target_name: "test.protocol".into(),
+                    dependency_type: DependencyType::Strong,
+                }),
+            ],
+        };
+
+        pretty_assertions::assert_eq!(
+            hashmap! {
+                ParentOrChildMoniker::Parent => hashset![
+                    child("coll1:dyn1:1"),
+                    child("coll1:dyn2:2"),
+                    child("coll2:dyn1:3"),
+                    child("coll2:dyn2:4"),
+                ],
+                child("coll1:dyn1:1") => hashset![child("coll2:dyn1:3")],
+                child("coll1:dyn2:2") => hashset![],
+                child("coll2:dyn1:3") => hashset![],
+                child("coll2:dyn2:4") => hashset![child("coll1:dyn1:1")],
+            },
+            process_component_dependencies(&instance)
+        )
+    }
+
+    #[test]
+    fn test_dynamic_offer_from_parent() {
+        let decl = ComponentDeclBuilder::new().add_transient_collection("coll").build();
+        let instance = FakeComponent {
+            decl,
+            dynamic_children: vec![
+                Child { moniker: "coll:dyn1:1".into(), environment_name: None, is_live: true },
+                Child { moniker: "coll:dyn2:2".into(), environment_name: None, is_live: true },
+            ],
+            dynamic_offers: vec![OfferDecl::Protocol(OfferProtocolDecl {
+                source: OfferSource::Parent,
+                target: OfferTarget::Child(ChildRef {
+                    name: "dyn1".to_string(),
+                    collection: Some("coll".to_string()),
+                }),
+                source_name: "test.protocol".into(),
+                target_name: "test.protocol".into(),
+                dependency_type: DependencyType::Strong,
+            })],
+        };
+
+        pretty_assertions::assert_eq!(
+            hashmap! {
+                ParentOrChildMoniker::Parent => hashset![
+                    child("coll:dyn1:1"),
+                    child("coll:dyn2:2"),
+                ],
+                child("coll:dyn1:1") => hashset![],
+                child("coll:dyn2:2") => hashset![],
+            },
+            process_component_dependencies(&instance)
+        )
+    }
+
+    #[test]
+    fn test_dynamic_offer_from_self() {
+        let decl = ComponentDeclBuilder::new().add_transient_collection("coll").build();
+        let instance = FakeComponent {
+            decl,
+            dynamic_children: vec![
+                Child { moniker: "coll:dyn1:1".into(), environment_name: None, is_live: true },
+                Child { moniker: "coll:dyn2:2".into(), environment_name: None, is_live: true },
+            ],
+            dynamic_offers: vec![OfferDecl::Protocol(OfferProtocolDecl {
+                source: OfferSource::Self_,
+                target: OfferTarget::Child(ChildRef {
+                    name: "dyn1".to_string(),
+                    collection: Some("coll".to_string()),
+                }),
+                source_name: "test.protocol".into(),
+                target_name: "test.protocol".into(),
+                dependency_type: DependencyType::Strong,
+            })],
+        };
+
+        pretty_assertions::assert_eq!(
+            hashmap! {
+                ParentOrChildMoniker::Parent => hashset![
+                    child("coll:dyn1:1"),
+                    child("coll:dyn2:2"),
+                ],
+                child("coll:dyn1:1") => hashset![],
+                child("coll:dyn2:2") => hashset![],
+            },
+            process_component_dependencies(&instance)
+        )
+    }
+
+    #[test]
+    fn test_dynamic_offer_from_static_child() {
+        let decl = ComponentDeclBuilder::new()
+            .add_lazy_child("childA")
+            .add_lazy_child("childB")
+            .add_transient_collection("coll")
+            .build();
+
+        let instance = FakeComponent {
+            decl,
+            dynamic_children: vec![
+                Child { moniker: "coll:dyn1:1".into(), environment_name: None, is_live: true },
+                Child { moniker: "coll:dyn2:2".into(), environment_name: None, is_live: true },
+            ],
+            dynamic_offers: vec![OfferDecl::Protocol(OfferProtocolDecl {
+                source: OfferSource::Child(ChildRef {
+                    name: "childA".to_string(),
+                    collection: None,
+                }),
+                target: OfferTarget::Child(ChildRef {
+                    name: "dyn1".to_string(),
+                    collection: Some("coll".to_string()),
+                }),
+                source_name: "test.protocol".into(),
+                target_name: "test.protocol".into(),
+                dependency_type: DependencyType::Strong,
+            })],
+        };
+
+        pretty_assertions::assert_eq!(
+            hashmap! {
+                ParentOrChildMoniker::Parent => hashset![
+                    child("childA:0"),
+                    child("childB:0"),
+                    child("coll:dyn1:1"),
+                    child("coll:dyn2:2"),
+                ],
+                child("childA:0") => hashset![child("coll:dyn1:1")],
+                child("childB:0") => hashset![],
+                child("coll:dyn1:1") => hashset![],
+                child("coll:dyn2:2") => hashset![],
+            },
+            process_component_dependencies(&instance)
+        )
+    }
+
+    #[test]
+    fn test_dynamic_offer_deleted_source() {
+        let decl = ComponentDeclBuilder::new().add_transient_collection("coll").build();
+
+        let instance = FakeComponent {
+            decl,
+            dynamic_children: vec![
+                Child { moniker: "coll:dyn1:0".into(), environment_name: None, is_live: false },
+                Child { moniker: "coll:dyn1:1".into(), environment_name: None, is_live: true },
+                Child { moniker: "coll:dyn2:2".into(), environment_name: None, is_live: true },
+            ],
+            dynamic_offers: vec![OfferDecl::Protocol(OfferProtocolDecl {
+                source: OfferSource::Child(ChildRef {
+                    name: "dyn1".to_string(),
+                    collection: Some("coll".to_string()),
+                }),
+                target: OfferTarget::Child(ChildRef {
+                    name: "dyn2".to_string(),
+                    collection: Some("coll".to_string()),
+                }),
+                source_name: "test.protocol".into(),
+                target_name: "test.protocol".into(),
+                dependency_type: DependencyType::Strong,
+            })],
+        };
+
+        pretty_assertions::assert_eq!(
+            hashmap! {
+                ParentOrChildMoniker::Parent => hashset![
+                    child("coll:dyn1:0"),
+                    child("coll:dyn1:1"),
+                    child("coll:dyn2:2"),
+                ],
+                child("coll:dyn1:0") => hashset![],
+                child("coll:dyn1:1") => hashset![child("coll:dyn2:2")],
+                child("coll:dyn2:2") => hashset![],
+            },
+            process_component_dependencies(&instance)
+        )
+    }
+
+    #[test]
+    fn test_dynamic_offer_deleted_target() {
+        let decl = ComponentDeclBuilder::new().add_transient_collection("coll").build();
+
+        let instance = FakeComponent {
+            decl,
+            dynamic_children: vec![
+                Child { moniker: "coll:dyn1:0".into(), environment_name: None, is_live: false },
+                Child { moniker: "coll:dyn1:1".into(), environment_name: None, is_live: true },
+                Child { moniker: "coll:dyn2:2".into(), environment_name: None, is_live: true },
+            ],
+            dynamic_offers: vec![OfferDecl::Protocol(OfferProtocolDecl {
+                source: OfferSource::Child(ChildRef {
+                    name: "dyn2".to_string(),
+                    collection: Some("coll".to_string()),
+                }),
+                target: OfferTarget::Child(ChildRef {
+                    name: "dyn1".to_string(),
+                    collection: Some("coll".to_string()),
+                }),
+                source_name: "test.protocol".into(),
+                target_name: "test.protocol".into(),
+                dependency_type: DependencyType::Strong,
+            })],
+        };
+
+        pretty_assertions::assert_eq!(
+            hashmap! {
+                ParentOrChildMoniker::Parent => hashset![
+                    child("coll:dyn1:0"),
+                    child("coll:dyn1:1"),
+                    child("coll:dyn2:2"),
+                ],
+                child("coll:dyn1:0") => hashset![],
+                child("coll:dyn1:1") => hashset![],
+                child("coll:dyn2:2") => hashset![child("coll:dyn1:1")],
+            },
+            process_component_dependencies(&instance)
+        )
+    }
+
     #[test_case(DependencyType::Weak)]
     #[test_case(DependencyType::WeakForMigration)]
     fn test_single_weak_dependency(weak_dep: DependencyType) {
@@ -1915,7 +2139,6 @@ mod tests {
     }
 
     #[test]
-    #[should_panic]
     fn test_target_does_not_exist() {
         let child_a = ChildDecl {
             name: "childA".to_string(),
@@ -1937,11 +2160,16 @@ mod tests {
             ..default_component_decl()
         };
 
-        process_component_dependencies(&FakeComponent::from_decl(decl));
+        pretty_assertions::assert_eq!(
+            hashmap! {
+                ParentOrChildMoniker::Parent => hashset![child("childA:0")],
+                child("childA:0") => hashset![],
+            },
+            process_component_dependencies(&FakeComponent::from_decl(decl))
+        );
     }
 
     #[test]
-    #[should_panic]
     fn test_source_does_not_exist() {
         let child_a = ChildDecl {
             name: "childA".to_string(),
@@ -1963,7 +2191,13 @@ mod tests {
             ..default_component_decl()
         };
 
-        process_component_dependencies(&FakeComponent::from_decl(decl));
+        pretty_assertions::assert_eq!(
+            hashmap! {
+                ParentOrChildMoniker::Parent => hashset![child("childA:0")],
+                child("childA:0") => hashset![],
+            },
+            process_component_dependencies(&FakeComponent::from_decl(decl))
+        );
     }
 
     #[test]
@@ -2372,7 +2606,7 @@ mod tests {
         test.model
             .start_instance(&component_c.abs_moniker, &StartReason::Eager)
             .await
-            .expect("could not start coll:b");
+            .expect("could not start c");
         assert!(is_executing(&component_container).await);
         assert!(is_executing(&component_a).await);
         assert!(is_executing(&component_b).await);
@@ -2426,6 +2660,139 @@ mod tests {
                 Lifecycle::Destroy(vec!["container:0", "coll:b:2"].into()),
             ];
             assert_eq!(next, expected);
+        }
+    }
+
+    #[fuchsia::test]
+    async fn shutdown_dynamic_offers() {
+        let components = vec![
+            ("root", ComponentDeclBuilder::new().add_lazy_child("container").build()),
+            (
+                "container",
+                ComponentDeclBuilder::new()
+                    .add_collection(
+                        CollectionDeclBuilder::new_transient_collection("coll")
+                            .allowed_offers(AllowedOffers::StaticAndDynamic)
+                            .build(),
+                    )
+                    .add_lazy_child("c")
+                    .offer(cm_rust::OfferDecl::Protocol(OfferProtocolDecl {
+                        source: OfferSource::Child(ChildRef {
+                            name: "c".to_string(),
+                            collection: None,
+                        }),
+                        source_name: "static_offer_source".into(),
+                        target: OfferTarget::Collection("coll".to_string()),
+                        target_name: "static_offer_target".into(),
+                        dependency_type: DependencyType::Strong,
+                    }))
+                    .build(),
+            ),
+            ("a", component_decl_with_test_runner()),
+            ("b", component_decl_with_test_runner()),
+            ("c", component_decl_with_test_runner()),
+        ];
+        let test = ActionsTest::new("root", components, Some(vec!["container"].into())).await;
+
+        // Create dynamic instances in "coll".
+        test.create_dynamic_child("coll", "a").await;
+        test.create_dynamic_child_with_args(
+            "coll",
+            "b",
+            fcomponent::CreateChildArgs {
+                dynamic_offers: Some(vec![fdecl::Offer::Protocol(fdecl::OfferProtocol {
+                    source: Some(fdecl::Ref::Child(fdecl::ChildRef {
+                        name: "a".to_string(),
+                        collection: Some("coll".to_string()),
+                    })),
+                    source_name: Some("dyn_offer_source_name".to_string()),
+                    target_name: Some("dyn_offer_target_name".to_string()),
+                    dependency_type: Some(fdecl::DependencyType::Strong),
+                    ..fdecl::OfferProtocol::EMPTY
+                })]),
+                ..fcomponent::CreateChildArgs::EMPTY
+            },
+        )
+        .await;
+
+        // Start the components. This should cause them to have an `Execution`.
+        let component_container = test.look_up(vec!["container"].into()).await;
+        let component_a = test.look_up(vec!["container", "coll:a"].into()).await;
+        let component_b = test.look_up(vec!["container", "coll:b"].into()).await;
+        let component_c = test.look_up(vec!["container", "c"].into()).await;
+        test.model
+            .start_instance(&component_container.abs_moniker, &StartReason::Eager)
+            .await
+            .expect("could not start container");
+        test.model
+            .start_instance(&component_a.abs_moniker, &StartReason::Eager)
+            .await
+            .expect("could not start coll:a");
+        test.model
+            .start_instance(&component_b.abs_moniker, &StartReason::Eager)
+            .await
+            .expect("could not start coll:b");
+        test.model
+            .start_instance(&component_c.abs_moniker, &StartReason::Eager)
+            .await
+            .expect("could not start c");
+        assert!(is_executing(&component_container).await);
+        assert!(is_executing(&component_a).await);
+        assert!(is_executing(&component_b).await);
+        assert!(is_executing(&component_c).await);
+        assert!(has_child(&component_container, "coll:a:1").await);
+        assert!(has_child(&component_container, "coll:b:2").await);
+
+        let component_a_info = ComponentInfo::new(component_a).await;
+        let component_b_info = ComponentInfo::new(component_b).await;
+        let component_container_info = ComponentInfo::new(component_container).await;
+
+        // Register shutdown action, and wait for it. Components should shut down (no more
+        // `Execution`). Also, the instances in the collection should have been destroyed because
+        // they were transient.
+        ActionSet::register(component_container_info.component.clone(), ShutdownAction::new())
+            .await
+            .expect("shutdown failed");
+        component_container_info.check_is_shut_down(&test.runner).await;
+        assert!(!has_child(&component_container_info.component, "coll:a:1").await);
+        assert!(!has_child(&component_container_info.component, "coll:b:2").await);
+        assert!(has_child(&component_container_info.component, "c:0").await);
+        component_a_info.check_is_shut_down(&test.runner).await;
+        component_b_info.check_is_shut_down(&test.runner).await;
+
+        // Verify events.
+        {
+            let mut events: Vec<_> = test
+                .test_hook
+                .lifecycle()
+                .into_iter()
+                .filter(|e| match e {
+                    Lifecycle::Stop(_) | Lifecycle::Destroy(_) => true,
+                    _ => false,
+                })
+                .collect();
+
+            pretty_assertions::assert_eq!(
+                vec![
+                    Lifecycle::Stop(vec!["container:0", "coll:b:2"].into()),
+                    Lifecycle::Stop(vec!["container:0", "coll:a:1"].into()),
+                    Lifecycle::Stop(vec!["container:0", "c:0"].into()),
+                ],
+                events.drain(0..3).collect::<Vec<_>>()
+            );
+
+            // The order here is nondeterministic.
+            pretty_assertions::assert_eq!(
+                btreeset![
+                    Lifecycle::Destroy(vec!["container:0", "coll:b:2"].into()),
+                    Lifecycle::Destroy(vec!["container:0", "coll:a:1"].into()),
+                ],
+                events.drain(0..2).collect::<BTreeSet<_>>()
+            );
+            pretty_assertions::assert_eq!(
+                vec![Lifecycle::Stop(vec!["container:0"].into()),],
+                events
+            );
         }
     }
 

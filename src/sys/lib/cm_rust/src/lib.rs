@@ -774,22 +774,6 @@ pub struct EnvironmentDecl {
     pub stop_timeout_ms: Option<u32>,
 }
 
-pub enum DependencySource<'a> {
-    Runner { registry: &'a Vec<RunnerRegistration> },
-    Resolver { registry: &'a Vec<ResolverRegistration> },
-    Debug { registry: &'a Vec<DebugRegistration> },
-}
-
-impl EnvironmentDecl {
-    pub fn get_dependency_sources<'a>(&'a self) -> Vec<DependencySource<'a>> {
-        vec![
-            DependencySource::Runner { registry: &self.runners },
-            DependencySource::Resolver { registry: &self.resolvers },
-            DependencySource::Debug { registry: &self.debug_capabilities },
-        ]
-    }
-}
-
 #[derive(FidlDecl, Debug, Clone, PartialEq, Eq)]
 #[fidl_decl(fidl_table = "fdecl::ConfigSchema")]
 pub struct ConfigDecl {
