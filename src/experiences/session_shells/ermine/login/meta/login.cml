@@ -31,6 +31,11 @@
             path: "/hosted_directories/account_cache",
         },
         {
+            directory: "account_tmp_dir",
+            rights: [ "rw*" ],
+            path: "/hosted_directories/account_tmp",
+        },
+        {
             storage: "account",
             from: "self",
             backing_dir: "account_data_dir",
@@ -40,6 +45,12 @@
             storage: "account_cache",
             from: "self",
             backing_dir: "account_cache_dir",
+            storage_id: "static_instance_id_or_moniker",
+        },
+        {
+            storage: "account_tmp",
+            from: "self",
+            backing_dir: "account_tmp_dir",
             storage_id: "static_instance_id_or_moniker",
         },
     ],
@@ -69,6 +80,10 @@
             from: "parent",
             rights: [ "r*" ],
             path: "/config/data",
+        },
+        {
+            storage: "tmp",
+            path: "/tmp",
         },
     ],
     offer: [
@@ -134,22 +149,16 @@
             to: [ "#ermine_shell" ],
         },
         {
-            storage: "account",
-            from: "self",
-            to: "#ermine_shell",
-        },
-        {
             // TODO(fxbug.dev/89628): This cache does not currently have any
             // process deleting files when it gets full, meaning all clients
             // need to place constraints on their usage. This is part of a wider
             // question on cache policy management discussed in fxb/89628.
-            storage: "account_cache",
+            storage: [
+                "account",
+                "account_cache",
+                "account_tmp",
+            ],
             from: "self",
-            to: "#ermine_shell",
-        },
-        {
-            storage: "tmp",
-            from: "parent",
             to: "#ermine_shell",
         },
     ],

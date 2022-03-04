@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+import 'dart:io' as io;
 import 'package:fidl/fidl.dart';
 import 'package:ermine_utils/ermine_utils.dart';
 import 'package:fidl_fuchsia_identity_account/fidl_async.dart';
@@ -19,7 +20,10 @@ const kSystemPickedAccountName = 'picked_by_system';
 const kUserPickedAccountName = 'picked_by_user';
 const kAccountDataDirectory = 'account_data';
 const kAccountCacheDirectory = 'account_cache';
+const kAccountTmpDirectory = 'account_tmp';
 const kCacheSubdirectory = 'cache/';
+const kIncomingTmpDirectory = '/tmp/';
+const kTmpSubdirectory = 'account/';
 
 enum AuthMode { automatic, manual }
 
@@ -179,12 +183,24 @@ class AuthService {
     await _publishAccountDirectory(_account!);
   }
 
-  /// Logs out of an account by locking it.
+  /// Logs out of an account by locking it and deleting the associated tmp
+  /// directory.
   Future<void> logout() async {
     assert(_account != null, 'No account exists to logout from.');
-    return _account!.lock();
+
+    log.info('Locking account.');
+    await _account!.lock();
+
+    // We expect the tmp subdirectory should exist by logout, but if it
+    // doesn't then we can just continue without attempting deletion.
+    if (io.Directory('$kIncomingTmpDirectory$kTmpSubdirectory').existsSync()) {
+      log.info('Deleting tmp directory for account.');
+      await io.Directory('$kIncomingTmpDirectory$kTmpSubdirectory')
+          .delete(recursive: true);
+    }
   }
 
+  /// Publishes all flavors of storage directory for the supplied account.
   Future<void> _publishAccountDirectory(Account account) async {
     // Get the data directory for the account.
     log.info('Getting data directory for account.');
@@ -194,7 +210,7 @@ class AuthService {
     // Open or create a subdirectory for the cache storage capability.
     log.info('Opening cache directory for account.');
     final dataDir = RemoteDir(dataDirChannel.first!);
-    final cacheDirChannel = ChannelPair();
+    final cacheSubdirChannel = ChannelPair();
     dataDir.open(
         openRightReadable |
             openRightWritable |
@@ -202,15 +218,30 @@ class AuthService {
             openFlagDirectory,
         0,
         kCacheSubdirectory,
-        InterfaceRequest(cacheDirChannel.second));
+        InterfaceRequest(cacheSubdirChannel.second));
 
-    // Host both directories.
+    // Create a directory for the tmp storage capability.
+    log.info('Creating tmp directory for account.');
+    final tmpDir = RemoteDir(Channel.fromFile(kIncomingTmpDirectory));
+    final tmpSubdirChannel = ChannelPair();
+    tmpDir.open(
+        openRightReadable |
+            openRightWritable |
+            openFlagCreate |
+            openFlagDirectory,
+        0,
+        kTmpSubdirectory,
+        InterfaceRequest(tmpSubdirChannel.second));
+
+    // Host all directories.
     hostedDirectories
       ..removeNode(kAccountDataDirectory)
       ..addNode(kAccountDataDirectory, dataDir)
       ..removeNode(kAccountCacheDirectory)
-      ..addNode(kAccountCacheDirectory, RemoteDir(cacheDirChannel.first!));
+      ..addNode(kAccountCacheDirectory, RemoteDir(cacheSubdirChannel.first!))
+      ..removeNode(kAccountTmpDirectory)
+      ..addNode(kAccountTmpDirectory, RemoteDir(tmpSubdirChannel.first!));
 
-    log.info('Data and cache directories for account published.');
+    log.info('Data, cache, and tmp directories for account published.');
   }
 }

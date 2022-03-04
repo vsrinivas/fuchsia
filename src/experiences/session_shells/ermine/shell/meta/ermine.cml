@@ -153,8 +153,9 @@
             to: "#chrome",
         },
         {
-            storage: "tmp",
+            storage: "account_tmp",
             from: "parent",
+            as: "tmp",
             to: "#chrome",
         },
         {
