@@ -28,7 +28,9 @@ import (
 )
 
 var (
-	coverageTestBinary = flag.String("coverage-test-binary", "", "Path to the instrumented coverage test binary")
+	buildIdDir         = flag.String("build-id-dir", "", "Path to build-id directory")
+	covargs            = flag.String("covargs", "", "Path to covargs binary")
+	coverageTestBinary = flag.String("coverage-test-binary", "", "Path to instrumented coverage test binary")
 	coverageTestName   = flag.String("coverage-test-name", "", "Name of coverage test")
 	goldenCoverageFile = flag.String("golden-coverage", "", "Path to golden coverage file")
 	llvmProfData       = flag.String("llvm-profdata", "", "Path to version of llvm-profdata tool")
@@ -49,7 +51,6 @@ func TestCoverage(t *testing.T) {
 	// Read SSH key which is required to run a test.
 	sshKeyFile := os.Getenv(constants.SSHKeyEnvKey)
 	testOutDir := t.TempDir()
-
 	// Create a new fuchsia tester that is responsible for executing the test.
 	// This is a v2 test, and it uses run-test-suite instead of runtests, so runtests=false.
 	// TODO(fxbug.dev/77634): When we start treating profiles as artifacts, start using ffx
@@ -107,6 +108,11 @@ func TestCoverage(t *testing.T) {
 		t.Fatalf("failed to collect data sinks: %s", err)
 	}
 
+	// Close recording of test outputs.
+	if err := outputs.Close(); err != nil {
+		t.Fatalf("failed to save test outputs: %s", err)
+	}
+
 	// Find the raw profile that corresponds to the given coverage test name.
 	rawProfile := ""
 	if len(outputs.Summary.Tests) != 1 {
@@ -124,22 +130,23 @@ func TestCoverage(t *testing.T) {
 		t.Fatalf("failed to find a raw profile")
 	}
 
-	// Read the raw profile using llvm-profdata show command to ensure that it's valid.
+	// Prepare llvm-profdata arguments.
 	args := []string{
 		"show",
 		"-binary-ids",
 		rawProfile,
 	}
+	// Read the raw profile using llvm-profdata show command to ensure that it's valid.
 	showCmd := exec.Command(*llvmProfData, args...)
 	if showCmdOutput, err := showCmd.CombinedOutput(); err != nil {
 		if _, ok := err.(*exec.ExitError); ok {
 			t.Fatalf("cannot read raw profile %s: %s", rawProfile, string(showCmdOutput))
 		} else {
-			t.Fatalf("cannot execute %s: %s", showCmd, err)
+			t.Fatalf("cannot execute %q: %s", showCmd, err)
 		}
 	}
 
-	// Generate an indexed profile using llvm-profdata merge command.
+	// Prepare llvm-profdata arguments.
 	indexedProfile := filepath.Join(testOutDir, "coverage.profdata")
 	args = []string{
 		"merge",
@@ -147,16 +154,17 @@ func TestCoverage(t *testing.T) {
 		"-o",
 		indexedProfile,
 	}
+	// Generate an indexed profile using llvm-profdata merge command.
 	mergeCmd := exec.Command(*llvmProfData, args...)
 	if mergeCmdOutput, err := mergeCmd.CombinedOutput(); err != nil {
 		if _, ok := err.(*exec.ExitError); ok {
 			t.Fatalf("cannot create an indexed profile: %s", string(mergeCmdOutput))
 		} else {
-			t.Fatalf("cannot execute %s: %s", mergeCmd, err)
+			t.Fatalf("cannot execute %q: %s", mergeCmd, err)
 		}
 	}
 
-	// Generate a coverage report via using llvm-cov export command.
+	// Prepare llvm-cov arguments.
 	args = []string{
 		"export",
 		"-summary-only",
@@ -164,13 +172,14 @@ func TestCoverage(t *testing.T) {
 		"-instr-profile", indexedProfile,
 		*coverageTestBinary,
 	}
+	// Generate a coverage report via using llvm-cov export command.
 	exportCmd := exec.Command(*llvmCov, args...)
 	generatedCoverageOutput, err := exportCmd.CombinedOutput()
 	if err != nil {
 		if _, ok := err.(*exec.ExitError); ok {
 			t.Fatalf("cannot export coverage: %s", string(generatedCoverageOutput))
 		} else {
-			t.Fatalf("cannot execute %s: %s", exportCmd, err)
+			t.Fatalf("cannot execute %q: %s", exportCmd, err)
 		}
 	}
 	var generatedCoverageExport llvm.Export
@@ -178,24 +187,65 @@ func TestCoverage(t *testing.T) {
 		t.Fatalf("cannot unmarshal generated coverage: %s", err)
 	}
 
-	// Read golden coverage report.
+	// Read golden coverage.
 	goldenCoverage, err := os.ReadFile(*goldenCoverageFile)
 	if err != nil {
-		t.Fatalf("cannot find golden coverage report: %s", err)
+		t.Fatalf("cannot find golden coverage file: %s", err)
 	}
 	var goldenCoverageExport llvm.Export
 	if err := json.Unmarshal(goldenCoverage, &goldenCoverageExport); err != nil {
 		t.Fatalf("cannot unmarshal golden coverage: %s", err)
 	}
 
-	// Compare the generated coverage report with a golden coverage report.
+	// Compare the generated coverage with a golden coverage.
 	diff := cmp.Diff(goldenCoverageExport, generatedCoverageExport)
 	if diff != "" {
 		t.Fatalf("unexpected coverage (-golden-coverage +generated-coverage): %s", diff)
 	}
 
-	// Close recording of test outputs.
-	if err := outputs.Close(); err != nil {
-		t.Fatalf("failed to save test outputs: %s", err)
+	summaryFile := filepath.Join(testOutDir, "summary.json")
+	if _, err := os.Stat(summaryFile); err != nil {
+		t.Fatalf("failed to find summary.json: %s", err)
+	}
+	// Prepare covargs arguments.
+	args = []string{
+		"-build-id-dir", *buildIdDir,
+		"-llvm-cov", *llvmCov,
+		"-llvm-profdata", *llvmProfData,
+		"-output-dir", testOutDir,
+		"-coverage-report=false",
+		"-report-dir", testOutDir,
+		"-save-temps", testOutDir,
+		"-summary", summaryFile,
+	}
+
+	// Invoke covargs.
+	covargsCmd := exec.Command(*covargs, args...)
+	if covargsOutput, err := covargsCmd.CombinedOutput(); err != nil {
+		if _, ok := err.(*exec.ExitError); ok {
+			t.Fatalf("failed to run covargs: %s", string(covargsOutput))
+		} else {
+			t.Fatalf("cannot execute %q: %s", covargsCmd, err)
+		}
+	}
+
+	// Read generated coverage.
+	coverageFile := filepath.Join(testOutDir, "coverage.json")
+	generatedCoverage, err := os.ReadFile(coverageFile)
+	if err != nil {
+		t.Fatalf("cannot read coverage.json: %s", err)
+	}
+	if err := json.Unmarshal(generatedCoverage, &generatedCoverageExport); err != nil {
+		t.Fatalf("cannot unmarshal generated coverage: %s", err)
+	}
+
+	if len(goldenCoverageExport.Data) != 1 || len(generatedCoverageExport.Data) != 1 {
+		t.Fatalf("failed to export data")
+	}
+
+	// Compare the covargs generated coverage summary section with a golden coverage.
+	diff = cmp.Diff(goldenCoverageExport.Data[0].Totals, generatedCoverageExport.Data[0].Totals)
+	if diff != "" {
+		t.Fatalf("unexpected coverage (-golden-coverage +generated-coverage): %s", diff)
 	}
 }
