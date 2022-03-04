@@ -2632,15 +2632,15 @@ static void ath10k_pci_free_irq(struct ath10k* ar) {
 static zx_status_t ath10k_pci_init_irq(struct ath10k* ar) {
   struct ath10k_pci* ar_pci = ath10k_pci_priv(ar);
   pci_protocol_t* pdev = &ar_pci->pdev;
-  uint32_t irq_cnt = 0;
 
   if (ath10k_pci_irq_mode != ATH10K_PCI_IRQ_AUTO) {
     ath10k_trace("limiting irq mode to: %d\n", ath10k_pci_irq_mode);
   }
 
   /* Try MSI */
-  if ((ath10k_pci_irq_mode != ATH10K_PCI_IRQ_LEGACY) &&
-      (pci_query_irq_mode(pdev, ZX_PCIE_IRQ_MODE_MSI, &irq_cnt) == ZX_OK) &&
+  pci_interrupt_modes_t irq_modes = {};
+  pci_get_interrupt_modes(pdev, &irq_modes);
+  if ((ath10k_pci_irq_mode != ATH10K_PCI_IRQ_LEGACY) && (irq_modes.msi >= 1) &&
       (pci_set_interrupt_mode(pdev, ZX_PCIE_IRQ_MODE_MSI, 1) == ZX_OK)) {
     ar_pci->oper_irq_mode = ATH10K_PCI_IRQ_MSI;
 
@@ -2656,7 +2656,7 @@ static zx_status_t ath10k_pci_init_irq(struct ath10k* ar) {
    * For now, fix the race by repeating the write in below
    * synchronization checking.
    */
-  if ((pci_query_irq_mode(pdev, ZX_PCIE_IRQ_MODE_LEGACY, &irq_cnt) == ZX_OK) &&
+  if ((irq_modes.legacy == 1) &&
       (pci_set_interrupt_mode(pdev, ZX_PCIE_IRQ_MODE_LEGACY, 1) == ZX_OK)) {
     ar_pci->oper_irq_mode = ATH10K_PCI_IRQ_LEGACY;
 
