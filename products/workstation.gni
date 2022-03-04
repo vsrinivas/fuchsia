@@ -33,10 +33,6 @@ base_package_labels += [
   "//src/media/audio/drivers/configurator:package",
   "//src/power:battery",
   "//src/sys/activity",
-  "//src/ui:workstation",
-  "//src/ui/bin/brightness_manager",
-  "//src/ui/bin/screensaver",
-  "//src/ui/bin/shortcut",
   "//third_party/openssh-portable:openssh-tools",
 
   # TODO(fxbug.dev/82822): Remove after out-of-tree tests migrate to
@@ -79,8 +75,12 @@ cache_package_labels += [
   "//src/media/playback/bundles:services",
   "//src/media/playback/bundles:audio_consumer_config",
   "//src/session",
+  "//src/ui/bin/brightness_manager",
+  "//src/ui/bin/screensaver",
+  "//src/ui/bin/shortcut",
   "//src/ui/bin/terminal",
   "//src/ui/scenic",
+  "//src/ui:workstation",
 ]
 
 # Add Bluetooth packages
