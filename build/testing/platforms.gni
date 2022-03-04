@@ -147,6 +147,5 @@ test_platforms = [
   # fxbug.dev/9127
   {
     device_type = "GCE"
-    cpu = "x64"
   },
 ]

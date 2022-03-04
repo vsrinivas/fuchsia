@@ -6,6 +6,11 @@ import("//build/board.gni")
 import("//build/testing/environments.gni")
 import("//build/testing/platforms.gni")
 
+declare_args() {
+  # A list of device types this build is allowed to run tests on.
+  allowed_test_device_types = []
+}
+
 _max_severity_allowed_val = [
   "FATAL",
   "ERROR",
@@ -257,33 +262,33 @@ template("test_spec") {
   # We constrain the allowed device types and the dimensions considered as
   # a function of this.
   # TODO(joshuaseaton): Use board_name instead of cpu in the reasoning above.
-  allowed_device_types = []
+  allowed_device_types = allowed_test_device_types
   if (board_name == "x64") {
-    allowed_device_types = [
+    allowed_device_types += [
       "AEMU",
       "QEMU",
       "Intel NUC Kit NUC7i5DNHE",
       "GCE",
     ]
   } else if (board_name == "qemu-arm64") {
-    allowed_device_types = [ "QEMU" ]
+    allowed_device_types += [ "QEMU" ]
   } else if (board_name == "qemu-x64") {
-    allowed_device_types = [
+    allowed_device_types += [
       "AEMU",
       "QEMU",
     ]
   } else if (board_name == "astro") {
-    allowed_device_types = [ "Astro" ]
+    allowed_device_types += [ "Astro" ]
   } else if (board_name == "luis") {
-    allowed_device_types = [ "Luis" ]
+    allowed_device_types += [ "Luis" ]
   } else if (board_name == "sherlock") {
-    allowed_device_types = [ "Sherlock" ]
+    allowed_device_types += [ "Sherlock" ]
   } else if (board_name == "nelson") {
-    allowed_device_types = [ "Nelson" ]
+    allowed_device_types += [ "Nelson" ]
   } else if (board_name == "vim3") {
-    allowed_device_types = [ "Vim3" ]
+    allowed_device_types += [ "Vim3" ]
   } else if (board_name == "chromebook-x64") {
-    allowed_device_types = [ "Atlas" ]
+    allowed_device_types += [ "Atlas" ]
   }
 
   _environments = []
