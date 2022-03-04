@@ -74,14 +74,14 @@ import("//build/flutter/internal/flutter_dart_test_component.gni")
 #  visibility
 #  non_dart_deps
 template("flutter_test_component") {
+  # TODO(fxbug.dev/64126) use the default build config
+  _build_cfg = dart_debug_build_cfg
   if (defined(invoker.build_cfg)) {
     _build_cfg = invoker.build_cfg
-  } else {
-    _build_cfg = dart_default_build_cfg
   }
 
   flutter_dart_test_component(target_name) {
-    forward_variables_from(invoker, "*", [ "build_cfg" ])
+    forward_variables_from(invoker, "*")
 
     build_cfg = _build_cfg
   }
