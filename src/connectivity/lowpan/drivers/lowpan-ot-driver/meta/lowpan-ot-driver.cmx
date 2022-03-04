@@ -21,6 +21,7 @@
             "fuchsia.net.interfaces.State",
             "fuchsia.net.interfaces.admin.Installer",
             "fuchsia.net.mdns.Publisher",
+            "fuchsia.net.mdns.Resolver",
             "fuchsia.net.mdns.Subscriber",
             "fuchsia.net.stack.Stack",
             "fuchsia.net.tun.Control",
