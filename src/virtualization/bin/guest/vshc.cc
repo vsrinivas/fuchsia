@@ -395,6 +395,7 @@ class ContainerStartup {
   }
 
   bool IsReady() { return container_status_ == fuchsia::virtualization::ContainerStatus::READY; }
+  bool IsFailure() { return container_status_ == fuchsia::virtualization::ContainerStatus::FAILED; }
 
  private:
   void Print(const std::string& output) { std::cout << output << std::flush; }
@@ -512,37 +513,54 @@ zx_status_t handle_vsh(std::optional<uint32_t> o_env_id, std::optional<uint32_t>
   if (!args.empty()) {
     linux_env_name = kLinuxEnvironmentName;
 
-    // Connect to the Linux manager.
-    async::Loop linux_manager_loop(&kAsyncLoopConfigNeverAttachToThread);
-    fuchsia::virtualization::LinuxManagerPtr linux_manager;
-    zx_status_t status =
-        context->svc()->Connect(linux_manager.NewRequest(linux_manager_loop.dispatcher()));
-    if (status != ZX_OK) {
-      std::cerr << "Unable to access /svc/" << fuchsia::virtualization::LinuxManager::Name_ << "\n";
-      return status;
-    }
+    for (;;) {
+      // Connect to the Linux manager.
+      async::Loop linux_manager_loop(&kAsyncLoopConfigNeverAttachToThread);
+      fuchsia::virtualization::LinuxManagerPtr linux_manager;
+      zx_status_t status =
+          context->svc()->Connect(linux_manager.NewRequest(linux_manager_loop.dispatcher()));
+      if (status != ZX_OK) {
+        std::cerr << "Unable to access /svc/" << fuchsia::virtualization::LinuxManager::Name_
+                  << "\n";
+        return status;
+      }
 
-    ContainerStartup container_startup;
-    linux_manager.events().OnGuestInfoChanged =
-        [&container_startup](std::string label, fuchsia::virtualization::LinuxGuestInfo info) {
-          container_startup.OnGuestInfoChanged(info);
-        };
+      ContainerStartup container_startup;
+      linux_manager.events().OnGuestInfoChanged =
+          [&container_startup](std::string label, fuchsia::virtualization::LinuxGuestInfo info) {
+            container_startup.OnGuestInfoChanged(info);
+          };
 
-    // Get the initial state of the container and start it if needed.
-    linux_manager->StartAndGetLinuxGuestInfo(
-        std::string(kLinuxEnvironmentName), [&container_startup, &linux_guest_cid](auto result) {
-          linux_guest_cid = result.response().info.cid();
-          container_startup.OnGuestStarted(result.response().info);
-        });
-    linux_manager_loop.Run(zx::time::infinite(), /*once*/ true);
+      // Get the initial state of the container and start it if needed.
+      linux_manager->StartAndGetLinuxGuestInfo(
+          std::string(kLinuxEnvironmentName), [&container_startup, &linux_guest_cid](auto result) {
+            linux_guest_cid = result.response().info.cid();
+            container_startup.OnGuestStarted(result.response().info);
+          });
+      linux_manager_loop.Run(zx::time::infinite(), /*once*/ true);
 
-    // Loop until container is ready. We intentionally continue on failure in
-    // case we recover. It also gives the user a chance to see the error as
-    // exiting might result in the terminal being closed.
-    while (!container_startup.IsReady()) {
-      container_startup.PrintProgress();
-      // 10 progress updates per second.
-      linux_manager_loop.Run(zx::deadline_after(zx::msec(100)), /*once*/ true);
+      // Loop until container is ready. We intentionally continue on failure in
+      // case we recover. It also gives the user a chance to see the error as
+      // exiting might result in the terminal being closed.
+      while (!container_startup.IsReady() && !container_startup.IsFailure()) {
+        container_startup.PrintProgress();
+        // 10 progress updates per second.
+        linux_manager_loop.Run(zx::deadline_after(zx::msec(100)), /*once*/ true);
+      }
+
+      if (container_startup.IsReady()) {
+        break;
+      }
+      std::cout << "Starting the Linux container has failed. Retry? (Y/n)" << std::endl;
+      int c = std::getchar();
+      switch (c) {
+        case 'y':
+        case 'Y':
+        case '\n':
+          continue;
+        default:
+          break;
+      }
     }
   }
 
