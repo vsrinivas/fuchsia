@@ -9,7 +9,8 @@ use {
     async_trait::async_trait,
     fidl::endpoints::{ProtocolMarker, ServerEnd},
     fidl::prelude::*,
-    fidl_fuchsia_component_runner as fcrunner, fidl_fuchsia_io as fio,
+    fidl_fuchsia_component as fcomponent, fidl_fuchsia_component_runner as fcrunner,
+    fidl_fuchsia_io as fio,
     fidl_fuchsia_io::{DirectoryMarker, DirectoryProxy},
     fidl_fuchsia_ldsvc::{LoaderMarker, LoaderRequest},
     fuchsia_async as fasync,
@@ -86,22 +87,23 @@ pub enum ComponentError {
 impl ComponentError {
     /// Convert this error into its approximate `fuchsia.component.Error` equivalent.
     pub fn as_zx_status(&self) -> zx::Status {
-        match self {
-            Self::InvalidStartInfo(_) => zx::Status::INVALID_ARGS,
-            Self::InvalidArgs(_, _) => zx::Status::INVALID_ARGS,
-            Self::MissingNamespace(_) => zx::Status::INVALID_ARGS,
-            Self::MissingOutDir(_) => zx::Status::INVALID_ARGS,
-            Self::MissingPkg(_) => zx::Status::INVALID_ARGS,
-            Self::LibraryLoadError(_, _) => zx::Status::INVALID_ARGS,
-            Self::LoadingExecutable(_, _) => zx::Status::INVALID_ARGS,
-            Self::VmoChild(_, _) => zx::Status::INTERNAL,
-            Self::ServeSuite(_) => zx::Status::INTERNAL,
-            Self::Fidl(_, _) => zx::Status::INTERNAL,
-            Self::CreateJob(_) => zx::Status::INTERNAL,
-            Self::CreateChannel(_) => zx::Status::INTERNAL,
-            Self::DuplicateJob(_) => zx::Status::INTERNAL,
-            Self::InvalidUrl => zx::Status::INVALID_ARGS,
-        }
+        let status = match self {
+            Self::InvalidStartInfo(_) => fcomponent::Error::InvalidArguments,
+            Self::InvalidArgs(_, _) => fcomponent::Error::InvalidArguments,
+            Self::MissingNamespace(_) => fcomponent::Error::InvalidArguments,
+            Self::MissingOutDir(_) => fcomponent::Error::InvalidArguments,
+            Self::MissingPkg(_) => fcomponent::Error::InvalidArguments,
+            Self::LibraryLoadError(_, _) => fcomponent::Error::Internal,
+            Self::LoadingExecutable(_, _) => fcomponent::Error::InstanceCannotStart,
+            Self::VmoChild(_, _) => fcomponent::Error::Internal,
+            Self::ServeSuite(_) => fcomponent::Error::Internal,
+            Self::Fidl(_, _) => fcomponent::Error::Internal,
+            Self::CreateJob(_) => fcomponent::Error::ResourceUnavailable,
+            Self::CreateChannel(_) => fcomponent::Error::ResourceUnavailable,
+            Self::DuplicateJob(_) => fcomponent::Error::Internal,
+            Self::InvalidUrl => fcomponent::Error::InvalidArguments,
+        };
+        zx::Status::from_raw(status.into_primitive().try_into().unwrap())
     }
 }
 
@@ -715,10 +717,14 @@ mod tests {
         let get_test_server = || DummyServer {};
         let err = start_component(start_info, server_controller, get_test_server, |_| Ok(())).await;
         assert_matches!(err, Err(ComponentError::InvalidStartInfo(_)));
-        assert_matches!(
-            client_controller.take_event_stream().next().await,
-            Some(Err(fidl::Error::ClientChannelClosed { status: zx::Status::INVALID_ARGS, .. }))
+        let expected_status = zx::Status::from_raw(
+            fcomponent::Error::InvalidArguments.into_primitive().try_into().unwrap(),
         );
+        let s = assert_matches!(
+            client_controller.take_event_stream().next().await,
+            Some(Err(fidl::Error::ClientChannelClosed { status: s, .. })) => s
+        );
+        assert_eq!(s, expected_status);
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
