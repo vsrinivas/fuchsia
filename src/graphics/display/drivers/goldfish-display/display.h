@@ -120,6 +120,7 @@ class Display : public DisplayType,
     uint32_t host_display_id = 0;
     float scale = 1.0;
     zx::time expected_next_flush = zx::time::infinite_past();
+    config_stamp_t latest_config_stamp = {.value = INVALID_CONFIG_STAMP_VALUE};
   };
 
   struct DisplayConfig {
@@ -178,9 +179,7 @@ class Display : public DisplayType,
   fbl::Mutex flush_lock_;
   ddk::DisplayControllerInterfaceProtocolClient dc_intf_ TA_GUARDED(flush_lock_);
 
-  std::map<uint64_t, DisplayConfig> current_config_;
   std::map<uint64_t, DisplayConfig> pending_config_;
-  config_stamp_t latest_config_stamp_ = {.value = INVALID_CONFIG_STAMP_VALUE};
 
   zx::event pipe_event_;
 
