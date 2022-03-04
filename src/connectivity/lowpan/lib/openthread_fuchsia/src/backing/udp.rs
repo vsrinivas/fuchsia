@@ -179,11 +179,6 @@ impl UdpSocketHelpers for ot::UdpSocket<'_> {
             ot::Error::Failed
         })?;
 
-        socket.as_ref().set_only_v6(true).map_err(move |err| {
-            error!("Error: {:?}", err);
-            ot::Error::Failed
-        })?;
-
         socket.as_ref().set_ttl(DEFAULT_HOP_LIMIT.into()).map_err(move |err| {
             error!("Error: {:?}", err);
             ot::Error::Failed
