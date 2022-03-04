@@ -57,7 +57,6 @@ pub(crate) mod inner {
 #[must_use]
 pub trait Hasher: Default + Clone + std::hash::Hasher + self::inner::Hasher {
     /// The output digest.
-    #[must_use]
     type Digest: Digest;
 
     /// Adds bytes to the hash.

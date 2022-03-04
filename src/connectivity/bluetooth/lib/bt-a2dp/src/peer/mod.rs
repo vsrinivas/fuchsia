@@ -458,11 +458,11 @@ impl Peer {
 
 /// Future which completes when the A2DP peer has closed the control conection.
 /// See `Peer::closed`
+#[must_use = "futures do nothing unless you `.await` or poll them"]
 pub struct ClosedPeer {
     inner: Weak<Mutex<Option<Vec<Waker>>>>,
 }
 
-#[must_use = "futures do nothing unless you `.await` or poll them"]
 impl Future for ClosedPeer {
     type Output = ();
 

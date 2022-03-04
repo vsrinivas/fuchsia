@@ -8,7 +8,7 @@ use {
     std::ffi::CStr,
 };
 
-/// "C" externs provided from the zstd third_party library.
+// "C" externs provided from the zstd third_party library.
 #[link(name = "zstd")]
 extern "C" {
     fn ZSTD_compress(
@@ -28,7 +28,7 @@ extern "C" {
     fn ZSTD_getErrorName(code: size_t) -> *const c_char;
 }
 
-/// "C" externs for ffi-bridged compression functions.
+// "C" externs for ffi-bridged compression functions.
 #[link(name = "ffi-bridge")]
 extern "C" {
     fn zstd_chunked_decompress(

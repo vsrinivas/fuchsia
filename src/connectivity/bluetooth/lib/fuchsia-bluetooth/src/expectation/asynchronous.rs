@@ -72,7 +72,6 @@ impl<T: ExpectableState> ExpectationFuture<T> {
 
 impl<T: ExpectableState> std::marker::Unpin for ExpectationFuture<T> {}
 
-#[must_use = "futures do nothing unless polled"]
 impl<T: ExpectableState> Future for ExpectationFuture<T> {
     type Output = T::State;
 

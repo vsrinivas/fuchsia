@@ -18,6 +18,7 @@ type TokenProviderResult<T> = Result<T, TokenProviderError>;
 pub struct HttpRequest(fidl_fuchsia_net_http::Request);
 
 /// A builder for `HttpRequest`.
+#[must_use = "HttpRequestBuilder must be consumed with finish()."]
 pub struct HttpRequestBuilder<'a> {
     url: String,
     method: String,
@@ -25,7 +26,6 @@ pub struct HttpRequestBuilder<'a> {
     body: Option<&'a str>,
 }
 
-#[must_use = "HttpRequestBuilder must be consumed with finish()."]
 impl<'a> HttpRequestBuilder<'a> {
     /// Create a new `HttpRequestBuilder`.
     pub fn new<T, U>(url: T, method: U) -> Self
