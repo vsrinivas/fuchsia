@@ -3,8 +3,13 @@
 // found in the LICENSE file.
 
 #include <fidl/test.transport/cpp/driver/wire.h>
+#include <lib/async/cpp/task.h>
+#include <lib/sync/cpp/completion.h>
 
 #include <zxtest/zxtest.h>
+
+#include "sdk/lib/fidl_driver/tests/transport/death_test_helper.h"
+#include "sdk/lib/fidl_driver/tests/transport/scoped_fake_driver.h"
 
 // Test creating a typed channel endpoint pair.
 TEST(Endpoints, CreateFromProtocol) {
@@ -53,3 +58,148 @@ TEST(Endpoints, CreateFromProtocolOutParameterStyleServerRetained) {
   ASSERT_TRUE(server_end.is_valid());
   ASSERT_TRUE(client_end->is_valid());
 }
+
+// These checks are only performed in debug builds.
+#ifndef NDEBUG
+
+TEST(WireClient, CannotDestroyInDifferentDispatcherThanBound) {
+  fidl_driver_testing::ScopedFakeDriver driver;
+
+  zx::status dispatcher1 = fdf::Dispatcher::Create(0);
+  ASSERT_OK(dispatcher1.status_value());
+
+  zx::status dispatcher2 = fdf::Dispatcher::Create(0);
+  ASSERT_OK(dispatcher2.status_value());
+
+  zx::status endpoints = fdf::CreateEndpoints<test_transport::TwoWayTest>();
+  ASSERT_OK(endpoints.status_value());
+
+  std::unique_ptr<fdf::WireClient<test_transport::TwoWayTest>> client;
+
+  // Create on one.
+  sync::Completion created;
+  async::PostTask(dispatcher1->async_dispatcher(), [&] {
+    client = std::make_unique<fdf::WireClient<test_transport::TwoWayTest>>();
+    client->Bind(std::move(endpoints->client), dispatcher1->get());
+    created.Signal();
+  });
+  ASSERT_OK(created.Wait());
+
+  // Destroy on another.
+  fidl_driver_testing::CurrentThreadExceptionHandler exception_handler;
+  sync::Completion destroyed;
+  async::PostTask(dispatcher2->async_dispatcher(), [&] {
+    exception_handler.Try([&] { client.reset(); });
+    destroyed.Signal();
+  });
+
+  ASSERT_NO_FATAL_FAILURE(exception_handler.WaitForOneSwBreakpoint());
+  ASSERT_OK(destroyed.Wait());
+}
+
+TEST(WireClient, CannotDestroyOnUnmanagedThread) {
+  fidl_driver_testing::ScopedFakeDriver driver;
+
+  zx::status dispatcher1 = fdf::Dispatcher::Create(0);
+  ASSERT_OK(dispatcher1.status_value());
+
+  zx::status endpoints = fdf::CreateEndpoints<test_transport::TwoWayTest>();
+  ASSERT_OK(endpoints.status_value());
+
+  std::unique_ptr<fdf::WireClient<test_transport::TwoWayTest>> client;
+
+  // Create on one.
+  sync::Completion created;
+  async::PostTask(dispatcher1->async_dispatcher(), [&] {
+    client = std::make_unique<fdf::WireClient<test_transport::TwoWayTest>>();
+    client->Bind(std::move(endpoints->client), dispatcher1->get());
+    created.Signal();
+  });
+  ASSERT_OK(created.Wait());
+
+  // Destroy on another.
+  fidl_driver_testing::CurrentThreadExceptionHandler exception_handler;
+  sync::Completion destroyed;
+  std::thread thread([&] {
+    exception_handler.Try([&] { client.reset(); });
+    destroyed.Signal();
+  });
+
+  ASSERT_NO_FATAL_FAILURE(exception_handler.WaitForOneSwBreakpoint());
+  ASSERT_OK(destroyed.Wait());
+  thread.join();
+}
+
+TEST(WireSharedClient, CanSendAcrossDispatcher) {
+  fidl_driver_testing::ScopedFakeDriver driver;
+
+  zx::status dispatcher1 = fdf::Dispatcher::Create(0);
+  ASSERT_OK(dispatcher1.status_value());
+
+  zx::status dispatcher2 = fdf::Dispatcher::Create(0);
+  ASSERT_OK(dispatcher2.status_value());
+
+  zx::status endpoints = fdf::CreateEndpoints<test_transport::TwoWayTest>();
+  ASSERT_OK(endpoints.status_value());
+
+  std::unique_ptr<fdf::WireSharedClient<test_transport::TwoWayTest>> client;
+
+  // Create on one.
+  sync::Completion created;
+  async::PostTask(dispatcher1->async_dispatcher(), [&] {
+    client = std::make_unique<fdf::WireSharedClient<test_transport::TwoWayTest>>();
+    client->Bind(std::move(endpoints->client), dispatcher1->get());
+    created.Signal();
+  });
+  ASSERT_OK(created.Wait());
+
+  // Destroy on another.
+  sync::Completion destroyed;
+  async::PostTask(dispatcher2->async_dispatcher(), [&] {
+    client.reset();
+    destroyed.Signal();
+  });
+  ASSERT_OK(destroyed.Wait());
+}
+
+TEST(WireClient, CannotBindUnsynchronizedDispatcher) {
+  fidl_driver_testing::ScopedFakeDriver driver;
+
+  zx::status dispatcher = fdf::Dispatcher::Create(FDF_DISPATCHER_OPTION_UNSYNCHRONIZED);
+  ASSERT_OK(dispatcher.status_value());
+
+  zx::status endpoints = fdf::CreateEndpoints<test_transport::TwoWayTest>();
+  ASSERT_OK(endpoints.status_value());
+
+  fdf::WireClient<test_transport::TwoWayTest> client;
+  sync::Completion created;
+  fidl_driver_testing::CurrentThreadExceptionHandler exception_handler;
+  async::PostTask(dispatcher->async_dispatcher(), [&] {
+    exception_handler.Try([&] { client.Bind(std::move(endpoints->client), dispatcher->get()); });
+    client = {};
+    created.Signal();
+  });
+  ASSERT_NO_FATAL_FAILURE(exception_handler.WaitForOneSwBreakpoint());
+  ASSERT_OK(created.Wait());
+}
+
+TEST(WireSharedClient, CanBindUnsynchronizedDispatcher) {
+  fidl_driver_testing::ScopedFakeDriver driver;
+
+  zx::status dispatcher = fdf::Dispatcher::Create(FDF_DISPATCHER_OPTION_UNSYNCHRONIZED);
+  ASSERT_OK(dispatcher.status_value());
+
+  zx::status endpoints = fdf::CreateEndpoints<test_transport::TwoWayTest>();
+  ASSERT_OK(endpoints.status_value());
+
+  fdf::WireSharedClient<test_transport::TwoWayTest> client;
+  sync::Completion created;
+  async::PostTask(dispatcher->async_dispatcher(), [&] {
+    client.Bind(std::move(endpoints->client), dispatcher->get());
+    client = {};
+    created.Signal();
+  });
+  ASSERT_OK(created.Wait());
+}
+
+#endif  // NDEBUG

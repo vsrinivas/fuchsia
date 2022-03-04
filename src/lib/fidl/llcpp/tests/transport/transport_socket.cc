@@ -56,6 +56,11 @@ zx_status_t socket_create_waiter(fidl_handle_t handle, async_dispatcher_t* dispa
   return ZX_OK;
 }
 
+void socket_create_thread_checker(async_dispatcher_t* dispatcher, ThreadingPolicy threading_policy,
+                                  AnyThreadChecker& any_thread_checker) {
+  any_thread_checker.emplace<ZirconThreadChecker>(threading_policy);
+}
+
 void socket_close(fidl_handle_t handle) { zx_handle_close(handle); }
 
 }  // namespace
@@ -66,6 +71,7 @@ const TransportVTable SocketTransport::VTable = {
     .write = socket_write,
     .read = socket_read,
     .create_waiter = socket_create_waiter,
+    .create_thread_checker = socket_create_thread_checker,
     .close = socket_close,
 };
 

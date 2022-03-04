@@ -12,6 +12,7 @@
 
 #include <zxtest/zxtest.h>
 
+#include "sdk/lib/fidl_driver/tests/transport/scoped_fake_driver.h"
 #include "sdk/lib/fidl_driver/tests/transport/server_on_unbound_helper.h"
 
 namespace {
@@ -36,9 +37,7 @@ struct TestServer : public fdf::WireServer<test_transport::TwoWayTest> {
 };
 
 TEST(DriverTransport, TwoWayAsync) {
-  void* driver = reinterpret_cast<void*>(uintptr_t(1));
-  fdf_internal_push_driver(driver);
-  auto deferred = fit::defer([]() { fdf_internal_pop_driver(); });
+  fidl_driver_testing::ScopedFakeDriver driver;
 
   auto dispatcher = fdf::Dispatcher::Create(FDF_DISPATCHER_OPTION_UNSYNCHRONIZED);
   ASSERT_OK(dispatcher.status_value());

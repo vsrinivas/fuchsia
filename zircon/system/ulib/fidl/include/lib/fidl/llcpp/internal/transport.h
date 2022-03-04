@@ -7,6 +7,7 @@
 
 #include <lib/fidl/coding.h>
 #include <lib/fidl/llcpp/internal/any.h>
+#include <lib/fidl/llcpp/internal/thread_checker.h>
 #include <lib/fidl/llcpp/result.h>
 #include <lib/fit/function.h>
 #include <zircon/assert.h>
@@ -233,6 +234,12 @@ struct TransportVTable {
                                TransportWaitSuccessHandler success_handler,
                                TransportWaitFailureHandler failure_handler,
                                AnyTransportWaiter& any_transport_waiter);
+
+  // Creates a thread checker object specific to the dispatcher type associated
+  // with the transport. For example, if the dispatcher has a concept of virtual
+  // threads, the thread checker implementation should check virtual threads.
+  void (*create_thread_checker)(async_dispatcher_t* dispatcher, ThreadingPolicy threading_policy,
+                                AnyThreadChecker& any_thread_checker);
 
   // Close the handle.
   void (*close)(fidl_handle_t);

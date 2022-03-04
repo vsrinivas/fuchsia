@@ -43,10 +43,11 @@ bool DispatchError::RequiresImmediateTeardown() {
   return !(origin == fidl::ErrorOrigin::kSend && info.reason() == fidl::Reason::kPeerClosed);
 }
 
-AsyncBinding::AsyncBinding(async_dispatcher_t* dispatcher,
-                           fidl::internal::AnyUnownedTransport transport,
+AsyncBinding::AsyncBinding(async_dispatcher_t* dispatcher, AnyUnownedTransport transport,
                            ThreadingPolicy threading_policy)
-    : dispatcher_(dispatcher), transport_(transport), thread_checker_(threading_policy) {
+    : dispatcher_(dispatcher),
+      transport_(transport),
+      thread_checker_(transport.vtable(), dispatcher, threading_policy) {
   ZX_ASSERT(dispatcher_);
   ZX_ASSERT(transport_.is_valid());
   transport_.create_waiter(

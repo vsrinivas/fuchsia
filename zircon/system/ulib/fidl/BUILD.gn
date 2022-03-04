@@ -113,6 +113,7 @@ if (is_fuchsia) {
                     "lib/fidl/llcpp/internal/endpoints.h",
                     "lib/fidl/llcpp/internal/server_details.h",
                     "lib/fidl/llcpp/internal/thread_checker.h",
+                    "lib/fidl/llcpp/internal/debug_thread_checker.h",
                     "lib/fidl/llcpp/internal/transport.h",
                     "lib/fidl/llcpp/internal/transport_channel.h",
                   ] + llcpp_wavl_tree_headers
@@ -125,6 +126,7 @@ if (is_fuchsia) {
           "include/lib/fidl/llcpp/internal/endpoints.h",
           "include/lib/fidl/llcpp/internal/server_details.h",
           "include/lib/fidl/llcpp/internal/thread_checker.h",
+          "lib/fidl/llcpp/internal/debug_thread_checker.h",
           "include/lib/fidl/llcpp/internal/transport.h",
           "include/lib/fidl/llcpp/internal/transport_channel.h",
         ] + llcpp_wavl_tree_headers_with_include

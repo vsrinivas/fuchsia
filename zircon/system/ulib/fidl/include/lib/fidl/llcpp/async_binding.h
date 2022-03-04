@@ -11,8 +11,8 @@
 #include <lib/fidl/epitaph.h>
 #include <lib/fidl/llcpp/extract_resource_on_destruction.h>
 #include <lib/fidl/llcpp/internal/client_details.h>
+#include <lib/fidl/llcpp/internal/debug_thread_checker.h>
 #include <lib/fidl/llcpp/internal/endpoints.h>
-#include <lib/fidl/llcpp/internal/thread_checker.h>
 #include <lib/fidl/llcpp/message.h>
 #include <lib/fidl/llcpp/result.h>
 #include <lib/fidl/llcpp/transaction.h>
@@ -234,13 +234,12 @@ class AsyncBinding : public std::enable_shared_from_this<AsyncBinding> {
   // |keep_alive_| must happen on a dispatcher thread.
   std::shared_ptr<AsyncBinding> keep_alive_ = {};
 
-  // |thread_checker_| records the thread ID of constructing thread and checks
-  // that required operations run on that thread when the threading policy calls
-  // for it.
+  // |thread_checker_| checks that required operations run on the appropriate
+  // thread as indicated by the threading policy.
   //
   // |thread_checker_| is no-op in release builds, and may be completely
   // optimized out.
-  [[no_unique_address]] ThreadChecker thread_checker_;
+  [[no_unique_address]] DebugOnlyThreadChecker thread_checker_;
 
   // A lock protecting the binding |lifecycle|.
   std::mutex lock_;

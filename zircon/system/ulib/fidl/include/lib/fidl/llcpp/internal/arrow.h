@@ -42,6 +42,7 @@ struct Arrow {
 
   // Returns a pointer to the concrete messaging implementation.
   Impl* operator->() { return &impl_; }
+  const Impl* operator->() const { return &impl_; }
 
  private:
   Impl impl_;

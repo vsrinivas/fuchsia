@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/fidl/internal.h>
+#include <lib/fidl/llcpp/internal/debug_thread_checker.h>
 #include <lib/fidl/llcpp/internal/transport_channel.h>
 #include <lib/fidl/llcpp/message.h>
 #include <lib/fidl/llcpp/message_storage.h>
@@ -115,6 +116,11 @@ zx_status_t channel_create_waiter(fidl_handle_t handle, async_dispatcher_t* disp
   return ZX_OK;
 }
 
+void channel_create_thread_checker(async_dispatcher_t* dispatcher, ThreadingPolicy threading_policy,
+                                   AnyThreadChecker& any_thread_checker) {
+  any_thread_checker.emplace<ZirconThreadChecker>(threading_policy);
+}
+
 void channel_close(fidl_handle_t handle) { zx_handle_close(handle); }
 
 }  // namespace
@@ -126,6 +132,7 @@ const TransportVTable ChannelTransport::VTable = {
     .read = channel_read,
     .call = channel_call,
     .create_waiter = channel_create_waiter,
+    .create_thread_checker = channel_create_thread_checker,
     .close = channel_close,
 };
 
