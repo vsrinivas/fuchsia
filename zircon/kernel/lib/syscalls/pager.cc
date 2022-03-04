@@ -36,15 +36,22 @@ void split_syscall_flags(uint32_t flags, uint32_t* source_flags, uint32_t* vmo_f
 
 // zx_status_t zx_pager_create
 zx_status_t sys_pager_create(uint32_t options, user_out_handle* out) {
+  auto up = ProcessDispatcher::GetCurrent();
+
+  zx_status_t status = up->EnforceBasicPolicy(ZX_POL_NEW_PAGER);
+  if (status != ZX_OK) {
+    return status;
+  }
+
   if (options) {
     return ZX_ERR_INVALID_ARGS;
   }
 
   KernelHandle<PagerDispatcher> handle;
   zx_rights_t rights;
-  zx_status_t result = PagerDispatcher::Create(&handle, &rights);
-  if (result != ZX_OK) {
-    return result;
+  status = PagerDispatcher::Create(&handle, &rights);
+  if (status != ZX_OK) {
+    return status;
   }
 
   return out->make(ktl::move(handle), rights);

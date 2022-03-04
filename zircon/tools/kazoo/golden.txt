@@ -15749,7 +15749,7 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "Create", "a", "new", "pager", "object", "."
       ],
       "requirements": [
-        "None", "."
+        "Caller", "job", "policy", "must", "allow", "ZX_POL_NEW_PAGER", "."
       ],
       "arguments": [
         {

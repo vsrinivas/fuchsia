@@ -46,23 +46,26 @@ __BEGIN_CDECLS
 // The process attempts to create a physical vmo and send it back on |handle|.
 // This will always fail because we don't supply a mmio resource.
 #define MINIP_CMD_CREATE_VMO_PHYSICAL (1 << 11)
+// The process attempts to create a pager vmo and send it back on |handle|.
+// The return value upon success is ZX_OK.
+#define MINIP_CMD_CREATE_PAGER (1 << 12)
 // The process writes a single byte 0 to |transferred_handle| with |zx_channel_write|.
 // The return value upon success is ZX_OK.
-#define MINIP_CMD_CHANNEL_WRITE (1 << 12)
+#define MINIP_CMD_CHANNEL_WRITE (1 << 13)
 // The process requests a backtrace dump.
 // The return value upon successful thread resume is ZX_OK.
-#define MINIP_CMD_BACKTRACE_REQUEST (1 << 13)
+#define MINIP_CMD_BACKTRACE_REQUEST (1 << 14)
 // The process requests a attempts to use the null handle with replace_as_executable.
 // This forwards the result of that operation
-#define MINIP_CMD_ATTEMPT_AMBIENT_EXECUTABLE (1 << 14)
+#define MINIP_CMD_ATTEMPT_AMBIENT_EXECUTABLE (1 << 15)
 // This checks the word the thread register points to against expected value.
-#define MINIP_CMD_CHECK_THREAD_POINTER (1 << 15)
+#define MINIP_CMD_CHECK_THREAD_POINTER (1 << 16)
 // The process will perform an async_wait on the |transferred_handle| and then
 // port cancel on it in an infinite loop.
-#define MINIP_CMD_WAIT_ASYNC_CANCEL (1 << 16)
+#define MINIP_CMD_WAIT_ASYNC_CANCEL (1 << 17)
 // The process just calls zx_thread_exit() immediately without replying.
 // The return value upon success is ZX_ERR_PEER_CLOSED.
-#define MINIP_CMD_THREAD_EXIT (1 << 17)
+#define MINIP_CMD_THREAD_EXIT (1 << 18)
 #define MINIP_THREAD_POINTER_CHECK_VALUE (0xdeadbeeffeedfaceUL)
 
 // Create and run a minimal process with one thread that blocks forever.

@@ -6,7 +6,7 @@ library zx;
 @transport("Syscall")
 protocol pager {
     /// Create a new pager object.
-    /// Rights: None.
+    /// Rights: Caller job policy must allow ZX_POL_NEW_PAGER.
     pager_create(struct {
         options uint32;
     }) -> (resource struct {

@@ -263,6 +263,7 @@ def match_sentence_form(sentence, arg_names):
         'ZX_POL_NEW_TIMER',
         'ZX_POL_NEW_PROCESS',
         'ZX_POL_NEW_PROFILE',
+        'ZX_POL_NEW_PAGER',
     ])
 
     # There's only two structs in zircon/types.h, so hardcoding this here is

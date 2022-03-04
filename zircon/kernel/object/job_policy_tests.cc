@@ -210,8 +210,8 @@ static bool add_basic_policy_deny_any_new(uint32_t flags) {
 
   auto p = JobPolicy::CreateRootPolicy();
   zx_policy_basic_v2_t policy{ZX_POL_NEW_ANY, ZX_POL_ACTION_DENY, flags};
-
   ASSERT_EQ(ZX_OK, p.AddBasicPolicy(ZX_JOB_POL_ABSOLUTE, &policy, 1));
+
   ASSERT_EQ(ZX_POL_ACTION_DENY, p.QueryBasicPolicy(ZX_POL_NEW_VMO));
   ASSERT_EQ(ZX_POL_ACTION_DENY, p.QueryBasicPolicy(ZX_POL_NEW_CHANNEL));
   ASSERT_EQ(ZX_POL_ACTION_DENY, p.QueryBasicPolicy(ZX_POL_NEW_EVENT));
@@ -222,6 +222,7 @@ static bool add_basic_policy_deny_any_new(uint32_t flags) {
   ASSERT_EQ(ZX_POL_ACTION_DENY, p.QueryBasicPolicy(ZX_POL_NEW_TIMER));
   ASSERT_EQ(ZX_POL_ACTION_DENY, p.QueryBasicPolicy(ZX_POL_NEW_PROCESS));
   ASSERT_EQ(ZX_POL_ACTION_DENY, p.QueryBasicPolicy(ZX_POL_NEW_PROFILE));
+  ASSERT_EQ(ZX_POL_ACTION_DENY, p.QueryBasicPolicy(ZX_POL_NEW_PAGER));
 
   ASSERT_EQ(ZX_POL_ACTION_ALLOW, p.QueryBasicPolicy(ZX_POL_BAD_HANDLE));
   ASSERT_EQ(ZX_POL_ACTION_ALLOW, p.QueryBasicPolicy(ZX_POL_WRONG_OBJECT));

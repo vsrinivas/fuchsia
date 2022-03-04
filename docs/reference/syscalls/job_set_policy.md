@@ -95,6 +95,8 @@ Where *condition* is one of
   a new process.
 + **ZX_POL_NEW_PROFILE** a process under this job is attempting to create
   a new profile.
++ **ZX_POL_NEW_PAGER** a process under this job is attempting to create
+  a new VMO pager.
 + **ZX_POL_AMBIENT_MARK_VMO_EXEC** a process under this job is attempting
   to use [`zx_vmo_replace_as_executable()`] with a **ZX_HANDLE_INVALID**
   as the second argument rather than a valid **ZX_RSRC_KIND_VMEX**.

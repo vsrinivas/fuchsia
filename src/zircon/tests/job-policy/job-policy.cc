@@ -124,7 +124,7 @@ void InvalidCalls(uint32_t options, uint32_t flags) {
   {
     // Too many.
     auto job = MakeJob();
-    zx_policy_basic_v2_t policy[16]{};
+    zx_policy_basic_v2_t policy[17]{};
     for (unsigned i = 0; i < std::size(policy); ++i) {
       policy[i] = {ZX_POL_BAD_HANDLE, ZX_POL_ACTION_KILL, flags};
     }
@@ -249,6 +249,12 @@ TEST(JobPolicyTest, EnforceDenyVmoPhysical) {
   zx_policy_basic_v1_t policy[] = {{ZX_POL_NEW_VMO, ZX_POL_ACTION_DENY}};
   CheckInvokingPolicy(policy, static_cast<uint32_t>(std::size(policy)),
                       MINIP_CMD_CREATE_VMO_PHYSICAL, ZX_ERR_ACCESS_DENIED);
+}
+
+TEST(JobPolicyTest, EnforceDenyPager) {
+  zx_policy_basic_v1_t policy[] = {{ZX_POL_NEW_PAGER, ZX_POL_ACTION_DENY}};
+  CheckInvokingPolicy(policy, static_cast<uint32_t>(std::size(policy)), MINIP_CMD_CREATE_PAGER,
+                      ZX_ERR_ACCESS_DENIED);
 }
 
 TEST(JobPolicyTest, EnforceDenyAmbientExecutable) {
@@ -445,6 +451,14 @@ TEST(JobPolicyTest, TestExceptionOnNewProfileAndDeny) {
   };
   CheckInvokingPolicyWithException(policy, static_cast<uint32_t>(std::size(policy)),
                                    MINIP_CMD_CREATE_PROFILE, ZX_ERR_ACCESS_DENIED);
+}
+
+TEST(JobPolicyTest, TestExceptionOnNewPagerAndDeny) {
+  zx_policy_basic_v1_t policy[] = {
+      {ZX_POL_NEW_PAGER, ZX_POL_ACTION_DENY_EXCEPTION},
+  };
+  CheckInvokingPolicyWithException(policy, static_cast<uint32_t>(std::size(policy)),
+                                   MINIP_CMD_CREATE_PAGER, ZX_ERR_ACCESS_DENIED);
 }
 
 // Test ZX_POL_BAD_HANDLE when syscalls are allowed to continue.

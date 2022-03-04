@@ -29,7 +29,7 @@ present pages), but the precise behavior is implementation dependent.
 
 <!-- Contents of this heading updated by update-docs-from-fidl, do not edit. -->
 
-None.
+Caller job policy must allow **ZX_POL_NEW_PAGER**.
 
 ## RETURN VALUE
 

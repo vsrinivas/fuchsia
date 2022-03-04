@@ -889,10 +889,11 @@ multiconst!(zx_excp_policy_code_t, [
     ZX_EXCP_POLICY_CODE_NEW_TIMER              = 11;
     ZX_EXCP_POLICY_CODE_NEW_PROCESS            = 12;
     ZX_EXCP_POLICY_CODE_NEW_PROFILE            = 13;
-    ZX_EXCP_POLICY_CODE_AMBIENT_MARK_VMO_EXEC  = 14;
-    ZX_EXCP_POLICY_CODE_CHANNEL_FULL_WRITE     = 15;
-    ZX_EXCP_POLICY_CODE_PORT_TOO_MANY_PACKETS  = 16;
-    ZX_EXCP_POLICY_CODE_BAD_SYSCALL            = 17;
+    ZX_EXCP_POLICY_CODE_NEW_PAGER              = 14;
+    ZX_EXCP_POLICY_CODE_AMBIENT_MARK_VMO_EXEC  = 15;
+    ZX_EXCP_POLICY_CODE_CHANNEL_FULL_WRITE     = 16;
+    ZX_EXCP_POLICY_CODE_PORT_TOO_MANY_PACKETS  = 17;
+    ZX_EXCP_POLICY_CODE_BAD_SYSCALL            = 18;
 ]);
 
 #[repr(C)]
@@ -1142,7 +1143,8 @@ multiconst!(u32, [
     ZX_POL_NEW_TIMER             = 11;
     ZX_POL_NEW_PROCESS           = 12;
     ZX_POL_NEW_PROFILE           = 13;
-    ZX_POL_AMBIENT_MARK_VMO_EXEC = 14;
+    ZX_POL_NEW_PAGER             = 14;
+    ZX_POL_AMBIENT_MARK_VMO_EXEC = 15;
 
     // policy actions
     ZX_POL_ACTION_ALLOW           = 0;

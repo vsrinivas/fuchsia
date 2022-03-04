@@ -199,6 +199,7 @@ pub enum JobCondition {
     NewTimer,
     NewProcess,
     NewProfile,
+    NewPager,
     AmbientMarkVmoExec,
 }
 
@@ -219,6 +220,7 @@ impl Into<u32> for JobCondition {
             JobCondition::NewTimer => sys::ZX_POL_NEW_TIMER,
             JobCondition::NewProcess => sys::ZX_POL_NEW_PROCESS,
             JobCondition::NewProfile => sys::ZX_POL_NEW_PROFILE,
+            JobCondition::NewPager => sys::ZX_POL_NEW_PAGER,
             JobCondition::AmbientMarkVmoExec => sys::ZX_POL_AMBIENT_MARK_VMO_EXEC,
         }
     }

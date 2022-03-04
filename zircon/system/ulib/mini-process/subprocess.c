@@ -187,6 +187,11 @@ __attribute__((section(".text.not-split"))) void minipr_thread_loop(zx_handle_t 
           cmd.status = ctx.vmo_physical_create(ZX_HANDLE_INVALID, 0u, 0u, &handle[0]);
           goto reply;
         }
+        if (what & MINIP_CMD_CREATE_PAGER) {
+          what &= ~MINIP_CMD_CREATE_PAGER;
+          cmd.status = ctx.pager_create(0u, &handle[0]);
+          goto reply;
+        }
         if (what & MINIP_CMD_CHANNEL_WRITE) {
           what &= ~MINIP_CMD_CHANNEL_WRITE;
 
