@@ -10,6 +10,8 @@ source_set("common") {
   testonly = true
   sources = [
     "async-deque.h",
+    "async-eventpair.cc",
+    "async-eventpair.h",
     "binding.h",
     "controller-provider.cc",
     "controller-provider.h",
@@ -94,6 +96,7 @@ test("unittests_bin") {
   testonly = true
   sources = [
     "async-deque-unittest.cc",
+    "async-eventpair-unittest.cc",
     "controller-provider-unittest.cc",
     "controller-unittest.cc",
     "input-unittest.cc",
