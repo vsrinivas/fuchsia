@@ -1,0 +1,28 @@
+{
+    include: [
+        "inspect/client.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        runner: "elf",
+        binary: "bin/component_manager",
+        args: [
+            "fuchsia-pkg://fuchsia.com/namespace-capabilities-integration-test#meta/integration-test-root.cm",
+            "--config",
+            "/pkg/data/component_manager_config",
+        ],
+    },
+    use: [
+        {
+            protocol: [
+                // This extra protocol is provided by the test
+                "fidl.examples.routing.echo.Echo",
+                "fuchsia.component.resolver.RealmBuilder",
+                "fuchsia.component.runner.RealmBuilder",
+                "fuchsia.process.Launcher",
+                "fuchsia.sys.Loader",
+                "fuchsia.tracing.provider.Registry",
+            ],
+        },
+    ],
+}

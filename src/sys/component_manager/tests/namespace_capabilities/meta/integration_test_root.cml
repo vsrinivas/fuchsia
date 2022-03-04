@@ -12,17 +12,16 @@
     children: [
         {
             name: "trigger",
-            url: "fuchsia-pkg://fuchsia.com/namespace-capabilities-integration-test#meta/trigger.cm",
+            url: "#meta/trigger.cm",
         },
     ],
     capabilities: [
         { protocol: "fuchsia.test.Suite" },
     ],
     use: [
-        // Needed to bind to children
         {
-            protocol: "fuchsia.component.Realm",
-            from: "framework",
+            protocol: "fidl.test.components.Trigger",
+            from: "#trigger",
         },
     ],
     offer: [

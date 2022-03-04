@@ -24,6 +24,7 @@ async fn main() {
 }
 
 async fn run_trigger_service(mut stream: ftest::TriggerRequestStream) {
+    // Attempt to connect to the Echo capability (a component manager namespace capability)
     let echo =
         client::connect_to_protocol::<fecho::EchoMarker>().expect("error connecting to echo");
     while let Some(event) = stream.try_next().await.expect("failed to serve trigger service") {
@@ -35,6 +36,7 @@ async fn run_trigger_service(mut stream: ftest::TriggerRequestStream) {
         let out = echo.echo_string(Some(&echo_str)).await.expect("echo_string failed");
         let out = out.expect("empty echo result");
 
+        // Attempt to open test-pkg (a component manager namespace capability)
         let file = io_util::open_file_in_namespace(
             "/test-pkg/data/testdata",
             io_util::OPEN_RIGHT_READABLE,

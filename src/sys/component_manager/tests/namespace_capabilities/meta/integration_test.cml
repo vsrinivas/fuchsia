@@ -1,0 +1,63 @@
+{
+    include: [
+        "//src/lib/fuchsia-component-test/meta/nested_component_manager.shard.cml",
+        "//src/sys/test_runners/rust/default.shard.cml",
+        "sys/component/realm_builder.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        binary: "bin/namespace_capabilities_integration_test",
+    },
+    children: [
+        {
+            name: "echo_server",
+            url: "#meta/echo_server.cm",
+        },
+        {
+            name: "nested_component_manager",
+            url: "#meta/component-manager.cm",
+            startup: "eager",
+        },
+    ],
+    use: [
+        { protocol: "fuchsia.sys2.EventSource" },
+        {
+            event: [ "stopped" ],
+            from: "framework",
+            modes: [ "async" ],
+        },
+        {
+            event_stream_deprecated: "StoppedEventStream",
+            subscriptions: [
+                {
+                    event: "stopped",
+                    mode: "async",
+                },
+            ],
+        },
+    ],
+    offer: [
+        {
+            // Wire this protocol down to the nested component manager so it appears
+            // as a namespace capability.
+            protocol: "fidl.examples.routing.echo.Echo",
+            from: "#echo_server",
+            to: [ "#nested_component_manager" ],
+        },
+        {
+            protocol: [
+                "fuchsia.logger.LogSink",
+                "fuchsia.process.Launcher",
+                "fuchsia.sys.Loader",
+                "fuchsia.tracing.provider.Registry",
+            ],
+            from: "parent",
+            to: [ "#nested_component_manager" ],
+        },
+        {
+            protocol: "fuchsia.logger.LogSink",
+            from: "parent",
+            to: [ "#echo_server" ],
+        },
+    ],
+}
