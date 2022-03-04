@@ -23,7 +23,7 @@
 #include <hid/usages.h>
 #include <zxtest/zxtest.h>
 
-#include "input-report.h"
+#include "driver_v1.h"
 
 namespace hid_input_report_dev {
 const uint8_t boot_mouse_desc[] = {
@@ -147,7 +147,7 @@ class FakeHidDevice : public ddk::HidDeviceProtocol<FakeHidDevice> {
 class HidDevTest : public zxtest::Test {
   void SetUp() override {
     client_ = ddk::HidDeviceProtocolClient(&fake_hid_.proto_);
-    device_ = new InputReport(fake_ddk::kFakeParent, client_);
+    device_ = new InputReportDriver(fake_ddk::kFakeParent, client_);
     // Each test is responsible for calling |device_->Bind()|.
   }
 
@@ -166,7 +166,7 @@ class HidDevTest : public zxtest::Test {
 
   SaveInspectVmoBind ddk_;
   FakeHidDevice fake_hid_;
-  InputReport* device_;
+  InputReportDriver* device_;
   ddk::HidDeviceProtocolClient client_;
 };
 
@@ -188,11 +188,11 @@ TEST_F(HidDevTest, HidLifetimeTest) {
 TEST(HidDevTest, InputReportUnregisterTest) {
   fake_ddk::Bind ddk_;
   FakeHidDevice fake_hid_;
-  InputReport* device_;
+  InputReportDriver* device_;
   ddk::HidDeviceProtocolClient client_;
 
   client_ = ddk::HidDeviceProtocolClient(&fake_hid_.proto_);
-  device_ = new InputReport(fake_ddk::kFakeParent, client_);
+  device_ = new InputReportDriver(fake_ddk::kFakeParent, client_);
 
   std::vector<uint8_t> boot_mouse(boot_mouse_desc, boot_mouse_desc + sizeof(boot_mouse_desc));
   fake_hid_.SetReportDesc(boot_mouse);
@@ -215,7 +215,7 @@ TEST(HidDevTest, InputReportUnregisterTestBindFailed) {
   ddk::HidDeviceProtocolClient client;
 
   client = ddk::HidDeviceProtocolClient(&fake_hid.proto_);
-  auto device = std::make_unique<InputReport>(fake_ddk::kFakeParent, client);
+  auto device = std::make_unique<InputReportDriver>(fake_ddk::kFakeParent, client);
 
   std::vector<uint8_t> boot_mouse(boot_mouse_desc, boot_mouse_desc + sizeof(boot_mouse_desc));
   fake_hid.SetReportDesc(boot_mouse);
@@ -290,7 +290,7 @@ TEST_F(HidDevTest, ReadInputReportsTest) {
     ASSERT_OK(result.status());
     reader = fidl::WireSyncClient<fuchsia_input_report::InputReportsReader>(
         std::move(endpoints->client));
-    ASSERT_OK(device_->WaitForNextReader(zx::duration::infinite()));
+    ASSERT_OK(device_->input_report().WaitForNextReader(zx::duration::infinite()));
   }
 
   // Spoof send a report.
@@ -342,7 +342,7 @@ TEST_F(HidDevTest, ReadInputReportsHangingGetTest) {
     auto result = sync_client->GetInputReportsReader(std::move(endpoints->server));
     ASSERT_OK(result.status());
     reader.Bind(std::move(endpoints->client), loop.dispatcher());
-    ASSERT_OK(device_->WaitForNextReader(zx::duration::infinite()));
+    ASSERT_OK(device_->input_report().WaitForNextReader(zx::duration::infinite()));
   }
 
   // Read the report. This will hang until a report is sent.
@@ -394,7 +394,7 @@ TEST_F(HidDevTest, CloseReaderWithOutstandingRead) {
     auto result = sync_client->GetInputReportsReader(std::move(endpoints->server));
     ASSERT_OK(result.status());
     reader.Bind(std::move(endpoints->client), loop.dispatcher());
-    ASSERT_OK(device_->WaitForNextReader(zx::duration::infinite()));
+    ASSERT_OK(device_->input_report().WaitForNextReader(zx::duration::infinite()));
   }
 
   // Queue a report.
@@ -452,7 +452,7 @@ TEST_F(HidDevTest, SensorTest) {
     ASSERT_OK(result.status());
     reader = fidl::WireSyncClient<fuchsia_input_report::InputReportsReader>(
         std::move(endpoints->client));
-    ASSERT_OK(device_->WaitForNextReader(zx::duration::infinite()));
+    ASSERT_OK(device_->input_report().WaitForNextReader(zx::duration::infinite()));
   }
 
   // Create the report.
@@ -514,7 +514,7 @@ TEST_F(HidDevTest, GetTouchInputReportTest) {
     ASSERT_OK(result.status());
     reader = fidl::WireSyncClient<fuchsia_input_report::InputReportsReader>(
         std::move(endpoints->client));
-    ASSERT_OK(device_->WaitForNextReader(zx::duration::infinite()));
+    ASSERT_OK(device_->input_report().WaitForNextReader(zx::duration::infinite()));
   }
 
   // Spoof send a report.
@@ -591,7 +591,7 @@ TEST_F(HidDevTest, KeyboardTest) {
     ASSERT_OK(result.status());
     reader = fidl::WireSyncClient<fuchsia_input_report::InputReportsReader>(
         std::move(endpoints->client));
-    ASSERT_OK(device_->WaitForNextReader(zx::duration::infinite()));
+    ASSERT_OK(device_->input_report().WaitForNextReader(zx::duration::infinite()));
   }
 
   // Spoof send a report.
@@ -708,7 +708,7 @@ TEST_F(HidDevTest, ConsumerControlTest) {
     ASSERT_OK(result.status());
     reader = fidl::WireSyncClient<fuchsia_input_report::InputReportsReader>(
         std::move(endpoints->client));
-    ASSERT_OK(device_->WaitForNextReader(zx::duration::infinite()));
+    ASSERT_OK(device_->input_report().WaitForNextReader(zx::duration::infinite()));
   }
 
   // Create another report.
@@ -816,7 +816,7 @@ TEST_F(HidDevTest, ConsumerControlTwoClientsTest) {
       ASSERT_OK(result.status());
       reader = fidl::WireSyncClient<fuchsia_input_report::InputReportsReader>(
           std::move(endpoints->client));
-      ASSERT_OK(device_->WaitForNextReader(zx::duration::infinite()));
+      ASSERT_OK(device_->input_report().WaitForNextReader(zx::duration::infinite()));
     }
 
     auto report_result = reader->ReadInputReports();

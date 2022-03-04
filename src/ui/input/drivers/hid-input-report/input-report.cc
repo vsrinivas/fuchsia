@@ -5,27 +5,21 @@
 #include "input-report.h"
 
 #include <lib/ddk/debug.h>
-#include <lib/ddk/device.h>
-#include <lib/ddk/driver.h>
-#include <lib/ddk/platform-defs.h>
-#include <lib/ddk/trace/event.h>
 #include <lib/fidl/epitaph.h>
 #include <lib/fit/defer.h>
+#include <lib/trace/internal/event_common.h>
 #include <lib/zx/clock.h>
 #include <threads.h>
 #include <zircon/status.h>
 
 #include <array>
 
-#include <ddktl/device.h>
-#include <ddktl/fidl.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>
 #include <hid-parser/parser.h>
 #include <hid-parser/report.h>
 #include <hid-parser/usages.h>
 
-#include "src/ui/input/drivers/hid-input-report/hid_input_report_bind.h"
 #include "src/ui/input/lib/hid-input-report/device.h"
 
 namespace hid_input_report_dev {
@@ -48,9 +42,9 @@ zx::status<hid_input_report::DeviceType> InputReport::InputReportDeviceTypeToHid
   }
 }
 
-void InputReport::DdkUnbind(ddk::UnbindTxn txn) {
+zx_status_t InputReport::Stop() {
   hiddev_.UnregisterListener();
-  txn.Reply();
+  return ZX_OK;
 }
 
 void InputReport::RemoveReaderFromList(InputReportsReader* reader) {
@@ -363,7 +357,7 @@ void InputReport::GetInputReport(GetInputReportRequestView request,
   }
 }
 
-zx_status_t InputReport::Bind() {
+zx_status_t InputReport::Start() {
   uint8_t report_desc[HID_MAX_DESC_LEN];
   size_t report_desc_size;
   zx_status_t status = hiddev_.GetDescriptor(report_desc, HID_MAX_DESC_LEN, &report_desc_size);
@@ -426,12 +420,6 @@ zx_status_t InputReport::Bind() {
   max_latency_usecs_ = root_.CreateUint("max_latency_usecs", 0);
   device_types_ = root_.CreateString("device_types", device_types);
 
-  status = DdkAdd(ddk::DeviceAddArgs("InputReport").set_inspect_vmo(inspector_.DuplicateVmo()));
-  if (status != ZX_OK) {
-    hiddev_.UnregisterListener();
-    return status;
-  }
-
   return ZX_OK;
 }
 
@@ -443,33 +431,4 @@ zx_status_t InputReport::WaitForNextReader(zx::duration timeout) {
   return status;
 }
 
-zx_status_t input_report_bind(void* ctx, zx_device_t* parent) {
-  fbl::AllocChecker ac;
-
-  ddk::HidDeviceProtocolClient hiddev(parent);
-  if (!hiddev.is_valid()) {
-    return ZX_ERR_INTERNAL;
-  }
-
-  auto dev = fbl::make_unique_checked<InputReport>(&ac, parent, hiddev);
-  if (!ac.check()) {
-    return ZX_ERR_NO_MEMORY;
-  }
-  auto status = dev->Bind();
-  if (status == ZX_OK) {
-    // devmgr is now in charge of the memory for dev
-    __UNUSED auto ptr = dev.release();
-  }
-  return status;
-}
-
-static zx_driver_ops_t input_report_driver_ops = []() -> zx_driver_ops_t {
-  zx_driver_ops_t ops = {};
-  ops.version = DRIVER_OPS_VERSION;
-  ops.bind = input_report_bind;
-  return ops;
-}();
-
 }  // namespace hid_input_report_dev
-
-ZIRCON_DRIVER(hid_input_report, hid_input_report_dev::input_report_driver_ops, "zircon", "0.1");

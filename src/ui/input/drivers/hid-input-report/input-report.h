@@ -14,8 +14,6 @@
 #include <optional>
 #include <vector>
 
-#include <ddktl/device.h>
-#include <ddktl/protocol/empty-protocol.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/mutex.h>
 
@@ -24,22 +22,15 @@
 
 namespace hid_input_report_dev {
 
-class InputReport;
-using DeviceType = ddk::Device<InputReport, ddk::Unbindable,
-                               ddk::Messageable<fuchsia_input_report::InputDevice>::Mixin>;
-class InputReport : public DeviceType,
+class InputReport : public fidl::WireServer<fuchsia_input_report::InputDevice>,
                     public InputReportBase,
-                    ddk::HidReportListenerProtocol<InputReport>,
-                    public ddk::EmptyProtocol<ZX_PROTOCOL_INPUTREPORT> {
+                    ddk::HidReportListenerProtocol<InputReport> {
  public:
-  InputReport(zx_device_t* parent, ddk::HidDeviceProtocolClient hiddev)
-      : DeviceType(parent), hiddev_(hiddev) {}
+  explicit InputReport(ddk::HidDeviceProtocolClient hiddev) : hiddev_(hiddev) {}
   virtual ~InputReport() = default;
 
-  // DDK Functions.
-  zx_status_t Bind();
-  void DdkUnbind(ddk::UnbindTxn txn);
-  void DdkRelease() { delete this; }
+  zx_status_t Start();
+  zx_status_t Stop();
 
   // HidReportListener functions.
   void HidReportListenerReceiveReport(const uint8_t* report, size_t report_size,
@@ -64,6 +55,8 @@ class InputReport : public DeviceType,
 
   // Function for testing that blocks until a new reader is connected.
   zx_status_t WaitForNextReader(zx::duration timeout);
+
+  zx::vmo InspectVmo() { return inspector_.DuplicateVmo(); }
 
  private:
   // This is the static size that is used to allocate this instance's InputDescriptor.

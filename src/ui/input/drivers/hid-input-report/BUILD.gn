@@ -26,6 +26,7 @@ group("tests") {
 fuchsia_driver("hid-input-report-driver") {
   output_name = "hid-input-report"
   sources = [
+    "driver_v1.cc",
     "input-report.cc",
     "input-reports-reader.cc",
   ]
@@ -59,6 +60,7 @@ fuchsia_driver_component("hid-input-report") {
 
 test("hid-input-report-test-bin") {
   sources = [
+    "driver_v1.cc",
     "input-report.cc",
     "input-reports-reader.cc",
     "test.cc",
