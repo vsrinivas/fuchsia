@@ -29,6 +29,16 @@ impl std::fmt::Display for WrongSize {
     }
 }
 
+/// Error type for when there is some sort of parsing error.
+#[derive(Debug, Copy, Clone, Eq, PartialEq, thiserror::Error)]
+pub struct ParseError;
+
+impl std::fmt::Display for ParseError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
+        std::fmt::Debug::fmt(self, f)
+    }
+}
+
 /// Error type for when there are no buffers to allocate.
 #[derive(Debug, Copy, Clone, Eq, PartialEq, thiserror::Error)]
 pub struct NoBufs;

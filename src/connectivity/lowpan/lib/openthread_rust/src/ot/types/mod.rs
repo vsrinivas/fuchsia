@@ -21,6 +21,7 @@ mod radio_region;
 mod route_preference;
 mod scan_results;
 mod security_policy;
+mod tlv;
 
 use crate::prelude_internal::*;
 
@@ -43,6 +44,7 @@ pub use radio_region::*;
 pub use route_preference::*;
 pub use scan_results::*;
 pub use security_policy::*;
+pub use tlv::*;
 
 /// 802.15.4 PAN Identifier. Same type as [`otsys::otPanId`](crate::otsys::otPanId).
 pub type PanId = otPanId;
