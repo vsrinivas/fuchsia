@@ -13,6 +13,7 @@ mod register;
 mod serve_to;
 
 pub mod net;
+pub mod poll_debugger;
 pub mod spinel;
 
 #[cfg(test)]
@@ -21,6 +22,7 @@ mod tests;
 pub use async_condition::*;
 pub use dummy_device::DummyDevice;
 pub use lowpan_device::Driver;
+pub use poll_debugger::*;
 pub use register::*;
 pub use serve_to::*;
 
@@ -41,6 +43,8 @@ pub(crate) mod prelude_internal {
 
     pub use fuchsia_syslog::macros::*;
 
+    pub use crate::poll_debugger::FutureDebugExt as _;
+    pub use crate::poll_debugger::StreamDebugExt as _;
     pub use crate::ServeTo as _;
     pub use crate::{ZxResult, ZxStatus};
     pub use anyhow::{format_err, Context as _};

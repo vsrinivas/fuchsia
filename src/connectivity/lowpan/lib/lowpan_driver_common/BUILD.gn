@@ -8,6 +8,7 @@ import("//build/rust/rustc_library.gni")
 rustc_library("lowpan_driver_common") {
   edition = "2018"
   with_unit_tests = true
+  features = [ "poll_debugger" ]
   deps = [
     "//sdk/fidl/fuchsia.factory.lowpan:fuchsia.factory.lowpan-rustc",
     "//sdk/fidl/fuchsia.hardware.network:fuchsia.hardware.network-rustc",
@@ -61,6 +62,7 @@ rustc_library("lowpan_driver_common") {
     "src/net/matcher.rs",
     "src/net/mod.rs",
     "src/net/tun.rs",
+    "src/poll_debugger.rs",
     "src/register.rs",
     "src/serve_to.rs",
     "src/spinel/correlated.rs",
