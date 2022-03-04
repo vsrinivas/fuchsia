@@ -4,8 +4,8 @@
 
 This document lists conventions to follow when writing Rust in the Fuchsia Source Tree. These conventions are a combination of best practices, project preferences, and some choices made for the sake of consistency.
 
-<!-- TODO(adamperry) add collapsible <details> sections around guideline bodies -->
-<!-- TODO(adamperry) inline text of upstream guidelines once fuchsia-specific guidelines settle -->
+<!-- TODO add collapsible <details> sections around guideline bodies -->
+<!-- TODO inline text of upstream guidelines once fuchsia-specific guidelines settle -->
 
 ## Guidelines
 
@@ -213,6 +213,12 @@ modifications, open a CL and cc [`fuchsia-rust-api-rubric@google.com`][rubric-gr
 is reviewed.
 
 [rubric-group]: mailto:fuchsia-rust-api-rubric@google.com
+
+### Pending Topics
+
+Pending topics are tracked in the [Rust>Rubric][monorail] Monorail component.
+
+[monorail]: https://bugs.fuchsia.dev/p/fuchsia/issues/list?q=component:Rust%3ERubric
 
 ## Relationship with upstream Rust API guidelines
 
