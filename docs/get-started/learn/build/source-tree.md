@@ -67,72 +67,72 @@ can be easy to get lost without a roadmap to guide you. This section contains
 an overview of a local Fuchsia checkout, with a summary of the various elements
 you can expect to find along the way:
 
-* `boards`: Contains all the default
+* `boards/`: Contains all the default
   [board configurations](/docs/development/build/concepts/build_system/boards_and_products.md)
   supported and maintained by the Fuchsia team.
-* `build`: Shared configurations and default templates for the
+* `build/`: Shared configurations and default templates for the
   [Fuchsia build system](/docs/development/build/concepts/build_system/index.md).
-* `bundles`: Top-level groupings of build target labels typically included
+* `bundles/`: Top-level groupings of build target labels typically included
   together in a build configuration. See
   [Bundles](/docs/development/build/concepts/build_system/bundles.md) for more details.
-* `docs`: The Fuchsia documentation, including the source material for the
+* `docs/`: The Fuchsia documentation, including the source material for the
   [Fuchsia.dev](https://fuchsia.dev/) developer site.
-* `examples`: Sample software components showcasing various aspects of the
+* `examples/`: Sample software components showcasing various aspects of the
   Fuchsia platform.
-* `products`: Contains all the default
+* `products/`: Contains all the default
   [product configurations](/docs/development/build/concepts/build_system/boards_and_products.md)
   supported and maintained by the Fuchsia team.
-* `scripts`: Various developer tools to simplify working with the Fuchsia
+* `scripts/`: Various developer tools to simplify working with the Fuchsia
   source tree, including the subcommands used in
   [fx workflows](/docs/development/build/fx.md).
-* `sdk`: The [Integrators Development Kit](/docs/development/idk/README.md),
+* `sdk/`: The [Integrators Development Kit](/docs/development/idk/README.md),
    including the
   [FIDL protocol definitions](https://fuchsia.dev/reference/fidl/README.md)
   for Fuchsia services.
-* `src`: Source code of Fuchsia, including components, services, and tools
+* `src/`: Source code of Fuchsia, including components, services, and tools
   running on the target device. **This is the stem of the flower**.
-* `tools`: [Fuchsia developer tools](https://fuchsia.dev/reference/tools/sdk/README.md)
+* `tools/`: [Fuchsia developer tools](https://fuchsia.dev/reference/tools/sdk/README.md)
   running on the host machine.
-* `vendor`: Reserved location for vendor-specific binaries and customizations
+* `vendor/`: Reserved location for vendor-specific binaries and customizations
   for product builds. The build system supports discovery of configuration
   files under `vendor/products` and `vendor/boards` to build Fuchsia for
   vendor-specific device targets.
-* `zircon`: Source code for Fuchsia's
+* `zircon/`: Source code for Fuchsia's
   [Zircon core](/docs/concepts/kernel/README.md), including the kernel.
 
 The source code of the Fuchsia platform breaks down further into the various
 components and services running on the device. Below is not a complete list,
 but may provide some interesting places to begin exploring:
 
-* `bringup`: Core system binaries used to bring up the system's user space
+* `src/bringup`: Core system binaries used to bring up the system's user space
   environment.
-* `camera`: Support services for camera device drivers.
-* `cobalt`: Fuchsia service used to log, collect and analyze metrics.
-* `connectivity`: Networking protocol support and device drivers.
-* `developer`: Developer tools running on the target, including
+* `src/camera`: Support services for camera device drivers.
+* `src/cobalt`: Fuchsia service used to log, collect and analyze metrics.
+* `src/connectivity`: Networking protocol support and device drivers.
+* `src/developer`: Developer tools running on the target, including
   [ffx](/docs/development/tools/ffx/overview.md).
-* `devices`: Device driver support libraries for common hardware subsystems.
-* `diagnostics`: Diagnostic support services such as logging, crash reporting,
+* `src/devices`: Device driver support libraries for common hardware subsystems.
+* `src/diagnostics`: Diagnostic support services such as logging, crash reporting,
   snapshots, and statistics.
-* `factory`: Components implementing access to factory config data storage.
-* `fonts`: Provider for built-in system fonts.
-* `graphics`: Support services for display device drivers.
-* `identity`: User account handling and identity token management.
-* `media`: Media codecs and playback services.
-* `power`: Power management services.
-* `proc`: POSIX compatibility libraries.
-* `recovery`: Recovery system and factory reset services.
-* `security`: Security policies and analysis tools.
-* `session`: [Session framework](/docs/concepts/session/introduction.md).
-* `storage`: Support for [filesystems](/docs/concepts/filesystems/filesystems.md)
+* `src/factory`: Components implementing access to factory config data storage.
+* `src/fonts`: Provider for built-in system fonts.
+* `src/graphics`: Support services for display device drivers.
+* `src/identity`: User account handling and identity token management.
+* `src/media`: Media codecs and playback services.
+* `src/power`: Power management services.
+* `src/proc`: POSIX compatibility libraries.
+* `src/recovery`: Recovery system and factory reset services.
+* `src/security`: Security policies and analysis tools.
+* `src/session`: [Session framework](/docs/concepts/session/introduction.md).
+* `src/storage`: Support for [filesystems](/docs/concepts/filesystems/filesystems.md)
   and volume management.
-* `sys`: [Component framework](/docs/concepts/components/v2/README.md) and
+* `src/sys`: [Component framework](/docs/concepts/components/v2/README.md) and
   services for [package management](/docs/concepts/packages/package.md).
-* `tests`: Platform end to end (E2E) integration tests.
-* `ui`: Services to support graphical user interface (GUI), including
+* `src/tests`: Platform end to end (E2E) integration tests.
+* `src/ui`: Services to support graphical user interface (GUI), including
   [Scenic](/docs/development/graphics/scenic/README.md).
-* `virtualization`: Hypervisor support for VM guests.
-* `zircon`: Libraries for interacting with the Zircon kernel.
+* `src/virtualization`: Hypervisor support for VM guests.
+* `src/zircon`: Libraries for interacting with the Zircon kernel.
 
 Note: For more details on how projects are structured in the Fuchsia tree, see
 [Source code layout](/docs/development/source_code/layout.md).
