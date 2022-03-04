@@ -40,6 +40,12 @@ void LinuxRunner::StartAndGetLinuxGuestInfo(std::string label,
     return;
   }
 
+  // If the container startup failed, we can request a retry.
+  if (info_ && info_->container_status == fuchsia::virtualization::ContainerStatus::FAILED) {
+    info_ = std::nullopt;
+    guest_->RetryContainerStartup();
+  }
+
   if (info_.has_value()) {
     fuchsia::virtualization::LinuxGuestInfo info;
     info.set_cid(info_->cid);

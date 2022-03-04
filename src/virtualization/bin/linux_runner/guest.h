@@ -56,6 +56,15 @@ class Guest : public vm_tools::StartupListener::Service,
         fuchsia::virtualization::RealmPtr env);
   ~Guest();
 
+  // Retry the container startup workflow.
+  //
+  // Creating the container can fail under expected situations (ex: no network connectivity) so
+  // we provide a way to retry that workflow.
+  //
+  // This must only be used in response to a previous failure to start the container, which is
+  // indicated by a ContainerStatus::FAILED message sent to the GuestInfoCallback.
+  void RetryContainerStartup() { CreateContainer(); }
+
  private:
   fpromise::promise<> Start();
   fpromise::promise<std::unique_ptr<GrpcVsockServer>, zx_status_t> StartGrpcServer();
