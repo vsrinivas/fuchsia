@@ -106,6 +106,9 @@ pub use radio::*;
 mod udp;
 pub use udp::*;
 
+mod border_agent;
+pub use border_agent::*;
+
 pub mod message;
 pub use message::{Message, MessageBuffer};
 
@@ -145,6 +148,7 @@ pub trait InstanceInterface:
     + Joiner
     + Udp
     + Trel
+    + BorderAgent
 {
 }
 
