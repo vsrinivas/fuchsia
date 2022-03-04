@@ -116,7 +116,7 @@ impl FatServer {
 async fn run() -> Result<(), Error> {
     let mut fs: ServiceFs<_> = ServiceFs::new();
 
-    fs.dir("svc").add_fidl_service(Services::Query).add_fidl_service(Services::Admin);
+    fs.add_fidl_service(Services::Query).add_fidl_service(Services::Admin);
     fs.take_and_serve_directory_handle()?;
 
     let device = Arc::new(FatServer::new());

@@ -60,14 +60,11 @@ zx_status_t Runner::ServeRoot(fidl::ServerEnd<fuchsia_io::Directory> root) {
   auto outgoing = fbl::MakeRefCounted<fs::PseudoDir>(factoryfs_->vfs());
   outgoing->AddEntry(kOutgoingDataRoot, std::move(vn));
 
-  auto svc_dir = fbl::MakeRefCounted<fs::PseudoDir>(factoryfs_->vfs());
-  outgoing->AddEntry("svc", svc_dir);
-
-  svc_dir->AddEntry(fidl::DiscoverableProtocolName<fuchsia_fs::Admin>,
-                    fbl::MakeRefCounted<AdminService>(loop_->dispatcher(), *this));
+  outgoing->AddEntry(fidl::DiscoverableProtocolName<fuchsia_fs::Admin>,
+                     fbl::MakeRefCounted<AdminService>(loop_->dispatcher(), *this));
 
   query_svc_ = fbl::MakeRefCounted<fs::QueryService>(factoryfs_->vfs());
-  svc_dir->AddEntry(fidl::DiscoverableProtocolName<fuchsia_fs::Query>, query_svc_);
+  outgoing->AddEntry(fidl::DiscoverableProtocolName<fuchsia_fs::Query>, query_svc_);
 
   status = ServeDirectory(std::move(outgoing), std::move(root));
   if (status != ZX_OK) {

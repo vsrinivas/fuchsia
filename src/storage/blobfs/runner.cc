@@ -100,20 +100,17 @@ zx_status_t Runner::ServeRoot(fidl::ServerEnd<fuchsia_io::Directory> root) {
   outgoing->AddEntry("diagnostics", diagnostics_dir);
   diagnostics_dir->AddEntry(fuchsia::inspect::Tree::Name_, inspect_tree);
 
-  auto svc_dir = fbl::MakeRefCounted<fs::PseudoDir>(this);
-  outgoing->AddEntry("svc", svc_dir);
+  outgoing->AddEntry(fidl::DiscoverableProtocolName<fuchsia_fs::Query>,
+                     fbl::MakeRefCounted<fs::QueryService>(this));
 
-  svc_dir->AddEntry(fidl::DiscoverableProtocolName<fuchsia_fs::Query>,
-                    fbl::MakeRefCounted<fs::QueryService>(this));
+  outgoing->AddEntry(fidl::DiscoverableProtocolName<fuchsia_update_verify::BlobfsVerifier>,
+                     fbl::MakeRefCounted<HealthCheckService>(loop_->dispatcher(), *blobfs_));
 
-  svc_dir->AddEntry(fidl::DiscoverableProtocolName<fuchsia_update_verify::BlobfsVerifier>,
-                    fbl::MakeRefCounted<HealthCheckService>(loop_->dispatcher(), *blobfs_));
-
-  svc_dir->AddEntry(fidl::DiscoverableProtocolName<fuchsia_fs::Admin>,
-                    fbl::MakeRefCounted<AdminService>(blobfs_->dispatcher(),
-                                                      [this](fs::FuchsiaVfs::ShutdownCallback cb) {
-                                                        this->Shutdown(std::move(cb));
-                                                      }));
+  outgoing->AddEntry(fidl::DiscoverableProtocolName<fuchsia_fs::Admin>,
+                     fbl::MakeRefCounted<AdminService>(blobfs_->dispatcher(),
+                                                       [this](fs::FuchsiaVfs::ShutdownCallback cb) {
+                                                         this->Shutdown(std::move(cb));
+                                                       }));
 
   status = ServeDirectory(std::move(outgoing), std::move(root));
   if (status != ZX_OK) {

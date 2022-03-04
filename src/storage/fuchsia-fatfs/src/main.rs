@@ -74,7 +74,7 @@ async fn main() -> Result<(), Error> {
     // Export the root directory in our outgoing directory.
     let mut fs = ServiceFs::new();
     fs.add_remote("root", proxy);
-    fs.dir("svc").add_fidl_service(Services::Admin).add_fidl_service(Services::Query);
+    fs.add_fidl_service(Services::Admin).add_fidl_service(Services::Query);
     fs.take_and_serve_directory_handle()?;
 
     let fatfs = Arc::new(fatfs);

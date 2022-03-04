@@ -15,6 +15,7 @@
 #include <lib/fdio/limits.h>
 #include <lib/fdio/namespace.h>
 #include <lib/fdio/vfs.h>
+#include <lib/service/llcpp/service.h>
 #include <lib/zx/channel.h>
 #include <string.h>
 #include <unistd.h>
@@ -116,19 +117,11 @@ zx::status<> MountedFilesystem::UnmountImpl() {
 
 __EXPORT
 zx::status<> Shutdown(fidl::UnownedClientEnd<Directory> export_root) {
-  auto admin_or = fidl::CreateEndpoints<fuchsia_fs::Admin>();
+  auto admin_or = service::ConnectAt<fuchsia_fs::Admin>(export_root);
   if (admin_or.is_error())
     return admin_or.take_error();
 
-  if (zx_status_t status =
-          fdio_service_connect_at(export_root.channel()->get(),
-                                  fidl::DiscoverableProtocolDefaultPath<fuchsia_fs::Admin> + 1,
-                                  admin_or->server.TakeChannel().release());
-      status != ZX_OK) {
-    return zx::error(status);
-  }
-
-  auto resp = fidl::WireCall(admin_or->client)->Shutdown();
+  auto resp = fidl::WireCall(*admin_or)->Shutdown();
   if (resp.status() != ZX_OK)
     return zx::error(resp.status());
 

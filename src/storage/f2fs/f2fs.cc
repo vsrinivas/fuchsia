@@ -148,15 +148,12 @@ zx::status<std::unique_ptr<F2fs>> CreateFsAndRoot(const MountOptions& mount_opti
   auto outgoing = fbl::MakeRefCounted<fs::PseudoDir>(fs.get());
   outgoing->AddEntry("root", std::move(data_root));
 
-  auto svc_dir = fbl::MakeRefCounted<fs::PseudoDir>(fs.get());
-  outgoing->AddEntry("svc", svc_dir);
-
   auto query_svc = fbl::MakeRefCounted<fs::QueryService>(fs.get());
-  svc_dir->AddEntry(fidl::DiscoverableProtocolName<fuchsia_fs::Query>, query_svc);
+  outgoing->AddEntry(fidl::DiscoverableProtocolName<fuchsia_fs::Query>, query_svc);
   fs->SetQueryService(std::move(query_svc));
 
   auto admin_svc = fbl::MakeRefCounted<AdminService>(fs->dispatcher(), fs.get());
-  svc_dir->AddEntry(fidl::DiscoverableProtocolName<fuchsia_fs::Admin>, admin_svc);
+  outgoing->AddEntry(fidl::DiscoverableProtocolName<fuchsia_fs::Admin>, admin_svc);
   fs->SetAdminService(std::move(admin_svc));
 
   fs->GetInspectTree().Initialize();

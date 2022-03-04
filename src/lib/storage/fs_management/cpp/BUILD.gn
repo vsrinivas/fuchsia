@@ -52,6 +52,7 @@ if (is_fuchsia) {
       "//zircon/system/ulib/fdio-caller",
       "//zircon/system/ulib/fzl",
       "//zircon/system/ulib/pretty",
+      "//zircon/system/ulib/service:service-llcpp",
       "//zircon/system/ulib/zx",
       "//zircon/system/ulib/zxc",
     ]

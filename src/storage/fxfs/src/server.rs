@@ -131,7 +131,7 @@ impl FxfsServer {
         // Export the root directory in our outgoing directory.
         let mut fs = ServiceFs::new();
         fs.add_remote("root", proxy);
-        fs.dir("svc").add_fidl_service(Services::Admin).add_fidl_service(Services::Query);
+        fs.add_fidl_service(Services::Admin).add_fidl_service(Services::Query);
         // Serve static Inspect instance from fuchsia_inspect::component to diagnostic directory.
         inspect_runtime::serve(fuchsia_inspect::component::inspector(), &mut fs)?;
         fs.serve_connection(outgoing_chan)?;
@@ -284,7 +284,7 @@ mod tests {
         let (client_end, server_end) = fidl::endpoints::create_endpoints::<DirectoryMarker>()?;
         let client_proxy = client_end.into_proxy().expect("Create DirectoryProxy failed");
         fasync::Task::spawn(async move {
-            let admin_proxy = fuchsia_component::client::connect_to_protocol_at_dir_svc::<
+            let admin_proxy = fuchsia_component::client::connect_to_protocol_at_dir_root::<
                 AdminMarker,
             >(&client_proxy)
             .expect("Connect to Admin service failed");

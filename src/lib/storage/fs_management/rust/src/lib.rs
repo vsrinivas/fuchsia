@@ -145,7 +145,7 @@ impl FSInstance {
 
         service_connect_at(
             &self.export_root,
-            &format!("svc/{}", fidl_fuchsia_fs::AdminMarker::PROTOCOL_NAME),
+            fidl_fuchsia_fs::AdminMarker::PROTOCOL_NAME,
             server_chan,
         )?;
         let admin_proxy = AdminSynchronousProxy::new(client_chan);

@@ -1440,10 +1440,8 @@ zx::status<std::unique_ptr<fs::ManagedVfs>> MountAndServe(const MountOptions& mo
   outgoing->AddEntry("diagnostics", diagnostics_dir);
   diagnostics_dir->AddEntry(fuchsia::inspect::Tree::Name_, inspect_tree);
 
-  auto svc_dir = fbl::MakeRefCounted<fs::PseudoDir>(fs.get());
-  outgoing->AddEntry("svc", svc_dir);
-  svc_dir->AddEntry(fidl::DiscoverableProtocolName<fuchsia_fs::Admin>,
-                    fbl::MakeRefCounted<AdminService>(fs->dispatcher(), *fs));
+  outgoing->AddEntry(fidl::DiscoverableProtocolName<fuchsia_fs::Admin>,
+                     fbl::MakeRefCounted<AdminService>(fs->dispatcher(), *fs));
 
   zx_status_t status = fs->ServeDirectory(std::move(outgoing), std::move(mount_channel));
   if (status != ZX_OK) {

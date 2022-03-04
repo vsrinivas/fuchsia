@@ -12,7 +12,7 @@ use {
     fidl::endpoints::{ClientEnd, ServerEnd},
     fidl_fuchsia_fs::AdminMarker,
     fidl_fuchsia_io::{DirectoryMarker, DirectoryProxy, NodeProxy},
-    fuchsia_component::client::connect_to_protocol_at_dir_svc,
+    fuchsia_component::client::connect_to_protocol_at_dir_root,
     fuchsia_component::server::ServiceFs,
     fuchsia_merkle::{Hash, MerkleTreeBuilder},
     fuchsia_runtime::{HandleInfo, HandleType},
@@ -186,7 +186,7 @@ impl BlobfsRamdisk {
 
     /// Signals blobfs to unmount and waits for it to exit cleanly, returning the backing Ramdisk.
     pub async fn unmount(self) -> Result<FormattedRamdisk, Error> {
-        connect_to_protocol_at_dir_svc::<AdminMarker>(&self.export_root_proxy)?
+        connect_to_protocol_at_dir_root::<AdminMarker>(&self.export_root_proxy)?
             .shutdown()
             .await
             .context("sending blobfs shutdown")?;

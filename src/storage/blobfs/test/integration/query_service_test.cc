@@ -31,8 +31,7 @@ namespace fio = fuchsia_io;
 class QueryServiceTest : public BlobfsWithFvmTest {
  protected:
   fidl::WireSyncClient<fuchsia_fs::Query> ConnectToQueryService() {
-    auto client_end = service::ConnectAt<fuchsia_fs::Query>(
-        fs().GetOutgoingDirectory(), fidl::DiscoverableProtocolDefaultPath<fuchsia_fs::Query>);
+    auto client_end = service::ConnectAt<fuchsia_fs::Query>(fs().GetOutgoingDirectory());
     EXPECT_EQ(client_end.status_value(), ZX_OK);
     return fidl::WireSyncClient<fuchsia_fs::Query>(std::move(*client_end));
   }
@@ -41,8 +40,7 @@ class QueryServiceTest : public BlobfsWithFvmTest {
 TEST_F(QueryServiceTest, IsNodeInFilesystemPositiveCase) {
   // Get a token corresponding to the root directory.
   fdio_cpp::UnownedFdioCaller caller(root_fd());
-  auto token_result =
-      fidl::WireCall(fidl::UnownedClientEnd<fio::Directory>(caller.channel()))->GetToken();
+  auto token_result = fidl::WireCall(caller.directory())->GetToken();
   ASSERT_EQ(token_result.status(), ZX_OK);
   ASSERT_EQ(token_result->s, ZX_OK);
   zx::handle token_raw = std::move(token_result->token);

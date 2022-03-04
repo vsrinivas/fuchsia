@@ -17,7 +17,7 @@ use {
         CLONE_FLAG_SAME_RIGHTS,
     },
     fuchsia_async::OnSignals,
-    fuchsia_component::client::connect_to_protocol_at_dir_svc,
+    fuchsia_component::client::connect_to_protocol_at_dir_root,
     fuchsia_runtime::{HandleInfo, HandleType},
     fuchsia_zircon::{Channel, Handle, HandleBased, Process, Signals, Status, Task},
     log::warn,
@@ -206,7 +206,7 @@ impl<FSC: FSConfig> ServingFilesystem<FSC> {
 
     async fn do_shutdown(&mut self) -> Result<(), ShutdownError> {
         let admin_proxy: fidl_fuchsia_fs::AdminProxy =
-            connect_to_protocol_at_dir_svc::<fidl_fuchsia_fs::AdminMarker>(&self.export_root)?;
+            connect_to_protocol_at_dir_root::<fidl_fuchsia_fs::AdminMarker>(&self.export_root)?;
         admin_proxy.shutdown().await?;
 
         let _ = OnSignals::new(&self.process, Signals::PROCESS_TERMINATED)
