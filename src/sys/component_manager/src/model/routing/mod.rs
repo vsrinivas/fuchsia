@@ -211,6 +211,32 @@ impl CapabilityProvider for DefaultComponentCapabilityProvider {
     }
 }
 
+/// The default provider for a Namespace Capability.
+struct NamespaceCapabilityProvider {
+    path: CapabilityPath,
+}
+
+#[async_trait]
+impl CapabilityProvider for NamespaceCapabilityProvider {
+    async fn open(
+        self: Box<Self>,
+        _task_scope: TaskScope,
+        flags: u32,
+        _open_mode: u32,
+        relative_path: PathBuf,
+        server_end: &mut zx::Channel,
+    ) -> Result<(), ModelError> {
+        let namespace_path = self.path.to_path_buf().attach(relative_path);
+        let namespace_path = namespace_path
+            .to_str()
+            .ok_or_else(|| ModelError::path_is_not_utf8(namespace_path.clone()))?;
+        let server_end = channel::take_channel(server_end);
+        io_util::connect_in_namespace(namespace_path, server_end, flags).map_err(|e| {
+            OpenResourceError::open_component_manager_namespace_failed(namespace_path, e).into()
+        })
+    }
+}
+
 /// Returns an instance of the default capability provider for the capability at `source`, if supported.
 fn get_default_provider(
     target: WeakComponentInstance,
@@ -232,10 +258,13 @@ fn get_default_provider(
                 _ => None,
             }
         }
+        CapabilitySource::Namespace { capability, .. } => match capability.source_path() {
+            Some(path) => Some(Box::new(NamespaceCapabilityProvider { path: path.clone() })),
+            _ => None,
+        },
         CapabilitySource::Framework { .. }
         | CapabilitySource::Capability { .. }
         | CapabilitySource::Builtin { .. }
-        | CapabilitySource::Namespace { .. }
         | CapabilitySource::Collection { .. } => {
             // There is no default provider for a framework or builtin capability
             None
@@ -281,14 +310,7 @@ async fn open_capability_at_source(open_request: OpenRequest<'_>) -> Result<(), 
         capability_provider.open(task_scope, flags, open_mode, relative_path, server_chan).await?;
         Ok(())
     } else {
-        // This is a temporary hack. If a global path-based framework capability
-        // is not provided by a hook in the component tree, then attempt to connect to the service
-        // in component manager's namespace. We could have modeled this as a default provider,
-        // but several hooks require that a provider is not set.
-        //
-        // TODO: Remove this hack, first investigating whether the restriction in the paragraph
-        // above is still relevant.
-        let namespace_path = match &source {
+        match &source {
             CapabilitySource::Component { .. } => {
                 unreachable!(
                     "Capability source is a component, which should have been caught by \
@@ -317,28 +339,17 @@ async fn open_capability_at_source(open_request: OpenRequest<'_>) -> Result<(), 
                     ),
                 ));
             }
-            CapabilitySource::Namespace { capability, .. } => match capability.source_path() {
-                Some(p) => p.clone(),
-                _ => {
-                    return Err(ModelError::from(
-                        RoutingError::capability_from_component_manager_not_found(
-                            capability.source_id(),
-                        ),
-                    ));
-                }
-            },
+            CapabilitySource::Namespace { capability, .. } => {
+                return Err(ModelError::from(
+                    RoutingError::capability_from_component_manager_not_found(
+                        capability.source_id(),
+                    ),
+                ));
+            }
             CapabilitySource::Collection { .. } => {
                 return Err(ModelError::unsupported("collections"));
             }
         };
-        let namespace_path = namespace_path.to_path_buf().attach(relative_path);
-        let namespace_path = namespace_path
-            .to_str()
-            .ok_or_else(|| ModelError::path_is_not_utf8(namespace_path.clone()))?;
-        let server_chan = channel::take_channel(server_chan);
-        io_util::connect_in_namespace(namespace_path, server_chan, flags).map_err(|e| {
-            OpenResourceError::open_component_manager_namespace_failed(namespace_path, e).into()
-        })
     }
 }
 
