@@ -5,8 +5,9 @@
 // TODO(https://fxbug.dev/84961): Fix null safety and remove this language version.
 // @dart=2.9
 
+import 'dart:math';
+
 import 'package:sl4f/sl4f.dart';
-import 'package:sl4f/trace_processing.dart';
 import 'package:test/test.dart';
 
 import 'helpers.dart';
@@ -43,8 +44,8 @@ void _addTest(String testName, String runAppCommand) {
     // Each tap will be 33.5ms apart, drifting 0.166ms against regular 60 fps
     // vsync interval. 100 taps span the entire vsync interval 1 time at 100
     // equidistant points.
-    await helper.sl4fDriver.ssh
-        .run('/bin/input tap 500 500 --tap_event_count=100 --duration=3350');
+    final input = Input(helper.sl4fDriver);
+    await input.tap(Point<int>(500, 500), tapEventCount: 100, duration: 3350);
 
     await traceSession.stop();
 
