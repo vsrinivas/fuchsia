@@ -84,13 +84,36 @@ group("terminal") {
   ]
 }
 
+# TODO(https://fxbug.dev/94919) split this into target/host groups and move to //products
 group("workstation") {
   testonly = true
   deps = [
     "//garnet/bin/setui_client:setui_client",
-    "//src/chromium:chromium_common_tests",
-    "//src/chromium:chromium_web_engine_tests",
-    "//src/chromium/web_runner_tests:tests",
+
+    # Only for products in which Flutter is supported.
+    "//src/tests/intl/timezone:tests-for-flutter",
+
+    # CFv2 test framework.
+    "//src/sys/run_test_suite",
+
+    # Used for Chromium tests
+    "//src/testing/fidl/intl_property_manager",
+
+    # E2E tests w/ default toolchain that do not produce Fuchsia packages, only host bins.
+    "//src/tests/end_to_end/screen_is_not_black",
+    "//src/tests/end_to_end/sl4f:test",
+    "//src/tests/end_to_end/time_sync:test",
+
+    # Other e2e dep bundles
+    "//src/experiences/tests/e2e:end_to_end_deps",
+    "//src/experiences/tests/performance:performance_deps",
+    "//src/tests/end_to_end/bundles:end_to_end_deps",
+
+    ### Host-only deps below here ###
+    "//src/experiences/tests/chrome:test($host_toolchain)",
+    "//src/experiences/tests/e2e:test($host_toolchain)",
+    "//src/experiences/tests/performance:test($host_toolchain)",
+    "//src/tests/end_to_end/copy_files:test($host_toolchain)",
   ]
 }
 

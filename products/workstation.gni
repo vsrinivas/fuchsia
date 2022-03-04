@@ -23,13 +23,14 @@ base_package_labels += [
   "//src/developer/ssh-key-manager",
   "//src/experiences/session_shells/ermine/session:session_manager",
   "//src/fonts",
+  "//src/fonts:open-fonts",
   "//src/fonts:open-fonts-collection",
   "//src/graphics/bin/vulkan_loader",
   "//src/identity/bin:minimal_auth",
   "//src/intl/intl_services/config:sysmgr",
   "//src/intl/intl_services:pkg",
   "//src/media/audio/bundles:services",
-  "//src/media/audio/drivers/configurator",
+  "//src/media/audio/drivers/configurator:package",
   "//src/power:battery",
   "//src/sys/activity",
   "//src/ui:workstation",
@@ -97,8 +98,6 @@ cache_package_labels += [
 ]
 
 universe_package_labels += [
-  "//examples/fidl:tests",
-
   "//src/lib/ui/carnelian:examples",
   "//src/ui/examples/bouncing_ball",
   "//src/ui/examples/spinning_square_view",
@@ -132,47 +131,8 @@ virtcon_italic_font_path =
 virtcon_bold_italic_font_path =
     "//prebuilt/third_party/fonts/robotomono/RobotoMono-BoldItalic.ttf"
 
-# End to end (E2E) product test runtime dependencies. Must be added to cache,
-# not universe, so the test can run on bots where there is no package server.
-#
-# TODO(fxbug.dev/9892): Support a package server on bots so this can be added to
-# universe like the tests.
-cache_package_labels += [
-  # Used for Chromium tests for example:
-  #    //src/chromium/web_runner_tests:tests
-  "//src/testing/fidl/intl_property_manager",
-
-  "//src/tests/end_to_end/bundles:end_to_end_deps",
-  "//src/tests/end_to_end/bundles:end_to_end_deps",
-  "//src/experiences/tests/e2e:end_to_end_deps",
-  "//src/experiences/tests/performance:performance_deps",
-
-  # CFv2 test framework.
-  "//src/sys/run_test_suite",
-]
-
-# E2E Product Tests. They don't produce fuchsia packages, but host executables
-# used by the tests.
-host_labels += [
-  "//src/experiences/tests/chrome:test",
-  "//src/experiences/tests/e2e:test",
-  "//src/experiences/tests/performance:test",
-  "//src/tests/end_to_end/copy_files:test",
-]
-
-universe_package_labels += [
-  # E2E Product Tests. They don't produce fuchsia packages, but host
-  # executables, and must just be included somewhere in the build configuration
-  # of the product.
-  "//src/tests/end_to_end/screen_is_not_black",
-  "//src/tests/end_to_end/sl4f:test",
-  "//src/tests/end_to_end/time_sync:test",
-
-  # Only for products in which Flutter is supported.
-  "//src/tests/intl/timezone:tests-for-flutter",
-
-  "//src/fonts:open-fonts",
-]
+### NOTE: Product-specific tests were previously defined here and are now
+### defined in //bundles/buildbot:workstation. See https://fxbug.dev/94919 for details.
 
 # Add SDK tools set to "cache" so these tools are automatically available in
 # QEMU images generated for the SDK, but in cache, so they can be updated.
