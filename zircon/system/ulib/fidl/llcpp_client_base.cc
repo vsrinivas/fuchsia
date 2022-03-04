@@ -187,7 +187,7 @@ void ClientController::Bind(AnyTransport client_end, async_dispatcher_t* dispatc
   ZX_ASSERT(!client_impl_);
   client_impl_ = ClientBase::Create(std::move(client_end), dispatcher, std::move(event_dispatcher),
                                     std::move(teardown_observer), threading_policy);
-  control_ = std::make_shared<ControlBlock>(client_impl_);
+  control_ = std::make_shared<ClientControlBlock>(client_impl_);
 }
 
 void ClientController::Unbind() {

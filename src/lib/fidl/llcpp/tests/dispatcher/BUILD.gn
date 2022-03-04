@@ -36,6 +36,7 @@ test("fidl_llcpp_dispatcher_tests_bin") {
   sources = [
     "any_test.cc",
     "bind_server_overloads_test.cc",
+    "client_continuation_test.cc",
     "client_controller_test.cc",
     "client_test.cc",
     "server_test.cc",

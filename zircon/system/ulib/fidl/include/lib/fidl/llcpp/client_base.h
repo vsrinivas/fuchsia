@@ -403,6 +403,35 @@ class ClientBase final : public std::enable_shared_from_this<ClientBase> {
   zx_txid_t txid_base_ __TA_GUARDED(lock_) = 0;
 };
 
+// |ControlBlock| controls the lifecycle of a client binding, such that
+// teardown will only happen after all clones of a |Client| managing
+// the same transport goes out of scope.
+//
+// Specifically, all clones of a |Client| will share the same |ControlBlock|
+// instance, which in turn references the |ClientBase|, and is responsible
+// for its teardown via RAII.
+class ClientControlBlock final : public std::enable_shared_from_this<ClientControlBlock> {
+ public:
+  explicit ClientControlBlock(std::shared_ptr<ClientBase> client)
+      : client_impl_(std::move(client)) {}
+
+  ClientControlBlock(const ClientControlBlock&) noexcept = delete;
+  ClientControlBlock& operator=(const ClientControlBlock&) noexcept = delete;
+  ClientControlBlock(ClientControlBlock&&) noexcept = default;
+  ClientControlBlock& operator=(ClientControlBlock&&) noexcept = default;
+
+  // Triggers teardown, which will cause any strong references to the
+  // |ClientBase| to be released.
+  ~ClientControlBlock() {
+    if (client_impl_) {
+      client_impl_->AsyncTeardown();
+    }
+  }
+
+ private:
+  std::shared_ptr<ClientBase> client_impl_;
+};
+
 // |ClientController| manages the lifetime of a |ClientBase| instance.
 //
 // |ClientBase|s are created when binding a client endpoint to a message
@@ -447,31 +476,8 @@ class ClientController {
   // Allow unit tests to peek into the internals of this class.
   friend ::fidl_testing::ClientChecker;
 
-  // |ControlBlock| controls the lifecycle of a client binding, such that
-  // teardown will only happen after all clones of a |Client| managing
-  // the same transport goes out of scope.
-  //
-  // Specifically, all clones of a |Client| will share the same |ControlBlock|
-  // instance, which in turn references the |ClientBase|, and is responsible
-  // for its teardown via RAII.
-  class ControlBlock final {
-   public:
-    explicit ControlBlock(std::shared_ptr<ClientBase> client) : client_impl_(std::move(client)) {}
-
-    // Triggers teardown, which will cause any strong references to the
-    // |ClientBase| to be released.
-    ~ControlBlock() {
-      if (client_impl_) {
-        client_impl_->AsyncTeardown();
-      }
-    }
-
-   private:
-    std::shared_ptr<ClientBase> client_impl_;
-  };
-
   std::shared_ptr<ClientBase> client_impl_;
-  std::shared_ptr<ControlBlock> control_;
+  std::shared_ptr<ClientControlBlock> control_;
 };
 
 }  // namespace internal
