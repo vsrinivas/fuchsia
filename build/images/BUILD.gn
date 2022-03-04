@@ -171,9 +171,13 @@ default_image_deps += [ ":qemu-kernel" ]
 # the rights chain.
 verify_routes("verify_capability_routes") {
   testonly = true
-  allowlist = [ fuchsia_verify_routes_exceptions_allowlist ]
+  allowlist = [ fuchsia_verify_routes_exceptions_allowlist ] +
+              fuchsia_verify_routes_exceptions_allowlist_product
   if (bootfs_only) {
     allowlist += [ fuchsia_verify_routes_exceptions_allowlist_bootfs ]
+  }
+  if (fuchsia_verify_routes_component_tree_config != "") {
+    component_tree_config = fuchsia_verify_routes_component_tree_config
   }
 }
 

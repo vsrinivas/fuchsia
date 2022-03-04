@@ -95,6 +95,17 @@ declare_args() {
   # Same as above, except this allowlist gets added in bootfs_only builds.
   fuchsia_verify_routes_exceptions_allowlist_bootfs = "//src/security/policy/build/verify_routes_exceptions_allowlist_bootfs.json5"
 
+  # Same as above, except these allowlists get added according to
+  # product-specific configuration.
+  fuchsia_verify_routes_exceptions_allowlist_product = []
+
+  # An optional component tree configuration file used to finalize dynamic
+  # elements of the component tree constructed for route verification. When
+  # non-empty, this value is passed as the `--component-tree-config` option
+  # to `ffx scrutiny verify routes` to verify routes in the fuchsia component
+  # tree.
+  fuchsia_verify_routes_component_tree_config = ""
+
   # An optional mapping of (scheme, resolver moniker, and resolver capability)
   # to component monikers that determine which component resolvers are compared
   # to the allowlist and which components are allowed to be resolved by the
