@@ -141,6 +141,7 @@ filesystem_sizes_args += [
 action("filesystem_sizes.json") {
   testonly = true
   hermetic_deps = false
+  no_output_dir_leaks = false
   script = "format_filesystem_sizes.py"
   deps = filesystem_sizes_deps
   if (recovery_is_zedboot) {

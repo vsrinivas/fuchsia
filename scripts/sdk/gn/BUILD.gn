@@ -38,6 +38,8 @@ template("gn_sdk") {
     # Fix this and delete this line.
     hermetic_deps = false
 
+    no_output_dir_leaks = false
+
     script = "//scripts/sdk/gn/generate.py"
     outputs = [ invoker.output_archive ]
     args = [

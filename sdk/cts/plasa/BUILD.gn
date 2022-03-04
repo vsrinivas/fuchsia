@@ -34,6 +34,8 @@ group("tests") {
 
 if (current_toolchain == toolchain_variant.base) {
   action("compdb") {
+    no_output_dir_leaks = false
+
     _compdb_file = "${root_build_dir}/compile_commands.json"
     _stamp_file = "${target_gen_dir}/${target_name}.stamp"
     outputs = [
@@ -62,6 +64,8 @@ if (current_toolchain == toolchain_variant.base) {
 }
 
 action("filter_compdb") {
+  no_output_dir_leaks = false
+
   script = "//sdk/cts/plasa/run_jq_on_compdb.sh"
   _stamp_file = "${target_gen_dir}/${target_name}.stamp"
   _jq = "//prebuilt/third_party/jq/${host_platform}/bin/jq"

@@ -32,6 +32,8 @@ template("cts_sdk") {
   # and move all CTS files into the final directory where the Infra process
   # expects them to be.
   action(generate_target_name) {
+    no_output_dir_leaks = false
+
     forward_variables_from(invoker, "*")
     script = "//scripts/sdk/gn/generate.py"
     sources = []

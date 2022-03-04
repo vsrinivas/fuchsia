@@ -30,6 +30,8 @@ template("clang_doc") {
       "${target_gen_dir}/${_filter_compdb_target_name}.compdb.d"
   _output_compdb = "${_output_compdb_dir}/compile_commands.json"
   action(_filter_compdb_target_name) {
+    no_output_dir_leaks = false
+
     script = "//sdk/cts/plasa/run_jq_on_compdb.sh"
     inputs = [
       #"${clang_prefix}/clang-doc",
@@ -57,6 +59,8 @@ template("clang_doc") {
   _out_path = "${target_gen_dir}/${_filter_compdb_target_name}.api.d"
   _clang_diagnosis_file = "${_output_compdb_dir}/stdout"
   action(_clang_doc_invocation_target) {
+    no_output_dir_leaks = false
+
     script = "//sdk/cts/plasa/run_clang_doc.sh"
     inputs = [
       "${clang_prefix}/clang-doc",

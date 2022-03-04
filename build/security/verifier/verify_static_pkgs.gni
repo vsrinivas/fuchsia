@@ -49,6 +49,8 @@ template("verify_static_pkgs") {
                              "visibility",
                            ])
 
+    no_output_dir_leaks = false
+
     stamp_file = "$target_gen_dir/$target_name.verified"
     depfile = "$target_gen_dir/$target_name.d"
 

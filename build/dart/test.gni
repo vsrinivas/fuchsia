@@ -221,6 +221,8 @@ template("dart_test") {
 
   # Creates a convenience script to invoke the test.
   action(_main_target_name) {
+    no_output_dir_leaks = false
+
     script = "//build/dart/gen_dart_test_invocation.py"
 
     inputs = [ _snapshot ]

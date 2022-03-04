@@ -53,6 +53,8 @@ template("cts_signature_tests") {
       # Copy the plasa manifest and fragment files to the CTS archive.
       copy_manifest_target_name = "${target_name}_copy_manifest"
       action(copy_manifest_target_name) {
+        no_output_dir_leaks = false
+
         testonly = true
         outputs = [ "$root_build_dir/cts/plasa/manifest.plasa.json" ]
         depfile = "${target_out_dir}/${copy_manifest_target_name}.d"

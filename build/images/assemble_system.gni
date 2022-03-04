@@ -740,6 +740,8 @@ template("assemble_system") {
   }
 
   ffx_action(labels.image_assembler) {
+    no_output_dir_leaks = false
+
     forward_variables_from(invoker,
                            [
                              "testonly",

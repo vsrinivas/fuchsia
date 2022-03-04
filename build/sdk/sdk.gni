@@ -273,6 +273,8 @@ template("sdk") {
   archive_generate_target_name = "${archive_target_name}_generate"
 
   compiled_action(archive_generate_target_name) {
+    no_output_dir_leaks = false
+
     forward_variables_from(invoker, [ "testonly" ])
 
     tool = "//build/tools/tarmaker"

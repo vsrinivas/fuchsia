@@ -1321,6 +1321,8 @@ if (!bootfs_only) {
 }
 
 compiled_action("uefi-disk") {
+  no_output_dir_leaks = false
+
   deps = uefi_disk_deps + [
            mkfs_label,
            "//src/firmware/gigaboot:bootloader(//src/firmware/gigaboot:efi_$target_cpu)",

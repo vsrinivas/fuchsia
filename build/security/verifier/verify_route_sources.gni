@@ -36,6 +36,8 @@ template("verify_route_sources") {
          "verify_route_sources() must specify config_path")
 
   ffx_action(target_name) {
+    no_output_dir_leaks = false
+
     forward_variables_from(invoker,
                            [
                              "testonly",

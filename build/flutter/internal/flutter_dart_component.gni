@@ -277,6 +277,8 @@ template("flutter_dart_component") {
         "$target_gen_dir/${_component_name}/stats/symbol_sizes.json"
 
     action(_snapshot_target_name) {
+      no_output_dir_leaks = false
+
       forward_variables_from(invoker,
                              [
                                "testonly",

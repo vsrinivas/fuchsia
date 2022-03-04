@@ -89,6 +89,8 @@ template("cts_source_library") {
   metadata_file = "${target_gen_dir}/${target_name}.sdk_meta.json"
   metadata_target_name = "${target_name}_metadata"
   action(metadata_target_name) {
+    no_output_dir_leaks = false
+
     forward_variables_from(invoker, [ "testonly" ])
     script = "//sdk/cts/build/scripts/gen_cts_meta_file.py"
 
