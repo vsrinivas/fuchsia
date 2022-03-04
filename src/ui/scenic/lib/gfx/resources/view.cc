@@ -86,7 +86,6 @@ View::View(Session* session, ResourceId id, ViewRefControl control_ref, ViewRef 
         return weak_ptr->GetViewNode()->GetGlobalTransform();
       }
 
-      FX_NOTREACHED() << "impossible";
       return glm::mat4(1.f);
     };
 
@@ -96,7 +95,6 @@ View::View(Session* session, ResourceId id, ViewRefControl control_ref, ViewRef 
         return weak_ptr->GetViewNode()->GetBoundingBox();
       }
 
-      FX_NOTREACHED() << "impossible";
       return escher::BoundingBox();
     };
 
