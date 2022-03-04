@@ -46,8 +46,10 @@ where
 }
 
 /// `ffx product-bundle list` sub-command.
-async fn pb_list<W: Write + Sync>(_sdk: Sdk, mut writer: W, cmd: &ListCommand) -> Result<()> {
-    let entries = get_pbms(/*update_metadata=*/ !cmd.cached).await.context("list pbms")?;
+async fn pb_list<W: Write + Sync>(_sdk: Sdk, writer: &mut W, cmd: &ListCommand) -> Result<()> {
+    let entries = get_pbms(/*update_metadata=*/ !cmd.cached, /*verbose=*/ false, writer)
+        .await
+        .context("list pbms")?;
     for entry in entries.iter() {
         match entry {
             Metadata::ProductBundleV1(bundle) => writeln!(writer, "{}", bundle.name)?,
@@ -59,7 +61,7 @@ async fn pb_list<W: Write + Sync>(_sdk: Sdk, mut writer: W, cmd: &ListCommand) -
 
 /// `ffx product-bundle get` sub-command.
 async fn pb_get<W: Write + Sync>(_sdk: Sdk, writer: &mut W, cmd: &GetCommand) -> Result<()> {
-    get_product_data(&cmd.product_bundle_name, writer).await
+    get_product_data(&cmd.product_bundle_name, cmd.verbose, writer).await
 }
 
 /// `ffx product-bundle create` sub-command.

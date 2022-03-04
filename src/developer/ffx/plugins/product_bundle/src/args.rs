@@ -37,6 +37,10 @@ pub struct GetCommand {
     /// get (and cache) data for specific product bundle.
     #[argh(positional)]
     pub product_bundle_name: Option<String>,
+
+    /// display list of downloaded files and other details.
+    #[argh(switch)]
+    pub verbose: bool,
 }
 
 /// Create product bundle manifest file.

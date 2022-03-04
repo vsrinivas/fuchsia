@@ -62,7 +62,9 @@ async fn exec_list<W: Write + Sync>(writer: &mut W, _sdk: Sdk, cmd: &ListCommand
 ///
 /// The list will be written to `writer`.
 async fn exec_list_pbms<W: Write + Sync>(writer: &mut W) -> Result<()> {
-    let entries = get_pbms(/*update_metadata=*/ true).await.context("get pbms entries")?;
+    let entries = get_pbms(/*update_metadata=*/ true, /*verbose=*/ false, writer)
+        .await
+        .context("get pbms entries")?;
     for entry in entries.iter() {
         match entry {
             Metadata::ProductBundleV1(bundle) => writeln!(writer, "{}", bundle.name)?,

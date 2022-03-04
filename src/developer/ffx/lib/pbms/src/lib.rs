@@ -43,12 +43,17 @@ mod sdk;
 ///                    (`SdkVersion::InTree`) then update_metadata is ignored.
 ///    - If true, new metadata will be downloaded from gcs.
 ///    - If false, no network IO will be performed.
-pub async fn get_pbms(update_metadata: bool) -> Result<Entries> {
+pub async fn get_pbms<W>(update_metadata: bool, verbose: bool, writer: &mut W) -> Result<Entries>
+where
+    W: Write + Sync,
+{
     let sdk = ffx_config::get_sdk().await.context("PBMS ffx config get sdk")?;
     match sdk.get_version() {
         SdkVersion::Version(version) => {
             if update_metadata {
-                fetch_fms_entries_from_sdk(version).await.context("fetch from sdk")?;
+                fetch_fms_entries_from_sdk(version, verbose, writer)
+                    .await
+                    .context("fetch from sdk")?;
             }
             Ok(local_entries(version).await.context("read pbms entries")?)
         }
@@ -67,15 +72,21 @@ pub async fn get_pbms(update_metadata: bool) -> Result<Entries> {
 /// is used.
 ///
 /// `writer` is used to output user messages.
-pub async fn get_product_data<W>(product_name: &Option<String>, writer: &mut W) -> Result<()>
+pub async fn get_product_data<W>(
+    product_name: &Option<String>,
+    verbose: bool,
+    writer: &mut W,
+) -> Result<()>
 where
     W: Write + Sync,
 {
     let sdk = ffx_config::get_sdk().await.context("PBMS ffx config get sdk")?;
     match sdk.get_version() {
-        SdkVersion::Version(version) => Ok(get_product_data_sdk(version, product_name, writer)
-            .await
-            .context("read pbms entries")?),
+        SdkVersion::Version(version) => {
+            Ok(get_product_data_sdk(version, product_name, verbose, writer)
+                .await
+                .context("read pbms entries")?)
+        }
         SdkVersion::InTree => {
             write!(
                 writer,
@@ -116,28 +127,45 @@ pub async fn get_metadata_dir(product_name: &str) -> Result<PathBuf> {
 async fn get_product_data_sdk<W>(
     version: &str,
     product_name: &Option<String>,
+    verbose: bool,
     writer: &mut W,
 ) -> Result<()>
 where
     W: Write + Sync,
 {
-    let entries = get_pbms(/*update_metadata=*/ true).await.context("get pbms")?;
+    let entries = get_pbms(/*update_metadata=*/ true, verbose, writer).await.context("get pbms")?;
     let product_bundle =
         find_product_bundle(&entries, product_name).context("find product bundle")?;
-    writeln!(writer, "Get product data for {:?}", product_bundle.name)?;
+    writeln!(writer, "Getting product data for {:?}", product_bundle.name)?;
     let local_dir = local_images_dir(version, &product_bundle.name).await?;
     for image in &product_bundle.images {
-        writeln!(writer, "    image: {:?}", image)?;
-        fetch_by_format(&image.format, &image.base_uri, &local_dir)
+        if verbose {
+            writeln!(writer, "    image: {:?}", image)?;
+        } else {
+            write!(writer, ".")?;
+        }
+        fetch_by_format(&image.format, &image.base_uri, &local_dir, verbose, writer)
             .await
             .with_context(|| format!("Images for {}.", product_bundle.name))?;
     }
+    writeln!(writer, "Getting package data for {:?}", product_bundle.name)?;
     let local_dir = local_packages_dir(version, &product_bundle.name).await?;
     for package in &product_bundle.packages {
-        writeln!(writer, "    package: {:?}", package.repo_uri)?;
-        fetch_by_format(&package.format, &package.repo_uri, &local_dir)
+        if verbose {
+            writeln!(writer, "    package: {:?}", package.repo_uri)?;
+        } else {
+            write!(writer, ".")?;
+            writer.flush()?;
+        }
+        fetch_by_format(&package.format, &package.repo_uri, &local_dir, verbose, writer)
             .await
             .with_context(|| format!("Packages for {}.", product_bundle.name))?;
+    }
+    writeln!(writer, "Download of product data for {:?} is complete.", product_bundle.name)?;
+    if verbose {
+        if let Some(parent) = local_dir.parent() {
+            writeln!(writer, "Data written to \"{}\".", parent.display())?;
+        }
     }
     Ok(())
 }
@@ -146,9 +174,18 @@ where
 ///
 /// For a directory, all files in the directory are downloaded.
 /// For a .tgz file, the file is downloaded and expanded.
-async fn fetch_by_format(format: &str, uri: &str, local_dir: &Path) -> Result<()> {
+async fn fetch_by_format<W>(
+    format: &str,
+    uri: &str,
+    local_dir: &Path,
+    verbose: bool,
+    writer: &mut W,
+) -> Result<()>
+where
+    W: Write + Sync,
+{
     match format {
-        "files" | "tgz" => fetch_bundle_uri(uri, &local_dir).await,
+        "files" | "tgz" => fetch_bundle_uri(uri, &local_dir, verbose, writer).await,
         _ =>
         // The schema currently defines only "files" or "tgz" (see RFC-100).
         // This error could be a typo in the product bundle or a new image
@@ -168,9 +205,17 @@ async fn fetch_by_format(format: &str, uri: &str, local_dir: &Path) -> Result<()
 /// Bundle, "bundle_uri".
 ///
 /// Currently: "pattern": "^(?:http|https|gs|file):\/\/"
-async fn fetch_bundle_uri(uri: &str, local_dir: &Path) -> Result<()> {
+async fn fetch_bundle_uri<W>(
+    uri: &str,
+    local_dir: &Path,
+    verbose: bool,
+    writer: &mut W,
+) -> Result<()>
+where
+    W: Write + Sync,
+{
     if uri.starts_with("gs://") {
-        fetch_from_gcs(uri, local_dir).await.context("Download from GCS.")?;
+        fetch_from_gcs(uri, local_dir, verbose, writer).await.context("Download from GCS.")?;
     } else if uri.starts_with("http://") || uri.starts_with("https://") {
         fetch_from_web(uri, local_dir).await?;
     } else if uri.starts_with("file://") {
@@ -236,7 +281,9 @@ mod tests {
         ffx_config::set(("sdk.type", ConfigLevel::User), "in-tree".into())
             .await
             .expect("set sdk type");
-        let entries = get_pbms(/*update_metadata=*/ false).await.expect("get pbms");
+        let mut writer = Box::new(std::io::stdout());
+        let entries =
+            get_pbms(/*update_metadata=*/ false, false, &mut writer).await.expect("get pbms");
         assert!(!entries.entry("test_fake-x64").is_none());
     }
 }

@@ -19,7 +19,7 @@ use {
     },
     std::{
         fs::File,
-        io::BufReader,
+        io::{BufReader, Write},
         path::{Path, PathBuf},
     },
 };
@@ -27,14 +27,24 @@ use {
 /// Load FMS Entries for a given SDK `version`.
 ///
 /// Tip: See `get_pbms()` for example usage.
-pub(crate) async fn fetch_fms_entries_from_sdk(version: &str) -> Result<()> {
+pub(crate) async fn fetch_fms_entries_from_sdk<W>(
+    version: &str,
+    verbose: bool,
+    writer: &mut W,
+) -> Result<()>
+where
+    W: Write + Sync,
+{
     let repos: Vec<String> =
         ffx_config::get("pbms.repos").await.context("get product-bundle.repos")?;
+    writeln!(writer, "Getting product metadata.")?;
     for gcs_url in repos {
         let gcs_url = gcs_url.replace("{version}", version);
         let local_dir = local_metadata_dir(version).await.context("local metadata path")?;
         let temp_dir = tempfile::tempdir_in(&local_dir).context("create temp dir")?;
-        fetch_from_gcs(&gcs_url, &temp_dir.path()).await.context("fetch from gcs")?;
+        fetch_from_gcs(&gcs_url, &temp_dir.path(), verbose, writer)
+            .await
+            .context("fetch from gcs")?;
         let hash = pb_file_name(&gcs_url);
         async_fs::rename(&temp_dir.path().join("product_bundles.json"), &local_dir.join(hash))
             .await
@@ -60,14 +70,24 @@ fn pb_file_name(gcs_url: &str) -> String {
 ///
 /// `gcs_url` is the full GCS url, e.g. "gs://bucket/path/to/file".
 /// The resulting data will be written to a directory at `local_dir`.
-pub(crate) async fn fetch_from_gcs(gcs_url: &str, local_dir: &Path) -> Result<()> {
+pub(crate) async fn fetch_from_gcs<W>(
+    gcs_url: &str,
+    local_dir: &Path,
+    verbose: bool,
+    writer: &mut W,
+) -> Result<()>
+where
+    W: Write + Sync,
+{
     let no_auth = TokenStore::new_without_auth();
     let client_factory = ClientFactory::new(no_auth);
     let client = client_factory.create_client();
     let url_string = gcs_url.to_string();
     let (bucket, gcs_path) = split_gs_url(&url_string).context("Splitting gs URL.")?;
-    if !client.fetch_all(bucket, gcs_path, &local_dir).await.is_ok() {
-        fetch_from_gcs_with_auth(bucket, gcs_path, local_dir).await.context("fetch with auth")?;
+    if !client.fetch_all(bucket, gcs_path, &local_dir, verbose, writer).await.is_ok() {
+        fetch_from_gcs_with_auth(bucket, gcs_path, local_dir, verbose, writer)
+            .await
+            .context("fetch with auth")?;
     }
     Ok(())
 }
@@ -75,11 +95,16 @@ pub(crate) async fn fetch_from_gcs(gcs_url: &str, local_dir: &Path) -> Result<()
 /// Download from a given `gcs_url` using auth.
 ///
 /// Fallback from using `fetch_from_gcs()` without auth.
-async fn fetch_from_gcs_with_auth(
+async fn fetch_from_gcs_with_auth<W>(
     gcs_bucket: &str,
     gcs_path: &str,
     local_dir: &Path,
-) -> Result<()> {
+    verbose: bool,
+    writer: &mut W,
+) -> Result<()>
+where
+    W: Write + Sync,
+{
     // TODO(fxb/89584): Change to using ffx client Id and consent screen.
     let boto: Option<PathBuf> =
         ffx_config::get("flash.gcs.token").await.context("getting flash.gcs.token config value")?;
@@ -104,7 +129,11 @@ async fn fetch_from_gcs_with_auth(
 
         let client_factory = ClientFactory::new(auth);
         let client = client_factory.create_client();
-        match client.fetch_all(gcs_bucket, gcs_path, &local_dir).await.context("fetch all") {
+        match client
+            .fetch_all(gcs_bucket, gcs_path, &local_dir, verbose, writer)
+            .await
+            .context("fetch all")
+        {
             Ok(()) => break,
             Err(e) => match e.downcast_ref::<GcsError>() {
                 Some(GcsError::NeedNewRefreshToken) => {

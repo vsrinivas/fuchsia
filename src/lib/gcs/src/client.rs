@@ -82,12 +82,18 @@ impl Client {
 
     /// Save content of matching objects (blob) from GCS to local location
     /// `output_dir`.
-    pub async fn fetch_all<P: AsRef<Path>>(
+    pub async fn fetch_all<P, W>(
         &self,
         bucket: &str,
         prefix: &str,
         output_dir: P,
-    ) -> Result<()> {
+        verbose: bool,
+        writer: &mut W,
+    ) -> Result<()>
+    where
+        P: AsRef<Path>,
+        W: Write + Sync,
+    {
         let objects =
             self.token_store.list(&self.https, bucket, prefix).await.context("token store list")?;
         let output_dir = output_dir.as_ref();
@@ -111,9 +117,17 @@ impl Client {
                     create_dir_all(&parent).context(format!("create dir all for {:?}", parent))?;
                 }
                 let mut file = File::create(output_path).context("create file")?;
-                println!("GCS fetch: gs://{}/{}", bucket, object);
+                if verbose {
+                    writeln!(writer, "GCS fetch: gs://{}/{}", bucket, object)?;
+                } else {
+                    write!(writer, ".")?;
+                    writer.flush()?;
+                }
                 self.write(bucket, &object, &mut file).await.context("write object")?;
             }
+        }
+        if !verbose {
+            writeln!(writer, "")?;
         }
         Ok(())
     }

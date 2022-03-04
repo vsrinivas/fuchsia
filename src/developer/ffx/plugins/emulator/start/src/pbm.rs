@@ -25,8 +25,10 @@ pub(crate) async fn make_configs(
     cmd: &StartCommand,
     ffx_config: &FfxConfigWrapper,
 ) -> Result<EmulatorConfiguration> {
-    let fms_entries =
-        pbms::get_pbms(/*update_metadata=*/ false).await.context("problem with fms_entries")?;
+    let mut writer = Box::new(std::io::stdout());
+    let fms_entries = pbms::get_pbms(/*update_metadata=*/ false, cmd.verbose, &mut writer)
+        .await
+        .context("problem with fms_entries")?;
     let product_bundle = fms::find_product_bundle(&fms_entries, &cmd.product_bundle)
         .context("problem with product_bundle")?;
     let virtual_device = fms::find_virtual_device(&fms_entries, &product_bundle.device_refs)
