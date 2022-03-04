@@ -15,8 +15,11 @@ source_set("symbolizer-markup") {
   public_deps = [
     "//sdk/lib/fit",
     "//sdk/lib/stdcompat",
-    "//zircon/system/public",
   ]
+
+  if (!is_fuchsia) {
+    public_deps += [ "//zircon/system/public" ]
+  }
 
   deps = [
     "//sdk/lib/fit",

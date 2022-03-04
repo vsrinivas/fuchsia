@@ -68,6 +68,7 @@ if (current_toolchain == default_toolchain) {
     public_deps = [ ":version-string.h($default_toolchain)" ]
     public_configs = [ ":gen.config" ]
     deps = [
+      "//src/lib/symbolizer-markup",
       "//zircon/kernel/lib/console",
       "//zircon/kernel/lib/init",
     ]

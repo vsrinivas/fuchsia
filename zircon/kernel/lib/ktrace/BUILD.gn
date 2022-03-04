@@ -38,6 +38,7 @@ config("suppress-warning.config") {
     "//sdk/lib/fit/*",
     "//sdk/lib/stdcompat/*",
     "//src/lib/llvm-profdata/*",
+    "//src/lib/symbolizer-markup/*",
     "//third_party/zstd/*",
     "//zircon/kernel/*",
     "//zircon/system/ulib/*",
