@@ -239,9 +239,13 @@ class DisplayCompositor final : public allocation::BufferCollectionImporter,
   // constraints as AttachTokens.
   BufferCollectionImportMode import_mode_ = BufferCollectionImportMode::AttemptDisplayConstraints;
 
-  std::array<float, 9> color_conversion_matrix_ = {1, 0, 0, 0, 1, 0, 0, 0, 1};
-  std::array<float, 3> color_conversion_preoffsets_ = {0, 0, 0};
-  std::array<float, 3> color_conversion_postoffsets_ = {0, 0, 0};
+  constexpr static std::array<float, 9> kDefaultColorConversionMatrix = {1, 0, 0, 0, 1, 0, 0, 0, 1};
+  constexpr static std::array<float, 3> kDefaultColorConversionOffsets = {0, 0, 0};
+
+  bool should_apply_display_color_conversion_ = false;
+  std::array<float, 9> color_conversion_matrix_ = kDefaultColorConversionMatrix;
+  std::array<float, 3> color_conversion_preoffsets_ = kDefaultColorConversionOffsets;
+  std::array<float, 3> color_conversion_postoffsets_ = kDefaultColorConversionOffsets;
 
   // TODO(fxbug.dev/77414): we use a weak ptr to safely post a task that might outlive this
   // DisplayCompositor, see RenderFrame().  This task simulates a vsync callback that we aren't yet

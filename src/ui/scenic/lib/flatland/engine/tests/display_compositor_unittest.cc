@@ -657,6 +657,9 @@ TEST_F(DisplayCompositorTest, HardwareFrameCorrectnessTest) {
   EXPECT_CALL(*renderer_.get(), ImportBufferImage(child_image_metadata)).WillOnce(Return(true));
   display_compositor_->ImportBufferImage(child_image_metadata);
 
+  display_compositor_->SetColorConversionValues({1, 0, 0, 0, 1, 0, 0, 0, 1}, {0.1f, 0.2f, 0.3f},
+                                                {-0.3f, -0.2f, -0.1f});
+
   // We start the frame by clearing the config.
   EXPECT_CALL(*mock, CheckConfig(true, _))
       .WillOnce(testing::Invoke([&](bool, MockDisplayController::CheckConfigCallback callback) {

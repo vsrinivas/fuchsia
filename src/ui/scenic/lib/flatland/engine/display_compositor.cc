@@ -537,12 +537,14 @@ void DisplayCompositor::RenderFrame(uint64_t frame_number, zx::time presentation
       hardware_fail = true;
       break;
     }
-    // Apply direct-to-display color conversion here.
-    zx_status_t status =
-        (*display_controller_.get())
-            ->SetDisplayColorConversion(data.display_id, color_conversion_preoffsets_,
-                                        color_conversion_matrix_, color_conversion_postoffsets_);
-    FX_CHECK(status == ZX_OK) << "Could not apply hardware color conversion: " << status;
+    if (should_apply_display_color_conversion_) {
+      // Apply direct-to-display color conversion here.
+      zx_status_t status =
+          (*display_controller_)
+              ->SetDisplayColorConversion(data.display_id, color_conversion_preoffsets_,
+                                          color_conversion_matrix_, color_conversion_postoffsets_);
+      FX_CHECK(status == ZX_OK) << "Could not apply hardware color conversion: " << status;
+    }
   }
 
   // Determine whether we need to fall back to GPU composition.  Avoid calling CheckConfig() if we
@@ -856,6 +858,9 @@ void DisplayCompositor::SetColorConversionValues(const std::array<float, 9>& mat
   color_conversion_matrix_ = matrix;
   color_conversion_preoffsets_ = preoffsets;
   color_conversion_postoffsets_ = postoffsets;
+  should_apply_display_color_conversion_ = (matrix != kDefaultColorConversionMatrix) ||
+                                           (preoffsets != kDefaultColorConversionOffsets) ||
+                                           (postoffsets != kDefaultColorConversionOffsets);
   renderer_->SetColorConversionValues(matrix, preoffsets, postoffsets);
 }
 
