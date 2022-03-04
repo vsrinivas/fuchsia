@@ -554,7 +554,6 @@ func (s *cloudSink) write(ctx context.Context, upload *artifactory.Upload) error
 		if !bytes.Equal(attrs.MD5, d) {
 			return fmt.Errorf("MD5 mismatch for %s; local: %x, remote: %x", upload.Destination, d, attrs.MD5)
 		}
-		logger.Infof(ctx, "Uploaded: %s", upload.Destination)
 		break
 	}
 	return nil
@@ -568,14 +567,14 @@ func (s *cloudSink) write(ctx context.Context, upload *artifactory.Upload) error
 // https://cloud.google.com/storage/docs/json_api/v1/status-codes and
 // https://tools.ietf.org/html/rfc7232#section-4.2.)
 // We do not report this as an error, however, as the associated object might
-// have been created after having checked its non-existence - and we wish to
-// be resilient in the event of such a race.
+// have been created by another job after we checked its non-existence - and we
+// wish to be resilient in the event of such a race.
 func checkGCSErr(ctx context.Context, err error, name string) error {
 	if err == nil || err == io.EOF {
 		return nil
 	}
 	if strings.Contains(err.Error(), "Error 412") {
-		logger.Infof(ctx, "object %q: created after its non-existence check", name)
+		logger.Debugf(ctx, "object %q: encountered recoverable race condition during upload, already exists remotely", name)
 		return nil
 	}
 	return err
@@ -733,6 +732,6 @@ func uploadFile(ctx context.Context, upload artifactory.Upload, dest dataSink) e
 	}); err != nil {
 		return fmt.Errorf("%s: %w", upload.Destination, err)
 	}
-	logger.Debugf(ctx, "object %q: created", upload.Destination)
+	logger.Infof(ctx, "object %q: created", upload.Destination)
 	return nil
 }
