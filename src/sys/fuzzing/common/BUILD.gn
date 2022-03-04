@@ -9,6 +9,7 @@ source_set("common") {
   visibility = [ "//src/sys/*" ]
   testonly = true
   sources = [
+    "async-deque.h",
     "binding.h",
     "controller-provider.cc",
     "controller-provider.h",
@@ -92,6 +93,7 @@ test("unittests_bin") {
   visibility = [ ":*" ]
   testonly = true
   sources = [
+    "async-deque-unittest.cc",
     "controller-provider-unittest.cc",
     "controller-unittest.cc",
     "input-unittest.cc",
