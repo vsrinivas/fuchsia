@@ -14,6 +14,13 @@ script_dir="$(dirname "$script")"
 # The value is an absolute path.
 project_root="$(readlink -f "$script_dir"/../..)"
 
+# The `realpath` command is not available on all systems, so we reimplement it
+# here in pure bash. It converts relative paths to absolute, and leaves
+# absolute paths as-is.
+realpath() {
+  [[ $1 == /* ]] && echo "$1" || echo "$PWD/${1#./}"
+}
+
 build_subdir="$(realpath --relative-to="$project_root" . )"
 project_root_rel="$(realpath --relative-to=. "$project_root")"
 
