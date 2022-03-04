@@ -5,6 +5,7 @@
 #include "src/virtualization/bin/vmm/device/block_dispatcher.h"
 
 #include <lib/async/cpp/task.h>
+#include <lib/fit/defer.h>
 #include <lib/fpromise/promise.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/trace/event.h>
@@ -403,6 +404,10 @@ class RemoteBlockDispatcher : public BlockDispatcher {
   uint32_t block_size_;
   const PhysMem& phys_mem_;
 
+  // This is retained here to avoid reallocation between requests. Each caller should assert the
+  // vector is empty before using it and clear the vector when done.
+  std::vector<block_fifo_request_t> fifo_requests_;
+
   fpromise::promise<void, zx_status_t> Sync() override {
     TRACE_DURATION("machina", "RemoteBlockDispatcher::Sync");
 
@@ -416,39 +421,69 @@ class RemoteBlockDispatcher : public BlockDispatcher {
     }
   }
 
+  fpromise::promise<void, zx_status_t> ReadBatch(const std::vector<Request>& requests) override {
+    return DoRead(requests);
+  }
+
   fpromise::promise<void, zx_status_t> ReadAt(void* data, uint64_t size, uint64_t off) override {
-    TRACE_DURATION("machina", "RemoteBlockDispatcher::ReadAt", "size", size, "off", off);
-    block_fifo_request_t request{
-        .opcode = BLOCKIO_READ,
-        .vmoid = id_.get(),
-        .length = safemath::checked_cast<uint32_t>(size / block_size_),
-        .vmo_offset = phys_mem_.offset(data, size) / block_size_,
-        .dev_offset = off / block_size_,
-    };
-    zx_status_t status = device_->FifoTransaction(&request, 1);
+    return DoRead(std::array<Request, 1>{{{data, size, off}}});
+  }
+
+  fpromise::promise<void, zx_status_t> WriteBatch(const std::vector<Request>& requests) override {
+    return DoWrite(requests);
+  }
+
+  fpromise::promise<void, zx_status_t> WriteAt(const void* data, uint64_t size,
+                                               uint64_t off) override {
+    std::array<const Request, 1> request = {{{const_cast<void*>(data), size, off}}};
+    return DoWrite(request);
+  }
+
+ private:
+  template <typename Collection>
+  fpromise::promise<void, zx_status_t> DoRead(const Collection& requests) {
+    TRACE_DURATION("machina", "RemoteBlockDispatcher::DoRead", "count", requests.size());
+
+    FX_CHECK(fifo_requests_.empty()) << "Consumers are required to clear fifo_requests_ after use";
+    auto cleanup = fit::defer([this] { fifo_requests_.clear(); });
+
+    for (const auto& request : requests) {
+      fifo_requests_.emplace_back(block_fifo_request_t{
+          .opcode = BLOCKIO_READ,
+          .vmoid = id_.get(),
+          .length = safemath::checked_cast<uint32_t>(request.size / block_size_),
+          .vmo_offset = phys_mem_.offset(request.data, request.size) / block_size_,
+          .dev_offset = request.off / block_size_,
+      });
+    }
+    zx_status_t status = device_->FifoTransaction(fifo_requests_.data(), fifo_requests_.size());
     if (status != ZX_OK) {
-      FX_PLOGS(ERROR, status) << "Failed to send read request of " << size << " at " << off
-                              << " block " << block_size_;
+      FX_PLOGS(ERROR, status) << "Failed to send read batch of " << requests.size() << " requests";
       return fpromise::make_error_promise(status);
     } else {
       return fpromise::make_result_promise<void, zx_status_t>(fpromise::ok());
     }
   }
 
-  fpromise::promise<void, zx_status_t> WriteAt(const void* data, uint64_t size,
-                                               uint64_t off) override {
-    TRACE_DURATION("machina", "RemoteBlockDispatcher::WriteAt", "size", size, "off", off);
-    block_fifo_request_t request{
-        .opcode = BLOCKIO_WRITE,
-        .vmoid = id_.get(),
-        .length = safemath::checked_cast<uint32_t>(size / block_size_),
-        .vmo_offset = phys_mem_.offset(data, size) / block_size_,
-        .dev_offset = off / block_size_,
-    };
-    zx_status_t status = device_->FifoTransaction(&request, 1);
+  template <typename Collection>
+  fpromise::promise<void, zx_status_t> DoWrite(const Collection& requests) {
+    TRACE_DURATION("machina", "RemoteBlockDispatcher::WriteBatch", "count", requests.size());
+
+    FX_CHECK(fifo_requests_.empty()) << "Consumers are required to clear fifo_requests_ after use";
+    auto cleanup = fit::defer([this] { fifo_requests_.clear(); });
+
+    for (const auto& request : requests) {
+      fifo_requests_.emplace_back(block_fifo_request_t{
+          .opcode = BLOCKIO_WRITE,
+          .vmoid = id_.get(),
+          .length = safemath::checked_cast<uint32_t>(request.size / block_size_),
+          .vmo_offset = phys_mem_.offset(request.data, request.size) / block_size_,
+          .dev_offset = request.off / block_size_,
+      });
+    }
+    zx_status_t status = device_->FifoTransaction(fifo_requests_.data(), fifo_requests_.size());
     if (status != ZX_OK) {
-      FX_PLOGS(ERROR, status) << "Failed to send write request of " << size << " at " << off
-                              << " block " << block_size_;
+      FX_PLOGS(ERROR, status) << "Failed to send write batch of " << requests.size() << " requests";
       return fpromise::make_error_promise(status);
     } else {
       return fpromise::make_result_promise<void, zx_status_t>(fpromise::ok());
