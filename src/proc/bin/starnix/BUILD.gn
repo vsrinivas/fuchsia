@@ -70,6 +70,7 @@ if (target_cpu == "x64") {
       "//third_party/rust_crates:log",
       "//third_party/rust_crates:maplit",
       "//third_party/rust_crates:memchr",
+      "//third_party/rust_crates:memoffset",
       "//third_party/rust_crates:once_cell",
       "//third_party/rust_crates:parking_lot",
       "//third_party/rust_crates:paste",

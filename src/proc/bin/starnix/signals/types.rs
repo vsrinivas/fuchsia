@@ -81,11 +81,14 @@ impl SignalState {
         }
     }
 
-    /// Finds the next queued signal that is not blocked by the given mask, removes it from the
+    /// Finds the next queued signal where the given function returns true, removes it from the
     /// queue, and returns it.
-    pub fn take_next_allowed_by_mask(&mut self, mask: sigset_t) -> Option<SignalInfo> {
+    pub fn take_next_where<F>(&mut self, predicate: F) -> Option<SignalInfo>
+    where
+        F: Fn(&SignalInfo) -> bool,
+    {
         // Find the first non-blocked signal
-        let index = self.queue.iter().position(|sig| !sig.signal.is_in_set(mask))?;
+        let index = self.queue.iter().position(predicate)?;
         self.queue.remove(index)
     }
 
@@ -121,6 +124,7 @@ pub struct SignalInfo {
     pub errno: i32,
     pub code: i32,
     pub detail: SignalDetail,
+    pub force: bool,
 }
 
 impl SignalInfo {
@@ -129,7 +133,7 @@ impl SignalInfo {
     }
 
     pub fn new(signal: Signal, code: u32, detail: SignalDetail) -> Self {
-        Self { signal, errno: 0, code: code as i32, detail }
+        Self { signal, errno: 0, code: code as i32, detail, force: false }
     }
 
     // TODO(tbodt): Add a bound requiring siginfo_t to be FromBytes. This will help ensure the

@@ -4,6 +4,7 @@
 
 use crate::not_implemented;
 use crate::signals::*;
+use crate::strace;
 use crate::task::*;
 use crate::types::*;
 
@@ -25,25 +26,37 @@ const RED_ZONE_SIZE: u64 = 128;
 /// A `SignalStackFrame` contains all the state that is stored on the stack prior
 /// to executing a signal handler.
 ///
-/// Note that the ordering of the fields is significant. In particular, restorer_address
-/// must be the first field, since that is where the signal handler will return after
-/// it finishes executing.
+/// The ordering of the fields is significant, as it is part of the syscall ABI. In particular,
+/// restorer_address must be the first field, since that is where the signal handler will return
+/// after it finishes executing.
 #[repr(C)]
-#[derive(Default)]
 #[cfg(target_arch = "x86_64")]
 struct SignalStackFrame {
     /// The address of the signal handler function.
+    ///
+    /// Must be the first field, to be positioned to serve as the return address.
     restorer_address: u64,
+
+    /// Information about the signal.
+    siginfo_bytes: [u8; std::mem::size_of::<siginfo_t>()],
 
     /// The state of the thread at the time the signal was handled.
     context: ucontext,
+    /// The FPU state. Must be immediately after the ucontext field, since Bionic considers this to
+    /// be part of the ucontext for some reason.
+    fpstate: _fpstate_64,
 }
 
 const SIG_STACK_SIZE: usize = std::mem::size_of::<SignalStackFrame>();
 
 impl SignalStackFrame {
-    fn new(context: ucontext, restorer_address: u64) -> SignalStackFrame {
-        SignalStackFrame { context, restorer_address }
+    fn new(siginfo: &SignalInfo, context: ucontext, restorer_address: u64) -> SignalStackFrame {
+        SignalStackFrame {
+            context,
+            siginfo_bytes: siginfo.as_siginfo_bytes(),
+            restorer_address,
+            fpstate: Default::default(),
+        }
     }
 
     fn as_bytes(self) -> [u8; SIG_STACK_SIZE] {
@@ -75,6 +88,7 @@ fn dispatch_signal_handler(
     action: sigaction_t,
 ) {
     let signal_stack_frame = SignalStackFrame::new(
+        &siginfo,
         ucontext {
             uc_mcontext: sigcontext {
                 r8: current_task.registers.r8,
@@ -142,6 +156,12 @@ fn dispatch_signal_handler(
 
     current_task.registers.rsp = stack_pointer;
     current_task.registers.rdi = siginfo.signal.number() as u64;
+    if (action.sa_flags & SA_SIGINFO as u64) != 0 {
+        current_task.registers.rsi =
+            stack_pointer + memoffset::offset_of!(SignalStackFrame, siginfo_bytes) as u64;
+        current_task.registers.rdx =
+            stack_pointer + memoffset::offset_of!(SignalStackFrame, context) as u64;
+    }
     current_task.registers.rip = action.sa_handler.ptr() as u64;
 }
 
@@ -199,6 +219,12 @@ pub fn send_signal(task: &Task, siginfo: SignalInfo) {
     }
 }
 
+pub fn force_signal(current_task: &CurrentTask, mut siginfo: SignalInfo) {
+    strace!(current_task, "forced signal {:?}", siginfo);
+    siginfo.force = true;
+    send_signal(current_task, siginfo)
+}
+
 /// Represents the action to take when signal is delivered.
 ///
 /// See https://man7.org/linux/man-pages/man7/signal.7.html.
@@ -236,7 +262,9 @@ pub fn dequeue_signal(current_task: &mut CurrentTask) {
     let mut signal_state = task.signals.write();
 
     let mask = signal_state.mask;
-    if let Some(siginfo) = signal_state.take_next_allowed_by_mask(mask) {
+    if let Some(siginfo) =
+        signal_state.take_next_where(|sig| !sig.signal.is_in_set(mask) || sig.force)
+    {
         let sigaction = task.signal_actions.get(siginfo.signal);
         match action_for_signal(&siginfo, sigaction) {
             DeliveryAction::CallHandler => {

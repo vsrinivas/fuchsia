@@ -628,6 +628,7 @@ impl MemoryManagerState {
                 zx::Status::OUT_OF_RANGE => errno!(EINVAL),
                 zx::Status::NO_MEMORY => errno!(ENOMEM),
                 zx::Status::INVALID_ARGS => errno!(EINVAL),
+                zx::Status::ACCESS_DENIED => errno!(EACCES),
                 _ => impossible_error(s),
             })?;
         }

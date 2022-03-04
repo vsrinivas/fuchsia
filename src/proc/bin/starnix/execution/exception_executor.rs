@@ -5,11 +5,13 @@
 #![cfg(not(feature = "restricted_mode"))]
 
 use anyhow::Error;
-use fuchsia_zircon::{
-    self as zx, sys::zx_exception_info_t, sys::ZX_EXCEPTION_STATE_HANDLED,
-    sys::ZX_EXCEPTION_STATE_THREAD_EXIT, sys::ZX_EXCEPTION_STATE_TRY_NEXT,
-    sys::ZX_EXCP_POLICY_CODE_BAD_SYSCALL, sys::ZX_EXCP_POLICY_ERROR, AsHandleRef, Task as zxTask,
+use fuchsia_zircon as zx;
+use fuchsia_zircon::sys::{
+    zx_exception_info_t, ZX_EXCEPTION_STATE_HANDLED, ZX_EXCEPTION_STATE_THREAD_EXIT,
+    ZX_EXCEPTION_STATE_TRY_NEXT, ZX_EXCP_FATAL_PAGE_FAULT, ZX_EXCP_POLICY_CODE_BAD_SYSCALL,
+    ZX_EXCP_POLICY_ERROR,
 };
+use fuchsia_zircon::{AsHandleRef, Task as zxTask};
 use log::info;
 use std::ffi::CString;
 use std::mem;
@@ -19,7 +21,7 @@ use super::shared::*;
 use crate::errno;
 use crate::from_status_like_fdio;
 use crate::mm::MemoryManager;
-use crate::signals::signal_handling::*;
+use crate::signals::*;
 use crate::strace;
 use crate::syscalls::decls::SyscallDecl;
 use crate::syscalls::table::dispatch_syscall;
@@ -104,12 +106,6 @@ fn run_exception_loop(
         assert!(buffer.n_handles() == 1);
         let exception = zx::Exception::from(buffer.take_handle(0).unwrap());
 
-        if info.type_ != ZX_EXCP_POLICY_ERROR {
-            info!("exception type: 0x{:x}", info.type_);
-            exception.set_exception_state(&ZX_EXCEPTION_STATE_TRY_NEXT)?;
-            continue;
-        }
-
         let thread = exception.get_thread()?;
         assert!(
             thread.get_koid() == current_task.thread.get_koid(),
@@ -117,36 +113,55 @@ fn run_exception_loop(
         );
 
         let report = thread.get_exception_report()?;
-        if report.context.synth_code != ZX_EXCP_POLICY_CODE_BAD_SYSCALL {
-            info!("exception synth_code: {}", report.context.synth_code);
-            exception.set_exception_state(&ZX_EXCEPTION_STATE_TRY_NEXT)?;
-            continue;
-        }
-
         let syscall_number = report.context.synth_data as u64;
         current_task.registers = thread.read_state_general_regs()?;
 
         let regs = &current_task.registers;
-        let args = (regs.rdi, regs.rsi, regs.rdx, regs.r10, regs.r8, regs.r9);
-        strace!(
-            current_task,
-            "{}({:#x}, {:#x}, {:#x}, {:#x}, {:#x}, {:#x})",
-            SyscallDecl::from_number(syscall_number).name,
-            args.0,
-            args.1,
-            args.2,
-            args.3,
-            args.4,
-            args.5
-        );
-        match dispatch_syscall(current_task, syscall_number, args) {
-            Ok(return_value) => {
-                strace!(current_task, "-> {:#x}", return_value.value());
-                current_task.registers.rax = return_value.value();
+        match info.type_ {
+            ZX_EXCP_POLICY_ERROR
+                if report.context.synth_code == ZX_EXCP_POLICY_CODE_BAD_SYSCALL =>
+            {
+                let args = (regs.rdi, regs.rsi, regs.rdx, regs.r10, regs.r8, regs.r9);
+                strace!(
+                    current_task,
+                    "{}({:#x}, {:#x}, {:#x}, {:#x}, {:#x}, {:#x})",
+                    SyscallDecl::from_number(syscall_number).name,
+                    args.0,
+                    args.1,
+                    args.2,
+                    args.3,
+                    args.4,
+                    args.5
+                );
+                match dispatch_syscall(current_task, syscall_number, args) {
+                    Ok(return_value) => {
+                        strace!(current_task, "-> {:#x}", return_value.value());
+                        current_task.registers.rax = return_value.value();
+                    }
+                    Err(errno) => {
+                        strace!(current_task, "!-> {}", errno);
+                        current_task.registers.rax = (-errno.value()) as u64;
+                    }
+                }
             }
-            Err(errno) => {
-                strace!(current_task, "!-> {}", errno);
-                current_task.registers.rax = (-errno.value()) as u64;
+
+            ZX_EXCP_FATAL_PAGE_FAULT => {
+                #[cfg(target_arch = "x86_64")]
+                let fault_addr = unsafe { report.context.arch.x86_64.cr2 };
+                strace!(
+                    current_task,
+                    "page fault, ip={:#x}, sp={:#x}, fault={:#x}",
+                    current_task.registers.rip,
+                    current_task.registers.rsp,
+                    fault_addr
+                );
+                force_signal(&current_task, SignalInfo::default(SIGSEGV));
+            }
+
+            _ => {
+                info!("unhandled exception. info={:?} report.header={:?} synth_code={:?} synth_data={:?}", info, report.header, report.context.synth_code, report.context.synth_data);
+                exception.set_exception_state(&ZX_EXCEPTION_STATE_TRY_NEXT)?;
+                continue;
             }
         }
 

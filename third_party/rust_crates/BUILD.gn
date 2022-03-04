@@ -428,6 +428,10 @@ group("memchr") {
   deps = [ ":memchr-v2_4_0" ]
 }
 
+group("memoffset") {
+  deps = [ ":memoffset-v0_6_3" ]
+}
+
 group("mockall") {
   deps = [ ":mockall-v0_9_0" ]
 }
