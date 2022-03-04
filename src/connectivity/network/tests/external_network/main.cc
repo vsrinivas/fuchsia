@@ -95,7 +95,7 @@ TEST(ExternalNetworkTest, ConnectToNonRoutableINET6) {
 
 TEST(ExternalNetworkTest, GetHostName) {
   char hostname[HOST_NAME_MAX];
-  EXPECT_GE(gethostname(hostname, sizeof(hostname)), 0) << strerror(errno);
+  ASSERT_GE(gethostname(hostname, sizeof(hostname)), 0) << strerror(errno);
 #if defined(__Fuchsia__)
   ASSERT_STREQ(hostname, kDerivedDeviceName);
 #endif
@@ -103,7 +103,7 @@ TEST(ExternalNetworkTest, GetHostName) {
 
 TEST(ExternalNetworkTest, Uname) {
   utsname uts;
-  EXPECT_EQ(uname(&uts), 0) << strerror(errno);
+  ASSERT_EQ(uname(&uts), 0) << strerror(errno);
 #if defined(__Fuchsia__)
   ASSERT_STREQ(uts.nodename, kDerivedDeviceName);
 #endif

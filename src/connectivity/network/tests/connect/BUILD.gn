@@ -2,9 +2,11 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/components.gni")
 import("//build/rust/rustc_binary.gni")
 
-rustc_binary("connect") {
+rustc_binary("bin") {
+  output_name = "connect"
   edition = "2018"
 
   deps = [
@@ -28,4 +30,38 @@ rustc_binary("connect") {
   sources = [ "src/main.rs" ]
 
   configs -= [ "//build/config/rust:allow_unused_results" ]
+}
+
+fuchsia_test_component("connect") {
+  manifest = "meta/connect.cmx"
+  deps = [ ":bin" ]
+}
+
+fuchsia_test_component("connect_test") {
+  manifest = "meta/connect_test.cmx"
+  deps = [ ":connect" ]
+}
+
+_universe_deps = [
+  # netemul-runner is used to create hermetic test environments.
+  "//src/connectivity/network/testing/netemul/runner:netemul-sandbox",
+]
+
+fuchsia_test_package("netstack-connect-tests") {
+  package_deps_for_infra_only = _universe_deps
+
+  test_components = [ ":connect_test" ]
+
+  deps = [
+    # netstack is under test.
+    "//src/connectivity/network/netstack:component-debug-legacy",
+
+    # netstack-cfg is used to configure netstack in test environments.
+    "//src/connectivity/network/testing/netemul/runner:netstack-cfg",
+  ]
+}
+
+group("tests") {
+  testonly = true
+  public_deps = _universe_deps + [ ":netstack-connect-tests" ]
 }

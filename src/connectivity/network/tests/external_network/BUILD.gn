@@ -1,0 +1,57 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/test.gni")
+
+test("bin") {
+  output_name = "external_network_client"
+  sources = [ "main.cc" ]
+
+  deps = [
+    "//src/lib/fxl/test:gtest_main",
+    "//zircon/system/ulib/fbl",
+  ]
+}
+
+fuchsia_test_component("client") {
+  deps = [ ":bin" ]
+  manifest = "meta/client.cmx"
+}
+
+fuchsia_unittest_component("test") {
+  deps = [ ":client" ]
+  manifest = "meta/test.cmx"
+}
+
+_universe_deps = [
+  # netemul-runner is used to create hermetic test environments.
+  "//src/connectivity/network/testing/netemul/runner:netemul-sandbox",
+]
+
+fuchsia_test_package("netstack-external-network-tests") {
+  package_deps_for_infra_only = _universe_deps
+
+  test_components = [ ":test" ]
+
+  deps = [
+    # device_name_provider provides fuchsia.device.NameProvider.
+    "//src/connectivity/network/tests:device_name_provider",
+
+    # netstack is under test.
+    "//src/connectivity/network/netstack:component-debug-legacy",
+
+    # netstack-cfg is used to configure netstack in test environments.
+    "//src/connectivity/network/testing/netemul/runner:netstack-cfg",
+  ]
+}
+
+group("tests") {
+  testonly = true
+  public_deps = _universe_deps + [ ":netstack-external-network-tests" ]
+
+  if (host_os == "linux") {
+    public_deps += [ ":client($host_toolchain)" ]
+  }
+}

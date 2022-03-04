@@ -3,7 +3,7 @@
         "syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "test/netstack_external_network_test_client"
+        "binary": "test/external_network_client"
     },
     "sandbox": {
         "services": [

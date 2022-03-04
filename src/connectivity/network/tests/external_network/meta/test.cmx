@@ -7,12 +7,12 @@
                 ],
                 "name": "external_network_environment",
                 "services": {
-                    "fuchsia.device.NameProvider": "fuchsia-pkg://fuchsia.com/netstack-c-api-tests#meta/device_name_provider.cmx",
-                    "fuchsia.net.interfaces.State": "fuchsia-pkg://fuchsia.com/netstack-c-api-tests#meta/netstack-debug.cmx",
-                    "fuchsia.net.stack.Stack": "fuchsia-pkg://fuchsia.com/netstack-c-api-tests#meta/netstack-debug.cmx",
-                    "fuchsia.net.debug.Interfaces": "fuchsia-pkg://fuchsia.com/netstack-c-api-tests#meta/netstack-debug.cmx",
-                    "fuchsia.netstack.Netstack": "fuchsia-pkg://fuchsia.com/netstack-c-api-tests#meta/netstack-debug.cmx",
-                    "fuchsia.posix.socket.Provider": "fuchsia-pkg://fuchsia.com/netstack-c-api-tests#meta/netstack-debug.cmx"
+                    "fuchsia.device.NameProvider": "fuchsia-pkg://fuchsia.com/netstack-external-network-tests#meta/device_name_provider.cmx",
+                    "fuchsia.net.interfaces.State": "fuchsia-pkg://fuchsia.com/netstack-external-network-tests#meta/netstack-debug.cmx",
+                    "fuchsia.net.stack.Stack": "fuchsia-pkg://fuchsia.com/netstack-external-network-tests#meta/netstack-debug.cmx",
+                    "fuchsia.net.debug.Interfaces": "fuchsia-pkg://fuchsia.com/netstack-external-network-tests#meta/netstack-debug.cmx",
+                    "fuchsia.netstack.Netstack": "fuchsia-pkg://fuchsia.com/netstack-external-network-tests#meta/netstack-debug.cmx",
+                    "fuchsia.posix.socket.Provider": "fuchsia-pkg://fuchsia.com/netstack-external-network-tests#meta/netstack-debug.cmx"
                 },
                 "setup": [
                     {
@@ -23,12 +23,12 @@
                             "192.168.0.1/24",
                             "192.168.0.2/24"
                         ],
-                        "url": "fuchsia-pkg://fuchsia.com/netstack-c-api-tests#meta/netstack-cfg.cmx"
+                        "url": "fuchsia-pkg://fuchsia.com/netstack-external-network-tests#meta/netstack-cfg.cmx"
                     }
                 ],
                 "test": [
                     {
-                        "url": "fuchsia-pkg://fuchsia.com/netstack-c-api-tests#meta/netstack_external_network_test_client.cmx"
+                        "url": "fuchsia-pkg://fuchsia.com/netstack-external-network-tests#meta/client.cmx"
                     }
                 ]
             },

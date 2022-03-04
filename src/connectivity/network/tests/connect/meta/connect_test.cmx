@@ -13,7 +13,7 @@
                                     "-i",
                                     "192.168.0.2/24"
                                 ],
-                                "url": "fuchsia-pkg://fuchsia.com/netstack-c-api-tests#meta/netstack-cfg.cmx"
+                                "url": "fuchsia-pkg://fuchsia.com/netstack-connect-tests#meta/netstack-cfg.cmx"
                             }
                         ],
                         "test": [
@@ -23,7 +23,7 @@
                                     "--remote",
                                     "192.168.0.1"
                                 ],
-                                "url": "fuchsia-pkg://fuchsia.com/netstack-c-api-tests#meta/connect.cmx"
+                                "url": "fuchsia-pkg://fuchsia.com/netstack-connect-tests#meta/connect.cmx"
                             }
                         ]
                     },
@@ -37,7 +37,7 @@
                                     "-i",
                                     "192.168.0.1/24"
                                 ],
-                                "url": "fuchsia-pkg://fuchsia.com/netstack-c-api-tests#meta/netstack-cfg.cmx"
+                                "url": "fuchsia-pkg://fuchsia.com/netstack-connect-tests#meta/netstack-cfg.cmx"
                             }
                         ],
                         "test": [
@@ -45,17 +45,17 @@
                                 "arguments": [
                                     "server"
                                 ],
-                                "url": "fuchsia-pkg://fuchsia.com/netstack-c-api-tests#meta/connect.cmx"
+                                "url": "fuchsia-pkg://fuchsia.com/netstack-connect-tests#meta/connect.cmx"
                             }
                         ]
                     }
                 ],
                 "services": {
-                    "fuchsia.net.interfaces.State": "fuchsia-pkg://fuchsia.com/netstack-c-api-tests#meta/netstack-debug.cmx",
-                    "fuchsia.net.debug.Interfaces": "fuchsia-pkg://fuchsia.com/netstack-c-api-tests#meta/netstack-debug.cmx",
-                    "fuchsia.net.stack.Stack": "fuchsia-pkg://fuchsia.com/netstack-c-api-tests#meta/netstack-debug.cmx",
-                    "fuchsia.netstack.Netstack": "fuchsia-pkg://fuchsia.com/netstack-c-api-tests#meta/netstack-debug.cmx",
-                    "fuchsia.posix.socket.Provider": "fuchsia-pkg://fuchsia.com/netstack-c-api-tests#meta/netstack-debug.cmx"
+                    "fuchsia.net.interfaces.State": "fuchsia-pkg://fuchsia.com/netstack-connect-tests#meta/netstack-debug.cmx",
+                    "fuchsia.net.debug.Interfaces": "fuchsia-pkg://fuchsia.com/netstack-connect-tests#meta/netstack-debug.cmx",
+                    "fuchsia.net.stack.Stack": "fuchsia-pkg://fuchsia.com/netstack-connect-tests#meta/netstack-debug.cmx",
+                    "fuchsia.netstack.Netstack": "fuchsia-pkg://fuchsia.com/netstack-connect-tests#meta/netstack-debug.cmx",
+                    "fuchsia.posix.socket.Provider": "fuchsia-pkg://fuchsia.com/netstack-connect-tests#meta/netstack-debug.cmx"
                 }
             },
             "networks": [
