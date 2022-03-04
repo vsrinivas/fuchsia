@@ -7,7 +7,6 @@
 
 #include <debug.h>
 #include <lib/console.h>
-#include <lib/symbolizer-markup/writer.h>
 #include <lib/version.h>
 #include <lib/version/version-string.h>
 #include <stdint.h>
@@ -69,6 +68,18 @@ void init_build_id(uint level) {
 // get useful backtraces when the kernel panics.
 LK_INIT_HOOK(elf_build_id, &init_build_id, LK_INIT_LEVEL_EARLIEST)
 
+void print_module(FILE* f, const char* build_id) {
+  fprintf(f, "{{{module:0:kernel:elf:%s}}}\n", build_id);
+}
+
+// TODO(eieio): Consider whether it makes sense to locate the logic for printing
+// mappings somewhere else (perhaps in vm/vm.cpp?).
+void print_mmap(FILE* f, uintptr_t bias, const void* begin, const void* end, const char* perm) {
+  const uintptr_t start = reinterpret_cast<uintptr_t>(begin);
+  const size_t size = reinterpret_cast<uintptr_t>(end) - start;
+  fprintf(f, "{{{mmap:%#lx:%#lx:load:0:%s:%#lx}}}\n", start, size, perm, start + bias);
+}
+
 }  // namespace
 
 const char* version_string() { return kVersionString; }
@@ -89,31 +100,14 @@ void print_version() {
 }
 
 void PrintSymbolizerContext(FILE* f) {
-  auto code_start = reinterpret_cast<uintptr_t>(__code_start);
-  auto code_end = reinterpret_cast<uintptr_t>(__code_start);
-  auto rodata_start = reinterpret_cast<uintptr_t>(__rodata_start);
-  auto rodata_end = reinterpret_cast<uintptr_t>(__rodata_end);
-  auto data_start = reinterpret_cast<uintptr_t>(__data_start);
-  auto data_end = reinterpret_cast<uintptr_t>(__data_end);
-  auto bss_start = reinterpret_cast<uintptr_t>(__bss_start);
-  auto bss_end = reinterpret_cast<uintptr_t>(_end);
-  auto bias = uintptr_t{KERNEL_BASE} - code_start;
-
-  // A canonical module ID for the kernel.
-  constexpr unsigned int kId = 0;
-
-  // The four mappings match the mappings printed by vm_init().
-  symbolizer_markup::Writer writer([f](std::string_view s) { f->Write(s); });
-  writer.Reset()
-      .ElfModule(kId, "kernel"sv, ElfBuildId())
-      .LoadImageMmap(code_start, code_end - code_start, kId, {.read = true, .execute = true},
-                     code_start + bias)
-      .LoadImageMmap(rodata_start, rodata_end - rodata_start, kId, {.read = true},
-                     rodata_start + bias)
-      .LoadImageMmap(data_start, data_end - data_start, kId, {.read = true, .write = true},
-                     data_start + bias)
-      .LoadImageMmap(bss_start, bss_end - bss_start, kId, {.read = true, .write = true},
-                     bss_start + bias);
+  const uintptr_t bias = KERNEL_BASE - reinterpret_cast<uintptr_t>(__code_start);
+  fprintf(f, "{{{reset}}}\n");
+  print_module(f, gElfBuildIdString);
+  // These four mappings match the mappings printed by vm_init().
+  print_mmap(f, bias, __code_start, __code_end, "rx");
+  print_mmap(f, bias, __rodata_start, __rodata_end, "r");
+  print_mmap(f, bias, __data_start, __data_end, "rw");
+  print_mmap(f, bias, __bss_start, _end, "rw");
 }
 
 void print_backtrace_version_info(FILE* f) {
