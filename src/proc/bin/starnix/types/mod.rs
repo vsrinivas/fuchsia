@@ -10,6 +10,7 @@ mod open_flags;
 mod resource_limits;
 mod signals;
 mod time;
+mod union;
 mod user_address;
 mod user_buffer;
 
@@ -30,3 +31,6 @@ pub use time::*;
 pub use uapi::*;
 pub use user_address::*;
 pub use user_buffer::*;
+
+// The compiler doesn't like a glob here.
+pub(crate) use union::struct_with_union_into_bytes;

@@ -196,6 +196,7 @@ if (target_cpu == "x64") {
       "types/signals.rs",
       "types/time.rs",
       "types/uapi.rs",
+      "types/union.rs",
       "types/user_address.rs",
       "types/user_buffer.rs",
       "vmex_resource.rs",
