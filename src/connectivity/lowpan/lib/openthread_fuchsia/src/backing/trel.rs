@@ -15,15 +15,24 @@ use std::collections::HashMap;
 use std::net::{Ipv6Addr, SocketAddr, SocketAddrV6};
 use std::task::{Context, Poll};
 
-const TXT_SEPARATOR: u8 = 0x13;
-const TXT_SEPARATOR_STR: &str = "\x13";
-
 pub(crate) struct TrelInstance {
     socket: fasync::net::UdpSocket,
     publication_responder: Option<Task<Result<(), anyhow::Error>>>,
     instance_name: String,
     peer_instance_sockaddr_map: HashMap<String, ot::SockAddr>,
     subscriber_request_stream: ServiceSubscriberRequestStream,
+}
+
+// Converts an optional vector of strings and to a single string.
+fn flatten_txt(txt: Option<Vec<String>>) -> String {
+    ot::dnssd_flatten_txt(txt.into_iter().flat_map(IntoIterator::into_iter))
+}
+
+// Splits the TXT record into individual values.
+fn split_txt(txt: &[u8]) -> Vec<String> {
+    ot::dnssd_split_txt(std::str::from_utf8(txt).unwrap())
+        .map(ToString::to_string)
+        .collect::<Vec<_>>()
 }
 
 impl TrelInstance {
@@ -61,24 +70,8 @@ impl TrelInstance {
         self.socket.local_addr().unwrap().port()
     }
 
-    // Converts an optional vector of strings and to a single string.
-    fn flatten_txt(txt: Option<Vec<String>>) -> String {
-        txt.into_iter()
-            .flat_map(IntoIterator::into_iter)
-            .collect::<Vec<_>>()
-            .join(TXT_SEPARATOR_STR)
-    }
-
-    // Splits the TXT record into individual values.
-    fn split_txt(txt: &[u8]) -> Vec<String> {
-        txt.split(|&x| x == TXT_SEPARATOR)
-            .map(|x| std::str::from_utf8(x).unwrap().to_string())
-            .filter(|x| !x.is_empty())
-            .collect::<Vec<_>>()
-    }
-
     fn register_service(&mut self, port: u16, txt: &[u8]) {
-        let txt = Self::split_txt(txt);
+        let txt = split_txt(txt);
         let (client, server) = create_endpoints::<PublicationResponder_Marker>().unwrap();
 
         let publisher =
@@ -143,7 +136,7 @@ impl TrelInstance {
                     },
                 responder,
             } => {
-                let txt = Self::flatten_txt(text);
+                let txt = flatten_txt(text);
                 let sockaddr: ot::SockAddr = ipv6_endpoint.into();
 
                 self.peer_instance_sockaddr_map.insert(instance_name, sockaddr);
@@ -166,7 +159,7 @@ impl TrelInstance {
                     },
                 responder,
             } => {
-                let txt = Self::flatten_txt(text);
+                let txt = flatten_txt(text);
                 let sockaddr: ot::SockAddr = ipv6_endpoint.into();
 
                 if let Some(old_sockaddr) =
@@ -380,25 +373,25 @@ mod test {
     #[test]
     fn test_split_txt() {
         assert_eq!(
-            TrelInstance::split_txt(b"\x13xa=a7bfc4981f4e4d22\x13xp=029c6f4dbae059cb"),
+            split_txt(b"\x13xa=a7bfc4981f4e4d22\x13xp=029c6f4dbae059cb"),
             vec!["xa=a7bfc4981f4e4d22".to_string(), "xp=029c6f4dbae059cb".to_string()]
         );
         assert_eq!(
-            TrelInstance::split_txt(b"xa=a7bfc4981f4e4d22\x13xp=029c6f4dbae059cb"),
+            split_txt(b"xa=a7bfc4981f4e4d22\x13xp=029c6f4dbae059cb"),
             vec!["xa=a7bfc4981f4e4d22".to_string(), "xp=029c6f4dbae059cb".to_string()]
         );
     }
 
     #[test]
     fn test_flatten_txt() {
-        assert_eq!(TrelInstance::flatten_txt(None), String::default());
-        assert_eq!(TrelInstance::flatten_txt(Some(vec![])), String::default());
+        assert_eq!(flatten_txt(None), String::default());
+        assert_eq!(flatten_txt(Some(vec![])), String::default());
         assert_eq!(
-            TrelInstance::flatten_txt(Some(vec!["xa=a7bfc4981f4e4d22".to_string()])),
+            flatten_txt(Some(vec!["xa=a7bfc4981f4e4d22".to_string()])),
             "xa=a7bfc4981f4e4d22".to_string()
         );
         assert_eq!(
-            TrelInstance::flatten_txt(Some(vec![
+            flatten_txt(Some(vec![
                 "xa=a7bfc4981f4e4d22".to_string(),
                 "xp=029c6f4dbae059cb".to_string()
             ])),
