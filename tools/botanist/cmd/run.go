@@ -117,11 +117,17 @@ type RunCommand struct {
 	// SysloggerFile, if nonempty, is the file to where the system's logs will be written.
 	syslogFile string
 
+	// syslogDir, if nonempty, is the directory in which system syslogs will be written.
+	syslogDir string
+
 	// SshKey is the path to a private SSH user key.
 	sshKey string
 
 	// SerialLogFile, if nonempty, is the file where the system's serial logs will be written.
 	serialLogFile string
+
+	// serialLogDir, if nonempty, is the directory in which system serial logs will be written.
+	serialLogDir string
 
 	// RepoURL specifies the URL of a package repository.
 	repoURL string
@@ -185,8 +191,10 @@ func (r *RunCommand) SetFlags(f *flag.FlagSet) {
 	f.Var(&r.zirconArgs, "zircon-args", "kernel command-line arguments")
 	f.DurationVar(&r.timeout, "timeout", 10*time.Minute, "duration allowed for the command to finish execution.")
 	f.StringVar(&r.syslogFile, "syslog", "", "file to write the systems logs to")
+	f.StringVar(&r.syslogDir, "syslog-dir", "", "the directory to write all system logs to.")
 	f.StringVar(&r.sshKey, "ssh", "", "file containing a private SSH user key; if not provided, a private key will be generated.")
 	f.StringVar(&r.serialLogFile, "serial-log", "", "file to write the serial logs to.")
+	f.StringVar(&r.serialLogDir, "serial-log-dir", "", "the directory to write all serial logs to.")
 	f.StringVar(&r.repoURL, "repo", "", "URL at which to configure a package repository; if the placeholder of \"localhost\" will be resolved and scoped as appropriate")
 	f.StringVar(&r.blobURL, "blobs", "", "URL at which to serve a package repository's blobs; if the placeholder of \"localhost\" will be resolved and scoped as appropriate")
 	f.StringVar(&r.localRepo, "local-repo", "", "path to a local package repository; the repo and blobs flags are ignored when this is set")
@@ -268,6 +276,25 @@ func (r *RunCommand) execute(ctx context.Context, args []string) error {
 	}
 
 	eg, ctx := errgroup.WithContext(ctx)
+	if r.serialLogDir != "" {
+		for _, t := range targetSlice {
+			eg.Go(func() error {
+				logger.Debugf(ctx, "starting serial collection for target %s", t.Nodename())
+
+				// Create a new file to capture the serial log for this nodename.
+				serialLogName := fmt.Sprintf("%s_serial_log.txt", t.Nodename())
+				if _, err := os.Create(filepath.Join(r.serialLogDir, serialLogName)); err != nil {
+					return err
+				}
+
+				// Start capturing the serial log for this target.
+				if err := t.CaptureSerialLog(r.serialLogFile); err != nil && ctx.Err() == nil {
+					return err
+				}
+				return nil
+			})
+		}
+	}
 	if r.serialLogFile != "" {
 		eg.Go(func() error {
 			logger.Debugf(ctx, "starting serial collection")
@@ -306,6 +333,7 @@ func (r *RunCommand) execute(ctx context.Context, args []string) error {
 
 		if !r.netboot {
 			for i, t := range targetSlice {
+				t := t
 				client, err := t.SSHClient()
 				if err != nil {
 					if err := r.dumpSyslogOverSerial(ctx, t.SerialSocketPath()); err != nil {
@@ -322,6 +350,17 @@ func (r *RunCommand) execute(ctx context.Context, args []string) error {
 				if i == 0 && r.syslogFile != "" {
 					go func() {
 						t0.CaptureSyslog(client, r.syslogFile, r.repoURL, r.blobURL)
+					}()
+				}
+				if r.syslogDir != "" {
+					go func() {
+						syslogName := fmt.Sprintf("%s_syslog.txt", t.Nodename())
+						syslogPath := filepath.Join(r.syslogDir, syslogName)
+						if _, err := os.Create(syslogPath); err != nil {
+							logger.Errorf(ctx, "failed to create syslog file %s: %s", syslogPath, err)
+							return
+						}
+						t.CaptureSyslog(client, syslogPath, r.repoURL, r.blobURL)
 					}()
 				}
 			}
