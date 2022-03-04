@@ -4,30 +4,48 @@
 
 use {
     component_events::{events::*, matcher::*},
-    fuchsia_async as fasync, fuchsia_syslog as syslog,
+    fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
+    fuchsia_component_test::new::{Capability, ChildOptions, RealmBuilder, Ref, Route},
+    fuchsia_syslog as syslog,
     test_case::test_case,
-    test_utils_lib::opaque_test::OpaqueTest,
 };
 
-#[test_case("fuchsia-pkg://fuchsia.com/fuchsia-component-test-tests#meta/realm_with_wait.cm"; "wait")]
-#[test_case("fuchsia-pkg://fuchsia.com/fuchsia-component-test-tests#meta/realm.cm"; "no_wait")]
+#[test_case("#meta/realm_with_wait.cm"; "wait")]
+#[test_case("#meta/realm.cm"; "no_wait")]
 #[fasync::run_singlethreaded(test)]
 async fn scoped_instances(root_component: &'static str) {
     syslog::init_with_tags(&["fuchsia_component_v2_test"]).expect("could not initialize logging");
-    let test = OpaqueTest::default(root_component).await.unwrap();
 
-    let event_source = test.connect_to_event_source().await.unwrap();
+    let builder = RealmBuilder::new().await.unwrap();
+    let root =
+        builder.add_child("root", root_component, ChildOptions::new().eager()).await.unwrap();
+    builder
+        .add_route(
+            Route::new()
+                .capability(Capability::protocol_by_name("fuchsia.logger.LogSink"))
+                .capability(Capability::protocol_by_name("fuchsia.sys2.EventSource"))
+                .from(Ref::parent())
+                .to(&root),
+        )
+        .await
+        .unwrap();
+    let instance =
+        builder.build_in_nested_component_manager("#meta/component_manager.cm").await.unwrap();
+    let proxy =
+        instance.root.connect_to_protocol_at_exposed_dir::<fsys::EventSourceMarker>().unwrap();
+
+    let event_source = EventSource::from_proxy(proxy);
 
     let mut event_stream = event_source
         .subscribe(vec![EventSubscription::new(vec![Stopped::NAME], EventMode::Async)])
         .await
         .unwrap();
 
-    test.start_component_tree().await.unwrap();
+    instance.start_component_tree().await.unwrap();
 
     EventMatcher::ok()
         .stop(Some(ExitStatusMatcher::Clean))
-        .moniker_regex(".")
+        .moniker_regex("./root$")
         .wait::<Stopped>(&mut event_stream)
         .await
         .unwrap();
