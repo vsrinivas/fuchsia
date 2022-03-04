@@ -21,7 +21,6 @@ pub const fn encode_ioctl_read<T>(_type: u8, number: u32) -> u32 {
     new_ioctl(_IOC_READ, _type, number, std::mem::size_of::<T>() as u32)
 }
 
-#[cfg(test)]
 pub const fn encode_ioctl_write<T>(_type: u8, number: u32) -> u32 {
     new_ioctl(_IOC_WRITE, _type, number, std::mem::size_of::<T>() as u32)
 }
