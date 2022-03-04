@@ -320,30 +320,28 @@ class VmCowPages final
                                 uint64_t max_out_pages, list_node* alloc_list,
                                 LazyPageRequest* page_request, LookupInfo* out) TA_REQ(lock_);
 
-  // Controls how the Add[New]Page[s]Locked functions handle the presence of already existing
-  // non-empty slots in the page list, i.e. entries that return false for IsEmpty().
-  enum class ExistingEntryAction : uint8_t {
-    // Do not overwrite any non-empty slots, i.e. only populate empty slots.
-    OverwriteNone,
-    // Only overwrite slots that represent initial content. In the case of anonymous VMOs,
-    // zero page markers represent initial content, as the entire VMO is implicitly zero on
-    // creation. For pager backed VMOs, initial content is explicitly supplied by the pager. (See
-    // comment in AddPageLocked for more details.)
-    OverwriteInitialContent,
-    // Overwrite any slots, regardless of the type of content, pages or markers.
-    OverwriteAnyContent,
+  // Controls the type of content that can be overwritten by the Add[New]Page[s]Locked functions.
+  enum class CanOverwriteContent : uint8_t {
+    // Do not overwrite any kind of content, i.e. only add a page at the slot if there is true
+    // absence of content.
+    None,
+    // Only overwrite slots that represent zeros. In the case of anonymous VMOs, both gaps and zero
+    // page markers represent zeros, as the entire VMO is implicitly zero on creation. For pager
+    // backed VMOs, zero page markers and gaps after supply_zero_offset_ represent zeros.
+    Zero,
+    // Overwrite any slots, regardless of the type of content.
+    NonZero,
   };
   // Adds an allocated page to this cow pages at the specified offset, can be optionally zeroed and
   // any mappings invalidated. If an error is returned the caller retains ownership of |page|.
   // Offset must be page aligned.
   //
-  // |overwrite| controls how the function handles a pre-existing non-empty slot at |offset|. If an
-  // already existing page or marker is found and |overwrite| does not permit replacing it,
-  // ZX_ERR_ALREADY_EXISTS will be returned. If a page is released from the page list as a result of
-  // overwriting, it is returned through |released_page| and the caller takes ownership of this
-  // page. If the |overwrite| action is such that a page cannot be released, it is valid for the
-  // caller to pass in nullptr for |released_page|.
-  zx_status_t AddNewPageLocked(uint64_t offset, vm_page_t* page, ExistingEntryAction overwrite,
+  // |overwrite| controls how the function handles pre-existing content at |offset|. If |overwrite|
+  // does not permit replacing the content, ZX_ERR_ALREADY_EXISTS will be returned. If a page is
+  // released from the page list as a result of overwriting, it is returned through |released_page|
+  // and the caller takes ownership of this page. If the |overwrite| action is such that a page
+  // cannot be released, it is valid for the caller to pass in nullptr for |released_page|.
+  zx_status_t AddNewPageLocked(uint64_t offset, vm_page_t* page, CanOverwriteContent overwrite,
                                ktl::optional<vm_page_t*>* released_page, bool zero = true,
                                bool do_range_update = true) TA_REQ(lock_);
 
@@ -351,14 +349,13 @@ class VmCowPages final
   // result ownership of the pages is taken. Pages are assumed to be in the ALLOC state and can be
   // optionally zeroed before inserting. start_offset must be page aligned.
   //
-  // |overwrite| controls how the function handles pre-existing non-empty slots in the range. If
-  // an already existing page or marker is found and |overwrite| does not permit replacing it,
-  // ZX_ERR_ALREADY_EXISTS will be returned. Pages released from the page list as a result of
-  // overwriting are returned through |released_pages| and the caller takes ownership of these
-  // pages. If the |overwrite| action is such that pages cannot be released, it is valid for the
-  // caller to pass in nullptr for |released_pages|.
+  // |overwrite| controls how the function handles pre-existing content in the range. If |overwrite|
+  // does not permit replacing the content, ZX_ERR_ALREADY_EXISTS will be returned. Pages released
+  // from the page list as a result of overwriting are returned through |released_pages| and the
+  // caller takes ownership of these pages. If the |overwrite| action is such that pages cannot be
+  // released, it is valid for the caller to pass in nullptr for |released_pages|.
   zx_status_t AddNewPagesLocked(uint64_t start_offset, list_node_t* pages,
-                                ExistingEntryAction overwrite, list_node_t* released_pages,
+                                CanOverwriteContent overwrite, list_node_t* released_pages,
                                 bool zero = true, bool do_range_update = true) TA_REQ(lock_);
 
   // Attempts to release pages in the pages list causing the range to become copy-on-write again.
@@ -645,18 +642,17 @@ class VmCowPages final
 
   // Add a page to the object at |offset|.
   //
-  // |overwrite| controls how the function handles a pre-existing non-empty slot at |offset|. If an
-  // already existing page or marker is found and |overwrite| does not permit replacing it,
-  // ZX_ERR_ALREADY_EXISTS will be returned. If a page is released from the page list as a result of
-  // overwriting, it is returned through |released_page| and the caller takes ownership of this
-  // page. If the |overwrite| action is such that a page cannot be released, it is valid for the
-  // caller to pass in nullptr for |released_page|.
+  // |overwrite| controls how the function handles pre-existing content at |offset|. If |overwrite|
+  // does not permit replacing the content, ZX_ERR_ALREADY_EXISTS will be returned. If a page is
+  // released from the page list as a result of overwriting, it is returned through |released_page|
+  // and the caller takes ownership of this page. If the |overwrite| action is such that a page
+  // cannot be released, it is valid for the caller to pass in nullptr for |released_page|.
   //
   // This operation unmaps the corresponding offset from any existing mappings, unless
   // |do_range_update| is false, in which case it will skip updating mappings.
   //
   // On success the page to add is moved out of `*p`, otherwise it is left there.
-  zx_status_t AddPageLocked(VmPageOrMarker* p, uint64_t offset, ExistingEntryAction overwrite,
+  zx_status_t AddPageLocked(VmPageOrMarker* p, uint64_t offset, CanOverwriteContent overwrite,
                             ktl::optional<vm_page_t*>* released_page, bool do_range_update = true)
       TA_REQ(lock_);
 

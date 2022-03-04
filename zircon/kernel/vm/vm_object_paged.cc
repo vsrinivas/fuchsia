@@ -281,9 +281,10 @@ zx_status_t VmObjectPaged::CreateContiguous(uint32_t pmm_alloc_flags, uint64_t s
   Guard<Mutex> guard{&vmo->lock_};
   // Add them to the appropriate range of the object, this takes ownership of all the pages
   // regardless of outcome.
-  // This is a newly created VMO, so we don't expect to be overwriting anything in its page list.
+  // This is a newly created VMO with a page source, so we don't expect to be overwriting anything
+  // in its page list.
   status = vmo->cow_pages_locked()->AddNewPagesLocked(
-      0, &page_list, VmCowPages::ExistingEntryAction::OverwriteNone, nullptr);
+      0, &page_list, VmCowPages::CanOverwriteContent::None, nullptr);
   if (status != ZX_OK) {
     return status;
   }
@@ -334,11 +335,10 @@ zx_status_t VmObjectPaged::CreateFromWiredPages(const void* data, size_t size, b
         panic("page used to back static vmo in unusable state: paddr %#" PRIxPTR " state %zu\n", pa,
               VmPageStateIndex(page->state()));
       }
-      // This is a newly created VMO, so we don't expect to be overwriting anything in its page
-      // list.
+      // This is a newly created anonymous VMO, so we expect to be overwriting zeros. A newly
+      // created anonymous VMO with no committed pages has all its content implicitly zero.
       status = vmo->cow_pages_locked()->AddNewPageLocked(
-          count * PAGE_SIZE, page, VmCowPages::ExistingEntryAction::OverwriteNone, nullptr, false,
-          false);
+          count * PAGE_SIZE, page, VmCowPages::CanOverwriteContent::Zero, nullptr, false, false);
       ASSERT(status == ZX_OK);
     }
 

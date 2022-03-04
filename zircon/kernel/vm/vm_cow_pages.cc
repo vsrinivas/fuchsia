@@ -1267,7 +1267,7 @@ uint64_t VmCowPages::CountAttributedAncestorPagesLocked(uint64_t offset, uint64_
 }
 
 zx_status_t VmCowPages::AddPageLocked(VmPageOrMarker* p, uint64_t offset,
-                                      ExistingEntryAction overwrite,
+                                      CanOverwriteContent overwrite,
                                       ktl::optional<vm_page_t*>* released_page,
                                       bool do_range_update) {
   canary_.Assert();
@@ -1293,29 +1293,33 @@ zx_status_t VmCowPages::AddPageLocked(VmPageOrMarker* p, uint64_t offset,
     return ZX_ERR_NO_MEMORY;
   }
 
-  // If we're not permitted to overwrite any entries, the slot should be empty.
-  if (overwrite == ExistingEntryAction::OverwriteNone && !page->IsEmpty()) {
-    return ZX_ERR_ALREADY_EXISTS;
+  // We cannot overwrite any kind of content.
+  if (overwrite == CanOverwriteContent::None) {
+    // An anonymous VMO starts off with all its content set to zero, i.e. at no point can it have
+    // absence of content.
+    if (!page_source_) {
+      return ZX_ERR_ALREADY_EXISTS;
+    }
+    // This VMO is backed by a page source, so empty slots represent absence of content. Fail if the
+    // slot is not empty.
+    if (!page->IsEmpty()) {
+      return ZX_ERR_ALREADY_EXISTS;
+    }
   }
-  // We're only permitted to overwrite initial content. "Initial content" has different meanings
-  // based on the whether the VMO is anonymous or is backed by a pager.
+
+  // We're only permitted to overwrite zero content. This has different meanings based on the
+  // whether the VMO is anonymous or is backed by a pager.
   //
   //  * For anonymous VMOs, the initial content for the entire VMO is implicitly all zeroes at the
-  //  time of creation. So zero page markers can be overwritten as they are equivalent to the empty
-  //  slot (initial content), but actual pages cannot.
+  //  time of creation. So both zero page markers and empty slots represent zero content. Therefore
+  //  the only content type that cannot be overwritten in this case is an actual page.
   //
-  //  * For pager backed VMOs, initial content is anything that was explicitly supplied by the pager
-  //  and has not changed since. The only category of pages we can accurately infer as initial
-  //  content are zero page markers, which represent clean zero pages supplied by the pager; the
-  //  moment they are modified they will be forked and replaced with an actual page. For actual
-  //  pages, tracking whether they qualify as initial content requires additional tracking metadata.
-  //  Simply examining whether the page is Clean is not enough, as the page might have been modified
-  //  and then written back, in other words, the contents might differ from the time of supply even
-  //  for a Clean page. Furthermore, there does not exist a use case where we would want to replace
-  //  a previously supplied page with another. There does however exist a use case for markers,
-  //  where they need to be forked for a write. So for pager backed VMOs too, it is permitted to
-  //  overwrite only zero page markers, but not actual pages.
-  if (overwrite == ExistingEntryAction::OverwriteInitialContent && page->IsPage()) {
+  //  * For pager backed VMOs, content is either explicitly supplied by the user pager before
+  //  supply_zero_offset_, or implicitly supplied as zeros beyond supply_zero_offset_. So zero
+  //  content is represented by either zero page markers before supply_zero_offset_ (supplied by the
+  //  user pager), or by gaps after supply_zero_offset_ (supplied by the kernel). Therefore the only
+  //  content type that cannot be overwritten in this case as well is an actual page.
+  if (overwrite == CanOverwriteContent::Zero && page->IsPage()) {
     // If we have a page source, the page source should be able to validate the page.
     DEBUG_ASSERT(!page_source_ || page_source_->DebugIsPageOk(page->Page(), offset));
     return ZX_ERR_ALREADY_EXISTS;
@@ -1323,8 +1327,8 @@ zx_status_t VmCowPages::AddPageLocked(VmPageOrMarker* p, uint64_t offset,
 
   // If the old entry is an actual page, release it.
   if (page->IsPage()) {
-    // We should be permitted to overwrite an existing page.
-    DEBUG_ASSERT(overwrite == ExistingEntryAction::OverwriteAnyContent);
+    // We should be permitted to overwrite any kind of content (zero or non-zero).
+    DEBUG_ASSERT(overwrite == CanOverwriteContent::NonZero);
     // The caller should have passed in an optional to hold the released page.
     DEBUG_ASSERT(released_page != nullptr);
     *released_page = page->ReleasePage();
@@ -1354,7 +1358,7 @@ zx_status_t VmCowPages::AddPageLocked(VmPageOrMarker* p, uint64_t offset,
 }
 
 zx_status_t VmCowPages::AddNewPageLocked(uint64_t offset, vm_page_t* page,
-                                         ExistingEntryAction overwrite,
+                                         CanOverwriteContent overwrite,
                                          ktl::optional<vm_page_t*>* released_page, bool zero,
                                          bool do_range_update) {
   canary_.Assert();
@@ -1388,7 +1392,7 @@ zx_status_t VmCowPages::AddNewPageLocked(uint64_t offset, vm_page_t* page,
 }
 
 zx_status_t VmCowPages::AddNewPagesLocked(uint64_t start_offset, list_node_t* pages,
-                                          ExistingEntryAction overwrite,
+                                          CanOverwriteContent overwrite,
                                           list_node_t* released_pages, bool zero,
                                           bool do_range_update) {
   canary_.Assert();
@@ -1548,8 +1552,8 @@ zx_status_t VmCowPages::CloneCowPageLocked(uint64_t offset, list_node_t* alloc_l
 
     // Skip the automatic range update so we can do it ourselves more efficiently.
     VmPageOrMarker add_page = VmPageOrMarker::Page(target_page);
-    zx_status_t status = cur->AddPageLocked(
-        &add_page, cur_offset, ExistingEntryAction::OverwriteInitialContent, nullptr, false);
+    zx_status_t status =
+        cur->AddPageLocked(&add_page, cur_offset, CanOverwriteContent::Zero, nullptr, false);
     DEBUG_ASSERT_MSG(status == ZX_OK, "AddPageLocked returned %d\n", status);
 
     if (!skip_range_update) {
@@ -2173,8 +2177,7 @@ zx_status_t VmCowPages::LookupPagesLocked(uint64_t offset, uint pf_flags,
       res_page->object.dirty_state = static_cast<uint8_t>(DirtyState::Dirty);
     }
 
-    zx_status_t status =
-        AddPageLocked(&insert, offset, ExistingEntryAction::OverwriteInitialContent, nullptr);
+    zx_status_t status = AddPageLocked(&insert, offset, CanOverwriteContent::Zero, nullptr);
     if (status != ZX_OK) {
       // AddPageLocked failing for any other reason is a programming error.
       DEBUG_ASSERT_MSG(status == ZX_ERR_NO_MEMORY, "status=%d\n", status);
@@ -3573,20 +3576,20 @@ zx_status_t VmCowPages::SupplyPagesLocked(uint64_t offset, uint64_t len, VmPageS
     if (new_zeroed_pages) {
       // When new_zeroed_pages is true, we need to call InitializeVmPage(), which AddNewPageLocked()
       // will do.
-      // We only want to populate offsets that don't have initial content yet, so do not overwrite
+      // We only want to populate offsets that have true absence of content, so do not overwrite
       // anything in the page list.
       DEBUG_ASSERT(src_page.IsPage());
-      status = AddNewPageLocked(offset, src_page.Page(), ExistingEntryAction::OverwriteNone,
-                                nullptr, /*zero=*/false, /*do_range_update=*/false);
+      status = AddNewPageLocked(offset, src_page.Page(), CanOverwriteContent::None, nullptr,
+                                /*zero=*/false, /*do_range_update=*/false);
       if (status == ZX_OK) {
         src_page.ReleasePage();
       }
     } else {
       // When new_zeroed_pages is false, we don't need InitializeVmPage(), so we use
       // AddPageLocked().
-      // We only want to populate offsets that don't have initial content yet, so do not overwrite
+      // We only want to populate offsets that have true absence of content, so do not overwrite
       // anything in the page list.
-      status = AddPageLocked(&src_page, offset, ExistingEntryAction::OverwriteNone, nullptr,
+      status = AddPageLocked(&src_page, offset, CanOverwriteContent::None, nullptr,
                              /*do_range_update=*/false);
     }
 
@@ -3729,7 +3732,7 @@ zx_status_t VmCowPages::DirtyPagesLocked(uint64_t offset, uint64_t len) {
             // perform a single batch update.
             zx_status_t status =
                 AddNewPageLocked(off, list_remove_head_type(&zero_pages_list, vm_page, queue_node),
-                                 ExistingEntryAction::OverwriteInitialContent, nullptr);
+                                 CanOverwriteContent::Zero, nullptr);
             // AddNewPageLocked will not fail with ZX_ERR_ALREADY_EXISTS as we can overwrite markers
             // with OverwriteInitialContent, nor with ZX_ERR_NO_MEMORY as we don't need to allocate
             // a new slot in the page list, we're simply replacing its content.
@@ -4113,7 +4116,7 @@ void VmCowPages::SwapPageLocked(uint64_t offset, vm_page_t* old_page, vm_page_t*
   // common code.
   VmPageOrMarker new_vm_page = VmPageOrMarker::Page(new_page);
   ktl::optional<vm_page_t*> released_page = ktl::nullopt;
-  zx_status_t status = AddPageLocked(&new_vm_page, offset, ExistingEntryAction::OverwriteAnyContent,
+  zx_status_t status = AddPageLocked(&new_vm_page, offset, CanOverwriteContent::NonZero,
                                      &released_page, /*do_range_update=*/false);
   // Absent bugs, AddPageLocked() can only return ZX_ERR_NO_MEMORY, but that failure can only occur
   // if page_list_ had to allocate.  Here, page_list_ hasn't yet had a chance to clean up any
