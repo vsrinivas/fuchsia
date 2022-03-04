@@ -10,6 +10,7 @@
 
 #include <deque>
 #include <memory>
+#include <unordered_map>
 
 #include "src/lib/fxl/memory/weak_ptr.h"
 #include "src/ui/scenic/lib/allocation/buffer_collection_importer.h"
@@ -119,6 +120,11 @@ class DisplayCompositor final : public allocation::BufferCollectionImporter,
     zx::event signal_event;
   };
 
+  struct ImageEventData {
+    scenic_impl::DisplayEventId signal_id;
+    zx::event signal_event;
+  };
+
   struct DisplayEngineData {
     // The hardware layers we've created to use on this display.
     std::vector<uint64_t> layers;
@@ -139,6 +145,9 @@ class DisplayCompositor final : public allocation::BufferCollectionImporter,
 
   // Generates a new FrameEventData struct to be used with a render target on a display.
   FrameEventData NewFrameEventData();
+
+  // Generates a new ImageEventData struct to be used with a client image on a display.
+  ImageEventData NewImageEventData();
 
   // Generates a hardware layer for direct compositing on the display. Returns the ID used
   // to reference that layer in the display controller API.
@@ -189,6 +198,12 @@ class DisplayCompositor final : public allocation::BufferCollectionImporter,
 
   // Maps the flatland global image id to the image id used by the display controller.
   std::unordered_map<allocation::GlobalImageId, uint64_t> image_id_map_;
+
+  // Maps the flatland global image id to the events used by the display controller.
+  std::unordered_map<allocation::GlobalImageId, ImageEventData> image_event_map_;
+
+  // Pending images in the current config that hasn't been applied yet.
+  std::vector<allocation::GlobalImageId> pending_images_in_config_;
 
   // Software renderer used when render data cannot be directly composited to the display.
   const std::shared_ptr<Renderer> renderer_;

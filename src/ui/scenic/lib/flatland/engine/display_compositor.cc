@@ -349,6 +349,9 @@ void DisplayCompositor::ReleaseBufferImage(allocation::GlobalImageId image_id) {
 
   // Release image from the renderer.
   renderer_->ReleaseBufferImage(image_id);
+
+  image_id_map_.erase(image_id);
+  image_event_map_.erase(image_id);
 }
 
 uint64_t DisplayCompositor::CreateDisplayLayer() {
@@ -394,16 +397,33 @@ bool DisplayCompositor::SetRenderDataOnDisplay(const RenderData& data) {
     }
   }
 
+  for (uint32_t i = 0; i < num_images; i++) {
+    const uint32_t image_id = data.images[i].identifier;
+    if (image_event_map_.find(image_id) == image_event_map_.end()) {
+      image_event_map_[image_id] = NewImageEventData();
+    } else {
+      // If the event is not signaled, image must still be in use by the display and cannot be used
+      // again.
+      auto status =
+          image_event_map_[image_id].signal_event.wait_one(ZX_EVENT_SIGNALED, zx::time(), nullptr);
+      if (status != ZX_OK) {
+        return false;
+      }
+    }
+    pending_images_in_config_.push_back(image_id);
+  }
+
   // We only set as many layers as needed for the images we have.
   SetDisplayLayers(data.display_id,
                    std::vector<uint64_t>(layers.begin(), layers.begin() + num_images));
 
   for (uint32_t i = 0; i < num_images; i++) {
-    if (data.images[i].identifier == allocation::kInvalidImageId) {
+    const uint32_t image_id = data.images[i].identifier;
+    if (image_id == allocation::kInvalidImageId) {
       ApplyLayerColor(layers[i], data.rectangles[i], data.images[i]);
     } else {
       ApplyLayerImage(layers[i], data.rectangles[i], data.images[i], /*wait_id*/ 0,
-                      /*signal_id*/ 0);
+                      /*signal_id*/ image_event_map_[image_id].signal_id);
     }
   }
   return true;
@@ -495,6 +515,7 @@ DisplayCompositor::DisplayConfigResponse DisplayCompositor::CheckConfig() {
 
 void DisplayCompositor::DiscardConfig() {
   TRACE_DURATION("gfx", "flatland::DisplayCompositor::DiscardConfig");
+  pending_images_in_config_.clear();
   fuchsia::hardware::display::ConfigResult result;
   std::vector<fuchsia::hardware::display::ClientCompositionOp> ops;
   std::unique_lock<std::mutex> lock(lock_);
@@ -575,7 +596,12 @@ void DisplayCompositor::RenderFrame(uint64_t frame_number, zx::time presentation
       const auto& data = render_data_list[i];
       const auto it = display_engine_data_map_.find(data.display_id);
       FX_DCHECK(it != display_engine_data_map_.end());
+
       auto& display_engine_data = it->second;
+      if (display_engine_data.vmo_count == 0) {
+        FX_LOGS(WARNING) << "No VMOs were created when creating display.";
+        return;
+      }
       const uint32_t curr_vmo = display_engine_data.curr_vmo;
       display_engine_data.curr_vmo =
           (display_engine_data.curr_vmo + 1) % display_engine_data.vmo_count;
@@ -651,6 +677,11 @@ void DisplayCompositor::RenderFrame(uint64_t frame_number, zx::time presentation
     release_fence_manager_.OnGpuCompositedFrame(frame_number, std::move(render_finished_fence),
                                                 std::move(release_fences), std::move(callback));
   } else {
+    // Unsignal image events before applying config.
+    for (auto id : pending_images_in_config_) {
+      image_event_map_[id].signal_event.signal(ZX_EVENT_SIGNALED, 0);
+    }
+
     // See ReleaseFenceManager comments for details.
     release_fence_manager_.OnDirectScanoutFrame(frame_number, std::move(release_fences),
                                                 std::move(callback));
@@ -716,6 +747,23 @@ DisplayCompositor::FrameEventData DisplayCompositor::NewFrameEventData() {
   status = zx::event::create(0, &result.signal_event);
   FX_DCHECK(status == ZX_OK);
   result.signal_event.signal(0, ZX_EVENT_SIGNALED);
+  result.signal_id = scenic_impl::ImportEvent(*display_controller_.get(), result.signal_event);
+  FX_DCHECK(result.signal_id != fuchsia::hardware::display::INVALID_DISP_ID);
+
+  return result;
+}
+
+DisplayCompositor::ImageEventData DisplayCompositor::NewImageEventData() {
+  ImageEventData result;
+
+  std::unique_lock<std::mutex> lock(lock_);
+
+  // The DC signals this once it has set the layer image.  We pre-signal this event so the first
+  // frame rendered with it behaves as though it was previously OKed for recycling.
+  auto status = zx::event::create(0, &result.signal_event);
+  FX_DCHECK(status == ZX_OK);
+  status = result.signal_event.signal(0, ZX_EVENT_SIGNALED);
+  FX_DCHECK(status == ZX_OK);
   result.signal_id = scenic_impl::ImportEvent(*display_controller_.get(), result.signal_event);
   FX_DCHECK(result.signal_id != fuchsia::hardware::display::INVALID_DISP_ID);
 

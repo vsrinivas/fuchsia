@@ -595,9 +595,10 @@ TEST_F(DisplayCompositorTest, HardwareFrameCorrectnessTest) {
     // for...:
     // - 2 calls for importing and setting constraints on the collection
     // - 2 calls to import the images
-    // - 2 calls to initialize layers
-    // - 1 call to set the layers on the display
+    // - 2 calls to create layers.
     // - 1 call to discard the config.
+    // - 1 call to set the layers on the display
+    // - 2 calls to import events for images.
     // - 2 calls to set each layer image
     // - 2 calls to set the layer primary config
     // - 2 calls to set the layer primary positions
@@ -609,7 +610,7 @@ TEST_F(DisplayCompositorTest, HardwareFrameCorrectnessTest) {
     // - 1 call to DiscardConfig
     // - 2 calls to destroy layer.
     // TODO(fxbug.dev/71264): Use function call counters from display's MockDisplayController.
-    for (uint32_t i = 0; i < 23; i++) {
+    for (uint32_t i = 0; i < 25; i++) {
       mock->WaitForMessage();
     }
   });
@@ -695,6 +696,7 @@ TEST_F(DisplayCompositorTest, HardwareFrameCorrectnessTest) {
     EXPECT_CALL(*mock, SetLayerPrimaryAlpha(layers[i], _, _)).Times(1);
     EXPECT_CALL(*mock, SetLayerImage(layers[i], collection_ids[i], _, _)).Times(1);
   }
+  EXPECT_CALL(*mock, ImportEvent(_, _)).Times(2);
 
   EXPECT_CALL(*mock, SetDisplayColorConversion(_, _, _, _)).Times(1);
 
@@ -740,6 +742,172 @@ TEST_F(DisplayCompositorTest, HardwareFrameCorrectnessTest) {
 
   display_compositor_.reset();
 
+  server.join();
+}
+
+TEST_F(DisplayCompositorTest, ChecksDisplayImageSignalFences) {
+  const uint64_t kGlobalBufferCollectionId = 1;
+  auto session = CreateSession();
+
+  // Create the root handle and a handle that will have an image attached.
+  const TransformHandle root_handle = session.graph().CreateTransform();
+  const TransformHandle image_handle = session.graph().CreateTransform();
+  session.graph().AddChild(root_handle, image_handle);
+
+  // Get an UberStruct for the session.
+  auto uber_struct = session.CreateUberStructWithCurrentTopology(root_handle);
+
+  // Add an image.
+  ImageMetadata image_metadata = ImageMetadata{
+      .collection_id = kGlobalBufferCollectionId,
+      .identifier = allocation::GenerateUniqueImageId(),
+      .vmo_index = 0,
+      .width = 128,
+      .height = 256,
+      .blend_mode = fuchsia::ui::composition::BlendMode::SRC,
+  };
+  uber_struct->images[image_handle] = image_metadata;
+  uber_struct->local_matrices[image_handle] =
+      glm::scale(glm::translate(glm::mat3(1.0), glm::vec2(9, 13)), glm::vec2(10, 20));
+  uber_struct->local_image_sample_regions[image_handle] = {0, 0, 128, 256};
+
+  // Submit the UberStruct.
+  session.PushUberStruct(std::move(uber_struct));
+
+  // Set the mock display controller functions and wait for messages.
+  auto mock = mock_display_controller_.get();
+  std::thread server([&mock]() mutable {
+    // Since we have 1 rectangles with image with 1 buffer collection, we have to wait
+    // for...:
+    // - 2 call for importing and setting constraints on the collection.
+    // - 2 call to create layers.
+    // - 1 call to import the image.
+    // - 1 call to discard the config.
+    // - 1 call to set the layers on the display.
+    // - 1 call to import event for image.
+    // - 1 call to set the layer image.
+    // - 1 call to set the layer primary config.
+    // - 1 call to set the layer primary alpha.
+    // - 1 call to set the layer primary position.
+    // - 1 call to set display color conversion.
+    // - 1 call to check the config.
+    // - 1 call to apply the config.
+    // - 1 call to GetLatestAppliedConfigStamp
+    // - 2 calls to discard the config.
+    // - 1 call to discard the config.
+    // - 2 calls to destroy layer.
+    // TODO(fxbug.dev/71264): Use function call counters from display's MockDisplayController.
+    for (uint32_t i = 0; i < 21; i++) {
+      mock->WaitForMessage();
+    }
+  });
+
+  // Import buffer collection.
+  EXPECT_CALL(*mock, ImportBufferCollection(kGlobalBufferCollectionId, _, _))
+      .WillOnce(testing::Invoke(
+          [](uint64_t, fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken>,
+             MockDisplayController::ImportBufferCollectionCallback callback) { callback(ZX_OK); }));
+  EXPECT_CALL(*mock, SetBufferCollectionConstraints(kGlobalBufferCollectionId, _, _))
+      .WillOnce(testing::Invoke(
+          [](uint64_t collection_id, fuchsia::hardware::display::ImageConfig config,
+             MockDisplayController::SetBufferCollectionConstraintsCallback callback) {
+            callback(ZX_OK);
+          }));
+  // Save token to avoid early token failure.
+  fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token_ref;
+  EXPECT_CALL(*renderer_.get(), ImportBufferCollection(kGlobalBufferCollectionId, _, _))
+      .WillOnce([&token_ref](allocation::GlobalBufferCollectionId, fuchsia::sysmem::Allocator_Sync*,
+                             fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token) {
+        token_ref = std::move(token);
+        return true;
+      });
+  display_compositor_->ImportBufferCollection(kGlobalBufferCollectionId, sysmem_allocator_.get(),
+                                              CreateToken());
+  SetDisplaySupported(kGlobalBufferCollectionId, true);
+
+  // Import image.
+  const uint64_t kDisplayImageId = 2;
+  EXPECT_CALL(*mock, ImportImage(_, kGlobalBufferCollectionId, 0, _))
+      .WillOnce(testing::Invoke([](fuchsia::hardware::display::ImageConfig, uint64_t, uint32_t,
+                                   MockDisplayController::ImportImageCallback callback) {
+        callback(ZX_OK, kDisplayImageId);
+      }));
+
+  EXPECT_CALL(*renderer_.get(), ImportBufferImage(image_metadata)).WillOnce(Return(true));
+  display_compositor_->ImportBufferImage(image_metadata);
+
+  // We start the frame by clearing the config.
+  EXPECT_CALL(*mock, CheckConfig(true, _))
+      .WillRepeatedly(
+          testing::Invoke([&](bool, MockDisplayController::CheckConfigCallback callback) {
+            fuchsia::hardware::display::ConfigResult result =
+                fuchsia::hardware::display::ConfigResult::OK;
+            std::vector<fuchsia::hardware::display::ClientCompositionOp> ops;
+            callback(result, ops);
+          }));
+
+  // Set expectation for CreateLayer calls.
+  uint64_t layer_id = 1;
+  std::vector<uint64_t> layers = {1u, 2u};
+  EXPECT_CALL(*mock, CreateLayer(_))
+      .Times(2)
+      .WillRepeatedly(testing::Invoke([&](MockDisplayController::CreateLayerCallback callback) {
+        callback(ZX_OK, layer_id++);
+      }));
+  EXPECT_CALL(*renderer_.get(), ChoosePreferredPixelFormat(_));
+
+  // Add display.
+  uint64_t kDisplayId = 1;
+  glm::uvec2 kResolution(1024, 768);
+  DisplayInfo display_info = {kResolution, {kPixelFormat}};
+  scenic_impl::display::Display display(kDisplayId, kResolution.x, kResolution.y);
+  display_compositor_->AddDisplay(&display, display_info, /*num_vmos*/ 0,
+                                  /*out_buffer_collection*/ nullptr);
+
+  // Set expectation for rendering image on layer.
+  std::vector<uint64_t> active_layers = {1u};
+  zx::event imported_event;
+  EXPECT_CALL(*mock, ImportEvent(_, _))
+      .WillOnce(testing::Invoke(
+          [&imported_event](zx::event event, uint64_t) { imported_event = std::move(event); }));
+  EXPECT_CALL(*mock, SetDisplayColorConversion(_, _, _, _)).Times(1);
+  EXPECT_CALL(*mock, SetDisplayLayers(kDisplayId, active_layers)).Times(1);
+  EXPECT_CALL(*mock, SetLayerPrimaryConfig(layers[0], _)).Times(1);
+  EXPECT_CALL(*mock, SetLayerPrimaryPosition(layers[0], _, _, _)).Times(1);
+  EXPECT_CALL(*mock, SetLayerPrimaryAlpha(layers[0], _, _)).Times(1);
+  EXPECT_CALL(*mock, SetLayerImage(layers[0], kDisplayImageId, _, _)).Times(1);
+  EXPECT_CALL(*mock, CheckConfig(false, _))
+      .WillOnce(testing::Invoke([&](bool, MockDisplayController::CheckConfigCallback callback) {
+        fuchsia::hardware::display::ConfigResult result =
+            fuchsia::hardware::display::ConfigResult::OK;
+        std::vector<fuchsia::hardware::display::ClientCompositionOp> ops;
+        callback(result, ops);
+      }));
+  EXPECT_CALL(*mock, ApplyConfig()).WillOnce(Return());
+  EXPECT_CALL(*mock, GetLatestAppliedConfigStamp(_))
+      .WillOnce(
+          testing::Invoke([&](MockDisplayController::GetLatestAppliedConfigStampCallback callback) {
+            fuchsia::hardware::display::ConfigStamp stamp = {1};
+            callback(stamp);
+          }));
+
+  // Render image. This should end up in display.
+  const auto& display_list =
+      GenerateDisplayListForTest({{kDisplayId, {display_info, root_handle}}});
+  display_compositor_->RenderFrame(1, zx::time(1), display_list, {},
+                                   [](const scheduling::FrameRenderer::Timestamps&) {});
+
+  // Try rendering again. Because |imported_event| isn't signaled and no render targets were created
+  // when adding display, we should fail.
+  auto status = imported_event.wait_one(ZX_EVENT_SIGNALED, zx::time(), nullptr);
+  EXPECT_NE(status, ZX_OK);
+  display_compositor_->RenderFrame(1, zx::time(1), display_list, {},
+                                   [](const scheduling::FrameRenderer::Timestamps&) {});
+
+  for (uint32_t i = 0; i < 2; i++) {
+    EXPECT_CALL(*mock, DestroyLayer(layers[i]));
+  }
+  display_compositor_.reset();
   server.join();
 }
 
