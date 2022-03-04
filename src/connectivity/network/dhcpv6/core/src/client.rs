@@ -2929,24 +2929,48 @@ pub(crate) mod testutil {
                 t2: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(t2)),
             }
         }
+
+        /// Creates a `TestIdentityAssociation` with default valid values for
+        /// lifetimes.
+        pub(crate) fn new_default(address: Ipv6Addr) -> TestIdentityAssociation {
+            TestIdentityAssociation {
+                address,
+                preferred_lifetime: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(
+                    v6::NonZeroOrMaxU32::new(100).expect("should succeed"),
+                )),
+                valid_lifetime: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(
+                    v6::NonZeroOrMaxU32::new(120).expect("should succeed"),
+                )),
+                t1: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(
+                    v6::NonZeroOrMaxU32::new(60).expect("should succeed"),
+                )),
+                t2: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(
+                    v6::NonZeroOrMaxU32::new(90).expect("should succeed"),
+                )),
+            }
+        }
     }
 
-    /// Creates a stateful client and exchanges messages to assign the
-    /// configured addresses.  Returns the client in AddressAssigned state and
-    /// the actions returned on transitioning to the AddressAssigned state.
-    /// Asserts the content of the client state.
+    /// Creates a stateful client, exchanges messages to bring it in Requesting
+    /// state, and sends a Request message. Returns the client in Requesting
+    /// state and the transaction ID for the Request-Reply exchange. Asserts the
+    /// content of the sent Request message and of the Requesting state.
     ///
     /// # Panics
     ///
-    /// `assign_addresses_and_assert` panics if address assignment fails.
-    pub(crate) fn assign_addresses_and_assert<R: Rng + std::fmt::Debug>(
+    /// `request_addresses_and_assert` panics if the Request message cannot be
+    /// parsed or does not contain the expected options, or the Requesting state
+    /// is incorrect.
+    pub(crate) fn request_addresses_and_assert<R: Rng + std::fmt::Debug>(
         client_id: [u8; CLIENT_ID_LEN],
+        server_id: [u8; CLIENT_ID_LEN],
         addresses_to_assign: Vec<TestIdentityAssociation>,
         expected_dns_servers: &[Ipv6Addr],
-        expected_t1: v6::NonZeroTimeValue,
         rng: R,
-    ) -> (ClientStateMachine<R>, Actions) {
-        let transaction_id = [0, 1, 2];
+    ) -> (ClientStateMachine<R>, [u8; 3]) {
+        // Generate a transaction_id for the Solicit - Advertise message
+        // exchange.
+        let transaction_id = [1, 2, 3];
         let configured_addresses = to_configured_addresses(
             u32::try_from(addresses_to_assign.len()).unwrap(),
             addresses_to_assign
@@ -2971,11 +2995,10 @@ pub(crate) mod testutil {
             transaction_id.clone(),
             client_id.clone(),
             configured_addresses.clone(),
-            options_to_request,
+            options_to_request.clone(),
             rng,
         );
 
-        let server_id = [1, 2, 3];
         let mut options = vec![
             v6::DhcpOption::ClientId(&client_id),
             v6::DhcpOption::ServerId(&server_id),
@@ -3014,31 +3037,100 @@ pub(crate) mod testutil {
         builder.serialize(&mut buf);
         let mut buf = &buf[..]; // Implements BufferView.
         let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
-        // The client should transition to Requesting and select the server that
-        // sent the best advertise.
-        assert_matches!(
-            &client.handle_message_receive(msg)[..],
+        // The client should select the server that sent the best advertise and
+        // transition to Requesting.
+        let actions = client.handle_message_receive(msg);
+        let mut buf = assert_matches!(
+            &actions[..],
            [
                 Action::CancelTimer(ClientTimerType::Retransmission),
                 Action::SendMessage(buf),
                 Action::ScheduleTimer(ClientTimerType::Retransmission, INITIAL_REQUEST_TIMEOUT)
-                // TODO(https://fxbug.dev/88838): reuse `send_request` test
-                // asserts to check the content of the Request message.
-           ] if testutil::msg_type(buf) == v6::MessageType::Request
+           ] => buf
+        );
+        testutil::assert_outgoing_stateful_message(
+            &mut buf,
+            v6::MessageType::Request,
+            &client_id,
+            Some(&server_id.to_vec()),
+            &options_to_request,
+            &configured_addresses,
         );
         let ClientStateMachine { transaction_id, options_to_request: _, state, rng: _ } = &client;
+        let request_transaction_id = *transaction_id;
         assert_matches!(&state, Some(ClientState::Requesting(Requesting {
-                client_id: _,
+                client_id: got_client_id,
                 addresses_to_request: _,
-                server_id,
-                collected_advertise: _,
+                server_id: got_server_id,
+                collected_advertise,
                 first_request_time: _,
-                retrans_timeout: _,
-                retrans_count: _,
-                solicit_max_rt: _,
-        })) if *server_id == vec![1,2,3]);
+                retrans_timeout,
+                retrans_count,
+                solicit_max_rt,
+        })) if *got_client_id == client_id &&
+               *got_server_id == server_id &&
+               collected_advertise.is_empty() &&
+               *retrans_timeout == INITIAL_REQUEST_TIMEOUT &&
+               *retrans_count == 0&&
+               *solicit_max_rt == MAX_SOLICIT_TIMEOUT);
+        (client, request_transaction_id)
+    }
 
-        let builder = v6::MessageBuilder::new(v6::MessageType::Reply, *transaction_id, &options);
+    /// Creates a stateful client and exchanges messages to assign the
+    /// configured addresses. Returns the client in AddressAssigned state and
+    /// the actions returned on transitioning to the AddressAssigned state.
+    /// Asserts the content of the client state.
+    ///
+    /// # Panics
+    ///
+    /// `assign_addresses_and_assert` panics if address assignment fails.
+    pub(crate) fn assign_addresses_and_assert<R: Rng + std::fmt::Debug>(
+        client_id: [u8; CLIENT_ID_LEN],
+        addresses_to_assign: Vec<TestIdentityAssociation>,
+        expected_dns_servers: &[Ipv6Addr],
+        expected_t1: v6::NonZeroTimeValue,
+        rng: R,
+    ) -> (ClientStateMachine<R>, Actions) {
+        let server_id = v6::duid_uuid();
+        let (mut client, transaction_id) = testutil::request_addresses_and_assert(
+            client_id.clone(),
+            server_id.clone(),
+            addresses_to_assign.clone(),
+            expected_dns_servers,
+            rng,
+        );
+
+        let mut options =
+            vec![v6::DhcpOption::ClientId(&client_id), v6::DhcpOption::ServerId(&server_id)];
+        if !expected_dns_servers.is_empty() {
+            options.push(v6::DhcpOption::DnsServers(&expected_dns_servers));
+        }
+        let addresses_to_assign: HashMap<v6::IAID, TestIdentityAssociation> =
+            (0..).map(v6::IAID::new).zip(addresses_to_assign).collect();
+        let mut iaaddr_opts = HashMap::new();
+        for (iaid, ia) in &addresses_to_assign {
+            assert_matches!(
+                iaaddr_opts.insert(
+                    *iaid,
+                    [v6::DhcpOption::IaAddr(v6::IaAddrSerializer::new(
+                        ia.address,
+                        testutil::get_value(ia.preferred_lifetime),
+                        testutil::get_value(ia.valid_lifetime),
+                        &[]
+                    ))]
+                ),
+                None
+            );
+        }
+        for (iaid, ia) in &addresses_to_assign {
+            options.push(v6::DhcpOption::Iana(v6::IanaSerializer::new(
+                *iaid,
+                testutil::get_value(ia.t1),
+                testutil::get_value(ia.t2),
+                iaaddr_opts.get(iaid).unwrap(),
+            )));
+        }
+        let builder = v6::MessageBuilder::new(v6::MessageType::Reply, transaction_id, &options);
         let mut buf = vec![0; builder.bytes_len()];
         builder.serialize(&mut buf);
         let mut buf = &buf[..]; // Implements BufferView.
@@ -3895,66 +3987,16 @@ mod tests {
 
     #[test]
     fn send_request() {
-        let client_id = v6::duid_uuid();
-        let configured_addresses = testutil::to_configured_addresses(3, vec![]);
-        let advertised_addresses = [
-            std_ip_v6!("::ffff:c00a:1ff"),
-            std_ip_v6!("::ffff:c00a:2ff"),
-            std_ip_v6!("::ffff:c00a:3ff"),
-        ];
-        let server_id = v6::duid_uuid();
-        let selected_advertise = AdvertiseMessage::new_default(
-            server_id.to_vec(),
-            &advertised_addresses,
+        let (mut _client, _transaction_id) = testutil::request_addresses_and_assert(
+            v6::duid_uuid(),
+            v6::duid_uuid(),
+            vec![
+                TestIdentityAssociation::new_default(std_ip_v6!("::ffff:c00a:1ff")),
+                TestIdentityAssociation::new_default(std_ip_v6!("::ffff:c00a:2ff")),
+                TestIdentityAssociation::new_default(std_ip_v6!("::ffff:c00a:3ff")),
+            ],
             &[],
-            &configured_addresses,
-        );
-        let options_to_request = vec![];
-        let mut rng = StepRng::new(std::u64::MAX / 2, 0);
-        let Transition { state, actions, transaction_id } = Requesting::start(
-            client_id.clone(),
-            configured_addresses,
-            selected_advertise,
-            &options_to_request[..],
-            BinaryHeap::new(),
-            MAX_SOLICIT_TIMEOUT,
-            &mut rng,
-        );
-        assert_matches!(transaction_id, Some(_));
-
-        // Start of requesting should send a request and schedule retransmission.
-        assert_matches!(
-            state,
-            ClientState::Requesting(Requesting {
-                client_id: _,
-                addresses_to_request: _,
-                server_id: _,
-                collected_advertise: _,
-                first_request_time: _,
-                retrans_timeout: _,
-                retrans_count: _,
-                solicit_max_rt: _,
-            })
-        );
-        let mut buf = assert_matches!(
-            &actions[..],
-            [
-                Action::CancelTimer(ClientTimerType::Retransmission),
-                Action::SendMessage(buf),
-                Action::ScheduleTimer(ClientTimerType::Retransmission, INITIAL_REQUEST_TIMEOUT)
-            ] => buf
-        );
-        let expected_addresses = (0..)
-            .map(v6::IAID::new)
-            .zip(advertised_addresses.map(Some))
-            .collect::<HashMap<v6::IAID, Option<Ipv6Addr>>>();
-        testutil::assert_outgoing_stateful_message(
-            &mut buf,
-            v6::MessageType::Request,
-            &client_id,
-            Some(&server_id.to_vec()),
-            &options_to_request,
-            &expected_addresses,
+            StepRng::new(std::u64::MAX / 2, 0),
         );
     }
 
@@ -5149,10 +5191,9 @@ mod tests {
     #[test]
     #[should_panic(expected = "received unexpected refresh timeout")]
     fn server_discovery_refresh_timeout_is_unreachable() {
-        let client_id = v6::duid_uuid();
         let mut client = testutil::start_and_assert_server_discovery(
             [0, 1, 2],
-            client_id.clone(),
+            v6::duid_uuid(),
             testutil::to_configured_addresses(1, vec![std_ip_v6!("::ffff:c00a:1ff")]),
             Vec::new(),
             StepRng::new(std::u64::MAX / 2, 0),
