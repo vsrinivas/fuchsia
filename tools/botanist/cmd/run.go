@@ -277,6 +277,9 @@ func (r *RunCommand) execute(ctx context.Context, args []string) error {
 
 	eg, ctx := errgroup.WithContext(ctx)
 	if r.serialLogDir != "" {
+		if err := os.Mkdir(r.serialLogDir, os.ModePerm); err != nil {
+			return err
+		}
 		for _, t := range targetSlice {
 			eg.Go(func() error {
 				logger.Debugf(ctx, "starting serial collection for target %s", t.Nodename())
@@ -353,6 +356,9 @@ func (r *RunCommand) execute(ctx context.Context, args []string) error {
 					}()
 				}
 				if r.syslogDir != "" {
+					if err := os.Mkdir(r.syslogDir, os.ModePerm); err != nil {
+						return err
+					}
 					go func() {
 						syslogName := fmt.Sprintf("%s_syslog.txt", t.Nodename())
 						syslogPath := filepath.Join(r.syslogDir, syslogName)
