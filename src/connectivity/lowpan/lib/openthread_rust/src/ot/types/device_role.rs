@@ -28,6 +28,16 @@ pub enum DeviceRole {
     Leader = OT_DEVICE_ROLE_LEADER as isize,
 }
 
+impl DeviceRole {
+    /// Returns true if the role is not disabled nor detached.
+    pub fn is_active(&self) -> bool {
+        match self {
+            DeviceRole::Disabled | DeviceRole::Detached => false,
+            _ => true,
+        }
+    }
+}
+
 impl From<otDeviceRole> for DeviceRole {
     fn from(x: otDeviceRole) -> Self {
         use num::FromPrimitive;

@@ -18,6 +18,12 @@ impl std::fmt::Debug for ExtAddress {
     }
 }
 
+impl std::fmt::Display for ExtAddress {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", hex::encode(self.as_slice()))
+    }
+}
+
 impl ExtAddress {
     /// Tries to create an `ExtAddress` reference from a byte slice.
     pub fn try_ref_from_slice(slice: &[u8]) -> Result<&ExtAddress, ot::WrongSize> {

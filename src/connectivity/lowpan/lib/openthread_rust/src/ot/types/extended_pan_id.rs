@@ -18,6 +18,12 @@ impl std::fmt::Debug for ExtendedPanId {
     }
 }
 
+impl std::fmt::Display for ExtendedPanId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", hex::encode(self.as_slice()))
+    }
+}
+
 impl ExtendedPanId {
     /// Tries to create an `ExtendedPanId` reference from a byte slice.
     pub fn try_ref_from_slice(slice: &[u8]) -> Result<&ExtendedPanId, ot::WrongSize> {
