@@ -322,6 +322,8 @@ PlatformResult AddRemoveRouteInternal(InterfaceType interface_type, const Inet::
   // now. Long term, this bug tracks proposing upstream changes that would create a
   // targeted action to enable forwarding / border-routing to clarify this contract.
   if (add && ShouldEnableV6Forwarding(interface_type)) {
+    // TODO(https://fxbug.dev/94540): Migrate to
+    // fuchsia.net.interfaces.admin/Control.SetConfiguration.
     fuchsia::net::stack::Stack_SetInterfaceIpForwardingDeprecated_Result forwarding_result;
     if (zx_status_t status = net_stack_sync_ptr->SetInterfaceIpForwardingDeprecated(
             interface_id.value(), fuchsia::net::IpVersion::V6, true /* enable */,
