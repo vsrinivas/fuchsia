@@ -9,6 +9,7 @@ import (
 	"bufio"
 	"bytes"
 	"compress/gzip"
+	"context"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -251,6 +252,12 @@ func (d *Distribution) buildCommandLine(fvd *fvdpb.VirtualDevice, images build.I
 
 // Create creates an instance of the emulator with the given parameters.
 func (d *Distribution) Create(fvd *fvdpb.VirtualDevice) (*Instance, error) {
+	return d.CreateContext(context.Background(), fvd)
+}
+
+// CreateContext creates an instance of the emulator with the given parameters,
+// passing through ctx to the underlying exec.Cmd.
+func (d *Distribution) CreateContext(ctx context.Context, fvd *fvdpb.VirtualDevice) (*Instance, error) {
 	images, err := d.loadImageManifest()
 	if err != nil {
 		return nil, err
@@ -264,7 +271,7 @@ func (d *Distribution) Create(fvd *fvdpb.VirtualDevice) (*Instance, error) {
 	fmt.Printf("Running %s %s\n", args[0], args[1:])
 
 	i := &Instance{
-		cmd:      exec.Command(args[0], args[1:]...),
+		cmd:      exec.CommandContext(ctx, args[0], args[1:]...),
 		emulator: d.Emulator,
 	}
 	// QEMU looks in the cwd for some specially named files, in particular
