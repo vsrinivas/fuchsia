@@ -18,5 +18,5 @@ declare_args() {
   # If enabled, check that the output dir path does not leak into
   # the command or any of its output files.  This is important for
   # remote build consistency and caching.
-  check_output_dir_leaks = false
+  check_output_dir_leaks = true
 }

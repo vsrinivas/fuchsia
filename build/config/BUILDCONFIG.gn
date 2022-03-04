@@ -1103,6 +1103,10 @@ foreach(_target_type,
         no_output_dir_leaks = invoker.no_output_dir_leaks
       }
 
+      if (!no_output_dir_leaks) {
+        deps += [ "//build:output_dir_leaking_allowlist" ]
+      }
+
       if (no_output_dir_leaks && check_output_dir_leaks) {
         _args = []
         _args = [

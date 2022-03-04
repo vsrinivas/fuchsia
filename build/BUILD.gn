@@ -353,3 +353,8 @@ group("deprecated_zx_wrapper_allowlist") {
     "//zircon/tools/zbi/*",
   ]
 }
+
+# TODO(https://fxbug.dev/94952): to be populated.
+group("output_dir_leaking_allowlist") {
+  visibility = [ "*" ]
+}
