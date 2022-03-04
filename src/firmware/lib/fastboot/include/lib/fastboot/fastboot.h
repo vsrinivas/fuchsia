@@ -83,12 +83,14 @@ class __EXPORT Fastboot {
 
   zx::status<> GetVar(const std::string &command, Transport *transport);
   zx::status<std::string> GetVarMaxDownloadSize(const std::vector<std::string_view> &, Transport *);
+  zx::status<std::string> GetVarSlotCount(const std::vector<std::string_view> &, Transport *);
   zx::status<> Download(const std::string &command, Transport *transport);
   zx::status<> Flash(const std::string &command, Transport *transport);
   zx::status<> SetActive(const std::string &command, Transport *transport);
 
   void ClearDownload();
   zx::status<fidl::WireSyncClient<fuchsia_paver::Paver>> ConnectToPaver();
+  zx::status<fidl::WireSyncClient<fuchsia_paver::BootManager>> FindBootManager();
   zx::status<> WriteFirmware(fuchsia_paver::wire::Configuration config,
                              std::string_view firmware_type, Transport *transport,
                              fidl::WireSyncClient<fuchsia_paver::DataSink> &data_sink);

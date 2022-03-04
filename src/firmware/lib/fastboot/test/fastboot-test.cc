@@ -528,6 +528,7 @@ TEST_F(FastbootFlashTest, SetActiveSlotB) {
 }
 
 TEST_F(FastbootFlashTest, SetActiveInvalidSlot) {
+  paver().set_abr_supported(true);
   Fastboot fastboot(0x40000, std::move(svc_chan()));
   std::string command = "set_active:r";
   TestTransport transport;
@@ -538,6 +539,30 @@ TEST_F(FastbootFlashTest, SetActiveInvalidSlot) {
   const std::vector<std::string>& sent_packets = transport.GetOutPackets();
   ASSERT_EQ(sent_packets.size(), 1ULL);
   ASSERT_EQ(sent_packets[0].compare(0, 4, "FAIL"), 0);
+}
+
+TEST_F(FastbootFlashTest, GetVarSlotCount) {
+  paver().set_abr_supported(true);
+  Fastboot fastboot(0x40000, std::move(svc_chan()));
+  std::string command = "getvar:slot-count";
+  TestTransport transport;
+  transport.AddInPacket(command);
+  zx::status<> ret = fastboot.ProcessPacket(&transport);
+  ASSERT_TRUE(ret.is_ok());
+  std::vector<std::string> expected_packets = {"OKAY2"};
+  ASSERT_NO_FATAL_FAILURE(CheckPacketsEqual(transport.GetOutPackets(), expected_packets));
+}
+
+TEST_F(FastbootFlashTest, GetVarSlotCountAbrNotSupported) {
+  paver().set_abr_supported(false);
+  Fastboot fastboot(0x40000, std::move(svc_chan()));
+  std::string command = "getvar:slot-count";
+  TestTransport transport;
+  transport.AddInPacket(command);
+  zx::status<> ret = fastboot.ProcessPacket(&transport);
+  ASSERT_TRUE(ret.is_ok());
+  std::vector<std::string> expected_packets = {"OKAY1"};
+  ASSERT_NO_FATAL_FAILURE(CheckPacketsEqual(transport.GetOutPackets(), expected_packets));
 }
 
 }  // namespace
