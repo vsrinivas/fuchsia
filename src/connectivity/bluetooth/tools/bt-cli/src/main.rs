@@ -22,8 +22,8 @@ use {
     regex::Regex,
     rustyline::{error::ReadlineError, CompletionType, Config, EditMode, Editor},
     std::{
-        cmp::Ordering, collections::HashMap, convert::TryFrom, fmt::Write, iter::FromIterator,
-        str::FromStr, sync::Arc, thread,
+        cmp::Ordering, collections::HashMap, convert::TryFrom, iter::FromIterator, str::FromStr,
+        sync::Arc, thread,
     },
 };
 
@@ -50,14 +50,34 @@ async fn get_active_host(state: &Mutex<State>) -> Result<String, Error> {
 }
 
 async fn get_hosts(state: &Mutex<State>) -> Result<String, Error> {
-    let mut string = String::new();
-    for host in &state.lock().hosts {
-        let _ = writeln!(string, "{}", host);
-    }
-    if string.is_empty() {
+    let hosts = &state.lock().hosts;
+    if hosts.is_empty() {
         return Ok(String::from("No adapters detected"));
     }
-    Ok(string)
+    // Create table of results
+    let mut table = Table::new();
+    table.set_format(*format::consts::FORMAT_NO_BORDER_LINE_SEPARATOR);
+    let _ = table.set_titles(row![
+        "HostId",
+        "Address",
+        "Active",
+        "Technology",
+        "Name",
+        "Discoverable",
+        "Discovering",
+    ]);
+    for host in hosts {
+        let _ = table.add_row(row![
+            host.id.to_string(),
+            format!("{}", host.address),
+            host.active.to_string(),
+            format!("{:?}", host.technology),
+            host.local_name.clone().unwrap_or("(unknown)".to_string()),
+            host.discoverable.to_string(),
+            host.discovering.to_string(),
+        ]);
+    }
+    Ok(format!("{}", table))
 }
 
 async fn set_active_host<'a>(
@@ -725,10 +745,65 @@ mod tests {
         }
     }
 
+    fn custom_host(
+        id: HostId,
+        address: Address,
+        active: bool,
+        discoverable: bool,
+        discovering: bool,
+        name: Option<String>,
+    ) -> HostInfo {
+        HostInfo {
+            id,
+            technology: fsys::TechnologyType::LowEnergy,
+            address,
+            active,
+            local_name: name,
+            discoverable,
+            discovering,
+        }
+    }
+
     fn state_with(p: Peer) -> State {
         let mut state = State::new();
         let _ = state.peers.insert(p.id, p);
         state
+    }
+
+    #[fuchsia::test]
+    async fn test_get_hosts() {
+        // Fields for table view of hosts
+        let fields = Regex::new(r"HostId[ \t]*\|[ \t]*Address[ \t]*\|[ \t]*Active[ \t]*\|[ \t]*Technology[ \t]*\|[ \t]*Name[ \t]*\|[ \t]*Discoverable[ \t]*\|[ \t]*Discovering").unwrap();
+
+        // No hosts
+        let mut output = get_hosts(&Mutex::new(State::new())).await.unwrap();
+        assert!(!fields.is_match(&output));
+        assert!(output.contains("No adapters"));
+
+        let mut state = State::new();
+        state.hosts.push(custom_host(
+            HostId(0xbeef),
+            Address::Public([0x11, 0x00, 0x55, 0x7E, 0xDE, 0xAD]),
+            false,
+            false,
+            false,
+            Some("Sapphire".to_string()),
+        ));
+        state.hosts.push(custom_host(
+            HostId(0xabcd),
+            Address::Random([0x22, 0x00, 0x55, 0x7E, 0xDE, 0xAD]),
+            false,
+            false,
+            true,
+            None,
+        ));
+        let state = Mutex::new(state);
+
+        // Hosts exist
+        output = get_hosts(&state).await.unwrap();
+        assert!(fields.is_match(&output));
+        assert!(output.contains("ef"));
+        assert!(output.contains("cd"));
     }
 
     #[test]

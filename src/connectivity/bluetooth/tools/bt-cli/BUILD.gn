@@ -35,6 +35,8 @@ rustc_binary("bin") {
   ]
 
   configs -= [ "//build/config/rust:allow_unused_results" ]
+
+  test_deps = [ "//src/lib/fuchsia" ]
 }
 
 fuchsia_shell_package("bt-cli") {
