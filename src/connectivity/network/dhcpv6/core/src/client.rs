@@ -2516,7 +2516,6 @@ impl ClientState {
             }
             ClientState::InformationRequesting(_)
             | ClientState::ServerDiscovery(_)
-            // TODO(https://fxbug.dev/88838): add test for Requesting.
             | ClientState::Requesting(_)
             | ClientState::AddressAssigned(_)
             | ClientState::Renewing(_) => {
@@ -5200,6 +5199,21 @@ mod tests {
         );
 
         // Should panic if Refresh is received while in ServerDiscovery state.
+        let _actions = client.handle_timeout(ClientTimerType::Refresh);
+    }
+
+    #[test]
+    #[should_panic(expected = "received unexpected refresh timeout")]
+    fn requesting_refresh_timeout_is_unreachable() {
+        let (mut client, _transaction_id) = testutil::request_addresses_and_assert(
+            v6::duid_uuid(),
+            v6::duid_uuid(),
+            vec![TestIdentityAssociation::new_default(std_ip_v6!("::ffff:c00a:1ff"))],
+            &[],
+            StepRng::new(std::u64::MAX / 2, 0),
+        );
+
+        // Should panic if Refresh is received while in Requesting state.
         let _actions = client.handle_timeout(ClientTimerType::Refresh);
     }
 
