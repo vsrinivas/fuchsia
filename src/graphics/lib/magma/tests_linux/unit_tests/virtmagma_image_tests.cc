@@ -241,7 +241,7 @@ TEST_P(MagmaImageTestFormats, ImportExportPresentableLinear) {
 TEST_P(MagmaImageTestFormats, ImportExportIntel) {
   constexpr uint32_t kFlags = 0;
   constexpr uint64_t kSpecifiedModifier = DRM_FORMAT_MOD_INVALID;
-  constexpr uint64_t kExpectedModifier = I915_FORMAT_MOD_Y_TILED;
+  constexpr uint64_t kExpectedModifier = I915_FORMAT_MOD_Y_TILED_CCS;
   ImportExportTest(kFlags, kSpecifiedModifier, kExpectedModifier);
 }
 
