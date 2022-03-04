@@ -293,11 +293,15 @@ class ClockSyncPipelineTest : public HermeticAudioTest {
     //          |                                  .    |
     //          V      num_frames_output (longer)  .    V
     //         +-----+-----------------------------+-----+
+    //               +-----+                 +-----+
+    //                 ^   ^                 ^   ^
+    //                 |   |                 |   |
+    //  max PostRampFrames data_start  data_end  max PreRampFrames
     //
     //
     // In this case, we expect more output frames than input frames. However, since the delta
     // is smaller than the maximum PostRampFrames, we cannot be sure if the extra frames are output
-    // or PostRampFrames. This means we cannot check if the system operated correctly.
+    // or PostRampFrames. This means we cannot check if the system operated perfectly.
     //
     // To address this problem, the diff between input and output frames must be greater than the
     // TotalRampFrames. This is checked in Init().
@@ -312,8 +316,8 @@ class ClockSyncPipelineTest : public HermeticAudioTest {
     auto num_frames_output =
         static_cast<int64_t>(NumFramesOutput(clock_slew_ppm, num_frames_input));
     auto data_start = TotalRampFrames();                  // signal reaches full strength
-    auto data_end = num_frames_output;                    // subsequent silence starts to ramp in
-    auto silence_start = data_start + num_frames_output;  // our signal ramp out is complete
+    auto data_end = num_frames_output - PreRampFrames();  // silence starts to ramp in
+    auto silence_start = data_start + num_frames_output + PostRampFrames();  // silence fully ramped
 
     // A. output step starts at expected frame.
     // B. magnitude is within tolerance across the entire step range: no dropouts

@@ -30,7 +30,6 @@ class PacketQueue : public ReadableStream {
   PacketQueue(Format format,
               fbl::RefPtr<VersionedTimelineFunction> ref_time_to_frac_presentation_frame,
               std::unique_ptr<AudioClock> audio_clock);
-  ~PacketQueue();
 
   bool empty() const {
     std::lock_guard<std::mutex> locker(pending_mutex_);
@@ -45,41 +44,59 @@ class PacketQueue : public ReadableStream {
   void PushPacket(const fbl::RefPtr<Packet>& packet);
   void Flush(const fbl::RefPtr<PendingFlushToken>& flush_token = nullptr);
 
-  // Report start and end time of underflow that occured.
-  // Times use the system monotonic clock.
-  void SetUnderflowReporter(fit::function<void(zx::time, zx::time)> underflow_reporter) {
+  // Register a callback to invoke when a packet underflows.
+  // The duration estimates the lateness of the packet relative to the system monotonic clock.
+  void SetUnderflowReporter(fit::function<void(zx::duration)> underflow_reporter) {
     underflow_reporter_ = std::move(underflow_reporter);
   }
 
   // |media::audio::ReadableStream|
   TimelineFunctionSnapshot ref_time_to_frac_presentation_frame() const override;
   AudioClock& reference_clock() override { return *audio_clock_; }
-  std::optional<ReadableStream::Buffer> ReadLock(ReadLockContext& ctx, Fixed frame,
-                                                 int64_t frame_count) override;
-  void Trim(Fixed frame) override;
-  void ReportUnderflow(Fixed frac_source_start, Fixed frac_source_mix_point,
-                       zx::duration underflow_duration) override;
-  void ReportPartialUnderflow(Fixed frac_source_offset, int64_t dest_mix_offset) override;
 
  private:
-  void ReadUnlock(bool fully_consumed);
+  // |media::audio::ReadableStream|
+  std::optional<ReadableStream::Buffer> ReadLockImpl(ReadLockContext& ctx, Fixed frame,
+                                                     int64_t frame_count) override;
+  void TrimImpl(Fixed frame) override;
+
+  void ReportUnderflow(const fbl::RefPtr<Packet>& packet, Fixed underflow_frames)
+      FXL_REQUIRE(pending_mutex_);
 
   StreamUsageMask usage_mask_;
 
-  std::mutex flush_mutex_;
   mutable std::mutex pending_mutex_;
 
-  std::deque<fbl::RefPtr<Packet>> pending_packet_queue_ FXL_GUARDED_BY(pending_mutex_);
+  struct PendingPacket {
+    fbl::RefPtr<Packet> packet;
+    bool seen_in_read_lock = false;
+  };
+
+  // New packets go on `pending_packet_queue_`.
+  //
+  // If a Flush happens while a ReadLock is held, then a downstream stage has a
+  // non-reference-counted pointer to the first packet in `pending_packet_queue_`.
+  // We can't flush that packet until the ReadLock is released.
+  //
+  // Hence, if Flush happens while in a ReadLock, we move all pending packets to
+  // `pending_flush_packet_queue_` and add a flush token to `pending_flush_token_queue_`.
+  // After the ReadLock is released, we remove all packets and flush tokens from these
+  // queues. Each `PendingFlushToken` completes a DiscardAllPackets FIDL call when the
+  // token is destructed, so as each token is removed from the queue, a DiscardAllPackets
+  // FIDL call is completed.
+  //
+  // If a Flush happens while a ReadLock is not held, it can be serviced immediately; the
+  // pending flush queues are not used.
+  std::deque<PendingPacket> pending_packet_queue_ FXL_GUARDED_BY(pending_mutex_);
   std::deque<fbl::RefPtr<Packet>> pending_flush_packet_queue_ FXL_GUARDED_BY(pending_mutex_);
   std::deque<fbl::RefPtr<PendingFlushToken>> pending_flush_token_queue_
       FXL_GUARDED_BY(pending_mutex_);
-  bool flushed_ FXL_GUARDED_BY(pending_mutex_) = true;
-  bool processing_in_progress_ FXL_GUARDED_BY(pending_mutex_) = false;
-  fbl::RefPtr<VersionedTimelineFunction> timeline_function_;
-  std::atomic<uint16_t> underflow_count_ = {0};
-  std::atomic<uint16_t> partial_underflow_count_ = {0};
-  fit::function<void(zx::time, zx::time)> underflow_reporter_;
+  bool read_lock_in_progress_ FXL_GUARDED_BY(pending_mutex_) = false;
 
+  size_t underflow_count_ FXL_GUARDED_BY(pending_mutex_) = {0};
+  fit::function<void(zx::duration)> underflow_reporter_;
+
+  fbl::RefPtr<VersionedTimelineFunction> timeline_function_;
   std::unique_ptr<AudioClock> audio_clock_;
 };
 

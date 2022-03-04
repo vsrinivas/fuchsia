@@ -10,7 +10,7 @@
 namespace media::audio {
 
 TapStage::TapStage(std::shared_ptr<ReadableStream> source, std::shared_ptr<WritableStream> tap)
-    : ReadableStream(source->format()),
+    : ReadableStream("TapStage", source->format()),
       source_(std::move(source)),
       tap_(std::move(tap)),
       output_producer_(OutputProducer::Select(tap_->format().stream_type())) {
@@ -18,8 +18,8 @@ TapStage::TapStage(std::shared_ptr<ReadableStream> source, std::shared_ptr<Writa
   FX_CHECK(source_->reference_clock() == tap_->reference_clock());
 }
 
-std::optional<ReadableStream::Buffer> TapStage::ReadLock(ReadLockContext& ctx, Fixed dest_frame,
-                                                         int64_t frame_count) {
+std::optional<ReadableStream::Buffer> TapStage::ReadLockImpl(ReadLockContext& ctx, Fixed dest_frame,
+                                                             int64_t frame_count) {
   // TapStage always produces data on integrally-aligned frames.
   dest_frame = Fixed(dest_frame.Floor());
 
@@ -57,13 +57,7 @@ std::optional<ReadableStream::Buffer> TapStage::ReadLock(ReadLockContext& ctx, F
   CopySourceToTap(*source_buffer, next_tap_frame, frame_count);
 
   // Forward the source buffer using the integral start position.
-  return ReadableStream::Buffer(
-      first_source_frame, source_buffer->length(), source_buffer->payload(),
-      source_buffer->is_continuous(), source_buffer->usage_mask(),
-      source_buffer->total_applied_gain_db(),
-      [source_buffer = std::move(source_buffer)](bool fully_consumed) mutable {
-        source_buffer->set_is_fully_consumed(fully_consumed);
-      });
+  return ForwardBuffer(std::move(source_buffer), first_source_frame);
 }
 
 void TapStage::WriteSilenceToTap(int64_t next_tap_frame, int64_t frame_count) {

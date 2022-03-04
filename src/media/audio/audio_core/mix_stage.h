@@ -14,7 +14,6 @@
 #include <gtest/gtest_prod.h>
 
 #include "src/lib/fxl/synchronization/thread_annotations.h"
-#include "src/media/audio/audio_core/cached_readable_stream_buffer.h"
 #include "src/media/audio/audio_core/mixer/mixer.h"
 #include "src/media/audio/audio_core/stream.h"
 #include "src/media/audio/audio_core/versioned_timeline_function.h"
@@ -38,9 +37,6 @@ class MixStage : public ReadableStream {
   // |media::audio::ReadableStream|
   TimelineFunctionSnapshot ref_time_to_frac_presentation_frame() const override;
   AudioClock& reference_clock() override { return output_ref_clock_; }
-  std::optional<ReadableStream::Buffer> ReadLock(ReadLockContext& ctx, Fixed dest_frame,
-                                                 int64_t frame_count) override;
-  void Trim(Fixed dest_frame) override;
   void SetPresentationDelay(zx::duration external_delay) override;
 
   std::shared_ptr<Mixer> AddInput(std::shared_ptr<ReadableStream> stream,
@@ -51,6 +47,9 @@ class MixStage : public ReadableStream {
  private:
   FRIEND_TEST(MixStageTest, DontCrashOnDestOffsetRoundingError);
 
+  std::optional<ReadableStream::Buffer> ReadLockImpl(ReadLockContext& ctx, Fixed dest_frame,
+                                                     int64_t frame_count) override;
+  void TrimImpl(Fixed dest_frame) override;
   void SetupMixBuffer(uint32_t max_mix_frames);
 
   struct MixJob {
@@ -68,6 +67,7 @@ class MixStage : public ReadableStream {
 
   struct StreamHolder {
     std::shared_ptr<ReadableStream> stream;
+    std::shared_ptr<ReadableStream> original_stream;
     std::shared_ptr<Mixer> mixer;
   };
 
@@ -83,7 +83,7 @@ class MixStage : public ReadableStream {
                    const TimelineRate& frac_source_frames_per_dest_frame);
 
   void MixStream(Mixer& mixer, ReadableStream& stream);
-  bool ProcessMix(Mixer& mixer, ReadableStream& stream, const ReadableStream::Buffer& buffer);
+  std::optional<Buffer> NextSourceBuffer(Mixer& mixer, ReadableStream& stream, int64_t dest_frames);
 
   std::mutex stream_lock_;
   std::vector<StreamHolder> streams_ FXL_GUARDED_BY(stream_lock_);
@@ -97,11 +97,6 @@ class MixStage : public ReadableStream {
   fbl::RefPtr<VersionedTimelineFunction> output_ref_clock_to_fractional_frame_;
 
   const Gain::Limits gain_limits_;
-
-  // The last buffer returned from ReadLock, saved to prevent recomputing frames on
-  // consecutive calls to ReadLock. This is reset once the caller has unlocked the buffer,
-  // signifying that the buffer is no longer needed.
-  CachedReadableStreamBuffer cached_buffer_;
 
   // Used to variably throttle the amount of jam-sync-related logging we produce
   uint32_t jam_sync_count_ = 0;

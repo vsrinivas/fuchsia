@@ -71,9 +71,8 @@ class ContextImpl : public Context {
     zx_status_t res = device_manager_.Init();
     FX_DCHECK(res == ZX_OK);
 
-    auto throttle =
-        ThrottleOutput::Create(process_config_.mix_profile_config(), threading_model_.get(),
-                               &device_manager_, &link_matrix_, clock_factory_);
+    auto throttle = ThrottleOutput::Create(threading_model_.get(), &device_manager_, &link_matrix_,
+                                           clock_factory_);
     throttle_output_ = throttle.get();
     route_graph_.SetThrottleOutput(threading_model_.get(), std::move(throttle));
 

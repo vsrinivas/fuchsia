@@ -22,6 +22,7 @@
 #include "src/media/audio/audio_core/mixer/mixer.h"
 #include "src/media/audio/audio_core/mixer/no_op.h"
 #include "src/media/audio/audio_core/reporter.h"
+#include "src/media/audio/audio_core/silence_padding_stream.h"
 #include "src/media/audio/lib/clock/utils.h"
 #include "src/media/audio/lib/timeline/timeline_rate.h"
 
@@ -40,15 +41,6 @@ zx::duration LeadTimeForMixer(const Format& format, const Mixer& mixer) {
   TimelineRate ticks_per_frame = format.frames_per_ns().Inverse();
   return zx::duration(ticks_per_frame.Scale(delay_frames));
 }
-
-// For now, allow dest position to move backwards by 960 frames before triggering a position reset.
-// Rollback can happen because of differences between the MixStage::ReadLock and Mixer::Mix APIs.
-// Otherwise, destination position discontinuities generally indicate a Mix that did not complete --
-// an underflow of some kind.
-// TODO(fxbug.dev/73306): Stop allowing this (change tolerance to 0 and/or remove this altogether),
-// once the system correctly moves position only forward.
-constexpr bool kAllowPositionRollback = true;
-constexpr int64_t kDestPosRollbackTolerance = 960;
 
 // Source position errors generally represent only the rate difference between time sources. We
 // reconcile clocks upon every ReadLock call, so even with wildly divergent clocks (+1000ppm vs.
@@ -73,10 +65,8 @@ constexpr uint16_t kJamSyncTraceInterval = 1;      // Log all remaining jam-sync
 constexpr bool kLogReconciledTimelineFunctions = false;
 constexpr bool kLogInitialPositionSync = false;
 constexpr bool kLogDestDiscontinuities = true;
-constexpr bool kLogRollbacks = false;
 // Use logging strides that are prime, to avoid seeing only certain message cadences.
 constexpr int kPositionLogStride = 997;
-constexpr int kLogRollbacksStride = 12343;
 
 }  // namespace
 
@@ -91,7 +81,7 @@ MixStage::MixStage(const Format& output_format, uint32_t block_size,
                    fbl::RefPtr<VersionedTimelineFunction> ref_time_to_frac_presentation_frame,
                    AudioClock& audio_clock, std::optional<float> min_gain_db,
                    std::optional<float> max_gain_db)
-    : ReadableStream(output_format),
+    : ReadableStream("MixStage", output_format),
       output_buffer_frames_(block_size),
       output_buffer_(block_size * output_format.channels()),
       output_ref_clock_(audio_clock),
@@ -131,6 +121,12 @@ std::shared_ptr<Mixer> MixStage::AddInput(std::shared_ptr<ReadableStream> stream
     mixer->bookkeeping().gain.SetDestGain(*initial_dest_gain_db);
   }
 
+  auto original_stream = stream;
+  stream = SilencePaddingStream::WrapIfNeeded(
+      stream, mixer->neg_filter_width() + mixer->pos_filter_width(),
+      // PointSampler doesn't need ringout, so this doesn't matter.
+      // SincSampler needs ringout and wants to keep fractional gaps, so round down.
+      /*fractional_gaps_round_down=*/true);
   stream->SetPresentationDelay(GetPresentationDelay() + LeadTimeForMixer(stream->format(), *mixer));
 
   FX_LOGS(DEBUG) << "AddInput "
@@ -140,7 +136,11 @@ std::shared_ptr<Mixer> MixStage::AddInput(std::shared_ptr<ReadableStream> stream
                  << (reference_clock().is_device_clock() ? "device)" : "client)");
   {
     std::lock_guard<std::mutex> lock(stream_lock_);
-    streams_.emplace_back(StreamHolder{std::move(stream), mixer});
+    streams_.emplace_back(StreamHolder{
+        .stream = std::move(stream),
+        .original_stream = std::move(original_stream),
+        .mixer = mixer,
+    });
   }
   return mixer;
 }
@@ -149,7 +149,7 @@ void MixStage::RemoveInput(const ReadableStream& stream) {
   TRACE_DURATION("audio", "MixStage::RemoveInput");
   std::lock_guard<std::mutex> lock(stream_lock_);
   auto it = std::find_if(streams_.begin(), streams_.end(), [stream = &stream](const auto& holder) {
-    return holder.stream.get() == stream;
+    return holder.original_stream.get() == stream;
   });
 
   if (it == streams_.end()) {
@@ -166,17 +166,8 @@ void MixStage::RemoveInput(const ReadableStream& stream) {
   streams_.erase(it);
 }
 
-std::optional<ReadableStream::Buffer> MixStage::ReadLock(ReadLockContext& ctx, Fixed dest_frame,
-                                                         int64_t frame_count) {
-  TRACE_DURATION("audio", "MixStage::ReadLock", "frame", dest_frame.Floor(), "length", frame_count);
-
-  // If we have a partially consumed block, return that here.
-  // Otherwise, the cached block, if any, is no longer needed.
-  if (cached_buffer_.Contains(dest_frame)) {
-    return cached_buffer_.Get();
-  }
-  cached_buffer_.Reset();
-
+std::optional<ReadableStream::Buffer> MixStage::ReadLockImpl(ReadLockContext& ctx, Fixed dest_frame,
+                                                             int64_t frame_count) {
   memset(&cur_mix_job_, 0, sizeof(cur_mix_job_));
 
   auto snapshot = ref_time_to_frac_presentation_frame();
@@ -199,11 +190,8 @@ std::optional<ReadableStream::Buffer> MixStage::ReadLock(ReadLockContext& ctx, F
     return std::nullopt;
   }
 
-  // Cache the buffer in case it is not fully read by the caller.
-  cached_buffer_.Set(ReadableStream::Buffer(Fixed(dest_frame.Floor()), cur_mix_job_.buf_frames,
-                                            cur_mix_job_.buf, true, cur_mix_job_.usages_mixed,
-                                            cur_mix_job_.total_applied_gain_db));
-  return cached_buffer_.Get();
+  return MakeCachedBuffer(Fixed(dest_frame.Floor()), cur_mix_job_.buf_frames, cur_mix_job_.buf,
+                          cur_mix_job_.usages_mixed, cur_mix_job_.total_applied_gain_db);
 }
 
 BaseStream::TimelineFunctionSnapshot MixStage::ref_time_to_frac_presentation_frame() const {
@@ -245,7 +233,7 @@ void MixStage::SetPresentationDelay(zx::duration external_delay) {
   }
 }
 
-void MixStage::Trim(Fixed dest_frame) {
+void MixStage::TrimImpl(Fixed dest_frame) {
   TRACE_DURATION("audio", "MixStage::Trim", "frame", dest_frame.Floor());
   ForEachSource(TaskType::Trim, dest_frame);
 }
@@ -257,7 +245,7 @@ void MixStage::ForEachSource(TaskType task_type, Fixed dest_frame) {
   {
     std::lock_guard<std::mutex> lock(stream_lock_);
     for (const auto& holder : streams_) {
-      sources.emplace_back(StreamHolder{holder.stream, holder.mixer});
+      sources.emplace_back(StreamHolder{holder});
     }
   }
 
@@ -294,69 +282,227 @@ void MixStage::MixStream(Mixer& mixer, ReadableStream& stream) {
   TRACE_DURATION("audio", "MixStage::MixStream");
   auto& info = mixer.source_info();
   auto& bookkeeping = mixer.bookkeeping();
-  info.frames_produced = 0;
 
-  // If the renderer is currently paused, subject_delta (not just step_size) is zero. This packet
-  // may be relevant eventually, but currently it contributes nothing.
+  // If the source is currently paused, source frames do not advance hence there's nothing to mix.
+  // However, destination frames continue to advance.
   if (!info.dest_frames_to_frac_source_frames.subject_delta()) {
     return;
   }
 
-  // The first sampling point for this mix, translated into the source (frac_frame) timeline
-  auto source_for_first_mix_job_frame = info.next_source_frame;
+  // Each iteration through the loop, we grab a source buffer and produce as many destination
+  // frames as possible. As we go, dest_offset tracks our position in our output buffer. Our
+  // absolute position is cur_mix_job_.dest_start_frame + dest_offset.
+  const int64_t dest_frames = cur_mix_job_.buf_frames;
+  int64_t dest_offset = 0;
 
-  while (true) {
-    // dest_frames_left: how many frames we still need to produce, for this mix job.
-    FX_DCHECK(cur_mix_job_.buf_frames >= info.frames_produced);
-    int64_t dest_frames_left = cur_mix_job_.buf_frames - info.frames_produced;
-    if (dest_frames_left == 0) {
+  while (dest_offset < dest_frames) {
+    const int64_t prev_dest_offset = dest_offset;
+    auto source_buffer = NextSourceBuffer(mixer, stream, dest_frames - dest_offset);
+    if (!source_buffer) {
       break;
     }
 
-    // Calculate this job's length in source frames, using our current resampler step.
-    Fixed source_frames = Mixer::Bookkeeping::DestLenToSourceLen(
-                              dest_frames_left, bookkeeping.step_size, bookkeeping.rate_modulo(),
-                              bookkeeping.denominator(), bookkeeping.source_pos_modulo) +
-                          mixer.pos_filter_width();
-
-    // Try to grab the front of the packet queue (or ring buffer, if capturing).
-    auto stream_buffer = stream.ReadLock(*cur_mix_job_.read_lock_ctx,
-                                         source_for_first_mix_job_frame, source_frames.Ceiling());
-
-    // If the queue is empty, then we are done.
-    if (!stream_buffer) {
-      break;
+    if constexpr (kMixerPositionTraceEvents) {
+      TRACE_DURATION("audio", "MixStage::MixStream position", "start",
+                     source_buffer->start().Integral().Floor(), "start.frac",
+                     source_buffer->start().Fraction().raw_value(), "length",
+                     source_buffer->length(), "next_source_frame",
+                     info.next_source_frame.Integral().Floor(), "next_source_frame.frac",
+                     info.next_source_frame.Fraction().raw_value(), "dest_offset", dest_offset,
+                     "dest_frames", dest_frames);
     }
 
-    // If the packet is discontinuous, reset our mixer's internal filter state.
-    if (!stream_buffer->is_continuous()) {
-      // Reset any cached state from previous buffer (but not our long-running position state).
-      mixer.Reset();
+    // ReadLock guarantees that source_buffer must intersect our current mix job, hence
+    // source_buffer should not be in the future nor the past.
+    //
+    // We'll start sampling at info.next_source_frame.
+    // Compute the offset of this frame in our source buffer.
+    Fixed source_offset = info.next_source_frame - source_buffer->start();
+
+    // To compute the destination frame D centered at source frame S, we'll use frames from
+    // a window surrounding S, defined by the pos and neg filter widths. For example, if we are
+    // down-sampling, the streams may look like:
+    //
+    //    source stream ++++++++++++++S++++++++++++++++++++++
+    //                          |     ^     |
+    //                          +-----+-----+
+    //                            neg | pos
+    //                                |
+    //                                V
+    //      dest stream +   +   +   + D +   +   +   +   +   +
+    //
+    // At this point in the code, D = dest_offset and S = info.next_source_frame. This is our
+    // starting point. There are two interesting cases:
+    //
+    //  1. S-1.0 < source_buffer->start() <= S + pos_filter_width
+    //
+    //     The first source_buffer frame can be used to produce frame D. This is the common case
+    //     for continuous (gapless) streams of audio. In this case, our resampler has cached all
+    //     source frames in the range [S-neg,X-1], where X = source_buffer->start(). We combine
+    //     those cached frames with the first S+pos-X frames from the source_buffer to produce D.
+    //
+    //  2. source_buffer->start() > S + pos_filter_width
+    //
+    //     The first source_buffer frame is beyond the last frame needed to produce frame D. This
+    //     means there is a gap in the source stream. Because our source is wrapped with a
+    //     SilencePaddingStream, there must have been at least neg+pos silent frames before that
+    //     gap, hence our resampler has quiesced to a "silent" state and will fill that gap with
+    //     silence. This implies that all frames in the range [S-neg,S+pos] are silent, and hence
+    //     D is silent as well. Since the destination buffer is zeroed before we start mixing, we
+    //     don't need to produce frame D. Instead we advance dest_offset to the first frame D'
+    //     whose sampling window includes source_buffer->start(). This is handled below.
+    //
+    int64_t initial_dest_advance = 0;
+    if (source_buffer->start() > info.next_source_frame + mixer.pos_filter_width()) {
+      // To illustrate:
+      //
+      //    source stream ++S+++++++++++++++++++++++S'++++X++++++++++++
+      //                    ^     |           |     ^     |
+      //                    +-----+           +-----+-----+
+      //                    | pos               neg | pos
+      //                    |                       |
+      //                    V                       V
+      //      dest stream + D +   +   +   +   +   + D'+   +   +   +   +
+      //
+      // S  = current source position (info.next_source_frame)
+      // X  = source_buffer->start()
+      // D  = current dest position (dest_offset)
+      // D' = first dest frame whose sampling window overlaps with source_buffer->start()
+      // S' = source position after advancing to D'
+
+      // We need to advance at least this many source frames.
+      auto mix_to_packet_gap =
+          Fixed(source_buffer->start() - info.next_source_frame - mixer.pos_filter_width());
+
+      // We need to advance this many destination frames to find a D' as illustrated above,
+      // but don't advance past the end of the destination buffer.
+      initial_dest_advance = Mixer::Bookkeeping::SourceLenToDestLen(
+          mix_to_packet_gap, bookkeeping.step_size, bookkeeping.rate_modulo(),
+          bookkeeping.denominator(), bookkeeping.source_pos_modulo);
+      initial_dest_advance = std::clamp(initial_dest_advance, 0l, dest_frames - dest_offset);
+
+      // Advance our long-running positions.
+      auto initial_source_running_position = info.next_source_frame;
+      auto initial_source_offset = source_offset;
+      auto initial_source_pos_modulo = bookkeeping.source_pos_modulo;
+      info.AdvanceAllPositionsBy(initial_dest_advance, bookkeeping);
+
+      // Advance our local offsets.
+      // We advance the source_offset the same amount as we advanced info.next_source_frame.
+      dest_offset += initial_dest_advance;
+      source_offset =
+          Fixed(initial_source_offset + info.next_source_frame - initial_source_running_position);
+
+      if constexpr (kMixerPositionTraceEvents) {
+        TRACE_DURATION("audio", "initial_dest_advance", "initial_dest_advance",
+                       initial_dest_advance);
+      }
+
+      FX_CHECK(source_offset + mixer.pos_filter_width() >= Fixed(0))
+          << "source_offset (" << ffl::String::DecRational << source_offset << ") + pos_width ("
+          << Fixed(-mixer.pos_filter_width()) << ") should >= 0 -- source running position was "
+          << initial_source_running_position << " (+ " << initial_source_pos_modulo << "/"
+          << bookkeeping.denominator() << " modulo), is now " << info.next_source_frame << " (+ "
+          << bookkeeping.source_pos_modulo << "/" << bookkeeping.denominator()
+          << " modulo); advanced dest by " << initial_dest_advance;
+
+      FX_CHECK(dest_offset <= dest_frames)
+          << ffl::String::DecRational << "dest_offset " << dest_offset << " advanced by "
+          << initial_dest_advance << " to " << dest_frames << ", exceeding " << dest_frames << ";"
+          << " mix_to_packet_gap=" << mix_to_packet_gap << " step_size=" << bookkeeping.step_size
+          << " rate_modulo=" << bookkeeping.rate_modulo()
+          << " denominator=" << bookkeeping.denominator()
+          << " source_pos_modulo=" << bookkeeping.source_pos_modulo << " (was "
+          << initial_source_pos_modulo << ")";
     }
 
-    // If a packet has no frames, there's no need to mix it; it may be skipped.
-    if (stream_buffer->end() == stream_buffer->start()) {
-      stream_buffer->set_is_fully_consumed(true);
-      continue;
+    // Consume as much of this source buffer as possible.
+    int64_t source_frames_consumed;
+
+    // Invariant: dest_offset <= dest_frames (see FX_CHECK above).
+    if (dest_offset == dest_frames) {
+      // We skipped so many frames in the destination buffer that we overran the end of the buffer.
+      // We are done with this job. This can happen when there is a large gap between our initial
+      // source position and source_buffer->start().
+      source_frames_consumed = 0;
+    } else if (Fixed(source_offset) - mixer.neg_filter_width() >= Fixed(source_buffer->length())) {
+      // The source buffer was initially within our mix window, but after skipping destination
+      // frames, it is now entirely in the past. This can only occur when down-sampling and is made
+      // more likely if the rate conversion ratio is very high. In the example below, D and S are
+      // the initial dest and source positions, D' and S' are the new positions after skipping
+      // destination frames, and X marks the source buffer, which is not in the sampling window for
+      // either D or D'.
+      //
+      //    source stream ++++++++++++++++++S++++++++++XXXXXXXXXXXX+++++++++++++S'+++++
+      //                              |     ^     |                       |     ^     |
+      //                              +-----+-----+                       +-----+-----+
+      //                                neg | pos                           neg | pos
+      //                                    |                                   |
+      //                                    V                                   V
+      //      dest stream +                 D                 +                 D'
+      //
+      source_frames_consumed = source_buffer->length();
+    } else {
+      // We have source and destination frames available.
+      auto dest_frames_per_dest_ref_clock_nsec =
+          ReferenceClockToIntegralFrames(cur_mix_job_.dest_ref_clock_to_frac_dest_frame).rate();
+
+      // Check whether we are still ramping
+      float local_gain_db;
+      const bool ramping = bookkeeping.gain.IsRamping();
+      if (ramping) {
+        // TODO(fxbug.dev/94160): make less error-prone
+        auto scale_arr_max = bookkeeping.gain.CalculateScaleArray(
+            bookkeeping.scale_arr.get(),
+            std::min(dest_frames - dest_offset, Mixer::Bookkeeping::kScaleArrLen),
+            dest_frames_per_dest_ref_clock_nsec);
+        local_gain_db = Gain::ScaleToDb(scale_arr_max);
+      } else {
+        local_gain_db = bookkeeping.gain.GetGainDb();
+      }
+
+      StageMetricsTimer timer("Mixer::Mix");
+      timer.Start();
+
+      const int64_t dest_offset_before_mix = dest_offset;
+      mixer.Mix(cur_mix_job_.buf, dest_frames, &dest_offset, source_buffer->payload(),
+                source_buffer->length(), &source_offset, cur_mix_job_.accumulate);
+
+      timer.Stop();
+      cur_mix_job_.read_lock_ctx->AddStageMetrics(timer.Metrics());
+
+      source_frames_consumed = std::min(Fixed(source_offset + mixer.pos_filter_width()).Floor(),
+                                        source_buffer->length());
+      cur_mix_job_.usages_mixed.insert_all(source_buffer->usage_mask());
+
+      // Check that we did not overflow the buffer.
+      FX_CHECK(dest_offset <= dest_frames)
+          << ffl::String::DecRational << "dest_offset(before)=" << dest_offset_before_mix
+          << " dest_offset(after)=" << dest_offset << " dest_frames=" << dest_frames
+          << " source_buffer.start=" << source_buffer->start()
+          << " source_buffer.length=" << source_buffer->length()
+          << " source_offset(final)=" << source_offset;
+
+      // Total applied gain: previously applied gain, plus any gain added at this stage.
+      float total_applied_gain_db =
+          Gain::CombineGains(source_buffer->total_applied_gain_db(), local_gain_db);
+      // Record the max applied gain of any source stream.
+      cur_mix_job_.total_applied_gain_db =
+          std::max(cur_mix_job_.total_applied_gain_db, total_applied_gain_db);
+
+      // If src is ramping, advance that ramp by the amount of dest that was just mixed.
+      if (ramping) {
+        bookkeeping.gain.Advance(dest_offset - dest_offset_before_mix,
+                                 dest_frames_per_dest_ref_clock_nsec);
+      }
     }
 
-    // Now process the packet at the front of the renderer's queue. If the packet has been
-    // entirely consumed, pop it off the front and proceed to the next. Otherwise, we are done.
-    auto fully_consumed = ProcessMix(mixer, stream, *stream_buffer);
-    stream_buffer->set_is_fully_consumed(fully_consumed);
+    source_buffer->set_frames_consumed(source_frames_consumed);
 
-    // If we have mixed enough destination frames, we are done with this mix, regardless of what
-    // we should now do with the source packet.
-    if (info.frames_produced == cur_mix_job_.buf_frames) {
-      break;
-    }
-    // If we still need to produce more destination data, but could not complete this source
-    // packet (we're paused, or the packet is in the future), then we are done.
-    if (!fully_consumed) {
-      break;
-    }
-
-    source_for_first_mix_job_frame = stream_buffer->end();
+    // Advance positions by the number of frames mixed.
+    // Note that we have already advanced by initial_dest_advance.
+    info.UpdateRunningPositionsBy(dest_offset - prev_dest_offset - initial_dest_advance,
+                                  bookkeeping);
   }
 
   // If there was insufficient supply to meet our demand, we may not have mixed enough frames, but
@@ -365,225 +511,41 @@ void MixStage::MixStream(Mixer& mixer, ReadableStream& stream) {
   cur_mix_job_.accumulate = true;
 }
 
-bool MixStage::ProcessMix(Mixer& mixer, ReadableStream& stream,
-                          const ReadableStream::Buffer& source_buffer) {
-  TRACE_DURATION("audio", "MixStage::ProcessMix");
-  // We are only called by MixStream, which has guaranteed these.
+std::optional<ReadableStream::Buffer> MixStage::NextSourceBuffer(Mixer& mixer,
+                                                                 ReadableStream& stream,
+                                                                 int64_t dest_frames) {
   auto& info = mixer.source_info();
   auto& bookkeeping = mixer.bookkeeping();
-  FX_DCHECK(cur_mix_job_.buf_frames > 0);
-  FX_DCHECK(info.frames_produced < cur_mix_job_.buf_frames);
-  FX_DCHECK(info.dest_frames_to_frac_source_frames.subject_delta());
 
-  if (kMixerPositionTraceEvents) {
-    TRACE_DURATION("audio", "MixStage::ProcessMix position", "start",
-                   source_buffer.start().Integral().Floor(), "start.frac",
-                   source_buffer.start().Fraction().raw_value(), "length", source_buffer.length(),
-                   "next_source_frame", info.next_source_frame.Integral().Floor(),
-                   "next_source_frame.frac", info.next_source_frame.Fraction().raw_value(),
-                   "frames_produced", info.frames_produced, "buf_frames", cur_mix_job_.buf_frames);
-  }
+  // Request enough source_frames to produce dest_frames.
+  Fixed source_frames = Mixer::Bookkeeping::DestLenToSourceLen(
+                            dest_frames, bookkeeping.step_size, bookkeeping.rate_modulo(),
+                            bookkeeping.denominator(), bookkeeping.source_pos_modulo) +
+                        mixer.pos_filter_width();
 
-  // At this point we know we need to consume some source data, but we don't yet know how much.
-  // Here is how many destination frames we still need to produce, for this mix job.
-  int64_t dest_frames_left = cur_mix_job_.buf_frames - info.frames_produced;
-  float* buf = cur_mix_job_.buf + (info.frames_produced * format().channels());
+  Fixed source_start = info.next_source_frame;
 
-  // This MixJob's first sampling point is our saved long-running source position.
-  auto source_for_first_mix_job_frame = info.next_source_frame;
-
-  // 'dest_frames_left', 'buf' and 'source_for_first_mix_job_frame' characterize our demand.
-  // Now reason about our supply.
-  //
-  // Assert our implementation-defined limit is compatible with the FIDL limit. The latter is
-  // already enforced by the renderer implementation.
-  static_assert(fuchsia::media::MAX_FRAMES_PER_RENDERER_PACKET <= Fixed::Max().Floor());
-  FX_DCHECK(source_buffer.end() > source_buffer.start());
-  FX_DCHECK(source_buffer.length() <= Fixed::Max());
-
-  // Retrieve the actual times of this source packet's first and last frames.
-  auto source_for_first_packet_frame = source_buffer.start();
-  Fixed source_for_final_packet_frame = source_buffer.end() - Fixed(1);
-
-  // If this source packet's last frame is too late to affect the first frame that we will mix,
-  // then this packet is entirely in the past and may be skipped.
-  //
-  // Check whether packet final frame is within "filter negative width" of our first mix point.
-  auto neg_width = mixer.neg_filter_width();
-  Fixed source_neg_edge_first_mix_frame = source_for_first_mix_job_frame - neg_width;
-
-  if (source_for_final_packet_frame < source_neg_edge_first_mix_frame) {
-    auto source_frames_late =
-        Fixed(source_neg_edge_first_mix_frame - source_for_first_packet_frame);
-    auto clock_mono_late = zx::nsec(info.clock_mono_to_frac_source_frames.rate().Inverse().Scale(
-        source_frames_late.raw_value()));
-
-    stream.ReportUnderflow(source_for_first_packet_frame, source_for_first_mix_job_frame,
-                           clock_mono_late);
-    // True == we're done with the packet (it can be completed) and would like another.
-    return true;
-  }
-
-  // If this source packet's first frame is too far in the future to affect the last frame we mix,
-  // then this packet is not yet needed and should be held.
-  //
-  // Compute the sampling point for our final mix frame.
-  // Then check whether packet's first frame is within "filter positive width" of that position.
-  Fixed source_for_final_mix_job_frame =
-      source_for_first_mix_job_frame +
-      Mixer::Bookkeeping::DestLenToSourceLen(dest_frames_left - 1, bookkeeping.step_size,
-                                             bookkeeping.rate_modulo(), bookkeeping.denominator(),
-                                             bookkeeping.source_pos_modulo);
-  auto pos_width = mixer.pos_filter_width();
-  if (source_for_first_packet_frame > Fixed(source_for_final_mix_job_frame + pos_width)) {
-    // False == we consumed all the available packet "supply" that we could at this time
-    // (based on requirement that we present packets in timestamp-chronological order).
-    return false;
-  }
-
-  // Otherwise, this packet will affect our MixJob. We compute source_offset (where in the packet we
-  // should start sampling) and dest_offset (where in dest buffer we put the first frame we mix).
-  int64_t initial_dest_advance = 0;
-  Fixed source_offset = source_for_first_mix_job_frame - source_for_first_packet_frame;
-  Fixed source_pos_edge_first_mix_frame = source_for_first_mix_job_frame + pos_width;
-
-  // If the packet's first frame comes after the filter window's positive edge,
-  // then we should skip some frames in the destination buffer before starting to produce data.
-  if (source_for_first_packet_frame > source_pos_edge_first_mix_frame) {
-    // Packet is within the mix window but starts after mix start. To start mixing at the right
-    // spots in the source packet and the dest buffer, we need to advance both timelines from their
-    // current positions, using the standard rate factors always employed by the resampler
-    // [source_rate, step_size, dest_rate]. If we DON'T advance by an integral number of step_sizes,
-    // our long-running source position (and thus our clock synchronization) won't be correct. The
-    // AdvanceAllPositionsBy function will do this for us, if we can give it the correct number of
-    // destination frames. The static bookkeeping method provides this value.
-
-    // MixStream breaks mix jobs into multiple pieces so that each packet gets its own ProcessMix
-    // call; this means there was no contiguous packet immediately before this one. Either this was
-    // the first packet of a stream, or there was a gap between the previous packet and this one.
-    // Packet timestamp gaps might be intentional (client uses a "sparse" stream) or unintentional.
-    // For now we don't report this as a problem; eventually (when we can rely on clients to
-    // accurately set STREAM_PACKET_FLAG_DISCONTINUITY), we should report this as a minor
-    // discontinuity if that flag is NOT set -- via something like
-    //    stream.ReportPartialUnderflow(frac_source_offset,dest_offset);
-    //
-    // TODO(fxbug.dev/50699): move packet discontinuity (gap/overlap) detection up into the
-    // Renderer/PacketQueue, and remove PartialUnderflow reporting and the metric altogether.
-
-    auto mix_to_packet_gap = Fixed(source_for_first_packet_frame - source_pos_edge_first_mix_frame);
-    initial_dest_advance = Mixer::Bookkeeping::SourceLenToDestLen(
-        mix_to_packet_gap, bookkeeping.step_size, bookkeeping.rate_modulo(),
-        bookkeeping.denominator(), bookkeeping.source_pos_modulo);
-    initial_dest_advance = std::clamp(initial_dest_advance, 0l, dest_frames_left);
-    auto initial_source_running_position = info.next_source_frame;
-    auto initial_source_offset = source_offset;
-    auto initial_source_pos_modulo = bookkeeping.source_pos_modulo;
-    info.AdvanceAllPositionsBy(initial_dest_advance, bookkeeping);
-    source_offset =
-        Fixed(initial_source_offset + info.next_source_frame - initial_source_running_position);
-
-    if (kMixerPositionTraceEvents) {
-      TRACE_DURATION("audio", "initial_dest_advance", "initial_dest_advance", initial_dest_advance);
-    }
-    FX_DCHECK(source_offset + pos_width >= Fixed(0))
-        << "source_offset (" << ffl::String::DecRational << source_offset << ") + pos_width ("
-        << Fixed(-pos_width) << ") should >= 0 -- source running position was "
-        << initial_source_running_position << " (+ " << initial_source_pos_modulo << "/"
-        << bookkeeping.denominator() << " modulo), is now " << info.next_source_frame << " (+ "
-        << bookkeeping.source_pos_modulo << "/" << bookkeeping.denominator()
-        << " modulo); advanced dest by " << initial_dest_advance;
-  }
-
-  // We may have skipped over some of the destination buffer to get to the start of the source
-  // buffer, or may have skipped over some source frames if the source buffer started too early, but
-  // now it looks like we are ready to go. Before mixing, double-check that we are still within our
-  // window. It is possible that this advancement has moved our sampling point beyond the current
-  // source packet, or has moved our target mix position beyond our dest mix buffer, or even BOTH:
-  int64_t dest_offset = initial_dest_advance;
-  bool consumed_source =
-      (source_offset + mixer.pos_filter_width() >= Fixed(source_buffer.length()));
-  if (consumed_source) {
-    // This packet was initially within our mix window, but after aligning our sampling point to
-    // the forward-nearest dest frame, it is now entirely in the past. This occurs when downsampling
-    // using very high rate conversion ratios. Just complete this packet and move on to the next.
-    // Note: the alignment may also have caused us to exceed our dest mix buffer. On exit we signal
-    // these conditions independently with retval 'source_consumed' and in-out param 'dest_offset'.
-  } else if (dest_offset >= dest_frames_left) {
-    // We initially needed to source frames from this packet in order to finish this mix. After
-    // aligning our sampling point to the forward-nearest dest frame, that dest frame is now at or
-    // beyond the end of this mix job. We have no need to mix any source material now, so just exit.
-    // Note: the alignment may also have caused us to exceed our source packet. On exit we signal
-    // these conditions independently with retval 'source_consumed' and in-out param 'dest_offset'.
-  } else {
-    // Yes, we really do have some frames that we can mix now.
-    auto prev_dest_offset = dest_offset;
-    auto dest_ref_clock_to_integral_dest_frame =
-        ReferenceClockToIntegralFrames(cur_mix_job_.dest_ref_clock_to_frac_dest_frame);
-
-    // Check whether we are still ramping
-    float local_gain_db;
-    bool ramping = bookkeeping.gain.IsRamping();
-    if (ramping) {
-      auto scale_arr_max = bookkeeping.gain.CalculateScaleArray(
-          bookkeeping.scale_arr.get(),
-          std::min(dest_frames_left - dest_offset, Mixer::Bookkeeping::kScaleArrLen),
-          dest_ref_clock_to_integral_dest_frame.rate());
-      local_gain_db = Gain::ScaleToDb(scale_arr_max);
-    } else {
-      local_gain_db = bookkeeping.gain.GetGainDb();
-    }
-
-    StageMetricsTimer timer("Mixer::Mix");
-    timer.Start();
-
-    mixer.Mix(buf, dest_frames_left, &dest_offset, source_buffer.payload(), source_buffer.length(),
-              &source_offset, cur_mix_job_.accumulate);
-
-    timer.Stop();
-    cur_mix_job_.read_lock_ctx->AddStageMetrics(timer.Metrics());
-
-    consumed_source = (source_offset + mixer.pos_filter_width()) >= Fixed(source_buffer.length());
-    if (consumed_source) {
-      FX_DCHECK(source_offset + pos_width >= Fixed(source_buffer.length()))
-          << "source_offset (" << ffl::String::DecRational << source_offset << ") plus pos_width ("
-          << ffl::String::DecRational << pos_width << ") should equal/exceed source_buffer.length ("
-          << ffl::String::DecRational << source_buffer.length() << ")";
-    } else {
-      FX_DCHECK(source_offset + pos_width < Fixed(source_buffer.length()))
-          << "source_offset (" << ffl::String::DecRational << source_offset << ") plus pos_width ("
-          << ffl::String::DecRational << pos_width << ") should be less than source_buffer.length ("
-          << ffl::String::DecRational << source_buffer.length() << ")";
-    }
-
-    cur_mix_job_.usages_mixed.insert_all(source_buffer.usage_mask());
-
-    // Total applied gain: previously applied gain, plus any gain added at this stage.
-    float total_applied_gain_db =
-        Gain::CombineGains(source_buffer.total_applied_gain_db(), local_gain_db);
-    // Record the max applied gain of any source stream.
-    cur_mix_job_.total_applied_gain_db =
-        std::max(cur_mix_job_.total_applied_gain_db, total_applied_gain_db);
-
-    // If source is ramping, advance that ramp by the amount of dest that was just mixed.
-    if (ramping) {
-      bookkeeping.gain.Advance(dest_offset - prev_dest_offset,
-                               dest_ref_clock_to_integral_dest_frame.rate());
+  // Advance source_start to our source's next available frame. This is needed because our
+  // source's current position may be ahead of info.next_source_frame by up to pos_filter_width
+  // frames. While we could keep track of this delta ourselves, it's easier to simply ask the
+  // source for its current position.
+  auto next_available = stream.NextAvailableFrame();
+  if (next_available && *next_available > source_start) {
+    const Fixed source_end = source_start + source_frames;
+    source_start = *next_available;
+    source_frames = source_end - source_start;
+    if (source_frames <= Fixed(0)) {
+      // This shouldn't happen: the source should not be ahead of info.next_source_frame by
+      // more than pos_filter_width and our initial source_frames should > pos_filter_width.
+      FX_LOGS(WARNING) << ffl::String::DecRational << "Unexpectedly small source request"
+                       << " [" << info.next_source_frame << ", " << source_end << ")"
+                       << " is entirely before next available frame (" << (*next_available) << ")";
+      return std::nullopt;
     }
   }
 
-  FX_DCHECK(dest_offset <= dest_frames_left);
-  // Bookkeeping (including source_pos_modulo) has already advanced -- now update long-running
-  // position (without double-incrementing source_pos_modulo).
-  info.UpdateRunningPositionsBy(dest_offset - initial_dest_advance, bookkeeping);
-
-  if (consumed_source) {
-    FX_DCHECK(source_offset + mixer.pos_filter_width() >= Fixed(source_buffer.length()));
-  }
-
-  info.frames_produced += dest_offset;
-  FX_DCHECK(info.frames_produced <= cur_mix_job_.buf_frames);
-
-  return consumed_source;
+  // Round up so we always request an integral number of frames.
+  return stream.ReadLock(*cur_mix_job_.read_lock_ctx, source_start, source_frames.Ceiling());
 }
 
 // We compose the effects of clock reconciliation into our sample-rate-conversion step size, but
@@ -702,28 +664,6 @@ void MixStage::ReconcileClocksAndSetStepSize(Mixer::SourceInfo& info,
                                  mono_now_from_dest, true);
     SetStepSize(info, bookkeeping, frac_source_frames_per_dest_frame);
     return;
-  }
-
-  // We will start mixing at dest_frame. If this doesn't match our expected dest position from the
-  // previous mix (info.next_dest_frame), there was a discontinuity. We must update
-  // info.next_dest_frame and advance info.next_source_frame by an equivalent amount.
-
-  // Dest-pos-went-backward discontinuities of up to kDestPosRollbackTolerance are normal. Set
-  // info.next_dest_frame to dest_frame; decrement info.next_source_frame by the corresponding
-  // step_size multiple. We will handle larger dest position gaps in the section after this one.
-  if constexpr (kAllowPositionRollback) {
-    if (dest_frame < info.next_dest_frame &&
-        dest_frame + kDestPosRollbackTolerance >= info.next_dest_frame) {
-      if constexpr (kLogRollbacks) {
-        static int rollback_count = 0;
-        if (rollback_count % kLogRollbacksStride == 0) {
-          FX_LOGS(INFO) << "Rolling back by " << info.next_dest_frame - dest_frame
-                        << " dest frames (1/" << kLogRollbacksStride << ") **********";
-        }
-        rollback_count = (rollback_count + 1) % kLogRollbacksStride;
-      }
-      info.AdvanceAllPositionsTo(dest_frame, bookkeeping);
-    }
   }
 
   // In most cases, we advance source position using step_size. For a dest discontinuity of N

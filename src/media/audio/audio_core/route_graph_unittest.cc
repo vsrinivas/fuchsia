@@ -75,9 +75,8 @@ class FakeAudioOutput : public AudioOutput {
 
   FakeAudioOutput(ThreadingModel* threading_model, DeviceRegistry* device_registry,
                   LinkMatrix* link_matrix, std::shared_ptr<AudioClockFactory> clock_factory)
-      : AudioOutput("", MixProfileConfig{}, threading_model, device_registry, link_matrix,
-                    clock_factory, nullptr /* EffectsLoaderV2 */,
-                    std::make_unique<AudioDriver>(this)) {}
+      : AudioOutput("", threading_model, device_registry, link_matrix, clock_factory,
+                    nullptr /* EffectsLoaderV2 */, std::make_unique<AudioDriver>(this)) {}
 
   void ApplyGainLimits(fuchsia::media::AudioGainInfo* in_out_info,
                        fuchsia::media::AudioGainValidFlags set_flags) override {}
@@ -86,7 +85,7 @@ class FakeAudioOutput : public AudioOutput {
   std::optional<AudioOutput::FrameSpan> StartMixJob(zx::time ref_time) override {
     return std::nullopt;
   }
-  void WriteMixOutput(int64_t start, int64_t length, const float* payload) override {}
+  void WriteMixOutput(int64_t start, int64_t length, const float* buffer) override {}
   void FinishMixJob(const AudioOutput::FrameSpan& span) override {}
   zx::duration MixDeadline() const override { return zx::msec(10); }
 

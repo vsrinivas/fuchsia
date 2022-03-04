@@ -13,14 +13,20 @@
 
 namespace media::audio::test {
 
+namespace {
 constexpr auto kSampleFormat = fuchsia::media::AudioSampleFormat::SIGNED_16;
 constexpr int32_t kSampleRate = 8000;
 constexpr int kChannelCount = 1;
-static const auto kFormat = Format::Create<kSampleFormat>(kChannelCount, kSampleRate).value();
+const auto kFormat = Format::Create<kSampleFormat>(kChannelCount, kSampleRate).value();
 
 constexpr int kRingBufferFrames = kSampleRate;  // 1s
-static const int kRingBufferSamples = kRingBufferFrames * kFormat.channels();
-static const int kRingBufferBytes = kRingBufferFrames * kFormat.bytes_per_frame();
+const int kRingBufferSamples = kRingBufferFrames * kFormat.channels();
+const int kRingBufferBytes = kRingBufferFrames * kFormat.bytes_per_frame();
+
+// Extra delay in Play() calls to account for scheduling latency.
+// This is intentionally set higher than likely necessary to reduce the chance of flakes.
+constexpr auto kPlayLeadTimeTolerance = zx::msec(20);
+}  // namespace
 
 //
 // AudioAdminTest
@@ -205,7 +211,8 @@ TEST_F(AudioAdminTest, SingleRenderStream) {
   // Start playing right now, so that after we've delayed at least 1 leadtime,
   // we should have mixed audio available for capture.  Our playback is sized
   // to be much much larger than our capture to prevent test flakes.
-  renderer->fidl()->Play(zx::clock::get_monotonic().get(), 0,
+  auto play_time = zx::clock::get_monotonic() + kPlayLeadTimeTolerance;
+  renderer->fidl()->Play(play_time.get(), 0,
                          AddCallback("Play", [&ref_time_received, &media_time_received](
                                                  int64_t ref_time, int64_t media_time) {
                            ref_time_received = ref_time;
@@ -219,7 +226,7 @@ TEST_F(AudioAdminTest, SingleRenderStream) {
   EXPECT_GE(ref_time_received, 0);
 
   // Give the playback some time to get mixed.
-  zx_nanosleep(zx_deadline_after(sleep_duration));
+  zx_nanosleep(zx_deadline_after(sleep_duration + kPlayLeadTimeTolerance.get()));
 
   // Add a callback for when we get our captured packet.
   capturer->fidl().events().OnPacketProduced =
@@ -272,7 +279,8 @@ TEST_F(AudioAdminTest, RenderMuteCapture) {
   // Start playing right now, so that after we've delayed at least 1 leadtime,
   // we should have mixed audio available for capture.  Our playback is sized
   // to be much much larger than our capture to prevent test flakes.
-  renderer->fidl()->Play(zx::clock::get_monotonic().get(), 0,
+  auto play_time = zx::clock::get_monotonic() + kPlayLeadTimeTolerance;
+  renderer->fidl()->Play(play_time.get(), 0,
                          AddCallback("Play", [&ref_time_received, &media_time_received](
                                                  int64_t ref_time, int64_t media_time) {
                            ref_time_received = ref_time;
@@ -286,7 +294,7 @@ TEST_F(AudioAdminTest, RenderMuteCapture) {
   EXPECT_GE(ref_time_received, 0);
 
   // Give the playback some time to get mixed.
-  zx_nanosleep(zx_deadline_after(sleep_duration));
+  zx_nanosleep(zx_deadline_after(sleep_duration + kPlayLeadTimeTolerance.get()));
 
   // Capture 10 samples of audio.
   capturer->fidl().events().OnPacketProduced =
@@ -348,7 +356,8 @@ void AudioAdminTest::TestCaptureMuteRender(bool set_usage_to_disable) {
   // Start playing right now, so that after we've delayed at least 1 leadtime,
   // we should have mixed audio available for capture.  Our playback is sized
   // to be much much larger than our capture to prevent test flakes.
-  renderer->fidl()->Play(zx::clock::get_monotonic().get(), 0,
+  auto play_time = zx::clock::get_monotonic() + kPlayLeadTimeTolerance;
+  renderer->fidl()->Play(play_time.get(), 0,
                          AddCallback("Play", [&ref_time_received, &media_time_received](
                                                  int64_t ref_time, int64_t media_time) {
                            ref_time_received = ref_time;
@@ -362,7 +371,7 @@ void AudioAdminTest::TestCaptureMuteRender(bool set_usage_to_disable) {
   EXPECT_GE(ref_time_received, 0);
 
   // Give the playback some time to get mixed.
-  zx_nanosleep(zx_deadline_after(sleep_duration));
+  zx_nanosleep(zx_deadline_after(sleep_duration + kPlayLeadTimeTolerance.get()));
 
   // Add a callback for when we get our captured packet.
   fuchsia::media::StreamPacket loopback_captured;
@@ -429,10 +438,10 @@ TEST_F(AudioAdminTest, DualRenderStreamMix) {
   // Start playing right now, so that after we've delayed at least 1 leadtime,
   // we should have mixed audio available for capture.  Our playback is sized
   // to be much much larger than our capture to prevent test flakes.
-  auto playat = zx::clock::get_monotonic().get();
-  renderer1->fidl()->PlayNoReply(playat, 0);
+  auto play_time = zx::clock::get_monotonic() + kPlayLeadTimeTolerance;
+  renderer1->fidl()->PlayNoReply(play_time.get(), 0);
   // Only get the callback for the second renderer.
-  renderer2->fidl()->Play(playat, 0,
+  renderer2->fidl()->Play(play_time.get(), 0,
                           AddCallback("Play", [&ref_time_received, &media_time_received](
                                                   int64_t ref_time, int64_t media_time) {
                             ref_time_received = ref_time;
@@ -446,7 +455,7 @@ TEST_F(AudioAdminTest, DualRenderStreamMix) {
   EXPECT_GT(ref_time_received, 0);
 
   // Give the playback some time to get mixed.
-  zx_nanosleep(zx_deadline_after(sleep_duration));
+  zx_nanosleep(zx_deadline_after(sleep_duration + kPlayLeadTimeTolerance.get()));
 
   // Capture 10 samples of audio.
   fuchsia::media::StreamPacket captured;
@@ -512,10 +521,10 @@ TEST_F(AudioAdminTest, DualRenderStreamDucking) {
   // Start playing right now, so that after we've delayed at least 1 leadtime,
   // we should have mixed audio available for capture.  Our playback is sized
   // to be much much larger than our capture to prevent test flakes.
-  auto playat = zx::clock::get_monotonic().get();
-  renderer1->fidl()->PlayNoReply(playat, 0);
+  auto play_time = zx::clock::get_monotonic() + kPlayLeadTimeTolerance;
+  renderer1->fidl()->PlayNoReply(play_time.get(), 0);
   // Only get the callback for the second renderer.
-  renderer2->fidl()->Play(playat, 0,
+  renderer2->fidl()->Play(play_time.get(), 0,
                           AddCallback("Play", [&ref_time_received, &media_time_received](
                                                   int64_t ref_time, int64_t media_time) {
                             ref_time_received = ref_time;
@@ -529,7 +538,7 @@ TEST_F(AudioAdminTest, DualRenderStreamDucking) {
   EXPECT_GT(ref_time_received, 0);
 
   // Give the playback some time to get mixed.
-  zx_nanosleep(zx_deadline_after(sleep_duration));
+  zx_nanosleep(zx_deadline_after(sleep_duration + kPlayLeadTimeTolerance.get()));
 
   // Capture 10 samples of audio.
   fuchsia::media::StreamPacket captured;
@@ -585,10 +594,10 @@ TEST_F(AudioAdminTest, DualRenderStreamMute) {
   // Start playing right now, so that after we've delayed at least 1 leadtime,
   // we should have mixed audio available for capture.  Our playback is sized
   // to be much much larger than our capture to prevent test flakes.
-  auto playat = zx::clock::get_monotonic().get();
-  renderer1->fidl()->PlayNoReply(playat, 0);
+  auto play_time = zx::clock::get_monotonic() + kPlayLeadTimeTolerance;
+  renderer1->fidl()->PlayNoReply(play_time.get(), 0);
   // Only get the callback for the second renderer.
-  renderer2->fidl()->Play(playat, 0,
+  renderer2->fidl()->Play(play_time.get(), 0,
                           AddCallback("Play", [&ref_time_received, &media_time_received](
                                                   int64_t ref_time, int64_t media_time) {
                             ref_time_received = ref_time;
@@ -602,7 +611,7 @@ TEST_F(AudioAdminTest, DualRenderStreamMute) {
   EXPECT_GT(ref_time_received, 0);
 
   // Give the playback some time to get mixed.
-  zx_nanosleep(zx_deadline_after(sleep_duration));
+  zx_nanosleep(zx_deadline_after(sleep_duration + kPlayLeadTimeTolerance.get()));
 
   // Capture 10 samples of audio.
   fuchsia::media::StreamPacket captured;
@@ -657,8 +666,8 @@ TEST_F(AudioAdminTest, DualCaptureStreamNone) {
   // Start playing right now, so that after we've delayed at least 1 leadtime,
   // we should have mixed audio available for capture.  Our playback is sized
   // to be much much larger than our capture to prevent test flakes.
-  auto playat = zx::clock::get_monotonic().get();
-  renderer->fidl()->Play(playat, 0,
+  auto play_time = zx::clock::get_monotonic() + kPlayLeadTimeTolerance;
+  renderer->fidl()->Play(play_time.get(), 0,
                          AddCallback("Play", [&ref_time_received, &media_time_received](
                                                  int64_t ref_time, int64_t media_time) {
                            ref_time_received = ref_time;
@@ -672,7 +681,7 @@ TEST_F(AudioAdminTest, DualCaptureStreamNone) {
   EXPECT_GT(ref_time_received, 0);
 
   // Give the playback some time to get mixed.
-  zx_nanosleep(zx_deadline_after(sleep_duration));
+  zx_nanosleep(zx_deadline_after(sleep_duration + kPlayLeadTimeTolerance.get()));
 
   // Capture 10 samples of audio.
   fuchsia::media::StreamPacket captured1;
@@ -764,8 +773,8 @@ TEST_F(AudioAdminTest, DISABLED_DualCaptureStreamMute) {
   // Start playing right now, so that after we've delayed at least 1 leadtime,
   // we should have mixed audio available for capture.  Our playback is sized
   // to be much much larger than our capture to prevent test flakes.
-  auto playat = zx::clock::get_monotonic().get();
-  renderer->fidl()->Play(playat, 0,
+  auto play_time = zx::clock::get_monotonic() + kPlayLeadTimeTolerance;
+  renderer->fidl()->Play(play_time.get(), 0,
                          AddCallback("Play", [&ref_time_received, &media_time_received](
                                                  int64_t ref_time, int64_t media_time) {
                            ref_time_received = ref_time;
@@ -779,7 +788,7 @@ TEST_F(AudioAdminTest, DISABLED_DualCaptureStreamMute) {
   EXPECT_GT(ref_time_received, 0);
 
   // Give the playback some time to get mixed.
-  zx_nanosleep(zx_deadline_after(sleep_duration));
+  zx_nanosleep(zx_deadline_after(sleep_duration + kPlayLeadTimeTolerance.get()));
 
   // Capture 10 samples of audio.
   capturer1->fidl()->StartAsyncCapture(10);

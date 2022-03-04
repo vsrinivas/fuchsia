@@ -22,6 +22,7 @@ class FakeStream : public ReadableStream {
 
   void set_usage_mask(StreamUsageMask mask) { usage_mask_ = mask; }
   void set_gain_db(float gain_db) { gain_db_ = gain_db; }
+  void set_max_frame(int64_t max_frame) { max_frame_ = max_frame; }
 
   const fbl::RefPtr<VersionedTimelineFunction>& timeline_function() const {
     return timeline_function_;
@@ -30,15 +31,18 @@ class FakeStream : public ReadableStream {
   // |media::audio::ReadableStream|
   TimelineFunctionSnapshot ref_time_to_frac_presentation_frame() const override;
   AudioClock& reference_clock() override { return *audio_clock_; }
-  std::optional<Buffer> ReadLock(ReadLockContext& ctx, Fixed frame, int64_t frame_count) override;
-  void Trim(Fixed frame) override {}
 
  private:
+  std::optional<Buffer> ReadLockImpl(ReadLockContext& ctx, Fixed frame,
+                                     int64_t frame_count) override;
+  void TrimImpl(Fixed frame) override {}
+
   fbl::RefPtr<VersionedTimelineFunction> timeline_function_ =
       fbl::MakeRefCounted<VersionedTimelineFunction>();
   size_t buffer_size_;
   StreamUsageMask usage_mask_;
   float gain_db_ = Gain::kUnityGainDb;
+  int64_t max_frame_ = std::numeric_limits<int64_t>::max();
   std::unique_ptr<uint8_t[]> buffer_;
 
   std::unique_ptr<AudioClock> audio_clock_;

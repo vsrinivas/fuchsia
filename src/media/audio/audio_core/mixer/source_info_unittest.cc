@@ -160,54 +160,6 @@ TEST_F(SourceInfoTest, UpdateRunningPositions_WithRateModulo) {
   TestPositionAdvanceWithRateModulo(/* advance_source_pos_modulo = */ false);
 }
 
-// Also validate AdvanceAllPositionsTo for negative offsets.
-// TODO(fxbug.dev/73306): remove when disallowed
-void SourceInfoTest::TestPositionAdvanceNegative(bool advance_source_pos_modulo) {
-  auto& bookkeeping = mixer_.bookkeeping();
-  bookkeeping.step_size = kOneFrame + Fixed::FromRaw(2);
-  bookkeeping.source_pos_modulo = 0;
-  bookkeeping.SetRateModuloAndDenominator(2, 5);
-
-  auto& info = mixer_.source_info();
-  info.next_dest_frame = 12;
-  info.next_source_frame = Fixed(3);
-
-  // Advance by -3 dest frames at a step_size of [1 frame + 2 subframes + mod 2/5]
-  // For -3 dest frames, this is an "advance" of -3 frames, -6 subframes, -6/5 mod.
-  if (advance_source_pos_modulo) {
-    info.AdvanceAllPositionsTo(9, bookkeeping);
-
-    // source_pos starts at 3 frames, 0 subframes, with position modulo 3 out of 5.
-    // source was 3 frames 0 subframes, plus -3f -6sf, is now 0 frames -6 subframes.
-    // source_pos_mod was 0/5, plus -6/5, is now -6/5 (negative modulo must be reduced).
-    // -6 subframes -6/5 becomes 8 subframes + mod 4/5.
-    // Thus source become 0 frames -8 subframes, pos_mod 4/5.
-    EXPECT_EQ(info.next_source_frame, Fixed::FromRaw(-8))
-        << "next_source_frame " << ffl::String::DecRational << info.next_source_frame;
-    EXPECT_EQ(bookkeeping.source_pos_modulo, 4ul);
-  } else {
-    info.UpdateRunningPositionsBy(-3, bookkeeping);
-
-    // source_pos starts at 3 frames, 0 subframes, with final position modulo 0 / 5.
-    // 3 frames 0 subframes, plus -3 frames -6 subframes, is now 0 frames -6 subframes.
-    // Unknown source_pos_mod, plus -6/5, is now 0/5 (or -5/5 reduced: must have started at 1/5).
-    // -6 subframes -5/5 becomes -7 subframes + mod 0/5.
-    //
-    // source become 0 frames -7 subframes, pos_mod 0/5.
-    EXPECT_EQ(info.next_source_frame, Fixed::FromRaw(-7))
-        << "next_source_frame " << ffl::String::DecRational << info.next_source_frame;
-    EXPECT_EQ(bookkeeping.source_pos_modulo, 0ul);
-  }
-  EXPECT_EQ(info.next_dest_frame, 9u);
-}
-
-TEST_F(SourceInfoTest, AdvanceAllPositions_Negative) {
-  TestPositionAdvanceNegative(/* advance_source_pos_modulo = */ true);
-}
-TEST_F(SourceInfoTest, UpdateRunningPositions_Negative) {
-  TestPositionAdvanceNegative(/* advance_source_pos_modulo = */ false);
-}
-
 // Validate correct translation to nsec, from running source position including source_pos_modulo
 // Test inputs were captured during real-world clock synchronization.
 TEST_F(SourceInfoTest, MonotonicNsecFromRunningSource) {

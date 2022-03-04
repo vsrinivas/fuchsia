@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/media/audio/audio_core/stream2.h"
+#include "src/media/audio/audio_core/stream.h"
 
 #include <lib/syslog/cpp/macros.h>
 
@@ -36,13 +36,7 @@ constexpr bool kLogTrims = true;
 
 }  // namespace
 
-namespace media::audio::stream2 {
-
-// TODO(fxbug.dev/50669): remove after replacing stream.h
-namespace mixer {
-using ::media::audio::mixer::IntersectPacket;
-using ::media::audio::mixer::Packet;
-}  // namespace mixer
+namespace media::audio {
 
 ReadableStream::ReadableStream(std::string n, Format format)
     : BaseStream(std::move(n), format),
@@ -259,4 +253,4 @@ void ReadableStream::DetectTimelineUpdate() {
   cached_ = std::nullopt;
 }
 
-}  // namespace media::audio::stream2
+}  // namespace media::audio

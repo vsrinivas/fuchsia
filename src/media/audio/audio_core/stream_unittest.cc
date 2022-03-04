@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/media/audio/audio_core/stream2.h"
+#include "src/media/audio/audio_core/stream.h"
 
 #include <lib/fit/defer.h>
 
@@ -14,12 +14,12 @@
 
 using ASF = fuchsia::media::AudioSampleFormat;
 
-namespace media::audio::stream2 {
+namespace media::audio {
 
 namespace {
 
 // Used when the ReadLockContext is unused by the test.
-media::audio::stream2::ReadableStream::ReadLockContext rlctx;
+media::audio::ReadableStream::ReadLockContext rlctx;
 
 const auto kFormat = Format::Create<ASF::SIGNED_16>(1, 48000).take_value();
 const auto kBytesPerFrame = kFormat.bytes_per_frame();
@@ -587,6 +587,7 @@ TEST_P(ReadableStreamTest, Reset) {
       ExpectBuffer(buffer, Fixed(100), Fixed(110), payload_1);
     }
     ExpectTrimCalls({Fixed(110)});
+    EXPECT_EQ(stream->NextAvailableFrame(), Fixed(110));
   }
 
   fake_stream().set_timeline_function(
@@ -598,6 +599,8 @@ TEST_P(ReadableStreamTest, Reset) {
       .payload = payload_2,
   });
 
+  EXPECT_EQ(stream->NextAvailableFrame(), std::nullopt);
+
   // Time reset: going backwards in position is ok.
   {
     SCOPED_TRACE("ReadLock(0, 1000)");
@@ -606,6 +609,7 @@ TEST_P(ReadableStreamTest, Reset) {
       ExpectBuffer(buffer, Fixed(50), Fixed(60), payload_2);
     }
     ExpectTrimCalls({Fixed(60)});
+    EXPECT_EQ(stream->NextAvailableFrame(), Fixed(60));
   }
 }
 
@@ -615,4 +619,4 @@ INSTANTIATE_TEST_SUITE_P(ReadableStreamTestPipelines, ReadableStreamTest,
                                          FakeStreamWithoutCachingThenPassthrough),
                          PipelineParamToString);
 
-}  // namespace media::audio::stream2
+}  // namespace media::audio

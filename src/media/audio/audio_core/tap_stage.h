@@ -25,13 +25,16 @@ class TapStage : public ReadableStream {
     return source_->ref_time_to_frac_presentation_frame();
   }
   AudioClock& reference_clock() override { return source_->reference_clock(); }
-  std::optional<ReadableStream::Buffer> ReadLock(ReadLockContext& ctx, Fixed dest_frame,
-                                                 int64_t frame_count) override;
-  void Trim(Fixed dest_frame) override { source_->Trim(dest_frame); }
-
   void SetPresentationDelay(zx::duration external_delay) override;
 
  private:
+  std::optional<ReadableStream::Buffer> ReadLockImpl(ReadLockContext& ctx, Fixed dest_frame,
+                                                     int64_t frame_count) override;
+  void TrimImpl(Fixed dest_frame) override {
+    // TapStage produces data on integrally-aligned frames, so Trim on integrally-aligned frames.
+    source_->Trim(Fixed(dest_frame.Floor()));
+  }
+
   void WriteSilenceToTap(int64_t frame, int64_t frame_count);
   void CopySourceToTap(const ReadableStream::Buffer& source_buffer, int64_t next_tap_frame,
                        int64_t frame_count);

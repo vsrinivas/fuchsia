@@ -69,10 +69,16 @@ class Mixer {
     }
 
    private:
-    // From current values, advance the long-running positions by dest_frames.
-    // "Advancing" negatively should be infrequent, but we support it.
+    // From current values, advance the long-running positions by dest_frames, which
+    // must be non-negative.
     void AdvancePositionsBy(int64_t dest_frames, Bookkeeping& bookkeeping,
                             bool advance_source_pos_modulo) {
+      FX_CHECK(dest_frames >= 0) << "Unexpected negative advance:"
+                                 << " dest_frames=" << dest_frames
+                                 << " denom=" << bookkeeping.denominator()
+                                 << " rate_mod=" << bookkeeping.rate_modulo() << " "
+                                 << " source_pos_mod=" << bookkeeping.source_pos_modulo;
+
       int64_t frac_source_frame_delta = bookkeeping.step_size.raw_value() * dest_frames;
       if (kMixerPositionTraceEvents) {
         TRACE_DURATION("audio", __func__, "dest_frames", dest_frames, "advance_source_pos_modulo",
@@ -89,16 +95,6 @@ class Mixer {
           source_pos_modulo_128 += bookkeeping.source_pos_modulo;
         }
         // else, assume (for now) that source_pos_modulo started at zero.
-
-        // TODO(mpuryear): remove negative-position-advance support, when no longer needed
-        // If advance was negative, mod the potentially-negative pos_modulo values up into range.
-        // Negative modulo is error-prone and potentially-undefined-behavior; avoiding it is more
-        // clear at little additional CPU cost (any negative position advance should be small).
-        while (source_pos_modulo_128 < 0) {
-          frac_source_frame_delta -= 1;
-          source_pos_modulo_128 += denominator_128;
-        }
-        // TODO(mpuryear): remove negative-position-advance support once this is no longer needed
 
         // mod these back down into range.
         auto new_source_pos_modulo = static_cast<uint64_t>(source_pos_modulo_128 % denominator_128);
@@ -254,9 +250,6 @@ class Mixer {
     // Thus, the TLF entails both source and dest rates and both source and dest reference clocks,
     // but NOT any additional micro-SRC being applied.
     TimelineFunction dest_frames_to_frac_source_frames;
-
-    // Per-job state, used by the MixStage around a loop of potentially multiple calls to Mix().
-    int64_t frames_produced;
 
     // These fields track our position in the destination and source streams. It may seem
     // sufficient to track next_dest_frame and use that to compute our source position:

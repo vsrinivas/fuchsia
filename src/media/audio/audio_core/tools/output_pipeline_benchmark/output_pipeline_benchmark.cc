@@ -226,7 +226,6 @@ std::shared_ptr<OutputPipeline> OutputPipelineBenchmark::CreateOutputPipeline(
       TimelineFunction(TimelineRate(Fixed(fps).raw_value(), zx::sec(1).to_nsecs()));
 
   return std::make_shared<OutputPipelineImpl>(device_profile.pipeline_config(),
-                                              process_config.mix_profile_config(),
                                               device_profile.volume_curve(), effects_loader_v2, 960,
                                               ref_time_to_frac_presentation_frame, device_clock);
 }

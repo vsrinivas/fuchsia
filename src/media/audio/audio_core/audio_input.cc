@@ -51,7 +51,14 @@ zx_status_t AudioInput::Init() {
 
 fpromise::result<std::shared_ptr<ReadableStream>, zx_status_t> AudioInput::InitializeDestLink(
     const AudioObject& dest) {
-  return fpromise::ok(driver()->readable_ring_buffer());
+  // Ring buffers can be read concurrently by multiple streams, while each ReadableRingBuffer
+  // object contains state for a single stream. Hence, create a duplicate object for each
+  // destination link.
+  // Note: nullptr should not happen in normal cases, but some tests rely on this behavior
+  if (!driver()->readable_ring_buffer()) {
+    return fpromise::ok(nullptr);
+  }
+  return fpromise::ok(driver()->readable_ring_buffer()->Dup());
 }
 
 void AudioInput::OnWakeup() {

@@ -10,6 +10,8 @@
 
 #include <fbl/algorithm.h>
 
+#include "src/media/audio/audio_core/mixer/intersect.h"
+#include "src/media/audio/audio_core/silence_padding_stream.h"
 #include "src/media/audio/audio_core/threading_model.h"
 
 namespace media::audio {
@@ -43,24 +45,6 @@ static constexpr uint32_t kSupportedUsageMask =
 
 // Used to throttle log messages.
 std::atomic<int64_t> fidl_error_count_{0};
-
-template <typename T>
-constexpr T RoundUp(T t, uint64_t alignment) {
-  return fbl::round_up(t, alignment);
-}
-
-template <typename T>
-constexpr T RoundDown(T t, uint64_t alignment) {
-  using UnsignedType = typename std::make_unsigned<T>::type;
-  if (t < 0) {
-    return -fbl::round_up(static_cast<UnsignedType>(std::abs(t)), alignment);
-  }
-  return fbl::round_down(static_cast<UnsignedType>(t), alignment);
-}
-
-std::pair<int64_t, int64_t> AlignBufferRequest(Fixed frame, uint32_t length, uint32_t alignment) {
-  return {RoundDown(frame.Floor(), alignment), RoundUp(length, alignment)};
-}
 
 Format ToOldFormat(const fuchsia_mediastreams::wire::AudioFormat& new_format) {
   FX_CHECK(new_format.sample_format == fuchsia_mediastreams::wire::AudioSampleFormat::kFloat);
@@ -398,99 +382,144 @@ fpromise::result<std::shared_ptr<EffectsStageV2>, zx_status_t> EffectsStageV2::C
 
 EffectsStageV2::EffectsStageV2(fuchsia_audio_effects::wire::ProcessorConfiguration config,
                                std::shared_ptr<ReadableStream> source)
-    : ReadableStream(ToOldFormat(config.outputs()[0].format())),
-      source_(std::move(source)),
+    : ReadableStream("EffectsStageV2", ToOldFormat(config.outputs()[0].format())),
+      source_(SilencePaddingStream::WrapIfNeeded(std::move(source),
+                                                 Fixed(config.outputs()[0].ring_out_frames()),
+                                                 /*fractional_gaps_round_down=*/false)),
       processor_(fidl::BindSyncClient(std::move(config.processor()))),
       fidl_buffers_(FidlBuffers::Create(config.inputs()[0].buffer(), config.outputs()[0].buffer())),
       max_frames_per_call_(config.max_frames_per_call()),
       block_size_frames_(config.block_size_frames()),
-      latency_frames_(config.outputs()[0].latency_frames()),
-      ringout_total_frames_(config.outputs()[0].ring_out_frames()) {
+      output_shift_frames_(config.outputs()[0].latency_frames()),
+      source_buffer_(source_->format(), max_frames_per_call_) {
   // Initialize our lead time. Passing 0 here will resolve to our effect's lead time
   // not counting the impact of any downstream processors.
   SetPresentationDelay(zx::duration(0));
 }
 
-std::optional<ReadableStream::Buffer> EffectsStageV2::ReadLock(ReadLockContext& ctx,
-                                                               Fixed dest_frame,
-                                                               int64_t frame_count) {
-  TRACE_DURATION("audio", "EffectsStageV2::ReadLock", "frame", dest_frame.Floor(), "length",
-                 frame_count);
+std::optional<ReadableStream::Buffer> EffectsStageV2::ReadLockImpl(ReadLockContext& ctx,
+                                                                   Fixed dest_frame,
+                                                                   int64_t frame_count) {
+  // ReadLockImpl should not be called until we've Trim'd past the last cached buffer.
+  // See comments for ReadableStream::MakeCachedBuffer.
+  FX_CHECK(!cache_);
 
-  // If we have a partially consumed block, return that here.
-  // Otherwise, the cached block, if any, is no longer needed.
-  if (cached_buffer_.Contains(dest_frame)) {
-    return cached_buffer_.Get();
-  }
-  cached_buffer_.Reset();
+  // EffectsStageV2 always produces data on integrally-aligned frames.
+  dest_frame = Fixed(dest_frame.Floor());
 
-  // TODO(fxbug.dev/50669): Some bugs below have been duplicated from effects_stage.cc.
-  // For example:
+  // Advance to our source's next available frame. This is needed when the source stream
+  // contains gaps. For example, given a sequence of calls:
   //
-  // - Ring out doesn't properly handle cases where the source stream has a gap smaller
-  //   than |frame_count| (we should ring out during that gap, but we don't).
+  //   ReadLock(ctx, 0, 20)
+  //   ReadLock(ctx, 20, 20)
   //
-  // - Ring out doesn't preserve total_applied_gain_db or usage_mask from the last source buffer.
+  // If our block size is 30, then at the first call, we will attempt to produce 30 frames
+  // starting at frame 0. If the source has data for that range, we'll cache all 30 processed
+  // frames and the second ReadLock call will be handled by our cache.
   //
-  // These bugs will be fixed at the same time they are fixed in effects_stage.cc.
-  // See fxrev.dev/478521.
-
-  // New frames are requested. Block-align the start frame and length.
-  auto [aligned_first_frame, aligned_frame_count] =
-      AlignBufferRequest(dest_frame, frame_count, block_size_frames_);
-
-  // Ensure we don't try to push more frames through our effects processor than supported.
-  aligned_frame_count = std::min(aligned_frame_count, max_frames_per_call_);
-
-  auto source_buffer = source_->ReadLock(ctx, Fixed(aligned_first_frame), aligned_frame_count);
-  if (source_buffer) {
-    // Copy source_buffer to buffers_.input.
-    const int64_t num_frames = source_buffer->length();
-    memmove(fidl_buffers_.input, source_buffer->payload(),
-            num_frames * static_cast<int64_t>(source_->format().bytes_per_frame()));
-
-    // Synchronous IPC.
-    CallProcess(ctx, source_buffer->length(), source_buffer->total_applied_gain_db(),
-                source_buffer->usage_mask().mask() & kSupportedUsageMask);
-
-    // Since we just sent some frames through the effects, update the start of the
-    // next ringout period.
-    next_ringout_frame_ = source_buffer->end().Floor();
-
-    // Cache the output buffer.
-    cached_buffer_.Set(ReadableStream::Buffer(
-        source_buffer->start(), source_buffer->length(),
-        reinterpret_cast<float*>(fidl_buffers_.output), source_buffer->is_continuous(),
-        source_buffer->usage_mask(), source_buffer->total_applied_gain_db()));
-    return cached_buffer_.Get();
+  // However, if the source has no data for the range [0, 30), the first ReadLock call will
+  // return std::nullopt. At the second call, we shouldn't ask the source for any frames
+  // before frame 30 because we already know that range is empty.
+  if (auto next_available = source_->NextAvailableFrame(); next_available) {
+    // SampleAndHold: source frame 1.X overlaps dest frame 2.0, so always round up.
+    int64_t frames_to_trim = next_available->Ceiling() - dest_frame.Floor();
+    if (frames_to_trim > 0) {
+      frame_count -= frames_to_trim;
+      dest_frame += Fixed(frames_to_trim);
+    }
   }
 
-  // We have no buffer within [aligned_first_frame, aligned_first_frame + aligned_frame_count)
-  // If this range overlaps a ringout period, feed some silence into the effect.
-  int64_t ringout_end_frame = next_ringout_frame_ + ringout_total_frames_;
-  if (next_ringout_frame_ <= aligned_first_frame && aligned_first_frame < ringout_end_frame) {
-    // Synchronous IPC.
-    memset(fidl_buffers_.input, 0, aligned_frame_count * source_->format().bytes_per_frame());
-    CallProcess(ctx, aligned_frame_count, 0.0f /* total_applied_gain_db */, 0 /* usage_mask */);
+  while (frame_count > 0) {
+    int64_t frames_read_from_source = FillCache(ctx, dest_frame, frame_count);
+    if (cache_) {
+      FX_CHECK(source_buffer_.length() > 0);
+      FX_CHECK(cache_->dest_buffer);
+      return MakeCachedBuffer(source_buffer_.start(), source_buffer_.length(), cache_->dest_buffer,
+                              cache_->source_usage_mask, cache_->source_total_applied_gain_db);
+    }
 
-    // Ringout frames are by definition continuous with the previous buffer.
-    const bool is_continuous = true;
-    cached_buffer_.Set(ReadableStream::Buffer(Fixed(aligned_first_frame), aligned_frame_count,
-                                              reinterpret_cast<float*>(fidl_buffers_.output),
-                                              is_continuous, StreamUsageMask(), 0.0f));
-    return cached_buffer_.Get();
+    // We tried to process an entire block, however the source had no data.
+    // If frame_count > max_frames_per_call_, try the next block.
+    dest_frame += Fixed(frames_read_from_source);
+    frame_count -= frames_read_from_source;
   }
 
-  // No buffer and we have no ringout frames remaining, so return silence.
+  // The source has no data for the requested range.
   return std::nullopt;
 }
 
-void EffectsStageV2::CallProcess(ReadLockContext& ctx, int64_t num_frames,
-                                 float total_applied_gain_db, uint32_t usage_mask) {
+void EffectsStageV2::TrimImpl(Fixed dest_frame) {
+  // EffectsStageV2 always produces data on integrally-aligned frames.
+  dest_frame = Fixed(dest_frame.Floor());
+
+  if (cache_ && dest_frame >= source_buffer_.end()) {
+    cache_ = std::nullopt;
+  }
+  source_->Trim(dest_frame);
+}
+
+int64_t EffectsStageV2::FillCache(ReadLockContext& ctx, Fixed dest_frame, int64_t frame_count) {
+  cache_ = std::nullopt;
+
+  source_buffer_.Reset(dest_frame);
+  auto source_usage_mask = StreamUsageMask();
+  float source_total_applied_gain_db = 0;
+  bool has_data = false;
+
+  // The buffer must have a multiple of block_size_frames_ and at most max_frames_per_call_.
+  // The buffer must have at most frame_count frames (ideally it has exactly that many).
+  frame_count = static_cast<int64_t>(
+      fbl::round_up(static_cast<uint64_t>(frame_count), static_cast<uint64_t>(block_size_frames_)));
+  frame_count = std::min(frame_count, max_frames_per_call_);
+
+  // Read frame_count frames.
+  while (source_buffer_.length() < frame_count) {
+    Fixed start = source_buffer_.end();
+    int64_t frames_remaining = frame_count - source_buffer_.length();
+
+    auto buf = source_->ReadLock(ctx, start, frames_remaining);
+    if (buf) {
+      // SampleAndHold: source frame 1.X overlaps dest frame 2.0, so always round up.
+      source_buffer_.AppendData(Fixed(buf->start().Ceiling()), buf->length(), buf->payload());
+      source_usage_mask.insert_all(buf->usage_mask());
+      source_total_applied_gain_db = buf->total_applied_gain_db();
+      has_data = true;
+    } else {
+      source_buffer_.AppendSilence(start, frames_remaining);
+    }
+  }
+
+  if (block_size_frames_ > 0) {
+    FX_CHECK(source_buffer_.length() % block_size_frames_ == 0)
+        << "Bad buffer size " << source_buffer_.length() << " must be divisible by "
+        << block_size_frames_;
+  }
+
+  // If the source had no frames, we don't need to process anything.
+  if (!has_data) {
+    return frame_count;
+  }
+
+  // Process this buffer.
+  // The result will be in fidl_buffers_.output.
+  CallProcess(ctx, source_usage_mask, source_total_applied_gain_db);
+
+  // Cache the result.
+  cache_ = Cache{
+      .source_usage_mask = source_usage_mask,
+      .source_total_applied_gain_db = source_total_applied_gain_db,
+      .dest_buffer = fidl_buffers_.output,
+  };
+
+  return frame_count;
+}
+
+void EffectsStageV2::CallProcess(ReadLockContext& ctx, StreamUsageMask source_usage_mask,
+                                 float source_total_applied_gain_db) {
   TRACE_DURATION("audio", "EffectsStageV2::CallProcess");
 
-  std::array<float, 1> total_applied_gain_db_array = {total_applied_gain_db};
-  std::array<uint32_t, 1> usage_mask_array = {usage_mask};
+  std::array<float, 1> total_applied_gain_db_array = {source_total_applied_gain_db};
+  std::array<uint32_t, 1> usage_mask_array = {source_usage_mask.mask() & kSupportedUsageMask};
 
   auto total_applied_gain_db_vector =
       fidl::VectorView<float>::FromExternal(total_applied_gain_db_array);
@@ -505,10 +534,15 @@ void EffectsStageV2::CallProcess(ReadLockContext& ctx, int64_t num_frames,
   options.set_usage_mask_per_input(
       fidl::ObjectView<fidl::VectorView<uint32_t>>::FromExternal(&usage_mask_vector));
 
+  // The source data needs to be copied into the pre-negotiated input buffer.
+  memmove(fidl_buffers_.input, source_buffer_.payload(),
+          source_buffer_.length() * static_cast<int64_t>(source_->format().bytes_per_frame()));
+
   // Synchronous IPC.
   StageMetricsTimer timer("EffectsStageV2::Process");
   timer.Start();
 
+  auto num_frames = source_buffer_.length();
   auto result = processor_.buffer(process_buffer_.view())->Process(num_frames, options);
   auto status = result.status();
   if (result.ok() && result->result.is_err()) {
@@ -564,9 +598,9 @@ BaseStream::TimelineFunctionSnapshot EffectsStageV2::ref_time_to_frac_presentati
 
   // Update our timeline function to include the latency introduced by these effects.
   //
-  // Our effects shift incoming audio into the future by "latency_frames_".
-  // So input frame[N] corresponds to output frame[N + latency_frames_].
-  auto delay_frac_frames = Fixed(latency_frames_);
+  // Our effects shift incoming audio into the future by `output_shift_frames_`.
+  // So input frame[N] corresponds to output frame[N + output_shift_frames_].
+  auto delay_frac_frames = Fixed(output_shift_frames_);
 
   auto source_frac_frame_to_dest_frac_frame =
       TimelineFunction(delay_frac_frames.raw_value(), 0, TimelineRate(1, 1));
@@ -594,7 +628,7 @@ void EffectsStageV2::SetPresentationDelay(zx::duration external_delay) {
 
 zx::duration EffectsStageV2::ComputeIntrinsicMinLeadTime() const {
   TimelineRate ticks_per_frame = format().frames_per_ns().Inverse();
-  int64_t lead_frames = latency_frames_;
+  int64_t lead_frames = output_shift_frames_;
   if (block_size_frames_ > 0) {
     // If we have a block size, include that in the lead time.
     lead_frames += block_size_frames_ - 1;

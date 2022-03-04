@@ -11,6 +11,7 @@
 
 #include "src/media/audio/audio_core/audio_object.h"
 #include "src/media/audio/audio_core/mixer/gain.h"
+#include "src/media/audio/audio_core/mixer/intersect.h"
 #include "src/media/audio/lib/clock/audio_clock.h"
 #include "src/media/audio/lib/format/format.h"
 
@@ -39,121 +40,132 @@ PacketQueue::PacketQueue(Format format, std::unique_ptr<AudioClock> audio_clock)
 
 PacketQueue::PacketQueue(Format format, fbl::RefPtr<VersionedTimelineFunction> timeline_function,
                          std::unique_ptr<AudioClock> audio_clock)
-    : ReadableStream(std::move(format)),
+    : ReadableStream("PacketQueue", std::move(format)),
       timeline_function_(std::move(timeline_function)),
       audio_clock_(std::move(audio_clock)) {}
-
-PacketQueue::~PacketQueue() {
-  pending_flush_packet_queue_.clear();
-  pending_packet_queue_.clear();
-  pending_flush_token_queue_.clear();
-}
 
 void PacketQueue::PushPacket(const fbl::RefPtr<Packet>& packet) {
   TRACE_DURATION("audio", "PacketQueue::PushPacket");
   std::lock_guard<std::mutex> locker(pending_mutex_);
-  pending_packet_queue_.emplace_back(std::move(packet));
+  pending_packet_queue_.push_back({
+      .packet = packet,
+      .seen_in_read_lock = false,
+  });
 }
 
 void PacketQueue::Flush(const fbl::RefPtr<PendingFlushToken>& flush_token) {
   TRACE_DURATION("audio", "PacketQueue::Flush");
-  std::deque<fbl::RefPtr<Packet>> flushed_packets;
+  std::lock_guard<std::mutex> locker(pending_mutex_);
 
-  {
-    std::lock_guard<std::mutex> locker(pending_mutex_);
-
-    flushed_ = true;
-
-    if (processing_in_progress_) {
-      // Is the sink currently mixing?  If so, the flush cannot complete until the mix operation has
-      // finished.  Move the 'waiting to be rendered' packets to the back of the 'waiting to be
-      // flushed queue', and append our flush token (if any) to the pending flush token queue.  The
-      // sink's thread will take care of releasing these objects back to the service thread for
-      // cleanup when it has finished its current job.
-      for (auto& packet : pending_packet_queue_) {
-        pending_flush_packet_queue_.emplace_back(std::move(packet));
-      }
-      pending_packet_queue_.clear();
-
-      if (flush_token != nullptr) {
-        pending_flush_token_queue_.emplace_back(std::move(flush_token));
-      }
-
-      return;
-    } else {
-      // If the sink is not currently mixing, then we just swap the contents the pending packet
-      // queues with out local queue and release the packets in the proper order once we have left
-      // the pending mutex lock.
-      FX_DCHECK(pending_flush_packet_queue_.empty());
-      FX_DCHECK(pending_flush_token_queue_.empty());
-      flushed_packets.swap(pending_packet_queue_);
+  if (read_lock_in_progress_) {
+    // Is the sink currently mixing? If so, the flush cannot complete until the mix operation has
+    // finished. Move the 'waiting to be rendered' packets to the back of the 'waiting to be
+    // flushed queue', and append our flush token (if any) to the pending flush token queue. The
+    // sink's thread will take care of releasing these objects back to the service thread for
+    // cleanup when it has finished its current job.
+    for (auto& pp : pending_packet_queue_) {
+      pending_flush_packet_queue_.emplace_back(std::move(pp.packet));
+    }
+    if (flush_token != nullptr) {
+      pending_flush_token_queue_.emplace_back(flush_token);
+    }
+  } else {
+    // Release packets in order.
+    FX_CHECK(pending_flush_packet_queue_.empty());
+    FX_CHECK(pending_flush_token_queue_.empty());
+    for (auto& pp : pending_packet_queue_) {
+      pp.packet = nullptr;
     }
   }
 
-  // Release the packets, front to back.
-  for (auto& ptr : flushed_packets) {
-    ptr = nullptr;
-  }
+  // Flush clears this queue.
+  pending_packet_queue_.clear();
 }
 
-std::optional<ReadableStream::Buffer> PacketQueue::ReadLock(ReadLockContext& ctx, Fixed frame,
-                                                            int64_t frame_count) {
-  TRACE_DURATION("audio", "PacketQueue::ReadLock", "frame", frame.Integral().Floor(), "frame.frac",
-                 frame.Fraction().raw_value(), "frame_count", frame_count);
+std::optional<ReadableStream::Buffer> PacketQueue::ReadLockImpl(ReadLockContext& ctx, Fixed frame,
+                                                                int64_t frame_count) {
   std::lock_guard<std::mutex> locker(pending_mutex_);
 
-  FX_DCHECK(!processing_in_progress_);
-  if (!pending_packet_queue_.size()) {
+  if (read_lock_in_progress_) {
+    FX_CHECK(false) << "PacketQueue::ReadLockImpl called while read lock still held";
+  }
+
+  // Since ReadLock never goes backwards in time, we can safely trim packets before `frame`.
+  // If the packet starts before the requested frame and has not been seen before, it underflowed.
+  while (!pending_packet_queue_.empty()) {
+    auto& pp = pending_packet_queue_.front();
+    if (Fixed diff = frame - pp.packet->start(); !pp.seen_in_read_lock && diff >= Fixed(1)) {
+      ReportUnderflow(pp.packet, diff);
+    }
+    if (pp.packet->end() > frame) {
+      pp.seen_in_read_lock = true;
+      break;
+    }
+    pending_packet_queue_.pop_front();
+  }
+
+  // Skip if there are no packets
+  if (pending_packet_queue_.empty()) {
     return std::nullopt;
   }
 
-  // TODO(fxbug.dev/50669): Obey ReadLock API.
-  processing_in_progress_ = true;
-  auto& packet = pending_packet_queue_.front();
-  bool is_continuous = !flushed_;
-  flushed_ = false;
-  return std::make_optional<ReadableStream::Buffer>(
-      packet->start(), packet->length(), packet->payload(), is_continuous, usage_mask_,
-      Gain::kUnityGainDb, [this](bool fully_consumed) { this->ReadUnlock(fully_consumed); });
+  // Check if the requested range intersects the first packet.
+  // If not the first packet must be include at least one frame >= `frame`.
+  auto& packet = pending_packet_queue_.front().packet;
+  auto frag = mixer::Packet{
+      .start = packet->start(),
+      .length = packet->length(),
+      .payload = packet->payload(),
+  };
+  auto isect = IntersectPacket(format(), frag, frame, frame_count);
+  if (!isect) {
+    return std::nullopt;
+  }
+
+  read_lock_in_progress_ = true;
+
+  // Don't use a cached buffer. We don't need caching since we don't generate any
+  // data dynamically.
+  //
+  // IMPORTANT: Another important reason to use MakeUncachedBuffer is that caching can
+  // make us hold onto packets for an unreasonably long time. Consider this example:
+  //
+  //    1. Client inserts a packet into the PacketQueue
+  //    2. A downstream pipeline stage calls PacketQueue::ReadLock and partially consumes the packet
+  //    3. Client pauses the audio stream
+  //    4. Client discards all packets from the PacketQueue
+  //
+  // In step 4, we cannot discard the packet because a downstream pipeline stage still has
+  // a reference to the packet (step 2) and will keep holding that reference until ReadLock
+  // advances, which won't happen until the audio stream is unpaused (step 3), which may take
+  // an arbitrarily long time. Hence it may take an arbitrarily long time to release the
+  // packet. The simplest way to avoid this problem is to not use cached buffers.
+  return MakeUncachedBuffer(isect->start, isect->length, isect->payload, usage_mask_,
+                            Gain::kUnityGainDb);
 }
 
-void PacketQueue::ReadUnlock(bool fully_consumed) {
-  TRACE_DURATION("audio", "PacketQueue::ReadUnlock", "fully_consumed", fully_consumed);
+void PacketQueue::TrimImpl(Fixed frame) {
   std::lock_guard<std::mutex> locker(pending_mutex_);
 
-  FX_DCHECK(processing_in_progress_);
-  processing_in_progress_ = false;
+  if (read_lock_in_progress_) {
+    // This Trim is ending a prior ReadLock.
+    read_lock_in_progress_ = false;
 
-  // Did a flush take place while we were working?  If so release each of the packets waiting to
-  // be flushed back to the service thread, then release each of the flush tokens.
-  if (!pending_flush_packet_queue_.empty() || !pending_flush_token_queue_.empty()) {
+    // Did a flush take place while we were working?  If so release each of the packets waiting to
+    // be flushed back to the service thread, then release each of the flush tokens.
     for (auto& ptr : pending_flush_packet_queue_) {
       ptr = nullptr;
     }
-
     for (auto& ptr : pending_flush_token_queue_) {
       ptr = nullptr;
     }
-
     pending_flush_packet_queue_.clear();
     pending_flush_token_queue_.clear();
-    return;
   }
 
-  // If the buffer was fully consumed, release the first packet. The queue must not be empty,
-  // unless the queue was flushed between ReadLock and ReadUnlock, but that case is handled above.
-  if (fully_consumed) {
-    FX_DCHECK(!pending_packet_queue_.empty());
-    pending_packet_queue_.pop_front();
-  }
-}
-
-void PacketQueue::Trim(Fixed frame) {
-  TRACE_DURATION("audio", "PacketQueue::Trim");
-
-  std::lock_guard<std::mutex> locker(pending_mutex_);
+  // Release packets that end before our trim position.
   while (!pending_packet_queue_.empty()) {
-    auto packet = pending_packet_queue_.front();
+    auto packet = pending_packet_queue_.front().packet;
     if (packet->end() > frame) {
       return;
     }
@@ -176,87 +188,55 @@ BaseStream::TimelineFunctionSnapshot PacketQueue::ref_time_to_frac_presentation_
   };
 }
 
-void PacketQueue::ReportUnderflow(Fixed frac_source_start, Fixed frac_source_mix_point,
-                                  zx::duration underflow_duration) {
-  TRACE_DURATION("audio", "PacketQueue::ReportUnderflow", "floor(frac_source_start)",
-                 frac_source_start.Floor(), "floor(frac_source_mix_point)",
-                 frac_source_mix_point.Floor(), "duration_ns", underflow_duration.to_nsecs());
+void PacketQueue::ReportUnderflow(const fbl::RefPtr<Packet>& packet, Fixed underflow_frames) {
+  TRACE_INSTANT("audio", "PacketQueue::UNDERFLOW", TRACE_SCOPE_THREAD, "underflow_frames",
+                underflow_frames.Floor(), "underflow_frames.frac",
+                underflow_frames.Fraction().raw_value());
   TRACE_ALERT("audio", "audiounderflow");
-  uint16_t underflow_count = std::atomic_fetch_add<uint16_t>(&underflow_count_, 1u);
+  underflow_count_++;
+
+  // We estimate the underflow duration using the stream's frame rate.
+  // This can be an underestimate in three ways:
+  //
+  //   * If the stream has been paused, this does not include the time spent paused.
+  //
+  //   * Frames are typically read in batches. This does not account for the batch size.
+  //     In practice we expect the batch size should be 10ms or less, which puts a bound
+  //     on this underestimate.
+  //
+  //   * `underflow_frames` is ultimately derived from the PacketQueue's reference clock.
+  //     For example, if the reference clock is running slower than the system monotonic
+  //     clock, then the underflow will appear shorter than it actually was. This error is
+  //     bounded by the maximum rate difference of the reference clock, which is +/-0.1%
+  //     (see zx_clock_update).
+  //
+  auto duration =
+      zx::duration(format().frames_per_ns().Inverse().Scale(underflow_frames.Ceiling()));
 
   if (underflow_reporter_) {
-    zx::time start_mono_time;
-    // If the renderer is paused concurrently with a mix, the timeline_function may be zeroed.
-    // If that happens, estimate start_mono_time using now - underflow_duration.
-    auto ref_time_to_fixed = timeline_function_->get().first;
-    if (ref_time_to_fixed.invertible()) {
-      auto fixed_to_ref_time = ref_time_to_fixed.Inverse();
-      auto start_ref_time = zx::time(fixed_to_ref_time.Apply(frac_source_start.raw_value()));
-      start_mono_time = reference_clock().MonotonicTimeFromReferenceTime(start_ref_time);
-    } else {
-      start_mono_time = zx::clock::get_monotonic() - underflow_duration;
-    }
-    underflow_reporter_(start_mono_time, start_mono_time + underflow_duration);
+    underflow_reporter_(duration);
   }
 
   if constexpr (kLogUnderflow) {
-    auto underflow_msec = static_cast<double>(underflow_duration.to_nsecs()) / ZX_MSEC(1);
-    if ((kUnderflowWarningInterval > 0) && (underflow_count % kUnderflowWarningInterval == 0)) {
-      FX_LOGS(WARNING) << "PACKET QUEUE UNDERFLOW #" << underflow_count + 1 << " (1/"
-                       << kUnderflowWarningInterval << "): source-start "
-                       << ffl::String::DecRational << frac_source_start << " missed mix-point "
-                       << frac_source_mix_point << " by " << std::dec << std::setprecision(4)
-                       << underflow_msec << " ms";
+    auto underflow_msec = static_cast<double>(duration.to_nsecs()) / ZX_MSEC(1);
 
-    } else if ((kUnderflowInfoInterval > 0) && (underflow_count % kUnderflowInfoInterval == 0)) {
-      FX_LOGS(INFO) << "PACKET QUEUE UNDERFLOW #" << underflow_count + 1 << " (1/"
-                    << kUnderflowInfoInterval << "): source-start " << ffl::String::DecRational
-                    << frac_source_start << " missed mix-point " << frac_source_mix_point << " by "
-                    << std::dec << std::setprecision(4) << underflow_msec << " ms";
+#define LOG_UNDERFLOW(where, interval)                                                   \
+  FX_LOGS(where) << "PACKET QUEUE UNDERFLOW #" << underflow_count_ << " (1/" << interval \
+                 << "): packet [" << ffl::String::DecRational << packet->start() << ", " \
+                 << packet->end() << "] arrived late by " << underflow_msec << " ms ("   \
+                 << underflow_frames << " frames)"
 
-    } else if ((kUnderflowTraceInterval > 0) && (underflow_count % kUnderflowTraceInterval == 0)) {
-      FX_LOGS(TRACE) << "PACKET QUEUE UNDERFLOW #" << underflow_count + 1 << " (1/"
-                     << kUnderflowTraceInterval << "): source-start " << ffl::String::DecRational
-                     << frac_source_start << " missed mix-point " << frac_source_mix_point << " by "
-                     << std::dec << std::setprecision(4) << underflow_msec << " ms";
-    }
-  }
-}
+    if ((kUnderflowWarningInterval > 0) &&
+        ((underflow_count_ - 1) % kUnderflowWarningInterval == 0)) {
+      LOG_UNDERFLOW(WARNING, kUnderflowWarningInterval);
 
-void PacketQueue::ReportPartialUnderflow(Fixed frac_source_offset, int64_t dest_mix_offset) {
-  TRACE_DURATION("audio", "PacketQueue::ReportPartialUnderflow", "floor(frac_source_offset)",
-                 frac_source_offset.Floor(), "dest_mix_offset", dest_mix_offset);
+    } else if ((kUnderflowInfoInterval > 0) &&
+               ((underflow_count_ - 1) % kUnderflowInfoInterval == 0)) {
+      LOG_UNDERFLOW(INFO, kUnderflowInfoInterval);
 
-  // Shifts by less than four source frames do not necessarily indicate underflow. A shift of this
-  // duration can be caused by the round-to-nearest-dest-frame step, when our rate-conversion ratio
-  // is sufficiently large (it can be as large as 4:1).
-  if (frac_source_offset >= 4) {
-    auto partial_underflow_count = std::atomic_fetch_add<uint16_t>(&partial_underflow_count_, 1u);
-    if constexpr (kLogUnderflow) {
-      if ((kUnderflowWarningInterval > 0) &&
-          (partial_underflow_count % kUnderflowWarningInterval == 0)) {
-        FX_LOGS(WARNING) << "PACKET QUEUE SHIFT #" << partial_underflow_count + 1 << " (1/"
-                         << kUnderflowWarningInterval << "): shifted by "
-                         << ffl::String::DecRational << frac_source_offset << " source frames and "
-                         << dest_mix_offset << " mix (output) frames";
-      } else if ((kUnderflowInfoInterval > 0) &&
-                 (partial_underflow_count % kUnderflowInfoInterval == 0)) {
-        FX_LOGS(INFO) << "PACKET QUEUE SHIFT #" << partial_underflow_count + 1 << " (1/"
-                      << kUnderflowInfoInterval << "): shifted by " << ffl::String::DecRational
-                      << frac_source_offset << " source frames and " << dest_mix_offset
-                      << " mix (output) frames";
-      } else if ((kUnderflowTraceInterval > 0) &&
-                 (partial_underflow_count % kUnderflowTraceInterval == 0)) {
-        FX_LOGS(TRACE) << "PACKET QUEUE SHIFT #" << partial_underflow_count + 1 << " (1/"
-                       << kUnderflowTraceInterval << "): shifted by " << ffl::String::DecRational
-                       << frac_source_offset << " source frames and " << dest_mix_offset
-                       << " mix (output) frames";
-      }
-    }
-  } else {
-    if constexpr (kLogUnderflow) {
-      FX_LOGS(TRACE) << "shifted " << dest_mix_offset
-                     << " mix (output) frames to align with source packet";
+    } else if ((kUnderflowTraceInterval > 0) &&
+               ((underflow_count_ - 1) % kUnderflowTraceInterval == 0)) {
+      LOG_UNDERFLOW(TRACE, kUnderflowTraceInterval);
     }
   }
 }

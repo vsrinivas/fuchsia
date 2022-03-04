@@ -15,12 +15,12 @@
 
 using ASF = fuchsia::media::AudioSampleFormat;
 
-namespace media::audio::stream2 {
+namespace media::audio {
 
 namespace {
 
 // Used when the ReadLockContext is unused by the test.
-static media::audio::stream2::ReadableStream::ReadLockContext rlctx;
+static media::audio::ReadableStream::ReadLockContext rlctx;
 
 class FakeStream : public ReadableStream {
  public:
@@ -571,4 +571,4 @@ TEST(SilencePaddingStreamTest, CreateRoundsUpNumberOfFrames) {
   }
 }
 
-}  // namespace media::audio::stream2
+}  // namespace media::audio

@@ -29,7 +29,9 @@ namespace {
 constexpr auto kChannelCount = 1;
 constexpr auto kFrameRate = 96000;
 constexpr auto kFramesPerCapturePacket = kFrameRate * 2 / 1000;  // 2ms
-constexpr auto kImpulseFrames = 35;                              // ~0.4ms
+constexpr auto kImpulseRingInFrames = kFrameRate * 10 / 1000;    // 10ms
+constexpr auto kImpulseRingInDuration = zx::msec(10);
+constexpr auto kImpulseFrames = 10;
 constexpr auto kImpulseMagnitude = 0.75;
 const auto kImpulseFormat =
     media::audio::Format::Create<ASF::FLOAT>(kChannelCount, kFrameRate).value();
@@ -128,6 +130,8 @@ class Capture {
     std::vector<zx::time> out;
 
     for (auto expected_time_mono : expected_times_mono) {
+      int64_t expected_frame = frames_to_mono_time_.Inverse().Apply(expected_time_mono.get());
+
       // If everything goes perfectly, we should find the signal at exactly expected_time_mono
       // for the loopback capture and slightly later for the microphone capture. Signals are
       // separated by 1s. To account for signals that might be way off, search +/- 250ms around
@@ -143,12 +147,20 @@ class Capture {
       auto max_frame = FindImpulseLeadingEdge(slice, kNoiseFloor);
 
       if (verbose) {
+        printf("[verbose] searched through frames %lu to %lu\n", search_frame_start,
+               search_frame_end);
         for (auto f = search_frame_start; f < search_frame_end; f++) {
-          auto val = buffer_.SampleAt(f, 0);
-          if (val > kNoiseFloor) {
+          // Print if this value or one of the next 5 values exceeds the noise floor.
+          bool print = false;
+          for (auto k = f; k < f + 5 && k < search_frame_end; k++) {
+            print = print || (buffer_.SampleAt(k, 0) > kNoiseFloor);
+          }
+          if (print) {
+            auto val = buffer_.SampleAt(f, 0);
             int64_t slice_index = f - search_frame_start;
-            printf("[verbose] frame %lu, sample %f%s\n", f, val,
-                   (max_frame && slice_index == *max_frame) ? " (left edge)" : "");
+            printf("[verbose] frame %lu, sample %f%s%s\n", f, val,
+                   (max_frame && slice_index == *max_frame) ? " (left edge)" : "",
+                   (slice_index == (expected_frame - search_frame_start)) ? " (expected)" : "");
           }
         }
       }
@@ -162,7 +174,7 @@ class Capture {
       out.push_back(zx::time(frames_to_mono_time_.Apply(left_edge)));
       if (verbose) {
         printf("[verbose] *** signal estimated at frame %lu, expected signal at frame %lu\n",
-               left_edge, frames_to_mono_time_.Inverse().Apply(expected_time_mono.get()));
+               left_edge, expected_frame);
       }
     }
 
@@ -448,16 +460,20 @@ int main(int argc, const char** argv) {
   auto restore_volume =
       fit::defer([old_volume, &volume_control]() { volume_control->SetVolume(*old_volume); });
 
-  // Play a short impulse every second.
-  // Play the first sound at least 1s in the future so it's beyond the renderer MinLeadTime
-  // and so we have plenty of time to setup the capturers before the first sound is played.
+  // Create an impulse signal prefixed by a silent ring in.
+  auto packet = GenerateSilentAudio(kImpulseFormat, kImpulseRingInFrames);
   auto impulse = GenerateConstantAudio(kImpulseFormat, kImpulseFrames, kImpulseMagnitude);
+  packet.Append(&impulse);
+
+  // Play an impulse every second. Play the first sound at least 1s-RingIn in the future so
+  // it's well-beyond the renderer's MinLeadTime and so we have plenty of time to setup the
+  // capturers before the first sound is played.
   global_start_time_mono = zx::clock::get_monotonic();
   std::vector<zx::time> play_times;
   for (auto k = 1; k < duration_seconds; k++) {
     auto t = global_start_time_mono + zx::sec(k);
-    PlaySound(audio, DupClock(), t, impulse);
-    play_times.push_back(t);
+    PlaySound(audio, DupClock(), t, packet);
+    play_times.push_back(t + kImpulseRingInDuration);
   }
 
   // Start the capturers.

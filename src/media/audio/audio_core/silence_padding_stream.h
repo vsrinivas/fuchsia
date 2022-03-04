@@ -8,10 +8,9 @@
 #include <memory>
 
 #include "src/media/audio/audio_core/mixer/output_producer.h"
-#include "src/media/audio/audio_core/stream2.h"
+#include "src/media/audio/audio_core/stream.h"
 
-// TODO(fxbug.dev/50669): namespace is temporary until we move stream2.h to stream.h
-namespace media::audio::stream2 {
+namespace media::audio {
 
 // A stream wrapper that appends silence after each discontiguous chunk of audio. We use
 // silence to "ring out" or "fade out" audio processors. This wrapper can be used when
@@ -116,11 +115,8 @@ class SilencePaddingStream : public ReadableStream {
 
   // Last non-silent buffer we returned from ReadLockImpl.
   std::optional<BufferInfo> last_buffer_;
-
-  // If set, source_ is empty from our last Trim'd frame up through this value.
-  std::optional<Fixed> next_valid_source_frame_;
 };
 
-}  // namespace media::audio::stream2
+}  // namespace media::audio
 
 #endif  // SRC_MEDIA_AUDIO_AUDIO_CORE_SILENCE_PADDING_STREAM_H_

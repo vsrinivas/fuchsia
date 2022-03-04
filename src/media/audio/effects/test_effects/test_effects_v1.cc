@@ -73,6 +73,10 @@ class TestEffect {
     if (channels_in() != channels_out()) {
       return false;
     }
+    if (block_size_frames() && num_frames % block_size_frames() != 0) {
+      fprintf(stderr, "Cannot mix %u frames; block size is %u\n", num_frames, block_size_frames());
+      return false;
+    }
     auto& effect = g_effects[effect_id()];
     for (uint32_t i = 0; i < num_frames * channels_in(); ++i) {
       if (effect.action == TEST_EFFECTS_ACTION_ADD) {

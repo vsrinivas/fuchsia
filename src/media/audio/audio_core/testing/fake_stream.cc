@@ -10,7 +10,8 @@ namespace media::audio::testing {
 
 FakeStream::FakeStream(const Format& format, std::shared_ptr<AudioClockFactory> clock_factory,
                        size_t max_buffer_size, zx::clock clock)
-    : ReadableStream(format), audio_clock_(clock_factory->CreateClientFixed(std::move(clock))) {
+    : ReadableStream("FakeStream", format),
+      audio_clock_(clock_factory->CreateClientFixed(std::move(clock))) {
   if (max_buffer_size == 0) {
     max_buffer_size = zx_system_get_page_size();
   }
@@ -19,11 +20,14 @@ FakeStream::FakeStream(const Format& format, std::shared_ptr<AudioClockFactory> 
   memset(buffer_.get(), 0, buffer_size_);
 }
 
-std::optional<ReadableStream::Buffer> FakeStream::ReadLock(ReadLockContext& ctx, Fixed frame,
-                                                           int64_t frame_count) {
+std::optional<ReadableStream::Buffer> FakeStream::ReadLockImpl(ReadLockContext& ctx, Fixed frame,
+                                                               int64_t frame_count) {
+  if (frame >= max_frame_) {
+    return std::nullopt;
+  }
   FX_CHECK(static_cast<uint64_t>(frame_count * format().bytes_per_frame()) < buffer_size_);
-  return std::make_optional<ReadableStream::Buffer>(frame, frame_count, buffer_.get(), true,
-                                                    usage_mask_, gain_db_);
+  return MakeUncachedBuffer(frame, std::min(Fixed(max_frame_ - frame).Floor(), frame_count),
+                            buffer_.get(), usage_mask_, gain_db_);
 }
 
 ReadableStream::TimelineFunctionSnapshot FakeStream::ref_time_to_frac_presentation_frame() const {
