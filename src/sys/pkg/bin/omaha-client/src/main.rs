@@ -101,6 +101,7 @@ async fn main_inner() -> Result<(), Error> {
     // Policy
     let mut policy_engine_builder = policy::FuchsiaPolicyEngineBuilder
         .time_source(StandardTimeSource)
+        .metrics_reporter(metrics_reporter.clone())
         .load_config_from("/config/data");
 
     if let Some(channel_config) = channel_data.config {

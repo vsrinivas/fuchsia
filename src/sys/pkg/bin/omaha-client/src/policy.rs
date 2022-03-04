@@ -2,7 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::{install_plan::FuchsiaInstallPlan, installer::InstallResult, timer::FuchsiaTimer};
+use crate::{
+    install_plan::FuchsiaInstallPlan, installer::InstallResult, metrics::CobaltMetricsReporter,
+    timer::FuchsiaTimer,
+};
 use anyhow::{anyhow, Context as _, Error};
 use fidl_fuchsia_ui_activity::{
     ListenerMarker, ListenerRequest, ProviderMarker, ProviderProxy, State,
@@ -268,6 +271,7 @@ fn fuzz_interval(
 #[derive(Debug)]
 pub struct FuchsiaPolicyEngine<T> {
     time_source: T,
+    metrics: CobaltMetricsReporter,
     // Whether the device is in active use.
     ui_activity: Arc<Mutex<UiActivityState>>,
     config: PolicyConfig,
@@ -279,6 +283,10 @@ pub struct FuchsiaPolicyEngine<T> {
 pub struct FuchsiaPolicyEngineBuilder;
 pub struct FuchsiaPolicyEngineBuilderWithTime<T> {
     time_source: T,
+}
+pub struct FuchsiaPolicyEngineBuilderWithTimeAndMetrics<T> {
+    time_source: T,
+    metrics: CobaltMetricsReporter,
     config: PolicyConfig,
 }
 impl FuchsiaPolicyEngineBuilder {
@@ -286,10 +294,32 @@ impl FuchsiaPolicyEngineBuilder {
     where
         T: TimeSource + Clone,
     {
-        FuchsiaPolicyEngineBuilderWithTime { time_source, config: PolicyConfig::default() }
+        FuchsiaPolicyEngineBuilderWithTime { time_source }
     }
 }
 impl<T> FuchsiaPolicyEngineBuilderWithTime<T> {
+    pub fn metrics_reporter(
+        self,
+        metrics: CobaltMetricsReporter,
+    ) -> FuchsiaPolicyEngineBuilderWithTimeAndMetrics<T> {
+        FuchsiaPolicyEngineBuilderWithTimeAndMetrics {
+            time_source: self.time_source,
+            metrics,
+            config: PolicyConfig::default(),
+        }
+    }
+    #[cfg(test)]
+    fn nop_metrics_reporter(self) -> FuchsiaPolicyEngineBuilderWithTimeAndMetrics<T> {
+        let (metrics, receiver) = CobaltMetricsReporter::new_mock();
+
+        // Send the metrics to an open receiver to avoid logspam.
+        fuchsia_async::Task::spawn(async move { receiver.for_each(|_| async move { () }).await })
+            .detach();
+
+        self.metrics_reporter(metrics)
+    }
+}
+impl<T> FuchsiaPolicyEngineBuilderWithTimeAndMetrics<T> {
     pub fn load_config_from(self, path: impl AsRef<Path>) -> Self {
         Self { config: PolicyConfigJson::load_from(path).into(), ..self }
     }
@@ -303,6 +333,7 @@ impl<T> FuchsiaPolicyEngineBuilderWithTime<T> {
     pub fn build(self) -> FuchsiaPolicyEngine<T> {
         FuchsiaPolicyEngine {
             time_source: self.time_source,
+            metrics: self.metrics,
             ui_activity: Arc::new(Mutex::new(UiActivityState::new())),
             config: self.config,
             waiting_for_reboot_time: None,
@@ -364,6 +395,8 @@ where
             );
             if let CheckDecision::Ok(_) = &decision {
                 self.update_check_rate_limiter.add_time(policy_data.current_time.mono);
+
+                self.metrics.report_update_check_opt_out_preference(policy_data.opt_out_preference);
             }
             decision
         }
@@ -660,6 +693,8 @@ impl PolicyConfigJson {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use assert_matches::assert_matches;
+    use cobalt_client::traits::AsEventCode;
     use fidl::endpoints::create_proxy_and_stream;
     use fidl_fuchsia_ui_activity::ProviderRequest;
     use fidl_fuchsia_update::{CommitStatusProviderMarker, CommitStatusProviderRequest};
@@ -1281,7 +1316,10 @@ mod tests {
             .last_time(last_update_time)
             .next_timing(CheckTiming::builder().time(next_update_time).build())
             .build();
-        let mut policy_engine = FuchsiaPolicyEngineBuilder.time_source(mock_time.clone()).build();
+        let mut policy_engine = FuchsiaPolicyEngineBuilder
+            .time_source(mock_time.clone())
+            .nop_metrics_reporter()
+            .build();
         let check_options = CheckOptions::default();
 
         for _ in 0..10 {
@@ -1326,7 +1364,8 @@ mod tests {
             .last_time(last_update_time)
             .next_timing(CheckTiming::builder().time(next_update_time).build())
             .build();
-        let mut policy_engine = FuchsiaPolicyEngineBuilder.time_source(mock_time).build();
+        let mut policy_engine =
+            FuchsiaPolicyEngineBuilder.time_source(mock_time).nop_metrics_reporter().build();
         let check_options = CheckOptions::default();
         let decision = policy_engine
             .update_check_allowed(&[], &schedule, &ProtocolState::default(), &check_options)
@@ -1378,6 +1417,89 @@ mod tests {
             disable_updates: true,
         });
         assert_eq!(result, expected);
+    }
+
+    // Test that update_check_allowed emits the update_check_opt_out_preference metric when it
+    // determines that an update check is allowed.
+    #[fasync::run_singlethreaded(test)]
+    async fn test_update_check_allowed_emits_opt_out_preference_metric_when_decision_is_ok() {
+        let (metrics_reporter, mut metrics) = CobaltMetricsReporter::new_mock();
+        let mock_time = MockTimeSource::new_from_now();
+
+        let mut policy_engine = FuchsiaPolicyEngineBuilder
+            .time_source(mock_time.clone())
+            .metrics_reporter(metrics_reporter)
+            .build();
+
+        // The current context:
+        //  - the time is "now"
+        //  - the last update was far in the past
+        //  - the next update time is just in the past
+        //  - the check options are at normal defaults (scheduled background check)
+        let now = mock_time.now();
+        let last_update_time = now - PERIODIC_INTERVAL - Duration::from_secs(1);
+        let next_update_time = last_update_time + PERIODIC_INTERVAL;
+        let schedule = UpdateCheckSchedule::builder()
+            .last_time(last_update_time)
+            .next_timing(CheckTiming::builder().time(next_update_time).build())
+            .build();
+
+        // Execute the policy check
+        let result = policy_engine
+            .update_check_allowed(
+                &[],
+                &schedule,
+                &ProtocolState::default(),
+                &CheckOptions::default(),
+            )
+            .await;
+
+        // Confirm that:
+        //  - the decision is Ok
+        //  - the expected metric was logged to cobalt
+        assert_matches!(result, CheckDecision::Ok(_));
+
+        let expected_metric = fidl_fuchsia_cobalt::CobaltEvent {
+            metric_id: mos_metrics_registry::UPDATE_CHECK_OPT_OUT_PREFERENCE_METRIC_ID,
+            event_codes: vec![
+                mos_metrics_registry::UpdateCheckOptOutPreferenceMetricDimensionPreference::AllowAllUpdates.as_event_code(),
+            ],
+            component: None,
+            payload: fidl_fuchsia_cobalt::EventPayload::Event(fidl_fuchsia_cobalt::Event),
+        };
+
+        let metric = metrics.next().await.unwrap();
+        assert_eq!(metric, expected_metric);
+    }
+
+    // Test that update_check_allowed does not emit the update_check_opt_out_preference metric when
+    // it determines that an update check is not allowed yet.
+    #[fasync::run_singlethreaded(test)]
+    async fn test_update_check_allowed_does_not_emit_opt_out_preference_metric_when_not_time() {
+        let (metrics_reporter, mut metrics) = CobaltMetricsReporter::new_mock();
+
+        let mut policy_engine = FuchsiaPolicyEngineBuilder
+            .time_source(MockTimeSource::new_from_now())
+            .metrics_reporter(metrics_reporter)
+            .build();
+
+        // Execute the policy check
+        let result = policy_engine
+            .update_check_allowed(
+                &[],
+                &UpdateCheckSchedule::default(),
+                &ProtocolState::default(),
+                &CheckOptions::default(),
+            )
+            .await;
+
+        // Confirm that:
+        //  - the decision is TooSoon
+        //  - no metrics were logged to cobalt
+        assert_matches!(result, CheckDecision::TooSoon);
+
+        drop(policy_engine);
+        assert_eq!(metrics.next().await, None);
     }
 
     // Test that update_can_start returns Ok when the system is committed.
@@ -1513,14 +1635,20 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_ui_activity_state_default_unknown() {
-        let policy_engine = FuchsiaPolicyEngineBuilder.time_source(StandardTimeSource).build();
+        let policy_engine = FuchsiaPolicyEngineBuilder
+            .time_source(StandardTimeSource)
+            .nop_metrics_reporter()
+            .build();
         let ui_activity = *policy_engine.ui_activity.lock().await;
         assert_eq!(ui_activity.state, State::Unknown);
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_ui_activity_watch_state() {
-        let policy_engine = FuchsiaPolicyEngineBuilder.time_source(StandardTimeSource).build();
+        let policy_engine = FuchsiaPolicyEngineBuilder
+            .time_source(StandardTimeSource)
+            .nop_metrics_reporter()
+            .build();
         let ui_activity = Arc::clone(&policy_engine.ui_activity);
         assert_eq!(ui_activity.lock().await.state, State::Unknown);
 
@@ -1688,10 +1816,11 @@ mod tests {
         assert_eq!(FuchsiaPolicy::reboot_allowed(&policy_data, &CheckOptions::default()), false);
     }
 
-    #[test]
-    fn test_omaha_client_policy_config_load_from_config_data() {
+    #[fasync::run_singlethreaded(test)]
+    async fn test_omaha_client_policy_config_load_from_config_data() {
         let policy_engine = FuchsiaPolicyEngineBuilder
             .time_source(StandardTimeSource)
+            .nop_metrics_reporter()
             .load_config_from("/config/data")
             .build();
         assert_eq!(
@@ -1731,10 +1860,11 @@ mod tests {
         );
     }
 
-    #[test]
-    fn test_policy_engine_builder_interval_override() {
+    #[fasync::run_singlethreaded(test)]
+    async fn test_policy_engine_builder_interval_override() {
         let policy_config = FuchsiaPolicyEngineBuilder
             .time_source(MockTimeSource::new_from_now())
+            .nop_metrics_reporter()
             .periodic_interval(Duration::from_secs(345678))
             .build()
             .config;
