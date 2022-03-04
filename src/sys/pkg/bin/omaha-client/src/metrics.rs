@@ -15,6 +15,7 @@ use omaha_client::{
 use std::{convert::TryFrom, time::Duration};
 
 /// A MetricsReporter trait implementation that send metrics to Cobalt.
+#[derive(Debug, Clone)]
 pub struct CobaltMetricsReporter {
     cobalt_sender: CobaltSender,
 }
@@ -27,10 +28,26 @@ impl CobaltMetricsReporter {
     }
 
     #[cfg(test)]
-    fn new_mock() -> (Self, futures::channel::mpsc::Receiver<CobaltEvent>) {
+    pub fn new_mock() -> (Self, futures::channel::mpsc::Receiver<CobaltEvent>) {
         let (sender, receiver) = futures::channel::mpsc::channel(1);
         let cobalt_sender = CobaltSender::new(sender);
         (CobaltMetricsReporter { cobalt_sender }, receiver)
+    }
+
+    /// Emit the update_check_opt_out_preference metric.
+    pub fn report_update_check_opt_out_preference(
+        &mut self,
+        preference: fidl_fuchsia_update_config::OptOutPreference,
+    ) {
+        use fidl_fuchsia_update_config::OptOutPreference as Fidl;
+        use mos_metrics_registry::UpdateCheckOptOutPreferenceMetricDimensionPreference as Cobalt;
+
+        let preference = match preference {
+            Fidl::AllowAllUpdates => Cobalt::AllowAllUpdates,
+            Fidl::AllowOnlySecurityUpdates => Cobalt::AllowOnlySecurityUpdates,
+        };
+        self.cobalt_sender
+            .log_event(mos_metrics_registry::UPDATE_CHECK_OPT_OUT_PREFERENCE_METRIC_ID, preference);
     }
 }
 
