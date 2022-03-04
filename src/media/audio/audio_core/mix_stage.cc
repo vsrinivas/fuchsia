@@ -174,24 +174,31 @@ std::optional<ReadableStream::Buffer> MixStage::ReadLockImpl(ReadLockContext& ct
 
   cur_mix_job_.read_lock_ctx = &ctx;
   cur_mix_job_.buf = &output_buffer_[0];
-  cur_mix_job_.buf_frames = std::min(static_cast<int64_t>(frame_count), output_buffer_frames_);
-  cur_mix_job_.dest_start_frame = dest_frame.Floor();
   cur_mix_job_.dest_ref_clock_to_frac_dest_frame = snapshot.timeline_function;
   cur_mix_job_.total_applied_gain_db = fuchsia::media::audio::MUTED_GAIN_DB;
 
-  // Fill the output buffer with silence.
-  ssize_t bytes_to_zero = cur_mix_job_.buf_frames * format().bytes_per_frame();
-  std::memset(cur_mix_job_.buf, 0, bytes_to_zero);
-  ForEachSource(TaskType::Mix, dest_frame);
+  while (frame_count > 0) {
+    cur_mix_job_.buf_frames = std::min(static_cast<int64_t>(frame_count), output_buffer_frames_);
+    cur_mix_job_.dest_start_frame = dest_frame.Floor();
 
-  if (cur_mix_job_.total_applied_gain_db <= fuchsia::media::audio::MUTED_GAIN_DB) {
-    // Either we mixed no streams, or all the streams mixed were muted. Either way we can just
-    // return nullopt to signify we have no audible frames.
-    return std::nullopt;
+    // Fill the output buffer with silence.
+    ssize_t bytes_to_zero = cur_mix_job_.buf_frames * format().bytes_per_frame();
+    std::memset(cur_mix_job_.buf, 0, bytes_to_zero);
+    ForEachSource(TaskType::Mix, dest_frame);
+
+    if (cur_mix_job_.total_applied_gain_db <= fuchsia::media::audio::MUTED_GAIN_DB) {
+      dest_frame += Fixed(cur_mix_job_.buf_frames);
+      frame_count -= cur_mix_job_.buf_frames;
+      continue;
+    }
+
+    return MakeCachedBuffer(Fixed(dest_frame.Floor()), cur_mix_job_.buf_frames, cur_mix_job_.buf,
+                            cur_mix_job_.usages_mixed, cur_mix_job_.total_applied_gain_db);
   }
 
-  return MakeCachedBuffer(Fixed(dest_frame.Floor()), cur_mix_job_.buf_frames, cur_mix_job_.buf,
-                          cur_mix_job_.usages_mixed, cur_mix_job_.total_applied_gain_db);
+  // Either we mixed no streams, or all the streams mixed were muted. Either way we can just
+  // return nullopt to signify we have no audible frames.
+  return std::nullopt;
 }
 
 BaseStream::TimelineFunctionSnapshot MixStage::ref_time_to_frac_presentation_frame() const {
