@@ -11,6 +11,7 @@
 
 #include <array>
 #include <iostream>
+#include <string_view>
 
 #include <fbl/unique_fd.h>
 #include <perftest/perftest.h>
@@ -91,7 +92,7 @@ void TemplateIsIpVersion() {
   static_assert(std::is_same_v<Ip, Ipv4> || std::is_same_v<Ip, Ipv6>);
 }
 
-// Tests the unidirectional throughput of streaming `transfer` bytes on a TCP loopback socket.
+// Computes the unidirectional throughput on a TCP loopback socket.
 //
 // Measures the time to write `transfer` bytes on one end of the socket and read them on the other
 // end on the same thread and calculates the throughput.
@@ -149,19 +150,42 @@ bool TcpWriteRead(perftest::RepeatState* state, size_t transfer) {
   return true;
 }
 
-// Tests the unidirectional throughput of transmitting a message of `size` bytes over a UDP
-// loopback socket.
+// Computes unidirectional throughput on a UDP loopback socket.
 //
-// Measures the time to write a message with `message_size` bytes on one end of the socket and read
-// it on the other on the same thread and calculates the throughput.
+// Measures the time to write `message_count` messages of size `message_size`
+// bytes on one end of the socket and read them out on the other end on the
+// same thread and calculates the throughput.
 template <typename Ip>
-bool UdpWriteRead(perftest::RepeatState* state, size_t message_size) {
+bool UdpWriteRead(perftest::RepeatState* state, size_t message_size, size_t message_count) {
   TemplateIsIpVersion<Ip>();
   using Addr = typename Ip::SockAddr;
+
   fbl::unique_fd server_sock;
   CHECK_TRUE_ERRNO(server_sock = fbl::unique_fd(socket(Ip::kFamily, SOCK_DGRAM, 0)));
   Addr sockaddr = Ip::loopback();
   CHECK_ZERO_ERRNO(bind(server_sock.get(), sockaddr.as_sockaddr(), sockaddr.socklen()));
+
+  uint32_t rcvbuf_opt;
+  socklen_t rcvbuf_optlen = sizeof(rcvbuf_opt);
+  CHECK_ZERO_ERRNO(
+      getsockopt(server_sock.get(), SOL_SOCKET, SO_RCVBUF, &rcvbuf_opt, &rcvbuf_optlen));
+
+  // On Linux, payloads are stored with a fixed per-packet overhead. Linux
+  // accounts for this overhead by setting the actual buffer size to double
+  // the size set with SO_RCVBUF. This hack fails when SO_RCVBUF is small and
+  // many packets are sent; avoid that case by setting RCVBUF only when the
+  // bytes-to-be-sent exceed the default value (which is large).
+  if (rcvbuf_opt < message_size * message_count) {
+    int rcv_bufsize = static_cast<int>(message_size * message_count);
+    CHECK_ZERO_ERRNO(
+        setsockopt(server_sock.get(), SOL_SOCKET, SO_RCVBUF, &rcv_bufsize, sizeof(rcv_bufsize)));
+    CHECK_ZERO_ERRNO(
+        getsockopt(server_sock.get(), SOL_SOCKET, SO_RCVBUF, &rcvbuf_opt, &rcvbuf_optlen));
+  }
+
+  FX_CHECK(rcvbuf_opt >= message_size * message_count)
+      << "rcvbuf size (" << rcvbuf_opt << ") < transfer size (" << message_size * message_count
+      << ")";
 
   socklen_t socklen = sockaddr.socklen();
   CHECK_ZERO_ERRNO(getsockname(server_sock.get(), sockaddr.as_sockaddr(), &socklen));
@@ -178,15 +202,18 @@ bool UdpWriteRead(perftest::RepeatState* state, size_t message_size) {
 
   state->SetBytesProcessedPerRun(message_size);
   while (state->KeepRunning()) {
-    ssize_t wr = write(client_sock.get(), send_bytes.data(), send_bytes.size());
-    CHECK_TRUE_ERRNO(wr >= 0);
-    FX_CHECK(static_cast<size_t>(wr) == send_bytes.size())
-        << "wrote " << wr << " expected " << send_bytes.size();
-
-    ssize_t rd = read(server_sock.get(), recv_bytes.data(), recv_bytes.size());
-    CHECK_TRUE_ERRNO(rd >= 0);
-    FX_CHECK(static_cast<size_t>(rd) == recv_bytes.size())
-        << "read " << rd << " expected " << send_bytes.size();
+    for (size_t i = 0; i < message_count; i++) {
+      ssize_t wr = write(client_sock.get(), send_bytes.data(), message_size);
+      CHECK_TRUE_ERRNO(wr >= 0);
+      FX_CHECK(static_cast<size_t>(wr) == message_size)
+          << "wrote " << wr << " expected " << message_size;
+    }
+    for (size_t i = 0; i < message_count; i++) {
+      ssize_t rd = read(server_sock.get(), recv_bytes.data(), message_size);
+      CHECK_TRUE_ERRNO(rd >= 0);
+      FX_CHECK(static_cast<size_t>(rd) == message_size)
+          << "read " << rd << " expected " << message_size;
+    }
   }
 
   return true;
@@ -194,7 +221,7 @@ bool UdpWriteRead(perftest::RepeatState* state, size_t message_size) {
 
 // Tests the ping latency over a loopback socket.
 //
-// Measures the time to send an echo request over an ICMP socket and observe its response.
+// Measures the time to send an echo request over a loopback ICMP socket and observe its response.
 template <typename Ip>
 bool PingLatency(perftest::RepeatState* state) {
   TemplateIsIpVersion<Ip>();
@@ -238,8 +265,7 @@ bool PingLatency(perftest::RepeatState* state) {
 }
 
 void RegisterTests() {
-  constexpr char kTestNameFmt[] = "WriteRead/%s/%s/%ld%s";
-  enum class Transport { kUdp, kTcp };
+  constexpr std::string_view kSingleReadTestNameFmt = "WriteRead/%s/%s/%ld%s";
   enum class Network { kIpv4, kIpv6 };
 
   auto network_to_string = [](Network network) {
@@ -251,44 +277,60 @@ void RegisterTests() {
     }
   };
 
-  auto get_test_name = [&kTestNameFmt, &network_to_string](Transport transport, Network network,
-                                                           size_t bytes) -> std::string {
-    const char* unit = "B";
+  auto bytes_with_unit = [](size_t bytes) -> std::pair<size_t, std::string_view> {
     if (bytes >= 1024) {
       bytes /= 1024;
-      unit = "kB";
+      // Keep "kB" instead of "KiB" to avoid losing benchmarking history.
+      return {bytes, "kB"};
     }
-    const char* transport_name = [transport]() {
-      switch (transport) {
-        case Transport::kUdp:
-          return "UDP";
-        case Transport::kTcp:
-          return "TCP";
-      }
-    }();
-    const char* network_name = network_to_string(network);
+    return {bytes, "B"};
+  };
 
-    return fxl::StringPrintf(kTestNameFmt, transport_name, network_name, bytes, unit);
+  auto get_tcp_test_name = [&bytes_with_unit, &network_to_string, &kSingleReadTestNameFmt](
+                               Network network, size_t raw_bytes) -> std::string {
+    std::string_view network_name = network_to_string(network);
+    auto [bytes, bytes_unit] = bytes_with_unit(raw_bytes);
+
+    return fxl::StringPrintf(kSingleReadTestNameFmt.data(), "TCP", network_name.data(), bytes,
+                             bytes_unit.data());
+  };
+
+  auto get_udp_test_name = [&bytes_with_unit, &network_to_string, &kSingleReadTestNameFmt](
+                               Network network, size_t raw_bytes,
+                               size_t message_count) -> std::string {
+    std::string_view network_name = network_to_string(network);
+    auto [bytes, bytes_unit] = bytes_with_unit(raw_bytes);
+    constexpr std::string_view kUDP = "UDP";
+    if (message_count > 1) {
+      return fxl::StringPrintf("MultiWriteRead/%s/%s/%ld%s/%ldMessages", kUDP.data(),
+                               network_name.data(), bytes, bytes_unit.data(), message_count);
+    } else {
+      return fxl::StringPrintf(kSingleReadTestNameFmt.data(), kUDP.data(), network_name.data(),
+                               bytes, bytes_unit.data());
+    }
   };
 
   constexpr size_t kTransferSizesForTcp[] = {
       1 << 10, 10 << 10, 100 << 10, 500 << 10, 1000 << 10,
   };
   for (size_t transfer : kTransferSizesForTcp) {
-    perftest::RegisterTest(get_test_name(Transport::kTcp, Network::kIpv4, transfer).c_str(),
-                           TcpWriteRead<Ipv4>, transfer);
-    perftest::RegisterTest(get_test_name(Transport::kTcp, Network::kIpv6, transfer).c_str(),
-                           TcpWriteRead<Ipv6>, transfer);
+    perftest::RegisterTest(get_tcp_test_name(Network::kIpv4, transfer).c_str(), TcpWriteRead<Ipv4>,
+                           transfer);
+    perftest::RegisterTest(get_tcp_test_name(Network::kIpv6, transfer).c_str(), TcpWriteRead<Ipv6>,
+                           transfer);
   }
 
-  // NB: Knowledge encoded at a distance here. This should not be hitting IP fragmentation but
-  // Netstack does not support the IP_DONTFRAG flag or equivalent.
+  // NB: Knowledge encoded at a distance: these datagrams avoid IP fragmentation
+  // only because loopback has a very large MTU.
   constexpr size_t kMessageSizesForUdp[] = {1, 100, 1 << 10, 10 << 10, 60 << 10};
+  constexpr size_t kMessageCountsForUdp[] = {1, 10, 50};
   for (size_t message_size : kMessageSizesForUdp) {
-    perftest::RegisterTest(get_test_name(Transport::kUdp, Network::kIpv4, message_size).c_str(),
-                           UdpWriteRead<Ipv4>, message_size);
-    perftest::RegisterTest(get_test_name(Transport::kUdp, Network::kIpv6, message_size).c_str(),
-                           UdpWriteRead<Ipv6>, message_size);
+    for (size_t message_count : kMessageCountsForUdp) {
+      perftest::RegisterTest(get_udp_test_name(Network::kIpv4, message_size, message_count).c_str(),
+                             UdpWriteRead<Ipv4>, message_size, message_count);
+      perftest::RegisterTest(get_udp_test_name(Network::kIpv6, message_size, message_count).c_str(),
+                             UdpWriteRead<Ipv6>, message_size, message_count);
+    }
   }
 
   [&network_to_string]() {
