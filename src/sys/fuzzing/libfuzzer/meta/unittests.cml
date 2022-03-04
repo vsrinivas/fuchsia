@@ -3,19 +3,13 @@
 // found in the LICENSE file.
 {
     include: [
-        "//src/sys/test_runners/gtest/default.shard.cml",
+        "//src/sys/fuzzing/common/meta/test.shard.cml",
         "//src/sys/test_runners/tmp_storage.shard.cml",
-        "syslog/client.shard.cml",
     ],
     program: {
         binary: "test/component_fuzzing_libfuzzer_unittests",
     },
     use: [
-        {
-            protocol: [
-                "fuchsia.process.Launcher",
-                "test.fuzzer.Relay",
-            ],
-        },
+        { protocol: "test.fuzzer.Relay" },
     ],
 }

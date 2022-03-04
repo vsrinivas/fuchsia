@@ -2,10 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 {
-    include: [
-        "//src/sys/test_runners/gtest/default.shard.cml",
-        "syslog/client.shard.cml",
-    ],
+    include: [ "//src/sys/fuzzing/common/meta/test.shard.cml" ],
     program: {
         binary: "test/component_fuzzing_common_unittests",
     },

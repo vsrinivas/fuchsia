@@ -25,6 +25,7 @@ source_set("testing") {
   deps = [ "//sdk/lib/syslog/cpp" ]
   public_deps = [
     "..:common",
+    "//sdk/testing/fidl:test_support",
     "//zircon/system/ulib/sync",
   ]
 }
