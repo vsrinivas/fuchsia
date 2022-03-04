@@ -23,11 +23,11 @@ pub async fn knock_cmd(remote_proxy: rc::RemoteControlProxy, cmd: KnockCommand) 
 async fn knock<W: Write>(
     remote_proxy: rc::RemoteControlProxy,
     mut write: W,
-    selector: &str,
+    selector_str: &str,
 ) -> Result<()> {
     let writer = &mut write;
-    let selector = selectors::parse_selector::<VerboseError>(selector).map_err(|e| {
-        ffx_error!("Invalid selector '{}': {}\n{}", selector, e, SELECTOR_FORMAT_HELP)
+    let selector = selectors::parse_selector::<VerboseError>(selector_str).map_err(|e| {
+        ffx_error!("Invalid selector '{}': {}\n{}", selector_str, e, SELECTOR_FORMAT_HELP)
     })?;
 
     let (client, server) = Channel::create()?;
@@ -68,7 +68,7 @@ async fn knock<W: Write>(
             Ok(())
         }
         Err(e) => {
-            writeln!(writer, "Failed to connect to service: {:?}", e)?;
+            writeln!(writer, "Failed to connect to service `{}`: {:?}", selector_str, e)?;
             Ok(())
         }
     }
