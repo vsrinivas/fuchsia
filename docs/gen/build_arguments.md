@@ -56,6 +56,13 @@ Set to true to enable legacy data partition names.
 
 From //src/storage/fshost/generated_fshost_config.gni:41
 
+### allowed_test_device_types
+A list of device types this build is allowed to run tests on.
+
+**Current value (from the default):** `[]`
+
+From //build/testing/test_spec.gni:11
+
 ### always_zedboot
 Build boot images that prefer Zedboot over local boot (only for EFI).
 
@@ -104,7 +111,7 @@ example, because the package is in base).
 
 **Current value (from the default):** `true`
 
-From //build/security.gni:140
+From //build/security.gni:151
 
 ### avb_algorithm
 
@@ -1751,7 +1758,18 @@ From //build/security.gni:81
 
 **Current value (from the default):** `"//src/security/policy/component_resolvers_policy.json5"`
 
-From //build/security.gni:103
+From //build/security.gni:114
+
+### fuchsia_verify_routes_component_tree_config
+An optional component tree configuration file used to finalize dynamic
+elements of the component tree constructed for route verification. When
+non-empty, this value is passed as the `--component-tree-config` option
+to `ffx scrutiny verify routes` to verify routes in the fuchsia component
+tree.
+
+**Current value (from the default):** `""`
+
+From //build/security.gni:107
 
 ### fuchsia_verify_routes_exceptions_allowlist
 
@@ -1765,6 +1783,14 @@ Same as above, except this allowlist gets added in bootfs_only builds.
 **Current value (from the default):** `"//src/security/policy/build/verify_routes_exceptions_allowlist_bootfs.json5"`
 
 From //build/security.gni:96
+
+### fuchsia_verify_routes_exceptions_allowlist_product
+Same as above, except these allowlists get added according to
+product-specific configuration.
+
+**Current value (from the default):** `[]`
+
+From //build/security.gni:100
 
 ### fuchsia_zbi_bootfs_filelist_goldens
 An optional lit of golden files for fuchsia.zbi bootFS file list. If
@@ -3520,7 +3546,7 @@ above changes.
 
 **Current value (from the default):** `[]`
 
-From //build/security.gni:118
+From //build/security.gni:129
 
 ### recovery_zbi_bootfs_filelist_goldens
 An optional list of golden files for recovery.zbi bootFS file list. If
@@ -4136,7 +4162,7 @@ Default value is 'all', it is preferable to set to 'none' for production
 
 **Current value (from the default):** `"all"`
 
-From //build/security.gni:131
+From //build/security.gni:142
 
 ### thinlto_cache_dir
 ThinLTO cache directory path.
