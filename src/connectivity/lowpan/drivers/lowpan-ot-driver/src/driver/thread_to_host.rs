@@ -39,7 +39,7 @@ where
 
         // TODO(rquattle): Consider make this a little more selective, this async-condition
         //                 is a bit of a big hammer.
-        if flags.contains(
+        if flags.intersects(
             ot::ChangedFlags::THREAD_NETWORK_NAME
                 | ot::ChangedFlags::THREAD_CHANNEL
                 | ot::ChangedFlags::THREAD_PANID
