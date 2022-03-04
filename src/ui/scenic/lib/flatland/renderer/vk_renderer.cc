@@ -17,6 +17,7 @@
 #include "src/ui/lib/escher/util/fuchsia_utils.h"
 #include "src/ui/lib/escher/util/image_utils.h"
 #include "src/ui/lib/escher/util/trace_macros.h"
+
 #include <glm/gtc/type_ptr.hpp>
 
 namespace {
@@ -294,9 +295,11 @@ void VkRenderer::ReleaseBufferImage(allocation::GlobalImageId image_id) {
   std::unique_lock<std::mutex> lock(lock_);
   if (texture_map_.find(image_id) != texture_map_.end()) {
     texture_map_.erase(image_id);
+    pending_textures_.erase(image_id);
   } else if (render_target_map_.find(image_id) != render_target_map_.end()) {
     render_target_map_.erase(image_id);
     depth_target_map_.erase(image_id);
+    pending_render_targets_.erase(image_id);
   }
 }
 

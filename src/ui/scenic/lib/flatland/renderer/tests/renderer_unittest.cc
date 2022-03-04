@@ -382,6 +382,61 @@ void RenderImageAfterBufferCollectionReleasedTest(Renderer* renderer,
   }
 }
 
+void RenderAfterImageReleasedTest(Renderer* renderer,
+                                  fuchsia::sysmem::Allocator_Sync* sysmem_allocator) {
+  auto texture_tokens = SysmemTokens::Create(sysmem_allocator);
+  auto target_tokens = SysmemTokens::Create(sysmem_allocator);
+
+  auto texture_collection_id = allocation::GenerateUniqueBufferCollectionId();
+  auto target_collection_id = allocation::GenerateUniqueBufferCollectionId();
+  auto result = renderer->ImportBufferCollection(texture_collection_id, sysmem_allocator,
+                                                 std::move(texture_tokens.dup_token));
+  EXPECT_TRUE(result);
+
+  result = renderer->RegisterRenderTargetCollection(target_collection_id, sysmem_allocator,
+                                                    std::move(target_tokens.dup_token));
+  EXPECT_TRUE(result);
+
+  std::vector<uint64_t> additional_format_modifiers;
+  if (escher::VulkanIsSupported() && escher::test::GlobalEscherUsesVirtualGpu()) {
+    additional_format_modifiers.push_back(fuchsia::sysmem::FORMAT_MODIFIER_GOOGLE_GOLDFISH_OPTIMAL);
+  }
+  const uint32_t kWidth = 64, kHeight = 32;
+  SetClientConstraintsAndWaitForAllocated(sysmem_allocator, std::move(texture_tokens.local_token),
+                                          /* image_count */ 1, /* width */ kWidth,
+                                          /* height */ kHeight, kNoneUsage,
+                                          additional_format_modifiers);
+
+  SetClientConstraintsAndWaitForAllocated(sysmem_allocator, std::move(target_tokens.local_token),
+                                          /* image_count */ 1, /* width */ kWidth,
+                                          /* height */ kHeight, kNoneUsage,
+                                          additional_format_modifiers);
+
+  // Import render target.
+  ImageMetadata render_target = {.collection_id = target_collection_id,
+                                 .identifier = allocation::GenerateUniqueImageId(),
+                                 .vmo_index = 0,
+                                 .width = kWidth,
+                                 .height = kHeight};
+  auto import_result = renderer->ImportBufferImage(render_target);
+  EXPECT_TRUE(import_result);
+
+  // Import image.
+  ImageMetadata image = {.collection_id = texture_collection_id,
+                         .identifier = allocation::GenerateUniqueImageId(),
+                         .vmo_index = 0,
+                         .width = kWidth,
+                         .height = kHeight};
+  import_result = renderer->ImportBufferImage(image);
+  EXPECT_TRUE(import_result);
+
+  // Now release the collection.
+  renderer->ReleaseBufferImage(image.identifier);
+
+  // Send an empty render.
+  renderer->Render(render_target, {}, {});
+}
+
 // Test to make sure we can call the functions RegisterTextureCollection(),
 // RegisterRenderTargetCollection() and ImportBufferImage() simultaneously from
 // multiple threads and have it work.
@@ -543,6 +598,11 @@ TEST_F(NullRendererTest, RenderImageAfterBufferCollectionReleasedTest) {
                                                /*use_vulkan*/ false);
 }
 
+TEST_F(NullRendererTest, RenderAfterImageReleasedTest) {
+  NullRenderer renderer;
+  RenderAfterImageReleasedTest(&renderer, sysmem_allocator_.get());
+}
+
 TEST_F(NullRendererTest, DISABLED_MultithreadingTest) {
   NullRenderer renderer;
   MultithreadingTest(&renderer);
@@ -609,6 +669,14 @@ VK_TEST_F(VulkanRendererTest, DISABLED_RenderImageAfterBufferCollectionReleasedT
   VkRenderer renderer(unique_escher->GetWeakPtr());
   RenderImageAfterBufferCollectionReleasedTest(&renderer, sysmem_allocator_.get(),
                                                /*use_vulkan*/ true);
+}
+
+VK_TEST_F(VulkanRendererTest, RenderAfterImageReleasedTest) {
+  auto env = escher::test::EscherEnvironment::GetGlobalTestEnvironment();
+  auto unique_escher = std::make_unique<escher::Escher>(
+      env->GetVulkanDevice(), env->GetFilesystem(), /*gpu_allocator*/ nullptr);
+  VkRenderer renderer(unique_escher->GetWeakPtr());
+  RenderAfterImageReleasedTest(&renderer, sysmem_allocator_.get());
 }
 
 VK_TEST_F(VulkanRendererTest, DISABLED_MultithreadingTest) {
