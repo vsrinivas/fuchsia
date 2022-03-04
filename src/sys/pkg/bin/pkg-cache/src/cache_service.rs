@@ -817,7 +817,7 @@ async fn serve_write_blob(
     impl State {
         fn expectation(&self) -> &'static str {
             match self {
-                State::ExpectTruncate(_) => "truncate",
+                State::ExpectTruncate(_) => "resize",
                 State::ExpectData(_) => "write",
                 State::ExpectClose => "close",
             }
@@ -843,11 +843,15 @@ async fn serve_write_blob(
     let task = async {
         while let Some(request) = stream.try_next().await.map_err(ServeWriteBlobError::Fidl)? {
             state = match (request, state) {
-                (FileRequest::Truncate { length, responder }, State::ExpectTruncate(blob)) => {
+                (
+                    FileRequest::TruncateDeprecatedUseResize { length, responder },
+                    State::ExpectTruncate(blob),
+                ) => {
                     let res = blob.truncate(length).await;
 
                     // Interpret responding errors as the stream closing unexpectedly.
-                    let _ = responder.send(truncate_result_to_status(&res).into_raw());
+                    let _: Result<(), fidl::Error> =
+                        responder.send(truncate_result_to_status(&res).into_raw());
 
                     // The empty blob needs no data and is complete after it is truncated.
                     match res? {
@@ -860,10 +864,11 @@ async fn serve_write_blob(
                     let res = blob.truncate(length).await;
 
                     // Interpret responding errors as the stream closing unexpectedly.
-                    let _ = responder.send(&mut match truncate_result_to_status(&res) {
-                        Status::OK => Ok(()),
-                        error => Err(error.into_raw()),
-                    });
+                    let _: Result<(), fidl::Error> =
+                        responder.send(&mut match truncate_result_to_status(&res) {
+                            Status::OK => Ok(()),
+                            error => Err(error.into_raw()),
+                        });
 
                     // The empty blob needs no data and is complete after it is truncated.
                     match res? {
@@ -875,7 +880,7 @@ async fn serve_write_blob(
                 (FileRequest::WriteDeprecated { data, responder }, State::ExpectData(blob)) => {
                     let res = blob.write(&data).await;
 
-                    let _ =
+                    let _: Result<(), fidl::Error> =
                         responder.send(write_result_to_status(&res).into_raw(), data.len() as u64);
 
                     match res? {
@@ -887,10 +892,11 @@ async fn serve_write_blob(
                 (FileRequest::Write { data, responder }, State::ExpectData(blob)) => {
                     let res = blob.write(&data).await;
 
-                    let _ = responder.send(&mut match write_result_to_status(&res) {
-                        Status::OK => Ok(data.len() as u64),
-                        error => Err(error.into_raw()),
-                    });
+                    let _: Result<(), fidl::Error> =
+                        responder.send(&mut match write_result_to_status(&res) {
+                            Status::OK => Ok(data.len() as u64),
+                            error => Err(error.into_raw()),
+                        });
 
                     match res? {
                         WriteSuccess::MoreToWrite(blob) => State::ExpectData(blob),
@@ -900,25 +906,21 @@ async fn serve_write_blob(
 
                 // Close is allowed in any state, but the blob is only written if we were expecting
                 // a close.
-                (FileRequest::CloseDeprecated { responder }, State::ExpectClose) => {
-                    close().await;
-                    let _ = responder.send(Status::OK.into_raw());
-                    return Ok(());
+                (FileRequest::CloseDeprecated { responder }, state) => {
+                    let () = close().await;
+                    let _: Result<(), fidl::Error> = responder.send(Status::OK.into_raw());
+                    return match state {
+                        State::ExpectClose => Ok(()),
+                        _ => Err(ServeWriteBlobError::UnexpectedClose),
+                    };
                 }
-                (FileRequest::Close { responder }, State::ExpectClose) => {
-                    close().await;
-                    let _ = responder.send(&mut Ok(()));
-                    return Ok(());
-                }
-                (FileRequest::CloseDeprecated { responder }, _) => {
-                    close().await;
-                    let _ = responder.send(Status::OK.into_raw());
-                    return Err(ServeWriteBlobError::UnexpectedClose);
-                }
-                (FileRequest::Close { responder }, _) => {
-                    close().await;
-                    let _ = responder.send(&mut Ok(()));
-                    return Err(ServeWriteBlobError::UnexpectedClose);
+                (FileRequest::Close { responder }, state) => {
+                    let () = close().await;
+                    let _: Result<(), fidl::Error> = responder.send(&mut Ok(()));
+                    return match state {
+                        State::ExpectClose => Ok(()),
+                        _ => Err(ServeWriteBlobError::UnexpectedClose),
+                    };
                 }
 
                 (request, state) => {
@@ -1143,7 +1145,10 @@ mod serve_needed_blobs_tests {
         let (iter, iter_server_end) =
             fidl::endpoints::create_proxy::<BlobInfoIteratorMarker>().unwrap();
         proxy.get_missing_blobs(iter_server_end).unwrap();
-        assert_matches!(iter.next().await, Err(_));
+        assert_matches!(
+            iter.next().await,
+            Err(fidl::Error::ClientChannelClosed { status: Status::PEER_CLOSED, .. })
+        );
 
         assert_matches!(
             task.await,
@@ -1178,16 +1183,34 @@ mod serve_needed_blobs_tests {
 
                 assert_matches!(proxy.open_meta_blob(blob_server_end).await, Ok(Ok(true)));
 
-                let _ = blob.truncate(4).await;
-                let _ = blob.write(b"test").await;
-                let _ = blob.close().await;
+                let () = blob
+                    .resize(4)
+                    .await
+                    .expect("resize failed")
+                    .map_err(Status::from_raw)
+                    .expect("resize error");
+                let _: u64 = blob
+                    .write(b"test")
+                    .await
+                    .expect("write failed")
+                    .map_err(Status::from_raw)
+                    .expect("write error");
+                let () = blob
+                    .close()
+                    .await
+                    .expect("close failed")
+                    .map_err(Status::from_raw)
+                    .expect("close error");
             },
         )
         .await;
 
         // Trying to open the meta FAR blob again after writing it successfully is a protocol violation.
         let (_blob, blob_server_end) = fidl::endpoints::create_proxy::<FileMarker>().unwrap();
-        assert_matches!(proxy.open_meta_blob(blob_server_end).await, Err(_));
+        assert_matches!(
+            proxy.open_meta_blob(blob_server_end).await,
+            Err(fidl::Error::ClientChannelClosed { status: Status::PEER_CLOSED, .. })
+        );
 
         assert_matches!(
             task.await,
@@ -1226,7 +1249,10 @@ mod serve_needed_blobs_tests {
                     fidl::endpoints::create_proxy::<FileMarker>().unwrap();
 
                 assert_matches!(proxy.open_meta_blob(blob_server_end).await, Ok(Ok(false)));
-                assert_matches!(blob.truncate(0).await, Err(_));
+                assert_matches!(
+                    blob.resize(0).await,
+                    Err(fidl::Error::ClientChannelClosed { status: Status::PEER_CLOSED, .. })
+                );
             },
         )
         .await;
@@ -1234,7 +1260,10 @@ mod serve_needed_blobs_tests {
         // Trying to open the meta FAR blob again after being told it is not needed is a protocol
         // violation.
         let (_blob, blob_server_end) = fidl::endpoints::create_proxy::<FileMarker>().unwrap();
-        assert_matches!(proxy.open_meta_blob(blob_server_end).await, Err(_));
+        assert_matches!(
+            proxy.open_meta_blob(blob_server_end).await,
+            Err(fidl::Error::ClientChannelClosed { status: Status::PEER_CLOSED, .. })
+        );
 
         assert_matches!(
             task.await,
@@ -1268,7 +1297,10 @@ mod serve_needed_blobs_tests {
                     proxy.open_meta_blob(blob_server_end).await,
                     Ok(Err(fidl_fuchsia_pkg::OpenBlobError::ConcurrentWrite))
                 );
-                assert_matches!(blob.truncate(1).await, Err(_));
+                assert_matches!(
+                    blob.resize(1).await,
+                    Err(fidl::Error::ClientChannelClosed { status: Status::PEER_CLOSED, .. })
+                );
             },
         )
         .await;
@@ -1284,9 +1316,19 @@ mod serve_needed_blobs_tests {
 
                 assert_matches!(proxy.open_meta_blob(blob_server_end).await, Ok(Ok(true)));
 
-                let _ = blob.truncate(1).await;
-                let _ = blob.write(&mut [0]).await;
-                let _ = blob.close().await;
+                let () = blob
+                    .resize(1)
+                    .await
+                    .expect("resize failed")
+                    .map_err(Status::from_raw)
+                    .expect("resize error");
+                let result =
+                    blob.write(&mut [0]).await.expect("write failed").map_err(Status::from_raw);
+                assert_eq!(result, Err(Status::IO_DATA_INTEGRITY));
+                assert_matches!(
+                    blob.close().await,
+                    Err(fidl::Error::ClientChannelClosed { status: Status::PEER_CLOSED, .. })
+                );
             },
         )
         .await;
@@ -1302,7 +1344,12 @@ mod serve_needed_blobs_tests {
 
                 assert_matches!(proxy.open_meta_blob(blob_server_end).await, Ok(Ok(true)));
 
-                let _ = blob.close().await;
+                let () = blob
+                    .close()
+                    .await
+                    .expect("close failed")
+                    .map_err(Status::from_raw)
+                    .expect("close error");
             },
         )
         .await;
@@ -1322,16 +1369,34 @@ mod serve_needed_blobs_tests {
 
                 assert_matches!(proxy.open_meta_blob(blob_server_end).await, Ok(Ok(true)));
 
-                let _ = blob.truncate(1).await;
-                let _ = blob.write(&mut [0]).await;
-                let _ = blob.close().await;
+                let () = blob
+                    .resize(1)
+                    .await
+                    .expect("resize failed")
+                    .map_err(Status::from_raw)
+                    .expect("resize error");
+                let _: u64 = blob
+                    .write(&mut [0])
+                    .await
+                    .expect("write failed")
+                    .map_err(Status::from_raw)
+                    .expect("write error");
+                let () = blob
+                    .close()
+                    .await
+                    .expect("close failed")
+                    .map_err(Status::from_raw)
+                    .expect("close error");
             },
         )
         .await;
 
         // Task moves to next state after retried write operation succeeds.
         let (_blob, blob_server_end) = fidl::endpoints::create_proxy::<FileMarker>().unwrap();
-        assert_matches!(proxy.open_meta_blob(blob_server_end).await, Err(_));
+        assert_matches!(
+            proxy.open_meta_blob(blob_server_end).await,
+            Err(fidl::Error::ClientChannelClosed { status: Status::PEER_CLOSED, .. })
+        );
         assert_matches!(
             task.await,
             Err(ServeNeededBlobsError::UnexpectedRequest {
@@ -1790,9 +1855,24 @@ mod serve_needed_blobs_tests {
                     Ok(Ok(true))
                 );
 
-                let _ = blob.truncate(payload.len() as u64).await;
-                let _ = blob.write(payload).await;
-                let _ = blob.close().await;
+                let () = blob
+                    .resize(payload.len() as u64)
+                    .await
+                    .expect("resize failed")
+                    .map_err(Status::from_raw)
+                    .expect("resize error");
+                let _: u64 = blob
+                    .write(payload)
+                    .await
+                    .expect("write failed")
+                    .map_err(Status::from_raw)
+                    .expect("write error");
+                let () = blob
+                    .close()
+                    .await
+                    .expect("close failed")
+                    .map_err(Status::from_raw)
+                    .expect("close error");
             },
         )
         .await;
@@ -1893,9 +1973,24 @@ mod serve_needed_blobs_tests {
                             assert_matches!(open_fut.await, Ok(Ok(true)));
 
                             let payload = payload(hash);
-                            let _ = blob.truncate(payload.len() as u64).await;
-                            let _ = blob.write(&payload).await;
-                            let _ = blob.close().await;
+                            let () = blob
+                                .resize(payload.len() as u64)
+                                .await
+                                .expect("resize failed")
+                                .map_err(Status::from_raw)
+                                .expect("resize error");
+                            let _: u64 = blob
+                                .write(&payload)
+                                .await
+                                .expect("write failed")
+                                .map_err(Status::from_raw)
+                                .expect("write error");
+                            let () = blob
+                                .close()
+                                .await
+                                .expect("close failed")
+                                .map_err(Status::from_raw)
+                                .expect("close error");
                         }
                     })
                     .await;
@@ -1996,7 +2091,10 @@ mod serve_needed_blobs_tests {
                     proxy.open_blob(&mut BlobId::from(content_blob).into(), blob_server_end).await,
                     Ok(Err(fidl_fuchsia_pkg::OpenBlobError::ConcurrentWrite))
                 );
-                assert_matches!(blob.truncate(1).await, Err(_));
+                assert_matches!(
+                    blob.resize(1).await,
+                    Err(fidl::Error::ClientChannelClosed { status: Status::PEER_CLOSED, .. })
+                );
             },
         )
         .await;
@@ -2015,9 +2113,19 @@ mod serve_needed_blobs_tests {
                     Ok(Ok(true))
                 );
 
-                let _ = blob.truncate(1).await;
-                let _ = blob.write(&mut [0]).await;
-                let _ = blob.close().await;
+                let () = blob
+                    .resize(1)
+                    .await
+                    .expect("resize failed")
+                    .map_err(Status::from_raw)
+                    .expect("resize error");
+                let result =
+                    blob.write(&mut [0]).await.expect("write failed").map_err(Status::from_raw);
+                assert_eq!(result, Err(Status::IO_DATA_INTEGRITY));
+                assert_matches!(
+                    blob.close().await,
+                    Err(fidl::Error::ClientChannelClosed { status: Status::PEER_CLOSED, .. })
+                );
             },
         )
         .await;
@@ -2036,7 +2144,12 @@ mod serve_needed_blobs_tests {
                     Ok(Ok(true))
                 );
 
-                let _ = blob.close().await;
+                let () = blob
+                    .close()
+                    .await
+                    .expect("close failed")
+                    .map_err(Status::from_raw)
+                    .expect("close error");
             },
         )
         .await;
@@ -2055,9 +2168,24 @@ mod serve_needed_blobs_tests {
                     Ok(Ok(true))
                 );
 
-                let _ = blob.truncate(1).await;
-                let _ = blob.write(&mut [0]).await;
-                let _ = blob.close().await;
+                let () = blob
+                    .resize(1)
+                    .await
+                    .expect("resize failed")
+                    .map_err(Status::from_raw)
+                    .expect("resize error");
+                let _: u64 = blob
+                    .write(&mut [0])
+                    .await
+                    .expect("write failed")
+                    .map_err(Status::from_raw)
+                    .expect("write error");
+                let () = blob
+                    .close()
+                    .await
+                    .expect("close failed")
+                    .map_err(Status::from_raw)
+                    .expect("close error");
             },
         )
         .await;
@@ -2140,9 +2268,24 @@ mod serve_needed_blobs_tests {
                 pending_blob_mock_fut.await;
             },
             async {
-                let _ = blob.truncate(payload.len() as u64).await;
-                let _ = blob.write(payload).await;
-                let _ = blob.close().await;
+                let () = blob
+                    .resize(payload.len() as u64)
+                    .await
+                    .expect("resize failed")
+                    .map_err(Status::from_raw)
+                    .expect("resize error");
+                let _: u64 = blob
+                    .write(payload)
+                    .await
+                    .expect("write failed")
+                    .map_err(Status::from_raw)
+                    .expect("write error");
+                let () = blob
+                    .close()
+                    .await
+                    .expect("close failed")
+                    .map_err(Status::from_raw)
+                    .expect("close error");
             },
         )
         .await;
@@ -2462,12 +2605,16 @@ mod serve_write_blob_tests {
         length: u64,
         blobfs_response: Status,
     ) -> Status {
-        let ((), o) = future::join(
+        let ((), status) = future::join(
             async move {
                 serve_fidl_request!(stream, {
-                    FileRequest::Truncate { length: actual_length, responder } => {
+                    FileRequest::Resize { length: actual_length, responder } => {
                         assert_eq!(length, actual_length);
-                        responder.send(blobfs_response.into_raw()).unwrap();
+                            let () = responder.send(&mut if blobfs_response == Status::OK {
+                            Ok(())
+                        } else {
+                        Err(blobfs_response.into_raw())
+                            }).unwrap();
                     },
                 });
 
@@ -2480,14 +2627,13 @@ mod serve_write_blob_tests {
                     });
                 }
             },
-            async move {
-                let s = proxy.truncate(length).await.map(Status::from_raw).unwrap();
-
-                s
-            },
+            proxy.resize(length).map(|result| match result.unwrap().map_err(Status::from_raw) {
+                Ok(()) => Status::OK,
+                Err(status) => status,
+            }),
         )
         .await;
-        o
+        status
     }
 
     /// Sends a write request, asserts that the remote end receives the request, responds to the
@@ -2503,11 +2649,11 @@ mod serve_write_blob_tests {
                 serve_fidl_request!(stream, {
                     FileRequest::Write { data: actual_data, responder } => {
                         assert_eq!(data, actual_data);
-                        if blobfs_response == zx::Status::OK {
-                            responder.send(&mut Ok(data.len() as u64)).unwrap();
+                        let () = responder.send(&mut if blobfs_response == zx::Status::OK {
+                            Ok(data.len() as u64)
                         } else {
-                            responder.send(&mut Err(blobfs_response.into_raw())).unwrap();
-                        }
+                            Err(blobfs_response.into_raw())
+                        }).unwrap();
                     },
                 });
 
@@ -2554,7 +2700,12 @@ mod serve_write_blob_tests {
                 },
             }),
             async move {
-                let _ = proxy.close().await;
+                let () = proxy
+                    .close()
+                    .await
+                    .expect("close failed")
+                    .map_err(Status::from_raw)
+                    .expect("close error");
                 drop(proxy);
             },
         )
@@ -2755,7 +2906,7 @@ mod serve_write_blob_tests {
                 StubRequestor::Read => "read",
                 StubRequestor::ReadAt => "read_at",
                 StubRequestor::Seek => "seek",
-                StubRequestor::Truncate => "truncate",
+                StubRequestor::Truncate => "resize",
                 StubRequestor::GetFlags => "get_flags",
                 StubRequestor::SetFlags => "set_flags",
                 StubRequestor::GetBuffer => "get_backing_memory",
@@ -2768,7 +2919,7 @@ mod serve_write_blob_tests {
                 StubRequestor::Clone => {
                     let (_, server_end) =
                         fidl::endpoints::create_proxy::<fidl_fuchsia_io::NodeMarker>().unwrap();
-                    let _ = proxy.clone(0, server_end);
+                    let () = proxy.clone(0, server_end).unwrap();
                     future::ready(()).boxed()
                 }
                 StubRequestor::Describe => proxy.describe().map(|_| ()).boxed(),
@@ -2791,7 +2942,7 @@ mod serve_write_blob_tests {
                 StubRequestor::Seek => {
                     proxy.seek(fidl_fuchsia_io::SeekOrigin::Start, 0).map(|_| ()).boxed()
                 }
-                StubRequestor::Truncate => proxy.truncate(0).map(|_| ()).boxed(),
+                StubRequestor::Truncate => proxy.resize(0).map(|_| ()).boxed(),
                 StubRequestor::GetFlags => proxy.get_flags().map(|_| ()).boxed(),
                 StubRequestor::SetFlags => proxy.set_flags(0).map(|_| ()).boxed(),
                 StubRequestor::GetBuffer => {
@@ -2811,7 +2962,7 @@ mod serve_write_blob_tests {
     impl InitialState {
         fn expected_method_name(self) -> &'static str {
             match self {
-                InitialState::ExpectTruncate => "truncate",
+                InitialState::ExpectTruncate => "resize",
                 InitialState::ExpectWrite => "write",
                 InitialState::ExpectClose => "close",
             }
@@ -2877,7 +3028,7 @@ mod serve_write_blob_tests {
 
                     let ((), ()) = future::join(
                         async move {
-                            let _ = bad_request_fut.await;
+                            let () = bad_request_fut.await;
                         },
                         verify_inner_blob_closes(proxy, stream),
                     )

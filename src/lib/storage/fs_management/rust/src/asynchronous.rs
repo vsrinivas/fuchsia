@@ -455,13 +455,12 @@ mod tests {
             )
             .await
             .expect("failed to create test file");
-            Status::ok(
-                test_file
-                    .truncate(content.len() as u64)
-                    .await
-                    .expect("failed to send truncate FIDL"),
-            )
-            .expect("failed to truncate file");
+            let () = test_file
+                .resize(content.len() as u64)
+                .await
+                .expect("failed to send resize FIDL")
+                .map_err(Status::from_raw)
+                .expect("failed to resize file");
             let _: u64 = test_file
                 .write(&content)
                 .await

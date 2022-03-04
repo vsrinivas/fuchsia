@@ -719,8 +719,11 @@ async fn unsupported_per_package_source(source: PackageSource) {
             expected_status
         );
 
-        // Verify truncate() fails.
-        assert_eq!(zx::Status::from_raw(file.truncate(0).await.unwrap()), expected_status);
+        // Verify resize() fails.
+        assert_eq!(
+            file.resize(0).await.unwrap().map_err(zx::Status::from_raw),
+            Err(expected_status)
+        );
     }
 
     // The name of this test is slightly misleading because files not under meta will yield

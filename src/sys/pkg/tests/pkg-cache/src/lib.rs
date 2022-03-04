@@ -63,8 +63,8 @@ mod space;
 mod sync;
 
 async fn write_blob(contents: &[u8], file: FileProxy) -> Result<(), zx::Status> {
-    let s = file.truncate(contents.len() as u64).await.unwrap();
-    assert_eq!(zx::Status::from_raw(s), zx::Status::OK);
+    let () =
+        file.resize(contents.len() as u64).await.unwrap().map_err(zx::Status::from_raw).unwrap();
 
     io_util::file::write(&file, contents).await.map_err(|e| match e {
         WriteError::WriteError(s) => s,

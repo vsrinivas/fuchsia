@@ -180,8 +180,8 @@ pub struct File {
 impl File {
     // Set the length of the file
     pub async fn truncate(&self, length: u64) -> Result<(), Status> {
-        match self.proxy.truncate(length).await {
-            Ok(raw_status_code) => Status::ok(raw_status_code),
+        match self.proxy.resize(length).await {
+            Ok(result) => result.map_err(Status::from_raw),
             Err(e) => {
                 if e.is_closed() {
                     Err(Status::PEER_CLOSED)

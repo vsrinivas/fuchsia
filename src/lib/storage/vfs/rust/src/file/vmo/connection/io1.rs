@@ -521,7 +521,7 @@ impl VmoFileConnection {
                 })
                 .await?;
             }
-            FileRequest::Truncate { length, responder } => {
+            FileRequest::TruncateDeprecatedUseResize { length, responder } => {
                 self.handle_truncate(length, |status| responder.send(status.into_raw())).await?;
             }
             FileRequest::Resize { length, responder } => {

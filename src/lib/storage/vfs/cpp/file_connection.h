@@ -53,7 +53,8 @@ class FileConnection : public Connection, public fidl::WireServer<fuchsia_io::Fi
   // |fuchsia.io/File| operations.
   //
 
-  void Truncate(TruncateRequestView request, TruncateCompleter::Sync& completer) final;
+  void TruncateDeprecatedUseResize(TruncateDeprecatedUseResizeRequestView request,
+                                   TruncateDeprecatedUseResizeCompleter::Sync& completer) final;
   void Resize(ResizeRequestView request, ResizeCompleter::Sync& completer) final;
   void GetFlagsDeprecatedUseNode(GetFlagsDeprecatedUseNodeRequestView request,
                                  GetFlagsDeprecatedUseNodeCompleter::Sync& completer) final;

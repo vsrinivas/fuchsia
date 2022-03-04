@@ -149,7 +149,9 @@ void NullPtyDeviceImpl::Seek(SeekRequestView request, SeekCompleter::Sync& compl
   ZX_ASSERT(false);
 }
 
-void NullPtyDeviceImpl::Truncate(TruncateRequestView request, TruncateCompleter::Sync& completer) {
+void NullPtyDeviceImpl::TruncateDeprecatedUseResize(
+    TruncateDeprecatedUseResizeRequestView request,
+    TruncateDeprecatedUseResizeCompleter::Sync& completer) {
   ZX_ASSERT(false);
 }
 

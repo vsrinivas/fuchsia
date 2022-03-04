@@ -129,7 +129,7 @@ async fn create_blob(blobfs: &DirectoryProxy, merkle: &str, contents: &[u8]) -> 
         fidl_fuchsia_io::OPEN_FLAG_CREATE | fidl_fuchsia_io::OPEN_RIGHT_WRITABLE,
     )
     .await?;
-    Status::ok(blob.truncate(contents.len() as u64).await?)?;
+    let () = blob.resize(contents.len() as u64).await?.map_err(Status::from_raw)?;
     write_blob(&blob, contents).await?;
     blob.close().await?.map_err(Status::from_raw)?;
 
@@ -141,7 +141,7 @@ async fn create_blob(blobfs: &DirectoryProxy, merkle: &str, contents: &[u8]) -> 
 // Dropping a FileProxy synchronously closes the zircon channel, but it is not guaranteed
 // that blobfs will respond to the channel closing before it responds to a request on a
 // separate channel to open the same blob. This means a test case that:
-// 1. opens writable + truncates on channel 0
+// 1. opens writable + resizes on channel 0
 // 2. drops channel 0
 // 3. opens writable on channel 1
 // can fail with ACCESS_DENIED in step 3, unless we wait.
@@ -192,7 +192,7 @@ async fn open_for_create_create() -> Result<(), Error> {
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
-async fn open_truncate_drop_create() -> Result<(), Error> {
+async fn open_resize_drop_create() -> Result<(), Error> {
     let blobfs_server = BlobfsRamdisk::start()?;
     let root_dir = blobfs_server.root_dir_proxy()?;
 
@@ -202,7 +202,7 @@ async fn open_truncate_drop_create() -> Result<(), Error> {
         fidl_fuchsia_io::OPEN_FLAG_CREATE | fidl_fuchsia_io::OPEN_RIGHT_WRITABLE,
     )
     .await?;
-    Status::ok(blob.truncate(BLOB_CONTENTS.len() as u64).await?)?;
+    let () = blob.resize(BLOB_CONTENTS.len() as u64).await?.map_err(Status::from_raw)?;
     drop(blob);
     wait_for_blob_to_be_creatable(&root_dir, BLOB_MERKLE).await;
 
@@ -222,7 +222,7 @@ async fn open_partial_write_drop_create() -> Result<(), Error> {
         fidl_fuchsia_io::OPEN_FLAG_CREATE | fidl_fuchsia_io::OPEN_RIGHT_WRITABLE,
     )
     .await?;
-    Status::ok(blob.truncate(BLOB_CONTENTS.len() as u64).await?)?;
+    let () = blob.resize(BLOB_CONTENTS.len() as u64).await?.map_err(Status::from_raw)?;
     write_blob(&blob, &BLOB_CONTENTS[0..1]).await?;
     drop(blob);
     wait_for_blob_to_be_creatable(&root_dir, BLOB_MERKLE).await;
@@ -243,7 +243,7 @@ async fn open_partial_write_close_create() -> Result<(), Error> {
         fidl_fuchsia_io::OPEN_FLAG_CREATE | fidl_fuchsia_io::OPEN_RIGHT_WRITABLE,
     )
     .await?;
-    Status::ok(blob.truncate(BLOB_CONTENTS.len() as u64).await?)?;
+    let () = blob.resize(BLOB_CONTENTS.len() as u64).await?.map_err(Status::from_raw)?;
     write_blob(&blob, &BLOB_CONTENTS[0..1]).await?;
     blob.close().await?.map_err(Status::from_raw)?;
 
@@ -253,7 +253,7 @@ async fn open_partial_write_close_create() -> Result<(), Error> {
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
-async fn open_truncate_open_for_create_fails() -> Result<(), Error> {
+async fn open_resize_open_for_create_fails() -> Result<(), Error> {
     let blobfs_server = BlobfsRamdisk::start()?;
     let root_dir = blobfs_server.root_dir_proxy()?;
 
@@ -263,7 +263,7 @@ async fn open_truncate_open_for_create_fails() -> Result<(), Error> {
         fidl_fuchsia_io::OPEN_FLAG_CREATE | fidl_fuchsia_io::OPEN_RIGHT_WRITABLE,
     )
     .await?;
-    Status::ok(blob.truncate(BLOB_CONTENTS.len() as u64).await?)?;
+    let () = blob.resize(BLOB_CONTENTS.len() as u64).await?.map_err(Status::from_raw)?;
 
     let res = open_blob(
         &root_dir,
@@ -278,7 +278,7 @@ async fn open_truncate_open_for_create_fails() -> Result<(), Error> {
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
-async fn open_open_truncate_truncate_fails() -> Result<(), Error> {
+async fn open_open_resize_resize_fails() -> Result<(), Error> {
     let blobfs_server = BlobfsRamdisk::start()?;
     let root_dir = blobfs_server.root_dir_proxy()?;
 
@@ -294,17 +294,15 @@ async fn open_open_truncate_truncate_fails() -> Result<(), Error> {
         fidl_fuchsia_io::OPEN_FLAG_CREATE | fidl_fuchsia_io::OPEN_RIGHT_WRITABLE,
     )
     .await?;
-    Status::ok(blob0.truncate(BLOB_CONTENTS.len() as u64).await?)?;
-
-    let res = Status::ok(blob1.truncate(BLOB_CONTENTS.len() as u64).await?);
-
-    assert_matches!(res, Err(zx::Status::BAD_STATE));
+    let () = blob0.resize(BLOB_CONTENTS.len() as u64).await?.map_err(Status::from_raw)?;
+    let result = blob1.resize(BLOB_CONTENTS.len() as u64).await?.map_err(Status::from_raw);
+    assert_matches!(result, Err(zx::Status::BAD_STATE));
 
     blobfs_server.stop().await
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
-async fn open_truncate_open_read_fails() -> Result<(), Error> {
+async fn open_resize_open_read_fails() -> Result<(), Error> {
     let blobfs_server = BlobfsRamdisk::start()?;
     let root_dir = blobfs_server.root_dir_proxy()?;
 
@@ -314,7 +312,7 @@ async fn open_truncate_open_read_fails() -> Result<(), Error> {
         fidl_fuchsia_io::OPEN_FLAG_CREATE | fidl_fuchsia_io::OPEN_RIGHT_WRITABLE,
     )
     .await?;
-    Status::ok(blob0.truncate(BLOB_CONTENTS.len() as u64).await?)?;
+    let () = blob0.resize(BLOB_CONTENTS.len() as u64).await?.map_err(Status::from_raw)?;
     let (blob1, _) =
         open_blob(&root_dir, BLOB_MERKLE, fidl_fuchsia_io::OPEN_RIGHT_READABLE).await?;
 
@@ -338,7 +336,7 @@ async fn open_for_create_wait_for_signal() -> Result<(), Error> {
     .await?;
     let (blob1, event) =
         open_blob(&root_dir, BLOB_MERKLE, fidl_fuchsia_io::OPEN_RIGHT_READABLE).await?;
-    Status::ok(blob0.truncate(BLOB_CONTENTS.len() as u64).await?)?;
+    let () = blob0.resize(BLOB_CONTENTS.len() as u64).await?.map_err(Status::from_raw)?;
     assert_matches!(
         event.wait_handle(zx::Signals::all(), zx::Time::after(zx::Duration::from_seconds(0))),
         Err(zx::Status::TIMED_OUT)
@@ -355,7 +353,7 @@ async fn open_for_create_wait_for_signal() -> Result<(), Error> {
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
-async fn open_truncate_wait_for_signal() -> Result<(), Error> {
+async fn open_resize_wait_for_signal() -> Result<(), Error> {
     let blobfs_server = BlobfsRamdisk::start()?;
     let root_dir = blobfs_server.root_dir_proxy()?;
 
@@ -365,7 +363,7 @@ async fn open_truncate_wait_for_signal() -> Result<(), Error> {
         fidl_fuchsia_io::OPEN_FLAG_CREATE | fidl_fuchsia_io::OPEN_RIGHT_WRITABLE,
     )
     .await?;
-    Status::ok(blob0.truncate(BLOB_CONTENTS.len() as u64).await?)?;
+    let () = blob0.resize(BLOB_CONTENTS.len() as u64).await?.map_err(Status::from_raw)?;
     let (blob1, event) =
         open_blob(&root_dir, BLOB_MERKLE, fidl_fuchsia_io::OPEN_RIGHT_READABLE).await?;
     assert_matches!(
@@ -508,7 +506,7 @@ async fn corrupt_create_fails_on_last_byte_write() -> Result<(), Error> {
         fidl_fuchsia_io::OPEN_FLAG_CREATE | fidl_fuchsia_io::OPEN_RIGHT_WRITABLE,
     )
     .await?;
-    Status::ok(blob.truncate(BLOB_CONTENTS.len() as u64).await?)?;
+    let () = blob.resize(BLOB_CONTENTS.len() as u64).await?.map_err(Status::from_raw)?;
 
     write_blob(&blob, &BLOB_CONTENTS[..BLOB_CONTENTS.len() - 1]).await?;
     let wrong_trailing_byte = !BLOB_CONTENTS.last().unwrap();

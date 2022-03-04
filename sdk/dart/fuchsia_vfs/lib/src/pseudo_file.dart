@@ -497,7 +497,7 @@ class _FileConnection extends File {
   }
 
   @override
-  Future<int> truncate(int length) async {
+  Future<int> truncateDeprecatedUseResize(int length) async {
     return _handleResize(length);
   }
 

@@ -69,6 +69,6 @@ class Uuid final {
 }  // namespace optee
 
 #define LOG(severity, fmt, ...) \
-  zxlogf(severity, "[%s::%s] " fmt "", optee::kDeviceName.data(), __FUNCTION__, ##__VA_ARGS__);
+  zxlogf(severity, "[%s::%s] " fmt "", optee::kDeviceName.data(), __FUNCTION__, ##__VA_ARGS__)
 
 #endif  // SRC_DEVICES_TEE_DRIVERS_OPTEE_OPTEE_UTIL_H_

@@ -543,7 +543,7 @@ void main() {
       await _assertRead(file.proxy, 100, '');
     });
 
-    test('write file at arbitary position', () async {
+    test('write file at arbitrary position', () async {
       var str = 'test_str';
       var file = _createReadWriteFile(str);
       var proxy = file.proxy;
@@ -592,8 +592,8 @@ void main() {
       await _assertFinalBuffer(proxy, file, str, str);
     });
 
-    group('write file when capacity is not initial lenght:', () {
-      test('should not truncate if there is nough capacity', () async {
+    group('write file when capacity is not initial length:', () {
+      test('should not resize if there is enough capacity', () async {
         var str = 'test_str';
         var file = _createReadWriteFile(str, capacity: str.length + 2);
         var proxy = file.proxy;
@@ -789,7 +789,7 @@ void main() {
       }
     });
 
-    group('truncate: ', () {
+    group('resize: ', () {
       test('failure test', () async {
         var str = 'test_str';
         var file = _createReadWriteFile(str, createProxy: false);
@@ -799,9 +799,10 @@ void main() {
             file.pseudoFile
                 .connect(openRightReadable, 0, _getNodeInterfaceRequest(proxy)),
             ZX.OK);
-        // truncate should fail
-        var truncateResponse = await proxy.truncate(3);
-        expect(truncateResponse, ZX.ERR_ACCESS_DENIED);
+        await expectLater(
+            proxy.resize(3),
+            throwsA(isA<MethodException>().having(
+                (e) => e.value, 'value', equals(ZX.ERR_ACCESS_DENIED))));
 
         await _assertRead(proxy, 100, str);
 
@@ -813,8 +814,8 @@ void main() {
         var file = _createReadWriteFile(str);
         var proxy = file.proxy;
 
-        var truncateResponse = await proxy.truncate(3);
-        expect(truncateResponse, ZX.OK);
+        await proxy.resize(3);
+
         var expectedStr = str.substring(0, 3);
 
         await _assertRead(proxy, 100, expectedStr);
@@ -842,14 +843,13 @@ void main() {
         var proxy = file.proxy;
 
         await _resetSeek(proxy, 5);
-        // truncate should fail
-        var truncateResponse = await proxy.truncate(3);
-        expect(truncateResponse, ZX.OK);
+
+        await proxy.resize(3);
 
         // seek and currentLen should be 3 so we should not get any data
         await _assertRead(proxy, 100, '');
 
-        // truncate should have worked
+        // resize should have worked
         await _assertReadAt(proxy, 100, 0, str.substring(0, 3));
       });
 

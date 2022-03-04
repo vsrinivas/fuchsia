@@ -7,21 +7,15 @@
 #include <endian.h>
 #include <fidl/fuchsia.hardware.rpmb/cpp/wire.h>
 #include <fidl/fuchsia.io/cpp/wire.h>
-#include <fidl/fuchsia.tee.manager/cpp/wire.h>
 #include <lib/ddk/debug.h>
-#include <lib/fidl-utils/bind.h>
-#include <lib/fidl/coding.h>
 #include <lib/fidl/llcpp/connect_service.h>
 #include <lib/fidl/llcpp/string_view.h>
 #include <lib/fidl/llcpp/transaction.h>
 #include <lib/fidl/llcpp/vector_view.h>
 #include <lib/stdcompat/functional.h>
 #include <lib/zx/channel.h>
-#include <lib/zx/clock.h>
 #include <lib/zx/handle.h>
 #include <lib/zx/vmo.h>
-#include <libgen.h>
-#include <stdlib.h>
 #include <zircon/time.h>
 #include <zircon/types.h>
 
@@ -33,7 +27,6 @@
 #include <utility>
 #include <vector>
 
-#include <ddktl/fidl.h>
 #include <fbl/string_buffer.h>
 #include <tee-client-api/tee-client-types.h>
 
@@ -73,7 +66,7 @@ static constexpr
 
 // Builds the expected path to a trusted application, formatting the file name per the RFC 4122
 // specification.
-static fbl::StringBuffer<kTaPathLength> BuildTaPath(const optee::Uuid& ta_uuid) {
+fbl::StringBuffer<kTaPathLength> BuildTaPath(const optee::Uuid& ta_uuid) {
   fbl::StringBuffer<kTaPathLength> buf;
   buf.Append(ta_uuid.ToString());
   buf.Append(kTaFileExtension);
@@ -81,9 +74,9 @@ static fbl::StringBuffer<kTaPathLength> BuildTaPath(const optee::Uuid& ta_uuid) 
   return buf;
 }
 
-static zx_status_t ConvertOpteeToZxResult(fidl::AnyArena& allocator, uint32_t optee_return_code,
-                                          uint32_t optee_return_origin,
-                                          fuchsia_tee::wire ::OpResult* zx_result) {
+zx_status_t ConvertOpteeToZxResult(fidl::AnyArena& allocator, uint32_t optee_return_code,
+                                   uint32_t optee_return_origin,
+                                   fuchsia_tee::wire ::OpResult* zx_result) {
   ZX_DEBUG_ASSERT(zx_result != nullptr);
 
   // Do a quick check of the return origin to make sure we can map it to one
@@ -110,7 +103,7 @@ static zx_status_t ConvertOpteeToZxResult(fidl::AnyArena& allocator, uint32_t op
   return ZX_OK;
 }
 
-static std::filesystem::path GetPathFromRawMemory(void* mem, size_t max_size) {
+std::filesystem::path GetPathFromRawMemory(void* mem, size_t max_size) {
   ZX_DEBUG_ASSERT(mem != nullptr);
   ZX_DEBUG_ASSERT(max_size > 0);
 
@@ -132,7 +125,7 @@ static std::filesystem::path GetPathFromRawMemory(void* mem, size_t max_size) {
 // `fuchsia.io.kOpenFlagDescribe` flag and returns the status contained in the event.
 //
 // This is useful for synchronously awaiting the result of an `Open` request.
-static zx_status_t AwaitIoOnOpenStatus(fidl::UnownedClientEnd<fuchsia_io::Node> node) {
+zx_status_t AwaitIoOnOpenStatus(fidl::UnownedClientEnd<fuchsia_io::Node> node) {
   class EventHandler : public fidl::WireSyncEventHandler<fuchsia_io::Node> {
    public:
     EventHandler() = default;
@@ -153,7 +146,7 @@ static zx_status_t AwaitIoOnOpenStatus(fidl::UnownedClientEnd<fuchsia_io::Node> 
 
   EventHandler event_handler;
   // TODO(godtamit): check for an epitaph here once `fuchsia.io` (and LLCPP) supports it.
-  auto status = event_handler.HandleOneEvent(std::move(node)).status();
+  auto status = event_handler.HandleOneEvent(node).status();
   if (status == ZX_OK) {
     status = event_handler.status();
   }
@@ -164,9 +157,9 @@ static zx_status_t AwaitIoOnOpenStatus(fidl::UnownedClientEnd<fuchsia_io::Node> 
 }
 
 // Calls `fuchsia.io.Directory/Open` on a channel and awaits the result.
-static zx::status<fidl::ClientEnd<fuchsia_io::Node>> OpenObjectInDirectory(
+zx::status<fidl::ClientEnd<fuchsia_io::Node>> OpenObjectInDirectory(
     fidl::UnownedClientEnd<fuchsia_io::Directory> root, uint32_t flags, uint32_t mode,
-    std::string path) {
+    const std::string& path) {
   // Ensure `kOpenFlagDescribe` is passed
   flags |= fuchsia_io::wire::kOpenFlagDescribe;
 
@@ -204,7 +197,7 @@ static zx::status<fidl::ClientEnd<fuchsia_io::Node>> OpenObjectInDirectory(
 //  * path: The path relative to `root` to open.
 template <uint32_t kOpenFlags>
 static zx::status<fidl::ClientEnd<fuchsia_io::Directory>> RecursivelyWalkPath(
-    fidl::UnownedClientEnd<fuchsia_io::Directory> root, std::filesystem::path path) {
+    fidl::UnownedClientEnd<fuchsia_io::Directory> root, const std::filesystem::path& path) {
   static_assert((kOpenFlags & fuchsia_io::wire::kOpenFlagNotDirectory) == 0,
                 "kOpenFlags must not include fuchsia_io::wire::kOpenFlagNotDirectory");
   ZX_DEBUG_ASSERT(root.is_valid());
@@ -245,20 +238,20 @@ static zx::status<fidl::ClientEnd<fuchsia_io::Directory>> RecursivelyWalkPath(
   return zx::ok(std::move(current_dir));
 }
 
-static inline zx::status<fidl::ClientEnd<fuchsia_io::Directory>> CreateDirectory(
-    fidl::UnownedClientEnd<fuchsia_io::Directory> root, std::filesystem::path path) {
+inline zx::status<fidl::ClientEnd<fuchsia_io::Directory>> CreateDirectory(
+    fidl::UnownedClientEnd<fuchsia_io::Directory> root, const std::filesystem::path& path) {
   static constexpr uint32_t kCreateFlags =
       fuchsia_io::wire::kOpenRightReadable | fuchsia_io::wire::kOpenRightWritable |
       fuchsia_io::wire::kOpenFlagCreate | fuchsia_io::wire::kOpenFlagDirectory;
-  return RecursivelyWalkPath<kCreateFlags>(std::move(root), std::move(path));
+  return RecursivelyWalkPath<kCreateFlags>(root, path);
 }
 
-static inline zx::status<fidl::ClientEnd<fuchsia_io::Directory>> OpenDirectory(
-    fidl::UnownedClientEnd<fuchsia_io::Directory> root, std::filesystem::path path) {
+inline zx::status<fidl::ClientEnd<fuchsia_io::Directory>> OpenDirectory(
+    fidl::UnownedClientEnd<fuchsia_io::Directory> root, const std::filesystem::path& path) {
   static constexpr uint32_t kOpenFlags = fuchsia_io::wire::kOpenRightReadable |
                                          fuchsia_io::wire::kOpenRightWritable |
                                          fuchsia_io::wire::kOpenFlagDirectory;
-  return RecursivelyWalkPath<kOpenFlags>(std::move(root), std::move(path));
+  return RecursivelyWalkPath<kOpenFlags>(root, path);
 }
 
 }  // namespace
@@ -286,12 +279,12 @@ void OpteeClient::OpenSession2(OpenSession2RequestView request,
 
   auto create_result =
       OpenSessionMessage::TryCreate(controller_->driver_pool(), controller_->client_pool(),
-                                    application_uuid_, std::move(request->parameter_set));
+                                    application_uuid_, request->parameter_set);
   if (!create_result.is_ok()) {
     LOG(ERROR, "failed to create OpenSessionMessage (status: %d)", create_result.error());
     result.set_return_code(allocator, TEEC_ERROR_COMMUNICATION);
     result.set_return_origin(fuchsia_tee::wire::ReturnOrigin::kCommunication);
-    completer.Reply(kInvalidSession, std::move(result));
+    completer.Reply(kInvalidSession, result);
     return;
   }
 
@@ -309,7 +302,7 @@ void OpteeClient::OpenSession2(OpenSession2RequestView request,
   if (call_code != kReturnOk) {
     result.set_return_code(allocator, TEEC_ERROR_COMMUNICATION);
     result.set_return_origin(fuchsia_tee::wire::ReturnOrigin::kCommunication);
-    completer.Reply(kInvalidSession, std::move(result));
+    completer.Reply(kInvalidSession, result);
     return;
   }
 
@@ -318,7 +311,7 @@ void OpteeClient::OpenSession2(OpenSession2RequestView request,
 
   if (ConvertOpteeToZxResult(allocator, message.return_code(), message.return_origin(), &result) !=
       ZX_OK) {
-    completer.Reply(kInvalidSession, std::move(result));
+    completer.Reply(kInvalidSession, result);
     return;
   }
 
@@ -329,14 +322,13 @@ void OpteeClient::OpenSession2(OpenSession2RequestView request,
     CloseSession(message.session_id());
     result.set_return_code(allocator, TEEC_ERROR_COMMUNICATION);
     result.set_return_origin(fuchsia_tee::wire::ReturnOrigin::kCommunication);
-    completer.Reply(kInvalidSession, std::move(result));
+    completer.Reply(kInvalidSession, result);
     return;
   }
-  result.set_parameter_set(allocator, std::move(out_parameters));
+  result.set_parameter_set(allocator, out_parameters);
   open_sessions_.insert(message.session_id());
 
-  completer.Reply(message.session_id(), std::move(result));
-  return;
+  completer.Reply(message.session_id(), result);
 }
 
 void OpteeClient::InvokeCommand(
@@ -348,7 +340,7 @@ void OpteeClient::InvokeCommand(
   if (open_sessions_.find(request->session_id) == open_sessions_.end()) {
     result.set_return_code(allocator, TEEC_ERROR_BAD_STATE);
     result.set_return_origin(fuchsia_tee::wire::ReturnOrigin::kCommunication);
-    completer.Reply(std::move(result));
+    completer.Reply(result);
     return;
   }
 
@@ -359,7 +351,7 @@ void OpteeClient::InvokeCommand(
     LOG(ERROR, "failed to create InvokeCommandMessage (status: %d)", create_result.error());
     result.set_return_code(allocator, TEEC_ERROR_COMMUNICATION);
     result.set_return_origin(fuchsia_tee::wire::ReturnOrigin::kCommunication);
-    completer.Reply(std::move(result));
+    completer.Reply(result);
     return;
   }
 
@@ -379,7 +371,7 @@ void OpteeClient::InvokeCommand(
   if (call_code != kReturnOk) {
     result.set_return_code(allocator, TEEC_ERROR_COMMUNICATION);
     result.set_return_origin(fuchsia_tee::wire::ReturnOrigin::kCommunication);
-    completer.Reply(std::move(result));
+    completer.Reply(result);
     return;
   }
 
@@ -388,7 +380,7 @@ void OpteeClient::InvokeCommand(
 
   if (ConvertOpteeToZxResult(allocator, message.return_code(), message.return_origin(), &result) !=
       ZX_OK) {
-    completer.Reply(std::move(result));
+    completer.Reply(result);
     return;
   }
 
@@ -396,13 +388,12 @@ void OpteeClient::InvokeCommand(
   if (message.CreateOutputParameterSet(allocator, &out_parameters) != ZX_OK) {
     result.set_return_code(allocator, TEEC_ERROR_COMMUNICATION);
     result.set_return_origin(fuchsia_tee::wire::ReturnOrigin::kCommunication);
-    completer.Reply(std::move(result));
+    completer.Reply(result);
     return;
   }
-  result.set_parameter_set(allocator, std::move(out_parameters));
+  result.set_parameter_set(allocator, out_parameters);
 
-  completer.Reply(std::move(result));
-  return;
+  completer.Reply(result);
 }
 
 zx_status_t OpteeClient::CloseSession(uint32_t session_id) {
@@ -530,7 +521,7 @@ zx::status<fidl::UnownedClientEnd<fuchsia_io::Directory>> OpteeClient::GetRootSt
   return zx::ok(root_storage_.borrow());
 }
 
-zx_status_t OpteeClient::InitRpmbClient(void) {
+zx_status_t OpteeClient::InitRpmbClient() {
   if (rpmb_client_.is_valid()) {
     return ZX_OK;
   }
@@ -555,7 +546,7 @@ zx_status_t OpteeClient::InitRpmbClient(void) {
 }
 
 zx::status<fidl::ClientEnd<fuchsia_io::Directory>> OpteeClient::GetStorageDirectory(
-    std::filesystem::path path, bool create) {
+    const std::filesystem::path& path, bool create) {
   auto root = GetRootStorage();
   if (root.is_error()) {
     return root.take_error();
@@ -787,7 +778,8 @@ zx_status_t OpteeClient::HandleRpcCommandLoadTa(LoadTaRpcMessage* message) {
     }
 
     return status;
-  } else if (ta_size == 0) {
+  }
+  if (ta_size == 0) {
     LOG(ERROR, "loaded trusted app %s with unexpected size!", ta_path.data());
     message->set_return_code(TEEC_ERROR_GENERIC);
     return status;
@@ -799,7 +791,8 @@ zx_status_t OpteeClient::HandleRpcCommandLoadTa(LoadTaRpcMessage* message) {
     // TEE is querying the size of the TA
     message->set_return_code(TEEC_SUCCESS);
     return ZX_OK;
-  } else if (ta_size > out_ta_mem->size()) {
+  }
+  if (ta_size > out_ta_mem->size()) {
     // TEE provided too small of a memory region to write TA into
     message->set_return_code(TEEC_ERROR_SHORT_BUFFER);
     return ZX_OK;
@@ -870,7 +863,7 @@ zx_status_t OpteeClient::HandleRpcCommandAccessRpmb(RpmbRpcMessage* message) {
     case RpmbReq::kCmdDataRequest: {
       std::optional<SharedMemoryView> new_tx_frame_mem = tx_frame_mem->SliceByVaddr(
           tx_frame_mem->vaddr() + sizeof(RpmbReq), tx_frame_mem->vaddr() + tx_frame_mem->size());
-      status = RpmbRouteFrames(std::move(new_tx_frame_mem), std::move(rx_frame_mem));
+      status = RpmbRouteFrames(new_tx_frame_mem, rx_frame_mem);
       break;
     }
     default:
@@ -964,28 +957,28 @@ zx_status_t OpteeClient::RpmbRouteFrames(std::optional<SharedMemoryView> tx_fram
       if ((tx_frame_cnt != 1) || (rx_frame_cnt != 1)) {
         return ZX_ERR_INVALID_ARGS;
       }
-      status = RpmbWriteRequest(std::move(tx_frames), std::move(rx_frames));
+      status = RpmbWriteRequest(tx_frames, rx_frames);
       break;
     case RpmbFrame::kRpmbRequestWCounter:
       LOG(DEBUG, "Receive RPMB::kRpmbRequestWCounter frame\n");
       if (tx_frame_cnt != 1 || (rx_frame_cnt != 1)) {
         return ZX_ERR_INVALID_ARGS;
       }
-      status = RpmbReadRequest(std::move(tx_frames), std::move(rx_frames));
+      status = RpmbReadRequest(tx_frames, rx_frames);
       break;
     case RpmbFrame::kRpmbRequestWriteData:
       LOG(DEBUG, "Receive RPMB::kRpmbRequestWriteData frame\n");
       if ((tx_frame_cnt != 1) || (rx_frame_cnt != 1)) {
         return ZX_ERR_INVALID_ARGS;
       }
-      status = RpmbWriteRequest(std::move(tx_frames), std::move(rx_frames));
+      status = RpmbWriteRequest(tx_frames, rx_frames);
       break;
     case RpmbFrame::kRpmbRequestReadData:
       LOG(DEBUG, "Receive RPMB::kRpmbRequestReadData frame\n");
       if ((tx_frame_cnt != 1) || !rx_frame_cnt) {
         return ZX_ERR_INVALID_ARGS;
       }
-      status = RpmbReadRequest(std::move(tx_frames), std::move(rx_frames));
+      status = RpmbReadRequest(tx_frames, rx_frames);
       break;
     default:
       LOG(ERROR, "Unknown RPMB frame: %d", betoh16(frame->request));
@@ -1281,7 +1274,8 @@ zx_status_t OpteeClient::HandleRpcCommandFileSystemOpenFile(OpenFileFileSystemRp
     LOG(DEBUG, "parent path not found (status: %d)", storage_dir.status_value());
     message->set_return_code(TEEC_ERROR_ITEM_NOT_FOUND);
     return storage_dir.status_value();
-  } else if (storage_dir.is_error()) {
+  }
+  if (storage_dir.is_error()) {
     LOG(DEBUG, "unable to get parent directory (status: %s)", storage_dir.status_string());
     message->set_return_code(TEEC_ERROR_BAD_STATE);
     return storage_dir.status_value();
@@ -1297,7 +1291,8 @@ zx_status_t OpteeClient::HandleRpcCommandFileSystemOpenFile(OpenFileFileSystemRp
     LOG(DEBUG, "file not found (status: %s)", node.status_string());
     message->set_return_code(TEEC_ERROR_ITEM_NOT_FOUND);
     return node.status_value();
-  } else if (node.is_error()) {
+  }
+  if (node.is_error()) {
     LOG(DEBUG, "unable to open file (status: %s)", node.status_string());
     message->set_return_code(TEEC_ERROR_GENERIC);
     return node.status_value();
@@ -1386,7 +1381,7 @@ zx_status_t OpteeClient::HandleRpcCommandFileSystemReadFile(ReadFileFileSystemRp
     return ZX_ERR_NOT_FOUND;
   }
 
-  auto file = std::move(maybe_file.value());
+  auto file = maybe_file.value();
 
   std::optional<SharedMemoryView> buffer_mem = GetMemoryReference(
       FindSharedMemory(message->file_contents_memory_identifier()),
@@ -1450,7 +1445,7 @@ zx_status_t OpteeClient::HandleRpcCommandFileSystemWriteFile(
     return ZX_ERR_NOT_FOUND;
   }
 
-  auto file = std::move(maybe_file.value());
+  auto file = maybe_file.value();
 
   std::optional<SharedMemoryView> buffer_mem = GetMemoryReference(
       FindSharedMemory(message->file_contents_memory_identifier()),
@@ -1502,18 +1497,19 @@ zx_status_t OpteeClient::HandleRpcCommandFileSystemTruncateFile(
     return ZX_ERR_NOT_FOUND;
   }
 
-  auto result = fidl::WireCall(maybe_file.value())->Truncate(message->target_file_size());
+  const fidl::WireResult result =
+      fidl::WireCall(maybe_file.value())->Resize(message->target_file_size());
   if (!result.ok()) {
     LOG(ERROR, "failed to truncate file (FIDL error: %s)", result.FormatDescription().c_str());
     message->set_return_code(TEEC_ERROR_GENERIC);
     return result.status();
   }
-
-  zx_status_t io_status = result->s;
-  if (io_status != ZX_OK) {
-    LOG(ERROR, "failed to truncate file (IO status: %d)", io_status);
+  const fidl::WireResponse response = result.value();
+  if (response.result.is_err()) {
+    LOG(ERROR, "failed to truncate file (IO status: %s)",
+        zx_status_get_string(response.result.err()));
     message->set_return_code(TEEC_ERROR_GENERIC);
-    return io_status;
+    return response.result.err();
   }
 
   message->set_return_code(TEEC_SUCCESS);
@@ -1614,7 +1610,8 @@ zx_status_t OpteeClient::HandleRpcCommandFileSystemRenameFile(
       LOG(INFO, "refusing to rename file to path that already exists with overwrite set to false");
       message->set_return_code(TEEC_ERROR_ACCESS_CONFLICT);
       return ZX_OK;
-    } else if (destination.status_value() != ZX_ERR_NOT_FOUND) {
+    }
+    if (destination.status_value() != ZX_ERR_NOT_FOUND) {
       LOG(ERROR, "could not check file existence before renaming (status %s)",
           destination.status_string());
       message->set_return_code(TEEC_ERROR_GENERIC);

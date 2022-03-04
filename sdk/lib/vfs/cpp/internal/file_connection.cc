@@ -48,7 +48,7 @@ void FileConnection::Describe(DescribeCallback callback) {
 }
 
 void FileConnection::Describe2(fuchsia::io::ConnectionInfoQuery query, Describe2Callback callback) {
-  Connection::Describe2(vn_, std::move(query), std::move(callback));
+  Connection::Describe2(vn_, query, std::move(callback));
 }
 
 void FileConnection::SyncDeprecated(SyncDeprecatedCallback callback) {
@@ -202,7 +202,8 @@ void FileConnection::Seek(fuchsia::io::SeekOrigin origin, int64_t offset, SeekCa
                  });
 }
 
-void FileConnection::Truncate(uint64_t length, TruncateCallback callback) {
+void FileConnection::TruncateDeprecatedUseResize(uint64_t length,
+                                                 TruncateDeprecatedUseResizeCallback callback) {
   if (!Flags::IsWritable(flags())) {
     callback(ZX_ERR_BAD_HANDLE);
     return;
@@ -211,7 +212,7 @@ void FileConnection::Truncate(uint64_t length, TruncateCallback callback) {
 }
 
 void FileConnection::Resize(uint64_t length, ResizeCallback callback) {
-  Truncate(length, [callback = std::move(callback)](zx_status_t status) {
+  TruncateDeprecatedUseResize(length, [callback = std::move(callback)](zx_status_t status) {
     if (status != ZX_OK) {
       callback(fpromise::error(status));
     } else {

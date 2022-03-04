@@ -193,40 +193,30 @@ async fn handle_file_req_panic(_req: FileRequest) {
 
 async fn handle_file_req_fail_truncate(call_count: Arc<AtomicU64>, req: FileRequest) {
     match req {
-        FileRequest::Truncate { length: _length, responder } => {
+        FileRequest::Resize { length: _length, responder } => {
             call_count.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
-            responder.send(Status::NO_MEMORY.into_raw()).expect("send truncate response");
-        }
-        FileRequest::CloseDeprecated { responder } => {
-            let _ = responder.send(Status::OK.into_raw());
+            responder.send(&mut Err(Status::NO_MEMORY.into_raw())).expect("send truncate response");
         }
         FileRequest::Close { responder } => {
             let _ = responder.send(&mut Ok(()));
         }
-        req => panic!("should only receive truncate requests: {:?}", req),
+        req => panic!("unexpected request: {:?}", req),
     }
 }
 
 async fn handle_file_req_fail_write(call_count: Arc<AtomicU64>, req: FileRequest) {
     match req {
-        FileRequest::Truncate { length: _length, responder } => {
-            responder.send(Status::OK.into_raw()).expect("send truncate response");
-        }
-        FileRequest::CloseDeprecated { responder } => {
-            let _ = responder.send(Status::OK.into_raw());
+        FileRequest::Resize { length: _length, responder } => {
+            responder.send(&mut Ok(())).expect("send resize response");
         }
         FileRequest::Close { responder } => {
             let _ = responder.send(&mut Ok(()));
-        }
-        FileRequest::WriteDeprecated { data: _data, responder } => {
-            call_count.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
-            responder.send(Status::NO_MEMORY.into_raw(), 0).expect("send write response");
         }
         FileRequest::Write { data: _data, responder } => {
             call_count.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
             responder.send(&mut Err(Status::NO_MEMORY.into_raw())).expect("send write response");
         }
-        req => panic!("should only receive write and truncate requests: {:?}", req),
+        req => panic!("unexpected request: {:?}", req),
     }
 }
 

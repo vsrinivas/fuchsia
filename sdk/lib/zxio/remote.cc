@@ -789,12 +789,17 @@ zx_status_t zxio_remote_seek(zxio_t* io, zxio_seek_origin_t start, int64_t offse
 zx_status_t zxio_remote_truncate(zxio_t* io, uint64_t length) {
   Remote rio(io);
   const fidl::WireResult result =
-      fidl::WireCall(fidl::UnownedClientEnd<fio::File>(rio.control()))->Truncate(length);
+      fidl::WireCall(fidl::UnownedClientEnd<fio::File>(rio.control()))->Resize(length);
   if (!result.ok()) {
     return result.status();
   }
   const auto& response = result.value();
-  return response.s;
+  switch (response.result.Which()) {
+    case fio::wire::File2ResizeResult::Tag::kErr:
+      return response.result.err();
+    case fio::wire::File2ResizeResult::Tag::kResponse:
+      return ZX_OK;
+  }
 }
 
 zx_status_t zxio_remote_flags_get(zxio_t* io, uint32_t* out_flags) {

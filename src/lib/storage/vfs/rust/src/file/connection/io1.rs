@@ -386,7 +386,7 @@ impl<T: 'static + File> FileConnection<T> {
                     responder.send(&mut Err(status.into_raw()))?;
                 }
             }
-            FileRequest::Truncate { length, responder } => {
+            FileRequest::TruncateDeprecatedUseResize { length, responder } => {
                 fuchsia_trace::duration!("storage", "File::Truncate", "length" => length);
                 let status = self.handle_truncate(length).await;
                 responder.send(status.into_raw())?;
@@ -560,13 +560,13 @@ impl<T: 'static + File> FileConnection<T> {
             }
         };
 
-        if new_seek < 0 {
+        return if new_seek < 0 {
             // Can't seek to before the end of a file.
-            return (zx::Status::OUT_OF_RANGE, self.seek);
+            (zx::Status::OUT_OF_RANGE, self.seek)
         } else {
             self.seek = new_seek as u64;
-            return (status, self.seek);
-        }
+            (status, self.seek)
+        };
     }
 
     async fn handle_set_attr(&mut self, flags: u32, attrs: NodeAttributes) -> zx::Status {
@@ -768,7 +768,7 @@ mod tests {
         }
 
         fn entry_info(&self) -> crate::directory::entry::EntryInfo {
-            todo!();
+            todo!()
         }
     }
 
@@ -1242,10 +1242,9 @@ mod tests {
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn test_truncate() {
+    async fn test_resize() {
         let env = init_mock_file(Box::new(always_succeed_callback), OPEN_RIGHT_WRITABLE);
-        let status = env.proxy.truncate(10).await.unwrap();
-        assert_eq!(zx::Status::from_raw(status), zx::Status::OK);
+        let () = env.proxy.resize(10).await.unwrap().map_err(zx::Status::from_raw).unwrap();
         let events = env.file.operations.lock().unwrap();
         assert_matches!(
             &events[..],
@@ -1257,10 +1256,10 @@ mod tests {
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn test_truncate_no_perms() {
+    async fn test_resize_no_perms() {
         let env = init_mock_file(Box::new(always_succeed_callback), OPEN_RIGHT_READABLE);
-        let status = env.proxy.truncate(10).await.unwrap();
-        assert_eq!(zx::Status::from_raw(status), zx::Status::BAD_HANDLE);
+        let result = env.proxy.resize(10).await.unwrap().map_err(zx::Status::from_raw);
+        assert_eq!(result, Err(zx::Status::BAD_HANDLE));
         let events = env.file.operations.lock().unwrap();
         assert_eq!(*events, vec![FileOperation::Init { flags: OPEN_RIGHT_READABLE },]);
     }

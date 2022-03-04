@@ -105,8 +105,8 @@ class OpteeClient : public fidl::WireServer<fuchsia_tee::Application> {
   //  * If `mem_iter` is valid and the slice bounds are valid, an initialized `std::optional` with
   //    the `SharedMemoryView`.
   //  * Otherwise, an uninitialized `std::optional`.
-  std::optional<SharedMemoryView> GetMemoryReference(SharedMemoryList::iterator mem_iter,
-                                                     zx_paddr_t base_paddr, size_t size);
+  static std::optional<SharedMemoryView> GetMemoryReference(SharedMemoryList::iterator mem_iter,
+                                                            zx_paddr_t base_paddr, size_t size);
 
   // Requests the root storage channel from the `Provider` and caches it in `root_storage_`.
   //
@@ -124,8 +124,8 @@ class OpteeClient : public fidl::WireServer<fuchsia_tee::Application> {
   // Parameters:
   //  * path:                 The path of the directory, relative to the root storage directory.
   //  * create:               Flag specifying whether to create directories if they don't exist.
-  zx::status<fidl::ClientEnd<fuchsia_io::Directory>> GetStorageDirectory(std::filesystem::path path,
-                                                                         bool create);
+  zx::status<fidl::ClientEnd<fuchsia_io::Directory>> GetStorageDirectory(
+      const std::filesystem::path& path, bool create);
 
   // Inits the Rpmb client from `OpteeController` and caches it in `rpmb_client_`.
   //
@@ -133,7 +133,7 @@ class OpteeClient : public fidl::WireServer<fuchsia_tee::Application> {
   //  * ZX_OK:                The operation was successful.
   //  * ZX_ERR_UNAVAILABLE:   `OpteeController` does not have access to a Rpmb.
   //  * `zx_status_t` codes from `zx::channel::create`
-  zx_status_t InitRpmbClient(void);
+  zx_status_t InitRpmbClient();
 
   // Tracks a new file system object associated with the current client.
   //
@@ -204,7 +204,7 @@ class OpteeClient : public fidl::WireServer<fuchsia_tee::Application> {
   zx_status_t HandleRpcCommandLoadTa(LoadTaRpcMessage* message);
   zx_status_t HandleRpcCommandAccessRpmb(RpmbRpcMessage* message);
   zx_status_t HandleRpcCommandWaitQueue(WaitQueueRpcMessage* message);
-  zx_status_t HandleRpcCommandGetTime(GetTimeRpcMessage* message);
+  static zx_status_t HandleRpcCommandGetTime(GetTimeRpcMessage* message);
   zx_status_t HandleRpcCommandAllocateMemory(AllocateMemoryRpcMessage* message);
   zx_status_t HandleRpcCommandFreeMemory(FreeMemoryRpcMessage* message);
 

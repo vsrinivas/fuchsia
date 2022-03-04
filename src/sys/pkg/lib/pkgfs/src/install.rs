@@ -198,8 +198,8 @@ impl MockBlob {
 
     async fn handle_truncate(&mut self, status: Status) -> u64 {
         match self.stream.next().await {
-            Some(Ok(FileRequest::Truncate { length, responder })) => {
-                responder.send(status.into_raw()).unwrap();
+            Some(Ok(FileRequest::Resize { length, responder })) => {
+                responder.send(&mut Err(status.into_raw())).unwrap();
 
                 length
             }
@@ -425,13 +425,16 @@ pub struct Blob<S> {
 impl Blob<NeedsTruncate> {
     /// Truncates the blob to the given size. On success, the blob enters the writable state.
     pub async fn truncate(self, size: u64) -> Result<Blob<NeedsData>, BlobTruncateError> {
-        let s = self.proxy.truncate(size).await.map_err(BlobTruncateError::Fidl)?;
-
-        match Status::from_raw(s) {
-            Status::OK => {}
-            Status::NO_SPACE => return Err(BlobTruncateError::NoSpace),
-            status => return Err(BlobTruncateError::UnexpectedResponse(status)),
-        }
+        let () = self
+            .proxy
+            .resize(size)
+            .await
+            .map_err(BlobTruncateError::Fidl)?
+            .map_err(Status::from_raw)
+            .map_err(|status| match status {
+                Status::NO_SPACE => BlobTruncateError::NoSpace,
+                status => BlobTruncateError::UnexpectedResponse(status),
+            })?;
 
         Ok(Blob { proxy: self.proxy, kind: self.kind, state: NeedsData { size, written: 0 } })
     }

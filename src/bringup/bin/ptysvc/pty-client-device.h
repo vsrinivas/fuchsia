@@ -50,7 +50,8 @@ class PtyClientDevice : public fidl::WireServer<fuchsia_hardware_pty::Device> {
   void SeekDeprecated(SeekDeprecatedRequestView request,
                       SeekDeprecatedCompleter::Sync& completer) final;
   void Seek(SeekRequestView request, SeekCompleter::Sync& completer) final;
-  void Truncate(TruncateRequestView request, TruncateCompleter::Sync& completer) final;
+  void TruncateDeprecatedUseResize(TruncateDeprecatedUseResizeRequestView request,
+                                   TruncateDeprecatedUseResizeCompleter::Sync& completer) final;
   void Resize(ResizeRequestView request, ResizeCompleter::Sync& completer) final;
   void GetFlagsDeprecatedUseNode(GetFlagsDeprecatedUseNodeRequestView request,
                                  GetFlagsDeprecatedUseNodeCompleter::Sync& completer) final;

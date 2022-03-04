@@ -166,7 +166,9 @@ void PtyClientDevice::Seek(SeekRequestView request, SeekCompleter::Sync& complet
   ZX_ASSERT(false);
 }
 
-void PtyClientDevice::Truncate(TruncateRequestView request, TruncateCompleter::Sync& completer) {
+void PtyClientDevice::TruncateDeprecatedUseResize(
+    TruncateDeprecatedUseResizeRequestView request,
+    TruncateDeprecatedUseResizeCompleter::Sync& completer) {
   ZX_ASSERT(false);
 }
 

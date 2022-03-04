@@ -331,13 +331,13 @@ pub struct Blob<S> {
 impl Blob<NeedsTruncate> {
     /// Truncates the blob to the given size. On success, the blob enters the writable state.
     pub async fn truncate(self, size: u64) -> Result<Blob<NeedsData>, TruncateBlobError> {
-        let s = self.proxy.truncate(size).await?;
-
-        match Status::from_raw(s) {
-            Status::OK => {}
-            Status::NO_SPACE => return Err(TruncateBlobError::NoSpace),
-            status => return Err(TruncateBlobError::UnexpectedResponse(status)),
-        }
+        let () =
+            self.proxy.resize(size).await?.map_err(Status::from_raw).map_err(
+                |status| match status {
+                    Status::NO_SPACE => TruncateBlobError::NoSpace,
+                    status => TruncateBlobError::UnexpectedResponse(status),
+                },
+            )?;
 
         Ok(Blob { proxy: self.proxy, state: NeedsData { size, written: 0 } })
     }
@@ -972,8 +972,8 @@ mod tests {
 
         async fn fail_truncate(mut self) -> Self {
             match self.stream.next().await {
-                Some(Ok(FileRequest::Truncate { length: _, responder })) => {
-                    responder.send(Status::NO_SPACE.into_raw()).unwrap();
+                Some(Ok(FileRequest::Resize { length: _, responder })) => {
+                    responder.send(&mut Err(Status::NO_SPACE.into_raw())).unwrap();
                 }
                 r => panic!("Unexpected request: {:?}", r),
             }
@@ -982,9 +982,9 @@ mod tests {
 
         async fn expect_truncate(mut self, expected_length: u64) -> Self {
             match self.stream.next().await {
-                Some(Ok(FileRequest::Truncate { length, responder })) => {
+                Some(Ok(FileRequest::Resize { length, responder })) => {
                     assert_eq!(length, expected_length);
-                    responder.send(Status::OK.into_raw()).unwrap();
+                    responder.send(&mut Ok(())).unwrap();
                 }
                 r => panic!("Unexpected request: {:?}", r),
             }

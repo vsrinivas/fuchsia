@@ -629,12 +629,18 @@ mod tests {
                     "block_device",
                 )
                 .await;
-                let status = file.truncate(2 * 1024 * 1024).await.expect("truncate failed");
-                zx::Status::ok(status).expect("file truncate failed");
-                assert_eq!(
-                    file.close().await.expect("FIDL call failed").map_err(zx::Status::from_raw),
-                    Ok(())
-                );
+                let () = file
+                    .resize(2 * 1024 * 1024)
+                    .await
+                    .expect("resize failed")
+                    .map_err(zx::Status::from_raw)
+                    .expect("resize error");
+                let () = file
+                    .close()
+                    .await
+                    .expect("close failed")
+                    .map_err(zx::Status::from_raw)
+                    .expect("close error");
 
                 root.open(
                     OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
@@ -928,12 +934,18 @@ mod tests {
                     "block_device",
                 )
                 .await;
-                let status = file.truncate(file_size).await.expect("truncate failed");
-                zx::Status::ok(status).expect("file truncate failed");
-                assert_eq!(
-                    file.close().await.expect("FIDL call failed").map_err(zx::Status::from_raw),
-                    Ok(())
-                );
+                let () = file
+                    .resize(file_size)
+                    .await
+                    .expect("resize failed")
+                    .map_err(zx::Status::from_raw)
+                    .expect("resize error");
+                let () = file
+                    .close()
+                    .await
+                    .expect("close failed")
+                    .map_err(zx::Status::from_raw)
+                    .expect("close error");
 
                 root.open(
                     OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
@@ -972,7 +984,12 @@ mod tests {
                     )
                     .await
                     .expect("open file failed");
-                    file.truncate(content.len() as u64).await.expect("truncate file failed");
+                    let () = file
+                        .resize(content.len() as u64)
+                        .await
+                        .expect("resize failed")
+                        .map_err(zx::Status::from_raw)
+                        .expect("resize error");
                     let _: u64 = file
                         .write(&content)
                         .await
@@ -1010,12 +1027,18 @@ mod tests {
                     "block_device",
                 )
                 .await;
-                let status = file.truncate(5 * 1024 * 1024).await.expect("truncate failed");
-                zx::Status::ok(status).expect("file truncate failed");
-                assert_eq!(
-                    file.close().await.expect("FIDL call failed").map_err(zx::Status::from_raw),
-                    Ok(())
-                );
+                let () = file
+                    .resize(5 * 1024 * 1024)
+                    .await
+                    .expect("resize failed")
+                    .map_err(zx::Status::from_raw)
+                    .expect("resize error");
+                let () = file
+                    .close()
+                    .await
+                    .expect("close failed")
+                    .map_err(zx::Status::from_raw)
+                    .expect("close error");
 
                 root.open(
                     OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,

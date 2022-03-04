@@ -151,7 +151,9 @@ zx_status_t FileConnection::ResizeInternal(uint64_t length) {
   return vnode()->Truncate(length);
 }
 
-void FileConnection::Truncate(TruncateRequestView request, TruncateCompleter::Sync& completer) {
+void FileConnection::TruncateDeprecatedUseResize(
+    TruncateDeprecatedUseResizeRequestView request,
+    TruncateDeprecatedUseResizeCompleter::Sync& completer) {
   completer.Reply(ResizeInternal(request->length));
 }
 

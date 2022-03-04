@@ -169,23 +169,23 @@ impl Blob<NeedsTruncate> {
 
     /// Truncates the blob to the given size. On success, the blob enters the writable state.
     pub async fn truncate(self, size: u64) -> Result<TruncateSuccess, TruncateError> {
-        let s = self.proxy.truncate(size).await?;
-
-        let err = match Status::from_raw(s) {
-            Status::OK => None,
-            Status::IO_DATA_INTEGRITY => Some(TruncateError::Corrupt),
-            Status::NO_SPACE => Some(TruncateError::NoSpace),
-            Status::BAD_STATE => Some(TruncateError::ConcurrentWrite),
-            status => Some(TruncateError::UnexpectedResponse(status)),
-        };
-
-        if let Some(err) = err {
-            // Dropping the file proxy will close the blob asynchronously. Make an explicit call to
-            // blobfs to close the blob and wait for it to acknowledge that it closed it, ensuring
-            // a quick retry to re-open this blob for write won't race with the blob closing in the
-            // background.
-            self.close().await;
-            return Err(err);
+        match self.proxy.resize(size).await?.map_err(Status::from_raw).map_err(
+            |status| match status {
+                Status::IO_DATA_INTEGRITY => TruncateError::Corrupt,
+                Status::NO_SPACE => TruncateError::NoSpace,
+                Status::BAD_STATE => TruncateError::ConcurrentWrite,
+                status => TruncateError::UnexpectedResponse(status),
+            },
+        ) {
+            Ok(()) => {}
+            Err(err) => {
+                // Dropping the file proxy will close the blob asynchronously. Make an explicit call to
+                // blobfs to close the blob and wait for it to acknowledge that it closed it, ensuring
+                // a quick retry to re-open this blob for write won't race with the blob closing in the
+                // background.
+                self.close().await;
+                return Err(err);
+            }
         }
 
         Ok(match size {

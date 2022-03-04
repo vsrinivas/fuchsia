@@ -120,11 +120,11 @@ mod test {
             // Serve the root directory
             // Truncating the file should succeed
             let request = file.try_next().await;
-            if let Ok(Some(FileRequest::Truncate { length, responder })) = request {
+            if let Ok(Some(FileRequest::Resize { length, responder })) = request {
                 assert_eq!(length, 0);
-                responder.send(0).unwrap();
+                responder.send(&mut Ok(())).unwrap();
             } else {
-                panic!("did not get truncate request: {:?}", request)
+                panic!("did not get resize request: {:?}", request)
             }
 
             // Writing the file should succeed
@@ -138,9 +138,7 @@ mod test {
 
             // Closing file should succeed
             let request = file.try_next().await;
-            if let Ok(Some(FileRequest::CloseDeprecated { responder })) = request {
-                responder.send(0).unwrap();
-            } else if let Ok(Some(FileRequest::Close { responder })) = request {
+            if let Ok(Some(FileRequest::Close { responder })) = request {
                 responder.send(&mut Ok(())).unwrap();
             } else {
                 panic!("did not get close request: {:?}", request)

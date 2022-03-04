@@ -679,7 +679,7 @@ func (f *fileWrapper) Seek(_ fidl.Context, origin io.SeekOrigin, offset int64) (
 	return io.File2SeekResultWithResponse(io.File2SeekResponse{OffsetFromStart: uint64(r)}), nil
 }
 
-func (f *fileWrapper) Truncate(_ fidl.Context, length uint64) (int32, error) {
+func (f *fileWrapper) TruncateDeprecatedUseResize(_ fidl.Context, length uint64) (int32, error) {
 	return int32(errorToZx(f.file.Truncate(length))), nil
 }
 

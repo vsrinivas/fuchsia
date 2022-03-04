@@ -159,20 +159,16 @@ impl Directory {
             }
         };
 
-        match file.truncate(0).await {
-            Ok(s) => {
-                Status::ok(s).map_err(|e| {
-                    format_err!("Could not truncate file `{}`: {}", path.as_path().display(), &e)
-                })?;
-            }
-            Err(e) => {
-                return Err(format_err!(
-                    "Could not truncate file `{}`: {}",
-                    path.as_path().display(),
-                    &e
-                ))
-            }
-        }
+        let () = file
+            .resize(0)
+            .await
+            .map_err(|e| {
+                format_err!("Could not truncate file `{}`: {}", path.as_path().display(), e)
+            })?
+            .map_err(Status::from_raw)
+            .map_err(|status| {
+                format_err!("Could not truncate file `{}`: {}", path.as_path().display(), status)
+            })?;
 
         match write(&file, data).await {
             Ok(()) => {}

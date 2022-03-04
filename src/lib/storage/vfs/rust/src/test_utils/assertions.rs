@@ -235,9 +235,12 @@ macro_rules! assert_truncate {
     ($proxy:expr, $length:expr) => {{
         use $crate::test_utils::assertions::reexport::Status;
 
-        let status = $proxy.truncate($length).await.expect("truncate failed");
-
-        assert_eq!(Status::from_raw(status), Status::OK);
+        let () = $proxy
+            .resize($length)
+            .await
+            .expect("resize failed")
+            .map_err(Status::from_raw)
+            .expect("resize error");
     }};
 }
 
@@ -247,9 +250,9 @@ macro_rules! assert_truncate_err {
     ($proxy:expr, $length:expr, $expected_status:expr) => {{
         use $crate::test_utils::assertions::reexport::Status;
 
-        let status = $proxy.truncate($length).await.expect("truncate failed");
+        let result = $proxy.resize($length).await.expect("resize failed").map_err(Status::from_raw);
 
-        assert_eq!(Status::from_raw(status), $expected_status);
+        assert_eq!(result, Err($expected_status));
     }};
 }
 

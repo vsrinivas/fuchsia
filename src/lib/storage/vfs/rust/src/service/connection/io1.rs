@@ -231,7 +231,7 @@ impl Connection {
             FileRequest::Seek { origin: _, offset: _, responder } => {
                 responder.send(&mut Err(ZX_ERR_ACCESS_DENIED))?;
             }
-            FileRequest::Truncate { length: _, responder } => {
+            FileRequest::TruncateDeprecatedUseResize { length: _, responder } => {
                 responder.send(ZX_ERR_ACCESS_DENIED)?;
             }
             FileRequest::Resize { length: _, responder } => {

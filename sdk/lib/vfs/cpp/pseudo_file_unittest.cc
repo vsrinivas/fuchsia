@@ -6,13 +6,9 @@
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
-#include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
-#include <lib/fdio/fdio.h>
-#include <lib/fdio/limits.h>
 #include <unistd.h>
 #include <zircon/errors.h>
-#include <zircon/processargs.h>
 #include <zircon/status.h>
 
 #include <algorithm>
@@ -33,11 +29,12 @@ class FileWrapper {
 
   static FileWrapper CreateReadWriteFile(std::string initial_str, size_t capacity,
                                          bool start_loop = true) {
-    return FileWrapper(true, initial_str, capacity, start_loop);
+    return FileWrapper(true, std::move(initial_str), capacity, start_loop);
   }
 
   static FileWrapper CreateReadOnlyFile(std::string initial_str, bool start_loop = true) {
-    return FileWrapper(false, initial_str, initial_str.length(), start_loop);
+    size_t length = initial_str.length();
+    return FileWrapper(false, std::move(initial_str), length, start_loop);
   }
 
   async_dispatcher_t* dispatcher() { return loop_.dispatcher(); }
@@ -57,7 +54,7 @@ class FileWrapper {
     if (write_allowed) {
       writeFn = [this](std::vector<uint8_t> input) {
         std::string str(input.size(), 0);
-        std::copy(input.begin(), input.begin() + input.size(), str.begin());
+        std::copy(input.begin(), input.end(), str.begin());
         buffer_ = std::move(str);
         return ZX_OK;
       };
@@ -103,30 +100,31 @@ class PseudoFileTest : public gtest::RealLoopFixture {
     }
   }
 
-  fuchsia::io::FileSyncPtr OpenReadWrite(vfs::internal::Node* node,
-                                         async_dispatcher_t* dispatcher) {
+  static fuchsia::io::FileSyncPtr OpenReadWrite(vfs::internal::Node* node,
+                                                async_dispatcher_t* dispatcher) {
     return OpenFile(node, fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_WRITABLE,
                     dispatcher);
   }
 
-  fuchsia::io::FileSyncPtr OpenRead(vfs::internal::Node* node, async_dispatcher_t* dispatcher) {
+  static fuchsia::io::FileSyncPtr OpenRead(vfs::internal::Node* node,
+                                           async_dispatcher_t* dispatcher) {
     return OpenFile(node, fuchsia::io::OPEN_RIGHT_READABLE, dispatcher);
   }
 
-  fuchsia::io::FileSyncPtr OpenFile(vfs::internal::Node* node, uint32_t flags,
-                                    async_dispatcher_t* dispatcher) {
+  static fuchsia::io::FileSyncPtr OpenFile(vfs::internal::Node* node, uint32_t flags,
+                                           async_dispatcher_t* dispatcher) {
     fuchsia::io::FileSyncPtr ptr;
     node->Serve(flags, ptr.NewRequest().TakeChannel(), dispatcher);
     return ptr;
   }
 
-  void AssertWriteAt(fuchsia::io::FileSyncPtr& file, const std::string& str, int offset,
-                     zx_status_t expected_status = ZX_OK, int expected_actual = -1) {
+  static void AssertWriteAt(fuchsia::io::FileSyncPtr& file, const std::string& str, uint64_t offset,
+                            zx_status_t expected_status = ZX_OK, int expected_actual = -1) {
     std::vector<uint8_t> buffer;
     buffer.resize(str.length());
     std::copy(str.begin(), str.end(), buffer.begin());
     fuchsia::io::File2_WriteAt_Result result;
-    file->WriteAt(buffer, offset, &result);
+    ASSERT_EQ(ZX_OK, file->WriteAt(buffer, offset, &result));
     if (expected_status == ZX_OK) {
       ASSERT_TRUE(result.is_response()) << zx_status_get_string(result.err());
       ASSERT_EQ(expected_actual == -1 ? str.length() : expected_actual,
@@ -137,13 +135,13 @@ class PseudoFileTest : public gtest::RealLoopFixture {
     }
   }
 
-  void AssertWrite(fuchsia::io::FileSyncPtr& file, const std::string& str,
-                   zx_status_t expected_status = ZX_OK, int expected_actual = -1) {
+  static void AssertWrite(fuchsia::io::FileSyncPtr& file, const std::string& str,
+                          zx_status_t expected_status = ZX_OK, int expected_actual = -1) {
     std::vector<uint8_t> buffer;
     buffer.resize(str.length());
     std::copy(str.begin(), str.end(), buffer.begin());
     fuchsia::io::File2_Write_Result result;
-    file->Write(buffer, &result);
+    ASSERT_EQ(ZX_OK, file->Write(buffer, &result));
     if (expected_status == ZX_OK) {
       ASSERT_TRUE(result.is_response()) << zx_status_get_string(result.err());
       ASSERT_EQ(expected_actual == -1 ? str.length() : expected_actual,
@@ -154,10 +152,10 @@ class PseudoFileTest : public gtest::RealLoopFixture {
     }
   }
 
-  void AssertReadAt(fuchsia::io::FileSyncPtr& file, int offset, int count,
-                    const std::string& expected_str, zx_status_t expected_status = ZX_OK) {
+  static void AssertReadAt(fuchsia::io::FileSyncPtr& file, uint64_t offset, uint64_t count,
+                           const std::string& expected_str, zx_status_t expected_status = ZX_OK) {
     fuchsia::io::File2_ReadAt_Result result;
-    file->ReadAt(count, offset, &result);
+    ASSERT_EQ(ZX_OK, file->ReadAt(count, offset, &result));
     if (expected_status == ZX_OK) {
       ASSERT_TRUE(result.is_response()) << zx_status_get_string(result.err());
       const std::vector<uint8_t>& data = result.response().data;
@@ -169,10 +167,10 @@ class PseudoFileTest : public gtest::RealLoopFixture {
     }
   }
 
-  void AssertRead(fuchsia::io::FileSyncPtr& file, int count, const std::string& expected_str,
-                  zx_status_t expected_status = ZX_OK) {
+  static void AssertRead(fuchsia::io::FileSyncPtr& file, uint64_t count,
+                         const std::string& expected_str, zx_status_t expected_status = ZX_OK) {
     fuchsia::io::File2_Read_Result result;
-    file->Read(count, &result);
+    ASSERT_EQ(ZX_OK, file->Read(count, &result));
     if (expected_status == ZX_OK) {
       ASSERT_TRUE(result.is_response()) << zx_status_get_string(result.err());
       const std::vector<uint8_t>& data = result.response().data;
@@ -184,17 +182,23 @@ class PseudoFileTest : public gtest::RealLoopFixture {
     }
   }
 
-  void AssertTruncate(fuchsia::io::FileSyncPtr& file, int count,
-                      zx_status_t expected_status = ZX_OK) {
-    zx_status_t status;
-    file->Truncate(count, &status);
-    ASSERT_EQ(expected_status, status);
+  static void AssertResize(fuchsia::io::FileSyncPtr& file, uint64_t count,
+                           zx_status_t expected_status = ZX_OK) {
+    fuchsia::io::File2_Resize_Result result;
+    ASSERT_EQ(ZX_OK, file->Resize(count, &result));
+    if (expected_status == ZX_OK) {
+      ASSERT_TRUE(result.is_response()) << zx_status_get_string(result.err());
+    } else {
+      ASSERT_TRUE(result.is_err());
+      ASSERT_EQ(expected_status, result.err());
+    }
   }
 
-  void AssertSeek(fuchsia::io::FileSyncPtr& file, int64_t offset, fuchsia::io::SeekOrigin origin,
-                  uint64_t expected_offset, zx_status_t expected_status = ZX_OK) {
+  static void AssertSeek(fuchsia::io::FileSyncPtr& file, int64_t offset,
+                         fuchsia::io::SeekOrigin origin, uint64_t expected_offset,
+                         zx_status_t expected_status = ZX_OK) {
     fuchsia::io::File2_Seek_Result result;
-    file->Seek(origin, offset, &result);
+    ASSERT_EQ(ZX_OK, file->Seek(origin, offset, &result));
     if (expected_status == ZX_OK) {
       ASSERT_TRUE(result.is_response()) << zx_status_get_string(result.err());
       ASSERT_EQ(expected_offset, result.response().offset_from_start);
@@ -204,9 +208,9 @@ class PseudoFileTest : public gtest::RealLoopFixture {
     }
   }
 
-  void CloseFile(fuchsia::io::FileSyncPtr& file, zx_status_t expected_status = ZX_OK) {
+  static void CloseFile(fuchsia::io::FileSyncPtr& file, zx_status_t expected_status = ZX_OK) {
     fuchsia::io::Node2_Close_Result result;
-    file->Close(&result);
+    ASSERT_EQ(ZX_OK, file->Close(&result));
     if (expected_status == ZX_OK) {
       ASSERT_TRUE(result.is_response()) << zx_status_get_string(result.err());
     } else {
@@ -219,7 +223,7 @@ class PseudoFileTest : public gtest::RealLoopFixture {
     RunLoopUntil([&]() { return file_wrapper.buffer() == expected_str; });
   }
 
-  int OpenAsFD(vfs::internal::Node* node, async_dispatcher_t* dispatcher) {
+  static int OpenAsFD(vfs::internal::Node* node, async_dispatcher_t* dispatcher) {
     zx::channel local, remote;
     EXPECT_EQ(ZX_OK, zx::channel::create(0, &local, &remote));
     EXPECT_EQ(ZX_OK,
@@ -316,7 +320,7 @@ TEST_F(PseudoFileTest, WriteAt) {
   // confirm by reading
   AssertRead(file, str.length(), updated_str);
 
-  // make sure file was not updated before conenction was closed.
+  // make sure file was not updated before connection was closed.
   ASSERT_EQ(file_wrapper.buffer(), str);
 
   CloseFile(file);
@@ -337,7 +341,7 @@ TEST_F(PseudoFileTest, MultipleWriteAt) {
   // confirm by reading
   AssertRead(file, str.length(), updated_str);
 
-  // make sure file was not updated before conenction was closed.
+  // make sure file was not updated before connection was closed.
   ASSERT_EQ(file_wrapper.buffer(), str);
 
   CloseFile(file);
@@ -394,7 +398,7 @@ TEST_F(PseudoFileTest, Write) {
 
   AssertReadAt(file, 0, 100, updated_str);
 
-  // make sure file was not updated before conenction was closed.
+  // make sure file was not updated before connection was closed.
   ASSERT_EQ(file_wrapper.buffer(), str);
 
   CloseFile(file);
@@ -408,11 +412,11 @@ TEST_F(PseudoFileTest, Truncate) {
   auto file_wrapper = FileWrapper::CreateReadWriteFile(str, 100);
   auto file = OpenReadWrite(file_wrapper.file(), file_wrapper.dispatcher());
 
-  AssertTruncate(file, 10);
+  AssertResize(file, 10);
 
   AssertRead(file, 100, str.substr(0, 10));
 
-  // make sure file was not updated before conenction was closed.
+  // make sure file was not updated before connection was closed.
   ASSERT_EQ(file_wrapper.buffer(), str);
 
   CloseFile(file);
@@ -470,7 +474,7 @@ TEST_F(PseudoFileTest, SeekFailsIfOffsetMoreThanCapacity) {
 
   AssertSeek(file, 1, fuchsia::io::SeekOrigin::END, 0, ZX_ERR_OUT_OF_RANGE);
 
-  // make sure offset didnot change
+  // make sure offset did not change
   AssertRead(file, 100, str);
 }
 
@@ -488,7 +492,7 @@ TEST_F(PseudoFileTest, WriteafterEndOfFile) {
 
   AssertReadAt(file, 0, 100, updated_str);
 
-  // make sure file was not updated before conenction was closed.
+  // make sure file was not updated before connection was closed.
   ASSERT_EQ(file_wrapper.buffer(), str);
 
   CloseFile(file);
@@ -528,7 +532,7 @@ TEST_F(PseudoFileTest, TruncateFailsForReadOnly) {
   auto file_wrapper = FileWrapper::CreateReadWriteFile(str, 100);
   auto file = OpenRead(file_wrapper.file(), file_wrapper.dispatcher());
 
-  AssertTruncate(file, 10, ZX_ERR_BAD_HANDLE);
+  AssertResize(file, 10, ZX_ERR_BAD_HANDLE);
 
   CloseFile(file);
 
@@ -592,8 +596,9 @@ TEST_F(PseudoFileTest, CanCloneFileConnectionAndReadAndWrite) {
   auto file = OpenReadWrite(file_wrapper.file(), file_wrapper.dispatcher());
 
   fuchsia::io::FileSyncPtr cloned_file;
-  file->Clone(fuchsia::io::CLONE_FLAG_SAME_RIGHTS,
-              fidl::InterfaceRequest<fuchsia::io::Node>(cloned_file.NewRequest().TakeChannel()));
+  ASSERT_EQ(ZX_OK, file->Clone(fuchsia::io::CLONE_FLAG_SAME_RIGHTS,
+                               fidl::InterfaceRequest<fuchsia::io::Node>(
+                                   cloned_file.NewRequest().TakeChannel())));
 
   CloseFile(file);
 
@@ -619,8 +624,9 @@ TEST_F(PseudoFileTest, NodeReferenceIsClonedAsNodeReference) {
                        file_wrapper.dispatcher());
 
   fuchsia::io::FileSyncPtr cloned_file;
-  file->Clone(fuchsia::io::CLONE_FLAG_SAME_RIGHTS,
-              fidl::InterfaceRequest<fuchsia::io::Node>(cloned_file.NewRequest().TakeChannel()));
+  ASSERT_EQ(ZX_OK, file->Clone(fuchsia::io::CLONE_FLAG_SAME_RIGHTS,
+                               fidl::InterfaceRequest<fuchsia::io::Node>(
+                                   cloned_file.NewRequest().TakeChannel())));
   CloseFile(file);
 
   // make sure node reference was opened
@@ -640,7 +646,7 @@ class FileWrapperWithFailingWriteFn {
 
   static FileWrapperWithFailingWriteFn Create(std::string initial_str, size_t capacity,
                                               zx_status_t write_error) {
-    return FileWrapperWithFailingWriteFn(initial_str, capacity, write_error);
+    return FileWrapperWithFailingWriteFn(std::move(initial_str), capacity, write_error);
   }
 
   async_dispatcher_t* dispatcher() { return loop_.dispatcher(); }
@@ -659,7 +665,7 @@ class FileWrapperWithFailingWriteFn {
     vfs::PseudoFile::WriteHandler writeFn;
     writeFn = [this, write_error](std::vector<uint8_t> input) {
       std::string str(input.size(), 0);
-      std::copy(input.begin(), input.begin() + input.size(), str.begin());
+      std::copy(input.begin(), input.end(), str.begin());
       buffer_ = std::move(str);
       return write_error;
     };

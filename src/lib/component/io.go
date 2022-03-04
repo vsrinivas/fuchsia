@@ -726,7 +726,7 @@ func (fState *fileState) Seek(_ fidl.Context, origin io.SeekOrigin, offset int64
 		}), err
 }
 
-func (*fileState) Truncate(_ fidl.Context, length uint64) (int32, error) {
+func (*fileState) TruncateDeprecatedUseResize(_ fidl.Context, length uint64) (int32, error) {
 	return int32(zx.ErrNotSupported), nil
 }
 

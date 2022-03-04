@@ -1053,7 +1053,7 @@ async fn file_write_at_with_insufficient_rights() {
 }
 
 #[fasync::run_singlethreaded(test)]
-async fn file_truncate_with_sufficient_rights() {
+async fn file_resize_with_sufficient_rights() {
     let harness = TestHarness::new().await;
 
     for file_flags in harness.file_rights.valid_combos_with(io::OPEN_RIGHT_WRITABLE) {
@@ -1062,13 +1062,16 @@ async fn file_truncate_with_sufficient_rights() {
 
         let file =
             open_node::<io::FileMarker>(&test_dir, file_flags, io::MODE_TYPE_FILE, TEST_FILE).await;
-        let status = file.truncate(0).await.expect("truncate failed");
-        assert_eq!(zx::Status::from_raw(status), zx::Status::OK);
+        file.resize(0)
+            .await
+            .expect("resize failed")
+            .map_err(zx::Status::from_raw)
+            .expect("resize error")
     }
 }
 
 #[fasync::run_singlethreaded(test)]
-async fn file_truncate_with_insufficient_rights() {
+async fn file_resize_with_insufficient_rights() {
     let harness = TestHarness::new().await;
     for file_flags in harness.file_rights.valid_combos_without(io::OPEN_RIGHT_WRITABLE) {
         let root = root_directory(vec![file(TEST_FILE, vec![])]);
@@ -1076,8 +1079,8 @@ async fn file_truncate_with_insufficient_rights() {
 
         let file =
             open_node::<io::FileMarker>(&test_dir, file_flags, io::MODE_TYPE_FILE, TEST_FILE).await;
-        let status = file.truncate(0).await.expect("truncate failed");
-        assert_eq!(zx::Status::from_raw(status), zx::Status::BAD_HANDLE);
+        let result = file.resize(0).await.expect("resize failed").map_err(zx::Status::from_raw);
+        assert_eq!(result, Err(zx::Status::BAD_HANDLE));
     }
 }
 

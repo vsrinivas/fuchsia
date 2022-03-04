@@ -315,10 +315,6 @@ impl Blob {
 
         match self.stream.next().await {
             None => {}
-            Some(Ok(FileRequest::CloseDeprecated { responder })) => {
-                let _ = responder.send(Status::OK.into_raw());
-                self.expect_done().await;
-            }
             Some(Ok(FileRequest::Close { responder })) => {
                 let _ = responder.send(&mut Ok(()));
                 self.expect_done().await;
@@ -341,11 +337,6 @@ impl Blob {
 
     async fn handle_read(&mut self, data: &[u8]) -> usize {
         match self.stream.next().await {
-            Some(Ok(FileRequest::ReadDeprecated { count, responder })) => {
-                let count = min(count.try_into().unwrap(), data.len());
-                responder.send(Status::OK.into_raw(), &data[..count]).unwrap();
-                return count;
-            }
             Some(Ok(FileRequest::Read { count, responder })) => {
                 let count = min(count.try_into().unwrap(), data.len());
                 responder.send(&mut Ok(data[..count].to_vec())).unwrap();
@@ -374,9 +365,6 @@ impl Blob {
 
         match self.stream.next().await {
             None => {}
-            Some(Ok(FileRequest::CloseDeprecated { responder })) => {
-                let _ = responder.send(Status::OK.into_raw());
-            }
             Some(Ok(FileRequest::Close { responder })) => {
                 let _ = responder.send(&mut Ok(()));
             }
@@ -397,23 +385,11 @@ impl Blob {
 
         loop {
             match self.stream.next().await {
-                Some(Ok(FileRequest::ReadDeprecated { count, responder })) => {
-                    let avail = data.len() - pos;
-                    let count = min(count.try_into().unwrap(), avail);
-                    responder.send(Status::OK.into_raw(), &data[pos..pos + count]).unwrap();
-                    pos += count;
-                }
                 Some(Ok(FileRequest::Read { count, responder })) => {
                     let avail = data.len() - pos;
                     let count = min(count.try_into().unwrap(), avail);
                     responder.send(&mut Ok(data[pos..pos + count].to_vec())).unwrap();
                     pos += count;
-                }
-                Some(Ok(FileRequest::ReadAtDeprecated { count, offset, responder })) => {
-                    let pos: usize = offset.try_into().unwrap();
-                    let avail = data.len() - pos;
-                    let count = min(count.try_into().unwrap(), avail);
-                    responder.send(Status::OK.into_raw(), &data[pos..pos + count]).unwrap();
                 }
                 Some(Ok(FileRequest::ReadAt { count, offset, responder })) => {
                     let pos: usize = offset.try_into().unwrap();
@@ -425,10 +401,6 @@ impl Blob {
                     let mut attr = fidl_fuchsia_io::NodeAttributes::new_empty();
                     attr.content_size = data.len().try_into().unwrap();
                     responder.send(Status::OK.into_raw(), &mut attr).unwrap();
-                }
-                Some(Ok(FileRequest::CloseDeprecated { responder })) => {
-                    let _ = responder.send(Status::OK.into_raw());
-                    return;
                 }
                 Some(Ok(FileRequest::Close { responder })) => {
                     let _ = responder.send(&mut Ok(()));
@@ -444,8 +416,10 @@ impl Blob {
 
     async fn handle_truncate(&mut self, status: Status) -> u64 {
         match self.stream.next().await {
-            Some(Ok(FileRequest::Truncate { length, responder })) => {
-                responder.send(status.into_raw()).unwrap();
+            Some(Ok(FileRequest::Resize { length, responder })) => {
+                responder
+                    .send(&mut if status == Status::OK { Ok(()) } else { Err(status.into_raw()) })
+                    .unwrap();
 
                 length
             }
@@ -459,17 +433,15 @@ impl Blob {
 
     async fn handle_write(&mut self, status: Status) -> Vec<u8> {
         match self.stream.next().await {
-            Some(Ok(FileRequest::WriteDeprecated { data, responder })) => {
-                responder.send(status.into_raw(), data.len() as u64).unwrap();
-
-                data
-            }
             Some(Ok(FileRequest::Write { data, responder })) => {
-                if status == Status::OK {
-                    responder.send(&mut Ok(data.len() as u64)).unwrap();
-                } else {
-                    responder.send(&mut Err(status.into_raw())).unwrap();
-                }
+                responder
+                    .send(&mut if status == Status::OK {
+                        Ok(data.len() as u64)
+                    } else {
+                        Err(status.into_raw())
+                    })
+                    .unwrap();
+
                 data
             }
             other => panic!("unexpected request: {:?}", other),
@@ -523,9 +495,6 @@ impl Blob {
             }
 
             match self.stream.next().await {
-                Some(Ok(FileRequest::CloseDeprecated { responder })) => {
-                    responder.send(Status::OK.into_raw()).unwrap();
-                }
                 Some(Ok(FileRequest::Close { responder })) => {
                     responder.send(&mut Ok(())).unwrap();
                 }

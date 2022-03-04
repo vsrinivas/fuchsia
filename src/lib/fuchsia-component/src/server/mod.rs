@@ -1530,7 +1530,9 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
                 let new_offset = self.handle_seek_request(connection, origin, offset);
                 responder.send(&mut Ok(new_offset))?;
             }
-            FileRequest::Truncate { length: _, responder } => unsupported!(responder)?,
+            FileRequest::TruncateDeprecatedUseResize { length: _, responder } => {
+                unsupported!(responder)?
+            }
             FileRequest::Resize { length: _, responder } => unsupported2!(responder)?,
             FileRequest::GetFlags { responder } => unsupported!(responder, 0)?,
             FileRequest::SetFlags { flags: _, responder } => unsupported!(responder)?,

@@ -101,7 +101,8 @@ protocol File1 {
     /// This method requires following rights: `OPEN_RIGHT_WRITABLE`, otherwise returns
     /// `ZX_ERR_BAD_HANDLE`.
     @selector("fuchsia.io1/File.Truncate")
-    Truncate(struct {
+    @deprecated("replaced by File2.Resize")
+    TruncateDeprecatedUseResize(struct {
         length uint64;
     }) -> (struct {
         s zx.status;

@@ -844,7 +844,7 @@ mod tests {
     }
 
     #[fasync::run(10, test)]
-    async fn test_truncate_extend() {
+    async fn test_resize_extend() {
         let fixture = TestFixture::new().await;
         let root = fixture.root();
 
@@ -874,8 +874,12 @@ mod tests {
             .expect("Seek was successful");
         assert_eq!(offset, 0);
 
-        let status = file.truncate(len as u64).await.expect("FIDL call failed");
-        Status::ok(status).expect("File truncate was successful");
+        let () = file
+            .resize(len as u64)
+            .await
+            .expect("resize failed")
+            .map_err(Status::from_raw)
+            .expect("resize error");
 
         let mut expected_buf = vec![0 as u8; len];
         expected_buf[..input.as_bytes().len()].copy_from_slice(input.as_bytes());
@@ -911,7 +915,7 @@ mod tests {
     }
 
     #[fasync::run(10, test)]
-    async fn test_truncate_shrink() {
+    async fn test_resize_shrink() {
         let fixture = TestFixture::new().await;
         let root = fixture.root();
 
@@ -935,8 +939,12 @@ mod tests {
 
         write_file_bytes(&file, &input).await.expect("File write was successful");
 
-        let status = file.truncate(short_len as u64).await.expect("truncate failed");
-        Status::ok(status).expect("File truncate was successful");
+        let () = file
+            .resize(short_len as u64)
+            .await
+            .expect("resize failed")
+            .map_err(Status::from_raw)
+            .expect("resize error");
 
         let offset = file
             .seek(SeekOrigin::Start, 0)
@@ -950,9 +958,13 @@ mod tests {
         assert_eq!(buf.len(), short_len);
         assert_eq!(buf, input[..short_len]);
 
-        // Re-truncate to the original length and verify the data's zeroed.
-        let status = file.truncate(len as u64).await.expect("FIDL call failed");
-        Status::ok(status).expect("File truncate was successful");
+        // Resize to the original length and verify the data's zeroed.
+        let () = file
+            .resize(len as u64)
+            .await
+            .expect("resize failed")
+            .map_err(Status::from_raw)
+            .expect("resize error");
 
         let expected_buf = {
             let mut v = vec![0 as u8; len];
@@ -977,7 +989,7 @@ mod tests {
     }
 
     #[fasync::run(10, test)]
-    async fn test_truncate_shrink_repeated() {
+    async fn test_resize_shrink_repeated() {
         let fixture = TestFixture::new().await;
         let root = fixture.root();
 
@@ -1003,17 +1015,19 @@ mod tests {
         write_file_bytes(&file, &input).await.expect("File write was successful");
 
         while len > short_len {
-            let to_truncate = std::cmp::min(len - short_len, 512);
-            len -= to_truncate;
-            let status = file.truncate(len as u64).await.expect("FIDL call failed");
-            Status::ok(status).expect("File truncate was successful");
-            len -= to_truncate;
+            len -= std::cmp::min(len - short_len, 512);
+            let () = file
+                .resize(len as u64)
+                .await
+                .expect("resize failed")
+                .map_err(Status::from_raw)
+                .expect("resize error");
         }
 
         let offset = file
             .seek(SeekOrigin::Start, 0)
             .await
-            .expect("truncate failed")
+            .expect("Seek failed")
             .map_err(Status::from_raw)
             .expect("Seek was successful");
         assert_eq!(offset, 0);
@@ -1022,9 +1036,13 @@ mod tests {
         assert_eq!(buf.len(), short_len);
         assert_eq!(buf, input[..short_len]);
 
-        // Re-truncate to the original length and verify the data's zeroed.
-        let status = file.truncate(orig_len as u64).await.expect("FIDL call failed");
-        Status::ok(status).expect("File truncate was successful");
+        // Resize to the original length and verify the data's zeroed.
+        let () = file
+            .resize(orig_len as u64)
+            .await
+            .expect("resize failed")
+            .map_err(Status::from_raw)
+            .expect("resize error");
 
         let expected_buf = {
             let mut v = vec![0 as u8; orig_len];
