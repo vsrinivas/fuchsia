@@ -789,7 +789,6 @@ TEST_F(DisplayCompositorTest, ChecksDisplayImageSignalFences) {
     // - 1 call to set the layer primary config.
     // - 1 call to set the layer primary alpha.
     // - 1 call to set the layer primary position.
-    // - 1 call to set display color conversion.
     // - 1 call to check the config.
     // - 1 call to apply the config.
     // - 1 call to GetLatestAppliedConfigStamp
@@ -870,7 +869,6 @@ TEST_F(DisplayCompositorTest, ChecksDisplayImageSignalFences) {
   EXPECT_CALL(*mock, ImportEvent(_, _))
       .WillOnce(testing::Invoke(
           [&imported_event](zx::event event, uint64_t) { imported_event = std::move(event); }));
-  EXPECT_CALL(*mock, SetDisplayColorConversion(_, _, _, _)).Times(1);
   EXPECT_CALL(*mock, SetDisplayLayers(kDisplayId, active_layers)).Times(1);
   EXPECT_CALL(*mock, SetLayerPrimaryConfig(layers[0], _)).Times(1);
   EXPECT_CALL(*mock, SetLayerPrimaryPosition(layers[0], _, _, _)).Times(1);
