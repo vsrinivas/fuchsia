@@ -4,37 +4,82 @@
 
 import("//build/components.gni")
 import("//build/rust/rustc_test.gni")
+import("//tools/cmc/build/expect_includes.gni")
 
-rustc_test("bin") {
-  output_name = "netemul_runner_test"
+rustc_library("lib") {
+  testonly = true
+  name = "netemul_runner_tests"
   deps = [
+    ":test_includes",
     "//sdk/fidl/fuchsia.test.manager:fuchsia.test.manager-rustc",
-    "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/sys/test_manager:test_lib",
     "//src/sys/test_runners:test_lib",
+    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures-util",
-    "//third_party/rust_crates:test-case",
   ]
   sources = [ "src/lib.rs" ]
   configs -= [ "//build/config/rust:allow_unused_results" ]
 }
 
-fuchsia_test_component("netemul-runner-test") {
-  manifest = "meta/netemul-runner-test.cml"
+expect_includes("test_includes") {
+  includes = [ "common.shard.cml" ]
+}
+
+rustc_test("netemul_runner_test") {
   deps = [
-    ":bin",
+    ":lib",
+    "//sdk/fidl/fuchsia.test.manager:fuchsia.test.manager-rustc",
+    "//src/lib/fuchsia-async",
+    "//src/sys/test_manager:test_lib",
+    "//third_party/rust_crates:test-case",
+  ]
+  source_root = "src/test.rs"
+  sources = [ "src/test.rs" ]
+  configs -= [ "//build/config/rust:allow_unused_results" ]
+}
+
+fuchsia_unittest_package("netemul-runner-tests") {
+  deps = [
+    ":netemul_runner_test",
     "test-data",
-    "//src/connectivity/network/testing/netemul-v2/runner:package",
+    "//src/connectivity/network/testing/netemul-v2/runner:component",
     "//src/sys/test_manager:test_manager_for_test_cmp",
   ]
 }
 
-fuchsia_test_package("netemul-runner-tests") {
-  test_components = [ ":netemul-runner-test" ]
+rustc_test("netemul_runner_errors_test") {
+  deps = [
+    ":lib",
+    "//src/lib/fuchsia-async",
+    "//third_party/rust_crates:test-case",
+  ]
+  source_root = "src/errors.rs"
+  sources = [ "src/errors.rs" ]
+  configs -= [ "//build/config/rust:allow_unused_results" ]
+}
+
+fuchsia_unittest_package("netemul-runner-errors-tests") {
+  deps = [
+    ":netemul_runner_errors_test",
+    "test-data",
+    "//src/connectivity/network/testing/netemul-v2/runner:component",
+    "//src/sys/test_manager:test_manager_for_test_cmp",
+  ]
+
+  # TODO(https://fxbug.dev/74868): allowlist ERROR logs from netemul_test_runner
+  # when testing invalid test configurations that cause it to emit ERROR logs.
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
 }
 
 group("tests") {
   testonly = true
-  deps = [ ":netemul-runner-tests" ]
+  deps = [
+    ":netemul-runner-errors-tests",
+    ":netemul-runner-tests",
+  ]
 }

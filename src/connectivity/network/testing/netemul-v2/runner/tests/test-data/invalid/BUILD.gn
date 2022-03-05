@@ -1,0 +1,31 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+
+fuchsia_test_component("invalid-config") {
+  manifest = "meta/invalid-config.cml"
+}
+
+fuchsia_test_component("missing-config-field") {
+  manifest = "meta/missing-config-field.cml"
+}
+
+fuchsia_test_component("missing-config-file") {
+  manifest = "meta/missing-config-file.cml"
+}
+
+fuchsia_test_component("test-suite-not-used") {
+  manifest = "meta/test-suite-not-used.cml"
+}
+
+group("invalid") {
+  testonly = true
+  deps = [
+    ":invalid-config",
+    ":missing-config-field",
+    ":missing-config-file",
+    ":test-suite-not-used",
+  ]
+}

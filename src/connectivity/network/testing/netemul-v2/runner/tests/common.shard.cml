@@ -7,9 +7,6 @@
         "//src/sys/test_runners/rust/default.shard.cml",
         "syslog/client.shard.cml",
     ],
-    program: {
-        binary: "bin/netemul_runner_test",
-    },
     children: [
         {
             name: "test_manager",

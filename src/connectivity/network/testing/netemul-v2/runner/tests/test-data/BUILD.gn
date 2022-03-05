@@ -4,14 +4,6 @@
 
 import("//build/components.gni")
 
-# TODO(https://fxbug.dev/92247): read the configuration directly from the
-# `program` section of the component's manifest rather than from a packaged
-# config file, once the CML schema supports it.
-resource("empty-network-config") {
-  sources = [ "empty_config.json" ]
-  outputs = [ "empty_config.json" ]
-}
-
 tests = [
   "elf",
   "gtest",
@@ -31,16 +23,16 @@ foreach(test, tests) {
   fuchsia_test_component(test_root) {
     component_name = test_root
     manifest = "${test}/meta/test-root.cml"
-    deps = [
-      ":${test_driver}",
-      ":empty-network-config",
-    ]
+    deps = [ ":${test_driver}" ]
   }
 }
 
 group("test-data") {
   testonly = true
-  deps = []
+  deps = [
+    "config",
+    "invalid",
+  ]
   foreach(test, tests) {
     deps += [ ":${test}-test" ]
   }
