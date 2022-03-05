@@ -1169,7 +1169,7 @@ mod tests {
     use packet::{Buf, InnerPacketBuilder, ParsablePacket, Serializer};
     use packet_formats::{
         icmp::{Icmpv4DestUnreachableCode, Icmpv6DestUnreachableCode},
-        ip::{IpExtByteSlice, IpPacket, IpPacketBuilder},
+        ip::{IpExtByteSlice, IpPacketBuilder},
         ipv4::{Ipv4Header, Ipv4PacketRaw},
         ipv6::{Ipv6Header, Ipv6PacketRaw},
     };
@@ -1180,12 +1180,14 @@ mod tests {
     use crate::{
         assert_empty,
         context::testutil::{DummyFrameCtx, DummyInstant},
-        device::IpFrameMeta,
         ip::{
             device::state::IpDeviceStateIpExt,
             icmp::Icmpv6ErrorCode,
-            socket::{testutil::DummyIpSocketCtx, BufferIpSocketHandler, IpSockUnroutableError},
-            DummyDeviceId,
+            socket::{
+                testutil::DummyIpSocketCtx, BufferIpSocketHandler, IpSockRouteError,
+                IpSockUnroutableError,
+            },
+            DummyDeviceId, SendIpPacketMeta,
         },
         testutil::{set_logger_for_test, FakeCryptoRng},
     };
@@ -1285,7 +1287,7 @@ mod tests {
     type DummyCtx<I> = crate::context::testutil::DummyCtx<
         DummyUdpCtx<I>,
         (),
-        IpFrameMeta<<I as Ip>::Addr, DummyDeviceId>,
+        SendIpPacketMeta<I, DummyDeviceId, SpecifiedAddr<<I as Ip>::Addr>>,
     >;
 
     /// The trait bounds required of `DummyCtx<I>` in tests.
@@ -1479,18 +1481,19 @@ mod tests {
         .expect("send_udp_listener failed");
         let frames = ctx.frames();
         assert_eq!(frames.len(), 2);
-        let check_frame = |(meta, frame_body): &(IpFrameMeta<I::Addr, DummyDeviceId>, Vec<u8>)| {
-            assert_eq!(meta.local_addr, remote_ip);
+        let check_frame = |(meta, frame_body): &(
+            SendIpPacketMeta<I, DummyDeviceId, SpecifiedAddr<I::Addr>>,
+            Vec<u8>,
+        )| {
+            let SendIpPacketMeta { device: _, src_ip, dst_ip, next_hop, proto, ttl: _ } = meta;
+            assert_eq!(next_hop, &remote_ip);
+            assert_eq!(src_ip, &local_ip);
+            assert_eq!(dst_ip, &remote_ip);
+            assert_eq!(proto, &IpProto::Udp.into());
             let mut buf = &frame_body[..];
-            let ip_packet = <I::Packet as ParsablePacket<_, _>>::parse(&mut buf, ())
-                .expect("Parsed send IP packet");
-            let (src_ip, dst_ip) = (ip_packet.src_ip(), ip_packet.dst_ip());
-            assert_eq!(src_ip, local_ip.get());
-            assert_eq!(dst_ip, remote_ip.get());
-            assert_eq!(ip_packet.proto(), IpProto::Udp.into());
-            mem::drop(ip_packet);
-            let udp_packet = UdpPacket::parse(&mut buf, UdpParseArgs::new(src_ip, dst_ip))
-                .expect("Parsed sent UDP packet");
+            let udp_packet =
+                UdpPacket::parse(&mut buf, UdpParseArgs::new(src_ip.get(), dst_ip.get()))
+                    .expect("Parsed sent UDP packet");
             assert_eq!(udp_packet.src_port().unwrap().get(), 100);
             assert_eq!(udp_packet.dst_port().get(), 200);
             assert_eq!(udp_packet.body(), &body[..]);
@@ -1574,17 +1577,14 @@ mod tests {
         assert_eq!(frames.len(), 1);
 
         // Check first frame.
-        let (meta, frame_body) = &frames[0];
-        assert_eq!(meta.local_addr, remote_ip);
+        let (SendIpPacketMeta { device: _, src_ip, dst_ip, next_hop, proto, ttl: _ }, frame_body) =
+            &frames[0];
+        assert_eq!(next_hop, &remote_ip);
+        assert_eq!(src_ip, &local_ip);
+        assert_eq!(dst_ip, &remote_ip);
+        assert_eq!(proto, &IpProto::Udp.into());
         let mut buf = &frame_body[..];
-        let ip_packet = <I::Packet as ParsablePacket<_, _>>::parse(&mut buf, ())
-            .expect("Parsed send IP packet");
-        let (src_ip, dst_ip) = (ip_packet.src_ip(), ip_packet.dst_ip());
-        assert_eq!(src_ip, local_ip.get());
-        assert_eq!(dst_ip, remote_ip.get());
-        assert_eq!(ip_packet.proto(), IpProto::Udp.into());
-        mem::drop(ip_packet);
-        let udp_packet = UdpPacket::parse(&mut buf, UdpParseArgs::new(src_ip, dst_ip))
+        let udp_packet = UdpPacket::parse(&mut buf, UdpParseArgs::new(src_ip.get(), dst_ip.get()))
             .expect("Parsed sent UDP packet");
         assert_eq!(udp_packet.src_port().unwrap().get(), 100);
         assert_eq!(udp_packet.dst_port().get(), 200);
@@ -1615,7 +1615,9 @@ mod tests {
 
         assert_eq!(
             conn_err,
-            UdpSockCreationError::Ip(IpSockUnroutableError::NoRouteToRemoteAddr.into())
+            UdpSockCreationError::Ip(
+                IpSockRouteError::Unroutable(IpSockUnroutableError::NoRouteToRemoteAddr).into()
+            )
         );
     }
 
@@ -1644,7 +1646,9 @@ mod tests {
 
         assert_eq!(
             conn_err,
-            UdpSockCreationError::Ip(IpSockUnroutableError::LocalAddrNotAssigned.into())
+            UdpSockCreationError::Ip(
+                IpSockRouteError::Unroutable(IpSockUnroutableError::LocalAddrNotAssigned).into()
+            )
         );
     }
 
@@ -1764,17 +1768,14 @@ mod tests {
         assert_eq!(frames.len(), 1);
 
         // Check first frame.
-        let (meta, frame_body) = &frames[0];
-        assert_eq!(meta.local_addr, remote_ip);
+        let (SendIpPacketMeta { device: _, src_ip, dst_ip, next_hop, proto, ttl: _ }, frame_body) =
+            &frames[0];
+        assert_eq!(next_hop, &remote_ip);
+        assert_eq!(src_ip, &local_ip);
+        assert_eq!(dst_ip, &remote_ip);
+        assert_eq!(proto, &I::Proto::from(IpProto::Udp));
         let mut buf = &frame_body[..];
-        let ip_packet = <I::Packet as ParsablePacket<_, _>>::parse(&mut buf, ())
-            .expect("Parsed send IP packet");
-        let (src_ip, dst_ip) = (ip_packet.src_ip(), ip_packet.dst_ip());
-        assert_eq!(src_ip, local_ip.get());
-        assert_eq!(dst_ip, remote_ip.get());
-        assert_eq!(ip_packet.proto(), IpProto::Udp.into());
-        mem::drop(ip_packet);
-        let udp_packet = UdpPacket::parse(&mut buf, UdpParseArgs::new(src_ip, dst_ip))
+        let udp_packet = UdpPacket::parse(&mut buf, UdpParseArgs::new(src_ip.get(), dst_ip.get()))
             .expect("Parsed sent UDP packet");
         assert_eq!(udp_packet.src_port().unwrap().get(), 100);
         assert_eq!(udp_packet.dst_port().get(), 200);
@@ -1810,7 +1811,7 @@ mod tests {
         assert_eq!(
             send_error,
             UdpSendError::CreateSock(UdpSockCreationError::Ip(
-                IpSockUnroutableError::LocalAddrNotAssigned.into()
+                IpSockRouteError::Unroutable(IpSockUnroutableError::LocalAddrNotAssigned).into()
             ))
         );
     }
@@ -1837,7 +1838,7 @@ mod tests {
         );
 
         // Instruct the dummy frame context to throw errors.
-        let frames: &mut DummyFrameCtx<IpFrameMeta<I::Addr, DummyDeviceId>> = ctx.as_mut();
+        let frames: &mut DummyFrameCtx<SendIpPacketMeta<I, _, _>> = ctx.as_mut();
         frames.set_should_error_for_frame(|_frame_meta| true);
 
         let body = [1, 2, 3, 4, 5];
@@ -1887,7 +1888,7 @@ mod tests {
         .expect("connect_udp failed");
 
         // Instruct the dummy frame context to throw errors.
-        let frames: &mut DummyFrameCtx<IpFrameMeta<I::Addr, DummyDeviceId>> = ctx.as_mut();
+        let frames: &mut DummyFrameCtx<SendIpPacketMeta<I, _, _>> = ctx.as_mut();
         frames.set_should_error_for_frame(|_frame_meta| true);
 
         // Now try to send something over this new connection:

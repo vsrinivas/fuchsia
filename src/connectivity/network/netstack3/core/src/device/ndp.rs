@@ -3089,9 +3089,12 @@ mod tests {
             testutil::receive_frame_or_panic,
             DeviceId, DeviceIdInner, DeviceLayerTimerId, DeviceLayerTimerIdInner, EthernetDeviceId,
         },
-        ip::device::{
-            get_assigned_ipv6_addr_subnets, get_ipv6_device_state, get_ipv6_hop_limit, get_mtu,
-            is_ipv6_routing_enabled, set_ipv6_routing_enabled, state::Ipv6AddressEntry,
+        ip::{
+            device::{
+                get_assigned_ipv6_addr_subnets, get_ipv6_device_state, get_ipv6_hop_limit, get_mtu,
+                is_ipv6_routing_enabled, set_ipv6_routing_enabled, state::Ipv6AddressEntry,
+            },
+            SendIpPacketMeta,
         },
         testutil::{
             get_counter_val, set_logger_for_test, DummyEventDispatcher,
@@ -3325,11 +3328,14 @@ mod tests {
 
         crate::ip::send_ipv6_packet_from_device(
             net.context("local"),
-            device_id,
-            local_ip().get(),
-            remote_ip().get(),
-            remote_ip().into_specified(),
-            Ipv6Proto::Icmpv6,
+            SendIpPacketMeta {
+                device: device_id,
+                src_ip: Some(local_ip().into_specified()),
+                dst_ip: remote_ip().into_specified(),
+                next_hop: remote_ip().into_specified(),
+                proto: Ipv6Proto::Icmpv6,
+                ttl: None,
+            },
             body,
             None,
         )
@@ -4391,11 +4397,14 @@ mod tests {
             assert_eq!(get_ipv6_hop_limit(ctx, device_id).get(), hop_limit);
             crate::ip::send_ipv6_packet_from_device(
                 ctx,
-                device_id,
-                config.local_ip.get(),
-                config.remote_ip.get(),
-                config.remote_ip,
-                IpProto::Tcp.into(),
+                SendIpPacketMeta {
+                    device: device_id,
+                    src_ip: Some(config.local_ip),
+                    dst_ip: config.remote_ip,
+                    next_hop: config.remote_ip,
+                    proto: IpProto::Tcp.into(),
+                    ttl: None,
+                },
                 Buf::new(vec![0; 10], ..),
                 None,
             )

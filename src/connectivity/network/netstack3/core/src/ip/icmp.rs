@@ -345,7 +345,7 @@ impl IcmpIpExt for Ipv6 {
 }
 
 /// An extension trait providing ICMP handler properties.
-pub(super) trait IcmpHandlerIpExt: Ip {
+pub(crate) trait IcmpHandlerIpExt: Ip {
     type SourceAddress: Witness<Self::Addr>;
     type IcmpError;
 }
@@ -361,7 +361,7 @@ impl IcmpHandlerIpExt for Ipv6 {
 }
 
 /// A kind of ICMPv4 error.
-pub(super) enum Icmpv4ErrorKind {
+pub(crate) enum Icmpv4ErrorKind {
     ParameterProblem {
         code: Icmpv4ParameterProblemCode,
         pointer: u8,
@@ -380,13 +380,13 @@ pub(super) enum Icmpv4ErrorKind {
 }
 
 /// An ICMPv4 error.
-pub(super) struct Icmpv4Error {
+pub(crate) struct Icmpv4Error {
     pub(super) kind: Icmpv4ErrorKind,
     pub(super) header_len: usize,
 }
 
 /// A kind of ICMPv6 error.
-pub(super) enum Icmpv6ErrorKind {
+pub(crate) enum Icmpv6ErrorKind {
     ParameterProblem { code: Icmpv6ParameterProblemCode, pointer: u32, allow_dst_multicast: bool },
     TtlExpired { proto: Ipv6Proto, header_len: usize },
     NetUnreachable { proto: Ipv6Proto, header_len: usize },
@@ -396,7 +396,7 @@ pub(super) enum Icmpv6ErrorKind {
 }
 
 /// The handler exposed by ICMP.
-pub(super) trait BufferIcmpHandler<I: IcmpHandlerIpExt, B: BufferMut>:
+pub(crate) trait BufferIcmpHandler<I: IcmpHandlerIpExt, B: BufferMut>:
     IpDeviceIdContext<I>
 {
     /// Sends an error message in response to an incoming packet.
@@ -2343,14 +2343,14 @@ mod tests {
     use crate::{
         assert_empty,
         context::testutil::{DummyCtx, DummyInstant},
-        device::{DeviceId, FrameDestination, IpFrameMeta},
+        device::{DeviceId, FrameDestination},
         ip::{
             device::{set_routing_enabled, state::IpDeviceStateIpExt},
             gmp::mld::MldPacketHandler,
             path_mtu::testutil::DummyPmtuState,
             receive_ipv4_packet, receive_ipv6_packet,
             socket::testutil::DummyIpSocketCtx,
-            DummyDeviceId,
+            DummyDeviceId, SendIpPacketMeta,
         },
         testutil::{get_counter_val, DUMMY_CONFIG_V4, DUMMY_CONFIG_V6},
         transport::udp::UdpStateBuilder,
@@ -3035,6 +3035,13 @@ mod tests {
             IcmpConnectionType::Remote => (config.remote_ip, REMOTE_CTX_NAME),
         };
 
+        let loopback_device_id = net
+            .context(LOCAL_CTX_NAME)
+            .state
+            .add_loopback_device(u16::MAX.into())
+            .expect("create the loopback interface");
+        crate::device::initialize_device(net.context(LOCAL_CTX_NAME), loopback_device_id);
+
         let conn = I::new_icmp_connection(
             net.context(LOCAL_CTX_NAME),
             Some(config.local_ip),
@@ -3217,7 +3224,11 @@ mod tests {
     /// context types.
     macro_rules! impl_context_traits {
         ($ip:ident, $inner:ident, $outer:ident, $state:ident, $info_type:ident, $should_send:expr) => {
-            type $outer = DummyCtx<$inner, (), IpFrameMeta<<$ip as Ip>::Addr, DummyDeviceId>>;
+            type $outer = DummyCtx<
+                $inner,
+                (),
+                SendIpPacketMeta<$ip, DummyDeviceId, SpecifiedAddr<<$ip as Ip>::Addr>>,
+            >;
 
             impl $inner {
                 fn with_errors_per_second(errors_per_second: u64) -> $inner {
@@ -4152,8 +4163,8 @@ mod tests {
         fn run_test<
             I: IpExt,
             C,
-            W: Fn(u64) -> DummyCtx<C, (), IpFrameMeta<I::Addr, DummyDeviceId>>,
-            S: Fn(&mut DummyCtx<C, (), IpFrameMeta<I::Addr, DummyDeviceId>>),
+            W: Fn(u64) -> DummyCtx<C, (), SendIpPacketMeta<I, DummyDeviceId, SpecifiedAddr<I::Addr>>>,
+            S: Fn(&mut DummyCtx<C, (), SendIpPacketMeta<I, DummyDeviceId, SpecifiedAddr<I::Addr>>>),
         >(
             with_errors_per_second: W,
             send: S,

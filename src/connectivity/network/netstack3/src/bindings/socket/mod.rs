@@ -14,8 +14,9 @@ use futures::{TryFutureExt as _, TryStreamExt as _};
 use net_types::ip::{Ip, IpAddress, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr};
 use net_types::SpecifiedAddr;
 use netstack3_core::{
-    IpSockCreationError, IpSockSendError, IpSockUnroutableError, LocalAddressError, NetstackError,
-    RemoteAddressError, SocketError, UdpSendError, UdpSendListenerError, UdpSockCreationError,
+    IpSockCreationError, IpSockRouteError, IpSockSendError, IpSockUnroutableError,
+    LocalAddressError, NetstackError, RemoteAddressError, SocketError, UdpSendError,
+    UdpSendListenerError, UdpSockCreationError,
 };
 
 use crate::bindings::{
@@ -319,6 +320,15 @@ impl IntoErrno for SocketError {
     }
 }
 
+impl IntoErrno for IpSockRouteError {
+    fn into_errno(self) -> Errno {
+        match self {
+            IpSockRouteError::NoLocalAddrAvailable => Errno::Eaddrnotavail,
+            IpSockRouteError::Unroutable(e) => e.into_errno(),
+        }
+    }
+}
+
 impl IntoErrno for IpSockUnroutableError {
     fn into_errno(self) -> Errno {
         match self {
@@ -332,8 +342,7 @@ impl IntoErrno for IpSockCreationError {
     fn into_errno(self) -> Errno {
         match self {
             IpSockCreationError::LocalAddrNotUnicast => Errno::Einval,
-            IpSockCreationError::NoLocalAddrAvailable => Errno::Eaddrnotavail,
-            IpSockCreationError::Unroutable(e) => e.into_errno(),
+            IpSockCreationError::Route(e) => e.into_errno(),
         }
     }
 }

@@ -52,7 +52,10 @@ use crate::{
     device::{DeviceId, FrameDestination},
     error::{ExistsError, NotFoundError},
     ip::{
-        device::state::AddressState,
+        device::{
+            get_ipv4_device_state, get_ipv6_device_state, iter_ipv4_devices, iter_ipv6_devices,
+            state::{AddressState, AssignedAddress as _, IpDeviceState},
+        },
         forwarding::{Destination, ForwardingTable},
         gmp::igmp::IgmpPacketHandler,
         icmp::{
@@ -65,7 +68,10 @@ use crate::{
         ipv6::Ipv6PacketAction,
         path_mtu::{PmtuCache, PmtuHandler, PmtuTimerId},
         reassembly::{FragmentCacheKey, FragmentProcessingState, IpPacketFragmentCache},
-        socket::{BufferIpSocketHandler, IpSock, IpSockUpdate, IpSocketHandler, Ipv4SocketContext},
+        socket::{
+            BufferIpSocketHandler, IpSock, IpSockRoute, IpSockRouteError, IpSockUnroutableError,
+            IpSockUpdate, IpSocketContext, IpSocketHandler,
+        },
     },
     BufferDispatcher, Ctx, EventDispatcher, Instant, StackState, TimerId, TimerIdInner,
 };
@@ -296,6 +302,10 @@ pub trait IpDeviceId: Copy + Display + Debug + PartialEq + Send + Sync {
 /// as when ICMP delivers an MLD packet to the `mld` module for processing).
 pub trait IpDeviceIdContext<I: Ip> {
     type DeviceId: IpDeviceId + 'static;
+
+    /// Returns the ID of the loopback interface, if one exists on the system
+    /// and is initialized.
+    fn loopback_id(&self) -> Option<Self::DeviceId>;
 }
 
 /// The status of an IP address on an interface.
@@ -353,15 +363,22 @@ pub(crate) trait IpStateContext<I: IpLayerStateIpExt<Self::Instant, Self::Device
 
 /// The IP device context provided to the IP layer.
 pub(crate) trait IpDeviceContext<I: IpLayerIpExt>: IpDeviceIdContext<I> {
-    /// Gets the status of an address on the interface.
+    /// Gets the status of an address.
+    ///
+    /// If the device ID is specified, only the specified device will be checked
+    /// for the address. If the device ID is unspecified, then all devices will
+    /// be checked for the address.
     fn address_status(
         &self,
-        device_id: Self::DeviceId,
+        device_id: Option<Self::DeviceId>,
         addr: SpecifiedAddr<I::Addr>,
     ) -> I::AddressStatus;
 
     /// Returns true iff the device has routing enabled.
     fn is_device_routing_enabled(&self, device_id: Self::DeviceId) -> bool;
+
+    /// Returns the hop limit.
+    fn get_hop_limit(&self, device_id: Self::DeviceId) -> NonZeroU8;
 }
 
 /// The transport context provided to the IP layer.
@@ -383,6 +400,140 @@ impl<
         C: IpStateContext<I> + IpDeviceContext<I> + TransportContext<I>,
     > IpLayerContext<I> for C
 {
+}
+
+impl<C: IpLayerContext<Ipv4> + device::IpDeviceContext<Ipv4>> IpSocketContext<Ipv4> for C {
+    fn lookup_route(
+        &self,
+        local_ip: Option<SpecifiedAddr<Ipv4Addr>>,
+        addr: SpecifiedAddr<Ipv4Addr>,
+    ) -> Result<IpSockRoute<Ipv4, C::DeviceId>, IpSockRouteError> {
+        let get_local_addr = |dev_state: &IpDeviceState<_, Ipv4>, local_ip| {
+            if let Some(local_ip) = local_ip {
+                if dev_state.iter_addrs().any(|addr_sub| addr_sub.addr() == local_ip) {
+                    Ok(local_ip)
+                } else {
+                    Err(IpSockUnroutableError::LocalAddrNotAssigned.into())
+                }
+            } else {
+                dev_state
+                    .iter_addrs()
+                    .next()
+                    .map_or(Err(IpSockRouteError::NoLocalAddrAvailable), |subnet| Ok(subnet.addr()))
+            }
+        };
+
+        // Check if locally destined.
+        //
+        // TODO(https://fxbug.dev/93870): Encode the delivery of locally
+        // destined packets to loopback in the route table.
+        if let Some(dev_state) = iter_ipv4_devices(self).find_map(|(_device_id, dev_state)| {
+            dev_state.iter_addrs().any(|addr_sub| addr_sub.addr() == addr).then(|| dev_state)
+        }) {
+            let loopback = if let Some(loopback) = self.loopback_id() {
+                loopback
+            } else {
+                return Err(IpSockUnroutableError::NoRouteToRemoteAddr.into());
+            };
+
+            return Ok(IpSockRoute {
+                // TODO(https://fxbug.dev/94965): Allow local IPs from any
+                // interface for locally-destined packets.
+                local_ip: get_local_addr(dev_state, local_ip)?,
+                destination: Destination { device: loopback, next_hop: addr },
+            });
+        }
+
+        lookup_route(self, addr)
+            .map(|destination| {
+                let Destination { device, next_hop: _ } = &destination;
+                let dev_state = get_ipv4_device_state(self, *device);
+
+                Ok(IpSockRoute { local_ip: get_local_addr(dev_state, local_ip)?, destination })
+            })
+            .unwrap_or(Err(IpSockUnroutableError::NoRouteToRemoteAddr.into()))
+    }
+}
+
+impl<C: IpLayerContext<Ipv6> + device::IpDeviceContext<Ipv6>> IpSocketContext<Ipv6> for C {
+    fn lookup_route(
+        &self,
+        local_ip: Option<SpecifiedAddr<Ipv6Addr>>,
+        addr: SpecifiedAddr<Ipv6Addr>,
+    ) -> Result<IpSockRoute<Ipv6, C::DeviceId>, IpSockRouteError> {
+        let get_local_addr = |device, local_ip| {
+            let dev_state = get_ipv6_device_state(self, device);
+            if let Some(local_ip) = local_ip {
+                // TODO(joshlf):
+                // - Allow the specified local IP to be the local IP of a
+                //   different device so long as we're operating in the weak
+                //   host model.
+                // - What about when the socket is bound to a device? How does
+                //   that affect things?
+                //
+                // TODO(fxbug.dev/69196): Give `local_ip` the type
+                // `Option<UnicastAddr<Ipv6Addr>>` instead of doing this dynamic
+                // check here.
+                let local_ip = UnicastAddr::from_witness(local_ip)
+                    .ok_or(IpSockUnroutableError::LocalAddrNotAssigned)?;
+                if dev_state.find_addr(&local_ip).map_or(true, |entry| entry.state.is_tentative()) {
+                    Err(IpSockUnroutableError::LocalAddrNotAssigned.into())
+                } else {
+                    Ok(local_ip.into_specified())
+                }
+            } else {
+                // TODO(joshlf):
+                // - If device binding is used, then we should only consider the
+                //   addresses of the device being bound to.
+                // - If we are operating in the strong host model, then perhaps
+                //   we should restrict ourselves to addresses associated with
+                //   the device found by looking up the remote in the forwarding
+                //   table? This I'm less sure of.
+                crate::ip::socket::ipv6_source_address_selection::select_ipv6_source_address(
+                    addr,
+                    device,
+                    iter_ipv6_devices(self)
+                        .map(|(device_id, ip_state)| {
+                            ip_state.iter_addrs().map(move |a| (a, device_id))
+                        })
+                        .flatten(),
+                )
+                .map(|a| a.into_specified())
+                .ok_or(IpSockRouteError::NoLocalAddrAvailable)
+            }
+        };
+
+        // Check if locally destined.
+        //
+        // TODO(https://fxbug.dev/93870): Encode the delivery of locally
+        // destined packets to loopback in the route table.
+        if let Some(device_id) = iter_ipv6_devices(self).find_map(|(device_id, dev_state)| {
+            dev_state
+                .iter_assigned_ipv6_addrs()
+                .any(|addr_sub| addr_sub.addr() == addr)
+                .then(|| device_id)
+        }) {
+            let loopback = if let Some(loopback) = self.loopback_id() {
+                loopback
+            } else {
+                return Err(IpSockUnroutableError::NoRouteToRemoteAddr.into());
+            };
+
+            return Ok(IpSockRoute {
+                // TODO(https://fxbug.dev/94965): Allow local IPs from any
+                // interface for locally-destined packets.
+                local_ip: get_local_addr(device_id, local_ip)?,
+                destination: Destination { device: loopback, next_hop: addr },
+            });
+        }
+
+        lookup_route(self, addr)
+            .map(|destination| {
+                let Destination { device, next_hop: _ } = &destination;
+                Ok(IpSockRoute { local_ip: get_local_addr(*device, local_ip)?, destination })
+            })
+            .unwrap_or(Err(IpSockUnroutableError::NoRouteToRemoteAddr.into()))
+    }
 }
 
 impl<D: EventDispatcher> IpStateContext<Ipv4> for Ctx<D> {
@@ -418,7 +569,7 @@ impl<D: EventDispatcher> TransportContext<Ipv6> for Ctx<D> {
 }
 
 /// The transport context provided to the IP layer requiring a buffer type.
-trait BufferTransportContext<I: IpLayerIpExt, B: BufferMut>:
+pub(crate) trait BufferTransportContext<I: IpLayerIpExt, B: BufferMut>:
     IpDeviceIdContext<I> + CounterContext
 {
     /// Dispatches a received incoming IP packet to the appropriate protocol.
@@ -433,7 +584,9 @@ trait BufferTransportContext<I: IpLayerIpExt, B: BufferMut>:
 }
 
 /// The IP device context provided to the IP layer requiring a buffer type.
-trait BufferIpDeviceContext<I: IpLayerIpExt, B: BufferMut>: IpDeviceIdContext<I> {
+pub(crate) trait BufferIpDeviceContext<I: IpLayerIpExt, B: BufferMut>:
+    IpDeviceContext<I>
+{
     /// Sends an IP frame to the next hop.
     fn send_ip_frame<S: Serializer<Buffer = B>>(
         &mut self,
@@ -444,7 +597,7 @@ trait BufferIpDeviceContext<I: IpLayerIpExt, B: BufferMut>: IpDeviceIdContext<I>
 }
 
 /// The execution context for the IP layer requiring buffer.
-trait BufferIpLayerContext<
+pub(crate) trait BufferIpLayerContext<
     I: IpLayerStateIpExt<Self::Instant, Self::DeviceId> + IcmpHandlerIpExt,
     B: BufferMut,
 >:
@@ -583,6 +736,10 @@ impl IpDeviceId for DummyDeviceId {
 #[cfg(test)]
 impl<I: Ip, S, Id, Meta> IpDeviceIdContext<I> for crate::context::testutil::DummyCtx<S, Id, Meta> {
     type DeviceId = DummyDeviceId;
+
+    fn loopback_id(&self) -> Option<DummyDeviceId> {
+        None
+    }
 }
 
 #[cfg(test)]
@@ -663,13 +820,11 @@ impl<I: Instant, DeviceId> AsMut<IpStateInner<Ipv4, I, DeviceId>> for Ipv4State<
     }
 }
 
-impl<D: EventDispatcher> crate::ip::socket::Ipv4SocketContext for Ctx<D> {
-    fn gen_ipv4_packet_id(&mut self) -> u16 {
-        // TODO(https://fxbug.dev/87588): Generate IPv4 IDs unpredictably
-        let state = &mut self.state.ipv4;
-        state.next_packet_id = state.next_packet_id.wrapping_add(1);
-        state.next_packet_id
-    }
+fn gen_ipv4_packet_id<C: IpStateContext<Ipv4>>(ctx: &mut C) -> u16 {
+    // TODO(https://fxbug.dev/87588): Generate IPv4 IDs unpredictably
+    let state = ctx.get_ip_layer_state_mut();
+    state.next_packet_id = state.next_packet_id.wrapping_add(1);
+    state.next_packet_id
 }
 
 pub(crate) struct Ipv6State<Instant: crate::Instant, D> {
@@ -1662,7 +1817,19 @@ fn receive_ipv4_packet_action<C: IpLayerContext<Ipv4>>(
     device: C::DeviceId,
     dst_ip: SpecifiedAddr<Ipv4Addr>,
 ) -> ReceivePacketAction<Ipv4Addr, C::DeviceId> {
-    match ctx.address_status(device, dst_ip) {
+    // If the packet arrived at the loopback interface, check if any local
+    // interface has the destination address assigned. This effectively lets
+    // the loopback interface operate as a weak host for incoming packets.
+    //
+    // Note that (as of writing) the stack sends all locally destined traffic to
+    // the loopback interface so we need this hack to allow the stack to accept
+    // packets that arrive at the loopback interface (after being looped back)
+    // but destined to an address that is assigned to another local interface.
+    //
+    // TODO(https://fxbug.dev/93870): This should instead be controlled by the
+    // routing table.
+    let address_device = if device.is_loopback() { None } else { Some(device) };
+    match ctx.address_status(address_device, dst_ip) {
         AddressStatus::Present(()) => {
             ctx.increment_counter("receive_ipv4_packet_action::deliver");
             ReceivePacketAction::Deliver
@@ -1679,7 +1846,19 @@ fn receive_ipv6_packet_action<C: IpLayerContext<Ipv6>>(
     device: C::DeviceId,
     dst_ip: SpecifiedAddr<Ipv6Addr>,
 ) -> ReceivePacketAction<Ipv6Addr, C::DeviceId> {
-    match ctx.address_status(device, dst_ip) {
+    // If the packet arrived at the loopback interface, check if any local
+    // interface has the destination address assigned. This effectively lets
+    // the loopback interface operate as a weak host for incoming packets.
+    //
+    // Note that (as of writing) the stack sends all locally destined traffic to
+    // the loopback interface so we need this hack to allow the stack to accept
+    // packets that arrive at the loopback interface (after being looped back)
+    // but destined to an address that is assigned to another local interface.
+    //
+    // TODO(https://fxbug.dev/93870): This should instead be controlled by the
+    // routing table.
+    let address_device = if device.is_loopback() { None } else { Some(device) };
+    match ctx.address_status(address_device, dst_ip) {
         AddressStatus::Present(Ipv6PresentAddressStatus::Multicast) => {
             ctx.increment_counter("receive_ipv6_packet_action::deliver_multicast");
             ReceivePacketAction::Deliver
@@ -1842,6 +2021,30 @@ pub(crate) fn iter_all_routes<D: EventDispatcher, A: IpAddress>(
     get_state_inner::<A::Version, _>(&ctx.state).table.iter_installed()
 }
 
+/// The metadata associated with an outgoing IP packet.
+pub(crate) struct SendIpPacketMeta<I: packet_formats::ip::IpExt, D, Src> {
+    pub(crate) device: D,
+    pub(crate) src_ip: Src,
+    pub(crate) dst_ip: SpecifiedAddr<I::Addr>,
+    pub(crate) next_hop: SpecifiedAddr<I::Addr>,
+    pub(crate) proto: I::Proto,
+    pub(crate) ttl: Option<NonZeroU8>,
+}
+
+impl<I: packet_formats::ip::IpExt, D> From<SendIpPacketMeta<I, D, SpecifiedAddr<I::Addr>>>
+    for SendIpPacketMeta<I, D, Option<SpecifiedAddr<I::Addr>>>
+{
+    fn from(
+        SendIpPacketMeta { device, src_ip, dst_ip, next_hop, proto, ttl }: SendIpPacketMeta<
+            I,
+            D,
+            SpecifiedAddr<I::Addr>,
+        >,
+    ) -> SendIpPacketMeta<I, D, Option<SpecifiedAddr<I::Addr>>> {
+        SendIpPacketMeta { device, src_ip: Some(src_ip), dst_ip, next_hop, proto, ttl }
+    }
+}
+
 /// Send an IP packet to a remote host over a specific device.
 ///
 /// `send_ip_packet_from_device` accepts a device, a source and destination IP
@@ -1857,71 +2060,78 @@ pub(crate) fn iter_all_routes<D: EventDispatcher, A: IpAddress>(
 /// is a non-loopback device.
 pub(crate) fn send_ipv4_packet_from_device<
     B: BufferMut,
-    D: BufferDispatcher<B>,
+    C: BufferIpLayerContext<Ipv4, B>,
     S: Serializer<Buffer = B>,
 >(
-    ctx: &mut Ctx<D>,
-    device: DeviceId,
-    src_ip: Ipv4Addr,
-    dst_ip: Ipv4Addr,
-    next_hop: SpecifiedAddr<Ipv4Addr>,
-    proto: Ipv4Proto,
+    ctx: &mut C,
+    SendIpPacketMeta { device, src_ip, dst_ip, next_hop, proto, ttl }: SendIpPacketMeta<
+        Ipv4,
+        C::DeviceId,
+        Option<SpecifiedAddr<Ipv4Addr>>,
+    >,
     body: S,
     mtu: Option<u32>,
 ) -> Result<(), S> {
+    let src_ip = src_ip.map_or(Ipv4::UNSPECIFIED_ADDRESS, |a| a.get());
     let builder = {
         assert!(
             (!Ipv4::LOOPBACK_SUBNET.contains(&src_ip) && !Ipv4::LOOPBACK_SUBNET.contains(&dst_ip))
                 || device.is_loopback()
         );
-        let mut builder =
-            Ipv4PacketBuilder::new(src_ip, dst_ip, get_hop_limit::<_, Ipv4>(ctx, device), proto);
-        builder.id(ctx.gen_ipv4_packet_id());
+        let mut builder = Ipv4PacketBuilder::new(
+            src_ip,
+            dst_ip,
+            ttl.unwrap_or_else(|| ctx.get_hop_limit(device)).get(),
+            proto,
+        );
+        builder.id(gen_ipv4_packet_id(ctx));
         builder
     };
     let body = body.encapsulate(builder);
 
     if let Some(mtu) = mtu {
         let body = body.with_mtu(mtu as usize);
-        crate::ip::device::send_ip_frame::<Ipv4, _, _, _>(ctx, device, next_hop, body)
-            .map_err(|ser| ser.into_inner().into_inner())
+        ctx.send_ip_frame(device, next_hop, body).map_err(|ser| ser.into_inner().into_inner())
     } else {
-        crate::ip::device::send_ip_frame::<Ipv4, _, _, _>(ctx, device, next_hop, body)
-            .map_err(|ser| ser.into_inner())
+        ctx.send_ip_frame(device, next_hop, body).map_err(|ser| ser.into_inner())
     }
 }
 
 pub(crate) fn send_ipv6_packet_from_device<
     B: BufferMut,
-    D: BufferDispatcher<B>,
+    C: BufferIpLayerContext<Ipv6, B>,
     S: Serializer<Buffer = B>,
 >(
-    ctx: &mut Ctx<D>,
-    device: DeviceId,
-    src_ip: Ipv6Addr,
-    dst_ip: Ipv6Addr,
-    next_hop: SpecifiedAddr<Ipv6Addr>,
-    proto: Ipv6Proto,
+    ctx: &mut C,
+    SendIpPacketMeta { device, src_ip, dst_ip, next_hop, proto, ttl }: SendIpPacketMeta<
+        Ipv6,
+        C::DeviceId,
+        Option<SpecifiedAddr<Ipv6Addr>>,
+    >,
     body: S,
     mtu: Option<u32>,
 ) -> Result<(), S> {
+    let src_ip = src_ip.map_or(Ipv6::UNSPECIFIED_ADDRESS, |a| a.get());
     let builder = {
         assert!(
             (!Ipv6::LOOPBACK_SUBNET.contains(&src_ip) && !Ipv6::LOOPBACK_SUBNET.contains(&dst_ip))
                 || device.is_loopback()
         );
-        Ipv6PacketBuilder::new(src_ip, dst_ip, get_hop_limit::<_, Ipv6>(ctx, device), proto)
+        Ipv6PacketBuilder::new(
+            src_ip,
+            dst_ip,
+            ttl.unwrap_or_else(|| ctx.get_hop_limit(device)).get(),
+            proto,
+        )
     };
 
     let body = body.encapsulate(builder);
 
     if let Some(mtu) = mtu {
         let body = body.with_mtu(mtu as usize);
-        crate::ip::device::send_ip_frame::<Ipv6, _, _, _>(ctx, device, next_hop, body)
-            .map_err(|ser| ser.into_inner().into_inner())
+        ctx.send_ip_frame(device, next_hop, body).map_err(|ser| ser.into_inner().into_inner())
     } else {
-        crate::ip::device::send_ip_frame::<Ipv6, _, _, _>(ctx, device, next_hop, body)
-            .map_err(|ser| ser.into_inner())
+        ctx.send_ip_frame(device, next_hop, body).map_err(|ser| ser.into_inner())
     }
 }
 
@@ -2056,11 +2266,14 @@ impl<B: BufferMut, D: BufferDispatcher<B>> InnerBufferIcmpContext<Ipv4, B> for C
         ) {
             send_ipv4_packet_from_device(
                 self,
-                device,
-                local_ip.get(),
-                original_src_ip.get(),
-                next_hop,
-                Ipv4Proto::Icmp,
+                SendIpPacketMeta {
+                    device,
+                    src_ip: Some(local_ip),
+                    dst_ip: original_src_ip,
+                    next_hop,
+                    ttl: None,
+                    proto: Ipv4Proto::Icmp,
+                },
                 get_body_from_src_ip(local_ip),
                 ip_mtu,
             )?;
@@ -2142,11 +2355,14 @@ impl<B: BufferMut, D: BufferDispatcher<B>> InnerBufferIcmpContext<Ipv6, B> for C
         {
             send_ipv6_packet_from_device(
                 self,
-                device,
-                local_ip.get(),
-                src_ip.get(),
-                next_hop,
-                Ipv6Proto::Icmpv6,
+                SendIpPacketMeta {
+                    device,
+                    src_ip: Some(local_ip),
+                    dst_ip: src_ip,
+                    next_hop,
+                    ttl: None,
+                    proto: Ipv6Proto::Icmpv6,
+                },
                 get_body(local_ip),
                 ip_mtu,
             )?;
@@ -2211,20 +2427,6 @@ where
     } else {
         debug!("Can't send ICMP response to {}: no route to host", src_ip);
         None
-    }
-}
-
-/// Get the hop limit for new IP packets that will be sent out from `device`.
-fn get_hop_limit<D: EventDispatcher, I: Ip>(ctx: &Ctx<D>, device: DeviceId) -> u8 {
-    // TODO(ghanan): Should IPv4 packets use the same TTL value as IPv6 packets?
-    //               Currently for the IPv6 case, we get the default hop limit
-    //               from the device state which can be updated by NDP's Router
-    //               Advertisement.
-
-    match I::VERSION {
-        IpVersion::V4 => DEFAULT_TTL.get(),
-        // This value can be updated by NDP's Router Advertisements.
-        IpVersion::V6 => crate::ip::device::get_ipv6_hop_limit(ctx, device).get(),
     }
 }
 

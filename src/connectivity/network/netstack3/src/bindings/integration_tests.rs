@@ -27,9 +27,9 @@ use netstack3_core::{
     context::{InstantContext, RngContext, TimerContext},
     get_all_ip_addr_subnets,
     icmp::{BufferIcmpContext, IcmpConnId, IcmpContext, IcmpIpExt},
-    BufferUdpContext, Ctx, DeviceId, DeviceLayerEventDispatcher, EntryDest, EntryEither, IpExt,
-    IpSockCreationError, Ipv6DeviceConfiguration, StackStateBuilder, TimerId, UdpConnId,
-    UdpContext, UdpListenerId,
+    initialize_device, BufferUdpContext, Ctx, DeviceId, DeviceLayerEventDispatcher, EntryDest,
+    EntryEither, IpExt, IpSockCreationError, Ipv6DeviceConfiguration, StackStateBuilder, TimerId,
+    UdpConnId, UdpContext, UdpListenerId,
 };
 use packet::{Buf, BufferMut, Serializer};
 use packet_formats::icmp::{IcmpEchoReply, IcmpMessage, IcmpUnusedCode};
@@ -40,6 +40,7 @@ use crate::bindings::{
     socket::datagram::{IcmpEcho, SocketCollectionIpExt, Udp},
     util::{ConversionContext as _, IntoFidl as _, TryFromFidlWithContext as _, TryIntoFidl as _},
     BindingsDispatcher, DeviceStatusNotifier, LockableContext, RequestStreamExt as _,
+    DEFAULT_LOOPBACK_MTU,
 };
 
 /// log::Log implementation that uses stdout.
@@ -612,6 +613,15 @@ impl TestSetupBuilder {
         for stack_cfg in self.stacks.into_iter() {
             println!("Adding stack: {:?}", stack_cfg);
             let mut stack = TestStack::new();
+            stack
+                .with_ctx(|ctx| {
+                    let loopback = ctx
+                        .state
+                        .add_loopback_device(DEFAULT_LOOPBACK_MTU)
+                        .expect("add loopback device");
+                    initialize_device(ctx, loopback);
+                })
+                .await;
 
             for (ep_name, addr) in stack_cfg.endpoints.into_iter() {
                 // get the endpoint from the sandbox config:

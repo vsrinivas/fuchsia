@@ -4,7 +4,6 @@
 
 //! IPv4 and IPv6 sockets.
 
-use alloc::boxed::Box;
 use alloc::vec::Vec;
 use core::cmp::Ordering;
 use core::convert::Infallible;
@@ -13,23 +12,19 @@ use core::num::NonZeroU8;
 
 use net_types::ip::{Ip, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr};
 use net_types::{SpecifiedAddr, UnicastAddr};
-use packet::{Buf, BufferMut, Either, SerializeError, Serializer};
+use packet::{Buf, BufferMut, SerializeError, Serializer};
 use packet_formats::ip::{Ipv4Proto, Ipv6Proto};
-use packet_formats::{ipv4::Ipv4PacketBuilder, ipv6::Ipv6PacketBuilder};
 use thiserror::Error;
 
 use crate::{
-    context::{CounterContext, FrameContext, InstantContext, RngContext},
-    device::{DeviceId, FrameDestination, IpFrameMeta},
+    context::{CounterContext, InstantContext, RngContext},
     ip::{
-        device::state::{
-            AddressState, AssignedAddress as _, IpDeviceState, IpDeviceStateIpExt, Ipv6AddressEntry,
-        },
+        device::state::{AddressState, IpDeviceStateIpExt, Ipv6AddressEntry},
         forwarding::{Destination, ForwardingTable},
-        IpDeviceIdContext, IpExt,
+        IpDeviceIdContext, IpExt, SendIpPacketMeta,
     },
     socket::Socket,
-    BufferDispatcher, Ctx, EventDispatcher,
+    Ctx, EventDispatcher,
 };
 
 /// A socket identifying a connection between a local and remote IP host.
@@ -205,6 +200,14 @@ pub enum IpSockCreationError {
     /// and does not depend on what subnets we're attached to.
     #[error("the specified local IP address is not a unicast address in its subnet")]
     LocalAddrNotUnicast,
+    /// An error occurred while looking up a route.
+    #[error("a route cannot be determined: {}", _0)]
+    Route(#[from] IpSockRouteError),
+}
+
+/// An error encountered when looking up a route for an IP socket.
+#[derive(Error, Copy, Clone, Debug, Eq, PartialEq)]
+pub enum IpSockRouteError {
     /// No local IP address was specified, and one could not be automatically
     /// selected.
     #[error("a local IP address could not be automatically selected")]
@@ -276,13 +279,13 @@ pub struct Ipv6SocketBuilder {
     // default value in `Default::default` because global defaults may be set
     // per-stack at runtime, meaning that default values cannot be known at
     // compile time.
-    hop_limit: Option<u8>,
+    hop_limit: Option<NonZeroU8>,
 }
 
 impl Ipv6SocketBuilder {
     /// Sets the Hop Limit field that will be set on outbound IPv6 packets.
     #[allow(dead_code)] // TODO(joshlf): Remove once this is used
-    pub(crate) fn hop_limit(&mut self, hop_limit: u8) -> &mut Ipv6SocketBuilder {
+    pub(crate) fn hop_limit(&mut self, hop_limit: NonZeroU8) -> &mut Ipv6SocketBuilder {
         self.hop_limit = Some(hop_limit);
         self
     }
@@ -292,10 +295,6 @@ impl Ipv6SocketBuilder {
 #[derive(Clone)]
 #[cfg_attr(test, derive(Debug, PartialEq))]
 pub struct IpSock<I: IpExt, D> {
-    // TODO(joshlf): This struct is larger than it needs to be. `remote_ip`,
-    // `local_ip`, and `proto` are all stored in `cached`'s `builder` when it's
-    // `Routable`. Instead, we could move these into the `Unroutable` variant of
-    // `CachedInfo`.
     defn: IpSockDefinition<I>,
     // This is `Ok` if the socket is currently routable and `Err` otherwise. If
     // `unroutable_behavior` is `Close`, then this is guaranteed to be `Ok`.
@@ -318,17 +317,10 @@ struct IpSockDefinition<I: IpExt> {
     // even well-defined for IPv4 in the absence of a subnet? B) Presumably we
     // have to always bind to a particular interface?
     local_ip: SpecifiedAddr<I::Addr>,
-    hop_limit: u8,
+    hop_limit: Option<NonZeroU8>,
     proto: I::Proto,
     #[cfg_attr(not(test), allow(unused))]
     unroutable_behavior: UnroutableBehavior,
-}
-
-#[derive(Clone, PartialEq)]
-#[cfg_attr(test, derive(Debug))]
-enum NextHop<I: Ip> {
-    Local,
-    Remote(SpecifiedAddr<I::Addr>),
 }
 
 /// Information which is cached inside an [`IpSock`].
@@ -338,9 +330,7 @@ enum NextHop<I: Ip> {
 #[derive(Clone)]
 #[cfg_attr(test, derive(Debug, PartialEq))]
 struct CachedInfo<I: IpExt, D> {
-    builder: I::PacketBuilder,
-    device: D,
-    next_hop: NextHop<I>,
+    destination: Destination<I::Addr, D>,
 }
 
 /// An update to the information cached in an [`IpSock`].
@@ -421,144 +411,46 @@ pub(super) fn update_all_ipv6_sockets<D: EventDispatcher>(
 // the caller. We will still need to have a separate enforcement mechanism for
 // raw IP sockets once we support those.
 
+/// The route for a socket.
+pub(super) struct IpSockRoute<I: Ip, D> {
+    /// The local IP to use for the socket.
+    pub(super) local_ip: SpecifiedAddr<I::Addr>,
+
+    /// The destination for packets originating from the socket.
+    pub(super) destination: Destination<I::Addr, D>,
+}
+
 /// The context required in order to implement [`IpSocketHandler`].
 ///
 /// Blanket impls of `IpSocketHandler` are provided in terms of
-/// `IpSocketContext` and [`Ipv4SocketContext`].
-pub(crate) trait IpSocketContext<I>:
+/// `IpSocketContext`.
+pub(super) trait IpSocketContext<I>:
     IpDeviceIdContext<I> + InstantContext + CounterContext + RngContext
 where
     I: IpDeviceStateIpExt<<Self as InstantContext>::Instant>,
 {
-    /// Looks up an address in the forwarding table.
+    /// Returns a route for a socket.
     fn lookup_route(
         &self,
-        addr: SpecifiedAddr<I::Addr>,
-    ) -> Option<Destination<I::Addr, Self::DeviceId>>;
-
-    /// Gets the state associated with an IP device.
-    fn get_ip_device_state(&self, device: Self::DeviceId) -> &IpDeviceState<Self::Instant, I>;
-
-    /// Iterates over all of the IP devices in the system.
-    fn iter_devices(
-        &self,
-    ) -> Box<dyn Iterator<Item = (Self::DeviceId, &IpDeviceState<Self::Instant, I>)> + '_>;
-}
-
-/// The context required in order to implement [`IpSocketHandler<Ipv4>`].
-///
-/// A blanket impl of `IpSocketHandler<Ipv4>` is provided in terms of
-/// [`Ipv4SocketContext`].
-///
-/// [`IpSocketHandler<Ipv4>`]: IpSocketHandler
-pub(crate) trait Ipv4SocketContext: IpSocketContext<Ipv4> {
-    /// Generates a new ID to be used for an outbound IPv4 packet.
-    fn gen_ipv4_packet_id(&mut self) -> u16;
+        src_ip: Option<SpecifiedAddr<I::Addr>>,
+        dst_ip: SpecifiedAddr<I::Addr>,
+    ) -> Result<IpSockRoute<I, Self::DeviceId>, IpSockRouteError>;
 }
 
 /// The context required in order to implement [`BufferIpSocketHandler`].
 ///
 /// Blanket impls of `BufferIpSocketHandler` are provided in terms of
 /// `BufferIpSocketContext`.
-pub(crate) trait BufferIpSocketContext<I, B: BufferMut>:
-    IpSocketContext<I> + FrameContext<B, IpFrameMeta<I::Addr, <Self as IpDeviceIdContext<I>>::DeviceId>>
+pub(super) trait BufferIpSocketContext<I, B: BufferMut>: IpSocketContext<I>
 where
-    I: IpDeviceStateIpExt<<Self as InstantContext>::Instant>,
+    I: IpDeviceStateIpExt<<Self as InstantContext>::Instant> + packet_formats::ip::IpExt,
 {
-    /// Receives an IP packet from `device` with the given frame destination.
-    fn receive_ip_packet(&mut self, device: Self::DeviceId, frame_dst: FrameDestination, buf: B);
-}
-
-impl<B: BufferMut, D: BufferDispatcher<B>> BufferIpSocketContext<Ipv4, B> for Ctx<D> {
-    fn receive_ip_packet(&mut self, device: DeviceId, frame_dst: FrameDestination, buf: B) {
-        crate::ip::receive_ipv4_packet(self, device, frame_dst, buf);
-    }
-}
-
-impl<B: BufferMut, D: BufferDispatcher<B>> BufferIpSocketContext<Ipv6, B> for Ctx<D> {
-    fn receive_ip_packet(&mut self, device: DeviceId, frame_dst: FrameDestination, buf: B) {
-        crate::ip::receive_ipv6_packet(self, device, frame_dst, buf);
-    }
-}
-
-/// Computes the [`CachedInfo`] for an IPv4 socket based on its definition.
-///
-/// Returns an error if the socket is currently unroutable.
-fn compute_ipv4_cached_info<C: IpSocketContext<Ipv4>>(
-    ctx: &C,
-    defn: &IpSockDefinition<Ipv4>,
-) -> Result<CachedInfo<Ipv4, C::DeviceId>, IpSockUnroutableError> {
-    ctx.lookup_route(defn.remote_ip).ok_or(IpSockUnroutableError::NoRouteToRemoteAddr).and_then(
-        |dst| {
-            let mut local_on_device = false;
-            let mut next_hop = NextHop::Remote(dst.next_hop);
-            for addr_sub in ctx.get_ip_device_state(dst.device).iter_addrs() {
-                let assigned_addr = addr_sub.addr();
-                local_on_device = local_on_device || assigned_addr == defn.local_ip;
-                if assigned_addr == defn.remote_ip {
-                    next_hop = NextHop::Local;
-                }
-                if local_on_device && next_hop == NextHop::Local {
-                    break;
-                }
-            }
-            if !local_on_device {
-                return Err(IpSockUnroutableError::LocalAddrNotAssigned);
-            }
-
-            Ok(CachedInfo {
-                builder: Ipv4PacketBuilder::new(
-                    defn.local_ip,
-                    defn.remote_ip,
-                    defn.hop_limit,
-                    defn.proto,
-                ),
-                device: dst.device,
-                next_hop,
-            })
-        },
-    )
-}
-
-/// Computes the [`CachedInfo`] for an IPv6 socket based on its definition.
-///
-/// Returns an error if the socket is currently unroutable.
-fn compute_ipv6_cached_info<C: IpSocketContext<Ipv6>>(
-    ctx: &C,
-    defn: &IpSockDefinition<Ipv6>,
-) -> Result<CachedInfo<Ipv6, C::DeviceId>, IpSockUnroutableError> {
-    ctx.lookup_route(defn.remote_ip).ok_or(IpSockUnroutableError::NoRouteToRemoteAddr).and_then(
-        |dst| {
-            // TODO(joshlf):
-            // - Allow the specified local IP to be the local IP of a
-            //   different device so long as we're operating in the weak
-            //   host model.
-            // - What about when the socket is bound to a device? How does
-            //   that affect things?
-            if ctx
-                .get_ip_device_state(dst.device)
-                .find_addr(&defn.local_ip)
-                .map_or(true, |entry| entry.state.is_tentative())
-            {
-                return Err(IpSockUnroutableError::LocalAddrNotAssigned);
-            }
-
-            let next_hop = if ctx
-                .get_ip_device_state(dst.device)
-                .iter_assigned_ipv6_addrs()
-                .any(|addr_sub| addr_sub.addr() == defn.remote_ip)
-            {
-                NextHop::Local
-            } else {
-                NextHop::Remote(dst.next_hop)
-            };
-
-            let builder =
-                Ipv6PacketBuilder::new(defn.local_ip, defn.remote_ip, defn.hop_limit, defn.proto);
-
-            Ok(CachedInfo { builder, device: dst.device, next_hop })
-        },
-    )
+    /// Send an IP packet to the next-hop node.
+    fn send_ip_packet<S: Serializer<Buffer = B>>(
+        &mut self,
+        meta: SendIpPacketMeta<I, Self::DeviceId, SpecifiedAddr<I::Addr>>,
+        body: S,
+    ) -> Result<(), S>;
 }
 
 impl<C: IpSocketContext<Ipv4>> IpSocketHandler<Ipv4> for C {
@@ -572,36 +464,13 @@ impl<C: IpSocketContext<Ipv4>> IpSocketHandler<Ipv4> for C {
         unroutable_behavior: UnroutableBehavior,
         builder: Option<Ipv4SocketBuilder>,
     ) -> Result<IpSock<Ipv4, C::DeviceId>, IpSockCreationError> {
-        let builder = builder.unwrap_or_default();
-        let local_ip = self
-            .lookup_route(remote_ip)
-            .ok_or(IpSockUnroutableError::NoRouteToRemoteAddr.into())
-            .and_then(|dst| {
-                let dev_state = self.get_ip_device_state(dst.device);
-                if let Some(local_ip) = local_ip {
-                    if dev_state.iter_addrs().any(|addr_sub| addr_sub.addr() == local_ip) {
-                        Ok(local_ip)
-                    } else {
-                        return Err(IpSockUnroutableError::LocalAddrNotAssigned.into());
-                    }
-                } else {
-                    dev_state
-                        .iter_addrs()
-                        .next()
-                        .and_then(|subnet| Some(subnet.addr()))
-                        .ok_or(IpSockCreationError::NoLocalAddrAvailable)
-                }
-            })?;
+        let IpSockRoute { local_ip, destination } = self.lookup_route(local_ip, remote_ip)?;
 
-        let defn = IpSockDefinition {
-            local_ip,
-            remote_ip,
-            hop_limit: builder.ttl.unwrap_or(super::DEFAULT_TTL).get(),
-            proto,
-            unroutable_behavior,
-        };
-        let cached = compute_ipv4_cached_info(self, &defn)?;
-        Ok(IpSock { defn, cached: Ok(cached) })
+        let Ipv4SocketBuilder { ttl } = builder.unwrap_or_default();
+
+        let defn =
+            IpSockDefinition { local_ip, remote_ip, proto, hop_limit: ttl, unroutable_behavior };
+        Ok(IpSock { defn, cached: Ok(CachedInfo { destination }) })
     }
 }
 
@@ -616,63 +485,12 @@ impl<C: IpSocketContext<Ipv6>> IpSocketHandler<Ipv6> for C {
         unroutable_behavior: UnroutableBehavior,
         builder: Option<Ipv6SocketBuilder>,
     ) -> Result<IpSock<Ipv6, C::DeviceId>, IpSockCreationError> {
-        let builder = builder.unwrap_or_default();
-        let local_ip = self
-            .lookup_route(remote_ip)
-            .ok_or(IpSockUnroutableError::NoRouteToRemoteAddr.into())
-            .and_then(|dst| {
-                if let Some(local_ip) = local_ip {
-                    // TODO(joshlf):
-                    // - Allow the specified local IP to be the local IP of a
-                    //   different device so long as we're operating in the weak
-                    //   host model.
-                    // - What about when the socket is bound to a device? How does
-                    //   that affect things?
-                    //
-                    // TODO(fxbug.dev/69196): Give `local_ip` the type
-                    // `Option<UnicastAddr<Ipv6Addr>>` instead of doing this dynamic
-                    // check here.
-                    let local_ip = UnicastAddr::from_witness(local_ip)
-                        .ok_or(IpSockCreationError::LocalAddrNotUnicast)?;
-                    if self
-                        .get_ip_device_state(dst.device)
-                        .find_addr(&local_ip)
-                        .map_or(true, |entry| entry.state.is_tentative())
-                    {
-                        return Err(IpSockUnroutableError::LocalAddrNotAssigned.into());
-                    }
-                    Ok(local_ip)
-                } else {
-                    // TODO(joshlf):
-                    // - If device binding is used, then we should only consider the
-                    //   addresses of the device being bound to.
-                    // - If we are operating in the strong host model, then perhaps
-                    //   we should restrict ourselves to addresses associated with
-                    //   the device found by looking up the remote in the forwarding
-                    //   table? This I'm less sure of.
+        let IpSockRoute { local_ip, destination } = self.lookup_route(local_ip, remote_ip)?;
 
-                    ipv6_source_address_selection::select_ipv6_source_address(
-                        remote_ip,
-                        dst.device,
-                        self.iter_devices()
-                            .map(|(device_id, ip_state)| {
-                                ip_state.iter_addrs().map(move |a| (a, device_id))
-                            })
-                            .flatten(),
-                    )
-                    .ok_or(IpSockCreationError::NoLocalAddrAvailable)
-                }
-            })?;
+        let Ipv6SocketBuilder { hop_limit } = builder.unwrap_or_default();
 
-        let defn = IpSockDefinition {
-            local_ip: local_ip.into_specified(),
-            remote_ip,
-            hop_limit: builder.hop_limit.unwrap_or(super::DEFAULT_TTL.get()),
-            proto,
-            unroutable_behavior,
-        };
-        let cached = compute_ipv6_cached_info(self, &defn)?;
-        Ok(IpSock { defn, cached: Ok(cached) })
+        let defn = IpSockDefinition { local_ip, remote_ip, proto, hop_limit, unroutable_behavior };
+        Ok(IpSock { defn, cached: Ok(CachedInfo { destination }) })
     }
 }
 
@@ -680,41 +498,34 @@ impl<
         B: BufferMut,
         C: BufferIpSocketContext<Ipv4, B>
             + BufferIpSocketContext<Ipv4, Buf<Vec<u8>>>
-            + Ipv4SocketContext,
+            + IpSocketContext<Ipv4>,
     > BufferIpSocketHandler<Ipv4, B> for C
 {
     fn send_ip_packet<S: Serializer<Buffer = B>>(
         &mut self,
-        socket: &IpSock<Ipv4, C::DeviceId>,
+        IpSock {
+            defn: IpSockDefinition { remote_ip, local_ip, hop_limit, proto, unroutable_behavior: _ },
+            cached,
+        }: &IpSock<Ipv4, C::DeviceId>,
         body: S,
     ) -> Result<(), (S, IpSockSendError)> {
         // TODO(joshlf): Call `trace!` with relevant fields from the socket.
         self.increment_counter("send_ipv4_packet");
-        match &socket.cached {
-            Ok(CachedInfo { builder, device, next_hop }) => {
-                let mut builder = builder.clone();
-                builder.id(self.gen_ipv4_packet_id());
-                let encapsulated = body.encapsulate(builder);
-
-                match next_hop {
-                    NextHop::Local => {
-                        let buffer = encapsulated
-                            .serialize_vec_outer()
-                            .map_err(|(err, ser)| (ser.into_inner(), err.into()))?;
-                        match buffer {
-                            Either::A(buffer) => {
-                                self.receive_ip_packet(*device, FrameDestination::Unicast, buffer)
-                            }
-                            Either::B(buffer) => {
-                                self.receive_ip_packet(*device, FrameDestination::Unicast, buffer)
-                            }
-                        }
-                        Ok(())
-                    }
-                    NextHop::Remote(next_hop) => self
-                        .send_frame(IpFrameMeta::new(*device, *next_hop), encapsulated)
-                        .map_err(|ser| (ser.into_inner(), IpSockSendError::Mtu)),
-                }
+        match cached {
+            Ok(CachedInfo { destination: Destination { device, next_hop } }) => {
+                BufferIpSocketContext::send_ip_packet(
+                    self,
+                    SendIpPacketMeta {
+                        device: *device,
+                        src_ip: *local_ip,
+                        dst_ip: *remote_ip,
+                        next_hop: *next_hop,
+                        ttl: *hop_limit,
+                        proto: *proto,
+                    },
+                    body,
+                )
+                .map_err(|s| (s, IpSockSendError::Mtu))
             }
             Err(err) => Err((body, (*err).into())),
         }
@@ -728,47 +539,29 @@ impl<
 {
     fn send_ip_packet<S: Serializer<Buffer = B>>(
         &mut self,
-        socket: &IpSock<Ipv6, C::DeviceId>,
+        IpSock {
+            defn: IpSockDefinition { remote_ip, local_ip, hop_limit, proto, unroutable_behavior: _ },
+            cached,
+        }: &IpSock<Ipv6, C::DeviceId>,
         body: S,
     ) -> Result<(), (S, IpSockSendError)> {
         // TODO(joshlf): Call `trace!` with relevant fields from the socket.
         self.increment_counter("send_ipv6_packet");
-        match &socket.cached {
-            Ok(CachedInfo { builder, device, next_hop }) => {
-                // Tentative addresses are not considered bound to an interface
-                // in the traditional sense. Therefore, no packet should have a
-                // source IP set to a tentative address - only to an address
-                // which is "assigned" or "deprecated". This should be enforced
-                // by the `IpSock` being kept up to date.
-                assert_matches::debug_assert_matches!(
-                    self.get_ip_device_state(*device)
-                        .find_addr(&socket.defn.local_ip)
-                        .unwrap()
-                        .state,
-                    AddressState::Assigned | AddressState::Deprecated
-                );
-                let encapsulated = body.encapsulate(builder);
-
-                match next_hop {
-                    NextHop::Local => {
-                        let buffer = encapsulated
-                            .serialize_vec_outer()
-                            .map_err(|(err, ser)| (ser.into_inner(), err.into()))?;
-
-                        match buffer {
-                            Either::A(buffer) => {
-                                self.receive_ip_packet(*device, FrameDestination::Unicast, buffer)
-                            }
-                            Either::B(buffer) => {
-                                self.receive_ip_packet(*device, FrameDestination::Unicast, buffer)
-                            }
-                        }
-                        Ok(())
-                    }
-                    NextHop::Remote(next_hop) => self
-                        .send_frame(IpFrameMeta::new(*device, *next_hop), encapsulated)
-                        .map_err(|ser| (ser.into_inner(), IpSockSendError::Mtu)),
-                }
+        match cached {
+            Ok(CachedInfo { destination: Destination { device, next_hop } }) => {
+                BufferIpSocketContext::send_ip_packet(
+                    self,
+                    SendIpPacketMeta {
+                        device: *device,
+                        src_ip: *local_ip,
+                        dst_ip: *remote_ip,
+                        next_hop: *next_hop,
+                        ttl: *hop_limit,
+                        proto: *proto,
+                    },
+                    body,
+                )
+                .map_err(|s| (s, IpSockSendError::Mtu))
             }
             Err(err) => Err((body, (*err).into())),
         }
@@ -967,7 +760,7 @@ pub(super) mod ipv6_source_address_selection {
         use net_types::ip::AddrSubnet;
 
         use super::*;
-        use crate::ip::device::state::AddrConfig;
+        use crate::{device::DeviceId, ip::device::state::AddrConfig};
 
         #[test]
         fn test_select_ipv6_source_address() {
@@ -1090,10 +883,13 @@ pub(crate) mod testutil {
 
     use super::*;
     use crate::{
-        context::testutil::{DummyCtx, DummyInstant},
+        context::{
+            testutil::{DummyCtx, DummyInstant},
+            FrameContext,
+        },
         ip::{
-            device::state::{AddrConfig, AddressState},
-            DummyDeviceId,
+            device::state::{AddrConfig, AddressState, AssignedAddress as _, IpDeviceState},
+            DummyDeviceId, SendIpPacketMeta,
         },
     };
 
@@ -1104,7 +900,6 @@ pub(crate) mod testutil {
     pub(crate) struct DummyIpSocketCtx<I: IpDeviceStateIpExt<DummyInstant>> {
         pub(crate) table: ForwardingTable<I, DummyDeviceId>,
         device_state: IpDeviceState<DummyInstant, I>,
-        next_ipv4_packet_id: u16,
     }
 
     impl<
@@ -1116,50 +911,58 @@ pub(crate) mod testutil {
     {
         fn lookup_route(
             &self,
+            local_ip: Option<SpecifiedAddr<I::Addr>>,
             addr: SpecifiedAddr<I::Addr>,
-        ) -> Option<Destination<I::Addr, DummyDeviceId>> {
-            self.get_ref().as_ref().table.lookup(addr)
-        }
+        ) -> Result<IpSockRoute<I, DummyDeviceId>, IpSockRouteError> {
+            let destination = self
+                .get_ref()
+                .as_ref()
+                .table
+                .lookup(addr)
+                .ok_or(IpSockUnroutableError::NoRouteToRemoteAddr)?;
 
-        fn get_ip_device_state(&self, _device: DummyDeviceId) -> &IpDeviceState<Self::Instant, I> {
-            &self.get_ref().as_ref().device_state
-        }
-
-        fn iter_devices(
-            &self,
-        ) -> Box<dyn Iterator<Item = (DummyDeviceId, &IpDeviceState<Self::Instant, I>)> + '_>
-        {
-            Box::new(core::iter::once((DummyDeviceId, &self.get_ref().as_ref().device_state)))
+            local_ip
+                .map_or_else(
+                    || {
+                        self.get_ref()
+                            .as_ref()
+                            .device_state
+                            .iter_addrs()
+                            .map(|e| e.addr())
+                            .next()
+                            .ok_or(IpSockRouteError::NoLocalAddrAvailable)
+                    },
+                    |local_ip| {
+                        self.get_ref()
+                            .as_ref()
+                            .device_state
+                            .iter_addrs()
+                            .any(|e| e.addr() == local_ip)
+                            .then(|| local_ip)
+                            .ok_or(IpSockUnroutableError::LocalAddrNotAssigned.into())
+                    },
+                )
+                .map(|local_ip| IpSockRoute { local_ip, destination })
         }
     }
 
     impl<
-            I: IpDeviceStateIpExt<DummyInstant>,
+            I: IpDeviceStateIpExt<DummyInstant> + packet_formats::ip::IpExt,
             B: BufferMut,
             S: AsRef<DummyIpSocketCtx<I>> + AsMut<DummyIpSocketCtx<I>>,
             Id,
             Meta,
         > BufferIpSocketContext<I, B> for DummyCtx<S, Id, Meta>
     where
-        DummyCtx<S, Id, Meta>: FrameContext<B, IpFrameMeta<I::Addr, DummyDeviceId>>,
+        DummyCtx<S, Id, Meta>:
+            FrameContext<B, SendIpPacketMeta<I, DummyDeviceId, SpecifiedAddr<I::Addr>>>,
     {
-        fn receive_ip_packet(
+        fn send_ip_packet<SS: Serializer<Buffer = B>>(
             &mut self,
-            _device: Self::DeviceId,
-            _frame_dst: FrameDestination,
-            _buf: B,
-        ) {
-            unimplemented!()
-        }
-    }
-
-    impl<S: AsRef<DummyIpSocketCtx<Ipv4>> + AsMut<DummyIpSocketCtx<Ipv4>>, Id, Meta>
-        Ipv4SocketContext for DummyCtx<S, Id, Meta>
-    {
-        fn gen_ipv4_packet_id(&mut self) -> u16 {
-            let state = &mut self.get_mut().as_mut();
-            state.next_ipv4_packet_id = state.next_ipv4_packet_id.wrapping_add(1);
-            state.next_ipv4_packet_id
+            meta: SendIpPacketMeta<I, Self::DeviceId, SpecifiedAddr<I::Addr>>,
+            body: SS,
+        ) -> Result<(), SS> {
+            self.send_frame(meta, body)
         }
     }
 
@@ -1179,7 +982,7 @@ pub(crate) mod testutil {
                 );
             }
 
-            DummyIpSocketCtx { table, device_state, next_ipv4_packet_id: 0 }
+            DummyIpSocketCtx { table, device_state }
         }
     }
 
@@ -1233,13 +1036,14 @@ mod tests {
     use packet::{Buf, InnerPacketBuilder, ParseBuffer};
     use packet_formats::{
         ip::IpPacket,
-        ipv4::{Ipv4OnlyMeta, Ipv4Packet},
+        ipv4::{Ipv4OnlyMeta, Ipv4Packet, Ipv4PacketBuilder},
+        ipv6::Ipv6PacketBuilder,
         testutil::{parse_ethernet_frame, parse_ip_packet_in_ethernet_frame},
     };
-    use specialize_ip_macro::ip_test;
+    use specialize_ip_macro::{ip_test, specialize_ip};
 
     use super::*;
-    use crate::ip::specialize_ip;
+    use crate::device::DeviceId;
     use crate::testutil::*;
 
     enum AddressType {
@@ -1270,33 +1074,39 @@ mod tests {
         let DummyEventDispatcherConfig { local_ip, remote_ip, subnet, local_mac: _, remote_mac: _ } =
             cfg;
         let mut ctx = DummyEventDispatcherBuilder::from_config(cfg).build();
+        let loopback_device_id =
+            ctx.state.add_loopback_device(u16::MAX.into()).expect("create the loopback interface");
+        crate::device::initialize_device(&mut ctx, loopback_device_id);
+
         let NewSocketTestCase { local_ip_type, remote_ip_type, expected_result } = test_case;
 
         #[ipv4]
         let remove_all_local_addrs = |ctx: &mut crate::testutil::DummyCtx| {
-            let mut devices = crate::ip::device::iter_ipv4_devices(ctx);
-            let (device, _state) = devices.next().unwrap();
-            assert_matches::assert_matches!(devices.next(), None);
-            drop(devices);
-            let subnets =
-                crate::ip::device::get_assigned_ipv4_addr_subnets(ctx, device).collect::<Vec<_>>();
-            for subnet in subnets {
-                crate::device::del_ip_addr(ctx, device, &subnet.addr())
-                    .expect("failed to remove addr from device");
+            let devices = crate::ip::device::iter_ipv4_devices(ctx)
+                .map(|(device, _state)| device)
+                .collect::<Vec<_>>();
+            for device in devices {
+                let subnets = crate::ip::device::get_assigned_ipv4_addr_subnets(ctx, device)
+                    .collect::<Vec<_>>();
+                for subnet in subnets {
+                    crate::device::del_ip_addr(ctx, device, &subnet.addr())
+                        .expect("failed to remove addr from device");
+                }
             }
         };
 
         #[ipv6]
         let remove_all_local_addrs = |ctx: &mut crate::testutil::DummyCtx| {
-            let mut devices = crate::ip::device::iter_ipv6_devices(ctx);
-            let (device, _state) = devices.next().unwrap();
-            assert_matches::assert_matches!(devices.next(), None);
-            drop(devices);
-            let subnets =
-                crate::ip::device::get_assigned_ipv6_addr_subnets(ctx, device).collect::<Vec<_>>();
-            for subnet in subnets {
-                crate::device::del_ip_addr(ctx, device, &subnet.addr())
-                    .expect("failed to remove addr from device");
+            let devices = crate::ip::device::iter_ipv6_devices(ctx)
+                .map(|(device, _state)| device)
+                .collect::<Vec<_>>();
+            for device in devices {
+                let subnets = crate::ip::device::get_assigned_ipv6_addr_subnets(ctx, device)
+                    .collect::<Vec<_>>();
+                for subnet in subnets {
+                    crate::device::del_ip_addr(ctx, device, &subnet.addr())
+                        .expect("failed to remove addr from device");
+                }
             }
         };
 
@@ -1315,9 +1125,13 @@ mod tests {
             }
         };
 
-        let (to_ip, expected_next_hop) = match remote_ip_type {
-            AddressType::LocallyOwned => (local_ip, NextHop::Local),
-            AddressType::Remote => (remote_ip, NextHop::Remote(remote_ip)),
+        let (to_ip, device) = match remote_ip_type {
+            AddressType::LocallyOwned => (
+                local_ip,
+                IpDeviceIdContext::<I>::loopback_id(&ctx)
+                    .expect("local test should have loopback device"),
+            ),
+            AddressType::Remote => (remote_ip, DeviceId::new_ethernet(0)),
             AddressType::Unspecified { can_select: _ } => {
                 panic!("remote_ip_type cannot be unspecified")
             }
@@ -1329,7 +1143,7 @@ mod tests {
                         .expect("failed to delete IPv6 device route"),
                 }
 
-                (remote_ip, NextHop::Remote(remote_ip))
+                (remote_ip, DeviceId::new_ethernet(0))
             }
         };
 
@@ -1356,14 +1170,10 @@ mod tests {
                 remote_ip: to_ip,
                 local_ip: expected_from_ip,
                 proto,
-                hop_limit: crate::ip::DEFAULT_TTL.get(),
+                hop_limit: None,
                 unroutable_behavior: UnroutableBehavior::Close,
             },
-            cached: Ok(CachedInfo {
-                builder,
-                next_hop: expected_next_hop,
-                device: DeviceId::new_ethernet(0),
-            }),
+            cached: Ok(CachedInfo { destination: Destination { next_hop: to_ip, device } }),
         };
 
         let res = IpSocketHandler::<I>::new_ip_socket(
@@ -1394,9 +1204,7 @@ mod tests {
                     // The template socket, but with the TTL set to 1.
                     let mut x = template.clone();
                     let IpSock::<Ipv4, DeviceId> { defn, cached } = &mut x;
-                    defn.hop_limit = 1;
-                    cached.as_mut().unwrap().builder =
-                        Ipv4PacketBuilder::new(expected_from_ip, to_ip, 1, proto);
+                    defn.hop_limit = NonZeroU8::new(1);
                     get_expected_result(x)
                 }
             );
@@ -1407,7 +1215,8 @@ mod tests {
             // Hop Limit is specified.
             const SPECIFIED_HOP_LIMIT: u8 = 1;
             let mut builder = Ipv6SocketBuilder::default();
-            let _: &mut Ipv6SocketBuilder = builder.hop_limit(SPECIFIED_HOP_LIMIT);
+            let _: &mut Ipv6SocketBuilder =
+                builder.hop_limit(NonZeroU8::new(SPECIFIED_HOP_LIMIT).unwrap());
             assert_eq!(
                 IpSocketHandler::<Ipv6>::new_ip_socket(
                     &mut ctx,
@@ -1420,10 +1229,9 @@ mod tests {
                 {
                     let mut template_with_hop_limit = template.clone();
                     let IpSock::<Ipv6, DeviceId> { defn, cached } = &mut template_with_hop_limit;
-                    defn.hop_limit = SPECIFIED_HOP_LIMIT;
+                    defn.hop_limit = NonZeroU8::new(SPECIFIED_HOP_LIMIT);
                     let builder =
                         Ipv6PacketBuilder::new(expected_from_ip, to_ip, SPECIFIED_HOP_LIMIT, proto);
-                    cached.as_mut().unwrap().builder = builder;
                     get_expected_result(template_with_hop_limit)
                 }
             );
@@ -1435,7 +1243,10 @@ mod tests {
         test_new::<I>(NewSocketTestCase {
             local_ip_type: AddressType::Unroutable,
             remote_ip_type: AddressType::Remote,
-            expected_result: Err(IpSockUnroutableError::LocalAddrNotAssigned.into()),
+            expected_result: Err(IpSockRouteError::Unroutable(
+                IpSockUnroutableError::LocalAddrNotAssigned,
+            )
+            .into()),
         });
     }
 
@@ -1444,7 +1255,10 @@ mod tests {
         test_new::<I>(NewSocketTestCase {
             local_ip_type: AddressType::LocallyOwned,
             remote_ip_type: AddressType::Unroutable,
-            expected_result: Err(IpSockUnroutableError::NoRouteToRemoteAddr.into()),
+            expected_result: Err(IpSockRouteError::Unroutable(
+                IpSockUnroutableError::NoRouteToRemoteAddr,
+            )
+            .into()),
         });
     }
 
@@ -1471,7 +1285,7 @@ mod tests {
         test_new::<I>(NewSocketTestCase {
             local_ip_type: AddressType::Unspecified { can_select: false },
             remote_ip_type: AddressType::Remote,
-            expected_result: Err(IpSockCreationError::NoLocalAddrAvailable),
+            expected_result: Err(IpSockRouteError::NoLocalAddrAvailable.into()),
         });
     }
 
@@ -1480,7 +1294,10 @@ mod tests {
         test_new::<I>(NewSocketTestCase {
             local_ip_type: AddressType::Remote,
             remote_ip_type: AddressType::Remote,
-            expected_result: Err(IpSockUnroutableError::LocalAddrNotAssigned.into()),
+            expected_result: Err(IpSockRouteError::Unroutable(
+                IpSockUnroutableError::LocalAddrNotAssigned,
+            )
+            .into()),
         });
     }
 
@@ -1507,7 +1324,10 @@ mod tests {
         test_new::<I>(NewSocketTestCase {
             local_ip_type: AddressType::Remote,
             remote_ip_type: AddressType::LocallyOwned,
-            expected_result: Err(IpSockUnroutableError::LocalAddrNotAssigned.into()),
+            expected_result: Err(IpSockRouteError::Unroutable(
+                IpSockUnroutableError::LocalAddrNotAssigned,
+            )
+            .into()),
         });
     }
 
@@ -1575,6 +1395,10 @@ mod tests {
                     .expect("install IPv6 device route on a fresh stack without routes")
             }
         }
+
+        let loopback_device_id =
+            ctx.state.add_loopback_device(u16::MAX.into()).expect("create the loopback interface");
+        crate::device::initialize_device(&mut ctx, loopback_device_id);
 
         let (expected_from_ip, from_ip) = match from_addr_type {
             AddressType::LocallyOwned => (local_ip, Some(local_ip)),
@@ -1666,7 +1490,7 @@ mod tests {
         #[ipv6]
         let (cfg, socket_builder, proto) = {
             let mut builder = Ipv6SocketBuilder::default();
-            let _: &mut Ipv6SocketBuilder = builder.hop_limit(1);
+            let _: &mut Ipv6SocketBuilder = builder.hop_limit(NonZeroU8::new(1).unwrap());
             (DUMMY_CONFIG_V6, builder, Ipv6Proto::Icmpv6)
         };
 
@@ -1692,7 +1516,7 @@ mod tests {
         .unwrap();
 
         #[ipv4]
-        let curr_id = ctx.gen_ipv4_packet_id();
+        let curr_id = crate::ip::gen_ipv4_packet_id(&mut ctx);
 
         // Send a packet on the socket and make sure that the right contents
         // are sent.

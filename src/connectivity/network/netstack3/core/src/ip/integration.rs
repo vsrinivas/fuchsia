@@ -4,64 +4,23 @@
 
 //! The integrations for protocols built on top of IP.
 
-use alloc::boxed::Box;
-
 use net_types::{
     ip::{Ipv4, Ipv4Addr, Ipv6, Ipv6Addr},
     SpecifiedAddr,
 };
+use packet::{BufferMut, Serializer};
 
 use crate::{
     context::StateContext,
     ip::{
-        device::{
-            get_ipv4_device_state, get_ipv6_device_state, iter_ipv4_devices, iter_ipv6_devices,
-            state::IpDeviceState, IpDeviceContext,
-        },
+        device::IpDeviceContext,
         icmp::{Icmpv4State, Icmpv6State},
-        lookup_route,
-        socket::{IpSock, IpSocketContext},
-        Destination, IpLayerContext, IpLayerStateIpExt, IpPacketFragmentCache, IpStateInner,
+        send_ipv4_packet_from_device, send_ipv6_packet_from_device,
+        socket::{BufferIpSocketContext, IpSock},
+        BufferIpLayerContext, IpLayerContext, IpLayerStateIpExt, IpPacketFragmentCache,
+        IpStateInner, SendIpPacketMeta,
     },
 };
-
-impl<C: IpLayerContext<Ipv4> + IpDeviceContext<Ipv4>> IpSocketContext<Ipv4> for C {
-    fn lookup_route(
-        &self,
-        addr: SpecifiedAddr<Ipv4Addr>,
-    ) -> Option<Destination<Ipv4Addr, C::DeviceId>> {
-        lookup_route(self, addr)
-    }
-
-    fn get_ip_device_state(&self, device: C::DeviceId) -> &IpDeviceState<C::Instant, Ipv4> {
-        get_ipv4_device_state(self, device)
-    }
-
-    fn iter_devices(
-        &self,
-    ) -> Box<dyn Iterator<Item = (C::DeviceId, &IpDeviceState<C::Instant, Ipv4>)> + '_> {
-        Box::new(iter_ipv4_devices(self))
-    }
-}
-
-impl<C: IpLayerContext<Ipv6> + IpDeviceContext<Ipv6>> IpSocketContext<Ipv6> for C {
-    fn lookup_route(
-        &self,
-        addr: SpecifiedAddr<Ipv6Addr>,
-    ) -> Option<Destination<Ipv6Addr, C::DeviceId>> {
-        lookup_route(self, addr)
-    }
-
-    fn get_ip_device_state(&self, device: C::DeviceId) -> &IpDeviceState<C::Instant, Ipv6> {
-        get_ipv6_device_state(self, device)
-    }
-
-    fn iter_devices(
-        &self,
-    ) -> Box<dyn Iterator<Item = (C::DeviceId, &IpDeviceState<C::Instant, Ipv6>)> + '_> {
-        Box::new(iter_ipv6_devices(self))
-    }
-}
 
 impl<I: IpLayerStateIpExt<C::Instant, C::DeviceId>, C: IpLayerContext<I>>
     StateContext<IpPacketFragmentCache<I>> for C
@@ -102,5 +61,29 @@ impl<C: IpLayerContext<Ipv6>> StateContext<Icmpv6State<C::Instant, IpSock<Ipv6, 
         _id: (),
     ) -> &mut Icmpv6State<C::Instant, IpSock<Ipv6, C::DeviceId>> {
         &mut self.get_ip_layer_state_mut().icmp
+    }
+}
+
+impl<B: BufferMut, C: BufferIpLayerContext<Ipv4, B> + IpDeviceContext<Ipv4>>
+    BufferIpSocketContext<Ipv4, B> for C
+{
+    fn send_ip_packet<S: Serializer<Buffer = B>>(
+        &mut self,
+        meta: SendIpPacketMeta<Ipv4, C::DeviceId, SpecifiedAddr<Ipv4Addr>>,
+        body: S,
+    ) -> Result<(), S> {
+        send_ipv4_packet_from_device(self, meta.into(), body, None)
+    }
+}
+
+impl<B: BufferMut, C: BufferIpLayerContext<Ipv6, B> + IpDeviceContext<Ipv6>>
+    BufferIpSocketContext<Ipv6, B> for C
+{
+    fn send_ip_packet<S: Serializer<Buffer = B>>(
+        &mut self,
+        meta: SendIpPacketMeta<Ipv6, C::DeviceId, SpecifiedAddr<Ipv6Addr>>,
+        body: S,
+    ) -> Result<(), S> {
+        send_ipv6_packet_from_device(self, meta.into(), body, None)
     }
 }

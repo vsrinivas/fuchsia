@@ -34,7 +34,7 @@ use crate::{
     ip::{
         icmp::{BufferIcmpContext, IcmpConnId, IcmpContext, IcmpIpExt},
         socket::IpSockCreationError,
-        EntryDest, EntryEither,
+        EntryDest, EntryEither, SendIpPacketMeta,
     },
     transport::udp::{BufferUdpContext, UdpContext},
     {Ctx, EventDispatcher, StackStateBuilder, TimerId},
@@ -1007,14 +1007,18 @@ mod tests {
             dst_ip: SpecifiedAddr<A>,
             device: DeviceId,
         ) {
+            let meta = SendIpPacketMeta {
+                device,
+                src_ip: Some(src_ip),
+                dst_ip,
+                next_hop: dst_ip,
+                proto: IpProto::Udp.into(),
+                ttl: None,
+            };
             #[ipv4addr]
             crate::ip::send_ipv4_packet_from_device(
                 ctx,
-                device,
-                src_ip.get(),
-                dst_ip.get(),
-                dst_ip,
-                IpProto::Udp.into(),
+                meta,
                 Buf::new(vec![1, 2, 3, 4], ..),
                 None,
             )
@@ -1023,11 +1027,7 @@ mod tests {
             #[ipv6addr]
             crate::ip::send_ipv6_packet_from_device(
                 ctx,
-                device,
-                src_ip.get(),
-                dst_ip.get(),
-                dst_ip,
-                IpProto::Udp.into(),
+                meta,
                 Buf::new(vec![1, 2, 3, 4], ..),
                 None,
             )

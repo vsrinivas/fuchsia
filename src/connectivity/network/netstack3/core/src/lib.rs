@@ -62,7 +62,7 @@ pub use crate::{
     ip::{
         device::state::{IpDeviceConfiguration, Ipv4DeviceConfiguration, Ipv6DeviceConfiguration},
         icmp,
-        socket::{IpSockCreationError, IpSockSendError, IpSockUnroutableError},
+        socket::{IpSockCreationError, IpSockRouteError, IpSockSendError, IpSockUnroutableError},
         EntryDest, EntryDestEither, EntryEither, IpExt, Ipv4StateBuilder, Ipv6StateBuilder,
         TransportIpContext,
     },
