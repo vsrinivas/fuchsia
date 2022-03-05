@@ -166,24 +166,24 @@ def _ensure_directory(path):
             raise
 
 
-def _copy_file(file, source_dir, dest_dir):
+def _copy_file(file, source_dir, dest_dir, follow_symlinks):
     '''Copies a file to a given path, taking care of creating directories if
     needed.
     '''
     source = os.path.join(source_dir, file)
     destination = os.path.join(dest_dir, file)
     _ensure_directory(destination)
-    shutil.copy2(source, destination)
+    shutil.copy2(source, destination, follow_symlinks=follow_symlinks)
 
 
-def _copy_files(files, source_dir, dest_dir):
+def _copy_files(files, source_dir, dest_dir, follow_symlinks):
     '''Copies a set of files to a given directory.'''
     for file in files:
-        _copy_file(file, source_dir, dest_dir)
+        _copy_file(file, source_dir, dest_dir, follow_symlinks)
 
 
 def _copy_identical_files(
-        set_one, source_dir_one, set_two, source_dir_two, dest_dir):
+        set_one, source_dir_one, set_two, dest_dir, follow_symlinks):
     '''Verifies that two sets of files are absolutely identical and then copies
     them to the output directory.
     '''
@@ -191,20 +191,20 @@ def _copy_identical_files(
         return False
     # Not verifying that the contents of the files are the same, as builds are
     # not exactly stable at the moment.
-    _copy_files(set_one, source_dir_one, dest_dir)
+    _copy_files(set_one, source_dir_one, dest_dir, follow_symlinks)
     return True
 
 
-def _copy_element(element, source_dir, dest_dir):
+def _copy_element(element, source_dir, dest_dir, follow_symlinks):
     '''Copy an entire SDK element to a given directory.'''
     meta = _get_meta(element, source_dir)
     common_files, arch_files = _get_files(meta)
     files = common_files
     for more_files in arch_files.values():
         files.update(more_files)
-    _copy_files(files, source_dir, dest_dir)
+    _copy_files(files, source_dir, dest_dir, follow_symlinks)
     # Copy the metadata file as well.
-    _copy_file(element, source_dir, dest_dir)
+    _copy_file(element, source_dir, dest_dir, follow_symlinks)
 
 
 def _write_meta(element, source_dir_one, source_dir_two, dest_dir):
@@ -347,7 +347,11 @@ def main():
         '--output-directory',
         help='Path to the merged SDK - as a directory',
         default='')
+    parser.add_argument('--stamp-file', help='Path to the stamp file')
     args = parser.parse_args()
+
+    # When producing an archive, we need to copy the symlink targets, not the symlinks themselves.
+    follow_symlinks = bool(args.output_archive)
 
     has_errors = False
 
@@ -363,9 +367,9 @@ def main():
 
         # Copy elements that appear in a single SDK.
         for element in sorted(first_elements - common_elements):
-            _copy_element(element.meta, first_dir, out_dir)
+            _copy_element(element.meta, first_dir, out_dir, follow_symlinks)
         for element in (second_elements - common_elements):
-            _copy_element(element.meta, second_dir, out_dir)
+            _copy_element(element.meta, second_dir, out_dir, follow_symlinks)
 
         # Verify and merge elements which are common to both SDKs.
         for raw_element in sorted(common_elements):
@@ -377,7 +381,7 @@ def main():
 
             # Common files should not vary.
             if not _copy_identical_files(first_common, first_dir, second_common,
-                                         second_dir, out_dir):
+                                         out_dir, follow_symlinks):
                 print('Error: different common files for %s' % (element))
                 has_errors = True
                 continue
@@ -387,17 +391,19 @@ def main():
             for arch in all_arches:
                 if arch in first_arch and arch in second_arch:
                     if not _copy_identical_files(first_arch[arch], first_dir,
-                                                 second_arch[arch], second_dir,
-                                                 out_dir):
+                                                 second_arch[arch], out_dir,
+                                                 follow_symlinks):
                         print(
                             'Error: different %s files for %s' %
                             (arch, element))
                         has_errors = True
                         continue
                 elif arch in first_arch:
-                    _copy_files(first_arch[arch], first_dir, out_dir)
+                    _copy_files(
+                        first_arch[arch], first_dir, out_dir, follow_symlinks)
                 elif arch in second_arch:
-                    _copy_files(second_arch[arch], second_dir, out_dir)
+                    _copy_files(
+                        second_arch[arch], second_dir, out_dir, follow_symlinks)
 
             if not _write_meta(element, first_dir, second_dir, out_dir):
                 print('Error: unable to merge meta for %s' % (element))
@@ -408,6 +414,10 @@ def main():
             has_errors = True
 
         # TODO(fxbug.dev/5362): verify that metadata files are valid.
+
+    if (args.stamp_file):
+        with open(args.stamp_file, 'w') as stamp_file:
+            stamp_file.write('')
 
     return 1 if has_errors else 0
 

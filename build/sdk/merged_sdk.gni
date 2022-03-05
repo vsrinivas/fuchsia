@@ -11,90 +11,100 @@ import("config.gni")
 #
 #   deps (required)
 #     List of labels representing SDKs to merge.
-#     A label may point to an `sdk` or a `merged_sdk` instance.
+#     A label may point to an `sdk` instance.
 
 template("merged_sdk") {
   assert(defined(invoker.deps), "Must define a 'deps' parameter")
   assert(invoker.deps != [], "'deps' may not be empty")
 
-  if (!build_sdk_archives) {
-    # This template is a no-op if SDK archives are not emitted.
-    group(target_name) {
-      forward_variables_from(invoker, [ "testonly" ])
-      deps = invoker.deps
-    }
-  } else {
-    index = 0
-    latest_archive = ""
-    latest_step = ""
-    foreach(dep, invoker.deps) {
-      archive_dir = "${root_out_dir}/sdk/archive"
-      name = get_label_info(dep, "name")
-      dep_archive = "${archive_dir}/$name.tar.gz"
+  dep_count = 0
+  foreach(dep, invoker.deps) {
+    dep_count = dep_count + 1
+  }
 
-      if (index == 0) {
-        latest_archive = dep_archive
+  index = 0
+  foreach(dep, invoker.deps) {
+    export_dir = "${root_out_dir}/sdk/exported"
+    name = get_label_info(dep, "name")
+    dep_dir = "${export_dir}/$name"
+    dep_stamp = "$target_gen_dir/$name.exported"
+
+    if (index == 0) {
+      latest_dir = dep_dir
+      latest_stamp = dep_stamp
+    } else {
+      step = "${target_name}_merge_${index}"
+
+      # Produce an archive only on the last step. Intermediate merged SDKs are
+      # symlink forests, like the input exported SDKs, to save disk space.
+      if (index < dep_count - 1) {
+        output_flag = "--output-directory"
+        merged = "$target_gen_dir/$target_name.$index"
       } else {
-        merged_archive = "$target_gen_dir/$target_name.$index.tar.gz"
-        step = "${target_name}_merge_${index}"
+        output_flag = "--output-archive"
+        merged = "$target_gen_dir/$target_name.$index.tar.gz"
+      }
+      merged_stamp = "$merged.stamp"
 
-        action(step) {
-          forward_variables_from(invoker, [ "testonly" ])
+      action(step) {
+        forward_variables_from(invoker, [ "testonly" ])
 
-          #TODO(b/222339823): Switch to Rust merge tool when fixed.
-          script = "//scripts/sdk/merger/merge.py"
+        #TODO(b/222339823): Switch to Rust merge tool when fixed.
+        script = "//scripts/sdk/merger/merge.py"
 
-          sources = [
-            dep_archive,
-            latest_archive,
-          ]
+        sources = [
+          dep_stamp,
+          latest_stamp,
+        ]
 
-          outputs = [ merged_archive ]
+        outputs = [ merged_stamp ]
 
-          args = [
-            "--first-archive",
-            rebase_path(latest_archive, root_build_dir),
-            "--second-archive",
-            rebase_path(dep_archive, root_build_dir),
-            "--output-archive",
-            rebase_path(merged_archive, root_build_dir),
-          ]
+        args = [
+          "--first-directory",
+          rebase_path(latest_dir, root_build_dir),
+          "--second-directory",
+          rebase_path(dep_dir, root_build_dir),
+          output_flag,
+          rebase_path(merged, root_build_dir),
+          "--stamp-file",
+          rebase_path(merged_stamp, root_build_dir),
+        ]
 
-          if (index == 1) {
-            public_deps = invoker.deps
-          } else {
-            public_deps = [ ":$latest_step" ]
-          }
+        if (index == 1) {
+          public_deps = invoker.deps
+        } else {
+          public_deps = [ ":$latest_step" ]
         }
-
-        latest_archive = merged_archive
-        latest_step = step
       }
 
-      index = index + 1
+      latest_dir = merged
+      latest_stamp = merged_stamp
+      latest_step = step
     }
 
-    copy(target_name) {
-      forward_variables_from(invoker, [ "testonly" ])
-      output_archive = "${root_out_dir}/sdk/archive/${target_name}.tar.gz"
+    index = index + 1
+  }
 
-      sources = [ latest_archive ]
+  copy(target_name) {
+    forward_variables_from(invoker, [ "testonly" ])
+    output_archive = "${root_out_dir}/sdk/archive/${target_name}.tar.gz"
 
-      outputs = [ output_archive ]
+    sources = [ latest_stamp ]
 
-      public_deps = [ ":$latest_step" ]
+    outputs = [ output_archive ]
 
-      metadata = {
-        sdk_archives = [
-          {
-            name = target_name
-            os = current_os
-            cpu = current_cpu
-            label = get_label_info(":$target_name", "label_with_toolchain")
-            path = rebase_path(output_archive, root_build_dir)
-          },
-        ]
-      }
+    public_deps = [ ":$latest_step" ]
+
+    metadata = {
+      sdk_archives = [
+        {
+          name = target_name
+          os = current_os
+          cpu = current_cpu
+          label = get_label_info(":$target_name", "label_with_toolchain")
+          path = rebase_path(output_archive, root_build_dir)
+        },
+      ]
     }
   }
 }
