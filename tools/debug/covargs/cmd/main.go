@@ -50,7 +50,6 @@ var (
 	buildIDDirPaths flagmisc.StringsValue
 	symbolServers   flagmisc.StringsValue
 	symbolCache     string
-	coverageReport  bool
 	dryRun          bool
 	skipFunctions   bool
 	outputDir       string
@@ -79,7 +78,6 @@ func init() {
 	flag.Var(&buildIDDirPaths, "build-id-dir", "path to .build-id directory")
 	flag.Var(&symbolServers, "symbol-server", "a GCS URL or bucket name that contains debug binaries indexed by build ID")
 	flag.StringVar(&symbolCache, "symbol-cache", "", "path to directory to store cached debug binaries in")
-	flag.BoolVar(&coverageReport, "coverage-report", true, "if set, generate a coverage report")
 	flag.BoolVar(&dryRun, "dry-run", false, "if set the system prints out commands that would be run instead of running them")
 	flag.BoolVar(&skipFunctions, "skip-functions", true, "if set, the coverage report enabled by the `report-dir` flag will not include function coverage")
 	flag.StringVar(&outputDir, "output-dir", "", "the directory to output results to")
@@ -625,33 +623,31 @@ func process(ctx context.Context, repo symbolize.Repository) error {
 			return fmt.Errorf("writing coverage %q: %w", coverageFilename, err)
 		}
 
-		if coverageReport {
-			var export llvm.Export
-			if err := json.NewDecoder(&b).Decode(&export); err != nil {
-				return fmt.Errorf("failed to load the exported file: %w", err)
-			}
+		var export llvm.Export
+		if err := json.NewDecoder(&b).Decode(&export); err != nil {
+			return fmt.Errorf("failed to load the exported file: %w", err)
+		}
 
-			var mapping *covargs.DiffMapping
-			if diffMappingFile != "" {
-				file, err := os.Open(diffMappingFile)
-				if err != nil {
-					return fmt.Errorf("cannot open %q: %w", diffMappingFile, err)
-				}
-				defer file.Close()
-
-				if err := json.NewDecoder(file).Decode(mapping); err != nil {
-					return fmt.Errorf("failed to load the diff mapping file: %w", err)
-				}
-			}
-
-			files, err := covargs.ConvertFiles(&export, basePath, mapping)
+		var mapping *covargs.DiffMapping
+		if diffMappingFile != "" {
+			file, err := os.Open(diffMappingFile)
 			if err != nil {
-				return fmt.Errorf("failed to convert files: %w", err)
+				return fmt.Errorf("cannot open %q: %w", diffMappingFile, err)
 			}
+			defer file.Close()
 
-			if _, err := covargs.SaveReport(files, shardSize, reportDir); err != nil {
-				return fmt.Errorf("failed to save report: %w", err)
+			if err := json.NewDecoder(file).Decode(mapping); err != nil {
+				return fmt.Errorf("failed to load the diff mapping file: %w", err)
 			}
+		}
+
+		files, err := covargs.ConvertFiles(&export, basePath, mapping)
+		if err != nil {
+			return fmt.Errorf("failed to convert files: %w", err)
+		}
+
+		if _, err := covargs.SaveReport(files, shardSize, reportDir); err != nil {
+			return fmt.Errorf("failed to save report: %w", err)
 		}
 	}
 
