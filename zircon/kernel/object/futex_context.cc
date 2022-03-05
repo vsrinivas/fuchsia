@@ -51,12 +51,11 @@ template <>
 class KTrace<false> : public KTraceBase {
  public:
   KTrace() {}
-  void FutexWait(uintptr_t futex_id, Thread* new_owner) {}
-  void FutexWoke(uintptr_t futex_id, zx_status_t result) {}
-  void FutexWake(uintptr_t futex_id, FutexActive active, RequeueOp requeue_op, uint32_t count,
+  void FutexWait(FutexId futex_id, Thread* new_owner) {}
+  void FutexWoke(FutexId futex_id, zx_status_t result) {}
+  void FutexWake(FutexId futex_id, FutexActive active, RequeueOp requeue_op, uint32_t count,
                  Thread* assigned_owner) {}
-  void FutexRequeue(uintptr_t futex_id, FutexActive active, uint32_t count,
-                    Thread* assigned_owner) {}
+  void FutexRequeue(FutexId futex_id, FutexActive active, uint32_t count, Thread* assigned_owner) {}
 };
 
 template <>
@@ -64,18 +63,20 @@ class KTrace<true> : public KTraceBase {
  public:
   KTrace() : ts_(ktrace_timestamp()) {}
 
-  void FutexWait(uintptr_t futex_id, Thread* new_owner) {
-    ktrace(TAG_FUTEX_WAIT, static_cast<uint32_t>(futex_id), static_cast<uint32_t>(futex_id >> 32),
+  void FutexWait(FutexId futex_id, Thread* new_owner) {
+    ktrace(TAG_FUTEX_WAIT, static_cast<uint32_t>(futex_id.get()),
+           static_cast<uint32_t>(futex_id.get() >> 32),
            static_cast<uint32_t>(new_owner ? new_owner->tid() : 0),
            static_cast<uint32_t>(arch_curr_cpu_num() & 0xFF), ts_);
   }
 
-  void FutexWoke(uintptr_t futex_id, zx_status_t result) {
-    ktrace(TAG_FUTEX_WOKE, static_cast<uint32_t>(futex_id), static_cast<uint32_t>(futex_id >> 32),
-           static_cast<uint32_t>(result), static_cast<uint32_t>(arch_curr_cpu_num() & 0xFF), ts_);
+  void FutexWoke(FutexId futex_id, zx_status_t result) {
+    ktrace(TAG_FUTEX_WOKE, static_cast<uint32_t>(futex_id.get()),
+           static_cast<uint32_t>(futex_id.get() >> 32), static_cast<uint32_t>(result),
+           static_cast<uint32_t>(arch_curr_cpu_num() & 0xFF), ts_);
   }
 
-  void FutexWake(uintptr_t futex_id, FutexActive active, RequeueOp requeue_op, uint32_t count,
+  void FutexWake(FutexId futex_id, FutexActive active, RequeueOp requeue_op, uint32_t count,
                  Thread* assigned_owner) {
     if ((count >= kCountSaturate) && (count != kUnlimitedCount)) {
       count = kCountSaturate;
@@ -86,12 +87,12 @@ class KTrace<true> : public KTraceBase {
                      ((requeue_op == RequeueOp::Yes) ? KTRACE_FLAGS_FUTEX_WAS_REQUEUE_FLAG : 0) |
                      ((active == FutexActive::Yes) ? KTRACE_FLAGS_FUTEX_WAS_ACTIVE_FLAG : 0);
 
-    ktrace(TAG_FUTEX_WAKE, static_cast<uint32_t>(futex_id), static_cast<uint32_t>(futex_id >> 32),
+    ktrace(TAG_FUTEX_WAKE, static_cast<uint32_t>(futex_id.get()),
+           static_cast<uint32_t>(futex_id.get() >> 32),
            static_cast<uint32_t>(assigned_owner ? assigned_owner->tid() : 0), flags, ts_);
   }
 
-  void FutexRequeue(uintptr_t futex_id, FutexActive active, uint32_t count,
-                    Thread* assigned_owner) {
+  void FutexRequeue(FutexId futex_id, FutexActive active, uint32_t count, Thread* assigned_owner) {
     if ((count >= kCountSaturate) && (count != kUnlimitedCount)) {
       count = kCountSaturate;
     }
@@ -101,7 +102,8 @@ class KTrace<true> : public KTraceBase {
                      KTRACE_FLAGS_FUTEX_WAS_REQUEUE_FLAG |
                      ((active == FutexActive::Yes) ? KTRACE_FLAGS_FUTEX_WAS_ACTIVE_FLAG : 0);
 
-    ktrace(TAG_FUTEX_WAKE, static_cast<uint32_t>(futex_id), static_cast<uint32_t>(futex_id >> 32),
+    ktrace(TAG_FUTEX_WAKE, static_cast<uint32_t>(futex_id.get()),
+           static_cast<uint32_t>(futex_id.get() >> 32),
            static_cast<uint32_t>(assigned_owner ? assigned_owner->tid() : 0), flags, ts_);
   }
 
@@ -176,7 +178,7 @@ struct ResetBlockingFutexIdState {
 };
 
 struct SetBlockingFutexIdState {
-  explicit SetBlockingFutexIdState(uintptr_t new_id) : id(new_id) {}
+  explicit SetBlockingFutexIdState(FutexId new_id) : id(new_id) {}
 
   // No move, no copy.
   SetBlockingFutexIdState(const SetBlockingFutexIdState&) = delete;
@@ -184,7 +186,7 @@ struct SetBlockingFutexIdState {
   SetBlockingFutexIdState& operator=(const SetBlockingFutexIdState&) = delete;
   SetBlockingFutexIdState& operator=(SetBlockingFutexIdState&&) = delete;
 
-  const uintptr_t id;
+  const FutexId id;
   uint32_t count = 0;
 };
 
@@ -197,7 +199,7 @@ OwnedWaitQueue::Hook::Action FutexContext::ResetBlockingFutexId(Thread* thrd, vo
   DEBUG_ASSERT(ctx != nullptr);
   auto state = reinterpret_cast<ResetBlockingFutexIdState*>(ctx);
 
-  thrd->user_thread()->blocking_futex_id_ = 0;
+  thrd->user_thread()->blocking_futex_id_ = FutexId::Null();
   ++state->count;
 
   return action;
@@ -303,7 +305,7 @@ zx_status_t FutexContext::FutexWaitInternal(user_in_ptr<const zx_futex_t> value_
 
   Thread* current_core_thread = Thread::Current::Get();
   ThreadDispatcher* current_thread = current_core_thread->user_thread();
-  uintptr_t futex_id = reinterpret_cast<uintptr_t>(value_ptr.get());
+  FutexId futex_id(value_ptr);
   {
     // Obtain the FutexState for the ID we are interested in, activating a free
     // futex state in the process if needed.  This operation should never fail
@@ -337,7 +339,7 @@ zx_status_t FutexContext::FutexWaitInternal(user_in_ptr<const zx_futex_t> value_
 
     // Sanity check, bookkeeping should not indicate that we are blocked on
     // a futex at this point in time.
-    DEBUG_ASSERT(current_thread->blocking_futex_id_ == 0);
+    DEBUG_ASSERT(current_thread->blocking_futex_id_ == FutexId::Null());
 
     int value;
     result = value_ptr.copy_from_user(&value);
@@ -402,7 +404,7 @@ zx_status_t FutexContext::FutexWaitInternal(user_in_ptr<const zx_futex_t> value_
   if (result == ZX_OK) {
     // The FutexWake operation should have already cleared our blocking
     // futex ID.
-    DEBUG_ASSERT(current_thread->blocking_futex_id_ == 0);
+    DEBUG_ASSERT(current_thread->blocking_futex_id_ == FutexId::Null());
     woke_tracer.FutexWoke(futex_id, result);
     return ZX_OK;
   }
@@ -421,11 +423,11 @@ zx_status_t FutexContext::FutexWaitInternal(user_in_ptr<const zx_futex_t> value_
   // we just woke up from.  We need to find the futex we were blocked by, and
   // release our pending op reference to it (potentially returning the
   // FutexState to the free pool in the process).
-  DEBUG_ASSERT(current_thread->blocking_futex_id_ != 0);
+  DEBUG_ASSERT(current_thread->blocking_futex_id_ != FutexId::Null());
   woke_tracer.FutexWoke(current_thread->blocking_futex_id_, result);
 
   FutexState::PendingOpRef futex_ref = FindActiveFutex(current_thread->blocking_futex_id_);
-  current_thread->blocking_futex_id_ = 0;
+  current_thread->blocking_futex_id_ = FutexId::Null();
   DEBUG_ASSERT(futex_ref != nullptr);
 
   // Record the fact that we are holding an extra reference.  The first
@@ -474,7 +476,7 @@ zx_status_t FutexContext::FutexWake(user_in_ptr<const zx_futex_t> value_ptr, uin
 
   // Try to find an active futex with the specified ID.  If we cannot find one,
   // then we are done.  This wake operation had no threads to wake.
-  uintptr_t futex_id = reinterpret_cast<uintptr_t>(value_ptr.get());
+  FutexId futex_id(value_ptr);
   FutexState::PendingOpRef futex_ref = FindActiveFutex(futex_id);
   if (futex_ref == nullptr) {
     tracer.FutexWake(futex_id, KTracer::FutexActive::No, KTracer::RequeueOp::No, wake_count,
@@ -585,8 +587,8 @@ zx_status_t FutexContext::FutexRequeueInternal(
   KTracer tracer;
 
   // Find the FutexState for the wake and requeue futexes.
-  uintptr_t wake_id = reinterpret_cast<uintptr_t>(wake_ptr.get());
-  uintptr_t requeue_id = reinterpret_cast<uintptr_t>(requeue_ptr.get());
+  FutexId wake_id(wake_ptr);
+  FutexId requeue_id(requeue_ptr);
   KTracer::FutexActive requeue_futex_was_active;
 
   Guard<SpinLock, IrqSave> ref_lookup_guard{&pool_lock_};
@@ -723,7 +725,7 @@ zx_status_t FutexContext::FutexGetOwner(user_in_ptr<const zx_futex_t> value_ptr,
 
   // Attempt to find the futex.  If it is not in the active set, then there is no owner.
   zx_koid_t koid = ZX_KOID_INVALID;
-  uintptr_t futex_id = reinterpret_cast<uintptr_t>(value_ptr.get());
+  FutexId futex_id(value_ptr);
   FutexState::PendingOpRef futex_ref = FindActiveFutex(futex_id);
 
   // We found a FutexState in the active set.  It may have an owner, but we need

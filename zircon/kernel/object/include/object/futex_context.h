@@ -22,6 +22,23 @@
 
 class ThreadDispatcher;
 
+class FutexId {
+ public:
+  // Shift for a better ID for hashing since the low bits are zero.
+  FutexId(user_in_ptr<const zx_futex_t> value_ptr)
+      : id_(reinterpret_cast<uintptr_t>(value_ptr.get()) >> 2) {}
+  bool operator==(const FutexId& other) const { return id_ == other.id_; }
+  bool operator!=(const FutexId& other) const { return id_ != other.id_; }
+  uintptr_t get() const { return id_; }
+
+  static inline constexpr FutexId Null() { return FutexId{}; }
+  static size_t GetHash(FutexId key) { return key.id_; }
+
+ private:
+  constexpr FutexId() : id_(0) {}
+  uintptr_t id_;
+};
+
 // FutexContex
 //
 // A FutexContext is the object which manages the state of all of the active
@@ -288,13 +305,13 @@ class FutexContext {
           uint32_t release_count = 1 + extra_refs_;
 
           DEBUG_ASSERT(state_ != nullptr);
-          DEBUG_ASSERT(state_->id() != 0);
+          DEBUG_ASSERT(state_->id() != FutexId::Null());
           DEBUG_ASSERT(state_->pending_operation_count_ >= release_count);
 
           state_->pending_operation_count_ -= release_count;
           if (state_->pending_operation_count_ == 0) {
             ctx_->free_futexes_.push_front(ctx_->active_futexes_.erase(*state_));
-            state_->id_ = 0;
+            state_->id_ = FutexId::Null();
             state_->waiters_.AssertNotOwned();
           }
 
@@ -310,11 +327,11 @@ class FutexContext {
       uint32_t extra_refs_ = 0;
     };
 
-    uintptr_t id() const { return id_; }
+    FutexId id() const { return id_; }
 
     // hashtable support
-    uintptr_t GetKey() const { return id(); }
-    static size_t GetHash(uintptr_t key) { return (key >> 3); }
+    FutexId GetKey() const { return id(); }
+    static size_t GetHash(FutexId key) { return FutexId::GetHash(key); }
 
    private:
     friend typename ktl::unique_ptr<FutexState>::deleter_type;
@@ -330,7 +347,7 @@ class FutexContext {
 
     uint32_t pending_operation_count() const { return pending_operation_count_; }
 
-    uintptr_t id_ = 0;
+    FutexId id_{FutexId::Null()};
     OwnedWaitQueue waiters_;
 
     // pending operation count is protected by the outer FutexContext pool lock.
@@ -369,12 +386,12 @@ class FutexContext {
   // Find the futex state for a given ID in the futex table, increment its
   // pending operation reference count, and return an RAII helper which helps to
   // manage the pending operation references.
-  FutexState::PendingOpRef FindActiveFutex(uintptr_t id) TA_EXCL(pool_lock_) {
+  FutexState::PendingOpRef FindActiveFutex(FutexId id) TA_EXCL(pool_lock_) {
     Guard<SpinLock, IrqSave> pool_lock_guard{&pool_lock_};
     return FindActiveFutexLocked(id);
   }
 
-  FutexState::PendingOpRef FindActiveFutexLocked(uintptr_t id) TA_REQ(pool_lock_) {
+  FutexState::PendingOpRef FindActiveFutexLocked(FutexId id) TA_REQ(pool_lock_) {
     auto iter = active_futexes_.find(id);
 
     if (iter.IsValid()) {
@@ -389,12 +406,12 @@ class FutexContext {
   // Find a futex with the specified ID, increment its pending_operation_count
   // and return it to the caller.  If the given futex ID is not currently
   // active, grab a free one and activate it.
-  FutexState::PendingOpRef ActivateFutex(uintptr_t id) TA_EXCL(pool_lock_) {
+  FutexState::PendingOpRef ActivateFutex(FutexId id) TA_EXCL(pool_lock_) {
     Guard<SpinLock, IrqSave> pool_lock_guard{&pool_lock_};
     return ActivateFutexLocked(id);
   }
 
-  FutexState::PendingOpRef ActivateFutexLocked(uintptr_t id) TA_REQ(pool_lock_) {
+  FutexState::PendingOpRef ActivateFutexLocked(FutexId id) TA_REQ(pool_lock_) {
     if (auto ret = FindActiveFutexLocked(id); ret != nullptr) {
       return ret;
     }
@@ -403,7 +420,7 @@ class FutexContext {
 
     // Sanity checks.
     DEBUG_ASSERT(new_state != nullptr);
-    DEBUG_ASSERT(new_state->id() == 0);
+    DEBUG_ASSERT(new_state->id() == FutexId::Null());
     DEBUG_ASSERT(new_state->pending_operation_count_ == 0);
     new_state->waiters_.AssertNotOwned();
 
@@ -431,7 +448,7 @@ class FutexContext {
   DECLARE_SPINLOCK(FutexContext, lockdep::LockFlagsTrackingDisabled) pool_lock_;
 
   // Hash table for FutexStates currently in use (eg; futexes with waiters).
-  fbl::HashTable<uintptr_t, ktl::unique_ptr<FutexState>,
+  fbl::HashTable<FutexId, ktl::unique_ptr<FutexState>,
                  fbl::DoublyLinkedList<ktl::unique_ptr<FutexState>>>
       active_futexes_ TA_GUARDED(pool_lock_);
 

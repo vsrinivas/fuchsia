@@ -27,6 +27,7 @@
 #include <object/dispatcher.h>
 #include <object/exception_dispatcher.h>
 #include <object/exceptionate.h>
+#include <object/futex_context.h>
 #include <object/handle.h>
 #include <object/thread_state.h>
 #include <vm/vm_address_region.h>
@@ -322,7 +323,7 @@ class ThreadDispatcher final : public SoloDispatcher<ThreadDispatcher, ZX_DEFAUL
   // figure out that this thread belongs to a specific process/futex-context,
   // and therefor the thread's futex-context lock can be used to guard this
   // futex ID.
-  uintptr_t blocking_futex_id_ = 0;
+  FutexId blocking_futex_id_{FutexId::Null()};
 
   // Generation counter protecting runtime stats.
   //
