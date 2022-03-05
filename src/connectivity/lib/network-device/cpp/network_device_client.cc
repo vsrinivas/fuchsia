@@ -401,7 +401,11 @@ void NetworkDeviceClient::GetPortInfoWithMac(netdev::wire::PortId port_id,
     state->result = std::move(info.value());
     completer.complete_ok();
   });
-  device_->GetPort(port_id, std::move(port_endpoints->server));
+  const fidl::Result result = device_->GetPort(port_id, std::move(port_endpoints->server));
+  if (!result.ok()) {
+    callback(zx::error(result.status()));
+    return;
+  }
 
   // Get the Mac address of the interface.
   auto get_mac_address =
@@ -409,6 +413,12 @@ void NetworkDeviceClient::GetPortInfoWithMac(netdev::wire::PortId port_id,
        mac_server =
            std::move(mac_endpoints->server)]() mutable -> fpromise::promise<void, zx_status_t> {
     fpromise::bridge<void, zx_status_t> bridge;
+
+    const fidl::Result result = state->port_client->GetMac(std::move(mac_server));
+    if (!result.ok()) {
+      return fpromise::make_error_promise(result.status());
+    }
+
     // NB: Like above, the GetUnicastAddress call on mac is written before we
     // pipeline the mac to the port. That ensures we observe an epitaph in case
     // mac is not supported, instead of PEER_CLOSED when attempting to write the
@@ -429,7 +439,7 @@ void NetworkDeviceClient::GetPortInfoWithMac(netdev::wire::PortId port_id,
           state->result.unicast_address = result.value().address;
           completer.complete_ok();
         });
-    state->port_client->GetMac(std::move(mac_server));
+
     return bridge.consumer.promise();
   };
 
@@ -495,7 +505,11 @@ void NetworkDeviceClient::GetPorts(PortsCallback callback) {
     callback(zx::error(watcher_endpoints.error_value()));
     return;
   }
-  device_->GetPortWatcher(std::move(watcher_endpoints->server));
+  const fidl::Result result = device_->GetPortWatcher(std::move(watcher_endpoints->server));
+  if (!result.ok()) {
+    callback(zx::error(result.status()));
+    return;
+  }
   fidl::WireClient<netdev::PortWatcher> watcher;
   watcher.Bind(std::move(watcher_endpoints->client), dispatcher_);
 
@@ -539,8 +553,12 @@ zx_status_t NetworkDeviceClient::KillSession() {
   rx_writable_wait_.Cancel();
   tx_wait_.Cancel();
   tx_writable_wait_.Cancel();
-  session_->Close();
-  return ZX_OK;
+
+  const fidl::Result result = session_->Close();
+  if (result.is_peer_closed()) {
+    return ZX_OK;
+  }
+  return result.status();
 }
 
 zx::status<std::unique_ptr<NetworkDeviceClient::StatusWatchHandle>>

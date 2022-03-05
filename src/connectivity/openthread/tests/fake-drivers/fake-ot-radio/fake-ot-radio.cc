@@ -88,9 +88,14 @@ void FakeOtRadioDevice::LowpanSpinelDeviceFidlImpl::Open(OpenRequestView request
   zx_status_t res = ot_radio_obj_.Reset();
   if (res == ZX_OK) {
     ot_radio_obj_.power_status_ = OT_SPINEL_DEVICE_ON;
-    fidl::WireSendEvent(*ot_radio_obj_.fidl_binding_)
-        ->OnReadyForSendFrames(kRadioboundAllowanceInit);
-    zxlogf(DEBUG, "OnReadyForSendFrames(kRadioboundAllowanceInit) sent");
+    const fidl::Result event_result = fidl::WireSendEvent(*ot_radio_obj_.fidl_binding_)
+                                          ->OnReadyForSendFrames(kRadioboundAllowanceInit);
+    if (event_result.ok()) {
+      zxlogf(DEBUG, "OnReadyForSendFrames(kRadioboundAllowanceInit) sent");
+    } else {
+      zxlogf(ERROR, "OnReadyForSendFrames(kRadioboundAllowanceInit) failed to send: %s",
+             event_result.FormatDescription().c_str());
+    }
     ot_radio_obj_.clientbound_allowance_ = 0;
     ot_radio_obj_.radiobound_allowance_ = kRadioboundAllowanceInit;
     ot_radio_obj_.clientbound_cnt_ = 0;
@@ -124,11 +129,19 @@ void FakeOtRadioDevice::LowpanSpinelDeviceFidlImpl::GetMaxFrameSize(
 void FakeOtRadioDevice::LowpanSpinelDeviceFidlImpl::SendFrame(SendFrameRequestView request,
                                                               SendFrameCompleter::Sync& completer) {
   if (ot_radio_obj_.power_status_ == OT_SPINEL_DEVICE_OFF) {
-    fidl::WireSendEvent(*ot_radio_obj_.fidl_binding_)
-        ->OnError(lowpan_spinel_fidl::wire::Error::kClosed, false);
+    const fidl::Result event_result =
+        fidl::WireSendEvent(*ot_radio_obj_.fidl_binding_)
+            ->OnError(lowpan_spinel_fidl::wire::Error::kClosed, false);
+    if (!event_result.ok()) {
+      zxlogf(ERROR, "OnError failed to send: %s", event_result.FormatDescription().c_str());
+    }
   } else if (request->data.count() > kMaxFrameSize) {
-    fidl::WireSendEvent((*ot_radio_obj_.fidl_binding_))
-        ->OnError(lowpan_spinel_fidl::wire::Error::kOutboundFrameTooLarge, false);
+    const fidl::Result event_result =
+        fidl::WireSendEvent((*ot_radio_obj_.fidl_binding_))
+            ->OnError(lowpan_spinel_fidl::wire::Error::kOutboundFrameTooLarge, false);
+    if (!event_result.ok()) {
+      zxlogf(ERROR, "OnError failed to send: %s", event_result.FormatDescription().c_str());
+    }
   } else if (ot_radio_obj_.radiobound_allowance_ == 0) {
     // Client violates the protocol, close FIDL channel and device. Will not send OnError event.
     ot_radio_obj_.power_status_ = OT_SPINEL_DEVICE_OFF;
@@ -149,9 +162,14 @@ void FakeOtRadioDevice::LowpanSpinelDeviceFidlImpl::SendFrame(SendFrameRequestVi
     ot_radio_obj_.radiobound_cnt_++;
 
     if ((ot_radio_obj_.radiobound_cnt_ & 1) == 0) {
-      fidl::WireSendEvent(*ot_radio_obj_.fidl_binding_)
-          ->OnReadyForSendFrames(kRadioboundAllowanceInc);
-      zxlogf(DEBUG, "OnReadyForSendFrames(kRadioboundAllowanceInc) sent");
+      const fidl::Result event_result = fidl::WireSendEvent(*ot_radio_obj_.fidl_binding_)
+                                            ->OnReadyForSendFrames(kRadioboundAllowanceInc);
+      if (event_result.ok()) {
+        zxlogf(DEBUG, "OnReadyForSendFrames(kRadioboundAllowanceInc) sent");
+      } else {
+        zxlogf(ERROR, "OnReadyForSendFrames(kRadioboundAllowanceInc) failed to send: %s",
+               event_result.FormatDescription().c_str());
+      }
       ot_radio_obj_.radiobound_allowance_ += kRadioboundAllowanceInc;
     }
   }

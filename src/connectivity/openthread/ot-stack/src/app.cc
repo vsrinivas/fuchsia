@@ -35,7 +35,11 @@ OtStackApp::LowpanSpinelDeviceFidlImpl::LowpanSpinelDeviceFidlImpl(OtStackApp& a
 void OtStackApp::ClientAllowanceInit() {
   client_outbound_allowance_ = kOutboundAllowanceInit;
   client_inbound_allowance_ = 0;
-  fidl::WireSendEvent(*binding_)->OnReadyForSendFrames(kOutboundAllowanceInit);
+  auto result = fidl::WireSendEvent(*binding_)->OnReadyForSendFrames(kOutboundAllowanceInit);
+  if (!result.ok()) {
+    FX_LOGS(ERROR) << "FIDL error while sending OnReadyForSendFrames event: "
+                   << result.FormatDescription();
+  }
 }
 
 void OtStackApp::RadioAllowanceInit() {
@@ -109,7 +113,12 @@ void OtStackApp::UpdateClientOutboundAllowance() {
   client_outbound_cnt++;
   if (((client_outbound_allowance_ & 1) == 0) && device_client_ptr_) {
     FX_LOGS(DEBUG) << "ot-stack: OnReadyForSendFrames: " << client_outbound_allowance_;
-    fidl::WireSendEvent(*binding_)->OnReadyForSendFrames(kOutboundAllowanceInc);
+    const fidl::Result result =
+        fidl::WireSendEvent(*binding_)->OnReadyForSendFrames(kOutboundAllowanceInc);
+    if (!result.ok()) {
+      FX_LOGS(ERROR) << "FIDL error while sending OnReadyForSendFrames event: "
+                     << result.FormatDescription();
+    }
     client_outbound_allowance_ += kOutboundAllowanceInc;
   }
   FX_LOGS(DEBUG) << "ot-stack: updated client_outbound_allowance_:" << client_outbound_allowance_;
@@ -384,7 +393,11 @@ void OtStackApp::SendOneFrameToClient() {
   }
   if (!client_inbound_queue_.empty() && client_inbound_allowance_ > 0) {
     auto data = fidl::VectorView<uint8_t>::FromExternal(client_inbound_queue_.front());
-    fidl::WireSendEvent(*binding_)->OnReceiveFrame(std::move(data));
+    const fidl::Result result = fidl::WireSendEvent(*binding_)->OnReceiveFrame(std::move(data));
+    if (!result.ok()) {
+      FX_LOGS(ERROR) << "FIDL error while sending OnReceiveFrame event: "
+                     << result.FormatDescription();
+    }
     UpdateClientInboundAllowance();
     client_inbound_queue_.pop_front();
     if (!client_inbound_queue_.empty() && client_inbound_allowance_ > 0) {
@@ -577,7 +590,12 @@ void OtStackApp::OnError(fidl::WireEvent<fidl_spinel::Device::OnError>* event) {
 }
 
 zx_status_t OtStackApp::Unknown() {
-  fidl::WireSendEvent(*binding_)->OnError(fidl_spinel::wire::Error::kIoError, true);
+  const fidl::Result result =
+      fidl::WireSendEvent(*binding_)->OnError(fidl_spinel::wire::Error::kIoError, true);
+  if (!result.ok()) {
+    return result.status();
+  }
+
   DisconnectDevice();
   return ZX_ERR_IO;
 }
