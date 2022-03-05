@@ -62,6 +62,8 @@ class GatherPackageDeps:
         # filenames longer than 100 characters.
         with tarfile.open(self.output_tar, 'w',
                           format=tarfile.GNU_FORMAT) as tar:
+            # Follow symlinks
+            tar.dereference = True
             # Create package.manifest in memory and add it to archive.
             manifest_lines = []
             # Add all source files to archive and add manfiest lines.
