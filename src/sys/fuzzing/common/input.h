@@ -29,6 +29,7 @@ class Input final {
   explicit Input(const std::vector<uint8_t>& bytes) : Input(bytes.data(), bytes.size()) {}
   explicit Input(const std::string& bytes) : Input(bytes.c_str(), bytes.size()) {}
   explicit Input(SharedMemory& shmem) : Input(shmem.data(), shmem.size()) {}
+  explicit Input(size_t size) : Input(std::vector<uint8_t>(size)) {}
   Input(Input&& other) noexcept { *this = std::move(other); }
 
   ~Input() = default;

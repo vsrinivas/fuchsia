@@ -93,6 +93,12 @@ TEST(InputTest, SharedMemoryConstructor) {
   EXPECT_EQ(input1.ToHex(), input2.ToHex());
 }
 
+TEST(InputTest, SizeConstructor) {
+  Input input1({0x00, 0x00, 0x00});
+  Input input2(3);
+  EXPECT_EQ(input1.ToHex(), input2.ToHex());
+}
+
 TEST(InputTest, MoveAssignment) {
   Input input1({0xde, 0xad, 0xbe, 0xef});
   auto input2 = input1.Duplicate();
