@@ -5,11 +5,19 @@
 // The fuchsia.bluetooth.sys.Bootstrap service is not relevant to all configurations, so products
 // that require it should include this shard. Because all of `core`'s `use`s are routed to `appmgr`
 // automatically, this shard exposes the Bootstrap protocol to the CFv1 world.
+// TODO(fxbug.dev/1496): Bluetooth owner component should restrict access to Bootstrap API
 {
     use: [
         {
             protocol: "fuchsia.bluetooth.sys.Bootstrap",
             from: "#bluetooth-core",
+        },
+    ],
+    offer: [
+        {
+            protocol: [ "fuchsia.bluetooth.sys.Bootstrap" ],
+            from: "#bluetooth-core",
+            to: "#session-manager",
         },
     ],
 }

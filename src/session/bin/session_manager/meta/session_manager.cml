@@ -53,7 +53,6 @@
                 "fuchsia.bluetooth.le.Central",
                 "fuchsia.bluetooth.le.Peripheral",
                 "fuchsia.bluetooth.sys.Access",
-                "fuchsia.bluetooth.sys.Bootstrap",
                 "fuchsia.camera3.DeviceWatcher",
                 "fuchsia.castauth.CastKeySigner",
                 "fuchsia.cobalt.SystemDataUpdater",
@@ -196,6 +195,12 @@
         {
             // Routed to session-manager via bt-hfp-audio-gateway.core_shard.cml
             protocol: [ "fuchsia.bluetooth.hfp.Hfp" ],
+            from: "parent",
+            to: "#session",
+        },
+        {
+            // Routed to session-manager via bt-bootstrap.core_shard.cml
+            protocol: [ "fuchsia.bluetooth.sys.Bootstrap" ],
             from: "parent",
             to: "#session",
         },
