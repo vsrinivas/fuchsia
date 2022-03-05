@@ -6,6 +6,7 @@
 
 use crate::common::{ElementType, Envelope};
 use crate::json::{schema, JsonObject};
+use anyhow::Result;
 use serde::{Deserialize, Serialize};
 
 impl JsonObject for Envelope<ProductBundleV1> {
@@ -15,6 +16,13 @@ impl JsonObject for Envelope<ProductBundleV1> {
 
     fn get_referenced_schemata() -> &'static [&'static str] {
         &[schema::COMMON, schema::HARDWARE_V1, schema::EMU_MANIFEST, schema::FLASH_MANIFEST_V1]
+    }
+}
+
+impl Envelope<ProductBundleV1> {
+    pub fn from(data: ProductBundleV1) -> Result<Envelope<ProductBundleV1>> {
+        let envelope = Envelope { data, schema_id: Envelope::<ProductBundleV1>::get_schema_id()? };
+        Ok(envelope)
     }
 }
 
@@ -64,7 +72,7 @@ pub struct ImageBundle {
 }
 
 /// Manifests describing how to boot the product on a device.
-#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize, Default)]
 #[serde(deny_unknown_fields)]
 pub struct Manifests {
     /// Optional manifest that describes how to boot an emulator.
