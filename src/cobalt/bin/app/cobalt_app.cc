@@ -26,7 +26,7 @@ using encoder::ClientSecret;
 using util::PosixFileSystem;
 using utils::FuchsiaHTTPClient;
 
-const size_t kMaxBytesPerEnvelope = 512 * 1024;  // 0.5 MiB.
+const float kMaxBytesPerEnvelopeFactor = 0.5;  // 50% of total capacity
 
 constexpr char kMetricsRegistryPath[] = "/config/data/global_metrics_registry.pb";
 
@@ -66,8 +66,8 @@ CobaltConfig CobaltApp::CreateCobaltConfig(
     const FuchsiaConfigurationData& configuration_data, FuchsiaSystemClockInterface* system_clock,
     FuchsiaHTTPClient::LoaderFactory http_loader_factory, UploadScheduleConfig upload_schedule_cfg,
     size_t event_aggregator_backfill_days, bool use_memory_observation_store,
-    size_t max_bytes_per_observation_store, const std::string& product_name,
-    const std::string& board_name, const std::string& version,
+    size_t max_bytes_per_observation_store, StorageQuotas storage_quotas,
+    const std::string& product_name, const std::string& board_name, const std::string& version,
     std::unique_ptr<ActivityListenerImpl> listener, std::unique_ptr<DiagnosticsImpl> diagnostics) {
   // |target_pipeline| is the pipeline used for sending data to cobalt. In particular, it is the
   // source of the encryption keys, as well as determining the destination for generated
@@ -93,8 +93,10 @@ CobaltConfig CobaltApp::CreateCobaltConfig(
       .file_system = std::make_unique<PosixFileSystem>(),
       .use_memory_observation_store = use_memory_observation_store,
       .max_bytes_per_event = fuchsia::cobalt::MAX_BYTES_PER_EVENT,
-      .max_bytes_per_envelope = kMaxBytesPerEnvelope,
+      .max_bytes_per_envelope = static_cast<size_t>(
+          kMaxBytesPerEnvelopeFactor * static_cast<float>(max_bytes_per_observation_store)),
       .max_bytes_total = max_bytes_per_observation_store,
+      .storage_quotas = storage_quotas,
       .observation_store_directory = kObservationStorePath,
 
       .local_aggregate_proto_store_path = kLocalAggregateProtoStorePath,
@@ -132,8 +134,8 @@ CobaltApp CobaltApp::CreateCobaltApp(
     fit::callback<void()> shutdown, inspect::Node inspect_node,
     UploadScheduleConfig upload_schedule_cfg, size_t event_aggregator_backfill_days,
     bool start_event_aggregator_worker, bool use_memory_observation_store,
-    size_t max_bytes_per_observation_store, const std::string& product_name,
-    const std::string& board_name, const std::string& version) {
+    size_t max_bytes_per_observation_store, StorageQuotas storage_quotas,
+    const std::string& product_name, const std::string& board_name, const std::string& version) {
   inspect::ValueList inspect_values;
   inspect::Node inspect_config_node = inspect_node.CreateChild("configuration_data");
   inspect_config_node.CreateString("product_name", product_name, &inspect_values);
@@ -157,7 +159,7 @@ CobaltApp CobaltApp::CreateCobaltApp(
         return loader_sync;
       },
       upload_schedule_cfg, event_aggregator_backfill_days, use_memory_observation_store,
-      max_bytes_per_observation_store, product_name, board_name, version,
+      max_bytes_per_observation_store, storage_quotas, product_name, board_name, version,
       std::make_unique<ActivityListenerImpl>(dispatcher, context->svc()),
       std::make_unique<DiagnosticsImpl>(inspect_node.CreateChild("core"))));
 

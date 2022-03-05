@@ -22,6 +22,7 @@
 #include "src/lib/files/directory.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/path.h"
+#include "src/public/cobalt_config.h"
 #include "third_party/cobalt/src/public/testing/fake_cobalt_service.h"
 
 namespace cobalt {
@@ -62,7 +63,8 @@ class CreateCobaltConfigTest : public gtest::TestLoopFixture {
         },
         UploadScheduleConfig{target_interval, min_interval, initial_interval, jitter},
         event_aggregator_backfill_days, use_memory_observation_store,
-        max_bytes_per_observation_store, product_name, board_name, version,
+        max_bytes_per_observation_store, cobalt::kDefaultStorageQuotas, product_name, board_name,
+        version,
         std::make_unique<ActivityListenerImpl>(dispatcher(), context_provider_.context()->svc()),
         std::make_unique<DiagnosticsImpl>(inspect::Node()));
   }
