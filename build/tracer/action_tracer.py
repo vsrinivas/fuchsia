@@ -825,7 +825,11 @@ def main():
         with open(args.hermetic_inputs_file) as f:
             hermetic_inputs = [os.path.abspath(l.strip()) for l in f]
 
-        # Generate the depfile here.
+        # Generate the depfile here. Take care of creating the output directory
+        # if needed.
+        depfile_dir = os.path.dirname(args.depfile)
+        if not os.path.exists(depfile_dir):
+            os.makedirs(depfile_dir)
         with open(args.depfile, 'w') as f:
             f.write(
                 '%s: %s\n' %
