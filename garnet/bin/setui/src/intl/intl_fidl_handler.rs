@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 use crate::base::{SettingInfo, SettingType};
-use crate::fidl_hanging_get_responder;
 use crate::handler::base::Request;
 use crate::ingress::Scoped;
 use crate::ingress::{request, watch};
@@ -12,12 +11,10 @@ use crate::job::Job;
 
 use fidl::endpoints::{ControlHandle, Responder};
 use fidl_fuchsia_settings::{
-    IntlMarker, IntlRequest, IntlSetResponder, IntlSetResult, IntlSettings, IntlWatchResponder,
+    IntlRequest, IntlSetResponder, IntlSetResult, IntlSettings, IntlWatchResponder,
 };
 use fuchsia_syslog::fx_log_warn;
 use std::convert::TryFrom;
-
-fidl_hanging_get_responder!(IntlMarker, IntlSettings, IntlWatchResponder,);
 
 impl From<SettingInfo> for IntlSettings {
     fn from(response: SettingInfo) -> Self {
