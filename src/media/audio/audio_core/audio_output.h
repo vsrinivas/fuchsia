@@ -13,6 +13,7 @@
 
 #include "src/media/audio/audio_core/audio_device.h"
 #include "src/media/audio/audio_core/audio_driver.h"
+#include "src/media/audio/audio_core/mix_profile_config.h"
 #include "src/media/audio/audio_core/output_pipeline.h"
 #include "src/media/audio/audio_core/process_config.h"
 #include "src/media/audio/audio_core/reporter.h"
@@ -42,9 +43,10 @@ class AudioOutput : public AudioDevice {
                    fuchsia::media::AudioGainValidFlags set_flags) override;
 
  protected:
-  AudioOutput(const std::string& name, ThreadingModel* threading_model, DeviceRegistry* registry,
-              LinkMatrix* link_matrix, std::shared_ptr<AudioClockFactory> clock_factory,
-              EffectsLoaderV2* effects_loader_v2, std::unique_ptr<AudioDriver>);
+  AudioOutput(const std::string& name, MixProfileConfig mix_profile_config,
+              ThreadingModel* threading_model, DeviceRegistry* registry, LinkMatrix* link_matrix,
+              std::shared_ptr<AudioClockFactory> clock_factory, EffectsLoaderV2* effects_loader_v2,
+              std::unique_ptr<AudioDriver>);
 
   Reporter::OutputDevice& reporter() { return *reporter_; }
   EffectsLoaderV2* effects_loader_v2() const { return effects_loader_v2_; }
@@ -71,7 +73,7 @@ class AudioOutput : public AudioDevice {
   void SetupMixTask(const DeviceConfig::OutputDeviceProfile& profile, size_t max_block_size_frames,
                     TimelineFunction device_reference_clock_to_fractional_frame)
       FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token());
-  virtual std::shared_ptr<OutputPipeline> CreateOutputPipeline(
+  virtual std::unique_ptr<OutputPipeline> CreateOutputPipeline(
       const PipelineConfig& config, const VolumeCurve& volume_curve, size_t max_block_size_frames,
       TimelineFunction device_reference_clock_to_fractional_frame, AudioClock& ref_clock);
 
@@ -132,9 +134,10 @@ class AudioOutput : public AudioDevice {
   std::optional<zx::time> next_sched_time_mono_;
   size_t max_block_size_frames_;
 
-  std::shared_ptr<OutputPipeline> pipeline_;
+  std::unique_ptr<OutputPipeline> pipeline_;
   Reporter::Container<Reporter::OutputDevice, Reporter::kObjectsToCache>::Ptr reporter_;
   EffectsLoaderV2* effects_loader_v2_;
+  MixProfileConfig mix_profile_config_;
 };
 
 }  // namespace media::audio

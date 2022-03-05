@@ -13,6 +13,7 @@
 
 #include "src/lib/fxl/synchronization/thread_annotations.h"
 #include "src/media/audio/audio_core/audio_output.h"
+#include "src/media/audio/audio_core/mix_profile_config.h"
 #include "src/media/audio/audio_core/pipeline_config.h"
 #include "src/media/audio/lib/clock/audio_clock.h"
 #include "src/media/audio/lib/clock/clone_mono.h"
@@ -27,18 +28,22 @@ static constexpr zx::duration TRIM_PERIOD = zx::msec(10);
 // Throttle output may only be owned on the FIDL thread.
 class ThrottleOutput : public AudioOutput {
  public:
-  static std::shared_ptr<AudioOutput> Create(ThreadingModel* threading_model,
+  static std::shared_ptr<AudioOutput> Create(const MixProfileConfig& mix_profile_config,
+                                             ThreadingModel* threading_model,
                                              DeviceRegistry* registry, LinkMatrix* link_matrix,
                                              std::shared_ptr<AudioClockFactory> clock_factory) {
-    return std::make_shared<ThrottleOutput>(threading_model, registry, link_matrix, clock_factory);
+    return std::make_shared<ThrottleOutput>(mix_profile_config, threading_model, registry,
+                                            link_matrix, clock_factory);
   }
 
   // Establish an audio clock (clone of monotonic) and override the default reference_clock()
   // implementation that calls into the AudioDriver, because we don't have an associated driver.
-  ThrottleOutput(ThreadingModel* threading_model, DeviceRegistry* registry, LinkMatrix* link_matrix,
+  ThrottleOutput(const MixProfileConfig& mix_profile_config, ThreadingModel* threading_model,
+                 DeviceRegistry* registry, LinkMatrix* link_matrix,
                  std::shared_ptr<AudioClockFactory> clock_factory)
-      : AudioOutput("throttle", threading_model, registry, link_matrix, clock_factory,
-                    nullptr /* EffectsLoaderV2 */, std::make_unique<AudioDriver>(this)),
+      : AudioOutput("throttle", mix_profile_config, threading_model, registry, link_matrix,
+                    clock_factory, nullptr /* EffectsLoaderV2 */,
+                    std::make_unique<AudioDriver>(this)),
         audio_clock_(clock_factory->CreateDeviceFixed(audio::clock::CloneOfMonotonic(),
                                                       AudioClock::kMonotonicDomain)) {
     const auto ref_now = reference_clock().Read();

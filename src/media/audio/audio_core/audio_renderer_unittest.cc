@@ -142,13 +142,12 @@ TEST_F(AudioRendererTest, AllocatePacketQueueForLinks) {
   context().route_graph().AddRenderer(std::move(renderer_));
   context().route_graph().AddDeviceToRoutes(fake_output_.get());
 
-  const size_t kFrames = 16;
   fidl_renderer_->SetPcmStreamType(PcmStreamType());
   AddPayloadBuffer(0, zx_system_get_page_size(), fidl_renderer_.get());
   fuchsia::media::StreamPacket packet;
   packet.payload_buffer_id = 0;
   packet.payload_offset = 0;
-  packet.payload_size = kFrames * sizeof(float);
+  packet.payload_offset = 128;
   fidl_renderer_->SendPacketNoReply(std::move(packet));
   RunLoopUntilIdle();
 
@@ -160,12 +159,13 @@ TEST_F(AudioRendererTest, AllocatePacketQueueForLinks) {
     ASSERT_TRUE(stream);
 
     {  // Expect a buffer.
-      auto buffer = stream->ReadLock(rlctx, Fixed(0), kFrames);
+      auto buffer = stream->ReadLock(rlctx, Fixed(0), 0);
       ASSERT_TRUE(buffer);
+      EXPECT_FALSE(buffer->is_continuous());
       EXPECT_NE(nullptr, buffer->payload());
     }
     {  // No more buffers.
-      auto buffer = stream->ReadLock(rlctx, Fixed(kFrames), 10);
+      auto buffer = stream->ReadLock(rlctx, Fixed(0), 0);
       ASSERT_FALSE(buffer);
     }
   }
@@ -200,6 +200,7 @@ TEST_F(AudioRendererTest, SendPacket_NO_TIMESTAMP) {
   for (uint32_t i = 0; i < 3; ++i) {
     auto buffer = stream->ReadLock(rlctx, Fixed(expected_packet_pts), kPacketSizeFrames);
     ASSERT_TRUE(buffer);
+    EXPECT_EQ(buffer->is_continuous(), i != 0);
     EXPECT_EQ(buffer->start().Floor(), expected_packet_pts);
     EXPECT_EQ(buffer->length(), kPacketSizeFrames);
     EXPECT_NE(nullptr, buffer->payload());
@@ -215,15 +216,13 @@ TEST_F(AudioRendererTest, SendPacket_NO_TIMESTAMP) {
   fidl_renderer_->SendPacketNoReply(fidl::Clone(packet));
   fidl_renderer_->SendPacketNoReply(fidl::Clone(packet));
   RunLoopUntilIdle();
+
   {
-    // Read enough frames to include all three packets in the same buffer.
-    // The buffer should appear PresentationDelay+30ms after expected_packet_pts.
-    auto delay_ms = stream->GetPresentationDelay().to_msecs() + 30 + 1 /* round up */;
-    auto total_packets = 3 * kPacketSizeFrames + delay_ms * kAudioRendererUnittestFrameRate / 1000;
-    auto buffer = stream->ReadLock(rlctx, Fixed(expected_packet_pts), total_packets);
+    auto buffer = stream->ReadLock(rlctx, Fixed(expected_packet_pts), kPacketSizeFrames);
     ASSERT_TRUE(buffer);
     // GT here as we are not continuous with the previous packet.
     EXPECT_GT(buffer->start().Floor(), expected_packet_pts);
+    EXPECT_TRUE(buffer->is_continuous());
     EXPECT_EQ(buffer->length(), kPacketSizeFrames);
     EXPECT_NE(nullptr, buffer->payload());
     expected_packet_pts = buffer->end().Floor();
@@ -232,6 +231,7 @@ TEST_F(AudioRendererTest, SendPacket_NO_TIMESTAMP) {
   for (uint32_t i = 0; i < 2; ++i) {
     auto buffer = stream->ReadLock(rlctx, Fixed(expected_packet_pts), kPacketSizeFrames);
     ASSERT_TRUE(buffer);
+    EXPECT_TRUE(buffer->is_continuous());
     EXPECT_EQ(buffer->start().Floor(), expected_packet_pts);
     EXPECT_EQ(buffer->length(), kPacketSizeFrames);
     EXPECT_NE(nullptr, buffer->payload());
