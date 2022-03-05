@@ -148,6 +148,15 @@ impl<T: Eq + Hash> RefCountedHashSet<T> {
     }
 }
 
+impl<T: Eq + Hash> core::iter::FromIterator<T> for RefCountedHashSet<T> {
+    fn from_iter<I: IntoIterator<Item = T>>(iter: I) -> Self {
+        iter.into_iter().fold(Self::default(), |mut set, t| {
+            let _: InsertResult<()> = set.insert(t);
+            set
+        })
+    }
+}
+
 #[cfg(test)]
 mod test {
     use alloc::format;

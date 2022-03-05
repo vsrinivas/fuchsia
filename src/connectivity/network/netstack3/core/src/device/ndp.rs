@@ -7796,13 +7796,15 @@ mod tests {
         let before_regen = regen_at - Duration::from_secs(10);
         // The only events that run before regen should be the DAD timers for
         // the static and temporary address that were created earlier.
-        assert_eq!(
-            ctx.trigger_timers_until_instant(before_regen, crate::handle_timer),
-            get_matching_slaac_address_entries(&ctx, device, |entry| {
-                entry.addr_sub().subnet() == subnet
-            })
-            .map(|entry| dad_timer_id(device_id, entry.addr_sub().addr()))
-            .collect::<Vec<_>>()
+        let dad_timer_ids = get_matching_slaac_address_entries(&ctx, device, |entry| {
+            entry.addr_sub().subnet() == subnet
+        })
+        .map(|entry| dad_timer_id(device_id, entry.addr_sub().addr()))
+        .collect::<Vec<_>>();
+        ctx.trigger_timers_until_and_expect_unordered(
+            before_regen,
+            dad_timer_ids,
+            crate::handle_timer,
         );
 
         let preferred_until = ctx

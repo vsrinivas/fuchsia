@@ -491,6 +491,7 @@ pub(crate) mod testutil {
     use core::{
         fmt::{self, Debug, Formatter},
         hash::Hash,
+        iter::FromIterator,
         ops::{self, RangeBounds},
     };
 
@@ -500,7 +501,7 @@ pub(crate) mod testutil {
 
     use super::*;
     use crate::{
-        data_structures::ref_counted_hash_map::{InsertResult, RefCountedHashSet, RemoveResult},
+        data_structures::ref_counted_hash_map::{RefCountedHashSet, RemoveResult},
         device::DeviceId,
         testutil::FakeCryptoRng,
         Instant,
@@ -942,11 +943,27 @@ pub(crate) mod testutil {
         >(
             &mut self,
             timers: I,
-            f: F,
+            mut f: F,
         ) where
             Id: Debug + Hash + Eq,
         {
-            self.trigger_timers_until_and_expect_unordered(DummyInstant::LATEST, timers, f);
+            let mut timers = RefCountedHashSet::from_iter(timers);
+
+            for _ in 0..timers.len() {
+                let id = self.trigger_next_timer(&mut f).expect("ran out of timers to trigger");
+                match timers.remove(id.clone()) {
+                    RemoveResult::Removed(()) | RemoveResult::StillPresent => {}
+                    RemoveResult::NotPresent => panic!("triggered unexpected timer: {:?}", id),
+                }
+            }
+
+            if timers.len() > 0 {
+                let mut s = String::from("Expected timers did not trigger:");
+                for (id, count) in timers.iter_counts() {
+                    s += &format!("\n\t{count}x {id:?}");
+                }
+                panic!("{}", s);
+            }
         }
 
         /// Triggers timers until `instant` and expects them to be the given
@@ -961,22 +978,15 @@ pub(crate) mod testutil {
             &mut self,
             instant: DummyInstant,
             timers: I,
-            mut f: F,
+            f: F,
         ) where
             Id: Debug + Hash + Eq,
         {
-            let mut timers =
-                timers.into_iter().fold(RefCountedHashSet::default(), |mut timers, id| {
-                    let _: InsertResult<()> = timers.insert(id);
-                    timers
-                });
+            let mut timers = RefCountedHashSet::from_iter(timers);
 
-            while timers.len() > 0
-                && self.as_mut().timers.peek().map(|tmr| tmr.0 <= instant).unwrap_or(false)
-            {
-                let id = self
-                    .trigger_next_timer(&mut f)
-                    .expect("unexpectedly ran out of timers to fire");
+            let triggered_timers = self.trigger_timers_until_instant(instant, f);
+
+            for id in triggered_timers {
                 match timers.remove(id.clone()) {
                     RemoveResult::Removed(()) | RemoveResult::StillPresent => {}
                     RemoveResult::NotPresent => panic!("triggered unexpected timer: {:?}", id),
@@ -1628,6 +1638,9 @@ pub(crate) mod testutil {
     mod tests {
         use super::*;
 
+        const ONE_SEC: Duration = Duration::from_secs(1);
+        const ONE_SEC_INSTANT: DummyInstant = DummyInstant { offset: ONE_SEC };
+
         #[test]
         fn test_instant_and_data() {
             // Verify implementation of InstantAndData to be used as a complex
@@ -1673,9 +1686,6 @@ pub(crate) mod testutil {
             // `false`.
             assert_eq!(ctx.trigger_next_timer(TimerHandler::handle_timer), None);
             assert_eq!(ctx.get_ref().as_slice(), []);
-
-            const ONE_SEC: Duration = Duration::from_secs(1);
-            const ONE_SEC_INSTANT: DummyInstant = DummyInstant { offset: ONE_SEC };
 
             // When one timer is installed, it should be triggered.
             ctx = Default::default();
@@ -1726,7 +1736,7 @@ pub(crate) mod testutil {
             assert_eq!(ctx.schedule_timer(Duration::from_secs(2), 2), None,);
             assert_eq!(
                 ctx.trigger_timers_until_instant(ONE_SEC_INSTANT, TimerHandler::handle_timer),
-                alloc::vec![0, 1],
+                vec![0, 1],
             );
 
             // The first two timers should have fired.
@@ -1744,6 +1754,21 @@ pub(crate) mod testutil {
 
             // The last timer should not have fired.
             assert_eq!(ctx.cancel_timer(2), Some(DummyInstant::from(Duration::from_secs(2))));
+        }
+
+        #[test]
+        fn test_trigger_timers_until_and_expect_unordered() {
+            // If the requested instant does not coincide with a timer trigger
+            // point, the time should still be advanced.
+            let mut ctx = DummyCtx::<Vec<(usize, DummyInstant)>, usize>::default();
+            assert_eq!(ctx.schedule_timer(Duration::from_secs(0), 0), None);
+            assert_eq!(ctx.schedule_timer(Duration::from_secs(2), 1), None);
+            ctx.trigger_timers_until_and_expect_unordered(
+                ONE_SEC_INSTANT,
+                vec![0],
+                TimerHandler::handle_timer,
+            );
+            assert_eq!(ctx.now(), ONE_SEC_INSTANT);
         }
     }
 }
