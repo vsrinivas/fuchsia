@@ -281,6 +281,7 @@ func (r *RunCommand) execute(ctx context.Context, args []string) error {
 			return err
 		}
 		for _, t := range targetSlice {
+			t := t
 			eg.Go(func() error {
 				logger.Debugf(ctx, "starting serial collection for target %s", t.Nodename())
 
