@@ -271,7 +271,7 @@ uint32_t AmlogicDisplay::DisplayControllerImplCheckConfiguration(
     return CONFIG_DISPLAY_OK;
   }
 
-  if (vout_->CheckMode(&display_configs[0]->mode) || (display_configs[0]->mode.v_addressable % 8)) {
+  if (vout_->CheckMode(&display_configs[0]->mode)) {
     return CONFIG_DISPLAY_UNSUPPORTED_MODES;
   }
 
