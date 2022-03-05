@@ -422,7 +422,7 @@ TEST(SocketTest, PassFD) {
     };
 
     char err_msg[FDIO_SPAWN_ERR_MSG_MAX_LENGTH] = {};
-    constexpr char bin_path[] = "/bin/cat";
+    constexpr char bin_path[] = "/pkg/bin/cat";
     const char* argv[] = {bin_path, nullptr};
 
     ASSERT_OK(fdio_spawn_etc(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL & ~FDIO_SPAWN_CLONE_STDIO,

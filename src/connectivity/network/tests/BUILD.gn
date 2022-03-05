@@ -107,14 +107,7 @@ foreach(test, tests) {
   }
 }
 
-_universe_deps = [
-  # cat is used to test FD passing in :netstack_fuchsia_c_api_test.
-  "//third_party/sbase:cat",
-]
-
 fuchsia_test_package("netstack-c-api-tests") {
-  package_deps_for_infra_only = _universe_deps
-
   test_components = []
   foreach(test, tests) {
     test_components += [ ":${test}_test_component" ]
@@ -126,21 +119,24 @@ fuchsia_test_package("netstack-c-api-tests") {
 
     # netstack is under test.
     "//src/connectivity/network/netstack:component-debug-legacy",
+
+    # cat is used to test FD passing in :netstack_fuchsia_c_api_test.
+    "//third_party/sbase:cat_bin",
   ]
 }
 
 group("tests") {
   testonly = true
-  public_deps = _universe_deps + [
-                  ":netstack-c-api-tests",
-                  "benchmarks:tests",
-                  "connect:tests",
-                  "dhcp_interop:dhcp_integration_tests",
-                  "external_network:tests",
-                  "fidl:tests",
-                  "getifaddrs:tests",
-                  "integration:tests",
-                ]
+  public_deps = [
+    ":netstack-c-api-tests",
+    "benchmarks:tests",
+    "connect:tests",
+    "dhcp_interop:dhcp_integration_tests",
+    "external_network:tests",
+    "fidl:tests",
+    "getifaddrs:tests",
+    "integration:tests",
+  ]
   if (host_os == "linux") {
     public_deps += [
       ":netstack_bsdsocket_c_api_test($host_toolchain)",
