@@ -490,12 +490,7 @@ impl HttpResponder for BlockResponseBodyOnce {
 }
 
 async fn body_to_bytes(body: Body) -> Vec<u8> {
-    body.try_fold(Vec::new(), |mut vec, b| async move {
-        vec.extend(b);
-        Ok(vec)
-    })
-    .await
-    .expect("body stream to complete")
+    hyper::body::to_bytes(body).await.expect("body to bytes").to_vec()
 }
 
 /// Responder that yields the response up to the final byte, then produces an error.  Panics if the

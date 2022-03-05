@@ -10,7 +10,7 @@ use crate::{
         Cohort,
     },
 };
-use futures::{executor::block_on, prelude::*};
+use futures::executor::block_on;
 use pretty_assertions::assert_eq;
 use serde_json::json;
 
@@ -210,11 +210,7 @@ fn test_single_request() {
     // Extract the request body out into a concatenated stream of Chunks, into a slice, so
     // that serde can be used to parse the body into a JSON Value object that can be compared
     // with the expected json constructed above.
-    let body = block_on(body.try_fold(Vec::new(), |mut vec, b| async move {
-        vec.extend(b);
-        Ok(vec)
-    }))
-    .unwrap();
+    let body = block_on(hyper::body::to_bytes(body)).unwrap();
     let actual: serde_json::Value = serde_json::from_slice(&body).unwrap();
 
     assert_eq!(expected, actual);

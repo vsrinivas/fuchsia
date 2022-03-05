@@ -1469,14 +1469,8 @@ mod tests {
     // Assert that the last request made to |http| is equal to the request built by
     // |request_builder|.
     async fn assert_request<'a>(http: &MockHttpRequest, request_builder: RequestBuilder<'a>) {
-        let body = request_builder.build().unwrap().into_body();
-        let body = body
-            .try_fold(Vec::new(), |mut vec, b| async move {
-                vec.extend(b);
-                Ok(vec)
-            })
-            .await
-            .unwrap();
+        let request = request_builder.build().unwrap();
+        let body = hyper::body::to_bytes(request).await.unwrap();
         // Compare string instead of Vec<u8> for easier debugging.
         let body_str = String::from_utf8_lossy(&body);
         http.assert_body_str(&body_str).await;

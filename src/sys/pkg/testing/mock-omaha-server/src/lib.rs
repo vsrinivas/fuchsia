@@ -180,13 +180,7 @@ async fn handle_omaha_request(
     assert_eq!(req.method(), Method::POST);
     assert_eq!(req.uri().query(), None);
 
-    let req_body = req
-        .into_body()
-        .try_fold(Vec::new(), |mut vec, b| async move {
-            vec.extend(b);
-            Ok(vec)
-        })
-        .await?;
+    let req_body = hyper::body::to_bytes(req).await?;
     let req_json: serde_json::Value = serde_json::from_slice(&req_body).expect("parse json");
 
     let request = req_json.get("request").unwrap();
@@ -394,14 +388,7 @@ mod tests {
         let response = client.request(request).await?;
 
         assert_eq!(response.status(), StatusCode::OK);
-        let body = response
-            .into_body()
-            .try_fold(Vec::new(), |mut vec, b| async move {
-                vec.extend(b);
-                Ok(vec)
-            })
-            .await
-            .context("reading response body")?;
+        let body = hyper::body::to_bytes(response).await.context("reading response body")?;
         let obj: serde_json::Value =
             serde_json::from_slice(&body).context("parsing response json")?;
 

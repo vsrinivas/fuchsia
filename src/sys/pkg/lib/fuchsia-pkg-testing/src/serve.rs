@@ -518,15 +518,9 @@ async fn get(url: impl AsRef<str>) -> Result<Vec<u8>, Error> {
         return Err(format_err!("unexpected status code: {:?}", response.status()));
     }
 
-    let body = response
-        .into_body()
-        .try_fold(Vec::new(), |mut vec, b| async move {
-            vec.extend(b);
-            Ok(vec)
-        })
-        .await?;
+    let body = hyper::body::to_bytes(response).await?;
 
-    Ok(body)
+    Ok(body.to_vec())
 }
 
 #[cfg(test)]

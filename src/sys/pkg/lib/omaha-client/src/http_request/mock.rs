@@ -84,29 +84,13 @@ impl MockHttpRequest {
     }
 
     pub async fn assert_body(&self, body: &[u8]) {
-        let chunks = self
-            .take_request()
-            .into_body()
-            .try_fold(Vec::new(), |mut vec, b| async move {
-                vec.extend(b);
-                Ok(vec)
-            })
-            .await
-            .unwrap();
-        assert_eq!(body, &chunks[..])
+        let bytes = hyper::body::to_bytes(self.take_request()).await.unwrap();
+        assert_eq!(body, &bytes);
     }
 
     pub async fn assert_body_str(&self, body: &str) {
-        let chunks = self
-            .take_request()
-            .into_body()
-            .try_fold(Vec::new(), |mut vec, b| async move {
-                vec.extend(b);
-                Ok(vec)
-            })
-            .await
-            .unwrap();
-        assert_eq!(body, String::from_utf8_lossy(chunks.as_ref()));
+        let bytes = hyper::body::to_bytes(self.take_request()).await.unwrap();
+        assert_eq!(body, String::from_utf8_lossy(&bytes));
     }
 }
 
