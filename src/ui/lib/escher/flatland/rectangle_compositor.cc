@@ -4,7 +4,6 @@
 
 #include "src/ui/lib/escher/flatland/rectangle_compositor.h"
 
-#include "src/ui/lib/escher/flatland/flatland_static_config.h"
 #include "src/ui/lib/escher/impl/naive_image.h"
 #include "src/ui/lib/escher/mesh/indexed_triangle_mesh_upload.h"
 #include "src/ui/lib/escher/mesh/tessellation.h"
@@ -85,14 +84,15 @@ static void InitRenderPassInfoHelper(RenderPassInfo* rp,
   }
 }
 
-// We need a render pass with two subpasses. The first pass renders each of the
-// renderables to a transient framebuffer, and the second pass reads in those
-// transient values as input, and is used to compute color conversion as a post
-// processing effect over the entire output framebuffer. Since color-conversion
-// doesn't require knowledge of adjacent pixels, subpasses are a relatively
-// straightforward way to handle it.
-bool SetupRenderPass(RenderPassInfo* rp, vk::Rect2D render_area, const ImagePtr& transient_image,
-                     const ImagePtr& output_image, const TexturePtr& depth_texture) {
+// We need a render pass with two subpasses in order to apply color conversion.
+// The first subpass renders each of the renderables to a transient framebuffer,
+// and the second subpass reads in those transient values as input, and is used to
+// compute color conversion as a post processing effect over the entire output
+// framebuffer. Since color-conversion doesn't require knowledge of adjacent
+// pixels, subpasses are a relatively straightforward way to handle it.
+bool SetupColorConversionDualPass(RenderPassInfo* rp, vk::Rect2D render_area,
+                                  const ImagePtr& transient_image, const ImagePtr& output_image,
+                                  const TexturePtr& depth_texture) {
   FX_DCHECK(output_image->info().sample_count == 1);
   rp->render_area = render_area;
 
@@ -220,8 +220,8 @@ void TraverseBatch(CommandBuffer* cmd_buf, vec3 bounds, ShaderProgramPtr program
 }
 
 void ApplyColorConversion(CommandBuffer* cmd_buf, ShaderProgramPtr program,
-                          ImageViewPtr input_attachment, glm::mat4 matrix, glm::vec4 preoffsets,
-                          glm::vec4 postoffsets) {
+                          ImageViewPtr input_attachment,
+                          const ColorConversionParams& color_conversion_params) {
   TRACE_DURATION("gfx", "RectangleCompositor::ApplyColorConversion");
   cmd_buf->SetToDefaultState(CommandBuffer::DefaultState::kOpaque);
   cmd_buf->SetDepthTestAndWrite(false, false);
@@ -230,18 +230,7 @@ void ApplyColorConversion(CommandBuffer* cmd_buf, ShaderProgramPtr program,
 
   cmd_buf->BindInputAttachment(/*set*/ 0, /*binding*/ 0, input_attachment);
 
-  // Struct to store all the push constant data in the fragment shader
-  // so we only need to make a single call to PushConstants().
-  struct FragmentShaderPushConstants {
-    alignas(16) mat4 matrix;
-    alignas(16) vec4 preoffsets;
-    alignas(16) vec4 postoffsets;
-  };
-
-  FragmentShaderPushConstants constants = {
-      .matrix = matrix, .preoffsets = preoffsets, .postoffsets = postoffsets};
-
-  cmd_buf->PushConstants(constants);
+  cmd_buf->PushConstants(color_conversion_params);
 
   // Draw one triangle. The vertex shader knows how to use the gl_VertexIndex
   // of each vertex to compute the appropriate position.
@@ -264,7 +253,8 @@ void RectangleCompositor::DrawBatch(CommandBuffer* cmd_buf,
                                     const std::vector<Rectangle2D>& rectangles,
                                     const std::vector<const TexturePtr>& textures,
                                     const std::vector<ColorData>& color_data,
-                                    const ImagePtr& output_image, const TexturePtr& depth_buffer) {
+                                    const ImagePtr& output_image, const TexturePtr& depth_buffer,
+                                    bool apply_color_conversion) {
   // TODO (fxr/43278): Add custom clear colors. We could either pass in another parameter to
   // this function or try to embed clear-data into the existing api. For example, one could
   // check to see if the back rectangle is fullscreen and solid-color, in which case we can
@@ -279,14 +269,6 @@ void RectangleCompositor::DrawBatch(CommandBuffer* cmd_buf,
   RenderPassInfo render_pass;
   vk::Rect2D render_area = {{0, 0}, {output_image->width(), output_image->height()}};
 
-  auto transient_image = CreateOrFindTransientImage(output_image);
-
-  if (!SetupRenderPass(&render_pass, render_area, transient_image, output_image, depth_buffer)) {
-    FX_LOGS(ERROR) << "RectangleCompositor::DrawBatch(): RenderPassInfo initialization failed. "
-                      "Exiting.";
-    return;
-  }
-
   // Construct the bounds that are used in the vertex shader to convert the
   // renderable positions into normalized device coordinates (NDC). The width
   // and height are divided by 2 to pre-optimize the shift that happens in the
@@ -295,26 +277,61 @@ void RectangleCompositor::DrawBatch(CommandBuffer* cmd_buf,
   vec3 bounds(static_cast<float>(output_image->width() * 0.5),
               static_cast<float>(output_image->height() * 0.5), rectangles.size());
 
-  if (transient_image->layout() != vk::ImageLayout::eColorAttachmentOptimal) {
-    cmd_buf->impl()->TransitionImageLayout(transient_image, vk::ImageLayout::eUndefined,
-                                           vk::ImageLayout::eColorAttachmentOptimal);
+  // If we don't have any color conversion data, stick to a single subpass.
+  if (!apply_color_conversion) {
+    // Setup a standard 1-pass renderpass where we render directly into the output image.
+    if (!RenderPassInfo::InitRenderPassInfo(&render_pass, render_area, output_image,
+                                            depth_buffer)) {
+      FX_LOGS(ERROR) << "RectangleCompositor::DrawBatch(): RenderPassInfo initialization failed. "
+                        "Exiting.";
+      return;
+    }
+
+    // Start the render pass.
+    cmd_buf->BeginRenderPass(render_pass);
+
+    // Iterate over all the renderables and draw them.
+    TraverseBatch(cmd_buf, bounds, standard_program_, rectangles, textures, color_data);
+
+    // End the render pass.
+    cmd_buf->EndRenderPass();
+
   }
+  // Here we'll need to setup the dual pass system.
+  else {
+    auto transient_image = CreateOrFindTransientImage(output_image);
 
-  // Start the render pass.
-  cmd_buf->BeginRenderPass(render_pass);
+    // Setup a 2-pass render pass where we first render into an intermediate buffer (not really:
+    // we try to use a transient buffer to avoid flushing memory from GPU caches to GPU-external
+    // memory) and then use that as an input attachment for the output pass, where we finally
+    // apply color correction.
+    if (!SetupColorConversionDualPass(&render_pass, render_area, transient_image, output_image,
+                                      depth_buffer)) {
+      FX_LOGS(ERROR) << "RectangleCompositor::DrawBatch(): RenderPassInfo initialization failed. "
+                        "Exiting.";
+      return;
+    }
 
-  // Iterate over all the renderables and draw them.
-  TraverseBatch(cmd_buf, bounds, standard_program_, rectangles, textures, color_data);
+    if (transient_image->layout() != vk::ImageLayout::eColorAttachmentOptimal) {
+      cmd_buf->impl()->TransitionImageLayout(transient_image, vk::ImageLayout::eUndefined,
+                                             vk::ImageLayout::eColorAttachmentOptimal);
+    }
 
-  cmd_buf->NextSubpass();
+    // Start the render pass.
+    cmd_buf->BeginRenderPass(render_pass);
 
-  ApplyColorConversion(cmd_buf, color_conversion_program_,
-                       render_pass.color_attachments[kTransientTargetAttachmentIndex],
-                       color_conversion_matrix_, color_conversion_preoffsets_,
-                       color_conversion_postoffsets_);
+    // Iterate over all the renderables and draw them.
+    TraverseBatch(cmd_buf, bounds, standard_program_, rectangles, textures, color_data);
 
-  // End the render pass.
-  cmd_buf->EndRenderPass();
+    cmd_buf->NextSubpass();
+
+    ApplyColorConversion(cmd_buf, color_conversion_program_,
+                         render_pass.color_attachments[kTransientTargetAttachmentIndex],
+                         color_conversion_params_);
+
+    // End the render pass.
+    cmd_buf->EndRenderPass();
+  }
 }
 
 // TODO(fxbug.dev/94252): It doesn't seem like all platforms actually support transient images.

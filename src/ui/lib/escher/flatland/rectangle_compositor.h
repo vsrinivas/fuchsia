@@ -5,8 +5,8 @@
 #ifndef SRC_UI_LIB_ESCHER_FLATLAND_RECTANGLE_COMPOSITOR_H_
 #define SRC_UI_LIB_ESCHER_FLATLAND_RECTANGLE_COMPOSITOR_H_
 
+#include "src/ui/lib/escher/flatland/flatland_static_config.h"
 #include "src/ui/lib/escher/forward_declarations.h"
-#include "src/ui/lib/escher/geometry/types.h"
 #include "src/ui/lib/escher/util/hash_map.h"
 #include "src/ui/lib/escher/vk/shader_program.h"
 #include "src/ui/lib/escher/vk/texture.h"
@@ -44,22 +44,21 @@ class RectangleCompositor {
   //             |is_opaque| determines use of opaque or transparent rendering.
   // - output_image: the render target the renderables will be rendered into.
   // - depth_buffer: The depth texture to be used for z-buffering.
+  // - apply_color_conversion: Does a color conversion pass over the rendered output
+  //   using the data set with |SetColorConversionParams|.
   //
   // Depth is implicit. Renderables are drawn in the order they appear in the input
   // vector, with the first entry being the furthest back, and the last the closest.
   void DrawBatch(CommandBuffer* cmd_buf, const std::vector<Rectangle2D>& rectangles,
                  const std::vector<const TexturePtr>& textures,
                  const std::vector<ColorData>& color_data, const ImagePtr& output_image,
-                 const TexturePtr& depth_buffer);
+                 const TexturePtr& depth_buffer, bool apply_color_conversion = false);
 
   // This data is used to apply a color-conversion post processing effect over the entire
   // rendered output, when making a call to |DrawBatch|. The color conversion formula
   // used is matrix * (color + preoffsets) + postoffsets.
-  void SetColorConversionParams(const glm::mat4& matrix, const glm::vec4& preoffsets,
-                                const glm::vec4& postoffsets) {
-    color_conversion_matrix_ = matrix;
-    color_conversion_preoffsets_ = preoffsets;
-    color_conversion_postoffsets_ = postoffsets;
+  void SetColorConversionParams(const ColorConversionParams& color_conversion_params) {
+    color_conversion_params_ = color_conversion_params;
   }
 
   // Minimal image constraints to be set on textures passed into DrawBatch.
@@ -84,9 +83,7 @@ class RectangleCompositor {
   HashMap<ImageInfo, ImagePtr> transient_image_map_;
 
   // Color conversion values.
-  glm::mat4 color_conversion_matrix_ = glm::mat4(1.0);
-  glm::vec4 color_conversion_preoffsets_ = glm::vec4(0.f);
-  glm::vec4 color_conversion_postoffsets_ = glm::vec4(0.f);
+  ColorConversionParams color_conversion_params_;
 };
 
 }  // namespace escher

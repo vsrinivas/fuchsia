@@ -1251,7 +1251,8 @@ VK_TEST_F(VulkanRendererTest, ColorCorrectionTest) {
   Rectangle2D renderable(glm::vec2(6, 3), glm::vec2(kRenderableWidth, kRenderableHeight));
 
   // Render the renderable to the render target.
-  renderer.Render(render_target, {renderable}, {renderable_image_data});
+  renderer.Render(render_target, {renderable}, {renderable_image_data}, /*fences*/ {},
+                  /*color_conversion*/ true);
   renderer.WaitIdle();
 
   // Calculate expected color.

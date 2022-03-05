@@ -141,7 +141,8 @@ void NullRenderer::SetColorConversionValues(const std::array<float, 9>& matrix,
 void NullRenderer::Render(const allocation::ImageMetadata& render_target,
                           const std::vector<Rectangle2D>& rectangles,
                           const std::vector<allocation::ImageMetadata>& images,
-                          const std::vector<zx::event>& release_fences) {
+                          const std::vector<zx::event>& release_fences,
+                          bool apply_color_conversion) {
   for (const auto& image : images) {
     auto image_id = image.identifier;
     FX_DCHECK(image_id != allocation::kInvalidId);

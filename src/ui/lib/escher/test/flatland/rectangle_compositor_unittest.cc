@@ -181,7 +181,7 @@ VK_TEST_F(RectangleCompositorTest, ColorConversionTest) {
                                     0.257912, 0.00000, 0.000000, -0.000000, 1.000000, 0.00000,
                                     0.000000, 0.000000, 0.00000, 1.00000);
   const glm::vec4 offsets(0);
-  ren_->SetColorConversionParams(conversion_matrix, offsets, offsets);
+  ren_->SetColorConversionParams({conversion_matrix, offsets, offsets});
 
   Rectangle2D rectangle(vec2(0, 0), vec2(512, 512));
   RectangleCompositor::ColorData color_data(vec4(1), /*is_opaque*/ true);
@@ -189,7 +189,7 @@ VK_TEST_F(RectangleCompositorTest, ColorConversionTest) {
   auto cmd_buf = frame_data_.frame->cmds();
   auto depth_texture = CreateDepthBuffer(escher().get(), frame_data_.color_attachment);
   ren_->DrawBatch(cmd_buf, {rectangle}, {texture}, {color_data}, frame_data_.color_attachment,
-                  depth_texture);
+                  depth_texture, /*apply_color_conversion*/ true);
 
   auto bytes = ReadbackFromColorAttachment(frame_data_.frame,
                                            frame_data_.color_attachment->swapchain_layout(),
@@ -209,7 +209,7 @@ VK_TEST_F(RectangleCompositorTest, ColorConversionTest) {
   EXPECT_EQ(histogram[expected_color], num_pixels);
 
   // Reset compositor.
-  ren_->SetColorConversionParams(glm::mat4(1), glm::vec4(0), glm::vec4(0));
+  ren_->SetColorConversionParams({glm::mat4(1), glm::vec4(0), glm::vec4(0)});
 }
 
 // Render a single full-screen renderable with a texture that has 4 colors but

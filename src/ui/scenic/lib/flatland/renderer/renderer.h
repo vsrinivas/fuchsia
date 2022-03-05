@@ -67,7 +67,8 @@ class Renderer : public allocation::BufferCollectionImporter {
   virtual void Render(const allocation::ImageMetadata& render_target,
                       const std::vector<Rectangle2D>& rectangles,
                       const std::vector<allocation::ImageMetadata>& images,
-                      const std::vector<zx::event>& release_fences = {}) = 0;
+                      const std::vector<zx::event>& release_fences = {},
+                      bool apply_color_conversion = false) = 0;
 
   // Values needed to adjust the color of the framebuffer as a postprocessing effect.
   virtual void SetColorConversionValues(const std::array<float, 9>& matrix,

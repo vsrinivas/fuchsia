@@ -439,7 +439,7 @@ escher::TexturePtr VkRenderer::ExtractTexture(const allocation::ImageMetadata& m
 void VkRenderer::Render(const ImageMetadata& render_target,
                         const std::vector<Rectangle2D>& rectangles,
                         const std::vector<ImageMetadata>& images,
-                        const std::vector<zx::event>& release_fences) {
+                        const std::vector<zx::event>& release_fences, bool apply_color_conversion) {
   TRACE_DURATION("gfx", "VkRenderer::Render");
 
   FX_DCHECK(rectangles.size() == images.size())
@@ -519,7 +519,7 @@ void VkRenderer::Render(const ImageMetadata& render_target,
 
   // Now the compositor can finally draw.
   compositor_.DrawBatch(command_buffer, rectangles, textures, color_data, output_image,
-                        depth_texture);
+                        depth_texture, apply_color_conversion);
 
   // Create vk::semaphores from the zx::events.
   std::vector<escher::SemaphorePtr> semaphores;
@@ -574,7 +574,7 @@ void VkRenderer::SetColorConversionValues(const std::array<float, 9>& matrix,
   glm::mat4 glm_matrix = glm::make_mat4(values);
   glm::vec4 glm_preoffsets(preoffsets[0], preoffsets[1], preoffsets[2], 0.0);
   glm::vec4 glm_postoffsets(postoffsets[0], postoffsets[1], postoffsets[2], 0.0);
-  compositor_.SetColorConversionParams(glm_matrix, glm_preoffsets, glm_postoffsets);
+  compositor_.SetColorConversionParams({glm_matrix, glm_preoffsets, glm_postoffsets});
 }
 
 zx_pixel_format_t VkRenderer::ChoosePreferredPixelFormat(
