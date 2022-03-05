@@ -8,7 +8,7 @@
 //! femu module since femu is a wrapper around an older version of QEMU.
 
 use crate::serialization::SerializingEngine;
-use anyhow::{bail, Result};
+use anyhow::Result;
 use async_trait::async_trait;
 use ffx_emulator_common::{
     config::{FfxConfigWrapper, QEMU_TOOL},
@@ -81,7 +81,11 @@ impl EmulatorEngine for QemuEngine {
     }
     fn validate(&self) -> Result<()> {
         if self.emulator_configuration.device.pointing_device == PointingDevice::Touch {
-            bail!("Touchscreen as a pointing device is not available on Qemu.");
+            eprintln!("Touchscreen as a pointing device is not available on Qemu.");
+            eprintln!(
+                "If you encounter errors, try changing the pointing device to 'mouse' in the \
+                Virtual Device specification."
+            );
         }
         self.validate_network_flags(&self.emulator_configuration)
             .and_then(|()| self.check_required_files(&self.emulator_configuration.guest))

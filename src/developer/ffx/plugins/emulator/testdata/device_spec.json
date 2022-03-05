@@ -9,7 +9,7 @@
                 "model": "hda"
             },
             "inputs": {
-                "pointing_device": "touch"
+                "pointing_device": "mouse"
             },
             "window_size": {
                 "height": 800,
