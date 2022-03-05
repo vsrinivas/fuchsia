@@ -192,9 +192,10 @@ impl Interface {
                         });
                     }
                     Interface::Accessibility => {
+                        let seeder = seeder.clone();
                         let _ = service_dir.add_fidl_service(
                             move |stream: AccessibilityRequestStream| {
-                                crate::accessibility::fidl_io::spawn(delegate.clone(), stream);
+                                seeder.seed(stream);
                             },
                         );
                     }

@@ -2,24 +2,70 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use fidl_fuchsia_settings::{
-    AccessibilityMarker, AccessibilityRequest, AccessibilitySettings, AccessibilityWatchResponder,
-};
-use fuchsia_async as fasync;
-
 use crate::accessibility::types::{AccessibilityInfo, CaptionsSettings, ColorBlindnessType};
 use crate::base::{SettingInfo, SettingType};
-use crate::fidl_hanging_get_responder;
-use crate::fidl_process;
-use crate::fidl_processor::settings::RequestContext;
 use crate::handler::base::Request;
-use crate::request_respond;
-
-fidl_hanging_get_responder!(
-    AccessibilityMarker,
-    AccessibilitySettings,
+use crate::ingress::{request, watch, Scoped};
+use crate::job::source::{Error as JobError, ErrorResponder};
+use crate::job::Job;
+use fidl::prelude::*;
+use fidl_fuchsia_settings::{
+    AccessibilityRequest, AccessibilitySetResponder, AccessibilitySetResult, AccessibilitySettings,
     AccessibilityWatchResponder,
-);
+};
+use fuchsia_syslog::fx_log_warn;
+use fuchsia_zircon as zx;
+use std::convert::TryFrom;
+
+impl ErrorResponder for AccessibilitySetResponder {
+    fn id(&self) -> &'static str {
+        "Privacy_Set"
+    }
+
+    fn respond(self: Box<Self>, error: fidl_fuchsia_settings::Error) -> Result<(), fidl::Error> {
+        self.send(&mut Err(error))
+    }
+}
+
+impl request::Responder<Scoped<AccessibilitySetResult>> for AccessibilitySetResponder {
+    fn respond(self, Scoped(mut response): Scoped<AccessibilitySetResult>) {
+        let _ = self.send(&mut response);
+    }
+}
+
+impl watch::Responder<AccessibilitySettings, zx::Status> for AccessibilityWatchResponder {
+    fn respond(self, response: Result<AccessibilitySettings, zx::Status>) {
+        match response {
+            Ok(settings) => {
+                let _ = self.send(settings);
+            }
+            Err(error) => {
+                self.control_handle().shutdown_with_epitaph(error);
+            }
+        }
+    }
+}
+
+impl TryFrom<AccessibilityRequest> for Job {
+    type Error = JobError;
+
+    fn try_from(item: AccessibilityRequest) -> Result<Self, Self::Error> {
+        #[allow(unreachable_patterns)]
+        match item {
+            AccessibilityRequest::Set { settings, responder } => {
+                Ok(request::Work::new(SettingType::Accessibility, to_request(settings), responder)
+                    .into())
+            }
+            AccessibilityRequest::Watch { responder } => {
+                Ok(watch::Work::new_job(SettingType::Accessibility, responder))
+            }
+            _ => {
+                fx_log_warn!("Received a call to an unsupported API: {:?}", item);
+                Err(JobError::Unsupported)
+            }
+        }
+    }
+}
 
 impl From<SettingInfo> for AccessibilitySettings {
     fn from(response: SettingInfo) -> Self {
@@ -42,55 +88,19 @@ impl From<SettingInfo> for AccessibilitySettings {
     }
 }
 
-impl From<AccessibilitySettings> for Request {
-    fn from(settings: AccessibilitySettings) -> Self {
-        Request::SetAccessibilityInfo(AccessibilityInfo {
-            audio_description: settings.audio_description,
-            screen_reader: settings.screen_reader,
-            color_inversion: settings.color_inversion,
-            enable_magnification: settings.enable_magnification,
-            color_correction: settings
-                .color_correction
-                .map(fidl_fuchsia_settings::ColorBlindnessType::into),
-            captions_settings: settings
-                .captions_settings
-                .map(fidl_fuchsia_settings::CaptionsSettings::into),
-        })
-    }
-}
-
-fidl_process!(Accessibility, SettingType::Accessibility, process_request,);
-
-async fn process_request(
-    context: RequestContext<AccessibilitySettings, AccessibilityWatchResponder>,
-    req: AccessibilityRequest,
-) -> Result<Option<AccessibilityRequest>, anyhow::Error> {
-    // Support future expansion of FIDL.
-    #[allow(unreachable_patterns)]
-    match req {
-        AccessibilityRequest::Set { settings, responder } => {
-            fasync::Task::spawn(async move {
-                request_respond!(
-                    context,
-                    responder,
-                    SettingType::Accessibility,
-                    settings.into(),
-                    Ok(()),
-                    Err(fidl_fuchsia_settings::Error::Failed),
-                    AccessibilityMarker
-                );
-            })
-            .detach();
-        }
-        AccessibilityRequest::Watch { responder } => {
-            context.watch(responder, true).await;
-        }
-        _ => {
-            return Ok(Some(req));
-        }
-    }
-
-    Ok(None)
+fn to_request(settings: AccessibilitySettings) -> Request {
+    Request::SetAccessibilityInfo(AccessibilityInfo {
+        audio_description: settings.audio_description,
+        screen_reader: settings.screen_reader,
+        color_inversion: settings.color_inversion,
+        enable_magnification: settings.enable_magnification,
+        color_correction: settings
+            .color_correction
+            .map(fidl_fuchsia_settings::ColorBlindnessType::into),
+        captions_settings: settings
+            .captions_settings
+            .map(fidl_fuchsia_settings::CaptionsSettings::into),
+    })
 }
 
 #[cfg(test)]
@@ -102,7 +112,7 @@ mod tests {
 
     #[test]
     fn test_request_try_from_settings_request_empty() {
-        let request = Request::from(AccessibilitySettings::EMPTY);
+        let request = to_request(AccessibilitySettings::EMPTY);
 
         const EXPECTED_ACCESSIBILITY_INFO: AccessibilityInfo = AccessibilityInfo {
             audio_description: None,
@@ -150,7 +160,7 @@ mod tests {
         accessibility_settings.color_correction = Some(ColorBlindnessType::Protanomaly);
         accessibility_settings.captions_settings = Some(EXPECTED_CAPTION_SETTINGS.into());
 
-        let request = Request::from(accessibility_settings);
+        let request = to_request(accessibility_settings);
 
         assert_eq!(request, Request::SetAccessibilityInfo(EXPECTED_ACCESSIBILITY_INFO));
     }
