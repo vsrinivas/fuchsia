@@ -9,9 +9,13 @@ source_set("common") {
   visibility = [ "//src/sys/*" ]
   testonly = true
   sources = [
+    "artifact.cc",
+    "artifact.h",
     "async-deque.h",
     "async-eventpair.cc",
     "async-eventpair.h",
+    "async-socket.cc",
+    "async-socket.h",
     "binding.h",
     "controller-provider.cc",
     "controller-provider.h",
@@ -97,6 +101,7 @@ test("unittests_bin") {
   sources = [
     "async-deque-unittest.cc",
     "async-eventpair-unittest.cc",
+    "async-socket-unittest.cc",
     "controller-provider-unittest.cc",
     "controller-unittest.cc",
     "input-unittest.cc",
