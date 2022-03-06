@@ -12,6 +12,10 @@
 {
     instances: [
         {
+            instance_id: "7db7e88479772e241229682b47f1794e12ac5d692f8d67421acd9d7ff318a975",
+            moniker: "/core/account/password_authenticator",
+        },
+        {
             instance_id: "e5ef2bbe9dd2b7cee87beac5e06cece13fe6f9c154b1f00abec155e6c6c9fa62",
             appmgr_moniker: {
                 url: "fuchsia-pkg://fuchsia.com/archivist#meta/archivist.cmx",
