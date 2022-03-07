@@ -3,5 +3,7 @@
 // found in the LICENSE file.
 
 using fuchsia.nand;
+using fuchsia.compat;
 
 fuchsia.BIND_PROTOCOL == fuchsia.nand.BIND_PROTOCOL.DEVICE;
+fuchsia.compat.LIBNAME == "nand-broker.so";

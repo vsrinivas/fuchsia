@@ -10,12 +10,14 @@ group("broker") {
 }
 
 driver_bind_rules("nand-broker-bind") {
-  disable_autobind = true
   rules = "nand-broker.bind"
   header_output = "nand-broker-bind.h"
   bind_output = "nand-broker.bindbc"
   tests = "bind-tests.json"
-  deps = [ "//src/devices/bind/fuchsia.nand" ]
+  deps = [
+    "//src/devices/bind/fuchsia.compat",
+    "//src/devices/bind/fuchsia.nand",
+  ]
 }
 
 fuchsia_driver("nand-broker-driver") {
