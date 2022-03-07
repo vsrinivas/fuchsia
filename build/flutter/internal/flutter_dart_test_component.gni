@@ -57,8 +57,6 @@ template("flutter_dart_test_component") {
   assert(defined(invoker.build_cfg),
          "flutter_dart_test_component() requires 'build_cfg' be defined")
   _build_cfg = invoker.build_cfg
-  assert(!_build_cfg.is_product,
-         "flutter_dart_test_component() requires a non-product build_cfg")
 
   _test_files = invoker.sources
 
