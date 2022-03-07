@@ -11,6 +11,9 @@ dart_library("ermine_utils") {
   sources = [
     "ermine_utils.dart",
     "src/crash.dart",
+    "src/dialogs/dialog.dart",
+    "src/dialogs/dialogs.dart",
+    "src/dialogs/password_prompt.dart",
     "src/mobx_disposable.dart",
     "src/mobx_extensions.dart",
     "src/themes.dart",
@@ -26,7 +29,9 @@ dart_library("ermine_utils") {
     "//sdk/fidl/fuchsia.feedback",
     "//sdk/fidl/fuchsia.mem",
     "//sdk/fidl/fuchsia.ui.views",
+    "//src/experiences/session_shells/ermine/internationalization",
     "//third_party/dart-pkg/git/flutter/packages/flutter",
+    "//third_party/dart-pkg/pub/flutter_mobx",
     "//third_party/dart-pkg/pub/meta",
     "//third_party/dart-pkg/pub/mobx",
   ]

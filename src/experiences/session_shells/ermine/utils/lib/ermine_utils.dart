@@ -3,6 +3,9 @@
 // found in the LICENSE file.
 
 export 'src/crash.dart';
+export 'src/dialogs/dialog.dart';
+export 'src/dialogs/dialogs.dart';
+export 'src/dialogs/password_prompt.dart';
 export 'src/mobx_disposable.dart';
 export 'src/mobx_extensions.dart';
 export 'src/themes.dart';

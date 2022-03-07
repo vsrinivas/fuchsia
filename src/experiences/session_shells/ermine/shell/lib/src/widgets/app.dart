@@ -7,7 +7,6 @@ import 'dart:ui';
 import 'package:ermine/src/states/app_state.dart';
 import 'package:ermine/src/widgets/app_view.dart';
 import 'package:ermine/src/widgets/overlays.dart';
-import 'package:ermine_dialogs/ermine_dialogs.dart';
 import 'package:ermine_utils/ermine_utils.dart';
 import 'package:flutter/material.dart' hide AppBar;
 import 'package:flutter_localizations/flutter_localizations.dart';

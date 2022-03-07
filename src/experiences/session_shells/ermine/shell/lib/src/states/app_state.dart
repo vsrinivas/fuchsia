@@ -12,7 +12,7 @@ import 'package:ermine/src/services/startup_service.dart';
 import 'package:ermine/src/states/app_state_impl.dart';
 import 'package:ermine/src/states/settings_state.dart';
 import 'package:ermine/src/states/view_state.dart';
-import 'package:ermine_dialogs/ermine_dialogs.dart';
+import 'package:ermine_utils/ermine_utils.dart';
 import 'package:flutter/material.dart' hide Action, AppBar;
 import 'package:fuchsia_scenic/views.dart';
 
@@ -63,6 +63,7 @@ abstract class AppState {
   void checkingForUpdatesAlert();
 
   factory AppState.fromEnv() {
+    // ignore: unnecessary_cast
     return AppStateImpl(
       launchService: LaunchService(),
       startupService: StartupService(),

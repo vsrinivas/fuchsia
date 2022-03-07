@@ -4,7 +4,7 @@
 
 import 'dart:ui';
 
-import 'package:ermine_dialogs/ermine_dialogs.dart';
+import 'package:ermine_utils/ermine_utils.dart';
 import 'package:fuchsia_scenic_flutter/fuchsia_view.dart';
 import 'package:login/src/services/auth_service.dart';
 import 'package:login/src/services/channel_service.dart';

@@ -114,7 +114,6 @@ dart_library("lib") {
     "//sdk/fidl/fuchsia.update.channelcontrol",
     "//sdk/fidl/fuchsia.wlan.common",
     "//sdk/fidl/fuchsia.wlan.policy",
-    "//src/experiences/session_shells/ermine/dialogs:ermine_dialogs",
     "//src/experiences/session_shells/ermine/internationalization",
     "//src/experiences/session_shells/ermine/keyboard_shortcuts",
     "//src/experiences/session_shells/ermine/utils:ermine_utils",
@@ -218,7 +217,6 @@ flutter_test("ermine_unittests") {
   deps = [
     ":lib",
     "//sdk/dart/fuchsia_logger",
-    "//src/experiences/session_shells/ermine/dialogs:ermine_dialogs",
     "//src/experiences/session_shells/ermine/internationalization",
     "//src/experiences/session_shells/ermine/keyboard_shortcuts",
     "//src/experiences/session_shells/ermine/utils:ermine_utils",

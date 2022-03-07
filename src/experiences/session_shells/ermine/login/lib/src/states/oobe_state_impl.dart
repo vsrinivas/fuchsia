@@ -6,7 +6,6 @@ import 'dart:convert' show json;
 import 'dart:io';
 import 'dart:ui';
 
-import 'package:ermine_dialogs/ermine_dialogs.dart';
 import 'package:ermine_utils/ermine_utils.dart';
 import 'package:flutter/services.dart';
 import 'package:fuchsia_inspect/inspect.dart';

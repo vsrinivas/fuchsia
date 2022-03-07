@@ -87,6 +87,7 @@ abstract class SettingsState implements TaskService {
 
   factory SettingsState.from(
       {required Map<String, Set<String>> shortcutBindings}) {
+    // ignore: unnecessary_cast
     return SettingsStateImpl(
       shortcutBindings: shortcutBindings,
       timezoneService: TimezoneService(),
