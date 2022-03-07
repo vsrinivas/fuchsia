@@ -31,8 +31,8 @@ VPartitionEntry CreatePartitionEntry(size_t slices) {
   uint8_t guid[sizeof(VPartitionEntry::type)];
   uint8_t name[sizeof(VPartitionEntry::unsafe_name)];
 
-  std::uniform_int_distribution<uint8_t> d('a', 'z');
-  auto g = [&]() { return d(rand); };
+  std::uniform_int_distribution<uint16_t> d('a', 'z');
+  auto g = [&]() { return static_cast<uint8_t>(d(rand)); };
   std::generate(std::begin(type), std::end(type), g);
   std::generate(std::begin(guid), std::end(guid), g);
   std::generate(std::begin(name), std::end(name), g);
