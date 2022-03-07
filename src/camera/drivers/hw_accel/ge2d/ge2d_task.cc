@@ -125,7 +125,7 @@ zx_status_t Ge2dTask::AllocInputCanvasIds(const buffer_collection_info_2_t* inpu
     input_image_canvas_ids[i].vmo = zx::vmo(vmo_dup);
   }
   num_input_canvas_ids_ = input_buffer_collection->buffer_count;
-  input_image_canvas_ids_ = move(input_image_canvas_ids);
+  input_image_canvas_ids_ = std::move(input_image_canvas_ids);
   return ZX_OK;
 }
 
