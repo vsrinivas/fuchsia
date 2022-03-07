@@ -271,9 +271,8 @@ static const struct iwl_rx_handlers iwl_mvm_rx_handlers[] = {
 
     RX_HANDLER(SCAN_ITERATION_COMPLETE, iwl_mvm_rx_lmac_scan_iter_complete_notif, RX_HANDLER_SYNC),
 #endif  // NEEDS_PORTING
-    // TODO(79965): Add support for handler with RX_HANDLER_ASYNC_LOCKED.
-    RX_HANDLER(SCAN_OFFLOAD_COMPLETE, iwl_mvm_rx_lmac_scan_complete_notif, RX_HANDLER_SYNC),
-    RX_HANDLER(SCAN_COMPLETE_UMAC, iwl_mvm_rx_umac_scan_complete_notif, RX_HANDLER_SYNC),
+    RX_HANDLER(SCAN_OFFLOAD_COMPLETE, iwl_mvm_rx_lmac_scan_complete_notif, RX_HANDLER_ASYNC_LOCKED),
+    RX_HANDLER(SCAN_COMPLETE_UMAC, iwl_mvm_rx_umac_scan_complete_notif, RX_HANDLER_ASYNC_LOCKED),
 #if 0  // NEEDS_PORTING
     RX_HANDLER(MATCH_FOUND_NOTIFICATION, iwl_mvm_rx_scan_match_found, RX_HANDLER_SYNC),
     RX_HANDLER(SCAN_ITERATION_COMPLETE_UMAC, iwl_mvm_rx_umac_scan_iter_complete_notif,
@@ -535,9 +534,7 @@ static const struct iwl_hcmd_arr iwl_mvm_groups[] = {
 };
 
 /* this forward declaration can avoid to export the function */
-#if 0   // NEEDS_PORTING
-static void iwl_mvm_async_handlers_wk(struct work_struct* wk);
-#endif  // NEEDS_PORTING
+static void iwl_mvm_async_handlers_wk(void* data);
 #ifdef CONFIG_PM
 static void iwl_mvm_d0i3_exit_work(struct work_struct* wk);
 #endif
@@ -772,8 +769,8 @@ static struct iwl_op_mode* iwl_op_mode_mvm_start(struct iwl_trans* trans, const 
   list_initialize(&mvm->async_handlers_list);
   mtx_init(&mvm->time_event_lock, mtx_plain);
 
+  iwl_task_create(mvm->dev, iwl_mvm_async_handlers_wk, mvm, &mvm->async_handlers_wk);
 #if 0  // NEEDS_PORTING
-    INIT_WORK(&mvm->async_handlers_wk, iwl_mvm_async_handlers_wk);
     INIT_WORK(&mvm->roc_done_wk, iwl_mvm_roc_done_wk);
 #ifdef CPTCFG_MAC80211_LATENCY_MEASUREMENTS
     INIT_WORK(&mvm->tx_latency_wk, iwl_mvm_tx_latency_wk);
@@ -1091,6 +1088,7 @@ static void iwl_op_mode_mvm_stop(struct iwl_op_mode* op_mode) {
   }
 
   iwl_task_release_sync(mvm->scan_timeout_task);
+  iwl_task_release_sync(mvm->async_handlers_wk);
 
 #if 0   // NEEDS_PORTING
     cancel_delayed_work_sync(&mvm->tcm.work);
@@ -1130,32 +1128,37 @@ void iwl_mvm_async_handlers_purge(struct iwl_mvm* mvm) {
   mtx_unlock(&mvm->async_handlers_lock);
 }
 
-#if 0   // NEEDS_PORTING
-static void iwl_mvm_async_handlers_wk(struct work_struct* wk) {
-    struct iwl_mvm* mvm = container_of(wk, struct iwl_mvm, async_handlers_wk);
-    struct iwl_async_handler_entry *entry, *tmp;
-    LIST_HEAD(local_list);
+static void iwl_mvm_async_handlers_wk(void* data) {
+  struct iwl_mvm* mvm = (struct iwl_mvm*)data;
+  struct iwl_async_handler_entry *entry, *tmp;
+  list_node_t local_list;
 
-    /* Ensure that we are not in stop flow (check iwl_mvm_mac_stop) */
+  /* TODO(fxbug.dev/95160): Ensure that we are not in stop flow (check iwl_mvm_mac_stop) */
 
-    /*
-     * Sync with Rx path with a lock. Remove all the entries from this list,
-     * add them to a local one (lock free), and then handle them.
-     */
-    spin_lock_bh(&mvm->async_handlers_lock);
-    list_splice_init(&mvm->async_handlers_list, &local_list);
-    spin_unlock_bh(&mvm->async_handlers_lock);
+  /*
+   * Sync with Rx path with a lock. Remove all the entries from this list,
+   * add them to a local one (lock free), and then handle them.
+   */
+  mtx_lock(&mvm->async_handlers_lock);
+  list_move(&mvm->async_handlers_list, &local_list);
+  mtx_unlock(&mvm->async_handlers_lock);
 
-    list_for_each_entry_safe(entry, tmp, &local_list, list) {
-        if (entry->context == RX_HANDLER_ASYNC_LOCKED) { mtx_lock(&mvm->mutex); }
-        entry->fn(mvm, &entry->rxb);
-        iwl_free_rxb(&entry->rxb);
-        list_del(&entry->list);
-        if (entry->context == RX_HANDLER_ASYNC_LOCKED) { mtx_unlock(&mvm->mutex); }
-        kfree(entry);
+  list_for_every_entry_safe (&local_list, entry, tmp, struct iwl_async_handler_entry, list) {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wthread-safety-analysis"
+    if (entry->context == RX_HANDLER_ASYNC_LOCKED) {
+      mtx_lock(&mvm->mutex);
     }
+    entry->fn(mvm, &entry->rxb);
+    iwl_free_rxb(&entry->rxb);
+    list_delete(&entry->list);
+    if (entry->context == RX_HANDLER_ASYNC_LOCKED) {
+      mtx_unlock(&mvm->mutex);
+    }
+    free(entry);
+#pragma GCC diagnostic pop
+  }
 }
-#endif  // NEEDS_PORTING
 
 static inline void iwl_mvm_rx_check_trigger(struct iwl_mvm* mvm, struct iwl_rx_packet* pkt) {
 #if 0   // NEEDS_PORTING
@@ -1223,9 +1226,7 @@ static void iwl_mvm_rx_common(struct iwl_mvm* mvm, struct iwl_rx_cmd_buffer* rxb
     mtx_lock(&mvm->async_handlers_lock);
     list_add_tail(&mvm->async_handlers_list, &entry->list);
     mtx_unlock(&mvm->async_handlers_lock);
-#if 0   // NEEDS_PORTING
-        schedule_work(&mvm->async_handlers_wk);
-#endif  // NEEDS_PORTING
+    iwl_task_post(mvm->async_handlers_wk, ZX_MSEC(0));
     break;
   }
 }

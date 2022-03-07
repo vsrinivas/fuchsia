@@ -466,9 +466,7 @@ TEST_F(PassiveScanTest, RegPassiveLmacScanSuccess) __TA_NO_THREAD_SAFETY_ANALYSI
   TestRxcb rxb(sim_trans_.iwl_trans()->dev, &scan_notif, sizeof(scan_notif));
 
   // Call notify complete to simulate scan completion.
-  mtx_unlock(&mvm_->mutex);
   iwl_mvm_rx_lmac_scan_complete_notif(mvm_, &rxb);
-  mtx_lock(&mvm_->mutex);
 
   EXPECT_EQ(0, mvm_->scan_status & IWL_MVM_SCAN_REGULAR);
   EXPECT_EQ(true, scan_result.sme_notified);
@@ -493,9 +491,7 @@ TEST_F(PassiveScanTest, RegPassiveLmacScanAborted) __TA_NO_THREAD_SAFETY_ANALYSI
   TestRxcb rxb(sim_trans_.iwl_trans()->dev, &scan_notif, sizeof(scan_notif));
 
   // Call notify complete to simulate scan abort.
-  mtx_unlock(&mvm_->mutex);
   iwl_mvm_rx_lmac_scan_complete_notif(mvm_, &rxb);
-  mtx_lock(&mvm_->mutex);
 
   EXPECT_EQ(0, mvm_->scan_status & IWL_MVM_SCAN_REGULAR);
   EXPECT_EQ(true, scan_result.sme_notified);

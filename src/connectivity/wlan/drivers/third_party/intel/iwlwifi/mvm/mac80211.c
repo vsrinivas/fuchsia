@@ -1134,7 +1134,9 @@ void __iwl_mvm_mac_stop(struct iwl_mvm* mvm) {
 void iwl_mvm_mac_stop(struct iwl_mvm* mvm) {
 #if 0   // NEEDS_PORTING
     flush_work(&mvm->d0i3_exit_work);
-    flush_work(&mvm->async_handlers_wk);
+#endif  // NEEDS_PORTING
+  iwl_task_wait(mvm->async_handlers_wk);
+#if 0   // NEEDS_PORTING
     flush_work(&mvm->add_stream_wk);
 #endif  // NEEDS_PORTING
 
@@ -1165,13 +1167,11 @@ void iwl_mvm_mac_stop(struct iwl_mvm* mvm) {
   __iwl_mvm_mac_stop(mvm);
   mtx_unlock(&mvm->mutex);
 
-#if 0   // NEEDS_PORTING
-    /*
-     * The worker might have been waiting for the mutex, let it run and
-     * discover that its list is now empty.
-     */
-    cancel_work_sync(&mvm->async_handlers_wk);
-#endif  // NEEDS_PORTING
+  /*
+   * The worker might have been waiting for the mutex, let it run and
+   * discover that its list is now empty.
+   */
+  iwl_task_cancel_sync(mvm->async_handlers_wk);
 }
 
 static struct iwl_mvm_phy_ctxt* iwl_mvm_get_free_phy_ctxt(struct iwl_mvm* mvm) {

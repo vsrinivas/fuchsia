@@ -866,7 +866,7 @@ struct iwl_mvm {
   mtx_t mutex;
   list_node_t async_handlers_list;
   mtx_t async_handlers_lock;
-  struct work_struct async_handlers_wk;
+  struct iwl_task* async_handlers_wk;
 
   struct work_struct roc_done_wk;
 
@@ -1615,9 +1615,7 @@ static inline void iwl_mvm_set_tx_cmd_ccmp(struct ieee80211_key_conf* keyconf,
 }
 
 static inline void iwl_mvm_wait_for_async_handlers(struct iwl_mvm* mvm) {
-#if 0   // NEEDS_PORTING
-    flush_work(&mvm->async_handlers_wk);
-#endif  // NEEDS_PORTING
+  iwl_task_wait(mvm->async_handlers_wk);
 }
 
 /* Statistics */

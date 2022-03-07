@@ -388,6 +388,9 @@ void iwl_mvm_rx_lmac_scan_complete_notif(struct iwl_mvm* mvm, struct iwl_rx_cmd_
     return;
   }
 
+  /* scan status must be locked for proper checking */
+  iwl_assert_lock_held(&mvm->mutex);
+
   /* We first check if we were stopping a scan, in which case we
    * just clear the stopping flag.  Then we check if it was a
    * firmware initiated stop, in which case we need to inform
@@ -397,7 +400,6 @@ void iwl_mvm_rx_lmac_scan_complete_notif(struct iwl_mvm* mvm, struct iwl_rx_cmd_
    * scans stopping or running at the same time (since LMAC
    * doesn't support it).
    */
-  mtx_lock(&mvm->mutex);
 #if 0   // NEEDS PORTING
   if (mvm->scan_status & IWL_MVM_SCAN_STOPPING_SCHED) {
     WARN_ON_ONCE(mvm->scan_status & IWL_MVM_SCAN_STOPPING_REGULAR);
@@ -438,7 +440,6 @@ void iwl_mvm_rx_lmac_scan_complete_notif(struct iwl_mvm* mvm, struct iwl_rx_cmd_
      * by both SME and iwl_mvm_reg_scan_start().
      */
     if ((status = iwl_task_cancel(mvm->scan_timeout_task)) != ZX_OK) {
-      mtx_unlock(&mvm->mutex);
       if (status == ZX_ERR_NOT_FOUND) {
         IWL_WARN(mvm, "Scan timeout occurred prior to getting notified by HW\n");
       }
@@ -464,7 +465,6 @@ void iwl_mvm_rx_lmac_scan_complete_notif(struct iwl_mvm* mvm, struct iwl_rx_cmd_
 
   mvm->last_ebs_successful = scan_notif->ebs_status == IWL_SCAN_EBS_SUCCESS ||
                              scan_notif->ebs_status == IWL_SCAN_EBS_INACTIVE;
-  mtx_unlock(&mvm->mutex);
 }
 
 #if 0   // NEEDS_PORTING
