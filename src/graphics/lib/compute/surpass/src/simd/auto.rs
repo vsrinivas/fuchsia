@@ -547,6 +547,11 @@ impl f32x8 {
         self
     }
 
+    pub fn recip(mut self) -> Self {
+        self.0.iter_mut().for_each(|val| *val = val.recip());
+        self
+    }
+
     pub fn mul_add(mut self, a: Self, b: Self) -> Self {
         self.0
             .iter_mut()

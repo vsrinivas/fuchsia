@@ -408,6 +408,10 @@ impl f32x8 {
         Self(unsafe { _mm256_sqrt_ps(self.0) })
     }
 
+    pub fn recip(self) -> Self {
+        Self(unsafe { _mm256_rcp_ps(self.0) })
+    }
+
     pub fn mul_add(self, a: Self, b: Self) -> Self {
         Self(unsafe { _mm256_fmadd_ps(self.0, a.0, b.0) })
     }

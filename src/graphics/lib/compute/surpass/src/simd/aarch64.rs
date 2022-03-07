@@ -413,6 +413,10 @@ impl f32x8 {
         Self(unsafe { [vsqrtq_f32(self.0[0]), vsqrtq_f32(self.0[1])] })
     }
 
+    pub fn recip(self) -> Self {
+        Self(unsafe { [vrecpeq_f32(self.0[0]), vrecpeq_f32(self.0[1])] })
+    }
+
     pub fn mul_add(self, a: Self, b: Self) -> Self {
         Self(unsafe {
             [vfmaq_f32(b.0[0], self.0[0], a.0[0]), vfmaq_f32(b.0[1], self.0[1], a.0[1])]
