@@ -109,17 +109,27 @@ mod tests {
     use {
         super::*,
         anyhow::Context,
+        fidl_fuchsia_boot as fboot,
+        fuchsia_component::client::connect_channel_to_protocol,
         fuchsia_zircon::{AsHandleRef, HandleBased},
         log::*,
         rand::Rng,
         std::panic,
     };
 
+    fn get_root_resource() -> zx::Resource {
+        let (client_end, server_end) = zx::Channel::create().unwrap();
+        connect_channel_to_protocol::<fboot::RootResourceMarker>(server_end).unwrap();
+        let service = fboot::RootResourceSynchronousProxy::new(client_end);
+        let resource = service.get(zx::Time::INFINITE).expect("couldn't get root resource");
+        resource
+    }
+
     // expect_message_in_debuglog will read the last 10000 messages in zircon's debuglog, looking
     // for a message that equals `sent_msg`. If found, the function returns. If the first 10,000
     // messages doesn't contain `sent_msg`, it will panic.
     fn expect_message_in_debuglog(sent_msg: String) {
-        let resource = zx::Resource::from(zx::Handle::invalid());
+        let resource = get_root_resource();
         let debuglog = zx::DebugLog::create(&resource, zx::DebugLogOpts::READABLE).unwrap();
         for _ in 0..10000 {
             match debuglog.read() {

@@ -89,12 +89,23 @@ impl DebugLog {
 mod tests {
     use super::*;
     use crate::{cprng_draw, Signals, Time};
+    use fidl_fuchsia_boot as fboot;
+    use fuchsia_component::client::connect_channel_to_protocol;
 
     // expect_message_in_debuglog will read the last 10000 messages in zircon's debuglog, looking
     // for a message that equals `sent_msg`. If found, the function returns. If the first 10,000
     // messages doesn't contain `sent_msg`, it will panic.
     fn expect_message_in_debuglog(sent_msg: String) {
-        let resource = Resource::from(Handle::invalid());
+        use fuchsia_zircon::{Channel, HandleBased};
+        let (client_end, server_end) = Channel::create().unwrap();
+        connect_channel_to_protocol::<fboot::RootResourceMarker>(server_end).unwrap();
+        let service = fboot::RootResourceSynchronousProxy::new(client_end);
+        let resource =
+            service.get(fuchsia_zircon::Time::INFINITE).expect("couldn't get root resource");
+        // This test and fuchsia-zircon are different crates, so we need
+        // to use from_raw to convert between the fuchsia_zircon handle and this test handle.
+        // See https://fxbug.dev/91562 for details.
+        let resource = unsafe { Resource::from(Handle::from_raw(resource.into_raw())) };
         let debuglog = DebugLog::create(&resource, DebugLogOpts::READABLE).unwrap();
         for _ in 0..10000 {
             match debuglog.read() {

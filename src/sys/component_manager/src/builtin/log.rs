@@ -106,6 +106,7 @@ mod tests {
         cm_task_scope::TaskScope,
         fidl::endpoints::ClientEnd,
         fuchsia_async as fasync,
+        fuchsia_component::client::connect_to_protocol,
         fuchsia_zircon::sys,
         fuchsia_zircon::AsHandleRef,
         futures::lock::Mutex,
@@ -114,11 +115,28 @@ mod tests {
         std::sync::Weak,
     };
 
+    fn root_resource_available() -> bool {
+        let bin = std::env::args().next();
+        match bin.as_ref().map(String::as_ref) {
+            Some("/pkg/bin/component_manager_test") => false,
+            Some("/pkg/bin/component_manager_boot_env_test") => true,
+            _ => panic!("Unexpected test binary name {:?}", bin),
+        }
+    }
+
+    async fn get_root_resource() -> Result<zx::Resource, Error> {
+        let root_resource_provider = connect_to_protocol::<fboot::RootResourceMarker>()?;
+        let root_resource_handle = root_resource_provider.get().await?;
+        Ok(zx::Resource::from(root_resource_handle))
+    }
+
     #[fuchsia::test]
     async fn has_correct_rights_for_read_only() -> Result<(), Error> {
-        // The kernel does not currently require a valid `Resource` to be
-        // provided when creating a `Debuglog`. This will change in the future.
-        let read_only_log = ReadOnlyLog::new(Resource::from(zx::Handle::invalid()));
+        if !root_resource_available() {
+            return Ok(());
+        }
+        let resource = get_root_resource().await?;
+        let read_only_log = ReadOnlyLog::new(resource);
         let (proxy, stream) =
             fidl::endpoints::create_proxy_and_stream::<fboot::ReadOnlyLogMarker>()?;
         fasync::Task::local(
@@ -136,9 +154,11 @@ mod tests {
 
     #[fuchsia::test]
     async fn can_connect_to_read_only() -> Result<(), Error> {
-        // The kernel does not currently require a valid `Resource` to be
-        // provided when creating a `Debuglog`. This will change in the future.
-        let read_only_log = ReadOnlyLog::new(Resource::from(zx::Handle::invalid()));
+        if !root_resource_available() {
+            return Ok(());
+        }
+        let resource = get_root_resource().await?;
+        let read_only_log = ReadOnlyLog::new(resource);
         let hooks = Hooks::new(None);
         hooks.install(read_only_log.hooks()).await;
 
@@ -176,8 +196,8 @@ mod tests {
 
     #[fuchsia::test]
     async fn has_correct_rights_for_write_only() -> Result<(), Error> {
-        // The kernel does not currently require a valid `Resource` to be
-        // provided when creating a `Debuglog`. This will change in the future.
+        // The kernel requires a valid `Resource` to be provided when creating a `Debuglog` that
+        // can be read from, but not one that can be written to.  This may change in the future.
         let resource = Resource::from(zx::Handle::invalid());
         let write_only_log =
             WriteOnlyLog::new(zx::DebugLog::create(&resource, zx::DebugLogOpts::empty()).unwrap());
@@ -199,8 +219,8 @@ mod tests {
 
     #[fuchsia::test]
     async fn can_connect_to_write_only() -> Result<(), Error> {
-        // The kernel does not currently require a valid `Resource` to be
-        // provided when creating a `Debuglog`. This will change in the future.
+        // The kernel requires a valid `Resource` to be provided when creating a `Debuglog` that
+        // can be read from, but not one that can be written to.  This may change in the future.
         let resource = Resource::from(zx::Handle::invalid());
         let write_only_log =
             WriteOnlyLog::new(zx::DebugLog::create(&resource, zx::DebugLogOpts::empty()).unwrap());

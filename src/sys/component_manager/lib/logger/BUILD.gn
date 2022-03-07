@@ -28,7 +28,11 @@ rustc_library("logger") {
     "//third_party/rust_crates:log",
   ]
 
-  test_deps = [ "//third_party/rust_crates:rand" ]
+  test_deps = [
+    "//sdk/fidl/fuchsia.boot:fuchsia.boot-rustc",
+    "//src/lib/fuchsia-component",
+    "//third_party/rust_crates:rand",
+  ]
 
   sources = [
     "src/fmt.rs",
@@ -39,5 +43,6 @@ rustc_library("logger") {
 }
 
 fuchsia_unittest_package("component_manager_logger_test") {
+  manifest = "meta/component_manager_logger_test.cml"
   deps = [ ":logger_test" ]
 }

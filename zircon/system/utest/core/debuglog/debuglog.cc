@@ -49,6 +49,28 @@ TEST(DebugLogTest, InvalidOptions) {
   EXPECT_EQ(log_handle, 0);
 }
 
+TEST(DebugLogTest, InvalidHandleAllowedOnlyForWrite) {
+  zx_handle_t log_handle = 0;
+
+  // Requesting a read-write handle with a valid root resource should work
+  ASSERT_OK(zx_debuglog_create(get_root_resource(), ZX_LOG_FLAG_READABLE, &log_handle));
+  ASSERT_OK(zx_handle_close(log_handle));
+  log_handle = ZX_HANDLE_INVALID;
+
+  // Requesting a write-only handle with an invalid root resource should work,
+  // since the dynamic linker needs to be able to log something somewhere when
+  // it can't bootstrap a process
+  ASSERT_OK(zx_debuglog_create(ZX_HANDLE_INVALID, 0, &log_handle));
+  ASSERT_OK(zx_handle_close(log_handle));
+  log_handle = ZX_HANDLE_INVALID;
+
+  // But requesting a read-write handle with an invalid root resource represents
+  // an information leak, so the kernel checks the first arg, and if it's not a
+  // valid handle, then we get an error
+  EXPECT_EQ(zx_debuglog_create(ZX_HANDLE_INVALID, ZX_LOG_FLAG_READABLE, &log_handle),
+            ZX_ERR_BAD_HANDLE);
+}
+
 TEST(DebugLogTest, MaxMessageSize) {
   zx_handle_t log_handle = ZX_HANDLE_INVALID;
   ASSERT_OK(zx_debuglog_create(get_root_resource(), ZX_LOG_FLAG_READABLE, &log_handle));
