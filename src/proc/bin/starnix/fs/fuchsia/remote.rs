@@ -13,10 +13,6 @@ use syncio::{
 
 use crate::errno;
 use crate::error;
-use crate::fd_impl_directory;
-use crate::fd_impl_nonblocking;
-use crate::fd_impl_nonseekable;
-use crate::fd_impl_seekable;
 use crate::from_status_like_fdio;
 use crate::fs::*;
 use crate::logging::impossible_error;
@@ -297,8 +293,7 @@ impl RemoteDirectoryObject {
 }
 
 impl FileOps for RemoteDirectoryObject {
-    fd_impl_directory!();
-    fd_impl_nonblocking!();
+    fileops_impl_directory!();
 
     fn seek(
         &self,
@@ -398,7 +393,7 @@ impl RemoteFileObject {
 }
 
 impl FileOps for RemoteFileObject {
-    fd_impl_seekable!();
+    fileops_impl_seekable!();
 
     fn read_at(
         &self,
@@ -468,7 +463,7 @@ impl RemotePipeObject {
 }
 
 impl FileOps for RemotePipeObject {
-    fd_impl_nonseekable!();
+    fileops_impl_nonseekable!();
 
     fn read(
         &self,

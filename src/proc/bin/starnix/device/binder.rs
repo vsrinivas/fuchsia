@@ -3,11 +3,11 @@
 // found in the LICENSE file.
 
 use crate::device::WithStaticDeviceId;
-use crate::fs::{FileObject, FileOps, FsNode, FsNodeOps, SeekOrigin};
+use crate::fs::{fileops_impl_nonblocking, FileObject, FileOps, FsNode, FsNodeOps, SeekOrigin};
 use crate::syscalls::{SyscallResult, SUCCESS};
 use crate::task::CurrentTask;
 use crate::types::*;
-use crate::{error, fd_impl_nonblocking, not_implemented};
+use crate::{error, not_implemented};
 use std::sync::Arc;
 use zerocopy::FromBytes;
 
@@ -38,7 +38,7 @@ impl FsNodeOps for DevBinder {
 }
 
 impl FileOps for DevBinder {
-    fd_impl_nonblocking!();
+    fileops_impl_nonblocking!();
 
     fn ioctl(
         &self,

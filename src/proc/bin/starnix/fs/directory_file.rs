@@ -6,12 +6,10 @@ use parking_lot::Mutex;
 use std::ops::Bound;
 
 use super::*;
-use crate::errno;
-use crate::error;
-use crate::fd_impl_directory;
-use crate::fd_impl_nonblocking;
+use crate::fs::fileops_impl_directory;
 use crate::task::*;
 use crate::types::*;
+use crate::{errno, error};
 
 // TODO: It should be possible to replace all uses of ROMemoryDirectory with TmpfsDirectory +
 // MS_RDONLY (at which point MemoryDirectory would be a better name for it).
@@ -80,8 +78,7 @@ pub fn emit_dotdot(
 }
 
 impl FileOps for MemoryDirectoryFile {
-    fd_impl_directory!();
-    fd_impl_nonblocking!();
+    fileops_impl_directory!();
 
     fn seek(
         &self,

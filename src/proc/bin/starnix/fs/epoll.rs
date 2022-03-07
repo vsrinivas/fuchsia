@@ -4,7 +4,6 @@
 
 use crate::errno;
 use crate::error;
-use crate::fd_impl_nonseekable;
 use crate::fs::*;
 use crate::not_implemented;
 use crate::task::*;
@@ -226,7 +225,7 @@ impl EpollFileObject {
 }
 
 impl FileOps for EpollFileObject {
-    fd_impl_nonseekable!();
+    fileops_impl_nonseekable!();
 
     fn write(
         &self,

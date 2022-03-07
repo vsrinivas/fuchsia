@@ -6,10 +6,7 @@ use fuchsia_zircon as zx;
 use std::sync::Arc;
 
 use crate::error;
-use crate::fd_impl_nonseekable;
-use crate::fs::buffers::*;
-use crate::fs::socket::*;
-use crate::fs::*;
+use crate::fs::{buffers::*, socket::*, *};
 use crate::task::*;
 use crate::types::*;
 
@@ -18,7 +15,7 @@ pub struct SocketFile {
 }
 
 impl FileOps for SocketFile {
-    fd_impl_nonseekable!();
+    fileops_impl_nonseekable!();
 
     fn read(
         &self,

@@ -5,8 +5,7 @@
 use std::sync::Arc;
 
 use super::*;
-use crate::fd_impl_nonblocking;
-use crate::fd_impl_seekable;
+use crate::fs::{fileops_impl_nonblocking, fileops_impl_seekable};
 use crate::task::*;
 use crate::types::*;
 
@@ -44,8 +43,8 @@ impl ByteVecFile {
     }
 }
 impl FileOps for ByteVecFile {
-    fd_impl_seekable!();
-    fd_impl_nonblocking!();
+    fileops_impl_seekable!();
+    fileops_impl_nonblocking!();
 
     fn read_at(
         &self,

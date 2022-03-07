@@ -6,7 +6,7 @@ use crate::fs::*;
 use crate::signals::*;
 use crate::task::*;
 use crate::types::*;
-use crate::{errno, error, fd_impl_nonseekable};
+use crate::{errno, error};
 use std::sync::Arc;
 
 use zerocopy::AsBytes;
@@ -22,7 +22,7 @@ impl SignalFd {
 }
 
 impl FileOps for SignalFd {
-    fd_impl_nonseekable!();
+    fileops_impl_nonseekable!();
 
     fn read(
         &self,

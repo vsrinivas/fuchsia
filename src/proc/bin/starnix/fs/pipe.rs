@@ -8,9 +8,7 @@ use std::sync::Arc;
 
 use crate::errno;
 use crate::error;
-use crate::fd_impl_nonseekable;
-use crate::fs::buffers::*;
-use crate::fs::*;
+use crate::fs::{buffers::*, *};
 use crate::mm::PAGE_SIZE;
 use crate::signals::*;
 use crate::syscalls::*;
@@ -258,7 +256,7 @@ struct PipeFileObject {
 }
 
 impl FileOps for PipeFileObject {
-    fd_impl_nonseekable!();
+    fileops_impl_nonseekable!();
 
     fn close(&self, file: &FileObject) {
         let mut events = FdEvents::empty();

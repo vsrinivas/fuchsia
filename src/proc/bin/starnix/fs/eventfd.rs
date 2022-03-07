@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 use crate::error;
-use crate::fd_impl_nonseekable;
 use crate::fs::*;
 use crate::task::*;
 use crate::types::*;
@@ -66,7 +65,7 @@ fn query_events_internal(inner: &EventFdInner) -> FdEvents {
 }
 
 impl FileOps for EventFdFileObject {
-    fd_impl_nonseekable!();
+    fileops_impl_nonseekable!();
 
     fn write(
         &self,

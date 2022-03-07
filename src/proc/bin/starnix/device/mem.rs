@@ -6,40 +6,9 @@ use fuchsia_zircon::cprng_draw;
 
 use crate::device::WithStaticDeviceId;
 use crate::error;
-use crate::fd_impl_nonblocking;
 use crate::fs::*;
 use crate::task::*;
 use crate::types::*;
-
-macro_rules! fd_impl_seekless {
-    () => {
-        fn read(
-            &self,
-            file: &FileObject,
-            current_task: &CurrentTask,
-            data: &[UserBuffer],
-        ) -> Result<usize, Errno> {
-            self.read_at(file, current_task, 0, data)
-        }
-        fn write(
-            &self,
-            file: &FileObject,
-            current_task: &CurrentTask,
-            data: &[UserBuffer],
-        ) -> Result<usize, Errno> {
-            self.write_at(file, current_task, 0, data)
-        }
-        fn seek(
-            &self,
-            _file: &FileObject,
-            _current_task: &CurrentTask,
-            _offset: off_t,
-            _whence: SeekOrigin,
-        ) -> Result<off_t, Errno> {
-            Ok(0)
-        }
-    };
-}
 
 /// Implements the /dev/null driver.
 pub struct DevNull;
@@ -57,8 +26,8 @@ impl FsNodeOps for DevNull {
 struct DevNullFile;
 
 impl FileOps for DevNullFile {
-    fd_impl_seekless!();
-    fd_impl_nonblocking!();
+    fileops_impl_seekless!();
+    fileops_impl_nonblocking!();
 
     fn write_at(
         &self,
@@ -97,8 +66,8 @@ impl FsNodeOps for DevZero {
 struct DevZeroFile;
 
 impl FileOps for DevZeroFile {
-    fd_impl_seekless!();
-    fd_impl_nonblocking!();
+    fileops_impl_seekless!();
+    fileops_impl_nonblocking!();
 
     fn write_at(
         &self,
@@ -142,8 +111,8 @@ impl FsNodeOps for DevFull {
 struct DevFullFile;
 
 impl FileOps for DevFullFile {
-    fd_impl_seekless!();
-    fd_impl_nonblocking!();
+    fileops_impl_seekless!();
+    fileops_impl_nonblocking!();
 
     fn write_at(
         &self,
@@ -200,8 +169,8 @@ impl FsNodeOps for DevURandom {
 struct DevRandomFile;
 
 impl FileOps for DevRandomFile {
-    fd_impl_seekless!();
-    fd_impl_nonblocking!();
+    fileops_impl_seekless!();
+    fileops_impl_nonblocking!();
 
     fn write_at(
         &self,
@@ -246,8 +215,8 @@ impl FsNodeOps for DevKmsg {
 struct DevKmsgFile;
 
 impl FileOps for DevKmsgFile {
-    fd_impl_seekless!();
-    fd_impl_nonblocking!();
+    fileops_impl_seekless!();
+    fileops_impl_nonblocking!();
 
     fn read_at(
         &self,

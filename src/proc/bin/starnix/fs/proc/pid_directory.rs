@@ -9,9 +9,7 @@ use crate::mm::{ProcMapsFile, ProcStatFile};
 use crate::mode;
 use crate::task::{CurrentTask, Task};
 use crate::types::*;
-use crate::{
-    errno, error, fd_impl_directory, fd_impl_nonblocking, fd_impl_seekable, fs_node_impl_symlink,
-};
+use crate::{errno, error, fs_node_impl_symlink};
 
 use maplit::hashmap;
 use parking_lot::Mutex;
@@ -62,8 +60,7 @@ impl PidDirectoryFileOps {
 }
 
 impl FileOps for PidDirectoryFileOps {
-    fd_impl_directory!();
-    fd_impl_nonblocking!();
+    fileops_impl_directory!();
 
     fn seek(
         &self,
@@ -201,8 +198,7 @@ impl FdDirectoryFileOps {
 }
 
 impl FileOps for FdDirectoryFileOps {
-    fd_impl_directory!();
-    fd_impl_nonblocking!();
+    fileops_impl_directory!();
 
     fn seek(
         &self,
@@ -321,8 +317,8 @@ impl CmdlineFile {
 }
 
 impl FileOps for CmdlineFile {
-    fd_impl_seekable!();
-    fd_impl_nonblocking!();
+    fileops_impl_seekable!();
+    fileops_impl_nonblocking!();
 
     fn read_at(
         &self,

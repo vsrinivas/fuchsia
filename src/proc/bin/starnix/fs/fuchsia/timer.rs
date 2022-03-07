@@ -9,7 +9,6 @@ use zerocopy::AsBytes;
 
 use crate::errno;
 use crate::error;
-use crate::fd_impl_nonseekable;
 use crate::from_status_like_fdio;
 use crate::fs::*;
 use crate::task::*;
@@ -125,7 +124,7 @@ impl TimerFile {
 }
 
 impl FileOps for TimerFile {
-    fd_impl_nonseekable!();
+    fileops_impl_nonseekable!();
     fn write(
         &self,
         file: &FileObject,

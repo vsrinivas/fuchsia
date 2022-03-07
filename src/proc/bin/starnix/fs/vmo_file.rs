@@ -9,12 +9,13 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use super::*;
+use crate::fs::{fileops_impl_nonblocking, fileops_impl_seekable};
 use crate::logging::impossible_error;
 use crate::mm::vmo::round_up_to_system_page_size;
 use crate::task::CurrentTask;
 use crate::types::*;
 use crate::vmex_resource::VMEX_RESOURCE;
-use crate::{errno, error, fd_impl_nonblocking, fd_impl_seekable, fs_node_impl_xattr_delegate};
+use crate::{errno, error, fs_node_impl_xattr_delegate};
 
 #[derive(Default)]
 struct MemoryXattrStorage {
@@ -169,8 +170,8 @@ impl VmoFileObject {
 }
 
 impl FileOps for VmoFileObject {
-    fd_impl_seekable!();
-    fd_impl_nonblocking!();
+    fileops_impl_seekable!();
+    fileops_impl_nonblocking!();
 
     fn read_at(
         &self,

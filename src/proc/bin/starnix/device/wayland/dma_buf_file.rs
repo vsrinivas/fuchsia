@@ -16,8 +16,6 @@ use std::sync::Arc;
 use super::BufferCollectionFile;
 use crate::errno;
 use crate::error;
-use crate::fd_impl_nonblocking;
-use crate::fd_impl_nonseekable;
 use crate::fs::*;
 use crate::mm::vmo::round_up_to_increment;
 use crate::syscalls::*;
@@ -245,8 +243,8 @@ impl DmaBufFile {
 }
 
 impl FileOps for DmaBufFile {
-    fd_impl_nonseekable!();
-    fd_impl_nonblocking!();
+    fileops_impl_nonseekable!();
+    fileops_impl_nonblocking!();
 
     fn ioctl(
         &self,

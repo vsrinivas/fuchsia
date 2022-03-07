@@ -146,7 +146,6 @@ mod test {
     use crate::mm::*;
     use crate::task::*;
     use crate::testing::*;
-    use crate::{fd_impl_nonblocking, fd_impl_seekable};
 
     use parking_lot::Mutex;
 
@@ -163,8 +162,8 @@ mod test {
     }
 
     impl FileOps for TestSeqFile {
-        fd_impl_seekable!();
-        fd_impl_nonblocking!();
+        fileops_impl_seekable!();
+        fileops_impl_nonblocking!();
 
         fn read_at(
             &self,

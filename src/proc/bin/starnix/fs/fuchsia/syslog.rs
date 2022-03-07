@@ -5,8 +5,6 @@
 use log::info;
 
 use crate::error;
-use crate::fd_impl_nonblocking;
-use crate::fd_impl_nonseekable;
 use crate::fs::*;
 use crate::syscalls::SyscallResult;
 use crate::task::*;
@@ -21,8 +19,8 @@ impl SyslogFile {
 }
 
 impl FileOps for SyslogFile {
-    fd_impl_nonseekable!();
-    fd_impl_nonblocking!();
+    fileops_impl_nonseekable!();
+    fileops_impl_nonblocking!();
 
     fn write(
         &self,

@@ -7,8 +7,6 @@ use fuchsia_zircon as zx;
 
 use std::sync::Arc;
 
-use crate::fd_impl_nonblocking;
-use crate::fd_impl_seekable;
 use crate::fs::*;
 use crate::task::{CurrentTask, Kernel};
 use crate::types::*;
@@ -38,8 +36,8 @@ impl BufferCollectionFile {
 }
 
 impl FileOps for BufferCollectionFile {
-    fd_impl_seekable!();
-    fd_impl_nonblocking!();
+    fileops_impl_seekable!();
+    fileops_impl_nonblocking!();
 
     fn read_at(
         &self,

@@ -3,10 +3,7 @@
 // found in the LICENSE file.
 
 use crate::error;
-use crate::fd_impl_nonblocking;
-use crate::fd_impl_nonseekable;
-use crate::fs::FileObject;
-use crate::fs::FileOps;
+use crate::fs::{fileops_impl_nonblocking, fileops_impl_nonseekable, FileObject, FileOps};
 use crate::task::CurrentTask;
 use crate::types::*;
 
@@ -14,8 +11,8 @@ use crate::types::*;
 pub struct NullFile;
 
 impl FileOps for NullFile {
-    fd_impl_nonseekable!();
-    fd_impl_nonblocking!();
+    fileops_impl_nonseekable!();
+    fileops_impl_nonblocking!();
 
     fn read(
         &self,

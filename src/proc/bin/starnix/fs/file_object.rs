@@ -43,7 +43,7 @@ pub trait FileOps: Send + Sync + AsAny {
     fn close(&self, _file: &FileObject) {}
 
     /// Read from the file without an offset. If your file is seekable, consider implementing this
-    /// with fd_impl_seekable.
+    /// with [`fileops_impl_seekable`].
     fn read(
         &self,
         file: &FileObject,
@@ -51,7 +51,7 @@ pub trait FileOps: Send + Sync + AsAny {
         data: &[UserBuffer],
     ) -> Result<usize, Errno>;
     /// Read from the file at an offset. If your file is seekable, consider implementing this with
-    /// fd_impl_nonseekable!.
+    /// [`fileops_impl_nonseekable`].
     fn read_at(
         &self,
         file: &FileObject,
@@ -60,7 +60,7 @@ pub trait FileOps: Send + Sync + AsAny {
         data: &[UserBuffer],
     ) -> Result<usize, Errno>;
     /// Write to the file without an offset. If your file is seekable, consider implementing this
-    /// with fd_impl_seekable!.
+    /// with [`fileops_impl_seekable`].
     fn write(
         &self,
         file: &FileObject,
@@ -68,7 +68,7 @@ pub trait FileOps: Send + Sync + AsAny {
         data: &[UserBuffer],
     ) -> Result<usize, Errno>;
     /// Write to the file at a offset. If your file is nonseekable, consider implementing this with
-    /// fd_impl_nonseekable!.
+    /// [`fileops_impl_nonseekable`].
     fn write_at(
         &self,
         file: &FileObject,
@@ -195,10 +195,9 @@ pub trait FileOps: Send + Sync + AsAny {
     }
 }
 
-/// Implements FileOps methods in a way that makes sense for nonseekable files. You must implement
-/// read and write.
-#[macro_export]
-macro_rules! fd_impl_nonseekable {
+/// Implements [`FileOps`] methods in a way that makes sense for non-seekable files.
+/// You must implement [`FileOps::read`] and [`FileOps::write`].
+macro_rules! fileops_impl_nonseekable {
     () => {
         fn read_at(
             &self,
@@ -233,10 +232,9 @@ macro_rules! fd_impl_nonseekable {
     };
 }
 
-/// Implements FileOps methods in a way that makes sense for seekable files. You must implement
-/// read_at and write_at.
-#[macro_export]
-macro_rules! fd_impl_seekable {
+/// Implements [`FileOps`] methods in a way that makes sense for seekable files.
+/// You must implement [`FileOps::read_at`] and [`FileOps::write_at`].
+macro_rules! fileops_impl_seekable {
     () => {
         fn read(
             &self,
@@ -292,9 +290,45 @@ macro_rules! fd_impl_seekable {
     };
 }
 
-#[macro_export]
-macro_rules! fd_impl_directory {
+/// Implements [`FileOps`] methods in a way that makes sense for files that ignore
+/// seeking operations and always read/write at offset 0.
+/// You must implement [`FileOps::read_at`] and [`FileOps::write_at`].
+macro_rules! fileops_impl_seekless {
     () => {
+        fn read(
+            &self,
+            file: &crate::fs::FileObject,
+            current_task: &crate::task::CurrentTask,
+            data: &[crate::types::UserBuffer],
+        ) -> Result<usize, crate::types::Errno> {
+            self.read_at(file, current_task, 0, data)
+        }
+        fn write(
+            &self,
+            file: &crate::fs::FileObject,
+            current_task: &crate::task::CurrentTask,
+            data: &[crate::types::UserBuffer],
+        ) -> Result<usize, crate::types::Errno> {
+            self.write_at(file, current_task, 0, data)
+        }
+        fn seek(
+            &self,
+            _file: &crate::fs::FileObject,
+            _current_task: &crate::task::CurrentTask,
+            _offset: crate::types::off_t,
+            _whence: crate::fs::SeekOrigin,
+        ) -> Result<crate::types::off_t, crate::types::Errno> {
+            Ok(0)
+        }
+    };
+}
+
+/// Implements [`FileOps`] methods in a way that makes sense for directories. You must implement
+/// [`FileOps::seek`] and [`FileOps::readdir`].
+macro_rules! fileops_impl_directory {
+    () => {
+        crate::fs::fileops_impl_nonblocking!();
+
         fn read(
             &self,
             _file: &crate::fs::FileObject,
@@ -339,8 +373,10 @@ macro_rules! fd_impl_directory {
     };
 }
 
-#[macro_export]
-macro_rules! fd_impl_nonblocking {
+/// Implements [`FileOps`] methods in a way that makes sense for files that never block
+/// while reading/writing. The [`FileOps::wait_async`] and [`FileOps::query_events`] methods are
+/// implemented for you.
+macro_rules! fileops_impl_nonblocking {
     () => {
         fn wait_async(
             &self,
@@ -358,6 +394,14 @@ macro_rules! fd_impl_nonblocking {
     };
 }
 
+// Public re-export of macros allows them to be used like regular rust items.
+
+pub(crate) use fileops_impl_directory;
+pub(crate) use fileops_impl_nonblocking;
+pub(crate) use fileops_impl_nonseekable;
+pub(crate) use fileops_impl_seekable;
+pub(crate) use fileops_impl_seekless;
+
 pub fn default_ioctl(request: u32) -> Result<SyscallResult, Errno> {
     not_implemented!("ioctl: request=0x{:x}", request);
     error!(ENOTTY)
@@ -372,7 +416,7 @@ impl OPathOps {
 }
 
 impl FileOps for OPathOps {
-    fd_impl_nonblocking!();
+    fileops_impl_nonblocking!();
 
     fn read(
         &self,

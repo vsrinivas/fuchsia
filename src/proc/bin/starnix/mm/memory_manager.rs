@@ -6,8 +6,7 @@ use bitflags::bitflags;
 use fuchsia_zircon::{self as zx, AsHandleRef};
 use lazy_static::lazy_static;
 use parking_lot::{Mutex, RwLock};
-use std::collections::hash_map::Entry;
-use std::collections::HashMap;
+use std::collections::{hash_map::Entry, HashMap};
 use std::convert::TryInto;
 use std::ffi::{CStr, CString};
 use std::sync::Arc;
@@ -16,12 +15,11 @@ use zerocopy::{AsBytes, FromBytes};
 use crate::collections::*;
 use crate::fs::*;
 use crate::logging::*;
-use crate::mm::vmo::round_up_to_system_page_size;
-use crate::mm::FutexTable;
+use crate::mm::{vmo::round_up_to_system_page_size, FutexTable};
 use crate::task::{CurrentTask, Task};
 use crate::types::{range_ext::RangeExt, *};
 use crate::vmex_resource::VMEX_RESOURCE;
-use crate::{errno, error, fd_impl_nonblocking, fd_impl_seekable, mode, not_implemented};
+use crate::{errno, error, mode, not_implemented};
 
 lazy_static! {
     pub static ref PAGE_SIZE: u64 = zx::system_get_page_size() as u64;
@@ -1312,8 +1310,8 @@ impl ProcMapsFile {
     }
 }
 impl FileOps for ProcMapsFile {
-    fd_impl_seekable!();
-    fd_impl_nonblocking!();
+    fileops_impl_seekable!();
+    fileops_impl_nonblocking!();
 
     fn read_at(
         &self,
@@ -1387,8 +1385,8 @@ impl ProcStatFile {
 }
 
 impl FileOps for ProcStatFile {
-    fd_impl_seekable!();
-    fd_impl_nonblocking!();
+    fileops_impl_seekable!();
+    fileops_impl_nonblocking!();
 
     fn read_at(
         &self,

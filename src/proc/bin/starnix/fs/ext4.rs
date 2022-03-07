@@ -15,8 +15,7 @@ use zerocopy::{AsBytes, FromBytes};
 
 use super::*;
 use crate::errno;
-use crate::fd_impl_directory;
-use crate::fd_impl_nonblocking;
+use crate::fs::fileops_impl_directory;
 use crate::fs_node_impl_symlink;
 use crate::logging::impossible_error;
 use crate::task::CurrentTask;
@@ -159,8 +158,7 @@ struct ExtDirFileObject {
 }
 
 impl FileOps for ExtDirFileObject {
-    fd_impl_directory!();
-    fd_impl_nonblocking!();
+    fileops_impl_directory!();
 
     fn seek(
         &self,

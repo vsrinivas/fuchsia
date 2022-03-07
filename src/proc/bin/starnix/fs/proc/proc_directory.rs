@@ -5,8 +5,6 @@
 use super::pid_directory::*;
 use crate::errno;
 use crate::error;
-use crate::fd_impl_directory;
-use crate::fd_impl_nonblocking;
 use crate::fs::*;
 use crate::fs_node_impl_symlink;
 use crate::mode;
@@ -87,8 +85,7 @@ impl DirectoryFileOps {
 }
 
 impl FileOps for DirectoryFileOps {
-    fd_impl_directory!();
-    fd_impl_nonblocking!();
+    fileops_impl_directory!();
 
     fn seek(
         &self,

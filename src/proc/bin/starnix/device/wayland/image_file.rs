@@ -9,8 +9,6 @@ use magma::*;
 
 use std::sync::Arc;
 
-use crate::fd_impl_nonblocking;
-use crate::fd_impl_seekable;
 use crate::fs::*;
 use crate::task::{CurrentTask, Kernel};
 use crate::types::*;
@@ -57,8 +55,8 @@ impl ImageFile {
 }
 
 impl FileOps for ImageFile {
-    fd_impl_seekable!();
-    fd_impl_nonblocking!();
+    fileops_impl_seekable!();
+    fileops_impl_nonblocking!();
 
     fn read_at(
         &self,
