@@ -26,6 +26,7 @@ import (
 	"fidl/fuchsia/netstack"
 
 	"gvisor.dev/gvisor/pkg/tcpip"
+	tcpipstack "gvisor.dev/gvisor/pkg/tcpip/stack"
 )
 
 var _ stack.StackWithCtx = (*stackImpl)(nil)
@@ -99,7 +100,7 @@ func (ns *Netstack) addInterfaceAddr(id uint64, ifAddr net.Subnet) stack.StackAd
 		return result
 	}
 
-	switch status := ns.addInterfaceAddress(tcpip.NICID(id), protocolAddr, true /* addRoute */); status {
+	switch status := ns.addInterfaceAddress(tcpip.NICID(id), protocolAddr, true /* addRoute */, tcpipstack.AddressProperties{}); status {
 	case zx.ErrOk:
 		result.SetResponse(stack.StackAddInterfaceAddressDeprecatedResponse{})
 		return result

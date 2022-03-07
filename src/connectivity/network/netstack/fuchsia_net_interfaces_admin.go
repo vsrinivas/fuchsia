@@ -11,14 +11,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strings"
 	"syscall/zx"
 	"syscall/zx/fidl"
 
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link/netdevice"
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/routes"
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/sync"
-	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/time"
 	"go.fuchsia.dev/fuchsia/src/lib/component"
 	syslog "go.fuchsia.dev/fuchsia/src/lib/syslog/go"
 
@@ -106,6 +104,7 @@ func (pc *addressStateProviderCollection) onInterfaceOnlineChangeLocked(online b
 var _ admin.AddressStateProviderWithCtx = (*adminAddressStateProviderImpl)(nil)
 
 type adminAddressStateProviderImpl struct {
+	controlImpl  *adminControlImpl
 	cancelServe  context.CancelFunc
 	ready        chan struct{}
 	protocolAddr tcpip.ProtocolAddress
@@ -164,12 +163,40 @@ func (pi *adminAddressStateProviderImpl) onRemoveLocked(reason admin.AddressRemo
 
 // TODO(https://fxbug.dev/80621): Add support for updating an address's
 // properties (valid and expected lifetimes).
-func (pi *adminAddressStateProviderImpl) UpdateAddressProperties(_ fidl.Context, addressProperties admin.AddressProperties) error {
-	_ = syslog.WarnTf(addressStateProviderName, "UpdateAddressProperties for %s: not supported", pi.protocolAddr.AddressWithPrefix.Address)
+func (pi *adminAddressStateProviderImpl) UpdateAddressProperties(_ fidl.Context, properties admin.AddressProperties) error {
+	deprecated := func() bool {
+		if properties.HasPreferredLifetimeInfo() {
+			switch preferred := properties.GetPreferredLifetimeInfo(); preferred.Which() {
+			case admin.PreferredLifetimeInfoPreferredLifetimeEnd:
+				// TODO(https://fxbug.dev/93825): Store the preferred lifetime.
+				panic(fmt.Sprintf("UpdateAddressProperties on addr %s with preferred lifetime %d not supported", pi.protocolAddr.AddressWithPrefix.Address, preferred))
+				return false
+			case admin.PreferredLifetimeInfoDeprecated:
+				return true
+			default:
+				panic(fmt.Sprintf("unexpected preferred lifetime info tag: %+v", preferred))
+			}
+		}
+		// Absence of preferred lifetime means infinite preferred lifetime, so not deprecated.
+		return false
+	}()
+	switch err := pi.controlImpl.ns.stack.SetAddressDeprecated(pi.controlImpl.nicid, pi.protocolAddr.AddressWithPrefix.Address, deprecated); err.(type) {
+	case nil:
+	case *tcpip.ErrUnknownNICID, *tcpip.ErrBadLocalAddress:
+		// TODO(https://fxbug.dev/94442): Upgrade to panic once we're guaranteed that we get here iff the address still exists.
+		_ = syslog.WarnTf(addressStateProviderName, "SetAddressDeprecated(%d, %s, %t) failed: %s",
+			pi.controlImpl.nicid, pi.protocolAddr.AddressWithPrefix.Address, deprecated, err)
+	default:
+		panic(fmt.Sprintf("SetAddressDeprecated(%d, %s, %t) failed with unexpected error: %s",
+			pi.controlImpl.nicid, pi.protocolAddr.AddressWithPrefix.Address, deprecated, err))
+	}
 
-	pi.onRemove(admin.AddressRemovalReasonUserRemoved)
-	// Always return an error here so we never issue a response to the request.
-	return fmt.Errorf("UpdateAddressPoprties is for %s: not supported", pi.protocolAddr.AddressWithPrefix.Address)
+	if properties.HasValidLifetimeEnd() {
+		// TODO(https://fxbug.dev/93825): Store the valid lifetime.
+		panic(fmt.Sprintf("UpdateAddressProperties on addr %s with valid lifetime %d not supported",
+			pi.protocolAddr.AddressWithPrefix.Address, properties.GetValidLifetimeEnd()))
+	}
+	return nil
 }
 
 func (pi *adminAddressStateProviderImpl) Detach(fidl.Context) error {
@@ -317,6 +344,7 @@ func (ci *adminControlImpl) AddAddress(_ fidl.Context, interfaceAddr net.Interfa
 
 	ctx, cancel := context.WithCancel(context.Background())
 	impl := &adminAddressStateProviderImpl{
+		controlImpl:  ci,
 		ready:        make(chan struct{}, 1),
 		cancelServe:  cancel,
 		protocolAddr: protocolAddr,
@@ -324,23 +352,32 @@ func (ci *adminControlImpl) AddAddress(_ fidl.Context, interfaceAddr net.Interfa
 	impl.mu.eventProxy.Channel = request.Channel
 
 	if reason := func() admin.AddressRemovalReason {
-		// TODO(https://fxbug.dev/80621): Add support for address lifetimes.
-		var b strings.Builder
-		if parameters.HasTemporary() {
-			b.WriteString(fmt.Sprintf(" temporary=%t", parameters.GetTemporary()))
+		var properties stack.AddressProperties
+		if parameters.HasTemporary() && parameters.GetTemporary() {
+			properties.Temporary = true
 		}
 		if parameters.HasInitialProperties() {
-			properties := parameters.GetInitialProperties()
-			if properties.HasPreferredLifetimeInfo() {
-				b.WriteString(fmt.Sprintf(" preferredLifetimeInfo=%#v", properties.GetPreferredLifetimeInfo()))
+			initProperties := parameters.GetInitialProperties()
+			if initProperties.HasValidLifetimeEnd() {
+				// TODO(https://fxbug.dev/93825): Store the valid lifetime.
+				panic(fmt.Sprintf("adding address %s with valid lifetime %d is not supported", addr, initProperties.GetValidLifetimeEnd()))
 			}
-			if properties.HasValidLifetimeEnd() {
-				b.WriteString(fmt.Sprintf(" validLifetimeEnd=%s", time.Monotonic(properties.GetValidLifetimeEnd())))
-			}
-		}
-		if unsupportedProperties := b.String(); unsupportedProperties != "" {
-			_ = syslog.WarnTf(controlName, "AddAddress called with unsupported parameters:%s", unsupportedProperties)
-			return admin.AddressRemovalReasonInvalid
+			properties.Deprecated = func() bool {
+				if initProperties.HasPreferredLifetimeInfo() {
+					switch preferred := initProperties.GetPreferredLifetimeInfo(); preferred.Which() {
+					case admin.PreferredLifetimeInfoDeprecated:
+						return true
+					case admin.PreferredLifetimeInfoPreferredLifetimeEnd:
+						// TODO(https://fxbug.dev/93825): Store the preferred lifetime.
+						panic(fmt.Sprintf("adding address %s with preferred lifetime %d is not supported", addr, preferred))
+					default:
+						panic(fmt.Sprintf("unknown preferred lifetime info tag: %+v", preferred))
+					}
+				}
+				// The absence of preferred lifetime means an infinite preferred lifetime,
+				// so the address is not deprecated.
+				return false
+			}()
 		}
 
 		if protocolAddr.AddressWithPrefix.PrefixLen > 8*len(protocolAddr.AddressWithPrefix.Address) {
@@ -366,7 +403,7 @@ func (ci *adminControlImpl) AddAddress(_ fidl.Context, interfaceAddr net.Interfa
 			return admin.AddressRemovalReasonAlreadyAssigned
 		}
 
-		status := ci.ns.addInterfaceAddress(ci.nicid, protocolAddr, false /* addRoute */)
+		status := ci.ns.addInterfaceAddress(ci.nicid, protocolAddr, false /* addRoute */, properties)
 		_ = syslog.DebugTf(addressStateProviderName, "addInterfaceAddress(%d, %+v, false) = %s", ci.nicid, protocolAddr, status)
 		switch status {
 		case zx.ErrOk:

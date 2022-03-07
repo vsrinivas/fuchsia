@@ -1314,8 +1314,8 @@ func TestAddRouteParameterValidation(t *testing.T) {
 	ifState := addNoopEndpoint(t, ns, "")
 	t.Cleanup(ifState.RemoveByUser)
 
-	if status := ns.addInterfaceAddress(ifState.nicid, addr, true /* addRoute */); status != zx.ErrOk {
-		t.Fatalf("ns.addInterfaceAddress(%d, %s) = %s", ifState.nicid, addr.AddressWithPrefix, status)
+	if status := ns.addInterfaceAddress(ifState.nicid, addr, true /* addRoute */, tcpipstack.AddressProperties{}); status != zx.ErrOk {
+		t.Fatalf("ns.addInterfaceAddress(%d, %s, true, {}) = %s", ifState.nicid, addr.AddressWithPrefix, status)
 	}
 
 	tests := []struct {

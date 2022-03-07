@@ -385,7 +385,7 @@ func (ns *Netstack) removeInterfaceAddress(nic tcpip.NICID, addr tcpip.ProtocolA
 // TODO(https://fxbug.dev/21222): Change this function to return
 // `admin.AddressRemovalReason` when we no longer need it for
 // `fuchsia.net.stack/Stack` or `fuchsia.netstack/Netstack`.
-func (ns *Netstack) addInterfaceAddress(nic tcpip.NICID, addr tcpip.ProtocolAddress, addRoute bool) zx.Status {
+func (ns *Netstack) addInterfaceAddress(nic tcpip.NICID, addr tcpip.ProtocolAddress, addRoute bool, properties stack.AddressProperties) zx.Status {
 	_ = syslog.Infof("adding static IP %s to NIC %d, addRoute=%t", addr.AddressWithPrefix, nic, addRoute)
 
 	if info, ok := ns.stack.NICInfo()[nic]; ok {
@@ -410,7 +410,7 @@ func (ns *Netstack) addInterfaceAddress(nic tcpip.NICID, addr tcpip.ProtocolAddr
 		}
 	}
 
-	switch err := ns.stack.AddProtocolAddress(nic, addr, stack.AddressProperties{}); err.(type) {
+	switch err := ns.stack.AddProtocolAddress(nic, addr, properties); err.(type) {
 	case nil:
 	case *tcpip.ErrUnknownNICID:
 		return zx.ErrNotFound

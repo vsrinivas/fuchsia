@@ -27,6 +27,7 @@ import (
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"gvisor.dev/gvisor/pkg/tcpip"
 	"gvisor.dev/gvisor/pkg/tcpip/header"
+	"gvisor.dev/gvisor/pkg/tcpip/stack"
 )
 
 func TestDiffInterfaceProperties(t *testing.T) {
@@ -290,8 +291,8 @@ func TestInterfacesWatcher(t *testing.T) {
 			PrefixLen: 16,
 		},
 	}
-	if status := ni.ns.addInterfaceAddress(ifs.nicid, protocolAddr, false /* addRoute */); status != zx.ErrOk {
-		t.Fatalf("addInterfaceAddress(%d, %#v, false): %s", ifs.nicid, protocolAddr, status)
+	if status := ni.ns.addInterfaceAddress(ifs.nicid, protocolAddr, false /* addRoute */, stack.AddressProperties{}); status != zx.ErrOk {
+		t.Fatalf("addInterfaceAddress(%d, %#v, false, {}): %s", ifs.nicid, protocolAddr, status)
 	}
 	addressAdded := id
 	properties := wantInterfaceProperties(ns, ifs.nicid)

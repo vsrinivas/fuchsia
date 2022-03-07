@@ -617,6 +617,14 @@ pub trait TestRealmExt {
     /// Returns the properties of the loopback interface, or `None` if there is no
     /// loopback interface.
     async fn loopback_properties(&self) -> Result<Option<fnet_interfaces_ext::Properties>>;
+
+    /// Get a `fuchsia.net.interfaces.admin/Control` client proxy for the
+    /// interface identified by [`id`] via `fuchsia.net.debug`.
+    ///
+    /// Note that one should prefer to operate on a `TestInterface` if it is
+    /// available; but this method exists in order to obtain a Control channel
+    /// for interfaces such as loopback.
+    fn interface_control(&self, id: u64) -> Result<fnet_interfaces_ext::admin::Control>;
 }
 
 #[async_trait]
@@ -650,5 +658,16 @@ impl TestRealmExt for netemul::TestRealm<'_> {
             }
         });
         Ok(properties)
+    }
+
+    fn interface_control(&self, id: u64) -> Result<fnet_interfaces_ext::admin::Control> {
+        let debug_control = self
+            .connect_to_protocol::<fnet_debug::InterfacesMarker>()
+            .context("connect to protocol")?;
+
+        let (control, server) = fnet_interfaces_ext::admin::Control::create_endpoints()
+            .context("create Control proxy")?;
+        let () = debug_control.get_admin(id, server).context("get admin")?;
+        Ok(control)
     }
 }

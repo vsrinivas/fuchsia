@@ -7,9 +7,10 @@
 use fidl_fuchsia_net_interfaces_admin as finterfaces_admin;
 use fidl_fuchsia_net_stack_ext::FidlReturn as _;
 use fuchsia_async::TimeoutExt as _;
-use fuchsia_zircon as zx;
 use futures::{FutureExt as _, StreamExt as _, TryFutureExt as _, TryStreamExt as _};
-use net_declare::{fidl_if_addr, fidl_ip_v4, fidl_ip_v4_with_prefix, fidl_subnet, std_socket_addr};
+use net_declare::{
+    fidl_if_addr, fidl_ip_v4, fidl_ip_v4_with_prefix, fidl_subnet, std_ip_v6, std_socket_addr,
+};
 use net_types::ip::IpAddress as _;
 use netemul::RealmUdpSocket as _;
 use netstack_testing_common::{
@@ -40,6 +41,93 @@ fn create_tun_device() -> (
     (tun_dev, netdevice_client_end)
 }
 
+#[variants_test]
+async fn address_deprecation<E: netemul::Endpoint>(name: &str) {
+    let sandbox = netemul::TestSandbox::new().expect("create sandbox");
+    let realm = sandbox.create_netstack_realm::<Netstack2, _>(name).expect("create realm");
+    let device = sandbox.create_endpoint::<E, _>(name).await.expect("create endpoint");
+    let interface = device.into_interface_in_realm(&realm).await.expect("add endpoint to Netstack");
+    assert!(interface.control().enable().await.expect("send enable").expect("enable"));
+    let () = interface.set_link_up(true).await.expect("bring device up");
+
+    const ADDR1: std::net::Ipv6Addr = std_ip_v6!("abcd::1");
+    const ADDR2: std::net::Ipv6Addr = std_ip_v6!("abcd::2");
+    // Cannot be const because `std::net::SocketAddrV6:new` isn't const.
+    let sock_addr = std_socket_addr!("[abcd::3]:12345");
+    // Note that the absence of the preferred_lifetime_info field implies infinite
+    // preferred lifetime.
+    const PREFERRED_PROPERTIES: fidl_fuchsia_net_interfaces_admin::AddressProperties =
+        fidl_fuchsia_net_interfaces_admin::AddressProperties::EMPTY;
+    const DEPRECATED_PROPERTIES: fidl_fuchsia_net_interfaces_admin::AddressProperties =
+        fidl_fuchsia_net_interfaces_admin::AddressProperties {
+            preferred_lifetime_info: Some(
+                fidl_fuchsia_net_interfaces_admin::PreferredLifetimeInfo::Deprecated(
+                    fidl_fuchsia_net_interfaces_admin::Empty,
+                ),
+            ),
+            ..fidl_fuchsia_net_interfaces_admin::AddressProperties::EMPTY
+        };
+    let addr1_state_provider = interfaces::add_subnet_address_and_route_wait_assigned(
+        &interface,
+        fidl_fuchsia_net::Subnet {
+            addr: fidl_fuchsia_net::IpAddress::Ipv6(fidl_fuchsia_net::Ipv6Address {
+                addr: ADDR1.octets(),
+            }),
+            prefix_len: 16,
+        },
+        // Note that an empty AddressParameters means that the address has
+        // infinite preferred lifetime.
+        fidl_fuchsia_net_interfaces_admin::AddressParameters {
+            initial_properties: Some(PREFERRED_PROPERTIES.clone()),
+            ..fidl_fuchsia_net_interfaces_admin::AddressParameters::EMPTY
+        },
+    )
+    .await
+    .expect("failed to add preferred address");
+
+    let addr2_state_provider = interfaces::add_address_wait_assigned(
+        interface.control(),
+        fidl_fuchsia_net::InterfaceAddress::Ipv6(fidl_fuchsia_net::Ipv6Address {
+            addr: ADDR2.octets(),
+        }),
+        fidl_fuchsia_net_interfaces_admin::AddressParameters {
+            initial_properties: Some(DEPRECATED_PROPERTIES.clone()),
+            ..fidl_fuchsia_net_interfaces_admin::AddressParameters::EMPTY
+        },
+    )
+    .await
+    .expect("failed to add deprecated address");
+
+    let get_source_addr = || async {
+        let sock = realm
+            .datagram_socket(
+                fidl_fuchsia_posix_socket::Domain::Ipv6,
+                fidl_fuchsia_posix_socket::DatagramSocketProtocol::Udp,
+            )
+            .await
+            .expect("failed to create UDP socket");
+        sock.connect(&socket2::SockAddr::from(sock_addr)).expect("failed to connect with socket");
+        *sock
+            .local_addr()
+            .expect("failed to get socket local addr")
+            .as_socket_ipv6()
+            .expect("socket local addr not IPv6")
+            .ip()
+    };
+    assert_eq!(get_source_addr().await, ADDR1);
+
+    addr1_state_provider
+        .update_address_properties(DEPRECATED_PROPERTIES)
+        .await
+        .expect("FIDL error deprecating address");
+    addr2_state_provider
+        .update_address_properties(PREFERRED_PROPERTIES)
+        .await
+        .expect("FIDL error setting address to preferred");
+
+    assert_eq!(get_source_addr().await, ADDR2);
+}
+
 #[fuchsia_async::run_singlethreaded(test)]
 async fn add_address_errors() {
     let name = "interfaces_admin_add_address_errors";
@@ -48,7 +136,7 @@ async fn add_address_errors() {
     let realm = sandbox.create_netstack_realm::<Netstack2, _>(name).expect("create realm");
 
     let fidl_fuchsia_net_interfaces_ext::Properties {
-        id,
+        id: loopback_id,
         addresses,
         name: _,
         device_class: _,
@@ -58,16 +146,12 @@ async fn add_address_errors() {
     } = realm
         .loopback_properties()
         .await
-        .expect("loopback_properties")
+        .expect("failed to get loopback properties")
         .expect("loopback not found");
 
-    let debug_control = realm
-        .connect_to_protocol::<fidl_fuchsia_net_debug::InterfacesMarker>()
-        .expect(<fidl_fuchsia_net_debug::InterfacesMarker as fidl::endpoints::DiscoverableProtocolMarker>::PROTOCOL_NAME);
-
-    let (control, server) = fidl_fuchsia_net_interfaces_ext::admin::Control::create_endpoints()
-        .expect("create Control proxy");
-    let () = debug_control.get_admin(id, server).expect("get admin");
+    let control = realm
+        .interface_control(loopback_id)
+        .expect("failed to get loopback interface control client proxy");
 
     const VALID_ADDRESS_PARAMETERS: fidl_fuchsia_net_interfaces_admin::AddressParameters =
         fidl_fuchsia_net_interfaces_admin::AddressParameters::EMPTY;
@@ -139,61 +223,6 @@ async fn add_address_errors() {
             .await,
             Err(fidl_fuchsia_net_interfaces_ext::admin::AddressStateProviderError::AddressRemoved(
                 fidl_fuchsia_net_interfaces_admin::AddressRemovalReason::Invalid
-            ))
-        );
-    }
-
-    // TODO(https://fxbug.dev/80621): adding an address with non-empty properties
-    // is currently unsupported. This testcase should be replaced with happy
-    // path tests that actually test the effects of the parameters once
-    // properly supported.
-    {
-        let parameters = fidl_fuchsia_net_interfaces_admin::AddressParameters {
-            initial_properties: Some(fidl_fuchsia_net_interfaces_admin::AddressProperties {
-                preferred_lifetime_info: Some(
-                    fidl_fuchsia_net_interfaces_admin::PreferredLifetimeInfo::Deprecated(
-                        fidl_fuchsia_net_interfaces_admin::Empty,
-                    ),
-                ),
-                valid_lifetime_end: Some(zx::Time::into_nanos(zx::Time::INFINITE)),
-                ..fidl_fuchsia_net_interfaces_admin::AddressProperties::EMPTY
-            }),
-            temporary: Some(true),
-            ..fidl_fuchsia_net_interfaces_admin::AddressParameters::EMPTY
-        };
-        assert_matches::assert_matches!(
-            interfaces::add_address_wait_assigned(&control, fidl_if_addr!("fe80::1"), parameters,)
-                .await,
-            Err(fidl_fuchsia_net_interfaces_ext::admin::AddressStateProviderError::AddressRemoved(
-                fidl_fuchsia_net_interfaces_admin::AddressRemovalReason::Invalid
-            ))
-        );
-    }
-
-    // TODO(https://fxbug.dev/80621): updating an address' properties is
-    // currently unsupported. This testcase should be replaced with happy path
-    // tests that actually test the effects of updating an address' properties
-    // once properly supported.
-    {
-        let address_state_provider = interfaces::add_address_wait_assigned(
-            &control,
-            fidl_if_addr!("fe80::1"),
-            VALID_ADDRESS_PARAMETERS,
-        )
-        .await
-        .expect("add address");
-        assert_matches::assert_matches!(
-            address_state_provider
-                .update_address_properties(fidl_fuchsia_net_interfaces_admin::AddressProperties::EMPTY)
-                .await,
-            Err(err) if err.is_closed()
-        );
-        assert_matches::assert_matches!(
-            address_state_provider.take_event_stream().try_next().await,
-            Ok(Some(
-                fidl_fuchsia_net_interfaces_admin::AddressStateProviderEvent::OnAddressRemoved {
-                    error: fidl_fuchsia_net_interfaces_admin::AddressRemovalReason::UserRemoved
-                }
             ))
         );
     }
