@@ -67,10 +67,11 @@ class AsyncTest : public ::testing::Test {
   // Callers should use |EXPECT_OK| instead of calling this directly.
   //
   template <typename Handler, typename ValueType>
-  Promise<> ExpectOk(const char* file, int line, Handler&& handler, const ValueType& expected) {
+  Promise<> ExpectOk(const char* file, int line, Handler&& handler, ValueType expected) {
     auto promise = fpromise::make_promise(std::move(handler));
     return promise
-        .inspect([file, line, &expected](typename decltype(promise)::result_type& result) {
+        .inspect([file, line,
+                  expected = std::move(expected)](typename decltype(promise)::result_type& result) {
           ASSERT_TRUE(result.is_ok()) << "Called from " << file << ":" << line;
           EXPECT_EQ(result.value(), expected) << "Called from " << file << ":" << line;
         })
@@ -98,10 +99,11 @@ class AsyncTest : public ::testing::Test {
   // Callers should use |EXPECT_ERROR| instead of calling this directly.
   //
   template <typename Handler, typename ErrorType>
-  Promise<> ExpectError(const char* file, int line, Handler&& handler, const ErrorType& expected) {
+  Promise<> ExpectError(const char* file, int line, Handler&& handler, ErrorType expected) {
     auto promise = fpromise::make_promise(std::move(handler));
     return promise
-        .inspect([file, line, &expected](typename decltype(promise)::result_type& result) {
+        .inspect([file, line,
+                  expected = std::move(expected)](typename decltype(promise)::result_type& result) {
           ASSERT_TRUE(result.is_error()) << "Called from " << file << ":" << line;
           EXPECT_EQ(result.error(), expected) << "Called from " << file << ":" << line;
         })

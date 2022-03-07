@@ -23,16 +23,16 @@ TEST_F(AsyncDequeTest, SendBeforeReceive) {
   Input world("world");
   pipe.Send(hello.Duplicate());
   pipe.Send(world.Duplicate());
-  FUZZING_EXPECT_OK(pipe.Receive(), hello);
-  FUZZING_EXPECT_OK(pipe.Receive(), world);
+  FUZZING_EXPECT_OK(pipe.Receive(), std::move(hello));
+  FUZZING_EXPECT_OK(pipe.Receive(), std::move(world));
   RunUntilIdle();
 }
 
 TEST_F(AsyncDequeTest, ReceiveBeforeSend) {
   AsyncDeque<Input> pipe;
   Input hello_world("hello world!");
-  FUZZING_EXPECT_OK(pipe.Receive(), hello_world);
-  pipe.Send(hello_world.Duplicate());
+  FUZZING_EXPECT_OK(pipe.Receive(), hello_world.Duplicate());
+  pipe.Send(std::move(hello_world));
   RunUntilIdle();
 }
 
@@ -42,10 +42,10 @@ TEST_F(AsyncDequeTest, Resend) {
   Input world("world");
   pipe.Resend(hello.Duplicate());
   pipe.Send(world.Duplicate());
-  FUZZING_EXPECT_OK(pipe.Receive(), hello);
+  FUZZING_EXPECT_OK(pipe.Receive(), hello.Duplicate());
   pipe.Resend(hello.Duplicate());
-  FUZZING_EXPECT_OK(pipe.Receive(), hello);
-  FUZZING_EXPECT_OK(pipe.Receive(), world);
+  FUZZING_EXPECT_OK(pipe.Receive(), std::move(hello));
+  FUZZING_EXPECT_OK(pipe.Receive(), std::move(world));
   RunUntilIdle();
 }
 
@@ -58,15 +58,15 @@ TEST_F(AsyncDequeTest, Close) {
   pipe1.Resend(hello.Duplicate());
   pipe1.Close();
   pipe1.Send(world.Duplicate());
-  FUZZING_EXPECT_OK(pipe1.Receive(), hello);
+  FUZZING_EXPECT_OK(pipe1.Receive(), hello.Duplicate());
   FUZZING_EXPECT_ERROR(pipe1.Receive());
   RunUntilIdle();
 
   // Close with promises waiting to receive.
   FUZZING_EXPECT_ERROR(pipe2.Receive());
   pipe2.Close();
-  pipe2.Send(hello.Duplicate());
-  pipe2.Resend(world.Duplicate());
+  pipe2.Send(std::move(hello));
+  pipe2.Resend(std::move(world));
   FUZZING_EXPECT_ERROR(pipe2.Receive());
   RunUntilIdle();
 }
