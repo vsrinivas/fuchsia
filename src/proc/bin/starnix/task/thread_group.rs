@@ -84,6 +84,8 @@ impl ThreadGroup {
         let pids = self.kernel.pids.read();
         for tid in &*self.tasks.read() {
             if let Some(task) = pids.get_task(*tid) {
+                // NOTE: It's possible for a task calling `sys_exit` to race with this,
+                // which could lead to an unexpected exit code.
                 *task.exit_code.lock() = Some(exit_code);
                 send_signal(&*task, SignalInfo::default(SIGKILL));
             }
