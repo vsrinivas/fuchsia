@@ -47,7 +47,7 @@ It will be set below and passed to other toolchains through toolchain_args
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1712
+From //build/config/BUILDCONFIG.gn:1716
 
 ### allow_legacy_data_partition_names
 Set to true to enable legacy data partition names.
@@ -1426,7 +1426,7 @@ This is just added to [`known_variants`](#known_variants).
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1459
+From //build/config/BUILDCONFIG.gn:1463
 
 ### extra_vbmeta_descriptors
 Additional VBMeta Descriptors to add to the vbmeta image during assembly.
@@ -2161,6 +2161,14 @@ Include an account partition in the FVM image if set to true.
 
 From //build/images/args.gni:136
 
+### include_bootsvc
+Include bootsvc in the bootfs image. Bootsvc is a legacy binary that used to be required for
+system boot, but is in the process of being removed (see fxb/44784).
+
+**Current value (from the default):** `true`
+
+From //build/images/args.gni:158
+
 ### include_fvm_blob_sparse
 Include fvm.blob.sparse.blk image into the build if set to true
 
@@ -2501,7 +2509,7 @@ Each element of the list is one variant, which is a scope defining:
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1281
+From //build/config/BUILDCONFIG.gn:1285
 
 ### launch_basemgr_on_boot
 Indicates whether to start basemgr.cmx on boot.
@@ -3848,7 +3856,7 @@ is satisfied if any of the strings matches against the candidate string.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1702
+From //build/config/BUILDCONFIG.gn:1706
 
 ### select_variant_canonical
 *This should never be set as a build argument.*
@@ -3857,7 +3865,7 @@ See //build/toolchain/clang_toolchain.gni for details.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1707
+From //build/config/BUILDCONFIG.gn:1711
 
 ### select_variant_shortcuts
 List of short names for commonly-used variant selectors.  Normally this
@@ -3907,7 +3915,7 @@ a list that can be spliced into [`select_variant`](#select_variant).
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1505
+From //build/config/BUILDCONFIG.gn:1509
 
 ### size_checker_input
 The input to the size checker.
@@ -4249,7 +4257,7 @@ From //build/config/sanitizers/sanitizer_default_options.gni:47
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1489
+From //build/config/BUILDCONFIG.gn:1493
 
 ### universe_package_labels
 If you add package labels to this variable, the packages will be included
