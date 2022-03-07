@@ -44,9 +44,9 @@ class InterceptorsTest : public gtest::RealLoopFixture {
 TEST_F(InterceptorsTest, PacketLossSeededRand) {
   std::seed_seq seed{1, 2, 3, 4};
   std::default_random_engine eng{seed};
-  std::uniform_int_distribution<uint8_t> dist(0, 99);
+  std::uniform_int_distribution<uint16_t> dist(0, 99);
 
-  auto rng = [&dist, &eng]() { return dist(eng); };
+  auto rng = [&dist, &eng]() { return static_cast<uint8_t>(dist(eng)); };
 
   int half_loss_count = 0;
   interceptor::PacketLoss half_loss(
