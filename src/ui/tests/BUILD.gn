@@ -8,6 +8,7 @@ group("tests") {
   deps = [
     "integration_flutter_tests",
     "integration_input_tests",
+    "lib",
     "scenic-stress-tests:tests",
   ]
 }

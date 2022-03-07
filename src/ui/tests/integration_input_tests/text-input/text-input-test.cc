@@ -53,6 +53,9 @@
 
 #include <gtest/gtest.h>
 #include <src/lib/fostr/fidl/fuchsia/ui/gfx/formatting.h>
+#include <src/ui/tests/lib/child_view_watcher_client.h>
+#include <src/ui/tests/lib/parent_viewport_watcher_client.h>
+#include <src/ui/tests/lib/view_provider_server.h>
 #include <test/inputsynthesis/cpp/fidl.h>
 #include <test/text/cpp/fidl.h>
 
@@ -89,66 +92,6 @@ using RealmBuilder = sys::testing::experimental::RealmBuilder;
 // Max timeout in failure cases.
 // Set this as low as you can that still works across all test platforms.
 constexpr zx::duration kTimeout = zx::min(5);
-
-// This is an in-process server for the `fuchsia.ui.app.ViewProvider` API for this
-// test.  It is required for this test to be able to define and set up its view
-// as the root view in Scenic's scene graph.  The implementation does little more
-// than to provide correct wiring of the FIDL API.  The test that uses it is
-// expected to provide a closure via SetCreateView2Callback, which will get invoked
-// when a message is received.
-//
-// Only Flatland methods are implemented, others will cause the server to crash
-// the test deliberately.
-class ViewProviderServer : public ViewProvider, public LocalComponent {
- public:
-  explicit ViewProviderServer(async_dispatcher_t* dispatcher) : dispatcher_(dispatcher) {}
-
-  // Start serving `ViewProvider` for the stream that arrives via `request`.
-  void Bind(fidl::InterfaceRequest<ViewProvider> request) {
-    bindings_.AddBinding(this, std::move(request), dispatcher_);
-  }
-
-  // Set this callback to direct where an incoming message from `CreateView2` will
-  // get forwarded to.
-  void SetCreateView2Callback(std::function<void(CreateView2Args)> callback) {
-    create_view2_callback_ = std::move(callback);
-  }
-
-  // LocalComponent::Start
-  void Start(std::unique_ptr<LocalComponentHandles> local_handles) override {
-    // When this component starts, add a binding to the test.touch.ResponseListener
-    // protocol to this component's outgoing directory.
-    FX_CHECK(local_handles->outgoing()->AddPublicService(
-                 fidl::InterfaceRequestHandler<ViewProvider>([this](auto request) {
-                   bindings_.AddBinding(this, std::move(request), dispatcher_);
-                 })) == ZX_OK);
-    local_handles_.emplace_back(std::move(local_handles));
-  }
-
-  // Gfx protocol is not implemented.
-  void CreateView(
-      ::zx::eventpair token,
-      ::fidl::InterfaceRequest<::fuchsia::sys::ServiceProvider> incoming_services,
-      ::fidl::InterfaceHandle<::fuchsia::sys::ServiceProvider> outgoing_services) override {
-    FAIL() << "CreateView is not supported.";
-  }
-
-  // Gfx protocol is not implemented.
-  void CreateViewWithViewRef(::zx::eventpair token, ViewRefControl view_ref_control,
-                             ViewRef view_ref) override {
-    FAIL() << "CreateViewWithRef is not supported.";
-  }
-
-  // Implements server-side `fuchsia.ui.app.ViewProvider/CreateView2`
-  void CreateView2(CreateView2Args args) override { create_view2_callback_(std::move(args)); }
-
- private:
-  async_dispatcher_t* dispatcher_ = nullptr;
-  std::vector<std::unique_ptr<LocalComponentHandles>> local_handles_;
-  fidl::BindingSet<ViewProvider> bindings_;
-
-  std::function<void(CreateView2Args)> create_view2_callback_ = nullptr;
-};
 
 // `ResponseListener` is a local test protocol that our test Flutter app uses to let us know
 // what text is being entered into its only text field.
@@ -286,98 +229,6 @@ class TextInputTest : public gtest::RealLoopFixture {
   std::unique_ptr<RealmRoot> realm_;
   std::unique_ptr<ViewProviderServer> view_provider_server_;
   std::unique_ptr<TestResponseListenerServer> test_response_listener_;
-};
-
-// A minimal server for fuchsia.ui.composition.ParentViewportWatcher.  All it
-// does is forward the values it receives to the functions set by the user.
-class ParentViewportWatcherClient {
- public:
-  struct Callbacks {
-    // Called when GetLayout returns.
-    std::function<void(LayoutInfo info)> on_get_layout{};
-    // Called when GetStatus returns.
-    std::function<void(ParentViewportStatus info)> on_status_info{};
-  };
-  explicit ParentViewportWatcherClient(fidl::InterfaceHandle<ParentViewportWatcher> client_end,
-                                       Callbacks callbacks)
-      // Subtle: callbacks are initialized before a call to Bind, so that we don't
-      // receive messages from the client end before the callbacks are installed.
-      : callbacks_(std::move(callbacks)), client_end_(client_end.Bind()) {
-    client_end_.set_error_handler([](zx_status_t status) {
-      FX_LOGS(ERROR) << "watcher error: " << zx_status_get_string(status);
-    });
-    // Kick off hanging get requests now.
-    ScheduleGetLayout();
-    ScheduleStatusInfo();
-  }
-
- private:
-  // Schedule* methods ensure that changes to the status are continuously
-  // communicated to the test fixture. This is because the statuses may
-  // change several times before they settle into the value we need.
-
-  void ScheduleGetLayout() {
-    client_end_->GetLayout([this](LayoutInfo l) {
-      this->callbacks_.on_get_layout(std::move(l));
-      ScheduleGetLayout();
-    });
-  }
-
-  void ScheduleStatusInfo() {
-    client_end_->GetStatus([this](ParentViewportStatus s) {
-      this->callbacks_.on_status_info(s);
-      ScheduleStatusInfo();
-    });
-  }
-
-  Callbacks callbacks_;
-  fidl::InterfacePtr<ParentViewportWatcher> client_end_;
-};
-
-// A minimal server for fuchsia.ui.composition.ChildViewWatcher.  All it does is
-// forward the values it receives to the functions set by the user.
-class ChildViewWatcherClient {
- public:
-  struct Callbacks {
-    // Called when GetStatus returns.
-    std::function<void(ChildViewStatus)> on_get_status{};
-    // Called when GetViewRef returns.
-    std::function<void(ViewRef)> on_get_view_ref{};
-  };
-
-  explicit ChildViewWatcherClient(fidl::InterfaceHandle<ChildViewWatcher> client_end,
-                                  Callbacks callbacks)
-      // Subtle: callbacks need to be initialized before a call to Bind, else
-      // we may receive messages before we install the message handlers.
-      : callbacks_(std::move(callbacks)), client_end_(client_end.Bind()) {
-    client_end_.set_error_handler([](zx_status_t status) {
-      FX_LOGS(ERROR) << "watcher error: " << zx_status_get_string(status);
-    });
-    ScheduleGetStatus();
-    ScheduleGetViewRef();
-  }
-
- private:
-  // Schedule* methods ensure that changes to the status are continuously
-  // communicated to the test fixture. This is because the statuses may
-  // change several times before they settle into the value we need.
-
-  void ScheduleGetStatus() {
-    client_end_->GetStatus([this](ChildViewStatus status) {
-      this->callbacks_.on_get_status(status);
-      this->ScheduleGetStatus();
-    });
-  }
-
-  void ScheduleGetViewRef() {
-    client_end_->GetViewRef([this](ViewRef view_ref) {
-      this->callbacks_.on_get_view_ref(std::move(view_ref));
-      this->ScheduleGetViewRef();
-    });
-  }
-
-  Callbacks callbacks_;
-  fidl::InterfacePtr<ChildViewWatcher> client_end_;
 };
 
 #ifndef INPUT_USE_MODERN_INPUT_INJECTION
