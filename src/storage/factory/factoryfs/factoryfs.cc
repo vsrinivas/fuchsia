@@ -55,7 +55,7 @@ zx_status_t Factoryfs::OpenRootNode(fbl::RefPtr<fs::Vnode>* out) {
   auto root = fbl::MakeRefCounted<Directory>(*this, std::string_view());
   auto validated_options = root->ValidateOptions(fs::VnodeConnectionOptions());
   if (validated_options.is_error()) {
-    return validated_options.error();
+    return validated_options.status_value();
   }
   zx_status_t status = root->Open(validated_options.value(), nullptr);
   if (status != ZX_OK) {

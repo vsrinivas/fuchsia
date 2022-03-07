@@ -125,7 +125,7 @@ TEST(PseudoDir, RejectOpenFlagNotDirectory) {
   auto dir = fbl::MakeRefCounted<fs::PseudoDir>();
   auto result = dir->ValidateOptions(fs::VnodeConnectionOptions::ReadOnly().set_not_directory());
   ASSERT_TRUE(result.is_error());
-  EXPECT_EQ(ZX_ERR_NOT_FILE, result.error());
+  EXPECT_EQ(ZX_ERR_NOT_FILE, result.status_value());
 }
 
 }  // namespace

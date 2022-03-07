@@ -98,8 +98,7 @@ class MinfsHarness : public fuchsia::io::test::Io1Harness {
     }
 
     auto options = directory->ValidateOptions(GetConnectionOptions(flags));
-    ZX_ASSERT_MSG(options.is_ok(), "Invalid directory flags: %s",
-                  zx_status_get_string(options.error()));
+    ZX_ASSERT_MSG(options.is_ok(), "Invalid directory flags: %s", options.status_string());
     zx_status_t status =
         minfs_->Serve(std::move(directory), directory_request.TakeChannel(), options.value());
     ZX_ASSERT_MSG(status == ZX_OK, "Failed to serve test directory: %s",

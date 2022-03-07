@@ -126,20 +126,18 @@ bool Vnode::Supports(VnodeProtocolSet protocols) const {
 
 bool Vnode::ValidateRights([[maybe_unused]] Rights rights) const { return true; }
 
-auto Vnode::ValidateOptions(VnodeConnectionOptions options) const
-    -> fpromise::result<ValidatedOptions, zx_status_t> {
+zx::status<Vnode::ValidatedOptions> Vnode::ValidateOptions(VnodeConnectionOptions options) const {
   auto protocols = options.protocols();
   if (!Supports(protocols)) {
     if (protocols == VnodeProtocol::kDirectory) {
-      return fpromise::error(ZX_ERR_NOT_DIR);
-    } else {
-      return fpromise::error(ZX_ERR_NOT_FILE);
+      return zx::error(ZX_ERR_NOT_DIR);
     }
+    return zx::error(ZX_ERR_NOT_FILE);
   }
   if (!ValidateRights(options.rights)) {
-    return fpromise::error(ZX_ERR_ACCESS_DENIED);
+    return zx::error(ZX_ERR_ACCESS_DENIED);
   }
-  return fpromise::ok(Validated(options));
+  return zx::ok(Validated(options));
 }
 
 VnodeProtocol Vnode::Negotiate(VnodeProtocolSet protocols) const {
@@ -223,7 +221,7 @@ zx_status_t Vnode::OpenValidating(VnodeConnectionOptions options,
                                   fbl::RefPtr<Vnode>* out_redirect) {
   auto validated_options = ValidateOptions(options);
   if (validated_options.is_error()) {
-    return validated_options.error();
+    return validated_options.status_value();
   }
   // The documentation on Vnode::Open promises it will never be called if options includes
   // vnode_reference.
@@ -304,10 +302,11 @@ zx_status_t Vnode::QueryFilesystem(fuchsia_io::wire::FilesystemInfo* out) {
     return ZX_ERR_NOT_SUPPORTED;
 
   zx::status<FilesystemInfo> info_or = vfs_->GetFilesystemInfo();
-  if (info_or.is_error())
-    return info_or.error_value();
+  if (info_or.is_error()) {
+    return info_or.status_value();
+  }
 
-  *out = info_or->ToFidl();
+  *out = info_or.value().ToFidl();
   return ZX_OK;
 }
 

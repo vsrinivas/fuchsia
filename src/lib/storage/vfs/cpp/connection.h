@@ -13,7 +13,6 @@
 #include <lib/async/cpp/wait.h>
 #include <lib/fidl/llcpp/transaction.h>
 #include <lib/fit/function.h>
-#include <lib/fpromise/result.h>
 #include <lib/zx/event.h>
 #include <stdint.h>
 #include <zircon/fidl.h>
@@ -35,9 +34,8 @@ namespace internal {
 class FidlTransaction;
 class Binding;
 
-fpromise::result<VnodeRepresentation, zx_status_t> Describe(const fbl::RefPtr<Vnode>& vnode,
-                                                            VnodeProtocol protocol,
-                                                            VnodeConnectionOptions options);
+zx::status<VnodeRepresentation> Describe(const fbl::RefPtr<Vnode>& vnode, VnodeProtocol protocol,
+                                         VnodeConnectionOptions options);
 
 // Perform basic flags sanitization.
 // Returns false if the flags combination is invalid.
@@ -184,26 +182,6 @@ class Connection : public fbl::DoublyLinkedListable<std::unique_ptr<Connection>>
   constexpr static uint32_t kStatusFlags =
       kSettableStatusFlags | fuchsia_io::wire::kOpenFlagNodeReference;
 
-  // |Result| is a result type used as the return value of the shared Node methods. The
-  // |zx_status_t| indicates application error i.e. in case of error, it should be returned via the
-  // FIDL method return value. The connection is never closed except from |NodeClose|.
-  //
-  // Note that |fpromise::result| has an extra |pending| state apart from |ok| and |error|; the
-  // pending state shall never be returned from any of these |Node_*| methods.
-  //
-  // If the operation is asynchronous, the corresponding function should take in a callback and
-  // return |void|.
-  template <typename T = void>
-  using Result = fpromise::result<T, zx_status_t>;
-
-  inline Result<> FromStatus(zx_status_t status) {
-    if (status == ZX_OK) {
-      return fpromise::ok();
-    } else {
-      return fpromise::error(status);
-    }
-  }
-
   // Node operations. Note that these provide the shared implementation of |fuchsia.io/Node|
   // methods, used by all connection subclasses.
   //
@@ -212,13 +190,13 @@ class Connection : public fbl::DoublyLinkedListable<std::unique_ptr<Connection>>
   // own any child objects and handles to avoid a dangling reference.
 
   void NodeClone(uint32_t flags, fidl::ServerEnd<fuchsia_io::Node> channel);
-  Result<> NodeClose();
-  Result<VnodeRepresentation> NodeDescribe();
+  zx::status<> NodeClose();
+  zx::status<VnodeRepresentation> NodeDescribe();
   void NodeSync(fit::callback<void(zx_status_t)> callback);
-  Result<VnodeAttributes> NodeGetAttr();
-  Result<> NodeSetAttr(uint32_t flags, const fuchsia_io::wire::NodeAttributes& attributes);
-  Result<uint32_t> NodeGetFlags();
-  Result<> NodeSetFlags(uint32_t flags);
+  zx::status<VnodeAttributes> NodeGetAttr();
+  zx::status<> NodeSetAttr(uint32_t flags, const fuchsia_io::wire::NodeAttributes& attributes);
+  zx::status<uint32_t> NodeGetFlags();
+  zx::status<> NodeSetFlags(uint32_t flags);
 
  private:
   // The contract of the Vnode API is that there should be a balancing |Close| call for every |Open|

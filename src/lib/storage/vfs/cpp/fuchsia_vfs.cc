@@ -286,9 +286,9 @@ zx_status_t FuchsiaVfs::Link(zx::event token, fbl::RefPtr<Vnode> oldparent, std:
 
 zx_status_t FuchsiaVfs::Serve(fbl::RefPtr<Vnode> vnode, zx::channel channel,
                               VnodeConnectionOptions options) {
-  auto result = vnode->ValidateOptions(options);
+  zx::status result = vnode->ValidateOptions(options);
   if (result.is_error()) {
-    return result.error();
+    return result.status_value();
   }
   return Serve(std::move(vnode), std::move(channel), result.value());
 }
@@ -329,15 +329,14 @@ zx_status_t FuchsiaVfs::Serve(fbl::RefPtr<Vnode> vnode, zx::channel server_end,
 
   // Send an |fuchsia.io/OnOpen| event if requested.
   if (options->flags.describe) {
-    fpromise::result<VnodeRepresentation, zx_status_t> result =
-        internal::Describe(vnode, protocol, *options);
+    zx::status<VnodeRepresentation> result = internal::Describe(vnode, protocol, *options);
     if (result.is_error()) {
       // TODO(fxbug.dev/95144) Use the returned fidl::Result's status value.
       (void)fidl::WireSendEvent(fidl::ServerEnd<fuchsia_io::Node>(std::move(server_end)))
-          ->OnOpen(result.error(), fio::wire::NodeInfo());
-      return result.error();
+          ->OnOpen(result.status_value(), fio::wire::NodeInfo());
+      return result.status_value();
     }
-    ConvertToIoV1NodeInfo(result.take_value(), [&](fio::wire::NodeInfo&& info) {
+    ConvertToIoV1NodeInfo(std::move(result).value(), [&](fio::wire::NodeInfo&& info) {
       // The channel may switch from |Node| protocol back to a custom protocol, after sending the
       // event, in the case of |VnodeProtocol::kConnector|.
       fidl::ServerEnd<fuchsia_io::Node> typed_server_end(std::move(server_end));
@@ -417,11 +416,12 @@ zx_status_t FuchsiaVfs::ServeDirectory(fbl::RefPtr<fs::Vnode> vn,
   VnodeConnectionOptions options;
   options.flags.directory = true;
   options.rights = rights;
-  auto validated_options = vn->ValidateOptions(options);
+  zx::status validated_options = vn->ValidateOptions(options);
   if (validated_options.is_error()) {
-    return validated_options.error();
-  } else if (zx_status_t r = OpenVnode(validated_options.value(), &vn); r != ZX_OK) {
-    return r;
+    return validated_options.status_value();
+  }
+  if (zx_status_t status = OpenVnode(validated_options.value(), &vn); status != ZX_OK) {
+    return status;
   }
 
   return Serve(std::move(vn), server_end.TakeChannel(), validated_options.value());

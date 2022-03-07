@@ -44,40 +44,40 @@ void NodeConnection::Clone(CloneRequestView request, CloneCompleter::Sync& compl
 
 void NodeConnection::CloseDeprecated(CloseDeprecatedRequestView request,
                                      CloseDeprecatedCompleter::Sync& completer) {
-  auto result = Connection::NodeClose();
+  zx::status result = Connection::NodeClose();
   if (result.is_error()) {
-    completer.Reply(result.error());
+    completer.Reply(result.status_value());
   } else {
     completer.Reply(ZX_OK);
   }
 }
 
 void NodeConnection::Close(CloseRequestView request, CloseCompleter::Sync& completer) {
-  auto result = Connection::NodeClose();
+  zx::status result = Connection::NodeClose();
   if (result.is_error()) {
-    completer.ReplyError(result.error());
+    completer.ReplyError(result.status_value());
   } else {
     completer.ReplySuccess();
   }
 }
 
 void NodeConnection::Describe(DescribeRequestView request, DescribeCompleter::Sync& completer) {
-  auto result = Connection::NodeDescribe();
+  zx::status result = Connection::NodeDescribe();
   if (result.is_error()) {
-    completer.Close(result.error());
+    completer.Close(result.status_value());
   } else {
-    ConvertToIoV1NodeInfo(result.take_value(),
+    ConvertToIoV1NodeInfo(std::move(result).value(),
                           [&](fio::wire::NodeInfo&& info) { completer.Reply(std::move(info)); });
   }
 }
 
 void NodeConnection::Describe2(Describe2RequestView request, Describe2Completer::Sync& completer) {
-  auto result = Connection::NodeDescribe();
+  zx::status result = Connection::NodeDescribe();
   if (result.is_error()) {
-    completer.Close(result.error());
+    completer.Close(result.status_value());
     return;
   }
-  ConnectionInfoConverter converter(result.take_value());
+  ConnectionInfoConverter converter(std::move(result).value());
   completer.Reply(std::move(converter.info));
 }
 
@@ -101,7 +101,7 @@ void NodeConnection::Sync(SyncRequestView request, SyncCompleter::Sync& complete
 void NodeConnection::GetAttr(GetAttrRequestView request, GetAttrCompleter::Sync& completer) {
   auto result = Connection::NodeGetAttr();
   if (result.is_error()) {
-    completer.Reply(result.error(), fio::wire::NodeAttributes());
+    completer.Reply(result.status_value(), fio::wire::NodeAttributes());
   } else {
     completer.Reply(ZX_OK, result.value().ToIoV1NodeAttributes());
   }
@@ -110,7 +110,7 @@ void NodeConnection::GetAttr(GetAttrRequestView request, GetAttrCompleter::Sync&
 void NodeConnection::SetAttr(SetAttrRequestView request, SetAttrCompleter::Sync& completer) {
   auto result = Connection::NodeSetAttr(request->flags, request->attributes);
   if (result.is_error()) {
-    completer.Reply(result.error());
+    completer.Reply(result.status_value());
   } else {
     completer.Reply(ZX_OK);
   }
@@ -119,7 +119,7 @@ void NodeConnection::SetAttr(SetAttrRequestView request, SetAttrCompleter::Sync&
 void NodeConnection::GetFlags(GetFlagsRequestView request, GetFlagsCompleter::Sync& completer) {
   auto result = Connection::NodeGetFlags();
   if (result.is_error()) {
-    completer.Reply(result.error(), 0);
+    completer.Reply(result.status_value(), 0);
   } else {
     completer.Reply(ZX_OK, result.value());
   }
@@ -128,7 +128,7 @@ void NodeConnection::GetFlags(GetFlagsRequestView request, GetFlagsCompleter::Sy
 void NodeConnection::SetFlags(SetFlagsRequestView request, SetFlagsCompleter::Sync& completer) {
   auto result = Connection::NodeSetFlags(request->flags);
   if (result.is_error()) {
-    completer.Reply(result.error());
+    completer.Reply(result.status_value());
   } else {
     completer.Reply(ZX_OK);
   }

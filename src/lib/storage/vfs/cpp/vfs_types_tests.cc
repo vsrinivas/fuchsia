@@ -77,7 +77,7 @@ class DummyVnode : public fs::Vnode {
 #define EXPECT_RESULT_OK(expr) EXPECT_TRUE((expr).is_ok())
 #define EXPECT_RESULT_ERROR(error_val, expr) \
   EXPECT_TRUE((expr).is_error());            \
-  EXPECT_EQ(error_val, (expr).error())
+  EXPECT_EQ(error_val, (expr).status_value())
 
 TEST(VnodeConnectionOptions, ValidateOptionsForDirectory) {
   class TestDirectory : public DummyVnode {

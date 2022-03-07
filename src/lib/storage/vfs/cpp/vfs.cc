@@ -131,7 +131,7 @@ Vfs::OpenResult Vfs::OpenLocked(fbl::RefPtr<Vnode> vndir, std::string_view path,
   }
   auto validated_options = vn->ValidateOptions(options);
   if (validated_options.is_error()) {
-    return validated_options.error();
+    return validated_options.status_value();
   }
 
   // |node_reference| requests that we don't actually open the underlying Vnode, but use the

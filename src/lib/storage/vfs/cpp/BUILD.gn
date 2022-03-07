@@ -29,8 +29,10 @@ static_library("cpp") {
   public_deps = [
     "//sdk/lib/fdio",
     "//sdk/lib/fit",
-    "//sdk/lib/fit-promise",
     "//zircon/system/ulib/fbl",
+
+    # <fs/vnode.h> has #include <lib/zx/status.h>
+    "//zircon/system/ulib/zxc",
   ]
 
   deps = [
@@ -113,9 +115,6 @@ static_library("cpp") {
 
       # <fs/trace.h> has #include <lib/trace/event.h>.
       "//zircon/system/ulib/trace",
-
-      # <fs/vnode.h> has #include <lib/zx/status.h>
-      "//zircon/system/ulib/zxc",
     ]
     deps += [
       "//sdk/fidl/fuchsia.cobalt:fuchsia.cobalt_c",

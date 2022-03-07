@@ -45,39 +45,39 @@ void FileConnection::Clone(CloneRequestView request, CloneCompleter::Sync& compl
 
 void FileConnection::CloseDeprecated(CloseDeprecatedRequestView request,
                                      CloseDeprecatedCompleter::Sync& completer) {
-  auto result = Connection::NodeClose();
+  zx::status result = Connection::NodeClose();
   if (result.is_error()) {
-    completer.Reply(result.error());
+    completer.Reply(result.status_value());
   } else {
     completer.Reply(ZX_OK);
   }
 }
 
 void FileConnection::Close(CloseRequestView request, CloseCompleter::Sync& completer) {
-  auto result = Connection::NodeClose();
+  zx::status result = Connection::NodeClose();
   if (result.is_error()) {
-    completer.ReplyError(result.error());
+    completer.ReplyError(result.status_value());
   } else {
     completer.ReplySuccess();
   }
 }
 
 void FileConnection::Describe(DescribeRequestView request, DescribeCompleter::Sync& completer) {
-  auto result = Connection::NodeDescribe();
+  zx::status result = Connection::NodeDescribe();
   if (result.is_error()) {
-    return completer.Close(result.error());
+    return completer.Close(result.status_value());
   }
-  ConvertToIoV1NodeInfo(result.take_value(),
+  ConvertToIoV1NodeInfo(std::move(result).value(),
                         [&](fio::wire::NodeInfo&& info) { completer.Reply(std::move(info)); });
 }
 
 void FileConnection::Describe2(Describe2RequestView request, Describe2Completer::Sync& completer) {
-  auto result = Connection::NodeDescribe();
+  zx::status result = Connection::NodeDescribe();
   if (result.is_error()) {
-    completer.Close(result.error());
+    completer.Close(result.status_value());
     return;
   }
-  ConnectionInfoConverter converter(result.take_value());
+  ConnectionInfoConverter converter(std::move(result).value());
   completer.Reply(std::move(converter.info));
 }
 
@@ -99,18 +99,18 @@ void FileConnection::Sync(SyncRequestView request, SyncCompleter::Sync& complete
 }
 
 void FileConnection::GetAttr(GetAttrRequestView request, GetAttrCompleter::Sync& completer) {
-  auto result = Connection::NodeGetAttr();
+  zx::status result = Connection::NodeGetAttr();
   if (result.is_error()) {
-    completer.Reply(result.error(), fio::wire::NodeAttributes());
+    completer.Reply(result.status_value(), fio::wire::NodeAttributes());
   } else {
     completer.Reply(ZX_OK, result.value().ToIoV1NodeAttributes());
   }
 }
 
 void FileConnection::SetAttr(SetAttrRequestView request, SetAttrCompleter::Sync& completer) {
-  auto result = Connection::NodeSetAttr(request->flags, request->attributes);
+  zx::status result = Connection::NodeSetAttr(request->flags, request->attributes);
   if (result.is_error()) {
-    completer.Reply(result.error());
+    completer.Reply(result.status_value());
   } else {
     completer.Reply(ZX_OK);
   }
@@ -119,9 +119,9 @@ void FileConnection::SetAttr(SetAttrRequestView request, SetAttrCompleter::Sync&
 void FileConnection::GetFlagsDeprecatedUseNode(
     GetFlagsDeprecatedUseNodeRequestView request,
     GetFlagsDeprecatedUseNodeCompleter::Sync& completer) {
-  auto result = Connection::NodeGetFlags();
+  zx::status result = Connection::NodeGetFlags();
   if (result.is_error()) {
-    completer.Reply(result.error(), 0);
+    completer.Reply(result.status_value(), 0);
   } else {
     completer.Reply(ZX_OK, result.value());
   }
@@ -130,9 +130,9 @@ void FileConnection::GetFlagsDeprecatedUseNode(
 void FileConnection::SetFlagsDeprecatedUseNode(
     SetFlagsDeprecatedUseNodeRequestView request,
     SetFlagsDeprecatedUseNodeCompleter::Sync& completer) {
-  auto result = Connection::NodeSetFlags(request->flags);
+  zx::status result = Connection::NodeSetFlags(request->flags);
   if (result.is_error()) {
-    completer.Reply(result.error());
+    completer.Reply(result.status_value());
   } else {
     completer.Reply(ZX_OK);
   }

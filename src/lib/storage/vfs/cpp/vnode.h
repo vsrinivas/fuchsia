@@ -8,7 +8,7 @@
 #include <lib/fdio/io.h>
 #include <lib/fdio/vfs.h>
 #include <lib/fit/function.h>
-#include <lib/fpromise/result.h>
+#include <lib/zx/status.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
@@ -36,7 +36,6 @@
 #include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/file-lock/file-lock.h>
 #include <lib/zx/channel.h>
-#include <lib/zx/status.h>
 #include <lib/zx/stream.h>
 #include <zircon/device/vfs.h>
 #endif  // __Fuchsia__
@@ -127,16 +126,15 @@ class Vnode : public VnodeRefCounted<Vnode>, public fbl::Recyclable<Vnode> {
   virtual bool ValidateRights(Rights rights) const;
 
   // Ensures that it is valid to access the vnode with given connection options. The vnode will only
-  // be opened for a particular request if the validation returns |fpromise::ok(...)|.
+  // be opened for a particular request if the validation returns |zx::ok(...)|.
   //
-  // The |fpromise::ok| variant of the return value is a |ValidatedOptions| object that encodes the
+  // The |zx::ok| variant of the return value is a |ValidatedOptions| object that encodes the
   // fact that |options| has been validated. It may be used to call other functions that only
   // accepts validated options.
   //
-  // The |fpromise::error| variant of the return value contains a suitable error code
+  // The |zx::error| variant of the return value contains a suitable error code
   // when validation fails.
-  fpromise::result<ValidatedOptions, zx_status_t> ValidateOptions(
-      VnodeConnectionOptions options) const;
+  zx::status<ValidatedOptions> ValidateOptions(VnodeConnectionOptions options) const;
 
   // Picks one protocol from |protocols|, when the intersection of the protocols requested by the
   // client and the ones supported by the vnode has more than one elements i.e. tie-breaking is

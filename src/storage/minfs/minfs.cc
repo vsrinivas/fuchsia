@@ -603,9 +603,7 @@ class ReleaseObject {
  public:
   explicit ReleaseObject(T object) : object_(std::move(object)) {}
 
-  void operator()([[maybe_unused]] const fpromise::result<void, zx_status_t>& dont_care) {
-    object_.reset();
-  }
+  void operator()([[maybe_unused]] const zx::status<void>& dont_care) { object_.reset(); }
 
  private:
   std::optional<T> object_;

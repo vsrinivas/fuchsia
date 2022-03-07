@@ -97,7 +97,7 @@ void CheckAppend(const fbl::RefPtr<fs::Vnode>& file, zx_status_t status, std::st
 #define EXPECT_RESULT_OK(expr) EXPECT_TRUE((expr).is_ok())
 #define EXPECT_RESULT_ERROR(error_val, expr) \
   EXPECT_TRUE((expr).is_error());            \
-  EXPECT_EQ(error_val, (expr).error())
+  EXPECT_EQ(error_val, (expr).status_value())
 
 TEST(PseudoFile, OpenValidationBuffered) {
   // no read handler, no write handler

@@ -1077,7 +1077,7 @@ zx_status_t Blobfs::OpenRootNode(fbl::RefPtr<fs::Vnode>* out) {
 
   auto validated_options = vn->ValidateOptions(fs::VnodeConnectionOptions());
   if (validated_options.is_error()) {
-    return validated_options.error();
+    return validated_options.status_value();
   }
   zx_status_t status = vn->Open(validated_options.value(), nullptr);
   if (status != ZX_OK) {

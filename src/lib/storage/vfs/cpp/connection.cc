@@ -47,18 +47,17 @@ constexpr zx_signals_t kWakeSignals =
 
 namespace internal {
 
-fpromise::result<VnodeRepresentation, zx_status_t> Describe(const fbl::RefPtr<Vnode>& vnode,
-                                                            VnodeProtocol protocol,
-                                                            VnodeConnectionOptions options) {
+zx::status<VnodeRepresentation> Describe(const fbl::RefPtr<Vnode>& vnode, VnodeProtocol protocol,
+                                         VnodeConnectionOptions options) {
   if (options.flags.node_reference) {
-    return fpromise::ok(VnodeRepresentation::Connector());
+    return zx::ok(VnodeRepresentation::Connector());
   }
   fs::VnodeRepresentation representation;
   zx_status_t status = vnode->GetNodeInfoForProtocol(protocol, options.rights, &representation);
   if (status != ZX_OK) {
-    return fpromise::error(status);
+    return zx::error(status);
   }
-  return fpromise::ok(std::move(representation));
+  return zx::ok(std::move(representation));
 }
 
 bool PrevalidateFlags(uint32_t flags) {
@@ -294,7 +293,7 @@ void Connection::NodeClone(uint32_t clone_flags, fidl::ServerEnd<fio::Node> serv
   fbl::RefPtr<Vnode> vn(vnode_);
   auto result = vn->ValidateOptions(clone_options);
   if (result.is_error()) {
-    return write_error(std::move(server_end), result.error());
+    return write_error(std::move(server_end), result.status_value());
   }
   auto& validated_options = result.value();
   zx_status_t open_status = ZX_OK;
@@ -308,14 +307,14 @@ void Connection::NodeClone(uint32_t clone_flags, fidl::ServerEnd<fio::Node> serv
   vfs_->Serve(vn, server_end.TakeChannel(), validated_options);
 }
 
-Connection::Result<> Connection::NodeClose() {
-  Result<> result = FromStatus(EnsureVnodeClosed());
+zx::status<> Connection::NodeClose() {
+  zx::status result = zx::make_status(EnsureVnodeClosed());
   closing_ = true;
   AsyncTeardown();
   return result;
 }
 
-Connection::Result<VnodeRepresentation> Connection::NodeDescribe() {
+zx::status<VnodeRepresentation> Connection::NodeDescribe() {
   return Describe(vnode(), protocol(), options());
 }
 
@@ -328,52 +327,49 @@ void Connection::NodeSync(fit::callback<void(zx_status_t)> callback) {
   vnode_->Sync(Vnode::SyncCallback(std::move(callback)));
 }
 
-Connection::Result<VnodeAttributes> Connection::NodeGetAttr() {
+zx::status<VnodeAttributes> Connection::NodeGetAttr() {
   FS_PRETTY_TRACE_DEBUG("[NodeGetAttr] options: ", options());
 
   fs::VnodeAttributes attr;
-  zx_status_t r;
-  if ((r = vnode_->GetAttributes(&attr)) != ZX_OK) {
-    return fpromise::error(r);
+  if (zx_status_t status = vnode_->GetAttributes(&attr); status != ZX_OK) {
+    return zx::error(status);
   }
-  return fpromise::ok(attr);
+  return zx::ok(attr);
 }
 
-Connection::Result<> Connection::NodeSetAttr(uint32_t flags,
-                                             const fio::wire::NodeAttributes& attributes) {
+zx::status<> Connection::NodeSetAttr(uint32_t flags, const fio::wire::NodeAttributes& attributes) {
   FS_PRETTY_TRACE_DEBUG("[NodeSetAttr] our options: ", options(), ", incoming flags: ", flags);
 
   if (options().flags.node_reference) {
-    return fpromise::error(ZX_ERR_BAD_HANDLE);
+    return zx::error(ZX_ERR_BAD_HANDLE);
   }
   if (!options().rights.write) {
-    return fpromise::error(ZX_ERR_BAD_HANDLE);
+    return zx::error(ZX_ERR_BAD_HANDLE);
   }
   constexpr uint32_t supported_flags =
       fio::wire::kNodeAttributeFlagCreationTime | fio::wire::kNodeAttributeFlagModificationTime;
   if (flags & ~supported_flags) {
-    return fpromise::error(ZX_ERR_INVALID_ARGS);
+    return zx::error(ZX_ERR_INVALID_ARGS);
   }
 
-  zx_status_t status = vnode_->SetAttributes(
-      fs::VnodeAttributesUpdate()
-          .set_creation_time(flags & fio::wire::kNodeAttributeFlagCreationTime
-                                 ? std::make_optional(attributes.creation_time)
-                                 : std::nullopt)
-          .set_modification_time(flags & fio::wire::kNodeAttributeFlagModificationTime
-                                     ? std::make_optional(attributes.modification_time)
-                                     : std::nullopt));
-  return FromStatus(status);
+  fs::VnodeAttributesUpdate update;
+  if (flags & fio::wire::kNodeAttributeFlagCreationTime) {
+    update.set_creation_time(attributes.creation_time);
+  }
+  if (flags & fio::wire::kNodeAttributeFlagModificationTime) {
+    update.set_modification_time(attributes.modification_time);
+  }
+  return zx::make_status(vnode_->SetAttributes(update));
 }
 
-Connection::Result<uint32_t> Connection::NodeGetFlags() {
-  return fpromise::ok(options().ToIoV1Flags() & (kStatusFlags | ZX_FS_RIGHTS));
+zx::status<uint32_t> Connection::NodeGetFlags() {
+  return zx::ok(options().ToIoV1Flags() & (kStatusFlags | ZX_FS_RIGHTS));
 }
 
-Connection::Result<> Connection::NodeSetFlags(uint32_t flags) {
+zx::status<> Connection::NodeSetFlags(uint32_t flags) {
   auto options = VnodeConnectionOptions::FromIoV1Flags(flags);
   set_append(options.flags.append);
-  return fpromise::ok();
+  return zx::ok();
 }
 
 zx_koid_t Connection::GetChannelOwnerKoid() {

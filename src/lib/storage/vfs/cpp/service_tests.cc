@@ -123,7 +123,7 @@ TEST(Service, ServiceNodeIsNotDirectory) {
   // Call |ValidateOptions| with the directory flag should fail.
   auto result = vnode->ValidateOptions(fs::VnodeConnectionOptions::ReadWrite().set_directory());
   ASSERT_TRUE(result.is_error());
-  ASSERT_EQ(ZX_ERR_NOT_DIR, result.error());
+  ASSERT_EQ(ZX_ERR_NOT_DIR, result.status_value());
 
   // Open the service through FIDL with the directory flag, which should fail.
   zx::status abc = fidl::CreateEndpoints<fio::Node>();
