@@ -733,7 +733,19 @@ build_api_module("tool_paths") {
   testonly = true
   data_keys = [ "tool_paths" ]
   walk_keys = [ "tool_barrier" ]
+
+  # Disable automatic sorting and grouping to ensure comments are associated
+  # with only the intended lines.
+  #
+  # NOSORT
   deps = [
+    # Pull in tools from host_labels.
+    ":host",
+
+    # ffx is used as part of the top-level build for every product configuration
+    # so should always be included in the tools manifest.
+    "//src/developer/ffx($host_toolchain)",
+
     ":tool_paths.llvm-tools",
     ":tool_paths.metadata",
     "//build/images:packages",
