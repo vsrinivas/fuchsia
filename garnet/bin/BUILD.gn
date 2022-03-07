@@ -15,7 +15,6 @@ group("bin") {
     "hwstress",
     "insntrace",
     "ktrace_provider",
-    "log_listener",
     "run_test_component",
     "sched",
     "setui",
