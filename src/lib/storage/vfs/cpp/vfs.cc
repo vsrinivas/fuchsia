@@ -264,24 +264,23 @@ zx_status_t Vfs::EnsureExists(fbl::RefPtr<Vnode> vndir, std::string_view path,
 zx_status_t Vfs::TrimName(std::string_view name, std::string_view* name_out, bool* is_dir_out) {
   *is_dir_out = false;
 
-  size_t len = name.length();
-  while ((len > 0) && name[len - 1] == '/') {
-    len--;
+  while (!name.empty() && name.back() == '/') {
     *is_dir_out = true;
+    name.remove_suffix(1);
   }
 
-  if (len == 0) {
+  if (name.empty()) {
     // 'name' should not contain paths consisting of exclusively '/' characters.
     return ZX_ERR_INVALID_ARGS;
-  } else if (len > NAME_MAX) {
+  } else if (name.length() > NAME_MAX) {
     // Name must be less than the maximum-expected length.
     return ZX_ERR_BAD_PATH;
-  } else if (memchr(name.data(), '/', len) != nullptr) {
+  } else if (name.find('/') != std::string::npos) {
     // Name must not contain '/' characters after being trimmed.
     return ZX_ERR_INVALID_ARGS;
   }
 
-  *name_out = std::string_view(name.data(), len);
+  *name_out = name;
   return ZX_OK;
 }
 

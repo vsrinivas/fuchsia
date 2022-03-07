@@ -36,8 +36,8 @@ constexpr std::tuple<NodeKind::Type, uint32_t> kKindFlagMap[] = {
 namespace internal {
 
 bool IsValidName(const std::string& name) {
-  return name.length() <= NAME_MAX && memchr(name.data(), '/', name.length()) == nullptr &&
-         name != "." && name != "..";
+  return name != "." && name != ".." && name.length() <= NAME_MAX &&
+         name.find('/') == std::string::npos;
 }
 
 Node::Node() = default;

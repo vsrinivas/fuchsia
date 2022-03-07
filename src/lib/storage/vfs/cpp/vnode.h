@@ -51,8 +51,8 @@ class FuchsiaVfs;
 #endif
 
 inline bool IsValidName(std::string_view name) {
-  return name.length() > 0 && name.length() <= NAME_MAX &&
-         memchr(name.data(), '/', name.length()) == nullptr && name != "." && name != "..";
+  return !name.empty() && name != "." && name != ".." && name.length() <= NAME_MAX &&
+         name.find('/') == std::string::npos;
 }
 
 // The VFS interface declares a default abstract Vnode class with common operations that may be
