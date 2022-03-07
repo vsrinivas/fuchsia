@@ -27,6 +27,7 @@ zx_library("gpt") {
     ]
     deps = [
       "//sdk/lib/fit",
+      "//src/lib/storage/block_client/cpp",
       "//src/lib/utf_conversion",
       "//zircon/system/ulib/mbr",
       "//zircon/system/ulib/range",
