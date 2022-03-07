@@ -568,6 +568,31 @@ type RespondWith = strict enum {
     ERR = 2;
 };
 
+type RequestTable = table {
+    1: value uint64;
+    2: forward_to_server string;
+};
+
+type ResponseTable = table {
+    1: value uint64;
+};
+
+type RequestUnion = flexible union {
+    1: unsigned struct {
+        value uint64;
+        forward_to_server string;
+    };
+    2: signed struct {
+        value int64;
+        forward_to_server string;
+    };
+};
+
+type ResponseUnion = strict union {
+    1: unsigned uint64;
+    2: signed int64;
+};
+
 @discoverable
 protocol Echo {
     // If `forward_to_server` is empty, just returns `value`.
@@ -642,6 +667,8 @@ protocol Echo {
         value VectorsStruct;
     }) error default_enum;
 
+    // TODO(fxbug.dev/88343): renamed these tests to make clearer the difference between these and
+    // the payload tests below.
     EchoTable(resource struct {
         value AllTypesTable;
         forward_to_server string;
@@ -657,6 +684,9 @@ protocol Echo {
         value AllTypesTable;
     }) error default_enum;
 
+
+    // TODO(fxbug.dev/88343): renamed these tests to make clearer the difference between these and
+    // the payload tests below.
     EchoXunions(resource struct {
         value vector<AllTypesXunion>;
         forward_to_server string;
@@ -676,4 +706,40 @@ protocol Echo {
     EchoNamedStructWithError(imp.ErrorableRequestStruct) -> (imp.ResponseStruct) error uint32;
     EchoNamedStructNoRetVal(imp.EventTriggeringRequestStruct);
     -> OnEchoNamedEvent(imp.ResponseStruct);
+
+    @bindings_denylist("cpp, dart, go, hlcpp, libfuzzer, llcpp, rust, syzkaller")
+    EchoTablePayload(RequestTable) -> (ResponseTable);
+    @bindings_denylist("cpp, dart, go, hlcpp, libfuzzer, llcpp, rust, syzkaller")
+    EchoTablePayloadWithError(table {
+        1: value uint64;
+        2: forward_to_server string;
+        3: result_err default_enum;
+        4: result_variant RespondWith;
+    }) -> (ResponseTable) error default_enum;
+    @bindings_denylist("cpp, dart, go, hlcpp, libfuzzer, llcpp, rust, syzkaller")
+    EchoTablePayloadNoRetVal(RequestTable);
+    @bindings_denylist("cpp, dart, go, hlcpp, libfuzzer, llcpp, rust, syzkaller")
+    -> OnEchoTablePayloadEvent(ResponseTable);
+
+    @bindings_denylist("cpp, dart, go, hlcpp, libfuzzer, llcpp, rust, syzkaller")
+    EchoUnionPayload(RequestUnion) -> (ResponseUnion);
+    @bindings_denylist("cpp, dart, go, hlcpp, libfuzzer, llcpp, rust, syzkaller")
+    EchoUnionPayloadWithError(flexible union {
+        1: unsigned @generated_name("UnsignedErrorable") struct {
+            value uint64;
+            forward_to_server string;
+            result_err default_enum;
+            result_variant RespondWith;
+        };
+        2: signed @generated_name("SignedErrorable") struct {
+            value int64;
+            forward_to_server string;
+            result_err default_enum;
+            result_variant RespondWith;
+        };
+    }) -> (ResponseUnion) error default_enum;
+    @bindings_denylist("cpp, dart, go, hlcpp, libfuzzer, llcpp, rust, syzkaller")
+    EchoUnionPayloadNoRetVal(RequestUnion);
+    @bindings_denylist("cpp, dart, go, hlcpp, libfuzzer, llcpp, rust, syzkaller")
+    -> OnEchoUnionPayloadEvent(ResponseUnion);
 };
