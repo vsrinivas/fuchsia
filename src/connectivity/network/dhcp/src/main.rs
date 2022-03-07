@@ -42,7 +42,7 @@ fn default_parameters() -> configuration::ServerParameters {
             max_seconds: DEFAULT_LEASE_DURATION_SECONDS,
         },
         managed_addrs: dhcp::configuration::ManagedAddresses {
-            mask: std::convert::TryInto::try_into(0u8).unwrap(),
+            mask: configuration::SubnetMask::new(0).unwrap(),
             pool_range_start: Ipv4Addr::UNSPECIFIED,
             pool_range_stop: Ipv4Addr::UNSPECIFIED,
         },
@@ -620,7 +620,6 @@ mod tests {
     use dhcp::configuration::ServerParameters;
     use futures::{sink::drain, FutureExt};
     use net_declare::{fidl_ip_v4, std_ip_v4};
-    use std::convert::TryFrom;
 
     #[derive(Debug, Eq, PartialEq)]
     struct CannedSocket {
@@ -742,7 +741,7 @@ mod tests {
                 max_seconds: 86400,
             },
             managed_addrs: dhcp::configuration::ManagedAddresses {
-                mask: dhcp::configuration::SubnetMask::try_from(25).unwrap(),
+                mask: dhcp::configuration::SubnetMask::new(25).unwrap(),
                 pool_range_start: std_ip_v4!("192.168.0.0"),
                 pool_range_stop: std_ip_v4!("192.168.0.0"),
             },

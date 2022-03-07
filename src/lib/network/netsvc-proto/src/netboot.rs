@@ -10,6 +10,7 @@
 //! over time with the netsvc code. The closest to an authoritative source is
 //! the netsvc source code in `//src/bringup/bin/netsvc`.
 
+use const_unwrap::const_unwrap_option;
 use packet::{
     BufferView, PacketBuilder, PacketConstraints, ParsablePacket, ParseMetadata, SerializeBuffer,
 };
@@ -25,9 +26,9 @@ pub use witness::ErrorValue;
 type U32 = zerocopy::U32<LittleEndian>;
 
 /// The UDP port a netboot server listens on.
-pub const SERVER_PORT: NonZeroU16 = unsafe { NonZeroU16::new_unchecked(33330) };
+pub const SERVER_PORT: NonZeroU16 = const_unwrap_option!(NonZeroU16::new(33330));
 /// The UDP port multicast advertisements are sent to.
-pub const ADVERT_PORT: NonZeroU16 = unsafe { NonZeroU16::new_unchecked(33331) };
+pub const ADVERT_PORT: NonZeroU16 = const_unwrap_option!(NonZeroU16::new(33331));
 
 const MAGIC: u32 = 0xAA774217;
 

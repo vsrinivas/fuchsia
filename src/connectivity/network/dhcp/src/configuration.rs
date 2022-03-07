@@ -151,8 +151,11 @@ impl FidlCompatible<fidl_fuchsia_net_dhcp::AddressPool> for ManagedAddresses {
             ..
         } = fidl
         {
-            let mask = SubnetMask::try_from(prefix_length).with_context(|| {
-                format!("failed to create subnet mask from prefix_length={}", prefix_length)
+            let mask = SubnetMask::new(prefix_length).ok_or_else(|| {
+                anyhow::format_err!(
+                    "failed to create subnet mask from prefix_length={}",
+                    prefix_length
+                )
             })?;
             let pool_range_start = Ipv4Addr::from_fidl(pool_range_start);
             let pool_range_stop = Ipv4Addr::from_fidl(pool_range_stop);
@@ -287,13 +290,15 @@ pub struct SubnetMask {
 }
 
 impl SubnetMask {
-    /// Returns a `SubnetMask` without checking the value.
+    /// Constructs a new `SubnetMask`.
     ///
-    /// # Safety
-    ///
-    /// The value must be <= 32 (the size of an IPv4 address in bits).
-    pub const unsafe fn new_unchecked(ones: u8) -> Self {
-        SubnetMask { ones }
+    /// `ones` must not be larger than 32 (the size of an IPv4 address in bits).
+    pub const fn new(ones: u8) -> Option<Self> {
+        if ones <= U32_BITS {
+            Some(SubnetMask { ones })
+        } else {
+            None
+        }
     }
 
     /// Returns a byte-array representation of the `SubnetMask` in Network (Big-Endian) byte-order.
@@ -336,21 +341,6 @@ impl SubnetMask {
     /// Returns the size of the subnet defined by this mask.
     pub fn subnet_size(&self) -> u32 {
         !self.to_u32()
-    }
-}
-
-impl TryFrom<u8> for SubnetMask {
-    type Error = anyhow::Error;
-
-    /// Returns a `Ok(SubnetMask)` with the `ones` high-order bits set if `ones` < 32, else `Err`.
-    fn try_from(ones: u8) -> Result<Self, Self::Error> {
-        if ones > U32_BITS {
-            Err(anyhow::format_err!(
-                "failed precondition: argument must be <= 32 (bit length of an IPv4 address)",
-            ))
-        } else {
-            Ok(SubnetMask { ones })
-        }
     }
 }
 
@@ -419,16 +409,6 @@ mod tests {
     }
 
     #[test]
-    fn subnet_mask_new_unchecked() {
-        for ones in 0..=U32_BITS {
-            assert_eq!(
-                unsafe { SubnetMask::new_unchecked(ones) },
-                SubnetMask::try_from(ones).expect("expected a valid subnet mask")
-            );
-        }
-    }
-
-    #[test]
     fn test_try_from_ipv4addr_with_consecutive_ones_returns_mask() {
         assert_eq!(
             SubnetMask::try_from(std_ip_v4!("255.255.255.0"))
@@ -448,30 +428,27 @@ mod tests {
     }
 
     #[test]
-    fn subnet_mask_try_from_u8() {
+    fn subnet_mask_new() {
         for ones in 0..=U32_BITS {
-            assert_eq!(
-                SubnetMask::try_from(ones).expect("expected valid subnet mask"),
-                SubnetMask { ones }
-            );
+            assert_eq!(SubnetMask::new(ones), Some(SubnetMask { ones }),);
         }
-
-        let _: anyhow::Error =
-            SubnetMask::try_from(U32_BITS + 1).expect_err("expected invalid subnet mask");
+        for ones in U32_BITS + 1..u8::MAX {
+            assert_eq!(SubnetMask::new(ones), None);
+        }
     }
 
     #[test]
     fn test_into_ipv4addr_returns_ipv4addr() {
         let mask: Ipv4Addr =
-            SubnetMask::try_from(24).expect("expected 24 to be a valid subnet mask").into();
+            SubnetMask::new(24).expect("expected 24 to be a valid subnet mask").into();
         assert_eq!(mask, std_ip_v4!("255.255.255.0"));
 
         let mask: Ipv4Addr =
-            SubnetMask::try_from(0).expect("expected 0 to be a valid subnet mask").into();
+            SubnetMask::new(0).expect("expected 0 to be a valid subnet mask").into();
         assert_eq!(mask, Ipv4Addr::UNSPECIFIED);
 
         let mask: Ipv4Addr =
-            SubnetMask::try_from(32).expect("expected 32 to be a valid subnet mask").into();
+            SubnetMask::new(32).expect("expected 32 to be a valid subnet mask").into();
         assert_eq!(mask, std_ip_v4!("255.255.255.255"));
     }
 

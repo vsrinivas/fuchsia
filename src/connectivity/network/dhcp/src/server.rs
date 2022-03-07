@@ -1432,7 +1432,6 @@ pub mod tests {
     use rand::Rng;
     use std::cell::RefCell;
     use std::collections::{BTreeSet, HashMap, HashSet};
-    use std::convert::TryFrom as _;
     use std::iter::FromIterator as _;
     use std::net::Ipv4Addr;
     use std::rc::Rc;
@@ -1566,7 +1565,7 @@ pub mod tests {
             server_ips,
             lease_length,
             managed_addrs: ManagedAddresses {
-                mask: SubnetMask::try_from(24)?,
+                mask: SubnetMask::new(24).unwrap(),
                 pool_range_start: net_declare::std::ip_v4!("192.168.0.0"),
                 pool_range_stop: net_declare::std::ip_v4!("192.168.0.0"),
             },
@@ -3978,7 +3977,7 @@ pub mod tests {
                 max_seconds: 60 * 60 * 24 * 7,
             },
             managed_addrs: ManagedAddresses {
-                mask: SubnetMask::try_from(24).unwrap(),
+                mask: SubnetMask::new(24).unwrap(),
                 pool_range_start: client_ip,
                 pool_range_stop: net_declare::std::ip_v4!("192.168.0.2"),
             },

@@ -986,6 +986,7 @@ mod tests {
     use super::*;
 
     use assert_matches::assert_matches;
+    use const_unwrap::const_unwrap_option;
     use fuchsia_async as fasync;
     use futures::future::FutureExt;
     use test_case::test_case;
@@ -997,9 +998,9 @@ mod tests {
     const DEFAULT_MIN_TX_BUFFER_HEAD: u16 = 4;
     const DEFAULT_MIN_TX_BUFFER_TAIL: u16 = 8;
     // Safety: These are safe because none of the values are zero.
-    const DEFAULT_BUFFER_LENGTH: NonZeroUsize = unsafe { NonZeroUsize::new_unchecked(64) };
-    const DEFAULT_TX_BUFFERS: NonZeroU16 = unsafe { NonZeroU16::new_unchecked(8) };
-    const DEFAULT_RX_BUFFERS: NonZeroU16 = unsafe { NonZeroU16::new_unchecked(8) };
+    const DEFAULT_BUFFER_LENGTH: NonZeroUsize = const_unwrap_option!(NonZeroUsize::new(64));
+    const DEFAULT_TX_BUFFERS: NonZeroU16 = const_unwrap_option!(NonZeroU16::new(8));
+    const DEFAULT_RX_BUFFERS: NonZeroU16 = const_unwrap_option!(NonZeroU16::new(8));
     const MAX_BUFFER_BYTES: usize = DEFAULT_BUFFER_LENGTH.get()
         * netdev::MAX_DESCRIPTOR_CHAIN as usize
         - DEFAULT_MIN_TX_BUFFER_HEAD as usize

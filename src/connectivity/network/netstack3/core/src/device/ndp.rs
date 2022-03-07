@@ -1008,12 +1008,8 @@ fn regen_advance(
     retrans_timer: Duration,
     dad_transmits: u8,
 ) -> NonZeroDuration {
-    const TWO_SECONDS: NonZeroDuration = NonZeroDuration::from_nonzero_secs(
-        // TODO(https://github.com/rust-lang/rust/issues/67441): Remove unsafe
-        // once const Option::unwrap is stablized
-        // SAFETY: 2 != 0
-        unsafe { NonZeroU64::new_unchecked(2) },
-    );
+    const TWO_SECONDS: NonZeroDuration =
+        NonZeroDuration::from_nonzero_secs(const_unwrap::const_unwrap_option!(NonZeroU64::new(2)));
     // Per the RFC, REGEN_ADVANCE in seconds =
     //   2 + (TEMP_IDGEN_RETRIES * DupAddrDetectTransmits * RetransTimer / 1000)
     //

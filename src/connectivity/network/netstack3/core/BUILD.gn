@@ -63,6 +63,7 @@ lib_deps = [
   "//src/connectivity/lib/net-types",
   "//src/connectivity/lib/packet-formats",
   "//src/connectivity/network/netstack3/core/specialize-ip-macro",
+  "//src/lib/const-unwrap",
   "//src/lib/mundane",
   "//src/lib/network/packet",
   "//src/lib/zerocopy",

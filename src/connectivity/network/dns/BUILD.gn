@@ -83,7 +83,10 @@ bin_base = {
     "//third_party/rust_crates:unicode-xid",
   ]
 
-  test_deps = [ "//src/connectivity/lib/net-declare" ]
+  test_deps = [
+    "//src/connectivity/lib/net-declare",
+    "//src/lib/const-unwrap",
+  ]
 
   sources = [ "src/main.rs" ]
 
