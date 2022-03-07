@@ -1358,6 +1358,43 @@ TEST_F(DispatcherTest, ShutdownProcessAsyncLoop) {
   ASSERT_OK(observer.WaitUntilDestructed());
 }
 
+TEST_F(DispatcherTest, SyncDispatcherCancelRequestDuringDestroy) {
+  DispatcherDestructedObserver observer;
+
+  const void* driver = CreateFakeDriver();
+  auto scheduler_role = "scheduler_role";
+
+  driver_runtime::Dispatcher* dispatcher;
+  ASSERT_EQ(ZX_OK, driver_runtime::Dispatcher::CreateWithLoop(
+                       0, scheduler_role, strlen(scheduler_role), driver, &loop_,
+                       observer.fdf_observer(), &dispatcher));
+
+  // Register a channel read that will be canceled by a posted task.
+  auto channel_read = std::make_unique<fdf::ChannelRead>(
+      local_ch_, 0,
+      [&](fdf_dispatcher_t* dispatcher, fdf::ChannelRead* channel_read, fdf_status_t status) {
+        ASSERT_FALSE(true);  // This should never be called.
+      });
+  ASSERT_OK(channel_read->Begin(static_cast<fdf_dispatcher_t*>(dispatcher)));
+
+  sync::Completion task_started;
+  sync::Completion dispatcher_destroy_started;
+
+  ASSERT_OK(async::PostTask(dispatcher->GetAsyncDispatcher(), [&] {
+    task_started.Signal();
+    ASSERT_OK(dispatcher_destroy_started.Wait(zx::time::infinite()));
+    ASSERT_OK(channel_read->Cancel());
+  }));
+
+  ASSERT_OK(task_started.Wait(zx::time::infinite()));
+
+  // |Dispatcher::Destroy| will move the registered channel read into |shutdown_queue_|.
+  fdf_dispatcher_destroy_async(static_cast<fdf_dispatcher_t*>(dispatcher));
+  dispatcher_destroy_started.Signal();
+
+  ASSERT_OK(observer.WaitUntilDestructed());
+}
+
 //
 // Misc tests
 //

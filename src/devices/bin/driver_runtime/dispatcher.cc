@@ -169,8 +169,6 @@ async_dispatcher_t* Dispatcher::GetAsyncDispatcher() {
 }
 
 void Dispatcher::Destroy() {
-  fbl::DoublyLinkedList<std::unique_ptr<CallbackRequest>> callbacks;
-
   {
     fbl::AutoLock lock(&callback_lock_);
 
@@ -179,9 +177,10 @@ void Dispatcher::Destroy() {
     }
     shutting_down_ = true;
 
-    callbacks = std::move(callback_queue_);
-    callbacks.splice(callbacks.end(), registered_callbacks_);
-
+    // Move the requests into a separate queue so we will be able to enter an idle state.
+    // This queue will be processed by |CompleteDestroy|.
+    shutdown_queue_ = std::move(callback_queue_);
+    shutdown_queue_.splice(shutdown_queue_.end(), registered_callbacks_);
     // To avoid race conditions with attempting to cancel a wait that might be scheduled to run,
     // we will cancel the event waiter in the |CompleteDestroy| callback.
     // This is as |async::Wait::Cancel| is not thread safe.
@@ -199,19 +198,19 @@ void Dispatcher::Destroy() {
   // Don't use async::WaitOnce as it sets the handler in a thread unsafe way.
   auto wait = std::make_unique<async::Wait>(
       event->get(), ZX_EVENT_SIGNALED, 0,
-      [dispatcher_ref = std::move(dispatcher_ref), to_cancel = std::move(callbacks),
-       event = std::move(*event)](async_dispatcher_t* dispatcher, async::Wait* wait,
-                                  zx_status_t status, const zx_packet_signal_t* signal) mutable {
+      [dispatcher_ref = std::move(dispatcher_ref), event = std::move(*event)](
+          async_dispatcher_t* dispatcher, async::Wait* wait, zx_status_t status,
+          const zx_packet_signal_t* signal) mutable {
         ZX_ASSERT(status == ZX_OK || status == ZX_ERR_CANCELED);
-        dispatcher_ref->CompleteDestroy(std::move(to_cancel));
+        dispatcher_ref->CompleteDestroy();
         delete wait;
       });
   ZX_ASSERT(wait->Begin(process_shared_dispatcher_) == ZX_OK);
   wait.release();  // This will be deleted by the wait handler once it is called.
 }
 
-void Dispatcher::CompleteDestroy(
-    fbl::DoublyLinkedList<std::unique_ptr<CallbackRequest>> to_cancel) {
+void Dispatcher::CompleteDestroy() {
+  fbl::DoublyLinkedList<std::unique_ptr<CallbackRequest>> to_cancel;
   {
     fbl::AutoLock lock(&callback_lock_);
 
@@ -227,7 +226,9 @@ void Dispatcher::CompleteDestroy(
       ZX_ASSERT(event_waiter_->Cancel() != nullptr);
       event_waiter_ = nullptr;
     }
+    to_cancel = std::move(shutdown_queue_);
   }
+
   // Call the callbacks outside the lock.
   while (!to_cancel.is_empty()) {
     auto callback_request = to_cancel.pop_front();
@@ -312,6 +313,8 @@ std::unique_ptr<driver_runtime::CallbackRequest> Dispatcher::RegisterCallbackWit
 
 void Dispatcher::QueueRegisteredCallback(driver_runtime::CallbackRequest* request,
                                          fdf_status_t callback_reason) {
+  ZX_ASSERT(request);
+
   auto idle_check = fit::defer([this]() {
     fbl::AutoLock lock(&callback_lock_);
     ZX_ASSERT(num_active_threads_ > 0);
@@ -328,6 +331,14 @@ void Dispatcher::QueueRegisteredCallback(driver_runtime::CallbackRequest* reques
     if (shutting_down_) {
       return;
     }
+
+    // Finding the callback request may fail if the request was cancelled in the meanwhile.
+    // This is possible if the channel was about to queue the registered callback (in response
+    // to a channel write or a peer channel closing), but the client cancelled the callback.
+    if (!request->InContainer()) {
+      return;
+    }
+
     callback_request = registered_callbacks_.erase(*request);
     // The callback request should only be removed if queued, or on shutting down,
     // which we checked earlier.
@@ -366,13 +377,14 @@ void Dispatcher::QueueRegisteredCallback(driver_runtime::CallbackRequest* reques
   }
 }
 
-std::unique_ptr<CallbackRequest> Dispatcher::CancelCallback(CallbackRequest& callback_request) {
+std::unique_ptr<CallbackRequest> Dispatcher::CancelCallback(CallbackRequest& request_to_cancel) {
   fbl::AutoLock lock(&callback_lock_);
-  auto req = callback_queue_.erase(callback_request);
-  if (req) {
-    return req;
+
+  // The request can be in |registered_callbacks_|, |callback_queue_| or |shutdown_queue_|.
+  if (request_to_cancel.InContainer()) {
+    return request_to_cancel.RemoveFromContainer();
   }
-  return registered_callbacks_.erase(callback_request);
+  return nullptr;
 }
 
 bool Dispatcher::SetCallbackReason(CallbackRequest* callback_to_update,

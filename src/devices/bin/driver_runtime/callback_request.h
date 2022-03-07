@@ -24,7 +24,9 @@ using Callback =
     fit::inline_callback<void(std::unique_ptr<CallbackRequest>, fdf_status_t), sizeof(void*) * 2>;
 
 // Wraps a callback so that it can be added to a list.
-class CallbackRequest : public fbl::DoublyLinkedListable<std::unique_ptr<CallbackRequest>> {
+class CallbackRequest
+    : public fbl::DoublyLinkedListable<std::unique_ptr<CallbackRequest>,
+                                       fbl::NodeOptions::AllowRemoveFromContainer> {
  public:
   CallbackRequest() = default;
 

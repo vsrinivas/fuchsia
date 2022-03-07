@@ -207,8 +207,8 @@ class Dispatcher : public async_dispatcher_t,
   void DispatchCallbacks(std::unique_ptr<EventWaiter> event_waiter,
                          fbl::RefPtr<Dispatcher> dispatcher_ref);
 
-  // Cancels the callbacks in |to_cancel|, and drops the initial reference to the dispatcher.
-  void CompleteDestroy(fbl::DoublyLinkedList<std::unique_ptr<CallbackRequest>> to_cancel);
+  // Cancels the callbacks in |shutdown_queue_|, and drops the initial reference to the dispatcher.
+  void CompleteDestroy();
 
   // Returns true if the dispatcher has no active threads or queued requests.
   bool IsIdleLocked() __TA_REQUIRES(&callback_lock_);
@@ -241,6 +241,11 @@ class Dispatcher : public async_dispatcher_t,
   // Queued callback requests from channels. These are requests that should
   // be run on the next available thread.
   fbl::DoublyLinkedList<std::unique_ptr<CallbackRequest>> callback_queue_
+      __TA_GUARDED(&callback_lock_);
+  // Callback requests that have been removed to be completed by |CompleteDestroy|.
+  // These are removed from the active queues to ensure the dispatcher does not
+  // attempt to continue processing them.
+  fbl::DoublyLinkedList<std::unique_ptr<CallbackRequest>> shutdown_queue_
       __TA_GUARDED(&callback_lock_);
 
   // True if currently dispatching a message.
