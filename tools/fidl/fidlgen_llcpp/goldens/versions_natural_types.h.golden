@@ -231,8 +231,16 @@ struct internal::NaturalIsMemcpyCompatible<::test_versions::Struct>
 
 #endif  // __Fuchsia__
 
+extern "C" const fidl_type_t test_versions_TableTable;
+
 template <>
 struct IsFidlType<::test_versions::Table> : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<::test_versions::Table> final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable = &test_versions_TableTable;
+};
 
 template <>
 struct internal::NaturalCodingTraits<
@@ -240,10 +248,18 @@ struct internal::NaturalCodingTraits<
     : public ::fidl::internal::NaturalTableCodingTraits<
           ::test_versions::Table> {};
 
+extern "C" const fidl_type_t test_versions_UnionTable;
+
 template <>
 struct IsFidlType<::test_versions::Union> : public std::true_type {};
 template <>
 struct IsUnion<::test_versions::Union> : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<::test_versions::Union> final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable = &test_versions_UnionTable;
+};
 
 template <>
 struct internal::NaturalCodingTraits<

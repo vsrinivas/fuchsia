@@ -424,9 +424,19 @@ struct internal::NaturalIsMemcpyCompatible<
 
 #endif  // __Fuchsia__
 
+extern "C" const fidl_type_t test_placementofattributes_ExampleTableTable;
+
 template <>
 struct IsFidlType<::test_placementofattributes::ExampleTable>
     : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<::test_placementofattributes::ExampleTable>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &test_placementofattributes_ExampleTableTable;
+};
 
 template <>
 struct internal::NaturalCodingTraits<
@@ -434,6 +444,8 @@ struct internal::NaturalCodingTraits<
     ::fidl::internal::NaturalCodingConstraintEmpty>
     : public ::fidl::internal::NaturalTableCodingTraits<
           ::test_placementofattributes::ExampleTable> {};
+
+extern "C" const fidl_type_t test_placementofattributes_ExampleXUnionTable;
 
 template <>
 struct IsFidlType<::test_placementofattributes::ExampleXUnion>
@@ -443,11 +455,20 @@ struct IsUnion<::test_placementofattributes::ExampleXUnion>
     : public std::true_type {};
 
 template <>
+struct ::fidl::internal::TypeTraits<::test_placementofattributes::ExampleXUnion>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &test_placementofattributes_ExampleXUnionTable;
+};
+
+template <>
 struct internal::NaturalCodingTraits<
     ::test_placementofattributes::ExampleXUnion,
     ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalUnionCodingTraits<
                 ::test_placementofattributes::ExampleXUnion> {};
+extern "C" const fidl_type_t test_placementofattributes_ExampleUnionTable;
 
 template <>
 struct IsFidlType<::test_placementofattributes::ExampleUnion>
@@ -455,6 +476,14 @@ struct IsFidlType<::test_placementofattributes::ExampleUnion>
 template <>
 struct IsUnion<::test_placementofattributes::ExampleUnion>
     : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<::test_placementofattributes::ExampleUnion>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &test_placementofattributes_ExampleUnionTable;
+};
 
 template <>
 struct internal::NaturalCodingTraits<

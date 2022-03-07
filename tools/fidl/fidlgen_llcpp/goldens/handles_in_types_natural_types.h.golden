@@ -306,6 +306,8 @@ struct internal::NaturalIsMemcpyCompatible<
 
 #endif  // __Fuchsia__
 
+extern "C" const fidl_type_t test_handlesintypes_TableWithHandleTable;
+
 template <>
 struct IsResource<::test_handlesintypes::TableWithHandle>
     : public std::true_type {};
@@ -314,11 +316,21 @@ struct IsFidlType<::test_handlesintypes::TableWithHandle>
     : public std::true_type {};
 
 template <>
+struct ::fidl::internal::TypeTraits<::test_handlesintypes::TableWithHandle>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &test_handlesintypes_TableWithHandleTable;
+};
+
+template <>
 struct internal::NaturalCodingTraits<
     ::test_handlesintypes::TableWithHandle,
     ::fidl::internal::NaturalCodingConstraintEmpty>
     : public ::fidl::internal::NaturalTableCodingTraits<
           ::test_handlesintypes::TableWithHandle> {};
+
+extern "C" const fidl_type_t test_handlesintypes_UnionWithHandleTable;
 
 template <>
 struct IsResource<::test_handlesintypes::UnionWithHandle>
@@ -328,6 +340,14 @@ struct IsFidlType<::test_handlesintypes::UnionWithHandle>
     : public std::true_type {};
 template <>
 struct IsUnion<::test_handlesintypes::UnionWithHandle> : public std::true_type {
+};
+
+template <>
+struct ::fidl::internal::TypeTraits<::test_handlesintypes::UnionWithHandle>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &test_handlesintypes_UnionWithHandleTable;
 };
 
 template <>

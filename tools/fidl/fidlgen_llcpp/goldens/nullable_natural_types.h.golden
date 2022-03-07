@@ -1024,10 +1024,19 @@ struct internal::NaturalIsMemcpyCompatible<::test_nullable::Int32Wrapper>
 
 #endif  // __Fuchsia__
 
+extern "C" const fidl_type_t test_nullable_SimpleUnionTable;
+
 template <>
 struct IsFidlType<::test_nullable::SimpleUnion> : public std::true_type {};
 template <>
 struct IsUnion<::test_nullable::SimpleUnion> : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<::test_nullable::SimpleUnion> final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &test_nullable_SimpleUnionTable;
+};
 
 template <>
 struct internal::NaturalCodingTraits<

@@ -23,7 +23,7 @@ class {{ .WireBufferCompleterImpl }} : public ::fdf::internal::BufferCompleterIm
   void Reply({{ RenderParams .ResponseArgs }});
 
   {{- if .Result }}
-  void ReplySuccess({{ RenderParams .Result.ValueMembers }});
+  void ReplySuccess({{ RenderParams .Result.ValueParameters }});
   void ReplyError({{ .Result.ErrorDecl }} error);
   {{- end }}
 };
@@ -73,16 +73,15 @@ void
 
 {{- if .Result }}
   void
-  {{ .WireBufferCompleterImpl.NoLeading }}::ReplySuccess({{ RenderParams .Result.ValueMembers }}) {
-    {{ .Result.ValueStructDecl }} response;
-    {{- range .Result.ValueMembers }}
-      response.{{ .Name }} = std::move({{ .Name }});
-    {{- end }}
+  {{ .WireBufferCompleterImpl.NoLeading }}::ReplySuccess(
+      {{- RenderParams .Result.ValueParameters }}) {
+    {{ .Result.BuildPayload "_response" -}}
+
     {{- if .Result.Value.InlineInEnvelope }}
-    return Reply({{ .Result.ResultDecl }}::WithResponse(std::move(response)));
+    return Reply({{ .Result.ResultDecl }}::WithResponse(std::move(_response)));
     {{- else }}
     return Reply({{ .Result.ResultDecl }}::WithResponse(
-        ::fidl::ObjectView<{{ .Result.ValueStructDecl }}>::FromExternal(&response)));
+        ::fidl::ObjectView<{{ .Result.ValueTypeDecl }}>::FromExternal(&_response)));
     {{- end }}
   }
 

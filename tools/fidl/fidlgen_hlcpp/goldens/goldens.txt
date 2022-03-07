@@ -76,6 +76,9 @@ padding_test_base.h.golden
 placement_of_attributes.cc.golden
 placement_of_attributes.h.golden
 placement_of_attributes_test_base.h.golden
+protocol_layouts.cc.golden
+protocol_layouts.h.golden
+protocol_layouts_test_base.h.golden
 protocol_payloads.cc.golden
 protocol_payloads.h.golden
 protocol_payloads_test_base.h.golden

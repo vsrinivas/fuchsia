@@ -548,14 +548,16 @@ type methodInner struct {
 	HasRequest                bool
 	HasRequestPayload         bool
 	RequestPayload            nameVariants
+	RequestFlattened          bool
 	RequestArgs               []Parameter
-	RequestLayout             fidlgen.Layout
+	RequestName               fidlgen.EncodedCompoundIdentifier
 	RequestAnonymousChildren  []ScopedLayout
 	HasResponse               bool
 	HasResponsePayload        bool
 	ResponsePayload           nameVariants
 	ResponseArgs              []Parameter
-	ResponseLayout            fidlgen.Layout
+	ResponseFlattened         bool
+	ResponseName              fidlgen.EncodedCompoundIdentifier
 	ResponseAnonymousChildren []ScopedLayout
 	Transitional              bool
 	Result                    *Result
@@ -640,12 +642,12 @@ func newMethod(inner methodInner, hl hlMessagingDetails, wire wireTypeNames, p f
 	hlCodingTableNamespace := hl.ProtocolMarker.Namespace().append("_internal")
 	wireCodingTableNamespace := wire.WireProtocolMarker.Namespace()
 	if inner.HasRequestPayload {
-		hlRequestCodingTable = messageBodyCodingTableName(&hlCodingTableNamespace, codingTableName(inner.RequestLayout.Name), "Table")
-		wireRequestCodingTable = messageBodyCodingTableName(&wireCodingTableNamespace, codingTableName(inner.RequestLayout.Name), "Table")
+		hlRequestCodingTable = messageBodyCodingTableName(&hlCodingTableNamespace, codingTableName(inner.RequestName), "Table")
+		wireRequestCodingTable = messageBodyCodingTableName(&wireCodingTableNamespace, codingTableName(inner.RequestName), "Table")
 	}
 	if inner.HasResponsePayload {
-		hlResponseCodingTable = messageBodyCodingTableName(&hlCodingTableNamespace, codingTableName(inner.ResponseLayout.Name), "Table")
-		wireResponseCodingTable = messageBodyCodingTableName(&wireCodingTableNamespace, codingTableName(inner.ResponseLayout.Name), "Table")
+		hlResponseCodingTable = messageBodyCodingTableName(&hlCodingTableNamespace, codingTableName(inner.ResponseName), "Table")
+		wireResponseCodingTable = messageBodyCodingTableName(&wireCodingTableNamespace, codingTableName(inner.ResponseName), "Table")
 	}
 
 	var callbackType *nameVariants = nil
@@ -759,26 +761,42 @@ func (c *compiler) compileProtocol(p fidlgen.Protocol) *Protocol {
 		var requestChildren []ScopedLayout
 		var requestTypeShapeV1 fidlgen.TypeShape
 		var requestTypeShapeV2 fidlgen.TypeShape
-		var requestPayloadStruct fidlgen.Struct
+		var requestPayloadName fidlgen.EncodedCompoundIdentifier
+		var requestPayloadArgs []Parameter
+		requestFlattened := true
 		if v.RequestPayload != nil {
 			requestTypeShapeV1 = v.RequestPayload.TypeShapeV1
 			requestTypeShapeV2 = v.RequestPayload.TypeShapeV2
-			if val, ok := c.messageBodyStructs[v.RequestPayload.Identifier]; ok {
-				requestPayloadStruct = val
-				requestChildren = c.anonymousChildren[toKey(val.NamingContext)]
+			if _, ok := c.messageBodyTypes[v.RequestPayload.Identifier]; ok {
+				requestPayloadName = v.RequestPayload.Identifier
+				if val, ok := c.messageBodyStructs[v.RequestPayload.Identifier]; ok {
+					requestPayloadArgs = c.compileParameterArray(val)
+					requestChildren = c.anonymousChildren[toKey(val.NamingContext)]
+				} else {
+					requestPayloadArgs = c.compileParameterSingleton(requestPayloadName, *v.RequestPayload)
+					requestFlattened = false
+				}
 			}
 		}
 
 		var responseChildren []ScopedLayout
 		var responseTypeShapeV1 fidlgen.TypeShape
 		var responseTypeShapeV2 fidlgen.TypeShape
-		var responsePayloadStruct fidlgen.Struct
+		var responsePayloadName fidlgen.EncodedCompoundIdentifier
+		var responsePayloadArgs []Parameter
+		responseFlattened := true
 		if v.ResponsePayload != nil {
 			responseTypeShapeV1 = v.ResponsePayload.TypeShapeV1
 			responseTypeShapeV2 = v.ResponsePayload.TypeShapeV2
-			if val, ok := c.messageBodyStructs[v.ResponsePayload.Identifier]; ok {
-				responsePayloadStruct = val
-				responseChildren = c.anonymousChildren[toKey(val.NamingContext)]
+			if _, ok := c.messageBodyTypes[v.ResponsePayload.Identifier]; ok {
+				responsePayloadName = v.ResponsePayload.Identifier
+				if val, ok := c.messageBodyStructs[v.ResponsePayload.Identifier]; ok {
+					responsePayloadArgs = c.compileParameterArray(val)
+					responseChildren = c.anonymousChildren[toKey(val.NamingContext)]
+				} else {
+					responsePayloadArgs = c.compileParameterSingleton(responsePayloadName, *v.ResponsePayload)
+					responseFlattened = false
+				}
 			}
 		}
 
@@ -813,14 +831,16 @@ func (c *compiler) compileProtocol(p fidlgen.Protocol) *Protocol {
 			HasRequest:                v.HasRequest,
 			HasRequestPayload:         v.HasRequestPayload(),
 			RequestPayload:            maybeRequestPayload,
-			RequestArgs:               c.compileParameterArray(requestPayloadStruct),
-			RequestLayout:             requestPayloadStruct.Layout,
+			RequestArgs:               requestPayloadArgs,
+			RequestFlattened:          requestFlattened,
+			RequestName:               requestPayloadName,
 			RequestAnonymousChildren:  requestChildren,
 			HasResponse:               v.HasResponse,
 			HasResponsePayload:        v.HasResponsePayload(),
 			ResponsePayload:           maybeResponsePayload,
-			ResponseArgs:              c.compileParameterArray(responsePayloadStruct),
-			ResponseLayout:            responsePayloadStruct.Layout,
+			ResponseArgs:              responsePayloadArgs,
+			ResponseFlattened:         responseFlattened,
+			ResponseName:              responsePayloadName,
 			ResponseAnonymousChildren: responseChildren,
 			Transitional:              v.IsTransitional(),
 			Result:                    result,
@@ -878,6 +898,18 @@ func (c *compiler) compileProtocol(p fidlgen.Protocol) *Protocol {
 	return &r
 }
 
+// compileParameterSingleton compiles parameters for unflattened layouts.
+func (c *compiler) compileParameterSingleton(name fidlgen.EncodedCompoundIdentifier, typ fidlgen.Type) []Parameter {
+	return []Parameter{{
+		Type:              c.compileType(typ),
+		nameVariants:      c.compileNameVariants(name),
+		OffsetV1:          0,
+		OffsetV2:          0,
+		HandleInformation: c.fieldHandleInformation(&typ),
+	}}
+}
+
+// compileParameterArray compiles parameters for flattened layouts.
 func (c *compiler) compileParameterArray(val fidlgen.Struct) []Parameter {
 	var params []Parameter = []Parameter{}
 	for _, v := range val.Members {

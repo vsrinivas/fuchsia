@@ -62,7 +62,7 @@ namespace test_handlesintypes {
 namespace wire {
 extern "C" const fidl_type_t test_handlesintypes_TableWithHandleTable;
 
-class TableWithHandle final {
+class TableWithHandle {
  public:
   // Returns whether no field is set.
   bool IsEmpty() const { return max_ordinal_ == 0; }

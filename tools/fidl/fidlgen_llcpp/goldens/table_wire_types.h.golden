@@ -66,7 +66,7 @@ namespace test_table {
 namespace wire {
 extern "C" const fidl_type_t test_table_TableWithAttributesTable;
 
-class TableWithAttributes final {
+class TableWithAttributes {
  public:
   // Returns whether no field is set.
   bool IsEmpty() const { return max_ordinal_ == 0; }
@@ -180,7 +180,7 @@ namespace test_table {
 namespace wire {
 extern "C" const fidl_type_t test_table_SimpleTableTable;
 
-class SimpleTable final {
+class SimpleTable {
  public:
   // Returns whether no field is set.
   bool IsEmpty() const { return max_ordinal_ == 0; }
@@ -324,7 +324,7 @@ namespace test_table {
 namespace wire {
 extern "C" const fidl_type_t test_table_ReverseOrdinalTableTable;
 
-class ReverseOrdinalTable final {
+class ReverseOrdinalTable {
  public:
   // Returns whether no field is set.
   bool IsEmpty() const { return max_ordinal_ == 0; }
@@ -504,7 +504,7 @@ namespace test_table {
 namespace wire {
 extern "C" const fidl_type_t test_table_OlderSimpleTableTable;
 
-class OlderSimpleTable final {
+class OlderSimpleTable {
  public:
   // Returns whether no field is set.
   bool IsEmpty() const { return max_ordinal_ == 0; }
@@ -618,7 +618,7 @@ namespace test_table {
 namespace wire {
 extern "C" const fidl_type_t test_table_NewerSimpleTableTable;
 
-class NewerSimpleTable final {
+class NewerSimpleTable {
  public:
   // Returns whether no field is set.
   bool IsEmpty() const { return max_ordinal_ == 0; }
@@ -796,7 +796,7 @@ namespace test_table {
 namespace wire {
 extern "C" const fidl_type_t test_table_ExtensionTableTable;
 
-class ExtensionTable final {
+class ExtensionTable {
  public:
   // Returns whether no field is set.
   bool IsEmpty() const { return max_ordinal_ == 0; }
@@ -930,7 +930,7 @@ namespace test_table {
 namespace wire {
 extern "C" const fidl_type_t test_table_SixtyFourOrdinalTableTable;
 
-class SixtyFourOrdinalTable final {
+class SixtyFourOrdinalTable {
  public:
   // Returns whether no field is set.
   bool IsEmpty() const { return max_ordinal_ == 0; }
@@ -3375,7 +3375,7 @@ namespace test_table {
 namespace wire {
 extern "C" const fidl_type_t test_table_EmptyTableTable;
 
-class EmptyTable final {
+class EmptyTable {
  public:
   // Returns whether no field is set.
   bool IsEmpty() const { return max_ordinal_ == 0; }

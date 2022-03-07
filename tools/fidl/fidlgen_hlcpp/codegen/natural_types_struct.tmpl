@@ -21,15 +21,15 @@ class {{ .Name }} final {
  public:
   static const fidl_type_t* FidlType;
 
-  {{- if .Result }}
+  {{- if .IsInResult }}
   {{ .Name }}() = default;
 
   {{- if eq 1 (len .Members) }}
   explicit {{ .Name }}({{ (index .Members 0).Type }} v) : {{ (index .Members 0).Name }}(std::move(v)) {}
   {{ (index .Members 0).Type }} ResultValue_() { return std::move({{ (index .Members 0).Name }}); }
   {{- end }}
-  explicit {{ .Name }}({{ .Result.ValueTupleDecl }} _value_tuple) {
-    {{- if .Result.ValueArity }}
+  explicit {{ .Name }}({{ .ParametersTupleDecl }} _value_tuple) {
+    {{- if not .IsEmpty }}
     std::tie(
       {{- range $index, $member := .Members }}
       {{- if $index }}, {{ end -}}
@@ -38,9 +38,9 @@ class {{ .Name }} final {
     ) = std::move(_value_tuple);
     {{- end }}
   }
-  operator {{ .Result.ValueTupleDecl }}() && {
+  operator {{ .ParametersTupleDecl }}() && {
     return std::make_tuple(
-      {{- if .Result.ValueArity }}
+      {{- if not .IsEmpty }}
         {{- range $index, $member := .Members }}
           {{- if $index }}, {{ end -}}
           std::move({{ .Name }})

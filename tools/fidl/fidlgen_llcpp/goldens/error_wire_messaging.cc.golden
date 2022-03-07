@@ -323,6 +323,7 @@ void fidl::internal::WireCompleterImpl<
     ::test_error::Example::Foo>::ReplySuccess(int64_t y) {
   ::test_error::wire::ExampleFooResponse _response;
   _response.y = std::move(y);
+
   return Reply(::test_error::wire::ExampleFooResult::WithResponse(
       ::fidl::ObjectView<::test_error::wire::ExampleFooResponse>::FromExternal(
           &_response)));
@@ -355,11 +356,12 @@ void fidl::internal::WireBufferCompleterImpl<::test_error::Example::Foo>::Reply(
 }
 void fidl::internal::WireBufferCompleterImpl<
     ::test_error::Example::Foo>::ReplySuccess(int64_t y) {
-  ::test_error::wire::ExampleFooResponse response;
-  response.y = std::move(y);
+  ::test_error::wire::ExampleFooResponse _response;
+  _response.y = std::move(y);
+
   return Reply(::test_error::wire::ExampleFooResult::WithResponse(
       ::fidl::ObjectView<::test_error::wire::ExampleFooResponse>::FromExternal(
-          &response)));
+          &_response)));
 }
 
 void fidl::internal::WireBufferCompleterImpl<

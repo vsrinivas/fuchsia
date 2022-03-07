@@ -314,7 +314,6 @@ fidl_testdata_info = [
       "fidldoc",
       "fidlgen_dart",
       "fidlgen_go",
-      "fidlgen_hlcpp",
       "fidlgen_libfuzzer",
       "fidlgen_llcpp",
       "fidlgen_rust",

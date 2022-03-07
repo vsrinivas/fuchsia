@@ -525,6 +525,223 @@ class EchoServerApp : public Echo {
     }
   }
 
+  void EchoTablePayload(RequestTable payload, EchoTablePayloadCallback callback) override {
+    if (payload.has_forward_to_server()) {
+      EchoClientApp app;
+      const std::string& forward_to_server = payload.forward_to_server();
+      bool failed = false;
+      app.echo().set_error_handler([this, &forward_to_server, &failed](zx_status_t status) {
+        failed = true;
+        loop_->Quit();
+        FX_LOGS(ERROR) << "error communicating with " << forward_to_server << ": " << status;
+      });
+      app.Start(forward_to_server);
+      bool called_back = false;
+      payload.clear_forward_to_server();
+      app.echo()->EchoTablePayload(std::move(payload),
+                                   [this, &called_back, &callback](ResponseTable resp) {
+                                     called_back = true;
+                                     callback(std::move(resp));
+                                     loop_->Quit();
+                                   });
+      while (!called_back && !failed) {
+        loop_->Run();
+      }
+      loop_->ResetQuit();
+    } else {
+      ResponseTable resp;
+      resp.set_value(payload.value());
+      callback(std::move(resp));
+    }
+  }
+
+  void EchoTablePayloadNoRetVal(RequestTable payload) override {
+    if (payload.has_forward_to_server()) {
+      std::unique_ptr<EchoClientApp> app(new EchoClientApp);
+      const std::string& forward_to_server = payload.forward_to_server();
+      app->echo().set_error_handler([this, forward_to_server](zx_status_t status) {
+        loop_->Quit();
+        FX_LOGS(ERROR) << "error communicating with " << forward_to_server << ": " << status;
+      });
+      app->Start(forward_to_server);
+      app->echo().events().OnEchoTablePayloadEvent = [this](ResponseTable resp) {
+        this->HandleOnTablePayloadEvent(std::move(resp));
+      };
+      payload.clear_forward_to_server();
+      app->echo()->EchoTablePayloadNoRetVal(std::move(payload));
+      client_apps_.push_back(std::move(app));
+    } else {
+      for (const auto& binding : bindings_.bindings()) {
+        ResponseTable resp;
+        resp.set_value(payload.value());
+        binding->events().OnEchoTablePayloadEvent(std::move(resp));
+      }
+    }
+  }
+
+  void EchoTablePayloadWithError(EchoEchoTablePayloadWithErrorRequest payload,
+                                 EchoTablePayloadWithErrorCallback callback) override {
+    if (payload.has_forward_to_server()) {
+      EchoClientApp app;
+      const std::string& forward_to_server = payload.forward_to_server();
+      bool failed = false;
+      app.echo().set_error_handler([this, &forward_to_server, &failed](zx_status_t status) {
+        failed = true;
+        loop_->Quit();
+        FX_LOGS(ERROR) << "error communicating with " << forward_to_server << ": " << status;
+      });
+      app.Start(forward_to_server);
+      bool called_back = false;
+      payload.clear_forward_to_server();
+      app.echo()->EchoTablePayloadWithError(
+          std::move(payload),
+          [this, &called_back, &callback](Echo_EchoTablePayloadWithError_Result res) {
+            called_back = true;
+            callback(std::move(res));
+            loop_->Quit();
+          });
+      while (!called_back && !failed) {
+        loop_->Run();
+      }
+      loop_->ResetQuit();
+    } else {
+      Echo_EchoTablePayloadWithError_Result result;
+      if (payload.result_variant() == RespondWith::ERR) {
+        result.set_err(payload.result_err());
+      } else {
+        ResponseTable resp;
+        resp.set_value(payload.value());
+        result.set_response(std::move(resp));
+      }
+      callback(std::move(result));
+    }
+  }
+
+  void EchoUnionPayload(RequestUnion payload, EchoUnionPayloadCallback callback) override {
+    const std::string& forward_to_server = payload.is_signed_()
+                                               ? payload.signed_().forward_to_server
+                                               : payload.unsigned_().forward_to_server;
+    if (!forward_to_server.empty()) {
+      EchoClientApp app;
+      bool failed = false;
+      app.echo().set_error_handler([this, &forward_to_server, &failed](zx_status_t status) {
+        failed = true;
+        loop_->Quit();
+        FX_LOGS(ERROR) << "error communicating with " << forward_to_server << ": " << status;
+      });
+      app.Start(forward_to_server);
+      bool called_back = false;
+      if (payload.is_signed_()) {
+        payload.signed_().forward_to_server = "";
+      } else {
+        payload.unsigned_().forward_to_server = "";
+      }
+      app.echo()->EchoUnionPayload(std::move(payload),
+                                   [this, &called_back, &callback](ResponseUnion resp) {
+                                     called_back = true;
+                                     callback(std::move(resp));
+                                     loop_->Quit();
+                                   });
+      while (!called_back && !failed) {
+        loop_->Run();
+      }
+      loop_->ResetQuit();
+    } else {
+      ResponseUnion resp;
+      if (payload.is_signed_()) {
+        resp.set_signed_(payload.signed_().value);
+      } else {
+        resp.set_unsigned_(payload.unsigned_().value);
+      }
+      callback(std::move(resp));
+    }
+  }
+
+  void EchoUnionPayloadWithError(EchoEchoUnionPayloadWithErrorRequest payload,
+                                 EchoUnionPayloadWithErrorCallback callback) override {
+    const std::string& forward_to_server = payload.is_signed_()
+                                               ? payload.signed_().forward_to_server
+                                               : payload.unsigned_().forward_to_server;
+    if (!forward_to_server.empty()) {
+      EchoClientApp app;
+      bool failed = false;
+      app.echo().set_error_handler([this, &forward_to_server, &failed](zx_status_t status) {
+        failed = true;
+        loop_->Quit();
+        FX_LOGS(ERROR) << "error communicating with " << forward_to_server << ": " << status;
+      });
+      app.Start(forward_to_server);
+      bool called_back = false;
+      if (payload.is_signed_()) {
+        payload.signed_().forward_to_server = "";
+      } else {
+        payload.unsigned_().forward_to_server = "";
+      }
+      app.echo()->EchoUnionPayloadWithError(
+          std::move(payload),
+          [this, &called_back, &callback](Echo_EchoUnionPayloadWithError_Result res) {
+            called_back = true;
+            callback(std::move(res));
+            loop_->Quit();
+          });
+      while (!called_back && !failed) {
+        loop_->Run();
+      }
+      loop_->ResetQuit();
+    } else {
+      const RespondWith result_variant = payload.is_signed_() ? payload.signed_().result_variant
+                                                              : payload.unsigned_().result_variant;
+      Echo_EchoUnionPayloadWithError_Result result;
+      ResponseUnion resp;
+      if (result_variant == RespondWith::ERR) {
+        result.set_err(payload.is_signed_() ? payload.signed_().result_err
+                                            : payload.unsigned_().result_err);
+      } else {
+        if (payload.is_signed_()) {
+          resp.set_signed_(payload.signed_().value);
+        } else {
+          resp.set_unsigned_(payload.unsigned_().value);
+        }
+        result.set_response(std::move(resp));
+      }
+      callback(std::move(result));
+    }
+  }
+
+  void EchoUnionPayloadNoRetVal(RequestUnion payload) override {
+    const std::string& forward_to_server = payload.is_signed_()
+                                               ? payload.signed_().forward_to_server
+                                               : payload.unsigned_().forward_to_server;
+    if (!forward_to_server.empty()) {
+      std::unique_ptr<EchoClientApp> app(new EchoClientApp);
+      app->echo().set_error_handler([this, forward_to_server](zx_status_t status) {
+        loop_->Quit();
+        FX_LOGS(ERROR) << "error communicating with " << forward_to_server << ": " << status;
+      });
+      app->Start(forward_to_server);
+      app->echo().events().OnEchoUnionPayloadEvent = [this](ResponseUnion resp) {
+        this->HandleOnUnionPayloadEvent(std::move(resp));
+      };
+      if (payload.is_signed_()) {
+        payload.signed_().forward_to_server = "";
+      } else {
+        payload.unsigned_().forward_to_server = "";
+      }
+      app->echo()->EchoUnionPayloadNoRetVal(std::move(payload));
+      client_apps_.push_back(std::move(app));
+    } else {
+      for (const auto& binding : bindings_.bindings()) {
+        ResponseUnion resp;
+        if (payload.is_signed_()) {
+          resp.set_signed_(payload.signed_().value);
+        } else {
+          resp.set_unsigned_(payload.unsigned_().value);
+        }
+        binding->events().OnEchoUnionPayloadEvent(std::move(resp));
+      }
+    }
+  }
+
  private:
   void HandleEchoEvent(Struct value) {
     for (const auto& binding : bindings_.bindings()) {
@@ -543,6 +760,20 @@ class EchoServerApp : public Echo {
       imported::SimpleStruct to_send;
       value.Clone(&to_send);
       binding->events().OnEchoNamedEvent(std::move(to_send));
+    }
+  }
+  void HandleOnTablePayloadEvent(ResponseTable payload) {
+    for (const auto& binding : bindings_.bindings()) {
+      ResponseTable to_send;
+      payload.Clone(&to_send);
+      binding->events().OnEchoTablePayloadEvent(std::move(to_send));
+    }
+  }
+  void HandleOnUnionPayloadEvent(ResponseUnion payload) {
+    for (const auto& binding : bindings_.bindings()) {
+      ResponseUnion to_send;
+      payload.Clone(&to_send);
+      binding->events().OnEchoUnionPayloadEvent(std::move(to_send));
     }
   }
 

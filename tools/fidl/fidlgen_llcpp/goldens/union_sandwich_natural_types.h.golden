@@ -959,6 +959,8 @@ struct internal::NaturalIsMemcpyCompatible<
 
 #endif  // __Fuchsia__
 
+extern "C" const fidl_type_t test_unionsandwich_UnionSize8Alignment4Table;
+
 template <>
 struct IsFidlType<::test_unionsandwich::UnionSize8Alignment4>
     : public std::true_type {};
@@ -967,11 +969,20 @@ struct IsUnion<::test_unionsandwich::UnionSize8Alignment4>
     : public std::true_type {};
 
 template <>
+struct ::fidl::internal::TypeTraits<::test_unionsandwich::UnionSize8Alignment4>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &test_unionsandwich_UnionSize8Alignment4Table;
+};
+
+template <>
 struct internal::NaturalCodingTraits<
     ::test_unionsandwich::UnionSize8Alignment4,
     ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalUnionCodingTraits<
                 ::test_unionsandwich::UnionSize8Alignment4> {};
+extern "C" const fidl_type_t test_unionsandwich_UnionSize36Alignment4Table;
 
 template <>
 struct IsFidlType<::test_unionsandwich::UnionSize36Alignment4>
@@ -981,11 +992,20 @@ struct IsUnion<::test_unionsandwich::UnionSize36Alignment4>
     : public std::true_type {};
 
 template <>
+struct ::fidl::internal::TypeTraits<::test_unionsandwich::UnionSize36Alignment4>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &test_unionsandwich_UnionSize36Alignment4Table;
+};
+
+template <>
 struct internal::NaturalCodingTraits<
     ::test_unionsandwich::UnionSize36Alignment4,
     ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalUnionCodingTraits<
                 ::test_unionsandwich::UnionSize36Alignment4> {};
+extern "C" const fidl_type_t test_unionsandwich_UnionSize12Alignment4Table;
 
 template <>
 struct IsFidlType<::test_unionsandwich::UnionSize12Alignment4>
@@ -995,11 +1015,20 @@ struct IsUnion<::test_unionsandwich::UnionSize12Alignment4>
     : public std::true_type {};
 
 template <>
+struct ::fidl::internal::TypeTraits<::test_unionsandwich::UnionSize12Alignment4>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &test_unionsandwich_UnionSize12Alignment4Table;
+};
+
+template <>
 struct internal::NaturalCodingTraits<
     ::test_unionsandwich::UnionSize12Alignment4,
     ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalUnionCodingTraits<
                 ::test_unionsandwich::UnionSize12Alignment4> {};
+extern "C" const fidl_type_t test_unionsandwich_UnionSize24Alignment8Table;
 
 template <>
 struct IsFidlType<::test_unionsandwich::UnionSize24Alignment8>
@@ -1007,6 +1036,14 @@ struct IsFidlType<::test_unionsandwich::UnionSize24Alignment8>
 template <>
 struct IsUnion<::test_unionsandwich::UnionSize24Alignment8>
     : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<::test_unionsandwich::UnionSize24Alignment8>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &test_unionsandwich_UnionSize24Alignment8Table;
+};
 
 template <>
 struct internal::NaturalCodingTraits<

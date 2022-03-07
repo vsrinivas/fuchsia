@@ -62,7 +62,7 @@ namespace test_arrays {
 namespace wire {
 extern "C" const fidl_type_t test_arrays_TableSmallArrayTable;
 
-class TableSmallArray final {
+class TableSmallArray {
  public:
   // Returns whether no field is set.
   bool IsEmpty() const { return max_ordinal_ == 0; }
@@ -171,7 +171,7 @@ namespace test_arrays {
 namespace wire {
 extern "C" const fidl_type_t test_arrays_TableLargeArrayTable;
 
-class TableLargeArray final {
+class TableLargeArray {
  public:
   // Returns whether no field is set.
   bool IsEmpty() const { return max_ordinal_ == 0; }

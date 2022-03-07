@@ -485,6 +485,9 @@ struct internal::NaturalIsMemcpyCompatible<
 
 #endif  // __Fuchsia__
 
+extern "C" const fidl_type_t
+    test_errorsyntax_ExampleUseOfErrorSyntax_CallWhichMayFail_ResultTable;
+
 template <>
 struct IsFidlType<
     ::test_errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Result>
@@ -493,6 +496,15 @@ template <>
 struct IsUnion<
     ::test_errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Result>
     : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<
+    ::test_errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Result>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &test_errorsyntax_ExampleUseOfErrorSyntax_CallWhichMayFail_ResultTable;
+};
 
 template <>
 struct internal::NaturalCodingTraits<

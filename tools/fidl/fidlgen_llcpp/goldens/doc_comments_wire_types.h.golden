@@ -80,7 +80,7 @@ extern "C" const fidl_type_t test_doccomments_TableTable;
 /// table comment #1
 ///
 /// table comment #3
-class Table final {
+class Table {
  public:
   // Returns whether no field is set.
   bool IsEmpty() const { return max_ordinal_ == 0; }

@@ -8,11 +8,40 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 )
 
+// UnionName stores all of the information necessary to use a union as a
+// payload. Unlike structs, unions always use a single "payload" argument
+// pointing to the underlying union/table type, so for externally defined unions
+// we only need to store the name and (optional) owning result type of the
+// union, rather than the entire, flattenable declaration with all of its
+// members.
+type UnionName struct {
+	nameVariants
+}
+
+func (*UnionName) Kind() declKind {
+	return Kinds.Union
+}
+
+// AsParameters renders the referenced union as a parameter list of length 1.
+func (u *UnionName) AsParameters(ty *Type, hi *HandleInformation) []Parameter {
+	return []Parameter{{
+		Type:              *ty,
+		nameVariants:      ty.nameVariants,
+		OffsetV1:          0,
+		OffsetV2:          0,
+		HandleInformation: hi,
+	}}
+}
+
+var _ Kinded = (*UnionName)(nil)
+var _ Payloader = (*UnionName)(nil)
+var _ namespaced = (*UnionName)(nil)
+
 type Union struct {
+	UnionName
 	Attributes
 	fidlgen.Strictness
 	fidlgen.Resourceness
-	nameVariants
 	CodingTableType     name
 	AnonymousChildren   []ScopedLayout
 	TagEnum             nameVariants
@@ -23,16 +52,19 @@ type Union struct {
 	Members             []UnionMember
 	BackingBufferTypeV1 string
 	BackingBufferTypeV2 string
-	Result              *Result
 	TypeShapeV1         TypeShape
 	TypeShapeV2         TypeShape
-}
 
-func (*Union) Kind() declKind {
-	return Kinds.Union
+	// TypeTraits contains information about a natural domain object.
+	TypeTraits name
+
+	// Result points to the Result this union is being used to represent, if this
+	// is in fact a Result wrapper.
+	Result *Result
 }
 
 var _ Kinded = (*Union)(nil)
+var _ Payloader = (*Union)(nil)
 var _ namespaced = (*Union)(nil)
 
 type UnionMember struct {
@@ -63,13 +95,13 @@ func (c *compiler) compileUnion(val fidlgen.Union) *Union {
 	tagEnum := name.nest("Tag")
 	wireOrdinalEnum := name.Wire.nest("Ordinal")
 	u := Union{
+		UnionName:          UnionName{nameVariants: name},
 		Attributes:         Attributes{val.Attributes},
 		TypeShapeV1:        TypeShape{val.TypeShapeV1},
 		TypeShapeV2:        TypeShape{val.TypeShapeV2},
 		AnonymousChildren:  c.getAnonymousChildren(val.Layout),
 		Strictness:         val.Strictness,
 		Resourceness:       val.Resourceness,
-		nameVariants:       name,
 		CodingTableType:    codingTableType,
 		TagEnum:            tagEnum,
 		TagUnknown:         tagEnum.nest("kUnknown"),
@@ -82,6 +114,7 @@ func (c *compiler) compileUnion(val fidlgen.Union) *Union {
 		BackingBufferTypeV2: computeAllocation(
 			TypeShape{val.TypeShapeV2}.MaxTotalSize(), boundednessBounded).
 			BackingBufferType(),
+		TypeTraits: TypeTraits.template(name.Unified),
 	}
 
 	naturalIndex := 1
@@ -110,29 +143,42 @@ func (c *compiler) compileUnion(val fidlgen.Union) *Union {
 	return &u
 }
 
-func (c *compiler) compileResult(s *Struct, m *fidlgen.Method) *Result {
+func (c *compiler) compileResult(p Payloader, m *fidlgen.Method) *Result {
 	valueType, errType := c.compileType(*m.ValueType), c.compileType(*m.ErrorType)
 	result := Result{
-		ResultDecl:      c.compileNameVariants(m.ResultType.Identifier),
-		ValueStructDecl: valueType.nameVariants,
-		Value:           valueType,
-		ErrorDecl:       errType.nameVariants,
-		Error:           errType,
+		ResultDecl:        c.compileNameVariants(m.ResultType.Identifier),
+		ValueTypeDecl:     valueType.nameVariants,
+		Value:             valueType,
+		ErrorDecl:         errType.nameVariants,
+		Error:             errType,
+		valueTypeIsStruct: false,
 	}
 
 	var memberTypeNames []name
-	if !s.isEmptyStruct {
-		for _, sm := range s.Members {
-			memberTypeNames = append(memberTypeNames, sm.Type.HLCPP)
-			result.ValueMembers = append(result.ValueMembers, sm.AsParameter())
+	result.ValueParameters = p.AsParameters(&valueType, c.fieldHandleInformation(m.ValueType))
+	for _, sm := range result.ValueParameters {
+		memberTypeNames = append(memberTypeNames, sm.Type.HLCPP)
+	}
+
+	// Only struct parameters may be flattened, so check specifically for that
+	// type.
+	switch s := p.(type) {
+	case *Struct:
+		result.valueTypeIsStruct = true
+
+		// Special case: empty structs must not generated a member type for the special "__reserved"
+		// member, so erase all members in the empty case.
+		if s.isEmptyStruct {
+			memberTypeNames = nil
+			result.ValueParameters = nil
 		}
 	}
-	result.ValueTupleDecl = makeTupleName(memberTypeNames)
 
+	result.ValueTupleDecl = makeTupleName(memberTypeNames)
 	if len(memberTypeNames) == 0 {
 		result.ValueDecl = makeName("void")
 	} else if len(memberTypeNames) == 1 {
-		result.ValueDecl = s.Members[0].Type.HLCPP
+		result.ValueDecl = memberTypeNames[0]
 	} else {
 		result.ValueDecl = result.ValueTupleDecl
 	}

@@ -18,7 +18,11 @@
 
     {{ if .ResponseArgs }}
     explicit {{ .WireEvent.Self }}({{ RenderParams .ResponseArgs }}) : {{ .ResponsePayload }}
-    {{- "{ " }}{{ RenderForwardStructParams .ResponseArgs }}}{}
+    {{- if .ResponseFlattened -}}
+    {{- "{ " }}{{ RenderForwardStructParams .ResponseArgs }}}
+    {{- else -}}
+    ({{ RenderForwardParams .ResponseArgs }})
+    {{- end -}}{}
     {{- end }}
     {{ .WireEvent.Self }}() = default;
 

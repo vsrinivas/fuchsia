@@ -25,7 +25,8 @@ type Struct struct {
 	Members             []StructMember
 	BackingBufferTypeV1 string
 	BackingBufferTypeV2 string
-	Result              *Result
+	IsInResult          bool
+	ParametersTupleDecl name
 	// Full decls needed to check if a type is memcpy compatible.
 	// Only set if it may be possible for a type to be memcpy compatible,
 	// e.g. has no padding.
@@ -46,10 +47,29 @@ func (*Struct) Kind() declKind {
 	return Kinds.Struct
 }
 
-// IsAnonymousRequestOrResponse indicates whether this struct is used as a method
-// request/response.
-func (s *Struct) IsAnonymousRequestOrResponse() bool {
-	return s.isAnonymousRequestOrResponse
+// AsParameters flattens the struct's members into a parameter list.
+func (s *Struct) AsParameters(_ *Type, _ *HandleInformation) []Parameter {
+	var out []Parameter
+	for _, sm := range s.Members {
+		out = append(out, sm.AsParameter())
+	}
+	return out
+}
+
+// SetInResult marks the struct as being used in as the success variant in a
+// method Result, and takes note of the tuple declaration of the result's
+// parameters. Because a named struct may be in multiple results, every
+// call to this function after the first one per instance is a no-op, since the
+// struct would have already been marked with the same information.
+func (s *Struct) SetInResult(result *Result) {
+	if !s.IsInResult {
+		s.IsInResult = true
+		s.ParametersTupleDecl = result.ValueTupleDecl
+	}
+}
+
+func (s *Struct) IsEmpty() bool {
+	return s.isEmptyStruct
 }
 
 var _ Kinded = (*Struct)(nil)
@@ -107,7 +127,7 @@ func (c *compiler) compileStructMember(val fidlgen.StructMember) StructMember {
 	}
 }
 
-func (c *compiler) compileStruct(val fidlgen.Struct, anonMessageBody bool) *Struct {
+func (c *compiler) compileStruct(val fidlgen.Struct) *Struct {
 	name := c.compileNameVariants(val.Name)
 	codingTableType := name.Wire.ns.member(c.compileCodingTableType(val.Name))
 	r := Struct{
@@ -125,8 +145,8 @@ func (c *compiler) compileStruct(val fidlgen.Struct, anonMessageBody bool) *Stru
 		BackingBufferTypeV2: computeAllocation(
 			TypeShape{val.TypeShapeV2}.MaxTotalSize(), boundednessBounded).
 			BackingBufferType(),
-		TypeTraits:                   TypeTraits.template(name.Unified),
-		isAnonymousRequestOrResponse: anonMessageBody,
+		IsInResult: false,
+		TypeTraits: TypeTraits.template(name.Unified),
 	}
 
 	for _, v := range val.Members {

@@ -48,7 +48,7 @@ struct {{ .WireTableFrame }} final {
 {{ EnsureNamespace . }}
 extern "C" const fidl_type_t {{ .CodingTableType.Name }};
 {{ .Docs }}
-class {{ .Name }} final {
+class {{ .Name }} {
 public:
 {{- range .AnonymousChildren }}
   using {{ .ScopedName }} = {{ .FlattenedName }};

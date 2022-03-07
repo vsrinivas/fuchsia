@@ -1001,8 +1001,17 @@ struct internal::NaturalIsMemcpyCompatible<
 
 #endif  // __Fuchsia__
 
+extern "C" const fidl_type_t test_anonymous_TableMemberTable;
+
 template <>
 struct IsFidlType<::test_anonymous::TableMember> : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<::test_anonymous::TableMember> final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &test_anonymous_TableMemberTable;
+};
 
 template <>
 struct internal::NaturalCodingTraits<
@@ -1011,9 +1020,19 @@ struct internal::NaturalCodingTraits<
     : public ::fidl::internal::NaturalTableCodingTraits<
           ::test_anonymous::TableMember> {};
 
+extern "C" const fidl_type_t test_anonymous_FunctionApplicationTable;
+
 template <>
 struct IsFidlType<::test_anonymous::FunctionApplication>
     : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<::test_anonymous::FunctionApplication>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &test_anonymous_FunctionApplicationTable;
+};
 
 template <>
 struct internal::NaturalCodingTraits<
@@ -1022,10 +1041,19 @@ struct internal::NaturalCodingTraits<
     : public ::fidl::internal::NaturalTableCodingTraits<
           ::test_anonymous::FunctionApplication> {};
 
+extern "C" const fidl_type_t test_anonymous_UnionMemberTable;
+
 template <>
 struct IsFidlType<::test_anonymous::UnionMember> : public std::true_type {};
 template <>
 struct IsUnion<::test_anonymous::UnionMember> : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<::test_anonymous::UnionMember> final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &test_anonymous_UnionMemberTable;
+};
 
 template <>
 struct internal::NaturalCodingTraits<
@@ -1033,6 +1061,7 @@ struct internal::NaturalCodingTraits<
     ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalUnionCodingTraits<
                 ::test_anonymous::UnionMember> {};
+extern "C" const fidl_type_t test_anonymous_ExpressionTable;
 
 template <>
 struct IsFidlType<::test_anonymous::Expression> : public std::true_type {};
@@ -1040,11 +1069,19 @@ template <>
 struct IsUnion<::test_anonymous::Expression> : public std::true_type {};
 
 template <>
+struct ::fidl::internal::TypeTraits<::test_anonymous::Expression> final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &test_anonymous_ExpressionTable;
+};
+
+template <>
 struct internal::NaturalCodingTraits<
     ::test_anonymous::Expression,
     ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalUnionCodingTraits<
                 ::test_anonymous::Expression> {};
+extern "C" const fidl_type_t test_anonymous_SomeProtocol_SomeMethod_ResultTable;
 
 template <>
 struct IsFidlType<::test_anonymous::SomeProtocol_SomeMethod_Result>
@@ -1052,6 +1089,15 @@ struct IsFidlType<::test_anonymous::SomeProtocol_SomeMethod_Result>
 template <>
 struct IsUnion<::test_anonymous::SomeProtocol_SomeMethod_Result>
     : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<
+    ::test_anonymous::SomeProtocol_SomeMethod_Result>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &test_anonymous_SomeProtocol_SomeMethod_ResultTable;
+};
 
 template <>
 struct internal::NaturalCodingTraits<

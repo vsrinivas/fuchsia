@@ -127,6 +127,8 @@ class {{ .Name }} final {
 {{- end }}
 
 {{- define "Union:Traits:NaturalTypesHeader" }}
+  extern "C" const fidl_type_t {{ .CodingTableType.Self }};
+
   {{ if .IsResourceType }}
   template <>
   struct IsResource<{{ . }}> : public std::true_type {};
@@ -135,6 +137,12 @@ class {{ .Name }} final {
   struct IsFidlType<{{ . }}> : public std::true_type {};
   template <>
   struct IsUnion<{{ . }}> : public std::true_type {};
+
+  template <>
+  struct {{ .TypeTraits }} final {
+  public:
+    static constexpr const fidl_type_t* kCodingTable = &{{ .CodingTableType.Self }};
+  };
 
   template <>
   struct internal::NaturalCodingTraits<{{ . }}, ::fidl::internal::NaturalCodingConstraintEmpty> final

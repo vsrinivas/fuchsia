@@ -382,10 +382,19 @@ struct internal::NaturalIsMemcpyCompatible<::test_error::ExampleFooRequest>
 
 #endif  // __Fuchsia__
 
+extern "C" const fidl_type_t test_error_Example_foo_ResultTable;
+
 template <>
 struct IsFidlType<::test_error::Example_foo_Result> : public std::true_type {};
 template <>
 struct IsUnion<::test_error::Example_foo_Result> : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<::test_error::Example_foo_Result> final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &test_error_Example_foo_ResultTable;
+};
 
 template <>
 struct internal::NaturalCodingTraits<

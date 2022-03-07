@@ -18,7 +18,11 @@ struct {{ .WireRequest }} final {{- if .HasRequestPayload }} : public {{ .Reques
 
   {{ if .RequestArgs }}
   explicit {{ .WireRequest.Self }}({{ RenderParams .RequestArgs }}) : {{ .RequestPayload }}
-  {{- "{ " }}{{ RenderForwardStructParams .RequestArgs }}}{}
+  {{- if .RequestFlattened -}}
+  {{- "{ " }}{{ RenderForwardStructParams .RequestArgs }}}
+  {{- else -}}
+  ({{ RenderForwardParams .RequestArgs }})
+  {{- end -}}{}
   {{- end }}
   {{ .WireRequest.Self }}() = default;
 

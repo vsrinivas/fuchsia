@@ -1248,10 +1248,12 @@ func (r *Root) DeclsWithDependencies() DeclInfoMap {
 	return decls
 }
 
-// GetMessageBodyTypeNames calculates set of ECI's that refer to types used as message bodies by
-// this library.
-func (r *Root) GetMessageBodyTypeNames() map[EncodedCompoundIdentifier]struct{} {
-	mbtn := map[EncodedCompoundIdentifier]struct{}{}
+type EncodedCompoundIdentifierSet map[EncodedCompoundIdentifier]struct{}
+
+// GetMessageBodyTypeNames calculates set of ECIs that refer to types used as message bodies by this
+// library.
+func (r *Root) GetMessageBodyTypeNames() EncodedCompoundIdentifierSet {
+	mbtn := EncodedCompoundIdentifierSet{}
 	for _, protocol := range r.Protocols {
 		for _, method := range protocol.Methods {
 			if method.RequestPayload != nil {

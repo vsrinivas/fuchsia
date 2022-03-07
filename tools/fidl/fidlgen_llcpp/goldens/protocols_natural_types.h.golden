@@ -4631,6 +4631,9 @@ struct internal::NaturalIsMemcpyCompatible<
 
 #endif  // __Fuchsia__
 
+extern "C" const fidl_type_t
+    test_protocols_WithErrorSyntax_HandleInResult_ResultTable;
+
 template <>
 struct IsResource<::test_protocols::WithErrorSyntax_HandleInResult_Result>
     : public std::true_type {};
@@ -4642,11 +4645,22 @@ struct IsUnion<::test_protocols::WithErrorSyntax_HandleInResult_Result>
     : public std::true_type {};
 
 template <>
+struct ::fidl::internal::TypeTraits<
+    ::test_protocols::WithErrorSyntax_HandleInResult_Result>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &test_protocols_WithErrorSyntax_HandleInResult_ResultTable;
+};
+
+template <>
 struct internal::NaturalCodingTraits<
     ::test_protocols::WithErrorSyntax_HandleInResult_Result,
     ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalUnionCodingTraits<
                 ::test_protocols::WithErrorSyntax_HandleInResult_Result> {};
+extern "C" const fidl_type_t
+    test_protocols_WithErrorSyntax_ResponseAsStruct_ResultTable;
 
 template <>
 struct IsFidlType<::test_protocols::WithErrorSyntax_ResponseAsStruct_Result>
@@ -4656,11 +4670,22 @@ struct IsUnion<::test_protocols::WithErrorSyntax_ResponseAsStruct_Result>
     : public std::true_type {};
 
 template <>
+struct ::fidl::internal::TypeTraits<
+    ::test_protocols::WithErrorSyntax_ResponseAsStruct_Result>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &test_protocols_WithErrorSyntax_ResponseAsStruct_ResultTable;
+};
+
+template <>
 struct internal::NaturalCodingTraits<
     ::test_protocols::WithErrorSyntax_ResponseAsStruct_Result,
     ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalUnionCodingTraits<
                 ::test_protocols::WithErrorSyntax_ResponseAsStruct_Result> {};
+extern "C" const fidl_type_t
+    test_protocols_WithErrorSyntax_ErrorAsPrimitive_ResultTable;
 
 template <>
 struct IsFidlType<::test_protocols::WithErrorSyntax_ErrorAsPrimitive_Result>
@@ -4670,11 +4695,21 @@ struct IsUnion<::test_protocols::WithErrorSyntax_ErrorAsPrimitive_Result>
     : public std::true_type {};
 
 template <>
+struct ::fidl::internal::TypeTraits<
+    ::test_protocols::WithErrorSyntax_ErrorAsPrimitive_Result>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &test_protocols_WithErrorSyntax_ErrorAsPrimitive_ResultTable;
+};
+
+template <>
 struct internal::NaturalCodingTraits<
     ::test_protocols::WithErrorSyntax_ErrorAsPrimitive_Result,
     ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalUnionCodingTraits<
                 ::test_protocols::WithErrorSyntax_ErrorAsPrimitive_Result> {};
+extern "C" const fidl_type_t test_protocols_TheUnionTable;
 
 template <>
 struct IsFidlType<::test_protocols::TheUnion> : public std::true_type {};
@@ -4682,10 +4717,19 @@ template <>
 struct IsUnion<::test_protocols::TheUnion> : public std::true_type {};
 
 template <>
+struct ::fidl::internal::TypeTraits<::test_protocols::TheUnion> final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &test_protocols_TheUnionTable;
+};
+
+template <>
 struct internal::NaturalCodingTraits<
     ::test_protocols::TheUnion, ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalUnionCodingTraits<
                 ::test_protocols::TheUnion> {};
+extern "C" const fidl_type_t
+    test_protocols_WithErrorSyntax_ErrorAsEnum_ResultTable;
 
 template <>
 struct IsFidlType<::test_protocols::WithErrorSyntax_ErrorAsEnum_Result>
@@ -4693,6 +4737,15 @@ struct IsFidlType<::test_protocols::WithErrorSyntax_ErrorAsEnum_Result>
 template <>
 struct IsUnion<::test_protocols::WithErrorSyntax_ErrorAsEnum_Result>
     : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<
+    ::test_protocols::WithErrorSyntax_ErrorAsEnum_Result>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &test_protocols_WithErrorSyntax_ErrorAsEnum_ResultTable;
+};
 
 template <>
 struct internal::NaturalCodingTraits<

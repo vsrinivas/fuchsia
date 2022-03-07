@@ -147,9 +147,9 @@ class {{ .Name }} final {
     ZX_ASSERT(!result.is_pending());
     if (result.is_ok()) {
       {{- if eq 0 .Result.ValueArity }}
-      set_response({{ .Result.ValueStructDecl }}{});
+      set_response({{ .Result.ValueTypeDecl }}{});
       {{- else }}
-      set_response({{ .Result.ValueStructDecl }}{result.take_value()});
+      set_response({{ .Result.ValueTypeDecl }}{result.take_value()});
       {{- end }}
     } else {
       set_err(result.take_error());

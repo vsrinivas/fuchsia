@@ -355,6 +355,7 @@ void fidl::internal::
         ::test_anonymous::wire::BitsMember bits_member) {
   ::test_anonymous::wire::SomeProtocolSomeMethodResponse _response;
   _response.bits_member = std::move(bits_member);
+
   return Reply(
       ::test_anonymous::wire::SomeProtocolSomeMethodResult::WithResponse(
           std::move(_response)));
@@ -393,11 +394,12 @@ void fidl::internal::
 void fidl::internal::WireBufferCompleterImpl<
     ::test_anonymous::SomeProtocol::SomeMethod>::
     ReplySuccess(::test_anonymous::wire::BitsMember bits_member) {
-  ::test_anonymous::wire::SomeProtocolSomeMethodResponse response;
-  response.bits_member = std::move(bits_member);
+  ::test_anonymous::wire::SomeProtocolSomeMethodResponse _response;
+  _response.bits_member = std::move(bits_member);
+
   return Reply(
       ::test_anonymous::wire::SomeProtocolSomeMethodResult::WithResponse(
-          std::move(response)));
+          std::move(_response)));
 }
 
 void fidl::internal::WireBufferCompleterImpl<

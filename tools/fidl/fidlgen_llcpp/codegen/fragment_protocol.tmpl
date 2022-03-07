@@ -172,8 +172,10 @@ struct TypeTraits<{{ .WireRequest }}> {
 {{- if .RequestArgs }}
 static_assert(sizeof({{ .WireRequest }})
     == TypeTraits<{{ .WireRequest }}>::kPrimarySize);
+{{- if .RequestFlattened }}
 {{- range $index, $param := .RequestArgs }}
 static_assert(offsetof({{ $method.WireRequest }}, {{ $param.Name }}) == {{ $param.OffsetV2 }});
+{{- end }}
 {{- end }}
 {{- end }}
 {{- if .Request.IsResource }}
@@ -249,8 +251,10 @@ struct TypeTraits<{{ .WireEvent }}> {
 {{- if .ResponseArgs }}
 static_assert(sizeof({{ .WireEvent }})
     == TypeTraits<{{ .WireEvent }}>::kPrimarySize);
+{{- if .ResponseFlattened }}
 {{- range $index, $param := .ResponseArgs }}
 static_assert(offsetof({{ $method.WireEvent }}, {{ $param.Name }}) == {{ $param.OffsetV2 }});
+{{- end }}
 {{- end }}
 {{- end }}
 {{- if .Response.IsResource }}
@@ -324,8 +328,10 @@ struct TypeTraits<{{ .WireResponse }}> {
 {{- if .ResponseArgs }}
 static_assert(sizeof({{ .WireResponse }})
     == TypeTraits<{{ .WireResponse }}>::kPrimarySize);
+{{- if .ResponseFlattened }}
 {{- range $index, $param := .ResponseArgs }}
 static_assert(offsetof({{ $method.WireResponse }}, {{ $param.Name }}) == {{ $param.OffsetV2 }});
+{{- end }}
 {{- end }}
 {{- end }}
 {{- if .Response.IsResource }}

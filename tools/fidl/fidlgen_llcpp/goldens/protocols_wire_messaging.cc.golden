@@ -5593,6 +5593,7 @@ void fidl::internal::WireCompleterImpl<
   _response.a = std::move(a);
   _response.b = std::move(b);
   _response.c = std::move(c);
+
   return Reply(
       ::test_protocols::wire::WithErrorSyntaxResponseAsStructResult::
           WithResponse(
@@ -5636,16 +5637,17 @@ void fidl::internal::WireBufferCompleterImpl<
 void fidl::internal::WireBufferCompleterImpl<
     ::test_protocols::WithErrorSyntax::ResponseAsStruct>::
     ReplySuccess(int64_t a, int64_t b, int64_t c) {
-  ::test_protocols::wire::WithErrorSyntaxResponseAsStructResponse response;
-  response.a = std::move(a);
-  response.b = std::move(b);
-  response.c = std::move(c);
+  ::test_protocols::wire::WithErrorSyntaxResponseAsStructResponse _response;
+  _response.a = std::move(a);
+  _response.b = std::move(b);
+  _response.c = std::move(c);
+
   return Reply(
       ::test_protocols::wire::WithErrorSyntaxResponseAsStructResult::
           WithResponse(
               ::fidl::ObjectView<::test_protocols::wire::
                                      WithErrorSyntaxResponseAsStructResponse>::
-                  FromExternal(&response)));
+                  FromExternal(&_response)));
 }
 
 void fidl::internal::WireBufferCompleterImpl<
@@ -5677,6 +5679,7 @@ void fidl::internal::WireCompleterImpl<
 void fidl::internal::WireCompleterImpl<
     ::test_protocols::WithErrorSyntax::ErrorAsPrimitive>::ReplySuccess() {
   ::test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResponse _response;
+
   return Reply(::test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResult::
                    WithResponse(std::move(_response)));
 }
@@ -5715,9 +5718,10 @@ void fidl::internal::WireBufferCompleterImpl<
 }
 void fidl::internal::WireBufferCompleterImpl<
     ::test_protocols::WithErrorSyntax::ErrorAsPrimitive>::ReplySuccess() {
-  ::test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResponse response;
+  ::test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResponse _response;
+
   return Reply(::test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResult::
-                   WithResponse(std::move(response)));
+                   WithResponse(std::move(_response)));
 }
 
 void fidl::internal::WireBufferCompleterImpl<
@@ -5748,6 +5752,7 @@ void fidl::internal::
 void fidl::internal::WireCompleterImpl<
     ::test_protocols::WithErrorSyntax::ErrorAsEnum>::ReplySuccess() {
   ::test_protocols::wire::WithErrorSyntaxErrorAsEnumResponse _response;
+
   return Reply(
       ::test_protocols::wire::WithErrorSyntaxErrorAsEnumResult::WithResponse(
           std::move(_response)));
@@ -5786,10 +5791,11 @@ void fidl::internal::WireBufferCompleterImpl<
 }
 void fidl::internal::WireBufferCompleterImpl<
     ::test_protocols::WithErrorSyntax::ErrorAsEnum>::ReplySuccess() {
-  ::test_protocols::wire::WithErrorSyntaxErrorAsEnumResponse response;
+  ::test_protocols::wire::WithErrorSyntaxErrorAsEnumResponse _response;
+
   return Reply(
       ::test_protocols::wire::WithErrorSyntaxErrorAsEnumResult::WithResponse(
-          std::move(response)));
+          std::move(_response)));
 }
 
 void fidl::internal::WireBufferCompleterImpl<
@@ -5822,6 +5828,7 @@ void fidl::internal::WireCompleterImpl<
     ReplySuccess(::zx::handle&& h) {
   ::test_protocols::wire::WithErrorSyntaxHandleInResultResponse _response;
   _response.h = std::move(h);
+
   return Reply(
       ::test_protocols::wire::WithErrorSyntaxHandleInResultResult::WithResponse(
           std::move(_response)));
@@ -5861,11 +5868,12 @@ void fidl::internal::WireBufferCompleterImpl<
 void fidl::internal::WireBufferCompleterImpl<
     ::test_protocols::WithErrorSyntax::HandleInResult>::
     ReplySuccess(::zx::handle&& h) {
-  ::test_protocols::wire::WithErrorSyntaxHandleInResultResponse response;
-  response.h = std::move(h);
+  ::test_protocols::wire::WithErrorSyntaxHandleInResultResponse _response;
+  _response.h = std::move(h);
+
   return Reply(
       ::test_protocols::wire::WithErrorSyntaxHandleInResultResult::WithResponse(
-          std::move(response)));
+          std::move(_response)));
 }
 
 void fidl::internal::WireBufferCompleterImpl<

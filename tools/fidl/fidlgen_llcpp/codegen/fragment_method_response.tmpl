@@ -18,7 +18,11 @@ struct {{ .WireResponse }} final {{- if .HasResponsePayload }} : public {{ .Resp
 
   {{ if .ResponseArgs }}
   explicit {{ .WireResponse.Self }}({{ RenderParams .ResponseArgs }}) : {{ .ResponsePayload }}
-  {{- "{ " }}{{ RenderForwardStructParams .ResponseArgs }}}{}
+  {{- if .ResponseFlattened -}}
+  {{- "{ " }}{{ RenderForwardStructParams .ResponseArgs }}}
+  {{- else -}}
+  ({{ RenderForwardParams .ResponseArgs }})
+  {{- end -}}{}
   {{- end }}
   {{ .WireResponse.Self }}() = default;
 

@@ -18,10 +18,39 @@ var (
 	WireTableFrame = fidlNs.member("WireTableFrame")
 )
 
+// TableName stores all of the information necessary to use a table as a
+// payload. Unlike structs, tables always use a single "payload" argument
+// pointing to the underlying table/table type, so for externally defined tables
+// we only need to store the name and (optional) owning result type of the
+// table, rather than the entire, flattenable declaration with all of its
+// members.
+type TableName struct {
+	nameVariants
+}
+
+func (*TableName) Kind() declKind {
+	return Kinds.Table
+}
+
+// AsParameters renders the referenced table as a parameter list of length 1.
+func (u *TableName) AsParameters(ty *Type, hi *HandleInformation) []Parameter {
+	return []Parameter{{
+		Type:              *ty,
+		nameVariants:      ty.nameVariants,
+		OffsetV1:          0,
+		OffsetV2:          0,
+		HandleInformation: hi,
+	}}
+}
+
+var _ Kinded = (*TableName)(nil)
+var _ Payloader = (*TableName)(nil)
+var _ namespaced = (*TableName)(nil)
+
 type Table struct {
+	TableName
 	Attributes
 	fidlgen.Resourceness
-	nameVariants
 	AnonymousChildren   []ScopedLayout
 	CodingTableType     name
 	Members             []TableMember
@@ -31,6 +60,9 @@ type Table struct {
 	TypeShapeV1         TypeShape
 	TypeShapeV2         TypeShape
 
+	// TypeTraits contains information about a natural domain object.
+	TypeTraits name
+
 	// WireTableFrame is the name of the table frame type associated with
 	// this table in wire domain objects.
 	WireTableFrame name
@@ -38,11 +70,8 @@ type Table struct {
 	FrameItems []TableFrameItem
 }
 
-func (*Table) Kind() declKind {
-	return Kinds.Table
-}
-
 var _ Kinded = (*Table)(nil)
+var _ Payloader = (*Table)(nil)
 var _ namespaced = (*Table)(nil)
 
 type TableMember struct {
@@ -100,12 +129,12 @@ func (c *compiler) compileTable(val fidlgen.Table) *Table {
 	name := c.compileNameVariants(val.Name)
 	codingTableType := name.Wire.ns.member(c.compileCodingTableType(val.Name))
 	r := Table{
+		TableName:         TableName{nameVariants: name},
 		Attributes:        Attributes{val.Attributes},
 		AnonymousChildren: c.getAnonymousChildren(val.Layout),
 		TypeShapeV1:       TypeShape{val.TypeShapeV1},
 		TypeShapeV2:       TypeShape{val.TypeShapeV2},
 		Resourceness:      val.Resourceness,
-		nameVariants:      name,
 		CodingTableType:   codingTableType,
 		Members:           nil,
 		BiggestOrdinal:    0,
@@ -116,6 +145,7 @@ func (c *compiler) compileTable(val fidlgen.Table) *Table {
 			TypeShape{val.TypeShapeV2}.MaxTotalSize(), boundednessBounded).
 			BackingBufferType(),
 		WireTableFrame: WireTableFrame.template(name.Wire),
+		TypeTraits:     TypeTraits.template(name.Unified),
 	}
 
 	for i, v := range val.SortedMembersNoReserved() {

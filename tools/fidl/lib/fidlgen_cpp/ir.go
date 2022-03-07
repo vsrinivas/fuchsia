@@ -302,18 +302,41 @@ func (r *Root) Namespace() namespace {
 
 // Result holds information about error results on methods.
 type Result struct {
-	ValueMembers    []Parameter
-	ResultDecl      nameVariants
-	ErrorDecl       nameVariants
-	Error           Type
-	ValueDecl       name
-	ValueStructDecl nameVariants
-	ValueTupleDecl  name
-	Value           Type
+	ResultDecl        nameVariants
+	ValueDecl         name
+	ValueParameters   []Parameter
+	ValueTypeDecl     nameVariants
+	ValueTupleDecl    name
+	Value             Type
+	ErrorDecl         nameVariants
+	Error             Type
+	valueTypeIsStruct bool
 }
 
 func (r Result) ValueArity() int {
-	return len(r.ValueMembers)
+	return len(r.ValueParameters)
+}
+
+// BuildPayload renders a "destructured" access to all of the
+// parameters described by a layout. For flattened parameter lists, this may
+// look like (assuming the supplied `varName` is "_response"):
+//
+//   _response.a = std::move(a);
+//   _response.b = std::move(b);
+//
+// Unflattened layouts are always rendered as:
+//
+//   MyLayoutArgType _response = std::move(my_layout_arg);
+func (r Result) BuildPayload(varName string) string {
+	out := fmt.Sprintf("%s %s;\n", r.ValueTypeDecl, varName)
+	if !r.valueTypeIsStruct && currentVariant != unifiedVariant {
+		return out + fmt.Sprintf("%s = std::move(%s);\n", varName, r.Value.Name())
+	}
+
+	for _, v := range r.ValueParameters {
+		out += fmt.Sprintf("%s.%s = std::move(%s);\n", varName, v.Name(), v.Name())
+	}
+	return out
 }
 
 var primitiveTypes = map[fidlgen.PrimitiveSubtype]string{
@@ -389,8 +412,9 @@ type compiler struct {
 	handleTypes        map[fidlgen.HandleSubtype]struct{}
 	resultForUnion     map[fidlgen.EncodedCompoundIdentifier]*Result
 	messageBodyStructs map[fidlgen.EncodedCompoundIdentifier]fidlgen.Struct
-	// anonymousChildren maps a layout (defined by its naming context key) to
-	// the anonymous layouts defined directly within that layout. We opt to flatten
+	messageBodyTypes   fidlgen.EncodedCompoundIdentifierSet
+	// anonymousChildren maps a layout (defined by its naming context key) to the
+	// anonymous layouts defined directly within that layout. We opt to flatten
 	// the naming context and use a map rather than a trie like structure for
 	// simplicity.
 	anonymousChildren        map[namingContextKey][]ScopedLayout
@@ -594,6 +618,18 @@ func (c *compiler) getAnonymousChildren(layout fidlgen.Layout) []ScopedLayout {
 	return c.anonymousChildren[toKey(layout.NamingContext)]
 }
 
+// Payloader is an interface describing operations that can be done to a
+// payloadable (struct, table, or union) layout.
+type Payloader interface {
+	// AsParameters renders the payloadable layout as a set of parameters, which
+	// is useful for operations like generating user-facing method signatures. For
+	// table and union payloads, this method always produces a single parameter
+	// pointing to the table/union itself, aka the "unflattened" representation.
+	// Conversely, in certain (but not all) C++ bindings, structs are "flattened"
+	// into a parameter list, with one parameter per struct member.
+	AsParameters(*Type, *HandleInformation) []Parameter
+}
+
 func compile(r fidlgen.Root) *Root {
 	root := Root{
 		Library: r.Name.Parse(),
@@ -606,12 +642,9 @@ func compile(r fidlgen.Root) *Root {
 		handleTypes:        make(map[fidlgen.HandleSubtype]struct{}),
 		resultForUnion:     make(map[fidlgen.EncodedCompoundIdentifier]*Result),
 		messageBodyStructs: make(map[fidlgen.EncodedCompoundIdentifier]fidlgen.Struct),
+		messageBodyTypes:   r.GetMessageBodyTypeNames(),
 		anonymousChildren:  make(map[namingContextKey][]ScopedLayout),
 	}
-
-	// Do a first pass of the protocols, creating a set of all names of types that are used as a
-	// transactional message bodies.
-	mbtn := r.GetMessageBodyTypeNames()
 
 	addAnonymousLayouts := func(layout fidlgen.Layout) {
 		if !layout.IsAnonymous() {
@@ -661,51 +694,66 @@ func compile(r fidlgen.Root) *Root {
 		decls[v.Name] = c.compileEnum(v)
 	}
 
-	// Note: for results calculation, we must first compile unions, and structs.
+	for _, v := range r.Tables {
+		decls[v.Name] = c.compileTable(v)
+	}
 
+	// Note: for results calculation, we must first compile unions, and structs.
 	for _, v := range r.Unions {
 		decls[v.Name] = c.compileUnion(v)
 	}
 
 	for _, v := range r.Structs {
-		anonMessageBody := false
-		if _, ok := mbtn[v.Name]; ok {
+		if _, ok := c.messageBodyTypes[v.Name]; ok {
 			c.messageBodyStructs[v.Name] = v
-			if v.IsAnonymous() {
-				anonMessageBody = true
-			}
 		}
-		decls[v.Name] = c.compileStruct(v, anonMessageBody)
+		decls[v.Name] = c.compileStruct(v)
 	}
 
 	for _, v := range r.ExternalStructs {
-		anonMessageBody := false
-		if _, ok := mbtn[v.Name]; ok {
+		if _, ok := c.messageBodyTypes[v.Name]; ok {
 			c.messageBodyStructs[v.Name] = v
-			if v.IsAnonymous() {
-				anonMessageBody = true
+		}
+		extDecls[v.Name] = c.compileStruct(v)
+	}
+
+	// Since union and table payloads, unlike structs, always use a single
+	// "payload" argument pointing to the underlying union/table type, we only
+	// need to store the name and (optional) owning result type of the union,
+	// rather than the entire, flattenable declaration with all of its members.
+	for _, v := range r.Libraries {
+		for name, decl := range v.Decls {
+			if decl.Type == fidlgen.TableDeclType {
+				extDecls[name] = &TableName{nameVariants: c.compileNameVariants(name)}
+			} else if decl.Type == fidlgen.UnionDeclType {
+				extDecls[name] = &UnionName{nameVariants: c.compileNameVariants(name)}
 			}
 		}
-		extDecls[v.Name] = c.compileStruct(v, anonMessageBody)
 	}
 
 	for _, v := range r.Protocols {
 		for _, m := range v.Methods {
 			if m.HasError {
-				var s *Struct
+				var p Payloader
 				valueTypeDecl, ok := decls[m.ValueType.Identifier]
 				if ok {
-					s = valueTypeDecl.(*Struct)
+					p = valueTypeDecl.(Payloader)
 				} else {
-					// If we are unable to look up the struct, this implies that
-					// this is an externally defined struct. In this case, the
-					// IR exposes the declaration.
-					valueTypeDecl = extDecls[m.ValueType.Identifier]
-					s = valueTypeDecl.(*Struct)
+					// If we are unable to look up the layout, this implies that it is externally defined. In
+					// this case, the IR exposes the declaration.
+					valueTypeDecl, ok := extDecls[m.ValueType.Identifier]
+					if ok {
+						p = valueTypeDecl.(Payloader)
+					} else {
+						panic(fmt.Sprintf("message body value type %s not found", m.ValueType.Identifier))
+					}
 				}
-				result := c.compileResult(s, &m)
+				result := c.compileResult(p, &m)
 				if ok {
-					s.Result = result
+					switch s := p.(type) {
+					case *Struct:
+						s.SetInResult(result)
+					}
 					if resultTypeDecl, ok := decls[m.ResultType.Identifier]; !ok {
 						panic(fmt.Sprintf("success struct %s in library, but result union %s is not",
 							m.ValueType.Identifier, m.ResultType.Identifier))
@@ -716,10 +764,6 @@ func compile(r fidlgen.Root) *Root {
 				}
 			}
 		}
-	}
-
-	for _, v := range r.Tables {
-		decls[v.Name] = c.compileTable(v)
 	}
 
 	for _, v := range r.Protocols {

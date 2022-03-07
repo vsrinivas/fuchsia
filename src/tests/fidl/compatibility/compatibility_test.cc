@@ -17,6 +17,7 @@
 #include <cstdlib>
 #include <map>
 #include <random>
+#include <regex>
 #include <vector>
 
 #include <gtest/gtest.h>
@@ -1921,6 +1922,157 @@ TEST(Table, EchoTableWithErrorErrorCase) {
       });
 }
 
+TEST(Table, EchoTablePayload) {
+  // TODO(fxbug.dev/88343): Enable for CPP, Dart, Go, LLCPP, and Rust.
+  const auto filter = [](const std::string& server_url) -> bool {
+    return server_url.find("hlcpp") != std::string::npos;
+  };
+
+  ForSomeServers(filter, [](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
+                            const std::string& server_url, const std::string& proxy_url) {
+    summary[ExtractShortName(proxy_url) + " <-> " + ExtractShortName(server_url) + " (table)"] =
+        false;
+    fidl::test::compatibility::RequestTable sent;
+    sent.set_forward_to_server(server_url);
+    sent.set_value(42u);
+
+    fidl::test::compatibility::RequestTable sent_clone;
+    sent.Clone(&sent_clone);
+
+    fidl::test::compatibility::ResponseTable resp_clone;
+    bool called_back = false;
+
+    proxy->EchoTablePayload(std::move(sent), [&loop, &resp_clone, &called_back](
+                                                 fidl::test::compatibility::ResponseTable resp) {
+      ASSERT_EQ(ZX_OK, resp.Clone(&resp_clone));
+      called_back = true;
+      loop.Quit();
+    });
+
+    loop.Run();
+    ASSERT_TRUE(called_back);
+    EXPECT_EQ(sent_clone.has_value(), resp_clone.has_value());
+    EXPECT_EQ(sent_clone.value(), resp_clone.value());
+    summary[ExtractShortName(proxy_url) + " <-> " + ExtractShortName(server_url) + " (table)"] =
+        true;
+  });
+}
+
+TEST(Table, EchoTablePayloadWithErrorSuccessCase) {
+  // TODO(fxbug.dev/88343): Enable for CPP, Dart, Go, LLCPP, and Rust.
+  const auto filter = [](const std::string& server_url) -> bool {
+    return server_url.find("hlcpp") != std::string::npos;
+  };
+
+  ForSomeServers(filter, [](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
+                            const std::string& server_url, const std::string& proxy_url) {
+    summary[ExtractShortName(proxy_url) + " <-> " + ExtractShortName(server_url) +
+            " (table result success)"] = false;
+    fidl::test::compatibility::EchoEchoTablePayloadWithErrorRequest sent;
+    sent.set_forward_to_server(server_url);
+    sent.set_value(42u);
+    sent.set_result_variant(fidl::test::compatibility::RespondWith::SUCCESS);
+
+    fidl::test::compatibility::EchoEchoTablePayloadWithErrorRequest sent_clone;
+    sent.Clone(&sent_clone);
+
+    fidl::test::compatibility::ResponseTable resp_clone;
+    bool called_back = false;
+
+    proxy->EchoTablePayloadWithError(
+        std::move(sent),
+        [&loop, &resp_clone,
+         &called_back](fidl::test::compatibility::Echo_EchoTablePayloadWithError_Result resp) {
+          ASSERT_TRUE(resp.is_response());
+          ASSERT_EQ(ZX_OK, resp.response().Clone(&resp_clone));
+          called_back = true;
+          loop.Quit();
+        });
+
+    loop.Run();
+    ASSERT_TRUE(called_back);
+    EXPECT_EQ(sent_clone.has_value(), resp_clone.has_value());
+    EXPECT_EQ(sent_clone.value(), resp_clone.value());
+    summary[ExtractShortName(proxy_url) + " <-> " + ExtractShortName(server_url) +
+            " (table result success)"] = true;
+  });
+}
+
+TEST(Table, EchoTablePayloadWithErrorErrorCase) {
+  // TODO(fxbug.dev/88343): Enable for CPP, Dart, Go, LLCPP, and Rust.
+  const auto filter = [](const std::string& server_url) -> bool {
+    return server_url.find("hlcpp") != std::string::npos;
+  };
+
+  ForSomeServers(filter, [](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
+                            const std::string& server_url, const std::string& proxy_url) {
+    summary[ExtractShortName(proxy_url) + " <-> " + ExtractShortName(server_url) +
+            " (table result success)"] = false;
+    fidl::test::compatibility::EchoEchoTablePayloadWithErrorRequest sent;
+    auto err = fidl::test::compatibility::default_enum::kOne;
+    sent.set_forward_to_server(server_url);
+    sent.set_result_err(err);
+    sent.set_result_variant(fidl::test::compatibility::RespondWith::ERR);
+
+    fidl::test::compatibility::EchoEchoTablePayloadWithErrorRequest sent_clone;
+    sent.Clone(&sent_clone);
+
+    fidl::test::compatibility::ResponseTable resp_clone;
+    bool called_back = false;
+
+    proxy->EchoTablePayloadWithError(
+        std::move(sent),
+        [&loop, &err,
+         &called_back](fidl::test::compatibility::Echo_EchoTablePayloadWithError_Result resp) {
+          ASSERT_TRUE(resp.is_err());
+          ASSERT_EQ(err, resp.err());
+          called_back = true;
+          loop.Quit();
+        });
+
+    loop.Run();
+    ASSERT_TRUE(called_back);
+    summary[ExtractShortName(proxy_url) + " <-> " + ExtractShortName(server_url) +
+            " (table result success)"] = true;
+  });
+}
+
+TEST(Table, EchoTablePayloadNoRetval) {
+  // TODO(fxbug.dev/88343): Enable for CPP, Dart, Go, LLCPP, and Rust.
+  const auto filter = [](const std::string& server_url) -> bool {
+    return server_url.find("hlcpp") != std::string::npos;
+  };
+
+  ForSomeServers(filter, [](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
+                            const std::string& server_url, const std::string& proxy_url) {
+    summary[ExtractShortName(proxy_url) + " <-> " + ExtractShortName(server_url) + " (table)"] =
+        false;
+    fidl::test::compatibility::RequestTable sent;
+    sent.set_forward_to_server(server_url);
+    sent.set_value(42u);
+
+    fidl::test::compatibility::RequestTable sent_clone;
+    sent.Clone(&sent_clone);
+
+    fidl::test::compatibility::ResponseTable resp_clone;
+    bool event_received = false;
+
+    proxy.events().OnEchoTablePayloadEvent =
+        [&loop, &resp_clone, &event_received](fidl::test::compatibility::ResponseTable resp) {
+          resp.Clone(&resp_clone);
+          event_received = true;
+          loop.Quit();
+        };
+    proxy->EchoTablePayloadNoRetVal(std::move(sent));
+    loop.Run();
+    ASSERT_TRUE(event_received);
+    EXPECT_EQ(sent_clone.has_value(), resp_clone.has_value());
+    EXPECT_EQ(sent_clone.value(), resp_clone.value());
+    summary[ExtractShortName(proxy_url) + " <-> " + ExtractShortName(server_url) + " (table)"] =
+        true;
+  });
+}
+
 TEST(Union, EchoUnions) {
   ForAllServers([](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
                    const std::string& server_url, const std::string& proxy_url) {
@@ -2015,6 +2167,161 @@ TEST(Union, EchoUnionsWithErrorErrorCase) {
     ASSERT_TRUE(called_back);
     summary[ExtractShortName(proxy_url) + " <-> " + ExtractShortName(server_url) +
             " (xunion result error)"] = true;
+  });
+}
+
+TEST(Union, EchoUnionPayload) {
+  // TODO(fxbug.dev/88343): Enable for CPP, Dart, Go, LLCPP, and Rust.
+  const auto filter = [](const std::string& server_url) -> bool {
+    return server_url.find("hlcpp") != std::string::npos;
+  };
+
+  ForSomeServers(filter, [](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
+                            const std::string& server_url, const std::string& proxy_url) {
+    summary[ExtractShortName(proxy_url) + " <-> " + ExtractShortName(server_url) + " (union)"] =
+        false;
+    fidl::test::compatibility::RequestUnion sent;
+    sent.set_signed_({.value = -123, .forward_to_server = server_url});
+
+    fidl::test::compatibility::RequestUnion sent_clone;
+    sent.Clone(&sent_clone);
+
+    fidl::test::compatibility::ResponseUnion resp_clone;
+    bool called_back = false;
+
+    proxy->EchoUnionPayload(std::move(sent), [&loop, &resp_clone, &called_back](
+                                                 fidl::test::compatibility::ResponseUnion resp) {
+      ASSERT_EQ(ZX_OK, resp.Clone(&resp_clone));
+      called_back = true;
+      loop.Quit();
+    });
+
+    loop.Run();
+    ASSERT_TRUE(called_back);
+    EXPECT_EQ(sent_clone.is_signed_(), resp_clone.is_signed_());
+    EXPECT_EQ(sent_clone.signed_().value, resp_clone.signed_());
+    summary[ExtractShortName(proxy_url) + " <-> " + ExtractShortName(server_url) + " (union)"] =
+        true;
+  });
+}
+
+TEST(Union, EchoUnionPayloadWithErrorSuccessCase) {
+  // TODO(fxbug.dev/88343): Enable for CPP, Dart, Go, LLCPP, and Rust.
+  const auto filter = [](const std::string& server_url) -> bool {
+    return server_url.find("hlcpp") != std::string::npos;
+  };
+
+  ForSomeServers(filter, [](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
+                            const std::string& server_url, const std::string& proxy_url) {
+    summary[ExtractShortName(proxy_url) + " <-> " + ExtractShortName(server_url) +
+            " (union result success)"] = false;
+    fidl::test::compatibility::UnsignedErrorable unsigned_errorable;
+    unsigned_errorable.forward_to_server = server_url;
+    unsigned_errorable.value = 42u;
+    unsigned_errorable.result_variant = fidl::test::compatibility::RespondWith::SUCCESS;
+
+    auto sent = fidl::test::compatibility::EchoEchoUnionPayloadWithErrorRequest::WithUnsigned_(
+        std::move(unsigned_errorable));
+
+    fidl::test::compatibility::EchoEchoUnionPayloadWithErrorRequest sent_clone;
+    sent.Clone(&sent_clone);
+
+    fidl::test::compatibility::ResponseUnion resp_clone;
+    bool called_back = false;
+
+    proxy->EchoUnionPayloadWithError(
+        std::move(sent),
+        [&loop, &resp_clone,
+         &called_back](fidl::test::compatibility::Echo_EchoUnionPayloadWithError_Result resp) {
+          ASSERT_TRUE(resp.is_response());
+          ASSERT_EQ(ZX_OK, resp.response().Clone(&resp_clone));
+          called_back = true;
+          loop.Quit();
+        });
+
+    loop.Run();
+    ASSERT_TRUE(called_back);
+    EXPECT_EQ(sent_clone.is_unsigned_(), resp_clone.is_unsigned_());
+    EXPECT_EQ(sent_clone.unsigned_().value, resp_clone.unsigned_());
+    summary[ExtractShortName(proxy_url) + " <-> " + ExtractShortName(server_url) +
+            " (union result success)"] = true;
+  });
+}
+
+TEST(Union, EchoUnionPayloadWithErrorErrorCase) {
+  // TODO(fxbug.dev/88343): Enable for CPP, Dart, Go, LLCPP, and Rust.
+  const auto filter = [](const std::string& server_url) -> bool {
+    return server_url.find("hlcpp") != std::string::npos;
+  };
+
+  ForSomeServers(filter, [](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
+                            const std::string& server_url, const std::string& proxy_url) {
+    summary[ExtractShortName(proxy_url) + " <-> " + ExtractShortName(server_url) +
+            " (union result success)"] = false;
+    fidl::test::compatibility::SignedErrorable signed_errorable;
+    auto err = fidl::test::compatibility::default_enum::kOne;
+    signed_errorable.forward_to_server = server_url;
+    signed_errorable.result_err = err;
+    signed_errorable.result_variant = fidl::test::compatibility::RespondWith::ERR;
+
+    auto sent = fidl::test::compatibility::EchoEchoUnionPayloadWithErrorRequest::WithSigned_(
+        std::move(signed_errorable));
+
+    fidl::test::compatibility::EchoEchoUnionPayloadWithErrorRequest sent_clone;
+    sent.Clone(&sent_clone);
+
+    fidl::test::compatibility::ResponseUnion resp_clone;
+    bool called_back = false;
+
+    proxy->EchoUnionPayloadWithError(
+        std::move(sent),
+        [&loop, &err,
+         &called_back](fidl::test::compatibility::Echo_EchoUnionPayloadWithError_Result resp) {
+          ASSERT_TRUE(resp.is_err());
+          ASSERT_EQ(err, resp.err());
+          called_back = true;
+          loop.Quit();
+        });
+
+    loop.Run();
+    ASSERT_TRUE(called_back);
+    summary[ExtractShortName(proxy_url) + " <-> " + ExtractShortName(server_url) +
+            " (union result success)"] = true;
+  });
+}
+
+TEST(Union, EchoUnionPayloadNoRetval) {
+  // TODO(fxbug.dev/88343): Enable for CPP, Dart, Go, LLCPP, and Rust.
+  const auto filter = [](const std::string& server_url) -> bool {
+    return server_url.find("hlcpp") != std::string::npos;
+  };
+
+  ForSomeServers(filter, [](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
+                            const std::string& server_url, const std::string& proxy_url) {
+    summary[ExtractShortName(proxy_url) + " <-> " + ExtractShortName(server_url) + " (union)"] =
+        false;
+    fidl::test::compatibility::RequestUnion sent;
+    sent.set_unsigned_({.value = 42u, .forward_to_server = server_url});
+
+    fidl::test::compatibility::RequestUnion sent_clone;
+    sent.Clone(&sent_clone);
+
+    fidl::test::compatibility::ResponseUnion resp_clone;
+    bool event_received = false;
+
+    proxy.events().OnEchoUnionPayloadEvent =
+        [&loop, &resp_clone, &event_received](fidl::test::compatibility::ResponseUnion resp) {
+          resp.Clone(&resp_clone);
+          event_received = true;
+          loop.Quit();
+        };
+    proxy->EchoUnionPayloadNoRetVal(std::move(sent));
+    loop.Run();
+    ASSERT_TRUE(event_received);
+    EXPECT_EQ(sent_clone.is_unsigned_(), resp_clone.is_unsigned_());
+    EXPECT_EQ(sent_clone.unsigned_().value, resp_clone.unsigned_());
+    summary[ExtractShortName(proxy_url) + " <-> " + ExtractShortName(server_url) + " (union)"] =
+        true;
   });
 }
 

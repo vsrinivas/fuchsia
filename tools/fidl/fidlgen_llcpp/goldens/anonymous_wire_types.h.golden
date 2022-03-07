@@ -95,7 +95,7 @@ namespace test_anonymous {
 namespace wire {
 extern "C" const fidl_type_t test_anonymous_TableMemberTable;
 
-class TableMember final {
+class TableMember {
  public:
   using TableData = test_anonymous::wire::TableData;
 
@@ -216,7 +216,7 @@ namespace test_anonymous {
 namespace wire {
 extern "C" const fidl_type_t test_anonymous_FunctionApplicationTable;
 
-class FunctionApplication final {
+class FunctionApplication {
  public:
   using Flags = test_anonymous::wire::Flags;
 

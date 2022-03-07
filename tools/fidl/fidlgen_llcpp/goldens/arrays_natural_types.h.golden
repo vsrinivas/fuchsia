@@ -451,8 +451,17 @@ struct internal::NaturalIsMemcpyCompatible<::test_arrays::StructLargeArray>
 
 #endif  // __Fuchsia__
 
+extern "C" const fidl_type_t test_arrays_TableSmallArrayTable;
+
 template <>
 struct IsFidlType<::test_arrays::TableSmallArray> : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<::test_arrays::TableSmallArray> final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &test_arrays_TableSmallArrayTable;
+};
 
 template <>
 struct internal::NaturalCodingTraits<
@@ -461,8 +470,17 @@ struct internal::NaturalCodingTraits<
     : public ::fidl::internal::NaturalTableCodingTraits<
           ::test_arrays::TableSmallArray> {};
 
+extern "C" const fidl_type_t test_arrays_TableLargeArrayTable;
+
 template <>
 struct IsFidlType<::test_arrays::TableLargeArray> : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<::test_arrays::TableLargeArray> final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &test_arrays_TableLargeArrayTable;
+};
 
 template <>
 struct internal::NaturalCodingTraits<
@@ -471,10 +489,19 @@ struct internal::NaturalCodingTraits<
     : public ::fidl::internal::NaturalTableCodingTraits<
           ::test_arrays::TableLargeArray> {};
 
+extern "C" const fidl_type_t test_arrays_UnionSmallArrayTable;
+
 template <>
 struct IsFidlType<::test_arrays::UnionSmallArray> : public std::true_type {};
 template <>
 struct IsUnion<::test_arrays::UnionSmallArray> : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<::test_arrays::UnionSmallArray> final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &test_arrays_UnionSmallArrayTable;
+};
 
 template <>
 struct internal::NaturalCodingTraits<
@@ -482,11 +509,19 @@ struct internal::NaturalCodingTraits<
     ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalUnionCodingTraits<
                 ::test_arrays::UnionSmallArray> {};
+extern "C" const fidl_type_t test_arrays_UnionLargeArrayTable;
 
 template <>
 struct IsFidlType<::test_arrays::UnionLargeArray> : public std::true_type {};
 template <>
 struct IsUnion<::test_arrays::UnionLargeArray> : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<::test_arrays::UnionLargeArray> final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &test_arrays_UnionLargeArrayTable;
+};
 
 template <>
 struct internal::NaturalCodingTraits<
