@@ -394,7 +394,7 @@ void CodecFactoryApp::DiscoverMagmaCodecDriversAndListenForMoreAsync() {
 }
 
 void CodecFactoryApp::PostDiscoveryQueueProcessing() {
-  async::PostTask(dispatcher_, fit::bind_member(this, &CodecFactoryApp::ProcessDiscoveryQueue));
+  async::PostTask(dispatcher_, fit::bind_member<&CodecFactoryApp::ProcessDiscoveryQueue>(this));
 }
 
 void CodecFactoryApp::ProcessDiscoveryQueue() {

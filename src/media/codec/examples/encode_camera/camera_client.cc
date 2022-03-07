@@ -46,7 +46,7 @@ fpromise::result<std::unique_ptr<CameraClient>, zx_status_t> CameraClient::Creat
   }
 
   cycler->watcher_->WatchDevices(
-      fit::bind_member(cycler.get(), &CameraClient::WatchDevicesCallback));
+      fit::bind_member<&CameraClient::WatchDevicesCallback>(cycler.get()));
 
   return fpromise::ok(std::move(cycler));
 }
@@ -68,7 +68,7 @@ void CameraClient::WatchDevicesCallback(std::vector<fuchsia::camera3::WatchDevic
       watcher_->ConnectToDevice(event.added(), device_.NewRequest());
 
       // Watch for mute changes.
-      device_->WatchMuteState(fit::bind_member(this, &CameraClient::WatchMuteStateHandler));
+      device_->WatchMuteState(fit::bind_member<&CameraClient::WatchMuteStateHandler>(this));
 
       // Fetch camera configurations
       device_->GetConfigurations(
@@ -90,7 +90,7 @@ void CameraClient::WatchDevicesCallback(std::vector<fuchsia::camera3::WatchDevic
   }
 
   // Hanging get.
-  watcher_->WatchDevices(fit::bind_member(this, &CameraClient::WatchDevicesCallback));
+  watcher_->WatchDevices(fit::bind_member<&CameraClient::WatchDevicesCallback>(this));
 }
 
 void CameraClient::DumpConfigs() {
@@ -111,7 +111,7 @@ void CameraClient::DumpConfigs() {
 
 void CameraClient::WatchMuteStateHandler(bool software_muted, bool hardware_muted) {
   mute_state_handler_(software_muted | hardware_muted);
-  device_->WatchMuteState(fit::bind_member(this, &CameraClient::WatchMuteStateHandler));
+  device_->WatchMuteState(fit::bind_member<&CameraClient::WatchMuteStateHandler>(this));
 }
 
 void CameraClient::ConnectToStream(uint32_t config_index, uint32_t stream_index) {

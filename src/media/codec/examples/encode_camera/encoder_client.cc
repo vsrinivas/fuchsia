@@ -57,13 +57,13 @@ EncoderClient::EncoderClient(uint32_t bitrate, uint32_t gop_size, const std::str
   SetAbortOnError(output_buffer_collection_,
                   "fuchsia.sysmem.BufferCollection output disconnected.");
 
-  codec_.events().OnStreamFailed = fit::bind_member(this, &EncoderClient::OnStreamFailed);
-  codec_.events().OnInputConstraints = fit::bind_member(this, &EncoderClient::OnInputConstraints);
-  codec_.events().OnFreeInputPacket = fit::bind_member(this, &EncoderClient::OnFreeInputPacket);
-  codec_.events().OnOutputConstraints = fit::bind_member(this, &EncoderClient::OnOutputConstraints);
-  codec_.events().OnOutputFormat = fit::bind_member(this, &EncoderClient::OnOutputFormat);
-  codec_.events().OnOutputPacket = fit::bind_member(this, &EncoderClient::OnOutputPacket);
-  codec_.events().OnOutputEndOfStream = fit::bind_member(this, &EncoderClient::OnOutputEndOfStream);
+  codec_.events().OnStreamFailed = fit::bind_member<&EncoderClient::OnStreamFailed>(this);
+  codec_.events().OnInputConstraints = fit::bind_member<&EncoderClient::OnInputConstraints>(this);
+  codec_.events().OnFreeInputPacket = fit::bind_member<&EncoderClient::OnFreeInputPacket>(this);
+  codec_.events().OnOutputConstraints = fit::bind_member<&EncoderClient::OnOutputConstraints>(this);
+  codec_.events().OnOutputFormat = fit::bind_member<&EncoderClient::OnOutputFormat>(this);
+  codec_.events().OnOutputPacket = fit::bind_member<&EncoderClient::OnOutputPacket>(this);
+  codec_.events().OnOutputEndOfStream = fit::bind_member<&EncoderClient::OnOutputEndOfStream>(this);
 }
 
 EncoderClient::~EncoderClient() {}
