@@ -1424,7 +1424,7 @@ TEST_F(DriverRunnerTest, StartSecondDriver_StopRootNode) {
       std::move(second_driver), dispatcher(), TeardownWatcher(1, indices));
 
   // Simulate the Component Framework calling Stop on the root driver.
-  root_client->Stop();
+  __UNUSED auto result = root_client->Stop();
 
   EXPECT_TRUE(RunLoopUntilIdle());
   // Check that the driver components were shut down in order.
@@ -1481,7 +1481,7 @@ TEST_F(DriverRunnerTest, StartSecondDriver_StopRootDriver) {
       std::move(*root_driver), dispatcher(), TeardownWatcher(0, indices));
   fidl::WireSharedClient<frunner::ComponentController> second_client(
       std::move(second_driver), dispatcher(), TeardownWatcher(1, indices));
-  root_client->Stop();
+  __UNUSED auto result = root_client->Stop();
   EXPECT_TRUE(RunLoopUntilIdle());
   EXPECT_THAT(indices, ElementsAre(1, 0));
 }
@@ -1541,7 +1541,7 @@ TEST_F(DriverRunnerTest, StartSecondDriver_BlockOnSecondDriver) {
       std::move(*root_driver), dispatcher(), TeardownWatcher(0, indices));
   fidl::WireSharedClient<frunner::ComponentController> second_client(
       std::move(second_driver), dispatcher(), TeardownWatcher(1, indices));
-  root_client->Stop();
+  __UNUSED auto result = root_client->Stop();
   EXPECT_TRUE(RunLoopUntilIdle());
   // Nothing has shut down yet, since we are waiting.
   EXPECT_THAT(indices, ElementsAre());

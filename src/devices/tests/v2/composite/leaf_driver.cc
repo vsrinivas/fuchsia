@@ -54,7 +54,7 @@ class LeafDriver {
   }
 
   result<void, zx_status_t> CallAck(const fidl::WireSharedClient<ft::Waiter>& waiter) {
-    waiter->Ack();
+    __UNUSED auto result = waiter->Ack();
     return ok();
   }
 

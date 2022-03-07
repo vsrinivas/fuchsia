@@ -449,7 +449,7 @@ void devfs_open(Devnode* dirdn, async_dispatcher_t* dispatcher, fidl::ServerEnd<
     auto describe =
         [&ipc, describe = flags & ZX_FS_FLAG_DESCRIBE](zx::status<fio::wire::NodeInfo> node_info) {
           if (describe) {
-            fidl::WireSendEvent(ipc)->OnOpen(
+            __UNUSED auto result = fidl::WireSendEvent(ipc)->OnOpen(
                 node_info.status_value(),
                 node_info.is_ok() ? std::move(node_info.value()) : fio::wire::NodeInfo());
           }
@@ -478,7 +478,7 @@ void devfs_open(Devnode* dirdn, async_dispatcher_t* dispatcher, fidl::ServerEnd<
       fidl::WireCall(dn->service_dir)
           ->Open(flags, 0, fidl::StringView::FromExternal(dn->service_path), std::move(ipc));
     } else {
-      dn->device->device_controller()->Open(flags, 0, ".", std::move(ipc));
+      __UNUSED auto result = dn->device->device_controller()->Open(flags, 0, ".", std::move(ipc));
     }
   }
 }
@@ -663,7 +663,7 @@ zx_status_t devfs_connect(const Device* dev, fidl::ServerEnd<fio::Node> client_r
   if (!client_remote.is_valid()) {
     return ZX_ERR_BAD_HANDLE;
   }
-  dev->device_controller()->Open(0, 0, ".", std::move(client_remote));
+  __UNUSED auto result = dev->device_controller()->Open(0, 0, ".", std::move(client_remote));
   return ZX_OK;
 }
 

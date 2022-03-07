@@ -135,7 +135,7 @@ TEST_F(LoaderTest, DoneClosesConnection) {
   fidl::WireClient<fldsvc::Loader> client(std::move(endpoints->client), dispatcher(), &handler);
 
   // Test that done closes the connection.
-  client->Done();
+  __UNUSED auto result = client->Done();
 
   ASSERT_TRUE(RunLoopUntilIdle());
 
