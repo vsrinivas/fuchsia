@@ -26,8 +26,8 @@ TEST(FidlTransaction, Reply) {
 
   auto dir = fbl::MakeRefCounted<fs::PseudoDir>();
   fs::internal::NodeConnection connection(&vfs, dir, fs::VnodeProtocol::kDirectory, {});
-  auto binding = std::make_shared<fs::internal::Binding>(&connection, loop.dispatcher(),
-                                                         std::move(server_end));
+  auto binding =
+      std::make_shared<fs::internal::Binding>(connection, loop.dispatcher(), std::move(server_end));
   zx_txid_t txid = 1;
   fs::internal::FidlTransaction txn(txid, binding);
   fidl_message_header_t message_header;

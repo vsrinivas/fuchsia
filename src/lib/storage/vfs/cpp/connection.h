@@ -268,7 +268,7 @@ class Connection : public fbl::DoublyLinkedListable<std::unique_ptr<Connection>>
 // This object contains an |async::WaitMethod| struct to wait for signals.
 class Binding final {
  public:
-  Binding(Connection* connection, async_dispatcher_t* dispatcher, zx::channel channel);
+  Binding(Connection& connection, async_dispatcher_t* dispatcher, zx::channel channel);
   ~Binding();
 
   Binding(const Binding&) = delete;
@@ -282,25 +282,12 @@ class Binding final {
   // Stops waiting for messages on the channel.
   void CancelDispatching();
 
-  // Keeps the |channel_| alive but stops ever waiting for further messages on it. After calling
-  // this method, in-progress waits are cancelled, and |StartDispatching| will become a no-op.
-  // Useful for halting message dispatch but keeping the ability to respond on the channel, as part
-  // of filesystem shutdown.
-  void DetachFromConnection();
-
   void AsyncTeardown();
 
   zx::channel& channel() { return channel_; }
 
-  void RegisterInflightTransaction() {
-    ZX_ASSERT(connection_ != nullptr);
-    connection_->RegisterInflightTransaction();
-  }
-  void UnregisterInflightTransaction() {
-    if (connection_ != nullptr) {
-      connection_->UnregisterInflightTransaction();
-    }
-  }
+  void RegisterInflightTransaction() { connection_.RegisterInflightTransaction(); }
+  void UnregisterInflightTransaction() { connection_.UnregisterInflightTransaction(); }
 
  private:
   // Callback for when new signals arrive on the channel, which could be: readable, peer closed,
@@ -310,10 +297,8 @@ class Binding final {
 
   async::WaitMethod<Binding, &Binding::HandleSignals> wait_;
 
-  // The connection which owns this binding. If the connection object is about to be destroyed but
-  // intentionally want the binding to live on, it must invalidate this reference by calling
-  // |DetachFromConnection| on the binding.
-  Connection* connection_;
+  // The connection which owns this binding.
+  Connection& connection_;
 
   // The dispatcher for reading messages and handling FIDL requests.
   async_dispatcher_t* dispatcher_;

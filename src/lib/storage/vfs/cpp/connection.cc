@@ -105,7 +105,7 @@ zx_status_t EnforceHierarchicalRights(Rights parent_rights, VnodeConnectionOptio
   return ZX_OK;
 }
 
-Binding::Binding(Connection* connection, async_dispatcher_t* dispatcher, zx::channel channel)
+Binding::Binding(Connection& connection, async_dispatcher_t* dispatcher, zx::channel channel)
     : wait_(this, channel.get(), kWakeSignals, 0),
       connection_(connection),
       dispatcher_(dispatcher),
@@ -156,7 +156,7 @@ zx_status_t Connection::StartDispatching(zx::channel channel) {
   ZX_DEBUG_ASSERT_MSG(InContainer(),
                       "Connection must be managed by the Vfs when dispatching FIDL messages.");
 
-  binding_ = std::make_shared<Binding>(this, vfs_->dispatcher(), std::move(channel));
+  binding_ = std::make_shared<Binding>(*this, vfs_->dispatcher(), std::move(channel));
   zx_status_t status = binding_->StartDispatching();
   if (status != ZX_OK) {
     binding_.reset();
@@ -166,9 +166,6 @@ zx_status_t Connection::StartDispatching(zx::channel channel) {
 }
 
 zx_status_t Binding::StartDispatching() {
-  if (!connection_) {
-    return ZX_OK;
-  }
   ZX_DEBUG_ASSERT(!wait_.is_pending());
   return wait_.Begin(dispatcher_);
 }
@@ -181,26 +178,15 @@ void Binding::CancelDispatching() {
   }
 }
 
-void Binding::DetachFromConnection() {
-  CancelDispatching();
-  UnregisterInflightTransaction();
-  connection_ = nullptr;
-}
-
 void Binding::HandleSignals(async_dispatcher_t* dispatcher, async::WaitBase* wait,
                             zx_status_t status, const zx_packet_signal_t* signal) {
-  if (!connection_) {
-    // Before a |Connection| is destructed, it will clear this pointer in its corresponding
-    // |Binding| by calling |DetachFromConnection|.
-    return;
-  }
   if (status != ZX_OK || !(signal->observed & ZX_CHANNEL_READABLE)) {
-    connection_->SyncTeardown();
+    connection_.SyncTeardown();
     return;
   }
-  bool handling_ok = connection_->OnMessage();
+  bool handling_ok = connection_.OnMessage();
   if (!handling_ok) {
-    connection_->SyncTeardown();
+    connection_.SyncTeardown();
   }
 }
 
