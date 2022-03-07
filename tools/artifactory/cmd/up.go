@@ -552,11 +552,16 @@ func (s *cloudSink) write(ctx context.Context, upload *artifactory.Upload) error
 			continue
 		}
 		if !bytes.Equal(attrs.MD5, d) {
-			return fmt.Errorf("MD5 mismatch for %s; local: %x, remote: %x", upload.Destination, d, attrs.MD5)
+			return md5MismatchError{fmt.Errorf("MD5 mismatch for %s; local: %x, remote: %x", upload.Destination, d, attrs.MD5)}
 		}
 		break
 	}
 	return nil
+}
+
+// TODO(fxbug.dev/78017): Delete this type once fixed.
+type md5MismatchError struct {
+	error
 }
 
 // checkGCSErr validates the error for a GCS upload.
@@ -685,6 +690,18 @@ func uploadFiles(ctx context.Context, files []artifactory.Upload, dest dataSink,
 			}
 
 			if err := uploadFile(ctx, upload, dest); err != nil {
+				// If deduplicated file already exists remotely but the local
+				// and remote md5 hashes don't match, upload our version to a
+				// namespaced path so it can be compared with the
+				// already-existent version to help with debugging.
+				// TODO(fxbug.dev/78017): Delete this logic once fixed.
+				var md5Err md5MismatchError
+				if errors.As(err, &md5Err) {
+					upload.Destination = path.Join(buildsNamespaceDir, "md5-mismatches", upload.Destination)
+					if err := uploadFile(ctx, upload, dest); err != nil {
+						logger.Warningf(ctx, "failed to upload md5-mismatch file %q for debugging: %s", upload.Destination, err)
+					}
+				}
 				errs <- err
 				return
 			}
