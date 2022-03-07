@@ -13,7 +13,6 @@
 #include <fbl/ref_ptr.h>
 
 #include "src/media/audio/audio_core/effects_stage_v1.h"
-#include "src/media/audio/audio_core/mix_profile_config.h"
 #include "src/media/audio/audio_core/mix_stage.h"
 #include "src/media/audio/audio_core/pipeline_config.h"
 #include "src/media/audio/audio_core/ring_buffer.h"
@@ -27,7 +26,7 @@ namespace media::audio {
 
 class OutputPipeline : public ReadableStream {
  public:
-  explicit OutputPipeline(Format format) : ReadableStream(format) {}
+  explicit OutputPipeline(Format format) : ReadableStream("OutputPipeline", format) {}
   ~OutputPipeline() override = default;
 
   // Returns a dup of the loopback stream for this pipeline, or nullptr if there is no loopback.
@@ -67,9 +66,8 @@ class OutputPipelineImpl : public OutputPipeline {
   //
   // The |sampler| is optionally used to select the type of sampler to be used when joining
   // mix stages together.
-  OutputPipelineImpl(const PipelineConfig& config, const MixProfileConfig& mix_profile_config,
-                     const VolumeCurve& volume_curve, EffectsLoaderV2* effects_loader_v2,
-                     uint32_t max_block_size_frames,
+  OutputPipelineImpl(const PipelineConfig& config, const VolumeCurve& volume_curve,
+                     EffectsLoaderV2* effects_loader_v2, uint32_t max_block_size_frames,
                      TimelineFunction ref_time_to_frac_presentation_frame, AudioClock& audio_clock,
                      Mixer::Resampler sampler = Mixer::Resampler::Default);
   ~OutputPipelineImpl() override = default;
@@ -90,17 +88,6 @@ class OutputPipelineImpl : public OutputPipeline {
       const std::string& instance_name, const std::string& config) override;
 
   // |media::audio::ReadableStream|
-  std::optional<ReadableStream::Buffer> ReadLock(ReadLockContext& ctx, Fixed dest_frame,
-                                                 int64_t frame_count) override {
-    TRACE_DURATION("audio", "OutputPipeline::ReadLock");
-    FX_DCHECK(state_.stream);
-    return state_.stream->ReadLock(ctx, dest_frame, frame_count);
-  }
-  void Trim(Fixed dest_frame) override {
-    TRACE_DURATION("audio", "OutputPipeline::Trim");
-    FX_CHECK(state_.stream);
-    state_.stream->Trim(dest_frame);
-  }
   TimelineFunctionSnapshot ref_time_to_frac_presentation_frame() const override {
     TRACE_DURATION("audio", "OutputPipeline::ref_time_to_frac_presentation_frame");
     FX_DCHECK(state_.stream);
@@ -113,15 +100,26 @@ class OutputPipelineImpl : public OutputPipeline {
   AudioClock& reference_clock() override { return state_.audio_clock; }
 
  private:
+  // |media::audio::ReadableStream|
+  std::optional<ReadableStream::Buffer> ReadLockImpl(ReadLockContext& ctx, Fixed dest_frame,
+                                                     int64_t frame_count) override {
+    FX_CHECK(state_.stream);
+    return ForwardBuffer(state_.stream->ReadLock(ctx, dest_frame, frame_count));
+  }
+  void TrimImpl(Fixed dest_frame) override {
+    FX_CHECK(state_.stream);
+    state_.stream->Trim(dest_frame);
+  }
+
   struct State {
-    State(const PipelineConfig& config, const MixProfileConfig& mix_profile_config,
-          const VolumeCurve& curve, EffectsLoaderV2* effects_loader_v2,
-          uint32_t max_block_size_frames, TimelineFunction ref_clock_to_fractional_frame,
-          AudioClock& clock, Mixer::Resampler sampler);
+    State(const PipelineConfig& config, const VolumeCurve& curve,
+          EffectsLoaderV2* effects_loader_v2, uint32_t max_block_size_frames,
+          TimelineFunction ref_clock_to_fractional_frame, AudioClock& clock,
+          Mixer::Resampler sampler);
 
     std::shared_ptr<ReadableStream> CreateMixStage(
-        const PipelineConfig::MixGroup& spec, const MixProfileConfig& mix_profile_config,
-        const VolumeCurve& volume_curve, EffectsLoaderV2* effects_loader_v2, uint32_t block_size,
+        const PipelineConfig::MixGroup& spec, const VolumeCurve& volume_curve,
+        EffectsLoaderV2* effects_loader_v2, uint32_t block_size,
         fbl::RefPtr<VersionedTimelineFunction> ref_clock_to_output_frame, AudioClock& clock,
         uint32_t* usage_mask, Mixer::Resampler sampler);
 

@@ -8,7 +8,6 @@
 #include <gtest/gtest.h>
 
 #include "src/media/audio/audio_core/audio_device_manager.h"
-#include "src/media/audio/audio_core/mix_profile_config.h"
 #include "src/media/audio/audio_core/testing/fake_audio_driver.h"
 #include "src/media/audio/audio_core/testing/threading_model_fixture.h"
 #include "src/media/audio/lib/clock/audio_clock_factory.h"
@@ -77,8 +76,8 @@ void ExpectEq(const PipelineConfig::MixGroup& expected,
 class TestDevice : public AudioOutput {
  public:
   TestDevice(std::unique_ptr<Context>& context)
-      : AudioOutput("", context->process_config().mix_profile_config(), &context->threading_model(),
-                    &context->device_manager(), &context->link_matrix(), context->clock_factory(),
+      : AudioOutput("", &context->threading_model(), &context->device_manager(),
+                    &context->link_matrix(), context->clock_factory(),
                     nullptr /* EffectsLoaderV2 */, std::make_unique<AudioDriver>(this)) {
     zx::channel c1, c2;
     ZX_ASSERT(ZX_OK == zx::channel::create(0, &c1, &c2));
@@ -140,7 +139,7 @@ class TestDevice : public AudioOutput {
   std::optional<AudioOutput::FrameSpan> StartMixJob(zx::time device_ref_time) override {
     return std::nullopt;
   }
-  void WriteMixOutput(int64_t start, int64_t length, const float* payload) override {}
+  void WriteMixOutput(int64_t start, int64_t length, const float* buffer) override {}
   void FinishMixJob(const AudioOutput::FrameSpan& span) override {}
   zx::duration MixDeadline() const override { return zx::msec(10); }
 

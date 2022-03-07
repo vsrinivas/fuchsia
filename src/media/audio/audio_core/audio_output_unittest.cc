@@ -8,7 +8,6 @@
 
 #include "src/media/audio/audio_core/audio_device_manager.h"
 #include "src/media/audio/audio_core/loudness_transform.h"
-#include "src/media/audio/audio_core/mix_profile_config.h"
 #include "src/media/audio/audio_core/testing/fake_audio_driver.h"
 #include "src/media/audio/audio_core/testing/fake_audio_renderer.h"
 #include "src/media/audio/audio_core/testing/fake_stream.h"
@@ -35,13 +34,14 @@ class TestOutputPipeline : public OutputPipeline {
         audio_clock_(clock_factory->CreateClientFixed(clock::AdjustableCloneOfMonotonic())) {}
 
   void EnqueueBuffer(Fixed start_frame, int64_t frame_count, void* payload) {
-    buffers_.emplace_back(start_frame, frame_count, payload, true, StreamUsageMask(),
-                          Gain::kUnityGainDb);
+    buffers_.push_back(
+        MakeCachedBuffer(start_frame, frame_count, payload, StreamUsageMask(), Gain::kUnityGainDb)
+            .value());
   }
 
   // |media::audio::ReadableStream|
-  std::optional<ReadableStream::Buffer> ReadLock(ReadLockContext& ctx, Fixed frame,
-                                                 int64_t frame_count) override {
+  std::optional<ReadableStream::Buffer> ReadLockImpl(ReadLockContext& ctx, Fixed frame,
+                                                     int64_t frame_count) override {
     if (buffers_.empty()) {
       return std::nullopt;
     }
@@ -49,7 +49,7 @@ class TestOutputPipeline : public OutputPipeline {
     buffers_.pop_front();
     return buffer;
   }
-  void Trim(Fixed frame) override {}
+  void TrimImpl(Fixed frame) override {}
   TimelineFunctionSnapshot ref_time_to_frac_presentation_frame() const override {
     return TimelineFunctionSnapshot{
         .timeline_function = kDriverRefPtsToFractionalFrames,
@@ -103,7 +103,7 @@ class TestAudioOutput : public AudioOutput {
  public:
   TestAudioOutput(ThreadingModel* threading_model, DeviceRegistry* registry,
                   LinkMatrix* link_matrix, std::shared_ptr<AudioClockFactory> clock_factory)
-      : AudioOutput("", MixProfileConfig{}, threading_model, registry, link_matrix, clock_factory,
+      : AudioOutput("", threading_model, registry, link_matrix, clock_factory,
                     nullptr /* EffectsLoaderV2 */, std::make_unique<StubDriver>(this)) {
     SetPresentationDelay(StubDriver::kSafeWriteDelayDuration);
   }
@@ -119,11 +119,11 @@ class TestAudioOutput : public AudioOutput {
     OBTAIN_EXECUTION_DOMAIN_TOKEN(token, &mix_domain());
     AudioOutput::Process();
   }
-  std::unique_ptr<OutputPipeline> CreateOutputPipeline(
+  std::shared_ptr<OutputPipeline> CreateOutputPipeline(
       const PipelineConfig& config, const VolumeCurve& volume_curve, size_t max_block_size_frames,
       TimelineFunction device_reference_clock_to_fractional_frame, AudioClock& ref_clock) override {
     if (output_pipeline_) {
-      return std::move(output_pipeline_);
+      return output_pipeline_;
     }
     return AudioOutput::CreateOutputPipeline(config, volume_curve, max_block_size_frames,
                                              device_reference_clock_to_fractional_frame, ref_clock);
@@ -147,8 +147,8 @@ class TestAudioOutput : public AudioOutput {
     finish_mix_delegate_ = std::move(delegate);
   }
 
-  void set_output_pipeline(std::unique_ptr<OutputPipeline> output_pipeline) {
-    output_pipeline_ = std::move(output_pipeline);
+  void set_output_pipeline(std::shared_ptr<OutputPipeline> output_pipeline) {
+    output_pipeline_ = output_pipeline;
   }
 
   // |AudioOutput|
@@ -181,7 +181,7 @@ class TestAudioOutput : public AudioOutput {
   StartMixDelegate start_mix_delegate_;
   WriteMixDelegate write_mix_delegate_;
   FinishMixDelegate finish_mix_delegate_;
-  std::unique_ptr<OutputPipeline> output_pipeline_;
+  std::shared_ptr<OutputPipeline> output_pipeline_;
 };
 
 class AudioOutputTest : public testing::ThreadingModelFixture {
@@ -280,8 +280,8 @@ TEST_F(AudioOutputTest, ProcessRequestsSilenceIfNoSourceBuffer) {
                     .take_value();
 
   // Use an output pipeline that will always return nullopt from ReadLock.
-  auto pipeline_owned = std::make_unique<TestOutputPipeline>(format, context().clock_factory());
-  audio_output_->set_output_pipeline(std::move(pipeline_owned));
+  auto pipeline = std::make_shared<TestOutputPipeline>(format, context().clock_factory());
+  audio_output_->set_output_pipeline(pipeline);
   SetupMixTask();
 
   // Return some valid, non-silent frame range from StartMixJob.
@@ -326,9 +326,8 @@ TEST_F(AudioOutputTest, ProcessSmallReadLocks) {
           .take_value();
 
   // Use an output pipeline that will always return nullopt from ReadLock.
-  auto pipeline_owned = std::make_unique<TestOutputPipeline>(format, context().clock_factory());
-  auto pipeline = pipeline_owned.get();
-  audio_output_->set_output_pipeline(std::move(pipeline_owned));
+  auto pipeline = std::make_shared<TestOutputPipeline>(format, context().clock_factory());
+  audio_output_->set_output_pipeline(pipeline);
   SetupMixTask();
 
   static constexpr int64_t kBufferFrames = 10;
@@ -388,9 +387,8 @@ TEST_F(AudioOutputTest, ProcessReadLockWithGap) {
           .take_value();
 
   // Use an output pipeline that will always return nullopt from ReadLock.
-  auto pipeline_owned = std::make_unique<TestOutputPipeline>(format, context().clock_factory());
-  auto pipeline = pipeline_owned.get();
-  audio_output_->set_output_pipeline(std::move(pipeline_owned));
+  auto pipeline = std::make_shared<TestOutputPipeline>(format, context().clock_factory());
+  audio_output_->set_output_pipeline(pipeline);
   SetupMixTask();
 
   static constexpr int64_t kBufferOffset = 5;
@@ -494,13 +492,18 @@ TEST_F(AudioOutputTest, UpdateOutputPipeline) {
                                    .frames_per_second = 48000,
                                })
                     .take_value();
-  auto default_stream = std::make_shared<testing::FakeStream>(format, context().clock_factory());
   const auto stream_usage = StreamUsage::WithRenderUsage(RenderUsage::MEDIA);
-  default_stream->set_usage_mask({stream_usage});
-  default_stream->set_gain_db(0.0);
-  default_stream->timeline_function()->Update(TimelineFunction(
-      TimelineRate(Fixed(format.frames_per_second()).raw_value(), zx::sec(1).to_nsecs())));
-  pipeline->AddInput(default_stream, stream_usage);
+
+  auto make_fake_stream = [this, format, stream_usage]() {
+    auto fs = std::make_shared<testing::FakeStream>(format, context().clock_factory());
+    fs->set_usage_mask({stream_usage});
+    fs->set_gain_db(0.0);
+    fs->timeline_function()->Update(TimelineFunction(
+        TimelineRate(Fixed(format.frames_per_second()).raw_value(), zx::sec(1).to_nsecs())));
+    return fs;
+  };
+
+  pipeline->AddInput(make_fake_stream(), stream_usage);
 
   {
     auto buf = pipeline->ReadLock(rlctx, Fixed(0), 48);
@@ -568,7 +571,7 @@ TEST_F(AudioOutputTest, UpdateOutputPipeline) {
   RunLoopUntilIdle();
   EXPECT_TRUE(updated_device_profile);
   pipeline = audio_output_->output_pipeline();
-  pipeline->AddInput(default_stream, stream_usage);
+  pipeline->AddInput(make_fake_stream(), stream_usage);
 
   {
     auto buf = pipeline->ReadLock(rlctx, Fixed(0), 48);

@@ -24,6 +24,9 @@ constexpr zx::duration kPaddingForUnspecifiedRefTime = zx::msec(20);
 // than this that are outstanding at the same time will be disconnected.
 constexpr size_t kMaxPacketAllocatorSlabs = 4;
 
+// Assert our implementation-defined limit is compatible with the FIDL limit.
+static_assert(fuchsia::media::MAX_FRAMES_PER_RENDERER_PACKET <= Fixed::Max().Floor());
+
 }  // namespace
 
 BaseRenderer::BaseRenderer(
@@ -101,8 +104,9 @@ fpromise::result<std::shared_ptr<ReadableStream>, zx_status_t> BaseRenderer::Ini
   auto queue = std::make_shared<PacketQueue>(*format(), reference_clock_to_fractional_frames_,
                                              std::move(clock_for_packet_queue));
 
-  queue->SetUnderflowReporter([this](zx::time start_time, zx::time stop_time) {
-    reporter_->Underflow(start_time, stop_time);
+  queue->SetUnderflowReporter([this](zx::duration duration) {
+    auto now = zx::clock::get_monotonic();
+    reporter_->Underflow(now - duration, now);
   });
   auto stream_usage = usage();
   FX_DCHECK(stream_usage) << "A renderer cannot be linked without a usage";

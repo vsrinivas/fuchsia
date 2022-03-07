@@ -26,7 +26,8 @@ const Format kDefaultFormat =
         .take_value();
 
 // 10ms @ 48khz
-const uint32_t kRingBufferFrameCount = 480;
+const int64_t kRingBufferFrameCount = 480;
+const auto kRingBufferFrameDuration = zx::msec(10);
 
 class InputRingBufferTest : public ::testing::Test {
  protected:
@@ -38,7 +39,7 @@ class InputRingBufferTest : public ::testing::Test {
 
     auto endpoints = BaseRingBuffer::AllocateSoftwareBuffer(
         format, std::move(timeline_function), reference_clock(), kRingBufferFrameCount,
-        [this]() { return safe_read_frame_; });
+        [this]() { return safe_write_frame_; });
     ring_buffer_ = endpoints.reader;
     ASSERT_TRUE(ring_buffer());
   }
@@ -49,7 +50,7 @@ class InputRingBufferTest : public ::testing::Test {
   // Advance to the given time.
   void Advance(zx::time ref_time) {
     auto pts_to_frac_frame = ring_buffer_->ref_time_to_frac_presentation_frame().timeline_function;
-    safe_read_frame_ = Fixed::FromRaw(pts_to_frac_frame.Apply(ref_time.get())).Floor();
+    safe_write_frame_ = Fixed::FromRaw(pts_to_frac_frame.Apply(ref_time.get())).Floor();
   }
 
  private:
@@ -58,7 +59,7 @@ class InputRingBufferTest : public ::testing::Test {
   std::unique_ptr<AudioClock> audio_clock_ = std::make_unique<AudioClock>(
       AudioClock::DeviceFixed(clock::CloneOfMonotonic(), AudioClock::kMonotonicDomain));
 
-  int64_t safe_read_frame_ = -1;
+  int64_t safe_write_frame_ = std::numeric_limits<int64_t>::min();
 };
 
 class OutputRingBufferTest : public ::testing::Test {
@@ -93,6 +94,8 @@ class OutputRingBufferTest : public ::testing::Test {
   int64_t safe_write_frame_ = 0;
 };
 
+}  // namespace
+
 TEST_F(InputRingBufferTest, ReadEmptyRing) {
   Advance(zx::time(0));
   auto buffer = ring_buffer()->ReadLock(rlctx, Fixed(0), 1);
@@ -120,8 +123,8 @@ TEST_F(InputRingBufferTest, ReadFullyAvailableRegion) {
   Advance(zx::time(0) + zx::msec(1));
   auto buffer = ring_buffer()->ReadLock(rlctx, Fixed(0), 48);
   ASSERT_TRUE(buffer);
-  EXPECT_EQ(buffer->start().Floor(), 0u);
-  EXPECT_EQ(buffer->length(), 48u);
+  EXPECT_EQ(buffer->start().Floor(), 0);
+  EXPECT_EQ(buffer->length(), 48);
 }
 
 TEST_F(InputRingBufferTest, ReadPartialRegion) {
@@ -130,8 +133,8 @@ TEST_F(InputRingBufferTest, ReadPartialRegion) {
   Advance(zx::time(0) + zx::msec(1));
   auto buffer = ring_buffer()->ReadLock(rlctx, Fixed(0), 96);
   ASSERT_TRUE(buffer);
-  EXPECT_EQ(buffer->start().Floor(), 0u);
-  EXPECT_EQ(buffer->length(), 48u);
+  EXPECT_EQ(buffer->start().Floor(), 0);
+  EXPECT_EQ(buffer->length(), 48);
 }
 
 TEST_F(InputRingBufferTest, SkipExpiredFrames) {
@@ -140,8 +143,8 @@ TEST_F(InputRingBufferTest, SkipExpiredFrames) {
   Advance(zx::time(0) + zx::msec(11));
   auto buffer = ring_buffer()->ReadLock(rlctx, Fixed(0), 96);
   ASSERT_TRUE(buffer);
-  EXPECT_EQ(buffer->start().Floor(), 48u);
-  EXPECT_EQ(buffer->length(), 48u);
+  EXPECT_EQ(buffer->start().Floor(), 48);
+  EXPECT_EQ(buffer->length(), 48);
 }
 
 TEST_F(InputRingBufferTest, ReadAfterTruncateBufferAtEndOfTheRing) {
@@ -150,29 +153,55 @@ TEST_F(InputRingBufferTest, ReadAfterTruncateBufferAtEndOfTheRing) {
   // ring again. Test our buffer is truncated for the first 48 frames requested at the end of the
   // ring.
   Advance(zx::time(0) + zx::msec(11));
-  auto buffer = ring_buffer()->ReadLock(rlctx, Fixed(432), 96);
-  ASSERT_TRUE(buffer);
-  EXPECT_EQ(buffer->start().Floor(), 432u);
-  EXPECT_EQ(buffer->length(), 48u);
+  {
+    auto buffer = ring_buffer()->ReadLock(rlctx, Fixed(432), 96);
+    ASSERT_TRUE(buffer);
+    EXPECT_EQ(buffer->start().Floor(), 432);
+    EXPECT_EQ(buffer->length(), 48);
+  }
 
   // Now read that last 48 frames at the start of the ring again.
-  buffer = ring_buffer()->ReadLock(rlctx, Fixed(480), 48);
-  ASSERT_TRUE(buffer);
-  EXPECT_EQ(buffer->start().Floor(), 480u);
-  EXPECT_EQ(buffer->length(), 48u);
+  {
+    auto buffer = ring_buffer()->ReadLock(rlctx, Fixed(480), 48);
+    ASSERT_TRUE(buffer);
+    EXPECT_EQ(buffer->start().Floor(), 480);
+    EXPECT_EQ(buffer->length(), 48);
+  }
 }
 
-TEST_F(InputRingBufferTest, ReadNegativeFrame) {
-  Advance(zx::time(0));
-  auto buffer = ring_buffer()->ReadLock(rlctx, Fixed(-10), 10);
+TEST_F(InputRingBufferTest, ReadNegativeFrames) {
+  // Allow reading [-2*RingBufFrames, -RingBufFrames).
+  Advance(zx::time(0) - kRingBufferFrameDuration);
+
+  // Request [-20, -10) but shifted down by kRingBufferFrameCount to test modulo.
+  const int64_t kRingBufferFrameCount = ring_buffer()->frames();
+  auto buffer = ring_buffer()->ReadLock(rlctx, Fixed(-kRingBufferFrameCount - 20), 10);
   ASSERT_TRUE(buffer);
 
   auto rb_start_address = reinterpret_cast<uintptr_t>(ring_buffer()->virt());
   auto buffer_address = reinterpret_cast<uintptr_t>(buffer->payload());
   EXPECT_EQ(buffer_address,
-            rb_start_address + ((ring_buffer()->frames() - 10) * kDefaultFormat.bytes_per_frame()));
-  EXPECT_EQ(buffer->start().Floor(), -10);
-  EXPECT_EQ(buffer->length(), 10u);
+            rb_start_address + (kRingBufferFrameCount - 20) * kDefaultFormat.bytes_per_frame());
+  EXPECT_EQ(buffer->start().Floor(), -kRingBufferFrameCount - 20);
+  EXPECT_EQ(buffer->length(), 10);
+}
+
+TEST_F(InputRingBufferTest, ReadNegativeThroughPositiveFrame) {
+  // Allow reading [-RingBufFrames, 0).
+  Advance(zx::time(0));
+
+  // Request [-5, 5).
+  const int64_t kRingBufferFrameCount = ring_buffer()->frames();
+  auto buffer = ring_buffer()->ReadLock(rlctx, Fixed(-5), 10);
+  ASSERT_TRUE(buffer);
+
+  // Should return [-5, 0) since the ring buffer wraps at 0.
+  auto rb_start_address = reinterpret_cast<uintptr_t>(ring_buffer()->virt());
+  auto buffer_address = reinterpret_cast<uintptr_t>(buffer->payload());
+  EXPECT_EQ(buffer_address,
+            rb_start_address + (kRingBufferFrameCount - 5) * kDefaultFormat.bytes_per_frame());
+  EXPECT_EQ(buffer->start().Floor(), -5);
+  EXPECT_EQ(buffer->length(), 5);
 }
 
 TEST_F(InputRingBufferTest, ReadFromDup) {
@@ -257,5 +286,4 @@ TEST_F(OutputRingBufferTest, WriteAfterTruncateBufferAtEndOfTheRing) {
   EXPECT_EQ(buffer->length(), 48);
 }
 
-}  // namespace
 }  // namespace media::audio

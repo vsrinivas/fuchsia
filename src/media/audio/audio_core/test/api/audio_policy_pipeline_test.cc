@@ -13,14 +13,20 @@
 
 namespace media::audio::test {
 
+namespace {
 constexpr auto kSampleFormat = fuchsia::media::AudioSampleFormat::SIGNED_16;
 constexpr int32_t kSampleRate = 8000;
 constexpr int kChannelCount = 1;
-static const auto kFormat = Format::Create<kSampleFormat>(kChannelCount, kSampleRate).value();
+const auto kFormat = Format::Create<kSampleFormat>(kChannelCount, kSampleRate).value();
 
 constexpr int kRingBufferFrames = kSampleRate;  // 1s
-static const int kRingBufferSamples = kRingBufferFrames * kFormat.channels();
-static const int kRingBufferBytes = kRingBufferFrames * kFormat.bytes_per_frame();
+const int kRingBufferSamples = kRingBufferFrames * kFormat.channels();
+const int kRingBufferBytes = kRingBufferFrames * kFormat.bytes_per_frame();
+
+// Extra delay in Play() calls to account for scheduling latency.
+// This is intentionally set higher than likely necessary to reduce the chance of flakes.
+constexpr auto kPlayLeadTimeTolerance = zx::msec(30);
+}  // namespace
 
 //
 // AudioAdminTest
@@ -59,11 +65,11 @@ class AudioAdminTest : public HermeticAudioTest {
         fuchsia::media::LoopbackAudioCapturerConfiguration()));
   }
 
-  zx_duration_t GetMinLeadTime(std::initializer_list<AudioRendererShim<kSampleFormat>*> renderers);
+  std::pair<zx::time, zx::time> ComputePlayAndCaptureTimes(
+      std::initializer_list<AudioRendererShim<kSampleFormat>*> renderers);
 
   // Expect that the given packet contains nothing but the given samples.
-  void ExpectPacketContains(std::string label, const fuchsia::media::StreamPacket& packet,
-                            const AudioBuffer<kSampleFormat>& payload,
+  void ExpectPacketContains(std::string label, const AudioBuffer<kSampleFormat>& packet,
                             int64_t expected_frames_per_packet, int16_t expected_data);
 
   void TestCaptureMuteRender(bool set_usage_to_disable);
@@ -136,36 +142,42 @@ AudioCapturerShim<kSampleFormat>* AudioAdminTest::SetUpCapturer(
   return c;
 }
 
-zx_duration_t AudioAdminTest::GetMinLeadTime(
+std::pair<zx::time, zx::time> AudioAdminTest::ComputePlayAndCaptureTimes(
     std::initializer_list<AudioRendererShim<kSampleFormat>*> renderers) {
-  zx_duration_t max_min_lead_time = 0;
+  // Compute the largest lead time for all renderers.
+  zx::duration lead_time;
   for (auto renderer : renderers) {
     // Get the minimum duration after submitting a packet to when we can start
     // capturing what we sent on the loopback interface.  We use the longest
     // latency of any of the renderers, but they should all have the same value.
-    max_min_lead_time = std::max(max_min_lead_time, renderer->min_lead_time().get());
+    lead_time = std::max(lead_time, renderer->min_lead_time());
   }
-  return max_min_lead_time;
+
+  // The play time is now + lead time + some tolerance to account for the delay between now
+  // and when the Play call actually runs inside audio_core.
+  auto play_time = zx::clock::get_monotonic() + lead_time + kPlayLeadTimeTolerance;
+
+  // We can start capturing after the output pipeline has completed one mix job (10ms by default).
+  // Our renderer's playback buffers contain the same sample repeated over-and-over for a long
+  // period of time (much longer than one mix job) so as long as the capturer wakes up shortly after
+  // this capture_time, there should be plenty of time to capture the rendered audio.
+  auto capture_time = play_time + zx::msec(10);
+
+  return std::make_pair(play_time, capture_time);
 }
 
 void AudioAdminTest::ExpectPacketContains(std::string label,
-                                          const fuchsia::media::StreamPacket& packet,
-                                          const AudioBuffer<kSampleFormat>& payload,
+                                          const AudioBuffer<kSampleFormat>& packet,
                                           int64_t expected_frames_per_packet,
                                           int16_t expected_data) {
-  ASSERT_EQ(static_cast<int64_t>(packet.payload_size),
-            expected_frames_per_packet * kFormat.bytes_per_frame())
+  ASSERT_EQ(packet.NumFrames(), expected_frames_per_packet)
       << "unexpected frame count for packet " << label;
 
   for (int64_t f = 0; f < expected_frames_per_packet; f++) {
     for (int32_t c = 0; c < kFormat.channels(); c++) {
-      int64_t offset =
-          (packet.payload_offset + f * kFormat.bytes_per_frame() + c * kFormat.bytes_per_sample()) %
-          kRingBufferBytes;
-      int64_t sample = offset / kFormat.bytes_per_sample();
-      ASSERT_EQ(fxl::StringPrintf("0x%x", payload.samples()[sample]),
+      ASSERT_EQ(fxl::StringPrintf("0x%x", packet.SampleAt(f, c)),
                 fxl::StringPrintf("0x%x", expected_data))
-          << "unexpected value at sample[" << sample << "] for packet " << label;
+          << "unexpected value at sample[frame=" << f << ",chan=" << c << "] for packet " << label;
     }
   }
 }
@@ -175,67 +187,49 @@ void AudioAdminTest::ExpectPacketContains(std::string label,
 // Creates a single output stream and a loopback capture and verifies it gets
 // back what it puts in.
 TEST_F(AudioAdminTest, SingleRenderStream) {
-  // Setup a policy rule that MEDIA being active will not affect a BACKGROUND
-  // capture.
+  // Setup a policy rule that MEDIA being active will not affect a BACKGROUND capture.
   audio_core_->ResetInteractions();
   audio_core_->SetInteraction(
       fuchsia::media::Usage::WithRenderUsage(fuchsia::media::AudioRenderUsage::MEDIA),
       fuchsia::media::Usage::WithCaptureUsage(fuchsia::media::AudioCaptureUsage::BACKGROUND),
       fuchsia::media::Behavior::NONE);
 
-  fuchsia::media::StreamPacket packet, captured;
-
-  // SetUp playback stream
   auto renderer = SetUpRenderer(fuchsia::media::AudioRenderUsage::MEDIA, kPlaybackData1);
   auto capturer = SetUpLoopbackCapturer();
 
-  // Get the minimum duration after submitting a packet to when we can start
-  // capturing what we sent on the loopback interface
-  zx_duration_t sleep_duration = GetMinLeadTime({renderer});
-  ASSERT_NE(sleep_duration, 0) << "Failed to get MinLeadTime";
+  renderer->fidl()->SendPacketNoReply({
+      .payload_offset = 0,
+      .payload_size = static_cast<uint64_t>(kRingBufferBytes),
+  });
 
-  packet.payload_offset = 0;
-  packet.payload_size = kRingBufferBytes;
-
-  renderer->fidl()->SendPacketNoReply(packet);
-
-  int64_t ref_time_received = -1;
-  int64_t media_time_received = -1;
-
-  // Start playing right now, so that after we've delayed at least 1 leadtime,
-  // we should have mixed audio available for capture.  Our playback is sized
-  // to be much much larger than our capture to prevent test flakes.
-  renderer->fidl()->Play(zx::clock::get_monotonic().get(), 0,
-                         AddCallback("Play", [&ref_time_received, &media_time_received](
-                                                 int64_t ref_time, int64_t media_time) {
-                           ref_time_received = ref_time;
-                           media_time_received = media_time;
+  // Start rendering.
+  auto [play_time, capture_time] = ComputePlayAndCaptureTimes({renderer});
+  renderer->fidl()->Play(play_time.get(), 0,
+                         AddCallback("Play", [](int64_t ref_time, int64_t media_time) {
+                           EXPECT_EQ(media_time, 0);
+                           EXPECT_GE(ref_time, 0);
                          }));
   ExpectCallbacks();
 
-  // We expect that media_time 0 played back at some point after the 'zero'
-  // time on the system.
-  EXPECT_EQ(media_time_received, 0);
-  EXPECT_GE(ref_time_received, 0);
-
   // Give the playback some time to get mixed.
-  zx_nanosleep(zx_deadline_after(sleep_duration));
+  zx_nanosleep(capture_time.get());
 
-  // Add a callback for when we get our captured packet.
+  // Capture 10 frames of audio.
+  std::optional<AudioBuffer<kSampleFormat>> captured;
   capturer->fidl().events().OnPacketProduced =
-      AddCallback("OnPacketProduced", [&captured](fuchsia::media::StreamPacket packet) {
+      AddCallback("OnPacketProduced", [&captured, capturer](fuchsia::media::StreamPacket packet) {
         // We only care about the first set of captured samples
-        if (captured.payload_size == 0) {
-          captured = packet;
+        if (captured == std::nullopt) {
+          captured = capturer->SnapshotPacket(packet);
         }
       });
 
-  // Capture 10 frames of audio.
   capturer->fidl()->StartAsyncCapture(10);
   ExpectCallbacks();
 
   // Check that we got 10 frames as we expected.
-  ExpectPacketContains("captured", captured, capturer->SnapshotPayload(), 10, kPlaybackData1);
+  ASSERT_NE(captured, std::nullopt);
+  ExpectPacketContains("captured", *captured, 10, kPlaybackData1);
 }
 
 // RenderMuteCapture
@@ -250,57 +244,41 @@ TEST_F(AudioAdminTest, RenderMuteCapture) {
       fuchsia::media::Usage::WithCaptureUsage(fuchsia::media::AudioCaptureUsage::BACKGROUND),
       fuchsia::media::Behavior::MUTE);
 
-  fuchsia::media::StreamPacket packet, captured;
-
-  // SetUp playback stream
   auto renderer = SetUpRenderer(fuchsia::media::AudioRenderUsage::SYSTEM_AGENT, kPlaybackData1);
   auto capturer = SetUpCapturer(fuchsia::media::AudioCaptureUsage::BACKGROUND);
 
-  // Get the minimum duration after submitting a packet to when we can start
-  // capturing what we sent on the loopback interface
-  zx_duration_t sleep_duration = GetMinLeadTime({renderer});
-  ASSERT_NE(sleep_duration, 0) << "Failed to get MinLeadTime";
+  renderer->fidl()->SendPacketNoReply({
+      .payload_offset = 0,
+      .payload_size = static_cast<uint64_t>(kRingBufferBytes),
+  });
 
-  packet.payload_offset = 0;
-  packet.payload_size = kRingBufferBytes;
-
-  renderer->fidl()->SendPacketNoReply(packet);
-
-  int64_t ref_time_received = -1;
-  int64_t media_time_received = -1;
-
-  // Start playing right now, so that after we've delayed at least 1 leadtime,
-  // we should have mixed audio available for capture.  Our playback is sized
-  // to be much much larger than our capture to prevent test flakes.
-  renderer->fidl()->Play(zx::clock::get_monotonic().get(), 0,
-                         AddCallback("Play", [&ref_time_received, &media_time_received](
-                                                 int64_t ref_time, int64_t media_time) {
-                           ref_time_received = ref_time;
-                           media_time_received = media_time;
+  // Start rendering.
+  auto [play_time, capture_time] = ComputePlayAndCaptureTimes({renderer});
+  renderer->fidl()->Play(play_time.get(), 0,
+                         AddCallback("Play", [](int64_t ref_time, int64_t media_time) {
+                           EXPECT_EQ(media_time, 0);
+                           EXPECT_GE(ref_time, 0);
                          }));
   ExpectCallbacks();
 
-  // We expect that media_time 0 played back at some point after the 'zero'
-  // time on the system.
-  EXPECT_EQ(media_time_received, 0);
-  EXPECT_GE(ref_time_received, 0);
-
   // Give the playback some time to get mixed.
-  zx_nanosleep(zx_deadline_after(sleep_duration));
+  zx_nanosleep(capture_time.get());
 
   // Capture 10 samples of audio.
+  std::optional<AudioBuffer<kSampleFormat>> captured;
   capturer->fidl().events().OnPacketProduced =
-      AddCallback("OnPacketProduced", [&captured](fuchsia::media::StreamPacket packet) {
+      AddCallback("OnPacketProduced", [&captured, capturer](fuchsia::media::StreamPacket packet) {
         // We only care about the first set of captured samples
-        if (captured.payload_size == 0) {
-          captured = packet;
+        if (captured == std::nullopt) {
+          captured = capturer->SnapshotPacket(packet);
         }
       });
   capturer->fidl()->StartAsyncCapture(10);
   ExpectCallbacks();
 
   // Check that we got 10 samples as we expected.
-  ExpectPacketContains("captured", captured, capturer->SnapshotPayload(), 10, 0x0);
+  ASSERT_NE(captured, std::nullopt);
+  ExpectPacketContains("captured", *captured, 10, 0x0);
 }
 
 // CaptureMuteRender
@@ -318,9 +296,9 @@ void AudioAdminTest::TestCaptureMuteRender(bool set_usage_to_disable) {
       fuchsia::media::Usage::WithRenderUsage(fuchsia::media::AudioRenderUsage::BACKGROUND),
       fuchsia::media::Behavior::MUTE);
 
-  // SetUp playback stream
   auto renderer = SetUpRenderer(fuchsia::media::AudioRenderUsage::BACKGROUND, kPlaybackData1);
   auto capturer = SetUpCapturer(fuchsia::media::AudioCaptureUsage::SYSTEM_AGENT);
+  auto loopback_capturer = SetUpLoopbackCapturer();
 
   // Immediately start this capturer so that it impacts policy.
   capturer->fidl()->StartAsyncCapture(10);
@@ -328,54 +306,33 @@ void AudioAdminTest::TestCaptureMuteRender(bool set_usage_to_disable) {
     capturer->fidl()->SetUsage(fuchsia::media::AudioCaptureUsage::BACKGROUND);
   }
 
-  auto loopback_capturer = SetUpLoopbackCapturer();
+  renderer->fidl()->SendPacketNoReply({
+      .payload_offset = 0,
+      .payload_size = static_cast<uint64_t>(kRingBufferBytes),
+  });
 
-  // Get the minimum duration after submitting a packet to when we can start
-  // capturing what we sent on the loopback interface
-  zx_duration_t sleep_duration = GetMinLeadTime({renderer});
-  ASSERT_NE(sleep_duration, 0) << "Failed to get MinLeadTime";
-
-  {
-    fuchsia::media::StreamPacket packet;
-    packet.payload_offset = 0;
-    packet.payload_size = kRingBufferBytes;
-    renderer->fidl()->SendPacketNoReply(packet);
-  }
-
-  int64_t ref_time_received = -1;
-  int64_t media_time_received = -1;
-
-  // Start playing right now, so that after we've delayed at least 1 leadtime,
-  // we should have mixed audio available for capture.  Our playback is sized
-  // to be much much larger than our capture to prevent test flakes.
-  renderer->fidl()->Play(zx::clock::get_monotonic().get(), 0,
-                         AddCallback("Play", [&ref_time_received, &media_time_received](
-                                                 int64_t ref_time, int64_t media_time) {
-                           ref_time_received = ref_time;
-                           media_time_received = media_time;
+  // Start rendering.
+  auto [play_time, capture_time] = ComputePlayAndCaptureTimes({renderer});
+  renderer->fidl()->Play(play_time.get(), 0,
+                         AddCallback("Play", [](int64_t ref_time, int64_t media_time) {
+                           EXPECT_EQ(media_time, 0);
+                           EXPECT_GE(ref_time, 0);
                          }));
   ExpectCallbacks();
 
-  // We expect that media_time 0 played back at some point after the 'zero'
-  // time on the system.
-  EXPECT_EQ(media_time_received, 0);
-  EXPECT_GE(ref_time_received, 0);
-
   // Give the playback some time to get mixed.
-  zx_nanosleep(zx_deadline_after(sleep_duration));
+  zx_nanosleep(capture_time.get());
 
   // Add a callback for when we get our captured packet.
-  fuchsia::media::StreamPacket loopback_captured;
-  bool produced_loopback_packet = false;
+  std::optional<AudioBuffer<kSampleFormat>> loopback_captured;
   loopback_capturer->fidl().events().OnPacketProduced =
-      AddCallback("OnPacketProduced", [&loopback_captured, &produced_loopback_packet,
-                                       ref_time_received](fuchsia::media::StreamPacket packet) {
-        // We only care about the first set of captured samples
-        if (packet.pts > ref_time_received && loopback_captured.payload_size == 0) {
-          loopback_captured = packet;
-          produced_loopback_packet = true;
-        }
-      });
+      AddCallback("OnPacketProduced",
+                  [&loopback_captured, loopback_capturer](fuchsia::media::StreamPacket packet) {
+                    // We only care about the first set of loopback_captured samples
+                    if (loopback_captured == std::nullopt) {
+                      loopback_captured = loopback_capturer->SnapshotPacket(packet);
+                    }
+                  });
 
   // Capture 10 samples of audio.
   loopback_capturer->fidl()->StartAsyncCapture(10);
@@ -383,8 +340,7 @@ void AudioAdminTest::TestCaptureMuteRender(bool set_usage_to_disable) {
 
   // Check that we got 10 samples as we expected.
   int16_t expected_data = set_usage_to_disable ? kPlaybackData1 : 0x0;
-  ExpectPacketContains("loopback_captured", loopback_captured, loopback_capturer->SnapshotPayload(),
-                       10, expected_data);
+  ExpectPacketContains("loopback_captured", *loopback_captured, 10, expected_data);
 }
 
 TEST_F(AudioAdminTest, CaptureMuteRender) { TestCaptureMuteRender(false); }
@@ -404,65 +360,50 @@ TEST_F(AudioAdminTest, DualRenderStreamMix) {
       fuchsia::media::Usage::WithCaptureUsage(fuchsia::media::AudioCaptureUsage::BACKGROUND),
       fuchsia::media::Behavior::NONE);
 
-  // SetUp playback streams
   auto renderer1 = SetUpRenderer(fuchsia::media::AudioRenderUsage::MEDIA, kPlaybackData1);
   auto renderer2 = SetUpRenderer(fuchsia::media::AudioRenderUsage::MEDIA, kPlaybackData2);
-
-  // SetUp loopback capture
   auto capturer = SetUpLoopbackCapturer();
 
-  // Get the minimum duration after submitting a packet to when we can start
-  // capturing what we sent on the loopback interface.
-  zx_duration_t sleep_duration = GetMinLeadTime({renderer1, renderer2});
-  ASSERT_NE(sleep_duration, 0) << "Failed to get MinLeadTime";
-
   for (auto renderer : {renderer1, renderer2}) {
-    fuchsia::media::StreamPacket packet;
-    packet.payload_offset = 0;
-    packet.payload_size = kRingBufferBytes;
-    renderer->fidl()->SendPacketNoReply(packet);
+    renderer->fidl()->SendPacketNoReply({
+        .payload_offset = 0,
+        .payload_size = static_cast<uint64_t>(kRingBufferBytes),
+    });
   }
 
-  int64_t ref_time_received = -1;
-  int64_t media_time_received = -1;
-
-  // Start playing right now, so that after we've delayed at least 1 leadtime,
-  // we should have mixed audio available for capture.  Our playback is sized
-  // to be much much larger than our capture to prevent test flakes.
-  auto playat = zx::clock::get_monotonic().get();
-  renderer1->fidl()->PlayNoReply(playat, 0);
-  // Only get the callback for the second renderer.
-  renderer2->fidl()->Play(playat, 0,
-                          AddCallback("Play", [&ref_time_received, &media_time_received](
-                                                  int64_t ref_time, int64_t media_time) {
-                            ref_time_received = ref_time;
-                            media_time_received = media_time;
+  // Start rendering.
+  auto [play_time, capture_time] = ComputePlayAndCaptureTimes({renderer1, renderer2});
+  renderer1->fidl()->Play(play_time.get(), 0,
+                          AddCallback("Play1", [](int64_t ref_time, int64_t media_time) {
+                            EXPECT_EQ(media_time, 0);
+                            EXPECT_GE(ref_time, 0);
+                          }));
+  renderer2->fidl()->Play(play_time.get(), 0,
+                          AddCallback("Play2", [](int64_t ref_time, int64_t media_time) {
+                            EXPECT_EQ(media_time, 0);
+                            EXPECT_GE(ref_time, 0);
                           }));
   ExpectCallbacks();
 
-  // We expect that media_time 0 played back at some point after the 'zero'
-  // time on the system.
-  EXPECT_EQ(media_time_received, 0);
-  EXPECT_GT(ref_time_received, 0);
-
   // Give the playback some time to get mixed.
-  zx_nanosleep(zx_deadline_after(sleep_duration));
+  zx_nanosleep(capture_time.get());
 
   // Capture 10 samples of audio.
-  fuchsia::media::StreamPacket captured;
+  std::optional<AudioBuffer<kSampleFormat>> captured;
   capturer->fidl().events().OnPacketProduced =
-      AddCallback("OnPacketProduced", [&captured](fuchsia::media::StreamPacket packet) {
+      AddCallback("OnPacketProduced", [&captured, capturer](fuchsia::media::StreamPacket packet) {
         // We only care about the first set of captured samples
-        if (captured.payload_size == 0) {
-          captured = packet;
+        if (captured == std::nullopt) {
+          captured = capturer->SnapshotPacket(packet);
         }
       });
+
   capturer->fidl()->StartAsyncCapture(10);
   ExpectCallbacks();
 
   // Check that we got 10 samples as we expected.
-  ExpectPacketContains("captured", captured, capturer->SnapshotPayload(), 10,
-                       kPlaybackData1 + kPlaybackData2);
+  ASSERT_NE(captured, std::nullopt);
+  ExpectPacketContains("captured", *captured, 10, kPlaybackData1 + kPlaybackData2);
 }
 
 // DualRenderStreamDucking
@@ -487,65 +428,50 @@ TEST_F(AudioAdminTest, DualRenderStreamDucking) {
       fuchsia::media::Usage::WithRenderUsage(fuchsia::media::AudioRenderUsage::BACKGROUND),
       fuchsia::media::Behavior::NONE);
 
-  // SetUp playback streams
   auto renderer1 = SetUpRenderer(fuchsia::media::AudioRenderUsage::MEDIA, kPlaybackData1);
   auto renderer2 = SetUpRenderer(fuchsia::media::AudioRenderUsage::INTERRUPTION, kPlaybackData2);
-
-  // SetUp loopback capture
   auto capturer = SetUpLoopbackCapturer();
 
-  // Get the minimum duration after submitting a packet to when we can start
-  // capturing what we sent on the loopback interface.
-  zx_duration_t sleep_duration = GetMinLeadTime({renderer1, renderer2});
-  ASSERT_NE(sleep_duration, 0) << "Failed to get MinLeadTime";
-
   for (auto renderer : {renderer1, renderer2}) {
-    fuchsia::media::StreamPacket packet;
-    packet.payload_offset = 0;
-    packet.payload_size = kRingBufferBytes;
-    renderer->fidl()->SendPacketNoReply(packet);
+    renderer->fidl()->SendPacketNoReply({
+        .payload_offset = 0,
+        .payload_size = static_cast<uint64_t>(kRingBufferBytes),
+    });
   }
 
-  int64_t ref_time_received = -1;
-  int64_t media_time_received = -1;
-
-  // Start playing right now, so that after we've delayed at least 1 leadtime,
-  // we should have mixed audio available for capture.  Our playback is sized
-  // to be much much larger than our capture to prevent test flakes.
-  auto playat = zx::clock::get_monotonic().get();
-  renderer1->fidl()->PlayNoReply(playat, 0);
-  // Only get the callback for the second renderer.
-  renderer2->fidl()->Play(playat, 0,
-                          AddCallback("Play", [&ref_time_received, &media_time_received](
-                                                  int64_t ref_time, int64_t media_time) {
-                            ref_time_received = ref_time;
-                            media_time_received = media_time;
+  // Start rendering.
+  auto [play_time, capture_time] = ComputePlayAndCaptureTimes({renderer1, renderer2});
+  renderer1->fidl()->Play(play_time.get(), 0,
+                          AddCallback("Play1", [](int64_t ref_time, int64_t media_time) {
+                            EXPECT_EQ(media_time, 0);
+                            EXPECT_GE(ref_time, 0);
+                          }));
+  renderer2->fidl()->Play(play_time.get(), 0,
+                          AddCallback("Play2", [](int64_t ref_time, int64_t media_time) {
+                            EXPECT_EQ(media_time, 0);
+                            EXPECT_GE(ref_time, 0);
                           }));
   ExpectCallbacks();
 
-  // We expect that media_time 0 played back at some point after the 'zero'
-  // time on the system.
-  EXPECT_EQ(media_time_received, 0);
-  EXPECT_GT(ref_time_received, 0);
-
   // Give the playback some time to get mixed.
-  zx_nanosleep(zx_deadline_after(sleep_duration));
+  zx_nanosleep(capture_time.get());
 
   // Capture 10 samples of audio.
-  fuchsia::media::StreamPacket captured;
+  std::optional<AudioBuffer<kSampleFormat>> captured;
   capturer->fidl().events().OnPacketProduced =
-      AddCallback("OnPacketProduced", [&captured](fuchsia::media::StreamPacket packet) {
+      AddCallback("OnPacketProduced", [&captured, capturer](fuchsia::media::StreamPacket packet) {
         // We only care about the first set of captured samples
-        if (captured.payload_size == 0) {
-          captured = packet;
+        if (captured == std::nullopt) {
+          captured = capturer->SnapshotPacket(packet);
         }
       });
+
   capturer->fidl()->StartAsyncCapture(10);
   ExpectCallbacks();
 
   // Check that we got 10 samples as we expected.
-  ExpectPacketContains("captured", captured, capturer->SnapshotPayload(), 10,
-                       kDuckedPlaybackData1 + kPlaybackData2);
+  ASSERT_NE(captured, std::nullopt);
+  ExpectPacketContains("captured", *captured, 10, kDuckedPlaybackData1 + kPlaybackData2);
 }
 
 // DualRenderStreamMute
@@ -560,64 +486,50 @@ TEST_F(AudioAdminTest, DualRenderStreamMute) {
       fuchsia::media::Usage::WithRenderUsage(fuchsia::media::AudioRenderUsage::BACKGROUND),
       fuchsia::media::Behavior::MUTE);
 
-  // SetUp playback streams
   auto renderer1 = SetUpRenderer(fuchsia::media::AudioRenderUsage::MEDIA, kPlaybackData1);
   auto renderer2 = SetUpRenderer(fuchsia::media::AudioRenderUsage::BACKGROUND, kPlaybackData2);
-
-  // SetUp loopback capture
   auto capturer = SetUpLoopbackCapturer();
 
-  // Get the minimum duration after submitting a packet to when we can start
-  // capturing what we sent on the loopback interface.
-  zx_duration_t sleep_duration = GetMinLeadTime({renderer1});
-  ASSERT_NE(sleep_duration, 0) << "Failed to get MinLeadTime";
-
   for (auto renderer : {renderer1, renderer2}) {
-    fuchsia::media::StreamPacket packet;
-    packet.payload_offset = 0;
-    packet.payload_size = kRingBufferBytes;
-    renderer->fidl()->SendPacketNoReply(packet);
+    renderer->fidl()->SendPacketNoReply({
+        .payload_offset = 0,
+        .payload_size = static_cast<uint64_t>(kRingBufferBytes),
+    });
   }
 
-  int64_t ref_time_received = -1;
-  int64_t media_time_received = -1;
-
-  // Start playing right now, so that after we've delayed at least 1 leadtime,
-  // we should have mixed audio available for capture.  Our playback is sized
-  // to be much much larger than our capture to prevent test flakes.
-  auto playat = zx::clock::get_monotonic().get();
-  renderer1->fidl()->PlayNoReply(playat, 0);
-  // Only get the callback for the second renderer.
-  renderer2->fidl()->Play(playat, 0,
-                          AddCallback("Play", [&ref_time_received, &media_time_received](
-                                                  int64_t ref_time, int64_t media_time) {
-                            ref_time_received = ref_time;
-                            media_time_received = media_time;
+  // Start rendering.
+  auto [play_time, capture_time] = ComputePlayAndCaptureTimes({renderer1, renderer2});
+  renderer1->fidl()->Play(play_time.get(), 0,
+                          AddCallback("Play1", [](int64_t ref_time, int64_t media_time) {
+                            EXPECT_EQ(media_time, 0);
+                            EXPECT_GE(ref_time, 0);
+                          }));
+  renderer2->fidl()->Play(play_time.get(), 0,
+                          AddCallback("Play2", [](int64_t ref_time, int64_t media_time) {
+                            EXPECT_EQ(media_time, 0);
+                            EXPECT_GE(ref_time, 0);
                           }));
   ExpectCallbacks();
 
-  // We expect that media_time 0 played back at some point after the 'zero'
-  // time on the system.
-  EXPECT_EQ(media_time_received, 0);
-  EXPECT_GT(ref_time_received, 0);
-
   // Give the playback some time to get mixed.
-  zx_nanosleep(zx_deadline_after(sleep_duration));
+  zx_nanosleep(capture_time.get());
 
   // Capture 10 samples of audio.
-  fuchsia::media::StreamPacket captured;
+  std::optional<AudioBuffer<kSampleFormat>> captured;
   capturer->fidl().events().OnPacketProduced =
-      AddCallback("OnPacketProduced", [&captured](fuchsia::media::StreamPacket packet) {
+      AddCallback("OnPacketProduced", [&captured, capturer](fuchsia::media::StreamPacket packet) {
         // We only care about the first set of captured samples
-        if (captured.payload_size == 0) {
-          captured = packet;
+        if (captured == std::nullopt) {
+          captured = capturer->SnapshotPacket(packet);
         }
       });
+
   capturer->fidl()->StartAsyncCapture(10);
   ExpectCallbacks();
 
   // Check that we got 10 samples as we expected.
-  ExpectPacketContains("captured", captured, capturer->SnapshotPayload(), 10, kPlaybackData1);
+  ASSERT_NE(captured, std::nullopt);
+  ExpectPacketContains("captured", *captured, 10, kPlaybackData1);
 }
 
 // DualCaptureStreamNone
@@ -632,64 +544,43 @@ TEST_F(AudioAdminTest, DualCaptureStreamNone) {
       fuchsia::media::Usage::WithCaptureUsage(fuchsia::media::AudioCaptureUsage::BACKGROUND),
       fuchsia::media::Behavior::NONE);
 
-  // SetUp playback streams
   auto renderer = SetUpRenderer(fuchsia::media::AudioRenderUsage::MEDIA, kPlaybackData1);
-
-  // SetUp loopback capture
   auto capturer1 = SetUpCapturer(fuchsia::media::AudioCaptureUsage::BACKGROUND);
   auto capturer2 = SetUpCapturer(fuchsia::media::AudioCaptureUsage::BACKGROUND);
 
-  // Get the minimum duration after submitting a packet to when we can start
-  // capturing what we sent on the loopback interface.
-  zx_duration_t sleep_duration = GetMinLeadTime({renderer});
-  ASSERT_NE(sleep_duration, 0) << "Failed to get MinLeadTime";
+  renderer->fidl()->SendPacketNoReply({
+      .payload_offset = 0,
+      .payload_size = static_cast<uint64_t>(kRingBufferBytes),
+  });
 
-  {
-    fuchsia::media::StreamPacket packet;
-    packet.payload_offset = 0;
-    packet.payload_size = kRingBufferBytes;
-    renderer->fidl()->SendPacketNoReply(packet);
-  }
-
-  int64_t ref_time_received = -1;
-  int64_t media_time_received = -1;
-
-  // Start playing right now, so that after we've delayed at least 1 leadtime,
-  // we should have mixed audio available for capture.  Our playback is sized
-  // to be much much larger than our capture to prevent test flakes.
-  auto playat = zx::clock::get_monotonic().get();
-  renderer->fidl()->Play(playat, 0,
-                         AddCallback("Play", [&ref_time_received, &media_time_received](
-                                                 int64_t ref_time, int64_t media_time) {
-                           ref_time_received = ref_time;
-                           media_time_received = media_time;
+  // Start rendering.
+  auto [play_time, capture_time] = ComputePlayAndCaptureTimes({renderer});
+  renderer->fidl()->Play(play_time.get(), 0,
+                         AddCallback("Play", [](int64_t ref_time, int64_t media_time) {
+                           EXPECT_EQ(media_time, 0);
+                           EXPECT_GE(ref_time, 0);
                          }));
   ExpectCallbacks();
 
-  // We expect that media_time 0 played back at some point after the 'zero'
-  // time on the system.
-  EXPECT_EQ(media_time_received, 0);
-  EXPECT_GT(ref_time_received, 0);
-
   // Give the playback some time to get mixed.
-  zx_nanosleep(zx_deadline_after(sleep_duration));
+  zx_nanosleep(capture_time.get());
 
   // Capture 10 samples of audio.
-  fuchsia::media::StreamPacket captured1;
-  capturer1->fidl().events().OnPacketProduced =
-      AddCallbackUnordered("OnPacketProduced", [&captured1](fuchsia::media::StreamPacket packet) {
+  std::optional<AudioBuffer<kSampleFormat>> captured1;
+  capturer1->fidl().events().OnPacketProduced = AddCallbackUnordered(
+      "OnPacketProduced", [&captured1, capturer1](fuchsia::media::StreamPacket packet) {
         // We only care about the first set of captured samples
-        if (captured1.payload_size == 0) {
-          captured1 = packet;
+        if (captured1 == std::nullopt) {
+          captured1 = capturer1->SnapshotPacket(packet);
         }
       });
 
-  fuchsia::media::StreamPacket captured2;
-  capturer2->fidl().events().OnPacketProduced =
-      AddCallbackUnordered("OnPacketProduced", [&captured2](fuchsia::media::StreamPacket packet) {
+  std::optional<AudioBuffer<kSampleFormat>> captured2;
+  capturer2->fidl().events().OnPacketProduced = AddCallbackUnordered(
+      "OnPacketProduced", [&captured2, capturer2](fuchsia::media::StreamPacket packet) {
         // We only care about the first set of captured samples
-        if (captured2.payload_size == 0) {
-          captured2 = packet;
+        if (captured2 == std::nullopt) {
+          captured2 = capturer2->SnapshotPacket(packet);
         }
       });
 
@@ -698,10 +589,10 @@ TEST_F(AudioAdminTest, DualCaptureStreamNone) {
   ExpectCallbacks();
 
   // Check that all of the samples contain the expected data.
-  ExpectPacketContains("captured1", captured1, capturer1->SnapshotPayload(), 10,
-                       kVirtualInputSampleValue);
-  ExpectPacketContains("captured2", captured2, capturer2->SnapshotPayload(), 10,
-                       kVirtualInputSampleValue);
+  ASSERT_NE(captured1, std::nullopt);
+  ASSERT_NE(captured2, std::nullopt);
+  ExpectPacketContains("captured1", *captured1, 10, kVirtualInputSampleValue);
+  ExpectPacketContains("captured2", *captured2, 10, kVirtualInputSampleValue);
 }
 
 // DualCaptureStreamMute
@@ -716,80 +607,56 @@ TEST_F(AudioAdminTest, DISABLED_DualCaptureStreamMute) {
       fuchsia::media::Usage::WithCaptureUsage(fuchsia::media::AudioCaptureUsage::BACKGROUND),
       fuchsia::media::Behavior::MUTE);
 
-  // SetUp playback streams
   auto renderer = SetUpRenderer(fuchsia::media::AudioRenderUsage::MEDIA, kPlaybackData1);
-
-  // SetUp loopback capture
   auto capturer1 = SetUpCapturer(fuchsia::media::AudioCaptureUsage::SYSTEM_AGENT);
   auto capturer2 = SetUpCapturer(fuchsia::media::AudioCaptureUsage::BACKGROUND);
 
   // Add a callback for when we get our captured packet.
-  fuchsia::media::StreamPacket captured1;
-  bool produced_packet1 = false;
-  capturer1->fidl().events().OnPacketProduced = AddCallback(
-      "OnPacketProduced", [&captured1, &produced_packet1](fuchsia::media::StreamPacket packet) {
+  std::optional<AudioBuffer<kSampleFormat>> captured1;
+  capturer1->fidl().events().OnPacketProduced =
+      AddCallback("OnPacketProduced", [&captured1, capturer1](fuchsia::media::StreamPacket packet) {
         // We only care about the first set of captured samples
-        if (captured1.payload_size == 0) {
-          captured1 = packet;
-          produced_packet1 = true;
+        if (captured1 == std::nullopt) {
+          captured1 = capturer1->SnapshotPacket(packet);
         }
       });
 
-  fuchsia::media::StreamPacket captured2;
-  bool produced_packet2 = false;
-  capturer2->fidl().events().OnPacketProduced = AddCallback(
-      "OnPacketProduced", [&captured2, &produced_packet2](fuchsia::media::StreamPacket packet) {
+  std::optional<AudioBuffer<kSampleFormat>> captured2;
+  capturer2->fidl().events().OnPacketProduced =
+      AddCallback("OnPacketProduced", [&captured2, capturer2](fuchsia::media::StreamPacket packet) {
         // We only care about the first set of captured samples
-        if (captured2.payload_size == 0) {
-          captured2 = packet;
-          produced_packet2 = true;
+        if (captured2 == std::nullopt) {
+          captured2 = capturer2->SnapshotPacket(packet);
         }
       });
 
-  // Get the minimum duration after submitting a packet to when we can start
-  // capturing what we sent on the loopback interface.
-  zx_duration_t sleep_duration = GetMinLeadTime({renderer});
-  ASSERT_NE(sleep_duration, 0) << "Failed to get MinLeadTime";
+  renderer->fidl()->SendPacketNoReply({
+      .payload_offset = 0,
+      .payload_size = static_cast<uint64_t>(kRingBufferBytes),
+  });
 
-  {
-    fuchsia::media::StreamPacket packet;
-    packet.payload_offset = 0;
-    packet.payload_size = kRingBufferBytes;
-    renderer->fidl()->SendPacketNoReply(packet);
-  }
-
-  int64_t ref_time_received = -1;
-  int64_t media_time_received = -1;
-
-  // Start playing right now, so that after we've delayed at least 1 leadtime,
-  // we should have mixed audio available for capture.  Our playback is sized
-  // to be much much larger than our capture to prevent test flakes.
-  auto playat = zx::clock::get_monotonic().get();
-  renderer->fidl()->Play(playat, 0,
-                         AddCallback("Play", [&ref_time_received, &media_time_received](
-                                                 int64_t ref_time, int64_t media_time) {
-                           ref_time_received = ref_time;
-                           media_time_received = media_time;
+  // Start rendering.
+  auto [play_time, capture_time] = ComputePlayAndCaptureTimes({renderer});
+  renderer->fidl()->Play(play_time.get(), 0,
+                         AddCallback("Play", [](int64_t ref_time, int64_t media_time) {
+                           EXPECT_EQ(media_time, 0);
+                           EXPECT_GE(ref_time, 0);
                          }));
   ExpectCallbacks();
 
-  // We expect that media_time 0 played back at some point after the 'zero'
-  // time on the system.
-  EXPECT_EQ(media_time_received, 0);
-  EXPECT_GT(ref_time_received, 0);
-
   // Give the playback some time to get mixed.
-  zx_nanosleep(zx_deadline_after(sleep_duration));
+  zx_nanosleep(capture_time.get());
 
   // Capture 10 samples of audio.
   capturer1->fidl()->StartAsyncCapture(10);
   capturer2->fidl()->StartAsyncCapture(10);
-  RunLoopUntil(
-      [&produced_packet1, &produced_packet2]() { return produced_packet1 && produced_packet2; });
+  RunLoopUntil([&captured1, &captured2]() { return captured1 && captured2; });
 
   // Check that we got 10 samples as we expected.
-  ExpectPacketContains("captured1", captured1, capturer1->SnapshotPayload(), 10, kPlaybackData1);
-  ExpectPacketContains("captured2", captured2, capturer2->SnapshotPayload(), 10, 0x0);
+  ASSERT_NE(captured1, std::nullopt);
+  ASSERT_NE(captured2, std::nullopt);
+  ExpectPacketContains("captured1", *captured1, 10, kPlaybackData1);
+  ExpectPacketContains("captured2", *captured2, 10, 0x0);
 }
 
 }  // namespace media::audio::test

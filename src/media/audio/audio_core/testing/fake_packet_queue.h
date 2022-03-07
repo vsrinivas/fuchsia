@@ -32,10 +32,13 @@ class FakePacketQueue : public ReadableStream {
   // |media::audio::ReadableStream|
   TimelineFunctionSnapshot ref_time_to_frac_presentation_frame() const override;
   AudioClock& reference_clock() override { return *audio_clock_; }
-  std::optional<Buffer> ReadLock(ReadLockContext& ctx, Fixed frame, int64_t frame_count) override;
-  void Trim(Fixed frame) override;
 
  private:
+  // |media::audio::ReadableStream|
+  std::optional<Buffer> ReadLockImpl(ReadLockContext& ctx, Fixed frame,
+                                     int64_t frame_count) override;
+  void TrimImpl(Fixed frame) override;
+
   std::vector<fbl::RefPtr<Packet>> packets_;
   fbl::RefPtr<VersionedTimelineFunction> timeline_function_;
   std::unique_ptr<AudioClock> audio_clock_;

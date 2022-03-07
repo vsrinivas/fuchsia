@@ -7,10 +7,7 @@
 #include "src/media/audio/audio_core/mixer/intersect.h"
 #include "src/media/audio/audio_core/mixer/output_producer.h"
 
-namespace media::audio::stream2 {
-
-// TODO(fxbug.dev/50669): remove after replacing stream.h
-using ::media::audio::OutputProducer;
+namespace media::audio {
 
 std::shared_ptr<ReadableStream> SilencePaddingStream::WrapIfNeeded(
     std::shared_ptr<ReadableStream> source, Fixed silence_frames, bool fractional_gaps_round_down) {
@@ -44,17 +41,22 @@ std::optional<ReadableStream::Buffer> SilencePaddingStream::ReadLockImpl(ReadLoc
   {
     Fixed source_start = dest_frame;
     Fixed dest_frame_end = dest_frame + Fixed(frame_count);
-    // If the source has a known empty region, advance our request past that region.
-    if (next_valid_source_frame_) {
-      source_start = std::max(source_start, *next_valid_source_frame_);
+    // Advance to our source's next available frame. This is needed when the source stream
+    // contains gaps. For example, given a sequence of calls:
+    //
+    //   ReadLock(ctx, 100, 10)
+    //   ReadLock(ctx, 105, 10)
+    //
+    // If silence_frames_ = 5 and our source does not have any data for the range [100,110),
+    // then at the first call, our source will return std::nullopt and we will return 5 frames
+    // of silence. At the next call, the caller asks for frames 105, but the source has already
+    // advanced to frame 110. We know that frames [105,110) are empty, so we must advance our
+    // request to frames [110,115).
+    if (auto next_available = source_->NextAvailableFrame(); next_available) {
+      source_start = std::max(source_start, *next_available);
     }
     if (int64_t source_frames = Fixed(dest_frame_end - source_start).Floor(); source_frames > 0) {
       next_buffer = source_->ReadLock(ctx, source_start, source_frames);
-      if (!next_buffer) {
-        next_valid_source_frame_ = source_start + Fixed(source_frames);
-      } else {
-        next_valid_source_frame_ = next_buffer->start();
-      }
     }
   }
 
@@ -110,11 +112,6 @@ std::optional<ReadableStream::Buffer> SilencePaddingStream::ReadLockImpl(ReadLoc
   return ForwardBuffer(std::move(next_buffer));
 }
 
-void SilencePaddingStream::TrimImpl(Fixed dest_frame) {
-  if (next_valid_source_frame_ && dest_frame >= *next_valid_source_frame_) {
-    next_valid_source_frame_ = std::nullopt;
-  }
-  source_->Trim(dest_frame);
-}
+void SilencePaddingStream::TrimImpl(Fixed dest_frame) { source_->Trim(dest_frame); }
 
-}  // namespace media::audio::stream2
+}  // namespace media::audio

@@ -14,7 +14,6 @@
 
 #include "lib/syslog/cpp/macros.h"
 #include "src/media/audio/audio_core/audio_driver.h"
-#include "src/media/audio/audio_core/mix_profile_config.h"
 #include "src/media/audio/audio_core/reporter.h"
 
 constexpr bool VERBOSE_TIMING_DEBUG = false;
@@ -70,8 +69,8 @@ DriverOutput::DriverOutput(const std::string& name, const MixProfileConfig& mix_
                            LinkMatrix* link_matrix,
                            std::shared_ptr<AudioClockFactory> clock_factory,
                            VolumeCurve volume_curve, EffectsLoaderV2* effects_loader_v2)
-    : AudioOutput(name, mix_profile_config, threading_model, registry, link_matrix, clock_factory,
-                  effects_loader_v2, std::make_unique<AudioDriver>(this)),
+    : AudioOutput(name, threading_model, registry, link_matrix, clock_factory, effects_loader_v2,
+                  std::make_unique<AudioDriver>(this)),
       low_water_duration_(mix_profile_config.period),
       high_water_duration_(low_water_duration_ + mix_profile_config.period),
       initial_stream_channel_(channel.TakeChannel()),

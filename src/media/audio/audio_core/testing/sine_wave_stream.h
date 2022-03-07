@@ -13,20 +13,20 @@
 
 namespace media::audio::testing {
 
-// A stream that contains an infinitely-repeating sine wave with the given format.
+// A stream that contains an infinitely-repeating sine wave with the given format and period.
 template <fuchsia::media::AudioSampleFormat SampleFormat>
 class SineWaveStream : public ReadableStream {
  public:
   SineWaveStream(TypedFormat<SampleFormat> format, int64_t period_frames, StreamUsage usage,
                  std::unique_ptr<AudioClock> clock)
-      : ReadableStream(format),
+      : ReadableStream("SineWaveStream", format),
         usage_mask_({usage}),
         clock_(std::move(clock)),
-        buffer_(GenerateCosineAudio(format,               //
-                                    period_frames * 100,  // num_frames
-                                    100,                  // number of periods within num_frames
-                                    1.0,                  // amplitude
-                                    -M_PI_2)),            // phase (generate sine instead of cosine)
+        buffer_(GenerateCosineAudio(format,              //
+                                    period_frames * 10,  // num_frames
+                                    10,                  // number of periods within num_frames
+                                    1.0,                 // amplitude
+                                    -M_PI_2)),           // phase (generate sine instead of cosine)
         // zx::time(0) == frame 0
         timeline_function_(fbl::MakeRefCounted<VersionedTimelineFunction>(TimelineFunction(
             TimelineRate(Fixed(format.frames_per_second()).raw_value(), zx::sec(1).to_nsecs())))) {}
@@ -40,18 +40,20 @@ class SineWaveStream : public ReadableStream {
   }
 
   AudioClock& reference_clock() override { return *clock_; }
-  void Trim(Fixed frame) override {}
 
-  std::optional<Buffer> ReadLock(ReadLockContext& ctx, Fixed frame, int64_t frame_count) override {
+ private:
+  std::optional<Buffer> ReadLockImpl(ReadLockContext& ctx, Fixed frame,
+                                     int64_t frame_count) override {
     int64_t frame_index = frame.Floor() % buffer_.NumFrames();
     int64_t sample_index = buffer_.SampleIndex(frame_index, 0);
     frame_count = std::min(frame_count, buffer_.NumFrames() - frame_index);
 
-    return std::make_optional<ReadableStream::Buffer>(
-        Fixed(frame), frame_count, &buffer_.samples()[sample_index], true, usage_mask_, 0.0f);
+    return MakeUncachedBuffer(Fixed(frame), frame_count, &buffer_.samples()[sample_index],
+                              usage_mask_, 0.0f);
   }
 
- private:
+  void TrimImpl(Fixed frame) override {}
+
   StreamUsageMask usage_mask_;
   std::unique_ptr<AudioClock> clock_;
   AudioBuffer<SampleFormat> buffer_;

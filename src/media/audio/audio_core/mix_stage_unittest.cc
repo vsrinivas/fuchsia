@@ -366,7 +366,6 @@ void MixStageTest::TestMixStageUniformFormats(ClockMode clock_mode) {
     EXPECT_THAT(arr2, Each(FloatEq(0.8f)))
         << std::setprecision(5) << "[0] " << arr2[0] << ", [1] " << arr2[1] << ", [94] " << arr2[94]
         << ", [95] " << arr2[95];
-    ;
   }
 
   output_frame_start += output_frame_count;
@@ -537,11 +536,13 @@ void MixStageTest::TestMixStageSingleInput(ClockMode clock_mode) {
 
   packet_queue->PushPacket(packet_factory.CreatePacket(1.0, zx::msec(5)));
 
-  constexpr uint32_t kRequestedFrames = 48;
-  auto buf = mix_stage_->ReadLock(rlctx, Fixed(0), kRequestedFrames);
-  ASSERT_TRUE(buf);
-  EXPECT_TRUE(buf->usage_mask().contains(kInputStreamUsage));
-  EXPECT_FLOAT_EQ(buf->total_applied_gain_db(), Gain::kUnityGainDb);
+  {
+    constexpr uint32_t kRequestedFrames = 48;
+    auto buf = mix_stage_->ReadLock(rlctx, Fixed(0), kRequestedFrames);
+    ASSERT_TRUE(buf);
+    EXPECT_TRUE(buf->usage_mask().contains(kInputStreamUsage));
+    EXPECT_FLOAT_EQ(buf->total_applied_gain_db(), Gain::kUnityGainDb);
+  }
 
   // Upon any fail, slab_allocator asserts at exit. Clear all allocations, so testing can continue.
   mix_stage_->Trim(Fixed::Max());
@@ -664,6 +665,42 @@ TEST_F(MixStageTest, BufferMaxAmplitudeIncludesDestGain) {
   }
 }
 
+TEST_F(MixStageTest, MixWithRingOut) {
+  // Set timeline rate to match our format.
+  auto timeline_function = TimelineFunction(
+      TimelineRate(Fixed(kDefaultFormat.frames_per_second()).raw_value(), zx::sec(1).to_nsecs()));
+
+  auto input = std::make_shared<testing::FakeStream>(kDefaultFormat, context().clock_factory());
+  input->timeline_function()->Update(timeline_function);
+  auto mixer = mix_stage_->AddInput(input, 0, Mixer::Resampler::WindowedSinc);
+
+  const auto ring_out = Fixed(mixer->neg_filter_width() + mixer->pos_filter_width()).Ceiling();
+  ASSERT_GT(ring_out, Fixed(0));
+
+  constexpr uint32_t kRequestedFrames = 20;
+  input->set_max_frame(kRequestedFrames);
+
+  // First mix should return a buffer with 20 frames.
+  {
+    auto buf = mix_stage_->ReadLock(rlctx, Fixed(0), kRequestedFrames);
+    ASSERT_TRUE(buf);
+    EXPECT_EQ(kRequestedFrames, buf->length());
+  }
+
+  // Next mix should return a buffer with `ring_out` frames.
+  {
+    auto buf = mix_stage_->ReadLock(rlctx, Fixed(kRequestedFrames), ring_out);
+    ASSERT_TRUE(buf);
+    EXPECT_EQ(ring_out, buf->length());
+  }
+
+  // Beyond the ring-out frames, no mix output should be produced.
+  {
+    auto buf = mix_stage_->ReadLock(rlctx, Fixed(kRequestedFrames + ring_out), 200);
+    ASSERT_FALSE(buf);
+  }
+}
+
 TEST_F(MixStageTest, CachedUntilFullyConsumed) {
   // Create a packet queue to use as our source stream.
   auto stream = std::make_shared<PacketQueue>(
@@ -677,7 +714,7 @@ TEST_F(MixStageTest, CachedUntilFullyConsumed) {
                                                  [&packet_released] { packet_released = true; }));
   auto mix_stage =
       std::make_shared<MixStage>(kDefaultFormat, 480, timeline_function_, *device_clock_);
-  mix_stage->AddInput(stream);
+  auto mixer = mix_stage->AddInput(stream);
 
   // After mixing half the packet, the packet should not be released.
   {
@@ -696,31 +733,33 @@ TEST_F(MixStageTest, CachedUntilFullyConsumed) {
   // After mixing all of the packet, the packet should be released.
   // However, we set fully consumed = false so the mix buffer will be cached.
   {
-    auto buf = mix_stage->ReadLock(rlctx, Fixed(0), 480);
+    auto buf = mix_stage->ReadLock(rlctx, Fixed(240), 240);
     RunLoopUntilIdle();
     ASSERT_TRUE(buf);
-    EXPECT_EQ(0u, buf->start().Floor());
-    EXPECT_EQ(480u, buf->length());
+    EXPECT_EQ(240, buf->start().Floor());
+    EXPECT_EQ(240, buf->length());
     EXPECT_EQ(1.0, static_cast<float*>(buf->payload())[0]);
     EXPECT_TRUE(packet_released);
-    buf->set_is_fully_consumed(false);
+    buf->set_frames_consumed(0);
   }
 
   // Mixing again should return the same buffer.
   // This time we set fully consumed = true to discard the cached mix result.
   {
-    auto buf = mix_stage->ReadLock(rlctx, Fixed(0), 480);
+    auto buf = mix_stage->ReadLock(rlctx, Fixed(240), 240);
     RunLoopUntilIdle();
     ASSERT_TRUE(buf);
-    EXPECT_EQ(0u, buf->start().Floor());
-    EXPECT_EQ(480u, buf->length());
+    EXPECT_EQ(240, buf->start().Floor());
+    EXPECT_EQ(240, buf->length());
     EXPECT_EQ(1.0, static_cast<float*>(buf->payload())[0]);
-    buf->set_is_fully_consumed(true);
+    buf->set_frames_consumed(240);
   }
 
-  // The mix buffer is not cached and the packet is gone, so we must mix silence.
+  // The mix buffer is not cached and the packet is gone.
+  // Skipping past the "ring out" region, we must produce silence.
   {
-    auto buf = mix_stage->ReadLock(rlctx, Fixed(0), 480);
+    const auto ring_out = Fixed(mixer->neg_filter_width() + mixer->pos_filter_width()).Ceiling();
+    auto buf = mix_stage->ReadLock(rlctx, Fixed(480) + ring_out, 480);
     RunLoopUntilIdle();
     ASSERT_FALSE(buf);
   }
@@ -845,9 +884,6 @@ TEST_F(MixStageTest, DontCrashOnDestOffsetRoundingError) {
   mix_stage_ = std::make_shared<MixStage>(kDefaultFormat, 480 /* block size in frames */,
                                           timeline_function_, *device_clock_);
 
-  // The crash happened in PointSampler.
-  auto mixer = mix_stage_->AddInput(input, std::nullopt, Mixer::Resampler::SampleAndHold);
-
   // First step of ReadLock.
   memset(&mix_stage_->cur_mix_job_, 0, sizeof(mix_stage_->cur_mix_job_));
 
@@ -858,18 +894,21 @@ TEST_F(MixStageTest, DontCrashOnDestOffsetRoundingError) {
   mix_stage_->cur_mix_job_.buf_frames = mix_stage_->output_buffer_frames_;
   mix_stage_->cur_mix_job_.dest_ref_clock_to_frac_dest_frame = TimelineFunction();
   mix_stage_->cur_mix_job_.read_lock_ctx = &rlctx;
-  mixer->source_info().frames_produced = 0;
+
+  auto stream = std::make_shared<testing::FakeStream>(kDefaultFormat, context().clock_factory());
+  auto mixer = mix_stage_->AddInput(input, std::nullopt, Mixer::Resampler::SampleAndHold);
   mixer->source_info().dest_frames_to_frac_source_frames =
       TimelineFunction(3582737759, 0, 8192000, 999);
   mixer->source_info().next_source_frame = Fixed::FromRaw(2414202275419);
   mixer->bookkeeping().step_size = Fixed(1);
   mixer->bookkeeping().SetRateModuloAndDenominator(0, 1);
 
-  char payload[10 * kDefaultNumChannels * sizeof(float)];
-  ReadableStream::Buffer buffer(Fixed::FromRaw(2414204747776), 10, payload, true, StreamUsageMask(),
-                                0);
-
-  mix_stage_->ProcessMix(*mixer, *input, buffer);
+  // So the next ReadLock call returns a buffer with:
+  // start = Fixed::FromRaw(2414204747776)
+  // length = Fixed(10)
+  stream->Trim(Fixed::FromRaw(2414204747776));
+  stream->set_max_frame(10);
+  mix_stage_->MixStream(*mixer, *input);
 }
 
 // When a packet starts after the mix starts, position should be advanced per step_size|rate_mod,
@@ -913,7 +952,6 @@ TEST_F(MixStageTest, PositionSkip) {
     EXPECT_EQ(bookkeeping.denominator(), static_cast<uint64_t>(kDefaultFormat.frames_per_second()));
 
     auto& info = mixer->source_info();
-    EXPECT_EQ(info.frames_produced, dest_frames_per_mix);
     EXPECT_EQ(info.next_dest_frame, source_pos_for_read_lock.Floor());
     EXPECT_EQ(info.next_source_frame, Fixed(Fixed(info.next_dest_frame) - Fixed::FromRaw(1)))
         << ffl::String::DecRational << info.next_source_frame;
@@ -953,6 +991,12 @@ class MixStagePositionTest : public MixStageTest {
         context().clock_factory()->CreateClientFixed(std::move(clock)));
     auto mixer = mix_stage_->AddInput(packet_queue, 0.0f, Mixer::Resampler::WindowedSinc);
     auto& info = mixer->source_info();
+
+    // This method is called multiple times from the same test.
+    // To avoid source-goes-backwards errors, reset the timeline function before calling ReadLock.
+    auto timeline_snapshot = timeline_function_->get();
+    timeline_function_->Update(TimelineFunction());
+    timeline_function_->Update(timeline_snapshot.first);
 
     // Initial mix
     mix_stage_->ReadLock(rlctx, Fixed(0), kDestFramesPerMix);
@@ -1108,24 +1152,6 @@ TEST_F(MixStagePositionTest, SourceDestPositionRelationship) {
   EXPECT_EQ(info()->next_dest_frame, Fixed(3 * kDestFramesPerMix).Floor());
 }
 
-// On backward dest discontinuity beyond the acceptable 960-frame threshold, long-running pos for
-// both dest and source are reset.
-// We will remove this case once we no longer have backwards-position movement.
-TEST_F(MixStagePositionTest, DestDiscontinuityRollbackBeyondThreshold) {
-  SetUpWithClock(std::move(clone_of_device_clock_));
-  // MixStage should reset both dest and source, then advance normally
-  ExpectPositionOffsetsAfterMix(1000, Fixed(0), 0, Fixed(0));
-}
-
-// On backward dest discontinuity within the acceptable 960-frame threshold, long-running pos for
-// both dest and source are correctly rolled-back.
-// We will remove this case once we no longer have backwards-position movement.
-TEST_F(MixStagePositionTest, DestDiscontinuityRollbackWithinThreshold) {
-  SetUpWithClock(std::move(clone_of_device_clock_));
-  // MixStage should rollback both dest and source by that same 300, then advance normally
-  ExpectPositionOffsetsAfterMix(300, Fixed(0), 0, Fixed(-300));
-}
-
 // On forward dest discontinuity beyond the acceptable 2ms threshold, long-running pos for both dest
 // and source are reset.
 TEST_F(MixStagePositionTest, DestDiscontinuityBeyondThreshold) {
@@ -1147,7 +1173,7 @@ TEST_F(MixStagePositionTest, DestDiscontinuityWithinThreshold) {
 TEST_F(MixStagePositionTest, SourceDiscontinuityNoSync) {
   SetUpWithClock(std::move(clone_of_device_clock_));
   // MixStage should not adjust these but merely advance normally
-  ExpectPositionOffsetsAfterMix(0, Fixed(-300), 0, Fixed(-300));
+  ExpectPositionOffsetsAfterMix(0, Fixed(300), 0, Fixed(300));
 }
 
 // On source discontinuity beyond the recoverability threshold, long-running source pos is reset.
@@ -1157,7 +1183,7 @@ TEST_F(MixStagePositionTest, SourceDiscontinuityBeyondThreshold) {
           .take_value());
   SetUpWithClock(std::move(non_clone));
   // MixStage should reset source, then advance normally
-  ExpectPositionOffsetsAfterMix(0, Fixed(-300), 0, Fixed(0));
+  ExpectPositionOffsetsAfterMix(0, Fixed(300), 0, Fixed(0));
 }
 
 // On a one-subframe source discontinuity, long-running source pos is untouched, no rate-adjustment

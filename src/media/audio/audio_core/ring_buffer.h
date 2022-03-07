@@ -91,19 +91,23 @@ class ReadableRingBuffer : public ReadableStream, public BaseRingBuffer {
                      int64_t frame_count, SafeReadWriteFrameFn safe_read_frame);
 
   // Return a duplicate handle that reads from the same underlying ring buffer but resets
-  // all stream-specific state.
+  // all stream-specific state, such as the current Trim position.
   std::shared_ptr<ReadableRingBuffer> Dup() const;
 
   // |media::audio::ReadableStream|
   BaseStream::TimelineFunctionSnapshot ref_time_to_frac_presentation_frame() const override;
   AudioClock& reference_clock() override { return audio_clock_; }
-  std::optional<ReadableStream::Buffer> ReadLock(ReadLockContext& ctx, Fixed frame,
-                                                 int64_t frame_count) override;
-  // Since we have no buffers to free, Trim is a no-op.
-  void Trim(Fixed frame) override {}
 
  private:
+  ReadableRingBuffer(const ReadableRingBuffer& rb);
   friend class BaseRingBuffer;
+
+  // |media::audio::ReadableStream|
+  std::optional<ReadableStream::Buffer> ReadLockImpl(ReadLockContext& ctx, Fixed frame,
+                                                     int64_t frame_count) override;
+  // Since we have no buffers to free, Trim is a no-op.
+  void TrimImpl(Fixed frame) override {}
+
   SafeReadWriteFrameFn safe_read_frame_;
 };
 

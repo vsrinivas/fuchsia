@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/media/audio/audio_core/stream2.h"
+#include "src/media/audio/audio_core/stream.h"
 
 #include <lib/syslog/cpp/macros.h>
 
@@ -36,13 +36,7 @@ constexpr bool kLogTrims = true;
 
 }  // namespace
 
-namespace media::audio::stream2 {
-
-// TODO(fxbug.dev/50669): remove after replacing stream.h
-namespace mixer {
-using ::media::audio::mixer::IntersectPacket;
-using ::media::audio::mixer::Packet;
-}  // namespace mixer
+namespace media::audio {
 
 ReadableStream::ReadableStream(std::string n, Format format)
     : BaseStream(std::move(n), format),
@@ -194,9 +188,11 @@ std::optional<ReadableStream::Buffer> ReadableStream::MakeCachedBuffer(
     float total_applied_gain_db) {
   // This buffer will be stored in cached_. It won't be returned to the ReadLock caller,
   // instead we'll use ReadFromCachedBuffer to return a proxy to this buffer.
-  return ReadableStream::Buffer(
-      start_frame, frame_count, payload, true /* use cache */, usage_mask, total_applied_gain_db,
-      nullptr /* buffer unlock is handled by the proxy (see ReadFromCachedBuffer) */);
+  return ReadableStream::Buffer(start_frame, frame_count, payload, true /* use cache */, usage_mask,
+                                total_applied_gain_db, [this](int64_t frames_consumed) mutable {
+                                  // Trim is handled by the proxy (see ReadFromCachedBuffer).
+                                  ReadUnlock();
+                                });
 }
 
 std::optional<ReadableStream::Buffer> ReadableStream::MakeUncachedBuffer(
@@ -214,6 +210,7 @@ std::optional<ReadableStream::Buffer> ReadableStream::MakeUncachedBuffer(
           previous_buffer_end_ = trim_frame;
         };
         Trim(trim_frame);
+        ReadUnlock();
       });
 }
 
@@ -242,6 +239,7 @@ std::optional<ReadableStream::Buffer> ReadableStream::ForwardBuffer(
         // is unlocked before it is Trim'd.
         buffer = std::nullopt;
         Trim(trim_frame);
+        ReadUnlock();
       });
 }
 
@@ -259,4 +257,4 @@ void ReadableStream::DetectTimelineUpdate() {
   cached_ = std::nullopt;
 }
 
-}  // namespace media::audio::stream2
+}  // namespace media::audio

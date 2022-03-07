@@ -427,6 +427,7 @@ void EffectsStageV2Test::TestAddOneWithSinglePacket(ProcessorInfo<T> info, int64
     auto buf = effects_stage->ReadLock(rlctx, Fixed(0), packet_frames);
     ASSERT_TRUE(buf);
     EXPECT_EQ(buf->start().Floor(), 0);
+    EXPECT_EQ(buf->start().Fraction().raw_value(), 0);
     EXPECT_EQ(buf->length(), read_lock_buffer_frames);
 
     auto vec = as_vec(buf->payload(), 0, read_lock_buffer_frames * output_channels);
@@ -444,9 +445,6 @@ void EffectsStageV2Test::TestAddOneWithSinglePacket(ProcessorInfo<T> info, int64
   }
 
   {
-    // TODO(fxbug.dev/50669): This will be unnecessary after we update ReadLock implementations
-    // to never return an out-of-bounds packet.
-    stream->Trim(Fixed(packet_frames));
     // Read the next packet. This should be null, because there are no more packets.
     auto buf = effects_stage->ReadLock(rlctx, Fixed(packet_frames), packet_frames);
     ASSERT_FALSE(buf);
@@ -514,6 +512,179 @@ TEST_F(EffectsStageV2Test, AddOneWithOneChanSameVmoDifferentRanges) {
       .output_format = DefaultFormatWithChannels(1),
   });
   TestAddOneWithSinglePacket(std::move(processor_info));
+}
+
+TEST_F(EffectsStageV2Test, AddOneWithSourceOffset) {
+  constexpr auto kPacketFrames = 480;
+  constexpr auto kPacketDuration = zx::msec(10);
+
+  std::vector<Fixed> source_offsets = {
+      Fixed(kPacketFrames / 2),
+      Fixed(kPacketFrames / 2) + ffl::FromRatio(1, 2),
+  };
+  for (auto source_offset : source_offsets) {
+    std::ostringstream os;
+    os << "source_offset=" << ffl::String::DecRational << source_offset;
+    SCOPED_TRACE(os.str());
+
+    auto info = MakeProcessorWithSameRange<AddOneProcessor>({
+        .input_format = DefaultFormatWithChannels(1),
+        .output_format = DefaultFormatWithChannels(1),
+    });
+
+    auto [packet_factory, stream, effects_stage] = MakeEffectsStage(std::move(info.config));
+    packet_factory->SeekToFrame(source_offset);
+    stream->PushPacket(packet_factory->CreatePacket(1.0, kPacketDuration));
+
+    // Source frame 100.5 is sampled at dest frame 101.
+    const int64_t dest_offset_frames = source_offset.Ceiling();
+
+    {
+      // Read the first packet. Since the first source packet is offset by source_offset,
+      // we should read silence from the source followed by 1.0s. The effect adds one to these
+      // values, so we should see 1.0s followed by 2.0s.
+      auto buf = effects_stage->ReadLock(rlctx, Fixed(0), kPacketFrames);
+      ASSERT_TRUE(buf);
+      EXPECT_EQ(buf->start().Floor(), 0);
+      EXPECT_EQ(buf->start().Fraction().raw_value(), 0);
+      EXPECT_EQ(buf->length(), kPacketFrames);
+
+      auto vec1 = as_vec(buf->payload(), 0, dest_offset_frames);
+      auto vec2 = as_vec(buf->payload(), dest_offset_frames, kPacketFrames);
+      EXPECT_THAT(vec1, Each(FloatEq(1.0f)));
+      EXPECT_THAT(vec2, Each(FloatEq(2.0f)));
+    }
+
+    {
+      // Read the second packet. This should contain the remainder of the 2.0s, followed
+      // by 1.0s.
+      auto buf = effects_stage->ReadLock(rlctx, Fixed(kPacketFrames), kPacketFrames);
+      ASSERT_TRUE(buf);
+      EXPECT_EQ(buf->start().Floor(), kPacketFrames);
+      EXPECT_EQ(buf->start().Fraction().raw_value(), 0);
+      EXPECT_EQ(buf->length(), kPacketFrames);
+
+      auto vec1 = as_vec(buf->payload(), 0, dest_offset_frames);
+      auto vec2 = as_vec(buf->payload(), dest_offset_frames, kPacketFrames);
+      EXPECT_THAT(vec1, Each(FloatEq(2.0f)));
+      EXPECT_THAT(vec2, Each(FloatEq(1.0f)));
+    }
+
+    {
+      // Read the next packet. This should be null, because there are no more packets.
+      auto buf = effects_stage->ReadLock(rlctx, Fixed(2 * kPacketFrames), kPacketFrames);
+      ASSERT_FALSE(buf);
+    }
+  }
+}
+
+TEST_F(EffectsStageV2Test, AddOneWithReadLockSmallerThanProcessingBuffer) {
+  auto info = MakeProcessorWithSameRange<AddOneProcessor>({
+      .input_format = DefaultFormatWithChannels(1),
+      .output_format = DefaultFormatWithChannels(1),
+      .max_frames_per_call = 720,
+      .block_size_frames = 720,
+  });
+
+  // Queue one 10ms packet (480 frames).
+  auto [packet_factory, stream, effects_stage] = MakeEffectsStage(std::move(info.config));
+  stream->PushPacket(packet_factory->CreatePacket(1.0, zx::msec(10)));
+
+  {
+    // Read the first packet.
+    auto buf = effects_stage->ReadLock(rlctx, Fixed(0), 480);
+    ASSERT_TRUE(buf);
+    EXPECT_EQ(buf->start().Floor(), 0);
+    EXPECT_EQ(buf->start().Fraction().raw_value(), 0);
+    EXPECT_EQ(buf->length(), 480);
+
+    // Our effect adds 1.0, and the source packet is 1.0, so the payload should contain all 2.0.
+    auto vec = as_vec(buf->payload(), 0, 480);
+    EXPECT_THAT(vec, Each(FloatEq(2.0f)));
+  }
+
+  {
+    // The source stream does not have a second packet, however when we processed the first
+    // packet, we processed 720 frames total (480 from the first packet + 240 of silence).
+    // This ReadLock should return those 240 frames.
+    auto buf = effects_stage->ReadLock(rlctx, Fixed(480), 480);
+    ASSERT_TRUE(buf);
+    EXPECT_EQ(buf->start().Floor(), 480);
+    EXPECT_EQ(buf->start().Fraction().raw_value(), 0);
+    EXPECT_EQ(buf->length(), 240);
+
+    // Since the source stream was silent, and our effect adds 1.0, the payload is 1.0.
+    auto vec = as_vec(buf->payload(), 0, 240);
+    EXPECT_THAT(vec, Each(FloatEq(1.0f)));
+  }
+
+  {
+    // Read again where we left off. This should be null, because our cache is exhausted
+    // and the source has no more data.
+    auto buf = effects_stage->ReadLock(rlctx, Fixed(720), 480);
+    ASSERT_FALSE(buf);
+  }
+}
+
+TEST_F(EffectsStageV2Test, AddOneWithReadLockSmallerThanProcessingBufferAndSourceOffset) {
+  auto info = MakeProcessorWithSameRange<AddOneProcessor>({
+      .input_format = DefaultFormatWithChannels(1),
+      .output_format = DefaultFormatWithChannels(1),
+      .max_frames_per_call = 720,
+      .block_size_frames = 720,
+  });
+
+  // Queue one 10ms packet (480 frames) starting at frame 720.
+  auto [packet_factory, stream, effects_stage] = MakeEffectsStage(std::move(info.config));
+  packet_factory->SeekToFrame(Fixed(720));
+  stream->PushPacket(packet_factory->CreatePacket(1.0, zx::msec(10)));
+
+  {
+    // This ReadLock will attempt read 720 frames from the source, but the source is empty.
+    auto buf = effects_stage->ReadLock(rlctx, Fixed(0), 480);
+    ASSERT_FALSE(buf);
+  }
+
+  {
+    // This ReadLock should not read anything from the source because we know
+    // from the prior ReadLock that the source is empty until 720.
+    auto buf = effects_stage->ReadLock(rlctx, Fixed(480), 240);
+    ASSERT_FALSE(buf);
+  }
+
+  {
+    // Now we have data.
+    auto buf = effects_stage->ReadLock(rlctx, Fixed(720), 480);
+    ASSERT_TRUE(buf);
+    EXPECT_EQ(buf->start().Floor(), 720);
+    EXPECT_EQ(buf->start().Fraction().raw_value(), 0);
+    EXPECT_EQ(buf->length(), 480);
+
+    // Our effect adds 1.0, and the source packet is 1.0, so the payload should contain all 2.0.
+    auto vec = as_vec(buf->payload(), 0, 480);
+    EXPECT_THAT(vec, Each(FloatEq(2.0f)));
+  }
+
+  {
+    // The source stream ends at frame 720+480=1200, however the last ReadLock processed
+    // 240 additional frames from the source. This ReadLock should return those 240 frames.
+    auto buf = effects_stage->ReadLock(rlctx, Fixed(1200), 480);
+    ASSERT_TRUE(buf);
+    EXPECT_EQ(buf->start().Floor(), 1200);
+    EXPECT_EQ(buf->start().Fraction().raw_value(), 0);
+    EXPECT_EQ(buf->length(), 240);
+
+    // Our effect adds 1.0, and the source range is silent, so the payload should contain all 1.0s.
+    auto vec = as_vec(buf->payload(), 0, 240);
+    EXPECT_THAT(vec, Each(FloatEq(1.0f)));
+  }
+
+  {
+    // Read again where we left off. This should be null, because our cache is exhausted
+    // and the source has no more data.
+    auto buf = effects_stage->ReadLock(rlctx, Fixed(1440), 480);
+    ASSERT_FALSE(buf);
+  }
 }
 
 //
@@ -1327,151 +1498,6 @@ TEST(EffectsStageV2BuffersTest, CreateSharedNonOverlapping) {
     (*p) += 1;
   }
 }
-
-//
-// RingOut
-//
-
-struct RingOutTestParameters {
-  uint32_t ring_out_frames;
-  uint32_t max_frames_per_call;
-  // The expected number of frames returned by each ReadLock call.
-  uint32_t read_lock_frames;
-};
-
-class EffectsStageV2RingOutTest : public EffectsStageV2Test,
-                                  public ::testing::WithParamInterface<RingOutTestParameters> {};
-
-TEST_P(EffectsStageV2RingOutTest, RingoutFrames) {
-  constexpr auto kPacketFrames = 480;
-  constexpr auto kInputPacketBytes = kPacketFrames * sizeof(float);
-  constexpr auto kOutputPacketBytes = kPacketFrames * sizeof(float);
-
-  ConfigOptions options;
-  options.ring_out_frames = GetParam().ring_out_frames;
-  options.max_frames_per_call = GetParam().max_frames_per_call;
-  CreateSeparateVmos(options, kInputPacketBytes, kOutputPacketBytes);
-
-  // Use a simple AddOneProcessor.
-  auto config = MakeProcessorConfig(arena(), DupConfigOptions(options));
-  auto server_end = AttachProcessorChannel(config);
-  AddOneProcessor processor(options, std::move(server_end), fidl_dispatcher());
-
-  auto packet_factory = std::make_unique<testing::PacketFactory>(dispatcher(), k48k1ChanFloatFormat,
-                                                                 zx_system_get_page_size());
-  auto stream = MakePacketQueue(k48k1ChanFloatFormat);
-  auto effects_stage = EffectsStageV2::Create(std::move(config), stream).take_value();
-
-  // Add 48 frames to our source.
-  stream->PushPacket(packet_factory->CreatePacket(1.0, zx::msec(1)));
-
-  // Read the first packet.
-  {
-    auto buf = effects_stage->ReadLock(rlctx, Fixed(0), 480);
-    ASSERT_TRUE(buf);
-    EXPECT_EQ(0, buf->start().Floor());
-    EXPECT_EQ(48, buf->length());
-  }
-
-  // TODO(fxbug.dev/50669): This will be unnecessary after we update ReadLock implementations
-  // to never return an out-of-bounds packet.
-  stream->Trim(Fixed(48));
-
-  // Now we expect our ringout to be split across many buffers.
-  int64_t start_frame = 48;
-  uint32_t ringout_frames = 0;
-  {
-    while (ringout_frames < GetParam().ring_out_frames) {
-      auto buf = effects_stage->ReadLock(rlctx, Fixed(start_frame), GetParam().ring_out_frames);
-      ASSERT_TRUE(buf);
-      EXPECT_EQ(start_frame, buf->start().Floor());
-      EXPECT_EQ(GetParam().read_lock_frames, buf->length());
-      start_frame += GetParam().read_lock_frames;
-      ringout_frames += GetParam().read_lock_frames;
-    }
-  }
-
-  {
-    auto buf = effects_stage->ReadLock(rlctx, Fixed(start_frame), 480);
-    EXPECT_FALSE(buf);
-  }
-
-  // Add another data packet to verify we correctly reset the ringout when the source goes silent
-  // again.
-  start_frame += 480;
-  packet_factory->SeekToFrame(Fixed(start_frame));
-  stream->PushPacket(packet_factory->CreatePacket(1.0, zx::msec(1)));
-
-  // Read the next packet.
-  {
-    auto buf = effects_stage->ReadLock(rlctx, Fixed(start_frame), 48);
-    ASSERT_TRUE(buf);
-    EXPECT_EQ(start_frame, buf->start().Floor());
-    EXPECT_EQ(48, buf->length());
-    start_frame += buf->length();
-  }
-
-  // TODO(fxbug.dev/50669): This will be unnecessary after we update ReadLock implementations
-  // to never return an out-of-bounds packet.
-  stream->Trim(Fixed(start_frame));
-
-  // Now we expect our ringout to be split across many buffers.
-  ringout_frames = 0;
-  {
-    while (ringout_frames < GetParam().ring_out_frames) {
-      auto buf = effects_stage->ReadLock(rlctx, Fixed(start_frame), GetParam().ring_out_frames);
-      ASSERT_TRUE(buf);
-      EXPECT_EQ(start_frame, buf->start().Floor());
-      EXPECT_EQ(GetParam().read_lock_frames, buf->length());
-      start_frame += GetParam().read_lock_frames;
-      ringout_frames += GetParam().read_lock_frames;
-    }
-  }
-
-  {
-    auto buf = effects_stage->ReadLock(rlctx, Fixed(48), 480);
-    EXPECT_FALSE(buf);
-  }
-}
-
-const RingOutTestParameters kNoRingout{
-    .ring_out_frames = 0,
-    .max_frames_per_call = 0,
-    .read_lock_frames = 0,
-};
-
-const RingOutTestParameters kSmallRingOutNoBlockSize{
-    .ring_out_frames = 4,
-    .max_frames_per_call = 0,
-    .read_lock_frames = 4,
-};
-
-const RingOutTestParameters kLargeRingOutNoBlockSize{
-    .ring_out_frames = 8192,
-    .max_frames_per_call = 0,
-    .read_lock_frames = 480,  // VMO buffer size
-};
-
-const RingOutTestParameters kMaxFramesPerBufferLowerThanRingOutFrames{
-    .ring_out_frames = 8192,
-    .max_frames_per_call = 128,
-    .read_lock_frames = 128,
-};
-
-std::string PrintRingOutParam(
-    const ::testing::TestParamInfo<EffectsStageV2RingOutTest::ParamType>& info) {
-  std::ostringstream os;
-  os << "ring_out_frames_" << info.param.ring_out_frames << "_"
-     << "max_frames_per_call_" << info.param.max_frames_per_call << "_"
-     << "read_lock_frames_" << info.param.read_lock_frames;
-  return os.str();
-}
-
-INSTANTIATE_TEST_SUITE_P(EffectsStageV2RingOutTestInstance, EffectsStageV2RingOutTest,
-                         ::testing::Values(kNoRingout, kSmallRingOutNoBlockSize,
-                                           kLargeRingOutNoBlockSize,
-                                           kMaxFramesPerBufferLowerThanRingOutFrames),
-                         PrintRingOutParam);
 
 }  // namespace
 }  // namespace media::audio

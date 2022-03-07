@@ -6,7 +6,6 @@
 
 #include <gmock/gmock.h>
 
-#include "src/media/audio/audio_core/mix_profile_config.h"
 #include "src/media/audio/audio_core/packet_queue.h"
 #include "src/media/audio/audio_core/process_config.h"
 #include "src/media/audio/audio_core/testing/fake_stream.h"
@@ -45,20 +44,27 @@ class EffectsStageV1Test : public testing::ThreadingModelFixture {
     return reinterpret_cast<std::array<T, N>&>(static_cast<T*>(ptr)[offset]);
   }
 
+  struct Options {
+    // Position of the first non-zero source frame.
+    Fixed first_source_frame;
+    // Effect options.
+    std::optional<int64_t> block_size;
+    std::optional<int64_t> max_frames_per_buffer;
+  };
+  std::shared_ptr<EffectsStageV1> CreateWithAddOneEffect(Options options);
+
   testing::PacketFactory& packet_factory() { return packet_factory_; }
   testing::TestEffectsV1Module& test_effects() { return test_effects_; }
-  const MixProfileConfig& mix_profile_config() const { return mix_profile_config_; }
   VolumeCurve& volume_curve() { return volume_curve_; }
 
  private:
   testing::PacketFactory packet_factory_{dispatcher(), k48k2ChanFloatFormat,
                                          zx_system_get_page_size()};
   testing::TestEffectsV1Module test_effects_ = testing::TestEffectsV1Module::Open();
-  MixProfileConfig mix_profile_config_;
   VolumeCurve volume_curve_ = VolumeCurve::DefaultForMinGain(VolumeCurve::kDefaultGainForMinVolume);
 };
 
-TEST_F(EffectsStageV1Test, ApplyEffectsToSourceStream) {
+std::shared_ptr<EffectsStageV1> EffectsStageV1Test::CreateWithAddOneEffect(Options options) {
   // Create a packet queue to use as our source stream.
   auto timeline_function =
       fbl::MakeRefCounted<VersionedTimelineFunction>(TimelineFunction(TimelineRate(
@@ -69,7 +75,15 @@ TEST_F(EffectsStageV1Test, ApplyEffectsToSourceStream) {
       context().clock_factory()->CreateClientFixed(clock::AdjustableCloneOfMonotonic()));
 
   // Create an effect we can load.
-  test_effects().AddEffect("add_1.0").WithAction(TEST_EFFECTS_ACTION_ADD, 1.0);
+  auto e = test_effects().AddEffect("add_1.0");
+  e.WithAction(TEST_EFFECTS_ACTION_ADD, 1.0);
+  if (options.block_size) {
+    e.WithBlockSize(*options.block_size);
+  }
+  if (options.max_frames_per_buffer) {
+    e.WithMaxFramesPerBuffer(*options.max_frames_per_buffer);
+  }
+  EXPECT_EQ(e.Build(), ZX_OK);
 
   // Create the effects stage.
   std::vector<PipelineConfig::EffectV1> effects;
@@ -78,32 +92,248 @@ TEST_F(EffectsStageV1Test, ApplyEffectsToSourceStream) {
       .effect_name = "add_1.0",
       .effect_config = "",
   });
-  auto effects_stage =
-      EffectsStageV1::Create(effects, stream, mix_profile_config(), volume_curve());
+  auto effects_stage = EffectsStageV1::Create(effects, stream, volume_curve());
 
-  // Enqueue 10ms of frames in the packet queue.
+  // Enqueue 10ms of frames in the packet queue. All samples are 1.0.
+  packet_factory().SeekToFrame(options.first_source_frame);
   stream->PushPacket(packet_factory().CreatePacket(1.0, zx::msec(10)));
 
-  {
-    // Read from the effects stage. Since our effect adds 1.0 to each sample, and we populated the
-    // packet with 1.0 samples, we expect to see only 2.0 samples in the result.
-    auto buf = effects_stage->ReadLock(rlctx, Fixed(0), 480);
-    ASSERT_TRUE(buf);
-    ASSERT_EQ(0u, buf->start().Floor());
-    ASSERT_EQ(480u, buf->length());
+  return effects_stage;
+}
 
-    auto& arr = as_array<float, 480>(buf->payload());
+TEST_F(EffectsStageV1Test, ApplyEffects) {
+  auto effects_stage = CreateWithAddOneEffect({});
+
+  {
+    // Read the first half of the first packet.
+    auto buf = effects_stage->ReadLock(rlctx, Fixed(0), 240);
+    ASSERT_TRUE(buf);
+    EXPECT_EQ(buf->start().Floor(), 0);
+    EXPECT_EQ(buf->length(), 240);
+
+    // Our effect adds 1.0, so the payload should contain all 2.0s.
+    auto& arr = as_array<float, 240>(buf->payload());
+    EXPECT_THAT(arr, Each(FloatEq(2.0f)));
+  }
+
+  {
+    // Read the second half of the first packet.
+    // The fractional dest_frame should be floor'd to 240.
+    auto buf = effects_stage->ReadLock(rlctx, Fixed(240) + ffl::FromRatio(1, 2), 240);
+    ASSERT_TRUE(buf);
+    EXPECT_EQ(buf->start().Floor(), 240);
+    EXPECT_EQ(buf->length(), 240);
+
+    // Our effect adds 1.0, so the payload should contain all 2.0s.
+    auto& arr = as_array<float, 240>(buf->payload());
     EXPECT_THAT(arr, Each(FloatEq(2.0f)));
   }
 
   {
     // Read again. This should be null, because there are no more packets.
-    auto buf = effects_stage->ReadLock(rlctx, Fixed(0), 480);
+    auto buf = effects_stage->ReadLock(rlctx, Fixed(480), 480);
     ASSERT_FALSE(buf);
   }
 }
 
-TEST_F(EffectsStageV1Test, BlockAlignRequests) {
+TEST_F(EffectsStageV1Test, ApplyEffectsWithOffsetSourcePosition) {
+  auto effects_stage = CreateWithAddOneEffect({
+      .first_source_frame = Fixed(240),
+      .block_size = 480,
+      .max_frames_per_buffer = 480,
+  });
+
+  {
+    // Read the packet.
+    auto buf = effects_stage->ReadLock(rlctx, Fixed(0), 480);
+    ASSERT_TRUE(buf);
+    EXPECT_EQ(buf->start().Floor(), 0);
+    EXPECT_EQ(buf->length(), 480);
+
+    // The source is empty (silent) for the first 240 frames, then all 1.0s
+    // for the next 240 frames. Since the block size is 480 frames, these
+    // should be processed in one block. Therefore we start with 240 1.0s
+    // (0.0+1.0) followed by 240 2.0s (1.0+1.1).
+    auto& arr1 = as_array<float, 240>(buf->payload(), 0);
+    auto& arr2 = as_array<float, 240>(buf->payload(), 240 * effects_stage->format().channels());
+    EXPECT_THAT(arr1, Each(FloatEq(1.0f)));
+    EXPECT_THAT(arr2, Each(FloatEq(2.0f)));
+  }
+}
+
+TEST_F(EffectsStageV1Test, ApplyEffectsWithFractionalSourcePosition) {
+  auto effects_stage = CreateWithAddOneEffect({
+      .first_source_frame = Fixed(100) + ffl::FromRatio(1, 2),
+  });
+
+  // The first source frame is 100.5, which is sampled at dest frame 101.
+  const int64_t dest_offset = 101;
+
+  {
+    // Read the first half of the first packet.
+    auto buf = effects_stage->ReadLock(rlctx, Fixed(dest_offset), 240);
+    ASSERT_TRUE(buf);
+    EXPECT_EQ(buf->start().Floor(), dest_offset);
+    EXPECT_EQ(buf->start().Fraction().raw_value(), 0);
+    EXPECT_EQ(buf->length(), 240);
+
+    // Our effect adds 1.0, so the payload should contain all 2.0s.
+    auto& arr = as_array<float, 240>(buf->payload());
+    EXPECT_THAT(arr, Each(FloatEq(2.0f)));
+  }
+
+  {
+    // Read the second half of the first packet.
+    // The fractional dest_frame should be floor'd to dest_offset + 240.
+    auto buf = effects_stage->ReadLock(rlctx, Fixed(dest_offset + 240) + ffl::FromRatio(1, 2), 240);
+    ASSERT_TRUE(buf);
+    EXPECT_EQ(buf->start().Floor(), dest_offset + 240);
+    EXPECT_EQ(buf->length(), 240);
+
+    // Our effect adds 1.0, so the payload should contain all 2.0s.
+    auto& arr = as_array<float, 240>(buf->payload());
+    EXPECT_THAT(arr, Each(FloatEq(2.0f)));
+  }
+
+  {
+    // Read again. This should be null, because there are no more packets.
+    auto buf = effects_stage->ReadLock(rlctx, Fixed(dest_offset + 480), 480);
+    ASSERT_FALSE(buf);
+  }
+}
+
+TEST_F(EffectsStageV1Test, ApplyEffectsReadLockLargerThanProcessingBuffer) {
+  auto effects_stage = CreateWithAddOneEffect({
+      .first_source_frame = Fixed(240),
+      .max_frames_per_buffer = 240,
+  });
+
+  {
+    // Try to read the first 480ms. The source data does not start until 240ms, so this
+    // should return a buffer covering [240ms,480ms).
+    auto buf = effects_stage->ReadLock(rlctx, Fixed(0), 480);
+    ASSERT_TRUE(buf);
+    EXPECT_EQ(buf->start().Floor(), 240);
+    EXPECT_EQ(buf->length(), 240);
+
+    // Our effect adds 1.0, so the payload should contain all 2.0s.
+    auto& arr = as_array<float, 240>(buf->payload());
+    EXPECT_THAT(arr, Each(FloatEq(2.0f)));
+  }
+
+  {
+    // Read again where we left off. This should read the remaining 240ms.
+    auto buf = effects_stage->ReadLock(rlctx, Fixed(480), 480);
+    ASSERT_TRUE(buf);
+    EXPECT_EQ(buf->start().Floor(), 480);
+    EXPECT_EQ(buf->length(), 240);
+
+    // Our effect adds 1.0, so the payload should contain all 2.0s.
+    auto& arr = as_array<float, 240>(buf->payload());
+    EXPECT_THAT(arr, Each(FloatEq(2.0f)));
+  }
+
+  {
+    // Read again where we left off. This should be null, because there are no more packets.
+    auto buf = effects_stage->ReadLock(rlctx, Fixed(720), 480);
+    ASSERT_FALSE(buf);
+  }
+}
+
+TEST_F(EffectsStageV1Test, ApplyEffectsReadLockSmallerThanProcessingBuffer) {
+  auto effects_stage = CreateWithAddOneEffect({
+      .first_source_frame = Fixed(0),
+      .block_size = 720,
+      .max_frames_per_buffer = 720,
+  });
+
+  {
+    // Read the first packet.
+    auto buf = effects_stage->ReadLock(rlctx, Fixed(0), 480);
+    ASSERT_TRUE(buf);
+    EXPECT_EQ(buf->start().Floor(), 0);
+    EXPECT_EQ(buf->length(), 480);
+
+    // Our effect adds 1.0, so the payload should contain all 2.0s.
+    auto& arr = as_array<float, 480>(buf->payload());
+    EXPECT_THAT(arr, Each(FloatEq(2.0f)));
+  }
+
+  {
+    // At the second packet, we've already cached "silence" from the source
+    // for the first 240 frames.
+    auto buf = effects_stage->ReadLock(rlctx, Fixed(480), 480);
+    ASSERT_TRUE(buf);
+    EXPECT_EQ(buf->start().Floor(), 480);
+    EXPECT_EQ(buf->length(), 240);
+
+    // Our effect adds 1.0, and the source is silent, so the payload should contain all 1.0s.
+    auto& arr = as_array<float, 240>(buf->payload());
+    EXPECT_THAT(arr, Each(FloatEq(1.0f)));
+  }
+
+  {
+    // Read again where we left off. This should be null, because our cache is exhausted
+    // and the source has no more data.
+    auto buf = effects_stage->ReadLock(rlctx, Fixed(720), 480);
+    ASSERT_FALSE(buf);
+  }
+}
+
+TEST_F(EffectsStageV1Test, ApplyEffectsReadLockSmallerThanProcessingBufferWithSourceOffset) {
+  auto effects_stage = CreateWithAddOneEffect({
+      .first_source_frame = Fixed(720),
+      .block_size = 720,
+      .max_frames_per_buffer = 720,
+  });
+
+  {
+    // This ReadLock will attempt read 720 frames from the source, but the source is empty.
+    auto buf = effects_stage->ReadLock(rlctx, Fixed(0), 480);
+    ASSERT_FALSE(buf);
+  }
+
+  {
+    // This ReadLock should not read anything from the source because we know
+    // from the prior ReadLock that the source is empty until 720.
+    auto buf = effects_stage->ReadLock(rlctx, Fixed(480), 240);
+    ASSERT_FALSE(buf);
+  }
+
+  {
+    // Now we have data.
+    auto buf = effects_stage->ReadLock(rlctx, Fixed(720), 480);
+    ASSERT_TRUE(buf);
+    EXPECT_EQ(buf->start().Floor(), 720);
+    EXPECT_EQ(buf->length(), 480);
+
+    // Our effect adds 1.0, so the payload should contain all 2.0s.
+    auto& arr = as_array<float, 480>(buf->payload());
+    EXPECT_THAT(arr, Each(FloatEq(2.0f)));
+  }
+
+  {
+    // Source data ends at 720+480=1200, however the last ReadLock processed 240 additional
+    // silent frames from the source.
+    auto buf = effects_stage->ReadLock(rlctx, Fixed(1200), 480);
+    ASSERT_TRUE(buf);
+    EXPECT_EQ(buf->start().Floor(), 1200);
+    EXPECT_EQ(buf->length(), 240);
+
+    // Our effect adds 1.0, and the source range is silent, so the payload should contain all 1.0s.
+    auto& arr = as_array<float, 240>(buf->payload());
+    EXPECT_THAT(arr, Each(FloatEq(1.0f)));
+  }
+
+  {
+    // Read again where we left off. This should be null, because our cache is exhausted
+    // and the source has no more data.
+    auto buf = effects_stage->ReadLock(rlctx, Fixed(1440), 480);
+    ASSERT_FALSE(buf);
+  }
+}
+
+TEST_F(EffectsStageV1Test, RespectBlockSize) {
   // Create a source stream.
   auto stream =
       std::make_shared<testing::FakeStream>(k48k2ChanFloatFormat, context().clock_factory());
@@ -122,44 +352,36 @@ TEST_F(EffectsStageV1Test, BlockAlignRequests) {
       .effect_name = "add_1.0",
       .effect_config = "",
   });
-  auto effects_stage =
-      EffectsStageV1::Create(effects, stream, mix_profile_config(), volume_curve());
+  auto effects_stage = EffectsStageV1::Create(effects, stream, volume_curve());
 
   EXPECT_EQ(effects_stage->block_size(), kBlockSize);
 
+  // EffectsStage must operate on blocks of 128 at time. Request more than 128 frames.
+  // Internally, we should read 2 blocks from the source, process those blocks, then
+  // return the first 138 frames. If don't process exactly 256 blocks, the TestEffect
+  // processor will fail.
   {
-    // Ask for a single negative frame. We should receive an entire block.
-    auto buffer = effects_stage->ReadLock(rlctx, Fixed(-1), 1);
-    EXPECT_EQ(buffer->start().Floor(), -static_cast<int32_t>(kBlockSize));
-    EXPECT_EQ(buffer->length(), kBlockSize);
+    auto buffer = effects_stage->ReadLock(rlctx, Fixed(0), 138);
+    EXPECT_EQ(buffer->start().Floor(), 0);
+    ASSERT_EQ(buffer->length(), 138);
+    EXPECT_EQ(reinterpret_cast<float*>(buffer->payload())[0], 1.0);
+    memset(buffer->payload(), 0, kBlockSize * k48k2ChanFloatFormat.bytes_per_frame());
   }
 
+  // Ask for the second and third blocks. The rest of the second block is immediately available.
   {
-    // Ask for 1 frame; expect to get a full block.
-    auto buffer = effects_stage->ReadLock(rlctx, Fixed(0), 1);
-    EXPECT_EQ(buffer->start().Floor(), 0u);
-    EXPECT_EQ(buffer->length(), kBlockSize);
+    auto buffer = effects_stage->ReadLock(rlctx, Fixed(138), 2 * kBlockSize);
+    EXPECT_EQ(buffer->start().Floor(), 138);
+    ASSERT_EQ(buffer->length(), 2 * kBlockSize - 138);
+    EXPECT_EQ(reinterpret_cast<float*>(buffer->payload())[0], 1.0);
   }
 
+  // Ask for the third block.
   {
-    // Ask for subsequent frames; expect the same block still.
-    auto buffer = effects_stage->ReadLock(rlctx, Fixed(kBlockSize / 2), kBlockSize / 2);
-    EXPECT_EQ(buffer->start().Floor(), 0u);
-    EXPECT_EQ(buffer->length(), kBlockSize);
-  }
-
-  {
-    // Ask for the second block
-    auto buffer = effects_stage->ReadLock(rlctx, Fixed(kBlockSize), kBlockSize);
-    EXPECT_EQ(buffer->start().Floor(), kBlockSize);
-    EXPECT_EQ(buffer->length(), kBlockSize);
-  }
-
-  {
-    // Check for a frame to verify we handle frame numbers > UINT32_MAX.
-    auto buffer = effects_stage->ReadLock(rlctx, Fixed(0x100000000), 1);
-    EXPECT_EQ(buffer->start().Floor(), 0x100000000);
-    EXPECT_EQ(buffer->length(), kBlockSize);
+    auto buffer = effects_stage->ReadLock(rlctx, Fixed(2 * kBlockSize), kBlockSize);
+    EXPECT_EQ(buffer->start().Floor(), 2 * kBlockSize);
+    ASSERT_EQ(buffer->length(), kBlockSize);
+    EXPECT_EQ(reinterpret_cast<float*>(buffer->payload())[0], 1.0);
   }
 }
 
@@ -171,7 +393,8 @@ TEST_F(EffectsStageV1Test, TruncateToMaxBufferSize) {
   const uint32_t kBlockSize = 128;
   const uint32_t kMaxBufferSize = 300;
   test_effects()
-      .AddEffect("test_effect")
+      .AddEffect("add_1.0")
+      .WithAction(TEST_EFFECTS_ACTION_ADD, 1.0)
       .WithBlockSize(kBlockSize)
       .WithMaxFramesPerBuffer(kMaxBufferSize);
 
@@ -179,19 +402,20 @@ TEST_F(EffectsStageV1Test, TruncateToMaxBufferSize) {
   std::vector<PipelineConfig::EffectV1> effects;
   effects.push_back(PipelineConfig::EffectV1{
       .lib_name = testing::kTestEffectsModuleName,
-      .effect_name = "test_effect",
+      .effect_name = "add_1.0",
       .effect_config = "",
   });
-  auto effects_stage =
-      EffectsStageV1::Create(effects, stream, mix_profile_config(), volume_curve());
+  auto effects_stage = EffectsStageV1::Create(effects, stream, volume_curve());
 
   EXPECT_EQ(effects_stage->block_size(), kBlockSize);
 
+  // Request 4 blocks, but get just 2, because the max buffer size is 300.
   {
     auto buffer = effects_stage->ReadLock(rlctx, Fixed(0), 512);
-    EXPECT_EQ(buffer->start().Floor(), 0u);
-    // Length is 2 full blocks since 3 blocks would be > 300 frames.
-    EXPECT_EQ(buffer->length(), 256);
+    EXPECT_EQ(buffer->start().Floor(), 0);
+    ASSERT_EQ(buffer->length(), 256);
+    EXPECT_EQ(reinterpret_cast<float*>(buffer->payload())[0], 1.0);
+    memset(buffer->payload(), 0, kBlockSize * k48k2ChanFloatFormat.bytes_per_frame());
   }
 }
 
@@ -199,7 +423,7 @@ TEST_F(EffectsStageV1Test, CompensateForEffectDelayInStreamTimeline) {
   auto stream =
       std::make_shared<testing::FakeStream>(k48k2ChanFloatFormat, context().clock_factory());
 
-  // Setup the timeline function so that time 0 alignes to frame 0 with a rate corresponding to the
+  // Setup the timeline function so that time 0 aligns to frame 0 with a rate corresponding to the
   // streams format.
   stream->timeline_function()->Update(TimelineFunction(TimelineRate(
       Fixed(k48k2ChanFloatFormat.frames_per_second()).raw_value(), zx::sec(1).to_nsecs())));
@@ -219,8 +443,7 @@ TEST_F(EffectsStageV1Test, CompensateForEffectDelayInStreamTimeline) {
       .effect_name = "effect_with_delay_3",
       .effect_config = "",
   });
-  auto effects_stage =
-      EffectsStageV1::Create(effects, stream, mix_profile_config(), volume_curve());
+  auto effects_stage = EffectsStageV1::Create(effects, stream, volume_curve());
 
   // Since our effect introduces 13 frames of latency, the incoming source frame at time 0 can only
   // emerge from the effect in output frame 13.
@@ -241,7 +464,7 @@ TEST_F(EffectsStageV1Test, AddDelayFramesIntoMinLeadTime) {
   auto stream =
       std::make_shared<testing::FakeStream>(k48k2ChanFloatFormat, context().clock_factory());
 
-  // Setup the timeline function so that time 0 alignes to frame 0 with a rate corresponding to the
+  // Setup the timeline function so that time 0 aligns to frame 0 with a rate corresponding to the
   // streams format.
   stream->timeline_function()->Update(TimelineFunction(TimelineRate(
       Fixed(k48k2ChanFloatFormat.frames_per_second()).raw_value(), zx::sec(1).to_nsecs())));
@@ -261,8 +484,7 @@ TEST_F(EffectsStageV1Test, AddDelayFramesIntoMinLeadTime) {
       .effect_name = "effect_with_delay_3",
       .effect_config = "",
   });
-  auto effects_stage =
-      EffectsStageV1::Create(effects, stream, mix_profile_config(), volume_curve());
+  auto effects_stage = EffectsStageV1::Create(effects, stream, volume_curve());
 
   // Check our initial lead time is only the effect delay.
   auto effect_lead_time =
@@ -302,8 +524,7 @@ TEST_F(EffectsStageV1Test, UpdateEffect) {
       .instance_name = kInstanceName,
       .effect_config = kInitialConfig,
   });
-  auto effects_stage =
-      EffectsStageV1::Create(effects, stream, mix_profile_config(), volume_curve());
+  auto effects_stage = EffectsStageV1::Create(effects, stream, volume_curve());
 
   effects_stage->UpdateEffect(kInstanceName, kConfig);
 
@@ -356,8 +577,7 @@ TEST_F(EffectsStageV1Test, CreateStageWithRechannelization) {
       .instance_name = "incremement_without_upchannel",
       .effect_config = "",
   });
-  auto effects_stage =
-      EffectsStageV1::Create(effects, stream, mix_profile_config(), volume_curve());
+  auto effects_stage = EffectsStageV1::Create(effects, stream, volume_curve());
 
   // Enqueue 10ms of frames in the packet queue. All samples will be initialized to 1.0.
   stream->PushPacket(packet_factory().CreatePacket(1.0, zx::msec(10)));
@@ -378,103 +598,12 @@ TEST_F(EffectsStageV1Test, CreateStageWithRechannelization) {
       // initialized as 0's. The second effect will increment all channels, so channels 0,1 will be
       // incremented twice and channels 2,3 will be incremented once. So we expect each frame to be
       // the samples [3.0, 3.0, 1.0, 1.0].
-      ASSERT_FLOAT_EQ(arr[i * 4 + 0], 3.0f);
-      ASSERT_FLOAT_EQ(arr[i * 4 + 1], 3.0f);
-      ASSERT_FLOAT_EQ(arr[i * 4 + 2], 1.0f);
-      ASSERT_FLOAT_EQ(arr[i * 4 + 3], 1.0f);
+      ASSERT_FLOAT_EQ(arr[i * 4 + 0], 3.0f) << i;
+      ASSERT_FLOAT_EQ(arr[i * 4 + 1], 3.0f) << i;
+      ASSERT_FLOAT_EQ(arr[i * 4 + 2], 1.0f) << i;
+      ASSERT_FLOAT_EQ(arr[i * 4 + 3], 1.0f) << i;
     }
   }
-}
-
-TEST_F(EffectsStageV1Test, ReleasePacketWhenFullyConsumed) {
-  test_effects().AddEffect("increment").WithAction(TEST_EFFECTS_ACTION_ADD, 1.0);
-
-  // Create a packet queue to use as our source stream.
-  auto timeline_function =
-      fbl::MakeRefCounted<VersionedTimelineFunction>(TimelineFunction(TimelineRate(
-          Fixed(k48k2ChanFloatFormat.frames_per_second()).raw_value(), zx::sec(1).to_nsecs())));
-  auto stream = std::make_shared<PacketQueue>(
-      k48k2ChanFloatFormat, timeline_function,
-      context().clock_factory()->CreateClientFixed(clock::AdjustableCloneOfMonotonic()));
-
-  // Create a simple effects stage.
-  std::vector<PipelineConfig::EffectV1> effects;
-  effects.push_back(PipelineConfig::EffectV1{
-      .lib_name = testing::kTestEffectsModuleName,
-      .effect_name = "increment",
-      .instance_name = "",
-      .effect_config = "",
-  });
-  auto effects_stage =
-      EffectsStageV1::Create(effects, stream, mix_profile_config(), volume_curve());
-
-  // Enqueue 10ms of frames in the packet queue. All samples will be initialized to 1.0.
-  bool packet_released = false;
-  stream->PushPacket(packet_factory().CreatePacket(1.0, zx::msec(10),
-                                                   [&packet_released] { packet_released = true; }));
-
-  // Acquire a buffer.
-  auto buf = effects_stage->ReadLock(rlctx, Fixed(0), 480);
-  RunLoopUntilIdle();
-  ASSERT_TRUE(buf);
-  EXPECT_EQ(0, buf->start().Floor());
-  EXPECT_EQ(480, buf->length());
-  EXPECT_FALSE(packet_released);
-
-  // Now release |buf| and mark it as fully consumed. This should release the underlying packet.
-  buf->set_is_fully_consumed(true);
-  buf = std::nullopt;
-  RunLoopUntilIdle();
-  EXPECT_TRUE(packet_released);
-}
-
-TEST_F(EffectsStageV1Test, ReleasePacketWhenNoLongerReferenced) {
-  test_effects().AddEffect("increment").WithAction(TEST_EFFECTS_ACTION_ADD, 1.0);
-
-  // Create a packet queue to use as our source stream.
-  auto timeline_function =
-      fbl::MakeRefCounted<VersionedTimelineFunction>(TimelineFunction(TimelineRate(
-          Fixed(k48k2ChanFloatFormat.frames_per_second()).raw_value(), zx::sec(1).to_nsecs())));
-  auto stream = std::make_shared<PacketQueue>(
-      k48k2ChanFloatFormat, timeline_function,
-      context().clock_factory()->CreateClientFixed(clock::AdjustableCloneOfMonotonic()));
-
-  // Create a simple effects stage.
-  std::vector<PipelineConfig::EffectV1> effects;
-  effects.push_back(PipelineConfig::EffectV1{
-      .lib_name = testing::kTestEffectsModuleName,
-      .effect_name = "increment",
-      .instance_name = "",
-      .effect_config = "",
-  });
-  auto effects_stage =
-      EffectsStageV1::Create(effects, stream, mix_profile_config(), volume_curve());
-
-  // Enqueue 10ms of frames in the packet queue. All samples will be initialized to 1.0.
-  bool packet_released = false;
-  stream->PushPacket(packet_factory().CreatePacket(1.0, zx::msec(10),
-                                                   [&packet_released] { packet_released = true; }));
-
-  // Acquire a buffer.
-  auto buf = effects_stage->ReadLock(rlctx, Fixed(0), 480);
-  RunLoopUntilIdle();
-  ASSERT_TRUE(buf);
-  EXPECT_EQ(0, buf->start().Floor());
-  EXPECT_EQ(480u, buf->length());
-  EXPECT_FALSE(packet_released);
-
-  // Release |buf|, we don't yet expect the underlying packet to be released.
-  buf->set_is_fully_consumed(false);
-  buf = std::nullopt;
-  RunLoopUntilIdle();
-  EXPECT_FALSE(packet_released);
-
-  // Now read another buffer. Since this does not overlap with the last buffer, this should release
-  // that packet.
-  buf = effects_stage->ReadLock(rlctx, Fixed(480), 480);
-  RunLoopUntilIdle();
-  EXPECT_FALSE(buf);
-  EXPECT_TRUE(packet_released);
 }
 
 TEST_F(EffectsStageV1Test, SendStreamInfoToEffects) {
@@ -496,7 +625,7 @@ TEST_F(EffectsStageV1Test, SendStreamInfoToEffects) {
       .instance_name = "",
       .effect_config = "",
   });
-  auto effects_stage = EffectsStageV1::Create(effects, input, mix_profile_config(), volume_curve());
+  auto effects_stage = EffectsStageV1::Create(effects, input, volume_curve());
 
   constexpr uint32_t kRequestedFrames = 48;
 
@@ -554,7 +683,7 @@ TEST_F(EffectsStageV1Test, SendStreamInfoToEffects) {
   }
 }
 
-TEST_F(EffectsStageV1Test, SkipRingoutIfDiscontinuous) {
+TEST_F(EffectsStageV1Test, RingOut) {
   auto timeline_function =
       fbl::MakeRefCounted<VersionedTimelineFunction>(TimelineFunction(TimelineRate(
           Fixed(k48k2ChanFloatFormat.frames_per_second()).raw_value(), zx::sec(1).to_nsecs())));
@@ -563,7 +692,7 @@ TEST_F(EffectsStageV1Test, SkipRingoutIfDiscontinuous) {
       context().clock_factory()->CreateClientFixed(clock::AdjustableCloneOfMonotonic()));
 
   static const uint32_t kBlockSize = 48;
-  static const uint32_t kRingOutBlocks = 4;
+  static const uint32_t kRingOutBlocks = 3;
   static const uint32_t kRingOutFrames = kBlockSize * kRingOutBlocks;
   test_effects()
       .AddEffect("effect")
@@ -578,14 +707,14 @@ TEST_F(EffectsStageV1Test, SkipRingoutIfDiscontinuous) {
       .instance_name = "",
       .effect_config = "",
   });
-  auto effects_stage =
-      EffectsStageV1::Create(effects, stream, mix_profile_config(), volume_curve());
+  auto effects_stage = EffectsStageV1::Create(effects, stream, volume_curve());
   EXPECT_EQ(2, effects_stage->format().channels());
 
   // Add 48 frames to our source.
   stream->PushPacket(packet_factory().CreatePacket(1.0, zx::msec(1)));
 
-  {  // Read the frames out.
+  // Read the frames out.
+  {
     auto buf = effects_stage->ReadLock(rlctx, Fixed(0), 480);
     ASSERT_TRUE(buf);
     EXPECT_EQ(0, buf->start().Floor());
@@ -600,187 +729,22 @@ TEST_F(EffectsStageV1Test, SkipRingoutIfDiscontinuous) {
     EXPECT_EQ(kBlockSize, buf->length());
   }
 
-  // Now skip the second and try to read the 3rd. This is discontinuous and should not return any
-  // data.
-  //
+  // Now skip the second and try to read the 3rd. This should return more silence.
   // The skipped buffer:
   //     buf = effects_stage->ReadLock(rlctx, Fixed(2 * kBlockSize), kBlockSize);
   {
     auto buf = effects_stage->ReadLock(rlctx, Fixed(3 * kBlockSize), kBlockSize);
-    ASSERT_FALSE(buf);
+    ASSERT_TRUE(buf);
+    EXPECT_EQ(3 * kBlockSize, buf->start().Floor());
+    EXPECT_EQ(kBlockSize, buf->length());
   }
 
-  // Now read the 4th packet. Since we had a previous discontinuous buffer, this is still silent.
+  // Nothing after the last frame of ringout.
   {
     auto buf = effects_stage->ReadLock(rlctx, Fixed(4 * kBlockSize), kBlockSize);
     ASSERT_FALSE(buf);
   }
 }
-
-struct RingOutTestParameters {
-  Format format;
-  uint32_t effect_ring_out_frames;
-  uint32_t effect_block_size;
-  uint32_t effect_max_frames_per_buffer;
-  // The expected number of frames in the ring-out buffers.
-  uint32_t ring_out_block_frames;
-};
-
-class EffectsStageV1RingoutTest : public EffectsStageV1Test,
-                                  public ::testing::WithParamInterface<RingOutTestParameters> {
- protected:
-  void SetUp() override {
-    auto timeline_function =
-        fbl::MakeRefCounted<VersionedTimelineFunction>(TimelineFunction(TimelineRate(
-            Fixed(k48k2ChanFloatFormat.frames_per_second()).raw_value(), zx::sec(1).to_nsecs())));
-    stream_ = std::make_shared<PacketQueue>(
-        k48k2ChanFloatFormat, timeline_function,
-        context().clock_factory()->CreateClientFixed(clock::AdjustableCloneOfMonotonic()));
-  }
-
-  std::shared_ptr<PacketQueue> stream_;
-};
-
-TEST_P(EffectsStageV1RingoutTest, RingoutBuffer) {
-  auto ringout_buffer = EffectsStageV1::RingoutBuffer::Create(
-      GetParam().format, GetParam().effect_ring_out_frames, GetParam().effect_max_frames_per_buffer,
-      GetParam().effect_block_size, MixProfileConfig::kDefaultPeriod.to_nsecs());
-
-  EXPECT_EQ(GetParam().ring_out_block_frames, ringout_buffer.buffer_frames);
-  EXPECT_EQ(GetParam().effect_ring_out_frames, ringout_buffer.total_frames);
-
-  if (GetParam().effect_ring_out_frames) {
-    EXPECT_EQ(GetParam().format.channels() * GetParam().ring_out_block_frames,
-              ringout_buffer.buffer.size());
-  } else {
-    EXPECT_EQ(0u, ringout_buffer.buffer.size());
-  }
-
-  if (GetParam().effect_block_size && GetParam().ring_out_block_frames) {
-    EXPECT_EQ(0u, ringout_buffer.buffer_frames % GetParam().ring_out_block_frames);
-  }
-}
-
-TEST_P(EffectsStageV1RingoutTest, RingoutFrames) {
-  test_effects()
-      .AddEffect("effect")
-      .WithRingOutFrames(GetParam().effect_ring_out_frames)
-      .WithBlockSize(GetParam().effect_block_size)
-      .WithMaxFramesPerBuffer(GetParam().effect_max_frames_per_buffer);
-
-  std::vector<PipelineConfig::EffectV1> effects;
-  effects.push_back(PipelineConfig::EffectV1{
-      .lib_name = testing::kTestEffectsModuleName,
-      .effect_name = "effect",
-      .instance_name = "",
-      .effect_config = "",
-  });
-  auto effects_stage =
-      EffectsStageV1::Create(effects, stream_, mix_profile_config(), volume_curve());
-  EXPECT_EQ(2, effects_stage->format().channels());
-
-  // Add 48 frames to our source.
-  stream_->PushPacket(packet_factory().CreatePacket(1.0, zx::msec(1)));
-
-  {  // Read the frames out.
-    auto buf = effects_stage->ReadLock(rlctx, Fixed(0), 480);
-    ASSERT_TRUE(buf);
-    EXPECT_EQ(0, buf->start().Floor());
-    EXPECT_EQ(48, buf->length());
-  }
-
-  // Now we expect our ringout to be split across many buffers.
-  int64_t start_frame = 48;
-  uint32_t ringout_frames = 0;
-  {
-    while (ringout_frames < GetParam().effect_ring_out_frames) {
-      auto buf =
-          effects_stage->ReadLock(rlctx, Fixed(start_frame), GetParam().effect_ring_out_frames);
-      ASSERT_TRUE(buf);
-      EXPECT_EQ(start_frame, buf->start().Floor());
-      EXPECT_EQ(GetParam().ring_out_block_frames, buf->length());
-      start_frame += GetParam().ring_out_block_frames;
-      ringout_frames += GetParam().ring_out_block_frames;
-    }
-  }
-
-  {
-    auto buf = effects_stage->ReadLock(rlctx, Fixed(start_frame), 480);
-    EXPECT_FALSE(buf);
-  }
-
-  // Add another data packet to verify we correctly reset the ringout when the source goes silent
-  // again.
-  start_frame += 480;
-  packet_factory().SeekToFrame(Fixed(start_frame));
-  stream_->PushPacket(packet_factory().CreatePacket(1.0, zx::msec(1)));
-
-  {  // Read the frames out.
-    auto buf = effects_stage->ReadLock(rlctx, Fixed(start_frame), 48);
-    ASSERT_TRUE(buf);
-    EXPECT_EQ(start_frame, buf->start().Floor());
-    EXPECT_EQ(48, buf->length());
-    start_frame += buf->length();
-  }
-
-  // Now we expect our ringout to be split across many buffers.
-  ringout_frames = 0;
-  {
-    while (ringout_frames < GetParam().effect_ring_out_frames) {
-      auto buf =
-          effects_stage->ReadLock(rlctx, Fixed(start_frame), GetParam().effect_ring_out_frames);
-      ASSERT_TRUE(buf);
-      EXPECT_EQ(start_frame, buf->start().Floor());
-      EXPECT_EQ(GetParam().ring_out_block_frames, buf->length());
-      start_frame += GetParam().ring_out_block_frames;
-      ringout_frames += GetParam().ring_out_block_frames;
-    }
-  }
-
-  {
-    auto buf = effects_stage->ReadLock(rlctx, Fixed(48), 480);
-    EXPECT_FALSE(buf);
-  }
-}
-
-const RingOutTestParameters kNoRingout{
-    .format = k48k2ChanFloatFormat,
-    .effect_ring_out_frames = 0,
-    .effect_block_size = 1,
-    .effect_max_frames_per_buffer = FUCHSIA_AUDIO_EFFECTS_FRAMES_PER_BUFFER_ANY,
-    .ring_out_block_frames = 0,
-};
-
-const RingOutTestParameters kSmallRingOutNoBlockSize{
-    .format = k48k2ChanFloatFormat,
-    .effect_ring_out_frames = 4,
-    .effect_block_size = 1,
-    .effect_max_frames_per_buffer = FUCHSIA_AUDIO_EFFECTS_FRAMES_PER_BUFFER_ANY,
-    // Should be a single block
-    .ring_out_block_frames = 4,
-};
-
-const RingOutTestParameters kLargeRingOutNoBlockSize{
-    .format = k48k2ChanFloatFormat,
-    .effect_ring_out_frames = 8192,
-    .effect_block_size = 1,
-    .effect_max_frames_per_buffer = FUCHSIA_AUDIO_EFFECTS_FRAMES_PER_BUFFER_ANY,
-    // Matches |kTargetRingoutBufferFrames| in effects_stage.cc
-    .ring_out_block_frames = 480,
-};
-
-const RingOutTestParameters kMaxFramesPerBufferLowerThanRingOutFrames{
-    .format = k48k2ChanFloatFormat,
-    .effect_ring_out_frames = 8192,
-    .effect_block_size = 1,
-    .effect_max_frames_per_buffer = 128,
-    .ring_out_block_frames = 128,
-};
-
-INSTANTIATE_TEST_SUITE_P(EffectsStageV1RingoutTestInstance, EffectsStageV1RingoutTest,
-                         ::testing::Values(kNoRingout, kSmallRingOutNoBlockSize,
-                                           kLargeRingOutNoBlockSize,
-                                           kMaxFramesPerBufferLowerThanRingOutFrames));
 
 }  // namespace
 }  // namespace media::audio

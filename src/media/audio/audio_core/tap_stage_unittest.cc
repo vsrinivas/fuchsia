@@ -108,7 +108,9 @@ class TapStageTest : public testing::ThreadingModelFixture {
     auto buffer = stream->ReadLock(rlctx, Fixed(frame), frame_count);
     ASSERT_TRUE(buffer);
     CheckBuffer<frame_count>(*buffer, frame, expected_sample);
-    buffer->set_is_fully_consumed(release);
+    if (!release) {
+      buffer->set_frames_consumed(0);
+    }
   }
 
   uint32_t tap_frame_offset_;
@@ -148,11 +150,7 @@ TEST_F(TapStageTest, CopySinglePacketWithFractionalDestPosition) {
   }
 }
 
-// TODO(fxbug.dev/50669): Currently this test doesn't pass because the source is allowed
-// to return the packet at the first ReadLock even though that intersection between
-// that packet and the first ReadLock is less than one frame. After the new ReadLock semantics
-// are implemented, this test should pass.
-TEST_F(TapStageTest, DISABLED_CopySinglePacketWithFractionalSourcePosition) {
+TEST_F(TapStageTest, CopySinglePacketWithFractionalSourcePosition) {
   // Seek to one packet - 0.5 frames.
   packet_factory().SeekToFrame(Fixed(kPacketFrames) - ffl::FromRatio(1, 2));
   packet_queue().PushPacket(packet_factory().CreatePacket(1.0, kPacketDuration));
