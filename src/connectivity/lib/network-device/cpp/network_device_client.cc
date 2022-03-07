@@ -414,11 +414,6 @@ void NetworkDeviceClient::GetPortInfoWithMac(netdev::wire::PortId port_id,
            std::move(mac_endpoints->server)]() mutable -> fpromise::promise<void, zx_status_t> {
     fpromise::bridge<void, zx_status_t> bridge;
 
-    const fidl::Result result = state->port_client->GetMac(std::move(mac_server));
-    if (!result.ok()) {
-      return fpromise::make_error_promise(result.status());
-    }
-
     // NB: Like above, the GetUnicastAddress call on mac is written before we
     // pipeline the mac to the port. That ensures we observe an epitaph in case
     // mac is not supported, instead of PEER_CLOSED when attempting to write the
@@ -439,6 +434,10 @@ void NetworkDeviceClient::GetPortInfoWithMac(netdev::wire::PortId port_id,
           state->result.unicast_address = result.value().address;
           completer.complete_ok();
         });
+    const fidl::Result result = state->port_client->GetMac(std::move(mac_server));
+    if (!result.ok()) {
+      return fpromise::make_error_promise(result.status());
+    }
 
     return bridge.consumer.promise();
   };
