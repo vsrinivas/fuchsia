@@ -32,18 +32,31 @@ class ConcurrentCopyFixture : public zxtest::Test {
   };
 
   void ResetBuffer() {
-    std::uniform_int_distribution<uint8_t> dist{0x00, 0x0FF};
+    std::uniform_int_distribution<uint16_t> dist{0x00, 0x0FF};
 
     for (size_t i = 0; i < dst_.size(); ++i) {
-      dst_[i] = dist(generator_);
+      dst_[i] = static_cast<uint8_t>(dist(generator_));
       src_[i] = ~dst_[i];
     }
   }
 
   template <typename T>
+  struct UniformDistType {
+    using Type = T;
+    static_assert(
+        std::is_integral_v<T> && sizeof(T) > 1,
+        "std::uniform_int_distribution can only handle integral types larger than a byte.");
+  };
+  template <>
+  struct UniformDistType<uint8_t> {
+    using Type = uint16_t;
+  };
+
+  template <typename T>
   T GetNonZeroRandom() {
-    std::uniform_int_distribution<T> dist{1, std::numeric_limits<T>::max()};
-    return dist(generator_);
+    std::uniform_int_distribution<typename UniformDistType<T>::Type> dist{
+        1, std::numeric_limits<T>::max()};
+    return static_cast<T>(dist(generator_));
   }
 
   template <typename T, concurrent::SyncOpt kSyncOpt>
