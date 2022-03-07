@@ -166,11 +166,6 @@
             url: "fuchsia-pkg://fuchsia.com/universe-resolver#meta/universe-resolver.cm",
         },
         {
-            name: "bt-avrcp",
-            url: "fuchsia-pkg://fuchsia.com/bt-avrcp#meta/bt-avrcp.cm",
-            environment: "#full-resolver-env",
-        },
-        {
             name: "network",
             url: "fuchsia-pkg://fuchsia.com/network#meta/network.cm",
             startup: "eager",
@@ -434,7 +429,6 @@
                 "#agis",
                 "#bluetooth-core",
                 "#brightness_manager",
-                "#bt-avrcp",
                 "#cobalt",
                 "#debug_serial",
                 "#detect",
@@ -874,11 +868,6 @@
             as: "dev-goldfish-sync",
             to: "#vulkan_loader",
             subdir: "class/goldfish-sync",
-        },
-        {
-            protocol: [ "fuchsia.bluetooth.bredr.Profile" ],
-            from: "#bluetooth-core",
-            to: "#bt-avrcp",
         },
         {
             directory: "dev",

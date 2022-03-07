@@ -263,17 +263,6 @@
             from: "#vulkan_loader",
         },
 
-        // From v2 Bluetooth components (testonly capabilities).
-        // TODO(fxbug.dev/86390): These capabilities should not always be available to the system.
-        // Remove this once we can conditionally expose these testonly capabilities.
-        {
-            protocol: [
-                "fuchsia.bluetooth.avrcp.PeerManager",
-                "fuchsia.bluetooth.avrcp.test.PeerManagerExt",
-            ],
-            from: "#bt-avrcp",
-        },
-
         // Used by SL4F in appmgr
         {
             protocol: [

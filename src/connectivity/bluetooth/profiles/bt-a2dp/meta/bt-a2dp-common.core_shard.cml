@@ -4,6 +4,7 @@
 {
     // The common parts of both the eager and lazy core shards.
     // Not usable without a child named "bt-a2dp", which is provided by those shards.
+    include: [ "//src/connectivity/bluetooth/profiles/bt-avrcp/meta/bt-avrcp.core_shard.cml" ],
     use: [
         {
             protocol: [
