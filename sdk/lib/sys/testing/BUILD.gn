@@ -4,8 +4,11 @@
 
 import("//build/sdk/sdk_component_manifests.gni")
 
-sdk_component_manifests("elf_test_runner_shard_sdk") {
+sdk_component_manifests("testing_sdk") {
   name = "sys/testing"
-  manifests = [ "elf_test_runner.shard.cml" ]
+  manifests = [
+    "elf_test_runner.shard.cml",
+    "hermetic-tier-2-test.shard.cml",
+  ]
   category = "partner"
 }

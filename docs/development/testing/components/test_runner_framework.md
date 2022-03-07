@@ -501,7 +501,7 @@ A test must explicitly mark itself to run as a **tier-2 hermetic** test.
         "//src/sys/test_runners/rust/default.shard.cml",
 
         // This includes the facet which marks the test type as "hermetic-tier-2".
-        {{ '<strong>' }}"//src/sys/test_manager/hermetic-tier-2-test.shard.cml",{{ '</strong>' }}
+        {{ '<strong>' }}"sys/testing/hermetic-tier-2-test.shard.cml",{{ '</strong>' }}
     ],
     program: {
         binary: "bin/my_component_test",
@@ -512,7 +512,7 @@ A test must explicitly mark itself to run as a **tier-2 hermetic** test.
 The shard includes following facet in the manifest file:
 
 ```json5
-{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/sys/test_manager/hermetic-tier-2-test.shard.cml" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="sdk/lib/sys/testing/hermetic-tier-2-test.shard.cml" %}
 ```
 
 ### Legacy non-hermetic tests

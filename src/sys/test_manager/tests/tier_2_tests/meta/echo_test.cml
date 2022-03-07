@@ -6,8 +6,8 @@
 // hermetic tier 2 realm.
 {
     include: [
-        "//src/sys/test_manager/hermetic-tier-2-test.shard.cml",
         "//src/sys/test_runners/rust/default.shard.cml",
+        "sys/testing/hermetic-tier-2-test.shard.cml",
         "syslog/client.shard.cml",
     ],
     program: {
