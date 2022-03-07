@@ -325,26 +325,12 @@ impl std::fmt::Display for ElfRuntime {
 #[derive(Debug, Eq, PartialEq)]
 pub struct Execution {
     pub elf_runtime: Option<ElfRuntime>,
-    pub merkle_root: Option<String>,
     pub outgoing_capabilities: Option<Vec<String>>,
     pub start_reason: Option<String>,
 }
 
 impl Execution {
     async fn parse(exec_dir: Directory) -> Result<Self> {
-        let in_dir = exec_dir.open_dir_readable("in")?;
-
-        let merkle_root = if in_dir.exists("pkg").await? {
-            let pkg_dir = in_dir.open_dir_readable("pkg")?;
-            if pkg_dir.exists("meta").await? {
-                pkg_dir.read_file("meta").await.ok()
-            } else {
-                None
-            }
-        } else {
-            None
-        };
-
         let elf_runtime = if exec_dir.exists("runtime").await? {
             let runtime_dir = exec_dir.open_dir_readable("runtime")?;
 
@@ -380,23 +366,10 @@ impl Execution {
 
         let start_reason = Some(exec_dir.read_file("start_reason").await?);
 
-        Ok(Self { elf_runtime, merkle_root, outgoing_capabilities, start_reason })
+        Ok(Self { elf_runtime, outgoing_capabilities, start_reason })
     }
 
     async fn parse_cmx(hub_dir: &Directory) -> Result<Self> {
-        let in_dir = hub_dir.open_dir_readable("in")?;
-
-        let merkle_root = if in_dir.exists("pkg").await? {
-            let pkg_dir = in_dir.open_dir_readable("pkg")?;
-            if pkg_dir.exists("meta").await? {
-                pkg_dir.read_file("meta").await.ok()
-            } else {
-                None
-            }
-        } else {
-            None
-        };
-
         let elf_runtime = Some(ElfRuntime::parse_cmx(hub_dir).await?);
 
         let outgoing_capabilities = if hub_dir.exists("out").await? {
@@ -411,7 +384,7 @@ impl Execution {
             None
         };
 
-        Ok(Self { elf_runtime, merkle_root, outgoing_capabilities, start_reason: None })
+        Ok(Self { elf_runtime, outgoing_capabilities, start_reason: None })
     }
 }
 
@@ -423,10 +396,6 @@ impl std::fmt::Display for Execution {
 
         if let Some(runtime) = &self.elf_runtime {
             write!(f, "{}", runtime)?;
-        }
-
-        if let Some(merkle_root) = &self.merkle_root {
-            pretty_print!(f, "Merkle root", merkle_root)?;
         }
 
         if let Some(outgoing_capabilities) = &self.outgoing_capabilities {
@@ -449,6 +418,7 @@ pub struct ConfigField {
 pub struct Resolved {
     pub incoming_capabilities: Vec<String>,
     pub exposed_capabilities: Vec<String>,
+    pub merkle_root: Option<String>,
     pub instance_id: Option<ComponentInstanceId>,
     pub config: Vec<ConfigField>,
 }
@@ -465,6 +435,18 @@ impl Resolved {
             get_capabilities(expose_dir).await?
         };
 
+        let use_dir = resolved_dir.open_dir_readable("use")?;
+        let merkle_root = if use_dir.exists("pkg").await? {
+            let pkg_dir = use_dir.open_dir_readable("pkg")?;
+            if pkg_dir.exists("meta").await? {
+                pkg_dir.read_file("meta").await.ok()
+            } else {
+                None
+            }
+        } else {
+            None
+        };
+
         let instance_id = resolved_dir.read_file("instance_id").await.ok();
 
         let config = if resolved_dir.exists("config").await? {
@@ -474,7 +456,7 @@ impl Resolved {
             vec![]
         };
 
-        Ok(Self { incoming_capabilities, exposed_capabilities, instance_id, config })
+        Ok(Self { incoming_capabilities, exposed_capabilities, merkle_root, instance_id, config })
     }
 
     async fn parse_cmx(hub_dir: &Directory) -> Result<Self> {
@@ -483,9 +465,22 @@ impl Resolved {
             get_capabilities(in_dir).await?
         };
 
+        let in_dir = hub_dir.open_dir_readable("in")?;
+        let merkle_root = if in_dir.exists("pkg").await? {
+            let pkg_dir = in_dir.open_dir_readable("pkg")?;
+            if pkg_dir.exists("meta").await? {
+                pkg_dir.read_file("meta").await.ok()
+            } else {
+                None
+            }
+        } else {
+            None
+        };
+
         Ok(Self {
             incoming_capabilities,
             exposed_capabilities: vec![],
+            merkle_root,
             instance_id: None,
             config: vec![],
         })
@@ -499,6 +494,10 @@ impl std::fmt::Display for Resolved {
         }
         pretty_print_list!(f, "Incoming Capabilities", self.incoming_capabilities);
         pretty_print_list!(f, "Exposed Capabilities", self.exposed_capabilities);
+
+        if let Some(merkle_root) = &self.merkle_root {
+            pretty_print!(f, "Merkle root", merkle_root)?;
+        }
 
         if !self.config.is_empty() {
             let max_len = self.config.iter().map(|f| f.key.len()).max().unwrap();
@@ -958,9 +957,6 @@ mod tests {
         // |- url
         // |- exec
         //    |- start_reason
-        //    |- in
-        //       |- pkg
-        //          |- meta
         //    |- out
         //       |- minfs
         //    |- runtime
@@ -969,13 +965,19 @@ mod tests {
         //          |- process_id
         //          |- process_start_time
         //          |- process_start_time_utc_estimate
+        // |- resolved
+        //    |- expose
+        //    |- use
+        //       |- pkg
+        //          |- meta
         fs::create_dir(root.join("children")).unwrap();
         File::create(root.join("component_type")).unwrap().write_all("static".as_bytes()).unwrap();
         File::create(root.join("url"))
             .unwrap()
             .write_all("fuchsia-pkg://fuchsia.com/stash#meta/stash.cm".as_bytes())
             .unwrap();
-        fs::create_dir_all(root.join("exec/in/pkg")).unwrap();
+        fs::create_dir_all(root.join("resolved/expose")).unwrap();
+        fs::create_dir_all(root.join("resolved/use/pkg")).unwrap();
         fs::create_dir_all(root.join("exec/out/minfs")).unwrap();
         fs::create_dir_all(root.join("exec/runtime/elf")).unwrap();
 
@@ -983,7 +985,10 @@ mod tests {
             .unwrap()
             .write_all("Instance is the root".as_bytes())
             .unwrap();
-        File::create(root.join("exec/in/pkg/meta")).unwrap().write_all("1234".as_bytes()).unwrap();
+        File::create(root.join("resolved/use/pkg/meta"))
+            .unwrap()
+            .write_all("1234".as_bytes())
+            .unwrap();
 
         File::create(root.join("exec/runtime/elf/job_id"))
             .unwrap()
@@ -1034,10 +1039,6 @@ mod tests {
             elf_runtime.process_start_time_utc_estimate.as_ref().unwrap();
         assert_eq!(process_start_time_utc_estimate, "Mon 12 Jul 2021 03:53:33 PM UTC");
 
-        assert!(execution.merkle_root.is_some());
-        let merkle_root = execution.merkle_root.as_ref().unwrap();
-        assert_eq!(merkle_root, "1234");
-
         assert!(execution.outgoing_capabilities.is_some());
         let outgoing_capabilities = execution.outgoing_capabilities.as_ref().unwrap();
         assert_eq!(outgoing_capabilities.len(), 1);
@@ -1045,7 +1046,10 @@ mod tests {
         let outgoing_capability = &outgoing_capabilities[0];
         assert_eq!(outgoing_capability, "minfs");
 
-        assert!(component.resolved.is_none());
+        let resolved = component.resolved.as_ref().unwrap();
+        assert!(resolved.merkle_root.is_some());
+        let merkle_root = resolved.merkle_root.as_ref().unwrap();
+        assert_eq!(merkle_root, "1234");
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -1089,7 +1093,6 @@ mod tests {
         assert_eq!(start_reason, "Instance is the root");
 
         assert!(execution.elf_runtime.is_none());
-        assert!(execution.merkle_root.is_none());
 
         assert!(execution.outgoing_capabilities.is_some());
         let outgoing_capabilities = execution.outgoing_capabilities.as_ref().unwrap();
@@ -1185,6 +1188,10 @@ mod tests {
         assert!(component.resolved.is_some());
         let resolved = component.resolved.as_ref().unwrap();
 
+        assert!(resolved.merkle_root.is_some());
+        let merkle_root = resolved.merkle_root.as_ref().unwrap();
+        assert_eq!(merkle_root, "1234");
+
         let incoming_capabilities = &resolved.incoming_capabilities;
         assert_eq!(incoming_capabilities.len(), 1);
 
@@ -1209,10 +1216,6 @@ mod tests {
         assert_eq!(process_id, 9898);
         assert!(elf_runtime.process_start_time.is_none());
         assert!(elf_runtime.process_start_time_utc_estimate.is_none());
-
-        assert!(execution.merkle_root.is_some());
-        let merkle_root = execution.merkle_root.as_ref().unwrap();
-        assert_eq!(merkle_root, "1234");
 
         assert!(execution.outgoing_capabilities.is_some());
         let outgoing_capabilities = execution.outgoing_capabilities.as_ref().unwrap();
