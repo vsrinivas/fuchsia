@@ -4,7 +4,7 @@
 
 use std::time::SystemTime;
 
-#[test]
+#[fuchsia::test]
 fn component_can_read_time() {
     let now = SystemTime::now()
         .duration_since(SystemTime::UNIX_EPOCH)

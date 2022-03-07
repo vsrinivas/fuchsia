@@ -873,7 +873,7 @@ mod tests {
         }
     }
 
-    #[test]
+    #[fuchsia::test]
     fn generate_moniker_based_storage_path_test() {
         for (relative_moniker, expected_output) in vec![
             (

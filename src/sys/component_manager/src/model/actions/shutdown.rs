@@ -867,7 +867,7 @@ mod tests {
         InstancedChildMoniker::from(moniker).into()
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_service_from_self() {
         let decl = ComponentDecl {
             offers: vec![OfferDecl::Protocol(OfferProtocolDecl {
@@ -926,7 +926,7 @@ mod tests {
         )
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_service_from_child() {
         let decl = ComponentDecl {
             exposes: vec![ExposeDecl::Protocol(ExposeProtocolDecl {
@@ -954,7 +954,7 @@ mod tests {
         )
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_single_dependency() {
         let child_a = ChildDecl {
             name: "childA".to_string(),
@@ -1001,7 +1001,7 @@ mod tests {
         )
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_environment_with_runner_from_parent() {
         let decl = ComponentDecl {
             environments: vec![EnvironmentDeclBuilder::new()
@@ -1029,7 +1029,7 @@ mod tests {
         )
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_environment_with_runner_from_self() {
         let decl = ComponentDecl {
             environments: vec![EnvironmentDeclBuilder::new()
@@ -1057,7 +1057,7 @@ mod tests {
         )
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_environment_with_runner_from_child() {
         let decl = ComponentDecl {
             environments: vec![EnvironmentDeclBuilder::new()
@@ -1085,7 +1085,7 @@ mod tests {
         )
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_environment_with_runner_from_child_to_collection() {
         let decl = ComponentDecl {
             environments: vec![EnvironmentDeclBuilder::new()
@@ -1139,7 +1139,7 @@ mod tests {
         )
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_chained_environments() {
         let decl = ComponentDecl {
             environments: vec![
@@ -1183,7 +1183,7 @@ mod tests {
         )
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_environment_and_offer() {
         let decl = ComponentDecl {
             offers: vec![OfferDecl::Protocol(OfferProtocolDecl {
@@ -1224,7 +1224,7 @@ mod tests {
         )
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_environment_with_resolver_from_parent() {
         let decl = ComponentDecl {
             environments: vec![EnvironmentDeclBuilder::new()
@@ -1252,7 +1252,7 @@ mod tests {
         )
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_environment_with_resolver_from_child() {
         let decl = ComponentDecl {
             environments: vec![EnvironmentDeclBuilder::new()
@@ -1282,7 +1282,7 @@ mod tests {
 
     // add test where B depends on A via environment and C depends on B via environment
 
-    #[test]
+    #[fuchsia::test]
     fn test_environment_with_chain_of_resolvers() {
         let decl = ComponentDecl {
             environments: vec![
@@ -1326,7 +1326,7 @@ mod tests {
         )
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_environment_with_resolver_and_runner_from_child() {
         let decl = ComponentDecl {
             environments: vec![EnvironmentDeclBuilder::new()
@@ -1365,7 +1365,7 @@ mod tests {
         )
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_environment_with_collection_resolver_from_child() {
         let decl = ComponentDecl {
             environments: vec![EnvironmentDeclBuilder::new()
@@ -1418,7 +1418,7 @@ mod tests {
         )
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_dynamic_offers_within_collection() {
         let decl = ComponentDeclBuilder::new()
             .add_lazy_child("childA")
@@ -1499,7 +1499,7 @@ mod tests {
         )
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_dynamic_offers_between_collections() {
         let decl = ComponentDeclBuilder::new()
             .add_transient_collection("coll1")
@@ -1561,7 +1561,7 @@ mod tests {
         )
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_dynamic_offer_from_parent() {
         let decl = ComponentDeclBuilder::new().add_transient_collection("coll").build();
         let instance = FakeComponent {
@@ -1595,7 +1595,7 @@ mod tests {
         )
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_dynamic_offer_from_self() {
         let decl = ComponentDeclBuilder::new().add_transient_collection("coll").build();
         let instance = FakeComponent {
@@ -1629,7 +1629,7 @@ mod tests {
         )
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_dynamic_offer_from_static_child() {
         let decl = ComponentDeclBuilder::new()
             .add_lazy_child("childA")
@@ -1675,7 +1675,7 @@ mod tests {
         )
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_dynamic_offer_deleted_source() {
         let decl = ComponentDeclBuilder::new().add_transient_collection("coll").build();
 
@@ -1716,7 +1716,7 @@ mod tests {
         )
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_dynamic_offer_deleted_target() {
         let decl = ComponentDeclBuilder::new().add_transient_collection("coll").build();
 
@@ -1805,7 +1805,7 @@ mod tests {
         )
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_multiple_dependencies_same_source() {
         let child_a = ChildDecl {
             name: "childA".to_string(),
@@ -1859,7 +1859,7 @@ mod tests {
         )
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_multiple_dependents_same_source() {
         let child_a = ChildDecl {
             name: "childA".to_string(),
@@ -1986,7 +1986,7 @@ mod tests {
         )
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_component_is_source_and_target() {
         let child_a = ChildDecl {
             name: "childA".to_string(),
@@ -2054,7 +2054,7 @@ mod tests {
     /// e<~c<~a~>b~>d
     ///     \      /
     ///      *>~~>*
-    #[test]
+    #[fuchsia::test]
     fn test_complex_routing() {
         let child_a = ChildDecl {
             name: "childA".to_string(),
@@ -2158,7 +2158,7 @@ mod tests {
         )
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_target_does_not_exist() {
         let child_a = ChildDecl {
             name: "childA".to_string(),
@@ -2189,7 +2189,7 @@ mod tests {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_source_does_not_exist() {
         let child_a = ChildDecl {
             name: "childA".to_string(),
@@ -2220,7 +2220,7 @@ mod tests {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_use_from_child() {
         let decl = ComponentDecl {
             offers: vec![OfferDecl::Protocol(OfferProtocolDecl {
@@ -2255,7 +2255,7 @@ mod tests {
         )
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_use_from_some_children() {
         let decl = ComponentDecl {
             offers: vec![OfferDecl::Protocol(OfferProtocolDecl {
@@ -2303,7 +2303,7 @@ mod tests {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_use_from_child_offer_storage() {
         let decl = ComponentDecl {
             capabilities: vec![
@@ -2371,7 +2371,7 @@ mod tests {
         )
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_use_from_child_weak() {
         let decl = ComponentDecl {
             offers: vec![OfferDecl::Protocol(OfferProtocolDecl {
@@ -2406,7 +2406,7 @@ mod tests {
         )
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_use_from_some_children_weak() {
         let decl = ComponentDecl {
             offers: vec![OfferDecl::Protocol(OfferProtocolDecl {
@@ -2460,7 +2460,7 @@ mod tests {
         )
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_resolver_capability_creates_dependency() {
         let child_a = ChildDecl {
             name: "childA".to_string(),

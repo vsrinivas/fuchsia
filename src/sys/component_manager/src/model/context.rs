@@ -77,7 +77,7 @@ impl WeakModelContext {
 pub mod tests {
     use super::*;
 
-    #[test]
+    #[fuchsia::test]
     fn weak_context_returns_error() {
         let weak_context = WeakModelContext::new(Weak::new());
         assert!(weak_context.upgrade().is_err());

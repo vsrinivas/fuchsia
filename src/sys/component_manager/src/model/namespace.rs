@@ -608,7 +608,7 @@ pub mod test {
         },
     };
 
-    #[test]
+    #[fuchsia::test]
     fn test_subpath_handling() {
         let mut stem = "/".to_string();
         let mut full = "/".to_string();

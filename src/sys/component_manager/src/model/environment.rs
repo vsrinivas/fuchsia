@@ -189,7 +189,7 @@ mod tests {
         std::{collections::HashMap, sync::Weak},
     };
 
-    #[test]
+    #[fuchsia::test]
     fn test_from_decl() {
         let component = ComponentInstance::new_root(
             Environment::empty(),

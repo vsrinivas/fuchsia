@@ -257,7 +257,7 @@ mod tests {
         component_d_info.check_is_shut_down(&test.runner).await;
     }
 
-    #[test]
+    #[fuchsia::test]
     #[should_panic(expected = "Component manager did not complete shutdown in allowed time.")]
     fn test_timeout() {
         const TIMEOUT_SECONDS: i64 = 6;

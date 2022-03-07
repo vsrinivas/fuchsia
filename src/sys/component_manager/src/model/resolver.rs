@@ -413,7 +413,7 @@ mod tests {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     #[should_panic(expected = "Found duplicate scheme in ComponentDecl")]
     fn test_duplicate_registration() {
         let mut registry = ResolverRegistry::new();
@@ -425,7 +425,7 @@ mod tests {
         registry.register("fuchsia-pkg".to_string(), Box::new(resolver_b));
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_multiple_scheme_registration() {
         let mut registry = ResolverRegistry::new();
         let resolver_a =

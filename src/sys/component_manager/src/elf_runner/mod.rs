@@ -930,7 +930,7 @@ mod tests {
         assert_eq!(t_0, monotonic_time);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn clock_transformation_roundtrip() {
         let t_0 = zx::Time::ZERO.into_nanos();
         // Arbitrary clock transformation
@@ -948,7 +948,7 @@ mod tests {
         assert!(roundtrip_diff <= 1);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn clock_trailing_transformation_roundtrip() {
         let t_0 = zx::Time::ZERO.into_nanos();
         // Arbitrary clock transformation where the synthetic clock is trailing behind the
@@ -967,7 +967,7 @@ mod tests {
         assert!(roundtrip_diff <= 1);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn clock_saturating_transformations() {
         let t_0 = i64::MAX;
         // Clock transformation which will positively overflow t_0
@@ -1101,7 +1101,7 @@ mod tests {
         Ok(())
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_stop_critical_component() -> Result<(), Error> {
         let mut exec = fasync::TestExecutor::new().expect("Unable to create new executor");
         // Presence of the Lifecycle channel isn't use by ElfComponent to sense
@@ -1145,7 +1145,7 @@ mod tests {
         Ok(())
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_stop_noncritical_component() -> Result<(), Error> {
         let mut exec = fasync::TestExecutor::new().expect("Unable to create new executor");
         // Presence of the Lifecycle channel isn't use by ElfComponent to sense

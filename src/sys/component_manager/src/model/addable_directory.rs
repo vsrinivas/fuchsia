@@ -87,7 +87,7 @@ mod tests {
         std::convert::TryInto, vfs::file::vmo::read_only_static,
     };
 
-    #[test]
+    #[fuchsia::test]
     fn addable_with_result_add_ok() {
         let dir = vfs::directory::immutable::simple();
 
@@ -102,7 +102,7 @@ mod tests {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn addable_with_result_add_error() {
         let dir = vfs::directory::immutable::simple();
 
@@ -116,7 +116,7 @@ mod tests {
         assert_matches!(err, ModelError::AddEntryError { .. });
     }
 
-    #[test]
+    #[fuchsia::test]
     fn addable_with_result_remove_ok() {
         let dir = vfs::directory::immutable::simple();
 
@@ -131,7 +131,7 @@ mod tests {
         assert!(entry.is_some(), "entry should have existed before remove");
     }
 
-    #[test]
+    #[fuchsia::test]
     fn addable_with_result_remove_missing_ok() {
         let dir = vfs::directory::immutable::simple();
 
@@ -139,7 +139,7 @@ mod tests {
         assert!(entry.is_none(), "entry should not have existed before remove");
     }
 
-    #[test]
+    #[fuchsia::test]
     fn addable_with_result_remove_error() {
         let dir = vfs::directory::immutable::simple();
 

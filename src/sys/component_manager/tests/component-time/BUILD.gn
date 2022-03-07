@@ -26,6 +26,8 @@ rustc_test("component-time-test") {
   source_root = "src/test.rs"
 
   sources = [ "src/test.rs" ]
+
+  deps = [ "//src/lib/fuchsia" ]
 }
 
 # Run with `fx test component-v1-time-unittests`.

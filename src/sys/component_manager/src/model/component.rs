@@ -2022,7 +2022,7 @@ pub mod tests {
         }
     }
 
-    #[test]
+    #[fuchsia::test]
     /// The scenario where the controller stops the component after a delay
     /// which is before the controller reaches its timeout.
     fn stop_component_successful_stop_with_delay() {
@@ -2109,7 +2109,7 @@ pub mod tests {
         assert_eq!(Poll::Ready(()), exec.run_until_stalled(&mut test_fut));
     }
 
-    #[test]
+    #[fuchsia::test]
     /// Test scenario where the controller does not stop the component within
     /// the allowed period and the component stop state machine has to send
     /// the `kill` message to the controller. The runner then does not kill the
@@ -2218,7 +2218,7 @@ pub mod tests {
         assert_eq!(Poll::Ready(()), exec.run_until_stalled(&mut check_msgs));
     }
 
-    #[test]
+    #[fuchsia::test]
     /// Test scenario where the controller does not stop the component within
     /// the allowed period and the component stop state machine has to send
     /// the `kill` message to the controller. The controller then kills the
@@ -2294,7 +2294,7 @@ pub mod tests {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     /// In this case we expect success, but that the stop state machine races
     /// with the controller. The state machine's timer expires, but when it
     /// goes to send the kill message, it finds the control channel is closed,

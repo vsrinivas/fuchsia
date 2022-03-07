@@ -102,23 +102,23 @@ mod tests {
         static ref DUMMY_URL_AS_STR: fn() -> String = || DUMMY_URL().as_str().to_owned();
     }
 
-    #[test]
+    #[fuchsia::test]
     fn no_arguments() {
         assert!(Arguments::new(vec![]).is_err());
     }
 
-    #[test]
+    #[fuchsia::test]
     fn no_config_file() {
         assert!(Arguments::new(vec![DUMMY_URL_AS_STR(),]).is_err());
         assert!(Arguments::new(vec![CONFIG_FLAG(),]).is_err());
     }
 
-    #[test]
+    #[fuchsia::test]
     fn multiple_component_urls() {
         assert!(Arguments::new(vec![DUMMY_URL_AS_STR(), DUMMY_URL_AS_STR(),]).is_err());
     }
 
-    #[test]
+    #[fuchsia::test]
     fn bad_flag() {
         let unknown_flag = || String::from("--unknown");
 
@@ -127,7 +127,7 @@ mod tests {
         assert!(Arguments::new(vec![DUMMY_URL_AS_STR(), unknown_flag()]).is_err());
     }
 
-    #[test]
+    #[fuchsia::test]
     fn bad_component_url() {
         let bad_url = || String::from("not a valid url");
 
@@ -135,7 +135,7 @@ mod tests {
         assert!(Arguments::new(vec![bad_url(), CONFIG_FLAG(), CONFIG_FILENAME(),]).is_err());
     }
 
-    #[test]
+    #[fuchsia::test]
     fn parse_arguments() {
         let expected_arguments = Arguments {
             config: CONFIG_FILENAME(),
