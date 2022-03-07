@@ -41,6 +41,7 @@
 #include <mock-boot-arguments/server.h>
 
 #include "lib/vfs/cpp/pseudo_dir.h"
+#include "src/lib/fxl/strings/join_strings.h"
 #include "src/lib/storage/vfs/cpp/pseudo_dir.h"
 #include "src/lib/storage/vfs/cpp/pseudo_file.h"
 #include "src/lib/storage/vfs/cpp/remote_dir.h"
@@ -329,7 +330,29 @@ class DriverTestRealm final : public fidl::WireServer<fuchsia_driver_test::Realm
           std::string(request->args.board_name().data(), request->args.board_name().size());
     }
 
-    boot_arguments_ = mock_boot_arguments::Server(CreateBootArgs(request));
+    auto boot_args = CreateBootArgs(request);
+    for (std::pair<std::string, std::string> boot_arg : boot_args) {
+      if (boot_arg.first.size() > fuchsia_boot::wire::kMaxArgsNameLength) {
+        FX_LOGF(ERROR, nullptr,
+                "The length of the name of the boot argument \"%.*s\" is too long: The length of "
+                "the boot argument's name must be less than or equal to %d",
+                (int)boot_arg.first.size(), boot_arg.first.data(),
+                fuchsia_boot::wire::kMaxArgsNameLength);
+        completer.ReplyError(ZX_ERR_INVALID_ARGS);
+        return;
+      }
+
+      if (boot_arg.second.size() > fuchsia_boot::wire::kMaxArgsValueLength) {
+        FX_LOGF(ERROR, nullptr,
+                "The length of the value of the boot argument \"%.*s\", which is \"%*.s\", is too "
+                "long: The length of the boot argument's value must be less than or equal to %d",
+                (int)boot_arg.first.size(), boot_arg.first.data(), (int)boot_arg.second.size(),
+                boot_arg.second.data(), fuchsia_boot::wire::kMaxArgsValueLength);
+        completer.ReplyError(ZX_ERR_INVALID_ARGS);
+        return;
+      }
+    }
+    boot_arguments_ = mock_boot_arguments::Server(std::move(boot_args));
 
     fidl::ClientEnd<fuchsia_io::Directory> boot_dir;
     if (request->args.has_boot()) {
@@ -449,22 +472,23 @@ class DriverTestRealm final : public fidl::WireServer<fuchsia_driver_test::Realm
     }
 
     if (request->args.has_driver_disable()) {
+      std::vector<std::string_view> drivers(request->args.driver_disable().count());
       for (auto& driver : request->args.driver_disable()) {
+        drivers.emplace_back(std::string_view(driver.data()));
         auto string = fbl::StringPrintf("driver.%s.disable", driver.data());
         boot_args[string.data()] = "true";
       }
+      boot_args["devmgr.disabled-drivers"] = fxl::JoinStrings(drivers, ",");
     }
 
     if (request->args.has_driver_bind_eager() && request->args.driver_bind_eager().count() > 0) {
-      std::string drivers = "";
+      std::vector<std::string_view> drivers(request->args.driver_bind_eager().count());
       for (auto& driver : request->args.driver_bind_eager()) {
-        drivers += std::string(driver.data()) + ",";
+        drivers.emplace_back(driver.data());
       }
-      // Remove the last ",".
-      drivers.pop_back();
-
-      boot_args["devmgr.bind-eager"] = drivers;
+      boot_args["devmgr.bind-eager"] = fxl::JoinStrings(drivers, ",");
     }
+
     return boot_args;
   }
 
@@ -553,7 +577,6 @@ int main() {
   if (status != ZX_OK) {
     return status;
   }
-
   auto realm = DriverTestRealm::Create(&outgoing, &loop);
   if (realm.status_value() != ZX_OK) {
     return realm.status_value();
