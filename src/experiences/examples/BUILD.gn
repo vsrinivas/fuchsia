@@ -13,9 +13,7 @@ group("examples") {
 group("tests") {
   testonly = true
 
-  public_deps = [
-    ":dart_unittests",
-  ]
+  public_deps = [ ":dart_unittests" ]
 }
 
 group("dart_unittests") {
