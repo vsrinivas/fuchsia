@@ -374,7 +374,12 @@ std::optional<FlashChipInfo> SpiFlashDevice::DetermineFlashChip() {
 }
 
 static zx_status_t CreateSpiFlash(void *ctx, zx_device_t *parent) {
+#ifdef ENABLE_DFV2
+  // TODO(fxbug.dev/93333): remove this once DFV2 has stabilised.
+  ddk::Pci pci(parent);
+#else
   ddk::Pci pci(parent, "pci");
+#endif
   std::optional<fdf::MmioBuffer> mmio;
   zx_status_t status = pci.MapMmio(0, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
   if (status != ZX_OK) {

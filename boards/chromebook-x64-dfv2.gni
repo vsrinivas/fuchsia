@@ -10,6 +10,7 @@ board_configs += [ "//build/drivers:enable_dfv2" ]
 board_bootfs_labels -= [
   "//src/devices/usb/drivers/xhci",
   "//src/devices/block/drivers/pci-sdhci",
+  "//src/devices/nand/drivers/intel-spi-flash",
   "//src/graphics/display/drivers/intel-i915",
   "//src/ui/input/drivers/pc-ps2",
 ]
@@ -17,6 +18,7 @@ board_bootfs_labels -= [
 board_bootfs_labels += [
   "//src/devices/usb/drivers/xhci:xhci-dfv2",
   "//src/devices/block/drivers/pci-sdhci:pci-sdhci-dfv2",
+  "//src/devices/nand/drivers/intel-spi-flash:driver-dfv2",
   "//src/graphics/display/drivers/intel-i915:intel-i915-dfv2",
   "//src/ui/input/drivers/pc-ps2:pc-ps2-dfv2",
 ]
