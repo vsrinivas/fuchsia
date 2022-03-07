@@ -252,12 +252,28 @@ func (d *Distribution) buildCommandLine(fvd *fvdpb.VirtualDevice, images build.I
 
 // Create creates an instance of the emulator with the given parameters.
 func (d *Distribution) Create(fvd *fvdpb.VirtualDevice) (*Instance, error) {
-	return d.CreateContext(context.Background(), fvd)
+	return d.create(
+		func(args []string) *exec.Cmd { return exec.Command(args[0], args[1:]...) },
+		fvd,
+	)
 }
 
 // CreateContext creates an instance of the emulator with the given parameters,
 // passing through ctx to the underlying exec.Cmd.
 func (d *Distribution) CreateContext(ctx context.Context, fvd *fvdpb.VirtualDevice) (*Instance, error) {
+	return d.create(
+		func(args []string) *exec.Cmd { return exec.CommandContext(ctx, args[0], args[1:]...) },
+		fvd,
+	)
+}
+
+// The create method is structured like this because the context docs explicitly warn
+// against passing a nil Context, and exec.CommandContext(context.Background(), ...)
+// is not equivalent to exec.Command(...).
+func (d *Distribution) create(
+	makeCmd func(args []string) *exec.Cmd,
+	fvd *fvdpb.VirtualDevice,
+) (*Instance, error) {
 	images, err := d.loadImageManifest()
 	if err != nil {
 		return nil, err
@@ -271,7 +287,7 @@ func (d *Distribution) CreateContext(ctx context.Context, fvd *fvdpb.VirtualDevi
 	fmt.Printf("Running %s %s\n", args[0], args[1:])
 
 	i := &Instance{
-		cmd:      exec.CommandContext(ctx, args[0], args[1:]...),
+		cmd:      makeCmd(args),
 		emulator: d.Emulator,
 	}
 	// QEMU looks in the cwd for some specially named files, in particular
