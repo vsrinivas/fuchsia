@@ -2075,6 +2075,8 @@ void iwl_mvm_sync_rx_queues_internal(struct iwl_mvm* mvm, struct iwl_mvm_interna
                                      uint32_t size);
 void iwl_mvm_reorder_timer_expired(struct timer_list* t);
 struct ieee80211_vif* iwl_mvm_get_bss_vif(struct iwl_mvm* mvm);
+
+// Returns true if any client interface is associated.
 bool iwl_mvm_is_vif_assoc(struct iwl_mvm* mvm);
 
 #define MVM_TCM_PERIOD_MSEC 500

@@ -582,13 +582,27 @@ zx_status_t iwl_mvm_init_mcc(struct iwl_mvm* mvm) {
   return retval;
 }
 
-#if 0   // NEEDS_PORTING
+// This is how the regulatory handler works:
+//
+//   Somehow the firmware detects the regulatory domain, it sends a MCC_CHUB_UPDATE_CMD
+//   notification to the driver (usually happens in the middle of a passive or active scan).
+//   The driver then schedules an async task (this function) to handle it.
+//
+//   At this moment, although the new country code is detected, the firmware is using the
+//   original country code (for example, "00" for the worldwide right after booting).
+//
+//   When the task is being executed, this function obtains the country code from the notification
+//   content, then tells the firmware to reflect the change (via the MCC_UPDATE_CMD command).
+//
+//   Then the response of MCC_UPDATE_CMD (returned from the firmware) contains the channel list
+//   of the new country. The information are saved by iwl_mvm_get_regdomain() function (so that
+//   we can use the channel list info for future active scan).
+//
 void iwl_mvm_rx_chub_update_mcc(struct iwl_mvm* mvm, struct iwl_rx_cmd_buffer* rxb) {
   struct iwl_rx_packet* pkt = rxb_addr(rxb);
   struct iwl_mcc_chub_notif* notif = (void*)pkt->data;
   enum iwl_mcc_source src;
-  char mcc[3];
-  struct ieee80211_regdomain* regd;
+  char mcc[3];  // Example: "US\0"
 
   iwl_assert_lock_held(&mvm->mutex);
 
@@ -597,7 +611,8 @@ void iwl_mvm_rx_chub_update_mcc(struct iwl_mvm* mvm, struct iwl_rx_cmd_buffer* r
     return;
   }
 
-  if (WARN_ON_ONCE(!iwl_mvm_is_lar_supported(mvm))) {
+  if (!iwl_mvm_is_lar_supported(mvm)) {
+    IWL_WARN(mvm, "LAR is not supported. Ignore MCC change.\n");
     return;
   }
 
@@ -606,13 +621,21 @@ void iwl_mvm_rx_chub_update_mcc(struct iwl_mvm* mvm, struct iwl_rx_cmd_buffer* r
   mcc[2] = '\0';
   src = notif->source_id;
 
-  IWL_DEBUG_LAR(mvm, "RX: received chub update mcc cmd (mcc '%s' src %d)\n", mcc, src);
-  regd = iwl_mvm_get_regdomain(mvm->hw->wiphy, mcc, src, NULL);
-  if (IS_ERR_OR_NULL(regd)) {
+  IWL_INFO(mvm, "RX: received chub update mcc cmd (mcc '%s' src %d)\n", mcc, src);
+
+  // Ask the firmware to change the regulatory domain and take effective.
+  bool changed;
+  wlanphy_country_t country;
+  zx_status_t ret = iwl_mvm_get_regdomain(mvm, mcc, src, &changed, &country);
+  if (ret != ZX_OK) {
+    IWL_ERR(mvm, "Cannot update the firmware with new country code (%s): %s\n", mcc,
+            zx_status_get_string(ret));
     return;
   }
 
+#if 0   // NEEDS_PORTING
+  // TODO(fxbug.dev/95163): inform the MLME when the regulatory domain is changed.
   regulatory_set_wiphy_regd(mvm->hw->wiphy, regd);
   kfree(regd);
-}
 #endif  // NEEDS_PORTING
+}

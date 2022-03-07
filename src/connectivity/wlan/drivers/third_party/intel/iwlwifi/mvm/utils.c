@@ -960,29 +960,33 @@ struct ieee80211_vif* iwl_mvm_get_bss_vif(struct iwl_mvm* mvm) {
 
     return bss_iter_data.vif;
 }
+#endif  // NEEDS_PORTING
 
 struct iwl_sta_iter_data {
-    bool assoc;
+  bool assoc;
 };
 
-static void iwl_mvm_sta_iface_iterator(void* _data, uint8_t* mac, struct ieee80211_vif* vif) {
-    struct iwl_sta_iter_data* data = _data;
+static void iwl_mvm_sta_iface_iterator(void* _data, struct iwl_mvm_vif* mvmvif) {
+  struct iwl_sta_iter_data* data = _data;
 
-    if (vif->type != NL80211_IFTYPE_STATION) { return; }
+  if (mvmvif->mac_role != WLAN_MAC_ROLE_CLIENT) {
+    return;
+  }
 
-    if (vif->bss_conf.assoc) { data->assoc = true; }
+  if (mvmvif->bss_conf.assoc) {
+    data->assoc = true;
+  }
 }
 
 bool iwl_mvm_is_vif_assoc(struct iwl_mvm* mvm) {
-    struct iwl_sta_iter_data data = {
-        .assoc = false,
-    };
+  struct iwl_sta_iter_data data = {
+      .assoc = false,
+  };
 
-    ieee80211_iterate_active_interfaces_atomic(mvm->hw, IEEE80211_IFACE_ITER_NORMAL,
-                                               iwl_mvm_sta_iface_iterator, &data);
-    return data.assoc;
+  ieee80211_iterate_active_interfaces_atomic(mvm, iwl_mvm_sta_iface_iterator, &data);
+
+  return data.assoc;
 }
-#endif  // NEEDS_PORTING
 
 zx_duration_t iwl_mvm_get_wd_timeout(struct iwl_mvm* mvm, struct ieee80211_vif* vif, bool tdls,
                                      bool cmd_q) {
