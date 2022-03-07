@@ -859,6 +859,64 @@ type Foo = resource struct {
   ASSERT_COMPILED(library);
 }
 
+TEST(ProtocolTests, GoodMethodStructSimpleLayout) {
+  TestLibrary library(R"FIDL(
+library example;
+
+@for_deprecated_c_bindings
+protocol MyProtocol {
+  -> OnMyEvent(struct {
+    b bool;
+  });
+};
+)FIDL");
+  ASSERT_COMPILED(library);
+}
+
+TEST(ProtocolTests, BadMethodStructSimpleLayout) {
+  TestLibrary library(R"FIDL(
+library example;
+
+@for_deprecated_c_bindings
+protocol MyProtocol {
+  -> OnMyEvent(struct {
+    b vector<bool>;
+  });
+};
+)FIDL");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrMemberMustBeSimple);
+}
+
+TEST(ProtocolTests, BadMethodStructSizeConstraints) {
+  TestLibrary library(R"FIDL(
+library example;
+
+protocol MyOtherProtocol {};
+
+type MyStruct = resource struct {
+  a client_end:<MyProtocol>;
+};
+
+@max_handles("0") @max_bytes("1")
+protocol MyProtocol {
+  MyMethod(MyStruct) -> (MyStruct) error uint32;
+  -> OnMyEvent(struct {
+    b uint16;
+  }) error uint32;
+};
+)FIDL");
+  ASSERT_FALSE(library.Compile());
+
+  // Both uses of "MyStruct" use too many handles.
+  EXPECT_ERR(library.errors()[0], fidl::ErrTooManyHandles);
+  EXPECT_ERR(library.errors()[1], fidl::ErrTooManyHandles);
+
+  // Both uses of "MyStruct," as well as the anonymous layout, use too many bytes.
+  EXPECT_ERR(library.errors()[2], fidl::ErrTooManyBytes);
+  EXPECT_ERR(library.errors()[3], fidl::ErrTooManyBytes);
+  EXPECT_ERR(library.errors()[4], fidl::ErrTooManyBytes);
+}
+
 TEST(ProtocolTests, BadMethodStructLayoutDefaultMember) {
   TestLibrary library(R"FIDL(
 library example;
@@ -868,6 +926,18 @@ protocol MyProtocol {
 };
 )FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrPayloadStructHasDefaultMembers);
+}
+
+TEST(ProtocolTests, BadMethodEmptyPayloadStruct) {
+  TestLibrary library(R"FIDL(
+library example;
+
+protocol MyProtocol {
+  MyMethod(struct {}) -> (struct {});
+};
+)FIDL");
+  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrEmptyPayloadStructs,
+                                      fidl::ErrEmptyPayloadStructs);
 }
 
 TEST(ProtocolTests, BadMethodEnumLayout) {
@@ -884,6 +954,7 @@ protocol MyProtocol {
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "enum");
 }
 
+// TODO(fxbug.dev/88343): Delete once --non_struct_payloads feature flag has been disabled.
 TEST(ProtocolTests, BadMethodTableLayout) {
   TestLibrary library(R"FIDL(
 library example;
@@ -898,6 +969,7 @@ protocol MyProtocol {
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "table");
 }
 
+// TODO(fxbug.dev/88343): Delete once --non_struct_payloads feature flag has been disabled.
 TEST(ProtocolTests, BadMethodUnionLayout) {
   TestLibrary library(R"FIDL(
 library example;
@@ -910,18 +982,6 @@ protocol MyProtocol {
 )FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrNotYetSupportedParameterListType);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "union");
-}
-
-TEST(ProtocolTests, BadMethodEmptyPayloadStruct) {
-  TestLibrary library(R"FIDL(
-library example;
-
-protocol MyProtocol {
-  MyMethod(struct {}) -> (struct {});
-};
-)FIDL");
-  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrEmptyPayloadStructs,
-                                      fidl::ErrEmptyPayloadStructs);
 }
 
 TEST(ProtocolTests, BadMethodEmptyResponseWithError) {
@@ -960,7 +1020,7 @@ type MyStruct = struct{
 };
 
 protocol MyProtocol {
-  MyMethod(MyStruct) -> (MyStruct);
+  MyMethod() -> (MyStruct);
     -> OnMyEvent(MyStruct);
 };
 )FIDL");
@@ -976,7 +1036,7 @@ type MyStruct = struct{
 };
 
 protocol MyProtocol {
-  MyMethod(MyStruct) -> (MyStruct) error uint32;
+  MyMethod() -> (MyStruct) error uint32;
   -> OnMyEvent(MyStruct) error uint32;
 };
 )FIDL");
@@ -1120,5 +1180,245 @@ protocol MyProtocol {
 )FIDL");
   ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrExpectedType, fidl::ErrExpectedType);
 }
+
+TEST(ProtocolTests, BadMethodTableSizeConstraints) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kNonStructPayloads);
+  TestLibrary library(R"FIDL(
+library example;
+
+protocol MyOtherProtocol {};
+
+type MyTable = resource table {
+  1: a client_end:<MyProtocol>;
+};
+
+@max_handles("0") @max_bytes("1")
+protocol MyProtocol {
+  MyMethod(MyTable) -> (MyTable) error uint32;
+  -> OnMyEvent(table {
+    1: b bool;
+  }) error uint32;
+};
+)FIDL",
+                      experimental_flags);
+  ASSERT_FALSE(library.Compile());
+
+  // Both uses of "MyTable" use too many handles.
+  EXPECT_ERR(library.errors()[0], fidl::ErrTooManyHandles);
+  EXPECT_ERR(library.errors()[1], fidl::ErrTooManyHandles);
+
+  // Both uses of "MyTable," as well as the anonymous layout, use too many bytes.
+  EXPECT_ERR(library.errors()[2], fidl::ErrTooManyBytes);
+  EXPECT_ERR(library.errors()[3], fidl::ErrTooManyBytes);
+  EXPECT_ERR(library.errors()[4], fidl::ErrTooManyBytes);
+}
+
+TEST(ProtocolTests, BadMethodTableSimpleLayout) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kNonStructPayloads);
+  TestLibrary library(R"FIDL(
+library example;
+
+@for_deprecated_c_bindings
+protocol MyProtocol {
+  -> OnMyEvent(table {
+    1: b bool;
+  });
+};
+)FIDL",
+                      experimental_flags);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnionCannotBeSimple);
+}
+
+TEST(ProtocolTests, GoodMethodTableRequest) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kNonStructPayloads);
+  TestLibrary library(R"FIDL(
+library example;
+
+protocol MyOtherProtocol {};
+
+type MyTable = resource table {
+  1: a client_end:<MyProtocol>;
+};
+
+protocol MyProtocol {
+  MyMethodOneWay(table {
+    1: b bool;
+  });
+  MyMethodTwoWay(MyTable) -> ();
+};
+)FIDL",
+                      experimental_flags);
+  ASSERT_COMPILED(library);
+}
+
+TEST(ProtocolTests, GoodMethodTableResponse) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kNonStructPayloads);
+  TestLibrary library(R"FIDL(
+library example;
+
+protocol MyOtherProtocol {};
+
+type MyTable = resource table {
+  1: a client_end:<MyProtocol>;
+};
+
+protocol MyProtocol {
+  MyMethod() -> (table {
+    1: b bool;
+  });
+  -> OnMyEvent(MyTable);
+};
+)FIDL",
+                      experimental_flags);
+  ASSERT_COMPILED(library);
+}
+
+TEST(ProtocolTests, GoodMethodTableResultPayload) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kNonStructPayloads);
+  TestLibrary library(R"FIDL(
+library example;
+
+protocol MyOtherProtocol {};
+
+type MyTable = resource table {
+  1: a client_end:<MyProtocol>;
+};
+
+protocol MyProtocol {
+  MyMethod() -> (MyTable) error uint32;
+  -> OnMyEvent(table {
+    1: b bool;
+  }) error uint32;
+};
+)FIDL",
+                      experimental_flags);
+  ASSERT_COMPILED(library);
+}
+
+TEST(ProtocolTests, GoodMethodUnionRequest) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kNonStructPayloads);
+  TestLibrary library(R"FIDL(
+library example;
+
+protocol MyOtherProtocol {};
+
+type MyUnion = strict resource union {
+  1: a client_end:<MyProtocol>;
+};
+
+protocol MyProtocol {
+  MyMethodOneWay(flexible union {
+    1: b bool;
+  });
+  MyMethodTwoWay(MyUnion) -> ();
+};
+)FIDL",
+                      experimental_flags);
+  ASSERT_COMPILED(library);
+}
+
+TEST(ProtocolTests, GoodMethodUnionResponse) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kNonStructPayloads);
+  TestLibrary library(R"FIDL(
+library example;
+
+protocol MyOtherProtocol {};
+
+type MyUnion = strict resource union {
+  1: a client_end:<MyProtocol>;
+};
+
+protocol MyProtocol {
+  MyMethod() -> (flexible union {
+    1: b bool;
+  });
+  -> OnMyEvent(MyUnion);
+};
+)FIDL",
+                      experimental_flags);
+  ASSERT_COMPILED(library);
+}
+
+TEST(ProtocolTests, GoodMethodUnionResultPayload) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kNonStructPayloads);
+  TestLibrary library(R"FIDL(
+library example;
+
+protocol MyOtherProtocol {};
+
+type MyUnion = strict resource union {
+  1: a client_end:<MyProtocol>;
+};
+
+protocol MyProtocol {
+  MyMethod() -> (MyUnion) error uint32;
+  -> OnMyEvent(flexible union {
+    1: b bool;
+  }) error uint32;
+};
+)FIDL",
+                      experimental_flags);
+  ASSERT_COMPILED(library);
+}
+
+TEST(ProtocolTests, BadMethodUnionSizeConstraints) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kNonStructPayloads);
+  TestLibrary library(R"FIDL(
+library example;
+
+protocol MyOtherProtocol {};
+
+type MyUnion = strict resource union {
+  1: a client_end:<MyProtocol>;
+};
+
+@max_handles("0") @max_bytes("1")
+protocol MyProtocol {
+  MyMethod(MyUnion) -> (MyUnion) error uint32;
+  -> OnMyEvent(flexible union {
+    1: b bool;
+  }) error uint32;
+};
+)FIDL",
+                      experimental_flags);
+  ASSERT_FALSE(library.Compile());
+
+  // Both uses of "MyUnion" use too many handles.
+  EXPECT_ERR(library.errors()[0], fidl::ErrTooManyHandles);
+  EXPECT_ERR(library.errors()[1], fidl::ErrTooManyHandles);
+
+  // Both uses of "MyUnion," as well as the anonymous layout, use too many bytes.
+  EXPECT_ERR(library.errors()[2], fidl::ErrTooManyBytes);
+  EXPECT_ERR(library.errors()[3], fidl::ErrTooManyBytes);
+  EXPECT_ERR(library.errors()[4], fidl::ErrTooManyBytes);
+}
+
+TEST(ProtocolTests, BadMethodUnionSimpleLayout) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kNonStructPayloads);
+  TestLibrary library(R"FIDL(
+library example;
+
+@for_deprecated_c_bindings
+protocol MyProtocol {
+  -> OnMyEvent(flexible union {
+    1: b bool;
+  });
+};
+)FIDL",
+                      experimental_flags);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnionCannotBeSimple);
+}
+
+// TODO(fxbug.dev/93542): add bad `:optional` message body tests here.
 
 }  // namespace

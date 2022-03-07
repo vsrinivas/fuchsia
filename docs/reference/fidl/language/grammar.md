@@ -250,9 +250,8 @@ an enum thereof.
 
 ### NOTE 8
 
-<!-- TODO(fxbug.dev/88343): update this when complete -->
 The `parameter-list` allows the more liberal `type-constructor` in the grammar,
-but the compiler only supports layouts that are non-empty structs.
+but the compiler only supports layouts that are structs, tables, or unions.
 
 ### NOTE 9
 

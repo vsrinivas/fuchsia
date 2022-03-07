@@ -46,6 +46,7 @@ foreach(filename, standalone_libraries) {
   fidl(library) {
     testonly = true
     sources = [ filename ]
+    experimental_flags = [ "non_struct_payloads" ]
     public_deps = [ "//zircon/vdso/zx" ]
     host_llcpp = true
 

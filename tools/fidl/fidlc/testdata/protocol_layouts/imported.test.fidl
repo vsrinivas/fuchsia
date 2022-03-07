@@ -1,0 +1,37 @@
+library test.protocollayouts.imported;
+
+type ImportTablePayload = table {
+    1: a uint16;
+};
+
+type ImportUnionPayload = strict union {
+    1: b bool;
+};
+
+protocol ComposedProtocol {
+    OneWayAnonComposed(table {
+        1: a uint16;
+    });
+    TwoWayAnonComposed(strict union {
+        1: b bool;
+    }) -> (table {
+        1: a uint16;
+    });
+    TwoWayAnonComposedWithError(table {
+        1: a uint16;
+    }) -> (strict union {
+        1: b bool;
+    }) error uint32;
+    -> OnAnonComposed(strict union {
+        1: b bool;
+    });
+    -> OnAnonComposedWithError(table {
+        1: a uint16;
+    }) error uint32;
+
+    OneWayNamedComposed(ImportTablePayload);
+    TwoWayNamedComposed(ImportUnionPayload) -> (ImportTablePayload);
+    TwoWayNamedComposedWithError(ImportTablePayload) -> (ImportUnionPayload) error uint32;
+    -> OnNamedComposed(ImportUnionPayload);
+    -> OnNamedComposedWithError(ImportTablePayload) error uint32;
+};

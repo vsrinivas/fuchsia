@@ -4,6 +4,7 @@
 
 #include "fidl/flat/compiler.h"
 
+#include "fidl/experimental_flags.h"
 #include "fidl/flat/attribute_schema.h"
 #include "fidl/flat/compile_step.h"
 #include "fidl/flat/consume_step.h"
@@ -123,8 +124,9 @@ std::vector<const Decl*> Libraries::DeclarationOrder() const {
 }
 
 std::set<const Library*, LibraryComparator> Libraries::DirectAndComposedDependencies(
-    const Library* library) const {
+    const Library* library, const ExperimentalFlags& experimental_flags) const {
   std::set<const Library*, LibraryComparator> direct_dependencies;
+
   auto add_constant_deps = [&](const Constant* constant) {
     if (constant->kind != Constant::Kind::kIdentifier)
       return;
@@ -132,6 +134,7 @@ std::set<const Library*, LibraryComparator> Libraries::DirectAndComposedDependen
     if (auto dep_library = identifier_constant->reference.target_library())
       direct_dependencies.insert(dep_library);
   };
+
   auto add_type_ctor_deps = [&](const TypeConstructor& type_ctor) {
     if (auto dep_library = type_ctor.layout.target_library())
       direct_dependencies.insert(dep_library);
@@ -153,36 +156,77 @@ std::set<const Library*, LibraryComparator> Libraries::DirectAndComposedDependen
         direct_dependencies.insert(dep_library);
     }
   };
+
   for (const auto& dep_library : library->dependencies.all()) {
     direct_dependencies.insert(dep_library);
   }
+
   // Discover additional dependencies that are required to support
   // cross-library protocol composition.
   for (const auto& protocol : library->protocol_declarations) {
     for (const auto method_with_info : protocol->all_methods) {
       if (method_with_info.method->maybe_request) {
-        auto id =
-            static_cast<const flat::IdentifierType*>(method_with_info.method->maybe_request->type);
-
-        // TODO(fxbug.dev/88343): switch on union/table when those are enabled.
-        auto as_struct = static_cast<const flat::Struct*>(id->type_decl);
-        for (const auto& member : as_struct->members) {
-          add_type_ctor_deps(*member.type_ctor);
+        const Type* type = method_with_info.method->maybe_request->type;
+        auto id = static_cast<const flat::IdentifierType*>(type);
+        switch (id->type_decl->kind) {
+          case Decl::Kind::kStruct: {
+            auto as_struct = static_cast<const flat::Struct*>(id->type_decl);
+            for (const auto& member : as_struct->members) {
+              add_type_ctor_deps(*member.type_ctor);
+            }
+            break;
+          }
+          case Decl::Kind::kTable:
+          case Decl::Kind::kUnion: {
+            if (experimental_flags.IsFlagEnabled(ExperimentalFlags::Flag::kNonStructPayloads)) {
+              // Table/union payloads are never flattened by backend generators, so we don't need to
+              // inspect their members, only the top-level type itself.
+              if (auto dep_library = type->name.library()) {
+                direct_dependencies.insert(dep_library);
+              }
+            } else {
+              assert(false && "should have failed compilation as --non_struct_payloads flag unset");
+            }
+            break;
+          }
+          default: {
+            assert(false && "unexpected kind");
+          }
         }
       }
       if (method_with_info.method->maybe_response) {
-        auto id =
-            static_cast<const flat::IdentifierType*>(method_with_info.method->maybe_response->type);
-
-        // TODO(fxbug.dev/88343): switch on union/table when those are enabled.
-        auto as_struct = static_cast<const flat::Struct*>(id->type_decl);
-        for (const auto& member : as_struct->members) {
-          add_type_ctor_deps(*member.type_ctor);
+        const Type* type = method_with_info.method->maybe_response->type;
+        auto id = static_cast<const flat::IdentifierType*>(type);
+        switch (id->type_decl->kind) {
+          case Decl::Kind::kStruct: {
+            auto as_struct = static_cast<const flat::Struct*>(id->type_decl);
+            for (const auto& member : as_struct->members) {
+              add_type_ctor_deps(*member.type_ctor);
+            }
+            break;
+          }
+          case Decl::Kind::kTable:
+          case Decl::Kind::kUnion: {
+            if (experimental_flags.IsFlagEnabled(ExperimentalFlags::Flag::kNonStructPayloads)) {
+              // Table/union payloads are never flattened by backend generators, so we don't need to
+              // inspect their members, only the top-level type itself.
+              if (auto dep_library = type->name.library()) {
+                direct_dependencies.insert(dep_library);
+              }
+            } else {
+              assert(false && "should have failed compilation as --non_struct_payloads flag unset");
+            }
+            break;
+          }
+          default: {
+            assert(false && "unexpected kind");
+          }
         }
       }
       direct_dependencies.insert(method_with_info.method->owning_protocol->name.library());
     }
   }
+
   direct_dependencies.erase(library);
   direct_dependencies.erase(root_library());
   return direct_dependencies;

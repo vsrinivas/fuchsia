@@ -119,7 +119,7 @@ bool TypeAllowed(const flat::Library* library, const flat::Type* type) {
   return true;
 }
 
-bool PayloadStructAllowed(const flat::Library* library,
+bool PayloadLayoutAllowed(const flat::Library* library,
                           const std::unique_ptr<flat::TypeConstructor>& payload) {
   if (!payload) {
     return true;
@@ -127,9 +127,13 @@ bool PayloadStructAllowed(const flat::Library* library,
 
   auto id = static_cast<const flat::IdentifierType*>(payload->type);
 
-  // TODO(fxbug.dev/88343): switch on union/table when those are enabled.
-  auto as_struct = static_cast<const flat::Struct*>(id->type_decl);
+  // Since no new uses of the C bindings are allowed, fail on payloads that are either unions or
+  // tables, as support for such payloads was added after C binding usage was frozen.
+  if (id->type_decl->kind != flat::Decl::Kind::kStruct) {
+    return false;
+  }
 
+  auto as_struct = static_cast<const flat::Struct*>(id->type_decl);
   for (const auto& member : as_struct->members) {
     if (!TypeAllowed(library, member.type_ctor->type)) {
       return false;
@@ -139,8 +143,8 @@ bool PayloadStructAllowed(const flat::Library* library,
 }
 
 bool MethodAllowed(const flat::Library* library, const flat::Protocol::Method& method) {
-  return MethodAlwaysAllowed(method) || (PayloadStructAllowed(library, method.maybe_request) &&
-                                         PayloadStructAllowed(library, method.maybe_response));
+  return MethodAlwaysAllowed(method) || (PayloadLayoutAllowed(library, method.maybe_request) &&
+                                         PayloadLayoutAllowed(library, method.maybe_response));
 }
 
 CGenerator::Member MessageHeader() {
@@ -978,7 +982,12 @@ std::map<const flat::Decl*, CGenerator::NamedProtocol> CGenerator::NameProtocols
         if (method.maybe_request) {
           auto id = static_cast<const flat::IdentifierType*>(method.maybe_request->type);
 
-          // TODO(fxbug.dev/88343): switch on union/table when those are enabled.
+          // Since no new uses of the C bindings are allowed, assert that payloads that are either
+          // unions or tables, as support for such payloads was added after C binding usage was
+          // frozen. The previous call to `MethodAllowed` should have exited early, so this assert
+          // should never be hit.
+          assert(id->type_decl->kind == flat::Decl::Kind::kStruct &&
+                 "table/union method payloads disallowed");
           auto as_struct = static_cast<const flat::Struct*>(id->type_decl);
           typeshape = as_struct->typeshape(WireFormat::kV1NoEe);
           members = &as_struct->members;
@@ -998,7 +1007,12 @@ std::map<const flat::Decl*, CGenerator::NamedProtocol> CGenerator::NameProtocols
         if (method.maybe_response) {
           auto id = static_cast<const flat::IdentifierType*>(method.maybe_response->type);
 
-          // TODO(fxbug.dev/88343): switch on union/table when those are enabled.
+          // Since no new uses of the C bindings are allowed, assert that payloads that are either
+          // unions or tables, as support for such payloads was added after C binding usage was
+          // frozen. The previous call to `MethodAllowed` should have exited early, so this assert
+          // should never be hit.
+          assert(id->type_decl->kind == flat::Decl::Kind::kStruct &&
+                 "table/union method payloads disallowed");
           auto as_struct = static_cast<const flat::Struct*>(id->type_decl);
           typeshape = as_struct->typeshape(WireFormat::kV1NoEe);
           members = &as_struct->members;

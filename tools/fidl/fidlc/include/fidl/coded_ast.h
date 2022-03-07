@@ -290,18 +290,18 @@ struct XUnionType : public Type {
 };
 
 struct ProtocolType : public Type {
-  explicit ProtocolType(std::vector<std::unique_ptr<StructType>> messages_during_compile)
+  explicit ProtocolType(std::vector<std::unique_ptr<Type>> messages_during_compile)
       // N.B. ProtocolTypes are never used in the eventual coding table generation.
       : Type(Kind::kProtocol, "", 0, 0, false, false),
         messages_during_compile(std::move(messages_during_compile)) {}
 
   // Note: the messages are moved from the protocol type into the
   // CodedTypesGenerator coded_types_ vector during assembly.
-  std::vector<std::unique_ptr<StructType>> messages_during_compile;
+  std::vector<std::unique_ptr<Type>> messages_during_compile;
 
   // Back pointers to fully compiled message types, owned by the
   // CodedTypesGenerator coded_types_ vector.
-  std::vector<const StructType*> messages_after_compile;
+  std::vector<const Type*> messages_after_compile;
 };
 
 struct ArrayType : public Type {

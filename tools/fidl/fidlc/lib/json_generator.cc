@@ -962,8 +962,7 @@ std::vector<const flat::Struct*> ExternalStructs(const flat::Library* library) {
         auto id = static_cast<const flat::IdentifierType*>(method->maybe_request->type);
 
         // Make sure this is actually an externally defined struct before proceeding.
-        if (id->name.library() != library) {
-          // TODO(fxbug.dev/88343): switch on union/table when those are enabled.
+        if (id->name.library() != library && id->type_decl->kind == flat::Decl::Kind::kStruct) {
           auto as_struct = static_cast<const flat::Struct*>(id->type_decl);
           external_structs.insert(as_struct);
         }
@@ -972,8 +971,7 @@ std::vector<const flat::Struct*> ExternalStructs(const flat::Library* library) {
         auto id = static_cast<const flat::IdentifierType*>(method->maybe_response->type);
 
         // Make sure this is actually an externally defined struct before proceeding.
-        if (id->name.library() != library) {
-          // TODO(fxbug.dev/88343): switch on union/table when those are enabled.
+        if (id->name.library() != library && id->type_decl->kind == flat::Decl::Kind::kStruct) {
           auto as_struct = static_cast<const flat::Struct*>(id->type_decl);
           external_structs.insert(as_struct);
         }
@@ -989,10 +987,10 @@ std::vector<const flat::Struct*> ExternalStructs(const flat::Library* library) {
           const auto* result_union = static_cast<const flat::Union*>(result_union_type->type_decl);
           const auto* success_variant_type = static_cast<const flat::IdentifierType*>(
               result_union->members[0].maybe_used->type_ctor->type);
+          if (success_variant_type->type_decl->kind != flat::Decl::Kind::kStruct) {
+            continue;
+          }
 
-          // TODO(fxbug.dev/88343): Assumption that this is a struct, whereas this
-          // will be relaxed to also allow a union or table.
-          assert(success_variant_type->type_decl->kind == flat::Decl::Kind::kStruct);
           const auto* success_variant_struct =
               static_cast<const flat::Struct*>(success_variant_type->type_decl);
 
@@ -1024,7 +1022,7 @@ std::ostringstream JSONGenerator::Produce() {
 
     GenerateObjectPunctuation(Position::kSubsequent);
     EmitObjectKey("library_dependencies");
-    GenerateArray(all_libraries_->DirectAndComposedDependencies(library));
+    GenerateArray(all_libraries_->DirectAndComposedDependencies(library, experimental_flags_));
 
     GenerateObjectMember("bits_declarations", library->bits_declarations);
     GenerateObjectMember("const_declarations", library->const_declarations);

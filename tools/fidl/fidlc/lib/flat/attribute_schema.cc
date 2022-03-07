@@ -390,20 +390,50 @@ static bool SimpleLayoutConstraint(Reporter* reporter, const Attribute* attr,
       auto method = static_cast<const Protocol::Method*>(element);
       if (method->maybe_request) {
         auto id = static_cast<const flat::IdentifierType*>(method->maybe_request->type);
-
-        // TODO(fxbug.dev/88343): switch on union/table when those are enabled.
-        auto as_struct = static_cast<const flat::Struct*>(id->type_decl);
-        if (!SimpleLayoutConstraint(reporter, attr, as_struct)) {
-          ok = false;
+        switch (id->type_decl->kind) {
+          case Decl::Kind::kStruct: {
+            auto as_struct = static_cast<const flat::Struct*>(id->type_decl);
+            if (!SimpleLayoutConstraint(reporter, attr, as_struct)) {
+              ok = false;
+            }
+            break;
+          }
+          case Decl::Kind::kTable: {
+            ok = false;
+            reporter->Fail(ErrTableCannotBeSimple, method->name, id->name);
+            break;
+          }
+          case Decl::Kind::kUnion: {
+            ok = false;
+            reporter->Fail(ErrUnionCannotBeSimple, method->name, id->name);
+            break;
+          }
+          default:
+            assert(false && "unexpected kind");
         }
       }
       if (method->maybe_response) {
         auto id = static_cast<const flat::IdentifierType*>(method->maybe_response->type);
-
-        // TODO(fxbug.dev/88343): switch on union/table when those are enabled.
-        auto as_struct = static_cast<const flat::Struct*>(id->type_decl);
-        if (!SimpleLayoutConstraint(reporter, attr, as_struct)) {
-          ok = false;
+        switch (id->type_decl->kind) {
+          case Decl::Kind::kStruct: {
+            auto as_struct = static_cast<const flat::Struct*>(id->type_decl);
+            if (!SimpleLayoutConstraint(reporter, attr, as_struct)) {
+              ok = false;
+            }
+            break;
+          }
+          case Decl::Kind::kTable: {
+            ok = false;
+            reporter->Fail(ErrTableCannotBeSimple, method->name, id->name);
+            break;
+          }
+          case Decl::Kind::kUnion: {
+            ok = false;
+            reporter->Fail(ErrUnionCannotBeSimple, method->name, id->name);
+            break;
+          }
+          default:
+            assert(false && "unexpected kind");
         }
       }
       break;
@@ -467,19 +497,15 @@ static bool MaxBytesConstraint(Reporter* reporter, const Attribute* attribute,
       bool ok = true;
       if (method->maybe_request) {
         auto id = static_cast<const flat::IdentifierType*>(method->maybe_request->type);
-
-        // TODO(fxbug.dev/88343): switch on union/table when those are enabled.
-        auto as_struct = static_cast<const flat::Struct*>(id->type_decl);
-        if (!MaxBytesConstraint(reporter, attribute, as_struct)) {
+        auto as_type_decl = static_cast<const flat::TypeDecl*>(id->type_decl);
+        if (!MaxBytesConstraint(reporter, attribute, as_type_decl)) {
           ok = false;
         }
       }
       if (method->maybe_response) {
         auto id = static_cast<const flat::IdentifierType*>(method->maybe_response->type);
-
-        // TODO(fxbug.dev/88343): switch on union/table when those are enabled.
-        auto as_struct = static_cast<const flat::Struct*>(id->type_decl);
-        if (!MaxBytesConstraint(reporter, attribute, as_struct)) {
+        auto as_type_decl = static_cast<const flat::TypeDecl*>(id->type_decl);
+        if (!MaxBytesConstraint(reporter, attribute, as_type_decl)) {
           ok = false;
         }
       }
@@ -541,19 +567,15 @@ static bool MaxHandlesConstraint(Reporter* reporter, const Attribute* attribute,
       bool ok = true;
       if (method->maybe_request) {
         auto id = static_cast<const flat::IdentifierType*>(method->maybe_request->type);
-
-        // TODO(fxbug.dev/88343): switch on union/table when those are enabled.
-        auto as_struct = static_cast<const flat::Struct*>(id->type_decl);
-        if (!MaxHandlesConstraint(reporter, attribute, as_struct)) {
+        auto as_type_decl = static_cast<const flat::TypeDecl*>(id->type_decl);
+        if (!MaxHandlesConstraint(reporter, attribute, as_type_decl)) {
           ok = false;
         }
       }
       if (method->maybe_response) {
         auto id = static_cast<const flat::IdentifierType*>(method->maybe_response->type);
-
-        // TODO(fxbug.dev/88343): switch on union/table when those are enabled.
-        auto as_struct = static_cast<const flat::Struct*>(id->type_decl);
-        if (!MaxHandlesConstraint(reporter, attribute, as_struct)) {
+        auto as_type_decl = static_cast<const flat::TypeDecl*>(id->type_decl);
+        if (!MaxHandlesConstraint(reporter, attribute, as_type_decl)) {
           ok = false;
         }
       }

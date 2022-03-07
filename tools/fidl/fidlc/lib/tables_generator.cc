@@ -4,6 +4,7 @@
 
 #include "fidl/tables_generator.h"
 
+#include "fidl/coded_ast.h"
 #include "fidl/names.h"
 
 namespace fidl {
@@ -542,9 +543,24 @@ void TablesGenerator::Produce(CodedTypesGenerator* coded_types_generator) {
       case coded::Type::Kind::kProtocol: {
         const auto* protocol_coded_type = static_cast<const coded::ProtocolType*>(coded_type);
         for (const auto* message : protocol_coded_type->messages_after_compile) {
-          // TODO(fxbug.dev/88343): Switch on table/union when those payloads are supported.
-          assert(message->kind == coded::Type::Kind::kStruct);
-          GenerateForward(*static_cast<const coded::StructType*>(message));
+          switch (message->kind) {
+            case coded::Type::Kind::kStruct: {
+              GenerateForward(*static_cast<const coded::StructType*>(message));
+              break;
+            }
+            case coded::Type::Kind::kTable: {
+              GenerateForward(*static_cast<const coded::TableType*>(message));
+              break;
+            }
+            case coded::Type::Kind::kXUnion: {
+              GenerateForward(*static_cast<const coded::XUnionType*>(message));
+              break;
+            }
+            default: {
+              assert(false && "only structs, tables, and unions may be used as message payloads");
+              return;
+            }
+          }
         }
         break;
       }
@@ -659,9 +675,24 @@ void TablesGenerator::Produce(CodedTypesGenerator* coded_types_generator) {
       case coded::Type::Kind::kProtocol: {
         const auto* protocol_coded_type = static_cast<const coded::ProtocolType*>(coded_type);
         for (const auto* message : protocol_coded_type->messages_after_compile) {
-          // TODO(fxbug.dev/88343): Switch on table/union when those payloads are supported.
-          assert(message->kind == coded::Type::Kind::kStruct);
-          Generate(*static_cast<const coded::StructType*>(message));
+          switch (message->kind) {
+            case coded::Type::Kind::kStruct: {
+              Generate(*static_cast<const coded::StructType*>(message));
+              break;
+            }
+            case coded::Type::Kind::kTable: {
+              Generate(*static_cast<const coded::TableType*>(message));
+              break;
+            }
+            case coded::Type::Kind::kXUnion: {
+              Generate(*static_cast<const coded::XUnionType*>(message));
+              break;
+            }
+            default: {
+              assert(false && "only structs, tables, and unions may be used as message payloads");
+              return;
+            }
+          }
         }
         break;
       }

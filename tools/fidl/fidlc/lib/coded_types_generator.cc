@@ -323,33 +323,37 @@ void CodedTypesGenerator::CompileFields(const flat::Decl* decl) {
         const auto& method = *method_with_info.method;
         auto CompileMessage = [&](const std::unique_ptr<flat::TypeConstructor>& payload) -> void {
           if (payload && payload->layout.target_name().as_anonymous() != nullptr) {
-            std::unique_ptr<coded::StructType>& coded_message =
-                coded_protocol->messages_during_compile[i++];
-            std::vector<coded::StructElement>& request_elements = coded_message->elements;
-            uint32_t field_num = 0;
-            bool is_noop = true;
             auto id = static_cast<const flat::IdentifierType*>(payload->type);
+            std::unique_ptr<coded::Type>& coded_message =
+                coded_protocol->messages_during_compile[i++];
+            bool is_noop = true;
 
-            // TODO(fxbug.dev/88343): switch on union/table when those are enabled.
-            auto as_struct = static_cast<const flat::Struct*>(id->type_decl);
-            assert(!as_struct->members.empty() && "cannot process empty message payloads");
-
-            for (const auto& parameter : FlattenedStructMembers(*as_struct)) {
-              auto coded_parameter_type =
-                  CompileType(parameter.type, coded::CodingContext::kOutsideEnvelope);
-              if (!coded_parameter_type->is_noop) {
-                request_elements.push_back(
-                    coded::StructField(parameter.type->Resourceness(), parameter.offset_v1,
-                                       parameter.offset_v2, coded_parameter_type));
-                is_noop = false;
+            switch (id->type_decl->kind) {
+              case flat::Decl::Kind::kStruct: {
+                auto coded_struct = static_cast<coded::StructType*>(coded_message.get());
+                auto struct_decl = static_cast<const flat::Struct*>(id->type_decl);
+                assert(!struct_decl->members.empty() && "cannot process empty message payloads");
+                CompileStructFields(struct_decl, coded_struct);
+                break;
               }
-              if (parameter.padding != 0) {
-                request_elements.push_back(coded::StructPadding::FromLength(
-                    parameter.inline_size_v1 + parameter.offset_v1,
-                    parameter.inline_size_v2 + parameter.offset_v2, parameter.padding));
+              case flat::Decl::Kind::kTable: {
+                auto coded_table = static_cast<coded::TableType*>(coded_message.get());
+                auto table_decl = static_cast<const flat::Table*>(id->type_decl);
+                CompileTableFields(table_decl, coded_table);
                 is_noop = false;
+                break;
               }
-              field_num++;
+              case flat::Decl::Kind::kUnion: {
+                auto coded_union = static_cast<coded::XUnionType*>(coded_message.get());
+                auto union_decl = static_cast<const flat::Union*>(id->type_decl);
+                CompileUnionFields(union_decl, coded_union);
+                is_noop = false;
+                break;
+              }
+              default: {
+                assert(false && "only structs, tables, and unions may be used as message payloads");
+                return;
+              }
             }
 
             coded_message->is_noop = is_noop;
@@ -359,7 +363,7 @@ void CodedTypesGenerator::CompileFields(const flat::Decl* decl) {
             // We also keep back pointers to reference to these messages via the
             // coded_protocol.
             coded_protocol->messages_after_compile.push_back(
-                static_cast<const coded::StructType*>(coded_types_.back().get()));
+                static_cast<const coded::Type*>(coded_types_.back().get()));
           }
         };
         if (method.has_request) {
@@ -375,29 +379,14 @@ void CodedTypesGenerator::CompileFields(const flat::Decl* decl) {
       auto struct_decl = static_cast<const flat::Struct*>(decl);
       coded::StructType* coded_struct =
           static_cast<coded::StructType*>(named_coded_types_[decl->name].get());
-      std::vector<coded::StructElement>& struct_elements = coded_struct->elements;
-      uint32_t field_num = 0;
-      bool is_noop = true;
-      for (const auto& member : FlattenedStructMembers(*struct_decl)) {
-        std::string member_name = coded_struct->coded_name + "_" + std::string(member.name.data());
-        auto coded_member_type = CompileType(member.type, coded::CodingContext::kOutsideEnvelope);
-        if (!coded_member_type->is_noop) {
-          struct_elements.push_back(coded::StructField(
-              member.type->Resourceness(), member.offset_v1, member.offset_v2, coded_member_type));
-          is_noop = false;
-        }
-        if (member.padding != 0) {
-          struct_elements.push_back(coded::StructPadding::FromLength(
-              member.inline_size_v1 + member.offset_v1, member.inline_size_v2 + member.offset_v2,
-              member.padding));
-          is_noop = false;
-        }
-        field_num++;
-      }
-      coded_struct->is_noop = is_noop;
-      if (field_num == 0) {
-        coded_struct->is_empty = true;
-      }
+      CompileStructFields(struct_decl, coded_struct);
+      break;
+    }
+    case flat::Decl::Kind::kTable: {
+      auto table_decl = static_cast<const flat::Table*>(decl);
+      coded::TableType* coded_table =
+          static_cast<coded::TableType*>(named_coded_types_[decl->name].get());
+      CompileTableFields(table_decl, coded_table);
       break;
     }
     case flat::Decl::Kind::kUnion: {
@@ -407,50 +396,83 @@ void CodedTypesGenerator::CompileFields(const flat::Decl* decl) {
       coded::XUnionType* nullable_coded_xunion = coded_xunion->maybe_reference_type;
       assert(nullable_coded_xunion != nullptr && "Named coded xunion must have a reference type!");
       assert(coded_xunion->fields.empty() && "The coded xunion fields are being compiled twice!");
-
-      std::set<uint32_t> members;
-      for (const auto& member_ref : union_decl->MembersSortedByXUnionOrdinal()) {
-        const auto& member = member_ref.get();
-        if (!members.emplace(member.ordinal->value).second) {
-          assert(false && "Duplicate ordinal found in table generation");
-        }
-        if (member.maybe_used) {
-          const auto* coded_member_type = CompileType(member.maybe_used->type_ctor->type,
-                                                      coded::CodingContext::kInsideEnvelope);
-          coded_xunion->fields.emplace_back(coded_member_type);
-          nullable_coded_xunion->fields.emplace_back(coded_member_type);
-        } else {
-          coded_xunion->fields.emplace_back(nullptr);
-          nullable_coded_xunion->fields.emplace_back(nullptr);
-        }
-      }
-      break;
-    }
-    case flat::Decl::Kind::kTable: {
-      auto table_decl = static_cast<const flat::Table*>(decl);
-      coded::TableType* coded_table =
-          static_cast<coded::TableType*>(named_coded_types_[decl->name].get());
-      std::vector<coded::TableField>& table_fields = coded_table->fields;
-      std::map<uint32_t, const flat::Table::Member*> members;
-      for (const auto& member : table_decl->members) {
-        if (!members.emplace(member.ordinal->value, &member).second) {
-          assert(false && "Duplicate ordinal found in table generation");
-        }
-      }
-      for (const auto& member_pair : members) {
-        const auto& member = *member_pair.second;
-        if (!member.maybe_used)
-          continue;
-        std::string member_name =
-            coded_table->coded_name + "_" + std::string(member.maybe_used->name.data());
-        auto coded_member_type =
-            CompileType(member.maybe_used->type_ctor->type, coded::CodingContext::kInsideEnvelope);
-        table_fields.emplace_back(coded_member_type, member.ordinal->value);
-      }
+      CompileUnionFields(union_decl, coded_xunion);
+      CompileUnionFields(union_decl, nullable_coded_xunion);
       break;
     }
     default: {
       break;
+    }
+  }
+}
+
+void CodedTypesGenerator::CompileStructFields(const flat::Struct* struct_decl,
+                                              coded::StructType* coded_struct) {
+  std::vector<coded::StructElement>& struct_elements = coded_struct->elements;
+  uint32_t field_num = 0;
+  bool is_noop = true;
+
+  for (const auto& member : FlattenedStructMembers(*struct_decl)) {
+    std::string member_name = coded_struct->coded_name + "_" + std::string(member.name.data());
+    auto coded_member_type = CompileType(member.type, coded::CodingContext::kOutsideEnvelope);
+    if (!coded_member_type->is_noop) {
+      struct_elements.push_back(coded::StructField(member.type->Resourceness(), member.offset_v1,
+                                                   member.offset_v2, coded_member_type));
+      is_noop = false;
+    }
+    if (member.padding != 0) {
+      struct_elements.push_back(coded::StructPadding::FromLength(
+          member.inline_size_v1 + member.offset_v1, member.inline_size_v2 + member.offset_v2,
+          member.padding));
+      is_noop = false;
+    }
+    field_num++;
+  }
+
+  if (field_num == 0) {
+    coded_struct->is_empty = true;
+  }
+  coded_struct->is_noop = is_noop;
+}
+
+void CodedTypesGenerator::CompileTableFields(const flat::Table* table_decl,
+                                             coded::TableType* coded_table) {
+  std::vector<coded::TableField>& table_fields = coded_table->fields;
+  std::map<uint32_t, const flat::Table::Member*> members;
+
+  for (const auto& member : table_decl->members) {
+    if (!members.emplace(member.ordinal->value, &member).second) {
+      assert(false && "Duplicate ordinal found in table generation");
+    }
+  }
+
+  for (const auto& member_pair : members) {
+    const auto& member = *member_pair.second;
+    if (!member.maybe_used)
+      continue;
+    std::string member_name =
+        coded_table->coded_name + "_" + std::string(member.maybe_used->name.data());
+    auto coded_member_type =
+        CompileType(member.maybe_used->type_ctor->type, coded::CodingContext::kInsideEnvelope);
+    table_fields.emplace_back(coded_member_type, member.ordinal->value);
+  }
+}
+
+void CodedTypesGenerator::CompileUnionFields(const flat::Union* union_decl,
+                                             coded::XUnionType* coded_union) {
+  std::set<uint32_t> members;
+
+  for (const auto& member_ref : union_decl->MembersSortedByXUnionOrdinal()) {
+    const auto& member = member_ref.get();
+    if (!members.emplace(member.ordinal->value).second) {
+      assert(false && "Duplicate ordinal found in table generation");
+    }
+    if (member.maybe_used) {
+      const auto* coded_member_type =
+          CompileType(member.maybe_used->type_ctor->type, coded::CodingContext::kInsideEnvelope);
+      coded_union->fields.emplace_back(coded_member_type);
+    } else {
+      coded_union->fields.emplace_back(nullptr);
     }
   }
 }
@@ -507,7 +529,7 @@ void CodedTypesGenerator::CompileDecl(const flat::Decl* decl) {
       auto protocol_decl = static_cast<const flat::Protocol*>(decl);
       std::string protocol_name = NameCodedName(protocol_decl->name);
       std::string protocol_qname = NameFlatName(protocol_decl->name);
-      std::vector<std::unique_ptr<coded::StructType>> protocol_messages;
+      std::vector<std::unique_ptr<coded::Type>> protocol_messages;
       for (const auto& method_with_info : protocol_decl->all_methods) {
         assert(method_with_info.method != nullptr);
         const auto& method = *method_with_info.method;
@@ -518,21 +540,33 @@ void CodedTypesGenerator::CompileDecl(const flat::Decl* decl) {
           if (payload && payload->layout.target_name().as_anonymous() != nullptr) {
             std::string message_name = NameMessage(method_name, kind);
             std::string message_qname = NameMessage(method_qname, kind);
-            auto typeshape_v1 = TypeShape::ForEmptyPayload();
-            auto typeshape_v2 = TypeShape::ForEmptyPayload();
             auto id = static_cast<const flat::IdentifierType*>(payload->type);
-
-            // TODO(fxbug.dev/88343): switch on union/table when those are enabled.
-            auto as_struct = static_cast<const flat::Struct*>(id->type_decl);
-            assert(!as_struct->members.empty() && "cannot process empty message payloads");
-
-            typeshape_v1 = as_struct->typeshape(WireFormat::kV1NoEe);
-            typeshape_v2 = as_struct->typeshape(WireFormat::kV2);
-
-            protocol_messages.push_back(std::make_unique<coded::StructType>(
-                std::move(message_name), std::vector<coded::StructElement>(),
-                typeshape_v1.inline_size, typeshape_v2.inline_size, typeshape_v1.has_envelope,
-                std::move(message_qname)));
+            switch (id->type_decl->kind) {
+              case flat::Decl::Kind::kStruct: {
+                auto struct_decl = static_cast<const flat::Struct*>(id->type_decl);
+                assert(!struct_decl->members.empty() && "cannot process empty message payloads");
+                protocol_messages.push_back(
+                    CompileStructDecl(struct_decl, message_name, message_qname));
+                break;
+              }
+              case flat::Decl::Kind::kTable: {
+                auto table_decl = static_cast<const flat::Table*>(id->type_decl);
+                protocol_messages.push_back(std::make_unique<coded::TableType>(
+                    std::move(message_name), std::vector<coded::TableField>(),
+                    std::move(message_qname), table_decl->resourceness));
+                break;
+              }
+              case flat::Decl::Kind::kUnion: {
+                auto union_decl = static_cast<const flat::Union*>(id->type_decl);
+                protocol_messages.push_back(CompileUnionDecl(
+                    union_decl, message_name, message_qname, types::Nullability::kNonnullable));
+                break;
+              }
+              default: {
+                assert(false && "only structs, tables, and unions may be used as message payloads");
+                return;
+              }
+            }
           }
         };
         if (method.has_request) {
@@ -559,35 +593,24 @@ void CodedTypesGenerator::CompileDecl(const flat::Decl* decl) {
     }
     case flat::Decl::Kind::kStruct: {
       auto struct_decl = static_cast<const flat::Struct*>(decl);
-      std::string struct_name = NameCodedName(struct_decl->name);
-      auto typeshape_v1 = struct_decl->typeshape(WireFormat::kV1NoEe);
-      auto typeshape_v2 = struct_decl->typeshape(WireFormat::kV2);
-      named_coded_types_.emplace(decl->name,
-                                 std::make_unique<coded::StructType>(
-                                     std::move(struct_name), std::vector<coded::StructElement>(),
-                                     typeshape_v1.inline_size, typeshape_v2.inline_size,
-                                     typeshape_v1.has_envelope, NameFlatName(struct_decl->name)));
+      std::string name = NameCodedName(struct_decl->name);
+      std::string qname = NameFlatName(struct_decl->name);
+      named_coded_types_.emplace(decl->name, CompileStructDecl(struct_decl, name, qname));
       break;
     }
     case flat::Decl::Kind::kUnion: {
       auto union_decl = static_cast<const flat::Union*>(decl);
-      std::string union_name = NameCodedName(union_decl->name);
-      std::string nullable_xunion_name = NameCodedNullableName(union_decl->name);
+      std::string qname = NameFlatName(union_decl->name);
 
       // Always create the reference type
-      auto nullable_xunion_type = std::make_unique<coded::XUnionType>(
-          std::move(nullable_xunion_name), std::vector<coded::XUnionField>(),
-          NameFlatName(union_decl->name), types::Nullability::kNullable, union_decl->strictness,
-          union_decl->resourceness.value());
+      std::unique_ptr<coded::XUnionType> nullable_xunion_type =
+          CompileUnionDecl(union_decl, NameCodedNullableName(union_decl->name), qname,
+                           types::Nullability::kNullable);
       coded::XUnionType* nullable_xunion_ptr = nullable_xunion_type.get();
       coded_types_.push_back(std::move(nullable_xunion_type));
-
-      auto xunion_type = std::make_unique<coded::XUnionType>(
-          std::move(union_name), std::vector<coded::XUnionField>(), NameFlatName(union_decl->name),
-          types::Nullability::kNonnullable, union_decl->strictness,
-          union_decl->resourceness.value());
-      xunion_type->maybe_reference_type = nullable_xunion_ptr;
-      named_coded_types_.emplace(decl->name, std::move(xunion_type));
+      named_coded_types_.emplace(
+          decl->name, CompileUnionDecl(union_decl, NameCodedName(union_decl->name), qname,
+                                       types::Nullability::kNonnullable, nullable_xunion_ptr));
       break;
     }
     case flat::Decl::Kind::kConst:
@@ -597,6 +620,31 @@ void CodedTypesGenerator::CompileDecl(const flat::Decl* decl) {
       // Nothing to do.
       break;
   }
+}
+
+std::unique_ptr<coded::StructType> CodedTypesGenerator::CompileStructDecl(
+    const flat::Struct* struct_decl, std::string name, std::string qname) {
+  auto typeshape_v1 = TypeShape::ForEmptyPayload();
+  auto typeshape_v2 = TypeShape::ForEmptyPayload();
+
+  typeshape_v1 = struct_decl->typeshape(WireFormat::kV1NoEe);
+  typeshape_v2 = struct_decl->typeshape(WireFormat::kV2);
+
+  return std::make_unique<coded::StructType>(std::move(name), std::vector<coded::StructElement>(),
+                                             typeshape_v1.inline_size, typeshape_v2.inline_size,
+                                             typeshape_v1.has_envelope, std::move(qname));
+}
+
+std::unique_ptr<coded::XUnionType> CodedTypesGenerator::CompileUnionDecl(
+    const flat::Union* union_decl, std::string name, std::string qname,
+    types::Nullability nullability, coded::XUnionType* reference_type) {
+  auto xunion_type = std::make_unique<coded::XUnionType>(
+      std::move(name), std::vector<coded::XUnionField>(), std::move(qname), nullability,
+      union_decl->strictness, union_decl->resourceness.value());
+  if (reference_type != nullptr) {
+    xunion_type->maybe_reference_type = reference_type;
+  }
+  return xunion_type;
 }
 
 void CodedTypesGenerator::CompileCodedTypes() {

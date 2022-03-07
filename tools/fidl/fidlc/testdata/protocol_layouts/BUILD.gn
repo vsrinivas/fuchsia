@@ -1,0 +1,20 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/fidl/fidl.gni")
+
+fidl("test.protocollayouts.imported") {
+  testonly = true
+  sources = [ "imported.test.fidl" ]
+  experimental_flags = [ "non_struct_payloads" ]
+  host_llcpp = true
+}
+
+fidl("test.protocollayouts") {
+  testonly = true
+  sources = [ "example.test.fidl" ]
+  public_deps = [ ":test.protocollayouts.imported" ]
+  experimental_flags = [ "non_struct_payloads" ]
+  host_llcpp = true
+}

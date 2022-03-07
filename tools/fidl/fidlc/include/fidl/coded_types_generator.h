@@ -11,6 +11,7 @@
 #include <vector>
 
 #include "coded_ast.h"
+#include "fidl/types.h"
 #include "flat/compiler.h"
 #include "flat_ast.h"
 
@@ -42,8 +43,19 @@ class CodedTypesGenerator {
  private:
   // Returns a pointer owned by coded_types_.
   const coded::Type* CompileType(const flat::Type* type, coded::CodingContext context);
+
   void CompileFields(const flat::Decl* decl);
+  void CompileStructFields(const flat::Struct* struct_decl, coded::StructType* coded_struct);
+  void CompileTableFields(const flat::Table* table_decl, coded::TableType* coded_table);
+  void CompileUnionFields(const flat::Union* union_decl, coded::XUnionType* coded_union);
+
   void CompileDecl(const flat::Decl* decl);
+  static std::unique_ptr<coded::StructType> CompileStructDecl(const flat::Struct* struct_decl,
+                                                              std::string name, std::string qname);
+  static std::unique_ptr<coded::XUnionType> CompileUnionDecl(
+      const flat::Union* union_decl, std::string name, std::string qname,
+      types::Nullability nullability, coded::XUnionType* reference_type = nullptr);
+
   void CompileXRef(const coded::Type* type);
 
   // Representation of the fields of a struct member after it has been flattened.
