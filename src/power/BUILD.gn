@@ -10,8 +10,11 @@ group("power") {
     "power-manager",
     "shutdown-shim",
     "temperature-logger",
-    "thermd",
   ]
+
+  if (target_cpu == "x64") {
+    deps += [ "thermd" ]
+  }
 }
 
 group("battery") {

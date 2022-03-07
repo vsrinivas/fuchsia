@@ -25,8 +25,4 @@ board_system_image_deps = [
   "//src/media/audio/bundles:virtual_audio_driver",
 ]
 
-board_package_labels = [
-  "//boards:verify_zedboot_cmdline_params_for_toulouse",
-  "//src/power/thermd",
-  "//src/power/thermd:config",
-]
+board_package_labels = [ "//boards:verify_zedboot_cmdline_params_for_toulouse" ]

@@ -32,8 +32,6 @@ board_system_image_deps += [
 
 board_package_labels += [
   "//src/hwinfo:default_board_config",
-  "//src/power/thermd",
-  "//src/power/thermd:config",
   "//src/devices/sysmem/bin/sysmem_connector",
   "//src/graphics/bin/vulkan_loader",
 ]
