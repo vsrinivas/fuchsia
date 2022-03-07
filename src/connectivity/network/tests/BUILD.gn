@@ -22,6 +22,8 @@ test("name_provider_service_not_present_test") {
 test("netstack_bsdsocket_c_api_test") {
   sources = [
     "bsdsocket_test.cc",
+    "if_nameindex_test.cc",
+    "no_network_test.cc",
     "util.cc",
     "util.h",
   ]
@@ -57,18 +59,6 @@ test("netstack_fuchsia_c_api_test") {
   ]
 }
 
-test("netstack_if_nameindex_test") {
-  sources = [ "if_nameindex_test.cc" ]
-
-  deps = [ "//src/lib/fxl/test:gtest_main" ]
-}
-
-test("netstack_no_network_test") {
-  sources = [ "no_network_test.cc" ]
-
-  deps = [ "//src/lib/fxl/test:gtest_main" ]
-}
-
 test("netstack_packetsocket_c_api_test") {
   sources = [ "packetsocket_test.cc" ]
 
@@ -92,8 +82,6 @@ tests = [
   "name_provider_service_not_present",
   "netstack_bsdsocket_c_api",
   "netstack_fuchsia_c_api",
-  "netstack_if_nameindex",
-  "netstack_no_network",
   "netstack_packetsocket_c_api",
   "netstack_rawsocket_c_api",
 ]
@@ -103,7 +91,7 @@ foreach(test, tests) {
   fuchsia_unittest_component("${name}_component") {
     component_name = name
     deps = [ ":${name}" ]
-    manifest = "meta/${name}.cmx"
+    manifest = "meta/${name}.cml"
   }
 }
 
@@ -115,10 +103,10 @@ fuchsia_test_package("netstack-c-api-tests") {
 
   deps = [
     # dns_resolver is under test.
-    "//src/connectivity/network/dns:component-legacy",
+    "//src/connectivity/network/dns:component",
 
     # netstack is under test.
-    "//src/connectivity/network/netstack:component-debug-legacy",
+    "//src/connectivity/network/netstack:component-debug",
 
     # cat is used to test FD passing in :netstack_fuchsia_c_api_test.
     "//third_party/sbase:cat_bin",
@@ -140,7 +128,6 @@ group("tests") {
   if (host_os == "linux") {
     public_deps += [
       ":netstack_bsdsocket_c_api_test($host_toolchain)",
-      ":netstack_if_nameindex_test($host_toolchain)",
       ":netstack_packetsocket_c_api_test($host_toolchain)",
       ":netstack_rawsocket_c_api_test($host_toolchain)",
     ]

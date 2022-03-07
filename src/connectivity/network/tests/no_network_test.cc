@@ -12,7 +12,16 @@
 
 namespace {
 
-TEST(NoNetworkTest, NonBlockingConnectHostV4) {
+class NoNetworkTest : public testing::Test {
+ protected:
+  void SetUp() override {
+#if !defined(__Fuchsia__)
+    GTEST_SKIP() << "NoNetworkTest can only run in a loopback-only environment";
+#endif
+  }
+};
+
+TEST_F(NoNetworkTest, NonBlockingConnectHostV4) {
   int connfd;
   ASSERT_GE(connfd = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0), 0) << strerror(errno);
 
@@ -27,7 +36,7 @@ TEST(NoNetworkTest, NonBlockingConnectHostV4) {
   ASSERT_EQ(close(connfd), 0) << strerror(errno);
 }
 
-TEST(NoNetworkTest, NonBlockingConnectHostV6) {
+TEST_F(NoNetworkTest, NonBlockingConnectHostV6) {
   int connfd;
   ASSERT_GE(connfd = socket(AF_INET6, SOCK_STREAM | SOCK_NONBLOCK, 0), 0) << strerror(errno);
 
@@ -42,7 +51,7 @@ TEST(NoNetworkTest, NonBlockingConnectHostV6) {
   ASSERT_EQ(close(connfd), 0) << strerror(errno);
 }
 
-TEST(NoNetworkTest, NonBlockingConnectNetV4) {
+TEST_F(NoNetworkTest, NonBlockingConnectNetV4) {
   int connfd;
   ASSERT_GE(connfd = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0), 0) << strerror(errno);
 
@@ -58,7 +67,7 @@ TEST(NoNetworkTest, NonBlockingConnectNetV4) {
   ASSERT_EQ(close(connfd), 0) << strerror(errno);
 }
 
-TEST(NoNetworkTest, NonBlockingConnectNetV6) {
+TEST_F(NoNetworkTest, NonBlockingConnectNetV6) {
   int connfd = socket(AF_INET6, SOCK_STREAM | SOCK_NONBLOCK, 0);
   ASSERT_GE(connfd, 0) << "socket failed: " << strerror(errno);
 
