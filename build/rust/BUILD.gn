@@ -30,6 +30,7 @@ action("cargo_toml_gen_desc") {
   sources = []
   inputs = []
   hermetic_deps = false
+  no_output_dir_leaks = false
   outputs = [ cargo_toml_gen_desc_out ]
   depfile = "$cargo_toml_gen_desc_out.d"
   args = [
