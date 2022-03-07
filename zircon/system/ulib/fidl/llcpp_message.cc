@@ -231,6 +231,7 @@ void OutgoingMessage::Write(internal::AnyUnownedTransport transport, WriteOption
     return;
   }
   ZX_ASSERT(transport_type() == transport.type());
+  ZX_ASSERT(is_transactional());
   zx_status_t status = transport.write(std::move(options), iovecs(), iovec_actual(), handles(),
                                        message_.iovec.handle_metadata, handle_actual());
   ReleaseHandles();
@@ -304,6 +305,7 @@ void OutgoingMessage::CallImplForTransportProvidedBuffer(internal::AnyUnownedTra
     return;
   }
   ZX_ASSERT(transport_type() == transport.type());
+  ZX_ASSERT(is_transactional());
 
   fidl_handle_t* result_handles;
   fidl_handle_metadata_t* result_handle_metadata;
@@ -339,6 +341,7 @@ void OutgoingMessage::CallImplForCallerProvidedBuffer(
     return;
   }
   ZX_ASSERT(transport_type() == transport.type());
+  ZX_ASSERT(is_transactional());
 
   uint32_t actual_num_bytes = 0u;
   uint32_t actual_num_handles = 0u;
@@ -409,8 +412,9 @@ IncomingMessage::IncomingMessage(const internal::TransportVTable* transport_vtab
           .num_handles = handle_actual,
       } {}
 
-IncomingMessage::IncomingMessage(const fidl::Result& failure) : fidl::Result(failure), message_ {}
-{ ZX_DEBUG_ASSERT(failure.status() != ZX_OK); }
+IncomingMessage::IncomingMessage(const fidl::Result& failure) : fidl::Result(failure), message_{} {
+  ZX_DEBUG_ASSERT(failure.status() != ZX_OK);
+}
 
 IncomingMessage::~IncomingMessage() { std::move(*this).CloseHandles(); }
 

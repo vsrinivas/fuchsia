@@ -192,12 +192,13 @@ TEST(BasicTypesTest, RawChannelCallStructWithTimeout) {
   async_loop_t* loop = nullptr;
   ASSERT_NO_FATAL_FAILURE(SpinUpAsyncCServerHelper(std::move(server), &loop));
 
-  fidl::WireRequest<basictypes::TestInterface::ConsumeSimpleStruct> request;
+  fidl::internal::TransactionalRequest<basictypes::TestInterface::ConsumeSimpleStruct> request;
   FillRequestHandles handles;
   FillRequest(handles, request);
   fidl::unstable::OwnedEncodedMessage<
-      fidl::WireRequest<basictypes::TestInterface::ConsumeSimpleStruct>>
+      fidl::internal::TransactionalRequest<basictypes::TestInterface::ConsumeSimpleStruct>>
       encoded(&request);
+  ASSERT_OK(encoded.status());
 
   FIDL_ALIGNDECL uint8_t response_storage[512];
   // Do the call and decode the received response.
@@ -206,7 +207,8 @@ TEST(BasicTypesTest, RawChannelCallStructWithTimeout) {
           zx::unowned_channel(client.get()), response_storage, sizeof(response_storage),
           fidl::CallOptions{.deadline = ZX_TIME_INFINITE_PAST});
 
-  ASSERT_EQ(encoded.status(), ZX_ERR_TIMED_OUT);
+  ASSERT_EQ(encoded.status(), ZX_ERR_TIMED_OUT, "Expected timeout, got %s",
+            encoded.FormatDescription().c_str());
 
   TearDownAsyncCServerHelper(loop);
 }
