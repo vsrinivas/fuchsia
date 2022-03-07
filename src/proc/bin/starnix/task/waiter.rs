@@ -59,7 +59,7 @@ impl Waiter {
 
     /// Wait until the waiter is woken up.
     ///
-    /// If the wait is interrupted (see interrupt), this function returns
+    /// If the wait is interrupted (see [`Waiter::interrupt`]), this function returns
     /// EINTR.
     pub fn wait(self: &Arc<Self>, current_task: &CurrentTask) -> Result<(), Errno> {
         self.wait_until(current_task, zx::Time::INFINITE)
@@ -67,7 +67,7 @@ impl Waiter {
 
     /// Wait until the given deadline has passed or the waiter is woken up.
     ///
-    /// If the wait is interrupted (seee interrupt), this function returns
+    /// If the wait is interrupted (see [`Waiter::interrupt`]), this function returns
     /// EINTR.
     pub fn wait_until(
         self: &Arc<Self>,

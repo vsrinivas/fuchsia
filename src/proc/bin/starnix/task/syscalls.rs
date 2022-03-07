@@ -165,8 +165,7 @@ pub fn sys_exit(current_task: &CurrentTask, exit_code: i32) -> Result<SyscallRes
 
 pub fn sys_exit_group(current_task: &CurrentTask, exit_code: i32) -> Result<SyscallResult, Errno> {
     info!(target: "exit", "{:?} exit_group({})", current_task, exit_code);
-    *current_task.exit_code.lock() = Some(exit_code);
-    current_task.thread_group.exit();
+    current_task.thread_group.exit(exit_code);
     Ok(SUCCESS)
 }
 

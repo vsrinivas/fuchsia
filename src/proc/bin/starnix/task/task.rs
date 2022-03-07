@@ -339,7 +339,7 @@ impl Task {
         pids.add_task(&child.task);
 
         if clone_thread {
-            self.thread_group.add(&child);
+            self.thread_group.add(&child)?;
         } else {
             pids.add_thread_group(&child.thread_group);
             child.signals.write().alt_stack = self.signals.read().alt_stack;

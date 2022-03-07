@@ -270,9 +270,13 @@ pub fn dequeue_signal(current_task: &mut CurrentTask) {
             DeliveryAction::CallHandler => {
                 dispatch_signal_handler(current_task, &mut signal_state, siginfo, sigaction);
             }
-
+            DeliveryAction::Terminate => {
+                // Release the signals lock. [`ThreadGroup::exit`] sends signals to threads which
+                // will include this one and cause a deadlock re-acquiring the signals lock.
+                drop(signal_state);
+                current_task.thread_group.exit(128 + siginfo.signal.number() as i32)
+            }
             DeliveryAction::Ignore => {}
-
             action => not_implemented!("Unimplemented signal delivery action {:?}", action),
         };
     }

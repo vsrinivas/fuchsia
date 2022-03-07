@@ -3,17 +3,17 @@
 // found in the LICENSE file.
 
 use fuchsia_zircon::sys;
-use fuchsia_zircon::{self as zx, AsHandleRef, Task as zxTask};
+use fuchsia_zircon::{self as zx, AsHandleRef};
 use parking_lot::{Mutex, RwLock};
 use std::collections::HashSet;
 use std::ffi::CStr;
 use std::sync::Arc;
 
-use crate::errno;
 use crate::from_status_like_fdio;
 use crate::signals::*;
 use crate::task::*;
 use crate::types::*;
+use crate::{errno, error};
 
 pub struct ThreadGroup {
     /// The kernel to which this thread group belongs.
@@ -44,6 +44,8 @@ pub struct ThreadGroup {
 
     /// WaitQueue for updates to the zombie_children lists of tasks in this group.
     pub child_exit_waiters: Mutex<WaitQueue>,
+
+    terminating: Mutex<bool>,
 }
 
 impl PartialEq for ThreadGroup {
@@ -65,19 +67,37 @@ impl ThreadGroup {
             itimers: Default::default(),
             zombie_leader: Mutex::new(None),
             child_exit_waiters: Mutex::default(),
+            terminating: Mutex::new(false),
         }
     }
 
-    pub fn exit(&self) {
-        // TODO: Set the error_code on the Zircon process object. Currently missing a way
-        //       to do this in Zircon. Might be easier in the new execution model.
-        self.process.kill().expect("Failed to terminate process.");
-        // TODO: Should we wait for the process to actually terminate?
+    pub fn exit(&self, exit_code: i32) {
+        let mut terminating = self.terminating.lock();
+        if *terminating {
+            // The thread group is already terminating and the SIGKILL signals have already been
+            // sent to all threads in the thread group.
+            return;
+        }
+        *terminating = true;
+
+        // Send a SIGKILL signal to each task.
+        let pids = self.kernel.pids.read();
+        for tid in &*self.tasks.read() {
+            if let Some(task) = pids.get_task(*tid) {
+                *task.exit_code.lock() = Some(exit_code);
+                send_signal(&*task, SignalInfo::default(SIGKILL));
+            }
+        }
     }
 
-    pub fn add(&self, task: &Task) {
+    pub fn add(&self, task: &Task) -> Result<(), Errno> {
+        let terminating = self.terminating.lock();
+        if *terminating {
+            return error!(EINVAL);
+        }
         let mut tasks = self.tasks.write();
         tasks.insert(task.id);
+        Ok(())
     }
 
     fn remove_internal(&self, task: &Arc<Task>) -> bool {
@@ -94,19 +114,25 @@ impl ThreadGroup {
 
     pub fn remove(&self, task: &Arc<Task>) {
         if self.remove_internal(task) {
+            let mut terminating = self.terminating.lock();
+            *terminating = true;
+
             let zombie =
                 self.zombie_leader.lock().take().expect("Failed to capture zombie leader.");
+
+            self.kernel.pids.write().remove_thread_group(self.leader);
 
             if let Some(parent) = self.kernel.pids.read().get_task(zombie.parent) {
                 parent.zombie_children.lock().push(zombie);
                 // TODO: Should this be zombie_leader.exit_signal?
                 send_signal(&parent, SignalInfo::default(SIGCHLD));
-            }
-
-            if let Some(parent) = self.kernel.pids.read().get_task(task.parent) {
                 parent.thread_group.child_exit_waiters.lock().notify_all();
             }
-            self.kernel.pids.write().remove_thread_group(self.leader);
+
+            // TODO: Set the error_code on the Zircon process object. Currently missing a way
+            // to do this in Zircon. Might be easier in the new execution model.
+
+            // Once the last zircon thread stops, the zircon process will also stop executing.
         }
     }
 
