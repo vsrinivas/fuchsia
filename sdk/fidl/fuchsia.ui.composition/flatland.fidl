@@ -426,7 +426,7 @@ protocol Flatland {
         frame_presented_info fuchsia.scenic.scheduling.FramePresentedInfo;
     });
 
-    /// If an error occurrs after a [`Present`], an `OnError` event will fire with associated
+    /// If an error occurs after a [`Present`], an `OnError` event will fire with associated
     /// information.
     ///
     /// FlatlandErrors will close the connection with the client.
