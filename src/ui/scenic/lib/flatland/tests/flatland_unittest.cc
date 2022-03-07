@@ -2070,8 +2070,11 @@ TEST_F(FlatlandTest, ViewportClippingPersistsAcrossInstances) {
 
 TEST_F(FlatlandTest, DefaultHitRegionsExist) {
   std::shared_ptr<Flatland> flatland = CreateFlatland();
+  const auto session_id = flatland->GetSessionId();
 
   const TransformId kId1 = {1};
+  const TransformHandle handle1 = TransformHandle(session_id, 1);
+
   flatland->CreateTransform(kId1);
   flatland->SetRootTransform(kId1);
 
@@ -2081,11 +2084,11 @@ TEST_F(FlatlandTest, DefaultHitRegionsExist) {
     auto& hit_regions = uber_struct->local_hit_regions_map;
 
     EXPECT_EQ(hit_regions.size(), 1u);
-    // Since there is only one element in the unordered map, accessing it with begin() is safe.
-    EXPECT_EQ(hit_regions.begin()->second.size(), 1u);
+    EXPECT_EQ(hit_regions[handle1].size(), 1u);
   }
 
   const TransformId kId2 = {2};
+  const TransformHandle handle2 = TransformHandle(session_id, 2);
   flatland->CreateTransform(kId2);
   flatland->SetRootTransform(kId2);
 
@@ -2096,15 +2099,17 @@ TEST_F(FlatlandTest, DefaultHitRegionsExist) {
     auto& hit_regions = uber_struct->local_hit_regions_map;
 
     EXPECT_EQ(hit_regions.size(), 1u);
-    // Since there is only one element in the unordered map, accessing it with begin() is safe.
-    EXPECT_EQ(hit_regions.begin()->second.size(), 1u);
+    EXPECT_EQ(hit_regions[handle2].size(), 1u);
   }
 }
 
 TEST_F(FlatlandTest, SetHitRegionsOverwritesPreviousOnes) {
   std::shared_ptr<Flatland> flatland = CreateFlatland();
+  const auto session_id = flatland->GetSessionId();
 
   const TransformId kId1 = {1};
+  const TransformHandle handle1 = TransformHandle(session_id, 1);
+
   flatland->CreateTransform(kId1);
   flatland->SetRootTransform(kId1);
 
@@ -2114,11 +2119,11 @@ TEST_F(FlatlandTest, SetHitRegionsOverwritesPreviousOnes) {
   {
     auto uber_struct = GetUberStruct(flatland.get());
     auto& hit_regions = uber_struct->local_hit_regions_map;
-    auto hit_region = hit_regions.begin()->second[0];
 
     EXPECT_EQ(hit_regions.size(), 1u);
-    // Since there is only one element in the unordered map, accessing it with begin() is safe.
-    EXPECT_EQ(hit_regions.begin()->second.size(), 1u);
+    EXPECT_EQ(hit_regions[handle1].size(), 1u);
+
+    auto hit_region = hit_regions[handle1][0];
 
     auto rect = hit_region.region;
     fuchsia::math::RectF expected_rect = {0, 0, FLT_MAX, FLT_MAX};
@@ -2128,8 +2133,9 @@ TEST_F(FlatlandTest, SetHitRegionsOverwritesPreviousOnes) {
 
   // Overwrite the default hit region with our own, even though it is for a different transform.
   const TransformId kId2 = {2};
-  flatland->CreateTransform(kId2);
+  const TransformHandle handle2 = TransformHandle(session_id, 2);
 
+  flatland->CreateTransform(kId2);
   flatland->SetHitRegions(kId2,
                           {{{0, 1, 2, 3}, fuchsia::ui::composition::HitTestInteraction::DEFAULT}});
 
@@ -2138,11 +2144,11 @@ TEST_F(FlatlandTest, SetHitRegionsOverwritesPreviousOnes) {
   {
     auto uber_struct = GetUberStruct(flatland.get());
     auto& hit_regions = uber_struct->local_hit_regions_map;
-    auto hit_region = hit_regions.begin()->second[0];
 
     EXPECT_EQ(hit_regions.size(), 1u);
-    // Since there is only one element in the unordered map, accessing it with begin() is safe.
-    EXPECT_EQ(hit_regions.begin()->second.size(), 1u);
+    EXPECT_EQ(hit_regions[handle2].size(), 1u);
+
+    auto hit_region = hit_regions[handle2][0];
 
     auto rect = hit_region.region;
     fuchsia::math::RectF expected_rect = {0, 1, 2, 3};
@@ -2159,11 +2165,11 @@ TEST_F(FlatlandTest, SetHitRegionsOverwritesPreviousOnes) {
   {
     auto uber_struct = GetUberStruct(flatland.get());
     auto& hit_regions = uber_struct->local_hit_regions_map;
-    auto hit_region = hit_regions.begin()->second[0];
 
     EXPECT_EQ(hit_regions.size(), 1u);
-    // Since there is only one element in the unordered map, accessing it with begin() is safe.
-    EXPECT_EQ(hit_regions.begin()->second.size(), 1u);
+    EXPECT_EQ(hit_regions[handle2].size(), 1u);
+
+    auto hit_region = hit_regions[handle2][0];
 
     auto rect = hit_region.region;
     fuchsia::math::RectF expected_rect = {1, 2, 3, 4};
@@ -2175,8 +2181,11 @@ TEST_F(FlatlandTest, SetHitRegionsOverwritesPreviousOnes) {
 
 TEST_F(FlatlandTest, SetRootTransformAfterSetHitRegions_DoesNotAddAHitRegion) {
   std::shared_ptr<Flatland> flatland = CreateFlatland();
+  const auto session_id = flatland->GetSessionId();
 
   const TransformId kId1 = {1};
+  const TransformHandle handle1 = TransformHandle(session_id, 1);
+
   flatland->CreateTransform(kId1);
   flatland->SetHitRegions(
       kId1, {{{0, 1, 2, 3}, fuchsia::ui::composition::HitTestInteraction::SEMANTICALLY_INVISIBLE}});
@@ -2186,17 +2195,61 @@ TEST_F(FlatlandTest, SetRootTransformAfterSetHitRegions_DoesNotAddAHitRegion) {
 
   auto uber_struct = GetUberStruct(flatland.get());
   auto& hit_regions = uber_struct->local_hit_regions_map;
-  auto hit_region = hit_regions.begin()->second[0];
 
   EXPECT_EQ(hit_regions.size(), 1u);
-  // Since there is only one element in the unordered map, accessing it with begin() is safe.
-  EXPECT_EQ(hit_regions.begin()->second.size(), 1u);
+  EXPECT_EQ(hit_regions[handle1].size(), 1u);
+
+  auto hit_region = hit_regions[handle1][0];
 
   auto rect = hit_region.region;
   fuchsia::math::RectF expected_rect = {0, 1, 2, 3};
   ExpectRectFEquals(rect, expected_rect);
   EXPECT_EQ(hit_region.hit_test,
             fuchsia::ui::composition::HitTestInteraction::SEMANTICALLY_INVISIBLE);
+}
+
+TEST_F(FlatlandTest, MultipleTransformsWithHitRegions) {
+  std::shared_ptr<Flatland> flatland = CreateFlatland();
+  const auto session_id = flatland->GetSessionId();
+
+  const TransformId kId1 = {1};
+  const TransformHandle handle1 = TransformHandle(session_id, 1);
+
+  flatland->CreateTransform(kId1);
+  flatland->SetHitRegions(kId1,
+                          {{{0, 1, 2, 3}, fuchsia::ui::composition::HitTestInteraction::DEFAULT}});
+
+  const TransformId kId2 = {2};
+  const TransformHandle handle2 = TransformHandle(session_id, 2);
+
+  flatland->CreateTransform(kId2);
+  flatland->SetHitRegions(
+      kId2, {{{1, 2, 3, 4}, fuchsia::ui::composition::HitTestInteraction::SEMANTICALLY_INVISIBLE}});
+
+  PRESENT(flatland, true);
+
+  {
+    auto uber_struct = GetUberStruct(flatland.get());
+    auto& hit_regions = uber_struct->local_hit_regions_map;
+
+    EXPECT_EQ(hit_regions.size(), 2u);
+    EXPECT_EQ(hit_regions[handle1].size(), 1u);
+    EXPECT_EQ(hit_regions[handle2].size(), 1u);
+
+    auto hit_region1 = hit_regions[handle1][0];
+    auto hit_region2 = hit_regions[handle2][0];
+
+    auto rect1 = hit_region1.region;
+    auto rect2 = hit_region2.region;
+    fuchsia::math::RectF expected_rect1 = {0, 1, 2, 3};
+    fuchsia::math::RectF expected_rect2 = {1, 2, 3, 4};
+    ExpectRectFEquals(rect1, expected_rect1);
+    ExpectRectFEquals(rect2, expected_rect2);
+
+    EXPECT_EQ(hit_region1.hit_test, fuchsia::ui::composition::HitTestInteraction::DEFAULT);
+    EXPECT_EQ(hit_region2.hit_test,
+              fuchsia::ui::composition::HitTestInteraction::SEMANTICALLY_INVISIBLE);
+  }
 }
 
 TEST_F(FlatlandTest, ChildViewWatcherFailsIdCollision) {
