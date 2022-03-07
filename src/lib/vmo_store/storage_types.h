@@ -187,7 +187,22 @@ class HashTableStorage : public AbstractStorage<_Key, _Meta> {
   inline bool is_full() const override { return false; }
 
  private:
-  std::uniform_int_distribution<Key> rnd_distro_;
+  // Note: std::uniform_int_distribution does not support byte-sized types.
+  template <typename T>
+  struct DistroType {
+    using Type = T;
+  };
+  template <>
+  struct DistroType<bool> {
+    using Type = uint16_t;
+  };
+  template <>
+  struct DistroType<uint8_t> {
+    using Type = uint16_t;
+  };
+
+  std::uniform_int_distribution<typename DistroType<Key>::Type> rnd_distro_{
+      0, std::numeric_limits<Key>::max()};
   std::default_random_engine rnd_;
   fbl::HashTable<Key, std::unique_ptr<HashTableVmo>> table_;
 };
