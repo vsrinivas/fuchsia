@@ -47,7 +47,7 @@ type DeviceMetadata struct {
 // Data contained in the device metadata.
 type DeviceMetadataData struct {
 	Description         json.RawMessage `json:"description"`
-	Type                json.RawMessage `json:"type"`
+	Type                string          `json:"type"`
 	Name                string          `json:"name"`
 	Hardware            json.RawMessage `json:"hardware"`
 	Ports               json.RawMessage `json:"ports,omitempty"`

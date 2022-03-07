@@ -36,8 +36,8 @@ type downloadCmd struct {
 }
 
 type productBundleContainerArtifacts struct {
-	productBundlePath  string
-	deviceMetadataPath string
+	productBundlePath   string
+	deviceMetadataPaths []string
 }
 
 const (
@@ -149,18 +149,20 @@ func (cmd *downloadCmd) execute(ctx context.Context) error {
 		}
 		productBundleContainer.Data.Entries = append(productBundleContainer.Data.Entries, entry)
 
-		deviceMetadataAbsPath := filepath.Join(imageDir, artifact.deviceMetadataPath)
-		deviceData, isNew, err := readDeviceMetadata(ctx, sink, deviceMetadataAbsPath, &knownDeviceMetadata)
-		if err != nil {
-			return fmt.Errorf("unable to read device metadata data for build_id %s: %w", buildID, err)
-		}
-		// Only append the device metadata if it is new.
-		if isNew {
-			entry, err := convertMetadataToRawMessage(deviceData)
+		for _, deviceMetadataPath := range artifact.deviceMetadataPaths {
+			deviceMetadataAbsPath := filepath.Join(imageDir, deviceMetadataPath)
+			deviceData, isNew, err := readDeviceMetadata(ctx, sink, deviceMetadataAbsPath, &knownDeviceMetadata)
 			if err != nil {
-				return fmt.Errorf("unable to convert device metadata to json.RawMessage %w", err)
+				return fmt.Errorf("unable to read device metadata data for build_id %s: %w", buildID, err)
 			}
-			productBundleContainer.Data.Entries = append(productBundleContainer.Data.Entries, entry)
+			// Only append the device metadata if it is new.
+			if isNew {
+				entry, err := convertMetadataToRawMessage(deviceData)
+				if err != nil {
+					return fmt.Errorf("unable to convert device metadata to json.RawMessage %w", err)
+				}
+				productBundleContainer.Data.Entries = append(productBundleContainer.Data.Entries, entry)
+			}
 		}
 	}
 
@@ -200,9 +202,11 @@ func readDeviceMetadata(ctx context.Context, sink dataSink, deviceMetadataPath s
 	if err := json.Unmarshal(data, &device); err != nil {
 		return nil, false, err
 	}
-	name := device.Data.Name
-	// Check if the name has been seen already. If it isn't in the knownDeviceMetadata, that means it
-	// is in new and exit early.
+	// Concat between the data name and type since physical and virtual device specs
+	// can have the same name.
+	name := fmt.Sprintf("%s-%s", device.Data.Name, device.Data.Type)
+	// Check if the name has been seen already. If it isn't in the knownDeviceMetadata,
+	// that means it is in new and exit early.
 	if _, ok := (*knownDeviceMetadata)[name]; !ok {
 		(*knownDeviceMetadata)[name] = data
 		return &device.Data, true, nil
@@ -311,7 +315,7 @@ func getProductBundleData(ctx context.Context, sink dataSink, productBundleJSONP
 }
 
 // getProductBundleContainerArtifactsFromImagesJSON reads the images.json file in GCS and determines
-// the paths for product_bundle and either physical or virtual device metadata.
+// the paths for product_bundle and physical/virtual device metadata.
 func getProductBundleContainerArtifactsFromImagesJSON(ctx context.Context, sink dataSink, imagesJSONPath string) (*productBundleContainerArtifacts, error) {
 	artifact := &productBundleContainerArtifacts{}
 	data, err := sink.readFromGCS(ctx, imagesJSONPath)
@@ -327,11 +331,7 @@ func getProductBundleContainerArtifactsFromImagesJSON(ctx context.Context, sink 
 		if entry.Name == pbmEntryName {
 			artifact.productBundlePath = entry.Path
 		} else if entry.Name == virtualDeviceEntryName || entry.Name == physicalDeviceEntryName {
-			if artifact.deviceMetadataPath != "" {
-				return nil, fmt.Errorf("found both a physical and virtual device metadata in the following paths: %q, %q."+
-					" Should only have one.", artifact.deviceMetadataPath, entry.Path)
-			}
-			artifact.deviceMetadataPath = entry.Path
+			artifact.deviceMetadataPaths = append(artifact.deviceMetadataPaths, entry.Path)
 		}
 	}
 	// Ensure that a product bundle path exists.
@@ -339,7 +339,7 @@ func getProductBundleContainerArtifactsFromImagesJSON(ctx context.Context, sink 
 		return nil, fmt.Errorf("unable to find product bundle in image manifest: %s", imagesJSONPath)
 	}
 	// Ensure that either a physical or virtual device metadata path exists.
-	if artifact.deviceMetadataPath == "" {
+	if len(artifact.deviceMetadataPaths) == 0 {
 		return nil, fmt.Errorf("unable to find a physical or virtual device metadata in image manifest: %s", imagesJSONPath)
 	}
 	return artifact, nil

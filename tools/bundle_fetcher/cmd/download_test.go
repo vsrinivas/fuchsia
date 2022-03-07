@@ -173,7 +173,7 @@ func TestGetProductBundleContainerArtifactsFromImagesJSON(t *testing.T) {
 			"path": "gen/build/images/product_bundle.json",
 			"type": "manifest"
 		  }]`),
-		"some/invalid/contains/both/virtual/and/physical/images.json": []byte(`[{
+		"some/valid/virtual/and/physical/images.json": []byte(`[{
 			"label": "//build/images:zedboot-script(//build/toolchain/fuchsia:arm64)",
 			"name": "zedboot-script",
 			"path": "pave-zedboot.sh",
@@ -210,16 +210,24 @@ func TestGetProductBundleContainerArtifactsFromImagesJSON(t *testing.T) {
 			name:          "valid images.json with physical device",
 			imageJSONPath: "some/valid/physical/images.json",
 			expectedOutput: &productBundleContainerArtifacts{
-				productBundlePath:  "gen/build/images/product_bundle.json",
-				deviceMetadataPath: "gen/build/images/physical_device.json",
+				productBundlePath:   "gen/build/images/product_bundle.json",
+				deviceMetadataPaths: []string{"gen/build/images/physical_device.json"},
 			},
 		},
 		{
 			name:          "valid images.json with virtual device",
 			imageJSONPath: "some/valid/virtual/images.json",
 			expectedOutput: &productBundleContainerArtifacts{
-				productBundlePath:  "gen/build/images/product_bundle.json",
-				deviceMetadataPath: "gen/build/images/virtual_device.json",
+				productBundlePath:   "gen/build/images/product_bundle.json",
+				deviceMetadataPaths: []string{"gen/build/images/virtual_device.json"},
+			},
+		},
+		{
+			name:          "images.json contains both a physical and virtual device metadata",
+			imageJSONPath: "some/valid/virtual/and/physical/images.json",
+			expectedOutput: &productBundleContainerArtifacts{
+				productBundlePath:   "gen/build/images/product_bundle.json",
+				deviceMetadataPaths: []string{"gen/build/images/physical_device.json", "gen/build/images/virtual_device.json"},
 			},
 		},
 		{
@@ -237,12 +245,6 @@ func TestGetProductBundleContainerArtifactsFromImagesJSON(t *testing.T) {
 			name:               "images.json is missing physical and virtual device metadata",
 			imageJSONPath:      "some/missing/physical/and/virtual/metadata/images.json",
 			expectedErrMessage: "unable to find a physical or virtual device metadata in image manifest: some/missing/physical/and/virtual/metadata/images.json",
-		},
-		{
-			name:          "images.json contains both a physical and virtual device metadata",
-			imageJSONPath: "some/invalid/contains/both/virtual/and/physical/images.json",
-			expectedErrMessage: `found both a physical and virtual device metadata in the following paths: "gen/build/images/physical_device.json",` +
-				` "gen/build/images/virtual_device.json". Should only have one.`,
 		},
 	}
 	for _, test := range tests {
@@ -297,6 +299,44 @@ var (
 		  },
 		  "start_up_args_template": "gen/build/images/emulator_flags.json.template",
 		  "name": "qemu-x64",
+		  "type": "virtual_device"
+		},
+		"schema_id": "http://fuchsia.com/schemas/sdk/virtual_device-93A41932.json"
+	}`)
+	validVirtualDeviceMetadataX64 = []byte(`{
+		"data": {
+		  "description": "A virtual x64 device",
+		  "hardware": {
+			  "cpu": {
+				"arch": "x64"
+			  },
+			  "audio": {
+				"model": "hda"
+			  },
+			  "inputs": {
+				"pointing_device": "touch"
+			  },
+			  "window_size": {
+				"height": 800,
+				"width": 1280,
+				"units": "pixels"
+			  },
+			  "memory": {
+				"quantity": 8192,
+				"units": "megabytes"
+			  },
+			  "storage": {
+				"quantity": 2,
+				"units": "gigabytes"
+			  }
+		  },
+		  "ports": {
+			"ssh": 22,
+			"mdns": 5353,
+			"debug": 2345
+		  },
+		  "start_up_args_template": "gen/build/images/emulator_flags.json.template",
+		  "name": "x64",
 		  "type": "virtual_device"
 		},
 		"schema_id": "http://fuchsia.com/schemas/sdk/virtual_device-93A41932.json"
@@ -381,9 +421,28 @@ func TestReadDeviceMetadata(t *testing.T) {
 			dir:                "fuchsia",
 			deviceMetadataPath: "builds/123456/images/gen/build/images/physical/device/one.json",
 			knownDeviceMetadata: &map[string][]byte{
-				"qemu-x64": validVirtualDeviceMetadata,
+				"qemu-x64-virtual_device": validVirtualDeviceMetadata,
 			},
 			expectedIsNew: true,
+			expectedDeviceMetadata: `{
+  "description": "A generic x64 device",
+  "type": "physical_device",
+  "name": "x64",
+  "hardware": {
+    "cpu": {
+      "arch": "x64"
+    }
+  }
+}`,
+		},
+		{
+			name: "valid physical device metadata that is new with the same name as a virtual device spec",
+			dir:  "fuchsia",
+			knownDeviceMetadata: &map[string][]byte{
+				"x64-virtual_device": validVirtualDeviceMetadataX64,
+			},
+			deviceMetadataPath: "builds/123456/images/gen/build/images/physical/device/one.json",
+			expectedIsNew:      true,
 			expectedDeviceMetadata: `{
   "description": "A generic x64 device",
   "type": "physical_device",
@@ -399,7 +458,7 @@ func TestReadDeviceMetadata(t *testing.T) {
 			name: "valid virtual device metadata that already exists with identical data",
 			dir:  "fuchsia",
 			knownDeviceMetadata: &map[string][]byte{
-				"qemu-x64": validVirtualDeviceMetadata,
+				"qemu-x64-virtual_device": validVirtualDeviceMetadata,
 			},
 			deviceMetadataPath: "builds/123456/images/gen/build/images/virtual/device/one.json",
 			expectedIsNew:      false,
@@ -487,10 +546,10 @@ func TestReadDeviceMetadataInvalid(t *testing.T) {
 			name: "device metadata has same name but different values in metadata",
 			dir:  "fuchsia",
 			knownDeviceMetadata: &map[string][]byte{
-				"qemu-x64": []byte("{some-thing-invalid}"),
+				"qemu-x64-virtual_device": []byte("{some-thing-invalid}"),
 			},
 			deviceMetadataPath: "builds/123456/images/gen/build/images/virtual/device/one.json",
-			expectedErrMessage: "device metadata's have the same name qemu-x64 but different values",
+			expectedErrMessage: "device metadata's have the same name qemu-x64-virtual_device but different values",
 		},
 	}
 	for _, test := range tests {
