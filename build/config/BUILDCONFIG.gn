@@ -1096,30 +1096,34 @@ foreach(_target_type,
                 ] + _args
       }
 
-      # To suppress checking for output dir leaks, in the invoker:
-      #   no_output_dir_leaks = false
-      no_output_dir_leaks = true
-      if (defined(invoker.no_output_dir_leaks)) {
-        no_output_dir_leaks = invoker.no_output_dir_leaks
-      }
+      # TODO(https://fxbug.dev/95130): Re-enable output-scanner on Mac when it's
+      # portable.
+      if (host_os != "mac") {
+        # To suppress checking for output dir leaks, in the invoker:
+        #   no_output_dir_leaks = false
+        no_output_dir_leaks = true
+        if (defined(invoker.no_output_dir_leaks)) {
+          no_output_dir_leaks = invoker.no_output_dir_leaks
+        }
 
-      if (!no_output_dir_leaks) {
-        deps += [ "//build:output_dir_leaking_allowlist" ]
-      }
+        if (!no_output_dir_leaks) {
+          deps += [ "//build:output_dir_leaking_allowlist" ]
+        }
 
-      if (no_output_dir_leaks && check_output_dir_leaks) {
-        _args = []
-        _args = [
-                  "--label",
-                  get_label_info(":$target_name", "label_with_toolchain"),
-                ] + rebase_path(outputs, root_build_dir) +
-                [
-                  "--",
-                  rebase_path(script, root_build_dir),
-                ] + args
-        args = []
-        args = _args
-        script = "//build/rbe/output-scanner.sh"
+        if (no_output_dir_leaks && check_output_dir_leaks) {
+          _args = []
+          _args = [
+                    "--label",
+                    get_label_info(":$target_name", "label_with_toolchain"),
+                  ] + rebase_path(outputs, root_build_dir) +
+                  [
+                    "--",
+                    rebase_path(script, root_build_dir),
+                  ] + args
+          args = []
+          args = _args
+          script = "//build/rbe/output-scanner.sh"
+        }
       }
 
       metadata = {
