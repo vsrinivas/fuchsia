@@ -6,7 +6,7 @@
     program: {
         args: [
             "--system-image-path",
-            "/pkg/data/assemblies/access_ota_blob_as_executable_v0/base.far",
+            "/pkg/data/assemblies/hello_world_v0/base.far",
         ],
     },
 }

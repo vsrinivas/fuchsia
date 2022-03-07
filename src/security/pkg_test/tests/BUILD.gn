@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("access_ota_blob_as_executable/access_ota_blob_as_executable.gni")
+import("bad_signature_update/bad_signature_update.gni")
 
 # Filesystem host for base (v0) system.
 fuchsia_test_component("fshost_v0-component") {
@@ -52,7 +53,25 @@ access_ota_blob_as_executable("core_access_ota_blob_as_executable") {
       "//src/sys/pkg/lib/fuchsia-pkg-testing/certs/test.fuchsia.com.rsa"
 }
 
+bad_signature_update("core_bad_signature_update") {
+  base_packages =
+      [ "//src/security/pkg_test/config:pkg_resolver_repository_config" ]
+
+  # Inject config file for test component.
+  test_config = "//src/security/pkg_test/config/tests/core_ota.json5"
+
+  # Configure compatible root cert, certchain, pkg_server private key.
+  root_ssl_cert = "//src/sys/pkg/lib/fuchsia-pkg-testing/certs/ca.cert"
+  pkg_server_certchain =
+      "//src/sys/pkg/lib/fuchsia-pkg-testing/certs/test.fuchsia.com.certchain"
+  pkg_server_key =
+      "//src/sys/pkg/lib/fuchsia-pkg-testing/certs/test.fuchsia.com.rsa"
+}
+
 group("tests") {
   testonly = true
-  deps = [ ":core_access_ota_blob_as_executable-package($target_toolchain)" ]
+  deps = [
+    ":core_access_ota_blob_as_executable-package($target_toolchain)",
+    ":core_bad_signature_update-package($target_toolchain)",
+  ]
 }

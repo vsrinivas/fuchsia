@@ -10,12 +10,8 @@
         "//src/sys/test_runners/rust/default.shard.cml",
     ],
     program: {
-        binary: "bin/access_ota_blob_as_executable",
+        binary: "bin/bad_signature_update",
         args: [
-            "--hello-world-v0-meta-far-path",
-            "/pkg/data/assemblies/v0/hello_world/meta.far",
-            "--hello-world-v1-meta-far-path",
-            "/pkg/data/assemblies/v1/hello_world/meta.far",
             "--v1-update-far-path",
             "/pkg/data/assemblies/hello_world_v1/update/update.far",
             "--test-config-path",

@@ -2,13 +2,14 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/compiled_action.gni")
 import("//build/components/fuchsia_test_component.gni")
 import("//build/components/fuchsia_test_package.gni")
 import("//build/rust/rustc_test.gni")
 import(
     "//src/security/pkg_test/assemblies/assemble_security_pkg_test_system.gni")
 
-template("access_ota_blob_as_executable") {
+template("bad_signature_update") {
   assert(defined(invoker.base_packages),
          "base_packages must be defined for $target_name")
   assert(defined(invoker.test_config),
@@ -36,18 +37,8 @@ template("access_ota_blob_as_executable") {
     packaged_assembly_directory = "hello_world_v0"
     system_version_file = "//src/security/pkg_test/assemblies/v0_version.txt"
 
-    # Calculated on local build from 2022-02-08:
-    #
-    #   v0 blobs:
-    #     $ wc --bytes $(fx get-build-dir)/obj/src/security/pkg_test/tests/core_access_ota_blob_as_executable_v0/blob.blk
-    #     3063808 [build-dir]/obj/src/security/pkg_test/tests/core_access_ota_blob_as_executable_v0/blob.blk
-    #
-    #   v1 TUF repo assets:
-    #     $ wc --bytes $(find $(fx get-build-dir)/gen/src/security/pkg_test/tests/core_access_ota_blob_as_executable_v1_tuf_repo_resources.unzipped -type f | grep '/\(targets\|blobs\)/')
-    #     [...]
-    #     46365598 total
-    #
-    #   Total: 3063808 + 46365598 = 49429406
+    # Calculated on local build from 2022-02-08. See equivalent
+    # access_ota_blob_as_executable rule for details.
     fvm_truncate_to_length = 49429406
   }
 
@@ -64,30 +55,86 @@ template("access_ota_blob_as_executable") {
     # specify `fvm_truncate_to_length`.
   }
 
-  # Resources and component for package server configured to serve "v1" OTA.
-  resource_group("${test_name}_v1-pkg_server-tls_resources") {
-    testonly = true
-    files = [
-      {
-        source = pkg_server_certchain
-        dest = "data/pkg_server/tls/pkg_server.certchain"
-      },
-      {
-        source = pkg_server_key
-        dest = "data/pkg_server/tls/pkg_server.rsa"
-      },
-    ]
-  }
+  # `resource`/`resource_group` targets should be built on the
+  # `target_toolchain`. Other toolchains should depend on the `target_toolchain`
+  # outputs.
+  if (current_toolchain == target_toolchain) {
+    # Resources and component for package server configured to serve "v1" OTA.
+    resource_group("${test_name}_v1-pkg_server-tls_resources") {
+      testonly = true
+      files = [
+        {
+          source = pkg_server_certchain
+          dest = "data/pkg_server/tls/pkg_server.certchain"
+        },
+        {
+          source = pkg_server_key
+          dest = "data/pkg_server/tls/pkg_server.rsa"
+        },
+      ]
+    }
 
-  # Resources that constitute inputs to the test component.
-  resource_group("${test_name}_test-resources") {
-    testonly = true
-    files = [
-      {
-        source = invoker.test_config
-        dest = "data/test_config.json5"
-      },
-    ]
+    # Resources that constitute inputs to the test component.
+    resource_group("${test_name}_test-resources") {
+      testonly = true
+      files = [
+        {
+          source = invoker.test_config
+          dest = "data/test_config.json5"
+        },
+      ]
+    }
+
+    # Create and resource v1 TUF repo with poisoned signature.
+    compiled_action("${test_name}_poisoned_v1_pm_publish_archive") {
+      testonly = true
+      tool = "//src/security/pkg_test/poison_tuf_signature"
+      deps = [ ":${test_name}_v1_pm_publish_archive" ]
+
+      pm_publish_archive_outputs =
+          get_target_outputs(":${test_name}_v1_pm_publish_archive")
+      input = pm_publish_archive_outputs[0]
+
+      output = "${target_out_dir}/poisoned_v1_tuf_repo.zip"
+
+      inputs = [ input ]
+      outputs = [ output ]
+      args = [
+        "--input",
+        rebase_path(input, root_build_dir),
+        "--output",
+        rebase_path(output, root_build_dir),
+
+        # TODO: Add params to specify what target to poison.
+      ]
+    }
+    zip_resource("${test_name}_poisoned_v1_tuf_repo_resources") {
+      testonly = true
+      deps = [ ":${test_name}_poisoned_v1_pm_publish_archive" ]
+      poisoned_pm_publish_archive_outputs =
+          get_target_outputs(":${test_name}_poisoned_v1_pm_publish_archive")
+      file = poisoned_pm_publish_archive_outputs[0]
+
+      # TODO: This is computed internally by
+      # `assemble_security_pkg_test_system()` based on
+      # `packaged_assembly_directory`; logic is duplicated here.
+      dest_prefix = "data/assemblies/hello_world_v1/repository"
+    }
+  } else {
+    group("${test_name}_v1-pkg_server-tls_resources") {
+      testonly = true
+      public_deps =
+          [ ":${test_name}_v1-pkg_server-tls_resources($target_toolchain)" ]
+    }
+    group("${test_name}_test-resources") {
+      testonly = true
+      public_deps = [ ":${test_name}_test-resources($target_toolchain)" ]
+    }
+    group("${test_name}_poisoned_v1_tuf_repo_resources") {
+      testonly = true
+      public_deps =
+          [ ":${test_name}_poisoned_v1_tuf_repo_resources($target_toolchain)" ]
+    }
   }
 
   # Note: Despite being independent of template parameters, this target must
@@ -101,9 +148,9 @@ template("access_ota_blob_as_executable") {
     # component manifest. See cml and source for details. These files are not
     # included as explicit deps here because they vary across different
     # packagings/configurations of the test.
-    component_name = "access_ota_blob_as_executable"
-    manifest = "//src/security/pkg_test/tests/access_ota_blob_as_executable/meta/access_ota_blob_as_executable.cml"
-    deps = [ "//src/security/pkg_test/tests/access_ota_blob_as_executable:access_ota_blob_as_executable-test" ]
+    component_name = "bad_signature_update"
+    manifest = "//src/security/pkg_test/tests/bad_signature_update/meta/bad_signature_update.cml"
+    deps = [ "//src/security/pkg_test/tests/bad_signature_update:bad_signature_update-test" ]
   }
 
   fuchsia_test_package("${test_name}-package") {
@@ -146,7 +193,7 @@ template("access_ota_blob_as_executable") {
 
       # Package server/update resources for delivering v1 OTA update.
       ":${test_name}_v1-pkg_server-tls_resources",
-      ":${test_name}_v1_tuf_repo_resources",
+      ":${test_name}_poisoned_v1_tuf_repo_resources",
       ":${test_name}_v1_update_package_resource",
     ]
 
