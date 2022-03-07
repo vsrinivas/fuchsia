@@ -410,11 +410,11 @@ std::unique_ptr<uint8_t[]> NewNoisePixels(uint32_t width, uint32_t height, size_
   std::random_device seed;
   std::default_random_engine prng(seed());
 #endif
-  std::uniform_int_distribution<uint8_t> random;
+  std::uniform_int_distribution<uint16_t> random(0, std::numeric_limits<uint8_t>::max());
 
   for (uint32_t j = 0; j < height; ++j) {
     for (uint32_t i = 0; i < width; ++i) {
-      pixels[j * width + i] = random(prng);
+      pixels[j * width + i] = static_cast<uint8_t>(random(prng));
     }
   }
 
