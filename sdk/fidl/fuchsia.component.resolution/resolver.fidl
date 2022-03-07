@@ -1,0 +1,58 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library fuchsia.component.resolution;
+
+/// An interface for resolving a URL to a component.
+///
+/// This interface is implemented by components that provide support
+/// for loading components with a particular URL scheme.   For example,
+/// the Fuchsia package component resolver exposes a service with this
+/// interface to resolve component URLs using the "fuchsia-pkg://" scheme.
+///
+/// To use a resolver to resolve URLs within your realm, register it
+/// in your realm's manifest.
+///
+/// Note: The component manager is the only intended direct client of this
+/// interface.
+@discoverable
+protocol Resolver {
+    /// Resolves a component with the given URL.
+    ///
+    /// `component_url` is the unescaped URL of the component to resolve.
+    ///
+    /// If successful, returns information about the component
+    /// that was resolved.
+    ///
+    /// On failure, returns a `ResolverError` error.
+    Resolve(struct {
+        component_url string:MAX_COMPONENT_URL_LENGTH;
+    }) -> (resource struct {
+        component Component;
+    }) error ResolverError;
+};
+
+/// The possible error conditions returned by ComponentResolver.
+// TODO(fxbug.dev/72139): API review of ResolverError.
+type ResolverError = strict enum {
+    /// An unexpected error occurred.
+    INTERNAL = 1;
+    /// A general IO error occurred.
+    IO = 2;
+    /// The component URL was malformed.
+    INVALID_ARGS = 3;
+    /// The repository specified in the URL is unsupported.
+    NOT_SUPPORTED = 4;
+    /// The component manifest was not found.
+    MANIFEST_NOT_FOUND = 5;
+    /// The component's package was not found.
+    PACKAGE_NOT_FOUND = 6;
+    /// Insufficient space on device to store component's package.
+    NO_SPACE = 7;
+    /// The component is temporarily unavailable.
+    RESOURCE_UNAVAILABLE = 8;
+    /// The component manifest could not be parsed or it contained invalid configuration.
+    INVALID_MANIFEST = 9;
+    /// The component specifies configuration fields but the values were not found.
+    CONFIG_VALUES_NOT_FOUND = 10;
+};
