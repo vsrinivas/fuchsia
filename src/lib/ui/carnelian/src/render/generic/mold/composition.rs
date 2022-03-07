@@ -218,6 +218,10 @@ impl Composition<Mold> for MoldComposition {
                     BlendMode::Difference => mold::BlendMode::Difference,
                     BlendMode::Exclusion => mold::BlendMode::Exclusion,
                     BlendMode::Multiply => mold::BlendMode::Multiply,
+                    BlendMode::Hue => mold::BlendMode::Hue,
+                    BlendMode::Saturation => mold::BlendMode::Saturation,
+                    BlendMode::Color => mold::BlendMode::Color,
+                    BlendMode::Luminosity => mold::BlendMode::Luminosity,
                 },
                 ..Default::default()
             }),

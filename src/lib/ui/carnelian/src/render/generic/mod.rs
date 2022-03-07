@@ -248,6 +248,17 @@ pub enum BlendMode {
     /// Produces an effect similar to that of the `Difference` mode but lower in contrast.
     /// Painting with white inverts the backdrop color; painting with black produces no change.
     Exclusion,
+    /// Creates a color with the hue of the source color and the saturation and luminosity of the backdrop color.
+    Hue,
+    /// Creates a color with the saturation of the source color and the hue and luminosity of the backdrop color.
+    /// Painting with this mode in an area of the backdrop that is a pure gray (no saturation) produces no change.
+    Saturation,
+    /// Creates a color with the hue and saturation of the source color and the luminosity of the backdrop color.
+    /// This preserves the gray levels of the backdrop and is useful for coloring monochrome images or tinting color images.
+    Color,
+    /// Creates a color with the luminosity of the source color and the hue and saturation of the backdrop color.
+    /// This produces an inverse effect to that of the `Color` mode.
+    Luminosity,
 }
 
 /// Raster style.

@@ -215,10 +215,10 @@ impl rive::Renderer for Renderer<'_> {
             rive::shapes::paint::BlendMode::Difference => BlendMode::Difference,
             rive::shapes::paint::BlendMode::Exclusion => BlendMode::Exclusion,
             rive::shapes::paint::BlendMode::Multiply => BlendMode::Multiply,
-            _ => {
-                println!("unsupported blend_mode: {:?}", paint.blend_mode);
-                BlendMode::Over
-            }
+            rive::shapes::paint::BlendMode::Hue => BlendMode::Hue,
+            rive::shapes::paint::BlendMode::Saturation => BlendMode::Saturation,
+            rive::shapes::paint::BlendMode::Color => BlendMode::Color,
+            rive::shapes::paint::BlendMode::Luminosity => BlendMode::Luminosity,
         };
 
         let fill_rule = match paint.fill_rule {
