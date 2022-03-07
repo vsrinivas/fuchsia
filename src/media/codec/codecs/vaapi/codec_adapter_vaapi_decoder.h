@@ -64,7 +64,12 @@ class CodecAdapterVaApiDecoder : public CodecAdapter {
     ZX_DEBUG_ASSERT(events_);
   }
 
-  ~CodecAdapterVaApiDecoder() { input_processing_loop_.Shutdown(); }
+  ~CodecAdapterVaApiDecoder() override {
+    input_processing_loop_.Shutdown();
+    // Tear down first to make sure the H264Accelerator doesn't reference other variables in this
+    // class later.
+    media_decoder_.reset();
+  }
 
   bool IsCoreCodecRequiringOutputConfigForFormatDetection() override { return false; }
 
@@ -236,9 +241,8 @@ class CodecAdapterVaApiDecoder : public CodecAdapter {
     std::lock_guard<std::mutex> lock(lock_);
     fuchsia::media::StreamOutputFormat result;
     fuchsia::sysmem::ImageFormat_2 image_format;
-    // This is temporary until the media decoder is added.
-    gfx::Size pic_size(0, 0);
-    gfx::Rect visible_rect(0, 0);
+    gfx::Size pic_size = media_decoder_->GetPicSize();
+    gfx::Rect visible_rect = media_decoder_->GetVisibleRect();
     image_format.pixel_format.type = fuchsia::sysmem::PixelFormatType::NV12;
     image_format.coded_width = pic_size.width();
     image_format.coded_height = pic_size.height();
@@ -331,9 +335,7 @@ class CodecAdapterVaApiDecoder : public CodecAdapter {
       // larger range of dimensions that includes the required range indicated
       // here (via a-priori knowledge of the potential stream dimensions), an
       // initiator is free to do so.
-
-      // This is temporary until the media decoder is added.
-      gfx::Size pic_size(0, 0);
+      gfx::Size pic_size = media_decoder_->GetPicSize();
       image_constraints.required_min_coded_width = pic_size.width();
       image_constraints.required_max_coded_width = pic_size.width();
       image_constraints.required_min_coded_height = pic_size.height();
@@ -349,7 +351,13 @@ class CodecAdapterVaApiDecoder : public CodecAdapter {
     buffer_settings_[port] = buffer_collection_info.settings;
   }
 
- protected:
+  bool ProcessOutput(scoped_refptr<VASurface> surface, int bitstream_id);
+
+  VAContextID context_id() { return context_id_->id(); }
+
+  scoped_refptr<VASurface> GetVASurface();
+
+ private:
   friend class VaApiOutput;
   void WaitForInputProcessingLoopToEnd() {
     ZX_DEBUG_ASSERT(thrd_current() != input_processing_thread_);
@@ -394,7 +402,13 @@ class CodecAdapterVaApiDecoder : public CodecAdapter {
   // Releases any resources from the just-ended stream.
   void CleanUpAfterStream();
 
-  uint32_t GetOutputStride() { return 0; }
+  void DecodeAnnexBBuffer(std::vector<uint8_t> data);
+
+  uint32_t GetOutputStride() {
+    return fbl::round_up(
+        static_cast<uint32_t>(media_decoder_->GetPicSize().width()),
+        buffer_settings_[kOutputPort]->image_format_constraints.bytes_per_row_divisor);
+  }
 
   static fuchsia::media::VideoUncompressedFormat GetUncompressedFormat(
       const fuchsia::sysmem::ImageFormat_2& image_format) {
@@ -429,6 +443,8 @@ class CodecAdapterVaApiDecoder : public CodecAdapter {
   BlockingMpscQueue<CodecInputItem> input_queue_;
   BlockingMpscQueue<CodecPacket*> free_output_packets_;
 
+  std::optional<ScopedConfigID> config_;
+
   // The order of output_buffer_pool_ and in_use_by_client_ matters, so that
   // destruction of in_use_by_client_ happens first, because those destructing
   // will return buffers to output_buffer_pool_.
@@ -442,6 +458,19 @@ class CodecAdapterVaApiDecoder : public CodecAdapter {
   uint64_t input_format_details_version_ordinal_;
 
   std::optional<fuchsia::sysmem::SingleBufferSettings> buffer_settings_[kPortCount];
+
+  // DPB surfaces.
+  std::mutex surfaces_lock_;
+  // Incremented whenever new surfaces are allocated and old surfaces should be released.
+  uint64_t surface_generation_ FXL_GUARDED_BY(surfaces_lock_) = {};
+  gfx::Size surface_size_ FXL_GUARDED_BY(surfaces_lock_);
+  std::vector<ScopedSurfaceID> surfaces_ FXL_GUARDED_BY(surfaces_lock_);
+
+  std::optional<ScopedContextID> context_id_;
+
+  // Will be accessed from the input processing thread if that's active, or the main thread
+  // otherwise.
+  std::unique_ptr<media::AcceleratedVideoDecoder> media_decoder_;
 
   std::deque<std::pair<int32_t, uint64_t>> stream_to_pts_map_;
   int32_t next_stream_id_{};

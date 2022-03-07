@@ -12,12 +12,14 @@ source_set("codec_runner_vaapi") {
   sources = [
     "buffer_pool.cc",
     "codec_adapter_vaapi_decoder.cc",
+    "h264_accelerator.cc",
     "vaapi_utils.cc",
   ]
 
   public = [
     "buffer_pool.h",
     "codec_adapter_vaapi_decoder.h",
+    "h264_accelerator.h",
     "vaapi_utils.h",
   ]
 

@@ -83,6 +83,17 @@ bool VADisplayWrapper::Initialize() {
 // static
 VADisplayWrapper* VADisplayWrapper::GetSingleton() { return display_wrapper.get(); }
 
+VASurface::VASurface(VASurfaceID va_surface_id, const gfx::Size& size, unsigned int format,
+                     ReleaseCB release_cb)
+    : va_surface_id_(va_surface_id),
+      size_(size),
+      format_(format),
+      release_cb_(std::move(release_cb)) {
+  DCHECK(release_cb_);
+}
+
+VASurface::~VASurface() { std::move(release_cb_)(va_surface_id_); }
+
 static bool SupportsH264() {
   VADisplay display = VADisplayWrapper::GetSingleton()->display();
   constexpr VAProfile kProfile = VAProfileH264High;

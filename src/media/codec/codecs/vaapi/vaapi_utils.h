@@ -121,6 +121,68 @@ class ScopedSurfaceID {
   FXL_DISALLOW_COPY_AND_ASSIGN(ScopedSurfaceID);
 };
 
+class VASurface {
+ public:
+  using ReleaseCB = fit::function<void(VASurfaceID)>;
+
+  VASurface(VASurfaceID va_surface_id, const gfx::Size& size, unsigned int format,
+            ReleaseCB release_cb);
+
+  VASurface(const VASurface&) = delete;
+  VASurface& operator=(const VASurface&) = delete;
+
+  VASurfaceID id() const { return va_surface_id_; }
+  const gfx::Size& size() const { return size_; }
+  unsigned int format() const { return format_; }
+
+  ~VASurface();
+
+ private:
+  const VASurfaceID va_surface_id_;
+  const gfx::Size size_;
+  const unsigned int format_;
+  ReleaseCB release_cb_;
+};
+
+class ScopedImageID {
+ public:
+  explicit ScopedImageID(VAImageID image_id) : id_(image_id) {}
+  ~ScopedImageID() { DestroyImageIfNecessary(); }
+  ScopedImageID(ScopedImageID&& other) noexcept {
+    id_ = other.id_;
+    other.id_ = 0;
+  }
+
+  ScopedImageID& operator=(ScopedImageID&& other) noexcept {
+    DestroyImageIfNecessary();
+
+    id_ = other.id_;
+    other.id_ = 0;
+    return *this;
+  }
+
+  VAImageID id() const { return id_; }
+
+  VAImageID release() {
+    auto id = id_;
+    id_ = 0;
+    return id;
+  }
+
+ private:
+  void DestroyImageIfNecessary() {
+    if (id_) {
+      VAStatus status = vaDestroyImage(VADisplayWrapper::GetSingleton()->display(), id_);
+      if (status != VA_STATUS_SUCCESS) {
+        FX_LOGS(FATAL) << "vaDestroyImage failed: " << status;
+      }
+    }
+    id_ = 0;
+  }
+  VAImageID id_;
+  FXL_DISALLOW_COPY_AND_ASSIGN(ScopedImageID);
+};
+
 std::vector<fuchsia::mediacodec::CodecDescription> GetCodecList();
 
 #endif  // SRC_MEDIA_CODEC_CODECS_VAAPI_VAAPI_UTILS_H_

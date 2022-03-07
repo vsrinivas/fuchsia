@@ -109,6 +109,8 @@ VADisplay vaGetDisplayMagma(magma_device_t device) { return &global_display_ptr;
 
 namespace {
 
+constexpr uint32_t kBearVideoWidth = 320u;
+
 class FakeCodecAdapterEvents : public CodecAdapterEvents {
  public:
   void onCoreCodecFailCodec(const char *format, ...) override {
@@ -132,6 +134,14 @@ class FakeCodecAdapterEvents : public CodecAdapterEvents {
   void onCoreCodecResetStreamAfterCurrentFrame() override {}
 
   void onCoreCodecMidStreamOutputConstraintsChange(bool output_re_config_required) override {
+    // Test a representative value.
+    auto output_constraints = codec_adapter_->CoreCodecGetBufferCollectionConstraints(
+        CodecPort::kOutputPort, fuchsia::media::StreamBufferConstraints(),
+        fuchsia::media::StreamBufferPartialSettings());
+    EXPECT_TRUE(output_constraints.buffer_memory_constraints.cpu_domain_supported);
+    EXPECT_EQ(kBearVideoWidth,
+              output_constraints.image_format_constraints[0].required_min_coded_width);
+
     std::unique_lock<std::mutex> lock(lock_);
     // Wait for buffer initialization to complete to ensure all buffers are staged to be loaded.
     cond_.wait(lock, [&]() { return buffer_initialization_completed_; });
@@ -148,8 +158,14 @@ class FakeCodecAdapterEvents : public CodecAdapterEvents {
 
   void onCoreCodecOutputPacket(CodecPacket *packet, bool error_detected_before,
                                bool error_detected_during) override {
+    auto output_format = codec_adapter_->CoreCodecGetOutputFormat(1u, 1u);
+    // Test a representative value.
+    EXPECT_EQ(
+        kBearVideoWidth,
+        output_format.format_details().domain().video().uncompressed().image_format.coded_width);
+
     std::lock_guard lock(lock_);
-    output_packet_count_++;
+    output_packets_done_.push_back(packet);
     cond_.notify_all();
   }
 
@@ -173,15 +189,22 @@ class FakeCodecAdapterEvents : public CodecAdapterEvents {
 
   void WaitForOutputPacketCount(size_t output_packet_count) {
     std::unique_lock<std::mutex> lock(lock_);
-    cond_.wait(lock, [&]() { return output_packet_count_ == output_packet_count; });
+    cond_.wait(lock, [&]() { return output_packets_done_.size() == output_packet_count; });
   }
 
-  size_t output_packet_count() const { return output_packet_count_; }
+  size_t output_packet_count() const { return output_packets_done_.size(); }
 
   void SetBufferInitializationCompleted() {
     std::lock_guard lock(lock_);
     buffer_initialization_completed_ = true;
     cond_.notify_all();
+  }
+
+  void ReturnLastOutputPacket() {
+    std::lock_guard lock(lock_);
+    auto packet = output_packets_done_.back();
+    output_packets_done_.pop_back();
+    codec_adapter_->CoreCodecRecycleOutputPacket(packet);
   }
 
  private:
@@ -193,7 +216,7 @@ class FakeCodecAdapterEvents : public CodecAdapterEvents {
   std::condition_variable cond_;
 
   std::vector<CodecPacket *> input_packets_done_;
-  size_t output_packet_count_ = 0;
+  std::vector<CodecPacket *> output_packets_done_;
   bool buffer_initialization_completed_ = false;
 };
 
@@ -201,6 +224,8 @@ TEST(H264Vaapi, DecodeBasic) {
   std::mutex lock;
 
   EXPECT_TRUE(VADisplayWrapper::InitializeSingletonForTesting());
+
+  constexpr uint32_t kExpectedOutputPackets = 29;
 
   FakeCodecAdapterEvents events;
   {
@@ -210,6 +235,11 @@ TEST(H264Vaapi, DecodeBasic) {
     format_details.set_format_details_version_ordinal(1);
     format_details.set_mime_type("video/h264");
     decoder.CoreCodecInit(format_details);
+
+    auto input_constraints = decoder.CoreCodecGetBufferCollectionConstraints(
+        CodecPort::kInputPort, fuchsia::media::StreamBufferConstraints(),
+        fuchsia::media::StreamBufferPartialSettings());
+    EXPECT_TRUE(input_constraints.buffer_memory_constraints.cpu_domain_supported);
 
     decoder.CoreCodecStartStream();
     decoder.CoreCodecQueueInputFormatDetails(format_details);
@@ -236,18 +266,26 @@ TEST(H264Vaapi, DecodeBasic) {
     std::vector<std::unique_ptr<CodecPacket>> packets(kOutputPacketCount);
     for (size_t i = 0; i < kOutputPacketCount; i++) {
       auto &packet = test_packets.packets[i];
-      packet->SetBuffer(test_buffers.buffers[i].get());
-      packet->SetStartOffset(0);
-      packet->SetValidLengthBytes(kOutputPacketSize);
       packets[i] = std::move(packet);
       decoder.CoreCodecAddBuffer(CodecPort::kOutputPort, test_buffers.buffers[i].get());
     }
 
     decoder.CoreCodecConfigureBuffers(CodecPort::kOutputPort, packets);
+    for (size_t i = 0; i < kOutputPacketCount; i++) {
+      decoder.CoreCodecRecycleOutputPacket(packets[i].get());
+    }
+
+    decoder.CoreCodecConfigureBuffers(CodecPort::kOutputPort, packets);
     events.SetBufferInitializationCompleted();
     events.WaitForInputPacketsDone();
+    events.WaitForOutputPacketCount(kExpectedOutputPackets);
+    events.ReturnLastOutputPacket();
     decoder.CoreCodecStopStream();
+    decoder.CoreCodecEnsureBuffersNotConfigured(CodecPort::kOutputPort);
   }
+
+  // One packet was returned, so it was already removed from the list.
+  EXPECT_EQ(kExpectedOutputPackets - 1u, events.output_packet_count());
 
   EXPECT_EQ(0u, events.fail_codec_count());
   EXPECT_EQ(0u, events.fail_stream_count());
