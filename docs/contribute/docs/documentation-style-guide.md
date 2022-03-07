@@ -4,10 +4,17 @@ This document gives writing style guidance for Fuchsia.dev, and these
 guidelines build on the general guidance in the [Google Developers Style
 Guide][google-dev-doc-style-guide].
 
-For information on general documentation standards, including file types,
-locations, and general tone, see the [Fuchsia documentation
-standards][doc-standard]. For specific guidance on word choice, style, and
-structure, see the [Fuchsia documentation style guide][style-guide].
+Note: This guide highlights some of the best practices for writing
+documentation for Fuchsia. Some of the topics may be covered more extensively
+in the resources in the following documents:
+
+* For information on general documentation standards, including file types,
+  locations, and general tone, see the [Fuchsia documentation
+  standards][doc-standard].
+* For specific guidance on word choice, style, and structure, see the
+  [Fuchsia documentation style guide][style-guide].
+* For the full Markdown reference guide, see the
+  [Markdown reference guide][markdown-guide].
 
 ## Text and links
 
@@ -168,6 +175,7 @@ Update the [state header][sh]
 
 [doc-standard]: /docs/contribute/docs/documentation-standards.md
 [style-guide]: /docs/contribute/docs/documentation-style-guide.md
+[markdown-guide]: /docs/contribute/docs/markdown.md
 [google-dev-doc-style-guide]: https://developers.google.com/style
 [markdown-reference-links]: /docs/contribute/docs/markdown.md
 [external-link-example]: http://example.com
