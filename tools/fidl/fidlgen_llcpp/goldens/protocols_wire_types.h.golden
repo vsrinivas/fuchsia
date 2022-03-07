@@ -289,8 +289,7 @@ class WithErrorSyntaxHandleInResultResult {
   WithErrorSyntaxHandleInResultResult()
       : ordinal_(::test_protocols::wire::WithErrorSyntaxHandleInResultResult::
                      Ordinal::Invalid),
-        envelope_ {}
-  {}
+        envelope_{} {}
 
   ~WithErrorSyntaxHandleInResultResult();
   WithErrorSyntaxHandleInResultResult(
@@ -418,8 +417,7 @@ class WithErrorSyntaxResponseAsStructResult {
   WithErrorSyntaxResponseAsStructResult()
       : ordinal_(::test_protocols::wire::WithErrorSyntaxResponseAsStructResult::
                      Ordinal::Invalid),
-        envelope_ {}
-  {}
+        envelope_{} {}
 
   WithErrorSyntaxResponseAsStructResult(
       const WithErrorSyntaxResponseAsStructResult&) = default;
@@ -566,8 +564,7 @@ class WithErrorSyntaxErrorAsPrimitiveResult {
   WithErrorSyntaxErrorAsPrimitiveResult()
       : ordinal_(::test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResult::
                      Ordinal::Invalid),
-        envelope_ {}
-  {}
+        envelope_{} {}
 
   WithErrorSyntaxErrorAsPrimitiveResult(
       const WithErrorSyntaxErrorAsPrimitiveResult&) = default;
@@ -684,8 +681,7 @@ class TheUnion {
  public:
   TheUnion()
       : ordinal_(::test_protocols::wire::TheUnion::Ordinal::Invalid),
-        envelope_ {}
-  {}
+        envelope_{} {}
 
   TheUnion(const TheUnion&) = default;
   TheUnion& operator=(const TheUnion&) = default;
@@ -747,8 +743,7 @@ class WithErrorSyntaxErrorAsEnumResult {
   WithErrorSyntaxErrorAsEnumResult()
       : ordinal_(::test_protocols::wire::WithErrorSyntaxErrorAsEnumResult::
                      Ordinal::Invalid),
-        envelope_ {}
-  {}
+        envelope_{} {}
 
   WithErrorSyntaxErrorAsEnumResult(const WithErrorSyntaxErrorAsEnumResult&) =
       default;

@@ -45,8 +45,7 @@ class ExampleUseOfErrorSyntaxCallWhichMayFailResult {
       : ordinal_(::test_errorsyntax::wire::
                      ExampleUseOfErrorSyntaxCallWhichMayFailResult::Ordinal::
                          Invalid),
-        envelope_ {}
-  {}
+        envelope_{} {}
 
   ExampleUseOfErrorSyntaxCallWhichMayFailResult(
       const ExampleUseOfErrorSyntaxCallWhichMayFailResult&) = default;

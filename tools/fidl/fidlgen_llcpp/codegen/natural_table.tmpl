@@ -77,14 +77,8 @@ class {{ .Name }} final {
   static constexpr auto kMembers = std::make_tuple(
     {{- range $i, $m := .Members }}
       {{- if $i }}, {{ end -}}
-      ::fidl::internal::NaturalTableMember<Storage_, {{ $m.Type }}>{
+      ::fidl::internal::NaturalTableMember<Storage_, {{ $m.Type }}, {{ $m.Constraint }}>{
         {{ $m.Ordinal }}, &Storage_::{{ $m.Name }}
-        {{- if $m.HandleInformation -}}
-          , std::make_optional<::fidl::internal::NaturalHandleInformation>({
-            .object_type = {{ $m.HandleInformation.ObjectType }},
-            .rights = {{ $m.HandleInformation.Rights }}
-          })
-        {{- end -}}
       }
     {{- end -}}
   );
@@ -110,7 +104,7 @@ class {{ .Name }} final {
   */}}
 
   template <>
-  struct internal::NaturalCodingTraits<{{ . }}> :
+  struct internal::NaturalCodingTraits<{{ . }}, ::fidl::internal::NaturalCodingConstraintEmpty> :
     public ::fidl::internal::NaturalTableCodingTraits<{{ . }}> {};
 {{ end }}
 

@@ -78,12 +78,14 @@ class NonInlineStructTestStruct final {
       ::test_encapsulatedstructs::NonInlineStructTestStruct>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<
-          Storage_, ::std::unique_ptr<::test_encapsulatedstructs::Int16Int8>>{
-          &Storage_::element, 0, 0},
-      ::fidl::internal::NaturalStructMember<Storage_, ::zx::handle>{
-          &Storage_::h, 8, 8,
-          std::make_optional<::fidl::internal::NaturalHandleInformation>(
-              {.object_type = ZX_OBJ_TYPE_NONE, .rights = 0x80000000})});
+          Storage_, ::std::unique_ptr<::test_encapsulatedstructs::Int16Int8>,
+          fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::element, 0,
+                                                        0},
+      ::fidl::internal::NaturalStructMember<
+          Storage_, ::zx::handle,
+          fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_NONE,
+                                                        0x80000000>>{
+          &Storage_::h, 8, 8});
 };
 
 #endif  // __Fuchsia__
@@ -140,10 +142,12 @@ class Int8Int32 final {
   friend struct ::fidl::internal::MemberVisitor<
       ::test_encapsulatedstructs::Int8Int32>;
   static constexpr auto kMembers = std::make_tuple(
-      ::fidl::internal::NaturalStructMember<Storage_, int8_t>{&Storage_::a, 0,
-                                                              0},
-      ::fidl::internal::NaturalStructMember<Storage_, int32_t>{&Storage_::b, 4,
-                                                               4});
+      ::fidl::internal::NaturalStructMember<
+          Storage_, int8_t, fidl::internal::NaturalCodingConstraintEmpty>{
+          &Storage_::a, 0, 0},
+      ::fidl::internal::NaturalStructMember<
+          Storage_, int32_t, fidl::internal::NaturalCodingConstraintEmpty>{
+          &Storage_::b, 4, 4});
 };
 
 extern "C" const fidl_type_t test_encapsulatedstructs_Int16Int8Table;
@@ -198,10 +202,12 @@ class Int16Int8 final {
   friend struct ::fidl::internal::MemberVisitor<
       ::test_encapsulatedstructs::Int16Int8>;
   static constexpr auto kMembers = std::make_tuple(
-      ::fidl::internal::NaturalStructMember<Storage_, int16_t>{&Storage_::a, 0,
-                                                               0},
-      ::fidl::internal::NaturalStructMember<Storage_, int8_t>{&Storage_::b, 2,
-                                                              2});
+      ::fidl::internal::NaturalStructMember<
+          Storage_, int16_t, fidl::internal::NaturalCodingConstraintEmpty>{
+          &Storage_::a, 0, 0},
+      ::fidl::internal::NaturalStructMember<
+          Storage_, int8_t, fidl::internal::NaturalCodingConstraintEmpty>{
+          &Storage_::b, 2, 2});
 };
 
 extern "C" const fidl_type_t test_encapsulatedstructs_ArrayInt16Int8Table;
@@ -259,8 +265,8 @@ class ArrayInt16Int8 final {
       ::test_encapsulatedstructs::ArrayInt16Int8>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<
-          Storage_, ::std::array<::test_encapsulatedstructs::Int16Int8, 3>>{
-          &Storage_::arr, 0, 0});
+          Storage_, ::std::array<::test_encapsulatedstructs::Int16Int8, 3>,
+          fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::arr, 0, 0});
 };
 
 extern "C" const fidl_type_t
@@ -340,14 +346,16 @@ class StructPaddingTestStruct final {
       ::test_encapsulatedstructs::StructPaddingTestStruct>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<
-          Storage_, ::test_encapsulatedstructs::Int16Int8>{&Storage_::trailing,
-                                                           0, 0},
+          Storage_, ::test_encapsulatedstructs::Int16Int8,
+          fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::trailing, 0,
+                                                        0},
       ::fidl::internal::NaturalStructMember<
-          Storage_, ::test_encapsulatedstructs::Int8Int32>{&Storage_::inner, 4,
-                                                           4},
+          Storage_, ::test_encapsulatedstructs::Int8Int32,
+          fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::inner, 4, 4},
       ::fidl::internal::NaturalStructMember<
-          Storage_, ::test_encapsulatedstructs::ArrayInt16Int8>{
-          &Storage_::array, 12, 12});
+          Storage_, ::test_encapsulatedstructs::ArrayInt16Int8,
+          fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::array, 12,
+                                                        12});
 };
 
 #ifdef __Fuchsia__
@@ -399,11 +407,11 @@ class TopLevelStruct final {
       ::test_encapsulatedstructs::TopLevelStruct>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<
-          Storage_, ::test_encapsulatedstructs::StructPaddingTestStruct>{
-          &Storage_::a, 0, 0},
+          Storage_, ::test_encapsulatedstructs::StructPaddingTestStruct,
+          fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::a, 0, 0},
       ::fidl::internal::NaturalStructMember<
-          Storage_, ::test_encapsulatedstructs::NonInlineStructTestStruct>{
-          &Storage_::b, 24, 24});
+          Storage_, ::test_encapsulatedstructs::NonInlineStructTestStruct,
+          fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::b, 24, 24});
 };
 
 #endif  // __Fuchsia__
@@ -433,7 +441,8 @@ struct ::fidl::internal::TypeTraits<
 
 template <>
 struct internal::NaturalCodingTraits<
-    ::test_encapsulatedstructs::NonInlineStructTestStruct>
+    ::test_encapsulatedstructs::NonInlineStructTestStruct,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_encapsulatedstructs::NonInlineStructTestStruct, 16, 16> {
 };
@@ -470,7 +479,9 @@ struct ::fidl::internal::TypeTraits<::test_encapsulatedstructs::Int8Int32>
 };
 
 template <>
-struct internal::NaturalCodingTraits<::test_encapsulatedstructs::Int8Int32>
+struct internal::NaturalCodingTraits<
+    ::test_encapsulatedstructs::Int8Int32,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_encapsulatedstructs::Int8Int32, 8, 8> {};
 
@@ -504,7 +515,9 @@ struct ::fidl::internal::TypeTraits<::test_encapsulatedstructs::Int16Int8>
 };
 
 template <>
-struct internal::NaturalCodingTraits<::test_encapsulatedstructs::Int16Int8>
+struct internal::NaturalCodingTraits<
+    ::test_encapsulatedstructs::Int16Int8,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_encapsulatedstructs::Int16Int8, 4, 4> {};
 
@@ -538,7 +551,9 @@ struct ::fidl::internal::TypeTraits<::test_encapsulatedstructs::ArrayInt16Int8>
 };
 
 template <>
-struct internal::NaturalCodingTraits<::test_encapsulatedstructs::ArrayInt16Int8>
+struct internal::NaturalCodingTraits<
+    ::test_encapsulatedstructs::ArrayInt16Int8,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_encapsulatedstructs::ArrayInt16Int8, 12, 12> {};
 
@@ -576,7 +591,8 @@ struct ::fidl::internal::TypeTraits<
 
 template <>
 struct internal::NaturalCodingTraits<
-    ::test_encapsulatedstructs::StructPaddingTestStruct>
+    ::test_encapsulatedstructs::StructPaddingTestStruct,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_encapsulatedstructs::StructPaddingTestStruct, 24, 24> {};
 
@@ -618,7 +634,9 @@ struct ::fidl::internal::TypeTraits<::test_encapsulatedstructs::TopLevelStruct>
 };
 
 template <>
-struct internal::NaturalCodingTraits<::test_encapsulatedstructs::TopLevelStruct>
+struct internal::NaturalCodingTraits<
+    ::test_encapsulatedstructs::TopLevelStruct,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_encapsulatedstructs::TopLevelStruct, 40, 40> {};
 

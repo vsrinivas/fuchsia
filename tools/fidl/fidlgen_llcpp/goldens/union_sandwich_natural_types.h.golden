@@ -84,9 +84,11 @@ class UnionSize8Alignment4 final {
   std::shared_ptr<Storage_> CloneStorage_() const;
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_unionsandwich::UnionSize8Alignment4>;
-  static constexpr std::array<
-      std::optional<::fidl::internal::NaturalHandleInformation>, 2>
-      kMembers = {std::nullopt, std::nullopt};
+  static constexpr auto kMembers =
+      std::make_tuple(::fidl::internal::NaturalUnionMember<
+                          ::fidl::internal::NaturalCodingConstraintEmpty>(),
+                      ::fidl::internal::NaturalUnionMember<
+                          fidl::internal::NaturalCodingConstraintEmpty>());
 
   explicit UnionSize8Alignment4(std::shared_ptr<Storage_> storage)
       : storage_(std::move(storage)) {}
@@ -184,12 +186,15 @@ class SandwichUnionSize8Alignment4 final {
   friend struct ::fidl::internal::MemberVisitor<
       ::test_unionsandwich::SandwichUnionSize8Alignment4>;
   static constexpr auto kMembers = std::make_tuple(
-      ::fidl::internal::NaturalStructMember<Storage_, uint32_t>{
+      ::fidl::internal::NaturalStructMember<
+          Storage_, uint32_t, fidl::internal::NaturalCodingConstraintEmpty>{
           &Storage_::before, 0, 0},
       ::fidl::internal::NaturalStructMember<
-          Storage_, ::test_unionsandwich::UnionSize8Alignment4>{
-          &Storage_::union_, 8, 8},
-      ::fidl::internal::NaturalStructMember<Storage_, uint32_t>{
+          Storage_, ::test_unionsandwich::UnionSize8Alignment4,
+          fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::union_, 8,
+                                                        8},
+      ::fidl::internal::NaturalStructMember<
+          Storage_, uint32_t, fidl::internal::NaturalCodingConstraintEmpty>{
           &Storage_::after, 32, 24});
 };
 
@@ -245,9 +250,11 @@ class UnionSize36Alignment4 final {
   std::shared_ptr<Storage_> CloneStorage_() const;
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_unionsandwich::UnionSize36Alignment4>;
-  static constexpr std::array<
-      std::optional<::fidl::internal::NaturalHandleInformation>, 2>
-      kMembers = {std::nullopt, std::nullopt};
+  static constexpr auto kMembers =
+      std::make_tuple(::fidl::internal::NaturalUnionMember<
+                          ::fidl::internal::NaturalCodingConstraintEmpty>(),
+                      ::fidl::internal::NaturalUnionMember<
+                          fidl::internal::NaturalCodingConstraintEmpty>());
 
   explicit UnionSize36Alignment4(std::shared_ptr<Storage_> storage)
       : storage_(std::move(storage)) {}
@@ -345,12 +352,15 @@ class SandwichUnionSize36Alignment4 final {
   friend struct ::fidl::internal::MemberVisitor<
       ::test_unionsandwich::SandwichUnionSize36Alignment4>;
   static constexpr auto kMembers = std::make_tuple(
-      ::fidl::internal::NaturalStructMember<Storage_, uint32_t>{
+      ::fidl::internal::NaturalStructMember<
+          Storage_, uint32_t, fidl::internal::NaturalCodingConstraintEmpty>{
           &Storage_::before, 0, 0},
       ::fidl::internal::NaturalStructMember<
-          Storage_, ::test_unionsandwich::UnionSize36Alignment4>{
-          &Storage_::union_, 8, 8},
-      ::fidl::internal::NaturalStructMember<Storage_, uint32_t>{
+          Storage_, ::test_unionsandwich::UnionSize36Alignment4,
+          fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::union_, 8,
+                                                        8},
+      ::fidl::internal::NaturalStructMember<
+          Storage_, uint32_t, fidl::internal::NaturalCodingConstraintEmpty>{
           &Storage_::after, 32, 24});
 };
 
@@ -406,9 +416,11 @@ class UnionSize12Alignment4 final {
   std::shared_ptr<Storage_> CloneStorage_() const;
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_unionsandwich::UnionSize12Alignment4>;
-  static constexpr std::array<
-      std::optional<::fidl::internal::NaturalHandleInformation>, 2>
-      kMembers = {std::nullopt, std::nullopt};
+  static constexpr auto kMembers =
+      std::make_tuple(::fidl::internal::NaturalUnionMember<
+                          ::fidl::internal::NaturalCodingConstraintEmpty>(),
+                      ::fidl::internal::NaturalUnionMember<
+                          fidl::internal::NaturalCodingConstraintEmpty>());
 
   explicit UnionSize12Alignment4(std::shared_ptr<Storage_> storage)
       : storage_(std::move(storage)) {}
@@ -506,13 +518,16 @@ class SandwichUnionSize12Alignment4 final {
   friend struct ::fidl::internal::MemberVisitor<
       ::test_unionsandwich::SandwichUnionSize12Alignment4>;
   static constexpr auto kMembers = std::make_tuple(
-      ::fidl::internal::NaturalStructMember<Storage_, uint32_t>{
+      ::fidl::internal::NaturalStructMember<
+          Storage_, uint32_t, fidl::internal::NaturalCodingConstraintEmpty>{
           &Storage_::before, 0, 0},
       ::fidl::internal::NaturalStructMember<
-          Storage_, ::test_unionsandwich::UnionSize12Alignment4>{
-          &Storage_::union_, 8, 8},
-      ::fidl::internal::NaturalStructMember<Storage_, int32_t>{&Storage_::after,
-                                                               32, 24});
+          Storage_, ::test_unionsandwich::UnionSize12Alignment4,
+          fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::union_, 8,
+                                                        8},
+      ::fidl::internal::NaturalStructMember<
+          Storage_, int32_t, fidl::internal::NaturalCodingConstraintEmpty>{
+          &Storage_::after, 32, 24});
 };
 
 extern "C" const fidl_type_t test_unionsandwich_StructSize16Alignment8Table;
@@ -572,10 +587,12 @@ class StructSize16Alignment8 final {
   friend struct ::fidl::internal::MemberVisitor<
       ::test_unionsandwich::StructSize16Alignment8>;
   static constexpr auto kMembers = std::make_tuple(
-      ::fidl::internal::NaturalStructMember<Storage_, uint64_t>{&Storage_::f1,
-                                                                0, 0},
-      ::fidl::internal::NaturalStructMember<Storage_, uint64_t>{&Storage_::f2,
-                                                                8, 8});
+      ::fidl::internal::NaturalStructMember<
+          Storage_, uint64_t, fidl::internal::NaturalCodingConstraintEmpty>{
+          &Storage_::f1, 0, 0},
+      ::fidl::internal::NaturalStructMember<
+          Storage_, uint64_t, fidl::internal::NaturalCodingConstraintEmpty>{
+          &Storage_::f2, 8, 8});
 };
 
 extern "C" const fidl_type_t test_unionsandwich_UnionSize24Alignment8Table;
@@ -632,9 +649,11 @@ class UnionSize24Alignment8 final {
   std::shared_ptr<Storage_> CloneStorage_() const;
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_unionsandwich::UnionSize24Alignment8>;
-  static constexpr std::array<
-      std::optional<::fidl::internal::NaturalHandleInformation>, 2>
-      kMembers = {std::nullopt, std::nullopt};
+  static constexpr auto kMembers =
+      std::make_tuple(::fidl::internal::NaturalUnionMember<
+                          ::fidl::internal::NaturalCodingConstraintEmpty>(),
+                      ::fidl::internal::NaturalUnionMember<
+                          fidl::internal::NaturalCodingConstraintEmpty>());
 
   explicit UnionSize24Alignment8(std::shared_ptr<Storage_> storage)
       : storage_(std::move(storage)) {}
@@ -732,12 +751,15 @@ class SandwichUnionSize24Alignment8 final {
   friend struct ::fidl::internal::MemberVisitor<
       ::test_unionsandwich::SandwichUnionSize24Alignment8>;
   static constexpr auto kMembers = std::make_tuple(
-      ::fidl::internal::NaturalStructMember<Storage_, uint32_t>{
+      ::fidl::internal::NaturalStructMember<
+          Storage_, uint32_t, fidl::internal::NaturalCodingConstraintEmpty>{
           &Storage_::before, 0, 0},
       ::fidl::internal::NaturalStructMember<
-          Storage_, ::test_unionsandwich::UnionSize24Alignment8>{
-          &Storage_::union_, 8, 8},
-      ::fidl::internal::NaturalStructMember<Storage_, uint32_t>{
+          Storage_, ::test_unionsandwich::UnionSize24Alignment8,
+          fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::union_, 8,
+                                                        8},
+      ::fidl::internal::NaturalStructMember<
+          Storage_, uint32_t, fidl::internal::NaturalCodingConstraintEmpty>{
           &Storage_::after, 32, 24});
 };
 
@@ -763,7 +785,8 @@ struct ::fidl::internal::TypeTraits<
 
 template <>
 struct internal::NaturalCodingTraits<
-    ::test_unionsandwich::SandwichUnionSize8Alignment4>
+    ::test_unionsandwich::SandwichUnionSize8Alignment4,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_unionsandwich::SandwichUnionSize8Alignment4, 40, 32> {};
 
@@ -802,7 +825,8 @@ struct ::fidl::internal::TypeTraits<
 
 template <>
 struct internal::NaturalCodingTraits<
-    ::test_unionsandwich::SandwichUnionSize36Alignment4>
+    ::test_unionsandwich::SandwichUnionSize36Alignment4,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_unionsandwich::SandwichUnionSize36Alignment4, 40, 32> {};
 
@@ -841,7 +865,8 @@ struct ::fidl::internal::TypeTraits<
 
 template <>
 struct internal::NaturalCodingTraits<
-    ::test_unionsandwich::SandwichUnionSize12Alignment4>
+    ::test_unionsandwich::SandwichUnionSize12Alignment4,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_unionsandwich::SandwichUnionSize12Alignment4, 40, 32> {};
 
@@ -880,7 +905,8 @@ struct ::fidl::internal::TypeTraits<
 
 template <>
 struct internal::NaturalCodingTraits<
-    ::test_unionsandwich::StructSize16Alignment8>
+    ::test_unionsandwich::StructSize16Alignment8,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_unionsandwich::StructSize16Alignment8, 16, 16> {};
 
@@ -912,7 +938,8 @@ struct ::fidl::internal::TypeTraits<
 
 template <>
 struct internal::NaturalCodingTraits<
-    ::test_unionsandwich::SandwichUnionSize24Alignment8>
+    ::test_unionsandwich::SandwichUnionSize24Alignment8,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_unionsandwich::SandwichUnionSize24Alignment8, 40, 32> {};
 
@@ -940,7 +967,9 @@ struct IsUnion<::test_unionsandwich::UnionSize8Alignment4>
     : public std::true_type {};
 
 template <>
-struct internal::NaturalCodingTraits<::test_unionsandwich::UnionSize8Alignment4>
+struct internal::NaturalCodingTraits<
+    ::test_unionsandwich::UnionSize8Alignment4,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalUnionCodingTraits<
                 ::test_unionsandwich::UnionSize8Alignment4> {};
 
@@ -953,7 +982,8 @@ struct IsUnion<::test_unionsandwich::UnionSize36Alignment4>
 
 template <>
 struct internal::NaturalCodingTraits<
-    ::test_unionsandwich::UnionSize36Alignment4>
+    ::test_unionsandwich::UnionSize36Alignment4,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalUnionCodingTraits<
                 ::test_unionsandwich::UnionSize36Alignment4> {};
 
@@ -966,7 +996,8 @@ struct IsUnion<::test_unionsandwich::UnionSize12Alignment4>
 
 template <>
 struct internal::NaturalCodingTraits<
-    ::test_unionsandwich::UnionSize12Alignment4>
+    ::test_unionsandwich::UnionSize12Alignment4,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalUnionCodingTraits<
                 ::test_unionsandwich::UnionSize12Alignment4> {};
 
@@ -979,7 +1010,8 @@ struct IsUnion<::test_unionsandwich::UnionSize24Alignment8>
 
 template <>
 struct internal::NaturalCodingTraits<
-    ::test_unionsandwich::UnionSize24Alignment8>
+    ::test_unionsandwich::UnionSize24Alignment8,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalUnionCodingTraits<
                 ::test_unionsandwich::UnionSize24Alignment8> {};
 

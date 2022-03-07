@@ -67,8 +67,9 @@ class SuperFooTopResponse final {
       ::test_inheritance::SuperFooTopResponse, 8, 8>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_inheritance::SuperFooTopResponse>;
-  static constexpr auto kMembers =
-      std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, int64_t>{
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalStructMember<
+          Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{
           &Storage_::y, 0, 0});
 };
 
@@ -118,8 +119,9 @@ class SuperFooRequest final {
   friend struct ::fidl::internal::MemberVisitor<
       ::test_inheritance::SuperFooRequest>;
   static constexpr auto kMembers = std::make_tuple(
-      ::fidl::internal::NaturalStructMember<Storage_, ::std::string>{
-          &Storage_::s, 0, 0});
+      ::fidl::internal::NaturalStructMember<
+          Storage_, ::std::string,
+          fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::s, 0, 0});
 };
 
 }  // namespace test_inheritance
@@ -141,7 +143,9 @@ struct ::fidl::internal::TypeTraits<::test_inheritance::SuperFooTopResponse>
 };
 
 template <>
-struct internal::NaturalCodingTraits<::test_inheritance::SuperFooTopResponse>
+struct internal::NaturalCodingTraits<
+    ::test_inheritance::SuperFooTopResponse,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_inheritance::SuperFooTopResponse, 8, 8> {};
 
@@ -169,9 +173,11 @@ struct ::fidl::internal::TypeTraits<::test_inheritance::SuperFooRequest> final {
 };
 
 template <>
-struct internal::NaturalCodingTraits<::test_inheritance::SuperFooRequest> final
-    : public ::fidl::internal::NaturalStructCodingTraits<
-          ::test_inheritance::SuperFooRequest, 16, 16> {};
+struct internal::NaturalCodingTraits<
+    ::test_inheritance::SuperFooRequest,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
+    final : public ::fidl::internal::NaturalStructCodingTraits<
+                ::test_inheritance::SuperFooRequest, 16, 16> {};
 
 template <>
 struct HasPadding<::test_inheritance::SuperFooRequest> : public std::true_type {

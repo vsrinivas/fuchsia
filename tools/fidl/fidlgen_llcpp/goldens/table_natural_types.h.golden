@@ -77,7 +77,9 @@ class TableWithAttributes final {
   friend struct ::fidl::internal::MemberVisitor<
       ::test_table::TableWithAttributes>;
   static constexpr auto kMembers = std::make_tuple(
-      ::fidl::internal::NaturalTableMember<Storage_, int64_t>{1, &Storage_::x});
+      ::fidl::internal::NaturalTableMember<
+          Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{
+          1, &Storage_::x});
 };
 
 extern "C" const fidl_type_t test_table_SimpleTableTable;
@@ -129,8 +131,12 @@ class SimpleTable final {
       ::test_table::SimpleTable>;
   friend struct ::fidl::internal::MemberVisitor<::test_table::SimpleTable>;
   static constexpr auto kMembers = std::make_tuple(
-      ::fidl::internal::NaturalTableMember<Storage_, int64_t>{1, &Storage_::x},
-      ::fidl::internal::NaturalTableMember<Storage_, int64_t>{5, &Storage_::y});
+      ::fidl::internal::NaturalTableMember<
+          Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{
+          1, &Storage_::x},
+      ::fidl::internal::NaturalTableMember<
+          Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{
+          5, &Storage_::y});
 };
 
 extern "C" const fidl_type_t test_table_ReverseOrdinalTableTable;
@@ -189,9 +195,15 @@ class ReverseOrdinalTable final {
   friend struct ::fidl::internal::MemberVisitor<
       ::test_table::ReverseOrdinalTable>;
   static constexpr auto kMembers = std::make_tuple(
-      ::fidl::internal::NaturalTableMember<Storage_, int64_t>{1, &Storage_::z},
-      ::fidl::internal::NaturalTableMember<Storage_, int64_t>{2, &Storage_::y},
-      ::fidl::internal::NaturalTableMember<Storage_, int64_t>{3, &Storage_::x});
+      ::fidl::internal::NaturalTableMember<
+          Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{
+          1, &Storage_::z},
+      ::fidl::internal::NaturalTableMember<
+          Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{
+          2, &Storage_::y},
+      ::fidl::internal::NaturalTableMember<
+          Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{
+          3, &Storage_::x});
 };
 
 extern "C" const fidl_type_t test_table_OlderSimpleTableTable;
@@ -237,7 +249,9 @@ class OlderSimpleTable final {
       ::test_table::OlderSimpleTable>;
   friend struct ::fidl::internal::MemberVisitor<::test_table::OlderSimpleTable>;
   static constexpr auto kMembers = std::make_tuple(
-      ::fidl::internal::NaturalTableMember<Storage_, int64_t>{1, &Storage_::x});
+      ::fidl::internal::NaturalTableMember<
+          Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{
+          1, &Storage_::x});
 };
 
 extern "C" const fidl_type_t test_table_NewerSimpleTableTable;
@@ -294,9 +308,15 @@ class NewerSimpleTable final {
       ::test_table::NewerSimpleTable>;
   friend struct ::fidl::internal::MemberVisitor<::test_table::NewerSimpleTable>;
   static constexpr auto kMembers = std::make_tuple(
-      ::fidl::internal::NaturalTableMember<Storage_, int64_t>{1, &Storage_::x},
-      ::fidl::internal::NaturalTableMember<Storage_, int64_t>{5, &Storage_::y},
-      ::fidl::internal::NaturalTableMember<Storage_, int64_t>{6, &Storage_::z});
+      ::fidl::internal::NaturalTableMember<
+          Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{
+          1, &Storage_::x},
+      ::fidl::internal::NaturalTableMember<
+          Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{
+          5, &Storage_::y},
+      ::fidl::internal::NaturalTableMember<
+          Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{
+          6, &Storage_::z});
 };
 
 extern "C" const fidl_type_t test_table_ExtensionTableTable;
@@ -674,126 +694,198 @@ class SixtyFourOrdinalTable final {
   friend struct ::fidl::internal::MemberVisitor<
       ::test_table::SixtyFourOrdinalTable>;
   static constexpr auto kMembers = std::make_tuple(
-      ::fidl::internal::NaturalTableMember<Storage_, int64_t>{1, &Storage_::v1},
-      ::fidl::internal::NaturalTableMember<Storage_, int64_t>{2, &Storage_::v2},
-      ::fidl::internal::NaturalTableMember<Storage_, int64_t>{3, &Storage_::v3},
-      ::fidl::internal::NaturalTableMember<Storage_, int64_t>{4, &Storage_::v4},
-      ::fidl::internal::NaturalTableMember<Storage_, int64_t>{5, &Storage_::v5},
-      ::fidl::internal::NaturalTableMember<Storage_, int64_t>{6, &Storage_::v6},
-      ::fidl::internal::NaturalTableMember<Storage_, int64_t>{7, &Storage_::v7},
-      ::fidl::internal::NaturalTableMember<Storage_, int64_t>{8, &Storage_::v8},
-      ::fidl::internal::NaturalTableMember<Storage_, int64_t>{9, &Storage_::v9},
-      ::fidl::internal::NaturalTableMember<Storage_, int64_t>{10,
-                                                              &Storage_::v10},
-      ::fidl::internal::NaturalTableMember<Storage_, int64_t>{11,
-                                                              &Storage_::v11},
-      ::fidl::internal::NaturalTableMember<Storage_, int64_t>{12,
-                                                              &Storage_::v12},
-      ::fidl::internal::NaturalTableMember<Storage_, int64_t>{13,
-                                                              &Storage_::v13},
-      ::fidl::internal::NaturalTableMember<Storage_, int64_t>{14,
-                                                              &Storage_::v14},
-      ::fidl::internal::NaturalTableMember<Storage_, int64_t>{15,
-                                                              &Storage_::v15},
-      ::fidl::internal::NaturalTableMember<Storage_, int64_t>{16,
-                                                              &Storage_::v16},
-      ::fidl::internal::NaturalTableMember<Storage_, int64_t>{17,
-                                                              &Storage_::v17},
-      ::fidl::internal::NaturalTableMember<Storage_, int64_t>{18,
-                                                              &Storage_::v18},
-      ::fidl::internal::NaturalTableMember<Storage_, int64_t>{19,
-                                                              &Storage_::v19},
-      ::fidl::internal::NaturalTableMember<Storage_, int64_t>{20,
-                                                              &Storage_::v20},
-      ::fidl::internal::NaturalTableMember<Storage_, int64_t>{21,
-                                                              &Storage_::v21},
-      ::fidl::internal::NaturalTableMember<Storage_, int64_t>{22,
-                                                              &Storage_::v22},
-      ::fidl::internal::NaturalTableMember<Storage_, int64_t>{23,
-                                                              &Storage_::v23},
-      ::fidl::internal::NaturalTableMember<Storage_, int64_t>{24,
-                                                              &Storage_::v24},
-      ::fidl::internal::NaturalTableMember<Storage_, int64_t>{25,
-                                                              &Storage_::v25},
-      ::fidl::internal::NaturalTableMember<Storage_, int64_t>{26,
-                                                              &Storage_::v26},
-      ::fidl::internal::NaturalTableMember<Storage_, int64_t>{27,
-                                                              &Storage_::v27},
-      ::fidl::internal::NaturalTableMember<Storage_, int64_t>{28,
-                                                              &Storage_::v28},
-      ::fidl::internal::NaturalTableMember<Storage_, int64_t>{29,
-                                                              &Storage_::v29},
-      ::fidl::internal::NaturalTableMember<Storage_, int64_t>{30,
-                                                              &Storage_::v30},
-      ::fidl::internal::NaturalTableMember<Storage_, int64_t>{31,
-                                                              &Storage_::v31},
-      ::fidl::internal::NaturalTableMember<Storage_, int64_t>{32,
-                                                              &Storage_::v32},
-      ::fidl::internal::NaturalTableMember<Storage_, int64_t>{33,
-                                                              &Storage_::v33},
-      ::fidl::internal::NaturalTableMember<Storage_, int64_t>{34,
-                                                              &Storage_::v34},
-      ::fidl::internal::NaturalTableMember<Storage_, int64_t>{35,
-                                                              &Storage_::v35},
-      ::fidl::internal::NaturalTableMember<Storage_, int64_t>{36,
-                                                              &Storage_::v36},
-      ::fidl::internal::NaturalTableMember<Storage_, int64_t>{37,
-                                                              &Storage_::v37},
-      ::fidl::internal::NaturalTableMember<Storage_, int64_t>{38,
-                                                              &Storage_::v38},
-      ::fidl::internal::NaturalTableMember<Storage_, int64_t>{39,
-                                                              &Storage_::v39},
-      ::fidl::internal::NaturalTableMember<Storage_, int64_t>{40,
-                                                              &Storage_::v40},
-      ::fidl::internal::NaturalTableMember<Storage_, int64_t>{41,
-                                                              &Storage_::v41},
-      ::fidl::internal::NaturalTableMember<Storage_, int64_t>{42,
-                                                              &Storage_::v42},
-      ::fidl::internal::NaturalTableMember<Storage_, int64_t>{43,
-                                                              &Storage_::v43},
-      ::fidl::internal::NaturalTableMember<Storage_, int64_t>{44,
-                                                              &Storage_::v44},
-      ::fidl::internal::NaturalTableMember<Storage_, int64_t>{45,
-                                                              &Storage_::v45},
-      ::fidl::internal::NaturalTableMember<Storage_, int64_t>{46,
-                                                              &Storage_::v46},
-      ::fidl::internal::NaturalTableMember<Storage_, int64_t>{47,
-                                                              &Storage_::v47},
-      ::fidl::internal::NaturalTableMember<Storage_, int64_t>{48,
-                                                              &Storage_::v48},
-      ::fidl::internal::NaturalTableMember<Storage_, int64_t>{49,
-                                                              &Storage_::v49},
-      ::fidl::internal::NaturalTableMember<Storage_, int64_t>{50,
-                                                              &Storage_::v50},
-      ::fidl::internal::NaturalTableMember<Storage_, int64_t>{51,
-                                                              &Storage_::v51},
-      ::fidl::internal::NaturalTableMember<Storage_, int64_t>{52,
-                                                              &Storage_::v52},
-      ::fidl::internal::NaturalTableMember<Storage_, int64_t>{53,
-                                                              &Storage_::v53},
-      ::fidl::internal::NaturalTableMember<Storage_, int64_t>{54,
-                                                              &Storage_::v54},
-      ::fidl::internal::NaturalTableMember<Storage_, int64_t>{55,
-                                                              &Storage_::v55},
-      ::fidl::internal::NaturalTableMember<Storage_, int64_t>{56,
-                                                              &Storage_::v56},
-      ::fidl::internal::NaturalTableMember<Storage_, int64_t>{57,
-                                                              &Storage_::v57},
-      ::fidl::internal::NaturalTableMember<Storage_, int64_t>{58,
-                                                              &Storage_::v58},
-      ::fidl::internal::NaturalTableMember<Storage_, int64_t>{59,
-                                                              &Storage_::v59},
-      ::fidl::internal::NaturalTableMember<Storage_, int64_t>{60,
-                                                              &Storage_::v60},
-      ::fidl::internal::NaturalTableMember<Storage_, int64_t>{61,
-                                                              &Storage_::v61},
-      ::fidl::internal::NaturalTableMember<Storage_, int64_t>{62,
-                                                              &Storage_::v62},
-      ::fidl::internal::NaturalTableMember<Storage_, int64_t>{63,
-                                                              &Storage_::v63},
-      ::fidl::internal::NaturalTableMember<Storage_,
-                                           ::test_table::ExtensionTable>{
-          64, &Storage_::v64});
+      ::fidl::internal::NaturalTableMember<
+          Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{
+          1, &Storage_::v1},
+      ::fidl::internal::NaturalTableMember<
+          Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{
+          2, &Storage_::v2},
+      ::fidl::internal::NaturalTableMember<
+          Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{
+          3, &Storage_::v3},
+      ::fidl::internal::NaturalTableMember<
+          Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{
+          4, &Storage_::v4},
+      ::fidl::internal::NaturalTableMember<
+          Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{
+          5, &Storage_::v5},
+      ::fidl::internal::NaturalTableMember<
+          Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{
+          6, &Storage_::v6},
+      ::fidl::internal::NaturalTableMember<
+          Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{
+          7, &Storage_::v7},
+      ::fidl::internal::NaturalTableMember<
+          Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{
+          8, &Storage_::v8},
+      ::fidl::internal::NaturalTableMember<
+          Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{
+          9, &Storage_::v9},
+      ::fidl::internal::NaturalTableMember<
+          Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{
+          10, &Storage_::v10},
+      ::fidl::internal::NaturalTableMember<
+          Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{
+          11, &Storage_::v11},
+      ::fidl::internal::NaturalTableMember<
+          Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{
+          12, &Storage_::v12},
+      ::fidl::internal::NaturalTableMember<
+          Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{
+          13, &Storage_::v13},
+      ::fidl::internal::NaturalTableMember<
+          Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{
+          14, &Storage_::v14},
+      ::fidl::internal::NaturalTableMember<
+          Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{
+          15, &Storage_::v15},
+      ::fidl::internal::NaturalTableMember<
+          Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{
+          16, &Storage_::v16},
+      ::fidl::internal::NaturalTableMember<
+          Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{
+          17, &Storage_::v17},
+      ::fidl::internal::NaturalTableMember<
+          Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{
+          18, &Storage_::v18},
+      ::fidl::internal::NaturalTableMember<
+          Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{
+          19, &Storage_::v19},
+      ::fidl::internal::NaturalTableMember<
+          Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{
+          20, &Storage_::v20},
+      ::fidl::internal::NaturalTableMember<
+          Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{
+          21, &Storage_::v21},
+      ::fidl::internal::NaturalTableMember<
+          Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{
+          22, &Storage_::v22},
+      ::fidl::internal::NaturalTableMember<
+          Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{
+          23, &Storage_::v23},
+      ::fidl::internal::NaturalTableMember<
+          Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{
+          24, &Storage_::v24},
+      ::fidl::internal::NaturalTableMember<
+          Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{
+          25, &Storage_::v25},
+      ::fidl::internal::NaturalTableMember<
+          Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{
+          26, &Storage_::v26},
+      ::fidl::internal::NaturalTableMember<
+          Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{
+          27, &Storage_::v27},
+      ::fidl::internal::NaturalTableMember<
+          Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{
+          28, &Storage_::v28},
+      ::fidl::internal::NaturalTableMember<
+          Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{
+          29, &Storage_::v29},
+      ::fidl::internal::NaturalTableMember<
+          Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{
+          30, &Storage_::v30},
+      ::fidl::internal::NaturalTableMember<
+          Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{
+          31, &Storage_::v31},
+      ::fidl::internal::NaturalTableMember<
+          Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{
+          32, &Storage_::v32},
+      ::fidl::internal::NaturalTableMember<
+          Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{
+          33, &Storage_::v33},
+      ::fidl::internal::NaturalTableMember<
+          Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{
+          34, &Storage_::v34},
+      ::fidl::internal::NaturalTableMember<
+          Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{
+          35, &Storage_::v35},
+      ::fidl::internal::NaturalTableMember<
+          Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{
+          36, &Storage_::v36},
+      ::fidl::internal::NaturalTableMember<
+          Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{
+          37, &Storage_::v37},
+      ::fidl::internal::NaturalTableMember<
+          Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{
+          38, &Storage_::v38},
+      ::fidl::internal::NaturalTableMember<
+          Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{
+          39, &Storage_::v39},
+      ::fidl::internal::NaturalTableMember<
+          Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{
+          40, &Storage_::v40},
+      ::fidl::internal::NaturalTableMember<
+          Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{
+          41, &Storage_::v41},
+      ::fidl::internal::NaturalTableMember<
+          Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{
+          42, &Storage_::v42},
+      ::fidl::internal::NaturalTableMember<
+          Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{
+          43, &Storage_::v43},
+      ::fidl::internal::NaturalTableMember<
+          Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{
+          44, &Storage_::v44},
+      ::fidl::internal::NaturalTableMember<
+          Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{
+          45, &Storage_::v45},
+      ::fidl::internal::NaturalTableMember<
+          Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{
+          46, &Storage_::v46},
+      ::fidl::internal::NaturalTableMember<
+          Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{
+          47, &Storage_::v47},
+      ::fidl::internal::NaturalTableMember<
+          Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{
+          48, &Storage_::v48},
+      ::fidl::internal::NaturalTableMember<
+          Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{
+          49, &Storage_::v49},
+      ::fidl::internal::NaturalTableMember<
+          Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{
+          50, &Storage_::v50},
+      ::fidl::internal::NaturalTableMember<
+          Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{
+          51, &Storage_::v51},
+      ::fidl::internal::NaturalTableMember<
+          Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{
+          52, &Storage_::v52},
+      ::fidl::internal::NaturalTableMember<
+          Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{
+          53, &Storage_::v53},
+      ::fidl::internal::NaturalTableMember<
+          Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{
+          54, &Storage_::v54},
+      ::fidl::internal::NaturalTableMember<
+          Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{
+          55, &Storage_::v55},
+      ::fidl::internal::NaturalTableMember<
+          Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{
+          56, &Storage_::v56},
+      ::fidl::internal::NaturalTableMember<
+          Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{
+          57, &Storage_::v57},
+      ::fidl::internal::NaturalTableMember<
+          Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{
+          58, &Storage_::v58},
+      ::fidl::internal::NaturalTableMember<
+          Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{
+          59, &Storage_::v59},
+      ::fidl::internal::NaturalTableMember<
+          Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{
+          60, &Storage_::v60},
+      ::fidl::internal::NaturalTableMember<
+          Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{
+          61, &Storage_::v61},
+      ::fidl::internal::NaturalTableMember<
+          Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{
+          62, &Storage_::v62},
+      ::fidl::internal::NaturalTableMember<
+          Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{
+          63, &Storage_::v63},
+      ::fidl::internal::NaturalTableMember<
+          Storage_, ::test_table::ExtensionTable,
+          fidl::internal::NaturalCodingConstraintEmpty>{64, &Storage_::v64});
 };
 
 extern "C" const fidl_type_t test_table_EmptyTableTable;
@@ -843,7 +935,9 @@ template <>
 struct IsFidlType<::test_table::TableWithAttributes> : public std::true_type {};
 
 template <>
-struct internal::NaturalCodingTraits<::test_table::TableWithAttributes>
+struct internal::NaturalCodingTraits<
+    ::test_table::TableWithAttributes,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     : public ::fidl::internal::NaturalTableCodingTraits<
           ::test_table::TableWithAttributes> {};
 
@@ -851,7 +945,8 @@ template <>
 struct IsFidlType<::test_table::SimpleTable> : public std::true_type {};
 
 template <>
-struct internal::NaturalCodingTraits<::test_table::SimpleTable>
+struct internal::NaturalCodingTraits<
+    ::test_table::SimpleTable, ::fidl::internal::NaturalCodingConstraintEmpty>
     : public ::fidl::internal::NaturalTableCodingTraits<
           ::test_table::SimpleTable> {};
 
@@ -859,7 +954,9 @@ template <>
 struct IsFidlType<::test_table::ReverseOrdinalTable> : public std::true_type {};
 
 template <>
-struct internal::NaturalCodingTraits<::test_table::ReverseOrdinalTable>
+struct internal::NaturalCodingTraits<
+    ::test_table::ReverseOrdinalTable,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     : public ::fidl::internal::NaturalTableCodingTraits<
           ::test_table::ReverseOrdinalTable> {};
 
@@ -867,7 +964,9 @@ template <>
 struct IsFidlType<::test_table::OlderSimpleTable> : public std::true_type {};
 
 template <>
-struct internal::NaturalCodingTraits<::test_table::OlderSimpleTable>
+struct internal::NaturalCodingTraits<
+    ::test_table::OlderSimpleTable,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     : public ::fidl::internal::NaturalTableCodingTraits<
           ::test_table::OlderSimpleTable> {};
 
@@ -875,7 +974,9 @@ template <>
 struct IsFidlType<::test_table::NewerSimpleTable> : public std::true_type {};
 
 template <>
-struct internal::NaturalCodingTraits<::test_table::NewerSimpleTable>
+struct internal::NaturalCodingTraits<
+    ::test_table::NewerSimpleTable,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     : public ::fidl::internal::NaturalTableCodingTraits<
           ::test_table::NewerSimpleTable> {};
 
@@ -883,7 +984,9 @@ template <>
 struct IsFidlType<::test_table::ExtensionTable> : public std::true_type {};
 
 template <>
-struct internal::NaturalCodingTraits<::test_table::ExtensionTable>
+struct internal::NaturalCodingTraits<
+    ::test_table::ExtensionTable,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     : public ::fidl::internal::NaturalTableCodingTraits<
           ::test_table::ExtensionTable> {};
 
@@ -892,7 +995,9 @@ struct IsFidlType<::test_table::SixtyFourOrdinalTable> : public std::true_type {
 };
 
 template <>
-struct internal::NaturalCodingTraits<::test_table::SixtyFourOrdinalTable>
+struct internal::NaturalCodingTraits<
+    ::test_table::SixtyFourOrdinalTable,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     : public ::fidl::internal::NaturalTableCodingTraits<
           ::test_table::SixtyFourOrdinalTable> {};
 
@@ -900,7 +1005,8 @@ template <>
 struct IsFidlType<::test_table::EmptyTable> : public std::true_type {};
 
 template <>
-struct internal::NaturalCodingTraits<::test_table::EmptyTable>
+struct internal::NaturalCodingTraits<
+    ::test_table::EmptyTable, ::fidl::internal::NaturalCodingConstraintEmpty>
     : public ::fidl::internal::NaturalTableCodingTraits<
           ::test_table::EmptyTable> {};
 

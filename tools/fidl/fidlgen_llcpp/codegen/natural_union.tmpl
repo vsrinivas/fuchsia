@@ -84,21 +84,13 @@ class {{ .Name }} final {
     std::shared_ptr<Storage_> CloneStorage_() const;
   {{- end }}
   friend struct ::fidl::internal::NaturalUnionCodingTraits<{{ . }}>;
-  static constexpr std::array<std::optional<::fidl::internal::NaturalHandleInformation>, {{ Add 1 (len .Members) }}> kMembers = {
-    std::nullopt
-    {{- range .Members }}
+  static constexpr auto kMembers = std::make_tuple(
+    ::fidl::internal::NaturalUnionMember<::fidl::internal::NaturalCodingConstraintEmpty>()
+    {{- range $i, $m := .Members }}
       ,
-      {{- if .HandleInformation -}}
-        std::make_optional<::fidl::internal::NaturalHandleInformation>({
-          .object_type = {{ .HandleInformation.ObjectType }},
-          .rights = {{ .HandleInformation.Rights }}
-        })
-      {{- else }}
-        std::nullopt
-      {{- end -}}
+        ::fidl::internal::NaturalUnionMember<{{ $m.Constraint }}>()
     {{- end -}}
-  };
-
+  );
 
   explicit {{ .Name }}(std::shared_ptr<Storage_> storage) : storage_(std::move(storage)) {}
 
@@ -145,7 +137,7 @@ class {{ .Name }} final {
   struct IsUnion<{{ . }}> : public std::true_type {};
 
   template <>
-  struct internal::NaturalCodingTraits<{{ . }}> final
+  struct internal::NaturalCodingTraits<{{ . }}, ::fidl::internal::NaturalCodingConstraintEmpty> final
     : public ::fidl::internal::NaturalUnionCodingTraits<{{ . }}> {};
 
 {{- end }}

@@ -165,8 +165,7 @@ class OnlyLlcpp {
  public:
   OnlyLlcpp()
       : ordinal_(::test_bindingsdenylist::wire::OnlyLlcpp::Ordinal::Invalid),
-        envelope_ {}
-  {}
+        envelope_{} {}
 
   OnlyLlcpp(const OnlyLlcpp&) = default;
   OnlyLlcpp& operator=(const OnlyLlcpp&) = default;
@@ -234,8 +233,7 @@ class DenyEachBindingOnlyDenySyzkallerResult {
   DenyEachBindingOnlyDenySyzkallerResult()
       : ordinal_(::test_bindingsdenylist::wire::
                      DenyEachBindingOnlyDenySyzkallerResult::Ordinal::Invalid),
-        envelope_ {}
-  {}
+        envelope_{} {}
 
   DenyEachBindingOnlyDenySyzkallerResult(
       const DenyEachBindingOnlyDenySyzkallerResult&) = default;
@@ -364,8 +362,7 @@ class DenyEachBindingOnlyDenyRustResult {
   DenyEachBindingOnlyDenyRustResult()
       : ordinal_(::test_bindingsdenylist::wire::
                      DenyEachBindingOnlyDenyRustResult::Ordinal::Invalid),
-        envelope_ {}
-  {}
+        envelope_{} {}
 
   DenyEachBindingOnlyDenyRustResult(const DenyEachBindingOnlyDenyRustResult&) =
       default;
@@ -488,8 +485,7 @@ class DenyEachBindingOnlyDenyLibfuzzerResult {
   DenyEachBindingOnlyDenyLibfuzzerResult()
       : ordinal_(::test_bindingsdenylist::wire::
                      DenyEachBindingOnlyDenyLibfuzzerResult::Ordinal::Invalid),
-        envelope_ {}
-  {}
+        envelope_{} {}
 
   DenyEachBindingOnlyDenyLibfuzzerResult(
       const DenyEachBindingOnlyDenyLibfuzzerResult&) = default;
@@ -618,8 +614,7 @@ class DenyEachBindingOnlyDenyGoResult {
   DenyEachBindingOnlyDenyGoResult()
       : ordinal_(::test_bindingsdenylist::wire::
                      DenyEachBindingOnlyDenyGoResult::Ordinal::Invalid),
-        envelope_ {}
-  {}
+        envelope_{} {}
 
   DenyEachBindingOnlyDenyGoResult(const DenyEachBindingOnlyDenyGoResult&) =
       default;
@@ -736,8 +731,7 @@ class DenyEachBindingOnlyDenyDartResult {
   DenyEachBindingOnlyDenyDartResult()
       : ordinal_(::test_bindingsdenylist::wire::
                      DenyEachBindingOnlyDenyDartResult::Ordinal::Invalid),
-        envelope_ {}
-  {}
+        envelope_{} {}
 
   DenyEachBindingOnlyDenyDartResult(const DenyEachBindingOnlyDenyDartResult&) =
       default;

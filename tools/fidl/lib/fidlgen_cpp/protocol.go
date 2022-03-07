@@ -717,6 +717,7 @@ type Parameter struct {
 	OffsetV1          int
 	OffsetV2          int
 	HandleInformation *HandleInformation
+	Constraint        string
 }
 
 func (p Parameter) NameAndType() (string, Type) {

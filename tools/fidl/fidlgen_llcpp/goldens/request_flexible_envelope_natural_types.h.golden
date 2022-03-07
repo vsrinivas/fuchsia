@@ -92,9 +92,13 @@ class StrictFoo final {
   std::shared_ptr<Storage_> CloneStorage_() const;
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_requestflexibleenvelope::StrictFoo>;
-  static constexpr std::array<
-      std::optional<::fidl::internal::NaturalHandleInformation>, 3>
-      kMembers = {std::nullopt, std::nullopt, std::nullopt};
+  static constexpr auto kMembers =
+      std::make_tuple(::fidl::internal::NaturalUnionMember<
+                          ::fidl::internal::NaturalCodingConstraintEmpty>(),
+                      ::fidl::internal::NaturalUnionMember<
+                          fidl::internal::NaturalCodingConstraintEmpty>(),
+                      ::fidl::internal::NaturalUnionMember<
+                          fidl::internal::NaturalCodingConstraintEmpty>());
 
   explicit StrictFoo(std::shared_ptr<Storage_> storage)
       : storage_(std::move(storage)) {}
@@ -188,10 +192,10 @@ class ProtocolRequestStrictResponseFlexibleRequest final {
   friend struct ::fidl::internal::MemberVisitor<
       ::test_requestflexibleenvelope::
           ProtocolRequestStrictResponseFlexibleRequest>;
-  static constexpr auto kMembers =
-      std::make_tuple(::fidl::internal::NaturalStructMember<
-                      Storage_, ::test_requestflexibleenvelope::StrictFoo>{
-          &Storage_::s, 0, 0});
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalStructMember<
+          Storage_, ::test_requestflexibleenvelope::StrictFoo,
+          fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::s, 0, 0});
 };
 
 extern "C" const fidl_type_t
@@ -260,10 +264,10 @@ class ProtocolRequestFlexibleResponseStrictTopResponse final {
   friend struct ::fidl::internal::MemberVisitor<
       ::test_requestflexibleenvelope::
           ProtocolRequestFlexibleResponseStrictTopResponse>;
-  static constexpr auto kMembers =
-      std::make_tuple(::fidl::internal::NaturalStructMember<
-                      Storage_, ::test_requestflexibleenvelope::StrictFoo>{
-          &Storage_::f, 0, 0});
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalStructMember<
+          Storage_, ::test_requestflexibleenvelope::StrictFoo,
+          fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::f, 0, 0});
 };
 
 extern "C" const fidl_type_t test_requestflexibleenvelope_FlexibleFooTable;
@@ -330,9 +334,13 @@ class FlexibleFoo final {
   std::shared_ptr<Storage_> CloneStorage_() const;
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_requestflexibleenvelope::FlexibleFoo>;
-  static constexpr std::array<
-      std::optional<::fidl::internal::NaturalHandleInformation>, 3>
-      kMembers = {std::nullopt, std::nullopt, std::nullopt};
+  static constexpr auto kMembers =
+      std::make_tuple(::fidl::internal::NaturalUnionMember<
+                          ::fidl::internal::NaturalCodingConstraintEmpty>(),
+                      ::fidl::internal::NaturalUnionMember<
+                          fidl::internal::NaturalCodingConstraintEmpty>(),
+                      ::fidl::internal::NaturalUnionMember<
+                          fidl::internal::NaturalCodingConstraintEmpty>());
 
   explicit FlexibleFoo(std::shared_ptr<Storage_> storage)
       : storage_(std::move(storage)) {}
@@ -428,10 +436,10 @@ class ProtocolRequestStrictResponseFlexibleTopResponse final {
   friend struct ::fidl::internal::MemberVisitor<
       ::test_requestflexibleenvelope::
           ProtocolRequestStrictResponseFlexibleTopResponse>;
-  static constexpr auto kMembers =
-      std::make_tuple(::fidl::internal::NaturalStructMember<
-                      Storage_, ::test_requestflexibleenvelope::FlexibleFoo>{
-          &Storage_::f, 0, 0});
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalStructMember<
+          Storage_, ::test_requestflexibleenvelope::FlexibleFoo,
+          fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::f, 0, 0});
 };
 
 extern "C" const fidl_type_t
@@ -499,10 +507,10 @@ class ProtocolRequestFlexibleResponseStrictRequest final {
   friend struct ::fidl::internal::MemberVisitor<
       ::test_requestflexibleenvelope::
           ProtocolRequestFlexibleResponseStrictRequest>;
-  static constexpr auto kMembers =
-      std::make_tuple(::fidl::internal::NaturalStructMember<
-                      Storage_, ::test_requestflexibleenvelope::FlexibleFoo>{
-          &Storage_::s, 0, 0});
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalStructMember<
+          Storage_, ::test_requestflexibleenvelope::FlexibleFoo,
+          fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::s, 0, 0});
 };
 
 }  // namespace test_requestflexibleenvelope
@@ -530,7 +538,8 @@ struct ::fidl::internal::TypeTraits<
 template <>
 struct internal::NaturalCodingTraits<
     ::test_requestflexibleenvelope::
-        ProtocolRequestStrictResponseFlexibleRequest>
+        ProtocolRequestStrictResponseFlexibleRequest,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_requestflexibleenvelope::
                     ProtocolRequestStrictResponseFlexibleRequest,
@@ -576,7 +585,8 @@ struct ::fidl::internal::TypeTraits<
 template <>
 struct internal::NaturalCodingTraits<
     ::test_requestflexibleenvelope::
-        ProtocolRequestFlexibleResponseStrictTopResponse>
+        ProtocolRequestFlexibleResponseStrictTopResponse,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_requestflexibleenvelope::
                     ProtocolRequestFlexibleResponseStrictTopResponse,
@@ -622,7 +632,8 @@ struct ::fidl::internal::TypeTraits<
 template <>
 struct internal::NaturalCodingTraits<
     ::test_requestflexibleenvelope::
-        ProtocolRequestStrictResponseFlexibleTopResponse>
+        ProtocolRequestStrictResponseFlexibleTopResponse,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_requestflexibleenvelope::
                     ProtocolRequestStrictResponseFlexibleTopResponse,
@@ -668,7 +679,8 @@ struct ::fidl::internal::TypeTraits<
 template <>
 struct internal::NaturalCodingTraits<
     ::test_requestflexibleenvelope::
-        ProtocolRequestFlexibleResponseStrictRequest>
+        ProtocolRequestFlexibleResponseStrictRequest,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_requestflexibleenvelope::
                     ProtocolRequestFlexibleResponseStrictRequest,
@@ -700,7 +712,9 @@ struct IsUnion<::test_requestflexibleenvelope::StrictFoo>
     : public std::true_type {};
 
 template <>
-struct internal::NaturalCodingTraits<::test_requestflexibleenvelope::StrictFoo>
+struct internal::NaturalCodingTraits<
+    ::test_requestflexibleenvelope::StrictFoo,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalUnionCodingTraits<
                 ::test_requestflexibleenvelope::StrictFoo> {};
 
@@ -713,7 +727,8 @@ struct IsUnion<::test_requestflexibleenvelope::FlexibleFoo>
 
 template <>
 struct internal::NaturalCodingTraits<
-    ::test_requestflexibleenvelope::FlexibleFoo>
+    ::test_requestflexibleenvelope::FlexibleFoo,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalUnionCodingTraits<
                 ::test_requestflexibleenvelope::FlexibleFoo> {};
 

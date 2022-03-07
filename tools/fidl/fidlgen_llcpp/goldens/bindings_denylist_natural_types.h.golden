@@ -116,9 +116,11 @@ class OnlyLlcpp final {
   std::shared_ptr<Storage_> CloneStorage_() const;
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_bindingsdenylist::OnlyLlcpp>;
-  static constexpr std::array<
-      std::optional<::fidl::internal::NaturalHandleInformation>, 2>
-      kMembers = {std::nullopt, std::nullopt};
+  static constexpr auto kMembers =
+      std::make_tuple(::fidl::internal::NaturalUnionMember<
+                          ::fidl::internal::NaturalCodingConstraintEmpty>(),
+                      ::fidl::internal::NaturalUnionMember<
+                          fidl::internal::NaturalCodingConstraintEmpty>());
 
   explicit OnlyLlcpp(std::shared_ptr<Storage_> storage)
       : storage_(std::move(storage)) {}
@@ -200,8 +202,9 @@ class MemberOnlyAppearsInImportingLibrary final {
       ::test_bindingsdenylist::MemberOnlyAppearsInImportingLibrary, 1, 1>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_bindingsdenylist::MemberOnlyAppearsInImportingLibrary>;
-  static constexpr auto kMembers =
-      std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, bool>{
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalStructMember<
+          Storage_, bool, fidl::internal::NaturalCodingConstraintEmpty>{
           &Storage_::a, 0, 0});
 };
 
@@ -272,7 +275,8 @@ class OnlyAppearsInImportingLibrary final {
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<
           Storage_,
-          ::test_bindingsdenylist::MemberOnlyAppearsInImportingLibrary>{
+          ::test_bindingsdenylist::MemberOnlyAppearsInImportingLibrary,
+          fidl::internal::NaturalCodingConstraintEmpty>{
           &Storage_::member_only_appears_in_importing_library, 0, 0});
 };
 
@@ -334,8 +338,9 @@ class DenyEachBinding_OnlyDenySyzkaller_Response final {
       4>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_bindingsdenylist::DenyEachBinding_OnlyDenySyzkaller_Response>;
-  static constexpr auto kMembers =
-      std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, int32_t>{
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalStructMember<
+          Storage_, int32_t, fidl::internal::NaturalCodingConstraintEmpty>{
           &Storage_::b, 0, 0});
 };
 
@@ -417,9 +422,13 @@ class DenyEachBinding_OnlyDenySyzkaller_Result final {
   std::shared_ptr<Storage_> CloneStorage_() const;
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_bindingsdenylist::DenyEachBinding_OnlyDenySyzkaller_Result>;
-  static constexpr std::array<
-      std::optional<::fidl::internal::NaturalHandleInformation>, 3>
-      kMembers = {std::nullopt, std::nullopt, std::nullopt};
+  static constexpr auto kMembers =
+      std::make_tuple(::fidl::internal::NaturalUnionMember<
+                          ::fidl::internal::NaturalCodingConstraintEmpty>(),
+                      ::fidl::internal::NaturalUnionMember<
+                          fidl::internal::NaturalCodingConstraintEmpty>(),
+                      ::fidl::internal::NaturalUnionMember<
+                          fidl::internal::NaturalCodingConstraintEmpty>());
 
   explicit DenyEachBinding_OnlyDenySyzkaller_Result(
       std::shared_ptr<Storage_> storage)
@@ -524,8 +533,9 @@ class DenyEachBindingOnlyDenySyzkallerTopResponse final {
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<
           Storage_,
-          ::test_bindingsdenylist::DenyEachBinding_OnlyDenySyzkaller_Result>{
-          &Storage_::result, 0, 0});
+          ::test_bindingsdenylist::DenyEachBinding_OnlyDenySyzkaller_Result,
+          fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::result, 0,
+                                                        0});
 };
 
 extern "C" const fidl_type_t
@@ -585,8 +595,9 @@ class DenyEachBinding_OnlyDenyRust_Response final {
       ::test_bindingsdenylist::DenyEachBinding_OnlyDenyRust_Response, 4, 4>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_bindingsdenylist::DenyEachBinding_OnlyDenyRust_Response>;
-  static constexpr auto kMembers =
-      std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, int32_t>{
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalStructMember<
+          Storage_, int32_t, fidl::internal::NaturalCodingConstraintEmpty>{
           &Storage_::b, 0, 0});
 };
 
@@ -665,9 +676,13 @@ class DenyEachBinding_OnlyDenyRust_Result final {
   std::shared_ptr<Storage_> CloneStorage_() const;
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_bindingsdenylist::DenyEachBinding_OnlyDenyRust_Result>;
-  static constexpr std::array<
-      std::optional<::fidl::internal::NaturalHandleInformation>, 3>
-      kMembers = {std::nullopt, std::nullopt, std::nullopt};
+  static constexpr auto kMembers =
+      std::make_tuple(::fidl::internal::NaturalUnionMember<
+                          ::fidl::internal::NaturalCodingConstraintEmpty>(),
+                      ::fidl::internal::NaturalUnionMember<
+                          fidl::internal::NaturalCodingConstraintEmpty>(),
+                      ::fidl::internal::NaturalUnionMember<
+                          fidl::internal::NaturalCodingConstraintEmpty>());
 
   explicit DenyEachBinding_OnlyDenyRust_Result(
       std::shared_ptr<Storage_> storage)
@@ -770,8 +785,9 @@ class DenyEachBindingOnlyDenyRustTopResponse final {
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<
           Storage_,
-          ::test_bindingsdenylist::DenyEachBinding_OnlyDenyRust_Result>{
-          &Storage_::result, 0, 0});
+          ::test_bindingsdenylist::DenyEachBinding_OnlyDenyRust_Result,
+          fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::result, 0,
+                                                        0});
 };
 
 extern "C" const fidl_type_t
@@ -832,8 +848,9 @@ class DenyEachBinding_OnlyDenyLibfuzzer_Response final {
       4>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_bindingsdenylist::DenyEachBinding_OnlyDenyLibfuzzer_Response>;
-  static constexpr auto kMembers =
-      std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, int32_t>{
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalStructMember<
+          Storage_, int32_t, fidl::internal::NaturalCodingConstraintEmpty>{
           &Storage_::b, 0, 0});
 };
 
@@ -915,9 +932,13 @@ class DenyEachBinding_OnlyDenyLibfuzzer_Result final {
   std::shared_ptr<Storage_> CloneStorage_() const;
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_bindingsdenylist::DenyEachBinding_OnlyDenyLibfuzzer_Result>;
-  static constexpr std::array<
-      std::optional<::fidl::internal::NaturalHandleInformation>, 3>
-      kMembers = {std::nullopt, std::nullopt, std::nullopt};
+  static constexpr auto kMembers =
+      std::make_tuple(::fidl::internal::NaturalUnionMember<
+                          ::fidl::internal::NaturalCodingConstraintEmpty>(),
+                      ::fidl::internal::NaturalUnionMember<
+                          fidl::internal::NaturalCodingConstraintEmpty>(),
+                      ::fidl::internal::NaturalUnionMember<
+                          fidl::internal::NaturalCodingConstraintEmpty>());
 
   explicit DenyEachBinding_OnlyDenyLibfuzzer_Result(
       std::shared_ptr<Storage_> storage)
@@ -1022,8 +1043,9 @@ class DenyEachBindingOnlyDenyLibfuzzerTopResponse final {
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<
           Storage_,
-          ::test_bindingsdenylist::DenyEachBinding_OnlyDenyLibfuzzer_Result>{
-          &Storage_::result, 0, 0});
+          ::test_bindingsdenylist::DenyEachBinding_OnlyDenyLibfuzzer_Result,
+          fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::result, 0,
+                                                        0});
 };
 
 extern "C" const fidl_type_t
@@ -1083,8 +1105,9 @@ class DenyEachBinding_OnlyDenyGo_Response final {
       ::test_bindingsdenylist::DenyEachBinding_OnlyDenyGo_Response, 4, 4>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_bindingsdenylist::DenyEachBinding_OnlyDenyGo_Response>;
-  static constexpr auto kMembers =
-      std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, int32_t>{
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalStructMember<
+          Storage_, int32_t, fidl::internal::NaturalCodingConstraintEmpty>{
           &Storage_::b, 0, 0});
 };
 
@@ -1163,9 +1186,13 @@ class DenyEachBinding_OnlyDenyGo_Result final {
   std::shared_ptr<Storage_> CloneStorage_() const;
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_bindingsdenylist::DenyEachBinding_OnlyDenyGo_Result>;
-  static constexpr std::array<
-      std::optional<::fidl::internal::NaturalHandleInformation>, 3>
-      kMembers = {std::nullopt, std::nullopt, std::nullopt};
+  static constexpr auto kMembers =
+      std::make_tuple(::fidl::internal::NaturalUnionMember<
+                          ::fidl::internal::NaturalCodingConstraintEmpty>(),
+                      ::fidl::internal::NaturalUnionMember<
+                          fidl::internal::NaturalCodingConstraintEmpty>(),
+                      ::fidl::internal::NaturalUnionMember<
+                          fidl::internal::NaturalCodingConstraintEmpty>());
 
   explicit DenyEachBinding_OnlyDenyGo_Result(std::shared_ptr<Storage_> storage)
       : storage_(std::move(storage)) {}
@@ -1266,8 +1293,9 @@ class DenyEachBindingOnlyDenyGoTopResponse final {
       ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoTopResponse>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<
-          Storage_, ::test_bindingsdenylist::DenyEachBinding_OnlyDenyGo_Result>{
-          &Storage_::result, 0, 0});
+          Storage_, ::test_bindingsdenylist::DenyEachBinding_OnlyDenyGo_Result,
+          fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::result, 0,
+                                                        0});
 };
 
 extern "C" const fidl_type_t
@@ -1327,8 +1355,9 @@ class DenyEachBinding_OnlyDenyDart_Response final {
       ::test_bindingsdenylist::DenyEachBinding_OnlyDenyDart_Response, 4, 4>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_bindingsdenylist::DenyEachBinding_OnlyDenyDart_Response>;
-  static constexpr auto kMembers =
-      std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, int32_t>{
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalStructMember<
+          Storage_, int32_t, fidl::internal::NaturalCodingConstraintEmpty>{
           &Storage_::b, 0, 0});
 };
 
@@ -1407,9 +1436,13 @@ class DenyEachBinding_OnlyDenyDart_Result final {
   std::shared_ptr<Storage_> CloneStorage_() const;
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_bindingsdenylist::DenyEachBinding_OnlyDenyDart_Result>;
-  static constexpr std::array<
-      std::optional<::fidl::internal::NaturalHandleInformation>, 3>
-      kMembers = {std::nullopt, std::nullopt, std::nullopt};
+  static constexpr auto kMembers =
+      std::make_tuple(::fidl::internal::NaturalUnionMember<
+                          ::fidl::internal::NaturalCodingConstraintEmpty>(),
+                      ::fidl::internal::NaturalUnionMember<
+                          fidl::internal::NaturalCodingConstraintEmpty>(),
+                      ::fidl::internal::NaturalUnionMember<
+                          fidl::internal::NaturalCodingConstraintEmpty>());
 
   explicit DenyEachBinding_OnlyDenyDart_Result(
       std::shared_ptr<Storage_> storage)
@@ -1512,8 +1545,9 @@ class DenyEachBindingOnlyDenyDartTopResponse final {
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<
           Storage_,
-          ::test_bindingsdenylist::DenyEachBinding_OnlyDenyDart_Result>{
-          &Storage_::result, 0, 0});
+          ::test_bindingsdenylist::DenyEachBinding_OnlyDenyDart_Result,
+          fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::result, 0,
+                                                        0});
 };
 
 extern "C" const fidl_type_t
@@ -1573,8 +1607,9 @@ class DenyEachBindingOnlyDenySyzkallerRequest final {
       ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerRequest, 1, 1>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerRequest>;
-  static constexpr auto kMembers =
-      std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, bool>{
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalStructMember<
+          Storage_, bool, fidl::internal::NaturalCodingConstraintEmpty>{
           &Storage_::a, 0, 0});
 };
 
@@ -1635,8 +1670,9 @@ class DenyEachBindingOnlyDenyRustRequest final {
       ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustRequest, 1, 1>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustRequest>;
-  static constexpr auto kMembers =
-      std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, bool>{
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalStructMember<
+          Storage_, bool, fidl::internal::NaturalCodingConstraintEmpty>{
           &Storage_::a, 0, 0});
 };
 
@@ -1697,8 +1733,9 @@ class DenyEachBindingOnlyDenyLibfuzzerRequest final {
       ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerRequest, 1, 1>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerRequest>;
-  static constexpr auto kMembers =
-      std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, bool>{
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalStructMember<
+          Storage_, bool, fidl::internal::NaturalCodingConstraintEmpty>{
           &Storage_::a, 0, 0});
 };
 
@@ -1759,8 +1796,9 @@ class DenyEachBindingOnlyDenyGoRequest final {
       ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoRequest, 1, 1>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoRequest>;
-  static constexpr auto kMembers =
-      std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, bool>{
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalStructMember<
+          Storage_, bool, fidl::internal::NaturalCodingConstraintEmpty>{
           &Storage_::a, 0, 0});
 };
 
@@ -1821,8 +1859,9 @@ class DenyEachBindingOnlyDenyDartRequest final {
       ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartRequest, 1, 1>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartRequest>;
-  static constexpr auto kMembers =
-      std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, bool>{
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalStructMember<
+          Storage_, bool, fidl::internal::NaturalCodingConstraintEmpty>{
           &Storage_::a, 0, 0});
 };
 
@@ -1850,7 +1889,8 @@ struct ::fidl::internal::TypeTraits<
 
 template <>
 struct internal::NaturalCodingTraits<
-    ::test_bindingsdenylist::MemberOnlyAppearsInImportingLibrary>
+    ::test_bindingsdenylist::MemberOnlyAppearsInImportingLibrary,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     final
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_bindingsdenylist::MemberOnlyAppearsInImportingLibrary, 1, 1> {
@@ -1885,7 +1925,8 @@ struct ::fidl::internal::TypeTraits<
 
 template <>
 struct internal::NaturalCodingTraits<
-    ::test_bindingsdenylist::OnlyAppearsInImportingLibrary>
+    ::test_bindingsdenylist::OnlyAppearsInImportingLibrary,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_bindingsdenylist::OnlyAppearsInImportingLibrary, 1, 1> {
 };
@@ -1922,7 +1963,8 @@ struct ::fidl::internal::TypeTraits<
 
 template <>
 struct internal::NaturalCodingTraits<
-    ::test_bindingsdenylist::DenyEachBinding_OnlyDenySyzkaller_Response>
+    ::test_bindingsdenylist::DenyEachBinding_OnlyDenySyzkaller_Response,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     final
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_bindingsdenylist::DenyEachBinding_OnlyDenySyzkaller_Response,
@@ -1958,7 +2000,8 @@ struct ::fidl::internal::TypeTraits<
 
 template <>
 struct internal::NaturalCodingTraits<
-    ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerTopResponse>
+    ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerTopResponse,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     final
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerTopResponse,
@@ -2001,7 +2044,8 @@ struct ::fidl::internal::TypeTraits<
 
 template <>
 struct internal::NaturalCodingTraits<
-    ::test_bindingsdenylist::DenyEachBinding_OnlyDenyRust_Response>
+    ::test_bindingsdenylist::DenyEachBinding_OnlyDenyRust_Response,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_bindingsdenylist::DenyEachBinding_OnlyDenyRust_Response,
                 4, 4> {};
@@ -2036,7 +2080,8 @@ struct ::fidl::internal::TypeTraits<
 
 template <>
 struct internal::NaturalCodingTraits<
-    ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustTopResponse>
+    ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustTopResponse,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustTopResponse,
                 24, 16> {};
@@ -2078,7 +2123,8 @@ struct ::fidl::internal::TypeTraits<
 
 template <>
 struct internal::NaturalCodingTraits<
-    ::test_bindingsdenylist::DenyEachBinding_OnlyDenyLibfuzzer_Response>
+    ::test_bindingsdenylist::DenyEachBinding_OnlyDenyLibfuzzer_Response,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     final
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_bindingsdenylist::DenyEachBinding_OnlyDenyLibfuzzer_Response,
@@ -2114,7 +2160,8 @@ struct ::fidl::internal::TypeTraits<
 
 template <>
 struct internal::NaturalCodingTraits<
-    ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerTopResponse>
+    ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerTopResponse,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     final
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerTopResponse,
@@ -2156,7 +2203,8 @@ struct ::fidl::internal::TypeTraits<
 
 template <>
 struct internal::NaturalCodingTraits<
-    ::test_bindingsdenylist::DenyEachBinding_OnlyDenyGo_Response>
+    ::test_bindingsdenylist::DenyEachBinding_OnlyDenyGo_Response,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     final
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_bindingsdenylist::DenyEachBinding_OnlyDenyGo_Response, 4, 4> {
@@ -2191,7 +2239,8 @@ struct ::fidl::internal::TypeTraits<
 
 template <>
 struct internal::NaturalCodingTraits<
-    ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoTopResponse>
+    ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoTopResponse,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoTopResponse,
                 24, 16> {};
@@ -2232,7 +2281,8 @@ struct ::fidl::internal::TypeTraits<
 
 template <>
 struct internal::NaturalCodingTraits<
-    ::test_bindingsdenylist::DenyEachBinding_OnlyDenyDart_Response>
+    ::test_bindingsdenylist::DenyEachBinding_OnlyDenyDart_Response,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_bindingsdenylist::DenyEachBinding_OnlyDenyDart_Response,
                 4, 4> {};
@@ -2267,7 +2317,8 @@ struct ::fidl::internal::TypeTraits<
 
 template <>
 struct internal::NaturalCodingTraits<
-    ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartTopResponse>
+    ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartTopResponse,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartTopResponse,
                 24, 16> {};
@@ -2309,7 +2360,8 @@ struct ::fidl::internal::TypeTraits<
 
 template <>
 struct internal::NaturalCodingTraits<
-    ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerRequest>
+    ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerRequest,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     final
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerRequest, 1,
@@ -2344,7 +2396,8 @@ struct ::fidl::internal::TypeTraits<
 
 template <>
 struct internal::NaturalCodingTraits<
-    ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustRequest>
+    ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustRequest,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     final
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustRequest, 1, 1> {};
@@ -2379,7 +2432,8 @@ struct ::fidl::internal::TypeTraits<
 
 template <>
 struct internal::NaturalCodingTraits<
-    ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerRequest>
+    ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerRequest,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     final
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerRequest, 1,
@@ -2414,7 +2468,8 @@ struct ::fidl::internal::TypeTraits<
 
 template <>
 struct internal::NaturalCodingTraits<
-    ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoRequest>
+    ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoRequest,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     final
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoRequest, 1, 1> {};
@@ -2448,7 +2503,8 @@ struct ::fidl::internal::TypeTraits<
 
 template <>
 struct internal::NaturalCodingTraits<
-    ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartRequest>
+    ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartRequest,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     final
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartRequest, 1, 1> {};
@@ -2470,9 +2526,11 @@ template <>
 struct IsUnion<::test_bindingsdenylist::OnlyLlcpp> : public std::true_type {};
 
 template <>
-struct internal::NaturalCodingTraits<::test_bindingsdenylist::OnlyLlcpp> final
-    : public ::fidl::internal::NaturalUnionCodingTraits<
-          ::test_bindingsdenylist::OnlyLlcpp> {};
+struct internal::NaturalCodingTraits<
+    ::test_bindingsdenylist::OnlyLlcpp,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
+    final : public ::fidl::internal::NaturalUnionCodingTraits<
+                ::test_bindingsdenylist::OnlyLlcpp> {};
 
 template <>
 struct IsFidlType<
@@ -2485,7 +2543,8 @@ struct IsUnion<
 
 template <>
 struct internal::NaturalCodingTraits<
-    ::test_bindingsdenylist::DenyEachBinding_OnlyDenySyzkaller_Result>
+    ::test_bindingsdenylist::DenyEachBinding_OnlyDenySyzkaller_Result,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     final
     : public ::fidl::internal::NaturalUnionCodingTraits<
           ::test_bindingsdenylist::DenyEachBinding_OnlyDenySyzkaller_Result> {};
@@ -2499,7 +2558,8 @@ struct IsUnion<::test_bindingsdenylist::DenyEachBinding_OnlyDenyRust_Result>
 
 template <>
 struct internal::NaturalCodingTraits<
-    ::test_bindingsdenylist::DenyEachBinding_OnlyDenyRust_Result>
+    ::test_bindingsdenylist::DenyEachBinding_OnlyDenyRust_Result,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalUnionCodingTraits<
                 ::test_bindingsdenylist::DenyEachBinding_OnlyDenyRust_Result> {
 };
@@ -2515,7 +2575,8 @@ struct IsUnion<
 
 template <>
 struct internal::NaturalCodingTraits<
-    ::test_bindingsdenylist::DenyEachBinding_OnlyDenyLibfuzzer_Result>
+    ::test_bindingsdenylist::DenyEachBinding_OnlyDenyLibfuzzer_Result,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     final
     : public ::fidl::internal::NaturalUnionCodingTraits<
           ::test_bindingsdenylist::DenyEachBinding_OnlyDenyLibfuzzer_Result> {};
@@ -2529,7 +2590,8 @@ struct IsUnion<::test_bindingsdenylist::DenyEachBinding_OnlyDenyGo_Result>
 
 template <>
 struct internal::NaturalCodingTraits<
-    ::test_bindingsdenylist::DenyEachBinding_OnlyDenyGo_Result>
+    ::test_bindingsdenylist::DenyEachBinding_OnlyDenyGo_Result,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalUnionCodingTraits<
                 ::test_bindingsdenylist::DenyEachBinding_OnlyDenyGo_Result> {};
 
@@ -2542,7 +2604,8 @@ struct IsUnion<::test_bindingsdenylist::DenyEachBinding_OnlyDenyDart_Result>
 
 template <>
 struct internal::NaturalCodingTraits<
-    ::test_bindingsdenylist::DenyEachBinding_OnlyDenyDart_Result>
+    ::test_bindingsdenylist::DenyEachBinding_OnlyDenyDart_Result,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalUnionCodingTraits<
                 ::test_bindingsdenylist::DenyEachBinding_OnlyDenyDart_Result> {
 };

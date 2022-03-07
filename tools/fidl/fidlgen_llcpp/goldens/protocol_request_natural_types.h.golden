@@ -66,11 +66,10 @@ class ParentTakeChildRequestRequest final {
       ::test_protocolrequest::ParentTakeChildRequestRequest>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<
-          Storage_, ::fidl::ServerEnd<::test_protocolrequest::Child>>{
-          &Storage_::r, 0, 0,
-          std::make_optional<::fidl::internal::NaturalHandleInformation>(
-              {.object_type = ZX_OBJ_TYPE_CHANNEL,
-               .rights = ZX_DEFAULT_CHANNEL_RIGHTS})});
+          Storage_, ::fidl::ServerEnd<::test_protocolrequest::Child>,
+          fidl::internal::NaturalCodingConstraintHandle<
+              ZX_OBJ_TYPE_CHANNEL, ZX_DEFAULT_CHANNEL_RIGHTS>>{&Storage_::r, 0,
+                                                               0});
 };
 
 #endif  // __Fuchsia__
@@ -114,11 +113,10 @@ class ParentTakeChildRequest final {
       ::test_protocolrequest::ParentTakeChildRequest>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<
-          Storage_, ::fidl::ClientEnd<::test_protocolrequest::Child>>{
-          &Storage_::c, 0, 0,
-          std::make_optional<::fidl::internal::NaturalHandleInformation>(
-              {.object_type = ZX_OBJ_TYPE_CHANNEL,
-               .rights = ZX_DEFAULT_CHANNEL_RIGHTS})});
+          Storage_, ::fidl::ClientEnd<::test_protocolrequest::Child>,
+          fidl::internal::NaturalCodingConstraintHandle<
+              ZX_OBJ_TYPE_CHANNEL, ZX_DEFAULT_CHANNEL_RIGHTS>>{&Storage_::c, 0,
+                                                               0});
 };
 
 #endif  // __Fuchsia__
@@ -163,11 +161,10 @@ class ParentGetChildTopResponse final {
       ::test_protocolrequest::ParentGetChildTopResponse>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<
-          Storage_, ::fidl::ClientEnd<::test_protocolrequest::Child>>{
-          &Storage_::c, 0, 0,
-          std::make_optional<::fidl::internal::NaturalHandleInformation>(
-              {.object_type = ZX_OBJ_TYPE_CHANNEL,
-               .rights = ZX_DEFAULT_CHANNEL_RIGHTS})});
+          Storage_, ::fidl::ClientEnd<::test_protocolrequest::Child>,
+          fidl::internal::NaturalCodingConstraintHandle<
+              ZX_OBJ_TYPE_CHANNEL, ZX_DEFAULT_CHANNEL_RIGHTS>>{&Storage_::c, 0,
+                                                               0});
 };
 
 #endif  // __Fuchsia__
@@ -214,11 +211,10 @@ class ParentGetChildRequestTopResponse final {
       ::test_protocolrequest::ParentGetChildRequestTopResponse>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<
-          Storage_, ::fidl::ServerEnd<::test_protocolrequest::Child>>{
-          &Storage_::r, 0, 0,
-          std::make_optional<::fidl::internal::NaturalHandleInformation>(
-              {.object_type = ZX_OBJ_TYPE_CHANNEL,
-               .rights = ZX_DEFAULT_CHANNEL_RIGHTS})});
+          Storage_, ::fidl::ServerEnd<::test_protocolrequest::Child>,
+          fidl::internal::NaturalCodingConstraintHandle<
+              ZX_OBJ_TYPE_CHANNEL, ZX_DEFAULT_CHANNEL_RIGHTS>>{&Storage_::r, 0,
+                                                               0});
 };
 
 #endif  // __Fuchsia__
@@ -248,7 +244,8 @@ struct ::fidl::internal::TypeTraits<
 
 template <>
 struct internal::NaturalCodingTraits<
-    ::test_protocolrequest::ParentTakeChildRequestRequest>
+    ::test_protocolrequest::ParentTakeChildRequestRequest,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_protocolrequest::ParentTakeChildRequestRequest, 4, 4> {};
 
@@ -284,7 +281,8 @@ struct ::fidl::internal::TypeTraits<
 
 template <>
 struct internal::NaturalCodingTraits<
-    ::test_protocolrequest::ParentTakeChildRequest>
+    ::test_protocolrequest::ParentTakeChildRequest,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_protocolrequest::ParentTakeChildRequest, 4, 4> {};
 
@@ -320,7 +318,8 @@ struct ::fidl::internal::TypeTraits<
 
 template <>
 struct internal::NaturalCodingTraits<
-    ::test_protocolrequest::ParentGetChildTopResponse>
+    ::test_protocolrequest::ParentGetChildTopResponse,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_protocolrequest::ParentGetChildTopResponse, 4, 4> {};
 
@@ -357,7 +356,8 @@ struct ::fidl::internal::TypeTraits<
 
 template <>
 struct internal::NaturalCodingTraits<
-    ::test_protocolrequest::ParentGetChildRequestTopResponse>
+    ::test_protocolrequest::ParentGetChildRequestTopResponse,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     final
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_protocolrequest::ParentGetChildRequestTopResponse, 4, 4> {};

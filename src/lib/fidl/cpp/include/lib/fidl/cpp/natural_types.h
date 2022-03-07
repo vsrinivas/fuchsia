@@ -133,7 +133,8 @@ template <typename FidlType>
   }
   ::fidl::internal::NaturalDecoder decoder(std::move(message));
   FidlType value{};
-  ::fidl::internal::NaturalCodingTraits<FidlType>::Decode(&decoder, &value, 0);
+  ::fidl::internal::NaturalCodingTraits<FidlType, NaturalCodingConstraintEmpty>::Decode(&decoder,
+                                                                                        &value, 0);
   return ::fitx::ok(std::move(value));
 }
 
@@ -155,8 +156,10 @@ template <typename FidlType>
   // the wire format version of the encoded message is the same as the one
   // used in HLCPP.
   ::fidl::internal::NaturalBodyEncoder encoder(fidl::internal::WireFormatVersion::kV2);
-  encoder.Alloc(::fidl::internal::NaturalEncodingInlineSize<FidlType>(&encoder));
-  ::fidl::internal::NaturalCodingTraits<FidlType>::Encode(&encoder, &value, 0);
+  encoder.Alloc(::fidl::internal::NaturalEncodingInlineSize<FidlType, NaturalCodingConstraintEmpty>(
+      &encoder));
+  ::fidl::internal::NaturalCodingTraits<FidlType, NaturalCodingConstraintEmpty>::Encode(&encoder,
+                                                                                        &value, 0);
   return EncodeResult(coding_table, std::move(encoder));
 }
 

@@ -65,8 +65,9 @@ class DocCommentWithQuotes final {
       ::test_escaping::DocCommentWithQuotes, 1, 1>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_escaping::DocCommentWithQuotes>;
-  static constexpr auto kMembers =
-      std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, uint8_t>{
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalStructMember<
+          Storage_, uint8_t, fidl::internal::NaturalCodingConstraintEmpty>{
           &Storage_::__reserved, 0, 0});
 };
 
@@ -89,7 +90,9 @@ struct ::fidl::internal::TypeTraits<::test_escaping::DocCommentWithQuotes>
 };
 
 template <>
-struct internal::NaturalCodingTraits<::test_escaping::DocCommentWithQuotes>
+struct internal::NaturalCodingTraits<
+    ::test_escaping::DocCommentWithQuotes,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_escaping::DocCommentWithQuotes, 1, 1> {};
 

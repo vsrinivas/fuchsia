@@ -89,9 +89,11 @@ class UnionMember final {
   std::shared_ptr<Storage_> CloneStorage_() const;
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_anonymous::UnionMember>;
-  static constexpr std::array<
-      std::optional<::fidl::internal::NaturalHandleInformation>, 2>
-      kMembers = {std::nullopt, std::nullopt};
+  static constexpr auto kMembers =
+      std::make_tuple(::fidl::internal::NaturalUnionMember<
+                          ::fidl::internal::NaturalCodingConstraintEmpty>(),
+                      ::fidl::internal::NaturalUnionMember<
+                          fidl::internal::NaturalCodingConstraintEmpty>());
 
   explicit UnionMember(std::shared_ptr<Storage_> storage)
       : storage_(std::move(storage)) {}
@@ -159,8 +161,9 @@ class TableData final {
   friend struct ::fidl::internal::NaturalStructCodingTraits<
       ::test_anonymous::TableData, 1, 1>;
   friend struct ::fidl::internal::MemberVisitor<::test_anonymous::TableData>;
-  static constexpr auto kMembers =
-      std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, uint8_t>{
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalStructMember<
+          Storage_, uint8_t, fidl::internal::NaturalCodingConstraintEmpty>{
           &Storage_::data, 0, 0});
 };
 
@@ -213,7 +216,8 @@ class TableMember final {
   friend struct ::fidl::internal::MemberVisitor<::test_anonymous::TableMember>;
   static constexpr auto kMembers =
       std::make_tuple(::fidl::internal::NaturalTableMember<
-                      Storage_, ::std::vector<::test_anonymous::TableData>>{
+                      Storage_, ::std::vector<::test_anonymous::TableData>,
+                      fidl::internal::NaturalCodingConstraintEmpty>{
           2, &Storage_::table_data});
 };
 
@@ -287,12 +291,14 @@ class SomeProtocolSomeMethodRequest final {
   friend struct ::fidl::internal::MemberVisitor<
       ::test_anonymous::SomeProtocolSomeMethodRequest>;
   static constexpr auto kMembers = std::make_tuple(
-      ::fidl::internal::NaturalStructMember<Storage_,
-                                            ::test_anonymous::UnionMember>{
-          &Storage_::union_member, 0, 0},
-      ::fidl::internal::NaturalStructMember<Storage_,
-                                            ::test_anonymous::TableMember>{
-          &Storage_::table_member, 24, 16});
+      ::fidl::internal::NaturalStructMember<
+          Storage_, ::test_anonymous::UnionMember,
+          fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::union_member,
+                                                        0, 0},
+      ::fidl::internal::NaturalStructMember<
+          Storage_, ::test_anonymous::TableMember,
+          fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::table_member,
+                                                        24, 16});
 };
 
 extern "C" const fidl_type_t test_anonymous_OverrideTestTable;
@@ -363,14 +369,16 @@ class OverrideTest final {
       ::test_anonymous::OverrideTest, 56, 40>;
   friend struct ::fidl::internal::MemberVisitor<::test_anonymous::OverrideTest>;
   static constexpr auto kMembers = std::make_tuple(
-      ::fidl::internal::NaturalStructMember<Storage_, ::test_anonymous::Op>{
-          &Storage_::op, 0, 0},
       ::fidl::internal::NaturalStructMember<
-          Storage_, ::std::unique_ptr<::test_anonymous::Expression>>{
-          &Storage_::left, 8, 8},
+          Storage_, ::test_anonymous::Op,
+          fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::op, 0, 0},
       ::fidl::internal::NaturalStructMember<
-          Storage_, ::std::unique_ptr<::test_anonymous::Expression>>{
-          &Storage_::right, 32, 24});
+          Storage_, ::std::unique_ptr<::test_anonymous::Expression>,
+          fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::left, 8, 8},
+      ::fidl::internal::NaturalStructMember<
+          Storage_, ::std::unique_ptr<::test_anonymous::Expression>,
+          fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::right, 32,
+                                                        24});
 };
 
 extern "C" const fidl_type_t test_anonymous_FunctionApplicationTable;
@@ -441,14 +449,16 @@ class FunctionApplication final {
   friend struct ::fidl::internal::MemberVisitor<
       ::test_anonymous::FunctionApplication>;
   static constexpr auto kMembers = std::make_tuple(
-      ::fidl::internal::NaturalTableMember<Storage_, ::std::string>{
-          1, &Storage_::func},
+      ::fidl::internal::NaturalTableMember<
+          Storage_, ::std::string,
+          fidl::internal::NaturalCodingConstraintEmpty>{1, &Storage_::func},
       ::fidl::internal::NaturalTableMember<
           Storage_,
-          ::std::vector<::std::unique_ptr<::test_anonymous::Expression>>>{
-          3, &Storage_::args},
-      ::fidl::internal::NaturalTableMember<Storage_, ::test_anonymous::Flags>{
-          4, &Storage_::flags});
+          ::std::vector<::std::unique_ptr<::test_anonymous::Expression>>,
+          fidl::internal::NaturalCodingConstraintEmpty>{3, &Storage_::args},
+      ::fidl::internal::NaturalTableMember<
+          Storage_, ::test_anonymous::Flags,
+          fidl::internal::NaturalCodingConstraintEmpty>{4, &Storage_::flags});
 };
 
 extern "C" const fidl_type_t test_anonymous_ExpressionTable;
@@ -531,9 +541,15 @@ class Expression final {
   std::shared_ptr<Storage_> CloneStorage_() const;
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_anonymous::Expression>;
-  static constexpr std::array<
-      std::optional<::fidl::internal::NaturalHandleInformation>, 4>
-      kMembers = {std::nullopt, std::nullopt, std::nullopt, std::nullopt};
+  static constexpr auto kMembers =
+      std::make_tuple(::fidl::internal::NaturalUnionMember<
+                          ::fidl::internal::NaturalCodingConstraintEmpty>(),
+                      ::fidl::internal::NaturalUnionMember<
+                          fidl::internal::NaturalCodingConstraintEmpty>(),
+                      ::fidl::internal::NaturalUnionMember<
+                          fidl::internal::NaturalCodingConstraintEmpty>(),
+                      ::fidl::internal::NaturalUnionMember<
+                          fidl::internal::NaturalCodingConstraintEmpty>());
 
   explicit Expression(std::shared_ptr<Storage_> storage)
       : storage_(std::move(storage)) {}
@@ -625,9 +641,10 @@ class SomeProtocol_SomeMethod_Response final {
       ::test_anonymous::SomeProtocol_SomeMethod_Response, 4, 4>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_anonymous::SomeProtocol_SomeMethod_Response>;
-  static constexpr auto kMembers = std::make_tuple(
-      ::fidl::internal::NaturalStructMember<Storage_,
-                                            ::test_anonymous::BitsMember>{
+  static constexpr auto kMembers =
+      std::make_tuple(::fidl::internal::NaturalStructMember<
+                      Storage_, ::test_anonymous::BitsMember,
+                      fidl::internal::NaturalCodingConstraintEmpty>{
           &Storage_::bits_member, 0, 0});
 };
 
@@ -704,9 +721,13 @@ class SomeProtocol_SomeMethod_Result final {
   std::shared_ptr<Storage_> CloneStorage_() const;
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_anonymous::SomeProtocol_SomeMethod_Result>;
-  static constexpr std::array<
-      std::optional<::fidl::internal::NaturalHandleInformation>, 3>
-      kMembers = {std::nullopt, std::nullopt, std::nullopt};
+  static constexpr auto kMembers =
+      std::make_tuple(::fidl::internal::NaturalUnionMember<
+                          ::fidl::internal::NaturalCodingConstraintEmpty>(),
+                      ::fidl::internal::NaturalUnionMember<
+                          fidl::internal::NaturalCodingConstraintEmpty>(),
+                      ::fidl::internal::NaturalUnionMember<
+                          fidl::internal::NaturalCodingConstraintEmpty>());
 
   explicit SomeProtocol_SomeMethod_Result(std::shared_ptr<Storage_> storage)
       : storage_(std::move(storage)) {}
@@ -799,8 +820,9 @@ class SomeProtocolSomeMethodTopResponse final {
       ::test_anonymous::SomeProtocolSomeMethodTopResponse>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<
-          Storage_, ::test_anonymous::SomeProtocol_SomeMethod_Result>{
-          &Storage_::result, 0, 0});
+          Storage_, ::test_anonymous::SomeProtocol_SomeMethod_Result,
+          fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::result, 0,
+                                                        0});
 };
 
 }  // namespace test_anonymous
@@ -820,9 +842,10 @@ struct ::fidl::internal::TypeTraits<::test_anonymous::TableData> final {
 };
 
 template <>
-struct internal::NaturalCodingTraits<::test_anonymous::TableData> final
-    : public ::fidl::internal::NaturalStructCodingTraits<
-          ::test_anonymous::TableData, 1, 1> {};
+struct internal::NaturalCodingTraits<
+    ::test_anonymous::TableData, ::fidl::internal::NaturalCodingConstraintEmpty>
+    final : public ::fidl::internal::NaturalStructCodingTraits<
+                ::test_anonymous::TableData, 1, 1> {};
 
 template <>
 struct internal::NaturalIsMemcpyCompatible<::test_anonymous::TableData>
@@ -850,7 +873,8 @@ struct ::fidl::internal::TypeTraits<
 
 template <>
 struct internal::NaturalCodingTraits<
-    ::test_anonymous::SomeProtocolSomeMethodRequest>
+    ::test_anonymous::SomeProtocolSomeMethodRequest,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_anonymous::SomeProtocolSomeMethodRequest, 40, 32> {};
 
@@ -884,9 +908,11 @@ struct ::fidl::internal::TypeTraits<::test_anonymous::OverrideTest> final {
 };
 
 template <>
-struct internal::NaturalCodingTraits<::test_anonymous::OverrideTest> final
-    : public ::fidl::internal::NaturalStructCodingTraits<
-          ::test_anonymous::OverrideTest, 56, 40> {};
+struct internal::NaturalCodingTraits<
+    ::test_anonymous::OverrideTest,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
+    final : public ::fidl::internal::NaturalStructCodingTraits<
+                ::test_anonymous::OverrideTest, 56, 40> {};
 
 template <>
 struct HasPadding<::test_anonymous::OverrideTest> : public std::true_type {};
@@ -920,7 +946,8 @@ struct ::fidl::internal::TypeTraits<
 
 template <>
 struct internal::NaturalCodingTraits<
-    ::test_anonymous::SomeProtocol_SomeMethod_Response>
+    ::test_anonymous::SomeProtocol_SomeMethod_Response,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_anonymous::SomeProtocol_SomeMethod_Response, 4, 4> {};
 
@@ -954,7 +981,8 @@ struct ::fidl::internal::TypeTraits<
 
 template <>
 struct internal::NaturalCodingTraits<
-    ::test_anonymous::SomeProtocolSomeMethodTopResponse>
+    ::test_anonymous::SomeProtocolSomeMethodTopResponse,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_anonymous::SomeProtocolSomeMethodTopResponse, 24, 16> {};
 
@@ -977,7 +1005,9 @@ template <>
 struct IsFidlType<::test_anonymous::TableMember> : public std::true_type {};
 
 template <>
-struct internal::NaturalCodingTraits<::test_anonymous::TableMember>
+struct internal::NaturalCodingTraits<
+    ::test_anonymous::TableMember,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     : public ::fidl::internal::NaturalTableCodingTraits<
           ::test_anonymous::TableMember> {};
 
@@ -986,7 +1016,9 @@ struct IsFidlType<::test_anonymous::FunctionApplication>
     : public std::true_type {};
 
 template <>
-struct internal::NaturalCodingTraits<::test_anonymous::FunctionApplication>
+struct internal::NaturalCodingTraits<
+    ::test_anonymous::FunctionApplication,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     : public ::fidl::internal::NaturalTableCodingTraits<
           ::test_anonymous::FunctionApplication> {};
 
@@ -996,9 +1028,11 @@ template <>
 struct IsUnion<::test_anonymous::UnionMember> : public std::true_type {};
 
 template <>
-struct internal::NaturalCodingTraits<::test_anonymous::UnionMember> final
-    : public ::fidl::internal::NaturalUnionCodingTraits<
-          ::test_anonymous::UnionMember> {};
+struct internal::NaturalCodingTraits<
+    ::test_anonymous::UnionMember,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
+    final : public ::fidl::internal::NaturalUnionCodingTraits<
+                ::test_anonymous::UnionMember> {};
 
 template <>
 struct IsFidlType<::test_anonymous::Expression> : public std::true_type {};
@@ -1006,9 +1040,11 @@ template <>
 struct IsUnion<::test_anonymous::Expression> : public std::true_type {};
 
 template <>
-struct internal::NaturalCodingTraits<::test_anonymous::Expression> final
-    : public ::fidl::internal::NaturalUnionCodingTraits<
-          ::test_anonymous::Expression> {};
+struct internal::NaturalCodingTraits<
+    ::test_anonymous::Expression,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
+    final : public ::fidl::internal::NaturalUnionCodingTraits<
+                ::test_anonymous::Expression> {};
 
 template <>
 struct IsFidlType<::test_anonymous::SomeProtocol_SomeMethod_Result>
@@ -1019,20 +1055,19 @@ struct IsUnion<::test_anonymous::SomeProtocol_SomeMethod_Result>
 
 template <>
 struct internal::NaturalCodingTraits<
-    ::test_anonymous::SomeProtocol_SomeMethod_Result>
+    ::test_anonymous::SomeProtocol_SomeMethod_Result,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalUnionCodingTraits<
                 ::test_anonymous::SomeProtocol_SomeMethod_Result> {};
 
 template <>
-struct internal::NaturalCodingTraits<::test_anonymous::Flags> {
+struct internal::NaturalCodingTraits<
+    ::test_anonymous::Flags, ::fidl::internal::NaturalCodingConstraintEmpty> {
   static constexpr size_t inline_size_v1_no_ee = sizeof(uint16_t);
   static constexpr size_t inline_size_v2 = sizeof(uint16_t);
 
   static void Encode(internal::NaturalEncoder* encoder,
-                     ::test_anonymous::Flags* value, size_t offset,
-                     cpp17::optional<NaturalHandleInformation>
-                         maybe_handle_info = cpp17::nullopt) {
-    ZX_DEBUG_ASSERT(maybe_handle_info == cpp17::nullopt);
+                     ::test_anonymous::Flags* value, size_t offset) {
     *encoder->template GetPtr<::test_anonymous::Flags>(offset) = *value;
   }
   static void Decode(internal::NaturalDecoder* decoder,
@@ -1041,15 +1076,14 @@ struct internal::NaturalCodingTraits<::test_anonymous::Flags> {
   }
 };
 template <>
-struct internal::NaturalCodingTraits<::test_anonymous::BitsMember> {
+struct internal::NaturalCodingTraits<
+    ::test_anonymous::BitsMember,
+    ::fidl::internal::NaturalCodingConstraintEmpty> {
   static constexpr size_t inline_size_v1_no_ee = sizeof(uint32_t);
   static constexpr size_t inline_size_v2 = sizeof(uint32_t);
 
   static void Encode(internal::NaturalEncoder* encoder,
-                     ::test_anonymous::BitsMember* value, size_t offset,
-                     cpp17::optional<NaturalHandleInformation>
-                         maybe_handle_info = cpp17::nullopt) {
-    ZX_DEBUG_ASSERT(maybe_handle_info == cpp17::nullopt);
+                     ::test_anonymous::BitsMember* value, size_t offset) {
     *encoder->template GetPtr<::test_anonymous::BitsMember>(offset) = *value;
   }
   static void Decode(internal::NaturalDecoder* decoder,
@@ -1060,16 +1094,14 @@ struct internal::NaturalCodingTraits<::test_anonymous::BitsMember> {
 
 template <>
 struct internal::NaturalCodingTraits<
-    ::test_anonymous::SomeProtocol_SomeMethod_Error> {
+    ::test_anonymous::SomeProtocol_SomeMethod_Error,
+    ::fidl::internal::NaturalCodingConstraintEmpty> {
   static constexpr size_t inline_size_v1_no_ee = sizeof(uint32_t);
   static constexpr size_t inline_size_v2 = sizeof(uint32_t);
 
   static void Encode(internal::NaturalEncoder* encoder,
                      ::test_anonymous::SomeProtocol_SomeMethod_Error* value,
-                     size_t offset,
-                     cpp17::optional<NaturalHandleInformation>
-                         maybe_handle_info = cpp17::nullopt) {
-    ZX_DEBUG_ASSERT(maybe_handle_info == cpp17::nullopt);
+                     size_t offset) {
     *encoder->template GetPtr<::test_anonymous::SomeProtocol_SomeMethod_Error>(
         offset) = *value;
   }
@@ -1083,15 +1115,13 @@ struct internal::NaturalCodingTraits<
   }
 };
 template <>
-struct internal::NaturalCodingTraits<::test_anonymous::Op> {
+struct internal::NaturalCodingTraits<
+    ::test_anonymous::Op, ::fidl::internal::NaturalCodingConstraintEmpty> {
   static constexpr size_t inline_size_v1_no_ee = sizeof(uint32_t);
   static constexpr size_t inline_size_v2 = sizeof(uint32_t);
 
   static void Encode(internal::NaturalEncoder* encoder,
-                     ::test_anonymous::Op* value, size_t offset,
-                     cpp17::optional<NaturalHandleInformation>
-                         maybe_handle_info = cpp17::nullopt) {
-    ZX_DEBUG_ASSERT(maybe_handle_info == cpp17::nullopt);
+                     ::test_anonymous::Op* value, size_t offset) {
     *encoder->template GetPtr<::test_anonymous::Op>(offset) = *value;
   }
   static void Decode(internal::NaturalDecoder* decoder,

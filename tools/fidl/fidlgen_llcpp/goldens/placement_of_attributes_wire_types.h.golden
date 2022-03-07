@@ -158,8 +158,7 @@ class ExampleXUnion {
   ExampleXUnion()
       : ordinal_(::test_placementofattributes::wire::ExampleXUnion::Ordinal::
                      Invalid),
-        envelope_ {}
-  {}
+        envelope_{} {}
 
   ExampleXUnion(const ExampleXUnion&) = default;
   ExampleXUnion& operator=(const ExampleXUnion&) = default;
@@ -225,8 +224,7 @@ class ExampleUnion {
   ExampleUnion()
       : ordinal_(
             ::test_placementofattributes::wire::ExampleUnion::Ordinal::Invalid),
-        envelope_ {}
-  {}
+        envelope_{} {}
 
   ExampleUnion(const ExampleUnion&) = default;
   ExampleUnion& operator=(const ExampleUnion&) = default;

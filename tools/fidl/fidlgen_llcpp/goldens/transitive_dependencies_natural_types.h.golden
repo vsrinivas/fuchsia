@@ -64,8 +64,9 @@ class Baz final {
   friend struct ::fidl::internal::MemberVisitor<
       ::test_transitivedependencies::Baz>;
   static constexpr auto kMembers = std::make_tuple(
-      ::fidl::internal::NaturalStructMember<Storage_, ::test_middle::Bar>{
-          &Storage_::g, 0, 0});
+      ::fidl::internal::NaturalStructMember<
+          Storage_, ::test_middle::Bar,
+          fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::g, 0, 0});
 };
 
 }  // namespace test_transitivedependencies
@@ -86,9 +87,11 @@ struct ::fidl::internal::TypeTraits<::test_transitivedependencies::Baz> final {
 };
 
 template <>
-struct internal::NaturalCodingTraits<::test_transitivedependencies::Baz> final
-    : public ::fidl::internal::NaturalStructCodingTraits<
-          ::test_transitivedependencies::Baz, 4, 4> {};
+struct internal::NaturalCodingTraits<
+    ::test_transitivedependencies::Baz,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
+    final : public ::fidl::internal::NaturalStructCodingTraits<
+                ::test_transitivedependencies::Baz, 4, 4> {};
 
 template <>
 struct internal::NaturalIsMemcpyCompatible<::test_transitivedependencies::Baz>

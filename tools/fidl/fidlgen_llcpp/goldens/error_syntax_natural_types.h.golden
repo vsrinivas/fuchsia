@@ -86,8 +86,9 @@ class ExampleUseOfErrorSyntax_CallWhichMayFail_Response final {
       8>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Response>;
-  static constexpr auto kMembers =
-      std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, int64_t>{
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalStructMember<
+          Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{
           &Storage_::value, 0, 0});
 };
 
@@ -171,9 +172,13 @@ class ExampleUseOfErrorSyntax_CallWhichMayFail_Result final {
   std::shared_ptr<Storage_> CloneStorage_() const;
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Result>;
-  static constexpr std::array<
-      std::optional<::fidl::internal::NaturalHandleInformation>, 3>
-      kMembers = {std::nullopt, std::nullopt, std::nullopt};
+  static constexpr auto kMembers =
+      std::make_tuple(::fidl::internal::NaturalUnionMember<
+                          ::fidl::internal::NaturalCodingConstraintEmpty>(),
+                      ::fidl::internal::NaturalUnionMember<
+                          fidl::internal::NaturalCodingConstraintEmpty>(),
+                      ::fidl::internal::NaturalUnionMember<
+                          fidl::internal::NaturalCodingConstraintEmpty>());
 
   explicit ExampleUseOfErrorSyntax_CallWhichMayFail_Result(
       std::shared_ptr<Storage_> storage)
@@ -282,8 +287,9 @@ class ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse final {
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<
           Storage_,
-          ::test_errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Result>{
-          &Storage_::result, 0, 0});
+          ::test_errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Result,
+          fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::result, 0,
+                                                        0});
 };
 
 extern "C" const fidl_type_t
@@ -345,8 +351,9 @@ class ExampleUseOfErrorSyntaxCallWhichMayFailRequest final {
   friend struct ::fidl::internal::MemberVisitor<
       ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest>;
   static constexpr auto kMembers = std::make_tuple(
-      ::fidl::internal::NaturalStructMember<Storage_, ::std::string>{
-          &Storage_::s, 0, 0});
+      ::fidl::internal::NaturalStructMember<
+          Storage_, ::std::string,
+          fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::s, 0, 0});
 };
 
 }  // namespace test_errorsyntax
@@ -372,7 +379,8 @@ struct ::fidl::internal::TypeTraits<
 
 template <>
 struct internal::NaturalCodingTraits<
-    ::test_errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Response>
+    ::test_errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Response,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     final
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Response,
@@ -409,7 +417,8 @@ struct ::fidl::internal::TypeTraits<
 
 template <>
 struct internal::NaturalCodingTraits<
-    ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse>
+    ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_errorsyntax::
                     ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse,
@@ -453,7 +462,8 @@ struct ::fidl::internal::TypeTraits<
 
 template <>
 struct internal::NaturalCodingTraits<
-    ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest>
+    ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     final
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest,
@@ -486,7 +496,8 @@ struct IsUnion<
 
 template <>
 struct internal::NaturalCodingTraits<
-    ::test_errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Result>
+    ::test_errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Result,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     final
     : public ::fidl::internal::NaturalUnionCodingTraits<
           ::test_errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Result> {

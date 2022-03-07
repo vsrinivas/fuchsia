@@ -161,8 +161,7 @@ class StrictUnion {
  public:
   StrictUnion()
       : ordinal_(::test_doccomments::wire::StrictUnion::Ordinal::Invalid),
-        envelope_ {}
-  {}
+        envelope_{} {}
 
   StrictUnion(const StrictUnion&) = default;
   StrictUnion& operator=(const StrictUnion&) = default;
@@ -236,8 +235,7 @@ class FlexibleUnion {
  public:
   FlexibleUnion()
       : ordinal_(::test_doccomments::wire::FlexibleUnion::Ordinal::Invalid),
-        envelope_ {}
-  {}
+        envelope_{} {}
 
   FlexibleUnion(const FlexibleUnion&) = default;
   FlexibleUnion& operator=(const FlexibleUnion&) = default;

@@ -68,8 +68,9 @@ class TwoWayAddTopResponse final {
       ::test_drivertwoway::TwoWayAddTopResponse, 2, 2>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_drivertwoway::TwoWayAddTopResponse>;
-  static constexpr auto kMembers =
-      std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, uint16_t>{
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalStructMember<
+          Storage_, uint16_t, fidl::internal::NaturalCodingConstraintEmpty>{
           &Storage_::sum, 0, 0});
 };
 
@@ -126,9 +127,11 @@ class TwoWayAddRequest final {
   friend struct ::fidl::internal::MemberVisitor<
       ::test_drivertwoway::TwoWayAddRequest>;
   static constexpr auto kMembers = std::make_tuple(
-      ::fidl::internal::NaturalStructMember<Storage_, uint16_t>{
+      ::fidl::internal::NaturalStructMember<
+          Storage_, uint16_t, fidl::internal::NaturalCodingConstraintEmpty>{
           &Storage_::addend1, 0, 0},
-      ::fidl::internal::NaturalStructMember<Storage_, uint16_t>{
+      ::fidl::internal::NaturalStructMember<
+          Storage_, uint16_t, fidl::internal::NaturalCodingConstraintEmpty>{
           &Storage_::addend2, 2, 2});
 };
 
@@ -151,7 +154,9 @@ struct ::fidl::internal::TypeTraits<::test_drivertwoway::TwoWayAddTopResponse>
 };
 
 template <>
-struct internal::NaturalCodingTraits<::test_drivertwoway::TwoWayAddTopResponse>
+struct internal::NaturalCodingTraits<
+    ::test_drivertwoway::TwoWayAddTopResponse,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_drivertwoway::TwoWayAddTopResponse, 2, 2> {};
 
@@ -180,7 +185,9 @@ struct ::fidl::internal::TypeTraits<::test_drivertwoway::TwoWayAddRequest>
 };
 
 template <>
-struct internal::NaturalCodingTraits<::test_drivertwoway::TwoWayAddRequest>
+struct internal::NaturalCodingTraits<
+    ::test_drivertwoway::TwoWayAddRequest,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_drivertwoway::TwoWayAddRequest, 4, 4> {};
 

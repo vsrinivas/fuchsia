@@ -45,6 +45,7 @@ type UnionMember struct {
 	WireOrdinalName   name
 	Offset            int
 	HandleInformation *HandleInformation
+	Constraint        string
 	NaturalIndex      int
 }
 
@@ -100,6 +101,7 @@ func (c *compiler) compileUnion(val fidlgen.Union) *Union {
 			WireOrdinalName:   u.WireOrdinalEnum.nest(tag.Wire.Name()),
 			Offset:            mem.Offset,
 			HandleInformation: c.fieldHandleInformation(&mem.Type),
+			Constraint:        c.fieldConstraint(&mem.Type),
 			NaturalIndex:      naturalIndex,
 		})
 		naturalIndex++

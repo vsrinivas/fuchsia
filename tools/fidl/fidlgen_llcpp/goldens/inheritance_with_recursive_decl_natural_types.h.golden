@@ -65,11 +65,10 @@ class ParentFirstRequest final {
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<
           Storage_,
-          ::fidl::ServerEnd<::test_inheritancewithrecursivedecl::Parent>>{
-          &Storage_::request, 0, 0,
-          std::make_optional<::fidl::internal::NaturalHandleInformation>(
-              {.object_type = ZX_OBJ_TYPE_CHANNEL,
-               .rights = ZX_DEFAULT_CHANNEL_RIGHTS})});
+          ::fidl::ServerEnd<::test_inheritancewithrecursivedecl::Parent>,
+          fidl::internal::NaturalCodingConstraintHandle<
+              ZX_OBJ_TYPE_CHANNEL, ZX_DEFAULT_CHANNEL_RIGHTS>>{
+          &Storage_::request, 0, 0});
 };
 
 #endif  // __Fuchsia__
@@ -118,11 +117,10 @@ class ChildSecondRequest final {
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<
           Storage_,
-          ::fidl::ServerEnd<::test_inheritancewithrecursivedecl::Parent>>{
-          &Storage_::request, 0, 0,
-          std::make_optional<::fidl::internal::NaturalHandleInformation>(
-              {.object_type = ZX_OBJ_TYPE_CHANNEL,
-               .rights = ZX_DEFAULT_CHANNEL_RIGHTS})});
+          ::fidl::ServerEnd<::test_inheritancewithrecursivedecl::Parent>,
+          fidl::internal::NaturalCodingConstraintHandle<
+              ZX_OBJ_TYPE_CHANNEL, ZX_DEFAULT_CHANNEL_RIGHTS>>{
+          &Storage_::request, 0, 0});
 };
 
 #endif  // __Fuchsia__
@@ -152,7 +150,8 @@ struct ::fidl::internal::TypeTraits<
 
 template <>
 struct internal::NaturalCodingTraits<
-    ::test_inheritancewithrecursivedecl::ParentFirstRequest>
+    ::test_inheritancewithrecursivedecl::ParentFirstRequest,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_inheritancewithrecursivedecl::ParentFirstRequest, 4, 4> {
 };
@@ -190,7 +189,8 @@ struct ::fidl::internal::TypeTraits<
 
 template <>
 struct internal::NaturalCodingTraits<
-    ::test_inheritancewithrecursivedecl::ChildSecondRequest>
+    ::test_inheritancewithrecursivedecl::ChildSecondRequest,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_inheritancewithrecursivedecl::ChildSecondRequest, 4, 4> {
 };

@@ -96,14 +96,20 @@ class ByteAndBytes final {
   friend struct ::fidl::internal::MemberVisitor<
       ::test_byteandbytes::ByteAndBytes>;
   static constexpr auto kMembers = std::make_tuple(
-      ::fidl::internal::NaturalStructMember<Storage_, uint8_t>{
+      ::fidl::internal::NaturalStructMember<
+          Storage_, uint8_t, fidl::internal::NaturalCodingConstraintEmpty>{
           &Storage_::single_byte, 0, 0},
-      ::fidl::internal::NaturalStructMember<Storage_, ::std::vector<uint8_t>>{
-          &Storage_::many_bytes, 8, 8},
-      ::fidl::internal::NaturalStructMember<Storage_, ::std::vector<uint8_t>>{
+      ::fidl::internal::NaturalStructMember<
+          Storage_, ::std::vector<uint8_t>,
+          fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::many_bytes,
+                                                        8, 8},
+      ::fidl::internal::NaturalStructMember<
+          Storage_, ::std::vector<uint8_t>,
+          fidl::internal::NaturalCodingConstraintEmpty>{
           &Storage_::only_one_k_bytes, 24, 24},
       ::fidl::internal::NaturalStructMember<
-          Storage_, ::cpp17::optional<::std::vector<uint8_t>>>{
+          Storage_, ::cpp17::optional<::std::vector<uint8_t>>,
+          fidl::internal::NaturalCodingConstraintEmpty>{
           &Storage_::opt_only_one_k_bytes, 40, 40});
 };
 
@@ -124,9 +130,11 @@ struct ::fidl::internal::TypeTraits<::test_byteandbytes::ByteAndBytes> final {
 };
 
 template <>
-struct internal::NaturalCodingTraits<::test_byteandbytes::ByteAndBytes> final
-    : public ::fidl::internal::NaturalStructCodingTraits<
-          ::test_byteandbytes::ByteAndBytes, 56, 56> {};
+struct internal::NaturalCodingTraits<
+    ::test_byteandbytes::ByteAndBytes,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
+    final : public ::fidl::internal::NaturalStructCodingTraits<
+                ::test_byteandbytes::ByteAndBytes, 56, 56> {};
 
 template <>
 struct HasPadding<::test_byteandbytes::ByteAndBytes> : public std::true_type {};

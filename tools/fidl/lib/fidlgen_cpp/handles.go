@@ -52,6 +52,16 @@ func (c *compiler) fieldHandleInformation(val *fidlgen.Type) *HandleInformation 
 	return nil
 }
 
+// A constraint type, used in natural type coding to perform validation.
+func (c *compiler) fieldConstraint(val *fidlgen.Type) string {
+	handleInfo := c.fieldHandleInformation(val)
+	if handleInfo == nil {
+		return "fidl::internal::NaturalCodingConstraintEmpty"
+	}
+	return fmt.Sprintf("fidl::internal::NaturalCodingConstraintHandle<%s, %s>",
+		handleInfo.ObjectType, handleInfo.Rights)
+}
+
 var handleSubtypeConsts = map[fidlgen.HandleSubtype]string{
 	fidlgen.Bti:          "BTI",
 	fidlgen.Channel:      "CHANNEL",

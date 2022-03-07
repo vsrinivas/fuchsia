@@ -64,8 +64,9 @@ class MyStruct final {
       ::test_importedconstvalues::MyStruct, 1, 1>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_importedconstvalues::MyStruct>;
-  static constexpr auto kMembers =
-      std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, uint8_t>{
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalStructMember<
+          Storage_, uint8_t, fidl::internal::NaturalCodingConstraintEmpty>{
           &Storage_::__reserved, 0, 0});
 };
 
@@ -94,9 +95,11 @@ struct ::fidl::internal::TypeTraits<::test_importedconstvalues::MyStruct>
 };
 
 template <>
-struct internal::NaturalCodingTraits<::test_importedconstvalues::MyStruct> final
-    : public ::fidl::internal::NaturalStructCodingTraits<
-          ::test_importedconstvalues::MyStruct, 1, 1> {};
+struct internal::NaturalCodingTraits<
+    ::test_importedconstvalues::MyStruct,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
+    final : public ::fidl::internal::NaturalStructCodingTraits<
+                ::test_importedconstvalues::MyStruct, 1, 1> {};
 
 template <>
 struct internal::NaturalIsMemcpyCompatible<::test_importedconstvalues::MyStruct>

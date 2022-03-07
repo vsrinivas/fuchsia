@@ -92,10 +92,10 @@ class StructWithNullableVector final {
       ::test_nullable::StructWithNullableVector, 16, 16>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_nullable::StructWithNullableVector>;
-  static constexpr auto kMembers =
-      std::make_tuple(::fidl::internal::NaturalStructMember<
-                      Storage_, ::cpp17::optional<::std::vector<int32_t>>>{
-          &Storage_::val, 0, 0});
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalStructMember<
+          Storage_, ::cpp17::optional<::std::vector<int32_t>>,
+          fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::val, 0, 0});
 };
 
 extern "C" const fidl_type_t test_nullable_StructWithNullableUnionTable;
@@ -154,8 +154,8 @@ class StructWithNullableUnion final {
       ::test_nullable::StructWithNullableUnion>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<
-          Storage_, ::std::unique_ptr<::test_nullable::SimpleUnion>>{
-          &Storage_::val, 0, 0});
+          Storage_, ::std::unique_ptr<::test_nullable::SimpleUnion>,
+          fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::val, 0, 0});
 };
 
 extern "C" const fidl_type_t test_nullable_StructWithNullableStructTable;
@@ -214,8 +214,8 @@ class StructWithNullableStruct final {
       ::test_nullable::StructWithNullableStruct>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<
-          Storage_, ::std::unique_ptr<::test_nullable::Int32Wrapper>>{
-          &Storage_::val, 0, 0});
+          Storage_, ::std::unique_ptr<::test_nullable::Int32Wrapper>,
+          fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::val, 0, 0});
 };
 
 extern "C" const fidl_type_t test_nullable_StructWithNullableStringTable;
@@ -268,9 +268,9 @@ class StructWithNullableString final {
   friend struct ::fidl::internal::MemberVisitor<
       ::test_nullable::StructWithNullableString>;
   static constexpr auto kMembers = std::make_tuple(
-      ::fidl::internal::NaturalStructMember<Storage_,
-                                            ::cpp17::optional<::std::string>>{
-          &Storage_::val, 0, 0});
+      ::fidl::internal::NaturalStructMember<
+          Storage_, ::cpp17::optional<::std::string>,
+          fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::val, 0, 0});
 };
 
 #ifdef __Fuchsia__
@@ -314,11 +314,10 @@ class StructWithNullableRequest final {
       ::test_nullable::StructWithNullableRequest>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<
-          Storage_, ::fidl::ServerEnd<::test_nullable::SimpleProtocol>>{
-          &Storage_::val, 0, 0,
-          std::make_optional<::fidl::internal::NaturalHandleInformation>(
-              {.object_type = ZX_OBJ_TYPE_CHANNEL,
-               .rights = ZX_DEFAULT_CHANNEL_RIGHTS})});
+          Storage_, ::fidl::ServerEnd<::test_nullable::SimpleProtocol>,
+          fidl::internal::NaturalCodingConstraintHandle<
+              ZX_OBJ_TYPE_CHANNEL, ZX_DEFAULT_CHANNEL_RIGHTS>>{&Storage_::val,
+                                                               0, 0});
 };
 
 #endif  // __Fuchsia__
@@ -364,11 +363,10 @@ class StructWithNullableProtocol final {
       ::test_nullable::StructWithNullableProtocol>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<
-          Storage_, ::fidl::ClientEnd<::test_nullable::SimpleProtocol>>{
-          &Storage_::val, 0, 0,
-          std::make_optional<::fidl::internal::NaturalHandleInformation>(
-              {.object_type = ZX_OBJ_TYPE_CHANNEL,
-               .rights = ZX_DEFAULT_CHANNEL_RIGHTS})});
+          Storage_, ::fidl::ClientEnd<::test_nullable::SimpleProtocol>,
+          fidl::internal::NaturalCodingConstraintHandle<
+              ZX_OBJ_TYPE_CHANNEL, ZX_DEFAULT_CHANNEL_RIGHTS>>{&Storage_::val,
+                                                               0, 0});
 };
 
 #endif  // __Fuchsia__
@@ -407,11 +405,11 @@ class StructWithNullableHandle final {
       ::test_nullable::StructWithNullableHandle, 4, 4>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_nullable::StructWithNullableHandle>;
-  static constexpr auto kMembers = std::make_tuple(
-      ::fidl::internal::NaturalStructMember<Storage_, ::zx::vmo>{
-          &Storage_::val, 0, 0,
-          std::make_optional<::fidl::internal::NaturalHandleInformation>(
-              {.object_type = ZX_OBJ_TYPE_VMO, .rights = 0x80000000})});
+  static constexpr auto kMembers =
+      std::make_tuple(::fidl::internal::NaturalStructMember<
+                      Storage_, ::zx::vmo,
+                      fidl::internal::NaturalCodingConstraintHandle<
+                          ZX_OBJ_TYPE_VMO, 0x80000000>>{&Storage_::val, 0, 0});
 };
 
 #endif  // __Fuchsia__
@@ -479,9 +477,13 @@ class SimpleUnion final {
   std::shared_ptr<Storage_> CloneStorage_() const;
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_nullable::SimpleUnion>;
-  static constexpr std::array<
-      std::optional<::fidl::internal::NaturalHandleInformation>, 3>
-      kMembers = {std::nullopt, std::nullopt, std::nullopt};
+  static constexpr auto kMembers =
+      std::make_tuple(::fidl::internal::NaturalUnionMember<
+                          ::fidl::internal::NaturalCodingConstraintEmpty>(),
+                      ::fidl::internal::NaturalUnionMember<
+                          fidl::internal::NaturalCodingConstraintEmpty>(),
+                      ::fidl::internal::NaturalUnionMember<
+                          fidl::internal::NaturalCodingConstraintEmpty>());
 
   explicit SimpleUnion(std::shared_ptr<Storage_> storage)
       : storage_(std::move(storage)) {}
@@ -561,8 +563,9 @@ class SimpleProtocolAddTopResponse final {
       ::test_nullable::SimpleProtocolAddTopResponse, 4, 4>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_nullable::SimpleProtocolAddTopResponse>;
-  static constexpr auto kMembers =
-      std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, int32_t>{
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalStructMember<
+          Storage_, int32_t, fidl::internal::NaturalCodingConstraintEmpty>{
           &Storage_::sum, 0, 0});
 };
 
@@ -621,10 +624,12 @@ class SimpleProtocolAddRequest final {
   friend struct ::fidl::internal::MemberVisitor<
       ::test_nullable::SimpleProtocolAddRequest>;
   static constexpr auto kMembers = std::make_tuple(
-      ::fidl::internal::NaturalStructMember<Storage_, int32_t>{&Storage_::a, 0,
-                                                               0},
-      ::fidl::internal::NaturalStructMember<Storage_, int32_t>{&Storage_::b, 4,
-                                                               4});
+      ::fidl::internal::NaturalStructMember<
+          Storage_, int32_t, fidl::internal::NaturalCodingConstraintEmpty>{
+          &Storage_::a, 0, 0},
+      ::fidl::internal::NaturalStructMember<
+          Storage_, int32_t, fidl::internal::NaturalCodingConstraintEmpty>{
+          &Storage_::b, 4, 4});
 };
 
 extern "C" const fidl_type_t test_nullable_Int32WrapperTable;
@@ -671,8 +676,9 @@ class Int32Wrapper final {
   friend struct ::fidl::internal::NaturalStructCodingTraits<
       ::test_nullable::Int32Wrapper, 4, 4>;
   friend struct ::fidl::internal::MemberVisitor<::test_nullable::Int32Wrapper>;
-  static constexpr auto kMembers =
-      std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, int32_t>{
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalStructMember<
+          Storage_, int32_t, fidl::internal::NaturalCodingConstraintEmpty>{
           &Storage_::val, 0, 0});
 };
 
@@ -695,7 +701,9 @@ struct ::fidl::internal::TypeTraits<::test_nullable::StructWithNullableVector>
 };
 
 template <>
-struct internal::NaturalCodingTraits<::test_nullable::StructWithNullableVector>
+struct internal::NaturalCodingTraits<
+    ::test_nullable::StructWithNullableVector,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_nullable::StructWithNullableVector, 16, 16> {};
 
@@ -729,7 +737,9 @@ struct ::fidl::internal::TypeTraits<::test_nullable::StructWithNullableUnion>
 };
 
 template <>
-struct internal::NaturalCodingTraits<::test_nullable::StructWithNullableUnion>
+struct internal::NaturalCodingTraits<
+    ::test_nullable::StructWithNullableUnion,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_nullable::StructWithNullableUnion, 24, 16> {};
 
@@ -763,7 +773,9 @@ struct ::fidl::internal::TypeTraits<::test_nullable::StructWithNullableStruct>
 };
 
 template <>
-struct internal::NaturalCodingTraits<::test_nullable::StructWithNullableStruct>
+struct internal::NaturalCodingTraits<
+    ::test_nullable::StructWithNullableStruct,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_nullable::StructWithNullableStruct, 8, 8> {};
 
@@ -797,7 +809,9 @@ struct ::fidl::internal::TypeTraits<::test_nullable::StructWithNullableString>
 };
 
 template <>
-struct internal::NaturalCodingTraits<::test_nullable::StructWithNullableString>
+struct internal::NaturalCodingTraits<
+    ::test_nullable::StructWithNullableString,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_nullable::StructWithNullableString, 16, 16> {};
 
@@ -834,7 +848,9 @@ struct ::fidl::internal::TypeTraits<::test_nullable::StructWithNullableRequest>
 };
 
 template <>
-struct internal::NaturalCodingTraits<::test_nullable::StructWithNullableRequest>
+struct internal::NaturalCodingTraits<
+    ::test_nullable::StructWithNullableRequest,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_nullable::StructWithNullableRequest, 4, 4> {};
 
@@ -868,7 +884,8 @@ struct ::fidl::internal::TypeTraits<::test_nullable::StructWithNullableProtocol>
 
 template <>
 struct internal::NaturalCodingTraits<
-    ::test_nullable::StructWithNullableProtocol>
+    ::test_nullable::StructWithNullableProtocol,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_nullable::StructWithNullableProtocol, 4, 4> {};
 
@@ -901,7 +918,9 @@ struct ::fidl::internal::TypeTraits<::test_nullable::StructWithNullableHandle>
 };
 
 template <>
-struct internal::NaturalCodingTraits<::test_nullable::StructWithNullableHandle>
+struct internal::NaturalCodingTraits<
+    ::test_nullable::StructWithNullableHandle,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_nullable::StructWithNullableHandle, 4, 4> {};
 
@@ -932,7 +951,8 @@ struct ::fidl::internal::TypeTraits<
 
 template <>
 struct internal::NaturalCodingTraits<
-    ::test_nullable::SimpleProtocolAddTopResponse>
+    ::test_nullable::SimpleProtocolAddTopResponse,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_nullable::SimpleProtocolAddTopResponse, 4, 4> {};
 
@@ -961,7 +981,9 @@ struct ::fidl::internal::TypeTraits<::test_nullable::SimpleProtocolAddRequest>
 };
 
 template <>
-struct internal::NaturalCodingTraits<::test_nullable::SimpleProtocolAddRequest>
+struct internal::NaturalCodingTraits<
+    ::test_nullable::SimpleProtocolAddRequest,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_nullable::SimpleProtocolAddRequest, 8, 8> {};
 
@@ -988,9 +1010,11 @@ struct ::fidl::internal::TypeTraits<::test_nullable::Int32Wrapper> final {
 };
 
 template <>
-struct internal::NaturalCodingTraits<::test_nullable::Int32Wrapper> final
-    : public ::fidl::internal::NaturalStructCodingTraits<
-          ::test_nullable::Int32Wrapper, 4, 4> {};
+struct internal::NaturalCodingTraits<
+    ::test_nullable::Int32Wrapper,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
+    final : public ::fidl::internal::NaturalStructCodingTraits<
+                ::test_nullable::Int32Wrapper, 4, 4> {};
 
 template <>
 struct internal::NaturalIsMemcpyCompatible<::test_nullable::Int32Wrapper>
@@ -1006,8 +1030,10 @@ template <>
 struct IsUnion<::test_nullable::SimpleUnion> : public std::true_type {};
 
 template <>
-struct internal::NaturalCodingTraits<::test_nullable::SimpleUnion> final
-    : public ::fidl::internal::NaturalUnionCodingTraits<
-          ::test_nullable::SimpleUnion> {};
+struct internal::NaturalCodingTraits<
+    ::test_nullable::SimpleUnion,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
+    final : public ::fidl::internal::NaturalUnionCodingTraits<
+                ::test_nullable::SimpleUnion> {};
 
 }  // namespace fidl

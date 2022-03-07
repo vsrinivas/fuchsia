@@ -81,9 +81,11 @@ class ExampleXUnion final {
   std::shared_ptr<Storage_> CloneStorage_() const;
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_placementofattributes::ExampleXUnion>;
-  static constexpr std::array<
-      std::optional<::fidl::internal::NaturalHandleInformation>, 2>
-      kMembers = {std::nullopt, std::nullopt};
+  static constexpr auto kMembers =
+      std::make_tuple(::fidl::internal::NaturalUnionMember<
+                          ::fidl::internal::NaturalCodingConstraintEmpty>(),
+                      ::fidl::internal::NaturalUnionMember<
+                          fidl::internal::NaturalCodingConstraintEmpty>());
 
   explicit ExampleXUnion(std::shared_ptr<Storage_> storage)
       : storage_(std::move(storage)) {}
@@ -160,9 +162,11 @@ class ExampleUnion final {
   std::shared_ptr<Storage_> CloneStorage_() const;
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_placementofattributes::ExampleUnion>;
-  static constexpr std::array<
-      std::optional<::fidl::internal::NaturalHandleInformation>, 2>
-      kMembers = {std::nullopt, std::nullopt};
+  static constexpr auto kMembers =
+      std::make_tuple(::fidl::internal::NaturalUnionMember<
+                          ::fidl::internal::NaturalCodingConstraintEmpty>(),
+                      ::fidl::internal::NaturalUnionMember<
+                          fidl::internal::NaturalCodingConstraintEmpty>());
 
   explicit ExampleUnion(std::shared_ptr<Storage_> storage)
       : storage_(std::move(storage)) {}
@@ -230,8 +234,9 @@ class ExampleTable final {
       ::test_placementofattributes::ExampleTable>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_placementofattributes::ExampleTable>;
-  static constexpr auto kMembers =
-      std::make_tuple(::fidl::internal::NaturalTableMember<Storage_, uint32_t>{
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalTableMember<
+          Storage_, uint32_t, fidl::internal::NaturalCodingConstraintEmpty>{
           1, &Storage_::member});
 };
 
@@ -281,8 +286,9 @@ class ExampleStruct final {
       ::test_placementofattributes::ExampleStruct, 4, 4>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_placementofattributes::ExampleStruct>;
-  static constexpr auto kMembers =
-      std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, uint32_t>{
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalStructMember<
+          Storage_, uint32_t, fidl::internal::NaturalCodingConstraintEmpty>{
           &Storage_::member, 0, 0});
 };
 
@@ -341,9 +347,9 @@ class ExampleProtocolMethodRequest final {
   friend struct ::fidl::internal::MemberVisitor<
       ::test_placementofattributes::ExampleProtocolMethodRequest>;
   static constexpr auto kMembers = std::make_tuple(
-      ::fidl::internal::NaturalStructMember<Storage_,
-                                            ::test_exampleusing::Empty>{
-          &Storage_::arg, 0, 0});
+      ::fidl::internal::NaturalStructMember<
+          Storage_, ::test_exampleusing::Empty,
+          fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::arg, 0, 0});
 };
 
 constexpr uint32_t EXAMPLE_CONST = 0u;
@@ -368,7 +374,8 @@ struct ::fidl::internal::TypeTraits<::test_placementofattributes::ExampleStruct>
 
 template <>
 struct internal::NaturalCodingTraits<
-    ::test_placementofattributes::ExampleStruct>
+    ::test_placementofattributes::ExampleStruct,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_placementofattributes::ExampleStruct, 4, 4> {};
 
@@ -400,7 +407,8 @@ struct ::fidl::internal::TypeTraits<
 
 template <>
 struct internal::NaturalCodingTraits<
-    ::test_placementofattributes::ExampleProtocolMethodRequest>
+    ::test_placementofattributes::ExampleProtocolMethodRequest,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     final
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_placementofattributes::ExampleProtocolMethodRequest, 1, 1> {};
@@ -421,7 +429,9 @@ struct IsFidlType<::test_placementofattributes::ExampleTable>
     : public std::true_type {};
 
 template <>
-struct internal::NaturalCodingTraits<::test_placementofattributes::ExampleTable>
+struct internal::NaturalCodingTraits<
+    ::test_placementofattributes::ExampleTable,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     : public ::fidl::internal::NaturalTableCodingTraits<
           ::test_placementofattributes::ExampleTable> {};
 
@@ -434,7 +444,8 @@ struct IsUnion<::test_placementofattributes::ExampleXUnion>
 
 template <>
 struct internal::NaturalCodingTraits<
-    ::test_placementofattributes::ExampleXUnion>
+    ::test_placementofattributes::ExampleXUnion,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalUnionCodingTraits<
                 ::test_placementofattributes::ExampleXUnion> {};
 
@@ -446,22 +457,22 @@ struct IsUnion<::test_placementofattributes::ExampleUnion>
     : public std::true_type {};
 
 template <>
-struct internal::NaturalCodingTraits<::test_placementofattributes::ExampleUnion>
+struct internal::NaturalCodingTraits<
+    ::test_placementofattributes::ExampleUnion,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalUnionCodingTraits<
                 ::test_placementofattributes::ExampleUnion> {};
 
 template <>
 struct internal::NaturalCodingTraits<
-    ::test_placementofattributes::ExampleBits> {
+    ::test_placementofattributes::ExampleBits,
+    ::fidl::internal::NaturalCodingConstraintEmpty> {
   static constexpr size_t inline_size_v1_no_ee = sizeof(uint32_t);
   static constexpr size_t inline_size_v2 = sizeof(uint32_t);
 
   static void Encode(internal::NaturalEncoder* encoder,
                      ::test_placementofattributes::ExampleBits* value,
-                     size_t offset,
-                     cpp17::optional<NaturalHandleInformation>
-                         maybe_handle_info = cpp17::nullopt) {
-    ZX_DEBUG_ASSERT(maybe_handle_info == cpp17::nullopt);
+                     size_t offset) {
     *encoder->template GetPtr<::test_placementofattributes::ExampleBits>(
         offset) = *value;
   }
@@ -476,16 +487,14 @@ struct internal::NaturalCodingTraits<
 
 template <>
 struct internal::NaturalCodingTraits<
-    ::test_placementofattributes::ExampleEnum> {
+    ::test_placementofattributes::ExampleEnum,
+    ::fidl::internal::NaturalCodingConstraintEmpty> {
   static constexpr size_t inline_size_v1_no_ee = sizeof(uint32_t);
   static constexpr size_t inline_size_v2 = sizeof(uint32_t);
 
   static void Encode(internal::NaturalEncoder* encoder,
                      ::test_placementofattributes::ExampleEnum* value,
-                     size_t offset,
-                     cpp17::optional<NaturalHandleInformation>
-                         maybe_handle_info = cpp17::nullopt) {
-    ZX_DEBUG_ASSERT(maybe_handle_info == cpp17::nullopt);
+                     size_t offset) {
     *encoder->template GetPtr<::test_placementofattributes::ExampleEnum>(
         offset) = *value;
   }

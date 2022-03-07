@@ -15,38 +15,39 @@
 
 namespace fidl::internal {
 
-// Used for handle rights and type checking during write and decode.
-struct NaturalHandleInformation {
-  zx_obj_type_t object_type;
-  zx_rights_t rights;
+struct NaturalCodingConstraintEmpty {};
+
+template <zx_obj_type_t ObjType, zx_rights_t Rights>
+struct NaturalCodingConstraintHandle {
+  static constexpr zx_obj_type_t obj_type = ObjType;
+  static constexpr zx_rights_t rights = Rights;
 };
 
-template <typename T, class Enable = void>
+template <typename T, typename Constraint, class Enable = void>
 struct NaturalCodingTraits;
 
-template <typename T>
+template <typename T, typename Constraint>
 size_t NaturalEncodingInlineSize(NaturalEncoder* encoder) {
   switch (encoder->wire_format()) {
     case ::fidl::internal::WireFormatVersion::kV1:
-      return NaturalCodingTraits<T>::inline_size_v1_no_ee;
+      return NaturalCodingTraits<T, Constraint>::inline_size_v1_no_ee;
     case ::fidl::internal::WireFormatVersion::kV2:
-      return NaturalCodingTraits<T>::inline_size_v2;
+      return NaturalCodingTraits<T, Constraint>::inline_size_v2;
   }
   __builtin_unreachable();
 }
 
-template <typename T>
+template <typename T, typename Constraint>
 size_t NaturalDecodingInlineSize(NaturalDecoder* decoder) {
-  return NaturalCodingTraits<T>::inline_size_v2;
+  return NaturalCodingTraits<T, Constraint>::inline_size_v2;
 }
 
 template <typename T>
-struct NaturalCodingTraits<T, typename std::enable_if<NaturalIsPrimitive<T>::value>::type> {
+struct NaturalCodingTraits<T, NaturalCodingConstraintEmpty,
+                           typename std::enable_if<NaturalIsPrimitive<T>::value>::type> {
   static constexpr size_t inline_size_v1_no_ee = sizeof(T);
   static constexpr size_t inline_size_v2 = sizeof(T);
-  static void Encode(NaturalEncoder* encoder, T* value, size_t offset,
-                     cpp17::optional<NaturalHandleInformation> maybe_handle_info = cpp17::nullopt) {
-    ZX_DEBUG_ASSERT(maybe_handle_info == cpp17::nullopt);
+  static void Encode(NaturalEncoder* encoder, T* value, size_t offset) {
     *encoder->template GetPtr<T>(offset) = *value;
   }
   static void Decode(NaturalDecoder* decoder, T* value, size_t offset) {
@@ -55,19 +56,17 @@ struct NaturalCodingTraits<T, typename std::enable_if<NaturalIsPrimitive<T>::val
 };
 
 template <>
-struct NaturalCodingTraits<bool> {
+struct NaturalCodingTraits<bool, NaturalCodingConstraintEmpty> {
   static constexpr size_t inline_size_v1_no_ee = sizeof(bool);
   static constexpr size_t inline_size_v2 = sizeof(bool);
-  static void Encode(NaturalEncoder* encoder, bool* value, size_t offset,
-                     cpp17::optional<NaturalHandleInformation> maybe_handle_info = cpp17::nullopt) {
+  static void Encode(NaturalEncoder* encoder, bool* value, size_t offset) {
     if (!(static_cast<uint8_t>(*value) == 0 || static_cast<uint8_t>(*value) == 1)) {
       encoder->SetError("invalid boolean value");
       return;
     }
     *encoder->template GetPtr<bool>(offset) = *value;
   }
-  static void Encode(NaturalEncoder* encoder, std::vector<bool>::iterator value, size_t offset,
-                     cpp17::optional<NaturalHandleInformation> maybe_handle_info = cpp17::nullopt) {
+  static void Encode(NaturalEncoder* encoder, std::vector<bool>::iterator value, size_t offset) {
     if (!(static_cast<uint8_t>(*value) == 0 || static_cast<uint8_t>(*value) == 1)) {
       encoder->SetError("invalid boolean value");
       return;
@@ -85,120 +84,114 @@ struct NaturalCodingTraits<bool> {
 template <bool Value>
 class NaturalUseStdCopy {};
 
-template <typename T>
+template <typename T, typename Constraint>
 void NaturalEncodeVectorBody(NaturalUseStdCopy<true>, NaturalEncoder* encoder,
                              typename std::vector<T>::iterator in_begin,
-                             typename std::vector<T>::iterator in_end, size_t out_offset,
-                             cpp17::optional<NaturalHandleInformation> maybe_handle_info) {
-  static_assert(NaturalCodingTraits<T>::inline_size_v1_no_ee == sizeof(T),
+                             typename std::vector<T>::iterator in_end, size_t out_offset) {
+  static_assert(NaturalCodingTraits<T, Constraint>::inline_size_v1_no_ee == sizeof(T),
                 "stride doesn't match object size");
   std::copy(in_begin, in_end, encoder->template GetPtr<T>(out_offset));
 }
 
-template <typename T>
+template <typename T, typename Constraint>
 void NaturalEncodeVectorBody(NaturalUseStdCopy<false>, NaturalEncoder* encoder,
                              typename std::vector<T>::iterator in_begin,
-                             typename std::vector<T>::iterator in_end, size_t out_offset,
-                             cpp17::optional<NaturalHandleInformation> maybe_handle_info) {
-  size_t stride = NaturalEncodingInlineSize<T>(encoder);
+                             typename std::vector<T>::iterator in_end, size_t out_offset) {
+  size_t stride = NaturalEncodingInlineSize<T, Constraint>(encoder);
   for (typename std::vector<T>::iterator in_it = in_begin; in_it != in_end;
        in_it++, out_offset += stride) {
-    NaturalCodingTraits<T>::Encode(encoder, &*in_it, out_offset, maybe_handle_info);
+    NaturalCodingTraits<T, Constraint>::Encode(encoder, &*in_it, out_offset);
   }
 }
 
-template <typename T>
+template <typename T, typename Constraint>
 void NaturalDecodeVectorBody(NaturalUseStdCopy<true>, NaturalDecoder* decoder,
                              size_t in_begin_offset, size_t in_end_offset, std::vector<T>* out,
                              size_t count) {
-  static_assert(NaturalCodingTraits<T>::inline_size_v1_no_ee == sizeof(T),
+  static_assert(NaturalCodingTraits<T, Constraint>::inline_size_v1_no_ee == sizeof(T),
                 "stride doesn't match object size");
   *out = std::vector<T>(decoder->template GetPtr<T>(in_begin_offset),
                         decoder->template GetPtr<T>(in_end_offset));
 }
 
-template <typename T>
+template <typename T, typename Constraint>
 void NaturalDecodeVectorBody(NaturalUseStdCopy<false>, NaturalDecoder* decoder,
                              size_t in_begin_offset, size_t in_end_offset, std::vector<T>* out,
                              size_t count) {
   out->resize(count);
-  size_t stride = NaturalDecodingInlineSize<T>(decoder);
+  size_t stride = NaturalDecodingInlineSize<T, Constraint>(decoder);
   size_t in_offset = in_begin_offset;
   typename std::vector<T>::iterator out_it = out->begin();
   for (; in_offset < in_end_offset; in_offset += stride, out_it++) {
-    NaturalCodingTraits<T>::Decode(decoder, &*out_it, in_offset);
+    NaturalCodingTraits<T, Constraint>::Decode(decoder, &*out_it, in_offset);
   }
 }
 
-template <typename T>
-struct NaturalCodingTraits<::std::vector<T>> {
+template <typename T, typename Constraint>
+struct NaturalCodingTraits<::std::vector<T>, Constraint> {
   static constexpr size_t inline_size_v1_no_ee = sizeof(fidl_vector_t);
   static constexpr size_t inline_size_v2 = sizeof(fidl_vector_t);
-  static void Encode(NaturalEncoder* encoder, ::std::vector<T>* value, size_t offset,
-                     cpp17::optional<NaturalHandleInformation> maybe_handle_info = cpp17::nullopt) {
+  static void Encode(NaturalEncoder* encoder, ::std::vector<T>* value, size_t offset) {
     size_t count = value->size();
     fidl_vector_t* vector = encoder->template GetPtr<fidl_vector_t>(offset);
     vector->count = count;
     vector->data = reinterpret_cast<void*>(FIDL_ALLOC_PRESENT);
-    size_t stride = NaturalEncodingInlineSize<T>(encoder);
+    size_t stride = NaturalEncodingInlineSize<T, Constraint>(encoder);
     size_t base = encoder->Alloc(count * stride);
-    internal::NaturalEncodeVectorBody<T>(
+    internal::NaturalEncodeVectorBody<T, Constraint>(
         internal::NaturalUseStdCopy<NaturalIsMemcpyCompatible<T>::value>(), encoder, value->begin(),
-        value->end(), base, maybe_handle_info);
+        value->end(), base);
   }
   static void Decode(NaturalDecoder* decoder, ::std::vector<T>* value, size_t offset) {
     fidl_vector_t* encoded = decoder->template GetPtr<fidl_vector_t>(offset);
-    size_t stride = NaturalDecodingInlineSize<T>(decoder);
+    size_t stride = NaturalDecodingInlineSize<T, Constraint>(decoder);
     size_t base = decoder->GetOffset(encoded->data);
     size_t count = encoded->count;
-    internal::NaturalDecodeVectorBody<T>(
+    internal::NaturalDecodeVectorBody<T, Constraint>(
         internal::NaturalUseStdCopy<NaturalIsMemcpyCompatible<T>::value>(), decoder, base,
         base + stride * count, value, count);
   }
 };
 
-template <typename T, size_t N>
-struct NaturalCodingTraits<::std::array<T, N>> {
-  static constexpr size_t inline_size_v1_no_ee = NaturalCodingTraits<T>::inline_size_v1_no_ee * N;
-  static constexpr size_t inline_size_v2 = NaturalCodingTraits<T>::inline_size_v2 * N;
-  static void Encode(NaturalEncoder* encoder, std::array<T, N>* value, size_t offset,
-                     cpp17::optional<NaturalHandleInformation> maybe_handle_info = cpp17::nullopt) {
+template <typename T, size_t N, typename Constraint>
+struct NaturalCodingTraits<::std::array<T, N>, Constraint> {
+  static constexpr size_t inline_size_v1_no_ee =
+      NaturalCodingTraits<T, Constraint>::inline_size_v1_no_ee * N;
+  static constexpr size_t inline_size_v2 = NaturalCodingTraits<T, Constraint>::inline_size_v2 * N;
+  static void Encode(NaturalEncoder* encoder, std::array<T, N>* value, size_t offset) {
     size_t stride;
-    stride = NaturalEncodingInlineSize<T>(encoder);
+    stride = NaturalEncodingInlineSize<T, Constraint>(encoder);
     if (NaturalIsMemcpyCompatible<T>::value) {
       memcpy(encoder->template GetPtr<void>(offset), &value[0], N * stride);
       return;
     }
     for (size_t i = 0; i < N; ++i) {
-      NaturalCodingTraits<T>::Encode(encoder, &value->at(i), offset + i * stride,
-                                     maybe_handle_info);
+      NaturalCodingTraits<T, Constraint>::Encode(encoder, &value->at(i), offset + i * stride);
     }
   }
   static void Decode(NaturalDecoder* decoder, std::array<T, N>* value, size_t offset) {
-    size_t stride = NaturalDecodingInlineSize<T>(decoder);
+    size_t stride = NaturalDecodingInlineSize<T, Constraint>(decoder);
     if (NaturalIsMemcpyCompatible<T>::value) {
       memcpy(&value[0], decoder->template GetPtr<void>(offset), N * stride);
       return;
     }
     for (size_t i = 0; i < N; ++i) {
-      NaturalCodingTraits<T>::Decode(decoder, &value->at(i), offset + i * stride);
+      NaturalCodingTraits<T, Constraint>::Decode(decoder, &value->at(i), offset + i * stride);
     }
   }
 };
 
 #ifdef __Fuchsia__
-template <typename T>
+template <typename T, typename Constraint>
 struct NaturalCodingTraits<
-    T, typename std::enable_if<std::is_base_of<zx::object_base, T>::value>::type> {
+    T, Constraint, typename std::enable_if<std::is_base_of<zx::object_base, T>::value>::type> {
   static constexpr size_t inline_size_v1_no_ee = sizeof(zx_handle_t);
   static constexpr size_t inline_size_v2 = sizeof(zx_handle_t);
-  static void Encode(NaturalEncoder* encoder, zx::object_base* value, size_t offset,
-                     cpp17::optional<NaturalHandleInformation> maybe_handle_info = cpp17::nullopt) {
-    ZX_ASSERT(maybe_handle_info);
+  static void Encode(NaturalEncoder* encoder, zx::object_base* value, size_t offset) {
     encoder->EncodeHandle(value->release(),
                           {
-                              .obj_type = maybe_handle_info->object_type,
-                              .rights = maybe_handle_info->rights,
+                              .obj_type = Constraint::obj_type,
+                              .rights = Constraint::rights,
                           },
                           offset);
   }
@@ -208,16 +201,16 @@ struct NaturalCodingTraits<
 };
 #endif  // __Fuchsia__
 
-template <typename T>
-struct NaturalCodingTraits<cpp17::optional<std::vector<T>>> {
+template <typename T, typename Constraint>
+struct NaturalCodingTraits<cpp17::optional<std::vector<T>>, Constraint> {
   static constexpr size_t inline_size_v1_no_ee = sizeof(fidl_vector_t);
   static constexpr size_t inline_size_v2 = sizeof(fidl_vector_t);
 
-  static void Encode(NaturalEncoder* encoder, cpp17::optional<std::vector<T>>* value, size_t offset,
-                     cpp17::optional<NaturalHandleInformation> maybe_handle_info = cpp17::nullopt) {
+  static void Encode(NaturalEncoder* encoder, cpp17::optional<std::vector<T>>* value,
+                     size_t offset) {
     if (value->has_value()) {
-      fidl::internal::NaturalCodingTraits<std::vector<T>>::Encode(encoder, &value->value(), offset,
-                                                                  maybe_handle_info);
+      fidl::internal::NaturalCodingTraits<std::vector<T>, Constraint>::Encode(
+          encoder, &value->value(), offset);
       return;
     }
     fidl_vector_t* vec = encoder->template GetPtr<fidl_vector_t>(offset);
@@ -233,23 +226,23 @@ struct NaturalCodingTraits<cpp17::optional<std::vector<T>>> {
       return;
     }
     std::vector<T> unwrapped;
-    fidl::internal::NaturalCodingTraits<std::vector<T>>::Decode(decoder, &unwrapped, offset);
+    fidl::internal::NaturalCodingTraits<std::vector<T>, Constraint>::Decode(decoder, &unwrapped,
+                                                                            offset);
     value->emplace(std::move(unwrapped));
   }
 };
 
-template <typename T>
-struct NaturalCodingTraits<std::unique_ptr<T>, typename std::enable_if<!IsUnion<T>::value>::type> {
+template <typename T, typename Constraint>
+struct NaturalCodingTraits<std::unique_ptr<T>, Constraint,
+                           typename std::enable_if<!IsUnion<T>::value>::type> {
   static constexpr size_t inline_size_v1_no_ee = sizeof(uintptr_t);
   static constexpr size_t inline_size_v2 = sizeof(uintptr_t);
-  static void Encode(NaturalEncoder* encoder, std::unique_ptr<T>* value, size_t offset,
-                     cpp17::optional<NaturalHandleInformation> maybe_handle_info = cpp17::nullopt) {
+  static void Encode(NaturalEncoder* encoder, std::unique_ptr<T>* value, size_t offset) {
     if (value->get()) {
       *encoder->template GetPtr<uintptr_t>(offset) = FIDL_ALLOC_PRESENT;
 
-      size_t alloc_size = NaturalEncodingInlineSize<T>(encoder);
-      NaturalCodingTraits<T>::Encode(encoder, value->get(), encoder->Alloc(alloc_size),
-                                     maybe_handle_info);
+      size_t alloc_size = NaturalEncodingInlineSize<T, Constraint>(encoder);
+      NaturalCodingTraits<T, Constraint>::Encode(encoder, value->get(), encoder->Alloc(alloc_size));
     } else {
       *encoder->template GetPtr<uintptr_t>(offset) = FIDL_ALLOC_ABSENT;
     }
@@ -259,19 +252,19 @@ struct NaturalCodingTraits<std::unique_ptr<T>, typename std::enable_if<!IsUnion<
     if (!ptr)
       return value->reset();
     *value = std::make_unique<T>();
-    NaturalCodingTraits<T>::Decode(decoder, value->get(), decoder->GetOffset(ptr));
+    NaturalCodingTraits<T, Constraint>::Decode(decoder, value->get(), decoder->GetOffset(ptr));
   }
 };
 
-template <typename T>
-struct NaturalCodingTraits<std::unique_ptr<T>, typename std::enable_if<IsUnion<T>::value>::type> {
+template <typename T, typename Constraint>
+struct NaturalCodingTraits<std::unique_ptr<T>, Constraint,
+                           typename std::enable_if<IsUnion<T>::value>::type> {
   static constexpr size_t inline_size_v1_no_ee = sizeof(fidl_xunion_t);
   static constexpr size_t inline_size_v2 = sizeof(fidl_xunion_v2_t);
 
-  static void Encode(NaturalEncoder* encoder, std::unique_ptr<T>* value, size_t offset,
-                     cpp17::optional<NaturalHandleInformation> maybe_handle_info = cpp17::nullopt) {
+  static void Encode(NaturalEncoder* encoder, std::unique_ptr<T>* value, size_t offset) {
     if (*value) {
-      NaturalCodingTraits<T>::Encode(encoder, value->get(), offset, maybe_handle_info);
+      NaturalCodingTraits<T, Constraint>::Encode(encoder, value->get(), offset);
       return;
     }
 
@@ -285,18 +278,16 @@ struct NaturalCodingTraits<std::unique_ptr<T>, typename std::enable_if<IsUnion<T
       return;
     }
     *value = std::make_unique<T>();
-    NaturalCodingTraits<T>::Decode(decoder, value->get(), offset);
+    NaturalCodingTraits<T, Constraint>::Decode(decoder, value->get(), offset);
   }
 };
 
 template <>
-struct NaturalCodingTraits<::std::string> final {
+struct NaturalCodingTraits<::std::string, NaturalCodingConstraintEmpty> final {
   static constexpr size_t inline_size_old = sizeof(fidl_string_t);
   static constexpr size_t inline_size_v1_no_ee = sizeof(fidl_string_t);
   static constexpr size_t inline_size_v2 = sizeof(fidl_string_t);
-  static void Encode(NaturalEncoder* encoder, std::string* value, size_t offset,
-                     cpp17::optional<NaturalHandleInformation> maybe_handle_info = cpp17::nullopt) {
-    ZX_DEBUG_ASSERT(!maybe_handle_info);
+  static void Encode(NaturalEncoder* encoder, std::string* value, size_t offset) {
     const size_t size = value->size();
     fidl_string_t* string = encoder->template GetPtr<fidl_string_t>(offset);
     string->size = size;
@@ -313,15 +304,14 @@ struct NaturalCodingTraits<::std::string> final {
 };
 
 template <>
-struct NaturalCodingTraits<cpp17::optional<std::string>> {
+struct NaturalCodingTraits<cpp17::optional<std::string>, NaturalCodingConstraintEmpty> {
   static constexpr size_t inline_size_v1_no_ee = sizeof(fidl_string_t);
   static constexpr size_t inline_size_v2 = sizeof(fidl_string_t);
 
-  static void Encode(NaturalEncoder* encoder, cpp17::optional<std::string>* value, size_t offset,
-                     cpp17::optional<NaturalHandleInformation> maybe_handle_info = cpp17::nullopt) {
-    ZX_DEBUG_ASSERT(!maybe_handle_info.has_value());
+  static void Encode(NaturalEncoder* encoder, cpp17::optional<std::string>* value, size_t offset) {
     if (value->has_value()) {
-      fidl::internal::NaturalCodingTraits<std::string>::Encode(encoder, &value->value(), offset);
+      fidl::internal::NaturalCodingTraits<std::string, NaturalCodingConstraintEmpty>::Encode(
+          encoder, &value->value(), offset);
       return;
     }
     fidl_string_t* string = encoder->template GetPtr<fidl_string_t>(offset);
@@ -336,20 +326,19 @@ struct NaturalCodingTraits<cpp17::optional<std::string>> {
       return;
     }
     std::string unwrapped;
-    fidl::internal::NaturalCodingTraits<std::string>::Decode(decoder, &unwrapped, offset);
+    fidl::internal::NaturalCodingTraits<std::string, NaturalCodingConstraintEmpty>::Decode(
+        decoder, &unwrapped, offset);
     value->emplace(unwrapped);
   }
 };
 
-template <typename T>
-struct NaturalCodingTraits<ClientEnd<T>> {
-  static void Encode(NaturalEncoder* encoder, ClientEnd<T>* value, size_t offset,
-                     cpp17::optional<NaturalHandleInformation> maybe_handle_info = cpp17::nullopt) {
-    ZX_DEBUG_ASSERT(maybe_handle_info);
+template <typename T, typename Constraint>
+struct NaturalCodingTraits<ClientEnd<T>, Constraint> {
+  static void Encode(NaturalEncoder* encoder, ClientEnd<T>* value, size_t offset) {
     encoder->EncodeHandle(value->TakeChannel().release(),
                           {
-                              .obj_type = maybe_handle_info->object_type,
-                              .rights = maybe_handle_info->rights,
+                              .obj_type = Constraint::obj_type,
+                              .rights = Constraint::rights,
                           },
                           offset);
   }
@@ -361,15 +350,13 @@ struct NaturalCodingTraits<ClientEnd<T>> {
   }
 };
 
-template <typename T>
-struct NaturalCodingTraits<ServerEnd<T>> {
-  static void Encode(NaturalEncoder* encoder, ServerEnd<T>* value, size_t offset,
-                     cpp17::optional<NaturalHandleInformation> maybe_handle_info = cpp17::nullopt) {
-    ZX_DEBUG_ASSERT(maybe_handle_info);
+template <typename T, typename Constraint>
+struct NaturalCodingTraits<ServerEnd<T>, Constraint> {
+  static void Encode(NaturalEncoder* encoder, ServerEnd<T>* value, size_t offset) {
     encoder->EncodeHandle(value->TakeChannel().release(),
                           {
-                              .obj_type = maybe_handle_info->object_type,
-                              .rights = maybe_handle_info->rights,
+                              .obj_type = Constraint::obj_type,
+                              .rights = Constraint::rights,
                           },
                           offset);
   }
@@ -381,15 +368,14 @@ struct NaturalCodingTraits<ServerEnd<T>> {
   }
 };
 
-template <typename T>
-void NaturalEncode(NaturalEncoder* encoder, T* value, size_t offset,
-                   cpp17::optional<NaturalHandleInformation> maybe_handle_info = cpp17::nullopt) {
-  NaturalCodingTraits<T>::Encode(encoder, value, offset, maybe_handle_info);
+template <typename Constraint, typename T>
+void NaturalEncode(NaturalEncoder* encoder, T* value, size_t offset) {
+  NaturalCodingTraits<T, Constraint>::Encode(encoder, value, offset);
 }
 
-template <typename T>
+template <typename Constraint, typename T>
 void NaturalDecode(NaturalDecoder* decoder, T* value, size_t offset) {
-  NaturalCodingTraits<T>::Decode(decoder, value, offset);
+  NaturalCodingTraits<T, Constraint>::Decode(decoder, value, offset);
 }
 
 }  // namespace fidl::internal

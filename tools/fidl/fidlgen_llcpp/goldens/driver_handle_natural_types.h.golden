@@ -61,11 +61,10 @@ class ServerEndWrapper final {
       ::test_driverhandle::ServerEndWrapper>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<
-          Storage_, ::fdf::ServerEnd<::test_driverhandle::DriverProtocol>>{
-          &Storage_::value, 0, 0,
-          std::make_optional<::fidl::internal::NaturalHandleInformation>(
-              {.object_type = ZX_OBJ_TYPE_CHANNEL,
-               .rights = ZX_DEFAULT_CHANNEL_RIGHTS})});
+          Storage_, ::fdf::ServerEnd<::test_driverhandle::DriverProtocol>,
+          fidl::internal::NaturalCodingConstraintHandle<
+              ZX_OBJ_TYPE_CHANNEL, ZX_DEFAULT_CHANNEL_RIGHTS>>{&Storage_::value,
+                                                               0, 0});
 };
 
 #endif  // __Fuchsia__
@@ -109,11 +108,10 @@ class ClientEndWrapper final {
       ::test_driverhandle::ClientEndWrapper>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<
-          Storage_, ::fdf::ClientEnd<::test_driverhandle::DriverProtocol>>{
-          &Storage_::value, 0, 0,
-          std::make_optional<::fidl::internal::NaturalHandleInformation>(
-              {.object_type = ZX_OBJ_TYPE_CHANNEL,
-               .rights = ZX_DEFAULT_CHANNEL_RIGHTS})});
+          Storage_, ::fdf::ClientEnd<::test_driverhandle::DriverProtocol>,
+          fidl::internal::NaturalCodingConstraintHandle<
+              ZX_OBJ_TYPE_CHANNEL, ZX_DEFAULT_CHANNEL_RIGHTS>>{&Storage_::value,
+                                                               0, 0});
 };
 
 #endif  // __Fuchsia__
@@ -140,7 +138,9 @@ struct ::fidl::internal::TypeTraits<::test_driverhandle::ServerEndWrapper>
 };
 
 template <>
-struct internal::NaturalCodingTraits<::test_driverhandle::ServerEndWrapper>
+struct internal::NaturalCodingTraits<
+    ::test_driverhandle::ServerEndWrapper,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_driverhandle::ServerEndWrapper, 4, 4> {};
 
@@ -173,7 +173,9 @@ struct ::fidl::internal::TypeTraits<::test_driverhandle::ClientEndWrapper>
 };
 
 template <>
-struct internal::NaturalCodingTraits<::test_driverhandle::ClientEndWrapper>
+struct internal::NaturalCodingTraits<
+    ::test_driverhandle::ClientEndWrapper,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_driverhandle::ClientEndWrapper, 4, 4> {};
 

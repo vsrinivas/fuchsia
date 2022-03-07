@@ -70,10 +70,12 @@ class Simple final {
       ::test_struct::Simple, 2, 2>;
   friend struct ::fidl::internal::MemberVisitor<::test_struct::Simple>;
   static constexpr auto kMembers = std::make_tuple(
-      ::fidl::internal::NaturalStructMember<Storage_, uint8_t>{&Storage_::f1, 0,
-                                                               0},
-      ::fidl::internal::NaturalStructMember<Storage_, bool>{&Storage_::f2, 1,
-                                                            1});
+      ::fidl::internal::NaturalStructMember<
+          Storage_, uint8_t, fidl::internal::NaturalCodingConstraintEmpty>{
+          &Storage_::f1, 0, 0},
+      ::fidl::internal::NaturalStructMember<
+          Storage_, bool, fidl::internal::NaturalCodingConstraintEmpty>{
+          &Storage_::f2, 1, 1});
 };
 
 extern "C" const fidl_type_t test_struct_BasicStructTable;
@@ -127,10 +129,12 @@ class BasicStruct final {
       ::test_struct::BasicStruct, 24, 24>;
   friend struct ::fidl::internal::MemberVisitor<::test_struct::BasicStruct>;
   static constexpr auto kMembers = std::make_tuple(
-      ::fidl::internal::NaturalStructMember<Storage_, uint32_t>{&Storage_::x, 0,
-                                                                0},
-      ::fidl::internal::NaturalStructMember<Storage_, ::std::string>{
-          &Storage_::y, 8, 8});
+      ::fidl::internal::NaturalStructMember<
+          Storage_, uint32_t, fidl::internal::NaturalCodingConstraintEmpty>{
+          &Storage_::x, 0, 0},
+      ::fidl::internal::NaturalStructMember<
+          Storage_, ::std::string,
+          fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::y, 8, 8});
 };
 
 }  // namespace test_struct
@@ -149,7 +153,9 @@ struct ::fidl::internal::TypeTraits<::test_struct::Simple> final {
 };
 
 template <>
-struct internal::NaturalCodingTraits<::test_struct::Simple> final
+struct internal::NaturalCodingTraits<
+    ::test_struct::Simple, ::fidl::internal::NaturalCodingConstraintEmpty>
+    final
     : public ::fidl::internal::NaturalStructCodingTraits<::test_struct::Simple,
                                                          2, 2> {};
 
@@ -176,9 +182,10 @@ struct ::fidl::internal::TypeTraits<::test_struct::BasicStruct> final {
 };
 
 template <>
-struct internal::NaturalCodingTraits<::test_struct::BasicStruct> final
-    : public ::fidl::internal::NaturalStructCodingTraits<
-          ::test_struct::BasicStruct, 24, 24> {};
+struct internal::NaturalCodingTraits<
+    ::test_struct::BasicStruct, ::fidl::internal::NaturalCodingConstraintEmpty>
+    final : public ::fidl::internal::NaturalStructCodingTraits<
+                ::test_struct::BasicStruct, 24, 24> {};
 
 template <>
 struct HasPadding<::test_struct::BasicStruct> : public std::true_type {};

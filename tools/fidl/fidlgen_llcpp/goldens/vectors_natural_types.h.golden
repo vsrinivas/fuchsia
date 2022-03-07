@@ -80,10 +80,13 @@ class ExampleUseOfVectors final {
   friend struct ::fidl::internal::MemberVisitor<
       ::test_vectors::ExampleUseOfVectors>;
   static constexpr auto kMembers = std::make_tuple(
-      ::fidl::internal::NaturalStructMember<Storage_, ::std::vector<uint8_t>>{
+      ::fidl::internal::NaturalStructMember<
+          Storage_, ::std::vector<uint8_t>,
+          fidl::internal::NaturalCodingConstraintEmpty>{
           &Storage_::vector_of_uint8, 0, 0},
-      ::fidl::internal::NaturalStructMember<Storage_,
-                                            ::std::vector<::std::vector<bool>>>{
+      ::fidl::internal::NaturalStructMember<
+          Storage_, ::std::vector<::std::vector<bool>>,
+          fidl::internal::NaturalCodingConstraintEmpty>{
           &Storage_::vector_of_vector_of_bool, 16, 16});
 };
 
@@ -105,9 +108,11 @@ struct ::fidl::internal::TypeTraits<::test_vectors::ExampleUseOfVectors> final {
 };
 
 template <>
-struct internal::NaturalCodingTraits<::test_vectors::ExampleUseOfVectors> final
-    : public ::fidl::internal::NaturalStructCodingTraits<
-          ::test_vectors::ExampleUseOfVectors, 32, 32> {};
+struct internal::NaturalCodingTraits<
+    ::test_vectors::ExampleUseOfVectors,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
+    final : public ::fidl::internal::NaturalStructCodingTraits<
+                ::test_vectors::ExampleUseOfVectors, 32, 32> {};
 
 template <>
 struct HasPadding<::test_vectors::ExampleUseOfVectors> : public std::true_type {

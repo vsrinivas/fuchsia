@@ -74,9 +74,11 @@ class Union final {
   std::shared_ptr<Storage_> CloneStorage_() const;
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_versions::Union>;
-  static constexpr std::array<
-      std::optional<::fidl::internal::NaturalHandleInformation>, 2>
-      kMembers = {std::nullopt, std::nullopt};
+  static constexpr auto kMembers =
+      std::make_tuple(::fidl::internal::NaturalUnionMember<
+                          ::fidl::internal::NaturalCodingConstraintEmpty>(),
+                      ::fidl::internal::NaturalUnionMember<
+                          fidl::internal::NaturalCodingConstraintEmpty>());
 
   explicit Union(std::shared_ptr<Storage_> storage)
       : storage_(std::move(storage)) {}
@@ -141,8 +143,9 @@ class Table final {
   friend struct ::fidl::internal::NaturalTableCodingTraits<
       ::test_versions::Table>;
   friend struct ::fidl::internal::MemberVisitor<::test_versions::Table>;
-  static constexpr auto kMembers =
-      std::make_tuple(::fidl::internal::NaturalTableMember<Storage_, uint32_t>{
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalTableMember<
+          Storage_, uint32_t, fidl::internal::NaturalCodingConstraintEmpty>{
           1, &Storage_::x});
 };
 
@@ -191,8 +194,9 @@ class Struct final {
   friend struct ::fidl::internal::NaturalStructCodingTraits<
       ::test_versions::Struct, 4, 4>;
   friend struct ::fidl::internal::MemberVisitor<::test_versions::Struct>;
-  static constexpr auto kMembers =
-      std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, uint32_t>{
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalStructMember<
+          Storage_, uint32_t, fidl::internal::NaturalCodingConstraintEmpty>{
           &Storage_::x, 0, 0});
 };
 
@@ -214,9 +218,10 @@ struct ::fidl::internal::TypeTraits<::test_versions::Struct> final {
 };
 
 template <>
-struct internal::NaturalCodingTraits<::test_versions::Struct> final
-    : public ::fidl::internal::NaturalStructCodingTraits<
-          ::test_versions::Struct, 4, 4> {};
+struct internal::NaturalCodingTraits<
+    ::test_versions::Struct, ::fidl::internal::NaturalCodingConstraintEmpty>
+    final : public ::fidl::internal::NaturalStructCodingTraits<
+                ::test_versions::Struct, 4, 4> {};
 
 template <>
 struct internal::NaturalIsMemcpyCompatible<::test_versions::Struct>
@@ -230,7 +235,8 @@ template <>
 struct IsFidlType<::test_versions::Table> : public std::true_type {};
 
 template <>
-struct internal::NaturalCodingTraits<::test_versions::Table>
+struct internal::NaturalCodingTraits<
+    ::test_versions::Table, ::fidl::internal::NaturalCodingConstraintEmpty>
     : public ::fidl::internal::NaturalTableCodingTraits<
           ::test_versions::Table> {};
 
@@ -240,20 +246,19 @@ template <>
 struct IsUnion<::test_versions::Union> : public std::true_type {};
 
 template <>
-struct internal::NaturalCodingTraits<::test_versions::Union> final
-    : public ::fidl::internal::NaturalUnionCodingTraits<
-          ::test_versions::Union> {};
+struct internal::NaturalCodingTraits<
+    ::test_versions::Union, ::fidl::internal::NaturalCodingConstraintEmpty>
+    final : public ::fidl::internal::NaturalUnionCodingTraits<
+                ::test_versions::Union> {};
 
 template <>
-struct internal::NaturalCodingTraits<::test_versions::Bits> {
+struct internal::NaturalCodingTraits<
+    ::test_versions::Bits, ::fidl::internal::NaturalCodingConstraintEmpty> {
   static constexpr size_t inline_size_v1_no_ee = sizeof(uint32_t);
   static constexpr size_t inline_size_v2 = sizeof(uint32_t);
 
   static void Encode(internal::NaturalEncoder* encoder,
-                     ::test_versions::Bits* value, size_t offset,
-                     cpp17::optional<NaturalHandleInformation>
-                         maybe_handle_info = cpp17::nullopt) {
-    ZX_DEBUG_ASSERT(maybe_handle_info == cpp17::nullopt);
+                     ::test_versions::Bits* value, size_t offset) {
     *encoder->template GetPtr<::test_versions::Bits>(offset) = *value;
   }
   static void Decode(internal::NaturalDecoder* decoder,
@@ -263,15 +268,13 @@ struct internal::NaturalCodingTraits<::test_versions::Bits> {
 };
 
 template <>
-struct internal::NaturalCodingTraits<::test_versions::Enum> {
+struct internal::NaturalCodingTraits<
+    ::test_versions::Enum, ::fidl::internal::NaturalCodingConstraintEmpty> {
   static constexpr size_t inline_size_v1_no_ee = sizeof(uint32_t);
   static constexpr size_t inline_size_v2 = sizeof(uint32_t);
 
   static void Encode(internal::NaturalEncoder* encoder,
-                     ::test_versions::Enum* value, size_t offset,
-                     cpp17::optional<NaturalHandleInformation>
-                         maybe_handle_info = cpp17::nullopt) {
-    ZX_DEBUG_ASSERT(maybe_handle_info == cpp17::nullopt);
+                     ::test_versions::Enum* value, size_t offset) {
     *encoder->template GetPtr<::test_versions::Enum>(offset) = *value;
   }
   static void Decode(internal::NaturalDecoder* decoder,

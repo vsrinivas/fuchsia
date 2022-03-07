@@ -71,8 +71,9 @@ class Example_foo_Response final {
       ::test_error::Example_foo_Response, 8, 8>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_error::Example_foo_Response>;
-  static constexpr auto kMembers =
-      std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, int64_t>{
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalStructMember<
+          Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{
           &Storage_::y, 0, 0});
 };
 
@@ -141,9 +142,13 @@ class Example_foo_Result final {
   std::shared_ptr<Storage_> CloneStorage_() const;
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_error::Example_foo_Result>;
-  static constexpr std::array<
-      std::optional<::fidl::internal::NaturalHandleInformation>, 3>
-      kMembers = {std::nullopt, std::nullopt, std::nullopt};
+  static constexpr auto kMembers =
+      std::make_tuple(::fidl::internal::NaturalUnionMember<
+                          ::fidl::internal::NaturalCodingConstraintEmpty>(),
+                      ::fidl::internal::NaturalUnionMember<
+                          fidl::internal::NaturalCodingConstraintEmpty>(),
+                      ::fidl::internal::NaturalUnionMember<
+                          fidl::internal::NaturalCodingConstraintEmpty>());
 
   explicit Example_foo_Result(std::shared_ptr<Storage_> storage)
       : storage_(std::move(storage)) {}
@@ -222,9 +227,10 @@ class ExampleFooTopResponse final {
       ::test_error::ExampleFooTopResponse, 24, 16>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_error::ExampleFooTopResponse>;
-  static constexpr auto kMembers = std::make_tuple(
-      ::fidl::internal::NaturalStructMember<Storage_,
-                                            ::test_error::Example_foo_Result>{
+  static constexpr auto kMembers =
+      std::make_tuple(::fidl::internal::NaturalStructMember<
+                      Storage_, ::test_error::Example_foo_Result,
+                      fidl::internal::NaturalCodingConstraintEmpty>{
           &Storage_::result, 0, 0});
 };
 
@@ -274,8 +280,9 @@ class ExampleFooRequest final {
   friend struct ::fidl::internal::MemberVisitor<
       ::test_error::ExampleFooRequest>;
   static constexpr auto kMembers = std::make_tuple(
-      ::fidl::internal::NaturalStructMember<Storage_, ::std::string>{
-          &Storage_::s, 0, 0});
+      ::fidl::internal::NaturalStructMember<
+          Storage_, ::std::string,
+          fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::s, 0, 0});
 };
 
 }  // namespace test_error
@@ -296,9 +303,11 @@ struct ::fidl::internal::TypeTraits<::test_error::Example_foo_Response> final {
 };
 
 template <>
-struct internal::NaturalCodingTraits<::test_error::Example_foo_Response> final
-    : public ::fidl::internal::NaturalStructCodingTraits<
-          ::test_error::Example_foo_Response, 8, 8> {};
+struct internal::NaturalCodingTraits<
+    ::test_error::Example_foo_Response,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
+    final : public ::fidl::internal::NaturalStructCodingTraits<
+                ::test_error::Example_foo_Response, 8, 8> {};
 
 template <>
 struct internal::NaturalIsMemcpyCompatible<::test_error::Example_foo_Response>
@@ -323,9 +332,11 @@ struct ::fidl::internal::TypeTraits<::test_error::ExampleFooTopResponse> final {
 };
 
 template <>
-struct internal::NaturalCodingTraits<::test_error::ExampleFooTopResponse> final
-    : public ::fidl::internal::NaturalStructCodingTraits<
-          ::test_error::ExampleFooTopResponse, 24, 16> {};
+struct internal::NaturalCodingTraits<
+    ::test_error::ExampleFooTopResponse,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
+    final : public ::fidl::internal::NaturalStructCodingTraits<
+                ::test_error::ExampleFooTopResponse, 24, 16> {};
 
 template <>
 struct HasPadding<::test_error::ExampleFooTopResponse> : public std::true_type {
@@ -354,9 +365,11 @@ struct ::fidl::internal::TypeTraits<::test_error::ExampleFooRequest> final {
 };
 
 template <>
-struct internal::NaturalCodingTraits<::test_error::ExampleFooRequest> final
-    : public ::fidl::internal::NaturalStructCodingTraits<
-          ::test_error::ExampleFooRequest, 16, 16> {};
+struct internal::NaturalCodingTraits<
+    ::test_error::ExampleFooRequest,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
+    final : public ::fidl::internal::NaturalStructCodingTraits<
+                ::test_error::ExampleFooRequest, 16, 16> {};
 
 template <>
 struct HasPadding<::test_error::ExampleFooRequest> : public std::true_type {};
@@ -375,8 +388,10 @@ template <>
 struct IsUnion<::test_error::Example_foo_Result> : public std::true_type {};
 
 template <>
-struct internal::NaturalCodingTraits<::test_error::Example_foo_Result> final
-    : public ::fidl::internal::NaturalUnionCodingTraits<
-          ::test_error::Example_foo_Result> {};
+struct internal::NaturalCodingTraits<
+    ::test_error::Example_foo_Result,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
+    final : public ::fidl::internal::NaturalUnionCodingTraits<
+                ::test_error::Example_foo_Result> {};
 
 }  // namespace fidl

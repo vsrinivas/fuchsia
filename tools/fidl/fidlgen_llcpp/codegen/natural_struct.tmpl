@@ -97,14 +97,8 @@ class {{ .Name }} final {
   static constexpr auto kMembers = std::make_tuple(
     {{- range $i, $m := .Members }}
       {{- if $i }}, {{ end -}}
-      ::fidl::internal::NaturalStructMember<Storage_, {{ $m.Type }}>{
+      ::fidl::internal::NaturalStructMember<Storage_, {{ $m.Type }}, {{ $m.Constraint }}>{
         &Storage_::{{ $m.Name }}, {{ $m.OffsetV1 }}, {{ $m.OffsetV2 }}
-        {{- if $m.HandleInformation -}}
-          ,std::make_optional<::fidl::internal::NaturalHandleInformation>({
-            .object_type = {{ $m.HandleInformation.ObjectType }},
-            .rights = {{ $m.HandleInformation.Rights }}
-          })
-        {{- end -}}
       }
     {{- end -}}
   );
@@ -136,7 +130,7 @@ class {{ .Name }} final {
   };
 
   template <>
-  struct internal::NaturalCodingTraits<{{ . }}> final
+  struct internal::NaturalCodingTraits<{{ . }}, ::fidl::internal::NaturalCodingConstraintEmpty> final
     : public ::fidl::internal::NaturalStructCodingTraits<{{ . }},
         {{ .TypeShapeV1.InlineSize }}, {{ .TypeShapeV2.InlineSize }}> {};
 

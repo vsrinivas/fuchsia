@@ -144,11 +144,11 @@ class WithErrorSyntax_HandleInResult_Response final {
       ::test_protocols::WithErrorSyntax_HandleInResult_Response, 4, 4>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_protocols::WithErrorSyntax_HandleInResult_Response>;
-  static constexpr auto kMembers = std::make_tuple(
-      ::fidl::internal::NaturalStructMember<Storage_, ::zx::handle>{
-          &Storage_::h, 0, 0,
-          std::make_optional<::fidl::internal::NaturalHandleInformation>(
-              {.object_type = ZX_OBJ_TYPE_NONE, .rights = 0x80000000})});
+  static constexpr auto kMembers =
+      std::make_tuple(::fidl::internal::NaturalStructMember<
+                      Storage_, ::zx::handle,
+                      fidl::internal::NaturalCodingConstraintHandle<
+                          ZX_OBJ_TYPE_NONE, 0x80000000>>{&Storage_::h, 0, 0});
 };
 
 #endif  // __Fuchsia__
@@ -213,9 +213,13 @@ class WithErrorSyntax_HandleInResult_Result final {
   std::shared_ptr<Storage_> storage_;
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_protocols::WithErrorSyntax_HandleInResult_Result>;
-  static constexpr std::array<
-      std::optional<::fidl::internal::NaturalHandleInformation>, 3>
-      kMembers = {std::nullopt, std::nullopt, std::nullopt};
+  static constexpr auto kMembers =
+      std::make_tuple(::fidl::internal::NaturalUnionMember<
+                          ::fidl::internal::NaturalCodingConstraintEmpty>(),
+                      ::fidl::internal::NaturalUnionMember<
+                          fidl::internal::NaturalCodingConstraintEmpty>(),
+                      ::fidl::internal::NaturalUnionMember<
+                          fidl::internal::NaturalCodingConstraintEmpty>());
 
   explicit WithErrorSyntax_HandleInResult_Result(
       std::shared_ptr<Storage_> storage)
@@ -296,8 +300,9 @@ class WithErrorSyntaxHandleInResultTopResponse final {
       ::test_protocols::WithErrorSyntaxHandleInResultTopResponse>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<
-          Storage_, ::test_protocols::WithErrorSyntax_HandleInResult_Result>{
-          &Storage_::result, 0, 0});
+          Storage_, ::test_protocols::WithErrorSyntax_HandleInResult_Result,
+          fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::result, 0,
+                                                        0});
 };
 
 #endif  // __Fuchsia__
@@ -339,11 +344,11 @@ class HandleRightsProtocolResponseMethodTopResponse final {
       ::test_protocols::HandleRightsProtocolResponseMethodTopResponse, 4, 4>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_protocols::HandleRightsProtocolResponseMethodTopResponse>;
-  static constexpr auto kMembers = std::make_tuple(
-      ::fidl::internal::NaturalStructMember<Storage_, ::zx::socket>{
-          &Storage_::h, 0, 0,
-          std::make_optional<::fidl::internal::NaturalHandleInformation>(
-              {.object_type = ZX_OBJ_TYPE_SOCKET, .rights = 0x1})});
+  static constexpr auto kMembers =
+      std::make_tuple(::fidl::internal::NaturalStructMember<
+                      Storage_, ::zx::socket,
+                      fidl::internal::NaturalCodingConstraintHandle<
+                          ZX_OBJ_TYPE_SOCKET, 0x1>>{&Storage_::h, 0, 0});
 };
 
 #endif  // __Fuchsia__
@@ -385,11 +390,11 @@ class HandleRightsProtocolResponseMethodRequest final {
       ::test_protocols::HandleRightsProtocolResponseMethodRequest, 4, 4>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_protocols::HandleRightsProtocolResponseMethodRequest>;
-  static constexpr auto kMembers = std::make_tuple(
-      ::fidl::internal::NaturalStructMember<Storage_, ::zx::socket>{
-          &Storage_::h, 0, 0,
-          std::make_optional<::fidl::internal::NaturalHandleInformation>(
-              {.object_type = ZX_OBJ_TYPE_SOCKET, .rights = 0x3})});
+  static constexpr auto kMembers =
+      std::make_tuple(::fidl::internal::NaturalStructMember<
+                      Storage_, ::zx::socket,
+                      fidl::internal::NaturalCodingConstraintHandle<
+                          ZX_OBJ_TYPE_SOCKET, 0x3>>{&Storage_::h, 0, 0});
 };
 
 #endif  // __Fuchsia__
@@ -431,11 +436,11 @@ class HandleRightsProtocolNoResponseMethodRequest final {
       ::test_protocols::HandleRightsProtocolNoResponseMethodRequest, 4, 4>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_protocols::HandleRightsProtocolNoResponseMethodRequest>;
-  static constexpr auto kMembers = std::make_tuple(
-      ::fidl::internal::NaturalStructMember<Storage_, ::zx::socket>{
-          &Storage_::h, 0, 0,
-          std::make_optional<::fidl::internal::NaturalHandleInformation>(
-              {.object_type = ZX_OBJ_TYPE_SOCKET, .rights = 0x3})});
+  static constexpr auto kMembers =
+      std::make_tuple(::fidl::internal::NaturalStructMember<
+                      Storage_, ::zx::socket,
+                      fidl::internal::NaturalCodingConstraintHandle<
+                          ZX_OBJ_TYPE_SOCKET, 0x3>>{&Storage_::h, 0, 0});
 };
 
 #endif  // __Fuchsia__
@@ -477,11 +482,11 @@ class HandleRightsProtocolAnEventRequest final {
       ::test_protocols::HandleRightsProtocolAnEventRequest, 4, 4>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_protocols::HandleRightsProtocolAnEventRequest>;
-  static constexpr auto kMembers = std::make_tuple(
-      ::fidl::internal::NaturalStructMember<Storage_, ::zx::socket>{
-          &Storage_::h, 0, 0,
-          std::make_optional<::fidl::internal::NaturalHandleInformation>(
-              {.object_type = ZX_OBJ_TYPE_SOCKET, .rights = 0x3})});
+  static constexpr auto kMembers =
+      std::make_tuple(::fidl::internal::NaturalStructMember<
+                      Storage_, ::zx::socket,
+                      fidl::internal::NaturalCodingConstraintHandle<
+                          ZX_OBJ_TYPE_SOCKET, 0x3>>{&Storage_::h, 0, 0});
 };
 
 #endif  // __Fuchsia__
@@ -523,11 +528,11 @@ class ChannelProtocolTakeHandleRequest final {
       ::test_protocols::ChannelProtocolTakeHandleRequest, 4, 4>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_protocols::ChannelProtocolTakeHandleRequest>;
-  static constexpr auto kMembers = std::make_tuple(
-      ::fidl::internal::NaturalStructMember<Storage_, ::zx::handle>{
-          &Storage_::h, 0, 0,
-          std::make_optional<::fidl::internal::NaturalHandleInformation>(
-              {.object_type = ZX_OBJ_TYPE_NONE, .rights = 0x80000000})});
+  static constexpr auto kMembers =
+      std::make_tuple(::fidl::internal::NaturalStructMember<
+                      Storage_, ::zx::handle,
+                      fidl::internal::NaturalCodingConstraintHandle<
+                          ZX_OBJ_TYPE_NONE, 0x80000000>>{&Storage_::h, 0, 0});
 };
 
 #endif  // __Fuchsia__
@@ -569,11 +574,11 @@ class ChannelProtocolMutateSocketTopResponse final {
       ::test_protocols::ChannelProtocolMutateSocketTopResponse, 4, 4>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_protocols::ChannelProtocolMutateSocketTopResponse>;
-  static constexpr auto kMembers = std::make_tuple(
-      ::fidl::internal::NaturalStructMember<Storage_, ::zx::socket>{
-          &Storage_::b, 0, 0,
-          std::make_optional<::fidl::internal::NaturalHandleInformation>(
-              {.object_type = ZX_OBJ_TYPE_SOCKET, .rights = 0x80000000})});
+  static constexpr auto kMembers =
+      std::make_tuple(::fidl::internal::NaturalStructMember<
+                      Storage_, ::zx::socket,
+                      fidl::internal::NaturalCodingConstraintHandle<
+                          ZX_OBJ_TYPE_SOCKET, 0x80000000>>{&Storage_::b, 0, 0});
 };
 
 #endif  // __Fuchsia__
@@ -615,11 +620,11 @@ class ChannelProtocolMutateSocketRequest final {
       ::test_protocols::ChannelProtocolMutateSocketRequest, 4, 4>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_protocols::ChannelProtocolMutateSocketRequest>;
-  static constexpr auto kMembers = std::make_tuple(
-      ::fidl::internal::NaturalStructMember<Storage_, ::zx::socket>{
-          &Storage_::a, 0, 0,
-          std::make_optional<::fidl::internal::NaturalHandleInformation>(
-              {.object_type = ZX_OBJ_TYPE_SOCKET, .rights = 0x80000000})});
+  static constexpr auto kMembers =
+      std::make_tuple(::fidl::internal::NaturalStructMember<
+                      Storage_, ::zx::socket,
+                      fidl::internal::NaturalCodingConstraintHandle<
+                          ZX_OBJ_TYPE_SOCKET, 0x80000000>>{&Storage_::a, 0, 0});
 };
 
 #endif  // __Fuchsia__
@@ -668,11 +673,10 @@ class WithProtocolEndsServerEndsTopResponse final {
       ::test_protocols::WithProtocolEndsServerEndsTopResponse>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<
-          Storage_, ::fidl::ServerEnd<::test_protocols::DiscoverableProtocol>>{
-          &Storage_::out, 0, 0,
-          std::make_optional<::fidl::internal::NaturalHandleInformation>(
-              {.object_type = ZX_OBJ_TYPE_CHANNEL,
-               .rights = ZX_DEFAULT_CHANNEL_RIGHTS})});
+          Storage_, ::fidl::ServerEnd<::test_protocols::DiscoverableProtocol>,
+          fidl::internal::NaturalCodingConstraintHandle<
+              ZX_OBJ_TYPE_CHANNEL, ZX_DEFAULT_CHANNEL_RIGHTS>>{&Storage_::out,
+                                                               0, 0});
 };
 
 #endif  // __Fuchsia__
@@ -721,11 +725,10 @@ class WithProtocolEndsServerEndsRequest final {
       ::test_protocols::WithProtocolEndsServerEndsRequest>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<
-          Storage_, ::fidl::ServerEnd<::test_protocols::DiscoverableProtocol>>{
-          &Storage_::in, 0, 0,
-          std::make_optional<::fidl::internal::NaturalHandleInformation>(
-              {.object_type = ZX_OBJ_TYPE_CHANNEL,
-               .rights = ZX_DEFAULT_CHANNEL_RIGHTS})});
+          Storage_, ::fidl::ServerEnd<::test_protocols::DiscoverableProtocol>,
+          fidl::internal::NaturalCodingConstraintHandle<
+              ZX_OBJ_TYPE_CHANNEL, ZX_DEFAULT_CHANNEL_RIGHTS>>{&Storage_::in, 0,
+                                                               0});
 };
 
 #endif  // __Fuchsia__
@@ -774,11 +777,10 @@ class WithProtocolEndsClientEndsTopResponse final {
       ::test_protocols::WithProtocolEndsClientEndsTopResponse>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<
-          Storage_, ::fidl::ClientEnd<::test_protocols::DiscoverableProtocol>>{
-          &Storage_::out, 0, 0,
-          std::make_optional<::fidl::internal::NaturalHandleInformation>(
-              {.object_type = ZX_OBJ_TYPE_CHANNEL,
-               .rights = ZX_DEFAULT_CHANNEL_RIGHTS})});
+          Storage_, ::fidl::ClientEnd<::test_protocols::DiscoverableProtocol>,
+          fidl::internal::NaturalCodingConstraintHandle<
+              ZX_OBJ_TYPE_CHANNEL, ZX_DEFAULT_CHANNEL_RIGHTS>>{&Storage_::out,
+                                                               0, 0});
 };
 
 #endif  // __Fuchsia__
@@ -827,11 +829,10 @@ class WithProtocolEndsClientEndsRequest final {
       ::test_protocols::WithProtocolEndsClientEndsRequest>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<
-          Storage_, ::fidl::ClientEnd<::test_protocols::DiscoverableProtocol>>{
-          &Storage_::in, 0, 0,
-          std::make_optional<::fidl::internal::NaturalHandleInformation>(
-              {.object_type = ZX_OBJ_TYPE_CHANNEL,
-               .rights = ZX_DEFAULT_CHANNEL_RIGHTS})});
+          Storage_, ::fidl::ClientEnd<::test_protocols::DiscoverableProtocol>,
+          fidl::internal::NaturalCodingConstraintHandle<
+              ZX_OBJ_TYPE_CHANNEL, ZX_DEFAULT_CHANNEL_RIGHTS>>{&Storage_::in, 0,
+                                                               0});
 };
 
 #endif  // __Fuchsia__
@@ -905,12 +906,15 @@ class WithErrorSyntax_ResponseAsStruct_Response final {
   friend struct ::fidl::internal::MemberVisitor<
       ::test_protocols::WithErrorSyntax_ResponseAsStruct_Response>;
   static constexpr auto kMembers = std::make_tuple(
-      ::fidl::internal::NaturalStructMember<Storage_, int64_t>{&Storage_::a, 0,
-                                                               0},
-      ::fidl::internal::NaturalStructMember<Storage_, int64_t>{&Storage_::b, 8,
-                                                               8},
-      ::fidl::internal::NaturalStructMember<Storage_, int64_t>{&Storage_::c, 16,
-                                                               16});
+      ::fidl::internal::NaturalStructMember<
+          Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{
+          &Storage_::a, 0, 0},
+      ::fidl::internal::NaturalStructMember<
+          Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{
+          &Storage_::b, 8, 8},
+      ::fidl::internal::NaturalStructMember<
+          Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{
+          &Storage_::c, 16, 16});
 };
 
 extern "C" const fidl_type_t
@@ -989,9 +993,13 @@ class WithErrorSyntax_ResponseAsStruct_Result final {
   std::shared_ptr<Storage_> CloneStorage_() const;
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_protocols::WithErrorSyntax_ResponseAsStruct_Result>;
-  static constexpr std::array<
-      std::optional<::fidl::internal::NaturalHandleInformation>, 3>
-      kMembers = {std::nullopt, std::nullopt, std::nullopt};
+  static constexpr auto kMembers =
+      std::make_tuple(::fidl::internal::NaturalUnionMember<
+                          ::fidl::internal::NaturalCodingConstraintEmpty>(),
+                      ::fidl::internal::NaturalUnionMember<
+                          fidl::internal::NaturalCodingConstraintEmpty>(),
+                      ::fidl::internal::NaturalUnionMember<
+                          fidl::internal::NaturalCodingConstraintEmpty>());
 
   explicit WithErrorSyntax_ResponseAsStruct_Result(
       std::shared_ptr<Storage_> storage)
@@ -1091,8 +1099,9 @@ class WithErrorSyntaxResponseAsStructTopResponse final {
       ::test_protocols::WithErrorSyntaxResponseAsStructTopResponse>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<
-          Storage_, ::test_protocols::WithErrorSyntax_ResponseAsStruct_Result>{
-          &Storage_::result, 0, 0});
+          Storage_, ::test_protocols::WithErrorSyntax_ResponseAsStruct_Result,
+          fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::result, 0,
+                                                        0});
 };
 
 extern "C" const fidl_type_t
@@ -1152,8 +1161,9 @@ class WithErrorSyntax_ErrorAsPrimitive_Response final {
       ::test_protocols::WithErrorSyntax_ErrorAsPrimitive_Response, 1, 1>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_protocols::WithErrorSyntax_ErrorAsPrimitive_Response>;
-  static constexpr auto kMembers =
-      std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, uint8_t>{
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalStructMember<
+          Storage_, uint8_t, fidl::internal::NaturalCodingConstraintEmpty>{
           &Storage_::__reserved, 0, 0});
 };
 
@@ -1233,9 +1243,13 @@ class WithErrorSyntax_ErrorAsPrimitive_Result final {
   std::shared_ptr<Storage_> CloneStorage_() const;
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_protocols::WithErrorSyntax_ErrorAsPrimitive_Result>;
-  static constexpr std::array<
-      std::optional<::fidl::internal::NaturalHandleInformation>, 3>
-      kMembers = {std::nullopt, std::nullopt, std::nullopt};
+  static constexpr auto kMembers =
+      std::make_tuple(::fidl::internal::NaturalUnionMember<
+                          ::fidl::internal::NaturalCodingConstraintEmpty>(),
+                      ::fidl::internal::NaturalUnionMember<
+                          fidl::internal::NaturalCodingConstraintEmpty>(),
+                      ::fidl::internal::NaturalUnionMember<
+                          fidl::internal::NaturalCodingConstraintEmpty>());
 
   explicit WithErrorSyntax_ErrorAsPrimitive_Result(
       std::shared_ptr<Storage_> storage)
@@ -1335,8 +1349,9 @@ class WithErrorSyntaxErrorAsPrimitiveTopResponse final {
       ::test_protocols::WithErrorSyntaxErrorAsPrimitiveTopResponse>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<
-          Storage_, ::test_protocols::WithErrorSyntax_ErrorAsPrimitive_Result>{
-          &Storage_::result, 0, 0});
+          Storage_, ::test_protocols::WithErrorSyntax_ErrorAsPrimitive_Result,
+          fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::result, 0,
+                                                        0});
 };
 
 extern "C" const fidl_type_t
@@ -1396,8 +1411,9 @@ class WithErrorSyntax_ErrorAsEnum_Response final {
       ::test_protocols::WithErrorSyntax_ErrorAsEnum_Response, 1, 1>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_protocols::WithErrorSyntax_ErrorAsEnum_Response>;
-  static constexpr auto kMembers =
-      std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, uint8_t>{
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalStructMember<
+          Storage_, uint8_t, fidl::internal::NaturalCodingConstraintEmpty>{
           &Storage_::__reserved, 0, 0});
 };
 
@@ -1474,8 +1490,9 @@ class WithAndWithoutRequestResponseWithRequestWithResponseTopResponse final {
       ::test_protocols::
           WithAndWithoutRequestResponseWithRequestWithResponseTopResponse>;
   static constexpr auto kMembers = std::make_tuple(
-      ::fidl::internal::NaturalStructMember<Storage_, ::std::string>{
-          &Storage_::ret, 0, 0});
+      ::fidl::internal::NaturalStructMember<
+          Storage_, ::std::string,
+          fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::ret, 0, 0});
 };
 
 extern "C" const fidl_type_t
@@ -1551,8 +1568,9 @@ class WithAndWithoutRequestResponseWithRequestWithResponseRequest final {
       ::test_protocols::
           WithAndWithoutRequestResponseWithRequestWithResponseRequest>;
   static constexpr auto kMembers = std::make_tuple(
-      ::fidl::internal::NaturalStructMember<Storage_, ::std::string>{
-          &Storage_::arg, 0, 0});
+      ::fidl::internal::NaturalStructMember<
+          Storage_, ::std::string,
+          fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::arg, 0, 0});
 };
 
 extern "C" const fidl_type_t
@@ -1627,8 +1645,9 @@ class WithAndWithoutRequestResponseWithRequestNoResponseRequest final {
       ::test_protocols::
           WithAndWithoutRequestResponseWithRequestNoResponseRequest>;
   static constexpr auto kMembers = std::make_tuple(
-      ::fidl::internal::NaturalStructMember<Storage_, ::std::string>{
-          &Storage_::arg, 0, 0});
+      ::fidl::internal::NaturalStructMember<
+          Storage_, ::std::string,
+          fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::arg, 0, 0});
 };
 
 extern "C" const fidl_type_t
@@ -1704,8 +1723,9 @@ class WithAndWithoutRequestResponseWithRequestEmptyResponseRequest final {
       ::test_protocols::
           WithAndWithoutRequestResponseWithRequestEmptyResponseRequest>;
   static constexpr auto kMembers = std::make_tuple(
-      ::fidl::internal::NaturalStructMember<Storage_, ::std::string>{
-          &Storage_::arg, 0, 0});
+      ::fidl::internal::NaturalStructMember<
+          Storage_, ::std::string,
+          fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::arg, 0, 0});
 };
 
 extern "C" const fidl_type_t
@@ -1769,8 +1789,9 @@ class WithAndWithoutRequestResponseOnWithResponseRequest final {
   friend struct ::fidl::internal::MemberVisitor<
       ::test_protocols::WithAndWithoutRequestResponseOnWithResponseRequest>;
   static constexpr auto kMembers = std::make_tuple(
-      ::fidl::internal::NaturalStructMember<Storage_, ::std::string>{
-          &Storage_::ret, 0, 0});
+      ::fidl::internal::NaturalStructMember<
+          Storage_, ::std::string,
+          fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::ret, 0, 0});
 };
 
 extern "C" const fidl_type_t
@@ -1846,8 +1867,9 @@ class WithAndWithoutRequestResponseNoRequestWithResponseTopResponse final {
       ::test_protocols::
           WithAndWithoutRequestResponseNoRequestWithResponseTopResponse>;
   static constexpr auto kMembers = std::make_tuple(
-      ::fidl::internal::NaturalStructMember<Storage_, ::std::string>{
-          &Storage_::ret, 0, 0});
+      ::fidl::internal::NaturalStructMember<
+          Storage_, ::std::string,
+          fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::ret, 0, 0});
 };
 
 extern "C" const fidl_type_t test_protocols_TransitionalRequestTopResponseTable;
@@ -1904,8 +1926,9 @@ class TransitionalRequestTopResponse final {
       ::test_protocols::TransitionalRequestTopResponse, 8, 8>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_protocols::TransitionalRequestTopResponse>;
-  static constexpr auto kMembers =
-      std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, int64_t>{
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalStructMember<
+          Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{
           &Storage_::y, 0, 0});
 };
 
@@ -1960,8 +1983,9 @@ class TransitionalRequestRequest final {
       ::test_protocols::TransitionalRequestRequest, 8, 8>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_protocols::TransitionalRequestRequest>;
-  static constexpr auto kMembers =
-      std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, int64_t>{
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalStructMember<
+          Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{
           &Storage_::x, 0, 0});
 };
 
@@ -2014,8 +2038,9 @@ class TransitionalOneWayRequest final {
       ::test_protocols::TransitionalOneWayRequest, 8, 8>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_protocols::TransitionalOneWayRequest>;
-  static constexpr auto kMembers =
-      std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, int64_t>{
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalStructMember<
+          Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{
           &Storage_::x, 0, 0});
 };
 
@@ -2068,8 +2093,9 @@ class TransitionalEventRequest final {
       ::test_protocols::TransitionalEventRequest, 8, 8>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_protocols::TransitionalEventRequest>;
-  static constexpr auto kMembers =
-      std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, int64_t>{
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalStructMember<
+          Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{
           &Storage_::x, 0, 0});
 };
 
@@ -2124,9 +2150,11 @@ class TheUnion final {
   std::shared_ptr<Storage_> CloneStorage_() const;
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_protocols::TheUnion>;
-  static constexpr std::array<
-      std::optional<::fidl::internal::NaturalHandleInformation>, 2>
-      kMembers = {std::nullopt, std::nullopt};
+  static constexpr auto kMembers =
+      std::make_tuple(::fidl::internal::NaturalUnionMember<
+                          ::fidl::internal::NaturalCodingConstraintEmpty>(),
+                      ::fidl::internal::NaturalUnionMember<
+                          fidl::internal::NaturalCodingConstraintEmpty>());
 
   explicit TheUnion(std::shared_ptr<Storage_> storage)
       : storage_(std::move(storage)) {}
@@ -2208,9 +2236,9 @@ class MethodWithUnionUnionMethodRequest final {
   friend struct ::fidl::internal::MemberVisitor<
       ::test_protocols::MethodWithUnionUnionMethodRequest>;
   static constexpr auto kMembers = std::make_tuple(
-      ::fidl::internal::NaturalStructMember<Storage_,
-                                            ::test_protocols::TheUnion>{
-          &Storage_::u, 0, 0});
+      ::fidl::internal::NaturalStructMember<
+          Storage_, ::test_protocols::TheUnion,
+          fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::u, 0, 0});
 };
 
 extern "C" const fidl_type_t test_protocols_SyscallProtocolMethodCRequestTable;
@@ -2272,10 +2300,12 @@ class SyscallProtocolMethodCRequest final {
   friend struct ::fidl::internal::MemberVisitor<
       ::test_protocols::SyscallProtocolMethodCRequest>;
   static constexpr auto kMembers = std::make_tuple(
-      ::fidl::internal::NaturalStructMember<Storage_, int64_t>{&Storage_::a, 0,
-                                                               0},
-      ::fidl::internal::NaturalStructMember<Storage_, int64_t>{&Storage_::b, 8,
-                                                               8});
+      ::fidl::internal::NaturalStructMember<
+          Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{
+          &Storage_::a, 0, 0},
+      ::fidl::internal::NaturalStructMember<
+          Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{
+          &Storage_::b, 8, 8});
 };
 
 #ifdef __Fuchsia__
@@ -2354,29 +2384,25 @@ class ProtocolEnds final {
   friend struct ::fidl::internal::MemberVisitor<::test_protocols::ProtocolEnds>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<
-          Storage_, ::fidl::ClientEnd<::test_protocols::DiscoverableProtocol>>{
-          &Storage_::client, 0, 0,
-          std::make_optional<::fidl::internal::NaturalHandleInformation>(
-              {.object_type = ZX_OBJ_TYPE_CHANNEL,
-               .rights = ZX_DEFAULT_CHANNEL_RIGHTS})},
+          Storage_, ::fidl::ClientEnd<::test_protocols::DiscoverableProtocol>,
+          fidl::internal::NaturalCodingConstraintHandle<
+              ZX_OBJ_TYPE_CHANNEL, ZX_DEFAULT_CHANNEL_RIGHTS>>{
+          &Storage_::client, 0, 0},
       ::fidl::internal::NaturalStructMember<
-          Storage_, ::fidl::ServerEnd<::test_protocols::DiscoverableProtocol>>{
-          &Storage_::server, 4, 4,
-          std::make_optional<::fidl::internal::NaturalHandleInformation>(
-              {.object_type = ZX_OBJ_TYPE_CHANNEL,
-               .rights = ZX_DEFAULT_CHANNEL_RIGHTS})},
+          Storage_, ::fidl::ServerEnd<::test_protocols::DiscoverableProtocol>,
+          fidl::internal::NaturalCodingConstraintHandle<
+              ZX_OBJ_TYPE_CHANNEL, ZX_DEFAULT_CHANNEL_RIGHTS>>{
+          &Storage_::server, 4, 4},
       ::fidl::internal::NaturalStructMember<
-          Storage_, ::fidl::ClientEnd<::test_protocols::DiscoverableProtocol>>{
-          &Storage_::client_opt, 8, 8,
-          std::make_optional<::fidl::internal::NaturalHandleInformation>(
-              {.object_type = ZX_OBJ_TYPE_CHANNEL,
-               .rights = ZX_DEFAULT_CHANNEL_RIGHTS})},
+          Storage_, ::fidl::ClientEnd<::test_protocols::DiscoverableProtocol>,
+          fidl::internal::NaturalCodingConstraintHandle<
+              ZX_OBJ_TYPE_CHANNEL, ZX_DEFAULT_CHANNEL_RIGHTS>>{
+          &Storage_::client_opt, 8, 8},
       ::fidl::internal::NaturalStructMember<
-          Storage_, ::fidl::ServerEnd<::test_protocols::DiscoverableProtocol>>{
-          &Storage_::server_opt, 12, 12,
-          std::make_optional<::fidl::internal::NaturalHandleInformation>(
-              {.object_type = ZX_OBJ_TYPE_CHANNEL,
-               .rights = ZX_DEFAULT_CHANNEL_RIGHTS})});
+          Storage_, ::fidl::ServerEnd<::test_protocols::DiscoverableProtocol>,
+          fidl::internal::NaturalCodingConstraintHandle<
+              ZX_OBJ_TYPE_CHANNEL, ZX_DEFAULT_CHANNEL_RIGHTS>>{
+          &Storage_::server_opt, 12, 12});
 };
 
 #endif  // __Fuchsia__
@@ -2421,9 +2447,9 @@ class WithProtocolEndsStructContainingEndsTopResponse final {
   friend struct ::fidl::internal::MemberVisitor<
       ::test_protocols::WithProtocolEndsStructContainingEndsTopResponse>;
   static constexpr auto kMembers = std::make_tuple(
-      ::fidl::internal::NaturalStructMember<Storage_,
-                                            ::test_protocols::ProtocolEnds>{
-          &Storage_::out, 0, 0});
+      ::fidl::internal::NaturalStructMember<
+          Storage_, ::test_protocols::ProtocolEnds,
+          fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::out, 0, 0});
 };
 
 #endif  // __Fuchsia__
@@ -2467,9 +2493,9 @@ class WithProtocolEndsStructContainingEndsRequest final {
   friend struct ::fidl::internal::MemberVisitor<
       ::test_protocols::WithProtocolEndsStructContainingEndsRequest>;
   static constexpr auto kMembers = std::make_tuple(
-      ::fidl::internal::NaturalStructMember<Storage_,
-                                            ::test_protocols::ProtocolEnds>{
-          &Storage_::in, 0, 0});
+      ::fidl::internal::NaturalStructMember<
+          Storage_, ::test_protocols::ProtocolEnds,
+          fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::in, 0, 0});
 };
 
 #endif  // __Fuchsia__
@@ -2615,36 +2641,51 @@ class ManyParametersFifteenRequest final {
   friend struct ::fidl::internal::MemberVisitor<
       ::test_protocols::ManyParametersFifteenRequest>;
   static constexpr auto kMembers = std::make_tuple(
-      ::fidl::internal::NaturalStructMember<Storage_, bool>{&Storage_::p1, 0,
-                                                            0},
-      ::fidl::internal::NaturalStructMember<Storage_, bool>{&Storage_::p2, 1,
-                                                            1},
-      ::fidl::internal::NaturalStructMember<Storage_, bool>{&Storage_::p3, 2,
-                                                            2},
-      ::fidl::internal::NaturalStructMember<Storage_, bool>{&Storage_::p4, 3,
-                                                            3},
-      ::fidl::internal::NaturalStructMember<Storage_, bool>{&Storage_::p5, 4,
-                                                            4},
-      ::fidl::internal::NaturalStructMember<Storage_, bool>{&Storage_::p6, 5,
-                                                            5},
-      ::fidl::internal::NaturalStructMember<Storage_, bool>{&Storage_::p7, 6,
-                                                            6},
-      ::fidl::internal::NaturalStructMember<Storage_, bool>{&Storage_::p8, 7,
-                                                            7},
-      ::fidl::internal::NaturalStructMember<Storage_, bool>{&Storage_::p9, 8,
-                                                            8},
-      ::fidl::internal::NaturalStructMember<Storage_, bool>{&Storage_::p10, 9,
-                                                            9},
-      ::fidl::internal::NaturalStructMember<Storage_, bool>{&Storage_::p11, 10,
-                                                            10},
-      ::fidl::internal::NaturalStructMember<Storage_, bool>{&Storage_::p12, 11,
-                                                            11},
-      ::fidl::internal::NaturalStructMember<Storage_, bool>{&Storage_::p13, 12,
-                                                            12},
-      ::fidl::internal::NaturalStructMember<Storage_, bool>{&Storage_::p14, 13,
-                                                            13},
-      ::fidl::internal::NaturalStructMember<Storage_, bool>{&Storage_::p15, 14,
-                                                            14});
+      ::fidl::internal::NaturalStructMember<
+          Storage_, bool, fidl::internal::NaturalCodingConstraintEmpty>{
+          &Storage_::p1, 0, 0},
+      ::fidl::internal::NaturalStructMember<
+          Storage_, bool, fidl::internal::NaturalCodingConstraintEmpty>{
+          &Storage_::p2, 1, 1},
+      ::fidl::internal::NaturalStructMember<
+          Storage_, bool, fidl::internal::NaturalCodingConstraintEmpty>{
+          &Storage_::p3, 2, 2},
+      ::fidl::internal::NaturalStructMember<
+          Storage_, bool, fidl::internal::NaturalCodingConstraintEmpty>{
+          &Storage_::p4, 3, 3},
+      ::fidl::internal::NaturalStructMember<
+          Storage_, bool, fidl::internal::NaturalCodingConstraintEmpty>{
+          &Storage_::p5, 4, 4},
+      ::fidl::internal::NaturalStructMember<
+          Storage_, bool, fidl::internal::NaturalCodingConstraintEmpty>{
+          &Storage_::p6, 5, 5},
+      ::fidl::internal::NaturalStructMember<
+          Storage_, bool, fidl::internal::NaturalCodingConstraintEmpty>{
+          &Storage_::p7, 6, 6},
+      ::fidl::internal::NaturalStructMember<
+          Storage_, bool, fidl::internal::NaturalCodingConstraintEmpty>{
+          &Storage_::p8, 7, 7},
+      ::fidl::internal::NaturalStructMember<
+          Storage_, bool, fidl::internal::NaturalCodingConstraintEmpty>{
+          &Storage_::p9, 8, 8},
+      ::fidl::internal::NaturalStructMember<
+          Storage_, bool, fidl::internal::NaturalCodingConstraintEmpty>{
+          &Storage_::p10, 9, 9},
+      ::fidl::internal::NaturalStructMember<
+          Storage_, bool, fidl::internal::NaturalCodingConstraintEmpty>{
+          &Storage_::p11, 10, 10},
+      ::fidl::internal::NaturalStructMember<
+          Storage_, bool, fidl::internal::NaturalCodingConstraintEmpty>{
+          &Storage_::p12, 11, 11},
+      ::fidl::internal::NaturalStructMember<
+          Storage_, bool, fidl::internal::NaturalCodingConstraintEmpty>{
+          &Storage_::p13, 12, 12},
+      ::fidl::internal::NaturalStructMember<
+          Storage_, bool, fidl::internal::NaturalCodingConstraintEmpty>{
+          &Storage_::p14, 13, 13},
+      ::fidl::internal::NaturalStructMember<
+          Storage_, bool, fidl::internal::NaturalCodingConstraintEmpty>{
+          &Storage_::p15, 14, 14});
 };
 
 extern "C" const fidl_type_t
@@ -2724,9 +2765,13 @@ class WithErrorSyntax_ErrorAsEnum_Result final {
   std::shared_ptr<Storage_> CloneStorage_() const;
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_protocols::WithErrorSyntax_ErrorAsEnum_Result>;
-  static constexpr std::array<
-      std::optional<::fidl::internal::NaturalHandleInformation>, 3>
-      kMembers = {std::nullopt, std::nullopt, std::nullopt};
+  static constexpr auto kMembers =
+      std::make_tuple(::fidl::internal::NaturalUnionMember<
+                          ::fidl::internal::NaturalCodingConstraintEmpty>(),
+                      ::fidl::internal::NaturalUnionMember<
+                          fidl::internal::NaturalCodingConstraintEmpty>(),
+                      ::fidl::internal::NaturalUnionMember<
+                          fidl::internal::NaturalCodingConstraintEmpty>());
 
   explicit WithErrorSyntax_ErrorAsEnum_Result(std::shared_ptr<Storage_> storage)
       : storage_(std::move(storage)) {}
@@ -2821,8 +2866,9 @@ class WithErrorSyntaxErrorAsEnumTopResponse final {
       ::test_protocols::WithErrorSyntaxErrorAsEnumTopResponse>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<
-          Storage_, ::test_protocols::WithErrorSyntax_ErrorAsEnum_Result>{
-          &Storage_::result, 0, 0});
+          Storage_, ::test_protocols::WithErrorSyntax_ErrorAsEnum_Result,
+          fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::result, 0,
+                                                        0});
 };
 
 extern "C" const fidl_type_t
@@ -2882,8 +2928,9 @@ class ChannelProtocolMethodBTopResponse final {
       ::test_protocols::ChannelProtocolMethodBTopResponse, 8, 8>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_protocols::ChannelProtocolMethodBTopResponse>;
-  static constexpr auto kMembers =
-      std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, int64_t>{
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalStructMember<
+          Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{
           &Storage_::result, 0, 0});
 };
 
@@ -2946,10 +2993,12 @@ class ChannelProtocolMethodBRequest final {
   friend struct ::fidl::internal::MemberVisitor<
       ::test_protocols::ChannelProtocolMethodBRequest>;
   static constexpr auto kMembers = std::make_tuple(
-      ::fidl::internal::NaturalStructMember<Storage_, int64_t>{&Storage_::a, 0,
-                                                               0},
-      ::fidl::internal::NaturalStructMember<Storage_, int64_t>{&Storage_::b, 8,
-                                                               8});
+      ::fidl::internal::NaturalStructMember<
+          Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{
+          &Storage_::a, 0, 0},
+      ::fidl::internal::NaturalStructMember<
+          Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{
+          &Storage_::b, 8, 8});
 };
 
 extern "C" const fidl_type_t test_protocols_ChannelProtocolMethodARequestTable;
@@ -3011,10 +3060,12 @@ class ChannelProtocolMethodARequest final {
   friend struct ::fidl::internal::MemberVisitor<
       ::test_protocols::ChannelProtocolMethodARequest>;
   static constexpr auto kMembers = std::make_tuple(
-      ::fidl::internal::NaturalStructMember<Storage_, int64_t>{&Storage_::a, 0,
-                                                               0},
-      ::fidl::internal::NaturalStructMember<Storage_, int64_t>{&Storage_::b, 8,
-                                                               8});
+      ::fidl::internal::NaturalStructMember<
+          Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{
+          &Storage_::a, 0, 0},
+      ::fidl::internal::NaturalStructMember<
+          Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{
+          &Storage_::b, 8, 8});
 };
 
 extern "C" const fidl_type_t test_protocols_ChannelProtocolEventARequestTable;
@@ -3076,10 +3127,12 @@ class ChannelProtocolEventARequest final {
   friend struct ::fidl::internal::MemberVisitor<
       ::test_protocols::ChannelProtocolEventARequest>;
   static constexpr auto kMembers = std::make_tuple(
-      ::fidl::internal::NaturalStructMember<Storage_, int64_t>{&Storage_::a, 0,
-                                                               0},
-      ::fidl::internal::NaturalStructMember<Storage_, int64_t>{&Storage_::b, 8,
-                                                               8});
+      ::fidl::internal::NaturalStructMember<
+          Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{
+          &Storage_::a, 0, 0},
+      ::fidl::internal::NaturalStructMember<
+          Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{
+          &Storage_::b, 8, 8});
 };
 
 }  // namespace test_protocols
@@ -3107,7 +3160,8 @@ struct ::fidl::internal::TypeTraits<
 
 template <>
 struct internal::NaturalCodingTraits<
-    ::test_protocols::WithErrorSyntax_HandleInResult_Response>
+    ::test_protocols::WithErrorSyntax_HandleInResult_Response,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     final
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_protocols::WithErrorSyntax_HandleInResult_Response, 4, 4> {};
@@ -3144,7 +3198,8 @@ struct ::fidl::internal::TypeTraits<
 
 template <>
 struct internal::NaturalCodingTraits<
-    ::test_protocols::WithErrorSyntaxHandleInResultTopResponse>
+    ::test_protocols::WithErrorSyntaxHandleInResultTopResponse,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     final
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_protocols::WithErrorSyntaxHandleInResultTopResponse, 24, 16> {
@@ -3190,7 +3245,8 @@ struct ::fidl::internal::TypeTraits<
 
 template <>
 struct internal::NaturalCodingTraits<
-    ::test_protocols::HandleRightsProtocolResponseMethodTopResponse>
+    ::test_protocols::HandleRightsProtocolResponseMethodTopResponse,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_protocols::HandleRightsProtocolResponseMethodTopResponse,
                 4, 4> {};
@@ -3228,7 +3284,8 @@ struct ::fidl::internal::TypeTraits<
 
 template <>
 struct internal::NaturalCodingTraits<
-    ::test_protocols::HandleRightsProtocolResponseMethodRequest>
+    ::test_protocols::HandleRightsProtocolResponseMethodRequest,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     final
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_protocols::HandleRightsProtocolResponseMethodRequest, 4, 4> {};
@@ -3265,7 +3322,8 @@ struct ::fidl::internal::TypeTraits<
 
 template <>
 struct internal::NaturalCodingTraits<
-    ::test_protocols::HandleRightsProtocolNoResponseMethodRequest>
+    ::test_protocols::HandleRightsProtocolNoResponseMethodRequest,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     final
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_protocols::HandleRightsProtocolNoResponseMethodRequest, 4, 4> {
@@ -3303,7 +3361,8 @@ struct ::fidl::internal::TypeTraits<
 
 template <>
 struct internal::NaturalCodingTraits<
-    ::test_protocols::HandleRightsProtocolAnEventRequest>
+    ::test_protocols::HandleRightsProtocolAnEventRequest,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_protocols::HandleRightsProtocolAnEventRequest, 4, 4> {};
 
@@ -3339,7 +3398,8 @@ struct ::fidl::internal::TypeTraits<
 
 template <>
 struct internal::NaturalCodingTraits<
-    ::test_protocols::ChannelProtocolTakeHandleRequest>
+    ::test_protocols::ChannelProtocolTakeHandleRequest,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_protocols::ChannelProtocolTakeHandleRequest, 4, 4> {};
 
@@ -3375,7 +3435,8 @@ struct ::fidl::internal::TypeTraits<
 
 template <>
 struct internal::NaturalCodingTraits<
-    ::test_protocols::ChannelProtocolMutateSocketTopResponse>
+    ::test_protocols::ChannelProtocolMutateSocketTopResponse,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     final
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_protocols::ChannelProtocolMutateSocketTopResponse, 4, 4> {};
@@ -3412,7 +3473,8 @@ struct ::fidl::internal::TypeTraits<
 
 template <>
 struct internal::NaturalCodingTraits<
-    ::test_protocols::ChannelProtocolMutateSocketRequest>
+    ::test_protocols::ChannelProtocolMutateSocketRequest,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_protocols::ChannelProtocolMutateSocketRequest, 4, 4> {};
 
@@ -3448,7 +3510,8 @@ struct ::fidl::internal::TypeTraits<
 
 template <>
 struct internal::NaturalCodingTraits<
-    ::test_protocols::WithProtocolEndsServerEndsTopResponse>
+    ::test_protocols::WithProtocolEndsServerEndsTopResponse,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_protocols::WithProtocolEndsServerEndsTopResponse, 4, 4> {
 };
@@ -3486,7 +3549,8 @@ struct ::fidl::internal::TypeTraits<
 
 template <>
 struct internal::NaturalCodingTraits<
-    ::test_protocols::WithProtocolEndsServerEndsRequest>
+    ::test_protocols::WithProtocolEndsServerEndsRequest,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_protocols::WithProtocolEndsServerEndsRequest, 4, 4> {};
 
@@ -3523,7 +3587,8 @@ struct ::fidl::internal::TypeTraits<
 
 template <>
 struct internal::NaturalCodingTraits<
-    ::test_protocols::WithProtocolEndsClientEndsTopResponse>
+    ::test_protocols::WithProtocolEndsClientEndsTopResponse,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_protocols::WithProtocolEndsClientEndsTopResponse, 4, 4> {
 };
@@ -3561,7 +3626,8 @@ struct ::fidl::internal::TypeTraits<
 
 template <>
 struct internal::NaturalCodingTraits<
-    ::test_protocols::WithProtocolEndsClientEndsRequest>
+    ::test_protocols::WithProtocolEndsClientEndsRequest,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_protocols::WithProtocolEndsClientEndsRequest, 4, 4> {};
 
@@ -3595,7 +3661,8 @@ struct ::fidl::internal::TypeTraits<
 
 template <>
 struct internal::NaturalCodingTraits<
-    ::test_protocols::WithErrorSyntax_ResponseAsStruct_Response>
+    ::test_protocols::WithErrorSyntax_ResponseAsStruct_Response,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     final
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_protocols::WithErrorSyntax_ResponseAsStruct_Response, 24, 24> {
@@ -3630,7 +3697,8 @@ struct ::fidl::internal::TypeTraits<
 
 template <>
 struct internal::NaturalCodingTraits<
-    ::test_protocols::WithErrorSyntaxResponseAsStructTopResponse>
+    ::test_protocols::WithErrorSyntaxResponseAsStructTopResponse,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_protocols::WithErrorSyntaxResponseAsStructTopResponse,
                 24, 16> {};
@@ -3670,7 +3738,8 @@ struct ::fidl::internal::TypeTraits<
 
 template <>
 struct internal::NaturalCodingTraits<
-    ::test_protocols::WithErrorSyntax_ErrorAsPrimitive_Response>
+    ::test_protocols::WithErrorSyntax_ErrorAsPrimitive_Response,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     final
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_protocols::WithErrorSyntax_ErrorAsPrimitive_Response, 1, 1> {};
@@ -3704,7 +3773,8 @@ struct ::fidl::internal::TypeTraits<
 
 template <>
 struct internal::NaturalCodingTraits<
-    ::test_protocols::WithErrorSyntaxErrorAsPrimitiveTopResponse>
+    ::test_protocols::WithErrorSyntaxErrorAsPrimitiveTopResponse,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_protocols::WithErrorSyntaxErrorAsPrimitiveTopResponse,
                 24, 16> {};
@@ -3744,7 +3814,8 @@ struct ::fidl::internal::TypeTraits<
 
 template <>
 struct internal::NaturalCodingTraits<
-    ::test_protocols::WithErrorSyntax_ErrorAsEnum_Response>
+    ::test_protocols::WithErrorSyntax_ErrorAsEnum_Response,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_protocols::WithErrorSyntax_ErrorAsEnum_Response, 1, 1> {
 };
@@ -3782,7 +3853,8 @@ struct ::fidl::internal::TypeTraits<
 template <>
 struct internal::NaturalCodingTraits<
     ::test_protocols::
-        WithAndWithoutRequestResponseWithRequestWithResponseTopResponse>
+        WithAndWithoutRequestResponseWithRequestWithResponseTopResponse,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     final
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_protocols::
@@ -3831,7 +3903,8 @@ struct ::fidl::internal::TypeTraits<
 template <>
 struct internal::NaturalCodingTraits<
     ::test_protocols::
-        WithAndWithoutRequestResponseWithRequestWithResponseRequest>
+        WithAndWithoutRequestResponseWithRequestWithResponseRequest,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_protocols::
                     WithAndWithoutRequestResponseWithRequestWithResponseRequest,
@@ -3876,7 +3949,8 @@ struct ::fidl::internal::TypeTraits<
 
 template <>
 struct internal::NaturalCodingTraits<
-    ::test_protocols::WithAndWithoutRequestResponseWithRequestNoResponseRequest>
+    ::test_protocols::WithAndWithoutRequestResponseWithRequestNoResponseRequest,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_protocols::
                     WithAndWithoutRequestResponseWithRequestNoResponseRequest,
@@ -3922,7 +3996,8 @@ struct ::fidl::internal::TypeTraits<
 template <>
 struct internal::NaturalCodingTraits<
     ::test_protocols::
-        WithAndWithoutRequestResponseWithRequestEmptyResponseRequest>
+        WithAndWithoutRequestResponseWithRequestEmptyResponseRequest,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     final
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_protocols::
@@ -3968,7 +4043,8 @@ struct ::fidl::internal::TypeTraits<
 
 template <>
 struct internal::NaturalCodingTraits<
-    ::test_protocols::WithAndWithoutRequestResponseOnWithResponseRequest>
+    ::test_protocols::WithAndWithoutRequestResponseOnWithResponseRequest,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     final
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_protocols::WithAndWithoutRequestResponseOnWithResponseRequest,
@@ -4013,7 +4089,8 @@ struct ::fidl::internal::TypeTraits<
 template <>
 struct internal::NaturalCodingTraits<
     ::test_protocols::
-        WithAndWithoutRequestResponseNoRequestWithResponseTopResponse>
+        WithAndWithoutRequestResponseNoRequestWithResponseTopResponse,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     final
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_protocols::
@@ -4057,7 +4134,8 @@ struct ::fidl::internal::TypeTraits<
 
 template <>
 struct internal::NaturalCodingTraits<
-    ::test_protocols::TransitionalRequestTopResponse>
+    ::test_protocols::TransitionalRequestTopResponse,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_protocols::TransitionalRequestTopResponse, 8, 8> {};
 
@@ -4089,7 +4167,8 @@ struct ::fidl::internal::TypeTraits<
 
 template <>
 struct internal::NaturalCodingTraits<
-    ::test_protocols::TransitionalRequestRequest>
+    ::test_protocols::TransitionalRequestRequest,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_protocols::TransitionalRequestRequest, 8, 8> {};
 
@@ -4119,7 +4198,8 @@ struct ::fidl::internal::TypeTraits<::test_protocols::TransitionalOneWayRequest>
 
 template <>
 struct internal::NaturalCodingTraits<
-    ::test_protocols::TransitionalOneWayRequest>
+    ::test_protocols::TransitionalOneWayRequest,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_protocols::TransitionalOneWayRequest, 8, 8> {};
 
@@ -4148,7 +4228,9 @@ struct ::fidl::internal::TypeTraits<::test_protocols::TransitionalEventRequest>
 };
 
 template <>
-struct internal::NaturalCodingTraits<::test_protocols::TransitionalEventRequest>
+struct internal::NaturalCodingTraits<
+    ::test_protocols::TransitionalEventRequest,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_protocols::TransitionalEventRequest, 8, 8> {};
 
@@ -4180,7 +4262,8 @@ struct ::fidl::internal::TypeTraits<
 
 template <>
 struct internal::NaturalCodingTraits<
-    ::test_protocols::MethodWithUnionUnionMethodRequest>
+    ::test_protocols::MethodWithUnionUnionMethodRequest,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_protocols::MethodWithUnionUnionMethodRequest, 24, 16> {};
 
@@ -4217,7 +4300,8 @@ struct ::fidl::internal::TypeTraits<
 
 template <>
 struct internal::NaturalCodingTraits<
-    ::test_protocols::SyscallProtocolMethodCRequest>
+    ::test_protocols::SyscallProtocolMethodCRequest,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_protocols::SyscallProtocolMethodCRequest, 16, 16> {};
 
@@ -4246,9 +4330,11 @@ struct ::fidl::internal::TypeTraits<::test_protocols::ProtocolEnds> final {
 };
 
 template <>
-struct internal::NaturalCodingTraits<::test_protocols::ProtocolEnds> final
-    : public ::fidl::internal::NaturalStructCodingTraits<
-          ::test_protocols::ProtocolEnds, 16, 16> {};
+struct internal::NaturalCodingTraits<
+    ::test_protocols::ProtocolEnds,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
+    final : public ::fidl::internal::NaturalStructCodingTraits<
+                ::test_protocols::ProtocolEnds, 16, 16> {};
 
 template <>
 struct internal::NaturalIsMemcpyCompatible<::test_protocols::ProtocolEnds>
@@ -4285,7 +4371,8 @@ struct ::fidl::internal::TypeTraits<
 
 template <>
 struct internal::NaturalCodingTraits<
-    ::test_protocols::WithProtocolEndsStructContainingEndsTopResponse>
+    ::test_protocols::WithProtocolEndsStructContainingEndsTopResponse,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     final
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_protocols::WithProtocolEndsStructContainingEndsTopResponse, 16,
@@ -4325,7 +4412,8 @@ struct ::fidl::internal::TypeTraits<
 
 template <>
 struct internal::NaturalCodingTraits<
-    ::test_protocols::WithProtocolEndsStructContainingEndsRequest>
+    ::test_protocols::WithProtocolEndsStructContainingEndsRequest,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_protocols::WithProtocolEndsStructContainingEndsRequest,
                 16, 16> {};
@@ -4359,7 +4447,8 @@ struct ::fidl::internal::TypeTraits<
 
 template <>
 struct internal::NaturalCodingTraits<
-    ::test_protocols::ManyParametersFifteenRequest>
+    ::test_protocols::ManyParametersFifteenRequest,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_protocols::ManyParametersFifteenRequest, 15, 15> {};
 
@@ -4391,7 +4480,8 @@ struct ::fidl::internal::TypeTraits<
 
 template <>
 struct internal::NaturalCodingTraits<
-    ::test_protocols::WithErrorSyntaxErrorAsEnumTopResponse>
+    ::test_protocols::WithErrorSyntaxErrorAsEnumTopResponse,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     final
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_protocols::WithErrorSyntaxErrorAsEnumTopResponse, 24, 16> {};
@@ -4430,7 +4520,8 @@ struct ::fidl::internal::TypeTraits<
 
 template <>
 struct internal::NaturalCodingTraits<
-    ::test_protocols::ChannelProtocolMethodBTopResponse>
+    ::test_protocols::ChannelProtocolMethodBTopResponse,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_protocols::ChannelProtocolMethodBTopResponse, 8, 8> {};
 
@@ -4462,7 +4553,8 @@ struct ::fidl::internal::TypeTraits<
 
 template <>
 struct internal::NaturalCodingTraits<
-    ::test_protocols::ChannelProtocolMethodBRequest>
+    ::test_protocols::ChannelProtocolMethodBRequest,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_protocols::ChannelProtocolMethodBRequest, 16, 16> {};
 
@@ -4493,7 +4585,8 @@ struct ::fidl::internal::TypeTraits<
 
 template <>
 struct internal::NaturalCodingTraits<
-    ::test_protocols::ChannelProtocolMethodARequest>
+    ::test_protocols::ChannelProtocolMethodARequest,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_protocols::ChannelProtocolMethodARequest, 16, 16> {};
 
@@ -4524,7 +4617,8 @@ struct ::fidl::internal::TypeTraits<
 
 template <>
 struct internal::NaturalCodingTraits<
-    ::test_protocols::ChannelProtocolEventARequest>
+    ::test_protocols::ChannelProtocolEventARequest,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_protocols::ChannelProtocolEventARequest, 16, 16> {};
 
@@ -4549,7 +4643,8 @@ struct IsUnion<::test_protocols::WithErrorSyntax_HandleInResult_Result>
 
 template <>
 struct internal::NaturalCodingTraits<
-    ::test_protocols::WithErrorSyntax_HandleInResult_Result>
+    ::test_protocols::WithErrorSyntax_HandleInResult_Result,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalUnionCodingTraits<
                 ::test_protocols::WithErrorSyntax_HandleInResult_Result> {};
 
@@ -4562,7 +4657,8 @@ struct IsUnion<::test_protocols::WithErrorSyntax_ResponseAsStruct_Result>
 
 template <>
 struct internal::NaturalCodingTraits<
-    ::test_protocols::WithErrorSyntax_ResponseAsStruct_Result>
+    ::test_protocols::WithErrorSyntax_ResponseAsStruct_Result,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalUnionCodingTraits<
                 ::test_protocols::WithErrorSyntax_ResponseAsStruct_Result> {};
 
@@ -4575,7 +4671,8 @@ struct IsUnion<::test_protocols::WithErrorSyntax_ErrorAsPrimitive_Result>
 
 template <>
 struct internal::NaturalCodingTraits<
-    ::test_protocols::WithErrorSyntax_ErrorAsPrimitive_Result>
+    ::test_protocols::WithErrorSyntax_ErrorAsPrimitive_Result,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalUnionCodingTraits<
                 ::test_protocols::WithErrorSyntax_ErrorAsPrimitive_Result> {};
 
@@ -4585,9 +4682,10 @@ template <>
 struct IsUnion<::test_protocols::TheUnion> : public std::true_type {};
 
 template <>
-struct internal::NaturalCodingTraits<::test_protocols::TheUnion> final
-    : public ::fidl::internal::NaturalUnionCodingTraits<
-          ::test_protocols::TheUnion> {};
+struct internal::NaturalCodingTraits<
+    ::test_protocols::TheUnion, ::fidl::internal::NaturalCodingConstraintEmpty>
+    final : public ::fidl::internal::NaturalUnionCodingTraits<
+                ::test_protocols::TheUnion> {};
 
 template <>
 struct IsFidlType<::test_protocols::WithErrorSyntax_ErrorAsEnum_Result>
@@ -4598,20 +4696,19 @@ struct IsUnion<::test_protocols::WithErrorSyntax_ErrorAsEnum_Result>
 
 template <>
 struct internal::NaturalCodingTraits<
-    ::test_protocols::WithErrorSyntax_ErrorAsEnum_Result>
+    ::test_protocols::WithErrorSyntax_ErrorAsEnum_Result,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalUnionCodingTraits<
                 ::test_protocols::WithErrorSyntax_ErrorAsEnum_Result> {};
 
 template <>
-struct internal::NaturalCodingTraits<::test_protocols::rights> {
+struct internal::NaturalCodingTraits<
+    ::test_protocols::rights, ::fidl::internal::NaturalCodingConstraintEmpty> {
   static constexpr size_t inline_size_v1_no_ee = sizeof(uint32_t);
   static constexpr size_t inline_size_v2 = sizeof(uint32_t);
 
   static void Encode(internal::NaturalEncoder* encoder,
-                     ::test_protocols::rights* value, size_t offset,
-                     cpp17::optional<NaturalHandleInformation>
-                         maybe_handle_info = cpp17::nullopt) {
-    ZX_DEBUG_ASSERT(maybe_handle_info == cpp17::nullopt);
+                     ::test_protocols::rights* value, size_t offset) {
     *encoder->template GetPtr<::test_protocols::rights>(offset) = *value;
   }
   static void Decode(internal::NaturalDecoder* decoder,
@@ -4621,15 +4718,14 @@ struct internal::NaturalCodingTraits<::test_protocols::rights> {
 };
 
 template <>
-struct internal::NaturalCodingTraits<::test_protocols::obj_type> {
+struct internal::NaturalCodingTraits<
+    ::test_protocols::obj_type,
+    ::fidl::internal::NaturalCodingConstraintEmpty> {
   static constexpr size_t inline_size_v1_no_ee = sizeof(uint32_t);
   static constexpr size_t inline_size_v2 = sizeof(uint32_t);
 
   static void Encode(internal::NaturalEncoder* encoder,
-                     ::test_protocols::obj_type* value, size_t offset,
-                     cpp17::optional<NaturalHandleInformation>
-                         maybe_handle_info = cpp17::nullopt) {
-    ZX_DEBUG_ASSERT(maybe_handle_info == cpp17::nullopt);
+                     ::test_protocols::obj_type* value, size_t offset) {
     *encoder->template GetPtr<::test_protocols::obj_type>(offset) = *value;
   }
   static void Decode(internal::NaturalDecoder* decoder,
@@ -4638,15 +4734,14 @@ struct internal::NaturalCodingTraits<::test_protocols::obj_type> {
   }
 };
 template <>
-struct internal::NaturalCodingTraits<::test_protocols::ErrorEnum> {
+struct internal::NaturalCodingTraits<
+    ::test_protocols::ErrorEnum,
+    ::fidl::internal::NaturalCodingConstraintEmpty> {
   static constexpr size_t inline_size_v1_no_ee = sizeof(uint32_t);
   static constexpr size_t inline_size_v2 = sizeof(uint32_t);
 
   static void Encode(internal::NaturalEncoder* encoder,
-                     ::test_protocols::ErrorEnum* value, size_t offset,
-                     cpp17::optional<NaturalHandleInformation>
-                         maybe_handle_info = cpp17::nullopt) {
-    ZX_DEBUG_ASSERT(maybe_handle_info == cpp17::nullopt);
+                     ::test_protocols::ErrorEnum* value, size_t offset) {
     *encoder->template GetPtr<::test_protocols::ErrorEnum>(offset) = *value;
   }
   static void Decode(internal::NaturalDecoder* decoder,

@@ -71,8 +71,9 @@ class Empty final {
   friend struct ::fidl::internal::NaturalStructCodingTraits<
       ::test_emptystruct::Empty, 1, 1>;
   friend struct ::fidl::internal::MemberVisitor<::test_emptystruct::Empty>;
-  static constexpr auto kMembers =
-      std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, uint8_t>{
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalStructMember<
+          Storage_, uint8_t, fidl::internal::NaturalCodingConstraintEmpty>{
           &Storage_::__reserved, 0, 0});
 };
 
@@ -127,9 +128,10 @@ class EmptyProtocolSendRequest final {
       ::test_emptystruct::EmptyProtocolSendRequest, 1, 1>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_emptystruct::EmptyProtocolSendRequest>;
-  static constexpr auto kMembers =
-      std::make_tuple(::fidl::internal::NaturalStructMember<
-                      Storage_, ::test_emptystruct::Empty>{&Storage_::e, 0, 0});
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalStructMember<
+          Storage_, ::test_emptystruct::Empty,
+          fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::e, 0, 0});
 };
 
 extern "C" const fidl_type_t
@@ -189,9 +191,10 @@ class EmptyProtocolSendAndReceiveTopResponse final {
       ::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse, 1, 1>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse>;
-  static constexpr auto kMembers =
-      std::make_tuple(::fidl::internal::NaturalStructMember<
-                      Storage_, ::test_emptystruct::Empty>{&Storage_::e, 0, 0});
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalStructMember<
+          Storage_, ::test_emptystruct::Empty,
+          fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::e, 0, 0});
 };
 
 extern "C" const fidl_type_t
@@ -251,9 +254,10 @@ class EmptyProtocolSendAndReceiveRequest final {
       ::test_emptystruct::EmptyProtocolSendAndReceiveRequest, 1, 1>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_emptystruct::EmptyProtocolSendAndReceiveRequest>;
-  static constexpr auto kMembers =
-      std::make_tuple(::fidl::internal::NaturalStructMember<
-                      Storage_, ::test_emptystruct::Empty>{&Storage_::e, 0, 0});
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalStructMember<
+          Storage_, ::test_emptystruct::Empty,
+          fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::e, 0, 0});
 };
 
 extern "C" const fidl_type_t test_emptystruct_EmptyProtocolReceiveRequestTable;
@@ -307,9 +311,10 @@ class EmptyProtocolReceiveRequest final {
       ::test_emptystruct::EmptyProtocolReceiveRequest, 1, 1>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_emptystruct::EmptyProtocolReceiveRequest>;
-  static constexpr auto kMembers =
-      std::make_tuple(::fidl::internal::NaturalStructMember<
-                      Storage_, ::test_emptystruct::Empty>{&Storage_::e, 0, 0});
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalStructMember<
+          Storage_, ::test_emptystruct::Empty,
+          fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::e, 0, 0});
 };
 
 }  // namespace test_emptystruct
@@ -329,9 +334,10 @@ struct ::fidl::internal::TypeTraits<::test_emptystruct::Empty> final {
 };
 
 template <>
-struct internal::NaturalCodingTraits<::test_emptystruct::Empty> final
-    : public ::fidl::internal::NaturalStructCodingTraits<
-          ::test_emptystruct::Empty, 1, 1> {};
+struct internal::NaturalCodingTraits<
+    ::test_emptystruct::Empty, ::fidl::internal::NaturalCodingConstraintEmpty>
+    final : public ::fidl::internal::NaturalStructCodingTraits<
+                ::test_emptystruct::Empty, 1, 1> {};
 
 template <>
 struct internal::NaturalIsMemcpyCompatible<::test_emptystruct::Empty>
@@ -359,7 +365,8 @@ struct ::fidl::internal::TypeTraits<
 
 template <>
 struct internal::NaturalCodingTraits<
-    ::test_emptystruct::EmptyProtocolSendRequest>
+    ::test_emptystruct::EmptyProtocolSendRequest,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_emptystruct::EmptyProtocolSendRequest, 1, 1> {};
 
@@ -392,7 +399,8 @@ struct ::fidl::internal::TypeTraits<
 
 template <>
 struct internal::NaturalCodingTraits<
-    ::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse>
+    ::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     final
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse, 1, 1> {};
@@ -427,7 +435,8 @@ struct ::fidl::internal::TypeTraits<
 
 template <>
 struct internal::NaturalCodingTraits<
-    ::test_emptystruct::EmptyProtocolSendAndReceiveRequest>
+    ::test_emptystruct::EmptyProtocolSendAndReceiveRequest,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_emptystruct::EmptyProtocolSendAndReceiveRequest, 1, 1> {
 };
@@ -461,7 +470,8 @@ struct ::fidl::internal::TypeTraits<
 
 template <>
 struct internal::NaturalCodingTraits<
-    ::test_emptystruct::EmptyProtocolReceiveRequest>
+    ::test_emptystruct::EmptyProtocolReceiveRequest,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_emptystruct::EmptyProtocolReceiveRequest, 1, 1> {};
 
