@@ -78,8 +78,11 @@ fuchsia_unittest_package("netemul-runner-errors-tests") {
 
 group("tests") {
   testonly = true
-  deps = [
-    ":netemul-runner-errors-tests",
-    ":netemul-runner-tests",
-  ]
+  deps = [ ":netemul-runner-tests" ]
+
+  # TODO(fxbug.dev/95120): deflake the following test on coverage bots and
+  # re-enable.
+  if (!is_coverage) {
+    deps += [ ":netemul-runner-errors-tests" ]
+  }
 }
