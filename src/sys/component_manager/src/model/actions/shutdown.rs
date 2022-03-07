@@ -45,19 +45,20 @@ impl Action for ShutdownAction {
     }
 }
 
-async fn shutdown_component(target: ShutdownInfo) -> Result<ParentOrChildMoniker, ModelError> {
-    match target.moniker {
-        ParentOrChildMoniker::Parent => {
-            // TODO: Put the parent in a "shutting down" state so that if it creates new instances
-            // after this point, they are created in a shut down state.
+async fn shutdown_component(target: ShutdownInfo) -> Result<ComponentRef, ModelError> {
+    match target.ref_ {
+        ComponentRef::Self_ => {
+            // TODO: Put `self` in a "shutting down" state so that if it creates
+            // new instances after this point, they are created in a shut down
+            // state.
             target.component.stop_instance(true, false).await?;
         }
-        ParentOrChildMoniker::ChildMoniker(_) => {
+        ComponentRef::Child(_) => {
             ActionSet::register(target.component, ShutdownAction::new()).await?;
         }
     }
 
-    Ok(target.moniker.clone())
+    Ok(target.ref_.clone())
 }
 
 /// Structure which holds bidirectional capability maps used during the
@@ -65,10 +66,10 @@ async fn shutdown_component(target: ShutdownInfo) -> Result<ParentOrChildMoniker
 struct ShutdownJob {
     /// A map from users of capabilities to the components that provide those
     /// capabilities
-    target_to_sources: HashMap<ParentOrChildMoniker, Vec<ParentOrChildMoniker>>,
+    target_to_sources: HashMap<ComponentRef, Vec<ComponentRef>>,
     /// A map from providers of capabilities to those components which use the
     /// capabilities
-    source_to_targets: HashMap<ParentOrChildMoniker, ShutdownInfo>,
+    source_to_targets: HashMap<ComponentRef, ShutdownInfo>,
 }
 
 /// ShutdownJob encapsulates the logic and state require to shutdown a component.
@@ -81,30 +82,29 @@ impl ShutdownJob {
         state: &ResolvedInstanceState,
     ) -> ShutdownJob {
         // `dependency_map` represents the dependency relationships between the
-        // nodes in this realm (the children, and the parent).
+        // nodes in this realm (the children, and the component itself).
         // `dependency_map` maps server => clients (a.k.a. provider => consumers,
         // or source => targets)
         let dependency_map = process_component_dependencies(state);
-        let mut source_to_targets: HashMap<ParentOrChildMoniker, ShutdownInfo> = HashMap::new();
+        let mut source_to_targets: HashMap<ComponentRef, ShutdownInfo> = HashMap::new();
 
         for (source, targets) in dependency_map {
             let component = match &source {
-                ParentOrChildMoniker::Parent => instance.clone(),
-                ParentOrChildMoniker::ChildMoniker(moniker) => {
+                ComponentRef::Self_ => instance.clone(),
+                ComponentRef::Child(moniker) => {
                     state.get_child(&moniker).expect("component not found in children").clone()
                 }
             };
 
             source_to_targets.insert(
                 source.clone(),
-                ShutdownInfo { moniker: source, dependents: targets, component },
+                ShutdownInfo { ref_: source, dependents: targets, component },
             );
         }
         // `target_to_sources` is the inverse of `source_to_targets`, and maps a target to all of
         // its dependencies. This inverse mapping gives us a way to do quick lookups when updating
         // `source_to_targets` as we shutdown components in execute().
-        let mut target_to_sources: HashMap<ParentOrChildMoniker, Vec<ParentOrChildMoniker>> =
-            HashMap::new();
+        let mut target_to_sources: HashMap<ComponentRef, Vec<ComponentRef>> = HashMap::new();
         for provider in source_to_targets.values() {
             // All listed siblings are ones that depend on this child
             // and all those siblings must stop before this one
@@ -114,7 +114,7 @@ impl ShutdownJob {
                 target_to_sources
                     .entry(consumer.clone())
                     .or_insert(vec![])
-                    .push(provider.moniker.clone());
+                    .push(provider.ref_.clone());
             }
         }
         let new_job = ShutdownJob { source_to_targets, target_to_sources };
@@ -146,14 +146,19 @@ impl ShutdownJob {
         // Look for any children that have no dependents
         let mut stop_targets = vec![];
 
-        for moniker in self.source_to_targets.keys().map(|key| key.clone()).collect::<Vec<_>>() {
+        for component_ref in
+            self.source_to_targets.keys().map(|key| key.clone()).collect::<Vec<_>>()
+        {
             let no_dependents = {
-                let info = self.source_to_targets.get(&moniker).expect("key disappeared from map");
+                let info =
+                    self.source_to_targets.get(&component_ref).expect("key disappeared from map");
                 info.dependents.is_empty()
             };
             if no_dependents {
                 stop_targets.push(
-                    self.source_to_targets.remove(&moniker).expect("key disappeared from map"),
+                    self.source_to_targets
+                        .remove(&component_ref)
+                        .expect("key disappeared from map"),
                 );
             }
         }
@@ -165,18 +170,18 @@ impl ShutdownJob {
                 futs.push(Box::pin(shutdown_component(target)));
             }
 
-            let (moniker, _, remaining) = select_all(futs).await;
+            let (component_ref, _, remaining) = select_all(futs).await;
             futs = remaining;
 
-            let moniker = moniker?;
+            let component_ref = component_ref?;
 
             // Look up the dependencies of the component that stopped
-            match self.target_to_sources.remove(&moniker) {
+            match self.target_to_sources.remove(&component_ref) {
                 Some(sources) => {
                     for source in sources {
                         let ready_to_stop = {
                             if let Some(info) = self.source_to_targets.get_mut(&source) {
-                                info.dependents.remove(&moniker);
+                                info.dependents.remove(&component_ref);
                                 // Have all of this components dependents stopped?
                                 info.dependents.is_empty()
                             } else {
@@ -186,7 +191,7 @@ impl ShutdownJob {
                                 panic!(
                                     "The component '{:?}' appears to have stopped before its \
                                      dependency '{:?}'",
-                                    moniker, source
+                                    component_ref, source
                                 );
                             }
                         };
@@ -248,17 +253,15 @@ async fn do_shutdown(component: &Arc<ComponentInstance>) -> Result<(), ModelErro
 
 /// Identifies a component in this realm. This can either be the component
 /// itself, or one of its children, identified by an instanced moniker.
-///
-/// TODO(fxbug.dev/94048): Replace "parent" with "self" here and elsewhere.
 #[derive(Debug, Eq, PartialEq, Hash, Clone)]
-pub enum ParentOrChildMoniker {
-    Parent,
-    ChildMoniker(InstancedChildMoniker),
+pub enum ComponentRef {
+    Self_,
+    Child(InstancedChildMoniker),
 }
 
-impl From<InstancedChildMoniker> for ParentOrChildMoniker {
+impl From<InstancedChildMoniker> for ComponentRef {
     fn from(moniker: InstancedChildMoniker) -> Self {
-        ParentOrChildMoniker::ChildMoniker(moniker)
+        ComponentRef::Child(moniker)
     }
 }
 
@@ -268,15 +271,15 @@ impl From<InstancedChildMoniker> for ParentOrChildMoniker {
 struct ShutdownInfo {
     // TODO(jmatt) reduce visibility of fields
     /// The identifier for this component
-    pub moniker: ParentOrChildMoniker,
+    pub ref_: ComponentRef,
     /// The components that this component offers capabilities to
-    pub dependents: HashSet<ParentOrChildMoniker>,
+    pub dependents: HashSet<ComponentRef>,
     pub component: Arc<ComponentInstance>,
 }
 
 impl fmt::Debug for ShutdownInfo {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "moniker: '{:?}'", self.moniker)
+        write!(f, "moniker: '{:?}'", self.ref_)
     }
 }
 
@@ -343,12 +346,12 @@ pub struct Child {
 
 /// For a given Component, identify capability dependencies between the
 /// component itself and its children. A map is returned which maps from a
-/// "source" component (represented by a `ParentOrChildMoniker`) to a set of
-/// "target" components to which the source component provides capabilities. The
-/// targets must be shut down before the source.
+/// "source" component (represented by a `ComponentRef`) to a set of "target"
+/// components to which the source component provides capabilities. The targets
+/// must be shut down before the source.
 pub fn process_component_dependencies(
     instance: &impl Component,
-) -> HashMap<ParentOrChildMoniker, HashSet<ParentOrChildMoniker>> {
+) -> HashMap<ComponentRef, HashSet<ComponentRef>> {
     // We build up the set of (source, target) dependency edges from a variety
     // of sources.
     let mut edges = HashSet::new();
@@ -362,20 +365,20 @@ pub fn process_component_dependencies(
     //
     // TODO(82689): This logic is likely unnecessary, as it deals with children
     // that have no direct dependency links with their parent.
-    let self_dependencies_closure = dependency_closure(&edges, ParentOrChildMoniker::Parent);
+    let self_dependencies_closure = dependency_closure(&edges, ComponentRef::Self_);
     let implicit_edges = instance.children().into_iter().filter_map(|child| {
-        let moniker = child.moniker.into();
-        if self_dependencies_closure.contains(&moniker) {
+        let component_ref = child.moniker.into();
+        if self_dependencies_closure.contains(&component_ref) {
             None
         } else {
-            Some((ParentOrChildMoniker::Parent, moniker))
+            Some((ComponentRef::Self_, component_ref))
         }
     });
 
     edges.extend(implicit_edges);
 
     let mut dependency_map = HashMap::new();
-    dependency_map.insert(ParentOrChildMoniker::Parent, HashSet::new());
+    dependency_map.insert(ComponentRef::Self_, HashSet::new());
 
     for child in instance.children() {
         dependency_map.insert(child.moniker.into(), HashSet::new());
@@ -403,9 +406,9 @@ pub fn process_component_dependencies(
 /// all nodes that the `start` node depends on, directly or indirectly. This
 /// includes `start` itself.
 fn dependency_closure(
-    edges: &HashSet<(ParentOrChildMoniker, ParentOrChildMoniker)>,
-    start: ParentOrChildMoniker,
-) -> HashSet<ParentOrChildMoniker> {
+    edges: &HashSet<(ComponentRef, ComponentRef)>,
+    start: ComponentRef,
+) -> HashSet<ComponentRef> {
     let mut res = HashSet::new();
     res.insert(start);
     loop {
@@ -428,9 +431,7 @@ fn dependency_closure(
 /// Return the set of dependency relationships that can be derived from the
 /// component's use declarations. For use declarations, `self` is always the
 /// target.
-fn get_dependencies_from_uses(
-    instance: &impl Component,
-) -> HashSet<(ParentOrChildMoniker, ParentOrChildMoniker)> {
+fn get_dependencies_from_uses(instance: &impl Component) -> HashSet<(ComponentRef, ComponentRef)> {
     let mut edges = HashSet::new();
     for use_ in &instance.uses() {
         let child_name = match use_ {
@@ -476,7 +477,7 @@ fn get_dependencies_from_uses(
             }
         };
 
-        edges.insert((child, ParentOrChildMoniker::Parent));
+        edges.insert((child, ComponentRef::Self_));
     }
     edges
 }
@@ -485,7 +486,7 @@ fn get_dependencies_from_uses(
 /// component's offer declarations. This includes both static and dynamic offers.
 fn get_dependencies_from_offers(
     instance: &impl Component,
-) -> HashSet<(ParentOrChildMoniker, ParentOrChildMoniker)> {
+) -> HashSet<(ComponentRef, ComponentRef)> {
     let mut edges = HashSet::new();
 
     for offer_decl in instance.offers() {
@@ -509,7 +510,7 @@ fn get_dependencies_from_offers(
 fn get_dependency_from_offer(
     instance: &impl Component,
     offer_decl: &OfferDecl,
-) -> Option<(Vec<ParentOrChildMoniker>, Vec<ParentOrChildMoniker>)> {
+) -> Option<(Vec<ComponentRef>, Vec<ComponentRef>)> {
     // We only care about dependencies where the provider of the dependency is
     // `self` or another child, otherwise the capability comes from the parent
     // or component manager itself in which case the relationship is not
@@ -585,10 +586,7 @@ fn get_dependency_from_offer(
 
 /// Given a `Component` instance and an `OfferSource`, return the names of
 /// components that match that `source`.
-fn find_offer_sources(
-    instance: &impl Component,
-    source: &OfferSource,
-) -> Vec<ParentOrChildMoniker> {
+fn find_offer_sources(instance: &impl Component, source: &OfferSource) -> Vec<ComponentRef> {
     match source {
         OfferSource::Child(ChildRef { name, collection }) => {
             match instance.find_live_child(name, collection) {
@@ -603,7 +601,7 @@ fn find_offer_sources(
                 }
             }
         }
-        OfferSource::Self_ => vec![ParentOrChildMoniker::Parent],
+        OfferSource::Self_ => vec![ComponentRef::Self_],
         OfferSource::Collection(_) => {
             // TODO(fxbug.dev/84766): Consider services routed from collections
             // in shutdown order.
@@ -634,10 +632,7 @@ fn find_offer_sources(
 ///
 /// The return value will have at most one entry in it, but it is returned in a
 /// Vec for consistency with the other `find_*` methods.
-fn find_storage_source(
-    instance: &impl Component,
-    name: &CapabilityName,
-) -> Vec<ParentOrChildMoniker> {
+fn find_storage_source(instance: &impl Component, name: &CapabilityName) -> Vec<ComponentRef> {
     let decl = instance.capabilities().into_iter().find_map(|decl| match decl {
         CapabilityDecl::Storage(decl) if &decl.name == name => Some(decl),
         _ => None,
@@ -665,7 +660,7 @@ fn find_storage_source(
                 }
             }
         }
-        StorageDirectorySource::Self_ => vec![ParentOrChildMoniker::Parent],
+        StorageDirectorySource::Self_ => vec![ComponentRef::Self_],
 
         // Storage from the parent is not relevant to shutdown order.
         StorageDirectorySource::Parent => vec![],
@@ -674,10 +669,7 @@ fn find_storage_source(
 
 /// Given a `Component` instance and an `OfferTarget`, return the names of
 /// components that match that `target`.
-fn find_offer_targets(
-    instance: &impl Component,
-    target: &OfferTarget,
-) -> Vec<ParentOrChildMoniker> {
+fn find_offer_targets(instance: &impl Component, target: &OfferTarget) -> Vec<ComponentRef> {
     match target {
         OfferTarget::Child(ChildRef { name, collection }) => {
             match instance.find_live_child(name, collection) {
@@ -706,8 +698,8 @@ fn find_offer_targets(
 /// depend on components that contribute to that environment.
 fn get_dependencies_from_environments(
     instance: &impl Component,
-) -> HashSet<(ParentOrChildMoniker, ParentOrChildMoniker)> {
-    let env_to_sources: HashMap<String, HashSet<ParentOrChildMoniker>> = instance
+) -> HashSet<(ComponentRef, ComponentRef)> {
+    let env_to_sources: HashMap<String, HashSet<ComponentRef>> = instance
         .environments()
         .into_iter()
         .map(|env| {
@@ -741,7 +733,7 @@ fn get_dependencies_from_environments(
 fn find_environment_sources(
     instance: &impl Component,
     env: &EnvironmentDecl,
-) -> HashSet<ParentOrChildMoniker> {
+) -> HashSet<ComponentRef> {
     // Get all the `RegistrationSources` for the runners, resolvers, and
     // debug_capabilities in this environment.
     let registration_sources = env
@@ -751,10 +743,10 @@ fn find_environment_sources(
         .chain(env.resolvers.iter().map(|r| &r.source))
         .chain(env.debug_capabilities.iter().map(|r| r.source()));
 
-    // Turn the shutdown-relevant sources into `ParentOrChildMoniker`s.
+    // Turn the shutdown-relevant sources into `ComponentRef`s.
     registration_sources
         .flat_map(|source| match source {
-            RegistrationSource::Self_ => vec![ParentOrChildMoniker::Parent],
+            RegistrationSource::Self_ => vec![ComponentRef::Self_],
             RegistrationSource::Child(child_name) => {
                 match instance.find_live_child(&child_name, &None) {
                     Some(child) => vec![child.moniker.into()],
@@ -869,19 +861,19 @@ mod tests {
 
     // TODO(jmatt) Add tests for all capability types
 
-    /// Returns a `ParentOrChildMoniker` for a child by parsing the moniker.
-    /// Panics if the moniker is malformed.
-    fn child(moniker: &str) -> ParentOrChildMoniker {
+    /// Returns a `ComponentRef` for a child by parsing the moniker. Panics if
+    /// the moniker is malformed.
+    fn child(moniker: &str) -> ComponentRef {
         InstancedChildMoniker::from(moniker).into()
     }
 
     #[test]
-    fn test_service_from_parent() {
+    fn test_service_from_self() {
         let decl = ComponentDecl {
             offers: vec![OfferDecl::Protocol(OfferProtocolDecl {
                 source: OfferSource::Self_,
-                source_name: "serviceParent".into(),
-                target_name: "serviceParent".into(),
+                source_name: "serviceSelf".into(),
+                target_name: "serviceSelf".into(),
                 target: OfferTarget::static_child("childA".to_string()),
                 dependency_type: DependencyType::Strong,
             })],
@@ -897,7 +889,7 @@ mod tests {
 
         pretty_assertions::assert_eq!(
             hashmap! {
-                ParentOrChildMoniker::Parent => hashset![child("childA:0")],
+                ComponentRef::Self_ => hashset![child("childA:0")],
                 child("childA:0") => hashset![],
             },
             process_component_dependencies(&FakeComponent::from_decl(decl))
@@ -906,12 +898,12 @@ mod tests {
 
     #[test_case(DependencyType::Weak)]
     #[test_case(DependencyType::WeakForMigration)]
-    fn test_weak_service_from_parent(weak_dep: DependencyType) {
+    fn test_weak_service_from_self(weak_dep: DependencyType) {
         let decl = ComponentDecl {
             offers: vec![OfferDecl::Protocol(OfferProtocolDecl {
                 source: OfferSource::Self_,
-                source_name: "serviceParent".into(),
-                target_name: "serviceParent".into(),
+                source_name: "serviceSelf".into(),
+                target_name: "serviceSelf".into(),
                 target: OfferTarget::static_child("childA".to_string()),
                 dependency_type: weak_dep,
             })],
@@ -927,7 +919,7 @@ mod tests {
 
         pretty_assertions::assert_eq!(
             hashmap! {
-                ParentOrChildMoniker::Parent => hashset![child("childA:0")],
+                ComponentRef::Self_ => hashset![child("childA:0")],
                 child("childA:0") => hashset![],
             },
             process_component_dependencies(&FakeComponent::from_decl(decl))
@@ -955,7 +947,7 @@ mod tests {
 
         pretty_assertions::assert_eq!(
             hashmap! {
-                ParentOrChildMoniker::Parent => hashset![child("childA:0")],
+                ComponentRef::Self_ => hashset![child("childA:0")],
                 child("childA:0") => hashset![],
             },
             process_component_dependencies(&FakeComponent::from_decl(decl))
@@ -1001,7 +993,7 @@ mod tests {
 
         pretty_assertions::assert_eq!(
             hashmap! {
-                ParentOrChildMoniker::Parent => hashset![child("childA:0"), child("childB:0")],
+                ComponentRef::Self_ => hashset![child("childA:0"), child("childB:0")],
                 child("childA:0") => hashset![],
                 child("childB:0") => hashset![child("childA:0")],
             },
@@ -1029,7 +1021,35 @@ mod tests {
 
         pretty_assertions::assert_eq!(
             hashmap! {
-                ParentOrChildMoniker::Parent => hashset![child("childA:0"), child("childB:0")],
+                ComponentRef::Self_ => hashset![child("childA:0"), child("childB:0")],
+                child("childA:0") => hashset![],
+                child("childB:0") => hashset![],
+            },
+            process_component_dependencies(&FakeComponent::from_decl(decl))
+        )
+    }
+
+    #[test]
+    fn test_environment_with_runner_from_self() {
+        let decl = ComponentDecl {
+            environments: vec![EnvironmentDeclBuilder::new()
+                .name("env")
+                .add_runner(cm_rust::RunnerRegistration {
+                    source: RegistrationSource::Self_,
+                    source_name: "foo".into(),
+                    target_name: "foo".into(),
+                })
+                .build()],
+            children: vec![
+                ChildDeclBuilder::new_lazy_child("childA").build(),
+                ChildDeclBuilder::new_lazy_child("childB").environment("env").build(),
+            ],
+            ..default_component_decl()
+        };
+
+        pretty_assertions::assert_eq!(
+            hashmap! {
+                ComponentRef::Self_ => hashset![child("childA:0"), child("childB:0")],
                 child("childA:0") => hashset![],
                 child("childB:0") => hashset![],
             },
@@ -1057,7 +1077,7 @@ mod tests {
 
         pretty_assertions::assert_eq!(
             hashmap! {
-                ParentOrChildMoniker::Parent => hashset![child("childA:0"), child("childB:0")],
+                ComponentRef::Self_ => hashset![child("childA:0"), child("childB:0")],
                 child("childA:0") => hashset![child("childB:0")],
                 child("childB:0") => hashset![],
             },
@@ -1103,7 +1123,7 @@ mod tests {
 
         pretty_assertions::assert_eq!(
             hashmap! {
-                ParentOrChildMoniker::Parent => hashset![
+                ComponentRef::Self_ => hashset![
                     child("childA:0"),
                     child("coll:dyn1:0"),
                     child("coll:dyn2:1"),
@@ -1150,7 +1170,7 @@ mod tests {
 
         pretty_assertions::assert_eq!(
             hashmap! {
-                ParentOrChildMoniker::Parent => hashset![
+                ComponentRef::Self_ => hashset![
                     child("childA:0"),
                     child("childB:0"),
                     child("childC:0")
@@ -1191,7 +1211,7 @@ mod tests {
 
         pretty_assertions::assert_eq!(
             hashmap! {
-                ParentOrChildMoniker::Parent => hashset![
+                ComponentRef::Self_ => hashset![
                     child("childA:0"),
                     child("childB:0"),
                     child("childC:0")
@@ -1224,7 +1244,7 @@ mod tests {
 
         pretty_assertions::assert_eq!(
             hashmap! {
-                ParentOrChildMoniker::Parent => hashset![child("childA:0"), child("childB:0")],
+                ComponentRef::Self_ => hashset![child("childA:0"), child("childB:0")],
                 child("childA:0") => hashset![],
                 child("childB:0") => hashset![],
             },
@@ -1252,7 +1272,7 @@ mod tests {
 
         pretty_assertions::assert_eq!(
             hashmap! {
-                ParentOrChildMoniker::Parent => hashset![child("childA:0"), child("childB:0")],
+                ComponentRef::Self_ => hashset![child("childA:0"), child("childB:0")],
                 child("childA:0") => hashset![child("childB:0")],
                 child("childB:0") => hashset![],
             },
@@ -1293,7 +1313,7 @@ mod tests {
 
         pretty_assertions::assert_eq!(
             hashmap! {
-                ParentOrChildMoniker::Parent => hashset![
+                ComponentRef::Self_ => hashset![
                     child("childA:0"),
                     child("childB:0"),
                     child("childC:0")
@@ -1332,7 +1352,7 @@ mod tests {
 
         pretty_assertions::assert_eq!(
             hashmap! {
-                ParentOrChildMoniker::Parent => hashset![
+                ComponentRef::Self_ => hashset![
                     child("childA:0"),
                     child("childB:0"),
                     child("childC:0")
@@ -1385,7 +1405,7 @@ mod tests {
 
         pretty_assertions::assert_eq!(
             hashmap! {
-                ParentOrChildMoniker::Parent => hashset![
+                ComponentRef::Self_ => hashset![
                     child("childA:0"),
                     child("coll:dyn1:0"),
                     child("coll:dyn2:1"),
@@ -1457,7 +1477,7 @@ mod tests {
 
         pretty_assertions::assert_eq!(
             hashmap! {
-                ParentOrChildMoniker::Parent => hashset![
+                ComponentRef::Self_ => hashset![
                     child("childA:0"),
                     child("coll:dyn1:1"),
                     child("coll:dyn2:2"),
@@ -1526,7 +1546,7 @@ mod tests {
 
         pretty_assertions::assert_eq!(
             hashmap! {
-                ParentOrChildMoniker::Parent => hashset![
+                ComponentRef::Self_ => hashset![
                     child("coll1:dyn1:1"),
                     child("coll1:dyn2:2"),
                     child("coll2:dyn1:3"),
@@ -1564,7 +1584,7 @@ mod tests {
 
         pretty_assertions::assert_eq!(
             hashmap! {
-                ParentOrChildMoniker::Parent => hashset![
+                ComponentRef::Self_ => hashset![
                     child("coll:dyn1:1"),
                     child("coll:dyn2:2"),
                 ],
@@ -1598,7 +1618,7 @@ mod tests {
 
         pretty_assertions::assert_eq!(
             hashmap! {
-                ParentOrChildMoniker::Parent => hashset![
+                ComponentRef::Self_ => hashset![
                     child("coll:dyn1:1"),
                     child("coll:dyn2:2"),
                 ],
@@ -1640,7 +1660,7 @@ mod tests {
 
         pretty_assertions::assert_eq!(
             hashmap! {
-                ParentOrChildMoniker::Parent => hashset![
+                ComponentRef::Self_ => hashset![
                     child("childA:0"),
                     child("childB:0"),
                     child("coll:dyn1:1"),
@@ -1683,7 +1703,7 @@ mod tests {
 
         pretty_assertions::assert_eq!(
             hashmap! {
-                ParentOrChildMoniker::Parent => hashset![
+                ComponentRef::Self_ => hashset![
                     child("coll:dyn1:0"),
                     child("coll:dyn1:1"),
                     child("coll:dyn2:2"),
@@ -1724,7 +1744,7 @@ mod tests {
 
         pretty_assertions::assert_eq!(
             hashmap! {
-                ParentOrChildMoniker::Parent => hashset![
+                ComponentRef::Self_ => hashset![
                     child("coll:dyn1:0"),
                     child("coll:dyn1:1"),
                     child("coll:dyn2:2"),
@@ -1758,8 +1778,8 @@ mod tests {
             offers: vec![
                 OfferDecl::Protocol(OfferProtocolDecl {
                     source: OfferSource::Self_,
-                    source_name: "serviceParent".into(),
-                    target_name: "serviceParent".into(),
+                    source_name: "serviceSelf".into(),
+                    target_name: "serviceSelf".into(),
                     target: OfferTarget::static_child("childA".to_string()),
                     dependency_type: weak_dep.clone(),
                 }),
@@ -1777,7 +1797,7 @@ mod tests {
 
         pretty_assertions::assert_eq!(
             hashmap! {
-                ParentOrChildMoniker::Parent => hashset![child("childA:0"), child("childB:0")],
+                ComponentRef::Self_ => hashset![child("childA:0"), child("childB:0")],
                 child("childA:0") => hashset![],
                 child("childB:0") => hashset![],
             },
@@ -1805,8 +1825,8 @@ mod tests {
             offers: vec![
                 OfferDecl::Protocol(OfferProtocolDecl {
                     source: OfferSource::Self_,
-                    source_name: "serviceParent".into(),
-                    target_name: "serviceParent".into(),
+                    source_name: "serviceSelf".into(),
+                    target_name: "serviceSelf".into(),
                     target: OfferTarget::static_child("childA".to_string()),
                     dependency_type: DependencyType::Strong,
                 }),
@@ -1831,7 +1851,7 @@ mod tests {
 
         pretty_assertions::assert_eq!(
             hashmap! {
-                ParentOrChildMoniker::Parent => hashset![child("childA:0"), child("childB:0")],
+                ComponentRef::Self_ => hashset![child("childA:0"), child("childB:0")],
                 child("childA:0") => hashset![],
                 child("childB:0") => hashset![child("childA:0")],
             },
@@ -1886,7 +1906,7 @@ mod tests {
 
         pretty_assertions::assert_eq!(
             hashmap! {
-                ParentOrChildMoniker::Parent => hashset![
+                ComponentRef::Self_ => hashset![
                     child("childA:0"),
                     child("childB:0"),
                     child("childC:0"),
@@ -1953,7 +1973,7 @@ mod tests {
 
         pretty_assertions::assert_eq!(
             hashmap! {
-                ParentOrChildMoniker::Parent => hashset![
+                ComponentRef::Self_ => hashset![
                     child("childA:0"),
                     child("childB:0"),
                     child("childC:0"),
@@ -2012,7 +2032,7 @@ mod tests {
 
         pretty_assertions::assert_eq!(
             hashmap! {
-                ParentOrChildMoniker::Parent => hashset![
+                ComponentRef::Self_ => hashset![
                     child("childA:0"),
                     child("childB:0"),
                     child("childC:0"),
@@ -2121,7 +2141,7 @@ mod tests {
 
         pretty_assertions::assert_eq!(
             hashmap! {
-                ParentOrChildMoniker::Parent => hashset![
+                ComponentRef::Self_ => hashset![
                    child("childA:0"),
                    child("childB:0"),
                    child("childC:0"),
@@ -2162,7 +2182,7 @@ mod tests {
 
         pretty_assertions::assert_eq!(
             hashmap! {
-                ParentOrChildMoniker::Parent => hashset![child("childA:0")],
+                ComponentRef::Self_ => hashset![child("childA:0")],
                 child("childA:0") => hashset![],
             },
             process_component_dependencies(&FakeComponent::from_decl(decl))
@@ -2193,7 +2213,7 @@ mod tests {
 
         pretty_assertions::assert_eq!(
             hashmap! {
-                ParentOrChildMoniker::Parent => hashset![child("childA:0")],
+                ComponentRef::Self_ => hashset![child("childA:0")],
                 child("childA:0") => hashset![],
             },
             process_component_dependencies(&FakeComponent::from_decl(decl))
@@ -2205,8 +2225,8 @@ mod tests {
         let decl = ComponentDecl {
             offers: vec![OfferDecl::Protocol(OfferProtocolDecl {
                 source: OfferSource::Self_,
-                source_name: "serviceParent".into(),
-                target_name: "serviceParent".into(),
+                source_name: "serviceSelf".into(),
+                target_name: "serviceSelf".into(),
                 target: OfferTarget::static_child("childA".to_string()),
                 dependency_type: DependencyType::Weak,
             })],
@@ -2228,8 +2248,8 @@ mod tests {
 
         pretty_assertions::assert_eq!(
             hashmap! {
-                ParentOrChildMoniker::Parent => hashset![],
-                child("childA:0") => hashset![ParentOrChildMoniker::Parent],
+                ComponentRef::Self_ => hashset![],
+                child("childA:0") => hashset![ComponentRef::Self_],
             },
             process_component_dependencies(&FakeComponent::from_decl(decl))
         )
@@ -2240,8 +2260,8 @@ mod tests {
         let decl = ComponentDecl {
             offers: vec![OfferDecl::Protocol(OfferProtocolDecl {
                 source: OfferSource::Self_,
-                source_name: "serviceParent".into(),
-                target_name: "serviceParent".into(),
+                source_name: "serviceSelf".into(),
+                target_name: "serviceSelf".into(),
                 target: OfferTarget::static_child("childA".to_string()),
                 dependency_type: DependencyType::Weak,
             })],
@@ -2273,9 +2293,10 @@ mod tests {
         pretty_assertions::assert_eq!(
             hashmap! {
                 // childB is a dependent because we consider all children
-                // dependent, unless the parent uses something from the child.
-                ParentOrChildMoniker::Parent => hashset![child("childB:0")],
-                child("childA:0") => hashset![ParentOrChildMoniker::Parent],
+                // dependent, unless the component uses something from the
+                // child.
+                ComponentRef::Self_ => hashset![child("childB:0")],
+                child("childA:0") => hashset![ComponentRef::Self_],
                 child("childB:0") => hashset![],
             },
             process_component_dependencies(&FakeComponent::from_decl(decl))
@@ -2342,8 +2363,8 @@ mod tests {
 
         pretty_assertions::assert_eq!(
             hashmap! {
-                ParentOrChildMoniker::Parent => hashset![],
-                child("childA:0") => hashset![ParentOrChildMoniker::Parent],
+                ComponentRef::Self_ => hashset![],
+                child("childA:0") => hashset![ComponentRef::Self_],
                 child("childB:0") => hashset![child("childA:0")],
             },
             process_component_dependencies(&FakeComponent::from_decl(decl))
@@ -2355,8 +2376,8 @@ mod tests {
         let decl = ComponentDecl {
             offers: vec![OfferDecl::Protocol(OfferProtocolDecl {
                 source: OfferSource::Self_,
-                source_name: "serviceParent".into(),
-                target_name: "serviceParent".into(),
+                source_name: "serviceSelf".into(),
+                target_name: "serviceSelf".into(),
                 target: OfferTarget::static_child("childA".to_string()),
                 dependency_type: DependencyType::Strong,
             })],
@@ -2378,7 +2399,7 @@ mod tests {
 
         pretty_assertions::assert_eq!(
             hashmap! {
-                ParentOrChildMoniker::Parent => hashset![child("childA:0")],
+                ComponentRef::Self_ => hashset![child("childA:0")],
                 child("childA:0") => hashset![],
             },
             process_component_dependencies(&FakeComponent::from_decl(decl))
@@ -2390,8 +2411,8 @@ mod tests {
         let decl = ComponentDecl {
             offers: vec![OfferDecl::Protocol(OfferProtocolDecl {
                 source: OfferSource::Self_,
-                source_name: "serviceParent".into(),
-                target_name: "serviceParent".into(),
+                source_name: "serviceSelf".into(),
+                target_name: "serviceSelf".into(),
                 target: OfferTarget::static_child("childA".to_string()),
                 dependency_type: DependencyType::Weak,
             })],
@@ -2431,8 +2452,8 @@ mod tests {
         pretty_assertions::assert_eq!(
             hashmap! {
                 // childB is a dependent because its use-from-child has a 'weak' dependency.
-                ParentOrChildMoniker::Parent => hashset![child("childB:0")],
-                child("childA:0") => hashset![ParentOrChildMoniker::Parent],
+                ComponentRef::Self_ => hashset![child("childB:0")],
+                child("childA:0") => hashset![ComponentRef::Self_],
                 child("childB:0") => hashset![],
             },
             process_component_dependencies(&FakeComponent::from_decl(decl))
@@ -2468,7 +2489,7 @@ mod tests {
 
         pretty_assertions::assert_eq!(
             hashmap! {
-                ParentOrChildMoniker::Parent => hashset![child("childA:0"), child("childB:0")],
+                ComponentRef::Self_ => hashset![child("childA:0"), child("childB:0")],
                 child("childA:0") => hashset![child("childB:0")],
                 child("childB:0") => hashset![],
             },
