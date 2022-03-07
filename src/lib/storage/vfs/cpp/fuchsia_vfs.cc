@@ -200,20 +200,29 @@ zx_status_t FuchsiaVfs::Rename(zx::event token, fbl::RefPtr<Vnode> oldparent,
                                std::string_view oldStr, std::string_view newStr) {
   // Local filesystem
   bool old_must_be_dir;
-  bool new_must_be_dir;
-  zx_status_t r;
-  if ((r = TrimName(oldStr, &oldStr, &old_must_be_dir)) != ZX_OK) {
-    return r;
-  } else if (oldStr == ".") {
-    return ZX_ERR_UNAVAILABLE;
-  } else if (oldStr == "..") {
-    return ZX_ERR_INVALID_ARGS;
+  {
+    zx::status result = TrimName(oldStr);
+    if (result.is_error()) {
+      return result.status_value();
+    }
+    old_must_be_dir = result.value();
+    if (oldStr == ".") {
+      return ZX_ERR_UNAVAILABLE;
+    }
+    if (oldStr == "..") {
+      return ZX_ERR_INVALID_ARGS;
+    }
   }
-
-  if ((r = TrimName(newStr, &newStr, &new_must_be_dir)) != ZX_OK) {
-    return r;
-  } else if (newStr == "." || newStr == "..") {
-    return ZX_ERR_INVALID_ARGS;
+  bool new_must_be_dir;
+  {
+    zx::status result = TrimName(newStr);
+    if (result.is_error()) {
+      return result.status_value();
+    }
+    new_must_be_dir = result.value();
+    if (newStr == "." || newStr == "..") {
+      return ZX_ERR_INVALID_ARGS;
+    }
   }
 
   fbl::RefPtr<fs::Vnode> newparent;
@@ -222,14 +231,15 @@ zx_status_t FuchsiaVfs::Rename(zx::event token, fbl::RefPtr<Vnode> oldparent,
     if (ReadonlyLocked()) {
       return ZX_ERR_ACCESS_DENIED;
     }
-    if ((r = TokenToVnode(std::move(token), &newparent)) != ZX_OK) {
-      return r;
+    if (zx_status_t status = TokenToVnode(std::move(token), &newparent); status != ZX_OK) {
+      return status;
     }
 
-    r = oldparent->Rename(newparent, oldStr, newStr, old_must_be_dir, new_must_be_dir);
-  }
-  if (r != ZX_OK) {
-    return r;
+    if (zx_status_t status =
+            oldparent->Rename(newparent, oldStr, newStr, old_must_be_dir, new_must_be_dir);
+        status != ZX_OK) {
+      return status;
+    }
   }
   oldparent->Notify(oldStr, fio::wire::WatchEvent::kRemoved);
   newparent->Notify(newStr, fio::wire::WatchEvent::kAdded);
@@ -244,41 +254,48 @@ zx_status_t FuchsiaVfs::Link(zx::event token, fbl::RefPtr<Vnode> oldparent, std:
                              std::string_view newStr) {
   std::lock_guard lock(vfs_lock_);
   fbl::RefPtr<fs::Vnode> newparent;
-  zx_status_t r;
-  if ((r = TokenToVnode(std::move(token), &newparent)) != ZX_OK) {
-    return r;
+  if (zx_status_t status = TokenToVnode(std::move(token), &newparent); status != ZX_OK) {
+    return status;
   }
   // Local filesystem
-  bool old_must_be_dir;
-  bool new_must_be_dir;
   if (ReadonlyLocked()) {
     return ZX_ERR_ACCESS_DENIED;
-  } else if ((r = TrimName(oldStr, &oldStr, &old_must_be_dir)) != ZX_OK) {
-    return r;
-  } else if (old_must_be_dir) {
-    return ZX_ERR_NOT_DIR;
-  } else if (oldStr == ".") {
-    return ZX_ERR_UNAVAILABLE;
-  } else if (oldStr == "..") {
-    return ZX_ERR_INVALID_ARGS;
   }
-
-  if ((r = TrimName(newStr, &newStr, &new_must_be_dir)) != ZX_OK) {
-    return r;
-  } else if (new_must_be_dir) {
-    return ZX_ERR_NOT_DIR;
-  } else if (newStr == "." || newStr == "..") {
-    return ZX_ERR_INVALID_ARGS;
+  {
+    zx::status result = TrimName(oldStr);
+    if (result.is_error()) {
+      return result.status_value();
+    }
+    if (result.value()) {
+      return ZX_ERR_NOT_DIR;
+    }
+    if (oldStr == ".") {
+      return ZX_ERR_UNAVAILABLE;
+    }
+    if (oldStr == "..") {
+      return ZX_ERR_INVALID_ARGS;
+    }
+  }
+  {
+    zx::status result = TrimName(newStr);
+    if (result.is_error()) {
+      return result.status_value();
+    }
+    if (result.value()) {
+      return ZX_ERR_NOT_DIR;
+    }
+    if (newStr == "." || newStr == "..") {
+      return ZX_ERR_INVALID_ARGS;
+    }
   }
 
   // Look up the target vnode
   fbl::RefPtr<Vnode> target;
-  if ((r = oldparent->Lookup(oldStr, &target)) < 0) {
-    return r;
+  if (zx_status_t status = oldparent->Lookup(oldStr, &target); status != ZX_OK) {
+    return status;
   }
-  r = newparent->Link(newStr, target);
-  if (r != ZX_OK) {
-    return r;
+  if (zx_status_t status = newparent->Link(newStr, target); status != ZX_OK) {
+    return status;
   }
   newparent->Notify(newStr, fio::wire::WatchEvent::kAdded);
   return ZX_OK;

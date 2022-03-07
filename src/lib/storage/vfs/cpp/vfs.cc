@@ -84,13 +84,14 @@ Vfs::OpenResult Vfs::OpenLocked(fbl::RefPtr<Vnode> vndir, std::string_view path,
   }
 
   {
-    bool must_be_dir = false;
-    if ((r = TrimName(path, &path, &must_be_dir)) != ZX_OK) {
-      return r;
-    } else if (path == "..") {
+    zx::status result = TrimName(path);
+    if (result.is_error()) {
+      return result.status_value();
+    }
+    if (path == "..") {
       return ZX_ERR_INVALID_ARGS;
     }
-    if (must_be_dir) {
+    if (result.value()) {
       options.flags.directory = true;
     }
   }
@@ -173,19 +174,19 @@ Vfs::TraversePathResult Vfs::TraversePathFetchVnodeLocked(fbl::RefPtr<Vnode> vnd
     return TraversePathResult::Remote{.vnode = std::move(vndir), .path = path};
   }
 
-  zx_status_t result;
   {
-    bool must_be_dir = false;
-    if ((result = TrimName(path, &path, &must_be_dir)) != ZX_OK) {
-      return result;
-    } else if (path == "..") {
+    zx::status result = TrimName(path);
+    if (result.is_error()) {
+      return result.status_value();
+    }
+    if (path == "..") {
       return ZX_ERR_INVALID_ARGS;
     }
   }
 
   fbl::RefPtr<Vnode> vn;
-  if ((result = LookupNode(std::move(vndir), path, &vn)) != ZX_OK) {
-    return result;
+  if (zx_status_t status = LookupNode(std::move(vndir), path, &vn); status != ZX_OK) {
+    return status;
   }
 
   if (vn->IsRemote()) {
@@ -261,27 +262,27 @@ zx_status_t Vfs::EnsureExists(fbl::RefPtr<Vnode> vndir, std::string_view path,
   return ZX_OK;
 }
 
-zx_status_t Vfs::TrimName(std::string_view name, std::string_view* name_out, bool* is_dir_out) {
-  *is_dir_out = false;
-
+zx::status<bool> Vfs::TrimName(std::string_view& name) {
+  bool is_dir = false;
   while (!name.empty() && name.back() == '/') {
-    *is_dir_out = true;
+    is_dir = true;
     name.remove_suffix(1);
   }
 
   if (name.empty()) {
     // 'name' should not contain paths consisting of exclusively '/' characters.
-    return ZX_ERR_INVALID_ARGS;
-  } else if (name.length() > NAME_MAX) {
+    return zx::error(ZX_ERR_INVALID_ARGS);
+  }
+  if (name.length() > NAME_MAX) {
     // Name must be less than the maximum-expected length.
-    return ZX_ERR_BAD_PATH;
-  } else if (name.find('/') != std::string::npos) {
+    return zx::error(ZX_ERR_BAD_PATH);
+  }
+  if (name.find('/') != std::string::npos) {
     // Name must not contain '/' characters after being trimmed.
-    return ZX_ERR_INVALID_ARGS;
+    return zx::error(ZX_ERR_INVALID_ARGS);
   }
 
-  *name_out = name;
-  return ZX_OK;
+  return zx::ok(is_dir);
 }
 
 zx_status_t Vfs::Readdir(Vnode* vn, VdirCookie* cookie, void* dirents, size_t len,

@@ -104,9 +104,9 @@ class Vfs {
   // validates whether the name has internal slashes and rejects them. Returns failure if the
   // resulting name is too long, empty, or contains slashes after trimming.
   //
-  // A trailing slash indicates that this refers specifically to a directlry and *is_dir_out will be
-  // set to true. Otherwise this will be false.
-  static zx_status_t TrimName(std::string_view name, std::string_view* name_out, bool* is_dir_out);
+  // Returns true iff name is suffixed with a trailing slash indicating an explicit reference to a
+  // directory.
+  static zx::status<bool> TrimName(std::string_view& name);
 
   // Attempt to create an entry with name |name| within the |vndir| directory.
   //
