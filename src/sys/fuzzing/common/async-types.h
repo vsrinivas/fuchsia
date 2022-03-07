@@ -31,7 +31,7 @@ namespace fuzzing {
 
 // All tasks should be scheduled on a common executor.
 using ExecutorPtr = std::shared_ptr<async::Executor>;
-inline ExecutorPtr MakeExecutor(async_dispatcher_t *dispatcher) {
+inline ExecutorPtr MakeExecutor(async_dispatcher_t* dispatcher) {
   return std::make_shared<async::Executor>(dispatcher);
 }
 
@@ -62,6 +62,23 @@ using ZxResult = fpromise::result<V, zx_status_t>;
 
 template <typename V = void>
 using ZxBridge = fpromise::bridge<V, zx_status_t>;
+
+// Like |fpromise::completer::bind|, but can handle |zx_status_t| errors. This is useful for
+// bridging FIDL callbacks for methods like "... -> ... error zx.status;".
+template <typename V = void>
+inline fit::function<void(ZxResult<V>)> ZxBind(typename ZxBridge<V>::completer_type&& completer) {
+  return [completer = std::move(completer)](ZxResult<V> result) mutable {
+    if (result.is_error()) {
+      completer.complete_error(result.error());
+      return;
+    }
+    if constexpr (std::is_same<V, void>::value) {
+      completer.complete_ok();
+    } else {
+      completer.complete_ok(result.take_value());
+    }
+  };
+}
 
 // Supporting types.
 
