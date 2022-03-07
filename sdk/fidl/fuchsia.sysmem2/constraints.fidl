@@ -33,10 +33,8 @@ type BufferCollectionConstraints = table {
     /// BufferCollectionConstraints is logically null (no fields set).
     1: usage BufferUsage;
 
-    /// Per-participant minimum number of buffers that are needed for camping
-    /// purposes.  A participant should specify a number for min_buffer_count
-    /// that's >= the maximum number of buffers that the participant may
-    /// concurrently camp on for any non-transient period of time.
+    /// Per-participant number of buffers that the participant may concurrently
+    /// hold for its exclusive use for a non-transient period of time (camp on).
     ///
     /// For example, a video decoder would specify (at least) the maximum number
     /// of reference frames + 1 frame currently being decoded into.
