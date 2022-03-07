@@ -15,9 +15,6 @@ using fuchsia.data;
 type Program = table {
     /// The name of the runner to use to run the component. Must match a
     /// `RunnerRegistration` in the component's environment.
-    ///
-    /// This may be absent if a `UseRunnerDecl` is set instead.
-    // TODO(fxbug.dev/68827): Replace `UseRunnerDecl` with this.
     1: runner name;
 
     /// Information about the program to run when the component is executed. The
@@ -26,5 +23,9 @@ type Program = table {
     ///
     /// For instance, this might contain a path to the program's executable
     /// image, or program arguments.
+    ///
+    /// * The keys represent namespaced properties, delimited by ".".
+    /// * Properties may be nested in values, but only in the case of an object
+    /// vector.
     2: info fuchsia.data.Dictionary;
 };

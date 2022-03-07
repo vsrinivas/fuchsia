@@ -109,8 +109,16 @@ fn value_to_dictionary_value(value: Value) -> Result<Option<Box<fdata::Dictionar
 
 /// Converts a [`serde_json::Map<String, serde_json::Value>`] to a [`fuchsia.data.Dictionary`].
 ///
-/// Values may be null, strings, arrays of strings, or objects.
-/// Object value are flattened with keys separated by a period:
+/// The JSON object is converted as follows:
+///
+/// * Convert all non-string and string values into DictionaryValue::str.
+/// * Flatten nested objects into top-level keys delimited by ".".
+/// * Convert array of discrete values into  array of DictionaryValue::str_vec.
+/// * Convert array of objects into array of DictionaryValue::obj_vec.
+///
+/// Values may be null, strings, arrays of strings, arrays of objects, or objects.
+///
+/// # Example
 ///
 /// ```json
 /// {
@@ -153,14 +161,22 @@ fn dictionary_from_nested_map(map: Map<String, Value>) -> Result<fdata::Dictiona
             Value::Null => Ok(None),
             Value::String(s) => Ok(Some(Box::new(fdata::DictionaryValue::Str(s.clone())))),
             Value::Array(arr) => {
-                let mut strs = vec![];
-                for val in arr {
-                    match val {
-                        Value::String(s) => strs.push(s),
-                        _ => return Err(Error::validate("Value must be string")),
-                    };
+                if arr.iter().all(Value::is_string) {
+                    let strs =
+                        arr.into_iter().map(|v| v.as_str().unwrap().to_owned()).collect::<Vec<_>>();
+                    Ok(Some(Box::new(fdata::DictionaryValue::StrVec(strs))))
+                } else if arr.iter().all(Value::is_object) {
+                    let objs = arr
+                        .into_iter()
+                        .map(|v| v.as_object().unwrap().clone())
+                        .map(|v| dictionary_from_nested_map(v))
+                        .collect::<Result<Vec<_>, _>>()?;
+                    Ok(Some(Box::new(fdata::DictionaryValue::ObjVec(objs))))
+                } else {
+                    Err(Error::validate(
+                        "Values of an array must either exclusively strings or exclusively objects",
+                    ))
                 }
-                Ok(Some(Box::new(fdata::DictionaryValue::StrVec(strs))))
             }
             _ => Err(Error::validate("Value must be string or list of strings")),
         }?;
@@ -1555,6 +1571,91 @@ mod tests {
                             fdata::DictionaryEntry {
                                 key: "one.two.three.four.five".to_string(),
                                 value: Some(Box::new(fdata::DictionaryValue::Str("six".to_string()))),
+                            },
+                        ]),
+                        ..fdata::Dictionary::EMPTY
+                    }),
+                    ..fdecl::Program::EMPTY
+                }),
+                ..default_component_decl()
+            },
+        },
+
+        test_compile_program_with_array_of_objects => {
+            input = json!({
+                "program": {
+                    "runner": "elf",
+                    "binary": "bin/app",
+                    "networks": [
+                        {
+                            "endpoints": [
+                                {
+                                    "name": "device",
+                                    "mac": "aa:bb:cc:dd:ee:ff"
+                                },
+                                {
+                                    "name": "emu",
+                                    "mac": "ff:ee:dd:cc:bb:aa"
+                                },
+                            ],
+                            "name": "external_network"
+                        }
+                    ],
+                },
+            }),
+            output = fdecl::Component {
+                program: Some(fdecl::Program {
+                    runner: Some("elf".to_string()),
+                    info: Some(fdata::Dictionary {
+                        entries: Some(vec![
+                            fdata::DictionaryEntry {
+                                key: "binary".to_string(),
+                                value: Some(Box::new(fdata::DictionaryValue::Str("bin/app".to_string()))),
+                            },
+                            fdata::DictionaryEntry {
+                                key: "networks".to_string(),
+                                value: Some(Box::new(fdata::DictionaryValue::ObjVec(vec![
+                                    fdata::Dictionary {
+                                        entries: Some(vec![
+                                            fdata::DictionaryEntry {
+                                                key: "endpoints".to_string(),
+                                                value: Some(Box::new(fdata::DictionaryValue::ObjVec(vec![
+                                                    fdata::Dictionary {
+                                                        entries: Some(vec![
+                                                            fdata::DictionaryEntry {
+                                                                key: "mac".to_string(),
+                                                                value: Some(Box::new(fdata::DictionaryValue::Str("aa:bb:cc:dd:ee:ff".to_string()))),
+                                                            },
+                                                            fdata::DictionaryEntry {
+                                                                key: "name".to_string(),
+                                                                value: Some(Box::new(fdata::DictionaryValue::Str("device".to_string()))),
+                                                            }
+                                                        ]),
+                                                        ..fdata::Dictionary::EMPTY
+                                                    },
+                                                    fdata::Dictionary {
+                                                        entries: Some(vec![
+                                                            fdata::DictionaryEntry {
+                                                                key: "mac".to_string(),
+                                                                value: Some(Box::new(fdata::DictionaryValue::Str("ff:ee:dd:cc:bb:aa".to_string()))),
+                                                            },
+                                                            fdata::DictionaryEntry {
+                                                                key: "name".to_string(),
+                                                                value: Some(Box::new(fdata::DictionaryValue::Str("emu".to_string()))),
+                                                            }
+                                                        ]),
+                                                        ..fdata::Dictionary::EMPTY
+                                                    },
+                                                ])))
+                                            },
+                                            fdata::DictionaryEntry {
+                                                key: "name".to_string(),
+                                                value: Some(Box::new(fdata::DictionaryValue::Str("external_network".to_string()))),
+                                            },
+                                        ]),
+                                        ..fdata::Dictionary::EMPTY
+                                    }
+                                ]))),
                             },
                         ]),
                         ..fdata::Dictionary::EMPTY
