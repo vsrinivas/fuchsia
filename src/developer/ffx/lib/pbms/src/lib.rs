@@ -88,7 +88,7 @@ where
                 .context("read pbms entries")?)
         }
         SdkVersion::InTree => {
-            write!(
+            writeln!(
                 writer,
                 "\
                 There's no data download necessary for in-tree products.\
