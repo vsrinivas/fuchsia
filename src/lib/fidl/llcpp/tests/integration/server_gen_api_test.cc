@@ -8,11 +8,13 @@
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>
 #include <lib/fidl/llcpp/server.h>
+#include <lib/stdcompat/functional.h>
 #include <lib/sync/completion.h>
 #include <lib/sync/cpp/completion.h>
 #include <zircon/fidl.h>
 #include <zircon/syscalls.h>
 
+#include <optional>
 #include <thread>
 #include <vector>
 
@@ -861,6 +863,123 @@ TEST(BindServerTestCase, ConcurrentIdempotentClose) {
 
   // Wait for the unbound handler before letting the loop be destroyed.
   ASSERT_OK(sync_completion_wait(&unbound, ZX_TIME_INFINITE));
+}
+
+// Tests that the user may ignore sync method completers after |Unbind| returns.
+//
+// This is useful for synchronously tearing down a server from a sequential
+// context, such as unbinding and destroying the server from a single-threaded
+// async dispatcher thread.
+TEST(BindServerTestCase, UnbindSynchronouslyPassivatesSyncCompleter) {
+  // This server destroys itself upon the |Echo| call.
+  class ShutdownOnEchoRequestServer : public fidl::WireServer<Simple> {
+   public:
+    ShutdownOnEchoRequestServer(async::Loop* loop, fidl::ServerEnd<Simple> server_end)
+        : binding_ref_(
+              fidl::BindServer(loop->dispatcher(), std::move(server_end), this,
+                               cpp20::bind_front(&ShutdownOnEchoRequestServer::OnUnbound, loop))) {}
+
+    void Echo(EchoRequestView request, EchoCompleter::Sync& completer) override {
+      // |Unbind| requests to unbind the server. |completer| is passivated.
+      // We will be asynchronously notified of unbind completion via |fidl::OnUnboundFn|.
+      binding_ref_.Unbind();
+    }
+
+    void Close(CloseRequestView request, CloseCompleter::Sync& completer) override {
+      ZX_PANIC("Unused");
+    }
+
+    static void OnUnbound(async::Loop* loop, ShutdownOnEchoRequestServer* server,
+                          fidl::UnbindInfo info, fidl::ServerEnd<Simple> server_end) {
+      EXPECT_EQ(fidl::Reason::kUnbind, info.reason());
+      EXPECT_OK(info.status());
+      loop->Quit();
+      delete server;
+    }
+
+   private:
+    fidl::ServerBindingRef<Simple> binding_ref_;
+  };
+
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+  zx::status endpoints = fidl::CreateEndpoints<Simple>();
+  ASSERT_OK(endpoints.status_value());
+
+  // Server owns itself.
+  (void)new ShutdownOnEchoRequestServer(&loop, std::move(endpoints->server));
+
+  std::thread call_thread([client_end = std::move(endpoints->client)] {
+    fidl::WireResult result = fidl::WireCall(client_end)->Echo(42);
+    ASSERT_STATUS(ZX_ERR_PEER_CLOSED, result.status());
+  });
+
+  // Loop is shutdown in |OnUnbound|.
+  ASSERT_STATUS(ZX_ERR_CANCELED, loop.Run());
+  call_thread.join();
+}
+
+// Tests that the user may immediately discard pending async method completers
+// after |Unbind| returns.
+//
+// This is useful for synchronously tearing down a server from a sequential
+// context, such as unbinding and destroying the server from a single-threaded
+// async dispatcher thread.
+TEST(BindServerTestCase, UnbindSynchronouslyPassivatesAsyncCompleter) {
+  // This server destroys itself upon the |Echo| call.
+  class ShutdownOnEchoRequestServer : public fidl::WireServer<Simple> {
+   public:
+    ShutdownOnEchoRequestServer(async::Loop* loop, fidl::ServerEnd<Simple> server_end)
+        : loop_(loop),
+          binding_ref_(
+              fidl::BindServer(loop->dispatcher(), std::move(server_end), this,
+                               cpp20::bind_front(&ShutdownOnEchoRequestServer::OnUnbound, loop))) {}
+
+    void Echo(EchoRequestView request, EchoCompleter::Sync& completer) override {
+      async_completer_.emplace(completer.ToAsync());
+
+      // Order of events:
+      // 1. |Unbind| requests to unbind the server. Completers are passivated.
+      // 2. Server and completer are destroyed. This is safe to do from the
+      //    single dispatcher thread.
+      // 3. We are notified of unbind completion via |fidl::OnUnboundFn|.
+      async::PostTask(loop_->dispatcher(), [&] {
+        binding_ref_.Unbind();
+        delete this;
+      });
+    }
+
+    void Close(CloseRequestView request, CloseCompleter::Sync& completer) override {
+      ZX_PANIC("Unused");
+    }
+
+    static void OnUnbound(async::Loop* loop, ShutdownOnEchoRequestServer* server,
+                          fidl::UnbindInfo info, fidl::ServerEnd<Simple> server_end) {
+      EXPECT_EQ(fidl::Reason::kUnbind, info.reason());
+      EXPECT_OK(info.status());
+      loop->Quit();
+    }
+
+   private:
+    async::Loop* loop_;
+    fidl::ServerBindingRef<Simple> binding_ref_;
+    std::optional<EchoCompleter::Async> async_completer_;
+  };
+
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+  zx::status endpoints = fidl::CreateEndpoints<Simple>();
+  ASSERT_OK(endpoints.status_value());
+
+  // Server owns itself.
+  (void)new ShutdownOnEchoRequestServer(&loop, std::move(endpoints->server));
+
+  std::thread call_thread([client_end = std::move(endpoints->client)] {
+    fidl::WireResult result = fidl::WireCall(client_end)->Echo(42);
+    ASSERT_STATUS(ZX_ERR_PEER_CLOSED, result.status());
+  });
+
+  // Loop is shutdown in |OnUnbound|.
+  ASSERT_STATUS(ZX_ERR_CANCELED, loop.Run());
+  call_thread.join();
 }
 
 // Tests the following corner case:

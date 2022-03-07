@@ -46,7 +46,7 @@ class SyncTransaction final : public Transaction {
 
   std::unique_ptr<Transaction> TakeOwnership() final;
 
-  bool IsUnbound() final;
+  bool DidOrGoingToUnbind() final;
 
  private:
   friend class AsyncTransaction;
@@ -86,7 +86,7 @@ class AsyncTransaction final : public Transaction {
 
   std::unique_ptr<Transaction> TakeOwnership() final;
 
-  bool IsUnbound() final;
+  bool DidOrGoingToUnbind() final;
 
  private:
   zx_txid_t txid_ = 0;

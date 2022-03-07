@@ -105,11 +105,12 @@ class Transaction {
     ZX_ASSERT_MSG(false, "Transaction does not support explicitly resuming dispatch.");
   }
 
-  // Returns true if the transaction references some internal binding, and that binding is no longer
-  // accessible. This is used to determine whether a reply is still required. The default
-  // implementation simply returns false in order to maintain the behavior for the binding
-  // implementations outside of libfidl.
-  virtual bool IsUnbound() { return false; }
+  // Returns true if the transaction references some internal binding, and that
+  // binding either no longer accessible, or scheduled to be destroyed at the
+  // next iteration of the event loop. This is used to determine whether a reply
+  // is still required. The default implementation returns false for bindings
+  // which do not support user-initiated unbinding.
+  virtual bool DidOrGoingToUnbind() { return false; }
 
   // A transaction will only be destroyed after one of three actions happens to it:
   // the Completer containing it is destroyed, the transaction is closed, or ownership is taken from
@@ -154,8 +155,7 @@ class CompleterBase {
   // - The server endpoint is unbound from the message dispatcher due to an
   //   error or an explicit |Unbind| request from a |fidl::ServerBindingRef|.
   //
-  // It is safe to destroy a completer without replying inside the |on_unbound|
-  // hook provided to |fidl::BindServer|.
+  // It is safe to destroy a completer without replying after calling |Unbind|.
   bool is_reply_needed() const;
 
   // Inspects the status of sending the reply. One may only call this after

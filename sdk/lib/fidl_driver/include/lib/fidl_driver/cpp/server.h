@@ -19,10 +19,13 @@ class ServerBindingRef : public fidl::internal::ServerBindingRefBase {
  public:
   using ServerBindingRefBase::ServerBindingRefBase;
 
-  // Triggers an asynchronous unbind operation. If specified, |on_unbound| will be invoked on a
-  // dispatcher thread, passing in the channel and the unbind reason. On return, the dispatcher
-  // will no longer have any wait associated with the channel (though handling of any already
-  // in-flight transactions will continue).
+  // Triggers an asynchronous unbind operation. If specified, |on_unbound| will
+  // be asynchronously run on a dispatcher thread, passing in the endpoint and
+  // the unbind reason.
+  //
+  // On return, the dispatcher will stop monitoring messages on the endpoint,
+  // though handling of any already in-flight transactions will continue.
+  // Pending completers may be discarded.
   //
   // This may be called from any thread.
   //

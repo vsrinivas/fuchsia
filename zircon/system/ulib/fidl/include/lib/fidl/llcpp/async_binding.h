@@ -121,6 +121,10 @@ class AsyncBinding : public std::enable_shared_from_this<AsyncBinding> {
     StartTeardownWithInfo(std::move(calling_ref), ::fidl::UnbindInfo::Unbind());
   }
 
+  // Returns true if the binding will teardown at the next iteration of the
+  // event loop, or has already torn down and pending deletion.
+  bool IsDestructionImminent() const __TA_EXCLUDES(lock_);
+
  protected:
   AsyncBinding(async_dispatcher_t* dispatcher, internal::AnyUnownedTransport transport,
                ThreadingPolicy threading_policy);
@@ -242,7 +246,9 @@ class AsyncBinding : public std::enable_shared_from_this<AsyncBinding> {
   [[no_unique_address]] DebugOnlyThreadChecker thread_checker_;
 
   // A lock protecting the binding |lifecycle|.
-  std::mutex lock_;
+  //
+  // It is mutable to support const accessors of the lifecycle.
+  mutable std::mutex lock_;
 
   // |Lifecycle| is a state machine that captures the lifecycle of a binding.
   //
@@ -295,7 +301,7 @@ class AsyncBinding : public std::enable_shared_from_this<AsyncBinding> {
     bool DidBecomeBound() const { return did_enter_bound_; }
 
     // Checks if the binding is in the specified |state|.
-    bool Is(LifecycleState state) { return state_ == state; }
+    bool Is(LifecycleState state) const { return state_ == state; }
 
     // Returns the current state as an enumeration.
     LifecycleState state() const { return state_; }

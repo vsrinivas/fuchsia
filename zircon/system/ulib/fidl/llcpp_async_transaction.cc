@@ -92,7 +92,10 @@ std::unique_ptr<Transaction> SyncTransaction::TakeOwnership() {
   return transaction;
 }
 
-bool SyncTransaction::IsUnbound() { return false; }
+bool SyncTransaction::DidOrGoingToUnbind() {
+  ZX_ASSERT(binding_);
+  return binding_->IsDestructionImminent();
+}
 
 //
 // Asynchronous transaction methods
@@ -134,7 +137,12 @@ std::unique_ptr<Transaction> AsyncTransaction::TakeOwnership() {
   __builtin_abort();
 }
 
-bool AsyncTransaction::IsUnbound() { return binding_.expired(); }
+bool AsyncTransaction::DidOrGoingToUnbind() {
+  if (auto binding = binding_.lock()) {
+    return binding->IsDestructionImminent();
+  }
+  return true;
+}
 
 }  // namespace internal
 

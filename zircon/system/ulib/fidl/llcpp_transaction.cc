@@ -32,7 +32,7 @@ bool CompleterBase::is_reply_needed() const {
   ScopedLock lock(lock_);
   if (!needs_to_reply_)
     return false;
-  if (!transaction_ || transaction_->IsUnbound())
+  if (!transaction_ || transaction_->DidOrGoingToUnbind())
     return false;
   return true;
 }

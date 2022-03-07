@@ -177,6 +177,11 @@ void AsyncBinding::HandleError(std::shared_ptr<AsyncBinding>&& calling_ref, Disp
   }
 }
 
+bool AsyncBinding::IsDestructionImminent() const {
+  std::scoped_lock lock(lock_);
+  return lifecycle_.Is(Lifecycle::kMustTeardown) || lifecycle_.Is(Lifecycle::kTorndown);
+}
+
 auto AsyncBinding::StartTeardownWithInfo(std::shared_ptr<AsyncBinding>&& calling_ref,
                                          UnbindInfo info) -> TeardownTaskPostingResult {
   ScopedThreadGuard guard(thread_checker_);
