@@ -17,7 +17,7 @@ config("arm64") {
   # rustc --target=aarch64-fuchsia --print target-features
   # `armv8a` and `simd` features are assumed by the target triple
   # `aarch64-fuchsia`.
-  rustflags = [ "-Ctarget-feature=+crc,+crypto" ]
+  rustflags = [ "-Ctarget-feature=+crc,+aes,+sha2" ]
 }
 
 config("cortex-a53") {
@@ -32,7 +32,7 @@ config("cortex-a53") {
   # TODO(fxbug.dev/87243): consider the below.
   #rustflags = [ "-Ctarget-cpu=cortex-a53" ]
 
-  rustflags = [ "-Ctarget-feature=+crc,+crypto,+neon" ]
+  rustflags = [ "-Ctarget-feature=+crc,+aes,+sha2,+neon" ]
 }
 
 config("no-outline-atomics") {
