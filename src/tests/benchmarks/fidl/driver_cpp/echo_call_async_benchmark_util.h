@@ -2,9 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_TESTS_BENCHMARKS_FIDL_DRIVER_ECHO_CALL_ASYNC_BENCHMARK_UTIL_H_
-#define SRC_TESTS_BENCHMARKS_FIDL_DRIVER_ECHO_CALL_ASYNC_BENCHMARK_UTIL_H_
+#ifndef SRC_TESTS_BENCHMARKS_FIDL_DRIVER_CPP_ECHO_CALL_ASYNC_BENCHMARK_UTIL_H_
+#define SRC_TESTS_BENCHMARKS_FIDL_DRIVER_CPP_ECHO_CALL_ASYNC_BENCHMARK_UTIL_H_
 
+#include <lib/async/cpp/task.h>
 #include <lib/fdf/cpp/dispatcher.h>
 #include <lib/fdf/dispatcher.h>
 #include <lib/fdf/internal.h>
@@ -51,32 +52,45 @@ bool EchoCallAsyncBenchmark(perftest::RepeatState* state, BuilderFunc builder) {
 
   EchoServerAsyncImpl<ProtocolType, FidlType> server;
   fdf::BindServer(dispatcher->get(), std::move(server_end), &server);
-  typename fdf::WireSharedClient<ProtocolType> client(std::move(client_end), dispatcher->get());
+
+  fdf::WireClient<ProtocolType> client;
+  sync::Completion bound;
+  async::PostTask(dispatcher->async_dispatcher(), [&]() {
+    client.Bind(std::move(client_end), dispatcher->get());
+    bound.Signal();
+  });
+  ZX_ASSERT(ZX_OK == bound.Wait());
 
   while (state->KeepRunning()) {
-    fidl::Arena<65536> fidl_arena;
-    FidlType aligned_value = builder(fidl_arena);
-
-    auto arena = fdf::Arena::Create(0, "");
-    ZX_ASSERT(arena.is_ok());
-
-    state->NextStep();  // End: Setup. Begin: EchoCall.
-
     sync::Completion completion;
-    client.buffer(*arena)->Echo(
-        std::move(aligned_value),
-        [&state, &completion](fdf::WireUnownedResult<typename ProtocolType::Echo>& result) {
-          state->NextStep();  // End: EchoCall. Begin: Teardown
-          ZX_ASSERT(result.ok());
-          completion.Signal();
-        });
+    async::PostTask(dispatcher->async_dispatcher(), [&]() {
+      fidl::Arena<65536> fidl_arena;
+      FidlType aligned_value = builder(fidl_arena);
 
-    completion.Wait();
+      auto arena = fdf::Arena::Create(0, "");
+      ZX_ASSERT(arena.is_ok());
+
+      state->NextStep();  // End: Setup. Begin: EchoCall.
+
+      client.buffer(*arena)->Echo(
+          std::move(aligned_value),
+          [&state, &completion](fdf::WireUnownedResult<typename ProtocolType::Echo>& result) {
+            state->NextStep();  // End: EchoCall. Begin: Teardown
+            ZX_ASSERT(result.ok());
+            completion.Signal();
+          });
+    });
+    ZX_ASSERT(ZX_OK == completion.Wait());
   }
+
+  sync::Completion destroyed;
+  async::PostTask(dispatcher->async_dispatcher(),
+                  [client = std::move(client), &destroyed]() { destroyed.Signal(); });
+  ZX_ASSERT(ZX_OK == destroyed.Wait());
 
   return true;
 }
 
 }  // namespace driver_benchmarks
 
-#endif  // SRC_TESTS_BENCHMARKS_FIDL_DRIVER_ECHO_CALL_ASYNC_BENCHMARK_UTIL_H_
+#endif  // SRC_TESTS_BENCHMARKS_FIDL_DRIVER_CPP_ECHO_CALL_ASYNC_BENCHMARK_UTIL_H_

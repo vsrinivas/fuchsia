@@ -8,6 +8,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>
+#include <lib/fidl/llcpp/channel.h>
 #include <lib/fidl/llcpp/coding.h>
 #include <lib/sync/cpp/completion.h>
 #include <zircon/status.h>
@@ -42,11 +43,10 @@ bool EchoCallAsyncBenchmark(perftest::RepeatState* state, BuilderFunc builder) {
   fidl::BindServer(loop.dispatcher(), std::move(endpoints->server), &server);
   loop.StartThread();
 
-  std::unique_ptr<fidl::WireClient<ProtocolType>> client =
-      std::make_unique<fidl::WireClient<ProtocolType>>();
+  fidl::WireClient<ProtocolType> client;
   sync::Completion bound;
   async::PostTask(loop.dispatcher(), [&]() {
-    client->Bind(std::move(endpoints->client), loop.dispatcher());
+    client.Bind(std::move(endpoints->client), loop.dispatcher());
     bound.Signal();
   });
   ZX_ASSERT(ZX_OK == bound.Wait());
@@ -59,7 +59,7 @@ bool EchoCallAsyncBenchmark(perftest::RepeatState* state, BuilderFunc builder) {
     async::PostTask(loop.dispatcher(), [&]() {
       state->NextStep();  // End: Setup. Begin: EchoCall.
 
-      (*client)->Echo(
+      client->Echo(
           std::move(aligned_value),
           [&state, &completion](fidl::WireUnownedResult<typename ProtocolType::Echo>& result) {
             state->NextStep();  // End: EchoCall. Begin: Teardown
