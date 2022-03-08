@@ -7,7 +7,7 @@ use crate::fs::{
     fileops_impl_nonblocking, FileObject, FileOps, FsNode, FsNodeOps, NamespaceNode, SeekOrigin,
 };
 use crate::logging::not_implemented;
-use crate::mm::{DesiredAddress, MappedVmo, MappingOptions};
+use crate::mm::{DesiredAddress, MappedVmo, MappingOptions, UserMemoryCursor};
 use crate::syscalls::{SyscallResult, SUCCESS};
 use crate::task::CurrentTask;
 use crate::types::*;
@@ -137,11 +137,12 @@ struct BinderProcess {
     #[allow(unused)]
     pid: pid_t,
     shared_memory: Mutex<Option<SharedMemory>>,
+    thread_pool: ThreadPool,
 }
 
 impl BinderProcess {
     fn new(pid: pid_t) -> Self {
-        Self { pid, shared_memory: Mutex::new(None) }
+        Self { pid, shared_memory: Mutex::new(None), thread_pool: ThreadPool::new() }
     }
 }
 
@@ -197,6 +198,32 @@ impl SharedMemory {
                 errno!(ENOMEM)
             })?;
         Ok(Self { kernel_address: kernel_address as *mut u8, user_address, length })
+    }
+}
+
+/// The set of threads that are interacting with the binder driver for a given process.
+#[derive(Debug)]
+struct ThreadPool(RwLock<BTreeMap<pid_t, Arc<BinderThread>>>);
+
+impl ThreadPool {
+    fn new() -> Self {
+        Self(RwLock::new(BTreeMap::new()))
+    }
+
+    fn find_or_register_thread(&self, tid: pid_t) -> Arc<BinderThread> {
+        self.0.write().entry(tid).or_insert_with(|| Arc::new(BinderThread::new(tid))).clone()
+    }
+}
+
+#[derive(Debug)]
+struct BinderThread {
+    #[allow(unused)]
+    tid: pid_t,
+}
+
+impl BinderThread {
+    fn new(tid: pid_t) -> Self {
+        Self { tid }
     }
 }
 
@@ -284,21 +311,40 @@ impl BinderDriver {
                 let mut input = binder_write_read::new_zeroed();
                 current_task.mm.read_object(user_ref, &mut input)?;
 
+                let binder_proc = self.find_or_register_process(current_task.get_pid());
+                let binder_thread =
+                    binder_proc.thread_pool.find_or_register_thread(current_task.get_tid());
+
                 // We will be writing this back to userspace, don't trust what the client gave us.
                 input.write_consumed = 0;
                 input.read_consumed = 0;
 
                 if input.write_size > 0 {
                     // The calling thread wants to write some data to the binder driver.
-                    not_implemented!("handling a binder thread's write");
-                    return error!(EOPNOTSUPP);
+                    let mut cursor = UserMemoryCursor::new(
+                        &*current_task.mm,
+                        UserAddress::from(input.write_buffer),
+                        input.write_size,
+                    );
+
+                    // Handle all the data the calling thread sent, which may include multiple work
+                    // items.
+                    while cursor.bytes_read() < input.write_size as usize {
+                        self.handle_thread_write(
+                            current_task,
+                            &*binder_proc,
+                            &*binder_thread,
+                            &mut cursor,
+                        )?;
+                    }
+                    input.write_consumed = cursor.bytes_read() as u64;
                 }
 
                 if input.read_size > 0 {
                     // The calling thread wants to read some data from the binder driver, blocking
                     // if there is nothing immediately available.
-                    not_implemented!("handling a binder thread's read");
-                    return error!(EOPNOTSUPP);
+                    input.read_consumed =
+                        self.handle_thread_read(current_task, &*binder_thread, &input)? as u64;
                 }
 
                 // Write back to the calling thread how much data was read/written.
@@ -318,6 +364,28 @@ impl BinderDriver {
                 error!(EINVAL)
             }
         }
+    }
+
+    /// Consumes one work item from the userspace binder_write_read buffer and handles it.
+    /// This method will never block.
+    fn handle_thread_write<'a>(
+        &self,
+        _current_task: &CurrentTask,
+        _binder_proc: &BinderProcess,
+        _binder_thread: &BinderThread,
+        _cursor: &mut UserMemoryCursor<'a>,
+    ) -> Result<(), Errno> {
+        error!(EOPNOTSUPP)
+    }
+
+    /// Dequeues work from the thread's work queue, or blocks until work is available.
+    fn handle_thread_read(
+        &self,
+        _current_task: &CurrentTask,
+        _binder_thread: &BinderThread,
+        _input: &binder_write_read,
+    ) -> Result<usize, Errno> {
+        error!(EOPNOTSUPP)
     }
 
     fn get_vmo(&self, length: usize) -> Result<zx::Vmo, Errno> {

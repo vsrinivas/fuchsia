@@ -1262,6 +1262,45 @@ impl MemoryManager {
     }
 }
 
+/// Allows for sequential reading of a task's userspace memory.
+pub struct UserMemoryCursor<'a> {
+    #[allow(unused)]
+    mm: &'a MemoryManager,
+    #[allow(unused)]
+    addr: UserAddress,
+    #[allow(unused)]
+    len: usize,
+    consumed: usize,
+}
+
+impl<'a> UserMemoryCursor<'a> {
+    /// Create a new [`UserMemoryCursor`] starting at userspace address `addr`.
+    /// Any reads past `addr + len` will fail with `EINVAL`.
+    pub fn new(mm: &'a MemoryManager, addr: UserAddress, len: u64) -> Self {
+        Self { mm, addr, len: len as usize, consumed: 0 }
+    }
+
+    /// Read an object from userspace memory and increment the read position.
+    #[allow(unused)]
+    pub fn read_object<T: FromBytes>(&mut self) -> Result<T, Errno> {
+        let obj_size = std::mem::size_of::<T>();
+        if obj_size > self.len {
+            return error!(EINVAL);
+        }
+        let mut obj: T = T::new_zeroed();
+        self.mm.read_object(UserRef::<T>::new(self.addr), &mut obj)?;
+        self.addr += obj_size;
+        self.len -= obj_size;
+        self.consumed += obj_size;
+        Ok(obj)
+    }
+
+    /// The total number of bytes read.
+    pub fn bytes_read(&self) -> usize {
+        self.consumed
+    }
+}
+
 /// A VMO and the userspace address at which it was mapped.
 #[derive(Debug, Clone)]
 pub struct MappedVmo {
