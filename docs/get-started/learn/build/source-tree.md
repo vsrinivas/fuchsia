@@ -67,72 +67,231 @@ can be easy to get lost without a roadmap to guide you. This section contains
 an overview of a local Fuchsia checkout, with a summary of the various elements
 you can expect to find along the way:
 
-* `boards/`: Contains all the default
-  [board configurations](/docs/development/build/concepts/build_system/boards_and_products.md)
-  supported and maintained by the Fuchsia team.
-* `build/`: Shared configurations and default templates for the
-  [Fuchsia build system](/docs/development/build/concepts/build_system/index.md).
-* `bundles/`: Top-level groupings of build target labels typically included
-  together in a build configuration. See
-  [Bundles](/docs/development/build/concepts/build_system/bundles.md) for more details.
-* `docs/`: The Fuchsia documentation, including the source material for the
-  [Fuchsia.dev](https://fuchsia.dev/) developer site.
-* `examples/`: Sample software components showcasing various aspects of the
-  Fuchsia platform.
-* `products/`: Contains all the default
-  [product configurations](/docs/development/build/concepts/build_system/boards_and_products.md)
-  supported and maintained by the Fuchsia team.
-* `scripts/`: Various developer tools to simplify working with the Fuchsia
-  source tree, including the subcommands used in
-  [fx workflows](/docs/development/build/fx.md).
-* `sdk/`: The [Integrators Development Kit](/docs/development/idk/README.md),
-   including the
-  [FIDL protocol definitions](https://fuchsia.dev/reference/fidl/README.md)
-  for Fuchsia services.
-* `src/`: Source code of Fuchsia, including components, services, and tools
-  running on the target device. **This is the stem of the flower**.
-* `tools/`: [Fuchsia developer tools](https://fuchsia.dev/reference/tools/sdk/README.md)
-  running on the host machine.
-* `vendor/`: Reserved location for vendor-specific binaries and customizations
-  for product builds. The build system supports discovery of configuration
-  files under `vendor/products` and `vendor/boards` to build Fuchsia for
-  vendor-specific device targets.
-* `zircon/`: Source code for Fuchsia's
-  [Zircon core](/docs/concepts/kernel/README.md), including the kernel.
+<table>
+  <tr>
+    <th>path</th>
+    <th>description</th>
+  </tr>
+  <tr>
+    <td><code>boards</code></td>
+    <td>
+      Contains all the default <a
+      href="/docs/development/build/concepts/build_system/boards_and_products.md">board
+      configurations</a> supported and maintained by the Fuchsia team.
+    </td>
+  </tr>
+  <tr>
+    <td><code>build</code></td>
+    <td>
+      Shared configurations and default templates for the <a
+      href="/docs/development/build/concepts/build_system/index.md">Fuchsia
+      build system</a>.
+    </td>
+  </tr>
+  <tr>
+    <td><code>bundles</code></td>
+    <td>
+      Top-level groupings of build target labels typically included together in
+      a build configuration. See <a
+      href="/docs/development/build/concepts/build_system/bundles.md">Bundles</a>
+      for more details.
+    </td>
+  </tr>
+  <tr>
+    <td><code>docs</code></td>
+    <td>
+      The Fuchsia documentation, including the source material for the <a
+      href="https://fuchsia.dev/">Fuchsia.dev</a> developer site.
+    </td>
+  </tr>
+  <tr>
+    <td><code>examples</code></td>
+    <td>
+      Sample software components showcasing various aspects of the Fuchsia
+      platform.
+    </td>
+  </tr>
+  <tr>
+    <td><code>products</code></td>
+    <td>
+      Contains all the default <a
+      href="/docs/development/build/concepts/build_system/boards_and_products.md">product
+      configurations</a> supported and maintained by the Fuchsia team.
+    </td>
+  </tr>
+  <tr>
+    <td><code>scripts</code></td>
+    <td>
+      Various developer tools to simplify working with the Fuchsia source tree,
+      including the subcommands used in <a
+      href="/docs/development/build/fx.md">fx workflows</a>.
+    </td>
+  </tr>
+  <tr>
+    <td><code>sdk</code></td>
+    <td>
+      The <a href="/docs/development/idk/README.md">Integrators Development
+      Kit</a>, including the <a
+      href="https://fuchsia.dev/reference/fidl/">FIDL protocol
+      definitions</a> for Fuchsia services.
+    </td>
+  </tr>
+  <tr>
+    <td><code>src</code></td>
+    <td>
+      Source code of Fuchsia, including components, services, and tools running
+      on the target device. <b>This is the stem of the flower</b>.
+    </td>
+  </tr>
+  <tr>
+    <td><code>tools</code></td>
+    <td>
+      <a href="https://fuchsia.dev/reference/tools/">Fuchsia
+      developer tools</a> running on the host machine.
+    </td>
+  </tr>
+
+  <tr>
+    <td><code>vendor</code></td>
+    <td>
+      Reserved location for vendor-specific binaries and customizations for
+      product builds. The build system supports discovery of configuration files
+      under <code>vendor/products</code> and <code>vendor/boards</code> to build
+      Fuchsia for vendor-specific device targets.
+    </td>
+  </tr>
+  <tr>
+    <td><code>zircon</code></td>
+    <td>
+      Source code for Fuchsia's <a href="/docs/concepts/kernel/README.md">Zircon
+      core</a>, including the kernel.
+    </td>
+  </tr>
+</table>
 
 The source code of the Fuchsia platform breaks down further into the various
 components and services running on the device. Below is not a complete list,
 but may provide some interesting places to begin exploring:
 
-* `src/bringup`: Core system binaries used to bring up the system's user space
-  environment.
-* `src/camera`: Support services for camera device drivers.
-* `src/cobalt`: Fuchsia service used to log, collect and analyze metrics.
-* `src/connectivity`: Networking protocol support and device drivers.
-* `src/developer`: Developer tools running on the target, including
-  [ffx](/docs/development/tools/ffx/overview.md).
-* `src/devices`: Device driver support libraries for common hardware subsystems.
-* `src/diagnostics`: Diagnostic support services such as logging, crash reporting,
-  snapshots, and statistics.
-* `src/factory`: Components implementing access to factory config data storage.
-* `src/fonts`: Provider for built-in system fonts.
-* `src/graphics`: Support services for display device drivers.
-* `src/identity`: User account handling and identity token management.
-* `src/media`: Media codecs and playback services.
-* `src/power`: Power management services.
-* `src/proc`: POSIX compatibility libraries.
-* `src/recovery`: Recovery system and factory reset services.
-* `src/security`: Security policies and analysis tools.
-* `src/session`: [Session framework](/docs/concepts/session/introduction.md).
-* `src/storage`: Support for [filesystems](/docs/concepts/filesystems/filesystems.md)
-  and volume management.
-* `src/sys`: [Component framework](/docs/concepts/components/v2/README.md) and
-  services for [package management](/docs/concepts/packages/package.md).
-* `src/tests`: Platform end to end (E2E) integration tests.
-* `src/ui`: Services to support graphical user interface (GUI), including
-  [Scenic](/docs/development/graphics/scenic/README.md).
-* `src/virtualization`: Hypervisor support for VM guests.
-* `src/zircon`: Libraries for interacting with the Zircon kernel.
+<table>
+  <tr>
+    <th>path</th>
+    <th>description</th>
+  </tr>
+  <tr>
+    <td><code>src/bringup</code></td>
+    <td>
+      Core system binaries used to bring up the system's user space environment.
+    </td>
+  </tr>
+  <tr>
+    <td><code>src/camera</code></td>
+    <td>Support services for camera device drivers.</td>
+  </tr>
+  <tr>
+    <td><code>src/cobalt</code></td>
+    <td>Fuchsia service used to log, collect and analyze metrics.</td>
+  </tr>
+  <tr>
+    <td><code>src/connectivity</code></td>
+    <td>Networking protocol support and device drivers.</td>
+  </tr>
+  <tr>
+    <td><code>src/developer</code></td>
+    <td>
+      Developer tools running on the target, including <a
+      href="/docs/development/tools/ffx/overview.md">ffx</a>.
+    </td>
+  </tr>
+  <tr>
+    <td><code>src/devices</code></td>
+    <td>Device driver support libraries for common hardware subsystems.</td>
+  </tr>
+  <tr>
+    <td><code>src/diagnostics</code></td>
+    <td>
+      Diagnostic support services such as logging, crash reporting, snapshots,
+      and statistics.
+    </td>
+  </tr>
+  <tr>
+    <td><code>src/factory</code></td>
+    <td>Components implementing access to factory config data storage.</td>
+  </tr>
+  <tr>
+    <td><code>src/fonts</code></td>
+    <td>Provider for built-in system fonts.</td>
+  </tr>
+  <tr>
+    <td><code>src/graphics</code></td>
+    <td>Support services for display device drivers.</td>
+  </tr>
+  <tr>
+    <td><code>src/identity</code></td>
+    <td>User account handling and identity token management.</td>
+  </tr>
+  <tr>
+    <td><code>src/media</code></td>
+    <td>Media codecs and playback services.</td>
+  </tr>
+  <tr>
+    <td><code>src/power</code></td>
+    <td>Power management services.</td>
+  </tr>
+  <tr>
+    <td><code>src/proc</code></td>
+    <td>POSIX compatibility libraries.</td>
+  </tr>
+  <tr>
+    <td><code>src/recovery</code></td>
+    <td>Recovery system and factory reset services.</td>
+  </tr>
+  <tr>
+    <td><code>src/security</code></td>
+    <td>Security policies and analysis tools.</td>
+  </tr>
+  <tr>
+    <td><code>src/session</code></td>
+    <td>
+      <a href="/docs/concepts/session/introduction.md">Session framework</a>.
+    </td>
+  </tr>
+  <tr>
+    <td><code>src/storage</code></td>
+    <td>
+      Support for <a
+      href="/docs/concepts/filesystems/filesystems.md">filesystems</a> and
+      volume management.
+    </td>
+  </tr>
+  <tr>
+    <td><code>src/sys</code></td>
+    <td>
+      <a href="/docs/concepts/components/v2/README.md">Component framework</a>
+      and services for <a href="/docs/concepts/packages/package.md">package
+      management</a>.
+    </td>
+  </tr>
+  <tr>
+    <td><code>src/tests</code></td>
+    <td>Platform end to end (E2E) integration tests. </td>
+  </tr>
+  <tr>
+    <td><code>src/ui</code></td>
+    <td>
+      Services to support graphical user interface (GUI), including <a
+      href="/docs/development/graphics/scenic/README.md">Scenic</a>.
+    </td>
+  </tr>
+  <tr>
+    <td><code>src/virtualization</code></td>
+    <td>Hypervisor support for VM guests.</td>
+  </tr>
+  <tr>
+    <td><code>src/zircon</code></td>
+    <td>Libraries for interacting with the Zircon kernel.</td>
+  </tr>
+</table>
 
 Note: For more details on how projects are structured in the Fuchsia tree, see
 [Source code layout](/docs/development/source_code/layout.md).
