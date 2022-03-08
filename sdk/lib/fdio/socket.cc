@@ -1973,7 +1973,7 @@ struct base_socket_with_event : public zxio {
       const uint8_t* data = out.begin();
       size_t remaining = out.count();
       for (int i = 0; remaining != 0 && i < msg->msg_iovlen; ++i) {
-        auto const& iov = msg->msg_iov[i];
+        iovec const& iov = msg->msg_iov[i];
         if (iov.iov_base != nullptr) {
           size_t actual = std::min(iov.iov_len, remaining);
           memcpy(iov.iov_base, data, actual);
@@ -2021,7 +2021,7 @@ struct base_socket_with_event : public zxio {
 
     size_t total = 0;
     for (int i = 0; i < msg->msg_iovlen; ++i) {
-      auto const& iov = msg->msg_iov[i];
+      iovec const& iov = msg->msg_iov[i];
       if (iov.iov_base == nullptr && iov.iov_len != 0) {
         *out_code = EFAULT;
         return ZX_OK;
@@ -2044,7 +2044,7 @@ struct base_socket_with_event : public zxio {
         break;
       }
       case 1: {
-        auto const& iov = *msg->msg_iov;
+        iovec const& iov = *msg->msg_iov;
         vec = fidl::VectorView<uint8_t>::FromExternal(static_cast<uint8_t*>(iov.iov_base),
                                                       iov.iov_len);
         break;
@@ -2053,7 +2053,7 @@ struct base_socket_with_event : public zxio {
         // TODO(https://fxbug.dev/67928): avoid this copy.
         data.reserve(total);
         for (int i = 0; i < msg->msg_iovlen; ++i) {
-          auto const& iov = msg->msg_iov[i];
+          iovec const& iov = msg->msg_iov[i];
           std::copy_n(static_cast<const uint8_t*>(iov.iov_base), iov.iov_len,
                       std::back_inserter(data));
         }

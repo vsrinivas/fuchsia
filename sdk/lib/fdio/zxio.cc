@@ -250,7 +250,7 @@ zx_status_t zxio::recvmsg_inner(struct msghdr* msg, int flags, size_t* out_actua
 
   zx_iovec_t zx_iov[msg->msg_iovlen];
   for (int i = 0; i < msg->msg_iovlen; ++i) {
-    auto const& iov = msg->msg_iov[i];
+    iovec const& iov = msg->msg_iov[i];
     zx_iov[i] = {
         .buffer = iov.iov_base,
         .capacity = iov.iov_len,
