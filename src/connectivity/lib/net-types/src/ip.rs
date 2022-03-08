@@ -2508,6 +2508,19 @@ impl<S: IpAddress, A: IpAddressWitness<S> + Copy> From<AddrSubnet<S, A>>
     }
 }
 
+/// An address that can be assigned to an interface.
+///
+/// `InterfaceAddr` upholds the following invariants:
+/// - Addresses must be unicast.
+/// - IPv4 addresses have a defined containing subnet so the broadcast address
+/// is known.
+#[allow(missing_docs)]
+#[derive(Clone, Eq, PartialEq, Debug, Hash)]
+pub enum InterfaceAddr {
+    V4(AddrSubnet<Ipv4Addr>),
+    V6(UnicastAddr<Ipv6Addr>),
+}
+
 #[cfg(test)]
 mod tests {
     use core::convert::TryInto;

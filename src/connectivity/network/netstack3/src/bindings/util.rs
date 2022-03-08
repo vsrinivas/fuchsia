@@ -7,9 +7,10 @@ use core::convert::Infallible as Never;
 use fidl_fuchsia_net as fidl_net;
 use fidl_fuchsia_net_stack as fidl_net_stack;
 use net_types::ip::{
-    AddrSubnetEither, AddrSubnetError, IpAddr, Ipv4Addr, Ipv6Addr, SubnetEither, SubnetError,
+    AddrSubnet, AddrSubnetEither, AddrSubnetError, InterfaceAddr, IpAddr, Ipv4Addr, Ipv6Addr,
+    SubnetEither, SubnetError,
 };
-use net_types::{SpecifiedAddr, Witness};
+use net_types::{SpecifiedAddr, UnicastAddr, Witness};
 use netstack3_core::{DeviceId, EntryDest, EntryEither, NetstackError};
 
 /// A core type which can be fallibly converted from the FIDL type `F`.
@@ -479,6 +480,53 @@ impl TryIntoFidlWithContext<fidl_net_stack::ForwardingEntry> for EntryEither<Dev
     }
 }
 
+#[derive(Debug, Eq, PartialEq)]
+pub enum InterfaceAddrError {
+    PrefixTooLong,
+    NotUnicast,
+}
+
+impl TryFromFidl<fidl_net::InterfaceAddress> for InterfaceAddr {
+    type Error = InterfaceAddrError;
+
+    fn try_from_fidl(
+        addr: fidl_net::InterfaceAddress,
+    ) -> Result<InterfaceAddr, InterfaceAddrError> {
+        match addr {
+            fidl_net::InterfaceAddress::Ipv4(fidl_net::Ipv4AddressWithPrefix {
+                addr,
+                prefix_len,
+            }) => Ok(InterfaceAddr::V4(AddrSubnet::new(addr.into_core(), prefix_len).map_err(
+                |e| match e {
+                    AddrSubnetError::NotUnicastInSubnet | AddrSubnetError::InvalidWitness => {
+                        InterfaceAddrError::NotUnicast
+                    }
+                    AddrSubnetError::PrefixTooLong => InterfaceAddrError::PrefixTooLong,
+                },
+            )?)),
+            fidl_net::InterfaceAddress::Ipv6(v6) => Ok(InterfaceAddr::V6(
+                UnicastAddr::new(v6.into_core()).ok_or(InterfaceAddrError::NotUnicast)?,
+            )),
+        }
+    }
+}
+
+impl TryIntoFidl<fidl_net::InterfaceAddress> for InterfaceAddr {
+    type Error = Never;
+
+    fn try_into_fidl(self) -> Result<fidl_net::InterfaceAddress, Never> {
+        Ok(match self {
+            InterfaceAddr::V4(v4) => {
+                fidl_net::InterfaceAddress::Ipv4(fidl_net::Ipv4AddressWithPrefix {
+                    addr: v4.addr().into_fidl(),
+                    prefix_len: v4.subnet().prefix(),
+                })
+            }
+            InterfaceAddr::V6(v6) => fidl_net::InterfaceAddress::Ipv6(v6.into_fidl()),
+        })
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use fidl_fuchsia_net as fidl_net;
@@ -760,6 +808,61 @@ mod tests {
         assert_eq!(
             EntryEither::try_from_fidl_with_ctx(&ctx, fidl).unwrap_err(),
             ForwardingConversionError::TypeMismatch
+        );
+    }
+
+    #[test]
+    fn interface_address_v4() {
+        use net_types::ip::InterfaceAddr;
+
+        let fidl = net_declare::fidl_if_addr!("192.168.1.2/24");
+        let core = InterfaceAddr::V4(
+            net_types::ip::AddrSubnet::new(net_declare::net_ip_v4!("192.168.1.2"), 24).unwrap(),
+        );
+        assert_eq!(InterfaceAddr::try_from_fidl(fidl.clone()), Ok(core.clone()));
+        assert_eq!(core.into_fidl(), fidl);
+
+        assert_eq!(
+            InterfaceAddr::try_from_fidl(net_declare::fidl_if_addr!("192.168.1.255/24")),
+            Err(InterfaceAddrError::NotUnicast)
+        );
+        assert_eq!(
+            InterfaceAddr::try_from_fidl(net_declare::fidl_if_addr!("0.0.0.0/24")),
+            Err(InterfaceAddrError::NotUnicast)
+        );
+        assert_eq!(
+            InterfaceAddr::try_from_fidl(net_declare::fidl_if_addr!("224.0.0.1/24")),
+            Err(InterfaceAddrError::NotUnicast)
+        );
+        assert_eq!(
+            InterfaceAddr::try_from_fidl(fidl_net::InterfaceAddress::Ipv4(
+                fidl_net::Ipv4AddressWithPrefix {
+                    addr: net_declare::fidl_ip_v4!("192.168.1.2"),
+                    prefix_len: 64
+                }
+            )),
+            Err(InterfaceAddrError::PrefixTooLong)
+        );
+    }
+
+    #[test]
+    fn interface_address_v6() {
+        use net_types::ip::InterfaceAddr;
+
+        let fidl = net_declare::fidl_if_addr!("2000::1");
+        let core = InterfaceAddr::V6(
+            net_types::UnicastAddr::new(net_declare::net_ip_v6!("2000::1")).unwrap(),
+        );
+        assert_eq!(InterfaceAddr::try_from_fidl(fidl.clone()), Ok(core.clone()));
+        assert_eq!(core.into_fidl(), fidl);
+
+        assert_eq!(
+            InterfaceAddr::try_from_fidl(net_declare::fidl_if_addr!("ff02::1")),
+            Err(InterfaceAddrError::NotUnicast)
+        );
+        assert_eq!(
+            InterfaceAddr::try_from_fidl(net_declare::fidl_if_addr!("::")),
+            Err(InterfaceAddrError::NotUnicast)
         );
     }
 }
