@@ -45,7 +45,7 @@ while [[ $# -gt 0 ]]; do
       ;;
 
     # ffx global flags that have parameters.
-    -c|--config|-e|--env|-T|--timeout)
+    -c|--config|-e|--env|-T|--timeout|--machine)
       args+=("$1")
       shift
       ;;
