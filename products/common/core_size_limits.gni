@@ -13,7 +13,13 @@
 # see fxbug.dev/79053.
 
 size_checker_input = {
-  icu_data = [ "icudtl.dat" ]
+  icu_data = [
+    # TODO(fxb/94824): remove "icudtl.dat" joinlty with size_checker.go.
+    # Previous size_checker matches by base name.
+    # New size checker matches by path.
+    "icudtl.dat",
+    "data/icudtl.dat",
+  ]
   icu_data_limit = 18460180  # 17.604 MiB
 
   # This is set to a very generous limit because ICU data size is routinely
@@ -25,7 +31,13 @@ size_checker_input = {
     # Must come before /system so that the config_data package can be attributed separately.
     {
       component = "Config Data"
-      src = [ "build/images/fuchsia/fuchsia/config_data" ]
+      src = [
+        "build/images/fuchsia/fuchsia/config_data",
+
+        # TODO(fxb/94824): remove when the manifests enumerated in the
+        # product assembly configuration match the new path.
+        "build/images/fuchsia/fuchsia_config-data",
+      ]
       limit = 98304  # 0.094 MiB
       creep_limit = 19660  # 0.019 MiB
     },

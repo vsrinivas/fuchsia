@@ -1,0 +1,86 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+declare_args() {
+  # The input to the size checker.
+  # The build system will produce a JSON file to be consumed by the size checker, which
+  # will check and prevent integration of subsystems that are over their space allocation.
+  # The input consists of the following keys:
+  #
+  # asset_ext(string array): a list of extensions that should be considered as assets.
+  #
+  # asset_limit(number): maximum size (in bytes) allocated for the assets.
+  #
+  # core_limit(number): maximum size (in bytes) allocated for the core system and/or services.
+  # This is sort of a "catch all" component that consists of all the area / packages that weren't
+  # specified in the components list below.
+  #
+  # core_creep_limit(number): maximum size creep (in bytes) per-CL allocated for the core system and/or services.
+  # This may be enforced by Gerrit.
+  #
+  # components(object array): a list of component objects. Each object should contain the following keys:
+  #
+  #   component(string): name of the component.
+  #
+  #   src(string array): path of the area / package to be included as part of the component.
+  #   The path should be relative to the obj/ in the output directory.
+  #   For example, consider two packages foo and far, built to out/.../obj/some_big_component/foo and out/.../obj/some_big_component/bar.
+  #   If you want to impose a limit on foo, your src will be ["some_big_component/foo"].
+  #   If you want to impose a limit on both foo and far, your src will be ["some_big_component"].
+  #   If a package has config-data, those prebuilt blobs actually live under the config-data package.
+  #   If you wish to impose a limit of those data as well, you should add "build/images/config-data/$for_pkg" to your src.
+  #   The $for_pkg corresponds to the $for_pkg field in config.gni.
+  #
+  #   limit(number): maximum size (in bytes) allocated for the component.
+  #   creep_limit(number): maxmium size creep (in bytes) per-CL allocated for the component.
+  #   This may be enforced by Gerrit.
+  #
+  # distributed_shlibs(string array): a list of shared libraries which are distributed in the Fuchsia SDK for
+  # partners to use in their prebuilt packages.
+  #
+  # distributed_shlibs_limit(number): maximum size (in bytes) allocated for distributed shared libraries.
+  #
+  # distributed_shlibs_creep_limit(number): maximum size creep (in bytes) allocated for distributed shared
+  # libraries. This may be enforced by Gerrit.
+  #
+  # icu_data(string array): a list of files which contribute to the ICU data limit.
+  #
+  # icu_data_limit(number): maximum size (in bytes) allocated to ICU data files.
+  #
+  # icu_data_creep_limit(number): maximum size creep (in bytes) allocated to ICU data files. This may be
+  # enforced by Gerrit.
+  #
+  # Example:
+  # size_checker_input = {
+  #   asset_ext = [ ".ttf" ]
+  #   asset_limit = 10240
+  #   core_limit = 10240
+  #   core_creep_limit = 320
+  #   distributed_shlibs = [
+  #     "lib/ld.so.1",
+  #     "lib/libc++.so.2",
+  #   ]
+  #   distributed_shlibs_limit = 10240
+  #   distributed_shlibs_creep_limit = 320
+  #   icu_data = [ "icudtl.dat" ]
+  #   icu_data_limit = 20480
+  #   icu_data_creep_limit = 320
+  #   components = [
+  #     {
+  #       component = "Foo"
+  #       src = [ "topaz/runtime/foo_runner" ]
+  #       limit = 10240
+  #       creep_limit = 320
+  #     },
+  #     {
+  #       component = "Bar"
+  #       src = [ "build/images" ]
+  #       limit = 20480
+  #       creep_limit = 640
+  #     },
+  #   ]
+  # }
+  size_checker_input = {
+  }
+}

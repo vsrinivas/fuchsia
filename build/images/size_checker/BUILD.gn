@@ -1,0 +1,232 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/compiled_action.gni")
+import("//build/images/args.gni")
+import("//build/python/python_action.gni")
+import("//build/tools/json_merge/json_merge.gni")
+import("//src/developer/ffx/build/ffx_action.gni")
+import("//tools/size_checker/size_checker_input.gni")
+
+assert(!bootfs_only)
+assert(size_checker_input != {
+       })
+
+_output_dir =
+    get_label_info(":convert_size_limits_to_size_budgets", "target_out_dir")
+_size_budgets_blobfs_file = "${_output_dir}/size_budgets.json"
+_size_budgets_non_blobfs_file = "${_output_dir}/update_package_budget.json"
+_blobs_config = "${_output_dir}/../fuchsia/fuchsia/gen/blobs.json"
+_board_config = "${_output_dir}/../fuchsia/fuchsia_board_config.json"
+_image_assembly_config =
+    "${_output_dir}/../fuchsia/fuchsia_image_assembly_config.json"
+
+action("convert_size_limits_to_size_budgets") {
+  script = "//build/images/assembly/convert_size_limits.py"
+  inputs = [
+    "$root_build_dir/size_checker.json",
+    _image_assembly_config,
+  ]
+  outputs = [
+    _size_budgets_blobfs_file,
+    _size_budgets_non_blobfs_file,
+  ]
+  deps = [
+    "//build/images/fuchsia:fuchsia_image_assembly_config",
+    "//build/images/fuchsia:fuchsia_product_assembler",
+    "//tools/size_checker/cmd:size_checker_json",
+  ]
+  testonly = true
+  args = [
+    "--size_limits",
+    rebase_path("$root_build_dir/size_checker.json", root_build_dir),
+    "--image_assembly_config",
+    rebase_path(_image_assembly_config, root_build_dir),
+    "--output",
+    rebase_path(_size_budgets_blobfs_file, root_build_dir),
+    "--non_blobfs_output",
+    rebase_path(_size_budgets_non_blobfs_file, root_build_dir),
+  ]
+}
+
+# Path to a generated file enumerating runtime dependencies of the
+# size budget verification tool.
+#
+# There are two levels of hermetic input generation.
+# The 1st level contains the list of manifests in a given budget.
+# The 2nd level contains the list of blobs in addition to the manifests.
+
+_blobfs_hermetic_inputs = "${_output_dir}/verify_size_budget_blobfs.hi"
+
+python_action("create_verify_size_budget_blobfs_hermetic_inputs") {
+  binary_label = "//build/images/assembly:check_size_hermetic_inputs"
+  inputs = [ _size_budgets_blobfs_file ]
+  outputs = [ _blobfs_hermetic_inputs ]
+  hermetic_deps = false
+  deps = [ ":convert_size_limits_to_size_budgets" ]
+  testonly = true
+  args = [
+    "--with-package-content",
+    "--budgets",
+    rebase_path(_size_budgets_blobfs_file, root_build_dir),
+    "--output",
+    rebase_path(_blobfs_hermetic_inputs, root_build_dir),
+  ]
+}
+
+ffx_action("verify_size_budget_blobfs") {
+  deps = [
+    ":convert_size_limits_to_size_budgets",
+    "//build/images/fuchsia:fuchsia_assembly",
+    "//build/images/fuchsia:fuchsia_board_config",
+  ]
+  hermetic_inputs_target = ":create_verify_size_budget_blobfs_hermetic_inputs"
+  hermetic_inputs_file = _blobfs_hermetic_inputs
+  inputs = [
+    _size_budgets_blobfs_file,
+    _blobs_config,
+    _board_config,
+  ]
+  outputs = [ "$target_out_dir/size_report_blobfs.json" ]
+  testonly = true
+  args = [
+    "--config",
+    "assembly_enabled=true",
+    "assembly",
+    "size-check",
+    "--budgets",
+    rebase_path(_size_budgets_blobfs_file, root_build_dir),
+    "--blob-sizes",
+    rebase_path(_blobs_config, root_build_dir),
+    "--board-config",
+    rebase_path(_board_config, root_build_dir),
+    "--gerrit-output",
+    rebase_path("$target_out_dir/size_report_blobfs.json", root_build_dir),
+  ]
+}
+
+_non_blobfs_hermetic_inputs = "${_output_dir}/verify_size_budget_non_blobfs.hi"
+
+python_action("create_verify_size_budget_non_blobfs_hermetic_inputs") {
+  binary_label = "//build/images/assembly:check_size_hermetic_inputs"
+  inputs = [ _size_budgets_non_blobfs_file ]
+  outputs = [ _non_blobfs_hermetic_inputs ]
+  hermetic_deps = false
+  deps = [
+    ":convert_size_limits_to_size_budgets",
+    "//build/images/fuchsia:update",
+  ]
+  testonly = true
+  args = [
+    "--with-package-content",
+    "--budgets",
+    rebase_path(_size_budgets_non_blobfs_file, root_build_dir),
+    "--output",
+    rebase_path(_non_blobfs_hermetic_inputs, root_build_dir),
+  ]
+}
+
+ffx_action("verify_size_budget_non_blobfs") {
+  deps = [
+    ":convert_size_limits_to_size_budgets",
+    "//build/images/fuchsia:fuchsia_board_config",
+    "//build/images/fuchsia:update",
+  ]
+  hermetic_inputs_target =
+      ":create_verify_size_budget_non_blobfs_hermetic_inputs"
+  hermetic_inputs_file = _non_blobfs_hermetic_inputs
+  inputs = [
+    _size_budgets_non_blobfs_file,
+    _board_config,
+    "$root_build_dir/obj/build/images/fuchsia/update/update_package_manifest.json",
+  ]
+  outputs = [ "$target_out_dir/size_report_non_blobfs.json" ]
+  testonly = true
+  args = [
+    "--config",
+    "assembly_enabled=true",
+    "assembly",
+    "size-check",
+    "--budgets",
+    rebase_path(_size_budgets_non_blobfs_file, root_build_dir),
+    "--board-config",
+    rebase_path(_board_config, root_build_dir),
+    "--gerrit-output",
+    rebase_path("$target_out_dir/size_report_non_blobfs.json", root_build_dir),
+  ]
+}
+
+json_merge("size_report.json") {
+  sources = [
+    "$target_out_dir/size_report_blobfs.json",
+    "$target_out_dir/size_report_non_blobfs.json",
+  ]
+  testonly = true
+  deps = [
+    ":verify_size_budget_blobfs",
+    ":verify_size_budget_non_blobfs",
+  ]
+}
+
+# Locate blobfs compression tool used by the legacy size checker.
+_blobfs_compression = "//src/storage/tools/blobfs-compression($host_toolchain)"
+_blobfs_compression_binary =
+    get_label_info(_blobfs_compression, "root_out_dir") + "/" +
+    get_label_info(_blobfs_compression, "name")
+
+compiled_action("legacy_verify_size_budget") {
+  tool = "//tools/size_checker/cmd:size_checker"
+  hermetic_inputs_target =
+      ":create_verify_size_budget_non_blobfs_hermetic_inputs"
+  hermetic_inputs_file = _non_blobfs_hermetic_inputs
+  deps = [
+    "//build/images/fuchsia:fuchsia_assembly",
+    "//build/images/fuchsia:fuchsia_image_assembly_config",
+    "//build/images/sizes:filesystem_sizes.json",
+    "//tools/size_checker/cmd:size_checker_json",
+    _blobfs_compression,
+  ]
+  inputs = [
+    _blobfs_compression_binary,
+    _blobs_config,
+    "$root_build_dir/filesystem_sizes.json",
+    "$root_build_dir/size_checker.json",
+  ]
+  outputs = [
+    "$target_out_dir/legacy_size_report.json",
+    "$target_out_dir/legacy_size_report.txt",
+  ]
+  testonly = true
+  args = [
+    "--build-dir",
+    rebase_path(root_build_dir, root_build_dir),
+    "--sizes-json-out",
+    rebase_path("$target_out_dir/legacy_size_report.json", root_build_dir),
+    "--report-out",
+    rebase_path("$target_out_dir/legacy_size_report.txt", root_build_dir),
+  ]
+}
+
+python_action("compare_size_reports_test") {
+  binary_label = "//build/images/assembly:compare_size_reports"
+  inputs = [
+    "$target_out_dir/size_report.json",
+    "$target_out_dir/legacy_size_report.json",
+  ]
+  testonly = true
+  deps = [
+    ":legacy_verify_size_budget",
+    ":size_report.json",
+  ]
+  outputs = [ "$target_out_dir/compare_size_reports_test.txt" ]
+  args = [
+    "--expected",
+    rebase_path("$target_out_dir/legacy_size_report.json", root_build_dir),
+    "--actual",
+    rebase_path("$target_out_dir/size_report.json", root_build_dir),
+    "--output",
+    rebase_path("$target_out_dir/compare_size_reports_test.txt",
+                root_build_dir),
+  ]
+}
