@@ -374,7 +374,7 @@ mod tests {
                 PackageBuilder::new("rolldice")
                     .add_resource_at("bin/rolldice", "#!/boot/bin/sh\necho 4\n".as_bytes())
                     .add_resource_at(
-                        "meta/rolldice.cmx",
+                        "meta/rolldice.cml",
                         r#"{"program":{"binary":"bin/rolldice"}}"#.as_bytes(),
                     )
                     .add_resource_at("data/duplicate_a", "same contents".as_bytes())
@@ -388,7 +388,7 @@ mod tests {
                         "#!/boot/bin/sh\necho ask again later\n".as_bytes(),
                     )
                     .add_resource_at(
-                        "meta/fortune.cmx",
+                        "meta/fortune.cml",
                         r#"{"program":{"binary":"bin/fortune"}}"#.as_bytes(),
                     )
                     .add_resource_at("data/duplicate_b", same_contents.as_bytes())
