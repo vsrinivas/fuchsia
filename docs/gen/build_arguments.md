@@ -407,7 +407,7 @@ From //build/board.gni:7
 A list of package labels to include in the 'base' package set. Used by the
 board definition rather than the product definition.
 
-**Current value for `target_cpu = "arm64"`:** `["//src/hwinfo:default_board_config", "//src/power/thermd", "//src/power/thermd:config", "//src/devices/sysmem/bin/sysmem_connector", "//src/graphics/bin/vulkan_loader"]`
+**Current value for `target_cpu = "arm64"`:** `["//src/hwinfo:default_board_config", "//src/devices/sysmem/bin/sysmem_connector", "//src/graphics/bin/vulkan_loader"]`
 
 From //boards/arm64.gni:33
 
@@ -2658,7 +2658,7 @@ Maximum allowable size for fuchsia.zbi
 
 **Current value for `target_cpu = "arm64"`:** `16777216`
 
-From //boards/arm64.gni:41
+From //boards/arm64.gni:39
 
 **Overridden from the default:** `0`
 
@@ -2681,7 +2681,7 @@ Maximum allowable size for zedboot.zbi
 
 **Current value for `target_cpu = "arm64"`:** `16777216`
 
-From //boards/arm64.gni:42
+From //boards/arm64.gni:40
 
 **Overridden from the default:** `0`
 
