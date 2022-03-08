@@ -4,9 +4,6 @@
 
 use fuchsia_zircon::{self as zx, AsHandleRef, HandleBased};
 
-use crate::errno;
-use crate::error;
-use crate::from_status_like_fdio;
 use crate::fs::FileHandle;
 use crate::task::Kernel;
 use crate::types::*;

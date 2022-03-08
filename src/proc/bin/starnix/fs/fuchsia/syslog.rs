@@ -4,7 +4,6 @@
 
 use log::info;
 
-use crate::error;
 use crate::fs::*;
 use crate::syscalls::SyscallResult;
 use crate::task::*;

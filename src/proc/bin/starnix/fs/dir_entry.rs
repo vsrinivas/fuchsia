@@ -8,8 +8,6 @@ use std::collections::BTreeMap;
 use std::fmt;
 use std::sync::{Arc, Weak};
 
-use crate::errno;
-use crate::error;
 use crate::fs::socket::*;
 use crate::fs::*;
 use crate::types::*;

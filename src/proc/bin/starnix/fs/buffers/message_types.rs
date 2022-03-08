@@ -5,8 +5,6 @@
 use zerocopy::byteorder::{ByteOrder, NativeEndian};
 use zerocopy::{AsBytes, FromBytes};
 
-use crate::errno;
-use crate::error;
 use crate::fs::socket::SocketAddress;
 use crate::fs::*;
 use crate::task::{CurrentTask, Task};

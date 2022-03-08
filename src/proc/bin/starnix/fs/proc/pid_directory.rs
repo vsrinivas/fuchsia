@@ -5,11 +5,11 @@
 use std::sync::Arc;
 
 use crate::fs::*;
+use crate::fs_node_impl_symlink;
 use crate::mm::{ProcMapsFile, ProcStatFile};
 use crate::mode;
 use crate::task::{CurrentTask, Task};
 use crate::types::*;
-use crate::{errno, error, fs_node_impl_symlink};
 
 use maplit::hashmap;
 use parking_lot::Mutex;

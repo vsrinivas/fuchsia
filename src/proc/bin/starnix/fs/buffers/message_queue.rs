@@ -5,7 +5,6 @@
 use std::collections::VecDeque;
 
 use super::message_types::*;
-use crate::error;
 use crate::fs::socket::SocketAddress;
 use crate::fs::FdEvents;
 use crate::task::Task;

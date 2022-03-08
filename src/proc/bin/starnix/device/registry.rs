@@ -5,7 +5,6 @@
 use crate::device::mem::*;
 use crate::fs::{FileOps, FsNode, FsNodeOps};
 use crate::types::*;
-use crate::{errno, error};
 
 use std::collections::{btree_map::Entry, BTreeMap};
 

@@ -9,7 +9,6 @@ use super::*;
 use crate::fs::fileops_impl_directory;
 use crate::task::*;
 use crate::types::*;
-use crate::{errno, error};
 
 // TODO: It should be possible to replace all uses of ROMemoryDirectory with TmpfsDirectory +
 // MS_RDONLY (at which point MemoryDirectory would be a better name for it).

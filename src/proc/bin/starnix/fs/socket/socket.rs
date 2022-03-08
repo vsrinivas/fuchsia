@@ -12,7 +12,6 @@ use crate::fs::*;
 use crate::mode;
 use crate::task::*;
 use crate::types::*;
-use crate::{errno, error};
 
 use parking_lot::Mutex;
 use std::sync::Arc;

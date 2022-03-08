@@ -7,7 +7,6 @@ use parking_lot::RwLock;
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use crate::errno;
 use crate::fs::*;
 use crate::types::*;
 
@@ -147,7 +146,6 @@ impl FdTable {
 mod test {
     use super::*;
 
-    use crate::error;
     use crate::fs::fuchsia::SyslogFile;
     use crate::task::*;
 

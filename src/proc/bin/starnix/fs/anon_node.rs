@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 use super::*;
-use crate::error;
 use crate::task::Kernel;
 use crate::types::*;
 

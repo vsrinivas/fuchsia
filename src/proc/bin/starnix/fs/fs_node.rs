@@ -8,7 +8,6 @@ use parking_lot::{Mutex, RwLock, RwLockReadGuard, RwLockWriteGuard};
 use std::sync::{Arc, Weak};
 
 use crate::device::DeviceMode;
-use crate::error;
 use crate::fs::pipe::Pipe;
 use crate::fs::socket::*;
 use crate::fs::*;

@@ -16,7 +16,6 @@ use super::proc::proc_fs;
 use super::sysfs::sys_fs;
 use super::tmpfs::TmpFs;
 use super::*;
-use crate::error;
 use crate::selinux::selinux_fs;
 use crate::task::{CurrentTask, Kernel};
 use crate::types::*;
@@ -448,7 +447,6 @@ impl Hash for NamespaceNode {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::errno;
     use crate::fs::tmpfs::TmpFs;
     use crate::testing::*;
 

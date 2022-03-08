@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::error;
 use crate::fs::{fileops_impl_nonblocking, fileops_impl_nonseekable, FileObject, FileOps};
 use crate::task::CurrentTask;
 use crate::types::*;

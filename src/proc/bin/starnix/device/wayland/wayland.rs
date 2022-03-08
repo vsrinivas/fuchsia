@@ -20,7 +20,6 @@ use super::bridge_client::*;
 use super::file_creation::*;
 use crate::device::wayland::image_file::ImageFile;
 use crate::device::wayland::BufferCollectionFile;
-use crate::errno;
 use crate::fs::buffers::*;
 use crate::fs::socket::*;
 use crate::fs::*;

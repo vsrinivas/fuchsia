@@ -3,8 +3,6 @@
 // found in the LICENSE file.
 
 use super::pid_directory::*;
-use crate::errno;
-use crate::error;
 use crate::fs::*;
 use crate::fs_node_impl_symlink;
 use crate::mode;

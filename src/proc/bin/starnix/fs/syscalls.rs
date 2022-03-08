@@ -5,8 +5,6 @@
 use std::convert::TryInto;
 use std::usize;
 
-use crate::errno;
-use crate::error;
 use crate::fs::eventfd::*;
 use crate::fs::fuchsia::*;
 use crate::fs::memfd::*;

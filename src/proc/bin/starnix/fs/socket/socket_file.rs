@@ -5,7 +5,6 @@
 use fuchsia_zircon as zx;
 use std::sync::Arc;
 
-use crate::error;
 use crate::fs::{buffers::*, socket::*, *};
 use crate::task::*;
 use crate::types::*;

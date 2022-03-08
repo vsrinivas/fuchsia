@@ -14,8 +14,6 @@ use std::convert::TryFrom;
 use std::sync::Arc;
 use zerocopy::AsBytes;
 
-use crate::errno;
-use crate::from_status_like_fdio;
 use crate::fs::ext4::ExtFilesystem;
 use crate::fs::fuchsia::{create_file_from_handle, RemoteFs, SyslogFile};
 use crate::fs::*;

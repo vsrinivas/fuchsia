@@ -5,8 +5,6 @@
 use std::mem;
 use zerocopy::{AsBytes, FromBytes};
 
-use crate::errno;
-use crate::error;
 use crate::fs::*;
 use crate::mm::vmo::round_up_to_increment;
 use crate::task::*;

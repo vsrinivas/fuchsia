@@ -10,7 +10,6 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Weak};
 
 use super::*;
-use crate::error;
 use crate::types::*;
 
 /// A file system that can be mounted in a namespace.

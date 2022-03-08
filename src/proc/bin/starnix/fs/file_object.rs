@@ -7,8 +7,6 @@ use parking_lot::Mutex;
 use std::fmt;
 use std::sync::Arc;
 
-use crate::errno;
-use crate::error;
 use crate::fs::*;
 use crate::logging::impossible_error;
 use crate::mm::{DesiredAddress, MappedVmo, MappingOptions};
@@ -206,8 +204,8 @@ macro_rules! fileops_impl_nonseekable {
             _offset: usize,
             _data: &[crate::types::UserBuffer],
         ) -> Result<usize, crate::types::Errno> {
-            use crate::types::errno::ESPIPE;
-            crate::error!(ESPIPE)
+            use crate::types::errno::*;
+            error!(ESPIPE)
         }
         fn write_at(
             &self,
@@ -216,8 +214,8 @@ macro_rules! fileops_impl_nonseekable {
             _offset: usize,
             _data: &[crate::types::UserBuffer],
         ) -> Result<usize, crate::types::Errno> {
-            use crate::types::errno::ESPIPE;
-            crate::error!(ESPIPE)
+            use crate::types::errno::*;
+            error!(ESPIPE)
         }
         fn seek(
             &self,
@@ -226,8 +224,8 @@ macro_rules! fileops_impl_nonseekable {
             _offset: crate::types::off_t,
             _whence: crate::fs::SeekOrigin,
         ) -> Result<crate::types::off_t, crate::types::Errno> {
-            use crate::types::errno::ESPIPE;
-            crate::error!(ESPIPE)
+            use crate::types::errno::*;
+            error!(ESPIPE)
         }
     };
 }
@@ -268,7 +266,7 @@ macro_rules! fileops_impl_seekable {
             offset: crate::types::off_t,
             whence: crate::fs::SeekOrigin,
         ) -> Result<crate::types::off_t, crate::types::Errno> {
-            use crate::types::errno::EINVAL;
+            use crate::types::errno::*;
             let mut current_offset = file.offset.lock();
             let new_offset = match whence {
                 crate::fs::SeekOrigin::SET => Some(offset),
@@ -278,10 +276,10 @@ macro_rules! fileops_impl_seekable {
                     offset.checked_add(stat.st_size as crate::types::off_t)
                 }
             }
-            .ok_or(crate::errno!(EINVAL))?;
+            .ok_or(errno!(EINVAL))?;
 
             if new_offset < 0 {
-                return crate::error!(EINVAL);
+                return error!(EINVAL);
             }
 
             *current_offset = new_offset;
@@ -335,8 +333,8 @@ macro_rules! fileops_impl_directory {
             _current_task: &crate::task::CurrentTask,
             _data: &[crate::types::UserBuffer],
         ) -> Result<usize, crate::types::Errno> {
-            use crate::types::errno::EISDIR;
-            crate::error!(EISDIR)
+            use crate::types::errno::*;
+            error!(EISDIR)
         }
 
         fn read_at(
@@ -346,8 +344,8 @@ macro_rules! fileops_impl_directory {
             _offset: usize,
             _data: &[crate::types::UserBuffer],
         ) -> Result<usize, crate::types::Errno> {
-            use crate::types::errno::EISDIR;
-            crate::error!(EISDIR)
+            use crate::types::errno::*;
+            error!(EISDIR)
         }
 
         fn write(
@@ -356,8 +354,8 @@ macro_rules! fileops_impl_directory {
             _current_task: &crate::task::CurrentTask,
             _data: &[crate::types::UserBuffer],
         ) -> Result<usize, crate::types::Errno> {
-            use crate::types::errno::EISDIR;
-            crate::error!(EISDIR)
+            use crate::types::errno::*;
+            error!(EISDIR)
         }
 
         fn write_at(
@@ -367,8 +365,8 @@ macro_rules! fileops_impl_directory {
             _offset: usize,
             _data: &[crate::types::UserBuffer],
         ) -> Result<usize, crate::types::Errno> {
-            use crate::types::errno::EISDIR;
-            crate::error!(EISDIR)
+            use crate::types::errno::*;
+            error!(EISDIR)
         }
     };
 }

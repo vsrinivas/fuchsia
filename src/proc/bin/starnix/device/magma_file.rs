@@ -13,8 +13,6 @@ use std::sync::Arc;
 
 use super::magma::*;
 use crate::device::wayland::image_file::*;
-use crate::errno;
-use crate::error;
 use crate::fs::*;
 use crate::logging::impossible_error;
 use crate::syscalls::*;

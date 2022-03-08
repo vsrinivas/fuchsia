@@ -6,7 +6,6 @@ use crate::fs::*;
 use crate::signals::*;
 use crate::task::*;
 use crate::types::*;
-use crate::{errno, error};
 use std::sync::Arc;
 
 use zerocopy::AsBytes;

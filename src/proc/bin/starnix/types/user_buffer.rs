@@ -5,7 +5,6 @@
 use zerocopy::{AsBytes, FromBytes};
 
 use crate::types::*;
-use crate::{errno, error};
 
 /// Matches iovec_t.
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, AsBytes, FromBytes)]

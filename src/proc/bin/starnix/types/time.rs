@@ -4,7 +4,6 @@
 
 use fuchsia_zircon as zx;
 
-use crate::error;
 use crate::types::*;
 
 const MICROS_PER_SECOND: i64 = 1000 * 1000;

@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::error;
 use crate::fs::FdEvents;
 use crate::logging::*;
 use crate::task::CurrentTask;

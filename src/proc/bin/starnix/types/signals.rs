@@ -7,7 +7,6 @@ use std::fmt;
 use std::hash::{Hash, Hasher};
 
 use crate::types::*;
-use crate::{errno, error};
 
 /// An unchecked signal represents a signal that has not been through verification, and may
 /// represent an invalid signal number.

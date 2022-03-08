@@ -13,10 +13,7 @@ use std::marker::PhantomData;
 use std::sync::Arc;
 
 use crate::auth::{Credentials, ShellJobControl};
-use crate::errno;
-use crate::error;
 use crate::execution::*;
-use crate::from_status_like_fdio;
 use crate::fs::*;
 use crate::loader::*;
 use crate::mm::MemoryManager;

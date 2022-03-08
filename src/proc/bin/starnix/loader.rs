@@ -8,13 +8,11 @@ use std::ffi::{CStr, CString};
 use std::sync::Arc;
 use zerocopy::AsBytes;
 
-use crate::from_status_like_fdio;
 use crate::fs::FileHandle;
 use crate::logging::*;
 use crate::mm::*;
 use crate::task::*;
 use crate::types::*;
-use crate::{errno, error};
 
 fn populate_initial_stack(
     stack_vmo: &zx::Vmo,

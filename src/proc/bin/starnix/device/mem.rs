@@ -5,7 +5,6 @@
 use fuchsia_zircon::cprng_draw;
 
 use crate::device::WithStaticDeviceId;
-use crate::error;
 use crate::fs::*;
 use crate::task::*;
 use crate::types::*;

@@ -4,7 +4,6 @@
 
 #![allow(dead_code)]
 
-use std::error;
 use std::fmt;
 
 use crate::types::uapi;
@@ -35,7 +34,7 @@ impl PartialEq for Errno {
 
 impl Eq for Errno {}
 
-impl error::Error for Errno {}
+impl std::error::Error for Errno {}
 
 impl fmt::Display for Errno {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -46,27 +45,6 @@ impl fmt::Display for Errno {
             _ => write!(f, "error {}: {} from unknown location", self.value, self.name),
         }
     }
-}
-
-/// `error` returns a `Err` containing an `Errno` struct tagged with the current file name and line
-/// number.
-///
-/// Use `errno!` instead if you want an unwrapped, but still tagged, `Errno`.
-#[macro_export]
-macro_rules! error {
-    ($err:ident) => {
-        Err(Errno::new($err.value(), stringify!($err), file!().to_string(), line!()))
-    };
-}
-
-/// `errno` returns an `Errno` struct tagged with the current file name and line number.
-///
-/// Use `error!` instead if you want the `Errno` to be wrapped in an `Err`.
-#[macro_export]
-macro_rules! errno {
-    ($err:ident) => {
-        Errno::new($err.value(), stringify!($err), file!().to_string(), line!())
-    };
 }
 
 pub const EPERM: Errno = Errno { value: uapi::EPERM, name: "EPERM", file: None, line: None };
@@ -254,12 +232,29 @@ pub const EHWPOISON: Errno =
 // ENOTSUP is a different error in posix, but has the same value as EOPNOTSUPP in linux.
 pub const ENOTSUP: Errno = EOPNOTSUPP;
 
+/// `error` returns a `Err` containing an `Errno` struct tagged with the current file name and line
+/// number.
+///
+/// Use `errno!` instead if you want an unwrapped, but still tagged, `Errno`.
+macro_rules! error {
+    ($err:ident) => {
+        Err(Errno::new($err.value(), stringify!($err), file!().to_string(), line!()))
+    };
+}
+
+/// `errno` returns an `Errno` struct tagged with the current file name and line number.
+///
+/// Use `error!` instead if you want the `Errno` to be wrapped in an `Err`.
+macro_rules! errno {
+    ($err:ident) => {
+        Errno::new($err.value(), stringify!($err), file!().to_string(), line!())
+    };
+}
+
 // There isn't really a mapping from zx::Status to Errno. The correct mapping is context-speific
 // but this converter is a reasonable first-approximation. The translation matches
 // fdio_status_to_errno. See fxbug.dev/30921 for more context.
 // TODO: Replace clients with more context-specific mappings.
-
-#[macro_export]
 macro_rules! from_status_like_fdio {
     ($status:ident) => {{
         let s = match $status {
@@ -301,3 +296,8 @@ macro_rules! from_status_like_fdio {
         errno!(s)
     }};
 }
+
+// Public re-export of macros allows them to be used like regular rust items.
+pub(crate) use errno;
+pub(crate) use error;
+pub(crate) use from_status_like_fdio;

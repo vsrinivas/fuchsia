@@ -7,9 +7,6 @@ use fuchsia_zircon::AsHandleRef;
 use parking_lot::Mutex;
 use zerocopy::AsBytes;
 
-use crate::errno;
-use crate::error;
-use crate::from_status_like_fdio;
 use crate::fs::*;
 use crate::task::*;
 use crate::types::*;

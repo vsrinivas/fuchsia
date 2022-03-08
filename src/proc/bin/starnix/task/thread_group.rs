@@ -9,11 +9,9 @@ use std::collections::HashSet;
 use std::ffi::CStr;
 use std::sync::Arc;
 
-use crate::from_status_like_fdio;
 use crate::signals::*;
 use crate::task::*;
 use crate::types::*;
-use crate::{errno, error};
 
 pub struct ThreadGroup {
     /// The kernel to which this thread group belongs.

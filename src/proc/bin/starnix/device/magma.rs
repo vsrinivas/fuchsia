@@ -14,7 +14,6 @@ use vk_sys as vk;
 use zerocopy::{AsBytes, FromBytes};
 
 use crate::device::wayland::vulkan::*;
-use crate::errno;
 use crate::task::CurrentTask;
 use crate::types::*;
 

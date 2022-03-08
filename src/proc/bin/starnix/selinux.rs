@@ -3,9 +3,9 @@
 // found in the LICENSE file.
 
 use crate::fs::*;
+use crate::mode;
 use crate::task::*;
 use crate::types::*;
-use crate::{errno, error, mode};
 
 struct SeLinuxFs;
 impl FileSystemOps for SeLinuxFs {}

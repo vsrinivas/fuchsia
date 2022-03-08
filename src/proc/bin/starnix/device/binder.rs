@@ -4,10 +4,10 @@
 
 use crate::device::WithStaticDeviceId;
 use crate::fs::{fileops_impl_nonblocking, FileObject, FileOps, FsNode, FsNodeOps, SeekOrigin};
+use crate::not_implemented;
 use crate::syscalls::{SyscallResult, SUCCESS};
 use crate::task::CurrentTask;
 use crate::types::*;
-use crate::{error, not_implemented};
 use std::sync::Arc;
 use zerocopy::FromBytes;
 

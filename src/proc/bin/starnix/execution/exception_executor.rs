@@ -18,8 +18,6 @@ use std::mem;
 use std::sync::Arc;
 
 use super::shared::*;
-use crate::errno;
-use crate::from_status_like_fdio;
 use crate::mm::MemoryManager;
 use crate::signals::*;
 use crate::strace;

@@ -11,9 +11,6 @@ use syncio::{
     ZxioSignals,
 };
 
-use crate::errno;
-use crate::error;
-use crate::from_status_like_fdio;
 use crate::fs::*;
 use crate::logging::impossible_error;
 use crate::task::*;
@@ -506,7 +503,6 @@ mod test {
     use fidl_fuchsia_io as fio;
     use fuchsia_async as fasync;
 
-    use crate::errno;
     use crate::mm::PAGE_SIZE;
     use crate::testing::*;
 

@@ -14,8 +14,6 @@ use zerocopy::{AsBytes, FromBytes};
 use std::sync::Arc;
 
 use super::BufferCollectionFile;
-use crate::errno;
-use crate::error;
 use crate::fs::*;
 use crate::mm::vmo::round_up_to_increment;
 use crate::syscalls::*;

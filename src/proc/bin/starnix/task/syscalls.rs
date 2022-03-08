@@ -7,8 +7,6 @@ use log::info;
 use std::ffi::CString;
 use zerocopy::AsBytes;
 
-use crate::errno;
-use crate::error;
 use crate::execution::*;
 use crate::mm::*;
 use crate::not_implemented;

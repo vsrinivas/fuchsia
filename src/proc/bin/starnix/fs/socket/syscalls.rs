@@ -7,8 +7,6 @@ use std::convert::TryInto;
 use zerocopy::{AsBytes, FromBytes};
 
 use super::*;
-use crate::errno;
-use crate::error;
 use crate::fs::buffers::*;
 use crate::fs::*;
 use crate::mode;

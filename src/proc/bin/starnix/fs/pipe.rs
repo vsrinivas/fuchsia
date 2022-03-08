@@ -6,8 +6,6 @@ use parking_lot::Mutex;
 use std::convert::TryInto;
 use std::sync::Arc;
 
-use crate::errno;
-use crate::error;
 use crate::fs::{buffers::*, *};
 use crate::mm::PAGE_SIZE;
 use crate::signals::*;

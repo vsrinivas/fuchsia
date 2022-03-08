@@ -6,7 +6,6 @@ use std::sync::Arc;
 
 use super::directory_file::MemoryDirectoryFile;
 use super::*;
-use crate::error;
 use crate::types::*;
 
 pub struct TmpFs(());
@@ -103,7 +102,6 @@ mod test {
     use std::sync::Arc;
     use zerocopy::AsBytes;
 
-    use crate::errno;
     use crate::mm::*;
     use crate::testing::*;
 

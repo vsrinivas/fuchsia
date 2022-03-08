@@ -6,8 +6,6 @@ use std::convert::TryFrom;
 use std::sync::Arc;
 
 use super::signalfd::*;
-use crate::errno;
-use crate::error;
 use crate::fs::*;
 use crate::not_implemented;
 use crate::signals::*;
