@@ -1,7 +1,6 @@
 {
     include: [
         "//src/sys/test_manager/debug_data/default.shard.cml",
-        "//src/sys/test_manager/hermetic-tier-2-test.shard.cml",
         "//src/sys/test_runners/rust/default.shard.cml",
         "syslog/client.shard.cml",
     ],

@@ -507,13 +507,6 @@
                 source_name: "fuchsia.debugdata.DebugData",
                 target_moniker: "/core/test_manager",
             },
-            {
-                debug: "protocol",
-                environment_name: "legacy-test-env",
-                source_moniker: "/core/test_manager/debug_data",
-                source_name: "fuchsia.debugdata.DebugData",
-                target_moniker: "/core/test_manager",
-            },
         ],
     },
 }
