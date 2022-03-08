@@ -127,8 +127,8 @@ async fn apply_command_line_options(
     }
     emu_config.runtime.log_level = if cmd.verbose { LogLevel::Verbose } else { LogLevel::Info };
 
-    // If the user specified a path to a flag template on the command line, use that.
-    if let Some(template_file) = &cmd.start_up_args_template {
+    // If the user specified a path to a flag config file on the command line, use that.
+    if let Some(template_file) = &cmd.config {
         emu_config.runtime.template = template_file.clone();
     }
 

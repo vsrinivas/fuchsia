@@ -34,6 +34,11 @@ pub struct StartCommand {
     #[argh(option, default = "AccelerationMode::Auto")]
     pub accel: AccelerationMode,
 
+    /// specify a configuration file to populate the command line flags for the emulator.
+    /// Defaults to a Handlebars config specified in the Product Bundle manifest.
+    #[argh(option)]
+    pub config: Option<PathBuf>,
+
     /// launch the emulator in serial console mode. This redirects the virtual serial port to the
     /// host's input/output streams, then maintains a connection to those streams rather than
     /// returning control to the host terminal. This is especially useful when the guest is running
@@ -108,13 +113,6 @@ pub struct StartCommand {
     /// used (e.g. if there is only one PBM available).
     #[argh(positional)]
     pub product_bundle: Option<String>,
-
-    /// specify a template file to populate the command line flags for the emulator.
-    /// Defaults to a Handlebars template specified in the Product Bundle manifest.
-    // TODO(fxbug.dev/90948): Make this non-optional once the template file is
-    // included in the SDK.
-    #[argh(option)]
-    pub start_up_args_template: Option<PathBuf>,
 
     /// the maximum time (in seconds) to wait on an emulator to boot before returning control
     /// to the user. A value of 0 will skip the check entirely. Default is 60 seconds. This
