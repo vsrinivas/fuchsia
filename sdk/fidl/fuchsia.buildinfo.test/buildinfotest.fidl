@@ -1,0 +1,17 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library fuchsia.buildinfo.test;
+
+using fuchsia.buildinfo;
+
+/// Returns fake build information about a Fuchsia system. Used for testing.
+/// SetBuildInfo() must be called first, else GetBuildInfo() will return
+/// an empty table.
+@discoverable
+protocol BuildInfoTestController {
+    // Set the return value of GetBuildInfo().
+    SetBuildInfo(struct {
+        build_info fuchsia.buildinfo.BuildInfo;
+    }) -> ();
+};

@@ -1,0 +1,3 @@
+protocol/member fuchsia.buildinfo.test/BuildInfoTestController.SetBuildInfo(fuchsia.buildinfo/BuildInfo build_info) -> ()
+protocol fuchsia.buildinfo.test/BuildInfoTestController
+library fuchsia.buildinfo.test

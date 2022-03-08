@@ -1,0 +1,27 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [ "sys/component/realm_builder.shard.cml" ],
+    program: {
+        runner: "elf",
+        binary: "bin/fake_build_info",
+    },
+    capabilities: [
+        {
+            protocol: [
+                "fuchsia.buildinfo.Provider",
+                "fuchsia.buildinfo.test.BuildInfoTestController",
+            ],
+        },
+    ],
+    expose: [
+        {
+            protocol: [
+                "fuchsia.buildinfo.Provider",
+                "fuchsia.buildinfo.test.BuildInfoTestController",
+            ],
+            from: "self",
+        },
+    ],
+}
