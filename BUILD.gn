@@ -117,6 +117,7 @@ build_api_module("api") {
     ":clippy_target_mapping",
     ":fuzzers",
     ":generated_sources",
+    ":gerrit_size_report",
     ":images",
     ":package-repositories",
     ":platforms",
@@ -1066,6 +1067,22 @@ build_api_module("assembly_input_archives") {
   testonly = true
   data_keys = [ "assembly_input_archives" ]
   deps = [ "//build/assembly" ]
+}
+
+# size_report.json contains a list (size 0 or 1) of gerrit size reports
+# produced by the build. The gerrit size reports have the format described in:
+#   https://chromium.googlesource.com/infra/gerrit-plugins/binary-size/+/HEAD/README.md
+#
+# Type: list(scope)
+#
+#   path
+#     Required: Path to the gerrit size report
+#     Type: path relative to $root_build_dir
+#
+build_api_module("gerrit_size_report") {
+  testonly = true
+  data_keys = [ "gerrit_size_reports" ]
+  deps = [ "//build/images:default-images" ]
 }
 
 ###

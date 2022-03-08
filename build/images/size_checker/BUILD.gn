@@ -206,6 +206,12 @@ compiled_action("legacy_verify_size_budget") {
     "--report-out",
     rebase_path("$target_out_dir/legacy_size_report.txt", root_build_dir),
   ]
+
+  metadata = {
+    gerrit_size_reports = [ rebase_path(
+            "$target_out_dir/legacy_size_report.json",
+            root_build_dir) ]
+  }
 }
 
 python_action("compare_size_reports_test") {
