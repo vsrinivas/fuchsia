@@ -48,7 +48,7 @@ func TestBindingsPackageDependency(t *testing.T) {
 		},
 		{
 			fidl:                 "type MyUnion = strict union { 1: foo uint8; };",
-			needsBindingsPackage: false,
+			needsBindingsPackage: true,
 		},
 		{
 			fidl:                 "type MyStruct = struct {};",

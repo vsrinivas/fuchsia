@@ -204,6 +204,12 @@ type MainProtocolTwoWayLocalWithErrorResult struct {
 	Err                                         uint32             `fidl_ordinal:"2"`
 }
 
+var _mMainProtocolTwoWayLocalWithErrorResult = _bindings.CreateLazyMarshaler(MainProtocolTwoWayLocalWithErrorResult{})
+
+func (msg *MainProtocolTwoWayLocalWithErrorResult) Marshaler() _bindings.Marshaler {
+	return _mMainProtocolTwoWayLocalWithErrorResult
+}
+
 func (_m *MainProtocolTwoWayLocalWithErrorResult) reset() {
 	switch _m.I_mainProtocolTwoWayLocalWithErrorResultTag {
 	case 1:
@@ -258,6 +264,12 @@ type MainProtocolOnLocalWithErrorResult struct {
 	I_mainProtocolOnLocalWithErrorResultTag `fidl:"x!" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
 	Response                                LocalStructPayload `fidl_ordinal:"1"`
 	Err                                     uint32             `fidl_ordinal:"2"`
+}
+
+var _mMainProtocolOnLocalWithErrorResult = _bindings.CreateLazyMarshaler(MainProtocolOnLocalWithErrorResult{})
+
+func (msg *MainProtocolOnLocalWithErrorResult) Marshaler() _bindings.Marshaler {
+	return _mMainProtocolOnLocalWithErrorResult
 }
 
 func (_m *MainProtocolOnLocalWithErrorResult) reset() {
@@ -316,6 +328,12 @@ type MainProtocolTwoWayImportWithErrorResult struct {
 	Err                                          uint32                                           `fidl_ordinal:"2"`
 }
 
+var _mMainProtocolTwoWayImportWithErrorResult = _bindings.CreateLazyMarshaler(MainProtocolTwoWayImportWithErrorResult{})
+
+func (msg *MainProtocolTwoWayImportWithErrorResult) Marshaler() _bindings.Marshaler {
+	return _mMainProtocolTwoWayImportWithErrorResult
+}
+
 func (_m *MainProtocolTwoWayImportWithErrorResult) reset() {
 	switch _m.I_mainProtocolTwoWayImportWithErrorResultTag {
 	case 1:
@@ -370,6 +388,12 @@ type MainProtocolOnImportWithErrorResult struct {
 	I_mainProtocolOnImportWithErrorResultTag `fidl:"x!" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
 	Response                                 testprotocolpayloadsimported.ImportStructPayload `fidl_ordinal:"1"`
 	Err                                      uint32                                           `fidl_ordinal:"2"`
+}
+
+var _mMainProtocolOnImportWithErrorResult = _bindings.CreateLazyMarshaler(MainProtocolOnImportWithErrorResult{})
+
+func (msg *MainProtocolOnImportWithErrorResult) Marshaler() _bindings.Marshaler {
+	return _mMainProtocolOnImportWithErrorResult
 }
 
 func (_m *MainProtocolOnImportWithErrorResult) reset() {
@@ -428,6 +452,12 @@ type MainProtocolTwoWayAnonWithErrorResult struct {
 	Err                                        uint32                                  `fidl_ordinal:"2"`
 }
 
+var _mMainProtocolTwoWayAnonWithErrorResult = _bindings.CreateLazyMarshaler(MainProtocolTwoWayAnonWithErrorResult{})
+
+func (msg *MainProtocolTwoWayAnonWithErrorResult) Marshaler() _bindings.Marshaler {
+	return _mMainProtocolTwoWayAnonWithErrorResult
+}
+
 func (_m *MainProtocolTwoWayAnonWithErrorResult) reset() {
 	switch _m.I_mainProtocolTwoWayAnonWithErrorResultTag {
 	case 1:
@@ -482,6 +512,12 @@ type MainProtocolOnAnonWithErrorResult struct {
 	I_mainProtocolOnAnonWithErrorResultTag `fidl:"x!" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
 	Response                               MainProtocolOnAnonWithErrorResponse `fidl_ordinal:"1"`
 	Err                                    uint32                              `fidl_ordinal:"2"`
+}
+
+var _mMainProtocolOnAnonWithErrorResult = _bindings.CreateLazyMarshaler(MainProtocolOnAnonWithErrorResult{})
+
+func (msg *MainProtocolOnAnonWithErrorResult) Marshaler() _bindings.Marshaler {
+	return _mMainProtocolOnAnonWithErrorResult
 }
 
 func (_m *MainProtocolOnAnonWithErrorResult) reset() {
@@ -553,161 +589,131 @@ const (
 type MainProtocolWithCtxInterface _bindings.ChannelProxy
 
 func (p *MainProtocolWithCtxInterface) OneWayComposed(ctx_ _bindings.Context, a int32) error {
-	req_ := &testprotocolpayloadsimported.ImportStructPayload{
-		A: a,
-	}
+	req_ := &testprotocolpayloadsimported.ImportStructPayload{A: a}
 	err_ := ((*_bindings.ChannelProxy)(p)).Send(MainProtocolOneWayComposedOrdinal, req_)
 	return err_
 }
 
 func (p *MainProtocolWithCtxInterface) TwoWayComposed(ctx_ _bindings.Context, a int32) (int32, error) {
-	req_ := &testprotocolpayloadsimported.ImportStructPayload{
-		A: a,
-	}
+	req_ := &testprotocolpayloadsimported.ImportStructPayload{A: a}
 	resp_ := &testprotocolpayloadsimported.ImportStructPayload{}
 	err_ := ((*_bindings.ChannelProxy)(p)).Call(MainProtocolTwoWayComposedOrdinal, req_, resp_)
-	return resp_.A, err_
+	return (*resp_).A, err_
 }
 
 func (p *MainProtocolWithCtxInterface) TwoWayComposedWithError(ctx_ _bindings.Context, a int32) (testprotocolpayloadsimported.ComposedProtocolTwoWayComposedWithErrorResult, error) {
-	req_ := &testprotocolpayloadsimported.ImportStructPayload{
-		A: a,
-	}
+	req_ := &testprotocolpayloadsimported.ImportStructPayload{A: a}
 	resp_ := &mainProtocolWithCtxTwoWayComposedWithErrorResponse{}
 	err_ := ((*_bindings.ChannelProxy)(p)).Call(MainProtocolTwoWayComposedWithErrorOrdinal, req_, resp_)
-	return resp_.Result, err_
+	return (*resp_).Result, err_
 }
 
 func (p *MainProtocolWithCtxInterface) ExpectOnComposed(ctx_ _bindings.Context) (int32, error) {
 	resp_ := &testprotocolpayloadsimported.ImportStructPayload{}
 	err_ := ((*_bindings.ChannelProxy)(p)).Recv(MainProtocolOnComposedOrdinal, resp_)
-	return resp_.A, err_
+	return (*resp_).A, err_
 }
 
 func (p *MainProtocolWithCtxInterface) ExpectOnComposedWithError(ctx_ _bindings.Context) (testprotocolpayloadsimported.ComposedProtocolOnComposedWithErrorResult, error) {
 	resp_ := &mainProtocolWithCtxOnComposedWithErrorResponse{}
 	err_ := ((*_bindings.ChannelProxy)(p)).Recv(MainProtocolOnComposedWithErrorOrdinal, resp_)
-	return resp_.Result, err_
+	return (*resp_).Result, err_
 }
 
 func (p *MainProtocolWithCtxInterface) OneWayLocal(ctx_ _bindings.Context, a uint32, b uint32) error {
-	req_ := &LocalStructPayload{
-		A: a,
-		B: b,
-	}
+	req_ := &LocalStructPayload{A: a, B: b}
 	err_ := ((*_bindings.ChannelProxy)(p)).Send(MainProtocolOneWayLocalOrdinal, req_)
 	return err_
 }
 
 func (p *MainProtocolWithCtxInterface) TwoWayLocal(ctx_ _bindings.Context, a uint32, b uint32) (uint32, uint32, error) {
-	req_ := &LocalStructPayload{
-		A: a,
-		B: b,
-	}
+	req_ := &LocalStructPayload{A: a, B: b}
 	resp_ := &LocalStructPayload{}
 	err_ := ((*_bindings.ChannelProxy)(p)).Call(MainProtocolTwoWayLocalOrdinal, req_, resp_)
-	return resp_.A, resp_.B, err_
+	return (*resp_).A, (*resp_).B, err_
 }
 
 func (p *MainProtocolWithCtxInterface) TwoWayLocalWithError(ctx_ _bindings.Context, a uint32, b uint32) (MainProtocolTwoWayLocalWithErrorResult, error) {
-	req_ := &LocalStructPayload{
-		A: a,
-		B: b,
-	}
+	req_ := &LocalStructPayload{A: a, B: b}
 	resp_ := &mainProtocolWithCtxTwoWayLocalWithErrorResponse{}
 	err_ := ((*_bindings.ChannelProxy)(p)).Call(MainProtocolTwoWayLocalWithErrorOrdinal, req_, resp_)
-	return resp_.Result, err_
+	return (*resp_).Result, err_
 }
 
 func (p *MainProtocolWithCtxInterface) ExpectOnLocal(ctx_ _bindings.Context) (uint32, uint32, error) {
 	resp_ := &LocalStructPayload{}
 	err_ := ((*_bindings.ChannelProxy)(p)).Recv(MainProtocolOnLocalOrdinal, resp_)
-	return resp_.A, resp_.B, err_
+	return (*resp_).A, (*resp_).B, err_
 }
 
 func (p *MainProtocolWithCtxInterface) ExpectOnLocalWithError(ctx_ _bindings.Context) (MainProtocolOnLocalWithErrorResult, error) {
 	resp_ := &mainProtocolWithCtxOnLocalWithErrorResponse{}
 	err_ := ((*_bindings.ChannelProxy)(p)).Recv(MainProtocolOnLocalWithErrorOrdinal, resp_)
-	return resp_.Result, err_
+	return (*resp_).Result, err_
 }
 
 func (p *MainProtocolWithCtxInterface) OneWayImport(ctx_ _bindings.Context, a int32) error {
-	req_ := &testprotocolpayloadsimported.ImportStructPayload{
-		A: a,
-	}
+	req_ := &testprotocolpayloadsimported.ImportStructPayload{A: a}
 	err_ := ((*_bindings.ChannelProxy)(p)).Send(MainProtocolOneWayImportOrdinal, req_)
 	return err_
 }
 
 func (p *MainProtocolWithCtxInterface) TwoWayImport(ctx_ _bindings.Context, a int32) (int32, error) {
-	req_ := &testprotocolpayloadsimported.ImportStructPayload{
-		A: a,
-	}
+	req_ := &testprotocolpayloadsimported.ImportStructPayload{A: a}
 	resp_ := &testprotocolpayloadsimported.ImportStructPayload{}
 	err_ := ((*_bindings.ChannelProxy)(p)).Call(MainProtocolTwoWayImportOrdinal, req_, resp_)
-	return resp_.A, err_
+	return (*resp_).A, err_
 }
 
 func (p *MainProtocolWithCtxInterface) TwoWayImportWithError(ctx_ _bindings.Context, a int32) (MainProtocolTwoWayImportWithErrorResult, error) {
-	req_ := &testprotocolpayloadsimported.ImportStructPayload{
-		A: a,
-	}
+	req_ := &testprotocolpayloadsimported.ImportStructPayload{A: a}
 	resp_ := &mainProtocolWithCtxTwoWayImportWithErrorResponse{}
 	err_ := ((*_bindings.ChannelProxy)(p)).Call(MainProtocolTwoWayImportWithErrorOrdinal, req_, resp_)
-	return resp_.Result, err_
+	return (*resp_).Result, err_
 }
 
 func (p *MainProtocolWithCtxInterface) ExpectOnImport(ctx_ _bindings.Context) (int32, error) {
 	resp_ := &testprotocolpayloadsimported.ImportStructPayload{}
 	err_ := ((*_bindings.ChannelProxy)(p)).Recv(MainProtocolOnImportOrdinal, resp_)
-	return resp_.A, err_
+	return (*resp_).A, err_
 }
 
 func (p *MainProtocolWithCtxInterface) ExpectOnImportWithError(ctx_ _bindings.Context) (MainProtocolOnImportWithErrorResult, error) {
 	resp_ := &mainProtocolWithCtxOnImportWithErrorResponse{}
 	err_ := ((*_bindings.ChannelProxy)(p)).Recv(MainProtocolOnImportWithErrorOrdinal, resp_)
-	return resp_.Result, err_
+	return (*resp_).Result, err_
 }
 
 func (p *MainProtocolWithCtxInterface) OneWayAnon(ctx_ _bindings.Context, a uint32, b uint32) error {
-	req_ := &mainProtocolWithCtxOneWayAnonRequest{
-		A: a,
-		B: b,
-	}
+	req_ := &mainProtocolWithCtxOneWayAnonRequest{A: a, B: b}
 	err_ := ((*_bindings.ChannelProxy)(p)).Send(MainProtocolOneWayAnonOrdinal, req_)
 	return err_
 }
 
 func (p *MainProtocolWithCtxInterface) TwoWayAnon(ctx_ _bindings.Context, a uint32, b uint32) (uint32, uint32, error) {
-	req_ := &mainProtocolWithCtxTwoWayAnonRequest{
-		A: a,
-		B: b,
-	}
+	req_ := &mainProtocolWithCtxTwoWayAnonRequest{A: a, B: b}
 	resp_ := &mainProtocolWithCtxTwoWayAnonResponse{}
 	err_ := ((*_bindings.ChannelProxy)(p)).Call(MainProtocolTwoWayAnonOrdinal, req_, resp_)
-	return resp_.A, resp_.B, err_
+	return (*resp_).A, (*resp_).B, err_
 }
 
 func (p *MainProtocolWithCtxInterface) TwoWayAnonWithError(ctx_ _bindings.Context, a uint32, b uint32) (MainProtocolTwoWayAnonWithErrorResult, error) {
-	req_ := &mainProtocolWithCtxTwoWayAnonWithErrorRequest{
-		A: a,
-		B: b,
-	}
+	req_ := &mainProtocolWithCtxTwoWayAnonWithErrorRequest{A: a, B: b}
 	resp_ := &mainProtocolWithCtxTwoWayAnonWithErrorResponse{}
 	err_ := ((*_bindings.ChannelProxy)(p)).Call(MainProtocolTwoWayAnonWithErrorOrdinal, req_, resp_)
-	return resp_.Result, err_
+	return (*resp_).Result, err_
 }
 
 func (p *MainProtocolWithCtxInterface) ExpectOnAnon(ctx_ _bindings.Context) (uint32, uint32, error) {
 	resp_ := &mainProtocolWithCtxOnAnonResponse{}
 	err_ := ((*_bindings.ChannelProxy)(p)).Recv(MainProtocolOnAnonOrdinal, resp_)
-	return resp_.A, resp_.B, err_
+	return (*resp_).A, (*resp_).B, err_
 }
 
 func (p *MainProtocolWithCtxInterface) ExpectOnAnonWithError(ctx_ _bindings.Context) (MainProtocolOnAnonWithErrorResult, error) {
 	resp_ := &mainProtocolWithCtxOnAnonWithErrorResponse{}
 	err_ := ((*_bindings.ChannelProxy)(p)).Recv(MainProtocolOnAnonWithErrorOrdinal, resp_)
-	return resp_.Result, err_
+	return (*resp_).Result, err_
 }
 
 type MainProtocolWithCtx interface {
@@ -741,155 +747,145 @@ type MainProtocolWithCtxStub struct {
 func (s_ *MainProtocolWithCtxStub) Dispatch(args_ _bindings.DispatchArgs) (_bindings.Message, bool, error) {
 	switch args_.Ordinal {
 	case MainProtocolOneWayComposedOrdinal:
-		in_ := testprotocolpayloadsimported.ImportStructPayload{}
+		in_ := &testprotocolpayloadsimported.ImportStructPayload{}
 		marshalerCtx, ok := _bindings.GetMarshalerContext(args_.Ctx)
 		if !ok {
 			return nil, false, _bindings.ErrMissingMarshalerContext
 		}
-		if err_ := _bindings.Unmarshal(marshalerCtx, args_.Bytes, args_.HandleInfos, &in_); err_ != nil {
+		if err_ := _bindings.Unmarshal(marshalerCtx, args_.Bytes, args_.HandleInfos, in_); err_ != nil {
 			return nil, false, err_
 		}
-		err_ := s_.Impl.OneWayComposed(args_.Ctx, in_.A)
+		err_ := s_.Impl.OneWayComposed(args_.Ctx, (*in_).A)
 		return nil, false, err_
 	case MainProtocolTwoWayComposedOrdinal:
-		in_ := testprotocolpayloadsimported.ImportStructPayload{}
+		in_ := &testprotocolpayloadsimported.ImportStructPayload{}
 		marshalerCtx, ok := _bindings.GetMarshalerContext(args_.Ctx)
 		if !ok {
 			return nil, false, _bindings.ErrMissingMarshalerContext
 		}
-		if err_ := _bindings.Unmarshal(marshalerCtx, args_.Bytes, args_.HandleInfos, &in_); err_ != nil {
+		if err_ := _bindings.Unmarshal(marshalerCtx, args_.Bytes, args_.HandleInfos, in_); err_ != nil {
 			return nil, false, err_
 		}
-		a, err_ := s_.Impl.TwoWayComposed(args_.Ctx, in_.A)
-		out_ := testprotocolpayloadsimported.ImportStructPayload{}
-		out_.A = a
-		return &out_, true, err_
+		a, err_ := s_.Impl.TwoWayComposed(args_.Ctx, (*in_).A)
+		out_ := &testprotocolpayloadsimported.ImportStructPayload{A: a}
+		return out_, true, err_
 	case MainProtocolTwoWayComposedWithErrorOrdinal:
-		in_ := testprotocolpayloadsimported.ImportStructPayload{}
+		in_ := &testprotocolpayloadsimported.ImportStructPayload{}
 		marshalerCtx, ok := _bindings.GetMarshalerContext(args_.Ctx)
 		if !ok {
 			return nil, false, _bindings.ErrMissingMarshalerContext
 		}
-		if err_ := _bindings.Unmarshal(marshalerCtx, args_.Bytes, args_.HandleInfos, &in_); err_ != nil {
+		if err_ := _bindings.Unmarshal(marshalerCtx, args_.Bytes, args_.HandleInfos, in_); err_ != nil {
 			return nil, false, err_
 		}
-		result, err_ := s_.Impl.TwoWayComposedWithError(args_.Ctx, in_.A)
-		out_ := mainProtocolWithCtxTwoWayComposedWithErrorResponse{}
-		out_.Result = result
-		return &out_, true, err_
+		result, err_ := s_.Impl.TwoWayComposedWithError(args_.Ctx, (*in_).A)
+		out_ := &mainProtocolWithCtxTwoWayComposedWithErrorResponse{Result: result}
+		return out_, true, err_
 	case MainProtocolOneWayLocalOrdinal:
-		in_ := LocalStructPayload{}
+		in_ := &LocalStructPayload{}
 		marshalerCtx, ok := _bindings.GetMarshalerContext(args_.Ctx)
 		if !ok {
 			return nil, false, _bindings.ErrMissingMarshalerContext
 		}
-		if err_ := _bindings.Unmarshal(marshalerCtx, args_.Bytes, args_.HandleInfos, &in_); err_ != nil {
+		if err_ := _bindings.Unmarshal(marshalerCtx, args_.Bytes, args_.HandleInfos, in_); err_ != nil {
 			return nil, false, err_
 		}
-		err_ := s_.Impl.OneWayLocal(args_.Ctx, in_.A, in_.B)
+		err_ := s_.Impl.OneWayLocal(args_.Ctx, (*in_).A, (*in_).B)
 		return nil, false, err_
 	case MainProtocolTwoWayLocalOrdinal:
-		in_ := LocalStructPayload{}
+		in_ := &LocalStructPayload{}
 		marshalerCtx, ok := _bindings.GetMarshalerContext(args_.Ctx)
 		if !ok {
 			return nil, false, _bindings.ErrMissingMarshalerContext
 		}
-		if err_ := _bindings.Unmarshal(marshalerCtx, args_.Bytes, args_.HandleInfos, &in_); err_ != nil {
+		if err_ := _bindings.Unmarshal(marshalerCtx, args_.Bytes, args_.HandleInfos, in_); err_ != nil {
 			return nil, false, err_
 		}
-		a, b, err_ := s_.Impl.TwoWayLocal(args_.Ctx, in_.A, in_.B)
-		out_ := LocalStructPayload{}
-		out_.A = a
-		out_.B = b
-		return &out_, true, err_
+		a, b, err_ := s_.Impl.TwoWayLocal(args_.Ctx, (*in_).A, (*in_).B)
+		out_ := &LocalStructPayload{A: a, B: b}
+		return out_, true, err_
 	case MainProtocolTwoWayLocalWithErrorOrdinal:
-		in_ := LocalStructPayload{}
+		in_ := &LocalStructPayload{}
 		marshalerCtx, ok := _bindings.GetMarshalerContext(args_.Ctx)
 		if !ok {
 			return nil, false, _bindings.ErrMissingMarshalerContext
 		}
-		if err_ := _bindings.Unmarshal(marshalerCtx, args_.Bytes, args_.HandleInfos, &in_); err_ != nil {
+		if err_ := _bindings.Unmarshal(marshalerCtx, args_.Bytes, args_.HandleInfos, in_); err_ != nil {
 			return nil, false, err_
 		}
-		result, err_ := s_.Impl.TwoWayLocalWithError(args_.Ctx, in_.A, in_.B)
-		out_ := mainProtocolWithCtxTwoWayLocalWithErrorResponse{}
-		out_.Result = result
-		return &out_, true, err_
+		result, err_ := s_.Impl.TwoWayLocalWithError(args_.Ctx, (*in_).A, (*in_).B)
+		out_ := &mainProtocolWithCtxTwoWayLocalWithErrorResponse{Result: result}
+		return out_, true, err_
 	case MainProtocolOneWayImportOrdinal:
-		in_ := testprotocolpayloadsimported.ImportStructPayload{}
+		in_ := &testprotocolpayloadsimported.ImportStructPayload{}
 		marshalerCtx, ok := _bindings.GetMarshalerContext(args_.Ctx)
 		if !ok {
 			return nil, false, _bindings.ErrMissingMarshalerContext
 		}
-		if err_ := _bindings.Unmarshal(marshalerCtx, args_.Bytes, args_.HandleInfos, &in_); err_ != nil {
+		if err_ := _bindings.Unmarshal(marshalerCtx, args_.Bytes, args_.HandleInfos, in_); err_ != nil {
 			return nil, false, err_
 		}
-		err_ := s_.Impl.OneWayImport(args_.Ctx, in_.A)
+		err_ := s_.Impl.OneWayImport(args_.Ctx, (*in_).A)
 		return nil, false, err_
 	case MainProtocolTwoWayImportOrdinal:
-		in_ := testprotocolpayloadsimported.ImportStructPayload{}
+		in_ := &testprotocolpayloadsimported.ImportStructPayload{}
 		marshalerCtx, ok := _bindings.GetMarshalerContext(args_.Ctx)
 		if !ok {
 			return nil, false, _bindings.ErrMissingMarshalerContext
 		}
-		if err_ := _bindings.Unmarshal(marshalerCtx, args_.Bytes, args_.HandleInfos, &in_); err_ != nil {
+		if err_ := _bindings.Unmarshal(marshalerCtx, args_.Bytes, args_.HandleInfos, in_); err_ != nil {
 			return nil, false, err_
 		}
-		a, err_ := s_.Impl.TwoWayImport(args_.Ctx, in_.A)
-		out_ := testprotocolpayloadsimported.ImportStructPayload{}
-		out_.A = a
-		return &out_, true, err_
+		a, err_ := s_.Impl.TwoWayImport(args_.Ctx, (*in_).A)
+		out_ := &testprotocolpayloadsimported.ImportStructPayload{A: a}
+		return out_, true, err_
 	case MainProtocolTwoWayImportWithErrorOrdinal:
-		in_ := testprotocolpayloadsimported.ImportStructPayload{}
+		in_ := &testprotocolpayloadsimported.ImportStructPayload{}
 		marshalerCtx, ok := _bindings.GetMarshalerContext(args_.Ctx)
 		if !ok {
 			return nil, false, _bindings.ErrMissingMarshalerContext
 		}
-		if err_ := _bindings.Unmarshal(marshalerCtx, args_.Bytes, args_.HandleInfos, &in_); err_ != nil {
+		if err_ := _bindings.Unmarshal(marshalerCtx, args_.Bytes, args_.HandleInfos, in_); err_ != nil {
 			return nil, false, err_
 		}
-		result, err_ := s_.Impl.TwoWayImportWithError(args_.Ctx, in_.A)
-		out_ := mainProtocolWithCtxTwoWayImportWithErrorResponse{}
-		out_.Result = result
-		return &out_, true, err_
+		result, err_ := s_.Impl.TwoWayImportWithError(args_.Ctx, (*in_).A)
+		out_ := &mainProtocolWithCtxTwoWayImportWithErrorResponse{Result: result}
+		return out_, true, err_
 	case MainProtocolOneWayAnonOrdinal:
-		in_ := mainProtocolWithCtxOneWayAnonRequest{}
+		in_ := &mainProtocolWithCtxOneWayAnonRequest{}
 		marshalerCtx, ok := _bindings.GetMarshalerContext(args_.Ctx)
 		if !ok {
 			return nil, false, _bindings.ErrMissingMarshalerContext
 		}
-		if err_ := _bindings.Unmarshal(marshalerCtx, args_.Bytes, args_.HandleInfos, &in_); err_ != nil {
+		if err_ := _bindings.Unmarshal(marshalerCtx, args_.Bytes, args_.HandleInfos, in_); err_ != nil {
 			return nil, false, err_
 		}
-		err_ := s_.Impl.OneWayAnon(args_.Ctx, in_.A, in_.B)
+		err_ := s_.Impl.OneWayAnon(args_.Ctx, (*in_).A, (*in_).B)
 		return nil, false, err_
 	case MainProtocolTwoWayAnonOrdinal:
-		in_ := mainProtocolWithCtxTwoWayAnonRequest{}
+		in_ := &mainProtocolWithCtxTwoWayAnonRequest{}
 		marshalerCtx, ok := _bindings.GetMarshalerContext(args_.Ctx)
 		if !ok {
 			return nil, false, _bindings.ErrMissingMarshalerContext
 		}
-		if err_ := _bindings.Unmarshal(marshalerCtx, args_.Bytes, args_.HandleInfos, &in_); err_ != nil {
+		if err_ := _bindings.Unmarshal(marshalerCtx, args_.Bytes, args_.HandleInfos, in_); err_ != nil {
 			return nil, false, err_
 		}
-		a, b, err_ := s_.Impl.TwoWayAnon(args_.Ctx, in_.A, in_.B)
-		out_ := mainProtocolWithCtxTwoWayAnonResponse{}
-		out_.A = a
-		out_.B = b
-		return &out_, true, err_
+		a, b, err_ := s_.Impl.TwoWayAnon(args_.Ctx, (*in_).A, (*in_).B)
+		out_ := &mainProtocolWithCtxTwoWayAnonResponse{A: a, B: b}
+		return out_, true, err_
 	case MainProtocolTwoWayAnonWithErrorOrdinal:
-		in_ := mainProtocolWithCtxTwoWayAnonWithErrorRequest{}
+		in_ := &mainProtocolWithCtxTwoWayAnonWithErrorRequest{}
 		marshalerCtx, ok := _bindings.GetMarshalerContext(args_.Ctx)
 		if !ok {
 			return nil, false, _bindings.ErrMissingMarshalerContext
 		}
-		if err_ := _bindings.Unmarshal(marshalerCtx, args_.Bytes, args_.HandleInfos, &in_); err_ != nil {
+		if err_ := _bindings.Unmarshal(marshalerCtx, args_.Bytes, args_.HandleInfos, in_); err_ != nil {
 			return nil, false, err_
 		}
-		result, err_ := s_.Impl.TwoWayAnonWithError(args_.Ctx, in_.A, in_.B)
-		out_ := mainProtocolWithCtxTwoWayAnonWithErrorResponse{}
-		out_.Result = result
-		return &out_, true, err_
+		result, err_ := s_.Impl.TwoWayAnonWithError(args_.Ctx, (*in_).A, (*in_).B)
+		out_ := &mainProtocolWithCtxTwoWayAnonWithErrorResponse{Result: result}
+		return out_, true, err_
 	}
 	return nil, false, _bindings.ErrUnknownOrdinal
 }
@@ -897,52 +893,34 @@ func (s_ *MainProtocolWithCtxStub) Dispatch(args_ _bindings.DispatchArgs) (_bind
 type MainProtocolEventProxy _bindings.ChannelProxy
 
 func (p *MainProtocolEventProxy) OnComposed(a int32) error {
-	event_ := &testprotocolpayloadsimported.ImportStructPayload{
-		A: a,
-	}
+	event_ := &testprotocolpayloadsimported.ImportStructPayload{A: a}
 	return ((*_bindings.ChannelProxy)(p)).Send(MainProtocolOnComposedOrdinal, event_)
 }
 func (p *MainProtocolEventProxy) OnComposedWithError(result testprotocolpayloadsimported.ComposedProtocolOnComposedWithErrorResult) error {
-	event_ := &mainProtocolWithCtxOnComposedWithErrorResponse{
-		Result: result,
-	}
+	event_ := &mainProtocolWithCtxOnComposedWithErrorResponse{Result: result}
 	return ((*_bindings.ChannelProxy)(p)).Send(MainProtocolOnComposedWithErrorOrdinal, event_)
 }
 func (p *MainProtocolEventProxy) OnLocal(a uint32, b uint32) error {
-	event_ := &LocalStructPayload{
-		A: a,
-		B: b,
-	}
+	event_ := &LocalStructPayload{A: a, B: b}
 	return ((*_bindings.ChannelProxy)(p)).Send(MainProtocolOnLocalOrdinal, event_)
 }
 func (p *MainProtocolEventProxy) OnLocalWithError(result MainProtocolOnLocalWithErrorResult) error {
-	event_ := &mainProtocolWithCtxOnLocalWithErrorResponse{
-		Result: result,
-	}
+	event_ := &mainProtocolWithCtxOnLocalWithErrorResponse{Result: result}
 	return ((*_bindings.ChannelProxy)(p)).Send(MainProtocolOnLocalWithErrorOrdinal, event_)
 }
 func (p *MainProtocolEventProxy) OnImport(a int32) error {
-	event_ := &testprotocolpayloadsimported.ImportStructPayload{
-		A: a,
-	}
+	event_ := &testprotocolpayloadsimported.ImportStructPayload{A: a}
 	return ((*_bindings.ChannelProxy)(p)).Send(MainProtocolOnImportOrdinal, event_)
 }
 func (p *MainProtocolEventProxy) OnImportWithError(result MainProtocolOnImportWithErrorResult) error {
-	event_ := &mainProtocolWithCtxOnImportWithErrorResponse{
-		Result: result,
-	}
+	event_ := &mainProtocolWithCtxOnImportWithErrorResponse{Result: result}
 	return ((*_bindings.ChannelProxy)(p)).Send(MainProtocolOnImportWithErrorOrdinal, event_)
 }
 func (p *MainProtocolEventProxy) OnAnon(a uint32, b uint32) error {
-	event_ := &mainProtocolWithCtxOnAnonResponse{
-		A: a,
-		B: b,
-	}
+	event_ := &mainProtocolWithCtxOnAnonResponse{A: a, B: b}
 	return ((*_bindings.ChannelProxy)(p)).Send(MainProtocolOnAnonOrdinal, event_)
 }
 func (p *MainProtocolEventProxy) OnAnonWithError(result MainProtocolOnAnonWithErrorResult) error {
-	event_ := &mainProtocolWithCtxOnAnonWithErrorResponse{
-		Result: result,
-	}
+	event_ := &mainProtocolWithCtxOnAnonWithErrorResponse{Result: result}
 	return ((*_bindings.ChannelProxy)(p)).Send(MainProtocolOnAnonWithErrorOrdinal, event_)
 }

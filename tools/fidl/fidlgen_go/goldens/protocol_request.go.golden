@@ -91,28 +91,24 @@ func (p *ParentWithCtxInterface) GetChild(ctx_ _bindings.Context) (ChildWithCtxI
 	var req_ _bindings.Message
 	resp_ := &parentWithCtxGetChildResponse{}
 	err_ := ((*_bindings.ChannelProxy)(p)).Call(ParentGetChildOrdinal, req_, resp_)
-	return resp_.C, err_
+	return (*resp_).C, err_
 }
 
 func (p *ParentWithCtxInterface) GetChildRequest(ctx_ _bindings.Context) (ChildWithCtxInterfaceRequest, error) {
 	var req_ _bindings.Message
 	resp_ := &parentWithCtxGetChildRequestResponse{}
 	err_ := ((*_bindings.ChannelProxy)(p)).Call(ParentGetChildRequestOrdinal, req_, resp_)
-	return resp_.R, err_
+	return (*resp_).R, err_
 }
 
 func (p *ParentWithCtxInterface) TakeChild(ctx_ _bindings.Context, c ChildWithCtxInterface) error {
-	req_ := &parentWithCtxTakeChildRequest{
-		C: c,
-	}
+	req_ := &parentWithCtxTakeChildRequest{C: c}
 	err_ := ((*_bindings.ChannelProxy)(p)).Send(ParentTakeChildOrdinal, req_)
 	return err_
 }
 
 func (p *ParentWithCtxInterface) TakeChildRequest(ctx_ _bindings.Context, r ChildWithCtxInterfaceRequest) error {
-	req_ := &parentWithCtxTakeChildRequestRequest{
-		R: r,
-	}
+	req_ := &parentWithCtxTakeChildRequestRequest{R: r}
 	err_ := ((*_bindings.ChannelProxy)(p)).Send(ParentTakeChildRequestOrdinal, req_)
 	return err_
 }
@@ -141,35 +137,33 @@ func (s_ *ParentWithCtxStub) Dispatch(args_ _bindings.DispatchArgs) (_bindings.M
 	switch args_.Ordinal {
 	case ParentGetChildOrdinal:
 		c, err_ := s_.Impl.GetChild(args_.Ctx)
-		out_ := parentWithCtxGetChildResponse{}
-		out_.C = c
-		return &out_, true, err_
+		out_ := &parentWithCtxGetChildResponse{C: c}
+		return out_, true, err_
 	case ParentGetChildRequestOrdinal:
 		r, err_ := s_.Impl.GetChildRequest(args_.Ctx)
-		out_ := parentWithCtxGetChildRequestResponse{}
-		out_.R = r
-		return &out_, true, err_
+		out_ := &parentWithCtxGetChildRequestResponse{R: r}
+		return out_, true, err_
 	case ParentTakeChildOrdinal:
-		in_ := parentWithCtxTakeChildRequest{}
+		in_ := &parentWithCtxTakeChildRequest{}
 		marshalerCtx, ok := _bindings.GetMarshalerContext(args_.Ctx)
 		if !ok {
 			return nil, false, _bindings.ErrMissingMarshalerContext
 		}
-		if err_ := _bindings.Unmarshal(marshalerCtx, args_.Bytes, args_.HandleInfos, &in_); err_ != nil {
+		if err_ := _bindings.Unmarshal(marshalerCtx, args_.Bytes, args_.HandleInfos, in_); err_ != nil {
 			return nil, false, err_
 		}
-		err_ := s_.Impl.TakeChild(args_.Ctx, in_.C)
+		err_ := s_.Impl.TakeChild(args_.Ctx, (*in_).C)
 		return nil, false, err_
 	case ParentTakeChildRequestOrdinal:
-		in_ := parentWithCtxTakeChildRequestRequest{}
+		in_ := &parentWithCtxTakeChildRequestRequest{}
 		marshalerCtx, ok := _bindings.GetMarshalerContext(args_.Ctx)
 		if !ok {
 			return nil, false, _bindings.ErrMissingMarshalerContext
 		}
-		if err_ := _bindings.Unmarshal(marshalerCtx, args_.Bytes, args_.HandleInfos, &in_); err_ != nil {
+		if err_ := _bindings.Unmarshal(marshalerCtx, args_.Bytes, args_.HandleInfos, in_); err_ != nil {
 			return nil, false, err_
 		}
-		err_ := s_.Impl.TakeChildRequest(args_.Ctx, in_.R)
+		err_ := s_.Impl.TakeChildRequest(args_.Ctx, (*in_).R)
 		return nil, false, err_
 	}
 	return nil, false, _bindings.ErrUnknownOrdinal

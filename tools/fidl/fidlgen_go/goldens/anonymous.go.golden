@@ -283,6 +283,12 @@ type UnionMember struct {
 	UnionData        uint8 `fidl_ordinal:"2"`
 }
 
+var _mUnionMember = _bindings.CreateLazyMarshaler(UnionMember{})
+
+func (msg *UnionMember) Marshaler() _bindings.Marshaler {
+	return _mUnionMember
+}
+
 func (_m *UnionMember) reset() {
 	switch _m.I_unionMemberTag {
 	case 2:
@@ -333,6 +339,12 @@ type SomeProtocolSomeMethodResult struct {
 	I_someProtocolSomeMethodResultTag `fidl:"x!" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
 	Response                          SomeProtocolSomeMethodResponse `fidl_ordinal:"1"`
 	Err                               SomeProtocolSomeMethodError    `fidl_ordinal:"2"`
+}
+
+var _mSomeProtocolSomeMethodResult = _bindings.CreateLazyMarshaler(SomeProtocolSomeMethodResult{})
+
+func (msg *SomeProtocolSomeMethodResult) Marshaler() _bindings.Marshaler {
+	return _mSomeProtocolSomeMethodResult
 }
 
 func (_m *SomeProtocolSomeMethodResult) reset() {
@@ -393,6 +405,12 @@ type Expression struct {
 	Value               uint64              `fidl_ordinal:"1"`
 	BinOp               OverrideTest        `fidl_ordinal:"2"`
 	FunctionApplication FunctionApplication `fidl_ordinal:"3"`
+}
+
+var _mExpression = _bindings.CreateLazyMarshaler(Expression{})
+
+func (msg *Expression) Marshaler() _bindings.Marshaler {
+	return _mExpression
 }
 
 func (_m *Expression) reset() {
@@ -475,6 +493,12 @@ type TableMember struct {
 	TableDataPresent bool
 }
 
+var _mTableMember = _bindings.CreateLazyMarshaler(TableMember{})
+
+func (msg *TableMember) Marshaler() _bindings.Marshaler {
+	return _mTableMember
+}
+
 func (u *TableMember) SetTableData(tableData []TableData) {
 	u.TableData = tableData
 	u.TableDataPresent = true
@@ -516,6 +540,12 @@ type FunctionApplication struct {
 	ArgsPresent   bool
 	Flags         Flags `fidl_ordinal:"4"`
 	FlagsPresent  bool
+}
+
+var _mFunctionApplication = _bindings.CreateLazyMarshaler(FunctionApplication{})
+
+func (msg *FunctionApplication) Marshaler() _bindings.Marshaler {
+	return _mFunctionApplication
 }
 
 func (u *FunctionApplication) SetFunc(func_ string) {
@@ -605,13 +635,10 @@ const (
 type SomeProtocolWithCtxInterface _bindings.ChannelProxy
 
 func (p *SomeProtocolWithCtxInterface) SomeMethod(ctx_ _bindings.Context, unionMember UnionMember, tableMember TableMember) (SomeProtocolSomeMethodResult, error) {
-	req_ := &someProtocolWithCtxSomeMethodRequest{
-		UnionMember: unionMember,
-		TableMember: tableMember,
-	}
+	req_ := &someProtocolWithCtxSomeMethodRequest{UnionMember: unionMember, TableMember: tableMember}
 	resp_ := &someProtocolWithCtxSomeMethodResponse{}
 	err_ := ((*_bindings.ChannelProxy)(p)).Call(SomeProtocolSomeMethodOrdinal, req_, resp_)
-	return resp_.Result, err_
+	return (*resp_).Result, err_
 }
 
 type SomeProtocolWithCtx interface {
@@ -634,18 +661,17 @@ type SomeProtocolWithCtxStub struct {
 func (s_ *SomeProtocolWithCtxStub) Dispatch(args_ _bindings.DispatchArgs) (_bindings.Message, bool, error) {
 	switch args_.Ordinal {
 	case SomeProtocolSomeMethodOrdinal:
-		in_ := someProtocolWithCtxSomeMethodRequest{}
+		in_ := &someProtocolWithCtxSomeMethodRequest{}
 		marshalerCtx, ok := _bindings.GetMarshalerContext(args_.Ctx)
 		if !ok {
 			return nil, false, _bindings.ErrMissingMarshalerContext
 		}
-		if err_ := _bindings.Unmarshal(marshalerCtx, args_.Bytes, args_.HandleInfos, &in_); err_ != nil {
+		if err_ := _bindings.Unmarshal(marshalerCtx, args_.Bytes, args_.HandleInfos, in_); err_ != nil {
 			return nil, false, err_
 		}
-		result, err_ := s_.Impl.SomeMethod(args_.Ctx, in_.UnionMember, in_.TableMember)
-		out_ := someProtocolWithCtxSomeMethodResponse{}
-		out_.Result = result
-		return &out_, true, err_
+		result, err_ := s_.Impl.SomeMethod(args_.Ctx, (*in_).UnionMember, (*in_).TableMember)
+		out_ := &someProtocolWithCtxSomeMethodResponse{Result: result}
+		return out_, true, err_
 	}
 	return nil, false, _bindings.ErrUnknownOrdinal
 }

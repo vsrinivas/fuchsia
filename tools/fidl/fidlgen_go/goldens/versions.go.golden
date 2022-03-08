@@ -125,6 +125,12 @@ type Union struct {
 	X             uint32 `fidl_ordinal:"1"`
 }
 
+var _mUnion = _bindings.CreateLazyMarshaler(Union{})
+
+func (msg *Union) Marshaler() _bindings.Marshaler {
+	return _mUnion
+}
+
 func (_m *Union) reset() {
 	switch _m.I_unionTag {
 	case 1:
@@ -169,6 +175,12 @@ type Table struct {
 	I_unknownData interface{}
 	X             uint32 `fidl_ordinal:"1"`
 	XPresent      bool
+}
+
+var _mTable = _bindings.CreateLazyMarshaler(Table{})
+
+func (msg *Table) Marshaler() _bindings.Marshaler {
+	return _mTable
 }
 
 func (u *Table) SetX(x uint32) {

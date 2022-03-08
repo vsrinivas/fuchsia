@@ -132,6 +132,12 @@ type ExampleUnion struct {
 	Variant           uint32 `fidl_ordinal:"1"`
 }
 
+var _mExampleUnion = _bindings.CreateLazyMarshaler(ExampleUnion{})
+
+func (msg *ExampleUnion) Marshaler() _bindings.Marshaler {
+	return _mExampleUnion
+}
+
 func (_m *ExampleUnion) reset() {
 	switch _m.I_exampleUnionTag {
 	case 1:
@@ -171,6 +177,12 @@ type ExampleXUnion struct {
 	I_exampleXUnionTag `fidl:"x" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
 	I_unknownData      interface{}
 	Variant            uint32 `fidl_ordinal:"1"`
+}
+
+var _mExampleXUnion = _bindings.CreateLazyMarshaler(ExampleXUnion{})
+
+func (msg *ExampleXUnion) Marshaler() _bindings.Marshaler {
+	return _mExampleXUnion
 }
 
 func (_m *ExampleXUnion) reset() {
@@ -219,6 +231,12 @@ type ExampleTable struct {
 	MemberPresent bool
 }
 
+var _mExampleTable = _bindings.CreateLazyMarshaler(ExampleTable{})
+
+func (msg *ExampleTable) Marshaler() _bindings.Marshaler {
+	return _mExampleTable
+}
+
 func (u *ExampleTable) SetMember(member uint32) {
 	u.Member = member
 	u.MemberPresent = true
@@ -258,9 +276,7 @@ const (
 type ExampleProtocolWithCtxInterface _bindings.ChannelProxy
 
 func (p *ExampleProtocolWithCtxInterface) Method(ctx_ _bindings.Context, arg testexampleusing.Empty) error {
-	req_ := &exampleProtocolWithCtxMethodRequest{
-		Arg: arg,
-	}
+	req_ := &exampleProtocolWithCtxMethodRequest{Arg: arg}
 	err_ := ((*_bindings.ChannelProxy)(p)).Send(ExampleProtocolMethodOrdinal, req_)
 	return err_
 }
@@ -285,15 +301,15 @@ type ExampleProtocolWithCtxStub struct {
 func (s_ *ExampleProtocolWithCtxStub) Dispatch(args_ _bindings.DispatchArgs) (_bindings.Message, bool, error) {
 	switch args_.Ordinal {
 	case ExampleProtocolMethodOrdinal:
-		in_ := exampleProtocolWithCtxMethodRequest{}
+		in_ := &exampleProtocolWithCtxMethodRequest{}
 		marshalerCtx, ok := _bindings.GetMarshalerContext(args_.Ctx)
 		if !ok {
 			return nil, false, _bindings.ErrMissingMarshalerContext
 		}
-		if err_ := _bindings.Unmarshal(marshalerCtx, args_.Bytes, args_.HandleInfos, &in_); err_ != nil {
+		if err_ := _bindings.Unmarshal(marshalerCtx, args_.Bytes, args_.HandleInfos, in_); err_ != nil {
 			return nil, false, err_
 		}
-		err_ := s_.Impl.Method(args_.Ctx, in_.Arg)
+		err_ := s_.Impl.Method(args_.Ctx, (*in_).Arg)
 		return nil, false, err_
 	}
 	return nil, false, _bindings.ErrUnknownOrdinal

@@ -131,6 +131,12 @@ type SimpleUnion struct {
 	B                float32 `fidl_ordinal:"2"`
 }
 
+var _mSimpleUnion = _bindings.CreateLazyMarshaler(SimpleUnion{})
+
+func (msg *SimpleUnion) Marshaler() _bindings.Marshaler {
+	return _mSimpleUnion
+}
+
 func (_m *SimpleUnion) reset() {
 	switch _m.I_simpleUnionTag {
 	case 1:
@@ -181,13 +187,10 @@ const (
 type SimpleProtocolWithCtxInterface _bindings.ChannelProxy
 
 func (p *SimpleProtocolWithCtxInterface) Add(ctx_ _bindings.Context, a int32, b int32) (int32, error) {
-	req_ := &simpleProtocolWithCtxAddRequest{
-		A: a,
-		B: b,
-	}
+	req_ := &simpleProtocolWithCtxAddRequest{A: a, B: b}
 	resp_ := &simpleProtocolWithCtxAddResponse{}
 	err_ := ((*_bindings.ChannelProxy)(p)).Call(SimpleProtocolAddOrdinal, req_, resp_)
-	return resp_.Sum, err_
+	return (*resp_).Sum, err_
 }
 
 type SimpleProtocolWithCtx interface {
@@ -210,18 +213,17 @@ type SimpleProtocolWithCtxStub struct {
 func (s_ *SimpleProtocolWithCtxStub) Dispatch(args_ _bindings.DispatchArgs) (_bindings.Message, bool, error) {
 	switch args_.Ordinal {
 	case SimpleProtocolAddOrdinal:
-		in_ := simpleProtocolWithCtxAddRequest{}
+		in_ := &simpleProtocolWithCtxAddRequest{}
 		marshalerCtx, ok := _bindings.GetMarshalerContext(args_.Ctx)
 		if !ok {
 			return nil, false, _bindings.ErrMissingMarshalerContext
 		}
-		if err_ := _bindings.Unmarshal(marshalerCtx, args_.Bytes, args_.HandleInfos, &in_); err_ != nil {
+		if err_ := _bindings.Unmarshal(marshalerCtx, args_.Bytes, args_.HandleInfos, in_); err_ != nil {
 			return nil, false, err_
 		}
-		sum, err_ := s_.Impl.Add(args_.Ctx, in_.A, in_.B)
-		out_ := simpleProtocolWithCtxAddResponse{}
-		out_.Sum = sum
-		return &out_, true, err_
+		sum, err_ := s_.Impl.Add(args_.Ctx, (*in_).A, (*in_).B)
+		out_ := &simpleProtocolWithCtxAddResponse{Sum: sum}
+		return out_, true, err_
 	}
 	return nil, false, _bindings.ErrUnknownOrdinal
 }

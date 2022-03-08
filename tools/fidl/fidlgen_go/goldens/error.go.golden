@@ -52,6 +52,12 @@ type ExampleFooResult struct {
 	Err                   uint32             `fidl_ordinal:"2"`
 }
 
+var _mExampleFooResult = _bindings.CreateLazyMarshaler(ExampleFooResult{})
+
+func (msg *ExampleFooResult) Marshaler() _bindings.Marshaler {
+	return _mExampleFooResult
+}
+
 func (_m *ExampleFooResult) reset() {
 	switch _m.I_exampleFooResultTag {
 	case 1:
@@ -102,12 +108,10 @@ const (
 type ExampleWithCtxInterface _bindings.ChannelProxy
 
 func (p *ExampleWithCtxInterface) Foo(ctx_ _bindings.Context, s string) (ExampleFooResult, error) {
-	req_ := &exampleWithCtxFooRequest{
-		S: s,
-	}
+	req_ := &exampleWithCtxFooRequest{S: s}
 	resp_ := &exampleWithCtxFooResponse{}
 	err_ := ((*_bindings.ChannelProxy)(p)).Call(ExampleFooOrdinal, req_, resp_)
-	return resp_.Result, err_
+	return (*resp_).Result, err_
 }
 
 type ExampleWithCtx interface {
@@ -130,18 +134,17 @@ type ExampleWithCtxStub struct {
 func (s_ *ExampleWithCtxStub) Dispatch(args_ _bindings.DispatchArgs) (_bindings.Message, bool, error) {
 	switch args_.Ordinal {
 	case ExampleFooOrdinal:
-		in_ := exampleWithCtxFooRequest{}
+		in_ := &exampleWithCtxFooRequest{}
 		marshalerCtx, ok := _bindings.GetMarshalerContext(args_.Ctx)
 		if !ok {
 			return nil, false, _bindings.ErrMissingMarshalerContext
 		}
-		if err_ := _bindings.Unmarshal(marshalerCtx, args_.Bytes, args_.HandleInfos, &in_); err_ != nil {
+		if err_ := _bindings.Unmarshal(marshalerCtx, args_.Bytes, args_.HandleInfos, in_); err_ != nil {
 			return nil, false, err_
 		}
-		result, err_ := s_.Impl.Foo(args_.Ctx, in_.S)
-		out_ := exampleWithCtxFooResponse{}
-		out_.Result = result
-		return &out_, true, err_
+		result, err_ := s_.Impl.Foo(args_.Ctx, (*in_).S)
+		out_ := &exampleWithCtxFooResponse{Result: result}
+		return out_, true, err_
 	}
 	return nil, false, _bindings.ErrUnknownOrdinal
 }

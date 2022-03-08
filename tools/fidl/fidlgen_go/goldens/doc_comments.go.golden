@@ -279,6 +279,12 @@ type StrictUnion struct {
 	Field int32 `fidl_ordinal:"1"`
 }
 
+var _mStrictUnion = _bindings.CreateLazyMarshaler(StrictUnion{})
+
+func (msg *StrictUnion) Marshaler() _bindings.Marshaler {
+	return _mStrictUnion
+}
+
 func (_m *StrictUnion) reset() {
 	switch _m.I_strictUnionTag {
 	case 1:
@@ -324,6 +330,12 @@ type FlexibleUnion struct {
 	//
 	// union member comment #3
 	Field int32 `fidl_ordinal:"1"`
+}
+
+var _mFlexibleUnion = _bindings.CreateLazyMarshaler(FlexibleUnion{})
+
+func (msg *FlexibleUnion) Marshaler() _bindings.Marshaler {
+	return _mFlexibleUnion
 }
 
 func (_m *FlexibleUnion) reset() {
@@ -376,6 +388,12 @@ type Table struct {
 	// table field comment #3
 	Field        int32 `fidl_ordinal:"1"`
 	FieldPresent bool
+}
+
+var _mTable = _bindings.CreateLazyMarshaler(Table{})
+
+func (msg *Table) Marshaler() _bindings.Marshaler {
+	return _mTable
 }
 
 func (u *Table) SetField(field int32) {

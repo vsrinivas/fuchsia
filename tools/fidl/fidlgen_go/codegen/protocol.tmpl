@@ -22,27 +22,19 @@ func (p *{{ $.ProxyName }}) {{ if .IsEvent -}}
 	{{- else -}}
 		{{ .Name }}
 	{{- end -}}
-	(ctx_ _bindings.Context
 	{{- if .Request -}}
-	{{- range .Request.Members -}}
-		, {{ .PrivateName }} {{ .Type }}
+	(ctx_ _bindings.Context, {{ .Request.NamesAndTypes }})
+	{{- else -}}
+	(ctx_ _bindings.Context)
 	{{- end -}}
-	{{- end -}}
-	)
 	{{- if .HasResponse -}}
-	{{- if .Response }} (
-	{{- range .Response.Members }}{{ .Type }}, {{ end -}}
-		error)
+	{{- if .Response }} ({{ .Response.Types }}, error)
 	{{- else }} error{{ end -}}
 	{{- else }} error{{ end }} {
 
 	{{- if .HasRequest }}
 	{{- if .Request }}
-	req_ := &{{ .Request.Name }}{
-		{{- range .Request.Members }}
-		{{ .Name }}: {{ .PrivateName }},
-		{{- end }}
-	}
+	req_ := &{{ .Request.Construct }}
 	{{- else }}
 	var req_ _bindings.Message
 	{{- end }}
@@ -69,7 +61,7 @@ func (p *{{ $.ProxyName }}) {{ if .IsEvent -}}
 	{{- end }}
 	{{- if .HasResponse }}
 	{{- if .Response }}
-	return {{ range .Response.Members }}resp_.{{ .Name }}, {{ end }}err_
+	return {{ .Response.Destructure "(*resp_)" }}, err_
 	{{- else }}
 	return err_
 	{{- end }}
@@ -89,18 +81,12 @@ type {{ .Name }} interface {
 	{{- end}}
 	{{- if .HasRequest }}
 	{{- if .Request }}
-	{{ .Name }}(ctx_ _bindings.Context
-	{{- range .Request.Members -}}
-		, {{ .PrivateName }} {{ .Type }}
-	{{- end -}}
-	)
+	{{ .Name }}(ctx_ _bindings.Context, {{ .Request.NamesAndTypes }})
 	{{- else }}
 	{{ .Name }}(ctx_ _bindings.Context)
 	{{- end }}
 	{{- if .HasResponse -}}
-	{{- if .Response }} (
-	{{- range .Response.Members }}{{ .Type }}, {{ end -}}
-		error)
+	{{- if .Response }} ({{ .Response.Types }}, error)
 	{{- else }} error{{ end -}}
 	{{- else }} error{{ end }}
 	{{- end }}
@@ -114,18 +100,12 @@ type {{.TransitionalBaseName}} struct {}
 {{ range .Methods }}
 {{- if and .IsTransitional .HasRequest }}
 {{- if .Request }}
-func (_ *{{$transitionalBaseName}}) {{ .Name }} (ctx_ _bindings.Context
-{{- range .Request.Members -}}
-	, {{ .PrivateName }} {{ .Type }}
-{{- end -}}
-)
+func (_ *{{$transitionalBaseName}}) {{ .Name }} (ctx_ _bindings.Context, {{ .Request.NamesAndTypes }})
 {{- else }}
 func (_ *{{$transitionalBaseName}}) {{ .Name }} (ctx_ _bindings.Context)
 {{- end }}
 {{- if .HasResponse -}}
-	{{- if .Response }} (
-		{{- range .Response.Members }}{{ .Type }}, {{ end -}}
-			error) {
+	{{- if .Response }} ({{- .Response.Types -}}, error) {
 	{{- else -}}
 		error {
 	{{ end -}}
@@ -169,35 +149,26 @@ func (s_ *{{ .StubName }}) Dispatch(args_ _bindings.DispatchArgs) (_bindings.Mes
 	case {{ .OrdinalName }}:
 		{{- if .HasRequest }}
 		{{- if .Request }}
-		in_ := {{ .Request.Name }}{}
+		in_ := &{{ .Request.Name }}{}
 		marshalerCtx, ok := _bindings.GetMarshalerContext(args_.Ctx)
 		if !ok {
 			return nil, false, _bindings.ErrMissingMarshalerContext
 		}
-		if err_ := _bindings.Unmarshal(marshalerCtx, args_.Bytes, args_.HandleInfos, &in_); err_ != nil {
+		if err_ := _bindings.Unmarshal(marshalerCtx, args_.Bytes, args_.HandleInfos, in_); err_ != nil {
 			return nil, false, err_
 		}
 		{{- end }}
 		{{- end }}
-		{{ if .Response }}
-		{{- range .Response.Members }}{{ .PrivateName }}, {{ end -}}
-		{{- end -}}
-		err_ := s_.Impl.{{ .Name }}(args_.Ctx
-		{{- if .HasRequest -}}
+		{{ if .Response }}{{- .Response.Names -}}, {{- end -}}
 		{{- if .Request -}}
-		{{- range $index, $m := .Request.Members -}}
-		, in_.{{ $m.Name }}
+		err_ := s_.Impl.{{ .Name }}(args_.Ctx, {{ .Request.Destructure "(*in_)" -}})
+		{{- else -}}
+		err_ := s_.Impl.{{ .Name }}(args_.Ctx)
 		{{- end -}}
-		{{- end -}}
-		{{- end -}}
-		)
 		{{- if .HasResponse }}
 		{{- if .Response }}
-		out_ := {{ .Response.Name }}{}
-		{{- range .Response.Members }}
-		out_.{{ .Name }} = {{ .PrivateName }}
-		{{- end }}
-		return &out_, true, err_
+		out_ := &{{ .Response.Construct }}
+		return out_, true, err_
 		{{- else }}
 		return nil, true, err_
 		{{- end }}
@@ -215,20 +186,13 @@ type {{ .EventProxyName }} _bindings.{{ .ProxyType }}
 {{- if .IsEvent }}
 func (p *{{ $.EventProxyName }}) {{ .Name }}(
 	{{- if .Response -}}
-	{{- range $index, $m := .Response.Members -}}
-		{{- if $index -}}, {{- end -}}
-		{{ $m.PrivateName }} {{ $m.Type }}
-	{{- end -}}
+	{{- .Response.NamesAndTypes -}}
 	{{- end -}}
 	) error {
 
 	{{- if .HasResponse }}
 	{{- if .Response }}
-	event_ := &{{ .Response.Name }}{
-		{{- range .Response.Members }}
-		{{ .Name }}: {{ .PrivateName }},
-		{{- end }}
-	}
+	event_ := &{{ .Response.Construct }}
 	{{- else }}
 	var event_ _bindings.Message
 	{{- end }}

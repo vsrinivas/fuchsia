@@ -312,7 +312,6 @@ fidl_testdata_info = [
     denylist = [
       "fidldoc",
       "fidlgen_dart",
-      "fidlgen_go",
       "fidlgen_rust",
       "fidlgen_syzkaller",
     ]

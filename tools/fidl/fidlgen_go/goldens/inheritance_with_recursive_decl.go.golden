@@ -46,9 +46,7 @@ const (
 type ParentWithCtxInterface _bindings.ChannelProxy
 
 func (p *ParentWithCtxInterface) First(ctx_ _bindings.Context, request ParentWithCtxInterfaceRequest) error {
-	req_ := &parentWithCtxFirstRequest{
-		Request: request,
-	}
+	req_ := &parentWithCtxFirstRequest{Request: request}
 	err_ := ((*_bindings.ChannelProxy)(p)).Send(ParentFirstOrdinal, req_)
 	return err_
 }
@@ -73,15 +71,15 @@ type ParentWithCtxStub struct {
 func (s_ *ParentWithCtxStub) Dispatch(args_ _bindings.DispatchArgs) (_bindings.Message, bool, error) {
 	switch args_.Ordinal {
 	case ParentFirstOrdinal:
-		in_ := parentWithCtxFirstRequest{}
+		in_ := &parentWithCtxFirstRequest{}
 		marshalerCtx, ok := _bindings.GetMarshalerContext(args_.Ctx)
 		if !ok {
 			return nil, false, _bindings.ErrMissingMarshalerContext
 		}
-		if err_ := _bindings.Unmarshal(marshalerCtx, args_.Bytes, args_.HandleInfos, &in_); err_ != nil {
+		if err_ := _bindings.Unmarshal(marshalerCtx, args_.Bytes, args_.HandleInfos, in_); err_ != nil {
 			return nil, false, err_
 		}
-		err_ := s_.Impl.First(args_.Ctx, in_.Request)
+		err_ := s_.Impl.First(args_.Ctx, (*in_).Request)
 		return nil, false, err_
 	}
 	return nil, false, _bindings.ErrUnknownOrdinal
@@ -97,17 +95,13 @@ const (
 type ChildWithCtxInterface _bindings.ChannelProxy
 
 func (p *ChildWithCtxInterface) First(ctx_ _bindings.Context, request ParentWithCtxInterfaceRequest) error {
-	req_ := &childWithCtxFirstRequest{
-		Request: request,
-	}
+	req_ := &childWithCtxFirstRequest{Request: request}
 	err_ := ((*_bindings.ChannelProxy)(p)).Send(ChildFirstOrdinal, req_)
 	return err_
 }
 
 func (p *ChildWithCtxInterface) Second(ctx_ _bindings.Context, request ParentWithCtxInterfaceRequest) error {
-	req_ := &childWithCtxSecondRequest{
-		Request: request,
-	}
+	req_ := &childWithCtxSecondRequest{Request: request}
 	err_ := ((*_bindings.ChannelProxy)(p)).Send(ChildSecondOrdinal, req_)
 	return err_
 }
@@ -133,26 +127,26 @@ type ChildWithCtxStub struct {
 func (s_ *ChildWithCtxStub) Dispatch(args_ _bindings.DispatchArgs) (_bindings.Message, bool, error) {
 	switch args_.Ordinal {
 	case ChildFirstOrdinal:
-		in_ := childWithCtxFirstRequest{}
+		in_ := &childWithCtxFirstRequest{}
 		marshalerCtx, ok := _bindings.GetMarshalerContext(args_.Ctx)
 		if !ok {
 			return nil, false, _bindings.ErrMissingMarshalerContext
 		}
-		if err_ := _bindings.Unmarshal(marshalerCtx, args_.Bytes, args_.HandleInfos, &in_); err_ != nil {
+		if err_ := _bindings.Unmarshal(marshalerCtx, args_.Bytes, args_.HandleInfos, in_); err_ != nil {
 			return nil, false, err_
 		}
-		err_ := s_.Impl.First(args_.Ctx, in_.Request)
+		err_ := s_.Impl.First(args_.Ctx, (*in_).Request)
 		return nil, false, err_
 	case ChildSecondOrdinal:
-		in_ := childWithCtxSecondRequest{}
+		in_ := &childWithCtxSecondRequest{}
 		marshalerCtx, ok := _bindings.GetMarshalerContext(args_.Ctx)
 		if !ok {
 			return nil, false, _bindings.ErrMissingMarshalerContext
 		}
-		if err_ := _bindings.Unmarshal(marshalerCtx, args_.Bytes, args_.HandleInfos, &in_); err_ != nil {
+		if err_ := _bindings.Unmarshal(marshalerCtx, args_.Bytes, args_.HandleInfos, in_); err_ != nil {
 			return nil, false, err_
 		}
-		err_ := s_.Impl.Second(args_.Ctx, in_.Request)
+		err_ := s_.Impl.Second(args_.Ctx, (*in_).Request)
 		return nil, false, err_
 	}
 	return nil, false, _bindings.ErrUnknownOrdinal

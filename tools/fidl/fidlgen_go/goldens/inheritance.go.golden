@@ -57,12 +57,10 @@ const (
 type SuperWithCtxInterface _bindings.ChannelProxy
 
 func (p *SuperWithCtxInterface) Foo(ctx_ _bindings.Context, s string) (int64, error) {
-	req_ := &superWithCtxFooRequest{
-		S: s,
-	}
+	req_ := &superWithCtxFooRequest{S: s}
 	resp_ := &superWithCtxFooResponse{}
 	err_ := ((*_bindings.ChannelProxy)(p)).Call(SuperFooOrdinal, req_, resp_)
-	return resp_.Y, err_
+	return (*resp_).Y, err_
 }
 
 type SuperWithCtx interface {
@@ -85,18 +83,17 @@ type SuperWithCtxStub struct {
 func (s_ *SuperWithCtxStub) Dispatch(args_ _bindings.DispatchArgs) (_bindings.Message, bool, error) {
 	switch args_.Ordinal {
 	case SuperFooOrdinal:
-		in_ := superWithCtxFooRequest{}
+		in_ := &superWithCtxFooRequest{}
 		marshalerCtx, ok := _bindings.GetMarshalerContext(args_.Ctx)
 		if !ok {
 			return nil, false, _bindings.ErrMissingMarshalerContext
 		}
-		if err_ := _bindings.Unmarshal(marshalerCtx, args_.Bytes, args_.HandleInfos, &in_); err_ != nil {
+		if err_ := _bindings.Unmarshal(marshalerCtx, args_.Bytes, args_.HandleInfos, in_); err_ != nil {
 			return nil, false, err_
 		}
-		y, err_ := s_.Impl.Foo(args_.Ctx, in_.S)
-		out_ := superWithCtxFooResponse{}
-		out_.Y = y
-		return &out_, true, err_
+		y, err_ := s_.Impl.Foo(args_.Ctx, (*in_).S)
+		out_ := &superWithCtxFooResponse{Y: y}
+		return out_, true, err_
 	}
 	return nil, false, _bindings.ErrUnknownOrdinal
 }
@@ -110,12 +107,10 @@ const (
 type SubWithCtxInterface _bindings.ChannelProxy
 
 func (p *SubWithCtxInterface) Foo(ctx_ _bindings.Context, s string) (int64, error) {
-	req_ := &subWithCtxFooRequest{
-		S: s,
-	}
+	req_ := &subWithCtxFooRequest{S: s}
 	resp_ := &subWithCtxFooResponse{}
 	err_ := ((*_bindings.ChannelProxy)(p)).Call(SubFooOrdinal, req_, resp_)
-	return resp_.Y, err_
+	return (*resp_).Y, err_
 }
 
 type SubWithCtx interface {
@@ -138,18 +133,17 @@ type SubWithCtxStub struct {
 func (s_ *SubWithCtxStub) Dispatch(args_ _bindings.DispatchArgs) (_bindings.Message, bool, error) {
 	switch args_.Ordinal {
 	case SubFooOrdinal:
-		in_ := subWithCtxFooRequest{}
+		in_ := &subWithCtxFooRequest{}
 		marshalerCtx, ok := _bindings.GetMarshalerContext(args_.Ctx)
 		if !ok {
 			return nil, false, _bindings.ErrMissingMarshalerContext
 		}
-		if err_ := _bindings.Unmarshal(marshalerCtx, args_.Bytes, args_.HandleInfos, &in_); err_ != nil {
+		if err_ := _bindings.Unmarshal(marshalerCtx, args_.Bytes, args_.HandleInfos, in_); err_ != nil {
 			return nil, false, err_
 		}
-		y, err_ := s_.Impl.Foo(args_.Ctx, in_.S)
-		out_ := subWithCtxFooResponse{}
-		out_.Y = y
-		return &out_, true, err_
+		y, err_ := s_.Impl.Foo(args_.Ctx, (*in_).S)
+		out_ := &subWithCtxFooResponse{Y: y}
+		return out_, true, err_
 	}
 	return nil, false, _bindings.ErrUnknownOrdinal
 }

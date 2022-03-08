@@ -76,6 +76,12 @@ type UnionWithHandle struct {
 	H                    _zx.VMO `fidl_handle_subtype:"3" fidl_handle_rights:"2147483648" fidl_bounds:"0" fidl_ordinal:"1"`
 }
 
+var _mUnionWithHandle = _bindings.CreateLazyMarshaler(UnionWithHandle{})
+
+func (msg *UnionWithHandle) Marshaler() _bindings.Marshaler {
+	return _mUnionWithHandle
+}
+
 func (_m *UnionWithHandle) reset() {
 	switch _m.I_unionWithHandleTag {
 	case 1:
@@ -120,6 +126,12 @@ type TableWithHandle struct {
 	I_unknownData interface{}
 	H             _zx.VMO `fidl_handle_subtype:"3" fidl_handle_rights:"2147483648" fidl_bounds:"0" fidl_ordinal:"1"`
 	HPresent      bool
+}
+
+var _mTableWithHandle = _bindings.CreateLazyMarshaler(TableWithHandle{})
+
+func (msg *TableWithHandle) Marshaler() _bindings.Marshaler {
+	return _mTableWithHandle
 }
 
 func (u *TableWithHandle) SetH(h _zx.VMO) {

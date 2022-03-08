@@ -81,6 +81,12 @@ type UnionSize8Alignment4 struct {
 	Variant                   uint32 `fidl_ordinal:"1"`
 }
 
+var _mUnionSize8Alignment4 = _bindings.CreateLazyMarshaler(UnionSize8Alignment4{})
+
+func (msg *UnionSize8Alignment4) Marshaler() _bindings.Marshaler {
+	return _mUnionSize8Alignment4
+}
+
 func (_m *UnionSize8Alignment4) reset() {
 	switch _m.I_unionSize8Alignment4Tag {
 	case 1:
@@ -118,6 +124,12 @@ const (
 type UnionSize12Alignment4 struct {
 	I_unionSize12Alignment4Tag `fidl:"x!" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
 	Variant                    [6]uint8 `fidl_ordinal:"1"`
+}
+
+var _mUnionSize12Alignment4 = _bindings.CreateLazyMarshaler(UnionSize12Alignment4{})
+
+func (msg *UnionSize12Alignment4) Marshaler() _bindings.Marshaler {
+	return _mUnionSize12Alignment4
 }
 
 func (_m *UnionSize12Alignment4) reset() {
@@ -159,6 +171,12 @@ type UnionSize24Alignment8 struct {
 	Variant                    StructSize16Alignment8 `fidl_ordinal:"1"`
 }
 
+var _mUnionSize24Alignment8 = _bindings.CreateLazyMarshaler(UnionSize24Alignment8{})
+
+func (msg *UnionSize24Alignment8) Marshaler() _bindings.Marshaler {
+	return _mUnionSize24Alignment8
+}
+
 func (_m *UnionSize24Alignment8) reset() {
 	switch _m.I_unionSize24Alignment8Tag {
 	case 1:
@@ -196,6 +214,12 @@ const (
 type UnionSize36Alignment4 struct {
 	I_unionSize36Alignment4Tag `fidl:"x!" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
 	Variant                    [32]uint8 `fidl_ordinal:"1"`
+}
+
+var _mUnionSize36Alignment4 = _bindings.CreateLazyMarshaler(UnionSize36Alignment4{})
+
+func (msg *UnionSize36Alignment4) Marshaler() _bindings.Marshaler {
+	return _mUnionSize36Alignment4
 }
 
 func (_m *UnionSize36Alignment4) reset() {

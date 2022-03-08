@@ -108,6 +108,12 @@ type PizzaOrPasta struct {
 	Pasta             Pasta `fidl_ordinal:"2"`
 }
 
+var _mPizzaOrPasta = _bindings.CreateLazyMarshaler(PizzaOrPasta{})
+
+func (msg *PizzaOrPasta) Marshaler() _bindings.Marshaler {
+	return _mPizzaOrPasta
+}
+
 func (_m *PizzaOrPasta) reset() {
 	switch _m.I_pizzaOrPastaTag {
 	case 1:
@@ -162,6 +168,12 @@ type ExplicitPizzaOrPasta struct {
 	I_explicitPizzaOrPastaTag `fidl:"x!" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
 	Pizza                     Pizza `fidl_ordinal:"1"`
 	Pasta                     Pasta `fidl_ordinal:"4"`
+}
+
+var _mExplicitPizzaOrPasta = _bindings.CreateLazyMarshaler(ExplicitPizzaOrPasta{})
+
+func (msg *ExplicitPizzaOrPasta) Marshaler() _bindings.Marshaler {
+	return _mExplicitPizzaOrPasta
 }
 
 func (_m *ExplicitPizzaOrPasta) reset() {
@@ -220,6 +232,12 @@ type FlexiblePizzaOrPasta struct {
 	I_unknownData             interface{}
 	Pizza                     Pizza `fidl_ordinal:"1"`
 	Pasta                     Pasta `fidl_ordinal:"2"`
+}
+
+var _mFlexiblePizzaOrPasta = _bindings.CreateLazyMarshaler(FlexiblePizzaOrPasta{})
+
+func (msg *FlexiblePizzaOrPasta) Marshaler() _bindings.Marshaler {
+	return _mFlexiblePizzaOrPasta
 }
 
 func (_m *FlexiblePizzaOrPasta) reset() {
@@ -291,6 +309,12 @@ type StrictPizzaOrPasta struct {
 	Pasta                   Pasta `fidl_ordinal:"2"`
 }
 
+var _mStrictPizzaOrPasta = _bindings.CreateLazyMarshaler(StrictPizzaOrPasta{})
+
+func (msg *StrictPizzaOrPasta) Marshaler() _bindings.Marshaler {
+	return _mStrictPizzaOrPasta
+}
+
 func (_m *StrictPizzaOrPasta) reset() {
 	switch _m.I_strictPizzaOrPastaTag {
 	case 1:
@@ -347,6 +371,12 @@ type Union struct {
 	Primitive                        int32    `fidl_ordinal:"1"`
 	StringNeedsConstructor           string   `fidl_bounds:"" fidl_ordinal:"2"`
 	VectorStringAlsoNeedsConstructor []string `fidl_bounds:"" fidl_ordinal:"3"`
+}
+
+var _mUnion = _bindings.CreateLazyMarshaler(Union{})
+
+func (msg *Union) Marshaler() _bindings.Marshaler {
+	return _mUnion
 }
 
 func (_m *Union) reset() {
@@ -422,6 +452,12 @@ type FlexibleUnion struct {
 	Primitive                        int32    `fidl_ordinal:"1"`
 	StringNeedsConstructor           string   `fidl_bounds:"" fidl_ordinal:"2"`
 	VectorStringAlsoNeedsConstructor []string `fidl_bounds:"" fidl_ordinal:"3"`
+}
+
+var _mFlexibleUnion = _bindings.CreateLazyMarshaler(FlexibleUnion{})
+
+func (msg *FlexibleUnion) Marshaler() _bindings.Marshaler {
+	return _mFlexibleUnion
 }
 
 func (_m *FlexibleUnion) reset() {
@@ -512,6 +548,12 @@ type StrictUnion struct {
 	VectorStringAlsoNeedsConstructor []string `fidl_bounds:"" fidl_ordinal:"3"`
 }
 
+var _mStrictUnion = _bindings.CreateLazyMarshaler(StrictUnion{})
+
+func (msg *StrictUnion) Marshaler() _bindings.Marshaler {
+	return _mStrictUnion
+}
+
 func (_m *StrictUnion) reset() {
 	switch _m.I_strictUnionTag {
 	case 1:
@@ -581,6 +623,12 @@ type FieldCollision struct {
 	FieldCollisionTag   int32 `fidl_ordinal:"1"`
 }
 
+var _mFieldCollision = _bindings.CreateLazyMarshaler(FieldCollision{})
+
+func (msg *FieldCollision) Marshaler() _bindings.Marshaler {
+	return _mFieldCollision
+}
+
 func (_m *FieldCollision) reset() {
 	switch _m.I_fieldCollisionTag {
 	case 1:
@@ -620,6 +668,12 @@ type ExplicitUnion struct {
 	I_explicitUnionTag     `fidl:"x!" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
 	Primitive              int32  `fidl_ordinal:"1"`
 	StringNeedsConstructor string `fidl_bounds:"" fidl_ordinal:"3"`
+}
+
+var _mExplicitUnion = _bindings.CreateLazyMarshaler(ExplicitUnion{})
+
+func (msg *ExplicitUnion) Marshaler() _bindings.Marshaler {
+	return _mExplicitUnion
 }
 
 func (_m *ExplicitUnion) reset() {
@@ -678,6 +732,12 @@ type ReverseOrdinalUnion struct {
 	First                    uint32 `fidl_ordinal:"1"`
 }
 
+var _mReverseOrdinalUnion = _bindings.CreateLazyMarshaler(ReverseOrdinalUnion{})
+
+func (msg *ReverseOrdinalUnion) Marshaler() _bindings.Marshaler {
+	return _mReverseOrdinalUnion
+}
+
 func (_m *ReverseOrdinalUnion) reset() {
 	switch _m.I_reverseOrdinalUnionTag {
 	case 2:
@@ -734,6 +794,12 @@ type FlexibleFoo struct {
 	I_unknownData    interface{}
 	S                string `fidl_bounds:"" fidl_ordinal:"1"`
 	I                int32  `fidl_ordinal:"2"`
+}
+
+var _mFlexibleFoo = _bindings.CreateLazyMarshaler(FlexibleFoo{})
+
+func (msg *FlexibleFoo) Marshaler() _bindings.Marshaler {
+	return _mFlexibleFoo
 }
 
 func (_m *FlexibleFoo) reset() {
@@ -805,6 +871,12 @@ type StrictFoo struct {
 	I              int32  `fidl_ordinal:"2"`
 }
 
+var _mStrictFoo = _bindings.CreateLazyMarshaler(StrictFoo{})
+
+func (msg *StrictFoo) Marshaler() _bindings.Marshaler {
+	return _mStrictFoo
+}
+
 func (_m *StrictFoo) reset() {
 	switch _m.I_strictFooTag {
 	case 1:
@@ -861,6 +933,12 @@ type ExplicitFoo struct {
 	I_unknownData    interface{}
 	S                string `fidl_bounds:"" fidl_ordinal:"2"`
 	I                int32  `fidl_ordinal:"1"`
+}
+
+var _mExplicitFoo = _bindings.CreateLazyMarshaler(ExplicitFoo{})
+
+func (msg *ExplicitFoo) Marshaler() _bindings.Marshaler {
+	return _mExplicitFoo
 }
 
 func (_m *ExplicitFoo) reset() {
@@ -932,6 +1010,12 @@ type ExplicitStrictFoo struct {
 	I                      int32  `fidl_ordinal:"2"`
 }
 
+var _mExplicitStrictFoo = _bindings.CreateLazyMarshaler(ExplicitStrictFoo{})
+
+func (msg *ExplicitStrictFoo) Marshaler() _bindings.Marshaler {
+	return _mExplicitStrictFoo
+}
+
 func (_m *ExplicitStrictFoo) reset() {
 	switch _m.I_explicitStrictFooTag {
 	case 3:
@@ -988,6 +1072,12 @@ type OlderSimpleUnion struct {
 	I_unknownData         interface{}
 	I                     int64   `fidl_ordinal:"1"`
 	F                     float32 `fidl_ordinal:"2"`
+}
+
+var _mOlderSimpleUnion = _bindings.CreateLazyMarshaler(OlderSimpleUnion{})
+
+func (msg *OlderSimpleUnion) Marshaler() _bindings.Marshaler {
+	return _mOlderSimpleUnion
 }
 
 func (_m *OlderSimpleUnion) reset() {
@@ -1061,6 +1151,12 @@ type NewerSimpleUnion struct {
 	I                     int64    `fidl_ordinal:"1"`
 	S                     string   `fidl_bounds:"" fidl_ordinal:"2"`
 	V                     []string `fidl_bounds:"" fidl_ordinal:"3"`
+}
+
+var _mNewerSimpleUnion = _bindings.CreateLazyMarshaler(NewerSimpleUnion{})
+
+func (msg *NewerSimpleUnion) Marshaler() _bindings.Marshaler {
+	return _mNewerSimpleUnion
 }
 
 func (_m *NewerSimpleUnion) reset() {
@@ -1151,6 +1247,12 @@ type StrictSimpleXUnion struct {
 	S                       string  `fidl_bounds:"" fidl_ordinal:"3"`
 }
 
+var _mStrictSimpleXUnion = _bindings.CreateLazyMarshaler(StrictSimpleXUnion{})
+
+func (msg *StrictSimpleXUnion) Marshaler() _bindings.Marshaler {
+	return _mStrictSimpleXUnion
+}
+
 func (_m *StrictSimpleXUnion) reset() {
 	switch _m.I_strictSimpleXUnionTag {
 	case 1:
@@ -1222,6 +1324,12 @@ type XUnionContainingEmptyStruct struct {
 	Empty                            Empty `fidl_ordinal:"1"`
 }
 
+var _mXUnionContainingEmptyStruct = _bindings.CreateLazyMarshaler(XUnionContainingEmptyStruct{})
+
+func (msg *XUnionContainingEmptyStruct) Marshaler() _bindings.Marshaler {
+	return _mXUnionContainingEmptyStruct
+}
+
 func (_m *XUnionContainingEmptyStruct) reset() {
 	switch _m.I_xUnionContainingEmptyStructTag {
 	case 1:
@@ -1272,6 +1380,12 @@ type StrictBoundedXUnion struct {
 	V                        []uint8 `fidl_bounds:"10" fidl_ordinal:"1"`
 }
 
+var _mStrictBoundedXUnion = _bindings.CreateLazyMarshaler(StrictBoundedXUnion{})
+
+func (msg *StrictBoundedXUnion) Marshaler() _bindings.Marshaler {
+	return _mStrictBoundedXUnion
+}
+
 func (_m *StrictBoundedXUnion) reset() {
 	switch _m.I_strictBoundedXUnionTag {
 	case 1:
@@ -1313,6 +1427,12 @@ type ExplicitXUnion struct {
 	I_unknownData       interface{}
 	I                   int64   `fidl_ordinal:"1"`
 	F                   float32 `fidl_ordinal:"4"`
+}
+
+var _mExplicitXUnion = _bindings.CreateLazyMarshaler(ExplicitXUnion{})
+
+func (msg *ExplicitXUnion) Marshaler() _bindings.Marshaler {
+	return _mExplicitXUnion
 }
 
 func (_m *ExplicitXUnion) reset() {
@@ -1384,6 +1504,12 @@ type UnionWithAttributes struct {
 	X                        int64 `fidl_ordinal:"1"`
 }
 
+var _mUnionWithAttributes = _bindings.CreateLazyMarshaler(UnionWithAttributes{})
+
+func (msg *UnionWithAttributes) Marshaler() _bindings.Marshaler {
+	return _mUnionWithAttributes
+}
+
 func (_m *UnionWithAttributes) reset() {
 	switch _m.I_unionWithAttributesTag {
 	case 1:
@@ -1434,14 +1560,14 @@ func (p *TestProtocolWithCtxInterface) StrictXUnionHenceResponseMayBeStackAlloca
 	var req_ _bindings.Message
 	resp_ := &testProtocolWithCtxStrictXUnionHenceResponseMayBeStackAllocatedResponse{}
 	err_ := ((*_bindings.ChannelProxy)(p)).Call(TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedOrdinal, req_, resp_)
-	return resp_.Xu, err_
+	return (*resp_).Xu, err_
 }
 
 func (p *TestProtocolWithCtxInterface) FlexibleXUnionHenceResponseMustBeHeapAllocated(ctx_ _bindings.Context) (OlderSimpleUnion, error) {
 	var req_ _bindings.Message
 	resp_ := &testProtocolWithCtxFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse{}
 	err_ := ((*_bindings.ChannelProxy)(p)).Call(TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedOrdinal, req_, resp_)
-	return resp_.Xu, err_
+	return (*resp_).Xu, err_
 }
 
 type TestProtocolWithCtx interface {
@@ -1466,14 +1592,12 @@ func (s_ *TestProtocolWithCtxStub) Dispatch(args_ _bindings.DispatchArgs) (_bind
 	switch args_.Ordinal {
 	case TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedOrdinal:
 		xu, err_ := s_.Impl.StrictXUnionHenceResponseMayBeStackAllocated(args_.Ctx)
-		out_ := testProtocolWithCtxStrictXUnionHenceResponseMayBeStackAllocatedResponse{}
-		out_.Xu = xu
-		return &out_, true, err_
+		out_ := &testProtocolWithCtxStrictXUnionHenceResponseMayBeStackAllocatedResponse{Xu: xu}
+		return out_, true, err_
 	case TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedOrdinal:
 		xu, err_ := s_.Impl.FlexibleXUnionHenceResponseMustBeHeapAllocated(args_.Ctx)
-		out_ := testProtocolWithCtxFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse{}
-		out_.Xu = xu
-		return &out_, true, err_
+		out_ := &testProtocolWithCtxFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse{Xu: xu}
+		return out_, true, err_
 	}
 	return nil, false, _bindings.ErrUnknownOrdinal
 }

@@ -9,6 +9,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"sync"
 	"syscall/zx"
@@ -411,7 +412,7 @@ func (echo *echoImpl) EchoNamedStructNoRetVal(_ fidl.Context, value imported.Sim
 			for {
 				value, err := echoWithCtxInterface.ExpectOnEchoNamedEvent(context.Background())
 				if err != nil {
-					log.Fatalf("ExpectOnEchoNamedEvent failed: %s while communicating with %s", err, forwardURL)
+					log.Fatalf("ExpectOnEchoStructNamedEvent failed: %s while communicating with %s", err, forwardURL)
 					return
 				}
 				mu.Lock()
@@ -431,6 +432,265 @@ func (echo *echoImpl) EchoNamedStructNoRetVal(_ fidl.Context, value imported.Sim
 		mu.Unlock()
 	}
 	return nil
+}
+
+func (echo *echoImpl) EchoTablePayload(_ fidl.Context, payload compatibility.RequestTable) (compatibility.ResponseTable, error) {
+	if !payload.HasForwardToServer() {
+		resp := compatibility.ResponseTable{}
+		resp.SetValue(payload.GetValue())
+		return resp, nil
+	}
+	echoWithCtxInterface, err := echo.getServer(payload.GetForwardToServer())
+	if err != nil {
+		log.Printf("Connecting to %s failed: %s", payload.GetForwardToServer(), err)
+		return compatibility.ResponseTable{}, err
+	}
+
+	payload.ClearForwardToServer()
+	response, err := echoWithCtxInterface.EchoTablePayload(context.Background(), payload)
+	if err != nil {
+		log.Printf("EchoTablePayload failed: %s", err)
+		return compatibility.ResponseTable{}, err
+	}
+	return response, nil
+}
+
+func (echo *echoImpl) EchoTablePayloadWithError(_ fidl.Context, payload compatibility.EchoEchoTablePayloadWithErrorRequest) (compatibility.EchoEchoTablePayloadWithErrorResult, error) {
+	if !payload.HasForwardToServer() {
+		if payload.GetResultVariant() == compatibility.RespondWithErr {
+			return compatibility.EchoEchoTablePayloadWithErrorResultWithErr(payload.GetResultErr()), nil
+		} else {
+			resp := compatibility.ResponseTable{}
+			resp.SetValue(payload.GetValue())
+			return compatibility.EchoEchoTablePayloadWithErrorResultWithResponse(resp), nil
+		}
+	}
+	echoWithCtxInterface, err := echo.getServer(payload.GetForwardToServer())
+	if err != nil {
+		log.Printf("Connecting to %s failed: %s", payload.GetForwardToServer(), err)
+		return compatibility.EchoEchoTablePayloadWithErrorResult{}, err
+	}
+
+	payload.ClearForwardToServer()
+	response, err := echoWithCtxInterface.EchoTablePayloadWithError(context.Background(), payload)
+	if err != nil {
+		log.Printf("EchoTablePayloadWithError failed: %s", err)
+		return compatibility.EchoEchoTablePayloadWithErrorResult{}, err
+	}
+	return response, nil
+}
+
+func (echo *echoImpl) EchoTablePayloadNoRetVal(_ fidl.Context, payload compatibility.RequestTable) error {
+	if payload.HasForwardToServer() {
+		forwardURL := payload.GetForwardToServer()
+		payload.ClearForwardToServer()
+		echoWithCtxInterface, err := echo.getServer(forwardURL)
+		if err != nil {
+			log.Printf("Connecting to %s failed: %s", forwardURL, err)
+			return err
+		}
+		go func() {
+			for {
+				value, err := echoWithCtxInterface.ExpectOnEchoTablePayloadEvent(context.Background())
+				if err != nil {
+					log.Fatalf("ExpectOnEchoTablePayloadEvent failed: %s while communicating with %s", err, forwardURL)
+					return
+				}
+				mu.Lock()
+				for pxy := range mu.proxies {
+					_ = pxy.OnEchoTablePayloadEvent(value)
+				}
+				mu.Unlock()
+				break
+			}
+		}()
+		echoWithCtxInterface.EchoTablePayloadNoRetVal(context.Background(), payload)
+	} else {
+		resp := compatibility.ResponseTable{}
+		resp.SetValue(payload.GetValue())
+		mu.Lock()
+		for pxy := range mu.proxies {
+			_ = pxy.OnEchoTablePayloadEvent(resp)
+		}
+		mu.Unlock()
+	}
+	return nil
+}
+
+func (echo *echoImpl) EchoTableRequestComposed(_ fidl.Context, payload imported.ComposedEchoTableRequestComposedRequest) (imported.SimpleStruct, error) {
+	if !payload.HasForwardToServer() {
+		return imported.SimpleStruct{
+			F1: true,
+			F2: payload.GetValue(),
+		}, nil
+	}
+	echoWithCtxInterface, err := echo.getServer(payload.GetForwardToServer())
+	if err != nil {
+		log.Printf("Connecting to %s failed: %s", payload.GetForwardToServer(), err)
+		return imported.SimpleStruct{}, err
+	}
+	payload.ClearForwardToServer()
+	response, err := echoWithCtxInterface.EchoTableRequestComposed(context.Background(), payload)
+	if err != nil {
+		log.Printf("EchoTableRequestComposed failed: %s", err)
+		return imported.SimpleStruct{}, err
+	}
+	return response, nil
+}
+
+func (echo *echoImpl) EchoUnionPayload(_ fidl.Context, payload compatibility.RequestUnion) (compatibility.ResponseUnion, error) {
+	var forwardURL string
+	if payload.Which() == compatibility.RequestUnionUnsigned {
+		if payload.Unsigned.ForwardToServer == "" {
+			return compatibility.ResponseUnionWithUnsigned(payload.Unsigned.Value), nil
+		}
+		forwardURL = payload.Unsigned.ForwardToServer
+		payload.Unsigned.ForwardToServer = ""
+	} else if payload.Which() == compatibility.RequestUnionSigned {
+		if payload.Signed.ForwardToServer == "" {
+			return compatibility.ResponseUnionWithSigned(payload.Signed.Value), nil
+		}
+		forwardURL = payload.Signed.ForwardToServer
+		payload.Signed.ForwardToServer = ""
+	} else {
+		log.Printf("Unknown ordinal for union: %d", payload.Which())
+		return compatibility.ResponseUnion{}, fmt.Errorf("unknown union ordinal")
+	}
+
+	echoWithCtxInterface, err := echo.getServer(forwardURL)
+	if err != nil {
+		log.Printf("Connecting to %s failed: %s", forwardURL, err)
+		return compatibility.ResponseUnion{}, err
+	}
+
+	response, err := echoWithCtxInterface.EchoUnionPayload(context.Background(), payload)
+	if err != nil {
+		log.Printf("EchoUnionPayload failed: %s", err)
+		return compatibility.ResponseUnion{}, err
+	}
+	return response, nil
+}
+
+func (echo *echoImpl) EchoUnionPayloadWithError(_ fidl.Context, payload compatibility.EchoEchoUnionPayloadWithErrorRequest) (compatibility.EchoEchoUnionPayloadWithErrorResult, error) {
+	var forwardURL string
+	if payload.Which() == compatibility.EchoEchoUnionPayloadWithErrorRequestUnsigned {
+		forwardURL = payload.Unsigned.ForwardToServer
+		payload.Unsigned.ForwardToServer = ""
+		if forwardURL == "" {
+			if payload.Unsigned.ResultVariant == compatibility.RespondWithErr {
+				return compatibility.EchoEchoUnionPayloadWithErrorResultWithErr(payload.Unsigned.ResultErr), nil
+			}
+			return compatibility.EchoEchoUnionPayloadWithErrorResultWithResponse(compatibility.ResponseUnionWithUnsigned(payload.Unsigned.Value)), nil
+		}
+	} else if payload.Which() == compatibility.EchoEchoUnionPayloadWithErrorRequestSigned {
+		forwardURL = payload.Signed.ForwardToServer
+		payload.Signed.ForwardToServer = ""
+		if forwardURL == "" {
+			if payload.Signed.ResultVariant == compatibility.RespondWithErr {
+				return compatibility.EchoEchoUnionPayloadWithErrorResultWithErr(payload.Signed.ResultErr), nil
+			}
+			return compatibility.EchoEchoUnionPayloadWithErrorResultWithResponse(compatibility.ResponseUnionWithSigned(payload.Signed.Value)), nil
+		}
+	} else {
+		log.Printf("Unknown ordinal for union: %d", payload.Which())
+		return compatibility.EchoEchoUnionPayloadWithErrorResult{}, fmt.Errorf("unknown union ordinal")
+	}
+
+	echoWithCtxInterface, err := echo.getServer(forwardURL)
+	if err != nil {
+		log.Printf("Connecting to %s failed: %s", forwardURL, err)
+		return compatibility.EchoEchoUnionPayloadWithErrorResult{}, err
+	}
+
+	response, err := echoWithCtxInterface.EchoUnionPayloadWithError(context.Background(), payload)
+	if err != nil {
+		log.Printf("EchoUnionPayloadWithError failed: %s", err)
+		return compatibility.EchoEchoUnionPayloadWithErrorResult{}, err
+	}
+	return response, nil
+}
+
+func (echo *echoImpl) EchoUnionPayloadNoRetVal(_ fidl.Context, payload compatibility.RequestUnion) error {
+	var resp compatibility.ResponseUnion
+	var forwardURL string
+	if payload.Which() == compatibility.RequestUnionUnsigned {
+		if payload.Unsigned.ForwardToServer == "" {
+			resp = compatibility.ResponseUnionWithUnsigned(payload.Unsigned.Value)
+		}
+		forwardURL = payload.Unsigned.ForwardToServer
+		payload.Unsigned.ForwardToServer = ""
+	} else if payload.Which() == compatibility.RequestUnionSigned {
+		if payload.Signed.ForwardToServer == "" {
+			resp = compatibility.ResponseUnionWithSigned(payload.Signed.Value)
+		}
+		forwardURL = payload.Signed.ForwardToServer
+		payload.Signed.ForwardToServer = ""
+	} else {
+		log.Printf("Unknown ordinal for union: %d", payload.Which())
+		return fmt.Errorf("unknown union ordinal")
+	}
+
+	if forwardURL != "" {
+		echoWithCtxInterface, err := echo.getServer(forwardURL)
+		if err != nil {
+			log.Printf("Connecting to %s failed: %s", forwardURL, err)
+			return err
+		}
+		go func() {
+			for {
+				value, err := echoWithCtxInterface.ExpectOnEchoUnionPayloadEvent(context.Background())
+				if err != nil {
+					log.Fatalf("ExpectOnEchoUnionPayloadEvent failed: %s while communicating with %s", err, forwardURL)
+					return
+				}
+				mu.Lock()
+				for pxy := range mu.proxies {
+					_ = pxy.OnEchoUnionPayloadEvent(value)
+				}
+				mu.Unlock()
+				break
+			}
+		}()
+		echoWithCtxInterface.EchoUnionPayloadNoRetVal(context.Background(), payload)
+	} else {
+		mu.Lock()
+		for pxy := range mu.proxies {
+			_ = pxy.OnEchoUnionPayloadEvent(resp)
+		}
+		mu.Unlock()
+	}
+	return nil
+}
+
+func (echo *echoImpl) EchoUnionResponseWithErrorComposed(_ fidl.Context, value int64, wantAbsoluteValue bool, forwardURL string, resultErr uint32, resultVariant imported.WantResponse) (imported.ComposedEchoUnionResponseWithErrorComposedResult, error) {
+	if forwardURL == "" {
+		if resultVariant == imported.WantResponseErr {
+			return imported.ComposedEchoUnionResponseWithErrorComposedResultWithErr(resultErr), nil
+		} else if wantAbsoluteValue {
+			abs := value
+			if value < 0 {
+				abs = value * -1
+			}
+			return imported.ComposedEchoUnionResponseWithErrorComposedResultWithResponse(
+				imported.ComposedEchoUnionResponseWithErrorComposedResponseWithUnsigned(uint64(abs)),
+			), nil
+		} else {
+			return imported.ComposedEchoUnionResponseWithErrorComposedResultWithResponse(
+				imported.ComposedEchoUnionResponseWithErrorComposedResponseWithSigned(value),
+			), nil
+		}
+	}
+	echoWithCtxInterface, err := echo.getServer(forwardURL)
+	if err != nil {
+		log.Printf("Connecting to %s failed: %s", forwardURL, err)
+		return imported.ComposedEchoUnionResponseWithErrorComposedResult{}, err
+	}
+	response, err := echoWithCtxInterface.EchoUnionResponseWithErrorComposed(context.Background(), value, wantAbsoluteValue, "", resultErr, resultVariant)
+	if err != nil {
+		log.Printf("EchoUnionResponseWithErrorComposed failed: %s", err)
+		return imported.ComposedEchoUnionResponseWithErrorComposedResult{}, err
+	}
+	return response, nil
 }
 
 var mu struct {

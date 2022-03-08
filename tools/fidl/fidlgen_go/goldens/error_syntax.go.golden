@@ -75,6 +75,12 @@ type ExampleUseOfErrorSyntaxCallWhichMayFailResult struct {
 	Err                                                uint32                                          `fidl_ordinal:"2"`
 }
 
+var _mExampleUseOfErrorSyntaxCallWhichMayFailResult = _bindings.CreateLazyMarshaler(ExampleUseOfErrorSyntaxCallWhichMayFailResult{})
+
+func (msg *ExampleUseOfErrorSyntaxCallWhichMayFailResult) Marshaler() _bindings.Marshaler {
+	return _mExampleUseOfErrorSyntaxCallWhichMayFailResult
+}
+
 func (_m *ExampleUseOfErrorSyntaxCallWhichMayFailResult) reset() {
 	switch _m.I_exampleUseOfErrorSyntaxCallWhichMayFailResultTag {
 	case 1:
@@ -126,21 +132,17 @@ const (
 type ExampleUseOfErrorSyntaxWithCtxInterface _bindings.ChannelProxy
 
 func (p *ExampleUseOfErrorSyntaxWithCtxInterface) ComposedCallWhichMayFail(ctx_ _bindings.Context, s string) (testerrorsyntaxparent.ParentUsesErrorSyntaxComposedCallWhichMayFailResult, error) {
-	req_ := &exampleUseOfErrorSyntaxWithCtxComposedCallWhichMayFailRequest{
-		S: s,
-	}
+	req_ := &exampleUseOfErrorSyntaxWithCtxComposedCallWhichMayFailRequest{S: s}
 	resp_ := &exampleUseOfErrorSyntaxWithCtxComposedCallWhichMayFailResponse{}
 	err_ := ((*_bindings.ChannelProxy)(p)).Call(ExampleUseOfErrorSyntaxComposedCallWhichMayFailOrdinal, req_, resp_)
-	return resp_.Result, err_
+	return (*resp_).Result, err_
 }
 
 func (p *ExampleUseOfErrorSyntaxWithCtxInterface) CallWhichMayFail(ctx_ _bindings.Context, s string) (ExampleUseOfErrorSyntaxCallWhichMayFailResult, error) {
-	req_ := &exampleUseOfErrorSyntaxWithCtxCallWhichMayFailRequest{
-		S: s,
-	}
+	req_ := &exampleUseOfErrorSyntaxWithCtxCallWhichMayFailRequest{S: s}
 	resp_ := &exampleUseOfErrorSyntaxWithCtxCallWhichMayFailResponse{}
 	err_ := ((*_bindings.ChannelProxy)(p)).Call(ExampleUseOfErrorSyntaxCallWhichMayFailOrdinal, req_, resp_)
-	return resp_.Result, err_
+	return (*resp_).Result, err_
 }
 
 type ExampleUseOfErrorSyntaxWithCtx interface {
@@ -164,31 +166,29 @@ type ExampleUseOfErrorSyntaxWithCtxStub struct {
 func (s_ *ExampleUseOfErrorSyntaxWithCtxStub) Dispatch(args_ _bindings.DispatchArgs) (_bindings.Message, bool, error) {
 	switch args_.Ordinal {
 	case ExampleUseOfErrorSyntaxComposedCallWhichMayFailOrdinal:
-		in_ := exampleUseOfErrorSyntaxWithCtxComposedCallWhichMayFailRequest{}
+		in_ := &exampleUseOfErrorSyntaxWithCtxComposedCallWhichMayFailRequest{}
 		marshalerCtx, ok := _bindings.GetMarshalerContext(args_.Ctx)
 		if !ok {
 			return nil, false, _bindings.ErrMissingMarshalerContext
 		}
-		if err_ := _bindings.Unmarshal(marshalerCtx, args_.Bytes, args_.HandleInfos, &in_); err_ != nil {
+		if err_ := _bindings.Unmarshal(marshalerCtx, args_.Bytes, args_.HandleInfos, in_); err_ != nil {
 			return nil, false, err_
 		}
-		result, err_ := s_.Impl.ComposedCallWhichMayFail(args_.Ctx, in_.S)
-		out_ := exampleUseOfErrorSyntaxWithCtxComposedCallWhichMayFailResponse{}
-		out_.Result = result
-		return &out_, true, err_
+		result, err_ := s_.Impl.ComposedCallWhichMayFail(args_.Ctx, (*in_).S)
+		out_ := &exampleUseOfErrorSyntaxWithCtxComposedCallWhichMayFailResponse{Result: result}
+		return out_, true, err_
 	case ExampleUseOfErrorSyntaxCallWhichMayFailOrdinal:
-		in_ := exampleUseOfErrorSyntaxWithCtxCallWhichMayFailRequest{}
+		in_ := &exampleUseOfErrorSyntaxWithCtxCallWhichMayFailRequest{}
 		marshalerCtx, ok := _bindings.GetMarshalerContext(args_.Ctx)
 		if !ok {
 			return nil, false, _bindings.ErrMissingMarshalerContext
 		}
-		if err_ := _bindings.Unmarshal(marshalerCtx, args_.Bytes, args_.HandleInfos, &in_); err_ != nil {
+		if err_ := _bindings.Unmarshal(marshalerCtx, args_.Bytes, args_.HandleInfos, in_); err_ != nil {
 			return nil, false, err_
 		}
-		result, err_ := s_.Impl.CallWhichMayFail(args_.Ctx, in_.S)
-		out_ := exampleUseOfErrorSyntaxWithCtxCallWhichMayFailResponse{}
-		out_.Result = result
-		return &out_, true, err_
+		result, err_ := s_.Impl.CallWhichMayFail(args_.Ctx, (*in_).S)
+		out_ := &exampleUseOfErrorSyntaxWithCtxCallWhichMayFailResponse{Result: result}
+		return out_, true, err_
 	}
 	return nil, false, _bindings.ErrUnknownOrdinal
 }

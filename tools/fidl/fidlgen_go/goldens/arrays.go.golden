@@ -39,6 +39,12 @@ type UnionSmallArray struct {
 	A                    [2]uint32 `fidl_ordinal:"1"`
 }
 
+var _mUnionSmallArray = _bindings.CreateLazyMarshaler(UnionSmallArray{})
+
+func (msg *UnionSmallArray) Marshaler() _bindings.Marshaler {
+	return _mUnionSmallArray
+}
+
 func (_m *UnionSmallArray) reset() {
 	switch _m.I_unionSmallArrayTag {
 	case 1:
@@ -78,6 +84,12 @@ type UnionLargeArray struct {
 	A                    [100]uint32 `fidl_ordinal:"1"`
 }
 
+var _mUnionLargeArray = _bindings.CreateLazyMarshaler(UnionLargeArray{})
+
+func (msg *UnionLargeArray) Marshaler() _bindings.Marshaler {
+	return _mUnionLargeArray
+}
+
 func (_m *UnionLargeArray) reset() {
 	switch _m.I_unionLargeArrayTag {
 	case 1:
@@ -111,6 +123,12 @@ type TableSmallArray struct {
 	I_unknownData interface{}
 	A             [2]uint32 `fidl_ordinal:"1"`
 	APresent      bool
+}
+
+var _mTableSmallArray = _bindings.CreateLazyMarshaler(TableSmallArray{})
+
+func (msg *TableSmallArray) Marshaler() _bindings.Marshaler {
+	return _mTableSmallArray
 }
 
 func (u *TableSmallArray) SetA(a [2]uint32) {
@@ -150,6 +168,12 @@ type TableLargeArray struct {
 	I_unknownData interface{}
 	A             [100]uint32 `fidl_ordinal:"1"`
 	APresent      bool
+}
+
+var _mTableLargeArray = _bindings.CreateLazyMarshaler(TableLargeArray{})
+
+func (msg *TableLargeArray) Marshaler() _bindings.Marshaler {
+	return _mTableLargeArray
 }
 
 func (u *TableLargeArray) SetA(a [100]uint32) {

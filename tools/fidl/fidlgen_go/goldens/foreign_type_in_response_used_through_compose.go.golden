@@ -29,7 +29,7 @@ func (p *TopWithCtxInterface) GetFoo(ctx_ _bindings.Context) (testbottom.Foo, er
 	var req_ _bindings.Message
 	resp_ := &topWithCtxGetFooResponse{}
 	err_ := ((*_bindings.ChannelProxy)(p)).Call(TopGetFooOrdinal, req_, resp_)
-	return resp_.Foo, err_
+	return (*resp_).Foo, err_
 }
 
 type TopWithCtx interface {
@@ -53,9 +53,8 @@ func (s_ *TopWithCtxStub) Dispatch(args_ _bindings.DispatchArgs) (_bindings.Mess
 	switch args_.Ordinal {
 	case TopGetFooOrdinal:
 		foo, err_ := s_.Impl.GetFoo(args_.Ctx)
-		out_ := topWithCtxGetFooResponse{}
-		out_.Foo = foo
-		return &out_, true, err_
+		out_ := &topWithCtxGetFooResponse{Foo: foo}
+		return out_, true, err_
 	}
 	return nil, false, _bindings.ErrUnknownOrdinal
 }

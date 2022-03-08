@@ -11,6 +11,12 @@ type EmptyTable struct {
 	I_unknownData interface{}
 }
 
+var _mEmptyTable = _bindings.CreateLazyMarshaler(EmptyTable{})
+
+func (msg *EmptyTable) Marshaler() _bindings.Marshaler {
+	return _mEmptyTable
+}
+
 func (u *EmptyTable) HasUnknownData() bool {
 	return u.I_unknownData != nil
 }
@@ -26,6 +32,12 @@ type SimpleTable struct {
 	XPresent      bool
 	Y             int64 `fidl_ordinal:"5"`
 	YPresent      bool
+}
+
+var _mSimpleTable = _bindings.CreateLazyMarshaler(SimpleTable{})
+
+func (msg *SimpleTable) Marshaler() _bindings.Marshaler {
+	return _mSimpleTable
 }
 
 func (u *SimpleTable) SetX(x int64) {
@@ -91,6 +103,12 @@ type OlderSimpleTable struct {
 	XPresent      bool
 }
 
+var _mOlderSimpleTable = _bindings.CreateLazyMarshaler(OlderSimpleTable{})
+
+func (msg *OlderSimpleTable) Marshaler() _bindings.Marshaler {
+	return _mOlderSimpleTable
+}
+
 func (u *OlderSimpleTable) SetX(x int64) {
 	u.X = x
 	u.XPresent = true
@@ -132,6 +150,12 @@ type NewerSimpleTable struct {
 	YPresent      bool
 	Z             int64 `fidl_ordinal:"6"`
 	ZPresent      bool
+}
+
+var _mNewerSimpleTable = _bindings.CreateLazyMarshaler(NewerSimpleTable{})
+
+func (msg *NewerSimpleTable) Marshaler() _bindings.Marshaler {
+	return _mNewerSimpleTable
 }
 
 func (u *NewerSimpleTable) SetX(x int64) {
@@ -225,6 +249,12 @@ type ReverseOrdinalTable struct {
 	XPresent      bool
 }
 
+var _mReverseOrdinalTable = _bindings.CreateLazyMarshaler(ReverseOrdinalTable{})
+
+func (msg *ReverseOrdinalTable) Marshaler() _bindings.Marshaler {
+	return _mReverseOrdinalTable
+}
+
 func (u *ReverseOrdinalTable) SetZ(z int64) {
 	u.Z = z
 	u.ZPresent = true
@@ -312,6 +342,12 @@ type TableWithAttributes struct {
 	XPresent      bool
 }
 
+var _mTableWithAttributes = _bindings.CreateLazyMarshaler(TableWithAttributes{})
+
+func (msg *TableWithAttributes) Marshaler() _bindings.Marshaler {
+	return _mTableWithAttributes
+}
+
 func (u *TableWithAttributes) SetX(x int64) {
 	u.X = x
 	u.XPresent = true
@@ -347,6 +383,12 @@ func (u *TableWithAttributes) GetUnknownData() map[uint64]_bindings.UnknownData 
 type ExtensionTable struct {
 	_             struct{} `fidl:"t" fidl_size_v1:"16" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
 	I_unknownData interface{}
+}
+
+var _mExtensionTable = _bindings.CreateLazyMarshaler(ExtensionTable{})
+
+func (msg *ExtensionTable) Marshaler() _bindings.Marshaler {
+	return _mExtensionTable
 }
 
 func (u *ExtensionTable) HasUnknownData() bool {
@@ -488,6 +530,12 @@ type SixtyFourOrdinalTable struct {
 	V63Present    bool
 	V64           ExtensionTable `fidl_ordinal:"64"`
 	V64Present    bool
+}
+
+var _mSixtyFourOrdinalTable = _bindings.CreateLazyMarshaler(SixtyFourOrdinalTable{})
+
+func (msg *SixtyFourOrdinalTable) Marshaler() _bindings.Marshaler {
+	return _mSixtyFourOrdinalTable
 }
 
 func (u *SixtyFourOrdinalTable) SetV1(v1 int64) {
