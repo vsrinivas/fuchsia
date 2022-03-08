@@ -6,6 +6,7 @@
 #define SRC_SYS_FUZZING_COMMON_CONTROLLER_H_
 
 #include <fuchsia/fuzzer/cpp/fidl.h>
+#include <lib/async/cpp/executor.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/interface_request.h>
 
@@ -15,7 +16,7 @@
 #include <thread>
 
 #include "src/lib/fxl/macros.h"
-#include "src/lib/fxl/synchronization/thread_annotations.h"
+#include "src/sys/fuzzing/common/async-types.h"
 #include "src/sys/fuzzing/common/binding.h"
 #include "src/sys/fuzzing/common/options.h"
 #include "src/sys/fuzzing/common/response.h"
@@ -27,7 +28,6 @@ namespace fuzzing {
 
 using ::fuchsia::fuzzer::Controller;
 using ::fuchsia::fuzzer::CorpusReader;
-using ::fuchsia::fuzzer::CorpusReaderSyncPtr;
 using ::fuchsia::fuzzer::Monitor;
 using ::fuchsia::fuzzer::TargetAdapter;
 
@@ -50,7 +50,7 @@ class ControllerImpl : public Controller {
   void GetOptions(GetOptionsCallback callback) override;
   void AddToCorpus(CorpusType corpus, FidlInput input, AddToCorpusCallback callback) override;
   void ReadCorpus(CorpusType corpus, fidl::InterfaceHandle<CorpusReader> reader,
-                  ReadCorpusCallback callback) override FXL_LOCKS_EXCLUDED(mutex_);
+                  ReadCorpusCallback callback) override;
   void WriteDictionary(FidlInput dictionary, WriteDictionaryCallback callback) override;
   void ReadDictionary(ReadDictionaryCallback callback) override;
   void AddMonitor(fidl::InterfaceHandle<Monitor> monitor, AddMonitorCallback callback) override;
@@ -87,9 +87,6 @@ class ControllerImpl : public Controller {
   void ReceiveAndThen(FidlInput fidl_input, Response response,
                       fit::function<void(Input, Response)> callback);
 
-  // Thread body for the corpus reader client.
-  void ReadCorpusLoop() FXL_LOCKS_EXCLUDED(mutex_);
-
   // Stop-related methods.
   void CloseImpl();
   void InterruptImpl();
@@ -98,18 +95,13 @@ class ControllerImpl : public Controller {
   Binding<Controller> binding_;
   std::unique_ptr<Runner> runner_;
 
+  // Async execution control.
+  ExecutorPtr executor_;
+
   // These pointers are instantiated by the controller and shared with other objects.
   std::shared_ptr<Dispatcher> dispatcher_;
   std::shared_ptr<Options> options_;
   std::shared_ptr<Transceiver> transceiver_;
-
-  // CorpusReader requests are handled by a designated thread to avoid blocking the FIDL dispatcher.
-  using CorpusReaderRequest = std::pair<CorpusType, CorpusReaderSyncPtr>;
-  std::mutex mutex_;
-  std::thread reader_;
-  std::deque<CorpusReaderRequest> readers_ FXL_GUARDED_BY(mutex_);
-  bool reading_ FXL_GUARDED_BY(mutex_) = true;
-  SyncWait pending_readers_;
 
   RunOnce close_;
   RunOnce interrupt_;

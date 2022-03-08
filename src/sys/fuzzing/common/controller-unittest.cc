@@ -12,6 +12,7 @@
 #include "src/sys/fuzzing/common/binding.h"
 #include "src/sys/fuzzing/common/dispatcher.h"
 #include "src/sys/fuzzing/common/status.h"
+#include "src/sys/fuzzing/common/testing/async-test.h"
 #include "src/sys/fuzzing/common/testing/corpus-reader.h"
 #include "src/sys/fuzzing/common/testing/monitor.h"
 #include "src/sys/fuzzing/common/testing/runner.h"
@@ -20,23 +21,21 @@
 namespace fuzzing {
 namespace {
 
+using fuchsia::fuzzer::ControllerPtr;
 using fuchsia::fuzzer::ControllerSyncPtr;
 using fuchsia::fuzzer::UpdateReason;
 
 // Test fixtures.
 
 // Base class for |Controller| unit tests.
-class ControllerTest : public ::testing::Test {
+class ControllerTest : public AsyncTest {
  public:
   // Implicitly tests |Controller::SetRunner| and |Controller::Bind|.
-  ControllerSyncPtr Bind() {
+  void Bind(fidl::InterfaceRequest<Controller> request) {
     auto runner = std::make_unique<FakeRunner>();
     runner_ = runner.get();
     controller_.SetRunner(std::move(runner));
-
-    ControllerSyncPtr controller;
-    controller_.Bind(controller.NewRequest());
-    return controller;
+    controller_.Bind(std::move(request));
   }
 
   void AddToCorpus(CorpusType corpus_type, Input input) {
@@ -68,7 +67,8 @@ class ControllerTest : public ::testing::Test {
 // Unit tests.
 
 TEST_F(ControllerTest, ConfigureAndGetOptions) {
-  auto controller = Bind();
+  ControllerSyncPtr controller;
+  Bind(controller.NewRequest());
 
   // GetOptions without Configure.
   Options options1;
@@ -139,7 +139,8 @@ TEST_F(ControllerTest, ConfigureAndGetOptions) {
 }
 
 TEST_F(ControllerTest, AddToCorpus) {
-  auto controller = Bind();
+  ControllerSyncPtr controller;
+  Bind(controller.NewRequest());
   Input input0;
   Input seed_input1({0xde, 0xad});
   Input seed_input2({0xbe, 0xef});
@@ -169,7 +170,8 @@ TEST_F(ControllerTest, AddToCorpus) {
 }
 
 TEST_F(ControllerTest, ReadCorpus) {
-  auto controller = Bind();
+  ControllerPtr controller;
+  Bind(controller.NewRequest(dispatcher()));
   Input input0;
   Input input1({0xde, 0xad});
   Input input2({0xbe, 0xef});
@@ -184,8 +186,9 @@ TEST_F(ControllerTest, ReadCorpus) {
 
   FakeCorpusReader seed_reader;
   FakeCorpusReader live_reader;
-  EXPECT_EQ(controller->ReadCorpus(CorpusType::SEED, seed_reader.NewBinding()), ZX_OK);
-  EXPECT_EQ(controller->ReadCorpus(CorpusType::LIVE, live_reader.NewBinding()), ZX_OK);
+  controller->ReadCorpus(CorpusType::SEED, seed_reader.NewBinding(), [] {});
+  controller->ReadCorpus(CorpusType::LIVE, live_reader.NewBinding(), [] {});
+  RunUntilIdle();
 
   // Interleave the calls.
   ASSERT_TRUE(live_reader.AwaitNext());
@@ -206,7 +209,8 @@ TEST_F(ControllerTest, ReadCorpus) {
 }
 
 TEST_F(ControllerTest, WriteDictionary) {
-  auto controller = Bind();
+  ControllerSyncPtr controller;
+  Bind(controller.NewRequest());
   auto invalid = FakeRunner::invalid_dictionary();
   auto valid = FakeRunner::valid_dictionary();
   zx_status_t result;
@@ -219,7 +223,8 @@ TEST_F(ControllerTest, WriteDictionary) {
 }
 
 TEST_F(ControllerTest, ReadDictionary) {
-  auto controller = Bind();
+  ControllerSyncPtr controller;
+  Bind(controller.NewRequest());
   FidlInput result;
 
   auto dict = FakeRunner::valid_dictionary();
@@ -230,7 +235,8 @@ TEST_F(ControllerTest, ReadDictionary) {
 }
 
 TEST_F(ControllerTest, GetStatus) {
-  auto controller = Bind();
+  ControllerSyncPtr controller;
+  Bind(controller.NewRequest());
   Status result;
 
   Status status;
@@ -255,7 +261,8 @@ TEST_F(ControllerTest, GetStatus) {
 }
 
 TEST_F(ControllerTest, AddMonitor) {
-  auto controller = Bind();
+  ControllerSyncPtr controller;
+  Bind(controller.NewRequest());
   FakeMonitor monitor;
 
   Status status;
@@ -272,7 +279,8 @@ TEST_F(ControllerTest, AddMonitor) {
 }
 
 TEST_F(ControllerTest, GetResults) {
-  auto controller = Bind();
+  ControllerSyncPtr controller;
+  Bind(controller.NewRequest());
   FuzzResult result;
   FidlInput fidl_input;
   Input result_input({0xde, 0xad, 0xbe, 0xef});
@@ -286,7 +294,8 @@ TEST_F(ControllerTest, GetResults) {
 }
 
 TEST_F(ControllerTest, Execute) {
-  auto controller = Bind();
+  ControllerSyncPtr controller;
+  Bind(controller.NewRequest());
   ::fuchsia::fuzzer::Controller_Execute_Result result;
   Input input({0xde, 0xad, 0xbe, 0xef});
 
@@ -304,7 +313,8 @@ TEST_F(ControllerTest, Execute) {
 }
 
 TEST_F(ControllerTest, Minimize) {
-  auto controller = Bind();
+  ControllerSyncPtr controller;
+  Bind(controller.NewRequest());
   ::fuchsia::fuzzer::Controller_Minimize_Result result;
   Input input({0xde, 0xad, 0xbe, 0xef});
   Input minimized({0xde, 0xbe});
@@ -324,7 +334,8 @@ TEST_F(ControllerTest, Minimize) {
 }
 
 TEST_F(ControllerTest, Cleanse) {
-  auto controller = Bind();
+  ControllerSyncPtr controller;
+  Bind(controller.NewRequest());
   ::fuchsia::fuzzer::Controller_Cleanse_Result result;
   Input input({0xde, 0xad, 0xbe, 0xef});
   Input cleansed({0x20, 0x20, 0xbe, 0xff});
@@ -344,7 +355,8 @@ TEST_F(ControllerTest, Cleanse) {
 }
 
 TEST_F(ControllerTest, Fuzz) {
-  auto controller = Bind();
+  ControllerSyncPtr controller;
+  Bind(controller.NewRequest());
   ::fuchsia::fuzzer::Controller_Fuzz_Result result;
   Input fuzzed({0xde, 0xad, 0xbe, 0xef});
 
@@ -365,7 +377,8 @@ TEST_F(ControllerTest, Fuzz) {
 }
 
 TEST_F(ControllerTest, Merge) {
-  auto controller = Bind();
+  ControllerSyncPtr controller;
+  Bind(controller.NewRequest());
   zx_status_t result;
 
   SetError(ZX_ERR_WRONG_TYPE);

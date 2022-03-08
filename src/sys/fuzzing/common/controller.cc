@@ -8,6 +8,8 @@
 #include <zircon/sanitizer.h>
 #include <zircon/status.h>
 
+#include "src/sys/fuzzing/common/async-types.h"
+#include "src/sys/fuzzing/common/corpus-reader-client.h"
 #include "src/sys/fuzzing/common/options.h"
 
 namespace fuzzing {
@@ -18,9 +20,9 @@ ControllerImpl::ControllerImpl()
       interrupt_([this]() { InterruptImpl(); }),
       join_([this]() { JoinImpl(); }) {
   dispatcher_ = binding_.dispatcher();
+  executor_ = std::make_unique<async::Executor>(dispatcher_->get());
   options_ = std::make_shared<Options>();
   transceiver_ = std::make_shared<Transceiver>();
-  reader_ = std::thread([this]() { ReadCorpusLoop(); });
 }
 
 ControllerImpl::~ControllerImpl() {
@@ -84,57 +86,31 @@ void ControllerImpl::AddToCorpus(CorpusType corpus_type, FidlInput fidl_input,
 
 void ControllerImpl::ReadCorpus(CorpusType corpus_type, fidl::InterfaceHandle<CorpusReader> reader,
                                 ReadCorpusCallback callback) {
-  CorpusReaderSyncPtr ptr;
-  ptr.Bind(std::move(reader));
-  {
-    std::lock_guard<std::mutex> lock(mutex_);
-    if (reading_) {
-      readers_.emplace_back(corpus_type, std::move(ptr));
-      pending_readers_.Signal();
+  std::vector<Input> inputs;
+  for (size_t offset = 1;; ++offset) {
+    auto input = runner_->ReadFromCorpus(corpus_type, offset);
+    if (input.size() == 0) {
+      break;
     }
+    inputs.emplace_back(std::move(input));
   }
-  // If |!reading|, the |ptr| will be dropped, signalling the controller is shutting down..
-  callback();
-}
+  auto client = std::make_unique<CorpusReaderClient>(executor_);
+  client->Bind(std::move(reader));
 
-void ControllerImpl::ReadCorpusLoop() {
-  while (true) {
-    // |pending_readers_| will be signalled on object destruction.
-    pending_readers_.WaitFor("more corpus readers");
-    CorpusType corpus_type;
-    CorpusReaderSyncPtr reader;
-    {
-      std::lock_guard<std::mutex> lock(mutex_);
-      if (readers_.empty()) {
-        return;
-      }
-      auto& request = readers_.front();
-      corpus_type = request.first;
-      reader = std::move(request.second);
-      readers_.pop_front();
-      if (reading_ && readers_.empty()) {
-        pending_readers_.Reset();
-      }
-    }
-    size_t offset = 1;
-    for (bool has_more = true; has_more;) {
-      auto input = runner_->ReadFromCorpus(corpus_type, offset++);
-      has_more = input.size() != 0;
-      FidlInput next;
-      // Only error from the transceiver is |ZX_ERR_BAD_STATE| if it is shutting down.
-      if (transceiver_->Transmit(std::move(input), &next) != ZX_OK) {
-        break;
-      }
-      zx_status_t result;
-      auto status = reader->Next(std::move(next), &result);
-      status = status == ZX_OK ? result : status;
-      if (status != ZX_OK) {
-        FX_LOGS(WARNING) << "Failed to send next input from corpus: "
-                         << zx_status_get_string(status);
-        break;
-      }
-    }
-  }
+  // Prevent the client from going out of scope before the promise completes.
+  auto task = fpromise::make_promise(
+      [inputs = std::move(inputs), client = std::move(client), callback = std::move(callback),
+       sending = ZxFuture<>()](Context& context) mutable -> Result<> {
+        if (!sending) {
+          sending = client->Send(std::move(inputs));
+        }
+        if (!sending(context)) {
+          return fpromise::pending();
+        }
+        callback();
+        return fpromise::ok();
+      });
+  executor_->schedule_task(std::move(task));
 }
 
 void ControllerImpl::WriteDictionary(FidlInput dictionary, WriteDictionaryCallback callback) {
@@ -210,11 +186,6 @@ void ControllerImpl::CloseImpl() {
   if (runner_) {
     runner_->Close();
   }
-  {
-    std::lock_guard<std::mutex> lock(mutex_);
-    reading_ = false;
-    pending_readers_.Signal();
-  }
   transceiver_->Close();
 }
 
@@ -228,7 +199,6 @@ void ControllerImpl::JoinImpl() {
   if (runner_) {
     runner_->Join();
   }
-  reader_.join();
   transceiver_->Join();
 }
 
