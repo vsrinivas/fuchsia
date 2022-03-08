@@ -1,0 +1,21 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("text") {
+  testonly = true
+  deps = [
+    "fidl-fuchsia-input-text-ext",
+    "text-edit-controller",
+    "text-edit-model",
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [
+    "fidl-fuchsia-input-text-ext:tests",
+    "text-edit-controller:tests",
+    "text-edit-model:tests",
+  ]
+}

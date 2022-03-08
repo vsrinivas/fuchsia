@@ -38,5 +38,6 @@ group("tests") {
     "drivers:tests",
     "lib:tests",
     "tests",
+    "text:tests",
   ]
 }
