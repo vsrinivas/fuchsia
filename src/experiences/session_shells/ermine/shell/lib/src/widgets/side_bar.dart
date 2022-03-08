@@ -6,6 +6,7 @@ import 'package:ermine/src/states/app_state.dart';
 import 'package:ermine/src/widgets/app_launcher.dart';
 import 'package:ermine/src/widgets/quick_settings.dart';
 import 'package:ermine/src/widgets/status.dart';
+import 'package:ermine_utils/ermine_utils.dart';
 import 'package:flutter/material.dart';
 
 /// Defines a widget that represents the overlay on the right side of screen.
@@ -30,13 +31,13 @@ class SideBar extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             // App Launcher.
-            Expanded(child: AppLauncher(appState)),
+            Expanded(child: WidgetFactory.create(() => AppLauncher(appState))),
 
             // Status.
-            Status(appState),
+            WidgetFactory.create(() => Status(appState)),
 
             // Quick Settings.
-            QuickSettings(appState),
+            WidgetFactory.create(() => QuickSettings(appState)),
           ],
         ),
       ),

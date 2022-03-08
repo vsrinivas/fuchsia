@@ -7,6 +7,7 @@ import 'package:ermine/src/widgets/app_bar.dart';
 import 'package:ermine/src/widgets/app_switcher.dart';
 import 'package:ermine/src/widgets/scrim.dart';
 import 'package:ermine/src/widgets/side_bar.dart';
+import 'package:ermine_utils/ermine_utils.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_mobx/flutter_mobx.dart';
 
@@ -23,7 +24,7 @@ class Overlays extends StatelessWidget {
         child: Stack(
           children: [
             // Scrim layer.
-            Scrim(app),
+            WidgetFactory.create(() => Scrim(app)),
 
             // App Bar.
             if (app.appBarVisible)
@@ -31,7 +32,7 @@ class Overlays extends StatelessWidget {
                 top: 0,
                 bottom: 0,
                 left: 0,
-                child: AppBar(app),
+                child: WidgetFactory.create(() => AppBar(app)),
               ),
 
             // Side Bar.
@@ -40,11 +41,12 @@ class Overlays extends StatelessWidget {
                 top: 0,
                 bottom: 0,
                 right: 0,
-                child: SideBar(app),
+                child: WidgetFactory.create(() => SideBar(app)),
               ),
 
             // App Switcher.
-            if (app.switcherVisible) AppSwitcher(app),
+            if (app.switcherVisible)
+              WidgetFactory.create(() => AppSwitcher(app)),
           ],
         ),
       );

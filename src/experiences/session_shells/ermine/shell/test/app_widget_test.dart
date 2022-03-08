@@ -14,13 +14,11 @@ import 'package:ermine/src/widgets/overlays.dart';
 import 'package:ermine_utils/ermine_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:fuchsia_logger/logger.dart';
 import 'package:intl/intl.dart';
 import 'package:mobx/mobx.dart' hide when;
 import 'package:mockito/mockito.dart';
 
 void main() async {
-  setupLogger(name: 'next_unittests');
   late App app;
   late MockAppState state;
 

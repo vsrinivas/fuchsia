@@ -212,7 +212,11 @@ config_data("images") {
 
 flutter_test("ermine_unittests") {
   null_safe = true
-  sources = [ "app_widget_test.dart" ]
+  sources = [
+    "app_widget_test.dart",
+    "overlays_widget_test.dart",
+    "side_bar_widget_test.dart",
+  ]
 
   deps = [
     ":lib",
