@@ -359,10 +359,17 @@ fuchsia_component("setui_service_v2") {
   deps = [ ":bin" ]
 }
 
+fuchsia_component("setui_service_with_camera") {
+  component_name = "setui_service_with_camera"
+  manifest = "meta/setui_service_with_camera.cml"
+  deps = [ ":bin" ]
+}
+
 fuchsia_package("setui_service") {
   deps = [
     ":setui_service_v1",
     ":setui_service_v2",
+    ":setui_service_with_camera",
     "//src/intl:icudtl",
   ]
 }

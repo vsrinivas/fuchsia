@@ -29,7 +29,6 @@
     use: [
         {
             protocol: [
-                "fuchsia.camera3.DeviceWatcher",
                 "fuchsia.hardware.power.statecontrol.Admin",
                 "fuchsia.media.AudioCore",
                 "fuchsia.media.sessions2.Discovery",
