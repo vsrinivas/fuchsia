@@ -72,7 +72,9 @@ void OtRadioDevice::LowpanSpinelDeviceFidlImpl::Open(OpenRequestView request,
   if (res == ZX_OK) {
     zxlogf(DEBUG, "open succeed, returning");
     ot_radio_obj_.power_status_ = OT_SPINEL_DEVICE_ON;
-    fidl::WireSendEvent(*ot_radio_obj_.fidl_binding_)->OnReadyForSendFrames(kOutboundAllowanceInit);
+    // TODO(fxbug.dev/94739): Consider handling errors instead of ignoring them.
+    (void)fidl::WireSendEvent(*ot_radio_obj_.fidl_binding_)
+        ->OnReadyForSendFrames(kOutboundAllowanceInit);
     ot_radio_obj_.inbound_allowance_ = 0;
     ot_radio_obj_.outbound_allowance_ = kOutboundAllowanceInit;
     ot_radio_obj_.inbound_cnt_ = 0;
@@ -106,10 +108,12 @@ void OtRadioDevice::LowpanSpinelDeviceFidlImpl::GetMaxFrameSize(
 void OtRadioDevice::LowpanSpinelDeviceFidlImpl::SendFrame(SendFrameRequestView request,
                                                           SendFrameCompleter::Sync& completer) {
   if (ot_radio_obj_.power_status_ == OT_SPINEL_DEVICE_OFF) {
-    fidl::WireSendEvent(*ot_radio_obj_.fidl_binding_)
+    // TODO(fxbug.dev/94739): Consider handling errors instead of ignoring them.
+    (void)fidl::WireSendEvent(*ot_radio_obj_.fidl_binding_)
         ->OnError(lowpan_spinel_fidl::wire::Error::kClosed, false);
   } else if (request->data.count() > kMaxFrameSize) {
-    fidl::WireSendEvent(*ot_radio_obj_.fidl_binding_)
+    // TODO(fxbug.dev/94739): Consider handling errors instead of ignoring them.
+    (void)fidl::WireSendEvent(*ot_radio_obj_.fidl_binding_)
         ->OnError(lowpan_spinel_fidl::wire::Error::kOutboundFrameTooLarge, false);
   } else if (ot_radio_obj_.outbound_allowance_ == 0) {
     // Client violates the protocol, close FIDL channel and device. Will not send OnError event.
@@ -127,7 +131,7 @@ void OtRadioDevice::LowpanSpinelDeviceFidlImpl::SendFrame(SendFrameRequestView r
       ot_radio_obj_.outbound_cnt_++;
       zxlogf(DEBUG, "Successfully Txed pkt, total tx pkt %lu", ot_radio_obj_.outbound_cnt_);
       if ((ot_radio_obj_.outbound_cnt_ & 1) == 0) {
-        fidl::WireSendEvent(*ot_radio_obj_.fidl_binding_)
+        (void)fidl::WireSendEvent(*ot_radio_obj_.fidl_binding_)
             ->OnReadyForSendFrames(kOutboundAllowanceInc);
         ot_radio_obj_.outbound_allowance_ += kOutboundAllowanceInc;
       }

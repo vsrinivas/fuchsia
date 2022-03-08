@@ -147,7 +147,7 @@ extern const char* const kCallerAllocatedBufferTooSmall;
 //
 // |Result| may be piped to an output stream (`std::cerr`, `FX_LOGS`, ...) to
 // print a human-readable description for debugging purposes.
-class Result {
+class [[nodiscard]] Result {
  public:
   constexpr Result() = default;
   ~Result() = default;

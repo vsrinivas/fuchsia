@@ -123,7 +123,8 @@ zx::status<> RunBenchmark(const std::string& component_url, const std::vector<st
 
   ComponentControllerEventHandler event_handler;
   while (!event_handler.terminated()) {
-    event_handler.HandleOneEvent(endpoints->client);
+    // TODO(fxbug.dev/94739): Consider handling errors instead of ignoring them.
+    (void)event_handler.HandleOneEvent(endpoints->client);
   }
   return event_handler.termination_status();
 }
