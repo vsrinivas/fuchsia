@@ -9,8 +9,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use super::*;
-use crate::fs::{fileops_impl_nonblocking, fileops_impl_seekable};
-use crate::fs_node_impl_xattr_delegate;
+use crate::fs::{fileops_impl_nonblocking, fileops_impl_seekable, fs_node_impl_xattr_delegate};
 use crate::logging::impossible_error;
 use crate::mm::vmo::round_up_to_system_page_size;
 use crate::task::CurrentTask;

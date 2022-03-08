@@ -14,8 +14,7 @@ use std::sync::{Arc, Weak};
 use zerocopy::{AsBytes, FromBytes};
 
 use super::*;
-use crate::fs::fileops_impl_directory;
-use crate::fs_node_impl_symlink;
+use crate::fs::{fileops_impl_directory, fs_node_impl_symlink};
 use crate::logging::impossible_error;
 use crate::task::CurrentTask;
 use crate::types::*;

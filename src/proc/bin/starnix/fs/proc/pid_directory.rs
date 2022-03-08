@@ -5,7 +5,6 @@
 use std::sync::Arc;
 
 use crate::fs::*;
-use crate::fs_node_impl_symlink;
 use crate::mm::{ProcMapsFile, ProcStatFile};
 use crate::task::{CurrentTask, Task};
 use crate::types::*;

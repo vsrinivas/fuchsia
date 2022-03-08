@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use super::*;
-use crate::fs_node_impl_symlink;
+use crate::fs::fs_node_impl_symlink;
 use crate::task::CurrentTask;
 use crate::types::*;
 

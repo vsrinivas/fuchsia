@@ -185,27 +185,39 @@ pub trait FsNodeOps: Send + Sync {
     }
 }
 
-/// Implements FsNodeOps methods in a way that makes sense for symlinks. You must implement
-/// readlink.
-#[macro_export]
+/// Implements [`FsNodeOps`] methods in a way that makes sense for symlinks.
+/// You must implement [`FsNodeOps::readlink`].
 macro_rules! fs_node_impl_symlink {
     () => {
-        fn open(&self, _node: &FsNode, _flags: OpenFlags) -> Result<Box<dyn FileOps>, Errno> {
+        fn open(
+            &self,
+            _node: &crate::fs::FsNode,
+            _flags: crate::types::OpenFlags,
+        ) -> Result<Box<dyn crate::fs::FileOps>, crate::types::Errno> {
             unreachable!("Symlink nodes cannot be opened.");
         }
     };
 }
 
-/// Delegates xattr FsNodeOps methods to another object.
-#[macro_export]
+/// Implements [`FsNodeOps::set_xattr`] by delegating to another [`FsNodeOps`]
+/// object.
 macro_rules! fs_node_impl_xattr_delegate {
     ($self:ident, $delegate:expr) => {
-        fn set_xattr(&$self, name: &FsStr, value: &FsStr, op: XattrOp) -> Result<(), Errno> {
+        fn set_xattr(
+            &$self,
+            name: &crate::fs::FsStr,
+            value: &crate::fs::FsStr,
+            op: crate::fs::XattrOp,
+        ) -> Result<(), crate::types::Errno> {
             $delegate.set_xattr(name, value, op)
         }
     };
     ($delegate:expr) => { fs_node_impl_xattr_delegate(self, $delegate) };
 }
+
+// Public re-export of macros allows them to be used like regular rust items.
+pub(crate) use fs_node_impl_symlink;
+pub(crate) use fs_node_impl_xattr_delegate;
 
 pub struct SpecialNode;
 
