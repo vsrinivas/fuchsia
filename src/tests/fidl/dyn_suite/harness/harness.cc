@@ -116,7 +116,7 @@ void ObserverOrchestrator::Observe(ObserveRequestView request, ObserveCompleter:
 void ObserverOrchestrator::SyncOnProgramPoint(uint64_t program_point) {
   EXPECT_FALSE(actual_program_point_.has_value());
   auto result = fidl::WireSendEvent(server_ref_)->OnProgramPoint(program_point);
-  ZX_ASSERT(result.ok());
+  EXPECT_EQ(ZX_OK, result.status());
 }
 
 void ObserverOrchestrator::ReleaseProgramPoint(uint64_t actual_program_point) {
