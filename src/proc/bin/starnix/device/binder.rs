@@ -8,7 +8,9 @@ use crate::not_implemented;
 use crate::syscalls::{SyscallResult, SUCCESS};
 use crate::task::CurrentTask;
 use crate::types::*;
-use std::sync::Arc;
+use parking_lot::RwLock;
+use std::collections::BTreeMap;
+use std::sync::{Arc, Weak};
 use zerocopy::FromBytes;
 
 /// Android's binder kernel driver implementation.
@@ -99,6 +101,9 @@ impl FileOps for DevBinder {
     }
 }
 
+#[derive(Debug)]
+struct BinderProcess;
+
 /// The ioctl character for all binder ioctls.
 const BINDER_IOCTL_CHAR: u8 = b'b';
 
@@ -109,18 +114,36 @@ const BINDER_IOCTL_WRITE_READ: u32 =
 /// The ioctl for setting the maximum number of threads the process wants to create for binder work.
 const BINDER_IOCTL_SET_MAX_THREADS: u32 = encode_ioctl_write::<u32>(BINDER_IOCTL_CHAR, 5);
 
+/// The ioctl for requests to become context manager.
+const BINDER_IOCTL_SET_CONTEXT_MGR: u32 = encode_ioctl_write::<u32>(BINDER_IOCTL_CHAR, 7);
+
 /// The ioctl for retrieving the kernel binder version.
 const BINDER_IOCTL_VERSION: u32 = encode_ioctl_write_read::<binder_version>(BINDER_IOCTL_CHAR, 9);
+
+/// The ioctl for requests to become context manager, v2.
+const BINDER_IOCTL_SET_CONTEXT_MGR_EXT: u32 =
+    encode_ioctl_write::<flat_binder_object>(BINDER_IOCTL_CHAR, 13);
 
 // The ioctl for enabling one-way transaction spam detection.
 const BINDER_IOCTL_ENABLE_ONEWAY_SPAM_DETECTION: u32 =
     encode_ioctl_write::<u32>(BINDER_IOCTL_CHAR, 16);
 
-struct BinderDriver;
+struct BinderDriver {
+    /// The "name server" process that is addressed via the special handle 0 and is responsible
+    /// for implementing the binder protocol `IServiceManager`.
+    context_manager: RwLock<Option<Weak<BinderProcess>>>,
+
+    /// Manages the internal state of each process interacting with the binder driver.
+    procs: RwLock<BTreeMap<pid_t, Arc<BinderProcess>>>,
+}
 
 impl BinderDriver {
     fn new() -> Self {
-        Self
+        Self { context_manager: RwLock::new(None), procs: RwLock::new(BTreeMap::new()) }
+    }
+
+    fn find_process(&self, pid: pid_t) -> Result<Arc<BinderProcess>, Errno> {
+        self.procs.read().get(&pid).cloned().ok_or_else(|| errno!(ENOENT))
     }
 
     fn ioctl(
@@ -139,6 +162,19 @@ impl BinderDriver {
                 let response =
                     binder_version { protocol_version: BINDER_CURRENT_PROTOCOL_VERSION as i32 };
                 current_task.mm.write_object(UserRef::new(user_arg), &response)?;
+                Ok(SUCCESS)
+            }
+            BINDER_IOCTL_SET_CONTEXT_MGR | BINDER_IOCTL_SET_CONTEXT_MGR_EXT => {
+                // A process is registering itself as the context manager.
+
+                if user_arg.is_null() {
+                    return error!(EINVAL);
+                }
+
+                // TODO: Read the flat_binder_object when ioctl is BINDER_IOCTL_SET_CONTEXT_MGR_EXT.
+
+                let binder_proc = self.find_process(current_task.get_pid())?;
+                *self.context_manager.write() = Some(Arc::downgrade(&binder_proc));
                 Ok(SUCCESS)
             }
             BINDER_IOCTL_WRITE_READ => {
