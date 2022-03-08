@@ -45,10 +45,16 @@ pub trait DebugRequestHandler {
 ///    realm are sent
 ///  * After a realm is stopped, no child components will start under it
 /// If these assumptions are broken, events may be lost.
+///
+/// |timeout_after_finish| is used to stop draining events after Finish() has been called on the
+/// controller. This is a workaround for missing Destroy events.
+/// TODO(fxbug.dev/94274): Remove this workaround once the missing Destroy events are fixed or use
+/// Stopped instead.
 pub async fn handle_debug_data_controller_and_events<CS, D>(
     controller_requests: CS,
     events: fsys::EventStreamRequestStream,
     debug_request_handler: D,
+    timeout_after_finish: zx::Duration,
     inspect_node: &Node,
 ) where
     CS: Stream<Item = Result<ftest_internal::DebugDataControllerRequest, fidl::Error>>
@@ -76,6 +82,7 @@ pub async fn handle_debug_data_controller_and_events<CS, D>(
                         let _ = controller_handle.send_on_debug_data_produced();
                     }
                 })
+                .with_timeout_after_finish(timeout_after_finish)
                 .with_inspect(
                     inspect_node,
                     &format!(
@@ -172,7 +179,7 @@ async fn serve_debug_data_set_controller(
                 ftest_internal::DebugDataSetControllerRequest::RemoveRealm {
                     realm_moniker,
                     ..
-                } => match set.lock().await.remove_realm(realm_moniker) {
+                } => match set.lock().await.remove_realm(realm_moniker).await {
                     Ok(()) => (),
                     Err(e) => warn!("Error removing a realm: {:?}", e),
                 },
@@ -185,7 +192,7 @@ async fn serve_debug_data_set_controller(
         Ok::<_, fidl::Error>(())
     };
     let result = control_fut.await;
-    set.lock().await.complete_set();
+    set.lock().await.complete_set().await;
     result?;
     match finish_called {
         true => Ok(()),
@@ -196,30 +203,15 @@ async fn serve_debug_data_set_controller(
 mod inner {
     use {
         super::*,
+        fuchsia_async as fasync,
         fuchsia_inspect::{ArrayProperty, LazyNode},
         futures::FutureExt,
-        lazy_static::lazy_static,
-        maplit::hashset,
         moniker::ChildMonikerBase,
     };
 
     /// Callback invoked when the DataSet determines that there is or is not any debug data
     /// produced. The parameter is true iff debug data was produced.
     type Callback = Box<dyn 'static + Fn(bool) + Send + Sync>;
-
-    lazy_static! {
-        /// Monikers relative to a top level realm for which we don't collect debug data.
-        /// TODO(fxbug.dev/94274): This is a workaround for Destroy events that are sometimes
-        /// missing. We should either remove this or add a mechanism to specify this
-        /// from test_manager.
-        static ref IGNORED_MONIKERS: HashSet<Vec<ChildMoniker>> = hashset! [
-            vec![
-                ChildMoniker::new("test_wrapper".to_string(), None),
-                ChildMoniker::new("hermetic_resolver".to_string(), None),
-            ]
-        ];
-
-    }
 
     /// A container that tracks the current known state of realms in a debug data set.
     pub(super) struct DebugDataSet {
@@ -229,7 +221,14 @@ mod inner {
         seen_realms: HashSet<ChildMoniker>,
         done_adding_realms: bool,
         sender: mpsc::Sender<DebugDataRequestMessage>,
-        on_capability_event: Option<Callback>,
+        on_capability_event: Arc<Mutex<Option<Callback>>>,
+        finish_timeout_task: Option<fasync::Task<()>>,
+        /// Timeout after Finish() is called to stop waiting for events and serve any
+        /// debug data.
+        // TODO(fxbug.dev/94274): This is in place due to rare missing destroy events that
+        // lead to timeouts. We should either switch to using Stopped, or remove this timeout
+        // once missing destroy event is fixed.
+        timeout_after_finish: zx::Duration,
         inspect_node: Option<LazyNode>,
     }
 
@@ -246,7 +245,9 @@ mod inner {
                 seen_realms: HashSet::new(),
                 done_adding_realms: false,
                 sender,
-                on_capability_event: Some(Box::new(on_capability_event)),
+                on_capability_event: Arc::new(Mutex::new(Some(Box::new(on_capability_event)))),
+                finish_timeout_task: None,
+                timeout_after_finish: zx::Duration::INFINITE,
                 inspect_node: None,
             }
         }
@@ -254,6 +255,10 @@ mod inner {
         // TODO(fxbug.dev/93280): array creation panics if a slot size larger than
         // 255 is specified. Remove this maximum once this is fixed in fuchsia_inspect.
         const MAX_INSPECT_ARRAY_SIZE: usize = u8::MAX as usize;
+
+        pub fn with_timeout_after_finish(self, timeout: zx::Duration) -> Self {
+            Self { timeout_after_finish: timeout, ..self }
+        }
 
         /// Attach an inspect node to the DebugDataSet under |parent_node|.
         pub fn with_inspect(self, parent_node: &Node, name: &str) -> Arc<Mutex<Self>> {
@@ -356,7 +361,7 @@ mod inner {
             Ok(())
         }
 
-        pub fn remove_realm(&mut self, moniker: String) -> Result<(), Error> {
+        pub async fn remove_realm(&mut self, moniker: String) -> Result<(), Error> {
             let moniker_child = realm_moniker_child(moniker)?;
             self.realms.remove(&moniker_child);
             self.running_components
@@ -364,13 +369,22 @@ mod inner {
             self.destroyed_before_start
                 .retain(|component_moniker| component_moniker.down_path()[0] != moniker_child);
             self.seen_realms.remove(&moniker_child);
-            self.close_sink_if_done();
+            self.close_sink_if_done().await;
             Ok(())
         }
 
-        pub fn complete_set(&mut self) {
+        pub async fn complete_set(&mut self) {
             self.done_adding_realms = true;
-            self.close_sink_if_done();
+            self.close_sink_if_done().await;
+
+            let mut sender_clone = self.sender.clone();
+            let on_capability_event_clone = self.on_capability_event.clone();
+            let timeout = self.timeout_after_finish;
+            self.finish_timeout_task = Some(fasync::Task::spawn(async move {
+                fasync::Timer::new(timeout).await;
+                sender_clone.close_channel();
+                on_capability_event_clone.lock().await.take().map(|callback| callback(false));
+            }));
         }
 
         pub async fn handle_event(&mut self, event: fsys::Event) -> Result<(), Error> {
@@ -378,12 +392,6 @@ mod inner {
             let unparsed_moniker =
                 header.moniker.as_ref().ok_or(anyhow!("Event contained no moniker"))?;
             let moniker = RelativeMoniker::parse(unparsed_moniker)?;
-
-            // check if we should ignore this moniker. Assumes that the given realms are always
-            // direct children of test_manager.
-            if IGNORED_MONIKERS.contains(&moniker.down_path()[1..]) {
-                return Ok(());
-            }
 
             let realm_id = moniker
                 .down_path()
@@ -396,8 +404,17 @@ mod inner {
                 fsys::EventType::CapabilityRequested => {
                     let test_url = self.realms.get(&realm_id).unwrap().clone();
                     let request = debug_data_request_from_event(event);
-                    self.sender.send(DebugDataRequestMessage { test_url, request }).await?;
-                    self.on_capability_event.take().map(|callback| callback(true));
+                    if let Err(e) =
+                        self.sender.send(DebugDataRequestMessage { test_url, request }).await
+                    {
+                        warn!(
+                            "Dropping debug data request from {} for test {}: {:?}",
+                            moniker,
+                            self.realms.get(&realm_id).unwrap(),
+                            e
+                        );
+                    }
+                    self.on_capability_event.lock().await.take().map(|callback| callback(true));
                 }
                 fsys::EventType::Started => {
                     if self.destroyed_before_start.remove(&moniker) {
@@ -415,20 +432,20 @@ mod inner {
                         self.seen_realms.insert(realm_id);
                         self.destroyed_before_start.insert(moniker);
                     }
-                    self.close_sink_if_done();
+                    self.close_sink_if_done().await;
                 }
                 other => warn!("Got unhandled event type: {:?}", other),
             }
             Ok(())
         }
 
-        fn close_sink_if_done(&mut self) {
+        async fn close_sink_if_done(&mut self) {
             if self.done_adding_realms
                 && self.running_components.is_empty()
                 && self.seen_realms.len() == self.realms.len()
             {
                 self.sender.close_channel();
-                self.on_capability_event.take().map(|callback| callback(false));
+                self.on_capability_event.lock().await.take().map(|callback| callback(false));
             }
         }
     }
@@ -461,6 +478,7 @@ mod inner {
         use super::*;
         use fuchsia_inspect::assert_data_tree;
         use maplit::hashmap;
+        use std::task::Poll;
 
         #[fuchsia::test]
         fn includes_moniker() {
@@ -546,7 +564,7 @@ mod inner {
                 set.handle_event(start_event(realm)).await.expect("handle event");
                 set.handle_event(destroy_event(realm)).await.expect("handle event");
             }
-            set.complete_set();
+            set.complete_set().await;
             assert_eq!(collect_requests_to_count(recv).await, hashmap! {});
         }
 
@@ -558,7 +576,7 @@ mod inner {
                 set.add_realm(realm.to_string(), url.to_string()).expect("add realm");
             }
             // If the set is marked complete, then events finish, stream should terminate.
-            set.complete_set();
+            set.complete_set().await;
             for event in common_test_events() {
                 set.handle_event(event).await.expect("handle event");
             }
@@ -583,7 +601,7 @@ mod inner {
             for event in common_test_events() {
                 set.handle_event(event).await.expect("handle event");
             }
-            set.complete_set();
+            set.complete_set().await;
 
             assert_eq!(
                 collect_requests_to_count(recv).await,
@@ -610,7 +628,7 @@ mod inner {
             set.handle_event(start_event("./test:realm-2")).await.expect("handle event");
             set.handle_event(capability_event("./test:realm-2")).await.expect("handle event");
             set.handle_event(destroy_event("./test:realm-2")).await.expect("handle event");
-            set.complete_set();
+            set.complete_set().await;
             // Requests for both realms should be present.
             assert_eq!(
                 collect_requests_to_count(recv).await,
@@ -634,8 +652,8 @@ mod inner {
             // add additional realms.
             set.add_realm("./test:realm-2".to_string(), "test-url-2".to_string())
                 .expect("add realm");
-            set.remove_realm("./test:realm-2".to_string()).expect("remove realm");
-            set.complete_set();
+            set.remove_realm("./test:realm-2".to_string()).await.expect("remove realm");
+            set.complete_set().await;
             // Requests for only the realm that wasn't removed should be present.
             assert_eq!(
                 collect_requests_to_count(recv).await,
@@ -646,19 +664,41 @@ mod inner {
         }
 
         #[fuchsia::test]
-        async fn hermetic_resolver_ignored() {
+        fn timeout_after_finish() {
+            const TIMEOUT: zx::Duration = zx::Duration::from_seconds(10);
+
+            let mut executor = fasync::TestExecutor::new_with_fake_time().expect("create executor");
             let (send, recv) = mpsc::channel(10);
-            let mut set = DebugDataSet::new(send, |got_data| assert!(!got_data));
-            set.add_realm("./test:realm-1".to_string(), "test-url-1".to_string())
-                .expect("add realm");
-            set.handle_event(start_event("./test:realm-1")).await.expect("handle event");
-            set.handle_event(destroy_event("./test:realm-1")).await.expect("handle event");
-            set.handle_event(start_event("./test:realm-1/test_wrapper/hermetic_resolver"))
-                .await
-                .expect("handle event");
-            set.complete_set();
-            // The start event for hermetic resolver should be ignored, and the set should close.
-            assert_eq!(collect_requests_to_count(recv).await, hashmap! {});
+            let mut set = DebugDataSet::new(send, |got_data| assert!(!got_data))
+                .with_timeout_after_finish(TIMEOUT);
+
+            let mut fut_1 = async {
+                set.add_realm("./test:realm-1".to_string(), "test-url-1".to_string())
+                    .expect("add realm");
+                set.handle_event(start_event("./test:realm-1")).await.expect("handle event");
+                // add a start event without corresponding destroy event
+                set.handle_event(start_event("./test:realm-1/test_wrapper/hermetic_resolver"))
+                    .await
+                    .expect("handle event");
+                set.handle_event(destroy_event("./test:realm-1")).await.expect("handle event");
+                set.complete_set().await;
+            }
+            .boxed();
+            assert_eq!(executor.run_until_stalled(&mut fut_1), Poll::Ready(()));
+
+            // after processing all events request collection should be stalled.
+            let mut collect_requests_fut = collect_requests_to_count(recv).boxed();
+            assert_eq!(executor.run_until_stalled(&mut collect_requests_fut), Poll::Pending);
+
+            // after waking up the timer, the request collection should complete, ignoring the
+            // missing event.
+            let time_before = executor.now();
+            assert_eq!(executor.wake_next_timer().unwrap(), time_before + TIMEOUT);
+            let requests = match executor.run_until_stalled(&mut collect_requests_fut) {
+                Poll::Ready(req) => req,
+                Poll::Pending => panic!("Expected requests to be ready but was pending"),
+            };
+            assert_eq!(requests, hashmap! {});
         }
 
         #[fuchsia::test]
@@ -740,7 +780,7 @@ mod inner {
                 }
             );
 
-            set.lock().await.complete_set();
+            set.lock().await.complete_set().await;
             assert_data_tree!(
                 inspector,
                 root: {
@@ -988,6 +1028,7 @@ mod test {
                 controller_request_stream,
                 event_request_stream,
                 request_handler,
+                zx::Duration::INFINITE,
                 fuchsia_inspect::Inspector::new().root(),
             ),
             test_fn(controller_request_proxy, event_proxy, request_recv),

@@ -16,8 +16,12 @@ use fidl_fuchsia_test_debug as ftest_debug;
 use fidl_fuchsia_test_internal as ftest_internal;
 use fidl_fuchsia_test_manager as ftest_manager;
 use fuchsia_component::{client::connect_to_protocol, server::ServiceFs};
+use fuchsia_zircon as zx;
 use futures::{channel::mpsc, pin_mut, FutureExt, StreamExt};
 use log::info;
+
+/// Timeout after Finish() is sent for a set to process events.
+const TIMEOUT_AFTER_FINISH: zx::Duration = zx::Duration::from_seconds(20);
 
 #[fuchsia::component]
 async fn main() -> Result<(), Error> {
@@ -45,6 +49,7 @@ async fn main() -> Result<(), Error> {
             request_stream_recv.flatten(),
             event_stream.into_stream()?,
             DebugRequestHandlerImpl,
+            TIMEOUT_AFTER_FINISH,
             fuchsia_inspect::component::inspector().root(),
         ),
         fs.collect::<()>(),
