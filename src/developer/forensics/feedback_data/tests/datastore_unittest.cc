@@ -64,6 +64,7 @@ constexpr zx::duration kTimeout = zx::sec(30);
 // spurious logs due to empty annotation allowlist.
 const AnnotationKeys kDefaultAnnotationsToAvoidSpuriousLogs = {
     kAnnotationBuildIsDebug,
+    kAnnotationDeviceNumCPUs,
 };
 // Allowlist to use in test cases where the attachments don't matter, but where we want to avoid
 // spurious logs due to empty attachment allowlist.
@@ -209,6 +210,7 @@ TEST_F(DatastoreTest, GetAnnotationsAndAttachments_SmokeTest) {
           kAnnotationBuildVersionPreviousBoot,
           kAnnotationBuildIsDebug,
           kAnnotationDeviceBoardName,
+          kAnnotationDeviceNumCPUs,
           kAnnotationSystemBootIdCurrent,
           kAnnotationSystemBootIdPrevious,
           kAnnotationSystemLastRebootReason,
@@ -225,6 +227,7 @@ TEST_F(DatastoreTest, GetAnnotationsAndAttachments_SmokeTest) {
           {kAnnotationBuildVersionPreviousBoot, Error::kMissingValue},
           {kAnnotationBuildIsDebug, "true"},
           {kAnnotationDeviceBoardName, "board-name"},
+          {kAnnotationDeviceNumCPUs, "4"},
           {kAnnotationSystemBootIdCurrent, "boot-id"},
           {kAnnotationSystemBootIdPrevious, "previous-boot-id"},
           {kAnnotationSystemLastRebootReason, Error::kMissingValue},
@@ -243,6 +246,7 @@ TEST_F(DatastoreTest, GetAnnotationsAndAttachments_SmokeTest) {
           Pair(kAnnotationBuildVersionPreviousBoot, ErrorOr<std::string>(Error::kMissingValue)),
           Pair(kAnnotationBuildIsDebug, ErrorOr<std::string>("true")),
           Pair(kAnnotationDeviceBoardName, ErrorOr<std::string>("board-name")),
+          Pair(kAnnotationDeviceNumCPUs, ErrorOr<std::string>("4")),
           Pair(kAnnotationSystemBootIdCurrent, ErrorOr<std::string>("boot-id")),
           Pair(kAnnotationSystemBootIdPrevious, ErrorOr<std::string>("previous-boot-id")),
           Pair(kAnnotationSystemLastRebootReason, ErrorOr<std::string>(Error::kMissingValue)),

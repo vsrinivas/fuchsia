@@ -41,6 +41,7 @@ constexpr const char* kAnnotationBuildVersion = feedback::kBuildVersionKey;
 constexpr const char* kAnnotationBuildVersionPreviousBoot = feedback::kBuildVersionPreviousBootKey;
 constexpr const char* kAnnotationDeviceBoardName = feedback::kDeviceBoardNameKey;
 constexpr const char* kAnnotationDeviceFeedbackId = feedback::kDeviceFeedbackIdKey;
+constexpr const char* kAnnotationDeviceNumCPUs = feedback::kDeviceNumCPUsKey;
 constexpr const char* kAnnotationHardwareBoardName = feedback::kHardwareBoardNameKey;
 constexpr const char* kAnnotationHardwareBoardRevision = feedback::kHardwareBoardRevisionKey;
 constexpr const char* kAnnotationHardwareProductLanguage = feedback::kHardwareProductLanguageKey;

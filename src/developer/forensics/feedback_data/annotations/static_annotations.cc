@@ -29,6 +29,7 @@ const AnnotationKeys kSupportedAnnotations = {
     kAnnotationBuildVersionPreviousBoot,
     kAnnotationBuildIsDebug,
     kAnnotationDeviceBoardName,
+    kAnnotationDeviceNumCPUs,
     kAnnotationSystemBootIdCurrent,
     kAnnotationSystemBootIdPrevious,
     kAnnotationSystemLastRebootReason,

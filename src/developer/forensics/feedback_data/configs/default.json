@@ -8,6 +8,7 @@
         "build.version.previous-boot",
         "device.board-name",
         "device.feedback-id",
+        "device.num-cpus",
         "device.uptime",
         "device.utc-time",
         "hardware.board.name",

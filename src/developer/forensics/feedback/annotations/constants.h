@@ -23,6 +23,7 @@ constexpr const char kBuildLatestCommitDateKey[] = "build.latest-commit-date";
 constexpr const char kBuildIsDebugKey[] = "build.is_debug";
 constexpr const char kDeviceBoardNameKey[] = "device.board-name";
 constexpr const char kDeviceFeedbackIdKey[] = "device.feedback-id";
+constexpr const char kDeviceNumCPUsKey[] = "device.num-cpus";
 constexpr const char kDeviceUptimeKey[] = "device.uptime";
 constexpr const char kDeviceUtcTimeKey[] = "device.utc-time";
 constexpr const char kHardwareBoardNameKey[] = "hardware.board.name";

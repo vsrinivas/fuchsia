@@ -10,6 +10,7 @@
 #include <lib/fidl/cpp/string.h>
 #include <lib/fidl/cpp/synchronous_interface_ptr.h>
 #include <lib/syslog/cpp/macros.h>
+#include <zircon/syscalls.h>
 
 #include "src/developer/forensics/feedback/annotations/constants.h"
 #include "src/developer/forensics/feedback/constants.h"
@@ -67,6 +68,8 @@ std::string IsDebug() {
 #endif
 }
 
+std::string NumCPUs() { return std::to_string(zx_system_get_num_cpus()); }
+
 }  // namespace
 
 Annotations GetStartupAnnotations(const RebootLog& reboot_log) {
@@ -78,6 +81,7 @@ Annotations GetStartupAnnotations(const RebootLog& reboot_log) {
       {kBuildVersionPreviousBootKey, ReadAnnotation(kPreviousBuildVersionPath)},
       {kBuildIsDebugKey, IsDebug()},
       {kDeviceBoardNameKey, BoardName()},
+      {kDeviceNumCPUsKey, NumCPUs()},
       {kSystemBootIdCurrentKey, ReadAnnotation(kCurrentBootIdPath)},
       {kSystemBootIdPreviousKey, ReadAnnotation(kPreviousBootIdPath)},
       {kSystemLastRebootReasonKey, LastRebootReasonAnnotation(reboot_log)},

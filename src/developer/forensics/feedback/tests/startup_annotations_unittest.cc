@@ -57,6 +57,7 @@ TEST_F(StartupAnnotationsTest, Keys) {
                                        Key(kBuildVersionPreviousBootKey),
                                        Key(kBuildIsDebugKey),
                                        Key(kDeviceBoardNameKey),
+                                       Key(kDeviceNumCPUsKey),
                                        Key(kSystemBootIdCurrentKey),
                                        Key(kSystemBootIdPreviousKey),
                                        Key(kSystemLastRebootReasonKey),
@@ -91,7 +92,8 @@ TEST_F(StartupAnnotationsTest, Values_FilesPresent) {
           Pair(kBuildBoardKey, "board"), Pair(kBuildProductKey, "product"),
           Pair(kBuildLatestCommitDateKey, "commit-date"), Pair(kBuildVersionKey, "current-version"),
           Pair(kBuildVersionPreviousBootKey, "previous-version"), Pair(kBuildIsDebugKey, _),
-          Pair(kDeviceBoardNameKey, _), Pair(kSystemBootIdCurrentKey, "current-boot-id"),
+          Pair(kDeviceBoardNameKey, _), Pair(kDeviceNumCPUsKey, _),
+          Pair(kSystemBootIdCurrentKey, "current-boot-id"),
           Pair(kSystemBootIdPreviousKey, "previous-boot-id"),
           Pair(kSystemLastRebootReasonKey, LastRebootReasonAnnotation(reboot_log)),
           Pair(kSystemLastRebootUptimeKey, LastRebootUptimeAnnotation(reboot_log))));
@@ -109,7 +111,8 @@ TEST_F(StartupAnnotationsTest, Values_FilesMissing) {
           Pair(kBuildLatestCommitDateKey, Error::kFileReadFailure),
           Pair(kBuildVersionKey, Error::kFileReadFailure),
           Pair(kBuildVersionPreviousBootKey, Error::kFileReadFailure), Pair(kBuildIsDebugKey, _),
-          Pair(kDeviceBoardNameKey, _), Pair(kSystemBootIdCurrentKey, Error::kFileReadFailure),
+          Pair(kDeviceBoardNameKey, _), Pair(kDeviceNumCPUsKey, _),
+          Pair(kSystemBootIdCurrentKey, Error::kFileReadFailure),
           Pair(kSystemBootIdPreviousKey, Error::kFileReadFailure),
           Pair(kSystemLastRebootReasonKey, LastRebootReasonAnnotation(reboot_log)),
           Pair(kSystemLastRebootUptimeKey, LastRebootUptimeAnnotation(reboot_log))));
