@@ -45,14 +45,21 @@ pub enum TreeServerSendPreference {
 }
 
 impl TreeServerSendPreference {
-    fn frozen_fails_with(failure: TreeServerSendPreference) -> Self {
-        TreeServerSendPreference::Frozen(Box::new(failure))
+    /// Create a new [`TreeServerSendPreference`] that sends a frozen/copy-on-write VMO of the tree,
+    /// falling back to the specified `failure_mode` if a frozen VMO cannot be provided.
+    ///
+    /// # Arguments
+    ///
+    /// * `failure_mode` - Fallback behavior to use if freezing the Inspect VMO fails.
+    ///
+    pub fn frozen_or(failure_mode: TreeServerSendPreference) -> Self {
+        TreeServerSendPreference::Frozen(Box::new(failure_mode))
     }
 }
 
 impl Default for TreeServerSendPreference {
     fn default() -> Self {
-        TreeServerSendPreference::frozen_fails_with(TreeServerSendPreference::Live)
+        TreeServerSendPreference::frozen_or(TreeServerSendPreference::Live)
     }
 }
 
@@ -61,7 +68,7 @@ impl Default for TreeServerSendPreference {
 pub struct TreeServerSettings {
     /// This specifies how the VMO should be sent over the tree server.
     /// Default behavior is TreeServerSendPreference::Frozen(TreeServerSendPreference::Live).
-    send_vmo_preference: TreeServerSendPreference,
+    pub send_vmo_preference: TreeServerSendPreference,
 }
 
 /// Runs a server for the `fuchsia.inspect.Tree` protocol. This protocol returns the VMO

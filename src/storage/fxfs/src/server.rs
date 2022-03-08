@@ -19,6 +19,7 @@ use {
     fuchsia_zircon::{self as zx, AsHandleRef},
     futures::stream::{StreamExt, TryStreamExt},
     futures::TryFutureExt,
+    inspect_runtime::service::{TreeServerSendPreference, TreeServerSettings},
     std::{
         convert::TryInto,
         sync::{
@@ -133,7 +134,18 @@ impl FxfsServer {
         fs.add_remote("root", proxy);
         fs.add_fidl_service(Services::Admin).add_fidl_service(Services::Query);
         // Serve static Inspect instance from fuchsia_inspect::component to diagnostic directory.
-        inspect_runtime::serve(fuchsia_inspect::component::inspector(), &mut fs)?;
+        // We fall back to DeepCopy mode instead of Live mode (the default) if we could not create a
+        // child copy of the backing VMO. This helps prevent issues with the reader acquiring a lock
+        // while the the filesystem is under load. See fxbug.dev/57330 for details.
+        inspect_runtime::serve_with_options(
+            fuchsia_inspect::component::inspector(),
+            TreeServerSettings {
+                send_vmo_preference: TreeServerSendPreference::frozen_or(
+                    TreeServerSendPreference::DeepCopy,
+                ),
+            },
+            &mut fs,
+        )?;
         fs.serve_connection(outgoing_chan)?;
 
         // Handle all ServiceFs connections. VFS connections will be spawned as separate tasks.
