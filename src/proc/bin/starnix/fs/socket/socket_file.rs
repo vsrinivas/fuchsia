@@ -42,8 +42,17 @@ impl FileOps for SocketFile {
         waiter: &Arc<Waiter>,
         events: FdEvents,
         handler: EventHandler,
-    ) {
+    ) -> WaitKey {
         self.socket.wait_async(waiter, events, handler)
+    }
+
+    fn cancel_wait(
+        &self,
+        _current_task: &CurrentTask,
+        _waiter: &Arc<Waiter>,
+        key: WaitKey,
+    ) -> bool {
+        self.socket.cancel_wait(key)
     }
 
     fn query_events(&self, _current_task: &CurrentTask) -> FdEvents {

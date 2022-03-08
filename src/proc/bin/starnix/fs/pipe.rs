@@ -333,14 +333,24 @@ impl FileOps for PipeFileObject {
         waiter: &Arc<Waiter>,
         events: FdEvents,
         handler: EventHandler,
-    ) {
+    ) -> WaitKey {
         let mut pipe = self.pipe.lock();
         let present_events = pipe.query_events();
         if events & present_events {
-            waiter.wake_immediately(present_events.mask(), handler);
+            waiter.wake_immediately(present_events.mask(), handler)
         } else {
-            pipe.waiters.wait_async_mask(waiter, events.mask(), handler);
+            pipe.waiters.wait_async_mask(waiter, events.mask(), handler)
         }
+    }
+
+    fn cancel_wait(
+        &self,
+        _current_task: &CurrentTask,
+        _waiter: &Arc<Waiter>,
+        key: WaitKey,
+    ) -> bool {
+        let mut pipe = self.pipe.lock();
+        pipe.waiters.cancel_wait(key)
     }
 
     fn query_events(&self, _current_task: &CurrentTask) -> FdEvents {

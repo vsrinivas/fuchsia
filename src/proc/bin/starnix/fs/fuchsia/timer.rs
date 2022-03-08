@@ -192,7 +192,7 @@ impl FileOps for TimerFile {
         waiter: &Arc<Waiter>,
         events: FdEvents,
         handler: EventHandler,
-    ) {
+    ) -> WaitKey {
         let signal_handler = move |signals: zx::Signals| {
             let events = TimerFile::get_events_from_signals(signals);
             handler(events);
@@ -203,7 +203,11 @@ impl FileOps for TimerFile {
                 TimerFile::get_signals_from_events(events),
                 Box::new(signal_handler),
             )
-            .unwrap(); // TODO return error
+            .unwrap() // TODO return error
+    }
+
+    fn cancel_wait(&self, _current_task: &CurrentTask, waiter: &Arc<Waiter>, key: WaitKey) -> bool {
+        waiter.cancel_signal_wait(&self.timer, key)
     }
 
     fn query_events(&self, _current_task: &CurrentTask) -> FdEvents {

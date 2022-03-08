@@ -133,14 +133,24 @@ impl FileOps for EventFdFileObject {
         waiter: &Arc<Waiter>,
         events: FdEvents,
         handler: EventHandler,
-    ) {
+    ) -> WaitKey {
         let mut inner = self.inner.lock();
         let present_events = query_events_internal(&inner);
         if events & present_events {
-            waiter.wake_immediately(present_events.mask(), handler);
+            waiter.wake_immediately(present_events.mask(), handler)
         } else {
-            inner.wait_queue.wait_async_mask(waiter, events.mask(), handler);
+            inner.wait_queue.wait_async_mask(waiter, events.mask(), handler)
         }
+    }
+
+    fn cancel_wait(
+        &self,
+        _current_task: &CurrentTask,
+        _waiter: &Arc<Waiter>,
+        key: WaitKey,
+    ) -> bool {
+        let mut inner = self.inner.lock();
+        inner.wait_queue.cancel_wait(key)
     }
 
     fn query_events(&self, _current_task: &CurrentTask) -> FdEvents {

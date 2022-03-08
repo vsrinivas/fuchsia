@@ -41,6 +41,7 @@ pub use dir_entry::*;
 pub use directory_file::*;
 pub use dirent_sink::*;
 pub use epoll::*;
+pub use eventfd::*;
 pub use fd_events::*;
 pub use fd_number::*;
 pub use fd_table::*;

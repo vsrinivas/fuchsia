@@ -367,15 +367,25 @@ impl Socket {
         peer.write_kernel(message)
     }
 
-    pub fn wait_async(&self, waiter: &Arc<Waiter>, events: FdEvents, handler: EventHandler) {
+    pub fn wait_async(
+        &self,
+        waiter: &Arc<Waiter>,
+        events: FdEvents,
+        handler: EventHandler,
+    ) -> WaitKey {
         let mut inner = self.lock();
 
         let present_events = inner.query_events();
         if events & present_events {
-            waiter.wake_immediately(present_events.mask(), handler);
+            waiter.wake_immediately(present_events.mask(), handler)
         } else {
-            inner.waiters.wait_async_mask(waiter, events.mask(), handler);
+            inner.waiters.wait_async_mask(waiter, events.mask(), handler)
         }
+    }
+
+    pub fn cancel_wait(&self, key: WaitKey) -> bool {
+        let mut inner = self.lock();
+        inner.waiters.cancel_wait(key)
     }
 
     pub fn query_events(&self) -> FdEvents {

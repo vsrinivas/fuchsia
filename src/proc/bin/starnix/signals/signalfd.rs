@@ -65,15 +65,20 @@ impl FileOps for SignalFd {
         waiter: &Arc<Waiter>,
         events: FdEvents,
         handler: EventHandler,
-    ) {
+    ) -> WaitKey {
         // TODO(tbodt): The fact that so many of the wait_async methods have the same
         // wake_immediately call is a sign that maybe it should be factored out to a higher layer.
         let mut signals = current_task.signals.write();
         if signals.is_any_allowed_by_mask(!self.mask) {
-            waiter.wake_immediately(FdEvents::POLLIN.mask(), handler);
+            waiter.wake_immediately(FdEvents::POLLIN.mask(), handler)
         } else {
-            signals.signalfd_wait.wait_async_mask(waiter, events.mask(), handler);
+            signals.signalfd_wait.wait_async_mask(waiter, events.mask(), handler)
         }
+    }
+
+    fn cancel_wait(&self, current_task: &CurrentTask, _waiter: &Arc<Waiter>, key: WaitKey) -> bool {
+        let mut signals = current_task.signals.write();
+        signals.signalfd_wait.cancel_wait(key)
     }
 
     fn query_events(&self, current_task: &CurrentTask) -> FdEvents {

@@ -167,7 +167,16 @@ pub trait FileOps: Send + Sync + AsAny {
         _waiter: &Arc<Waiter>,
         _events: FdEvents,
         _handler: EventHandler,
-    );
+    ) -> WaitKey;
+
+    /// Cancel a wait set up by wait_async.
+    /// Returns true if the wait has not been activated and has been cancelled.
+    fn cancel_wait(
+        &self,
+        _current_task: &CurrentTask,
+        _waiter: &Arc<Waiter>,
+        _key: WaitKey,
+    ) -> bool;
 
     fn query_events(&self, current_task: &CurrentTask) -> FdEvents;
 
@@ -383,7 +392,17 @@ macro_rules! fileops_impl_nonblocking {
             _waiter: &std::sync::Arc<crate::task::Waiter>,
             _events: crate::fs::FdEvents,
             _handler: crate::task::EventHandler,
-        ) {
+        ) -> crate::task::WaitKey {
+            crate::task::WaitKey::empty()
+        }
+
+        fn cancel_wait(
+            &self,
+            _current_task: &CurrentTask,
+            _waiter: &std::sync::Arc<crate::task::Waiter>,
+            _key: crate::task::WaitKey,
+        ) -> bool {
+            false
         }
 
         fn query_events(&self, _current_task: &crate::task::CurrentTask) -> crate::fs::FdEvents {
@@ -799,8 +818,19 @@ impl FileObject {
         waiter: &Arc<Waiter>,
         events: FdEvents,
         handler: EventHandler,
-    ) {
+    ) -> WaitKey {
         self.ops().wait_async(self, current_task, waiter, events, handler)
+    }
+
+    // Cancel a wait set up with wait_async
+    #[allow(dead_code)]
+    pub fn cancel_wait(
+        &self,
+        current_task: &CurrentTask,
+        waiter: &Arc<Waiter>,
+        key: WaitKey,
+    ) -> bool {
+        self.ops().cancel_wait(current_task, waiter, key)
     }
 
     // Return the events currently active

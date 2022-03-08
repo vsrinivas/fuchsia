@@ -251,8 +251,17 @@ impl FileOps for EpollFileObject {
         _waiter: &Arc<Waiter>,
         _events: FdEvents,
         _handler: EventHandler,
-    ) {
+    ) -> WaitKey {
         panic!("waiting on epoll unimplemnted")
+    }
+
+    fn cancel_wait(
+        &self,
+        _current_task: &CurrentTask,
+        _waiter: &Arc<Waiter>,
+        _key: WaitKey,
+    ) -> bool {
+        panic!("cancelling waiting on epoll unimplemnted")
     }
 
     fn query_events(&self, _current_task: &CurrentTask) -> FdEvents {

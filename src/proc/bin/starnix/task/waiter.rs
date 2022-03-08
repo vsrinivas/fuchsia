@@ -21,6 +21,7 @@ pub enum WaitCallback {
     EventHandler(EventHandler),
 }
 
+#[derive(Clone, Copy)]
 pub struct WaitKey {
     key: u64,
 }
@@ -29,6 +30,10 @@ impl WaitKey {
     /// an empty key means no associated handler
     pub fn empty() -> WaitKey {
         WaitKey { key: 0 }
+    }
+
+    pub fn equals(&self, other: &WaitKey) -> bool {
+        self.key == other.key
     }
 }
 
@@ -172,10 +177,18 @@ impl Waiter {
         handle: &dyn zx::AsHandleRef,
         signals: zx::Signals,
         handler: SignalHandler,
-    ) -> Result<(), zx::Status> {
+    ) -> Result<WaitKey, zx::Status> {
         let callback = WaitCallback::SignalHandler(handler);
         let key = self.register_callback(callback);
-        handle.wait_async_handle(&self.port, key, signals, zx::WaitAsyncOpts::empty())
+        handle.wait_async_handle(&self.port, key, signals, zx::WaitAsyncOpts::empty())?;
+        Ok(WaitKey { key })
+    }
+
+    pub fn cancel_signal_wait<H>(&self, handle: &H, key: WaitKey) -> bool
+    where
+        H: zx::AsHandleRef,
+    {
+        self.port.cancel(handle, key.key).is_ok()
     }
 
     fn wake_on_events(&self, handler: EventHandler) -> WaitKey {
@@ -250,12 +263,18 @@ impl WaitQueue {
     ///
     /// This function does not actually block the waiter. To block the waiter,
     /// call the "wait" function on the waiter.
-    pub fn wait_async_mask(&mut self, waiter: &Arc<Waiter>, events: u32, handler: EventHandler) {
+    pub fn wait_async_mask(
+        &mut self,
+        waiter: &Arc<Waiter>,
+        events: u32,
+        handler: EventHandler,
+    ) -> WaitKey {
         let key = waiter.wake_on_events(handler);
         self.waiters.push(WaitEntry { waiter: Arc::clone(waiter), events, persistent: false, key });
+        key
     }
 
-    pub fn wait_async(&mut self, waiter: &Arc<Waiter>) {
+    pub fn wait_async(&mut self, waiter: &Arc<Waiter>) -> WaitKey {
         self.wait_async_mask(waiter, u32::MAX, WaitCallback::none())
     }
 
@@ -279,6 +298,23 @@ impl WaitQueue {
                 return true;
             })
             .collect();
+    }
+
+    pub fn cancel_wait(&mut self, key: WaitKey) -> bool {
+        let mut cancelled = false;
+        // TODO(steveaustin) Maybe make waiters a map to avoid linear search
+        self.waiters = std::mem::take(&mut self.waiters)
+            .into_iter()
+            .filter(|entry| {
+                if entry.key.equals(&key) {
+                    cancelled = true;
+                    false
+                } else {
+                    true
+                }
+            })
+            .collect();
+        cancelled
     }
 
     pub fn notify_mask(&mut self, events: u32) {
@@ -309,8 +345,11 @@ mod tests {
     use super::*;
     use crate::fs::fuchsia::*;
     use crate::fs::FdEvents;
+    use crate::fs::{new_eventfd, EventFdType};
+    use crate::mm::PAGE_SIZE;
     use crate::types::UserBuffer;
     use fuchsia_async as fasync;
+    use std::sync::atomic::AtomicU64;
 
     use crate::testing::*;
 
@@ -361,6 +400,39 @@ mod tests {
 
         let read_mem_valid = &read_mem[0..read_size];
         assert_eq!(*&read_mem_valid, test_string.as_bytes());
+    }
+
+    #[test]
+    fn test_async_wait_cancel() {
+        for do_cancel in [true, false] {
+            let (kernel, current_task) = create_kernel_and_task();
+            let event = new_eventfd(&kernel, 0, EventFdType::Counter, true);
+            let waiter = Waiter::new();
+            let callback_count = Arc::new(AtomicU64::new(0));
+            let callback_count_clone = callback_count.clone();
+            let handler = move |_observed: FdEvents| {
+                callback_count_clone.fetch_add(1, Ordering::Relaxed);
+            };
+            let key = event.wait_async(&current_task, &waiter, FdEvents::POLLIN, Box::new(handler));
+            if do_cancel {
+                event.cancel_wait(&current_task, &waiter, key);
+            }
+            let write_mem = map_memory(&current_task, UserAddress::default(), *PAGE_SIZE);
+            let add_val = 1u64;
+            current_task.mm.write_memory(write_mem, &add_val.to_ne_bytes()).unwrap();
+            let data = [UserBuffer { address: write_mem, length: std::mem::size_of::<u64>() }];
+            assert_eq!(event.write(&current_task, &data).unwrap(), std::mem::size_of::<u64>());
+
+            let wait_result = waiter.wait_until(&current_task, zx::Time::ZERO);
+            let final_count = callback_count.load(Ordering::Relaxed);
+            if do_cancel {
+                assert_eq!(wait_result, Err(ETIMEDOUT));
+                assert_eq!(0, final_count);
+            } else {
+                assert_eq!(wait_result, Ok(()));
+                assert_eq!(1, final_count);
+            }
+        }
     }
 
     #[test]
