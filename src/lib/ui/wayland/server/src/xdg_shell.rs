@@ -1253,6 +1253,7 @@ impl XdgToplevel {
         let control_handle = stream.control_handle();
         fasync::Task::local(
             async move {
+                #[allow(clippy::never_loop)] // TODO(fxbug.dev/95062)
                 while let Some(request) = stream.try_next().await.unwrap() {
                     match request {
                         ViewProviderRequest::CreateView2 { args, .. } => {
@@ -1659,6 +1660,7 @@ impl XdgSurfaceView {
         geometry: &Rect,
     ) -> (i32, i32) {
         // Use local offset if we have a parent view.
+        #[allow(clippy::eq_op)] // TODO(fxbug.dev/95062)
         parent.as_ref().map_or_else(
             ||
             // Center in available space if geometry is non-zero.

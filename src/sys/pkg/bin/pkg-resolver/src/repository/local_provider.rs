@@ -56,6 +56,7 @@ impl RepositoryProvider<Json> for LocalMirrorRepositoryProvider {
             let mut stream = file_proxy.take_event_stream();
 
             let mut status = None;
+            #[allow(clippy::never_loop)] // TODO(fxbug.dev/95063)
             while let Some(event) = stream.next().await {
                 match event {
                     Ok(FileEvent::OnOpen_ { s, .. }) => {

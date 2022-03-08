@@ -195,6 +195,7 @@ impl SelectorString {
     pub fn is_selector(s: &str) -> bool {
         // Check that there is at least one ':' delimited segment, and that it parses as a selector
         // type.
+        #[allow(clippy::suspicious_splitn)] // TODO(fxbug.dev/95056)
         let mut split = s.splitn(1, ':');
 
         match (split.next(), split.next()) {

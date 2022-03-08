@@ -435,6 +435,7 @@ impl MultiCharRange for CharCollection {
     }
 }
 
+#[allow(clippy::derive_hash_xor_eq)] // TODO(fxbug.dev/95047)
 impl Hash for CharCollection {
     fn hash<H: Hasher>(&self, state: &mut H) {
         self.ranges.iter().for_each(|range| hash_char_range(range, state));

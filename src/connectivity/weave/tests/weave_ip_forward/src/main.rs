@@ -246,6 +246,7 @@ async fn run_server_node(
     Ok(())
 }
 
+#[allow(clippy::unused_io_amount)] // TODO(fxbug.dev/95087)
 async fn get_test_fut_client(connect_addr: String) -> Result<(), Error> {
     let mut stream = TcpStream::connect(connect_addr.clone()).context("Tcp connection failed")?;
     let request = HELLO_MSG_REQ.as_bytes();

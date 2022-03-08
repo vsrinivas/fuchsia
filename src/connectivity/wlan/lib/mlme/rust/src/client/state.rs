@@ -2882,6 +2882,7 @@ mod tests {
         }
     }
 
+    #[allow(clippy::unit_cmp)] // TODO(fxbug.dev/95064)
     #[test]
     fn assoc_send_eth_frame_becomes_data_frame() {
         let exec = fasync::TestExecutor::new().expect("failed to create an executor");

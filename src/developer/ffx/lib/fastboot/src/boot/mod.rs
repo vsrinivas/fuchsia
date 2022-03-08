@@ -19,6 +19,7 @@ const BOOT_MAGIC: &str = "ANDROID!";
 const BOOT_SIZE: usize = 8;
 const V4_HEADER_SIZE: u32 = 1580;
 
+#[allow(clippy::unused_io_amount)] // TODO(fxbug.dev/95073)
 fn copy<R: Read, W: Write>(mut reader: BufReader<R>, writer: &mut BufWriter<W>) -> Result<()> {
     loop {
         let buffer = reader.fill_buf()?;
@@ -63,6 +64,7 @@ async fn get_boot_image<W: Write, F: FileResolver + Sync>(
     }
 }
 
+#[allow(clippy::unused_io_amount)] // TODO(fxbug.dev/95073)
 pub async fn boot<W: Write, F: FileResolver + Sync>(
     writer: &mut W,
     file_resolver: &mut F,

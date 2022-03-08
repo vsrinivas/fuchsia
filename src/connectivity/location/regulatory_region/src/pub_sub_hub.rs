@@ -511,6 +511,7 @@ mod tests {
         assert_eq!(hub.get_value(), Some("US".to_string()));
     }
 
+    #[allow(clippy::unused_io_amount)] // TODO(fxbug.dev/95051)
     #[test]
     fn load_as_none_if_cache_file_is_bad() {
         let temp_dir = TempDir::new_in("/cache/").expect("failed to create temporary directory");

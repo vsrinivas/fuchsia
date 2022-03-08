@@ -1547,6 +1547,7 @@ mod tests {
             assert_eq!(body, [0]);
         }
 
+        #[allow(clippy::eq_op)] // TODO(fxbug.dev/95029)
         #[ipv6]
         {
             let (body, src_mac, dst_mac, src_ip, dst_ip, proto, ttl) =

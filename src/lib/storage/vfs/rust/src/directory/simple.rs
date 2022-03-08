@@ -205,6 +205,7 @@ where
 
         // Create copies so if this fails to open we can call the not found handler
         let ref_copy = self.clone();
+        #[allow(clippy::clone_double_ref)] // TODO(fxbug.dev/95027)
         let name_copy = name.clone().to_string();
 
         // Do not hold the mutex more than necessary.  Plus, [`parking_lot::Mutex`] is not

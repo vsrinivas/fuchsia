@@ -350,6 +350,7 @@ impl SliceCache {
             // Generic `Slice<'static, ()>` are transmuted to `Slice<'s, T>`, enforcing the
             // original `slice`'s lifetime. Since slices are simply pairs of `(offset, len)`,
             // transmuting `()` to `T` relies on the `ROOT` being set up above with the correct pointer.
+            #[allow(clippy::transmute_undefined_repr)] // TODO(fxbug.dev/95175)
             return Some(unsafe { mem::transmute(&mut *self.slices) });
         }
 
@@ -369,6 +370,7 @@ impl SliceCache {
                 // Generic `Slice<'static, ()>` are transmuted to `Slice<'s, T>`, enforcing the
                 // original `slice`'s lifetime. Since slices are simply pairs of `(offset, len)`,
                 // transmuting `()` to `T` relies on the `ROOT` being set up above with the correct pointer.
+                #[allow(clippy::transmute_undefined_repr)] // TODO(fxbug.dev/95175)
                 return Some(unsafe { mem::transmute(&mut *self.slices) });
             }
         }

@@ -604,6 +604,7 @@ impl Hooks {
                 if let Some(hooks) = hooks_map.get_mut(&event.event_type()) {
                     hooks.retain(|hook| {
                         if let Some(callback) = hook.callback.upgrade() {
+                            #[allow(clippy::clone_double_ref)] // TODO(fxbug.dev/95031)
                             strong_hooks
                                 .push(StrongHookEntry { name: hook.name.clone(), callback });
                             true

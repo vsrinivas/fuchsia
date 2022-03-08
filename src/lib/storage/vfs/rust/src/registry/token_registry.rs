@@ -209,6 +209,7 @@ mod tests {
         assert_eq!(token.basic_info().unwrap().rights, DEFAULT_TOKEN_RIGHTS);
     }
 
+    #[allow(clippy::vtable_address_comparisons)] // TODO(fxbug.dev/95027)
     #[test]
     fn client_unregister() {
         let client = MockDirectory::new();

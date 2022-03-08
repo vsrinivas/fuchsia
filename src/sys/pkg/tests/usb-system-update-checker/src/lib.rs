@@ -212,6 +212,7 @@ impl TestEnv {
             fidl::endpoints::create_request_stream::<MonitorMarker>()
                 .expect("Creating monitor endpoints succeeds");
         let monitor_task = fasync::Task::spawn(async move {
+            #[allow(clippy::never_loop)] // TODO(fxbug.dev/95063)
             while let Some(request) = stream.try_next().await.expect("try_next succeeds") {
                 match request {
                     MonitorRequest::OnUpdateStarted { .. } => {

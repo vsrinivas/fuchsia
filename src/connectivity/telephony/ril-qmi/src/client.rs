@@ -222,6 +222,7 @@ mod tests {
 
         let sender = async {
             // hacky way of getting around two step client/lock requirements
+            #[allow(clippy::never_loop)] // TODO(fxbug.dev/95076)
             loop {
                 if let Some(modem_lock) = modem.try_lock() {
                     let client = modem_lock.create_client().await;

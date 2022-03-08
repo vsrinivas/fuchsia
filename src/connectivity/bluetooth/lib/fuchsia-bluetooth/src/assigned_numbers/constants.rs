@@ -607,6 +607,7 @@ pub(super) const DESCRIPTOR_NUMBERS: [AssignedNumber; 15] = [
     assigned_number!(0x290E, "Time Trigger Setting"),
 ];
 
+#[allow(clippy::invisible_characters)] // TODO(fxbug.dev/95033)
 /// Service Class Profile Identifiers.
 /// Used in SDP to advertise the type of service being provided.
 /// Source: https://www.bluetooth.com/specifications/assigned-numbers/service-discovery/

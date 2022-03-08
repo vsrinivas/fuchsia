@@ -46,6 +46,7 @@ struct RoundedLine {
 }
 
 impl RoundedLine {
+    #[allow(clippy::approx_constant)] // TODO(fxbug.dev/95054)
     fn new(mut path_builder: PathBuilder, pos: Point, length: f32, thickness: f32) -> Self {
         let radius = thickness / 2.0;
         let tl = pos.to_vector();

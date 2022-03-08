@@ -42,6 +42,7 @@ pub extern "C" fn stop_client_mlme(mlme: &mut MlmeHandle) {
     mlme.stop();
 }
 
+#[allow(clippy::not_unsafe_ptr_arg_deref)] // TODO(fxbug.dev/95064)
 #[no_mangle]
 pub extern "C" fn delete_client_mlme(mlme: *mut MlmeHandle) {
     if !mlme.is_null() {

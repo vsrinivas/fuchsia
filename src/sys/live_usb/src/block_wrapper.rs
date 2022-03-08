@@ -60,6 +60,7 @@ impl<T: FileLike> Read for WrappedBlockDevice<T> {
 }
 
 impl<T: FileLike> Write for WrappedBlockDevice<T> {
+    #[allow(clippy::unused_io_amount)] // TODO(fxbug.dev/95090)
     fn write(&mut self, buf: &[u8]) -> Result<usize> {
         let start = self.cur_pos;
         let end = self.cur_pos + buf.len() as u64;
@@ -182,6 +183,7 @@ mod tests {
         }
     }
 
+    #[allow(clippy::unused_io_amount)] // TODO(fxbug.dev/95090)
     #[test]
     fn test_block_read() {
         let disk = ExactDisk::new(vec![0, 0, 1, 1, 3, 3, 4, 4], 4);
@@ -194,6 +196,7 @@ mod tests {
         assert_eq!(buf, [1, 1, 3, 3, 4, 4]);
     }
 
+    #[allow(clippy::unused_io_amount)] // TODO(fxbug.dev/95090)
     #[test]
     fn test_block_write_seek() {
         let disk = ExactDisk::new(vec![0, 0, 1, 1, 3, 3, 4, 4], 4);

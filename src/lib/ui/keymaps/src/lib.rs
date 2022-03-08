@@ -415,6 +415,7 @@ impl LockStateKeys {
         if lock_key == LockState::from_bits_allow_unknown(0) {
             return;
         }
+        #[allow(clippy::clone_double_ref)] // TODO(fxbug.dev/95048)
         let lock_state = self.state.get(&lock_key).map(|e| e.clone());
         match (event, lock_state) {
             (KeyEventType::Pressed, None) => {

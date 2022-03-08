@@ -521,6 +521,7 @@ mod tests {
         assert_eq!(fut_step.get(), 2);
     }
 
+    #[allow(clippy::unit_cmp)] // TODO(fxbug.dev/95049)
     #[test]
     // Runs a future that waits on a timer.
     fn stepwise_timer() {

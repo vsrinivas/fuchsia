@@ -44,6 +44,7 @@ pub struct Gtk {
     // TODO(hahnr): Add TKIP Tx/Rx MIC support (IEEE 802.11-2016, 12.8.2).
 }
 
+#[allow(clippy::derive_hash_xor_eq)] // TODO(fxbug.dev/95064)
 /// Custom Hash implementation which doesn't take the RSC or cipher suite into consideration.
 impl Hash for Gtk {
     fn hash<H: Hasher>(&self, state: &mut H) {

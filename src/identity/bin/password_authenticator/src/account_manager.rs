@@ -589,6 +589,7 @@ where
                             );
                         });
                         // Ignore the result.
+                        #[allow(clippy::drop_copy)] // TODO(fxbug.dev/95068)
                         drop(shred_res);
                     }
                     Err(err) => {

@@ -40,6 +40,7 @@ fn main() -> Result<(), anyhow::Error> {
     let eventloop_fut = eventloop.run().fuse();
     futures::pin_mut!(eventloop_fut);
     let mut serve_fut = fs.collect().map(Ok);
+    #[allow(clippy::never_loop)] // TODO(fxbug.dev/95055)
     executor.run_singlethreaded(async {
         loop {
             futures::select! {

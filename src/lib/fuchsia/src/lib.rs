@@ -89,6 +89,7 @@ pub fn init_logging_for_test_with_threads<'a, R>(
     _logging_tags: &'a [&'static str],
     _interest: fidl_fuchsia_diagnostics::Interest,
 ) -> impl Fn(usize) -> R + 'a {
+    #[allow(clippy::clone_double_ref)] // TODO(fxbug.dev/95091)
     move |n| {
         #[cfg(target_os = "fuchsia")]
         let _guard = {

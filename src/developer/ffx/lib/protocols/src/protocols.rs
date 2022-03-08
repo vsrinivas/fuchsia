@@ -224,6 +224,7 @@ where
 
     async fn start_protocol(&self, cx: &Context) -> Result<()> {
         let cx = cx.clone();
+        #[allow(clippy::async_yields_async)] // TODO(fxbug.dev/95073)
         let fut = self
             .start_fut
             .get_or_init(async move {

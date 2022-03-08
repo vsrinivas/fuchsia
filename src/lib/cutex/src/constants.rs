@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#![allow(clippy::bad_bit_mask)] // TODO(fxbug.dev/95084)
+
 use static_assertions::const_assert;
 
 pub(crate) const IS_LOCKED: usize = 1usize.rotate_right(1);

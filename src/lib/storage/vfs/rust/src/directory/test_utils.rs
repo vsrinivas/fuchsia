@@ -71,6 +71,7 @@ impl DirentsSameInodeBuilder {
         DirentsSameInodeBuilder { expected: vec![], inode }
     }
 
+    #[allow(clippy::unused_io_amount)] // TODO(fxbug.dev/95027)
     pub fn add(&mut self, type_: u8, name: &[u8]) -> &mut Self {
         assert!(
             name.len() <= MAX_FILENAME as usize,

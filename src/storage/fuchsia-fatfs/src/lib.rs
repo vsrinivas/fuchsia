@@ -187,6 +187,7 @@ mod tests {
             };
         }
 
+        #[allow(clippy::unused_io_amount)] // TODO(fxbug.dev/95027)
         fn create_fs_structure(&self, name: &str, dir: &Dir<'_>) {
             match self {
                 TestDiskContents::File(content) => {

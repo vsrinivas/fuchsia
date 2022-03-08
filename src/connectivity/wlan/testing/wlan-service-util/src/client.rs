@@ -105,6 +105,7 @@ async fn handle_connect_transaction(
 
     let mut result_code = fidl_ieee80211::StatusCode::RefusedReasonUnspecified;
 
+    #[allow(clippy::never_loop)] // TODO(fxbug.dev/95064)
     while let Some(evt) = event_stream
         .try_next()
         .await

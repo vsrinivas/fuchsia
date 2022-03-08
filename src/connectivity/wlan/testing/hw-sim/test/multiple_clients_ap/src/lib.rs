@@ -37,6 +37,7 @@ async fn connect(
     let (local, remote) = fidl::endpoints::create_proxy()?;
     client_sme.connect(req, Some(remote))?;
     let mut stream = local.take_event_stream();
+    #[allow(clippy::never_loop)] // TODO(fxbug.dev/95064)
     while let Some(event) = stream.try_next().await? {
         match event {
             fidl_sme::ConnectTransactionEvent::OnConnectResult { result } => {

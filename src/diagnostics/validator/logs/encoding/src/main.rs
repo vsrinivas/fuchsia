@@ -51,6 +51,7 @@ async fn main() -> Result<(), Error> {
         let test_name = test_case.0;
         let mut buffer = vec![0; size.try_into().expect("Unable to convert size")];
         vmo.read(&mut buffer, 0)?;
+        #[allow(clippy::clone_double_ref)] // TODO(fxbug.dev/95023)
         expected.push((test_name.clone(), test_case.2));
         actual.push((test_name, buffer));
     }
@@ -134,6 +135,7 @@ fn test_empty_string() -> TestCase {
     ("test_empty_string", record, expected_result)
 }
 
+#[allow(clippy::approx_constant)] // TODO(fxbug.dev/95023)
 fn test_float() -> TestCase {
     let timestamp = 6;
     let arg = Argument { name: String::from("name"), value: Value::Floating(3.1415) };

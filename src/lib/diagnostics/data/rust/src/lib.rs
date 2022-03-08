@@ -614,6 +614,7 @@ impl LogsDataBuilder {
 
     #[must_use = "You must call build on your builder to consume its result"]
     pub fn set_dropped(mut self, value: u64) -> Self {
+        #[allow(clippy::absurd_extreme_comparisons)] // TODO(fxbug.dev/95023)
         if value <= 0 {
             return self;
         }

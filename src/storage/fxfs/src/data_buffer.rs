@@ -284,6 +284,7 @@ impl BoxedPage {
         self.0.page()
     }
 
+    #[allow(clippy::mut_from_ref)] // TODO(fxbug.dev/95027)
     unsafe fn page_mut(&self) -> &mut Page {
         self.0.page_mut()
     }
@@ -322,6 +323,7 @@ impl PageCell {
         &*self.0.get()
     }
 
+    #[allow(clippy::mut_from_ref)] // TODO(fxbug.dev/95027)
     unsafe fn page_mut(&self) -> &mut Page {
         &mut *self.0.get()
     }

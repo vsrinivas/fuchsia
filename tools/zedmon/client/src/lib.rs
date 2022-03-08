@@ -375,6 +375,7 @@ impl<InterfaceType: usb_bulk::Open<InterfaceType> + Read + Write> ZedmonClient<I
         }
     }
 
+    #[allow(clippy::unused_io_amount)] // TODO(fxbug.dev/95036)
     /// Retrieves a ParameterValue from the provided Zedmon interface.
     fn get_parameter(interface: &mut InterfaceType, index: u8) -> Result<ParameterValue, Error> {
         let request = protocol::encode_query_parameter(index);
@@ -398,6 +399,7 @@ impl<InterfaceType: usb_bulk::Open<InterfaceType> + Read + Write> ZedmonClient<I
         }
     }
 
+    #[allow(clippy::unused_io_amount)] // TODO(fxbug.dev/95036)
     /// Retrieves a ReportFormat from the provided Zedmon interface.
     fn get_report_format(interface: &mut InterfaceType, index: u8) -> Result<ReportFormat, Error> {
         let request = protocol::encode_query_report_format(index);
@@ -421,6 +423,7 @@ impl<InterfaceType: usb_bulk::Open<InterfaceType> + Read + Write> ZedmonClient<I
         }
     }
 
+    #[allow(clippy::unused_io_amount)] // TODO(fxbug.dev/95036)
     /// Disables reporting on the Zedmon device.
     fn disable_reporting(interface: &mut InterfaceType) -> Result<(), Error> {
         let request = protocol::encode_disable_reporting();
@@ -428,6 +431,7 @@ impl<InterfaceType: usb_bulk::Open<InterfaceType> + Read + Write> ZedmonClient<I
         Ok(())
     }
 
+    #[allow(clippy::unused_io_amount)] // TODO(fxbug.dev/95036)
     /// Enables reporting on the Zedmon device.
     fn enable_reporting(&self) -> Result<(), Error> {
         let request = protocol::encode_enable_reporting();
@@ -631,6 +635,7 @@ impl<InterfaceType: usb_bulk::Open<InterfaceType> + Read + Write> ZedmonClient<I
         report_io_result.and(processing_result)
     }
 
+    #[allow(clippy::unused_io_amount)] // TODO(fxbug.dev/95036)
     /// Returns a tuple consisting of:
     ///   - An estimate of the offset between the Zedmon clock and the host clock, in microseconds.
     ///     The offset is defined such that, in the absence of drift,
@@ -706,6 +711,7 @@ impl<InterfaceType: usb_bulk::Open<InterfaceType> + Read + Write> ZedmonClient<I
         Ok((best_offset_micros, uncertainty_micros))
     }
 
+    #[allow(clippy::unused_io_amount)] // TODO(fxbug.dev/95036)
     /// Enables or disables the relay on the Zedmon device.
     pub fn set_relay(&self, enable: bool) -> Result<(), Error> {
         let request = protocol::encode_set_output(protocol::Output::Relay as u8, enable);

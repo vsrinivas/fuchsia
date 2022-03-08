@@ -244,6 +244,7 @@ impl LegacyComponent {
             );
         }
 
+        #[allow(clippy::never_loop)] // TODO(fxbug.dev/95070)
         while let Some(req) =
             stream.try_next().await.context("invalid controller request from component manager")?
         {

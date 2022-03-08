@@ -247,6 +247,7 @@ mod tests {
         );
     }
 
+    #[allow(clippy::approx_constant)] // TODO(fxbug.dev/95023)
     #[fuchsia::test]
     fn float_arg_roundtrip() {
         assert_roundtrips(
@@ -257,6 +258,7 @@ mod tests {
         );
     }
 
+    #[allow(clippy::approx_constant)] // TODO(fxbug.dev/95023)
     #[fuchsia::test]
     fn arg_of_each_type_roundtrips() {
         assert_roundtrips(

@@ -521,6 +521,7 @@ where
         })
         .collect::<Result<Vec<&ComponentSelector>, anyhow::Error>>();
 
+    #[allow(clippy::clone_double_ref)] // TODO(fxbug.dev/95023)
     component_selectors?
         .iter()
         .filter_map(|selector| {

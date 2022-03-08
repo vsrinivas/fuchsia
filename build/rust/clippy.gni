@@ -78,6 +78,7 @@ template("clippy") {
       "$rebased_rustc_prefix/clippy-driver",
       rebase_path(source_root, root_build_dir),
       "-${level}clippy::all",
+      "-Dclippy::correctness",
       "--target=$rust_target",
       "--edition=$edition",
       "--cfg=rust_panic=\"${rust_panic}\"",

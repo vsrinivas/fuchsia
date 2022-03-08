@@ -50,6 +50,7 @@ mod test {
                 shared_state: &Arc<SharedState>,
             ) -> BoxFuture<'static, Result<(Self, Self::Env, Self::Runner), Error>> {
                 let shared = shared_state.get(SHARED_KEY).unwrap_or_else(|| {
+                    #[allow(clippy::let_underscore_lock)] // TODO(fxbug.dev/95033)
                     let _ = shared_state.try_insert(SHARED_KEY, Mutex::new(INITIAL_VAL));
                     shared_state.get(SHARED_KEY).unwrap()
                 });

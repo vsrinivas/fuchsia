@@ -146,6 +146,7 @@ pub fn check_child_connection_flags(
     }
 }
 
+#[allow(clippy::unused_io_amount)] // TODO(fxbug.dev/95027)
 /// A helper to generate binary encodings for the ReadDirents response.  This function will append
 /// an entry description as specified by `entry` and `name` to the `buf`, and would return `true`.
 /// In case this would cause the buffer size to exceed `max_bytes`, the buffer is then left

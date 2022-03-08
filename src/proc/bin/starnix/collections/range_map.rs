@@ -313,6 +313,7 @@ mod test {
 
         assert!(map.get(&12).is_none());
         map.remove(&(10..34));
+        #[allow(clippy::reversed_empty_ranges)] // TODO(fxbug.dev/95057)
         map.remove(&(34..10));
     }
 

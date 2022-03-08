@@ -98,6 +98,7 @@ async fn read_with_timeout<T: AsyncRead + Unpin>(
     }
 }
 
+#[allow(clippy::unused_io_amount)] // TODO(fxbug.dev/95074)
 pub async fn send_with_listener<T: AsyncRead + AsyncWrite + Unpin>(
     cmd: Command,
     interface: &mut T,
@@ -108,6 +109,7 @@ pub async fn send_with_listener<T: AsyncRead + AsyncWrite + Unpin>(
     read(interface, listener).await
 }
 
+#[allow(clippy::unused_io_amount)] // TODO(fxbug.dev/95074)
 pub async fn send<T: AsyncRead + AsyncWrite + Unpin>(
     cmd: Command,
     interface: &mut T,
@@ -117,6 +119,7 @@ pub async fn send<T: AsyncRead + AsyncWrite + Unpin>(
     read_and_log_info(interface).await
 }
 
+#[allow(clippy::unused_io_amount)] // TODO(fxbug.dev/95074)
 pub async fn send_with_timeout<T: AsyncRead + AsyncWrite + Unpin>(
     cmd: Command,
     interface: &mut T,

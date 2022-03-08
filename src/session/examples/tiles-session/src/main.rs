@@ -212,6 +212,7 @@ async fn set_scene_manager_root_view(
         fidl::endpoints::create_proxy::<ui_views::FocuserMarker>()
             .expect("Failed to create Focuser channel");
 
+    #[allow(clippy::never_loop)] // TODO(fxbug.dev/95061)
     while let Some(request) = view_provider_request_stream
         .try_next()
         .await
@@ -358,6 +359,7 @@ fn run_client_view_controller_request_stream(
     internal_sender: UnboundedSender<MessageInternal>,
 ) {
     fasync::Task::local(async move {
+        #[allow(clippy::never_loop)] // TODO(fxbug.dev/95061)
         while let Ok(Some(request)) = request_stream.try_next().await {
             match request {
                 fidl_fuchsia_element::ViewControllerRequest::Dismiss { control_handle } => {

@@ -4,5 +4,6 @@
 
 fn main() {
     let num = 9;
+    #[allow(clippy::while_immutable_condition)] // TODO(fxbug.dev/95052)
     while num >= 10 {}
 }

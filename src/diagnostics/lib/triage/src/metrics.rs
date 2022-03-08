@@ -616,6 +616,7 @@ impl<'a> MetricState<'a> {
         }
         let mut bindings = HashMap::new();
         for (name, value) in parameters.iter().zip(args.iter()) {
+            #[allow(clippy::clone_double_ref)] // TODO(fxbug.dev/95056)
             bindings.insert(name.clone(), value.clone());
         }
         let expression = substitute(&lambda.body, &bindings);

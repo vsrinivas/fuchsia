@@ -1264,6 +1264,7 @@ mod tests {
                 .expect("Failed to create Session FIDL.");
 
         let session = Session::new(session_proxy);
+        #[allow(clippy::let_underscore_lock)] // TODO(fxbug.dev/95062)
         let _ = session.lock();
         let parent_node = EntityNode::new(session.clone());
         let child_node = EntityNode::new(session.clone());
@@ -1298,6 +1299,7 @@ mod tests {
                 .expect("Failed to create Session FIDL.");
 
         let session = Session::new(session_proxy);
+        #[allow(clippy::let_underscore_lock)] // TODO(fxbug.dev/95062)
         let _ = session.lock();
         let parent_node = EntityNode::new(session.clone());
         let child_node = EntityNode::new(session.clone());
@@ -1334,6 +1336,7 @@ mod tests {
                 .expect("Failed to create Session FIDL.");
 
         let session = Session::new(session_proxy);
+        #[allow(clippy::let_underscore_lock)] // TODO(fxbug.dev/95062)
         let _ = session.lock();
         let compositor = DisplayCompositor::new(session.clone());
         compositor.set_display_rotation(DisplayRotation::By270Degrees);
@@ -1376,6 +1379,7 @@ mod tests {
                 .expect("Failed to create Session FIDL.");
 
         let session = Session::new(session_proxy);
+        #[allow(clippy::let_underscore_lock)] // TODO(fxbug.dev/95062)
         let _ = session.lock();
 
         let ViewTokenPair { view_token: _, view_holder_token } = ViewTokenPair::new().unwrap();

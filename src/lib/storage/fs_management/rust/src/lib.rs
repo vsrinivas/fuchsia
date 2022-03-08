@@ -677,6 +677,7 @@ mod tests {
         ramdisk.destroy().expect("failed to destroy ramdisk");
     }
 
+    #[allow(clippy::unused_io_amount)] // TODO(fxbug.dev/95027)
     #[test]
     fn blobfs_format_fsck_error() {
         let block_size = 512;
@@ -698,6 +699,7 @@ mod tests {
         ramdisk.destroy().expect("failed to destroy ramdisk");
     }
 
+    #[allow(clippy::unused_io_amount)] // TODO(fxbug.dev/95027)
     #[test]
     fn blobfs_format_mount_write_query_remount_read_unmount() {
         let block_size = 512;
@@ -798,6 +800,7 @@ mod tests {
         ramdisk.destroy().expect("failed to destroy ramdisk");
     }
 
+    #[allow(clippy::unused_io_amount)] // TODO(fxbug.dev/95027)
     #[test]
     fn minfs_format_fsck_error() {
         let block_size = 8192;
@@ -828,6 +831,7 @@ mod tests {
         ramdisk.destroy().expect("failed to destroy ramdisk");
     }
 
+    #[allow(clippy::unused_io_amount)] // TODO(fxbug.dev/95027)
     #[test]
     fn minfs_format_mount_write_query_remount_read_unmount() {
         let block_size = 8192;

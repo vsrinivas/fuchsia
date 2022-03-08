@@ -89,6 +89,7 @@ impl Service for Camera3Service {
                                 )
                                 .fuse();
                                 futures::pin_mut!(timer);
+                                #[allow(clippy::never_loop)] // TODO(fxbug.dev/95046)
                                 loop {
                                     futures::select! {
                                         _ = timer => {

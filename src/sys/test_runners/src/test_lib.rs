@@ -143,6 +143,7 @@ pub async fn collect_listener_event(
                 ret.push(ListenerEvent::StartTest(name.clone()));
                 loggers.push(std_handles);
                 let mut listener = listener.into_stream()?;
+                #[allow(clippy::never_loop)] // TODO(fxbug.dev/95070)
                 while let Some(result) = listener.try_next().await? {
                     match result {
                         Finished { result, .. } => {

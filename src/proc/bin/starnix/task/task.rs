@@ -699,6 +699,7 @@ impl CurrentTask {
         // Below, we shadow the mode argument with the mode of the file we are
         // opening. This line of code will hopefully catch future bugs if we
         // refactor this function.
+        #[allow(clippy::drop_copy)] // TODO(fxbug.dev/95057)
         std::mem::drop(mode);
 
         let mode = name.entry.node.info().mode;

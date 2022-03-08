@@ -137,6 +137,7 @@ fn spawn_null_controller_server(mut request_stream: fcrunner::ComponentControlle
     // one, as this is the contract we have implemented so far. Exiting will
     // cause our handle to the channel to drop and close the channel.
     fasync::Task::spawn(async move {
+        #[allow(clippy::never_loop)] // TODO(fxbug.dev/95031)
         while let Ok(Some(request)) = request_stream.try_next().await {
             match request {
                 fcrunner::ComponentControllerRequest::Stop { control_handle: c } => {

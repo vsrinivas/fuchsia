@@ -966,6 +966,7 @@ impl<C: EthernetIpLinkDeviceContext> NdpContext<EthernetLinkDevice> for C {
                 // should not use a deprecated address, and we should have
                 // no existing connections using a tentative address.
 
+                #[allow(clippy::drop_ref)] // TODO(fxbug.dev/95029)
                 mem::drop(entry);
                 mem::drop(addrs);
 

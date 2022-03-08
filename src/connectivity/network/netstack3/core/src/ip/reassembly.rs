@@ -673,6 +673,7 @@ fn get_header<B: ByteSlice, I: Ip>(packet: &<I as IpExtByteSlice<B>>::Packet) ->
 }
 
 /// A fragment of a packet's body.
+#[allow(clippy::derive_ord_xor_partial_ord)] // TODO(fxbug.dev/95029)
 #[derive(Debug, PartialEq, Eq, Ord)]
 struct PacketBodyFragment {
     offset: u16,

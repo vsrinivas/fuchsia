@@ -20,6 +20,7 @@ pub struct MonikerWithUrl {
     pub component_url: String,
 }
 
+#[allow(clippy::derive_ord_xor_partial_ord)] // TODO(fxbug.dev/95023)
 #[derive(Debug, Eq, PartialEq, Ord)]
 pub enum ListResponseItem {
     Moniker(String),

@@ -234,6 +234,7 @@ impl SuperBlock {
         Ok((super_block, ItemReader { reader }))
     }
 
+    #[allow(clippy::unused_io_amount)] // TODO(fxbug.dev/95027)
     /// Writes the super-block and the records from the root parent store.
     pub(super) async fn write<'a, S: AsRef<ObjectStore> + Send + Sync + 'static>(
         &self,

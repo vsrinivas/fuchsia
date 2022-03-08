@@ -212,6 +212,7 @@ mod test {
         let r4: Range<u64> = 1..1;
         assert!(!r4.is_valid());
 
+        #[allow(clippy::reversed_empty_ranges)] // TODO(fxbug.dev/95027)
         let r5: Range<u64> = 5..2;
         assert!(!r5.is_valid());
     }
@@ -229,6 +230,7 @@ mod test {
     #[test]
     fn test_invalid_range_length() {
         // Invalid range length
+        #[allow(clippy::reversed_empty_ranges)] // TODO(fxbug.dev/95027)
         let r1: Range<u64> = 8..1;
         r1.length();
     }

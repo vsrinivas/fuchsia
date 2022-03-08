@@ -1826,6 +1826,7 @@ impl FromStr for ConfigKey {
         for (i, c) in s.char_indices() {
             // Follows the FIDL specification: identifiers must start with a letter, can contain
             // letters, numbers, and underscores, but cannot end with an underscore
+            #[allow(clippy::if_same_then_else)] // TODO(fxbug.dev/95050)
             if (i == 0) && !c.is_ascii_lowercase() {
                 return Err(ParseError::InvalidValue);
             } else if (i == length - 1) && !c.is_ascii_lowercase() && !c.is_ascii_digit() {

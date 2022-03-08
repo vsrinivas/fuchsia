@@ -382,6 +382,7 @@ impl<'a> Message<'a> {
     /// [`otsys::otMessageRead`](crate::otsys::otMessageRead).
     pub fn to_vec(&self) -> Vec<u8> {
         let mut buffer = Vec::with_capacity(self.len());
+        #[allow(clippy::uninit_vec)] // TODO(fxbug.dev/95089)
         unsafe {
             buffer.set_len(self.len());
             otMessageRead(

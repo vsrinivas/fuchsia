@@ -693,6 +693,7 @@ pub(crate) mod tests {
         assert_eq!(manager.rewrite(&url), "fuchsia-pkg://fuchsia.com/c".parse().unwrap());
     }
 
+    #[allow(clippy::unit_cmp)] // TODO(fxbug.dev/95063)
     #[fasync::run_singlethreaded(test)]
     async fn test_commit_additional_rule() {
         let existing_rule = rule!("fuchsia.com" => "fuchsia.com", "/rolldice" => "/rolldice");
@@ -727,6 +728,7 @@ pub(crate) mod tests {
         assert_eq!(manager.list().cloned().collect::<Vec<_>>(), new_rules);
     }
 
+    #[allow(clippy::unit_cmp)] // TODO(fxbug.dev/95063)
     #[fasync::run_singlethreaded(test)]
     async fn test_erase_all_dynamic_rules() {
         let rules = vec![

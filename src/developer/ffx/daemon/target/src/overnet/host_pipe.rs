@@ -130,6 +130,7 @@ impl HostPipeChild {
             HostPipeChild {
                 inner: ssh,
                 task: Some(Task::local(async move {
+                    #[allow(clippy::drop_copy)] // TODO(fxbug.dev/95073)
                     drop(futures::join!(copy_in, copy_out, log_stderr));
                 })),
             },

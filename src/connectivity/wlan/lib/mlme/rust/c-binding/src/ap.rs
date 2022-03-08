@@ -38,6 +38,7 @@ pub extern "C" fn stop_ap_sta(sta: &mut MlmeHandle) {
     sta.stop();
 }
 
+#[allow(clippy::not_unsafe_ptr_arg_deref)] // TODO(fxbug.dev/95064)
 #[no_mangle]
 pub extern "C" fn delete_ap_sta(sta: *mut MlmeHandle) {
     if !sta.is_null() {

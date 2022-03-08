@@ -213,6 +213,7 @@ struct IndexEntry {
 }
 
 impl IndexEntry {
+    #[allow(clippy::unused_io_amount)] // TODO(fxbug.dev/95058)
     fn populate_in_index(self, registry_path: &Path, destination: &Path) {
         std::fs::create_dir_all(destination.parent().unwrap()).unwrap();
         let mut index_file = File::create(destination).unwrap();

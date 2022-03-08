@@ -564,6 +564,7 @@ mod tests {
         let _event_queue = fasync::Task::local(event_queue);
 
         let (sender, _receiver) = mpsc::channel(0);
+        #[allow(clippy::async_yields_async)] // TODO(fxbug.dev/95063)
         let wait_flush = executor.run_singlethreaded(async {
             handle.add_client(MpscNotifier { sender }).await.unwrap();
             handle.try_flush(Duration::from_secs(1)).await.unwrap()
@@ -581,6 +582,7 @@ mod tests {
 
         let (sender1, mut receiver1) = mpsc::channel(0);
         let (sender2, mut receiver2) = mpsc::channel(0);
+        #[allow(clippy::async_yields_async)] // TODO(fxbug.dev/95063)
         let wait_flush = executor.run_singlethreaded(async {
             handle.add_client(MpscNotifier { sender: sender1 }).await.unwrap();
             handle.queue_event("first").await.unwrap();
@@ -618,6 +620,7 @@ mod tests {
         let _event_queue = fasync::Task::local(event_queue);
 
         let (sender, mut receiver) = mpsc::channel(0);
+        #[allow(clippy::async_yields_async)] // TODO(fxbug.dev/95063)
         let wait_flush = {
             let setup = async {
                 handle.queue_event("first").await.unwrap();

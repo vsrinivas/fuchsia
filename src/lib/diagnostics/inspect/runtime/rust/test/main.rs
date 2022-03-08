@@ -7,6 +7,7 @@ use fuchsia_component::server::ServiceFs;
 use fuchsia_inspect::*;
 use futures::prelude::*;
 
+#[allow(clippy::approx_constant)] // TODO(fxbug.dev/95023)
 #[fuchsia::component]
 async fn main() -> Result<(), Error> {
     let root = component::inspector().root();

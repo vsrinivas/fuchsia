@@ -129,6 +129,7 @@ struct HashableResponseCode {
     response_code: ResponseCode,
 }
 
+#[allow(clippy::derive_hash_xor_eq)] // TODO(fxbug.dev/95055)
 impl Hash for HashableResponseCode {
     fn hash<H: Hasher>(&self, state: &mut H) {
         let HashableResponseCode { response_code } = self;

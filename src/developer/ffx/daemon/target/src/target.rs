@@ -50,6 +50,7 @@ pub enum TargetAddrType {
     Fastboot(FastbootInterface),
 }
 
+#[allow(clippy::derive_hash_xor_eq)] // TODO(fxbug.dev/95073)
 #[derive(Debug, Clone, Hash)]
 pub struct TargetAddrEntry {
     pub addr: TargetAddr,

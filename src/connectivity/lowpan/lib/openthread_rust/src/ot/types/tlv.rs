@@ -120,6 +120,7 @@ impl<'a> MeshcopTlv<'a> {
     /// Writes this TLV to the given slice, returning the trimmed
     /// slice if the given slice was large enough to hold the value. If the given
     /// slice was too small, it remains unchanged and the method returns `None`.
+    #[allow(clippy::unused_io_amount)] // TODO(fxbug.dev/95089)
     pub fn write_to<'b, T: Write>(&self, out: &mut T) -> std::io::Result<()> {
         let value_len = self.value_len();
 

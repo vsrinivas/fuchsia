@@ -642,6 +642,7 @@ pub(crate) mod test_utils {
     }
 
     impl CapturedWlanSoftmacPassiveScanArgs {
+        #[allow(clippy::not_unsafe_ptr_arg_deref)] // TODO(fxbug.dev/95064)
         pub fn from_banjo(
             banjo_args_ptr: *const banjo_wlan_softmac::WlanSoftmacPassiveScanArgs,
         ) -> CapturedWlanSoftmacPassiveScanArgs {
@@ -716,6 +717,7 @@ pub(crate) mod test_utils {
             }
         }
 
+        #[allow(clippy::not_unsafe_ptr_arg_deref)] // TODO(fxbug.dev/95064)
         pub extern "C" fn start(
             device: *mut c_void,
             _ifc: *const WlanSoftmacIfcProtocol<'_>,
@@ -731,6 +733,7 @@ pub(crate) mod test_utils {
             zx::sys::ZX_OK
         }
 
+        #[allow(clippy::not_unsafe_ptr_arg_deref)] // TODO(fxbug.dev/95064)
         pub extern "C" fn deliver_eth_frame(
             device: *mut c_void,
             data: *const u8,
@@ -797,6 +800,7 @@ pub(crate) mod test_utils {
             zx::sys::ZX_OK
         }
 
+        #[allow(clippy::not_unsafe_ptr_arg_deref)] // TODO(fxbug.dev/95064)
         pub extern "C" fn set_key(
             device: *mut c_void,
             key: *mut banjo_wlan_softmac::WlanKeyConfig,
@@ -810,6 +814,7 @@ pub(crate) mod test_utils {
             }
         }
 
+        #[allow(clippy::not_unsafe_ptr_arg_deref)] // TODO(fxbug.dev/95064)
         pub extern "C" fn start_passive_scan(
             device: *mut c_void,
             passive_scan_args: *const banjo_wlan_softmac::WlanSoftmacPassiveScanArgs,
@@ -825,6 +830,7 @@ pub(crate) mod test_utils {
             zx::sys::ZX_OK
         }
 
+        #[allow(clippy::not_unsafe_ptr_arg_deref)] // TODO(fxbug.dev/95064)
         pub extern "C" fn start_active_scan(
             device: *mut c_void,
             active_scan_args: *const banjo_wlan_softmac::WlanSoftmacActiveScanArgs,
@@ -883,6 +889,7 @@ pub(crate) mod test_utils {
             unsafe { (*(device as *const Self)).spectrum_management_support }
         }
 
+        #[allow(clippy::not_unsafe_ptr_arg_deref)] // TODO(fxbug.dev/95064)
         pub extern "C" fn configure_bss(device: *mut c_void, cfg: *mut BssConfig) -> i32 {
             unsafe {
                 (*(device as *mut Self)).bss_cfg.replace((*cfg).clone());
@@ -925,6 +932,7 @@ pub(crate) mod test_utils {
             }
         }
 
+        #[allow(clippy::not_unsafe_ptr_arg_deref)] // TODO(fxbug.dev/95064)
         pub extern "C" fn configure_assoc(device: *mut c_void, cfg: *mut WlanAssocCtx) -> i32 {
             unsafe {
                 (*(device as *mut Self)).assocs.insert((*cfg).bssid, (*cfg).clone());

@@ -38,6 +38,7 @@ fn setup_request() -> ProcedureRequest {
 
 fn select_codec(supported: Vec<CodecId>) -> CodecId {
     // Prefer SBD over CVSD if it is supported, as it's higher quality.
+    #[allow(clippy::if_same_then_else)] // TODO(fxbug.dev/95033)
     if supported.contains(&CodecId::MSBC) {
         // TODO(fxbug.dev/81374): Re-enable MSBC when it's working again.
         // CodecId::MSBC

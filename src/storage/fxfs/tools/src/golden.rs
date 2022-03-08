@@ -60,6 +60,7 @@ async fn load_device(path: &Path) -> Result<FakeDevice, Error> {
     Ok(device)
 }
 
+#[allow(clippy::unused_io_amount)] // TODO(fxbug.dev/95027)
 /// Compresses a RAM backed FakeDevice into a zstd compressed local image.
 async fn save_device(device: Arc<dyn Device>, path: &Path) -> Result<(), Error> {
     device.reopen();
@@ -75,6 +76,7 @@ async fn save_device(device: Arc<dyn Device>, path: &Path) -> Result<(), Error> 
     Ok(())
 }
 
+#[allow(clippy::unused_io_amount)] // TODO(fxbug.dev/95027)
 /// Create a new golden image (at the current version).
 pub async fn create_image() -> Result<(), Error> {
     let path = golden_image_dir()?.join(latest_image_filename());

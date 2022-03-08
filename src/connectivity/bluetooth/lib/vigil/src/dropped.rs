@@ -16,6 +16,7 @@ pub struct Dropped(Shared<futures::channel::oneshot::Receiver<()>>);
 impl Dropped {
     pub fn new<DW: DropWatch<U> + ?Sized, U: ?Sized>(watchable: &DW) -> Self {
         let (sender, receiver) = futures::channel::oneshot::channel();
+        #[allow(clippy::drop_copy)] // TODO(fxbug.dev/95033)
         DropWatch::watch(watchable, move |_| drop(sender.send(())));
         Self(receiver.shared())
     }

@@ -312,6 +312,7 @@ impl LocalComponentRunner {
                     self.execution_scope.spawn(async move {
                         let mut local_component_implementation_fut =
                             (*local_component_implementation)(component_handles).fuse();
+                        #[allow(clippy::never_loop)] // TODO(fxbug.dev/95072)
                         loop {
                             let mut controller_request_fut =
                                 controller_request_stream.try_next().fuse();

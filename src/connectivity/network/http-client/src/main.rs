@@ -150,6 +150,7 @@ async fn to_success_response(
 }
 
 fn to_fidl_error(error: &hyper::Error) -> net_http::Error {
+    #[allow(clippy::if_same_then_else)] // TODO(fxbug.dev/95028)
     if error.is_parse() {
         net_http::Error::UnableToParse
     } else if error.is_user() {

@@ -446,6 +446,7 @@ mod tests {
             (root_name, ComponentDeclBuilder::new().add_lazy_child(child_name).build()),
             (child_name, test_helpers::component_decl_with_test_runner()),
         ];
+        #[allow(clippy::clone_double_ref)] // TODO(fxbug.dev/95031)
         let test_topology = ActionsTest::new(components[0].0.clone(), components, None).await;
 
         let child = test_topology.look_up(vec![child_name].into()).await;

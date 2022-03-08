@@ -407,6 +407,7 @@ mod tests {
         ramdisk.destroy().expect("failed to destroy ramdisk");
     }
 
+    #[allow(clippy::unused_io_amount)] // TODO(fxbug.dev/95027)
     #[fuchsia::test]
     async fn blobfs_format_fsck_error() {
         let block_size = 512;
@@ -563,6 +564,7 @@ mod tests {
         ramdisk.destroy().expect("failed to destroy ramdisk");
     }
 
+    #[allow(clippy::unused_io_amount)] // TODO(fxbug.dev/95027)
     #[fuchsia::test]
     async fn minfs_format_fsck_error() {
         let block_size = 8192;

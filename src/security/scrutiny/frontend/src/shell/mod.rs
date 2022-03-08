@@ -376,6 +376,7 @@ impl Shell {
         info!("Command: {}", command);
 
         let mut output = String::new();
+        #[allow(clippy::if_same_then_else)] // TODO(fxbug.dev/95035)
         if self.builtin(command.clone(), &mut output)? == CommandResponse::Executed {
         } else if self.plugin(command.clone(), &mut output)? == CommandResponse::Executed {
         } else {

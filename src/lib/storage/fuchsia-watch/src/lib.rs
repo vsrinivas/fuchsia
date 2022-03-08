@@ -264,6 +264,7 @@ mod tests {
         let subdir = path.join("subdir");
 
         fs::write(&existing_path, "a").expect("write existing");
+        #[allow(clippy::clone_double_ref)] // TODO(fxbug.dev/95027)
         let mut watch_stream = watch(path.clone()).await.expect("watch stream");
         fs::write(&file1, "a").expect("write file1");
 
@@ -340,6 +341,7 @@ mod tests {
 
         fs::create_dir(&existing_dir).expect("create existing");
         fs::write(&existing_file, "a").expect("write existing file");
+        #[allow(clippy::clone_double_ref)] // TODO(fxbug.dev/95027)
         let mut watch_stream = watch_recursive(path.clone());
 
         assert_eq!(

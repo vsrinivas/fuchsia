@@ -101,6 +101,7 @@ impl SuiteServer for TestServer {
         test_url: &str,
         request_stream: fidl_fuchsia_test::SuiteRequestStream,
     ) -> AbortHandle {
+        #[allow(clippy::clone_double_ref)] // TODO(fxbug.dev/95070)
         let test_url = test_url.clone().to_owned();
         let (fut, test_suite_abortable_handle) =
             abortable(self.serve_test_suite(request_stream, weak_test_component.clone()));
@@ -295,6 +296,7 @@ impl TestServer {
                         // it in buffer for next iteration.
                         break;
                     }
+                    #[allow(clippy::if_same_then_else)] // TODO(fxbug.dev/95070)
                     if iter.peek() == Some(&"".as_bytes())
                         && (buffer == b"PASS" || buffer == b"FAIL")
                     {

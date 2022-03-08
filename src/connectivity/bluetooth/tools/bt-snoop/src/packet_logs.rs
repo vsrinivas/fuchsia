@@ -46,6 +46,7 @@ fn generate_lazy_values_for_packet_log(
         for pkt in log.iter_mut() {
             append_pcap(&mut data, &pkt, utc_xform.as_ref())?;
         }
+        #[allow(clippy::drop_ref)] // TODO(fxbug.dev/95033)
         drop(log);
         drop(guard);
 

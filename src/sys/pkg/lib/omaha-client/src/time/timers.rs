@@ -223,6 +223,7 @@ mod mock {
             let mut timer = MockTimer::new();
             timer.expect_for_range(Duration::from_secs(10), Duration::from_secs(20));
 
+            #[allow(clippy::async_yields_async)] // TODO(fxbug.dev/95063)
             block_on(async { timer.wait_for(Duration::from_secs(15)) });
         }
 
@@ -232,6 +233,7 @@ mod mock {
             let mut timer = MockTimer::new();
             timer.expect_for_range(Duration::from_secs(10), Duration::from_secs(20));
 
+            #[allow(clippy::async_yields_async)] // TODO(fxbug.dev/95063)
             block_on(async { timer.wait_for(Duration::from_secs(3)) });
         }
 
@@ -241,6 +243,7 @@ mod mock {
             let mut timer = MockTimer::new();
             timer.expect_for_range(Duration::from_secs(10), Duration::from_secs(20));
 
+            #[allow(clippy::async_yields_async)] // TODO(fxbug.dev/95063)
             block_on(async { timer.wait_for(Duration::from_secs(30)) });
         }
 

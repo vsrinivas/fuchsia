@@ -57,6 +57,7 @@ async fn check_device_match(
         Some(info) => {
             // Accept the device if all specified match arguments are equal to the corresponding
             // fields in DeviceInfo.
+            #[allow(clippy::if_same_then_else)] // TODO(fxbug.dev/95034)
             if match_args.vendor_id.unwrap_or(info.vendor_id) != info.vendor_id {
                 None
             } else if match_args.product_id.unwrap_or(info.product_id) != info.product_id {

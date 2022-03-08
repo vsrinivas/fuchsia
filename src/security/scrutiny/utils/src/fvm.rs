@@ -188,6 +188,7 @@ impl FvmReader {
         Self { cursor: Cursor::new(fvm_buffer) }
     }
 
+    #[allow(clippy::unused_io_amount)] // TODO(fxbug.dev/95035)
     /// Parses the FVM provided during construction returning the set of
     /// partitions as buffers ordered by vslice.
     pub fn parse(&mut self) -> Result<Vec<FvmPartition>> {

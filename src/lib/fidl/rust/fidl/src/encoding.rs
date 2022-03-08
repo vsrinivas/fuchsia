@@ -2522,6 +2522,7 @@ macro_rules! fidl_struct_copy {
                 encoder.debug_check_bounds::<Self>(offset);
                 unsafe {
                     let buf_ptr = encoder.mut_buffer().as_mut_ptr().offset(offset as isize);
+                    #[allow(clippy::transmute_undefined_repr)] // TODO(fxbug.dev/95059)
                     let typed_buf_ptr = std::mem::transmute::<*mut u8, *mut $name>(buf_ptr);
                     typed_buf_ptr.write_unaligned((self as *const $name).read());
                     $(

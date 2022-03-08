@@ -78,7 +78,10 @@ async fn ext4_server_mounts_block_device(
     file_buf.seek(io::SeekFrom::Start(0))?;
 
     let mut temp_buf = vec![0u8; size as usize];
-    file_buf.read(&mut temp_buf)?;
+    #[allow(clippy::unused_io_amount)] // TODO(fxbug.dev/95027)
+    {
+        file_buf.read(&mut temp_buf)?;
+    }
 
     let (ramdisk, remote_block_device) = make_ramdisk().await;
     remote_block_device.write_at(temp_buf[..].into(), 0).await.expect("write_at failed");
@@ -118,6 +121,7 @@ async fn ext4_server_mounts_block_device(
     Ok(())
 }
 
+#[allow(clippy::unused_io_amount)] // TODO(fxbug.dev/95027)
 #[fasync::run_singlethreaded(test)]
 async fn ext4_server_mounts_block_device_and_dies_on_close() -> Result<(), Error> {
     let mut file_buf = io::BufReader::new(fs::File::open("/pkg/data/nest.img")?);
@@ -156,6 +160,7 @@ async fn ext4_server_mounts_block_device_and_dies_on_close() -> Result<(), Error
     Ok(())
 }
 
+#[allow(clippy::unused_io_amount)] // TODO(fxbug.dev/95027)
 #[fasync::run_singlethreaded(test)]
 async fn ext4_server_mounts_vmo_one_file() -> Result<(), Error> {
     let ext4 = fuchsia_component::client::connect_to_protocol::<Server_Marker>()
@@ -182,6 +187,7 @@ async fn ext4_server_mounts_vmo_one_file() -> Result<(), Error> {
     Ok(())
 }
 
+#[allow(clippy::unused_io_amount)] // TODO(fxbug.dev/95027)
 #[fasync::run_singlethreaded(test)]
 async fn ext4_server_mounts_vmo_nested_dirs() -> Result<(), Error> {
     let ext4 = fuchsia_component::client::connect_to_protocol::<Server_Marker>()
@@ -215,6 +221,7 @@ async fn ext4_server_mounts_vmo_nested_dirs() -> Result<(), Error> {
     Ok(())
 }
 
+#[allow(clippy::unused_io_amount)] // TODO(fxbug.dev/95027)
 #[fasync::run_singlethreaded(test)]
 async fn ext4_unified_service_mounts_vmo() -> Result<(), Error> {
     let ext4_service = fuchsia_component::client::connect_to_service::<ServiceMarker>()

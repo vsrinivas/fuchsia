@@ -1276,6 +1276,7 @@ mod tests {
         assert_eq!(content, expected);
     }
 
+    #[allow(clippy::unused_io_amount)] // TODO(fxbug.dev/95023)
     #[fuchsia::test]
     fn test_max_capacity_file_write() {
         struct TestCase {

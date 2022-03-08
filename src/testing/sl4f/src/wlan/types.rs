@@ -178,6 +178,7 @@ pub(crate) enum WlanMacRoleDef {
     Mesh = 3,
 }
 
+#[allow(clippy::enum_clike_unportable_variant)] // TODO(fxbug.dev/95034)
 #[derive(Serialize)]
 #[serde(remote = "fidl_common::DriverFeature")]
 pub(crate) enum DriverFeatureDef {

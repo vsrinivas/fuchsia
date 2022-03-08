@@ -254,6 +254,7 @@ mod tests {
         queue.insert(5.into());
         assert_eq!(to_values(&mut queue), vec![4, 5]);
 
+        #[allow(clippy::erasing_op)] // TODO(fxbug.dev/95033)
         let mut queue: BoundedQueue<Record> = BoundedQueue::new(
             0 * std::mem::size_of::<Record>(),
             2 * std::mem::size_of::<Record>(),

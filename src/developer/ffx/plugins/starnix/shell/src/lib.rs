@@ -48,6 +48,7 @@ pub async fn shell_starnix(
 
     let mut event_stream = controller_proxy.take_event_stream();
     let term_event_future = async move {
+        #[allow(clippy::never_loop)] // TODO(fxbug.dev/95057)
         while let Some(result) = event_stream.next().await {
             match result? {
                 ShellControllerEvent::OnTerminated { return_code } => {

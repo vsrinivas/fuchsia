@@ -520,6 +520,7 @@ mod tests {
         }
     }
 
+    #[allow(clippy::approx_constant)] // TODO(fxbug.dev/95023)
     #[fuchsia::test]
     async fn inspect_data_for_component() -> Result<(), anyhow::Error> {
         let instance = start_component().await?;
@@ -562,6 +563,7 @@ mod tests {
         Ok(())
     }
 
+    #[allow(clippy::approx_constant)] // TODO(fxbug.dev/95023)
     #[fuchsia::test]
     async fn select_all_for_moniker() {
         let instance = start_component().await.expect("started component");

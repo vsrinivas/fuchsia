@@ -17,6 +17,7 @@ use {
 /// Use stdin/stdout as a link to another overnet instance
 pub struct HostPipe {}
 
+#[allow(clippy::unused_io_amount)] // TODO(fxbug.dev/95025)
 async fn copy_stdin_to_socket(
     mut tx_socket: futures::io::WriteHalf<fidl::AsyncSocket>,
 ) -> Result<(), Error> {

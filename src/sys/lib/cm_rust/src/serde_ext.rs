@@ -165,6 +165,7 @@ impl Serialize for DictionaryValue {
 
 struct DictionaryValueVisitor;
 
+#[allow(clippy::serde_api_misuse)] // TODO(fxbug.dev/95072)
 impl<'de> Visitor<'de> for DictionaryValueVisitor {
     type Value = DictionaryValue;
 

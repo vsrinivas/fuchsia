@@ -1917,6 +1917,7 @@ mod sealed {
 }
 
 #[cfg(test)]
+#[allow(clippy::reversed_empty_ranges)] // TODO(fxbug.dev/95029)
 mod tests {
     use super::*;
 

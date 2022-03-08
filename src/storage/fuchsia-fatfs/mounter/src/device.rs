@@ -293,6 +293,7 @@ pub mod test {
             .expect("Format volume succeeds");
     }
 
+    #[allow(clippy::unused_io_amount)] // TODO(fxbug.dev/95027)
     pub fn setup_test_fs(channel: zx::Channel, name: &str) {
         let device = Box::new(
             remote_block_device::Cache::new(RemoteBlockClientSync::new(channel).unwrap()).unwrap(),

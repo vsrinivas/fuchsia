@@ -1673,6 +1673,7 @@ pub mod tests {
         let _ = node.update_throttling_state(Nanoseconds(0), ThermalLoad(0)).await;
     }
 
+    #[allow(clippy::unit_cmp)] // TODO(fxbug.dev/95036)
     /// Tests that the ThermalPolicy node populates the correct temperature sensor driver path in
     /// its UpdateThermalLoad messages.
     #[fasync::run_singlethreaded(test)]
@@ -1713,6 +1714,7 @@ pub mod tests {
         assert_eq!(node.process_thermal_load(Nanoseconds(1), ThermalLoad(20)).await.unwrap(), ());
     }
 
+    #[allow(clippy::unit_cmp)] // TODO(fxbug.dev/95036)
     /// Tests that each of the configured `thermal_load_notify_nodes` nodes receive an
     /// UpdateThermalLoad message as expected.
     #[fasync::run_singlethreaded(test)]

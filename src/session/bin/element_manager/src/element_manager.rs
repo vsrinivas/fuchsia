@@ -341,6 +341,7 @@ impl ElementManager {
             launch_options.set_additional_services(services.names, services.host_directory);
         }
 
+        #[allow(clippy::clone_double_ref)] // TODO(fxbug.dev/95061)
         let app = fuchsia_component::client::launch_with_options(
             &self.sys_launcher,
             child_url.to_string(),

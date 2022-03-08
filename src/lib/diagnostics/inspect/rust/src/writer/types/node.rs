@@ -841,6 +841,7 @@ mod tests {
         });
     }
 
+    #[allow(clippy::approx_constant)] // TODO(fxbug.dev/95023)
     #[fuchsia::test]
     fn record() {
         let inspector = Inspector::new();
@@ -918,6 +919,7 @@ mod tests {
         })
     }
 
+    #[allow(clippy::approx_constant)] // TODO(fxbug.dev/95023)
     #[fuchsia::test]
     fn record_weak() {
         let inspector = Inspector::new();

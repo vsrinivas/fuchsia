@@ -79,6 +79,7 @@ impl<B: ByteSlice + Clone> BufferView<B> for BufferViewWrapper<B> {
 
 impl<B: ByteSlice> AsRef<[u8]> for BufferViewWrapper<B> {
     fn as_ref(&self) -> &[u8] {
+        #[allow(clippy::clone_double_ref)] // TODO(fxbug.dev/95085)
         self.0.as_ref().clone().as_ref()
     }
 }
@@ -1307,6 +1308,7 @@ mod tests {
     fn test_domain_bad_pointer_index() {
         let packet: Vec<u8> = vec![0u8, 0x01, 'y' as u8, 0xc0, 0x09];
         let slice: &[u8] = packet.as_ref();
+        #[allow(clippy::clone_double_ref)] // TODO(fxbug.dev/95085)
         let mut bv = BufferViewWrapper(slice.clone());
         bv.take_front(3).unwrap();
         assert_eq!(
@@ -1319,6 +1321,7 @@ mod tests {
     fn test_domain_pointer_cycles() {
         for packet in [vec![0xc0, 0x00], vec![0x02, 0x02, 0x01, 0xc0, 0x05, 0xc0, 0x03]].iter() {
             let slice: &[u8] = packet.as_ref();
+            #[allow(clippy::clone_double_ref)] // TODO(fxbug.dev/95085)
             let mut bv = BufferViewWrapper(slice.clone());
             assert_eq!(Domain::parse(&mut bv, Some(&slice)).unwrap_err(), ParseError::PointerCycle);
         }
@@ -1369,6 +1372,7 @@ mod tests {
         .iter()
         {
             let slice: &[u8] = test.packet.as_ref();
+            #[allow(clippy::clone_double_ref)] // TODO(fxbug.dev/95085)
             let mut bv = BufferViewWrapper(slice.clone());
             bv.take_front(test.parsing_offset).unwrap();
             let parsed = Domain::parse(&mut bv, Some(&slice)).unwrap();

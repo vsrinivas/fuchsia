@@ -200,6 +200,7 @@ pub fn start_presentation_loop(
                         present(&session);
 
                         // Wait for frame to be presented before we queue another present.
+                        #[allow(clippy::never_loop)] // TODO(fxbug.dev/95062)
                         while let Some(event) =
                             event_stream.try_next().await.expect("Failed to get next event")
                         {

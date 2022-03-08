@@ -384,6 +384,7 @@ impl VirtualOutput {
         Ok(())
     }
 
+    #[allow(clippy::unused_io_amount)] // TODO(fxbug.dev/95034)
     pub fn write_header(&mut self, len: u32) -> Result<(), Error> {
         let bytes_per_sample = get_sample_size(get_zircon_sample_format(self.sample_format))?;
 
@@ -466,6 +467,7 @@ impl InputWorker {
         self.inj_data.clear();
     }
 
+    #[allow(clippy::unused_io_amount)] // TODO(fxbug.dev/95034)
     fn set_data(&mut self, data: Vec<u8>) -> Result<(), Error> {
         if self.inj_data.len() > 0 {
             return Err(format_err!("Cannot inject new audio without flushing old audio"));

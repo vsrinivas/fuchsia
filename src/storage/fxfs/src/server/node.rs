@@ -171,6 +171,7 @@ impl NodeCache {
         .await
     }
 
+    #[allow(clippy::vtable_address_comparisons)] // TODO(fxbug.dev/95027)
     /// Removes a node from the cache. Calling this on a placeholder is an error; instead, the
     /// placeholder should simply be dropped.
     pub fn remove(&self, node: &dyn FxNode) {

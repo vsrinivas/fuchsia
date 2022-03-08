@@ -638,6 +638,7 @@ impl ViewAssistant for TerminalViewAssistant {
         );
         fuchsia_inspect::component::inspector().root().record_string("grid", txt.trim());
 
+        #[allow(clippy::drop_ref)] // TODO(fxbug.dev/95065)
         drop(grid);
 
         scene_details.scene.render(render_context, ready_event, context)?;
@@ -1016,6 +1017,7 @@ mod tests {
     async fn wait_until_update_received_or_timeout(
         receiver: &mut mpsc::UnboundedReceiver<Message>,
     ) -> Result<(), Error> {
+        #[allow(clippy::never_loop)] // TODO(fxbug.dev/95065)
         loop {
             let timeout = Timer::new(5000_i64.millis().after_now());
             let either = futures::future::select(timeout, receiver.next().fuse());

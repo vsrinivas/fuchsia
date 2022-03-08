@@ -426,6 +426,7 @@ mod tests {
         );
     }
 
+    #[allow(clippy::unused_io_amount)] // TODO(fxbug.dev/95027)
     #[test]
     fn test_io_read_write_and_seek() {
         let (_ramdisk, remote_block_device) = make_ramdisk();

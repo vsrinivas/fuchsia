@@ -47,6 +47,7 @@ impl From<Error> for CResult {
     }
 }
 
+#[allow(clippy::not_unsafe_ptr_arg_deref)] // TODO(fxbug.dev/95027)
 /// Creates a new [`Extractor`] and returns an opaque pointer to it.
 ///
 /// # Arguments
@@ -80,6 +81,7 @@ pub extern "C" fn extractor_new(
     CResult::ok()
 }
 
+#[allow(clippy::not_unsafe_ptr_arg_deref)] // TODO(fxbug.dev/95027)
 /// Destroys an [`Extractor`] object.
 #[no_mangle]
 pub extern "C" fn extractor_delete(extractor: *mut Extractor) {

@@ -27,6 +27,7 @@ mod tests {
         assert_eq!(1 + 1, 2);
     }
 
+    #[allow(clippy::unit_cmp)] // TODO(fxbug.dev/95081)
     async fn async_setup<F, Fut>(_test_name: &str, test: F)
     where
         F: FnOnce(futures::channel::mpsc::Sender<()>) -> Fut,

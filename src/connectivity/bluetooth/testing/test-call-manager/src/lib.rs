@@ -566,6 +566,7 @@ impl TestCallManager {
                 let remote = call.remote.clone();
                 let state = call.state;
                 let direction = call.direction;
+                #[allow(clippy::drop_ref)] // TODO(fxbug.dev/95033)
                 drop(call);
                 let (client_end, stream) =
                     fidl::endpoints::create_request_stream::<CallMarker>()

@@ -145,6 +145,7 @@ impl ThreadGroup {
     pub fn set_name(&self, name: &CStr) -> Result<(), Errno> {
         if name.to_bytes().len() >= sys::ZX_MAX_NAME_LEN {
             // TODO: Might want to use [..sys::ZX_MAX_NAME_LEN] of only the last path component.
+            #[allow(clippy::clone_double_ref)] // TODO(fxbug.dev/95057)
             let mut clone = name.clone().to_owned().into_bytes();
             clone[sys::ZX_MAX_NAME_LEN - 1] = 0;
             let name = CStr::from_bytes_with_nul(&clone[..sys::ZX_MAX_NAME_LEN])

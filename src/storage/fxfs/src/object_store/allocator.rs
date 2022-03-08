@@ -797,6 +797,7 @@ impl Allocator for SimpleAllocator {
         // First take out the deallocations that we now know to be flushed.  The list is maintained
         // in order, so we can stop on the first entry that we find that should not be unreserved
         // yet.
+        #[allow(clippy::never_loop)] // TODO(fxbug.dev/95027)
         let deallocs = 'outer: loop {
             let mut inner = self.inner.lock().unwrap();
             for (index, (dealloc_log_offset, _)) in inner.committed_deallocated.iter().enumerate() {

@@ -1232,6 +1232,7 @@ mod tests {
         assert_does_not_exist_error(&errors[0], &does_not_exist_dir);
     }
 
+    #[allow(clippy::unused_io_amount)] // TODO(fxbug.dev/95063)
     #[fasync::run_singlethreaded(test)]
     async fn test_builder_static_configs_dir_invalid_config() {
         let dir = tempfile::tempdir().unwrap();
@@ -1437,6 +1438,7 @@ mod tests {
         assert_eq!(repomgr.dynamic_configs, HashMap::new());
     }
 
+    #[allow(clippy::unused_io_amount)] // TODO(fxbug.dev/95063)
     #[fasync::run_singlethreaded(test)]
     async fn test_builder_dynamic_configs_path_invalid_config() {
         let dir = tempfile::tempdir().unwrap();

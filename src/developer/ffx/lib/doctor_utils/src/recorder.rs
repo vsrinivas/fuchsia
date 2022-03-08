@@ -36,6 +36,7 @@ impl DoctorRecorder {
         Self { resource: HashMap::new(), source_files: vec![] }
     }
 
+    #[allow(clippy::unused_io_amount)] // TODO(fxbug.dev/95073)
     fn copy_file(&self, source: &PathBuf, zip: &mut ZipWriter<File>) -> Result<()> {
         let mut f = File::open(source)?;
         let source_name = source.file_name().unwrap().to_string_lossy();

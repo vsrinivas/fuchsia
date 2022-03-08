@@ -13,6 +13,7 @@ use std::fs;
 use std::io::Write;
 use std::path::PathBuf;
 
+#[allow(clippy::unused_io_amount)] // TODO(fxbug.dev/95050)
 /// Read in a CML file and produce the equivalent CM.
 pub fn compile(
     file: &PathBuf,

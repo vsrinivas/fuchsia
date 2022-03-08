@@ -46,6 +46,7 @@ pub(super) enum Event {
 
 impl std::fmt::Debug for Event {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
+        #[allow(clippy::recursive_format_impl)] // TODO(fxbug.dev/95183)
         match self {
             Event::ControlRequestStream(stream) => {
                 let _: &fnet_virtualization::ControlRequestStream = stream;

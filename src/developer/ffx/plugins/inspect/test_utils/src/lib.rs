@@ -366,6 +366,7 @@ impl Entry for MockDir {
         }
     }
 
+    #[allow(clippy::unused_io_amount)] // TODO(fxbug.dev/95073)
     fn encode(&self, buf: &mut Vec<u8>) {
         buf.write_u64::<LittleEndian>(INO_UNKNOWN).expect("writing mockdir ino to work");
         buf.write_u8(self.name.len() as u8).expect("writing mockdir size to work");
@@ -407,6 +408,7 @@ impl Entry for MockFile {
         unimplemented!();
     }
 
+    #[allow(clippy::unused_io_amount)] // TODO(fxbug.dev/95073)
     fn encode(&self, buf: &mut Vec<u8>) {
         buf.write_u64::<LittleEndian>(INO_UNKNOWN).expect("writing mockdir ino to work");
         buf.write_u8(self.name.len() as u8).expect("writing mockdir size to work");

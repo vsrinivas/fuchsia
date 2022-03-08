@@ -36,6 +36,7 @@ fn addr_to_string(bytes: &AddressBytes) -> String {
 }
 
 impl Address {
+    #[allow(clippy::inherent_to_string_shadow_display)] // TODO(fxbug.dev/95033)
     /// Returns a string representation of the address bytes.
     // TODO(armansito): This method is temporarily used for the deprecated FIDL APIs that represent
     // addresses as strings. Remove this method once all of those APIs are removed.

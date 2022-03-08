@@ -54,6 +54,7 @@ struct Options {
     extra_number: Option<i64>,
 }
 
+#[allow(clippy::approx_constant)] // TODO(fxbug.dev/95023)
 #[fuchsia::component]
 async fn main() -> Result<(), Error> {
     let opts = Options::from_args();

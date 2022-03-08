@@ -214,6 +214,7 @@ where
     Ok(())
 }
 
+#[allow(clippy::unused_io_amount)] // TODO(fxbug.dev/95067)
 async fn open_factory_source(factory_config: FactoryConfig) -> Result<DirectoryProxy, Error> {
     let (directory_proxy, directory_server_end) = create_proxy::<DirectoryMarker>()?;
     match factory_config {

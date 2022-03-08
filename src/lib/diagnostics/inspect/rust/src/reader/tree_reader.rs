@@ -124,6 +124,7 @@ mod tests {
         crate::{assert_data_tree, reader, Inspector},
     };
 
+    #[allow(clippy::approx_constant)] // TODO(fxbug.dev/95023)
     #[fuchsia::test]
     async fn test_read() -> Result<(), anyhow::Error> {
         let inspector = test_inspector();
@@ -140,6 +141,7 @@ mod tests {
         Ok(())
     }
 
+    #[allow(clippy::approx_constant)] // TODO(fxbug.dev/95023)
     #[fuchsia::test]
     async fn test_load_snapshot_tree() -> Result<(), anyhow::Error> {
         let inspector = test_inspector();
@@ -203,6 +205,7 @@ mod tests {
         Ok(())
     }
 
+    #[allow(clippy::approx_constant)] // TODO(fxbug.dev/95023)
     fn test_inspector() -> Inspector {
         let inspector = Inspector::new();
         let root = inspector.root();

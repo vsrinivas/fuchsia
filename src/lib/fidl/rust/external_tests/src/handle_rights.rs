@@ -107,6 +107,7 @@ impl OrdinalTransformChannel {
             server_end_ordinal,
         }
     }
+    #[allow(clippy::unused_io_amount)] // TODO(fxbug.dev/95059)
     fn transform_impl(
         in_end: &mut Channel,
         in_ordinal: u64,

@@ -36,6 +36,7 @@ pub struct Signal {
     number: u32,
 }
 
+#[allow(clippy::derive_hash_xor_eq)] // TODO(fxbug.dev/95057)
 impl Hash for Signal {
     fn hash<H: Hasher>(&self, state: &mut H) {
         self.number.hash(state);

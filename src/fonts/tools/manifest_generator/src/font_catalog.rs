@@ -183,6 +183,7 @@ impl TryMerge for FontFamilyAliasSet {
     /// Ensure that every alias `name` is unique among all the `FontFamilyAliasSet`s.
     fn post_validate(groups: Vec<Self>) -> Result<Vec<Self>, MergeError<Self>> {
         let mut unique = HashSet::new();
+        #[allow(clippy::clone_double_ref)] // TODO(fxbug.dev/95060)
         let first_duplicate =
             groups.iter().flat_map(|group| group.names()).find(|name| !unique.insert(name.clone()));
         match first_duplicate {

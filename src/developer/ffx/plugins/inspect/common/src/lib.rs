@@ -137,6 +137,7 @@ impl DiagnosticsProvider for DiagnosticsBridgeProvider {
                 return Err(Error::IOError("get next".into(), e.into()));
             }
             Ok(result) => {
+                #[allow(clippy::never_loop)] // TODO(fxbug.dev/95073)
                 for entry in result
                     .map_err(|s| anyhow!("Iterator error: {:?}", s))
                     .map_err(|e| Error::IOError("iterate results".into(), e))?

@@ -251,6 +251,7 @@ mod tests {
         ns.unbind(path.join("out").to_str().unwrap()).unwrap();
     }
 
+    #[allow(clippy::approx_constant)] // TODO(fxbug.dev/95023)
     #[fuchsia::test]
     async fn inspect_data_collector_tree() {
         let path = PathBuf::from("/test-bindings2");

@@ -425,6 +425,7 @@ mod tests {
     async fn emulate_peripheral(
         mut stream: PeripheralRequestStream,
     ) -> Result<(MockPeripheral, ServerEnd<ConnectionMarker>), Error> {
+        #[allow(clippy::never_loop)] // TODO(fxbug.dev/95033)
         while let Some(msg) = stream.try_next().await? {
             match msg {
                 PeripheralRequest::Advertise {

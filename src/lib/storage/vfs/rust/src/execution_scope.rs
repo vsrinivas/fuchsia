@@ -478,6 +478,7 @@ mod tests {
         });
     }
 
+    #[allow(clippy::vtable_address_comparisons)] // TODO(fxbug.dev/95027)
     #[test]
     fn with_token_registry() {
         let registry = token_registry::Simple::new();
@@ -491,6 +492,7 @@ mod tests {
         );
     }
 
+    #[allow(clippy::vtable_address_comparisons)] // TODO(fxbug.dev/95027)
     #[test]
     fn with_inode_registry() {
         let registry = inode_registry::Simple::new();
@@ -504,6 +506,7 @@ mod tests {
         );
     }
 
+    #[allow(clippy::vtable_address_comparisons)] // TODO(fxbug.dev/95027)
     #[test]
     fn with_mock_entry_constructor() {
         let entry_constructor = mocks::MockEntryConstructor::new();

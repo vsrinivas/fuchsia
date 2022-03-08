@@ -134,6 +134,7 @@ impl Store {
         Ok(res)
     }
 
+    #[allow(clippy::unused_io_amount)] // TODO(fxbug.dev/95090)
     fn deserialize(bytes: Vec<u8>) -> Result<Store, Error> {
         let mut res = Store::default();
         let bytes_len = bytes.len() as u64;
