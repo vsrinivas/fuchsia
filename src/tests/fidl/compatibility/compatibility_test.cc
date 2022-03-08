@@ -2073,6 +2073,49 @@ TEST(Table, EchoTablePayloadNoRetval) {
   });
 }
 
+// TODO(fxbug.dev/94910): This is an N+M case, where we only want to test each bindings
+// client/server once, rather than in combination with ever other binding. Move this test case to a
+// more appropriate file with other such N+M cases, once it exists.
+TEST(Table, EchoTableRequestComposed) {
+  // TODO(fxbug.dev/88343): Enable for CPP, Dart, Go, and Rust.
+  const auto filter = [](const std::string& server_url) -> bool {
+    return server_url.find("lcpp") != std::string::npos;
+  };
+
+  ForSomeServers(filter, [](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
+                            const std::string& server_url, const std::string& proxy_url) {
+    summary[ExtractShortName(proxy_url) + " <-> " + ExtractShortName(server_url) + " (table)"] =
+        false;
+    ::fidl::test::imported::ComposedEchoTableRequestComposedRequest sent;
+    sent.set_value(42u);
+    sent.set_forward_to_server(server_url);
+
+    ::fidl::test::imported::ComposedEchoTableRequestComposedRequest sent_clone;
+    sent.Clone(&sent_clone);
+
+    fidl::test::imported::SimpleStruct expected_resp;
+    expected_resp.f1 = true;
+    expected_resp.f2 = sent.value();
+
+    fidl::test::imported::SimpleStruct resp_clone;
+    bool called_back = false;
+
+    proxy->EchoTableRequestComposed(std::move(sent), [&loop, &resp_clone, &called_back](
+                                                         fidl::test::imported::SimpleStruct resp) {
+      ASSERT_EQ(ZX_OK, resp.Clone(&resp_clone));
+      called_back = true;
+      loop.Quit();
+    });
+
+    loop.Run();
+    ASSERT_TRUE(called_back);
+    EXPECT_EQ(expected_resp.f1, resp_clone.f1);
+    EXPECT_EQ(expected_resp.f2, resp_clone.f2);
+    summary[ExtractShortName(proxy_url) + " <-> " + ExtractShortName(server_url) + " (table)"] =
+        true;
+  });
+}
+
 TEST(Union, EchoUnions) {
   ForAllServers([](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
                    const std::string& server_url, const std::string& proxy_url) {
@@ -2320,6 +2363,80 @@ TEST(Union, EchoUnionPayloadNoRetval) {
     ASSERT_TRUE(event_received);
     EXPECT_EQ(sent_clone.is_unsigned_(), resp_clone.is_unsigned_());
     EXPECT_EQ(sent_clone.unsigned_().value, resp_clone.unsigned_());
+    summary[ExtractShortName(proxy_url) + " <-> " + ExtractShortName(server_url) + " (union)"] =
+        true;
+  });
+}
+
+// TODO(fxbug.dev/94910): This is an N+M case, where we only want to test each bindings
+// client/server once, rather than in combination with ever other binding. Move this test case to a
+// more appropriate file with other such N+M cases, once it exists.
+TEST(Union, EchoUnionResponseWithErrorComposedSuccessCase) {
+  // TODO(fxbug.dev/88343): Enable for CPP, Dart, Go, and Rust.
+  const auto filter = [](const std::string& server_url) -> bool {
+    return server_url.find("lcpp") != std::string::npos;
+  };
+
+  ForSomeServers(filter, [](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
+                            const std::string& server_url, const std::string& proxy_url) {
+    summary[ExtractShortName(proxy_url) + " <-> " + ExtractShortName(server_url) + " (union)"] =
+        false;
+    int64_t value = -42;
+    bool want_absolute_value = true;
+    const uint32_t err = 13;
+
+    ::fidl::test::imported::Composed_EchoUnionResponseWithErrorComposed_Response resp_clone;
+    bool called_back = false;
+
+    proxy->EchoUnionResponseWithErrorComposed(
+        value, want_absolute_value, server_url, err, fidl::test::imported::WantResponse::SUCCESS,
+        [&loop, &resp_clone, &called_back](
+            fidl::test::imported::Composed_EchoUnionResponseWithErrorComposed_Result resp) {
+          ASSERT_TRUE(resp.is_response());
+          ASSERT_EQ(ZX_OK, resp.response().Clone(&resp_clone));
+          called_back = true;
+          loop.Quit();
+        });
+
+    loop.Run();
+    ASSERT_TRUE(called_back);
+    ASSERT_EQ(want_absolute_value, resp_clone.is_unsigned_());
+    EXPECT_EQ((uint64_t)std::abs(value), resp_clone.unsigned_());
+    summary[ExtractShortName(proxy_url) + " <-> " + ExtractShortName(server_url) + " (union)"] =
+        true;
+  });
+}
+
+// TODO(fxbug.dev/94910): This is an N+M case, where we only want to test each bindings
+// client/server once, rather than in combination with ever other binding. Move this test case to a
+// more appropriate file with other such N+M cases, once it exists.
+TEST(Union, EchoUnionResponseWithErrorComposedErrorCase) {
+  // TODO(fxbug.dev/88343): Enable for CPP, Dart, Go, and Rust.
+  const auto filter = [](const std::string& server_url) -> bool {
+    return server_url.find("lcpp") != std::string::npos;
+  };
+
+  ForSomeServers(filter, [](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
+                            const std::string& server_url, const std::string& proxy_url) {
+    summary[ExtractShortName(proxy_url) + " <-> " + ExtractShortName(server_url) + " (union)"] =
+        false;
+    int64_t value = -42;
+    bool want_absolute_value = true;
+    const uint32_t err = 13;
+    bool called_back = false;
+
+    proxy->EchoUnionResponseWithErrorComposed(
+        value, want_absolute_value, server_url, err, fidl::test::imported::WantResponse::ERR,
+        [&loop, &err, &called_back](
+            fidl::test::imported::Composed_EchoUnionResponseWithErrorComposed_Result resp) {
+          ASSERT_TRUE(resp.is_err());
+          ASSERT_EQ(err, resp.err());
+          called_back = true;
+          loop.Quit();
+        });
+
+    loop.Run();
+    ASSERT_TRUE(called_back);
     summary[ExtractShortName(proxy_url) + " <-> " + ExtractShortName(server_url) + " (union)"] =
         true;
   });

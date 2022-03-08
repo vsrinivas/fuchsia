@@ -7,7 +7,7 @@ type WantResponse = strict enum {
 
 type SimpleStruct = struct {
     f1 bool;
-    f2 uint16;
+    f2 uint64;
 };
 
 // If `forward_to_server` is empty, just returns `value`.
@@ -35,4 +35,29 @@ type ErrorableRequestStruct = struct {
     result_err uint32;
     forward_to_server string;
     result_variant WantResponse;
+};
+
+// This protocol exists solely to be composed into the `Echo` protocol in `library
+// fidl.test.compatibility` as a means of testing the behavior and code generation of protocol
+// composition.
+// TODO(fxbug.dev/94910): Only test these tests in "N+M" mode, and move them into their
+// own file, as they are not specifically concerned with wire compatibility across bindings.
+@bindings_denylist("cpp, dart, go, rust, syzkaller")
+protocol Composed {
+    @bindings_denylist("cpp, dart, go, rust, syzkaller")
+    EchoTableRequestComposed(table {
+        1: value uint64;
+        2: forward_to_server string;
+    }) -> (ResponseStruct);
+    @bindings_denylist("cpp, dart, go, rust, syzkaller")
+    EchoUnionResponseWithErrorComposed(struct {
+        value int64;
+        want_absolute_value bool;
+        forward_to_server string;
+        result_err uint32;
+        result_variant WantResponse;
+    }) -> (strict union {
+        1: unsigned uint64;
+        2: signed int64;
+    }) error uint32;
 };

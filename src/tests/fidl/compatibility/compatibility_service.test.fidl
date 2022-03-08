@@ -595,6 +595,9 @@ type ResponseUnion = strict union {
 
 @discoverable
 protocol Echo {
+    @bindings_denylist("cpp, dart, go, rust, syzkaller")
+    compose imp.Composed;
+
     // If `forward_to_server` is empty, just returns `value`.
     // If `forward_to_server` is not empty, it is treated as the URL of a server
     // which implements this interface. The server that recieves the non-empty

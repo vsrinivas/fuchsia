@@ -617,6 +617,37 @@ class EchoServerApp : public Echo {
     }
   }
 
+  void EchoTableRequestComposed(
+      ::fidl::test::imported::ComposedEchoTableRequestComposedRequest payload,
+      EchoTableRequestComposedCallback callback) override {
+    if (payload.has_forward_to_server()) {
+      EchoClientApp app;
+      const std::string& forward_to_server = payload.forward_to_server();
+      bool failed = false;
+      app.echo().set_error_handler([this, &forward_to_server, &failed](zx_status_t status) {
+        failed = true;
+        loop_->Quit();
+        FX_LOGS(ERROR) << "error communicating with " << forward_to_server << ": " << status;
+      });
+      app.Start(forward_to_server);
+      bool called_back = false;
+      payload.clear_forward_to_server();
+      app.echo()->EchoTableRequestComposed(
+          std::move(payload), [this, &called_back, &callback](imported::SimpleStruct resp) {
+            called_back = true;
+            callback(std::move(resp));
+            loop_->Quit();
+          });
+      while (!called_back && !failed) {
+        loop_->Run();
+      }
+      loop_->ResetQuit();
+    } else {
+      imported::SimpleStruct resp = {.f1 = true, .f2 = payload.value()};
+      callback(std::move(resp));
+    }
+  }
+
   void EchoUnionPayload(RequestUnion payload, EchoUnionPayloadCallback callback) override {
     const std::string& forward_to_server = payload.is_signed_()
                                                ? payload.signed_().forward_to_server
@@ -740,6 +771,50 @@ class EchoServerApp : public Echo {
         binding->events().OnEchoUnionPayloadEvent(std::move(resp));
       }
     }
+  }
+
+  void EchoUnionResponseWithErrorComposed(
+      int64_t value, bool want_absolute_value, std::string forward_to_server, uint32_t err,
+      imported::WantResponse result_variant,
+      EchoUnionResponseWithErrorComposedCallback callback) override {
+    if (!forward_to_server.empty()) {
+      EchoClientApp app;
+      bool failed = false;
+      app.echo().set_error_handler([this, &forward_to_server, &failed](zx_status_t status) {
+        failed = true;
+        loop_->Quit();
+        FX_LOGS(ERROR) << "error communicating with " << forward_to_server << ": " << status;
+      });
+      app.Start(forward_to_server);
+      bool called_back = false;
+      app.echo()->EchoUnionResponseWithErrorComposed(
+          value, want_absolute_value, "", err, result_variant,
+          [this, &called_back,
+           &callback](imported::Composed_EchoUnionResponseWithErrorComposed_Result resp) {
+            called_back = true;
+            callback(std::move(resp));
+            loop_->Quit();
+          });
+      while (!called_back && !failed) {
+        loop_->Run();
+      }
+      loop_->ResetQuit();
+      return;
+    }
+
+    imported::Composed_EchoUnionResponseWithErrorComposed_Result result;
+    if (result_variant == imported::WantResponse::ERR) {
+      result.set_err(err);
+    } else if (want_absolute_value) {
+      result.set_response(
+          ::fidl::test::imported::Composed_EchoUnionResponseWithErrorComposed_Response::
+              WithUnsigned_(static_cast<uint64_t>(std::abs(value))));
+    } else {
+      result.set_response(
+          ::fidl::test::imported::Composed_EchoUnionResponseWithErrorComposed_Response::WithSigned_(
+              std::move(value)));
+    }
+    callback(std::move(result));
   }
 
  private:

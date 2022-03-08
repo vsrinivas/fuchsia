@@ -164,6 +164,11 @@ class EchoClientApp {
     return client_.HandleOneEvent(event_handler).status();
   }
 
+  fidl::WireResult<Echo::EchoTableRequestComposed> EchoTableRequestComposed(
+      ::fidl_test_imported::wire::ComposedEchoTableRequestComposedRequest payload) {
+    return client_->EchoTableRequestComposed(std::move(payload));
+  }
+
   fidl::WireResult<Echo::EchoUnionPayload> EchoUnionPayload(
       fidl_test_compatibility::wire::RequestUnion payload) {
     return client_->EchoUnionPayload(std::move(payload));
@@ -181,6 +186,13 @@ class EchoClientApp {
       return result.status();
     }
     return client_.HandleOneEvent(event_handler).status();
+  }
+
+  fidl::WireResult<Echo::EchoUnionResponseWithErrorComposed> EchoUnionResponseWithErrorComposed(
+      int64_t value, bool want_absolute_value, ::fidl::StringView forward_to_server,
+      uint32_t result_err, fidl_test_imported::wire::WantResponse result_variant) {
+    return client_->EchoUnionResponseWithErrorComposed(
+        value, want_absolute_value, forward_to_server, result_err, result_variant);
   }
 
   EchoClientApp(const EchoClientApp&) = delete;
@@ -640,6 +652,24 @@ class EchoConnection final : public fidl::WireServer<Echo> {
     }
   }
 
+  void EchoTableRequestComposed(EchoTableRequestComposedRequestView request,
+                                EchoTableRequestComposedCompleter::Sync& completer) override {
+    if (!request->has_forward_to_server()) {
+      completer.Reply(
+          std::move(fidl_test_imported::wire::SimpleStruct{.f1 = true, .f2 = request->value()}));
+    } else {
+      EchoClientApp app(request->forward_to_server());
+      fidl::Arena allocator;
+      ::fidl_test_imported::wire::ComposedEchoTableRequestComposedRequest req(allocator);
+      req.set_value(fidl::ObjectView<uint64_t>(allocator, request->value()));
+
+      auto result = app.EchoTableRequestComposed(req);
+      ZX_ASSERT_MSG(result.status() == ZX_OK, "Forwarding failed: %s",
+                    result.FormatDescription().c_str());
+      completer.Reply(std::move(result.Unwrap()->value));
+    }
+  }
+
   void EchoUnionPayload(EchoUnionPayloadRequestView request,
                         EchoUnionPayloadCompleter::Sync& completer) override {
     fidl::StringView& forward_to_server = request->is_signed_()
@@ -783,6 +813,40 @@ class EchoConnection final : public fidl::WireServer<Echo> {
                     zx_status_get_string(status));
       ZX_ASSERT_MSG(event_handler.result().ok(), "Replying with event failed indirect: %s",
                     event_handler.result().FormatDescription().c_str());
+    }
+  }
+
+  void EchoUnionResponseWithErrorComposed(
+      EchoUnionResponseWithErrorComposedRequestView request,
+      EchoUnionResponseWithErrorComposedCompleter::Sync& completer) override {
+    if (request->forward_to_server.empty()) {
+      if (request->result_variant == fidl_test_imported::wire::WantResponse::kErr) {
+        completer.ReplyError(request->result_err);
+        return;
+      }
+      fidl::Arena allocator;
+      fidl_test_imported::wire::ComposedEchoUnionResponseWithErrorComposedResponse resp;
+      if (request->want_absolute_value) {
+        auto obj_view =
+            fidl::ObjectView<uint64_t>(allocator, static_cast<uint64_t>(std::abs(request->value)));
+        resp = fidl_test_imported::wire::ComposedEchoUnionResponseWithErrorComposedResponse::
+            WithUnsigned_(std::move(obj_view));
+      } else {
+        auto obj_view = fidl::ObjectView<int64_t>(allocator, request->value);
+        resp = fidl_test_imported::wire::ComposedEchoUnionResponseWithErrorComposedResponse::
+            WithSigned_(std::move(obj_view));
+      }
+      fidl_test_imported::wire::ComposedEchoUnionResponseWithErrorComposedResult res;
+      res.set_response(allocator, std::move(resp));
+      completer.Reply(std::move(res));
+    } else {
+      EchoClientApp app(request->forward_to_server);
+      auto result =
+          app.EchoUnionResponseWithErrorComposed(request->value, request->want_absolute_value, "",
+                                                 request->result_err, request->result_variant);
+      ZX_ASSERT_MSG(result.status() == ZX_OK, "Forwarding failed: %s",
+                    result.FormatDescription().c_str());
+      completer.Reply(std::move(result->result));
     }
   }
 

@@ -586,6 +586,11 @@ class EchoConnection final : public fidl::Server<Echo> {
     // TODO(fxbug.dev/88343): Implement.
   }
 
+  void EchoTableRequestComposed(EchoTableRequestComposedRequest& request,
+                                EchoTableRequestComposedCompleter::Sync& completer) override {
+    // TODO(fxbug.dev/88343): Implement.
+  }
+
   void EchoUnionPayload(EchoUnionPayloadRequest& request,
                         EchoUnionPayloadCompleter::Sync& completer) override {
     // TODO(fxbug.dev/88343): Implement.
@@ -598,6 +603,12 @@ class EchoConnection final : public fidl::Server<Echo> {
 
   void EchoUnionPayloadNoRetVal(EchoUnionPayloadNoRetValRequest& request,
                                 EchoUnionPayloadNoRetValCompleter::Sync&) override {
+    // TODO(fxbug.dev/88343): Implement.
+  }
+
+  void EchoUnionResponseWithErrorComposed(
+      EchoUnionResponseWithErrorComposedRequest& request,
+      EchoUnionResponseWithErrorComposedCompleter::Sync& completer) override {
     // TODO(fxbug.dev/88343): Implement.
   }
 
