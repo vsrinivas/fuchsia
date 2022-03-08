@@ -140,11 +140,10 @@ class DisplayCompositorParameterizedSmokeTest
     : public DisplayCompositorSmokeTest,
       public ::testing::WithParamInterface<fuchsia::sysmem::PixelFormatType> {};
 
-// Renders a fullscreen green rectangle to the provided display. This
-// tests the engine's ability to properly read in flatland uberstruct
-// data and then pass the data along to the display-controller interface
-// to be composited directly in hardware. The Astro display controller
-// only handles full screen rects.
+// Renders a fullscreen rectangle to the provided display. This tests the engine's ability to
+// properly read in flatland uberstruct data and then pass the data along to the display-controller
+// interface to be composited directly in hardware. The Astro display controller only handles full
+// screen rects.
 VK_TEST_P(DisplayCompositorParameterizedSmokeTest, FullscreenRectangleTest) {
   // Even though we are rendering directly with the display controller in this test,
   // we still use the VkRenderer so that all of the same constraints we'd expect to
@@ -171,34 +170,6 @@ VK_TEST_P(DisplayCompositorParameterizedSmokeTest, FullscreenRectangleTest) {
       SetupClientTextures(display_compositor.get(), kTextureCollectionId, GetParam(), kTextureWidth,
                           kTextureHeight, 1, &texture_collection_info);
   EXPECT_TRUE(texture_collection);
-
-  // Get a raw pointer for the texture's vmo and make it green.
-  const uint32_t num_pixels = kTextureWidth * kTextureHeight;
-  uint32_t col = (255U << 24) | (255U << 8);
-  std::vector<uint32_t> write_values;
-  write_values.assign(num_pixels, col);
-  switch (GetParam()) {
-    case fuchsia::sysmem::PixelFormatType::BGRA32: {
-      MapHostPointer(texture_collection_info, /*vmo_index*/ 0,
-                     [&write_values](uint8_t* vmo_host, uint32_t num_bytes) {
-                       EXPECT_GE(num_bytes, sizeof(uint32_t) * write_values.size());
-                       memcpy(vmo_host, write_values.data(),
-                              sizeof(uint32_t) * write_values.size());
-                     });
-      break;
-    }
-    case fuchsia::sysmem::PixelFormatType::R8G8B8A8: {
-      MapHostPointer(texture_collection_info, /*vmo_index*/ 0,
-                     [&write_values](uint8_t* vmo_host, uint32_t num_bytes) {
-                       EXPECT_GE(num_bytes, sizeof(uint32_t) * write_values.size());
-                       memcpy(vmo_host, write_values.data(),
-                              sizeof(uint32_t) * write_values.size());
-                     });
-      break;
-    }
-    default:
-      FX_NOTREACHED();
-  }
 
   // Import the texture to the engine.
   auto image_metadata = ImageMetadata{.collection_id = kTextureCollectionId,

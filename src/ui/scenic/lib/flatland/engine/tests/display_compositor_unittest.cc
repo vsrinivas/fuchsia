@@ -956,5 +956,104 @@ TEST_F(DisplayCompositorTest, RendererOnly_ImportAndReleaseBufferCollectionTest)
   server.join();
 }
 
+class ParameterizedYuvDisplayCompositorTest
+    : public DisplayCompositorTest,
+      public ::testing::WithParamInterface<fuchsia::sysmem::PixelFormatType> {};
+
+// TODO(fxbug.dev/85601): This test tries to import a YUV buffer to display and confirms that
+// Flatland falls back to vulkan compositing. Remove this test when i915 supports YUV buffers.
+TEST_P(ParameterizedYuvDisplayCompositorTest, EnforceDisplayConstraints_SkipsYuvImages) {
+  SetBufferCollectionImportMode(BufferCollectionImportMode::EnforceDisplayConstraints);
+
+  auto mock = mock_display_controller_.get();
+  // Set the mock display controller functions and wait for messages.
+  std::thread server([&mock]() mutable {
+    // - 1 call to ImportBufferCollection
+    // - 1 call to SetBufferCollectionConstraints
+    // - 1 call to DiscardConfig
+    // TODO(fxbug.dev/71264): Use function call counters from display's MockDisplayController.
+    for (uint32_t i = 0; i < 3; i++) {
+      mock->WaitForMessage();
+    }
+  });
+
+  const auto kGlobalBufferCollectionId = allocation::GenerateUniqueBufferCollectionId();
+
+  // Import buffer collection.
+  EXPECT_CALL(*mock, ImportBufferCollection(kGlobalBufferCollectionId, _, _))
+      .WillOnce(testing::Invoke(
+          [](uint64_t, fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token,
+             MockDisplayController::ImportBufferCollectionCallback callback) {
+            token.BindSync()->Close();
+            callback(ZX_OK);
+          }));
+  EXPECT_CALL(*mock, SetBufferCollectionConstraints(kGlobalBufferCollectionId, _, _))
+      .WillOnce(testing::Invoke(
+          [](uint64_t collection_id, fuchsia::hardware::display::ImageConfig config,
+             MockDisplayController::SetBufferCollectionConstraintsCallback callback) {
+            callback(ZX_OK);
+          }));
+  EXPECT_CALL(*renderer_.get(), ImportBufferCollection(kGlobalBufferCollectionId, _, _))
+      .WillOnce([](allocation::GlobalBufferCollectionId, fuchsia::sysmem::Allocator_Sync*,
+                   fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token) {
+        token.BindSync()->Close();
+        return true;
+      });
+  auto token = CreateToken();
+  EXPECT_TRUE(token.is_valid());
+  fuchsia::sysmem::BufferCollectionTokenSyncPtr dup_token;
+  auto sync_token = token.BindSync();
+  sync_token->Duplicate(ZX_RIGHT_SAME_RIGHTS, dup_token.NewRequest());
+  sync_token->Sync();
+  display_compositor_->ImportBufferCollection(kGlobalBufferCollectionId, sysmem_allocator_.get(),
+                                              std::move(sync_token));
+
+  // Allocate YUV buffer collection using param.
+  const uint32_t kWidth = 128;
+  const uint32_t height = 256;
+  {
+    auto [buffer_usage, memory_constraints] = GetUsageAndMemoryConstraintsForCpuWriteOften();
+    fuchsia::sysmem::BufferCollectionSyncPtr texture_collection =
+        CreateBufferCollectionSyncPtrAndSetConstraints(
+            sysmem_allocator_.get(), std::move(dup_token), 1, kWidth, height, buffer_usage,
+            GetParam(), memory_constraints);
+    zx_status_t allocation_status = ZX_OK;
+    fuchsia::sysmem::BufferCollectionInfo_2 collection_info;
+    auto status = texture_collection->WaitForBuffersAllocated(&allocation_status, &collection_info);
+    EXPECT_EQ(status, ZX_OK);
+    EXPECT_EQ(allocation_status, ZX_OK);
+    texture_collection->Close();
+  }
+
+  // Import image.
+  ImageMetadata image_metadata = ImageMetadata{
+      .collection_id = kGlobalBufferCollectionId,
+      .identifier = allocation::GenerateUniqueImageId(),
+      .vmo_index = 0,
+      .width = kWidth,
+      .height = height,
+      .blend_mode = fuchsia::ui::composition::BlendMode::SRC,
+  };
+  // Make sure the image isn't imported to display.
+  EXPECT_CALL(*mock, ImportImage(_, _, _, _)).Times(0);
+  EXPECT_CALL(*renderer_.get(), ImportBufferImage(image_metadata)).WillOnce(Return(true));
+  display_compositor_->ImportBufferImage(image_metadata);
+
+  // Shutdown.
+  EXPECT_CALL(*mock, CheckConfig(_, _))
+      .WillOnce(testing::Invoke([&](bool, MockDisplayController::CheckConfigCallback callback) {
+        fuchsia::hardware::display::ConfigResult result =
+            fuchsia::hardware::display::ConfigResult::OK;
+        std::vector<fuchsia::hardware::display::ClientCompositionOp> ops;
+        callback(result, ops);
+      }));
+  display_compositor_.reset();
+  server.join();
+}
+
+INSTANTIATE_TEST_SUITE_P(PixelFormats, ParameterizedYuvDisplayCompositorTest,
+                         ::testing::Values(fuchsia::sysmem::PixelFormatType::NV12,
+                                           fuchsia::sysmem::PixelFormatType::I420));
+
 }  // namespace test
 }  // namespace flatland

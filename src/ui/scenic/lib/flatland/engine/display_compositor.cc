@@ -53,6 +53,8 @@ zx_pixel_format_t BufferCollectionPixelFormatToZirconFormat(
       return ZX_PIXEL_FORMAT_ABGR_8888;
     case fuchsia::sysmem::PixelFormatType::NV12:
       return ZX_PIXEL_FORMAT_NV12;
+    case fuchsia::sysmem::PixelFormatType::I420:
+      return ZX_PIXEL_FORMAT_I420;
     default:
       break;
   }
@@ -277,7 +279,6 @@ bool DisplayCompositor::ImportBufferImage(const allocation::ImageMetadata& metad
     buffer_collection_supports_display_[metadata.collection_id] = false;
     return true;
   }
-
   if (buffer_collection_supports_display_.find(metadata.collection_id) ==
       buffer_collection_supports_display_.end()) {
     zx_status_t allocation_status = ZX_OK;
@@ -298,6 +299,16 @@ bool DisplayCompositor::ImportBufferImage(const allocation::ImageMetadata& metad
     }
     status = display_tokens_[metadata.collection_id]->Close();
     display_tokens_.erase(metadata.collection_id);
+  }
+
+  // TODO(fxbug.dev/85601): Remove after YUV buffers can be imported to display. We filter YUV
+  // images out of display path.
+  if (buffer_collection_pixel_format_[metadata.collection_id].type ==
+          fuchsia::sysmem::PixelFormatType::NV12 ||
+      buffer_collection_pixel_format_[metadata.collection_id].type ==
+          fuchsia::sysmem::PixelFormatType::I420) {
+    buffer_collection_supports_display_[metadata.collection_id] = false;
+    return true;
   }
 
   if (!buffer_collection_supports_display_[metadata.collection_id]) {

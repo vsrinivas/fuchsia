@@ -77,6 +77,12 @@ static fuchsia_sysmem::wire::PixelFormatType pixel_format_types[2] = {
     fuchsia_sysmem::wire::PixelFormatType::kR8G8B8A8,
 };
 
+// TODO(fxbug.dev/85601): Remove after YUV buffers can be imported to Intel display.
+static fuchsia_sysmem::wire::PixelFormatType yuv_pixel_format_types[2] = {
+    fuchsia_sysmem::wire::PixelFormatType::kI420,
+    fuchsia_sysmem::wire::PixelFormatType::kNv12,
+};
+
 static void gpu_release(void* ctx) { static_cast<i915::Controller*>(ctx)->GpuRelease(); }
 
 static zx_protocol_device_t i915_gpu_core_device_proto = {};
@@ -883,6 +889,10 @@ zx_status_t Controller::DisplayControllerImplImportImage(image_t* image, zx_unow
     return ZX_ERR_INVALID_ARGS;
   }
 
+  ZX_DEBUG_ASSERT(collection_info.settings.image_format_constraints.pixel_format.type !=
+                      fuchsia_sysmem::wire::PixelFormatType::kI420 &&
+                  collection_info.settings.image_format_constraints.pixel_format.type !=
+                      fuchsia_sysmem::wire::PixelFormatType::kNv12);
   uint32_t type;
   if (!ConvertPixelFormatToType(collection_info.settings.image_format_constraints.pixel_format,
                                 &type)) {
@@ -1841,6 +1851,13 @@ zx_status_t Controller::DisplayControllerImplSetBufferCollectionConstraints(
   if (image_constraints_count == 0) {
     zxlogf(ERROR, "Config has unsupported type %d", config->type);
     return ZX_ERR_INVALID_ARGS;
+  }
+  for (unsigned i = 0; i < std::size(yuv_pixel_format_types); ++i) {
+    fuchsia_sysmem::wire::ImageFormatConstraints& image_constraints =
+        constraints.image_format_constraints[image_constraints_count++];
+    image_constraints.pixel_format.type = yuv_pixel_format_types[i];
+    image_constraints.color_spaces_count = 1;
+    image_constraints.color_space[0].type = fuchsia_sysmem::wire::ColorSpaceType::kRec709;
   }
   constraints.image_format_constraints_count = image_constraints_count;
 

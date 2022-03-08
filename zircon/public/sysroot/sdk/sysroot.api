@@ -211,7 +211,7 @@
   "include/zircon/limits.h": "564b9d2902c5e1992e2c75cca156ef30",
   "include/zircon/listnode.h": "adc44cc353c4b9b7de4f20c250ddd299",
   "include/zircon/lookup.h": "053d29f711949d3d47b7a6b97b62d735",
-  "include/zircon/pixelformat.h": "950bbf354a91ebf0f53195ab59fd90c0",
+  "include/zircon/pixelformat.h": "db26f868419b9adbff00210d96239375",
   "include/zircon/process.h": "e890bf8ab56a3b8dd935774112e3fd45",
   "include/zircon/processargs.h": "6dd81da1946cf63db2015215639dfd07",
   "include/zircon/rights.h": "40d14b5e1268ffb9c9288634552075bc",
