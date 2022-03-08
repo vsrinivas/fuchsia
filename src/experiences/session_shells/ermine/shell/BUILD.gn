@@ -215,6 +215,7 @@ flutter_test("ermine_unittests") {
   sources = [
     "app_widget_test.dart",
     "overlays_widget_test.dart",
+    "quick_settings_widget_test.dart",
     "side_bar_widget_test.dart",
   ]
 

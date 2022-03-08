@@ -14,11 +14,13 @@ import 'package:ermine/src/widgets/overlays.dart';
 import 'package:ermine_utils/ermine_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:fuchsia_logger/logger.dart';
 import 'package:intl/intl.dart';
 import 'package:mobx/mobx.dart' hide when;
 import 'package:mockito/mockito.dart';
 
 void main() async {
+  setupLogger(name: 'ermine_unittests');
   late App app;
   late MockAppState state;
 
@@ -39,8 +41,8 @@ void main() async {
     final stream = controller.stream.asObservable();
     when(state.locale).thenAnswer((_) => stream.value);
     when(state.views).thenAnswer((_) => <ViewState>[]);
-    when(state.overlaysVisible).thenAnswer((_) => false);
-    when(state.dialogsVisible).thenAnswer((_) => false);
+    when(state.overlaysVisible).thenAnswer((_) => false.asObservable().value);
+    when(state.dialogsVisible).thenAnswer((_) => false.asObservable().value);
 
     await tester.pumpWidget(app);
     // app should be OffStage until locale is pushed.
@@ -71,8 +73,8 @@ void main() async {
     // Create one view.
     when(state.views).thenAnswer((_) => [MockViewState()]);
     // Show overlays.
-    when(state.overlaysVisible).thenAnswer((_) => true);
-    when(state.dialogsVisible).thenAnswer((_) => false);
+    when(state.overlaysVisible).thenAnswer((_) => true.asObservable().value);
+    when(state.dialogsVisible).thenAnswer((_) => false.asObservable().value);
 
     await tester.pumpWidget(app);
     await tester.pumpAndSettle();

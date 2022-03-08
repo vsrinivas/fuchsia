@@ -24,8 +24,7 @@ class _LocalizationsDelegate extends LocalizationsDelegate<void> {
             : locale.toString();
     final String localeName = Intl.canonicalizedLocale(name);
     await messages_all.initializeMessages(localeName);
-    log.info(
-        '_LocalizationsDelegate: current default locale: ${Intl.defaultLocale}');
+    log.info('Setting default locale to: ${Intl.defaultLocale}');
   }
 
   const _LocalizationsDelegate();
@@ -39,9 +38,6 @@ class _LocalizationsDelegate extends LocalizationsDelegate<void> {
 
   @override
   bool isSupported(Locale locale) {
-    bool supported = supported_locales.locales.contains(locale);
-    log.finer(
-        '_LocalizationsDelegate: locale: ${locale.toString()}; isSupported: ${supported.toString()}');
-    return supported;
+    return supported_locales.locales.contains(locale);
   }
 }
