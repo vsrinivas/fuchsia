@@ -1923,9 +1923,9 @@ TEST(Table, EchoTableWithErrorErrorCase) {
 }
 
 TEST(Table, EchoTablePayload) {
-  // TODO(fxbug.dev/88343): Enable for CPP, Dart, Go, LLCPP, and Rust.
+  // TODO(fxbug.dev/88343): Enable for CPP, Dart, Go, and Rust.
   const auto filter = [](const std::string& server_url) -> bool {
-    return server_url.find("hlcpp") != std::string::npos;
+    return server_url.find("lcpp") != std::string::npos;
   };
 
   ForSomeServers(filter, [](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
@@ -1959,9 +1959,9 @@ TEST(Table, EchoTablePayload) {
 }
 
 TEST(Table, EchoTablePayloadWithErrorSuccessCase) {
-  // TODO(fxbug.dev/88343): Enable for CPP, Dart, Go, LLCPP, and Rust.
+  // TODO(fxbug.dev/88343): Enable for CPP, Dart, Go, and Rust.
   const auto filter = [](const std::string& server_url) -> bool {
-    return server_url.find("hlcpp") != std::string::npos;
+    return server_url.find("lcpp") != std::string::npos;
   };
 
   ForSomeServers(filter, [](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
@@ -1999,9 +1999,9 @@ TEST(Table, EchoTablePayloadWithErrorSuccessCase) {
 }
 
 TEST(Table, EchoTablePayloadWithErrorErrorCase) {
-  // TODO(fxbug.dev/88343): Enable for CPP, Dart, Go, LLCPP, and Rust.
+  // TODO(fxbug.dev/88343): Enable for CPP, Dart, Go, and Rust.
   const auto filter = [](const std::string& server_url) -> bool {
-    return server_url.find("hlcpp") != std::string::npos;
+    return server_url.find("lcpp") != std::string::npos;
   };
 
   ForSomeServers(filter, [](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
@@ -2038,9 +2038,9 @@ TEST(Table, EchoTablePayloadWithErrorErrorCase) {
 }
 
 TEST(Table, EchoTablePayloadNoRetval) {
-  // TODO(fxbug.dev/88343): Enable for CPP, Dart, Go, LLCPP, and Rust.
+  // TODO(fxbug.dev/88343): Enable for CPP, Dart, Go, and Rust.
   const auto filter = [](const std::string& server_url) -> bool {
-    return server_url.find("hlcpp") != std::string::npos;
+    return server_url.find("lcpp") != std::string::npos;
   };
 
   ForSomeServers(filter, [](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
@@ -2171,9 +2171,9 @@ TEST(Union, EchoUnionsWithErrorErrorCase) {
 }
 
 TEST(Union, EchoUnionPayload) {
-  // TODO(fxbug.dev/88343): Enable for CPP, Dart, Go, LLCPP, and Rust.
+  // TODO(fxbug.dev/88343): Enable for CPP, Dart, Go, and Rust.
   const auto filter = [](const std::string& server_url) -> bool {
-    return server_url.find("hlcpp") != std::string::npos;
+    return server_url.find("lcpp") != std::string::npos;
   };
 
   ForSomeServers(filter, [](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
@@ -2206,9 +2206,9 @@ TEST(Union, EchoUnionPayload) {
 }
 
 TEST(Union, EchoUnionPayloadWithErrorSuccessCase) {
-  // TODO(fxbug.dev/88343): Enable for CPP, Dart, Go, LLCPP, and Rust.
+  // TODO(fxbug.dev/88343): Enable for CPP, Dart, Go, and Rust.
   const auto filter = [](const std::string& server_url) -> bool {
-    return server_url.find("hlcpp") != std::string::npos;
+    return server_url.find("lcpp") != std::string::npos;
   };
 
   ForSomeServers(filter, [](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
@@ -2249,9 +2249,9 @@ TEST(Union, EchoUnionPayloadWithErrorSuccessCase) {
 }
 
 TEST(Union, EchoUnionPayloadWithErrorErrorCase) {
-  // TODO(fxbug.dev/88343): Enable for CPP, Dart, Go, LLCPP, and Rust.
+  // TODO(fxbug.dev/88343): Enable for CPP, Dart, Go, and Rust.
   const auto filter = [](const std::string& server_url) -> bool {
-    return server_url.find("hlcpp") != std::string::npos;
+    return server_url.find("lcpp") != std::string::npos;
   };
 
   ForSomeServers(filter, [](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
@@ -2291,9 +2291,9 @@ TEST(Union, EchoUnionPayloadWithErrorErrorCase) {
 }
 
 TEST(Union, EchoUnionPayloadNoRetval) {
-  // TODO(fxbug.dev/88343): Enable for CPP, Dart, Go, LLCPP, and Rust.
+  // TODO(fxbug.dev/88343): Enable for CPP, Dart, Go, and Rust.
   const auto filter = [](const std::string& server_url) -> bool {
-    return server_url.find("hlcpp") != std::string::npos;
+    return server_url.find("lcpp") != std::string::npos;
   };
 
   ForSomeServers(filter, [](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,

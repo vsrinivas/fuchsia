@@ -3,7 +3,9 @@
 // found in the LICENSE file.
 
 #include <fidl/fidl.test.compatibility/cpp/wire.h>
+#include <fidl/fidl.test.compatibility/cpp/wire_types.h>
 #include <fidl/fidl.test.imported/cpp/wire.h>
+#include <fidl/fidl.test.imported/cpp/wire_types.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
@@ -11,6 +13,7 @@
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fidl/cpp/interface_request.h>
+#include <lib/fidl/llcpp/string_view.h>
 #include <lib/stdcompat/optional.h>
 #include <lib/sys/cpp/component_context.h>
 #include <zircon/status.h>
@@ -18,8 +21,6 @@
 #include <cstdlib>
 #include <iostream>
 #include <string>
-
-#include "fidl/fidl.test.imported/cpp/wire_types.h"
 
 constexpr const char kEchoInterfaceName[] = "fidl.test.compatibility.Echo";
 
@@ -142,6 +143,44 @@ class EchoClientApp {
       ::fidl::StringView forward_to_server, wire::RespondWith result_variant) {
     return client_->EchoXunionsWithError(std::move(value), err, std::move(forward_to_server),
                                          result_variant);
+  }
+
+  fidl::WireResult<Echo::EchoTablePayload> EchoTablePayload(
+      fidl_test_compatibility::wire::RequestTable payload) {
+    return client_->EchoTablePayload(std::move(payload));
+  }
+
+  fidl::WireResult<Echo::EchoTablePayloadWithError> EchoTablePayloadWithError(
+      fidl_test_compatibility::wire::EchoEchoTablePayloadWithErrorRequest payload) {
+    return client_->EchoTablePayloadWithError(std::move(payload));
+  }
+
+  zx_status_t EchoTablePayloadNoRetVal(fidl_test_compatibility::wire::RequestTable payload,
+                                       fidl::WireSyncEventHandler<Echo>& event_handler) {
+    auto result = client_->EchoTablePayloadNoRetVal(std::move(payload));
+    if (result.status() != ZX_OK) {
+      return result.status();
+    }
+    return client_.HandleOneEvent(event_handler).status();
+  }
+
+  fidl::WireResult<Echo::EchoUnionPayload> EchoUnionPayload(
+      fidl_test_compatibility::wire::RequestUnion payload) {
+    return client_->EchoUnionPayload(std::move(payload));
+  }
+
+  fidl::WireResult<Echo::EchoUnionPayloadWithError> EchoUnionPayloadWithError(
+      fidl_test_compatibility::wire::EchoEchoUnionPayloadWithErrorRequest payload) {
+    return client_->EchoUnionPayloadWithError(std::move(payload));
+  }
+
+  zx_status_t EchoUnionPayloadNoRetVal(fidl_test_compatibility::wire::RequestUnion payload,
+                                       fidl::WireSyncEventHandler<Echo>& event_handler) {
+    auto result = client_->EchoUnionPayloadNoRetVal(std::move(payload));
+    if (result.status() != ZX_OK) {
+      return result.status();
+    }
+    return client_.HandleOneEvent(event_handler).status();
   }
 
   EchoClientApp(const EchoClientApp&) = delete;
@@ -498,6 +537,248 @@ class EchoConnection final : public fidl::WireServer<Echo> {
       EventHandler event_handler(this);
       zx_status_t status =
           app.EchoNamedStructNoRetVal(std::move(request->value), "", event_handler);
+      ZX_ASSERT_MSG(status == ZX_OK, "Replying with event failed direct: %s",
+                    zx_status_get_string(status));
+      ZX_ASSERT_MSG(event_handler.result().ok(), "Replying with event failed indirect: %s",
+                    event_handler.result().FormatDescription().c_str());
+    }
+  }
+
+  void EchoTablePayload(EchoTablePayloadRequestView request,
+                        EchoTablePayloadCompleter::Sync& completer) override {
+    if (!request->has_forward_to_server()) {
+      fidl::Arena allocator;
+      fidl_test_compatibility::wire::ResponseTable resp(allocator);
+      resp.set_value(fidl::ObjectView<uint64_t>(allocator, request->value()));
+      completer.Reply(std::move(resp));
+    } else {
+      EchoClientApp app(request->forward_to_server());
+      fidl::Arena allocator;
+      fidl_test_compatibility::wire::RequestTable req(allocator);
+      req.set_value(fidl::ObjectView<uint64_t>(allocator, request->value()));
+      auto result = app.EchoTablePayload(req);
+      ZX_ASSERT_MSG(result.status() == ZX_OK, "Forwarding failed: %s",
+                    result.FormatDescription().c_str());
+      completer.Reply(std::move(*result.Unwrap()));
+    }
+  }
+
+  void EchoTablePayloadWithError(EchoTablePayloadWithErrorRequestView request,
+                                 EchoTablePayloadWithErrorCompleter::Sync& completer) override {
+    if (!request->has_forward_to_server()) {
+      if (request->result_variant() == wire::RespondWith::kErr) {
+        completer.ReplyError(request->result_err());
+      } else {
+        fidl::Arena allocator;
+        fidl_test_compatibility::wire::ResponseTable resp(allocator);
+        resp.set_value(fidl::ObjectView<uint64_t>(allocator, request->value()));
+        wire::EchoEchoTablePayloadWithErrorResult res;
+        res.set_response(allocator, std::move(resp));
+        completer.Reply(std::move(res));
+      }
+    } else {
+      EchoClientApp app(request->forward_to_server());
+      fidl::Arena allocator;
+      fidl_test_compatibility::wire::EchoEchoTablePayloadWithErrorRequest req(allocator);
+      req.set_result_variant(request->result_variant());
+      if (req.result_variant() == wire::RespondWith::kErr) {
+        req.set_result_err(request->result_err());
+      } else {
+        req.set_value(fidl::ObjectView<uint64_t>(allocator, request->value()));
+      }
+
+      auto result = app.EchoTablePayloadWithError(req);
+      ZX_ASSERT_MSG(result.status() == ZX_OK, "Forwarding failed: %s",
+                    result.FormatDescription().c_str());
+      completer.Reply(std::move(result->result));
+    }
+  }
+
+  void EchoTablePayloadNoRetVal(EchoTablePayloadNoRetValRequestView request,
+                                EchoTablePayloadNoRetValCompleter::Sync&) override {
+    if (!request->has_forward_to_server()) {
+      fidl::Arena allocator;
+      fidl_test_compatibility::wire::ResponseTable resp(allocator);
+      resp.set_value(fidl::ObjectView<uint64_t>(allocator, request->value()));
+      fidl::Result result =
+          fidl::WireSendEvent(server_binding_.value())->OnEchoTablePayloadEvent(std::move(resp));
+      ZX_ASSERT_MSG(result.ok(), "Replying with event failed: %s",
+                    result.FormatDescription().c_str());
+    } else {
+      class EventHandler : public fidl::WireSyncEventHandler<Echo> {
+       public:
+        explicit EventHandler(EchoConnection* connection) : connection_(connection) {}
+
+        fidl::Result result() const { return result_; }
+
+        void OnEchoTablePayloadEvent(
+            fidl::WireEvent<Echo::OnEchoTablePayloadEvent>* event) override {
+          result_ = fidl::WireSendEvent(connection_->server_binding_.value())
+                        ->OnEchoTablePayloadEvent(std::move(*event));
+        }
+
+        zx_status_t Unknown() override {
+          ZX_PANIC("Received unexpected event");
+          return ZX_ERR_INVALID_ARGS;
+        }
+
+       private:
+        EchoConnection* const connection_;
+        fidl::Result result_ = fidl::Result::Ok();
+      };
+
+      EchoClientApp app(request->forward_to_server());
+      EventHandler event_handler(this);
+      fidl::Arena allocator;
+      fidl_test_compatibility::wire::RequestTable req(allocator);
+      req.set_value(fidl::ObjectView<uint64_t>(allocator, request->value()));
+      zx_status_t status = app.EchoTablePayloadNoRetVal(req, event_handler);
+      ZX_ASSERT_MSG(status == ZX_OK, "Replying with event failed direct: %s",
+                    zx_status_get_string(status));
+      ZX_ASSERT_MSG(event_handler.result().ok(), "Replying with event failed indirect: %s",
+                    event_handler.result().FormatDescription().c_str());
+    }
+  }
+
+  void EchoUnionPayload(EchoUnionPayloadRequestView request,
+                        EchoUnionPayloadCompleter::Sync& completer) override {
+    fidl::StringView& forward_to_server = request->is_signed_()
+                                              ? request->signed_().forward_to_server
+                                              : request->unsigned_().forward_to_server;
+    if (forward_to_server.empty()) {
+      fidl::Arena allocator;
+      fidl_test_compatibility::wire::ResponseUnion resp;
+      if (request->is_signed_()) {
+        resp = fidl_test_compatibility::wire::ResponseUnion::WithSigned_(allocator,
+                                                                         request->signed_().value);
+      } else {
+        resp = fidl_test_compatibility::wire::ResponseUnion::WithUnsigned_(
+            allocator, request->unsigned_().value);
+      }
+      completer.Reply(std::move(resp));
+    } else {
+      EchoClientApp app(forward_to_server);
+      fidl::Arena allocator;
+      fidl_test_compatibility::wire::RequestUnion req;
+
+      if (request->is_signed_()) {
+        req =
+            fidl_test_compatibility::wire::RequestUnion::WithSigned_(allocator, request->signed_());
+        req.signed_().forward_to_server = "";
+      } else {
+        req = fidl_test_compatibility::wire::RequestUnion::WithUnsigned_(allocator,
+                                                                         request->unsigned_());
+        req.unsigned_().forward_to_server = "";
+      }
+      auto result = app.EchoUnionPayload(req);
+      ZX_ASSERT_MSG(result.status() == ZX_OK, "Forwarding failed: %s",
+                    result.FormatDescription().c_str());
+      completer.Reply(std::move(*result.Unwrap()));
+    }
+  }
+
+  void EchoUnionPayloadWithError(EchoUnionPayloadWithErrorRequestView request,
+                                 EchoUnionPayloadWithErrorCompleter::Sync& completer) override {
+    fidl::StringView& forward_to_server = request->is_signed_()
+                                              ? request->signed_().forward_to_server
+                                              : request->unsigned_().forward_to_server;
+    wire::RespondWith& result_variant = request->is_signed_() ? request->signed_().result_variant
+                                                              : request->unsigned_().result_variant;
+    if (forward_to_server.empty()) {
+      if (result_variant == wire::RespondWith::kErr) {
+        completer.ReplyError(request->is_signed_() ? request->signed_().result_err
+                                                   : request->unsigned_().result_err);
+      } else {
+        fidl::Arena allocator;
+        fidl_test_compatibility::wire::ResponseUnion resp;
+        if (request->is_signed_()) {
+          resp = fidl_test_compatibility::wire::ResponseUnion::WithSigned_(
+              allocator, request->signed_().value);
+        } else {
+          resp = fidl_test_compatibility::wire::ResponseUnion::WithUnsigned_(
+              allocator, request->unsigned_().value);
+        }
+        wire::EchoEchoUnionPayloadWithErrorResult res;
+        res.set_response(allocator, std::move(resp));
+        completer.Reply(std::move(res));
+      }
+    } else {
+      EchoClientApp app(forward_to_server);
+      fidl::Arena allocator;
+      fidl_test_compatibility::wire::EchoEchoUnionPayloadWithErrorRequest req;
+
+      if (request->is_signed_()) {
+        req = fidl_test_compatibility::wire::EchoEchoUnionPayloadWithErrorRequest::WithSigned_(
+            allocator, request->signed_());
+        req.signed_().forward_to_server = "";
+      } else {
+        req = fidl_test_compatibility::wire::EchoEchoUnionPayloadWithErrorRequest::WithUnsigned_(
+            allocator, request->unsigned_());
+        req.unsigned_().forward_to_server = "";
+      }
+      auto result = app.EchoUnionPayloadWithError(req);
+      ZX_ASSERT_MSG(result.status() == ZX_OK, "Forwarding failed: %s",
+                    result.FormatDescription().c_str());
+      completer.Reply(std::move(result->result));
+    }
+  }
+
+  void EchoUnionPayloadNoRetVal(EchoUnionPayloadNoRetValRequestView request,
+                                EchoUnionPayloadNoRetValCompleter::Sync&) override {
+    fidl::StringView& forward_to_server = request->is_signed_()
+                                              ? request->signed_().forward_to_server
+                                              : request->unsigned_().forward_to_server;
+    if (forward_to_server.empty()) {
+      fidl::Arena allocator;
+      fidl_test_compatibility::wire::ResponseUnion resp;
+      if (request->is_signed_()) {
+        resp = fidl_test_compatibility::wire::ResponseUnion::WithSigned_(allocator,
+                                                                         request->signed_().value);
+      } else {
+        resp = fidl_test_compatibility::wire::ResponseUnion::WithUnsigned_(
+            allocator, request->unsigned_().value);
+      }
+      fidl::Result result =
+          fidl::WireSendEvent(server_binding_.value())->OnEchoUnionPayloadEvent(std::move(resp));
+      ZX_ASSERT_MSG(result.ok(), "Replying with event failed: %s",
+                    result.FormatDescription().c_str());
+    } else {
+      class EventHandler : public fidl::WireSyncEventHandler<Echo> {
+       public:
+        explicit EventHandler(EchoConnection* connection) : connection_(connection) {}
+
+        fidl::Result result() const { return result_; }
+        void OnEchoUnionPayloadEvent(
+            fidl::WireEvent<Echo::OnEchoUnionPayloadEvent>* event) override {
+          result_ = fidl::WireSendEvent(connection_->server_binding_.value())
+                        ->OnEchoUnionPayloadEvent(std::move(*event));
+        }
+
+        zx_status_t Unknown() override {
+          ZX_PANIC("Received unexpected event");
+          return ZX_ERR_INVALID_ARGS;
+        }
+
+       private:
+        EchoConnection* const connection_;
+        fidl::Result result_ = fidl::Result::Ok();
+      };
+
+      EchoClientApp app(forward_to_server);
+      EventHandler event_handler(this);
+      fidl::Arena allocator;
+      fidl_test_compatibility::wire::RequestUnion req;
+
+      if (request->is_signed_()) {
+        req =
+            fidl_test_compatibility::wire::RequestUnion::WithSigned_(allocator, request->signed_());
+        req.signed_().forward_to_server = "";
+      } else {
+        req = fidl_test_compatibility::wire::RequestUnion::WithUnsigned_(allocator,
+                                                                         request->unsigned_());
+        req.unsigned_().forward_to_server = "";
+      }
+      zx_status_t status = app.EchoUnionPayloadNoRetVal(std::move(req), event_handler);
       ZX_ASSERT_MSG(status == ZX_OK, "Replying with event failed direct: %s",
                     zx_status_get_string(status));
       ZX_ASSERT_MSG(event_handler.result().ok(), "Replying with event failed indirect: %s",

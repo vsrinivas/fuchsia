@@ -571,6 +571,36 @@ class EchoConnection final : public fidl::Server<Echo> {
     }
   }
 
+  void EchoTablePayload(EchoTablePayloadRequest& request,
+                        EchoTablePayloadCompleter::Sync& completer) override {
+    // TODO(fxbug.dev/88343): Implement.
+  }
+
+  void EchoTablePayloadWithError(EchoTablePayloadWithErrorRequest& request,
+                                 EchoTablePayloadWithErrorCompleter::Sync& completer) override {
+    // TODO(fxbug.dev/88343): Implement.
+  }
+
+  void EchoTablePayloadNoRetVal(EchoTablePayloadNoRetValRequest& request,
+                                EchoTablePayloadNoRetValCompleter::Sync&) override {
+    // TODO(fxbug.dev/88343): Implement.
+  }
+
+  void EchoUnionPayload(EchoUnionPayloadRequest& request,
+                        EchoUnionPayloadCompleter::Sync& completer) override {
+    // TODO(fxbug.dev/88343): Implement.
+  }
+
+  void EchoUnionPayloadWithError(EchoUnionPayloadWithErrorRequest& request,
+                                 EchoUnionPayloadWithErrorCompleter::Sync& completer) override {
+    // TODO(fxbug.dev/88343): Implement.
+  }
+
+  void EchoUnionPayloadNoRetVal(EchoUnionPayloadNoRetValRequest& request,
+                                EchoUnionPayloadNoRetValCompleter::Sync&) override {
+    // TODO(fxbug.dev/88343): Implement.
+  }
+
   void set_server_binding(::fidl::ServerBindingRef<Echo> binding) {
     server_binding_.emplace(binding);
   }
