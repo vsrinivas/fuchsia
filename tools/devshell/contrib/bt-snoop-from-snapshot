@@ -1,4 +1,4 @@
-#!/usr/bin/env python3.8
+#!/usr/bin/env fuchsia-vendored-python
 # -*- coding: utf-8 -*-
 # Copyright 2019 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
@@ -6,6 +6,11 @@
 
 #### CATEGORY=Run, inspect and debug
 ### extract a snoop log from a snapshot as pcap formatted data
+
+## Usage: fx bt-snoop-from-snapshot INPUT_SNAPSHOT.zip > OUTPUT.pcap
+##
+## INPUT_SNAPSHOT is a snapshot from a Fuchsia device, such as obtained with
+## `ffx target snapshot`.  The pcap output file can be opened with wireshark.
 
 import argparse
 from base64 import b64decode
