@@ -353,9 +353,9 @@ impl<'a> ForUrl<'a> {
     /// for a url regardless of how many times resolve() is called.
     pub fn respond_serially(
         self,
-        reponses: Vec<Result<TestPackage, fidl_fuchsia_pkg::ResolveError>>,
+        responses: Vec<Result<TestPackage, fidl_fuchsia_pkg::ResolveError>>,
     ) {
-        self.svc.expectations.lock().insert(self.url, Expectation::ImmediateVec(reponses));
+        self.svc.expectations.lock().insert(self.url, Expectation::ImmediateVec(responses));
     }
 }
 

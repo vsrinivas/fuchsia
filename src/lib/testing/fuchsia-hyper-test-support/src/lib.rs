@@ -91,7 +91,7 @@ impl TestServer {
     }
 
     /// Internal helper which iterates over all Handlers until it finds one that will respond to the
-    /// request.  It then returns that reponse.  If not response is found, it returns 404 NOT_FOUND.
+    /// request.  It then returns that response.  If not response is found, it returns 404 NOT_FOUND.
     async fn handle_request(
         handlers: Arc<Vec<Arc<dyn Handler>>>,
         req: Request<Body>,

@@ -807,7 +807,7 @@ pub(crate) mod tests {
             .expect("sent packet");
         match sink_req {
             StreamSinkRequest::SendPacket { packet, responder, .. } => {
-                responder.send().expect("send reponse should work");
+                responder.send().expect("send response should work");
                 packet.flags
             }
             _ => panic!("should have received a packet"),

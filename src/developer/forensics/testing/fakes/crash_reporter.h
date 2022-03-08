@@ -18,7 +18,7 @@ namespace fakes {
 class FakeCrashReporterQuerier;
 
 // Fake handler for fuchsia.feedback.CrashReporter, returns an error if the filed crash report
-// doesn't contain a program name. Otherwise, an ok reponse is returned.
+// doesn't contain a program name. Otherwise, an ok response is returned.
 class CrashReporter : public fuchsia::feedback::CrashReporter {
  public:
   void SetQuerier(

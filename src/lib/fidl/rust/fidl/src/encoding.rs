@@ -4337,7 +4337,7 @@ tuple_impls!(
 );
 
 // The unit type has 0 size because it represents the absent payload after the
-// transaction header in the reponse of a two-way FIDL method such as this one:
+// transaction header in the response of a two-way FIDL method such as this one:
 //
 //     Method() -> ();
 //

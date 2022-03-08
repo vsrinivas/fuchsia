@@ -110,7 +110,7 @@ StatusOr<fbl::String> GetStreamConfigString(audio::utils::AudioDeviceStream* str
   // Ensure the claimed string length is valid.
   if (response.strlen > sizeof(response.str)) {
     return Status(ZX_ERR_INTERNAL,
-                  fbl::StringPrintf("Reponse string length larger than buffer: %d/%ld",
+                  fbl::StringPrintf("Response string length larger than buffer: %d/%ld",
                                     response.strlen, sizeof(response.str)));
   }
 

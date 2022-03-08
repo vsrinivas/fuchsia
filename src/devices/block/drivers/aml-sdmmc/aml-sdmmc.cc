@@ -177,7 +177,7 @@ zx_status_t AmlSdmmc::WaitForInterrupt(sdmmc_req_t* req) {
       AML_SDMMC_TRACE("Response timeout, cmd%d, arg=0x%08x, status=0x%08x", req->cmd_idx, req->arg,
                       status_irq.reg_value());
     } else {
-      AML_SDMMC_ERROR("Reponse timeout, cmd%d, arg=0x%08x, status=0x%08x, consecutive=%lu",
+      AML_SDMMC_ERROR("Response timeout, cmd%d, arg=0x%08x, status=0x%08x, consecutive=%lu",
                       req->cmd_idx, req->arg, status_irq.reg_value(), ++consecutive_cmd_errors_);
     }
     return ZX_ERR_TIMED_OUT;

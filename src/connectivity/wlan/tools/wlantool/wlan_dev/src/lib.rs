@@ -217,7 +217,7 @@ async fn do_iface(
                         match resp {
                             // TODO(eyw): Implement fmt::Display
                             Some(r) => println!("Iface {}: {:#?}", iface_id, r),
-                            None => println!("Iface {} returns empty stats resonse", iface_id),
+                            None => println!("Iface {} returns empty stats response", iface_id),
                         }
                     }
                     status => println!("error getting stats for Iface {}: {}", iface_id, status),

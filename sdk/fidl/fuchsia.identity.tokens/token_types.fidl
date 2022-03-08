@@ -10,7 +10,7 @@ type OauthRefreshToken = table {
     /// The content of the token.
     // Note no maximum size is defined. The OAuth spec states clients should
     // avoid making assumptions about token sizes. No max size is guaranteed to
-    // accomodate all implementations but we do not know of any implementation
+    // accommodate all implementations but we do not know of any implementation
     // where token size exceeds a few kilobytes so exceeding the maximum size of
     // a FIDL message is very unlikely.
     1: content string;
@@ -46,7 +46,7 @@ type OpenIdToken = table {
     2: expiry_time zx.time;
 };
 
-/// The reponse from an OpenID Connect UserInfo endpoint.
+/// The response from an OpenID Connect UserInfo endpoint.
 type OpenIdUserInfo = table {
     /// The subject to which this info applies.
     1: subject string:255;

@@ -41,7 +41,7 @@ class PendingResponse final : public MessageSender {
 
   // |PendingResponse| objects are copiable.
   //
-  // Each copy refers to the same logical reponse, which means |Send| should be
+  // Each copy refers to the same logical response, which means |Send| should be
   // called at most once among all the copies.
   //
   // The reason |PendingResponse| objects are copiable is so that they can be

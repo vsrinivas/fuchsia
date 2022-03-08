@@ -1426,7 +1426,7 @@ static void iwl_mvm_rx_tx_cmd_single(struct iwl_mvm* mvm, struct iwl_rx_packet* 
              * its sequence control is 0. Note that for that same
              * reason, NDPs are never sent to A-MPDU'able queues
              * so that we can never have more than one freed frame
-             * for a single Tx resonse (see WARN_ON below).
+             * for a single Tx response (see WARN_ON below).
              */
             if (ieee80211_is_qos_nullfunc(hdr->frame_control)) { is_ndp = true; }
         }

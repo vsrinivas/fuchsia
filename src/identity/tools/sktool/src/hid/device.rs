@@ -192,7 +192,7 @@ impl<C: Connection, R: Rng> Device<C, R> {
         let packet = connection
             .read_matching_packet(|packet| {
                 if packet.channel() != init_channel {
-                    // It's normal for reponses to other clients to be present on other channels.
+                    // It's normal for responses to other clients to be present on other channels.
                     return Ok(false);
                 } else if packet.command()? != Command::Init {
                     return Err(format_err!("Received unexpected command in init response."));
