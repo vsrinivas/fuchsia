@@ -43,6 +43,8 @@ zx::status<std::unique_ptr<JsonFilesystem>> JsonFilesystem::NewFilesystem(
           .supports_watch_event_deleted =
               ConfigGetOrDefault<bool>(config, "supports_watch_event_deleted", true),
           .supports_inspect = ConfigGetOrDefault<bool>(config, "supports_inspect", false),
+          .supports_shutdown_on_no_connections =
+              ConfigGetOrDefault<bool>(config, "supports_shutdown_on_no_connections", false),
       },
       format, sectors_per_cluster));
 }
@@ -91,6 +93,8 @@ class JsonInstance : public FilesystemInstance {
   fidl::UnownedClientEnd<fuchsia_io::Directory> GetOutgoingDirectory() const override {
     return outgoing_directory_.borrow();
   }
+
+  void ResetOutgoingDirectory() override { outgoing_directory_.reset(); }
 
  private:
   const JsonFilesystem& filesystem_;

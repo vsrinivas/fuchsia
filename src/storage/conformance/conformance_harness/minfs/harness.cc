@@ -23,6 +23,7 @@
 #include "fuchsia/io/cpp/fidl.h"
 #include "fuchsia/io/test/cpp/fidl.h"
 #include "src/lib/storage/block_client/cpp/fake_block_device.h"
+#include "src/lib/storage/vfs/cpp/pseudo_dir.h"
 #include "src/lib/storage/vfs/cpp/vfs_types.h"
 #include "src/storage/minfs/bcache.h"
 #include "src/storage/minfs/directory.h"
@@ -49,6 +50,12 @@ class MinfsHarness : public fuchsia::io::test::Io1Harness {
     auto minfs_or = Minfs::Create(vfs_loop_.dispatcher(), std::move(bcache_or.value()), {});
     ZX_ASSERT(minfs_or.is_ok());
     minfs_ = std::move(minfs_or.value());
+
+    // One connection must be maintained to avoid filesystem termination.
+    auto root_server = root_client_.NewRequest();
+    fbl::RefPtr<Directory> root = GetRootNode();
+    minfs_->ServeDirectory(std::move(root),
+                           fidl::ServerEnd<fuchsia_io::Directory>(root_server.TakeChannel()));
   }
 
   ~MinfsHarness() override {
@@ -186,6 +193,7 @@ class MinfsHarness : public fuchsia::io::test::Io1Harness {
 
   // Used to create a new unique directory within minfs for every call to |GetDirectory|.
   uint32_t directory_count_ = 0;
+  fuchsia::io::DirectoryPtr root_client_;
 };
 
 }  // namespace minfs

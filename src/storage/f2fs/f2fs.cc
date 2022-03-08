@@ -212,7 +212,6 @@ void F2fs::OnNoConnections() {
   if (IsTerminating()) {
     return;
   }
-  UninstallAll(zx::time::infinite());
   Shutdown([](zx_status_t status) mutable {
     ZX_ASSERT_MSG(status == ZX_OK, "Filesystem shutdown failed on OnNoConnections(): %s",
                   zx_status_get_string(status));

@@ -144,6 +144,11 @@
             "description": "True if the filesystem can expand in size when used within a volume manager like FVM",
             "type": "boolean"
         },
+        "supports_shutdown_on_no_connections": {
+            "default": false,
+            "description": "True if the filesystem supports shutdown on no connections",
+            "type": "boolean"
+        },
         "supports_sparse_files": {
             "default": true,
             "description": "True if the filesystem supports sparse files",

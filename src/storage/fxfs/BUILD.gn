@@ -239,6 +239,7 @@ fs_test_config("fxfs") {
   supports_resize = true
   supports_mmap = true
   supports_mmap_shared_write = false
+  supports_shutdown_on_no_connections = true
   max_file_size = 9223372036854775807
 
   options = [

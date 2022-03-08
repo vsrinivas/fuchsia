@@ -1526,6 +1526,15 @@ zx::status<fs::FilesystemInfo> Minfs::GetFilesystemInfo() {
   return zx::ok(info);
 }
 
+void Minfs::OnNoConnections() {
+  if (IsTerminating()) {
+    return;
+  }
+  Shutdown([](zx_status_t status) mutable {
+    ZX_ASSERT_MSG(status == ZX_OK, "Filesystem shutdown failed on OnNoConnections(): %s",
+                  zx_status_get_string(status));
+  });
+}
 #endif
 
 uint32_t BlocksRequiredForInode(uint64_t inode_count) {

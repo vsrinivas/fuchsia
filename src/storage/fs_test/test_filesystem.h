@@ -69,6 +69,8 @@ class TestFilesystem {
     return filesystem_->GetOutgoingDirectory();
   }
 
+  void ResetOutgoingDirectory() { filesystem_->ResetOutgoingDirectory(); }
+
   zx::status<fuchsia_io::wire::FilesystemInfo> GetFsInfo() const;
 
  private:

@@ -289,6 +289,9 @@ class Minfs :
   void Shutdown(fs::FuchsiaVfs::ShutdownCallback cb) final;
   zx::status<fs::FilesystemInfo> GetFilesystemInfo() final;
 
+  // ManagedVfs overrides.
+  void OnNoConnections() final;
+
   // Signals the completion object as soon as the journal has finished synchronizing.
   void Sync(SyncCallback closure = {});
 #endif

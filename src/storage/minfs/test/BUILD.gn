@@ -256,6 +256,7 @@ fs_test_config("minfs") {
   supports_fsck_after_every_transaction = true
   supports_watch_event_deleted = false
   supports_inspect = true
+  supports_shutdown_on_no_connections = true
   options = [
     {
       description = "MinfsWithFvm"

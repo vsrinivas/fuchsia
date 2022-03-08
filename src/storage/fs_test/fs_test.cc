@@ -507,6 +507,7 @@ class BlobfsInstance : public FilesystemInstance {
   fidl::UnownedClientEnd<fuchsia_io::Directory> GetOutgoingDirectory() const override {
     return outgoing_directory_.borrow();
   }
+  void ResetOutgoingDirectory() override { outgoing_directory_.reset(); }
 
  private:
   RamDevice device_;

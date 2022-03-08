@@ -113,6 +113,7 @@ class FilesystemInstance {
   virtual fidl::UnownedClientEnd<fuchsia_io::Directory> GetOutgoingDirectory() const {
     return fidl::ClientEnd<fuchsia_io::Directory>();
   }
+  virtual void ResetOutgoingDirectory() {}
 };
 
 // Base class for all supported file systems. It is a factory class that generates
@@ -136,6 +137,7 @@ class Filesystem {
     bool is_journaled = true;
     bool supports_watch_event_deleted = true;
     bool supports_inspect = false;
+    bool supports_shutdown_on_no_connections = false;
   };
 
   virtual ~Filesystem() = default;

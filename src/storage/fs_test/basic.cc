@@ -139,6 +139,36 @@ TEST_P(BasicTest, Statvfs) {
 INSTANTIATE_TEST_SUITE_P(/*no prefix*/, BasicTest, testing::ValuesIn(AllTestFilesystems()),
                          testing::PrintToStringParamName());
 
+using ShutdownOnNoConnectionsTest = FilesystemTest;
+
+TEST_P(ShutdownOnNoConnectionsTest, OnNoConnections) {
+  // Disconnect namespace connection.
+  ASSERT_EQ(FsUnbind(fs().mount_path()).status_value(), ZX_OK);
+
+  // Disconnect outgoing directory connection.
+  fs().ResetOutgoingDirectory();
+
+  // Sleep for a while until the filesystem shutdown complete.
+  zx::nanosleep(zx::deadline_after(zx::msec(100)));
+
+  // Now, the filesystem is terminated. We can remount the filesystem.
+  ASSERT_EQ(fs().Mount().status_value(), ZX_OK);
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    /*no prefix*/, ShutdownOnNoConnectionsTest,
+    testing::ValuesIn(MapAndFilterAllTestFilesystems(
+        [](const TestFilesystemOptions& options) -> std::optional<TestFilesystemOptions> {
+          if (options.filesystem->GetTraits().supports_shutdown_on_no_connections) {
+            return options;
+          } else {
+            return std::nullopt;
+          }
+        })),
+    testing::PrintToStringParamName());
+
+GTEST_ALLOW_UNINSTANTIATED_PARAMETERIZED_TEST(ShutdownOnNoConnectionsTest);
+
 using FsckAfterEveryTransactionTest = FilesystemTest;
 
 TEST_P(FsckAfterEveryTransactionTest, SimpleOperationsSucceeds) {
