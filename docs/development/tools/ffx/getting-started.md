@@ -229,16 +229,16 @@ and only if the channel isn't closed.
 The component framework will start the component that provides the service
 on-demand.
 
-Note: the selector you pass to `knock` may contain a wildcard but must match
+Note: the service you pass to `knock` may contain a wildcard but must match
 _exactly one_ service. You cannot `knock` on multiple services at once.
 
 For example:
 
 ```
-$ fx ffx component knock 'core/appmgr:out:fuchsia.hwinfo.P*'
+$ fx ffx component knock /core/appmgr fuchsia.hwinfo.P*
 Success: service is up. Connected to 'core/appmgr:out:fuchsia.hwinfo.Product'.
 
-$ fx ffx component knock 'core/appmgr:out:not.a.real.service'
+$ fx ffx component knock /core/appmgr not.a.real.service
 Failed to connect to service: NoMatchingServices
 ```
 

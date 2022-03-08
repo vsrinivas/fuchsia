@@ -7,17 +7,33 @@ use {
     errors::ffx_error,
     ffx_component::SELECTOR_FORMAT_HELP,
     ffx_core::ffx_plugin,
-    ffx_knock_args::KnockCommand,
+    ffx_knock_args::{KnockCommand, Node},
     fidl::handle::Channel,
     fidl_fuchsia_developer_remotecontrol as rc, fuchsia_zircon_status as zx_status,
+    moniker::{AbsoluteMoniker, AbsoluteMonikerBase},
     selectors::{self, VerboseError},
     std::io::{stdout, Write},
 };
 
+fn generate_selector(moniker: String, service: String, node: Node) -> Result<String> {
+    let mut moniker = AbsoluteMoniker::parse_str(moniker.as_str())
+        .map_err(|e| ffx_error!("Moniker could not be parsed: {}", e))?
+        .to_string();
+
+    // Remove the leading '/' if present.
+    if moniker.chars().next().unwrap() == '/' {
+        moniker.remove(0);
+    }
+
+    Ok([moniker, node.to_string(), service].join(":"))
+}
+
 #[ffx_plugin()]
 pub async fn knock_cmd(remote_proxy: rc::RemoteControlProxy, cmd: KnockCommand) -> Result<()> {
     let writer = Box::new(stdout());
-    knock(remote_proxy, writer, &cmd.selector).await
+
+    knock(remote_proxy, writer, generate_selector(cmd.moniker, cmd.service, cmd.node)?.as_str())
+        .await
 }
 
 async fn knock<W: Write>(
@@ -80,7 +96,7 @@ async fn knock<W: Write>(
 #[cfg(test)]
 mod test {
     use {
-        super::*, fidl::endpoints::RequestStream, fidl::handle::AsyncChannel,
+        super::*, anyhow::Result, fidl::endpoints::RequestStream, fidl::handle::AsyncChannel,
         fidl_fuchsia_developer_ffx::DaemonRequestStream, futures::TryStreamExt,
     };
 
@@ -156,5 +172,28 @@ mod test {
         assert!(output.contains("Failure"));
         assert!(output.contains("core/test:out:fuchsia.myservice"));
         Ok(())
+    }
+
+    #[test]
+    fn test_generate_selector() {
+        assert_eq!(
+            generate_selector(
+                "/core/cobalt".to_string(),
+                "fuchsia.net.http.Loader".to_string(),
+                Node::In
+            )
+            .unwrap(),
+            "core/cobalt:in:fuchsia.net.http.Loader"
+        );
+        assert_eq!(
+            generate_selector(
+                "INVALID_MONIKER".to_string(),
+                "fuchsia.net.http.Loader".to_string(),
+                Node::In
+            )
+            .unwrap_err()
+            .to_string(),
+            "Moniker could not be parsed: invalid moniker: INVALID_MONIKER".to_string()
+        );
     }
 }
