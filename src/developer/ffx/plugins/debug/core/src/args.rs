@@ -9,11 +9,12 @@ use {argh::FromArgs, ffx_core::ffx_command};
 #[derive(FromArgs, PartialEq, Debug)]
 #[argh(subcommand, name = "core", description = "start the debugger and open a minidump")]
 pub struct CoreCommand {
-    /// minidump.dmp file to open
+    /// minidump.dmp file to open. If left empty, the tool will list available minidumps on the
+    /// device and ask for a choice to open.
     #[argh(positional)]
-    pub minidump: String,
+    pub minidump: Option<String>,
 
-    /// extra arguments passed to zxdb. Any arguments starting with "-" must be after a "--" separator.
-    #[argh(positional)]
+    /// extra arguments passed to zxdb.
+    #[argh(option)]
     pub zxdb_args: Vec<String>,
 }
