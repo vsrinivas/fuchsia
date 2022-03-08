@@ -8,6 +8,21 @@ config("codec_runner_vaapi_include_config") {
   include_dirs = [ "." ]
 }
 
+source_set("avcc_processor") {
+  sources = [
+    "avcc_processor.cc",
+    "avcc_processor.h",
+  ]
+  public_deps = [
+    "//sdk/fidl/fuchsia.mediacodec",
+    "//sdk/lib/fit",
+    "//sdk/lib/syslog/cpp",
+    "//src/media/lib/codec_impl",
+
+    #   "//src/media/lib/video_utils/h264:h264_parser",
+  ]
+}
+
 source_set("codec_runner_vaapi") {
   sources = [
     "buffer_pool.cc",
@@ -26,6 +41,7 @@ source_set("codec_runner_vaapi") {
   public_configs = [ ":codec_runner_vaapi_include_config" ]
 
   public_deps = [
+    ":avcc_processor",
     "//sdk/fidl/fuchsia.mediacodec",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",

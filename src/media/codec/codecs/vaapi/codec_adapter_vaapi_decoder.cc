@@ -117,8 +117,7 @@ void CodecAdapterVaApiDecoder::ProcessInputLoop() {
         }
         config_.emplace(config_id);
       }
-      // TODO: Process Oob bytes.
-
+      avcc_processor_.ProcessOobBytes(input_item.format_details());
     } else if (input_item.is_end_of_stream()) {
       {
         constexpr uint8_t kEndOfStreamNalUnitType = 11;
@@ -154,8 +153,11 @@ void CodecAdapterVaApiDecoder::ProcessInputLoop() {
       }
       events_->onCoreCodecInputPacketDone(input_item.packet());
 
-      // TODO: handle avcc.
-      DecodeAnnexBBuffer(std::move(data));
+      if (avcc_processor_.is_avcc()) {
+        DecodeAnnexBBuffer(avcc_processor_.ParseVideoAvcc(std::move(data)));
+      } else {
+        DecodeAnnexBBuffer(std::move(data));
+      }
 
       {
         constexpr uint8_t kAccessUnitDelimiterNalUnitType = 9;

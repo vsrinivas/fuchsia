@@ -25,6 +25,7 @@
 #include "media/gpu/accelerated_video_decoder.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/synchronization/thread_annotations.h"
+#include "src/media/codec/codecs/vaapi/avcc_processor.h"
 #include "src/media/lib/mpsc_queue/mpsc_queue.h"
 #include "vaapi_utils.h"
 
@@ -60,6 +61,8 @@ class CodecAdapterVaApiDecoder : public CodecAdapter {
       : CodecAdapter(lock, codec_adapter_events),
         input_queue_(),
         free_output_packets_(),
+        avcc_processor_(fit::bind_member<&CodecAdapterVaApiDecoder::DecodeAnnexBBuffer>(this),
+                        codec_adapter_events),
         input_processing_loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {
     ZX_DEBUG_ASSERT(events_);
   }
@@ -456,6 +459,8 @@ class CodecAdapterVaApiDecoder : public CodecAdapter {
   std::vector<const CodecBuffer*> staged_output_buffers_;
 
   uint64_t input_format_details_version_ordinal_;
+
+  AvccProcessor avcc_processor_;
 
   std::optional<fuchsia::sysmem::SingleBufferSettings> buffer_settings_[kPortCount];
 
