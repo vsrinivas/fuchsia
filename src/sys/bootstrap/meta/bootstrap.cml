@@ -447,6 +447,14 @@
         {
             protocol: [ "fuchsia.sysmem.Allocator" ],
             from: "#svchost",
+            to: [
+                "#boot-drivers",
+                "#pkg-drivers",
+            ],
+        },
+        {
+            protocol: [ "fuchsia.sysmem.Allocator" ],
+            from: "#svchost",
             to: "#virtual_console",
         },
         {
