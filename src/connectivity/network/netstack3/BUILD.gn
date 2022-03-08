@@ -74,7 +74,13 @@ rustc_binary("bin") {
 fuchsia_component("component-legacy") {
   component_name = "netstack3"
   manifest = "meta/netstack3.cmx"
-  deps = [ ":bin" ]
+  deps = [
+    ":bin",
+
+    # This component is only used for testing so ensure it doesn't show up in
+    # production builds.
+    "//build/validate:non_production_tag",
+  ]
 }
 
 fuchsia_component("component") {

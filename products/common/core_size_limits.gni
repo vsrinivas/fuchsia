@@ -86,7 +86,7 @@ size_checker_input = {
     {
       component = "Connectivity/Network"
       src = [ "src/connectivity/network" ]
-      limit = 8338276  # 7.952 MiB
+      limit = 8965179  # 8.550 MiB
       creep_limit = 75497  # 0.072 MiB
     },
     {
