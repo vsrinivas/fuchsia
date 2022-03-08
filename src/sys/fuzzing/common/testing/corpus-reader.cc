@@ -11,7 +11,8 @@
 
 namespace fuzzing {
 
-FakeCorpusReader::FakeCorpusReader(ExecutorPtr executor) : binding_(this), executor_(executor) {}
+FakeCorpusReader::FakeCorpusReader(ExecutorPtr executor)
+    : binding_(this), executor_(std::move(executor)) {}
 
 void FakeCorpusReader::Bind(fidl::InterfaceRequest<CorpusReader> request) {
   auto status = binding_.Bind(std::move(request), executor_->dispatcher());

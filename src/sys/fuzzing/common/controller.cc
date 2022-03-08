@@ -8,6 +8,7 @@
 #include <zircon/sanitizer.h>
 #include <zircon/status.h>
 
+#include "src/sys/fuzzing/common/async-socket.h"
 #include "src/sys/fuzzing/common/async-types.h"
 #include "src/sys/fuzzing/common/corpus-reader-client.h"
 #include "src/sys/fuzzing/common/options.h"
@@ -20,7 +21,7 @@ ControllerImpl::ControllerImpl()
       interrupt_([this]() { InterruptImpl(); }),
       join_([this]() { JoinImpl(); }) {
   dispatcher_ = binding_.dispatcher();
-  executor_ = std::make_unique<async::Executor>(dispatcher_->get());
+  executor_ = MakeExecutor(dispatcher_->get());
   options_ = MakeOptions();
   transceiver_ = std::make_shared<Transceiver>();
 }
@@ -78,10 +79,18 @@ void ControllerImpl::GetOptions(GetOptionsCallback callback) {
 
 void ControllerImpl::AddToCorpus(CorpusType corpus_type, FidlInput fidl_input,
                                  AddToCorpusCallback callback) {
-  ReceiveAndThen(std::move(fidl_input), NewResponse(std::move(callback)),
-                 [this, corpus_type](Input received, Response response) {
-                   response.Send(runner_->AddToCorpus(corpus_type, std::move(received)));
-                 });
+  auto task =
+      fpromise::make_promise([executor = executor_, fidl_input = std::move(fidl_input)]() mutable {
+        return AsyncSocketRead(executor, std::move(fidl_input));
+      })
+          .and_then([runner = runner_, corpus_type](Input& received) -> ZxResult<> {
+            runner->AddToCorpus(corpus_type, std::move(received));
+            return fpromise::ok();
+          })
+          .then([callback = std::move(callback)](const ZxResult<>& result) {
+            callback(result.is_ok() ? ZX_OK : result.error());
+          });
+  executor_->schedule_task(std::move(task));
 }
 
 void ControllerImpl::ReadCorpus(CorpusType corpus_type, fidl::InterfaceHandle<CorpusReader> reader,
@@ -114,15 +123,25 @@ void ControllerImpl::ReadCorpus(CorpusType corpus_type, fidl::InterfaceHandle<Co
 }
 
 void ControllerImpl::WriteDictionary(FidlInput dictionary, WriteDictionaryCallback callback) {
-  ReceiveAndThen(std::move(dictionary), NewResponse(std::move(callback)),
-                 [this](Input received, Response response) {
-                   response.Send(runner_->ParseDictionary(received));
-                 });
+  auto task =
+      fpromise::make_promise([executor = executor_, dictionary = std::move(dictionary)]() mutable {
+        return AsyncSocketRead(executor, std::move(dictionary));
+      })
+          .and_then([runner = runner_](Input& received) -> ZxResult<> {
+            auto status = runner->ParseDictionary(std::move(received));
+            if (status != ZX_OK) {
+              return fpromise::error(status);
+            }
+            return fpromise::ok();
+          })
+          .then([callback = std::move(callback)](const ZxResult<>& result) {
+            callback(result.is_ok() ? ZX_OK : result.error());
+          });
+  executor_->schedule_task(std::move(task));
 }
 
 void ControllerImpl::ReadDictionary(ReadDictionaryCallback callback) {
-  auto response = NewResponse(std::move(callback));
-  response.Send(ZX_OK, FuzzResult::NO_ERRORS, runner_->GetDictionaryAsInput());
+  callback(AsyncSocketWrite(executor_, runner_->GetDictionaryAsInput()));
 }
 
 void ControllerImpl::GetStatus(GetStatusCallback callback) { callback(runner_->CollectStatus()); }
@@ -135,8 +154,7 @@ void ControllerImpl::AddMonitor(fidl::InterfaceHandle<Monitor> monitor,
 }
 
 void ControllerImpl::GetResults(GetResultsCallback callback) {
-  auto response = NewResponse(std::move(callback));
-  response.Send(ZX_OK, runner_->result(), runner_->result_input());
+  callback(runner_->result(), AsyncSocketWrite(executor_, runner_->result_input()));
 }
 
 void ControllerImpl::Execute(FidlInput fidl_input, ExecuteCallback callback) {
