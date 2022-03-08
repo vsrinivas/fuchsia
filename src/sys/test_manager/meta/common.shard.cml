@@ -188,6 +188,10 @@
                 // Needed for //src/cobalt/bin/meta/cobalt_testapp_for_prober_do_not_run_manually.cml
                 // TODO(fxbug.dev/83038): Remove once e2e is better supported.
                 "fuchsia.net.http.Loader",
+
+                // Dart runners allow connections from the Dart Observatory,
+                // for debugging.
+                "fuchsia.posix.socket.Provider",
                 "fuchsia.scheduler.ProfileProvider",
 
                 // Needed for test_manager_tests and test runner tests.

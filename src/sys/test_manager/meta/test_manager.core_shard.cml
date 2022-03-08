@@ -265,5 +265,12 @@
             from: "#network",
             to: "#test_manager",
         },
+
+        // Needed by dart and flutter runners
+        {
+            protocol: "fuchsia.posix.socket.Provider",
+            from: "#network",
+            to: "#test_manager",
+        },
     ],
 }
