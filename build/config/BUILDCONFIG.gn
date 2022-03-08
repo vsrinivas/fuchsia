@@ -993,7 +993,7 @@ foreach(_target_type,
             _wrapper_script,
             _hermetic_inputs_file,
           ]
-          depfile = "${target_gen_dir}/${target_name}.depfile"
+          depfile = "${target_out_dir}/${target_name}.depfile"
           args = [
             "-S",
             rebase_path(_wrapper_script, root_build_dir),
