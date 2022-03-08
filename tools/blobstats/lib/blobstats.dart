@@ -119,18 +119,18 @@ class BlobStats {
         '   $percent% ${formatSize(deduplicatedSize)} / ${formatSize(duplicatedSize)}');
   }
 
-  String metaFarToBlobsJson(String farPath) {
-    // Assumes details of //build/package.gni, namely that it generates
+  String metaFarToPackageManifest(String farPath) {
+    // Assumes details of the build, namely that it generates
     //   <build-dir>/.../<package>/meta.far
-    // and puts a blobs.json file into
-    //   <build-dir>/.../<package>/blobs.json
+    // and puts a package_manifest.json file into
+    //   <build-dir>/.../<package>/package_manifest.json
     if (!farPath.endsWith('/meta.far')) {
       throw ArgumentError('Build details have changed');
     }
-    String path = '${removeSuffix(farPath, 'meta.far')}blobs.json';
+    String path = '${removeSuffix(farPath, 'meta.far')}package_manifest.json';
     if (!File(path).existsSync()) {
       throw ArgumentError(
-          'Build details have changed - path to blobs.json $path not found for $farPath');
+          'Build details have changed - path to package_manifest.json $path not found for $farPath');
     }
     return path;
   }
@@ -158,8 +158,9 @@ class BlobStats {
         ..blobCount = 0
         ..blobsByPath = <String, Blob>{};
 
-      var blobs =
-          json.decode(await File(metaFarToBlobsJson(far.path)).readAsString());
+      var packageManifest = json.decode(
+          await File(metaFarToPackageManifest(far.path)).readAsString());
+      var blobs = packageManifest['blobs'];
 
       for (var blob in blobs) {
         var hash = blob['merkle'];
