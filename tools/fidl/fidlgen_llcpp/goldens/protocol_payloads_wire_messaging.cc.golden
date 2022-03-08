@@ -158,7 +158,7 @@ extern "C" const fidl_type_t
       request_message(::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
   outgoing.Write(client.handle());
-  SetResult(outgoing);
+  SetStatus(outgoing);
 }
 namespace test_protocolpayloads {
 #endif  // __Fuchsia__
@@ -178,7 +178,7 @@ namespace test_protocolpayloads {
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation =
       allocator.TryAllocate(buffer_size);
   if (!allocation.is_ok()) {
-    ::fidl::Result::operator=(allocation.error_value());
+    ::fidl::Status::operator=(allocation.error_value());
     return;
   }
   uint8_t* buffer = allocation->data;
@@ -191,7 +191,7 @@ namespace test_protocolpayloads {
       request_message(request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
   outgoing.Write(client_end.handle());
-  ::fidl::Result::operator=(outgoing);
+  ::fidl::Status::operator=(outgoing);
 }
 namespace test_protocolpayloads {
 #endif  // __Fuchsia__
@@ -213,7 +213,7 @@ namespace test_protocolpayloads {
   outgoing.Call<::fidl::internal::TransactionalResponse<
       ::test_protocolpayloads::MainProtocol::TwoWayComposed>>(
       client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()));
-  SetResult(outgoing);
+  SetStatus(outgoing);
 }
 
 ::fidl::WireResult<::test_protocolpayloads::MainProtocol::TwoWayComposed>::
@@ -233,7 +233,7 @@ namespace test_protocolpayloads {
       ::test_protocolpayloads::MainProtocol::TwoWayComposed>>(
       client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()),
       fidl::CallOptions{.deadline = deadline});
-  SetResult(outgoing);
+  SetStatus(outgoing);
 }
 namespace test_protocolpayloads {
 #endif  // __Fuchsia__
@@ -253,7 +253,7 @@ namespace test_protocolpayloads {
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation =
       allocator.TryAllocate(buffer_size);
   if (!allocation.is_ok()) {
-    ::fidl::Result::operator=(allocation.error_value());
+    ::fidl::Status::operator=(allocation.error_value());
     return;
   }
   uint8_t* buffer = allocation->data;
@@ -275,7 +275,7 @@ namespace test_protocolpayloads {
       ::test_protocolpayloads::MainProtocol::TwoWayComposed>>(
       client_end.handle(), response_bytes, response_byte_capacity);
   bytes_ = response_bytes;
-  ::fidl::Result::operator=(outgoing);
+  ::fidl::Status::operator=(outgoing);
 }
 namespace test_protocolpayloads {
 #endif  // __Fuchsia__
@@ -299,7 +299,7 @@ namespace test_protocolpayloads {
   outgoing.Call<::fidl::internal::TransactionalResponse<
       ::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>>(
       client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()));
-  SetResult(outgoing);
+  SetStatus(outgoing);
 }
 
 ::fidl::WireResult<
@@ -321,7 +321,7 @@ namespace test_protocolpayloads {
       ::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>>(
       client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()),
       fidl::CallOptions{.deadline = deadline});
-  SetResult(outgoing);
+  SetStatus(outgoing);
 }
 namespace test_protocolpayloads {
 #endif  // __Fuchsia__
@@ -342,7 +342,7 @@ namespace test_protocolpayloads {
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation =
       allocator.TryAllocate(buffer_size);
   if (!allocation.is_ok()) {
-    ::fidl::Result::operator=(allocation.error_value());
+    ::fidl::Status::operator=(allocation.error_value());
     return;
   }
   uint8_t* buffer = allocation->data;
@@ -364,7 +364,7 @@ namespace test_protocolpayloads {
       ::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>>(
       client_end.handle(), response_bytes, response_byte_capacity);
   bytes_ = response_bytes;
-  ::fidl::Result::operator=(outgoing);
+  ::fidl::Status::operator=(outgoing);
 }
 namespace test_protocolpayloads {
 #endif  // __Fuchsia__
@@ -384,7 +384,7 @@ namespace test_protocolpayloads {
       request_message(::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
   outgoing.Write(client.handle());
-  SetResult(outgoing);
+  SetStatus(outgoing);
 }
 namespace test_protocolpayloads {
 #endif  // __Fuchsia__
@@ -403,7 +403,7 @@ namespace test_protocolpayloads {
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation =
       allocator.TryAllocate(buffer_size);
   if (!allocation.is_ok()) {
-    ::fidl::Result::operator=(allocation.error_value());
+    ::fidl::Status::operator=(allocation.error_value());
     return;
   }
   uint8_t* buffer = allocation->data;
@@ -416,7 +416,7 @@ namespace test_protocolpayloads {
       request_message(request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
   outgoing.Write(client_end.handle());
-  ::fidl::Result::operator=(outgoing);
+  ::fidl::Status::operator=(outgoing);
 }
 namespace test_protocolpayloads {
 #endif  // __Fuchsia__
@@ -438,7 +438,7 @@ namespace test_protocolpayloads {
   outgoing.Call<::fidl::internal::TransactionalResponse<
       ::test_protocolpayloads::MainProtocol::TwoWayLocal>>(
       client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()));
-  SetResult(outgoing);
+  SetStatus(outgoing);
 }
 
 ::fidl::WireResult<::test_protocolpayloads::MainProtocol::TwoWayLocal>::
@@ -458,7 +458,7 @@ namespace test_protocolpayloads {
       ::test_protocolpayloads::MainProtocol::TwoWayLocal>>(
       client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()),
       fidl::CallOptions{.deadline = deadline});
-  SetResult(outgoing);
+  SetStatus(outgoing);
 }
 namespace test_protocolpayloads {
 #endif  // __Fuchsia__
@@ -477,7 +477,7 @@ namespace test_protocolpayloads {
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation =
       allocator.TryAllocate(buffer_size);
   if (!allocation.is_ok()) {
-    ::fidl::Result::operator=(allocation.error_value());
+    ::fidl::Status::operator=(allocation.error_value());
     return;
   }
   uint8_t* buffer = allocation->data;
@@ -499,7 +499,7 @@ namespace test_protocolpayloads {
       ::test_protocolpayloads::MainProtocol::TwoWayLocal>>(
       client_end.handle(), response_bytes, response_byte_capacity);
   bytes_ = response_bytes;
-  ::fidl::Result::operator=(outgoing);
+  ::fidl::Status::operator=(outgoing);
 }
 namespace test_protocolpayloads {
 #endif  // __Fuchsia__
@@ -523,7 +523,7 @@ namespace test_protocolpayloads {
   outgoing.Call<::fidl::internal::TransactionalResponse<
       ::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>>(
       client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()));
-  SetResult(outgoing);
+  SetStatus(outgoing);
 }
 
 ::fidl::WireResult<
@@ -545,7 +545,7 @@ namespace test_protocolpayloads {
       ::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>>(
       client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()),
       fidl::CallOptions{.deadline = deadline});
-  SetResult(outgoing);
+  SetStatus(outgoing);
 }
 namespace test_protocolpayloads {
 #endif  // __Fuchsia__
@@ -566,7 +566,7 @@ namespace test_protocolpayloads {
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation =
       allocator.TryAllocate(buffer_size);
   if (!allocation.is_ok()) {
-    ::fidl::Result::operator=(allocation.error_value());
+    ::fidl::Status::operator=(allocation.error_value());
     return;
   }
   uint8_t* buffer = allocation->data;
@@ -588,7 +588,7 @@ namespace test_protocolpayloads {
       ::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>>(
       client_end.handle(), response_bytes, response_byte_capacity);
   bytes_ = response_bytes;
-  ::fidl::Result::operator=(outgoing);
+  ::fidl::Status::operator=(outgoing);
 }
 namespace test_protocolpayloads {
 #endif  // __Fuchsia__
@@ -608,7 +608,7 @@ namespace test_protocolpayloads {
       request_message(::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
   outgoing.Write(client.handle());
-  SetResult(outgoing);
+  SetStatus(outgoing);
 }
 namespace test_protocolpayloads {
 #endif  // __Fuchsia__
@@ -627,7 +627,7 @@ namespace test_protocolpayloads {
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation =
       allocator.TryAllocate(buffer_size);
   if (!allocation.is_ok()) {
-    ::fidl::Result::operator=(allocation.error_value());
+    ::fidl::Status::operator=(allocation.error_value());
     return;
   }
   uint8_t* buffer = allocation->data;
@@ -640,7 +640,7 @@ namespace test_protocolpayloads {
       request_message(request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
   outgoing.Write(client_end.handle());
-  ::fidl::Result::operator=(outgoing);
+  ::fidl::Status::operator=(outgoing);
 }
 namespace test_protocolpayloads {
 #endif  // __Fuchsia__
@@ -662,7 +662,7 @@ namespace test_protocolpayloads {
   outgoing.Call<::fidl::internal::TransactionalResponse<
       ::test_protocolpayloads::MainProtocol::TwoWayImport>>(
       client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()));
-  SetResult(outgoing);
+  SetStatus(outgoing);
 }
 
 ::fidl::WireResult<::test_protocolpayloads::MainProtocol::TwoWayImport>::
@@ -682,7 +682,7 @@ namespace test_protocolpayloads {
       ::test_protocolpayloads::MainProtocol::TwoWayImport>>(
       client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()),
       fidl::CallOptions{.deadline = deadline});
-  SetResult(outgoing);
+  SetStatus(outgoing);
 }
 namespace test_protocolpayloads {
 #endif  // __Fuchsia__
@@ -701,7 +701,7 @@ namespace test_protocolpayloads {
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation =
       allocator.TryAllocate(buffer_size);
   if (!allocation.is_ok()) {
-    ::fidl::Result::operator=(allocation.error_value());
+    ::fidl::Status::operator=(allocation.error_value());
     return;
   }
   uint8_t* buffer = allocation->data;
@@ -723,7 +723,7 @@ namespace test_protocolpayloads {
       ::test_protocolpayloads::MainProtocol::TwoWayImport>>(
       client_end.handle(), response_bytes, response_byte_capacity);
   bytes_ = response_bytes;
-  ::fidl::Result::operator=(outgoing);
+  ::fidl::Status::operator=(outgoing);
 }
 namespace test_protocolpayloads {
 #endif  // __Fuchsia__
@@ -747,7 +747,7 @@ namespace test_protocolpayloads {
   outgoing.Call<::fidl::internal::TransactionalResponse<
       ::test_protocolpayloads::MainProtocol::TwoWayImportWithError>>(
       client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()));
-  SetResult(outgoing);
+  SetStatus(outgoing);
 }
 
 ::fidl::WireResult<
@@ -769,7 +769,7 @@ namespace test_protocolpayloads {
       ::test_protocolpayloads::MainProtocol::TwoWayImportWithError>>(
       client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()),
       fidl::CallOptions{.deadline = deadline});
-  SetResult(outgoing);
+  SetStatus(outgoing);
 }
 namespace test_protocolpayloads {
 #endif  // __Fuchsia__
@@ -790,7 +790,7 @@ namespace test_protocolpayloads {
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation =
       allocator.TryAllocate(buffer_size);
   if (!allocation.is_ok()) {
-    ::fidl::Result::operator=(allocation.error_value());
+    ::fidl::Status::operator=(allocation.error_value());
     return;
   }
   uint8_t* buffer = allocation->data;
@@ -812,7 +812,7 @@ namespace test_protocolpayloads {
       ::test_protocolpayloads::MainProtocol::TwoWayImportWithError>>(
       client_end.handle(), response_bytes, response_byte_capacity);
   bytes_ = response_bytes;
-  ::fidl::Result::operator=(outgoing);
+  ::fidl::Status::operator=(outgoing);
 }
 namespace test_protocolpayloads {
 #endif  // __Fuchsia__
@@ -832,7 +832,7 @@ namespace test_protocolpayloads {
       request_message(::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
   outgoing.Write(client.handle());
-  SetResult(outgoing);
+  SetStatus(outgoing);
 }
 namespace test_protocolpayloads {
 #endif  // __Fuchsia__
@@ -851,7 +851,7 @@ namespace test_protocolpayloads {
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation =
       allocator.TryAllocate(buffer_size);
   if (!allocation.is_ok()) {
-    ::fidl::Result::operator=(allocation.error_value());
+    ::fidl::Status::operator=(allocation.error_value());
     return;
   }
   uint8_t* buffer = allocation->data;
@@ -864,7 +864,7 @@ namespace test_protocolpayloads {
       request_message(request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
   outgoing.Write(client_end.handle());
-  ::fidl::Result::operator=(outgoing);
+  ::fidl::Status::operator=(outgoing);
 }
 namespace test_protocolpayloads {
 #endif  // __Fuchsia__
@@ -886,7 +886,7 @@ namespace test_protocolpayloads {
   outgoing.Call<::fidl::internal::TransactionalResponse<
       ::test_protocolpayloads::MainProtocol::TwoWayAnon>>(
       client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()));
-  SetResult(outgoing);
+  SetStatus(outgoing);
 }
 
 ::fidl::WireResult<::test_protocolpayloads::MainProtocol::TwoWayAnon>::
@@ -906,7 +906,7 @@ namespace test_protocolpayloads {
       ::test_protocolpayloads::MainProtocol::TwoWayAnon>>(
       client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()),
       fidl::CallOptions{.deadline = deadline});
-  SetResult(outgoing);
+  SetStatus(outgoing);
 }
 namespace test_protocolpayloads {
 #endif  // __Fuchsia__
@@ -925,7 +925,7 @@ namespace test_protocolpayloads {
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation =
       allocator.TryAllocate(buffer_size);
   if (!allocation.is_ok()) {
-    ::fidl::Result::operator=(allocation.error_value());
+    ::fidl::Status::operator=(allocation.error_value());
     return;
   }
   uint8_t* buffer = allocation->data;
@@ -947,7 +947,7 @@ namespace test_protocolpayloads {
       ::test_protocolpayloads::MainProtocol::TwoWayAnon>>(
       client_end.handle(), response_bytes, response_byte_capacity);
   bytes_ = response_bytes;
-  ::fidl::Result::operator=(outgoing);
+  ::fidl::Status::operator=(outgoing);
 }
 namespace test_protocolpayloads {
 #endif  // __Fuchsia__
@@ -970,7 +970,7 @@ namespace test_protocolpayloads {
   outgoing.Call<::fidl::internal::TransactionalResponse<
       ::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>>(
       client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()));
-  SetResult(outgoing);
+  SetStatus(outgoing);
 }
 
 ::fidl::WireResult<::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>::
@@ -991,7 +991,7 @@ namespace test_protocolpayloads {
       ::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>>(
       client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()),
       fidl::CallOptions{.deadline = deadline});
-  SetResult(outgoing);
+  SetStatus(outgoing);
 }
 namespace test_protocolpayloads {
 #endif  // __Fuchsia__
@@ -1012,7 +1012,7 @@ namespace test_protocolpayloads {
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation =
       allocator.TryAllocate(buffer_size);
   if (!allocation.is_ok()) {
-    ::fidl::Result::operator=(allocation.error_value());
+    ::fidl::Status::operator=(allocation.error_value());
     return;
   }
   uint8_t* buffer = allocation->data;
@@ -1034,7 +1034,7 @@ namespace test_protocolpayloads {
       ::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>>(
       client_end.handle(), response_bytes, response_byte_capacity);
   bytes_ = response_bytes;
-  ::fidl::Result::operator=(outgoing);
+  ::fidl::Status::operator=(outgoing);
 }
 namespace test_protocolpayloads {
 #endif  // __Fuchsia__
@@ -1042,7 +1042,7 @@ namespace test_protocolpayloads {
 }  // namespace test_protocolpayloads
 #ifdef __Fuchsia__
 
-::fidl::Result fidl::internal::WireWeakOnewayClientImpl<
+::fidl::Status fidl::internal::WireWeakOnewayClientImpl<
     ::test_protocolpayloads::MainProtocol>::OneWayComposed(int32_t a) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::internal::TransactionalRequest<
@@ -1056,7 +1056,7 @@ namespace test_protocolpayloads {
                        &_request_object);
   return _client_base()->SendOneWay(_request_message.GetOutgoingMessage());
 }
-::fidl::Result fidl::internal::WireWeakOnewayClientImpl<
+::fidl::Status fidl::internal::WireWeakOnewayClientImpl<
     ::test_protocolpayloads::MainProtocol>::OneWayLocal(uint32_t a,
                                                         uint32_t b) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
@@ -1071,7 +1071,7 @@ namespace test_protocolpayloads {
                        &_request_object);
   return _client_base()->SendOneWay(_request_message.GetOutgoingMessage());
 }
-::fidl::Result fidl::internal::WireWeakOnewayClientImpl<
+::fidl::Status fidl::internal::WireWeakOnewayClientImpl<
     ::test_protocolpayloads::MainProtocol>::OneWayImport(int32_t a) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::internal::TransactionalRequest<
@@ -1085,7 +1085,7 @@ namespace test_protocolpayloads {
                        &_request_object);
   return _client_base()->SendOneWay(_request_message.GetOutgoingMessage());
 }
-::fidl::Result fidl::internal::WireWeakOnewayClientImpl<
+::fidl::Status fidl::internal::WireWeakOnewayClientImpl<
     ::test_protocolpayloads::MainProtocol>::OneWayAnon(uint32_t a, uint32_t b) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::internal::TransactionalRequest<
@@ -1742,7 +1742,7 @@ void fidl::internal::WireWeakAsyncClientImpl<
       _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
   _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
 }
-::fidl::Result fidl::internal::WireWeakOnewayBufferClientImpl<
+::fidl::Status fidl::internal::WireWeakOnewayBufferClientImpl<
     ::test_protocolpayloads::MainProtocol>::OneWayComposed(int32_t a) {
   constexpr uint32_t _buffer_size =
       ::fidl::AsyncClientMethodBufferSizeInChannel<
@@ -1762,7 +1762,7 @@ void fidl::internal::WireWeakAsyncClientImpl<
       _request_message(_allocation->data, _buffer_size, &_request);
   return _client_base()->SendOneWay(_request_message.GetOutgoingMessage());
 }
-::fidl::Result fidl::internal::WireWeakOnewayBufferClientImpl<
+::fidl::Status fidl::internal::WireWeakOnewayBufferClientImpl<
     ::test_protocolpayloads::MainProtocol>::OneWayLocal(uint32_t a,
                                                         uint32_t b) {
   constexpr uint32_t _buffer_size =
@@ -1783,7 +1783,7 @@ void fidl::internal::WireWeakAsyncClientImpl<
       _request_message(_allocation->data, _buffer_size, &_request);
   return _client_base()->SendOneWay(_request_message.GetOutgoingMessage());
 }
-::fidl::Result fidl::internal::WireWeakOnewayBufferClientImpl<
+::fidl::Status fidl::internal::WireWeakOnewayBufferClientImpl<
     ::test_protocolpayloads::MainProtocol>::OneWayImport(int32_t a) {
   constexpr uint32_t _buffer_size =
       ::fidl::AsyncClientMethodBufferSizeInChannel<
@@ -1803,7 +1803,7 @@ void fidl::internal::WireWeakAsyncClientImpl<
       _request_message(_allocation->data, _buffer_size, &_request);
   return _client_base()->SendOneWay(_request_message.GetOutgoingMessage());
 }
-::fidl::Result fidl::internal::WireWeakOnewayBufferClientImpl<
+::fidl::Status fidl::internal::WireWeakOnewayBufferClientImpl<
     ::test_protocolpayloads::MainProtocol>::OneWayAnon(uint32_t a, uint32_t b) {
   constexpr uint32_t _buffer_size =
       ::fidl::AsyncClientMethodBufferSizeInChannel<
@@ -2171,7 +2171,7 @@ fidl::internal::WireWeakSyncClientImpl<
 
 #ifdef __Fuchsia__
 
-::fidl::Result fidl::
+::fidl::Status fidl::
     WireSyncEventHandler<::test_protocolpayloads::MainProtocol>::HandleOneEvent(
         ::fidl::UnownedClientEnd<::test_protocolpayloads::MainProtocol>
             client_end) {
@@ -2179,7 +2179,7 @@ fidl::internal::WireWeakSyncClientImpl<
       ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED, ::zx::time::infinite(),
       nullptr);
   if (status != ZX_OK) {
-    return ::fidl::Result::TransportError(
+    return ::fidl::Status::TransportError(
         status, ::fidl::internal::kErrorWaitOneFailed);
   }
   constexpr uint32_t kHandleAllocSize = ([]() constexpr {
@@ -2256,7 +2256,7 @@ fidl::internal::WireWeakSyncClientImpl<
     // This can only be due to a newer version of the protocol defining a new
     // event, whose size exceeds the maximum of known events in the current
     // protocol.
-    return ::fidl::Result::UnexpectedMessage(Unknown());
+    return ::fidl::Status::UnexpectedMessage(Unknown());
   }
   if (!msg.ok()) {
     return msg;
@@ -2268,91 +2268,91 @@ fidl::internal::WireWeakSyncClientImpl<
           ::test_protocolpayloads::MainProtocol::OnComposed>>
           decoded{::std::move(msg)};
       if (!decoded.ok()) {
-        return ::fidl::Result(decoded);
+        return ::fidl::Status(decoded);
       }
       auto* primary = &decoded.PrimaryObject()->body;
       OnComposed(primary);
-      return ::fidl::Result::Ok();
+      return ::fidl::Status::Ok();
     }
     case ::test_protocolpayloads::kMainProtocol_OnComposedWithError_Ordinal: {
       ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalEvent<
           ::test_protocolpayloads::MainProtocol::OnComposedWithError>>
           decoded{::std::move(msg)};
       if (!decoded.ok()) {
-        return ::fidl::Result(decoded);
+        return ::fidl::Status(decoded);
       }
       auto* primary = &decoded.PrimaryObject()->body;
       OnComposedWithError(primary);
-      return ::fidl::Result::Ok();
+      return ::fidl::Status::Ok();
     }
     case ::test_protocolpayloads::kMainProtocol_OnLocal_Ordinal: {
       ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalEvent<
           ::test_protocolpayloads::MainProtocol::OnLocal>>
           decoded{::std::move(msg)};
       if (!decoded.ok()) {
-        return ::fidl::Result(decoded);
+        return ::fidl::Status(decoded);
       }
       auto* primary = &decoded.PrimaryObject()->body;
       OnLocal(primary);
-      return ::fidl::Result::Ok();
+      return ::fidl::Status::Ok();
     }
     case ::test_protocolpayloads::kMainProtocol_OnLocalWithError_Ordinal: {
       ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalEvent<
           ::test_protocolpayloads::MainProtocol::OnLocalWithError>>
           decoded{::std::move(msg)};
       if (!decoded.ok()) {
-        return ::fidl::Result(decoded);
+        return ::fidl::Status(decoded);
       }
       auto* primary = &decoded.PrimaryObject()->body;
       OnLocalWithError(primary);
-      return ::fidl::Result::Ok();
+      return ::fidl::Status::Ok();
     }
     case ::test_protocolpayloads::kMainProtocol_OnImport_Ordinal: {
       ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalEvent<
           ::test_protocolpayloads::MainProtocol::OnImport>>
           decoded{::std::move(msg)};
       if (!decoded.ok()) {
-        return ::fidl::Result(decoded);
+        return ::fidl::Status(decoded);
       }
       auto* primary = &decoded.PrimaryObject()->body;
       OnImport(primary);
-      return ::fidl::Result::Ok();
+      return ::fidl::Status::Ok();
     }
     case ::test_protocolpayloads::kMainProtocol_OnImportWithError_Ordinal: {
       ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalEvent<
           ::test_protocolpayloads::MainProtocol::OnImportWithError>>
           decoded{::std::move(msg)};
       if (!decoded.ok()) {
-        return ::fidl::Result(decoded);
+        return ::fidl::Status(decoded);
       }
       auto* primary = &decoded.PrimaryObject()->body;
       OnImportWithError(primary);
-      return ::fidl::Result::Ok();
+      return ::fidl::Status::Ok();
     }
     case ::test_protocolpayloads::kMainProtocol_OnAnon_Ordinal: {
       ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalEvent<
           ::test_protocolpayloads::MainProtocol::OnAnon>>
           decoded{::std::move(msg)};
       if (!decoded.ok()) {
-        return ::fidl::Result(decoded);
+        return ::fidl::Status(decoded);
       }
       auto* primary = &decoded.PrimaryObject()->body;
       OnAnon(primary);
-      return ::fidl::Result::Ok();
+      return ::fidl::Status::Ok();
     }
     case ::test_protocolpayloads::kMainProtocol_OnAnonWithError_Ordinal: {
       ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalEvent<
           ::test_protocolpayloads::MainProtocol::OnAnonWithError>>
           decoded{::std::move(msg)};
       if (!decoded.ok()) {
-        return ::fidl::Result(decoded);
+        return ::fidl::Status(decoded);
       }
       auto* primary = &decoded.PrimaryObject()->body;
       OnAnonWithError(primary);
-      return ::fidl::Result::Ok();
+      return ::fidl::Status::Ok();
     }
     default: {
-      return ::fidl::Result::UnexpectedMessage(Unknown());
+      return ::fidl::Status::UnexpectedMessage(Unknown());
     }
   }
 }
@@ -3480,7 +3480,7 @@ void ::fidl::internal::TransactionalEvent<
 
 #ifdef __Fuchsia__
 
-fidl::Result fidl::internal::WireWeakEventSender<
+fidl::Status fidl::internal::WireWeakEventSender<
     ::test_protocolpayloads::MainProtocol>::OnComposed(int32_t a) {
   ::fidl::internal::TransactionalEvent<
       ::test_protocolpayloads::MainProtocol::OnComposed>
@@ -3494,7 +3494,7 @@ fidl::Result fidl::internal::WireWeakEventSender<
   return _inner().SendEvent(_response_message.GetOutgoingMessage());
 }
 
-fidl::Result fidl::internal::WireWeakBufferEventSender<
+fidl::Status fidl::internal::WireWeakBufferEventSender<
     ::test_protocolpayloads::MainProtocol>::OnComposed(int32_t a) {
   constexpr uint32_t _buffer_size = ::fidl::EventReplyBufferSizeInChannel<
       ::test_protocolpayloads::MainProtocol::OnComposed>();
@@ -3516,7 +3516,7 @@ fidl::Result fidl::internal::WireWeakBufferEventSender<
   return _inner().SendEvent(_response_message.GetOutgoingMessage());
 }
 
-fidl::Result fidl::internal::WireEventSender<
+fidl::Status fidl::internal::WireEventSender<
     ::test_protocolpayloads::MainProtocol>::OnComposed(int32_t a) {
   ::fidl::internal::TransactionalEvent<
       ::test_protocolpayloads::MainProtocol::OnComposed>
@@ -3529,10 +3529,10 @@ fidl::Result fidl::internal::WireEventSender<
       _response_message{::fidl::internal::AllowUnownedInputRef{}, &_response};
   auto& _message = _response_message.GetOutgoingMessage();
   _message.Write(_transport());
-  return ::fidl::Result{_message};
+  return ::fidl::Status{_message};
 }
 
-fidl::Result fidl::internal::WireBufferEventSender<
+fidl::Status fidl::internal::WireBufferEventSender<
     ::test_protocolpayloads::MainProtocol>::OnComposed(int32_t a) {
   constexpr uint32_t _buffer_size = ::fidl::EventReplyBufferSizeInChannel<
       ::test_protocolpayloads::MainProtocol::OnComposed>();
@@ -3552,10 +3552,10 @@ fidl::Result fidl::internal::WireBufferEventSender<
       _response_message(_allocation->data, _buffer_size, &_response);
   auto& _message = _response_message.GetOutgoingMessage();
   _message.Write(_transport());
-  return ::fidl::Result{_message};
+  return ::fidl::Status{_message};
 }
 
-fidl::Result
+fidl::Status
 fidl::internal::WireWeakEventSender<::test_protocolpayloads::MainProtocol>::
     OnComposedWithError(::test_protocolpayloads_imported::wire::
                             ComposedProtocolOnComposedWithErrorResult result) {
@@ -3571,7 +3571,7 @@ fidl::internal::WireWeakEventSender<::test_protocolpayloads::MainProtocol>::
   return _inner().SendEvent(_response_message.GetOutgoingMessage());
 }
 
-fidl::Result fidl::internal::WireWeakBufferEventSender<
+fidl::Status fidl::internal::WireWeakBufferEventSender<
     ::test_protocolpayloads::MainProtocol>::
     OnComposedWithError(::test_protocolpayloads_imported::wire::
                             ComposedProtocolOnComposedWithErrorResult result) {
@@ -3595,7 +3595,7 @@ fidl::Result fidl::internal::WireWeakBufferEventSender<
   return _inner().SendEvent(_response_message.GetOutgoingMessage());
 }
 
-fidl::Result fidl::internal::
+fidl::Status fidl::internal::
     WireEventSender<::test_protocolpayloads::MainProtocol>::OnComposedWithError(
         ::test_protocolpayloads_imported::wire::
             ComposedProtocolOnComposedWithErrorResult result) {
@@ -3610,10 +3610,10 @@ fidl::Result fidl::internal::
       _response_message{::fidl::internal::AllowUnownedInputRef{}, &_response};
   auto& _message = _response_message.GetOutgoingMessage();
   _message.Write(_transport());
-  return ::fidl::Result{_message};
+  return ::fidl::Status{_message};
 }
 
-fidl::Result
+fidl::Status
 fidl::internal::WireBufferEventSender<::test_protocolpayloads::MainProtocol>::
     OnComposedWithError(::test_protocolpayloads_imported::wire::
                             ComposedProtocolOnComposedWithErrorResult result) {
@@ -3635,10 +3635,10 @@ fidl::internal::WireBufferEventSender<::test_protocolpayloads::MainProtocol>::
       _response_message(_allocation->data, _buffer_size, &_response);
   auto& _message = _response_message.GetOutgoingMessage();
   _message.Write(_transport());
-  return ::fidl::Result{_message};
+  return ::fidl::Status{_message};
 }
 
-fidl::Result fidl::internal::WireWeakEventSender<
+fidl::Status fidl::internal::WireWeakEventSender<
     ::test_protocolpayloads::MainProtocol>::OnLocal(uint32_t a, uint32_t b) {
   ::fidl::internal::TransactionalEvent<
       ::test_protocolpayloads::MainProtocol::OnLocal>
@@ -3652,7 +3652,7 @@ fidl::Result fidl::internal::WireWeakEventSender<
   return _inner().SendEvent(_response_message.GetOutgoingMessage());
 }
 
-fidl::Result fidl::internal::WireWeakBufferEventSender<
+fidl::Status fidl::internal::WireWeakBufferEventSender<
     ::test_protocolpayloads::MainProtocol>::OnLocal(uint32_t a, uint32_t b) {
   constexpr uint32_t _buffer_size = ::fidl::EventReplyBufferSizeInChannel<
       ::test_protocolpayloads::MainProtocol::OnLocal>();
@@ -3674,7 +3674,7 @@ fidl::Result fidl::internal::WireWeakBufferEventSender<
   return _inner().SendEvent(_response_message.GetOutgoingMessage());
 }
 
-fidl::Result fidl::internal::WireEventSender<
+fidl::Status fidl::internal::WireEventSender<
     ::test_protocolpayloads::MainProtocol>::OnLocal(uint32_t a, uint32_t b) {
   ::fidl::internal::TransactionalEvent<
       ::test_protocolpayloads::MainProtocol::OnLocal>
@@ -3687,10 +3687,10 @@ fidl::Result fidl::internal::WireEventSender<
       _response_message{::fidl::internal::AllowUnownedInputRef{}, &_response};
   auto& _message = _response_message.GetOutgoingMessage();
   _message.Write(_transport());
-  return ::fidl::Result{_message};
+  return ::fidl::Status{_message};
 }
 
-fidl::Result fidl::internal::WireBufferEventSender<
+fidl::Status fidl::internal::WireBufferEventSender<
     ::test_protocolpayloads::MainProtocol>::OnLocal(uint32_t a, uint32_t b) {
   constexpr uint32_t _buffer_size = ::fidl::EventReplyBufferSizeInChannel<
       ::test_protocolpayloads::MainProtocol::OnLocal>();
@@ -3710,10 +3710,10 @@ fidl::Result fidl::internal::WireBufferEventSender<
       _response_message(_allocation->data, _buffer_size, &_response);
   auto& _message = _response_message.GetOutgoingMessage();
   _message.Write(_transport());
-  return ::fidl::Result{_message};
+  return ::fidl::Status{_message};
 }
 
-fidl::Result
+fidl::Status
 fidl::internal::WireWeakEventSender<::test_protocolpayloads::MainProtocol>::
     OnLocalWithError(
         ::test_protocolpayloads::wire::MainProtocolOnLocalWithErrorResult
@@ -3730,7 +3730,7 @@ fidl::internal::WireWeakEventSender<::test_protocolpayloads::MainProtocol>::
   return _inner().SendEvent(_response_message.GetOutgoingMessage());
 }
 
-fidl::Result fidl::internal::WireWeakBufferEventSender<
+fidl::Status fidl::internal::WireWeakBufferEventSender<
     ::test_protocolpayloads::MainProtocol>::
     OnLocalWithError(
         ::test_protocolpayloads::wire::MainProtocolOnLocalWithErrorResult
@@ -3755,7 +3755,7 @@ fidl::Result fidl::internal::WireWeakBufferEventSender<
   return _inner().SendEvent(_response_message.GetOutgoingMessage());
 }
 
-fidl::Result fidl::internal::
+fidl::Status fidl::internal::
     WireEventSender<::test_protocolpayloads::MainProtocol>::OnLocalWithError(
         ::test_protocolpayloads::wire::MainProtocolOnLocalWithErrorResult
             result) {
@@ -3770,10 +3770,10 @@ fidl::Result fidl::internal::
       _response_message{::fidl::internal::AllowUnownedInputRef{}, &_response};
   auto& _message = _response_message.GetOutgoingMessage();
   _message.Write(_transport());
-  return ::fidl::Result{_message};
+  return ::fidl::Status{_message};
 }
 
-fidl::Result
+fidl::Status
 fidl::internal::WireBufferEventSender<::test_protocolpayloads::MainProtocol>::
     OnLocalWithError(
         ::test_protocolpayloads::wire::MainProtocolOnLocalWithErrorResult
@@ -3796,10 +3796,10 @@ fidl::internal::WireBufferEventSender<::test_protocolpayloads::MainProtocol>::
       _response_message(_allocation->data, _buffer_size, &_response);
   auto& _message = _response_message.GetOutgoingMessage();
   _message.Write(_transport());
-  return ::fidl::Result{_message};
+  return ::fidl::Status{_message};
 }
 
-fidl::Result fidl::internal::WireWeakEventSender<
+fidl::Status fidl::internal::WireWeakEventSender<
     ::test_protocolpayloads::MainProtocol>::OnImport(int32_t a) {
   ::fidl::internal::TransactionalEvent<
       ::test_protocolpayloads::MainProtocol::OnImport>
@@ -3813,7 +3813,7 @@ fidl::Result fidl::internal::WireWeakEventSender<
   return _inner().SendEvent(_response_message.GetOutgoingMessage());
 }
 
-fidl::Result fidl::internal::WireWeakBufferEventSender<
+fidl::Status fidl::internal::WireWeakBufferEventSender<
     ::test_protocolpayloads::MainProtocol>::OnImport(int32_t a) {
   constexpr uint32_t _buffer_size = ::fidl::EventReplyBufferSizeInChannel<
       ::test_protocolpayloads::MainProtocol::OnImport>();
@@ -3835,7 +3835,7 @@ fidl::Result fidl::internal::WireWeakBufferEventSender<
   return _inner().SendEvent(_response_message.GetOutgoingMessage());
 }
 
-fidl::Result fidl::internal::WireEventSender<
+fidl::Status fidl::internal::WireEventSender<
     ::test_protocolpayloads::MainProtocol>::OnImport(int32_t a) {
   ::fidl::internal::TransactionalEvent<
       ::test_protocolpayloads::MainProtocol::OnImport>
@@ -3848,10 +3848,10 @@ fidl::Result fidl::internal::WireEventSender<
       _response_message{::fidl::internal::AllowUnownedInputRef{}, &_response};
   auto& _message = _response_message.GetOutgoingMessage();
   _message.Write(_transport());
-  return ::fidl::Result{_message};
+  return ::fidl::Status{_message};
 }
 
-fidl::Result fidl::internal::WireBufferEventSender<
+fidl::Status fidl::internal::WireBufferEventSender<
     ::test_protocolpayloads::MainProtocol>::OnImport(int32_t a) {
   constexpr uint32_t _buffer_size = ::fidl::EventReplyBufferSizeInChannel<
       ::test_protocolpayloads::MainProtocol::OnImport>();
@@ -3871,10 +3871,10 @@ fidl::Result fidl::internal::WireBufferEventSender<
       _response_message(_allocation->data, _buffer_size, &_response);
   auto& _message = _response_message.GetOutgoingMessage();
   _message.Write(_transport());
-  return ::fidl::Result{_message};
+  return ::fidl::Status{_message};
 }
 
-fidl::Result
+fidl::Status
 fidl::internal::WireWeakEventSender<::test_protocolpayloads::MainProtocol>::
     OnImportWithError(
         ::test_protocolpayloads::wire::MainProtocolOnImportWithErrorResult
@@ -3891,7 +3891,7 @@ fidl::internal::WireWeakEventSender<::test_protocolpayloads::MainProtocol>::
   return _inner().SendEvent(_response_message.GetOutgoingMessage());
 }
 
-fidl::Result fidl::internal::WireWeakBufferEventSender<
+fidl::Status fidl::internal::WireWeakBufferEventSender<
     ::test_protocolpayloads::MainProtocol>::
     OnImportWithError(
         ::test_protocolpayloads::wire::MainProtocolOnImportWithErrorResult
@@ -3916,7 +3916,7 @@ fidl::Result fidl::internal::WireWeakBufferEventSender<
   return _inner().SendEvent(_response_message.GetOutgoingMessage());
 }
 
-fidl::Result fidl::internal::
+fidl::Status fidl::internal::
     WireEventSender<::test_protocolpayloads::MainProtocol>::OnImportWithError(
         ::test_protocolpayloads::wire::MainProtocolOnImportWithErrorResult
             result) {
@@ -3931,10 +3931,10 @@ fidl::Result fidl::internal::
       _response_message{::fidl::internal::AllowUnownedInputRef{}, &_response};
   auto& _message = _response_message.GetOutgoingMessage();
   _message.Write(_transport());
-  return ::fidl::Result{_message};
+  return ::fidl::Status{_message};
 }
 
-fidl::Result
+fidl::Status
 fidl::internal::WireBufferEventSender<::test_protocolpayloads::MainProtocol>::
     OnImportWithError(
         ::test_protocolpayloads::wire::MainProtocolOnImportWithErrorResult
@@ -3957,10 +3957,10 @@ fidl::internal::WireBufferEventSender<::test_protocolpayloads::MainProtocol>::
       _response_message(_allocation->data, _buffer_size, &_response);
   auto& _message = _response_message.GetOutgoingMessage();
   _message.Write(_transport());
-  return ::fidl::Result{_message};
+  return ::fidl::Status{_message};
 }
 
-fidl::Result fidl::internal::WireWeakEventSender<
+fidl::Status fidl::internal::WireWeakEventSender<
     ::test_protocolpayloads::MainProtocol>::OnAnon(uint32_t a, uint32_t b) {
   ::fidl::internal::TransactionalEvent<
       ::test_protocolpayloads::MainProtocol::OnAnon>
@@ -3974,7 +3974,7 @@ fidl::Result fidl::internal::WireWeakEventSender<
   return _inner().SendEvent(_response_message.GetOutgoingMessage());
 }
 
-fidl::Result fidl::internal::WireWeakBufferEventSender<
+fidl::Status fidl::internal::WireWeakBufferEventSender<
     ::test_protocolpayloads::MainProtocol>::OnAnon(uint32_t a, uint32_t b) {
   constexpr uint32_t _buffer_size = ::fidl::EventReplyBufferSizeInChannel<
       ::test_protocolpayloads::MainProtocol::OnAnon>();
@@ -3996,7 +3996,7 @@ fidl::Result fidl::internal::WireWeakBufferEventSender<
   return _inner().SendEvent(_response_message.GetOutgoingMessage());
 }
 
-fidl::Result fidl::internal::WireEventSender<
+fidl::Status fidl::internal::WireEventSender<
     ::test_protocolpayloads::MainProtocol>::OnAnon(uint32_t a, uint32_t b) {
   ::fidl::internal::TransactionalEvent<
       ::test_protocolpayloads::MainProtocol::OnAnon>
@@ -4009,10 +4009,10 @@ fidl::Result fidl::internal::WireEventSender<
       _response_message{::fidl::internal::AllowUnownedInputRef{}, &_response};
   auto& _message = _response_message.GetOutgoingMessage();
   _message.Write(_transport());
-  return ::fidl::Result{_message};
+  return ::fidl::Status{_message};
 }
 
-fidl::Result fidl::internal::WireBufferEventSender<
+fidl::Status fidl::internal::WireBufferEventSender<
     ::test_protocolpayloads::MainProtocol>::OnAnon(uint32_t a, uint32_t b) {
   constexpr uint32_t _buffer_size = ::fidl::EventReplyBufferSizeInChannel<
       ::test_protocolpayloads::MainProtocol::OnAnon>();
@@ -4032,10 +4032,10 @@ fidl::Result fidl::internal::WireBufferEventSender<
       _response_message(_allocation->data, _buffer_size, &_response);
   auto& _message = _response_message.GetOutgoingMessage();
   _message.Write(_transport());
-  return ::fidl::Result{_message};
+  return ::fidl::Status{_message};
 }
 
-fidl::Result fidl::internal::
+fidl::Status fidl::internal::
     WireWeakEventSender<::test_protocolpayloads::MainProtocol>::OnAnonWithError(
         ::test_protocolpayloads::wire::MainProtocolOnAnonWithErrorResult
             result) {
@@ -4051,7 +4051,7 @@ fidl::Result fidl::internal::
   return _inner().SendEvent(_response_message.GetOutgoingMessage());
 }
 
-fidl::Result fidl::internal::WireWeakBufferEventSender<
+fidl::Status fidl::internal::WireWeakBufferEventSender<
     ::test_protocolpayloads::MainProtocol>::
     OnAnonWithError(
         ::test_protocolpayloads::wire::MainProtocolOnAnonWithErrorResult
@@ -4076,7 +4076,7 @@ fidl::Result fidl::internal::WireWeakBufferEventSender<
   return _inner().SendEvent(_response_message.GetOutgoingMessage());
 }
 
-fidl::Result fidl::internal::
+fidl::Status fidl::internal::
     WireEventSender<::test_protocolpayloads::MainProtocol>::OnAnonWithError(
         ::test_protocolpayloads::wire::MainProtocolOnAnonWithErrorResult
             result) {
@@ -4091,10 +4091,10 @@ fidl::Result fidl::internal::
       _response_message{::fidl::internal::AllowUnownedInputRef{}, &_response};
   auto& _message = _response_message.GetOutgoingMessage();
   _message.Write(_transport());
-  return ::fidl::Result{_message};
+  return ::fidl::Status{_message};
 }
 
-fidl::Result
+fidl::Status
 fidl::internal::WireBufferEventSender<::test_protocolpayloads::MainProtocol>::
     OnAnonWithError(
         ::test_protocolpayloads::wire::MainProtocolOnAnonWithErrorResult
@@ -4117,7 +4117,7 @@ fidl::internal::WireBufferEventSender<::test_protocolpayloads::MainProtocol>::
       _response_message(_allocation->data, _buffer_size, &_response);
   auto& _message = _response_message.GetOutgoingMessage();
   _message.Write(_transport());
-  return ::fidl::Result{_message};
+  return ::fidl::Status{_message};
 }
 
 #endif  // __Fuchsia__

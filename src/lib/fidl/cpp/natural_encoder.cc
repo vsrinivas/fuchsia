@@ -73,13 +73,13 @@ void NaturalEncoder::EncodeHandle(fidl_handle_t handle, HandleAttributes attr, s
 
 fidl::OutgoingMessage NaturalBodyEncoder::GetBody(const fidl_type_t* type) {
   if (status_ != ZX_OK) {
-    return fidl::OutgoingMessage(fidl::Result::EncodeError(status_, error_));
+    return fidl::OutgoingMessage(fidl::Status::EncodeError(status_, error_));
   }
 
   const char* err_msg;
   zx_status_t status = Validate(type, 0, &err_msg);
   if (status != ZX_OK) {
-    return fidl::OutgoingMessage(fidl::Result::EncodeError(status, err_msg));
+    return fidl::OutgoingMessage(fidl::Status::EncodeError(status, err_msg));
   }
 
   fidl_outgoing_msg_t c_msg = {

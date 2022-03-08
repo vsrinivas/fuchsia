@@ -26,7 +26,7 @@ extern "C" const fidl_type_t
       request_message(::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
   outgoing.Write(client.handle());
-  SetResult(outgoing);
+  SetStatus(outgoing);
 }
 namespace test_placementofattributes {
 #endif  // __Fuchsia__
@@ -46,7 +46,7 @@ namespace test_placementofattributes {
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation =
       allocator.TryAllocate(buffer_size);
   if (!allocation.is_ok()) {
-    ::fidl::Result::operator=(allocation.error_value());
+    ::fidl::Status::operator=(allocation.error_value());
     return;
   }
   uint8_t* buffer = allocation->data;
@@ -59,7 +59,7 @@ namespace test_placementofattributes {
       request_message(request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
   outgoing.Write(client_end.handle());
-  ::fidl::Result::operator=(outgoing);
+  ::fidl::Status::operator=(outgoing);
 }
 namespace test_placementofattributes {
 #endif  // __Fuchsia__
@@ -67,7 +67,7 @@ namespace test_placementofattributes {
 }  // namespace test_placementofattributes
 #ifdef __Fuchsia__
 
-::fidl::Result fidl::internal::WireWeakOnewayClientImpl<
+::fidl::Status fidl::internal::WireWeakOnewayClientImpl<
     ::test_placementofattributes::ExampleProtocol>::
     Method(const ::test_exampleusing::wire::Empty& arg) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
@@ -82,7 +82,7 @@ namespace test_placementofattributes {
                        &_request_object);
   return _client_base()->SendOneWay(_request_message.GetOutgoingMessage());
 }
-::fidl::Result fidl::internal::WireWeakOnewayBufferClientImpl<
+::fidl::Status fidl::internal::WireWeakOnewayBufferClientImpl<
     ::test_placementofattributes::ExampleProtocol>::
     Method(const ::test_exampleusing::wire::Empty& arg) {
   constexpr uint32_t _buffer_size =
@@ -107,7 +107,7 @@ namespace test_placementofattributes {
 
 #ifdef __Fuchsia__
 
-::fidl::Result
+::fidl::Status
 fidl::WireSyncEventHandler<::test_placementofattributes::ExampleProtocol>::
     HandleOneEvent(
         ::fidl::UnownedClientEnd<::test_placementofattributes::ExampleProtocol>
@@ -116,7 +116,7 @@ fidl::WireSyncEventHandler<::test_placementofattributes::ExampleProtocol>::
       ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED, ::zx::time::infinite(),
       nullptr);
   if (status != ZX_OK) {
-    return ::fidl::Result::TransportError(
+    return ::fidl::Status::TransportError(
         status, ::fidl::internal::kErrorWaitOneFailed);
   }
   constexpr uint32_t kHandleAllocSize = ([]() constexpr {
@@ -141,7 +141,7 @@ fidl::WireSyncEventHandler<::test_placementofattributes::ExampleProtocol>::
     // This can only be due to a newer version of the protocol defining a new
     // event, whose size exceeds the maximum of known events in the current
     // protocol.
-    return ::fidl::Result::UnexpectedMessage(Unknown());
+    return ::fidl::Status::UnexpectedMessage(Unknown());
   }
   if (!msg.ok()) {
     return msg;
@@ -149,7 +149,7 @@ fidl::WireSyncEventHandler<::test_placementofattributes::ExampleProtocol>::
   fidl_message_header_t* hdr = msg.header();
   switch (hdr->ordinal) {
     default: {
-      return ::fidl::Result::UnexpectedMessage(Unknown());
+      return ::fidl::Status::UnexpectedMessage(Unknown());
     }
   }
 }

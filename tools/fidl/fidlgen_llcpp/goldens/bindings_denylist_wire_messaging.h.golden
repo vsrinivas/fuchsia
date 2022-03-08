@@ -94,7 +94,7 @@ class ::fidl::WireSyncEventHandler<::test_bindingsdenylist::Allowed>
   // Handle all possible events defined in this protocol.
   // Blocks to consume exactly one message from the channel, then call the
   // corresponding virtual method.
-  ::fidl::Result HandleOneEvent(
+  ::fidl::Status HandleOneEvent(
       ::fidl::UnownedClientEnd<::test_bindingsdenylist::Allowed> client_end);
 };
 
@@ -388,7 +388,7 @@ namespace test_bindingsdenylist {
 template <>
 class ::fidl::WireResult<::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
                              LibfuzzerNeedsNonemptyProtocol>
-    final : public ::fidl::Result {
+    final : public ::fidl::Status {
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_bindingsdenylist::OnlyLibfuzzerAndDeps>
@@ -403,7 +403,7 @@ class ::fidl::WireResult<::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
           ::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
               LibfuzzerNeedsNonemptyProtocol>* request,
       zx_time_t _deadline);
-  explicit WireResult(const ::fidl::Result& result) : ::fidl::Result(result) {}
+  explicit WireResult(const ::fidl::Status& result) : ::fidl::Status(result) {}
   WireResult(WireResult&&) = delete;
   WireResult(const WireResult&) = delete;
   WireResult* operator=(WireResult&&) = delete;
@@ -416,7 +416,7 @@ class ::fidl::WireResult<::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
 template <>
 class ::fidl::WireUnownedResult<::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
                                     LibfuzzerNeedsNonemptyProtocol>
-    final : public ::fidl::Result {
+    final : public ::fidl::Status {
  public:
   explicit WireUnownedResult(
       ::fidl::UnownedClientEnd<::test_bindingsdenylist::OnlyLibfuzzerAndDeps>
@@ -429,14 +429,14 @@ class ::fidl::WireUnownedResult<::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
                              ::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
                                  LibfuzzerNeedsNonemptyProtocol>* response)
       : bytes_(reinterpret_cast<uint8_t*>(response)) {}
-  explicit WireUnownedResult(const ::fidl::Result& result)
-      : ::fidl::Result(result) {}
+  explicit WireUnownedResult(const ::fidl::Status& result)
+      : ::fidl::Status(result) {}
   explicit WireUnownedResult(
       ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<
           ::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
               LibfuzzerNeedsNonemptyProtocol>>&& decoded,
       ::fidl::internal::IncomingTransportContext context)
-      : ::fidl::Result(decoded) {
+      : ::fidl::Status(decoded) {
     if (decoded.ok()) {
       bytes_ = reinterpret_cast<uint8_t*>(decoded.PrimaryObject());
     } else {
@@ -486,7 +486,7 @@ class ::fidl::WireSyncEventHandler<
   // Handle all possible events defined in this protocol.
   // Blocks to consume exactly one message from the channel, then call the
   // corresponding virtual method.
-  ::fidl::Result HandleOneEvent(
+  ::fidl::Status HandleOneEvent(
       ::fidl::UnownedClientEnd<::test_bindingsdenylist::OnlyLibfuzzerAndDeps>
           client_end);
 };
@@ -730,7 +730,7 @@ class ::fidl::WireSyncEventHandler<::test_bindingsdenylist::OnlyCppAndDeps>
   // Handle all possible events defined in this protocol.
   // Blocks to consume exactly one message from the channel, then call the
   // corresponding virtual method.
-  ::fidl::Result HandleOneEvent(
+  ::fidl::Status HandleOneEvent(
       ::fidl::UnownedClientEnd<::test_bindingsdenylist::OnlyCppAndDeps>
           client_end);
 };
@@ -1029,7 +1029,7 @@ namespace test_bindingsdenylist {
 template <>
 class ::fidl::WireResult<
     ::test_bindingsdenylist::ImportsSameNameContext::Unattributed>
-    final : public ::fidl::Result {
+    final : public ::fidl::Status {
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_bindingsdenylist::ImportsSameNameContext>
@@ -1037,7 +1037,7 @@ class ::fidl::WireResult<
       ::fidl::internal::TransactionalRequest<
           ::test_bindingsdenylist::ImportsSameNameContext::Unattributed>*
           request);
-  explicit WireResult(const ::fidl::Result& result) : ::fidl::Result(result) {}
+  explicit WireResult(const ::fidl::Status& result) : ::fidl::Status(result) {}
   WireResult(WireResult&&) = delete;
   WireResult(const WireResult&) = delete;
   WireResult* operator=(WireResult&&) = delete;
@@ -1049,7 +1049,7 @@ class ::fidl::WireResult<
 template <>
 class ::fidl::WireUnownedResult<
     ::test_bindingsdenylist::ImportsSameNameContext::Unattributed>
-    final : public ::fidl::Result {
+    final : public ::fidl::Status {
  public:
   explicit WireUnownedResult(
       ::fidl::UnownedClientEnd<::test_bindingsdenylist::ImportsSameNameContext>
@@ -1058,8 +1058,8 @@ class ::fidl::WireUnownedResult<
       ::fidl::internal::TransactionalRequest<
           ::test_bindingsdenylist::ImportsSameNameContext::Unattributed>*
           request);
-  explicit WireUnownedResult(const ::fidl::Result& result)
-      : ::fidl::Result(result) {}
+  explicit WireUnownedResult(const ::fidl::Status& result)
+      : ::fidl::Status(result) {}
   WireUnownedResult(WireUnownedResult&&) = delete;
   WireUnownedResult(const WireUnownedResult&) = delete;
   WireUnownedResult* operator=(WireUnownedResult&&) = delete;
@@ -1069,7 +1069,7 @@ class ::fidl::WireUnownedResult<
 template <>
 class ::fidl::WireResult<::test_bindingsdenylist::ImportsSameNameContext::
                              AlwaysAppearsInImportingLibrary>
-    final : public ::fidl::Result {
+    final : public ::fidl::Status {
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_bindingsdenylist::ImportsSameNameContext>
@@ -1077,7 +1077,7 @@ class ::fidl::WireResult<::test_bindingsdenylist::ImportsSameNameContext::
       ::fidl::internal::TransactionalRequest<
           ::test_bindingsdenylist::ImportsSameNameContext::
               AlwaysAppearsInImportingLibrary>* request);
-  explicit WireResult(const ::fidl::Result& result) : ::fidl::Result(result) {}
+  explicit WireResult(const ::fidl::Status& result) : ::fidl::Status(result) {}
   WireResult(WireResult&&) = delete;
   WireResult(const WireResult&) = delete;
   WireResult* operator=(WireResult&&) = delete;
@@ -1090,7 +1090,7 @@ template <>
 class ::fidl::WireUnownedResult<
     ::test_bindingsdenylist::ImportsSameNameContext::
         AlwaysAppearsInImportingLibrary>
-    final : public ::fidl::Result {
+    final : public ::fidl::Status {
  public:
   explicit WireUnownedResult(
       ::fidl::UnownedClientEnd<::test_bindingsdenylist::ImportsSameNameContext>
@@ -1099,8 +1099,8 @@ class ::fidl::WireUnownedResult<
       ::fidl::internal::TransactionalRequest<
           ::test_bindingsdenylist::ImportsSameNameContext::
               AlwaysAppearsInImportingLibrary>* request);
-  explicit WireUnownedResult(const ::fidl::Result& result)
-      : ::fidl::Result(result) {}
+  explicit WireUnownedResult(const ::fidl::Status& result)
+      : ::fidl::Status(result) {}
   WireUnownedResult(WireUnownedResult&&) = delete;
   WireUnownedResult(const WireUnownedResult&) = delete;
   WireUnownedResult* operator=(WireUnownedResult&&) = delete;
@@ -1140,7 +1140,7 @@ class ::fidl::WireSyncEventHandler<
   // Handle all possible events defined in this protocol.
   // Blocks to consume exactly one message from the channel, then call the
   // corresponding virtual method.
-  ::fidl::Result HandleOneEvent(
+  ::fidl::Status HandleOneEvent(
       ::fidl::UnownedClientEnd<::test_bindingsdenylist::ImportsSameNameContext>
           client_end);
 };
@@ -2517,7 +2517,7 @@ namespace test_bindingsdenylist {
 }  // namespace test_bindingsdenylist
 template <>
 class ::fidl::WireResult<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>
-    final : public ::fidl::Result {
+    final : public ::fidl::Status {
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_bindingsdenylist::DenyEachBinding> client,
@@ -2528,7 +2528,7 @@ class ::fidl::WireResult<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>
       ::fidl::internal::TransactionalRequest<
           ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>* request,
       zx_time_t _deadline);
-  explicit WireResult(const ::fidl::Result& result) : ::fidl::Result(result) {}
+  explicit WireResult(const ::fidl::Status& result) : ::fidl::Status(result) {}
   WireResult(WireResult&&) = delete;
   WireResult(const WireResult&) = delete;
   WireResult* operator=(WireResult&&) = delete;
@@ -2586,7 +2586,7 @@ class ::fidl::WireResult<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>
 template <>
 class ::fidl::WireUnownedResult<
     ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>
-    final : public ::fidl::Result {
+    final : public ::fidl::Status {
  public:
   explicit WireUnownedResult(
       ::fidl::UnownedClientEnd<::test_bindingsdenylist::DenyEachBinding>
@@ -2598,13 +2598,13 @@ class ::fidl::WireUnownedResult<
       ::fidl::internal::TransactionalResponse<
           ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>* response)
       : bytes_(reinterpret_cast<uint8_t*>(response)) {}
-  explicit WireUnownedResult(const ::fidl::Result& result)
-      : ::fidl::Result(result) {}
+  explicit WireUnownedResult(const ::fidl::Status& result)
+      : ::fidl::Status(result) {}
   explicit WireUnownedResult(
       ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<
           ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>>&& decoded,
       ::fidl::internal::IncomingTransportContext context)
-      : ::fidl::Result(decoded) {
+      : ::fidl::Status(decoded) {
     if (decoded.ok()) {
       bytes_ = reinterpret_cast<uint8_t*>(decoded.PrimaryObject());
     } else {
@@ -2670,7 +2670,7 @@ class ::fidl::WireUnownedResult<
 };
 template <>
 class ::fidl::WireResult<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>
-    final : public ::fidl::Result {
+    final : public ::fidl::Status {
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_bindingsdenylist::DenyEachBinding> client,
@@ -2681,7 +2681,7 @@ class ::fidl::WireResult<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>
       ::fidl::internal::TransactionalRequest<
           ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>* request,
       zx_time_t _deadline);
-  explicit WireResult(const ::fidl::Result& result) : ::fidl::Result(result) {}
+  explicit WireResult(const ::fidl::Status& result) : ::fidl::Status(result) {}
   WireResult(WireResult&&) = delete;
   WireResult(const WireResult&) = delete;
   WireResult* operator=(WireResult&&) = delete;
@@ -2739,7 +2739,7 @@ class ::fidl::WireResult<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>
 template <>
 class ::fidl::WireUnownedResult<
     ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>
-    final : public ::fidl::Result {
+    final : public ::fidl::Status {
  public:
   explicit WireUnownedResult(
       ::fidl::UnownedClientEnd<::test_bindingsdenylist::DenyEachBinding>
@@ -2751,13 +2751,13 @@ class ::fidl::WireUnownedResult<
       ::fidl::internal::TransactionalResponse<
           ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>* response)
       : bytes_(reinterpret_cast<uint8_t*>(response)) {}
-  explicit WireUnownedResult(const ::fidl::Result& result)
-      : ::fidl::Result(result) {}
+  explicit WireUnownedResult(const ::fidl::Status& result)
+      : ::fidl::Status(result) {}
   explicit WireUnownedResult(
       ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<
           ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>>&& decoded,
       ::fidl::internal::IncomingTransportContext context)
-      : ::fidl::Result(decoded) {
+      : ::fidl::Status(decoded) {
     if (decoded.ok()) {
       bytes_ = reinterpret_cast<uint8_t*>(decoded.PrimaryObject());
     } else {
@@ -2822,7 +2822,7 @@ class ::fidl::WireUnownedResult<
 template <>
 class ::fidl::WireResult<
     ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>
-    final : public ::fidl::Result {
+    final : public ::fidl::Status {
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_bindingsdenylist::DenyEachBinding> client,
@@ -2834,7 +2834,7 @@ class ::fidl::WireResult<
       ::fidl::internal::TransactionalRequest<
           ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>* request,
       zx_time_t _deadline);
-  explicit WireResult(const ::fidl::Result& result) : ::fidl::Result(result) {}
+  explicit WireResult(const ::fidl::Status& result) : ::fidl::Status(result) {}
   WireResult(WireResult&&) = delete;
   WireResult(const WireResult&) = delete;
   WireResult* operator=(WireResult&&) = delete;
@@ -2896,7 +2896,7 @@ class ::fidl::WireResult<
 template <>
 class ::fidl::WireUnownedResult<
     ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>
-    final : public ::fidl::Result {
+    final : public ::fidl::Status {
  public:
   explicit WireUnownedResult(
       ::fidl::UnownedClientEnd<::test_bindingsdenylist::DenyEachBinding>
@@ -2910,14 +2910,14 @@ class ::fidl::WireUnownedResult<
           ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>*
           response)
       : bytes_(reinterpret_cast<uint8_t*>(response)) {}
-  explicit WireUnownedResult(const ::fidl::Result& result)
-      : ::fidl::Result(result) {}
+  explicit WireUnownedResult(const ::fidl::Status& result)
+      : ::fidl::Status(result) {}
   explicit WireUnownedResult(
       ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<
           ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>>&&
           decoded,
       ::fidl::internal::IncomingTransportContext context)
-      : ::fidl::Result(decoded) {
+      : ::fidl::Status(decoded) {
     if (decoded.ok()) {
       bytes_ = reinterpret_cast<uint8_t*>(decoded.PrimaryObject());
     } else {
@@ -2987,7 +2987,7 @@ class ::fidl::WireUnownedResult<
 };
 template <>
 class ::fidl::WireResult<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>
-    final : public ::fidl::Result {
+    final : public ::fidl::Status {
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_bindingsdenylist::DenyEachBinding> client,
@@ -2998,7 +2998,7 @@ class ::fidl::WireResult<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>
       ::fidl::internal::TransactionalRequest<
           ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>* request,
       zx_time_t _deadline);
-  explicit WireResult(const ::fidl::Result& result) : ::fidl::Result(result) {}
+  explicit WireResult(const ::fidl::Status& result) : ::fidl::Status(result) {}
   WireResult(WireResult&&) = delete;
   WireResult(const WireResult&) = delete;
   WireResult* operator=(WireResult&&) = delete;
@@ -3056,7 +3056,7 @@ class ::fidl::WireResult<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>
 template <>
 class ::fidl::WireUnownedResult<
     ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>
-    final : public ::fidl::Result {
+    final : public ::fidl::Status {
  public:
   explicit WireUnownedResult(
       ::fidl::UnownedClientEnd<::test_bindingsdenylist::DenyEachBinding>
@@ -3068,13 +3068,13 @@ class ::fidl::WireUnownedResult<
       ::fidl::internal::TransactionalResponse<
           ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>* response)
       : bytes_(reinterpret_cast<uint8_t*>(response)) {}
-  explicit WireUnownedResult(const ::fidl::Result& result)
-      : ::fidl::Result(result) {}
+  explicit WireUnownedResult(const ::fidl::Status& result)
+      : ::fidl::Status(result) {}
   explicit WireUnownedResult(
       ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<
           ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>>&& decoded,
       ::fidl::internal::IncomingTransportContext context)
-      : ::fidl::Result(decoded) {
+      : ::fidl::Status(decoded) {
     if (decoded.ok()) {
       bytes_ = reinterpret_cast<uint8_t*>(decoded.PrimaryObject());
     } else {
@@ -3141,7 +3141,7 @@ class ::fidl::WireUnownedResult<
 template <>
 class ::fidl::WireResult<
     ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>
-    final : public ::fidl::Result {
+    final : public ::fidl::Status {
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_bindingsdenylist::DenyEachBinding> client,
@@ -3153,7 +3153,7 @@ class ::fidl::WireResult<
       ::fidl::internal::TransactionalRequest<
           ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>* request,
       zx_time_t _deadline);
-  explicit WireResult(const ::fidl::Result& result) : ::fidl::Result(result) {}
+  explicit WireResult(const ::fidl::Status& result) : ::fidl::Status(result) {}
   WireResult(WireResult&&) = delete;
   WireResult(const WireResult&) = delete;
   WireResult* operator=(WireResult&&) = delete;
@@ -3215,7 +3215,7 @@ class ::fidl::WireResult<
 template <>
 class ::fidl::WireUnownedResult<
     ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>
-    final : public ::fidl::Result {
+    final : public ::fidl::Status {
  public:
   explicit WireUnownedResult(
       ::fidl::UnownedClientEnd<::test_bindingsdenylist::DenyEachBinding>
@@ -3229,14 +3229,14 @@ class ::fidl::WireUnownedResult<
           ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>*
           response)
       : bytes_(reinterpret_cast<uint8_t*>(response)) {}
-  explicit WireUnownedResult(const ::fidl::Result& result)
-      : ::fidl::Result(result) {}
+  explicit WireUnownedResult(const ::fidl::Status& result)
+      : ::fidl::Status(result) {}
   explicit WireUnownedResult(
       ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<
           ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>>&&
           decoded,
       ::fidl::internal::IncomingTransportContext context)
-      : ::fidl::Result(decoded) {
+      : ::fidl::Status(decoded) {
     if (decoded.ok()) {
       bytes_ = reinterpret_cast<uint8_t*>(decoded.PrimaryObject());
     } else {
@@ -3335,7 +3335,7 @@ class ::fidl::WireSyncEventHandler<::test_bindingsdenylist::DenyEachBinding>
   // Handle all possible events defined in this protocol.
   // Blocks to consume exactly one message from the channel, then call the
   // corresponding virtual method.
-  ::fidl::Result HandleOneEvent(
+  ::fidl::Status HandleOneEvent(
       ::fidl::UnownedClientEnd<::test_bindingsdenylist::DenyEachBinding>
           client_end);
 };
@@ -4134,11 +4134,11 @@ class ::fidl::internal::WireWeakOnewayClientImpl<
 
   // Allocates 32 bytes of message buffer on the stack. No heap allocation
   // necessary.
-  ::fidl::Result Unattributed();
+  ::fidl::Status Unattributed();
 
   // Allocates 32 bytes of message buffer on the stack. No heap allocation
   // necessary.
-  ::fidl::Result AlwaysAppearsInImportingLibrary();
+  ::fidl::Status AlwaysAppearsInImportingLibrary();
 };
 
 template <>
@@ -4158,10 +4158,10 @@ class ::fidl::internal::WireWeakOnewayBufferClientImpl<
   using BufferClientImplBase::BufferClientImplBase;
 
   // Caller provides the backing storage for FIDL message.
-  ::fidl::Result Unattributed();
+  ::fidl::Status Unattributed();
 
   // Caller provides the backing storage for FIDL message.
-  ::fidl::Result AlwaysAppearsInImportingLibrary();
+  ::fidl::Status AlwaysAppearsInImportingLibrary();
 };
 
 template <>

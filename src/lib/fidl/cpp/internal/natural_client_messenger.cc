@@ -6,7 +6,7 @@
 #include <lib/fidl/cpp/internal/natural_client_messenger.h>
 #include <lib/fidl/llcpp/client_base.h>
 #include <lib/fidl/llcpp/message.h>
-#include <lib/fidl/llcpp/result.h>
+#include <lib/fidl/llcpp/status.h>
 
 namespace fidl {
 namespace internal {
@@ -16,7 +16,7 @@ void NaturalClientMessenger::TwoWay(fidl::OutgoingMessage message,
   client_base_->SendTwoWay(message, context);
 }
 
-fidl::Result NaturalClientMessenger::OneWay(fidl::OutgoingMessage message) const {
+fidl::Status NaturalClientMessenger::OneWay(fidl::OutgoingMessage message) const {
   return client_base_->SendOneWay(message);
 }
 

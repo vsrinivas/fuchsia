@@ -6,7 +6,7 @@
 #define LIB_FIDL_LLCPP_TRANSACTION_H_
 
 #include <lib/fidl/llcpp/message_storage.h>
-#include <lib/fidl/llcpp/result.h>
+#include <lib/fidl/llcpp/status.h>
 #include <lib/fidl/llcpp/traits.h>
 #include <lib/fidl/txn_header.h>
 #include <zircon/assert.h>
@@ -167,7 +167,7 @@ class CompleterBase {
   // callback will be triggered with a detailed reason. As such, this accessor
   // is only useful when one needs to determine which particular method reply
   // failed, and can be ignored in general use.
-  fidl::Result result_of_reply() const;
+  fidl::Status result_of_reply() const;
 
   // TODO(fxbug.dev/60240): Use composition instead of inheriting all completers
   // from |CompleterBase|. This method is unnecessarily exposed to the user.
@@ -219,7 +219,7 @@ class CompleterBase {
   void DropTransaction();
 
   Transaction* transaction_;
-  std::optional<fidl::Result> reply_result_;
+  std::optional<fidl::Status> reply_result_;
   bool owned_;
   bool needs_to_reply_;
 

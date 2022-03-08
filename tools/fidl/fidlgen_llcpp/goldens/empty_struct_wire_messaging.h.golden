@@ -479,12 +479,12 @@ namespace test_emptystruct {
 }  // namespace test_emptystruct
 template <>
 class ::fidl::WireResult<::test_emptystruct::EmptyProtocol::Send> final
-    : public ::fidl::Result {
+    : public ::fidl::Status {
  public:
   WireResult(::fidl::UnownedClientEnd<::test_emptystruct::EmptyProtocol> client,
              ::fidl::internal::TransactionalRequest<
                  ::test_emptystruct::EmptyProtocol::Send>* request);
-  explicit WireResult(const ::fidl::Result& result) : ::fidl::Result(result) {}
+  explicit WireResult(const ::fidl::Status& result) : ::fidl::Status(result) {}
   WireResult(WireResult&&) = delete;
   WireResult(const WireResult&) = delete;
   WireResult* operator=(WireResult&&) = delete;
@@ -495,15 +495,15 @@ class ::fidl::WireResult<::test_emptystruct::EmptyProtocol::Send> final
 };
 template <>
 class ::fidl::WireUnownedResult<::test_emptystruct::EmptyProtocol::Send> final
-    : public ::fidl::Result {
+    : public ::fidl::Status {
  public:
   explicit WireUnownedResult(
       ::fidl::UnownedClientEnd<::test_emptystruct::EmptyProtocol> client_end,
       ::fidl::internal::AnyBufferAllocator& allocator,
       ::fidl::internal::TransactionalRequest<
           ::test_emptystruct::EmptyProtocol::Send>* request);
-  explicit WireUnownedResult(const ::fidl::Result& result)
-      : ::fidl::Result(result) {}
+  explicit WireUnownedResult(const ::fidl::Status& result)
+      : ::fidl::Status(result) {}
   WireUnownedResult(WireUnownedResult&&) = delete;
   WireUnownedResult(const WireUnownedResult&) = delete;
   WireUnownedResult* operator=(WireUnownedResult&&) = delete;
@@ -512,7 +512,7 @@ class ::fidl::WireUnownedResult<::test_emptystruct::EmptyProtocol::Send> final
 };
 template <>
 class ::fidl::WireResult<::test_emptystruct::EmptyProtocol::SendAndReceive>
-    final : public ::fidl::Result {
+    final : public ::fidl::Status {
  public:
   WireResult(::fidl::UnownedClientEnd<::test_emptystruct::EmptyProtocol> client,
              ::fidl::internal::TransactionalRequest<
@@ -521,7 +521,7 @@ class ::fidl::WireResult<::test_emptystruct::EmptyProtocol::SendAndReceive>
              ::fidl::internal::TransactionalRequest<
                  ::test_emptystruct::EmptyProtocol::SendAndReceive>* request,
              zx_time_t _deadline);
-  explicit WireResult(const ::fidl::Result& result) : ::fidl::Result(result) {}
+  explicit WireResult(const ::fidl::Status& result) : ::fidl::Status(result) {}
   WireResult(WireResult&&) = delete;
   WireResult(const WireResult&) = delete;
   WireResult* operator=(WireResult&&) = delete;
@@ -575,7 +575,7 @@ class ::fidl::WireResult<::test_emptystruct::EmptyProtocol::SendAndReceive>
 template <>
 class ::fidl::WireUnownedResult<
     ::test_emptystruct::EmptyProtocol::SendAndReceive>
-    final : public ::fidl::Result {
+    final : public ::fidl::Status {
  public:
   explicit WireUnownedResult(
       ::fidl::UnownedClientEnd<::test_emptystruct::EmptyProtocol> client_end,
@@ -586,13 +586,13 @@ class ::fidl::WireUnownedResult<
       ::fidl::internal::TransactionalResponse<
           ::test_emptystruct::EmptyProtocol::SendAndReceive>* response)
       : bytes_(reinterpret_cast<uint8_t*>(response)) {}
-  explicit WireUnownedResult(const ::fidl::Result& result)
-      : ::fidl::Result(result) {}
+  explicit WireUnownedResult(const ::fidl::Status& result)
+      : ::fidl::Status(result) {}
   explicit WireUnownedResult(
       ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<
           ::test_emptystruct::EmptyProtocol::SendAndReceive>>&& decoded,
       ::fidl::internal::IncomingTransportContext context)
-      : ::fidl::Result(decoded) {
+      : ::fidl::Status(decoded) {
     if (decoded.ok()) {
       bytes_ = reinterpret_cast<uint8_t*>(decoded.PrimaryObject());
     } else {
@@ -683,7 +683,7 @@ class ::fidl::WireSyncEventHandler<::test_emptystruct::EmptyProtocol>
   // Handle all possible events defined in this protocol.
   // Blocks to consume exactly one message from the channel, then call the
   // corresponding virtual method.
-  ::fidl::Result HandleOneEvent(
+  ::fidl::Status HandleOneEvent(
       ::fidl::UnownedClientEnd<::test_emptystruct::EmptyProtocol> client_end);
 };
 
@@ -881,7 +881,7 @@ class ::fidl::internal::WireWeakOnewayClientImpl<
 
   // Allocates 40 bytes of message buffer on the stack. No heap allocation
   // necessary.
-  ::fidl::Result Send(const ::test_emptystruct::wire::Empty& e);
+  ::fidl::Status Send(const ::test_emptystruct::wire::Empty& e);
 };
 
 template <>
@@ -913,7 +913,7 @@ class ::fidl::internal::WireWeakOnewayBufferClientImpl<
   using BufferClientImplBase::BufferClientImplBase;
 
   // Caller provides the backing storage for FIDL message.
-  ::fidl::Result Send(const ::test_emptystruct::wire::Empty& e);
+  ::fidl::Status Send(const ::test_emptystruct::wire::Empty& e);
 };
 
 template <>
@@ -954,7 +954,7 @@ class ::fidl::internal::WireWeakEventSender<::test_emptystruct::EmptyProtocol>
  public:
   using WeakEventSenderBase::WeakEventSenderBase;
 
-  fidl::Result Receive(const ::test_emptystruct::wire::Empty& e);
+  fidl::Status Receive(const ::test_emptystruct::wire::Empty& e);
 };
 
 template <>
@@ -964,7 +964,7 @@ class ::fidl::internal::WireWeakBufferEventSender<
  public:
   using WeakBufferEventSenderBase::WeakBufferEventSenderBase;
 
-  fidl::Result Receive(const ::test_emptystruct::wire::Empty& e);
+  fidl::Status Receive(const ::test_emptystruct::wire::Empty& e);
 };
 
 template <>
@@ -975,7 +975,7 @@ class ::fidl::internal::WireEventSender<::test_emptystruct::EmptyProtocol>
  public:
   using SyncEndpointManagedVeneer::SyncEndpointManagedVeneer;
 
-  fidl::Result Receive(const ::test_emptystruct::wire::Empty& e);
+  fidl::Status Receive(const ::test_emptystruct::wire::Empty& e);
 };
 
 template <>
@@ -986,6 +986,6 @@ class ::fidl::internal::WireBufferEventSender<::test_emptystruct::EmptyProtocol>
  public:
   using SyncEndpointBufferVeneer::SyncEndpointBufferVeneer;
 
-  fidl::Result Receive(const ::test_emptystruct::wire::Empty& e);
+  fidl::Status Receive(const ::test_emptystruct::wire::Empty& e);
 };
 #endif  // __Fuchsia__

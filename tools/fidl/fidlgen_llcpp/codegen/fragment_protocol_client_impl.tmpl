@@ -202,9 +202,9 @@ void {{ $.NaturalClientImpl.NoLeading }}::{{ .Name }}(
 {{ $.NaturalClientImpl.NoLeading }}::{{ .Name }}(
     {{- template "Method:ClientRequestArgumentsOneWay:Helper" . }}) const {
   ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport> _encoder{ {{ .OrdinalName }} };
-  ::fidl::Result result = messenger().OneWay(::fidl::internal::EncodeTransactionalMessage(
+  ::fidl::Status status = messenger().OneWay(::fidl::internal::EncodeTransactionalMessage(
     _encoder {{- if .HasRequestPayload }}, std::move(payload){{ end }}));
-  return ::fidl::internal::ToFitxResult(result);
+  return ::fidl::internal::ToFitxResult(status);
 }
 {{ end }}
 

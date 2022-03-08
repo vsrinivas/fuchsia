@@ -9,7 +9,7 @@
 
 namespace fidl {
 
-class Result;
+class Status;
 class OutgoingMessage;
 
 namespace internal {
@@ -39,7 +39,7 @@ class NaturalClientMessenger {
   // Sends a one way message.
   //
   // Any send-time errors are propagated via the return value.
-  fidl::Result OneWay(fidl::OutgoingMessage message) const;
+  fidl::Status OneWay(fidl::OutgoingMessage message) const;
 
  private:
   // The client messaging implementation.

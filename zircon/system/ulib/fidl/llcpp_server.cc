@@ -25,7 +25,7 @@ namespace internal {
       zx_status_t decode_status =
           begin->dispatch(impl, std::move(msg), std::move(transport_context), txn);
       if (unlikely(decode_status != ZX_OK)) {
-        txn->InternalError(UnbindInfo{fidl::Result::DecodeError(decode_status)},
+        txn->InternalError(UnbindInfo{fidl::Status::DecodeError(decode_status)},
                            fidl::ErrorOrigin::kReceive);
       }
       return ::fidl::DispatchResult::kFound;
@@ -50,7 +50,7 @@ void Dispatch(void* impl, ::fidl::IncomingMessage& msg,
   }
 }
 
-::fidl::Result WeakEventSenderInner::SendEvent(::fidl::OutgoingMessage& message) const {
+::fidl::Status WeakEventSenderInner::SendEvent(::fidl::OutgoingMessage& message) const {
   if (auto binding = binding_.lock()) {
     message.set_txid(0);
     message.Write(binding->transport());
@@ -58,12 +58,12 @@ void Dispatch(void* impl, ::fidl::IncomingMessage& msg,
       HandleSendError(message.error());
       return message.error();
     }
-    return fidl::Result::Ok();
+    return fidl::Status::Ok();
   }
-  return fidl::Result::Unbound();
+  return fidl::Status::Unbound();
 }
 
-void WeakEventSenderInner::HandleSendError(fidl::Result error) const {
+void WeakEventSenderInner::HandleSendError(fidl::Status error) const {
   if (auto binding = binding_.lock()) {
     binding->HandleError(std::move(binding), {UnbindInfo{error}, ErrorOrigin::kSend});
   }

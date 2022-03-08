@@ -12,12 +12,12 @@
     //
   {{- end }}
   // {{- template "Method:ClientAllocationComment:Helper" . }}
-  ::fidl::Result {{ .Name }}({{ RenderParams .RequestArgs }});
+  ::fidl::Status {{ .Name }}({{ RenderParams .RequestArgs }});
 {{- end }}
 
 
 {{- define "Method:WireWeakOnewayClientImpl:WireMessagingSource" }}
-  ::fidl::Result {{ .Protocol.WireWeakOnewayClientImpl.NoLeading }}::{{ .Name }}(
+  ::fidl::Status {{ .Protocol.WireWeakOnewayClientImpl.NoLeading }}::{{ .Name }}(
         {{- RenderParams .RequestArgs }}) {
     FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
     {{ .WireTransactionalRequest }} _request_object{ {{ RenderForwardParams .RequestArgs }} };

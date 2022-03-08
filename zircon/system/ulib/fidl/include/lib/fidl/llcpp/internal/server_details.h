@@ -11,7 +11,7 @@
 #include <lib/fidl/llcpp/internal/transport.h>
 #include <lib/fidl/llcpp/message.h>
 #include <lib/fidl/llcpp/message_storage.h>
-#include <lib/fidl/llcpp/result.h>
+#include <lib/fidl/llcpp/status.h>
 #include <lib/fidl/llcpp/transaction.h>
 #include <lib/fidl/llcpp/wire_messaging_declarations.h>
 
@@ -99,10 +99,10 @@ class WeakEventSenderInner {
   // |message| will have its transaction ID set to zero.
   //
   // Errors are returned to the caller.
-  fidl::Result SendEvent(::fidl::OutgoingMessage& message) const;
+  fidl::Status SendEvent(::fidl::OutgoingMessage& message) const;
 
   // Handles errors in sending events. This may lead to binding teardown.
-  void HandleSendError(fidl::Result error) const;
+  void HandleSendError(fidl::Status error) const;
 
   const std::weak_ptr<::fidl::internal::AsyncServerBinding>& binding() const { return binding_; }
 

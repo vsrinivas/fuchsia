@@ -713,13 +713,13 @@ namespace test_unknowninteractions {
 }  // namespace test_unknowninteractions
 template <>
 class ::fidl::WireResult<::test_unknowninteractions::Example::StrictOneWay>
-    final : public ::fidl::Result {
+    final : public ::fidl::Status {
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_unknowninteractions::Example> client,
       ::fidl::internal::TransactionalRequest<
           ::test_unknowninteractions::Example::StrictOneWay>* request);
-  explicit WireResult(const ::fidl::Result& result) : ::fidl::Result(result) {}
+  explicit WireResult(const ::fidl::Status& result) : ::fidl::Status(result) {}
   WireResult(WireResult&&) = delete;
   WireResult(const WireResult&) = delete;
   WireResult* operator=(WireResult&&) = delete;
@@ -731,15 +731,15 @@ class ::fidl::WireResult<::test_unknowninteractions::Example::StrictOneWay>
 template <>
 class ::fidl::WireUnownedResult<
     ::test_unknowninteractions::Example::StrictOneWay>
-    final : public ::fidl::Result {
+    final : public ::fidl::Status {
  public:
   explicit WireUnownedResult(
       ::fidl::UnownedClientEnd<::test_unknowninteractions::Example> client_end,
       ::fidl::internal::AnyBufferAllocator& allocator,
       ::fidl::internal::TransactionalRequest<
           ::test_unknowninteractions::Example::StrictOneWay>* request);
-  explicit WireUnownedResult(const ::fidl::Result& result)
-      : ::fidl::Result(result) {}
+  explicit WireUnownedResult(const ::fidl::Status& result)
+      : ::fidl::Status(result) {}
   WireUnownedResult(WireUnownedResult&&) = delete;
   WireUnownedResult(const WireUnownedResult&) = delete;
   WireUnownedResult* operator=(WireUnownedResult&&) = delete;
@@ -748,13 +748,13 @@ class ::fidl::WireUnownedResult<
 };
 template <>
 class ::fidl::WireResult<::test_unknowninteractions::Example::FlexibleOneWay>
-    final : public ::fidl::Result {
+    final : public ::fidl::Status {
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_unknowninteractions::Example> client,
       ::fidl::internal::TransactionalRequest<
           ::test_unknowninteractions::Example::FlexibleOneWay>* request);
-  explicit WireResult(const ::fidl::Result& result) : ::fidl::Result(result) {}
+  explicit WireResult(const ::fidl::Status& result) : ::fidl::Status(result) {}
   WireResult(WireResult&&) = delete;
   WireResult(const WireResult&) = delete;
   WireResult* operator=(WireResult&&) = delete;
@@ -766,15 +766,15 @@ class ::fidl::WireResult<::test_unknowninteractions::Example::FlexibleOneWay>
 template <>
 class ::fidl::WireUnownedResult<
     ::test_unknowninteractions::Example::FlexibleOneWay>
-    final : public ::fidl::Result {
+    final : public ::fidl::Status {
  public:
   explicit WireUnownedResult(
       ::fidl::UnownedClientEnd<::test_unknowninteractions::Example> client_end,
       ::fidl::internal::AnyBufferAllocator& allocator,
       ::fidl::internal::TransactionalRequest<
           ::test_unknowninteractions::Example::FlexibleOneWay>* request);
-  explicit WireUnownedResult(const ::fidl::Result& result)
-      : ::fidl::Result(result) {}
+  explicit WireUnownedResult(const ::fidl::Status& result)
+      : ::fidl::Status(result) {}
   WireUnownedResult(WireUnownedResult&&) = delete;
   WireUnownedResult(const WireUnownedResult&) = delete;
   WireUnownedResult* operator=(WireUnownedResult&&) = delete;
@@ -783,7 +783,7 @@ class ::fidl::WireUnownedResult<
 };
 template <>
 class ::fidl::WireResult<::test_unknowninteractions::Example::StrictTwoWay>
-    final : public ::fidl::Result {
+    final : public ::fidl::Status {
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_unknowninteractions::Example> client,
@@ -794,7 +794,7 @@ class ::fidl::WireResult<::test_unknowninteractions::Example::StrictTwoWay>
       ::fidl::internal::TransactionalRequest<
           ::test_unknowninteractions::Example::StrictTwoWay>* request,
       zx_time_t _deadline);
-  explicit WireResult(const ::fidl::Result& result) : ::fidl::Result(result) {}
+  explicit WireResult(const ::fidl::Status& result) : ::fidl::Status(result) {}
   WireResult(WireResult&&) = delete;
   WireResult(const WireResult&) = delete;
   WireResult* operator=(WireResult&&) = delete;
@@ -807,7 +807,7 @@ class ::fidl::WireResult<::test_unknowninteractions::Example::StrictTwoWay>
 template <>
 class ::fidl::WireUnownedResult<
     ::test_unknowninteractions::Example::StrictTwoWay>
-    final : public ::fidl::Result {
+    final : public ::fidl::Status {
  public:
   explicit WireUnownedResult(
       ::fidl::UnownedClientEnd<::test_unknowninteractions::Example> client_end,
@@ -818,13 +818,13 @@ class ::fidl::WireUnownedResult<
       ::fidl::internal::TransactionalResponse<
           ::test_unknowninteractions::Example::StrictTwoWay>* response)
       : bytes_(reinterpret_cast<uint8_t*>(response)) {}
-  explicit WireUnownedResult(const ::fidl::Result& result)
-      : ::fidl::Result(result) {}
+  explicit WireUnownedResult(const ::fidl::Status& result)
+      : ::fidl::Status(result) {}
   explicit WireUnownedResult(
       ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<
           ::test_unknowninteractions::Example::StrictTwoWay>>&& decoded,
       ::fidl::internal::IncomingTransportContext context)
-      : ::fidl::Result(decoded) {
+      : ::fidl::Status(decoded) {
     if (decoded.ok()) {
       bytes_ = reinterpret_cast<uint8_t*>(decoded.PrimaryObject());
     } else {
@@ -843,7 +843,7 @@ class ::fidl::WireUnownedResult<
 };
 template <>
 class ::fidl::WireResult<::test_unknowninteractions::Example::FlexibleTwoWay>
-    final : public ::fidl::Result {
+    final : public ::fidl::Status {
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_unknowninteractions::Example> client,
@@ -854,7 +854,7 @@ class ::fidl::WireResult<::test_unknowninteractions::Example::FlexibleTwoWay>
       ::fidl::internal::TransactionalRequest<
           ::test_unknowninteractions::Example::FlexibleTwoWay>* request,
       zx_time_t _deadline);
-  explicit WireResult(const ::fidl::Result& result) : ::fidl::Result(result) {}
+  explicit WireResult(const ::fidl::Status& result) : ::fidl::Status(result) {}
   WireResult(WireResult&&) = delete;
   WireResult(const WireResult&) = delete;
   WireResult* operator=(WireResult&&) = delete;
@@ -867,7 +867,7 @@ class ::fidl::WireResult<::test_unknowninteractions::Example::FlexibleTwoWay>
 template <>
 class ::fidl::WireUnownedResult<
     ::test_unknowninteractions::Example::FlexibleTwoWay>
-    final : public ::fidl::Result {
+    final : public ::fidl::Status {
  public:
   explicit WireUnownedResult(
       ::fidl::UnownedClientEnd<::test_unknowninteractions::Example> client_end,
@@ -878,13 +878,13 @@ class ::fidl::WireUnownedResult<
       ::fidl::internal::TransactionalResponse<
           ::test_unknowninteractions::Example::FlexibleTwoWay>* response)
       : bytes_(reinterpret_cast<uint8_t*>(response)) {}
-  explicit WireUnownedResult(const ::fidl::Result& result)
-      : ::fidl::Result(result) {}
+  explicit WireUnownedResult(const ::fidl::Status& result)
+      : ::fidl::Status(result) {}
   explicit WireUnownedResult(
       ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<
           ::test_unknowninteractions::Example::FlexibleTwoWay>>&& decoded,
       ::fidl::internal::IncomingTransportContext context)
-      : ::fidl::Result(decoded) {
+      : ::fidl::Status(decoded) {
     if (decoded.ok()) {
       bytes_ = reinterpret_cast<uint8_t*>(decoded.PrimaryObject());
     } else {
@@ -938,7 +938,7 @@ class ::fidl::WireSyncEventHandler<::test_unknowninteractions::Example>
   // Handle all possible events defined in this protocol.
   // Blocks to consume exactly one message from the channel, then call the
   // corresponding virtual method.
-  ::fidl::Result HandleOneEvent(
+  ::fidl::Status HandleOneEvent(
       ::fidl::UnownedClientEnd<::test_unknowninteractions::Example> client_end);
 };
 
@@ -1250,11 +1250,11 @@ class ::fidl::internal::WireWeakOnewayClientImpl<
 
   // Allocates 32 bytes of message buffer on the stack. No heap allocation
   // necessary.
-  ::fidl::Result StrictOneWay();
+  ::fidl::Status StrictOneWay();
 
   // Allocates 32 bytes of message buffer on the stack. No heap allocation
   // necessary.
-  ::fidl::Result FlexibleOneWay();
+  ::fidl::Status FlexibleOneWay();
 };
 
 template <>
@@ -1286,10 +1286,10 @@ class ::fidl::internal::WireWeakOnewayBufferClientImpl<
   using BufferClientImplBase::BufferClientImplBase;
 
   // Caller provides the backing storage for FIDL message.
-  ::fidl::Result StrictOneWay();
+  ::fidl::Status StrictOneWay();
 
   // Caller provides the backing storage for FIDL message.
-  ::fidl::Result FlexibleOneWay();
+  ::fidl::Status FlexibleOneWay();
 };
 
 template <>
@@ -1339,9 +1339,9 @@ class ::fidl::internal::WireWeakEventSender<::test_unknowninteractions::Example>
  public:
   using WeakEventSenderBase::WeakEventSenderBase;
 
-  fidl::Result StrictEvent();
+  fidl::Status StrictEvent();
 
-  fidl::Result FlexibleEvent();
+  fidl::Status FlexibleEvent();
 };
 
 template <>
@@ -1351,9 +1351,9 @@ class ::fidl::internal::WireWeakBufferEventSender<
  public:
   using WeakBufferEventSenderBase::WeakBufferEventSenderBase;
 
-  fidl::Result StrictEvent();
+  fidl::Status StrictEvent();
 
-  fidl::Result FlexibleEvent();
+  fidl::Status FlexibleEvent();
 };
 
 template <>
@@ -1364,9 +1364,9 @@ class ::fidl::internal::WireEventSender<::test_unknowninteractions::Example>
  public:
   using SyncEndpointManagedVeneer::SyncEndpointManagedVeneer;
 
-  fidl::Result StrictEvent();
+  fidl::Status StrictEvent();
 
-  fidl::Result FlexibleEvent();
+  fidl::Status FlexibleEvent();
 };
 
 template <>
@@ -1378,8 +1378,8 @@ class ::fidl::internal::WireBufferEventSender<
  public:
   using SyncEndpointBufferVeneer::SyncEndpointBufferVeneer;
 
-  fidl::Result StrictEvent();
+  fidl::Status StrictEvent();
 
-  fidl::Result FlexibleEvent();
+  fidl::Status FlexibleEvent();
 };
 #endif  // __Fuchsia__

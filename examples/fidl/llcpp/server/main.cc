@@ -46,8 +46,8 @@ class EchoImpl final : public fidl::WireServer<fuchsia_examples::Echo> {
   // Handle a SendString request by sending on OnString event with the request value. For
   // fire and forget methods, the completer can be used to close the channel with an epitaph.
   void SendString(SendStringRequestView request, SendStringCompleter::Sync& completer) override {
-    fidl::Result result = fidl::WireSendEvent(binding_)->OnString(request->value);
-    ZX_ASSERT(result.ok());
+    fidl::Status status = fidl::WireSendEvent(binding_)->OnString(request->value);
+    ZX_ASSERT(status.ok());
   }
 
   // Handle an EchoString request by responding with the request value. For two-way

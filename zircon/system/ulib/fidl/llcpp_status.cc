@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/fidl/llcpp/result.h>
+#include <lib/fidl/llcpp/status.h>
 #include <lib/fit/nullable.h>
 #include <lib/stdcompat/string_view.h>
 #include <zircon/compiler.h>
@@ -32,17 +32,17 @@ namespace {
 // If the description exceeds this length at runtime,
 // the output will be truncated.
 // We can increase the size if necessary.
-using ResultFormattingBuffer = std::array<char, 256>;
+using StatusFormattingBuffer = std::array<char, 256>;
 
 }  // namespace
 
-[[nodiscard]] std::string Result::FormatDescription() const {
-  ResultFormattingBuffer buf;
+[[nodiscard]] std::string Status::FormatDescription() const {
+  StatusFormattingBuffer buf;
   size_t length = FormatImpl(buf.begin(), sizeof(buf), /* from_unbind_info */ false);
   return std::string(buf.begin(), length);
 }
 
-[[nodiscard]] const char* Result::lossy_description() const {
+[[nodiscard]] const char* Status::lossy_description() const {
   // If an error string was explicitly specified, use that.
   if (error_) {
     return error_;
@@ -51,7 +51,7 @@ using ResultFormattingBuffer = std::array<char, 256>;
   return reason_description();
 }
 
-[[nodiscard]] const char* Result::reason_description() const {
+[[nodiscard]] const char* Status::reason_description() const {
   // The error descriptions are quite terse to save binary size.
   switch (reason_) {
     case internal::kUninitializedReason:
@@ -75,7 +75,7 @@ using ResultFormattingBuffer = std::array<char, 256>;
   }
 }
 
-size_t Result::FormatImpl(char* destination, size_t length, bool from_unbind_info) const {
+size_t Status::FormatImpl(char* destination, size_t length, bool from_unbind_info) const {
   // We use |snprintf| since it minimizes allocation and is faster
   // than output streams.
   if (!from_unbind_info && status_ == ZX_OK && reason_ == internal::kUninitializedReason) {
@@ -114,22 +114,22 @@ size_t Result::FormatImpl(char* destination, size_t length, bool from_unbind_inf
 #endif  // __Fuchsia__
 }
 
-std::ostream& operator<<(std::ostream& ostream, const Result& result) {
-  ResultFormattingBuffer buf;
+std::ostream& operator<<(std::ostream& ostream, const Status& result) {
+  StatusFormattingBuffer buf;
   size_t length = result.FormatImpl(buf.begin(), sizeof(buf), /* from_unbind_info */ false);
   ostream << cpp17::string_view(buf.begin(), length);
   return ostream;
 }
 
 [[nodiscard]] std::string UnbindInfo::FormatDescription() const {
-  ResultFormattingBuffer buf;
+  StatusFormattingBuffer buf;
   size_t length = FormatImpl(buf.begin(), sizeof(buf), /* from_unbind_info */ true);
   return std::string(buf.begin(), length);
 }
 
 std::ostream& operator<<(std::ostream& ostream, const UnbindInfo& info) {
-  ResultFormattingBuffer buf;
-  size_t length = info.Result::FormatImpl(buf.begin(), sizeof(buf), /* from_unbind_info */ true);
+  StatusFormattingBuffer buf;
+  size_t length = info.Status::FormatImpl(buf.begin(), sizeof(buf), /* from_unbind_info */ true);
   ostream << cpp17::string_view(buf.begin(), length);
   return ostream;
 }

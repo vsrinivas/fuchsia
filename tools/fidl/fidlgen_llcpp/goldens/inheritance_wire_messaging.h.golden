@@ -252,7 +252,7 @@ namespace test_inheritance {
 }  // namespace test_inheritance
 template <>
 class ::fidl::WireResult<::test_inheritance::Super::Foo> final
-    : public ::fidl::Result {
+    : public ::fidl::Status {
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_inheritance::Super> client,
@@ -263,7 +263,7 @@ class ::fidl::WireResult<::test_inheritance::Super::Foo> final
       ::fidl::internal::TransactionalRequest<::test_inheritance::Super::Foo>*
           request,
       zx_time_t _deadline);
-  explicit WireResult(const ::fidl::Result& result) : ::fidl::Result(result) {}
+  explicit WireResult(const ::fidl::Status& result) : ::fidl::Status(result) {}
   WireResult(WireResult&&) = delete;
   WireResult(const WireResult&) = delete;
   WireResult* operator=(WireResult&&) = delete;
@@ -310,7 +310,7 @@ class ::fidl::WireResult<::test_inheritance::Super::Foo> final
 };
 template <>
 class ::fidl::WireUnownedResult<::test_inheritance::Super::Foo> final
-    : public ::fidl::Result {
+    : public ::fidl::Status {
  public:
   explicit WireUnownedResult(
       ::fidl::UnownedClientEnd<::test_inheritance::Super> client_end,
@@ -321,13 +321,13 @@ class ::fidl::WireUnownedResult<::test_inheritance::Super::Foo> final
       ::fidl::internal::TransactionalResponse<::test_inheritance::Super::Foo>*
           response)
       : bytes_(reinterpret_cast<uint8_t*>(response)) {}
-  explicit WireUnownedResult(const ::fidl::Result& result)
-      : ::fidl::Result(result) {}
+  explicit WireUnownedResult(const ::fidl::Status& result)
+      : ::fidl::Status(result) {}
   explicit WireUnownedResult(
       ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<
           ::test_inheritance::Super::Foo>>&& decoded,
       ::fidl::internal::IncomingTransportContext context)
-      : ::fidl::Result(decoded) {
+      : ::fidl::Status(decoded) {
     if (decoded.ok()) {
       bytes_ = reinterpret_cast<uint8_t*>(decoded.PrimaryObject());
     } else {
@@ -409,7 +409,7 @@ class ::fidl::WireSyncEventHandler<::test_inheritance::Super>
   // Handle all possible events defined in this protocol.
   // Blocks to consume exactly one message from the channel, then call the
   // corresponding virtual method.
-  ::fidl::Result HandleOneEvent(
+  ::fidl::Status HandleOneEvent(
       ::fidl::UnownedClientEnd<::test_inheritance::Super> client_end);
 };
 
@@ -777,7 +777,7 @@ namespace test_inheritance {
 }  // namespace test_inheritance
 template <>
 class ::fidl::WireResult<::test_inheritance::Sub::Foo> final
-    : public ::fidl::Result {
+    : public ::fidl::Status {
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_inheritance::Sub> client,
@@ -788,7 +788,7 @@ class ::fidl::WireResult<::test_inheritance::Sub::Foo> final
       ::fidl::internal::TransactionalRequest<::test_inheritance::Sub::Foo>*
           request,
       zx_time_t _deadline);
-  explicit WireResult(const ::fidl::Result& result) : ::fidl::Result(result) {}
+  explicit WireResult(const ::fidl::Status& result) : ::fidl::Status(result) {}
   WireResult(WireResult&&) = delete;
   WireResult(const WireResult&) = delete;
   WireResult* operator=(WireResult&&) = delete;
@@ -833,7 +833,7 @@ class ::fidl::WireResult<::test_inheritance::Sub::Foo> final
 };
 template <>
 class ::fidl::WireUnownedResult<::test_inheritance::Sub::Foo> final
-    : public ::fidl::Result {
+    : public ::fidl::Status {
  public:
   explicit WireUnownedResult(
       ::fidl::UnownedClientEnd<::test_inheritance::Sub> client_end,
@@ -844,13 +844,13 @@ class ::fidl::WireUnownedResult<::test_inheritance::Sub::Foo> final
       ::fidl::internal::TransactionalResponse<::test_inheritance::Sub::Foo>*
           response)
       : bytes_(reinterpret_cast<uint8_t*>(response)) {}
-  explicit WireUnownedResult(const ::fidl::Result& result)
-      : ::fidl::Result(result) {}
+  explicit WireUnownedResult(const ::fidl::Status& result)
+      : ::fidl::Status(result) {}
   explicit WireUnownedResult(
       ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<
           ::test_inheritance::Sub::Foo>>&& decoded,
       ::fidl::internal::IncomingTransportContext context)
-      : ::fidl::Result(decoded) {
+      : ::fidl::Status(decoded) {
     if (decoded.ok()) {
       bytes_ = reinterpret_cast<uint8_t*>(decoded.PrimaryObject());
     } else {
@@ -930,7 +930,7 @@ class ::fidl::WireSyncEventHandler<::test_inheritance::Sub>
   // Handle all possible events defined in this protocol.
   // Blocks to consume exactly one message from the channel, then call the
   // corresponding virtual method.
-  ::fidl::Result HandleOneEvent(
+  ::fidl::Status HandleOneEvent(
       ::fidl::UnownedClientEnd<::test_inheritance::Sub> client_end);
 };
 

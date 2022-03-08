@@ -56,9 +56,9 @@ namespace test_versions {
 fidl::internal::NaturalClientImpl<::test_versions::Protocol>::Foo() const {
   ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
       _encoder{::test_versions::kProtocol_Foo_Ordinal};
-  ::fidl::Result result = messenger().OneWay(
+  ::fidl::Status status = messenger().OneWay(
       ::fidl::internal::EncodeTransactionalMessage(_encoder));
-  return ::fidl::internal::ToFitxResult(result);
+  return ::fidl::internal::ToFitxResult(status);
 }
 namespace test_versions {
 #endif  // __Fuchsia__

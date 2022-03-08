@@ -78,10 +78,10 @@ fidl::internal::NaturalClientImpl<::test_protocolrequest::Parent>::TakeChild(
     ::test_protocolrequest::ParentTakeChildRequest&& payload) const {
   ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
       _encoder{::test_protocolrequest::kParent_TakeChild_Ordinal};
-  ::fidl::Result result =
+  ::fidl::Status status =
       messenger().OneWay(::fidl::internal::EncodeTransactionalMessage(
           _encoder, std::move(payload)));
-  return ::fidl::internal::ToFitxResult(result);
+  return ::fidl::internal::ToFitxResult(status);
 }
 
 ::fitx::result<::fidl::Error> fidl::internal::
@@ -89,10 +89,10 @@ fidl::internal::NaturalClientImpl<::test_protocolrequest::Parent>::TakeChild(
         ::test_protocolrequest::ParentTakeChildRequestRequest&& payload) const {
   ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
       _encoder{::test_protocolrequest::kParent_TakeChildRequest_Ordinal};
-  ::fidl::Result result =
+  ::fidl::Status status =
       messenger().OneWay(::fidl::internal::EncodeTransactionalMessage(
           _encoder, std::move(payload)));
-  return ::fidl::internal::ToFitxResult(result);
+  return ::fidl::internal::ToFitxResult(status);
 }
 namespace test_protocolrequest {
 #endif  // __Fuchsia__

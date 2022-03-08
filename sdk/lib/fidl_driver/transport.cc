@@ -12,7 +12,7 @@
 #include <lib/fdf/dispatcher.h>
 #include <lib/fidl/llcpp/message.h>
 #include <lib/fidl/llcpp/message_storage.h>
-#include <lib/fidl/llcpp/result.h>
+#include <lib/fidl/llcpp/status.h>
 #include <zircon/errors.h>
 
 #include <optional>

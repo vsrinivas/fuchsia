@@ -43,7 +43,7 @@ extern "C" const fidl_type_t
   outgoing.Call<::fidl::internal::TransactionalResponse<
       ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>>(
       client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()));
-  SetResult(outgoing);
+  SetStatus(outgoing);
 }
 
 ::fidl::WireResult<
@@ -67,7 +67,7 @@ extern "C" const fidl_type_t
       ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>>(
       client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()),
       fidl::CallOptions{.deadline = deadline});
-  SetResult(outgoing);
+  SetStatus(outgoing);
 }
 namespace test_requestflexibleenvelope {
 #endif  // __Fuchsia__
@@ -89,7 +89,7 @@ namespace test_requestflexibleenvelope {
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation =
       allocator.TryAllocate(buffer_size);
   if (!allocation.is_ok()) {
-    ::fidl::Result::operator=(allocation.error_value());
+    ::fidl::Status::operator=(allocation.error_value());
     return;
   }
   uint8_t* buffer = allocation->data;
@@ -113,7 +113,7 @@ namespace test_requestflexibleenvelope {
       ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>>(
       client_end.handle(), response_bytes, response_byte_capacity);
   bytes_ = response_bytes;
-  ::fidl::Result::operator=(outgoing);
+  ::fidl::Status::operator=(outgoing);
 }
 namespace test_requestflexibleenvelope {
 #endif  // __Fuchsia__
@@ -139,7 +139,7 @@ namespace test_requestflexibleenvelope {
   outgoing.Call<::fidl::internal::TransactionalResponse<
       ::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>>(
       client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()));
-  SetResult(outgoing);
+  SetStatus(outgoing);
 }
 
 ::fidl::WireResult<
@@ -163,7 +163,7 @@ namespace test_requestflexibleenvelope {
       ::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>>(
       client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()),
       fidl::CallOptions{.deadline = deadline});
-  SetResult(outgoing);
+  SetStatus(outgoing);
 }
 namespace test_requestflexibleenvelope {
 #endif  // __Fuchsia__
@@ -185,7 +185,7 @@ namespace test_requestflexibleenvelope {
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation =
       allocator.TryAllocate(buffer_size);
   if (!allocation.is_ok()) {
-    ::fidl::Result::operator=(allocation.error_value());
+    ::fidl::Status::operator=(allocation.error_value());
     return;
   }
   uint8_t* buffer = allocation->data;
@@ -209,7 +209,7 @@ namespace test_requestflexibleenvelope {
       ::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>>(
       client_end.handle(), response_bytes, response_byte_capacity);
   bytes_ = response_bytes;
-  ::fidl::Result::operator=(outgoing);
+  ::fidl::Status::operator=(outgoing);
 }
 namespace test_requestflexibleenvelope {
 #endif  // __Fuchsia__
@@ -489,7 +489,7 @@ fidl::internal::WireWeakSyncClientImpl<
 
 #ifdef __Fuchsia__
 
-::fidl::Result
+::fidl::Status
 fidl::WireSyncEventHandler<::test_requestflexibleenvelope::Protocol>::
     HandleOneEvent(
         ::fidl::UnownedClientEnd<::test_requestflexibleenvelope::Protocol>
@@ -498,7 +498,7 @@ fidl::WireSyncEventHandler<::test_requestflexibleenvelope::Protocol>::
       ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED, ::zx::time::infinite(),
       nullptr);
   if (status != ZX_OK) {
-    return ::fidl::Result::TransportError(
+    return ::fidl::Status::TransportError(
         status, ::fidl::internal::kErrorWaitOneFailed);
   }
   constexpr uint32_t kHandleAllocSize = ([]() constexpr {
@@ -523,7 +523,7 @@ fidl::WireSyncEventHandler<::test_requestflexibleenvelope::Protocol>::
     // This can only be due to a newer version of the protocol defining a new
     // event, whose size exceeds the maximum of known events in the current
     // protocol.
-    return ::fidl::Result::UnexpectedMessage(Unknown());
+    return ::fidl::Status::UnexpectedMessage(Unknown());
   }
   if (!msg.ok()) {
     return msg;
@@ -531,7 +531,7 @@ fidl::WireSyncEventHandler<::test_requestflexibleenvelope::Protocol>::
   fidl_message_header_t* hdr = msg.header();
   switch (hdr->ordinal) {
     default: {
-      return ::fidl::Result::UnexpectedMessage(Unknown());
+      return ::fidl::Status::UnexpectedMessage(Unknown());
     }
   }
 }

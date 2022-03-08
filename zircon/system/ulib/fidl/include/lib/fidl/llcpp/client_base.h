@@ -40,7 +40,7 @@ class ResponseContextAsyncErrorTask : private async_task_t {
   //
   // If successful, ownership of the context is passed to the |dispatcher| until
   // the task is executed.
-  zx_status_t TryAsyncDeliverError(::fidl::Result error, async_dispatcher_t* dispatcher) {
+  zx_status_t TryAsyncDeliverError(::fidl::Status error, async_dispatcher_t* dispatcher) {
     error_ = error;
     async_task_t* task = this;
     *task = async_task_t{{ASYNC_STATE_INIT},
@@ -57,7 +57,7 @@ class ResponseContextAsyncErrorTask : private async_task_t {
     context->OnError(self->error_);
   }
 
-  ::fidl::Result error_;
+  ::fidl::Status error_;
 };
 
 // |ResponseContext| contains information about an outstanding asynchronous
@@ -126,7 +126,7 @@ class ResponseContext : public fidl::internal_wavl::WAVLTreeContainable<Response
       ::fidl::IncomingMessage&& result, internal::IncomingTransportContext transport_context) = 0;
 
   // A helper around |OnRawResult| to directly notify an error to the context.
-  void OnError(::fidl::Result error) {
+  void OnError(::fidl::Status error) {
     OnRawResult(fidl::IncomingMessage::Create(error), internal::IncomingTransportContext());
   }
 
@@ -233,7 +233,7 @@ class WireResponseContext : public internal::ResponseContext {
     }
     ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<FidlMethod>> decoded{
         std::move(msg)};
-    ::fidl::Result maybe_error = decoded;
+    ::fidl::Status maybe_error = decoded;
     ::fidl::internal::WireUnownedResultType<FidlMethod> result(std::move(decoded),
                                                                std::move(transport_context));
     OnResult(result);
@@ -280,11 +280,11 @@ class ClientBase final : public std::enable_shared_from_this<ClientBase> {
   //
   // It invokes |sync_call| with a strong reference to the transport to prevent
   // its destruction during a |transport.Call|. The |sync_call| callable must
-  // have a return type that could be instantiated with a |fidl::Result| to
+  // have a return type that could be instantiated with a |fidl::Status| to
   // propagate failures.
   //
   // If the client has been unbound, returns a result type instantiated with
-  // a |fidl::Result::Unbound| error.
+  // a |fidl::Status::Unbound| error.
   //
   // If the client has a valid binding, returns the return value of |sync_call|.
   template <typename Callable>
@@ -292,7 +292,7 @@ class ClientBase final : public std::enable_shared_from_this<ClientBase> {
     using ReturnType = typename fit::callable_traits<Callable>::return_type;
     std::shared_ptr<AnyTransport> transport = GetTransport();
     if (!transport) {
-      return ReturnType(fidl::Result::Unbound());
+      return ReturnType(fidl::Status::Unbound());
     }
     // TODO(fxbug.dev/78906): We should report errors to binding teardown
     // by calling |HandleSendError|. A naive approach of checking the result
@@ -328,7 +328,7 @@ class ClientBase final : public std::enable_shared_from_this<ClientBase> {
   // |message| will have its transaction ID set to zero.
   //
   // Errors are returned to the caller.
-  fidl::Result SendOneWay(::fidl::OutgoingMessage& message, fidl::WriteOptions write_options = {});
+  fidl::Status SendOneWay(::fidl::OutgoingMessage& message, fidl::WriteOptions write_options = {});
 
   // For debugging.
   size_t GetTransactionCount() {
@@ -363,11 +363,11 @@ class ClientBase final : public std::enable_shared_from_this<ClientBase> {
 
   // Handles errors in sending one-way or two-way FIDL requests. This may lead
   // to binding teardown.
-  void HandleSendError(fidl::Result error);
+  void HandleSendError(fidl::Status error);
 
   // Try to asynchronously notify |context| of the |error|. If not possible
   // (e.g. dispatcher shutting down), notify it synchronously as a last resort.
-  void TryAsyncDeliverError(::fidl::Result error, ResponseContext* context);
+  void TryAsyncDeliverError(::fidl::Status error, ResponseContext* context);
 
   std::shared_ptr<AnyTransport> GetTransport() {
     if (auto binding = binding_.lock()) {

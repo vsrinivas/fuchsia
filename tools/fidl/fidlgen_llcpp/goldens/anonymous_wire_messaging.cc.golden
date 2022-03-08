@@ -28,7 +28,7 @@ extern "C" const fidl_type_t
   outgoing.Call<::fidl::internal::TransactionalResponse<
       ::test_anonymous::SomeProtocol::SomeMethod>>(
       client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()));
-  SetResult(outgoing);
+  SetStatus(outgoing);
 }
 
 ::fidl::WireResult<::test_anonymous::SomeProtocol::SomeMethod>::WireResult(
@@ -47,7 +47,7 @@ extern "C" const fidl_type_t
       ::test_anonymous::SomeProtocol::SomeMethod>>(
       client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()),
       fidl::CallOptions{.deadline = deadline});
-  SetResult(outgoing);
+  SetStatus(outgoing);
 }
 namespace test_anonymous {
 #endif  // __Fuchsia__
@@ -65,7 +65,7 @@ namespace test_anonymous {
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation =
       allocator.TryAllocate(buffer_size);
   if (!allocation.is_ok()) {
-    ::fidl::Result::operator=(allocation.error_value());
+    ::fidl::Status::operator=(allocation.error_value());
     return;
   }
   uint8_t* buffer = allocation->data;
@@ -87,7 +87,7 @@ namespace test_anonymous {
       ::test_anonymous::SomeProtocol::SomeMethod>>(
       client_end.handle(), response_bytes, response_byte_capacity);
   bytes_ = response_bytes;
-  ::fidl::Result::operator=(outgoing);
+  ::fidl::Status::operator=(outgoing);
 }
 namespace test_anonymous {
 #endif  // __Fuchsia__
@@ -219,14 +219,14 @@ void fidl::internal::
 
 #ifdef __Fuchsia__
 
-::fidl::Result
+::fidl::Status
 fidl::WireSyncEventHandler<::test_anonymous::SomeProtocol>::HandleOneEvent(
     ::fidl::UnownedClientEnd<::test_anonymous::SomeProtocol> client_end) {
   zx_status_t status = client_end.channel()->wait_one(
       ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED, ::zx::time::infinite(),
       nullptr);
   if (status != ZX_OK) {
-    return ::fidl::Result::TransportError(
+    return ::fidl::Status::TransportError(
         status, ::fidl::internal::kErrorWaitOneFailed);
   }
   constexpr uint32_t kHandleAllocSize = ([]() constexpr {
@@ -251,7 +251,7 @@ fidl::WireSyncEventHandler<::test_anonymous::SomeProtocol>::HandleOneEvent(
     // This can only be due to a newer version of the protocol defining a new
     // event, whose size exceeds the maximum of known events in the current
     // protocol.
-    return ::fidl::Result::UnexpectedMessage(Unknown());
+    return ::fidl::Status::UnexpectedMessage(Unknown());
   }
   if (!msg.ok()) {
     return msg;
@@ -259,7 +259,7 @@ fidl::WireSyncEventHandler<::test_anonymous::SomeProtocol>::HandleOneEvent(
   fidl_message_header_t* hdr = msg.header();
   switch (hdr->ordinal) {
     default: {
-      return ::fidl::Result::UnexpectedMessage(Unknown());
+      return ::fidl::Status::UnexpectedMessage(Unknown());
     }
   }
 }

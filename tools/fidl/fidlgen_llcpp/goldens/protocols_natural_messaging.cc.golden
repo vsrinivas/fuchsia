@@ -58,10 +58,10 @@ void fidl::internal::NaturalClientImpl<::test_protocols::HandleRightsProtocol>::
   ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
       _encoder{
           ::test_protocols::kHandleRightsProtocol_NoResponseMethod_Ordinal};
-  ::fidl::Result result =
+  ::fidl::Status status =
       messenger().OneWay(::fidl::internal::EncodeTransactionalMessage(
           _encoder, std::move(payload)));
-  return ::fidl::internal::ToFitxResult(result);
+  return ::fidl::internal::ToFitxResult(status);
 }
 namespace test_protocols {
 #endif  // __Fuchsia__
@@ -106,7 +106,7 @@ fidl::internal::NaturalEventDispatcher<::test_protocols::HandleRightsProtocol>::
       _encoder{::test_protocols::kHandleRightsProtocol_AnEvent_Ordinal};
   auto encoded_message = ::fidl::internal::EncodeTransactionalMessage(
       _encoder, std::move(payload));
-  ::fidl::Result result = _inner().SendEvent(encoded_message);
+  ::fidl::Status result = _inner().SendEvent(encoded_message);
   return ::fidl::internal::ToFitxResult(result);
 }
 
@@ -118,7 +118,7 @@ fidl::internal::NaturalEventDispatcher<::test_protocols::HandleRightsProtocol>::
   auto encoded_message = ::fidl::internal::EncodeTransactionalMessage(
       _encoder, std::move(payload));
   encoded_message.Write(_transport());
-  return ::fidl::internal::ToFitxResult(::fidl::Result{encoded_message});
+  return ::fidl::internal::ToFitxResult(::fidl::Status{encoded_message});
 }
 
 #endif  // __Fuchsia__
@@ -436,9 +436,9 @@ void fidl::internal::NaturalClientImpl<
   ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
       _encoder{::test_protocols::
                    kWithAndWithoutRequestResponse_NoRequestNoResponse_Ordinal};
-  ::fidl::Result result = messenger().OneWay(
+  ::fidl::Status status = messenger().OneWay(
       ::fidl::internal::EncodeTransactionalMessage(_encoder));
-  return ::fidl::internal::ToFitxResult(result);
+  return ::fidl::internal::ToFitxResult(status);
 }
 
 ::fitx::result<::fidl::Error> fidl::internal::NaturalClientImpl<
@@ -451,10 +451,10 @@ void fidl::internal::NaturalClientImpl<
       _encoder{
           ::test_protocols::
               kWithAndWithoutRequestResponse_WithRequestNoResponse_Ordinal};
-  ::fidl::Result result =
+  ::fidl::Status status =
       messenger().OneWay(::fidl::internal::EncodeTransactionalMessage(
           _encoder, std::move(payload)));
-  return ::fidl::internal::ToFitxResult(result);
+  return ::fidl::internal::ToFitxResult(status);
 }
 namespace test_protocols {
 #endif  // __Fuchsia__
@@ -517,7 +517,7 @@ std::optional<::fidl::UnbindInfo> fidl::internal::NaturalEventDispatcher<
       _encoder{::test_protocols::
                    kWithAndWithoutRequestResponse_OnEmptyResponse_Ordinal};
   auto encoded_message = ::fidl::internal::EncodeTransactionalMessage(_encoder);
-  ::fidl::Result result = _inner().SendEvent(encoded_message);
+  ::fidl::Status result = _inner().SendEvent(encoded_message);
   return ::fidl::internal::ToFitxResult(result);
 }
 
@@ -528,7 +528,7 @@ std::optional<::fidl::UnbindInfo> fidl::internal::NaturalEventDispatcher<
                    kWithAndWithoutRequestResponse_OnEmptyResponse_Ordinal};
   auto encoded_message = ::fidl::internal::EncodeTransactionalMessage(_encoder);
   encoded_message.Write(_transport());
-  return ::fidl::internal::ToFitxResult(::fidl::Result{encoded_message});
+  return ::fidl::internal::ToFitxResult(::fidl::Status{encoded_message});
 }
 
 ::fitx::result<::fidl::Error> fidl::internal::NaturalWeakEventSender<
@@ -541,7 +541,7 @@ std::optional<::fidl::UnbindInfo> fidl::internal::NaturalEventDispatcher<
                    kWithAndWithoutRequestResponse_OnWithResponse_Ordinal};
   auto encoded_message = ::fidl::internal::EncodeTransactionalMessage(
       _encoder, std::move(payload));
-  ::fidl::Result result = _inner().SendEvent(encoded_message);
+  ::fidl::Status result = _inner().SendEvent(encoded_message);
   return ::fidl::internal::ToFitxResult(result);
 }
 
@@ -556,7 +556,7 @@ std::optional<::fidl::UnbindInfo> fidl::internal::NaturalEventDispatcher<
   auto encoded_message = ::fidl::internal::EncodeTransactionalMessage(
       _encoder, std::move(payload));
   encoded_message.Write(_transport());
-  return ::fidl::internal::ToFitxResult(::fidl::Result{encoded_message});
+  return ::fidl::internal::ToFitxResult(::fidl::Status{encoded_message});
 }
 
 #endif  // __Fuchsia__
@@ -849,10 +849,10 @@ fidl::internal::NaturalClientImpl<::test_protocols::Transitional>::OneWay(
     ::test_protocols::TransitionalOneWayRequest&& payload) const {
   ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
       _encoder{::test_protocols::kTransitional_OneWay_Ordinal};
-  ::fidl::Result result =
+  ::fidl::Status status =
       messenger().OneWay(::fidl::internal::EncodeTransactionalMessage(
           _encoder, std::move(payload)));
-  return ::fidl::internal::ToFitxResult(result);
+  return ::fidl::internal::ToFitxResult(status);
 }
 namespace test_protocols {
 #endif  // __Fuchsia__
@@ -894,7 +894,7 @@ fidl::internal::NaturalWeakEventSender<::test_protocols::Transitional>::Event(
       _encoder{::test_protocols::kTransitional_Event_Ordinal};
   auto encoded_message = ::fidl::internal::EncodeTransactionalMessage(
       _encoder, std::move(payload));
-  ::fidl::Result result = _inner().SendEvent(encoded_message);
+  ::fidl::Status result = _inner().SendEvent(encoded_message);
   return ::fidl::internal::ToFitxResult(result);
 }
 
@@ -906,7 +906,7 @@ fidl::internal::NaturalEventSender<::test_protocols::Transitional>::Event(
   auto encoded_message = ::fidl::internal::EncodeTransactionalMessage(
       _encoder, std::move(payload));
   encoded_message.Write(_transport());
-  return ::fidl::internal::ToFitxResult(::fidl::Result{encoded_message});
+  return ::fidl::internal::ToFitxResult(::fidl::Status{encoded_message});
 }
 
 #endif  // __Fuchsia__
@@ -1003,10 +1003,10 @@ namespace test_protocols {
         ::test_protocols::MethodWithUnionUnionMethodRequest&& payload) const {
   ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
       _encoder{::test_protocols::kMethodWithUnion_UnionMethod_Ordinal};
-  ::fidl::Result result =
+  ::fidl::Status status =
       messenger().OneWay(::fidl::internal::EncodeTransactionalMessage(
           _encoder, std::move(payload)));
-  return ::fidl::internal::ToFitxResult(result);
+  return ::fidl::internal::ToFitxResult(status);
 }
 namespace test_protocols {
 #endif  // __Fuchsia__
@@ -1357,10 +1357,10 @@ fidl::internal::NaturalClientImpl<::test_protocols::ManyParameters>::Fifteen(
     ::test_protocols::ManyParametersFifteenRequest&& payload) const {
   ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
       _encoder{::test_protocols::kManyParameters_Fifteen_Ordinal};
-  ::fidl::Result result =
+  ::fidl::Status status =
       messenger().OneWay(::fidl::internal::EncodeTransactionalMessage(
           _encoder, std::move(payload)));
-  return ::fidl::internal::ToFitxResult(result);
+  return ::fidl::internal::ToFitxResult(status);
 }
 namespace test_protocols {
 #endif  // __Fuchsia__
@@ -1757,9 +1757,9 @@ namespace test_protocols {
     ::test_protocols::DiscoverableProtocol>::Method() const {
   ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
       _encoder{::test_protocols::kDiscoverableProtocol_Method_Ordinal};
-  ::fidl::Result result = messenger().OneWay(
+  ::fidl::Status status = messenger().OneWay(
       ::fidl::internal::EncodeTransactionalMessage(_encoder));
-  return ::fidl::internal::ToFitxResult(result);
+  return ::fidl::internal::ToFitxResult(status);
 }
 namespace test_protocols {
 #endif  // __Fuchsia__
@@ -1953,10 +1953,10 @@ fidl::internal::NaturalClientImpl<::test_protocols::ChannelProtocol>::MethodA(
     ::test_protocols::ChannelProtocolMethodARequest&& payload) const {
   ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
       _encoder{::test_protocols::kChannelProtocol_MethodA_Ordinal};
-  ::fidl::Result result =
+  ::fidl::Status status =
       messenger().OneWay(::fidl::internal::EncodeTransactionalMessage(
           _encoder, std::move(payload)));
-  return ::fidl::internal::ToFitxResult(result);
+  return ::fidl::internal::ToFitxResult(status);
 }
 namespace test_protocols {
 #endif  // __Fuchsia__
@@ -1998,7 +1998,7 @@ std::optional<::fidl::UnbindInfo> fidl::internal::
       _encoder{::test_protocols::kChannelProtocol_EventA_Ordinal};
   auto encoded_message = ::fidl::internal::EncodeTransactionalMessage(
       _encoder, std::move(payload));
-  ::fidl::Result result = _inner().SendEvent(encoded_message);
+  ::fidl::Status result = _inner().SendEvent(encoded_message);
   return ::fidl::internal::ToFitxResult(result);
 }
 
@@ -2010,7 +2010,7 @@ fidl::internal::NaturalEventSender<::test_protocols::ChannelProtocol>::EventA(
   auto encoded_message = ::fidl::internal::EncodeTransactionalMessage(
       _encoder, std::move(payload));
   encoded_message.Write(_transport());
-  return ::fidl::internal::ToFitxResult(::fidl::Result{encoded_message});
+  return ::fidl::internal::ToFitxResult(::fidl::Status{encoded_message});
 }
 
 #endif  // __Fuchsia__

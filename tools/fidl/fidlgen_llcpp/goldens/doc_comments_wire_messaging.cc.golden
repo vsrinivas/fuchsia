@@ -24,7 +24,7 @@ namespace test_doccomments {
       request_message(::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
   outgoing.Write(client.handle());
-  SetResult(outgoing);
+  SetStatus(outgoing);
 }
 namespace test_doccomments {
 #endif  // __Fuchsia__
@@ -32,7 +32,7 @@ namespace test_doccomments {
 }  // namespace test_doccomments
 #ifdef __Fuchsia__
 
-::fidl::Result fidl::internal::WireWeakOnewayClientImpl<
+::fidl::Status fidl::internal::WireWeakOnewayClientImpl<
     ::test_doccomments::Interface>::Method() {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::internal::TransactionalRequest<::test_doccomments::Interface::Method>
@@ -45,7 +45,7 @@ namespace test_doccomments {
                        &_request_object);
   return _client_base()->SendOneWay(_request_message.GetOutgoingMessage());
 }
-::fidl::Result fidl::internal::WireWeakOnewayBufferClientImpl<
+::fidl::Status fidl::internal::WireWeakOnewayBufferClientImpl<
     ::test_doccomments::Interface>::Method() {
   constexpr uint32_t _buffer_size =
       ::fidl::AsyncClientMethodBufferSizeInChannel<
@@ -68,14 +68,14 @@ namespace test_doccomments {
 
 #ifdef __Fuchsia__
 
-::fidl::Result
+::fidl::Status
 fidl::WireSyncEventHandler<::test_doccomments::Interface>::HandleOneEvent(
     ::fidl::UnownedClientEnd<::test_doccomments::Interface> client_end) {
   zx_status_t status = client_end.channel()->wait_one(
       ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED, ::zx::time::infinite(),
       nullptr);
   if (status != ZX_OK) {
-    return ::fidl::Result::TransportError(
+    return ::fidl::Status::TransportError(
         status, ::fidl::internal::kErrorWaitOneFailed);
   }
   constexpr uint32_t kHandleAllocSize = ([]() constexpr {
@@ -105,7 +105,7 @@ fidl::WireSyncEventHandler<::test_doccomments::Interface>::HandleOneEvent(
     // This can only be due to a newer version of the protocol defining a new
     // event, whose size exceeds the maximum of known events in the current
     // protocol.
-    return ::fidl::Result::UnexpectedMessage(Unknown());
+    return ::fidl::Status::UnexpectedMessage(Unknown());
   }
   if (!msg.ok()) {
     return msg;
@@ -117,15 +117,15 @@ fidl::WireSyncEventHandler<::test_doccomments::Interface>::HandleOneEvent(
           ::test_doccomments::Interface::OnEvent>>
           decoded{::std::move(msg)};
       if (!decoded.ok()) {
-        return ::fidl::Result(decoded);
+        return ::fidl::Status(decoded);
       }
       ::fidl::WireEvent<::test_doccomments::Interface::OnEvent> empty_event;
       auto* primary = &empty_event;
       OnEvent(primary);
-      return ::fidl::Result::Ok();
+      return ::fidl::Status::Ok();
     }
     default: {
-      return ::fidl::Result::UnexpectedMessage(Unknown());
+      return ::fidl::Status::UnexpectedMessage(Unknown());
     }
   }
 }
@@ -223,7 +223,7 @@ void ::fidl::internal::TransactionalEvent<
 
 #ifdef __Fuchsia__
 
-fidl::Result
+fidl::Status
 fidl::internal::WireWeakEventSender<::test_doccomments::Interface>::OnEvent() {
   ::fidl::internal::TransactionalEvent<::test_doccomments::Interface::OnEvent>
       _response{};
@@ -236,7 +236,7 @@ fidl::internal::WireWeakEventSender<::test_doccomments::Interface>::OnEvent() {
   return _inner().SendEvent(_response_message.GetOutgoingMessage());
 }
 
-fidl::Result fidl::internal::WireWeakBufferEventSender<
+fidl::Status fidl::internal::WireWeakBufferEventSender<
     ::test_doccomments::Interface>::OnEvent() {
   constexpr uint32_t _buffer_size = ::fidl::EventReplyBufferSizeInChannel<
       ::test_doccomments::Interface::OnEvent>();
@@ -257,7 +257,7 @@ fidl::Result fidl::internal::WireWeakBufferEventSender<
   return _inner().SendEvent(_response_message.GetOutgoingMessage());
 }
 
-fidl::Result
+fidl::Status
 fidl::internal::WireEventSender<::test_doccomments::Interface>::OnEvent() {
   ::fidl::internal::TransactionalEvent<::test_doccomments::Interface::OnEvent>
       _response{};
@@ -269,10 +269,10 @@ fidl::internal::WireEventSender<::test_doccomments::Interface>::OnEvent() {
       _response_message{::fidl::internal::AllowUnownedInputRef{}, &_response};
   auto& _message = _response_message.GetOutgoingMessage();
   _message.Write(_transport());
-  return ::fidl::Result{_message};
+  return ::fidl::Status{_message};
 }
 
-fidl::Result fidl::internal::WireBufferEventSender<
+fidl::Status fidl::internal::WireBufferEventSender<
     ::test_doccomments::Interface>::OnEvent() {
   constexpr uint32_t _buffer_size = ::fidl::EventReplyBufferSizeInChannel<
       ::test_doccomments::Interface::OnEvent>();
@@ -291,7 +291,7 @@ fidl::Result fidl::internal::WireBufferEventSender<
       _response_message(_allocation->data, _buffer_size, &_response);
   auto& _message = _response_message.GetOutgoingMessage();
   _message.Write(_transport());
-  return ::fidl::Result{_message};
+  return ::fidl::Status{_message};
 }
 
 #endif  // __Fuchsia__

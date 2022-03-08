@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_FIDL_LLCPP_RESULT_H_
-#define LIB_FIDL_LLCPP_RESULT_H_
+#ifndef LIB_FIDL_LLCPP_STATUS_H_
+#define LIB_FIDL_LLCPP_STATUS_H_
 
 #include <zircon/assert.h>
 #include <zircon/compiler.h>
@@ -20,7 +20,7 @@ namespace fidl {
 // Reason for a failed operation, or how the endpoint was unbound from the
 // client/server message dispatcher.
 //
-// |Reason| is always carried inside a |fidl::Result| or |fidl::UnbindInfo|. As
+// |Reason| is always carried inside a |fidl::Status| or |fidl::UnbindInfo|. As
 // such, it is always accompanied with a |status| value. The documentation below
 // describes precise semantics of the |status| under different reasons.
 //
@@ -133,7 +133,7 @@ extern const char* const kCallerAllocatedBufferTooSmall;
 
 }  // namespace internal
 
-// |Result| represents the result of an operation.
+// |Status| represents the result of an operation.
 //
 // If the operation was successful:
 // - `ok()` returns true.
@@ -145,34 +145,34 @@ extern const char* const kCallerAllocatedBufferTooSmall;
 // - `status()` contains a non-OK status code specific to the failed operation.
 // - `reason()` describes the operation which failed.
 //
-// |Result| may be piped to an output stream (`std::cerr`, `FX_LOGS`, ...) to
+// |Status| may be piped to an output stream (`std::cerr`, `FX_LOGS`, ...) to
 // print a human-readable description for debugging purposes.
-class [[nodiscard]] Result {
+class [[nodiscard]] Status {
  public:
-  constexpr Result() = default;
-  ~Result() = default;
+  constexpr Status() = default;
+  ~Status() = default;
 
   // Constructs a result representing a success.
-  constexpr static Result Ok() { return Result(ZX_OK, internal::kUninitializedReason, nullptr); }
+  constexpr static Status Ok() { return Status(ZX_OK, internal::kUninitializedReason, nullptr); }
 
   // Constructs a result indicating that the operation cannot proceed
   // because the corresponding endpoint has been unbound from the dispatcher
   // (applies to both client and server).
-  constexpr static Result Unbound() {
-    return Result(ZX_ERR_CANCELED, ::fidl::Reason::kUnbind, ::fidl::internal::kErrorChannelUnbound);
+  constexpr static Status Unbound() {
+    return Status(ZX_ERR_CANCELED, ::fidl::Reason::kUnbind, ::fidl::internal::kErrorChannelUnbound);
   }
 
   // Constructs a result indicating that the operation cannot proceed
   // because a unknown message was received. Specifcally, the method or event
   // ordinal is not recognized by the binding.
-  constexpr static Result UnknownOrdinal() {
-    return Result(ZX_ERR_NOT_SUPPORTED, ::fidl::Reason::kUnexpectedMessage,
+  constexpr static Status UnknownOrdinal() {
+    return Status(ZX_ERR_NOT_SUPPORTED, ::fidl::Reason::kUnexpectedMessage,
                   ::fidl::internal::kErrorUnknownOrdinal);
   }
 
   // Constructs a transport error with |status| and optional |error_message|.
   // |status| must not be |ZX_OK|.
-  constexpr static Result TransportError(zx_status_t status, const char* error_message = nullptr) {
+  constexpr static Status TransportError(zx_status_t status, const char* error_message = nullptr) {
     ZX_DEBUG_ASSERT(status != ZX_OK);
     // Depending on the order of operations during a remote endpoint closure, we
     // may either observe a |kTransportError| from writing to a channel or a
@@ -184,24 +184,24 @@ class [[nodiscard]] Result {
     if (status == ZX_ERR_PEER_CLOSED) {
       reason = Reason::kPeerClosed;
     }
-    return Result(status, reason, error_message);
+    return Status(status, reason, error_message);
   }
 
-  constexpr static Result EncodeError(zx_status_t status, const char* error_message = nullptr) {
-    return Result(status, ::fidl::Reason::kEncodeError, error_message);
+  constexpr static Status EncodeError(zx_status_t status, const char* error_message = nullptr) {
+    return Status(status, ::fidl::Reason::kEncodeError, error_message);
   }
 
-  constexpr static Result DecodeError(zx_status_t status, const char* error_message = nullptr) {
-    return Result(status, ::fidl::Reason::kDecodeError, error_message);
+  constexpr static Status DecodeError(zx_status_t status, const char* error_message = nullptr) {
+    return Status(status, ::fidl::Reason::kDecodeError, error_message);
   }
 
-  constexpr static Result UnexpectedMessage(zx_status_t status,
+  constexpr static Status UnexpectedMessage(zx_status_t status,
                                             const char* error_message = nullptr) {
-    return Result(status, ::fidl::Reason::kUnexpectedMessage, error_message);
+    return Status(status, ::fidl::Reason::kUnexpectedMessage, error_message);
   }
 
-  constexpr Result(const Result& result) = default;
-  constexpr Result& operator=(const Result& result) = default;
+  constexpr Status(const Status& result) = default;
+  constexpr Status& operator=(const Status& result) = default;
 
   // Status associated with the reason. See documentation on |fidl::Reason|
   // for how to interpret the status.
@@ -254,7 +254,7 @@ class [[nodiscard]] Result {
   // problem.
   //
   // If a logging API supports output streams (`<<` operators), piping the
-  // |Result| to the log via `<<` is more efficient than calling this function.
+  // |Status| to the log via `<<` is more efficient than calling this function.
   [[nodiscard]] std::string FormatDescription() const;
 
   // Returns a lossy description of the error. The returned |const char*| has
@@ -280,13 +280,13 @@ class [[nodiscard]] Result {
   //     FX_LOGS(ERROR) << "GetBar failed: " << bar.error();
   //   }
   //
-  const Result& error() const {
+  const Status& error() const {
     ZX_ASSERT(status_ != ZX_OK);
     return *this;
   }
 
  protected:
-  void SetResult(const Result& other) { operator=(other); }
+  void SetStatus(const Status& other) { operator=(other); }
 
   // Returns a pointer to populate additional error message.
   [[nodiscard]] const char** error_address() { return &error_; }
@@ -304,10 +304,10 @@ class [[nodiscard]] Result {
 
  private:
   friend class UnbindInfo;
-  friend std::ostream& operator<<(std::ostream& ostream, const Result& result);
+  friend std::ostream& operator<<(std::ostream& ostream, const Status& result);
 
   __ALWAYS_INLINE
-  constexpr Result(zx_status_t status, ::fidl::Reason reason, const char* error)
+  constexpr Status(zx_status_t status, ::fidl::Reason reason, const char* error)
       : status_(status), reason_(reason), error_(error) {}
 
   zx_status_t status_ = ZX_ERR_INTERNAL;
@@ -316,10 +316,15 @@ class [[nodiscard]] Result {
 };
 
 // Logs a full description of the result to an output stream.
-std::ostream& operator<<(std::ostream& ostream, const Result& result);
+std::ostream& operator<<(std::ostream& ostream, const Status& result);
+
+// fidl::Result is being renamed to fidl::Status and will be removed after
+// there are no more usages.
+// TODO(fxbug.dev/95217) Remove this alias.
+using Result = Status;
 
 // |Error| is a type alias for when the result of an operation is an error.
-using Error = Result;
+using Error = Status;
 
 // |UnbindInfo| describes how the channel was unbound from a server or client.
 //
@@ -327,27 +332,27 @@ using Error = Result;
 //
 // |UnbindInfo| is passed to |OnUnboundFn| and |AsyncEventHandler::Unbound| if
 // provided by the user.
-class UnbindInfo : private Result {
+class UnbindInfo : private Status {
  public:
   // Creates an invalid |UnbindInfo|.
   constexpr UnbindInfo() = default;
   ~UnbindInfo() = default;
 
-  constexpr explicit UnbindInfo(const Result& result) : Result(result) {
+  constexpr explicit UnbindInfo(const Status& result) : Status(result) {
     ZX_DEBUG_ASSERT(reason() != internal::kUninitializedReason);
   }
 
-  constexpr static UnbindInfo UnknownOrdinal() { return UnbindInfo{Result::UnknownOrdinal()}; }
+  constexpr static UnbindInfo UnknownOrdinal() { return UnbindInfo{Status::UnknownOrdinal()}; }
 
   // Constructs an |UnbindInfo| indicating that the user explicitly requested
   // unbinding the server endpoint from the dispatcher.
   //
-  // **Note that this is not the same as |Result::Unbound|**:
-  // |Result::Unbound| means an operation failed because the required endpoint
+  // **Note that this is not the same as |Status::Unbound|**:
+  // |Status::Unbound| means an operation failed because the required endpoint
   // has been unbound, and is an error. |UnbindInfo::Unbind| on the other hand
   // is an expected result from user initiation.
   constexpr static UnbindInfo Unbind() {
-    return UnbindInfo{Result(ZX_OK, ::fidl::Reason::kUnbind, nullptr)};
+    return UnbindInfo{Status(ZX_OK, ::fidl::Reason::kUnbind, nullptr)};
   }
 
   // Constructs an |UnbindInfo| indicating that the server connection is
@@ -358,19 +363,19 @@ class UnbindInfo : private Result {
   // which epitaph value should be sent. But this is not re-exposed to the user
   // since the user provided the epitaph in the first place.
   constexpr static UnbindInfo Close(zx_status_t status) {
-    return UnbindInfo{Result(status, ::fidl::Reason::kClose, nullptr)};
+    return UnbindInfo{Status(status, ::fidl::Reason::kClose, nullptr)};
   }
 
   // Constructs an |UnbindInfo| indicating that the endpoint peer has
   // closed.
   constexpr static UnbindInfo PeerClosed(zx_status_t status) {
-    return UnbindInfo{Result(status, ::fidl::Reason::kPeerClosed, nullptr)};
+    return UnbindInfo{Status(status, ::fidl::Reason::kPeerClosed, nullptr)};
   }
 
   // Constructs an |UnbindInfo| indicating the async dispatcher returned
   // an error |status|.
   constexpr static UnbindInfo DispatcherError(zx_status_t status) {
-    return UnbindInfo{Result(status, ::fidl::Reason::kDispatcherError, nullptr)};
+    return UnbindInfo{Status(status, ::fidl::Reason::kDispatcherError, nullptr)};
   }
 
   UnbindInfo(const UnbindInfo&) = default;
@@ -381,7 +386,7 @@ class UnbindInfo : private Result {
   // Generally, logging this value alone wouldn't be the most convenient for
   // debugging, since it requires developers to check back to the enum.
   // Prefer logging the |UnbindInfo| itself or via |FormatDescription|.
-  using Result::reason;
+  using Status::reason;
 
   // Status associated with the reason. See documentation on |fidl::Reason|
   // for how to interpret the status.
@@ -389,11 +394,11 @@ class UnbindInfo : private Result {
   // Generally, logging this status alone wouldn't be very useful, since its
   // interpretation is dependent on the reason.
   // Prefer logging the |UnbindInfo| itself or via |FormatDescription|.
-  using Result::status;
+  using Status::status;
 
 #ifdef __Fuchsia__
   // Returns the string representation of the status value.
-  using Result::status_string;
+  using Status::status_string;
 #endif  // __Fuchsia__
 
   // Renders a full description of the cause of the unbinding.
@@ -415,7 +420,7 @@ class UnbindInfo : private Result {
   // string that best represents the cause, sometimes losing information. As
   // such, this method should only be used when interfacing with C APIs that are
   // unable to take a string or output stream.
-  using Result::lossy_description;
+  using Status::lossy_description;
 
   // Returns true if the unbinding was initiated by the user, that is, the user
   // called Unbind/Close on the server side to proactively teardown the
@@ -441,11 +446,11 @@ class UnbindInfo : private Result {
   //
   // This error is of interest since some protocol users may consider the peer
   // going away to be part of its normal operation, while others might not.
-  using Result::is_peer_closed;
+  using Status::is_peer_closed;
 
   // Returns if the transport was unbound because the async dispatcher is
   // shutting down.
-  using Result::is_dispatcher_shutdown;
+  using Status::is_dispatcher_shutdown;
 
   // Returns if the user invoked `Close(epitaph)` on a |fidl::ServerBindingRef| or
   // completer and the epitaph was sent.
@@ -456,7 +461,7 @@ class UnbindInfo : private Result {
   bool did_send_epitaph() const { return reason() == Reason::kClose; }
 
   // Reinterprets the |UnbindInfo| as the cause of an operation failure.
-  fidl::Result ToError() const { return Result(*this); }
+  fidl::Status ToError() const { return Status(*this); }
 
  private:
   friend std::ostream& operator<<(std::ostream& ostream, const UnbindInfo& info);
@@ -469,4 +474,4 @@ static_assert(sizeof(UnbindInfo) == sizeof(uintptr_t) * 2, "UnbindInfo should be
 
 }  // namespace fidl
 
-#endif  // LIB_FIDL_LLCPP_RESULT_H_
+#endif  // LIB_FIDL_LLCPP_STATUS_H_

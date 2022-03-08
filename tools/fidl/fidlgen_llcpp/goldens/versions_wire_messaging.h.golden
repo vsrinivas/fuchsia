@@ -87,7 +87,7 @@ class ::fidl::WireSyncEventHandler<::test_versions::OtherProtocol>
   // Handle all possible events defined in this protocol.
   // Blocks to consume exactly one message from the channel, then call the
   // corresponding virtual method.
-  ::fidl::Result HandleOneEvent(
+  ::fidl::Status HandleOneEvent(
       ::fidl::UnownedClientEnd<::test_versions::OtherProtocol> client_end);
 };
 
@@ -272,13 +272,13 @@ namespace test_versions {
 }  // namespace test_versions
 template <>
 class ::fidl::WireResult<::test_versions::Protocol::Foo> final
-    : public ::fidl::Result {
+    : public ::fidl::Status {
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_versions::Protocol> client,
       ::fidl::internal::TransactionalRequest<::test_versions::Protocol::Foo>*
           request);
-  explicit WireResult(const ::fidl::Result& result) : ::fidl::Result(result) {}
+  explicit WireResult(const ::fidl::Status& result) : ::fidl::Status(result) {}
   WireResult(WireResult&&) = delete;
   WireResult(const WireResult&) = delete;
   WireResult* operator=(WireResult&&) = delete;
@@ -289,15 +289,15 @@ class ::fidl::WireResult<::test_versions::Protocol::Foo> final
 };
 template <>
 class ::fidl::WireUnownedResult<::test_versions::Protocol::Foo> final
-    : public ::fidl::Result {
+    : public ::fidl::Status {
  public:
   explicit WireUnownedResult(
       ::fidl::UnownedClientEnd<::test_versions::Protocol> client_end,
       ::fidl::internal::AnyBufferAllocator& allocator,
       ::fidl::internal::TransactionalRequest<::test_versions::Protocol::Foo>*
           request);
-  explicit WireUnownedResult(const ::fidl::Result& result)
-      : ::fidl::Result(result) {}
+  explicit WireUnownedResult(const ::fidl::Status& result)
+      : ::fidl::Status(result) {}
   WireUnownedResult(WireUnownedResult&&) = delete;
   WireUnownedResult(const WireUnownedResult&) = delete;
   WireUnownedResult* operator=(WireUnownedResult&&) = delete;
@@ -334,7 +334,7 @@ class ::fidl::WireSyncEventHandler<::test_versions::Protocol>
   // Handle all possible events defined in this protocol.
   // Blocks to consume exactly one message from the channel, then call the
   // corresponding virtual method.
-  ::fidl::Result HandleOneEvent(
+  ::fidl::Status HandleOneEvent(
       ::fidl::UnownedClientEnd<::test_versions::Protocol> client_end);
 };
 
@@ -592,7 +592,7 @@ class ::fidl::internal::WireWeakOnewayClientImpl<::test_versions::Protocol>
 
   // Allocates 32 bytes of message buffer on the stack. No heap allocation
   // necessary.
-  ::fidl::Result Foo();
+  ::fidl::Status Foo();
 };
 
 template <>
@@ -610,7 +610,7 @@ class ::fidl::internal::WireWeakOnewayBufferClientImpl<
   using BufferClientImplBase::BufferClientImplBase;
 
   // Caller provides the backing storage for FIDL message.
-  ::fidl::Result Foo();
+  ::fidl::Status Foo();
 };
 
 template <>

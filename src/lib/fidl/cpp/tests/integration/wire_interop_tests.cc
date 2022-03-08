@@ -345,8 +345,8 @@ TEST_F(UnifiedClientToWireServer, OneWay) {
   {
     // Test with wire domain objects.
     fidl::Arena arena;
-    fidl::Result result = client().wire()->OneWay(MakeWireFile(arena));
-    ASSERT_TRUE(result.ok());
+    fidl::Status status = client().wire()->OneWay(MakeWireFile(arena));
+    ASSERT_TRUE(status.ok());
     ASSERT_OK(loop().RunUntilIdle());
     EXPECT_EQ(2, server.num_calls);
   }
@@ -393,8 +393,8 @@ TEST_F(UnifiedClientToWireServerWithEventHandler, OnNode) {
   // Send an event.
   fidl::Arena arena;
   auto node = MakeWireDir(arena);
-  fidl::Result result = fidl::WireSendEvent(binding)->OnNode(node);
-  ASSERT_OK(result.status());
+  fidl::Status status = fidl::WireSendEvent(binding)->OnNode(node);
+  ASSERT_OK(status.status());
 
   // Test receiving natural domain objects.
   ASSERT_OK(loop().RunUntilIdle());
@@ -577,8 +577,8 @@ TEST_F(WireClientToNaturalServer, OneWay) {
                    CheckErrorsWhenUnbound<Server>());
 
   fidl::Arena arena;
-  fidl::Result result = client()->OneWay(MakeWireFile(arena));
-  ASSERT_TRUE(result.ok());
+  fidl::Status status = client()->OneWay(MakeWireFile(arena));
+  ASSERT_TRUE(status.ok());
   ASSERT_OK(loop().RunUntilIdle());
   EXPECT_EQ(1, server.num_calls);
 }
@@ -632,8 +632,8 @@ TEST_F(WireClientToNaturalServerWithEventHandler, SendOnNodeEventOverServerEnd) 
   {
     fidl::Arena arena;
     fidl_cpp_wire_interop_test::wire::Node node = MakeWireDir(arena);
-    fidl::Result result = fidl::WireSendEvent(server_end())->OnNode(node);
-    EXPECT_OK(result.status());
+    fidl::Status status = fidl::WireSendEvent(server_end())->OnNode(node);
+    EXPECT_OK(status.status());
     EXPECT_OK(loop().RunUntilIdle());
     EXPECT_EQ(2, num_events());
   }
@@ -661,8 +661,8 @@ TEST_F(WireClientToNaturalServerWithEventHandler, SendOnNodeEventOverServerBindi
   {
     fidl::Arena arena;
     fidl_cpp_wire_interop_test::wire::Node node = MakeWireDir(arena);
-    fidl::Result result = fidl::WireSendEvent(binding_ref)->OnNode(node);
-    EXPECT_OK(result.status());
+    fidl::Status status = fidl::WireSendEvent(binding_ref)->OnNode(node);
+    EXPECT_OK(status.status());
     EXPECT_OK(loop().RunUntilIdle());
     EXPECT_EQ(2, num_events());
   }

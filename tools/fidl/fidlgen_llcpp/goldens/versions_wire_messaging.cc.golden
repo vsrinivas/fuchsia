@@ -10,14 +10,14 @@
 
 #ifdef __Fuchsia__
 
-::fidl::Result
+::fidl::Status
 fidl::WireSyncEventHandler<::test_versions::OtherProtocol>::HandleOneEvent(
     ::fidl::UnownedClientEnd<::test_versions::OtherProtocol> client_end) {
   zx_status_t status = client_end.channel()->wait_one(
       ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED, ::zx::time::infinite(),
       nullptr);
   if (status != ZX_OK) {
-    return ::fidl::Result::TransportError(
+    return ::fidl::Status::TransportError(
         status, ::fidl::internal::kErrorWaitOneFailed);
   }
   constexpr uint32_t kHandleAllocSize = ([]() constexpr {
@@ -42,7 +42,7 @@ fidl::WireSyncEventHandler<::test_versions::OtherProtocol>::HandleOneEvent(
     // This can only be due to a newer version of the protocol defining a new
     // event, whose size exceeds the maximum of known events in the current
     // protocol.
-    return ::fidl::Result::UnexpectedMessage(Unknown());
+    return ::fidl::Status::UnexpectedMessage(Unknown());
   }
   if (!msg.ok()) {
     return msg;
@@ -50,7 +50,7 @@ fidl::WireSyncEventHandler<::test_versions::OtherProtocol>::HandleOneEvent(
   fidl_message_header_t* hdr = msg.header();
   switch (hdr->ordinal) {
     default: {
-      return ::fidl::Result::UnexpectedMessage(Unknown());
+      return ::fidl::Status::UnexpectedMessage(Unknown());
     }
   }
 }
@@ -123,7 +123,7 @@ namespace test_versions {
       request_message(::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
   outgoing.Write(client.handle());
-  SetResult(outgoing);
+  SetStatus(outgoing);
 }
 namespace test_versions {
 #endif  // __Fuchsia__
@@ -131,7 +131,7 @@ namespace test_versions {
 }  // namespace test_versions
 #ifdef __Fuchsia__
 
-::fidl::Result
+::fidl::Status
 fidl::internal::WireWeakOnewayClientImpl<::test_versions::Protocol>::Foo() {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::internal::TransactionalRequest<::test_versions::Protocol::Foo>
@@ -143,7 +143,7 @@ fidl::internal::WireWeakOnewayClientImpl<::test_versions::Protocol>::Foo() {
                        &_request_object);
   return _client_base()->SendOneWay(_request_message.GetOutgoingMessage());
 }
-::fidl::Result fidl::internal::WireWeakOnewayBufferClientImpl<
+::fidl::Status fidl::internal::WireWeakOnewayBufferClientImpl<
     ::test_versions::Protocol>::Foo() {
   constexpr uint32_t _buffer_size =
       ::fidl::AsyncClientMethodBufferSizeInChannel<
@@ -165,14 +165,14 @@ fidl::internal::WireWeakOnewayClientImpl<::test_versions::Protocol>::Foo() {
 
 #ifdef __Fuchsia__
 
-::fidl::Result
+::fidl::Status
 fidl::WireSyncEventHandler<::test_versions::Protocol>::HandleOneEvent(
     ::fidl::UnownedClientEnd<::test_versions::Protocol> client_end) {
   zx_status_t status = client_end.channel()->wait_one(
       ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED, ::zx::time::infinite(),
       nullptr);
   if (status != ZX_OK) {
-    return ::fidl::Result::TransportError(
+    return ::fidl::Status::TransportError(
         status, ::fidl::internal::kErrorWaitOneFailed);
   }
   constexpr uint32_t kHandleAllocSize = ([]() constexpr {
@@ -197,7 +197,7 @@ fidl::WireSyncEventHandler<::test_versions::Protocol>::HandleOneEvent(
     // This can only be due to a newer version of the protocol defining a new
     // event, whose size exceeds the maximum of known events in the current
     // protocol.
-    return ::fidl::Result::UnexpectedMessage(Unknown());
+    return ::fidl::Status::UnexpectedMessage(Unknown());
   }
   if (!msg.ok()) {
     return msg;
@@ -205,7 +205,7 @@ fidl::WireSyncEventHandler<::test_versions::Protocol>::HandleOneEvent(
   fidl_message_header_t* hdr = msg.header();
   switch (hdr->ordinal) {
     default: {
-      return ::fidl::Result::UnexpectedMessage(Unknown());
+      return ::fidl::Status::UnexpectedMessage(Unknown());
     }
   }
 }

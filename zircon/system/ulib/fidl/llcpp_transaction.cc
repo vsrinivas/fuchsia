@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/fidl/llcpp/message.h>
-#include <lib/fidl/llcpp/result.h>
+#include <lib/fidl/llcpp/status.h>
 #include <lib/fidl/llcpp/transaction.h>
 
 namespace fidl {
@@ -67,7 +67,7 @@ std::unique_ptr<Transaction> CompleterBase::TakeOwnership() {
   return clone;
 }
 
-fidl::Result CompleterBase::result_of_reply() const {
+fidl::Status CompleterBase::result_of_reply() const {
   if (!reply_result_.has_value()) {
     ZX_PANIC("Did not make a reply on this completer.");
   }
@@ -95,12 +95,12 @@ void CompleterBase::SendReply(::fidl::OutgoingMessage* message,
   };
   zx_status_t status = transaction_->Reply(message, std::move(write_options));
   if (status != ZX_OK) {
-    auto error = fidl::Result::TransportError(status);
+    auto error = fidl::Status::TransportError(status);
     transaction_->InternalError(fidl::UnbindInfo{error}, fidl::ErrorOrigin::kSend);
     reply_result_.emplace(error);
     return;
   }
-  reply_result_.emplace(fidl::Result::Ok());
+  reply_result_.emplace(fidl::Status::Ok());
 }
 
 void CompleterBase::EnsureHasTransaction(ScopedLock* lock) {

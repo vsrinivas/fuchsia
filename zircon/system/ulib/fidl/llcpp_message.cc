@@ -34,7 +34,7 @@ OutgoingMessage OutgoingMessage::FromEncodedCValue(const fidl_outgoing_msg_t* c_
 }
 
 OutgoingMessage::OutgoingMessage(const fidl_outgoing_msg_t* c_msg, bool is_transactional)
-    : fidl::Result(fidl::Result::Ok()) {
+    : fidl::Status(fidl::Status::Ok()) {
   ZX_ASSERT(c_msg);
   transport_vtable_ = &internal::ChannelTransport::VTable;
   switch (c_msg->type) {
@@ -73,8 +73,8 @@ OutgoingMessage::OutgoingMessage(const fidl_outgoing_msg_t* c_msg, bool is_trans
   is_transactional_ = is_transactional;
 }
 
-OutgoingMessage::OutgoingMessage(const ::fidl::Result& failure)
-    : fidl::Result(failure),
+OutgoingMessage::OutgoingMessage(const ::fidl::Status& failure)
+    : fidl::Status(failure),
       message_({.type = FIDL_OUTGOING_MSG_TYPE_IOVEC,
                 .iovec = {
                     .iovecs = nullptr,
@@ -87,7 +87,7 @@ OutgoingMessage::OutgoingMessage(const ::fidl::Result& failure)
 }
 
 OutgoingMessage::OutgoingMessage(InternalIovecConstructorArgs args)
-    : fidl::Result(fidl::Result::Ok()),
+    : fidl::Status(fidl::Status::Ok()),
       transport_vtable_(args.transport_vtable),
       message_({
           .type = FIDL_OUTGOING_MSG_TYPE_IOVEC,
@@ -103,7 +103,7 @@ OutgoingMessage::OutgoingMessage(InternalIovecConstructorArgs args)
       backing_buffer_(args.backing_buffer) {}
 
 OutgoingMessage::OutgoingMessage(InternalByteBackedConstructorArgs args)
-    : fidl::Result(fidl::Result::Ok()),
+    : fidl::Status(fidl::Status::Ok()),
       transport_vtable_(args.transport_vtable),
       message_({
           .type = FIDL_OUTGOING_MSG_TYPE_IOVEC,
@@ -186,7 +186,7 @@ void OutgoingMessage::EncodeImpl(fidl::internal::WireFormatVersion wire_format_v
       backing_buffer(), backing_buffer_capacity(), &num_iovecs_actual, &num_handles_actual,
       error_address());
   if (status != ZX_OK) {
-    SetResult(fidl::Result::EncodeError(status, *error_address()));
+    SetStatus(fidl::Status::EncodeError(status, *error_address()));
     return;
   }
   iovec_message().num_iovecs = num_iovecs_actual;
@@ -213,7 +213,7 @@ void OutgoingMessage::EncodeImpl(fidl::internal::WireFormatVersion wire_format_v
       linearized_bytes.size(), backing_buffer(), backing_buffer_capacity(), &actual_num_bytes,
       error_address());
   if (status != ZX_OK) {
-    SetResult(fidl::Result::EncodeError(status, *error_address()));
+    SetStatus(fidl::Status::EncodeError(status, *error_address()));
     return;
   }
 
@@ -236,7 +236,7 @@ void OutgoingMessage::Write(internal::AnyUnownedTransport transport, WriteOption
                                        message_.iovec.handle_metadata, handle_actual());
   ReleaseHandles();
   if (status != ZX_OK) {
-    SetResult(fidl::Result::TransportError(status));
+    SetStatus(fidl::Status::TransportError(status));
   }
 }
 
@@ -249,7 +249,7 @@ void OutgoingMessage::DecodeImplForCall(const internal::CodingConfig& coding_con
   if (response_type == nullptr) {
     return;
   } else if (unlikely(*in_out_num_bytes <= sizeof(fidl_message_header_t))) {
-    SetResult(fidl::Result::DecodeError(ZX_ERR_BUFFER_TOO_SMALL,
+    SetStatus(fidl::Status::DecodeError(ZX_ERR_BUFFER_TOO_SMALL,
                                         "non-nullptr response_type must be larger than 16 bytes"));
     return;
   }
@@ -264,12 +264,12 @@ void OutgoingMessage::DecodeImplForCall(const internal::CodingConfig& coding_con
         FIDL_TRANSFORMATION_V1_TO_V2, response_type, true, bytes, *in_out_num_bytes,
         transformed_bytes.get(), ZX_CHANNEL_MAX_MSG_BYTES, &transformed_num_bytes, error_address());
     if (status != ZX_OK) {
-      SetResult(fidl::Result::DecodeError(status, *error_address()));
+      SetStatus(fidl::Status::DecodeError(status, *error_address()));
       return;
     }
 
     if (transformed_num_bytes > *in_out_num_bytes) {
-      SetResult(fidl::Result::DecodeError(ZX_ERR_BUFFER_TOO_SMALL,
+      SetStatus(fidl::Status::DecodeError(ZX_ERR_BUFFER_TOO_SMALL,
                                           "transformed bytes exceeds message buffer capacity"));
       return;
     }
@@ -283,7 +283,7 @@ void OutgoingMessage::DecodeImplForCall(const internal::CodingConfig& coding_con
   zx_status_t trim_status = ::fidl::internal::fidl_exclude_header_bytes(
       bytes, *in_out_num_bytes, &trimmed_result_bytes, &trimmed_num_bytes, error_address());
   if (trim_status != ZX_OK) {
-    SetResult(fidl::Result::DecodeError(trim_status, *error_address()));
+    SetStatus(fidl::Status::DecodeError(trim_status, *error_address()));
     return;
   }
 
@@ -291,7 +291,7 @@ void OutgoingMessage::DecodeImplForCall(const internal::CodingConfig& coding_con
       coding_config, response_type, trimmed_result_bytes, trimmed_num_bytes, handles,
       handle_metadata, num_handles, error_address(), false);
   if (status != ZX_OK) {
-    SetResult(fidl::Result::DecodeError(status, *error_address()));
+    SetStatus(fidl::Status::DecodeError(status, *error_address()));
     return;
   }
 }
@@ -324,7 +324,7 @@ void OutgoingMessage::CallImplForTransportProvidedBuffer(internal::AnyUnownedTra
   zx_status_t status = transport.call(std::move(options), args, out_num_bytes, &result_num_handles);
   ReleaseHandles();
   if (status != ZX_OK) {
-    SetResult(fidl::Result::TransportError(status));
+    SetStatus(fidl::Status::TransportError(status));
     return;
   }
 
@@ -362,7 +362,7 @@ void OutgoingMessage::CallImplForCallerProvidedBuffer(
       transport.call(std::move(options), args, &actual_num_bytes, &actual_num_handles);
   ReleaseHandles();
   if (status != ZX_OK) {
-    SetResult(fidl::Result::TransportError(status));
+    SetStatus(fidl::Status::TransportError(status));
     return;
   }
 
@@ -402,7 +402,7 @@ IncomingMessage::IncomingMessage(const internal::TransportVTable* transport_vtab
                                  uint32_t byte_actual, zx_handle_t* handles,
                                  fidl_handle_metadata_t* handle_metadata, uint32_t handle_actual,
                                  SkipMessageHeaderValidationTag)
-    : fidl::Result(fidl::Result::Ok()),
+    : fidl::Status(fidl::Status::Ok()),
       transport_vtable_(transport_vtable),
       message_{
           .bytes = bytes,
@@ -412,7 +412,7 @@ IncomingMessage::IncomingMessage(const internal::TransportVTable* transport_vtab
           .num_handles = handle_actual,
       } {}
 
-IncomingMessage::IncomingMessage(const fidl::Result& failure) : fidl::Result(failure), message_{} {
+IncomingMessage::IncomingMessage(const fidl::Status& failure) : fidl::Status(failure), message_{} {
   ZX_DEBUG_ASSERT(failure.status() != ZX_OK);
 }
 
@@ -462,7 +462,7 @@ void IncomingMessage::Decode__Internal_MayBreak(internal::WireFormatVersion wire
       zx_status_t status = ::fidl::internal::fidl_exclude_header_bytes(
           bytes(), byte_actual(), &trimmed_bytes, &trimmed_num_bytes, error_address());
       if (status != ZX_OK) {
-        SetResult(fidl::Result::DecodeError(status, *error_address()));
+        SetStatus(fidl::Status::DecodeError(status, *error_address()));
         return;
       }
     }
@@ -470,7 +470,7 @@ void IncomingMessage::Decode__Internal_MayBreak(internal::WireFormatVersion wire
     zx_status_t status = internal__fidl_validate__v1__may_break(
         message_type, trimmed_bytes, trimmed_num_bytes, handle_actual(), error_address());
     if (status != ZX_OK) {
-      SetResult(fidl::Result::DecodeError(status, *error_address()));
+      SetStatus(fidl::Status::DecodeError(status, *error_address()));
       return;
     }
 
@@ -483,7 +483,7 @@ void IncomingMessage::Decode__Internal_MayBreak(internal::WireFormatVersion wire
           out_transformed_buffer->get(), ZX_CHANNEL_MAX_MSG_BYTES, &actual_num_bytes,
           error_address());
       if (status != ZX_OK) {
-        SetResult(fidl::Result::DecodeError(status, *error_address()));
+        SetStatus(fidl::Status::DecodeError(status, *error_address()));
         return;
       }
 
@@ -499,7 +499,7 @@ void IncomingMessage::Decode__Internal_MayBreak(internal::WireFormatVersion wire
     zx_status_t status = ::fidl::internal::fidl_exclude_header_bytes(
         bytes(), byte_actual(), &trimmed_bytes, &trimmed_num_bytes, error_address());
     if (status != ZX_OK) {
-      SetResult(fidl::Result::DecodeError(status, *error_address()));
+      SetStatus(fidl::Status::DecodeError(status, *error_address()));
       return;
     }
   }
@@ -513,27 +513,27 @@ void IncomingMessage::Decode__Internal_MayBreak(internal::WireFormatVersion wire
   // Now the caller is responsible for the handles contained in `bytes()`.
   ReleaseHandles();
   if (status != ZX_OK) {
-    SetResult(fidl::Result::DecodeError(status, *error_address()));
+    SetStatus(fidl::Status::DecodeError(status, *error_address()));
   }
 }
 
 void IncomingMessage::ValidateHeader() {
   if (byte_actual() < sizeof(fidl_message_header_t)) {
-    return SetResult(fidl::Result::UnexpectedMessage(ZX_ERR_INVALID_ARGS,
+    return SetStatus(fidl::Status::UnexpectedMessage(ZX_ERR_INVALID_ARGS,
                                                      ::fidl::internal::kErrorInvalidHeader));
   }
 
   auto* hdr = header();
   zx_status_t status = fidl_validate_txn_header(hdr);
   if (status != ZX_OK) {
-    return SetResult(
-        fidl::Result::UnexpectedMessage(status, ::fidl::internal::kErrorInvalidHeader));
+    return SetStatus(
+        fidl::Status::UnexpectedMessage(status, ::fidl::internal::kErrorInvalidHeader));
   }
 
   // See https://fuchsia.dev/fuchsia-src/contribute/governance/rfcs/0053_epitaphs?hl=en#wire_format
   if (unlikely(maybe_epitaph())) {
     if (hdr->txid != 0) {
-      return SetResult(fidl::Result::UnexpectedMessage(ZX_ERR_INVALID_ARGS,
+      return SetStatus(fidl::Status::UnexpectedMessage(ZX_ERR_INVALID_ARGS,
                                                        ::fidl::internal::kErrorInvalidHeader));
     }
   }
@@ -559,7 +559,7 @@ IncomingMessage OutgoingToIncomingMessage::ConversionImpl(
 
   if (num_handles > ZX_CHANNEL_MAX_MSG_HANDLES) {
     FidlHandleCloseMany(handles, num_handles);
-    return fidl::IncomingMessage::Create(fidl::Result::EncodeError(ZX_ERR_OUT_OF_RANGE));
+    return fidl::IncomingMessage::Create(fidl::Status::EncodeError(ZX_ERR_OUT_OF_RANGE));
   }
 
   // Note: it may be possible to remove these allocations.
@@ -573,7 +573,7 @@ IncomingMessage OutgoingToIncomingMessage::ConversionImpl(
     if (status != ZX_OK) {
       FidlHandleCloseMany(handles, num_handles);
       FidlHandleCloseMany(buf_handles.get(), num_handles);
-      return fidl::IncomingMessage::Create(fidl::Result::EncodeError(status));
+      return fidl::IncomingMessage::Create(fidl::Status::EncodeError(status));
     }
     buf_handles[i] = handles[i];
     buf_handle_metadata[i] = handle_metadata[i];
@@ -583,7 +583,7 @@ IncomingMessage OutgoingToIncomingMessage::ConversionImpl(
   if (buf_bytes.size() > ZX_CHANNEL_MAX_MSG_BYTES) {
     FidlHandleCloseMany(handles, num_handles);
     FidlHandleCloseMany(buf_handles.get(), num_handles);
-    return fidl::IncomingMessage::Create(fidl::Result::EncodeError(ZX_ERR_INVALID_ARGS));
+    return fidl::IncomingMessage::Create(fidl::Status::EncodeError(ZX_ERR_INVALID_ARGS));
   }
 
   if (input.is_transactional()) {

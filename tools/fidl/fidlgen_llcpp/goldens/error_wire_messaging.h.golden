@@ -253,7 +253,7 @@ namespace test_error {
 }  // namespace test_error
 template <>
 class ::fidl::WireResult<::test_error::Example::Foo> final
-    : public ::fidl::Result {
+    : public ::fidl::Status {
  public:
   WireResult(::fidl::UnownedClientEnd<::test_error::Example> client,
              ::fidl::internal::TransactionalRequest<::test_error::Example::Foo>*
@@ -262,7 +262,7 @@ class ::fidl::WireResult<::test_error::Example::Foo> final
              ::fidl::internal::TransactionalRequest<::test_error::Example::Foo>*
                  request,
              zx_time_t _deadline);
-  explicit WireResult(const ::fidl::Result& result) : ::fidl::Result(result) {}
+  explicit WireResult(const ::fidl::Status& result) : ::fidl::Status(result) {}
   WireResult(WireResult&&) = delete;
   WireResult(const WireResult&) = delete;
   WireResult* operator=(WireResult&&) = delete;
@@ -306,7 +306,7 @@ class ::fidl::WireResult<::test_error::Example::Foo> final
 };
 template <>
 class ::fidl::WireUnownedResult<::test_error::Example::Foo> final
-    : public ::fidl::Result {
+    : public ::fidl::Status {
  public:
   explicit WireUnownedResult(
       ::fidl::UnownedClientEnd<::test_error::Example> client_end,
@@ -317,13 +317,13 @@ class ::fidl::WireUnownedResult<::test_error::Example::Foo> final
       ::fidl::internal::TransactionalResponse<::test_error::Example::Foo>*
           response)
       : bytes_(reinterpret_cast<uint8_t*>(response)) {}
-  explicit WireUnownedResult(const ::fidl::Result& result)
-      : ::fidl::Result(result) {}
+  explicit WireUnownedResult(const ::fidl::Status& result)
+      : ::fidl::Status(result) {}
   explicit WireUnownedResult(
       ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<
           ::test_error::Example::Foo>>&& decoded,
       ::fidl::internal::IncomingTransportContext context)
-      : ::fidl::Result(decoded) {
+      : ::fidl::Status(decoded) {
     if (decoded.ok()) {
       bytes_ = reinterpret_cast<uint8_t*>(decoded.PrimaryObject());
     } else {
@@ -402,7 +402,7 @@ class ::fidl::WireSyncEventHandler<::test_error::Example>
   // Handle all possible events defined in this protocol.
   // Blocks to consume exactly one message from the channel, then call the
   // corresponding virtual method.
-  ::fidl::Result HandleOneEvent(
+  ::fidl::Status HandleOneEvent(
       ::fidl::UnownedClientEnd<::test_error::Example> client_end);
 };
 

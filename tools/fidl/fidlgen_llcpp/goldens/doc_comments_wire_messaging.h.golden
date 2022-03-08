@@ -212,12 +212,12 @@ namespace test_doccomments {
 }  // namespace test_doccomments
 template <>
 class ::fidl::WireResult<::test_doccomments::Interface::Method> final
-    : public ::fidl::Result {
+    : public ::fidl::Status {
  public:
   WireResult(::fidl::UnownedClientEnd<::test_doccomments::Interface> client,
              ::fidl::internal::TransactionalRequest<
                  ::test_doccomments::Interface::Method>* request);
-  explicit WireResult(const ::fidl::Result& result) : ::fidl::Result(result) {}
+  explicit WireResult(const ::fidl::Status& result) : ::fidl::Status(result) {}
   WireResult(WireResult&&) = delete;
   WireResult(const WireResult&) = delete;
   WireResult* operator=(WireResult&&) = delete;
@@ -228,15 +228,15 @@ class ::fidl::WireResult<::test_doccomments::Interface::Method> final
 };
 template <>
 class ::fidl::WireUnownedResult<::test_doccomments::Interface::Method> final
-    : public ::fidl::Result {
+    : public ::fidl::Status {
  public:
   explicit WireUnownedResult(
       ::fidl::UnownedClientEnd<::test_doccomments::Interface> client_end,
       ::fidl::internal::AnyBufferAllocator& allocator,
       ::fidl::internal::TransactionalRequest<
           ::test_doccomments::Interface::Method>* request);
-  explicit WireUnownedResult(const ::fidl::Result& result)
-      : ::fidl::Result(result) {}
+  explicit WireUnownedResult(const ::fidl::Status& result)
+      : ::fidl::Status(result) {}
   WireUnownedResult(WireUnownedResult&&) = delete;
   WireUnownedResult(const WireUnownedResult&) = delete;
   WireUnownedResult* operator=(WireUnownedResult&&) = delete;
@@ -279,7 +279,7 @@ class ::fidl::WireSyncEventHandler<::test_doccomments::Interface>
   // Handle all possible events defined in this protocol.
   // Blocks to consume exactly one message from the channel, then call the
   // corresponding virtual method.
-  ::fidl::Result HandleOneEvent(
+  ::fidl::Status HandleOneEvent(
       ::fidl::UnownedClientEnd<::test_doccomments::Interface> client_end);
 };
 
@@ -480,7 +480,7 @@ class ::fidl::internal::WireWeakOnewayClientImpl<::test_doccomments::Interface>
   //
   // Allocates 32 bytes of message buffer on the stack. No heap allocation
   // necessary.
-  ::fidl::Result Method();
+  ::fidl::Status Method();
 };
 
 template <>
@@ -503,7 +503,7 @@ class ::fidl::internal::WireWeakOnewayBufferClientImpl<
   /// method comment #3
   //
   // Caller provides the backing storage for FIDL message.
-  ::fidl::Result Method();
+  ::fidl::Status Method();
 };
 
 template <>
@@ -535,7 +535,7 @@ class ::fidl::internal::WireWeakEventSender<::test_doccomments::Interface>
   /// event comment #1
   ///
   /// event comment #3
-  fidl::Result OnEvent();
+  fidl::Status OnEvent();
 };
 
 template <>
@@ -547,7 +547,7 @@ class ::fidl::internal::WireWeakBufferEventSender<::test_doccomments::Interface>
   /// event comment #1
   ///
   /// event comment #3
-  fidl::Result OnEvent();
+  fidl::Status OnEvent();
 };
 
 template <>
@@ -560,7 +560,7 @@ class ::fidl::internal::WireEventSender<::test_doccomments::Interface>
   /// event comment #1
   ///
   /// event comment #3
-  fidl::Result OnEvent();
+  fidl::Status OnEvent();
 };
 
 template <>
@@ -574,6 +574,6 @@ class ::fidl::internal::WireBufferEventSender<::test_doccomments::Interface>
   /// event comment #1
   ///
   /// event comment #3
-  fidl::Result OnEvent();
+  fidl::Status OnEvent();
 };
 #endif  // __Fuchsia__

@@ -7,7 +7,7 @@
 
 #include <lib/fidl/llcpp/internal/arrow.h>
 #include <lib/fidl/llcpp/message.h>
-#include <lib/fidl/llcpp/result.h>
+#include <lib/fidl/llcpp/status.h>
 #include <lib/fidl/llcpp/wire_messaging_declarations.h>
 #include <lib/fit/function.h>
 #include <lib/stdcompat/variant.h>

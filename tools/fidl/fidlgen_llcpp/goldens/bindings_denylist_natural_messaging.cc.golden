@@ -243,9 +243,9 @@ namespace test_bindingsdenylist {
   ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
       _encoder{::test_bindingsdenylist::
                    kImportsSameNameContext_Unattributed_Ordinal};
-  ::fidl::Result result = messenger().OneWay(
+  ::fidl::Status status = messenger().OneWay(
       ::fidl::internal::EncodeTransactionalMessage(_encoder));
-  return ::fidl::internal::ToFitxResult(result);
+  return ::fidl::internal::ToFitxResult(status);
 }
 
 ::fitx::result<::fidl::Error> fidl::internal::NaturalClientImpl<
@@ -255,9 +255,9 @@ namespace test_bindingsdenylist {
       _encoder{
           ::test_bindingsdenylist::
               kImportsSameNameContext_AlwaysAppearsInImportingLibrary_Ordinal};
-  ::fidl::Result result = messenger().OneWay(
+  ::fidl::Status status = messenger().OneWay(
       ::fidl::internal::EncodeTransactionalMessage(_encoder));
-  return ::fidl::internal::ToFitxResult(result);
+  return ::fidl::internal::ToFitxResult(status);
 }
 namespace test_bindingsdenylist {
 #endif  // __Fuchsia__

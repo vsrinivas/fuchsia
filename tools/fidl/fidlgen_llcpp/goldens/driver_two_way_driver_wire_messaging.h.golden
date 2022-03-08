@@ -256,7 +256,7 @@ namespace test_drivertwoway {
 }  // namespace test_drivertwoway
 template <>
 class ::fdf::WireUnownedResult<::test_drivertwoway::TwoWay::Add> final
-    : public ::fidl::Result {
+    : public ::fidl::Status {
  public:
   explicit WireUnownedResult(
       ::fdf::UnownedClientEnd<::test_drivertwoway::TwoWay> client_end,
@@ -267,13 +267,13 @@ class ::fdf::WireUnownedResult<::test_drivertwoway::TwoWay::Add> final
       ::fidl::internal::TransactionalResponse<::test_drivertwoway::TwoWay::Add>*
           response)
       : bytes_(reinterpret_cast<uint8_t*>(response)) {}
-  explicit WireUnownedResult(const ::fidl::Result& result)
-      : ::fidl::Result(result) {}
+  explicit WireUnownedResult(const ::fidl::Status& result)
+      : ::fidl::Status(result) {}
   explicit WireUnownedResult(
       ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<
           ::test_drivertwoway::TwoWay::Add>>&& decoded,
       ::fidl::internal::IncomingTransportContext context)
-      : ::fidl::Result(decoded),
+      : ::fidl::Status(decoded),
         arena_(context.release<::fidl::internal::DriverTransport>()) {
     if (decoded.ok()) {
       bytes_ = reinterpret_cast<uint8_t*>(decoded.PrimaryObject());
@@ -362,7 +362,7 @@ class ::fidl::WireSyncEventHandler<::test_drivertwoway::TwoWay>
   // Handle all possible events defined in this protocol.
   // Blocks to consume exactly one message from the channel, then call the
   // corresponding virtual method.
-  ::fidl::Result HandleOneEvent(
+  ::fidl::Status HandleOneEvent(
       ::fdf::UnownedClientEnd<::test_drivertwoway::TwoWay> client_end);
 };
 

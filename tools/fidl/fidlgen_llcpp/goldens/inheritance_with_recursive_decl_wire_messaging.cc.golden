@@ -26,7 +26,7 @@ extern "C" const fidl_type_t
       request_message(::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
   outgoing.Write(client.handle());
-  SetResult(outgoing);
+  SetStatus(outgoing);
 }
 namespace test_inheritancewithrecursivedecl {
 #endif  // __Fuchsia__
@@ -45,7 +45,7 @@ namespace test_inheritancewithrecursivedecl {
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation =
       allocator.TryAllocate(buffer_size);
   if (!allocation.is_ok()) {
-    ::fidl::Result::operator=(allocation.error_value());
+    ::fidl::Status::operator=(allocation.error_value());
     return;
   }
   uint8_t* buffer = allocation->data;
@@ -58,7 +58,7 @@ namespace test_inheritancewithrecursivedecl {
       request_message(request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
   outgoing.Write(client_end.handle());
-  ::fidl::Result::operator=(outgoing);
+  ::fidl::Status::operator=(outgoing);
 }
 namespace test_inheritancewithrecursivedecl {
 #endif  // __Fuchsia__
@@ -66,7 +66,7 @@ namespace test_inheritancewithrecursivedecl {
 }  // namespace test_inheritancewithrecursivedecl
 #ifdef __Fuchsia__
 
-::fidl::Result fidl::internal::WireWeakOnewayClientImpl<
+::fidl::Status fidl::internal::WireWeakOnewayClientImpl<
     ::test_inheritancewithrecursivedecl::Parent>::
     First(::fidl::ServerEnd<::test_inheritancewithrecursivedecl::Parent>&&
               request) {
@@ -82,7 +82,7 @@ namespace test_inheritancewithrecursivedecl {
                        &_request_object);
   return _client_base()->SendOneWay(_request_message.GetOutgoingMessage());
 }
-::fidl::Result fidl::internal::WireWeakOnewayBufferClientImpl<
+::fidl::Status fidl::internal::WireWeakOnewayBufferClientImpl<
     ::test_inheritancewithrecursivedecl::Parent>::
     First(::fidl::ServerEnd<::test_inheritancewithrecursivedecl::Parent>&&
               request) {
@@ -108,7 +108,7 @@ namespace test_inheritancewithrecursivedecl {
 
 #ifdef __Fuchsia__
 
-::fidl::Result
+::fidl::Status
 fidl::WireSyncEventHandler<::test_inheritancewithrecursivedecl::Parent>::
     HandleOneEvent(
         ::fidl::UnownedClientEnd<::test_inheritancewithrecursivedecl::Parent>
@@ -117,7 +117,7 @@ fidl::WireSyncEventHandler<::test_inheritancewithrecursivedecl::Parent>::
       ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED, ::zx::time::infinite(),
       nullptr);
   if (status != ZX_OK) {
-    return ::fidl::Result::TransportError(
+    return ::fidl::Status::TransportError(
         status, ::fidl::internal::kErrorWaitOneFailed);
   }
   constexpr uint32_t kHandleAllocSize = ([]() constexpr {
@@ -142,7 +142,7 @@ fidl::WireSyncEventHandler<::test_inheritancewithrecursivedecl::Parent>::
     // This can only be due to a newer version of the protocol defining a new
     // event, whose size exceeds the maximum of known events in the current
     // protocol.
-    return ::fidl::Result::UnexpectedMessage(Unknown());
+    return ::fidl::Status::UnexpectedMessage(Unknown());
   }
   if (!msg.ok()) {
     return msg;
@@ -150,7 +150,7 @@ fidl::WireSyncEventHandler<::test_inheritancewithrecursivedecl::Parent>::
   fidl_message_header_t* hdr = msg.header();
   switch (hdr->ordinal) {
     default: {
-      return ::fidl::Result::UnexpectedMessage(Unknown());
+      return ::fidl::Status::UnexpectedMessage(Unknown());
     }
   }
 }
@@ -276,7 +276,7 @@ extern "C" const fidl_type_t
       request_message(::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
   outgoing.Write(client.handle());
-  SetResult(outgoing);
+  SetStatus(outgoing);
 }
 namespace test_inheritancewithrecursivedecl {
 #endif  // __Fuchsia__
@@ -295,7 +295,7 @@ namespace test_inheritancewithrecursivedecl {
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation =
       allocator.TryAllocate(buffer_size);
   if (!allocation.is_ok()) {
-    ::fidl::Result::operator=(allocation.error_value());
+    ::fidl::Status::operator=(allocation.error_value());
     return;
   }
   uint8_t* buffer = allocation->data;
@@ -308,7 +308,7 @@ namespace test_inheritancewithrecursivedecl {
       request_message(request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
   outgoing.Write(client_end.handle());
-  ::fidl::Result::operator=(outgoing);
+  ::fidl::Status::operator=(outgoing);
 }
 namespace test_inheritancewithrecursivedecl {
 #endif  // __Fuchsia__
@@ -329,7 +329,7 @@ namespace test_inheritancewithrecursivedecl {
       request_message(::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
   outgoing.Write(client.handle());
-  SetResult(outgoing);
+  SetStatus(outgoing);
 }
 namespace test_inheritancewithrecursivedecl {
 #endif  // __Fuchsia__
@@ -348,7 +348,7 @@ namespace test_inheritancewithrecursivedecl {
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation =
       allocator.TryAllocate(buffer_size);
   if (!allocation.is_ok()) {
-    ::fidl::Result::operator=(allocation.error_value());
+    ::fidl::Status::operator=(allocation.error_value());
     return;
   }
   uint8_t* buffer = allocation->data;
@@ -361,7 +361,7 @@ namespace test_inheritancewithrecursivedecl {
       request_message(request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
   outgoing.Write(client_end.handle());
-  ::fidl::Result::operator=(outgoing);
+  ::fidl::Status::operator=(outgoing);
 }
 namespace test_inheritancewithrecursivedecl {
 #endif  // __Fuchsia__
@@ -369,7 +369,7 @@ namespace test_inheritancewithrecursivedecl {
 }  // namespace test_inheritancewithrecursivedecl
 #ifdef __Fuchsia__
 
-::fidl::Result fidl::internal::
+::fidl::Status fidl::internal::
     WireWeakOnewayClientImpl<::test_inheritancewithrecursivedecl::Child>::First(
         ::fidl::ServerEnd<::test_inheritancewithrecursivedecl::Parent>&&
             request) {
@@ -385,7 +385,7 @@ namespace test_inheritancewithrecursivedecl {
                        &_request_object);
   return _client_base()->SendOneWay(_request_message.GetOutgoingMessage());
 }
-::fidl::Result fidl::internal::WireWeakOnewayClientImpl<
+::fidl::Status fidl::internal::WireWeakOnewayClientImpl<
     ::test_inheritancewithrecursivedecl::Child>::
     Second(::fidl::ServerEnd<::test_inheritancewithrecursivedecl::Parent>&&
                request) {
@@ -401,7 +401,7 @@ namespace test_inheritancewithrecursivedecl {
                        &_request_object);
   return _client_base()->SendOneWay(_request_message.GetOutgoingMessage());
 }
-::fidl::Result fidl::internal::WireWeakOnewayBufferClientImpl<
+::fidl::Status fidl::internal::WireWeakOnewayBufferClientImpl<
     ::test_inheritancewithrecursivedecl::Child>::
     First(::fidl::ServerEnd<::test_inheritancewithrecursivedecl::Parent>&&
               request) {
@@ -423,7 +423,7 @@ namespace test_inheritancewithrecursivedecl {
       _request_message(_allocation->data, _buffer_size, &_request);
   return _client_base()->SendOneWay(_request_message.GetOutgoingMessage());
 }
-::fidl::Result fidl::internal::WireWeakOnewayBufferClientImpl<
+::fidl::Status fidl::internal::WireWeakOnewayBufferClientImpl<
     ::test_inheritancewithrecursivedecl::Child>::
     Second(::fidl::ServerEnd<::test_inheritancewithrecursivedecl::Parent>&&
                request) {
@@ -449,7 +449,7 @@ namespace test_inheritancewithrecursivedecl {
 
 #ifdef __Fuchsia__
 
-::fidl::Result
+::fidl::Status
 fidl::WireSyncEventHandler<::test_inheritancewithrecursivedecl::Child>::
     HandleOneEvent(
         ::fidl::UnownedClientEnd<::test_inheritancewithrecursivedecl::Child>
@@ -458,7 +458,7 @@ fidl::WireSyncEventHandler<::test_inheritancewithrecursivedecl::Child>::
       ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED, ::zx::time::infinite(),
       nullptr);
   if (status != ZX_OK) {
-    return ::fidl::Result::TransportError(
+    return ::fidl::Status::TransportError(
         status, ::fidl::internal::kErrorWaitOneFailed);
   }
   constexpr uint32_t kHandleAllocSize = ([]() constexpr {
@@ -483,7 +483,7 @@ fidl::WireSyncEventHandler<::test_inheritancewithrecursivedecl::Child>::
     // This can only be due to a newer version of the protocol defining a new
     // event, whose size exceeds the maximum of known events in the current
     // protocol.
-    return ::fidl::Result::UnexpectedMessage(Unknown());
+    return ::fidl::Status::UnexpectedMessage(Unknown());
   }
   if (!msg.ok()) {
     return msg;
@@ -491,7 +491,7 @@ fidl::WireSyncEventHandler<::test_inheritancewithrecursivedecl::Child>::
   fidl_message_header_t* hdr = msg.header();
   switch (hdr->ordinal) {
     default: {
-      return ::fidl::Result::UnexpectedMessage(Unknown());
+      return ::fidl::Status::UnexpectedMessage(Unknown());
     }
   }
 }

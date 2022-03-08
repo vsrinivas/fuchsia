@@ -7,7 +7,7 @@
 
 #include <lib/fidl/llcpp/internal/transport.h>
 #include <lib/fidl/llcpp/message_storage.h>
-#include <lib/fidl/llcpp/result.h>
+#include <lib/fidl/llcpp/status.h>
 #include <lib/fidl/llcpp/traits.h>
 #include <lib/fidl/txn_header.h>
 #include <lib/fit/nullable.h>
@@ -59,7 +59,7 @@ struct AllowUnownedInputRef {};
 //
 // For efficiency, errors are stored inside this object. |Write| operations are
 // no-op and return the contained error if the message is in an error state.
-class OutgoingMessage : public ::fidl::Result {
+class OutgoingMessage : public ::fidl::Status {
  public:
   // Copy and move is disabled for the sake of avoiding double handle close.
   // It is possible to implement the move operations with correct semantics if they are
@@ -125,7 +125,7 @@ class OutgoingMessage : public ::fidl::Result {
   // Creates an empty outgoing message representing an error.
   //
   // |failure| must contain an error result.
-  explicit OutgoingMessage(const ::fidl::Result& failure);
+  explicit OutgoingMessage(const ::fidl::Status& failure);
 
   // Set the txid in the message header.
   //
@@ -246,7 +246,7 @@ class OutgoingMessage : public ::fidl::Result {
 
  protected:
   OutgoingMessage(fidl_outgoing_msg_t msg, uint32_t handle_capacity)
-      : ::fidl::Result(::fidl::Result::Ok()), message_(msg), handle_capacity_(handle_capacity) {}
+      : ::fidl::Status(::fidl::Status::Ok()), message_(msg), handle_capacity_(handle_capacity) {}
 
   void EncodeImpl(fidl::internal::WireFormatVersion wire_format_version,
                   const fidl_type_t* message_type, void* data);
@@ -287,7 +287,7 @@ class OutgoingMessage : public ::fidl::Result {
     return message_.iovec;
   }
 
-  using Result::SetResult;
+  using Result::SetStatus;
 
   const internal::TransportVTable* transport_vtable_ = nullptr;
   fidl_outgoing_msg_t message_ = {};
@@ -341,7 +341,7 @@ class DecodedMessageBase;
 //     fidl::IncomingMessage msg = fidl::ChannelReadEtc(handle, 0, byte_span, handle_span);
 //     if (!msg.ok()) { /* ... error handling ... */ }
 //
-class IncomingMessage : public ::fidl::Result {
+class IncomingMessage : public ::fidl::Status {
  public:
   // Creates an object which can manage a FIDL channel message. Allocated memory is
   // not owned by the |IncomingMessage|, but handles are owned by it and cleaned up when the
@@ -418,16 +418,16 @@ class IncomingMessage : public ::fidl::Result {
   // a channel).
   //
   // |failure| must contain an error result.
-  static IncomingMessage Create(const ::fidl::Result& failure) { return IncomingMessage(failure); }
+  static IncomingMessage Create(const ::fidl::Status& failure) { return IncomingMessage(failure); }
 
   IncomingMessage(const IncomingMessage&) = delete;
   IncomingMessage& operator=(const IncomingMessage&) = delete;
 
-  IncomingMessage(IncomingMessage&& other) noexcept : ::fidl::Result(other) {
+  IncomingMessage(IncomingMessage&& other) noexcept : ::fidl::Status(other) {
     MoveImpl(std::move(other));
   }
   IncomingMessage& operator=(IncomingMessage&& other) noexcept {
-    ::fidl::Result::operator=(other);
+    ::fidl::Status::operator=(other);
     if (this != &other) {
       MoveImpl(std::move(other));
     }
@@ -499,7 +499,7 @@ class IncomingMessage : public ::fidl::Result {
                                  bool hlcpp_mode);
 
  private:
-  explicit IncomingMessage(const ::fidl::Result& failure);
+  explicit IncomingMessage(const ::fidl::Status& failure);
   IncomingMessage(const internal::TransportVTable* transport_vtable, uint8_t* bytes,
                   uint32_t byte_actual, zx_handle_t* handles,
                   fidl_handle_metadata_t* handle_metadata, uint32_t handle_actual);
@@ -577,7 +577,7 @@ class IncomingMessage : public ::fidl::Result {
   // This method should be used after a read.
   void Decode(const fidl_type_t* message_type, std::unique_ptr<uint8_t[]>* out_transformed_buffer);
 
-  // Performs basic transactional message header validation and sets the |fidl::Result| fields
+  // Performs basic transactional message header validation and sets the |fidl::Status| fields
   // accordingly.
   void ValidateHeader();
 
@@ -603,7 +603,7 @@ IncomingMessage MessageRead(TransportObject&& transport, ::fidl::BufferSpan byte
       options, bytes_storage.data, bytes_storage.capacity, handle_storage, handle_metadata_storage,
       handle_capacity, &num_bytes, &num_handles);
   if (status != ZX_OK) {
-    return IncomingMessage::Create(fidl::Result::TransportError(status));
+    return IncomingMessage::Create(fidl::Status::TransportError(status));
   }
   return IncomingMessage::Create(bytes_storage.data, num_bytes, handle_storage,
                                  handle_metadata_storage, num_handles);
@@ -620,7 +620,7 @@ namespace internal {
 // subclass should be defined which adds the FIDL type-specific handle RAII
 // behavior.
 template <typename FidlType>
-class DecodedMessageBase : public ::fidl::Result {
+class DecodedMessageBase : public ::fidl::Status {
  public:
   // Creates an |DecodedMessageBase| by decoding the incoming message |msg|.
   // Consumes |msg|.
@@ -631,7 +631,7 @@ class DecodedMessageBase : public ::fidl::Result {
     static_assert(fidl::IsFidlTransactionalMessage<FidlType>::value);
     msg.Decode<FidlType>(&allocated_buffer_);
     bytes_ = msg.bytes();
-    SetResult(msg);
+    SetStatus(msg);
   }
 
   // Creates an |DecodedMessageBase| by decoding the incoming message |msg| as the specified
@@ -642,16 +642,16 @@ class DecodedMessageBase : public ::fidl::Result {
     static_assert(!fidl::IsFidlTransactionalMessage<FidlType>::value);
     msg.Decode<FidlType>(wire_format_version, &allocated_buffer_);
     bytes_ = msg.bytes();
-    SetResult(msg);
+    SetStatus(msg);
   }
 
   // Creates an empty decoded message representing an error (e.g. failed to read
   // from a channel).
   //
   // |failure| must contain an error result.
-  explicit DecodedMessageBase(const ::fidl::Result& failure) {
+  explicit DecodedMessageBase(const ::fidl::Status& failure) {
     ZX_DEBUG_ASSERT(!failure.ok());
-    SetResult(failure);
+    SetStatus(failure);
   }
 
  protected:
@@ -726,7 +726,7 @@ class UnownedEncodedMessage final {
   bool ok() const { return message_.status() == ZX_OK; }
   std::string FormatDescription() const { return message_.FormatDescription(); }
   const char* lossy_description() const { return message_.lossy_description(); }
-  const ::fidl::Result& error() const { return message_.error(); }
+  const ::fidl::Status& error() const { return message_.error(); }
 
   ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
@@ -779,7 +779,7 @@ class OwnedEncodedMessage final {
   bool ok() const { return message_.ok(); }
   std::string FormatDescription() const { return message_.FormatDescription(); }
   const char* lossy_description() const { return message_.lossy_description(); }
-  const ::fidl::Result& error() const { return message_.error(); }
+  const ::fidl::Status& error() const { return message_.error(); }
 
   ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_.GetOutgoingMessage(); }
 

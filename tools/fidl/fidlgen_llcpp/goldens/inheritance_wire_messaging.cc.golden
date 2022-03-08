@@ -25,7 +25,7 @@ extern "C" const fidl_type_t test_inheritance_SuperFooTopResponseTable;
   outgoing.Call<
       ::fidl::internal::TransactionalResponse<::test_inheritance::Super::Foo>>(
       client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()));
-  SetResult(outgoing);
+  SetStatus(outgoing);
 }
 
 ::fidl::WireResult<::test_inheritance::Super::Foo>::WireResult(
@@ -43,7 +43,7 @@ extern "C" const fidl_type_t test_inheritance_SuperFooTopResponseTable;
       ::fidl::internal::TransactionalResponse<::test_inheritance::Super::Foo>>(
       client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()),
       fidl::CallOptions{.deadline = deadline});
-  SetResult(outgoing);
+  SetStatus(outgoing);
 }
 namespace test_inheritance {
 #endif  // __Fuchsia__
@@ -60,7 +60,7 @@ namespace test_inheritance {
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation =
       allocator.TryAllocate(buffer_size);
   if (!allocation.is_ok()) {
-    ::fidl::Result::operator=(allocation.error_value());
+    ::fidl::Status::operator=(allocation.error_value());
     return;
   }
   uint8_t* buffer = allocation->data;
@@ -80,7 +80,7 @@ namespace test_inheritance {
       ::fidl::internal::TransactionalResponse<::test_inheritance::Super::Foo>>(
       client_end.handle(), response_bytes, response_byte_capacity);
   bytes_ = response_bytes;
-  ::fidl::Result::operator=(outgoing);
+  ::fidl::Status::operator=(outgoing);
 }
 namespace test_inheritance {
 #endif  // __Fuchsia__
@@ -192,14 +192,14 @@ fidl::internal::WireWeakSyncClientImpl<::test_inheritance::Super>::Foo(
 
 #ifdef __Fuchsia__
 
-::fidl::Result
+::fidl::Status
 fidl::WireSyncEventHandler<::test_inheritance::Super>::HandleOneEvent(
     ::fidl::UnownedClientEnd<::test_inheritance::Super> client_end) {
   zx_status_t status = client_end.channel()->wait_one(
       ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED, ::zx::time::infinite(),
       nullptr);
   if (status != ZX_OK) {
-    return ::fidl::Result::TransportError(
+    return ::fidl::Status::TransportError(
         status, ::fidl::internal::kErrorWaitOneFailed);
   }
   constexpr uint32_t kHandleAllocSize = ([]() constexpr {
@@ -224,7 +224,7 @@ fidl::WireSyncEventHandler<::test_inheritance::Super>::HandleOneEvent(
     // This can only be due to a newer version of the protocol defining a new
     // event, whose size exceeds the maximum of known events in the current
     // protocol.
-    return ::fidl::Result::UnexpectedMessage(Unknown());
+    return ::fidl::Status::UnexpectedMessage(Unknown());
   }
   if (!msg.ok()) {
     return msg;
@@ -232,7 +232,7 @@ fidl::WireSyncEventHandler<::test_inheritance::Super>::HandleOneEvent(
   fidl_message_header_t* hdr = msg.header();
   switch (hdr->ordinal) {
     default: {
-      return ::fidl::Result::UnexpectedMessage(Unknown());
+      return ::fidl::Status::UnexpectedMessage(Unknown());
     }
   }
 }
@@ -376,7 +376,7 @@ extern "C" const fidl_type_t test_inheritance_SuperFooTopResponseTable;
   outgoing.Call<
       ::fidl::internal::TransactionalResponse<::test_inheritance::Sub::Foo>>(
       client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()));
-  SetResult(outgoing);
+  SetStatus(outgoing);
 }
 
 ::fidl::WireResult<::test_inheritance::Sub::Foo>::WireResult(
@@ -394,7 +394,7 @@ extern "C" const fidl_type_t test_inheritance_SuperFooTopResponseTable;
       ::fidl::internal::TransactionalResponse<::test_inheritance::Sub::Foo>>(
       client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()),
       fidl::CallOptions{.deadline = deadline});
-  SetResult(outgoing);
+  SetStatus(outgoing);
 }
 namespace test_inheritance {
 #endif  // __Fuchsia__
@@ -411,7 +411,7 @@ namespace test_inheritance {
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation =
       allocator.TryAllocate(buffer_size);
   if (!allocation.is_ok()) {
-    ::fidl::Result::operator=(allocation.error_value());
+    ::fidl::Status::operator=(allocation.error_value());
     return;
   }
   uint8_t* buffer = allocation->data;
@@ -431,7 +431,7 @@ namespace test_inheritance {
       ::fidl::internal::TransactionalResponse<::test_inheritance::Sub::Foo>>(
       client_end.handle(), response_bytes, response_byte_capacity);
   bytes_ = response_bytes;
-  ::fidl::Result::operator=(outgoing);
+  ::fidl::Status::operator=(outgoing);
 }
 namespace test_inheritance {
 #endif  // __Fuchsia__
@@ -543,14 +543,14 @@ fidl::internal::WireWeakSyncClientImpl<::test_inheritance::Sub>::Foo(
 
 #ifdef __Fuchsia__
 
-::fidl::Result
+::fidl::Status
 fidl::WireSyncEventHandler<::test_inheritance::Sub>::HandleOneEvent(
     ::fidl::UnownedClientEnd<::test_inheritance::Sub> client_end) {
   zx_status_t status = client_end.channel()->wait_one(
       ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED, ::zx::time::infinite(),
       nullptr);
   if (status != ZX_OK) {
-    return ::fidl::Result::TransportError(
+    return ::fidl::Status::TransportError(
         status, ::fidl::internal::kErrorWaitOneFailed);
   }
   constexpr uint32_t kHandleAllocSize = ([]() constexpr {
@@ -575,7 +575,7 @@ fidl::WireSyncEventHandler<::test_inheritance::Sub>::HandleOneEvent(
     // This can only be due to a newer version of the protocol defining a new
     // event, whose size exceeds the maximum of known events in the current
     // protocol.
-    return ::fidl::Result::UnexpectedMessage(Unknown());
+    return ::fidl::Status::UnexpectedMessage(Unknown());
   }
   if (!msg.ok()) {
     return msg;
@@ -583,7 +583,7 @@ fidl::WireSyncEventHandler<::test_inheritance::Sub>::HandleOneEvent(
   fidl_message_header_t* hdr = msg.header();
   switch (hdr->ordinal) {
     default: {
-      return ::fidl::Result::UnexpectedMessage(Unknown());
+      return ::fidl::Status::UnexpectedMessage(Unknown());
     }
   }
 }

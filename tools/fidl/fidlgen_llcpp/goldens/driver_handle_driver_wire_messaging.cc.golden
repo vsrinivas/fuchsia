@@ -10,7 +10,7 @@
 
 #ifdef __Fuchsia__
 
-::fidl::Result
+::fidl::Status
 fidl::WireSyncEventHandler<::test_driverhandle::DriverProtocol>::HandleOneEvent(
     ::fdf::UnownedClientEnd<::test_driverhandle::DriverProtocol> client_end) {
   ZX_PANIC("events not supported for transport 'Driver'");

@@ -194,14 +194,14 @@ namespace test_inheritancewithrecursivedecl {
 }  // namespace test_inheritancewithrecursivedecl
 template <>
 class ::fidl::WireResult<::test_inheritancewithrecursivedecl::Parent::First>
-    final : public ::fidl::Result {
+    final : public ::fidl::Status {
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_inheritancewithrecursivedecl::Parent>
           client,
       ::fidl::internal::TransactionalRequest<
           ::test_inheritancewithrecursivedecl::Parent::First>* request);
-  explicit WireResult(const ::fidl::Result& result) : ::fidl::Result(result) {}
+  explicit WireResult(const ::fidl::Status& result) : ::fidl::Status(result) {}
   WireResult(WireResult&&) = delete;
   WireResult(const WireResult&) = delete;
   WireResult* operator=(WireResult&&) = delete;
@@ -213,7 +213,7 @@ class ::fidl::WireResult<::test_inheritancewithrecursivedecl::Parent::First>
 template <>
 class ::fidl::WireUnownedResult<
     ::test_inheritancewithrecursivedecl::Parent::First>
-    final : public ::fidl::Result {
+    final : public ::fidl::Status {
  public:
   explicit WireUnownedResult(
       ::fidl::UnownedClientEnd<::test_inheritancewithrecursivedecl::Parent>
@@ -221,8 +221,8 @@ class ::fidl::WireUnownedResult<
       ::fidl::internal::AnyBufferAllocator& allocator,
       ::fidl::internal::TransactionalRequest<
           ::test_inheritancewithrecursivedecl::Parent::First>* request);
-  explicit WireUnownedResult(const ::fidl::Result& result)
-      : ::fidl::Result(result) {}
+  explicit WireUnownedResult(const ::fidl::Status& result)
+      : ::fidl::Status(result) {}
   WireUnownedResult(WireUnownedResult&&) = delete;
   WireUnownedResult(const WireUnownedResult&) = delete;
   WireUnownedResult* operator=(WireUnownedResult&&) = delete;
@@ -260,7 +260,7 @@ class ::fidl::WireSyncEventHandler<::test_inheritancewithrecursivedecl::Parent>
   // Handle all possible events defined in this protocol.
   // Blocks to consume exactly one message from the channel, then call the
   // corresponding virtual method.
-  ::fidl::Result HandleOneEvent(
+  ::fidl::Status HandleOneEvent(
       ::fidl::UnownedClientEnd<::test_inheritancewithrecursivedecl::Parent>
           client_end);
 };
@@ -674,14 +674,14 @@ namespace test_inheritancewithrecursivedecl {
 }  // namespace test_inheritancewithrecursivedecl
 template <>
 class ::fidl::WireResult<::test_inheritancewithrecursivedecl::Child::First>
-    final : public ::fidl::Result {
+    final : public ::fidl::Status {
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_inheritancewithrecursivedecl::Child>
           client,
       ::fidl::internal::TransactionalRequest<
           ::test_inheritancewithrecursivedecl::Child::First>* request);
-  explicit WireResult(const ::fidl::Result& result) : ::fidl::Result(result) {}
+  explicit WireResult(const ::fidl::Status& result) : ::fidl::Status(result) {}
   WireResult(WireResult&&) = delete;
   WireResult(const WireResult&) = delete;
   WireResult* operator=(WireResult&&) = delete;
@@ -693,7 +693,7 @@ class ::fidl::WireResult<::test_inheritancewithrecursivedecl::Child::First>
 template <>
 class ::fidl::WireUnownedResult<
     ::test_inheritancewithrecursivedecl::Child::First>
-    final : public ::fidl::Result {
+    final : public ::fidl::Status {
  public:
   explicit WireUnownedResult(
       ::fidl::UnownedClientEnd<::test_inheritancewithrecursivedecl::Child>
@@ -701,8 +701,8 @@ class ::fidl::WireUnownedResult<
       ::fidl::internal::AnyBufferAllocator& allocator,
       ::fidl::internal::TransactionalRequest<
           ::test_inheritancewithrecursivedecl::Child::First>* request);
-  explicit WireUnownedResult(const ::fidl::Result& result)
-      : ::fidl::Result(result) {}
+  explicit WireUnownedResult(const ::fidl::Status& result)
+      : ::fidl::Status(result) {}
   WireUnownedResult(WireUnownedResult&&) = delete;
   WireUnownedResult(const WireUnownedResult&) = delete;
   WireUnownedResult* operator=(WireUnownedResult&&) = delete;
@@ -711,14 +711,14 @@ class ::fidl::WireUnownedResult<
 };
 template <>
 class ::fidl::WireResult<::test_inheritancewithrecursivedecl::Child::Second>
-    final : public ::fidl::Result {
+    final : public ::fidl::Status {
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_inheritancewithrecursivedecl::Child>
           client,
       ::fidl::internal::TransactionalRequest<
           ::test_inheritancewithrecursivedecl::Child::Second>* request);
-  explicit WireResult(const ::fidl::Result& result) : ::fidl::Result(result) {}
+  explicit WireResult(const ::fidl::Status& result) : ::fidl::Status(result) {}
   WireResult(WireResult&&) = delete;
   WireResult(const WireResult&) = delete;
   WireResult* operator=(WireResult&&) = delete;
@@ -730,7 +730,7 @@ class ::fidl::WireResult<::test_inheritancewithrecursivedecl::Child::Second>
 template <>
 class ::fidl::WireUnownedResult<
     ::test_inheritancewithrecursivedecl::Child::Second>
-    final : public ::fidl::Result {
+    final : public ::fidl::Status {
  public:
   explicit WireUnownedResult(
       ::fidl::UnownedClientEnd<::test_inheritancewithrecursivedecl::Child>
@@ -738,8 +738,8 @@ class ::fidl::WireUnownedResult<
       ::fidl::internal::AnyBufferAllocator& allocator,
       ::fidl::internal::TransactionalRequest<
           ::test_inheritancewithrecursivedecl::Child::Second>* request);
-  explicit WireUnownedResult(const ::fidl::Result& result)
-      : ::fidl::Result(result) {}
+  explicit WireUnownedResult(const ::fidl::Status& result)
+      : ::fidl::Status(result) {}
   WireUnownedResult(WireUnownedResult&&) = delete;
   WireUnownedResult(const WireUnownedResult&) = delete;
   WireUnownedResult* operator=(WireUnownedResult&&) = delete;
@@ -777,7 +777,7 @@ class ::fidl::WireSyncEventHandler<::test_inheritancewithrecursivedecl::Child>
   // Handle all possible events defined in this protocol.
   // Blocks to consume exactly one message from the channel, then call the
   // corresponding virtual method.
-  ::fidl::Result HandleOneEvent(
+  ::fidl::Status HandleOneEvent(
       ::fidl::UnownedClientEnd<::test_inheritancewithrecursivedecl::Child>
           client_end);
 };
@@ -937,7 +937,7 @@ class ::fidl::internal::WireWeakOnewayClientImpl<
 
   // Allocates 40 bytes of message buffer on the stack. No heap allocation
   // necessary.
-  ::fidl::Result First(
+  ::fidl::Status First(
       ::fidl::ServerEnd<::test_inheritancewithrecursivedecl::Parent>&& request);
 };
 
@@ -958,7 +958,7 @@ class ::fidl::internal::WireWeakOnewayBufferClientImpl<
   using BufferClientImplBase::BufferClientImplBase;
 
   // Caller provides the backing storage for FIDL message.
-  ::fidl::Result First(
+  ::fidl::Status First(
       ::fidl::ServerEnd<::test_inheritancewithrecursivedecl::Parent>&& request);
 };
 
@@ -1031,12 +1031,12 @@ class ::fidl::internal::WireWeakOnewayClientImpl<
 
   // Allocates 40 bytes of message buffer on the stack. No heap allocation
   // necessary.
-  ::fidl::Result First(
+  ::fidl::Status First(
       ::fidl::ServerEnd<::test_inheritancewithrecursivedecl::Parent>&& request);
 
   // Allocates 40 bytes of message buffer on the stack. No heap allocation
   // necessary.
-  ::fidl::Result Second(
+  ::fidl::Status Second(
       ::fidl::ServerEnd<::test_inheritancewithrecursivedecl::Parent>&& request);
 };
 
@@ -1057,11 +1057,11 @@ class ::fidl::internal::WireWeakOnewayBufferClientImpl<
   using BufferClientImplBase::BufferClientImplBase;
 
   // Caller provides the backing storage for FIDL message.
-  ::fidl::Result First(
+  ::fidl::Status First(
       ::fidl::ServerEnd<::test_inheritancewithrecursivedecl::Parent>&& request);
 
   // Caller provides the backing storage for FIDL message.
-  ::fidl::Result Second(
+  ::fidl::Status Second(
       ::fidl::ServerEnd<::test_inheritancewithrecursivedecl::Parent>&& request);
 };
 

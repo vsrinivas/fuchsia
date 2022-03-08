@@ -90,9 +90,9 @@ int main(int argc, const char** argv) {
 
   // Make a SendString request. The resulting OnString event will be handled by
   // the event handler defined above.
-  fidl::Result result_oneway = client->SendString("hi");
+  fidl::Status status_oneway = client->SendString("hi");
   // Check for any synchronous errors.
-  ZX_ASSERT(result_oneway.ok());
+  ZX_ASSERT(status_oneway.ok());
   loop.Run();
 
   return 0;

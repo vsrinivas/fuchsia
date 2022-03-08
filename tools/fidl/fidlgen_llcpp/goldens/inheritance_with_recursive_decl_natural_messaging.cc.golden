@@ -14,10 +14,10 @@ namespace test_inheritancewithrecursivedecl {
         const {
   ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
       _encoder{::test_inheritancewithrecursivedecl::kParent_First_Ordinal};
-  ::fidl::Result result =
+  ::fidl::Status status =
       messenger().OneWay(::fidl::internal::EncodeTransactionalMessage(
           _encoder, std::move(payload)));
-  return ::fidl::internal::ToFitxResult(result);
+  return ::fidl::internal::ToFitxResult(status);
 }
 namespace test_inheritancewithrecursivedecl {
 #endif  // __Fuchsia__
@@ -105,10 +105,10 @@ namespace test_inheritancewithrecursivedecl {
         const {
   ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
       _encoder{::test_inheritancewithrecursivedecl::kChild_First_Ordinal};
-  ::fidl::Result result =
+  ::fidl::Status status =
       messenger().OneWay(::fidl::internal::EncodeTransactionalMessage(
           _encoder, std::move(payload)));
-  return ::fidl::internal::ToFitxResult(result);
+  return ::fidl::internal::ToFitxResult(status);
 }
 
 ::fitx::result<::fidl::Error> fidl::internal::
@@ -117,10 +117,10 @@ namespace test_inheritancewithrecursivedecl {
         const {
   ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
       _encoder{::test_inheritancewithrecursivedecl::kChild_Second_Ordinal};
-  ::fidl::Result result =
+  ::fidl::Status status =
       messenger().OneWay(::fidl::internal::EncodeTransactionalMessage(
           _encoder, std::move(payload)));
-  return ::fidl::internal::ToFitxResult(result);
+  return ::fidl::internal::ToFitxResult(status);
 }
 namespace test_inheritancewithrecursivedecl {
 #endif  // __Fuchsia__

@@ -7,7 +7,7 @@
 {{- define "Method:Result:WireMessagingHeader" }}
 {{- EnsureNamespace "" }}
 template<>
-class {{ .WireResult }} final : public ::fidl::Result {
+class {{ .WireResult }} final : public ::fidl::Status {
   public:
     {{ .WireResult.Self }}(::{{ .Transport.Namespace }}::UnownedClientEnd<{{ .Protocol }}> client,
         {{ .WireTransactionalRequest }}* request);
@@ -15,7 +15,7 @@ class {{ .WireResult }} final : public ::fidl::Result {
     {{ .WireResult.Self }}(::{{ .Transport.Namespace }}::UnownedClientEnd<{{ .Protocol }}> client,
         {{ .WireTransactionalRequest }}* request, zx_time_t _deadline);
    {{- end }}
-   explicit {{ .WireResult.Self }}(const ::fidl::Result& result) : ::fidl::Result(result) {}
+   explicit {{ .WireResult.Self }}(const ::fidl::Status& result) : ::fidl::Status(result) {}
    {{ .WireResult.Self }}({{ .WireResult.Self }}&&) = delete;
    {{ .WireResult.Self }}(const {{ .WireResult.Self }}&) = delete;
    {{ .WireResult.Self }}* operator=({{ .WireResult.Self }}&&) = delete;
@@ -81,7 +81,7 @@ class {{ .WireResult }} final : public ::fidl::Result {
   {{- else }}
   outgoing.Write(client.handle());
   {{- end }}
-  SetResult(outgoing);
+  SetStatus(outgoing);
 }
   {{- if .HasResponse }}
 
@@ -94,7 +94,7 @@ class {{ .WireResult }} final : public ::fidl::Result {
   auto& outgoing = request_message.GetOutgoingMessage();
   outgoing.Call<{{ .WireTransactionalResponse }}>(
     client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()), fidl::CallOptions{.deadline = deadline});
-  SetResult(outgoing);
+  SetStatus(outgoing);
 }
   {{- end }}
 {{- EndifFuchsia -}}

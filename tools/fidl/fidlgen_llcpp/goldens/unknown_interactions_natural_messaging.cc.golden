@@ -84,18 +84,18 @@ void fidl::internal::NaturalClientImpl<::test_unknowninteractions::Example>::
     ::test_unknowninteractions::Example>::StrictOneWay() const {
   ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
       _encoder{::test_unknowninteractions::kExample_StrictOneWay_Ordinal};
-  ::fidl::Result result = messenger().OneWay(
+  ::fidl::Status status = messenger().OneWay(
       ::fidl::internal::EncodeTransactionalMessage(_encoder));
-  return ::fidl::internal::ToFitxResult(result);
+  return ::fidl::internal::ToFitxResult(status);
 }
 
 ::fitx::result<::fidl::Error> fidl::internal::NaturalClientImpl<
     ::test_unknowninteractions::Example>::FlexibleOneWay() const {
   ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
       _encoder{::test_unknowninteractions::kExample_FlexibleOneWay_Ordinal};
-  ::fidl::Result result = messenger().OneWay(
+  ::fidl::Status status = messenger().OneWay(
       ::fidl::internal::EncodeTransactionalMessage(_encoder));
-  return ::fidl::internal::ToFitxResult(result);
+  return ::fidl::internal::ToFitxResult(status);
 }
 namespace test_unknowninteractions {
 #endif  // __Fuchsia__
@@ -152,7 +152,7 @@ std::optional<::fidl::UnbindInfo> fidl::internal::
   ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
       _encoder{::test_unknowninteractions::kExample_StrictEvent_Ordinal};
   auto encoded_message = ::fidl::internal::EncodeTransactionalMessage(_encoder);
-  ::fidl::Result result = _inner().SendEvent(encoded_message);
+  ::fidl::Status result = _inner().SendEvent(encoded_message);
   return ::fidl::internal::ToFitxResult(result);
 }
 
@@ -162,7 +162,7 @@ std::optional<::fidl::UnbindInfo> fidl::internal::
       _encoder{::test_unknowninteractions::kExample_StrictEvent_Ordinal};
   auto encoded_message = ::fidl::internal::EncodeTransactionalMessage(_encoder);
   encoded_message.Write(_transport());
-  return ::fidl::internal::ToFitxResult(::fidl::Result{encoded_message});
+  return ::fidl::internal::ToFitxResult(::fidl::Status{encoded_message});
 }
 
 ::fitx::result<::fidl::Error> fidl::internal::NaturalWeakEventSender<
@@ -170,7 +170,7 @@ std::optional<::fidl::UnbindInfo> fidl::internal::
   ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
       _encoder{::test_unknowninteractions::kExample_FlexibleEvent_Ordinal};
   auto encoded_message = ::fidl::internal::EncodeTransactionalMessage(_encoder);
-  ::fidl::Result result = _inner().SendEvent(encoded_message);
+  ::fidl::Status result = _inner().SendEvent(encoded_message);
   return ::fidl::internal::ToFitxResult(result);
 }
 
@@ -180,7 +180,7 @@ std::optional<::fidl::UnbindInfo> fidl::internal::
       _encoder{::test_unknowninteractions::kExample_FlexibleEvent_Ordinal};
   auto encoded_message = ::fidl::internal::EncodeTransactionalMessage(_encoder);
   encoded_message.Write(_transport());
-  return ::fidl::internal::ToFitxResult(::fidl::Result{encoded_message});
+  return ::fidl::internal::ToFitxResult(::fidl::Status{encoded_message});
 }
 
 #endif  // __Fuchsia__

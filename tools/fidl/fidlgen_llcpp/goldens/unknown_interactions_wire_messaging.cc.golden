@@ -37,7 +37,7 @@ namespace test_unknowninteractions {
       request_message(::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
   outgoing.Write(client.handle());
-  SetResult(outgoing);
+  SetStatus(outgoing);
 }
 namespace test_unknowninteractions {
 #endif  // __Fuchsia__
@@ -57,7 +57,7 @@ namespace test_unknowninteractions {
       request_message(::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
   outgoing.Write(client.handle());
-  SetResult(outgoing);
+  SetStatus(outgoing);
 }
 namespace test_unknowninteractions {
 #endif  // __Fuchsia__
@@ -79,7 +79,7 @@ namespace test_unknowninteractions {
   outgoing.Call<::fidl::internal::TransactionalResponse<
       ::test_unknowninteractions::Example::StrictTwoWay>>(
       client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()));
-  SetResult(outgoing);
+  SetStatus(outgoing);
 }
 
 ::fidl::WireResult<::test_unknowninteractions::Example::StrictTwoWay>::
@@ -99,7 +99,7 @@ namespace test_unknowninteractions {
       ::test_unknowninteractions::Example::StrictTwoWay>>(
       client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()),
       fidl::CallOptions{.deadline = deadline});
-  SetResult(outgoing);
+  SetStatus(outgoing);
 }
 namespace test_unknowninteractions {
 #endif  // __Fuchsia__
@@ -121,7 +121,7 @@ namespace test_unknowninteractions {
   outgoing.Call<::fidl::internal::TransactionalResponse<
       ::test_unknowninteractions::Example::FlexibleTwoWay>>(
       client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()));
-  SetResult(outgoing);
+  SetStatus(outgoing);
 }
 
 ::fidl::WireResult<::test_unknowninteractions::Example::FlexibleTwoWay>::
@@ -141,7 +141,7 @@ namespace test_unknowninteractions {
       ::test_unknowninteractions::Example::FlexibleTwoWay>>(
       client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()),
       fidl::CallOptions{.deadline = deadline});
-  SetResult(outgoing);
+  SetStatus(outgoing);
 }
 namespace test_unknowninteractions {
 #endif  // __Fuchsia__
@@ -149,7 +149,7 @@ namespace test_unknowninteractions {
 }  // namespace test_unknowninteractions
 #ifdef __Fuchsia__
 
-::fidl::Result fidl::internal::WireWeakOnewayClientImpl<
+::fidl::Status fidl::internal::WireWeakOnewayClientImpl<
     ::test_unknowninteractions::Example>::StrictOneWay() {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::internal::TransactionalRequest<
@@ -163,7 +163,7 @@ namespace test_unknowninteractions {
                        &_request_object);
   return _client_base()->SendOneWay(_request_message.GetOutgoingMessage());
 }
-::fidl::Result fidl::internal::WireWeakOnewayClientImpl<
+::fidl::Status fidl::internal::WireWeakOnewayClientImpl<
     ::test_unknowninteractions::Example>::FlexibleOneWay() {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::internal::TransactionalRequest<
@@ -319,7 +319,7 @@ void fidl::internal::WireWeakAsyncClientImpl<
       _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
   _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
 }
-::fidl::Result fidl::internal::WireWeakOnewayBufferClientImpl<
+::fidl::Status fidl::internal::WireWeakOnewayBufferClientImpl<
     ::test_unknowninteractions::Example>::StrictOneWay() {
   constexpr uint32_t _buffer_size =
       ::fidl::AsyncClientMethodBufferSizeInChannel<
@@ -339,7 +339,7 @@ void fidl::internal::WireWeakAsyncClientImpl<
       _request_message(_allocation->data, _buffer_size, &_request);
   return _client_base()->SendOneWay(_request_message.GetOutgoingMessage());
 }
-::fidl::Result fidl::internal::WireWeakOnewayBufferClientImpl<
+::fidl::Status fidl::internal::WireWeakOnewayBufferClientImpl<
     ::test_unknowninteractions::Example>::FlexibleOneWay() {
   constexpr uint32_t _buffer_size =
       ::fidl::AsyncClientMethodBufferSizeInChannel<
@@ -444,14 +444,14 @@ fidl::internal::WireWeakSyncClientImpl<
 
 #ifdef __Fuchsia__
 
-::fidl::Result
+::fidl::Status
 fidl::WireSyncEventHandler<::test_unknowninteractions::Example>::HandleOneEvent(
     ::fidl::UnownedClientEnd<::test_unknowninteractions::Example> client_end) {
   zx_status_t status = client_end.channel()->wait_one(
       ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED, ::zx::time::infinite(),
       nullptr);
   if (status != ZX_OK) {
-    return ::fidl::Result::TransportError(
+    return ::fidl::Status::TransportError(
         status, ::fidl::internal::kErrorWaitOneFailed);
   }
   constexpr uint32_t kHandleAllocSize = ([]() constexpr {
@@ -488,7 +488,7 @@ fidl::WireSyncEventHandler<::test_unknowninteractions::Example>::HandleOneEvent(
     // This can only be due to a newer version of the protocol defining a new
     // event, whose size exceeds the maximum of known events in the current
     // protocol.
-    return ::fidl::Result::UnexpectedMessage(Unknown());
+    return ::fidl::Status::UnexpectedMessage(Unknown());
   }
   if (!msg.ok()) {
     return msg;
@@ -500,29 +500,29 @@ fidl::WireSyncEventHandler<::test_unknowninteractions::Example>::HandleOneEvent(
           ::test_unknowninteractions::Example::StrictEvent>>
           decoded{::std::move(msg)};
       if (!decoded.ok()) {
-        return ::fidl::Result(decoded);
+        return ::fidl::Status(decoded);
       }
       ::fidl::WireEvent<::test_unknowninteractions::Example::StrictEvent>
           empty_event;
       auto* primary = &empty_event;
       StrictEvent(primary);
-      return ::fidl::Result::Ok();
+      return ::fidl::Status::Ok();
     }
     case ::test_unknowninteractions::kExample_FlexibleEvent_Ordinal: {
       ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalEvent<
           ::test_unknowninteractions::Example::FlexibleEvent>>
           decoded{::std::move(msg)};
       if (!decoded.ok()) {
-        return ::fidl::Result(decoded);
+        return ::fidl::Status(decoded);
       }
       ::fidl::WireEvent<::test_unknowninteractions::Example::FlexibleEvent>
           empty_event;
       auto* primary = &empty_event;
       FlexibleEvent(primary);
-      return ::fidl::Result::Ok();
+      return ::fidl::Status::Ok();
     }
     default: {
-      return ::fidl::Result::UnexpectedMessage(Unknown());
+      return ::fidl::Status::UnexpectedMessage(Unknown());
     }
   }
 }
@@ -808,7 +808,7 @@ void ::fidl::internal::TransactionalEvent<
 
 #ifdef __Fuchsia__
 
-fidl::Result fidl::internal::WireWeakEventSender<
+fidl::Status fidl::internal::WireWeakEventSender<
     ::test_unknowninteractions::Example>::StrictEvent() {
   ::fidl::internal::TransactionalEvent<
       ::test_unknowninteractions::Example::StrictEvent>
@@ -822,7 +822,7 @@ fidl::Result fidl::internal::WireWeakEventSender<
   return _inner().SendEvent(_response_message.GetOutgoingMessage());
 }
 
-fidl::Result fidl::internal::WireWeakBufferEventSender<
+fidl::Status fidl::internal::WireWeakBufferEventSender<
     ::test_unknowninteractions::Example>::StrictEvent() {
   constexpr uint32_t _buffer_size = ::fidl::EventReplyBufferSizeInChannel<
       ::test_unknowninteractions::Example::StrictEvent>();
@@ -844,7 +844,7 @@ fidl::Result fidl::internal::WireWeakBufferEventSender<
   return _inner().SendEvent(_response_message.GetOutgoingMessage());
 }
 
-fidl::Result fidl::internal::WireEventSender<
+fidl::Status fidl::internal::WireEventSender<
     ::test_unknowninteractions::Example>::StrictEvent() {
   ::fidl::internal::TransactionalEvent<
       ::test_unknowninteractions::Example::StrictEvent>
@@ -857,10 +857,10 @@ fidl::Result fidl::internal::WireEventSender<
       _response_message{::fidl::internal::AllowUnownedInputRef{}, &_response};
   auto& _message = _response_message.GetOutgoingMessage();
   _message.Write(_transport());
-  return ::fidl::Result{_message};
+  return ::fidl::Status{_message};
 }
 
-fidl::Result fidl::internal::WireBufferEventSender<
+fidl::Status fidl::internal::WireBufferEventSender<
     ::test_unknowninteractions::Example>::StrictEvent() {
   constexpr uint32_t _buffer_size = ::fidl::EventReplyBufferSizeInChannel<
       ::test_unknowninteractions::Example::StrictEvent>();
@@ -880,10 +880,10 @@ fidl::Result fidl::internal::WireBufferEventSender<
       _response_message(_allocation->data, _buffer_size, &_response);
   auto& _message = _response_message.GetOutgoingMessage();
   _message.Write(_transport());
-  return ::fidl::Result{_message};
+  return ::fidl::Status{_message};
 }
 
-fidl::Result fidl::internal::WireWeakEventSender<
+fidl::Status fidl::internal::WireWeakEventSender<
     ::test_unknowninteractions::Example>::FlexibleEvent() {
   ::fidl::internal::TransactionalEvent<
       ::test_unknowninteractions::Example::FlexibleEvent>
@@ -897,7 +897,7 @@ fidl::Result fidl::internal::WireWeakEventSender<
   return _inner().SendEvent(_response_message.GetOutgoingMessage());
 }
 
-fidl::Result fidl::internal::WireWeakBufferEventSender<
+fidl::Status fidl::internal::WireWeakBufferEventSender<
     ::test_unknowninteractions::Example>::FlexibleEvent() {
   constexpr uint32_t _buffer_size = ::fidl::EventReplyBufferSizeInChannel<
       ::test_unknowninteractions::Example::FlexibleEvent>();
@@ -919,7 +919,7 @@ fidl::Result fidl::internal::WireWeakBufferEventSender<
   return _inner().SendEvent(_response_message.GetOutgoingMessage());
 }
 
-fidl::Result fidl::internal::WireEventSender<
+fidl::Status fidl::internal::WireEventSender<
     ::test_unknowninteractions::Example>::FlexibleEvent() {
   ::fidl::internal::TransactionalEvent<
       ::test_unknowninteractions::Example::FlexibleEvent>
@@ -932,10 +932,10 @@ fidl::Result fidl::internal::WireEventSender<
       _response_message{::fidl::internal::AllowUnownedInputRef{}, &_response};
   auto& _message = _response_message.GetOutgoingMessage();
   _message.Write(_transport());
-  return ::fidl::Result{_message};
+  return ::fidl::Status{_message};
 }
 
-fidl::Result fidl::internal::WireBufferEventSender<
+fidl::Status fidl::internal::WireBufferEventSender<
     ::test_unknowninteractions::Example>::FlexibleEvent() {
   constexpr uint32_t _buffer_size = ::fidl::EventReplyBufferSizeInChannel<
       ::test_unknowninteractions::Example::FlexibleEvent>();
@@ -955,7 +955,7 @@ fidl::Result fidl::internal::WireBufferEventSender<
       _response_message(_allocation->data, _buffer_size, &_response);
   auto& _message = _response_message.GetOutgoingMessage();
   _message.Write(_transport());
-  return ::fidl::Result{_message};
+  return ::fidl::Status{_message};
 }
 
 #endif  // __Fuchsia__

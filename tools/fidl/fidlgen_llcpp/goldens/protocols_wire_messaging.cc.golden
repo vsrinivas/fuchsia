@@ -41,7 +41,7 @@ extern "C" const fidl_type_t
       request_message(::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
   outgoing.Write(client.handle());
-  SetResult(outgoing);
+  SetStatus(outgoing);
 }
 namespace test_protocols {
 #endif  // __Fuchsia__
@@ -62,7 +62,7 @@ namespace test_protocols {
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation =
       allocator.TryAllocate(buffer_size);
   if (!allocation.is_ok()) {
-    ::fidl::Result::operator=(allocation.error_value());
+    ::fidl::Status::operator=(allocation.error_value());
     return;
   }
   uint8_t* buffer = allocation->data;
@@ -75,7 +75,7 @@ namespace test_protocols {
       request_message(request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
   outgoing.Write(client_end.handle());
-  ::fidl::Result::operator=(outgoing);
+  ::fidl::Status::operator=(outgoing);
 }
 namespace test_protocols {
 #endif  // __Fuchsia__
@@ -97,7 +97,7 @@ namespace test_protocols {
   outgoing.Call<::fidl::internal::TransactionalResponse<
       ::test_protocols::HandleRightsProtocol::ResponseMethod>>(
       client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()));
-  SetResult(outgoing);
+  SetStatus(outgoing);
 }
 
 ::fidl::WireResult<::test_protocols::HandleRightsProtocol::ResponseMethod>::
@@ -117,7 +117,7 @@ namespace test_protocols {
       ::test_protocols::HandleRightsProtocol::ResponseMethod>>(
       client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()),
       fidl::CallOptions{.deadline = deadline});
-  SetResult(outgoing);
+  SetStatus(outgoing);
 }
 namespace test_protocols {
 #endif  // __Fuchsia__
@@ -137,7 +137,7 @@ namespace test_protocols {
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation =
       allocator.TryAllocate(buffer_size);
   if (!allocation.is_ok()) {
-    ::fidl::Result::operator=(allocation.error_value());
+    ::fidl::Status::operator=(allocation.error_value());
     return;
   }
   uint8_t* buffer = allocation->data;
@@ -159,7 +159,7 @@ namespace test_protocols {
       ::test_protocols::HandleRightsProtocol::ResponseMethod>>(
       client_end.handle(), response_bytes, response_byte_capacity);
   bytes_ = response_bytes;
-  ::fidl::Result::operator=(outgoing);
+  ::fidl::Status::operator=(outgoing);
 }
 namespace test_protocols {
 #endif  // __Fuchsia__
@@ -167,7 +167,7 @@ namespace test_protocols {
 }  // namespace test_protocols
 #ifdef __Fuchsia__
 
-::fidl::Result fidl::internal::WireWeakOnewayClientImpl<
+::fidl::Status fidl::internal::WireWeakOnewayClientImpl<
     ::test_protocols::HandleRightsProtocol>::NoResponseMethod(::zx::socket&&
                                                                   h) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
@@ -262,7 +262,7 @@ void fidl::internal::WireWeakAsyncClientImpl<
       _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
   _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
 }
-::fidl::Result fidl::internal::WireWeakOnewayBufferClientImpl<
+::fidl::Status fidl::internal::WireWeakOnewayBufferClientImpl<
     ::test_protocols::HandleRightsProtocol>::NoResponseMethod(::zx::socket&&
                                                                   h) {
   constexpr uint32_t _buffer_size =
@@ -329,7 +329,7 @@ fidl::internal::WireWeakSyncClientImpl<
 
 #ifdef __Fuchsia__
 
-::fidl::Result
+::fidl::Status
 fidl::WireSyncEventHandler<::test_protocols::HandleRightsProtocol>::
     HandleOneEvent(
         ::fidl::UnownedClientEnd<::test_protocols::HandleRightsProtocol>
@@ -338,7 +338,7 @@ fidl::WireSyncEventHandler<::test_protocols::HandleRightsProtocol>::
       ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED, ::zx::time::infinite(),
       nullptr);
   if (status != ZX_OK) {
-    return ::fidl::Result::TransportError(
+    return ::fidl::Status::TransportError(
         status, ::fidl::internal::kErrorWaitOneFailed);
   }
   constexpr uint32_t kHandleAllocSize = ([]() constexpr {
@@ -369,7 +369,7 @@ fidl::WireSyncEventHandler<::test_protocols::HandleRightsProtocol>::
     // This can only be due to a newer version of the protocol defining a new
     // event, whose size exceeds the maximum of known events in the current
     // protocol.
-    return ::fidl::Result::UnexpectedMessage(Unknown());
+    return ::fidl::Status::UnexpectedMessage(Unknown());
   }
   if (!msg.ok()) {
     return msg;
@@ -381,14 +381,14 @@ fidl::WireSyncEventHandler<::test_protocols::HandleRightsProtocol>::
           ::test_protocols::HandleRightsProtocol::AnEvent>>
           decoded{::std::move(msg)};
       if (!decoded.ok()) {
-        return ::fidl::Result(decoded);
+        return ::fidl::Status(decoded);
       }
       auto* primary = &decoded.PrimaryObject()->body;
       AnEvent(primary);
-      return ::fidl::Result::Ok();
+      return ::fidl::Status::Ok();
     }
     default: {
-      return ::fidl::Result::UnexpectedMessage(Unknown());
+      return ::fidl::Status::UnexpectedMessage(Unknown());
     }
   }
 }
@@ -606,7 +606,7 @@ void ::fidl::WireEvent<
 
 #ifdef __Fuchsia__
 
-fidl::Result fidl::internal::WireWeakEventSender<
+fidl::Status fidl::internal::WireWeakEventSender<
     ::test_protocols::HandleRightsProtocol>::AnEvent(::zx::socket&& h) {
   ::fidl::internal::TransactionalEvent<
       ::test_protocols::HandleRightsProtocol::AnEvent>
@@ -620,7 +620,7 @@ fidl::Result fidl::internal::WireWeakEventSender<
   return _inner().SendEvent(_response_message.GetOutgoingMessage());
 }
 
-fidl::Result fidl::internal::WireWeakBufferEventSender<
+fidl::Status fidl::internal::WireWeakBufferEventSender<
     ::test_protocols::HandleRightsProtocol>::AnEvent(::zx::socket&& h) {
   constexpr uint32_t _buffer_size = ::fidl::EventReplyBufferSizeInChannel<
       ::test_protocols::HandleRightsProtocol::AnEvent>();
@@ -642,7 +642,7 @@ fidl::Result fidl::internal::WireWeakBufferEventSender<
   return _inner().SendEvent(_response_message.GetOutgoingMessage());
 }
 
-fidl::Result fidl::internal::WireEventSender<
+fidl::Status fidl::internal::WireEventSender<
     ::test_protocols::HandleRightsProtocol>::AnEvent(::zx::socket&& h) {
   ::fidl::internal::TransactionalEvent<
       ::test_protocols::HandleRightsProtocol::AnEvent>
@@ -655,10 +655,10 @@ fidl::Result fidl::internal::WireEventSender<
       _response_message{::fidl::internal::AllowUnownedInputRef{}, &_response};
   auto& _message = _response_message.GetOutgoingMessage();
   _message.Write(_transport());
-  return ::fidl::Result{_message};
+  return ::fidl::Status{_message};
 }
 
-fidl::Result fidl::internal::WireBufferEventSender<
+fidl::Status fidl::internal::WireBufferEventSender<
     ::test_protocols::HandleRightsProtocol>::AnEvent(::zx::socket&& h) {
   constexpr uint32_t _buffer_size = ::fidl::EventReplyBufferSizeInChannel<
       ::test_protocols::HandleRightsProtocol::AnEvent>();
@@ -678,7 +678,7 @@ fidl::Result fidl::internal::WireBufferEventSender<
       _response_message(_allocation->data, _buffer_size, &_response);
   auto& _message = _response_message.GetOutgoingMessage();
   _message.Write(_transport());
-  return ::fidl::Result{_message};
+  return ::fidl::Status{_message};
 }
 
 #endif  // __Fuchsia__
@@ -751,7 +751,7 @@ extern "C" const fidl_type_t
       request_message(::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
   outgoing.Write(client.handle());
-  SetResult(outgoing);
+  SetStatus(outgoing);
 }
 namespace test_protocols {
 #endif  // __Fuchsia__
@@ -777,7 +777,7 @@ namespace test_protocols {
   outgoing.Call<::fidl::internal::TransactionalResponse<
       ::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse>>(
       client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()));
-  SetResult(outgoing);
+  SetStatus(outgoing);
 }
 
 ::fidl::WireResult<
@@ -801,7 +801,7 @@ namespace test_protocols {
       ::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse>>(
       client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()),
       fidl::CallOptions{.deadline = deadline});
-  SetResult(outgoing);
+  SetStatus(outgoing);
 }
 namespace test_protocols {
 #endif  // __Fuchsia__
@@ -827,7 +827,7 @@ namespace test_protocols {
   outgoing.Call<::fidl::internal::TransactionalResponse<
       ::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>>(
       client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()));
-  SetResult(outgoing);
+  SetStatus(outgoing);
 }
 
 ::fidl::WireResult<
@@ -851,7 +851,7 @@ namespace test_protocols {
       ::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>>(
       client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()),
       fidl::CallOptions{.deadline = deadline});
-  SetResult(outgoing);
+  SetStatus(outgoing);
 }
 namespace test_protocols {
 #endif  // __Fuchsia__
@@ -872,7 +872,7 @@ namespace test_protocols {
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation =
       allocator.TryAllocate(buffer_size);
   if (!allocation.is_ok()) {
-    ::fidl::Result::operator=(allocation.error_value());
+    ::fidl::Status::operator=(allocation.error_value());
     return;
   }
   uint8_t* buffer = allocation->data;
@@ -896,7 +896,7 @@ namespace test_protocols {
       ::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>>(
       client_end.handle(), response_bytes, response_byte_capacity);
   bytes_ = response_bytes;
-  ::fidl::Result::operator=(outgoing);
+  ::fidl::Status::operator=(outgoing);
 }
 namespace test_protocols {
 #endif  // __Fuchsia__
@@ -920,7 +920,7 @@ namespace test_protocols {
       request_message(::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
   outgoing.Write(client.handle());
-  SetResult(outgoing);
+  SetStatus(outgoing);
 }
 namespace test_protocols {
 #endif  // __Fuchsia__
@@ -941,7 +941,7 @@ namespace test_protocols {
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation =
       allocator.TryAllocate(buffer_size);
   if (!allocation.is_ok()) {
-    ::fidl::Result::operator=(allocation.error_value());
+    ::fidl::Status::operator=(allocation.error_value());
     return;
   }
   uint8_t* buffer = allocation->data;
@@ -955,7 +955,7 @@ namespace test_protocols {
       request_message(request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
   outgoing.Write(client_end.handle());
-  ::fidl::Result::operator=(outgoing);
+  ::fidl::Status::operator=(outgoing);
 }
 namespace test_protocols {
 #endif  // __Fuchsia__
@@ -982,7 +982,7 @@ namespace test_protocols {
       ::test_protocols::WithAndWithoutRequestResponse::
           WithRequestEmptyResponse>>(client.handle(), bytes_.data(),
                                      static_cast<uint32_t>(bytes_.size()));
-  SetResult(outgoing);
+  SetStatus(outgoing);
 }
 
 ::fidl::WireResult<
@@ -1007,7 +1007,7 @@ namespace test_protocols {
           WithRequestEmptyResponse>>(client.handle(), bytes_.data(),
                                      static_cast<uint32_t>(bytes_.size()),
                                      fidl::CallOptions{.deadline = deadline});
-  SetResult(outgoing);
+  SetStatus(outgoing);
 }
 namespace test_protocols {
 #endif  // __Fuchsia__
@@ -1029,7 +1029,7 @@ namespace test_protocols {
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation =
       allocator.TryAllocate(buffer_size);
   if (!allocation.is_ok()) {
-    ::fidl::Result::operator=(allocation.error_value());
+    ::fidl::Status::operator=(allocation.error_value());
     return;
   }
   uint8_t* buffer = allocation->data;
@@ -1054,7 +1054,7 @@ namespace test_protocols {
           WithRequestEmptyResponse>>(client_end.handle(), response_bytes,
                                      response_byte_capacity);
   bytes_ = response_bytes;
-  ::fidl::Result::operator=(outgoing);
+  ::fidl::Status::operator=(outgoing);
 }
 namespace test_protocols {
 #endif  // __Fuchsia__
@@ -1081,7 +1081,7 @@ namespace test_protocols {
       ::test_protocols::WithAndWithoutRequestResponse::
           WithRequestWithResponse>>(client.handle(), bytes_.data(),
                                     static_cast<uint32_t>(bytes_.size()));
-  SetResult(outgoing);
+  SetStatus(outgoing);
 }
 
 ::fidl::WireResult<
@@ -1106,7 +1106,7 @@ namespace test_protocols {
           WithRequestWithResponse>>(client.handle(), bytes_.data(),
                                     static_cast<uint32_t>(bytes_.size()),
                                     fidl::CallOptions{.deadline = deadline});
-  SetResult(outgoing);
+  SetStatus(outgoing);
 }
 namespace test_protocols {
 #endif  // __Fuchsia__
@@ -1128,7 +1128,7 @@ namespace test_protocols {
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation =
       allocator.TryAllocate(buffer_size);
   if (!allocation.is_ok()) {
-    ::fidl::Result::operator=(allocation.error_value());
+    ::fidl::Status::operator=(allocation.error_value());
     return;
   }
   uint8_t* buffer = allocation->data;
@@ -1153,7 +1153,7 @@ namespace test_protocols {
           WithRequestWithResponse>>(client_end.handle(), response_bytes,
                                     response_byte_capacity);
   bytes_ = response_bytes;
-  ::fidl::Result::operator=(outgoing);
+  ::fidl::Status::operator=(outgoing);
 }
 namespace test_protocols {
 #endif  // __Fuchsia__
@@ -1161,7 +1161,7 @@ namespace test_protocols {
 }  // namespace test_protocols
 #ifdef __Fuchsia__
 
-::fidl::Result fidl::internal::WireWeakOnewayClientImpl<
+::fidl::Status fidl::internal::WireWeakOnewayClientImpl<
     ::test_protocols::WithAndWithoutRequestResponse>::NoRequestNoResponse() {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::internal::TransactionalRequest<
@@ -1175,7 +1175,7 @@ namespace test_protocols {
                        &_request_object);
   return _client_base()->SendOneWay(_request_message.GetOutgoingMessage());
 }
-::fidl::Result fidl::internal::WireWeakOnewayClientImpl<
+::fidl::Status fidl::internal::WireWeakOnewayClientImpl<
     ::test_protocols::WithAndWithoutRequestResponse>::
     WithRequestNoResponse(::fidl::StringView arg) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
@@ -1515,7 +1515,7 @@ void fidl::internal::WireWeakAsyncClientImpl<
       _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
   _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
 }
-::fidl::Result fidl::internal::WireWeakOnewayBufferClientImpl<
+::fidl::Status fidl::internal::WireWeakOnewayBufferClientImpl<
     ::test_protocols::WithAndWithoutRequestResponse>::NoRequestNoResponse() {
   constexpr uint32_t _buffer_size =
       ::fidl::AsyncClientMethodBufferSizeInChannel<
@@ -1536,7 +1536,7 @@ void fidl::internal::WireWeakAsyncClientImpl<
       _request_message(_allocation->data, _buffer_size, &_request);
   return _client_base()->SendOneWay(_request_message.GetOutgoingMessage());
 }
-::fidl::Result fidl::internal::WireWeakOnewayBufferClientImpl<
+::fidl::Status fidl::internal::WireWeakOnewayBufferClientImpl<
     ::test_protocols::WithAndWithoutRequestResponse>::
     WithRequestNoResponse(::fidl::StringView arg) {
   constexpr uint32_t _buffer_size =
@@ -1755,7 +1755,7 @@ fidl::internal::WireWeakSyncClientImpl<
 
 #ifdef __Fuchsia__
 
-::fidl::Result
+::fidl::Status
 fidl::WireSyncEventHandler<::test_protocols::WithAndWithoutRequestResponse>::
     HandleOneEvent(::fidl::UnownedClientEnd<
                    ::test_protocols::WithAndWithoutRequestResponse>
@@ -1764,7 +1764,7 @@ fidl::WireSyncEventHandler<::test_protocols::WithAndWithoutRequestResponse>::
       ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED, ::zx::time::infinite(),
       nullptr);
   if (status != ZX_OK) {
-    return ::fidl::Result::TransportError(
+    return ::fidl::Status::TransportError(
         status, ::fidl::internal::kErrorWaitOneFailed);
   }
   constexpr uint32_t kHandleAllocSize = ([]() constexpr {
@@ -1803,7 +1803,7 @@ fidl::WireSyncEventHandler<::test_protocols::WithAndWithoutRequestResponse>::
     // This can only be due to a newer version of the protocol defining a new
     // event, whose size exceeds the maximum of known events in the current
     // protocol.
-    return ::fidl::Result::UnexpectedMessage(Unknown());
+    return ::fidl::Status::UnexpectedMessage(Unknown());
   }
   if (!msg.ok()) {
     return msg;
@@ -1816,14 +1816,14 @@ fidl::WireSyncEventHandler<::test_protocols::WithAndWithoutRequestResponse>::
           ::test_protocols::WithAndWithoutRequestResponse::OnEmptyResponse>>
           decoded{::std::move(msg)};
       if (!decoded.ok()) {
-        return ::fidl::Result(decoded);
+        return ::fidl::Status(decoded);
       }
       ::fidl::WireEvent<
           ::test_protocols::WithAndWithoutRequestResponse::OnEmptyResponse>
           empty_event;
       auto* primary = &empty_event;
       OnEmptyResponse(primary);
-      return ::fidl::Result::Ok();
+      return ::fidl::Status::Ok();
     }
     case ::test_protocols::
         kWithAndWithoutRequestResponse_OnWithResponse_Ordinal: {
@@ -1831,14 +1831,14 @@ fidl::WireSyncEventHandler<::test_protocols::WithAndWithoutRequestResponse>::
           ::test_protocols::WithAndWithoutRequestResponse::OnWithResponse>>
           decoded{::std::move(msg)};
       if (!decoded.ok()) {
-        return ::fidl::Result(decoded);
+        return ::fidl::Status(decoded);
       }
       auto* primary = &decoded.PrimaryObject()->body;
       OnWithResponse(primary);
-      return ::fidl::Result::Ok();
+      return ::fidl::Status::Ok();
     }
     default: {
-      return ::fidl::Result::UnexpectedMessage(Unknown());
+      return ::fidl::Status::UnexpectedMessage(Unknown());
     }
   }
 }
@@ -2344,7 +2344,7 @@ void ::fidl::internal::TransactionalEvent<
 
 #ifdef __Fuchsia__
 
-fidl::Result fidl::internal::WireWeakEventSender<
+fidl::Status fidl::internal::WireWeakEventSender<
     ::test_protocols::WithAndWithoutRequestResponse>::OnEmptyResponse() {
   ::fidl::internal::TransactionalEvent<
       ::test_protocols::WithAndWithoutRequestResponse::OnEmptyResponse>
@@ -2358,7 +2358,7 @@ fidl::Result fidl::internal::WireWeakEventSender<
   return _inner().SendEvent(_response_message.GetOutgoingMessage());
 }
 
-fidl::Result fidl::internal::WireWeakBufferEventSender<
+fidl::Status fidl::internal::WireWeakBufferEventSender<
     ::test_protocols::WithAndWithoutRequestResponse>::OnEmptyResponse() {
   constexpr uint32_t _buffer_size = ::fidl::EventReplyBufferSizeInChannel<
       ::test_protocols::WithAndWithoutRequestResponse::OnEmptyResponse>();
@@ -2380,7 +2380,7 @@ fidl::Result fidl::internal::WireWeakBufferEventSender<
   return _inner().SendEvent(_response_message.GetOutgoingMessage());
 }
 
-fidl::Result fidl::internal::WireEventSender<
+fidl::Status fidl::internal::WireEventSender<
     ::test_protocols::WithAndWithoutRequestResponse>::OnEmptyResponse() {
   ::fidl::internal::TransactionalEvent<
       ::test_protocols::WithAndWithoutRequestResponse::OnEmptyResponse>
@@ -2393,10 +2393,10 @@ fidl::Result fidl::internal::WireEventSender<
       _response_message{::fidl::internal::AllowUnownedInputRef{}, &_response};
   auto& _message = _response_message.GetOutgoingMessage();
   _message.Write(_transport());
-  return ::fidl::Result{_message};
+  return ::fidl::Status{_message};
 }
 
-fidl::Result fidl::internal::WireBufferEventSender<
+fidl::Status fidl::internal::WireBufferEventSender<
     ::test_protocols::WithAndWithoutRequestResponse>::OnEmptyResponse() {
   constexpr uint32_t _buffer_size = ::fidl::EventReplyBufferSizeInChannel<
       ::test_protocols::WithAndWithoutRequestResponse::OnEmptyResponse>();
@@ -2416,10 +2416,10 @@ fidl::Result fidl::internal::WireBufferEventSender<
       _response_message(_allocation->data, _buffer_size, &_response);
   auto& _message = _response_message.GetOutgoingMessage();
   _message.Write(_transport());
-  return ::fidl::Result{_message};
+  return ::fidl::Status{_message};
 }
 
-fidl::Result fidl::internal::WireWeakEventSender<
+fidl::Status fidl::internal::WireWeakEventSender<
     ::test_protocols::WithAndWithoutRequestResponse>::
     OnWithResponse(::fidl::StringView ret) {
   ::fidl::internal::TransactionalEvent<
@@ -2434,7 +2434,7 @@ fidl::Result fidl::internal::WireWeakEventSender<
   return _inner().SendEvent(_response_message.GetOutgoingMessage());
 }
 
-fidl::Result fidl::internal::WireWeakBufferEventSender<
+fidl::Status fidl::internal::WireWeakBufferEventSender<
     ::test_protocols::WithAndWithoutRequestResponse>::
     OnWithResponse(::fidl::StringView ret) {
   constexpr uint32_t _buffer_size = ::fidl::EventReplyBufferSizeInChannel<
@@ -2457,7 +2457,7 @@ fidl::Result fidl::internal::WireWeakBufferEventSender<
   return _inner().SendEvent(_response_message.GetOutgoingMessage());
 }
 
-fidl::Result fidl::internal::WireEventSender<
+fidl::Status fidl::internal::WireEventSender<
     ::test_protocols::WithAndWithoutRequestResponse>::
     OnWithResponse(::fidl::StringView ret) {
   ::fidl::internal::TransactionalEvent<
@@ -2471,10 +2471,10 @@ fidl::Result fidl::internal::WireEventSender<
       _response_message{::fidl::internal::AllowUnownedInputRef{}, &_response};
   auto& _message = _response_message.GetOutgoingMessage();
   _message.Write(_transport());
-  return ::fidl::Result{_message};
+  return ::fidl::Status{_message};
 }
 
-fidl::Result fidl::internal::WireBufferEventSender<
+fidl::Status fidl::internal::WireBufferEventSender<
     ::test_protocols::WithAndWithoutRequestResponse>::
     OnWithResponse(::fidl::StringView ret) {
   constexpr uint32_t _buffer_size = ::fidl::EventReplyBufferSizeInChannel<
@@ -2495,7 +2495,7 @@ fidl::Result fidl::internal::WireBufferEventSender<
       _response_message(_allocation->data, _buffer_size, &_response);
   auto& _message = _response_message.GetOutgoingMessage();
   _message.Write(_transport());
-  return ::fidl::Result{_message};
+  return ::fidl::Status{_message};
 }
 
 #endif  // __Fuchsia__
@@ -2533,7 +2533,7 @@ extern "C" const fidl_type_t test_protocols_TransitionalEventRequestTable;
   outgoing.Call<::fidl::internal::TransactionalResponse<
       ::test_protocols::Transitional::Request>>(
       client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()));
-  SetResult(outgoing);
+  SetStatus(outgoing);
 }
 
 ::fidl::WireResult<::test_protocols::Transitional::Request>::WireResult(
@@ -2552,7 +2552,7 @@ extern "C" const fidl_type_t test_protocols_TransitionalEventRequestTable;
       ::test_protocols::Transitional::Request>>(
       client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()),
       fidl::CallOptions{.deadline = deadline});
-  SetResult(outgoing);
+  SetStatus(outgoing);
 }
 namespace test_protocols {
 #endif  // __Fuchsia__
@@ -2570,7 +2570,7 @@ namespace test_protocols {
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation =
       allocator.TryAllocate(buffer_size);
   if (!allocation.is_ok()) {
-    ::fidl::Result::operator=(allocation.error_value());
+    ::fidl::Status::operator=(allocation.error_value());
     return;
   }
   uint8_t* buffer = allocation->data;
@@ -2592,7 +2592,7 @@ namespace test_protocols {
       ::test_protocols::Transitional::Request>>(
       client_end.handle(), response_bytes, response_byte_capacity);
   bytes_ = response_bytes;
-  ::fidl::Result::operator=(outgoing);
+  ::fidl::Status::operator=(outgoing);
 }
 namespace test_protocols {
 #endif  // __Fuchsia__
@@ -2611,7 +2611,7 @@ namespace test_protocols {
       request_message(::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
   outgoing.Write(client.handle());
-  SetResult(outgoing);
+  SetStatus(outgoing);
 }
 namespace test_protocols {
 #endif  // __Fuchsia__
@@ -2629,7 +2629,7 @@ namespace test_protocols {
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation =
       allocator.TryAllocate(buffer_size);
   if (!allocation.is_ok()) {
-    ::fidl::Result::operator=(allocation.error_value());
+    ::fidl::Status::operator=(allocation.error_value());
     return;
   }
   uint8_t* buffer = allocation->data;
@@ -2642,7 +2642,7 @@ namespace test_protocols {
       request_message(request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
   outgoing.Write(client_end.handle());
-  ::fidl::Result::operator=(outgoing);
+  ::fidl::Status::operator=(outgoing);
 }
 namespace test_protocols {
 #endif  // __Fuchsia__
@@ -2650,7 +2650,7 @@ namespace test_protocols {
 }  // namespace test_protocols
 #ifdef __Fuchsia__
 
-::fidl::Result fidl::internal::WireWeakOnewayClientImpl<
+::fidl::Status fidl::internal::WireWeakOnewayClientImpl<
     ::test_protocols::Transitional>::OneWay(int64_t x) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::internal::TransactionalRequest<::test_protocols::Transitional::OneWay>
@@ -2736,7 +2736,7 @@ void fidl::internal::WireWeakAsyncClientImpl<::test_protocols::Transitional>::
       _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
   _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
 }
-::fidl::Result fidl::internal::WireWeakOnewayBufferClientImpl<
+::fidl::Status fidl::internal::WireWeakOnewayBufferClientImpl<
     ::test_protocols::Transitional>::OneWay(int64_t x) {
   constexpr uint32_t _buffer_size =
       ::fidl::AsyncClientMethodBufferSizeInChannel<
@@ -2799,14 +2799,14 @@ fidl::internal::WireWeakSyncClientImpl<::test_protocols::Transitional>::Request(
 
 #ifdef __Fuchsia__
 
-::fidl::Result
+::fidl::Status
 fidl::WireSyncEventHandler<::test_protocols::Transitional>::HandleOneEvent(
     ::fidl::UnownedClientEnd<::test_protocols::Transitional> client_end) {
   zx_status_t status = client_end.channel()->wait_one(
       ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED, ::zx::time::infinite(),
       nullptr);
   if (status != ZX_OK) {
-    return ::fidl::Result::TransportError(
+    return ::fidl::Status::TransportError(
         status, ::fidl::internal::kErrorWaitOneFailed);
   }
   constexpr uint32_t kHandleAllocSize = ([]() constexpr {
@@ -2836,7 +2836,7 @@ fidl::WireSyncEventHandler<::test_protocols::Transitional>::HandleOneEvent(
     // This can only be due to a newer version of the protocol defining a new
     // event, whose size exceeds the maximum of known events in the current
     // protocol.
-    return ::fidl::Result::UnexpectedMessage(Unknown());
+    return ::fidl::Status::UnexpectedMessage(Unknown());
   }
   if (!msg.ok()) {
     return msg;
@@ -2848,14 +2848,14 @@ fidl::WireSyncEventHandler<::test_protocols::Transitional>::HandleOneEvent(
           ::test_protocols::Transitional::Event>>
           decoded{::std::move(msg)};
       if (!decoded.ok()) {
-        return ::fidl::Result(decoded);
+        return ::fidl::Status(decoded);
       }
       auto* primary = &decoded.PrimaryObject()->body;
       Event(primary);
-      return ::fidl::Result::Ok();
+      return ::fidl::Status::Ok();
     }
     default: {
-      return ::fidl::Result::UnexpectedMessage(Unknown());
+      return ::fidl::Status::UnexpectedMessage(Unknown());
     }
   }
 }
@@ -3030,7 +3030,7 @@ void ::fidl::internal::TransactionalEvent<
 
 #ifdef __Fuchsia__
 
-fidl::Result fidl::internal::WireWeakEventSender<
+fidl::Status fidl::internal::WireWeakEventSender<
     ::test_protocols::Transitional>::Event(int64_t x) {
   ::fidl::internal::TransactionalEvent<::test_protocols::Transitional::Event>
       _response{x};
@@ -3043,7 +3043,7 @@ fidl::Result fidl::internal::WireWeakEventSender<
   return _inner().SendEvent(_response_message.GetOutgoingMessage());
 }
 
-fidl::Result fidl::internal::WireWeakBufferEventSender<
+fidl::Status fidl::internal::WireWeakBufferEventSender<
     ::test_protocols::Transitional>::Event(int64_t x) {
   constexpr uint32_t _buffer_size = ::fidl::EventReplyBufferSizeInChannel<
       ::test_protocols::Transitional::Event>();
@@ -3064,7 +3064,7 @@ fidl::Result fidl::internal::WireWeakBufferEventSender<
   return _inner().SendEvent(_response_message.GetOutgoingMessage());
 }
 
-fidl::Result fidl::internal::WireEventSender<
+fidl::Status fidl::internal::WireEventSender<
     ::test_protocols::Transitional>::Event(int64_t x) {
   ::fidl::internal::TransactionalEvent<::test_protocols::Transitional::Event>
       _response{x};
@@ -3076,10 +3076,10 @@ fidl::Result fidl::internal::WireEventSender<
       _response_message{::fidl::internal::AllowUnownedInputRef{}, &_response};
   auto& _message = _response_message.GetOutgoingMessage();
   _message.Write(_transport());
-  return ::fidl::Result{_message};
+  return ::fidl::Status{_message};
 }
 
-fidl::Result fidl::internal::WireBufferEventSender<
+fidl::Status fidl::internal::WireBufferEventSender<
     ::test_protocols::Transitional>::Event(int64_t x) {
   constexpr uint32_t _buffer_size = ::fidl::EventReplyBufferSizeInChannel<
       ::test_protocols::Transitional::Event>();
@@ -3098,7 +3098,7 @@ fidl::Result fidl::internal::WireBufferEventSender<
       _response_message(_allocation->data, _buffer_size, &_response);
   auto& _message = _response_message.GetOutgoingMessage();
   _message.Write(_transport());
-  return ::fidl::Result{_message};
+  return ::fidl::Status{_message};
 }
 
 #endif  // __Fuchsia__
@@ -3123,7 +3123,7 @@ extern "C" const fidl_type_t
       request_message(::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
   outgoing.Write(client.handle());
-  SetResult(outgoing);
+  SetStatus(outgoing);
 }
 namespace test_protocols {
 #endif  // __Fuchsia__
@@ -3141,7 +3141,7 @@ namespace test_protocols {
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation =
       allocator.TryAllocate(buffer_size);
   if (!allocation.is_ok()) {
-    ::fidl::Result::operator=(allocation.error_value());
+    ::fidl::Status::operator=(allocation.error_value());
     return;
   }
   uint8_t* buffer = allocation->data;
@@ -3154,7 +3154,7 @@ namespace test_protocols {
       request_message(request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
   outgoing.Write(client_end.handle());
-  ::fidl::Result::operator=(outgoing);
+  ::fidl::Status::operator=(outgoing);
 }
 namespace test_protocols {
 #endif  // __Fuchsia__
@@ -3162,7 +3162,7 @@ namespace test_protocols {
 }  // namespace test_protocols
 #ifdef __Fuchsia__
 
-::fidl::Result fidl::internal::
+::fidl::Status fidl::internal::
     WireWeakOnewayClientImpl<::test_protocols::MethodWithUnion>::UnionMethod(
         ::test_protocols::wire::TheUnion u) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
@@ -3177,7 +3177,7 @@ namespace test_protocols {
                        &_request_object);
   return _client_base()->SendOneWay(_request_message.GetOutgoingMessage());
 }
-::fidl::Result fidl::internal::WireWeakOnewayBufferClientImpl<
+::fidl::Status fidl::internal::WireWeakOnewayBufferClientImpl<
     ::test_protocols::MethodWithUnion>::
     UnionMethod(::test_protocols::wire::TheUnion u) {
   constexpr uint32_t _buffer_size =
@@ -3202,14 +3202,14 @@ namespace test_protocols {
 
 #ifdef __Fuchsia__
 
-::fidl::Result
+::fidl::Status
 fidl::WireSyncEventHandler<::test_protocols::MethodWithUnion>::HandleOneEvent(
     ::fidl::UnownedClientEnd<::test_protocols::MethodWithUnion> client_end) {
   zx_status_t status = client_end.channel()->wait_one(
       ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED, ::zx::time::infinite(),
       nullptr);
   if (status != ZX_OK) {
-    return ::fidl::Result::TransportError(
+    return ::fidl::Status::TransportError(
         status, ::fidl::internal::kErrorWaitOneFailed);
   }
   constexpr uint32_t kHandleAllocSize = ([]() constexpr {
@@ -3234,7 +3234,7 @@ fidl::WireSyncEventHandler<::test_protocols::MethodWithUnion>::HandleOneEvent(
     // This can only be due to a newer version of the protocol defining a new
     // event, whose size exceeds the maximum of known events in the current
     // protocol.
-    return ::fidl::Result::UnexpectedMessage(Unknown());
+    return ::fidl::Status::UnexpectedMessage(Unknown());
   }
   if (!msg.ok()) {
     return msg;
@@ -3242,7 +3242,7 @@ fidl::WireSyncEventHandler<::test_protocols::MethodWithUnion>::HandleOneEvent(
   fidl_message_header_t* hdr = msg.header();
   switch (hdr->ordinal) {
     default: {
-      return ::fidl::Result::UnexpectedMessage(Unknown());
+      return ::fidl::Status::UnexpectedMessage(Unknown());
     }
   }
 }
@@ -3371,7 +3371,7 @@ extern "C" const fidl_type_t
   outgoing.Call<::fidl::internal::TransactionalResponse<
       ::test_protocols::WithProtocolEnds::ClientEnds>>(
       client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()));
-  SetResult(outgoing);
+  SetStatus(outgoing);
 }
 
 ::fidl::WireResult<::test_protocols::WithProtocolEnds::ClientEnds>::WireResult(
@@ -3390,7 +3390,7 @@ extern "C" const fidl_type_t
       ::test_protocols::WithProtocolEnds::ClientEnds>>(
       client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()),
       fidl::CallOptions{.deadline = deadline});
-  SetResult(outgoing);
+  SetStatus(outgoing);
 }
 namespace test_protocols {
 #endif  // __Fuchsia__
@@ -3408,7 +3408,7 @@ namespace test_protocols {
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation =
       allocator.TryAllocate(buffer_size);
   if (!allocation.is_ok()) {
-    ::fidl::Result::operator=(allocation.error_value());
+    ::fidl::Status::operator=(allocation.error_value());
     return;
   }
   uint8_t* buffer = allocation->data;
@@ -3430,7 +3430,7 @@ namespace test_protocols {
       ::test_protocols::WithProtocolEnds::ClientEnds>>(
       client_end.handle(), response_bytes, response_byte_capacity);
   bytes_ = response_bytes;
-  ::fidl::Result::operator=(outgoing);
+  ::fidl::Status::operator=(outgoing);
 }
 namespace test_protocols {
 #endif  // __Fuchsia__
@@ -3451,7 +3451,7 @@ namespace test_protocols {
   outgoing.Call<::fidl::internal::TransactionalResponse<
       ::test_protocols::WithProtocolEnds::ServerEnds>>(
       client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()));
-  SetResult(outgoing);
+  SetStatus(outgoing);
 }
 
 ::fidl::WireResult<::test_protocols::WithProtocolEnds::ServerEnds>::WireResult(
@@ -3470,7 +3470,7 @@ namespace test_protocols {
       ::test_protocols::WithProtocolEnds::ServerEnds>>(
       client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()),
       fidl::CallOptions{.deadline = deadline});
-  SetResult(outgoing);
+  SetStatus(outgoing);
 }
 namespace test_protocols {
 #endif  // __Fuchsia__
@@ -3488,7 +3488,7 @@ namespace test_protocols {
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation =
       allocator.TryAllocate(buffer_size);
   if (!allocation.is_ok()) {
-    ::fidl::Result::operator=(allocation.error_value());
+    ::fidl::Status::operator=(allocation.error_value());
     return;
   }
   uint8_t* buffer = allocation->data;
@@ -3510,7 +3510,7 @@ namespace test_protocols {
       ::test_protocols::WithProtocolEnds::ServerEnds>>(
       client_end.handle(), response_bytes, response_byte_capacity);
   bytes_ = response_bytes;
-  ::fidl::Result::operator=(outgoing);
+  ::fidl::Status::operator=(outgoing);
 }
 namespace test_protocols {
 #endif  // __Fuchsia__
@@ -3533,7 +3533,7 @@ namespace test_protocols {
   outgoing.Call<::fidl::internal::TransactionalResponse<
       ::test_protocols::WithProtocolEnds::StructContainingEnds>>(
       client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()));
-  SetResult(outgoing);
+  SetStatus(outgoing);
 }
 
 ::fidl::WireResult<::test_protocols::WithProtocolEnds::StructContainingEnds>::
@@ -3553,7 +3553,7 @@ namespace test_protocols {
       ::test_protocols::WithProtocolEnds::StructContainingEnds>>(
       client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()),
       fidl::CallOptions{.deadline = deadline});
-  SetResult(outgoing);
+  SetStatus(outgoing);
 }
 namespace test_protocols {
 #endif  // __Fuchsia__
@@ -3573,7 +3573,7 @@ namespace test_protocols {
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation =
       allocator.TryAllocate(buffer_size);
   if (!allocation.is_ok()) {
-    ::fidl::Result::operator=(allocation.error_value());
+    ::fidl::Status::operator=(allocation.error_value());
     return;
   }
   uint8_t* buffer = allocation->data;
@@ -3595,7 +3595,7 @@ namespace test_protocols {
       ::test_protocols::WithProtocolEnds::StructContainingEnds>>(
       client_end.handle(), response_bytes, response_byte_capacity);
   bytes_ = response_bytes;
-  ::fidl::Result::operator=(outgoing);
+  ::fidl::Status::operator=(outgoing);
 }
 namespace test_protocols {
 #endif  // __Fuchsia__
@@ -3969,14 +3969,14 @@ fidl::internal::WireWeakSyncClientImpl<::test_protocols::WithProtocolEnds>::
 
 #ifdef __Fuchsia__
 
-::fidl::Result
+::fidl::Status
 fidl::WireSyncEventHandler<::test_protocols::WithProtocolEnds>::HandleOneEvent(
     ::fidl::UnownedClientEnd<::test_protocols::WithProtocolEnds> client_end) {
   zx_status_t status = client_end.channel()->wait_one(
       ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED, ::zx::time::infinite(),
       nullptr);
   if (status != ZX_OK) {
-    return ::fidl::Result::TransportError(
+    return ::fidl::Status::TransportError(
         status, ::fidl::internal::kErrorWaitOneFailed);
   }
   constexpr uint32_t kHandleAllocSize = ([]() constexpr {
@@ -4001,7 +4001,7 @@ fidl::WireSyncEventHandler<::test_protocols::WithProtocolEnds>::HandleOneEvent(
     // This can only be due to a newer version of the protocol defining a new
     // event, whose size exceeds the maximum of known events in the current
     // protocol.
-    return ::fidl::Result::UnexpectedMessage(Unknown());
+    return ::fidl::Status::UnexpectedMessage(Unknown());
   }
   if (!msg.ok()) {
     return msg;
@@ -4009,7 +4009,7 @@ fidl::WireSyncEventHandler<::test_protocols::WithProtocolEnds>::HandleOneEvent(
   fidl_message_header_t* hdr = msg.header();
   switch (hdr->ordinal) {
     default: {
-      return ::fidl::Result::UnexpectedMessage(Unknown());
+      return ::fidl::Status::UnexpectedMessage(Unknown());
     }
   }
 }
@@ -4365,7 +4365,7 @@ extern "C" const fidl_type_t test_protocols_ManyParametersFifteenRequestTable;
       request_message(::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
   outgoing.Write(client.handle());
-  SetResult(outgoing);
+  SetStatus(outgoing);
 }
 namespace test_protocols {
 #endif  // __Fuchsia__
@@ -4383,7 +4383,7 @@ namespace test_protocols {
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation =
       allocator.TryAllocate(buffer_size);
   if (!allocation.is_ok()) {
-    ::fidl::Result::operator=(allocation.error_value());
+    ::fidl::Status::operator=(allocation.error_value());
     return;
   }
   uint8_t* buffer = allocation->data;
@@ -4396,7 +4396,7 @@ namespace test_protocols {
       request_message(request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
   outgoing.Write(client_end.handle());
-  ::fidl::Result::operator=(outgoing);
+  ::fidl::Status::operator=(outgoing);
 }
 namespace test_protocols {
 #endif  // __Fuchsia__
@@ -4404,7 +4404,7 @@ namespace test_protocols {
 }  // namespace test_protocols
 #ifdef __Fuchsia__
 
-::fidl::Result fidl::internal::WireWeakOnewayClientImpl<
+::fidl::Status fidl::internal::WireWeakOnewayClientImpl<
     ::test_protocols::ManyParameters>::Fifteen(bool p1, bool p2, bool p3,
                                                bool p4, bool p5, bool p6,
                                                bool p7, bool p8, bool p9,
@@ -4423,7 +4423,7 @@ namespace test_protocols {
                        &_request_object);
   return _client_base()->SendOneWay(_request_message.GetOutgoingMessage());
 }
-::fidl::Result fidl::internal::WireWeakOnewayBufferClientImpl<
+::fidl::Status fidl::internal::WireWeakOnewayBufferClientImpl<
     ::test_protocols::ManyParameters>::Fifteen(bool p1, bool p2, bool p3,
                                                bool p4, bool p5, bool p6,
                                                bool p7, bool p8, bool p9,
@@ -4452,14 +4452,14 @@ namespace test_protocols {
 
 #ifdef __Fuchsia__
 
-::fidl::Result
+::fidl::Status
 fidl::WireSyncEventHandler<::test_protocols::ManyParameters>::HandleOneEvent(
     ::fidl::UnownedClientEnd<::test_protocols::ManyParameters> client_end) {
   zx_status_t status = client_end.channel()->wait_one(
       ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED, ::zx::time::infinite(),
       nullptr);
   if (status != ZX_OK) {
-    return ::fidl::Result::TransportError(
+    return ::fidl::Status::TransportError(
         status, ::fidl::internal::kErrorWaitOneFailed);
   }
   constexpr uint32_t kHandleAllocSize = ([]() constexpr {
@@ -4484,7 +4484,7 @@ fidl::WireSyncEventHandler<::test_protocols::ManyParameters>::HandleOneEvent(
     // This can only be due to a newer version of the protocol defining a new
     // event, whose size exceeds the maximum of known events in the current
     // protocol.
-    return ::fidl::Result::UnexpectedMessage(Unknown());
+    return ::fidl::Status::UnexpectedMessage(Unknown());
   }
   if (!msg.ok()) {
     return msg;
@@ -4492,7 +4492,7 @@ fidl::WireSyncEventHandler<::test_protocols::ManyParameters>::HandleOneEvent(
   fidl_message_header_t* hdr = msg.header();
   switch (hdr->ordinal) {
     default: {
-      return ::fidl::Result::UnexpectedMessage(Unknown());
+      return ::fidl::Status::UnexpectedMessage(Unknown());
     }
   }
 }
@@ -4618,7 +4618,7 @@ extern "C" const fidl_type_t
   outgoing.Call<::fidl::internal::TransactionalResponse<
       ::test_protocols::WithErrorSyntax::ResponseAsStruct>>(
       client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()));
-  SetResult(outgoing);
+  SetStatus(outgoing);
 }
 
 ::fidl::WireResult<::test_protocols::WithErrorSyntax::ResponseAsStruct>::
@@ -4638,7 +4638,7 @@ extern "C" const fidl_type_t
       ::test_protocols::WithErrorSyntax::ResponseAsStruct>>(
       client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()),
       fidl::CallOptions{.deadline = deadline});
-  SetResult(outgoing);
+  SetStatus(outgoing);
 }
 namespace test_protocols {
 #endif  // __Fuchsia__
@@ -4656,7 +4656,7 @@ namespace test_protocols {
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation =
       allocator.TryAllocate(buffer_size);
   if (!allocation.is_ok()) {
-    ::fidl::Result::operator=(allocation.error_value());
+    ::fidl::Status::operator=(allocation.error_value());
     return;
   }
   uint8_t* buffer = allocation->data;
@@ -4678,7 +4678,7 @@ namespace test_protocols {
       ::test_protocols::WithErrorSyntax::ResponseAsStruct>>(
       client_end.handle(), response_bytes, response_byte_capacity);
   bytes_ = response_bytes;
-  ::fidl::Result::operator=(outgoing);
+  ::fidl::Status::operator=(outgoing);
 }
 namespace test_protocols {
 #endif  // __Fuchsia__
@@ -4700,7 +4700,7 @@ namespace test_protocols {
   outgoing.Call<::fidl::internal::TransactionalResponse<
       ::test_protocols::WithErrorSyntax::ErrorAsPrimitive>>(
       client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()));
-  SetResult(outgoing);
+  SetStatus(outgoing);
 }
 
 ::fidl::WireResult<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>::
@@ -4720,7 +4720,7 @@ namespace test_protocols {
       ::test_protocols::WithErrorSyntax::ErrorAsPrimitive>>(
       client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()),
       fidl::CallOptions{.deadline = deadline});
-  SetResult(outgoing);
+  SetStatus(outgoing);
 }
 namespace test_protocols {
 #endif  // __Fuchsia__
@@ -4738,7 +4738,7 @@ namespace test_protocols {
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation =
       allocator.TryAllocate(buffer_size);
   if (!allocation.is_ok()) {
-    ::fidl::Result::operator=(allocation.error_value());
+    ::fidl::Status::operator=(allocation.error_value());
     return;
   }
   uint8_t* buffer = allocation->data;
@@ -4760,7 +4760,7 @@ namespace test_protocols {
       ::test_protocols::WithErrorSyntax::ErrorAsPrimitive>>(
       client_end.handle(), response_bytes, response_byte_capacity);
   bytes_ = response_bytes;
-  ::fidl::Result::operator=(outgoing);
+  ::fidl::Status::operator=(outgoing);
 }
 namespace test_protocols {
 #endif  // __Fuchsia__
@@ -4781,7 +4781,7 @@ namespace test_protocols {
   outgoing.Call<::fidl::internal::TransactionalResponse<
       ::test_protocols::WithErrorSyntax::ErrorAsEnum>>(
       client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()));
-  SetResult(outgoing);
+  SetStatus(outgoing);
 }
 
 ::fidl::WireResult<::test_protocols::WithErrorSyntax::ErrorAsEnum>::WireResult(
@@ -4800,7 +4800,7 @@ namespace test_protocols {
       ::test_protocols::WithErrorSyntax::ErrorAsEnum>>(
       client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()),
       fidl::CallOptions{.deadline = deadline});
-  SetResult(outgoing);
+  SetStatus(outgoing);
 }
 namespace test_protocols {
 #endif  // __Fuchsia__
@@ -4818,7 +4818,7 @@ namespace test_protocols {
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation =
       allocator.TryAllocate(buffer_size);
   if (!allocation.is_ok()) {
-    ::fidl::Result::operator=(allocation.error_value());
+    ::fidl::Status::operator=(allocation.error_value());
     return;
   }
   uint8_t* buffer = allocation->data;
@@ -4840,7 +4840,7 @@ namespace test_protocols {
       ::test_protocols::WithErrorSyntax::ErrorAsEnum>>(
       client_end.handle(), response_bytes, response_byte_capacity);
   bytes_ = response_bytes;
-  ::fidl::Result::operator=(outgoing);
+  ::fidl::Status::operator=(outgoing);
 }
 namespace test_protocols {
 #endif  // __Fuchsia__
@@ -4862,7 +4862,7 @@ namespace test_protocols {
   outgoing.Call<::fidl::internal::TransactionalResponse<
       ::test_protocols::WithErrorSyntax::HandleInResult>>(
       client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()));
-  SetResult(outgoing);
+  SetStatus(outgoing);
 }
 
 ::fidl::WireResult<::test_protocols::WithErrorSyntax::HandleInResult>::
@@ -4882,7 +4882,7 @@ namespace test_protocols {
       ::test_protocols::WithErrorSyntax::HandleInResult>>(
       client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()),
       fidl::CallOptions{.deadline = deadline});
-  SetResult(outgoing);
+  SetStatus(outgoing);
 }
 namespace test_protocols {
 #endif  // __Fuchsia__
@@ -4900,7 +4900,7 @@ namespace test_protocols {
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation =
       allocator.TryAllocate(buffer_size);
   if (!allocation.is_ok()) {
-    ::fidl::Result::operator=(allocation.error_value());
+    ::fidl::Status::operator=(allocation.error_value());
     return;
   }
   uint8_t* buffer = allocation->data;
@@ -4922,7 +4922,7 @@ namespace test_protocols {
       ::test_protocols::WithErrorSyntax::HandleInResult>>(
       client_end.handle(), response_bytes, response_byte_capacity);
   bytes_ = response_bytes;
-  ::fidl::Result::operator=(outgoing);
+  ::fidl::Status::operator=(outgoing);
 }
 namespace test_protocols {
 #endif  // __Fuchsia__
@@ -5405,14 +5405,14 @@ fidl::internal::WireWeakSyncClientImpl<
 
 #ifdef __Fuchsia__
 
-::fidl::Result
+::fidl::Status
 fidl::WireSyncEventHandler<::test_protocols::WithErrorSyntax>::HandleOneEvent(
     ::fidl::UnownedClientEnd<::test_protocols::WithErrorSyntax> client_end) {
   zx_status_t status = client_end.channel()->wait_one(
       ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED, ::zx::time::infinite(),
       nullptr);
   if (status != ZX_OK) {
-    return ::fidl::Result::TransportError(
+    return ::fidl::Status::TransportError(
         status, ::fidl::internal::kErrorWaitOneFailed);
   }
   constexpr uint32_t kHandleAllocSize = ([]() constexpr {
@@ -5437,7 +5437,7 @@ fidl::WireSyncEventHandler<::test_protocols::WithErrorSyntax>::HandleOneEvent(
     // This can only be due to a newer version of the protocol defining a new
     // event, whose size exceeds the maximum of known events in the current
     // protocol.
-    return ::fidl::Result::UnexpectedMessage(Unknown());
+    return ::fidl::Status::UnexpectedMessage(Unknown());
   }
   if (!msg.ok()) {
     return msg;
@@ -5445,7 +5445,7 @@ fidl::WireSyncEventHandler<::test_protocols::WithErrorSyntax>::HandleOneEvent(
   fidl_message_header_t* hdr = msg.header();
   switch (hdr->ordinal) {
     default: {
-      return ::fidl::Result::UnexpectedMessage(Unknown());
+      return ::fidl::Status::UnexpectedMessage(Unknown());
     }
   }
 }
@@ -5962,7 +5962,7 @@ namespace test_protocols {
       request_message(::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
   outgoing.Write(client.handle());
-  SetResult(outgoing);
+  SetStatus(outgoing);
 }
 namespace test_protocols {
 #endif  // __Fuchsia__
@@ -5970,7 +5970,7 @@ namespace test_protocols {
 }  // namespace test_protocols
 #ifdef __Fuchsia__
 
-::fidl::Result fidl::internal::WireWeakOnewayClientImpl<
+::fidl::Status fidl::internal::WireWeakOnewayClientImpl<
     ::test_protocols::DiscoverableProtocol>::Method() {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::internal::TransactionalRequest<
@@ -5984,7 +5984,7 @@ namespace test_protocols {
                        &_request_object);
   return _client_base()->SendOneWay(_request_message.GetOutgoingMessage());
 }
-::fidl::Result fidl::internal::WireWeakOnewayBufferClientImpl<
+::fidl::Status fidl::internal::WireWeakOnewayBufferClientImpl<
     ::test_protocols::DiscoverableProtocol>::Method() {
   constexpr uint32_t _buffer_size =
       ::fidl::AsyncClientMethodBufferSizeInChannel<
@@ -6008,7 +6008,7 @@ namespace test_protocols {
 
 #ifdef __Fuchsia__
 
-::fidl::Result
+::fidl::Status
 fidl::WireSyncEventHandler<::test_protocols::DiscoverableProtocol>::
     HandleOneEvent(
         ::fidl::UnownedClientEnd<::test_protocols::DiscoverableProtocol>
@@ -6017,7 +6017,7 @@ fidl::WireSyncEventHandler<::test_protocols::DiscoverableProtocol>::
       ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED, ::zx::time::infinite(),
       nullptr);
   if (status != ZX_OK) {
-    return ::fidl::Result::TransportError(
+    return ::fidl::Status::TransportError(
         status, ::fidl::internal::kErrorWaitOneFailed);
   }
   constexpr uint32_t kHandleAllocSize = ([]() constexpr {
@@ -6042,7 +6042,7 @@ fidl::WireSyncEventHandler<::test_protocols::DiscoverableProtocol>::
     // This can only be due to a newer version of the protocol defining a new
     // event, whose size exceeds the maximum of known events in the current
     // protocol.
-    return ::fidl::Result::UnexpectedMessage(Unknown());
+    return ::fidl::Status::UnexpectedMessage(Unknown());
   }
   if (!msg.ok()) {
     return msg;
@@ -6050,7 +6050,7 @@ fidl::WireSyncEventHandler<::test_protocols::DiscoverableProtocol>::
   fidl_message_header_t* hdr = msg.header();
   switch (hdr->ordinal) {
     default: {
-      return ::fidl::Result::UnexpectedMessage(Unknown());
+      return ::fidl::Status::UnexpectedMessage(Unknown());
     }
   }
 }
@@ -6181,7 +6181,7 @@ extern "C" const fidl_type_t
       request_message(::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
   outgoing.Write(client.handle());
-  SetResult(outgoing);
+  SetStatus(outgoing);
 }
 namespace test_protocols {
 #endif  // __Fuchsia__
@@ -6199,7 +6199,7 @@ namespace test_protocols {
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation =
       allocator.TryAllocate(buffer_size);
   if (!allocation.is_ok()) {
-    ::fidl::Result::operator=(allocation.error_value());
+    ::fidl::Status::operator=(allocation.error_value());
     return;
   }
   uint8_t* buffer = allocation->data;
@@ -6212,7 +6212,7 @@ namespace test_protocols {
       request_message(request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
   outgoing.Write(client_end.handle());
-  ::fidl::Result::operator=(outgoing);
+  ::fidl::Status::operator=(outgoing);
 }
 namespace test_protocols {
 #endif  // __Fuchsia__
@@ -6233,7 +6233,7 @@ namespace test_protocols {
   outgoing.Call<::fidl::internal::TransactionalResponse<
       ::test_protocols::ChannelProtocol::MethodB>>(
       client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()));
-  SetResult(outgoing);
+  SetStatus(outgoing);
 }
 
 ::fidl::WireResult<::test_protocols::ChannelProtocol::MethodB>::WireResult(
@@ -6252,7 +6252,7 @@ namespace test_protocols {
       ::test_protocols::ChannelProtocol::MethodB>>(
       client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()),
       fidl::CallOptions{.deadline = deadline});
-  SetResult(outgoing);
+  SetStatus(outgoing);
 }
 namespace test_protocols {
 #endif  // __Fuchsia__
@@ -6270,7 +6270,7 @@ namespace test_protocols {
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation =
       allocator.TryAllocate(buffer_size);
   if (!allocation.is_ok()) {
-    ::fidl::Result::operator=(allocation.error_value());
+    ::fidl::Status::operator=(allocation.error_value());
     return;
   }
   uint8_t* buffer = allocation->data;
@@ -6292,7 +6292,7 @@ namespace test_protocols {
       ::test_protocols::ChannelProtocol::MethodB>>(
       client_end.handle(), response_bytes, response_byte_capacity);
   bytes_ = response_bytes;
-  ::fidl::Result::operator=(outgoing);
+  ::fidl::Status::operator=(outgoing);
 }
 namespace test_protocols {
 #endif  // __Fuchsia__
@@ -6313,7 +6313,7 @@ namespace test_protocols {
   outgoing.Call<::fidl::internal::TransactionalResponse<
       ::test_protocols::ChannelProtocol::TakeHandle>>(
       client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()));
-  SetResult(outgoing);
+  SetStatus(outgoing);
 }
 
 ::fidl::WireResult<::test_protocols::ChannelProtocol::TakeHandle>::WireResult(
@@ -6332,7 +6332,7 @@ namespace test_protocols {
       ::test_protocols::ChannelProtocol::TakeHandle>>(
       client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()),
       fidl::CallOptions{.deadline = deadline});
-  SetResult(outgoing);
+  SetStatus(outgoing);
 }
 namespace test_protocols {
 #endif  // __Fuchsia__
@@ -6350,7 +6350,7 @@ namespace test_protocols {
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation =
       allocator.TryAllocate(buffer_size);
   if (!allocation.is_ok()) {
-    ::fidl::Result::operator=(allocation.error_value());
+    ::fidl::Status::operator=(allocation.error_value());
     return;
   }
   uint8_t* buffer = allocation->data;
@@ -6372,7 +6372,7 @@ namespace test_protocols {
       ::test_protocols::ChannelProtocol::TakeHandle>>(
       client_end.handle(), response_bytes, response_byte_capacity);
   bytes_ = response_bytes;
-  ::fidl::Result::operator=(outgoing);
+  ::fidl::Status::operator=(outgoing);
 }
 namespace test_protocols {
 #endif  // __Fuchsia__
@@ -6393,7 +6393,7 @@ namespace test_protocols {
   outgoing.Call<::fidl::internal::TransactionalResponse<
       ::test_protocols::ChannelProtocol::MutateSocket>>(
       client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()));
-  SetResult(outgoing);
+  SetStatus(outgoing);
 }
 
 ::fidl::WireResult<::test_protocols::ChannelProtocol::MutateSocket>::WireResult(
@@ -6412,7 +6412,7 @@ namespace test_protocols {
       ::test_protocols::ChannelProtocol::MutateSocket>>(
       client.handle(), bytes_.data(), static_cast<uint32_t>(bytes_.size()),
       fidl::CallOptions{.deadline = deadline});
-  SetResult(outgoing);
+  SetStatus(outgoing);
 }
 namespace test_protocols {
 #endif  // __Fuchsia__
@@ -6430,7 +6430,7 @@ namespace test_protocols {
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation =
       allocator.TryAllocate(buffer_size);
   if (!allocation.is_ok()) {
-    ::fidl::Result::operator=(allocation.error_value());
+    ::fidl::Status::operator=(allocation.error_value());
     return;
   }
   uint8_t* buffer = allocation->data;
@@ -6452,7 +6452,7 @@ namespace test_protocols {
       ::test_protocols::ChannelProtocol::MutateSocket>>(
       client_end.handle(), response_bytes, response_byte_capacity);
   bytes_ = response_bytes;
-  ::fidl::Result::operator=(outgoing);
+  ::fidl::Status::operator=(outgoing);
 }
 namespace test_protocols {
 #endif  // __Fuchsia__
@@ -6460,7 +6460,7 @@ namespace test_protocols {
 }  // namespace test_protocols
 #ifdef __Fuchsia__
 
-::fidl::Result fidl::internal::WireWeakOnewayClientImpl<
+::fidl::Status fidl::internal::WireWeakOnewayClientImpl<
     ::test_protocols::ChannelProtocol>::MethodA(int64_t a, int64_t b) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::internal::TransactionalRequest<
@@ -6700,7 +6700,7 @@ void fidl::internal::
       _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
   _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
 }
-::fidl::Result fidl::internal::WireWeakOnewayBufferClientImpl<
+::fidl::Status fidl::internal::WireWeakOnewayBufferClientImpl<
     ::test_protocols::ChannelProtocol>::MethodA(int64_t a, int64_t b) {
   constexpr uint32_t _buffer_size =
       ::fidl::AsyncClientMethodBufferSizeInChannel<
@@ -6847,14 +6847,14 @@ fidl::internal::WireWeakSyncClientImpl<
 
 #ifdef __Fuchsia__
 
-::fidl::Result
+::fidl::Status
 fidl::WireSyncEventHandler<::test_protocols::ChannelProtocol>::HandleOneEvent(
     ::fidl::UnownedClientEnd<::test_protocols::ChannelProtocol> client_end) {
   zx_status_t status = client_end.channel()->wait_one(
       ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED, ::zx::time::infinite(),
       nullptr);
   if (status != ZX_OK) {
-    return ::fidl::Result::TransportError(
+    return ::fidl::Status::TransportError(
         status, ::fidl::internal::kErrorWaitOneFailed);
   }
   constexpr uint32_t kHandleAllocSize = ([]() constexpr {
@@ -6884,7 +6884,7 @@ fidl::WireSyncEventHandler<::test_protocols::ChannelProtocol>::HandleOneEvent(
     // This can only be due to a newer version of the protocol defining a new
     // event, whose size exceeds the maximum of known events in the current
     // protocol.
-    return ::fidl::Result::UnexpectedMessage(Unknown());
+    return ::fidl::Status::UnexpectedMessage(Unknown());
   }
   if (!msg.ok()) {
     return msg;
@@ -6896,14 +6896,14 @@ fidl::WireSyncEventHandler<::test_protocols::ChannelProtocol>::HandleOneEvent(
           ::test_protocols::ChannelProtocol::EventA>>
           decoded{::std::move(msg)};
       if (!decoded.ok()) {
-        return ::fidl::Result(decoded);
+        return ::fidl::Status(decoded);
       }
       auto* primary = &decoded.PrimaryObject()->body;
       EventA(primary);
-      return ::fidl::Result::Ok();
+      return ::fidl::Status::Ok();
     }
     default: {
-      return ::fidl::Result::UnexpectedMessage(Unknown());
+      return ::fidl::Status::UnexpectedMessage(Unknown());
     }
   }
 }
@@ -7250,7 +7250,7 @@ void ::fidl::WireResponse<
 
 #ifdef __Fuchsia__
 
-fidl::Result fidl::internal::WireWeakEventSender<
+fidl::Status fidl::internal::WireWeakEventSender<
     ::test_protocols::ChannelProtocol>::EventA(int64_t a, int64_t b) {
   ::fidl::internal::TransactionalEvent<
       ::test_protocols::ChannelProtocol::EventA>
@@ -7264,7 +7264,7 @@ fidl::Result fidl::internal::WireWeakEventSender<
   return _inner().SendEvent(_response_message.GetOutgoingMessage());
 }
 
-fidl::Result fidl::internal::WireWeakBufferEventSender<
+fidl::Status fidl::internal::WireWeakBufferEventSender<
     ::test_protocols::ChannelProtocol>::EventA(int64_t a, int64_t b) {
   constexpr uint32_t _buffer_size = ::fidl::EventReplyBufferSizeInChannel<
       ::test_protocols::ChannelProtocol::EventA>();
@@ -7286,7 +7286,7 @@ fidl::Result fidl::internal::WireWeakBufferEventSender<
   return _inner().SendEvent(_response_message.GetOutgoingMessage());
 }
 
-fidl::Result fidl::internal::WireEventSender<
+fidl::Status fidl::internal::WireEventSender<
     ::test_protocols::ChannelProtocol>::EventA(int64_t a, int64_t b) {
   ::fidl::internal::TransactionalEvent<
       ::test_protocols::ChannelProtocol::EventA>
@@ -7299,10 +7299,10 @@ fidl::Result fidl::internal::WireEventSender<
       _response_message{::fidl::internal::AllowUnownedInputRef{}, &_response};
   auto& _message = _response_message.GetOutgoingMessage();
   _message.Write(_transport());
-  return ::fidl::Result{_message};
+  return ::fidl::Status{_message};
 }
 
-fidl::Result fidl::internal::WireBufferEventSender<
+fidl::Status fidl::internal::WireBufferEventSender<
     ::test_protocols::ChannelProtocol>::EventA(int64_t a, int64_t b) {
   constexpr uint32_t _buffer_size = ::fidl::EventReplyBufferSizeInChannel<
       ::test_protocols::ChannelProtocol::EventA>();
@@ -7322,7 +7322,7 @@ fidl::Result fidl::internal::WireBufferEventSender<
       _response_message(_allocation->data, _buffer_size, &_response);
   auto& _message = _response_message.GetOutgoingMessage();
   _message.Write(_transport());
-  return ::fidl::Result{_message};
+  return ::fidl::Status{_message};
 }
 
 #endif  // __Fuchsia__

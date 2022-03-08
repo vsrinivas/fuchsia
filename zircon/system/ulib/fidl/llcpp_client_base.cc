@@ -92,7 +92,7 @@ void ClientBase::ReleaseResponseContexts(fidl::UnbindInfo info) {
       case fidl::Reason::kDecodeError:
         // These errors are specific to one call, whose corresponding context
         // would have been notified during |Dispatch| or making the call.
-        context->OnError(fidl::Result::Unbound());
+        context->OnError(fidl::Status::Unbound());
         break;
       case fidl::Reason::kPeerClosed:
       case fidl::Reason::kDispatcherError:
@@ -122,10 +122,10 @@ void ClientBase::SendTwoWay(fidl::OutgoingMessage& message, ResponseContext* con
     }
     return;
   }
-  TryAsyncDeliverError(fidl::Result::Unbound(), context);
+  TryAsyncDeliverError(fidl::Status::Unbound(), context);
 }
 
-fidl::Result ClientBase::SendOneWay(::fidl::OutgoingMessage& message,
+fidl::Status ClientBase::SendOneWay(::fidl::OutgoingMessage& message,
                                     fidl::WriteOptions write_options) {
   if (auto transport = GetTransport()) {
     message.set_txid(0);
@@ -134,18 +134,18 @@ fidl::Result ClientBase::SendOneWay(::fidl::OutgoingMessage& message,
       HandleSendError(message.error());
       return message.error();
     }
-    return fidl::Result::Ok();
+    return fidl::Status::Ok();
   }
-  return fidl::Result::Unbound();
+  return fidl::Status::Unbound();
 }
 
-void ClientBase::HandleSendError(fidl::Result error) {
+void ClientBase::HandleSendError(fidl::Status error) {
   if (auto binding = binding_.lock()) {
     binding->HandleError(std::move(binding), {UnbindInfo{error}, ErrorOrigin::kSend});
   }
 }
 
-void ClientBase::TryAsyncDeliverError(::fidl::Result error, ResponseContext* context) {
+void ClientBase::TryAsyncDeliverError(::fidl::Status error, ResponseContext* context) {
   zx_status_t status = context->TryAsyncDeliverError(error, dispatcher_);
   if (status != ZX_OK) {
     context->OnError(error);

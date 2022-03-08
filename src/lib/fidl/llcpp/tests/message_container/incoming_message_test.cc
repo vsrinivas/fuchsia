@@ -18,14 +18,14 @@
 TEST(IncomingMessage, ConstructNonOkMessage) {
   constexpr auto kError = "test error";
   auto message =
-      fidl::IncomingMessage::Create(fidl::Result::TransportError(ZX_ERR_ACCESS_DENIED, kError));
+      fidl::IncomingMessage::Create(fidl::Status::TransportError(ZX_ERR_ACCESS_DENIED, kError));
   EXPECT_FALSE(message.ok());
   EXPECT_EQ(ZX_ERR_ACCESS_DENIED, message.status());
 }
 
 TEST(IncomingMessage, ConstructNonOkMessageRequiresNonOkStatus) {
 #if ZX_DEBUG_ASSERT_IMPLEMENTED
-  ASSERT_DEATH({ auto message = fidl::IncomingMessage::Create(fidl::Result::DecodeError(ZX_OK)); },
+  ASSERT_DEATH({ auto message = fidl::IncomingMessage::Create(fidl::Status::DecodeError(ZX_OK)); },
                "!= ZX_OK");
 #else
   GTEST_SKIP() << "Debug assertions are disabled";

@@ -12,9 +12,9 @@ namespace test_service {
     ::test_service::SecondProtocol>::MethodOnSecond() const {
   ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
       _encoder{::test_service::kSecondProtocol_MethodOnSecond_Ordinal};
-  ::fidl::Result result = messenger().OneWay(
+  ::fidl::Status status = messenger().OneWay(
       ::fidl::internal::EncodeTransactionalMessage(_encoder));
-  return ::fidl::internal::ToFitxResult(result);
+  return ::fidl::internal::ToFitxResult(status);
 }
 namespace test_service {
 #endif  // __Fuchsia__
@@ -94,9 +94,9 @@ namespace test_service {
     ::test_service::FirstProtocol>::MethodOnFirst() const {
   ::fidl::internal::NaturalMessageEncoder<::fidl::internal::ChannelTransport>
       _encoder{::test_service::kFirstProtocol_MethodOnFirst_Ordinal};
-  ::fidl::Result result = messenger().OneWay(
+  ::fidl::Status status = messenger().OneWay(
       ::fidl::internal::EncodeTransactionalMessage(_encoder));
-  return ::fidl::internal::ToFitxResult(result);
+  return ::fidl::internal::ToFitxResult(status);
 }
 namespace test_service {
 #endif  // __Fuchsia__

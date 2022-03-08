@@ -113,19 +113,19 @@ class NaturalMessageEncoder final : public NaturalEncoder {
 
   fidl::OutgoingMessage GetMessage(const fidl_type_t* type) {
     if (status_ != ZX_OK) {
-      return fidl::OutgoingMessage(fidl::Result::EncodeError(status_, error_));
+      return fidl::OutgoingMessage(fidl::Status::EncodeError(status_, error_));
     }
 
     if (type) {
       const char* err_msg;
       zx_status_t status = Validate(type, sizeof(fidl_message_header_t), &err_msg);
       if (status != ZX_OK) {
-        return fidl::OutgoingMessage(fidl::Result::EncodeError(status, err_msg));
+        return fidl::OutgoingMessage(fidl::Status::EncodeError(status, err_msg));
       }
     } else {
       // Null type means message header only.
       if (bytes_.size() != sizeof(fidl_message_header_t) && handle_actual_ == 0) {
-        return fidl::OutgoingMessage(fidl::Result::EncodeError(
+        return fidl::OutgoingMessage(fidl::Status::EncodeError(
             ZX_ERR_INVALID_ARGS,
             "message with null type must be a message header with no additional content"));
       }

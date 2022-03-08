@@ -149,12 +149,12 @@ namespace test_service {
 }  // namespace test_service
 template <>
 class ::fidl::WireResult<::test_service::SecondProtocol::MethodOnSecond> final
-    : public ::fidl::Result {
+    : public ::fidl::Status {
  public:
   WireResult(::fidl::UnownedClientEnd<::test_service::SecondProtocol> client,
              ::fidl::internal::TransactionalRequest<
                  ::test_service::SecondProtocol::MethodOnSecond>* request);
-  explicit WireResult(const ::fidl::Result& result) : ::fidl::Result(result) {}
+  explicit WireResult(const ::fidl::Status& result) : ::fidl::Status(result) {}
   WireResult(WireResult&&) = delete;
   WireResult(const WireResult&) = delete;
   WireResult* operator=(WireResult&&) = delete;
@@ -165,15 +165,15 @@ class ::fidl::WireResult<::test_service::SecondProtocol::MethodOnSecond> final
 };
 template <>
 class ::fidl::WireUnownedResult<::test_service::SecondProtocol::MethodOnSecond>
-    final : public ::fidl::Result {
+    final : public ::fidl::Status {
  public:
   explicit WireUnownedResult(
       ::fidl::UnownedClientEnd<::test_service::SecondProtocol> client_end,
       ::fidl::internal::AnyBufferAllocator& allocator,
       ::fidl::internal::TransactionalRequest<
           ::test_service::SecondProtocol::MethodOnSecond>* request);
-  explicit WireUnownedResult(const ::fidl::Result& result)
-      : ::fidl::Result(result) {}
+  explicit WireUnownedResult(const ::fidl::Status& result)
+      : ::fidl::Status(result) {}
   WireUnownedResult(WireUnownedResult&&) = delete;
   WireUnownedResult(const WireUnownedResult&) = delete;
   WireUnownedResult* operator=(WireUnownedResult&&) = delete;
@@ -211,7 +211,7 @@ class ::fidl::WireSyncEventHandler<::test_service::SecondProtocol>
   // Handle all possible events defined in this protocol.
   // Blocks to consume exactly one message from the channel, then call the
   // corresponding virtual method.
-  ::fidl::Result HandleOneEvent(
+  ::fidl::Status HandleOneEvent(
       ::fidl::UnownedClientEnd<::test_service::SecondProtocol> client_end);
 };
 
@@ -430,12 +430,12 @@ namespace test_service {
 }  // namespace test_service
 template <>
 class ::fidl::WireResult<::test_service::FirstProtocol::MethodOnFirst> final
-    : public ::fidl::Result {
+    : public ::fidl::Status {
  public:
   WireResult(::fidl::UnownedClientEnd<::test_service::FirstProtocol> client,
              ::fidl::internal::TransactionalRequest<
                  ::test_service::FirstProtocol::MethodOnFirst>* request);
-  explicit WireResult(const ::fidl::Result& result) : ::fidl::Result(result) {}
+  explicit WireResult(const ::fidl::Status& result) : ::fidl::Status(result) {}
   WireResult(WireResult&&) = delete;
   WireResult(const WireResult&) = delete;
   WireResult* operator=(WireResult&&) = delete;
@@ -446,15 +446,15 @@ class ::fidl::WireResult<::test_service::FirstProtocol::MethodOnFirst> final
 };
 template <>
 class ::fidl::WireUnownedResult<::test_service::FirstProtocol::MethodOnFirst>
-    final : public ::fidl::Result {
+    final : public ::fidl::Status {
  public:
   explicit WireUnownedResult(
       ::fidl::UnownedClientEnd<::test_service::FirstProtocol> client_end,
       ::fidl::internal::AnyBufferAllocator& allocator,
       ::fidl::internal::TransactionalRequest<
           ::test_service::FirstProtocol::MethodOnFirst>* request);
-  explicit WireUnownedResult(const ::fidl::Result& result)
-      : ::fidl::Result(result) {}
+  explicit WireUnownedResult(const ::fidl::Status& result)
+      : ::fidl::Status(result) {}
   WireUnownedResult(WireUnownedResult&&) = delete;
   WireUnownedResult(const WireUnownedResult&) = delete;
   WireUnownedResult* operator=(WireUnownedResult&&) = delete;
@@ -492,7 +492,7 @@ class ::fidl::WireSyncEventHandler<::test_service::FirstProtocol>
   // Handle all possible events defined in this protocol.
   // Blocks to consume exactly one message from the channel, then call the
   // corresponding virtual method.
-  ::fidl::Result HandleOneEvent(
+  ::fidl::Status HandleOneEvent(
       ::fidl::UnownedClientEnd<::test_service::FirstProtocol> client_end);
 };
 
@@ -953,7 +953,7 @@ class ::fidl::internal::WireWeakOnewayClientImpl<::test_service::SecondProtocol>
 
   // Allocates 32 bytes of message buffer on the stack. No heap allocation
   // necessary.
-  ::fidl::Result MethodOnSecond();
+  ::fidl::Status MethodOnSecond();
 };
 
 template <>
@@ -972,7 +972,7 @@ class ::fidl::internal::WireWeakOnewayBufferClientImpl<
   using BufferClientImplBase::BufferClientImplBase;
 
   // Caller provides the backing storage for FIDL message.
-  ::fidl::Result MethodOnSecond();
+  ::fidl::Status MethodOnSecond();
 };
 
 template <>
@@ -1038,7 +1038,7 @@ class ::fidl::internal::WireWeakOnewayClientImpl<::test_service::FirstProtocol>
 
   // Allocates 32 bytes of message buffer on the stack. No heap allocation
   // necessary.
-  ::fidl::Result MethodOnFirst();
+  ::fidl::Status MethodOnFirst();
 };
 
 template <>
@@ -1057,7 +1057,7 @@ class ::fidl::internal::WireWeakOnewayBufferClientImpl<
   using BufferClientImplBase::BufferClientImplBase;
 
   // Caller provides the backing storage for FIDL message.
-  ::fidl::Result MethodOnFirst();
+  ::fidl::Status MethodOnFirst();
 };
 
 template <>

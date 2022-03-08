@@ -4090,13 +4090,13 @@ namespace test_protocollayouts {
 template <>
 class ::fidl::WireResult<
     ::test_protocollayouts::MainProtocol::OneWayAnonComposed>
-    final : public ::fidl::Result {
+    final : public ::fidl::Status {
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_protocollayouts::MainProtocol> client,
       ::fidl::internal::TransactionalRequest<
           ::test_protocollayouts::MainProtocol::OneWayAnonComposed>* request);
-  explicit WireResult(const ::fidl::Result& result) : ::fidl::Result(result) {}
+  explicit WireResult(const ::fidl::Status& result) : ::fidl::Status(result) {}
   WireResult(WireResult&&) = delete;
   WireResult(const WireResult&) = delete;
   WireResult* operator=(WireResult&&) = delete;
@@ -4108,15 +4108,15 @@ class ::fidl::WireResult<
 template <>
 class ::fidl::WireUnownedResult<
     ::test_protocollayouts::MainProtocol::OneWayAnonComposed>
-    final : public ::fidl::Result {
+    final : public ::fidl::Status {
  public:
   explicit WireUnownedResult(
       ::fidl::UnownedClientEnd<::test_protocollayouts::MainProtocol> client_end,
       ::fidl::internal::AnyBufferAllocator& allocator,
       ::fidl::internal::TransactionalRequest<
           ::test_protocollayouts::MainProtocol::OneWayAnonComposed>* request);
-  explicit WireUnownedResult(const ::fidl::Result& result)
-      : ::fidl::Result(result) {}
+  explicit WireUnownedResult(const ::fidl::Status& result)
+      : ::fidl::Status(result) {}
   WireUnownedResult(WireUnownedResult&&) = delete;
   WireUnownedResult(const WireUnownedResult&) = delete;
   WireUnownedResult* operator=(WireUnownedResult&&) = delete;
@@ -4126,7 +4126,7 @@ class ::fidl::WireUnownedResult<
 template <>
 class ::fidl::WireResult<
     ::test_protocollayouts::MainProtocol::TwoWayAnonComposed>
-    final : public ::fidl::Result {
+    final : public ::fidl::Status {
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_protocollayouts::MainProtocol> client,
@@ -4137,7 +4137,7 @@ class ::fidl::WireResult<
       ::fidl::internal::TransactionalRequest<
           ::test_protocollayouts::MainProtocol::TwoWayAnonComposed>* request,
       zx_time_t _deadline);
-  explicit WireResult(const ::fidl::Result& result) : ::fidl::Result(result) {}
+  explicit WireResult(const ::fidl::Status& result) : ::fidl::Status(result) {}
   WireResult(WireResult&&) = delete;
   WireResult(const WireResult&) = delete;
   WireResult* operator=(WireResult&&) = delete;
@@ -4199,7 +4199,7 @@ class ::fidl::WireResult<
 template <>
 class ::fidl::WireUnownedResult<
     ::test_protocollayouts::MainProtocol::TwoWayAnonComposed>
-    final : public ::fidl::Result {
+    final : public ::fidl::Status {
  public:
   explicit WireUnownedResult(
       ::fidl::UnownedClientEnd<::test_protocollayouts::MainProtocol> client_end,
@@ -4210,13 +4210,13 @@ class ::fidl::WireUnownedResult<
       ::fidl::internal::TransactionalResponse<
           ::test_protocollayouts::MainProtocol::TwoWayAnonComposed>* response)
       : bytes_(reinterpret_cast<uint8_t*>(response)) {}
-  explicit WireUnownedResult(const ::fidl::Result& result)
-      : ::fidl::Result(result) {}
+  explicit WireUnownedResult(const ::fidl::Status& result)
+      : ::fidl::Status(result) {}
   explicit WireUnownedResult(
       ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<
           ::test_protocollayouts::MainProtocol::TwoWayAnonComposed>>&& decoded,
       ::fidl::internal::IncomingTransportContext context)
-      : ::fidl::Result(decoded) {
+      : ::fidl::Status(decoded) {
     if (decoded.ok()) {
       bytes_ = reinterpret_cast<uint8_t*>(decoded.PrimaryObject());
     } else {
@@ -4287,7 +4287,7 @@ class ::fidl::WireUnownedResult<
 template <>
 class ::fidl::WireResult<
     ::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>
-    final : public ::fidl::Result {
+    final : public ::fidl::Status {
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_protocollayouts::MainProtocol> client,
@@ -4300,7 +4300,7 @@ class ::fidl::WireResult<
           ::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>*
           request,
       zx_time_t _deadline);
-  explicit WireResult(const ::fidl::Result& result) : ::fidl::Result(result) {}
+  explicit WireResult(const ::fidl::Status& result) : ::fidl::Status(result) {}
   WireResult(WireResult&&) = delete;
   WireResult(const WireResult&) = delete;
   WireResult* operator=(WireResult&&) = delete;
@@ -4362,7 +4362,7 @@ class ::fidl::WireResult<
 template <>
 class ::fidl::WireUnownedResult<
     ::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>
-    final : public ::fidl::Result {
+    final : public ::fidl::Status {
  public:
   explicit WireUnownedResult(
       ::fidl::UnownedClientEnd<::test_protocollayouts::MainProtocol> client_end,
@@ -4375,14 +4375,14 @@ class ::fidl::WireUnownedResult<
           ::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>*
           response)
       : bytes_(reinterpret_cast<uint8_t*>(response)) {}
-  explicit WireUnownedResult(const ::fidl::Result& result)
-      : ::fidl::Result(result) {}
+  explicit WireUnownedResult(const ::fidl::Status& result)
+      : ::fidl::Status(result) {}
   explicit WireUnownedResult(
       ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<
           ::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>>&&
           decoded,
       ::fidl::internal::IncomingTransportContext context)
-      : ::fidl::Result(decoded) {
+      : ::fidl::Status(decoded) {
     if (decoded.ok()) {
       bytes_ = reinterpret_cast<uint8_t*>(decoded.PrimaryObject());
     } else {
@@ -4453,13 +4453,13 @@ class ::fidl::WireUnownedResult<
 template <>
 class ::fidl::WireResult<
     ::test_protocollayouts::MainProtocol::OneWayNamedComposed>
-    final : public ::fidl::Result {
+    final : public ::fidl::Status {
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_protocollayouts::MainProtocol> client,
       ::fidl::internal::TransactionalRequest<
           ::test_protocollayouts::MainProtocol::OneWayNamedComposed>* request);
-  explicit WireResult(const ::fidl::Result& result) : ::fidl::Result(result) {}
+  explicit WireResult(const ::fidl::Status& result) : ::fidl::Status(result) {}
   WireResult(WireResult&&) = delete;
   WireResult(const WireResult&) = delete;
   WireResult* operator=(WireResult&&) = delete;
@@ -4471,15 +4471,15 @@ class ::fidl::WireResult<
 template <>
 class ::fidl::WireUnownedResult<
     ::test_protocollayouts::MainProtocol::OneWayNamedComposed>
-    final : public ::fidl::Result {
+    final : public ::fidl::Status {
  public:
   explicit WireUnownedResult(
       ::fidl::UnownedClientEnd<::test_protocollayouts::MainProtocol> client_end,
       ::fidl::internal::AnyBufferAllocator& allocator,
       ::fidl::internal::TransactionalRequest<
           ::test_protocollayouts::MainProtocol::OneWayNamedComposed>* request);
-  explicit WireUnownedResult(const ::fidl::Result& result)
-      : ::fidl::Result(result) {}
+  explicit WireUnownedResult(const ::fidl::Status& result)
+      : ::fidl::Status(result) {}
   WireUnownedResult(WireUnownedResult&&) = delete;
   WireUnownedResult(const WireUnownedResult&) = delete;
   WireUnownedResult* operator=(WireUnownedResult&&) = delete;
@@ -4489,7 +4489,7 @@ class ::fidl::WireUnownedResult<
 template <>
 class ::fidl::WireResult<
     ::test_protocollayouts::MainProtocol::TwoWayNamedComposed>
-    final : public ::fidl::Result {
+    final : public ::fidl::Status {
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_protocollayouts::MainProtocol> client,
@@ -4500,7 +4500,7 @@ class ::fidl::WireResult<
       ::fidl::internal::TransactionalRequest<
           ::test_protocollayouts::MainProtocol::TwoWayNamedComposed>* request,
       zx_time_t _deadline);
-  explicit WireResult(const ::fidl::Result& result) : ::fidl::Result(result) {}
+  explicit WireResult(const ::fidl::Status& result) : ::fidl::Status(result) {}
   WireResult(WireResult&&) = delete;
   WireResult(const WireResult&) = delete;
   WireResult* operator=(WireResult&&) = delete;
@@ -4562,7 +4562,7 @@ class ::fidl::WireResult<
 template <>
 class ::fidl::WireUnownedResult<
     ::test_protocollayouts::MainProtocol::TwoWayNamedComposed>
-    final : public ::fidl::Result {
+    final : public ::fidl::Status {
  public:
   explicit WireUnownedResult(
       ::fidl::UnownedClientEnd<::test_protocollayouts::MainProtocol> client_end,
@@ -4573,13 +4573,13 @@ class ::fidl::WireUnownedResult<
       ::fidl::internal::TransactionalResponse<
           ::test_protocollayouts::MainProtocol::TwoWayNamedComposed>* response)
       : bytes_(reinterpret_cast<uint8_t*>(response)) {}
-  explicit WireUnownedResult(const ::fidl::Result& result)
-      : ::fidl::Result(result) {}
+  explicit WireUnownedResult(const ::fidl::Status& result)
+      : ::fidl::Status(result) {}
   explicit WireUnownedResult(
       ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<
           ::test_protocollayouts::MainProtocol::TwoWayNamedComposed>>&& decoded,
       ::fidl::internal::IncomingTransportContext context)
-      : ::fidl::Result(decoded) {
+      : ::fidl::Status(decoded) {
     if (decoded.ok()) {
       bytes_ = reinterpret_cast<uint8_t*>(decoded.PrimaryObject());
     } else {
@@ -4650,7 +4650,7 @@ class ::fidl::WireUnownedResult<
 template <>
 class ::fidl::WireResult<
     ::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>
-    final : public ::fidl::Result {
+    final : public ::fidl::Status {
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_protocollayouts::MainProtocol> client,
@@ -4663,7 +4663,7 @@ class ::fidl::WireResult<
           ::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>*
           request,
       zx_time_t _deadline);
-  explicit WireResult(const ::fidl::Result& result) : ::fidl::Result(result) {}
+  explicit WireResult(const ::fidl::Status& result) : ::fidl::Status(result) {}
   WireResult(WireResult&&) = delete;
   WireResult(const WireResult&) = delete;
   WireResult* operator=(WireResult&&) = delete;
@@ -4725,7 +4725,7 @@ class ::fidl::WireResult<
 template <>
 class ::fidl::WireUnownedResult<
     ::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>
-    final : public ::fidl::Result {
+    final : public ::fidl::Status {
  public:
   explicit WireUnownedResult(
       ::fidl::UnownedClientEnd<::test_protocollayouts::MainProtocol> client_end,
@@ -4738,14 +4738,14 @@ class ::fidl::WireUnownedResult<
           ::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>*
           response)
       : bytes_(reinterpret_cast<uint8_t*>(response)) {}
-  explicit WireUnownedResult(const ::fidl::Result& result)
-      : ::fidl::Result(result) {}
+  explicit WireUnownedResult(const ::fidl::Status& result)
+      : ::fidl::Status(result) {}
   explicit WireUnownedResult(
       ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<
           ::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>>&&
           decoded,
       ::fidl::internal::IncomingTransportContext context)
-      : ::fidl::Result(decoded) {
+      : ::fidl::Status(decoded) {
     if (decoded.ok()) {
       bytes_ = reinterpret_cast<uint8_t*>(decoded.PrimaryObject());
     } else {
@@ -4815,13 +4815,13 @@ class ::fidl::WireUnownedResult<
 };
 template <>
 class ::fidl::WireResult<::test_protocollayouts::MainProtocol::OneWayImport>
-    final : public ::fidl::Result {
+    final : public ::fidl::Status {
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_protocollayouts::MainProtocol> client,
       ::fidl::internal::TransactionalRequest<
           ::test_protocollayouts::MainProtocol::OneWayImport>* request);
-  explicit WireResult(const ::fidl::Result& result) : ::fidl::Result(result) {}
+  explicit WireResult(const ::fidl::Status& result) : ::fidl::Status(result) {}
   WireResult(WireResult&&) = delete;
   WireResult(const WireResult&) = delete;
   WireResult* operator=(WireResult&&) = delete;
@@ -4833,15 +4833,15 @@ class ::fidl::WireResult<::test_protocollayouts::MainProtocol::OneWayImport>
 template <>
 class ::fidl::WireUnownedResult<
     ::test_protocollayouts::MainProtocol::OneWayImport>
-    final : public ::fidl::Result {
+    final : public ::fidl::Status {
  public:
   explicit WireUnownedResult(
       ::fidl::UnownedClientEnd<::test_protocollayouts::MainProtocol> client_end,
       ::fidl::internal::AnyBufferAllocator& allocator,
       ::fidl::internal::TransactionalRequest<
           ::test_protocollayouts::MainProtocol::OneWayImport>* request);
-  explicit WireUnownedResult(const ::fidl::Result& result)
-      : ::fidl::Result(result) {}
+  explicit WireUnownedResult(const ::fidl::Status& result)
+      : ::fidl::Status(result) {}
   WireUnownedResult(WireUnownedResult&&) = delete;
   WireUnownedResult(const WireUnownedResult&) = delete;
   WireUnownedResult* operator=(WireUnownedResult&&) = delete;
@@ -4850,7 +4850,7 @@ class ::fidl::WireUnownedResult<
 };
 template <>
 class ::fidl::WireResult<::test_protocollayouts::MainProtocol::TwoWayImport>
-    final : public ::fidl::Result {
+    final : public ::fidl::Status {
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_protocollayouts::MainProtocol> client,
@@ -4861,7 +4861,7 @@ class ::fidl::WireResult<::test_protocollayouts::MainProtocol::TwoWayImport>
       ::fidl::internal::TransactionalRequest<
           ::test_protocollayouts::MainProtocol::TwoWayImport>* request,
       zx_time_t _deadline);
-  explicit WireResult(const ::fidl::Result& result) : ::fidl::Result(result) {}
+  explicit WireResult(const ::fidl::Status& result) : ::fidl::Status(result) {}
   WireResult(WireResult&&) = delete;
   WireResult(const WireResult&) = delete;
   WireResult* operator=(WireResult&&) = delete;
@@ -4919,7 +4919,7 @@ class ::fidl::WireResult<::test_protocollayouts::MainProtocol::TwoWayImport>
 template <>
 class ::fidl::WireUnownedResult<
     ::test_protocollayouts::MainProtocol::TwoWayImport>
-    final : public ::fidl::Result {
+    final : public ::fidl::Status {
  public:
   explicit WireUnownedResult(
       ::fidl::UnownedClientEnd<::test_protocollayouts::MainProtocol> client_end,
@@ -4930,13 +4930,13 @@ class ::fidl::WireUnownedResult<
       ::fidl::internal::TransactionalResponse<
           ::test_protocollayouts::MainProtocol::TwoWayImport>* response)
       : bytes_(reinterpret_cast<uint8_t*>(response)) {}
-  explicit WireUnownedResult(const ::fidl::Result& result)
-      : ::fidl::Result(result) {}
+  explicit WireUnownedResult(const ::fidl::Status& result)
+      : ::fidl::Status(result) {}
   explicit WireUnownedResult(
       ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<
           ::test_protocollayouts::MainProtocol::TwoWayImport>>&& decoded,
       ::fidl::internal::IncomingTransportContext context)
-      : ::fidl::Result(decoded) {
+      : ::fidl::Status(decoded) {
     if (decoded.ok()) {
       bytes_ = reinterpret_cast<uint8_t*>(decoded.PrimaryObject());
     } else {
@@ -5001,7 +5001,7 @@ class ::fidl::WireUnownedResult<
 template <>
 class ::fidl::WireResult<
     ::test_protocollayouts::MainProtocol::TwoWayImportWithError>
-    final : public ::fidl::Result {
+    final : public ::fidl::Status {
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_protocollayouts::MainProtocol> client,
@@ -5013,7 +5013,7 @@ class ::fidl::WireResult<
       ::fidl::internal::TransactionalRequest<
           ::test_protocollayouts::MainProtocol::TwoWayImportWithError>* request,
       zx_time_t _deadline);
-  explicit WireResult(const ::fidl::Result& result) : ::fidl::Result(result) {}
+  explicit WireResult(const ::fidl::Status& result) : ::fidl::Status(result) {}
   WireResult(WireResult&&) = delete;
   WireResult(const WireResult&) = delete;
   WireResult* operator=(WireResult&&) = delete;
@@ -5075,7 +5075,7 @@ class ::fidl::WireResult<
 template <>
 class ::fidl::WireUnownedResult<
     ::test_protocollayouts::MainProtocol::TwoWayImportWithError>
-    final : public ::fidl::Result {
+    final : public ::fidl::Status {
  public:
   explicit WireUnownedResult(
       ::fidl::UnownedClientEnd<::test_protocollayouts::MainProtocol> client_end,
@@ -5088,14 +5088,14 @@ class ::fidl::WireUnownedResult<
           ::test_protocollayouts::MainProtocol::TwoWayImportWithError>*
           response)
       : bytes_(reinterpret_cast<uint8_t*>(response)) {}
-  explicit WireUnownedResult(const ::fidl::Result& result)
-      : ::fidl::Result(result) {}
+  explicit WireUnownedResult(const ::fidl::Status& result)
+      : ::fidl::Status(result) {}
   explicit WireUnownedResult(
       ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<
           ::test_protocollayouts::MainProtocol::TwoWayImportWithError>>&&
           decoded,
       ::fidl::internal::IncomingTransportContext context)
-      : ::fidl::Result(decoded) {
+      : ::fidl::Status(decoded) {
     if (decoded.ok()) {
       bytes_ = reinterpret_cast<uint8_t*>(decoded.PrimaryObject());
     } else {
@@ -5165,13 +5165,13 @@ class ::fidl::WireUnownedResult<
 };
 template <>
 class ::fidl::WireResult<::test_protocollayouts::MainProtocol::OneWayLocal>
-    final : public ::fidl::Result {
+    final : public ::fidl::Status {
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_protocollayouts::MainProtocol> client,
       ::fidl::internal::TransactionalRequest<
           ::test_protocollayouts::MainProtocol::OneWayLocal>* request);
-  explicit WireResult(const ::fidl::Result& result) : ::fidl::Result(result) {}
+  explicit WireResult(const ::fidl::Status& result) : ::fidl::Status(result) {}
   WireResult(WireResult&&) = delete;
   WireResult(const WireResult&) = delete;
   WireResult* operator=(WireResult&&) = delete;
@@ -5183,15 +5183,15 @@ class ::fidl::WireResult<::test_protocollayouts::MainProtocol::OneWayLocal>
 template <>
 class ::fidl::WireUnownedResult<
     ::test_protocollayouts::MainProtocol::OneWayLocal>
-    final : public ::fidl::Result {
+    final : public ::fidl::Status {
  public:
   explicit WireUnownedResult(
       ::fidl::UnownedClientEnd<::test_protocollayouts::MainProtocol> client_end,
       ::fidl::internal::AnyBufferAllocator& allocator,
       ::fidl::internal::TransactionalRequest<
           ::test_protocollayouts::MainProtocol::OneWayLocal>* request);
-  explicit WireUnownedResult(const ::fidl::Result& result)
-      : ::fidl::Result(result) {}
+  explicit WireUnownedResult(const ::fidl::Status& result)
+      : ::fidl::Status(result) {}
   WireUnownedResult(WireUnownedResult&&) = delete;
   WireUnownedResult(const WireUnownedResult&) = delete;
   WireUnownedResult* operator=(WireUnownedResult&&) = delete;
@@ -5200,7 +5200,7 @@ class ::fidl::WireUnownedResult<
 };
 template <>
 class ::fidl::WireResult<::test_protocollayouts::MainProtocol::TwoWayLocal>
-    final : public ::fidl::Result {
+    final : public ::fidl::Status {
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_protocollayouts::MainProtocol> client,
@@ -5211,7 +5211,7 @@ class ::fidl::WireResult<::test_protocollayouts::MainProtocol::TwoWayLocal>
       ::fidl::internal::TransactionalRequest<
           ::test_protocollayouts::MainProtocol::TwoWayLocal>* request,
       zx_time_t _deadline);
-  explicit WireResult(const ::fidl::Result& result) : ::fidl::Result(result) {}
+  explicit WireResult(const ::fidl::Status& result) : ::fidl::Status(result) {}
   WireResult(WireResult&&) = delete;
   WireResult(const WireResult&) = delete;
   WireResult* operator=(WireResult&&) = delete;
@@ -5265,7 +5265,7 @@ class ::fidl::WireResult<::test_protocollayouts::MainProtocol::TwoWayLocal>
 template <>
 class ::fidl::WireUnownedResult<
     ::test_protocollayouts::MainProtocol::TwoWayLocal>
-    final : public ::fidl::Result {
+    final : public ::fidl::Status {
  public:
   explicit WireUnownedResult(
       ::fidl::UnownedClientEnd<::test_protocollayouts::MainProtocol> client_end,
@@ -5276,13 +5276,13 @@ class ::fidl::WireUnownedResult<
       ::fidl::internal::TransactionalResponse<
           ::test_protocollayouts::MainProtocol::TwoWayLocal>* response)
       : bytes_(reinterpret_cast<uint8_t*>(response)) {}
-  explicit WireUnownedResult(const ::fidl::Result& result)
-      : ::fidl::Result(result) {}
+  explicit WireUnownedResult(const ::fidl::Status& result)
+      : ::fidl::Status(result) {}
   explicit WireUnownedResult(
       ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<
           ::test_protocollayouts::MainProtocol::TwoWayLocal>>&& decoded,
       ::fidl::internal::IncomingTransportContext context)
-      : ::fidl::Result(decoded) {
+      : ::fidl::Status(decoded) {
     if (decoded.ok()) {
       bytes_ = reinterpret_cast<uint8_t*>(decoded.PrimaryObject());
     } else {
@@ -5343,7 +5343,7 @@ class ::fidl::WireUnownedResult<
 template <>
 class ::fidl::WireResult<
     ::test_protocollayouts::MainProtocol::TwoWayLocalWithError>
-    final : public ::fidl::Result {
+    final : public ::fidl::Status {
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_protocollayouts::MainProtocol> client,
@@ -5354,7 +5354,7 @@ class ::fidl::WireResult<
       ::fidl::internal::TransactionalRequest<
           ::test_protocollayouts::MainProtocol::TwoWayLocalWithError>* request,
       zx_time_t _deadline);
-  explicit WireResult(const ::fidl::Result& result) : ::fidl::Result(result) {}
+  explicit WireResult(const ::fidl::Status& result) : ::fidl::Status(result) {}
   WireResult(WireResult&&) = delete;
   WireResult(const WireResult&) = delete;
   WireResult* operator=(WireResult&&) = delete;
@@ -5416,7 +5416,7 @@ class ::fidl::WireResult<
 template <>
 class ::fidl::WireUnownedResult<
     ::test_protocollayouts::MainProtocol::TwoWayLocalWithError>
-    final : public ::fidl::Result {
+    final : public ::fidl::Status {
  public:
   explicit WireUnownedResult(
       ::fidl::UnownedClientEnd<::test_protocollayouts::MainProtocol> client_end,
@@ -5427,14 +5427,14 @@ class ::fidl::WireUnownedResult<
       ::fidl::internal::TransactionalResponse<
           ::test_protocollayouts::MainProtocol::TwoWayLocalWithError>* response)
       : bytes_(reinterpret_cast<uint8_t*>(response)) {}
-  explicit WireUnownedResult(const ::fidl::Result& result)
-      : ::fidl::Result(result) {}
+  explicit WireUnownedResult(const ::fidl::Status& result)
+      : ::fidl::Status(result) {}
   explicit WireUnownedResult(
       ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<
           ::test_protocollayouts::MainProtocol::TwoWayLocalWithError>>&&
           decoded,
       ::fidl::internal::IncomingTransportContext context)
-      : ::fidl::Result(decoded) {
+      : ::fidl::Status(decoded) {
     if (decoded.ok()) {
       bytes_ = reinterpret_cast<uint8_t*>(decoded.PrimaryObject());
     } else {
@@ -5504,13 +5504,13 @@ class ::fidl::WireUnownedResult<
 };
 template <>
 class ::fidl::WireResult<::test_protocollayouts::MainProtocol::OneWayAnon> final
-    : public ::fidl::Result {
+    : public ::fidl::Status {
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_protocollayouts::MainProtocol> client,
       ::fidl::internal::TransactionalRequest<
           ::test_protocollayouts::MainProtocol::OneWayAnon>* request);
-  explicit WireResult(const ::fidl::Result& result) : ::fidl::Result(result) {}
+  explicit WireResult(const ::fidl::Status& result) : ::fidl::Status(result) {}
   WireResult(WireResult&&) = delete;
   WireResult(const WireResult&) = delete;
   WireResult* operator=(WireResult&&) = delete;
@@ -5522,15 +5522,15 @@ class ::fidl::WireResult<::test_protocollayouts::MainProtocol::OneWayAnon> final
 template <>
 class ::fidl::WireUnownedResult<
     ::test_protocollayouts::MainProtocol::OneWayAnon>
-    final : public ::fidl::Result {
+    final : public ::fidl::Status {
  public:
   explicit WireUnownedResult(
       ::fidl::UnownedClientEnd<::test_protocollayouts::MainProtocol> client_end,
       ::fidl::internal::AnyBufferAllocator& allocator,
       ::fidl::internal::TransactionalRequest<
           ::test_protocollayouts::MainProtocol::OneWayAnon>* request);
-  explicit WireUnownedResult(const ::fidl::Result& result)
-      : ::fidl::Result(result) {}
+  explicit WireUnownedResult(const ::fidl::Status& result)
+      : ::fidl::Status(result) {}
   WireUnownedResult(WireUnownedResult&&) = delete;
   WireUnownedResult(const WireUnownedResult&) = delete;
   WireUnownedResult* operator=(WireUnownedResult&&) = delete;
@@ -5539,7 +5539,7 @@ class ::fidl::WireUnownedResult<
 };
 template <>
 class ::fidl::WireResult<::test_protocollayouts::MainProtocol::TwoWayAnon> final
-    : public ::fidl::Result {
+    : public ::fidl::Status {
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_protocollayouts::MainProtocol> client,
@@ -5550,7 +5550,7 @@ class ::fidl::WireResult<::test_protocollayouts::MainProtocol::TwoWayAnon> final
       ::fidl::internal::TransactionalRequest<
           ::test_protocollayouts::MainProtocol::TwoWayAnon>* request,
       zx_time_t _deadline);
-  explicit WireResult(const ::fidl::Result& result) : ::fidl::Result(result) {}
+  explicit WireResult(const ::fidl::Status& result) : ::fidl::Status(result) {}
   WireResult(WireResult&&) = delete;
   WireResult(const WireResult&) = delete;
   WireResult* operator=(WireResult&&) = delete;
@@ -5604,7 +5604,7 @@ class ::fidl::WireResult<::test_protocollayouts::MainProtocol::TwoWayAnon> final
 template <>
 class ::fidl::WireUnownedResult<
     ::test_protocollayouts::MainProtocol::TwoWayAnon>
-    final : public ::fidl::Result {
+    final : public ::fidl::Status {
  public:
   explicit WireUnownedResult(
       ::fidl::UnownedClientEnd<::test_protocollayouts::MainProtocol> client_end,
@@ -5615,13 +5615,13 @@ class ::fidl::WireUnownedResult<
       ::fidl::internal::TransactionalResponse<
           ::test_protocollayouts::MainProtocol::TwoWayAnon>* response)
       : bytes_(reinterpret_cast<uint8_t*>(response)) {}
-  explicit WireUnownedResult(const ::fidl::Result& result)
-      : ::fidl::Result(result) {}
+  explicit WireUnownedResult(const ::fidl::Status& result)
+      : ::fidl::Status(result) {}
   explicit WireUnownedResult(
       ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<
           ::test_protocollayouts::MainProtocol::TwoWayAnon>>&& decoded,
       ::fidl::internal::IncomingTransportContext context)
-      : ::fidl::Result(decoded) {
+      : ::fidl::Status(decoded) {
     if (decoded.ok()) {
       bytes_ = reinterpret_cast<uint8_t*>(decoded.PrimaryObject());
     } else {
@@ -5682,7 +5682,7 @@ class ::fidl::WireUnownedResult<
 template <>
 class ::fidl::WireResult<
     ::test_protocollayouts::MainProtocol::TwoWayAnonWithError>
-    final : public ::fidl::Result {
+    final : public ::fidl::Status {
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_protocollayouts::MainProtocol> client,
@@ -5693,7 +5693,7 @@ class ::fidl::WireResult<
       ::fidl::internal::TransactionalRequest<
           ::test_protocollayouts::MainProtocol::TwoWayAnonWithError>* request,
       zx_time_t _deadline);
-  explicit WireResult(const ::fidl::Result& result) : ::fidl::Result(result) {}
+  explicit WireResult(const ::fidl::Status& result) : ::fidl::Status(result) {}
   WireResult(WireResult&&) = delete;
   WireResult(const WireResult&) = delete;
   WireResult* operator=(WireResult&&) = delete;
@@ -5755,7 +5755,7 @@ class ::fidl::WireResult<
 template <>
 class ::fidl::WireUnownedResult<
     ::test_protocollayouts::MainProtocol::TwoWayAnonWithError>
-    final : public ::fidl::Result {
+    final : public ::fidl::Status {
  public:
   explicit WireUnownedResult(
       ::fidl::UnownedClientEnd<::test_protocollayouts::MainProtocol> client_end,
@@ -5766,13 +5766,13 @@ class ::fidl::WireUnownedResult<
       ::fidl::internal::TransactionalResponse<
           ::test_protocollayouts::MainProtocol::TwoWayAnonWithError>* response)
       : bytes_(reinterpret_cast<uint8_t*>(response)) {}
-  explicit WireUnownedResult(const ::fidl::Result& result)
-      : ::fidl::Result(result) {}
+  explicit WireUnownedResult(const ::fidl::Status& result)
+      : ::fidl::Status(result) {}
   explicit WireUnownedResult(
       ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<
           ::test_protocollayouts::MainProtocol::TwoWayAnonWithError>>&& decoded,
       ::fidl::internal::IncomingTransportContext context)
-      : ::fidl::Result(decoded) {
+      : ::fidl::Status(decoded) {
     if (decoded.ok()) {
       bytes_ = reinterpret_cast<uint8_t*>(decoded.PrimaryObject());
     } else {
@@ -5902,7 +5902,7 @@ class ::fidl::WireSyncEventHandler<::test_protocollayouts::MainProtocol>
   // Handle all possible events defined in this protocol.
   // Blocks to consume exactly one message from the channel, then call the
   // corresponding virtual method.
-  ::fidl::Result HandleOneEvent(
+  ::fidl::Status HandleOneEvent(
       ::fidl::UnownedClientEnd<::test_protocollayouts::MainProtocol>
           client_end);
 };
@@ -7077,31 +7077,31 @@ class ::fidl::internal::WireWeakOnewayClientImpl<
 
   // Allocates 56 bytes of message buffer on the stack. No heap allocation
   // necessary.
-  ::fidl::Result OneWayAnonComposed(
+  ::fidl::Status OneWayAnonComposed(
       ::test_protocollayouts_imported::wire::
           ComposedProtocolOneWayAnonComposedRequest
               ComposedProtocolOneWayAnonComposedRequest);
 
   // Allocates 56 bytes of message buffer on the stack. No heap allocation
   // necessary.
-  ::fidl::Result OneWayNamedComposed(
+  ::fidl::Status OneWayNamedComposed(
       ::test_protocollayouts_imported::wire::ImportTablePayload
           ImportTablePayload);
 
   // Allocates 56 bytes of message buffer on the stack. No heap allocation
   // necessary.
-  ::fidl::Result OneWayImport(
+  ::fidl::Status OneWayImport(
       ::test_protocollayouts_imported::wire::ImportTablePayload
           ImportTablePayload);
 
   // Allocates 56 bytes of message buffer on the stack. No heap allocation
   // necessary.
-  ::fidl::Result OneWayLocal(
+  ::fidl::Status OneWayLocal(
       ::test_protocollayouts::wire::LocalTablePayload LocalTablePayload);
 
   // Allocates 56 bytes of message buffer on the stack. No heap allocation
   // necessary.
-  ::fidl::Result OneWayAnon(
+  ::fidl::Status OneWayAnon(
       ::test_protocollayouts::wire::MainProtocolOneWayAnonRequest
           MainProtocolOneWayAnonRequest);
 };
@@ -7271,27 +7271,27 @@ class ::fidl::internal::WireWeakOnewayBufferClientImpl<
   using BufferClientImplBase::BufferClientImplBase;
 
   // Caller provides the backing storage for FIDL message.
-  ::fidl::Result OneWayAnonComposed(
+  ::fidl::Status OneWayAnonComposed(
       ::test_protocollayouts_imported::wire::
           ComposedProtocolOneWayAnonComposedRequest
               ComposedProtocolOneWayAnonComposedRequest);
 
   // Caller provides the backing storage for FIDL message.
-  ::fidl::Result OneWayNamedComposed(
+  ::fidl::Status OneWayNamedComposed(
       ::test_protocollayouts_imported::wire::ImportTablePayload
           ImportTablePayload);
 
   // Caller provides the backing storage for FIDL message.
-  ::fidl::Result OneWayImport(
+  ::fidl::Status OneWayImport(
       ::test_protocollayouts_imported::wire::ImportTablePayload
           ImportTablePayload);
 
   // Caller provides the backing storage for FIDL message.
-  ::fidl::Result OneWayLocal(
+  ::fidl::Status OneWayLocal(
       ::test_protocollayouts::wire::LocalTablePayload LocalTablePayload);
 
   // Caller provides the backing storage for FIDL message.
-  ::fidl::Result OneWayAnon(
+  ::fidl::Status OneWayAnon(
       ::test_protocollayouts::wire::MainProtocolOneWayAnonRequest
           MainProtocolOneWayAnonRequest);
 };
@@ -7467,39 +7467,39 @@ class ::fidl::internal::WireWeakEventSender<
  public:
   using WeakEventSenderBase::WeakEventSenderBase;
 
-  fidl::Result OnAnonComposed(::test_protocollayouts_imported::wire::
+  fidl::Status OnAnonComposed(::test_protocollayouts_imported::wire::
                                   ComposedProtocolOnAnonComposedRequest
                                       ComposedProtocolOnAnonComposedRequest);
 
-  fidl::Result OnAnonComposedWithError(
+  fidl::Status OnAnonComposedWithError(
       ::test_protocollayouts_imported::wire::
           ComposedProtocolOnAnonComposedWithErrorResult result);
 
-  fidl::Result OnNamedComposed(
+  fidl::Status OnNamedComposed(
       ::test_protocollayouts_imported::wire::ImportUnionPayload
           ImportUnionPayload);
 
-  fidl::Result OnNamedComposedWithError(
+  fidl::Status OnNamedComposedWithError(
       ::test_protocollayouts_imported::wire::
           ComposedProtocolOnNamedComposedWithErrorResult result);
 
-  fidl::Result OnImport(
+  fidl::Status OnImport(
       ::test_protocollayouts_imported::wire::ImportUnionPayload
           ImportUnionPayload);
 
-  fidl::Result OnImportWithError(
+  fidl::Status OnImportWithError(
       ::test_protocollayouts::wire::MainProtocolOnImportWithErrorResult result);
 
-  fidl::Result OnLocal(
+  fidl::Status OnLocal(
       ::test_protocollayouts::wire::LocalUnionPayload LocalUnionPayload);
 
-  fidl::Result OnLocalWithError(
+  fidl::Status OnLocalWithError(
       ::test_protocollayouts::wire::MainProtocolOnLocalWithErrorResult result);
 
-  fidl::Result OnAnon(::test_protocollayouts::wire::MainProtocolOnAnonRequest
+  fidl::Status OnAnon(::test_protocollayouts::wire::MainProtocolOnAnonRequest
                           MainProtocolOnAnonRequest);
 
-  fidl::Result OnAnonWithError(
+  fidl::Status OnAnonWithError(
       ::test_protocollayouts::wire::MainProtocolOnAnonWithErrorResult result);
 };
 
@@ -7510,39 +7510,39 @@ class ::fidl::internal::WireWeakBufferEventSender<
  public:
   using WeakBufferEventSenderBase::WeakBufferEventSenderBase;
 
-  fidl::Result OnAnonComposed(::test_protocollayouts_imported::wire::
+  fidl::Status OnAnonComposed(::test_protocollayouts_imported::wire::
                                   ComposedProtocolOnAnonComposedRequest
                                       ComposedProtocolOnAnonComposedRequest);
 
-  fidl::Result OnAnonComposedWithError(
+  fidl::Status OnAnonComposedWithError(
       ::test_protocollayouts_imported::wire::
           ComposedProtocolOnAnonComposedWithErrorResult result);
 
-  fidl::Result OnNamedComposed(
+  fidl::Status OnNamedComposed(
       ::test_protocollayouts_imported::wire::ImportUnionPayload
           ImportUnionPayload);
 
-  fidl::Result OnNamedComposedWithError(
+  fidl::Status OnNamedComposedWithError(
       ::test_protocollayouts_imported::wire::
           ComposedProtocolOnNamedComposedWithErrorResult result);
 
-  fidl::Result OnImport(
+  fidl::Status OnImport(
       ::test_protocollayouts_imported::wire::ImportUnionPayload
           ImportUnionPayload);
 
-  fidl::Result OnImportWithError(
+  fidl::Status OnImportWithError(
       ::test_protocollayouts::wire::MainProtocolOnImportWithErrorResult result);
 
-  fidl::Result OnLocal(
+  fidl::Status OnLocal(
       ::test_protocollayouts::wire::LocalUnionPayload LocalUnionPayload);
 
-  fidl::Result OnLocalWithError(
+  fidl::Status OnLocalWithError(
       ::test_protocollayouts::wire::MainProtocolOnLocalWithErrorResult result);
 
-  fidl::Result OnAnon(::test_protocollayouts::wire::MainProtocolOnAnonRequest
+  fidl::Status OnAnon(::test_protocollayouts::wire::MainProtocolOnAnonRequest
                           MainProtocolOnAnonRequest);
 
-  fidl::Result OnAnonWithError(
+  fidl::Status OnAnonWithError(
       ::test_protocollayouts::wire::MainProtocolOnAnonWithErrorResult result);
 };
 
@@ -7554,39 +7554,39 @@ class ::fidl::internal::WireEventSender<::test_protocollayouts::MainProtocol>
  public:
   using SyncEndpointManagedVeneer::SyncEndpointManagedVeneer;
 
-  fidl::Result OnAnonComposed(::test_protocollayouts_imported::wire::
+  fidl::Status OnAnonComposed(::test_protocollayouts_imported::wire::
                                   ComposedProtocolOnAnonComposedRequest
                                       ComposedProtocolOnAnonComposedRequest);
 
-  fidl::Result OnAnonComposedWithError(
+  fidl::Status OnAnonComposedWithError(
       ::test_protocollayouts_imported::wire::
           ComposedProtocolOnAnonComposedWithErrorResult result);
 
-  fidl::Result OnNamedComposed(
+  fidl::Status OnNamedComposed(
       ::test_protocollayouts_imported::wire::ImportUnionPayload
           ImportUnionPayload);
 
-  fidl::Result OnNamedComposedWithError(
+  fidl::Status OnNamedComposedWithError(
       ::test_protocollayouts_imported::wire::
           ComposedProtocolOnNamedComposedWithErrorResult result);
 
-  fidl::Result OnImport(
+  fidl::Status OnImport(
       ::test_protocollayouts_imported::wire::ImportUnionPayload
           ImportUnionPayload);
 
-  fidl::Result OnImportWithError(
+  fidl::Status OnImportWithError(
       ::test_protocollayouts::wire::MainProtocolOnImportWithErrorResult result);
 
-  fidl::Result OnLocal(
+  fidl::Status OnLocal(
       ::test_protocollayouts::wire::LocalUnionPayload LocalUnionPayload);
 
-  fidl::Result OnLocalWithError(
+  fidl::Status OnLocalWithError(
       ::test_protocollayouts::wire::MainProtocolOnLocalWithErrorResult result);
 
-  fidl::Result OnAnon(::test_protocollayouts::wire::MainProtocolOnAnonRequest
+  fidl::Status OnAnon(::test_protocollayouts::wire::MainProtocolOnAnonRequest
                           MainProtocolOnAnonRequest);
 
-  fidl::Result OnAnonWithError(
+  fidl::Status OnAnonWithError(
       ::test_protocollayouts::wire::MainProtocolOnAnonWithErrorResult result);
 };
 
@@ -7599,39 +7599,39 @@ class ::fidl::internal::WireBufferEventSender<
  public:
   using SyncEndpointBufferVeneer::SyncEndpointBufferVeneer;
 
-  fidl::Result OnAnonComposed(::test_protocollayouts_imported::wire::
+  fidl::Status OnAnonComposed(::test_protocollayouts_imported::wire::
                                   ComposedProtocolOnAnonComposedRequest
                                       ComposedProtocolOnAnonComposedRequest);
 
-  fidl::Result OnAnonComposedWithError(
+  fidl::Status OnAnonComposedWithError(
       ::test_protocollayouts_imported::wire::
           ComposedProtocolOnAnonComposedWithErrorResult result);
 
-  fidl::Result OnNamedComposed(
+  fidl::Status OnNamedComposed(
       ::test_protocollayouts_imported::wire::ImportUnionPayload
           ImportUnionPayload);
 
-  fidl::Result OnNamedComposedWithError(
+  fidl::Status OnNamedComposedWithError(
       ::test_protocollayouts_imported::wire::
           ComposedProtocolOnNamedComposedWithErrorResult result);
 
-  fidl::Result OnImport(
+  fidl::Status OnImport(
       ::test_protocollayouts_imported::wire::ImportUnionPayload
           ImportUnionPayload);
 
-  fidl::Result OnImportWithError(
+  fidl::Status OnImportWithError(
       ::test_protocollayouts::wire::MainProtocolOnImportWithErrorResult result);
 
-  fidl::Result OnLocal(
+  fidl::Status OnLocal(
       ::test_protocollayouts::wire::LocalUnionPayload LocalUnionPayload);
 
-  fidl::Result OnLocalWithError(
+  fidl::Status OnLocalWithError(
       ::test_protocollayouts::wire::MainProtocolOnLocalWithErrorResult result);
 
-  fidl::Result OnAnon(::test_protocollayouts::wire::MainProtocolOnAnonRequest
+  fidl::Status OnAnon(::test_protocollayouts::wire::MainProtocolOnAnonRequest
                           MainProtocolOnAnonRequest);
 
-  fidl::Result OnAnonWithError(
+  fidl::Status OnAnonWithError(
       ::test_protocollayouts::wire::MainProtocolOnAnonWithErrorResult result);
 };
 #endif  // __Fuchsia__

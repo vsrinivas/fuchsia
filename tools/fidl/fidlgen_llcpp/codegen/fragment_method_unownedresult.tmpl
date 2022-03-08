@@ -7,7 +7,7 @@
 {{- define "Method:UnownedResult:WireMessagingHeader" }}
 {{- EnsureNamespace "" }}
 template<>
-class {{ .WireUnownedResult }} final : public ::fidl::Result {
+class {{ .WireUnownedResult }} final : public ::fidl::Status {
  public:
   {{- if .Transport.HasSyncClient }}
   {{- $args := (printf "::%s::UnownedClientEnd<%s> client_end" .Transport.Namespace .Protocol) }}
@@ -19,12 +19,12 @@ class {{ .WireUnownedResult }} final : public ::fidl::Result {
   explicit {{ .WireUnownedResult.Self }}({{ .WireTransactionalResponse }}* response)
       : bytes_(reinterpret_cast<uint8_t*>(response)) {}
   {{- end }}
-  explicit {{ .WireUnownedResult.Self }}(const ::fidl::Result& result) : ::fidl::Result(result) {}
+  explicit {{ .WireUnownedResult.Self }}(const ::fidl::Status& result) : ::fidl::Status(result) {}
   {{- if .HasResponse }}
   explicit {{ .WireUnownedResult.Self }}(
     ::fidl::unstable::DecodedMessage<{{ .WireTransactionalResponse }}>&& decoded,
     ::fidl::internal::IncomingTransportContext context)
-      : ::fidl::Result(decoded)
+      : ::fidl::Status(decoded)
         {
     if (decoded.ok()) {
       bytes_ = reinterpret_cast<uint8_t*>(decoded.PrimaryObject());
@@ -93,7 +93,7 @@ class {{ .WireUnownedResult }} final : public ::fidl::Result {
   constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<{{ .Marker }}>();
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation = allocator.TryAllocate(buffer_size);
   if (!allocation.is_ok()) {
-    ::fidl::Result::operator=(allocation.error_value());
+    ::fidl::Status::operator=(allocation.error_value());
     return;
   }
   uint8_t* buffer = allocation->data;
@@ -126,7 +126,7 @@ class {{ .WireUnownedResult }} final : public ::fidl::Result {
 {{- else }}
   outgoing.Write(client_end.handle());
 {{- end }}
-  ::fidl::Result::operator=(outgoing);
+  ::fidl::Status::operator=(outgoing);
 }
 
 {{- EndifFuchsia -}}

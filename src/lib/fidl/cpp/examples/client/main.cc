@@ -139,8 +139,8 @@ int main(int argc, const char** argv) {
 
   // [START one_way_wire]
   // Make an EchoString call with wire types.
-  fidl::Result wire_result = client.wire()->SendString("hello");
-  ZX_ASSERT(wire_result.ok());
+  fidl::Status wire_status = client.wire()->SendString("hello");
+  ZX_ASSERT(wire_status.ok());
   // [END one_way_wire]
   loop.Run();
   loop.ResetQuit();

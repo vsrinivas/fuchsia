@@ -102,12 +102,12 @@ class MockResponseContext : public fidl::internal::ResponseContext {
 
   int num_errors() const { return num_errors_; }
 
-  cpp17::optional<fidl::Result> last_error() const { return last_error_; }
+  cpp17::optional<fidl::Status> last_error() const { return last_error_; }
 
  private:
   bool canceled_ = false;
   int num_errors_ = 0;
-  cpp17::optional<fidl::Result> last_error_ = cpp17::nullopt;
+  cpp17::optional<fidl::Status> last_error_ = cpp17::nullopt;
 };
 
 class NaturalClientMessengerTest : public zxtest::Test {
@@ -185,7 +185,7 @@ TEST_F(NaturalClientMessengerTest, OneWay) {
   GoodMessage good;
 
   EXPECT_EQ(0, impl()->GetTransactionCount());
-  fidl::Result result = messenger().OneWay(good.message());
+  fidl::Status result = messenger().OneWay(good.message());
   loop().RunUntilIdle();
   EXPECT_OK(result.status());
   EXPECT_EQ(0, impl()->GetTransactionCount());
@@ -206,7 +206,7 @@ TEST_F(NaturalClientMessengerTest, OneWayUnbound) {
   EXPECT_STATUS(ZX_ERR_PEER_CLOSED, incoming.status());
 
   EXPECT_EQ(0, impl()->GetTransactionCount());
-  fidl::Result result = messenger().OneWay(good.message());
+  fidl::Status result = messenger().OneWay(good.message());
 
   loop().RunUntilIdle();
   EXPECT_EQ(ZX_ERR_CANCELED, result.status());

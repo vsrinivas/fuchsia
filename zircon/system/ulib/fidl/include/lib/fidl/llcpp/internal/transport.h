@@ -8,7 +8,7 @@
 #include <lib/fidl/coding.h>
 #include <lib/fidl/llcpp/internal/any.h>
 #include <lib/fidl/llcpp/internal/thread_checker.h>
-#include <lib/fidl/llcpp/result.h>
+#include <lib/fidl/llcpp/status.h>
 #include <lib/fit/function.h>
 #include <zircon/assert.h>
 #include <zircon/fidl.h>

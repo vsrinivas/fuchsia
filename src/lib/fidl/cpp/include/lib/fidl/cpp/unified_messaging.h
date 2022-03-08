@@ -97,7 +97,7 @@ fidl::OutgoingMessage EncodeTransactionalMessage(
   }
 }
 
-inline ::fitx::result<::fidl::Error> ToFitxResult(::fidl::Result result) {
+inline ::fitx::result<::fidl::Error> ToFitxResult(::fidl::Status result) {
   if (result.ok()) {
     return ::fitx::ok();
   }

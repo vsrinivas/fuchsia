@@ -37,7 +37,7 @@ public:
   // Handle all possible events defined in this protocol.
   // Blocks to consume exactly one message from the channel, then call the corresponding virtual
   // method.
-  ::fidl::Result HandleOneEvent(
+  ::fidl::Status HandleOneEvent(
       ::{{ .Transport.Namespace }}::UnownedClientEnd<{{ . }}> client_end);
 };
 
@@ -62,13 +62,13 @@ class {{ .WireEventDispatcher }} final :
 {{ EnsureNamespace "" }}
 {{- IfdefFuchsia }}
 {{ if .Transport.HasEvents }}
-::fidl::Result {{ .WireSyncEventHandler.NoLeading }}::HandleOneEvent(
+::fidl::Status {{ .WireSyncEventHandler.NoLeading }}::HandleOneEvent(
     ::{{ .Transport.Namespace }}::UnownedClientEnd<{{ . }}> client_end) {
   zx_status_t status = client_end.channel()->wait_one(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
                                                       ::zx::time::infinite(),
                                                       nullptr);
   if (status != ZX_OK) {
-    return ::fidl::Result::TransportError(status, ::fidl::internal::kErrorWaitOneFailed);
+    return ::fidl::Status::TransportError(status, ::fidl::internal::kErrorWaitOneFailed);
   }
   constexpr uint32_t kHandleAllocSize = ([]() constexpr {
     uint32_t x = 0;
@@ -99,7 +99,7 @@ class {{ .WireEventDispatcher }} final :
     // Message size is unexpectedly larger than calculated.
     // This can only be due to a newer version of the protocol defining a new event,
     // whose size exceeds the maximum of known events in the current protocol.
-    return ::fidl::Result::UnexpectedMessage(Unknown());
+    return ::fidl::Status::UnexpectedMessage(Unknown());
   }
   if (!msg.ok()) {
     return msg;
@@ -110,7 +110,7 @@ class {{ .WireEventDispatcher }} final :
     case {{ .OrdinalName }}: {
       ::fidl::unstable::DecodedMessage<{{ .WireTransactionalEvent }}> decoded{::std::move(msg)};
       if (!decoded.ok()) {
-        return ::fidl::Result(decoded);
+        return ::fidl::Status(decoded);
       }
       {{- if .ResponseArgs }}
       auto* primary = &decoded.PrimaryObject()->body;
@@ -119,11 +119,11 @@ class {{ .WireEventDispatcher }} final :
       auto* primary = &empty_event;
       {{- end }}
       {{ .Name }}(primary);
-      return ::fidl::Result::Ok();
+      return ::fidl::Status::Ok();
     }
   {{- end }}
     default: {
-      return ::fidl::Result::UnexpectedMessage(Unknown());
+      return ::fidl::Status::UnexpectedMessage(Unknown());
     }
   }
 }
@@ -159,7 +159,7 @@ std::optional<::fidl::UnbindInfo>
 }
 
 {{- else }}{{/* not .Transport.HasEvents */}}
-::fidl::Result {{ .WireSyncEventHandler.NoLeading }}::HandleOneEvent(
+::fidl::Status {{ .WireSyncEventHandler.NoLeading }}::HandleOneEvent(
     ::{{ .Transport.Namespace }}::UnownedClientEnd<{{ . }}> client_end) {
       ZX_PANIC("events not supported for transport '{{ .Transport.Name }}'");
 }

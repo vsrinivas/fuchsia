@@ -158,15 +158,15 @@ namespace test_driveroneway {
 }  // namespace test_driveroneway
 template <>
 class ::fdf::WireUnownedResult<::test_driveroneway::OneWay::Send> final
-    : public ::fidl::Result {
+    : public ::fidl::Status {
  public:
   explicit WireUnownedResult(
       ::fdf::UnownedClientEnd<::test_driveroneway::OneWay> client_end,
       const ::fdf::Arena& arena,
       ::fidl::internal::TransactionalRequest<::test_driveroneway::OneWay::Send>*
           request);
-  explicit WireUnownedResult(const ::fidl::Result& result)
-      : ::fidl::Result(result) {}
+  explicit WireUnownedResult(const ::fidl::Status& result)
+      : ::fidl::Status(result) {}
   WireUnownedResult(WireUnownedResult&&) = delete;
   WireUnownedResult(const WireUnownedResult&) = delete;
   WireUnownedResult* operator=(WireUnownedResult&&) = delete;
@@ -203,7 +203,7 @@ class ::fidl::WireSyncEventHandler<::test_driveroneway::OneWay>
   // Handle all possible events defined in this protocol.
   // Blocks to consume exactly one message from the channel, then call the
   // corresponding virtual method.
-  ::fidl::Result HandleOneEvent(
+  ::fidl::Status HandleOneEvent(
       ::fdf::UnownedClientEnd<::test_driveroneway::OneWay> client_end);
 };
 
@@ -288,7 +288,7 @@ class ::fidl::internal::WireWeakOnewayBufferClientImpl<
   using BufferClientImplBase::BufferClientImplBase;
 
   // Caller provides the backing storage for FIDL message.
-  ::fidl::Result Send(const ::test_driveroneway::wire::Payload& payload);
+  ::fidl::Status Send(const ::test_driveroneway::wire::Payload& payload);
 };
 
 template <>
