@@ -1,0 +1,14 @@
+{
+    "license": {
+        "patternRoot": [
+            {
+                "paths": [
+                    "{FUCHSIA_DIR}/tools/check-licenses/golden/patterns"
+                ],
+                "notes": [
+                    "Default location for all check-licenses license patterns."
+                ]
+            }
+        ]
+    }
+}

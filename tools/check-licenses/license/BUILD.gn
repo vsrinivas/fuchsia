@@ -1,0 +1,39 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/go/go_library.gni")
+import("//build/go/go_test.gni")
+
+go_library("license") {
+  sources = [
+    "config.go",
+    "init.go",
+    "metrics.go",
+    "pattern.go",
+    "pattern_test.go",
+    "search.go",
+  ]
+  deps = [
+    "//tools/check-licenses/file",
+    "//tools/check-licenses/license/notice",
+    "//tools/lib/logger",
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":check-licenses_license_tests($host_toolchain)" ]
+}
+
+if (is_host) {
+  go_test("check-licenses_license_tests") {
+    gopackages = [ "go.fuchsia.dev/fuchsia/tools/check-licenses/license" ]
+    args = [
+      "--test_data_dir",
+      rebase_path("$target_gen_dir/testdata", root_build_dir),
+    ]
+    deps = [ ":license" ]
+    non_go_deps = [ "testdata" ]
+  }
+}
