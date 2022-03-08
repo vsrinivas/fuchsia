@@ -17,51 +17,51 @@
 // See also runner-fatal-unittest.inc.
 
 TEST_F(RUNNER_TEST, ExecuteNoError) {
-  RUNNER_TYPE runner;
-  ExecuteNoError(&runner);
+  auto runner = RUNNER_TYPE::MakePtr(executor());
+  ExecuteNoError(runner);
 }
 
 TEST_F(RUNNER_TEST, ExecuteWithError) {
-  RUNNER_TYPE runner;
-  ExecuteWithError(&runner);
+  auto runner = RUNNER_TYPE::MakePtr(executor());
+  ExecuteWithError(runner);
 }
 
 TEST_F(RUNNER_TEST, ExecuteWithLeak) {
-  RUNNER_TYPE runner;
-  ExecuteWithLeak(&runner);
+  auto runner = RUNNER_TYPE::MakePtr(executor());
+  ExecuteWithLeak(runner);
 }
 
 TEST_F(RUNNER_TEST, MinimizeNoError) {
-  RUNNER_TYPE runner;
-  MinimizeNoError(&runner);
+  auto runner = RUNNER_TYPE::MakePtr(executor());
+  MinimizeNoError(runner);
 }
 
 TEST_F(RUNNER_TEST, CleanseNoReplacement) {
-  RUNNER_TYPE runner;
-  CleanseNoReplacement(&runner);
+  auto runner = RUNNER_TYPE::MakePtr(executor());
+  CleanseNoReplacement(runner);
 }
 
 TEST_F(RUNNER_TEST, CleanseAlreadyClean) {
-  RUNNER_TYPE runner;
-  CleanseAlreadyClean(&runner);
+  auto runner = RUNNER_TYPE::MakePtr(executor());
+  CleanseAlreadyClean(runner);
 }
 
 TEST_F(RUNNER_TEST, FuzzUntilError) {
-  RUNNER_TYPE runner;
-  FuzzUntilError(&runner);
+  auto runner = RUNNER_TYPE::MakePtr(executor());
+  FuzzUntilError(runner);
 }
 
 TEST_F(RUNNER_TEST, FuzzUntilRuns) {
-  RUNNER_TYPE runner;
-  FuzzUntilRuns(&runner);
+  auto runner = RUNNER_TYPE::MakePtr(executor());
+  FuzzUntilRuns(runner);
 }
 
 TEST_F(RUNNER_TEST, FuzzUntilTime) {
-  RUNNER_TYPE runner;
-  FuzzUntilTime(&runner);
+  auto runner = RUNNER_TYPE::MakePtr(executor());
+  FuzzUntilTime(runner);
 }
 
 TEST_F(RUNNER_TEST, Stop) {
-  RUNNER_TYPE runner;
-  Stop(&runner);
+  auto runner = RUNNER_TYPE::MakePtr(executor());
+  Stop(runner);
 }

@@ -15,6 +15,7 @@
 
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/synchronization/thread_annotations.h"
+#include "src/sys/fuzzing/common/async-types.h"
 #include "src/sys/fuzzing/common/input.h"
 #include "src/sys/fuzzing/common/monitors.h"
 #include "src/sys/fuzzing/common/options.h"
@@ -29,6 +30,11 @@ using ::fuchsia::fuzzer::Status;
 using ::fuchsia::fuzzer::TargetAdapter;
 using ::fuchsia::fuzzer::UpdateReason;
 using CorpusType = ::fuchsia::fuzzer::Corpus;
+
+// |RunnerPtr| is the preferred way to reference a |Runner| in a future or promise without needing
+// to wrap it in a scope.
+class Runner;
+using RunnerPtr = std::shared_ptr<Runner>;
 
 // This base class encapsulates the logic of performing a sequence of fuzzing runs. In
 // particular, it defines virtual methods for performing the fuzzing workflows asynchronously, and
@@ -90,7 +96,7 @@ class Runner {
   virtual void Join() { join_.Run(); }
 
  protected:
-  Runner();
+  explicit Runner(ExecutorPtr executor);
 
   virtual void set_result(FuzzResult result) { result_ = result; }
   virtual void set_result_input(const Input& input) { result_input_ = input.Duplicate(); }

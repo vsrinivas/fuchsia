@@ -13,6 +13,7 @@
 #include <memory>
 #include <string_view>
 
+#include "src/sys/fuzzing/common/async-types.h"
 #include "src/sys/fuzzing/common/input.h"
 #include "src/sys/fuzzing/common/runner.h"
 
@@ -23,8 +24,10 @@ using ::fuchsia::fuzzer::Status;
 // The concrete implementation of |Runner| for the libfuzzer engine.
 class LibFuzzerRunner : public Runner {
  public:
-  LibFuzzerRunner();
   ~LibFuzzerRunner() override;
+
+  // Factory method.
+  static RunnerPtr MakePtr(ExecutorPtr executor);
 
   void set_cmdline(const std::vector<std::string>& cmdline) { cmdline_ = cmdline; }
   void set_verbose(bool verbose) { verbose_ = verbose; }
@@ -57,6 +60,8 @@ class LibFuzzerRunner : public Runner {
   virtual std::vector<fdio_spawn_action_t> MakeSpawnActions();
 
  private:
+  explicit LibFuzzerRunner(ExecutorPtr executor);
+
   // Construct a set of libFuzzer command-line arguments for the current options.
   std::vector<std::string> MakeArgs();
 

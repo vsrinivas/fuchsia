@@ -32,26 +32,12 @@ class ControllerTest : public AsyncTest {
  public:
   // Implicitly tests |Controller::SetRunner| and |Controller::Bind|.
   void Bind(fidl::InterfaceRequest<Controller> request) {
-    auto runner = std::make_unique<FakeRunner>();
-    runner_ = runner.get();
-    controller_.SetRunner(std::move(runner));
+    runner_ = FakeRunner::MakePtr(executor());
+    controller_.SetRunner(runner_);
     controller_.Bind(std::move(request));
   }
 
-  void AddToCorpus(CorpusType corpus_type, Input input) {
-    runner_->AddToCorpus(corpus_type, std::move(input));
-  }
-  Input ReadFromCorpus(CorpusType corpus_type, size_t offset) {
-    return runner_->ReadFromCorpus(corpus_type, offset);
-  }
-
-  zx_status_t ParseDictionary(const Input& input) { return runner_->ParseDictionary(input); }
-
-  void SetError(zx_status_t error) { runner_->set_error(error); }
-  void SetResult(FuzzResult result) { runner_->set_result(result); }
-  void SetResultInput(const Input& input) { runner_->set_result_input(input); }
-  void SetStatus(Status status) { runner_->set_status(std::move(status)); }
-  void UpdateMonitors(UpdateReason reason) { runner_->UpdateMonitors(reason); }
+  auto runner() const { return std::static_pointer_cast<FakeRunner>(runner_); }
 
   FidlInput Transmit(const Input& input) { return transceiver_.Transmit(input.Duplicate()); }
 
@@ -60,7 +46,7 @@ class ControllerTest : public AsyncTest {
 
  private:
   ControllerImpl controller_;
-  FakeRunner* runner_;
+  RunnerPtr runner_;
   FakeTransceiver transceiver_;
 };
 
@@ -158,15 +144,15 @@ TEST_F(ControllerTest, AddToCorpus) {
   EXPECT_EQ(controller->AddToCorpus(CorpusType::LIVE, Transmit(live_input4), &result), ZX_OK);
   EXPECT_EQ(result, ZX_OK);
 
-  EXPECT_EQ(ReadFromCorpus(CorpusType::SEED, 0).ToHex(), input0.ToHex());
-  EXPECT_EQ(ReadFromCorpus(CorpusType::SEED, 1).ToHex(), seed_input1.ToHex());
-  EXPECT_EQ(ReadFromCorpus(CorpusType::SEED, 2).ToHex(), seed_input2.ToHex());
-  EXPECT_EQ(ReadFromCorpus(CorpusType::SEED, 3).ToHex(), input0.ToHex());
+  EXPECT_EQ(runner()->ReadFromCorpus(CorpusType::SEED, 0).ToHex(), input0.ToHex());
+  EXPECT_EQ(runner()->ReadFromCorpus(CorpusType::SEED, 1).ToHex(), seed_input1.ToHex());
+  EXPECT_EQ(runner()->ReadFromCorpus(CorpusType::SEED, 2).ToHex(), seed_input2.ToHex());
+  EXPECT_EQ(runner()->ReadFromCorpus(CorpusType::SEED, 3).ToHex(), input0.ToHex());
 
-  EXPECT_EQ(ReadFromCorpus(CorpusType::LIVE, 0).ToHex(), input0.ToHex());
-  EXPECT_EQ(ReadFromCorpus(CorpusType::LIVE, 1).ToHex(), live_input3.ToHex());
-  EXPECT_EQ(ReadFromCorpus(CorpusType::LIVE, 2).ToHex(), live_input4.ToHex());
-  EXPECT_EQ(ReadFromCorpus(CorpusType::LIVE, 3).ToHex(), input0.ToHex());
+  EXPECT_EQ(runner()->ReadFromCorpus(CorpusType::LIVE, 0).ToHex(), input0.ToHex());
+  EXPECT_EQ(runner()->ReadFromCorpus(CorpusType::LIVE, 1).ToHex(), live_input3.ToHex());
+  EXPECT_EQ(runner()->ReadFromCorpus(CorpusType::LIVE, 2).ToHex(), live_input4.ToHex());
+  EXPECT_EQ(runner()->ReadFromCorpus(CorpusType::LIVE, 3).ToHex(), input0.ToHex());
 }
 
 TEST_F(ControllerTest, ReadCorpus) {
@@ -178,11 +164,11 @@ TEST_F(ControllerTest, ReadCorpus) {
   Input input3({0xfe, 0xed});
   Input input4({0xfa, 0xce});
 
-  AddToCorpus(CorpusType::SEED, input1.Duplicate());
-  AddToCorpus(CorpusType::SEED, input2.Duplicate());
+  runner()->AddToCorpus(CorpusType::SEED, input1.Duplicate());
+  runner()->AddToCorpus(CorpusType::SEED, input2.Duplicate());
 
-  AddToCorpus(CorpusType::LIVE, input3.Duplicate());
-  AddToCorpus(CorpusType::LIVE, input4.Duplicate());
+  runner()->AddToCorpus(CorpusType::LIVE, input3.Duplicate());
+  runner()->AddToCorpus(CorpusType::LIVE, input4.Duplicate());
 
   FakeCorpusReader seed_reader(executor());
   FakeCorpusReader live_reader(executor());
@@ -227,7 +213,7 @@ TEST_F(ControllerTest, ReadDictionary) {
   FidlInput result;
 
   auto dict = FakeRunner::valid_dictionary();
-  EXPECT_EQ(ParseDictionary(dict), ZX_OK);
+  EXPECT_EQ(runner()->ParseDictionary(dict), ZX_OK);
   EXPECT_EQ(controller->ReadDictionary(&result), ZX_OK);
   auto received = Receive(std::move(result));
   EXPECT_EQ(received.ToHex(), dict.ToHex());
@@ -247,7 +233,7 @@ TEST_F(ControllerTest, GetStatus) {
   status.set_corpus_num_inputs(15);
   status.set_corpus_total_size(25);
   auto expected = CopyStatus(status);
-  SetStatus(std::move(status));
+  runner()->set_status(std::move(status));
 
   EXPECT_EQ(controller->GetStatus(&result), ZX_OK);
   EXPECT_EQ(result.running(), expected.running());
@@ -267,9 +253,9 @@ TEST_F(ControllerTest, AddMonitor) {
   Status status;
   status.set_runs(13);
   auto expected = CopyStatus(status);
-  SetStatus(std::move(status));
+  runner()->set_status(std::move(status));
   EXPECT_EQ(controller->AddMonitor(monitor.NewBinding()), ZX_OK);
-  UpdateMonitors(UpdateReason::PULSE);
+  runner()->UpdateMonitors(UpdateReason::PULSE);
 
   UpdateReason reason;
   auto updated = monitor.NextStatus(&reason);
@@ -284,8 +270,8 @@ TEST_F(ControllerTest, GetResults) {
   FidlInput fidl_input;
   Input result_input({0xde, 0xad, 0xbe, 0xef});
 
-  SetResult(FuzzResult::DEATH);
-  SetResultInput(result_input);
+  runner()->set_result(FuzzResult::DEATH);
+  runner()->set_result_input(result_input);
   EXPECT_EQ(controller->GetResults(&result, &fidl_input), ZX_OK);
   EXPECT_EQ(result, FuzzResult::DEATH);
   auto received = Receive(std::move(fidl_input));
@@ -298,13 +284,13 @@ TEST_F(ControllerTest, Execute) {
   ::fuchsia::fuzzer::Controller_Execute_Result result;
   Input input({0xde, 0xad, 0xbe, 0xef});
 
-  SetError(ZX_ERR_WRONG_TYPE);
+  runner()->set_error(ZX_ERR_WRONG_TYPE);
   EXPECT_EQ(controller->Execute(Transmit(input), &result), ZX_OK);
   ASSERT_TRUE(result.is_err());
   EXPECT_EQ(result.err(), ZX_ERR_WRONG_TYPE);
 
-  SetError(ZX_OK);
-  SetResult(FuzzResult::OOM);
+  runner()->set_error(ZX_OK);
+  runner()->set_result(FuzzResult::OOM);
   EXPECT_EQ(controller->Execute(Transmit(input), &result), ZX_OK);
   ASSERT_TRUE(result.is_response()) << zx_status_get_string(result.err());
   auto& response = result.response();
@@ -318,13 +304,13 @@ TEST_F(ControllerTest, Minimize) {
   Input input({0xde, 0xad, 0xbe, 0xef});
   Input minimized({0xde, 0xbe});
 
-  SetError(ZX_ERR_WRONG_TYPE);
+  runner()->set_error(ZX_ERR_WRONG_TYPE);
   EXPECT_EQ(controller->Minimize(Transmit(input), &result), ZX_OK);
   ASSERT_TRUE(result.is_err());
   EXPECT_EQ(result.err(), ZX_ERR_WRONG_TYPE);
 
-  SetError(ZX_OK);
-  SetResultInput(minimized);
+  runner()->set_error(ZX_OK);
+  runner()->set_result_input(minimized);
   EXPECT_EQ(controller->Minimize(Transmit(input), &result), ZX_OK);
   ASSERT_TRUE(result.is_response()) << zx_status_get_string(result.err());
   auto& response = result.response();
@@ -339,13 +325,13 @@ TEST_F(ControllerTest, Cleanse) {
   Input input({0xde, 0xad, 0xbe, 0xef});
   Input cleansed({0x20, 0x20, 0xbe, 0xff});
 
-  SetError(ZX_ERR_WRONG_TYPE);
+  runner()->set_error(ZX_ERR_WRONG_TYPE);
   EXPECT_EQ(controller->Cleanse(Transmit(input), &result), ZX_OK);
   ASSERT_TRUE(result.is_err());
   EXPECT_EQ(result.err(), ZX_ERR_WRONG_TYPE);
 
-  SetError(ZX_OK);
-  SetResultInput(cleansed);
+  runner()->set_error(ZX_OK);
+  runner()->set_result_input(cleansed);
   EXPECT_EQ(controller->Cleanse(Transmit(input), &result), ZX_OK);
   ASSERT_TRUE(result.is_response()) << zx_status_get_string(result.err());
   auto& response = result.response();
@@ -359,14 +345,14 @@ TEST_F(ControllerTest, Fuzz) {
   ::fuchsia::fuzzer::Controller_Fuzz_Result result;
   Input fuzzed({0xde, 0xad, 0xbe, 0xef});
 
-  SetError(ZX_ERR_WRONG_TYPE);
+  runner()->set_error(ZX_ERR_WRONG_TYPE);
   EXPECT_EQ(controller->Fuzz(&result), ZX_OK);
   ASSERT_TRUE(result.is_err());
   EXPECT_EQ(result.err(), ZX_ERR_WRONG_TYPE);
 
-  SetError(ZX_OK);
-  SetResult(FuzzResult::CRASH);
-  SetResultInput(fuzzed);
+  runner()->set_error(ZX_OK);
+  runner()->set_result(FuzzResult::CRASH);
+  runner()->set_result_input(fuzzed);
   EXPECT_EQ(controller->Fuzz(&result), ZX_OK);
   ASSERT_TRUE(result.is_response()) << zx_status_get_string(result.err());
   auto& response = result.response();
@@ -380,11 +366,11 @@ TEST_F(ControllerTest, Merge) {
   Bind(controller.NewRequest());
   zx_status_t result;
 
-  SetError(ZX_ERR_WRONG_TYPE);
+  runner()->set_error(ZX_ERR_WRONG_TYPE);
   EXPECT_EQ(controller->Merge(&result), ZX_OK);
   EXPECT_EQ(result, ZX_ERR_WRONG_TYPE);
 
-  SetError(ZX_OK);
+  runner()->set_error(ZX_OK);
   EXPECT_EQ(controller->Merge(&result), ZX_OK);
   EXPECT_EQ(result, ZX_OK);
 }

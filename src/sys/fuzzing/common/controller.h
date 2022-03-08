@@ -39,8 +39,10 @@ class ControllerImpl : public Controller {
   ControllerImpl();
   ~ControllerImpl() override;
 
-  // Sets the runner used to perform tasks.
-  void SetRunner(std::unique_ptr<Runner> runner);
+  const RunnerPtr& runner() const { return runner_; }
+
+  // Sets and configures the runner used to perform tasks.
+  void SetRunner(RunnerPtr runner);
 
   // Binds the FIDL interface request to this object.
   void Bind(fidl::InterfaceRequest<Controller> request);
@@ -93,7 +95,7 @@ class ControllerImpl : public Controller {
   void JoinImpl();
 
   Binding<Controller> binding_;
-  std::unique_ptr<Runner> runner_;
+  RunnerPtr runner_;
 
   // Async execution control.
   ExecutorPtr executor_;

@@ -14,6 +14,7 @@
 #include <random>
 
 #include "src/lib/fxl/macros.h"
+#include "src/sys/fuzzing/common/async-types.h"
 #include "src/sys/fuzzing/common/input.h"
 #include "src/sys/fuzzing/common/options.h"
 #include "src/sys/fuzzing/common/runner.h"
@@ -28,8 +29,10 @@ using CorpusType = ::fuchsia::fuzzer::Corpus;
 // a crash if given an input that includes "CRASH".
 class SimpleFixedRunner final : public Runner {
  public:
-  SimpleFixedRunner();
   ~SimpleFixedRunner() override = default;
+
+  // Factory method.
+  static RunnerPtr MakePtr(ExecutorPtr executor);
 
   // See ../common/runner.h.
   void AddDefaults(Options* options) override;
@@ -49,6 +52,8 @@ class SimpleFixedRunner final : public Runner {
   Status CollectStatus() override;
 
  private:
+  explicit SimpleFixedRunner(ExecutorPtr executor);
+
   FuzzResult TestOne(const Input& input);
   size_t Measure(const Input& input, bool accumulate);
 

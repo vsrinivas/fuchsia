@@ -14,9 +14,9 @@ void RunnerImplTest::SetAdapterParameters(const std::vector<std::string>& parame
   target_adapter_.SetParameters(parameters);
 }
 
-void RunnerImplTest::Configure(Runner* runner, const OptionsPtr& options) {
+void RunnerImplTest::Configure(const RunnerPtr& runner, const OptionsPtr& options) {
   RunnerTest::Configure(runner, options);
-  auto* runner_impl = static_cast<RunnerImpl*>(runner);
+  auto runner_impl = std::static_pointer_cast<RunnerImpl>(runner);
   stopped_ = true;
 
   auto coverage_provider = std::make_unique<CoverageProviderClient>();

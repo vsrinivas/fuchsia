@@ -10,6 +10,7 @@
 #include <vector>
 
 #include "src/lib/fxl/macros.h"
+#include "src/sys/fuzzing/common/async-types.h"
 #include "src/sys/fuzzing/common/runner.h"
 
 namespace fuzzing {
@@ -18,8 +19,10 @@ namespace fuzzing {
 // simply returns whatever results are preloaded by a unit test.
 class FakeRunner final : public Runner {
  public:
-  FakeRunner();
   ~FakeRunner() override = default;
+
+  // Factory method.
+  static RunnerPtr MakePtr(ExecutorPtr executor);
 
   static Input valid_dictionary() { return Input("key=\"value\"\n"); }
   static Input invalid_dictionary() { return Input("invalid"); }
@@ -58,6 +61,7 @@ class FakeRunner final : public Runner {
   Status CollectStatus() override;
 
  private:
+  explicit FakeRunner(ExecutorPtr executor);
   zx_status_t Run();
 
   zx_status_t error_ = ZX_OK;

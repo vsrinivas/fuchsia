@@ -25,7 +25,7 @@ enum Action : uint8_t {
 
 }  // namespace
 
-Runner::Runner()
+Runner::Runner(ExecutorPtr executor)
     : action_(kIdle),
       close_([this]() { CloseImpl(); }),
       interrupt_([this] { InterruptImpl(); }),

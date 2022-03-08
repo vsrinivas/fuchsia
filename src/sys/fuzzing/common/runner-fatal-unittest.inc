@@ -18,26 +18,26 @@
 // See also runner-unittest.inc.
 
 TEST_F(RUNNER_TEST, MinimizeEmpty) {
-  RUNNER_TYPE runner;
-  MinimizeEmpty(&runner);
+  auto runner = RUNNER_TYPE::MakePtr(executor());
+  MinimizeEmpty(runner);
 }
 
 TEST_F(RUNNER_TEST, MinimizeOneByte) {
-  RUNNER_TYPE runner;
-  MinimizeOneByte(&runner);
+  auto runner = RUNNER_TYPE::MakePtr(executor());
+  MinimizeOneByte(runner);
 }
 
 TEST_F(RUNNER_TEST, MinimizeReduceByTwo) {
-  RUNNER_TYPE runner;
-  MinimizeReduceByTwo(&runner);
+  auto runner = RUNNER_TYPE::MakePtr(executor());
+  MinimizeReduceByTwo(runner);
 }
 
 TEST_F(RUNNER_TEST, MinimizeNewError) {
-  RUNNER_TYPE runner;
-  MinimizeNewError(&runner);
+  auto runner = RUNNER_TYPE::MakePtr(executor());
+  MinimizeNewError(runner);
 }
 
 TEST_F(RUNNER_TEST, CleanseTwoBytes) {
-  RUNNER_TYPE runner;
-  CleanseTwoBytes(&runner);
+  auto runner = RUNNER_TYPE::MakePtr(executor());
+  CleanseTwoBytes(runner);
 }

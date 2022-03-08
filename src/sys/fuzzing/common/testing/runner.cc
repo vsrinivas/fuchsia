@@ -11,7 +11,11 @@
 
 namespace fuzzing {
 
-FakeRunner::FakeRunner() {
+RunnerPtr FakeRunner::MakePtr(ExecutorPtr executor) {
+  return RunnerPtr(new FakeRunner(std::move(executor)));
+}
+
+FakeRunner::FakeRunner(ExecutorPtr executor) : Runner(executor) {
   seed_corpus_.push_back(Input());
   live_corpus_.push_back(Input());
 }

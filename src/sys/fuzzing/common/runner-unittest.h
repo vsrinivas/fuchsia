@@ -16,6 +16,7 @@
 #include "src/sys/fuzzing/common/input.h"
 #include "src/sys/fuzzing/common/options.h"
 #include "src/sys/fuzzing/common/runner.h"
+#include "src/sys/fuzzing/common/testing/async-test.h"
 #include "src/sys/fuzzing/common/testing/module.h"
 
 namespace fuzzing {
@@ -33,17 +34,17 @@ namespace fuzzing {
 //   #undef RUNNER_TEST
 //   #undef RUNNER_TYPE
 //
-class RunnerTest : public ::testing::Test {
+class RunnerTest : public AsyncTest {
  protected:
   //////////////////////////////////////
   // Test fixtures.
 
   const OptionsPtr& options() { return options_; }
 
-  static OptionsPtr DefaultOptions(Runner* runner);
+  static OptionsPtr DefaultOptions(const RunnerPtr& runner);
 
   // Adds test-related |options| (e.g. PRNG seed) and configures the |runner|.
-  virtual void Configure(Runner* runner, const OptionsPtr& options);
+  virtual void Configure(const RunnerPtr& runner, const OptionsPtr& options);
 
   // Tests may set fake feedback to be "produced" during calls to |RunOne| with the given |input|.
   void SetCoverage(const Input& input, const Coverage& coverage);
@@ -100,23 +101,23 @@ class RunnerTest : public ::testing::Test {
   //////////////////////////////////////
   // Unit tests, organized by fuzzing workflow.
 
-  void ExecuteNoError(Runner* runner);
-  void ExecuteWithError(Runner* runner);
-  void ExecuteWithLeak(Runner* runner);
+  void ExecuteNoError(const RunnerPtr& runner);
+  void ExecuteWithError(const RunnerPtr& runner);
+  void ExecuteWithLeak(const RunnerPtr& runner);
 
-  void MinimizeNoError(Runner* runner);
-  void MinimizeEmpty(Runner* runner);
-  void MinimizeOneByte(Runner* runner);
-  void MinimizeReduceByTwo(Runner* runner);
-  void MinimizeNewError(Runner* runner);
+  void MinimizeNoError(const RunnerPtr& runner);
+  void MinimizeEmpty(const RunnerPtr& runner);
+  void MinimizeOneByte(const RunnerPtr& runner);
+  void MinimizeReduceByTwo(const RunnerPtr& runner);
+  void MinimizeNewError(const RunnerPtr& runner);
 
-  void CleanseNoReplacement(Runner* runner);
-  void CleanseAlreadyClean(Runner* runner);
-  void CleanseTwoBytes(Runner* runner);
+  void CleanseNoReplacement(const RunnerPtr& runner);
+  void CleanseAlreadyClean(const RunnerPtr& runner);
+  void CleanseTwoBytes(const RunnerPtr& runner);
 
-  void FuzzUntilError(Runner* runner);
-  void FuzzUntilRuns(Runner* runner);
-  void FuzzUntilTime(Runner* runner);
+  void FuzzUntilError(const RunnerPtr& runner);
+  void FuzzUntilRuns(const RunnerPtr& runner);
+  void FuzzUntilTime(const RunnerPtr& runner);
 
   // The |Merge| unit tests have extra parameters and are not included in runner-unittest.inc.
   // They should be added directly, e.g.:
@@ -128,12 +129,13 @@ class RunnerTest : public ::testing::Test {
 
   // |expected| indicates the anticipated return value when merging a corpus with an error-causing
   // input.
-  void MergeSeedError(Runner* runner, zx_status_t expected, uint64_t oom_limit = kDefaultOomLimit);
+  void MergeSeedError(const RunnerPtr& runner, zx_status_t expected,
+                      uint64_t oom_limit = kDefaultOomLimit);
 
   // |keeps_errors| indicates whether merge keeps error-causing inputs in the final corpus.
-  void Merge(Runner* runner, bool keeps_errors, uint64_t oom_limit = kDefaultOomLimit);
+  void Merge(const RunnerPtr& runner, bool keeps_errors, uint64_t oom_limit = kDefaultOomLimit);
 
-  void Stop(Runner* runner);
+  void Stop(const RunnerPtr& runner);
 
  private:
   struct Feedback {

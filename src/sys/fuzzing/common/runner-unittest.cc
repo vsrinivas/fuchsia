@@ -13,13 +13,13 @@ static constexpr size_t kNumReplacements = 2;
 
 // Test fixtures.
 
-OptionsPtr RunnerTest::DefaultOptions(Runner* runner) {
+OptionsPtr RunnerTest::DefaultOptions(const RunnerPtr& runner) {
   auto options = MakeOptions();
   runner->AddDefaults(options.get());
   return options;
 }
 
-void RunnerTest::Configure(Runner* runner, const OptionsPtr& options) {
+void RunnerTest::Configure(const RunnerPtr& runner, const OptionsPtr& options) {
   options_ = options;
   options_->set_seed(1);
   runner->Configure(options_);
@@ -109,7 +109,7 @@ void RunnerTest::SetStatus(zx_status_t status) {
 
 // Unit tests.
 
-void RunnerTest::ExecuteNoError(Runner* runner) {
+void RunnerTest::ExecuteNoError(const RunnerPtr& runner) {
   Configure(runner, RunnerTest::DefaultOptions(runner));
   Input input({0x01});
   runner->Execute(input.Duplicate(), [&](zx_status_t status) { SetStatus(status); });
@@ -118,7 +118,7 @@ void RunnerTest::ExecuteNoError(Runner* runner) {
   EXPECT_EQ(runner->result(), FuzzResult::NO_ERRORS);
 }
 
-void RunnerTest::ExecuteWithError(Runner* runner) {
+void RunnerTest::ExecuteWithError(const RunnerPtr& runner) {
   Configure(runner, RunnerTest::DefaultOptions(runner));
   Input input({0x02});
   runner->Execute(input.Duplicate(), [&](zx_status_t status) { SetStatus(status); });
@@ -128,7 +128,7 @@ void RunnerTest::ExecuteWithError(Runner* runner) {
   EXPECT_EQ(runner->result_input().ToHex(), input.ToHex());
 }
 
-void RunnerTest::ExecuteWithLeak(Runner* runner) {
+void RunnerTest::ExecuteWithLeak(const RunnerPtr& runner) {
   auto options = RunnerTest::DefaultOptions(runner);
   options->set_detect_leaks(true);
   Configure(runner, options);
@@ -145,7 +145,7 @@ void RunnerTest::ExecuteWithLeak(Runner* runner) {
 }
 
 // Simulate no error on the original input.
-void RunnerTest::MinimizeNoError(Runner* runner) {
+void RunnerTest::MinimizeNoError(const RunnerPtr& runner) {
   Configure(runner, RunnerTest::DefaultOptions(runner));
   Input input({0x04});
   runner->Minimize(input.Duplicate(), [&](zx_status_t status) { SetStatus(status); });
@@ -154,7 +154,7 @@ void RunnerTest::MinimizeNoError(Runner* runner) {
 }
 
 // Empty input should exit immediately.
-void RunnerTest::MinimizeEmpty(Runner* runner) {
+void RunnerTest::MinimizeEmpty(const RunnerPtr& runner) {
   Configure(runner, RunnerTest::DefaultOptions(runner));
   Input input;
   runner->Minimize(std::move(input), [&](zx_status_t status) { SetStatus(status); });
@@ -163,7 +163,7 @@ void RunnerTest::MinimizeEmpty(Runner* runner) {
 }
 
 // 1-byte input should exit immediately.
-void RunnerTest::MinimizeOneByte(Runner* runner) {
+void RunnerTest::MinimizeOneByte(const RunnerPtr& runner) {
   Configure(runner, RunnerTest::DefaultOptions(runner));
   Input input({0x44});
   runner->Minimize(std::move(input), [&](zx_status_t status) { SetStatus(status); });
@@ -171,7 +171,7 @@ void RunnerTest::MinimizeOneByte(Runner* runner) {
   EXPECT_EQ(GetStatus(), ZX_OK);
 }
 
-void RunnerTest::MinimizeReduceByTwo(Runner* runner) {
+void RunnerTest::MinimizeReduceByTwo(const RunnerPtr& runner) {
   auto options = RunnerTest::DefaultOptions(runner);
   constexpr size_t kRuns = 10;
   options->set_runs(kRuns);
@@ -199,7 +199,7 @@ void RunnerTest::MinimizeReduceByTwo(Runner* runner) {
   EXPECT_EQ(runner->result_input().ToHex(), minimized.ToHex());
 }
 
-void RunnerTest::MinimizeNewError(Runner* runner) {
+void RunnerTest::MinimizeNewError(const RunnerPtr& runner) {
   auto options = RunnerTest::DefaultOptions(runner);
   options->set_run_limit(zx::msec(500).get());
   Configure(runner, options);
@@ -214,7 +214,7 @@ void RunnerTest::MinimizeNewError(Runner* runner) {
   EXPECT_EQ(runner->result_input().ToHex(), minimized.ToHex());
 }
 
-void RunnerTest::CleanseNoReplacement(Runner* runner) {
+void RunnerTest::CleanseNoReplacement(const RunnerPtr& runner) {
   Configure(runner, RunnerTest::DefaultOptions(runner));
   Input input({0x07, 0x17, 0x27});
   runner->Cleanse(input.Duplicate(), [&](zx_status_t status) { SetStatus(status); });
@@ -228,7 +228,7 @@ void RunnerTest::CleanseNoReplacement(Runner* runner) {
   EXPECT_EQ(runner->result_input().ToHex(), input.ToHex());
 }
 
-void RunnerTest::CleanseAlreadyClean(Runner* runner) {
+void RunnerTest::CleanseAlreadyClean(const RunnerPtr& runner) {
   Configure(runner, RunnerTest::DefaultOptions(runner));
   Input input({' ', 0xff});
   runner->Cleanse(input.Duplicate(), [&](zx_status_t status) { SetStatus(status); });
@@ -237,7 +237,7 @@ void RunnerTest::CleanseAlreadyClean(Runner* runner) {
   EXPECT_EQ(runner->result_input().ToHex(), input.ToHex());
 }
 
-void RunnerTest::CleanseTwoBytes(Runner* runner) {
+void RunnerTest::CleanseTwoBytes(const RunnerPtr& runner) {
   Configure(runner, RunnerTest::DefaultOptions(runner));
 
   Input input0({0x08, 0x18, 0x28});
@@ -267,7 +267,7 @@ void RunnerTest::CleanseTwoBytes(Runner* runner) {
   EXPECT_EQ(runner->result_input().ToHex(), "2018ff");
 }
 
-void RunnerTest::FuzzUntilError(Runner* runner) {
+void RunnerTest::FuzzUntilError(const RunnerPtr& runner) {
   auto options = RunnerTest::DefaultOptions(runner);
   options->set_detect_exits(true);
   Configure(runner, options);
@@ -280,7 +280,7 @@ void RunnerTest::FuzzUntilError(Runner* runner) {
   EXPECT_EQ(runner->result(), FuzzResult::EXIT);
 }
 
-void RunnerTest::FuzzUntilRuns(Runner* runner) {
+void RunnerTest::FuzzUntilRuns(const RunnerPtr& runner) {
   auto options = RunnerTest::DefaultOptions(runner);
   const size_t kNumRuns = 10;
   options->set_runs(kNumRuns);
@@ -368,7 +368,7 @@ void RunnerTest::FuzzUntilRuns(Runner* runner) {
   EXPECT_EQ(missing, std::vector<std::string>());
 }
 
-void RunnerTest::FuzzUntilTime(Runner* runner) {
+void RunnerTest::FuzzUntilTime(const RunnerPtr& runner) {
   // Time is always tricky to test. As a result, this test verifies the bare minimum, namely that
   // the runner exits at least 100 ms after it started. All other verification is performed in more
   // controllable tests, such as |FuzzUntilRuns| above.
@@ -386,7 +386,7 @@ void RunnerTest::FuzzUntilTime(Runner* runner) {
   EXPECT_GE(elapsed, zx::msec(100));
 }
 
-void RunnerTest::MergeSeedError(Runner* runner, zx_status_t expected, uint64_t oom_limit) {
+void RunnerTest::MergeSeedError(const RunnerPtr& runner, zx_status_t expected, uint64_t oom_limit) {
   auto options = RunnerTest::DefaultOptions(runner);
   options->set_oom_limit(oom_limit);
   Configure(runner, options);
@@ -396,7 +396,7 @@ void RunnerTest::MergeSeedError(Runner* runner, zx_status_t expected, uint64_t o
   EXPECT_EQ(GetStatus(), expected);
 }
 
-void RunnerTest::Merge(Runner* runner, bool keeps_errors, uint64_t oom_limit) {
+void RunnerTest::Merge(const RunnerPtr& runner, bool keeps_errors, uint64_t oom_limit) {
   auto options = RunnerTest::DefaultOptions(runner);
   options->set_oom_limit(oom_limit);
   Configure(runner, options);
@@ -469,7 +469,7 @@ void RunnerTest::Merge(Runner* runner, bool keeps_errors, uint64_t oom_limit) {
   EXPECT_EQ(expected_live, actual_live);
 }
 
-void RunnerTest::Stop(Runner* runner) {
+void RunnerTest::Stop(const RunnerPtr& runner) {
   Configure(runner, RunnerTest::DefaultOptions(runner));
   runner->Fuzz([&](zx_status_t status) { SetStatus(status); });
   std::thread t([this]() { RunUntilIdle(); });

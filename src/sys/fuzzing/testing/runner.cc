@@ -14,7 +14,11 @@ namespace fuzzing {
 
 const char* kPattern = "CRASH";
 
-SimpleFixedRunner::SimpleFixedRunner() {
+RunnerPtr SimpleFixedRunner::MakePtr(ExecutorPtr executor) {
+  return RunnerPtr(new SimpleFixedRunner(std::move(executor)));
+}
+
+SimpleFixedRunner::SimpleFixedRunner(ExecutorPtr executor) : Runner(executor) {
   seed_corpus_.emplace_back();
   live_corpus_.emplace_back();
   start_ = zx::time::infinite();

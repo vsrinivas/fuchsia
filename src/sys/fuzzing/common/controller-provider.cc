@@ -38,7 +38,7 @@ void ControllerProviderImpl::Stop() { binding_.Unbind(); }
 ///////////////////////////////////////////////////////////////
 // Run-related methods
 
-zx_status_t ControllerProviderImpl::Run(std::unique_ptr<Runner> runner) {
+zx_status_t ControllerProviderImpl::Run(RunnerPtr runner) {
   SetRunner(std::move(runner));
   zx::channel channel{zx_take_startup_handle(PA_HND(PA_USER0, 0))};
   Serve(std::move(channel));
@@ -46,7 +46,7 @@ zx_status_t ControllerProviderImpl::Run(std::unique_ptr<Runner> runner) {
   return ZX_OK;
 }
 
-void ControllerProviderImpl::SetRunner(std::unique_ptr<Runner> runner) {
+void ControllerProviderImpl::SetRunner(RunnerPtr runner) {
   FX_CHECK(runner);
   controller_.SetRunner(std::move(runner));
 }

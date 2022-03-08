@@ -36,7 +36,7 @@ void ControllerImpl::Bind(fidl::InterfaceRequest<Controller> request) {
   binding_.Bind(std::move(request));
 }
 
-void ControllerImpl::SetRunner(std::unique_ptr<Runner> runner) {
+void ControllerImpl::SetRunner(RunnerPtr runner) {
   runner_ = std::move(runner);
   AddDefaults();
   runner_->Configure(options_);

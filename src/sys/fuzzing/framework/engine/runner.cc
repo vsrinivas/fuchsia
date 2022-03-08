@@ -19,8 +19,13 @@ namespace fuzzing {
 using ::fuchsia::fuzzer::CoverageEvent;
 using ::fuchsia::fuzzer::MAX_PROCESS_STATS;
 
-RunnerImpl::RunnerImpl()
-    : close_([this] { CloseImpl(); }),
+RunnerPtr RunnerImpl::MakePtr(ExecutorPtr executor) {
+  return RunnerPtr(new RunnerImpl(std::move(executor)));
+}
+
+RunnerImpl::RunnerImpl(ExecutorPtr executor)
+    : Runner(executor),
+      close_([this] { CloseImpl(); }),
       interrupt_([this]() { InterruptImpl(); }),
       join_([this]() { JoinImpl(); }) {
   timer_ = std::thread([this]() { Timer(); });

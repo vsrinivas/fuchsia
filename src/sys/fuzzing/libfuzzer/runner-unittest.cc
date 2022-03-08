@@ -33,6 +33,7 @@ using ::test::fuzzer::SignaledBuffer;
 // doing so when another debugger like zxdb is needed to investigate failed tests.
 #define LIBFUZZER_ALLOW_DEBUG 0
 
+// Specializes the generic |RunnerTest| for |LibFuzzerRunner|.
 class LibFuzzerRunnerTest : public RunnerTest {
  protected:
   //////////////////////////////////////
@@ -46,6 +47,7 @@ class LibFuzzerRunnerTest : public RunnerTest {
   static const uint64_t kOomLimit = 1ULL << 26;  // 64 MB
 
   void SetUp() override {
+    RunnerTest::SetUp();
     test_input_buffer_.Reserve(kDefaultMaxInputSize);
     feedback_buffer_.Mirror(&feedback_, sizeof(feedback_));
     // Convince libFuzzer that the code is instrumented.
@@ -53,16 +55,16 @@ class LibFuzzerRunnerTest : public RunnerTest {
     SetCoverage(Input("\n"), {{255, 255}});
   }
 
-  void Configure(Runner* runner, const OptionsPtr& options) override {
+  void Configure(const RunnerPtr& runner, const OptionsPtr& options) override {
     RunnerTest::Configure(runner, options);
-    auto* testrunner = static_cast<LibFuzzerRunner*>(runner);
+    auto libfuzzer_runner = std::static_pointer_cast<LibFuzzerRunner>(runner);
     std::vector<std::string> cmdline{"/pkg/bin/libfuzzer_test_fuzzer"};
 
 // See notes on LIBFUZZER_SHOW_OUTPUT above.
 #if LIBFUZZER_SHOW_OUTPUT
-    testrunner->set_verbose(true);
+    libfuzzer_runner->set_verbose(true);
 #else
-    testrunner->set_verbose(false);
+    libfuzzer_runner->set_verbose(false);
 #endif  // LIBFUZZER_SHOW_OUTPUT
 
 // See notes on LIBFUZZER_ALLOW_DEBUG above.
@@ -74,7 +76,7 @@ class LibFuzzerRunnerTest : public RunnerTest {
     cmdline.push_back("-handle_abrt=0");
 #endif  // LIBFUZZER_ALLOW_DEBUG
 
-    testrunner->set_cmdline(std::move(cmdline));
+    libfuzzer_runner->set_cmdline(std::move(cmdline));
   }
 
   bool HasTestInput(zx::time deadline) override {
@@ -126,6 +128,7 @@ class LibFuzzerRunnerTest : public RunnerTest {
         files::DeletePath(files::JoinPath("/tmp", path), /* recursive */ true);
       }
     }
+    RunnerTest::TearDown();
   }
 
  private:
@@ -147,13 +150,13 @@ class LibFuzzerRunnerTest : public RunnerTest {
 #undef RUNNER_TEST
 
 TEST_F(LibFuzzerRunnerTest, MergeSeedError) {
-  LibFuzzerRunner runner;
-  MergeSeedError(&runner, /* expected */ ZX_OK, kOomLimit);
+  auto runner = LibFuzzerRunner::MakePtr(executor());
+  MergeSeedError(runner, /* expected */ ZX_OK, kOomLimit);
 }
 
 TEST_F(LibFuzzerRunnerTest, Merge) {
-  LibFuzzerRunner runner;
-  Merge(&runner, /* keep_errors= */ false, kOomLimit);
+  auto runner = LibFuzzerRunner::MakePtr(executor());
+  Merge(runner, /* keep_errors= */ false, kOomLimit);
 }
 
 }  // namespace fuzzing

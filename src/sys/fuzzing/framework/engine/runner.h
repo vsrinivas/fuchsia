@@ -21,6 +21,7 @@
 
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/synchronization/thread_annotations.h"
+#include "src/sys/fuzzing/common/async-types.h"
 #include "src/sys/fuzzing/common/dispatcher.h"
 #include "src/sys/fuzzing/common/input.h"
 #include "src/sys/fuzzing/common/run-once.h"
@@ -40,8 +41,10 @@ namespace fuzzing {
 // The concrete implementation of |Runner|.
 class RunnerImpl final : public Runner {
  public:
-  RunnerImpl();
   ~RunnerImpl() override;
+
+  // Factory method.
+  static RunnerPtr MakePtr(ExecutorPtr executor);
 
   void SetTargetAdapter(std::unique_ptr<TargetAdapterClient> target_adapter);
   void SetCoverageProvider(std::unique_ptr<CoverageProviderClient> coverage_provider);
@@ -82,6 +85,8 @@ class RunnerImpl final : public Runner {
   void ClearErrors() override;
 
  private:
+  explicit RunnerImpl(ExecutorPtr executor);
+
   // Creates and returns a scope object for a synchronous workflow. This will reset errors,
   // deadlines, and run counts, and update monitors with an INIT update. When the object falls out
   // of scope, it will ensure the fuzzer is stopped, disable timers, and send a DONE update. Each

@@ -87,8 +87,13 @@ void WriteInputToFile(const Input& input, const std::string& pathname) {
 
 }  // namespace
 
-LibFuzzerRunner::LibFuzzerRunner()
-    : close_([this]() { CloseImpl(); }),
+RunnerPtr LibFuzzerRunner::MakePtr(ExecutorPtr executor) {
+  return RunnerPtr(new LibFuzzerRunner(std::move(executor)));
+}
+
+LibFuzzerRunner::LibFuzzerRunner(ExecutorPtr executor)
+    : Runner(executor),
+      close_([this]() { CloseImpl(); }),
       interrupt_([this]() { InterruptImpl(); }),
       join_([this]() { JoinImpl(); }) {
   FX_CHECK(std::filesystem::create_directory(kSeedCorpusPath));

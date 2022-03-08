@@ -32,7 +32,7 @@ class ControllerProviderImpl final : public ControllerProvider {
   void Connect(fidl::InterfaceRequest<Controller> request, ConnectCallback callback) override;
   void Stop() override;
 
-  void SetRunner(std::unique_ptr<Runner> runner);
+  void SetRunner(RunnerPtr runner);
 
   // Fulfills requests received on the |channel| to connect to the |Controller|.
   void Serve(zx::channel channel);
@@ -40,7 +40,7 @@ class ControllerProviderImpl final : public ControllerProvider {
   // Takes the startup channel provided by the fuzz_test_runner and serves
   // |fuchsia.fuzzer.ControllerProvider| on it. Blocks until the registry calls |Stop| and/or closes
   // the channel.
-  zx_status_t Run(std::unique_ptr<Runner> runner);
+  zx_status_t Run(RunnerPtr runner);
 
  private:
   // Stop-related methods.

@@ -7,6 +7,7 @@
 #include <gtest/gtest.h>
 
 #include "src/sys/fuzzing/common/controller.h"
+#include "src/sys/fuzzing/common/testing/async-test.h"
 #include "src/sys/fuzzing/common/testing/registrar.h"
 #include "src/sys/fuzzing/common/testing/runner.h"
 
@@ -17,11 +18,11 @@ using ::fuchsia::fuzzer::ControllerSyncPtr;
 
 // Test fixtures
 
-class ControllerProviderTest : public ::testing::Test {
+class ControllerProviderTest : public AsyncTest {
  protected:
   ControllerProviderSyncPtr GetProvider() {
     ControllerProviderSyncPtr provider;
-    provider_.SetRunner(std::make_unique<FakeRunner>());
+    provider_.SetRunner(FakeRunner::MakePtr(executor()));
     provider_.Serve(registrar_.Bind());
     provider.Bind(registrar_.TakeProvider());
     return provider;
