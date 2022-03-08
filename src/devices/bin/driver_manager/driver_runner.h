@@ -124,7 +124,7 @@ class OwnedMessage {
  public:
   static std::unique_ptr<OwnedMessage<T>> From(T& message) {
     // TODO(fxbug.dev/45252): Use FIDL at rest.
-    fidl::unstable::OwnedEncodedMessage<T> encoded(fidl::internal::WireFormatVersion::kV1,
+    fidl::unstable::OwnedEncodedMessage<T> encoded(fidl::internal::WireFormatVersion::kV2,
                                                    &message);
     ZX_ASSERT_MSG(encoded.ok(), "Failed to encode: %s", encoded.FormatDescription().data());
     return std::make_unique<OwnedMessage>(encoded);
@@ -139,7 +139,7 @@ class OwnedMessage {
   // TODO(fxbug.dev/45252): Use FIDL at rest.
   explicit OwnedMessage(fidl::unstable::OwnedEncodedMessage<T>& encoded)
       : converted_(encoded.GetOutgoingMessage()),
-        decoded_(fidl::internal::WireFormatVersion::kV1, std::move(converted_.incoming_message())) {
+        decoded_(fidl::internal::WireFormatVersion::kV2, std::move(converted_.incoming_message())) {
     ZX_ASSERT_MSG(decoded_.ok(), "Failed to decode: %s", decoded_.FormatDescription().c_str());
   }
 
