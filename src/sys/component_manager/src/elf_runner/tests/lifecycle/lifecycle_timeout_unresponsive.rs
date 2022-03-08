@@ -62,19 +62,16 @@ async fn test_stop_timeouts() {
         // is sufficient.
         instance.connect_to_binder().unwrap();
 
-        let moniker_stem = format!("./{}:{}", collection_name, instance.child_name());
-        let root_moniker = format!("{}$", moniker_stem);
-        let custom_timeout_child = format!("{}/custom-timeout-child$", moniker_stem);
-        let inherited_timeout_child = format!("{}/inherited-timeout-child$", moniker_stem);
+        let root_moniker = format!("./{}:{}", collection_name, instance.child_name());
+        let custom_timeout_child = format!("{}/custom-timeout-child", root_moniker);
+        let inherited_timeout_child = format!("{}/inherited-timeout-child", root_moniker);
 
         EventSequence::new()
             .all_of(
                 vec![
-                    EventMatcher::ok().r#type(Started::TYPE).moniker_regex(&root_moniker),
-                    EventMatcher::ok().r#type(Started::TYPE).moniker_regex(&custom_timeout_child),
-                    EventMatcher::ok()
-                        .r#type(Started::TYPE)
-                        .moniker_regex(&inherited_timeout_child),
+                    EventMatcher::ok().r#type(Started::TYPE).moniker(&root_moniker),
+                    EventMatcher::ok().r#type(Started::TYPE).moniker(&custom_timeout_child),
+                    EventMatcher::ok().r#type(Started::TYPE).moniker(&inherited_timeout_child),
                 ],
                 Ordering::Unordered,
             )
@@ -89,9 +86,9 @@ async fn test_stop_timeouts() {
         .has_subset(
             vec![
                 EventMatcher::ok()
-                    .monikers_regex(vec![root_moniker.clone()])
+                    .moniker(root_moniker.clone())
                     .stop(Some(ExitStatusMatcher::AnyCrash)),
-                EventMatcher::ok().r#type(Purged::TYPE).monikers_regex(vec![root_moniker.clone()]),
+                EventMatcher::ok().r#type(Purged::TYPE).moniker(root_moniker.clone()),
             ],
             Ordering::Ordered,
         )
@@ -103,11 +100,9 @@ async fn test_stop_timeouts() {
         .has_subset(
             vec![
                 EventMatcher::ok()
-                    .monikers_regex(vec![custom_moniker.clone()])
+                    .moniker(custom_moniker.clone())
                     .stop(Some(ExitStatusMatcher::AnyCrash)),
-                EventMatcher::ok()
-                    .r#type(Purged::TYPE)
-                    .monikers_regex(vec![custom_moniker.clone()]),
+                EventMatcher::ok().r#type(Purged::TYPE).moniker(custom_moniker.clone()),
             ],
             Ordering::Ordered,
         )
@@ -119,11 +114,9 @@ async fn test_stop_timeouts() {
         .has_subset(
             vec![
                 EventMatcher::ok()
-                    .monikers_regex(vec![inherited_moniker.clone()])
+                    .moniker(inherited_moniker.clone())
                     .stop(Some(ExitStatusMatcher::AnyCrash)),
-                EventMatcher::ok()
-                    .r#type(Purged::TYPE)
-                    .monikers_regex(vec![inherited_moniker.clone()]),
+                EventMatcher::ok().r#type(Purged::TYPE).moniker(inherited_moniker.clone()),
             ],
             Ordering::Ordered,
         )

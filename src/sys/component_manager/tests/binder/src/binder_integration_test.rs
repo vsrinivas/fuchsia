@@ -10,7 +10,7 @@ use {
     futures::stream::{FusedStream, StreamExt},
 };
 
-const CHILD_MONIKER: &str = "looper";
+const CHILD_MONIKER: &str = "./looper";
 const NUM_CONNECTIONS: u64 = 3;
 
 #[fuchsia::test]
@@ -39,7 +39,7 @@ async fn binder() {
     // First, assert that a connection to fuchsia.component.Binder triggers a start.
     EventMatcher::ok()
         .r#type(fsys::EventType::Started)
-        .moniker_regex(CHILD_MONIKER.to_owned())
+        .moniker(CHILD_MONIKER.to_owned())
         .wait::<Started>(&mut event_stream)
         .await
         .expect("failed to observe events");
@@ -54,7 +54,7 @@ async fn binder() {
     let () = shutdowner.shutdown().expect("failed to call Shutdown()");
     EventMatcher::ok()
         .r#type(fsys::EventType::Stopped)
-        .moniker_regex(CHILD_MONIKER.to_owned())
+        .moniker(CHILD_MONIKER.to_owned())
         .wait::<Stopped>(&mut event_stream)
         .await
         .expect("failed to observe events");

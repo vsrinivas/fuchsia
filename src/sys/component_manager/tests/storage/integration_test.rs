@@ -45,7 +45,7 @@ async fn wait_for_clean_stop(cm: RealmInstance, moniker_to_wait_on: &str) {
     // Expect the component to stop
     EventMatcher::ok()
         .stop(Some(ExitStatusMatcher::Clean))
-        .moniker_regex(moniker_to_wait_on)
+        .moniker(moniker_to_wait_on)
         .wait::<Stopped>(&mut event_stream)
         .await
         .unwrap();

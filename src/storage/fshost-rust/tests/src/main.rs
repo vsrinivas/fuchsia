@@ -73,7 +73,7 @@ async fn admin_shutdown_shuts_down_fshost() {
     admin.shutdown().await.unwrap();
 
     EventMatcher::ok()
-        .moniker_regex("realm_builder:.*/fshost")
+        .moniker_regex("realm_builder:.*/fshost$")
         .wait::<Stopped>(&mut event_stream)
         .await
         .unwrap();

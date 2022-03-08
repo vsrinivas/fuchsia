@@ -40,32 +40,26 @@ async fn destroy() {
             vec![
                 EventMatcher::ok()
                     .r#type(Stopped::TYPE)
-                    .moniker_regex("./collection_realm/coll:parent/trigger_a"),
+                    .moniker("./collection_realm/coll:parent/trigger_a"),
                 EventMatcher::ok()
                     .r#type(Stopped::TYPE)
-                    .moniker_regex("./collection_realm/coll:parent/trigger_b"),
+                    .moniker("./collection_realm/coll:parent/trigger_b"),
             ],
             Ordering::Unordered,
         )
-        .then(
-            EventMatcher::ok()
-                .r#type(Stopped::TYPE)
-                .moniker_regex("./collection_realm/coll:parent"),
-        )
+        .then(EventMatcher::ok().r#type(Stopped::TYPE).moniker("./collection_realm/coll:parent"))
         .all_of(
             vec![
                 EventMatcher::ok()
                     .r#type(Purged::TYPE)
-                    .moniker_regex("./collection_realm/coll:parent/trigger_a"),
+                    .moniker("./collection_realm/coll:parent/trigger_a"),
                 EventMatcher::ok()
                     .r#type(Purged::TYPE)
-                    .moniker_regex("./collection_realm/coll:parent/trigger_b"),
+                    .moniker("./collection_realm/coll:parent/trigger_b"),
             ],
             Ordering::Unordered,
         )
-        .then(
-            EventMatcher::ok().r#type(Purged::TYPE).moniker_regex("./collection_realm/coll:parent"),
-        )
+        .then(EventMatcher::ok().r#type(Purged::TYPE).moniker("./collection_realm/coll:parent"))
         .subscribe_and_expect(&mut event_source)
         .await
         .unwrap();
@@ -117,10 +111,10 @@ async fn destroy_and_recreate() {
             vec![
                 EventMatcher::ok()
                     .r#type(Started::TYPE)
-                    .moniker_regex("./destroy_and_recreate/coll:trigger"),
+                    .moniker("./destroy_and_recreate/coll:trigger"),
                 EventMatcher::ok()
                     .r#type(Destroyed::TYPE)
-                    .moniker_regex("./destroy_and_recreate/coll:trigger"),
+                    .moniker("./destroy_and_recreate/coll:trigger"),
             ],
             Ordering::Ordered,
         )
@@ -128,10 +122,10 @@ async fn destroy_and_recreate() {
             vec![
                 EventMatcher::ok()
                     .r#type(Started::TYPE)
-                    .moniker_regex("./destroy_and_recreate/coll:trigger"),
+                    .moniker("./destroy_and_recreate/coll:trigger"),
                 EventMatcher::ok()
                     .r#type(Purged::TYPE)
-                    .moniker_regex("./destroy_and_recreate/coll:trigger"),
+                    .moniker("./destroy_and_recreate/coll:trigger"),
             ],
             // The previous instance can be purged before/after the new instance is started.
             // That is why this sequence is unordered.

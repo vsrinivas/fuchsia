@@ -60,8 +60,8 @@ async fn main() {
     EventSequence::new()
         .all_of(
             vec![
-                EventMatcher::default().r#type(Purged::TYPE).moniker_regex("./coll:parent/child"),
-                EventMatcher::default().r#type(Purged::TYPE).moniker_regex("./coll:parent"),
+                EventMatcher::default().r#type(Purged::TYPE).moniker("./coll:parent/child"),
+                EventMatcher::default().r#type(Purged::TYPE).moniker("./coll:parent"),
             ],
             Ordering::Unordered,
         )

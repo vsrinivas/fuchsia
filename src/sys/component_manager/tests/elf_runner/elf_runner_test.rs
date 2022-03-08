@@ -37,7 +37,7 @@ async fn run_single_test(url: &str) {
 
     EventMatcher::ok()
         .stop(Some(ExitStatusMatcher::Clean))
-        .moniker_regex("./reporter")
+        .moniker("./reporter")
         .wait::<Stopped>(&mut event_stream)
         .await
         .unwrap();

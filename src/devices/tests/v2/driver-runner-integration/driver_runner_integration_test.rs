@@ -69,12 +69,12 @@ async fn driver_runner_test() -> Result<(), anyhow::Error> {
     // Driver hosts live in a collection, and their monikers will look like:
     //   /driver-hosts:driver-host-{DRIVER_NUMBER}
     let events = vec![
-        EventMatcher::ok().r#type(events::Started::TYPE).moniker_regex(r".*/driver_manager"),
-        EventMatcher::ok().r#type(events::Started::TYPE).moniker_regex(r".*/driver-index"),
-        EventMatcher::ok().r#type(events::Started::TYPE).moniker_regex(r".*/pkg-drivers:root"),
+        EventMatcher::ok().r#type(events::Started::TYPE).moniker_regex(r".*/driver_manager$"),
+        EventMatcher::ok().r#type(events::Started::TYPE).moniker_regex(r".*/driver-index$"),
+        EventMatcher::ok().r#type(events::Started::TYPE).moniker_regex(r".*/pkg-drivers:root$"),
         EventMatcher::ok()
             .r#type(events::Started::TYPE)
-            .moniker_regex(r".*/driver-hosts:driver-host-0"),
+            .moniker_regex(r".*/driver-hosts:driver-host-0$"),
     ];
     check_events(events, &mut started_stream).await?;
     let reader = ArchiveReader::new();

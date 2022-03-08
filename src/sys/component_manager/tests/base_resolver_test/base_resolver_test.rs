@@ -34,13 +34,10 @@ async fn base_resolver_appmgr_bridge_test() {
     instance.start_component_tree().await.unwrap();
 
     // Expect realm builder root to start
-    EventMatcher::ok().moniker_regex(".").expect_match::<Started>(&mut event_stream).await;
+    EventMatcher::ok().moniker(".").expect_match::<Started>(&mut event_stream).await;
 
     // Expect start to succeed because we're using the appmgr loader
-    EventMatcher::ok()
-        .moniker_regex("./echo_server")
-        .expect_match::<Started>(&mut event_stream)
-        .await;
+    EventMatcher::ok().moniker("./echo_server").expect_match::<Started>(&mut event_stream).await;
 }
 
 #[fuchsia::test]
@@ -70,15 +67,11 @@ async fn base_resolver_disabled_test() {
     instance.start_component_tree().await.unwrap();
 
     // Expect the root component to be bound to
-    let _ = EventMatcher::ok()
-        .moniker_regex("./root")
-        .wait::<Started>(&mut event_stream)
-        .await
-        .unwrap();
+    let _ = EventMatcher::ok().moniker("./root").wait::<Started>(&mut event_stream).await.unwrap();
 
     // Expect start failure for echo_server because we shouldn't resolve the component
     EventMatcher::err()
-        .moniker_regex("./root/echo_server")
+        .moniker("./root/echo_server")
         .expect_match::<Resolved>(&mut event_stream)
         .await;
 }

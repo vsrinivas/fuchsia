@@ -39,7 +39,7 @@ async fn start_nested_cm_and_wait_for_clean_stop(root_url: &str, moniker_to_wait
     // Expect the component to stop
     EventMatcher::ok()
         .stop(Some(ExitStatusMatcher::Clean))
-        .moniker_regex(moniker_to_wait_on)
+        .moniker(moniker_to_wait_on)
         .wait::<Stopped>(&mut event_stream)
         .await
         .unwrap();

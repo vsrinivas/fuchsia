@@ -43,7 +43,7 @@ async fn test_exit_detection() {
     let target_moniker = format!("./{}:{}", collection_name, instance.child_name());
 
     EventSequence::new()
-        .then(EventMatcher::ok().r#type(events::Stopped::TYPE).moniker_regex(&target_moniker))
+        .then(EventMatcher::ok().r#type(events::Stopped::TYPE).moniker(&target_moniker))
         .expect(event_stream)
         .await
         .unwrap();
@@ -85,14 +85,14 @@ async fn test_exit_after_rendezvous() {
 
     // First, ensure that component has started.
     EventMatcher::ok()
-        .moniker_regex(&target_moniker)
+        .moniker(&target_moniker)
         .wait::<events::Started>(&mut event_stream)
         .await
         .expect("failed to observe events");
 
     // Then, wait to get confirmation that the component under test exited.
     EventSequence::new()
-        .then(EventMatcher::ok().r#type(events::Stopped::TYPE).moniker_regex(&target_moniker))
+        .then(EventMatcher::ok().r#type(events::Stopped::TYPE).moniker(&target_moniker))
         .expect(event_stream)
         .await
         .unwrap();

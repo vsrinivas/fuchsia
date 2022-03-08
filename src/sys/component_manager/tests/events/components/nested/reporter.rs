@@ -13,9 +13,9 @@ async fn main() {
     EventSequence::new()
         .has_subset(
             vec![
-                EventMatcher::ok().moniker_regex("./child_a"),
-                EventMatcher::ok().moniker_regex("./child_b"),
-                EventMatcher::ok().moniker_regex("./child_c"),
+                EventMatcher::ok().moniker("./child_a"),
+                EventMatcher::ok().moniker("./child_b"),
+                EventMatcher::ok().moniker("./child_c"),
             ],
             Ordering::Unordered,
         )

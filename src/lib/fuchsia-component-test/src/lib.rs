@@ -284,8 +284,9 @@ impl ScopedInstance {
             .connect_to_protocol_at_exposed_dir::<fcomponent::BinderMarker>()
             .context("failed to connect to fuchsia.component.Binder")?;
 
+        let moniker = format!("./{}:{}", self.collection, self.child_name);
         let _ = EventMatcher::ok()
-            .moniker_regex(self.child_name.to_owned())
+            .moniker(&moniker)
             .wait::<Started>(&mut event_stream)
             .await
             .context("failed to observe Started event")?;

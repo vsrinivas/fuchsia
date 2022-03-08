@@ -42,58 +42,58 @@ async fn verify_routing_failure_messages() {
     let expected = EventSequence::new()
         .all_of(
             vec![
-                EventMatcher::ok().r#type(events::Stopped::TYPE).moniker_regex("/routing-tests/child"),
-                EventMatcher::ok().r#type(events::Stopped::TYPE).moniker_regex(
-                    "/routing-tests/offers-to-children-unavailable/child-for-offer-from-parent",
+                EventMatcher::ok().r#type(events::Stopped::TYPE).moniker("./routing-tests/child"),
+                EventMatcher::ok().r#type(events::Stopped::TYPE).moniker(
+                    "./routing-tests/offers-to-children-unavailable/child-for-offer-from-parent",
                 ),
-                EventMatcher::ok().r#type(events::Stopped::TYPE).moniker_regex(
-                    "/routing-tests/offers-to-children-unavailable/child-for-offer-from-sibling",
+                EventMatcher::ok().r#type(events::Stopped::TYPE).moniker(
+                    "./routing-tests/offers-to-children-unavailable/child-for-offer-from-sibling",
                 ),
-                EventMatcher::ok().r#type(events::Stopped::TYPE).moniker_regex(
-                    "/routing-tests/offers-to-children-unavailable/child-open-unrequested",
+                EventMatcher::ok().r#type(events::Stopped::TYPE).moniker(
+                    "./routing-tests/offers-to-children-unavailable/child-open-unrequested",
                 ),
                 EventMatcher::ok()
                     .r#type(events::Stopped::TYPE)
-                    .moniker_regex("/reader")
+                    .moniker("./reader")
                     .stop(Some(ExitStatusMatcher::Clean)),
                 EventMatcher::ok()
                     .r#type(events::CapabilityRouted::TYPE)
                     .capability_name("fuchsia.diagnostics.ArchiveAccessor")
-                    .moniker_regex("/reader"),
+                    .moniker("./reader"),
                 EventMatcher::ok()
                     .r#type(events::CapabilityRouted::TYPE)
                     .capability_name("fuchsia.logger.LogSink")
-                    .moniker_regex("/routing-tests/child"),
+                    .moniker("./routing-tests/child"),
                 EventMatcher::ok()
                     .r#type(events::CapabilityRouted::TYPE)
                     .capability_name("fuchsia.logger.LogSink")
-                    .moniker_regex(
-                        "/routing-tests/offers-to-children-unavailable/child-for-offer-from-parent",
+                    .moniker(
+                        "./routing-tests/offers-to-children-unavailable/child-for-offer-from-parent",
                     ),
                 EventMatcher::ok()
                     .r#type(events::CapabilityRouted::TYPE)
                     .capability_name("fuchsia.logger.LogSink")
-                    .moniker_regex(
-                        "/routing-tests/offers-to-children-unavailable/child-for-offer-from-sibling",
+                    .moniker(
+                        "./routing-tests/offers-to-children-unavailable/child-for-offer-from-sibling",
                     ),
                 EventMatcher::ok()
                     .r#type(events::CapabilityRouted::TYPE)
                     .capability_name("fuchsia.logger.LogSink")
-                    .moniker_regex(
-                        "/routing-tests/offers-to-children-unavailable/child-open-unrequested",
+                    .moniker(
+                        "./routing-tests/offers-to-children-unavailable/child-open-unrequested",
                     ),
                 EventMatcher::ok()
                     .r#type(events::CapabilityRouted::TYPE)
                     .capability_name("fuchsia.logger.LogSink")
-                    .moniker_regex("/archivist"),
+                    .moniker("./archivist"),
                 EventMatcher::ok()
                     .r#type(events::CapabilityRouted::TYPE)
                     .capability_name("fuchsia.sys2.EventSource")
-                    .moniker_regex("/archivist"),
+                    .moniker("./archivist"),
                 EventMatcher::ok()
                     .r#type(events::CapabilityRouted::TYPE)
                     .capability_name("fuchsia.logger.LogSink")
-                    .moniker_regex("/archivist"),
+                    .moniker("./archivist"),
             ],
             sequence::Ordering::Unordered,
         )

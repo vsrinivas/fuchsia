@@ -34,10 +34,10 @@ async fn test_normal_behavior() {
 
         instance.connect_to_binder().unwrap();
 
-        let moniker = format!("^./{}:{}$", collection_name, instance.child_name());
+        let moniker = format!("./{}:{}", collection_name, instance.child_name());
 
         EventMatcher::ok()
-            .moniker_regex(moniker.clone())
+            .moniker(moniker.clone())
             .wait::<Started>(&mut event_stream)
             .await
             .expect("failed to observe events");
@@ -47,7 +47,7 @@ async fn test_normal_behavior() {
     let () = destroy_waiter.await.expect("failed to destroy child");
 
     EventSequence::new()
-        .then(EventMatcher::ok().moniker_regex(&moniker).stop(Some(ExitStatusMatcher::Clean)))
+        .then(EventMatcher::ok().moniker(&moniker).stop(Some(ExitStatusMatcher::Clean)))
         .expect(event_stream)
         .await
         .unwrap();

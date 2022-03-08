@@ -231,7 +231,7 @@ async fn purged_storage_user() {
     instance.destroy().await.unwrap();
 
     EventMatcher::ok()
-        .moniker_regex(storage_user_moniker)
+        .moniker(storage_user_moniker)
         .wait::<Purged>(&mut event_stream)
         .await
         .unwrap();

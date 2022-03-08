@@ -76,7 +76,7 @@ async fn log_unattributed_stream() {
 
     // Ensure that Archivist has started before continuing with tests.
     let _ = EventMatcher::ok()
-        .moniker_regex("archivist")
+        .moniker_regex("archivist$")
         .wait::<Started>(&mut event_stream)
         .await
         .unwrap();

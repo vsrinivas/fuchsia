@@ -161,8 +161,8 @@ pub async fn get_child_component_event_matcher(
 ) -> Result<component_events::matcher::EventMatcher> {
     let realm_moniker = &realm.get_moniker().await.context("calling get moniker")?;
     let moniker_for_match =
-        format!("{}/{}/{}", NETEMUL_SANDBOX_MONIKER, realm_moniker, component_moniker);
-    Ok(component_events::matcher::EventMatcher::ok().moniker_regex(moniker_for_match))
+        format!("./{}/{}/{}", NETEMUL_SANDBOX_MONIKER, realm_moniker, component_moniker);
+    Ok(component_events::matcher::EventMatcher::ok().moniker(moniker_for_match))
 }
 
 /// The name of the netemul sandbox component, which is the parent component of

@@ -45,7 +45,7 @@ async fn scoped_instances(root_component: &'static str) {
 
     EventMatcher::ok()
         .stop(Some(ExitStatusMatcher::Clean))
-        .moniker_regex("./root$")
+        .moniker("./root")
         .wait::<Stopped>(&mut event_stream)
         .await
         .unwrap();

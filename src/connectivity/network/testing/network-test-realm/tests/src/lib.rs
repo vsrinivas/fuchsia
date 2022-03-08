@@ -32,7 +32,7 @@ const ETH1_INTERFACE_NAME: &'static str = "eth1";
 const ETH2_INTERFACE_NAME: &'static str = "eth2";
 const EXPECTED_INTERFACE_NAME: &'static str = "added-interface";
 const FAKE_STUB_URL: &'static str = "#meta/test-stub.cm";
-const TEST_STUB_MONIKER_REGEX: &'static str = ".*/stubs:test-stub";
+const TEST_STUB_MONIKER_REGEX: &'static str = ".*/stubs:test-stub$";
 
 const DEFAULT_IPV4_TARGET_SUBNET: fnet::Subnet = fidl_subnet!("192.168.255.1/16");
 const DEFAULT_IPV6_TARGET_SUBNET: fnet::Subnet = fidl_subnet!("3080::2/64");

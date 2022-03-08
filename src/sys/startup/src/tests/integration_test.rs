@@ -30,7 +30,7 @@ async fn integration_test() {
     test.start_component_tree().await.unwrap();
 
     let event = EventMatcher::ok()
-        .moniker_regex("./startup")
+        .moniker("./startup")
         .capability_name("fuchsia.appmgr.Startup")
         .expect_match::<CapabilityRouted>(&mut event_stream)
         .await;

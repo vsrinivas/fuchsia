@@ -104,23 +104,36 @@ impl RawFieldMatcher<String> for CapabilityNameMatcher {
 }
 
 #[derive(Clone, Debug)]
-pub struct MonikerMatcher {
-    monikers: RegexSet,
+pub enum MonikerMatcher {
+    Regex(RegexSet),
+    Direct(Vec<String>),
 }
 
 impl MonikerMatcher {
-    fn new<I, S>(monikers: I) -> Self
+    fn regex<I, S>(monikers: I) -> Self
     where
         S: AsRef<str>,
         I: IntoIterator<Item = S>,
     {
-        Self { monikers: RegexSet::new(monikers).unwrap() }
+        Self::Regex(RegexSet::new(monikers).unwrap())
+    }
+
+    fn direct<I, S>(monikers: I) -> Self
+    where
+        S: AsRef<str>,
+        I: IntoIterator<Item = S>,
+    {
+        let monikers = monikers.into_iter().map(|m| m.as_ref().to_string()).collect();
+        Self::Direct(monikers)
     }
 }
 
 impl fmt::Display for MonikerMatcher {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{:?}", self.monikers)
+        match self {
+            Self::Regex(regex) => write!(f, "{:?}", regex),
+            Self::Direct(monikers) => write!(f, "{:?}", monikers),
+        }
     }
 }
 
@@ -128,7 +141,10 @@ impl RawFieldMatcher<String> for MonikerMatcher {
     const NAME: &'static str = "target_monikers";
 
     fn matches(&self, other: &String) -> bool {
-        self.monikers.is_match(other)
+        match self {
+            Self::Regex(regex_set) => regex_set.is_match(other),
+            Self::Direct(monikers) => monikers.iter().any(|m| m == other),
+        }
     }
 }
 
@@ -247,19 +263,36 @@ impl EventMatcher {
         self
     }
 
+    /// The expected target moniker.
+    pub fn moniker(self, moniker: impl Into<String>) -> Self {
+        self.monikers(&[moniker.into()])
+    }
+
+    /// The expected target monikers.
+    pub fn monikers<I, S>(mut self, monikers: I) -> Self
+    where
+        S: AsRef<str>,
+        I: IntoIterator<Item = S>,
+    {
+        self.target_monikers = Some(MonikerMatcher::direct(monikers));
+        self
+    }
+
     /// The expected target moniker as a regular expression.
+    /// If the exact moniker is known, use the `moniker` method instead.
     pub fn moniker_regex(self, moniker: impl Into<String>) -> Self {
         self.monikers_regex(&[moniker.into()])
     }
 
     /// The expected target monikers as regular expressions. This will match against
-    /// regular expression in the iterator provided.
+    /// regular expression in the iterator provided. If the exact monikers are known,
+    /// use the `monikers` method instead.
     pub fn monikers_regex<I, S>(mut self, monikers: I) -> Self
     where
         S: AsRef<str>,
         I: IntoIterator<Item = S>,
     {
-        self.target_monikers = Some(MonikerMatcher::new(monikers));
+        self.target_monikers = Some(MonikerMatcher::regex(monikers));
         self
     }
 

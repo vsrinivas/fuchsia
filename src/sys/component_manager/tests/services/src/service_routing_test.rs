@@ -118,14 +118,14 @@ async fn start_branch() -> Result<ScopedInstance, Error> {
     EventSequence::new()
         .has_subset(
             vec![
-                EventMatcher::ok().r#type(Discovered::TYPE).moniker_regex(format!(
+                EventMatcher::ok().r#type(Discovered::TYPE).moniker(format!(
                     "./{}:{}/{}:{}",
                     BRANCHES_COLLECTION,
                     branch.child_name(),
                     ACCOUNT_PROVIDERS_COLLECTION,
                     PROVIDER_A_NAME,
                 )),
-                EventMatcher::ok().r#type(Discovered::TYPE).moniker_regex(format!(
+                EventMatcher::ok().r#type(Discovered::TYPE).moniker(format!(
                     "./{}:{}/{}:{}",
                     BRANCHES_COLLECTION,
                     branch.child_name(),
@@ -172,7 +172,7 @@ async fn start_provider(branch: &ScopedInstance, child_name: &str) -> Result<(),
     // Wait for the provider to start.
     EventSequence::new()
         .has_subset(
-            vec![EventMatcher::ok().r#type(Started::TYPE).moniker_regex(provider_moniker)],
+            vec![EventMatcher::ok().r#type(Started::TYPE).moniker(provider_moniker)],
             Ordering::Unordered,
         )
         .expect(event_stream)

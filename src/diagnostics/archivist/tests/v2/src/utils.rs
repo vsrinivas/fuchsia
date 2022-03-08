@@ -35,7 +35,7 @@ pub async fn wait_for_component_stopped_event(
     let moniker_for_match = format!("./realm_builder:{}/test/{}", instance_child_name, component);
     EventMatcher::ok()
         .stop(Some(status_match))
-        .moniker_regex(moniker_for_match)
+        .moniker(moniker_for_match)
         .wait::<Stopped>(event_stream)
         .await
         .unwrap();

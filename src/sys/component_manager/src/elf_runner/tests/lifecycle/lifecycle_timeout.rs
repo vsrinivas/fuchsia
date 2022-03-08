@@ -19,7 +19,7 @@ use {
 async fn test_stop_timeouts() {
     let event_source = EventSource::new().unwrap();
 
-    let mut event_stream_start = event_source
+    let event_stream_start = event_source
         .subscribe(vec![EventSubscription::new(vec![Started::NAME], EventMode::Async)])
         .await
         .unwrap();
@@ -60,40 +60,37 @@ async fn test_stop_timeouts() {
 
         instance.connect_to_binder().unwrap();
 
-        // Why do we have three duplicate events sets here? We expect three things
-        // to stop, the root component and its two children. The problem is that
-        // there isn't a great way to express the path of the children because
-        // it looks something like "./{collection}:{root-name}:{X}/{child-name}".
-        // We don't know what "X" is for sure, it will tend to be "1", but there
-        // is no contract around this and the validation logic does not accept
-        // generic regexes.
         let child_name = instance.child_name().to_string();
-        let moniker_stem = format!("./{}:{}", collection_name, child_name);
-        let custom_timeout_child = format!("{}/custom-timeout-child$", moniker_stem);
-        let inherited_timeout_child = format!("{}/inherited-timeout-child$", moniker_stem);
-        let target_monikers =
-            [moniker_stem.clone(), custom_timeout_child.clone(), inherited_timeout_child.clone()];
+        let root_moniker = format!("./{}:{}", collection_name, child_name);
+        let custom_timeout_child = format!("{}/custom-timeout-child", root_moniker);
+        let inherited_timeout_child = format!("{}/inherited-timeout-child", root_moniker);
 
-        for _ in 0..target_monikers.len() {
-            EventMatcher::ok()
-                .monikers_regex(&target_monikers)
-                .wait::<Started>(&mut event_stream_start)
-                .await
-                .expect("failed to observe events");
-        }
+        EventSequence::new()
+            .all_of(
+                vec![
+                    EventMatcher::ok().r#type(Started::TYPE).moniker(root_moniker.clone()),
+                    EventMatcher::ok().r#type(Started::TYPE).moniker(custom_timeout_child.clone()),
+                    EventMatcher::ok()
+                        .r#type(Started::TYPE)
+                        .moniker(inherited_timeout_child.clone()),
+                ],
+                Ordering::Unordered,
+            )
+            .expect(event_stream_start)
+            .await
+            .unwrap();
 
-        (moniker_stem, custom_timeout_child, inherited_timeout_child)
+        (root_moniker, custom_timeout_child, inherited_timeout_child)
     };
 
+    // We expect three components to stop: the root component and its two children.
     EventSequence::new()
         .has_subset(
             vec![
                 EventMatcher::ok()
-                    .monikers_regex(vec![custom_timeout_child.clone()])
+                    .moniker(custom_timeout_child.clone())
                     .stop(Some(ExitStatusMatcher::Clean)),
-                EventMatcher::ok()
-                    .r#type(Purged::TYPE)
-                    .monikers_regex(vec![custom_timeout_child.clone()]),
+                EventMatcher::ok().r#type(Purged::TYPE).moniker(custom_timeout_child.clone()),
             ],
             Ordering::Ordered,
         )
@@ -105,11 +102,9 @@ async fn test_stop_timeouts() {
         .has_subset(
             vec![
                 EventMatcher::ok()
-                    .monikers_regex(vec![inherited_timeout_child.clone()])
+                    .moniker(inherited_timeout_child.clone())
                     .stop(Some(ExitStatusMatcher::Clean)),
-                EventMatcher::ok()
-                    .r#type(Purged::TYPE)
-                    .monikers_regex(vec![inherited_timeout_child.clone()]),
+                EventMatcher::ok().r#type(Purged::TYPE).moniker(inherited_timeout_child.clone()),
             ],
             Ordering::Ordered,
         )
@@ -120,10 +115,8 @@ async fn test_stop_timeouts() {
     EventSequence::new()
         .has_subset(
             vec![
-                EventMatcher::ok()
-                    .monikers_regex(vec![parent.clone()])
-                    .stop(Some(ExitStatusMatcher::AnyCrash)),
-                EventMatcher::ok().r#type(Purged::TYPE).monikers_regex(vec![parent.clone()]),
+                EventMatcher::ok().moniker(parent.clone()).stop(Some(ExitStatusMatcher::AnyCrash)),
+                EventMatcher::ok().r#type(Purged::TYPE).moniker(parent.clone()),
             ],
             Ordering::Ordered,
         )
