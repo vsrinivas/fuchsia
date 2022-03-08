@@ -14,7 +14,8 @@ use {
 trait DeviceInfoPrinter {
     fn print(&self, tabs: usize) -> Result<()>;
 
-    fn print_graph(&self, child: &fdd::DeviceInfo) -> Result<()>;
+    fn print_graph_node(&self) -> Result<()>;
+    fn print_graph_edge(&self, child: &fdd::DeviceInfo) -> Result<()>;
 }
 
 struct DFv1Device(fdd::DeviceInfo);
@@ -41,22 +42,26 @@ impl DeviceInfoPrinter for DFv1Device {
         Ok(())
     }
 
-    fn print_graph(&self, child: &fdd::DeviceInfo) -> Result<()> {
+    fn print_graph_node(&self) -> Result<()> {
         println!(
-            "     \"{}\" -> \"{}\"",
+            "     \"{}\" [label=\"{}\"]",
+            self.0.id.as_ref().ok_or(format_err!("Device missing id"))?,
             Self::extract_name(
                 &self
                     .0
                     .topological_path
                     .as_ref()
                     .ok_or(format_err!("Device missing topological path"))?
-            ),
-            Self::extract_name(
-                &child
-                    .topological_path
-                    .as_ref()
-                    .ok_or(format_err!("Child device missing topological path"))?
             )
+        );
+        Ok(())
+    }
+
+    fn print_graph_edge(&self, child: &fdd::DeviceInfo) -> Result<()> {
+        println!(
+            "     \"{}\" -> \"{}\"",
+            self.0.id.as_ref().ok_or(format_err!("Device missing id"))?,
+            child.id.as_ref().ok_or(format_err!("Child device missing id"))?,
         );
         Ok(())
     }
@@ -84,16 +89,22 @@ impl DeviceInfoPrinter for DFv2Node {
         Ok(())
     }
 
-    fn print_graph(&self, child: &fdd::DeviceInfo) -> Result<()> {
+    fn print_graph_node(&self) -> Result<()> {
         println!(
-            "     \"{}\" -> \"{}\"",
+            "     \"{}\" [label=\"{}\"]",
+            self.0.id.as_ref().ok_or(format_err!("Node missing id"))?,
             Self::extract_name(
                 &self.0.moniker.as_ref().ok_or(format_err!("Node missing moniker"))?
-            ),
-            // If the device is a DFv2 node then it is assumed that the child is a DFv2 node.
-            Self::extract_name(
-                &child.moniker.as_ref().ok_or(format_err!("Child node missing moniker"))?
             )
+        );
+        Ok(())
+    }
+
+    fn print_graph_edge(&self, child: &fdd::DeviceInfo) -> Result<()> {
+        println!(
+            "     \"{}\" -> \"{}\"",
+            self.0.id.as_ref().ok_or(format_err!("Node missing id"))?,
+            child.id.as_ref().ok_or(format_err!("Child node missing id"))?
         );
         Ok(())
     }
@@ -121,10 +132,17 @@ impl DeviceInfoPrinter for Device {
         }
     }
 
-    fn print_graph(&self, child: &fdd::DeviceInfo) -> Result<()> {
+    fn print_graph_node(&self) -> Result<()> {
         match self {
-            Device::V1(device) => device.print_graph(child),
-            Device::V2(node) => node.print_graph(child),
+            Device::V1(device) => device.print_graph_node(),
+            Device::V2(node) => node.print_graph_node(),
+        }
+    }
+
+    fn print_graph_edge(&self, child: &fdd::DeviceInfo) -> Result<()> {
+        match self {
+            Device::V1(device) => device.print_graph_edge(child),
+            Device::V2(node) => node.print_graph_edge(child),
         }
     }
 }
@@ -186,13 +204,18 @@ pub async fn dump(
         println!("     node [ shape = \"box\" color = \"#2a5b4f\" penwidth = 2.25 fontname = \"prompt medium\" fontsize = 10 margin = 0.22 ];");
         println!("     edge [ color = \"#37474f\" penwidth = 1 style = dashed fontname = \"roboto mono\" fontsize = 10 ];");
         for device in devices.iter() {
+            device.print_graph_node()?;
+        }
+
+        for device in devices.iter() {
             if let Some(child_ids) = &device.get_device_info().child_ids {
                 for id in child_ids.iter().rev() {
                     let child = &device_map[&id];
-                    device.print_graph(child.get_device_info())?;
+                    device.print_graph_edge(child.get_device_info())?;
                 }
             }
         }
+
         println!("}}");
     } else {
         let roots = devices.iter().filter(|device| {
