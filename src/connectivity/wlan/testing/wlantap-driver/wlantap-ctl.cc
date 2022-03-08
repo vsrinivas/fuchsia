@@ -66,7 +66,7 @@ struct WlantapCtl : fidl::WireServer<wlantap::WlantapCtl> {
       // replace it with the officially supported API once that is implemented.
       // TODO(fxbug.dev/45252): Use FIDL at rest.
       fidl::unstable::OwnedEncodedMessage<wlantap::wire::WlantapPhyConfig> encoded(
-          fidl::internal::WireFormatVersion::kV1, &request->config);
+          fidl::internal::WireFormatVersion::kV2, &request->config);
       if (!encoded.ok()) {
         completer.Reply(encoded.status());
         return;
@@ -77,7 +77,7 @@ struct WlantapCtl : fidl::WireServer<wlantap::WlantapCtl> {
       uint32_t byte_actual = incoming.byte_actual();
       // TODO(fxbug.dev/45252): Use FIDL at rest.
       fidl::unstable::DecodedMessage<wlantap::wire::WlantapPhyConfig> decoded{
-          fidl::internal::WireFormatVersion::kV1, std::move(incoming)};
+          fidl::internal::WireFormatVersion::kV2, std::move(incoming)};
       if (!decoded.ok()) {
         completer.Reply(status);
         return;
