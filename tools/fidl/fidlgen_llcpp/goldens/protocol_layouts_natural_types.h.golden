@@ -139,9 +139,13 @@ class MainProtocol_TwoWayImportWithError_Result final {
   std::shared_ptr<Storage_> CloneStorage_() const;
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_protocollayouts::MainProtocol_TwoWayImportWithError_Result>;
-  static constexpr std::array<
-      std::optional<::fidl::internal::NaturalHandleInformation>, 3>
-      kMembers = {std::nullopt, std::nullopt, std::nullopt};
+  static constexpr auto kMembers =
+      std::make_tuple(::fidl::internal::NaturalUnionMember<
+                          ::fidl::internal::NaturalCodingConstraintEmpty>(),
+                      ::fidl::internal::NaturalUnionMember<
+                          fidl::internal::NaturalCodingConstraintEmpty>(),
+                      ::fidl::internal::NaturalUnionMember<
+                          fidl::internal::NaturalCodingConstraintEmpty>());
 
   explicit MainProtocol_TwoWayImportWithError_Result(
       std::shared_ptr<Storage_> storage)
@@ -246,8 +250,9 @@ class MainProtocolTwoWayImportWithErrorTopResponse final {
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<
           Storage_,
-          ::test_protocollayouts::MainProtocol_TwoWayImportWithError_Result>{
-          &Storage_::result, 0, 0});
+          ::test_protocollayouts::MainProtocol_TwoWayImportWithError_Result,
+          fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::result, 0,
+                                                        0});
 };
 
 extern "C" const fidl_type_t
@@ -313,9 +318,11 @@ class MainProtocol_TwoWayAnonWithError_Response final {
   std::shared_ptr<Storage_> CloneStorage_() const;
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_protocollayouts::MainProtocol_TwoWayAnonWithError_Response>;
-  static constexpr std::array<
-      std::optional<::fidl::internal::NaturalHandleInformation>, 2>
-      kMembers = {std::nullopt, std::nullopt};
+  static constexpr auto kMembers =
+      std::make_tuple(::fidl::internal::NaturalUnionMember<
+                          ::fidl::internal::NaturalCodingConstraintEmpty>(),
+                      ::fidl::internal::NaturalUnionMember<
+                          fidl::internal::NaturalCodingConstraintEmpty>());
 
   explicit MainProtocol_TwoWayAnonWithError_Response(
       std::shared_ptr<Storage_> storage)
@@ -425,9 +432,13 @@ class MainProtocol_TwoWayAnonWithError_Result final {
   std::shared_ptr<Storage_> CloneStorage_() const;
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_protocollayouts::MainProtocol_TwoWayAnonWithError_Result>;
-  static constexpr std::array<
-      std::optional<::fidl::internal::NaturalHandleInformation>, 3>
-      kMembers = {std::nullopt, std::nullopt, std::nullopt};
+  static constexpr auto kMembers =
+      std::make_tuple(::fidl::internal::NaturalUnionMember<
+                          ::fidl::internal::NaturalCodingConstraintEmpty>(),
+                      ::fidl::internal::NaturalUnionMember<
+                          fidl::internal::NaturalCodingConstraintEmpty>(),
+                      ::fidl::internal::NaturalUnionMember<
+                          fidl::internal::NaturalCodingConstraintEmpty>());
 
   explicit MainProtocol_TwoWayAnonWithError_Result(
       std::shared_ptr<Storage_> storage)
@@ -532,8 +543,9 @@ class MainProtocolTwoWayAnonWithErrorTopResponse final {
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<
           Storage_,
-          ::test_protocollayouts::MainProtocol_TwoWayAnonWithError_Result>{
-          &Storage_::result, 0, 0});
+          ::test_protocollayouts::MainProtocol_TwoWayAnonWithError_Result,
+          fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::result, 0,
+                                                        0});
 };
 
 extern "C" const fidl_type_t
@@ -612,9 +624,13 @@ class MainProtocol_OnImportWithError_Result final {
   std::shared_ptr<Storage_> CloneStorage_() const;
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_protocollayouts::MainProtocol_OnImportWithError_Result>;
-  static constexpr std::array<
-      std::optional<::fidl::internal::NaturalHandleInformation>, 3>
-      kMembers = {std::nullopt, std::nullopt, std::nullopt};
+  static constexpr auto kMembers =
+      std::make_tuple(::fidl::internal::NaturalUnionMember<
+                          ::fidl::internal::NaturalCodingConstraintEmpty>(),
+                      ::fidl::internal::NaturalUnionMember<
+                          fidl::internal::NaturalCodingConstraintEmpty>(),
+                      ::fidl::internal::NaturalUnionMember<
+                          fidl::internal::NaturalCodingConstraintEmpty>());
 
   explicit MainProtocol_OnImportWithError_Result(
       std::shared_ptr<Storage_> storage)
@@ -717,8 +733,9 @@ class MainProtocolOnImportWithErrorRequest final {
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<
           Storage_,
-          ::test_protocollayouts::MainProtocol_OnImportWithError_Result>{
-          &Storage_::result, 0, 0});
+          ::test_protocollayouts::MainProtocol_OnImportWithError_Result,
+          fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::result, 0,
+                                                        0});
 };
 
 extern "C" const fidl_type_t
@@ -774,8 +791,9 @@ class MainProtocol_OnAnonWithError_Response final {
       ::test_protocollayouts::MainProtocol_OnAnonWithError_Response>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_protocollayouts::MainProtocol_OnAnonWithError_Response>;
-  static constexpr auto kMembers =
-      std::make_tuple(::fidl::internal::NaturalTableMember<Storage_, uint16_t>{
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalTableMember<
+          Storage_, uint16_t, fidl::internal::NaturalCodingConstraintEmpty>{
           1, &Storage_::a});
 };
 
@@ -854,9 +872,13 @@ class MainProtocol_OnAnonWithError_Result final {
   std::shared_ptr<Storage_> CloneStorage_() const;
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_protocollayouts::MainProtocol_OnAnonWithError_Result>;
-  static constexpr std::array<
-      std::optional<::fidl::internal::NaturalHandleInformation>, 3>
-      kMembers = {std::nullopt, std::nullopt, std::nullopt};
+  static constexpr auto kMembers =
+      std::make_tuple(::fidl::internal::NaturalUnionMember<
+                          ::fidl::internal::NaturalCodingConstraintEmpty>(),
+                      ::fidl::internal::NaturalUnionMember<
+                          fidl::internal::NaturalCodingConstraintEmpty>(),
+                      ::fidl::internal::NaturalUnionMember<
+                          fidl::internal::NaturalCodingConstraintEmpty>());
 
   explicit MainProtocol_OnAnonWithError_Result(
       std::shared_ptr<Storage_> storage)
@@ -958,9 +980,9 @@ class MainProtocolOnAnonWithErrorRequest final {
       ::test_protocollayouts::MainProtocolOnAnonWithErrorRequest>;
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<
-          Storage_,
-          ::test_protocollayouts::MainProtocol_OnAnonWithError_Result>{
-          &Storage_::result, 0, 0});
+          Storage_, ::test_protocollayouts::MainProtocol_OnAnonWithError_Result,
+          fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::result, 0,
+                                                        0});
 };
 
 extern "C" const fidl_type_t
@@ -1016,8 +1038,9 @@ class MainProtocolTwoWayAnonWithErrorRequest final {
       ::test_protocollayouts::MainProtocolTwoWayAnonWithErrorRequest>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_protocollayouts::MainProtocolTwoWayAnonWithErrorRequest>;
-  static constexpr auto kMembers =
-      std::make_tuple(::fidl::internal::NaturalTableMember<Storage_, uint16_t>{
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalTableMember<
+          Storage_, uint16_t, fidl::internal::NaturalCodingConstraintEmpty>{
           1, &Storage_::a});
 };
 
@@ -1074,8 +1097,9 @@ class MainProtocolTwoWayAnonTopResponse final {
       ::test_protocollayouts::MainProtocolTwoWayAnonTopResponse>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_protocollayouts::MainProtocolTwoWayAnonTopResponse>;
-  static constexpr auto kMembers =
-      std::make_tuple(::fidl::internal::NaturalTableMember<Storage_, uint16_t>{
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalTableMember<
+          Storage_, uint16_t, fidl::internal::NaturalCodingConstraintEmpty>{
           1, &Storage_::a});
 };
 
@@ -1137,9 +1161,11 @@ class MainProtocolTwoWayAnonRequest final {
   std::shared_ptr<Storage_> CloneStorage_() const;
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_protocollayouts::MainProtocolTwoWayAnonRequest>;
-  static constexpr std::array<
-      std::optional<::fidl::internal::NaturalHandleInformation>, 2>
-      kMembers = {std::nullopt, std::nullopt};
+  static constexpr auto kMembers =
+      std::make_tuple(::fidl::internal::NaturalUnionMember<
+                          ::fidl::internal::NaturalCodingConstraintEmpty>(),
+                      ::fidl::internal::NaturalUnionMember<
+                          fidl::internal::NaturalCodingConstraintEmpty>());
 
   explicit MainProtocolTwoWayAnonRequest(std::shared_ptr<Storage_> storage)
       : storage_(std::move(storage)) {}
@@ -1217,8 +1243,9 @@ class MainProtocolOneWayAnonRequest final {
       ::test_protocollayouts::MainProtocolOneWayAnonRequest>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_protocollayouts::MainProtocolOneWayAnonRequest>;
-  static constexpr auto kMembers =
-      std::make_tuple(::fidl::internal::NaturalTableMember<Storage_, uint16_t>{
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalTableMember<
+          Storage_, uint16_t, fidl::internal::NaturalCodingConstraintEmpty>{
           1, &Storage_::a});
 };
 
@@ -1278,9 +1305,11 @@ class MainProtocolOnAnonRequest final {
   std::shared_ptr<Storage_> CloneStorage_() const;
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_protocollayouts::MainProtocolOnAnonRequest>;
-  static constexpr std::array<
-      std::optional<::fidl::internal::NaturalHandleInformation>, 2>
-      kMembers = {std::nullopt, std::nullopt};
+  static constexpr auto kMembers =
+      std::make_tuple(::fidl::internal::NaturalUnionMember<
+                          ::fidl::internal::NaturalCodingConstraintEmpty>(),
+                      ::fidl::internal::NaturalUnionMember<
+                          fidl::internal::NaturalCodingConstraintEmpty>());
 
   explicit MainProtocolOnAnonRequest(std::shared_ptr<Storage_> storage)
       : storage_(std::move(storage)) {}
@@ -1358,9 +1387,11 @@ class LocalUnionPayload final {
   std::shared_ptr<Storage_> CloneStorage_() const;
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_protocollayouts::LocalUnionPayload>;
-  static constexpr std::array<
-      std::optional<::fidl::internal::NaturalHandleInformation>, 2>
-      kMembers = {std::nullopt, std::nullopt};
+  static constexpr auto kMembers =
+      std::make_tuple(::fidl::internal::NaturalUnionMember<
+                          ::fidl::internal::NaturalCodingConstraintEmpty>(),
+                      ::fidl::internal::NaturalUnionMember<
+                          fidl::internal::NaturalCodingConstraintEmpty>());
 
   explicit LocalUnionPayload(std::shared_ptr<Storage_> storage)
       : storage_(std::move(storage)) {}
@@ -1463,9 +1494,13 @@ class MainProtocol_TwoWayLocalWithError_Result final {
   std::shared_ptr<Storage_> CloneStorage_() const;
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_protocollayouts::MainProtocol_TwoWayLocalWithError_Result>;
-  static constexpr std::array<
-      std::optional<::fidl::internal::NaturalHandleInformation>, 3>
-      kMembers = {std::nullopt, std::nullopt, std::nullopt};
+  static constexpr auto kMembers =
+      std::make_tuple(::fidl::internal::NaturalUnionMember<
+                          ::fidl::internal::NaturalCodingConstraintEmpty>(),
+                      ::fidl::internal::NaturalUnionMember<
+                          fidl::internal::NaturalCodingConstraintEmpty>(),
+                      ::fidl::internal::NaturalUnionMember<
+                          fidl::internal::NaturalCodingConstraintEmpty>());
 
   explicit MainProtocol_TwoWayLocalWithError_Result(
       std::shared_ptr<Storage_> storage)
@@ -1570,8 +1605,9 @@ class MainProtocolTwoWayLocalWithErrorTopResponse final {
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<
           Storage_,
-          ::test_protocollayouts::MainProtocol_TwoWayLocalWithError_Result>{
-          &Storage_::result, 0, 0});
+          ::test_protocollayouts::MainProtocol_TwoWayLocalWithError_Result,
+          fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::result, 0,
+                                                        0});
 };
 
 extern "C" const fidl_type_t test_protocollayouts_LocalTablePayloadTable;
@@ -1617,8 +1653,9 @@ class LocalTablePayload final {
       ::test_protocollayouts::LocalTablePayload>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_protocollayouts::LocalTablePayload>;
-  static constexpr auto kMembers =
-      std::make_tuple(::fidl::internal::NaturalTableMember<Storage_, uint16_t>{
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalTableMember<
+          Storage_, uint16_t, fidl::internal::NaturalCodingConstraintEmpty>{
           1, &Storage_::a});
 };
 
@@ -1697,9 +1734,13 @@ class MainProtocol_OnLocalWithError_Result final {
   std::shared_ptr<Storage_> CloneStorage_() const;
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_protocollayouts::MainProtocol_OnLocalWithError_Result>;
-  static constexpr std::array<
-      std::optional<::fidl::internal::NaturalHandleInformation>, 3>
-      kMembers = {std::nullopt, std::nullopt, std::nullopt};
+  static constexpr auto kMembers =
+      std::make_tuple(::fidl::internal::NaturalUnionMember<
+                          ::fidl::internal::NaturalCodingConstraintEmpty>(),
+                      ::fidl::internal::NaturalUnionMember<
+                          fidl::internal::NaturalCodingConstraintEmpty>(),
+                      ::fidl::internal::NaturalUnionMember<
+                          fidl::internal::NaturalCodingConstraintEmpty>());
 
   explicit MainProtocol_OnLocalWithError_Result(
       std::shared_ptr<Storage_> storage)
@@ -1802,8 +1843,9 @@ class MainProtocolOnLocalWithErrorRequest final {
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<
           Storage_,
-          ::test_protocollayouts::MainProtocol_OnLocalWithError_Result>{
-          &Storage_::result, 0, 0});
+          ::test_protocollayouts::MainProtocol_OnLocalWithError_Result,
+          fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::result, 0,
+                                                        0});
 };
 
 }  // namespace test_protocollayouts
@@ -1829,7 +1871,8 @@ struct ::fidl::internal::TypeTraits<
 
 template <>
 struct internal::NaturalCodingTraits<
-    ::test_protocollayouts::MainProtocolTwoWayImportWithErrorTopResponse>
+    ::test_protocollayouts::MainProtocolTwoWayImportWithErrorTopResponse,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     final
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_protocollayouts::MainProtocolTwoWayImportWithErrorTopResponse,
@@ -1873,7 +1916,8 @@ struct ::fidl::internal::TypeTraits<
 
 template <>
 struct internal::NaturalCodingTraits<
-    ::test_protocollayouts::MainProtocolTwoWayAnonWithErrorTopResponse>
+    ::test_protocollayouts::MainProtocolTwoWayAnonWithErrorTopResponse,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     final
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_protocollayouts::MainProtocolTwoWayAnonWithErrorTopResponse,
@@ -1915,7 +1959,8 @@ struct ::fidl::internal::TypeTraits<
 
 template <>
 struct internal::NaturalCodingTraits<
-    ::test_protocollayouts::MainProtocolOnImportWithErrorRequest>
+    ::test_protocollayouts::MainProtocolOnImportWithErrorRequest,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_protocollayouts::MainProtocolOnImportWithErrorRequest,
                 24, 16> {};
@@ -1955,7 +2000,8 @@ struct ::fidl::internal::TypeTraits<
 
 template <>
 struct internal::NaturalCodingTraits<
-    ::test_protocollayouts::MainProtocolOnAnonWithErrorRequest>
+    ::test_protocollayouts::MainProtocolOnAnonWithErrorRequest,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     final
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_protocollayouts::MainProtocolOnAnonWithErrorRequest, 24, 16> {
@@ -1997,7 +2043,8 @@ struct ::fidl::internal::TypeTraits<
 
 template <>
 struct internal::NaturalCodingTraits<
-    ::test_protocollayouts::MainProtocolTwoWayLocalWithErrorTopResponse>
+    ::test_protocollayouts::MainProtocolTwoWayLocalWithErrorTopResponse,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     final
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_protocollayouts::MainProtocolTwoWayLocalWithErrorTopResponse,
@@ -2039,7 +2086,8 @@ struct ::fidl::internal::TypeTraits<
 
 template <>
 struct internal::NaturalCodingTraits<
-    ::test_protocollayouts::MainProtocolOnLocalWithErrorRequest>
+    ::test_protocollayouts::MainProtocolOnLocalWithErrorRequest,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     final
     : public ::fidl::internal::NaturalStructCodingTraits<
           ::test_protocollayouts::MainProtocolOnLocalWithErrorRequest, 24, 16> {
@@ -2079,7 +2127,8 @@ struct ::fidl::internal::TypeTraits<
 
 template <>
 struct internal::NaturalCodingTraits<
-    ::test_protocollayouts::MainProtocol_OnAnonWithError_Response>
+    ::test_protocollayouts::MainProtocol_OnAnonWithError_Response,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     : public ::fidl::internal::NaturalTableCodingTraits<
           ::test_protocollayouts::MainProtocol_OnAnonWithError_Response> {};
 
@@ -2102,7 +2151,8 @@ struct ::fidl::internal::TypeTraits<
 
 template <>
 struct internal::NaturalCodingTraits<
-    ::test_protocollayouts::MainProtocolTwoWayAnonWithErrorRequest>
+    ::test_protocollayouts::MainProtocolTwoWayAnonWithErrorRequest,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     : public ::fidl::internal::NaturalTableCodingTraits<
           ::test_protocollayouts::MainProtocolTwoWayAnonWithErrorRequest> {};
 
@@ -2124,7 +2174,8 @@ struct ::fidl::internal::TypeTraits<
 
 template <>
 struct internal::NaturalCodingTraits<
-    ::test_protocollayouts::MainProtocolTwoWayAnonTopResponse>
+    ::test_protocollayouts::MainProtocolTwoWayAnonTopResponse,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     : public ::fidl::internal::NaturalTableCodingTraits<
           ::test_protocollayouts::MainProtocolTwoWayAnonTopResponse> {};
 
@@ -2146,7 +2197,8 @@ struct ::fidl::internal::TypeTraits<
 
 template <>
 struct internal::NaturalCodingTraits<
-    ::test_protocollayouts::MainProtocolOneWayAnonRequest>
+    ::test_protocollayouts::MainProtocolOneWayAnonRequest,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     : public ::fidl::internal::NaturalTableCodingTraits<
           ::test_protocollayouts::MainProtocolOneWayAnonRequest> {};
 
@@ -2165,7 +2217,9 @@ struct ::fidl::internal::TypeTraits<::test_protocollayouts::LocalTablePayload>
 };
 
 template <>
-struct internal::NaturalCodingTraits<::test_protocollayouts::LocalTablePayload>
+struct internal::NaturalCodingTraits<
+    ::test_protocollayouts::LocalTablePayload,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     : public ::fidl::internal::NaturalTableCodingTraits<
           ::test_protocollayouts::LocalTablePayload> {};
 
@@ -2192,7 +2246,8 @@ struct ::fidl::internal::TypeTraits<
 
 template <>
 struct internal::NaturalCodingTraits<
-    ::test_protocollayouts::MainProtocol_TwoWayImportWithError_Result>
+    ::test_protocollayouts::MainProtocol_TwoWayImportWithError_Result,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     final
     : public ::fidl::internal::NaturalUnionCodingTraits<
           ::test_protocollayouts::MainProtocol_TwoWayImportWithError_Result> {};
@@ -2219,7 +2274,8 @@ struct ::fidl::internal::TypeTraits<
 
 template <>
 struct internal::NaturalCodingTraits<
-    ::test_protocollayouts::MainProtocol_TwoWayAnonWithError_Response>
+    ::test_protocollayouts::MainProtocol_TwoWayAnonWithError_Response,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     final
     : public ::fidl::internal::NaturalUnionCodingTraits<
           ::test_protocollayouts::MainProtocol_TwoWayAnonWithError_Response> {};
@@ -2245,7 +2301,8 @@ struct ::fidl::internal::TypeTraits<
 
 template <>
 struct internal::NaturalCodingTraits<
-    ::test_protocollayouts::MainProtocol_TwoWayAnonWithError_Result>
+    ::test_protocollayouts::MainProtocol_TwoWayAnonWithError_Result,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     final
     : public ::fidl::internal::NaturalUnionCodingTraits<
           ::test_protocollayouts::MainProtocol_TwoWayAnonWithError_Result> {};
@@ -2270,7 +2327,8 @@ struct ::fidl::internal::TypeTraits<
 
 template <>
 struct internal::NaturalCodingTraits<
-    ::test_protocollayouts::MainProtocol_OnImportWithError_Result>
+    ::test_protocollayouts::MainProtocol_OnImportWithError_Result,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalUnionCodingTraits<
                 ::test_protocollayouts::MainProtocol_OnImportWithError_Result> {
 };
@@ -2295,7 +2353,8 @@ struct ::fidl::internal::TypeTraits<
 
 template <>
 struct internal::NaturalCodingTraits<
-    ::test_protocollayouts::MainProtocol_OnAnonWithError_Result>
+    ::test_protocollayouts::MainProtocol_OnAnonWithError_Result,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalUnionCodingTraits<
                 ::test_protocollayouts::MainProtocol_OnAnonWithError_Result> {};
 extern "C" const fidl_type_t
@@ -2319,7 +2378,8 @@ struct ::fidl::internal::TypeTraits<
 
 template <>
 struct internal::NaturalCodingTraits<
-    ::test_protocollayouts::MainProtocolTwoWayAnonRequest>
+    ::test_protocollayouts::MainProtocolTwoWayAnonRequest,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalUnionCodingTraits<
                 ::test_protocollayouts::MainProtocolTwoWayAnonRequest> {};
 extern "C" const fidl_type_t
@@ -2343,7 +2403,8 @@ struct ::fidl::internal::TypeTraits<
 
 template <>
 struct internal::NaturalCodingTraits<
-    ::test_protocollayouts::MainProtocolOnAnonRequest>
+    ::test_protocollayouts::MainProtocolOnAnonRequest,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalUnionCodingTraits<
                 ::test_protocollayouts::MainProtocolOnAnonRequest> {};
 extern "C" const fidl_type_t test_protocollayouts_LocalUnionPayloadTable;
@@ -2364,7 +2425,9 @@ struct ::fidl::internal::TypeTraits<::test_protocollayouts::LocalUnionPayload>
 };
 
 template <>
-struct internal::NaturalCodingTraits<::test_protocollayouts::LocalUnionPayload>
+struct internal::NaturalCodingTraits<
+    ::test_protocollayouts::LocalUnionPayload,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalUnionCodingTraits<
                 ::test_protocollayouts::LocalUnionPayload> {};
 extern "C" const fidl_type_t
@@ -2389,7 +2452,8 @@ struct ::fidl::internal::TypeTraits<
 
 template <>
 struct internal::NaturalCodingTraits<
-    ::test_protocollayouts::MainProtocol_TwoWayLocalWithError_Result>
+    ::test_protocollayouts::MainProtocol_TwoWayLocalWithError_Result,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     final
     : public ::fidl::internal::NaturalUnionCodingTraits<
           ::test_protocollayouts::MainProtocol_TwoWayLocalWithError_Result> {};
@@ -2414,7 +2478,8 @@ struct ::fidl::internal::TypeTraits<
 
 template <>
 struct internal::NaturalCodingTraits<
-    ::test_protocollayouts::MainProtocol_OnLocalWithError_Result>
+    ::test_protocollayouts::MainProtocol_OnLocalWithError_Result,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalUnionCodingTraits<
                 ::test_protocollayouts::MainProtocol_OnLocalWithError_Result> {
 };
