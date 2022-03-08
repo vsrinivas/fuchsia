@@ -78,14 +78,29 @@ class DataGenerator {
     }
   }
 
+  // Note: uniform_int_distribution is undefined behavior for integral types
+  // smaller than short.
   template <typename T>
-  std::enable_if_t<std::is_same_v<T, bool>, T> next() {
-    return std::uniform_int_distribution<short>{}(rand_engine_) % 2;
-  }
+  struct UniformDistType {
+    using Type = T;
+  };
+  template <>
+  struct UniformDistType<bool> {
+    using Type = uint16_t;
+  };
+  template <>
+  struct UniformDistType<uint8_t> {
+    using Type = uint16_t;
+  };
+  template <>
+  struct UniformDistType<int8_t> {
+    using Type = int16_t;
+  };
 
   template <typename T>
-  std::enable_if_t<std::is_integral_v<T> && !std::is_same_v<T, bool>, T> next() {
-    return std::uniform_int_distribution<T>{}(rand_engine_);
+  std::enable_if_t<std::is_integral_v<T>, T> next() {
+    return static_cast<T>(std::uniform_int_distribution<typename UniformDistType<T>::Type>(
+        0, std::numeric_limits<T>::max())(rand_engine_));
   }
 
   template <typename T>
@@ -582,11 +597,12 @@ void InitializeStruct(Struct* s) {
   // Seed deterministically so that this function's outputs are predictable.
   rand_engine.seed(42);
   std::bernoulli_distribution bool_distribution;
-  std::uniform_int_distribution<int8_t> int8_distribution;
+  std::uniform_int_distribution<int16_t> int8_distribution(0, std::numeric_limits<int8_t>::max());
   std::uniform_int_distribution<int16_t> int16_distribution;
   std::uniform_int_distribution<int32_t> int32_distribution;
   std::uniform_int_distribution<int64_t> int64_distribution;
-  std::uniform_int_distribution<uint8_t> uint8_distribution;
+  std::uniform_int_distribution<uint16_t> uint8_distribution(0,
+                                                             std::numeric_limits<uint8_t>::max());
   std::uniform_int_distribution<uint16_t> uint16_distribution;
   std::uniform_int_distribution<uint32_t> uint32_distribution;
   std::uniform_int_distribution<uint64_t> uint64_distribution;
@@ -597,11 +613,11 @@ void InitializeStruct(Struct* s) {
 
   // primitive_types
   s->primitive_types.b = bool_distribution(rand_engine);
-  s->primitive_types.i8 = int8_distribution(rand_engine);
+  s->primitive_types.i8 = static_cast<int8_t>(int8_distribution(rand_engine));
   s->primitive_types.i16 = int16_distribution(rand_engine);
   s->primitive_types.i32 = int32_distribution(rand_engine);
   s->primitive_types.i64 = int64_distribution(rand_engine);
-  s->primitive_types.u8 = uint8_distribution(rand_engine);
+  s->primitive_types.u8 = static_cast<uint8_t>(uint8_distribution(rand_engine));
   s->primitive_types.u16 = uint16_distribution(rand_engine);
   s->primitive_types.u32 = uint32_distribution(rand_engine);
   s->primitive_types.u64 = uint64_distribution(rand_engine);
@@ -610,11 +626,11 @@ void InitializeStruct(Struct* s) {
 
   // arrays
   s->arrays.b_0[0] = bool_distribution(rand_engine);
-  s->arrays.i8_0[0] = int8_distribution(rand_engine);
+  s->arrays.i8_0[0] = static_cast<int8_t>(int8_distribution(rand_engine));
   s->arrays.i16_0[0] = int16_distribution(rand_engine);
   s->arrays.i32_0[0] = int32_distribution(rand_engine);
   s->arrays.i64_0[0] = int64_distribution(rand_engine);
-  s->arrays.u8_0[0] = uint8_distribution(rand_engine);
+  s->arrays.u8_0[0] = static_cast<uint8_t>(uint8_distribution(rand_engine));
   s->arrays.u16_0[0] = uint16_distribution(rand_engine);
   s->arrays.u32_0[0] = uint32_distribution(rand_engine);
   s->arrays.u64_0[0] = uint64_distribution(rand_engine);
@@ -624,11 +640,11 @@ void InitializeStruct(Struct* s) {
 
   for (uint32_t i = 0; i < fidl::test::compatibility::arrays_size; ++i) {
     s->arrays.b_1[i] = bool_distribution(rand_engine);
-    s->arrays.i8_1[i] = int8_distribution(rand_engine);
+    s->arrays.i8_1[i] = static_cast<int8_t>(int8_distribution(rand_engine));
     s->arrays.i16_1[i] = int16_distribution(rand_engine);
     s->arrays.i32_1[i] = int32_distribution(rand_engine);
     s->arrays.i64_1[i] = int64_distribution(rand_engine);
-    s->arrays.u8_1[i] = uint8_distribution(rand_engine);
+    s->arrays.u8_1[i] = static_cast<uint8_t>(uint8_distribution(rand_engine));
     s->arrays.u16_1[i] = uint16_distribution(rand_engine);
     s->arrays.u32_1[i] = uint32_distribution(rand_engine);
     s->arrays.u64_1[i] = uint64_distribution(rand_engine);
@@ -641,11 +657,11 @@ void InitializeStruct(Struct* s) {
   for (uint32_t i = 0; i < fidl::test::compatibility::arrays_size; ++i) {
     for (uint32_t j = 0; j < kArbitraryConstant; ++j) {
       s->arrays_2d.b[i][j] = bool_distribution(rand_engine);
-      s->arrays_2d.i8[i][j] = int8_distribution(rand_engine);
+      s->arrays_2d.i8[i][j] = static_cast<int8_t>(int8_distribution(rand_engine));
       s->arrays_2d.i16[i][j] = int16_distribution(rand_engine);
       s->arrays_2d.i32[i][j] = int32_distribution(rand_engine);
       s->arrays_2d.i64[i][j] = int64_distribution(rand_engine);
-      s->arrays_2d.u8[i][j] = uint8_distribution(rand_engine);
+      s->arrays_2d.u8[i][j] = static_cast<uint8_t>(uint8_distribution(rand_engine));
       s->arrays_2d.u16[i][j] = uint16_distribution(rand_engine);
       s->arrays_2d.u32[i][j] = uint32_distribution(rand_engine);
       s->arrays_2d.u64[i][j] = uint64_distribution(rand_engine);
@@ -657,11 +673,13 @@ void InitializeStruct(Struct* s) {
 
   // vectors
   s->vectors.b_0 = std::vector<bool>(kArbitraryVectorSize, bool_distribution(rand_engine));
-  s->vectors.i8_0 = std::vector<int8_t>(kArbitraryVectorSize, int8_distribution(rand_engine));
+  s->vectors.i8_0 = std::vector<int8_t>(kArbitraryVectorSize,
+                                        static_cast<int8_t>(int8_distribution(rand_engine)));
   s->vectors.i16_0 = std::vector<int16_t>(kArbitraryVectorSize, int16_distribution(rand_engine));
   s->vectors.i32_0 = std::vector<int32_t>(kArbitraryVectorSize, int32_distribution(rand_engine));
   s->vectors.i64_0 = std::vector<int64_t>(kArbitraryVectorSize, int64_distribution(rand_engine));
-  s->vectors.u8_0 = std::vector<uint8_t>(kArbitraryVectorSize, uint8_distribution(rand_engine));
+  s->vectors.u8_0 = std::vector<uint8_t>(kArbitraryVectorSize,
+                                         static_cast<uint8_t>(uint8_distribution(rand_engine)));
   s->vectors.u16_0 = std::vector<uint16_t>(kArbitraryVectorSize, uint16_distribution(rand_engine));
   s->vectors.u32_0 = std::vector<uint32_t>(kArbitraryVectorSize, uint32_distribution(rand_engine));
   s->vectors.u64_0 = std::vector<uint64_t>(kArbitraryVectorSize, uint64_distribution(rand_engine));
@@ -692,16 +710,16 @@ void InitializeStruct(Struct* s) {
     for (uint8_t i = 0; i < kArbitraryVectorSize; ++i) {
       bool_outer_vector.emplace_back(
           std::vector<bool>(std::vector<bool>(kArbitraryConstant, bool_distribution(rand_engine))));
-      int8_outer_vector.emplace_back(std::vector<int8_t>(
-          std::vector<int8_t>(kArbitraryConstant, int8_distribution(rand_engine))));
+      int8_outer_vector.emplace_back(std::vector<int8_t>(std::vector<int8_t>(
+          kArbitraryConstant, static_cast<int8_t>(int8_distribution(rand_engine)))));
       int16_outer_vector.emplace_back(std::vector<int16_t>(
           std::vector<int16_t>(kArbitraryConstant, int16_distribution(rand_engine))));
       int32_outer_vector.emplace_back(std::vector<int32_t>(
           std::vector<int32_t>(kArbitraryConstant, int32_distribution(rand_engine))));
       int64_outer_vector.emplace_back(std::vector<int64_t>(
           std::vector<int64_t>(kArbitraryConstant, int64_distribution(rand_engine))));
-      uint8_outer_vector.emplace_back(std::vector<uint8_t>(
-          std::vector<uint8_t>(kArbitraryConstant, uint8_distribution(rand_engine))));
+      uint8_outer_vector.emplace_back(std::vector<uint8_t>(std::vector<uint8_t>(
+          kArbitraryConstant, static_cast<uint8_t>(uint8_distribution(rand_engine)))));
       uint16_outer_vector.emplace_back(std::vector<uint16_t>(
           std::vector<uint16_t>(kArbitraryConstant, uint16_distribution(rand_engine))));
       uint32_outer_vector.emplace_back(std::vector<uint32_t>(
@@ -733,11 +751,12 @@ void InitializeStruct(Struct* s) {
   }
 
   s->vectors.b_sized_0 = std::vector<bool>{bool_distribution(rand_engine)};
-  s->vectors.i8_sized_0 = std::vector<int8_t>{int8_distribution(rand_engine)};
+  s->vectors.i8_sized_0 = std::vector<int8_t>{static_cast<int8_t>(int8_distribution(rand_engine))};
   s->vectors.i16_sized_0 = std::vector<int16_t>{int16_distribution(rand_engine)};
   s->vectors.i32_sized_0 = std::vector<int32_t>{int32_distribution(rand_engine)};
   s->vectors.i64_sized_0 = std::vector<int64_t>{int64_distribution(rand_engine)};
-  s->vectors.u8_sized_0 = std::vector<uint8_t>{uint8_distribution(rand_engine)};
+  s->vectors.u8_sized_0 =
+      std::vector<uint8_t>{static_cast<uint8_t>(uint8_distribution(rand_engine))};
   s->vectors.u16_sized_0 = std::vector<uint16_t>{uint16_distribution(rand_engine)};
   s->vectors.u32_sized_0 = std::vector<uint32_t>{uint32_distribution(rand_engine)};
   s->vectors.u64_sized_0 = std::vector<uint64_t>{uint64_distribution(rand_engine)};
@@ -752,16 +771,17 @@ void InitializeStruct(Struct* s) {
 
   s->vectors.b_sized_1 =
       std::vector<bool>(fidl::test::compatibility::vectors_size, bool_distribution(rand_engine));
-  s->vectors.i8_sized_1 =
-      std::vector<int8_t>(fidl::test::compatibility::vectors_size, int8_distribution(rand_engine));
+  s->vectors.i8_sized_1 = std::vector<int8_t>(fidl::test::compatibility::vectors_size,
+                                              static_cast<int8_t>(int8_distribution(rand_engine)));
   s->vectors.i16_sized_1 = std::vector<int16_t>(fidl::test::compatibility::vectors_size,
                                                 int16_distribution(rand_engine));
   s->vectors.i32_sized_1 = std::vector<int32_t>(fidl::test::compatibility::vectors_size,
                                                 int32_distribution(rand_engine));
   s->vectors.i64_sized_1 = std::vector<int64_t>(fidl::test::compatibility::vectors_size,
                                                 int64_distribution(rand_engine));
-  s->vectors.u8_sized_1 = std::vector<uint8_t>(fidl::test::compatibility::vectors_size,
-                                               uint8_distribution(rand_engine));
+  s->vectors.u8_sized_1 =
+      std::vector<uint8_t>(fidl::test::compatibility::vectors_size,
+                           static_cast<uint8_t>(uint8_distribution(rand_engine)));
   s->vectors.u16_sized_1 = std::vector<uint16_t>(fidl::test::compatibility::vectors_size,
                                                  uint16_distribution(rand_engine));
   s->vectors.u32_sized_1 = std::vector<uint32_t>(fidl::test::compatibility::vectors_size,
@@ -795,16 +815,16 @@ void InitializeStruct(Struct* s) {
     for (uint32_t i = 0; i < fidl::test::compatibility::vectors_size; ++i) {
       bool_outer_vector.emplace_back(
           std::vector<bool>(std::vector<bool>(kArbitraryConstant, bool_distribution(rand_engine))));
-      int8_outer_vector.emplace_back(std::vector<int8_t>(
-          std::vector<int8_t>(kArbitraryConstant, int8_distribution(rand_engine))));
+      int8_outer_vector.emplace_back(std::vector<int8_t>(std::vector<int8_t>(
+          kArbitraryConstant, static_cast<int8_t>(int8_distribution(rand_engine)))));
       int16_outer_vector.emplace_back(std::vector<int16_t>(
           std::vector<int16_t>(kArbitraryConstant, int16_distribution(rand_engine))));
       int32_outer_vector.emplace_back(std::vector<int32_t>(
           std::vector<int32_t>(kArbitraryConstant, int32_distribution(rand_engine))));
       int64_outer_vector.emplace_back(std::vector<int64_t>(
           std::vector<int64_t>(kArbitraryConstant, int64_distribution(rand_engine))));
-      uint8_outer_vector.emplace_back(std::vector<uint8_t>(
-          std::vector<uint8_t>(kArbitraryConstant, uint8_distribution(rand_engine))));
+      uint8_outer_vector.emplace_back(std::vector<uint8_t>(std::vector<uint8_t>(
+          kArbitraryConstant, static_cast<uint8_t>(uint8_distribution(rand_engine)))));
       uint16_outer_vector.emplace_back(std::vector<uint16_t>(
           std::vector<uint16_t>(kArbitraryConstant, uint16_distribution(rand_engine))));
       uint32_outer_vector.emplace_back(std::vector<uint32_t>(
@@ -842,8 +862,8 @@ void InitializeStruct(Struct* s) {
   {
     std::vector<std::vector<int8_t>> int8_outer_vector;
     for (uint8_t i = 0; i < kArbitraryVectorSize; ++i) {
-      int8_outer_vector.emplace_back(std::vector<int8_t>(
-          std::vector<int8_t>(kArbitraryConstant, int8_distribution(rand_engine))));
+      int8_outer_vector.emplace_back(std::vector<int8_t>(std::vector<int8_t>(
+          kArbitraryConstant, static_cast<int8_t>(int8_distribution(rand_engine)))));
     }
     s->vectors.i8_nullable_1 = VectorPtr<std::vector<int8_t>>(std::move(int8_outer_vector));
   }
