@@ -19,6 +19,8 @@ import (
 )
 
 var conformanceTmpl = template.Must(template.New("conformanceTmpls").Parse(`
+#![allow(unused_imports)]
+
 use dynfidl::{BasicField, Field, Structure, VectorField};
 
 {{ range .EncodeSuccessCases }}
