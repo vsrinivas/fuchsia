@@ -49,8 +49,10 @@ const MAX_VIEW_COUNT uint32 = 300;
 ///
 /// Configuration: The context view is determined outside of this protocol.
 ///
-/// Frequency: A snapshot is issued at most once per frame, but for relatively
-/// static content, can be issued at a slower rate.
+/// Frequency: A client can receive one or more snapshots per frame. Clients
+/// should not "count snapshots", as the per-frame snapshot count can be
+/// non-deterministic. Instead, clients should look for specific conditions on
+/// the snapshot state.
 ///
 /// Issuance: If the context view is disconnected from a display, no
 /// frames are issued on behalf of the context view, and a Watch() call will
