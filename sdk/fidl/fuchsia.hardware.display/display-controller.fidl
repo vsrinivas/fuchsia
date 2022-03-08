@@ -775,4 +775,29 @@ protocol Controller {
     SetMinimumRgb(struct {
         minimum_rgb uint8;
     }) -> (struct {}) error zx.status;
+
+    /// Power off/on the display panel.
+    ///
+    /// This function takes effect immediately. Clients don't need to call
+    /// `ApplyConfig()` to commit this command.
+    ///
+    /// Once a display is turned off, it will not deliver vsync events, which
+    /// may include the vsync event for the most recently applied config.
+    ///
+    /// Staged display control commands (e.g. SetDisplayLayer) will not be
+    /// affected. They are still applied to the display device when client calls
+    /// `ApplyConfig()`, but the contents will be shown on display panel only
+    /// after client powers on the display again.
+    ///
+    /// Newly added displays are turned on by default.
+    ///
+    /// Returns ZX_ERR_NOT_FOUND if `display_id` is invalid when Controller
+    /// handles this method.
+    /// Returns ZX_ERR_NOT_SUPPORTED if the display driver IC doesn't support
+    /// turning on/off displays.
+    @transitional
+    SetDisplayPower(struct {
+        display_id uint64;
+        power_on bool;
+    }) -> (struct {}) error zx.status;
 };

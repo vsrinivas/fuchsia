@@ -1,0 +1,32 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library fuchsia.ui.display.internal;
+
+using zx;
+
+/// `DisplayPower` is an internal service that controls the power state of all
+/// display devices.
+@discoverable
+protocol DisplayPower {
+    /// Set the power state of all connected display devices to `power_on`.
+    ///
+    /// It succeeds when all connected displays are turned on or off; once
+    /// display devices are turned off, `fuchsia.hardware.display.Controller`
+    /// clients will not receive `OnVsync` events anymore until they are turned
+    /// on again.
+    ///
+    /// If any of the connected displays fails to turn on/off, it will return
+    /// `ZX_ERR_NOT_SUPPORTED` error, and only the power states of the devices
+    /// which support power state control will be changed.
+    ///
+    /// All display devices are turned on by default.
+    ///
+    // TODO(fxbug.dev/95196): Currently this method controls all displays and
+    // only succeeds when all displays support DDIC power control. We should
+    // improve this function to better support multi-display use cases.
+    @transitional
+    SetDisplayPower(struct {
+        power_on bool;
+    }) -> (struct {}) error zx.status;
+};
