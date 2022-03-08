@@ -33,7 +33,7 @@ std::unique_ptr<TargetAdapterClient> GetClient() {
         context->svc()->Connect(std::move(request));
       };
   client->SetHandler(std::move(handler));
-  auto options = std::make_shared<Options>();
+  auto options = MakeOptions();
   TargetAdapterClient::AddDefaults(options.get());
   client->Configure(std::move(options));
   return client;
@@ -60,7 +60,7 @@ TEST(FuzzerTest, EmptyInputs) {
 }
 
 TEST(FuzzerTest, SeedCorpus) {
-  auto options = std::make_shared<Options>();
+  auto options = MakeOptions();
   Corpus::AddDefaults(options.get());
   auto client = GetClient();
 

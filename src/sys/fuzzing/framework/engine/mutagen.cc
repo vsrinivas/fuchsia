@@ -57,7 +57,7 @@ void Mutagen::AddDefaults(Options* options) {
   }
 }
 
-void Mutagen::Configure(const std::shared_ptr<Options>& options) {
+void Mutagen::Configure(const OptionsPtr& options) {
   options_ = options;
   prng_.seed(options_->seed());
   dictionary_.Configure(options_);

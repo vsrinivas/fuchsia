@@ -36,7 +36,7 @@ class CoverageProviderClient final {
   fidl::InterfaceRequest<CoverageProvider> TakeRequest();
 
   // Sets options. Invokes |fuchsia.fuzzer.CoverageProvider.SetOptions|.
-  void Configure(const std::shared_ptr<Options>& options);
+  void Configure(const OptionsPtr& options);
 
   // Sets the |on_event| callback to be invoked on each event. This can only be called once.
   void OnEvent(fit::function<void(CoverageEvent)> on_event);

@@ -39,7 +39,7 @@ Runner::~Runner() {
   join_.Run();
 }
 
-zx_status_t Runner::Configure(const std::shared_ptr<Options>& options) {
+zx_status_t Runner::Configure(const OptionsPtr& options) {
   std::lock_guard<std::mutex> lock(mutex_);
   if (!idle_) {
     FX_LOGS(WARNING) << "Attempted to re-configure when fuzzing already in progress.";

@@ -20,7 +20,7 @@ bool FakeProcessProxy::has_module(FakeFrameworkModule* module) const {
   return iter != ids_.end() && iter->second == id[1];
 }
 
-void FakeProcessProxy::Configure(const std::shared_ptr<Options>& options) { options_ = options; }
+void FakeProcessProxy::Configure(const OptionsPtr& options) { options_ = options; }
 
 InstrumentationSyncPtr FakeProcessProxy::Bind(bool disable_warnings) {
   if (disable_warnings) {

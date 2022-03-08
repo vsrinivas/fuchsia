@@ -29,7 +29,7 @@ CoverageProviderClient::CoverageProviderClient() : dispatcher_(std::make_shared<
 
 CoverageProviderClient::~CoverageProviderClient() { Close(); }
 
-void CoverageProviderClient::Configure(const std::shared_ptr<Options>& options) {
+void CoverageProviderClient::Configure(const OptionsPtr& options) {
   provider_->SetOptions(CopyOptions(*options));
 }
 

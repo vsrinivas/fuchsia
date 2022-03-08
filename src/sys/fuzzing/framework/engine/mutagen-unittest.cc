@@ -20,8 +20,8 @@ class MutagenTest : public ::testing::Test {
  protected:
   void SetUp() override { out_.Reserve(kBufSize); }
 
-  std::shared_ptr<Options> DefaultOptions() {
-    auto options = std::make_shared<Options>();
+  OptionsPtr DefaultOptions() {
+    auto options = MakeOptions();
     Mutagen::AddDefaults(options.get());
     return options;
   }

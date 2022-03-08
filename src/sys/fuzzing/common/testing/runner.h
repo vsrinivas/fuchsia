@@ -47,7 +47,7 @@ class FakeRunner final : public Runner {
 
   using Runner::UpdateMonitors;
 
-  void ConfigureImpl(const std::shared_ptr<Options>& options) override;
+  void ConfigureImpl(const OptionsPtr& options) override;
   zx_status_t SyncExecute(const Input& input) override { return Run(); }
   zx_status_t SyncMinimize(const Input& input) override { return Run(); }
   zx_status_t SyncCleanse(const Input& input) override { return Run(); }

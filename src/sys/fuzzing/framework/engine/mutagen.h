@@ -78,7 +78,7 @@ class Mutagen final {
   static void AddDefaults(Options* options);
 
   // Sets options.
-  void Configure(const std::shared_ptr<Options>& options);
+  void Configure(const OptionsPtr& options);
 
   // Makes a copy of the previously configured input, mutates it using a pseudoradomly selected
   // mutation strategy, and stores the result in |out|.
@@ -155,7 +155,7 @@ class Mutagen final {
   char PickSpecial();
 
  private:
-  std::shared_ptr<Options> options_;
+  OptionsPtr options_;
   std::minstd_rand prng_;
   Input base_input_;
   Input crossover_;

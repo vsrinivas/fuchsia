@@ -65,7 +65,7 @@ class Runner {
   virtual Input GetDictionaryAsInput() const = 0;
 
   // Fuzzing workflows.
-  zx_status_t Configure(const std::shared_ptr<Options>& options);
+  zx_status_t Configure(const OptionsPtr& options);
   void Execute(Input input, fit::function<void(zx_status_t)> callback) FXL_LOCKS_EXCLUDED(mutex_);
   void Minimize(Input input, fit::function<void(zx_status_t)> callback) FXL_LOCKS_EXCLUDED(mutex_);
   void Cleanse(Input input, fit::function<void(zx_status_t)> callback) FXL_LOCKS_EXCLUDED(mutex_);
@@ -96,7 +96,7 @@ class Runner {
   virtual void set_result_input(const Input& input) { result_input_ = input.Duplicate(); }
 
   // Fuzzing workflow implementations.
-  virtual void ConfigureImpl(const std::shared_ptr<Options>& options) = 0;
+  virtual void ConfigureImpl(const OptionsPtr& options) = 0;
   virtual zx_status_t SyncExecute(const Input& input) = 0;
   virtual zx_status_t SyncMinimize(const Input& input) = 0;
   virtual zx_status_t SyncCleanse(const Input& input) = 0;

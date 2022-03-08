@@ -13,13 +13,13 @@ static constexpr size_t kNumReplacements = 2;
 
 // Test fixtures.
 
-std::shared_ptr<Options> RunnerTest::DefaultOptions(Runner* runner) {
-  auto options = std::make_shared<Options>();
+OptionsPtr RunnerTest::DefaultOptions(Runner* runner) {
+  auto options = MakeOptions();
   runner->AddDefaults(options.get());
   return options;
 }
 
-void RunnerTest::Configure(Runner* runner, const std::shared_ptr<Options>& options) {
+void RunnerTest::Configure(Runner* runner, const OptionsPtr& options) {
   options_ = options;
   options_->set_seed(1);
   runner->Configure(options_);

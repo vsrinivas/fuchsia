@@ -23,7 +23,7 @@ void TargetAdapterClient::AddDefaults(Options* options) {
   }
 }
 
-void TargetAdapterClient::Configure(const std::shared_ptr<Options>& options) {
+void TargetAdapterClient::Configure(const OptionsPtr& options) {
   FX_CHECK(options);
   options_ = options;
   test_input_.Reserve(options_->max_input_size());

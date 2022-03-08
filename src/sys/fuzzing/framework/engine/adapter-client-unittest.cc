@@ -28,13 +28,13 @@ namespace fuzzing {
 
 class TargetAdapterClientTest : public ::testing::Test {
  protected:
-  std::shared_ptr<Options> DefaultOptions() {
-    auto options = std::make_shared<Options>();
+  OptionsPtr DefaultOptions() {
+    auto options = MakeOptions();
     TargetAdapterClient::AddDefaults(options.get());
     return options;
   }
 
-  void Configure(const std::shared_ptr<Options>& options) {
+  void Configure(const OptionsPtr& options) {
     adapter_ = std::make_unique<FakeTargetAdapter>();
     client_ = std::make_unique<TargetAdapterClient>(adapter_->GetHandler());
     client_->Configure(options);

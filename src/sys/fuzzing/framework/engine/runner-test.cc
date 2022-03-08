@@ -14,7 +14,7 @@ void RunnerImplTest::SetAdapterParameters(const std::vector<std::string>& parame
   target_adapter_.SetParameters(parameters);
 }
 
-void RunnerImplTest::Configure(Runner* runner, const std::shared_ptr<Options>& options) {
+void RunnerImplTest::Configure(Runner* runner, const OptionsPtr& options) {
   RunnerTest::Configure(runner, options);
   auto* runner_impl = static_cast<RunnerImpl*>(runner);
   stopped_ = true;

@@ -53,7 +53,7 @@ class LibFuzzerRunnerTest : public RunnerTest {
     SetCoverage(Input("\n"), {{255, 255}});
   }
 
-  void Configure(Runner* runner, const std::shared_ptr<Options>& options) override {
+  void Configure(Runner* runner, const OptionsPtr& options) override {
     RunnerTest::Configure(runner, options);
     auto* testrunner = static_cast<LibFuzzerRunner*>(runner);
     std::vector<std::string> cmdline{"/pkg/bin/libfuzzer_test_fuzzer"};

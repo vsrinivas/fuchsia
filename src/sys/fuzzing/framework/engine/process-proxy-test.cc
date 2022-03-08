@@ -17,8 +17,8 @@ std::unique_ptr<ProcessProxyImpl> ProcessProxyTest::MakeProcessProxy() {
   return std::make_unique<ProcessProxyImpl>(kInvalidTargetId + 1, pool_);
 }
 
-std::shared_ptr<Options> ProcessProxyTest::DefaultOptions() {
-  auto options = std::make_shared<Options>();
+OptionsPtr ProcessProxyTest::DefaultOptions() {
+  auto options = MakeOptions();
   ProcessProxyImpl::AddDefaults(options.get());
   return options;
 }

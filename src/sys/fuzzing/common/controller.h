@@ -100,7 +100,7 @@ class ControllerImpl : public Controller {
 
   // These pointers are instantiated by the controller and shared with other objects.
   std::shared_ptr<Dispatcher> dispatcher_;
-  std::shared_ptr<Options> options_;
+  OptionsPtr options_;
   std::shared_ptr<Transceiver> transceiver_;
 
   RunOnce close_;

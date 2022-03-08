@@ -34,7 +34,7 @@ class ProcessProxyTest : public ::testing::Test {
 
   std::unique_ptr<ProcessProxyImpl> MakeProcessProxy();
 
-  static std::shared_ptr<Options> DefaultOptions();
+  static OptionsPtr DefaultOptions();
 
   InstrumentedProcess IgnoreSentSignals(zx::process&& process);
   InstrumentedProcess IgnoreTarget(zx::eventpair&& eventpair);

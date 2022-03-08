@@ -37,7 +37,7 @@ class Corpus final {
   static void AddDefaults(Options* options);
 
   // Sets options. This will reset the PRNG.
-  void Configure(const std::shared_ptr<Options>& options);
+  void Configure(const OptionsPtr& options);
 
   // Recusively walks the |root|-relative directories given by |dirs| and |Add|s the contents of the
   // files they contain.
@@ -65,7 +65,7 @@ class Corpus final {
   // Reads the file at |filename| and |Add|s its contents.
   zx_status_t ReadFile(const std::string& filename);
 
-  std::shared_ptr<Options> options_;
+  OptionsPtr options_;
   std::minstd_rand prng_;
   std::mutex mutex_;
 

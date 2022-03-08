@@ -25,6 +25,10 @@ using ::fuchsia::fuzzer::Options;
 // copy-constructor.
 Options CopyOptions(const Options& options);
 
+// Aliases to simplify passing around the shared options.
+using OptionsPtr = std::shared_ptr<Options>;
+inline OptionsPtr MakeOptions() { return std::make_shared<Options>(); }
+
 }  // namespace fuzzing
 
 #endif  // SRC_SYS_FUZZING_COMMON_OPTIONS_H_

@@ -51,7 +51,7 @@ zx_status_t SimpleFixedRunner::ParseDictionary(const Input& input) {
 
 Input SimpleFixedRunner::GetDictionaryAsInput() const { return dictionary_.Duplicate(); }
 
-void SimpleFixedRunner::ConfigureImpl(const std::shared_ptr<Options>& options) {
+void SimpleFixedRunner::ConfigureImpl(const OptionsPtr& options) {
   options_ = options;
   prng_.seed(options_->seed());
 }

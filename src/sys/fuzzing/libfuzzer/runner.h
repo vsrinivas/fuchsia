@@ -43,7 +43,7 @@ class LibFuzzerRunner : public Runner {
   void Join() override { join_.Run(); }
 
  protected:
-  void ConfigureImpl(const std::shared_ptr<Options>& options) override;
+  void ConfigureImpl(const OptionsPtr& options) override;
   zx_status_t SyncExecute(const Input& input) override;
   zx_status_t SyncMinimize(const Input& input) override;
   zx_status_t SyncCleanse(const Input& input) override;
@@ -82,7 +82,7 @@ class LibFuzzerRunner : public Runner {
   void JoinImpl();
 
   std::vector<std::string> cmdline_;
-  std::shared_ptr<Options> options_;
+  OptionsPtr options_;
 
   // Immutable set of inputs. These will be kept on merge.
   std::vector<std::string> seed_corpus_;

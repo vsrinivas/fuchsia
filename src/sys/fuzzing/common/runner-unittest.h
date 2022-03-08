@@ -38,12 +38,12 @@ class RunnerTest : public ::testing::Test {
   //////////////////////////////////////
   // Test fixtures.
 
-  const std::shared_ptr<Options>& options() { return options_; }
+  const OptionsPtr& options() { return options_; }
 
-  static std::shared_ptr<Options> DefaultOptions(Runner* runner);
+  static OptionsPtr DefaultOptions(Runner* runner);
 
   // Adds test-related |options| (e.g. PRNG seed) and configures the |runner|.
-  virtual void Configure(Runner* runner, const std::shared_ptr<Options>& options);
+  virtual void Configure(Runner* runner, const OptionsPtr& options);
 
   // Tests may set fake feedback to be "produced" during calls to |RunOne| with the given |input|.
   void SetCoverage(const Input& input, const Coverage& coverage);
@@ -142,7 +142,7 @@ class RunnerTest : public ::testing::Test {
     bool leak = false;
   };
 
-  std::shared_ptr<Options> options_;
+  OptionsPtr options_;
   std::unordered_map<std::string, Feedback> feedback_;
   SyncWait started_sync_;
 

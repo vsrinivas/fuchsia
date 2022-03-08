@@ -68,7 +68,7 @@ class ProcessTest : public ::testing::Test {
 
   // Create a fake |ProcessProxy|, bind to it, and call |Connect| on it.
   std::unique_ptr<FakeProcessProxy> MakeAndBindProxy(TestProcess& process,
-                                                     const std::shared_ptr<Options>& options,
+                                                     const OptionsPtr& options,
                                                      bool disable_warnings = true) {
     auto proxy = std::make_unique<FakeProcessProxy>(pool_);
     proxy->Configure(options);
@@ -83,8 +83,8 @@ class ProcessTest : public ::testing::Test {
   std::shared_ptr<ModulePool> pool_;
 };
 
-std::shared_ptr<Options> DefaultOptions() {
-  auto options = std::make_shared<Options>();
+OptionsPtr DefaultOptions() {
+  auto options = MakeOptions();
   Process::AddDefaults(options.get());
   return options;
 }

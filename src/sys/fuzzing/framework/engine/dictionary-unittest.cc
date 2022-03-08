@@ -13,8 +13,8 @@ namespace {
 
 // Test fixtures.
 
-std::shared_ptr<Options> DefaultOptions() {
-  auto options = std::make_shared<Options>();
+OptionsPtr DefaultOptions() {
+  auto options = MakeOptions();
   Dictionary::AddDefaults(options.get());
   return options;
 }

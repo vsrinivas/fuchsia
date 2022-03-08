@@ -53,7 +53,7 @@ void Corpus::AddDefaults(Options* options) {
   }
 }
 
-void Corpus::Configure(const std::shared_ptr<Options>& options) {
+void Corpus::Configure(const OptionsPtr& options) {
   options_ = options;
   prng_.seed(options_->seed());
 }

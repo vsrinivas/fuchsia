@@ -49,7 +49,7 @@ zx_status_t FakeRunner::ParseDictionary(const Input& input) {
 
 Input FakeRunner::GetDictionaryAsInput() const { return dictionary_.Duplicate(); }
 
-void FakeRunner::ConfigureImpl(const std::shared_ptr<Options>& options) {}
+void FakeRunner::ConfigureImpl(const OptionsPtr& options) {}
 
 zx_status_t FakeRunner::Run() {
   Runner::set_result(result_);

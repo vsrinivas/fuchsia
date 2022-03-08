@@ -39,7 +39,7 @@ class SimpleFixedRunner final : public Runner {
   Input GetDictionaryAsInput() const override;
 
  protected:
-  void ConfigureImpl(const std::shared_ptr<Options>& options) override;
+  void ConfigureImpl(const OptionsPtr& options) override;
   zx_status_t SyncExecute(const Input& input) override;
   zx_status_t SyncMinimize(const Input& input) override;
   zx_status_t SyncCleanse(const Input& input) override;
@@ -52,7 +52,7 @@ class SimpleFixedRunner final : public Runner {
   FuzzResult TestOne(const Input& input);
   size_t Measure(const Input& input, bool accumulate);
 
-  std::shared_ptr<Options> options_;
+  OptionsPtr options_;
   std::vector<Input> seed_corpus_;
   std::vector<Input> live_corpus_;
   Input dictionary_;

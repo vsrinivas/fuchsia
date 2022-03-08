@@ -37,7 +37,7 @@ class Dictionary final {
   static void AddDefaults(Options* options);
 
   // Sets options.
-  void Configure(const std::shared_ptr<Options>& options);
+  void Configure(const OptionsPtr& options);
 
   // Adds |size| bytes as a word to this dictionary.
   void Add(const void* data, size_t size, uint16_t level = 0);
@@ -82,7 +82,7 @@ class Dictionary final {
     return true;
   }
 
-  std::shared_ptr<Options> options_;
+  OptionsPtr options_;
   std::unordered_map<uint16_t, Level> words_by_level_;
   uint16_t max_level_ = 0;
 

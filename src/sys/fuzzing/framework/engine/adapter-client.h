@@ -35,7 +35,7 @@ class TargetAdapterClient final {
   static void AddDefaults(Options* options);
 
   // Sets options. The max input size may be increased by |LoadSeedCorpus|.
-  void Configure(const std::shared_ptr<Options>& options);
+  void Configure(const OptionsPtr& options);
 
   // Gets the command-line parameters from the target adapter.
   std::vector<std::string> GetParameters();
@@ -61,7 +61,7 @@ class TargetAdapterClient final {
   // Connects to the target adapter if needed. Does nothing if already connected.
   void Connect();
 
-  std::shared_ptr<Options> options_;
+  OptionsPtr options_;
   fidl::InterfaceRequestHandler<TargetAdapter> handler_;
   TargetAdapterSyncPtr adapter_;
   SignalCoordinator coordinator_;

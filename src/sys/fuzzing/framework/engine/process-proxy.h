@@ -49,7 +49,7 @@ class ProcessProxyImpl final {
   static void AddDefaults(Options* options);
 
   // Sets options for this object.
-  void Configure(const std::shared_ptr<Options>& options);
+  void Configure(const OptionsPtr& options);
 
   // The |on_signal| callback will be invoked when the associated process acknowledges a call to
   // |Start| or |Finish|. The |on_error| callback will be invoked with the |target_id| when the
@@ -81,7 +81,7 @@ class ProcessProxyImpl final {
 
  private:
   uint64_t target_id_ = kInvalidTargetId;
-  std::shared_ptr<Options> options_;
+  OptionsPtr options_;
 
   std::shared_ptr<ModulePool> pool_;
   std::unordered_map<ModuleProxy*, SharedMemory> modules_;

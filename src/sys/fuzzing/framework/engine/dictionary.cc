@@ -36,7 +36,7 @@ void Dictionary::AddDefaults(Options* options) {
   }
 }
 
-void Dictionary::Configure(const std::shared_ptr<Options>& options) { options_ = options; }
+void Dictionary::Configure(const OptionsPtr& options) { options_ = options; }
 
 void Dictionary::Add(const void* data, size_t size, uint16_t level) {
   const auto* bytes = reinterpret_cast<const uint8_t*>(data);

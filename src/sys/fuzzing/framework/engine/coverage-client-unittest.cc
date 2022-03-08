@@ -49,7 +49,7 @@ class CoverageProviderClientTest : public ::testing::Test {
 
 TEST_F(CoverageProviderClientTest, Configure) {
   // Configure before connecting...
-  auto options = std::make_shared<Options>();
+  auto options = MakeOptions();
   options->set_seed(1U);
 
   CoverageProviderClient client;

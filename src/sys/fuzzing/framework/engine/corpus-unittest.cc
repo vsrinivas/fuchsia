@@ -24,8 +24,8 @@ Input input2() { return Input({0x21, 0x22}); }
 Input input3() { return Input({0x31, 0x32, 0x33, 0x34, 0x35, 0x36}); }
 Input input4() { return Input({0x41, 0x42, 0x43, 0x44}); }
 
-std::shared_ptr<Options> DefaultOptions() {
-  auto options = std::make_shared<Options>();
+OptionsPtr DefaultOptions() {
+  auto options = MakeOptions();
   Corpus::AddDefaults(options.get());
   return options;
 }

@@ -42,7 +42,7 @@ class FakeProcessProxy : public Instrumentation {
   size_t num_modules() const { return ids_.size(); }
   bool has_module(FakeFrameworkModule* module) const;
 
-  void Configure(const std::shared_ptr<Options>& options);
+  void Configure(const OptionsPtr& options);
 
   // FIDL methods.
   InstrumentationSyncPtr Bind(bool disable_warnings);
@@ -56,7 +56,7 @@ class FakeProcessProxy : public Instrumentation {
  private:
   Binding<Instrumentation> binding_;
   std::shared_ptr<ModulePool> pool_;
-  std::shared_ptr<Options> options_;
+  OptionsPtr options_;
   zx_koid_t process_koid_ = 0;
   std::unordered_map<uint64_t, uint64_t> ids_;
   std::vector<SharedMemory> counters_;

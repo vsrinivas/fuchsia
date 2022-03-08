@@ -26,7 +26,7 @@ namespace fuzzing {
 class RunnerImplTest : public RunnerTest {
  protected:
   // RunnerTest methods.
-  void Configure(Runner* runner, const std::shared_ptr<Options>& options) override;
+  void Configure(Runner* runner, const OptionsPtr& options) override;
   bool HasTestInput(zx::time deadline) override;
   Input GetTestInput() override;
   void SetFeedback(const Coverage& coverage, FuzzResult result, bool leak) override;

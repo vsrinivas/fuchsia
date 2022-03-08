@@ -57,7 +57,7 @@ void ProcessProxyImpl::AddDefaults(Options* options) {
   }
 }
 
-void ProcessProxyImpl::Configure(const std::shared_ptr<Options>& options) { options_ = options; }
+void ProcessProxyImpl::Configure(const OptionsPtr& options) { options_ = options; }
 
 void ProcessProxyImpl::SetHandlers(SignalHandler on_signal, ErrorHandler on_error) {
   FX_DCHECK(!on_signal_);

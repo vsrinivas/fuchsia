@@ -21,7 +21,7 @@ ControllerImpl::ControllerImpl()
       join_([this]() { JoinImpl(); }) {
   dispatcher_ = binding_.dispatcher();
   executor_ = std::make_unique<async::Executor>(dispatcher_->get());
-  options_ = std::make_shared<Options>();
+  options_ = MakeOptions();
   transceiver_ = std::make_shared<Transceiver>();
 }
 

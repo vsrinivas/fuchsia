@@ -66,7 +66,7 @@ void RunnerImpl::AddDefaults(Options* options) {
   }
 }
 
-void RunnerImpl::ConfigureImpl(const std::shared_ptr<Options>& options) {
+void RunnerImpl::ConfigureImpl(const OptionsPtr& options) {
   options_ = options;
   seed_corpus_->Configure(options_);
   live_corpus_->Configure(options_);

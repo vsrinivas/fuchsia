@@ -107,7 +107,7 @@ void LibFuzzerRunner::AddDefaults(Options* options) {
   }
 }
 
-void LibFuzzerRunner::ConfigureImpl(const std::shared_ptr<Options>& options) { options_ = options; }
+void LibFuzzerRunner::ConfigureImpl(const OptionsPtr& options) { options_ = options; }
 
 ///////////////////////////////////////////////////////////////
 // Corpus-related methods.

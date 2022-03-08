@@ -72,7 +72,7 @@ class RunnerImpl final : public Runner {
 
  protected:
   // Fuzzing workflow implementations.
-  void ConfigureImpl(const std::shared_ptr<Options>& options) override;
+  void ConfigureImpl(const OptionsPtr& options) override;
   zx_status_t SyncExecute(const Input& input) override;
   zx_status_t SyncMinimize(const Input& input) override;
   zx_status_t SyncCleanse(const Input& input) override;
@@ -153,7 +153,7 @@ class RunnerImpl final : public Runner {
   void JoinImpl();
 
   // General configuration.
-  std::shared_ptr<Options> options_;
+  OptionsPtr options_;
   uint32_t run_ = 0;
   zx::time start_ = zx::time::infinite_past();
   zx::time next_pulse_ = zx::time::infinite();
