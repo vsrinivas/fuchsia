@@ -3,15 +3,22 @@
 // found in the LICENSE file.
 
 use crate::device::WithStaticDeviceId;
-use crate::fs::{fileops_impl_nonblocking, FileObject, FileOps, FsNode, FsNodeOps, SeekOrigin};
+use crate::fs::{
+    fileops_impl_nonblocking, FileObject, FileOps, FsNode, FsNodeOps, NamespaceNode, SeekOrigin,
+};
 use crate::logging::not_implemented;
+use crate::mm::{DesiredAddress, MappedVmo, MappingOptions};
 use crate::syscalls::{SyscallResult, SUCCESS};
 use crate::task::CurrentTask;
 use crate::types::*;
-use parking_lot::RwLock;
+use fuchsia_zircon as zx;
+use parking_lot::{Mutex, RwLock};
 use std::collections::BTreeMap;
 use std::sync::{Arc, Weak};
 use zerocopy::FromBytes;
+
+/// The largest mapping of shared memory allowed by the binder driver.
+const MAX_MMAP_SIZE: usize = 4 * 1024 * 1024;
 
 /// Android's binder kernel driver implementation.
 #[derive(Clone)]
@@ -51,6 +58,30 @@ impl FileOps for DevBinder {
         _out_addr: UserAddress,
     ) -> Result<SyscallResult, Errno> {
         self.0.ioctl(current_task, request, in_addr)
+    }
+
+    fn get_vmo(
+        &self,
+        _file: &FileObject,
+        _current_task: &CurrentTask,
+        length: Option<usize>,
+        _prot: zx::VmarFlags,
+    ) -> Result<zx::Vmo, Errno> {
+        self.0.get_vmo(length.unwrap_or(MAX_MMAP_SIZE))
+    }
+
+    fn mmap(
+        &self,
+        file: &FileObject,
+        current_task: &CurrentTask,
+        addr: DesiredAddress,
+        vmo_offset: u64,
+        length: usize,
+        flags: zx::VmarFlags,
+        mapping_options: MappingOptions,
+        filename: NamespaceNode,
+    ) -> Result<MappedVmo, Errno> {
+        self.0.mmap(file, current_task, addr, vmo_offset, length, flags, mapping_options, filename)
     }
 
     fn read(
@@ -102,7 +133,72 @@ impl FileOps for DevBinder {
 }
 
 #[derive(Debug)]
-struct BinderProcess;
+struct BinderProcess {
+    #[allow(unused)]
+    pid: pid_t,
+    shared_memory: Mutex<Option<SharedMemory>>,
+}
+
+impl BinderProcess {
+    fn new(pid: pid_t) -> Self {
+        Self { pid, shared_memory: Mutex::new(None) }
+    }
+}
+
+/// The mapped VMO shared between userspace and the binder driver.
+///
+/// The binder driver copies messages from one process to another, which essentially amounts to
+/// a copy between VMOs. It is not possible to copy directly between VMOs without an intermediate
+/// copy, and the binder driver must only perform one copy for performance reasons.
+///
+/// The memory allocated to a binder process is shared with the binder driver, and mapped into
+/// the kernel's address space so that a VMO read operation can copy directly into the mapped VMO.
+#[derive(Debug)]
+struct SharedMemory {
+    /// The address in kernel address space where the VMO is mapped.
+    #[allow(unused)]
+    kernel_address: *mut u8,
+    /// The address in user address space where the VMO is mapped.
+    #[allow(unused)]
+    user_address: UserAddress,
+    /// The length of the shared memory mapping.
+    #[allow(unused)]
+    length: usize,
+}
+
+impl Drop for SharedMemory {
+    fn drop(&mut self) {
+        let kernel_root_vmar = fuchsia_runtime::vmar_root_self();
+
+        // SAFETY: This object hands out references to the mapped memory, but the borrow checker
+        // ensures correct lifetimes.
+        let res = unsafe { kernel_root_vmar.unmap(self.kernel_address as usize, self.length) };
+        match res {
+            Ok(()) => {}
+            Err(status) => {
+                log::error!("failed to unmap shared binder region from kernel: {:?}", status);
+            }
+        }
+    }
+}
+
+// SAFETY: SharedMemory has exclusive ownership of the `kernel_address` pointer, so it is safe to
+// send across threads.
+unsafe impl Send for SharedMemory {}
+
+impl SharedMemory {
+    fn map(vmo: &zx::Vmo, user_address: UserAddress, length: usize) -> Result<Self, Errno> {
+        // Map the VMO into the kernel's address space.
+        let kernel_root_vmar = fuchsia_runtime::vmar_root_self();
+        let kernel_address = kernel_root_vmar
+            .map(0, vmo, 0, length, zx::VmarFlags::PERM_READ | zx::VmarFlags::PERM_WRITE)
+            .map_err(|status| {
+                log::error!("failed to map shared binder region in kernel: {:?}", status);
+                errno!(ENOMEM)
+            })?;
+        Ok(Self { kernel_address: kernel_address as *mut u8, user_address, length })
+    }
+}
 
 /// The ioctl character for all binder ioctls.
 const BINDER_IOCTL_CHAR: u8 = b'b';
@@ -142,8 +238,8 @@ impl BinderDriver {
         Self { context_manager: RwLock::new(None), procs: RwLock::new(BTreeMap::new()) }
     }
 
-    fn find_process(&self, pid: pid_t) -> Result<Arc<BinderProcess>, Errno> {
-        self.procs.read().get(&pid).cloned().ok_or_else(|| errno!(ENOENT))
+    fn find_or_register_process(&self, pid: pid_t) -> Arc<BinderProcess> {
+        self.procs.write().entry(pid).or_insert_with(|| Arc::new(BinderProcess::new(pid))).clone()
     }
 
     fn ioctl(
@@ -173,7 +269,7 @@ impl BinderDriver {
 
                 // TODO: Read the flat_binder_object when ioctl is BINDER_IOCTL_SET_CONTEXT_MGR_EXT.
 
-                let binder_proc = self.find_process(current_task.get_pid())?;
+                let binder_proc = self.find_or_register_process(current_task.get_pid());
                 *self.context_manager.write() = Some(Arc::downgrade(&binder_proc));
                 Ok(SUCCESS)
             }
@@ -220,6 +316,58 @@ impl BinderDriver {
             _ => {
                 log::error!("binder received unknown ioctl request 0x{:08x}", request);
                 error!(EINVAL)
+            }
+        }
+    }
+
+    fn get_vmo(&self, length: usize) -> Result<zx::Vmo, Errno> {
+        zx::Vmo::create(length as u64).map_err(|_| errno!(ENOMEM))
+    }
+
+    fn mmap(
+        &self,
+        _file: &FileObject,
+        current_task: &CurrentTask,
+        addr: DesiredAddress,
+        _vmo_offset: u64,
+        length: usize,
+        flags: zx::VmarFlags,
+        mapping_options: MappingOptions,
+        filename: NamespaceNode,
+    ) -> Result<MappedVmo, Errno> {
+        let binder_proc = self.find_or_register_process(current_task.get_pid());
+
+        // Do not support mapping shared memory more than once.
+        let mut shared_memory = binder_proc.shared_memory.lock();
+        if shared_memory.is_some() {
+            return error!(EINVAL);
+        }
+
+        // Create a VMO that will be shared between the driver and the client process.
+        let vmo = Arc::new(self.get_vmo(length)?);
+
+        // Map the VMO into the binder process' address space.
+        let user_address = current_task.mm.map(
+            addr,
+            vmo.clone(),
+            0,
+            length,
+            flags,
+            mapping_options,
+            Some(filename),
+        )?;
+
+        // Map the VMO into the driver's address space.
+        match SharedMemory::map(&*vmo, user_address, length) {
+            Ok(mem) => {
+                *shared_memory = Some(mem);
+                Ok(MappedVmo::new(vmo, user_address))
+            }
+            Err(err) => {
+                // Try to cleanup by unmapping from userspace, but ignore any errors. We
+                // can't really recover from them.
+                let _ = current_task.mm.unmap(user_address, length);
+                Err(err)
             }
         }
     }
