@@ -3999,7 +3999,7 @@ size_checker_input = {
 
 **Current value (from the default):** `{ }`
 
-From //tools/size_checker/cmd/BUILD.gn:84
+From //tools/size_checker/size_checker_input.gni:84
 
 ### smp_max_cpus
 
