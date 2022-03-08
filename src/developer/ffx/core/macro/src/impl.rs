@@ -371,7 +371,20 @@ fn generate_known_proxy(
                 let output_fut = Ident::new(&format!("{}_fut", factory_name), Span::call_site());
                 let output_fut_res =
                     Ident::new(&format!("{}_fut_res", factory_name), Span::call_site());
-                let implementation = quote! { let #output_fut = injector.#factory_name(); };
+                let implementation = quote! {
+                    let #output_fut = async {
+                        let retry_count = 1;
+                        let mut tries = 0;
+                        loop {
+                            tries += 1;
+                            let factory = injector.#factory_name().await;
+                            if factory.is_ok() || tries > retry_count {
+                                break factory;
+                            }
+                        }
+                    };
+                };
+
                 let testing = if known_proxy.2 {
                     generate_fake_test_proxy_method(pat_ident.ident.clone(), proxy_type_path)
                 } else {
