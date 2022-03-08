@@ -60,8 +60,9 @@ test("get_hardware_display_controller_test") {
     ":hdcp_client",
     ":hdcp_service",
     "//sdk/lib/fit-promise",
-    "//sdk/lib/sys/cpp/testing:integration_fixture",
+    "//sdk/lib/sys/cpp:cpp",
     "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture",
     "//third_party/googletest:gtest",
   ]
 }
@@ -84,8 +85,8 @@ test("get_hardware_display_controller_inject_services_test") {
     ":hdcp_client",
     ":hdcp_service",
     "//sdk/lib/fit-promise",
-    "//sdk/lib/sys/cpp/testing:integration_fixture",
     "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture",
     "//third_party/googletest:gtest",
   ]
 }
