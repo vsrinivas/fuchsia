@@ -1,7 +1,7 @@
-Name: Mbed TLS
+Name: OVMF
 URL:
 Version:
 License:
-License File: repo/LICENSE
+License File: License.txt
 Description:
 Local Modifications:
