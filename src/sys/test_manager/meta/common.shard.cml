@@ -83,12 +83,12 @@
         },
         {
             name: "tier-2-tests",
-            environment: "#test-env",
+            environment: "#legacy-test-env",
             durability: "transient",
         },
         {
             name: "system-tests",
-            environment: "#test-env",
+            environment: "#legacy-test-env",
             durability: "transient",
         },
     ],

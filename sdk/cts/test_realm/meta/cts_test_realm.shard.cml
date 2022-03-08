@@ -5,7 +5,7 @@
     collections: [
         {
             name: "cts-tests",
-            environment: "#test-env",
+            environment: "#legacy-test-env",
             durability: "transient",
         },
     ],

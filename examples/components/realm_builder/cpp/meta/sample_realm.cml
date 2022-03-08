@@ -7,6 +7,7 @@
         "sys/component/realm_builder.shard.cml",
 
         // [START_EXCLUDE]
+        "//sdk/lib/sys/testing/hermetic-tier-2-test.shard.cml",
         "//src/sys/test_runners/gtest/default.shard.cml",
         "syslog/client.shard.cml",
         // [END_EXCLUDE]

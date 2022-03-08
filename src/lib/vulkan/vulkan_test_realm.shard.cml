@@ -5,7 +5,7 @@
     collections: [
         {
             name: "vulkan-tests",
-            environment: "#test-env",
+            environment: "#legacy-test-env",
             durability: "transient",
         },
     ],
