@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 use crate::fs::*;
-use crate::mode;
 use crate::task::*;
 use crate::types::*;
 

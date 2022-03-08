@@ -5,7 +5,6 @@
 use super::pid_directory::*;
 use crate::fs::*;
 use crate::fs_node_impl_symlink;
-use crate::mode;
 use crate::task::*;
 use crate::types::*;
 

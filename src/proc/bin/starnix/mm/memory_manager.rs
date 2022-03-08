@@ -16,10 +16,10 @@ use crate::collections::*;
 use crate::fs::*;
 use crate::logging::*;
 use crate::mm::{vmo::round_up_to_system_page_size, FutexTable};
+use crate::not_implemented;
 use crate::task::{CurrentTask, Task};
 use crate::types::{range_ext::RangeExt, *};
 use crate::vmex_resource::VMEX_RESOURCE;
-use crate::{mode, not_implemented};
 
 lazy_static! {
     pub static ref PAGE_SIZE: u64 = zx::system_get_page_size() as u64;

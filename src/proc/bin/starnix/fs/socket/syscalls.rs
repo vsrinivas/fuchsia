@@ -9,7 +9,6 @@ use zerocopy::{AsBytes, FromBytes};
 use super::*;
 use crate::fs::buffers::*;
 use crate::fs::*;
-use crate::mode;
 use crate::not_implemented;
 use crate::strace;
 use crate::syscalls::*;

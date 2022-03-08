@@ -112,9 +112,11 @@ impl ops::Not for FileMode {
     }
 }
 
-#[macro_export]
 macro_rules! mode {
     ($type:ident, $mode:expr) => {
         crate::types::FileMode::from_bits($mode) | crate::types::FileMode::$type
     };
 }
+
+// Public re-export of macros allows them to be used like regular rust items.
+pub(crate) use mode;

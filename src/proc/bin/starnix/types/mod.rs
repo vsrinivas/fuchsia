@@ -19,6 +19,8 @@ pub mod errno;
 pub mod range_ext;
 pub mod uapi;
 
+pub(crate) use union::*;
+
 pub use device_type::*;
 pub use errno::*;
 pub use file_mode::*;
@@ -31,6 +33,3 @@ pub use time::*;
 pub use uapi::*;
 pub use user_address::*;
 pub use user_buffer::*;
-
-// The compiler doesn't like a glob here.
-pub(crate) use union::struct_with_union_into_bytes;

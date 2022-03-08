@@ -7,7 +7,6 @@ use crate::device::wayland::DmaBufNode;
 use crate::fs::socket::*;
 use crate::fs::FdNumber;
 use crate::fs::FsString;
-use crate::mode;
 use crate::task::CurrentTask;
 use crate::types::*;
 

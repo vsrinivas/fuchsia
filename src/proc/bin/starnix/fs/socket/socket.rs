@@ -9,7 +9,6 @@ use super::*;
 
 use crate::fs::buffers::*;
 use crate::fs::*;
-use crate::mode;
 use crate::task::*;
 use crate::types::*;
 
