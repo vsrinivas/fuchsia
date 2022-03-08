@@ -10,10 +10,12 @@
 ##
 ## Configure target device to use a new update source.
 ##
-##   --name NAME      Name the generated update source config NAME.
-##   --addr ADDR      Specify the package server address explicitly.
-##   --port PORT      The port at ADDR on which the package server is running (default: 8083).
-##   --[no-]persist   Enable or disable persistence of repo metadata. Disabled by default.
+##   --name NAME        Name the generated update source config NAME.
+##   --addr ADDR        Specify the package server address explicitly.
+##   --port PORT        The port at ADDR on which the package server is running (default: 8083).
+##   --[no-]persist     Enable or disable persistence of repo metadata. Disabled by default.
+##   --server-mode MODE Use repository server mode MODE to register a repository onto a device.
+##                      (default: output of 'ffx config get repository.server.mode').
 ##
 ## ADDR:
 ## Any IPv4 / IPv6 address or publicly reachable DNS name.
@@ -40,10 +42,11 @@ function main {
   fx-standard-switches "$@"
   set -- "${FX_ARGV[@]}"
 
-  addr=""
-  port=""
-  source_name=""
-  persist=""
+  local addr=""
+  local port=""
+  local source_name=""
+  local persist=""
+  local server_mode=""
   while [[ $# -ne 0 ]]; do
     case "$1" in
       --addr)
@@ -63,6 +66,10 @@ function main {
       --persist)
         persist="-p"
         ;;
+      --server-mode)
+        server_mode="$2"
+        shift
+        ;;
       *)
         fx-error "Unrecognized option: $1"
         usage
@@ -71,10 +78,12 @@ function main {
     shift
   done
 
-  local server_mode="$(package-server-mode)"
-  local err="$?"
-  if [[ "${err}" -ne 0 ]]; then
-    exit 1
+  if [[ -z "${server_mode}" ]]; then
+    server_mode="$(package-server-mode)"
+    local err="$?"
+    if [[ "${err}" -ne 0 ]]; then
+      exit 1
+    fi
   fi
 
   if [[ "${server_mode}" = "pm" ]]; then

@@ -172,6 +172,9 @@ with-pinned-target() {
 repo_dir="${FUCHSIA_BUILD_DIR}/amber-files"
 
 if is_feature_enabled "incremental"; then
+  # FIXME(http://fxbug.dev/79636): ffx doesn't yet support incremental package building.
+  server_mode="pm"
+
   fx-info "Incremental package auto-publishing is enabled."
   serve_flags+=( -p "all_package_manifests.list" )
 
@@ -233,7 +236,7 @@ else
 fi
 
 # Error out if we can't start a package server.
-check-if-we-can-start-package-server "" "${port}"
+check-if-we-can-start-package-server "${server_mode}" "" "${port}"
 err=$?
 if [[ "${err}" -ne 0 ]]; then
   exit 1
@@ -259,6 +262,7 @@ if [[ "${server_mode}" = "pm" ]]; then
   # Allow a little slack for pm serve to startup, that way the first kill -0 will catch a dead server
   sleep 0.1
   if ! kill -0 "${pm_pid}" 2> /dev/null; then
+    wait "${pm_pid}"
     err=$?
     fx-error "Server died"
     fx-error "If the server exited with 'address already in use', pm may be colliding with"
@@ -340,7 +344,7 @@ while true; do
   if [[ "${state}" == "config" ]]; then
     log "Registering devhost as update source"
 
-    add_update_source_args=( "${persist}" --port "${port}" )
+    add_update_source_args=( "${persist}" --port "${port}" --server-mode "${server_mode}" )
     if [[ ! -z "${source_name}" ]]; then
       add_update_source_args+=( --name "${source_name}" )
     fi

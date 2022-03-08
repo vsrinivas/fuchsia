@@ -3,13 +3,14 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-readonly SERVE_UPDATES_PORT=8083
-
 BT_FILE_DEPS=(
   "out/default/host_x64/pm"
+  "scripts/fx"
+  "tools/devshell/lib/fx-cmd-locator.sh"
   "tools/devshell/lib/fx-optional-features.sh"
   "tools/devshell/lib/updates.sh"
   "tools/devshell/lib/vars.sh"
+  "tools/devshell/lib/platform.sh"
   "tools/devshell/serve-updates"
   "tools/devshell/tests/subcommands/data/fx_serve_update_test/testpackage.cmx"
   "tools/devshell/tests/subcommands/data/fx_serve_update_test/testpackage.json"
@@ -19,29 +20,21 @@ BT_FILE_DEPS=(
 # Build a fake gn to satisfy vars.sh and some other commands to satisfy
 # serve-updates.
 BT_MOCKED_TOOLS=(
+  "tools/devshell/build"
   "tools/devshell/add-update-source"
   "tools/devshell/shell"
 )
 
+declare fx
+
 BT_SET_UP() {
-  declare -i TEST_SERVE_UPDATES_PID=
-  declare TEST_WITH_MOCK=true
-  # Process optional test arguments:
-  #    fx run-bash-test fx_serve_update_test -- --nomock
-  set -- "${BT_TEST_ARGS[@]}"
-  while (( $# > 0 )); do
-    local opt="$1"; shift
-    case "${opt}" in
-      --nomock)
-        TEST_WITH_MOCK=false
-        ;;
-      *)
-        btf::stderr "Invalid test arguments after ' -- ': $@"
-        btf::stderr "Supported option(s):"
-        btf::stderr "  --nomock (connect to a live server, instead of the default mock server)"
-        return 1
-    esac
-  done
+  source "${BT_TEMP_DIR}/tools/devshell/tests/lib/fuchsia-mock.sh"
+  fx="$(btf::setup_fx)"
+  source "${BT_TEMP_DIR}/tools/devshell/lib/vars.sh"
+  fx-config-read
+  build="${BT_TEMP_DIR}/tools/devshell/build"
+
+  export FUCHSIA_DEVICE_NAME="foo-bar-baz-quux"
 
   FUCHSIA_DIR="${BT_TEMP_DIR}"
   FUCHSIA_BUILD_DIR="${FUCHSIA_DIR}/out/default"
@@ -53,51 +46,21 @@ BT_SET_UP() {
   echo "out/default" > "${FUCHSIA_DIR}/.fx-build-dir"
   touch "${FUCHSIA_BUILD_DIR}/args.gn"
   touch "${FUCHSIA_BUILD_DIR}/fx.config"
-
-  if $TEST_WITH_MOCK; then
-    local -r serve_updates="${FUCHSIA_DIR}/tools/devshell/serve-updates"
-    btf::make_mock "${serve_updates}"
-
-    # When the mock serve-updates is called, serve a mock json file on the port
-    local nc_opts=( -l ${SERVE_UPDATES_PORT} )
-    if [[ "$(uname -s)" != "Darwin" ]]; then
-      nc_opts+=( -q 0 )
-    fi
-    cat > "${serve_updates}.mock_side_effects" <<EOF
-      while [[ ! -e ${REPODIR}/repository/targets.json ]]; do
-        sleep 1
-      done
-      nc ${nc_opts[@]} 2>&1 >/dev/null <<EOHTTP
-HTTP/1.1 200 OK
-Content-Type: text/html; charset=UTF-8
-Server: netcat!
-
-\$(cat ${REPODIR}/repository/targets.json)
-EOHTTP
-[[ $? -eq 0 ]] || exit $?
-EOF
-  fi
 }
 
 BT_TEAR_DOWN() {
-  if [[ -n "${TEST_SERVE_UPDATES_PID}" ]]; then
-    if kill -0 "${TEST_SERVE_UPDATES_PID}" 2> /dev/null; then
-      kill -TERM "${TEST_SERVE_UPDATES_PID}" 2> /dev/null
-      wait "${TEST_SERVE_UPDATES_PID}" 2> /dev/null
+  if [[ -n "${serve_updates_pid}" ]]; then
+    if kill -0 "${serve_updates_pid}" 2> /dev/null; then
+      kill -TERM "${serve_updates_pid}" 2> /dev/null
+      wait "${serve_updates_pid}" 2> /dev/null
     fi
   fi
 }
 
-_get_targets() {
-  curl -s http://127.0.0.1:${SERVE_UPDATES_PORT}/targets.json? > targets.json
-  return $?
-}
-
-TEST_fx_serve_updates() {
+# Create a TUF repository for testing.
+_create_repo() {
   # The pm tool needs to exist.
   BT_ASSERT_FILE_EXISTS "${PM}"
-
-  cd data/fx_serve_update_test
 
   # Build the package from the manifest.
   "${PM}" -o testpackage -m testpackage.manifest build
@@ -109,21 +72,117 @@ TEST_fx_serve_updates() {
   "${PM}" newrepo -repo "${REPODIR}"
   "${PM}" publish -a -f testpackage/testpackage-0.far -r "${REPODIR}"
   BT_ASSERT_FILE_EXISTS "${REPODIR}/repository/targets.json"
+}
 
-  # Fire up fx serve-updates. Note, test output is captured, so re-route background task output
-  # to stderr to avoid hanging.
-  >&2 "${FUCHSIA_DEVSHELL_DIR}/serve-updates" &
-  TEST_SERVE_UPDATES_PID=$!
+# Create a mock pm instance that will serve a file, then block until the test
+# is complete.
+_create_mock_pm() {
+  local serve_updates_port=$1
 
-  # Request the list of targets (but wait if the server isn't alive yet).
+  local nc_opts=( -l "${serve_updates_port}" )
+  if [[ "$(uname -s)" != "Darwin" ]]; then
+    nc_opts+=( -q 0 )
+  fi
+
+  local pm="$(btf::make_installed_hosttools_mock pm)"
+  cat > "${pm}.mock_side_effects" <<EOF
+    # Run a server in the background.
+    nc ${nc_opts[@]} 2>&1 >/dev/null <<EOHTTP &
+HTTP/1.1 200 OK
+Content-Type: text/html; charset=UTF-8
+Server: netcat!
+
+\$(cat ${REPODIR}/repository/targets.json)
+EOHTTP
+    pid=\$!
+
+    # Give the server some time to get a request. Otherwise kill it and error out.
+    c=0
+    while (( c < 10 )); do
+      if kill -0 "\${pid}"; then
+        wait "\${pid}"
+        err=\$?
+        if [[ "\${err}" -eq 0 ]]; then
+          break
+        else
+          echo "nc died with \${err}" 1>&2
+          exit "\${err}"
+        fi
+      fi
+
+      sleep 1
+    done
+
+    if (( c == 10 )); then
+      echo "timed out waiting for request" 1>&2
+      exit 1
+    fi
+
+    # Even though serve-updates will try to kill the pm process when it is shut
+    # down, it won't actually kill the mock pm, because serve-updates kills only
+    # kills the pm mock wrapper, not the mock_side_effects. So in order to
+    # actually shut down the mock pm, wait for the real binary to be deleted.
+    # Wait for the mock pm to be removed, then shut down.
+    c=0
+    while (( c < 10 )); do
+      if [[ ! -f "${pm}" ]]; then
+        exit 0
+      fi
+
+      sleep 1
+      (( c++ ))
+    done
+
+    echo "timed out waiting for ${pm} to be removed" 1>&2
+    exit 1
+EOF
+}
+
+# Wait for serve-updates to report it is ready to push packages.
+_wait_for_serve_updates_to_start() {
+  local serve_updates_pid=$1
+  local stdout=$2
+
+  local tries=0
+  while (( tries < 10 )); do
+    # Error out if serve-updates failed.
+    if ! kill -0 "${serve_updates_pid}" 2> /dev/null; then
+      BT_FAIL "serve-updates failed"
+    fi
+
+    if [[ -e "${stdout}" ]]; then
+      if grep "Ready to push packages!" "${stdout}" 1> /dev/null; then
+        break
+      fi
+    fi
+
+    sleep 0.1
+    (( tries++ ))
+  done
+
+  if [[ "${tries}" -eq 10 ]]; then
+    BT_FAIL "timed out waiting for serve-updates to start"
+  fi
+
+  return 0
+}
+
+_get_targets() {
+  local port=$1
+  curl -s http://127.0.0.1:${port}/targets.json > targets.json
+  return $?
+}
+
+_check_targets() {
+  local port=$1
   local -i max_tries=10
   local -i try_count=1
   local -i status=0
-  _get_targets
+  _get_targets "${port}"
   status=$?
-  while (( $status != 0 && try_count < max_tries )); do
+  while (( "${status}" != 0 && try_count < max_tries )); do
     sleep 0.1
-    _get_targets
+    _get_targets "${port}"
     status=$?
     : $(( try_count++ ))
   done
@@ -132,6 +191,199 @@ TEST_fx_serve_updates() {
 
   # Confirm testpackage is one of the targets.
   BT_EXPECT_FILE_CONTAINS_SUBSTRING targets.json "testpackage/0"
+}
+
+TEST_fx_serve_updates_with_pm() {
+  cd data/fx_serve_update_test
+  BT_ASSERT _create_repo
+
+  # Listen on a unique port.
+  local serve_updates_port=9083
+
+  BT_ASSERT _create_mock_pm "${serve_updates_port}"
+
+  local ffx="$(btf::make_installed_hosttools_mock ffx)"
+  cat > "${ffx}.mock_side_effects" << "EOF"
+if [[ "$@" == "config get repository.server.mode" ]]; then
+  echo "\"pm\""
+elif [[ "$@" == "config get repository.server.listen" ]]; then
+  echo "\"[::]:${serve_update_port}\""
+else
+  echo "127.0.0.1"
+fi
+EOF
+
+  # Fire up fx serve-updates.
+  "${FUCHSIA_DEVSHELL_DIR}/serve-updates" -l "${serve_updates_port}" 1>stdout &
+  serve_updates_pid=$!
+
+  # Give fx serve-updates some time to come up.
+  BT_ASSERT _wait_for_serve_updates_to_start "${serve_updates_pid}" stdout
+
+  # Request the list of targets. Confirm testpackage is one of the targets.
+  BT_ASSERT _check_targets "${serve_updates_port}"
+
+  BT_EXPECT_FILE_CONTAINS_SUBSTRING targets.json "testpackage/0"
+
+  # Shut down our fake pm, which should stop serve-updates.
+  kill "${serve_updates_pid}"
+  wait "${serve_updates_pid}"
+
+  BT_EXPECT_FILE_CONTAINS_SUBSTRING stdout "Ready to push packages!"
+
+  return 0
+}
+
+TEST_fx_serve_updates_with_pm_with_incremental() {
+  cd data/fx_serve_update_test
+  BT_ASSERT _create_repo
+
+  # Listen on a unique port.
+  local serve_updates_port=9084
+
+  BT_ASSERT _create_mock_pm "${serve_updates_port}"
+
+  ffx="$(btf::make_installed_hosttools_mock ffx)"
+  cat > "${ffx}.mock_side_effects" <<EOF
+if [[ "\$@" == "config get repository.server.mode" ]]; then
+  echo "\"pm\""
+else
+  echo "127.0.0.1"
+fi
+EOF
+
+  # Fire up fx serve-updates. Note, test output is captured, so re-route background task output
+  # to stderr to avoid hanging.
+  FUCHSIA_DISABLED_incremental=0 ${FUCHSIA_DEVSHELL_DIR}/serve-updates -v -l "${serve_updates}" 1>stdout 2>stderr &
+  serve_updates_pid=$!
+
+  BT_ASSERT _wait_for_serve_updates_to_start "${serve_updates_pid}" stdout
+
+  # Request the list of targets. Confirm testpackage is one of the targets.
+  BT_ASSERT _check_targets "${serve_updates_port}"
+
+  # Shut down our fake pm, which should stop serve-updates.
+  kill "${serve_updates_pid}"
+  wait "${serve_updates_pid}"
+
+  BT_EXPECT_FILE_CONTAINS_SUBSTRING stdout "Ready to push packages!"
+  BT_EXPECT_FILE_CONTAINS_SUBSTRING stderr "Incremental package auto-publishing is enabled."
+}
+
+TEST_fx_serve_updates_exits_if_pm_fails_to_start() {
+  cd data/fx_serve_update_test
+  BT_ASSERT _create_repo
+
+  # Listen on a unique port.
+  local serve_updates_port=9085
+
+  pm="$(btf::make_installed_hosttools_mock pm)"
+  lockfile="${BT_TEMP_DIR}/.pm.lock"
+  echo 5 > "${pm}.mock_status"
+
+  ffx="$(btf::make_installed_hosttools_mock ffx)"
+  cat > "${ffx}.mock_side_effects" << "EOF"
+if [[ "$@" == "config get repository.server.mode" ]]; then
+  echo "\"pm\""
+else
+  echo "127.0.0.1"
+fi
+EOF
+
+  # Fire up fx serve-updates. Note, test output is captured, so re-route background task output
+  # to stderr to avoid hanging.
+  BT_EXPECT_FAIL "${FUCHSIA_DEVSHELL_DIR}/serve-updates" -l ":${serve_updates_port}" 2> stderr
+  BT_EXPECT_FILE_CONTAINS_SUBSTRING stderr "Server died"
+}
+
+TEST_fx_serve_updates_with_ffx() {
+  cd data/fx_serve_update_test
+  BT_ASSERT _create_repo
+
+  # Listen on a unique port.
+  local serve_updates_port=9086
+
+  local shell="${FUCHSIA_DIR}/tools/devshell/shell"
+  btf::make_mock "${shell}"
+  cat > "${shell}.mock_side_effects" <<EOF
+if [[ "\$@" == "clock --monotonic" ]]; then
+  echo "0"
+fi
+EOF
+
+  # Create a mock ffx, which runs in ffx mode, and writes to files when the server is started and stopped.
+  local ffx="$(btf::make_installed_hosttools_mock ffx)"
+  local started_server="${BT_TEMP_DIR}/started-server"
+  local stopped_server="${BT_TEMP_DIR}/stopped-server"
+  cat > "${ffx}.mock_side_effects" <<EOF
+if [[ "\$@" == "config get repository.server.mode" ]]; then
+  echo "\"ffx\""
+elif [[ "\$@" == "config get repository.server.listen" ]]; then
+  echo "\"[::]:${serve_updates_port}\""
+elif [[ "\$@" == "--config ffx_repository=true repository server start" ]]; then
+  touch "${started_server}"
+  exit 0
+elif [[ "\$@" == "--config ffx_repository=true repository server stop" ]]; then
+  touch "${stopped_server}"
+  exit 0
+else
+  echo "127.0.0.1"
+fi
+EOF
+
+  # Fire up fx serve-updates. Note, test output is captured, so re-route background task output
+  # to stderr to avoid hanging.
+  "${FUCHSIA_DEVSHELL_DIR}/serve-updates" -l ":${serve_updates_port}" 1>stdout &
+  local serve_updates_pid=$!
+
+  _wait_for_serve_updates_to_start "${serve_updates_pid}" stdout
+
+  # Shut down our fake ffx server, which should stop serve-updates.
+  kill "${serve_updates_pid}"
+  wait "${serve_updates_pid}"
+
+  BT_ASSERT_FILE_EXISTS "${started_server}"
+  BT_ASSERT_FILE_EXISTS "${stopped_server}"
+
+  BT_EXPECT_FILE_CONTAINS_SUBSTRING stdout "Ready to push packages!"
+}
+
+TEST_fx_serve_updates_with_ffx_with_incremental() {
+  cd data/fx_serve_update_test
+  BT_ASSERT _create_repo
+
+  # Listen on a unique port.
+  local serve_updates_port=9087
+
+  BT_ASSERT _create_mock_pm "${serve_updates_port}"
+
+  # Even though the ffx config says we should use the ffx repository server, we
+  # should fall back to using pm.
+  ffx="$(btf::make_installed_hosttools_mock ffx)"
+  cat > "${ffx}.mock_side_effects" <<EOF
+if [[ "\$@" == "config get repository.server.mode" ]]; then
+  echo "\"ffx\""
+else
+  echo "127.0.0.1"
+fi
+EOF
+
+  # Fire up fx serve-updates. Note, test output is captured, so re-route background task output
+  # to stderr to avoid hanging.
+  FUCHSIA_DISABLED_incremental=0 ${FUCHSIA_DEVSHELL_DIR}/serve-updates -v -l "${serve_updates}" 1>stdout 2>stderr &
+  serve_updates_pid=$!
+
+  BT_ASSERT _wait_for_serve_updates_to_start "${serve_updates_pid}" stdout
+
+  # Request the list of targets. Confirm testpackage is one of the targets.
+  BT_ASSERT _check_targets "${serve_updates_port}"
+
+  # Shut down our fake pm, which should stop serve-updates.
+  kill "${serve_updates_pid}"
+  wait "${serve_updates_pid}"
+
+  BT_EXPECT_FILE_CONTAINS_SUBSTRING stdout "Ready to push packages!"
+  BT_EXPECT_FILE_CONTAINS_SUBSTRING stderr "Incremental package auto-publishing is enabled."
 }
 
 BT_RUN_TESTS "$@"

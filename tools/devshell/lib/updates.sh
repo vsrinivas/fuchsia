@@ -44,14 +44,13 @@ function package-server-mode {
 # * If we are using ffx, return 0 if ffx is configured to listen on the
 #   specified port.
 function check-if-we-can-start-package-server {
-  local expected_ip=$1
-  local expected_port=$2
+  local mode=$1
+  local expected_ip=$2
+  local expected_port=$3
 
-  # First determine which package server we are supposed to be using.
-  local mode=$(package-server-mode)
-  local err=$?
-  if [[ "${err}" -ne 0 ]]; then
-    return "${err}"
+  # We can run if nothing is listening on our port.
+  if ! is-listening-on-port "${expected_port}"; then
+    return 0
   fi
 
   # Checks if a pm package server process appears to be running.
@@ -63,11 +62,6 @@ function check-if-we-can-start-package-server {
 
   # Check that the server mode is known, and that we have the ability to use this server mode.
   if [[ "${mode}" = "pm" ]]; then
-    # We can't run if something else is listening on our port.
-    if ! check-listening-on-port "${expected_port}"; then
-      return 0
-    fi
-
     # Something is using the port. Try to determine if it's another pm server, or ffx.
     if [[ "${is_pm_running}" -eq 0 ]]; then
       fx-warn "It looks like serve-updates may be running."
@@ -75,13 +69,22 @@ function check-if-we-can-start-package-server {
       return 1
     fi
 
-    fx-error "It looks like some process is listening on ${port}."
-    fx-error "You probably need to stop that and start a new one here with \"fx serve\""
+    configured_mode="$(package-server-mode)"
+    if [[ "${configured_mode}" == "ffx" ]]; then
+      fx-error "Even though we are trying to start a pm package server, it appears"
+      fx-error "that there may be an ffx server running that could block the pm"
+      fx-error "package server from listening on ${expected_port}."
+      fx-error ""
+      fx-error "You probably need to either stop serve-updates, or explicitly shut"
+      fx-error "the ffx server with \"$ ffx repository server stop\" and start a new"
+      fx-error "one with \"fx serve\"."
+    else
+      fx-error "It looks like some process is listening on ${port}."
+      fx-error "You probably need to stop that and start a new one here with \"fx serve\""
+    fi
 
     return 1
   else
-
-
     # Make sure ffx repository is configured to listen on this address.
     ffx-repository-check-server-address "${expected_ip}" "${expected_port}"
     local err=$?
@@ -162,7 +165,7 @@ function check-for-package-server {
       return 1
     fi
 
-    if ! check-listening-on-port "${ffx_port}"; then
+    if ! is-listening-on-port "${ffx_port}"; then
       fx-error "It looks like the ffx package server is not running."
       fx-error "You probably need to run \"fx add-update-source\""
       return 1
@@ -175,7 +178,7 @@ function check-for-package-server {
   return 0
 }
 
-function check-listening-on-port {
+function is-listening-on-port {
   local port=$1
 
   if [[ "$(uname -s)" == "Darwin" ]]; then
@@ -341,7 +344,7 @@ function ffx-repository-check-server-address {
 }
 
 function default-repository-url {
-  local mode=$(package-server-mode)
+  local mode="$(package-server-mode)"
   local err=$?
 
   if [[ "${err}" -ne 0 ]]; then
