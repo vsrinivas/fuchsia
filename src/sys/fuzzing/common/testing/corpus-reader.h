@@ -2,20 +2,23 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// TODO(fxbug.dev/92490): Rename this when |Controller| is migrated.
 #ifndef SRC_SYS_FUZZING_COMMON_TESTING_CORPUS_READER_H_
 #define SRC_SYS_FUZZING_COMMON_TESTING_CORPUS_READER_H_
 
 #include <fuchsia/fuzzer/cpp/fidl.h>
-#include <lib/fidl/cpp/interface_handle.h>
+#include <lib/async/cpp/executor.h>
+#include <lib/async/dispatcher.h>
+#include <lib/fidl/cpp/binding.h>
+#include <lib/fidl/cpp/interface_request.h>
+#include <stdint.h>
 
 #include <memory>
-#include <mutex>
+#include <vector>
 
 #include "src/lib/fxl/macros.h"
-#include "src/sys/fuzzing/common/binding.h"
+#include "src/sys/fuzzing/common/async-types.h"
 #include "src/sys/fuzzing/common/input.h"
-#include "src/sys/fuzzing/common/sync-wait.h"
-#include "src/sys/fuzzing/common/transceiver.h"
 
 namespace fuzzing {
 
@@ -25,28 +28,25 @@ using ::fuchsia::fuzzer::CorpusReader;
 // from the engine and adds them to a queue that can be waited on.
 class FakeCorpusReader final : public CorpusReader {
  public:
-  FakeCorpusReader();
+  explicit FakeCorpusReader(ExecutorPtr executor);
   ~FakeCorpusReader() override = default;
 
+  const std::vector<Input>& corpus() const { return corpus_; }
+
+  // |Next| will return an error after this many successful calls.
+  void set_error_after(int64_t error_after) { error_after_ = error_after; }
+
   // FIDL methods.
+  void Bind(fidl::InterfaceRequest<CorpusReader> request);
   fidl::InterfaceHandle<CorpusReader> NewBinding();
   void Next(FidlInput fidl_input, NextCallback callback) override;
 
-  // Blocks until a call to |GetNext| would succeed, in which case it returns true, or until the
-  // channel is closed, in which case it returns false.
-  bool AwaitNext();
-
-  // Returns the next input as submitted by |Next|. This should only be called after |AwaitNext| has
-  // returned true.
-  Input GetNext();
-
  private:
-  Binding<CorpusReader> binding_;
-  Transceiver transceiver_;
-  SyncWait sync_;
-  std::mutex mutex_;
-  std::deque<Input> inputs_ FXL_GUARDED_BY(mutex_);
-  bool has_more_ FXL_GUARDED_BY(mutex_) = true;
+  fidl::Binding<CorpusReader> binding_;
+  ExecutorPtr executor_;
+  int64_t error_after_ = -1;
+  std::vector<Input> corpus_;
+  Scope scope_;
 
   FXL_DISALLOW_COPY_ASSIGN_AND_MOVE(FakeCorpusReader);
 };

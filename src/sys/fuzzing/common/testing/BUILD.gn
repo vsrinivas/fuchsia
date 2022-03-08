@@ -6,8 +6,6 @@ source_set("testing") {
   visibility = [ "//src/sys/*" ]
   testonly = true
   sources = [
-    "async-corpus-reader.cc",
-    "async-corpus-reader.h",
     "async-test.h",
     "corpus-reader.cc",
     "corpus-reader.h",

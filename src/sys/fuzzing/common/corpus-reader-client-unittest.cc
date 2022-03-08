@@ -9,8 +9,8 @@
 #include <gtest/gtest.h>
 
 #include "src/sys/fuzzing/common/input.h"
-#include "src/sys/fuzzing/common/testing/async-corpus-reader.h"
 #include "src/sys/fuzzing/common/testing/async-test.h"
+#include "src/sys/fuzzing/common/testing/corpus-reader.h"
 
 namespace fuzzing {
 
@@ -19,7 +19,7 @@ namespace fuzzing {
 class CorpusReaderClientTest : public AsyncTest {
  protected:
   auto Connect(CorpusReaderClient& client) {
-    auto server = std::make_unique<FakeAsyncCorpusReader>(executor());
+    auto server = std::make_unique<FakeCorpusReader>(executor());
     server->Bind(client.NewRequest());
     return server;
   }

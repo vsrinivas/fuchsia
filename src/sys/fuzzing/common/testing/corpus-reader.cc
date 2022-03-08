@@ -7,53 +7,43 @@
 #include <lib/syslog/cpp/macros.h>
 #include <zircon/status.h>
 
+#include "src/sys/fuzzing/common/async-socket.h"
+
 namespace fuzzing {
 
-FakeCorpusReader::FakeCorpusReader() : binding_(this) {}
+FakeCorpusReader::FakeCorpusReader(ExecutorPtr executor) : binding_(this), executor_(executor) {}
 
-fidl::InterfaceHandle<CorpusReader> FakeCorpusReader::NewBinding() { return binding_.NewBinding(); }
+void FakeCorpusReader::Bind(fidl::InterfaceRequest<CorpusReader> request) {
+  auto status = binding_.Bind(std::move(request), executor_->dispatcher());
+  FX_DCHECK(status == ZX_OK) << zx_status_get_string(status);
+}
+
+fidl::InterfaceHandle<CorpusReader> FakeCorpusReader::NewBinding() {
+  fidl::InterfaceHandle<CorpusReader> client;
+  Bind(client.NewRequest());
+  return client;
+}
 
 void FakeCorpusReader::Next(FidlInput fidl_input, NextCallback callback) {
-  transceiver_.Receive(std::move(fidl_input), [&](zx_status_t status, Input input) {
-    FX_DCHECK(status == ZX_OK) << zx_status_get_string(status);
-    std::lock_guard<std::mutex> lock(mutex_);
-    if (input.size() == 0) {
-      has_more_ = false;
-    } else {
-      inputs_.push_back(std::move(input));
-    }
-    sync_.Signal();
-  });
-  callback(ZX_OK);
-}
-
-bool FakeCorpusReader::AwaitNext() {
-  while (true) {
-    sync_.WaitFor("next corpus element");
-    {
-      std::lock_guard<std::mutex> lock(mutex_);
-      if (!inputs_.empty()) {
-        return true;
-      }
-      if (!has_more_) {
-        return false;
-      }
-    }
+  if (error_after_-- == 0) {
+    callback(ZX_ERR_INTERNAL);
+    return;
   }
-}
-
-Input FakeCorpusReader::GetNext() {
-  Input input;
-  {
-    std::lock_guard<std::mutex> lock(mutex_);
-    FX_DCHECK(!inputs_.empty());
-    input = std::move(inputs_.front());
-    inputs_.pop_front();
-    if (inputs_.empty() && has_more_) {
-      sync_.Reset();
-    }
-  }
-  return input;
+  auto next = AsyncSocketRead(executor_, std::move(fidl_input))
+                  .and_then([this](Input& input) {
+                    corpus_.emplace_back(std::move(input));
+                    return fpromise::ok();
+                  })
+                  .then([callback = std::move(callback)](ZxResult<>& result) mutable {
+                    if (result.is_error()) {
+                      callback(result.error());
+                    } else {
+                      callback(ZX_OK);
+                    }
+                    return fpromise::ok();
+                  })
+                  .wrap_with(scope_);
+  executor_->schedule_task(std::move(next));
 }
 
 }  // namespace fuzzing

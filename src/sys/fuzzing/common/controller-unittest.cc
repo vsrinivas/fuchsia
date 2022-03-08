@@ -184,28 +184,27 @@ TEST_F(ControllerTest, ReadCorpus) {
   AddToCorpus(CorpusType::LIVE, input3.Duplicate());
   AddToCorpus(CorpusType::LIVE, input4.Duplicate());
 
-  FakeCorpusReader seed_reader;
-  FakeCorpusReader live_reader;
-  controller->ReadCorpus(CorpusType::SEED, seed_reader.NewBinding(), [] {});
-  controller->ReadCorpus(CorpusType::LIVE, live_reader.NewBinding(), [] {});
+  FakeCorpusReader seed_reader(executor());
+  FakeCorpusReader live_reader(executor());
+  Bridge<> seed_bridge;
+  Bridge<> live_bridge;
+  controller->ReadCorpus(CorpusType::SEED, seed_reader.NewBinding(), seed_bridge.completer.bind());
+  controller->ReadCorpus(CorpusType::LIVE, live_reader.NewBinding(), live_bridge.completer.bind());
+  FUZZING_EXPECT_OK(seed_bridge.consumer.promise_or(fpromise::error()));
+  FUZZING_EXPECT_OK(live_bridge.consumer.promise_or(fpromise::error()));
   RunUntilIdle();
 
-  // Interleave the calls.
-  ASSERT_TRUE(live_reader.AwaitNext());
-  EXPECT_EQ(live_reader.GetNext().ToHex(), input3.ToHex());
+  const auto& seed_corpus = seed_reader.corpus();
+  ASSERT_EQ(seed_corpus.size(), 3U);
+  EXPECT_EQ(seed_corpus[0], input1);
+  EXPECT_EQ(seed_corpus[1], input2);
+  EXPECT_EQ(seed_corpus[2], input0);
 
-  ASSERT_TRUE(seed_reader.AwaitNext());
-  EXPECT_EQ(seed_reader.GetNext().ToHex(), input1.ToHex());
-
-  ASSERT_TRUE(live_reader.AwaitNext());
-  EXPECT_EQ(live_reader.GetNext().ToHex(), input4.ToHex());
-
-  ASSERT_TRUE(seed_reader.AwaitNext());
-  EXPECT_EQ(seed_reader.GetNext().ToHex(), input2.ToHex());
-
-  // All inputs have been sent.
-  EXPECT_FALSE(live_reader.AwaitNext());
-  EXPECT_FALSE(live_reader.AwaitNext());
+  const auto& live_corpus = live_reader.corpus();
+  ASSERT_EQ(live_corpus.size(), 3U);
+  EXPECT_EQ(live_corpus[0], input3);
+  EXPECT_EQ(live_corpus[1], input4);
+  EXPECT_EQ(live_corpus[2], input0);
 }
 
 TEST_F(ControllerTest, WriteDictionary) {
