@@ -173,7 +173,7 @@ void DriverHost::Start(StartRequestView request, StartCompleter::Sync& completer
   // data before it is destroyed.
   // TODO(fxbug.dev/45252): Use FIDL at rest.
   fidl::unstable::OwnedEncodedMessage<fdf::wire::DriverStartArgs> message(
-      fidl::internal::WireFormatVersion::kV1, &request->start_args);
+      fidl::internal::WireFormatVersion::kV2, &request->start_args);
   if (!message.ok()) {
     LOGF(ERROR, "Failed to start driver '%s', could not encode start args: %s", url.data(),
          message.FormatDescription().data());
