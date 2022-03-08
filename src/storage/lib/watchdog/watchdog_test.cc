@@ -9,6 +9,7 @@
 #include <lib/watchdog/watchdog.h>
 #include <unistd.h>
 
+#include <atomic>
 #include <chrono>
 #include <cstddef>
 #include <cstdio>
@@ -26,7 +27,7 @@ namespace fs_watchdog {
 namespace {
 
 // Default sleep argument for the watchdog
-constexpr std::chrono::nanoseconds kSleepDuration = std::chrono::milliseconds(500);
+constexpr std::chrono::nanoseconds kSleepDuration = std::chrono::milliseconds(100);
 
 // Custom/overloaded operation timeout
 constexpr int kOperationTimeoutSeconds = 1;
@@ -94,12 +95,14 @@ class TestOperationTracker : public FsOperationTracker {
   TestOperationTracker(OperationBase* operation, WatchdogInterface* watchdog, bool track = true)
       : FsOperationTracker(operation, watchdog, track) {}
   void OnTimeOut(FILE* out_stream) const final { handler_called_++; }
+
   bool TimeoutHandlerCalled() const { return handler_called_ > 0; }
+
   int TimeoutHandlerCalledCount() const { return handler_called_; }
 
  private:
   // Incremented on each call to TimeoutHandler.
-  mutable int handler_called_ = 0;
+  mutable std::atomic<int> handler_called_ = 0;
 };
 
 std::unique_ptr<std::string> GetData(int fd) {
