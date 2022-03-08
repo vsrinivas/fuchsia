@@ -8,9 +8,8 @@ use std::fmt;
 use std::sync::Arc;
 
 use crate::fs::*;
-use crate::logging::impossible_error;
+use crate::logging::{impossible_error, not_implemented};
 use crate::mm::{DesiredAddress, MappedVmo, MappingOptions};
-use crate::not_implemented;
 use crate::syscalls::SyscallResult;
 use crate::task::*;
 use crate::types::as_any::*;

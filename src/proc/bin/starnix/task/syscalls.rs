@@ -8,9 +8,8 @@ use std::ffi::CString;
 use zerocopy::AsBytes;
 
 use crate::execution::*;
+use crate::logging::{not_implemented, strace};
 use crate::mm::*;
-use crate::not_implemented;
-use crate::strace;
 use crate::syscalls::*;
 use crate::types::*;
 

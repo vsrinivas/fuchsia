@@ -4,7 +4,7 @@
 
 use crate::device::WithStaticDeviceId;
 use crate::fs::{fileops_impl_nonblocking, FileObject, FileOps, FsNode, FsNodeOps, SeekOrigin};
-use crate::not_implemented;
+use crate::logging::not_implemented;
 use crate::syscalls::{SyscallResult, SUCCESS};
 use crate::task::CurrentTask;
 use crate::types::*;

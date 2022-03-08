@@ -2,9 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::not_implemented;
+use crate::logging::{not_implemented, strace};
 use crate::signals::*;
-use crate::strace;
 use crate::task::*;
 use crate::types::*;
 

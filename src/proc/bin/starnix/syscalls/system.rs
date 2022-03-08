@@ -6,7 +6,7 @@ use fuchsia_runtime::utc_time;
 use fuchsia_zircon::{self as zx, Task};
 use log::warn;
 
-use crate::not_implemented;
+use crate::logging::not_implemented;
 use crate::syscalls::decls::SyscallDecl;
 use crate::syscalls::*;
 use crate::task::Waiter;

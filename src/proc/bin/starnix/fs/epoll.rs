@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use crate::fs::*;
-use crate::not_implemented;
+use crate::logging::not_implemented;
 use crate::task::*;
 use crate::types::*;
 use fuchsia_zircon as zx;

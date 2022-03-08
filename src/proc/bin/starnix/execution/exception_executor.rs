@@ -18,9 +18,9 @@ use std::mem;
 use std::sync::Arc;
 
 use super::shared::*;
+use crate::logging::strace;
 use crate::mm::MemoryManager;
 use crate::signals::*;
-use crate::strace;
 use crate::syscalls::decls::SyscallDecl;
 use crate::syscalls::table::dispatch_syscall;
 use crate::task::*;

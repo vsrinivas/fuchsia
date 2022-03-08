@@ -12,7 +12,6 @@ use crate::mm::*;
 use crate::syscalls::*;
 use crate::types::*;
 use crate::vmex_resource::VMEX_RESOURCE;
-use crate::{not_implemented, strace};
 
 fn mmap_prot_to_vm_opt(prot: u32) -> zx::VmarFlags {
     let mut flags = zx::VmarFlags::empty();
