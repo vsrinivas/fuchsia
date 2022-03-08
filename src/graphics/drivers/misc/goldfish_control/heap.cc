@@ -47,7 +47,10 @@ void Heap::BindWithHeapProperties(zx::channel server_request,
                                           self->OnClose(info, server_end.TakeChannel());
                                         });
         auto result = fidl::WireSendEvent(binding)->OnRegister(std::move(heap_properties));
-        ZX_ASSERT(result.ok());
+        if (!result.ok()) {
+          zxlogf(ERROR, "[%s] OnRegister() failed: %s", tag_.c_str(),
+                 result.FormatDescription().c_str());
+        }
       });
 }
 
