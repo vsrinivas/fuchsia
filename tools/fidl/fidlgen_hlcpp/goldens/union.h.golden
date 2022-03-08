@@ -2520,7 +2520,8 @@ struct CodingTraits<std::unique_ptr<::test::union_::UnionWithAttributes>> {
       Encoder* encoder,
       std::unique_ptr<::test::union_::UnionWithAttributes>* value,
       size_t offset,
-      cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+      cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
+          cpp17::nullopt) {
     auto&& p_xunion = *value;
     if (p_xunion) {
       p_xunion->Encode(encoder, offset);
@@ -2579,10 +2580,11 @@ struct CodingTraits<std::unique_ptr<::test::union_::Union>> {
   static constexpr size_t inline_size_v1_no_ee = 24;
   static constexpr size_t inline_size_v2 = 16;
 
-  static void Encode(
-      Encoder* encoder, std::unique_ptr<::test::union_::Union>* value,
-      size_t offset,
-      cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  static void Encode(Encoder* encoder,
+                     std::unique_ptr<::test::union_::Union>* value,
+                     size_t offset,
+                     cpp17::optional<::fidl::HandleInformation>
+                         maybe_handle_info = cpp17::nullopt) {
     auto&& p_xunion = *value;
     if (p_xunion) {
       p_xunion->Encode(encoder, offset);
@@ -2677,10 +2679,11 @@ struct CodingTraits<std::unique_ptr<::test::union_::StrictUnion>> {
   static constexpr size_t inline_size_v1_no_ee = 24;
   static constexpr size_t inline_size_v2 = 16;
 
-  static void Encode(
-      Encoder* encoder, std::unique_ptr<::test::union_::StrictUnion>* value,
-      size_t offset,
-      cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  static void Encode(Encoder* encoder,
+                     std::unique_ptr<::test::union_::StrictUnion>* value,
+                     size_t offset,
+                     cpp17::optional<::fidl::HandleInformation>
+                         maybe_handle_info = cpp17::nullopt) {
     auto&& p_xunion = *value;
     if (p_xunion) {
       p_xunion->Encode(encoder, offset);
@@ -2747,10 +2750,11 @@ struct CodingTraits<std::unique_ptr<::test::union_::StrictSimpleXUnion>> {
   static constexpr size_t inline_size_v1_no_ee = 24;
   static constexpr size_t inline_size_v2 = 16;
 
-  static void Encode(
-      Encoder* encoder,
-      std::unique_ptr<::test::union_::StrictSimpleXUnion>* value, size_t offset,
-      cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  static void Encode(Encoder* encoder,
+                     std::unique_ptr<::test::union_::StrictSimpleXUnion>* value,
+                     size_t offset,
+                     cpp17::optional<::fidl::HandleInformation>
+                         maybe_handle_info = cpp17::nullopt) {
     auto&& p_xunion = *value;
     if (p_xunion) {
       p_xunion->Encode(encoder, offset);
@@ -2813,10 +2817,11 @@ struct CodingTraits<std::unique_ptr<::test::union_::StrictFoo>> {
   static constexpr size_t inline_size_v1_no_ee = 24;
   static constexpr size_t inline_size_v2 = 16;
 
-  static void Encode(
-      Encoder* encoder, std::unique_ptr<::test::union_::StrictFoo>* value,
-      size_t offset,
-      cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  static void Encode(Encoder* encoder,
+                     std::unique_ptr<::test::union_::StrictFoo>* value,
+                     size_t offset,
+                     cpp17::optional<::fidl::HandleInformation>
+                         maybe_handle_info = cpp17::nullopt) {
     auto&& p_xunion = *value;
     if (p_xunion) {
       p_xunion->Encode(encoder, offset);
@@ -2883,7 +2888,8 @@ struct CodingTraits<std::unique_ptr<::test::union_::StrictBoundedXUnion>> {
       Encoder* encoder,
       std::unique_ptr<::test::union_::StrictBoundedXUnion>* value,
       size_t offset,
-      cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+      cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
+          cpp17::nullopt) {
     auto&& p_xunion = *value;
     if (p_xunion) {
       p_xunion->Encode(encoder, offset);
@@ -3002,7 +3008,8 @@ struct CodingTraits<std::unique_ptr<::test::union_::ReverseOrdinalUnion>> {
       Encoder* encoder,
       std::unique_ptr<::test::union_::ReverseOrdinalUnion>* value,
       size_t offset,
-      cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+      cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
+          cpp17::nullopt) {
     auto&& p_xunion = *value;
     if (p_xunion) {
       p_xunion->Encode(encoder, offset);
@@ -3122,10 +3129,11 @@ struct CodingTraits<std::unique_ptr<::test::union_::StrictPizzaOrPasta>> {
   static constexpr size_t inline_size_v1_no_ee = 24;
   static constexpr size_t inline_size_v2 = 16;
 
-  static void Encode(
-      Encoder* encoder,
-      std::unique_ptr<::test::union_::StrictPizzaOrPasta>* value, size_t offset,
-      cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  static void Encode(Encoder* encoder,
+                     std::unique_ptr<::test::union_::StrictPizzaOrPasta>* value,
+                     size_t offset,
+                     cpp17::optional<::fidl::HandleInformation>
+                         maybe_handle_info = cpp17::nullopt) {
     auto&& p_xunion = *value;
     if (p_xunion) {
       p_xunion->Encode(encoder, offset);
@@ -3186,10 +3194,11 @@ struct CodingTraits<std::unique_ptr<::test::union_::PizzaOrPasta>> {
   static constexpr size_t inline_size_v1_no_ee = 24;
   static constexpr size_t inline_size_v2 = 16;
 
-  static void Encode(
-      Encoder* encoder, std::unique_ptr<::test::union_::PizzaOrPasta>* value,
-      size_t offset,
-      cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  static void Encode(Encoder* encoder,
+                     std::unique_ptr<::test::union_::PizzaOrPasta>* value,
+                     size_t offset,
+                     cpp17::optional<::fidl::HandleInformation>
+                         maybe_handle_info = cpp17::nullopt) {
     auto&& p_xunion = *value;
     if (p_xunion) {
       p_xunion->Encode(encoder, offset);
@@ -3256,7 +3265,8 @@ struct CodingTraits<std::unique_ptr<::test::union_::FlexiblePizzaOrPasta>> {
       Encoder* encoder,
       std::unique_ptr<::test::union_::FlexiblePizzaOrPasta>* value,
       size_t offset,
-      cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+      cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
+          cpp17::nullopt) {
     auto&& p_xunion = *value;
     if (p_xunion) {
       p_xunion->Encode(encoder, offset);
@@ -3324,7 +3334,8 @@ struct CodingTraits<std::unique_ptr<::test::union_::ExplicitPizzaOrPasta>> {
       Encoder* encoder,
       std::unique_ptr<::test::union_::ExplicitPizzaOrPasta>* value,
       size_t offset,
-      cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+      cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
+          cpp17::nullopt) {
     auto&& p_xunion = *value;
     if (p_xunion) {
       p_xunion->Encode(encoder, offset);
@@ -3388,10 +3399,11 @@ struct CodingTraits<std::unique_ptr<::test::union_::OlderSimpleUnion>> {
   static constexpr size_t inline_size_v1_no_ee = 24;
   static constexpr size_t inline_size_v2 = 16;
 
-  static void Encode(
-      Encoder* encoder,
-      std::unique_ptr<::test::union_::OlderSimpleUnion>* value, size_t offset,
-      cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  static void Encode(Encoder* encoder,
+                     std::unique_ptr<::test::union_::OlderSimpleUnion>* value,
+                     size_t offset,
+                     cpp17::optional<::fidl::HandleInformation>
+                         maybe_handle_info = cpp17::nullopt) {
     auto&& p_xunion = *value;
     if (p_xunion) {
       p_xunion->Encode(encoder, offset);
@@ -3536,10 +3548,11 @@ struct CodingTraits<std::unique_ptr<::test::union_::NewerSimpleUnion>> {
   static constexpr size_t inline_size_v1_no_ee = 24;
   static constexpr size_t inline_size_v2 = 16;
 
-  static void Encode(
-      Encoder* encoder,
-      std::unique_ptr<::test::union_::NewerSimpleUnion>* value, size_t offset,
-      cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  static void Encode(Encoder* encoder,
+                     std::unique_ptr<::test::union_::NewerSimpleUnion>* value,
+                     size_t offset,
+                     cpp17::optional<::fidl::HandleInformation>
+                         maybe_handle_info = cpp17::nullopt) {
     auto&& p_xunion = *value;
     if (p_xunion) {
       p_xunion->Encode(encoder, offset);
@@ -3601,10 +3614,11 @@ struct CodingTraits<std::unique_ptr<::test::union_::FlexibleUnion>> {
   static constexpr size_t inline_size_v1_no_ee = 24;
   static constexpr size_t inline_size_v2 = 16;
 
-  static void Encode(
-      Encoder* encoder, std::unique_ptr<::test::union_::FlexibleUnion>* value,
-      size_t offset,
-      cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  static void Encode(Encoder* encoder,
+                     std::unique_ptr<::test::union_::FlexibleUnion>* value,
+                     size_t offset,
+                     cpp17::optional<::fidl::HandleInformation>
+                         maybe_handle_info = cpp17::nullopt) {
     auto&& p_xunion = *value;
     if (p_xunion) {
       p_xunion->Encode(encoder, offset);
@@ -3669,10 +3683,11 @@ struct CodingTraits<std::unique_ptr<::test::union_::FlexibleFoo>> {
   static constexpr size_t inline_size_v1_no_ee = 24;
   static constexpr size_t inline_size_v2 = 16;
 
-  static void Encode(
-      Encoder* encoder, std::unique_ptr<::test::union_::FlexibleFoo>* value,
-      size_t offset,
-      cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  static void Encode(Encoder* encoder,
+                     std::unique_ptr<::test::union_::FlexibleFoo>* value,
+                     size_t offset,
+                     cpp17::optional<::fidl::HandleInformation>
+                         maybe_handle_info = cpp17::nullopt) {
     auto&& p_xunion = *value;
     if (p_xunion) {
       p_xunion->Encode(encoder, offset);
@@ -3732,10 +3747,11 @@ struct CodingTraits<std::unique_ptr<::test::union_::FieldCollision>> {
   static constexpr size_t inline_size_v1_no_ee = 24;
   static constexpr size_t inline_size_v2 = 16;
 
-  static void Encode(
-      Encoder* encoder, std::unique_ptr<::test::union_::FieldCollision>* value,
-      size_t offset,
-      cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  static void Encode(Encoder* encoder,
+                     std::unique_ptr<::test::union_::FieldCollision>* value,
+                     size_t offset,
+                     cpp17::optional<::fidl::HandleInformation>
+                         maybe_handle_info = cpp17::nullopt) {
     auto&& p_xunion = *value;
     if (p_xunion) {
       p_xunion->Encode(encoder, offset);
@@ -3795,10 +3811,11 @@ struct CodingTraits<std::unique_ptr<::test::union_::ExplicitXUnion>> {
   static constexpr size_t inline_size_v1_no_ee = 24;
   static constexpr size_t inline_size_v2 = 16;
 
-  static void Encode(
-      Encoder* encoder, std::unique_ptr<::test::union_::ExplicitXUnion>* value,
-      size_t offset,
-      cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  static void Encode(Encoder* encoder,
+                     std::unique_ptr<::test::union_::ExplicitXUnion>* value,
+                     size_t offset,
+                     cpp17::optional<::fidl::HandleInformation>
+                         maybe_handle_info = cpp17::nullopt) {
     auto&& p_xunion = *value;
     if (p_xunion) {
       p_xunion->Encode(encoder, offset);
@@ -3893,10 +3910,11 @@ struct CodingTraits<std::unique_ptr<::test::union_::ExplicitUnion>> {
   static constexpr size_t inline_size_v1_no_ee = 24;
   static constexpr size_t inline_size_v2 = 16;
 
-  static void Encode(
-      Encoder* encoder, std::unique_ptr<::test::union_::ExplicitUnion>* value,
-      size_t offset,
-      cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  static void Encode(Encoder* encoder,
+                     std::unique_ptr<::test::union_::ExplicitUnion>* value,
+                     size_t offset,
+                     cpp17::optional<::fidl::HandleInformation>
+                         maybe_handle_info = cpp17::nullopt) {
     auto&& p_xunion = *value;
     if (p_xunion) {
       p_xunion->Encode(encoder, offset);
@@ -3960,10 +3978,11 @@ struct CodingTraits<std::unique_ptr<::test::union_::ExplicitStrictFoo>> {
   static constexpr size_t inline_size_v1_no_ee = 24;
   static constexpr size_t inline_size_v2 = 16;
 
-  static void Encode(
-      Encoder* encoder,
-      std::unique_ptr<::test::union_::ExplicitStrictFoo>* value, size_t offset,
-      cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  static void Encode(Encoder* encoder,
+                     std::unique_ptr<::test::union_::ExplicitStrictFoo>* value,
+                     size_t offset,
+                     cpp17::optional<::fidl::HandleInformation>
+                         maybe_handle_info = cpp17::nullopt) {
     auto&& p_xunion = *value;
     if (p_xunion) {
       p_xunion->Encode(encoder, offset);
@@ -4024,10 +4043,11 @@ struct CodingTraits<std::unique_ptr<::test::union_::ExplicitFoo>> {
   static constexpr size_t inline_size_v1_no_ee = 24;
   static constexpr size_t inline_size_v2 = 16;
 
-  static void Encode(
-      Encoder* encoder, std::unique_ptr<::test::union_::ExplicitFoo>* value,
-      size_t offset,
-      cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  static void Encode(Encoder* encoder,
+                     std::unique_ptr<::test::union_::ExplicitFoo>* value,
+                     size_t offset,
+                     cpp17::optional<::fidl::HandleInformation>
+                         maybe_handle_info = cpp17::nullopt) {
     auto&& p_xunion = *value;
     if (p_xunion) {
       p_xunion->Encode(encoder, offset);
@@ -4118,7 +4138,8 @@ struct CodingTraits<
       Encoder* encoder,
       std::unique_ptr<::test::union_::XUnionContainingEmptyStruct>* value,
       size_t offset,
-      cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+      cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
+          cpp17::nullopt) {
     auto&& p_xunion = *value;
     if (p_xunion) {
       p_xunion->Encode(encoder, offset);

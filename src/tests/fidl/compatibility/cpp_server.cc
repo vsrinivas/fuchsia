@@ -40,6 +40,14 @@ class EventProxy : public fidl::AsyncEventHandler<Echo> {
     result_ = fidl::SendEvent(server_binding_)->OnEchoNamedEvent(std::move(event->value()));
     sync_completion_signal(&completion);
   }
+  void OnEchoTablePayloadEvent(fidl::Event<Echo::OnEchoTablePayloadEvent>& event) override {
+    result_ = fidl::SendEvent(server_binding_)->OnEchoTablePayloadEvent(std::move(*event));
+    sync_completion_signal(&completion);
+  }
+  void OnEchoUnionPayloadEvent(fidl::Event<Echo::OnEchoUnionPayloadEvent>& event) override {
+    result_ = fidl::SendEvent(server_binding_)->OnEchoUnionPayloadEvent(std::move(*event));
+    sync_completion_signal(&completion);
+  }
 
   fitx::result<fidl::Error> WaitForEvent() {
     sync_completion_wait(&completion, ZX_TIME_INFINITE);
@@ -198,6 +206,61 @@ class EchoClientApp {
         EchoEchoXunionsWithErrorRequest(std::move(value), err, std::move(forward_to_server),
                                         result_variant),
         std::move(callback));
+  }
+
+  void EchoTablePayload(fidl_test_compatibility::RequestTable payload,
+                        fidl::ClientCallback<Echo::EchoTablePayload> callback) {
+    client_->EchoTablePayload(std::move(payload), std::move(callback));
+  }
+
+  void EchoTablePayloadWithError(
+      fidl_test_compatibility::EchoEchoTablePayloadWithErrorRequest payload,
+      fidl::ClientCallback<Echo::EchoTablePayloadWithError> callback) {
+    client_->EchoTablePayloadWithError(std::move(payload), std::move(callback));
+  }
+
+  zx_status_t EchoTablePayloadNoRetVal(fidl_test_compatibility::RequestTable payload) {
+    auto result = client_->EchoTablePayloadNoRetVal(std::move(payload));
+    if (result.is_error()) {
+      return result.error_value().status();
+    }
+    return ZX_OK;
+  }
+
+  void EchoTableRequestComposed(
+      ::fidl_test_imported::ComposedEchoTableRequestComposedRequest payload,
+      fidl::ClientCallback<Echo::EchoTableRequestComposed> callback) {
+    client_->EchoTableRequestComposed(std::move(payload), std::move(callback));
+  }
+
+  void EchoUnionPayload(fidl_test_compatibility::RequestUnion payload,
+                        fidl::ClientCallback<Echo::EchoUnionPayload> callback) {
+    return client_->EchoUnionPayload(std::move(payload), std::move(callback));
+  }
+
+  void EchoUnionPayloadWithError(
+      fidl_test_compatibility::EchoEchoUnionPayloadWithErrorRequest payload,
+      fidl::ClientCallback<Echo::EchoUnionPayloadWithError> callback) {
+    return client_->EchoUnionPayloadWithError(std::move(payload), std::move(callback));
+  }
+
+  void EchoUnionResponseWithErrorComposed(
+      int64_t value, bool want_absolute_value, ::std::string forward_to_server, uint32_t result_err,
+      fidl_test_imported::WantResponse result_variant,
+      fidl::ClientCallback<Echo::EchoUnionResponseWithErrorComposed> callback) {
+    client_->EchoUnionResponseWithErrorComposed(
+        fidl_test_imported::ComposedEchoUnionResponseWithErrorComposedRequest(
+            value, want_absolute_value, std::move(forward_to_server), result_err,
+            std::move(result_variant)),
+        std::move(callback));
+  }
+
+  zx_status_t EchoUnionPayloadNoRetVal(fidl_test_compatibility::RequestUnion payload) {
+    auto result = client_->EchoUnionPayloadNoRetVal(std::move(payload));
+    if (result.is_error()) {
+      return result.error_value().status();
+    }
+    return ZX_OK;
   }
 
   EchoClientApp(const EchoClientApp&) = delete;
@@ -573,43 +636,255 @@ class EchoConnection final : public fidl::Server<Echo> {
 
   void EchoTablePayload(EchoTablePayloadRequest& request,
                         EchoTablePayloadCompleter::Sync& completer) override {
-    // TODO(fxbug.dev/88343): Implement.
+    if (!request->forward_to_server().has_value()) {
+      ::fidl_test_compatibility::ResponseTable resp{{.value = request->value()}};
+      completer.Reply(std::move(resp));
+    } else {
+      std::shared_ptr<EchoClientApp> app =
+          std::make_shared<EchoClientApp>(request->forward_to_server().value());
+      fidl_test_compatibility::RequestTable req{{.value = request->value()}};
+      app->EchoTablePayload(
+          std::move(req),
+          [completer = completer.ToAsync(), extend_lifetime = app](
+              fitx::result<fidl::Error, fidl::Response<Echo::EchoTablePayload>>& result) mutable {
+            ZX_ASSERT_MSG(result.is_ok(), "Forwarding failed: %s",
+                          result.error_value().FormatDescription().c_str());
+            completer.Reply(std::move(*result.value()));
+          });
+    }
   }
 
   void EchoTablePayloadWithError(EchoTablePayloadWithErrorRequest& request,
                                  EchoTablePayloadWithErrorCompleter::Sync& completer) override {
-    // TODO(fxbug.dev/88343): Implement.
+    if (!request->forward_to_server().has_value()) {
+      if (request->result_variant() == wire::RespondWith::kErr) {
+        completer.Reply(
+            Echo_EchoTablePayloadWithError_Result::WithErr(request->result_err().value()));
+      } else {
+        ::fidl_test_compatibility::ResponseTable resp{{.value = request->value()}};
+        completer.Reply(Echo_EchoTablePayloadWithError_Result::WithResponse(std::move(resp)));
+      }
+    } else {
+      std::shared_ptr<EchoClientApp> app =
+          std::make_shared<EchoClientApp>(request->forward_to_server().value());
+      EchoEchoTablePayloadWithErrorRequest req{{
+          .value = request->value(),
+          .result_err = request->result_err(),
+          .result_variant = request->result_variant(),
+      }};
+
+      app->EchoTablePayloadWithError(
+          std::move(req),
+          [completer = completer.ToAsync(), extend_lifetime = app](
+              fitx::result<fidl::Error, fidl::Response<Echo::EchoTablePayloadWithError>>&
+                  result) mutable {
+            ZX_ASSERT_MSG(result.is_ok(), "Forwarding failed: %s",
+                          result.error_value().FormatDescription().c_str());
+            completer.Reply(std::move(*result.value()));
+          });
+    }
   }
 
   void EchoTablePayloadNoRetVal(EchoTablePayloadNoRetValRequest& request,
                                 EchoTablePayloadNoRetValCompleter::Sync&) override {
-    // TODO(fxbug.dev/88343): Implement.
+    if (!request->forward_to_server().has_value()) {
+      ::fidl_test_compatibility::ResponseTable resp{{.value = request->value()}};
+      fitx::result<fidl::Error> result =
+          fidl::SendEvent(server_binding_.value())->OnEchoTablePayloadEvent(std::move(resp));
+      ZX_ASSERT_MSG(result.is_ok(), "Replying with event failed: %s",
+                    result.error_value().FormatDescription().c_str());
+    } else {
+      EventProxy event_handler(server_binding_.value());
+      EchoClientApp app(request->forward_to_server().value(), &event_handler);
+      ::fidl_test_compatibility::RequestTable req{{.value = request->value()}};
+      zx_status_t status = app.EchoTablePayloadNoRetVal(std::move(req));
+      ZX_ASSERT_MSG(status == ZX_OK, "Replying with event failed direct: %s",
+                    zx_status_get_string(status));
+      auto result = event_handler.WaitForEvent();
+      ZX_ASSERT_MSG(result.is_ok(), "Replying with event failed indirect: %s",
+                    result.error_value().FormatDescription().c_str());
+    }
   }
 
   void EchoTableRequestComposed(EchoTableRequestComposedRequest& request,
                                 EchoTableRequestComposedCompleter::Sync& completer) override {
-    // TODO(fxbug.dev/88343): Implement.
+    if (!request->forward_to_server().has_value()) {
+      fidl_test_imported::SimpleStruct resp(true, request->value().value());
+      completer.Reply(std::move(resp));
+    } else {
+      std::shared_ptr<EchoClientApp> app =
+          std::make_shared<EchoClientApp>(request->forward_to_server().value());
+      fidl_test_imported::ComposedEchoTableRequestComposedRequest req{{.value = request->value()}};
+      app->EchoTableRequestComposed(
+          std::move(req),
+          [completer = completer.ToAsync(), extend_lifetime = app](
+              fitx::result<fidl::Error, fidl::Response<Echo::EchoTableRequestComposed>>&
+                  result) mutable {
+            ZX_ASSERT_MSG(result.is_ok(), "Forwarding failed: %s",
+                          result.error_value().FormatDescription().c_str());
+            completer.Reply(std::move(*result.value()));
+          });
+    }
   }
 
   void EchoUnionPayload(EchoUnionPayloadRequest& request,
                         EchoUnionPayloadCompleter::Sync& completer) override {
-    // TODO(fxbug.dev/88343): Implement.
+    const std::string& forward_to_server = request->signed_()
+                                               ? request->signed_()->forward_to_server()
+                                               : request->unsigned_()->forward_to_server();
+    if (forward_to_server.empty()) {
+      ResponseUnion resp;
+      if (request->Which() == RequestUnion::Tag::kSigned) {
+        resp = ResponseUnion::WithSigned_(request->signed_()->value());
+      } else {
+        resp = ResponseUnion::WithUnsigned_(request->unsigned_()->value());
+      }
+      completer.Reply(std::move(resp));
+    } else {
+      std::shared_ptr<EchoClientApp> app = std::make_shared<EchoClientApp>(forward_to_server);
+      RequestUnion req;
+      if (request->Which() == RequestUnion::Tag::kSigned) {
+        req = RequestUnion::WithSigned_(
+            ::fidl_test_compatibility::Signed(request->signed_()->value(), ""));
+      } else {
+        req = RequestUnion::WithUnsigned_(
+            ::fidl_test_compatibility::Unsigned(request->unsigned_()->value(), ""));
+      }
+      app->EchoUnionPayload(
+          std::move(req),
+          [completer = completer.ToAsync(), extend_lifetime = app](
+              fitx::result<fidl::Error, fidl::Response<Echo::EchoUnionPayload>>& result) mutable {
+            ZX_ASSERT_MSG(result.is_ok(), "Forwarding failed: %s",
+                          result.error_value().FormatDescription().c_str());
+            completer.Reply(std::move(*result.value()));
+          });
+    }
   }
 
   void EchoUnionPayloadWithError(EchoUnionPayloadWithErrorRequest& request,
                                  EchoUnionPayloadWithErrorCompleter::Sync& completer) override {
-    // TODO(fxbug.dev/88343): Implement.
+    const std::string& forward_to_server = request->signed_()
+                                               ? request->signed_()->forward_to_server()
+                                               : request->unsigned_()->forward_to_server();
+    if (forward_to_server.empty()) {
+      RespondWith result_variant = request->signed_() ? request->signed_()->result_variant()
+                                                      : request->unsigned_()->result_variant();
+      if (result_variant == wire::RespondWith::kErr) {
+        default_enum err = request->signed_() ? request->signed_()->result_err()
+                                              : request->unsigned_()->result_err();
+        completer.Reply(Echo_EchoUnionPayloadWithError_Result::WithErr(err));
+      } else {
+        ResponseUnion resp;
+        if (request->Which() == EchoEchoUnionPayloadWithErrorRequest::Tag::kSigned) {
+          resp = ResponseUnion::WithSigned_(request->signed_()->value());
+        } else {
+          resp = ResponseUnion::WithUnsigned_(request->unsigned_()->value());
+        }
+        completer.Reply(Echo_EchoUnionPayloadWithError_Result::WithResponse(std::move(resp)));
+      }
+    } else {
+      std::shared_ptr<EchoClientApp> app = std::make_shared<EchoClientApp>(forward_to_server);
+      EchoEchoUnionPayloadWithErrorRequest req;
+      if (request->Which() == EchoEchoUnionPayloadWithErrorRequest::Tag::kSigned) {
+        auto variant = request->signed_();
+        req = EchoEchoUnionPayloadWithErrorRequest::WithSigned_(
+            ::fidl_test_compatibility::SignedErrorable(variant->value(), "", variant->result_err(),
+                                                       variant->result_variant()));
+      } else {
+        auto variant = request->unsigned_();
+        req = EchoEchoUnionPayloadWithErrorRequest::WithUnsigned_(
+            ::fidl_test_compatibility::UnsignedErrorable(
+                variant->value(), "", variant->result_err(), variant->result_variant()));
+      }
+
+      app->EchoUnionPayloadWithError(
+          std::move(req),
+          [completer = completer.ToAsync(), extend_lifetime = app](
+              fitx::result<fidl::Error, fidl::Response<Echo::EchoUnionPayloadWithError>>&
+                  result) mutable {
+            ZX_ASSERT_MSG(result.is_ok(), "Forwarding failed: %s",
+                          result.error_value().FormatDescription().c_str());
+            completer.Reply(std::move(*result.value()));
+          });
+    }
   }
 
   void EchoUnionPayloadNoRetVal(EchoUnionPayloadNoRetValRequest& request,
                                 EchoUnionPayloadNoRetValCompleter::Sync&) override {
-    // TODO(fxbug.dev/88343): Implement.
+    const std::string& forward_to_server = request->signed_()
+                                               ? request->signed_()->forward_to_server()
+                                               : request->unsigned_()->forward_to_server();
+    if (forward_to_server.empty()) {
+      ResponseUnion resp;
+      if (request->Which() == RequestUnion::Tag::kSigned) {
+        resp = ResponseUnion::WithSigned_(request->signed_()->value());
+      } else {
+        resp = ResponseUnion::WithUnsigned_(request->unsigned_()->value());
+      }
+      fitx::result<fidl::Error> result =
+          fidl::SendEvent(server_binding_.value())->OnEchoUnionPayloadEvent(std::move(resp));
+      ZX_ASSERT_MSG(result.is_ok(), "Replying with event failed: %s",
+                    result.error_value().FormatDescription().c_str());
+    } else {
+      EventProxy event_handler(server_binding_.value());
+      EchoClientApp app(forward_to_server, &event_handler);
+      RequestUnion req;
+      if (request->Which() == RequestUnion::Tag::kSigned) {
+        req = RequestUnion::WithSigned_(
+            ::fidl_test_compatibility::Signed(request->signed_()->value(), ""));
+      } else {
+        req = RequestUnion::WithUnsigned_(
+            ::fidl_test_compatibility::Unsigned(request->unsigned_()->value(), ""));
+      }
+
+      zx_status_t status = app.EchoUnionPayloadNoRetVal(std::move(req));
+      ZX_ASSERT_MSG(status == ZX_OK, "Replying with event failed direct: %s",
+                    zx_status_get_string(status));
+      auto result = event_handler.WaitForEvent();
+      ZX_ASSERT_MSG(result.is_ok(), "Replying with event failed indirect: %s",
+                    result.error_value().FormatDescription().c_str());
+    }
   }
 
   void EchoUnionResponseWithErrorComposed(
       EchoUnionResponseWithErrorComposedRequest& request,
       EchoUnionResponseWithErrorComposedCompleter::Sync& completer) override {
-    // TODO(fxbug.dev/88343): Implement.
+    if (request->forward_to_server().empty()) {
+      if (request->result_variant() == fidl_test_imported::WantResponse::kErr) {
+        completer.Reply(
+            fidl_test_imported::Composed_EchoUnionResponseWithErrorComposed_Result::WithErr(
+                request->result_err()));
+        return;
+      }
+
+      ::fidl_test_imported::Composed_EchoUnionResponseWithErrorComposed_Response resp;
+      if (request->want_absolute_value()) {
+        resp = ::fidl_test_imported::Composed_EchoUnionResponseWithErrorComposed_Response::
+            WithUnsigned_(static_cast<uint64_t>(std::abs(request->value())));
+      } else {
+        resp =
+            ::fidl_test_imported::Composed_EchoUnionResponseWithErrorComposed_Response::WithSigned_(
+                request->value());
+      }
+      completer.Reply(
+          fidl_test_imported::Composed_EchoUnionResponseWithErrorComposed_Result::WithResponse(
+              std::move(resp)));
+    } else {
+      std::shared_ptr<EchoClientApp> app =
+          std::make_shared<EchoClientApp>(request->forward_to_server());
+      request->forward_to_server() = "";
+      fidl_test_imported::ComposedEchoTableRequestComposedRequest req{{.value = request->value()}};
+      app->EchoUnionResponseWithErrorComposed(
+          std::move(request->value()), request->want_absolute_value(), "", request->result_err(),
+          request->result_variant(),
+          [completer = completer.ToAsync(), extend_lifetime = app](
+              fitx::result<fidl::Error, fidl::Response<Echo::EchoUnionResponseWithErrorComposed>>&
+                  result) mutable {
+            ZX_ASSERT_MSG(result.is_ok(), "Forwarding failed: %s",
+                          result.error_value().FormatDescription().c_str());
+            completer.Reply(std::move(*result.value()));
+          });
+    }
   }
 
   void set_server_binding(::fidl::ServerBindingRef<Echo> binding) {

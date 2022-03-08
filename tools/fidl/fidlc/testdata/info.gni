@@ -310,7 +310,6 @@ fidl_testdata_info = [
 
     # TODO(fxbug.dev/88343): No backend support yet
     denylist = [
-      "fidlgen_cpp",
       "fidldoc",
       "fidlgen_dart",
       "fidlgen_go",

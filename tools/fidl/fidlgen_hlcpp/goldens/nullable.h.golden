@@ -717,10 +717,11 @@ struct CodingTraits<std::unique_ptr<::test::nullable::SimpleUnion>> {
   static constexpr size_t inline_size_v1_no_ee = 24;
   static constexpr size_t inline_size_v2 = 16;
 
-  static void Encode(
-      Encoder* encoder, std::unique_ptr<::test::nullable::SimpleUnion>* value,
-      size_t offset,
-      cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  static void Encode(Encoder* encoder,
+                     std::unique_ptr<::test::nullable::SimpleUnion>* value,
+                     size_t offset,
+                     cpp17::optional<::fidl::HandleInformation>
+                         maybe_handle_info = cpp17::nullopt) {
     auto&& p_xunion = *value;
     if (p_xunion) {
       p_xunion->Encode(encoder, offset);

@@ -491,7 +491,8 @@ struct CodingTraits<std::unique_ptr<
           ::test::errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Result>*
           value,
       size_t offset,
-      cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+      cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
+          cpp17::nullopt) {
     auto&& p_xunion = *value;
     if (p_xunion) {
       p_xunion->Encode(encoder, offset);

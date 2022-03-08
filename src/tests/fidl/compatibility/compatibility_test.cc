@@ -1275,15 +1275,13 @@ std::string ExtractShortName(const std::string& pkg_url) {
 
 using TestBody = std::function<void(async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
                                     const std::string& server_url, const std::string& proxy_url)>;
-using AllowServer = std::function<bool(const std::string& server_url)>;
+using AllowServerPair =
+    std::function<bool(const std::string& proxy_url, const std::string& server_url)>;
 
-void ForSomeServers(AllowServer allow, TestBody body) {
+void ForSomeServers(AllowServerPair allow, TestBody body) {
   for (auto const& proxy_url : servers) {
-    if (!allow(proxy_url)) {
-      continue;
-    }
     for (auto const& server_url : servers) {
-      if (!allow(server_url)) {
+      if (!allow(proxy_url, server_url)) {
         continue;
       }
       std::cerr << proxy_url << " <-> " << server_url << std::endl;
@@ -1305,12 +1303,15 @@ void ForSomeServers(AllowServer allow, TestBody body) {
 }
 
 void ForAllServers(TestBody body) {
-  ForSomeServers([](const std::string& _) { return true; }, body);
+  ForSomeServers([](const std::string& _p, const std::string& _s) { return true; }, body);
 }
 
-[[maybe_unused]] AllowServer Exclude(std::initializer_list<const char*> substrings) {
-  return [substrings](const std::string& server_url) {
+[[maybe_unused]] AllowServerPair Exclude(std::initializer_list<const char*> substrings) {
+  return [substrings](const std::string& proxy_url, const std::string& server_url) {
     for (auto substring : substrings) {
+      if (proxy_url.find(substring) != std::string::npos) {
+        return false;
+      }
       if (server_url.find(substring) != std::string::npos) {
         return false;
       }
@@ -1923,9 +1924,9 @@ TEST(Table, EchoTableWithErrorErrorCase) {
 }
 
 TEST(Table, EchoTablePayload) {
-  // TODO(fxbug.dev/88343): Enable for CPP, Dart, Go, and Rust.
-  const auto filter = [](const std::string& server_url) -> bool {
-    return server_url.find("lcpp") != std::string::npos;
+  // TODO(fxbug.dev/88343): Enable for Dart, Go, and Rust.
+  const auto filter = [](const std::string& proxy_url, const std::string& server_url) -> bool {
+    return Exclude(std::initializer_list<const char*>{"dart", "go", "rust"})(proxy_url, server_url);
   };
 
   ForSomeServers(filter, [](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
@@ -1959,9 +1960,9 @@ TEST(Table, EchoTablePayload) {
 }
 
 TEST(Table, EchoTablePayloadWithErrorSuccessCase) {
-  // TODO(fxbug.dev/88343): Enable for CPP, Dart, Go, and Rust.
-  const auto filter = [](const std::string& server_url) -> bool {
-    return server_url.find("lcpp") != std::string::npos;
+  // TODO(fxbug.dev/88343): Enable for Dart, Go, and Rust.
+  const auto filter = [](const std::string& proxy_url, const std::string& server_url) -> bool {
+    return Exclude(std::initializer_list<const char*>{"dart", "go", "rust"})(proxy_url, server_url);
   };
 
   ForSomeServers(filter, [](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
@@ -1999,9 +2000,9 @@ TEST(Table, EchoTablePayloadWithErrorSuccessCase) {
 }
 
 TEST(Table, EchoTablePayloadWithErrorErrorCase) {
-  // TODO(fxbug.dev/88343): Enable for CPP, Dart, Go, and Rust.
-  const auto filter = [](const std::string& server_url) -> bool {
-    return server_url.find("lcpp") != std::string::npos;
+  // TODO(fxbug.dev/88343): Enable for Dart, Go, and Rust.
+  const auto filter = [](const std::string& proxy_url, const std::string& server_url) -> bool {
+    return Exclude(std::initializer_list<const char*>{"dart", "go", "rust"})(proxy_url, server_url);
   };
 
   ForSomeServers(filter, [](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
@@ -2038,9 +2039,9 @@ TEST(Table, EchoTablePayloadWithErrorErrorCase) {
 }
 
 TEST(Table, EchoTablePayloadNoRetval) {
-  // TODO(fxbug.dev/88343): Enable for CPP, Dart, Go, and Rust.
-  const auto filter = [](const std::string& server_url) -> bool {
-    return server_url.find("lcpp") != std::string::npos;
+  // TODO(fxbug.dev/88343): Enable for Dart, Go, and Rust.
+  const auto filter = [](const std::string& proxy_url, const std::string& server_url) -> bool {
+    return Exclude(std::initializer_list<const char*>{"dart", "go", "rust"})(proxy_url, server_url);
   };
 
   ForSomeServers(filter, [](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
@@ -2077,9 +2078,10 @@ TEST(Table, EchoTablePayloadNoRetval) {
 // client/server once, rather than in combination with ever other binding. Move this test case to a
 // more appropriate file with other such N+M cases, once it exists.
 TEST(Table, EchoTableRequestComposed) {
-  // TODO(fxbug.dev/88343): Enable for CPP, Dart, Go, and Rust.
-  const auto filter = [](const std::string& server_url) -> bool {
-    return server_url.find("lcpp") != std::string::npos;
+  // TODO(fxbug.dev/88343): Enable for Dart, Go, and Rust.
+  const auto filter = [](const std::string& proxy_url, const std::string& server_url) -> bool {
+    return proxy_url == server_url &&
+           Exclude(std::initializer_list<const char*>{"dart", "go", "rust"})(proxy_url, server_url);
   };
 
   ForSomeServers(filter, [](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
@@ -2214,9 +2216,9 @@ TEST(Union, EchoUnionsWithErrorErrorCase) {
 }
 
 TEST(Union, EchoUnionPayload) {
-  // TODO(fxbug.dev/88343): Enable for CPP, Dart, Go, and Rust.
-  const auto filter = [](const std::string& server_url) -> bool {
-    return server_url.find("lcpp") != std::string::npos;
+  // TODO(fxbug.dev/88343): Enable for Dart, Go, and Rust.
+  const auto filter = [](const std::string& proxy_url, const std::string& server_url) -> bool {
+    return Exclude(std::initializer_list<const char*>{"dart", "go", "rust"})(proxy_url, server_url);
   };
 
   ForSomeServers(filter, [](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
@@ -2249,9 +2251,9 @@ TEST(Union, EchoUnionPayload) {
 }
 
 TEST(Union, EchoUnionPayloadWithErrorSuccessCase) {
-  // TODO(fxbug.dev/88343): Enable for CPP, Dart, Go, and Rust.
-  const auto filter = [](const std::string& server_url) -> bool {
-    return server_url.find("lcpp") != std::string::npos;
+  // TODO(fxbug.dev/88343): Enable for Dart, Go, and Rust.
+  const auto filter = [](const std::string& proxy_url, const std::string& server_url) -> bool {
+    return Exclude(std::initializer_list<const char*>{"dart", "go", "rust"})(proxy_url, server_url);
   };
 
   ForSomeServers(filter, [](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
@@ -2292,9 +2294,9 @@ TEST(Union, EchoUnionPayloadWithErrorSuccessCase) {
 }
 
 TEST(Union, EchoUnionPayloadWithErrorErrorCase) {
-  // TODO(fxbug.dev/88343): Enable for CPP, Dart, Go, and Rust.
-  const auto filter = [](const std::string& server_url) -> bool {
-    return server_url.find("lcpp") != std::string::npos;
+  // TODO(fxbug.dev/88343): Enable for Dart, Go, and Rust.
+  const auto filter = [](const std::string& proxy_url, const std::string& server_url) -> bool {
+    return Exclude(std::initializer_list<const char*>{"dart", "go", "rust"})(proxy_url, server_url);
   };
 
   ForSomeServers(filter, [](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
@@ -2334,9 +2336,9 @@ TEST(Union, EchoUnionPayloadWithErrorErrorCase) {
 }
 
 TEST(Union, EchoUnionPayloadNoRetval) {
-  // TODO(fxbug.dev/88343): Enable for CPP, Dart, Go, and Rust.
-  const auto filter = [](const std::string& server_url) -> bool {
-    return server_url.find("lcpp") != std::string::npos;
+  // TODO(fxbug.dev/88343): Enable for Dart, Go, and Rust.
+  const auto filter = [](const std::string& proxy_url, const std::string& server_url) -> bool {
+    return Exclude(std::initializer_list<const char*>{"dart", "go", "rust"})(proxy_url, server_url);
   };
 
   ForSomeServers(filter, [](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
@@ -2372,9 +2374,10 @@ TEST(Union, EchoUnionPayloadNoRetval) {
 // client/server once, rather than in combination with ever other binding. Move this test case to a
 // more appropriate file with other such N+M cases, once it exists.
 TEST(Union, EchoUnionResponseWithErrorComposedSuccessCase) {
-  // TODO(fxbug.dev/88343): Enable for CPP, Dart, Go, and Rust.
-  const auto filter = [](const std::string& server_url) -> bool {
-    return server_url.find("lcpp") != std::string::npos;
+  // TODO(fxbug.dev/88343): Enable for Dart, Go, and Rust.
+  const auto filter = [](const std::string& proxy_url, const std::string& server_url) -> bool {
+    return proxy_url == server_url &&
+           Exclude(std::initializer_list<const char*>{"dart", "go", "rust"})(proxy_url, server_url);
   };
 
   ForSomeServers(filter, [](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
@@ -2411,9 +2414,10 @@ TEST(Union, EchoUnionResponseWithErrorComposedSuccessCase) {
 // client/server once, rather than in combination with ever other binding. Move this test case to a
 // more appropriate file with other such N+M cases, once it exists.
 TEST(Union, EchoUnionResponseWithErrorComposedErrorCase) {
-  // TODO(fxbug.dev/88343): Enable for CPP, Dart, Go, and Rust.
-  const auto filter = [](const std::string& server_url) -> bool {
-    return server_url.find("lcpp") != std::string::npos;
+  // TODO(fxbug.dev/88343): Enable for Dart, Go, and Rust.
+  const auto filter = [](const std::string& proxy_url, const std::string& server_url) -> bool {
+    return proxy_url == server_url &&
+           Exclude(std::initializer_list<const char*>{"dart", "go", "rust"})(proxy_url, server_url);
   };
 
   ForSomeServers(filter, [](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,

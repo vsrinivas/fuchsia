@@ -3581,7 +3581,8 @@ struct CodingTraits<
       std::unique_ptr<::test::protocols::WithErrorSyntax_HandleInResult_Result>*
           value,
       size_t offset,
-      cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+      cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
+          cpp17::nullopt) {
     auto&& p_xunion = *value;
     if (p_xunion) {
       p_xunion->Encode(encoder, offset);
@@ -4133,7 +4134,8 @@ struct CodingTraits<std::unique_ptr<
       std::unique_ptr<
           ::test::protocols::WithErrorSyntax_ResponseAsStruct_Result>* value,
       size_t offset,
-      cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+      cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
+          cpp17::nullopt) {
     auto&& p_xunion = *value;
     if (p_xunion) {
       p_xunion->Encode(encoder, offset);
@@ -4285,7 +4287,8 @@ struct CodingTraits<std::unique_ptr<
       std::unique_ptr<
           ::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result>* value,
       size_t offset,
-      cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+      cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
+          cpp17::nullopt) {
     auto&& p_xunion = *value;
     if (p_xunion) {
       p_xunion->Encode(encoder, offset);
@@ -4831,10 +4834,11 @@ struct CodingTraits<std::unique_ptr<::test::protocols::TheUnion>> {
   static constexpr size_t inline_size_v1_no_ee = 24;
   static constexpr size_t inline_size_v2 = 16;
 
-  static void Encode(
-      Encoder* encoder, std::unique_ptr<::test::protocols::TheUnion>* value,
-      size_t offset,
-      cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  static void Encode(Encoder* encoder,
+                     std::unique_ptr<::test::protocols::TheUnion>* value,
+                     size_t offset,
+                     cpp17::optional<::fidl::HandleInformation>
+                         maybe_handle_info = cpp17::nullopt) {
     auto&& p_xunion = *value;
     if (p_xunion) {
       p_xunion->Encode(encoder, offset);
@@ -5191,7 +5195,8 @@ struct CodingTraits<
       std::unique_ptr<::test::protocols::WithErrorSyntax_ErrorAsEnum_Result>*
           value,
       size_t offset,
-      cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+      cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
+          cpp17::nullopt) {
     auto&& p_xunion = *value;
     if (p_xunion) {
       p_xunion->Encode(encoder, offset);

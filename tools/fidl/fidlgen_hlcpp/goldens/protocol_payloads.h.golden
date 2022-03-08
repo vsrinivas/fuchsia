@@ -2170,7 +2170,8 @@ struct CodingTraits<std::unique_ptr<
           ::test::protocolpayloads::MainProtocol_TwoWayImportWithError_Result>*
           value,
       size_t offset,
-      cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+      cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
+          cpp17::nullopt) {
     auto&& p_xunion = *value;
     if (p_xunion) {
       p_xunion->Encode(encoder, offset);
@@ -2344,7 +2345,8 @@ struct CodingTraits<std::unique_ptr<
           ::test::protocolpayloads::MainProtocol_TwoWayAnonWithError_Result>*
           value,
       size_t offset,
-      cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+      cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
+          cpp17::nullopt) {
     auto&& p_xunion = *value;
     if (p_xunion) {
       p_xunion->Encode(encoder, offset);
@@ -2474,7 +2476,8 @@ struct CodingTraits<std::unique_ptr<
           ::test::protocolpayloads::MainProtocol_OnImportWithError_Result>*
           value,
       size_t offset,
-      cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+      cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
+          cpp17::nullopt) {
     auto&& p_xunion = *value;
     if (p_xunion) {
       p_xunion->Encode(encoder, offset);
@@ -2641,7 +2644,8 @@ struct CodingTraits<std::unique_ptr<
       std::unique_ptr<
           ::test::protocolpayloads::MainProtocol_OnAnonWithError_Result>* value,
       size_t offset,
-      cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+      cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
+          cpp17::nullopt) {
     auto&& p_xunion = *value;
     if (p_xunion) {
       p_xunion->Encode(encoder, offset);
@@ -2967,7 +2971,8 @@ struct CodingTraits<std::unique_ptr<
           ::test::protocolpayloads::MainProtocol_TwoWayLocalWithError_Result>*
           value,
       size_t offset,
-      cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+      cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
+          cpp17::nullopt) {
     auto&& p_xunion = *value;
     if (p_xunion) {
       p_xunion->Encode(encoder, offset);
@@ -3098,7 +3103,8 @@ struct CodingTraits<std::unique_ptr<
           ::test::protocolpayloads::MainProtocol_OnLocalWithError_Result>*
           value,
       size_t offset,
-      cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+      cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
+          cpp17::nullopt) {
     auto&& p_xunion = *value;
     if (p_xunion) {
       p_xunion->Encode(encoder, offset);

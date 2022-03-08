@@ -1824,7 +1824,8 @@ struct CodingTraits<std::unique_ptr<
           ::test::bindingsdenylist::DenyEachBinding_OnlyDenySyzkaller_Result>*
           value,
       size_t offset,
-      cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+      cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
+          cpp17::nullopt) {
     auto&& p_xunion = *value;
     if (p_xunion) {
       p_xunion->Encode(encoder, offset);
@@ -1990,7 +1991,8 @@ struct CodingTraits<std::unique_ptr<
       std::unique_ptr<
           ::test::bindingsdenylist::DenyEachBinding_OnlyDenyRust_Result>* value,
       size_t offset,
-      cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+      cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
+          cpp17::nullopt) {
     auto&& p_xunion = *value;
     if (p_xunion) {
       p_xunion->Encode(encoder, offset);
@@ -2152,7 +2154,8 @@ struct CodingTraits<std::unique_ptr<
           ::test::bindingsdenylist::DenyEachBinding_OnlyDenyLibfuzzer_Result>*
           value,
       size_t offset,
-      cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+      cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
+          cpp17::nullopt) {
     auto&& p_xunion = *value;
     if (p_xunion) {
       p_xunion->Encode(encoder, offset);
@@ -2313,7 +2316,8 @@ struct CodingTraits<std::unique_ptr<
       std::unique_ptr<
           ::test::bindingsdenylist::DenyEachBinding_OnlyDenyGo_Result>* value,
       size_t offset,
-      cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+      cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
+          cpp17::nullopt) {
     auto&& p_xunion = *value;
     if (p_xunion) {
       p_xunion->Encode(encoder, offset);
@@ -2472,7 +2476,8 @@ struct CodingTraits<std::unique_ptr<
       std::unique_ptr<
           ::test::bindingsdenylist::DenyEachBinding_OnlyDenyDart_Result>* value,
       size_t offset,
-      cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+      cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
+          cpp17::nullopt) {
     auto&& p_xunion = *value;
     if (p_xunion) {
       p_xunion->Encode(encoder, offset);

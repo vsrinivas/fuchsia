@@ -1237,10 +1237,11 @@ struct CodingTraits<std::unique_ptr<::test::anonymous::UnionMember>> {
   static constexpr size_t inline_size_v1_no_ee = 24;
   static constexpr size_t inline_size_v2 = 16;
 
-  static void Encode(
-      Encoder* encoder, std::unique_ptr<::test::anonymous::UnionMember>* value,
-      size_t offset,
-      cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  static void Encode(Encoder* encoder,
+                     std::unique_ptr<::test::anonymous::UnionMember>* value,
+                     size_t offset,
+                     cpp17::optional<::fidl::HandleInformation>
+                         maybe_handle_info = cpp17::nullopt) {
     auto&& p_xunion = *value;
     if (p_xunion) {
       p_xunion->Encode(encoder, offset);
@@ -1574,10 +1575,11 @@ struct CodingTraits<std::unique_ptr<::test::anonymous::Expression>> {
   static constexpr size_t inline_size_v1_no_ee = 24;
   static constexpr size_t inline_size_v2 = 16;
 
-  static void Encode(
-      Encoder* encoder, std::unique_ptr<::test::anonymous::Expression>* value,
-      size_t offset,
-      cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  static void Encode(Encoder* encoder,
+                     std::unique_ptr<::test::anonymous::Expression>* value,
+                     size_t offset,
+                     cpp17::optional<::fidl::HandleInformation>
+                         maybe_handle_info = cpp17::nullopt) {
     auto&& p_xunion = *value;
     if (p_xunion) {
       p_xunion->Encode(encoder, offset);
@@ -1713,7 +1715,8 @@ struct CodingTraits<
       Encoder* encoder,
       std::unique_ptr<::test::anonymous::SomeProtocol_SomeMethod_Result>* value,
       size_t offset,
-      cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+      cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
+          cpp17::nullopt) {
     auto&& p_xunion = *value;
     if (p_xunion) {
       p_xunion->Encode(encoder, offset);

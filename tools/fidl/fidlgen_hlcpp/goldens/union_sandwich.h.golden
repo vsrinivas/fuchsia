@@ -507,7 +507,8 @@ struct CodingTraits<
       Encoder* encoder,
       std::unique_ptr<::test::unionsandwich::UnionSize8Alignment4>* value,
       size_t offset,
-      cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+      cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
+          cpp17::nullopt) {
     auto&& p_xunion = *value;
     if (p_xunion) {
       p_xunion->Encode(encoder, offset);
@@ -618,7 +619,8 @@ struct CodingTraits<
       Encoder* encoder,
       std::unique_ptr<::test::unionsandwich::UnionSize36Alignment4>* value,
       size_t offset,
-      cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+      cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
+          cpp17::nullopt) {
     auto&& p_xunion = *value;
     if (p_xunion) {
       p_xunion->Encode(encoder, offset);
@@ -729,7 +731,8 @@ struct CodingTraits<
       Encoder* encoder,
       std::unique_ptr<::test::unionsandwich::UnionSize12Alignment4>* value,
       size_t offset,
-      cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+      cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
+          cpp17::nullopt) {
     auto&& p_xunion = *value;
     if (p_xunion) {
       p_xunion->Encode(encoder, offset);
@@ -872,7 +875,8 @@ struct CodingTraits<
       Encoder* encoder,
       std::unique_ptr<::test::unionsandwich::UnionSize24Alignment8>* value,
       size_t offset,
-      cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+      cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
+          cpp17::nullopt) {
     auto&& p_xunion = *value;
     if (p_xunion) {
       p_xunion->Encode(encoder, offset);

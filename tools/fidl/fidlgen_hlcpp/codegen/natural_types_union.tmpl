@@ -511,7 +511,7 @@ struct CodingTraits<std::unique_ptr<{{ . }}>> {
   static constexpr size_t inline_size_v2 = 16;
 
   static void Encode(Encoder* encoder, std::unique_ptr<{{ . }}>* value, size_t offset,
-                     cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+                     cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt) {
     {{/* TODO(fxbug.dev/7805): Disallow empty xunions (but permit nullable/optional
          xunions). */ -}}
 

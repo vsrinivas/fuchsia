@@ -527,7 +527,8 @@ struct CodingTraits<
       Encoder* encoder,
       std::unique_ptr<::test::requestflexibleenvelope::StrictFoo>* value,
       size_t offset,
-      cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+      cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
+          cpp17::nullopt) {
     auto&& p_xunion = *value;
     if (p_xunion) {
       p_xunion->Encode(encoder, offset);
@@ -689,7 +690,8 @@ struct CodingTraits<
       Encoder* encoder,
       std::unique_ptr<::test::requestflexibleenvelope::FlexibleFoo>* value,
       size_t offset,
-      cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+      cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
+          cpp17::nullopt) {
     auto&& p_xunion = *value;
     if (p_xunion) {
       p_xunion->Encode(encoder, offset);
