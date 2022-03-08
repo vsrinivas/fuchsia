@@ -10,7 +10,23 @@ import (
 	"unicode/utf8"
 )
 
-// Break a name into parts, discarding underscores but not changing case
+// The functions in this file convert names between snake_case, ALL_CAPS_SNAKE,
+// UpperCamelCase, lowerCamelCase, kCamelCase, and "friendly case". They accept
+// inputs in any style, split into parts, and recombine with the desired style.
+// See "RFC-0040: Identifier Uniqueness" for details on how name-part boundaries
+// are calculated.
+//
+// TODO(fxbug.dev/95218): Fix any discrepancies with RFC-0040. In particular,
+// ensure that all these functions are idempotent.
+
+// nameParts breaks an identifier into parts recognized according to RFC-0040
+// which can be recombined into identifiers in different case systems.
+//
+// Splits the string according to what is recognized as boundaries for both
+// snake case and camel case, allowing it to be transformed into either case
+// system regardless of the original case. Note that runs of multiple uppercase
+// characters are treated as a single part, so all-caps abbreviations will be
+// grouped. For example, "HTTPExample" will be split into "HTTP" and "Example".
 func nameParts(name string) []string {
 	var parts []string
 	for _, namePart := range strings.Split(name, "_") {
@@ -37,7 +53,8 @@ func nameParts(name string) []string {
 	return parts
 }
 
-// Convert text to snake_case style
+// ToSnakeCase converts an identifier to RFC-0040 canonical snake_case style.
+// Works independent of which case the identifier is originally in.
 func ToSnakeCase(name string) string {
 	parts := nameParts(name)
 	for i := range parts {
@@ -46,7 +63,10 @@ func ToSnakeCase(name string) string {
 	return strings.Join(parts, "_")
 }
 
-// Convert a name to UpperCamelCase style
+// ToUpperCamelCase converts an identifier to RFC-0040 UpperCamelCase style.
+// Works independent of which case the identifier is originally in. Note that
+// canonical identifiers use title case for abbreviations, so e.g. HTTPExample
+// will become HttpExample.
 func ToUpperCamelCase(name string) string {
 	parts := nameParts(name)
 	for i := range parts {
@@ -58,7 +78,10 @@ func ToUpperCamelCase(name string) string {
 	return strings.Join(parts, "")
 }
 
-// Convert a name to lowerCamelCase style
+// ToLowerCamelCase converts an identifier to RFC-0040 lowerCamelCase style.
+// Works independent of which case the identifier is originally in. Note that
+// canonical identifiers use title case for abbreviations, so e.g. ExampleHTTP
+// will become ExampleHttp.
 func ToLowerCamelCase(name string) string {
 	parts := nameParts(name)
 	for i := range parts {
@@ -74,7 +97,9 @@ func ToLowerCamelCase(name string) string {
 	return strings.Join(parts, "")
 }
 
-// Convert text to friendly case style (like snake case, but with spaces)
+// ToFriendlyCase converts an identifier to RFC-0040 "friendly case" style (like
+// snake case, but with spaces). Works independent of which case the identifier
+// is originally in.
 func ToFriendlyCase(name string) string {
 	parts := nameParts(name)
 	for i := range parts {
@@ -83,7 +108,8 @@ func ToFriendlyCase(name string) string {
 	return strings.Join(parts, " ")
 }
 
-// Convert a const name from kCamelCase to ALL_CAPS_SNAKE style
+// ConstNameToAllCapsSnake converts a const name from kCamelCase to
+// ALL_CAPS_SNAKE style
 func ConstNameToAllCapsSnake(name string) string {
 	parts := nameParts(RemoveLeadingK(name))
 	for i := range parts {
@@ -92,13 +118,13 @@ func ConstNameToAllCapsSnake(name string) string {
 	return strings.Join(parts, "_")
 }
 
-// Convert a const name to kCamelCase style
+// ConstNameToKCamelCase converts a const name to kCamelCase style
 func ConstNameToKCamelCase(name string) string {
 	return "k" + ToUpperCamelCase(RemoveLeadingK(name))
 }
 
-// Removes a leading 'k' if the second character is upper-case, otherwise
-// returns the argument
+// RemoveLeadingK removes a leading 'k' if the second character is upper-case,
+// otherwise returns the argument
 func RemoveLeadingK(name string) string {
 	if len(name) >= 2 && name[0] == 'k' {
 		secondRune, _ := utf8.DecodeRuneInString(name[1:])

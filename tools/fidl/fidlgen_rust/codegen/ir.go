@@ -1,6 +1,6 @@
-// Copyright 2018 The Fuchsia Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style license that can be
-// found in the LICENSE file.
+// Copyright 2018 The Fuchsia Authors. All rights reserved.  Use of this source
+// code is governed by a BSD-style license that can be found in the LICENSE
+// file.
 
 package codegen
 
@@ -143,42 +143,77 @@ type TableMember struct {
 	HandleSubtype     string
 }
 
+// Protocol is the definition of a protocol in the library being compiled.
 type Protocol struct {
+	// Raw JSON IR data about this protocol. Embedded to provide access to
+	// fields common to all bindings.
 	fidlgen.Protocol
-	ECI          EncodedCompoundIdentifier
-	Name         string
-	Openness     fidlgen.Openness
-	Methods      []Method
+	// Compound identifier referring to this protocol.
+	ECI EncodedCompoundIdentifier
+	// Name of the protocol as a Rust CamelCase identifier. Since only protocols
+	// from the same library are included, this will never be qualified, so it
+	// is just the CamelCase name of the protocol.
+	Name string
+	// List of methods that are part of this protocol. Processed from
+	// fidlgen.Protocol to add Rust-specific fields.
+	Methods []Method
+	// Name of this protocol for legacy (pre-RFC-0041) service discovery, if the
+	// protocol is marked as discoverable. This value does not include enclosing
+	// quote marks.
 	ProtocolName string
 }
 
+// Method is a method defined in a protocol.
 type Method struct {
+	// Raw JSON IR data about this method. Embedded to provide access to fields
+	// common to all bindings.
 	fidlgen.Method
-	Ordinal        uint64
-	Name           string
-	Strict         bool
-	CamelName      string
-	HasRequest     bool
-	Request        []Parameter
-	HasResponse    bool
-	Response       []Parameter
-	Result         *Result
-	IsTransitional bool
+	// Name of the method converted to snake_case. Used when generating
+	// rust-methods associated with this method, such as proxy methods and
+	// encoder methods.
+	Name string
+	// Name of the method converted to CamelCase. Used when generating
+	// rust-types associated with this method, such as responders.
+	CamelName string
+	// Parameters to this method extracted from the request type struct.
+	Request []Parameter
+	// Response payload to this method extracted from the response type struct.
+	// Note that when error syntax is used, this will contain only a single
+	// element, for the result union.
+	Response []Parameter
+	// If error syntax was used, this will contain information about the result
+	// union.
+	Result *Result
 }
 
+// DynamicFlags gets rust code for the DynamicFlags value that should be set for
+// a call to this method.
 func (m *Method) DynamicFlags() string {
-	if m.Strict {
+	if m.IsStrict() {
 		return "fidl::encoding::DynamicFlags::empty()"
 	}
 	return "fidl::encoding::DynamicFlags::FLEXIBLE"
 }
 
+// A Parameter to either the requset or response of a method. Contains
+// information to assist in generating code using borrowed types and handle
+// wrappers.
 type Parameter struct {
-	OGType            fidlgen.Type
-	Type              string
-	BorrowedType      string
-	Name              string
+	// The raw fidlgen type of the parameter.
+	OGType fidlgen.Type
+	// String representing the type to use for this parameter when handling it
+	// by-value.
+	Type string
+	// String representing the type to use for this parameter when receiving it
+	// as a possibly-borrowed method argument.
+	BorrowedType string
+	// Snake-case name to use for the parameter.
+	Name string
+	// Name of the wrapper type that should be used for handle validation, if
+	// HasHandleMetadata is true.
 	HandleWrapperName string
+	// True if the type of the parameter has handle metadata and so requires
+	// validation.
 	HasHandleMetadata bool
 }
 
@@ -328,11 +363,12 @@ var reservedWords = map[string]struct{}{
 	"yield":    {},
 
 	// Weak keywords (special meaning in specific contexts)
-	// These are ok in all contexts of fidl names.
+	// These are ok in all contexts of FIDL names.
 	//"default":	{},
 	//"union":	{},
 
-	// Things that are not keywords, but for which collisions would be very unpleasant
+	// Things that are not keywords, but for which collisions would be very
+	// unpleasant
 	"Result":  {},
 	"Ok":      {},
 	"Err":     {},
@@ -371,6 +407,8 @@ func isReservedWord(str string) bool {
 	return ok
 }
 
+// hasReservedSuffix checks if a string ends with a suffix commonly used by the
+// bindings in generated types
 func hasReservedSuffix(str string) bool {
 	for _, suffix := range reservedSuffixes {
 		if strings.HasSuffix(str, suffix) {
@@ -380,6 +418,13 @@ func hasReservedSuffix(str string) bool {
 	return false
 }
 
+// changeIfReserved adds an underscore suffix to differentiate an identifier
+// from a reserved name
+//
+// Reserved names include a variety of rust keywords, commonly used rust types
+// like Result, Vec, and Future, and any name ending in a suffix used by the
+// bindings to identify particular generated types like -Impl, -Marker, and
+// -Proxy.
 func changeIfReserved(val fidlgen.Identifier) string {
 	str := string(val)
 	if hasReservedSuffix(str) || isReservedWord(str) {
@@ -474,6 +519,9 @@ type compiler struct {
 	handleMetadataWrappers map[string]HandleMetadataWrapper
 }
 
+// inExternalLibrary returns true if the library that the given
+// CompoundIdentifier is in is different from the one the compiler is generating
+// code for.
 func (c *compiler) inExternalLibrary(ci fidlgen.CompoundIdentifier) bool {
 	if len(ci.Library) != len(c.library) {
 		return true
@@ -486,6 +534,8 @@ func (c *compiler) inExternalLibrary(ci fidlgen.CompoundIdentifier) bool {
 	return false
 }
 
+// TODO(fxbug.dev/66767): Escaping reserved words should happen *after*
+// converting to CamelCase.
 func compileCamelIdentifier(val fidlgen.Identifier) string {
 	return fidlgen.ToUpperCamelCase(changeIfReserved(val))
 }
@@ -498,14 +548,29 @@ func compileLibraryName(library fidlgen.LibraryIdentifier) string {
 	return changeIfReserved(fidlgen.Identifier(strings.Join(parts, "_")))
 }
 
+// compileSnakeIdentifier converts the identifier to snake_case and escapes it
+// (by adding an underscore suffix) if it collides with a reserved word.
+// TODO(fxbug.dev/66767): Escaping reserved words should happen *after*
+// converting to snake_case.
 func compileSnakeIdentifier(val fidlgen.Identifier) string {
 	return fidlgen.ToSnakeCase(changeIfReserved(val))
 }
 
+// TODO(fxbug.dev/66767): Escaping reserved words should happen *after*
+// converting to SCREAMING_SNAKE_CASE.
 func compileScreamingSnakeIdentifier(val fidlgen.Identifier) string {
 	return fidlgen.ConstNameToAllCapsSnake(changeIfReserved(val))
 }
 
+// compileCompoundIdentifier produces a string Rust identifier which can be used
+// from the generated code to refer to the specified FIDL declaration or member.
+//
+// The case used in the Declaration and Member names will be unchanged.
+//
+// If the CompoundIdentifier is from the current library, the name will be
+// unqualified, meaning that it is suitable for use in Rust type declarations.
+// If it is from a different library, it will be fully qualified, and the source
+// library will be added as a required extern-crate.
 func (c *compiler) compileCompoundIdentifier(val fidlgen.CompoundIdentifier) string {
 	strs := []string{}
 	if c.inExternalLibrary(val) {
@@ -521,6 +586,22 @@ func (c *compiler) compileCompoundIdentifier(val fidlgen.CompoundIdentifier) str
 	return strings.Join(strs, "::")
 }
 
+// compileCamelCompoundIdentifier produces a string Rust identifier which can be
+// used from the generated code to refer to the specified FIDL declaration or
+// member.
+//
+// The resulting string will have the Declaration changed to CamelCase, but
+// Member (if any) will be unaffected by case conversion.
+//
+// If the CompoundIdentifier is from the current library, the name will be
+// unqualified. If the CompoundIdentifier refers to a Declaration, that means
+// that the name is just the declaration name converted to CamelCase, so it is
+// suitable for use in Rust type declarations. If the CompoundIdentifier is for
+// a member within a declaration, the member name will be qualified by the
+// declaration name, so it is not suitable for declaring e.g. a method name.
+//
+// If it is from a different library, it will be fully qualified, and the source
+// library will be added as a required extern-crate.
 func (c *compiler) compileCamelCompoundIdentifier(eci fidlgen.EncodedCompoundIdentifier) string {
 	val := eci.Parse()
 	val.Name = fidlgen.Identifier(compileCamelIdentifier(val.Name))
@@ -710,6 +791,8 @@ func (c *compiler) fieldHandleInformation(val *fidlgen.Type) FieldHandleInformat
 	}
 }
 
+// compileType gets a string to use in generated code for the rust type used for
+// the given FIDL type.
 func (c *compiler) compileType(val fidlgen.Type) string {
 	var t string
 	switch val.Kind {
@@ -749,6 +832,12 @@ func (c *compiler) compileType(val fidlgen.Type) string {
 	return t
 }
 
+// compileBorrowedType gets a string to use in generated code for the rust type
+// used when the given FIDL type is used in a method parameter where encoding is
+// needed. Note that borrowing is only actually used for structs and collections
+// where we want to avoid copying, primitive types are passed by value.
+// Generated references are mutable in order to allow fuchsia handles to be
+// moved out when encoding.
 func (c *compiler) compileBorrowedType(val fidlgen.Type) string {
 	var t string
 	switch val.Kind {
@@ -876,6 +965,9 @@ func (c *compiler) compileHandleMetadataWrapper(val *fidlgen.Type) (string, bool
 	return name, hi.hasHandleMetadata
 }
 
+// compileParameterArray extracts the fields of the given method-request or
+// method-response payload struct as method parameters, and prepares them for
+// code generation by providing rust types and names to use.
 func (c *compiler) compileParameterArray(payload fidlgen.Struct) []Parameter {
 	var parameters []Parameter
 	for _, v := range payload.Members {
@@ -900,7 +992,6 @@ func (c *compiler) compileProtocol(val fidlgen.Protocol) Protocol {
 		Protocol:     val,
 		ECI:          val.Name,
 		Name:         c.compileCamelCompoundIdentifier(val.Name),
-		Openness:     val.Openness,
 		Methods:      []Method{},
 		ProtocolName: strings.Trim(val.GetServiceName(), "\""),
 	}
@@ -940,17 +1031,12 @@ func (c *compiler) compileProtocol(val fidlgen.Protocol) Protocol {
 		}
 
 		r.Methods = append(r.Methods, Method{
-			Method:         v,
-			Ordinal:        v.Ordinal,
-			Name:           name,
-			Strict:         v.IsStrict(),
-			CamelName:      camelName,
-			HasRequest:     v.HasRequest,
-			Request:        compiledRequestParameterList,
-			HasResponse:    v.HasResponse,
-			Response:       compiledResponseParameterList,
-			Result:         foundResult,
-			IsTransitional: v.IsTransitional(),
+			Method:    v,
+			Name:      name,
+			CamelName: camelName,
+			Request:   compiledRequestParameterList,
+			Response:  compiledResponseParameterList,
+			Result:    foundResult,
 		})
 	}
 

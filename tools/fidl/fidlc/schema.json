@@ -768,11 +768,11 @@
             },
             "properties": {
                 "has_request": {
-                    "description": "Flag indicating that protocol method has a request component",
+                    "description": "Flag indicating that protocol method has a request component. If has_request is true, the method is client-initiated. It may or may not have a payload, which is provided separately in `maybe_request_payload`. For example, `Foo()` is a method where has_request would be true but `maybe_request_payload` would be absent.",
                     "type": "boolean"
                 },
                 "has_response": {
-                    "description": "Flag indicating that protocol method has a response component",
+                    "description": "Flag indicating that protocol method has a response component. If has_response is true, the method is either a two-way method or a server initiated event, depending on whether it `has_request`. It may or may not have a payload, which is provided separately in `maybe_response_payload`. For example `Foo() -> ()` and `-> Bar()` are methods where `has_response` would be true but `maybe_response_payload` would be absent.",
                     "type": "boolean"
                 },
                 "is_composed": {
@@ -780,7 +780,7 @@
                     "type": "boolean"
                 },
                 "has_error": {
-                    "description": "Flag indicating whether method uses the error syntax",
+                    "description": "Flag indicating whether method uses the error syntax. If true, maybe_response_payload will be a single-element struct wrapping the result union, and the response will be further broken down in the  `maybe_response_result_type`, `maybe_response_success_type`, and `maybe_response_err_type` fields.",
                     "type": "boolean"
                 },
                 "location": {
@@ -797,7 +797,7 @@
                 },
                 "maybe_response_payload": {
                     "$ref": "#/definitions/identifier-type",
-                    "description": "Optional response type"
+                    "description": "Optional response type. This is the wire form of the response, so if error syntax is used, this is a struct wrapping the result union."
                 },
                 "maybe_response_result_type": {
                     "$ref": "#/definitions/type",

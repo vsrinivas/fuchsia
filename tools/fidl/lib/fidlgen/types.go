@@ -58,18 +58,32 @@ func ReadJSONIrContent(b []byte) (Root, error) {
 
 type Identifier string
 
+// A LibraryIdentifier identifies a FIDL library, from the library declaration
+// at the start of a FIDL file.
 type LibraryIdentifier []Identifier
 
+// A CompoundIdentifier identifies a particular declaration in a library or
+// member in a declaration.
 type CompoundIdentifier struct {
+	// Library the declaration is in.
 	Library LibraryIdentifier
-	Name    Identifier
-	Member  Identifier
+	// Name of the declaration.
+	Name Identifier
+	// Member of the declaration. If set to empty string, this
+	// CompoundIdentifier refers to the declaration rather than a member.
+	Member Identifier
 }
 
+// An EncodedLibraryIdentifier is a LibraryIdentifier encoded as a string,
+// suitable for use in map keys.
 type EncodedLibraryIdentifier string
 
+// An EncodedCompoundIdentifier is a CompoundIdentifier encoded as a string,
+// suitable for use in map keys.
 type EncodedCompoundIdentifier string
 
+// Encode formats a LibraryIdentifier as a string by joining the identifier
+// components with ".", e.g.  "my.fidl.library".
 func (li LibraryIdentifier) Encode() EncodedLibraryIdentifier {
 	ss := make([]string, len(li))
 	for i, s := range li {
@@ -78,10 +92,25 @@ func (li LibraryIdentifier) Encode() EncodedLibraryIdentifier {
 	return EncodedLibraryIdentifier(strings.Join(ss, "."))
 }
 
+// EncodeDecl encodes the fully-qualified declaration portion of the
+// CompoundIdentifier.
+//
+// Encoded form consists of the encoded form of the library identifier, followed
+// by a slash, then the name of the declaration. If the CompoundIdentifier does
+// not have a Member, this will be the same as Encode. Example:
+// "my.fidl.library/MyProtocol".
 func (ci CompoundIdentifier) EncodeDecl() EncodedCompoundIdentifier {
 	return EncodedCompoundIdentifier(string(ci.Library.Encode()) + "/" + string(ci.Name))
 }
 
+// Encode encodes the fully-qualified declaration or member identified by this
+// CompoundIdentifier.
+//
+// Encoded form consists of the encoded library identifier, then the declaration
+// name. If a member is specified, it will come after the declaration name,
+// separated by a dot. Example:
+// - With no Member: "my.fidl.library/MyProtocol"
+// - With Member: "my.fidl.library/MyProtocol.SomeMethod"
 func (ci CompoundIdentifier) Encode() EncodedCompoundIdentifier {
 	if ci.Member != "" {
 		return EncodedCompoundIdentifier(fmt.Sprintf("%s.%s", ci.EncodeDecl(), ci.Member))
@@ -89,10 +118,12 @@ func (ci CompoundIdentifier) Encode() EncodedCompoundIdentifier {
 	return ci.EncodeDecl()
 }
 
+// Parts splits the library identifier back into component parts.
 func (eli EncodedLibraryIdentifier) Parts() []string {
 	return strings.Split(string(eli), ".")
 }
 
+// Parse decodes an EncodedLibraryIdentifier back into a LibraryIdentifier.
 func (eli EncodedLibraryIdentifier) Parse() LibraryIdentifier {
 	parts := eli.Parts()
 	idents := make([]Identifier, len(parts))
@@ -102,6 +133,8 @@ func (eli EncodedLibraryIdentifier) Parse() LibraryIdentifier {
 	return LibraryIdentifier(idents)
 }
 
+// PartsReversed splits the library identifier back into component parts and
+// returns them in reverse order.
 func (eli EncodedLibraryIdentifier) PartsReversed() []string {
 	parts := eli.Parts()
 	partsReversed := make([]string, len(parts))
@@ -112,10 +145,16 @@ func (eli EncodedLibraryIdentifier) PartsReversed() []string {
 	return partsReversed
 }
 
+// Parts splits an EncodedCompoundIdentifier into an optional library name and
+// declaration or member id.
+//
+// This splits off the library name, but does not check whether the referenced
+// member is a delaration or member of a declaration.
 func (eci EncodedCompoundIdentifier) Parts() []string {
 	return strings.SplitN(string(eci), "/", 2)
 }
 
+// LibraryName retrieves the library name from an EncodedCompoundIdentifier.
 func (eci EncodedCompoundIdentifier) LibraryName() EncodedLibraryIdentifier {
 	raw_library := ""
 	if parts := eci.Parts(); len(parts) == 2 {
@@ -124,6 +163,8 @@ func (eci EncodedCompoundIdentifier) LibraryName() EncodedLibraryIdentifier {
 	return EncodedLibraryIdentifier(raw_library)
 }
 
+// DeclName retrieves the fully-qualified declaration name from an
+// EncodedCompoundIdentifier. This operation is idempotent.
 func (eci EncodedCompoundIdentifier) DeclName() EncodedCompoundIdentifier {
 	ci := eci.Parse()
 	parts := []string{}
@@ -134,6 +175,7 @@ func (eci EncodedCompoundIdentifier) DeclName() EncodedCompoundIdentifier {
 		strings.Join(parts, "."), ci.Name))
 }
 
+// Parse converts an EncodedCompoundIdentifier back into a CompoundIdentifier.
 func (eci EncodedCompoundIdentifier) Parse() CompoundIdentifier {
 	parts := eci.Parts()
 	raw_library := ""
@@ -150,14 +192,6 @@ func (eci EncodedCompoundIdentifier) Parse() CompoundIdentifier {
 		member = Identifier(name_parts[1])
 	}
 	return CompoundIdentifier{library, name, member}
-}
-
-func EnsureLibrary(l EncodedLibraryIdentifier, eci EncodedCompoundIdentifier) EncodedCompoundIdentifier {
-	if strings.Index(string(eci), "/") != -1 {
-		return eci
-	}
-	new_eci := strings.Join([]string{string(l), "/", string(eci)}, "")
-	return EncodedCompoundIdentifier(new_eci)
 }
 
 type PrimitiveSubtype string
@@ -891,6 +925,8 @@ func EmptyStructMember(name string) StructMember {
 	}
 }
 
+// Openness of a protocol. Affects whether unknown interaction handlers are generated. Also controls
+// whether methods are allowed to be flexible, but that is enforced by fidlc, not fidlgen.
 type Openness string
 
 const (
@@ -902,10 +938,16 @@ const (
 // Protocol represents the declaration of a FIDL protocol.
 type Protocol struct {
 	Decl
+	// Whether the protocol is open. This affects whether the server-side generates handlers for
+	// unknown interactions.
 	Openness Openness `json:"openness,omitempty"`
-	Methods  []Method `json:"methods"`
+	// List of methods that are part of this protocol.
+	Methods []Method `json:"methods"`
 }
 
+// If the protocol is discoverable, gets the discovery name for the protocol, consisting of the
+// library name and protocol declaration name separated by dots and enclosed in quotes. For example,
+// "\"my.library.MyProtocol\"". This part of legacy service discovery (pre-RFC-0041).
 func (d *Protocol) GetServiceName() string {
 	if found := d.HasAttribute("discoverable"); found {
 		ci := d.Name.Parse()
@@ -945,23 +987,47 @@ type ServiceMember struct {
 // Method represents the declaration of a FIDL method.
 type Method struct {
 	Attributes
-	Ordinal uint64     `json:"ordinal"`
-	Name    Identifier `json:"name"`
-	// TODO(fxbug.dev/88366): make "strict" required once fidlc always provides
-	// it.  It's currently gated by unknown_interactions and should not default
-	// to false when not provided.
-	MaybeStrict     *bool `json:"strict,omitempty"`
-	IsComposed      bool  `json:"is_composed"`
-	HasRequest      bool  `json:"has_request"`
-	RequestPayload  *Type `json:"maybe_request_payload,omitempty"`
-	RequestPadding  bool  `json:"maybe_request_has_padding,omitempty"`
-	RequestFlexible bool  `json:"experimental_maybe_request_has_flexible_envelope,omitempty"`
-	HasResponse     bool  `json:"has_response"`
+	// Computed ordinal to use to identify the method on the wire.
+	Ordinal uint64 `json:"ordinal"`
+	// Unqualified name of the method.
+	Name Identifier `json:"name"`
+	// Whether the method is marked as strict (other wise flexible).
+	//
+	// While unknown interactions are experimental, a not-set strictness should be treated as
+	// strict. After unknown interactions are released this field will be made required. For now,
+	// use IsStrict() to access the value correctly.
+	//
+	// TODO(fxbug.dev/88366): make "strict" required once fidlc always provides it.  It's currently
+	// gated by unknown_interactions and should not default to false when not provided.
+	MaybeStrict *bool `json:"strict,omitempty"`
+	// True if the method was composed into this protocol from another protocol definition.
+	IsComposed bool `json:"is_composed"`
+	// True if this method has a request. This is true for all client-initiated methods, and false
+	// for server-initiated events. There may still be no request payload, for example "Foo()" has a
+	// request but no request payload.
+	HasRequest bool `json:"has_request"`
+	// The request payload of the method, given in the method arguments.
+	RequestPayload *Type `json:"maybe_request_payload,omitempty"`
+	// True if this method has a response. This is true for two-way methods and for server-initiated
+	// events. There may still be no response payload, for example "Foo(...) -> ()" or "-> Bar()"
+	// have a response but no response payload.
+	HasResponse bool `json:"has_response"`
+	// The full response payload, as it appears on the wire. If error syntax is used, this is a
+	// struct with a single field containing the ResultType. Otherwise, it is the same as the return
+	// value of the method.
 	ResponsePayload *Type `json:"maybe_response_payload,omitempty"`
-	HasError        bool  `json:"has_error"`
-	ResultType      *Type `json:"maybe_response_result_type,omitempty"`
-	ValueType       *Type `json:"maybe_response_success_type,omitempty"`
-	ErrorType       *Type `json:"maybe_response_err_type,omitempty"`
+	// Whether the method uses the "error" syntax. If true, ResponsePayload will be a single-element
+	// struct wrapping the result union, and rssponse will be further broken down in the ResultType,
+	// ValueType, and ErrorType fields.
+	HasError bool `json:"has_error"`
+	// If error syntax is used, this is the type of the result union containing the ValueType and
+	// ErrorType.
+	ResultType *Type `json:"maybe_response_result_type,omitempty"`
+	// If error syntax is used, this is the type of the success variant of the ResultType union,
+	// which is the same as the return value.
+	ValueType *Type `json:"maybe_response_success_type,omitempty"`
+	// If error syntax is used, this is the type of the error variant of the ResultType union.
+	ErrorType *Type `json:"maybe_response_err_type,omitempty"`
 }
 
 // GetRequestPayloadIdentifier retrieves the identifier that points to the
@@ -1242,7 +1308,7 @@ func (r *Root) DeclsWithDependencies() DeclInfoMap {
 	}
 	for _, l := range r.Libraries {
 		for k, v := range l.Decls {
-			decls[EnsureLibrary(l.Name, k)] = v
+			decls[k] = v
 		}
 	}
 	return decls
