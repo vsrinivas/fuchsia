@@ -1,6 +1,7 @@
 // This is a CML shard, which is necessary when a nested component manager is
 // used with the fuchsia_component_test library
 {
+    include: [ "//src/sys/test_manager/hermetic-tier-2-test.shard.cml" ],
     offer: [
         {
             protocol: [

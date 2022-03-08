@@ -1,5 +1,6 @@
 {
     include: [
+        "//src/sys/test_manager/hermetic-tier-2-test.shard.cml",
         "//src/sys/test_runners/gtest/default.shard.cml",
         "sys/component/realm_builder.shard.cml",
     ],

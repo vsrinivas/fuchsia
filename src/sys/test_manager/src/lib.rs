@@ -1606,13 +1606,6 @@ async fn get_realm(
     let archivist = wrapper_realm
         .add_child(ARCHIVIST_REALM_NAME, ARCHIVIST_FOR_EMBEDDING_URL, ChildOptions::new().eager())
         .await?;
-    let enclosing_env = wrapper_realm
-        .add_local_child(
-            ENCLOSING_ENV_REALM_NAME,
-            move |handles| Box::pin(gen_enclosing_env(handles)),
-            ChildOptions::new(),
-        )
-        .await?;
 
     // Parent to archivist
     builder
@@ -1634,22 +1627,19 @@ async fn get_realm(
         )
         .await?;
 
-    // archivist to test root and enclosing env
-    wrapper_realm
-        .add_route(
-            Route::new()
-                .capability(Capability::protocol_by_name("fuchsia.logger.LogSink"))
-                .from(&archivist)
-                .to(&test_root)
-                .to(&enclosing_env),
-        )
-        .await?;
-
     // archivist to test root
     wrapper_realm
         .add_route(
             Route::new()
                 .capability(Capability::protocol_by_name("fuchsia.logger.Log"))
+                .from(&archivist)
+                .to(&test_root),
+        )
+        .await?;
+    wrapper_realm
+        .add_route(
+            Route::new()
+                .capability(Capability::protocol_by_name("fuchsia.logger.LogSink"))
                 .from(&archivist)
                 .to(&test_root),
         )
@@ -1693,32 +1683,54 @@ async fn get_realm(
         )
         .await?;
 
-    // enclosing env to test root
-    wrapper_realm
-        .add_route(
-            Route::new()
-                .capability(Capability::protocol::<fv1sys::EnvironmentMarker>())
-                .capability(Capability::protocol::<fv1sys::LauncherMarker>())
-                .capability(Capability::protocol::<fv1sys::LoaderMarker>())
-                .from(&enclosing_env)
-                .to(&test_root),
-        )
-        .await?;
+    // If this is not a hermetic test, generate an enclosing environment to allow
+    // the test to launch CFv1 components.
+    if !collection.eq(HERMETIC_TESTS_COLLECTION) {
+        let enclosing_env = wrapper_realm
+            .add_local_child(
+                ENCLOSING_ENV_REALM_NAME,
+                move |handles| Box::pin(gen_enclosing_env(handles)),
+                ChildOptions::new(),
+            )
+            .await?;
 
-    // debug to enclosing env
-    // This must be done manually, as there is currently no way to add a "use from debug"
-    // declaration using `add_route`.
-    let mut enclosing_env_decl = wrapper_realm.get_component_decl(&enclosing_env).await?;
-    enclosing_env_decl.uses.push(cm_rust::UseDecl::Protocol(cm_rust::UseProtocolDecl {
-        source: cm_rust::UseSource::Debug,
-        source_name: fdebugdata::DebugDataMarker::PROTOCOL_NAME.into(),
-        target_path: format!("/svc/{}", fdebugdata::DebugDataMarker::PROTOCOL_NAME)
-            .as_str()
-            .try_into()
-            .unwrap(),
-        dependency_type: cm_rust::DependencyType::Strong,
-    }));
-    wrapper_realm.replace_component_decl(&enclosing_env, enclosing_env_decl).await?;
+        // archivist to enclosing env
+        wrapper_realm
+            .add_route(
+                Route::new()
+                    .capability(Capability::protocol_by_name("fuchsia.logger.LogSink"))
+                    .from(&archivist)
+                    .to(&enclosing_env),
+            )
+            .await?;
+
+        // enclosing env to test root
+        wrapper_realm
+            .add_route(
+                Route::new()
+                    .capability(Capability::protocol::<fv1sys::EnvironmentMarker>())
+                    .capability(Capability::protocol::<fv1sys::LauncherMarker>())
+                    .capability(Capability::protocol::<fv1sys::LoaderMarker>())
+                    .from(&enclosing_env)
+                    .to(&test_root),
+            )
+            .await?;
+
+        // debug to enclosing env
+        // This must be done manually, as there is currently no way to add a "use from debug"
+        // declaration using `add_route`.
+        let mut enclosing_env_decl = wrapper_realm.get_component_decl(&enclosing_env).await?;
+        enclosing_env_decl.uses.push(cm_rust::UseDecl::Protocol(cm_rust::UseProtocolDecl {
+            source: cm_rust::UseSource::Debug,
+            source_name: fdebugdata::DebugDataMarker::PROTOCOL_NAME.into(),
+            target_path: format!("/svc/{}", fdebugdata::DebugDataMarker::PROTOCOL_NAME)
+                .as_str()
+                .try_into()
+                .unwrap(),
+            dependency_type: cm_rust::DependencyType::Strong,
+        }));
+        wrapper_realm.replace_component_decl(&enclosing_env, enclosing_env_decl).await?;
+    }
 
     // wrapper realm to archivist
     wrapper_realm

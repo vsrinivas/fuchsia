@@ -42,6 +42,79 @@
                     from: "#go_test_runner",
                 },
                 {
+                    runner: "stress_test_runner",
+                    from: "#stress_test_runner",
+                },
+                {
+                    runner: "realm_builder",
+                    from: "#realm_builder_server",
+                },
+            ],
+            resolvers: [
+                {
+                    resolver: "realm_builder_resolver",
+                    from: "#realm_builder_server",
+                    scheme: "realm-builder",
+                },
+            ],
+            debug: [
+                {
+                    protocol: "fuchsia.debugdata.DebugData",
+                    from: "#debug_data",
+                },
+            ],
+
+            // TODO(fxbug.dev/87330): We need more time to collect logs on
+            // coverage bots. Remove this one we have single archivist for all
+            // tests.
+            __stop_timeout_ms: 30000,
+        },
+        {
+            // The test-env above is used by the hermetic test realm, which
+            // should not be able to run CFv1 components, so the env does not
+            // provide the legacy_test_runner and cmx_runner. However, the
+            // other test realms need to be able to run CFv1 components, so
+            // we intialize a legacy-test-env that provides these runners.
+            name: "legacy-test-env",
+            extends: "realm",
+            runners: [
+                {
+                    runner: "elf_test_runner",
+                    from: "#elf_test_runner",
+                },
+                {
+                    runner: "elf_test_ambient_exec_runner",
+                    from: "#elf_test_ambient_exec_runner",
+                },
+                {
+                    runner: "gtest_runner",
+                    from: "#gtest_runner",
+                },
+                {
+                    runner: "netemul_test_runner",
+                    from: "#netemul_test_runner",
+                },
+                {
+                    runner: "rust_test_runner",
+                    from: "#rust_test_runner",
+                },
+                {
+                    runner: "starnix_test_runner",
+                    from: "#starnix_test_runner",
+                },
+                {
+                    runner: "starnix_unit_test_runner",
+                    from: "#starnix_unit_test_runner",
+                },
+                {
+                    runner: "inspect_test_runner",
+                    from: "#inspect_test_runner",
+                },
+                {
+                    runner: "go_test_runner",
+                    from: "#go_test_runner",
+                },
+                {
                     runner: "legacy_test_runner",
                     from: "#legacy_test_runner",
                 },

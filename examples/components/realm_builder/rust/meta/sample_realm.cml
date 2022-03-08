@@ -4,11 +4,13 @@
 {
     // [START include_shard_rust]
     include: [
-        "sys/component/realm_builder.shard.cml",
+        "//src/sys/test_manager/hermetic-tier-2-test.shard.cml",
 
         // [START_EXCLUDE]
         "//src/sys/test_runners/rust/default.shard.cml",
+        "sys/component/realm_builder.shard.cml",
         "syslog/client.shard.cml",
+
         // [END_EXCLUDE]
     ],
 
