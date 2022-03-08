@@ -22,6 +22,7 @@ static_library("cpp") {
     "client.h",
     "reader.h",
     "remote_block_device.h",
+    "writer.h",
   ]
   sources = [
     "block_device.cc",
@@ -29,6 +30,7 @@ static_library("cpp") {
     "client.cc",
     "reader.cc",
     "remote_block_device.cc",
+    "writer.cc",
   ]
 
   public_configs = [ ":migration" ]
@@ -65,6 +67,7 @@ static_library("cpp") {
     "//src/lib/ddk",
     "//src/lib/storage/vfs/cpp",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/fdio-caller",
     "//zircon/system/ulib/sync",
     "//zircon/system/ulib/zx",
     "//zircon/third_party/ulib/safemath",
@@ -112,6 +115,7 @@ test("block_client_unit_test") {
     "fake_block_device_unittest.cc",
     "reader_unittest.cc",
     "remote_block_device_unittest.cc",
+    "writer_unittest.cc",
   ]
 
   public_configs = [ ":migration" ]

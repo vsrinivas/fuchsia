@@ -57,6 +57,7 @@
 #include <zxtest/zxtest.h>
 
 #include "src/lib/storage/block_client/cpp/client.h"
+#include "src/lib/storage/block_client/cpp/remote_block_device.h"
 #include "src/lib/storage/fs_management/cpp/fvm.h"
 #include "src/lib/storage/fs_management/cpp/mount.h"
 #include "src/storage/blobfs/format.h"
@@ -435,6 +436,17 @@ void CheckWriteReadBlock(int fd, size_t block, size_t count) {
   CheckRead(fd, off, len, in.get());
 }
 
+void CheckWriteReadBytesFifo(int fd, size_t off, size_t len) {
+  std::unique_ptr<uint8_t[]> write_buf(new uint8_t[len]);
+  memset(write_buf.get(), 0xa3, len);
+
+  ASSERT_EQ(block_client::SingleWriteBytes(fd, write_buf.get(), len, off), ZX_OK);
+  std::unique_ptr<uint8_t[]> read_buf(new uint8_t[len]);
+  memset(read_buf.get(), 0, len);
+  ASSERT_EQ(block_client::SingleReadBytes(fd, read_buf.get(), len, off), ZX_OK);
+  EXPECT_EQ(memcmp(write_buf.get(), read_buf.get(), len), 0);
+}
+
 void CheckNoAccessBlock(int fd, size_t block, size_t count) {
   fdio_cpp::UnownedFdioCaller disk_connection(fd);
   zx_status_t status;
@@ -577,6 +589,38 @@ TEST_F(FvmTest, TestAllocateOne) {
   ASSERT_EQ(vp_fd_or.status_value(), ZX_OK, "Couldn't re-open Data VPart");
   vp_fd = *std::move(vp_fd_or);
   CheckWriteReadBlock(vp_fd.get(), 0, 1);
+
+  ASSERT_EQ(close(vp_fd.release()), 0);
+  ASSERT_EQ(close(fd.release()), 0);
+  FVMCheckSliceSize(fvm_device(), kSliceSize);
+  ValidateFVM(ramdisk_device());
+}
+
+// Test Reading and writing with RemoteBlockDevice helpers
+TEST_F(FvmTest, TestReadWriteSingle) {
+  constexpr uint64_t kBlockSize = 512;
+  constexpr uint64_t kBlockCount = 1 << 16;
+  constexpr uint64_t kSliceSize = 64 * kBlockSize;
+  CreateFVM(kBlockSize, kBlockCount, kSliceSize);
+  fbl::unique_fd fd = fvm_device();
+  ASSERT_TRUE(fd);
+
+  // Allocate one VPart
+  alloc_req_t request;
+  memset(&request, 0, sizeof(request));
+  request.slice_count = 1;
+  memcpy(request.guid, kTestUniqueGUID, BLOCK_GUID_LEN);
+  strcpy(request.name, kTestPartName1);
+  memcpy(request.type, kTestPartGUIDData, BLOCK_GUID_LEN);
+  auto vp_fd_or =
+      fs_management::FvmAllocatePartitionWithDevfs(devfs_root().get(), fd.get(), &request);
+  ASSERT_EQ(vp_fd_or.status_value(), ZX_OK);
+  fbl::unique_fd vp_fd = *std::move(vp_fd_or);
+
+  // Check that we can read from / write to it.
+  CheckWriteReadBytesFifo(vp_fd.get(), 0, kBlockSize);
+  // Check with an offset
+  CheckWriteReadBytesFifo(vp_fd.get(), kBlockSize * 7, kBlockSize * 4);
 
   ASSERT_EQ(close(vp_fd.release()), 0);
   ASSERT_EQ(close(fd.release()), 0);

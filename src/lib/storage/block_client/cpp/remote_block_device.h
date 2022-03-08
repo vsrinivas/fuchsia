@@ -25,6 +25,7 @@ namespace block_client {
 class RemoteBlockDevice final : public BlockDevice {
  public:
   static zx_status_t Create(zx::channel device, std::unique_ptr<RemoteBlockDevice>* out);
+  static zx::status<std::unique_ptr<RemoteBlockDevice>> Create(int fd);
   RemoteBlockDevice& operator=(RemoteBlockDevice&&) = delete;
   RemoteBlockDevice(RemoteBlockDevice&&) = delete;
   RemoteBlockDevice& operator=(const RemoteBlockDevice&) = delete;
@@ -49,6 +50,13 @@ class RemoteBlockDevice final : public BlockDevice {
   zx::channel device_;
   block_client::Client fifo_client_;
 };
+
+// Helper functions for performing single reads and writes from a block
+// buffer_size and offset are considered sizes in bytes, although
+// reading and writing can only be done in whole block increments.
+// buffer must be pre-allocated to the correct size.
+zx_status_t SingleReadBytes(int fd, void* buffer, size_t buffer_size, size_t offset);
+zx_status_t SingleWriteBytes(int fd, void* buffer, size_t buffer_size, size_t offset);
 
 }  // namespace block_client
 

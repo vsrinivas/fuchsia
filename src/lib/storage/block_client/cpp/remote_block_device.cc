@@ -5,9 +5,15 @@
 #include "src/lib/storage/block_client/cpp/remote_block_device.h"
 
 #include <fidl/fuchsia.device/cpp/wire.h>
+#include <fidl/fuchsia.hardware.block/cpp/wire.h>
 #include <fidl/fuchsia.io/cpp/wire.h>
+#include <lib/fdio/cpp/caller.h>
 #include <lib/syslog/cpp/macros.h>
+#include <lib/zx/vmo.h>
 #include <zircon/device/vfs.h>
+
+#include "src/lib/storage/block_client/cpp/reader.h"
+#include "src/lib/storage/block_client/cpp/writer.h"
 
 namespace fio = fuchsia_io;
 
@@ -143,9 +149,47 @@ zx_status_t RemoteBlockDevice::Create(zx::channel device, std::unique_ptr<Remote
   return ZX_OK;
 }
 
+zx::status<std::unique_ptr<RemoteBlockDevice>> RemoteBlockDevice::Create(int fd) {
+  auto endpoints = fidl::CreateEndpoints<fuchsia_io::Node>();
+  if (!endpoints.is_ok()) {
+    return endpoints.take_error();
+  }
+
+  fdio_cpp::UnownedFdioCaller caller(fd);
+  auto status = fidl::WireCall(caller.node())
+                    ->Clone(fio::wire::kCloneFlagSameRights, std::move(endpoints->server))
+                    .status();
+  if (status != ZX_OK) {
+    return zx::error(status);
+  }
+  std::unique_ptr<block_client::RemoteBlockDevice> client;
+  status = block_client::RemoteBlockDevice::Create(endpoints->client.TakeChannel(), &client);
+  if (status != ZX_OK) {
+    return zx::error(status);
+  }
+  return zx::ok(std::move(client));
+}
+
 RemoteBlockDevice::RemoteBlockDevice(zx::channel device, zx::fifo fifo)
     : device_(std::move(device)), fifo_client_(std::move(fifo)) {}
 
 RemoteBlockDevice::~RemoteBlockDevice() { BlockCloseFifo(device_); }
 
+zx_status_t SingleReadBytes(int fd, void* buffer, size_t buffer_size, size_t offset) {
+  auto client = RemoteBlockDevice::Create(fd);
+  if (!client.is_ok()) {
+    return client.error_value();
+  }
+  Reader reader(*(client.value()));
+  return reader.Read(offset, buffer_size, buffer);
+}
+
+zx_status_t SingleWriteBytes(int fd, void* buffer, size_t buffer_size, size_t offset) {
+  auto client = RemoteBlockDevice::Create(fd);
+  if (!client.is_ok()) {
+    return client.error_value();
+  }
+  Writer writer(*(client.value()));
+  return writer.Write(offset, buffer_size, buffer);
+}
 }  // namespace block_client
