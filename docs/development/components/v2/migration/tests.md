@@ -438,11 +438,23 @@ specific features your test components may support:
 
 ## Verify the migrated tests {#verify-tests}
 
-Build and run your test and verify that it passes:
+Verify that your migrated tests are passing successfully using Components v2.
 
-```posix-terminal
-fx build && fx test my_component_tests
-```
+1.  Build the target for your test package:
+
+    ```posix-terminal
+    fx build
+    ```
+
+1.  Verify your tests successfully pass with the test:
+
+    ```posix-terminal
+    fx test my_component_tests
+    ```
+
+    Note: If tools or scripts invoke your tests component using
+    `fx shell run-test-component`, migrate this usage to
+    `fx shell run-test-suite` or `ffx test run`.
 
 If your test doesn't run correctly or doesn't start at all, try following the
 advice in [Troubleshooting components][troubleshooting-components].

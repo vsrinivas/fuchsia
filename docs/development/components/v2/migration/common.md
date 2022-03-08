@@ -124,35 +124,6 @@ policy allowlist at
 }
 ```
 
-## Shell binaries
-
-Your project may contain a `fuchsia_shell_package()` build target designed to
-execute in a shell environment. Many of these packages also contain a CMX file
-to support invoking the binary as a v1 component. When
-[routing your services][migrate-components-v1] to the `sys` environment,
-include any services required by shell binaries.
-
-Note: If your component requires `shell-commands` directory access to invoke
-shell binaries, see [directory features][migrate-features-directory] for more
-details.
-
-Shell binaries are run in the `sys` [environment][glossary.environment], and
-have access to all the capabilities provided there. Capabilities are not defined
-by the CMX manifest file unless shell binaries are invoked as a component using
-the `run` command.
-
-When working with shell binaries, consider the following:
-
--   If you only need access to the binary through a shell interface, remove the
-    unused CMX file entirely. Do not replace it with a corresponding CML file.
--   If you need to access the binary from somewhere else in the v2 component
-    topology (such as tests), migrate the functionality into a new v2 component
-    instead.
-
-Note: There is no v2 equivalent of using `run` to invoke a shell binary **as a
-component**. If you require this feature for your component, reach out to
-[component-framework-dev][cf-dev-list].
-
 ## Lifecycle
 
 If your component serves the `fuchsia.process.lifecycle.Lifecycle` protocol,
@@ -269,10 +240,7 @@ specific features your components may support:
 [migrate-add-shard]: /docs/development/components/v2/migration/components.md#add-core-shard
 [migrate-components]: /docs/development/components/v2/migration/components.md
 [migrate-components-add]: /docs/development/components/v2/migration/components.md#add-component-to-topology
-[migrate-components-v1]: /docs/development/components/v2/migration/components.md#route-to-v1
-[migrate-features-directory]: /docs/development/components/v2/migration/features.md#directory-features
-[moniker]: /docs/concepts/components/v2/monikers.md
-[lifecycle-example]: /examples/components/lifecycle
+[rust-lifecycle]: /examples/components/lifecycle
 [src-security-policy]: /src/security/policy/component_manager_policy.json5
 [sysmgr-critical-components]: /docs/concepts/components/v1/sysmgr.md#critical_components
 [rcs-selector-maps]: /docs/development/tools/ffx/development/plugins.md#selector-maps

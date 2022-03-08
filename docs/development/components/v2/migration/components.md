@@ -635,28 +635,77 @@ specific features your system components may support:
 -   [Diagnostics capabilities](diagnostics.md)
 -   [Other common situations](common.md)
 
+## Launching components {#launch-component}
+
+Components v1 supports launching components explicitly using their component
+URL with `fx shell run`. This instantiates the component in the common `sys`
+[environment][glossary.environment] where it has full access to the capabilities
+available there.
+
+In Components v2, system components interact through the capabilities that are
+explicitly routed to them. This means that where a component is instantiated
+within the [component topology](#add-component-to-topology) affects what a
+component can accomplish.
+
+If your component is currently invoked using `fx run` or `fx shell`,
+consider migrating the functionality to a [plugin for `ffx`][ffx-plugins].
+
+### Shell binaries {#shell-binary}
+
+Your project may contain a `fuchsia_shell_package()` build target designed to
+execute in a shell environment. Many of these packages also contain a CMX file
+to support invoking the binary as a v1 component. When
+[routing your services](#route-to-v1) to the `sys` environment,
+include any services required by shell binaries.
+
+Shell binaries are run in the `sys` [environment][glossary.environment], and
+have access to all the capabilities provided there. Capabilities are not defined
+by the CMX manifest file unless shell binaries are invoked as a component using
+the `fx shell run` command.
+
+When working with shell binaries, consider the following:
+
+-   If you only need access to the binary through a shell interface, remove the
+    unused CMX file entirely. Do not replace it with a corresponding CML file.
+-   If you need to access the binary from somewhere else in the v2 component
+    topology (such as tests), migrate the functionality into a new v2 component
+    instead.
+
+Note: If the solutions presented here are not appropriate for your use case,
+please reach out to [component-framework-dev][cf-dev-list].
+
 ## Verify the migrated component {#verify-component}
 
-Build the target for your package and manually verify that your component and
-its dependencies still work as expected.
+Verify that your migrated component and its dependencies behave as expected
+using Components v2.
 
-```posix-terminal
-fx build
-```
+1.  Build the target for your package:
 
-Perform manual verification of capability routing using the `verify routes`
-command built into [scrutiny][fx-scrutiny].
+    ```posix-terminal
+    fx build
+    ```
 
-```posix-terminal
-ffx scrutiny verify routes
-```
+1.  Perform manual verification of capability routing using the `verify routes`
+    command built into [scrutiny][fx-scrutiny].
 
-This command reports routing errors in the static component topology of the
-current build. This can help you find missing `offer` or `expose` declarations
-before performing runtime tests.
+    ```posix-terminal
+    ffx scrutiny verify routes \
+        --build-path {{ '<var label="build directory">$(fx get-build-dir)</var>' }} \
+        --repository-path {{ '<var label="build directory">$(fx get-build-dir)/amber-files/repository</var>' }} 
+    ```
 
-Note: Scrutiny can only verify routes in the v2 component topology. It cannot
-look into `appmgr` and the `sys` environment to review usage from v1 components.
+    This command reports routing errors in the static component topology of the
+    current build. This can help you find missing `offer` or `expose`
+    declarations before performing runtime tests.
+
+    Note: Scrutiny can only verify routes in the v2 component topology. It
+    cannot look into `appmgr` and the `sys` environment to review usage from
+    v1 components.
+
+1.  Manually verify your component's behavior. You can use the complete set of
+    [`ffx component` tools][ffx-component] to interact with your component and
+    its capabilities at runtime. For additional details on running components in
+    the v2 component topology, see [Run components][run-components].
 
 If your component or one of the components that depends on it isn't working
 correctly, try following the advice in
@@ -668,6 +717,8 @@ correctly, try following the advice in
 [components-topology]: /docs/concepts/components/v2/topology.md
 [core-realm-rfc]: /docs/contribute/governance/rfcs/0089_core_realm_variations.md
 [cs-core-cml]: /src/sys/core/meta/core.cml
+[ffx-component]: /docs/development/tools/ffx/getting-started.md#interacting_with_components
+[ffx-plugins]: /docs/development/tools/ffx/development/plugins.md
 [fx-scrutiny]: https://fuchsia.dev/reference/tools/fx/cmd/scrutiny
 [glossary.component-manifest]: /docs/glossary/README.md#component-manifest
 [glossary.components-v1]: /docs/glossary/README.md#components-v1
@@ -683,6 +734,8 @@ correctly, try following the advice in
 [manifests-program]: https://fuchsia.dev/reference/cml#program
 [manifests-shard]: /docs/development/components/build.md#component-manifest-shards
 [manifests-use]: https://fuchsia.dev/reference/cml#use
+[migrate-features-directory]: /docs/development/components/v2/migration/features.md#directory-features
+[run-components]: /docs/development/components/run.md
 [sysmgr-config]: /docs/concepts/components/v1/sysmgr.md
 [sysmgr-config-search]: https://cs.opensource.google/search?q=fuchsia-pkg:%2F%2Ffuchsia.com%2F.*%23meta%2Fmy_component.cmx%20-f:.*.cmx$%20%5C%22services%5C%22&ss=fuchsia
 [sysmgr-gn-config-search]: https://cs.opensource.google/search?q=-f:.*.gn%20"font_provider:sysmgr_config"&ss=fuchsia

@@ -11,8 +11,10 @@ when using the [component framework][doc-intro]:
 
 You can run the capability routing static analyzer on a host with this command:
 
-```
-ffx scrutiny verify routes
+```posix-terminal
+ffx scrutiny verify routes \
+    --build-path $(fx get-build-dir) \
+    --repository-path $(fx get-build-dir)/amber-files/repository
 ```
 
 The static analyzer will soon also run in CQ, so you may see CQ failures attributed
