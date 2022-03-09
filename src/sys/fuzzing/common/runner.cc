@@ -90,8 +90,10 @@ ZxPromise<FuzzResult> Runner::Execute(Input input) {
   return PendAsync(kExecute, std::move(input)).and_then([this]() { return fpromise::ok(result_); });
 }
 
-void Runner::Minimize(Input input, fit::function<void(zx_status_t)> callback) {
-  Pend(kMinimize, std::move(input), std::move(callback));
+ZxPromise<Input> Runner::Minimize(Input input) {
+  return PendAsync(kMinimize, std::move(input)).and_then([this]() {
+    return fpromise::ok(result_input_.Duplicate());
+  });
 }
 
 void Runner::Cleanse(Input input, fit::function<void(zx_status_t)> callback) {

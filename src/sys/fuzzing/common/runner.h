@@ -73,7 +73,7 @@ class Runner {
   // Fuzzing workflows.
   zx_status_t Configure(const OptionsPtr& options);
   ZxPromise<FuzzResult> Execute(Input input) FXL_LOCKS_EXCLUDED(mutex_);
-  void Minimize(Input input, fit::function<void(zx_status_t)> callback) FXL_LOCKS_EXCLUDED(mutex_);
+  ZxPromise<Input> Minimize(Input input) FXL_LOCKS_EXCLUDED(mutex_);
   void Cleanse(Input input, fit::function<void(zx_status_t)> callback) FXL_LOCKS_EXCLUDED(mutex_);
   void Fuzz(fit::function<void(zx_status_t)> callback) FXL_LOCKS_EXCLUDED(mutex_);
   void Merge(fit::function<void(zx_status_t)> callback) FXL_LOCKS_EXCLUDED(mutex_);

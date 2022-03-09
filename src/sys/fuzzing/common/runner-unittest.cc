@@ -138,32 +138,31 @@ void RunnerTest::ExecuteWithLeak(const RunnerPtr& runner) {
   EXPECT_EQ(RunOne(FuzzResult::LEAK), input);
   RunUntilIdle();
 }
-
 // Simulate no error on the original input.
 void RunnerTest::MinimizeNoError(const RunnerPtr& runner) {
   Configure(runner, RunnerTest::DefaultOptions(runner));
   Input input({0x04});
-  runner->Minimize(input.Duplicate(), [&](zx_status_t status) { SetStatus(status); });
-  RunOne();
-  EXPECT_EQ(GetStatus(), ZX_ERR_INVALID_ARGS);
+  FUZZING_EXPECT_ERROR(runner->Minimize(input.Duplicate()), ZX_ERR_INVALID_ARGS);
+  EXPECT_EQ(RunOne(), input);
+  RunUntilIdle();
 }
 
 // Empty input should exit immediately.
 void RunnerTest::MinimizeEmpty(const RunnerPtr& runner) {
   Configure(runner, RunnerTest::DefaultOptions(runner));
   Input input;
-  runner->Minimize(std::move(input), [&](zx_status_t status) { SetStatus(status); });
-  RunOne(FuzzResult::CRASH);
-  EXPECT_EQ(GetStatus(), ZX_OK);
+  FUZZING_EXPECT_OK(runner->Minimize(input.Duplicate()), input.Duplicate());
+  EXPECT_EQ(RunOne(FuzzResult::CRASH), input);
+  RunUntilIdle();
 }
 
 // 1-byte input should exit immediately.
 void RunnerTest::MinimizeOneByte(const RunnerPtr& runner) {
   Configure(runner, RunnerTest::DefaultOptions(runner));
   Input input({0x44});
-  runner->Minimize(std::move(input), [&](zx_status_t status) { SetStatus(status); });
-  RunOne(FuzzResult::CRASH);
-  EXPECT_EQ(GetStatus(), ZX_OK);
+  FUZZING_EXPECT_OK(runner->Minimize(input.Duplicate()), input.Duplicate());
+  EXPECT_EQ(RunOne(FuzzResult::CRASH), input);
+  RunUntilIdle();
 }
 
 void RunnerTest::MinimizeReduceByTwo(const RunnerPtr& runner) {
@@ -173,25 +172,24 @@ void RunnerTest::MinimizeReduceByTwo(const RunnerPtr& runner) {
 
   Configure(runner, options);
   Input input({0x51, 0x52, 0x53, 0x54, 0x55, 0x56});
-  runner->Minimize(input.Duplicate(), [&](zx_status_t status) { SetStatus(status); });
+  Input minimized;
+  FUZZING_EXPECT_OK(runner->Minimize(input.Duplicate()), &minimized);
 
   // Simulate a crash on the original input of 6 bytes...
   auto test_input = RunOne(FuzzResult::CRASH);
-  EXPECT_EQ(input.ToHex(), test_input.ToHex());
+  EXPECT_EQ(test_input, input);
 
   // ...and on inputs as small as input of 4 bytes, but no smaller.
   size_t runs = 0;
   for (; test_input.size() > 4 && runs < kRuns; ++runs) {
     test_input = RunOne(FuzzResult::CRASH);
   }
-  auto minimized = test_input.Duplicate();
-  EXPECT_LE(minimized.size(), 4U);
   for (runs = 0; runs < kRuns; ++runs) {
-    test_input = RunOne(FuzzResult::NO_ERRORS);
+    RunOne(FuzzResult::NO_ERRORS);
   }
 
-  EXPECT_EQ(GetStatus(), ZX_OK);
-  EXPECT_EQ(runner->result_input().ToHex(), minimized.ToHex());
+  RunUntilIdle();
+  EXPECT_EQ(minimized, test_input);
 }
 
 void RunnerTest::MinimizeNewError(const RunnerPtr& runner) {
@@ -199,14 +197,17 @@ void RunnerTest::MinimizeNewError(const RunnerPtr& runner) {
   options->set_run_limit(zx::msec(500).get());
   Configure(runner, options);
   Input input({0x05, 0x15, 0x25, 0x35});
-  runner->Minimize(input.Duplicate(), [&](zx_status_t status) { SetStatus(status); });
+  Input minimized;
+  FUZZING_EXPECT_OK(runner->Minimize(input.Duplicate()), &minimized);
+
   // Simulate a crash on the original input...
-  auto minimized = RunOne(FuzzResult::CRASH);
+  auto test_input = RunOne(FuzzResult::CRASH);
+
   // ...and a timeout on a smaller input.
-  auto test_input = RunOne(FuzzResult::TIMEOUT);
-  EXPECT_LT(test_input.size(), input.size());
-  EXPECT_EQ(GetStatus(), ZX_OK);
-  EXPECT_EQ(runner->result_input().ToHex(), minimized.ToHex());
+  RunOne(FuzzResult::TIMEOUT);
+
+  RunUntilIdle();
+  EXPECT_EQ(minimized, test_input);
 }
 
 void RunnerTest::CleanseNoReplacement(const RunnerPtr& runner) {
