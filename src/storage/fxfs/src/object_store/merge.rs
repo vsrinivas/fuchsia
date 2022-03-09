@@ -170,9 +170,16 @@ pub fn merge(
     }
     match (left.key(), left.value(), right.key()) {
         (ObjectKey { data: ObjectKeyData::Object, .. }, ObjectValue::None, _) => {
+            // Note that due to OrdLowerBound, when keys are equal,
+            // left.layer_index < right.layer_index so
+            // we don't need to consider tombstones on the right here.
+            debug_assert!(left.layer_index < right.layer_index);
             MergeResult::Other { emit: None, left: Keep, right: Discard }
         }
         (left_key, _, right_key) if left_key == right_key => {
+            // Likewise, equal keys implies the left is the newer value,
+            // so we are safe to keep it here.
+            debug_assert!(left.layer_index < right.layer_index);
             MergeResult::Other { emit: None, left: Keep, right: Discard }
         }
         _ => MergeResult::EmitLeft,
