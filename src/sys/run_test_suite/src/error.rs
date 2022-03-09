@@ -74,7 +74,7 @@ fn convert_launch_error_to_str(e: &ftest_manager::LaunchError) -> &'static str {
     match e {
         ftest_manager::LaunchError::CaseEnumeration => "Cannot enumerate test. This may mean `fuchsia.test.Suite` was not \
         configured correctly. Refer to: \
-        https://fuchsia.dev/fuchsia-src/development/components/v2/troubleshooting#troubleshoot-test",
+        https://fuchsia.dev/fuchsia-src/development/components/troubleshooting#troubleshoot-test",
         ftest_manager::LaunchError::ResourceUnavailable => "Resource unavailable",
         ftest_manager::LaunchError::InstanceCannotResolve => "Cannot resolve test.",
         ftest_manager::LaunchError::InvalidArgs => {
@@ -83,7 +83,7 @@ fn convert_launch_error_to_str(e: &ftest_manager::LaunchError) -> &'static str {
         ftest_manager::LaunchError::FailedToConnectToTestSuite => {
             "Cannot communicate with the tests. This may mean `fuchsia.test.Suite` was not \
             configured correctly. Refer to: \
-            https://fuchsia.dev/fuchsia-src/development/components/v2/troubleshooting#troubleshoot-test"
+            https://fuchsia.dev/fuchsia-src/development/components/troubleshooting#troubleshoot-test"
         }
         ftest_manager::LaunchError::InternalError => "Internal error, please file bug",
         ftest_manager::LaunchError::NoMatchingCases =>

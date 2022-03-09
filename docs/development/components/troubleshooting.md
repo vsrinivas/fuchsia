@@ -328,7 +328,7 @@ If this happens, you'll see an error like the following from `fx test`:
 Test suite encountered error trying to run tests: getting test cases
 Caused by:
     The test protocol was closed. This may mean `fuchsia.test.Suite` was not configured correctly.
-    Refer to: https://fuchsia.dev/fuchsia-src/development/components/v2/troubleshooting#troubleshoot-test
+    Refer to: https://fuchsia.dev/fuchsia-src/development/components/troubleshooting#troubleshoot-test
 ```
 
 Misconfigurations can happen in a few test-specific ways:

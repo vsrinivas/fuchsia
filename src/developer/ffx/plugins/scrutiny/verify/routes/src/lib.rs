@@ -114,7 +114,7 @@ impl VerifyRoutes {
 Static Capability Flow Analysis Error:
 The route verifier failed to verify all capability routes in this build.
 
-See https://fuchsia.dev/fuchsia-src/development/components/v2/troubleshooting#static-analyzer
+See https://fuchsia.dev/fuchsia-src/development/components/troubleshooting#static-analyzer
 
 If the broken route is required for a transition it can be temporarily added
 to the allowlist located at: {:?}
