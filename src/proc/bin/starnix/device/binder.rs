@@ -260,6 +260,9 @@ bitflags! {
         /// The thread is an auxiliary binder thread.
         const REGISTERED = 1 << 2;
 
+        /// The thread is waiting for commands.
+        const WAITING_FOR_COMMAND = 1 << 3;
+
         /// The thread is a main or auxiliary binder thread.
         const BINDER_THREAD = Self::MAIN.bits | Self::REGISTERED.bits;
     }
@@ -390,8 +393,13 @@ impl BinderDriver {
                 if input.read_size > 0 {
                     // The calling thread wants to read some data from the binder driver, blocking
                     // if there is nothing immediately available.
+                    let read_buffer = UserBuffer {
+                        address: UserAddress::from(input.read_buffer),
+                        length: input.read_size as usize,
+                    };
                     input.read_consumed =
-                        self.handle_thread_read(current_task, &*binder_thread, &input)? as u64;
+                        self.handle_thread_read(current_task, &*binder_thread, &read_buffer)?
+                            as u64;
                 }
 
                 // Write back to the calling thread how much data was read/written.
@@ -452,11 +460,32 @@ impl BinderDriver {
     /// Dequeues work from the thread's work queue, or blocks until work is available.
     fn handle_thread_read(
         &self,
-        _current_task: &CurrentTask,
-        _binder_thread: &BinderThread,
-        _input: &binder_write_read,
+        current_task: &CurrentTask,
+        binder_thread: &BinderThread,
+        _read_buffer: &UserBuffer,
     ) -> Result<usize, Errno> {
-        error!(EOPNOTSUPP)
+        loop {
+            let command_queue = binder_thread.command_queue.lock();
+            if let Some(_) = command_queue.front() {
+                return Ok(0);
+            }
+
+            // No commands readily available to read. Register with the wait queue.
+            let waiter = Waiter::new();
+            binder_thread.waiters.lock().wait_async_events(
+                &waiter,
+                FdEvents::POLLIN,
+                Box::new(|_| {}),
+            );
+            drop(command_queue);
+
+            // Put this thread to sleep.
+            scopeguard::defer! {
+                binder_thread.state.write().remove(ThreadState::WAITING_FOR_COMMAND);
+            }
+            binder_thread.state.write().insert(ThreadState::WAITING_FOR_COMMAND);
+            waiter.wait(current_task)?;
+        }
     }
 
     fn get_vmo(&self, length: usize) -> Result<zx::Vmo, Errno> {
