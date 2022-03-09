@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#![allow(non_upper_case_globals)]
+
 use crate::device::DeviceOps;
 use crate::fs::devtmpfs::dev_tmp_fs;
 use crate::fs::{
@@ -13,6 +15,7 @@ use crate::mm::{DesiredAddress, MappedVmo, MappingOptions, UserMemoryCursor};
 use crate::syscalls::{SyscallResult, SUCCESS};
 use crate::task::{CurrentTask, Kernel};
 use crate::types::*;
+use bitflags::bitflags;
 use fuchsia_zircon as zx;
 use parking_lot::{Mutex, RwLock};
 use std::collections::BTreeMap;
@@ -211,14 +214,34 @@ impl ThreadPool {
 struct BinderThread {
     #[allow(unused)]
     tid: pid_t,
+    state: RwLock<ThreadState>,
 }
 
 impl BinderThread {
     fn new(tid: pid_t) -> Self {
-        Self { tid }
+        Self { tid, state: RwLock::new(ThreadState::empty()) }
     }
 }
 
+bitflags! {
+    /// The state of a thread.
+    struct ThreadState: u32 {
+        /// The thread is the main binder thread.
+        const MAIN = 1;
+
+        /// The thread is an auxiliary binder thread.
+        const REGISTERED = 1 << 2;
+
+        /// The thread is a main or auxiliary binder thread.
+        const BINDER_THREAD = Self::MAIN.bits | Self::REGISTERED.bits;
+    }
+}
+
+impl Default for ThreadState {
+    fn default() -> Self {
+        ThreadState::empty()
+    }
+}
 /// The ioctl character for all binder ioctls.
 const BINDER_IOCTL_CHAR: u8 = b'b';
 
@@ -364,10 +387,34 @@ impl BinderDriver {
         &self,
         _current_task: &CurrentTask,
         _binder_proc: &BinderProcess,
-        _binder_thread: &BinderThread,
-        _cursor: &mut UserMemoryCursor<'a>,
+        binder_thread: &BinderThread,
+        cursor: &mut UserMemoryCursor<'a>,
     ) -> Result<(), Errno> {
-        error!(EOPNOTSUPP)
+        let command = cursor.read_object::<binder_driver_command_protocol>()?;
+        match command {
+            binder_driver_command_protocol_BC_ENTER_LOOPER
+            | binder_driver_command_protocol_BC_REGISTER_LOOPER => {
+                // A binder thread is registering itself with the binder driver.
+                let mut state = binder_thread.state.write();
+                if state.intersects(ThreadState::BINDER_THREAD) {
+                    // This thread is already registered.
+                    error!(EINVAL)
+                } else {
+                    *state |= match command {
+                        binder_driver_command_protocol_BC_ENTER_LOOPER => ThreadState::MAIN,
+                        binder_driver_command_protocol_BC_REGISTER_LOOPER => {
+                            ThreadState::REGISTERED
+                        }
+                        _ => unreachable!(),
+                    };
+                    Ok(())
+                }
+            }
+            _ => {
+                log::error!("binder received unknown RW command: 0x{:08x}", command);
+                error!(EINVAL)
+            }
+        }
     }
 
     /// Dequeues work from the thread's work queue, or blocks until work is available.

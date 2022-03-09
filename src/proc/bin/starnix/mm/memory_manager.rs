@@ -1264,11 +1264,8 @@ impl MemoryManager {
 
 /// Allows for sequential reading of a task's userspace memory.
 pub struct UserMemoryCursor<'a> {
-    #[allow(unused)]
     mm: &'a MemoryManager,
-    #[allow(unused)]
     addr: UserAddress,
-    #[allow(unused)]
     len: usize,
     consumed: usize,
 }
@@ -1281,7 +1278,6 @@ impl<'a> UserMemoryCursor<'a> {
     }
 
     /// Read an object from userspace memory and increment the read position.
-    #[allow(unused)]
     pub fn read_object<T: FromBytes>(&mut self) -> Result<T, Errno> {
         let obj_size = std::mem::size_of::<T>();
         if obj_size > self.len {
