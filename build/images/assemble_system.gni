@@ -905,8 +905,8 @@ template("assemble_system") {
                              "testonly",
                              "visibility",
                            ])
-    deps = [ ":${labels.image_assembly_config}" ]
-    image_assembly_config = files.image_assembly_config
+    deps = [ ":${labels.product_assembler}" ]
+    image_assembly_config = files.regenerated_image_assembly_config
     output = files.cs_image_assembly_inputs
   }
 
@@ -922,7 +922,7 @@ template("assemble_system") {
       "assembly",
       "create-system",
       "--image-assembly-config",
-      rebase_path(files.image_assembly_config, root_build_dir),
+      rebase_path(files.regenerated_image_assembly_config, root_build_dir),
       "--images",
       rebase_path(files.images_config, root_build_dir),
       "--base-package-name",
@@ -935,13 +935,13 @@ template("assemble_system") {
 
     deps = [
       ":${labels.cs_image_assembly_inputs}",
-      ":${labels.image_assembly_config}",
       ":${labels.images_config}",
+      ":${labels.product_assembler}",
     ]
 
     hermetic_inputs_file = files.cs_image_assembly_inputs
     inputs = [
-      files.image_assembly_config,
+      files.regenerated_image_assembly_config,
       files.images_config,
     ]
 
