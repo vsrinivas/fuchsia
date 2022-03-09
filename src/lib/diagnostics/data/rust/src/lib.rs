@@ -828,10 +828,61 @@ impl Data<Logs> {
             .and_then(|p| p.children.iter().find(|property| property.name.as_str() == "message"))
     }
 
-    pub fn payload_args(&self) -> Option<&DiagnosticsHierarchy<LogsField>> {
+    pub fn payload_keys(&self) -> Option<&DiagnosticsHierarchy<LogsField>> {
         self.payload
             .as_ref()
             .and_then(|p| p.children.iter().find(|property| property.name.as_str() == "keys"))
+    }
+
+    /// Returns an iterator over the payload keys as strings with the format "key=value".
+    pub fn payload_keys_strings(&self) -> Box<dyn Iterator<Item = String> + '_> {
+        let maybe_iter = self.payload_keys().map(|p| {
+            Box::new(p.properties.iter().filter_map(|property| match property {
+                LogsProperty::String(LogsField::Tag, _tag) => None,
+                LogsProperty::String(LogsField::ProcessId, _tag) => None,
+                LogsProperty::String(LogsField::ThreadId, _tag) => None,
+                LogsProperty::String(LogsField::Verbosity, _tag) => None,
+                LogsProperty::String(LogsField::Dropped, _tag) => None,
+                LogsProperty::String(LogsField::Msg, _tag) => None,
+                LogsProperty::String(LogsField::FilePath, _tag) => None,
+                LogsProperty::String(LogsField::LineNumber, _tag) => None,
+                LogsProperty::String(LogsField::Other(key), value) => {
+                    Some(format!("{}={}", key.to_string(), value))
+                }
+                LogsProperty::Bytes(LogsField::Other(key), _) => {
+                    Some(format!("{} = <bytes>", key.to_string()))
+                }
+                LogsProperty::Int(LogsField::Other(key), value) => {
+                    Some(format!("{}={}", key.to_string(), value))
+                }
+                LogsProperty::Uint(LogsField::Other(key), value) => {
+                    Some(format!("{}={}", key.to_string(), value))
+                }
+                LogsProperty::Double(LogsField::Other(key), value) => {
+                    Some(format!("{}={}", key.to_string(), value))
+                }
+                LogsProperty::Bool(LogsField::Other(key), value) => {
+                    Some(format!("{}={}", key.to_string(), value))
+                }
+                LogsProperty::DoubleArray(LogsField::Other(key), value) => {
+                    Some(format!("{}={:?}", key.to_string(), value))
+                }
+                LogsProperty::IntArray(LogsField::Other(key), value) => {
+                    Some(format!("{}={:?}", key.to_string(), value))
+                }
+                LogsProperty::UintArray(LogsField::Other(key), value) => {
+                    Some(format!("{}={:?}", key.to_string(), value))
+                }
+                LogsProperty::StringList(LogsField::Other(key), value) => {
+                    Some(format!("{}={:?}", key.to_string(), value))
+                }
+                _ => None,
+            }))
+        });
+        match maybe_iter {
+            Some(i) => Box::new(i),
+            None => Box::new(std::iter::empty()),
+        }
     }
 
     pub fn payload_message_mut(&mut self) -> Option<&mut DiagnosticsHierarchy<LogsField>> {
@@ -931,7 +982,7 @@ impl Data<Logs> {
 
     #[cfg(target_os = "fuchsia")]
     pub(crate) fn non_legacy_contents(&self) -> Box<dyn Iterator<Item = &LogsProperty> + '_> {
-        match self.payload_args() {
+        match self.payload_keys() {
             None => Box::new(std::iter::empty()),
             Some(payload) => Box::new(payload.properties.iter()),
         }
@@ -947,55 +998,7 @@ impl fmt::Display for Data<Logs> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         // Multiple tags are supported for the `LogMessage` format and are represented
         // as multiple instances of LogsField::Tag arguments.
-        let kvps = self
-            .payload_args()
-            .map(|p| {
-                p.properties
-                    .iter()
-                    .filter_map(|property| match property {
-                        LogsProperty::String(LogsField::Tag, _tag) => None,
-                        LogsProperty::String(LogsField::ProcessId, _tag) => None,
-                        LogsProperty::String(LogsField::ThreadId, _tag) => None,
-                        LogsProperty::String(LogsField::Verbosity, _tag) => None,
-                        LogsProperty::String(LogsField::Dropped, _tag) => None,
-                        LogsProperty::String(LogsField::Msg, _tag) => None,
-                        LogsProperty::String(LogsField::FilePath, _tag) => None,
-                        LogsProperty::String(LogsField::LineNumber, _tag) => None,
-                        LogsProperty::String(LogsField::Other(key), value) => {
-                            Some(format!("{}={}", key.to_string(), value))
-                        }
-                        LogsProperty::Bytes(LogsField::Other(key), _) => {
-                            Some(format!("{} = <bytes>", key.to_string()))
-                        }
-                        LogsProperty::Int(LogsField::Other(key), value) => {
-                            Some(format!("{}={}", key.to_string(), value))
-                        }
-                        LogsProperty::Uint(LogsField::Other(key), value) => {
-                            Some(format!("{}={}", key.to_string(), value))
-                        }
-                        LogsProperty::Double(LogsField::Other(key), value) => {
-                            Some(format!("{}={}", key.to_string(), value))
-                        }
-                        LogsProperty::Bool(LogsField::Other(key), value) => {
-                            Some(format!("{}={}", key.to_string(), value))
-                        }
-                        LogsProperty::DoubleArray(LogsField::Other(key), value) => {
-                            Some(format!("{}={:?}", key.to_string(), value))
-                        }
-                        LogsProperty::IntArray(LogsField::Other(key), value) => {
-                            Some(format!("{}={:?}", key.to_string(), value))
-                        }
-                        LogsProperty::UintArray(LogsField::Other(key), value) => {
-                            Some(format!("{}={:?}", key.to_string(), value))
-                        }
-                        LogsProperty::StringList(LogsField::Other(key), value) => {
-                            Some(format!("{}={:?}", key.to_string(), value))
-                        }
-                        _ => None,
-                    })
-                    .collect::<Vec<_>>()
-            })
-            .unwrap_or(vec![]);
+        let kvps = self.payload_keys_strings();
         let time: Duration = self.metadata.timestamp.into();
         write!(
             f,
@@ -1018,10 +1021,8 @@ impl fmt::Display for Data<Logs> {
         }
 
         write!(f, " {}", self.msg().unwrap_or(""))?;
-        if !kvps.is_empty() {
-            for kvp in kvps {
-                write!(f, " {}", kvp)?;
-            }
+        for kvp in kvps {
+            write!(f, " {}", kvp)?;
         }
         Ok(())
     }

@@ -345,7 +345,12 @@ impl<'a> DefaultLogFormatter<'a> {
 
         let reset_str = if options.color { format!("{}", style::Reset) } else { String::default() };
 
-        let msg = symbolized_msg.unwrap_or(data.msg().unwrap_or("<missing message>").to_string());
+        let mut msg =
+            symbolized_msg.unwrap_or(data.msg().unwrap_or("<missing message>").to_string());
+        let kvps = data.payload_keys_strings().collect::<Vec<_>>().join(" ");
+        if !kvps.is_empty() {
+            msg.push_str(" ");
+        }
 
         let process_info_str = if options.show_metadata {
             format!("[{}][{}]", data.pid().unwrap_or(0), data.tid().unwrap_or(0))
@@ -361,7 +366,7 @@ impl<'a> DefaultLogFormatter<'a> {
 
         let severity_str = &format!("{}", data.metadata.severity)[..1];
         format!(
-            "[{}]{}[{}]{}[{}{}{}] {}{}{}",
+            "[{}]{}[{}]{}[{}{}{}] {}{}{}{}",
             ts,
             process_info_str,
             data.moniker,
@@ -371,6 +376,7 @@ impl<'a> DefaultLogFormatter<'a> {
             reset_str,
             color_str,
             msg,
+            kvps,
             reset_str
         )
     }
@@ -564,7 +570,7 @@ pub async fn log_cmd<W: std::io::Write>(
 mod test {
     use {
         super::*,
-        diagnostics_data::{LogsDataBuilder, Timestamp},
+        diagnostics_data::{LogsDataBuilder, LogsField, LogsProperty, Timestamp},
         errors::ResultExt as _,
         ffx_log_args::DumpCommand,
         ffx_log_test_utils::{setup_fake_archive_iterator, FakeArchiveIteratorResponse},
@@ -1777,6 +1783,41 @@ mod test {
                         None
                     ),
                     "[1615535969.000][some/moniker][][W] multi\nline\nmessage"
+                );
+            }
+            DisplayOption::Json => unreachable!("The default display option must be Text"),
+        }
+    }
+
+    #[fuchsia::test]
+    fn display_for_structured_fields() {
+        let mut stdout = Unblock::new(std::io::stdout());
+        let options = LogFormatterOptions {
+            display: DisplayOption::Text(TextDisplayOptions {
+                show_metadata: true,
+                ..TextDisplayOptions::default()
+            }),
+            no_symbols: false,
+        };
+
+        let formatter =
+            DefaultLogFormatter::new(LogFilterCriteria::default(), &mut stdout, options.clone());
+        match &options.display {
+            DisplayOption::Text(options) => {
+                assert_eq!(
+                    formatter.format_target_log_data(
+                        &options,
+                        logs_data_builder()
+                            .set_message("my message")
+                            .add_key(LogsProperty::Int(LogsField::Other("foo".to_string()), 2i64))
+                            .add_key(LogsProperty::String(
+                                LogsField::Other("bar".to_string()),
+                                "baz".to_string()
+                            ))
+                            .build(),
+                        None
+                    ),
+                    "[1615535969.000][1][2][some/moniker][W] my message bar=baz foo=2"
                 );
             }
             DisplayOption::Json => unreachable!("The default display option must be Text"),
