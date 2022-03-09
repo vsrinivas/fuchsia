@@ -221,6 +221,8 @@ impl Cr50 {
 
                     responder.send(&mut fidl_result).context("Replying to request")?;
                 }
+                PinWeaverRequest::GetLog { .. } => todo!(),
+                PinWeaverRequest::LogReplay { .. } => todo!(),
             }
         }
         Ok(())
