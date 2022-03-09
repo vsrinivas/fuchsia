@@ -49,5 +49,8 @@ fuchsia_test_package("test-output-directory-unit-tests") {
 
 group("tests") {
   testonly = true
-  deps = [ ":test-output-directory-unit-tests" ]
+  deps = [
+    ":directory_test($host_toolchain)",
+    ":test-output-directory-unit-tests",
+  ]
 }

@@ -1008,17 +1008,20 @@ impl From<SuiteRunOptions> for fidl_fuchsia_test_manager::RunOptions {
 
 #[cfg(test)]
 mod test {
-    use super::*;
-    use crate::output::InMemoryReporter;
-    use assert_matches::assert_matches;
-    use fidl::endpoints::{create_proxy_and_stream, ServerEnd};
-    use fuchsia_zircon as zx;
-    use futures::future::{join, join3};
-    use maplit::hashmap;
-    use output::EntityId;
-    use vfs::{
-        directory::entry::DirectoryEntry, execution_scope::ExecutionScope,
-        file::vmo::read_only_static, pseudo_directory,
+    use {
+        super::*, crate::output::InMemoryReporter, assert_matches::assert_matches,
+        fidl::endpoints::create_proxy_and_stream, futures::future::join, maplit::hashmap,
+        output::EntityId,
+    };
+    #[cfg(target_os = "fuchsia")]
+    use {
+        fidl::endpoints::ServerEnd,
+        fuchsia_zircon as zx,
+        futures::future::join3,
+        vfs::{
+            directory::entry::DirectoryEntry, execution_scope::ExecutionScope,
+            file::vmo::read_only_static, pseudo_directory,
+        },
     };
 
     const TEST_URL: &str = "test.cm";
@@ -1300,6 +1303,7 @@ mod test {
         assert!(reports[1].report.directories.is_empty());
     }
 
+    #[cfg(target_os = "fuchsia")]
     #[fuchsia::test]
     async fn single_run_custom_directory() {
         let (builder_proxy, run_builder_stream) =
@@ -1446,6 +1450,7 @@ mod test {
         assert!(run.report.started_time.is_some());
     }
 
+    #[cfg(target_os = "fuchsia")]
     #[fuchsia::test]
     async fn single_run_debug_data() {
         let (builder_proxy, run_builder_stream) =
