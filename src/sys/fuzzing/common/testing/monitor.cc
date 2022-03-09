@@ -9,50 +9,30 @@
 
 namespace fuzzing {
 
-FakeMonitor::FakeMonitor() : binding_(this) {}
+FakeMonitor::FakeMonitor(ExecutorPtr executor) : binding_(this), executor_(std::move(executor)) {}
 
-fidl::InterfaceHandle<Monitor> FakeMonitor::NewBinding() { return binding_.NewBinding(); }
-
-MonitorPtr FakeMonitor::Bind(const std::shared_ptr<Dispatcher>& dispatcher) {
-  MonitorPtr ptr;
-  binding_.Bind(ptr.NewRequest(dispatcher->get()));
-  return ptr;
+fidl::InterfaceHandle<Monitor> FakeMonitor::NewBinding() {
+  return binding_.NewBinding(executor_->dispatcher());
 }
 
 void FakeMonitor::Update(UpdateReason reason, Status status, UpdateCallback callback) {
-  {
-    std::lock_guard<std::mutex> lock(mutex_);
-    reasons_.push_back(reason);
-    statuses_.push_back(std::move(status));
-    sync_.Signal();
-  }
+  updates_.emplace_back();
+  auto& back = updates_.back();
+  back.reason = reason;
+  back.status = std::move(status);
+  task_.resume_task();
   callback();
 }
 
-UpdateReason FakeMonitor::NextReason() {
-  UpdateReason reason;
-  NextStatus(&reason);
-  return reason;
-}
-
-Status FakeMonitor::NextStatus(UpdateReason* out_reason) {
-  sync_.WaitFor("next status update");
-  UpdateReason reason;
-  Status status;
-  {
-    std::lock_guard<std::mutex> lock(mutex_);
-    reason = reasons_.front();
-    reasons_.pop_front();
-    status = std::move(statuses_.front());
-    statuses_.pop_front();
-    if (reasons_.empty()) {
-      sync_.Reset();
-    }
-  }
-  if (out_reason) {
-    *out_reason = reason;
-  }
-  return status;
+Promise<> FakeMonitor::AwaitUpdate() {
+  return fpromise::make_promise([this](Context& context) -> Result<> {
+           if (updates_.empty()) {
+             task_ = context.suspend_task();
+             return fpromise::pending();
+           }
+           return fpromise::ok();
+         })
+      .wrap_with(scope_);
 }
 
 }  // namespace fuzzing

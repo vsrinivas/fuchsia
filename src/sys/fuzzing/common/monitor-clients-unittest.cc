@@ -20,11 +20,14 @@ class MonitorClientsTest : public AsyncTest {};
 TEST_F(MonitorClientsTest, Update) {
   MonitorClients monitors(executor());
 
-  FakeMonitor monitor1, monitor2;
+  FakeMonitor monitor1(executor());
+  FakeMonitor monitor2(executor());
   monitors.Add(monitor1.NewBinding());
   monitors.Add(monitor2.NewBinding());
 
   Status status;
+  monitors.Update(UpdateReason::INIT);
+
   status.set_runs(32);
   monitors.set_status(std::move(status));
 
@@ -32,21 +35,36 @@ TEST_F(MonitorClientsTest, Update) {
   FUZZING_EXPECT_OK(monitors.AwaitAcknowledgement());
   RunUntilIdle();
 
-  UpdateReason reason1;
-  auto status1 = monitor1.NextStatus(&reason1);
-  EXPECT_EQ(reason1, UpdateReason::NEW);
-  EXPECT_EQ(status1.runs(), 32U);
+  ASSERT_FALSE(monitor1.empty());
+  EXPECT_EQ(monitor1.reason(), UpdateReason::INIT);
+  EXPECT_FALSE(monitor1.status().has_runs());
+  EXPECT_TRUE(monitor1.is_bound());
 
-  UpdateReason reason2;
-  auto status2 = monitor2.NextStatus(&reason2);
-  EXPECT_EQ(reason2, UpdateReason::NEW);
-  EXPECT_EQ(status2.runs(), 32U);
+  // Monitors should have received both updates.
+  monitor1.pop_front();
+  ASSERT_FALSE(monitor1.empty());
+  EXPECT_EQ(monitor1.reason(), UpdateReason::NEW);
+  ASSERT_TRUE(monitor1.status().has_runs());
+  EXPECT_EQ(monitor1.status().runs(), 32U);
+
+  // Second monitor should have received identical updates.
+  ASSERT_FALSE(monitor2.empty());
+  EXPECT_EQ(monitor2.reason(), UpdateReason::INIT);
+  EXPECT_FALSE(monitor2.status().has_runs());
+  EXPECT_TRUE(monitor2.is_bound());
+
+  monitor2.pop_front();
+  ASSERT_FALSE(monitor2.empty());
+  EXPECT_EQ(monitor2.reason(), UpdateReason::NEW);
+  ASSERT_TRUE(monitor2.status().has_runs());
+  EXPECT_EQ(monitor2.status().runs(), 32U);
 }
 
 TEST_F(MonitorClientsTest, Finish) {
   MonitorClients monitors(executor());
 
-  FakeMonitor monitor1, monitor2;
+  FakeMonitor monitor1(executor());
+  FakeMonitor monitor2(executor());
   monitors.Add(monitor1.NewBinding());
   monitors.Add(monitor2.NewBinding());
 
@@ -54,11 +72,13 @@ TEST_F(MonitorClientsTest, Finish) {
   FUZZING_EXPECT_OK(monitors.AwaitAcknowledgement());
   RunUntilIdle();
 
-  EXPECT_EQ(monitor1.NextReason(), UpdateReason::DONE);
-  EXPECT_EQ(monitor2.NextReason(), UpdateReason::DONE);
+  ASSERT_FALSE(monitor1.empty());
+  EXPECT_EQ(monitor1.reason(), UpdateReason::DONE);
+  EXPECT_FALSE(monitor1.is_bound());
 
-  monitor1.AwaitClose();
-  monitor2.AwaitClose();
+  ASSERT_FALSE(monitor2.empty());
+  EXPECT_EQ(monitor2.reason(), UpdateReason::DONE);
+  EXPECT_FALSE(monitor2.is_bound());
 }
 
 }  // namespace fuzzing

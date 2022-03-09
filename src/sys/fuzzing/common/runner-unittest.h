@@ -65,7 +65,7 @@ class RunnerTest : public AsyncTest {
 
   // Fakes the interactions needed with the runner to perform a sequence of fuzzing runs until the
   // engine indicates it is idle. See also |HasStatus| below.
-  void RunUntilIdle();
+  void RunAllInputs();
 
   // Waits until the runner is started and producing test inputs, or until it stops without
   // providing any inputs. Useful when another thread is responsible for driving the runner, e.g.

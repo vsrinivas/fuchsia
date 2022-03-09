@@ -274,21 +274,27 @@ TEST_F(ControllerTest, GetStatus) {
 }
 
 TEST_F(ControllerTest, AddMonitor) {
-  ControllerSyncPtr controller;
+  ControllerPtr controller;
   Bind(controller.NewRequest());
-  FakeMonitor monitor;
+  FakeMonitor monitor(executor());
 
   Status status;
   status.set_runs(13);
   auto expected = CopyStatus(status);
   runner()->set_status(std::move(status));
-  EXPECT_EQ(controller->AddMonitor(monitor.NewBinding()), ZX_OK);
-  runner()->UpdateMonitors(UpdateReason::PULSE);
 
-  UpdateReason reason;
-  auto updated = monitor.NextStatus(&reason);
-  EXPECT_EQ(updated.runs(), expected.runs());
-  EXPECT_EQ(reason, UpdateReason::PULSE);
+  Bridge<> bridge;
+  controller->AddMonitor(monitor.NewBinding(), bridge.completer.bind());
+  FUZZING_EXPECT_OK(bridge.consumer.promise_or(fpromise::error()));
+  RunUntilIdle();
+
+  runner()->UpdateMonitors(UpdateReason::PULSE);
+  FUZZING_EXPECT_OK(monitor.AwaitUpdate());
+  RunUntilIdle();
+
+  ASSERT_FALSE(monitor.empty());
+  EXPECT_EQ(monitor.status().runs(), expected.runs());
+  EXPECT_EQ(monitor.reason(), UpdateReason::PULSE);
 }
 
 TEST_F(ControllerTest, GetResults) {

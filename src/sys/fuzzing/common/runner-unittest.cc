@@ -74,7 +74,7 @@ Input RunnerTest::RunOne(bool has_leak) {
   return input;
 }
 
-void RunnerTest::RunUntilIdle() {
+void RunnerTest::RunAllInputs() {
   while (HasTestInput()) {
     auto input = GetTestInput();
     SetFeedback(GetCoverage(input), GetResult(input), HasLeak(input));
@@ -301,9 +301,8 @@ void RunnerTest::FuzzUntilRuns(const RunnerPtr& runner) {
   expected.push_back(input3.ToHex());
 
   // Subscribe to status updates.
-  FakeMonitor monitor;
-  auto dispatcher = std::make_shared<Dispatcher>();
-  runner->AddMonitor(monitor.Bind(dispatcher));
+  FakeMonitor monitor(executor());
+  runner->AddMonitor(monitor.NewBinding());
 
   // Fuzz for exactly |kNumRuns|.
   runner->Fuzz([&](zx_status_t status) { SetStatus(status); });
@@ -313,9 +312,10 @@ void RunnerTest::FuzzUntilRuns(const RunnerPtr& runner) {
   }
 
   // Check that we get the expected status updates.
-  UpdateReason reason;
-  auto status = monitor.NextStatus(&reason);
-  EXPECT_EQ(size_t(reason), UpdateReason::INIT);
+  FUZZING_EXPECT_OK(monitor.AwaitUpdate());
+  RunUntilIdle();
+  EXPECT_EQ(monitor.reason(), UpdateReason::INIT);
+  auto status = monitor.take_status();
   ASSERT_TRUE(status.has_running());
   EXPECT_TRUE(status.running());
   ASSERT_TRUE(status.has_runs());
@@ -327,8 +327,11 @@ void RunnerTest::FuzzUntilRuns(const RunnerPtr& runner) {
   EXPECT_GE(status.covered_pcs(), 0U);
   auto covered_pcs = status.covered_pcs();
 
-  status = monitor.NextStatus(&reason);
-  EXPECT_EQ(size_t(reason), UpdateReason::NEW);
+  monitor.pop_front();
+  FUZZING_EXPECT_OK(monitor.AwaitUpdate());
+  RunUntilIdle();
+  EXPECT_EQ(monitor.reason(), UpdateReason::NEW);
+  status = monitor.take_status();
   ASSERT_TRUE(status.has_running());
   EXPECT_TRUE(status.running());
   ASSERT_TRUE(status.has_runs());
@@ -342,10 +345,12 @@ void RunnerTest::FuzzUntilRuns(const RunnerPtr& runner) {
   covered_pcs = status.covered_pcs();
 
   // Skip others up to DONE.
-  while (reason != UpdateReason::DONE) {
-    status = monitor.NextStatus(&reason);
+  while (monitor.reason() != UpdateReason::DONE) {
+    monitor.pop_front();
+    FUZZING_EXPECT_OK(monitor.AwaitUpdate());
+    RunUntilIdle();
   }
-  EXPECT_EQ(size_t(reason), UpdateReason::DONE);
+  status = monitor.take_status();
   ASSERT_TRUE(status.has_running());
   EXPECT_FALSE(status.running());
   ASSERT_TRUE(status.has_runs());
@@ -378,7 +383,7 @@ void RunnerTest::FuzzUntilTime(const RunnerPtr& runner) {
 
   auto start = zx::clock::get_monotonic();
   runner->Fuzz([&](zx_status_t status) { SetStatus(status); });
-  RunUntilIdle();
+  RunAllInputs();
   auto elapsed = zx::clock::get_monotonic() - start;
 
   EXPECT_EQ(GetStatus(), ZX_OK);
@@ -450,7 +455,7 @@ void RunnerTest::Merge(const RunnerPtr& runner, bool keeps_errors, uint64_t oom_
   runner->AddToCorpus(CorpusType::LIVE, input7.Duplicate());
 
   runner->Merge([&](zx_status_t status) { SetStatus(status); });
-  RunUntilIdle();
+  RunAllInputs();
   EXPECT_EQ(GetStatus(), ZX_OK);
 
   std::vector<std::string> actual_seed;
@@ -472,7 +477,7 @@ void RunnerTest::Merge(const RunnerPtr& runner, bool keeps_errors, uint64_t oom_
 void RunnerTest::Stop(const RunnerPtr& runner) {
   Configure(runner, RunnerTest::DefaultOptions(runner));
   runner->Fuzz([&](zx_status_t status) { SetStatus(status); });
-  std::thread t([this]() { RunUntilIdle(); });
+  std::thread t([this]() { RunAllInputs(); });
   AwaitStarted();
   // Each stage of stopping should be idempotent.
   runner->Close();

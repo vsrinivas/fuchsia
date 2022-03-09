@@ -6,52 +6,53 @@
 #define SRC_SYS_FUZZING_COMMON_TESTING_MONITOR_H_
 
 #include <fuchsia/fuzzer/cpp/fidl.h>
+#include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/interface_handle.h>
 
 #include <deque>
-#include <memory>
-#include <mutex>
 
 #include "src/lib/fxl/macros.h"
-#include "src/sys/fuzzing/common/binding.h"
-#include "src/sys/fuzzing/common/dispatcher.h"
-#include "src/sys/fuzzing/common/sync-wait.h"
+#include "src/sys/fuzzing/common/async-types.h"
+#include "src/sys/fuzzing/common/status.h"
 
 namespace fuzzing {
 
 using ::fuchsia::fuzzer::Monitor;
-using ::fuchsia::fuzzer::MonitorPtr;
-using ::fuchsia::fuzzer::Status;
 using ::fuchsia::fuzzer::UpdateReason;
 
 // This is an implementation of |fuchsia.fuzzer.Monitor| for testing. It handles both the controller
 // and user dispatch threads, and provides a way to await the next update.
 class FakeMonitor final : public Monitor {
  public:
-  FakeMonitor();
+  explicit FakeMonitor(ExecutorPtr executor);
   ~FakeMonitor() override = default;
+
+  bool is_bound() const { return binding_.is_bound(); }
+  bool empty() const { return updates_.empty(); }
+  UpdateReason reason() const { return updates_.front().reason; }
+  const Status& status() const { return updates_.front().status; }
+  Status take_status() { return std::move(updates_.front().status); }
+  void pop_front() { updates_.pop_front(); }
 
   // FIDL-related methods.
   fidl::InterfaceHandle<Monitor> NewBinding();
-  MonitorPtr Bind(const std::shared_ptr<Dispatcher>& dispatcher);
-
   void Update(UpdateReason reason, Status status, UpdateCallback callback) override;
 
-  // Blocks until the next call to |Update| and returns the provided reason.
-  UpdateReason NextReason();
-
-  // Blocks until the next call to |Update| and returns the provided status, and |reason| if not
-  // null.
-  Status NextStatus(UpdateReason* out_reason = nullptr);
-
-  zx_status_t AwaitClose() { return binding_.AwaitClose(); }
+  // TODO(fxbug.dev/92490): There needs to be a way to wait on an update until the |Controller| is
+  // fully updated to use the same executor as the test when testing.
+  Promise<> AwaitUpdate();
 
  private:
-  Binding<Monitor> binding_;
-  std::mutex mutex_;
-  std::deque<UpdateReason> reasons_;
-  std::deque<Status> statuses_;
-  SyncWait sync_;
+  struct StatusUpdate {
+    UpdateReason reason;
+    Status status;
+  };
+
+  fidl::Binding<Monitor> binding_;
+  ExecutorPtr executor_;
+  std::deque<StatusUpdate> updates_;
+  fpromise::suspended_task task_;
+  Scope scope_;
 
   FXL_DISALLOW_COPY_ASSIGN_AND_MOVE(FakeMonitor);
 };
