@@ -338,10 +338,9 @@ zx_status_t brcmf_set_ps_mode(brcmf_pub* drvr, const wlanphy_ps_mode_t* ps_mode)
   uint32_t fw_ps_mode;
 
   switch (ps_mode->ps_mode) {
+      // As per Synaptics PM_FAST is the only recommended power save setting.
     case POWER_SAVE_TYPE_PS_MODE_ULTRA_LOW_POWER:
     case POWER_SAVE_TYPE_PS_MODE_LOW_POWER:
-      fw_ps_mode = PM_MAX;
-      break;
     case POWER_SAVE_TYPE_PS_MODE_BALANCED:
       fw_ps_mode = PM_FAST;
       break;

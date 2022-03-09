@@ -92,6 +92,51 @@ TEST_F(PhyPsModeTest, SetPsMode) {
   ASSERT_EQ(fw_ps_mode, (uint32_t)PM_FAST);
   DeleteInterface();
 }
+// Ensure PS Mode set in FW is either OFF or FAST.
+TEST_F(PhyPsModeTest, CheckFWPsMode) {
+  wlanphy_ps_mode_t valid_ps_mode = {.ps_mode = POWER_SAVE_TYPE_PS_MODE_BALANCED};
+  zx_status_t status;
+  uint32_t fw_ps_mode;
+
+  Init();
+  CreateInterface();
+  EXPECT_EQ(DeviceCount(), static_cast<size_t>(2));
+
+  // Get the country code and verify that it is set to WW.
+  GetPsModeFromFirmware(&fw_ps_mode);
+  ASSERT_EQ(fw_ps_mode, (uint32_t)PM_OFF);
+
+  // Set PS mode to PS_MODE_BALANCED
+  status = SetPsMode(&valid_ps_mode);
+  ASSERT_EQ(status, ZX_OK);
+  // Verify that it gets set to FAST in FW
+  GetPsModeFromFirmware(&fw_ps_mode);
+  ASSERT_EQ(fw_ps_mode, (uint32_t)PM_FAST);
+
+  // Set PS mode to PS_MODE_ULTRA_LOW_POWER
+  valid_ps_mode.ps_mode = POWER_SAVE_TYPE_PS_MODE_ULTRA_LOW_POWER;
+  status = SetPsMode(&valid_ps_mode);
+  ASSERT_EQ(status, ZX_OK);
+  // Verify that it gets set to FAST in FW
+  GetPsModeFromFirmware(&fw_ps_mode);
+  ASSERT_EQ(fw_ps_mode, (uint32_t)PM_FAST);
+  // Set PS mode to PS_MODE_LOW_POWER
+  valid_ps_mode.ps_mode = POWER_SAVE_TYPE_PS_MODE_LOW_POWER;
+  status = SetPsMode(&valid_ps_mode);
+  ASSERT_EQ(status, ZX_OK);
+  // Verify that it gets set to FAST in FW
+  GetPsModeFromFirmware(&fw_ps_mode);
+  ASSERT_EQ(fw_ps_mode, (uint32_t)PM_FAST);
+
+  // Set PS mode to PS_MODE_PERFORMANCE
+  valid_ps_mode.ps_mode = POWER_SAVE_TYPE_PS_MODE_PERFORMANCE;
+  status = SetPsMode(&valid_ps_mode);
+  ASSERT_EQ(status, ZX_OK);
+  // Verify that it gets set to OFF in FW
+  GetPsModeFromFirmware(&fw_ps_mode);
+  ASSERT_EQ(fw_ps_mode, (uint32_t)PM_OFF);
+  DeleteInterface();
+}
 
 // Test Getting PS Mode
 TEST_F(PhyPsModeTest, GetPsMode) {
