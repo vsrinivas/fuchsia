@@ -108,7 +108,7 @@ async fn add_ethernet_device() {
     assert_eq!(
         device_class,
         fidl_fuchsia_net_interfaces::DeviceClass::Device(
-            fidl_fuchsia_hardware_network::DeviceClass::Ethernet
+            fidl_fuchsia_hardware_network::DeviceClass::Virtual
         )
     );
     assert!(!online);
@@ -204,7 +204,7 @@ async fn add_ethernet_interface<N: Netstack>(name: &str) {
     assert_eq!(
         *device_class,
         fidl_fuchsia_net_interfaces::DeviceClass::Device(
-            fidl_fuchsia_hardware_network::DeviceClass::Ethernet
+            fidl_fuchsia_hardware_network::DeviceClass::Virtual
         )
     );
     assert!(!online);

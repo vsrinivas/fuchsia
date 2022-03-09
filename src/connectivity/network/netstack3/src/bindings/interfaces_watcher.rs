@@ -107,6 +107,10 @@ where
             }) => {
                 let device_class = if features.contains(fidl_ethernet::Features::LOOPBACK) {
                     fidl_interfaces::DeviceClass::Loopback(fidl_interfaces::Empty)
+                } else if features.contains(fidl_ethernet::Features::SYNTHETIC) {
+                    fidl_interfaces::DeviceClass::Device(fidl_netdev::DeviceClass::Virtual)
+                } else if features.contains(fidl_ethernet::Features::WLAN_AP) {
+                    fidl_interfaces::DeviceClass::Device(fidl_netdev::DeviceClass::WlanAp)
                 } else if features.contains(fidl_ethernet::Features::WLAN) {
                     fidl_interfaces::DeviceClass::Device(fidl_netdev::DeviceClass::Wlan)
                 } else {

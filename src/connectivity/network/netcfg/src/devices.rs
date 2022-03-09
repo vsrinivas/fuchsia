@@ -80,11 +80,13 @@ impl DeviceInfo {
         let Self { device_class, mac: _, is_synthetic: _, topological_path } = self;
         match device_class {
             fhwnet::DeviceClass::WlanAp => true,
+            // TODO(https://fxbug.dev/95273): Remove string matching once integration tests don't
+            // need it to detect a WLAN AP interface.
+            fhwnet::DeviceClass::Virtual => topological_path.contains(WLAN_AP_TOPO_PATH_CONTAINS),
             fhwnet::DeviceClass::Wlan
             | fhwnet::DeviceClass::Ethernet
-            | fhwnet::DeviceClass::Virtual
             | fhwnet::DeviceClass::Ppp
-            | fhwnet::DeviceClass::Bridge => topological_path.contains(WLAN_AP_TOPO_PATH_CONTAINS),
+            | fhwnet::DeviceClass::Bridge => false,
         }
     }
 }
@@ -181,7 +183,11 @@ impl Device for EthernetDevice {
                 .context("error getting device info for ethdev")
                 .map_err(errors::Error::NonFatal)?;
         let is_synthetic = features.contains(feth::Features::SYNTHETIC);
-        let device_class = if features.contains(feth::Features::WLAN) {
+        let device_class = if is_synthetic {
+            fhwnet::DeviceClass::Virtual
+        } else if features.contains(feth::Features::WLAN_AP) {
+            fhwnet::DeviceClass::WlanAp
+        } else if features.contains(feth::Features::WLAN) {
             fhwnet::DeviceClass::Wlan
         } else {
             fhwnet::DeviceClass::Ethernet

@@ -21,12 +21,17 @@ const ETH_FRAME_MAX_SIZE uint32 = 1518;
 ///
 /// The FEATURE_DMA flag indicates that the device can copy the buffer data using DMA and will ensure
 /// that physical addresses are provided in netbufs.
+///
+/// The FEATURE_WLAN_AP flag indicates a device operating in wlan SoftAP mode.
+/// When FEATURE_WLAN_AP is enabled, the FEATURE_WLAN flag is ignored and
+/// assumed to be on.
 // TODO: implement netbuf-based receive operations by implementing proto->queue_rx() and
 // ifc->complete_rx()
 type EthernetFeature = strict enum : uint32 {
     WLAN = 0x1;
     SYNTH = 0x2;
     DMA = 0x4;
+    WLAN_AP = 0x8;
 };
 
 const ETHERNET_STATUS_ONLINE uint32 = 0x1;

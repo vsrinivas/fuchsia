@@ -100,7 +100,7 @@ async fn watcher_existing<N: Netstack>(name: &str) {
                         && has_default_ipv6_route == rhs_ipv6_route
                         && device_class
                             == &fidl_fuchsia_net_interfaces::DeviceClass::Device(
-                                fidl_fuchsia_hardware_network::DeviceClass::Ethernet,
+                                fidl_fuchsia_hardware_network::DeviceClass::Virtual,
                             )
                 }
             }
