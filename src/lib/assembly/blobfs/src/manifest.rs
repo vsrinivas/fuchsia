@@ -31,7 +31,8 @@ impl BlobManifest {
 
     /// Add a file from the host at `path`.
     pub fn add_file(&mut self, path: impl AsRef<Path>) -> Result<()> {
-        let file = File::open(&path)?;
+        let file =
+            File::open(&path).context(format!("Adding file: {}", path.as_ref().display()))?;
         let merkle = MerkleTree::from_reader(&file)
             .context(format!(
                 "Failed to calculate the merkle for file: {}",

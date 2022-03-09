@@ -49,7 +49,8 @@ impl BlobFSBuilder {
     /// Add a package to blobfs by inserting every blob mentioned in the
     /// `package_manifest_path` on the host.
     pub fn add_package(&mut self, package_manifest_path: impl AsRef<Path>) -> Result<()> {
-        let manifest_file = File::open(package_manifest_path)?;
+        let manifest_file = File::open(&package_manifest_path)
+            .context(format!("Opening file: {}", &package_manifest_path.as_ref().display()))?;
         let manifest_reader = BufReader::new(manifest_file);
         let manifest: PackageManifest = serde_json::from_reader(manifest_reader)?;
         self.manifest.add_package(manifest)

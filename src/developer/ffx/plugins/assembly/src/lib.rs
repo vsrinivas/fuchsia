@@ -11,6 +11,7 @@ mod blob_json_generator;
 mod blobfs;
 mod extra_hash_descriptor;
 mod fvm;
+mod fvm_new;
 mod operations;
 mod util;
 mod zbi;
