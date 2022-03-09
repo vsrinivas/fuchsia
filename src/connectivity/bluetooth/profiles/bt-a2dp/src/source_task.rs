@@ -87,7 +87,7 @@ impl SourceTaskBuilder {
 }
 
 /// Provides audio from this to the MediaStream when started.  Streams are created and started when
-/// this task is started, and destoyed when stopped.
+/// this task is started, and destroyed when stopped.
 pub(crate) struct ConfiguredSourceTask {
     /// The type of source audio.
     source_type: sources::AudioSourceType,

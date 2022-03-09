@@ -11,7 +11,7 @@ which contains metadata about the encoded audio, followed by the payload data. W
 supports multiple subframes of data with multiple programs/layers all muxed together, current observed
 A2DP sources only use one.
 
-Note: LATM can optionally include a sycnhronization layer, but that is not handled here as
+Note: LATM can optionally include a synchronization layer, but that is not handled here as
 it's not used by A2DP.
 
 # Example
@@ -511,7 +511,7 @@ impl<'a> AudioMuxElement<'a> {
     }
 
     fn parse_from_bits(input: BitsCtx<'a>) -> IResult<BitsCtx<'a>, AudioMuxElement<'a>> {
-        // Note: assume muxConfigPresent is 1, as reccommended by RFC 3016
+        // Note: assume muxConfigPresent is 1, as recommended by RFC 3016
 
         let (input, use_same_stream_mux) = tag(0b0, 1usize)(input)?;
         if use_same_stream_mux == 0 {

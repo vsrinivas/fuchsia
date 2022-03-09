@@ -517,7 +517,7 @@ async fn main() -> Result<(), Error> {
     fuchsia_trace_provider::trace_provider_create_with_fdio();
 
     // Check to see that we can encode SBC audio.
-    // This is a requireement of A2DP 1.3: Section 4.2
+    // This is a requirement of A2DP 1.3: Section 4.2
     if let Err(e) = test_encode_sbc().await {
         error!("Can't encode SBC Audio: {:?}", e);
         return Ok(());

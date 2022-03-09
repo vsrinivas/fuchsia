@@ -69,7 +69,7 @@ To view the current state of the profile, use `fx iquery show core/bt-a2dp`.
             [below repeated for each peer encountered since starting A2DP]
             peer_14:
                id = 2c1044bce7b57143
-               desciriptor = ProfileDescriptor { profile_id: AdvancedAudioDistribution, [...] }
+               descriptor = ProfileDescriptor { profile_id: AdvancedAudioDistribution, [...] }
                connection_count = 3
         [below repeated for each connected peer]
         peer_0:
@@ -79,7 +79,7 @@ To view the current state of the profile, use `fx iquery show core/bt-a2dp`.
               endpoint_state = StreamEndpoint { id: 5, [...] }
             stream_2:
               endpoint_state = StreamEndpoint { endpoint_type: Sink, media_type: Audio, state: Idle, capabilities: [MediaTransport, MediaCodec { media_type: Audio, codec_type: MediaCodecType::AUDIO_SBC, codec_extra: [63, 255, 2, 250] }], remote_id: None, configuration: [] }
-            [repeated for each stream endpoint, connected enpoints will have a media_stream]
+            [repeated for each stream endpoint, connected endpoints will have a media_stream]
             stream_4:
               endpoint_state = [...]
               media_stream:

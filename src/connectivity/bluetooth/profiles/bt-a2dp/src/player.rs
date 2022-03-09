@@ -457,7 +457,7 @@ impl Player {
                     if let Err(e) = self.audio_sink.write_all(frame).await {
                         info!("Failed to write packet to sink: {:?}", e);
                     }
-                    // Only one payload per AAC RTP Pakcet.
+                    // Only one payload per AAC RTP Packet.
                     break;
                 }
                 _ => return Err(format_err!("Unrecognized codec!")),
@@ -845,7 +845,7 @@ pub(crate) mod tests {
         // should not have a discontinuity yet
         assert_eq!(flags & STREAM_PACKET_FLAG_DISCONTINUITY, 0);
 
-        // introduce discont
+        // introduce discontinuity
         raw[3] = 8;
         let flags = push_payload_get_flags(&raw, &mut exec, &mut player, &mut sink_request_stream);
         assert_eq!(flags & STREAM_PACKET_FLAG_DISCONTINUITY, STREAM_PACKET_FLAG_DISCONTINUITY);
@@ -921,7 +921,7 @@ pub(crate) mod tests {
         let (_sender, receiver) = mpsc::channel(1);
 
         let mut sink = AudioConsumerSink::build(&mut audio_consumer_proxy, 48000, None, receiver)
-            .expect("builds correctliy");
+            .expect("builds correctly");
 
         let (mut sink_request_stream, _buffers) =
             expect_audio_consumer_sink_setup(&mut exec, &mut audio_consumer_request_stream, false);
@@ -945,7 +945,7 @@ pub(crate) mod tests {
         // No more buffers left, send_frame should be an error.
         assert!(sink.send_frame(payload, 0).is_err());
 
-        // Writing to the sink shoould be pending.
+        // Writing to the sink should be pending.
         let mut write_fut = sink.write_all(payload);
 
         let (waker, write_fut_wake_count) = new_count_waker();
