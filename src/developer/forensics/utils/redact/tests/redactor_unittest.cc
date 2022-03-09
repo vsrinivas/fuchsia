@@ -12,9 +12,23 @@
 namespace forensics {
 namespace {
 
+class IdentityRedactorTest : public ::testing::Test {
+ protected:
+  std::string Redact(std::string text) { return redactor_.Redact(text); }
+
+ private:
+  IdentityRedactor redactor_;
+};
+
+TEST_F(IdentityRedactorTest, Check) {
+  EXPECT_EQ(Redact("Email: alice@website.tld"), "Email: alice@website.tld");
+}
+
 class RedactorTest : public ::testing::Test {
  protected:
   std::string Redact(std::string text) { return redactor_.Redact(text); }
+
+  const Redactor& redactor() const { return redactor_; }
 
  private:
   Redactor redactor_;
@@ -80,7 +94,7 @@ TEST_F(RedactorTest, Check) {
 }
 
 TEST_F(RedactorTest, Canary) {
-  EXPECT_EQ(Redact(Redactor::UnredactedCanary()), Redactor::RedactedCanary());
+  EXPECT_EQ(Redact(redactor().UnredactedCanary()), redactor().RedactedCanary());
 }
 
 }  // namespace

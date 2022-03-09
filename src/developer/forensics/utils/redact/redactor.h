@@ -14,19 +14,29 @@
 
 namespace forensics {
 
+class RedactorBase {
+ public:
+  // Redacts |text| in-place and returns a reference to |text|.
+  virtual std::string& Redact(std::string& text) = 0;
+
+  // Unredacted / redacted version of canary message for confirming log redaction.
+  virtual std::string UnredactedCanary() const = 0;
+  virtual std::string RedactedCanary() const = 0;
+};
+
+// Redacts PII from text.
+//
 // TODO(fxbug.dev/94086): keep this class in sync with the Rust redactor until its deleted (located
 // in
 // https://osscs.corp.google.com/fuchsia/fuchsia/+/main:src/diagnostics/archivist/src/logs/redact.rs
-class Redactor {
+class Redactor : public RedactorBase {
  public:
   Redactor();
 
-  // Redacts |text| in-place and returns a reference to |text|.
-  std::string& Redact(std::string& text);
+  std::string& Redact(std::string& text) override;
 
-  // Unredacted / redacted version of canary message for confirming log redaction.
-  static std::string UnredactedCanary();
-  static std::string RedactedCanary();
+  std::string UnredactedCanary() const override;
+  std::string RedactedCanary() const override;
 
  private:
   Redactor& Add(Replacer replacer);
@@ -35,6 +45,15 @@ class Redactor {
 
   RedactionIdCache cache_;
   std::vector<Replacer> replacers_;
+};
+
+// Do-nothing redactor
+class IdentityRedactor : public RedactorBase {
+ public:
+  std::string& Redact(std::string& text) override;
+
+  std::string UnredactedCanary() const override;
+  std::string RedactedCanary() const override;
 };
 
 }  // namespace forensics
