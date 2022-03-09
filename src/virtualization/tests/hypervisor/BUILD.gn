@@ -6,9 +6,8 @@ import("//build/components.gni")
 import("//src/virtualization/buildtools/linux_paths.gni")
 import("//src/virtualization/buildtools/romfs_image.gni")
 
-executable("hypervisor_tests") {
+executable("hypervisor_integration_tests") {
   testonly = true
-
   sources = [
     # Common code.
     "common_tests.cc",
@@ -20,7 +19,6 @@ executable("hypervisor_tests") {
     "arch/${target_cpu}/arch_tests.cc",
     "arch/${target_cpu}/guest_code.S",
   ]
-
   deps = [
     "//sdk/fidl/fuchsia.kernel",
     "//sdk/fidl/fuchsia.sysinfo",
@@ -35,15 +33,9 @@ executable("hypervisor_tests") {
   ]
 }
 
-fuchsia_test_component("hypervisor_tests_cmp") {
-  component_name = "hypervisor_tests"
-  deps = [ ":hypervisor_tests" ]
+fuchsia_unittest_package("hypervisor_tests") {
+  deps = [ ":hypervisor_integration_tests" ]
   manifest = "meta/hypervisor_tests.cmx"
-}
-
-fuchsia_test_package("hypervisor_tests_pkg") {
-  package_name = "hypervisor-tests-pkg"
-  test_components = [ ":hypervisor_tests_cmp" ]
   test_specs = {
     environments = guest_envs
     log_settings = {
@@ -54,6 +46,5 @@ fuchsia_test_package("hypervisor_tests_pkg") {
 
 group("hypervisor") {
   testonly = true
-
-  deps = [ ":hypervisor_tests_pkg" ]
+  deps = [ ":hypervisor_tests" ]
 }

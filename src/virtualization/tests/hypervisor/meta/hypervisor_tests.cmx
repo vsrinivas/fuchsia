@@ -12,7 +12,7 @@
         "syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "bin/hypervisor_tests"
+        "binary": "bin/hypervisor_integration_tests"
     },
     "sandbox": {
         "services": [
