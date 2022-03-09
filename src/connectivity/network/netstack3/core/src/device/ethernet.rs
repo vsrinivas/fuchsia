@@ -5,7 +5,7 @@
 //! The Ethernet protocol.
 
 use alloc::{collections::HashMap, collections::VecDeque, vec::Vec};
-use core::{fmt::Debug, mem, num::NonZeroU8};
+use core::{fmt::Debug, mem};
 
 use assert_matches::assert_matches;
 use log::{debug, trace};
@@ -24,7 +24,6 @@ use packet_formats::{
     ethernet::{
         EtherType, EthernetFrame, EthernetFrameBuilder, EthernetFrameLengthCheck, EthernetIpExt,
     },
-    icmp::ndp::{options::NdpOptionBuilder, NeighborSolicitation},
 };
 use specialize_ip_macro::specialize_ip_address;
 
@@ -36,13 +35,11 @@ use crate::{
         arp::{self, ArpContext, ArpDeviceIdContext, ArpFrameMetadata, ArpState, ArpTimerId},
         link::LinkDevice,
         ndp::{self, NdpContext, NdpHandler, NdpState, NdpTimerId},
-        BufferIpLinkDeviceContext, DadTimerId, DeviceIdContext, EthernetDeviceId, FrameDestination,
+        BufferIpLinkDeviceContext, DeviceIdContext, EthernetDeviceId, FrameDestination,
         IpLinkDeviceContext, RecvIpFrameMeta,
     },
     error::{ExistsError, NotFoundError},
-    ip::device::state::{
-        AddrConfig, AddrConfigType, AddressState, IpDeviceState, Ipv6AddressEntry, SlaacConfig,
-    },
+    ip::device::state::{AddrConfig, AddrConfigType, AddressState, IpDeviceState, SlaacConfig},
     Ctx, EventDispatcher, Ipv6DeviceConfiguration,
 };
 
@@ -306,7 +303,6 @@ impl EthernetDeviceState {
 pub(crate) enum EthernetTimerId<D> {
     Arp(ArpTimerId<EthernetLinkDevice, Ipv4Addr, D>),
     Ndp(NdpTimerId<EthernetLinkDevice, D>),
-    Dad(DadTimerId<EthernetLinkDevice, D>),
 }
 
 impl<D> From<ArpTimerId<EthernetLinkDevice, Ipv4Addr, D>> for EthernetTimerId<D> {
@@ -321,12 +317,6 @@ impl<D> From<NdpTimerId<EthernetLinkDevice, D>> for EthernetTimerId<D> {
     }
 }
 
-impl<D> From<DadTimerId<EthernetLinkDevice, D>> for EthernetTimerId<D> {
-    fn from(id: DadTimerId<EthernetLinkDevice, D>) -> EthernetTimerId<D> {
-        EthernetTimerId::Dad(id)
-    }
-}
-
 /// Handle an Ethernet timer firing.
 pub(super) fn handle_timer<C: EthernetIpLinkDeviceContext>(
     ctx: &mut C,
@@ -335,9 +325,6 @@ pub(super) fn handle_timer<C: EthernetIpLinkDeviceContext>(
     match id {
         EthernetTimerId::Arp(id) => arp::handle_timer(ctx, id.into()),
         EthernetTimerId::Ndp(id) => <C as NdpHandler<EthernetLinkDevice>>::handle_timer(ctx, id),
-        EthernetTimerId::Dad(DadTimerId { device_id, addr, _marker }) => {
-            do_duplicate_address_detection(ctx, device_id, addr)
-        }
     }
 }
 
@@ -356,13 +343,6 @@ impl_timer_context!(
     EthernetTimerId<<C as DeviceIdContext<EthernetLinkDevice>>::DeviceId>,
     NdpTimerId<EthernetLinkDevice, <C as DeviceIdContext<EthernetLinkDevice>>::DeviceId>,
     EthernetTimerId::Ndp(id),
-    id
-);
-impl_timer_context!(
-    DeviceIdContext<EthernetLinkDevice>,
-    EthernetTimerId<<C as DeviceIdContext<EthernetLinkDevice>>::DeviceId>,
-    DadTimerId<EthernetLinkDevice, <C as DeviceIdContext<EthernetLinkDevice>>::DeviceId>,
-    EthernetTimerId::Dad(id),
     id
 );
 
@@ -535,62 +515,6 @@ pub(super) fn set_promiscuous_mode<C: EthernetIpLinkDeviceContext>(
     enabled: bool,
 ) {
     ctx.get_state_mut_with(device_id).link.promiscuous_mode = enabled;
-}
-
-/// Do duplicate address detection.
-///
-/// # Panics
-///
-/// Panics if tentative state for the address is not found.
-pub(super) fn do_duplicate_address_detection<C: EthernetIpLinkDeviceContext>(
-    ctx: &mut C,
-    device_id: C::DeviceId,
-    addr: UnicastAddr<Ipv6Addr>,
-) {
-    let Ipv6AddressEntry { addr_sub: _, state, config: _ } = ctx
-        .get_state_mut_with(device_id)
-        .ip
-        .ipv6
-        .ip_state
-        .iter_addrs_mut()
-        .find(|e| e.addr_sub().addr() == addr)
-        .expect("should find an address we are performing DAD on");
-
-    let remaining = match state {
-        AddressState::Tentative { dad_transmits_remaining } => dad_transmits_remaining,
-        AddressState::Assigned | AddressState::Deprecated => {
-            panic!("expected address to be tentative")
-        }
-    };
-
-    match remaining {
-        None => {
-            *state = AddressState::Assigned;
-        }
-        Some(non_zero_remaining) => {
-            *remaining = NonZeroU8::new(non_zero_remaining.get() - 1);
-
-            // Uses same RETRANS_TIMER definition per RFC 4862 section-5.1
-            let retrans_timer = ctx.retrans_timer(device_id);
-
-            let src_ll = ctx.get_link_layer_addr(device_id);
-            // TODO(https://fxbug.dev/85055): Either panic or guarantee that this error
-            // can't happen statically?
-            let _ = ndp::send_ndp_packet::<_, _, &[u8], _>(
-                ctx,
-                device_id,
-                Ipv6::UNSPECIFIED_ADDRESS,
-                addr.to_solicited_node_address().into_specified(),
-                NeighborSolicitation::new(addr.get()),
-                &[NdpOptionBuilder::SourceLinkLayerAddress(&src_ll.bytes())],
-            );
-
-            let _: Option<C::Instant> = ctx.schedule_timer(
-                retrans_timer,
-                DadTimerId { device_id, addr, _marker: core::marker::PhantomData }.into(),
-            );
-        }
-    }
 }
 
 /// Add `device_id` to a link multicast group `multicast_addr`.
@@ -842,9 +766,16 @@ impl<C: EthernetIpLinkDeviceContext> StateContext<NdpState<EthernetLinkDevice>, 
     }
 }
 
+pub(super) fn get_mac<C: EthernetIpLinkDeviceContext>(
+    ctx: &C,
+    device_id: C::DeviceId,
+) -> &UnicastAddr<Mac> {
+    &ctx.get_state_with(device_id).link.mac
+}
+
 impl<C: EthernetIpLinkDeviceContext> NdpContext<EthernetLinkDevice> for C {
     fn get_link_layer_addr(&self, device_id: C::DeviceId) -> UnicastAddr<Mac> {
-        self.get_state_with(device_id).link.mac
+        get_mac(self, device_id).clone()
     }
 
     fn get_interface_identifier(&self, device_id: C::DeviceId) -> [u8; 8] {

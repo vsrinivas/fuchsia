@@ -15,6 +15,7 @@ use alloc::{boxed::Box, vec::Vec};
 use core::{
     fmt::{self, Debug, Display, Formatter},
     marker::PhantomData,
+    time::Duration,
 };
 
 use log::{debug, trace};
@@ -49,8 +50,8 @@ use crate::{
     ip::{
         device::{
             state::{
-                AddrConfig, AddressState, DualStackIpDeviceState, Ipv4DeviceConfiguration,
-                Ipv4DeviceState, Ipv6AddressEntry, Ipv6DeviceConfiguration, Ipv6DeviceState,
+                AddrConfig, DualStackIpDeviceState, Ipv4DeviceConfiguration, Ipv4DeviceState,
+                Ipv6DeviceConfiguration, Ipv6DeviceState,
             },
             BufferIpDeviceContext, IpDeviceContext, Ipv6DeviceContext,
         },
@@ -58,14 +59,6 @@ use crate::{
     },
     BufferDispatcher, Ctx, EventDispatcher, Instant, StackState,
 };
-
-/// A timer ID for duplicate address detection.
-#[derive(Copy, Clone, Eq, PartialEq, Debug, Hash)]
-pub(crate) struct DadTimerId<D: LinkDevice, DeviceId> {
-    device_id: DeviceId,
-    addr: UnicastAddr<Ipv6Addr>,
-    _marker: PhantomData<D>,
-}
 
 /// An execution context which provides a `DeviceId` type for various device
 /// layer internals to share.
@@ -348,53 +341,19 @@ impl<D: EventDispatcher> IpDeviceContext<Ipv6> for Ctx<D> {
 }
 
 impl<D: EventDispatcher> Ipv6DeviceContext for Ctx<D> {
-    fn start_duplicate_address_detection(
-        &mut self,
-        device_id: Self::DeviceId,
-        addr: UnicastAddr<Ipv6Addr>,
-    ) {
+    fn retrans_timer(&self, device_id: Self::DeviceId) -> Duration {
         match device_id.inner() {
-            DeviceIdInner::Ethernet(id) => {
-                self::ethernet::do_duplicate_address_detection(self, id, addr)
-            }
+            DeviceIdInner::Ethernet(id) => NdpHandler::retrans_timer(self, id),
             DeviceIdInner::Loopback => {
-                let Ipv6AddressEntry { addr_sub: _, state, config: _ } =
-                    IpDeviceContext::<Ipv6>::get_ip_device_state_mut(self, device_id)
-                        .ip_state
-                        .iter_addrs_mut()
-                        .find(|e| e.addr_sub().addr() == addr)
-                        .expect("should find an address we are performing DAD on");
-                match state {
-                    AddressState::Tentative { dad_transmits_remaining } => {
-                        assert_eq!(
-                            dad_transmits_remaining, &None,
-                            "TODO(https://fxbug.dev/72378): loopback does not handle DAD yet"
-                        );
-                    }
-                    AddressState::Assigned | AddressState::Deprecated => {
-                        panic!("expected address to be tentative")
-                    }
-                }
-
-                *state = AddressState::Assigned;
+                unimplemented!("TODO(https://fxbug.dev/72378): loopback does not handle NDP yet")
             }
         }
     }
 
-    fn stop_duplicate_address_detection(
-        &mut self,
-        device_id: Self::DeviceId,
-        addr: UnicastAddr<Ipv6Addr>,
-    ) {
+    fn get_link_layer_addr_bytes(&self, device_id: Self::DeviceId) -> Option<&[u8]> {
         match device_id.inner() {
-            DeviceIdInner::Ethernet(id) => {
-                let _: Option<D::Instant> = self.cancel_timer(EthernetTimerId::Dad(DadTimerId {
-                    device_id: id,
-                    addr,
-                    _marker: core::marker::PhantomData,
-                }));
-            }
-            DeviceIdInner::Loopback => {}
+            DeviceIdInner::Ethernet(id) => Some(ethernet::get_mac(self, id).as_ref().as_ref()),
+            DeviceIdInner::Loopback => None,
         }
     }
 

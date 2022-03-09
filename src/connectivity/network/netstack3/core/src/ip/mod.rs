@@ -2099,7 +2099,7 @@ pub(crate) fn send_ipv4_packet_from_device<
 
 pub(crate) fn send_ipv6_packet_from_device<
     B: BufferMut,
-    C: BufferIpLayerContext<Ipv6, B>,
+    C: BufferIpDeviceContext<Ipv6, B>,
     S: Serializer<Buffer = B>,
 >(
     ctx: &mut C,

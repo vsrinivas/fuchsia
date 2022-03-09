@@ -85,11 +85,6 @@ use crate::{
 /// [RFC 4861 section 4.5]: https://tools.ietf.org/html/rfc4861#section-4.5
 const REQUIRED_NDP_IP_PACKET_HOP_LIMIT: u8 = 255;
 
-/// The number of NS messages to be sent to perform DAD [RFC 4862 section 5.1].
-///
-/// [RFC 4862 section 5.1]: https://tools.ietf.org/html/rfc4862#section-5.1
-pub(crate) const DUP_ADDR_DETECT_TRANSMITS: u8 = 1;
-
 /// Minimum Valid Lifetime value to actually update an address's valid lifetime.
 ///
 /// 2 hours.
@@ -197,11 +192,6 @@ pub(crate) trait NdpHandler<D: LinkDevice>: DeviceIdContext<D> {
     ///
     /// Note, some values may not take effect immediately, and may only take
     /// effect the next time they are used. These scenarios documented below:
-    ///
-    ///  - Updates to [`NdpConfiguration::dup_addr_detect_transmits`] will only
-    ///    take effect the next time Duplicate Address Detection (DAD) is done.
-    ///    Any DAD processes that have already started will continue using the
-    ///    old value.
     ///
     ///  - Updates to [`NdpConfiguration::max_router_solicitations`] will only
     ///    take effect the next time routers are explicitly solicited. Current
@@ -3089,6 +3079,7 @@ mod tests {
             device::{
                 get_assigned_ipv6_addr_subnets, get_ipv6_device_state, get_ipv6_hop_limit, get_mtu,
                 is_ipv6_routing_enabled, set_ipv6_routing_enabled, state::Ipv6AddressEntry,
+                Ipv6DeviceTimerId,
             },
             SendIpPacketMeta,
         },
@@ -3522,14 +3513,9 @@ mod tests {
     }
 
     fn dad_timer_id(id: EthernetDeviceId, addr: UnicastAddr<Ipv6Addr>) -> TimerId {
-        // We assume Ethernet since that's what all of our tests use.
-        TimerId(TimerIdInner::DeviceLayer(DeviceLayerTimerId(DeviceLayerTimerIdInner::Ethernet(
-            EthernetTimerId::Dad(crate::device::DadTimerId {
-                device_id: id,
-                addr,
-                _marker: PhantomData,
-            }),
-        ))))
+        TimerId(TimerIdInner::Ipv6Device(Ipv6DeviceTimerId::Dad(
+            crate::ip::device::dad::DadTimerId { device_id: id.into(), addr },
+        )))
     }
 
     #[test]

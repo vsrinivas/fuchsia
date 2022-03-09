@@ -14,7 +14,10 @@ use net_types::{
 use nonzero_ext::nonzero;
 
 use crate::{
-    ip::gmp::{igmp::IgmpGroupState, mld::MldGroupState, MulticastGroupSet},
+    ip::{
+        device::dad::DUP_ADDR_DETECT_TRANSMITS,
+        gmp::{igmp::IgmpGroupState, mld::MldGroupState, MulticastGroupSet},
+    },
     Instant,
 };
 
@@ -138,6 +141,11 @@ impl<Instant, I: IpDeviceStateIpExt<Instant>> IpDeviceState<Instant, I> {
         self.addrs.iter().find(|entry| &entry.addr().get() == addr)
     }
 
+    /// Finds the mutable entry for `addr` if any.
+    pub(crate) fn find_addr_mut(&mut self, addr: &I::Addr) -> Option<&mut I::AssignedAddress> {
+        self.addrs.iter_mut().find(|entry| &entry.addr().get() == addr)
+    }
+
     /// Adds an IP address to this interface.
     pub(crate) fn add_addr(
         &mut self,
@@ -238,7 +246,7 @@ pub struct Ipv6DeviceConfiguration {
 impl Default for Ipv6DeviceConfiguration {
     fn default() -> Ipv6DeviceConfiguration {
         Ipv6DeviceConfiguration {
-            dad_transmits: NonZeroU8::new(crate::device::ndp::DUP_ADDR_DETECT_TRANSMITS),
+            dad_transmits: NonZeroU8::new(DUP_ADDR_DETECT_TRANSMITS),
             ip_config: Default::default(),
         }
     }

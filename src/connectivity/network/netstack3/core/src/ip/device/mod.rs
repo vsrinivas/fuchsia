@@ -4,11 +4,12 @@
 
 //! An IP device.
 
+pub(crate) mod dad;
 mod integration;
 pub(crate) mod state;
 
 use alloc::boxed::Box;
-use core::num::NonZeroU8;
+use core::{num::NonZeroU8, time::Duration};
 
 #[cfg(test)]
 use net_types::ip::{Ip, IpVersion};
@@ -22,10 +23,13 @@ use crate::{
     context::{InstantContext, RngContext, TimerContext, TimerHandler},
     error::{ExistsError, NotFoundError},
     ip::{
-        device::state::{
-            AddrConfig, AddressState, IpDeviceConfiguration, IpDeviceState, IpDeviceStateIpExt,
-            Ipv4DeviceConfiguration, Ipv4DeviceState, Ipv6AddressEntry, Ipv6DeviceConfiguration,
-            Ipv6DeviceState,
+        device::{
+            dad::{DadHandler, DadTimerId},
+            state::{
+                AddrConfig, AddressState, IpDeviceConfiguration, IpDeviceState, IpDeviceStateIpExt,
+                Ipv4DeviceConfiguration, Ipv4DeviceState, Ipv6AddressEntry,
+                Ipv6DeviceConfiguration, Ipv6DeviceState,
+            },
         },
         gmp::{
             igmp::IgmpTimerId, mld::MldReportDelay, GmpHandler, GroupJoinResult, GroupLeaveResult,
@@ -69,6 +73,7 @@ pub(crate) fn handle_ipv4_timer<C: BufferIpDeviceContext<Ipv4, EmptyBuf>>(
 #[derive(Copy, Clone, Eq, PartialEq, Debug, Hash)]
 pub(crate) enum Ipv6DeviceTimerId<DeviceId> {
     Mld(MldReportDelay<DeviceId>),
+    Dad(DadTimerId<DeviceId>),
 }
 
 impl<DeviceId> From<MldReportDelay<DeviceId>> for Ipv6DeviceTimerId<DeviceId> {
@@ -77,8 +82,14 @@ impl<DeviceId> From<MldReportDelay<DeviceId>> for Ipv6DeviceTimerId<DeviceId> {
     }
 }
 
+impl<DeviceId> From<DadTimerId<DeviceId>> for Ipv6DeviceTimerId<DeviceId> {
+    fn from(id: DadTimerId<DeviceId>) -> Ipv6DeviceTimerId<DeviceId> {
+        Ipv6DeviceTimerId::Dad(id)
+    }
+}
+
 // If we are provided with an impl of `TimerContext<Ipv6DeviceTimerId<_>>`, then
-// we can in turn provide an impl of `TimerContext` for MLD.
+// we can in turn provide an impl of `TimerContext` for MLD and DAD.
 impl_timer_context!(
     IpDeviceIdContext<Ipv6>,
     Ipv6DeviceTimerId<C::DeviceId>,
@@ -86,14 +97,22 @@ impl_timer_context!(
     Ipv6DeviceTimerId::Mld(id),
     id
 );
+impl_timer_context!(
+    IpDeviceIdContext<Ipv6>,
+    Ipv6DeviceTimerId<C::DeviceId>,
+    DadTimerId<C::DeviceId>,
+    Ipv6DeviceTimerId::Dad(id),
+    id
+);
 
 /// Handle an IPv6 device timer firing.
-pub(crate) fn handle_ipv6_timer<C: BufferIpDeviceContext<Ipv6, EmptyBuf>>(
+pub(crate) fn handle_ipv6_timer<C: BufferIpDeviceContext<Ipv6, EmptyBuf> + DadHandler>(
     ctx: &mut C,
     id: Ipv6DeviceTimerId<C::DeviceId>,
 ) {
     match id {
         Ipv6DeviceTimerId::Mld(id) => TimerHandler::handle_timer(ctx, id),
+        Ipv6DeviceTimerId::Dad(id) => DadHandler::handle_timer(ctx, id),
     }
 }
 
@@ -160,23 +179,14 @@ pub(crate) trait IpDeviceContext<
 
 /// The execution context for an IPv6 device.
 pub(crate) trait Ipv6DeviceContext: IpDeviceContext<Ipv6> {
-    /// Starts duplicate address detection.
+    /// Returns the NDP retransmission timer configured on the device.
     // TODO(https://fxbug.dev/72378): Remove this method once DAD operates at
     // L3.
-    fn start_duplicate_address_detection(
-        &mut self,
-        device_id: Self::DeviceId,
-        addr: UnicastAddr<Ipv6Addr>,
-    );
+    fn retrans_timer(&self, device_id: Self::DeviceId) -> Duration;
 
-    /// Stops duplicate address detection.
-    // TODO(https://fxbug.dev/72378): Remove this method once DAD operates at
-    // L3.
-    fn stop_duplicate_address_detection(
-        &mut self,
-        device_id: Self::DeviceId,
-        addr: UnicastAddr<Ipv6Addr>,
-    );
+    /// Returns the device's link-layer address bytes, if the device supports
+    /// link-layer addressing.
+    fn get_link_layer_addr_bytes(&self, device_id: Self::DeviceId) -> Option<&[u8]>;
 
     /// Starts soliciting routers.
     // TODO(https://fxbug.dev/72378): Remove this method once DAD operates at
@@ -469,7 +479,7 @@ pub(crate) fn add_ipv4_addr_subnet<
 ///
 /// `config` is the way this address is being configured. See [`AddrConfig`]
 /// for more details.
-pub(crate) fn add_ipv6_addr_subnet<C: Ipv6DeviceContext + BufferIpDeviceContext<Ipv6, EmptyBuf>>(
+pub(crate) fn add_ipv6_addr_subnet<C: Ipv6DeviceContext + GmpHandler<Ipv6> + DadHandler>(
     ctx: &mut C,
     device_id: C::DeviceId,
     addr_sub: AddrSubnet<Ipv6Addr>,
@@ -493,7 +503,7 @@ pub(crate) fn add_ipv6_addr_subnet<C: Ipv6DeviceContext + BufferIpDeviceContext<
         ))
         .map(|()| {
             join_ip_multicast(ctx, device_id, addr_sub.addr().to_solicited_node_address());
-            ctx.start_duplicate_address_detection(device_id, addr_sub.addr());
+            DadHandler::do_duplicate_address_detection(ctx, device_id, addr_sub.addr());
         })
 }
 
@@ -507,7 +517,7 @@ pub(crate) fn del_ipv4_addr<C: IpDeviceContext<Ipv4> + BufferIpDeviceContext<Ipv
 }
 
 /// Removes an IPv6 address and associated subnet from this device.
-pub(crate) fn del_ipv6_addr<C: Ipv6DeviceContext + BufferIpDeviceContext<Ipv6, EmptyBuf>>(
+pub(crate) fn del_ipv6_addr<C: Ipv6DeviceContext + GmpHandler<Ipv6> + DadHandler>(
     ctx: &mut C,
     device_id: C::DeviceId,
     addr: &SpecifiedAddr<Ipv6Addr>,
@@ -520,7 +530,7 @@ pub(crate) fn del_ipv6_addr<C: Ipv6DeviceContext + BufferIpDeviceContext<Ipv6, E
         if let Some(addr) = UnicastAddr::new(addr.get()) {
             // Leave the the solicited-node multicast group.
             leave_ip_multicast(ctx, device_id, addr.to_solicited_node_address());
-            ctx.stop_duplicate_address_detection(device_id, addr);
+            DadHandler::stop_duplicate_address_detection(ctx, device_id, addr);
         }
     })
 }

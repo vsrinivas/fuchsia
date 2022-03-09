@@ -4,23 +4,29 @@
 
 //! The integrations for protocols built on top of an IP device.
 
-use core::num::NonZeroU8;
+use core::{num::NonZeroU8, time::Duration};
 
 use net_types::{
-    ip::{AddrSubnet, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr},
-    LinkLocalUnicastAddr, MulticastAddr, SpecifiedAddr, Witness as _,
+    ip::{AddrSubnet, Ip as _, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr},
+    LinkLocalUnicastAddr, MulticastAddr, SpecifiedAddr, UnicastAddr, Witness as _,
 };
 use packet::{BufferMut, EmptyBuf, Serializer};
+use packet_formats::{
+    icmp::{ndp::NeighborSolicitation, IcmpPacketBuilder, IcmpUnusedCode},
+    ip::Ipv6Proto,
+};
 
 use crate::{
     context::{FrameContext, InstantContext},
     ip::{
         self,
         device::{
-            self, get_ipv4_addr_subnet, get_ipv4_device_state, get_ipv6_device_state,
-            get_ipv6_hop_limit, is_ipv4_routing_enabled, is_ipv6_routing_enabled,
-            iter_ipv4_devices, iter_ipv6_devices, send_ip_frame,
-            state::{AddressState, IpDeviceState},
+            self,
+            dad::{Ipv6DeviceDadContext, Ipv6LayerDadContext},
+            get_ipv4_addr_subnet, get_ipv4_device_state, get_ipv6_device_state, get_ipv6_hop_limit,
+            is_ipv4_routing_enabled, is_ipv6_routing_enabled, iter_ipv4_devices, iter_ipv6_devices,
+            send_ip_frame,
+            state::{AddressState, IpDeviceState, Ipv6AddressEntry},
             IpDeviceIpExt,
         },
         gmp::{
@@ -28,9 +34,23 @@ use crate::{
             mld::{MldContext, MldFrameMetadata, MldGroupState},
             MulticastGroupSet,
         },
-        AddressStatus, IpLayerIpExt, Ipv6PresentAddressStatus, DEFAULT_TTL,
+        send_ipv6_packet_from_device, AddressStatus, IpLayerIpExt, Ipv6PresentAddressStatus,
+        SendIpPacketMeta, DEFAULT_TTL,
     },
 };
+
+/// The IP packet hop limit for all NDP packets.
+///
+/// See [RFC 4861 section 4.1], [RFC 4861 section 4.2], [RFC 4861 section 4.2],
+/// [RFC 4861 section 4.3], [RFC 4861 section 4.4], and [RFC 4861 section 4.5]
+/// for more information.
+///
+/// [RFC 4861 section 4.1]: https://tools.ietf.org/html/rfc4861#section-4.1
+/// [RFC 4861 section 4.2]: https://tools.ietf.org/html/rfc4861#section-4.2
+/// [RFC 4861 section 4.3]: https://tools.ietf.org/html/rfc4861#section-4.3
+/// [RFC 4861 section 4.4]: https://tools.ietf.org/html/rfc4861#section-4.4
+/// [RFC 4861 section 4.5]: https://tools.ietf.org/html/rfc4861#section-4.5
+const REQUIRED_NDP_IP_PACKET_HOP_LIMIT: u8 = 255;
 
 impl<C: device::BufferIpDeviceContext<Ipv4, EmptyBuf>> IgmpContext for C {
     fn get_ip_addr_subnet(&self, device: C::DeviceId) -> Option<AddrSubnet<Ipv4Addr>> {
@@ -92,6 +112,59 @@ impl<C: device::BufferIpDeviceContext<Ipv6, EmptyBuf>> MldContext for C {
     ) {
         let (state, rng) = self.get_ip_device_state_mut_and_rng(device);
         (&mut state.ip_state.multicast_groups, rng)
+    }
+}
+
+impl<C: device::Ipv6DeviceContext> Ipv6DeviceDadContext for C {
+    fn get_address_state_mut(
+        &mut self,
+        device_id: C::DeviceId,
+        addr: UnicastAddr<Ipv6Addr>,
+    ) -> Option<&mut AddressState> {
+        self.get_ip_device_state_mut(device_id)
+            .ip_state
+            .find_addr_mut(&addr)
+            .map(|Ipv6AddressEntry { addr_sub: _, state, config: _ }| state)
+    }
+
+    fn retrans_timer(&self, device_id: C::DeviceId) -> Duration {
+        device::Ipv6DeviceContext::retrans_timer(self, device_id)
+    }
+
+    fn get_link_layer_addr_bytes(&self, device_id: C::DeviceId) -> Option<&[u8]> {
+        device::Ipv6DeviceContext::get_link_layer_addr_bytes(self, device_id)
+    }
+}
+
+impl<C: ip::BufferIpDeviceContext<Ipv6, EmptyBuf>> Ipv6LayerDadContext for C {
+    fn send_dad_packet<S: Serializer<Buffer = EmptyBuf>>(
+        &mut self,
+        device_id: Self::DeviceId,
+        dst_ip: MulticastAddr<Ipv6Addr>,
+        message: NeighborSolicitation,
+        body: S,
+    ) -> Result<(), S> {
+        let src_ip = Ipv6::UNSPECIFIED_ADDRESS;
+        let dst_ip = dst_ip.into_specified();
+        send_ipv6_packet_from_device(
+            self,
+            SendIpPacketMeta {
+                device: device_id,
+                src_ip: SpecifiedAddr::new(src_ip),
+                dst_ip,
+                next_hop: dst_ip,
+                ttl: NonZeroU8::new(REQUIRED_NDP_IP_PACKET_HOP_LIMIT),
+                proto: Ipv6Proto::Icmpv6,
+            },
+            body.encapsulate(IcmpPacketBuilder::<Ipv6, &[u8], _>::new(
+                src_ip,
+                dst_ip.get(),
+                IcmpUnusedCode,
+                message,
+            )),
+            None,
+        )
+        .map_err(|s| s.into_inner())
     }
 }
 
