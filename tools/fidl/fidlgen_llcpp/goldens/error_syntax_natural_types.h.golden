@@ -4,7 +4,7 @@
 
 #include <fidl/test.errorsyntax/cpp/common_types.h>
 #include <fidl/test.errorsyntax/cpp/markers.h>
-#include <lib/fidl/cpp/coding_traits.h>
+#include <lib/fidl/cpp/natural_coding_traits.h>
 #include <lib/fidl/cpp/unified_messaging.h>
 
 #include <cinttypes>
@@ -389,8 +389,8 @@ struct internal::NaturalCodingTraits<
 template <>
 struct internal::NaturalIsMemcpyCompatible<
     ::test_errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Response>
-    : public internal::BoolConstant<
-          !HasPadding<
+    : public std::bool_constant<
+          !internal::NaturalHasPadding<
               ::test_errorsyntax::
                   ExampleUseOfErrorSyntax_CallWhichMayFail_Response>::value &&
           internal::NaturalIsMemcpyCompatible<int64_t>::value> {};
@@ -425,15 +425,15 @@ struct internal::NaturalCodingTraits<
                 24, 16> {};
 
 template <>
-struct HasPadding<
+struct internal::NaturalHasPadding<
     ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse>
     : public std::true_type {};
 
 template <>
 struct internal::NaturalIsMemcpyCompatible<
     ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse>
-    : public internal::BoolConstant<
-          !HasPadding<
+    : public std::bool_constant<
+          !internal::NaturalHasPadding<
               ::test_errorsyntax::
                   ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse>::value &&
           internal::NaturalIsMemcpyCompatible<
@@ -470,15 +470,15 @@ struct internal::NaturalCodingTraits<
           16, 16> {};
 
 template <>
-struct HasPadding<
+struct internal::NaturalHasPadding<
     ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest>
     : public std::true_type {};
 
 template <>
 struct internal::NaturalIsMemcpyCompatible<
     ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest>
-    : public internal::BoolConstant<
-          !HasPadding<
+    : public std::bool_constant<
+          !internal::NaturalHasPadding<
               ::test_errorsyntax::
                   ExampleUseOfErrorSyntaxCallWhichMayFailRequest>::value &&
           internal::NaturalIsMemcpyCompatible<::std::string>::value> {};

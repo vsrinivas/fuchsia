@@ -4,7 +4,7 @@
 
 #include <fidl/test.importedconstvalues/cpp/common_types.h>
 #include <fidl/test.importedconstvalues/cpp/markers.h>
-#include <lib/fidl/cpp/coding_traits.h>
+#include <lib/fidl/cpp/natural_coding_traits.h>
 #include <lib/fidl/cpp/unified_messaging.h>
 
 #include <cinttypes>
@@ -103,8 +103,9 @@ struct internal::NaturalCodingTraits<
 
 template <>
 struct internal::NaturalIsMemcpyCompatible<::test_importedconstvalues::MyStruct>
-    : public internal::BoolConstant<
-          !HasPadding<::test_importedconstvalues::MyStruct>::value &&
+    : public std::bool_constant<
+          !internal::NaturalHasPadding<
+              ::test_importedconstvalues::MyStruct>::value &&
           internal::NaturalIsMemcpyCompatible<uint8_t>::value> {};
 
 #endif  // __Fuchsia__

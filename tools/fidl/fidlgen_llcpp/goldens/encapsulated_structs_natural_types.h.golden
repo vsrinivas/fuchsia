@@ -4,7 +4,7 @@
 
 #include <fidl/test.encapsulatedstructs/cpp/common_types.h>
 #include <fidl/test.encapsulatedstructs/cpp/markers.h>
-#include <lib/fidl/cpp/coding_traits.h>
+#include <lib/fidl/cpp/natural_coding_traits.h>
 #include <lib/fidl/cpp/unified_messaging.h>
 
 #include <cinttypes>
@@ -448,14 +448,15 @@ struct internal::NaturalCodingTraits<
 };
 
 template <>
-struct HasPadding<::test_encapsulatedstructs::NonInlineStructTestStruct>
+struct internal::NaturalHasPadding<
+    ::test_encapsulatedstructs::NonInlineStructTestStruct>
     : public std::true_type {};
 
 template <>
 struct internal::NaturalIsMemcpyCompatible<
     ::test_encapsulatedstructs::NonInlineStructTestStruct>
-    : public internal::BoolConstant<
-          !HasPadding<
+    : public std::bool_constant<
+          !internal::NaturalHasPadding<
               ::test_encapsulatedstructs::NonInlineStructTestStruct>::value &&
           internal::NaturalIsMemcpyCompatible<::std::unique_ptr<
               ::test_encapsulatedstructs::Int16Int8>>::value &&
@@ -486,14 +487,15 @@ struct internal::NaturalCodingTraits<
                 ::test_encapsulatedstructs::Int8Int32, 8, 8> {};
 
 template <>
-struct HasPadding<::test_encapsulatedstructs::Int8Int32>
+struct internal::NaturalHasPadding<::test_encapsulatedstructs::Int8Int32>
     : public std::true_type {};
 
 template <>
 struct internal::NaturalIsMemcpyCompatible<
     ::test_encapsulatedstructs::Int8Int32>
-    : public internal::BoolConstant<
-          !HasPadding<::test_encapsulatedstructs::Int8Int32>::value &&
+    : public std::bool_constant<
+          !internal::NaturalHasPadding<
+              ::test_encapsulatedstructs::Int8Int32>::value &&
           internal::NaturalIsMemcpyCompatible<int8_t>::value &&
           internal::NaturalIsMemcpyCompatible<int32_t>::value> {};
 
@@ -522,14 +524,15 @@ struct internal::NaturalCodingTraits<
                 ::test_encapsulatedstructs::Int16Int8, 4, 4> {};
 
 template <>
-struct HasPadding<::test_encapsulatedstructs::Int16Int8>
+struct internal::NaturalHasPadding<::test_encapsulatedstructs::Int16Int8>
     : public std::true_type {};
 
 template <>
 struct internal::NaturalIsMemcpyCompatible<
     ::test_encapsulatedstructs::Int16Int8>
-    : public internal::BoolConstant<
-          !HasPadding<::test_encapsulatedstructs::Int16Int8>::value &&
+    : public std::bool_constant<
+          !internal::NaturalHasPadding<
+              ::test_encapsulatedstructs::Int16Int8>::value &&
           internal::NaturalIsMemcpyCompatible<int16_t>::value &&
           internal::NaturalIsMemcpyCompatible<int8_t>::value> {};
 
@@ -558,14 +561,15 @@ struct internal::NaturalCodingTraits<
                 ::test_encapsulatedstructs::ArrayInt16Int8, 12, 12> {};
 
 template <>
-struct HasPadding<::test_encapsulatedstructs::ArrayInt16Int8>
+struct internal::NaturalHasPadding<::test_encapsulatedstructs::ArrayInt16Int8>
     : public std::true_type {};
 
 template <>
 struct internal::NaturalIsMemcpyCompatible<
     ::test_encapsulatedstructs::ArrayInt16Int8>
-    : public internal::BoolConstant<
-          !HasPadding<::test_encapsulatedstructs::ArrayInt16Int8>::value &&
+    : public std::bool_constant<
+          !internal::NaturalHasPadding<
+              ::test_encapsulatedstructs::ArrayInt16Int8>::value &&
           internal::NaturalIsMemcpyCompatible<
               ::std::array<::test_encapsulatedstructs::Int16Int8, 3>>::value> {
 };
@@ -597,14 +601,15 @@ struct internal::NaturalCodingTraits<
                 ::test_encapsulatedstructs::StructPaddingTestStruct, 24, 24> {};
 
 template <>
-struct HasPadding<::test_encapsulatedstructs::StructPaddingTestStruct>
+struct internal::NaturalHasPadding<
+    ::test_encapsulatedstructs::StructPaddingTestStruct>
     : public std::true_type {};
 
 template <>
 struct internal::NaturalIsMemcpyCompatible<
     ::test_encapsulatedstructs::StructPaddingTestStruct>
-    : public internal::BoolConstant<
-          !HasPadding<
+    : public std::bool_constant<
+          !internal::NaturalHasPadding<
               ::test_encapsulatedstructs::StructPaddingTestStruct>::value &&
           internal::NaturalIsMemcpyCompatible<
               ::test_encapsulatedstructs::Int16Int8>::value &&
@@ -641,14 +646,15 @@ struct internal::NaturalCodingTraits<
                 ::test_encapsulatedstructs::TopLevelStruct, 40, 40> {};
 
 template <>
-struct HasPadding<::test_encapsulatedstructs::TopLevelStruct>
+struct internal::NaturalHasPadding<::test_encapsulatedstructs::TopLevelStruct>
     : public std::true_type {};
 
 template <>
 struct internal::NaturalIsMemcpyCompatible<
     ::test_encapsulatedstructs::TopLevelStruct>
-    : public internal::BoolConstant<
-          !HasPadding<::test_encapsulatedstructs::TopLevelStruct>::value &&
+    : public std::bool_constant<
+          !internal::NaturalHasPadding<
+              ::test_encapsulatedstructs::TopLevelStruct>::value &&
           internal::NaturalIsMemcpyCompatible<
               ::test_encapsulatedstructs::StructPaddingTestStruct>::value &&
           internal::NaturalIsMemcpyCompatible<

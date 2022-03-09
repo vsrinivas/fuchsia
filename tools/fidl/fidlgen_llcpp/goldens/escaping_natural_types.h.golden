@@ -4,7 +4,7 @@
 
 #include <fidl/test.escaping/cpp/common_types.h>
 #include <fidl/test.escaping/cpp/markers.h>
-#include <lib/fidl/cpp/coding_traits.h>
+#include <lib/fidl/cpp/natural_coding_traits.h>
 #include <lib/fidl/cpp/unified_messaging.h>
 
 #include <cinttypes>
@@ -99,8 +99,9 @@ struct internal::NaturalCodingTraits<
 template <>
 struct internal::NaturalIsMemcpyCompatible<
     ::test_escaping::DocCommentWithQuotes>
-    : public internal::BoolConstant<
-          !HasPadding<::test_escaping::DocCommentWithQuotes>::value &&
+    : public std::bool_constant<
+          !internal::NaturalHasPadding<
+              ::test_escaping::DocCommentWithQuotes>::value &&
           internal::NaturalIsMemcpyCompatible<uint8_t>::value> {};
 
 #endif  // __Fuchsia__

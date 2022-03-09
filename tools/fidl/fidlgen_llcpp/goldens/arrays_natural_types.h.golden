@@ -4,7 +4,7 @@
 
 #include <fidl/test.arrays/cpp/common_types.h>
 #include <fidl/test.arrays/cpp/markers.h>
-#include <lib/fidl/cpp/coding_traits.h>
+#include <lib/fidl/cpp/natural_coding_traits.h>
 #include <lib/fidl/cpp/unified_messaging.h>
 
 #include <cinttypes>
@@ -415,10 +415,10 @@ struct internal::NaturalCodingTraits<
 
 template <>
 struct internal::NaturalIsMemcpyCompatible<::test_arrays::StructSmallArray>
-    : public internal::BoolConstant<
-          !HasPadding<::test_arrays::StructSmallArray>::value &&
-          internal::NaturalIsMemcpyCompatible<
-              ::std::array<uint32_t, 2>>::value> {};
+    : public std::bool_constant<!internal::NaturalHasPadding<
+                                    ::test_arrays::StructSmallArray>::value &&
+                                internal::NaturalIsMemcpyCompatible<
+                                    ::std::array<uint32_t, 2>>::value> {};
 
 #endif  // __Fuchsia__
 
@@ -444,10 +444,10 @@ struct internal::NaturalCodingTraits<
 
 template <>
 struct internal::NaturalIsMemcpyCompatible<::test_arrays::StructLargeArray>
-    : public internal::BoolConstant<
-          !HasPadding<::test_arrays::StructLargeArray>::value &&
-          internal::NaturalIsMemcpyCompatible<
-              ::std::array<uint32_t, 100>>::value> {};
+    : public std::bool_constant<!internal::NaturalHasPadding<
+                                    ::test_arrays::StructLargeArray>::value &&
+                                internal::NaturalIsMemcpyCompatible<
+                                    ::std::array<uint32_t, 100>>::value> {};
 
 #endif  // __Fuchsia__
 

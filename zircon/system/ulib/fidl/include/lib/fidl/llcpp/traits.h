@@ -65,6 +65,11 @@ template <> struct NaturalIsMemcpyCompatible<int64_t> : public std::true_type {}
 template <typename T, size_t N>
 struct NaturalIsMemcpyCompatible<std::array<T, N>> : public NaturalIsMemcpyCompatible<T> {};
 
+// True if a struct has padding.
+// Does not include inner structs or other types recursively.
+template <typename T>
+struct NaturalHasPadding : public std::false_type {};
+
 }  // namespace internal
 
 // A type trait that indicates whether the given type is a request/response type

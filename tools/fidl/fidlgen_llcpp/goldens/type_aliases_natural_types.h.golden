@@ -4,7 +4,7 @@
 
 #include <fidl/test.typealiases/cpp/common_types.h>
 #include <fidl/test.typealiases/cpp/markers.h>
-#include <lib/fidl/cpp/coding_traits.h>
+#include <lib/fidl/cpp/natural_coding_traits.h>
 #include <lib/fidl/cpp/unified_messaging.h>
 
 #include <cinttypes>
@@ -205,14 +205,15 @@ struct internal::NaturalCodingTraits<
                 ::test_typealiases::ExampleOfUseOfAliases, 88, 88> {};
 
 template <>
-struct HasPadding<::test_typealiases::ExampleOfUseOfAliases>
+struct internal::NaturalHasPadding<::test_typealiases::ExampleOfUseOfAliases>
     : public std::true_type {};
 
 template <>
 struct internal::NaturalIsMemcpyCompatible<
     ::test_typealiases::ExampleOfUseOfAliases>
-    : public internal::BoolConstant<
-          !HasPadding<::test_typealiases::ExampleOfUseOfAliases>::value &&
+    : public std::bool_constant<
+          !internal::NaturalHasPadding<
+              ::test_typealiases::ExampleOfUseOfAliases>::value &&
           internal::NaturalIsMemcpyCompatible<uint32_t>::value &&
           internal::NaturalIsMemcpyCompatible<
               ::std::vector<::std::string>>::value &&

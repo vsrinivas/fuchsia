@@ -4,7 +4,7 @@
 
 #include <fidl/test.driverhandle/cpp/common_types.h>
 #include <fidl/test.driverhandle/cpp/markers.h>
-#include <lib/fidl/cpp/coding_traits.h>
+#include <lib/fidl/cpp/natural_coding_traits.h>
 #include <lib/fidl/cpp/unified_messaging.h>
 
 #include <cinttypes>
@@ -147,8 +147,9 @@ struct internal::NaturalCodingTraits<
 template <>
 struct internal::NaturalIsMemcpyCompatible<
     ::test_driverhandle::ServerEndWrapper>
-    : public internal::BoolConstant<
-          !HasPadding<::test_driverhandle::ServerEndWrapper>::value &&
+    : public std::bool_constant<
+          !internal::NaturalHasPadding<
+              ::test_driverhandle::ServerEndWrapper>::value &&
           internal::NaturalIsMemcpyCompatible<
               ::fdf::ServerEnd<::test_driverhandle::DriverProtocol>>::value> {};
 
@@ -182,8 +183,9 @@ struct internal::NaturalCodingTraits<
 template <>
 struct internal::NaturalIsMemcpyCompatible<
     ::test_driverhandle::ClientEndWrapper>
-    : public internal::BoolConstant<
-          !HasPadding<::test_driverhandle::ClientEndWrapper>::value &&
+    : public std::bool_constant<
+          !internal::NaturalHasPadding<
+              ::test_driverhandle::ClientEndWrapper>::value &&
           internal::NaturalIsMemcpyCompatible<
               ::fdf::ClientEnd<::test_driverhandle::DriverProtocol>>::value> {};
 

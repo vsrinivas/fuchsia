@@ -4,7 +4,7 @@
 
 #include <fidl/test.protocolrequest/cpp/common_types.h>
 #include <fidl/test.protocolrequest/cpp/markers.h>
-#include <lib/fidl/cpp/coding_traits.h>
+#include <lib/fidl/cpp/natural_coding_traits.h>
 #include <lib/fidl/cpp/unified_messaging.h>
 
 #include <cinttypes>
@@ -252,8 +252,8 @@ struct internal::NaturalCodingTraits<
 template <>
 struct internal::NaturalIsMemcpyCompatible<
     ::test_protocolrequest::ParentTakeChildRequestRequest>
-    : public internal::BoolConstant<
-          !HasPadding<
+    : public std::bool_constant<
+          !internal::NaturalHasPadding<
               ::test_protocolrequest::ParentTakeChildRequestRequest>::value &&
           internal::NaturalIsMemcpyCompatible<
               ::fidl::ServerEnd<::test_protocolrequest::Child>>::value> {};
@@ -289,8 +289,9 @@ struct internal::NaturalCodingTraits<
 template <>
 struct internal::NaturalIsMemcpyCompatible<
     ::test_protocolrequest::ParentTakeChildRequest>
-    : public internal::BoolConstant<
-          !HasPadding<::test_protocolrequest::ParentTakeChildRequest>::value &&
+    : public std::bool_constant<
+          !internal::NaturalHasPadding<
+              ::test_protocolrequest::ParentTakeChildRequest>::value &&
           internal::NaturalIsMemcpyCompatible<
               ::fidl::ClientEnd<::test_protocolrequest::Child>>::value> {};
 
@@ -326,8 +327,8 @@ struct internal::NaturalCodingTraits<
 template <>
 struct internal::NaturalIsMemcpyCompatible<
     ::test_protocolrequest::ParentGetChildTopResponse>
-    : public internal::BoolConstant<
-          !HasPadding<
+    : public std::bool_constant<
+          !internal::NaturalHasPadding<
               ::test_protocolrequest::ParentGetChildTopResponse>::value &&
           internal::NaturalIsMemcpyCompatible<
               ::fidl::ClientEnd<::test_protocolrequest::Child>>::value> {};
@@ -365,9 +366,10 @@ struct internal::NaturalCodingTraits<
 template <>
 struct internal::NaturalIsMemcpyCompatible<
     ::test_protocolrequest::ParentGetChildRequestTopResponse>
-    : public internal::BoolConstant<
-          !HasPadding<::test_protocolrequest::
-                          ParentGetChildRequestTopResponse>::value &&
+    : public std::bool_constant<
+          !internal::NaturalHasPadding<
+              ::test_protocolrequest::ParentGetChildRequestTopResponse>::
+              value &&
           internal::NaturalIsMemcpyCompatible<
               ::fidl::ServerEnd<::test_protocolrequest::Child>>::value> {};
 

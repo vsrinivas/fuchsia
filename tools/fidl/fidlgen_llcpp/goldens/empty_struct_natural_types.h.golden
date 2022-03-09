@@ -4,7 +4,7 @@
 
 #include <fidl/test.emptystruct/cpp/common_types.h>
 #include <fidl/test.emptystruct/cpp/markers.h>
-#include <lib/fidl/cpp/coding_traits.h>
+#include <lib/fidl/cpp/natural_coding_traits.h>
 #include <lib/fidl/cpp/unified_messaging.h>
 
 #include <cinttypes>
@@ -341,8 +341,8 @@ struct internal::NaturalCodingTraits<
 
 template <>
 struct internal::NaturalIsMemcpyCompatible<::test_emptystruct::Empty>
-    : public internal::BoolConstant<
-          !HasPadding<::test_emptystruct::Empty>::value &&
+    : public std::bool_constant<
+          !internal::NaturalHasPadding<::test_emptystruct::Empty>::value &&
           internal::NaturalIsMemcpyCompatible<uint8_t>::value> {};
 
 #endif  // __Fuchsia__
@@ -373,8 +373,9 @@ struct internal::NaturalCodingTraits<
 template <>
 struct internal::NaturalIsMemcpyCompatible<
     ::test_emptystruct::EmptyProtocolSendRequest>
-    : public internal::BoolConstant<
-          !HasPadding<::test_emptystruct::EmptyProtocolSendRequest>::value &&
+    : public std::bool_constant<
+          !internal::NaturalHasPadding<
+              ::test_emptystruct::EmptyProtocolSendRequest>::value &&
           internal::NaturalIsMemcpyCompatible<
               ::test_emptystruct::Empty>::value> {};
 
@@ -408,9 +409,10 @@ struct internal::NaturalCodingTraits<
 template <>
 struct internal::NaturalIsMemcpyCompatible<
     ::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse>
-    : public internal::BoolConstant<
-          !HasPadding<::test_emptystruct::
-                          EmptyProtocolSendAndReceiveTopResponse>::value &&
+    : public std::bool_constant<
+          !internal::NaturalHasPadding<
+              ::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse>::
+              value &&
           internal::NaturalIsMemcpyCompatible<
               ::test_emptystruct::Empty>::value> {};
 
@@ -444,8 +446,8 @@ struct internal::NaturalCodingTraits<
 template <>
 struct internal::NaturalIsMemcpyCompatible<
     ::test_emptystruct::EmptyProtocolSendAndReceiveRequest>
-    : public internal::BoolConstant<
-          !HasPadding<
+    : public std::bool_constant<
+          !internal::NaturalHasPadding<
               ::test_emptystruct::EmptyProtocolSendAndReceiveRequest>::value &&
           internal::NaturalIsMemcpyCompatible<
               ::test_emptystruct::Empty>::value> {};
@@ -478,8 +480,9 @@ struct internal::NaturalCodingTraits<
 template <>
 struct internal::NaturalIsMemcpyCompatible<
     ::test_emptystruct::EmptyProtocolReceiveRequest>
-    : public internal::BoolConstant<
-          !HasPadding<::test_emptystruct::EmptyProtocolReceiveRequest>::value &&
+    : public std::bool_constant<
+          !internal::NaturalHasPadding<
+              ::test_emptystruct::EmptyProtocolReceiveRequest>::value &&
           internal::NaturalIsMemcpyCompatible<
               ::test_emptystruct::Empty>::value> {};
 

@@ -4,7 +4,7 @@
 
 #include <fidl/test.requestflexibleenvelope/cpp/common_types.h>
 #include <fidl/test.requestflexibleenvelope/cpp/markers.h>
-#include <lib/fidl/cpp/coding_traits.h>
+#include <lib/fidl/cpp/natural_coding_traits.h>
 #include <lib/fidl/cpp/unified_messaging.h>
 
 #include <cinttypes>
@@ -546,16 +546,17 @@ struct internal::NaturalCodingTraits<
                 24, 16> {};
 
 template <>
-struct HasPadding<::test_requestflexibleenvelope::
-                      ProtocolRequestStrictResponseFlexibleRequest>
-    : public std::true_type {};
+struct internal::NaturalHasPadding<
+    ::test_requestflexibleenvelope::
+        ProtocolRequestStrictResponseFlexibleRequest> : public std::true_type {
+};
 
 template <>
 struct internal::NaturalIsMemcpyCompatible<
     ::test_requestflexibleenvelope::
         ProtocolRequestStrictResponseFlexibleRequest>
-    : public internal::BoolConstant<
-          !HasPadding<
+    : public std::bool_constant<
+          !internal::NaturalHasPadding<
               ::test_requestflexibleenvelope::
                   ProtocolRequestStrictResponseFlexibleRequest>::value &&
           internal::NaturalIsMemcpyCompatible<
@@ -593,16 +594,17 @@ struct internal::NaturalCodingTraits<
                 24, 16> {};
 
 template <>
-struct HasPadding<::test_requestflexibleenvelope::
-                      ProtocolRequestFlexibleResponseStrictTopResponse>
+struct internal::NaturalHasPadding<
+    ::test_requestflexibleenvelope::
+        ProtocolRequestFlexibleResponseStrictTopResponse>
     : public std::true_type {};
 
 template <>
 struct internal::NaturalIsMemcpyCompatible<
     ::test_requestflexibleenvelope::
         ProtocolRequestFlexibleResponseStrictTopResponse>
-    : public internal::BoolConstant<
-          !HasPadding<
+    : public std::bool_constant<
+          !internal::NaturalHasPadding<
               ::test_requestflexibleenvelope::
                   ProtocolRequestFlexibleResponseStrictTopResponse>::value &&
           internal::NaturalIsMemcpyCompatible<
@@ -640,16 +642,17 @@ struct internal::NaturalCodingTraits<
                 24, 16> {};
 
 template <>
-struct HasPadding<::test_requestflexibleenvelope::
-                      ProtocolRequestStrictResponseFlexibleTopResponse>
+struct internal::NaturalHasPadding<
+    ::test_requestflexibleenvelope::
+        ProtocolRequestStrictResponseFlexibleTopResponse>
     : public std::true_type {};
 
 template <>
 struct internal::NaturalIsMemcpyCompatible<
     ::test_requestflexibleenvelope::
         ProtocolRequestStrictResponseFlexibleTopResponse>
-    : public internal::BoolConstant<
-          !HasPadding<
+    : public std::bool_constant<
+          !internal::NaturalHasPadding<
               ::test_requestflexibleenvelope::
                   ProtocolRequestStrictResponseFlexibleTopResponse>::value &&
           internal::NaturalIsMemcpyCompatible<
@@ -687,16 +690,17 @@ struct internal::NaturalCodingTraits<
                 24, 16> {};
 
 template <>
-struct HasPadding<::test_requestflexibleenvelope::
-                      ProtocolRequestFlexibleResponseStrictRequest>
-    : public std::true_type {};
+struct internal::NaturalHasPadding<
+    ::test_requestflexibleenvelope::
+        ProtocolRequestFlexibleResponseStrictRequest> : public std::true_type {
+};
 
 template <>
 struct internal::NaturalIsMemcpyCompatible<
     ::test_requestflexibleenvelope::
         ProtocolRequestFlexibleResponseStrictRequest>
-    : public internal::BoolConstant<
-          !HasPadding<
+    : public std::bool_constant<
+          !internal::NaturalHasPadding<
               ::test_requestflexibleenvelope::
                   ProtocolRequestFlexibleResponseStrictRequest>::value &&
           internal::NaturalIsMemcpyCompatible<

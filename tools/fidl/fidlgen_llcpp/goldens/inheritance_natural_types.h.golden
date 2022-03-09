@@ -4,7 +4,7 @@
 
 #include <fidl/test.inheritance/cpp/common_types.h>
 #include <fidl/test.inheritance/cpp/markers.h>
-#include <lib/fidl/cpp/coding_traits.h>
+#include <lib/fidl/cpp/natural_coding_traits.h>
 #include <lib/fidl/cpp/unified_messaging.h>
 
 #include <cinttypes>
@@ -152,8 +152,9 @@ struct internal::NaturalCodingTraits<
 template <>
 struct internal::NaturalIsMemcpyCompatible<
     ::test_inheritance::SuperFooTopResponse>
-    : public internal::BoolConstant<
-          !HasPadding<::test_inheritance::SuperFooTopResponse>::value &&
+    : public std::bool_constant<
+          !internal::NaturalHasPadding<
+              ::test_inheritance::SuperFooTopResponse>::value &&
           internal::NaturalIsMemcpyCompatible<int64_t>::value> {};
 
 #endif  // __Fuchsia__
@@ -180,13 +181,14 @@ struct internal::NaturalCodingTraits<
                 ::test_inheritance::SuperFooRequest, 16, 16> {};
 
 template <>
-struct HasPadding<::test_inheritance::SuperFooRequest> : public std::true_type {
-};
+struct internal::NaturalHasPadding<::test_inheritance::SuperFooRequest>
+    : public std::true_type {};
 
 template <>
 struct internal::NaturalIsMemcpyCompatible<::test_inheritance::SuperFooRequest>
-    : public internal::BoolConstant<
-          !HasPadding<::test_inheritance::SuperFooRequest>::value &&
+    : public std::bool_constant<
+          !internal::NaturalHasPadding<
+              ::test_inheritance::SuperFooRequest>::value &&
           internal::NaturalIsMemcpyCompatible<::std::string>::value> {};
 
 #endif  // __Fuchsia__

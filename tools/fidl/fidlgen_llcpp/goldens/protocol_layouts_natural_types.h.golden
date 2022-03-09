@@ -4,7 +4,7 @@
 
 #include <fidl/test.protocollayouts/cpp/common_types.h>
 #include <fidl/test.protocollayouts/cpp/markers.h>
-#include <lib/fidl/cpp/coding_traits.h>
+#include <lib/fidl/cpp/natural_coding_traits.h>
 #include <lib/fidl/cpp/unified_messaging.h>
 
 #include <cinttypes>
@@ -1879,15 +1879,15 @@ struct internal::NaturalCodingTraits<
           24, 16> {};
 
 template <>
-struct HasPadding<
+struct internal::NaturalHasPadding<
     ::test_protocollayouts::MainProtocolTwoWayImportWithErrorTopResponse>
     : public std::true_type {};
 
 template <>
 struct internal::NaturalIsMemcpyCompatible<
     ::test_protocollayouts::MainProtocolTwoWayImportWithErrorTopResponse>
-    : public internal::BoolConstant<
-          !HasPadding<
+    : public std::bool_constant<
+          !internal::NaturalHasPadding<
               ::test_protocollayouts::
                   MainProtocolTwoWayImportWithErrorTopResponse>::value &&
           internal::NaturalIsMemcpyCompatible<
@@ -1924,16 +1924,17 @@ struct internal::NaturalCodingTraits<
           24, 16> {};
 
 template <>
-struct HasPadding<
+struct internal::NaturalHasPadding<
     ::test_protocollayouts::MainProtocolTwoWayAnonWithErrorTopResponse>
     : public std::true_type {};
 
 template <>
 struct internal::NaturalIsMemcpyCompatible<
     ::test_protocollayouts::MainProtocolTwoWayAnonWithErrorTopResponse>
-    : public internal::BoolConstant<
-          !HasPadding<::test_protocollayouts::
-                          MainProtocolTwoWayAnonWithErrorTopResponse>::value &&
+    : public std::bool_constant<
+          !internal::NaturalHasPadding<
+              ::test_protocollayouts::
+                  MainProtocolTwoWayAnonWithErrorTopResponse>::value &&
           internal::NaturalIsMemcpyCompatible<
               ::test_protocollayouts::MainProtocol_TwoWayAnonWithError_Result>::
               value> {};
@@ -1966,15 +1967,17 @@ struct internal::NaturalCodingTraits<
                 24, 16> {};
 
 template <>
-struct HasPadding<::test_protocollayouts::MainProtocolOnImportWithErrorRequest>
+struct internal::NaturalHasPadding<
+    ::test_protocollayouts::MainProtocolOnImportWithErrorRequest>
     : public std::true_type {};
 
 template <>
 struct internal::NaturalIsMemcpyCompatible<
     ::test_protocollayouts::MainProtocolOnImportWithErrorRequest>
-    : public internal::BoolConstant<
-          !HasPadding<::test_protocollayouts::
-                          MainProtocolOnImportWithErrorRequest>::value &&
+    : public std::bool_constant<
+          !internal::NaturalHasPadding<
+              ::test_protocollayouts::MainProtocolOnImportWithErrorRequest>::
+              value &&
           internal::NaturalIsMemcpyCompatible<
               ::test_protocollayouts::MainProtocol_OnImportWithError_Result>::
               value> {};
@@ -2008,15 +2011,17 @@ struct internal::NaturalCodingTraits<
 };
 
 template <>
-struct HasPadding<::test_protocollayouts::MainProtocolOnAnonWithErrorRequest>
+struct internal::NaturalHasPadding<
+    ::test_protocollayouts::MainProtocolOnAnonWithErrorRequest>
     : public std::true_type {};
 
 template <>
 struct internal::NaturalIsMemcpyCompatible<
     ::test_protocollayouts::MainProtocolOnAnonWithErrorRequest>
-    : public internal::BoolConstant<
-          !HasPadding<::test_protocollayouts::
-                          MainProtocolOnAnonWithErrorRequest>::value &&
+    : public std::bool_constant<
+          !internal::NaturalHasPadding<
+              ::test_protocollayouts::MainProtocolOnAnonWithErrorRequest>::
+              value &&
           internal::NaturalIsMemcpyCompatible<
               ::test_protocollayouts::MainProtocol_OnAnonWithError_Result>::
               value> {};
@@ -2051,16 +2056,17 @@ struct internal::NaturalCodingTraits<
           24, 16> {};
 
 template <>
-struct HasPadding<
+struct internal::NaturalHasPadding<
     ::test_protocollayouts::MainProtocolTwoWayLocalWithErrorTopResponse>
     : public std::true_type {};
 
 template <>
 struct internal::NaturalIsMemcpyCompatible<
     ::test_protocollayouts::MainProtocolTwoWayLocalWithErrorTopResponse>
-    : public internal::BoolConstant<
-          !HasPadding<::test_protocollayouts::
-                          MainProtocolTwoWayLocalWithErrorTopResponse>::value &&
+    : public std::bool_constant<
+          !internal::NaturalHasPadding<
+              ::test_protocollayouts::
+                  MainProtocolTwoWayLocalWithErrorTopResponse>::value &&
           internal::NaturalIsMemcpyCompatible<
               ::test_protocollayouts::
                   MainProtocol_TwoWayLocalWithError_Result>::value> {};
@@ -2094,15 +2100,17 @@ struct internal::NaturalCodingTraits<
 };
 
 template <>
-struct HasPadding<::test_protocollayouts::MainProtocolOnLocalWithErrorRequest>
+struct internal::NaturalHasPadding<
+    ::test_protocollayouts::MainProtocolOnLocalWithErrorRequest>
     : public std::true_type {};
 
 template <>
 struct internal::NaturalIsMemcpyCompatible<
     ::test_protocollayouts::MainProtocolOnLocalWithErrorRequest>
-    : public internal::BoolConstant<
-          !HasPadding<::test_protocollayouts::
-                          MainProtocolOnLocalWithErrorRequest>::value &&
+    : public std::bool_constant<
+          !internal::NaturalHasPadding<
+              ::test_protocollayouts::MainProtocolOnLocalWithErrorRequest>::
+              value &&
           internal::NaturalIsMemcpyCompatible<
               ::test_protocollayouts::MainProtocol_OnLocalWithError_Result>::
               value> {};

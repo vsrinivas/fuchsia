@@ -4,7 +4,7 @@
 
 #include <fidl/test.placementofattributes/cpp/common_types.h>
 #include <fidl/test.placementofattributes/cpp/markers.h>
-#include <lib/fidl/cpp/coding_traits.h>
+#include <lib/fidl/cpp/natural_coding_traits.h>
 #include <lib/fidl/cpp/unified_messaging.h>
 
 #include <cinttypes>
@@ -382,8 +382,9 @@ struct internal::NaturalCodingTraits<
 template <>
 struct internal::NaturalIsMemcpyCompatible<
     ::test_placementofattributes::ExampleStruct>
-    : public internal::BoolConstant<
-          !HasPadding<::test_placementofattributes::ExampleStruct>::value &&
+    : public std::bool_constant<
+          !internal::NaturalHasPadding<
+              ::test_placementofattributes::ExampleStruct>::value &&
           internal::NaturalIsMemcpyCompatible<uint32_t>::value> {};
 
 #endif  // __Fuchsia__
@@ -416,11 +417,11 @@ struct internal::NaturalCodingTraits<
 template <>
 struct internal::NaturalIsMemcpyCompatible<
     ::test_placementofattributes::ExampleProtocolMethodRequest>
-    : public internal::BoolConstant<
-          !HasPadding<::test_placementofattributes::
-                          ExampleProtocolMethodRequest>::value &&
-          internal::NaturalIsMemcpyCompatible<
-              ::test_exampleusing::Empty>::value> {};
+    : public std::bool_constant<!internal::NaturalHasPadding<
+                                    ::test_placementofattributes::
+                                        ExampleProtocolMethodRequest>::value &&
+                                internal::NaturalIsMemcpyCompatible<
+                                    ::test_exampleusing::Empty>::value> {};
 
 #endif  // __Fuchsia__
 

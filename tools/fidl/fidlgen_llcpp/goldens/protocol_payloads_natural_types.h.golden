@@ -4,7 +4,7 @@
 
 #include <fidl/test.protocolpayloads/cpp/common_types.h>
 #include <fidl/test.protocolpayloads/cpp/markers.h>
-#include <lib/fidl/cpp/coding_traits.h>
+#include <lib/fidl/cpp/natural_coding_traits.h>
 #include <lib/fidl/cpp/unified_messaging.h>
 
 #include <cinttypes>
@@ -1786,15 +1786,15 @@ struct internal::NaturalCodingTraits<
           24, 16> {};
 
 template <>
-struct HasPadding<
+struct internal::NaturalHasPadding<
     ::test_protocolpayloads::MainProtocolTwoWayImportWithErrorTopResponse>
     : public std::true_type {};
 
 template <>
 struct internal::NaturalIsMemcpyCompatible<
     ::test_protocolpayloads::MainProtocolTwoWayImportWithErrorTopResponse>
-    : public internal::BoolConstant<
-          !HasPadding<
+    : public std::bool_constant<
+          !internal::NaturalHasPadding<
               ::test_protocolpayloads::
                   MainProtocolTwoWayImportWithErrorTopResponse>::value &&
           internal::NaturalIsMemcpyCompatible<
@@ -1833,9 +1833,10 @@ struct internal::NaturalCodingTraits<
 template <>
 struct internal::NaturalIsMemcpyCompatible<
     ::test_protocolpayloads::MainProtocol_TwoWayAnonWithError_Response>
-    : public internal::BoolConstant<
-          !HasPadding<::test_protocolpayloads::
-                          MainProtocol_TwoWayAnonWithError_Response>::value &&
+    : public std::bool_constant<
+          !internal::NaturalHasPadding<
+              ::test_protocolpayloads::
+                  MainProtocol_TwoWayAnonWithError_Response>::value &&
           internal::NaturalIsMemcpyCompatible<uint32_t>::value> {};
 
 #endif  // __Fuchsia__
@@ -1868,16 +1869,17 @@ struct internal::NaturalCodingTraits<
           24, 16> {};
 
 template <>
-struct HasPadding<
+struct internal::NaturalHasPadding<
     ::test_protocolpayloads::MainProtocolTwoWayAnonWithErrorTopResponse>
     : public std::true_type {};
 
 template <>
 struct internal::NaturalIsMemcpyCompatible<
     ::test_protocolpayloads::MainProtocolTwoWayAnonWithErrorTopResponse>
-    : public internal::BoolConstant<
-          !HasPadding<::test_protocolpayloads::
-                          MainProtocolTwoWayAnonWithErrorTopResponse>::value &&
+    : public std::bool_constant<
+          !internal::NaturalHasPadding<
+              ::test_protocolpayloads::
+                  MainProtocolTwoWayAnonWithErrorTopResponse>::value &&
           internal::NaturalIsMemcpyCompatible<
               ::test_protocolpayloads::
                   MainProtocol_TwoWayAnonWithError_Result>::value> {};
@@ -1910,15 +1912,17 @@ struct internal::NaturalCodingTraits<
                 24, 16> {};
 
 template <>
-struct HasPadding<::test_protocolpayloads::MainProtocolOnImportWithErrorRequest>
+struct internal::NaturalHasPadding<
+    ::test_protocolpayloads::MainProtocolOnImportWithErrorRequest>
     : public std::true_type {};
 
 template <>
 struct internal::NaturalIsMemcpyCompatible<
     ::test_protocolpayloads::MainProtocolOnImportWithErrorRequest>
-    : public internal::BoolConstant<
-          !HasPadding<::test_protocolpayloads::
-                          MainProtocolOnImportWithErrorRequest>::value &&
+    : public std::bool_constant<
+          !internal::NaturalHasPadding<
+              ::test_protocolpayloads::MainProtocolOnImportWithErrorRequest>::
+              value &&
           internal::NaturalIsMemcpyCompatible<
               ::test_protocolpayloads::MainProtocol_OnImportWithError_Result>::
               value> {};
@@ -1954,9 +1958,10 @@ struct internal::NaturalCodingTraits<
 template <>
 struct internal::NaturalIsMemcpyCompatible<
     ::test_protocolpayloads::MainProtocol_OnAnonWithError_Response>
-    : public internal::BoolConstant<
-          !HasPadding<::test_protocolpayloads::
-                          MainProtocol_OnAnonWithError_Response>::value &&
+    : public std::bool_constant<
+          !internal::NaturalHasPadding<
+              ::test_protocolpayloads::MainProtocol_OnAnonWithError_Response>::
+              value &&
           internal::NaturalIsMemcpyCompatible<uint32_t>::value> {};
 
 #endif  // __Fuchsia__
@@ -1988,15 +1993,17 @@ struct internal::NaturalCodingTraits<
 };
 
 template <>
-struct HasPadding<::test_protocolpayloads::MainProtocolOnAnonWithErrorRequest>
+struct internal::NaturalHasPadding<
+    ::test_protocolpayloads::MainProtocolOnAnonWithErrorRequest>
     : public std::true_type {};
 
 template <>
 struct internal::NaturalIsMemcpyCompatible<
     ::test_protocolpayloads::MainProtocolOnAnonWithErrorRequest>
-    : public internal::BoolConstant<
-          !HasPadding<::test_protocolpayloads::
-                          MainProtocolOnAnonWithErrorRequest>::value &&
+    : public std::bool_constant<
+          !internal::NaturalHasPadding<
+              ::test_protocolpayloads::MainProtocolOnAnonWithErrorRequest>::
+              value &&
           internal::NaturalIsMemcpyCompatible<
               ::test_protocolpayloads::MainProtocol_OnAnonWithError_Result>::
               value> {};
@@ -2032,9 +2039,10 @@ struct internal::NaturalCodingTraits<
 template <>
 struct internal::NaturalIsMemcpyCompatible<
     ::test_protocolpayloads::MainProtocolTwoWayAnonWithErrorRequest>
-    : public internal::BoolConstant<
-          !HasPadding<::test_protocolpayloads::
-                          MainProtocolTwoWayAnonWithErrorRequest>::value &&
+    : public std::bool_constant<
+          !internal::NaturalHasPadding<
+              ::test_protocolpayloads::MainProtocolTwoWayAnonWithErrorRequest>::
+              value &&
           internal::NaturalIsMemcpyCompatible<uint32_t>::value> {};
 
 #endif  // __Fuchsia__
@@ -2067,9 +2075,10 @@ struct internal::NaturalCodingTraits<
 template <>
 struct internal::NaturalIsMemcpyCompatible<
     ::test_protocolpayloads::MainProtocolTwoWayAnonTopResponse>
-    : public internal::BoolConstant<
-          !HasPadding<::test_protocolpayloads::
-                          MainProtocolTwoWayAnonTopResponse>::value &&
+    : public std::bool_constant<
+          !internal::NaturalHasPadding<
+              ::test_protocolpayloads::MainProtocolTwoWayAnonTopResponse>::
+              value &&
           internal::NaturalIsMemcpyCompatible<uint32_t>::value> {};
 
 #endif  // __Fuchsia__
@@ -2102,8 +2111,8 @@ struct internal::NaturalCodingTraits<
 template <>
 struct internal::NaturalIsMemcpyCompatible<
     ::test_protocolpayloads::MainProtocolTwoWayAnonRequest>
-    : public internal::BoolConstant<
-          !HasPadding<
+    : public std::bool_constant<
+          !internal::NaturalHasPadding<
               ::test_protocolpayloads::MainProtocolTwoWayAnonRequest>::value &&
           internal::NaturalIsMemcpyCompatible<uint32_t>::value> {};
 
@@ -2137,8 +2146,8 @@ struct internal::NaturalCodingTraits<
 template <>
 struct internal::NaturalIsMemcpyCompatible<
     ::test_protocolpayloads::MainProtocolOneWayAnonRequest>
-    : public internal::BoolConstant<
-          !HasPadding<
+    : public std::bool_constant<
+          !internal::NaturalHasPadding<
               ::test_protocolpayloads::MainProtocolOneWayAnonRequest>::value &&
           internal::NaturalIsMemcpyCompatible<uint32_t>::value> {};
 
@@ -2171,8 +2180,8 @@ struct internal::NaturalCodingTraits<
 template <>
 struct internal::NaturalIsMemcpyCompatible<
     ::test_protocolpayloads::MainProtocolOnAnonRequest>
-    : public internal::BoolConstant<
-          !HasPadding<
+    : public std::bool_constant<
+          !internal::NaturalHasPadding<
               ::test_protocolpayloads::MainProtocolOnAnonRequest>::value &&
           internal::NaturalIsMemcpyCompatible<uint32_t>::value> {};
 
@@ -2203,8 +2212,9 @@ struct internal::NaturalCodingTraits<
 template <>
 struct internal::NaturalIsMemcpyCompatible<
     ::test_protocolpayloads::LocalStructPayload>
-    : public internal::BoolConstant<
-          !HasPadding<::test_protocolpayloads::LocalStructPayload>::value &&
+    : public std::bool_constant<
+          !internal::NaturalHasPadding<
+              ::test_protocolpayloads::LocalStructPayload>::value &&
           internal::NaturalIsMemcpyCompatible<uint32_t>::value> {};
 
 #endif  // __Fuchsia__
@@ -2237,16 +2247,17 @@ struct internal::NaturalCodingTraits<
           24, 16> {};
 
 template <>
-struct HasPadding<
+struct internal::NaturalHasPadding<
     ::test_protocolpayloads::MainProtocolTwoWayLocalWithErrorTopResponse>
     : public std::true_type {};
 
 template <>
 struct internal::NaturalIsMemcpyCompatible<
     ::test_protocolpayloads::MainProtocolTwoWayLocalWithErrorTopResponse>
-    : public internal::BoolConstant<
-          !HasPadding<::test_protocolpayloads::
-                          MainProtocolTwoWayLocalWithErrorTopResponse>::value &&
+    : public std::bool_constant<
+          !internal::NaturalHasPadding<
+              ::test_protocolpayloads::
+                  MainProtocolTwoWayLocalWithErrorTopResponse>::value &&
           internal::NaturalIsMemcpyCompatible<
               ::test_protocolpayloads::
                   MainProtocol_TwoWayLocalWithError_Result>::value> {};
@@ -2279,15 +2290,17 @@ struct internal::NaturalCodingTraits<
                 24, 16> {};
 
 template <>
-struct HasPadding<::test_protocolpayloads::MainProtocolOnLocalWithErrorRequest>
+struct internal::NaturalHasPadding<
+    ::test_protocolpayloads::MainProtocolOnLocalWithErrorRequest>
     : public std::true_type {};
 
 template <>
 struct internal::NaturalIsMemcpyCompatible<
     ::test_protocolpayloads::MainProtocolOnLocalWithErrorRequest>
-    : public internal::BoolConstant<
-          !HasPadding<::test_protocolpayloads::
-                          MainProtocolOnLocalWithErrorRequest>::value &&
+    : public std::bool_constant<
+          !internal::NaturalHasPadding<
+              ::test_protocolpayloads::MainProtocolOnLocalWithErrorRequest>::
+              value &&
           internal::NaturalIsMemcpyCompatible<
               ::test_protocolpayloads::MainProtocol_OnLocalWithError_Result>::
               value> {};

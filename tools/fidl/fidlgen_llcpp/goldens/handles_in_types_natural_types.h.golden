@@ -4,7 +4,7 @@
 
 #include <fidl/test.handlesintypes/cpp/common_types.h>
 #include <fidl/test.handlesintypes/cpp/markers.h>
-#include <lib/fidl/cpp/coding_traits.h>
+#include <lib/fidl/cpp/natural_coding_traits.h>
 #include <lib/fidl/cpp/unified_messaging.h>
 
 #include <cinttypes>
@@ -284,14 +284,15 @@ struct internal::NaturalCodingTraits<
                 ::test_handlesintypes::HandlesInTypes, 104, 96> {};
 
 template <>
-struct HasPadding<::test_handlesintypes::HandlesInTypes>
+struct internal::NaturalHasPadding<::test_handlesintypes::HandlesInTypes>
     : public std::true_type {};
 
 template <>
 struct internal::NaturalIsMemcpyCompatible<
     ::test_handlesintypes::HandlesInTypes>
-    : public internal::BoolConstant<
-          !HasPadding<::test_handlesintypes::HandlesInTypes>::value &&
+    : public std::bool_constant<
+          !internal::NaturalHasPadding<
+              ::test_handlesintypes::HandlesInTypes>::value &&
           internal::NaturalIsMemcpyCompatible<::zx::vmo>::value &&
           internal::NaturalIsMemcpyCompatible<
               ::std::vector<::zx::vmo>>::value &&

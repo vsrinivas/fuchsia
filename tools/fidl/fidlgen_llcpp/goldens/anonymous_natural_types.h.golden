@@ -4,7 +4,7 @@
 
 #include <fidl/test.anonymous/cpp/common_types.h>
 #include <fidl/test.anonymous/cpp/markers.h>
-#include <lib/fidl/cpp/coding_traits.h>
+#include <lib/fidl/cpp/natural_coding_traits.h>
 #include <lib/fidl/cpp/unified_messaging.h>
 
 #include <cinttypes>
@@ -849,8 +849,8 @@ struct internal::NaturalCodingTraits<
 
 template <>
 struct internal::NaturalIsMemcpyCompatible<::test_anonymous::TableData>
-    : public internal::BoolConstant<
-          !HasPadding<::test_anonymous::TableData>::value &&
+    : public std::bool_constant<
+          !internal::NaturalHasPadding<::test_anonymous::TableData>::value &&
           internal::NaturalIsMemcpyCompatible<uint8_t>::value> {};
 
 #endif  // __Fuchsia__
@@ -879,14 +879,15 @@ struct internal::NaturalCodingTraits<
                 ::test_anonymous::SomeProtocolSomeMethodRequest, 40, 32> {};
 
 template <>
-struct HasPadding<::test_anonymous::SomeProtocolSomeMethodRequest>
-    : public std::true_type {};
+struct internal::NaturalHasPadding<
+    ::test_anonymous::SomeProtocolSomeMethodRequest> : public std::true_type {};
 
 template <>
 struct internal::NaturalIsMemcpyCompatible<
     ::test_anonymous::SomeProtocolSomeMethodRequest>
-    : public internal::BoolConstant<
-          !HasPadding<::test_anonymous::SomeProtocolSomeMethodRequest>::value &&
+    : public std::bool_constant<
+          !internal::NaturalHasPadding<
+              ::test_anonymous::SomeProtocolSomeMethodRequest>::value &&
           internal::NaturalIsMemcpyCompatible<
               ::test_anonymous::UnionMember>::value &&
           internal::NaturalIsMemcpyCompatible<
@@ -915,12 +916,13 @@ struct internal::NaturalCodingTraits<
                 ::test_anonymous::OverrideTest, 56, 40> {};
 
 template <>
-struct HasPadding<::test_anonymous::OverrideTest> : public std::true_type {};
+struct internal::NaturalHasPadding<::test_anonymous::OverrideTest>
+    : public std::true_type {};
 
 template <>
 struct internal::NaturalIsMemcpyCompatible<::test_anonymous::OverrideTest>
-    : public internal::BoolConstant<
-          !HasPadding<::test_anonymous::OverrideTest>::value &&
+    : public std::bool_constant<
+          !internal::NaturalHasPadding<::test_anonymous::OverrideTest>::value &&
           internal::NaturalIsMemcpyCompatible<::test_anonymous::Op>::value &&
           internal::NaturalIsMemcpyCompatible<
               ::std::unique_ptr<::test_anonymous::Expression>>::value> {};
@@ -954,8 +956,8 @@ struct internal::NaturalCodingTraits<
 template <>
 struct internal::NaturalIsMemcpyCompatible<
     ::test_anonymous::SomeProtocol_SomeMethod_Response>
-    : public internal::BoolConstant<
-          !HasPadding<
+    : public std::bool_constant<
+          !internal::NaturalHasPadding<
               ::test_anonymous::SomeProtocol_SomeMethod_Response>::value &&
           internal::NaturalIsMemcpyCompatible<
               ::test_anonymous::BitsMember>::value> {};
@@ -987,14 +989,15 @@ struct internal::NaturalCodingTraits<
                 ::test_anonymous::SomeProtocolSomeMethodTopResponse, 24, 16> {};
 
 template <>
-struct HasPadding<::test_anonymous::SomeProtocolSomeMethodTopResponse>
+struct internal::NaturalHasPadding<
+    ::test_anonymous::SomeProtocolSomeMethodTopResponse>
     : public std::true_type {};
 
 template <>
 struct internal::NaturalIsMemcpyCompatible<
     ::test_anonymous::SomeProtocolSomeMethodTopResponse>
-    : public internal::BoolConstant<
-          !HasPadding<
+    : public std::bool_constant<
+          !internal::NaturalHasPadding<
               ::test_anonymous::SomeProtocolSomeMethodTopResponse>::value &&
           internal::NaturalIsMemcpyCompatible<
               ::test_anonymous::SomeProtocol_SomeMethod_Result>::value> {};

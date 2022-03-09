@@ -4,7 +4,7 @@
 
 #include <fidl/test.vectors/cpp/common_types.h>
 #include <fidl/test.vectors/cpp/markers.h>
-#include <lib/fidl/cpp/coding_traits.h>
+#include <lib/fidl/cpp/natural_coding_traits.h>
 #include <lib/fidl/cpp/unified_messaging.h>
 
 #include <cinttypes>
@@ -115,13 +115,14 @@ struct internal::NaturalCodingTraits<
                 ::test_vectors::ExampleUseOfVectors, 32, 32> {};
 
 template <>
-struct HasPadding<::test_vectors::ExampleUseOfVectors> : public std::true_type {
-};
+struct internal::NaturalHasPadding<::test_vectors::ExampleUseOfVectors>
+    : public std::true_type {};
 
 template <>
 struct internal::NaturalIsMemcpyCompatible<::test_vectors::ExampleUseOfVectors>
-    : public internal::BoolConstant<
-          !HasPadding<::test_vectors::ExampleUseOfVectors>::value &&
+    : public std::bool_constant<
+          !internal::NaturalHasPadding<
+              ::test_vectors::ExampleUseOfVectors>::value &&
           internal::NaturalIsMemcpyCompatible<::std::vector<uint8_t>>::value &&
           internal::NaturalIsMemcpyCompatible<
               ::std::vector<::std::vector<bool>>>::value> {};

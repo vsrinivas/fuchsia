@@ -4,7 +4,7 @@
 
 #include <fidl/test.drivertwoway/cpp/common_types.h>
 #include <fidl/test.drivertwoway/cpp/markers.h>
-#include <lib/fidl/cpp/coding_traits.h>
+#include <lib/fidl/cpp/natural_coding_traits.h>
 #include <lib/fidl/cpp/unified_messaging.h>
 
 #include <cinttypes>
@@ -163,8 +163,9 @@ struct internal::NaturalCodingTraits<
 template <>
 struct internal::NaturalIsMemcpyCompatible<
     ::test_drivertwoway::TwoWayAddTopResponse>
-    : public internal::BoolConstant<
-          !HasPadding<::test_drivertwoway::TwoWayAddTopResponse>::value &&
+    : public std::bool_constant<
+          !internal::NaturalHasPadding<
+              ::test_drivertwoway::TwoWayAddTopResponse>::value &&
           internal::NaturalIsMemcpyCompatible<uint16_t>::value> {};
 
 #endif  // __Fuchsia__
@@ -194,8 +195,9 @@ struct internal::NaturalCodingTraits<
 template <>
 struct internal::NaturalIsMemcpyCompatible<
     ::test_drivertwoway::TwoWayAddRequest>
-    : public internal::BoolConstant<
-          !HasPadding<::test_drivertwoway::TwoWayAddRequest>::value &&
+    : public std::bool_constant<
+          !internal::NaturalHasPadding<
+              ::test_drivertwoway::TwoWayAddRequest>::value &&
           internal::NaturalIsMemcpyCompatible<uint16_t>::value> {};
 
 #endif  // __Fuchsia__

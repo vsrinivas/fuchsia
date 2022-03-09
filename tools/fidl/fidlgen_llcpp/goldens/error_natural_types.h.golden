@@ -4,7 +4,7 @@
 
 #include <fidl/test.error/cpp/common_types.h>
 #include <fidl/test.error/cpp/markers.h>
-#include <lib/fidl/cpp/coding_traits.h>
+#include <lib/fidl/cpp/natural_coding_traits.h>
 #include <lib/fidl/cpp/unified_messaging.h>
 
 #include <cinttypes>
@@ -311,8 +311,9 @@ struct internal::NaturalCodingTraits<
 
 template <>
 struct internal::NaturalIsMemcpyCompatible<::test_error::Example_foo_Response>
-    : public internal::BoolConstant<
-          !HasPadding<::test_error::Example_foo_Response>::value &&
+    : public std::bool_constant<
+          !internal::NaturalHasPadding<
+              ::test_error::Example_foo_Response>::value &&
           internal::NaturalIsMemcpyCompatible<int64_t>::value> {};
 
 #endif  // __Fuchsia__
@@ -339,13 +340,14 @@ struct internal::NaturalCodingTraits<
                 ::test_error::ExampleFooTopResponse, 24, 16> {};
 
 template <>
-struct HasPadding<::test_error::ExampleFooTopResponse> : public std::true_type {
-};
+struct internal::NaturalHasPadding<::test_error::ExampleFooTopResponse>
+    : public std::true_type {};
 
 template <>
 struct internal::NaturalIsMemcpyCompatible<::test_error::ExampleFooTopResponse>
-    : public internal::BoolConstant<
-          !HasPadding<::test_error::ExampleFooTopResponse>::value &&
+    : public std::bool_constant<
+          !internal::NaturalHasPadding<
+              ::test_error::ExampleFooTopResponse>::value &&
           internal::NaturalIsMemcpyCompatible<
               ::test_error::Example_foo_Result>::value> {};
 
@@ -372,12 +374,14 @@ struct internal::NaturalCodingTraits<
                 ::test_error::ExampleFooRequest, 16, 16> {};
 
 template <>
-struct HasPadding<::test_error::ExampleFooRequest> : public std::true_type {};
+struct internal::NaturalHasPadding<::test_error::ExampleFooRequest>
+    : public std::true_type {};
 
 template <>
 struct internal::NaturalIsMemcpyCompatible<::test_error::ExampleFooRequest>
-    : public internal::BoolConstant<
-          !HasPadding<::test_error::ExampleFooRequest>::value &&
+    : public std::bool_constant<
+          !internal::NaturalHasPadding<
+              ::test_error::ExampleFooRequest>::value &&
           internal::NaturalIsMemcpyCompatible<::std::string>::value> {};
 
 #endif  // __Fuchsia__

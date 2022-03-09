@@ -29,7 +29,6 @@ source_set("cpp") {
     "natural_encoder.cc",
   ]
   public_deps = [
-    "//sdk/lib/fidl/cpp:cpp_base",
     "//sdk/lib/stdcompat",
     "//zircon/system/ulib/fidl:fidl-llcpp",
     "//zircon/system/ulib/zxc",

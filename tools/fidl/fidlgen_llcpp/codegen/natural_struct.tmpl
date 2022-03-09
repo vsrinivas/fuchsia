@@ -136,13 +136,13 @@ class {{ .Name }} final {
 
   {{ if .TypeShapeV1.HasPadding }}
   template<>
-  struct HasPadding<{{ . }}> : public std::true_type {};
+  struct internal::NaturalHasPadding<{{ . }}> : public std::true_type {};
   {{ end }}
 
   {{ if .FullDeclMemcpyCompatibleDeps }}
   template<>
-  struct internal::NaturalIsMemcpyCompatible<{{ . }}> : public internal::BoolConstant<
-      !HasPadding<{{ . }}>::value
+  struct internal::NaturalIsMemcpyCompatible<{{ . }}> : public std::bool_constant<
+      !internal::NaturalHasPadding<{{ . }}>::value
   {{- range .FullDeclMemcpyCompatibleDeps }}
       && internal::NaturalIsMemcpyCompatible<{{ .Unified }}>::value
     {{- end -}}
