@@ -72,10 +72,7 @@ void ControllerImpl::Configure(Options options, ConfigureCallback callback) {
   callback(runner_->Configure(options_));
 }
 
-void ControllerImpl::GetOptions(GetOptionsCallback callback) {
-  auto options = CopyOptions(*options_);
-  callback(std::move(options));
-}
+void ControllerImpl::GetOptions(GetOptionsCallback callback) { callback(CopyOptions(*options_)); }
 
 void ControllerImpl::AddToCorpus(CorpusType corpus_type, FidlInput fidl_input,
                                  AddToCorpusCallback callback) {

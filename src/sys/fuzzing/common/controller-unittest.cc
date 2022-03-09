@@ -9,6 +9,7 @@
 
 #include <gtest/gtest.h>
 
+#include "src/sys/fuzzing/common/async-socket.h"
 #include "src/sys/fuzzing/common/binding.h"
 #include "src/sys/fuzzing/common/dispatcher.h"
 #include "src/sys/fuzzing/common/status.h"
@@ -53,12 +54,15 @@ class ControllerTest : public AsyncTest {
 // Unit tests.
 
 TEST_F(ControllerTest, ConfigureAndGetOptions) {
-  ControllerSyncPtr controller;
-  Bind(controller.NewRequest());
+  ControllerPtr controller;
+  Bind(controller.NewRequest(dispatcher()));
 
   // GetOptions without Configure.
   Options options1;
-  EXPECT_EQ(controller->GetOptions(&options1), ZX_OK);
+  Bridge<Options> bridge1;
+  controller->GetOptions(bridge1.completer.bind());
+  FUZZING_EXPECT_OK(bridge1.consumer.promise_or(fpromise::error()), &options1);
+  RunUntilIdle();
   EXPECT_NE(options1.seed(), 0U);
 
   // Configure.
@@ -78,10 +82,11 @@ TEST_F(ControllerTest, ConfigureAndGetOptions) {
   options1.set_detect_exits(detect_exits);
   options1.set_detect_leaks(detect_leaks);
   options1.set_run_limit(run_limit.get());
-  zx_status_t status;
   auto options2 = CopyOptions(options1);
-  EXPECT_EQ(controller->Configure(std::move(options1), &status), ZX_OK);
-  EXPECT_EQ(status, ZX_OK);
+  Bridge<zx_status_t> bridge2;
+  controller->Configure(std::move(options1), bridge2.completer.bind());
+  FUZZING_EXPECT_OK(bridge2.consumer.promise_or(fpromise::ok(ZX_ERR_CANCELED)), ZX_OK);
+  RunUntilIdle();
 
   // Can Configure again.
   uint64_t malloc_limit = 64ULL << 10;
@@ -100,12 +105,17 @@ TEST_F(ControllerTest, ConfigureAndGetOptions) {
   options2.set_leak_exitcode(leak_exitcode);
   options2.set_oom_exitcode(oom_exitcode);
   options2.set_pulse_interval(pulse_interval.get());
-  EXPECT_EQ(controller->Configure(std::move(options2), &status), ZX_OK);
-  EXPECT_EQ(status, ZX_OK);
+  Bridge<zx_status_t> bridge3;
+  controller->Configure(std::move(options2), bridge3.completer.bind());
+  FUZZING_EXPECT_OK(bridge3.consumer.promise_or(fpromise::ok(ZX_ERR_CANCELED)), ZX_OK);
+  RunUntilIdle();
 
   // Changes are reflected.
   Options options3;
-  EXPECT_EQ(controller->GetOptions(&options3), ZX_OK);
+  Bridge<Options> bridge4;
+  controller->GetOptions(bridge4.completer.bind());
+  FUZZING_EXPECT_OK(bridge4.consumer.promise_or(fpromise::error()), &options3);
+  RunUntilIdle();
   EXPECT_EQ(options3.runs(), runs);
   EXPECT_EQ(options3.max_total_time(), max_total_time.get());
   EXPECT_EQ(options3.seed(), seed);
@@ -125,24 +135,29 @@ TEST_F(ControllerTest, ConfigureAndGetOptions) {
 }
 
 TEST_F(ControllerTest, AddToCorpus) {
-  ControllerSyncPtr controller;
-  Bind(controller.NewRequest());
+  ControllerPtr controller;
+  Bind(controller.NewRequest(dispatcher()));
   Input input0;
   Input seed_input1({0xde, 0xad});
   Input seed_input2({0xbe, 0xef});
   Input live_input3({0xfe, 0xed});
   Input live_input4({0xfa, 0xce});
-  zx_status_t result;
 
   // Interleave the calls.
-  EXPECT_EQ(controller->AddToCorpus(CorpusType::LIVE, Transmit(live_input3), &result), ZX_OK);
-  EXPECT_EQ(result, ZX_OK);
-  EXPECT_EQ(controller->AddToCorpus(CorpusType::SEED, Transmit(seed_input1), &result), ZX_OK);
-  EXPECT_EQ(result, ZX_OK);
-  EXPECT_EQ(controller->AddToCorpus(CorpusType::SEED, Transmit(seed_input2), &result), ZX_OK);
-  EXPECT_EQ(result, ZX_OK);
-  EXPECT_EQ(controller->AddToCorpus(CorpusType::LIVE, Transmit(live_input4), &result), ZX_OK);
-  EXPECT_EQ(result, ZX_OK);
+  Bridge<zx_status_t> bridge1, bridge2, bridge3, bridge4;
+  controller->AddToCorpus(CorpusType::LIVE, AsyncSocketWrite(executor(), live_input3.Duplicate()),
+                          bridge3.completer.bind());
+  controller->AddToCorpus(CorpusType::SEED, AsyncSocketWrite(executor(), seed_input1.Duplicate()),
+                          bridge1.completer.bind());
+  controller->AddToCorpus(CorpusType::SEED, AsyncSocketWrite(executor(), seed_input2.Duplicate()),
+                          bridge2.completer.bind());
+  controller->AddToCorpus(CorpusType::LIVE, AsyncSocketWrite(executor(), live_input4.Duplicate()),
+                          bridge4.completer.bind());
+  FUZZING_EXPECT_OK(bridge1.consumer.promise_or(fpromise::error()));
+  FUZZING_EXPECT_OK(bridge2.consumer.promise_or(fpromise::error()));
+  FUZZING_EXPECT_OK(bridge3.consumer.promise_or(fpromise::error()));
+  FUZZING_EXPECT_OK(bridge4.consumer.promise_or(fpromise::error()));
+  RunUntilIdle();
 
   EXPECT_EQ(runner()->ReadFromCorpus(CorpusType::SEED, 0).ToHex(), input0.ToHex());
   EXPECT_EQ(runner()->ReadFromCorpus(CorpusType::SEED, 1).ToHex(), seed_input1.ToHex());
@@ -194,34 +209,43 @@ TEST_F(ControllerTest, ReadCorpus) {
 }
 
 TEST_F(ControllerTest, WriteDictionary) {
-  ControllerSyncPtr controller;
-  Bind(controller.NewRequest());
-  auto invalid = FakeRunner::invalid_dictionary();
-  auto valid = FakeRunner::valid_dictionary();
-  zx_status_t result;
+  ControllerPtr controller;
+  Bind(controller.NewRequest(dispatcher()));
 
-  EXPECT_EQ(controller->WriteDictionary(Transmit(invalid), &result), ZX_OK);
-  EXPECT_EQ(result, ZX_ERR_INVALID_ARGS);
+  Bridge<zx_status_t> bridge1;
+  controller->WriteDictionary(AsyncSocketWrite(executor(), FakeRunner::invalid_dictionary()),
+                              bridge1.completer.bind());
+  FUZZING_EXPECT_OK(bridge1.consumer.promise_or(fpromise::error()), ZX_ERR_INVALID_ARGS);
 
-  EXPECT_EQ(controller->WriteDictionary(Transmit(valid), &result), ZX_OK);
-  EXPECT_EQ(result, ZX_OK);
+  Bridge<zx_status_t> bridge2;
+  controller->WriteDictionary(AsyncSocketWrite(executor(), FakeRunner::valid_dictionary()),
+                              bridge2.completer.bind());
+  FUZZING_EXPECT_OK(bridge2.consumer.promise_or(fpromise::error()), ZX_OK);
+
+  RunUntilIdle();
 }
 
 TEST_F(ControllerTest, ReadDictionary) {
-  ControllerSyncPtr controller;
+  ControllerPtr controller;
   Bind(controller.NewRequest());
-  FidlInput result;
 
   auto dict = FakeRunner::valid_dictionary();
   EXPECT_EQ(runner()->ParseDictionary(dict), ZX_OK);
-  EXPECT_EQ(controller->ReadDictionary(&result), ZX_OK);
-  auto received = Receive(std::move(result));
-  EXPECT_EQ(received.ToHex(), dict.ToHex());
+
+  Bridge<FidlInput> bridge;
+  controller->ReadDictionary(bridge.completer.bind());
+  FUZZING_EXPECT_OK(bridge.consumer.promise_or(fpromise::error())
+                        .or_else([] { return fpromise::error(ZX_ERR_CANCELED); })
+                        .and_then([&](FidlInput& fidl_input) {
+                          return AsyncSocketRead(executor(), std::move(fidl_input));
+                        }),
+                    std::move(dict));
+  RunUntilIdle();
 }
 
 TEST_F(ControllerTest, GetStatus) {
-  ControllerSyncPtr controller;
-  Bind(controller.NewRequest());
+  ControllerPtr controller;
+  Bind(controller.NewRequest(dispatcher()));
   Status result;
 
   Status status;
@@ -235,7 +259,11 @@ TEST_F(ControllerTest, GetStatus) {
   auto expected = CopyStatus(status);
   runner()->set_status(std::move(status));
 
-  EXPECT_EQ(controller->GetStatus(&result), ZX_OK);
+  Bridge<Status> bridge;
+  controller->GetStatus(bridge.completer.bind());
+  FUZZING_EXPECT_OK(bridge.consumer.promise_or(fpromise::error()), &result);
+  RunUntilIdle();
+
   EXPECT_EQ(result.running(), expected.running());
   EXPECT_EQ(result.runs(), expected.runs());
   EXPECT_EQ(result.elapsed(), expected.elapsed());
@@ -264,18 +292,25 @@ TEST_F(ControllerTest, AddMonitor) {
 }
 
 TEST_F(ControllerTest, GetResults) {
-  ControllerSyncPtr controller;
-  Bind(controller.NewRequest());
-  FuzzResult result;
-  FidlInput fidl_input;
-  Input result_input({0xde, 0xad, 0xbe, 0xef});
+  ControllerPtr controller;
+  Bind(controller.NewRequest(dispatcher()));
 
-  runner()->set_result(FuzzResult::DEATH);
-  runner()->set_result_input(result_input);
-  EXPECT_EQ(controller->GetResults(&result, &fidl_input), ZX_OK);
-  EXPECT_EQ(result, FuzzResult::DEATH);
-  auto received = Receive(std::move(fidl_input));
-  EXPECT_EQ(received.ToHex(), result_input.ToHex());
+  Artifact artifact(FuzzResult::DEATH, {0xde, 0xad, 0xbe, 0xef});
+  runner()->set_result(artifact.fuzz_result());
+  runner()->set_result_input(artifact.input());
+
+  Bridge<FidlArtifact> bridge;
+  controller->GetResults([completer = std::move(bridge.completer)](FuzzResult fuzz_result,
+                                                                   FidlInput fidl_input) mutable {
+    completer.complete_ok(MakeFidlArtifact(fuzz_result, std::move(fidl_input)));
+  });
+  FUZZING_EXPECT_OK(bridge.consumer.promise_or(fpromise::error())
+                        .or_else([] { return fpromise::error(ZX_ERR_CANCELED); })
+                        .and_then([&](FidlArtifact& fidl_artifact) {
+                          return AsyncSocketRead(executor(), std::move(fidl_artifact));
+                        }),
+                    std::move(artifact));
+  RunUntilIdle();
 }
 
 TEST_F(ControllerTest, Execute) {

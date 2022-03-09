@@ -78,6 +78,24 @@ class AsyncTest : public ::testing::Test {
         .discard_result();
   }
 
+  // Checks if a promise returns ok and returns its value via |out|. |handler| can be anything that
+  // can be passed to |fpromise::make_promise| to make a promise.
+  //
+  // Callers should use |EXPECT_OK| instead of calling this directly.
+  //
+  template <typename Handler, typename ValueType>
+  Promise<> ExpectOk(const char* file, int line, Handler&& handler, ValueType* out) {
+    auto promise = fpromise::make_promise(std::move(handler));
+    return promise.then(
+        [file, line, out](typename decltype(promise)::result_type& result) -> Result<> {
+          EXPECT_TRUE(result.is_ok()) << "Called from " << file << ":" << line;
+          if (result.is_ok()) {
+            *out = result.take_value();
+          }
+          return fpromise::ok();
+        });
+  }
+
   // Checks if a promise returns an error. |handler| can be anything that can be passed to
   // |fpromise::make_promise| to make a promise.
   //
