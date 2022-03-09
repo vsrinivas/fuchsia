@@ -120,17 +120,22 @@ go_library("lib") {
 if (is_host) {
   host_test_data("clang_coverage_test_deps") {
     sources = [
+      "$host_out_dir/covargs",
       "//prebuilt/third_party/clang/${host_platform}/bin/llvm-cov",
       "//prebuilt/third_party/clang/${host_platform}/bin/llvm-profdata",
       "clang_golden_coverage.json",
       clang_coverage_test_binary_path,
     ]
 
-    deps = [ ":copy_clang_coverage_test_binary" ]
+    deps = [
+      ":copy_clang_coverage_test_binary",
+      "//tools/debug/covargs",
+    ]
   }
 
   host_test_data("rust_coverage_test_deps") {
     sources = [
+      "$host_out_dir/covargs",
       "$rust_sysroot/lib",
       "$rustc_prefix/llvm-profdata",
       "//prebuilt/third_party/clang/${host_platform}/bin/llvm-cov",
@@ -138,7 +143,10 @@ if (is_host) {
       rust_coverage_test_binary_path,
     ]
 
-    deps = [ ":copy_rust_coverage_test_binary" ]
+    deps = [
+      ":copy_rust_coverage_test_binary",
+      "//tools/debug/covargs",
+    ]
   }
 }
 
@@ -155,6 +163,8 @@ go_test("clang_coverage_tests") {
   if (is_host && target_cpu == "x64") {
     environments = [ emu_env ]
     args = [
+      "--covargs",
+      rebase_path("$host_out_dir/covargs", root_build_dir),
       "--coverage-test-binary",
       rebase_path(clang_coverage_test_binary_path, root_build_dir),
       "--coverage-test-name",
@@ -185,6 +195,8 @@ go_test("rust_coverage_tests") {
   if (is_host && target_cpu == "x64") {
     environments = [ emu_env ]
     args = [
+      "--covargs",
+      rebase_path("$host_out_dir/covargs", root_build_dir),
       "--coverage-test-binary",
       rebase_path(rust_coverage_test_binary_path, root_build_dir),
       "--coverage-test-name",
