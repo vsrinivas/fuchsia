@@ -31,12 +31,14 @@ Usage: $script [options] output_files... -- command...
 Options:
   --help | -h : print help and exit
   --label STRING : build system label for this action
+  --[no-]execute : check the command without executing it.  [default: execute]
 EOF
 }
 
 command_break=0
 prev_opt=
 label=
+execute=1
 # Collect names of output files.
 outputs=()
 for opt
@@ -59,6 +61,8 @@ do
     -h | --help) usage; exit ;;
     --label) prev_opt=label ;;
     --label=*) label="$optarg" ;;
+    --execute) execute=1 ;;
+    --no-execute) execute=0 ;;
     --) command_break=1; shift; break ;;
     *) outputs+=( "$opt" ) ;;
   esac
@@ -106,24 +110,31 @@ do
   # Do not shift, keep tokens for execution.
 done
 
-# Run the command.
-"$@"
+if [[ "$execute" == 1 ]]
+then
+  # Run the command.
+  "$@"
 
-status="$?"
+  status="$?"
 
-# On success, check the outputs.
-test "$status" != 0 || {
-  for f in "${outputs[@]}"
-  do
-    if grep -q "$build_subdir" "$f"
-    then
-      err=1
-      error_msg "Output file $f contains '$build_subdir'." \
-        "If this cannot be fixed in the tool, mark this action in GN with 'no_output_dir_leaks = false'."
-    fi
-    # TODO(http://fxbug.dev/92670) check for known remote paths, like "/b/f/w"
-  done
-  test "$err" = 0 || exit 1
-}
+  # On success, check the outputs.
+  test "$status" != 0 || {
+    for f in "${outputs[@]}"
+    do
+      if grep -q "$build_subdir" "$f"
+      then
+        err=1
+        error_msg "Output file $f contains '$build_subdir'." \
+          "If this cannot be fixed in the tool, mark this action in GN with 'no_output_dir_leaks = false'."
+      fi
+      # TODO(http://fxbug.dev/92670) check for known remote paths, like "/b/f/w"
+    done
+  }
+else
+  # Skip execution.
+  status=0
+fi
+
+test "$err" = 0 || exit 1
 
 exit "$status"

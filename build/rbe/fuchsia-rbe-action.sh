@@ -18,6 +18,8 @@ project_root="$(readlink -f "$script_dir"/../..)"
 
 script_subdir="$(realpath --relative-to="$project_root" "$script_dir")"
 
+check_output_dir_leaks="$script_dir"/output-scanner.sh
+
 # $PWD must be inside $project_root.
 build_subdir="$(realpath --relative-to="$project_root" . )"
 project_root_rel="$(realpath --relative-to=. "$project_root")"
@@ -65,6 +67,7 @@ inputs=
 output_files=
 rewrapper_options=()
 want_auto_reproxy=0
+canonicalize_working_dir="false"
 
 prev_opt=
 # Extract script options before --
@@ -102,6 +105,12 @@ do
     --inputs) prev_opt=inputs ;;
     --output_files=*) output_files="$optarg" ;;
     --output_files) prev_opt=output_files ;;
+
+    # Detect this option, and forward it:
+    --canonicalize_working_dir=*)
+      canonicalize_working_dir="$optarg"
+      rewrapper_options+=( "$opt" )
+      ;;
 
     --auto-reproxy) want_auto_reproxy=1 ;;
     --no-reproxy) want_auto_reproxy=0 ;;
@@ -166,6 +175,11 @@ test -z "$fsatrace_path" || {
 inputs_joined="$(IFS=, ; echo "${inputs_array[*]}")"
 output_files_joined="$(IFS=, ; echo "${output_files_array[*]}")"
 
+output_files_rel=()
+for f in "${output_files_array[@]}"
+do output_files_rel+=( "${f#$build_subdir/}" )
+done
+
 rewrapper_options+=(
   --inputs="$inputs_joined"
   --output_files="$output_files_joined"
@@ -194,6 +208,18 @@ test "$dry_run" = 0 || {
   echo "[$script]:" "${full_command[@]}"
   exit
 }
+
+# Pre-flight check for output dir leaks in the remote command.
+# Enforce this when using --canonicalize_working_dir.
+# We could not just wrap the rewrapper command with the same script
+# because rewrapper's --output_files arguments do need to be relative to the
+# *exec_root*, and thus, contain the $build_subdir in their paths' prefixes.
+test "$canonicalize_working_dir" = "false" || \
+  "$check_output_dir_leaks" --no-execute "${output_files_rel[@]}" -- "$@" || {
+  echo "Detected local output dir leaks in the command.  Aborting remote execution."
+  exit 1
+}
+
 "${full_command[@]}"
 
 # Exit normally on success.
