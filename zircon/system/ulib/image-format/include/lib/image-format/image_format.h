@@ -8,6 +8,7 @@
 #include <fidl/fuchsia.sysmem/cpp/wire.h>
 #include <fidl/fuchsia.sysmem2/cpp/wire.h>
 #include <fuchsia/sysmem/c/fidl.h>
+#include <lib/fpromise/result.h>
 #include <zircon/pixelformat.h>
 
 // Iff this returns true, the two pixel formats are equal.

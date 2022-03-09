@@ -157,9 +157,8 @@ if (is_fuchsia) {
       # <lib/fidl/llcpp/async_binding.h> has #include <lib/async/dispatcher.h>
       "//zircon/system/ulib/async:headers",
 
-      # <lib/fidl/llcpp/sync_call.h> has #include <lib/fit/result.h>.
+      # <lib/fidl/llcpp/wire_messaging.h> has #include <lib/fit/function.h>.
       "//sdk/lib/fit:headers",
-      "//sdk/lib/fit-promise:headers",
 
       # <lib/fidl/llcpp/async_binding.h> has #include <lib/sync/completion.h>
       "//zircon/system/ulib/sync:headers",
