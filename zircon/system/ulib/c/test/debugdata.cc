@@ -189,9 +189,8 @@ TEST(DebugDataTests, ConfirmMatchingFuchsiaIODefinitions) {
   ASSERT_EQ(fuchsia_io_OPEN_RIGHT_READABLE, fio::wire::kOpenRightReadable);
   ASSERT_EQ(fuchsia_io_OPEN_RIGHT_WRITABLE, fio::wire::kOpenRightWritable);
 
-  // LLCPP doesn't expose the ordinal, so we have to dig into internals to assert this.
-  fidl::internal::TransactionalRequest<fio::Directory::Open> for_ordinal;
-  ASSERT_EQ(fuchsia_io_DirectoryOpenOrdinal, for_ordinal.header.ordinal);
+  ASSERT_EQ(fuchsia_io_DirectoryOpenOrdinal,
+            fidl::internal::WireOrdinal<fio::Directory::Open>::value);
 
   zx::channel ch1, ch2;
   ASSERT_OK(zx::channel::create(0, &ch1, &ch2));
