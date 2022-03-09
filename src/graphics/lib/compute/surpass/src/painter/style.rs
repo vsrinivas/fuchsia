@@ -325,7 +325,7 @@ impl Texture {
         let offsets = ty.mul_add(f32x8::splat(self.image.width as f32), tx);
         let data = &*self.image.data;
         // TODO(fxb/94997): Evaluate SIMD conversion to u32x8.
-        let pixels = offsets.as_array().map(|o| data[o as usize]);
+        let pixels = offsets.to_array().map(|o| data[o as usize]);
         let get_channel = |c| {
             f32x8::from_array([
                 pixels[0][c],
@@ -805,10 +805,10 @@ mod tests {
 
         for (i, color) in colors.iter_mut().enumerate() {
             *color = [
-                separate[0].as_array()[i],
-                separate[1].as_array()[i],
-                separate[2].as_array()[i],
-                separate[3].as_array()[i],
+                separate[0].to_array()[i],
+                separate[1].to_array()[i],
+                separate[2].to_array()[i],
+                separate[3].to_array()[i],
             ];
         }
 
@@ -1082,7 +1082,7 @@ mod tests {
             .unwrap(),
         );
         let texture = Texture { transform, image };
-        texture.color_at(-2.0, -2.0).iter().map(|v| v.as_array().clone()).collect()
+        texture.color_at(-2.0, -2.0).iter().map(|v| v.to_array().clone()).collect()
     }
 
     #[test]

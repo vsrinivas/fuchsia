@@ -466,7 +466,7 @@ impl f32x8 {
         ])
     }
 
-    pub fn as_array(&self) -> [f32; 8] {
+    pub fn to_array(&self) -> [f32; 8] {
         self.0
     }
 

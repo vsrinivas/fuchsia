@@ -371,7 +371,7 @@ impl f32x8 {
         Self(unsafe { _mm256_loadu_ps(val.as_ptr()) })
     }
 
-    pub fn as_array(&self) -> [f32; 8] {
+    pub fn to_array(&self) -> [f32; 8] {
         let mut result = [0.0f32; 8];
         unsafe { _mm256_storeu_ps(result.as_mut_ptr(), self.0) }
         result
