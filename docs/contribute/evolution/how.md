@@ -231,7 +231,6 @@ platform interfaces are observed and respected.
 [kernel-objects]: /docs/reference/kernel_objects/objects.md
 [l10n-packaging]: /docs/development/internationalization/localization/packaging.md
 [logs]: /docs/reference/diagnostics/logs/README.md
-[monikers]: /docs/concepts/components/v2/monikers.md
 [namespaces]: /docs/concepts/process/namespaces.md
 [oot-component-testing]: /docs/contribute/roadmap/2021/oot_component_testing.md
 [oot-system-testing]: /docs/contribute/roadmap/2021/oot_system_testing.md

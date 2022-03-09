@@ -239,7 +239,7 @@ even if CTS coverage never reaches 100% of the platform surface.
 [hub]: /docs/concepts/components/v2/hub.md
 [inspect]: /docs/development/diagnostics/inspect/README.md
 [logs]: /docs/reference/diagnostics/logs/README.md
-[monikers]: /docs/concepts/components/v2/monikers.md
+[monikers]: /docs/concepts/components/v2/identifiers.md#monikers
 [oot-component-testing]: /docs/contribute/roadmap/2021/oot_component_testing.md
 [oot-system-testing]: /docs/contribute/roadmap/2021/oot_system_testing.md
 [package-url]: /docs/concepts/packages/package_url.md

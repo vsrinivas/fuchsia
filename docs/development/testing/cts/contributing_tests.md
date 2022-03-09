@@ -278,5 +278,5 @@ the future, when possible.
 [Start the Fuchsia Emulator]: /docs/get-started/set_up_femu.md
 [Test Components]: /docs/development/testing/components/test_component.md
 [file a bug]: https://bugs.fuchsia.dev/p/fuchsia/issues/list?q=component%3ADeveloperExperience%3ECTS
-[relative component URL]: /docs/concepts/components/component_urls.md
+[relative component URL]: /docs/reference/components/url.md#relative
 [CTS bug component]: https://bugs.fuchsia.dev/p/fuchsia/templates/detail?saved=1&template=Fuchsia%20Compatibility%20Test%20Suite%20%28CTS%29&ts=1627669234

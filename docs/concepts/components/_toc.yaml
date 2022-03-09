@@ -18,14 +18,12 @@ toc:
   path: /docs/concepts/components/v2/lifecycle.md
 - title: "Topology"
   path: /docs/concepts/components/v2/topology.md
-- title: "Monikers"
-  path: /docs/concepts/components/v2/monikers.md
+- title: "Identifiers"
+  path: /docs/concepts/components/v2/identifiers.md
 - title: "Realms"
   path: /docs/concepts/components/v2/realms.md
 - title: "Environments"
   path: /docs/concepts/components/v2/environments.md
-- title: "Component URLs"
-  path: /docs/concepts/components/component_urls.md
 - title: "Termination policies"
   path: /docs/concepts/components/v2/termination_policies.md
 - title: "Capabilities"

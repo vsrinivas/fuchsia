@@ -496,7 +496,6 @@ revisions for the events API.
 [doc-main-process-critical]: /docs/concepts/components/v2/elf_runner.md#using_the_elf_runner
 [doc-manifests]: /docs/concepts/components/v2/component_manifests.md
 [doc-migration-guide]: /docs/development/components/v2/migration/README.md
-[doc-moniker-privacy]: /docs/concepts/components/v2/monikers.md#privacy
 [doc-sysmgr]: /docs/concepts/components/v1/sysmgr.md
 [gerrit-rfc-component-events]: https://fuchsia-review.googlesource.com/c/fuchsia/+/535692
 [gerrit-rfc-starter]: https://fuchsia-review.googlesource.com/c/fuchsia/+/533701

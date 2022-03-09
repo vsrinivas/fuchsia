@@ -421,7 +421,7 @@ offer: [
 [doc-logs]: /docs/concepts/components/diagnostics/logs/README.md
 [doc-manifests-program]: https://fuchsia.dev/reference/cml#program
 [doc-manifests]: /docs/concepts/components/v2/component_manifests.md
-[doc-monikers]: /docs/concepts/components/v2/monikers.md
+[doc-monikers]: /docs/reference/components/moniker.md
 [doc-packages]: /docs/concepts/packages/package.md
 [doc-protocol]: /docs/concepts/components/v2/capabilities/protocol.md
 [doc-routing]: /docs/concepts/components/v2/capabilities/README.md#routing

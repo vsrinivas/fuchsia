@@ -58,7 +58,7 @@ component declaration from a component URL.
 [doc-children]: /docs/concepts/components/v2/realms.md#child-component-instances
 [doc-capabilities]: /docs/concepts/components/v2/capabilities/README.md
 [doc-collections]: /docs/concepts/components/v2/realms.md#collections
-[doc-component-url]: /docs/concepts/components/component_urls.md
+[doc-component-url]: /docs/concepts/components/v2/identifiers.md#component-urls
 [doc-environments]: /docs/concepts/components/v2/environments.md
 [fidl-component-decl]: https://fuchsia.dev/reference/fidl/fuchsia.component.decl#Component
 [fidl-wire-encoded]: /docs/reference/fidl/language/wire-format/README.md#dual-forms

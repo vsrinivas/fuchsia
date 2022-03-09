@@ -11,6 +11,10 @@ toc:
 - heading: "Component Framework"
 - title: "Component manifest (.cml)"
   path: /reference/cml.md
+- title: "Component moniker"
+  path: /docs/reference/components/moniker.md
+- title: "Component URL"
+  path: /docs/reference/components/url.md
 - heading: "FIDL"
 - title: "Bindings"
   section:

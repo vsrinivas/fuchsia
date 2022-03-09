@@ -194,12 +194,12 @@ definitions for full documentation.
 [collections]: https://fuchsia.dev/reference/cml#collections
 [component-manifest-examples]: ./component_manifests.md#examples
 [component-manifests]: ./component_manifests.md
-[component-urls]: /docs/concepts/components/component_urls.md
+[component-urls]: /docs/concepts/components/v2/identifiers.md#component-urls
 [environments]: ./environments.md
 [expose]: https://fuchsia.dev/reference/cml#expose
 [offer]: https://fuchsia.dev/reference/cml#offer
 [framework-protocols]: ./capabilities/protocol.md#framework
-[monikers]: ./monikers.md
+[monikers]: ./identifiers.md#monikers
 [realm.fidl]: https://fuchsia.dev/reference/fidl/fuchsia.sys2#Realm
 [runners]: ./capabilities/runners.md
 [topology-instance-tree]: ./topology.md#component-instance-tree

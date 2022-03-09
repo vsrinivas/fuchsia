@@ -125,5 +125,5 @@ support standard Fuchsia URL schemes:
 [fidl-resolver]: /sdk/fidl/fuchsia.sys2/runtime/component_resolver.fidl
 [fidl-decl]: /sdk/fidl/fuchsia.component.decl/component.fidl
 [fidl-directory]: /sdk/fidl/fuchsia.io/directory.fidl
-[url-boot]: /docs/concepts/components/component_urls.md#fuchsia-boot
-[url-pkg]: /docs/concepts/components/component_urls.md#fuchsia-pkg
+[url-boot]: /docs/reference/components/url.md#fuchsia-boot
+[url-pkg]: /docs/reference/components/url.md#fuchsia-pkg

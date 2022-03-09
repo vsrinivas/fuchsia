@@ -341,6 +341,6 @@ specific features your components may support:
 [migrate-features-events]: /docs/development/components/v2/migration/features.md#events
 [migrate-tests]: /docs/development/components/v2/migration/tests.md
 [migrate-tests-inject]: /docs/development/components/v2/migration/tests.md#injected-services
-[moniker]: /docs/concepts/components/v2/monikers.md
+[moniker]: /docs/reference/components/moniker.md
 [realm-builder-monikers]: /docs/development/testing/components/realm_builder.md#test-component-moniker
 [syslog]: /docs/development/diagnostics/logs/recording.md#logsinksyslog

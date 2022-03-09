@@ -17,8 +17,8 @@ modern component framework. For details on legacy components, see
     destruction.
 -   [Topology](topology.md): The relationships among component instances.
 -   [Realms](realms.md): Sub-trees of the component instance topology.
--   [Monikers](monikers.md): Identifiers for component instances based on the
-    component topology.
+-   [Identifiers](identifiers.md): Identifiers for components and
+    component instances.
 
 ## Developing components
 
@@ -26,7 +26,6 @@ modern component framework. For details on legacy components, see
     how to route them between components.
 -   [Component manifests](component_manifests.md): How to define a component for
     the framework.
--   [Component URLs][doc-component-urls] are URLs that identify components.
 -   [ELF runner](elf_runner.md): How to launch a component from an ELF file.
     Typically useful for developing system components in C++, Rust, or Go.
 
@@ -55,7 +54,6 @@ modern component framework. For details on legacy components, see
 
 [glossary.components v1]: /docs/glossary/README.md#components-v1
 [glossary.components v2]: /docs/glossary/README.md#components-v2
-[doc-component-urls]: /docs/concepts/components/component_urls.md
 [legacy-components]: /docs/concepts/components/v1/README.md
 [migration]: /docs/contribute/open_projects/components/migration.md
 [rfc0093]: /docs/contribute/governance/rfcs/0093_component_manifest_design_principles.md

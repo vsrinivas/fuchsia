@@ -1,63 +1,11 @@
-# Monikers
+# Component monikers
 
-<<../_v2_banner.md>>
-
-
-A moniker identifies a specific component instance in the component tree using
-a topological path.
-
-Note: Use [component URLs][doc-component-urls] to identify the location from
-which the component's manifest and assets are retrieved; use monikers to
-identify a specific instance of a component.
-
-## Types
-
-There are three types of monikers:
-
-- Child moniker: Denotes a child of a component instance relative to its parent.
-- Relative moniker: Denotes the path from a source component instance to a
-  target component instance. It is expressed as a sequence of child monikers.
-- Absolute moniker: Denotes the path from the root of the component instance
-  tree to a target component instance. It is expressed as a sequence of child
-  monikers. Every component instance has a unique absolute moniker.
-
-## Stability
-
-Monikers are stable identifiers. Assuming the component topology does not
-change, the monikers used to identify component instances in the topology
-will remain the same.
-
-## Uniqueness
-
-Each time a component instance is destroyed and a new component instance with
-the same name is created in its place in the component topology (as a child
-of the same parent), the new instance is assigned a unique instance identifier
-to distinguish it from prior instances in that place.
-
-Monikers include unique instance identifiers to prevent confusion of old
-component instances with new component instances of the same name as the
-tree evolves.
-
-## Privacy
-
-Monikers may contain privacy-sensitive information about other components that
-the user is running.
-
-To preserve the encapsulation of the system, components should be unable to
-determine the identity of other components running outside of their own
-realm. Accordingly, monikers are only transmitted on a need-to-know basis
-or in an obfuscated form.
-
-For example, components are not given information about their own absolute
-moniker because it would also reveal information about their parents and
-ancestors.
-
-Monikers may be collected in system logs. They are also used to implement the
-component framework's persistence features.
-
-## Notation
+A [component moniker][glossary.moniker] identifies a specific component instance
+in the component tree using a topological path.
 
 This section describes the syntax used for displaying monikers to users.
+
+## Identifiers {#identifiers}
 
 ### Instance and Collection Names
 
@@ -67,7 +15,7 @@ are arranged by their parent into named collections.
 Syntax: Each name is a string of 1 to 100 of the following characters:
 `a-z`, `0-9`, `_`, `.`, `-`.
 
-See [component manifest][doc-manifests] documentation for more details.
+See the [component manifest reference][cml-reference] for more details.
 
 ### Instance Identifiers
 
@@ -76,7 +24,7 @@ parent destroys a component instance and creates a new one with the same name.
 
 Syntax: Decimal formatted 32-bit unsigned integer using characters: `0-9`.
 
-### Child Monikers
+## Child Monikers {#child}
 
 Represented by the child's collection name (if any), name, and instance
 identifier delimited by `:`.
@@ -93,7 +41,7 @@ Examples:
 - `carol:0`: child "carol" (instance id 0)
 - `support:dan:1`: child "dan" (instance id 1) in collection "support"
 
-### Relative Monikers
+## Relative Monikers {#relative}
 
 Represented by the minimal sequence of child monikers encountered when tracing
 upwards from a source to the common ancestor of the source and target and then
@@ -140,7 +88,7 @@ Examples:
 - `.\alice:2/bob:0`: a cousin - traverse up `alice:2` then down `bob:0`
 - `./support:dan:1`: a child - traverse down into collection child `support:dan:1`
 
-### Absolute Monikers
+## Absolute Monikers {#absolute}
 
 Represented by the absolute path from the root to the component instance as
 a sequence of child monikers.
@@ -165,6 +113,5 @@ Examples:
 - `/alice:2/support:dan:1`: from root traverse down `alice:2` then down `support:dan:1`
 - `/alice:2/carol:1`: from root traverse down `alice:2` then down `carol:1`
 
-
-[doc-manifests]: component_manifests.md
-[doc-component-urls]: introduction.md#component-urls
+[glossary.moniker]: /docs/glossary/README.md#moniker
+[cml-reference]: https://fuchsia.dev/reference/cml

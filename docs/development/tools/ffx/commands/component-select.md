@@ -64,7 +64,7 @@ Consider this example:
 You may optionally omit the property selector: `core/remote-control:out` is
 equivalent to `core/remote-control:out:*`.
 
-[component-moniker]: /docs/concepts/components/v2/monikers.md
+[component-moniker]: /docs/reference/components/moniker.md
 [component-routing]: /docs/concepts/components/v2/capabilities/README.md#routing-terminology
 [component-topology]: /docs/concepts/components/v2/topology.md
 [ffx-plugins]: /docs/development/tools/ffx/development/plugins.md

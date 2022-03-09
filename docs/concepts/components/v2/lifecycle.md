@@ -147,7 +147,7 @@ fx list-packages --base
 [doc-manifests-expose]: https://fuchsia.dev/reference/cml#expose
 [doc-manifests-offer]: https://fuchsia.dev/reference/cml#offer
 [doc-manifests]: component_manifests.md
-[doc-monikers]: monikers.md
+[doc-monikers]: identifiers.md#monikers
 [doc-package-set]: /docs/concepts/packages/package.md#types_of_packages
 [doc-storage]: capabilities/storage.md
 [doc-topology]: topology.md

@@ -286,7 +286,7 @@ Starting component instance...
 [capability-protocol]: /docs/concepts/components/v2/capabilities/protocol.md
 [capability-storage]: /docs/concepts/components/v2/capabilities/storage.md
 [component-select]: /docs/development/tools/ffx/commands/component-select.md
-[component-url]: /docs/concepts/components/component_urls.md
+[component-url]: /docs/reference/components/url.md
 [fidl-launcher]: https://fuchsia.dev/reference/fidl/fuchsia.process#Launcher
 [fidl-logger]: https://fuchsia.dev/reference/fidl/fuchsia.logger#LogSink
 [ffx-reference]: https://fuchsia.dev/reference/tools/sdk/ffx.md#component

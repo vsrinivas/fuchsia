@@ -211,5 +211,4 @@ Further reading:
 [doc-runners]: /docs/concepts/components/v2/capabilities/runners.md
 [doc-resolvers]: /docs/concepts/components/v2/capabilities/resolvers.md
 [doc-topology]: /docs/concepts/components/v2/topology.md
-[doc-component-urls]: /docs/concepts/components/component_urls.md
 [doc-packages]: /docs/concepts/packages/package.md

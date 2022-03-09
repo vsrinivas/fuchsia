@@ -22,7 +22,7 @@ session component URL.
    extension.
 
    For more information, see
-   [`fuchsia-pkg`](/docs/concepts/components/component_urls.md#fuchsia-pkg) and
+   [`fuchsia-pkg`](/docs/reference/components/url.md#fuchsia-pkg) and
    [Package name](/docs/concepts/packages/package_url.md#package-name).
 
 1.  In the `BUILD.gn` file, include the configuration file for the session

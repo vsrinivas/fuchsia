@@ -271,5 +271,5 @@ For a printf log, this would look as follows in JSON:
 ```
 
 [archivist]: /docs/reference/diagnostics/inspect/tree.md#archivist
-[moniker]: /docs/concepts/components/v2/monikers.md
+[moniker]: /docs/reference/components/moniker.md
 [stream-diagnostics]: https://fuchsia.dev/reference/fidl/fuchsia.diagnostics#ArchiveAccessor.StreamDiagnostics)

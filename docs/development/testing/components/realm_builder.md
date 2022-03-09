@@ -454,7 +454,7 @@ controller, see [offering test capabilities](#routing-from-test).
 [cap-routes]: /docs/concepts/components/v2/capabilities/README.md#routing
 [children]: https://fuchsia.dev/reference/cml#children
 [collection]: https://fuchsia.dev/reference/cml#collections
-[component-urls]: /docs/concepts/components/component_urls.md
+[component-urls]: /docs/reference/components/url.md
 [environment]: https://fuchsia.dev/reference/cml#environments
 [expose]: https://fuchsia.dev/reference/cml#expose
 [namespaces]: /docs/concepts/process/namespaces.md

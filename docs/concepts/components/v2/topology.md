@@ -128,8 +128,8 @@ information.
 [doc-expose]: https://fuchsia.dev/reference/cml#expose
 [doc-realms]: /docs/concepts/components/v2/realms.md
 [doc-realm-framework-protocol]: /docs/concepts/components/v2/realms.md#realm-framework-protocol
-[doc-monikers]: /docs/concepts/components/v2/monikers.md
-[doc-component-urls]: /docs/concepts/components/component_urls.md
+[doc-monikers]: /docs/concepts/components/v2/identifiers.md#monikers
+[doc-component-urls]: /docs/concepts/components/v2/identifiers.md#component-urls
 [doc-capability-routing]: /docs/concepts/components/v2/capabilities/README.md#routing
 [doc-component-declaration]: /docs/concepts/components/v2/component_manifests.md#component-declaration
 [wiki-least-privilege]: https://en.wikipedia.org/wiki/Principle_of_least_privilege

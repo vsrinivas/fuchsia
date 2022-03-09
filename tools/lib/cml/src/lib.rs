@@ -994,7 +994,7 @@ pub struct Document {
     /// ```
     ///
     /// [doc-children]: /docs/concepts/components/v2/realms.md#child-component-instances
-    /// [component-url]: /docs/concepts/components/component_urls.md
+    /// [component-url]: /docs/reference/components/url.md
     /// [doc-eager]: /docs/concepts/components/v2/lifecycle.md#eager_binding
     /// [doc-reboot-on-terminate]: /docs/concepts/components/v2/termination_policies.md#reboot-on-terminate
     pub children: Option<Vec<Child>>,
