@@ -211,9 +211,20 @@ fn load_manifests_blobs_match_budgets(budgets: &Vec<PackageSetBudget>) -> Result
         }
 
         if budget.merge {
-            let mut map: HashMap<_, _> =
-                budget_blob.blobs.drain(..).map(|blob| (blob.hash.clone(), blob)).collect();
+            let mut map: HashMap<_, _> = budget_blob
+                .blobs
+                .drain(..)
+                .filter_map(|b| match b.path.as_str() {
+                    // Because we are merging the packages into a single package, remove the
+                    // meta.fars from each individual input.
+                    "meta/" => None,
+                    _ => Some((b.hash.clone(), b)),
+                })
+                .collect();
             budget_blob.blobs = map.drain().map(|(_k, v)| v).collect();
+
+            // Add additional space for the meta.far.
+            budget_blob.budget.used_bytes = 32768;
         }
 
         budget_blobs.push(budget_blob);
@@ -344,7 +355,8 @@ fn compute_budget_results(
 ) -> Vec<BudgetResult> {
     let mut result = vec![];
     for budget_usage in budget_usages.iter() {
-        let used_bytes: u64 = budget_usage
+        let mut used_bytes = budget_usage.budget.used_bytes;
+        used_bytes += budget_usage
             .blobs
             .iter()
             .filter(|blob| !ignore_hashes.contains(&blob.hash))
@@ -352,7 +364,7 @@ fn compute_budget_results(
                 Some(blob_entry_count) => blob_entry_count.size / blob_entry_count.share_count,
                 None => 0,
             })
-            .sum();
+            .sum::<u64>();
         result.push(BudgetResult {
             name: budget_usage.budget.name.clone(),
             used_bytes: used_bytes,
@@ -625,7 +637,7 @@ mod tests {
         test_fs.assert_eq(
             "output.json",
             json!({
-                "Software Deliver": 40i32,
+                "Software Deliver": 32808i32,
                 "Software Deliver.budget": 1i32,
                 "Software Deliver.creepBudget": 2i32,
                 "Software Deliver.owner": "http://go/fuchsia-size-stats/single_component/?f=component%3Ain%3ASoftware+Deliver"

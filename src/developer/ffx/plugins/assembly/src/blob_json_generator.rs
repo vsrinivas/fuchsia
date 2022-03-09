@@ -29,7 +29,7 @@ impl BlobJsonGenerator {
         let board_config: BoardConfig =
             read_config(board_config).context("Failed to read the board config")?;
         Ok(BlobJsonGenerator {
-            layout: board_config.blobfs.layout,
+            layout: "deprecated_padded".into(),
             compress: board_config.blobfs.compress,
             tools,
         })

@@ -28,10 +28,7 @@ def is_different(key, expected, actual):
 
     # Amount of difference between the value beyond which one the test fails.
     accepted_difference = {
-        "/system (drivers and early boot)": 200000,
-        # See fxb/94824#c7: The new tool uses blobfs rather than blobfs-compress
-        # which is more efficient and return smaller files.
-        "Update Package": 100000,
+        "/system (drivers and early boot)": 8192,
         # The new tool use the same rounding strategy for resources and packages.
         # The former tool makes exact computation for resource and rounding for packages.
         "Distributed shared libraries": 500,
