@@ -27,6 +27,10 @@ pub struct AutoTestGeneratorCommand {
     #[argh(switch, short = 'c')]
     pub cpp: bool,
 
+    /// disables adding Fuchsia copyright header
+    #[argh(switch)]
+    pub nocopyright: bool,
+
     /// also print to stdout.
     #[argh(switch, short = 'v')]
     pub verbose: bool,

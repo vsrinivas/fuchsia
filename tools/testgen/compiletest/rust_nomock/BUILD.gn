@@ -10,7 +10,10 @@ rustc_test("bin") {
   name = "echo_server_test"
   edition = "2018"
   source_root = "src/echo_server_test.rs"
-  sources = [ "src/echo_server_test.rs" ]
+  sources = [
+    "src/echo_server_test.rs",
+    "src/lib.rs",
+  ]
   deps = [
     "//examples/components/routing/fidl:echo-rustc",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",

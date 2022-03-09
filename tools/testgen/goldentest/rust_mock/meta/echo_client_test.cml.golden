@@ -7,7 +7,7 @@
        "//src/sys/test_runners/rust/default.shard.cml",
     ],
     program: {
-       binary: "bin/echo_server_test",
+       binary: "bin/echo_client_test",
     },
     use: [
        {

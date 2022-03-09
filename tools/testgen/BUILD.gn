@@ -37,10 +37,12 @@ if (is_host) {
       "src/templates/template_rust_BUILD",
       "src/templates/template_rust_mock_function",
       "src/templates/template_rust_test_function",
+      "src/templates/template_rust_connect_function",
       "src/templates/template_cpp_mock_function",
       "src/templates/template_cpp_test_function",
       "src/templates/template_cpp_manifest",
       "src/templates/template_cpp_BUILD",
+      "src/templates/template_copyright",
     ]
   }
   install_host_tools("host") {

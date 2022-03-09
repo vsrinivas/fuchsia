@@ -6,12 +6,14 @@ package goldentest
 import (
 	"context"
 	"flag"
-	"github.com/google/go-cmp/cmp"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/google/go-cmp/cmp"
 )
 
 var (
@@ -85,6 +87,18 @@ func compareLineByLine(t *testing.T, golden, generated []string, filename string
 	}
 }
 
+func diff(t *testing.T, generated_path, golden_path string) {
+	generated_code, err := os.ReadFile(generated_path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	golden_code, err := os.ReadFile(golden_path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	compareLineByLine(t, strings.Split(string(golden_code), "\n")[1:], strings.Split(string(generated_code), "\n")[1:], path.Base(golden_path))
+}
+
 func compareGolden(t *testing.T) {
 	t.Logf("generated_build %s", output)
 	t.Logf("golden_build %s", *golden)
@@ -92,59 +106,29 @@ func compareGolden(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Cannot find absolute path to golden %s, error: %v", *golden, err)
 	}
-
 	// Build
-	generated_build, err := os.ReadFile(filepath.Join(output, "BUILD.gn"))
-	if err != nil {
-		t.Fatal(err)
+	diff(t, filepath.Join(output, "BUILD.gn"), filepath.Join(golden_abs, "BUILD.gn.golden"))
+	if strings.Contains(*cm, "echo_server.cm") {
+		// Manifest
+		diff(t, filepath.Join(output, "meta/echo_server_test.cml"), filepath.Join(golden_abs, "echo_server_test.cml.golden"))
+	} else {
+		// Manifest
+		diff(t, filepath.Join(output, "meta/echo_client_test.cml"), filepath.Join(golden_abs, "echo_client_test.cml.golden"))
 	}
-	golden_build, err := os.ReadFile(filepath.Join(golden_abs, "BUILD.gn.golden"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	// Skip the first line that contains the copyright year.
-	compareLineByLine(t, strings.Split(string(golden_build), "\n")[1:], strings.Split(string(generated_build), "\n")[1:], "BUILD.gn")
-
-	// Manifest
-	generated_manifest, err := os.ReadFile(filepath.Join(output, "meta/echo_server_test.cml"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	golden_manifest, err := os.ReadFile(filepath.Join(golden_abs, "echo_server_test.cml.golden"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	// Skip the first line that contains the copyright year.
-	compareLineByLine(t, strings.Split(string(golden_manifest), "\n")[1:], strings.Split(string(generated_manifest), "\n")[1:], "manifest")
-
 	// Code
 	if *language == "rust" {
-		generated_code, err := os.ReadFile(filepath.Join(output, "src/echo_server_test.rs"))
-		if err != nil {
-			t.Fatal(err)
+		if *mock {
+			diff(t, filepath.Join(output, "src/echo_client_test.rs"), filepath.Join(golden_abs, "echo_client_test.rs.golden"))
+		} else {
+			diff(t, filepath.Join(output, "src/echo_server_test.rs"), filepath.Join(golden_abs, "echo_server_test.rs.golden"))
 		}
-		golden_code, err := os.ReadFile(filepath.Join(golden_abs, "echo_server_test.rs.golden"))
-		if err != nil {
-			t.Fatal(err)
-		}
-		if diff := cmp.Diff(golden_code, generated_code); diff != "" {
-			t.Errorf("Found mismatch in generated rust code (-want +got):\n%s", diff)
-		}
+		diff(t, filepath.Join(output, "src/lib.rs"), filepath.Join(golden_abs, "lib.rs.golden"))
 	}
 	if *language == "cpp" {
-		generated_code, err := os.ReadFile(filepath.Join(output, "src/echo_server_test.cc"))
-		if err != nil {
-			t.Fatal(err)
-		}
-		golden_code, err := os.ReadFile(filepath.Join(golden_abs, "echo_server_test.cc.golden"))
-		if err != nil {
-			t.Fatal(err)
-		}
-		if diff := cmp.Diff(golden_code, generated_code); diff != "" {
-			t.Errorf("Found mismatch in generated cpp code (-want +got):\n%s", diff)
-		}
+		diff(t, filepath.Join(output, "src/echo_server_test.cc"), filepath.Join(golden_abs, "echo_server_test.cc.golden"))
 	}
 }
+
 func Test_Golden(t *testing.T) {
 	setUp(t)
 	runTestGen(t)

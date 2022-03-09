@@ -6,8 +6,8 @@
 import("//build/components.gni")
 import("//build/rust/rustc_test.gni")
 
-rustc_test("bin") {
-  name = "echo_client_test"
+rustc_test("echo_client_compiletest") {
+  name = "echo_client_compiletest"
   edition = "2018"
   source_root = "src/echo_client_test.rs"
   sources = [
@@ -15,24 +15,23 @@ rustc_test("bin") {
     "src/lib.rs",
   ]
   deps = [
-    # Change COMPONENT_FIDL_BUILD_TARGET to fidl target being tested
-    # ex: "//examples/components/routing/fidl:echo-rustc",
-    {COMPONENT_FIDL_BUILD_TARGET},
+    "//examples/components/routing/fidl:echo-rustc",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia",
+    "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/fuchsia-component-test",
     "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:futures",
     "//third_party/rust_crates:async-trait",
+    "//third_party/rust_crates:futures",
   ]
 }
 
 fuchsia_component("echo_client_test") {
   testonly = true
   manifest = "meta/echo_client_test.cml"
-  deps = [ ":bin" ]
+  deps = [ ":echo_client_compiletest" ]
 }
 
 fuchsia_test_package("integration_test_pkg") {
@@ -40,13 +39,11 @@ fuchsia_test_package("integration_test_pkg") {
   test_components = [ ":echo_client_test" ]
   deps = [
     ":echo_client_test",
-    # Change COMPONENT_BUILD_TARGET to component targets the test use
-    # ex: "//examples/components/routing/echo_server:echo_server_component",
-    {COMPONENT_BUILD_TARGET},
+    "//examples/components/routing/echo_client:echo_client_component",
   ]
 }
 
 group("tests") {
   testonly = true
-  public_deps = [":integration_test_pkg"]
+  public_deps = [ ":integration_test_pkg" ]
 }

@@ -5,13 +5,14 @@
 use anyhow::Result;
 use std::io::Write;
 
-use crate::test_code::{CodeGenerator, TestCodeBuilder};
+use crate::test_code::{convert_to_camel, copyright, CodeGenerator, TestCodeBuilder};
 
 const MOCK_FUNC_TEMPLATE: &'static str = include_str!("templates/template_cpp_mock_function");
 const TEST_FUNC_TEMPLATE: &'static str = include_str!("templates/template_cpp_test_function");
 
 pub struct CppTestCodeGenerator<'a> {
     pub code: &'a CppTestCode,
+    pub copyright: bool,
 }
 
 impl CodeGenerator for CppTestCodeGenerator<'_> {
@@ -66,6 +67,10 @@ class {}Test: public ::gtest::RealLoopFixture {{
 "#,
         );
 
+        // Add copyright
+        if self.copyright {
+            writer.write_all(&copyright("//").as_bytes())?;
+        }
         // Add import statements
         let mut all_imports = self.code.imports.clone();
         all_imports.sort();
@@ -94,25 +99,6 @@ class {}Test: public ::gtest::RealLoopFixture {{
 
         Ok(())
     }
-}
-
-fn convert_to_camel(input: &str) -> String {
-    let mut camel = "".to_string();
-    // Always capitalize first char
-    let mut capitalize = true;
-    for c in input.chars() {
-        if capitalize {
-            camel.push(c.to_ascii_uppercase());
-            capitalize = false;
-            continue;
-        }
-        if c == '-' || c == '_' {
-            capitalize = true;
-            continue;
-        }
-        camel.push(c);
-    }
-    return camel;
 }
 
 pub struct MockService {
@@ -308,26 +294,8 @@ impl TestCodeBuilder for CppTestCode {
         );
         self
     }
-}
-
-#[cfg(test)]
-mod test {
-    use super::*;
-
-    #[test]
-    fn test_convert_camel_case() -> Result<()> {
-        let camel_1 = convert_to_camel("log-stats");
-        assert_eq!(camel_1, "LogStats");
-
-        let camel_2 = convert_to_camel("log_stats");
-        assert_eq!(camel_2, "LogStats");
-
-        let camel_3 = convert_to_camel("LogStats");
-        assert_eq!(camel_3, "LogStats");
-
-        let camel_4 = convert_to_camel("logstats");
-        assert_eq!(camel_4, "Logstats");
-
-        Ok(())
+    fn add_fidl_connect<'a>(&'a mut self, _protocol: &str) -> &'a dyn TestCodeBuilder {
+        // Not implemented
+        self
     }
 }
