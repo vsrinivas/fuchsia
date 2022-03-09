@@ -16,6 +16,7 @@
 
 #include <optional>
 #include <thread>
+#include <utility>
 #include <vector>
 
 #include <zxtest/zxtest.h>
@@ -1167,6 +1168,47 @@ class UnbindObserver {
   zx_status_t expected_status_;
   sync::Completion completion_;
 };
+
+TEST(BindServerTestCase, UnbindInfoDispatcherBeginsShutdownDuringMessageHandling) {
+  struct WorkingServer : fidl::WireServer<Example> {
+    explicit WorkingServer(std::shared_ptr<async::Loop> loop) : loop_(std::move(loop)) {}
+    void TwoWay(TwoWayRequestView request, TwoWayCompleter::Sync& completer) override {
+      completer.Reply(request->in);
+      std::thread shutdown([loop = loop_] { loop->Shutdown(); });
+      shutdown.detach();
+      // Polling until the dispatcher has entered a shutdown state.
+      while (true) {
+        if (async::PostTask(loop_->dispatcher(), [] {}) == ZX_ERR_BAD_STATE) {
+          return;
+        }
+        zx_nanosleep(zx_deadline_after(ZX_MSEC(50)));
+      }
+    }
+    void OneWay(OneWayRequestView request, OneWayCompleter::Sync& completer) override {
+      ADD_FAILURE("Must not call OneWay");
+    }
+
+   private:
+    std::shared_ptr<async::Loop> loop_;
+  };
+
+  // Launches a new thread for the server so we can wait on the worker.
+  std::shared_ptr loop = std::make_shared<async::Loop>(&kAsyncLoopConfigNoAttachToCurrentThread);
+  ASSERT_OK(loop->StartThread());
+  auto server = std::make_unique<WorkingServer>(loop);
+
+  zx::status endpoints = fidl::CreateEndpoints<Example>();
+  ASSERT_OK(endpoints.status_value());
+  auto [local, remote] = std::move(*endpoints);
+
+  UnbindObserver<Example> observer(fidl::Reason::kDispatcherError, ZX_ERR_BAD_STATE);
+  fidl::BindServer(loop->dispatcher(), std::move(remote), server.get(), observer.GetCallback());
+
+  fidl::WireResult result = fidl::WireCall(local)->TwoWay("");
+  EXPECT_OK(result.status());
+
+  ASSERT_OK(observer.completion().Wait());
+}
 
 // Error sending reply should trigger binding teardown.
 TEST(BindServerTestCase, UnbindInfoErrorSendingReply) {
