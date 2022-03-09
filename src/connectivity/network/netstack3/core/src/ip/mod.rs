@@ -62,8 +62,7 @@ use crate::{
             BufferIcmpHandler, IcmpHandlerIpExt, IcmpIpExt, IcmpIpTransportContext, IcmpState,
             Icmpv4Error, Icmpv4ErrorCode, Icmpv4ErrorKind, Icmpv4State, Icmpv4StateBuilder,
             Icmpv6ErrorCode, Icmpv6ErrorKind, Icmpv6State, Icmpv6StateBuilder,
-            InnerBufferIcmpContext, InnerIcmpContext, ShouldSendIcmpv4ErrorInfo,
-            ShouldSendIcmpv6ErrorInfo,
+            InnerBufferIcmpContext, InnerIcmpContext,
         },
         ipv6::Ipv6PacketAction,
         path_mtu::{PmtuCache, PmtuHandler, PmtuTimerId},
@@ -2232,12 +2231,10 @@ impl<B: BufferMut, D: BufferDispatcher<B>> InnerBufferIcmpContext<Ipv4, B> for C
     >(
         &mut self,
         device: DeviceId,
-        frame_dst: FrameDestination,
         original_src_ip: SpecifiedAddr<Ipv4Addr>,
         original_dst_ip: SpecifiedAddr<Ipv4Addr>,
         get_body_from_src_ip: F,
         ip_mtu: Option<u32>,
-        should_send_info: ShouldSendIcmpv4ErrorInfo,
     ) -> Result<(), S> {
         trace!(
             "send_icmp_error_message({}, {}, {}, {:?})",
@@ -2247,15 +2244,6 @@ impl<B: BufferMut, D: BufferDispatcher<B>> InnerBufferIcmpContext<Ipv4, B> for C
             ip_mtu
         );
         self.increment_counter("send_icmp_error_message");
-
-        if !crate::ip::icmp::should_send_icmpv4_error(
-            frame_dst,
-            original_src_ip,
-            original_dst_ip,
-            should_send_info,
-        ) {
-            return Ok(());
-        }
 
         if let Some((device, local_ip, next_hop)) = get_icmp_error_message_destination(
             self,
@@ -2334,19 +2322,13 @@ impl<B: BufferMut, D: BufferDispatcher<B>> InnerBufferIcmpContext<Ipv6, B> for C
     >(
         &mut self,
         device: DeviceId,
-        frame_dst: FrameDestination,
         src_ip: SpecifiedAddr<Ipv6Addr>,
         dst_ip: SpecifiedAddr<Ipv6Addr>,
         get_body: F,
         ip_mtu: Option<u32>,
-        should_send_info: ShouldSendIcmpv6ErrorInfo,
     ) -> Result<(), S> {
         trace!("send_icmp_error_message({}, {}, {}, {:?})", device, src_ip, dst_ip, ip_mtu);
         self.increment_counter("send_icmp_error_message");
-
-        if !crate::ip::icmp::should_send_icmpv6_error(frame_dst, src_ip, dst_ip, should_send_info) {
-            return Ok(());
-        }
 
         if let Some((device, local_ip, next_hop)) =
             get_icmp_error_message_destination(self, device, src_ip, dst_ip, |device_id| {
