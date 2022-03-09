@@ -158,7 +158,8 @@ void ConvertToIoV1NodeInfo(VnodeRepresentation representation,
       info.set_service(service);
       callback(std::move(info));
     } else if constexpr (std::is_same_v<T, fs::VnodeRepresentation::File>) {
-      fio::wire::FileObject file = {.event = std::move(repr.observer)};
+      fio::wire::FileObject file = {.event = std::move(repr.observer),
+                                    .stream = std::move(repr.stream)};
       info.set_file(fidl::ObjectView<fio::wire::FileObject>::FromExternal(&file));
       callback(std::move(info));
     } else if constexpr (std::is_same_v<T, fs::VnodeRepresentation::Directory>) {
@@ -199,6 +200,7 @@ ConnectionInfoConverter::ConnectionInfoConverter(VnodeRepresentation representat
     } else if constexpr (std::is_same_v<T, fs::VnodeRepresentation::File>) {
       fio::wire::FileInfo file(arena);
       file.set_observer(std::move(repr.observer));
+      file.set_stream(std::move(repr.stream));
       info.set_representation(arena, fio::wire::Representation::WithFile(arena, std::move(file)));
     } else if constexpr (std::is_same_v<T, fs::VnodeRepresentation::Directory>) {
       info.set_representation(arena, fio::wire::Representation::WithDirectory(arena));

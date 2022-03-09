@@ -17,6 +17,7 @@
 #include <lib/zx/eventpair.h>
 #include <lib/zx/handle.h>
 #include <lib/zx/socket.h>
+#include <lib/zx/stream.h>
 #include <lib/zx/vmo.h>
 #endif
 
@@ -401,6 +402,7 @@ class VnodeRepresentation {
 
   struct File {
     zx::event observer = {};
+    zx::stream stream = {};
   };
 
   struct Directory {};
