@@ -57,11 +57,9 @@ zx_status_t CreateBcache(std::unique_ptr<block_client::BlockDevice> device, bool
 }
 
 std::unique_ptr<block_client::BlockDevice> Bcache::Destroy(std::unique_ptr<Bcache> bcache) {
-  {
-    // Destroy the VmoBuffer before extracting the underlying device, as it needs
-    // to de-register itself from the underlying block device to be terminated.
-    __UNUSED auto unused = std::move(bcache->buffer_);
-  }
+  // Destroy the VmoBuffer before extracting the underlying device, as it needs
+  // to de-register itself from the underlying block device to be terminated.
+  bcache->DestroyVmoBuffer();
   return std::move(bcache->owned_device_);
 }
 #endif  // __Fuchsia__
@@ -77,11 +75,12 @@ zx_status_t Bcache::Readblk(block_t bno, void* data) {
   operation.vmo_offset = 0;
   operation.dev_offset = bno;
   operation.length = 1;
+  std::lock_guard lock(buffer_mutex_);
   zx_status_t status = RunOperation(operation, &buffer_);
   if (status != ZX_OK) {
     return status;
   }
-  memcpy(data, buffer_.Data(0), BlockSize());
+  std::memcpy(data, buffer_.Data(0), BlockSize());
   return ZX_OK;
 }
 #else   // __Fuchsia__
@@ -111,7 +110,8 @@ zx_status_t Bcache::Writeblk(block_t bno, const void* data) {
   operation.vmo_offset = 0;
   operation.dev_offset = bno;
   operation.length = 1;
-  memcpy(buffer_.Data(0), data, BlockSize());
+  std::lock_guard lock(buffer_mutex_);
+  std::memcpy(buffer_.Data(0), data, BlockSize());
   return RunOperation(operation, &buffer_);
 }
 #else   // __Fuchsia__
@@ -173,7 +173,7 @@ zx_status_t Bcache::Create(block_client::BlockDevice* device, uint64_t max_block
                            block_t block_size, std::unique_ptr<Bcache>* out) {
   std::unique_ptr<Bcache> bcache(new Bcache(device, max_blocks, block_size));
 
-  zx_status_t status = bcache->buffer_.Initialize(bcache.get(), 1, block_size, "scratch-block");
+  zx_status_t status = bcache->CreateVmoBuffer();
   if (status != ZX_OK) {
     return status;
   }

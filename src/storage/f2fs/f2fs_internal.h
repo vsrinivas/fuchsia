@@ -121,8 +121,7 @@ class SuperblockInfo {
   SuperblockInfo(SuperblockInfo &&) = delete;
   SuperblockInfo &operator=(SuperblockInfo &&) = delete;
 
-  SuperblockInfo() : nr_pages_ {}
-  {}
+  SuperblockInfo() : nr_pages_{} {}
 
   Superblock &GetRawSuperblock() { return *raw_superblock_; }
   void SetRawSuperblock(std::shared_ptr<Superblock> &raw_sb) { raw_superblock_ = raw_sb; }

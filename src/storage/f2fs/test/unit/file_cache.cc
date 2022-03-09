@@ -304,26 +304,11 @@ TEST_F(FileCacheTest, Basic) {
     ASSERT_EQ(page->IsWriteback(), false);
     ASSERT_EQ(page->IsLocked(), true);
 
-    // Sanity checks for storage::BlockBuffer.
-    ASSERT_EQ(page->Vmo(), ZX_HANDLE_INVALID);
-    ASSERT_EQ(page->Data(0), page->GetAddress());
-    ASSERT_EQ(page->capacity(), page->BlockSize() / kPageSize);
-
     // Sanity checks for interfaces to Page::vmo_.
     memset(w_buf, i, kPageSize);
     ASSERT_EQ(page->VmoWrite(w_buf, 0, kPageSize), ZX_OK);
     ASSERT_EQ(page->VmoRead(r_buf, 0, kPageSize), ZX_OK);
     ASSERT_EQ(memcmp(r_buf, w_buf, kPageSize), 0);
-    ASSERT_EQ(page->Zero(0, 1), ZX_OK);
-    ASSERT_EQ(page->VmoRead(r_buf, 0, kPageSize), ZX_OK);
-    memset(w_buf, 0, kPageSize);
-    ASSERT_EQ(memcmp(r_buf, w_buf, kPageSize), 0);
-
-    const void *ptr1 = page->Data(0);
-    void *ptr2 = page->Data(0);
-    ASSERT_EQ(ptr1, ptr2);
-    ASSERT_EQ(page->Data(page->capacity()), nullptr);
-
     Page::PutPage(std::move(page), true);
   }
 

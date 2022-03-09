@@ -318,18 +318,8 @@ zx_status_t F2fs::MakeReadOperation(fbl::RefPtr<Page> page, block_t blk_addr, bo
     return ZX_ERR_OUT_OF_RANGE;
   }
 
-  fs::BufferedOperationsBuilder operations;
-  operations.Add(
-      storage::Operation{
-          .type = storage::OperationType::kRead,
-          .vmo_offset = 0,
-          .dev_offset = blk_addr,
-          .length = 1,
-      },
-      page.get());
-
-  // block_client::Client::Transaction() is thread safe.
-  zx_status_t ret = GetBc().RunRequests(operations.TakeOperations());
+  // TODO: Request multiple Pages.
+  zx_status_t ret = GetBc().Readblk(blk_addr, page->GetAddress());
   if (ret == ZX_OK && is_sync) {
     page->SetUptodate();
   }
@@ -340,15 +330,14 @@ zx_status_t F2fs::MakeWriteOperation(fbl::RefPtr<Page> page, block_t blk_addr, P
   if (blk_addr >= GetBc().Maxblk()) {
     return ZX_ERR_OUT_OF_RANGE;
   }
+
   // TODO: writer_ needs to keep merged IOs separately for each type.
-  writer_->EnqueuePage(
-      storage::Operation{
-          .type = storage::OperationType::kWrite,
-          .vmo_offset = 0,
-          .dev_offset = blk_addr,
-          .length = 1,
-      },
-      std::move(page));
+  storage::Operation op = {
+      .type = storage::OperationType::kWrite,
+      .dev_offset = blk_addr,
+      .length = 1,
+  };
+  writer_->EnqueuePage(op, std::move(page));
 
   return ZX_OK;
 }

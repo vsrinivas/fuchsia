@@ -15,16 +15,13 @@ class VnodeF2fs;
 class FileCache;
 
 enum class PageFlag {
-  kPageUptodate = 0,   // It is uptodate. No need to read blocks from disk.
-  kPageDirty,          // It needs to be written out.
-  kPageWriteback,      // It is under writeback.
-  kPageLocked,         // It is locked. Wait for it to be unlocked.
-  kPageAlloc,          // It has a valid Page::vmo_.
-  kPageMapped,         // It has a valid mapping to the address space.
-  kPageStorageMapped,  // It has a valid mapping to the underlying storage for I/O. It should be set
-                       // only when it is subject to IO operations (e.g., ClearDirtyForIo() or
-                       // when it is not uptodate in GetPage()).
-  kPageActive,         // It is being referenced.
+  kPageUptodate = 0,  // It is uptodate. No need to read blocks from disk.
+  kPageDirty,         // It needs to be written out.
+  kPageWriteback,     // It is under writeback.
+  kPageLocked,        // It is locked. Wait for it to be unlocked.
+  kPageAlloc,         // It has a valid Page::vmo_.
+  kPageMapped,        // It has a valid mapping to the address space.
+  kPageActive,        // It is being referenced.
   kPageFlagSize = 8,
 };
 
@@ -62,8 +59,7 @@ class PageRefCounted : public fs::VnodeRefCounted<T> {
   ~PageRefCounted() = default;
 };
 
-class Page : public storage::BlockBuffer,
-             public PageRefCounted<Page>,
+class Page : public PageRefCounted<Page>,
              public fbl::Recyclable<Page>,
              public fbl::WAVLTreeContainable<Page *> {
  public:
@@ -109,15 +105,11 @@ class Page : public storage::BlockBuffer,
   bool IsLocked() const { return TestFlag(PageFlag::kPageLocked); }
   bool IsAllocated() const { return TestFlag(PageFlag::kPageAlloc); }
   bool IsMapped() const { return TestFlag(PageFlag::kPageMapped); }
-  bool IsStorageMapped() const { return TestFlag(PageFlag::kPageStorageMapped); }
   bool IsActive() const { return TestFlag(PageFlag::kPageActive); }
 
   void ClearMapped() { ClearFlag(PageFlag::kPageMapped); }
   zx_status_t Unmap();
   zx_status_t Map();
-  zx_status_t StorageUnmap();
-  zx_status_t StorageMap();
-  void ClearStorageMapped() { ClearFlag(PageFlag::kPageStorageMapped); }
 
   // Each Setxxx() method atomically sets a flag and returns the previous value.
   // It should be called when the first reference is made in FileCache::GetPageUnsafe().
@@ -157,37 +149,19 @@ class Page : public storage::BlockBuffer,
   bool ClearDirtyForIo(bool for_writeback);
 
   // Truncate and punch-a-hole operations call it to invalidate a Page.
-  // It clears PageFlag::kPageUptodate and unmaps |address_|. If the Page is dirty, it clears
-  // PageFlag::kPageDirty and decreases the regarding regarding dirty page count.
+  // It clears PageFlag::kPageUptodate. If the Page is dirty, it clears PageFlag::kPageDirty and
+  // decreases corresponding dirty page count.
   // Note that it does not wait for a writeback Page to be written out. So, a caller ensure that its
   // block address is invalidated in a dnode or nat entry before calling it.
   void Invalidate();
 
   void ZeroUserSegment(uint64_t start, uint64_t end) {
-    auto end_offset = safemath::CheckMul(capacity(), static_cast<size_t>(BlockSize()));
-    if (end_offset.IsValid() && start < end && end <= end_offset.ValueOrDie()) {
+    if (start < end && end <= BlockSize()) {
       std::memset(reinterpret_cast<uint8_t *>(GetAddress()) + start, 0, end - start);
     }
   }
 
-  // for storage::BlockBuffer
-  zx_status_t Zero(size_t index, size_t count) final;
-  size_t capacity() const final { return 1; }
-  uint32_t BlockSize() const final { return kPageSize; }
-  zx_handle_t Vmo() const final { return ZX_HANDLE_INVALID; }
-  vmoid_t vmoid() const final { return vmoid_.get(); }
-  void *Data(size_t index) final {
-    if (IsMapped() && index < capacity()) {
-      return GetAddress();
-    }
-    return nullptr;
-  }
-  const void *Data(size_t index) const final {
-    if (IsMapped() && index < capacity()) {
-      return GetAddress();
-    }
-    return nullptr;
-  }
+  uint32_t BlockSize() const { return kPageSize; }
 
   zx_status_t VmoWrite(const void *buffer, uint64_t offset, size_t buffer_size);
   zx_status_t VmoRead(void *buffer, uint64_t offset, size_t buffer_size);
@@ -218,7 +192,6 @@ class Page : public storage::BlockBuffer,
   // It contains the data of the block at |index_|.
   // TODO: when resizeable paged_vmo is available, clone a part of paged_vmo
   zx::vmo vmo_;
-  storage::Vmoid vmoid_;
   // It indicates FileCache to which |this| belongs.
   // It is only use for Downgrade() or unit tests.
   FileCache *file_cache_ = nullptr;
@@ -257,7 +230,6 @@ class FileCache {
   VnodeF2fs &GetVnode() const { return *vnode_; }
   // It is only allowed to call it from Page::fbl_recycle.
   void Downgrade(Page *raw_page) __TA_EXCLUDES(tree_lock_);
-  zx_status_t Evict(Page *page) __TA_EXCLUDES(tree_lock_);
 
  private:
   // It returns a set of dirty Pages that meet |operation|. A caller should unlock the Pages.

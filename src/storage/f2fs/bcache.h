@@ -49,6 +49,15 @@ class Bcache : public fs::TransactionHandler {
   Bcache(Bcache&&) = delete;
   Bcache& operator=(Bcache&&) = delete;
 
+  zx_status_t CreateVmoBuffer() __TA_EXCLUDES(buffer_mutex_) {
+    std::lock_guard lock(buffer_mutex_);
+    return buffer_.Initialize(this, 1, block_size_, "scratch-block");
+  }
+  void DestroyVmoBuffer() __TA_EXCLUDES(buffer_mutex_) {
+    std::lock_guard lock(buffer_mutex_);
+    __UNUSED auto unused = std::move(buffer_);
+  }
+
   // Destroys a "bcache" object, but take back ownership of the underlying block device.
 #ifdef __Fuchsia__
   static std::unique_ptr<block_client::BlockDevice> Destroy(std::unique_ptr<Bcache> bcache);
@@ -91,8 +100,8 @@ class Bcache : public fs::TransactionHandler {
   // These do not track blocks (or attempt to access the block cache)
   // NOTE: Not marked as final, since these are overridden methods on host,
   // but not on __Fuchsia__.
-  zx_status_t Readblk(block_t bno, void* data);
-  zx_status_t Writeblk(block_t bno, const void* data);
+  zx_status_t Readblk(block_t bno, void* data) __TA_EXCLUDES(buffer_mutex_);
+  zx_status_t Writeblk(block_t bno, const void* data) __TA_EXCLUDES(buffer_mutex_);
   zx_status_t Trim(block_t start, block_t num);
 #ifdef __Fuchsia__
   zx_status_t Flush() override { return DeviceTransactionHandler::Flush(); }
@@ -154,8 +163,9 @@ class Bcache : public fs::TransactionHandler {
   fuchsia_hardware_block_BlockInfo info_ = {};
   std::unique_ptr<block_client::BlockDevice> owned_device_;  // The device, if owned.
   block_client::BlockDevice* device_;  // Pointer to the device, irrespective of ownership.
-  // This buffer is used as internal scratch space for the "Readblk/Writeblk" methods.
-  storage::VmoBuffer buffer_;
+  // |buffer_| and |buffer_mutex_| are used in the "Readblk/Writeblk" methods.
+  storage::VmoBuffer buffer_ __TA_GUARDED(buffer_mutex_);
+  std::mutex buffer_mutex_;
   std::shared_mutex mutex_;
 #else   // __Fuchsia__
   const fbl::unique_fd fd_;
