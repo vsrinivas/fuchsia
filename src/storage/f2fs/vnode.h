@@ -377,6 +377,16 @@ class VnodeF2fs : public fs::Vnode,
   // TODO: When |is_reclaim| is set, release |page| after the IO completion
   zx_status_t WriteDirtyPage(fbl::RefPtr<Page> page, bool is_reclaim);
 
+  PageType GetPageType() {
+    if (IsNode()) {
+      return PageType::kNode;
+    } else if (IsMeta()) {
+      return PageType::kMeta;
+    } else {
+      return PageType::kData;
+    }
+  }
+
  protected:
   void RecycleNode() override;
   std::condition_variable_any flag_cvar_{};

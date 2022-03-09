@@ -38,7 +38,8 @@ void F2fs::SyncFs(bool bShutdown) {
   // TODO:: Consider !superblock_info_.IsDirty()
   if (bShutdown) {
     FX_LOGS(INFO) << "[f2fs] Unmount triggered";
-    WritebackOperation op = {.bSync = true};
+    WritebackOperation op;
+    // Checkpointing will flush all Pages that Writer is holding.
     op.if_vnode = [](fbl::RefPtr<VnodeF2fs> &vnode) {
       if (!vnode->IsDir()) {
         return ZX_OK;
@@ -46,7 +47,6 @@ void F2fs::SyncFs(bool bShutdown) {
       return ZX_ERR_NEXT;
     };
     SyncDirtyDataPages(op);
-    ScheduleWriterSubmitPages();
   } else {
     WriteCheckpoint(false, false);
   }

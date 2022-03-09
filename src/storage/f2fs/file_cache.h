@@ -35,8 +35,8 @@ struct WritebackOperation {
   pgoff_t start = 0;  // All dirty Pages within the range of [start, end) are subject to writeback.
   pgoff_t end = kPgOffMax;
   pgoff_t to_write = kPgOffMax;  // The number of dirty Pages to be written.
-  bool bSync = false;  // If true, FileCache::Writeback() waits for all IO operations of the written
-                       // dirty Pages to complete.
+  bool bSync = false;  // If true, FileCache::Writeback() waits for all dirty/writeback Pages to be
+                       // flushed in that vnode.
   bool bReleasePages =
       true;  // If true, it releases clean Pages while traversing FileCache::page_tree_.
   VnodeCallback if_vnode =

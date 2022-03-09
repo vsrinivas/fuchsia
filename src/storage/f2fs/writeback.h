@@ -15,7 +15,8 @@ constexpr auto kWriteTimeOut = std::chrono::seconds(60);
 
 class SegmentWriteBuffer {
  public:
-  SegmentWriteBuffer(storage::VmoidRegistry *vmoid_registry, size_t blocks, uint32_t block_size);
+  SegmentWriteBuffer(storage::VmoidRegistry *vmoid_registry, size_t blocks, uint32_t block_size,
+                     PageType type);
   SegmentWriteBuffer() = delete;
   SegmentWriteBuffer(const SegmentWriteBuffer &) = delete;
   SegmentWriteBuffer &operator=(const SegmentWriteBuffer &) = delete;
@@ -27,9 +28,11 @@ class SegmentWriteBuffer {
   zx::status<uint32_t> ReserveOperation(storage::Operation &operation, fbl::RefPtr<Page> page)
       __TA_EXCLUDES(mutex_);
   void ReleaseBuffers(const PageOperations &operation) __TA_EXCLUDES(mutex_);
+  block_t GetCapacity() const { return safemath::checked_cast<block_t>(buffer_.capacity()); }
 
  private:
-  static constexpr std::string_view kVmoBufferLabel = "SegmentWriteBuffer";
+  static constexpr std::string_view kVmoBufferLabels[static_cast<uint32_t>(PageType::kNrPageType)] =
+      {"DataSegment", "NodeSegment", "MetaArea"};
 
   fs::BufferedOperationsBuilder builder_ __TA_GUARDED(mutex_);
   std::vector<fbl::RefPtr<Page>> pages_ __TA_GUARDED(mutex_);
@@ -93,22 +96,22 @@ class Writer {
   void ScheduleTask(fpromise::pending_task task);
   // It schedules SubmitPages().
   // If |completion| is set, it notifies the caller of the operation completion.
-  void ScheduleSubmitPages(sync_completion_t *completion);
+  void ScheduleSubmitPages(sync_completion_t *completion = nullptr,
+                           PageType type = PageType::kNrPageType);
   // It merges Pages to be written.
-  void EnqueuePage(storage::Operation &operation, fbl::RefPtr<f2fs::Page> page);
+  void EnqueuePage(storage::Operation &operation, fbl::RefPtr<f2fs::Page> page, PageType type);
 
  private:
   // It takes writeback operations from |builder_| and passes them to RunReqeusts().
-  // When the operations are complete, it groups Pages by the vnode id and passes each group to
-  // the regarding FileCache for releasing mappings and committed pages.
-  fpromise::promise<> SubmitPages(sync_completion_t *completion);
+  // When the operations are complete, it groups Pages by the vnode id and passes each group to the
+  // regarding FileCache for releasing mappings and committed pages.
+  fpromise::promise<> SubmitPages(sync_completion_t *completion, PageType type);
 
   F2fs *fs_ = nullptr;
   fs::TransactionHandler *transaction_handler_ = nullptr;
-  //  TODO: Maintain a separate buffer for each stream.
-  std::unique_ptr<SegmentWriteBuffer> write_buffer_;
+  std::array<std::unique_ptr<SegmentWriteBuffer>, static_cast<uint32_t>(PageType::kNrPageType)>
+      write_buffer_;
   fs::BackgroundExecutor executor_;
-  // TODO: Track the last block for each PageType segment
 };
 
 }  // namespace f2fs

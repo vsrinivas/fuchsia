@@ -276,8 +276,9 @@ class F2fs : public fs::Vfs {
                             PageType type, block_t nblocks = 1);
 
   void ScheduleWriterTask(fpromise::pending_task task) { writer_->ScheduleTask(std::move(task)); }
-  void ScheduleWriterSubmitPages(sync_completion_t *completion = nullptr) {
-    writer_->ScheduleSubmitPages(completion);
+  void ScheduleWriterSubmitPages(sync_completion_t *completion = nullptr,
+                                 PageType type = PageType::kNrPageType) {
+    writer_->ScheduleSubmitPages(completion, type);
   }
 
  private:

@@ -164,7 +164,7 @@ void Page::ClearUptodate() { ClearFlag(PageFlag::kPageUptodate); }
 
 void Page::WaitOnWriteback() {
   if (IsWriteback()) {
-    fs_->ScheduleWriterSubmitPages();
+    fs_->ScheduleWriterSubmitPages(nullptr, GetVnode().GetPageType());
   }
   WaitOnFlag(PageFlag::kPageWriteback);
 }
@@ -422,6 +422,8 @@ pgoff_t FileCache::Writeback(WritebackOperation &operation) {
   }
 
   pgoff_t nwritten = 0;
+  // The Pages of a vnode should belong to a PageType.
+  PageType type = vnode_->GetPageType();
   for (size_t i = 0; i < pages.size(); ++i) {
     fbl::RefPtr<Page> page = std::move(pages[i]);
     pages[i] = nullptr;
@@ -450,7 +452,7 @@ pgoff_t FileCache::Writeback(WritebackOperation &operation) {
   }
   if (operation.bSync) {
     sync_completion_t completion;
-    vnode_->Vfs()->ScheduleWriterSubmitPages(&completion);
+    vnode_->Vfs()->ScheduleWriterSubmitPages(&completion, type);
     sync_completion_wait(&completion, ZX_TIME_INFINITE);
   }
   return nwritten;

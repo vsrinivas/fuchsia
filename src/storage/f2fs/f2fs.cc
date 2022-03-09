@@ -331,13 +331,12 @@ zx_status_t F2fs::MakeWriteOperation(fbl::RefPtr<Page> page, block_t blk_addr, P
     return ZX_ERR_OUT_OF_RANGE;
   }
 
-  // TODO: writer_ needs to keep merged IOs separately for each type.
   storage::Operation op = {
       .type = storage::OperationType::kWrite,
       .dev_offset = blk_addr,
       .length = 1,
   };
-  writer_->EnqueuePage(op, std::move(page));
+  writer_->EnqueuePage(op, std::move(page), type);
 
   return ZX_OK;
 }

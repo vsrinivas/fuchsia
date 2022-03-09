@@ -7,9 +7,10 @@
 namespace f2fs {
 
 SegmentWriteBuffer::SegmentWriteBuffer(storage::VmoidRegistry *vmoid_registry, size_t blocks,
-                                       uint32_t block_size) {
-  ZX_ASSERT(buffer_.Initialize(vmoid_registry, blocks, block_size, kVmoBufferLabel.data()) ==
-            ZX_OK);
+                                       uint32_t block_size, PageType type) {
+  ZX_DEBUG_ASSERT(type < PageType::kNrPageType);
+  ZX_ASSERT(buffer_.Initialize(vmoid_registry, blocks, block_size,
+                               kVmoBufferLabels[static_cast<uint32_t>(type)].data()) == ZX_OK);
 }
 
 PageOperations SegmentWriteBuffer::TakeOperations() {
@@ -59,8 +60,10 @@ zx::status<uint32_t> SegmentWriteBuffer::ReserveOperation(storage::Operation &op
 SegmentWriteBuffer::~SegmentWriteBuffer() { ZX_DEBUG_ASSERT(pages_.size() == 0); }
 
 Writer::Writer(F2fs *fs, Bcache *bc) : fs_(fs), transaction_handler_(bc) {
-  write_buffer_ =
-      std::make_unique<SegmentWriteBuffer>(bc, kDefaultBlocksPerSegment * 2, kBlockSize);
+  for (const auto type : {PageType::kData, PageType::kNode, PageType::kMeta}) {
+    write_buffer_[static_cast<uint32_t>(type)] =
+        std::make_unique<SegmentWriteBuffer>(bc, kDefaultBlocksPerSegment, kBlockSize, type);
+  }
 }
 
 Writer::~Writer() {
@@ -69,19 +72,23 @@ Writer::~Writer() {
   ZX_ASSERT(sync_completion_wait(&completion, ZX_TIME_INFINITE) == ZX_OK);
 }
 
-void Writer::EnqueuePage(storage::Operation &operation, fbl::RefPtr<f2fs::Page> page) {
-  auto ret = write_buffer_->ReserveOperation(operation, std::move(page));
+void Writer::EnqueuePage(storage::Operation &operation, fbl::RefPtr<f2fs::Page> page,
+                         PageType type) {
+  ZX_DEBUG_ASSERT(type < PageType::kNrPageType);
+  auto ret =
+      write_buffer_[static_cast<uint32_t>(type)]->ReserveOperation(operation, std::move(page));
   if (ret.is_error()) {
     // Should not happen.
     ZX_ASSERT(0);
-  } else if (ret.value() >= kDefaultBlocksPerSegment) {
-    // Submit Pages when they are merged as much as a segment.
-    ScheduleSubmitPages(nullptr);
+  } else if (ret.value() >= std::min(kDefaultBlocksPerSegment / 2,
+                                     write_buffer_[static_cast<uint32_t>(type)]->GetCapacity())) {
+    // Submit Pages once they are merged as much as half of either its buffer or segment.
+    ScheduleSubmitPages(nullptr, type);
   }
 }
 
-fpromise::promise<> Writer::SubmitPages(sync_completion_t *completion) {
-  auto operations = write_buffer_->TakeOperations();
+fpromise::promise<> Writer::SubmitPages(sync_completion_t *completion, PageType type) {
+  auto operations = write_buffer_[static_cast<uint32_t>(type)]->TakeOperations();
   if (operations.Empty()) {
     if (completion) {
       return fpromise::make_promise([completion]() { sync_completion_signal(completion); });
@@ -117,8 +124,19 @@ void Writer::ScheduleTask(fpromise::pending_task task) {
   return executor_.schedule_task(std::move(task));
 }
 
-void Writer::ScheduleSubmitPages(sync_completion_t *completion) {
-  return ScheduleTask(SubmitPages(completion));
+void Writer::ScheduleSubmitPages(sync_completion_t *completion, PageType type) {
+  if (type == PageType::kNrPageType) {
+    auto tasks = SubmitPages(nullptr, PageType::kData)
+                     .then([this](fpromise::result<> &result) {
+                       return SubmitPages(nullptr, PageType::kNode);
+                     })
+                     .then([this, completion](fpromise::result<> &result) {
+                       return SubmitPages(completion, PageType::kMeta);
+                     });
+    return ScheduleTask(std::move(tasks));
+  } else {
+    return ScheduleTask(SubmitPages(completion, type));
+  }
 }
 
 }  // namespace f2fs
