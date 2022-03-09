@@ -54,6 +54,10 @@ ProcessConfigBuilder& ProcessConfigBuilder::AddDeviceProfile(
 
 ProcessConfigBuilder& ProcessConfigBuilder::SetMixProfile(MixProfileConfig mix_profile_config) {
   mix_profile_config_ = mix_profile_config;
+  FX_LOGS(INFO) << "Setting a custom MixProfile: capacity_usec "
+                << mix_profile_config.capacity.to_usecs() << "; deadline_usec "
+                << mix_profile_config.deadline.to_usecs() << "; period_usec "
+                << mix_profile_config.period.to_usecs();
   return *this;
 }
 
