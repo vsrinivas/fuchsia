@@ -107,7 +107,7 @@ TEST_femu_osx_networking() {
   # Verify that zbi was called to add the authorized_keys
   # shellcheck disable=SC1090
   source "${MOCKED_ZBI}.mock_state"
-  gn-test-check-mock-args _ANY_ -o _ANY_ "${FUCHSIA_WORK_DIR}/image/zircon-a.zbi" --entry "data/ssh/authorized_keys=${BT_TEMP_DIR}/scripts/sdk/gn/base/testdata/authorized_keys"
+  gn-test-check-mock-args _ANY_ -o _ANY_ "${FUCHSIA_WORK_DIR}/image/zircon-a.zbi" --entry "data/ssh/authorized_keys=${BT_TEMP_DIR}/scripts/sdk/gn/base/testdata/authorized_keys" --type=entropy:64 /dev/urandom
 
   # Verify some of the arguments passed to the emulator binary
   # shellcheck disable=SC1090

@@ -557,7 +557,8 @@ trap 'rm -Rf "${img_dir}"; [[ "${GRPCWEBPROXY_PID}" ]] && kill "${GRPCWEBPROXY_P
 
 KERNEL_ZBI="${img_dir}/fuchsia-ssh.zbi"
 "${ZBI_TOOL}" -o "${KERNEL_ZBI}" "${ZBI_IMAGE}" \
-  --entry "data/ssh/authorized_keys=${AUTHORIZED_KEYS}"
+  --entry "data/ssh/authorized_keys=${AUTHORIZED_KEYS}" \
+  --type=entropy:64 /dev/urandom
 
 if [[ -n "${FVM_IMAGE}" ]]; then
   fvm_raw="${img_dir}/fvm_raw.blk"
