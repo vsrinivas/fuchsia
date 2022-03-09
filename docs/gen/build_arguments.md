@@ -3461,6 +3461,25 @@ From //products/bringup.gni:40
 
 From //build/product.gni:7
 
+### product_config
+Passed as the `product` key in the product assembly config.
+
+**Current value for `target_cpu = "arm64"`:** `{ }`
+
+From //products/bringup.gni:67
+
+**Overridden from the default:** `{ }`
+
+From //build/product.gni:33
+
+**Current value for `target_cpu = "x64"`:** `{ }`
+
+From //products/bringup.gni:67
+
+**Overridden from the default:** `{ }`
+
+From //build/product.gni:33
+
 ### product_description
 A human readable product description.
 
@@ -4511,7 +4530,7 @@ Whether libraries under //vendor should be linted.
 
 **Current value (from the default):** `false`
 
-From //build/fidl/fidl_library.gni:14
+From //build/fidl/fidl_library.gni:15
 
 ### verbose_image_assembly
 Enable verbose output from `ffx assembly image`, this creates non-silent
