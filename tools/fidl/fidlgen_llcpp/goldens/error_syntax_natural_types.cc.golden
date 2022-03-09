@@ -2,27 +2,17 @@
 
 #include <fidl/test.errorsyntax/cpp/natural_types.h>
 
-#ifdef __Fuchsia__
-
-#endif  // __Fuchsia__
-
 ::test_errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Response::Storage_
 test_errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Response::
     CloneStorage_() const {
   return Storage_{::fidl::internal::NaturalClone(storage_.value)};
 }
-#ifdef __Fuchsia__
-
-#endif  // __Fuchsia__
 
 ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse::Storage_
 test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse::
     CloneStorage_() const {
   return Storage_{::fidl::internal::NaturalClone(storage_.result)};
 }
-#ifdef __Fuchsia__
-
-#endif  // __Fuchsia__
 
 ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest::Storage_
 test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest::

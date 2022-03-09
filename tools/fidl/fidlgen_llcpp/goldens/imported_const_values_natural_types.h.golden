@@ -5,7 +5,7 @@
 #include <fidl/test.importedconstvalues/cpp/common_types.h>
 #include <fidl/test.importedconstvalues/cpp/markers.h>
 #include <lib/fidl/cpp/natural_coding_traits.h>
-#include <lib/fidl/cpp/unified_messaging.h>
+#include <lib/fidl/cpp/natural_types.h>
 
 #include <cinttypes>
 #include <string>
@@ -79,7 +79,6 @@ constexpr ::test_dependent::MyBits BITS_MEMBER =
 }  // namespace test_importedconstvalues
 namespace fidl {
 
-#ifdef __Fuchsia__
 extern "C" const fidl_type_t test_importedconstvalues_MyStructTable;
 
 template <>
@@ -107,7 +106,5 @@ struct internal::NaturalIsMemcpyCompatible<::test_importedconstvalues::MyStruct>
           !internal::NaturalHasPadding<
               ::test_importedconstvalues::MyStruct>::value &&
           internal::NaturalIsMemcpyCompatible<uint8_t>::value> {};
-
-#endif  // __Fuchsia__
 
 }  // namespace fidl

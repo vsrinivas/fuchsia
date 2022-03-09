@@ -5,7 +5,7 @@
 #include <fidl/test.bits/cpp/common_types.h>
 #include <fidl/test.bits/cpp/markers.h>
 #include <lib/fidl/cpp/natural_coding_traits.h>
-#include <lib/fidl/cpp/unified_messaging.h>
+#include <lib/fidl/cpp/natural_types.h>
 
 #include <cinttypes>
 #include <string>

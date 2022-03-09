@@ -90,6 +90,10 @@ class {{ .Name }} final {
 
 
 {{- define "Table:Traits:NaturalTypesHeader" }}
+  {{ if .IsResourceType }}
+  {{- IfdefFuchsia -}}
+  {{- end }}
+
   extern "C" const fidl_type_t {{ .CodingTableType.Self }};
 
   {{ if .IsResourceType }}
@@ -105,19 +109,21 @@ class {{ .Name }} final {
     static constexpr const fidl_type_t* kCodingTable = &{{ .CodingTableType.Self }};
   };
 
-  {{- /*
-  TODO(fxbug.dev/82189): We are reusing the HLCPP coding machinery. For now this
-  is the minimal to support encoding/decoding, without any optimizations. This may
-  change as we gradually move to a complete natural domain object fork.
-  */}}
-
   template <>
   struct internal::NaturalCodingTraits<{{ . }}, ::fidl::internal::NaturalCodingConstraintEmpty> :
     public ::fidl::internal::NaturalTableCodingTraits<{{ . }}> {};
+
+  {{ if .IsResourceType }}
+  {{- EndifFuchsia -}}
+  {{ end }}
 {{ end }}
 
 
 {{- define "Table:NaturalTypesSource" }}
+{{ if .IsResourceType }}
+{{- IfdefFuchsia -}}
+{{- end }}
+
 {{- EnsureNamespace "" }}
 
 {{ if not .IsResourceType }}
@@ -130,4 +136,8 @@ class {{ .Name }} final {
     };
   }
 {{- end }}
+
+{{ if .IsResourceType }}
+{{- EndifFuchsia -}}
+{{ end }}
 {{- end }}

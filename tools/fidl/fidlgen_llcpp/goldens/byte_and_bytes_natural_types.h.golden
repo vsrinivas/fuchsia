@@ -5,7 +5,7 @@
 #include <fidl/test.byteandbytes/cpp/common_types.h>
 #include <fidl/test.byteandbytes/cpp/markers.h>
 #include <lib/fidl/cpp/natural_coding_traits.h>
-#include <lib/fidl/cpp/unified_messaging.h>
+#include <lib/fidl/cpp/natural_types.h>
 
 #include <cinttypes>
 #include <string>
@@ -116,7 +116,6 @@ class ByteAndBytes final {
 }  // namespace test_byteandbytes
 namespace fidl {
 
-#ifdef __Fuchsia__
 extern "C" const fidl_type_t test_byteandbytes_ByteAndBytesTable;
 
 template <>
@@ -149,7 +148,5 @@ struct internal::NaturalIsMemcpyCompatible<::test_byteandbytes::ByteAndBytes>
           internal::NaturalIsMemcpyCompatible<::std::vector<uint8_t>>::value &&
           internal::NaturalIsMemcpyCompatible<
               ::cpp17::optional<::std::vector<uint8_t>>>::value> {};
-
-#endif  // __Fuchsia__
 
 }  // namespace fidl

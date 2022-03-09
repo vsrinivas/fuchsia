@@ -5,7 +5,7 @@
 #include <fidl/test.errorsyntax/cpp/common_types.h>
 #include <fidl/test.errorsyntax/cpp/markers.h>
 #include <lib/fidl/cpp/natural_coding_traits.h>
-#include <lib/fidl/cpp/unified_messaging.h>
+#include <lib/fidl/cpp/natural_types.h>
 
 #include <cinttypes>
 #include <string>
@@ -359,7 +359,6 @@ class ExampleUseOfErrorSyntaxCallWhichMayFailRequest final {
 }  // namespace test_errorsyntax
 namespace fidl {
 
-#ifdef __Fuchsia__
 extern "C" const fidl_type_t
     test_errorsyntax_ExampleUseOfErrorSyntax_CallWhichMayFail_ResponseTable;
 
@@ -395,9 +394,6 @@ struct internal::NaturalIsMemcpyCompatible<
                   ExampleUseOfErrorSyntax_CallWhichMayFail_Response>::value &&
           internal::NaturalIsMemcpyCompatible<int64_t>::value> {};
 
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
 extern "C" const fidl_type_t
     test_errorsyntax_ExampleUseOfErrorSyntaxCallWhichMayFailTopResponseTable;
 
@@ -440,9 +436,6 @@ struct internal::NaturalIsMemcpyCompatible<
               ::test_errorsyntax::
                   ExampleUseOfErrorSyntax_CallWhichMayFail_Result>::value> {};
 
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
 extern "C" const fidl_type_t
     test_errorsyntax_ExampleUseOfErrorSyntaxCallWhichMayFailRequestTable;
 
@@ -482,8 +475,6 @@ struct internal::NaturalIsMemcpyCompatible<
               ::test_errorsyntax::
                   ExampleUseOfErrorSyntaxCallWhichMayFailRequest>::value &&
           internal::NaturalIsMemcpyCompatible<::std::string>::value> {};
-
-#endif  // __Fuchsia__
 
 extern "C" const fidl_type_t
     test_errorsyntax_ExampleUseOfErrorSyntax_CallWhichMayFail_ResultTable;

@@ -25,6 +25,9 @@ var conformanceTmpl = template.Must(template.New("tmpl").Parse(`
 #include "src/lib/fidl/cpp/tests/conformance/conformance_utils.h"
 
 {{ range .EncodeSuccessCases }}
+{{- if .FuchsiaOnly }}
+#ifdef __Fuchsia__
+{{- end }}
 TEST(Conformance, {{ .Name }}_Encode) {
 	{{- if .HandleDefs }}
 	const auto handle_defs = {{ .HandleDefs }};
@@ -36,9 +39,15 @@ TEST(Conformance, {{ .Name }}_Encode) {
 	conformance_utils::EncodeSuccess(
 		{{ .WireFormatVersion }}, obj, expected_bytes, expected_handles, {{ .CheckHandleRights }});
 }
+{{- if .FuchsiaOnly }}
+#endif  // __Fuchsia__
+{{- end }}
 {{ end }}
 
 {{ range .DecodeSuccessCases }}
+{{- if .FuchsiaOnly }}
+#ifdef __Fuchsia__
+{{- end }}
 TEST(Conformance, {{ .Name }}_Decode) {
 	{{- if .HandleDefs }}
 	const auto handle_defs = {{ .HandleDefs }};
@@ -56,9 +65,15 @@ TEST(Conformance, {{ .Name }}_Decode) {
 		{{ .EqualityCheck }}
 	});
 }
+{{- if .FuchsiaOnly }}
+#endif  // __Fuchsia__
+{{- end }}
 {{ end }}
 
 {{ range .EncodeFailureCases }}
+{{- if .FuchsiaOnly }}
+#ifdef __Fuchsia__
+{{- end }}
 TEST(Conformance, {{ .Name }}_EncodeFailure) {
 	{{- if .HandleDefs }}
 	const auto handle_defs = {{ .HandleDefs }};
@@ -75,9 +90,15 @@ TEST(Conformance, {{ .Name }}_EncodeFailure) {
 	}
 	{{- end }}
 }
+{{- if .FuchsiaOnly }}
+#endif  // __Fuchsia__
+{{- end }}
 {{ end }}
 
 {{ range .DecodeFailureCases }}
+{{- if .FuchsiaOnly }}
+#ifdef __Fuchsia__
+{{- end }}
 TEST(Conformance, {{ .Name }}_DecodeFailure) {
 	{{- if .HandleDefs }}
 	const auto handle_defs = {{ .HandleDefs }};
@@ -93,6 +114,9 @@ TEST(Conformance, {{ .Name }}_DecodeFailure) {
 	}
 	{{- end }}
 }
+{{- if .FuchsiaOnly }}
+#endif  // __Fuchsia__
+{{- end }}
 {{ end }}
 `))
 
@@ -105,19 +129,23 @@ type conformanceTmplInput struct {
 
 type encodeSuccessCase struct {
 	WireFormatVersion, Name, ValueBuild, ValueVar, Bytes, HandleDefs, Handles string
-	CheckHandleRights                                                         bool
+	FuchsiaOnly, CheckHandleRights                                            bool
 }
 
 type decodeSuccessCase struct {
 	WireFormatVersion, Name, Type, Bytes, HandleDefs, Handles, EqualityCheck, HandleKoidVectorName string
+	FuchsiaOnly                                                                                    bool
 }
 
 type encodeFailureCase struct {
 	WireFormatVersion, Name, ValueBuild, ValueVar, HandleDefs string
+
+	FuchsiaOnly bool
 }
 
 type decodeFailureCase struct {
 	WireFormatVersion, Name, Type, Bytes, HandleDefs, Handles string
+	FuchsiaOnly                                               bool
 }
 
 func GenerateConformanceTests(gidl gidlir.All, fidl fidlgen.Root, config gidlconfig.GeneratorConfig) ([]byte, error) {
@@ -159,6 +187,7 @@ func encodeSuccessCases(gidlEncodeSuccesses []gidlir.EncodeSuccess, schema gidlm
 			continue
 		}
 		valueBuild, valueVar := buildValue(encodeSuccess.Value, decl, handleReprRaw)
+		fuchsiaOnly := decl.IsResourceType() || len(encodeSuccess.HandleDefs) > 0
 		for _, encoding := range encodeSuccess.Encodings {
 			if !wireFormatSupported(encoding.WireFormat) {
 				continue
@@ -171,6 +200,7 @@ func encodeSuccessCases(gidlEncodeSuccesses []gidlir.EncodeSuccess, schema gidlm
 				Bytes:             libhlcpp.BuildBytes(encoding.Bytes),
 				HandleDefs:        buildHandleDefs(encodeSuccess.HandleDefs),
 				Handles:           libhlcpp.BuildRawHandleDispositions(encoding.HandleDispositions),
+				FuchsiaOnly:       fuchsiaOnly,
 				CheckHandleRights: encodeSuccess.CheckHandleRights,
 			})
 		}
@@ -191,6 +221,7 @@ func decodeSuccessCases(gidlDecodeSuccesses []gidlir.DecodeSuccess, schema gidlm
 		actualValueVar := "value"
 		handleKoidVectorName := "handle_koids"
 		equalityCheck := buildEqualityCheck(actualValueVar, decodeSuccess.Value, decl, handleKoidVectorName)
+		fuchsiaOnly := decl.IsResourceType() || len(decodeSuccess.HandleDefs) > 0
 		for _, encoding := range decodeSuccess.Encodings {
 			if !wireFormatSupported(encoding.WireFormat) {
 				continue
@@ -204,6 +235,7 @@ func decodeSuccessCases(gidlDecodeSuccesses []gidlir.DecodeSuccess, schema gidlm
 				Handles:              libhlcpp.BuildRawHandleInfos(encoding.Handles),
 				EqualityCheck:        equalityCheck,
 				HandleKoidVectorName: handleKoidVectorName,
+				FuchsiaOnly:          fuchsiaOnly,
 			})
 		}
 	}
@@ -221,6 +253,7 @@ func encodeFailureCases(gidlEncodeFailures []gidlir.EncodeFailure, schema gidlmi
 			continue
 		}
 		valueBuild, valueVar := buildValue(encodeFailure.Value, decl, handleReprDisposition)
+		fuchsiaOnly := decl.IsResourceType() || len(encodeFailure.HandleDefs) > 0
 		for _, wireFormat := range supportedWireFormats {
 			encodeFailureCases = append(encodeFailureCases, encodeFailureCase{
 				Name:              testCaseName(encodeFailure.Name, wireFormat),
@@ -228,6 +261,7 @@ func encodeFailureCases(gidlEncodeFailures []gidlir.EncodeFailure, schema gidlmi
 				ValueBuild:        valueBuild,
 				ValueVar:          valueVar,
 				HandleDefs:        buildHandleDefs(encodeFailure.HandleDefs),
+				FuchsiaOnly:       fuchsiaOnly,
 			})
 		}
 	}
@@ -237,10 +271,15 @@ func encodeFailureCases(gidlEncodeFailures []gidlir.EncodeFailure, schema gidlmi
 func decodeFailureCases(gidlDecodeFailures []gidlir.DecodeFailure, schema gidlmixer.Schema) ([]decodeFailureCase, error) {
 	var decodeFailureCases []decodeFailureCase
 	for _, decodeFailure := range gidlDecodeFailures {
+		decl, err := schema.ExtractDeclarationByName(decodeFailure.Type)
+		if err != nil {
+			return nil, fmt.Errorf("decode failure %s: %s", decodeFailure.Name, err)
+		}
 		for _, encoding := range decodeFailure.Encodings {
 			if !wireFormatSupported(encoding.WireFormat) {
 				continue
 			}
+			fuchsiaOnly := decl.IsResourceType() || len(decodeFailure.HandleDefs) > 0
 			decodeFailureCases = append(decodeFailureCases, decodeFailureCase{
 				Name:              testCaseName(decodeFailure.Name, encoding.WireFormat),
 				WireFormatVersion: wireFormatVersionName(encoding.WireFormat),
@@ -248,6 +287,7 @@ func decodeFailureCases(gidlDecodeFailures []gidlir.DecodeFailure, schema gidlmi
 				Bytes:             libhlcpp.BuildBytes(encoding.Bytes),
 				HandleDefs:        buildHandleInfoDefs(decodeFailure.HandleDefs),
 				Handles:           libhlcpp.BuildRawHandleInfos(encoding.Handles),
+				FuchsiaOnly:       fuchsiaOnly,
 			})
 		}
 	}

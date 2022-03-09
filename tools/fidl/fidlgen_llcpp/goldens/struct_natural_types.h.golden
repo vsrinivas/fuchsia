@@ -5,7 +5,7 @@
 #include <fidl/test.struct/cpp/common_types.h>
 #include <fidl/test.struct/cpp/markers.h>
 #include <lib/fidl/cpp/natural_coding_traits.h>
-#include <lib/fidl/cpp/unified_messaging.h>
+#include <lib/fidl/cpp/natural_types.h>
 
 #include <cinttypes>
 #include <string>
@@ -140,7 +140,6 @@ class BasicStruct final {
 }  // namespace test_struct
 namespace fidl {
 
-#ifdef __Fuchsia__
 extern "C" const fidl_type_t test_struct_SimpleTable;
 
 template <>
@@ -166,9 +165,6 @@ struct internal::NaturalIsMemcpyCompatible<::test_struct::Simple>
           internal::NaturalIsMemcpyCompatible<uint8_t>::value &&
           internal::NaturalIsMemcpyCompatible<bool>::value> {};
 
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
 extern "C" const fidl_type_t test_struct_BasicStructTable;
 
 template <>
@@ -197,7 +193,5 @@ struct internal::NaturalIsMemcpyCompatible<::test_struct::BasicStruct>
           !internal::NaturalHasPadding<::test_struct::BasicStruct>::value &&
           internal::NaturalIsMemcpyCompatible<uint32_t>::value &&
           internal::NaturalIsMemcpyCompatible<::std::string>::value> {};
-
-#endif  // __Fuchsia__
 
 }  // namespace fidl

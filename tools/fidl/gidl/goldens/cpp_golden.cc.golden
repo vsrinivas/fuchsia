@@ -349,6 +349,7 @@ var1.v() = std::unique_ptr<test_conformance::GoldenBoolStruct>();
 		::fidl::internal::WireFormatVersion::kV2, obj, expected_bytes, expected_handles, false);
 }
 
+#ifdef __Fuchsia__
 TEST(Conformance, GoldenHandleBasicRightsStruct_V2_Encode) {
 	const auto handle_defs = std::vector<zx_handle_t>{
 conformance_utils::CreateChannel(61454), // #0
@@ -371,7 +372,9 @@ var1.v() = zx::event(handle_defs[0]);
 	conformance_utils::EncodeSuccess(
 		::fidl::internal::WireFormatVersion::kV2, obj, expected_bytes, expected_handles, true);
 }
+#endif  // __Fuchsia__
 
+#ifdef __Fuchsia__
 TEST(Conformance, GoldenNullableHandleStructNonNull_V2_Encode) {
 	const auto handle_defs = std::vector<zx_handle_t>{
 conformance_utils::CreateEvent(2147483648), // #0
@@ -394,7 +397,9 @@ var1.v() = zx::handle(handle_defs[0]);
 	conformance_utils::EncodeSuccess(
 		::fidl::internal::WireFormatVersion::kV2, obj, expected_bytes, expected_handles, false);
 }
+#endif  // __Fuchsia__
 
+#ifdef __Fuchsia__
 TEST(Conformance, GoldenNullableHandleStructNull_V2_Encode) {
 	auto var1 = test_conformance::GoldenNullableHandleStruct{};
 var1.v() = zx::handle();
@@ -407,6 +412,7 @@ var1.v() = zx::handle();
 	conformance_utils::EncodeSuccess(
 		::fidl::internal::WireFormatVersion::kV2, obj, expected_bytes, expected_handles, false);
 }
+#endif  // __Fuchsia__
 
 
 
@@ -758,6 +764,7 @@ ASSERT_NULL(f1.v());
 	});
 }
 
+#ifdef __Fuchsia__
 TEST(Conformance, GoldenHandleBasicRightsStruct_V2_Decode) {
 	const auto handle_defs = std::vector<zx_handle_info_t>{
 
@@ -793,7 +800,9 @@ handle_defs[0],};
   
 	});
 }
+#endif  // __Fuchsia__
 
+#ifdef __Fuchsia__
 TEST(Conformance, GoldenNullableHandleStructNonNull_V2_Decode) {
 	const auto handle_defs = std::vector<zx_handle_info_t>{
 
@@ -829,7 +838,9 @@ handle_defs[0],};
   
 	});
 }
+#endif  // __Fuchsia__
 
+#ifdef __Fuchsia__
 TEST(Conformance, GoldenNullableHandleStructNull_V2_Decode) {
 	auto bytes = std::vector<uint8_t>{
 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
@@ -842,6 +853,7 @@ ASSERT_FALSE(f1.v().is_valid());
 
 	});
 }
+#endif  // __Fuchsia__
 
 
 

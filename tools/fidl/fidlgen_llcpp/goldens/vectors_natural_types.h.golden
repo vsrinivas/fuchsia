@@ -5,7 +5,7 @@
 #include <fidl/test.vectors/cpp/common_types.h>
 #include <fidl/test.vectors/cpp/markers.h>
 #include <lib/fidl/cpp/natural_coding_traits.h>
-#include <lib/fidl/cpp/unified_messaging.h>
+#include <lib/fidl/cpp/natural_types.h>
 
 #include <cinttypes>
 #include <string>
@@ -93,7 +93,6 @@ class ExampleUseOfVectors final {
 }  // namespace test_vectors
 namespace fidl {
 
-#ifdef __Fuchsia__
 extern "C" const fidl_type_t test_vectors_ExampleUseOfVectorsTable;
 
 template <>
@@ -126,7 +125,5 @@ struct internal::NaturalIsMemcpyCompatible<::test_vectors::ExampleUseOfVectors>
           internal::NaturalIsMemcpyCompatible<::std::vector<uint8_t>>::value &&
           internal::NaturalIsMemcpyCompatible<
               ::std::vector<::std::vector<bool>>>::value> {};
-
-#endif  // __Fuchsia__
 
 }  // namespace fidl

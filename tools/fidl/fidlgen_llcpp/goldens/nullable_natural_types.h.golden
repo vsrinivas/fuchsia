@@ -5,7 +5,7 @@
 #include <fidl/test.nullable/cpp/common_types.h>
 #include <fidl/test.nullable/cpp/markers.h>
 #include <lib/fidl/cpp/natural_coding_traits.h>
-#include <lib/fidl/cpp/unified_messaging.h>
+#include <lib/fidl/cpp/natural_types.h>
 
 #include <cinttypes>
 #include <string>
@@ -685,7 +685,6 @@ class Int32Wrapper final {
 }  // namespace test_nullable
 namespace fidl {
 
-#ifdef __Fuchsia__
 extern "C" const fidl_type_t test_nullable_StructWithNullableVectorTable;
 
 template <>
@@ -720,9 +719,6 @@ struct internal::NaturalIsMemcpyCompatible<
           internal::NaturalIsMemcpyCompatible<
               ::cpp17::optional<::std::vector<int32_t>>>::value> {};
 
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
 extern "C" const fidl_type_t test_nullable_StructWithNullableUnionTable;
 
 template <>
@@ -757,9 +753,6 @@ struct internal::NaturalIsMemcpyCompatible<
           internal::NaturalIsMemcpyCompatible<
               ::std::unique_ptr<::test_nullable::SimpleUnion>>::value> {};
 
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
 extern "C" const fidl_type_t test_nullable_StructWithNullableStructTable;
 
 template <>
@@ -794,9 +787,6 @@ struct internal::NaturalIsMemcpyCompatible<
           internal::NaturalIsMemcpyCompatible<
               ::std::unique_ptr<::test_nullable::Int32Wrapper>>::value> {};
 
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
 extern "C" const fidl_type_t test_nullable_StructWithNullableStringTable;
 
 template <>
@@ -831,9 +821,8 @@ struct internal::NaturalIsMemcpyCompatible<
           internal::NaturalIsMemcpyCompatible<
               ::cpp17::optional<::std::string>>::value> {};
 
-#endif  // __Fuchsia__
-
 #ifdef __Fuchsia__
+
 extern "C" const fidl_type_t test_nullable_StructWithNullableRequestTable;
 
 template <>
@@ -870,6 +859,7 @@ struct internal::NaturalIsMemcpyCompatible<
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
 extern "C" const fidl_type_t test_nullable_StructWithNullableProtocolTable;
 
 template <>
@@ -906,6 +896,7 @@ struct internal::NaturalIsMemcpyCompatible<
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
 extern "C" const fidl_type_t test_nullable_StructWithNullableHandleTable;
 
 template <>
@@ -940,7 +931,6 @@ struct internal::NaturalIsMemcpyCompatible<
 
 #endif  // __Fuchsia__
 
-#ifdef __Fuchsia__
 extern "C" const fidl_type_t test_nullable_SimpleProtocolAddTopResponseTable;
 
 template <>
@@ -971,9 +961,6 @@ struct internal::NaturalIsMemcpyCompatible<
               ::test_nullable::SimpleProtocolAddTopResponse>::value &&
           internal::NaturalIsMemcpyCompatible<int32_t>::value> {};
 
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
 extern "C" const fidl_type_t test_nullable_SimpleProtocolAddRequestTable;
 
 template <>
@@ -1003,9 +990,6 @@ struct internal::NaturalIsMemcpyCompatible<
               ::test_nullable::SimpleProtocolAddRequest>::value &&
           internal::NaturalIsMemcpyCompatible<int32_t>::value> {};
 
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
 extern "C" const fidl_type_t test_nullable_Int32WrapperTable;
 
 template <>
@@ -1030,8 +1014,6 @@ struct internal::NaturalIsMemcpyCompatible<::test_nullable::Int32Wrapper>
     : public std::bool_constant<
           !internal::NaturalHasPadding<::test_nullable::Int32Wrapper>::value &&
           internal::NaturalIsMemcpyCompatible<int32_t>::value> {};
-
-#endif  // __Fuchsia__
 
 extern "C" const fidl_type_t test_nullable_SimpleUnionTable;
 

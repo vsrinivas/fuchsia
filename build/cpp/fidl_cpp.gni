@@ -456,7 +456,7 @@ template("fidl_cpp_family") {
       layer = "natural_types"
       headers = [ "fidl/$library_name/cpp/natural_types.h" ]
       sources = [ "fidl/$library_name/cpp/natural_types.cc" ]
-      public_deps = [ "//src/lib/fidl/cpp" ]
+      public_deps = [ "//src/lib/fidl/cpp:cpp_base" ]
       layer_deps = [ "common" ]
       if (defined(invoker.contains_drivers) && invoker.contains_drivers) {
         public_deps += [ "//sdk/lib/fidl_driver:fidl_driver_natural" ]

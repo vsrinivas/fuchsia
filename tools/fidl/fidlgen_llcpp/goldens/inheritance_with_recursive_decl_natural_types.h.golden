@@ -5,7 +5,7 @@
 #include <fidl/test.inheritancewithrecursivedecl/cpp/common_types.h>
 #include <fidl/test.inheritancewithrecursivedecl/cpp/markers.h>
 #include <lib/fidl/cpp/natural_coding_traits.h>
-#include <lib/fidl/cpp/unified_messaging.h>
+#include <lib/fidl/cpp/natural_types.h>
 
 #include <cinttypes>
 #include <string>
@@ -129,6 +129,7 @@ class ChildSecondRequest final {
 namespace fidl {
 
 #ifdef __Fuchsia__
+
 extern "C" const fidl_type_t
     test_inheritancewithrecursivedecl_ParentFirstRequestTable;
 
@@ -168,6 +169,7 @@ struct internal::NaturalIsMemcpyCompatible<
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
 extern "C" const fidl_type_t
     test_inheritancewithrecursivedecl_ChildSecondRequestTable;
 

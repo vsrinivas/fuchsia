@@ -2,17 +2,10 @@
 
 #include <fidl/test.inheritance/cpp/natural_types.h>
 
-#ifdef __Fuchsia__
-
-#endif  // __Fuchsia__
-
 ::test_inheritance::SuperFooTopResponse::Storage_
 test_inheritance::SuperFooTopResponse::CloneStorage_() const {
   return Storage_{::fidl::internal::NaturalClone(storage_.y)};
 }
-#ifdef __Fuchsia__
-
-#endif  // __Fuchsia__
 
 ::test_inheritance::SuperFooRequest::Storage_
 test_inheritance::SuperFooRequest::CloneStorage_() const {

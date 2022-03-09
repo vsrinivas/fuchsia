@@ -2,26 +2,16 @@
 
 #include <fidl/test.anonymous/cpp/natural_types.h>
 
-#ifdef __Fuchsia__
-
-#endif  // __Fuchsia__
-
 ::test_anonymous::TableData::Storage_ test_anonymous::TableData::CloneStorage_()
     const {
   return Storage_{::fidl::internal::NaturalClone(storage_.data)};
 }
-#ifdef __Fuchsia__
-
-#endif  // __Fuchsia__
 
 ::test_anonymous::SomeProtocolSomeMethodRequest::Storage_
 test_anonymous::SomeProtocolSomeMethodRequest::CloneStorage_() const {
   return Storage_{::fidl::internal::NaturalClone(storage_.union_member),
                   ::fidl::internal::NaturalClone(storage_.table_member)};
 }
-#ifdef __Fuchsia__
-
-#endif  // __Fuchsia__
 
 ::test_anonymous::OverrideTest::Storage_
 test_anonymous::OverrideTest::CloneStorage_() const {
@@ -29,17 +19,11 @@ test_anonymous::OverrideTest::CloneStorage_() const {
                   ::fidl::internal::NaturalClone(storage_.left),
                   ::fidl::internal::NaturalClone(storage_.right)};
 }
-#ifdef __Fuchsia__
-
-#endif  // __Fuchsia__
 
 ::test_anonymous::SomeProtocol_SomeMethod_Response::Storage_
 test_anonymous::SomeProtocol_SomeMethod_Response::CloneStorage_() const {
   return Storage_{::fidl::internal::NaturalClone(storage_.bits_member)};
 }
-#ifdef __Fuchsia__
-
-#endif  // __Fuchsia__
 
 ::test_anonymous::SomeProtocolSomeMethodTopResponse::Storage_
 test_anonymous::SomeProtocolSomeMethodTopResponse::CloneStorage_() const {

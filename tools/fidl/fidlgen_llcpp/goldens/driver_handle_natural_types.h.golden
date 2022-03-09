@@ -5,7 +5,7 @@
 #include <fidl/test.driverhandle/cpp/common_types.h>
 #include <fidl/test.driverhandle/cpp/markers.h>
 #include <lib/fidl/cpp/natural_coding_traits.h>
-#include <lib/fidl/cpp/unified_messaging.h>
+#include <lib/fidl/cpp/natural_types.h>
 
 #include <cinttypes>
 #include <string>
@@ -120,6 +120,7 @@ class ClientEndWrapper final {
 namespace fidl {
 
 #ifdef __Fuchsia__
+
 extern "C" const fidl_type_t test_driverhandle_ServerEndWrapperTable;
 
 template <>
@@ -156,6 +157,7 @@ struct internal::NaturalIsMemcpyCompatible<
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
 extern "C" const fidl_type_t test_driverhandle_ClientEndWrapperTable;
 
 template <>

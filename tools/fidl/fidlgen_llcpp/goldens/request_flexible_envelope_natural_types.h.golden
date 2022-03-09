@@ -5,7 +5,7 @@
 #include <fidl/test.requestflexibleenvelope/cpp/common_types.h>
 #include <fidl/test.requestflexibleenvelope/cpp/markers.h>
 #include <lib/fidl/cpp/natural_coding_traits.h>
-#include <lib/fidl/cpp/unified_messaging.h>
+#include <lib/fidl/cpp/natural_types.h>
 
 #include <cinttypes>
 #include <string>
@@ -516,7 +516,6 @@ class ProtocolRequestFlexibleResponseStrictRequest final {
 }  // namespace test_requestflexibleenvelope
 namespace fidl {
 
-#ifdef __Fuchsia__
 extern "C" const fidl_type_t
     test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleRequestTable;
 
@@ -562,9 +561,6 @@ struct internal::NaturalIsMemcpyCompatible<
           internal::NaturalIsMemcpyCompatible<
               ::test_requestflexibleenvelope::StrictFoo>::value> {};
 
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
 extern "C" const fidl_type_t
     test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictTopResponseTable;
 
@@ -610,9 +606,6 @@ struct internal::NaturalIsMemcpyCompatible<
           internal::NaturalIsMemcpyCompatible<
               ::test_requestflexibleenvelope::StrictFoo>::value> {};
 
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
 extern "C" const fidl_type_t
     test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleTopResponseTable;
 
@@ -658,9 +651,6 @@ struct internal::NaturalIsMemcpyCompatible<
           internal::NaturalIsMemcpyCompatible<
               ::test_requestflexibleenvelope::FlexibleFoo>::value> {};
 
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
 extern "C" const fidl_type_t
     test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictRequestTable;
 
@@ -706,8 +696,6 @@ struct internal::NaturalIsMemcpyCompatible<
           internal::NaturalIsMemcpyCompatible<
               ::test_requestflexibleenvelope::FlexibleFoo>::value> {};
 
-#endif  // __Fuchsia__
-
 extern "C" const fidl_type_t test_requestflexibleenvelope_StrictFooTable;
 
 template <>
@@ -731,6 +719,7 @@ struct internal::NaturalCodingTraits<
     ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalUnionCodingTraits<
                 ::test_requestflexibleenvelope::StrictFoo> {};
+
 extern "C" const fidl_type_t test_requestflexibleenvelope_FlexibleFooTable;
 
 template <>

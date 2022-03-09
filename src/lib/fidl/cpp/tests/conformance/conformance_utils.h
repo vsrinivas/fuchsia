@@ -8,10 +8,18 @@
 #include <lib/fidl/cpp/natural_types.h>
 #include <lib/fidl/internal.h>
 
+#ifdef __Fuchsia__
+#include <lib/fidl/llcpp/internal/transport_channel.h>
+#include <lib/zx/channel.h>
+#else
+#include <lib/fidl/llcpp/internal/transport_channel_host.h>
+#endif  // __Fuchsia__
+
 #include <zxtest/zxtest.h>
 
 namespace conformance_utils {
 
+#ifdef __Fuchsia__
 inline zx_handle_t HandleReplace(zx_handle_t handle, zx_rights_t rights) {
   zx_handle_t replaced_handle;
   ZX_ASSERT(zx_handle_replace(handle, rights, &replaced_handle) == ZX_OK);
@@ -30,6 +38,7 @@ inline zx_handle_t CreateEvent(zx_rights_t rights) {
   ZX_ASSERT(zx_event_create(0, &e) == ZX_OK);
   return HandleReplace(e, rights);
 }
+#endif  // __Fuchsia__
 
 template <class Input>
 void ForgetHandles(fidl::internal::WireFormatVersion wire_format, Input input) {

@@ -5,7 +5,7 @@
 #include <fidl/test.emptystruct/cpp/common_types.h>
 #include <fidl/test.emptystruct/cpp/markers.h>
 #include <lib/fidl/cpp/natural_coding_traits.h>
-#include <lib/fidl/cpp/unified_messaging.h>
+#include <lib/fidl/cpp/natural_types.h>
 
 #include <cinttypes>
 #include <string>
@@ -320,7 +320,6 @@ class EmptyProtocolReceiveRequest final {
 }  // namespace test_emptystruct
 namespace fidl {
 
-#ifdef __Fuchsia__
 extern "C" const fidl_type_t test_emptystruct_EmptyTable;
 
 template <>
@@ -345,9 +344,6 @@ struct internal::NaturalIsMemcpyCompatible<::test_emptystruct::Empty>
           !internal::NaturalHasPadding<::test_emptystruct::Empty>::value &&
           internal::NaturalIsMemcpyCompatible<uint8_t>::value> {};
 
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
 extern "C" const fidl_type_t test_emptystruct_EmptyProtocolSendRequestTable;
 
 template <>
@@ -379,9 +375,6 @@ struct internal::NaturalIsMemcpyCompatible<
           internal::NaturalIsMemcpyCompatible<
               ::test_emptystruct::Empty>::value> {};
 
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
 extern "C" const fidl_type_t
     test_emptystruct_EmptyProtocolSendAndReceiveTopResponseTable;
 
@@ -416,9 +409,6 @@ struct internal::NaturalIsMemcpyCompatible<
           internal::NaturalIsMemcpyCompatible<
               ::test_emptystruct::Empty>::value> {};
 
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
 extern "C" const fidl_type_t
     test_emptystruct_EmptyProtocolSendAndReceiveRequestTable;
 
@@ -452,9 +442,6 @@ struct internal::NaturalIsMemcpyCompatible<
           internal::NaturalIsMemcpyCompatible<
               ::test_emptystruct::Empty>::value> {};
 
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
 extern "C" const fidl_type_t test_emptystruct_EmptyProtocolReceiveRequestTable;
 
 template <>
@@ -485,7 +472,5 @@ struct internal::NaturalIsMemcpyCompatible<
               ::test_emptystruct::EmptyProtocolReceiveRequest>::value &&
           internal::NaturalIsMemcpyCompatible<
               ::test_emptystruct::Empty>::value> {};
-
-#endif  // __Fuchsia__
 
 }  // namespace fidl

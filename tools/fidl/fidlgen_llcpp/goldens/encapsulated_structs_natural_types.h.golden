@@ -5,7 +5,7 @@
 #include <fidl/test.encapsulatedstructs/cpp/common_types.h>
 #include <fidl/test.encapsulatedstructs/cpp/markers.h>
 #include <lib/fidl/cpp/natural_coding_traits.h>
-#include <lib/fidl/cpp/unified_messaging.h>
+#include <lib/fidl/cpp/natural_types.h>
 
 #include <cinttypes>
 #include <string>
@@ -420,6 +420,7 @@ class TopLevelStruct final {
 namespace fidl {
 
 #ifdef __Fuchsia__
+
 extern "C" const fidl_type_t
     test_encapsulatedstructs_NonInlineStructTestStructTable;
 
@@ -464,7 +465,6 @@ struct internal::NaturalIsMemcpyCompatible<
 
 #endif  // __Fuchsia__
 
-#ifdef __Fuchsia__
 extern "C" const fidl_type_t test_encapsulatedstructs_Int8Int32Table;
 
 template <>
@@ -499,9 +499,6 @@ struct internal::NaturalIsMemcpyCompatible<
           internal::NaturalIsMemcpyCompatible<int8_t>::value &&
           internal::NaturalIsMemcpyCompatible<int32_t>::value> {};
 
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
 extern "C" const fidl_type_t test_encapsulatedstructs_Int16Int8Table;
 
 template <>
@@ -536,9 +533,6 @@ struct internal::NaturalIsMemcpyCompatible<
           internal::NaturalIsMemcpyCompatible<int16_t>::value &&
           internal::NaturalIsMemcpyCompatible<int8_t>::value> {};
 
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
 extern "C" const fidl_type_t test_encapsulatedstructs_ArrayInt16Int8Table;
 
 template <>
@@ -574,9 +568,6 @@ struct internal::NaturalIsMemcpyCompatible<
               ::std::array<::test_encapsulatedstructs::Int16Int8, 3>>::value> {
 };
 
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
 extern "C" const fidl_type_t
     test_encapsulatedstructs_StructPaddingTestStructTable;
 
@@ -618,9 +609,8 @@ struct internal::NaturalIsMemcpyCompatible<
           internal::NaturalIsMemcpyCompatible<
               ::test_encapsulatedstructs::ArrayInt16Int8>::value> {};
 
-#endif  // __Fuchsia__
-
 #ifdef __Fuchsia__
+
 extern "C" const fidl_type_t test_encapsulatedstructs_TopLevelStructTable;
 
 template <>

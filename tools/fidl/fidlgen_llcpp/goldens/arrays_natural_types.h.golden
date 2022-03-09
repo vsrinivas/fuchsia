@@ -5,7 +5,7 @@
 #include <fidl/test.arrays/cpp/common_types.h>
 #include <fidl/test.arrays/cpp/markers.h>
 #include <lib/fidl/cpp/natural_coding_traits.h>
-#include <lib/fidl/cpp/unified_messaging.h>
+#include <lib/fidl/cpp/natural_types.h>
 
 #include <cinttypes>
 #include <string>
@@ -393,7 +393,6 @@ class StructLargeArray final {
 }  // namespace test_arrays
 namespace fidl {
 
-#ifdef __Fuchsia__
 extern "C" const fidl_type_t test_arrays_StructSmallArrayTable;
 
 template <>
@@ -420,9 +419,6 @@ struct internal::NaturalIsMemcpyCompatible<::test_arrays::StructSmallArray>
                                 internal::NaturalIsMemcpyCompatible<
                                     ::std::array<uint32_t, 2>>::value> {};
 
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
 extern "C" const fidl_type_t test_arrays_StructLargeArrayTable;
 
 template <>
@@ -448,8 +444,6 @@ struct internal::NaturalIsMemcpyCompatible<::test_arrays::StructLargeArray>
                                     ::test_arrays::StructLargeArray>::value &&
                                 internal::NaturalIsMemcpyCompatible<
                                     ::std::array<uint32_t, 100>>::value> {};
-
-#endif  // __Fuchsia__
 
 extern "C" const fidl_type_t test_arrays_TableSmallArrayTable;
 
@@ -509,6 +503,7 @@ struct internal::NaturalCodingTraits<
     ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalUnionCodingTraits<
                 ::test_arrays::UnionSmallArray> {};
+
 extern "C" const fidl_type_t test_arrays_UnionLargeArrayTable;
 
 template <>

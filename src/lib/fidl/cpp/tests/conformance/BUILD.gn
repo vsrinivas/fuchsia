@@ -10,7 +10,10 @@ import("//tools/fidl/gidl/gidl.gni")
 
 group("conformance") {
   testonly = true
-  deps = [ ":fidl_cpp_conformance_tests" ]
+  deps = [
+    ":fidl_cpp_conformance_tests",
+    ":fidl_cpp_conformance_tests_bin($host_toolchain)",
+  ]
 }
 
 gidl_output_prefix = "conformance_suite__"
@@ -34,7 +37,8 @@ foreach(gidl_file, conformance_suite_gidl_files) {
 test("fidl_cpp_conformance_tests_bin") {
   output_name = "fidl_cpp_conformance_tests"
   deps =
-      [ "//src/tests/fidl/conformance_suite:conformance_fidl_cpp" ] + gidl_deps
+      [ "//src/tests/fidl/conformance_suite:conformance_fidl_natural_types" ] +
+      gidl_deps
 }
 
 fuchsia_unittest_package("fidl_cpp_conformance_tests") {

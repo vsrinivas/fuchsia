@@ -2,152 +2,100 @@
 
 #include <fidl/test.bindingsdenylist/cpp/natural_types.h>
 
-#ifdef __Fuchsia__
-
-#endif  // __Fuchsia__
-
 ::test_bindingsdenylist::MemberOnlyAppearsInImportingLibrary::Storage_
 test_bindingsdenylist::MemberOnlyAppearsInImportingLibrary::CloneStorage_()
     const {
   return Storage_{::fidl::internal::NaturalClone(storage_.a)};
 }
-#ifdef __Fuchsia__
-
-#endif  // __Fuchsia__
 
 ::test_bindingsdenylist::OnlyAppearsInImportingLibrary::Storage_
 test_bindingsdenylist::OnlyAppearsInImportingLibrary::CloneStorage_() const {
   return Storage_{::fidl::internal::NaturalClone(
       storage_.member_only_appears_in_importing_library)};
 }
-#ifdef __Fuchsia__
-
-#endif  // __Fuchsia__
 
 ::test_bindingsdenylist::DenyEachBinding_OnlyDenySyzkaller_Response::Storage_
 test_bindingsdenylist::DenyEachBinding_OnlyDenySyzkaller_Response::
     CloneStorage_() const {
   return Storage_{::fidl::internal::NaturalClone(storage_.b)};
 }
-#ifdef __Fuchsia__
-
-#endif  // __Fuchsia__
 
 ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerTopResponse::Storage_
 test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerTopResponse::
     CloneStorage_() const {
   return Storage_{::fidl::internal::NaturalClone(storage_.result)};
 }
-#ifdef __Fuchsia__
-
-#endif  // __Fuchsia__
 
 ::test_bindingsdenylist::DenyEachBinding_OnlyDenyRust_Response::Storage_
 test_bindingsdenylist::DenyEachBinding_OnlyDenyRust_Response::CloneStorage_()
     const {
   return Storage_{::fidl::internal::NaturalClone(storage_.b)};
 }
-#ifdef __Fuchsia__
-
-#endif  // __Fuchsia__
 
 ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustTopResponse::Storage_
 test_bindingsdenylist::DenyEachBindingOnlyDenyRustTopResponse::CloneStorage_()
     const {
   return Storage_{::fidl::internal::NaturalClone(storage_.result)};
 }
-#ifdef __Fuchsia__
-
-#endif  // __Fuchsia__
 
 ::test_bindingsdenylist::DenyEachBinding_OnlyDenyLibfuzzer_Response::Storage_
 test_bindingsdenylist::DenyEachBinding_OnlyDenyLibfuzzer_Response::
     CloneStorage_() const {
   return Storage_{::fidl::internal::NaturalClone(storage_.b)};
 }
-#ifdef __Fuchsia__
-
-#endif  // __Fuchsia__
 
 ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerTopResponse::Storage_
 test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerTopResponse::
     CloneStorage_() const {
   return Storage_{::fidl::internal::NaturalClone(storage_.result)};
 }
-#ifdef __Fuchsia__
-
-#endif  // __Fuchsia__
 
 ::test_bindingsdenylist::DenyEachBinding_OnlyDenyGo_Response::Storage_
 test_bindingsdenylist::DenyEachBinding_OnlyDenyGo_Response::CloneStorage_()
     const {
   return Storage_{::fidl::internal::NaturalClone(storage_.b)};
 }
-#ifdef __Fuchsia__
-
-#endif  // __Fuchsia__
 
 ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoTopResponse::Storage_
 test_bindingsdenylist::DenyEachBindingOnlyDenyGoTopResponse::CloneStorage_()
     const {
   return Storage_{::fidl::internal::NaturalClone(storage_.result)};
 }
-#ifdef __Fuchsia__
-
-#endif  // __Fuchsia__
 
 ::test_bindingsdenylist::DenyEachBinding_OnlyDenyDart_Response::Storage_
 test_bindingsdenylist::DenyEachBinding_OnlyDenyDart_Response::CloneStorage_()
     const {
   return Storage_{::fidl::internal::NaturalClone(storage_.b)};
 }
-#ifdef __Fuchsia__
-
-#endif  // __Fuchsia__
 
 ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartTopResponse::Storage_
 test_bindingsdenylist::DenyEachBindingOnlyDenyDartTopResponse::CloneStorage_()
     const {
   return Storage_{::fidl::internal::NaturalClone(storage_.result)};
 }
-#ifdef __Fuchsia__
-
-#endif  // __Fuchsia__
 
 ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerRequest::Storage_
 test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerRequest::CloneStorage_()
     const {
   return Storage_{::fidl::internal::NaturalClone(storage_.a)};
 }
-#ifdef __Fuchsia__
-
-#endif  // __Fuchsia__
 
 ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustRequest::Storage_
 test_bindingsdenylist::DenyEachBindingOnlyDenyRustRequest::CloneStorage_()
     const {
   return Storage_{::fidl::internal::NaturalClone(storage_.a)};
 }
-#ifdef __Fuchsia__
-
-#endif  // __Fuchsia__
 
 ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerRequest::Storage_
 test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerRequest::CloneStorage_()
     const {
   return Storage_{::fidl::internal::NaturalClone(storage_.a)};
 }
-#ifdef __Fuchsia__
-
-#endif  // __Fuchsia__
 
 ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoRequest::Storage_
 test_bindingsdenylist::DenyEachBindingOnlyDenyGoRequest::CloneStorage_() const {
   return Storage_{::fidl::internal::NaturalClone(storage_.a)};
 }
-#ifdef __Fuchsia__
-
-#endif  // __Fuchsia__
 
 ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartRequest::Storage_
 test_bindingsdenylist::DenyEachBindingOnlyDenyDartRequest::CloneStorage_()

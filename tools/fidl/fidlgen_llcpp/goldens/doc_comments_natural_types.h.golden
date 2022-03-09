@@ -5,7 +5,7 @@
 #include <fidl/test.doccomments/cpp/common_types.h>
 #include <fidl/test.doccomments/cpp/markers.h>
 #include <lib/fidl/cpp/natural_coding_traits.h>
-#include <lib/fidl/cpp/unified_messaging.h>
+#include <lib/fidl/cpp/natural_types.h>
 
 #include <cinttypes>
 #include <string>
@@ -320,7 +320,6 @@ constexpr int32_t C = 4u;
 }  // namespace test_doccomments
 namespace fidl {
 
-#ifdef __Fuchsia__
 extern "C" const fidl_type_t test_doccomments_StructTable;
 
 template <>
@@ -344,8 +343,6 @@ struct internal::NaturalIsMemcpyCompatible<::test_doccomments::Struct>
     : public std::bool_constant<
           !internal::NaturalHasPadding<::test_doccomments::Struct>::value &&
           internal::NaturalIsMemcpyCompatible<int32_t>::value> {};
-
-#endif  // __Fuchsia__
 
 extern "C" const fidl_type_t test_doccomments_TableTable;
 
@@ -385,6 +382,7 @@ struct internal::NaturalCodingTraits<
     ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalUnionCodingTraits<
                 ::test_doccomments::StrictUnion> {};
+
 extern "C" const fidl_type_t test_doccomments_FlexibleUnionTable;
 
 template <>

@@ -54,10 +54,6 @@
 
 #endif  // __Fuchsia__
 
-#ifdef __Fuchsia__
-
-#endif  // __Fuchsia__
-
 ::test_protocols::WithErrorSyntax_ResponseAsStruct_Response::Storage_
 test_protocols::WithErrorSyntax_ResponseAsStruct_Response::CloneStorage_()
     const {
@@ -65,44 +61,29 @@ test_protocols::WithErrorSyntax_ResponseAsStruct_Response::CloneStorage_()
                   ::fidl::internal::NaturalClone(storage_.b),
                   ::fidl::internal::NaturalClone(storage_.c)};
 }
-#ifdef __Fuchsia__
-
-#endif  // __Fuchsia__
 
 ::test_protocols::WithErrorSyntaxResponseAsStructTopResponse::Storage_
 test_protocols::WithErrorSyntaxResponseAsStructTopResponse::CloneStorage_()
     const {
   return Storage_{::fidl::internal::NaturalClone(storage_.result)};
 }
-#ifdef __Fuchsia__
-
-#endif  // __Fuchsia__
 
 ::test_protocols::WithErrorSyntax_ErrorAsPrimitive_Response::Storage_
 test_protocols::WithErrorSyntax_ErrorAsPrimitive_Response::CloneStorage_()
     const {
   return Storage_{::fidl::internal::NaturalClone(storage_.__reserved)};
 }
-#ifdef __Fuchsia__
-
-#endif  // __Fuchsia__
 
 ::test_protocols::WithErrorSyntaxErrorAsPrimitiveTopResponse::Storage_
 test_protocols::WithErrorSyntaxErrorAsPrimitiveTopResponse::CloneStorage_()
     const {
   return Storage_{::fidl::internal::NaturalClone(storage_.result)};
 }
-#ifdef __Fuchsia__
-
-#endif  // __Fuchsia__
 
 ::test_protocols::WithErrorSyntax_ErrorAsEnum_Response::Storage_
 test_protocols::WithErrorSyntax_ErrorAsEnum_Response::CloneStorage_() const {
   return Storage_{::fidl::internal::NaturalClone(storage_.__reserved)};
 }
-#ifdef __Fuchsia__
-
-#endif  // __Fuchsia__
 
 ::test_protocols::
     WithAndWithoutRequestResponseWithRequestWithResponseTopResponse::Storage_
@@ -111,9 +92,6 @@ test_protocols::WithErrorSyntax_ErrorAsEnum_Response::CloneStorage_() const {
             CloneStorage_() const {
   return Storage_{::fidl::internal::NaturalClone(storage_.ret)};
 }
-#ifdef __Fuchsia__
-
-#endif  // __Fuchsia__
 
 ::test_protocols::WithAndWithoutRequestResponseWithRequestWithResponseRequest::
     Storage_
@@ -122,9 +100,6 @@ test_protocols::WithErrorSyntax_ErrorAsEnum_Response::CloneStorage_() const {
             CloneStorage_() const {
   return Storage_{::fidl::internal::NaturalClone(storage_.arg)};
 }
-#ifdef __Fuchsia__
-
-#endif  // __Fuchsia__
 
 ::test_protocols::WithAndWithoutRequestResponseWithRequestNoResponseRequest::
     Storage_
@@ -132,9 +107,6 @@ test_protocols::WithErrorSyntax_ErrorAsEnum_Response::CloneStorage_() const {
         CloneStorage_() const {
   return Storage_{::fidl::internal::NaturalClone(storage_.arg)};
 }
-#ifdef __Fuchsia__
-
-#endif  // __Fuchsia__
 
 ::test_protocols::WithAndWithoutRequestResponseWithRequestEmptyResponseRequest::
     Storage_
@@ -143,18 +115,12 @@ test_protocols::WithErrorSyntax_ErrorAsEnum_Response::CloneStorage_() const {
             CloneStorage_() const {
   return Storage_{::fidl::internal::NaturalClone(storage_.arg)};
 }
-#ifdef __Fuchsia__
-
-#endif  // __Fuchsia__
 
 ::test_protocols::WithAndWithoutRequestResponseOnWithResponseRequest::Storage_
 test_protocols::WithAndWithoutRequestResponseOnWithResponseRequest::
     CloneStorage_() const {
   return Storage_{::fidl::internal::NaturalClone(storage_.ret)};
 }
-#ifdef __Fuchsia__
-
-#endif  // __Fuchsia__
 
 ::test_protocols::
     WithAndWithoutRequestResponseNoRequestWithResponseTopResponse::Storage_
@@ -163,58 +129,37 @@ test_protocols::WithAndWithoutRequestResponseOnWithResponseRequest::
             CloneStorage_() const {
   return Storage_{::fidl::internal::NaturalClone(storage_.ret)};
 }
-#ifdef __Fuchsia__
-
-#endif  // __Fuchsia__
 
 ::test_protocols::TransitionalRequestTopResponse::Storage_
 test_protocols::TransitionalRequestTopResponse::CloneStorage_() const {
   return Storage_{::fidl::internal::NaturalClone(storage_.y)};
 }
-#ifdef __Fuchsia__
-
-#endif  // __Fuchsia__
 
 ::test_protocols::TransitionalRequestRequest::Storage_
 test_protocols::TransitionalRequestRequest::CloneStorage_() const {
   return Storage_{::fidl::internal::NaturalClone(storage_.x)};
 }
-#ifdef __Fuchsia__
-
-#endif  // __Fuchsia__
 
 ::test_protocols::TransitionalOneWayRequest::Storage_
 test_protocols::TransitionalOneWayRequest::CloneStorage_() const {
   return Storage_{::fidl::internal::NaturalClone(storage_.x)};
 }
-#ifdef __Fuchsia__
-
-#endif  // __Fuchsia__
 
 ::test_protocols::TransitionalEventRequest::Storage_
 test_protocols::TransitionalEventRequest::CloneStorage_() const {
   return Storage_{::fidl::internal::NaturalClone(storage_.x)};
 }
-#ifdef __Fuchsia__
-
-#endif  // __Fuchsia__
 
 ::test_protocols::MethodWithUnionUnionMethodRequest::Storage_
 test_protocols::MethodWithUnionUnionMethodRequest::CloneStorage_() const {
   return Storage_{::fidl::internal::NaturalClone(storage_.u)};
 }
-#ifdef __Fuchsia__
-
-#endif  // __Fuchsia__
 
 ::test_protocols::SyscallProtocolMethodCRequest::Storage_
 test_protocols::SyscallProtocolMethodCRequest::CloneStorage_() const {
   return Storage_{::fidl::internal::NaturalClone(storage_.a),
                   ::fidl::internal::NaturalClone(storage_.b)};
 }
-#ifdef __Fuchsia__
-
-#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 
@@ -246,49 +191,38 @@ test_protocols::ManyParametersFifteenRequest::CloneStorage_() const {
                   ::fidl::internal::NaturalClone(storage_.p14),
                   ::fidl::internal::NaturalClone(storage_.p15)};
 }
-#ifdef __Fuchsia__
-
-#endif  // __Fuchsia__
 
 ::test_protocols::WithErrorSyntaxErrorAsEnumTopResponse::Storage_
 test_protocols::WithErrorSyntaxErrorAsEnumTopResponse::CloneStorage_() const {
   return Storage_{::fidl::internal::NaturalClone(storage_.result)};
 }
-#ifdef __Fuchsia__
-
-#endif  // __Fuchsia__
 
 ::test_protocols::ChannelProtocolMethodBTopResponse::Storage_
 test_protocols::ChannelProtocolMethodBTopResponse::CloneStorage_() const {
   return Storage_{::fidl::internal::NaturalClone(storage_.result)};
 }
-#ifdef __Fuchsia__
-
-#endif  // __Fuchsia__
 
 ::test_protocols::ChannelProtocolMethodBRequest::Storage_
 test_protocols::ChannelProtocolMethodBRequest::CloneStorage_() const {
   return Storage_{::fidl::internal::NaturalClone(storage_.a),
                   ::fidl::internal::NaturalClone(storage_.b)};
 }
-#ifdef __Fuchsia__
-
-#endif  // __Fuchsia__
 
 ::test_protocols::ChannelProtocolMethodARequest::Storage_
 test_protocols::ChannelProtocolMethodARequest::CloneStorage_() const {
   return Storage_{::fidl::internal::NaturalClone(storage_.a),
                   ::fidl::internal::NaturalClone(storage_.b)};
 }
-#ifdef __Fuchsia__
-
-#endif  // __Fuchsia__
 
 ::test_protocols::ChannelProtocolEventARequest::Storage_
 test_protocols::ChannelProtocolEventARequest::CloneStorage_() const {
   return Storage_{::fidl::internal::NaturalClone(storage_.a),
                   ::fidl::internal::NaturalClone(storage_.b)};
 }
+
+#ifdef __Fuchsia__
+
+#endif  // __Fuchsia__
 
 std::shared_ptr<
     ::test_protocols::WithErrorSyntax_ResponseAsStruct_Result::Storage_>

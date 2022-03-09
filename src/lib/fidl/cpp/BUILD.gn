@@ -2,29 +2,19 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-assert(is_fuchsia, "Unified C++ bindings only support Fuchsia for now.")
-
-source_set("cpp") {
+# The base library that supports domain objects.
+#
+# It works on host and Fuchsia.
+source_set("cpp_base") {
   public = [
-    "include/lib/fidl/cpp/channel.h",
-    "include/lib/fidl/cpp/client.h",
-    "include/lib/fidl/cpp/internal/client_details.h",
-    "include/lib/fidl/cpp/internal/make_response_context.h",
     "include/lib/fidl/cpp/internal/message_extensions.h",
-    "include/lib/fidl/cpp/internal/natural_client_base.h",
-    "include/lib/fidl/cpp/internal/natural_client_messenger.h",
-    "include/lib/fidl/cpp/internal/natural_server_messenger.h",
     "include/lib/fidl/cpp/natural_coding_traits.h",
     "include/lib/fidl/cpp/natural_decoder.h",
     "include/lib/fidl/cpp/natural_encoder.h",
     "include/lib/fidl/cpp/natural_types.h",
-    "include/lib/fidl/cpp/unified_messaging.h",
-    "include/lib/fidl/cpp/unified_messaging_declarations.h",
   ]
   sources = [
     "internal/message_extensions.cc",
-    "internal/natural_client_messenger.cc",
-    "internal/natural_server_messenger.cc",
     "natural_decoder.cc",
     "natural_encoder.cc",
   ]
@@ -33,9 +23,32 @@ source_set("cpp") {
     "//zircon/system/ulib/fidl:fidl-llcpp",
     "//zircon/system/ulib/zxc",
   ]
-  public_configs = [ ":cpp.headers" ]
+  deps = [ "//zircon/system/ulib/fidl:fidl_base" ]
+  public_configs = [ ":cpp_base.headers" ]
 }
 
-config("cpp.headers") {
+config("cpp_base.headers") {
   include_dirs = [ "include" ]
+}
+
+# The unified C++ library that adds messaging APIs on top of domain objects.
+#
+# It is Fuchsia-only.
+source_set("cpp") {
+  public = [
+    "include/lib/fidl/cpp/channel.h",
+    "include/lib/fidl/cpp/client.h",
+    "include/lib/fidl/cpp/internal/client_details.h",
+    "include/lib/fidl/cpp/internal/make_response_context.h",
+    "include/lib/fidl/cpp/internal/natural_client_base.h",
+    "include/lib/fidl/cpp/internal/natural_client_messenger.h",
+    "include/lib/fidl/cpp/internal/natural_server_messenger.h",
+    "include/lib/fidl/cpp/unified_messaging.h",
+    "include/lib/fidl/cpp/unified_messaging_declarations.h",
+  ]
+  sources = [
+    "internal/natural_client_messenger.cc",
+    "internal/natural_server_messenger.cc",
+  ]
+  public_deps = [ "//src/lib/fidl/cpp:cpp_base" ]
 }

@@ -2,17 +2,10 @@
 
 #include <fidl/test.arrays/cpp/natural_types.h>
 
-#ifdef __Fuchsia__
-
-#endif  // __Fuchsia__
-
 ::test_arrays::StructSmallArray::Storage_
 test_arrays::StructSmallArray::CloneStorage_() const {
   return Storage_{::fidl::internal::NaturalClone(storage_.a)};
 }
-#ifdef __Fuchsia__
-
-#endif  // __Fuchsia__
 
 ::test_arrays::StructLargeArray::Storage_
 test_arrays::StructLargeArray::CloneStorage_() const {

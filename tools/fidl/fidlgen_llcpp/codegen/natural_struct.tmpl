@@ -112,7 +112,9 @@ class {{ .Name }} final {
 
 
 {{- define "Struct:Traits:NaturalTypesHeader" }}
+  {{ if .IsResourceType }}
   {{- IfdefFuchsia -}}
+  {{- end }}
 
   extern "C" const fidl_type_t {{ .CodingTableType.Self }};
 
@@ -148,17 +150,19 @@ class {{ .Name }} final {
     {{- end -}}
   > {};
   {{ end }}
+
+  {{ if .IsResourceType }}
   {{- EndifFuchsia -}}
+  {{ end }}
 {{- end }}
 
 
 {{- define "Struct:NaturalTypesSource" }}
+{{ if .IsResourceType }}
 {{- IfdefFuchsia -}}
+{{- end }}
+
 {{- EnsureNamespace "" }}
-
-
-{{- EndifFuchsia -}}
-
 {{- if not .IsResourceType }}
   {{ . }}::Storage_ {{ .NoLeading }}::CloneStorage_() const {
     return Storage_{
@@ -170,4 +174,7 @@ class {{ .Name }} final {
   }
 {{- end }}
 
+{{ if .IsResourceType }}
+{{- EndifFuchsia -}}
+{{ end }}
 {{- end }}

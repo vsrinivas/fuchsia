@@ -125,7 +125,7 @@ template("gidl_cpp_conformance") {
   _gidl_cc_source_set(target_name) {
     type = "conformance"
     language = "cpp"
-    bindings_suffix = "_cpp"
+    bindings_suffix = "_natural_types"
     forward_variables_from(invoker, "*")
   }
 }

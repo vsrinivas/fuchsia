@@ -5,7 +5,7 @@
 #include <fidl/test.inheritance/cpp/common_types.h>
 #include <fidl/test.inheritance/cpp/markers.h>
 #include <lib/fidl/cpp/natural_coding_traits.h>
-#include <lib/fidl/cpp/unified_messaging.h>
+#include <lib/fidl/cpp/natural_types.h>
 
 #include <cinttypes>
 #include <string>
@@ -127,7 +127,6 @@ class SuperFooRequest final {
 }  // namespace test_inheritance
 namespace fidl {
 
-#ifdef __Fuchsia__
 extern "C" const fidl_type_t test_inheritance_SuperFooTopResponseTable;
 
 template <>
@@ -157,9 +156,6 @@ struct internal::NaturalIsMemcpyCompatible<
               ::test_inheritance::SuperFooTopResponse>::value &&
           internal::NaturalIsMemcpyCompatible<int64_t>::value> {};
 
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
 extern "C" const fidl_type_t test_inheritance_SuperFooRequestTable;
 
 template <>
@@ -190,7 +186,5 @@ struct internal::NaturalIsMemcpyCompatible<::test_inheritance::SuperFooRequest>
           !internal::NaturalHasPadding<
               ::test_inheritance::SuperFooRequest>::value &&
           internal::NaturalIsMemcpyCompatible<::std::string>::value> {};
-
-#endif  // __Fuchsia__
 
 }  // namespace fidl

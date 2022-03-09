@@ -5,7 +5,7 @@
 #include <fidl/test.error/cpp/common_types.h>
 #include <fidl/test.error/cpp/markers.h>
 #include <lib/fidl/cpp/natural_coding_traits.h>
-#include <lib/fidl/cpp/unified_messaging.h>
+#include <lib/fidl/cpp/natural_types.h>
 
 #include <cinttypes>
 #include <string>
@@ -288,7 +288,6 @@ class ExampleFooRequest final {
 }  // namespace test_error
 namespace fidl {
 
-#ifdef __Fuchsia__
 extern "C" const fidl_type_t test_error_Example_foo_ResponseTable;
 
 template <>
@@ -316,9 +315,6 @@ struct internal::NaturalIsMemcpyCompatible<::test_error::Example_foo_Response>
               ::test_error::Example_foo_Response>::value &&
           internal::NaturalIsMemcpyCompatible<int64_t>::value> {};
 
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
 extern "C" const fidl_type_t test_error_ExampleFooTopResponseTable;
 
 template <>
@@ -351,9 +347,6 @@ struct internal::NaturalIsMemcpyCompatible<::test_error::ExampleFooTopResponse>
           internal::NaturalIsMemcpyCompatible<
               ::test_error::Example_foo_Result>::value> {};
 
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
 extern "C" const fidl_type_t test_error_ExampleFooRequestTable;
 
 template <>
@@ -383,8 +376,6 @@ struct internal::NaturalIsMemcpyCompatible<::test_error::ExampleFooRequest>
           !internal::NaturalHasPadding<
               ::test_error::ExampleFooRequest>::value &&
           internal::NaturalIsMemcpyCompatible<::std::string>::value> {};
-
-#endif  // __Fuchsia__
 
 extern "C" const fidl_type_t test_error_Example_foo_ResultTable;
 

@@ -2,19 +2,12 @@
 
 #include <fidl/test.unionsandwich/cpp/natural_types.h>
 
-#ifdef __Fuchsia__
-
-#endif  // __Fuchsia__
-
 ::test_unionsandwich::SandwichUnionSize8Alignment4::Storage_
 test_unionsandwich::SandwichUnionSize8Alignment4::CloneStorage_() const {
   return Storage_{::fidl::internal::NaturalClone(storage_.before),
                   ::fidl::internal::NaturalClone(storage_.union_),
                   ::fidl::internal::NaturalClone(storage_.after)};
 }
-#ifdef __Fuchsia__
-
-#endif  // __Fuchsia__
 
 ::test_unionsandwich::SandwichUnionSize36Alignment4::Storage_
 test_unionsandwich::SandwichUnionSize36Alignment4::CloneStorage_() const {
@@ -22,9 +15,6 @@ test_unionsandwich::SandwichUnionSize36Alignment4::CloneStorage_() const {
                   ::fidl::internal::NaturalClone(storage_.union_),
                   ::fidl::internal::NaturalClone(storage_.after)};
 }
-#ifdef __Fuchsia__
-
-#endif  // __Fuchsia__
 
 ::test_unionsandwich::SandwichUnionSize12Alignment4::Storage_
 test_unionsandwich::SandwichUnionSize12Alignment4::CloneStorage_() const {
@@ -32,18 +22,12 @@ test_unionsandwich::SandwichUnionSize12Alignment4::CloneStorage_() const {
                   ::fidl::internal::NaturalClone(storage_.union_),
                   ::fidl::internal::NaturalClone(storage_.after)};
 }
-#ifdef __Fuchsia__
-
-#endif  // __Fuchsia__
 
 ::test_unionsandwich::StructSize16Alignment8::Storage_
 test_unionsandwich::StructSize16Alignment8::CloneStorage_() const {
   return Storage_{::fidl::internal::NaturalClone(storage_.f1),
                   ::fidl::internal::NaturalClone(storage_.f2)};
 }
-#ifdef __Fuchsia__
-
-#endif  // __Fuchsia__
 
 ::test_unionsandwich::SandwichUnionSize24Alignment8::Storage_
 test_unionsandwich::SandwichUnionSize24Alignment8::CloneStorage_() const {

@@ -127,6 +127,10 @@ class {{ .Name }} final {
 {{- end }}
 
 {{- define "Union:Traits:NaturalTypesHeader" }}
+  {{ if .IsResourceType }}
+  {{- IfdefFuchsia -}}
+  {{- end }}
+
   extern "C" const fidl_type_t {{ .CodingTableType.Self }};
 
   {{ if .IsResourceType }}
@@ -148,10 +152,17 @@ class {{ .Name }} final {
   struct internal::NaturalCodingTraits<{{ . }}, ::fidl::internal::NaturalCodingConstraintEmpty> final
     : public ::fidl::internal::NaturalUnionCodingTraits<{{ . }}> {};
 
+{{ if .IsResourceType }}
+{{- EndifFuchsia -}}
+{{- end }}
 {{- end }}
 
 
 {{- define "Union:NaturalTypesSource" }}
+{{ if .IsResourceType }}
+{{- IfdefFuchsia -}}
+{{- end }}
+
 {{- EnsureNamespace "" }}
 
 {{ if not .IsResourceType }}
@@ -169,4 +180,8 @@ class {{ .Name }} final {
     }
   }
 {{- end }}
+
+{{ if .IsResourceType }}
+{{- EndifFuchsia -}}
+{{ end }}
 {{- end }}

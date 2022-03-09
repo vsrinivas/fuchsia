@@ -5,7 +5,7 @@
 #include <fidl/test.padding/cpp/common_types.h>
 #include <fidl/test.padding/cpp/markers.h>
 #include <lib/fidl/cpp/natural_coding_traits.h>
-#include <lib/fidl/cpp/unified_messaging.h>
+#include <lib/fidl/cpp/natural_types.h>
 
 #include <cinttypes>
 #include <string>
@@ -1075,7 +1075,6 @@ class Padding1ByteEnd final {
 }  // namespace test_padding
 namespace fidl {
 
-#ifdef __Fuchsia__
 extern "C" const fidl_type_t test_padding_Padding7ByteMiddleTable;
 
 template <>
@@ -1108,9 +1107,6 @@ struct internal::NaturalIsMemcpyCompatible<::test_padding::Padding7ByteMiddle>
           internal::NaturalIsMemcpyCompatible<uint8_t>::value &&
           internal::NaturalIsMemcpyCompatible<uint64_t>::value> {};
 
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
 extern "C" const fidl_type_t test_padding_Padding7ByteEndTable;
 
 template <>
@@ -1142,9 +1138,6 @@ struct internal::NaturalIsMemcpyCompatible<::test_padding::Padding7ByteEnd>
           internal::NaturalIsMemcpyCompatible<uint64_t>::value &&
           internal::NaturalIsMemcpyCompatible<uint8_t>::value> {};
 
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
 extern "C" const fidl_type_t test_padding_Padding6ByteMiddleTable;
 
 template <>
@@ -1177,9 +1170,6 @@ struct internal::NaturalIsMemcpyCompatible<::test_padding::Padding6ByteMiddle>
           internal::NaturalIsMemcpyCompatible<uint16_t>::value &&
           internal::NaturalIsMemcpyCompatible<uint64_t>::value> {};
 
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
 extern "C" const fidl_type_t test_padding_Padding6ByteEndTable;
 
 template <>
@@ -1211,9 +1201,6 @@ struct internal::NaturalIsMemcpyCompatible<::test_padding::Padding6ByteEnd>
           internal::NaturalIsMemcpyCompatible<uint64_t>::value &&
           internal::NaturalIsMemcpyCompatible<uint16_t>::value> {};
 
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
 extern "C" const fidl_type_t test_padding_Padding5ByteMiddleTable;
 
 template <>
@@ -1247,9 +1234,6 @@ struct internal::NaturalIsMemcpyCompatible<::test_padding::Padding5ByteMiddle>
           internal::NaturalIsMemcpyCompatible<uint8_t>::value &&
           internal::NaturalIsMemcpyCompatible<uint64_t>::value> {};
 
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
 extern "C" const fidl_type_t test_padding_Padding5ByteEndTable;
 
 template <>
@@ -1282,9 +1266,6 @@ struct internal::NaturalIsMemcpyCompatible<::test_padding::Padding5ByteEnd>
           internal::NaturalIsMemcpyCompatible<uint16_t>::value &&
           internal::NaturalIsMemcpyCompatible<uint8_t>::value> {};
 
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
 extern "C" const fidl_type_t test_padding_Padding4ByteMiddleTable;
 
 template <>
@@ -1317,9 +1298,6 @@ struct internal::NaturalIsMemcpyCompatible<::test_padding::Padding4ByteMiddle>
           internal::NaturalIsMemcpyCompatible<uint32_t>::value &&
           internal::NaturalIsMemcpyCompatible<uint64_t>::value> {};
 
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
 extern "C" const fidl_type_t test_padding_Padding4ByteEndTable;
 
 template <>
@@ -1351,9 +1329,6 @@ struct internal::NaturalIsMemcpyCompatible<::test_padding::Padding4ByteEnd>
           internal::NaturalIsMemcpyCompatible<uint64_t>::value &&
           internal::NaturalIsMemcpyCompatible<uint32_t>::value> {};
 
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
 extern "C" const fidl_type_t test_padding_Padding4ByteAlignmentLength12Table;
 
 template <>
@@ -1390,9 +1365,6 @@ struct internal::NaturalIsMemcpyCompatible<
           internal::NaturalIsMemcpyCompatible<uint8_t>::value &&
           internal::NaturalIsMemcpyCompatible<uint16_t>::value> {};
 
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
 extern "C" const fidl_type_t test_padding_Padding3ByteMiddleTable;
 
 template <>
@@ -1425,9 +1397,6 @@ struct internal::NaturalIsMemcpyCompatible<::test_padding::Padding3ByteMiddle>
           internal::NaturalIsMemcpyCompatible<uint8_t>::value &&
           internal::NaturalIsMemcpyCompatible<uint32_t>::value> {};
 
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
 extern "C" const fidl_type_t test_padding_Padding3ByteEndTable;
 
 template <>
@@ -1459,9 +1428,6 @@ struct internal::NaturalIsMemcpyCompatible<::test_padding::Padding3ByteEnd>
           internal::NaturalIsMemcpyCompatible<uint32_t>::value &&
           internal::NaturalIsMemcpyCompatible<uint8_t>::value> {};
 
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
 extern "C" const fidl_type_t test_padding_Padding2ByteMiddleTable;
 
 template <>
@@ -1494,9 +1460,6 @@ struct internal::NaturalIsMemcpyCompatible<::test_padding::Padding2ByteMiddle>
           internal::NaturalIsMemcpyCompatible<uint16_t>::value &&
           internal::NaturalIsMemcpyCompatible<uint32_t>::value> {};
 
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
 extern "C" const fidl_type_t test_padding_Padding2ByteEndTable;
 
 template <>
@@ -1528,9 +1491,6 @@ struct internal::NaturalIsMemcpyCompatible<::test_padding::Padding2ByteEnd>
           internal::NaturalIsMemcpyCompatible<uint32_t>::value &&
           internal::NaturalIsMemcpyCompatible<uint16_t>::value> {};
 
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
 extern "C" const fidl_type_t test_padding_Padding2ByteAlignmentLength6Table;
 
 template <>
@@ -1566,9 +1526,6 @@ struct internal::NaturalIsMemcpyCompatible<
           internal::NaturalIsMemcpyCompatible<uint8_t>::value &&
           internal::NaturalIsMemcpyCompatible<uint16_t>::value> {};
 
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
 extern "C" const fidl_type_t test_padding_Padding1ByteMiddleTable;
 
 template <>
@@ -1601,9 +1558,6 @@ struct internal::NaturalIsMemcpyCompatible<::test_padding::Padding1ByteMiddle>
           internal::NaturalIsMemcpyCompatible<uint8_t>::value &&
           internal::NaturalIsMemcpyCompatible<uint16_t>::value> {};
 
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
 extern "C" const fidl_type_t test_padding_Padding1ByteEndTable;
 
 template <>
@@ -1634,7 +1588,5 @@ struct internal::NaturalIsMemcpyCompatible<::test_padding::Padding1ByteEnd>
               ::test_padding::Padding1ByteEnd>::value &&
           internal::NaturalIsMemcpyCompatible<uint16_t>::value &&
           internal::NaturalIsMemcpyCompatible<uint8_t>::value> {};
-
-#endif  // __Fuchsia__
 
 }  // namespace fidl

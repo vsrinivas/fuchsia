@@ -5,7 +5,7 @@
 #include <fidl/test.protocolpayloads/cpp/common_types.h>
 #include <fidl/test.protocolpayloads/cpp/markers.h>
 #include <lib/fidl/cpp/natural_coding_traits.h>
-#include <lib/fidl/cpp/unified_messaging.h>
+#include <lib/fidl/cpp/natural_types.h>
 
 #include <cinttypes>
 #include <string>
@@ -1758,7 +1758,6 @@ class MainProtocolOnLocalWithErrorRequest final {
 }  // namespace test_protocolpayloads
 namespace fidl {
 
-#ifdef __Fuchsia__
 extern "C" const fidl_type_t
     test_protocolpayloads_MainProtocolTwoWayImportWithErrorTopResponseTable;
 
@@ -1801,9 +1800,6 @@ struct internal::NaturalIsMemcpyCompatible<
               ::test_protocolpayloads::
                   MainProtocol_TwoWayImportWithError_Result>::value> {};
 
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
 extern "C" const fidl_type_t
     test_protocolpayloads_MainProtocol_TwoWayAnonWithError_ResponseTable;
 
@@ -1839,9 +1835,6 @@ struct internal::NaturalIsMemcpyCompatible<
                   MainProtocol_TwoWayAnonWithError_Response>::value &&
           internal::NaturalIsMemcpyCompatible<uint32_t>::value> {};
 
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
 extern "C" const fidl_type_t
     test_protocolpayloads_MainProtocolTwoWayAnonWithErrorTopResponseTable;
 
@@ -1884,9 +1877,6 @@ struct internal::NaturalIsMemcpyCompatible<
               ::test_protocolpayloads::
                   MainProtocol_TwoWayAnonWithError_Result>::value> {};
 
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
 extern "C" const fidl_type_t
     test_protocolpayloads_MainProtocolOnImportWithErrorRequestTable;
 
@@ -1927,9 +1917,6 @@ struct internal::NaturalIsMemcpyCompatible<
               ::test_protocolpayloads::MainProtocol_OnImportWithError_Result>::
               value> {};
 
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
 extern "C" const fidl_type_t
     test_protocolpayloads_MainProtocol_OnAnonWithError_ResponseTable;
 
@@ -1964,9 +1951,6 @@ struct internal::NaturalIsMemcpyCompatible<
               value &&
           internal::NaturalIsMemcpyCompatible<uint32_t>::value> {};
 
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
 extern "C" const fidl_type_t
     test_protocolpayloads_MainProtocolOnAnonWithErrorRequestTable;
 
@@ -2008,9 +1992,6 @@ struct internal::NaturalIsMemcpyCompatible<
               ::test_protocolpayloads::MainProtocol_OnAnonWithError_Result>::
               value> {};
 
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
 extern "C" const fidl_type_t
     test_protocolpayloads_MainProtocolTwoWayAnonWithErrorRequestTable;
 
@@ -2045,9 +2026,6 @@ struct internal::NaturalIsMemcpyCompatible<
               value &&
           internal::NaturalIsMemcpyCompatible<uint32_t>::value> {};
 
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
 extern "C" const fidl_type_t
     test_protocolpayloads_MainProtocolTwoWayAnonTopResponseTable;
 
@@ -2081,9 +2059,6 @@ struct internal::NaturalIsMemcpyCompatible<
               value &&
           internal::NaturalIsMemcpyCompatible<uint32_t>::value> {};
 
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
 extern "C" const fidl_type_t
     test_protocolpayloads_MainProtocolTwoWayAnonRequestTable;
 
@@ -2116,9 +2091,6 @@ struct internal::NaturalIsMemcpyCompatible<
               ::test_protocolpayloads::MainProtocolTwoWayAnonRequest>::value &&
           internal::NaturalIsMemcpyCompatible<uint32_t>::value> {};
 
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
 extern "C" const fidl_type_t
     test_protocolpayloads_MainProtocolOneWayAnonRequestTable;
 
@@ -2151,9 +2123,6 @@ struct internal::NaturalIsMemcpyCompatible<
               ::test_protocolpayloads::MainProtocolOneWayAnonRequest>::value &&
           internal::NaturalIsMemcpyCompatible<uint32_t>::value> {};
 
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
 extern "C" const fidl_type_t
     test_protocolpayloads_MainProtocolOnAnonRequestTable;
 
@@ -2185,9 +2154,6 @@ struct internal::NaturalIsMemcpyCompatible<
               ::test_protocolpayloads::MainProtocolOnAnonRequest>::value &&
           internal::NaturalIsMemcpyCompatible<uint32_t>::value> {};
 
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
 extern "C" const fidl_type_t test_protocolpayloads_LocalStructPayloadTable;
 
 template <>
@@ -2217,9 +2183,6 @@ struct internal::NaturalIsMemcpyCompatible<
               ::test_protocolpayloads::LocalStructPayload>::value &&
           internal::NaturalIsMemcpyCompatible<uint32_t>::value> {};
 
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
 extern "C" const fidl_type_t
     test_protocolpayloads_MainProtocolTwoWayLocalWithErrorTopResponseTable;
 
@@ -2262,9 +2225,6 @@ struct internal::NaturalIsMemcpyCompatible<
               ::test_protocolpayloads::
                   MainProtocol_TwoWayLocalWithError_Result>::value> {};
 
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
 extern "C" const fidl_type_t
     test_protocolpayloads_MainProtocolOnLocalWithErrorRequestTable;
 
@@ -2305,8 +2265,6 @@ struct internal::NaturalIsMemcpyCompatible<
               ::test_protocolpayloads::MainProtocol_OnLocalWithError_Result>::
               value> {};
 
-#endif  // __Fuchsia__
-
 extern "C" const fidl_type_t
     test_protocolpayloads_MainProtocol_TwoWayImportWithError_ResultTable;
 
@@ -2336,6 +2294,7 @@ struct internal::NaturalCodingTraits<
     : public ::fidl::internal::NaturalUnionCodingTraits<
           ::test_protocolpayloads::MainProtocol_TwoWayImportWithError_Result> {
 };
+
 extern "C" const fidl_type_t
     test_protocolpayloads_MainProtocol_TwoWayAnonWithError_ResultTable;
 
@@ -2363,6 +2322,7 @@ struct internal::NaturalCodingTraits<
     final
     : public ::fidl::internal::NaturalUnionCodingTraits<
           ::test_protocolpayloads::MainProtocol_TwoWayAnonWithError_Result> {};
+
 extern "C" const fidl_type_t
     test_protocolpayloads_MainProtocol_OnImportWithError_ResultTable;
 
@@ -2390,6 +2350,7 @@ struct internal::NaturalCodingTraits<
     final
     : public ::fidl::internal::NaturalUnionCodingTraits<
           ::test_protocolpayloads::MainProtocol_OnImportWithError_Result> {};
+
 extern "C" const fidl_type_t
     test_protocolpayloads_MainProtocol_OnAnonWithError_ResultTable;
 
@@ -2416,6 +2377,7 @@ struct internal::NaturalCodingTraits<
     final : public ::fidl::internal::NaturalUnionCodingTraits<
                 ::test_protocolpayloads::MainProtocol_OnAnonWithError_Result> {
 };
+
 extern "C" const fidl_type_t
     test_protocolpayloads_MainProtocol_TwoWayLocalWithError_ResultTable;
 
@@ -2444,6 +2406,7 @@ struct internal::NaturalCodingTraits<
     final
     : public ::fidl::internal::NaturalUnionCodingTraits<
           ::test_protocolpayloads::MainProtocol_TwoWayLocalWithError_Result> {};
+
 extern "C" const fidl_type_t
     test_protocolpayloads_MainProtocol_OnLocalWithError_ResultTable;
 

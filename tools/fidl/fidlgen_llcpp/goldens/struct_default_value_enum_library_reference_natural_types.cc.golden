@@ -2,10 +2,6 @@
 
 #include <fidl/test.structdefaultvalueenumlibraryreference/cpp/natural_types.h>
 
-#ifdef __Fuchsia__
-
-#endif  // __Fuchsia__
-
 ::test_structdefaultvalueenumlibraryreference::Foo::Storage_
 test_structdefaultvalueenumlibraryreference::Foo::CloneStorage_() const {
   return Storage_{::fidl::internal::NaturalClone(storage_.field)};

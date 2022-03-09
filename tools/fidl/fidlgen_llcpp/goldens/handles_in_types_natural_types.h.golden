@@ -5,7 +5,7 @@
 #include <fidl/test.handlesintypes/cpp/common_types.h>
 #include <fidl/test.handlesintypes/cpp/markers.h>
 #include <lib/fidl/cpp/natural_coding_traits.h>
-#include <lib/fidl/cpp/unified_messaging.h>
+#include <lib/fidl/cpp/natural_types.h>
 
 #include <cinttypes>
 #include <string>
@@ -259,6 +259,7 @@ class HandlesInTypes final {
 namespace fidl {
 
 #ifdef __Fuchsia__
+
 extern "C" const fidl_type_t test_handlesintypes_HandlesInTypesTable;
 
 template <>
@@ -307,6 +308,8 @@ struct internal::NaturalIsMemcpyCompatible<
 
 #endif  // __Fuchsia__
 
+#ifdef __Fuchsia__
+
 extern "C" const fidl_type_t test_handlesintypes_TableWithHandleTable;
 
 template <>
@@ -330,6 +333,10 @@ struct internal::NaturalCodingTraits<
     ::fidl::internal::NaturalCodingConstraintEmpty>
     : public ::fidl::internal::NaturalTableCodingTraits<
           ::test_handlesintypes::TableWithHandle> {};
+
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
 
 extern "C" const fidl_type_t test_handlesintypes_UnionWithHandleTable;
 
@@ -357,6 +364,8 @@ struct internal::NaturalCodingTraits<
     ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalUnionCodingTraits<
                 ::test_handlesintypes::UnionWithHandle> {};
+
+#endif  // __Fuchsia__
 
 template <>
 struct internal::NaturalCodingTraits<

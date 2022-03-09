@@ -2,10 +2,6 @@
 
 #include <fidl/test.vectors/cpp/natural_types.h>
 
-#ifdef __Fuchsia__
-
-#endif  // __Fuchsia__
-
 ::test_vectors::ExampleUseOfVectors::Storage_
 test_vectors::ExampleUseOfVectors::CloneStorage_() const {
   return Storage_{

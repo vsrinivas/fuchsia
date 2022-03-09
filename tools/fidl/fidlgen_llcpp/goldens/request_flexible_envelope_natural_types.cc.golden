@@ -2,19 +2,12 @@
 
 #include <fidl/test.requestflexibleenvelope/cpp/natural_types.h>
 
-#ifdef __Fuchsia__
-
-#endif  // __Fuchsia__
-
 ::test_requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleRequest::
     Storage_
     test_requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleRequest::
         CloneStorage_() const {
   return Storage_{::fidl::internal::NaturalClone(storage_.s)};
 }
-#ifdef __Fuchsia__
-
-#endif  // __Fuchsia__
 
 ::test_requestflexibleenvelope::
     ProtocolRequestFlexibleResponseStrictTopResponse::Storage_
@@ -23,9 +16,6 @@
             const {
   return Storage_{::fidl::internal::NaturalClone(storage_.f)};
 }
-#ifdef __Fuchsia__
-
-#endif  // __Fuchsia__
 
 ::test_requestflexibleenvelope::
     ProtocolRequestStrictResponseFlexibleTopResponse::Storage_
@@ -34,9 +24,6 @@
             const {
   return Storage_{::fidl::internal::NaturalClone(storage_.f)};
 }
-#ifdef __Fuchsia__
-
-#endif  // __Fuchsia__
 
 ::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictRequest::
     Storage_

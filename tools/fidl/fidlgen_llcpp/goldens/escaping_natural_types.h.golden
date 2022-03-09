@@ -5,7 +5,7 @@
 #include <fidl/test.escaping/cpp/common_types.h>
 #include <fidl/test.escaping/cpp/markers.h>
 #include <lib/fidl/cpp/natural_coding_traits.h>
-#include <lib/fidl/cpp/unified_messaging.h>
+#include <lib/fidl/cpp/natural_types.h>
 
 #include <cinttypes>
 #include <string>
@@ -74,7 +74,6 @@ class DocCommentWithQuotes final {
 }  // namespace test_escaping
 namespace fidl {
 
-#ifdef __Fuchsia__
 extern "C" const fidl_type_t test_escaping_DocCommentWithQuotesTable;
 
 template <>
@@ -103,7 +102,5 @@ struct internal::NaturalIsMemcpyCompatible<
           !internal::NaturalHasPadding<
               ::test_escaping::DocCommentWithQuotes>::value &&
           internal::NaturalIsMemcpyCompatible<uint8_t>::value> {};
-
-#endif  // __Fuchsia__
 
 }  // namespace fidl

@@ -5,7 +5,7 @@
 #include <fidl/test.anonymous/cpp/common_types.h>
 #include <fidl/test.anonymous/cpp/markers.h>
 #include <lib/fidl/cpp/natural_coding_traits.h>
-#include <lib/fidl/cpp/unified_messaging.h>
+#include <lib/fidl/cpp/natural_types.h>
 
 #include <cinttypes>
 #include <string>
@@ -828,7 +828,6 @@ class SomeProtocolSomeMethodTopResponse final {
 }  // namespace test_anonymous
 namespace fidl {
 
-#ifdef __Fuchsia__
 extern "C" const fidl_type_t test_anonymous_TableDataTable;
 
 template <>
@@ -853,9 +852,6 @@ struct internal::NaturalIsMemcpyCompatible<::test_anonymous::TableData>
           !internal::NaturalHasPadding<::test_anonymous::TableData>::value &&
           internal::NaturalIsMemcpyCompatible<uint8_t>::value> {};
 
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
 extern "C" const fidl_type_t test_anonymous_SomeProtocolSomeMethodRequestTable;
 
 template <>
@@ -893,9 +889,6 @@ struct internal::NaturalIsMemcpyCompatible<
           internal::NaturalIsMemcpyCompatible<
               ::test_anonymous::TableMember>::value> {};
 
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
 extern "C" const fidl_type_t test_anonymous_OverrideTestTable;
 
 template <>
@@ -927,9 +920,6 @@ struct internal::NaturalIsMemcpyCompatible<::test_anonymous::OverrideTest>
           internal::NaturalIsMemcpyCompatible<
               ::std::unique_ptr<::test_anonymous::Expression>>::value> {};
 
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
 extern "C" const fidl_type_t
     test_anonymous_SomeProtocol_SomeMethod_ResponseTable;
 
@@ -962,9 +952,6 @@ struct internal::NaturalIsMemcpyCompatible<
           internal::NaturalIsMemcpyCompatible<
               ::test_anonymous::BitsMember>::value> {};
 
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
 extern "C" const fidl_type_t
     test_anonymous_SomeProtocolSomeMethodTopResponseTable;
 
@@ -1001,8 +988,6 @@ struct internal::NaturalIsMemcpyCompatible<
               ::test_anonymous::SomeProtocolSomeMethodTopResponse>::value &&
           internal::NaturalIsMemcpyCompatible<
               ::test_anonymous::SomeProtocol_SomeMethod_Result>::value> {};
-
-#endif  // __Fuchsia__
 
 extern "C" const fidl_type_t test_anonymous_TableMemberTable;
 
@@ -1064,6 +1049,7 @@ struct internal::NaturalCodingTraits<
     ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalUnionCodingTraits<
                 ::test_anonymous::UnionMember> {};
+
 extern "C" const fidl_type_t test_anonymous_ExpressionTable;
 
 template <>
@@ -1084,6 +1070,7 @@ struct internal::NaturalCodingTraits<
     ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalUnionCodingTraits<
                 ::test_anonymous::Expression> {};
+
 extern "C" const fidl_type_t test_anonymous_SomeProtocol_SomeMethod_ResultTable;
 
 template <>

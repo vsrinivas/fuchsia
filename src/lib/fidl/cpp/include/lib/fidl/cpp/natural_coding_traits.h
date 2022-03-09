@@ -9,7 +9,10 @@
 #include <lib/fidl/cpp/natural_encoder.h>
 #include <lib/fidl/llcpp/traits.h>
 #include <lib/stdcompat/optional.h>
+
+#ifdef __Fuchsia__
 #include <lib/zx/channel.h>
+#endif  // __Fuchsia__
 
 #include <string>
 
@@ -332,6 +335,7 @@ struct NaturalCodingTraits<cpp17::optional<std::string>, NaturalCodingConstraint
   }
 };
 
+#ifdef __Fuchsia__
 template <typename T, typename Constraint>
 struct NaturalCodingTraits<ClientEnd<T>, Constraint> {
   static void Encode(NaturalEncoder* encoder, ClientEnd<T>* value, size_t offset) {
@@ -367,6 +371,7 @@ struct NaturalCodingTraits<ServerEnd<T>, Constraint> {
     *value = ServerEnd<T>(std::move(channel));
   }
 };
+#endif  // __Fuchsia__
 
 template <typename Constraint, typename T>
 void NaturalEncode(NaturalEncoder* encoder, T* value, size_t offset) {

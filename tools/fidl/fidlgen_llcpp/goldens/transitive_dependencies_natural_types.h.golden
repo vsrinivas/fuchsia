@@ -5,7 +5,7 @@
 #include <fidl/test.transitivedependencies/cpp/common_types.h>
 #include <fidl/test.transitivedependencies/cpp/markers.h>
 #include <lib/fidl/cpp/natural_coding_traits.h>
-#include <lib/fidl/cpp/unified_messaging.h>
+#include <lib/fidl/cpp/natural_types.h>
 
 #include <cinttypes>
 #include <string>
@@ -72,7 +72,6 @@ class Baz final {
 }  // namespace test_transitivedependencies
 namespace fidl {
 
-#ifdef __Fuchsia__
 extern "C" const fidl_type_t test_transitivedependencies_BazTable;
 
 template <>
@@ -99,7 +98,5 @@ struct internal::NaturalIsMemcpyCompatible<::test_transitivedependencies::Baz>
           !internal::NaturalHasPadding<
               ::test_transitivedependencies::Baz>::value &&
           internal::NaturalIsMemcpyCompatible<::test_middle::Bar>::value> {};
-
-#endif  // __Fuchsia__
 
 }  // namespace fidl

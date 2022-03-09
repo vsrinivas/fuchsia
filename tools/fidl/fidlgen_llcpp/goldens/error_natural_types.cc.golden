@@ -2,25 +2,15 @@
 
 #include <fidl/test.error/cpp/natural_types.h>
 
-#ifdef __Fuchsia__
-
-#endif  // __Fuchsia__
-
 ::test_error::Example_foo_Response::Storage_
 test_error::Example_foo_Response::CloneStorage_() const {
   return Storage_{::fidl::internal::NaturalClone(storage_.y)};
 }
-#ifdef __Fuchsia__
-
-#endif  // __Fuchsia__
 
 ::test_error::ExampleFooTopResponse::Storage_
 test_error::ExampleFooTopResponse::CloneStorage_() const {
   return Storage_{::fidl::internal::NaturalClone(storage_.result)};
 }
-#ifdef __Fuchsia__
-
-#endif  // __Fuchsia__
 
 ::test_error::ExampleFooRequest::Storage_
 test_error::ExampleFooRequest::CloneStorage_() const {

@@ -5,7 +5,7 @@
 #include <fidl/test.protocols/cpp/common_types.h>
 #include <fidl/test.protocols/cpp/markers.h>
 #include <lib/fidl/cpp/natural_coding_traits.h>
-#include <lib/fidl/cpp/unified_messaging.h>
+#include <lib/fidl/cpp/natural_types.h>
 
 #include <cinttypes>
 #include <string>
@@ -3139,6 +3139,7 @@ class ChannelProtocolEventARequest final {
 namespace fidl {
 
 #ifdef __Fuchsia__
+
 extern "C" const fidl_type_t
     test_protocols_WithErrorSyntax_HandleInResult_ResponseTable;
 
@@ -3178,6 +3179,7 @@ struct internal::NaturalIsMemcpyCompatible<
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
 extern "C" const fidl_type_t
     test_protocols_WithErrorSyntaxHandleInResultTopResponseTable;
 
@@ -3225,6 +3227,7 @@ struct internal::NaturalIsMemcpyCompatible<
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
 extern "C" const fidl_type_t
     test_protocols_HandleRightsProtocolResponseMethodTopResponseTable;
 
@@ -3266,6 +3269,7 @@ struct internal::NaturalIsMemcpyCompatible<
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
 extern "C" const fidl_type_t
     test_protocols_HandleRightsProtocolResponseMethodRequestTable;
 
@@ -3305,6 +3309,7 @@ struct internal::NaturalIsMemcpyCompatible<
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
 extern "C" const fidl_type_t
     test_protocols_HandleRightsProtocolNoResponseMethodRequestTable;
 
@@ -3345,6 +3350,7 @@ struct internal::NaturalIsMemcpyCompatible<
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
 extern "C" const fidl_type_t
     test_protocols_HandleRightsProtocolAnEventRequestTable;
 
@@ -3382,6 +3388,7 @@ struct internal::NaturalIsMemcpyCompatible<
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
 extern "C" const fidl_type_t
     test_protocols_ChannelProtocolTakeHandleRequestTable;
 
@@ -3419,6 +3426,7 @@ struct internal::NaturalIsMemcpyCompatible<
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
 extern "C" const fidl_type_t
     test_protocols_ChannelProtocolMutateSocketTopResponseTable;
 
@@ -3458,6 +3466,7 @@ struct internal::NaturalIsMemcpyCompatible<
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
 extern "C" const fidl_type_t
     test_protocols_ChannelProtocolMutateSocketRequestTable;
 
@@ -3495,6 +3504,7 @@ struct internal::NaturalIsMemcpyCompatible<
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
 extern "C" const fidl_type_t
     test_protocols_WithProtocolEndsServerEndsTopResponseTable;
 
@@ -3534,6 +3544,7 @@ struct internal::NaturalIsMemcpyCompatible<
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
 extern "C" const fidl_type_t
     test_protocols_WithProtocolEndsServerEndsRequestTable;
 
@@ -3572,6 +3583,7 @@ struct internal::NaturalIsMemcpyCompatible<
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
 extern "C" const fidl_type_t
     test_protocols_WithProtocolEndsClientEndsTopResponseTable;
 
@@ -3611,6 +3623,7 @@ struct internal::NaturalIsMemcpyCompatible<
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
 extern "C" const fidl_type_t
     test_protocols_WithProtocolEndsClientEndsRequestTable;
 
@@ -3648,7 +3661,6 @@ struct internal::NaturalIsMemcpyCompatible<
 
 #endif  // __Fuchsia__
 
-#ifdef __Fuchsia__
 extern "C" const fidl_type_t
     test_protocols_WithErrorSyntax_ResponseAsStruct_ResponseTable;
 
@@ -3683,9 +3695,6 @@ struct internal::NaturalIsMemcpyCompatible<
               value &&
           internal::NaturalIsMemcpyCompatible<int64_t>::value> {};
 
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
 extern "C" const fidl_type_t
     test_protocols_WithErrorSyntaxResponseAsStructTopResponseTable;
 
@@ -3726,9 +3735,6 @@ struct internal::NaturalIsMemcpyCompatible<
               ::test_protocols::WithErrorSyntax_ResponseAsStruct_Result>::
               value> {};
 
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
 extern "C" const fidl_type_t
     test_protocols_WithErrorSyntax_ErrorAsPrimitive_ResponseTable;
 
@@ -3762,9 +3768,6 @@ struct internal::NaturalIsMemcpyCompatible<
               value &&
           internal::NaturalIsMemcpyCompatible<uint8_t>::value> {};
 
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
 extern "C" const fidl_type_t
     test_protocols_WithErrorSyntaxErrorAsPrimitiveTopResponseTable;
 
@@ -3805,9 +3808,6 @@ struct internal::NaturalIsMemcpyCompatible<
               ::test_protocols::WithErrorSyntax_ErrorAsPrimitive_Result>::
               value> {};
 
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
 extern "C" const fidl_type_t
     test_protocols_WithErrorSyntax_ErrorAsEnum_ResponseTable;
 
@@ -3840,9 +3840,6 @@ struct internal::NaturalIsMemcpyCompatible<
               ::test_protocols::WithErrorSyntax_ErrorAsEnum_Response>::value &&
           internal::NaturalIsMemcpyCompatible<uint8_t>::value> {};
 
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
 extern "C" const fidl_type_t
     test_protocols_WithAndWithoutRequestResponseWithRequestWithResponseTopResponseTable;
 
@@ -3890,9 +3887,6 @@ struct internal::NaturalIsMemcpyCompatible<
               value &&
           internal::NaturalIsMemcpyCompatible<::std::string>::value> {};
 
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
 extern "C" const fidl_type_t
     test_protocols_WithAndWithoutRequestResponseWithRequestWithResponseRequestTable;
 
@@ -3939,9 +3933,6 @@ struct internal::NaturalIsMemcpyCompatible<
               value &&
           internal::NaturalIsMemcpyCompatible<::std::string>::value> {};
 
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
 extern "C" const fidl_type_t
     test_protocols_WithAndWithoutRequestResponseWithRequestNoResponseRequestTable;
 
@@ -3983,9 +3974,6 @@ struct internal::NaturalIsMemcpyCompatible<
               value &&
           internal::NaturalIsMemcpyCompatible<::std::string>::value> {};
 
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
 extern "C" const fidl_type_t
     test_protocols_WithAndWithoutRequestResponseWithRequestEmptyResponseRequestTable;
 
@@ -4033,9 +4021,6 @@ struct internal::NaturalIsMemcpyCompatible<
               value &&
           internal::NaturalIsMemcpyCompatible<::std::string>::value> {};
 
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
 extern "C" const fidl_type_t
     test_protocols_WithAndWithoutRequestResponseOnWithResponseRequestTable;
 
@@ -4076,9 +4061,6 @@ struct internal::NaturalIsMemcpyCompatible<
                   WithAndWithoutRequestResponseOnWithResponseRequest>::value &&
           internal::NaturalIsMemcpyCompatible<::std::string>::value> {};
 
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
 extern "C" const fidl_type_t
     test_protocols_WithAndWithoutRequestResponseNoRequestWithResponseTopResponseTable;
 
@@ -4126,9 +4108,6 @@ struct internal::NaturalIsMemcpyCompatible<
               value &&
           internal::NaturalIsMemcpyCompatible<::std::string>::value> {};
 
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
 extern "C" const fidl_type_t test_protocols_TransitionalRequestTopResponseTable;
 
 template <>
@@ -4159,9 +4138,6 @@ struct internal::NaturalIsMemcpyCompatible<
               ::test_protocols::TransitionalRequestTopResponse>::value &&
           internal::NaturalIsMemcpyCompatible<int64_t>::value> {};
 
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
 extern "C" const fidl_type_t test_protocols_TransitionalRequestRequestTable;
 
 template <>
@@ -4192,9 +4168,6 @@ struct internal::NaturalIsMemcpyCompatible<
               ::test_protocols::TransitionalRequestRequest>::value &&
           internal::NaturalIsMemcpyCompatible<int64_t>::value> {};
 
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
 extern "C" const fidl_type_t test_protocols_TransitionalOneWayRequestTable;
 
 template <>
@@ -4224,9 +4197,6 @@ struct internal::NaturalIsMemcpyCompatible<
               ::test_protocols::TransitionalOneWayRequest>::value &&
           internal::NaturalIsMemcpyCompatible<int64_t>::value> {};
 
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
 extern "C" const fidl_type_t test_protocols_TransitionalEventRequestTable;
 
 template <>
@@ -4256,9 +4226,6 @@ struct internal::NaturalIsMemcpyCompatible<
               ::test_protocols::TransitionalEventRequest>::value &&
           internal::NaturalIsMemcpyCompatible<int64_t>::value> {};
 
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
 extern "C" const fidl_type_t
     test_protocols_MethodWithUnionUnionMethodRequestTable;
 
@@ -4296,9 +4263,6 @@ struct internal::NaturalIsMemcpyCompatible<
           internal::NaturalIsMemcpyCompatible<
               ::test_protocols::TheUnion>::value> {};
 
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
 extern "C" const fidl_type_t test_protocols_SyscallProtocolMethodCRequestTable;
 
 template <>
@@ -4329,9 +4293,8 @@ struct internal::NaturalIsMemcpyCompatible<
               ::test_protocols::SyscallProtocolMethodCRequest>::value &&
           internal::NaturalIsMemcpyCompatible<int64_t>::value> {};
 
-#endif  // __Fuchsia__
-
 #ifdef __Fuchsia__
+
 extern "C" const fidl_type_t test_protocols_ProtocolEndsTable;
 
 template <>
@@ -4365,6 +4328,7 @@ struct internal::NaturalIsMemcpyCompatible<::test_protocols::ProtocolEnds>
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
 extern "C" const fidl_type_t
     test_protocols_WithProtocolEndsStructContainingEndsTopResponseTable;
 
@@ -4408,6 +4372,7 @@ struct internal::NaturalIsMemcpyCompatible<
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
 extern "C" const fidl_type_t
     test_protocols_WithProtocolEndsStructContainingEndsRequestTable;
 
@@ -4447,7 +4412,6 @@ struct internal::NaturalIsMemcpyCompatible<
 
 #endif  // __Fuchsia__
 
-#ifdef __Fuchsia__
 extern "C" const fidl_type_t test_protocols_ManyParametersFifteenRequestTable;
 
 template <>
@@ -4478,9 +4442,6 @@ struct internal::NaturalIsMemcpyCompatible<
               ::test_protocols::ManyParametersFifteenRequest>::value &&
           internal::NaturalIsMemcpyCompatible<bool>::value> {};
 
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
 extern "C" const fidl_type_t
     test_protocols_WithErrorSyntaxErrorAsEnumTopResponseTable;
 
@@ -4519,9 +4480,6 @@ struct internal::NaturalIsMemcpyCompatible<
           internal::NaturalIsMemcpyCompatible<
               ::test_protocols::WithErrorSyntax_ErrorAsEnum_Result>::value> {};
 
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
 extern "C" const fidl_type_t
     test_protocols_ChannelProtocolMethodBTopResponseTable;
 
@@ -4553,9 +4511,6 @@ struct internal::NaturalIsMemcpyCompatible<
               ::test_protocols::ChannelProtocolMethodBTopResponse>::value &&
           internal::NaturalIsMemcpyCompatible<int64_t>::value> {};
 
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
 extern "C" const fidl_type_t test_protocols_ChannelProtocolMethodBRequestTable;
 
 template <>
@@ -4586,9 +4541,6 @@ struct internal::NaturalIsMemcpyCompatible<
               ::test_protocols::ChannelProtocolMethodBRequest>::value &&
           internal::NaturalIsMemcpyCompatible<int64_t>::value> {};
 
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
 extern "C" const fidl_type_t test_protocols_ChannelProtocolMethodARequestTable;
 
 template <>
@@ -4619,9 +4571,6 @@ struct internal::NaturalIsMemcpyCompatible<
               ::test_protocols::ChannelProtocolMethodARequest>::value &&
           internal::NaturalIsMemcpyCompatible<int64_t>::value> {};
 
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
 extern "C" const fidl_type_t test_protocols_ChannelProtocolEventARequestTable;
 
 template <>
@@ -4652,7 +4601,7 @@ struct internal::NaturalIsMemcpyCompatible<
               ::test_protocols::ChannelProtocolEventARequest>::value &&
           internal::NaturalIsMemcpyCompatible<int64_t>::value> {};
 
-#endif  // __Fuchsia__
+#ifdef __Fuchsia__
 
 extern "C" const fidl_type_t
     test_protocols_WithErrorSyntax_HandleInResult_ResultTable;
@@ -4682,6 +4631,9 @@ struct internal::NaturalCodingTraits<
     ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalUnionCodingTraits<
                 ::test_protocols::WithErrorSyntax_HandleInResult_Result> {};
+
+#endif  // __Fuchsia__
+
 extern "C" const fidl_type_t
     test_protocols_WithErrorSyntax_ResponseAsStruct_ResultTable;
 
@@ -4707,6 +4659,7 @@ struct internal::NaturalCodingTraits<
     ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalUnionCodingTraits<
                 ::test_protocols::WithErrorSyntax_ResponseAsStruct_Result> {};
+
 extern "C" const fidl_type_t
     test_protocols_WithErrorSyntax_ErrorAsPrimitive_ResultTable;
 
@@ -4732,6 +4685,7 @@ struct internal::NaturalCodingTraits<
     ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalUnionCodingTraits<
                 ::test_protocols::WithErrorSyntax_ErrorAsPrimitive_Result> {};
+
 extern "C" const fidl_type_t test_protocols_TheUnionTable;
 
 template <>
@@ -4751,6 +4705,7 @@ struct internal::NaturalCodingTraits<
     ::test_protocols::TheUnion, ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalUnionCodingTraits<
                 ::test_protocols::TheUnion> {};
+
 extern "C" const fidl_type_t
     test_protocols_WithErrorSyntax_ErrorAsEnum_ResultTable;
 

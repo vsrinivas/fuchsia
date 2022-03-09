@@ -4,7 +4,11 @@
 
 #include <lib/fidl/cpp/internal/message_extensions.h>
 #include <lib/fidl/internal.h>
+#ifdef __Fuchsia__
 #include <lib/fidl/llcpp/internal/transport_channel.h>
+#else
+#include <lib/fidl/llcpp/internal/transport_channel_host.h>
+#endif
 #include <zircon/fidl.h>
 #include <zircon/syscalls.h>
 

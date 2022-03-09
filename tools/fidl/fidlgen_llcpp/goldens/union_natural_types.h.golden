@@ -5,7 +5,7 @@
 #include <fidl/test.union/cpp/common_types.h>
 #include <fidl/test.union/cpp/markers.h>
 #include <lib/fidl/cpp/natural_coding_traits.h>
-#include <lib/fidl/cpp/unified_messaging.h>
+#include <lib/fidl/cpp/natural_types.h>
 
 #include <cinttypes>
 #include <string>
@@ -2676,7 +2676,6 @@ class XUnionContainingEmptyStruct final {
 }  // namespace test_union
 namespace fidl {
 
-#ifdef __Fuchsia__
 extern "C" const fidl_type_t test_union_StructWithNullableXUnionTable;
 
 template <>
@@ -2711,9 +2710,6 @@ struct internal::NaturalIsMemcpyCompatible<
           internal::NaturalIsMemcpyCompatible<
               ::std::unique_ptr<::test_union::OlderSimpleUnion>>::value> {};
 
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
 extern "C" const fidl_type_t
     test_union_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponseTable;
 
@@ -2762,9 +2758,6 @@ struct internal::NaturalIsMemcpyCompatible<
           internal::NaturalIsMemcpyCompatible<
               ::test_union::StrictBoundedXUnion>::value> {};
 
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
 extern "C" const fidl_type_t test_union_PizzaTable;
 
 template <>
@@ -2794,9 +2787,6 @@ struct internal::NaturalIsMemcpyCompatible<::test_union::Pizza>
           internal::NaturalIsMemcpyCompatible<
               ::std::vector<::std::string>>::value> {};
 
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
 extern "C" const fidl_type_t test_union_PastaTable;
 
 template <>
@@ -2825,9 +2815,6 @@ struct internal::NaturalIsMemcpyCompatible<::test_union::Pasta>
           !internal::NaturalHasPadding<::test_union::Pasta>::value &&
           internal::NaturalIsMemcpyCompatible<::std::string>::value> {};
 
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
 extern "C" const fidl_type_t
     test_union_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponseTable;
 
@@ -2876,9 +2863,6 @@ struct internal::NaturalIsMemcpyCompatible<
           internal::NaturalIsMemcpyCompatible<
               ::test_union::OlderSimpleUnion>::value> {};
 
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
 extern "C" const fidl_type_t test_union_NullableUnionStructTable;
 
 template <>
@@ -2910,9 +2894,6 @@ struct internal::NaturalIsMemcpyCompatible<::test_union::NullableUnionStruct>
           internal::NaturalIsMemcpyCompatible<
               ::std::unique_ptr<::test_union::Union>>::value> {};
 
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
 extern "C" const fidl_type_t test_union_UnionSandwichTable;
 
 template <>
@@ -2943,9 +2924,6 @@ struct internal::NaturalIsMemcpyCompatible<::test_union::UnionSandwich>
           internal::NaturalIsMemcpyCompatible<
               ::test_union::ExplicitXUnion>::value> {};
 
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
 extern "C" const fidl_type_t test_union_EmptyTable;
 
 template <>
@@ -2970,8 +2948,6 @@ struct internal::NaturalIsMemcpyCompatible<::test_union::Empty>
           !internal::NaturalHasPadding<::test_union::Empty>::value &&
           internal::NaturalIsMemcpyCompatible<uint8_t>::value> {};
 
-#endif  // __Fuchsia__
-
 extern "C" const fidl_type_t test_union_UnionWithAttributesTable;
 
 template <>
@@ -2992,6 +2968,7 @@ struct internal::NaturalCodingTraits<
     ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalUnionCodingTraits<
                 ::test_union::UnionWithAttributes> {};
+
 extern "C" const fidl_type_t test_union_UnionTable;
 
 template <>
@@ -3010,6 +2987,7 @@ struct internal::NaturalCodingTraits<
     ::test_union::Union, ::fidl::internal::NaturalCodingConstraintEmpty>
     final
     : public ::fidl::internal::NaturalUnionCodingTraits<::test_union::Union> {};
+
 extern "C" const fidl_type_t test_union_StrictUnionTable;
 
 template <>
@@ -3029,6 +3007,7 @@ struct internal::NaturalCodingTraits<
     ::test_union::StrictUnion, ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalUnionCodingTraits<
                 ::test_union::StrictUnion> {};
+
 extern "C" const fidl_type_t test_union_StrictSimpleXUnionTable;
 
 template <>
@@ -3049,6 +3028,7 @@ struct internal::NaturalCodingTraits<
     ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalUnionCodingTraits<
                 ::test_union::StrictSimpleXUnion> {};
+
 extern "C" const fidl_type_t test_union_StrictFooTable;
 
 template <>
@@ -3067,6 +3047,7 @@ struct internal::NaturalCodingTraits<
     ::test_union::StrictFoo, ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalUnionCodingTraits<
                 ::test_union::StrictFoo> {};
+
 extern "C" const fidl_type_t test_union_StrictBoundedXUnionTable;
 
 template <>
@@ -3087,6 +3068,7 @@ struct internal::NaturalCodingTraits<
     ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalUnionCodingTraits<
                 ::test_union::StrictBoundedXUnion> {};
+
 extern "C" const fidl_type_t test_union_ReverseOrdinalUnionTable;
 
 template <>
@@ -3107,6 +3089,7 @@ struct internal::NaturalCodingTraits<
     ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalUnionCodingTraits<
                 ::test_union::ReverseOrdinalUnion> {};
+
 extern "C" const fidl_type_t test_union_StrictPizzaOrPastaTable;
 
 template <>
@@ -3127,6 +3110,7 @@ struct internal::NaturalCodingTraits<
     ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalUnionCodingTraits<
                 ::test_union::StrictPizzaOrPasta> {};
+
 extern "C" const fidl_type_t test_union_PizzaOrPastaTable;
 
 template <>
@@ -3146,6 +3130,7 @@ struct internal::NaturalCodingTraits<
     ::test_union::PizzaOrPasta, ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalUnionCodingTraits<
                 ::test_union::PizzaOrPasta> {};
+
 extern "C" const fidl_type_t test_union_FlexiblePizzaOrPastaTable;
 
 template <>
@@ -3167,6 +3152,7 @@ struct internal::NaturalCodingTraits<
     ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalUnionCodingTraits<
                 ::test_union::FlexiblePizzaOrPasta> {};
+
 extern "C" const fidl_type_t test_union_ExplicitPizzaOrPastaTable;
 
 template <>
@@ -3188,6 +3174,7 @@ struct internal::NaturalCodingTraits<
     ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalUnionCodingTraits<
                 ::test_union::ExplicitPizzaOrPasta> {};
+
 extern "C" const fidl_type_t test_union_OlderSimpleUnionTable;
 
 template <>
@@ -3208,6 +3195,7 @@ struct internal::NaturalCodingTraits<
     ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalUnionCodingTraits<
                 ::test_union::OlderSimpleUnion> {};
+
 extern "C" const fidl_type_t test_union_NewerSimpleUnionTable;
 
 template <>
@@ -3228,6 +3216,7 @@ struct internal::NaturalCodingTraits<
     ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalUnionCodingTraits<
                 ::test_union::NewerSimpleUnion> {};
+
 extern "C" const fidl_type_t test_union_FlexibleUnionTable;
 
 template <>
@@ -3247,6 +3236,7 @@ struct internal::NaturalCodingTraits<
     ::test_union::FlexibleUnion, ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalUnionCodingTraits<
                 ::test_union::FlexibleUnion> {};
+
 extern "C" const fidl_type_t test_union_FlexibleFooTable;
 
 template <>
@@ -3266,6 +3256,7 @@ struct internal::NaturalCodingTraits<
     ::test_union::FlexibleFoo, ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalUnionCodingTraits<
                 ::test_union::FlexibleFoo> {};
+
 extern "C" const fidl_type_t test_union_FieldCollisionTable;
 
 template <>
@@ -3286,6 +3277,7 @@ struct internal::NaturalCodingTraits<
     ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalUnionCodingTraits<
                 ::test_union::FieldCollision> {};
+
 extern "C" const fidl_type_t test_union_ExplicitXUnionTable;
 
 template <>
@@ -3306,6 +3298,7 @@ struct internal::NaturalCodingTraits<
     ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalUnionCodingTraits<
                 ::test_union::ExplicitXUnion> {};
+
 extern "C" const fidl_type_t test_union_ExplicitUnionTable;
 
 template <>
@@ -3325,6 +3318,7 @@ struct internal::NaturalCodingTraits<
     ::test_union::ExplicitUnion, ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalUnionCodingTraits<
                 ::test_union::ExplicitUnion> {};
+
 extern "C" const fidl_type_t test_union_ExplicitStrictFooTable;
 
 template <>
@@ -3345,6 +3339,7 @@ struct internal::NaturalCodingTraits<
     ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalUnionCodingTraits<
                 ::test_union::ExplicitStrictFoo> {};
+
 extern "C" const fidl_type_t test_union_ExplicitFooTable;
 
 template <>
@@ -3364,6 +3359,7 @@ struct internal::NaturalCodingTraits<
     ::test_union::ExplicitFoo, ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalUnionCodingTraits<
                 ::test_union::ExplicitFoo> {};
+
 extern "C" const fidl_type_t test_union_XUnionContainingEmptyStructTable;
 
 template <>
