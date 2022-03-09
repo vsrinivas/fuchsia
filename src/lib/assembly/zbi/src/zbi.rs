@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use anyhow::{anyhow, Error, Result};
+use anyhow::{anyhow, Context, Error, Result};
 use assembly_tool::Tool;
 use assembly_util::PathToStringExt;
 use log::debug;
@@ -154,8 +154,10 @@ impl ZbiBuilder {
             .as_ref()
             .to_str()
             .ok_or(anyhow!("BootFS manifest path is not valid UTF-8"))?;
-        let output_path =
-            output_path.as_ref().to_str().ok_or(anyhow!("Output path is not valid UTF-8"))?;
+        let output_path = output_path
+            .as_ref()
+            .path_to_string()
+            .context("Output manifest path cannot be converted to a string")?;
 
         let mut args: Vec<String> = Vec::new();
 
@@ -199,16 +201,17 @@ impl ZbiBuilder {
         }
 
         // Set the output file to write.
-        args.push(format!("--output={}", output_path));
+        args.push("--output".into());
+        args.push(output_path);
 
         // Create an output manifest that describes the contents of the built ZBI.
         if let Some(output_manifest) = &self.output_manifest {
-            args.push(format!(
-                "--json-output={}",
+            args.push("--json-output".into());
+            args.push(
                 output_manifest
-                    .to_str()
-                    .ok_or(anyhow!("Output manifest path is not valid UTF-8"))?
-            ));
+                    .path_to_string()
+                    .context("Output manifest path cannot be converted to a string")?,
+            );
         }
         Ok(args)
     }
@@ -317,7 +320,8 @@ mod tests {
                 "bootfs",
                 "--type=image_args",
                 "--entry=bootargs",
-                "--output=output",
+                "--output",
+                "output",
             ]
         );
     }
@@ -343,7 +347,8 @@ mod tests {
                 "bootfs",
                 "--type=image_args",
                 "--entry=bootargs",
-                "--output=output",
+                "--output",
+                "output",
             ]
         );
     }
@@ -367,7 +372,8 @@ mod tests {
                 "--entry=cmd-arg2",
                 "--files",
                 "bootfs",
-                "--output=output",
+                "--output",
+                "output",
             ]
         );
     }
@@ -393,7 +399,8 @@ mod tests {
                 "--files",
                 "bootfs",
                 "--compressed=zstd.max",
-                "--output=output",
+                "--output",
+                "output",
             ]
         );
     }
@@ -418,8 +425,10 @@ mod tests {
                 "--entry=cmd-arg2",
                 "--files",
                 "bootfs",
-                "--output=output",
-                "--json-output=path/to/manifest",
+                "--output",
+                "output",
+                "--json-output",
+                "path/to/manifest",
             ]
         );
     }
