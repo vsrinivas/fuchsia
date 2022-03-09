@@ -71,7 +71,6 @@ impl<'a> BuildScript<'a> {
             features.push(format!("--cfg=feature=\"{}\"", feature))
         }
 
-        #[allow(clippy::clone_double_ref)] // TODO(fxbug.dev/95086)
         let output = Command::new(rustc)
             .arg(format!("--edition={}", target.edition))
             .arg(format!("--crate-name={}", crate_name))
@@ -79,7 +78,7 @@ impl<'a> BuildScript<'a> {
             .arg("--crate-type=bin")
             .arg("-o")
             .arg(out_file.clone())
-            .arg(build_script.path.clone())
+            .arg(build_script.path)
             .output()
             .expect("failed to execute process");
         if !output.status.success() {

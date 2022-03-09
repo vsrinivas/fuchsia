@@ -57,7 +57,7 @@ pub fn target_to_gn_conditional(target: &str) -> Result<String, Error> {
 //
 // wow. an interview question in real life.
 pub fn cfg_to_gn_conditional(cfg: &str) -> Result<String, Error> {
-    #[allow(clippy::if_same_then_else)] // TODO(fxbug.dev/95086)
+    #[allow(clippy::if_same_then_else)]
     if cfg.starts_with("cfg") {
         Ok(cfg_to_gn_conditional(&cfg[4..cfg.len() - 1])?)
     } else if cfg.starts_with("not") {
