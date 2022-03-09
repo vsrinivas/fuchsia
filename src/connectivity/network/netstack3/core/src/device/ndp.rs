@@ -2107,13 +2107,15 @@ fn add_slaac_addr_sub<'a, D: LinkDevice, C: NdpContext<D>>(
                         &temporary_address_config.secret_key,
                     );
 
-                    if has_iana_allowed_iid(address.addr().get())
-                        && ctx.get_ip_device_state(device_id).find_addr(&address.addr()) == None
-                    {
-                        break address;
-                    } else {
-                        seed = seed.wrapping_add(1);
+                    if has_iana_allowed_iid(address.addr().get()) {
+                        match ctx.get_ip_device_state(device_id).find_addr(&address.addr()) {
+                            Some(_) => {
+                                ctx.increment_counter("generated_temporary_slaac_addr_exists")
+                            }
+                            None => break address,
+                        }
                     }
+                    seed = seed.wrapping_add(1);
                 }
             };
 
@@ -6722,67 +6724,65 @@ mod tests {
 
     #[test]
     fn test_host_temporary_slaac_and_manual_addresses_conflict() {
-        let (mut ctx, device, _config) = initialize_with_temporary_addresses_enabled();
-        let device_id = device.try_into().unwrap();
+        // Verify that if the temporary SLAAC address generation picks an
+        // address that is already assigned, it tries again. The difficulty here
+        // is that the test uses an RNG to pick an address. To make sure we
+        // assign the address that the code _would_ pick, we run the code twice
+        // with the same RNG seed and parameters. The first time is lets us
+        // figure out the temporary address that is generated. Then, we run the
+        // same code with the address already assigned to verify the behavior.
+        const RNG_SEED: [u8; 16] = [1; 16];
         let config = Ipv6::DUMMY_CONFIG;
-
         let src_mac = config.remote_mac;
         let dst_ip = config.local_ip;
         let src_ip = src_mac.to_ipv6_link_local().addr().get();
         let subnet = subnet_v6!("0102:0304:0506:0708::/64");
 
-        // Before sending an RA, which would cause the same temporary address to
-        // be generated, manually assign that address.
-        crate::device::add_ip_addr_subnet(
-            &mut ctx,
-            device,
-            AddrSubnet::from_witness(
-                UnicastAddr::new(ip_v6!("0102:0304:0506:0708:7a76:733e:a50c:7a99")).unwrap(),
-                64,
-            )
-            .unwrap()
-            .to_witness(),
-        )
-        .expect("adding address failed");
-        // Groom the RNG so it will produce the expected conflicted address that
-        // we just assigned.
-        *ctx.dispatcher.rng_mut() = rand::SeedableRng::from_seed([1; 16]);
+        // Receive an RA to figure out the temporary address that is assigned.
+        let conflicted_addr = {
+            let (mut ctx, device, _config) = initialize_with_temporary_addresses_enabled();
 
-        let interface_identifier = generate_opaque_interface_identifier(
-            subnet,
-            &ctx.get_interface_identifier(device_id)[..],
-            [],
-            // Clone the RNG so we can see what the next value (which will be
-            // used to generate the temporary address) will be.
-            OpaqueIidNonce::Random(ctx.dispatcher.rng().clone().next_u64()),
-            &StateContext::<NdpState<_>, _>::get_state_with(&ctx, device_id)
-                .config
-                .get_temporary_address_configuration()
-                .unwrap()
-                .secret_key,
-        );
-        let mut conflicted_addr = [1, 2, 3, 4, 5, 6, 7, 8, 0, 0, 0, 0, 0, 0, 0, 0];
-        conflicted_addr[8..].copy_from_slice(&interface_identifier.to_be_bytes()[..8]);
-        let conflicted_addr = UnicastAddr::new(Ipv6Addr::from(conflicted_addr)).unwrap();
-        let conflicted_addr_sub =
-            AddrSubnet::from_witness(conflicted_addr, subnet.prefix()).unwrap();
+            *ctx.dispatcher.rng_mut() = rand::SeedableRng::from_seed(RNG_SEED);
+
+            // Receive an RA and determine what temporary address was assigned, then return it.
+            receive_prefix_update(&mut ctx, device, src_ip, dst_ip, subnet, 9000, 10000, true);
+            *get_matching_slaac_address_entry(&ctx, device, |entry| match entry.config {
+                AddrConfig::Slaac(SlaacConfig::Static { valid_until: _ }) => false,
+                AddrConfig::Slaac(SlaacConfig::Temporary(_)) => true,
+                AddrConfig::Manual => false,
+            })
+            .unwrap()
+            .addr_sub()
+        };
+        assert!(subnet.contains(&conflicted_addr.addr().get()));
+
+        // Now that we know what address will be assigned, create a new instance
+        // of the stack and assign that same address manually.
+        let (mut ctx, device, _config) = initialize_with_temporary_addresses_enabled();
+        let device_id = device.try_into().unwrap();
+        crate::device::add_ip_addr_subnet(&mut ctx, device, conflicted_addr.to_witness())
+            .expect("adding address failed");
+
         // Sanity check: `conflicted_addr` is already assigned on the device.
-        assert_ne!(
+        assert_matches!(
             NdpContext::<EthernetLinkDevice>::get_ip_device_state(&ctx, device_id)
                 .iter_global_ipv6_addrs()
-                .find(|entry| entry.addr_sub().addr() == conflicted_addr),
-            None,
+                .find(|entry| entry.addr_sub() == &conflicted_addr),
+            Some(_)
         );
 
-        // Receive a new RA with new prefix (autonomous).
-        //
-        // Should get a new temporary IP that is different from
-        // `conflicted_addr_sub`.
+        // Seed the RNG right before the RA is received, just like in our
+        // earlier run above.
+        *ctx.dispatcher.rng_mut() = rand::SeedableRng::from_seed(RNG_SEED);
+
+        // Receive a new RA with new prefix (autonomous). The system will assign
+        // a temporary and static SLAAC address. The first temporary address
+        // tried will conflict with `conflicted_addr` assigned above, so a
+        // different one will be generated.
         receive_prefix_update(&mut ctx, device, src_ip, dst_ip, subnet, 9000, 10000, true);
-        let ndp_state = StateContext::<NdpState<EthernetLinkDevice>, _>::get_state_mut_with(
-            &mut ctx, device_id,
-        );
-        assert!(ndp_state.has_prefix(&subnet));
+
+        // Verify that `conflicted_addr` was generated and rejected.
+        assert_eq!(get_counter_val(&mut ctx, "generated_temporary_slaac_addr_exists"), 1);
 
         // Should have gotten a new temporary IP.
         let temporary_slaac_addresses =
@@ -6794,8 +6794,8 @@ mod tests {
             .map(|entry| entry.addr_sub())
             .collect::<Vec<_>>();
         assert_matches!(&temporary_slaac_addresses[..], [&temporary_addr] => {
-            assert_eq!(temporary_addr.subnet(), conflicted_addr_sub.subnet());
-            assert_ne!(temporary_addr, conflicted_addr_sub);
+            assert_eq!(temporary_addr.subnet(), conflicted_addr.subnet());
+            assert_ne!(temporary_addr, conflicted_addr);
         });
     }
 
