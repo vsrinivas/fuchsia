@@ -59,7 +59,7 @@ declare_args() {
   clippy_warn = false
 
   # Makes clippy targets fail to build when any deny lints are found
-  clippy_cause_failure = true
+  clippy_cause_failure = false
 }
 
 if (rustc_prefix == default_rustc_prefix &&
