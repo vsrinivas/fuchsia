@@ -2,14 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::device::WithStaticDeviceId;
+use crate::device::DeviceOps;
+use crate::fs::devtmpfs::dev_tmp_fs;
 use crate::fs::{
-    fileops_impl_nonblocking, FileObject, FileOps, FsNode, FsNodeOps, NamespaceNode, SeekOrigin,
+    fileops_impl_nonblocking, FileObject, FileOps, FileSystem, FileSystemHandle, FileSystemOps,
+    FsNode, FsStr, NamespaceNode, ROMemoryDirectory, SeekOrigin, SpecialNode,
 };
 use crate::logging::not_implemented;
 use crate::mm::{DesiredAddress, MappedVmo, MappingOptions, UserMemoryCursor};
 use crate::syscalls::{SyscallResult, SUCCESS};
-use crate::task::CurrentTask;
+use crate::task::{CurrentTask, Kernel};
 use crate::types::*;
 use fuchsia_zircon as zx;
 use parking_lot::{Mutex, RwLock};
@@ -22,31 +24,21 @@ const MAX_MMAP_SIZE: usize = 4 * 1024 * 1024;
 
 /// Android's binder kernel driver implementation.
 #[derive(Clone)]
-pub struct DevBinder(Arc<BinderDriver>);
+pub struct BinderDev(Arc<BinderDriver>);
 
-impl DevBinder {
-    /// The binder's static device ID. Use a MISC major number, which is the category used for
-    /// non-specific hardware drivers.
-    /// This could be dynamically assigned by the kernel but we don't have enough drivers nor the
-    /// ability to dynamically load drivers to need this yet.
-    pub const DEVICE_ID: DeviceType = DeviceType::new(10, 0);
-
+impl BinderDev {
     pub fn new() -> Self {
         Self(Arc::new(BinderDriver::new()))
     }
 }
 
-impl WithStaticDeviceId for DevBinder {
-    const ID: DeviceType = Self::DEVICE_ID;
-}
-
-impl FsNodeOps for DevBinder {
+impl DeviceOps for BinderDev {
     fn open(&self, _node: &FsNode, _flags: OpenFlags) -> Result<Box<dyn FileOps>, Errno> {
         Ok(Box::new(self.clone()))
     }
 }
 
-impl FileOps for DevBinder {
+impl FileOps for BinderDev {
     fileops_impl_nonblocking!();
 
     fn ioctl(
@@ -439,4 +431,33 @@ impl BinderDriver {
             }
         }
     }
+}
+
+pub struct BinderFs(());
+impl FileSystemOps for BinderFs {}
+
+const BINDERS: &[&'static FsStr] = &[b"binder", b"hwbinder", b"vndbinder"];
+
+impl BinderFs {
+    pub fn new(kernel: &Kernel) -> Result<FileSystemHandle, Errno> {
+        let fs = FileSystem::new_with_permanent_entries(BinderFs(()));
+        fs.set_root(ROMemoryDirectory);
+        for binder in BINDERS {
+            BinderFs::add_binder(kernel, &fs, &binder)?;
+        }
+        Ok(fs)
+    }
+
+    fn add_binder(kernel: &Kernel, fs: &FileSystemHandle, name: &FsStr) -> Result<(), Errno> {
+        let dev = kernel.device_registry.write().register_misc_chrdev(BinderDev::new())?;
+        fs.root().add_node_ops_dev(name, mode!(IFCHR, 0o600), dev, SpecialNode)?;
+        Ok(())
+    }
+}
+
+pub fn create_binders(kernel: &Kernel) -> Result<(), Errno> {
+    for binder in BINDERS {
+        BinderFs::add_binder(kernel, dev_tmp_fs(kernel), binder)?;
+    }
+    Ok(())
 }

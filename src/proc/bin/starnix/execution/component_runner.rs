@@ -142,6 +142,7 @@ pub fn start_component(
         run_features(&features, &current_task)
             .map_err(|e| anyhow!("Failed to initialize features: {:?}", e))?;
     }
+    crate::device::create_binders(&kernel)?;
 
     let mut argv = vec![binary_path];
     argv.extend(args.into_iter());

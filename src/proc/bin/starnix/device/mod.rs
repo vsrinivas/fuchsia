@@ -6,6 +6,7 @@ mod binder;
 mod features;
 mod registry;
 
+pub use binder::*;
 pub use features::*;
 pub use registry::*;
 

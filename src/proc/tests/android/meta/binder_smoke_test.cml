@@ -2,6 +2,5 @@
     include: [ "//src/proc/tests/android/starnix_test.shard.cml" ],
     program: {
         binary: "data/tests/binder_smoke_test",
-        features: [ "binder" ],
     },
 }

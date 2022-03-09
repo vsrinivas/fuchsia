@@ -4,6 +4,7 @@
 
 use fuchsia_zircon::cprng_draw;
 
+use crate::device::DeviceOps;
 use crate::device::WithStaticDeviceId;
 use crate::fs::*;
 use crate::task::*;
@@ -16,7 +17,7 @@ impl WithStaticDeviceId for DevNull {
     const ID: DeviceType = DeviceType::NULL;
 }
 
-impl FsNodeOps for DevNull {
+impl DeviceOps for DevNull {
     fn open(&self, _node: &FsNode, _flags: OpenFlags) -> Result<Box<dyn FileOps>, Errno> {
         Ok(Box::new(DevNullFile))
     }
@@ -31,10 +32,14 @@ impl FileOps for DevNullFile {
     fn write_at(
         &self,
         _file: &FileObject,
-        _current_task: &CurrentTask,
+        current_task: &CurrentTask,
         _offset: usize,
         data: &[UserBuffer],
     ) -> Result<usize, Errno> {
+        current_task.mm.read_each(data, |bytes| {
+            log::warn!("{:?} write to devnull: {:?}", current_task, String::from_utf8_lossy(bytes));
+            Ok(Some(()))
+        })?;
         UserBuffer::get_total_length(data)
     }
 
@@ -56,7 +61,7 @@ impl WithStaticDeviceId for DevZero {
     const ID: DeviceType = DeviceType::ZERO;
 }
 
-impl FsNodeOps for DevZero {
+impl DeviceOps for DevZero {
     fn open(&self, _node: &FsNode, _flags: OpenFlags) -> Result<Box<dyn FileOps>, Errno> {
         Ok(Box::new(DevZeroFile))
     }
@@ -101,7 +106,7 @@ impl WithStaticDeviceId for DevFull {
     const ID: DeviceType = DeviceType::FULL;
 }
 
-impl FsNodeOps for DevFull {
+impl DeviceOps for DevFull {
     fn open(&self, _node: &FsNode, _flags: OpenFlags) -> Result<Box<dyn FileOps>, Errno> {
         Ok(Box::new(DevFullFile))
     }
@@ -146,7 +151,7 @@ impl WithStaticDeviceId for DevRandom {
     const ID: DeviceType = DeviceType::RANDOM;
 }
 
-impl FsNodeOps for DevRandom {
+impl DeviceOps for DevRandom {
     fn open(&self, _node: &FsNode, _flags: OpenFlags) -> Result<Box<dyn FileOps>, Errno> {
         Ok(Box::new(DevRandomFile))
     }
@@ -159,7 +164,7 @@ impl WithStaticDeviceId for DevURandom {
     const ID: DeviceType = DeviceType::URANDOM;
 }
 
-impl FsNodeOps for DevURandom {
+impl DeviceOps for DevURandom {
     fn open(&self, _node: &FsNode, _flags: OpenFlags) -> Result<Box<dyn FileOps>, Errno> {
         Ok(Box::new(DevRandomFile))
     }
@@ -205,7 +210,7 @@ impl WithStaticDeviceId for DevKmsg {
     const ID: DeviceType = DeviceType::KMSG;
 }
 
-impl FsNodeOps for DevKmsg {
+impl DeviceOps for DevKmsg {
     fn open(&self, _node: &FsNode, _flags: OpenFlags) -> Result<Box<dyn FileOps>, Errno> {
         Ok(Box::new(DevKmsgFile))
     }

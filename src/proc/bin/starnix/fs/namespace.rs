@@ -16,6 +16,7 @@ use super::proc::proc_fs;
 use super::sysfs::sys_fs;
 use super::tmpfs::TmpFs;
 use super::*;
+use crate::device::BinderFs;
 use crate::selinux::selinux_fs;
 use crate::task::{CurrentTask, Kernel};
 use crate::types::*;
@@ -123,6 +124,7 @@ pub fn create_filesystem(
         b"selinuxfs" => Fs(selinux_fs(kernel).clone()),
         b"sysfs" => Fs(sys_fs(kernel).clone()),
         b"tmpfs" => Fs(TmpFs::new()),
+        b"binder" => Fs(BinderFs::new(kernel)?),
         _ => return error!(ENODEV),
     })
 }
