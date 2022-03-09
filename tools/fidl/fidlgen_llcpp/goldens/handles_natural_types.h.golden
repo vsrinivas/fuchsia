@@ -553,7 +553,42 @@ struct internal::NaturalCodingTraits<
   static constexpr size_t inline_size_v2 = sizeof(uint32_t);
 
   static void Encode(internal::NaturalEncoder* encoder,
-                     ::test_handles::obj_type* value, size_t offset) {
+                     ::test_handles::obj_type* value, size_t offset,
+                     size_t recursion_depth) {
+    switch (*value) {
+      case ::test_handles::obj_type::kNone:
+      case ::test_handles::obj_type::kProcess:
+      case ::test_handles::obj_type::kThread:
+      case ::test_handles::obj_type::kVmo:
+      case ::test_handles::obj_type::kChannel:
+      case ::test_handles::obj_type::kEvent:
+      case ::test_handles::obj_type::kPort:
+      case ::test_handles::obj_type::kInterrupt:
+      case ::test_handles::obj_type::kLog:
+      case ::test_handles::obj_type::kSocket:
+      case ::test_handles::obj_type::kResource:
+      case ::test_handles::obj_type::kEventpair:
+      case ::test_handles::obj_type::kJob:
+      case ::test_handles::obj_type::kVmar:
+      case ::test_handles::obj_type::kFifo:
+      case ::test_handles::obj_type::kGuest:
+      case ::test_handles::obj_type::kVcpu:
+      case ::test_handles::obj_type::kTimer:
+      case ::test_handles::obj_type::kIommu:
+      case ::test_handles::obj_type::kBti:
+      case ::test_handles::obj_type::kProfile:
+      case ::test_handles::obj_type::kPmt:
+      case ::test_handles::obj_type::kSuspendToken:
+      case ::test_handles::obj_type::kPager:
+      case ::test_handles::obj_type::kException:
+      case ::test_handles::obj_type::kClock:
+      case ::test_handles::obj_type::kStream:
+      case ::test_handles::obj_type::kMsi:
+        break;
+      default:
+        encoder->SetError("unknown enum value");
+        return;
+    }
     *encoder->template GetPtr<::test_handles::obj_type>(offset) = *value;
   }
   static void Decode(internal::NaturalDecoder* decoder,

@@ -76,12 +76,6 @@ fidl::OutgoingMessage NaturalBodyEncoder::GetBody(const fidl_type_t* type) {
     return fidl::OutgoingMessage(fidl::Status::EncodeError(status_, error_));
   }
 
-  const char* err_msg;
-  zx_status_t status = Validate(type, 0, &err_msg);
-  if (status != ZX_OK) {
-    return fidl::OutgoingMessage(fidl::Status::EncodeError(status, err_msg));
-  }
-
   fidl_outgoing_msg_t c_msg = {
       .type = FIDL_OUTGOING_MSG_TYPE_BYTE,
       .byte =

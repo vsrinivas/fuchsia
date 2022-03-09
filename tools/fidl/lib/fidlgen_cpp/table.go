@@ -121,7 +121,7 @@ func (c *compiler) compileTableMember(val fidlgen.TableMember, index int) TableM
 		MethodClearName:    fmt.Sprintf("clear_%s", val.Name),
 		ValueUnionName:     fmt.Sprintf("ValueUnion_%s", val.Name),
 		HandleInformation:  c.fieldHandleInformation(&val.Type),
-		Constraint:         c.fieldConstraint(&val.Type),
+		Constraint:         t.FieldConstraint,
 	}
 }
 

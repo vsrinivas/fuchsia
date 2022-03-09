@@ -123,7 +123,7 @@ func (c *compiler) compileStructMember(val fidlgen.StructMember) StructMember {
 		OffsetV1:          val.FieldShapeV1.Offset,
 		OffsetV2:          val.FieldShapeV2.Offset,
 		HandleInformation: c.fieldHandleInformation(&val.Type),
-		Constraint:        c.fieldConstraint(&val.Type),
+		Constraint:        t.FieldConstraint,
 	}
 }
 

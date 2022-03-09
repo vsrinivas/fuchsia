@@ -497,7 +497,10 @@ struct internal::NaturalCodingTraits<
 
   static void Encode(internal::NaturalEncoder* encoder,
                      ::test_placementofattributes::ExampleBits* value,
-                     size_t offset) {
+                     size_t offset, size_t recursion_depth) {
+    if (static_cast<uint32_t>(*value) & ~1ull) {
+      encoder->SetError("unknown bit set in bits value");
+    }
     *encoder->template GetPtr<::test_placementofattributes::ExampleBits>(
         offset) = *value;
   }
@@ -519,7 +522,14 @@ struct internal::NaturalCodingTraits<
 
   static void Encode(internal::NaturalEncoder* encoder,
                      ::test_placementofattributes::ExampleEnum* value,
-                     size_t offset) {
+                     size_t offset, size_t recursion_depth) {
+    switch (*value) {
+      case ::test_placementofattributes::ExampleEnum::kMember:
+        break;
+      default:
+        encoder->SetError("unknown enum value");
+        return;
+    }
     *encoder->template GetPtr<::test_placementofattributes::ExampleEnum>(
         offset) = *value;
   }

@@ -92,10 +92,12 @@ class StructWithNullableVector final {
       ::test_nullable::StructWithNullableVector, 16, 16>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_nullable::StructWithNullableVector>;
-  static constexpr auto kMembers = std::make_tuple(
-      ::fidl::internal::NaturalStructMember<
-          Storage_, ::cpp17::optional<::std::vector<int32_t>>,
-          fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::val, 0, 0});
+  static constexpr auto kMembers =
+      std::make_tuple(::fidl::internal::NaturalStructMember<
+                      Storage_, ::cpp17::optional<::std::vector<int32_t>>,
+                      fidl::internal::NaturalCodingConstraintVector<
+                          fidl::internal::NaturalCodingConstraintEmpty>>{
+          &Storage_::val, 0, 0});
 };
 
 extern "C" const fidl_type_t test_nullable_StructWithNullableUnionTable;
@@ -267,10 +269,11 @@ class StructWithNullableString final {
       ::test_nullable::StructWithNullableString, 16, 16>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_nullable::StructWithNullableString>;
-  static constexpr auto kMembers = std::make_tuple(
-      ::fidl::internal::NaturalStructMember<
-          Storage_, ::cpp17::optional<::std::string>,
-          fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::val, 0, 0});
+  static constexpr auto kMembers =
+      std::make_tuple(::fidl::internal::NaturalStructMember<
+                      Storage_, ::cpp17::optional<::std::string>,
+                      fidl::internal::NaturalCodingConstraintString<>>{
+          &Storage_::val, 0, 0});
 };
 
 #ifdef __Fuchsia__

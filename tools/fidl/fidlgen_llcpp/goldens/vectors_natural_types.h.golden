@@ -82,11 +82,14 @@ class ExampleUseOfVectors final {
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<
           Storage_, ::std::vector<uint8_t>,
-          fidl::internal::NaturalCodingConstraintEmpty>{
+          fidl::internal::NaturalCodingConstraintVector<
+              fidl::internal::NaturalCodingConstraintEmpty>>{
           &Storage_::vector_of_uint8, 0, 0},
       ::fidl::internal::NaturalStructMember<
           Storage_, ::std::vector<::std::vector<bool>>,
-          fidl::internal::NaturalCodingConstraintEmpty>{
+          fidl::internal::NaturalCodingConstraintVector<
+              fidl::internal::NaturalCodingConstraintVector<
+                  fidl::internal::NaturalCodingConstraintEmpty>>>{
           &Storage_::vector_of_vector_of_bool, 16, 16});
 };
 

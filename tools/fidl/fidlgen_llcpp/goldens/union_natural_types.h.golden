@@ -235,15 +235,16 @@ class Union final {
   std::shared_ptr<Storage_> storage_;
   std::shared_ptr<Storage_> CloneStorage_() const;
   friend struct ::fidl::internal::NaturalUnionCodingTraits<::test_union::Union>;
-  static constexpr auto kMembers =
-      std::make_tuple(::fidl::internal::NaturalUnionMember<
-                          ::fidl::internal::NaturalCodingConstraintEmpty>(),
-                      ::fidl::internal::NaturalUnionMember<
-                          fidl::internal::NaturalCodingConstraintEmpty>(),
-                      ::fidl::internal::NaturalUnionMember<
-                          fidl::internal::NaturalCodingConstraintEmpty>(),
-                      ::fidl::internal::NaturalUnionMember<
-                          fidl::internal::NaturalCodingConstraintEmpty>());
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalUnionMember<
+          ::fidl::internal::NaturalCodingConstraintEmpty>(),
+      ::fidl::internal::NaturalUnionMember<
+          fidl::internal::NaturalCodingConstraintEmpty>(),
+      ::fidl::internal::NaturalUnionMember<
+          fidl::internal::NaturalCodingConstraintString<>>(),
+      ::fidl::internal::NaturalUnionMember<
+          fidl::internal::NaturalCodingConstraintVector<
+              fidl::internal::NaturalCodingConstraintString<>>>());
 
   explicit Union(std::shared_ptr<Storage_> storage)
       : storage_(std::move(storage)) {}
@@ -414,15 +415,16 @@ class StrictUnion final {
   std::shared_ptr<Storage_> CloneStorage_() const;
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_union::StrictUnion>;
-  static constexpr auto kMembers =
-      std::make_tuple(::fidl::internal::NaturalUnionMember<
-                          ::fidl::internal::NaturalCodingConstraintEmpty>(),
-                      ::fidl::internal::NaturalUnionMember<
-                          fidl::internal::NaturalCodingConstraintEmpty>(),
-                      ::fidl::internal::NaturalUnionMember<
-                          fidl::internal::NaturalCodingConstraintEmpty>(),
-                      ::fidl::internal::NaturalUnionMember<
-                          fidl::internal::NaturalCodingConstraintEmpty>());
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalUnionMember<
+          ::fidl::internal::NaturalCodingConstraintEmpty>(),
+      ::fidl::internal::NaturalUnionMember<
+          fidl::internal::NaturalCodingConstraintEmpty>(),
+      ::fidl::internal::NaturalUnionMember<
+          fidl::internal::NaturalCodingConstraintString<>>(),
+      ::fidl::internal::NaturalUnionMember<
+          fidl::internal::NaturalCodingConstraintVector<
+              fidl::internal::NaturalCodingConstraintString<>>>());
 
   explicit StrictUnion(std::shared_ptr<Storage_> storage)
       : storage_(std::move(storage)) {}
@@ -538,7 +540,7 @@ class StrictSimpleXUnion final {
                       ::fidl::internal::NaturalUnionMember<
                           fidl::internal::NaturalCodingConstraintEmpty>(),
                       ::fidl::internal::NaturalUnionMember<
-                          fidl::internal::NaturalCodingConstraintEmpty>());
+                          fidl::internal::NaturalCodingConstraintString<>>());
 
   explicit StrictSimpleXUnion(std::shared_ptr<Storage_> storage)
       : storage_(std::move(storage)) {}
@@ -638,7 +640,7 @@ class StrictFoo final {
       std::make_tuple(::fidl::internal::NaturalUnionMember<
                           ::fidl::internal::NaturalCodingConstraintEmpty>(),
                       ::fidl::internal::NaturalUnionMember<
-                          fidl::internal::NaturalCodingConstraintEmpty>(),
+                          fidl::internal::NaturalCodingConstraintString<>>(),
                       ::fidl::internal::NaturalUnionMember<
                           fidl::internal::NaturalCodingConstraintEmpty>());
 
@@ -718,11 +720,12 @@ class StrictBoundedXUnion final {
   std::shared_ptr<Storage_> CloneStorage_() const;
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_union::StrictBoundedXUnion>;
-  static constexpr auto kMembers =
-      std::make_tuple(::fidl::internal::NaturalUnionMember<
-                          ::fidl::internal::NaturalCodingConstraintEmpty>(),
-                      ::fidl::internal::NaturalUnionMember<
-                          fidl::internal::NaturalCodingConstraintEmpty>());
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalUnionMember<
+          ::fidl::internal::NaturalCodingConstraintEmpty>(),
+      ::fidl::internal::NaturalUnionMember<
+          fidl::internal::NaturalCodingConstraintVector<
+              fidl::internal::NaturalCodingConstraintEmpty, 10>>());
 
   explicit StrictBoundedXUnion(std::shared_ptr<Storage_> storage)
       : storage_(std::move(storage)) {}
@@ -976,7 +979,8 @@ class Pizza final {
   static constexpr auto kMembers =
       std::make_tuple(::fidl::internal::NaturalStructMember<
                       Storage_, ::std::vector<::std::string>,
-                      fidl::internal::NaturalCodingConstraintEmpty>{
+                      fidl::internal::NaturalCodingConstraintVector<
+                          fidl::internal::NaturalCodingConstraintString<16>>>{
           &Storage_::toppings, 0, 0});
 };
 
@@ -1027,7 +1031,7 @@ class Pasta final {
   static constexpr auto kMembers =
       std::make_tuple(::fidl::internal::NaturalStructMember<
                       Storage_, ::std::string,
-                      fidl::internal::NaturalCodingConstraintEmpty>{
+                      fidl::internal::NaturalCodingConstraintString<16>>{
           &Storage_::sauce, 0, 0});
 };
 
@@ -1742,15 +1746,16 @@ class NewerSimpleUnion final {
   std::shared_ptr<Storage_> CloneStorage_() const;
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_union::NewerSimpleUnion>;
-  static constexpr auto kMembers =
-      std::make_tuple(::fidl::internal::NaturalUnionMember<
-                          ::fidl::internal::NaturalCodingConstraintEmpty>(),
-                      ::fidl::internal::NaturalUnionMember<
-                          fidl::internal::NaturalCodingConstraintEmpty>(),
-                      ::fidl::internal::NaturalUnionMember<
-                          fidl::internal::NaturalCodingConstraintEmpty>(),
-                      ::fidl::internal::NaturalUnionMember<
-                          fidl::internal::NaturalCodingConstraintEmpty>());
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalUnionMember<
+          ::fidl::internal::NaturalCodingConstraintEmpty>(),
+      ::fidl::internal::NaturalUnionMember<
+          fidl::internal::NaturalCodingConstraintEmpty>(),
+      ::fidl::internal::NaturalUnionMember<
+          fidl::internal::NaturalCodingConstraintString<>>(),
+      ::fidl::internal::NaturalUnionMember<
+          fidl::internal::NaturalCodingConstraintVector<
+              fidl::internal::NaturalCodingConstraintString<>>>());
 
   explicit NewerSimpleUnion(std::shared_ptr<Storage_> storage)
       : storage_(std::move(storage)) {}
@@ -1864,15 +1869,16 @@ class FlexibleUnion final {
   std::shared_ptr<Storage_> CloneStorage_() const;
   friend struct ::fidl::internal::NaturalUnionCodingTraits<
       ::test_union::FlexibleUnion>;
-  static constexpr auto kMembers =
-      std::make_tuple(::fidl::internal::NaturalUnionMember<
-                          ::fidl::internal::NaturalCodingConstraintEmpty>(),
-                      ::fidl::internal::NaturalUnionMember<
-                          fidl::internal::NaturalCodingConstraintEmpty>(),
-                      ::fidl::internal::NaturalUnionMember<
-                          fidl::internal::NaturalCodingConstraintEmpty>(),
-                      ::fidl::internal::NaturalUnionMember<
-                          fidl::internal::NaturalCodingConstraintEmpty>());
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalUnionMember<
+          ::fidl::internal::NaturalCodingConstraintEmpty>(),
+      ::fidl::internal::NaturalUnionMember<
+          fidl::internal::NaturalCodingConstraintEmpty>(),
+      ::fidl::internal::NaturalUnionMember<
+          fidl::internal::NaturalCodingConstraintString<>>(),
+      ::fidl::internal::NaturalUnionMember<
+          fidl::internal::NaturalCodingConstraintVector<
+              fidl::internal::NaturalCodingConstraintString<>>>());
 
   explicit FlexibleUnion(std::shared_ptr<Storage_> storage)
       : storage_(std::move(storage)) {}
@@ -1973,7 +1979,7 @@ class FlexibleFoo final {
       std::make_tuple(::fidl::internal::NaturalUnionMember<
                           ::fidl::internal::NaturalCodingConstraintEmpty>(),
                       ::fidl::internal::NaturalUnionMember<
-                          fidl::internal::NaturalCodingConstraintEmpty>(),
+                          fidl::internal::NaturalCodingConstraintString<>>(),
                       ::fidl::internal::NaturalUnionMember<
                           fidl::internal::NaturalCodingConstraintEmpty>());
 
@@ -2317,7 +2323,7 @@ class ExplicitUnion final {
                       ::fidl::internal::NaturalUnionMember<
                           fidl::internal::NaturalCodingConstraintEmpty>(),
                       ::fidl::internal::NaturalUnionMember<
-                          fidl::internal::NaturalCodingConstraintEmpty>());
+                          fidl::internal::NaturalCodingConstraintString<>>());
 
   explicit ExplicitUnion(std::shared_ptr<Storage_> storage)
       : storage_(std::move(storage)) {}
@@ -2411,7 +2417,7 @@ class ExplicitStrictFoo final {
       std::make_tuple(::fidl::internal::NaturalUnionMember<
                           ::fidl::internal::NaturalCodingConstraintEmpty>(),
                       ::fidl::internal::NaturalUnionMember<
-                          fidl::internal::NaturalCodingConstraintEmpty>(),
+                          fidl::internal::NaturalCodingConstraintString<>>(),
                       ::fidl::internal::NaturalUnionMember<
                           fidl::internal::NaturalCodingConstraintEmpty>());
 
@@ -2509,7 +2515,7 @@ class ExplicitFoo final {
       std::make_tuple(::fidl::internal::NaturalUnionMember<
                           ::fidl::internal::NaturalCodingConstraintEmpty>(),
                       ::fidl::internal::NaturalUnionMember<
-                          fidl::internal::NaturalCodingConstraintEmpty>(),
+                          fidl::internal::NaturalCodingConstraintString<>>(),
                       ::fidl::internal::NaturalUnionMember<
                           fidl::internal::NaturalCodingConstraintEmpty>());
 

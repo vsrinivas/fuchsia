@@ -1489,10 +1489,11 @@ class WithAndWithoutRequestResponseWithRequestWithResponseTopResponse final {
   friend struct ::fidl::internal::MemberVisitor<
       ::test_protocols::
           WithAndWithoutRequestResponseWithRequestWithResponseTopResponse>;
-  static constexpr auto kMembers = std::make_tuple(
-      ::fidl::internal::NaturalStructMember<
-          Storage_, ::std::string,
-          fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::ret, 0, 0});
+  static constexpr auto kMembers =
+      std::make_tuple(::fidl::internal::NaturalStructMember<
+                      Storage_, ::std::string,
+                      fidl::internal::NaturalCodingConstraintString<>>{
+          &Storage_::ret, 0, 0});
 };
 
 extern "C" const fidl_type_t
@@ -1567,10 +1568,11 @@ class WithAndWithoutRequestResponseWithRequestWithResponseRequest final {
   friend struct ::fidl::internal::MemberVisitor<
       ::test_protocols::
           WithAndWithoutRequestResponseWithRequestWithResponseRequest>;
-  static constexpr auto kMembers = std::make_tuple(
-      ::fidl::internal::NaturalStructMember<
-          Storage_, ::std::string,
-          fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::arg, 0, 0});
+  static constexpr auto kMembers =
+      std::make_tuple(::fidl::internal::NaturalStructMember<
+                      Storage_, ::std::string,
+                      fidl::internal::NaturalCodingConstraintString<>>{
+          &Storage_::arg, 0, 0});
 };
 
 extern "C" const fidl_type_t
@@ -1644,10 +1646,11 @@ class WithAndWithoutRequestResponseWithRequestNoResponseRequest final {
   friend struct ::fidl::internal::MemberVisitor<
       ::test_protocols::
           WithAndWithoutRequestResponseWithRequestNoResponseRequest>;
-  static constexpr auto kMembers = std::make_tuple(
-      ::fidl::internal::NaturalStructMember<
-          Storage_, ::std::string,
-          fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::arg, 0, 0});
+  static constexpr auto kMembers =
+      std::make_tuple(::fidl::internal::NaturalStructMember<
+                      Storage_, ::std::string,
+                      fidl::internal::NaturalCodingConstraintString<>>{
+          &Storage_::arg, 0, 0});
 };
 
 extern "C" const fidl_type_t
@@ -1722,10 +1725,11 @@ class WithAndWithoutRequestResponseWithRequestEmptyResponseRequest final {
   friend struct ::fidl::internal::MemberVisitor<
       ::test_protocols::
           WithAndWithoutRequestResponseWithRequestEmptyResponseRequest>;
-  static constexpr auto kMembers = std::make_tuple(
-      ::fidl::internal::NaturalStructMember<
-          Storage_, ::std::string,
-          fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::arg, 0, 0});
+  static constexpr auto kMembers =
+      std::make_tuple(::fidl::internal::NaturalStructMember<
+                      Storage_, ::std::string,
+                      fidl::internal::NaturalCodingConstraintString<>>{
+          &Storage_::arg, 0, 0});
 };
 
 extern "C" const fidl_type_t
@@ -1788,10 +1792,11 @@ class WithAndWithoutRequestResponseOnWithResponseRequest final {
       16>;
   friend struct ::fidl::internal::MemberVisitor<
       ::test_protocols::WithAndWithoutRequestResponseOnWithResponseRequest>;
-  static constexpr auto kMembers = std::make_tuple(
-      ::fidl::internal::NaturalStructMember<
-          Storage_, ::std::string,
-          fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::ret, 0, 0});
+  static constexpr auto kMembers =
+      std::make_tuple(::fidl::internal::NaturalStructMember<
+                      Storage_, ::std::string,
+                      fidl::internal::NaturalCodingConstraintString<>>{
+          &Storage_::ret, 0, 0});
 };
 
 extern "C" const fidl_type_t
@@ -1866,10 +1871,11 @@ class WithAndWithoutRequestResponseNoRequestWithResponseTopResponse final {
   friend struct ::fidl::internal::MemberVisitor<
       ::test_protocols::
           WithAndWithoutRequestResponseNoRequestWithResponseTopResponse>;
-  static constexpr auto kMembers = std::make_tuple(
-      ::fidl::internal::NaturalStructMember<
-          Storage_, ::std::string,
-          fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::ret, 0, 0});
+  static constexpr auto kMembers =
+      std::make_tuple(::fidl::internal::NaturalStructMember<
+                      Storage_, ::std::string,
+                      fidl::internal::NaturalCodingConstraintString<>>{
+          &Storage_::ret, 0, 0});
 };
 
 extern "C" const fidl_type_t test_protocols_TransitionalRequestTopResponseTable;
@@ -4739,7 +4745,11 @@ struct internal::NaturalCodingTraits<
   static constexpr size_t inline_size_v2 = sizeof(uint32_t);
 
   static void Encode(internal::NaturalEncoder* encoder,
-                     ::test_protocols::rights* value, size_t offset) {
+                     ::test_protocols::rights* value, size_t offset,
+                     size_t recursion_depth) {
+    if (static_cast<uint32_t>(*value) & ~3ull) {
+      encoder->SetError("unknown bit set in bits value");
+    }
     *encoder->template GetPtr<::test_protocols::rights>(offset) = *value;
   }
   static void Decode(internal::NaturalDecoder* decoder,
@@ -4756,7 +4766,16 @@ struct internal::NaturalCodingTraits<
   static constexpr size_t inline_size_v2 = sizeof(uint32_t);
 
   static void Encode(internal::NaturalEncoder* encoder,
-                     ::test_protocols::obj_type* value, size_t offset) {
+                     ::test_protocols::obj_type* value, size_t offset,
+                     size_t recursion_depth) {
+    switch (*value) {
+      case ::test_protocols::obj_type::kNone:
+      case ::test_protocols::obj_type::kSocket:
+        break;
+      default:
+        encoder->SetError("unknown enum value");
+        return;
+    }
     *encoder->template GetPtr<::test_protocols::obj_type>(offset) = *value;
   }
   static void Decode(internal::NaturalDecoder* decoder,
@@ -4772,7 +4791,16 @@ struct internal::NaturalCodingTraits<
   static constexpr size_t inline_size_v2 = sizeof(uint32_t);
 
   static void Encode(internal::NaturalEncoder* encoder,
-                     ::test_protocols::ErrorEnum* value, size_t offset) {
+                     ::test_protocols::ErrorEnum* value, size_t offset,
+                     size_t recursion_depth) {
+    switch (*value) {
+      case ::test_protocols::ErrorEnum::kErrFoo:
+      case ::test_protocols::ErrorEnum::kErrBar:
+        break;
+      default:
+        encoder->SetError("unknown enum value");
+        return;
+    }
     *encoder->template GetPtr<::test_protocols::ErrorEnum>(offset) = *value;
   }
   static void Decode(internal::NaturalDecoder* decoder,

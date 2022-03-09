@@ -158,8 +158,8 @@ template <typename FidlType>
   ::fidl::internal::NaturalBodyEncoder encoder(fidl::internal::WireFormatVersion::kV2);
   encoder.Alloc(::fidl::internal::NaturalEncodingInlineSize<FidlType, NaturalCodingConstraintEmpty>(
       &encoder));
-  ::fidl::internal::NaturalCodingTraits<FidlType, NaturalCodingConstraintEmpty>::Encode(&encoder,
-                                                                                        &value, 0);
+  ::fidl::internal::NaturalCodingTraits<FidlType, NaturalCodingConstraintEmpty>::Encode(
+      &encoder, &value, 0, kRecursionDepthInitial);
   return EncodeResult(coding_table, std::move(encoder));
 }
 

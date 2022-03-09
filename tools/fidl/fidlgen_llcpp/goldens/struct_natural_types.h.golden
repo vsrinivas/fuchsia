@@ -134,7 +134,7 @@ class BasicStruct final {
           &Storage_::x, 0, 0},
       ::fidl::internal::NaturalStructMember<
           Storage_, ::std::string,
-          fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::y, 8, 8});
+          fidl::internal::NaturalCodingConstraintString<>>{&Storage_::y, 8, 8});
 };
 
 }  // namespace test_struct

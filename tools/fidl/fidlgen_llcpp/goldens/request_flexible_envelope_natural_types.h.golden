@@ -96,7 +96,7 @@ class StrictFoo final {
       std::make_tuple(::fidl::internal::NaturalUnionMember<
                           ::fidl::internal::NaturalCodingConstraintEmpty>(),
                       ::fidl::internal::NaturalUnionMember<
-                          fidl::internal::NaturalCodingConstraintEmpty>(),
+                          fidl::internal::NaturalCodingConstraintString<>>(),
                       ::fidl::internal::NaturalUnionMember<
                           fidl::internal::NaturalCodingConstraintEmpty>());
 
@@ -338,7 +338,7 @@ class FlexibleFoo final {
       std::make_tuple(::fidl::internal::NaturalUnionMember<
                           ::fidl::internal::NaturalCodingConstraintEmpty>(),
                       ::fidl::internal::NaturalUnionMember<
-                          fidl::internal::NaturalCodingConstraintEmpty>(),
+                          fidl::internal::NaturalCodingConstraintString<>>(),
                       ::fidl::internal::NaturalUnionMember<
                           fidl::internal::NaturalCodingConstraintEmpty>());
 

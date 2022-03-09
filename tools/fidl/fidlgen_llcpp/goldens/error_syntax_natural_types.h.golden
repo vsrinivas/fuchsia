@@ -353,7 +353,7 @@ class ExampleUseOfErrorSyntaxCallWhichMayFailRequest final {
   static constexpr auto kMembers = std::make_tuple(
       ::fidl::internal::NaturalStructMember<
           Storage_, ::std::string,
-          fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::s, 0, 0});
+          fidl::internal::NaturalCodingConstraintString<>>{&Storage_::s, 0, 0});
 };
 
 }  // namespace test_errorsyntax

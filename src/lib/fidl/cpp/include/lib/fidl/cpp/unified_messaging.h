@@ -90,7 +90,7 @@ fidl::OutgoingMessage EncodeTransactionalMessage(
         ::fidl::internal::NaturalEncodingInlineSize<Payload, NaturalCodingConstraintEmpty>(
             &encoder));
     ::fidl::internal::NaturalCodingTraits<Payload, NaturalCodingConstraintEmpty>::Encode(
-        &encoder, &payload, sizeof(fidl_message_header_t));
+        &encoder, &payload, sizeof(fidl_message_header_t), kRecursionDepthInitial);
     return encoder.GetMessage(TypeTraits<Payload>::kCodingTable);
   } else {
     return encoder.GetMessage(nullptr);

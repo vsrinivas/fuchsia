@@ -29,7 +29,8 @@ using Error = Result;
 namespace internal {
 
 template <typename Constraint, typename Field>
-void NaturalEnvelopeEncode(NaturalEncoder* encoder, Field* value, size_t offset) {
+void NaturalEnvelopeEncode(NaturalEncoder* encoder, Field* value, size_t offset,
+                           size_t recursion_depth) {
   if (value == nullptr) {
     // Nothing to encode.
     return;
@@ -41,7 +42,8 @@ void NaturalEnvelopeEncode(NaturalEncoder* encoder, Field* value, size_t offset)
     case ::fidl::internal::WireFormatVersion::kV1: {
       fidl::internal::NaturalEncode<Constraint>(
           encoder, value,
-          encoder->Alloc(::fidl::internal::NaturalEncodingInlineSize<Field, Constraint>(encoder)));
+          encoder->Alloc(::fidl::internal::NaturalEncodingInlineSize<Field, Constraint>(encoder)),
+          recursion_depth);
 
       // Call GetPtr after Encode because the buffer may move.
       fidl_envelope_t* envelope = encoder->GetPtr<fidl_envelope_t>(offset);
@@ -53,7 +55,7 @@ void NaturalEnvelopeEncode(NaturalEncoder* encoder, Field* value, size_t offset)
     case ::fidl::internal::WireFormatVersion::kV2: {
       if (::fidl::internal::NaturalEncodingInlineSize<Field, Constraint>(encoder) <=
           FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
-        fidl::internal::NaturalEncode<Constraint>(encoder, value, offset);
+        fidl::internal::NaturalEncode<Constraint>(encoder, value, offset, recursion_depth);
 
         // Call GetPtr after Encode because the buffer may move.
         fidl_envelope_v2_t* envelope = encoder->GetPtr<fidl_envelope_v2_t>(offset);
@@ -65,7 +67,8 @@ void NaturalEnvelopeEncode(NaturalEncoder* encoder, Field* value, size_t offset)
 
       fidl::internal::NaturalEncode<Constraint>(
           encoder, value,
-          encoder->Alloc(::fidl::internal::NaturalEncodingInlineSize<Field, Constraint>(encoder)));
+          encoder->Alloc(::fidl::internal::NaturalEncodingInlineSize<Field, Constraint>(encoder)),
+          recursion_depth);
 
       // Call GetPtr after Encode because the buffer may move.
       fidl_envelope_v2_t* envelope = encoder->GetPtr<fidl_envelope_v2_t>(offset);
@@ -79,12 +82,12 @@ void NaturalEnvelopeEncode(NaturalEncoder* encoder, Field* value, size_t offset)
 
 template <typename Constraint, typename Field>
 void NaturalEnvelopeEncodeOptional(NaturalEncoder* encoder, std::optional<Field>* value,
-                                   size_t offset) {
+                                   size_t offset, size_t recursion_depth) {
   if (!value->has_value()) {
     // Nothing to encode.
     return;
   }
-  NaturalEnvelopeEncode<Constraint>(encoder, &value->value(), offset);
+  NaturalEnvelopeEncode<Constraint>(encoder, &value->value(), offset, recursion_depth);
 }
 
 template <typename Constraint, typename Field>
@@ -192,14 +195,15 @@ struct NaturalStructCodingTraits {
   static constexpr size_t inline_size_v1_no_ee = V1;
   static constexpr size_t inline_size_v2 = V2;
 
-  static void Encode(NaturalEncoder* encoder, T* value, size_t offset) {
+  static void Encode(NaturalEncoder* encoder, T* value, size_t offset, size_t recursion_depth) {
     const auto wire_format = encoder->wire_format();
     MemberVisitor<T>::Visit(value, [&](auto* member, auto& member_info) -> void {
       size_t field_offset = wire_format == ::fidl::internal::WireFormatVersion::kV1
                                 ? member_info.offset_v1
                                 : member_info.offset_v2;
       using Constraint = typename std::remove_reference_t<decltype(member_info)>::Constraint;
-      fidl::internal::NaturalEncode<Constraint>(encoder, member, offset + field_offset);
+      fidl::internal::NaturalEncode<Constraint>(encoder, member, offset + field_offset,
+                                                recursion_depth);
     });
   }
 
@@ -241,13 +245,17 @@ struct NaturalTableCodingTraits {
   static constexpr size_t inline_size_v2 = 16;
 
   template <class EncoderImpl>
-  static void Encode(EncoderImpl* encoder, T* value, size_t offset) {
+  static void Encode(EncoderImpl* encoder, T* value, size_t offset, size_t recursion_depth) {
     size_t max_ordinal = MaxOrdinal(value);
     fidl_vector_t* vector = encoder->template GetPtr<fidl_vector_t>(offset);
     vector->count = max_ordinal;
     vector->data = reinterpret_cast<void*>(FIDL_ALLOC_PRESENT);
     if (max_ordinal == 0)
       return;
+    if (recursion_depth + 2 > kRecursionDepthMax) {
+      encoder->SetError("recursion depth exceeded");
+      return;
+    }
     size_t envelope_size = (encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1)
                                ? sizeof(fidl_envelope_t)
                                : sizeof(fidl_envelope_v2_t);
@@ -255,7 +263,7 @@ struct NaturalTableCodingTraits {
     MemberVisitor<T>::Visit(value, [&](auto* member, auto& member_info) {
       size_t offset = base + (member_info.ordinal - 1) * envelope_size;
       using Constraint = typename std::remove_reference_t<decltype(member_info)>::Constraint;
-      NaturalEnvelopeEncodeOptional<Constraint>(encoder, member, offset);
+      NaturalEnvelopeEncodeOptional<Constraint>(encoder, member, offset, recursion_depth + 2);
     });
   }
 
@@ -321,11 +329,15 @@ struct NaturalUnionCodingTraits {
   static constexpr size_t inline_size_v1_no_ee = 24;
   static constexpr size_t inline_size_v2 = 16;
 
-  static void Encode(NaturalEncoder* encoder, T* value, size_t offset) {
+  static void Encode(NaturalEncoder* encoder, T* value, size_t offset, size_t recursion_depth) {
     const size_t index = value->storage_->index();
     ZX_ASSERT(index > 0);
+    if (recursion_depth + 1 > kRecursionDepthMax) {
+      encoder->SetError("recursion depth exceeded");
+      return;
+    }
     const size_t envelope_offset = offset + offsetof(fidl_xunion_t, envelope);
-    EncodeMember(encoder, value, envelope_offset, index);
+    EncodeMember(encoder, value, envelope_offset, index, recursion_depth + 1);
     // Call GetPtr after Encode because the buffer may move.
     fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
     xunion->tag = static_cast<fidl_union_tag_t>(T::IndexToTag(index));
@@ -333,16 +345,17 @@ struct NaturalUnionCodingTraits {
 
   template <size_t I = 1>
   static void EncodeMember(NaturalEncoder* encoder, T* value, size_t envelope_offset,
-                           const size_t index) {
+                           const size_t index, size_t recursion_depth) {
     static_assert(I > 0);
     if constexpr (I < std::variant_size_v<typename T::Storage_>) {
       if (I == index) {
         auto& member_info = std::get<I>(T::kMembers);
         using Constraint = typename std::remove_reference_t<decltype(member_info)>::Constraint;
-        NaturalEnvelopeEncode<Constraint>(encoder, &std::get<I>(*value->storage_), envelope_offset);
+        NaturalEnvelopeEncode<Constraint>(encoder, &std::get<I>(*value->storage_), envelope_offset,
+                                          recursion_depth);
         return;
       }
-      return EncodeMember<I + 1>(encoder, value, envelope_offset, index);
+      return EncodeMember<I + 1>(encoder, value, envelope_offset, index, recursion_depth);
     }
   }
 

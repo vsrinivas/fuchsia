@@ -65,23 +65,6 @@ class NaturalEncoder {
   }
 
  protected:
-  zx_status_t Validate(const fidl_type_t* type, uint32_t offset, const char** out_err_msg) {
-    switch (wire_format_) {
-      case internal::WireFormatVersion::kV1:
-        return internal__fidl_validate__v1__may_break(type, bytes_.data() + offset,
-                                                      static_cast<uint32_t>(bytes_.size() - offset),
-                                                      handle_actual_, out_err_msg);
-        break;
-      case internal::WireFormatVersion::kV2:
-        return internal__fidl_validate__v2__may_break(type, bytes_.data() + offset,
-                                                      static_cast<uint32_t>(bytes_.size() - offset),
-                                                      handle_actual_, out_err_msg);
-        break;
-      default:
-        __builtin_unreachable();
-    }
-  }
-
   const CodingConfig* coding_config_;
   std::vector<uint8_t> bytes_;
   fidl_handle_t* handles_;
@@ -113,21 +96,6 @@ class NaturalMessageEncoder final : public NaturalEncoder {
   fidl::OutgoingMessage GetMessage(const fidl_type_t* type) {
     if (status_ != ZX_OK) {
       return fidl::OutgoingMessage(fidl::Status::EncodeError(status_, error_));
-    }
-
-    if (type) {
-      const char* err_msg;
-      zx_status_t status = Validate(type, sizeof(fidl_message_header_t), &err_msg);
-      if (status != ZX_OK) {
-        return fidl::OutgoingMessage(fidl::Status::EncodeError(status, err_msg));
-      }
-    } else {
-      // Null type means message header only.
-      if (bytes_.size() != sizeof(fidl_message_header_t) && handle_actual_ == 0) {
-        return fidl::OutgoingMessage(fidl::Status::EncodeError(
-            ZX_ERR_INVALID_ARGS,
-            "message with null type must be a message header with no additional content"));
-      }
     }
 
     return fidl::OutgoingMessage::Create_InternalMayBreak(
