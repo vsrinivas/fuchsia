@@ -59,7 +59,7 @@ generated_file("plasa") {
   data_keys = [ "plasa" ]
   outputs = [ "$root_build_dir/manifest.plasa.json" ]
   output_conversion = "json"
-  deps = _sdk_public_deps
+  deps = _sdk_public_deps + [ "//sdk/cts/plasa:vdso_summary" ]
 }
 
 # This target is used by infra builders to build all SDK archives that
