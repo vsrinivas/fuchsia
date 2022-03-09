@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 use crate::fs::*;
-use crate::logging::not_implemented;
 use crate::task::*;
 use crate::types::*;
 use fuchsia_zircon as zx;
@@ -22,6 +21,7 @@ struct WaitObject {
     target: FileHandle,
     events: FdEvents,
     data: u64,
+    cancel_key: WaitKey,
 }
 
 /// EpollKey acts as an key to a map of WaitObject.
@@ -84,13 +84,13 @@ impl EpollFileObject {
         &self,
         current_task: &CurrentTask,
         key: EpollKey,
-        wait_object: &WaitObject,
+        wait_object: &mut WaitObject,
     ) -> Result<(), Errno> {
         let trigger_list = self.trigger_list.clone();
         let handler =
             move |observed: FdEvents| trigger_list.lock().push_back(ReadyObject { key, observed });
 
-        wait_object.target.wait_async(
+        wait_object.cancel_key = wait_object.target.wait_async(
             current_task,
             &self.waiter,
             wait_object.events,
@@ -118,6 +118,7 @@ impl EpollFileObject {
                     target: file.clone(),
                     events: FdEvents::from(epoll_event.events),
                     data: epoll_event.data,
+                    cancel_key: WaitKey::empty(),
                 });
                 self.wait_on_file(current_task, key, wait_object)
             }
@@ -125,16 +126,40 @@ impl EpollFileObject {
     }
 
     /// Modify the events we are looking for on a Filehandle.
-    pub fn modify(&self, _file: &FileHandle, _epoll_event: EpollEvent) -> Result<(), Errno> {
-        not_implemented!("cannot modify a wait_async");
-        error!(ENOSYS)
+    pub fn modify(
+        &self,
+        current_task: &CurrentTask,
+        file: &FileHandle,
+        mut epoll_event: EpollEvent,
+    ) -> Result<(), Errno> {
+        epoll_event.events |= FdEvents::POLLHUP.mask();
+        epoll_event.events |= FdEvents::POLLERR.mask();
+
+        let mut waits = self.wait_objects.write();
+        let key = as_epoll_key(&file);
+        match waits.entry(key) {
+            Entry::Occupied(mut entry) => {
+                let wait_object = entry.get_mut();
+                wait_object.target.cancel_wait(&current_task, &self.waiter, wait_object.cancel_key);
+                wait_object.events = FdEvents::from(epoll_event.events);
+                self.wait_on_file(current_task, key, wait_object)?;
+                Ok(())
+            }
+            Entry::Vacant(_) => return error!(ENOENT),
+        }
     }
 
     /// Cancel an asynchronous wait on an object. Events triggered before
     /// calling this will still be delivered.
-    pub fn delete(&self, _file: &FileHandle) -> Result<(), Errno> {
-        not_implemented!("cannot cancel a wait_async");
-        error!(ENOSYS)
+    pub fn delete(&self, current_task: &CurrentTask, file: &FileHandle) -> Result<(), Errno> {
+        let mut waits = self.wait_objects.write();
+        let key = as_epoll_key(&file);
+        if let Some(wait_object) = waits.remove(&key) {
+            wait_object.target.cancel_wait(&current_task, &self.waiter, wait_object.cancel_key);
+            Ok(())
+        } else {
+            error!(ENOENT)
+        }
     }
 
     /// Blocking wait on all waited upon events with a timeout.
@@ -148,10 +173,10 @@ impl EpollFileObject {
         // previously been triggered.
         {
             let mut rearm_list = self.rearm_list.lock();
-            let waits = self.wait_objects.write();
+            let mut waits = self.wait_objects.write();
             for to_wait in rearm_list.iter() {
                 // TODO handle interrupts here
-                let w = waits.get(&to_wait.key).ok_or(errno!(EFAULT))?;
+                let w = waits.get_mut(&to_wait.key).ok_or(errno!(EFAULT))?;
                 self.wait_on_file(current_task, to_wait.key, w)?;
             }
             rearm_list.clear();
@@ -184,8 +209,8 @@ impl EpollFileObject {
             //the next wait.
             let mut trigger_list = self.trigger_list.lock();
             if let Some(pending) = trigger_list.pop_front() {
-                let wait_objects = self.wait_objects.read();
-                if let Some(wait) = wait_objects.get(&pending.key) {
+                let mut wait_objects = self.wait_objects.write();
+                if let Some(wait) = wait_objects.get_mut(&pending.key) {
                     let observed = wait.target.query_events(current_task);
                     if observed & wait.events {
                         let ready = ReadyObject { key: pending.key, observed };
@@ -374,5 +399,61 @@ mod tests {
         let mut read_data = vec![0u8; test_len];
         current_task.mm.read_memory(read_buf[0].address, &mut read_data).unwrap();
         assert_eq!(read_data.as_bytes(), test_bytes);
+    }
+
+    #[::fuchsia::test]
+    fn test_epoll_ctl_cancel() {
+        for do_cancel in [true, false] {
+            let (kernel, current_task) = create_kernel_and_task();
+            let event = new_eventfd(&kernel, 0, EventFdType::Counter, true);
+            let waiter = Waiter::new();
+
+            let epoll_file = EpollFileObject::new(&kernel);
+            let epoll_file = epoll_file.downcast_file::<EpollFileObject>().unwrap();
+            const EVENT_DATA: u64 = 42;
+            epoll_file
+                .add(
+                    &current_task,
+                    &event,
+                    EpollEvent { events: FdEvents::POLLIN.mask(), data: EVENT_DATA },
+                )
+                .unwrap();
+
+            if do_cancel {
+                epoll_file.delete(&current_task, &event).unwrap();
+            }
+
+            let callback_count = Arc::new(AtomicU64::new(0));
+            let callback_count_clone = callback_count.clone();
+            let handler = move |_observed: FdEvents| {
+                callback_count_clone.fetch_add(1, Ordering::Relaxed);
+            };
+            let key = event.wait_async(&current_task, &waiter, FdEvents::POLLIN, Box::new(handler));
+            if do_cancel {
+                event.cancel_wait(&current_task, &waiter, key);
+            }
+
+            let write_mem = map_memory(
+                &current_task,
+                UserAddress::default(),
+                std::mem::size_of::<u64>() as u64,
+            );
+            let add_val = 1u64;
+            current_task.mm.write_memory(write_mem, &add_val.to_ne_bytes()).unwrap();
+            let data = [UserBuffer { address: write_mem, length: std::mem::size_of::<u64>() }];
+            assert_eq!(event.write(&current_task, &data).unwrap(), std::mem::size_of::<u64>());
+
+            let events = epoll_file.wait(&current_task, 10, 0).unwrap();
+
+            if do_cancel {
+                assert_eq!(0, events.len());
+            } else {
+                assert_eq!(1, events.len());
+                let event = &events[0];
+                assert!(FdEvents::from(event.events) & FdEvents::POLLIN);
+                let data = event.data;
+                assert_eq!(EVENT_DATA, data);
+            }
+        }
     }
 }

@@ -822,14 +822,8 @@ impl FileObject {
     }
 
     // Cancel a wait set up with wait_async
-    #[allow(dead_code)]
-    pub fn cancel_wait(
-        &self,
-        current_task: &CurrentTask,
-        waiter: &Arc<Waiter>,
-        key: WaitKey,
-    ) -> bool {
-        self.ops().cancel_wait(current_task, waiter, key)
+    pub fn cancel_wait(&self, current_task: &CurrentTask, waiter: &Arc<Waiter>, key: WaitKey) {
+        self.ops().cancel_wait(current_task, waiter, key);
     }
 
     // Return the events currently active

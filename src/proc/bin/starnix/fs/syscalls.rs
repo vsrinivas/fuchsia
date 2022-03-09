@@ -1072,9 +1072,9 @@ pub fn sys_epoll_ctl(
         }
         EPOLL_CTL_MOD => {
             current_task.mm.read_object(event, &mut epoll_event)?;
-            epoll_file.modify(&ctl_file, epoll_event)?;
+            epoll_file.modify(&current_task, &ctl_file, epoll_event)?;
         }
-        EPOLL_CTL_DEL => epoll_file.delete(&ctl_file)?,
+        EPOLL_CTL_DEL => epoll_file.delete(&current_task, &ctl_file)?,
         _ => return error!(EINVAL),
     }
     Ok(SUCCESS)
