@@ -16,8 +16,14 @@ use log::info;
 use std::fs::File;
 
 pub fn create_system(args: CreateSystemArgs) -> Result<()> {
-    let CreateSystemArgs { image_assembly_config, images, outdir, gendir, base_package_name } =
-        args;
+    let CreateSystemArgs {
+        image_assembly_config,
+        images,
+        outdir,
+        gendir,
+        base_package_name,
+        mode: _,
+    } = args;
     let gendir = gendir.unwrap_or(outdir.clone());
     let base_package_name = base_package_name.unwrap_or("system_image".to_string());
 

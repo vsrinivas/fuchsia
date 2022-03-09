@@ -2,10 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use anyhow::{anyhow, Result};
 use argh::FromArgs;
 use ffx_core::ffx_command;
 use serde::Deserialize;
 use std::path::PathBuf;
+use std::str::FromStr;
 
 #[ffx_command()]
 #[derive(FromArgs, Debug, PartialEq)]
@@ -82,6 +84,39 @@ pub struct CreateSystemArgs {
     /// base packages to the same TUF repository.
     #[argh(option)]
     pub base_package_name: Option<String>,
+
+    /// mode indicating where to place packages.
+    #[argh(option, default = "default_package_mode()")]
+    pub mode: PackageMode,
+}
+
+/// Mode indicating where to place packages.
+#[derive(Debug, PartialEq)]
+pub enum PackageMode {
+    /// Put packages in a FVM.
+    Fvm,
+
+    /// Put packages in a FVM as a ramdisk in the ZBI.
+    FvmInZbi,
+
+    /// Put packages into BootFS.
+    BootFS,
+}
+
+impl FromStr for PackageMode {
+    type Err = anyhow::Error;
+    fn from_str(s: &str) -> Result<Self> {
+        match s {
+            "fvm" => Ok(PackageMode::Fvm),
+            "fvm-in-zbi" => Ok(PackageMode::FvmInZbi),
+            "bootfs" => Ok(PackageMode::BootFS),
+            _ => Err(anyhow!("invalid package mode: {}", s)),
+        }
+    }
+}
+
+fn default_package_mode() -> PackageMode {
+    PackageMode::Fvm
 }
 
 /// construct an UpdatePackage using images and package.

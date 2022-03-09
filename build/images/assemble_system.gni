@@ -933,6 +933,18 @@ template("assemble_system") {
       rebase_path(files.cs_outdir, root_build_dir),
     ]
 
+    if (embed_fvm_in_zbi) {
+      args += [
+        "--mode",
+        "fvm-in-zbi",
+      ]
+    } else if (!generate_fvm) {
+      args += [
+        "--mode",
+        "bootfs",
+      ]
+    }
+
     deps = [
       ":${labels.cs_image_assembly_inputs}",
       ":${labels.images_config}",
