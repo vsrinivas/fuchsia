@@ -2,6 +2,7 @@
 
 #pragma once
 
+#include <lib/fidl/llcpp/internal/display_error.h>
 #include <lib/fidl/llcpp/traits.h>
 #include <lib/stdcompat/optional.h>
 
@@ -15,6 +16,15 @@ enum class MyStrictEnum : uint32_t {
 
   kBar = 2u,
 };
+
+}  // namespace test_enum
+template <>
+struct fidl::internal::DisplayError<::test_enum::MyStrictEnum> {
+  static size_t Format(const ::test_enum::MyStrictEnum& value,
+                       char* destination, size_t capacity);
+};
+
+namespace test_enum {
 
 class MyFlexibleEnumWithCustomUnknown final {
  public:
@@ -57,6 +67,17 @@ constexpr const ::test_enum::MyFlexibleEnumWithCustomUnknown
     MyFlexibleEnumWithCustomUnknown::kCustomUnknown =
         ::test_enum::MyFlexibleEnumWithCustomUnknown(3u);
 
+}  // namespace test_enum
+template <>
+struct fidl::internal::DisplayError<
+    ::test_enum::MyFlexibleEnumWithCustomUnknown> {
+  static size_t Format(
+      const ::test_enum::MyFlexibleEnumWithCustomUnknown& value,
+      char* destination, size_t capacity);
+};
+
+namespace test_enum {
+
 class MyFlexibleEnum final {
  public:
   constexpr MyFlexibleEnum() : value_(0) {}
@@ -90,6 +111,15 @@ constexpr const ::test_enum::MyFlexibleEnum MyFlexibleEnum::kFoo =
 constexpr const ::test_enum::MyFlexibleEnum MyFlexibleEnum::kBar =
     ::test_enum::MyFlexibleEnum(2u);
 
+}  // namespace test_enum
+template <>
+struct fidl::internal::DisplayError<::test_enum::MyFlexibleEnum> {
+  static size_t Format(const ::test_enum::MyFlexibleEnum& value,
+                       char* destination, size_t capacity);
+};
+
+namespace test_enum {
+
 class MyEmptyFlexibleEnum final {
  public:
   constexpr MyEmptyFlexibleEnum() : value_(0) {}
@@ -107,6 +137,12 @@ class MyEmptyFlexibleEnum final {
 };
 
 }  // namespace test_enum
+template <>
+struct fidl::internal::DisplayError<::test_enum::MyEmptyFlexibleEnum> {
+  static size_t Format(const ::test_enum::MyEmptyFlexibleEnum& value,
+                       char* destination, size_t capacity);
+};
+
 namespace fidl {
 
 template <>

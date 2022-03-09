@@ -2,6 +2,7 @@
 
 #pragma once
 
+#include <lib/fidl/llcpp/internal/display_error.h>
 #include <lib/fidl/llcpp/traits.h>
 #include <lib/stdcompat/optional.h>
 
@@ -111,6 +112,15 @@ enum class obj_type : uint32_t {
   kSocket = 14u,
 };
 
+}  // namespace test_protocols
+template <>
+struct fidl::internal::DisplayError<::test_protocols::obj_type> {
+  static size_t Format(const ::test_protocols::obj_type& value,
+                       char* destination, size_t capacity);
+};
+
+namespace test_protocols {
+
 enum class ErrorEnum : uint32_t {
 
   kErrFoo = 1u,
@@ -119,6 +129,12 @@ enum class ErrorEnum : uint32_t {
 };
 
 }  // namespace test_protocols
+template <>
+struct fidl::internal::DisplayError<::test_protocols::ErrorEnum> {
+  static size_t Format(const ::test_protocols::ErrorEnum& value,
+                       char* destination, size_t capacity);
+};
+
 namespace fidl {
 
 template <>

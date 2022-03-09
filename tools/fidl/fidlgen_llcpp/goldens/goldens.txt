@@ -1,3 +1,4 @@
+anonymous_common_types.cc.golden
 anonymous_common_types.h.golden
 anonymous_driver.h.golden
 anonymous_driver_wire_messaging.cc.golden
@@ -14,6 +15,7 @@ anonymous_wire_messaging.h.golden
 anonymous_wire_test_base.h.golden
 anonymous_wire_types.cc.golden
 anonymous_wire_types.h.golden
+arrays_common_types.cc.golden
 arrays_common_types.h.golden
 arrays_driver.h.golden
 arrays_driver_wire_messaging.cc.golden
@@ -30,6 +32,7 @@ arrays_wire_messaging.h.golden
 arrays_wire_test_base.h.golden
 arrays_wire_types.cc.golden
 arrays_wire_types.h.golden
+bindings_denylist_common_types.cc.golden
 bindings_denylist_common_types.h.golden
 bindings_denylist_driver.h.golden
 bindings_denylist_driver_wire_messaging.cc.golden
@@ -46,7 +49,9 @@ bindings_denylist_wire_messaging.h.golden
 bindings_denylist_wire_test_base.h.golden
 bindings_denylist_wire_types.cc.golden
 bindings_denylist_wire_types.h.golden
+bits_common_types.cc.golden
 bits_common_types.h.golden
+bits_constants_common_types.cc.golden
 bits_constants_common_types.h.golden
 bits_constants_driver.h.golden
 bits_constants_driver_wire_messaging.cc.golden
@@ -78,6 +83,7 @@ bits_wire_messaging.h.golden
 bits_wire_test_base.h.golden
 bits_wire_types.cc.golden
 bits_wire_types.h.golden
+byte_and_bytes_common_types.cc.golden
 byte_and_bytes_common_types.h.golden
 byte_and_bytes_driver.h.golden
 byte_and_bytes_driver_wire_messaging.cc.golden
@@ -94,6 +100,7 @@ byte_and_bytes_wire_messaging.h.golden
 byte_and_bytes_wire_test_base.h.golden
 byte_and_bytes_wire_types.cc.golden
 byte_and_bytes_wire_types.h.golden
+consts_common_types.cc.golden
 consts_common_types.h.golden
 consts_driver.h.golden
 consts_driver_wire_messaging.cc.golden
@@ -110,6 +117,7 @@ consts_wire_messaging.h.golden
 consts_wire_test_base.h.golden
 consts_wire_types.cc.golden
 consts_wire_types.h.golden
+doc_comments_common_types.cc.golden
 doc_comments_common_types.h.golden
 doc_comments_driver.h.golden
 doc_comments_driver_wire_messaging.cc.golden
@@ -126,6 +134,7 @@ doc_comments_wire_messaging.h.golden
 doc_comments_wire_test_base.h.golden
 doc_comments_wire_types.cc.golden
 doc_comments_wire_types.h.golden
+driver_handle_common_types.cc.golden
 driver_handle_common_types.h.golden
 driver_handle_driver.h.golden
 driver_handle_driver_wire_messaging.cc.golden
@@ -142,6 +151,7 @@ driver_handle_wire_messaging.h.golden
 driver_handle_wire_test_base.h.golden
 driver_handle_wire_types.cc.golden
 driver_handle_wire_types.h.golden
+driver_one_way_common_types.cc.golden
 driver_one_way_common_types.h.golden
 driver_one_way_driver.h.golden
 driver_one_way_driver_wire_messaging.cc.golden
@@ -158,6 +168,7 @@ driver_one_way_wire_messaging.h.golden
 driver_one_way_wire_test_base.h.golden
 driver_one_way_wire_types.cc.golden
 driver_one_way_wire_types.h.golden
+driver_two_way_common_types.cc.golden
 driver_two_way_common_types.h.golden
 driver_two_way_driver.h.golden
 driver_two_way_driver_wire_messaging.cc.golden
@@ -174,6 +185,7 @@ driver_two_way_wire_messaging.h.golden
 driver_two_way_wire_test_base.h.golden
 driver_two_way_wire_types.cc.golden
 driver_two_way_wire_types.h.golden
+empty_struct_common_types.cc.golden
 empty_struct_common_types.h.golden
 empty_struct_driver.h.golden
 empty_struct_driver_wire_messaging.cc.golden
@@ -190,6 +202,7 @@ empty_struct_wire_messaging.h.golden
 empty_struct_wire_test_base.h.golden
 empty_struct_wire_types.cc.golden
 empty_struct_wire_types.h.golden
+encapsulated_structs_common_types.cc.golden
 encapsulated_structs_common_types.h.golden
 encapsulated_structs_driver.h.golden
 encapsulated_structs_driver_wire_messaging.cc.golden
@@ -206,6 +219,7 @@ encapsulated_structs_wire_messaging.h.golden
 encapsulated_structs_wire_test_base.h.golden
 encapsulated_structs_wire_types.cc.golden
 encapsulated_structs_wire_types.h.golden
+enum_common_types.cc.golden
 enum_common_types.h.golden
 enum_driver.h.golden
 enum_driver_wire_messaging.cc.golden
@@ -222,6 +236,7 @@ enum_wire_messaging.h.golden
 enum_wire_test_base.h.golden
 enum_wire_types.cc.golden
 enum_wire_types.h.golden
+error_common_types.cc.golden
 error_common_types.h.golden
 error_driver.h.golden
 error_driver_wire_messaging.cc.golden
@@ -232,6 +247,7 @@ error_natural_messaging.cc.golden
 error_natural_messaging.h.golden
 error_natural_types.cc.golden
 error_natural_types.h.golden
+error_syntax_common_types.cc.golden
 error_syntax_common_types.h.golden
 error_syntax_driver.h.golden
 error_syntax_driver_wire_messaging.cc.golden
@@ -254,6 +270,7 @@ error_wire_messaging.h.golden
 error_wire_test_base.h.golden
 error_wire_types.cc.golden
 error_wire_types.h.golden
+escaping_common_types.cc.golden
 escaping_common_types.h.golden
 escaping_driver.h.golden
 escaping_driver_wire_messaging.cc.golden
@@ -270,6 +287,7 @@ escaping_wire_messaging.h.golden
 escaping_wire_test_base.h.golden
 escaping_wire_types.cc.golden
 escaping_wire_types.h.golden
+foreign_type_in_response_used_through_compose_common_types.cc.golden
 foreign_type_in_response_used_through_compose_common_types.h.golden
 foreign_type_in_response_used_through_compose_driver.h.golden
 foreign_type_in_response_used_through_compose_driver_wire_messaging.cc.golden
@@ -286,11 +304,13 @@ foreign_type_in_response_used_through_compose_wire_messaging.h.golden
 foreign_type_in_response_used_through_compose_wire_test_base.h.golden
 foreign_type_in_response_used_through_compose_wire_types.cc.golden
 foreign_type_in_response_used_through_compose_wire_types.h.golden
+handles_common_types.cc.golden
 handles_common_types.h.golden
 handles_driver.h.golden
 handles_driver_wire_messaging.cc.golden
 handles_driver_wire_messaging.h.golden
 handles_fidl.h.golden
+handles_in_types_common_types.cc.golden
 handles_in_types_common_types.h.golden
 handles_in_types_driver.h.golden
 handles_in_types_driver_wire_messaging.cc.golden
@@ -318,6 +338,7 @@ handles_wire_messaging.h.golden
 handles_wire_test_base.h.golden
 handles_wire_types.cc.golden
 handles_wire_types.h.golden
+imported_const_values_common_types.cc.golden
 imported_const_values_common_types.h.golden
 imported_const_values_driver.h.golden
 imported_const_values_driver_wire_messaging.cc.golden
@@ -334,6 +355,7 @@ imported_const_values_wire_messaging.h.golden
 imported_const_values_wire_test_base.h.golden
 imported_const_values_wire_types.cc.golden
 imported_const_values_wire_types.h.golden
+inheritance_common_types.cc.golden
 inheritance_common_types.h.golden
 inheritance_driver.h.golden
 inheritance_driver_wire_messaging.cc.golden
@@ -350,6 +372,7 @@ inheritance_wire_messaging.h.golden
 inheritance_wire_test_base.h.golden
 inheritance_wire_types.cc.golden
 inheritance_wire_types.h.golden
+inheritance_with_recursive_decl_common_types.cc.golden
 inheritance_with_recursive_decl_common_types.h.golden
 inheritance_with_recursive_decl_driver.h.golden
 inheritance_with_recursive_decl_driver_wire_messaging.cc.golden
@@ -366,6 +389,7 @@ inheritance_with_recursive_decl_wire_messaging.h.golden
 inheritance_with_recursive_decl_wire_test_base.h.golden
 inheritance_with_recursive_decl_wire_types.cc.golden
 inheritance_with_recursive_decl_wire_types.h.golden
+nullable_common_types.cc.golden
 nullable_common_types.h.golden
 nullable_driver.h.golden
 nullable_driver_wire_messaging.cc.golden
@@ -382,6 +406,7 @@ nullable_wire_messaging.h.golden
 nullable_wire_test_base.h.golden
 nullable_wire_types.cc.golden
 nullable_wire_types.h.golden
+padding_common_types.cc.golden
 padding_common_types.h.golden
 padding_driver.h.golden
 padding_driver_wire_messaging.cc.golden
@@ -398,6 +423,7 @@ padding_wire_messaging.h.golden
 padding_wire_test_base.h.golden
 padding_wire_types.cc.golden
 padding_wire_types.h.golden
+placement_of_attributes_common_types.cc.golden
 placement_of_attributes_common_types.h.golden
 placement_of_attributes_driver.h.golden
 placement_of_attributes_driver_wire_messaging.cc.golden
@@ -414,6 +440,7 @@ placement_of_attributes_wire_messaging.h.golden
 placement_of_attributes_wire_test_base.h.golden
 placement_of_attributes_wire_types.cc.golden
 placement_of_attributes_wire_types.h.golden
+protocol_layouts_common_types.cc.golden
 protocol_layouts_common_types.h.golden
 protocol_layouts_driver.h.golden
 protocol_layouts_driver_wire_messaging.cc.golden
@@ -430,6 +457,7 @@ protocol_layouts_wire_messaging.h.golden
 protocol_layouts_wire_test_base.h.golden
 protocol_layouts_wire_types.cc.golden
 protocol_layouts_wire_types.h.golden
+protocol_payloads_common_types.cc.golden
 protocol_payloads_common_types.h.golden
 protocol_payloads_driver.h.golden
 protocol_payloads_driver_wire_messaging.cc.golden
@@ -446,6 +474,7 @@ protocol_payloads_wire_messaging.h.golden
 protocol_payloads_wire_test_base.h.golden
 protocol_payloads_wire_types.cc.golden
 protocol_payloads_wire_types.h.golden
+protocol_request_common_types.cc.golden
 protocol_request_common_types.h.golden
 protocol_request_driver.h.golden
 protocol_request_driver_wire_messaging.cc.golden
@@ -462,6 +491,7 @@ protocol_request_wire_messaging.h.golden
 protocol_request_wire_test_base.h.golden
 protocol_request_wire_types.cc.golden
 protocol_request_wire_types.h.golden
+protocols_common_types.cc.golden
 protocols_common_types.h.golden
 protocols_driver.h.golden
 protocols_driver_wire_messaging.cc.golden
@@ -478,6 +508,7 @@ protocols_wire_messaging.h.golden
 protocols_wire_test_base.h.golden
 protocols_wire_types.cc.golden
 protocols_wire_types.h.golden
+request_flexible_envelope_common_types.cc.golden
 request_flexible_envelope_common_types.h.golden
 request_flexible_envelope_driver.h.golden
 request_flexible_envelope_driver_wire_messaging.cc.golden
@@ -494,6 +525,7 @@ request_flexible_envelope_wire_messaging.h.golden
 request_flexible_envelope_wire_test_base.h.golden
 request_flexible_envelope_wire_types.cc.golden
 request_flexible_envelope_wire_types.h.golden
+service_common_types.cc.golden
 service_common_types.h.golden
 service_driver.h.golden
 service_driver_wire_messaging.cc.golden
@@ -510,7 +542,9 @@ service_wire_messaging.h.golden
 service_wire_test_base.h.golden
 service_wire_types.cc.golden
 service_wire_types.h.golden
+struct_common_types.cc.golden
 struct_common_types.h.golden
+struct_default_value_enum_library_reference_common_types.cc.golden
 struct_default_value_enum_library_reference_common_types.h.golden
 struct_default_value_enum_library_reference_driver.h.golden
 struct_default_value_enum_library_reference_driver_wire_messaging.cc.golden
@@ -542,6 +576,7 @@ struct_wire_messaging.h.golden
 struct_wire_test_base.h.golden
 struct_wire_types.cc.golden
 struct_wire_types.h.golden
+table_common_types.cc.golden
 table_common_types.h.golden
 table_driver.h.golden
 table_driver_wire_messaging.cc.golden
@@ -558,7 +593,9 @@ table_wire_messaging.h.golden
 table_wire_test_base.h.golden
 table_wire_types.cc.golden
 table_wire_types.h.golden
+transitive_dependencies_common_types.cc.golden
 transitive_dependencies_common_types.h.golden
+transitive_dependencies_compose_common_types.cc.golden
 transitive_dependencies_compose_common_types.h.golden
 transitive_dependencies_compose_driver.h.golden
 transitive_dependencies_compose_driver_wire_messaging.cc.golden
@@ -590,6 +627,7 @@ transitive_dependencies_wire_messaging.h.golden
 transitive_dependencies_wire_test_base.h.golden
 transitive_dependencies_wire_types.cc.golden
 transitive_dependencies_wire_types.h.golden
+type_aliases_common_types.cc.golden
 type_aliases_common_types.h.golden
 type_aliases_driver.h.golden
 type_aliases_driver_wire_messaging.cc.golden
@@ -606,6 +644,7 @@ type_aliases_wire_messaging.h.golden
 type_aliases_wire_test_base.h.golden
 type_aliases_wire_types.cc.golden
 type_aliases_wire_types.h.golden
+union_common_types.cc.golden
 union_common_types.h.golden
 union_driver.h.golden
 union_driver_wire_messaging.cc.golden
@@ -616,6 +655,7 @@ union_natural_messaging.cc.golden
 union_natural_messaging.h.golden
 union_natural_types.cc.golden
 union_natural_types.h.golden
+union_sandwich_common_types.cc.golden
 union_sandwich_common_types.h.golden
 union_sandwich_driver.h.golden
 union_sandwich_driver_wire_messaging.cc.golden
@@ -638,6 +678,7 @@ union_wire_messaging.h.golden
 union_wire_test_base.h.golden
 union_wire_types.cc.golden
 union_wire_types.h.golden
+unknown_interactions_common_types.cc.golden
 unknown_interactions_common_types.h.golden
 unknown_interactions_driver.h.golden
 unknown_interactions_driver_wire_messaging.cc.golden
@@ -654,6 +695,7 @@ unknown_interactions_wire_messaging.h.golden
 unknown_interactions_wire_test_base.h.golden
 unknown_interactions_wire_types.cc.golden
 unknown_interactions_wire_types.h.golden
+vectors_common_types.cc.golden
 vectors_common_types.h.golden
 vectors_driver.h.golden
 vectors_driver_wire_messaging.cc.golden
@@ -670,6 +712,7 @@ vectors_wire_messaging.h.golden
 vectors_wire_test_base.h.golden
 vectors_wire_types.cc.golden
 vectors_wire_types.h.golden
+versions_common_types.cc.golden
 versions_common_types.h.golden
 versions_driver.h.golden
 versions_driver_wire_messaging.cc.golden

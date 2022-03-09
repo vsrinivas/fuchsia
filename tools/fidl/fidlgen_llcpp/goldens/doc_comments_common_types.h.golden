@@ -2,6 +2,7 @@
 
 #pragma once
 
+#include <lib/fidl/llcpp/internal/display_error.h>
 #include <lib/fidl/llcpp/traits.h>
 #include <lib/stdcompat/optional.h>
 
@@ -231,6 +232,15 @@ enum class MyStrictEnum : uint32_t {
   kBar = 2u,
 };
 
+}  // namespace test_doccomments
+template <>
+struct fidl::internal::DisplayError<::test_doccomments::MyStrictEnum> {
+  static size_t Format(const ::test_doccomments::MyStrictEnum& value,
+                       char* destination, size_t capacity);
+};
+
+namespace test_doccomments {
+
 /// flexible enum comment #1.
 ///
 /// flexible enum comment #2.
@@ -274,6 +284,12 @@ constexpr const ::test_doccomments::MyFlexibleEnum MyFlexibleEnum::kBar =
     ::test_doccomments::MyFlexibleEnum(2u);
 
 }  // namespace test_doccomments
+template <>
+struct fidl::internal::DisplayError<::test_doccomments::MyFlexibleEnum> {
+  static size_t Format(const ::test_doccomments::MyFlexibleEnum& value,
+                       char* destination, size_t capacity);
+};
+
 namespace fidl {
 
 template <>

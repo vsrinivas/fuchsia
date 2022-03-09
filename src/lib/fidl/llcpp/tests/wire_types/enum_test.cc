@@ -80,3 +80,51 @@ TEST(Enum, Switch) {
   };
   EXPECT_EQ(6000u, switch_on_flexible(FlexibleType::kE));
 }
+
+TEST(StrictEnum, DisplayErrorTypeTruncated) {
+  StrictEnum e = StrictEnum::kB;
+  constexpr size_t kTinyCapacity = 10;
+  char buffer[kTinyCapacity];
+  size_t written = fidl::internal::FormatDisplayError(e, buffer, sizeof(buffer));
+  EXPECT_EQ(std::string_view(buffer, written), "test.type");
+  EXPECT_EQ(kTinyCapacity - 1, written);
+  EXPECT_EQ('\0', buffer[kTinyCapacity - 1]);
+}
+
+TEST(StrictEnum, DisplayErrorValueTruncated) {
+  StrictEnum e = StrictEnum::kB;
+  constexpr size_t kSmallCapacity = 26;
+  char buffer[kSmallCapacity];
+  size_t written = fidl::internal::FormatDisplayError(e, buffer, sizeof(buffer));
+  EXPECT_EQ(std::string_view(buffer, written), "test.types/StrictEnum.B (");
+  EXPECT_EQ(kSmallCapacity - 1, written);
+  EXPECT_EQ('\0', buffer[kSmallCapacity - 1]);
+}
+
+TEST(StrictEnum, KnownDisplayError) {
+  StrictEnum e = StrictEnum::kB;
+  char buffer[100];
+  fidl::internal::FormatDisplayError(e, buffer, sizeof(buffer));
+  EXPECT_EQ(std::string_view(buffer), "test.types/StrictEnum.B (value: 2)");
+}
+
+TEST(StrictEnum, UnknownDisplayError) {
+  StrictEnum e = static_cast<StrictEnum>(0);
+  char buffer[100];
+  fidl::internal::FormatDisplayError(e, buffer, sizeof(buffer));
+  EXPECT_EQ(std::string_view(buffer), "test.types/StrictEnum.[UNKNOWN] (value: 0)");
+}
+
+TEST(FlexibleEnum, KnownDisplayError) {
+  FlexibleEnum e = FlexibleEnum::kB;
+  char buffer[100];
+  fidl::internal::FormatDisplayError(e, buffer, sizeof(buffer));
+  EXPECT_EQ(std::string_view(buffer), "test.types/FlexibleEnum.B (value: 2)");
+}
+
+TEST(FlexibleEnum, UnknownDisplayError) {
+  FlexibleEnum e = static_cast<FlexibleEnum>(0);
+  char buffer[100];
+  fidl::internal::FormatDisplayError(e, buffer, sizeof(buffer));
+  EXPECT_EQ(std::string_view(buffer), "test.types/FlexibleEnum.[UNKNOWN] (value: 0)");
+}

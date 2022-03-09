@@ -54,7 +54,45 @@ constexpr const {{ $ }} {{ $.Name }}::{{ $member.Name }} =
   {{ $ }}({{ $member.Value }});
 {{- end }}
 {{ end }}
+
+{{- if .IsCompatibleWithError }}
+{{ EnsureNamespace "" }}
+template <>
+struct fidl::internal::DisplayError<{{ . }}> {
+  static size_t Format(const {{ . }}& value, char* destination, size_t capacity);
+};
+{{- end }}
+
 {{ end }}
+
+
+
+{{- define "Enum:CommonTypesSource" }}
+
+{{ EnsureNamespace . }}
+extern "C" const fidl_type_t {{ .CodingTableType.Name }};
+
+{{- if .IsCompatibleWithError }}
+{{ EnsureNamespace "" }}
+size_t fidl::internal::DisplayError<{{ . }}>::Format(
+    const {{ . }}& value, char* destination, size_t capacity
+) {
+  const char* name = [&] () -> const char* {
+    switch (static_cast<{{ .Type }}>(value)) {
+      {{- range .Members }}
+     case {{ .Value }}: return "{{ .EnumMember.Name }}";
+      {{- end }}
+     default: return nullptr;
+    }
+  }();
+  return ::fidl::internal::FormatApplicationError(
+      static_cast<{{ .Type }}>(value), name, &{{ .CodingTableType }}, destination, capacity);
+}
+{{- end }}
+
+{{- end }}
+
+
 
 {{- define "Enum:Traits:CommonTypesHeader" }}
 

@@ -76,42 +76,49 @@ using StatusFormattingBuffer = std::array<char, 256>;
 }
 
 size_t Status::FormatImpl(char* destination, size_t length, bool from_unbind_info) const {
+  ZX_ASSERT(length > 0);
+  int num_would_write = 0;
+
   // We use |snprintf| since it minimizes allocation and is faster
   // than output streams.
   if (!from_unbind_info && status_ == ZX_OK && reason_ == internal::kUninitializedReason) {
-    return snprintf(destination, length, "FIDL success");
-  }
+    num_would_write = snprintf(destination, length, "FIDL success");
+  } else {
+    const char* prelude = from_unbind_info ? "FIDL endpoint was unbound" : "FIDL operation failed";
 
-  const char* prelude = from_unbind_info ? "FIDL endpoint was unbound" : "FIDL operation failed";
+    const char* status_meaning = [&] {
+      switch (reason_) {
+        // This reason may only appear in an |UnbindInfo|.
+        case Reason::kClose:
+          ZX_DEBUG_ASSERT(from_unbind_info);
+          return "status of sending epitaph";
+        case Reason::kPeerClosed:
+          if (status_ != ZX_ERR_PEER_CLOSED) {
+            return "epitaph";
+          }
+          break;
+        default:
+          break;
+      }
+      return "status";
+    }();
 
-  const char* status_meaning = [&] {
-    switch (reason_) {
-      // This reason may only appear in an |UnbindInfo|.
-      case Reason::kClose:
-        ZX_DEBUG_ASSERT(from_unbind_info);
-        return "status of sending epitaph";
-      case Reason::kPeerClosed:
-        if (status_ != ZX_ERR_PEER_CLOSED) {
-          return "epitaph";
-        }
-        break;
-      default:
-        break;
-    }
-    return "status";
-  }();
-
-  const char* detail_prefix = error_ ? ", detail: " : "";
-  const char* detail = error_ ? error_ : "";
+    const char* detail_prefix = error_ ? ", detail: " : "";
+    const char* detail = error_ ? error_ : "";
 
 #ifdef __Fuchsia__
-  return snprintf(destination, length, "%s due to %s, %s: %s (%d)%s%s", prelude,
-                  reason_description(), status_meaning, status_string(), status_, detail_prefix,
-                  detail);
+    num_would_write = snprintf(destination, length, "%s due to %s, %s: %s (%d)%s%s", prelude,
+                               reason_description(), status_meaning, status_string(), status_,
+                               detail_prefix, detail);
 #else
-  return snprintf(destination, length, "%s due to %s, %s: %d%s%s", prelude, reason_description(),
-                  status_meaning, status_, detail_prefix, detail);
+    num_would_write =
+        snprintf(destination, length, "%s due to %s, %s: %d%s%s", prelude, reason_description(),
+                 status_meaning, status_, detail_prefix, detail);
 #endif  // __Fuchsia__
+  }
+
+  ZX_ASSERT(num_would_write > 0);
+  return static_cast<size_t>(num_would_write) >= length ? length - 1 : num_would_write;
 }
 
 std::ostream& operator<<(std::ostream& ostream, const Status& result) {
@@ -132,6 +139,11 @@ std::ostream& operator<<(std::ostream& ostream, const UnbindInfo& info) {
   size_t length = info.Status::FormatImpl(buf.begin(), sizeof(buf), /* from_unbind_info */ true);
   ostream << cpp17::string_view(buf.begin(), length);
   return ostream;
+}
+
+size_t fidl::internal::DisplayError<fidl::Result>::Format(const fidl::Result& value,
+                                                          char* destination, size_t capacity) {
+  return value.FormatImpl(destination, capacity, false);
 }
 
 }  // namespace fidl

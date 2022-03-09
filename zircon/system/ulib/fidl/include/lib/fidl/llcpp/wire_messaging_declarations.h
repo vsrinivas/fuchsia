@@ -172,8 +172,10 @@ class WireCompleterImpl;
 template <typename FidlMethod>
 class WireCompleterBase;
 
-// |WireMethodTypes| gives access to the completer type associated with a
-// particular method.
+// |WireMethodTypes| gives access to:
+// - the completer type associated with a particular method.
+// - if two-way and uses the error syntax: the application error type in the
+//   error syntax.
 template <typename FidlMethod>
 struct WireMethodTypes;
 

@@ -5,6 +5,7 @@
 #ifndef LIB_FIDL_LLCPP_STATUS_H_
 #define LIB_FIDL_LLCPP_STATUS_H_
 
+#include <lib/fidl/llcpp/internal/display_error.h>
 #include <zircon/assert.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
@@ -295,16 +296,18 @@ class [[nodiscard]] Status {
   [[nodiscard]] const char* reason_description() const;
 
   // Renders the description into a buffer |destination| that is of size
-  // |length|. The description will cut off at `length - 1`.
+  // |length|. The description will cut off at `length - 1`. It inserts a
+  // trailing NUL.
   //
   // |from_unbind_info| should be true iff this is invoked by |UnbindInfo|.
   //
-  // Returns how many bytes were written.
+  // Returns how many bytes were written, not counting the NUL.
   size_t FormatImpl(char* destination, size_t length, bool from_unbind_info) const;
 
  private:
   friend class UnbindInfo;
   friend std::ostream& operator<<(std::ostream& ostream, const Status& result);
+  friend struct fidl::internal::DisplayError<fidl::Status>;
 
   __ALWAYS_INLINE
   constexpr Status(zx_status_t status, ::fidl::Reason reason, const char* error)
@@ -322,6 +325,12 @@ std::ostream& operator<<(std::ostream& ostream, const Status& result);
 // there are no more usages.
 // TODO(fxbug.dev/95217) Remove this alias.
 using Result = Status;
+
+// Implement |DisplayError| for |fidl::Result|.
+template <>
+struct fidl::internal::DisplayError<fidl::Result> {
+  static size_t Format(const fidl::Result& value, char* destination, size_t capacity);
+};
 
 // |Error| is a type alias for when the result of an operation is an error.
 using Error = Status;

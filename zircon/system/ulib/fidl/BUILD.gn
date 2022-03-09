@@ -117,6 +117,7 @@ if (is_fuchsia) {
                     "lib/fidl/llcpp/internal/debug_thread_checker.h",
                     "lib/fidl/llcpp/internal/transport.h",
                     "lib/fidl/llcpp/internal/transport_channel.h",
+                    "lib/fidl/llcpp/internal/display_error.h",
                   ] + llcpp_wavl_tree_headers
 
     sdk_private_headers =
@@ -139,6 +140,7 @@ if (is_fuchsia) {
       "llcpp_async_transaction.cc",
       "llcpp_client_base.cc",
       "llcpp_decoding.cc",
+      "llcpp_display_error.cc",
       "llcpp_encoding.cc",
       "llcpp_message.cc",
       "llcpp_message_storage.cc",
@@ -198,6 +200,7 @@ if (is_fuchsia) {
                     "lib/fidl/llcpp/vector_view.h",
                     "lib/fidl/llcpp/wire_types.h",
                     "lib/fidl/llcpp/internal/transport.h",
+                    "lib/fidl/llcpp/internal/display_error.h",
                     "lib/fidl/llcpp/internal/transport_channel_host.h",
                   ] + llcpp_wavl_tree_headers
 
@@ -210,6 +213,7 @@ if (is_fuchsia) {
     sources = [
       "llcpp_arena.cc",
       "llcpp_decoding.cc",
+      "llcpp_display_error.cc",
       "llcpp_encoding.cc",
       "llcpp_message.cc",
       "llcpp_message_storage.cc",

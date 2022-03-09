@@ -67,6 +67,10 @@ struct {{ .WireOrdinal }} final { static constexpr uint64_t value = {{ .Ordinal 
   {{- end }}
 {{- end }}
 
+{{- range .TwoWayMethods }}
+  {{- template "Method:Types:WireMessagingHeader" . }}
+{{- end }}
+
 {{ EnsureNamespace "fidl" }}
 {{ template "Protocol:Traits:WireMessagingHeader" . }}
 

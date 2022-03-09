@@ -3,6 +3,7 @@
 #pragma once
 
 #include <fidl/test.errorsyntax.parent/cpp/common_types.h>
+#include <lib/fidl/llcpp/internal/display_error.h>
 #include <lib/fidl/llcpp/traits.h>
 #include <lib/stdcompat/optional.h>
 

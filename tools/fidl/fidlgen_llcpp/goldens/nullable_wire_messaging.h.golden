@@ -118,6 +118,16 @@ struct ::fidl::internal::TransactionalResponse<
   void _InitHeader();
 };
 
+#ifdef __Fuchsia__
+
+template <>
+struct ::fidl::internal::WireMethodTypes<::test_nullable::SimpleProtocol::Add> {
+  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<
+      ::test_nullable::SimpleProtocol::Add>>;
+};
+
+#endif  // __Fuchsia__
+
 namespace fidl {
 
 template <>
@@ -528,12 +538,6 @@ class ::fidl::internal::WireCompleterBase<::test_nullable::SimpleProtocol::Add>
     WireCompleterImpl::_set_core(this);
     return *this;
   }
-};
-
-template <>
-struct ::fidl::internal::WireMethodTypes<::test_nullable::SimpleProtocol::Add> {
-  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<
-      ::test_nullable::SimpleProtocol::Add>>;
 };
 
 // Pure-virtual interface to be implemented by a server.

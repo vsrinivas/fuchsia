@@ -245,6 +245,17 @@ struct ::fidl::internal::TransactionalEvent<
 };
 #endif  // __Fuchsia__
 
+#ifdef __Fuchsia__
+
+template <>
+struct ::fidl::internal::WireMethodTypes<
+    ::test_protocols::HandleRightsProtocol::ResponseMethod> {
+  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<
+      ::test_protocols::HandleRightsProtocol::ResponseMethod>>;
+};
+
+#endif  // __Fuchsia__
+
 namespace fidl {
 
 template <>
@@ -971,13 +982,6 @@ class ::fidl::internal::WireCompleterBase<
   }
 };
 
-template <>
-struct ::fidl::internal::WireMethodTypes<
-    ::test_protocols::HandleRightsProtocol::ResponseMethod> {
-  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<
-      ::test_protocols::HandleRightsProtocol::ResponseMethod>>;
-};
-
 // Pure-virtual interface to be implemented by a server.
 // This interface uses typed channels (i.e. |fidl::ClientEnd<SomeProtocol>|
 // and |fidl::ServerEnd<SomeProtocol>|).
@@ -1445,6 +1449,52 @@ struct ::fidl::internal::TransactionalEvent<
  private:
   void _InitHeader();
 };
+
+#ifdef __Fuchsia__
+
+template <>
+struct ::fidl::internal::WireMethodTypes<
+    ::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse> {
+  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<
+      ::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse>>;
+};
+
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+template <>
+struct ::fidl::internal::WireMethodTypes<
+    ::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse> {
+  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<
+      ::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>>;
+};
+
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+template <>
+struct ::fidl::internal::WireMethodTypes<
+    ::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse> {
+  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<
+      ::test_protocols::WithAndWithoutRequestResponse::
+          WithRequestEmptyResponse>>;
+};
+
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+template <>
+struct ::fidl::internal::WireMethodTypes<
+    ::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse> {
+  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<
+      ::test_protocols::WithAndWithoutRequestResponse::
+          WithRequestWithResponse>>;
+};
+
+#endif  // __Fuchsia__
 
 namespace fidl {
 
@@ -3155,13 +3205,6 @@ class ::fidl::internal::WireCompleterBase<
 };
 
 template <>
-struct ::fidl::internal::WireMethodTypes<
-    ::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse> {
-  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<
-      ::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse>>;
-};
-
-template <>
 class ::fidl::internal::WireCompleterImpl<
     ::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>
     : public ::fidl::internal::CompleterImplBase<
@@ -3202,13 +3245,6 @@ class ::fidl::internal::WireCompleterBase<
     WireCompleterImpl::_set_core(this);
     return *this;
   }
-};
-
-template <>
-struct ::fidl::internal::WireMethodTypes<
-    ::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse> {
-  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<
-      ::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>>;
 };
 
 template <>
@@ -3255,14 +3291,6 @@ class ::fidl::internal::WireCompleterBase<
 };
 
 template <>
-struct ::fidl::internal::WireMethodTypes<
-    ::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse> {
-  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<
-      ::test_protocols::WithAndWithoutRequestResponse::
-          WithRequestEmptyResponse>>;
-};
-
-template <>
 class ::fidl::internal::WireCompleterImpl<
     ::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>
     : public ::fidl::internal::CompleterImplBase<
@@ -3303,14 +3331,6 @@ class ::fidl::internal::WireCompleterBase<
     WireCompleterImpl::_set_core(this);
     return *this;
   }
-};
-
-template <>
-struct ::fidl::internal::WireMethodTypes<
-    ::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse> {
-  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<
-      ::test_protocols::WithAndWithoutRequestResponse::
-          WithRequestWithResponse>>;
 };
 
 // Pure-virtual interface to be implemented by a server.
@@ -3553,6 +3573,17 @@ struct ::fidl::internal::TransactionalEvent<
  private:
   void _InitHeader();
 };
+
+#ifdef __Fuchsia__
+
+template <>
+struct ::fidl::internal::WireMethodTypes<
+    ::test_protocols::Transitional::Request> {
+  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<
+      ::test_protocols::Transitional::Request>>;
+};
+
+#endif  // __Fuchsia__
 
 namespace fidl {
 
@@ -4150,13 +4181,6 @@ class ::fidl::internal::WireCompleterBase<
     WireCompleterImpl::_set_core(this);
     return *this;
   }
-};
-
-template <>
-struct ::fidl::internal::WireMethodTypes<
-    ::test_protocols::Transitional::Request> {
-  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<
-      ::test_protocols::Transitional::Request>>;
 };
 
 // Pure-virtual interface to be implemented by a server.
@@ -4806,6 +4830,39 @@ struct ::fidl::internal::TransactionalResponse<
  private:
   void _InitHeader();
 };
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+template <>
+struct ::fidl::internal::WireMethodTypes<
+    ::test_protocols::WithProtocolEnds::ClientEnds> {
+  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<
+      ::test_protocols::WithProtocolEnds::ClientEnds>>;
+};
+
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+template <>
+struct ::fidl::internal::WireMethodTypes<
+    ::test_protocols::WithProtocolEnds::ServerEnds> {
+  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<
+      ::test_protocols::WithProtocolEnds::ServerEnds>>;
+};
+
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+template <>
+struct ::fidl::internal::WireMethodTypes<
+    ::test_protocols::WithProtocolEnds::StructContainingEnds> {
+  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<
+      ::test_protocols::WithProtocolEnds::StructContainingEnds>>;
+};
+
 #endif  // __Fuchsia__
 
 namespace fidl {
@@ -5972,13 +6029,6 @@ class ::fidl::internal::WireCompleterBase<
 };
 
 template <>
-struct ::fidl::internal::WireMethodTypes<
-    ::test_protocols::WithProtocolEnds::ClientEnds> {
-  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<
-      ::test_protocols::WithProtocolEnds::ClientEnds>>;
-};
-
-template <>
 class ::fidl::internal::WireCompleterImpl<
     ::test_protocols::WithProtocolEnds::ServerEnds>
     : public ::fidl::internal::CompleterImplBase<
@@ -6020,13 +6070,6 @@ class ::fidl::internal::WireCompleterBase<
 };
 
 template <>
-struct ::fidl::internal::WireMethodTypes<
-    ::test_protocols::WithProtocolEnds::ServerEnds> {
-  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<
-      ::test_protocols::WithProtocolEnds::ServerEnds>>;
-};
-
-template <>
 class ::fidl::internal::WireCompleterImpl<
     ::test_protocols::WithProtocolEnds::StructContainingEnds>
     : public ::fidl::internal::CompleterImplBase<
@@ -6065,13 +6108,6 @@ class ::fidl::internal::WireCompleterBase<
     WireCompleterImpl::_set_core(this);
     return *this;
   }
-};
-
-template <>
-struct ::fidl::internal::WireMethodTypes<
-    ::test_protocols::WithProtocolEnds::StructContainingEnds> {
-  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<
-      ::test_protocols::WithProtocolEnds::StructContainingEnds>>;
 };
 
 // Pure-virtual interface to be implemented by a server.
@@ -6790,6 +6826,58 @@ struct ::fidl::internal::TransactionalResponse<
  private:
   void _InitHeader();
 };
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+template <>
+struct ::fidl::internal::WireMethodTypes<
+    ::test_protocols::WithErrorSyntax::ResponseAsStruct> {
+  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<
+      ::test_protocols::WithErrorSyntax::ResponseAsStruct>>;
+
+  using ApplicationError = uint32_t;
+};
+
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+template <>
+struct ::fidl::internal::WireMethodTypes<
+    ::test_protocols::WithErrorSyntax::ErrorAsPrimitive> {
+  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<
+      ::test_protocols::WithErrorSyntax::ErrorAsPrimitive>>;
+
+  using ApplicationError = uint32_t;
+};
+
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+template <>
+struct ::fidl::internal::WireMethodTypes<
+    ::test_protocols::WithErrorSyntax::ErrorAsEnum> {
+  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<
+      ::test_protocols::WithErrorSyntax::ErrorAsEnum>>;
+
+  using ApplicationError = ::test_protocols::wire::ErrorEnum;
+};
+
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+template <>
+struct ::fidl::internal::WireMethodTypes<
+    ::test_protocols::WithErrorSyntax::HandleInResult> {
+  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<
+      ::test_protocols::WithErrorSyntax::HandleInResult>>;
+
+  using ApplicationError = uint32_t;
+};
+
 #endif  // __Fuchsia__
 
 namespace fidl {
@@ -8140,13 +8228,6 @@ class ::fidl::internal::WireCompleterBase<
 };
 
 template <>
-struct ::fidl::internal::WireMethodTypes<
-    ::test_protocols::WithErrorSyntax::ResponseAsStruct> {
-  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<
-      ::test_protocols::WithErrorSyntax::ResponseAsStruct>>;
-};
-
-template <>
 class ::fidl::internal::WireCompleterImpl<
     ::test_protocols::WithErrorSyntax::ErrorAsPrimitive>
     : public ::fidl::internal::CompleterImplBase<
@@ -8191,13 +8272,6 @@ class ::fidl::internal::WireCompleterBase<
     WireCompleterImpl::_set_core(this);
     return *this;
   }
-};
-
-template <>
-struct ::fidl::internal::WireMethodTypes<
-    ::test_protocols::WithErrorSyntax::ErrorAsPrimitive> {
-  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<
-      ::test_protocols::WithErrorSyntax::ErrorAsPrimitive>>;
 };
 
 template <>
@@ -8246,13 +8320,6 @@ class ::fidl::internal::WireCompleterBase<
 };
 
 template <>
-struct ::fidl::internal::WireMethodTypes<
-    ::test_protocols::WithErrorSyntax::ErrorAsEnum> {
-  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<
-      ::test_protocols::WithErrorSyntax::ErrorAsEnum>>;
-};
-
-template <>
 class ::fidl::internal::WireCompleterImpl<
     ::test_protocols::WithErrorSyntax::HandleInResult>
     : public ::fidl::internal::CompleterImplBase<
@@ -8297,13 +8364,6 @@ class ::fidl::internal::WireCompleterBase<
     WireCompleterImpl::_set_core(this);
     return *this;
   }
-};
-
-template <>
-struct ::fidl::internal::WireMethodTypes<
-    ::test_protocols::WithErrorSyntax::HandleInResult> {
-  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<
-      ::test_protocols::WithErrorSyntax::HandleInResult>>;
 };
 
 // Pure-virtual interface to be implemented by a server.
@@ -8969,6 +9029,39 @@ struct ::fidl::internal::TransactionalResponse<
  private:
   void _InitHeader();
 };
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+template <>
+struct ::fidl::internal::WireMethodTypes<
+    ::test_protocols::ChannelProtocol::MethodB> {
+  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<
+      ::test_protocols::ChannelProtocol::MethodB>>;
+};
+
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+template <>
+struct ::fidl::internal::WireMethodTypes<
+    ::test_protocols::ChannelProtocol::TakeHandle> {
+  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<
+      ::test_protocols::ChannelProtocol::TakeHandle>>;
+};
+
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+template <>
+struct ::fidl::internal::WireMethodTypes<
+    ::test_protocols::ChannelProtocol::MutateSocket> {
+  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<
+      ::test_protocols::ChannelProtocol::MutateSocket>>;
+};
+
 #endif  // __Fuchsia__
 
 namespace fidl {
@@ -10145,13 +10238,6 @@ class ::fidl::internal::WireCompleterBase<
 };
 
 template <>
-struct ::fidl::internal::WireMethodTypes<
-    ::test_protocols::ChannelProtocol::MethodB> {
-  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<
-      ::test_protocols::ChannelProtocol::MethodB>>;
-};
-
-template <>
 class ::fidl::internal::WireCompleterImpl<
     ::test_protocols::ChannelProtocol::TakeHandle>
     : public ::fidl::internal::CompleterImplBase<
@@ -10193,13 +10279,6 @@ class ::fidl::internal::WireCompleterBase<
 };
 
 template <>
-struct ::fidl::internal::WireMethodTypes<
-    ::test_protocols::ChannelProtocol::TakeHandle> {
-  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<
-      ::test_protocols::ChannelProtocol::TakeHandle>>;
-};
-
-template <>
 class ::fidl::internal::WireCompleterImpl<
     ::test_protocols::ChannelProtocol::MutateSocket>
     : public ::fidl::internal::CompleterImplBase<
@@ -10238,13 +10317,6 @@ class ::fidl::internal::WireCompleterBase<
     WireCompleterImpl::_set_core(this);
     return *this;
   }
-};
-
-template <>
-struct ::fidl::internal::WireMethodTypes<
-    ::test_protocols::ChannelProtocol::MutateSocket> {
-  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<
-      ::test_protocols::ChannelProtocol::MutateSocket>>;
 };
 
 // Pure-virtual interface to be implemented by a server.

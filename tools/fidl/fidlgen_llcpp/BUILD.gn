@@ -28,6 +28,7 @@ if (is_host) {
       "codegen/driver/fragment_protocol_caller.tmpl",
       "codegen/driver/fragment_protocol_client_impl.tmpl",
       "codegen/file_common_types_header.tmpl",
+      "codegen/file_common_types_source.tmpl",
       "codegen/file_markers.tmpl",
       "codegen/file_natural_messaging_header.tmpl",
       "codegen/file_natural_messaging_source.tmpl",
@@ -53,6 +54,7 @@ if (is_host) {
       "codegen/fragment_method_request.tmpl",
       "codegen/fragment_method_response.tmpl",
       "codegen/fragment_method_result.tmpl",
+      "codegen/fragment_method_types.tmpl",
       "codegen/fragment_method_unownedresult.tmpl",
       "codegen/fragment_protocol.tmpl",
       "codegen/fragment_protocol_caller.tmpl",
@@ -108,6 +110,10 @@ if (is_host) {
           {
             golden = "${info.name}_common_types.h.golden"
             generated = "$gen_dir/$include_path/common_types.h"
+          },
+          {
+            golden = "${info.name}_common_types.cc.golden"
+            generated = "$gen_dir/$include_path/common_types.cc"
           },
           {
             golden = "${info.name}_wire_types.h.golden"

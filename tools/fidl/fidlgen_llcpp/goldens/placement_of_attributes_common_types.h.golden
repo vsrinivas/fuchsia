@@ -3,6 +3,7 @@
 #pragma once
 
 #include <fidl/test.exampleusing/cpp/common_types.h>
+#include <lib/fidl/llcpp/internal/display_error.h>
 #include <lib/fidl/llcpp/traits.h>
 #include <lib/stdcompat/optional.h>
 
@@ -112,6 +113,12 @@ enum class ExampleEnum : uint32_t {
 };
 
 }  // namespace test_placementofattributes
+template <>
+struct fidl::internal::DisplayError<::test_placementofattributes::ExampleEnum> {
+  static size_t Format(const ::test_placementofattributes::ExampleEnum& value,
+                       char* destination, size_t capacity);
+};
+
 namespace fidl {
 
 template <>

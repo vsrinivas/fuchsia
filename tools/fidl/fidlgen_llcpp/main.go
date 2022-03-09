@@ -15,7 +15,7 @@ func main() {
 	generator := codegen.NewGenerator(flags)
 	generator.GenerateFiles(fidl, []string{
 		"WireHeader", "UnifiedHeader", "WireTestBase", "Markers",
-		"CommonTypesHeader",
+		"CommonTypesHeader", "CommonTypesSource",
 		"WireTypesHeader", "WireTypesSource",
 		"WireMessagingHeader", "WireMessagingSource",
 		"NaturalTypesHeader", "NaturalTypesSource",

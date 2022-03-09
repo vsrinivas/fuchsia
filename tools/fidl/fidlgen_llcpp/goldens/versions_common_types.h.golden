@@ -2,6 +2,7 @@
 
 #pragma once
 
+#include <lib/fidl/llcpp/internal/display_error.h>
 #include <lib/fidl/llcpp/traits.h>
 #include <lib/stdcompat/optional.h>
 
@@ -126,6 +127,12 @@ class Enum final {
 constexpr const ::test_versions::Enum Enum::kA = ::test_versions::Enum(1u);
 
 }  // namespace test_versions
+template <>
+struct fidl::internal::DisplayError<::test_versions::Enum> {
+  static size_t Format(const ::test_versions::Enum& value, char* destination,
+                       size_t capacity);
+};
+
 namespace fidl {
 
 template <>

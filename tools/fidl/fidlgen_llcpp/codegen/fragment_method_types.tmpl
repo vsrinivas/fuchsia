@@ -1,0 +1,22 @@
+{{/*
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+*/}}
+
+
+{{- define "Method:Types:WireMessagingHeader" }}
+{{ IfdefFuchsia }}
+
+{{ EnsureNamespace "" }}
+template<>
+struct {{ .WireMethodTypes }} {
+  using Completer = fidl::Completer<{{ .WireCompleterBase }}>;
+
+  {{ if .Result }}
+  using ApplicationError = {{ .Result.ErrorDecl }};
+  {{ end }}
+};
+
+{{ EndifFuchsia }}
+{{- end }}

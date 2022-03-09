@@ -8,10 +8,10 @@
 
 #include <zxtest/zxtest.h>
 
-TEST(Status, ReasonShouldNotBeUsedInOkResult) {
+TEST(Status, ReasonShouldNotBeUsedInOkStatus) {
 #ifdef __Fuchsia__
-  fidl::Status ok_result = fidl::Status::Ok();
-  ASSERT_DEATH(([&] { (void)ok_result.reason(); }), "reason");
+  fidl::Status ok_status = fidl::Status::Ok();
+  ASSERT_DEATH(([&] { (void)ok_status.reason(); }), "reason");
 #endif  // __Fuchsia__
 }
 
@@ -86,6 +86,13 @@ TEST(Status, UnexpectedMessageDescription) {
       "status: -10, detail: foo");
   ASSERT_EQ(expected,
             fidl::Status::UnexpectedMessage(ZX_ERR_INVALID_ARGS, "foo").FormatDescription());
+}
+
+TEST(Status, FormatDisplayError) {
+  auto r = fidl::Status::Ok();
+  char buffer[100];
+  fidl::internal::FormatDisplayError(r, buffer, sizeof(buffer));
+  ASSERT_EQ("FIDL success", std::string_view(buffer));
 }
 
 TEST(UnbindInfo, UnbindDescription) {

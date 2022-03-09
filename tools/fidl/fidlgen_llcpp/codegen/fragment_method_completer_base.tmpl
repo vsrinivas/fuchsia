@@ -50,10 +50,6 @@ class {{ .WireCompleterBase }} : public ::fidl::CompleterBase, public {{ .WireCo
   }
 };
 
-template<>
-struct {{ .WireMethodTypes }} {
-  using Completer = fidl::Completer<{{ .WireCompleterBase }}>;
-};
 {{- end }}
 
 

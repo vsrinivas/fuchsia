@@ -31,6 +31,13 @@ struct MethodTypes {
 template <typename FidlMethod>
 using NaturalCompleter = typename fidl::internal::MethodTypes<FidlMethod>::Completer;
 
+// Note: application error types used in the error syntax are limited to int32,
+// uint32, and enums thereof. Thus the same application error types are shared
+// between wire and natural domain objects.
+template <typename FidlMethod>
+using NaturalApplicationError =
+    typename fidl::internal::WireMethodTypes<FidlMethod>::ApplicationError;
+
 // |MessageBase| is a mixin with common functionalities for transactional
 // message wrappers.
 //

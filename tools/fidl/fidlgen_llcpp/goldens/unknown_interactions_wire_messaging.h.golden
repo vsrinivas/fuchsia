@@ -241,6 +241,28 @@ struct ::fidl::internal::TransactionalEvent<
   void _InitHeader();
 };
 
+#ifdef __Fuchsia__
+
+template <>
+struct ::fidl::internal::WireMethodTypes<
+    ::test_unknowninteractions::Example::StrictTwoWay> {
+  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<
+      ::test_unknowninteractions::Example::StrictTwoWay>>;
+};
+
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+template <>
+struct ::fidl::internal::WireMethodTypes<
+    ::test_unknowninteractions::Example::FlexibleTwoWay> {
+  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<
+      ::test_unknowninteractions::Example::FlexibleTwoWay>>;
+};
+
+#endif  // __Fuchsia__
+
 namespace fidl {
 
 template <>
@@ -1129,13 +1151,6 @@ class ::fidl::internal::WireCompleterBase<
 };
 
 template <>
-struct ::fidl::internal::WireMethodTypes<
-    ::test_unknowninteractions::Example::StrictTwoWay> {
-  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<
-      ::test_unknowninteractions::Example::StrictTwoWay>>;
-};
-
-template <>
 class ::fidl::internal::WireCompleterImpl<
     ::test_unknowninteractions::Example::FlexibleTwoWay>
     : public ::fidl::internal::CompleterImplBase<
@@ -1174,13 +1189,6 @@ class ::fidl::internal::WireCompleterBase<
     WireCompleterImpl::_set_core(this);
     return *this;
   }
-};
-
-template <>
-struct ::fidl::internal::WireMethodTypes<
-    ::test_unknowninteractions::Example::FlexibleTwoWay> {
-  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<
-      ::test_unknowninteractions::Example::FlexibleTwoWay>>;
 };
 
 // Pure-virtual interface to be implemented by a server.

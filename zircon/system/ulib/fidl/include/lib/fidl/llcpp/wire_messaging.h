@@ -48,6 +48,10 @@ struct WireMethodTypes {
 
 template <typename FidlMethod>
 using WireCompleter = typename fidl::internal::WireMethodTypes<FidlMethod>::Completer;
+
+template <typename FidlMethod>
+using WireApplicationError = typename fidl::internal::WireMethodTypes<FidlMethod>::ApplicationError;
+
 }  // namespace internal
 
 enum class DispatchResult;

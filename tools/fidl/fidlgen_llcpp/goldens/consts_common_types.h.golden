@@ -2,6 +2,7 @@
 
 #pragma once
 
+#include <lib/fidl/llcpp/internal/display_error.h>
 #include <lib/fidl/llcpp/traits.h>
 #include <lib/stdcompat/optional.h>
 
@@ -112,6 +113,12 @@ enum class EnumType : int32_t {
 };
 
 }  // namespace test_consts
+template <>
+struct fidl::internal::DisplayError<::test_consts::EnumType> {
+  static size_t Format(const ::test_consts::EnumType& value, char* destination,
+                       size_t capacity);
+};
+
 namespace fidl {
 
 template <>

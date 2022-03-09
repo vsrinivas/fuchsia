@@ -2,6 +2,7 @@
 
 #pragma once
 
+#include <lib/fidl/llcpp/internal/display_error.h>
 #include <lib/fidl/llcpp/traits.h>
 #include <lib/stdcompat/optional.h>
 
@@ -17,6 +18,12 @@ enum class obj_type : uint32_t {
 };
 
 }  // namespace test_handlesintypes
+template <>
+struct fidl::internal::DisplayError<::test_handlesintypes::obj_type> {
+  static size_t Format(const ::test_handlesintypes::obj_type& value,
+                       char* destination, size_t capacity);
+};
+
 namespace fidl {
 
 template <>

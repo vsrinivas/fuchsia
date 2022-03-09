@@ -12,9 +12,10 @@ type Enum struct {
 	Attributes
 	fidlgen.Strictness
 	nameVariants
-	Enum    fidlgen.Enum
-	Type    nameVariants
-	Members []EnumMember
+	CodingTableType name
+	Enum            fidlgen.Enum
+	Type            nameVariants
+	Members         []EnumMember
 }
 
 func (*Enum) Kind() declKind {
@@ -26,6 +27,10 @@ var _ namespaced = (*Enum)(nil)
 
 func (e Enum) UnknownValueForTmpl() interface{} {
 	return e.Enum.UnknownValueForTmpl()
+}
+
+func (e Enum) IsCompatibleWithError() bool {
+	return e.Enum.Type == fidlgen.Int32 || e.Enum.Type == fidlgen.Uint32
 }
 
 type EnumMember struct {
@@ -42,11 +47,12 @@ func (m EnumMember) IsUnknown() bool {
 func (c *compiler) compileEnum(val fidlgen.Enum) *Enum {
 	name := c.compileNameVariants(val.Name)
 	r := Enum{
-		Attributes:   Attributes{val.Attributes},
-		Strictness:   val.Strictness,
-		nameVariants: name,
-		Enum:         val,
-		Type:         NameVariantsForPrimitive(val.Type),
+		Attributes:      Attributes{val.Attributes},
+		Strictness:      val.Strictness,
+		nameVariants:    name,
+		CodingTableType: name.Unified.ns.member(c.compileCodingTableType(val.Name)),
+		Enum:            val,
+		Type:            NameVariantsForPrimitive(val.Type),
 	}
 	for _, v := range val.Members {
 		r.Members = append(r.Members, EnumMember{

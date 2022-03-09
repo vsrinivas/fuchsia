@@ -2,6 +2,7 @@
 
 #pragma once
 
+#include <lib/fidl/llcpp/internal/display_error.h>
 #include <lib/fidl/llcpp/traits.h>
 #include <lib/stdcompat/optional.h>
 
@@ -240,6 +241,17 @@ constexpr const ::test_anonymous::SomeProtocol_SomeMethod_Error
     SomeProtocol_SomeMethod_Error::kErrorTwo =
         ::test_anonymous::SomeProtocol_SomeMethod_Error(2u);
 
+}  // namespace test_anonymous
+template <>
+struct fidl::internal::DisplayError<
+    ::test_anonymous::SomeProtocol_SomeMethod_Error> {
+  static size_t Format(
+      const ::test_anonymous::SomeProtocol_SomeMethod_Error& value,
+      char* destination, size_t capacity);
+};
+
+namespace test_anonymous {
+
 class Op final {
  public:
   constexpr Op() : value_(0) {}
@@ -275,6 +287,12 @@ constexpr const ::test_anonymous::Op Op::kMul = ::test_anonymous::Op(2u);
 constexpr const ::test_anonymous::Op Op::kDiv = ::test_anonymous::Op(3u);
 
 }  // namespace test_anonymous
+template <>
+struct fidl::internal::DisplayError<::test_anonymous::Op> {
+  static size_t Format(const ::test_anonymous::Op& value, char* destination,
+                       size_t capacity);
+};
+
 namespace fidl {
 
 template <>

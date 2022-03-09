@@ -266,6 +266,28 @@ struct ::fidl::internal::TransactionalRequest<
 };
 #endif  // __Fuchsia__
 
+#ifdef __Fuchsia__
+
+template <>
+struct ::fidl::internal::WireMethodTypes<
+    ::test_protocolrequest::Parent::GetChild> {
+  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<
+      ::test_protocolrequest::Parent::GetChild>>;
+};
+
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+template <>
+struct ::fidl::internal::WireMethodTypes<
+    ::test_protocolrequest::Parent::GetChildRequest> {
+  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<
+      ::test_protocolrequest::Parent::GetChildRequest>>;
+};
+
+#endif  // __Fuchsia__
+
 namespace fidl {
 
 template <>
@@ -1270,13 +1292,6 @@ class ::fidl::internal::WireCompleterBase<
 };
 
 template <>
-struct ::fidl::internal::WireMethodTypes<
-    ::test_protocolrequest::Parent::GetChild> {
-  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<
-      ::test_protocolrequest::Parent::GetChild>>;
-};
-
-template <>
 class ::fidl::internal::WireCompleterImpl<
     ::test_protocolrequest::Parent::GetChildRequest>
     : public ::fidl::internal::CompleterImplBase<
@@ -1315,13 +1330,6 @@ class ::fidl::internal::WireCompleterBase<
     WireCompleterImpl::_set_core(this);
     return *this;
   }
-};
-
-template <>
-struct ::fidl::internal::WireMethodTypes<
-    ::test_protocolrequest::Parent::GetChildRequest> {
-  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<
-      ::test_protocolrequest::Parent::GetChildRequest>>;
 };
 
 // Pure-virtual interface to be implemented by a server.

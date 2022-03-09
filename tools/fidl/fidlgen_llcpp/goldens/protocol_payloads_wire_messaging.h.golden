@@ -1137,6 +1137,102 @@ struct ::fidl::internal::TransactionalEvent<
   void _InitHeader();
 };
 
+#ifdef __Fuchsia__
+
+template <>
+struct ::fidl::internal::WireMethodTypes<
+    ::test_protocolpayloads::MainProtocol::TwoWayComposed> {
+  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<
+      ::test_protocolpayloads::MainProtocol::TwoWayComposed>>;
+};
+
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+template <>
+struct ::fidl::internal::WireMethodTypes<
+    ::test_protocolpayloads::MainProtocol::TwoWayComposedWithError> {
+  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<
+      ::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>>;
+
+  using ApplicationError = uint32_t;
+};
+
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+template <>
+struct ::fidl::internal::WireMethodTypes<
+    ::test_protocolpayloads::MainProtocol::TwoWayLocal> {
+  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<
+      ::test_protocolpayloads::MainProtocol::TwoWayLocal>>;
+};
+
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+template <>
+struct ::fidl::internal::WireMethodTypes<
+    ::test_protocolpayloads::MainProtocol::TwoWayLocalWithError> {
+  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<
+      ::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>>;
+
+  using ApplicationError = uint32_t;
+};
+
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+template <>
+struct ::fidl::internal::WireMethodTypes<
+    ::test_protocolpayloads::MainProtocol::TwoWayImport> {
+  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<
+      ::test_protocolpayloads::MainProtocol::TwoWayImport>>;
+};
+
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+template <>
+struct ::fidl::internal::WireMethodTypes<
+    ::test_protocolpayloads::MainProtocol::TwoWayImportWithError> {
+  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<
+      ::test_protocolpayloads::MainProtocol::TwoWayImportWithError>>;
+
+  using ApplicationError = uint32_t;
+};
+
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+template <>
+struct ::fidl::internal::WireMethodTypes<
+    ::test_protocolpayloads::MainProtocol::TwoWayAnon> {
+  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<
+      ::test_protocolpayloads::MainProtocol::TwoWayAnon>>;
+};
+
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+template <>
+struct ::fidl::internal::WireMethodTypes<
+    ::test_protocolpayloads::MainProtocol::TwoWayAnonWithError> {
+  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<
+      ::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>>;
+
+  using ApplicationError = uint32_t;
+};
+
+#endif  // __Fuchsia__
+
 namespace fidl {
 
 template <>
@@ -5137,13 +5233,6 @@ class ::fidl::internal::WireCompleterBase<
 };
 
 template <>
-struct ::fidl::internal::WireMethodTypes<
-    ::test_protocolpayloads::MainProtocol::TwoWayComposed> {
-  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<
-      ::test_protocolpayloads::MainProtocol::TwoWayComposed>>;
-};
-
-template <>
 class ::fidl::internal::WireCompleterImpl<
     ::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>
     : public ::fidl::internal::CompleterImplBase<
@@ -5191,13 +5280,6 @@ class ::fidl::internal::WireCompleterBase<
 };
 
 template <>
-struct ::fidl::internal::WireMethodTypes<
-    ::test_protocolpayloads::MainProtocol::TwoWayComposedWithError> {
-  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<
-      ::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>>;
-};
-
-template <>
 class ::fidl::internal::WireCompleterImpl<
     ::test_protocolpayloads::MainProtocol::TwoWayLocal>
     : public ::fidl::internal::CompleterImplBase<
@@ -5236,13 +5318,6 @@ class ::fidl::internal::WireCompleterBase<
     WireCompleterImpl::_set_core(this);
     return *this;
   }
-};
-
-template <>
-struct ::fidl::internal::WireMethodTypes<
-    ::test_protocolpayloads::MainProtocol::TwoWayLocal> {
-  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<
-      ::test_protocolpayloads::MainProtocol::TwoWayLocal>>;
 };
 
 template <>
@@ -5295,13 +5370,6 @@ class ::fidl::internal::WireCompleterBase<
 };
 
 template <>
-struct ::fidl::internal::WireMethodTypes<
-    ::test_protocolpayloads::MainProtocol::TwoWayLocalWithError> {
-  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<
-      ::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>>;
-};
-
-template <>
 class ::fidl::internal::WireCompleterImpl<
     ::test_protocolpayloads::MainProtocol::TwoWayImport>
     : public ::fidl::internal::CompleterImplBase<
@@ -5340,13 +5408,6 @@ class ::fidl::internal::WireCompleterBase<
     WireCompleterImpl::_set_core(this);
     return *this;
   }
-};
-
-template <>
-struct ::fidl::internal::WireMethodTypes<
-    ::test_protocolpayloads::MainProtocol::TwoWayImport> {
-  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<
-      ::test_protocolpayloads::MainProtocol::TwoWayImport>>;
 };
 
 template <>
@@ -5399,13 +5460,6 @@ class ::fidl::internal::WireCompleterBase<
 };
 
 template <>
-struct ::fidl::internal::WireMethodTypes<
-    ::test_protocolpayloads::MainProtocol::TwoWayImportWithError> {
-  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<
-      ::test_protocolpayloads::MainProtocol::TwoWayImportWithError>>;
-};
-
-template <>
 class ::fidl::internal::WireCompleterImpl<
     ::test_protocolpayloads::MainProtocol::TwoWayAnon>
     : public ::fidl::internal::CompleterImplBase<
@@ -5444,13 +5498,6 @@ class ::fidl::internal::WireCompleterBase<
     WireCompleterImpl::_set_core(this);
     return *this;
   }
-};
-
-template <>
-struct ::fidl::internal::WireMethodTypes<
-    ::test_protocolpayloads::MainProtocol::TwoWayAnon> {
-  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<
-      ::test_protocolpayloads::MainProtocol::TwoWayAnon>>;
 };
 
 template <>
@@ -5500,13 +5547,6 @@ class ::fidl::internal::WireCompleterBase<
     WireCompleterImpl::_set_core(this);
     return *this;
   }
-};
-
-template <>
-struct ::fidl::internal::WireMethodTypes<
-    ::test_protocolpayloads::MainProtocol::TwoWayAnonWithError> {
-  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<
-      ::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>>;
 };
 
 // Pure-virtual interface to be implemented by a server.

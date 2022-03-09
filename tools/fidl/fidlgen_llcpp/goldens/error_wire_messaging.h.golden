@@ -111,6 +111,18 @@ struct ::fidl::internal::TransactionalResponse<::test_error::Example::Foo>
   void _InitHeader();
 };
 
+#ifdef __Fuchsia__
+
+template <>
+struct ::fidl::internal::WireMethodTypes<::test_error::Example::Foo> {
+  using Completer = fidl::Completer<
+      ::fidl::internal::WireCompleterBase<::test_error::Example::Foo>>;
+
+  using ApplicationError = uint32_t;
+};
+
+#endif  // __Fuchsia__
+
 namespace fidl {
 
 template <>
@@ -505,12 +517,6 @@ class ::fidl::internal::WireCompleterBase<::test_error::Example::Foo>
     WireCompleterImpl::_set_core(this);
     return *this;
   }
-};
-
-template <>
-struct ::fidl::internal::WireMethodTypes<::test_error::Example::Foo> {
-  using Completer = fidl::Completer<
-      ::fidl::internal::WireCompleterBase<::test_error::Example::Foo>>;
 };
 
 // Pure-virtual interface to be implemented by a server.

@@ -428,6 +428,7 @@ template("fidl_cpp_family") {
         "fidl/$library_name/cpp/common_types.h",
         "fidl/$library_name/cpp/markers.h",
       ]
+      sources = [ "fidl/$library_name/cpp/common_types.cc" ]
       public_deps = llcpp_public_deps
     },
 

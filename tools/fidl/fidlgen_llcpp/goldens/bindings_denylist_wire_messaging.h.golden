@@ -251,6 +251,19 @@ struct ::fidl::internal::TransactionalResponse<
   void _InitHeader();
 };
 
+#ifdef __Fuchsia__
+
+template <>
+struct ::fidl::internal::WireMethodTypes<
+    ::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
+        LibfuzzerNeedsNonemptyProtocol> {
+  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<
+      ::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
+          LibfuzzerNeedsNonemptyProtocol>>;
+};
+
+#endif  // __Fuchsia__
+
 namespace fidl {
 
 template <>
@@ -618,15 +631,6 @@ class ::fidl::internal::WireCompleterBase<
     WireCompleterImpl::_set_core(this);
     return *this;
   }
-};
-
-template <>
-struct ::fidl::internal::WireMethodTypes<
-    ::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
-        LibfuzzerNeedsNonemptyProtocol> {
-  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<
-      ::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
-          LibfuzzerNeedsNonemptyProtocol>>;
 };
 
 // Pure-virtual interface to be implemented by a server.
@@ -1744,6 +1748,71 @@ struct ::fidl::internal::TransactionalResponse<
  private:
   void _InitHeader();
 };
+
+#ifdef __Fuchsia__
+
+template <>
+struct ::fidl::internal::WireMethodTypes<
+    ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart> {
+  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>>;
+
+  using ApplicationError = uint32_t;
+};
+
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+template <>
+struct ::fidl::internal::WireMethodTypes<
+    ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo> {
+  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>>;
+
+  using ApplicationError = uint32_t;
+};
+
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+template <>
+struct ::fidl::internal::WireMethodTypes<
+    ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer> {
+  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>>;
+
+  using ApplicationError = uint32_t;
+};
+
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+template <>
+struct ::fidl::internal::WireMethodTypes<
+    ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust> {
+  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>>;
+
+  using ApplicationError = uint32_t;
+};
+
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+template <>
+struct ::fidl::internal::WireMethodTypes<
+    ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller> {
+  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>>;
+
+  using ApplicationError = uint32_t;
+};
+
+#endif  // __Fuchsia__
 
 namespace fidl {
 
@@ -3567,13 +3636,6 @@ class ::fidl::internal::WireCompleterBase<
 };
 
 template <>
-struct ::fidl::internal::WireMethodTypes<
-    ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart> {
-  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<
-      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>>;
-};
-
-template <>
 class ::fidl::internal::WireCompleterImpl<
     ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>
     : public ::fidl::internal::CompleterImplBase<
@@ -3618,13 +3680,6 @@ class ::fidl::internal::WireCompleterBase<
     WireCompleterImpl::_set_core(this);
     return *this;
   }
-};
-
-template <>
-struct ::fidl::internal::WireMethodTypes<
-    ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo> {
-  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<
-      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>>;
 };
 
 template <>
@@ -3677,13 +3732,6 @@ class ::fidl::internal::WireCompleterBase<
 };
 
 template <>
-struct ::fidl::internal::WireMethodTypes<
-    ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer> {
-  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<
-      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>>;
-};
-
-template <>
 class ::fidl::internal::WireCompleterImpl<
     ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>
     : public ::fidl::internal::CompleterImplBase<
@@ -3728,13 +3776,6 @@ class ::fidl::internal::WireCompleterBase<
     WireCompleterImpl::_set_core(this);
     return *this;
   }
-};
-
-template <>
-struct ::fidl::internal::WireMethodTypes<
-    ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust> {
-  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<
-      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>>;
 };
 
 template <>
@@ -3784,13 +3825,6 @@ class ::fidl::internal::WireCompleterBase<
     WireCompleterImpl::_set_core(this);
     return *this;
   }
-};
-
-template <>
-struct ::fidl::internal::WireMethodTypes<
-    ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller> {
-  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<
-      ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>>;
 };
 
 // Pure-virtual interface to be implemented by a server.

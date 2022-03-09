@@ -187,6 +187,31 @@ struct ::fidl::internal::TransactionalResponse<
   void _InitHeader();
 };
 
+#ifdef __Fuchsia__
+
+template <>
+struct ::fidl::internal::WireMethodTypes<
+    ::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated> {
+  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<
+      ::test_union::TestProtocol::
+          StrictXUnionHenceResponseMayBeStackAllocated>>;
+};
+
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+template <>
+struct ::fidl::internal::WireMethodTypes<
+    ::test_union::TestProtocol::
+        FlexibleXUnionHenceResponseMustBeHeapAllocated> {
+  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<
+      ::test_union::TestProtocol::
+          FlexibleXUnionHenceResponseMustBeHeapAllocated>>;
+};
+
+#endif  // __Fuchsia__
+
 namespace fidl {
 
 template <>
@@ -1000,14 +1025,6 @@ class ::fidl::internal::WireCompleterBase<
 };
 
 template <>
-struct ::fidl::internal::WireMethodTypes<
-    ::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated> {
-  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<
-      ::test_union::TestProtocol::
-          StrictXUnionHenceResponseMayBeStackAllocated>>;
-};
-
-template <>
 class ::fidl::internal::WireCompleterImpl<
     ::test_union::TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocated>
     : public ::fidl::internal::CompleterImplBase<
@@ -1048,15 +1065,6 @@ class ::fidl::internal::WireCompleterBase<
     WireCompleterImpl::_set_core(this);
     return *this;
   }
-};
-
-template <>
-struct ::fidl::internal::WireMethodTypes<
-    ::test_union::TestProtocol::
-        FlexibleXUnionHenceResponseMustBeHeapAllocated> {
-  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<
-      ::test_union::TestProtocol::
-          FlexibleXUnionHenceResponseMustBeHeapAllocated>>;
 };
 
 // Pure-virtual interface to be implemented by a server.
