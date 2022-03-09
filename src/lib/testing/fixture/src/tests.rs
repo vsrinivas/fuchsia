@@ -34,7 +34,7 @@ mod tests {
     {
         let (tx, mut rx) = futures::channel::mpsc::channel(0);
         let rx_fut = async {
-            assert_eq!(rx.next().await.unwrap(), ());
+            assert_eq!(rx.next().await, Some(()));
         };
         let ((), ()) = futures::future::join(rx_fut, test(tx)).await;
     }
