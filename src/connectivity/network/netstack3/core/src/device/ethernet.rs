@@ -601,32 +601,6 @@ pub(super) fn leave_link_multicast<C: EthernetIpLinkDeviceContext>(
     }
 }
 
-/// Is `device` in the IP multicast group `multicast_addr`?
-#[specialize_ip_address]
-pub(super) fn is_in_ip_multicast<C: EthernetIpLinkDeviceContext, A: IpAddress>(
-    ctx: &C,
-    device_id: C::DeviceId,
-    multicast_addr: MulticastAddr<A>,
-) -> bool {
-    #[ipv4addr]
-    return ctx
-        .get_state_with(device_id)
-        .ip
-        .ipv4
-        .ip_state
-        .multicast_groups
-        .contains(&multicast_addr);
-
-    #[ipv6addr]
-    return ctx
-        .get_state_with(device_id)
-        .ip
-        .ipv6
-        .ip_state
-        .multicast_groups
-        .contains(&multicast_addr);
-}
-
 /// Get the MTU associated with this device.
 pub(super) fn get_mtu<C: EthernetIpLinkDeviceContext>(ctx: &C, device_id: C::DeviceId) -> u32 {
     ctx.get_state_with(device_id).link.mtu
@@ -1700,6 +1674,21 @@ mod tests {
         }
     }
 
+    fn leave_ip_multicast<A: IpAddress, D: EventDispatcher>(
+        ctx: &mut Ctx<D>,
+        device: DeviceId,
+        multicast_addr: MulticastAddr<A>,
+    ) {
+        match multicast_addr.into() {
+            IpAddr::V4(multicast_addr) => {
+                crate::ip::device::leave_ip_multicast::<Ipv4, _>(ctx, device, multicast_addr)
+            }
+            IpAddr::V6(multicast_addr) => {
+                crate::ip::device::leave_ip_multicast::<Ipv6, _>(ctx, device, multicast_addr)
+            }
+        }
+    }
+
     /// Test that we can join and leave a multicast group, but we only truly
     /// leave it after calling `leave_ip_multicast` the same number of times as
     /// `join_ip_multicast`.
@@ -1722,7 +1711,7 @@ mod tests {
         assert!(is_in_ip_multicast(&ctx, device, multicast_addr));
 
         // Leave the multicast group.
-        crate::device::leave_ip_multicast(&mut ctx, device, multicast_addr);
+        leave_ip_multicast(&mut ctx, device, multicast_addr);
         assert!(!is_in_ip_multicast(&ctx, device, multicast_addr));
 
         // Join the multicst group.
@@ -1734,11 +1723,11 @@ mod tests {
         assert!(is_in_ip_multicast(&ctx, device, multicast_addr));
 
         // Leave it (still in it because we joined twice).
-        crate::device::leave_ip_multicast(&mut ctx, device, multicast_addr);
+        leave_ip_multicast(&mut ctx, device, multicast_addr);
         assert!(is_in_ip_multicast(&ctx, device, multicast_addr));
 
         // Leave it again... (actually left now).
-        crate::device::leave_ip_multicast(&mut ctx, device, multicast_addr);
+        leave_ip_multicast(&mut ctx, device, multicast_addr);
         assert!(!is_in_ip_multicast(&ctx, device, multicast_addr));
     }
 
@@ -1762,7 +1751,7 @@ mod tests {
         assert!(!is_in_ip_multicast(&ctx, device, multicast_addr));
 
         // Leave it (this should panic).
-        crate::device::leave_ip_multicast(&mut ctx, device, multicast_addr);
+        leave_ip_multicast(&mut ctx, device, multicast_addr);
     }
 
     #[test]

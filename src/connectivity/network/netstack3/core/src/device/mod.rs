@@ -841,39 +841,6 @@ impl<D: EventDispatcher, I: Ip> IpDeviceIdContext<I> for Ctx<D> {
     }
 }
 
-/// Attempt to remove `device` from a multicast group `multicast_addr`.
-///
-/// `leave_ip_multicast` will attempt to remove `device` from a multicast group
-/// `multicast_addr`. `device` may have "joined" the same multicast address
-/// multiple times, so `device` will only leave the multicast group once
-/// `leave_ip_multicast` has been called for each corresponding
-/// [`join_ip_multicast`]. That is, if `join_ip_multicast` gets called 3 times
-/// and `leave_ip_multicast` gets called two times (after all 3
-/// `join_ip_multicast` calls), `device` will still be in the multicast group
-/// until the next (final) call to `leave_ip_multicast`.
-///
-/// # Panics
-///
-/// Panics if `device` is not initialized or `device` is not currently in the
-/// multicast group.
-// TODO(joshlf): remove `allow(dead_code)` when this is used.
-#[cfg_attr(not(test), allow(dead_code))]
-pub(crate) fn leave_ip_multicast<D: BufferDispatcher<EmptyBuf>, A: IpAddress>(
-    ctx: &mut Ctx<D>,
-    device: DeviceId,
-    multicast_addr: MulticastAddr<A>,
-) {
-    // `device` must not be uninitialized.
-    assert!(is_device_usable(&ctx.state, device));
-
-    trace!("join_ip_multicast: device {:?} leaving multicast {:?}", device, multicast_addr);
-
-    match multicast_addr.into() {
-        IpAddr::V4(addr) => crate::ip::device::leave_ip_multicast::<Ipv4, _>(ctx, device, addr),
-        IpAddr::V6(addr) => crate::ip::device::leave_ip_multicast::<Ipv6, _>(ctx, device, addr),
-    }
-}
-
 /// Get a reference to the common device state for a `device`.
 fn get_common_device_state<D: EventDispatcher>(
     state: &StackState<D>,

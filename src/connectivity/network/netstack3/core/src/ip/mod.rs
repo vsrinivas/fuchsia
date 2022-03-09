@@ -3588,7 +3588,14 @@ mod tests {
 
         // Leave the multicast group and receive the packet, we should not
         // dispatch it.
-        crate::device::leave_ip_multicast(&mut ctx, device, multi_addr);
+        match multi_addr.into() {
+            IpAddr::V4(multicast_addr) => {
+                crate::ip::device::leave_ip_multicast::<Ipv4, _>(&mut ctx, device, multicast_addr)
+            }
+            IpAddr::V6(multicast_addr) => {
+                crate::ip::device::leave_ip_multicast::<Ipv6, _>(&mut ctx, device, multicast_addr)
+            }
+        }
         assert!(!I::get_ip_device_state(&ctx, device).multicast_groups.contains(&multi_addr));
         receive_frame(&mut ctx, device, buf.clone()).expect("error receiving frame");
         assert_eq!(get_counter_val(&mut ctx, dispatch_receive_ip_packet_name::<I>()), 1);
