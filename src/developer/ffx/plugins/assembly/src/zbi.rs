@@ -12,7 +12,6 @@ use assembly_tool::Tool;
 use assembly_util::PathToStringExt;
 use fuchsia_pkg::PackageManifest;
 use std::path::{Path, PathBuf};
-use std::process::Command;
 use zbi::ZbiBuilder;
 
 pub fn convert_to_new_config(zbi_config: &ZbiConfig) -> Result<Zbi> {
@@ -114,6 +113,7 @@ pub fn construct_zbi(
 /// If the board requires the zbi to be post-processed to make it bootable by
 /// the bootloaders, then perform that task here.
 pub fn vendor_sign_zbi(
+    signing_tool: Box<dyn Tool>,
     outdir: impl AsRef<Path>,
     zbi_config: &Zbi,
     zbi: impl AsRef<Path>,
@@ -136,21 +136,9 @@ pub fn vendor_sign_zbi(
     // If the script config defines extra arguments, add them:
     args.extend_from_slice(&script.args[..]);
 
-    let output = Command::new(&script.path)
-        .args(&args)
-        .output()
-        .context(format!("Failed to run the vendor tool: {}", script.path.display()))?;
-
-    // The tool ran, but may have returned an error.
-    if output.status.success() {
-        Ok(signed_path)
-    } else {
-        Err(anyhow!(
-            "Vendor tool returned an error: {}\n{}",
-            output.status,
-            String::from_utf8_lossy(output.stderr.as_slice())
-        ))
-    }
+    // Run the tool.
+    signing_tool.run(&args)?;
+    Ok(signed_path)
 }
 
 #[cfg(test)]
@@ -160,13 +148,11 @@ mod tests {
     use crate::base_package::BasePackage;
     use assembly_config::{ImageAssemblyConfig, ZbiConfig, ZbiSigningScript};
     use assembly_images_config::{PostProcessingScript, Zbi, ZbiCompression};
-    use assembly_test_util::generate_fake_tool;
     use assembly_tool::testing::FakeToolProvider;
-    use assembly_tool::ToolProvider;
+    use assembly_tool::{ToolCommandLog, ToolProvider};
     use assembly_util::PathToStringExt;
     use fuchsia_hash::Hash;
     use serde_json::json;
-    use serial_test::serial;
     use std::collections::BTreeMap;
     use std::fs::File;
     use std::io::Write;
@@ -211,7 +197,6 @@ mod tests {
     // other test has an open file, then the spawned process will get a copy of
     // the open file descriptor, preventing the other test from executing it.
     #[test]
-    #[serial]
     fn construct() {
         let dir = tempdir().unwrap();
 
@@ -265,7 +250,6 @@ mod tests {
     }
 
     #[test]
-    #[serial]
     fn vendor_sign() {
         let dir = tempdir().unwrap();
         let expected_output = dir.path().join("fuchsia.zbi.signed");
@@ -274,49 +258,39 @@ mod tests {
         let zbi_path = dir.path().join("fuchsia.zbi");
         std::fs::write(&zbi_path, "fake zbi").unwrap();
 
-        // Create the signing tool that ensures that we pass the correct arguments.
-        let tool_path = dir.path().join("tool.sh");
-        generate_fake_tool(
-            &tool_path,
-            format!(
-                r#"#!/bin/bash
-            if [[ "$1" != "-z" || "$3" != "-o" ]]; then
-              exit 1
-            fi
-            if [[ "$2" != {} ]]; then
-              exit 1
-            fi
-            if [[ "$4" != {} ]]; then
-              exit 1
-            fi
-            if [[ "$5" != {} || "$6" != {} ]]; then
-              exit 1
-            fi
-            exit 0
-        "#,
-                zbi_path.path_to_string().unwrap(),
-                expected_output.path_to_string().unwrap(),
-                "arg1",
-                "arg2",
-            ),
-        );
-
-        // Create the signing config.
-        let extra_arguments = vec!["arg1".into(), "arg2".into()];
-
         // Create fake zbi config.
         let zbi = Zbi {
             name: "fuchsia".into(),
             compression: ZbiCompression::ZStd,
             postprocessing_script: Some(PostProcessingScript {
-                path: tool_path,
-                args: extra_arguments,
+                path: PathBuf::from("fake"),
+                args: vec!["arg1".into(), "arg2".into()],
             }),
         };
 
         // Sign the zbi.
-        let signed_zbi_path = vendor_sign_zbi(dir.path(), &zbi, &zbi_path).unwrap();
+        let tools = FakeToolProvider::default();
+        let signing_tool = tools.get_tool("fake").unwrap();
+        let signed_zbi_path = vendor_sign_zbi(signing_tool, dir.path(), &zbi, &zbi_path).unwrap();
         assert_eq!(signed_zbi_path, expected_output);
+
+        let expected_commands: ToolCommandLog = serde_json::from_value(json!({
+            "commands": [
+                {
+                    "tool": "./host_x64/fake",
+                    "args": [
+                        "-z",
+                        zbi_path.path_to_string().unwrap(),
+                        "-o",
+                        expected_output.path_to_string().unwrap(),
+                        "arg1",
+                        "arg2",
+                    ]
+                }
+            ]
+        }))
+        .unwrap();
+        assert_eq!(&expected_commands, tools.log());
     }
 
     // Generates a package manifest to be used for testing. The file is written

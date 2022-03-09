@@ -38,7 +38,7 @@ pub fn assemble(args: ImageArgs) -> Result<()> {
     let gendir = gendir.unwrap_or(outdir.clone());
 
     // Use the sdk to get the host tool paths.
-    let sdk_tools = SdkToolProvider::try_new()?;
+    let tools = SdkToolProvider::try_new()?;
 
     let base_package: Option<BasePackage> = if has_base_package(&product) {
         info!("Creating base package");
@@ -56,7 +56,7 @@ pub fn assemble(args: ImageArgs) -> Result<()> {
         info!("Creating the blobfs");
         Some(
             blobfs::construct_blobfs(
-                sdk_tools.get_tool("blobfs")?,
+                tools.get_tool("blobfs")?,
                 &outdir,
                 &gendir,
                 &product,
@@ -73,7 +73,7 @@ pub fn assemble(args: ImageArgs) -> Result<()> {
     let fvms: Option<Fvms> = if let Some(fvm_config) = &board.fvm {
         info!("Creating the fvm");
         Some(
-            construct_fvm(&sdk_tools, &outdir, &fvm_config, blobfs_path.as_ref())
+            construct_fvm(&tools, &outdir, &fvm_config, blobfs_path.as_ref())
                 .context("Creating the fvm")?,
         )
     } else {
@@ -93,7 +93,7 @@ pub fn assemble(args: ImageArgs) -> Result<()> {
     info!("Creating the ZBI");
     let zbi_config = zbi::convert_to_new_config(&board.zbi)?;
     let zbi_path = zbi::construct_zbi(
-        sdk_tools.get_tool("zbi")?,
+        tools.get_tool("zbi")?,
         &outdir,
         &gendir,
         &product,
@@ -117,15 +117,17 @@ pub fn assemble(args: ImageArgs) -> Result<()> {
     // If the board specifies a vendor-specific signing script, use that to
     // post-process the ZBI, and then use the post-processed ZBI in the update
     // package and the
-    let (zbi_for_update_path, signed) = if zbi_config.postprocessing_script.is_some() {
-        info!("Vendor signing the ZBI");
-        (
-            zbi::vendor_sign_zbi(&outdir, &zbi_config, &zbi_path)
-                .context("Vendor-signing the ZBI")?,
-            true,
-        )
-    } else {
-        (zbi_path, false)
+    let (zbi_for_update_path, signed) = match &zbi_config.postprocessing_script {
+        Some(script) => {
+            info!("Vendor signing the ZBI");
+            let signing_tool = tools.get_tool_with_path(script.path.clone())?;
+            (
+                zbi::vendor_sign_zbi(signing_tool, &outdir, &zbi_config, &zbi_path)
+                    .context("Vendor-signing the ZBI")?,
+                true,
+            )
+        }
+        _ => (zbi_path, false),
     };
 
     info!("Creating images manifest");
@@ -161,7 +163,7 @@ pub fn assemble(args: ImageArgs) -> Result<()> {
         let command_log_path = gendir.join("command_log.json");
         let command_log =
             File::create(command_log_path).context("Failed to create command_log.json")?;
-        serde_json::to_writer(&command_log, sdk_tools.log())
+        serde_json::to_writer(&command_log, tools.log())
             .context("Failed to write to command_log.json")?;
     }
 

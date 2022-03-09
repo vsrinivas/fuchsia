@@ -27,7 +27,7 @@ pub fn create_system(args: CreateSystemArgs) -> Result<()> {
         util::read_config(images).context("Failed to read the images config")?;
 
     // Get the tool set.
-    let sdk_tools = FakeToolProvider::default();
+    let tools = FakeToolProvider::default();
 
     // 1. Create the base package if needed.
     let base_package: Option<BasePackage> = if has_base_package(&image_assembly_config) {
@@ -51,7 +51,7 @@ pub fn create_system(args: CreateSystemArgs) -> Result<()> {
             construct_fvm(
                 &outdir,
                 &gendir,
-                &sdk_tools,
+                &tools,
                 &image_assembly_config,
                 fvm_config.clone(),
                 &base_package,
@@ -65,8 +65,7 @@ pub fn create_system(args: CreateSystemArgs) -> Result<()> {
     let command_log_path = gendir.join("command_log.json");
     let command_log =
         File::create(command_log_path).context("Failed to create command_log.json")?;
-    serde_json::to_writer(&command_log, sdk_tools.log())
-        .context("Failed to write the command log")?;
+    serde_json::to_writer(&command_log, tools.log()).context("Failed to write the command log")?;
 
     Ok(())
 }
