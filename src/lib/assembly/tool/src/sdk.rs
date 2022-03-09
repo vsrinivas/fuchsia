@@ -25,8 +25,7 @@ impl SdkToolProvider {
     /// found, parsed, or is invalid.
     pub fn try_new() -> Result<Self> {
         Ok(Self {
-            sdk: block_on(get_sdk())
-                .context("Trying again may resolve this (see https://fxbug.dev/91633).")?,
+            sdk: block_on(get_sdk()).context("Reading the SDK")?,
             log: ToolCommandLog::default(),
         })
     }
@@ -38,6 +37,11 @@ impl ToolProvider for SdkToolProvider {
             .sdk
             .get_host_tool(name.as_ref())
             .context(format!("Getting host tool from the SDK: {}", name))?;
+        self.get_tool_with_path(path)
+    }
+
+    /// Use |path| to create a new tool.
+    fn get_tool_with_path(&self, path: PathBuf) -> Result<Box<dyn Tool>> {
         let tool = SdkTool::new(path, self.log.clone());
         Ok(Box::new(tool))
     }

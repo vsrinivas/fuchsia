@@ -38,7 +38,7 @@ pub fn assemble(args: ImageArgs) -> Result<()> {
     let gendir = gendir.unwrap_or(outdir.clone());
 
     // Use the sdk to get the host tool paths.
-    let sdk_tools = SdkToolProvider::try_new().context("Getting SDK tools")?;
+    let sdk_tools = SdkToolProvider::try_new()?;
 
     let base_package: Option<BasePackage> = if has_base_package(&product) {
         info!("Creating base package");

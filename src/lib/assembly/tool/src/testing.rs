@@ -6,6 +6,8 @@
 
 use crate::tool::{Tool, ToolCommand, ToolCommandLog, ToolProvider};
 use anyhow::Result;
+use assembly_util::PathToStringExt;
+use std::path::PathBuf;
 
 /// A provider for tools that no-op, but log their execution so it can be asserted in a test.
 pub struct FakeToolProvider {
@@ -20,6 +22,11 @@ impl FakeToolProvider {
     pub fn new_with_side_effect(side_effect: fn(&str, &[String]) -> ()) -> FakeToolProvider {
         FakeToolProvider { log: ToolCommandLog::default(), side_effect }
     }
+
+    /// Get a tool by its name.
+    fn get_tool_with_name(&self, name: String) -> Result<Box<dyn Tool>> {
+        Ok(Box::new(FakeTool { name, log: self.log().clone(), side_effect: self.side_effect }))
+    }
 }
 
 impl Default for FakeToolProvider {
@@ -31,11 +38,11 @@ impl Default for FakeToolProvider {
 
 impl ToolProvider for FakeToolProvider {
     fn get_tool(&self, name: &str) -> Result<Box<dyn Tool>> {
-        Ok(Box::new(FakeTool {
-            name: name.to_string(),
-            log: self.log().clone(),
-            side_effect: self.side_effect,
-        }))
+        self.get_tool_with_name(format!("./host_x64/{}", name))
+    }
+
+    fn get_tool_with_path(&self, path: PathBuf) -> Result<Box<dyn Tool>> {
+        self.get_tool_with_name(path.path_to_string()?)
     }
 
     fn log(&self) -> &ToolCommandLog {
@@ -56,7 +63,7 @@ struct FakeTool {
 impl Tool for FakeTool {
     fn run(&self, args: &[String]) -> Result<()> {
         (self.side_effect)(&self.name, args);
-        self.log.add(ToolCommand::new(format!("./host_x64/{}", self.name), args.into()));
+        self.log.add(ToolCommand::new(self.name.clone(), args.into()));
         Ok(())
     }
 }
@@ -83,8 +90,13 @@ mod test {
                     "args": [
                         "cat"
                     ]
-                }
-
+                },
+                {
+                    "tool": "my_tool_with_path",
+                    "args": [
+                        "cat"
+                    ]
+                },
             ]
         }))
         .unwrap();
@@ -96,6 +108,10 @@ mod test {
         drop(tool);
 
         let tool = tools.get_tool("my_other_tool").unwrap();
+        assert!(tool.run(&["cat".into()]).is_ok());
+        drop(tool);
+
+        let tool = tools.get_tool_with_path("my_tool_with_path".into()).unwrap();
         assert!(tool.run(&["cat".into()]).is_ok());
         drop(tool);
 

@@ -7,12 +7,16 @@ use crate::serde_arc;
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::cell::RefCell;
+use std::path::PathBuf;
 use std::sync::Arc;
 
 /// A producer of `Tool`s that can be run, and log their execution.
 pub trait ToolProvider {
-    /// Access a tool from the provider.
+    /// Access a tool from the provider by name.
     fn get_tool(&self, name: &str) -> Result<Box<dyn Tool>>;
+
+    /// Access a tool from the provider by path.
+    fn get_tool_with_path(&self, path: PathBuf) -> Result<Box<dyn Tool>>;
 
     /// Get the log of the commands that have been run.
     fn log(&self) -> &ToolCommandLog;
