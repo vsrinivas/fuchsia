@@ -10,5 +10,9 @@
     {
         "path": "fragment-fidl.plasa.json",
         "kind": "api_fidl"
+    },
+    {
+        "path": "fragment-vdso.plasa.json",
+        "kind": "api_vdso"
     }
 ]

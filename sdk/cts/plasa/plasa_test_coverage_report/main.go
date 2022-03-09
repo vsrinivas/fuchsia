@@ -78,6 +78,8 @@ const (
 	kindCCAPI = "api_cc"
 	// kindFIDLAPI denotes a FIDL API element.
 	kindFIDLAPI = "api_fidl"
+	// kindVDSOAPI denotes a VDSO API element.
+	kindVDSOAPI = "api_vdso"
 	// kindFIDLProtocolMember is a kind of a FIDL API element, which is in itself a method on a protocol.
 	kindFIDLProtocolMember = "protocol/member"
 )
@@ -128,8 +130,7 @@ func (m *TestCoverageReport) addCCAPIReport(r model.Report) {
 	}
 }
 
-// addFIDLAPIReport adds a FIDL API report to the test coverage report.
-func (m *TestCoverageReport) addFIDLAPIReport(r []summarize.ElementStr) {
+func (m *TestCoverageReport) addAPIReport(k string, r []summarize.ElementStr) {
 	for _, i := range r {
 		n := string(i.Name)
 		if _, ok := m.seen[n]; ok {
@@ -142,11 +143,21 @@ func (m *TestCoverageReport) addFIDLAPIReport(r []summarize.ElementStr) {
 		}
 		ci := TestCoverageReportItem{
 			Name: n,
-			Kind: kindFIDLAPI,
+			Kind: k,
 		}
 		m.Items = append(m.Items, ci)
 		m.seen[n] = struct{}{}
 	}
+}
+
+// addFIDLAPIReport adds a FIDL API report to the test coverage report.
+func (m *TestCoverageReport) addFIDLAPIReport(r []summarize.ElementStr) {
+	m.addAPIReport(kindFIDLAPI, r)
+}
+
+// addVDSOAPIReport adds a VDSO API report to the test coverage report.
+func (m *TestCoverageReport) addVDSOAPIReport(r []summarize.ElementStr) {
+	m.addAPIReport(kindVDSOAPI, r)
 }
 
 func (m TestCoverageReport) writeTo(w io.Writer) error {
@@ -187,6 +198,12 @@ func filter(m io.Reader, w io.Writer) error {
 				return fmt.Errorf("could not parse FIDL API fragment: %+v: %w", pk.path, err)
 			}
 			out.addFIDLAPIReport(m[0])
+		case kindVDSOAPI:
+			m, err := summarize.LoadSummariesJSON(pf)
+			if err != nil {
+				return fmt.Errorf("could not parse FIDL API fragment: %+v: %w", pk.path, err)
+			}
+			out.addVDSOAPIReport(m[0])
 		default:
 			panic(fmt.Sprintf("unsupported API kind: %v", pk.kind))
 		}

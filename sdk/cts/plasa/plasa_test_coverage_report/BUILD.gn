@@ -45,6 +45,7 @@ if (is_host) {
   host_test_data("testdata") {
     sources = [
       "testdata/fragment-fidl.plasa.json",
+      "testdata/fragment-vdso.plasa.json",
       "testdata/fragment1.plasa.json",
       "testdata/fragment2.plasa.json",
       "testdata/plasa.manifest.json",

@@ -42,6 +42,10 @@ func TestPlasaManifestRead(t *testing.T) {
         {
             "name": "fuchsia.library/Protocol.member",
             "kind": "api_fidl"
+        },
+        {
+            "name": "fuchsia.library/Protocol.member2",
+            "kind": "api_vdso"
         }
     ]
 }

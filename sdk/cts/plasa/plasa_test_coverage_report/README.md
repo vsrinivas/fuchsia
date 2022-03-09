@@ -74,6 +74,10 @@ the [data schema][sch].
             "kind": "api_fidl"
         },
         {
+            "name": "fuchsia.library/Protocol.member2",
+            "kind": "api_vdso"
+        },
+        {
             "name": "::FidlCodedEnum::FidlCodedEnum",
             "kind": "api_cc"
         },
