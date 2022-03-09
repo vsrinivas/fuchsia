@@ -46,7 +46,6 @@ pub struct EventSource {
 }
 
 pub enum EventMode {
-    Sync,
     Async,
 }
 
@@ -62,7 +61,7 @@ impl EventSubscription {
 }
 impl From<Vec<String>> for EventSubscription {
     fn from(event_names: Vec<String>) -> Self {
-        Self { names: event_names, mode: EventMode::Sync }
+        Self { names: event_names, mode: EventMode::Async }
     }
 }
 
@@ -98,8 +97,7 @@ impl EventSource {
                     .map(|name| fsys::EventSubscription {
                         event_name: Some(name.to_string()),
                         mode: Some(match &request.mode {
-                            EventMode::Sync => fsys::EventMode::Sync,
-                            _ => fsys::EventMode::Async,
+                            EventMode::Async => fsys::EventMode::Async,
                         }),
                         ..fsys::EventSubscription::EMPTY
                     })

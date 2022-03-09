@@ -89,7 +89,7 @@ impl EventSequence {
     ) -> Result<BoxFuture<'a, Result<(), Error>>, Error> {
         let event_names = self.event_names()?;
         let event_stream = event_source
-            .subscribe(vec![EventSubscription::new(event_names, EventMode::Sync)])
+            .subscribe(vec![EventSubscription::new(event_names, EventMode::Async)])
             .await?;
         let expected_events = self.clone();
         let (tx, rx) = oneshot::channel();
