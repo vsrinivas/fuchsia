@@ -27,6 +27,9 @@ executable("bin") {
     "pthreads.cc",
     "random_memcpy.cc",
   ]
+  if (is_host) {
+    sources += [ "process_spawn_posix.cc" ]
+  }
   if (is_fuchsia) {
     sources += [
       "async_loop.cc",
@@ -183,7 +186,14 @@ fuchsia_shell_package("fuchsia_microbenchmarks_perftestmode") {
 if (is_linux) {
   host_test("fuchsia_microbenchmarks_host_unittestmode") {
     binary_path = "$root_out_dir/fuchsia_microbenchmarks"
-    deps = [ ":bin" ]
+    deps = [
+      ":bin",
+      ":runtime_deps",
+    ]
+  }
+  host_test_data("runtime_deps") {
+    sources = [ "$root_out_dir/fdio_spawn_helper" ]
+    deps = [ ":fdio_spawn_helper" ]
   }
 }
 
