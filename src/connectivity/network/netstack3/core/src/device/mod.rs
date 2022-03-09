@@ -356,24 +356,6 @@ impl<D: EventDispatcher> Ipv6DeviceContext for Ctx<D> {
             DeviceIdInner::Loopback => None,
         }
     }
-
-    fn start_soliciting_routers(&mut self, device_id: Self::DeviceId) {
-        match device_id.inner() {
-            DeviceIdInner::Ethernet(id) => {
-                NdpHandler::<EthernetLinkDevice>::start_soliciting_routers(self, id)
-            }
-            DeviceIdInner::Loopback => {}
-        }
-    }
-
-    fn stop_soliciting_routers(&mut self, device_id: Self::DeviceId) {
-        match device_id.inner() {
-            DeviceIdInner::Ethernet(id) => {
-                NdpHandler::<EthernetLinkDevice>::stop_soliciting_routers(self, id)
-            }
-            DeviceIdInner::Loopback => {}
-        }
-    }
 }
 
 impl<B: BufferMut, D: BufferDispatcher<B>> BufferIpDeviceContext<Ipv6, B> for Ctx<D> {
@@ -717,20 +699,14 @@ pub fn initialize_device<D: EventDispatcher>(ctx: &mut Ctx<D>, device: DeviceId)
     match device.inner() {
         DeviceIdInner::Ethernet(id) => {
             ethernet::initialize_device(ctx, id);
-            // All nodes should join the all-nodes multicast group.
-            join_ip_multicast(ctx, device, Ipv6::ALL_NODES_LINK_LOCAL_MULTICAST_ADDRESS);
-
-            // RFC 4861 section 6.3.7, it implies only a host sends router
-            // solicitation messages.
-            if !crate::ip::device::is_ipv6_routing_enabled(ctx, device) {
-                <Ctx<_> as NdpHandler<EthernetLinkDevice>>::start_soliciting_routers(ctx, id);
-            }
         }
         DeviceIdInner::Loopback => {}
     }
 
     get_common_device_state_mut(&mut ctx.state, device)
         .set_initialization_status(InitializationStatus::Initialized);
+
+    crate::ip::device::enable_ipv6_device(ctx, device)
 }
 
 /// Remove a device from the device layer.
@@ -862,37 +838,6 @@ impl<D: EventDispatcher, I: Ip> IpDeviceIdContext<I> for Ctx<D> {
             .loopback
             .as_ref()
             .and_then(|state| state.common.is_initialized().then(|| DeviceIdInner::Loopback.into()))
-    }
-}
-
-/// Add `device` to a multicast group `multicast_addr`.
-///
-/// Calling `join_ip_multicast` with the same `device` and `multicast_addr` is
-/// completely safe. A counter will be kept for the number of times
-/// `join_ip_multicast` has been called with the same `device` and
-/// `multicast_addr` pair. To completely leave a multicast group,
-/// [`leave_ip_multicast`] must be called the same number of times
-/// `join_ip_multicast` has been called for the same `device` and
-/// `multicast_addr` pair. The first time `join_ip_multicast` is called for a
-/// new `device` and `multicast_addr` pair, the device will actually join the
-/// multicast group.
-///
-/// # Panics
-///
-/// Panics if `device` is not initialized.
-pub(crate) fn join_ip_multicast<D: BufferDispatcher<EmptyBuf> + EventDispatcher, A: IpAddress>(
-    ctx: &mut Ctx<D>,
-    device: DeviceId,
-    multicast_addr: MulticastAddr<A>,
-) {
-    // `device` must not be uninitialized.
-    assert!(is_device_usable(&ctx.state, device));
-
-    trace!("join_ip_multicast: device {:?} joining multicast {:?}", device, multicast_addr);
-
-    match multicast_addr.into() {
-        IpAddr::V4(addr) => crate::ip::device::join_ip_multicast::<Ipv4, _>(ctx, device, addr),
-        IpAddr::V6(addr) => crate::ip::device::join_ip_multicast::<Ipv6, _>(ctx, device, addr),
     }
 }
 

@@ -2998,11 +2998,9 @@ mod tests {
         let b = "bob";
         let dummy_config = I::DUMMY_CONFIG;
         let mut state_builder = StackStateBuilder::default();
-        let mut ndp_config = crate::device::ndp::NdpConfiguration::default();
-        ndp_config.set_max_router_solicitations(None);
-        state_builder.device_builder().set_default_ndp_config(ndp_config);
         let mut ipv6_config = crate::ip::device::state::Ipv6DeviceConfiguration::default();
         ipv6_config.dad_transmits = None;
+        ipv6_config.max_router_solicitations = None;
         state_builder.device_builder().set_default_ipv6_config(ipv6_config);
         let device = DeviceId::new_ethernet(0);
         let mut alice = DummyEventDispatcherBuilder::from_config(dummy_config.swap())
@@ -3065,11 +3063,9 @@ mod tests {
 
         let dummy_config = Ipv6::DUMMY_CONFIG;
         let mut state_builder = StackStateBuilder::default();
-        let mut ndp_config = crate::device::ndp::NdpConfiguration::default();
-        ndp_config.set_max_router_solicitations(None);
-        state_builder.device_builder().set_default_ndp_config(ndp_config);
         let mut ipv6_config = crate::ip::device::state::Ipv6DeviceConfiguration::default();
         ipv6_config.dad_transmits = None;
+        ipv6_config.max_router_solicitations = None;
         state_builder.device_builder().set_default_ipv6_config(ipv6_config);
         let mut dispatcher_builder = DummyEventDispatcherBuilder::from_config(dummy_config.clone());
         let extra_ip = UnicastAddr::new(Ipv6Addr::from_bytes([
@@ -3578,7 +3574,14 @@ mod tests {
 
         // Join the multicast group and receive the packet, we should dispatch
         // it.
-        crate::device::join_ip_multicast(&mut ctx, device, multi_addr);
+        match multi_addr.into() {
+            IpAddr::V4(multicast_addr) => {
+                crate::ip::device::join_ip_multicast::<Ipv4, _>(&mut ctx, device, multicast_addr)
+            }
+            IpAddr::V6(multicast_addr) => {
+                crate::ip::device::join_ip_multicast::<Ipv6, _>(&mut ctx, device, multicast_addr)
+            }
+        }
         assert!(I::get_ip_device_state(&ctx, device).multicast_groups.contains(&multi_addr));
         receive_frame(&mut ctx, device, buf.clone()).expect("error receiving frame");
         assert_eq!(get_counter_val(&mut ctx, dispatch_receive_ip_packet_name::<I>()), 1);
@@ -3738,7 +3741,11 @@ mod tests {
         );
 
         // Receive packet addressed to a multicast address we're subscribed to.
-        crate::device::join_ip_multicast(&mut ctx, v4_dev, Ipv4::ALL_ROUTERS_MULTICAST_ADDRESS);
+        crate::ip::device::join_ip_multicast::<Ipv4, _>(
+            &mut ctx,
+            v4_dev,
+            Ipv4::ALL_ROUTERS_MULTICAST_ADDRESS,
+        );
         assert_eq!(
             receive_ipv4_packet_action(
                 &mut ctx,

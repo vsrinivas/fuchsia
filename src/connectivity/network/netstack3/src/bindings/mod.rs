@@ -627,6 +627,7 @@ impl Netstack {
                 loopback,
                 Ipv6DeviceConfiguration {
                     dad_transmits: None,
+                    max_router_solicitations: None,
                     ip_config: IpDeviceConfiguration { gmp_enabled: false },
                 },
             );

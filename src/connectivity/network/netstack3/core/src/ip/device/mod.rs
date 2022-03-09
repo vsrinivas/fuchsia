@@ -6,6 +6,7 @@
 
 pub(crate) mod dad;
 mod integration;
+pub(crate) mod router_solicitation;
 pub(crate) mod state;
 
 use alloc::boxed::Box;
@@ -25,6 +26,7 @@ use crate::{
     ip::{
         device::{
             dad::{DadHandler, DadTimerId},
+            router_solicitation::{RsHandler, RsTimerId},
             state::{
                 AddrConfig, AddressState, IpDeviceConfiguration, IpDeviceState, IpDeviceStateIpExt,
                 Ipv4DeviceConfiguration, Ipv4DeviceState, Ipv6AddressEntry,
@@ -74,6 +76,7 @@ pub(crate) fn handle_ipv4_timer<C: BufferIpDeviceContext<Ipv4, EmptyBuf>>(
 pub(crate) enum Ipv6DeviceTimerId<DeviceId> {
     Mld(MldReportDelay<DeviceId>),
     Dad(DadTimerId<DeviceId>),
+    Rs(RsTimerId<DeviceId>),
 }
 
 impl<DeviceId> From<MldReportDelay<DeviceId>> for Ipv6DeviceTimerId<DeviceId> {
@@ -85,6 +88,12 @@ impl<DeviceId> From<MldReportDelay<DeviceId>> for Ipv6DeviceTimerId<DeviceId> {
 impl<DeviceId> From<DadTimerId<DeviceId>> for Ipv6DeviceTimerId<DeviceId> {
     fn from(id: DadTimerId<DeviceId>) -> Ipv6DeviceTimerId<DeviceId> {
         Ipv6DeviceTimerId::Dad(id)
+    }
+}
+
+impl<DeviceId> From<RsTimerId<DeviceId>> for Ipv6DeviceTimerId<DeviceId> {
+    fn from(id: RsTimerId<DeviceId>) -> Ipv6DeviceTimerId<DeviceId> {
+        Ipv6DeviceTimerId::Rs(id)
     }
 }
 
@@ -104,15 +113,25 @@ impl_timer_context!(
     Ipv6DeviceTimerId::Dad(id),
     id
 );
+impl_timer_context!(
+    IpDeviceIdContext<Ipv6>,
+    Ipv6DeviceTimerId<C::DeviceId>,
+    RsTimerId<C::DeviceId>,
+    Ipv6DeviceTimerId::Rs(id),
+    id
+);
 
 /// Handle an IPv6 device timer firing.
-pub(crate) fn handle_ipv6_timer<C: BufferIpDeviceContext<Ipv6, EmptyBuf> + DadHandler>(
+pub(crate) fn handle_ipv6_timer<
+    C: BufferIpDeviceContext<Ipv6, EmptyBuf> + DadHandler + RsHandler,
+>(
     ctx: &mut C,
     id: Ipv6DeviceTimerId<C::DeviceId>,
 ) {
     match id {
         Ipv6DeviceTimerId::Mld(id) => TimerHandler::handle_timer(ctx, id),
         Ipv6DeviceTimerId::Dad(id) => DadHandler::handle_timer(ctx, id),
+        Ipv6DeviceTimerId::Rs(id) => RsHandler::handle_timer(ctx, id),
     }
 }
 
@@ -187,16 +206,6 @@ pub(crate) trait Ipv6DeviceContext: IpDeviceContext<Ipv6> {
     /// Returns the device's link-layer address bytes, if the device supports
     /// link-layer addressing.
     fn get_link_layer_addr_bytes(&self, device_id: Self::DeviceId) -> Option<&[u8]>;
-
-    /// Starts soliciting routers.
-    // TODO(https://fxbug.dev/72378): Remove this method once DAD operates at
-    // L3.
-    fn start_soliciting_routers(&mut self, device_id: Self::DeviceId);
-
-    /// Stops soliciting routers.
-    // TODO(https://fxbug.dev/72378): Remove this method once DAD operates at
-    // L3.
-    fn stop_soliciting_routers(&mut self, device_id: Self::DeviceId);
 }
 
 /// The execution context for an IP device with a buffer.
@@ -216,6 +225,24 @@ pub(crate) trait BufferIpDeviceContext<
         local_addr: SpecifiedAddr<I::Addr>,
         body: S,
     ) -> Result<(), S>;
+}
+
+pub(crate) fn enable_ipv6_device<C: Ipv6DeviceContext + GmpHandler<Ipv6> + RsHandler>(
+    ctx: &mut C,
+    device_id: C::DeviceId,
+) {
+    // All nodes should join the all-nodes multicast group.
+    join_ip_multicast(ctx, device_id, Ipv6::ALL_NODES_LINK_LOCAL_MULTICAST_ADDRESS);
+
+    // As per RFC 4861 section 6.3.7,
+    //
+    //    A host sends Router Solicitations to the all-routers multicast
+    //    address.
+    //
+    // If we are operating as a router, we do not solicit routers.
+    if !is_ipv6_routing_enabled(ctx, device_id) {
+        RsHandler::start_router_solicitation(ctx, device_id);
+    }
 }
 
 /// Gets the IPv4 address and subnet pairs associated with this device.
@@ -331,7 +358,7 @@ pub(crate) fn is_ipv6_routing_enabled<C: IpDeviceContext<Ipv6>>(
 /// Enables or disables IP packet routing on `device`.
 #[cfg(test)]
 pub(crate) fn set_routing_enabled<
-    C: IpDeviceContext<Ipv4> + Ipv6DeviceContext + GmpHandler<Ipv6>,
+    C: IpDeviceContext<Ipv4> + Ipv6DeviceContext + GmpHandler<Ipv6> + RsHandler,
     I: Ip,
 >(
     ctx: &mut C,
@@ -370,7 +397,7 @@ fn set_ipv4_routing_enabled<C: IpDeviceContext<Ipv4>>(
 /// Does nothing if the routing status does not change as a consequence of this
 /// call.
 #[cfg(test)]
-pub(crate) fn set_ipv6_routing_enabled<C: Ipv6DeviceContext + GmpHandler<Ipv6>>(
+pub(crate) fn set_ipv6_routing_enabled<C: Ipv6DeviceContext + GmpHandler<Ipv6> + RsHandler>(
     ctx: &mut C,
     device_id: C::DeviceId,
     enabled: bool,
@@ -384,13 +411,13 @@ pub(crate) fn set_ipv6_routing_enabled<C: Ipv6DeviceContext + GmpHandler<Ipv6>>(
     }
 
     if enabled {
-        ctx.stop_soliciting_routers(device_id);
+        RsHandler::stop_router_solicitation(ctx, device_id);
         ctx.get_ip_device_state_mut(device_id).ip_state.routing_enabled = true;
         join_ip_multicast(ctx, device_id, Ipv6::ALL_ROUTERS_LINK_LOCAL_MULTICAST_ADDRESS);
     } else {
         leave_ip_multicast(ctx, device_id, Ipv6::ALL_ROUTERS_LINK_LOCAL_MULTICAST_ADDRESS);
         ctx.get_ip_device_state_mut(device_id).ip_state.routing_enabled = false;
-        ctx.start_soliciting_routers(device_id);
+        RsHandler::start_router_solicitation(ctx, device_id);
     }
 
     Ok(())
@@ -490,8 +517,10 @@ pub(crate) fn add_ipv6_addr_subnet<C: Ipv6DeviceContext + GmpHandler<Ipv6> + Dad
         config:
             Ipv6DeviceConfiguration {
                 dad_transmits,
+                max_router_solicitations: _,
                 ip_config: IpDeviceConfiguration { gmp_enabled: _ },
             },
+        router_soliciations_remaining: _,
     } = ctx.get_ip_device_state_mut(device_id);
 
     let addr_sub = addr_sub.to_unicast();

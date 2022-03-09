@@ -12,7 +12,10 @@ use net_types::{
 };
 use packet::{BufferMut, EmptyBuf, Serializer};
 use packet_formats::{
-    icmp::{ndp::NeighborSolicitation, IcmpPacketBuilder, IcmpUnusedCode},
+    icmp::{
+        ndp::{NeighborSolicitation, RouterSolicitation},
+        IcmpMessage, IcmpPacketBuilder, IcmpUnusedCode,
+    },
     ip::Ipv6Proto,
 };
 
@@ -25,6 +28,7 @@ use crate::{
             dad::{Ipv6DeviceDadContext, Ipv6LayerDadContext},
             get_ipv4_addr_subnet, get_ipv4_device_state, get_ipv6_device_state, get_ipv6_hop_limit,
             is_ipv4_routing_enabled, is_ipv6_routing_enabled, iter_ipv4_devices, iter_ipv6_devices,
+            router_solicitation::{Ipv6DeviceRsContext, Ipv6LayerRsContext},
             send_ip_frame,
             state::{AddressState, IpDeviceState, Ipv6AddressEntry},
             IpDeviceIpExt,
@@ -136,6 +140,41 @@ impl<C: device::Ipv6DeviceContext> Ipv6DeviceDadContext for C {
     }
 }
 
+fn send_ndp_packet<
+    C: ip::BufferIpDeviceContext<Ipv6, EmptyBuf>,
+    S: Serializer<Buffer = EmptyBuf>,
+    M: IcmpMessage<Ipv6, &'static [u8]>,
+>(
+    ctx: &mut C,
+    device_id: C::DeviceId,
+    src_ip: Ipv6Addr,
+    dst_ip: SpecifiedAddr<Ipv6Addr>,
+    body: S,
+    code: M::Code,
+    message: M,
+) -> Result<(), S> {
+    // TODO(https://fxbug.dev/95359): Send through ICMPv6 send path.
+    send_ipv6_packet_from_device(
+        ctx,
+        SendIpPacketMeta {
+            device: device_id,
+            src_ip: SpecifiedAddr::new(src_ip),
+            dst_ip,
+            next_hop: dst_ip,
+            ttl: NonZeroU8::new(REQUIRED_NDP_IP_PACKET_HOP_LIMIT),
+            proto: Ipv6Proto::Icmpv6,
+        },
+        body.encapsulate(IcmpPacketBuilder::<Ipv6, &[u8], _>::new(
+            src_ip,
+            dst_ip.get(),
+            code,
+            message,
+        )),
+        None,
+    )
+    .map_err(|s| s.into_inner())
+}
+
 impl<C: ip::BufferIpDeviceContext<Ipv6, EmptyBuf>> Ipv6LayerDadContext for C {
     fn send_dad_packet<S: Serializer<Buffer = EmptyBuf>>(
         &mut self,
@@ -144,27 +183,59 @@ impl<C: ip::BufferIpDeviceContext<Ipv6, EmptyBuf>> Ipv6LayerDadContext for C {
         message: NeighborSolicitation,
         body: S,
     ) -> Result<(), S> {
-        let src_ip = Ipv6::UNSPECIFIED_ADDRESS;
-        let dst_ip = dst_ip.into_specified();
-        send_ipv6_packet_from_device(
+        send_ndp_packet(
             self,
-            SendIpPacketMeta {
-                device: device_id,
-                src_ip: SpecifiedAddr::new(src_ip),
-                dst_ip,
-                next_hop: dst_ip,
-                ttl: NonZeroU8::new(REQUIRED_NDP_IP_PACKET_HOP_LIMIT),
-                proto: Ipv6Proto::Icmpv6,
-            },
-            body.encapsulate(IcmpPacketBuilder::<Ipv6, &[u8], _>::new(
-                src_ip,
-                dst_ip.get(),
-                IcmpUnusedCode,
-                message,
-            )),
-            None,
+            device_id,
+            Ipv6::UNSPECIFIED_ADDRESS,
+            dst_ip.into_specified(),
+            body,
+            IcmpUnusedCode,
+            message,
         )
-        .map_err(|s| s.into_inner())
+    }
+}
+
+impl<C: device::Ipv6DeviceContext> Ipv6DeviceRsContext for C {
+    fn get_max_router_solicitations(&self, device_id: C::DeviceId) -> Option<NonZeroU8> {
+        self.get_ip_device_state(device_id).config.max_router_solicitations
+    }
+
+    fn get_router_soliciations_remaining_mut(
+        &mut self,
+        device_id: C::DeviceId,
+    ) -> &mut Option<NonZeroU8> {
+        &mut self.get_ip_device_state_mut(device_id).router_soliciations_remaining
+    }
+
+    fn get_link_layer_addr_bytes(&self, device_id: C::DeviceId) -> Option<&[u8]> {
+        device::Ipv6DeviceContext::get_link_layer_addr_bytes(self, device_id)
+    }
+}
+
+impl<C: ip::BufferIpDeviceContext<Ipv6, EmptyBuf> + device::Ipv6DeviceContext> Ipv6LayerRsContext
+    for C
+{
+    fn send_rs_packet<S: Serializer<Buffer = EmptyBuf>>(
+        &mut self,
+        device_id: Self::DeviceId,
+        message: RouterSolicitation,
+        body: S,
+    ) -> Result<(), S> {
+        let dst_ip = Ipv6::ALL_ROUTERS_LINK_LOCAL_MULTICAST_ADDRESS.into_specified();
+        send_ndp_packet(
+            self,
+            device_id,
+            crate::ip::socket::ipv6_source_address_selection::select_ipv6_source_address(
+                dst_ip,
+                device_id,
+                get_ipv6_device_state(self, device_id).iter_addrs().map(move |a| (a, device_id)),
+            )
+            .map_or(Ipv6::UNSPECIFIED_ADDRESS, |a| a.get()),
+            dst_ip,
+            body,
+            IcmpUnusedCode,
+            message,
+        )
     }
 }
 

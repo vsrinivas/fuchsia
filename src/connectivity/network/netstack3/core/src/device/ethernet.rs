@@ -1685,6 +1685,21 @@ mod tests {
         return MulticastAddr::new(Ipv6Addr::new([0xff00, 0, 0, 0, 0, 0, 0, 1])).unwrap();
     }
 
+    fn join_ip_multicast<A: IpAddress, D: EventDispatcher>(
+        ctx: &mut Ctx<D>,
+        device: DeviceId,
+        multicast_addr: MulticastAddr<A>,
+    ) {
+        match multicast_addr.into() {
+            IpAddr::V4(multicast_addr) => {
+                crate::ip::device::join_ip_multicast::<Ipv4, _>(ctx, device, multicast_addr)
+            }
+            IpAddr::V6(multicast_addr) => {
+                crate::ip::device::join_ip_multicast::<Ipv6, _>(ctx, device, multicast_addr)
+            }
+        }
+    }
+
     /// Test that we can join and leave a multicast group, but we only truly
     /// leave it after calling `leave_ip_multicast` the same number of times as
     /// `join_ip_multicast`.
@@ -1703,7 +1718,7 @@ mod tests {
         assert!(!is_in_ip_multicast(&ctx, device, multicast_addr));
 
         // Join the multicast group.
-        crate::device::join_ip_multicast(&mut ctx, device, multicast_addr);
+        join_ip_multicast(&mut ctx, device, multicast_addr);
         assert!(is_in_ip_multicast(&ctx, device, multicast_addr));
 
         // Leave the multicast group.
@@ -1711,11 +1726,11 @@ mod tests {
         assert!(!is_in_ip_multicast(&ctx, device, multicast_addr));
 
         // Join the multicst group.
-        crate::device::join_ip_multicast(&mut ctx, device, multicast_addr);
+        join_ip_multicast(&mut ctx, device, multicast_addr);
         assert!(is_in_ip_multicast(&ctx, device, multicast_addr));
 
         // Join it again...
-        crate::device::join_ip_multicast(&mut ctx, device, multicast_addr);
+        join_ip_multicast(&mut ctx, device, multicast_addr);
         assert!(is_in_ip_multicast(&ctx, device, multicast_addr));
 
         // Leave it (still in it because we joined twice).

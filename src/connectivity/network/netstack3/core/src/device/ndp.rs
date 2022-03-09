@@ -121,35 +121,6 @@ const MAX_MULTICAST_SOLICIT: u8 = 3;
 
 // Host Constants
 
-/// Maximum number of Router Solicitation messages that may be sent when
-/// attempting to discover routers. Each message sent must be separated by at
-/// least `RTR_SOLICITATION_INTERVAL` as defined in [RFC 4861 section 10].
-///
-/// [RFC 4861 section 10]: https://tools.ietf.org/html/rfc4861#section-10
-pub(crate) const MAX_RTR_SOLICITATIONS: u8 = 3;
-
-/// Minimum duration between router solicitation messages as defined in [RFC
-/// 4861 section 10].
-///
-/// [RFC 4861 section 10]: https://tools.ietf.org/html/rfc4861#section-10
-const RTR_SOLICITATION_INTERVAL: Duration = Duration::from_secs(4);
-
-/// Amount of time to wait after sending `MAX_RTR_SOLICITATIONS` Router
-/// Solicitation messages before determining that there are no routers on the
-/// link for the purpose of IPv6 Stateless Address Autoconfiguration if no
-/// Router Advertisement messages have been received as defined in [RFC 4861
-/// section 10].
-///
-/// This parameter is also used when a host sends its initial Router
-/// Solicitation message, as per [RFC 4861 section 6.3.7]. Before a node sends
-/// an initial solicitation, it SHOULD delay the transmission for a random
-/// amount of time between 0 and `MAX_RTR_SOLICITATION_DELAY`. This serves to
-/// alleviate congestion when many hosts start up on a link at the same time.
-///
-/// [RFC 4861 section 10]: https://tools.ietf.org/html/rfc4861#section-10
-/// [RFC 4861 section 6.3.7]: https://tools.ietf.org/html/rfc4861#section-6.3.7
-const MAX_RTR_SOLICITATION_DELAY: Duration = Duration::from_secs(1);
-
 /// Maximum allowed DESYNC_FACTOR as a ratio of the TEMP_PREFERRED_LIFETIME as
 /// described in [RFC 8981 Section 3.8].
 ///
@@ -191,32 +162,8 @@ pub(crate) trait NdpHandler<D: LinkDevice>: DeviceIdContext<D> {
     /// Updates the NDP configuration for a `device_id`.
     ///
     /// Note, some values may not take effect immediately, and may only take
-    /// effect the next time they are used. These scenarios documented below:
-    ///
-    ///  - Updates to [`NdpConfiguration::max_router_solicitations`] will only
-    ///    take effect the next time routers are explicitly solicited. Current
-    ///    router solicitation will continue using the old value.
+    /// effect the next time they are used.
     fn set_configuration(&mut self, device_id: Self::DeviceId, config: NdpConfiguration);
-
-    /// Start soliciting routers.
-    ///
-    /// Does nothing if a device's MAX_RTR_SOLICITATIONS parameters is `0`.
-    ///
-    /// # Panics
-    ///
-    /// Panics if we attempt to start router solicitation as a router, or if the
-    /// device is already soliciting routers.
-    fn start_soliciting_routers(&mut self, device_id: Self::DeviceId);
-
-    /// Stop soliciting routers.
-    ///
-    /// Does nothing if the device is not soliciting routers.
-    ///
-    /// # Panics
-    ///
-    /// Panics if we attempt to stop router solicitations on a router (this
-    /// should never happen as routers should not be soliciting other routers).
-    fn stop_soliciting_routers(&mut self, device_id: Self::DeviceId);
 
     /// Look up the link layer address.
     ///
@@ -258,13 +205,6 @@ where
 
     fn set_configuration(&mut self, device_id: Self::DeviceId, config: NdpConfiguration) {
         set_ndp_configuration(self, device_id, config)
-    }
-
-    fn start_soliciting_routers(&mut self, device_id: Self::DeviceId) {
-        start_soliciting_routers(self, device_id)
-    }
-    fn stop_soliciting_routers(&mut self, device_id: Self::DeviceId) {
-        stop_soliciting_routers(self, device_id)
     }
 
     fn lookup(
@@ -501,17 +441,6 @@ fn deinitialize<D: LinkDevice, C: NdpContext<D>>(ctx: &mut C, device_id: C::Devi
 /// Per interface configuration for NDP.
 #[derive(Debug, Clone)]
 pub struct NdpConfiguration {
-    /// Value for NDP's MAX_RTR_SOLICITATIONS parameter to configure how many
-    /// router solicitation messages to send on interface enable.
-    ///
-    /// As per [RFC 4861 section 6.3.7], a host SHOULD transmit up to
-    /// `MAX_RTR_SOLICITATIONS` Router Solicitation messages. Given the RFC does
-    /// not require us to send `MAX_RTR_SOLICITATIONS` messages, we allow a
-    /// configurable value, up to `MAX_RTR_SOLICITATIONS`.
-    ///
-    /// Default: [`MAX_RTR_SOLICITATIONS`].
-    max_router_solicitations: Option<NonZeroU8>,
-
     /// Configuration for temporary address assignment.
     ///
     /// If `None`, temporary addresses will not be assigned to interfaces, and
@@ -560,34 +489,11 @@ struct TemporarySlaacAddressConfiguration {
 
 impl Default for NdpConfiguration {
     fn default() -> Self {
-        Self {
-            max_router_solicitations: NonZeroU8::new(MAX_RTR_SOLICITATIONS),
-            temporary_address_configuration: None,
-        }
+        Self { temporary_address_configuration: None }
     }
 }
 
 impl NdpConfiguration {
-    /// Get the value for NDP's MAX_RTR_SOLICITATIONS parameter.
-    pub fn get_max_router_solicitations(&self) -> Option<NonZeroU8> {
-        self.max_router_solicitations
-    }
-
-    /// Set the value for NDP's MAX_RTR_SOLICITATIONS parameter.
-    ///
-    /// A value of `None` means no router solicitations will be sent.
-    /// `MAX_RTR_SOLICITATIONS` is the maximum possible value; values will be
-    /// saturated at `MAX_RTR_SOLICITATIONS`.
-    pub fn set_max_router_solicitations(&mut self, mut v: Option<NonZeroU8>) {
-        if let Some(inner) = v {
-            if inner.get() > MAX_RTR_SOLICITATIONS {
-                v = NonZeroU8::new(MAX_RTR_SOLICITATIONS);
-            }
-        }
-
-        self.max_router_solicitations = v;
-    }
-
     /// Enables temporary addressing with the provided parameters.
     ///
     /// `rng` is used to initialize the key that is used to generate new addresses.
@@ -635,9 +541,6 @@ pub(crate) struct NdpState<D: LinkDevice> {
 
     /// List of on-link prefixes.
     on_link_prefixes: HashSet<Subnet<Ipv6Addr>>,
-
-    /// Number of remaining Router Solicitation messages to send.
-    router_solicitations_remaining: u8,
 
     //
     // Interface parameters learned from Router Advertisements.
@@ -690,7 +593,6 @@ impl<D: LinkDevice> NdpState<D> {
             neighbors: NeighborTable::default(),
             default_routers: HashSet::new(),
             on_link_prefixes: HashSet::new(),
-            router_solicitations_remaining: 0,
 
             base_reachable_time: REACHABLE_TIME_DEFAULT,
             reachable_time: REACHABLE_TIME_DEFAULT,
@@ -845,8 +747,6 @@ pub(crate) struct NdpTimerId<D: LinkDevice, DeviceId> {
 pub(crate) enum InnerNdpTimerId {
     /// This is used to retry sending Neighbor Discovery Protocol requests.
     LinkAddressResolution { neighbor_addr: UnicastAddr<Ipv6Addr> },
-    /// Timer to send Router Solicitation messages.
-    RouterSolicitationTransmit,
     /// Timer to invalidate a router.
     ///
     /// `ip` is the identifying IP of the router.
@@ -860,8 +760,6 @@ pub(crate) enum InnerNdpTimerId {
     /// Timer to generate a new temporary SLAAC address before an existing one
     /// expires.
     RegenerateTemporaryAddress { addr_subnet: AddrSubnet<Ipv6Addr, UnicastAddr<Ipv6Addr>> },
-    // TODO: The RFC suggests that we SHOULD make a random delay to join the
-    // solicitation group. When we support MLD, we probably want one for that.
 }
 
 impl<D: LinkDevice, DeviceId: Copy> NdpTimerId<D, DeviceId> {
@@ -876,10 +774,6 @@ impl<D: LinkDevice, DeviceId: Copy> NdpTimerId<D, DeviceId> {
         neighbor_addr: UnicastAddr<Ipv6Addr>,
     ) -> NdpTimerId<D, DeviceId> {
         NdpTimerId::new(device_id, InnerNdpTimerId::LinkAddressResolution { neighbor_addr })
-    }
-
-    pub(crate) fn new_router_solicitation(device_id: DeviceId) -> NdpTimerId<D, DeviceId> {
-        NdpTimerId::new(device_id, InnerNdpTimerId::RouterSolicitationTransmit)
     }
 
     pub(crate) fn new_router_invalidation(
@@ -955,7 +849,6 @@ fn handle_timer<D: LinkDevice, C: NdpContext<D>>(ctx: &mut C, id: NdpTimerId<D, 
                 unreachable!("handle_timer: timer for neighbor {:?} address resolution should not exist if no entry exists", neighbor_addr);
             }
         }
-        InnerNdpTimerId::RouterSolicitationTransmit => do_router_solicitation(ctx, id.device_id),
         InnerNdpTimerId::RouterInvalidation { ip } => {
             // Invalidate the router.
             //
@@ -1255,137 +1148,6 @@ impl<H> NeighborTable<H> {
 impl<H> Default for NeighborTable<H> {
     fn default() -> Self {
         NeighborTable { table: HashMap::default() }
-    }
-}
-
-fn start_soliciting_routers<D: LinkDevice, C: NdpContext<D>>(ctx: &mut C, device_id: C::DeviceId) {
-    // MUST NOT be a router.
-    assert!(!ctx.is_router_device(device_id));
-
-    let ndp_state = ctx.get_state_mut_with(device_id);
-
-    // MUST NOT already be performing router solicitation.
-    assert_eq!(ndp_state.router_solicitations_remaining, 0);
-
-    if let Some(v) = ndp_state.config.max_router_solicitations {
-        trace!(
-            "ndp::start_soliciting_routers: start soliciting routers for device: {:?}",
-            device_id
-        );
-
-        ndp_state.router_solicitations_remaining = v.get();
-
-        // As per RFC 4861 section 6.3.7, delay the first transmission for a
-        // random amount of time between 0 and `MAX_RTR_SOLICITATION_DELAY` to
-        // alleviate congestion when many hosts start up on a link at the same
-        // time.
-        let delay = ctx.rng_mut().gen_range(Duration::new(0, 0)..MAX_RTR_SOLICITATION_DELAY);
-
-        // MUST NOT already be performing router solicitation.
-        assert_eq!(
-            ctx.schedule_timer(delay, NdpTimerId::new_router_solicitation(device_id).into()),
-            None
-        );
-    } else {
-        trace!("ndp::start_soliciting_routers: device {:?} not configured to send any router solicitations", device_id);
-    }
-}
-
-fn stop_soliciting_routers<D: LinkDevice, C: NdpContext<D>>(ctx: &mut C, device_id: C::DeviceId) {
-    trace!("ndp::stop_soliciting_routers: stop soliciting routers for device: {:?}", device_id);
-
-    assert!(!ctx.is_router_device(device_id));
-
-    let _: Option<C::Instant> =
-        ctx.cancel_timer(NdpTimerId::new_router_solicitation(device_id).into());
-
-    // No more router solicitations remaining since we are cancelling.
-    ctx.get_state_mut_with(device_id).router_solicitations_remaining = 0;
-}
-
-/// Solicit routers once amd schedule next message.
-///
-/// # Panics
-///
-/// Panics if we attempt to do router solicitation as a router or if we are
-/// already done soliciting routers.
-fn do_router_solicitation<D: LinkDevice, C: NdpContext<D>>(ctx: &mut C, device_id: C::DeviceId) {
-    assert!(!ctx.is_router_device(device_id));
-
-    let ndp_state = ctx.get_state_mut_with(device_id);
-    let remaining = &mut ndp_state.router_solicitations_remaining;
-
-    assert!(*remaining > 0);
-    *remaining -= 1;
-    let remaining = *remaining;
-
-    let src_ip = ctx.get_non_tentative_global_or_link_local_addr(device_id);
-
-    trace!(
-        "do_router_solicitation: soliciting routers for device {:?} using src_ip {:?}",
-        device_id,
-        src_ip
-    );
-
-    send_router_solicitation(ctx, device_id, src_ip);
-
-    if remaining == 0 {
-        trace!(
-            "do_router_solicitation: done sending router solicitation messages for device {:?}",
-            device_id
-        );
-        return;
-    } else {
-        // TODO(ghanan): Make the interval between messages configurable.
-        let _: Option<C::Instant> = ctx.schedule_timer(
-            RTR_SOLICITATION_INTERVAL,
-            NdpTimerId::new_router_solicitation(device_id).into(),
-        );
-    }
-}
-
-/// Send a router solicitation packet.
-///
-/// # Panics
-///
-/// Panics if we attempt to send a router solicitation as a router.
-fn send_router_solicitation<D: LinkDevice, C: NdpContext<D>>(
-    ctx: &mut C,
-    device_id: C::DeviceId,
-    src_ip: Option<UnicastAddr<Ipv6Addr>>,
-) {
-    assert!(!ctx.get_ip_device_state(device_id).routing_enabled);
-
-    trace!("send_router_solicitation: sending router solicitation from {:?}", src_ip);
-
-    match src_ip {
-        Some(src_ip) => {
-            let src_ll = ctx.get_link_layer_addr(device_id);
-            // TODO(https://fxbug.dev/85055): Either panic or guarantee that
-            // this error can't happen statically?
-            let _ = send_ndp_packet::<_, _, &[u8], _>(
-                ctx,
-                device_id,
-                src_ip.get(),
-                Ipv6::ALL_ROUTERS_LINK_LOCAL_MULTICAST_ADDRESS.into_specified(),
-                RouterSolicitation::default(),
-                &[NdpOptionBuilder::SourceLinkLayerAddress(src_ll.bytes())],
-            );
-        }
-        None => {
-            // Must not include the source link layer address if the source address
-            // is unspecified as per RFC 4861 section 4.1.
-            // TODO(https://fxbug.dev/85055): Either panic or guarantee that
-            // this error can't happen statically?
-            let _ = send_ndp_packet::<_, _, &[u8], _>(
-                ctx,
-                device_id,
-                Ipv6::UNSPECIFIED_ADDRESS,
-                Ipv6::ALL_ROUTERS_LINK_LOCAL_MULTICAST_ADDRESS.into_specified(),
-                RouterSolicitation::default(),
-                &[],
-            );
-        }
     }
 }
 
@@ -3080,7 +2842,10 @@ mod tests {
         ip::{
             device::{
                 get_assigned_ipv6_addr_subnets, get_ipv6_device_state, get_ipv6_hop_limit, get_mtu,
-                is_ipv6_routing_enabled, set_ipv6_routing_enabled, state::Ipv6AddressEntry,
+                is_ipv6_routing_enabled,
+                router_solicitation::{MAX_RTR_SOLICITATION_DELAY, RTR_SOLICITATION_INTERVAL},
+                set_ipv6_routing_enabled,
+                state::Ipv6AddressEntry,
                 Ipv6DeviceTimerId,
             },
             SendIpPacketMeta,
@@ -3191,23 +2956,7 @@ mod tests {
     #[test]
     fn test_ndp_configuration() {
         let mut c = NdpConfiguration::default();
-        let solicits = NonZeroU8::new(MAX_RTR_SOLICITATIONS);
-        assert_eq!(c.get_max_router_solicitations(), solicits);
         assert_eq!(c.get_temporary_address_configuration(), None);
-
-        let solicits = None;
-        c.set_max_router_solicitations(solicits);
-        assert_eq!(c.get_max_router_solicitations(), solicits);
-        assert_eq!(c.get_temporary_address_configuration(), None);
-
-        let solicits = NonZeroU8::new(2);
-        c.set_max_router_solicitations(solicits);
-        assert_eq!(c.get_max_router_solicitations(), solicits);
-        assert_eq!(c.get_temporary_address_configuration(), None);
-
-        // Max Router Solicitations gets saturated at `MAX_RTR_SOLICITATIONS`.
-        c.set_max_router_solicitations(NonZeroU8::new(MAX_RTR_SOLICITATIONS + 1));
-        assert_eq!(c.get_max_router_solicitations(), NonZeroU8::new(MAX_RTR_SOLICITATIONS));
 
         let mut rng = StepRng::new(0xAAAAAAAAAAAAAAAA, 0);
         let temp_valid_lifetime = NonZeroDuration::new(Duration::from_secs(20)).unwrap();
@@ -3459,16 +3208,15 @@ mod tests {
         let remote = DummyEventDispatcherBuilder::default();
         let device_id = DeviceId::new_ethernet(0);
 
-        let mut stack_builder = StackStateBuilder::default();
-        let mut ndp_config = NdpConfiguration::default();
-        ndp_config.set_max_router_solicitations(None);
-        stack_builder.device_builder().set_default_ndp_config(ndp_config);
-
         // We explicitly call `build_with` when building our contexts below
         // because `build` will set the default NDP parameter
         // DUP_ADDR_DETECT_TRANSMITS to 0 (effectively disabling DAD) so we use
         // our own custom `StackStateBuilder` to set it to the default value of
         // `1` (see `DUP_ADDR_DETECT_TRANSMITS`).
+        let mut stack_builder = StackStateBuilder::default();
+        let mut ipv6_config = crate::device::Ipv6DeviceConfiguration::default();
+        ipv6_config.max_router_solicitations = None;
+        stack_builder.device_builder().set_default_ipv6_config(ipv6_config);
         let mut net = crate::context::testutil::new_legacy_simple_dummy_network(
             "local",
             local.build_with(stack_builder.clone(), DummyEventDispatcher::default()),
@@ -3517,6 +3265,12 @@ mod tests {
     fn dad_timer_id(id: EthernetDeviceId, addr: UnicastAddr<Ipv6Addr>) -> TimerId {
         TimerId(TimerIdInner::Ipv6Device(Ipv6DeviceTimerId::Dad(
             crate::ip::device::dad::DadTimerId { device_id: id.into(), addr },
+        )))
+    }
+
+    fn rs_timer_id(id: EthernetDeviceId) -> TimerId {
+        TimerId(TimerIdInner::Ipv6Device(Ipv6DeviceTimerId::Rs(
+            crate::ip::device::router_solicitation::RsTimerId { device_id: id.into() },
         )))
     }
 
@@ -3653,11 +3407,9 @@ mod tests {
     #[test]
     fn test_dad_three_transmits_no_conflicts() {
         let mut stack_builder = StackStateBuilder::default();
-        let mut ndp_config = crate::device::ndp::NdpConfiguration::default();
-        ndp_config.set_max_router_solicitations(None);
-        stack_builder.device_builder().set_default_ndp_config(ndp_config);
         let mut ipv6_config = crate::device::Ipv6DeviceConfiguration::default();
         ipv6_config.dad_transmits = None;
+        ipv6_config.max_router_solicitations = None;
         stack_builder.device_builder().set_default_ipv6_config(ipv6_config);
         let mut ctx = Ctx::new(stack_builder.build(), DummyEventDispatcher::default());
         let dev_id = ctx.state.add_ethernet_device(local_mac(), Ipv6::MINIMUM_LINK_MTU.into());
@@ -3757,12 +3509,9 @@ mod tests {
 
         assert_empty(ctx.dispatcher.frames_sent());
 
-        let mut ndp_config = NdpConfiguration::default();
-        ndp_config.set_max_router_solicitations(None);
-        crate::device::set_ndp_configuration(&mut ctx, dev_id, ndp_config)
-            .expect("error setting NDP configuuration");
         let mut ipv6_config = crate::device::Ipv6DeviceConfiguration::default();
         ipv6_config.dad_transmits = NonZeroU8::new(3);
+        ipv6_config.max_router_solicitations = None;
         crate::device::set_ipv6_configuration(&mut ctx, dev_id, ipv6_config);
 
         // Add an IP.
@@ -3846,12 +3595,9 @@ mod tests {
         crate::device::initialize_device(&mut ctx, dev_id);
 
         // Enable DAD.
-        let mut ndp_config = NdpConfiguration::default();
-        ndp_config.set_max_router_solicitations(None);
-        crate::device::set_ndp_configuration(&mut ctx, dev_id, ndp_config)
-            .expect("error setting NDP configuuration");
         let mut ipv6_config = crate::device::Ipv6DeviceConfiguration::default();
         ipv6_config.dad_transmits = NonZeroU8::new(3);
+        ipv6_config.max_router_solicitations = None;
         crate::device::set_ipv6_configuration(&mut ctx, dev_id, ipv6_config);
 
         assert_empty(ctx.dispatcher.frames_sent());
@@ -4797,10 +4543,7 @@ mod tests {
         let time = ctx.now();
         assert_eq!(
             ctx.trigger_next_timer(crate::handle_timer).unwrap(),
-            NdpTimerId::new_router_solicitation(
-                device_id.try_into().expect("expected ethernet ID")
-            )
-            .into()
+            rs_timer_id(device_id.try_into().expect("expected ethernet ID")).into()
         );
         // Initial router solicitation should be a random delay between 0 and
         // `MAX_RTR_SOLICITATION_DELAY`.
@@ -4818,10 +4561,7 @@ mod tests {
         let time = ctx.now();
         assert_eq!(
             ctx.trigger_next_timer(crate::handle_timer).unwrap(),
-            NdpTimerId::new_router_solicitation(
-                device_id.try_into().expect("expected ethernet ID")
-            )
-            .into()
+            rs_timer_id(device_id.try_into().expect("expected ethernet ID")).into()
         );
         assert_eq!(ctx.now().duration_since(time), RTR_SOLICITATION_INTERVAL);
         let (src_mac, _, src_ip, _, _, message, code) =
@@ -4833,8 +4573,8 @@ mod tests {
         validate_params(src_mac, src_ip, message, code);
 
         // Before the next one, lets assign an IP address (DAD won't be
-        // performed so it will be assigned immediately. The router solicitation
-        // message will now use the new assigned IP as the source.
+        // performed so it will be assigned immediately). The router solicitation
+        // message should continue to use the link-local address.
         add_ip_addr_subnet(
             &mut ctx,
             device_id,
@@ -4844,10 +4584,7 @@ mod tests {
         let time = ctx.now();
         assert_eq!(
             ctx.trigger_next_timer(crate::handle_timer).unwrap(),
-            NdpTimerId::new_router_solicitation(
-                device_id.try_into().expect("expected ethernet ID")
-            )
-            .into()
+            rs_timer_id(device_id.try_into().expect("expected ethernet ID")).into()
         );
         assert_eq!(ctx.now().duration_since(time), RTR_SOLICITATION_INTERVAL);
         let (src_mac, _, src_ip, _, _, message, code) =
@@ -4865,10 +4602,7 @@ mod tests {
                 },
             )
             .unwrap();
-        assert_eq!(src_mac, dummy_config.local_mac.get());
-        assert_eq!(src_ip, dummy_config.local_ip.get());
-        assert_eq!(message, RouterSolicitation::default());
-        assert_eq!(code, IcmpUnusedCode);
+        validate_params(src_mac, src_ip, message, code);
 
         // No more timers.
         assert_eq!(ctx.trigger_next_timer(crate::handle_timer), None);
@@ -4880,10 +4614,8 @@ mod tests {
         let mut stack_builder = StackStateBuilder::default();
         let mut ipv6_config = crate::device::Ipv6DeviceConfiguration::default();
         ipv6_config.dad_transmits = None;
+        ipv6_config.max_router_solicitations = NonZeroU8::new(2);
         stack_builder.device_builder().set_default_ipv6_config(ipv6_config);
-        let mut ndp_config = crate::device::ndp::NdpConfiguration::default();
-        ndp_config.set_max_router_solicitations(NonZeroU8::new(2));
-        stack_builder.device_builder().set_default_ndp_config(ndp_config);
         let mut ctx = Ctx::new(stack_builder.build(), DummyEventDispatcher::default());
 
         assert_empty(ctx.dispatcher.frames_sent());
@@ -4895,10 +4627,7 @@ mod tests {
         let time = ctx.now();
         assert_eq!(
             ctx.trigger_next_timer(crate::handle_timer).unwrap(),
-            NdpTimerId::new_router_solicitation(
-                device_id.try_into().expect("expected ethernet ID")
-            )
-            .into()
+            rs_timer_id(device_id.try_into().expect("expected ethernet ID")).into()
         );
         // Initial router solicitation should be a random delay between 0 and
         // `MAX_RTR_SOLICITATION_DELAY`.
@@ -4909,10 +4638,7 @@ mod tests {
         let time = ctx.now();
         assert_eq!(
             ctx.trigger_next_timer(crate::handle_timer).unwrap(),
-            NdpTimerId::new_router_solicitation(
-                device_id.try_into().expect("expected ethernet ID")
-            )
-            .into()
+            rs_timer_id(device_id.try_into().expect("expected ethernet ID")).into()
         );
         assert_eq!(ctx.now().duration_since(time), RTR_SOLICITATION_INTERVAL);
         assert_eq!(ctx.dispatcher.frames_sent().len(), 2);
@@ -4958,9 +4684,7 @@ mod tests {
         let device =
             ctx.state.add_ethernet_device(dummy_config.local_mac, Ipv6::MINIMUM_LINK_MTU.into());
         crate::device::initialize_device(&mut ctx, device);
-        let timer_id =
-            NdpTimerId::new_router_solicitation(device.try_into().expect("expected ethernet ID"))
-                .into();
+        let timer_id = rs_timer_id(device.try_into().expect("expected ethernet ID")).into();
 
         // Send the first router solicitation.
         assert_empty(ctx.dispatcher.frames_sent());
@@ -5485,10 +5209,8 @@ mod tests {
         let mut state_builder = StackStateBuilder::default();
         let mut ipv6_config = crate::device::Ipv6DeviceConfiguration::default();
         ipv6_config.dad_transmits = None;
+        ipv6_config.max_router_solicitations = None;
         state_builder.device_builder().set_default_ipv6_config(ipv6_config);
-        let mut ndp_config = NdpConfiguration::default();
-        ndp_config.set_max_router_solicitations(None);
-        state_builder.device_builder().set_default_ndp_config(ndp_config);
         let mut ctx = DummyEventDispatcherBuilder::default()
             .build_with(state_builder, DummyEventDispatcher::default());
         let device = ctx.state.add_ethernet_device(config.local_mac, Ipv6::MINIMUM_LINK_MTU.into());

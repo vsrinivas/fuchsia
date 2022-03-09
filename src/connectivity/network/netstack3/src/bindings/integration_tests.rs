@@ -394,13 +394,10 @@ impl TestStack {
         // when Duplicate Address Detection finishes or when an IPv6 address has
         // been assigned. Without such events, tests do not know how long to
         // wait for the stack to be ready for events.
-        use netstack3_core::NdpConfiguration;
         let mut builder = StackStateBuilder::default();
-        let mut config = NdpConfiguration::default();
-        config.set_max_router_solicitations(None);
-        builder.device_builder().set_default_ndp_config(config);
         builder.device_builder().set_default_ipv6_config(Ipv6DeviceConfiguration {
             dad_transmits: None,
+            max_router_solicitations: None,
             ip_config: Default::default(),
         });
         let ctx = TestContext::new(builder);

@@ -157,11 +157,9 @@ fn bench_forward_minimum<B: Bencher>(b: &mut B, frame_size: usize) {
     let mut state_builder = StackStateBuilder::default();
     // Most tests do not need NDP's DAD or router solicitation so disable it
     // here.
-    let mut ndp_config = crate::device::ndp::NdpConfiguration::default();
-    ndp_config.set_max_router_solicitations(None);
-    state_builder.device_builder().set_default_ndp_config(ndp_config);
     let mut ipv6_config = crate::ip::device::state::Ipv6DeviceConfiguration::default();
     ipv6_config.dad_transmits = None;
+    ipv6_config.max_router_solicitations = None;
     state_builder.device_builder().set_default_ipv6_config(ipv6_config);
 
     let mut ctx = DummyEventDispatcherBuilder::from_config(DUMMY_CONFIG_V4)

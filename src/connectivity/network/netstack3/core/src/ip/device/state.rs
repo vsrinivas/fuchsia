@@ -15,7 +15,7 @@ use nonzero_ext::nonzero;
 
 use crate::{
     ip::{
-        device::dad::DUP_ADDR_DETECT_TRANSMITS,
+        device::{dad::DUP_ADDR_DETECT_TRANSMITS, router_solicitation::MAX_RTR_SOLICITATIONS},
         gmp::{igmp::IgmpGroupState, mld::MldGroupState, MulticastGroupSet},
     },
     Instant,
@@ -239,6 +239,16 @@ pub struct Ipv6DeviceConfiguration {
     /// [RFC 4862 section 5.1]: https://datatracker.ietf.org/doc/html/rfc4862#section-5.1
     pub dad_transmits: Option<NonZeroU8>,
 
+    /// Value for NDP's `MAX_RTR_SOLICITATIONS` parameter to configure how many
+    /// router solicitation messages to send when solicing routers.
+    ///
+    /// A value of `None` means router solicitation will not be performed.
+    ///
+    /// See [RFC 4861 section 6.3.7] for details.
+    ///
+    /// [RFC 4861 section 6.3.7]: https://datatracker.ietf.org/doc/html/rfc4861#section-6.3.7
+    pub max_router_solicitations: Option<NonZeroU8>,
+
     /// The configuration common to all IP devices.
     pub ip_config: IpDeviceConfiguration,
 }
@@ -247,6 +257,7 @@ impl Default for Ipv6DeviceConfiguration {
     fn default() -> Ipv6DeviceConfiguration {
         Ipv6DeviceConfiguration {
             dad_transmits: NonZeroU8::new(DUP_ADDR_DETECT_TRANSMITS),
+            max_router_solicitations: NonZeroU8::new(MAX_RTR_SOLICITATIONS),
             ip_config: Default::default(),
         }
     }
@@ -254,13 +265,18 @@ impl Default for Ipv6DeviceConfiguration {
 
 /// The state common to all IPv6 devices.
 pub(crate) struct Ipv6DeviceState<I: Instant> {
+    pub(super) router_soliciations_remaining: Option<NonZeroU8>,
     pub(crate) ip_state: IpDeviceState<I, Ipv6>,
     pub(crate) config: Ipv6DeviceConfiguration,
 }
 
 impl<I: Instant> Default for Ipv6DeviceState<I> {
     fn default() -> Ipv6DeviceState<I> {
-        Ipv6DeviceState { ip_state: Default::default(), config: Default::default() }
+        Ipv6DeviceState {
+            router_soliciations_remaining: None,
+            ip_state: Default::default(),
+            config: Default::default(),
+        }
     }
 }
 
