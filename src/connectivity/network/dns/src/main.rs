@@ -124,18 +124,28 @@ impl QueryStats {
     }
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug)]
 struct HashableResponseCode {
     response_code: ResponseCode,
 }
 
-#[allow(clippy::derive_hash_xor_eq)] // TODO(fxbug.dev/95055)
 impl Hash for HashableResponseCode {
     fn hash<H: Hasher>(&self, state: &mut H) {
         let HashableResponseCode { response_code } = self;
         u16::from(*response_code).hash(state)
     }
 }
+
+// Hand-implemented because of clippy's derive_hash_xor_eq lint.
+impl PartialEq for HashableResponseCode {
+    fn eq(&self, other: &Self) -> bool {
+        let HashableResponseCode { response_code } = self;
+        let HashableResponseCode { response_code: other } = other;
+        response_code.eq(other)
+    }
+}
+
+impl Eq for HashableResponseCode {}
 
 impl From<ResponseCode> for HashableResponseCode {
     fn from(response_code: ResponseCode) -> Self {
