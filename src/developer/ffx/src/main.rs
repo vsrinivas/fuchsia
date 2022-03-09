@@ -26,6 +26,7 @@ use {
     std::default::Default,
     std::future::Future,
     std::path::PathBuf,
+    std::str::FromStr,
     std::time::{Duration, Instant},
     timeout::timeout,
 };
@@ -348,6 +349,11 @@ async fn run() -> Result<i32> {
     ffx_config::logging::init(is_daemon(&app.subcommand)).await?;
 
     log::info!("starting command: {:?}", std::env::args().collect::<Vec<String>>());
+
+    // Since this is invoking the config, this must be run _after_ ffx_config::init.
+    let log_level = app.log_level().await?;
+    let _ = simplelog::LevelFilter::from_str(log_level.as_str()).with_context(||
+        ffx_error!("'{}' is not a valid log level. Supported log levels are 'Off', 'Error', 'Warn', 'Info', 'Debug', and 'Trace'", log_level))?;
 
     // HACK(64402): hoist uses a lazy static initializer obfuscating access to inject
     // this value by other means, so:

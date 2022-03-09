@@ -7,7 +7,8 @@
         "enabled": [
             "$FFX_LOG_ENABLED",
             true
-        ]
+        ],
+        "level": "Debug"
     },
     "proxy": {
         "timeout_secs": 10.0

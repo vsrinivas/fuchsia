@@ -36,6 +36,15 @@ pub struct Ffx {
     /// override default proxy timeout
     pub timeout: Option<f64>,
 
+    #[argh(option, short = 'l', long = "log-level")]
+    #[ffx_config_default(key = "log.level", default = "Debug")]
+    /// sets the log level for ffx output. This can be set to anything supported by
+    /// `simplelog::LevelFilter`, which includes "Off", "Error", "Warn", "Info", "Debug", "Trace",
+    /// in order of verbosity. If set to "Info", for example, this will print everything else
+    /// behind it in verbosity, which includes "Warn", and "Error". This can be set in `ffx config`
+    /// under "log.level" if you wish to preserve this between `ffx` invocations.
+    pub log_level: Option<String>,
+
     #[argh(subcommand)]
     pub subcommand: Option<Subcommand>,
 }
