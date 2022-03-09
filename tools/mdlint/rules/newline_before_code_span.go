@@ -33,7 +33,7 @@ func (rule *newlineBeforeCodeSpan) OnDocStart(_ *core.Doc) {
 
 func (rule *newlineBeforeCodeSpan) OnNext(tok core.Token) {
 	if rule.newLineCount < 2 && tok.Kind == core.FencedCodeBlock {
-		rule.reporter.Warnf(tok, "no empty newline before fenced code block")
+		rule.reporter.Warnf(tok, "must have extra new line before fenced code block")
 	}
 	if tok.Kind == core.Newline {
 		rule.newLineCount = rule.newLineCount + 1
