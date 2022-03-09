@@ -35,10 +35,14 @@
 
 #define X2APIC_ICR_DEST_MODE_PHYSICAL 0
 #define X2APIC_ICR_DELIVERY_MODE_FIXED 0
+#define X2APIC_ICR_DELIVERY_MODE_NMI 4
 
+#define X2APIC_ICR(shorthand, dest_mode, delivery_mode, vector)                        \
+  (((shorthand) << 18) | ((dest_mode) << 11) | ((delivery_mode) << 8) | (vector))
 #define X2APIC_ICR_FIXED(shorthand, vector)                        \
-  (((shorthand) << 18) | ((X2APIC_ICR_DEST_MODE_PHYSICAL) << 11) | \
-   ((X2APIC_ICR_DELIVERY_MODE_FIXED) << 8) | (vector))
+  X2APIC_ICR(shorthand, X2APIC_ICR_DEST_MODE_PHYSICAL, X2APIC_ICR_DELIVERY_MODE_FIXED, vector)
+#define X2APIC_ICR_NMI(shorthand)                        \
+  X2APIC_ICR(shorthand, 0, X2APIC_ICR_DELIVERY_MODE_NMI, 0)
 
 .text
 
@@ -535,6 +539,26 @@ FUNCTION vcpu_ipi
     // Send IPI to invalid CPU 64.
     mov $64, %edx
     mov $X2APIC_ICR_FIXED(X2APIC_ICR_SHORTHAND_NONE, INT_IPI_VECTOR), %eax
+    wrmsr
+
+    // Send NMI all
+    xor %edx, %edx
+    mov $X2APIC_ICR_NMI(X2APIC_ICR_SHORTHAND_ALL_INCLUDING_SELF), %eax
+    wrmsr
+
+    // Send NMI self
+    xor %edx, %edx
+    mov $X2APIC_ICR_NMI(X2APIC_ICR_SHORTHAND_SELF), %eax
+    wrmsr
+
+    // Send NMI to others
+    xor %edx, %edx
+    mov $X2APIC_ICR_NMI(X2APIC_ICR_SHORTHAND_ALL_EXCLUDING_SELF), %eax
+    wrmsr
+
+    // Send NMI to CPU 2.
+    mov $2, %edx
+    mov $X2APIC_ICR_NMI(X2APIC_ICR_SHORTHAND_NONE), %eax
     wrmsr
 
     movq $0, (EXIT_TEST_ADDR)

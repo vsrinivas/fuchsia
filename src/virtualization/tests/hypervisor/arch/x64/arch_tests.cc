@@ -17,6 +17,7 @@
 
 #include "src/virtualization/bin/vmm/bits.h"
 #include "src/virtualization/tests/hypervisor/hypervisor_tests.h"
+#include "zircon/kernel/arch/x86/include/arch/x86/interrupts.h"
 
 namespace {
 
@@ -223,19 +224,30 @@ TEST(Guest, VcpuIpi) {
   // The guest will attempt to send IPIs to sets of CPUs in the following order.
   //
   // Changes here will need to be synchronised with `vcpu_ipi`.
-  std::array<uint64_t, 6> expected_masks = {
-      0b1111,  // Shorthand all (including self)
-      0b0001,  // Shorthand self
-      0b1110,  // Shorthand all (excluding self)
-      0b0100,  // CPU #2
-      0b1111,  // Broadcast (all including self)
-      0b0000,  // CPU #64 (invalid CPU)
+  struct ExpectedIpi {
+    uint64_t mask;
+    uint8_t vector;
   };
+  std::array<ExpectedIpi, 10> expected_masks = {{
+      {0b1111, INT_IPI_VECTOR},  // Shorthand all (including self)
+      {0b0001, INT_IPI_VECTOR},  // Shorthand self
+      {0b1110, INT_IPI_VECTOR},  // Shorthand all (excluding self)
+      {0b0100, INT_IPI_VECTOR},  // CPU #2
+      {0b1111, INT_IPI_VECTOR},  // Broadcast (all including self)
+      {0b0000, INT_IPI_VECTOR},  // CPU #64 (invalid CPU)
+      // NMI to self is undefined in the APIC. This is implemented by just
+      // masking out self when generating destinations so destinations for
+      // shortands including and excluding self are identical.
+      {0b1110, X86_INT_NMI},  // NMI Shorthand all (including self)
+      {0b0000, X86_INT_NMI},  // NMI Shorthand self
+      {0b1110, X86_INT_NMI},  // NMI Shorthand all (excluding self)
+      {0b0100, X86_INT_NMI},  // NMI to CPU #2
+  }};
 
   // Each time an IPI is sent the hypervisor will return control to the VMM,
   // which is responsible for forwarding it to the correct Vcpu. We don't
   // bother forwarding it, but just allow the guest to keep sending new IPIs.
-  for (uint64_t expected_mask : expected_masks) {
+  for (const auto& expected_ipi : expected_masks) {
     // Run the guest.
     zx_port_packet_t packet = {};
     ASSERT_EQ(test.vcpu.enter(&packet), ZX_OK);
@@ -243,8 +255,8 @@ TEST(Guest, VcpuIpi) {
     // Exepct an exit indicating an IPI was sent to ourselves.
     EXPECT_EQ(packet.type, ZX_PKT_TYPE_GUEST_VCPU);
     EXPECT_EQ(packet.guest_vcpu.type, ZX_PKT_GUEST_VCPU_INTERRUPT);
-    EXPECT_EQ(packet.guest_vcpu.interrupt.vector, INT_IPI_VECTOR);
-    EXPECT_EQ(packet.guest_vcpu.interrupt.mask & bit_mask<uint64_t>(kNumCpus), expected_mask);
+    EXPECT_EQ(packet.guest_vcpu.interrupt.vector, expected_ipi.vector);
+    EXPECT_EQ(packet.guest_vcpu.interrupt.mask & bit_mask<uint64_t>(kNumCpus), expected_ipi.mask);
   }
 
   // Enter once and wait for the guest to send an IPI.

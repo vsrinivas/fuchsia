@@ -17,6 +17,7 @@
 #include <arch/hypervisor.h>
 #include <arch/x86/apic.h>
 #include <arch/x86/feature.h>
+#include <arch/x86/interrupts.h>
 #include <arch/x86/mmu.h>
 #include <arch/x86/pv.h>
 #include <explicit-memory/bytes.h>
@@ -742,6 +743,24 @@ static zx_status_t handle_ipi(const ExitInfo& exit_info, AutoVmcs* vmcs,
       packet->guest_vcpu.type = ZX_PKT_GUEST_VCPU_INTERRUPT;
       packet->guest_vcpu.interrupt.mask = ipi_target_mask(icr, self);
       packet->guest_vcpu.interrupt.vector = icr.vector;
+      next_rip(exit_info, vmcs);
+      return ZX_ERR_NEXT;
+    }
+    case InterruptDeliveryMode::NMI: {
+      uint16_t self = static_cast<uint16_t>(vmcs->Read(VmcsField16::VPID) - 1);
+      memset(packet, 0, sizeof(*packet));
+      packet->type = ZX_PKT_TYPE_GUEST_VCPU;
+      packet->guest_vcpu.type = ZX_PKT_GUEST_VCPU_INTERRUPT;
+      // Intel Volume 3a, Table 10-4 specifies that NMI to self is an invalid configuration and
+      // behavior is undefined for invalid configurations.
+      //
+      // For simplicity we'll just clear the self-bit in the mask.
+      packet->guest_vcpu.interrupt.mask = ipi_target_mask(icr, self) & ~(1 << self);
+
+      // Intel Volume 3a, Section 10.6.1 Interrupt Command Register.
+      //
+      // For NMI the target information is ignored since the NMI vector is already defined.
+      packet->guest_vcpu.interrupt.vector = X86_INT_NMI;
       next_rip(exit_info, vmcs);
       return ZX_ERR_NEXT;
     }
