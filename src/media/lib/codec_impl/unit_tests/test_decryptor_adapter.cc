@@ -311,12 +311,13 @@ class DecryptorAdapterTest : public gtest::TestWithEnvironmentFixture {
 
   void PopulateInputData() {
     constexpr size_t kNumInputPackets = 50;
-    std::uniform_int_distribution<uint8_t> dist;
+    std::uniform_int_distribution<int> dist(0, std::numeric_limits<uint8_t>::max());
 
     input_data_.reserve(kNumInputPackets);
     for (size_t i = 0; i < kNumInputPackets; i++) {
       std::vector<uint8_t> v(kInputPacketSize);
-      std::generate(v.begin(), v.end(), [this, &dist]() { return dist(prng_); });
+      std::generate(v.begin(), v.end(),
+                    [this, &dist]() { return static_cast<uint8_t>(dist(prng_)); });
       input_data_.emplace_back(std::move(v));
     }
     input_iter_ = input_data_.begin();
