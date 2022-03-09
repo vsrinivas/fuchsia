@@ -100,7 +100,7 @@ TEST_F(ChannelProviderTest, Succeed_OnlyCurrentChannel) {
   auto channel_provider_server =
       std::make_unique<stubs::ChannelControl>(stubs::ChannelControlBase::Params{
           .current = "current-channel",
-          .target = std::nullopt,
+          .target = "target-channel",
       });
   SetUpChannelProviderServer(std::move(channel_provider_server));
 
@@ -114,7 +114,7 @@ TEST_F(ChannelProviderTest, Succeed_OnlyCurrentChannel) {
 TEST_F(ChannelProviderTest, Succeed_OnlyTargetChannel) {
   auto channel_provider_server =
       std::make_unique<stubs::ChannelControl>(stubs::ChannelControlBase::Params{
-          .current = std::nullopt,
+          .current = "current-channel",
           .target = "target-channel",
       });
   SetUpChannelProviderServer(std::move(channel_provider_server));

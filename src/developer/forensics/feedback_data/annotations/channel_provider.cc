@@ -4,11 +4,14 @@
 
 #include "src/developer/forensics/feedback_data/annotations/channel_provider.h"
 
+#include <algorithm>
+
 #include "src/developer/forensics/feedback_data/annotations/types.h"
 #include "src/developer/forensics/feedback_data/annotations/utils.h"
 #include "src/developer/forensics/feedback_data/constants.h"
 #include "src/developer/forensics/utils/errors.h"
 #include "src/developer/forensics/utils/fidl/channel_provider_ptr.h"
+#include "src/developer/forensics/utils/fit/timeout.h"
 
 namespace forensics {
 namespace feedback_data {
@@ -19,16 +22,6 @@ const AnnotationKeys kSupportedAnnotations = {
     kAnnotationSystemUpdateChannelTarget,
 };
 
-using AnnotationPair = std::pair<std::string, AnnotationOr>;
-
-AnnotationPair MakeAnnotationPair(const std::string& key,
-                                  const ::fpromise::result<std::string, Error>& result) {
-  AnnotationOr annotation =
-      (result.is_ok()) ? AnnotationOr(result.value()) : AnnotationOr(result.error());
-
-  return std::make_pair(key, std::move(annotation));
-}
-
 }  // namespace
 
 ChannelProvider::ChannelProvider(async_dispatcher_t* dispatcher,
@@ -38,45 +31,29 @@ ChannelProvider::ChannelProvider(async_dispatcher_t* dispatcher,
 
 ::fpromise::promise<Annotations> ChannelProvider::GetAnnotations(zx::duration timeout,
                                                                  const AnnotationKeys& allowlist) {
-  const AnnotationKeys annotations_to_get = RestrictAllowlist(allowlist, kSupportedAnnotations);
-
-  std::vector<::fpromise::promise<AnnotationPair>> annotation_promises;
-  if (annotations_to_get.find(kAnnotationSystemUpdateChannelCurrent) != annotations_to_get.end()) {
-    annotation_promises.push_back(
-        fidl::GetCurrentChannel(dispatcher_, services_, fit::Timeout(timeout))
-            .then([](const ::fpromise::result<std::string, Error>& result) {
-              return ::fpromise::ok(
-                  MakeAnnotationPair(kAnnotationSystemUpdateChannelCurrent, result));
-            }));
+  const AnnotationKeys to_get = RestrictAllowlist(allowlist, kSupportedAnnotations);
+  if (to_get.empty()) {
+    return ::fpromise::make_result_promise<Annotations>(::fpromise::ok<Annotations>({}));
   }
 
-  if (annotations_to_get.find(kAnnotationSystemUpdateChannelTarget) != annotations_to_get.end()) {
-    annotation_promises.push_back(
-        fidl::GetTargetChannel(dispatcher_, services_, fit::Timeout(timeout))
-            .then([](const ::fpromise::result<std::string, Error>& result) {
-              return ::fpromise::ok(
-                  MakeAnnotationPair(kAnnotationSystemUpdateChannelTarget, result));
-            }));
-  }
+  using Result = ::fpromise::result<std::string, Error>;
+  return ::fpromise::join_promises(
+             fidl::GetCurrentChannel(dispatcher_, services_, fit::Timeout(timeout)),
+             fidl::GetTargetChannel(dispatcher_, services_, fit::Timeout(timeout)))
+      .and_then([this, to_get](std::tuple<Result, Result>& results) {
+        Annotations annotations({
+            {kAnnotationSystemUpdateChannelCurrent, std::get<0>(results)},
+            {kAnnotationSystemUpdateChannelTarget, std::get<1>(results)},
+        });
 
-  return ::fpromise::join_promise_vector(std::move(annotation_promises))
-      .and_then([cobalt = cobalt_](std::vector<::fpromise::result<AnnotationPair>>& results)
-                    -> ::fpromise::result<Annotations> {
-        Annotations annotations;
-        for (auto& result : results) {
-          annotations.insert(std::move(result).value());
+        if (std::find_if(annotations.begin(), annotations.end(), [](const auto& annotation) {
+              const auto& value = annotation.second;
+              return !value.HasValue() && value.Error() == Error::kTimeout;
+            }) != annotations.end()) {
+          cobalt_->LogOccurrence(cobalt::TimedOutData::kChannel);
         }
 
-        bool found_timeout{false};
-        for (const auto& [_, v] : annotations) {
-          found_timeout |= (!v.HasValue() && v.Error() == Error::kTimeout);
-        }
-
-        if (found_timeout) {
-          cobalt->LogOccurrence(cobalt::TimedOutData::kChannel);
-        }
-
-        return ::fpromise::ok(std::move(annotations));
+        return ::fpromise::ok(ExtractAllowlisted(to_get, annotations));
       });
 }
 

@@ -5,6 +5,7 @@
 #ifndef SRC_DEVELOPER_FORENSICS_UTILS_ERRORS_H_
 #define SRC_DEVELOPER_FORENSICS_UTILS_ERRORS_H_
 
+#include <lib/fpromise/promise.h>
 #include <lib/syslog/cpp/macros.h>
 
 #include <string>
@@ -36,6 +37,15 @@ class ErrorOr {
  public:
   ErrorOr(T value) : data_(std::move(value)) {}
   ErrorOr(enum Error error) : data_(error) {}
+
+  // Allow construction from a ::fpromise::result.
+  ErrorOr(::fpromise::result<T, Error> result) {
+    if (result.is_ok()) {
+      data_ = std::move(result.value());
+    } else {
+      data_ = result.error();
+    }
+  }
 
   // Allow construction from a type U iff U is convertible to T, but not the otherway around.
   template <typename U,
