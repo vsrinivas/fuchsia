@@ -28,3 +28,7 @@ _bootfs_deps =
 board_bootfs_labels += _bootfs_deps
 board_recovery_bootfs_labels += _bootfs_deps
 board_zedboot_bootfs_labels += _bootfs_deps
+
+# Supports only virtual devices.
+board_is_emu = true
+board_is_phys = false

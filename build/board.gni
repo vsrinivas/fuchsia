@@ -68,4 +68,10 @@ declare_args() {
 
   # Whether or not the board pulls in the system-update-configurator component.
   board_supports_update_configurator = false
+
+  # Whether or not the board supports emulator/physical devices.
+  # This is used to determine if product bundle metadata should generate a
+  # physical/virtual device spec or both.
+  board_is_emu = false
+  board_is_phys = true
 }

@@ -38,3 +38,7 @@ board_package_labels += [
 
 max_fuchsia_zbi_size = 16777216  # 16 MiB
 max_zedboot_zbi_size = 16777216  # 16 MiB
+
+# Supports only virtual devices.
+board_is_emu = true
+board_is_phys = false

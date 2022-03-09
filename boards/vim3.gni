@@ -94,3 +94,7 @@ fastboot_product = "galilei"
 # available size, here we set it to be the same as sherlock (3280mb), which is clearly safe
 # and sufficient for now.
 fvm_emmc_partition_size = 3439329280
+
+# Supports only physical devices.
+board_is_emu = false
+board_is_phys = true

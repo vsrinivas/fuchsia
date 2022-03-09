@@ -74,3 +74,6 @@ vbmeta_r_partition = "vbmeta_r"
 fvm_partition = "fvm"
 active_partition = "a"
 fastboot_product = "gigaboot"
+
+# Supports both physical and virtual devices.
+board_is_emu = true
