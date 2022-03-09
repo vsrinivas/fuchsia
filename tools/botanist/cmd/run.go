@@ -287,12 +287,13 @@ func (r *RunCommand) execute(ctx context.Context, args []string) error {
 
 				// Create a new file to capture the serial log for this nodename.
 				serialLogName := fmt.Sprintf("%s_serial_log.txt", t.Nodename())
-				if _, err := os.Create(filepath.Join(r.serialLogDir, serialLogName)); err != nil {
+				serialLogPath := filepath.Join(r.serialLogDir, serialLogName)
+				if _, err := os.Create(serialLogPath); err != nil {
 					return err
 				}
 
 				// Start capturing the serial log for this target.
-				if err := t.CaptureSerialLog(r.serialLogFile); err != nil && ctx.Err() == nil {
+				if err := t.CaptureSerialLog(serialLogPath); err != nil && ctx.Err() == nil {
 					return err
 				}
 				return nil
