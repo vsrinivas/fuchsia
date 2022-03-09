@@ -38,7 +38,6 @@ fuchsia_unittest_package("fixture-tests-pkg") {
   package_name = "fixture-tests"
   component_name = "fixture-tests"
   deps = [ ":fixture-tests" ]
-  manifest = "meta/fixture-tests.cml"
 }
 
 group("tests") {
