@@ -19,9 +19,10 @@ class AppLauncher extends StatelessWidget {
         padding: EdgeInsets.symmetric(vertical: 8),
         itemCount: app.appLaunchEntries.length,
         itemBuilder: (context, index) {
-          final item = app.appLaunchEntries[index];
           return Observer(builder: (context) {
+            final item = app.appLaunchEntries[index];
             return ListTile(
+              key: ValueKey('launchItem-$index'),
               contentPadding: EdgeInsets.symmetric(horizontal: 24),
               autofocus: index == 0,
               leading: Image(

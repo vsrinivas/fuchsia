@@ -67,6 +67,7 @@ class AppChips extends StatelessWidget {
                           // Requires pointer to press it.
                           descendantsAreFocusable: false,
                           child: IconButton(
+                            key: ValueKey('appChipClose-$index'),
                             icon: Icon(Icons.close),
                             iconSize: 24,
                             splashRadius: 24,

@@ -213,6 +213,8 @@ config_data("images") {
 flutter_test("ermine_unittests") {
   null_safe = true
   sources = [
+    "app_chips_test.dart",
+    "app_launcher_test.dart",
     "app_widget_test.dart",
     "overlays_widget_test.dart",
     "quick_settings_widget_test.dart",

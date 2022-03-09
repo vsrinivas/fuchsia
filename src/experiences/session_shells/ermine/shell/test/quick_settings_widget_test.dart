@@ -69,7 +69,7 @@ void main() async {
     await tester.tap(find.byKey(ValueKey('darkMode')));
     await tester.pumpAndSettle();
 
-    verify(app.setTheme(darkTheme: false)).called(1);
+    verify(app.setTheme(darkTheme: false));
   });
 }
 
