@@ -10,11 +10,7 @@
     },
     use: [
         {
-            protocol: [
-                "fidl.examples.routing.echo.Echo",
-                "fuchsia.io.Directory",
-                "fuchsia.process.Launcher",
-            ],
+            protocol: [ "fuchsia.process.Launcher" ],
         },
     ],
 }
