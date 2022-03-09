@@ -5,13 +5,15 @@
 //! Test utilities for starting a pkgfs server.
 
 use {
-    anyhow::{Context as _, Error},
+    anyhow::{anyhow, Context as _, Error},
     fdio::{SpawnAction, SpawnOptions},
     fidl::endpoints::ClientEnd,
     fidl_fuchsia_io::{DirectoryMarker, DirectoryProxy},
     fuchsia_merkle::Hash,
     fuchsia_runtime::{HandleInfo, HandleType},
     fuchsia_zircon::AsHandleRef,
+    futures::TryStreamExt,
+    pkgfs::install::BlobKind,
     scoped_task::{self, Scoped},
     std::ffi::{CStr, CString},
 };
@@ -198,6 +200,50 @@ impl PkgfsRamdisk {
     pub async fn stop(self) -> Result<(), Error> {
         kill_pkgfs(self.process)?;
         self.blobfs.stop().await
+    }
+
+    /// Activate `pkg` in pkgfs' dynamic index. This will make the package available at
+    /// `/pkgfs/versions/<merkle>`. The package should be completely written to blobfs prior to
+    /// calling this method.
+    pub async fn activate_already_installed_pkg(&self, pkg: Hash) -> Result<(), Error> {
+        let pkgfs_root = self.root_dir_proxy().unwrap();
+        let pkgfs_install = pkgfs::install::Client::open_from_pkgfs_root(&pkgfs_root).unwrap();
+        let pkgfs_needs = pkgfs::needs::Client::open_from_pkgfs_root(&pkgfs_root).unwrap();
+        // Try to create the meta far blob, expecting it to fail with already_exists, indicating the
+        // meta far blob is readable in blobfs. Pkgfs will then import the package, populating
+        // /pkgfs/needs/<merkle> with any missing content blobs, which we expect to be empty.
+        let () = match pkgfs_install.create_blob(pkg, BlobKind::Package).await {
+            Err(pkgfs::install::BlobCreateError::AlreadyExists) => Ok(()),
+            Ok((_blob, closer)) => {
+                let () = closer.close().await;
+                Err(anyhow!("The meta far should be read-only, but it is writable"))
+            }
+            Err(e) => Err(anyhow!("The meta far failed to open with an unexpected error {:}", e)),
+        }?;
+
+        // Verify that /pkgfs/needs/<merkle> is empty or missing, failing with its contents if it is
+        // not.
+        let needs = {
+            let needs = pkgfs_needs.list_needs(pkg);
+            futures::pin_mut!(needs);
+            match needs.try_next().await.map_err(|e| anyhow!("While listing needs {:}", e))? {
+                Some(needs) => {
+                    let mut needs = needs.into_iter().collect::<Vec<_>>();
+                    needs.sort_unstable();
+                    needs
+                }
+                None => vec![],
+            }
+        };
+        if !needs.is_empty() {
+            return Err(anyhow!(
+                "The package should have all blobs present on disk, \
+                                but some were not: {:?}",
+                needs
+            ));
+        }
+
+        Ok(())
     }
 }
 

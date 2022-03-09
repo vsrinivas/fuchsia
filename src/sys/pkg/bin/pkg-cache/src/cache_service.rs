@@ -367,7 +367,7 @@ async fn serve_needed_blobs(
 
         // Step 4: Start an install for this package through pkgfs, expecting it to discover no
         // work is needed and start serving the package's pkg dir at /pkgfs/versions/<merkle>.
-        let () = poke_pkgfs(pkgfs_install, pkgfs_needs, meta_far_info).await?;
+        let () = poke_pkgfs(pkgfs_install, pkgfs_needs, meta_far_info.blob_id.into()).await?;
 
         serve_iterator.await;
         Ok(())
@@ -575,16 +575,20 @@ async fn handle_open_blobs(
     Ok(())
 }
 
-async fn poke_pkgfs(
+/// Activate `pkg` in pkgfs' dynamic index. This will make the package available at
+/// `/pkgfs/versions/<merkle>`. The package should be completely written to blobfs prior to
+/// calling this method.
+/// This starts an install for provided meta far hash through pkgfs. Pkgfs is expected to discover
+/// that no work is needed and start serving the package's pkg dir at /pkgfs/versions/<merkle>.
+pub async fn poke_pkgfs(
     pkgfs_install: &pkgfs::install::Client,
     pkgfs_needs: &pkgfs::needs::Client,
-    meta_far_info: BlobInfo,
+    hash: Hash,
 ) -> Result<(), PokePkgfsError> {
     // Try to create the meta far blob, expecting it to fail with already_exists, indicating the
     // meta far blob is readable in blobfs. Pkgfs will then import the package, populating
     // /pkgfs/needs/<merkle> with any missing content blobs, which we expect to be empty.
-    let () = match pkgfs_install.create_blob(meta_far_info.blob_id.into(), BlobKind::Package).await
-    {
+    let () = match pkgfs_install.create_blob(hash, BlobKind::Package).await {
         Err(pkgfs::install::BlobCreateError::AlreadyExists) => Ok(()),
         Ok((_blob, closer)) => {
             let () = closer.close().await;
@@ -596,7 +600,7 @@ async fn poke_pkgfs(
     // Verify that /pkgfs/needs/<merkle> is empty or missing, failing with its contents if it is
     // not.
     let needs = {
-        let needs = pkgfs_needs.list_needs(meta_far_info.blob_id.into());
+        let needs = pkgfs_needs.list_needs(hash);
         futures::pin_mut!(needs);
         match needs.try_next().await.map_err(PokePkgfsError::ListNeeds)? {
             Some(needs) => {
@@ -615,7 +619,7 @@ async fn poke_pkgfs(
 }
 
 #[derive(thiserror::Error, Debug)]
-enum PokePkgfsError {
+pub enum PokePkgfsError {
     #[error("the meta far should be read-only, but it is writable")]
     MetaFarWritable,
 

@@ -117,6 +117,7 @@ async fn test_pkgfs_shadowed_cache_package() {
         .system_image_merkle(system_image_package.meta_far_merkle_root())
         .start()
         .unwrap();
+    pkgfs.activate_already_installed_pkg(*pkg.meta_far_merkle_root()).await.unwrap();
 
     let d = pkgfs.root_dir().expect("getting pkgfs root dir");
 

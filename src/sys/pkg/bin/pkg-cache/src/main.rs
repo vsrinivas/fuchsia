@@ -109,7 +109,14 @@ async fn main_inner() -> Result<(), Error> {
             async {
                 let cache_packages =
                     system_image.cache_packages().await.context("reading cache_packages")?;
-                index::load_cache_packages(&mut package_index, &cache_packages, &blobfs).await;
+                index::load_cache_packages(
+                    &mut package_index,
+                    &cache_packages,
+                    &blobfs,
+                    pkgfs_install.clone(),
+                    pkgfs_needs.clone(),
+                )
+                .await;
                 Ok(cache_packages)
             },
             system_image.non_static_allow_list(),

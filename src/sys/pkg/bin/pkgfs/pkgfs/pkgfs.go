@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+//go:build !build_with_native_toolchain
 // +build !build_with_native_toolchain
 
 // Package pkgfs hosts a filesystem for interacting with packages that are
@@ -103,7 +104,6 @@ func New(blobDir *fdio.Directory, enforcePkgfsPackagesNonStaticAllowlist bool, e
 
 // staticIndexPath is the path inside the system package directory that contains the static packages for that system version.
 const staticIndexPath = "data/static_packages"
-const cacheIndexPath = "data/cache_packages"
 const disableExecutabilityEnforcementPath = "data/pkgfs_disable_executability_restrictions"
 const packagesAllowlistPath = "data/pkgfs_packages_non_static_packages_allowlist.txt"
 
@@ -119,46 +119,6 @@ func loadStaticIndex(static *index.StaticIndex, blobfs *blobfs.Manager, root str
 	defer indexFile.Close()
 
 	return static.LoadFrom(indexFile, systemImage, systemImageMerkleroot)
-}
-
-func (f *Filesystem) loadCacheIndex(root string) error {
-	log.Println("pkgfs: loading cache index")
-	start := time.Now()
-	indexFile, err := f.blobfs.Open(root)
-	if err != nil {
-		return fmt.Errorf("pkgfs: could not load cache index from blob %s: %s", root, err)
-	}
-	defer indexFile.Close()
-
-	entries, err := index.ParseIndexFile(indexFile)
-	if err != nil {
-		return fmt.Errorf("pkgfs: error parsing cache index: %v", err)
-	}
-
-	var foundCount int
-	for _, entry := range entries {
-		meta, err := f.blobfs.Open(entry.Merkle)
-		if err != nil {
-			// Package meta.far is missing, skip it.
-			continue
-		}
-		meta.Close()
-		if err := importPackage(f, entry.Merkle); err != nil && err != fs.ErrAlreadyExists {
-			// This probably shouldn't happen if the meta far is present already.
-			log.Printf("pkgfs: surprising error loading optional pkg %q: %v", entry.Key, err)
-		}
-		if f.index.IsInstalling(entry.Merkle) {
-			// Some content blobs are missing.
-			// Mark failed so we don't list the package in /pkgfs/needs/packages
-			f.index.InstallingFailedForPackage(entry.Merkle)
-		}
-		if _, found := f.index.GetRoot(entry.Merkle); found {
-			foundCount++
-		}
-	}
-	log.Printf("pkgfs: cache index loaded in %.3fs; found %d/%d packages",
-		time.Since(start).Seconds(), foundCount, len(entries))
-	return nil
 }
 
 // Read the /pkgfs/packages allowlist for which non-static packages it should return,
@@ -213,14 +173,6 @@ func (f *Filesystem) SetSystemRoot(merkleroot string) error {
 	}, merkleroot)
 	if err != nil {
 		return err
-	}
-
-	blob, ok = pd.getBlobFor(cacheIndexPath)
-	if ok {
-		err := f.loadCacheIndex(blob)
-		if err != nil {
-			return err
-		}
 	}
 
 	// Using our root package, retrieve the packages allowlist, if it exists,

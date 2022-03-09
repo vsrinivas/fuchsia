@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use {
+    crate::cache_service::poke_pkgfs,
     anyhow::anyhow,
     fuchsia_inspect as finspect,
     fuchsia_merkle::Hash,
@@ -227,12 +228,14 @@ impl DynamicIndex {
     }
 }
 
-/// For any package referenced by the cache packages manifest that has all of its blobs present in
-/// blobfs, imports those packages into the provided dynamic index.
+/// Activate in the dynamic index packages included in `cache_packages` that have all their blobs
+/// present in blobfs.
 pub async fn load_cache_packages(
     index: &mut DynamicIndex,
     cache_packages: &CachePackages,
     blobfs: &blobfs::Client,
+    pkgfs_install: pkgfs::install::Client,
+    pkgfs_needs: pkgfs::needs::Client,
 ) {
     // This function is called before anything writes to or deletes from blobfs, so if it needs
     // to be sped up, it might be possible to:
@@ -294,6 +297,15 @@ pub async fn load_cache_packages(
                 anyhow!(e)
             );
             let () = index.cancel_install(&hash);
+            continue;
+        }
+
+        if let Err(e) = poke_pkgfs(&pkgfs_install, &pkgfs_needs, hash).await {
+            fx_log_err!(
+                "load_cache_packages: failed to activate {} in pkgfs: {:#}",
+                hash,
+                anyhow!(e)
+            );
             continue;
         }
     }
@@ -684,6 +696,9 @@ mod tests {
         let blobfs = blobfs_ramdisk::BlobfsRamdisk::start().unwrap();
         let blobfs_dir = blobfs.root_dir().unwrap();
 
+        let (pkgfs_install, mut pkgfs_install_mock) = pkgfs::install::Client::new_mock();
+        let (pkgfs_needs, mut pkgfs_needs_mock) = pkgfs::needs::Client::new_mock();
+
         present_package0.write_to_blobfs_dir(&blobfs_dir);
         missing_content_blob.write_to_blobfs_dir(&blobfs_dir);
         missing_meta_far.write_to_blobfs_dir(&blobfs_dir);
@@ -724,7 +739,45 @@ mod tests {
         let mut dynamic_index =
             DynamicIndex::new(finspect::Inspector::new().root().create_child("index"));
 
-        let () = load_cache_packages(&mut dynamic_index, &cache_packages, &blobfs.client()).await;
+        let ((), ()) = futures::future::join(
+            async {
+                load_cache_packages(
+                    &mut dynamic_index,
+                    &cache_packages,
+                    &blobfs.client(),
+                    pkgfs_install,
+                    pkgfs_needs,
+                )
+                .await;
+            },
+            async {
+                pkgfs_install_mock
+                    .expect_create_blob(
+                        *present_package0.meta_far_merkle_root(),
+                        pkgfs::install::BlobKind::Package.into(),
+                    )
+                    .await
+                    .fail_open_with_already_exists();
+                pkgfs_needs_mock
+                    .expect_enumerate_needs(*present_package0.meta_far_merkle_root())
+                    .await
+                    .fail_open_with_not_found()
+                    .await;
+                pkgfs_install_mock
+                    .expect_create_blob(
+                        *present_package1.meta_far_merkle_root(),
+                        pkgfs::install::BlobKind::Package.into(),
+                    )
+                    .await
+                    .fail_open_with_already_exists();
+                pkgfs_needs_mock
+                    .expect_enumerate_needs(*present_package1.meta_far_merkle_root())
+                    .await
+                    .fail_open_with_unexpected_error()
+                    .await;
+            },
+        )
+        .await;
 
         let present0 = Package::Active {
             path: "present0/0".parse().unwrap(),
@@ -758,6 +811,9 @@ mod tests {
                 .chain(present_package1.list_blobs().unwrap().into_iter())
                 .collect()
         );
+
+        pkgfs_install_mock.expect_done().await;
+        pkgfs_needs_mock.expect_done().await;
     }
 
     #[fasync::run_singlethreaded(test)]

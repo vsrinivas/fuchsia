@@ -144,8 +144,17 @@ pub async fn load_cache_packages(
     index: &mut PackageIndex,
     cache_packages: &system_image::CachePackages,
     blobfs: &blobfs::Client,
+    pkgfs_install: pkgfs::install::Client,
+    pkgfs_needs: pkgfs::needs::Client,
 ) {
-    crate::index::dynamic::load_cache_packages(&mut index.dynamic, cache_packages, blobfs).await
+    crate::index::dynamic::load_cache_packages(
+        &mut index.dynamic,
+        cache_packages,
+        blobfs,
+        pkgfs_install,
+        pkgfs_needs,
+    )
+    .await
 }
 
 /// Notifies the appropriate inner indices that the given meta far blob is now available in blobfs.
