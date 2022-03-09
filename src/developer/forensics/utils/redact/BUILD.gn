@@ -1,0 +1,20 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("redact") {
+  sources = [
+    "cache.cc",
+    "cache.h",
+    "redactor.cc",
+    "redactor.h",
+    "replacer.cc",
+    "replacer.h",
+  ]
+
+  deps = [
+    "//sdk/lib/fit",
+    "//src/lib/fxl",
+    "//third_party/re2",
+  ]
+}

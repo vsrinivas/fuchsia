@@ -30,6 +30,7 @@ group("tests") {
     "feedback_data/tests",
     "last_reboot/tests",
     "snapshot/tests",
+    "utils/redact/tests",
     "utils/tests",
   ]
 }

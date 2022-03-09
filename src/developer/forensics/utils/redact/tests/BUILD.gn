@@ -1,0 +1,86 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components/fuchsia_test_package.gni")
+import("//build/components/fuchsia_unittest_component.gni")
+
+###############################################################################
+# EXECUTABLES
+###############################################################################
+executable("cache_unittest_exe") {
+  testonly = true
+
+  sources = [ "cache_unittest.cc" ]
+
+  deps = [
+    "//src/developer/forensics/testing:gtest_with_syslog_main",
+    "//src/developer/forensics/utils/redact",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+  ]
+}
+
+executable("redactor_unittest_exe") {
+  testonly = true
+
+  sources = [ "redactor_unittest.cc" ]
+
+  deps = [
+    "//src/developer/forensics/testing:gtest_with_syslog_main",
+    "//src/developer/forensics/utils/redact",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+  ]
+}
+
+executable("replacer_unittest_exe") {
+  testonly = true
+
+  sources = [ "replacer_unittest.cc" ]
+
+  deps = [
+    "//src/developer/forensics/testing:gtest_with_syslog_main",
+    "//src/developer/forensics/utils/redact",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+  ]
+}
+
+###############################################################################
+# COMPONENTS
+###############################################################################
+fuchsia_unittest_component("cache_unittest") {
+  deps = [ ":cache_unittest_exe" ]
+}
+
+fuchsia_unittest_component("redactor_unittest") {
+  deps = [ ":redactor_unittest_exe" ]
+}
+
+fuchsia_unittest_component("replacer_unittest") {
+  deps = [ ":replacer_unittest_exe" ]
+}
+
+###############################################################################
+# PACKAGES
+###############################################################################
+fuchsia_test_package("redact-tests") {
+  test_components = [
+    ":cache_unittest",
+    ":redactor_unittest",
+    ":replacer_unittest",
+  ]
+
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
+}
+
+group("tests") {
+  testonly = true
+
+  deps = [ ":redact-tests" ]
+}
