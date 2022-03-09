@@ -112,20 +112,17 @@ void RunnerTest::SetStatus(zx_status_t status) {
 void RunnerTest::ExecuteNoError(const RunnerPtr& runner) {
   Configure(runner, RunnerTest::DefaultOptions(runner));
   Input input({0x01});
-  runner->Execute(input.Duplicate(), [&](zx_status_t status) { SetStatus(status); });
-  EXPECT_EQ(RunOne().ToHex(), input.ToHex());
-  EXPECT_EQ(GetStatus(), ZX_OK);
-  EXPECT_EQ(runner->result(), FuzzResult::NO_ERRORS);
+  FUZZING_EXPECT_OK(runner->Execute(input.Duplicate()), FuzzResult::NO_ERRORS);
+  EXPECT_EQ(RunOne(), input);
+  RunUntilIdle();
 }
 
 void RunnerTest::ExecuteWithError(const RunnerPtr& runner) {
   Configure(runner, RunnerTest::DefaultOptions(runner));
   Input input({0x02});
-  runner->Execute(input.Duplicate(), [&](zx_status_t status) { SetStatus(status); });
-  RunOne(FuzzResult::BAD_MALLOC);
-  EXPECT_EQ(GetStatus(), ZX_OK);
-  EXPECT_EQ(runner->result(), FuzzResult::BAD_MALLOC);
-  EXPECT_EQ(runner->result_input().ToHex(), input.ToHex());
+  FUZZING_EXPECT_OK(runner->Execute(input.Duplicate()), FuzzResult::BAD_MALLOC);
+  EXPECT_EQ(RunOne(FuzzResult::BAD_MALLOC), input);
+  RunUntilIdle();
 }
 
 void RunnerTest::ExecuteWithLeak(const RunnerPtr& runner) {
@@ -136,12 +133,10 @@ void RunnerTest::ExecuteWithLeak(const RunnerPtr& runner) {
   // Simulate a suspected leak, followed by an LSan exit. The leak detection heuristics only run
   // full leak detection when a leak is suspected based on mismatched allocations.
   SetLeak(input, true);
-  runner->Execute(input.Duplicate(), [&](zx_status_t status) { SetStatus(status); });
-  RunOne();
-  RunOne(FuzzResult::LEAK);
-  EXPECT_EQ(GetStatus(), ZX_OK);
-  EXPECT_EQ(runner->result(), FuzzResult::LEAK);
-  EXPECT_EQ(runner->result_input().ToHex(), input.ToHex());
+  FUZZING_EXPECT_OK(runner->Execute(input.Duplicate()), FuzzResult::LEAK);
+  EXPECT_EQ(RunOne(), input);
+  EXPECT_EQ(RunOne(FuzzResult::LEAK), input);
+  RunUntilIdle();
 }
 
 // Simulate no error on the original input.

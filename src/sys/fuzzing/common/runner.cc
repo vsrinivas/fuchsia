@@ -73,8 +73,21 @@ void Runner::Pend(uint8_t action, Input input, fit::function<void(zx_status_t)> 
   worker_sync_.Signal();
 }
 
-void Runner::Execute(Input input, fit::function<void(zx_status_t)> callback) {
-  Pend(kExecute, std::move(input), std::move(callback));
+ZxPromise<> Runner::PendAsync(uint8_t action, Input&& input) {
+  ZxBridge<> bridge;
+  Pend(action, std::move(input),
+       [completer = std::move(bridge.completer)](zx_status_t status) mutable {
+         if (status != ZX_OK) {
+           completer.complete_error(status);
+           return;
+         }
+         completer.complete_ok();
+       });
+  return bridge.consumer.promise_or(fpromise::error(ZX_ERR_CANCELED));
+}
+
+ZxPromise<FuzzResult> Runner::Execute(Input input) {
+  return PendAsync(kExecute, std::move(input)).and_then([this]() { return fpromise::ok(result_); });
 }
 
 void Runner::Minimize(Input input, fit::function<void(zx_status_t)> callback) {

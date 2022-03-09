@@ -320,22 +320,26 @@ TEST_F(ControllerTest, GetResults) {
 }
 
 TEST_F(ControllerTest, Execute) {
-  ControllerSyncPtr controller;
+  ControllerPtr controller;
   Bind(controller.NewRequest());
-  ::fuchsia::fuzzer::Controller_Execute_Result result;
+  // ::fuchsia::fuzzer::Controller_Execute_Result result;
   Input input({0xde, 0xad, 0xbe, 0xef});
 
   runner()->set_error(ZX_ERR_WRONG_TYPE);
-  EXPECT_EQ(controller->Execute(Transmit(input), &result), ZX_OK);
-  ASSERT_TRUE(result.is_err());
-  EXPECT_EQ(result.err(), ZX_ERR_WRONG_TYPE);
+  ZxBridge<FuzzResult> bridge1;
+  controller->Execute(AsyncSocketWrite(executor(), input.Duplicate()),
+                      ZxBind<FuzzResult>(std::move(bridge1.completer)));
+  FUZZING_EXPECT_ERROR(bridge1.consumer.promise_or(fpromise::error(ZX_ERR_CANCELED)),
+                       ZX_ERR_WRONG_TYPE);
+  RunUntilIdle();
 
   runner()->set_error(ZX_OK);
   runner()->set_result(FuzzResult::OOM);
-  EXPECT_EQ(controller->Execute(Transmit(input), &result), ZX_OK);
-  ASSERT_TRUE(result.is_response()) << zx_status_get_string(result.err());
-  auto& response = result.response();
-  EXPECT_EQ(response.result, FuzzResult::OOM);
+  ZxBridge<FuzzResult> bridge2;
+  controller->Execute(AsyncSocketWrite(executor(), input.Duplicate()),
+                      ZxBind<FuzzResult>(std::move(bridge2.completer)));
+  FUZZING_EXPECT_OK(bridge2.consumer.promise(), FuzzResult::OOM);
+  RunUntilIdle();
 }
 
 TEST_F(ControllerTest, Minimize) {

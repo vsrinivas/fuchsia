@@ -72,7 +72,7 @@ class Runner {
 
   // Fuzzing workflows.
   zx_status_t Configure(const OptionsPtr& options);
-  void Execute(Input input, fit::function<void(zx_status_t)> callback) FXL_LOCKS_EXCLUDED(mutex_);
+  ZxPromise<FuzzResult> Execute(Input input) FXL_LOCKS_EXCLUDED(mutex_);
   void Minimize(Input input, fit::function<void(zx_status_t)> callback) FXL_LOCKS_EXCLUDED(mutex_);
   void Cleanse(Input input, fit::function<void(zx_status_t)> callback) FXL_LOCKS_EXCLUDED(mutex_);
   void Fuzz(fit::function<void(zx_status_t)> callback) FXL_LOCKS_EXCLUDED(mutex_);
@@ -120,6 +120,9 @@ class Runner {
   // Schedule a workflow to be performed by the worker thread.
   void Pend(uint8_t action, Input input, fit::function<void(zx_status_t)> callback)
       FXL_LOCKS_EXCLUDED(mutex_);
+
+  // Wraps |Pend| in a promise.
+  ZxPromise<> PendAsync(uint8_t action, Input&& input) FXL_LOCKS_EXCLUDED(mutex_);
 
   // The worker thread body.
   void Worker() FXL_LOCKS_EXCLUDED(mutex_);

@@ -155,13 +155,14 @@ void ControllerImpl::GetResults(GetResultsCallback callback) {
 }
 
 void ControllerImpl::Execute(FidlInput fidl_input, ExecuteCallback callback) {
-  ReceiveAndThen(std::move(fidl_input), NewResponse(std::move(callback)),
-                 [this](Input received, Response response) {
-                   runner_->Execute(std::move(received), [this, response = std::move(response)](
-                                                             zx_status_t status) mutable {
-                     response.Send(status, runner_->result(), runner_->result_input());
-                   });
-                 });
+  auto task = AsyncSocketRead(executor_, std::move(fidl_input))
+                  .and_then([runner = runner_](Input& received) {
+                    return runner->Execute(std::move(received));
+                  })
+                  .then([callback = std::move(callback)](ZxResult<FuzzResult>& result) {
+                    callback(std::move(result));
+                  });
+  executor_->schedule_task(std::move(task));
 }
 
 void ControllerImpl::Minimize(FidlInput fidl_input, MinimizeCallback callback) {
