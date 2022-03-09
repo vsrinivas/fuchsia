@@ -130,7 +130,7 @@ impl RealmBuilderFactory {
                     {
                         Ok(realm_node) => realm_node,
                         Err(e) => {
-                            warn!("unable to load manifest at {:?}: {:?}", relative_url, e);
+                            warn!("unable to load manifest at {:?}: {}", relative_url, e);
                             responder.send(&mut Err(e.into()))?;
                             continue;
                         }
@@ -248,7 +248,7 @@ impl Builder {
                     match res {
                         Ok(url) => responder.send(&mut Ok(url))?,
                         Err(e) => {
-                            warn!("unable to build the realm the client requested: {:?}", e);
+                            warn!("unable to build the realm the client requested: {}", e);
                             responder.send(&mut Err(e.into()))?;
                         }
                     }
@@ -287,7 +287,7 @@ impl Realm {
                         Ok(()) => responder.send(&mut Ok(()))?,
                         Err(e) => {
                             warn!(
-                                "unable to add child {:?} with url {:?} to realm: {:?}",
+                                "unable to add child {:?} with url {:?} to realm: {}",
                                 name, url, e
                             );
                             responder.send(&mut Err(e.into()))?;
@@ -303,7 +303,7 @@ impl Realm {
                         Ok(()) => responder.send(&mut Ok(()))?,
                         Err(e) => {
                             warn!(
-                                "unable to add legacy child {:?} with url {:?} to realm: {:?}",
+                                "unable to add legacy child {:?} with url {:?} to realm: {}",
                                 name, legacy_url, e
                             );
                             responder.send(&mut Err(e.into()))?;
@@ -318,7 +318,7 @@ impl Realm {
                     match self.add_child_from_decl(name.clone(), decl, options).await {
                         Ok(()) => responder.send(&mut Ok(()))?,
                         Err(e) => {
-                            warn!("unable to add child {:?} from decl to realm: {:?}", name, e);
+                            warn!("unable to add child {:?} from decl to realm: {}", name, e);
                             responder.send(&mut Err(e.into()))?;
                         }
                     }
@@ -331,7 +331,7 @@ impl Realm {
                     match self.add_local_child(name.clone(), options).await {
                         Ok(()) => responder.send(&mut Ok(()))?,
                         Err(e) => {
-                            warn!("unable to add local child {:?} to realm: {:?}", name, e);
+                            warn!("unable to add local child {:?} to realm: {}", name, e);
                             responder.send(&mut Err(e.into()))?;
                         }
                     }
@@ -344,7 +344,7 @@ impl Realm {
                     match self.add_child_realm(name.clone(), options, child_realm).await {
                         Ok(()) => responder.send(&mut Ok(()))?,
                         Err(e) => {
-                            warn!("unable to add child realm {:?}: {:?}", name, e);
+                            warn!("unable to add child realm {:?}: {}", name, e);
                             responder.send(&mut Err(e.into()))?;
                         }
                     }
@@ -357,7 +357,7 @@ impl Realm {
                     match self.get_component_decl(name.clone()).await {
                         Ok(decl) => responder.send(&mut Ok(decl))?,
                         Err(e) => {
-                            warn!("unable to get component decl for child {:?}: {:?}", name, e);
+                            warn!("unable to get component decl for child {:?}: {}", name, e);
                             responder.send(&mut Err(e.into()))?;
                         }
                     }
@@ -370,7 +370,7 @@ impl Realm {
                     match self.replace_component_decl(name.clone(), component_decl).await {
                         Ok(()) => responder.send(&mut Ok(()))?,
                         Err(e) => {
-                            warn!("unable to replace component decl for child {:?}: {:?}", name, e);
+                            warn!("unable to replace component decl for child {:?}: {}", name, e);
                             responder.send(&mut Err(e.into()))?;
                         }
                     }
@@ -390,7 +390,7 @@ impl Realm {
                     match self.replace_realm_decl(component_decl).await {
                         Ok(()) => responder.send(&mut Ok(()))?,
                         Err(e) => {
-                            warn!("unable to replace realm decl: {:?}", e);
+                            warn!("unable to replace realm decl: {}", e);
                             responder.send(&mut Err(e.into()))?;
                         }
                     }
@@ -405,7 +405,7 @@ impl Realm {
                             responder.send(&mut Ok(()))?;
                         }
                         Err(e) => {
-                            warn!("unable to add route: {:?}", e);
+                            warn!("unable to add route: {}", e);
                             responder.send(&mut Err(e.into()))?;
                         }
                     }
@@ -425,7 +425,7 @@ impl Realm {
                             responder.send(&mut Ok(()))?;
                         }
                         Err(e) => {
-                            warn!("unable to add route: {:?}", e);
+                            warn!("unable to add route: {}", e);
                             responder.send(&mut Err(e.into()))?;
                         }
                     }
@@ -476,7 +476,7 @@ impl Realm {
         options: ftest::ChildOptions,
     ) -> Result<(), RealmBuilderError> {
         if let Err(e) = cm_fidl_validator::validate(&component_decl) {
-            return Err(RealmBuilderError::InvalidComponentDecl(e));
+            return Err(RealmBuilderError::InvalidComponentDecl(e, component_decl));
         }
         let child_realm_node = RealmNode2::new_from_decl(component_decl.fidl_into_native(), false);
         self.realm_node.add_child(name, options, child_realm_node).await
@@ -723,7 +723,7 @@ impl RealmNodeState {
             });
         decl.children.get_or_insert(vec![]).extend(child_decls);
         if let Err(e) = cm_fidl_validator::validate(&decl) {
-            return Err(RealmBuilderError::InvalidComponentDecl(e));
+            return Err(RealmBuilderError::InvalidComponentDecl(e, decl));
         }
         Ok(())
     }
@@ -843,8 +843,9 @@ impl RealmNode2 {
             let fidl_decl = io_util::read_file_fidl::<fcdecl::Component>(&file_proxy)
                 .await
                 .map_err(|e| RealmBuilderError::DeclReadError(relative_url.clone(), e))?;
-            cm_fidl_validator::validate(&fidl_decl)
-                .map_err(|e| RealmBuilderError::InvalidComponentDeclWithName(relative_url, e))?;
+            cm_fidl_validator::validate(&fidl_decl).map_err(|e| {
+                RealmBuilderError::InvalidComponentDeclWithName(relative_url, e, fidl_decl.clone())
+            })?;
 
             let mut self_ = RealmNode2::new_from_decl(fidl_decl.fidl_into_native(), false);
             self_.component_loaded_from_pkg = true;
@@ -978,7 +979,9 @@ impl RealmNode2 {
             let name =
                 if walked_path.is_empty() { "root".to_string() } else { walked_path.join("-") };
             let decl = state_guard.decl.clone().native_into_fidl();
-            match registry.validate_and_register(decl, name, Some(Clone::clone(&package_dir))).await
+            match registry
+                .validate_and_register(&decl, name, Some(Clone::clone(&package_dir)))
+                .await
             {
                 Ok(url) => Ok(url),
                 Err(e) => {
@@ -986,7 +989,11 @@ impl RealmNode2 {
                         "manifest validation failed during build step for component {:?}: {:?}",
                         walked_path, e
                     );
-                    Err(RealmBuilderError::InvalidComponentDeclWithName(walked_path.join("/"), e))
+                    Err(RealmBuilderError::InvalidComponentDeclWithName(
+                        walked_path.join("/"),
+                        e,
+                        decl,
+                    ))
                 }
             }
         }
@@ -1473,12 +1480,12 @@ enum RealmBuilderError {
     InvalidManifestExtension,
 
     /// A component declaration failed validation.
-    #[error("a component manifest failed validation: {0:?}")]
-    InvalidComponentDecl(cm_fidl_validator::error::ErrorList),
+    #[error("a component manifest failed validation: {0:?}\n{1:#?}")]
+    InvalidComponentDecl(cm_fidl_validator::error::ErrorList, fcdecl::Component),
 
     /// A component declaration failed validation.
-    #[error("the manifest for component {0:?} failed validation: {1:?}")]
-    InvalidComponentDeclWithName(String, cm_fidl_validator::error::ErrorList),
+    #[error("the manifest for component {0:?} failed validation: {1:?}\n{2:#?}")]
+    InvalidComponentDeclWithName(String, cm_fidl_validator::error::ErrorList, fcdecl::Component),
 
     /// The referenced child does not exist.
     #[error("there is no component named {0:?} in this realm")]
@@ -1544,8 +1551,8 @@ impl From<RealmBuilderError> for ftest::RealmBuilderError2 {
         match err {
             RealmBuilderError::ChildAlreadyExists(_) => Self::ChildAlreadyExists,
             RealmBuilderError::InvalidManifestExtension => Self::InvalidManifestExtension,
-            RealmBuilderError::InvalidComponentDecl(_) => Self::InvalidComponentDecl,
-            RealmBuilderError::InvalidComponentDeclWithName(_, _) => Self::InvalidComponentDecl,
+            RealmBuilderError::InvalidComponentDecl(_, _) => Self::InvalidComponentDecl,
+            RealmBuilderError::InvalidComponentDeclWithName(_, _, _) => Self::InvalidComponentDecl,
             RealmBuilderError::NoSuchChild(_) => Self::NoSuchChild,
             RealmBuilderError::ChildDeclNotVisible(_) => Self::ChildDeclNotVisible,
             RealmBuilderError::NoSuchSource(_) => Self::NoSuchSource,

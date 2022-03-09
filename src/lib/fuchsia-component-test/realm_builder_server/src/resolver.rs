@@ -53,20 +53,20 @@ impl Registry {
     // Validates the given decl, and returns a URL at which it can be resolved
     pub async fn validate_and_register(
         self: &Arc<Self>,
-        decl: fcdecl::Component,
+        decl: &fcdecl::Component,
         name: String,
         package_dir: Option<fio::DirectoryProxy>,
     ) -> Result<String, cm_fidl_validator::error::ErrorList> {
-        cm_fidl_validator::validate(&decl)?;
+        cm_fidl_validator::validate(decl)?;
 
         let mut next_unique_component_id_guard = self.next_unique_component_id.lock().await;
         let mut component_decls_guard = self.component_decls.lock().await;
 
-        let url = format!("{}://{}-{}", RESOLVER_SCHEME, *next_unique_component_id_guard, name);
+        let url = format!("{}://{}/{}", RESOLVER_SCHEME, *next_unique_component_id_guard, name);
         *next_unique_component_id_guard += 1;
         component_decls_guard.insert(
             Url::parse(&url).expect("generated invalid URL"),
-            ResolveableComponent { decl, package_dir },
+            ResolveableComponent { decl: decl.clone(), package_dir },
         );
         Ok(url)
     }
