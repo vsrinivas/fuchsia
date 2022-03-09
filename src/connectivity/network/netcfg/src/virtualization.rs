@@ -20,6 +20,7 @@ use fuchsia_zircon as zx;
 
 use anyhow::{anyhow, Context as _};
 use async_trait::async_trait;
+use derivative::Derivative;
 use futures::{channel::oneshot, future, FutureExt as _, StreamExt as _, TryStreamExt as _};
 use tracing::{debug, error, info, warn};
 
@@ -37,26 +38,13 @@ pub(super) enum NetworkRequest {
     Finished(oneshot::Sender<()>),
 }
 
+#[derive(Derivative)]
+#[derivative(Debug)]
 pub(super) enum Event {
-    ControlRequestStream(fnet_virtualization::ControlRequestStream),
+    ControlRequestStream(#[derivative(Debug = "ignore")] fnet_virtualization::ControlRequestStream),
     ControlRequest(fnet_virtualization::ControlRequest),
     NetworkRequest(NetworkRequest),
     InterfaceClose(u64),
-}
-
-impl std::fmt::Debug for Event {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
-        #[allow(clippy::recursive_format_impl)] // TODO(fxbug.dev/95183)
-        match self {
-            Event::ControlRequestStream(stream) => {
-                let _: &fnet_virtualization::ControlRequestStream = stream;
-                write!(f, "ControlRequestStream")
-            }
-            Event::ControlRequest(_) | Event::NetworkRequest(_) | Event::InterfaceClose(_) => {
-                write!(f, "{:?}", self)
-            }
-        }
-    }
 }
 
 pub(super) type EventStream = Pin<Box<dyn futures::stream::Stream<Item = Event>>>;
