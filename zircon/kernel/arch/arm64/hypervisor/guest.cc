@@ -84,9 +84,7 @@ zx_status_t Guest::SetTrap(uint32_t kind, zx_gpaddr_t addr, size_t len,
       return ZX_ERR_INVALID_ARGS;
   }
 
-  if (SIZE_MAX - len < addr) {
-    return ZX_ERR_OUT_OF_RANGE;
-  } else if (!IS_PAGE_ALIGNED(addr) || !IS_PAGE_ALIGNED(len) || len == 0) {
+  if (!IS_PAGE_ALIGNED(addr) || !IS_PAGE_ALIGNED(len)) {
     return ZX_ERR_INVALID_ARGS;
   }
   zx_status_t status = gpas_->UnmapRange(addr, len);

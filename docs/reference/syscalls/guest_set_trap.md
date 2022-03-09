@@ -79,13 +79,13 @@ returned.
 **ZX_ERR_ACCESS_DENIED** *handle* or *port_handle* do not have the
 **ZX_RIGHT_WRITE** right.
 
-**ZX_ERR_ALREADY_EXISTS** A trap with the same *kind* and *addr* already exists.
+**ZX_ERR_ALREADY_EXISTS** A trap for *kind* already exists that intersects with
+*addr* and *size*.
 
 **ZX_ERR_BAD_HANDLE** *handle* or *port_handle* are invalid handles.
 
-**ZX_ERR_INVALID_ARGS** *kind* is not a valid address space, *addr* or *size*
-do not meet the requirements of *kind*, *size* is 0, or **ZX_GUEST_TRAP_MEM** was
-specified with a *port_handle*.
+**ZX_ERR_INVALID_ARGS** *kind* is not a valid address space, or
+**ZX_GUEST_TRAP_MEM** was specified with a *port_handle*.
 
 **ZX_ERR_NO_MEMORY**  Failure due to lack of memory.
 There is no good way for userspace to handle this (unlikely) error.

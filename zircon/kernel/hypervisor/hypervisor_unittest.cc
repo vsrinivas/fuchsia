@@ -7,10 +7,12 @@
 #include <assert.h>
 #include <lib/unittest/unittest.h>
 #include <zircon/errors.h>
+#include <zircon/syscalls/hypervisor.h>
 #include <zircon/types.h>
 
 #include <hypervisor/guest_physical_address_space.h>
 #include <hypervisor/interrupt_tracker.h>
+#include <hypervisor/trap_map.h>
 #include <vm/pmm.h>
 #include <vm/scanner.h>
 #include <vm/vm.h>
@@ -589,6 +591,54 @@ static bool interrupt_bitmap() {
   END_TEST;
 }
 
+static bool trap_map_insert_trap_intersecting() {
+  BEGIN_TEST;
+
+  hypervisor::TrapMap trap_map;
+  // Add traps:
+  // 1. [10, 19]
+  // 2. [20, 29]
+  // 3. [35, 5]
+  EXPECT_EQ(ZX_OK, trap_map.InsertTrap(ZX_GUEST_TRAP_MEM, 10, 10, nullptr, 0));
+  EXPECT_EQ(ZX_OK, trap_map.InsertTrap(ZX_GUEST_TRAP_MEM, 20, 10, nullptr, 0));
+  EXPECT_EQ(ZX_OK, trap_map.InsertTrap(ZX_GUEST_TRAP_MEM, 35, 5, nullptr, 0));
+  // Trap at [0, 10] intersects with trap 1.
+  EXPECT_EQ(ZX_ERR_ALREADY_EXISTS, trap_map.InsertTrap(ZX_GUEST_TRAP_MEM, 0, 11, nullptr, 0));
+  // Trap at [10, 19] intersects with trap 1.
+  EXPECT_EQ(ZX_ERR_ALREADY_EXISTS, trap_map.InsertTrap(ZX_GUEST_TRAP_MEM, 10, 10, nullptr, 0));
+  // Trap at [11, 18] intersects with trap 1.
+  EXPECT_EQ(ZX_ERR_ALREADY_EXISTS, trap_map.InsertTrap(ZX_GUEST_TRAP_MEM, 11, 8, nullptr, 0));
+  // Trap at [15, 24] intersects with trap 1 and trap 2.
+  EXPECT_EQ(ZX_ERR_ALREADY_EXISTS, trap_map.InsertTrap(ZX_GUEST_TRAP_MEM, 15, 10, nullptr, 0));
+  // Trap at [30, 39] intersects with trap 3.
+  EXPECT_EQ(ZX_ERR_ALREADY_EXISTS, trap_map.InsertTrap(ZX_GUEST_TRAP_MEM, 30, 10, nullptr, 0));
+  // Trap at [36, 40] intersects with trap 3.
+  EXPECT_EQ(ZX_ERR_ALREADY_EXISTS, trap_map.InsertTrap(ZX_GUEST_TRAP_MEM, 36, 5, nullptr, 0));
+
+  // Add a trap at the beginning.
+  EXPECT_EQ(ZX_OK, trap_map.InsertTrap(ZX_GUEST_TRAP_MEM, 0, 10, nullptr, 0));
+  // In the gap.
+  EXPECT_EQ(ZX_OK, trap_map.InsertTrap(ZX_GUEST_TRAP_MEM, 30, 5, nullptr, 0));
+  // And at the end.
+  EXPECT_EQ(ZX_OK, trap_map.InsertTrap(ZX_GUEST_TRAP_MEM, 40, 10, nullptr, 0));
+
+  END_TEST;
+}
+
+static bool trap_map_insert_trap_out_of_range() {
+  BEGIN_TEST;
+
+  hypervisor::TrapMap trap_map;
+  EXPECT_EQ(ZX_ERR_OUT_OF_RANGE, trap_map.InsertTrap(ZX_GUEST_TRAP_MEM, 0, 0, nullptr, 0));
+  EXPECT_EQ(ZX_ERR_OUT_OF_RANGE,
+            trap_map.InsertTrap(ZX_GUEST_TRAP_MEM, UINT32_MAX, UINT64_MAX, nullptr, 0));
+#ifdef ARCH_X86
+  EXPECT_EQ(ZX_ERR_OUT_OF_RANGE, trap_map.InsertTrap(ZX_GUEST_TRAP_IO, 0, UINT32_MAX, nullptr, 0));
+#endif  // ARCH_X86
+
+  END_TEST;
+}
+
 // Use the function name as the test name
 #define HYPERVISOR_UNITTEST(fname) UNITTEST(#fname, fname)
 
@@ -606,4 +656,6 @@ HYPERVISOR_UNITTEST(guest_physical_address_space_uncached)
 HYPERVISOR_UNITTEST(guest_physical_address_space_uncached_device)
 HYPERVISOR_UNITTEST(guest_physical_address_space_write_combining)
 HYPERVISOR_UNITTEST(interrupt_bitmap)
+HYPERVISOR_UNITTEST(trap_map_insert_trap_intersecting)
+HYPERVISOR_UNITTEST(trap_map_insert_trap_out_of_range)
 UNITTEST_END_TESTCASE(hypervisor, "hypervisor", "Hypervisor unit tests.")

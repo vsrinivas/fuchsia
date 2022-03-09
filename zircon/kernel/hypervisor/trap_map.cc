@@ -13,8 +13,29 @@
 #include <fbl/auto_lock.h>
 #include <hypervisor/ktrace.h>
 #include <hypervisor/trap_map.h>
+#include <kernel/range_check.h>
 
-static constexpr size_t kMaxPacketsPerRange = 256;
+namespace {
+
+constexpr size_t kMaxPacketsPerRange = 256;
+
+bool ValidRange(uint32_t kind, zx_gpaddr_t addr, size_t len) {
+  if (len == 0) {
+    return false;
+  }
+  zx_gpaddr_t end;
+  if (add_overflow(addr, len, &end)) {
+    return false;
+  }
+#ifdef ARCH_X86
+  if (kind == ZX_GUEST_TRAP_IO && end > UINT16_MAX) {
+    return false;
+  }
+#endif  // ARCH_X86
+  return true;
+}
+
+}  // namespace
 
 namespace hypervisor {
 
@@ -81,6 +102,9 @@ zx_status_t Trap::Queue(const zx_port_packet_t& packet, StateInvalidator* invali
 
 zx_status_t TrapMap::InsertTrap(uint32_t kind, zx_gpaddr_t addr, size_t len,
                                 fbl::RefPtr<PortDispatcher> port, uint64_t key) {
+  if (!ValidRange(kind, addr, len)) {
+    return ZX_ERR_OUT_OF_RANGE;
+  }
   TrapTree* traps = TreeOf(kind);
   if (traps == nullptr) {
     return ZX_ERR_INVALID_ARGS;
@@ -97,12 +121,16 @@ zx_status_t TrapMap::InsertTrap(uint32_t kind, zx_gpaddr_t addr, size_t len,
   }
 
   Guard<SpinLock, IrqSave> guard{&lock_};
-  bool inserted = traps->insert_or_find(ktl::move(range));
-  if (!inserted) {
-    dprintf(INFO, "hypervisor: Trap for kind %u (addr %#lx len %lu key %lu) already exists\n", kind,
-            addr, len, key);
+  auto iter = traps->upper_bound(addr);
+  // If `upper_bound()` does not return `end()`, check if the range intersects.
+  if (iter.IsValid() && Intersects(addr, len, iter->addr(), iter->len())) {
     return ZX_ERR_ALREADY_EXISTS;
   }
+  // Decrement the iterator, and check if the next range intersects.
+  if (--iter; iter.IsValid() && Intersects(addr, len, iter->addr(), iter->len())) {
+    return ZX_ERR_ALREADY_EXISTS;
+  }
+  traps->insert(ktl::move(range));
   return ZX_OK;
 }
 

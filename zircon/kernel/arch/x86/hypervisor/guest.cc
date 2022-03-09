@@ -4,9 +4,9 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <align.h>
 #include <zircon/syscalls/hypervisor.h>
 
-#include <align.h>
 #include <arch/x86/apic.h>
 #include <arch/x86/feature.h>
 
@@ -85,12 +85,6 @@ Guest::~Guest() { free_vmx_state(); }
 
 zx_status_t Guest::SetTrap(uint32_t kind, zx_vaddr_t addr, size_t len,
                            fbl::RefPtr<PortDispatcher> port, uint64_t key) {
-  if (len == 0) {
-    return ZX_ERR_INVALID_ARGS;
-  } else if (SIZE_MAX - len < addr) {
-    return ZX_ERR_OUT_OF_RANGE;
-  }
-
   switch (kind) {
     case ZX_GUEST_TRAP_MEM:
       if (port) {
@@ -105,8 +99,6 @@ zx_status_t Guest::SetTrap(uint32_t kind, zx_vaddr_t addr, size_t len,
     case ZX_GUEST_TRAP_IO:
       if (port) {
         return ZX_ERR_INVALID_ARGS;
-      } else if (addr + len > UINT16_MAX) {
-        return ZX_ERR_OUT_OF_RANGE;
       }
       return traps_.InsertTrap(kind, addr, len, ktl::move(port), key);
     default:
