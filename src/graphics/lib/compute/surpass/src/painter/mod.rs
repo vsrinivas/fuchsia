@@ -27,7 +27,9 @@ mod style;
 
 use layer_workbench::{Context, LayerPainter, LayerWorkbench};
 
-pub use style::{BlendMode, Fill, FillRule, Gradient, GradientBuilder, GradientType, Style};
+pub use style::{
+    BlendMode, Fill, FillRule, Gradient, GradientBuilder, GradientType, Image, Style, Texture,
+};
 
 pub use self::style::{Channel, Color, BGRA, RGBA};
 
@@ -372,6 +374,7 @@ impl Painter {
                 [f32x8::splat(r), f32x8::splat(g), f32x8::splat(b), f32x8::splat(a)]
             }
             Fill::Gradient(gradient) => gradient.color_at(x as f32, y as f32),
+            Fill::Texture(texture) => texture.color_at(x as f32, y as f32),
         }
     }
 
@@ -762,7 +765,7 @@ mod tests {
         fn colors(&self) -> [[f32; 4]; TILE_SIZE * TILE_SIZE] {
             let mut colors = [[0.0, 0.0, 0.0, 1.0]; TILE_SIZE * TILE_SIZE];
 
-            for (i, (((&c0, &c1), &c2), &alpha)) in self
+            for (i, (((c0, c1), c2), alpha)) in self
                 .red
                 .iter()
                 .flat_map(f32x8::as_array)

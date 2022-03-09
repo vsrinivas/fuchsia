@@ -355,8 +355,7 @@ impl f32x8 {
 
     pub fn indexed() -> Self {
         const INDICES: [f32; 8] = [0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0];
-
-        Self(unsafe { [vld1q_f32(INDICES.as_ptr()), vld1q_f32(INDICES[4..].as_ptr())] })
+        Self::from_array(INDICES)
     }
 
     pub fn from_bits(val: u32x8) -> Self {
@@ -367,9 +366,12 @@ impl f32x8 {
         u32x8(unsafe { [vreinterpretq_u32_f32(self.0[0]), vreinterpretq_u32_f32(self.0[1])] })
     }
 
-    #[cfg(test)]
-    pub fn as_array(&self) -> &[f32; 8] {
-        unsafe { std::mem::transmute(&self.0) }
+    pub fn from_array(val: [f32; 8]) -> Self {
+        Self(unsafe { [vld1q_f32(val.as_ptr()), vld1q_f32(val[4..].as_ptr())] })
+    }
+
+    pub fn as_array(&self) -> [f32; 8] {
+        unsafe { std::mem::transmute(self.0) }
     }
 
     pub fn eq(self, other: Self) -> m32x8 {
@@ -407,6 +409,12 @@ impl f32x8 {
 
     pub fn clamp(self, min: Self, max: Self) -> Self {
         self.min(max).max(min)
+    }
+
+    pub fn floor(self) -> Self {
+        Self(unsafe {
+            [vcvtq_f32_s32(vcvtmq_s32_f32(self.0[0])), vcvtq_f32_s32(vcvtmq_s32_f32(self.0[1]))]
+        })
     }
 
     pub fn sqrt(self) -> Self {

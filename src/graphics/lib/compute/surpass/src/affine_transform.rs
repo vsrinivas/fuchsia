@@ -14,12 +14,12 @@
 /// ```
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct AffineTransform {
-    ux: f32,
-    uy: f32,
-    vx: f32,
-    vy: f32,
-    tx: f32,
-    ty: f32,
+    pub ux: f32,
+    pub uy: f32,
+    pub vx: f32,
+    pub vy: f32,
+    pub tx: f32,
+    pub ty: f32,
 }
 
 impl Default for AffineTransform {

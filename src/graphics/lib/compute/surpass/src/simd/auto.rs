@@ -433,7 +433,11 @@ impl f32x8 {
     }
 
     pub fn indexed() -> Self {
-        Self([0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0])
+        Self::from_array([0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0])
+    }
+
+    pub fn from_array(val: [f32; 8]) -> Self {
+        Self(val)
     }
 
     pub fn from_bits(val: u32x8) -> Self {
@@ -462,9 +466,8 @@ impl f32x8 {
         ])
     }
 
-    #[cfg(test)]
-    pub fn as_array(&self) -> &[f32; 8] {
-        &self.0
+    pub fn as_array(&self) -> [f32; 8] {
+        self.0
     }
 
     pub fn eq(self, other: Self) -> m32x8 {
@@ -539,6 +542,11 @@ impl f32x8 {
             .iter_mut()
             .zip(min.0.iter().zip(max.0.iter()))
             .for_each(|(t, (&min, &max))| *t = t.clamp(min, max));
+        self
+    }
+
+    pub fn floor(mut self) -> Self {
+        self.0.iter_mut().for_each(|val| *val = val.floor());
         self
     }
 

@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use std::sync::Arc;
+use std::{fmt, sync::Arc};
 
-use crate::{simd::f32x8, Point};
+use crate::{simd::f32x8, AffineTransform, Point};
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum Channel {
@@ -248,11 +248,105 @@ impl Gradient {
         channels
     }
 }
+#[derive(Debug)]
+pub enum ImageError {
+    SizeMismatch { len: usize, width: usize, height: usize },
+    TooLarge,
+}
+
+impl fmt::Display for ImageError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::SizeMismatch { len, width, height } => {
+                write!(
+                    f,
+                    "buffer has {} pixels, which does not match \
+                     the specified width ({}) and height ({})",
+                    len, width, height
+                )
+            }
+            Self::TooLarge => {
+                write!(
+                    f,
+                    "image dimensions exceed what is addressable \
+                     with f32; try to reduce the image size."
+                )
+            }
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct Image {
+    /// Image pixels stored as f32 components xyza in linear space.
+    /// The array is expected to contain width * height elements.
+    data: Box<[[f32; 4]]>,
+    /// Width of the image.
+    width: f32,
+    /// Height of the image.
+    height: f32,
+}
+
+impl Image {
+    pub fn new(data: Box<[[f32; 4]]>, width: usize, height: usize) -> Result<Image, ImageError> {
+        match width * height {
+            len if len > (1 << f32::MANTISSA_DIGITS) => Err(ImageError::TooLarge),
+            len if len != data.len() => {
+                Err(ImageError::SizeMismatch { len: data.len(), width, height })
+            }
+            _ => Ok(Image { data, width: width as f32, height: height as f32 }),
+        }
+    }
+}
+
+/// Describes how to shade a surface using a bitmap image.
+#[derive(Clone, Debug, PartialEq)]
+pub struct Texture {
+    /// Transformation from screen-space to texture-space.
+    pub transform: AffineTransform,
+    /// Image shared with zero or more textures.
+    pub image: Arc<Image>,
+}
+
+impl Texture {
+    #[inline(never)]
+    pub fn color_at(&self, x: f32, y: f32) -> [f32x8; 4] {
+        let x = f32x8::splat(x);
+        let y = f32x8::splat(y) + f32x8::indexed();
+        // Apply affine transformation.
+        let t = self.transform;
+        let tx = x.mul_add(f32x8::splat(t.ux), f32x8::splat(t.vx).mul_add(y, f32x8::splat(t.tx)));
+        let ty = x.mul_add(f32x8::splat(t.uy), f32x8::splat(t.vy).mul_add(y, f32x8::splat(t.ty)));
+        // Apply Clamp texture mode.
+        let tx = tx.clamp(f32x8::splat(0.0), f32x8::splat(self.image.width - 1.0)).floor();
+        let ty = ty.clamp(f32x8::splat(0.0), f32x8::splat(self.image.height - 1.0)).floor();
+        // Compute texture offsets.
+        // Largest consecutive integer is 2^53
+        let offsets = ty.mul_add(f32x8::splat(self.image.width as f32), tx);
+        let data = &*self.image.data;
+        // TODO(fxb/94997): Evaluate SIMD conversion to u32x8.
+        let pixels = offsets.as_array().map(|o| data[o as usize]);
+        let get_channel = |c| {
+            f32x8::from_array([
+                pixels[0][c],
+                pixels[1][c],
+                pixels[2][c],
+                pixels[3][c],
+                pixels[4][c],
+                pixels[5][c],
+                pixels[6][c],
+                pixels[7][c],
+            ])
+        };
+        [get_channel(0), get_channel(1), get_channel(2), get_channel(3)]
+    }
+}
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Fill {
     Solid(Color),
     Gradient(Gradient),
+    Texture(Texture),
 }
 
 impl Default for Fill {
@@ -969,5 +1063,98 @@ mod tests {
         let color = Color { r: 3.0, g: 2.0, b: 1.0, a: 1.0 };
         let max = color.max();
         assert_eq!(max, 3.0);
+    }
+
+    fn apply_texture_color_at(transform: AffineTransform) -> Vec<[f32; 8]> {
+        let image = Arc::new(
+            Image::new(
+                Box::new([
+                    [0.1, 0.2, 0.3, 0.1],
+                    [0.4, 0.5, 0.6, 0.2],
+                    [0.7, 0.8, 0.9, 0.3],
+                    [0.8, 0.7, 0.6, 0.4],
+                    [0.5, 0.4, 0.5, 0.5],
+                    [0.2, 0.1, 0.0, 0.6],
+                ]),
+                2,
+                3,
+            )
+            .unwrap(),
+        );
+        let texture = Texture { transform, image };
+        texture.color_at(-2.0, -2.0).iter().map(|v| v.as_array().clone()).collect()
+    }
+
+    #[test]
+    fn texture_color_at_with_identity() {
+        assert_eq!(
+            apply_texture_color_at(AffineTransform::default()),
+            [
+                [0.1, 0.1, 0.1, 0.7, 0.5, 0.5, 0.5, 0.5],
+                [0.2, 0.2, 0.2, 0.8, 0.4, 0.4, 0.4, 0.4],
+                [0.3, 0.3, 0.3, 0.9, 0.5, 0.5, 0.5, 0.5],
+                [0.1, 0.1, 0.1, 0.3, 0.5, 0.5, 0.5, 0.5],
+            ],
+        );
+    }
+
+    #[test]
+    fn texture_color_at_with_scale_x2() {
+        assert_eq!(
+            apply_texture_color_at(AffineTransform {
+                ux: 0.5,
+                uy: 0.0,
+                vy: 0.5,
+                vx: 0.0,
+                tx: 0.0,
+                ty: 0.0
+            }),
+            [
+                [0.1, 0.1, 0.1, 0.1, 0.7, 0.7, 0.5, 0.5],
+                [0.2, 0.2, 0.2, 0.2, 0.8, 0.8, 0.4, 0.4],
+                [0.3, 0.3, 0.3, 0.3, 0.9, 0.9, 0.5, 0.5],
+                [0.1, 0.1, 0.1, 0.1, 0.3, 0.3, 0.5, 0.5],
+            ],
+        );
+    }
+
+    #[test]
+    fn texture_color_at_with_translation() {
+        assert_eq!(
+            apply_texture_color_at(AffineTransform {
+                ux: 1.0,
+                uy: 0.0,
+                vx: 0.0,
+                vy: 1.0,
+                tx: 1.0,
+                ty: 1.0
+            }),
+            [
+                [0.1, 0.1, 0.7, 0.5, 0.5, 0.5, 0.5, 0.5],
+                [0.2, 0.2, 0.8, 0.4, 0.4, 0.4, 0.4, 0.4],
+                [0.3, 0.3, 0.9, 0.5, 0.5, 0.5, 0.5, 0.5],
+                [0.1, 0.1, 0.3, 0.5, 0.5, 0.5, 0.5, 0.5],
+            ],
+        );
+    }
+
+    #[test]
+    fn texture_color_at_with_axis_inverted() {
+        assert_eq!(
+            apply_texture_color_at(AffineTransform {
+                ux: 0.0,
+                uy: 1.0,
+                vx: 1.0,
+                vy: 0.0,
+                tx: 0.0,
+                ty: 0.0
+            }),
+            [
+                [0.1, 0.1, 0.1, 0.4, 0.4, 0.4, 0.4, 0.4],
+                [0.2, 0.2, 0.2, 0.5, 0.5, 0.5, 0.5, 0.5],
+                [0.3, 0.3, 0.3, 0.6, 0.6, 0.6, 0.6, 0.6],
+                [0.1, 0.1, 0.1, 0.2, 0.2, 0.2, 0.2, 0.2],
+            ],
+        );
     }
 }
