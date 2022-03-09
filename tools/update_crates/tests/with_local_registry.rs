@@ -213,14 +213,13 @@ struct IndexEntry {
 }
 
 impl IndexEntry {
-    #[allow(clippy::unused_io_amount)] // TODO(fxbug.dev/95058)
     fn populate_in_index(self, registry_path: &Path, destination: &Path) {
         std::fs::create_dir_all(destination.parent().unwrap()).unwrap();
         let mut index_file = File::create(destination).unwrap();
         for version in self.versions {
             // add a line to the json file
             serde_json::to_writer(&mut index_file, &version.metadata).unwrap();
-            index_file.write(b"\n").unwrap();
+            index_file.write_all(b"\n").unwrap();
 
             // copy the .crate file to the registry
             let crate_destination = registry_path.join(version.crate_source.file_name().unwrap());
