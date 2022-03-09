@@ -26,7 +26,9 @@ enum Action : uint8_t {
 }  // namespace
 
 Runner::Runner(ExecutorPtr executor)
-    : action_(kIdle),
+    : executor_(executor),
+      action_(kIdle),
+      monitors_(executor),
       close_([this]() { CloseImpl(); }),
       interrupt_([this] { InterruptImpl(); }),
       join_([this]() { JoinImpl(); }) {
@@ -147,7 +149,7 @@ void Runner::AddMonitor(fidl::InterfaceHandle<Monitor> monitor) {
 }
 
 void Runner::UpdateMonitors(UpdateReason reason) {
-  monitors_.SetStatus(CollectStatus());
+  monitors_.set_status(CollectStatus());
   monitors_.Update(reason);
 }
 

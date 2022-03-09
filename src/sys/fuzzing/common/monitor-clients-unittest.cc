@@ -2,16 +2,23 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/sys/fuzzing/common/monitors.h"
+#include "src/sys/fuzzing/common/monitor-clients.h"
 
 #include <gtest/gtest.h>
 
+#include "src/sys/fuzzing/common/testing/async-test.h"
 #include "src/sys/fuzzing/common/testing/monitor.h"
 
 namespace fuzzing {
 
-TEST(MonitorClientsTest, Update) {
-  MonitorClients monitors;
+// Test fixtures.
+
+class MonitorClientsTest : public AsyncTest {};
+
+// Unit tests.
+
+TEST_F(MonitorClientsTest, Update) {
+  MonitorClients monitors(executor());
 
   FakeMonitor monitor1, monitor2;
   monitors.Add(monitor1.NewBinding());
@@ -19,9 +26,11 @@ TEST(MonitorClientsTest, Update) {
 
   Status status;
   status.set_runs(32);
-  monitors.SetStatus(std::move(status));
+  monitors.set_status(std::move(status));
 
   monitors.Update(UpdateReason::NEW);
+  FUZZING_EXPECT_OK(monitors.AwaitAcknowledgement());
+  RunUntilIdle();
 
   UpdateReason reason1;
   auto status1 = monitor1.NextStatus(&reason1);
@@ -34,14 +43,16 @@ TEST(MonitorClientsTest, Update) {
   EXPECT_EQ(status2.runs(), 32U);
 }
 
-TEST(MonitorClientsTest, Finish) {
-  MonitorClients monitors;
+TEST_F(MonitorClientsTest, Finish) {
+  MonitorClients monitors(executor());
 
   FakeMonitor monitor1, monitor2;
   monitors.Add(monitor1.NewBinding());
   monitors.Add(monitor2.NewBinding());
 
   monitors.Update(UpdateReason::DONE);
+  FUZZING_EXPECT_OK(monitors.AwaitAcknowledgement());
+  RunUntilIdle();
 
   EXPECT_EQ(monitor1.NextReason(), UpdateReason::DONE);
   EXPECT_EQ(monitor2.NextReason(), UpdateReason::DONE);

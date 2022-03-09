@@ -17,7 +17,7 @@
 #include "src/lib/fxl/synchronization/thread_annotations.h"
 #include "src/sys/fuzzing/common/async-types.h"
 #include "src/sys/fuzzing/common/input.h"
-#include "src/sys/fuzzing/common/monitors.h"
+#include "src/sys/fuzzing/common/monitor-clients.h"
 #include "src/sys/fuzzing/common/options.h"
 #include "src/sys/fuzzing/common/result.h"
 #include "src/sys/fuzzing/common/run-once.h"
@@ -114,7 +114,7 @@ class Runner {
 
   // Collects the current status, labels it with the given |reason|, and sends it all attached
   //|Monitor|s.
-  void UpdateMonitors(UpdateReason reason) FXL_LOCKS_EXCLUDED(mutex_);
+  void UpdateMonitors(UpdateReason reason);
 
  private:
   // Schedule a workflow to be performed by the worker thread.
@@ -132,6 +132,8 @@ class Runner {
   void CloseImpl();
   void InterruptImpl();
   void JoinImpl();
+
+  ExecutorPtr executor_;
 
   std::mutex mutex_;
 
