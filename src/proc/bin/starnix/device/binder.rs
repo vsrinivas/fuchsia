@@ -7,18 +7,18 @@
 use crate::device::DeviceOps;
 use crate::fs::devtmpfs::dev_tmp_fs;
 use crate::fs::{
-    fileops_impl_nonblocking, FileObject, FileOps, FileSystem, FileSystemHandle, FileSystemOps,
-    FsNode, FsStr, NamespaceNode, ROMemoryDirectory, SeekOrigin, SpecialNode,
+    FdEvents, FileObject, FileOps, FileSystem, FileSystemHandle, FileSystemOps, FsNode, FsStr,
+    NamespaceNode, ROMemoryDirectory, SeekOrigin, SpecialNode,
 };
 use crate::logging::not_implemented;
 use crate::mm::{DesiredAddress, MappedVmo, MappingOptions, UserMemoryCursor};
 use crate::syscalls::{SyscallResult, SUCCESS};
-use crate::task::{CurrentTask, Kernel};
+use crate::task::{CurrentTask, EventHandler, Kernel, WaitKey, WaitQueue, Waiter};
 use crate::types::*;
 use bitflags::bitflags;
 use fuchsia_zircon as zx;
 use parking_lot::{Mutex, RwLock};
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, VecDeque};
 use std::sync::{Arc, Weak};
 use zerocopy::FromBytes;
 
@@ -42,7 +42,24 @@ impl DeviceOps for BinderDev {
 }
 
 impl FileOps for BinderDev {
-    fileops_impl_nonblocking!();
+    fn query_events(&self, _current_task: &CurrentTask) -> FdEvents {
+        FdEvents::POLLIN | FdEvents::POLLOUT
+    }
+
+    fn wait_async(
+        &self,
+        _file: &FileObject,
+        current_task: &CurrentTask,
+        waiter: &Arc<Waiter>,
+        events: FdEvents,
+        handler: EventHandler,
+    ) -> WaitKey {
+        self.0.wait_async(current_task, waiter, events, handler)
+    }
+
+    fn cancel_wait(&self, current_task: &CurrentTask, waiter: &Arc<Waiter>, key: WaitKey) -> bool {
+        self.0.cancel_wait(current_task, waiter, key)
+    }
 
     fn ioctl(
         &self,
@@ -215,11 +232,22 @@ struct BinderThread {
     #[allow(unused)]
     tid: pid_t,
     state: RwLock<ThreadState>,
+    /// The binder driver uses this queue to communicate with a binder thread. When a binder thread
+    /// issues a [`BINDER_IOCTL_WRITE_READ`] ioctl, it will read from this command queue.
+    command_queue: Mutex<VecDeque<Command>>,
+    /// When there are no commands in the command queue, the binder thread can register with this
+    /// [`WaitQueue`] to be notified when commands are available.
+    waiters: Mutex<WaitQueue>,
 }
 
 impl BinderThread {
     fn new(tid: pid_t) -> Self {
-        Self { tid, state: RwLock::new(ThreadState::empty()) }
+        Self {
+            tid,
+            state: RwLock::new(ThreadState::empty()),
+            command_queue: Mutex::new(VecDeque::new()),
+            waiters: Mutex::new(WaitQueue::default()),
+        }
     }
 }
 
@@ -242,6 +270,10 @@ impl Default for ThreadState {
         ThreadState::empty()
     }
 }
+
+#[derive(Debug)]
+struct Command;
+
 /// The ioctl character for all binder ioctls.
 const BINDER_IOCTL_CHAR: u8 = b'b';
 
@@ -477,6 +509,30 @@ impl BinderDriver {
                 Err(err)
             }
         }
+    }
+
+    fn wait_async(
+        &self,
+        current_task: &CurrentTask,
+        waiter: &Arc<Waiter>,
+        events: FdEvents,
+        handler: EventHandler,
+    ) -> WaitKey {
+        let binder_proc = self.find_or_register_process(current_task.get_pid());
+        let binder_thread = binder_proc.thread_pool.find_or_register_thread(current_task.get_tid());
+        let command_queue = binder_thread.command_queue.lock();
+        if command_queue.is_empty() {
+            binder_thread.waiters.lock().wait_async_events(waiter, events, handler)
+        } else {
+            waiter.wake_immediately(FdEvents::POLLIN.mask(), handler)
+        }
+    }
+
+    fn cancel_wait(&self, current_task: &CurrentTask, _waiter: &Arc<Waiter>, key: WaitKey) -> bool {
+        let binder_proc = self.find_or_register_process(current_task.get_pid());
+        let binder_thread = binder_proc.thread_pool.find_or_register_thread(current_task.get_tid());
+        let result = binder_thread.waiters.lock().cancel_wait(key);
+        result
     }
 }
 

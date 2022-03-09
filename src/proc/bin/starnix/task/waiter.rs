@@ -21,7 +21,7 @@ pub enum WaitCallback {
     EventHandler(EventHandler),
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub struct WaitKey {
     key: u64,
 }
@@ -227,13 +227,19 @@ impl Waiter {
     }
 }
 
+impl std::fmt::Debug for Waiter {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Waiter").finish_non_exhaustive()
+    }
+}
+
 /// A list of waiters waiting for some event.
 ///
 /// For events that are generated inside Starnix, we walk the wait queue
 /// on the thread that triggered the event to notify the waiters that the event
 /// has occurred. The waiters will then wake up on their own thread to handle
 /// the event.
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct WaitQueue {
     /// The list of waiters.
     waiters: Vec<WaitEntry>,
@@ -255,14 +261,26 @@ struct WaitEntry {
     key: WaitKey,
 }
 
+// Custom Debug implementation to emit `events` as a hex string.
+impl std::fmt::Debug for WaitEntry {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("WaitEntry")
+            .field("waiter", &self.waiter)
+            .field("events", &format_args!("0x{:08x}", self.events))
+            .field("persistent", &self.persistent)
+            .field("key", &self.key)
+            .finish()
+    }
+}
+
 impl WaitQueue {
-    /// Establish a wait for the given events.
+    /// Establish a wait for the given event mask.
     ///
     /// The waiter will be notified when an event matching the events mask
     /// occurs.
     ///
     /// This function does not actually block the waiter. To block the waiter,
-    /// call the "wait" function on the waiter.
+    /// call the [`Waiter::wait`] function on the waiter.
     pub fn wait_async_mask(
         &mut self,
         waiter: &Arc<Waiter>,
@@ -274,8 +292,29 @@ impl WaitQueue {
         key
     }
 
+    /// Establish a wait for any event.
+    ///
+    /// The waiter will be notified when any event occurs.
+    ///
+    /// This function does not actually block the waiter. To block the waiter,
+    /// call the [`Waiter::wait`] function on the waiter.
     pub fn wait_async(&mut self, waiter: &Arc<Waiter>) -> WaitKey {
         self.wait_async_mask(waiter, u32::MAX, WaitCallback::none())
+    }
+
+    /// Establish a wait for the given events.
+    ///
+    /// The waiter will be notified when an event matching the `events` occurs.
+    ///
+    /// This function does not actually block the waiter. To block the waiter,
+    /// call the [`Waiter::wait`] function on the waiter.
+    pub fn wait_async_events(
+        &mut self,
+        waiter: &Arc<Waiter>,
+        events: FdEvents,
+        handler: EventHandler,
+    ) -> WaitKey {
+        self.wait_async_mask(waiter, events.mask(), handler)
     }
 
     /// Notify any waiters that the given events have occurred.
