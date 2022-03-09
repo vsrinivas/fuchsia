@@ -4,15 +4,15 @@ library bind.test.lib;
 using fuchsia.driver.framework as fdf;
 
 const KINGFISHER fdf.NodePropertyKeyString = "test.lib.KINGFISHER";
-const KINGFISHER_BELTED fdf.NodePropertyValueEnum = "test.lib.KINGFISHER_BELTED";
+const KINGFISHER_BELTED fdf.NodePropertyValueEnum = "test.lib.KINGFISHER.BELTED";
 
-const MIMID fdf.NodePropertyKeyString = "test.lib.MIMID";
-const MIMID_CATBIRD fdf.NodePropertyValueEnum = "test.lib.MIMID_CATBIRD";
-const MIMID_THRASHER fdf.NodePropertyValueEnum = "test.lib.MIMID_THRASHER";
-const MIMID_TREMBLER fdf.NodePropertyValueEnum = "test.lib.MIMID_TREMBLER";
-const MIMID_MOCKINGBIRD fdf.NodePropertyValueEnum = "test.lib.MIMID_MOCKINGBIRD";
+const MIMID fdf.NodePropertyKeyString = "test.lib.Mimid";
+const MIMID_CATBIRD fdf.NodePropertyValueEnum = "test.lib.Mimid.Catbird";
+const MIMID_THRASHER fdf.NodePropertyValueEnum = "test.lib.Mimid.Thrasher";
+const MIMID_TREMBLER fdf.NodePropertyValueEnum = "test.lib.Mimid.Trembler";
+const MIMID_MOCKINGBIRD fdf.NodePropertyValueEnum = "test.lib.Mimid.Mockingbird";
 
-const PHAINOPEPLA fdf.NodePropertyKeyString = "test.lib.PHAINOPEPLA";
+const PHAINOPEPLA fdf.NodePropertyKeyString = "test.lib.Phainopepla";
 
 const THRUSH fdf.NodePropertyKeyString = "test.lib.THRUSH";
 const THRUSH_HERMIT fdf.NodePropertyValueString = "hermit_thrush";

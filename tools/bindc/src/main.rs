@@ -432,7 +432,8 @@ fn convert_to_fidl_constant(
     path: &String,
 ) -> Result<String, Error> {
     let mut result = String::new();
-    let identifier_name = declaration.identifier.name.to_uppercase();
+    let fidl_identifier = declaration.identifier.name.to_uppercase();
+    let identifier_name = &declaration.identifier.name;
 
     // Generating the key definition is only done when it is not extended.
     // When it is extended, the key will already be defined in the library that it is
@@ -441,12 +442,12 @@ fn convert_to_fidl_constant(
         writeln!(
             &mut result,
             "const {} fdf.NodePropertyKeyString = \"{}.{}\";",
-            &identifier_name, &path, &identifier_name
+            &fidl_identifier, &path, identifier_name
         )?;
     }
 
     for value in &declaration.values {
-        let name = generate_declaration_name(&identifier_name, value);
+        let name = generate_declaration_name(&fidl_identifier, value);
         let property_output = match &value {
             bind_library::Value::Number(_, val) => {
                 format!("const {} fdf.NodePropertyValueUint = {};", name, val)
@@ -457,8 +458,11 @@ fn convert_to_fidl_constant(
             bind_library::Value::Bool(_, val) => {
                 format!("const {} fdf.NodePropertyValueBool = {};", name, val)
             }
-            bind_library::Value::Enum(_) => {
-                format!("const {} fdf.NodePropertyValueEnum = \"{}.{}\";", name, path, name)
+            bind_library::Value::Enum(val) => {
+                format!(
+                    "const {} fdf.NodePropertyValueEnum = \"{}.{}.{}\";",
+                    name, path, identifier_name, val
+                )
             }
         };
         writeln!(&mut result, "{}", property_output)?;
@@ -855,7 +859,7 @@ mod tests {
             "@no_doc".to_string(),
             "library bind.fuchsia.platform;".to_string(),
             "using fuchsia.driver.framework as fdf;".to_string(),
-            "const A_KEY fdf.NodePropertyKeyString = \"fuchsia.platform.A_KEY\";".to_string(),
+            "const A_KEY fdf.NodePropertyKeyString = \"fuchsia.platform.a_key\";".to_string(),
             "const A_KEY_A_VALUE fdf.NodePropertyValueString = \"a string value\";".to_string(),
         ];
 
