@@ -6,18 +6,31 @@
 
 #include "turducken.h"
 
+#include <ctype.h>
 #include <lib/boot-options/word-view.h>
 #include <lib/memalloc/range.h>
 #include <lib/zbitl/error-stdio.h>
+#include <stdio.h>
 #include <zircon/assert.h>
 #include <zircon/boot/image.h>
 
 #include <ktl/algorithm.h>
+#include <ktl/optional.h>
 #include <ktl/span.h>
 #include <ktl/string_view.h>
 #include <phys/boot-zbi.h>
 #include <phys/symbolize.h>
 #include <phys/zbitl-allocation.h>
+
+#ifdef __x86_64__
+
+#include <phys/trampoline-boot.h>
+
+#else  // arm
+
+using TrampolineBoot = BootZbi;
+
+#endif  // __x86_64__
 
 #include "test-main.h"
 
@@ -157,7 +170,7 @@ void TurduckenTestBase::Load(TurduckenTestBase::Zbi::iterator kernel_item,
 }
 
 void TurduckenTestBase::Boot() {
-  BootZbi boot;
+  TrampolineBoot boot;
 
   auto result = boot.Init(BootZbi::InputZbi(ktl::as_bytes(loaded_.data())));
   if (result.is_error()) {
@@ -191,6 +204,7 @@ int TestMain(void* zbi, arch::EarlyTicks entry_ticks) {
   InitMemory(zbi);
 
   TurduckenTest test(zbi, entry_ticks);
+  test.LogCmdLineArguments();
 
   for (auto it = test.boot_zbi().begin(); it != test.boot_zbi().end(); ++it) {
     if (it->header->type == test.embedded_type()) {
@@ -208,4 +222,38 @@ int TestMain(void* zbi, arch::EarlyTicks entry_ticks) {
   }
 
   return -1;
+}
+
+void TurduckenTestBase::LogCmdLineArguments() {
+  for (auto [header, payload] : boot_zbi()) {
+    if (header->type == ZBI_TYPE_CMDLINE) {
+      ktl::string_view cmdline{
+          reinterpret_cast<const char*>(payload.data()),
+          payload.size(),
+      };
+      printf("%s: CMDLINE @ %p |%.*s|\n", test_name(), payload.data(),
+             static_cast<int>(cmdline.size()), cmdline.data());
+    }
+  }
+  ZX_ASSERT(boot_zbi().take_error().is_ok());
+}
+
+ktl::optional<uint64_t> TurduckenTestBase::ParseUint(ktl::string_view value_str) {
+  if (value_str.empty()) {
+    return ktl::nullopt;
+  }
+
+  uint64_t dec_base = 1;
+  uint64_t value = 0;
+  for (auto it = value_str.rbegin(); it != value_str.rend(); ++it) {
+    auto ch = *it;
+    if (isdigit(ch) == 0) {
+      return ktl::nullopt;
+    }
+    unsigned val = ch - '0';
+    value += dec_base * val;
+    dec_base *= 10;
+  }
+
+  return value;
 }

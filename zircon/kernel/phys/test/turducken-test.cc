@@ -33,18 +33,6 @@ int TurduckenTest::Main(Zbi::iterator kernel_item) {
   auto flavor = OptionWithPrefix(kApertif);
   ZX_ASSERT(flavor.has_value());
 
-  for (auto [header, payload] : boot_zbi()) {
-    if (header->type == ZBI_TYPE_CMDLINE) {
-      ktl::string_view cmdline{
-          reinterpret_cast<const char*>(payload.data()),
-          payload.size(),
-      };
-      printf("%s: CMDLINE @ %p |%.*s|\n", test_name(), payload.data(),
-             static_cast<int>(cmdline.size()), cmdline.data());
-    }
-  }
-  ZX_ASSERT(boot_zbi().take_error().is_ok());
-
   auto change_flavor = [this, flavor = *flavor](ktl::string_view tasty) {
     ktl::span<char> change = ModifyOption(kApertif);
     ZX_ASSERT(change.size() > kApertif.size());

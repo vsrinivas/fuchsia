@@ -84,7 +84,7 @@ if (toolchain_environment == "kernel.phys" ||
 
   source_set("trampoline-boot") {
     visibility = [
-      ":*",
+      "./*",
 
       # Required for legacy-boot-shim
       "//zircon/kernel/arch/x86/*",
@@ -437,6 +437,9 @@ zbi_executable("physboot") {
     "//zircon/kernel/lib/libc",
     "//zircon/system/ulib/zbitl",
   ]
+
+  # TODO(fxbug.dev/88583): Add support for arm. Currently the include is guarded
+  # for x86 only, but still is validated by GN.
   if (current_cpu == "x64") {
     deps += [ ":trampoline-boot" ]
   }

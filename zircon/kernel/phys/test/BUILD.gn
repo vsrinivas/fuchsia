@@ -340,6 +340,12 @@ if (current_toolchain != default_toolchain) {
       "//zircon/kernel/lib/ktl",
       "//zircon/kernel/lib/libc",
     ]
+
+    # TODO(fxbug.dev/88583): Add support for arm. Currently the include is guarded
+    # for x86 only, but still is validated by GN.
+    if (current_cpu == "x64") {
+      deps += [ "..:trampoline-boot" ]
+    }
   }
 
   zbi_executable("chain-load-test") {
@@ -404,6 +410,60 @@ if (current_toolchain != default_toolchain) {
     ]
   }
 
+  # TODO(fxbug.dev/88583): remove usage of legacy ZBI when TrampolineBoot allows arbitrary
+  # addresses.
+  zbi_executable("trampoline-boot-test") {
+    # The add, remove trick ensures these are removed, whether or not they're
+    # present in the default configs list.
+    configs += [ "//zircon/kernel/arch/x86/phys:load-1mb" ]
+    configs -= [ "//zircon/kernel/arch/x86/phys:load-1mb" ]
+    configs += [ "//zircon/kernel/phys:load-pic" ]
+    configs -= [ "//zircon/kernel/phys:load-pic" ]
+
+    # Now add the one we want.
+    configs += [ "//zircon/kernel/arch/x86/phys:load-1mb" ]
+
+    testonly = true
+    sources = [ "trampoline-boot-test.cc" ]
+    deps = [
+      ":turducken",
+      ":zbi-test-main",
+      "//src/lib/elfldltl",
+      "//zircon/kernel/lib/libc",
+      "//zircon/system/ulib/pretty",
+    ]
+  }
+
+  # turkey
+  zbi_executable("trampoline-boot-test-shim") {
+    testonly = true
+    sources = [ "trampoline-boot-test-shim.cc" ]
+    deps = [
+      ":turducken",
+      "..:new",
+      "..:trampoline-boot",
+      "//zircon/kernel/lib/libc",
+      "//zircon/system/ulib/pretty",
+      "//zircon/system/ulib/zxc",
+    ]
+    data_deps = [ ":trampoline-cmdline" ]
+  }
+
+  kernel_cmdline("trampoline-cmdline") {
+    args = [
+      # Communicates the load address to be used by the shim,
+      # and then verified by the loaded ZBI.
+      "trampoline.load_address=1M",
+    ]
+  }
+
+  turducken_zbi_test("trampoline-boot-zbi-test") {
+    kernel = ":trampoline-boot-test-shim"
+
+    sources = get_target_outputs(":trampoline-boot-test")
+    data_deps = [ ":trampoline-boot-test" ]
+  }
+
   group("test") {
     testonly = true
     deps = [
@@ -420,7 +480,12 @@ if (current_toolchain != default_toolchain) {
       "elf-loading",
     ]
     if (current_cpu == "x64") {
-      deps += [ ":qemu-memory-test" ]
+      deps += [
+        ":qemu-memory-test",
+
+        # TODO(fxb/88583): Add support for arm.
+        ":trampoline-boot-zbi-test",
+      ]
     }
     if (current_cpu == "arm64") {  # TODO(mcgrathr): support on x86
       deps += [ ":zbi-phys-exception-test" ]

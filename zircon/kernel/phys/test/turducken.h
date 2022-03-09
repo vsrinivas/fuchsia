@@ -28,16 +28,22 @@
 #include <lib/zbitl/image.h>
 #include <zircon/boot/image.h>
 
+#include <cstdint>
+
 #include <ktl/byte.h>
 #include <ktl/optional.h>
 #include <ktl/span.h>
 #include <ktl/string_view.h>
 #include <phys/allocation.h>
+#include <phys/boot-zbi.h>
 
 // These methods are defined in turducken.cc along with a common TestMain.
 class TurduckenTestBase {
  public:
   using Zbi = zbitl::Image<ktl::span<ktl::byte>>;
+
+  // Returns the unsigned integer encoded in |value_str|.
+  static ktl::optional<uint64_t> ParseUint(ktl::string_view value_str);
 
   TurduckenTestBase() = delete;
 
@@ -74,6 +80,9 @@ class TurduckenTestBase {
   // prefix.  The returned span is empty if no matches are found.  Otherwise it
   // can be modified in place.
   ktl::span<char> ModifyOption(ktl::string_view prefix);
+
+  // Log the command-line arguments constructed from the boot-zbi(ZBI_TYPE_CMDLINE).
+  void LogCmdLineArguments();
 
   // Unpack the embedded ZBI in the kernel_item (ZBI_TYPE_STORAGE_KERNEL).
   // Then append [first, last) to it, with extra_data_space capacity to spare.
