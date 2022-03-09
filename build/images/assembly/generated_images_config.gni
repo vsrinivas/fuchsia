@@ -5,6 +5,7 @@
 import("//build/images/args.gni")
 import("//build/images/fvm.gni")
 import("//build/images/vbmeta.gni")
+import("//build/zbi/zbi.gni")
 
 # Generates an Images Config. See the specification here:
 #   https://fuchsia.googlesource.com/fuchsia/+/refs/heads/main/src/developer/ffx/plugins/assembly/#images-config
@@ -83,7 +84,7 @@ template("generated_images_config") {
   zbi = {
     type = "zbi"
     name = invoker.zbi_name
-    compression = "zstd.max"
+    compression = zbi_compression
 
     # Set the signing script if provided.
     if (defined(invoker.zbi_signing_script)) {
