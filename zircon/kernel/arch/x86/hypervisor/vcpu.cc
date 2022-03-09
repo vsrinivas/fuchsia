@@ -39,18 +39,6 @@ static constexpr uint32_t kInterruptTypeHardwareException = 3u << 8;
 static constexpr uint32_t kInterruptTypeSoftwareException = 6u << 8;
 static constexpr uint16_t kBaseProcessorVpid = 1;
 
-static zx_status_t invept(InvEpt invalidation, uint64_t eptp) {
-  uint8_t err;
-  uint64_t descriptor[] = {eptp, 0};
-
-  __asm__ __volatile__("invept %[descriptor], %[invalidation]"
-                       : "=@ccna"(err)  // Set `err` on error (C or Z flag set)
-                       : [descriptor] "m"(descriptor), [invalidation] "r"(invalidation)
-                       : "cc");
-
-  return err ? ZX_ERR_INTERNAL : ZX_OK;
-}
-
 static zx_status_t vmptrld(paddr_t pa) {
   uint8_t err;
 

@@ -37,7 +37,19 @@ static zx_status_t vmxoff() {
 
   __asm__ __volatile__("vmxoff"
                        : "=@ccna"(err)  // Set `err` on error (C or Z flag set)
-                       : // no inputs
+                       :                // no inputs
+                       : "cc");
+
+  return err ? ZX_ERR_INTERNAL : ZX_OK;
+}
+
+zx_status_t invept(InvEpt invalidation, uint64_t eptp) {
+  uint8_t err;
+  uint64_t descriptor[] = {eptp, 0};
+
+  __asm__ __volatile__("invept %[descriptor], %[invalidation]"
+                       : "=@ccna"(err)  // Set `err` on error (C or Z flag set)
+                       : [descriptor] "m"(descriptor), [invalidation] "r"(invalidation)
                        : "cc");
 
   return err ? ZX_ERR_INTERNAL : ZX_OK;
@@ -145,12 +157,34 @@ static zx_status_t vmxon_task(void* context, cpu_num_t cpu_num) {
     return status;
   }
 
+  // From Volume 3, Section 28.3.3.4: Software can use the INVEPT instruction
+  // with the “all-context” INVEPT type immediately after execution of the VMXON
+  // instruction or immediately prior to execution of the VMXOFF instruction.
+  // Either prevents potentially undesired retention of information cached from
+  // EPT paging structures between separate uses of VMX operation.
+  status = invept(InvEpt::ALL_CONTEXT, 0);
+  if (status != ZX_OK) {
+    dprintf(CRITICAL, "Failed to invalidate all EPTs on CPU %u\n", cpu_num);
+    return status;
+  }
+
   return ZX_OK;
 }
 
 static void vmxoff_task(void* arg) {
+  // From Volume 3, Section 28.3.3.4: Software can use the INVEPT instruction
+  // with the “all-context” INVEPT type immediately after execution of the VMXON
+  // instruction or immediately prior to execution of the VMXOFF instruction.
+  // Either prevents potentially undesired retention of information cached from
+  // EPT paging structures between separate uses of VMX operation.
+  zx_status_t status = invept(InvEpt::ALL_CONTEXT, 0);
+  if (status != ZX_OK) {
+    dprintf(CRITICAL, "Failed to invalidate all EPTs on CPU %u\n", arch_curr_cpu_num());
+    return;
+  }
+
   // Execute VMXOFF.
-  zx_status_t status = vmxoff();
+  status = vmxoff();
   if (status != ZX_OK) {
     dprintf(CRITICAL, "Failed to turn off VMX on CPU %u\n", arch_curr_cpu_num());
     return;
