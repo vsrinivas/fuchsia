@@ -719,6 +719,14 @@ TEST_F(EthernetTestFixture, ApIfaceDoesNotAffectEthernetOnClientDisconnect) {
   TestEthernetAgainstRole(WLAN_MAC_ROLE_AP);
 }
 
+TEST_F(EthernetTestFixture, ApIfaceHasApEthernetFeature) {
+  InitDeviceWithRole(WLAN_MAC_ROLE_AP);
+  ethernet_info_t info;
+  device_->EthQuery(0, &info);
+  ASSERT_TRUE(info.features & ETHERNET_FEATURE_WLAN);
+  ASSERT_TRUE(info.features & ETHERNET_FEATURE_WLAN_AP);
+}
+
 TEST_F(EthernetTestFixture, StartThenSetOnline) {
   InitDeviceWithRole(WLAN_MAC_ROLE_AP);  // role doesn't matter
   device_->EthStart(&eth_proto_);

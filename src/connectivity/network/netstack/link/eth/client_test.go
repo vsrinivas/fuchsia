@@ -491,8 +491,20 @@ func TestDeviceClass(t *testing.T) {
 			expectClass: network.DeviceClassEthernet,
 		},
 		{
+			features:    fidlethernet.FeaturesWlanAp,
+			expectClass: network.DeviceClassWlanAp,
+		},
+		{
+			features:    fidlethernet.FeaturesSynthetic,
+			expectClass: network.DeviceClassVirtual,
+		},
+		{
 			features:    fidlethernet.FeaturesWlan,
 			expectClass: network.DeviceClassWlan,
+		},
+		{
+			features:    fidlethernet.FeaturesWlan | fidlethernet.FeaturesWlanAp,
+			expectClass: network.DeviceClassWlanAp,
 		},
 	}
 	for _, test := range tests {

@@ -1157,6 +1157,9 @@ zx_status_t Device::EthQuery(uint32_t options, ethernet_info_t* info) {
   if (query_info_.features & WLAN_FULLMAC_FEATURE_SYNTH) {
     info->features |= ETHERNET_FEATURE_SYNTH;
   }
+  if (query_info_.role == WLAN_MAC_ROLE_AP) {
+    info->features |= ETHERNET_FEATURE_WLAN_AP;
+  }
 
   // mtu
   info->mtu = 1500;

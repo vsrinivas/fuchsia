@@ -407,6 +407,12 @@ func (c *Client) ListenTX() error {
 }
 
 func (c *Client) DeviceClass() network.DeviceClass {
+	if c.Info.Features&ethernet.FeaturesWlanAp != 0 {
+		return network.DeviceClassWlanAp
+	}
+	if c.Info.Features&ethernet.FeaturesSynthetic != 0 {
+		return network.DeviceClassVirtual
+	}
 	if c.Info.Features&ethernet.FeaturesWlan != 0 {
 		return network.DeviceClassWlan
 	}

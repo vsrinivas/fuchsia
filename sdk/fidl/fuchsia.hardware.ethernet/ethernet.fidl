@@ -15,6 +15,7 @@ type Features = strict bits : uint32 {
     WLAN = 0x01;
     SYNTHETIC = 0x02;
     LOOPBACK = 0x04;
+    WLAN_AP = 0x08;
 };
 
 @for_deprecated_c_bindings
