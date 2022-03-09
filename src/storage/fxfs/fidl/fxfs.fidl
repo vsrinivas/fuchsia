@@ -7,6 +7,14 @@ library fuchsia.fxfs;
 using fuchsia.io;
 using zx;
 
+/// Designates the purpose of a key.
+type KeyPurpose = flexible enum {
+    /// The key will be used to encrypt metadata.
+    METADATA = 1;
+    /// The key will be used to encrypt data.
+    DATA = 2;
+};
+
 @discoverable
 protocol Crypt {
     /// Creates a new key wrapped with the key identified by `wrapping_key_id`.  `owner` identifies
@@ -15,6 +23,7 @@ protocol Crypt {
     /// meaning to Fxfs.
     CreateKey(struct {
         owner uint64;
+        purpose KeyPurpose;
     }) -> (struct {
         wrapping_key_id uint64;
         wrapped_key bytes:32;
@@ -32,6 +41,36 @@ protocol Crypt {
     }) -> (struct {
         unwrapped_keys vector<bytes:32>:8;
     }) error zx.status;
+};
+
+type CryptSettings = table {
+    1: active_data_wrapping_key_id uint64;
+    2: active_metadata_wrapping_key_id uint64;
+};
+
+@discoverable
+protocol CryptManagement {
+    /// Adds a new wrapping key to the Crypt service.  The new key will immediately be available
+    /// for unwrapping keys (Crypt::UnwrapKeys) but won't be used for wrapping keys until
+    /// CryptManagement::SetActiveKeys is called.
+    AddWrappingKey(struct {
+        wrapping_key_id uint64;
+        key bytes:32;
+    }) -> (struct {}) error zx.status;
+
+    /// Updates the key which will be used for wrapping keys (Crypt::CreateKey).  `purpose`
+    /// describes which active key to modify.
+    SetActiveKey(struct {
+        purpose KeyPurpose;
+        wrapping_key_id uint64;
+    }) -> (struct {}) error zx.status;
+
+    /// Forgets a wrapping key, preventing its use for future key-unwrapping.  All future calls to
+    /// Crypt::UnwrapKeys with that wrapping key ID will fail.
+    /// If either the data or metadata part of the key is active, an error is returned.
+    ForgetWrappingKey(struct {
+        wrapping_key_id uint64;
+    }) -> (struct {}) error zx.status;
 };
 
 protocol Volume {

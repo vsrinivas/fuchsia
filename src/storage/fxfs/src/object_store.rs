@@ -30,7 +30,7 @@ pub use store_object_handle::StoreObjectHandle;
 
 use {
     crate::{
-        crypt::{Crypt, StreamCipher, WrappedKeys, WrappedKeysV1},
+        crypt::{Crypt, KeyPurpose, StreamCipher, WrappedKeys, WrappedKeysV1},
         data_buffer::{DataBuffer, MemDataBuffer},
         debug_assert_not_too_long,
         errors::FxfsError,
@@ -431,7 +431,8 @@ impl ObjectStore {
         crypt: Arc<dyn Crypt>,
     ) -> Result<Arc<Self>, Error> {
         let filesystem = parent_store.filesystem();
-        let (wrapped_keys, unwrapped_keys) = crypt.create_key(handle.object_id()).await?;
+        let (wrapped_keys, unwrapped_keys) =
+            crypt.create_key(handle.object_id(), KeyPurpose::Metadata).await?;
         let store = Self::new(
             Some(parent_store),
             handle.object_id(),
@@ -655,7 +656,7 @@ impl ObjectStore {
             crypt = store_crypt.as_deref();
         }
         let (keys, unwrapped_keys) = if let Some(crypt) = crypt {
-            let (keys, unwrapped_keys) = crypt.create_key(object_id).await?;
+            let (keys, unwrapped_keys) = crypt.create_key(object_id, KeyPurpose::Data).await?;
             (EncryptionKeys::AES256XTS(keys), Some(unwrapped_keys))
         } else {
             (EncryptionKeys::None, None)

@@ -3,10 +3,10 @@
 // found in the LICENSE file.
 
 use {
-    crate::crypt::{Crypt, UnwrappedKey, UnwrappedKeys, WrappedKey, WrappedKeys},
+    crate::crypt::{Crypt, KeyPurpose, UnwrappedKey, UnwrappedKeys, WrappedKey, WrappedKeys},
     anyhow::{anyhow, bail, Error},
     async_trait::async_trait,
-    fidl_fuchsia_fxfs::CryptProxy,
+    fidl_fuchsia_fxfs::{CryptProxy, KeyPurpose as FidlKeyPurpose},
     std::convert::TryInto,
 };
 
@@ -20,11 +20,24 @@ impl RemoteCrypt {
     }
 }
 
+impl From<KeyPurpose> for FidlKeyPurpose {
+    fn from(other: KeyPurpose) -> Self {
+        match other {
+            KeyPurpose::Data => Self::Data,
+            KeyPurpose::Metadata => Self::Metadata,
+        }
+    }
+}
+
 #[async_trait]
 impl Crypt for RemoteCrypt {
-    async fn create_key(&self, owner: u64) -> Result<(WrappedKeys, UnwrappedKeys), Error> {
+    async fn create_key(
+        &self,
+        owner: u64,
+        purpose: KeyPurpose,
+    ) -> Result<(WrappedKeys, UnwrappedKeys), Error> {
         let (wrapping_key_id, key, unwrapped_key) =
-            self.client.create_key(owner).await?.map_err(|e| anyhow!(e))?;
+            self.client.create_key(owner, purpose.into()).await?.map_err(|e| anyhow!(e))?;
         Ok((
             WrappedKeys(vec![WrappedKey {
                 wrapping_key_id,

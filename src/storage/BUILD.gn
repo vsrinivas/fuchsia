@@ -22,6 +22,7 @@ group("tests") {
     "fuzzers:tests",
     "fvm:tests",
     "fxfs:tests",
+    "fxfs-crypt:tests",
     "gpt:tests",
     "host_fs_test:tests",
     "lib:tests",
