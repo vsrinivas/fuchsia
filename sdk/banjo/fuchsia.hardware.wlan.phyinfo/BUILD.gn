@@ -5,6 +5,6 @@
 import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.hardware.wlan.phyinfo") {
-  sdk_category = "partner"
+  sdk_category = "experimental"
   sources = [ "phyinfo.fidl" ]
 }

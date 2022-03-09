@@ -5,7 +5,7 @@
 import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.hardware.wlan.softmac") {
-  sdk_category = "partner"
+  sdk_category = "experimental"
   sources = [ "softmac.fidl" ]
   public_deps = [
     "//sdk/banjo/fuchsia.hardware.wlan.associnfo",
