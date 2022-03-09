@@ -117,7 +117,7 @@ class TestableStackImpl : public StackImpl {
     WEAVE_ERROR OnResetConfig(uint16_t resetFlags) override {
       parent_->reset_config_was_called_ = true;
       if (resetFlags != parent_->expected_reset_config_flags_) {
-        ADD_FAILURE() << "OnResetConfig recieved the incorrect flags";
+        ADD_FAILURE() << "OnResetConfig received the incorrect flags";
       }
       return parent_->reset_config_result_;
     }

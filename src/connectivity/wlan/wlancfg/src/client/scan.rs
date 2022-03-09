@@ -1236,7 +1236,7 @@ mod tests {
 
         // No retry expected, check for results on the scan request
         assert_variant!(exec.run_until_stalled(&mut scan_fut), Poll::Ready(result) => {
-            let error = result.expect_err("did not expect to recieve scan results");
+            let error = result.expect_err("did not expect to receive scan results");
             assert_eq!(error, types::ScanError::GeneralError);
         });
 

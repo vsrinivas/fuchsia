@@ -396,7 +396,7 @@ fn main() -> Result<(), Error> {
 
     const STACK_SIZE: usize = 512 * 1024;
 
-    // Create a child thread with a larger stack size to accomodate large structures being built.
+    // Create a child thread with a larger stack size to accommodate large structures being built.
     let thread_handle = thread::Builder::new().stack_size(STACK_SIZE).spawn(run_test)?;
 
     thread_handle.join().expect("Failed to join test thread")

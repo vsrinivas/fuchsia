@@ -575,7 +575,7 @@ mod tests {
                 .try_send(IfaceManagerRequest::Disconnect(network_id, reason))
                 .map_err(|e| {
                     error!(
-                        "Failed to send disconnect: commands_sender's reciever may have
+                        "Failed to send disconnect: commands_sender's receiver may have
                         been dropped. FakeIfaceManager should be created manually with a sender
                         assigned: {:?}",
                         e

@@ -123,7 +123,7 @@ class CodecBuffer {
   // must not touch memory at buffer_base() when a fake mapping is in effect, but if client code
   // does anyway, that thread will cleanly fault (not get stuck reading, not seem to let a write
   // happen, not be reading/writing any arbitrary other data in the process's address space).  The
-  // fake_map_addr vaddr region is guaranteed to have enough vaddr pages to accomodate
+  // fake_map_addr vaddr region is guaranteed to have enough vaddr pages to accommodate
   // vmo_usable_start % ZX_PAGE_SIZE + vmo_usable_size (so that an access within the bounds of the
   // buffer will reliably fault cleanly).
   void FakeMap(uint8_t* fake_map_addr);

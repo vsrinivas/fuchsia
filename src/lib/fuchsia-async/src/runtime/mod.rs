@@ -50,7 +50,7 @@ pub trait DurationExt {
 /// The time when a Timer should wakeup.
 pub trait WakeupTime {
     /// Convert this time into a fuchsia_async::Time.
-    /// This is allowed to be innacurate, but the innacuracy must make the wakeup time later,
+    /// This is allowed to be inaccurate, but the inaccuracy must make the wakeup time later,
     /// never earlier.
     fn into_time(self) -> Time;
 }

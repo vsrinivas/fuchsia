@@ -384,7 +384,7 @@ vk_swapchain_staging_present_image(vk_swapchain_staging_t * staging,
              frame_index,
              staging->frame_count);
 
-  // Transition target image to transfer-src, and blit image to tranfer-dst.
+  // Transition target image to transfer-src, and blit image to transfer-dst.
   Stage * stage = &staging->stages[image_index];
 
   VkSemaphore signal_semaphore = staging->copy_semaphores[frame_index];

@@ -41,7 +41,7 @@ class PciDriverTests : public zxtest::Test {
 // which results in our protocol test driver being loaded. The protocol test
 // driver exposes a FIDL RunTests interface for the test runner to request tests
 // be run and receive a summary report. Protocol tests are run in the proxied
-// devhost against the real PCI protcol implementation speaking to a real PCI
+// devhost against the real PCI protocol implementation speaking to a real PCI
 // device interface, backed by the fake bus driver.
 //
 // Illustrated:

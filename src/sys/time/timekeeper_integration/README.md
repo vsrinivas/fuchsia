@@ -9,7 +9,7 @@ The test component implements a number of services:
  * `fuchsia.time.Maintenance` - provides timekeeper with a handle to a clock
  created by the test component.
  * `test.time.TimeSourceControl` - allows a `dev_time_source` launched
- by Timekeeper to forward the `fuchsia.time.external.*` connections it recieves from
+ by Timekeeper to forward the `fuchsia.time.external.*` connections it receives from
  Timekeeper to the test component.
 
 In addition, the test launches a mock Cobalt component, which makes

@@ -529,7 +529,7 @@ mod tests {
         let fake_component = FakeComponent {
             onkill: Some(move || {
                 sender.send(()).unwrap();
-                // After acknowledging that we recieved kill, send the epitaph
+                // After acknowledging that we received kill, send the epitaph
                 // value so `serve` completes.
                 let _ = epitaph_tx.send(CHANNEL_EPITAPH.try_into().unwrap());
             }),

@@ -6,7 +6,7 @@ library fuchsia.fs;
 /// Administration functionality for filesystems.
 @discoverable
 protocol Admin {
-    /// Shuts down the filesystem. Once the filesystem recieves the shutdown request, it will
+    /// Shuts down the filesystem. Once the filesystem receives the shutdown request, it will
     /// complete any active requests before terminating, but will not respond to new requests. This
     /// call blocks until all open connections to the filesystem are terminated and any underlying
     /// block devices or other owned channels are released, then it responds to this request and

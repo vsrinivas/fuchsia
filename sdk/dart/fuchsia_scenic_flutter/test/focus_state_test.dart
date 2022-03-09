@@ -39,7 +39,7 @@ void main() {
   test('FocusState: current and next', () async {
     // Because this test doesn't purely rely on Futures and relies on callbacks
     // (the mock method call handler), create a completer that will finish when
-    // all of the focus states have been dispatched and recieved.
+    // all of the focus states have been dispatched and received.
     final completer = Completer();
     final lock = ReadersWriterLock();
 

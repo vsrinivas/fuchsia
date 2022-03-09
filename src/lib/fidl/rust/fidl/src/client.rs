@@ -305,7 +305,7 @@ impl Client {
 #[derive(Debug)]
 pub struct MessageResponse {
     id: Txid,
-    // `None` if the message response has been recieved
+    // `None` if the message response has been received
     client: Option<Arc<ClientInner>>,
 }
 

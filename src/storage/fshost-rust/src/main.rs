@@ -45,7 +45,7 @@ async fn main() -> Result<(), Error> {
         .await
         .ok_or_else(|| format_err!("shutdown signal stream ended unexpectedly"))?;
 
-    log::info!("shutdown signal recieved");
+    log::info!("shutdown signal received");
 
     // Shutting down fshost involves sending asynchronous shutdown signals to several different
     // systems in order. If at any point we hit an error, we log loudly, but continue with the

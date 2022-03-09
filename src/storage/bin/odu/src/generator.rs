@@ -91,7 +91,7 @@ impl ActiveCommands {
     /// Returns value of command_count. This returns a snap-shot in time value.
     /// By the time another action is performed based on previous value returned
     /// by count, the count may have changed. Currently, sender increments the
-    /// count and reciever decrements it.
+    /// count and receiver decrements it.
     pub fn count(&self) -> u64 {
         let &(ref lock, ref _cvar) = &*self.command_count;
         let count = lock.lock().unwrap();

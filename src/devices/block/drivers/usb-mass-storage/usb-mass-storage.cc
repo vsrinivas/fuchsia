@@ -518,7 +518,7 @@ zx_status_t UsbMassStorageDevice::ModeSense(uint8_t lun, uint8_t page, void* dat
   // the device should report any errors in the CSW stage,
   // which seems to suggest that stalling here is out-of-spec.
   // Some devices that we tested with do stall the CBW or data transfer stage,
-  // so to accomodate those devices we consider the transfer to have ended (with an error)
+  // so to accommodate those devices we consider the transfer to have ended (with an error)
   // when we receive a stall condition from the device.
   if (SendCbw(lun, transfer_length, USB_DIR_IN, sizeof(command), &command) == ZX_ERR_IO_REFUSED) {
     return ZX_ERR_IO_REFUSED;

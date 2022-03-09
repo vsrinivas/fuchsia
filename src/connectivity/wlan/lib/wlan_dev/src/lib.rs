@@ -56,7 +56,7 @@ impl fmt::Debug for Device {
 
 /// Encapsulate phy and iface devices as well as the environment where they exist
 pub trait DeviceEnv {
-    /// Path to the directory where new phy deivces will be spawned
+    /// Path to the directory where new phy devices will be spawned
     const PHY_PATH: &'static str;
 
     /// Opens a directory for device watcher to detect new devices

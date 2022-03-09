@@ -163,7 +163,7 @@ impl PushSourcePuppetInner {
     }
 }
 
-/// The list of RTC update requests recieved by a `NestedTimekeeper`.
+/// The list of RTC update requests received by a `NestedTimekeeper`.
 #[derive(Clone, Debug)]
 pub struct RtcUpdates(Arc<Mutex<Vec<fidl_fuchsia_hardware_rtc::Time>>>);
 

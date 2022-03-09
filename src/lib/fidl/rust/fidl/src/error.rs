@@ -81,7 +81,7 @@ pub enum Error {
     #[error("A FIDL message contained incorrectly encoded UTF8.")]
     Utf8Error,
 
-    /// A message was recieved for an ordinal value that the service does not understand.
+    /// A message was received for an ordinal value that the service does not understand.
     /// This generally results from an attempt to call a FIDL service of a type other than
     /// the one being served.
     #[error(

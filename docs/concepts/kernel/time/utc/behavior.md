@@ -9,7 +9,7 @@ UTC time is supplied by a
 [kernel clock object](/docs/reference/kernel_objects/clock.md) that is
 distributed to components. A process cannot read UTC time unless it is passed a
 handle to the clock when launched. All components started by Component Manager
-recieve a handle to the clock.
+receive a handle to the clock.
 
 [Timekeeper](/src/sys/time/timekeeper) sets and maintains the UTC clock by
 synchronizing against either a Real Time Clock (RTC) or an external source

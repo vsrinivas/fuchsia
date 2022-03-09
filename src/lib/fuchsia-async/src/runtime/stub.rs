@@ -132,7 +132,7 @@ pub mod timer {
     impl core::future::Future for Timer {
         type Output = ();
 
-        /// Stub future implrementation, panics if used.
+        /// Stub future implementation, panics if used.
         fn poll(
             self: std::pin::Pin<&mut Self>,
             _: &mut std::task::Context<'_>,

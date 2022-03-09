@@ -14,7 +14,7 @@
 namespace media_player {
 
 // |SlidingBuffer| is a ring buffer of fixed size that emulates an infinite
-// index space by revolving its ring buffer to accomodate the most recent write.
+// index space by revolving its ring buffer to accommodate the most recent write.
 // It is designed for use in caching a mostly linear progression through a data
 // stream.
 //
@@ -24,7 +24,7 @@ namespace media_player {
 // When consuming from this buffer, call |Read()| to try and read a range. If
 // all desired bytes are not read, call |Slide()| to slide the buffer up to the
 // end of the read. |Slide()| will return the writes that must be made to the
-// buffer to accomodate the |Read()|.
+// buffer to accommodate the |Read()|.
 class SlidingBuffer {
  public:
   struct Block {
@@ -42,7 +42,7 @@ class SlidingBuffer {
   // Reads from the virtual position |pos| into |buffer| up to |bytes_to_read|.
   size_t Read(size_t pos, uint8_t* buffer, size_t bytes_to_read);
 
-  // Slides the buffer so it will accomodate the virtual position |dest_pos|
+  // Slides the buffer so it will accommodate the virtual position |dest_pos|
   // and |budget| bytes after it. It will return a set of Blocks that must
   // be filled with the contents of the upstream data source in order to
   // complete the slide.

@@ -160,7 +160,7 @@ protocol LogSink {
 
     /// Send this socket to be drained, using the structured logs format.
     ///
-    /// See //docs/reference/diagnostics/logs/encoding.md for what is expected to be recieved over
+    /// See //docs/reference/diagnostics/logs/encoding.md for what is expected to be received over
     /// the socket.
     @transitional
     ConnectStructured(resource struct {

@@ -49,7 +49,7 @@ namespace media_player {
 // Input
 // A node possesses zero or more Input instances. Input objects
 // implement the supply of media into the node and demand for media signalled
-// upstream. Inputs recieve media from Outputs in the form of packets
+// upstream. Inputs receive media from Outputs in the form of packets
 // (type Packet).
 //
 // Output

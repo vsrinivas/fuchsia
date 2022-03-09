@@ -54,7 +54,7 @@ class ProxyController : public MessageHandler {
   // If |response_handler| is non-null, the message will be assigned a
   // transaction identifier before being encoded and sent over the channel. The
   // |response_handler| will be retained by the |ProxyController| until the
-  // |ProxyController| recieves a response to the message, at which time the
+  // |ProxyController| receives a response to the message, at which time the
   // |ProxyController| will call the |OnMessage| method of the
   // |response_handler|.
   //

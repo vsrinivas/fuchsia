@@ -1147,7 +1147,7 @@ fn process_sae_frame_rx(
     let peer_sta_address = frame.peer_sta_address.clone();
     let supplicant = match protection {
         Protection::Rsna(rsna) => &mut rsna.supplicant,
-        _ => bail!("Unexpected SAE frame recieved"),
+        _ => bail!("Unexpected SAE frame received"),
     };
 
     let mut updates = UpdateSink::default();

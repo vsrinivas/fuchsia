@@ -74,7 +74,7 @@ exclude = [
 
 [export.rename]
 # Unfortunately cbindgen's rename machinery is rather simple
-# and doesn't accomodate our needs. As a result we have to
+# and doesn't accommodate our needs. As a result we have to
 # explicitly declare the items which should get renamed
 "Ap" = "wlan_ap_sta_t"
 "BufferProvider" = "mlme_buffer_provider_ops_t"

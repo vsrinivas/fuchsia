@@ -22,7 +22,7 @@ class FshostBootArgs {
  public:
   // Create an FshostBootArgs object by attempting to connect to fuchsia.boot.Arguments through the
   // namespace. If the service connection fails, this creates an object that returns default values.
-  // TODO: This probably shouldn't automatically fall back to defaults just to accomodate test
+  // TODO: This probably shouldn't automatically fall back to defaults just to accommodate test
   // environments. The test environment should provide the services fshost needs, faking if needed.
   static std::shared_ptr<FshostBootArgs> Create();
 

@@ -1507,7 +1507,7 @@ TEST_F(LuisPartitionerTests, AddPartitionNotSupported) {
 
 TEST_F(LuisPartitionerTests, FindPartition) {
   std::unique_ptr<BlockDevice> gpt_dev;
-  // kBlockCount should be a value large enough to accomodate all partitions and blocks reserved
+  // kBlockCount should be a value large enough to accommodate all partitions and blocks reserved
   // by gpt. The current value is copied from the case of sherlock. As of now, we assume they
   // have the same disk size requirement.
   constexpr uint64_t kBlockCount = 0x748034;
@@ -1786,7 +1786,7 @@ TEST_F(NelsonPartitionerTests, AddPartitionNotSupported) {
 
 TEST_F(NelsonPartitionerTests, FindPartition) {
   std::unique_ptr<BlockDevice> gpt_dev;
-  // kBlockCount should be a value large enough to accomodate all partitions and blocks reserved
+  // kBlockCount should be a value large enough to accommodate all partitions and blocks reserved
   // by gpt. The current value is copied from the case of sherlock. The actual size of fvm
   // partition on nelson is yet to be finalized.
   constexpr uint64_t kBlockCount = 0x748034;

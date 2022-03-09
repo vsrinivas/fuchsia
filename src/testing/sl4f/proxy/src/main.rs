@@ -54,7 +54,7 @@ impl TcpProxyControl {
         TcpProxyControl { proxy_handles: Mutex::new(HashMap::new()) }
     }
 
-    /// Serve `TcpProxyControlRequest`s recieved on the provided stream.
+    /// Serve `TcpProxyControlRequest`s received on the provided stream.
     pub async fn serve_requests_from_stream(
         &self,
         mut stream: TcpProxyControlRequestStream,
@@ -170,7 +170,7 @@ impl TcpProxy {
             .await;
     }
 
-    /// Proxies any requests recieved on |tcp_listener| to localhost:|target_port|.
+    /// Proxies any requests received on |tcp_listener| to localhost:|target_port|.
     async fn serve_proxy(tcp_listener: fasync::net::TcpListener, target_port: u16) {
         tcp_listener
             .accept_stream()

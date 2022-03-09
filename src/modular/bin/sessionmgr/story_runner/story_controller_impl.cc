@@ -815,7 +815,7 @@ void StoryControllerImpl::ProcessPendingStoryShellViews() {
   // is the number of modules. This function is N^2, and it's called once for
   // each of the N modules. However, N is small, and moreover its scale is
   // limited my much more severe constraints. Eventually, we will address this
-  // by changing story shell to be able to accomodate modules out of traversal
+  // by changing story shell to be able to accommodate modules out of traversal
   // order.
   if (!story_shell_) {
     return;

@@ -46,7 +46,7 @@ class SimpleBlobDataProducer : public BlobDataProducer {
 };
 
 // Merges two producers together with optional padding between them. If there is padding, we
-// require the second producer to be able to accomodate padding at the beginning up to
+// require the second producer to be able to accommodate padding at the beginning up to
 // kBlobfsBlockSize i.e. the first span it returns must point to a buffer that can be prepended with
 // up to kBlobfsBlockSize bytes. Both producers should be able to accommodate padding at the end if
 // it would be required.

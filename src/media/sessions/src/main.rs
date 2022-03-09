@@ -35,7 +35,7 @@ const CHANNEL_BUFFER_SIZE: usize = 100;
 /// This number should be forgiving. If we lower it we may want to build some
 /// in-process staging area for changes so we can send them to clients that ACK
 /// late. At 20 though, clients that don't ACK can't reasonably expect to be
-/// accomodated.
+/// accommodated.
 const MAX_EVENTS_SENT_WITHOUT_ACK: usize = 20;
 
 fn spawn_log_error(fut: impl Future<Output = Result<()>> + 'static) {

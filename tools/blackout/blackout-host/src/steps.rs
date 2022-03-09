@@ -35,7 +35,7 @@ static SSH_OPTIONS: &'static [&str] = &[
     // the next three control how long ssh will wait in different situations before giving up.
     // wait 100 seconds for the server to be routable. overrides the system default tcp timeout.
     "-o", "ConnectTimeout=100",
-    // send a ping to the server every 10 seconds if no data has been recieved from the server
+    // send a ping to the server every 10 seconds if no data has been received from the server
     "-o", "ServerAliveInterval=10",
     // send 6 of those pings before giving up. this is equivalent to a timeout of about 60 seconds
     // before giving up the connection, when the server is routable but we aren't getting responses

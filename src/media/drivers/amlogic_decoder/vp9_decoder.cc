@@ -1427,7 +1427,7 @@ bool Vp9Decoder::FindNewFrameBuffer(HardwareRenderParams* params, bool params_ch
 
   // These may or may not be changing.  VP9 permits frame dimensions to change
   // from frame to frame of the same stream.  As long as the BufferCollection
-  // can accomodate params (checked above), we don't need to re-allocate
+  // can accommodate params (checked above), we don't need to re-allocate
   // buffers.
   new_frame->hw_width = params->hw_width;
   new_frame->hw_height = params->hw_height;

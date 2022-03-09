@@ -60,7 +60,7 @@ struct AvrcpClientController {
     /// Used as part of flow control for delivery of notifications to the client.
     notification_window_counter: u32,
 
-    /// Current queue of outstanding notifications not recieved by the client. Used as part of flow
+    /// Current queue of outstanding notifications not received by the client. Used as part of flow
     /// control.
     // At some point this may change where we consolidate outgoing events if the FIDL client
     // can't keep up and falls behind instead of keeping a queue.

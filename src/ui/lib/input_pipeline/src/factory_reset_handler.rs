@@ -511,11 +511,11 @@ mod tests {
 
         assert!(
             is_reset_requested(&reset_event),
-            "Should reset when the reset signal is recieved."
+            "Should reset when the reset signal is received."
         );
         assert!(
             !is_reset_requested(&non_reset_event),
-            "Should only reset when the reset signal is recieved."
+            "Should only reset when the reset signal is received."
         );
     }
 

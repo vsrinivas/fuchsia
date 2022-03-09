@@ -159,7 +159,7 @@ type Header struct {
 	PartitionEntryArrayCRC32 uint32
 }
 
-// ReadFrom reads from the given reader into the reciever header. If an error
+// ReadFrom reads from the given reader into the receiver header. If an error
 // occurs, the returned bytes read may be incorrect.
 func (h *Header) ReadFrom(r io.Reader) (int64, error) {
 	return HeaderSize, binary.Read(r, binary.LittleEndian, h)
@@ -230,7 +230,7 @@ type PartitionEntry struct {
 	PartitionName       PartitionName
 }
 
-// ReadFrom reads from the given reader into the reciever PartitionEntry. If an
+// ReadFrom reads from the given reader into the receiver PartitionEntry. If an
 // error occurs, the returned bytes read may be incorrect.
 func (p *PartitionEntry) ReadFrom(r io.Reader) (int64, error) {
 	return PartitionEntrySize, binary.Read(r, binary.LittleEndian, p)

@@ -48,7 +48,7 @@ class FakeMapRange {
   //
   // The returned address is always ZX_PAGE_SIZE aligned.
   //
-  // The returned address has enough room to accomodate a fake buffer base pointer that preserves
+  // The returned address has enough room to accommodate a fake buffer base pointer that preserves
   // low-order page-offset bits for a buffer with any alignment with respect to ZX_PAGE_SIZE.
   uint8_t* base();
   // This size is how large a buffer can be supported by this instance.

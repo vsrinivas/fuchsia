@@ -70,7 +70,7 @@ class ServiceDirectory final {
   // the default name.
   //
   // This overload for |Connect| discards the status of the underlying
-  // connection operation. Callers that wish to recieve that status should use
+  // connection operation. Callers that wish to receive that status should use
   // one of the other overloads that returns a |zx_status_t|.
   //
   // # Example
@@ -143,7 +143,7 @@ class ServiceDirectory final {
   // Clone underlying directory channel.
   //
   // This overload for |CloneHandle| discards the status of the underlying
-  // operation. Callers that wish to recieve that status should use
+  // operation. Callers that wish to receive that status should use
   // other overload that returns a |zx_status_t|.
   fidl::InterfaceHandle<fuchsia::io::Directory> CloneChannel() const;
 

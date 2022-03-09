@@ -165,7 +165,7 @@ impl WlanPolicyFacade {
     }
 
     /// Connect to a network through the policy layer. The network must have been saved first.
-    /// Returns an error if the connect command was not recieved, otherwise returns the response
+    /// Returns an error if the connect command was not received, otherwise returns the response
     /// to the connect request as a string. A connection should be triggered if the response is
     /// "Acknowledged".
     /// # Arguments:

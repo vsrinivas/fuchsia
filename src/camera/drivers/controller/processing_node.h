@@ -196,7 +196,7 @@ class ProcessNode {
   // The output frame rate for this node.
   fuchsia::camera2::FrameRate output_frame_rate_;
   // Current frame counter. This is in terms of no. of output frames
-  // worth of input recieved.
+  // worth of input received.
   // current_frame_count = (no. of input frames generated * output_frame_rate)
   uint32_t current_frame_count_ = 0;
   // Type of node.

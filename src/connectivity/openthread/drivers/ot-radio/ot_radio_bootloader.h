@@ -36,7 +36,7 @@ enum OtRadioBlResult {
   // Bootloader Response received doesn't match cmd field of the cmd sent
   BL_ERR_RESP_CMD_MISMATCH = -7,
 
-  // Bootloader response recieved has incorrect crc
+  // Bootloader response received has incorrect crc
   BL_ERR_RESP_CRC_MISMATCH = -8,
 
   // Bootloader response received doesn't have expected length

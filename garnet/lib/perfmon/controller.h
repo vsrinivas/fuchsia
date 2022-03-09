@@ -21,7 +21,7 @@ namespace perfmon {
 
 class Controller {
  public:
-  // The protcol specifies buffer sizes in 4K pages.
+  // The protocol specifies buffer sizes in 4K pages.
   static constexpr uint32_t kLog2PageSize = 12;
   static constexpr uint32_t kPageSize = 1 << kLog2PageSize;
   // The protocol restricts buffer sizes to 256MB.

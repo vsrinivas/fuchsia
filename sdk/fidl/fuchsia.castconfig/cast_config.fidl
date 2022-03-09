@@ -27,7 +27,7 @@ protocol Provider {
 
     /// Notifies the config provider of the config status.
     ///
-    /// `processed`: `true` if successfully recieved and processed
+    /// `processed`: `true` if successfully received and processed
     /// `retry`: If `processed` is `false` config provider determines if a retry
     ///  is appropriate.
     Notify(struct {

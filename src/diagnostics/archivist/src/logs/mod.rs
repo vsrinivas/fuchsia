@@ -589,7 +589,7 @@ mod tests {
         let klog_reader = TestDebugLog::new();
         klog_reader.enqueue_read_entry(&log1);
         klog_reader.enqueue_read_entry(&log2);
-        // logs recieved after kernel indicates no logs should be read
+        // logs received after kernel indicates no logs should be read
         klog_reader.enqueue_read_fail(zx::Status::SHOULD_WAIT);
         klog_reader.enqueue_read_entry(&log3);
         klog_reader.enqueue_read_fail(zx::Status::SHOULD_WAIT);

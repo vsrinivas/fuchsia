@@ -39,11 +39,11 @@ class Diagnostics {
     uint64_t num_slices = 0;
     // Partition table size (number of entries)
     uint64_t partition_table_entries = 0;
-    // Total number of partition entries the FVM instance can accomodate
+    // Total number of partition entries the FVM instance can accommodate
     uint64_t partition_table_reserved_entries = 0;
     // Partition table size (number of entries)
     uint64_t allocation_table_entries = 0;
-    // Total number of slice entries the FVM instance can accomodate
+    // Total number of slice entries the FVM instance can accommodate
     uint64_t allocation_table_reserved_entries = 0;
     // Number of slices reserved
     uint64_t num_reserved_slices = 0;

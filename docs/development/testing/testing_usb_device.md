@@ -104,7 +104,7 @@ std::vector<usb_peripheral::FunctionDescriptor> function_descs;
 usb_peripheral::FunctionDescriptor function_desc = {
     .interface_class = {usb_class},
     .interface_subclass = {usb_subclass},
-    .interface_protocol = {usb_protocl},
+    .interface_protocol = {usb_protocol},
 };
 function_descs.push_back(function_desc);
 

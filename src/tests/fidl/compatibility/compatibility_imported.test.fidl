@@ -12,7 +12,7 @@ type SimpleStruct = struct {
 
 // If `forward_to_server` is empty, just returns `value`.
 // If `forward_to_server` is not empty, it is treated as the URL of a server
-// which implements this interface. The server that recieves the non-empty
+// which implements this interface. The server that receives the non-empty
 // `forward_to_server` arg acts as a proxy for that other server.
 // For the error variants: if should_error is true, the provided err result
 // error is sent, otherwise the response variant is sent.

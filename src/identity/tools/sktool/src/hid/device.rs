@@ -208,7 +208,7 @@ impl<C: Connection, R: Rng> Device<C, R> {
                 let mut received_nonce = [0u8; NONCE_LENGTH as usize];
                 payload.copy_to_slice(&mut received_nonce);
                 if received_nonce != nonce {
-                    // It's potentially possible to recieve another client's init response, whose
+                    // It's potentially possible to receive another client's init response, whose
                     // nonce won't match the one we sent. Unlikely enough to log though.
                     info!("Received init packet with an unexpected nonce.");
                     return Ok(false);

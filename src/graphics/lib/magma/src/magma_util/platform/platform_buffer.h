@@ -87,7 +87,7 @@ class PlatformBuffer {
   virtual bool MapAtCpuAddr(uint64_t addr, uint64_t offset, uint64_t length) = 0;
 
   // Maps the buffer to a VA constrained by |upper_limit|. The value of
-  // |upper_limit| must be large enough to accomodate the size of the buffer
+  // |upper_limit| must be large enough to accommodate the size of the buffer
   // with alignment. When |alignment| is not zero, it must be a power of 2 and
   // page-aligned.
   virtual bool MapCpuConstrained(void** va_out, uint64_t length, uint64_t upper_limit,

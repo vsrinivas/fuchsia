@@ -727,10 +727,10 @@ struct callback {
 
 ### The Async attribute
 
-Within the `protocl` section, we see another attribute: the `[Async]` attribute:
+Within the `protocol` section, we see another attribute: the `[Async]` attribute:
 
 ```banjo
-[20] protocl I2c {
+[20] protocol I2c {
 ...      /// comments (removed)
 [27]     [Async]
 ```

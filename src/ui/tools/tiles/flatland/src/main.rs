@@ -306,7 +306,7 @@ impl Service {
     }
 
     fn quit(&mut self, _control_handle: ControllerControlHandle) {
-        fx_log_info!("recieved Quit message");
+        fx_log_info!("received Quit message");
         std::process::exit(0);
     }
 

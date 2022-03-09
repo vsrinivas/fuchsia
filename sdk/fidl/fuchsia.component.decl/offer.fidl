@@ -73,7 +73,7 @@ type OfferProtocol = table {
     /// The name by which the capability is being offered.
     4: target_name name;
 
-    /// The dependency type this offer represents. A component which recieves a
+    /// The dependency type this offer represents. A component which receives a
     /// weak offer must support the offered capability being unavailable at any
     /// point.
     5: dependency_type DependencyType;
@@ -104,7 +104,7 @@ type OfferDirectory = table {
     /// The subdirectory of this directory to offer instead of the root. Optional.
     6: subdir string:MAX_PATH_LENGTH;
 
-    /// The dependency type this offer represents. A component which recieves a
+    /// The dependency type this offer represents. A component which receives a
     /// weak offer must support the offered capability being unavailable at any
     /// point.
     7: dependency_type DependencyType;

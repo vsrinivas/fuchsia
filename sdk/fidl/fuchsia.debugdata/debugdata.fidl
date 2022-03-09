@@ -50,6 +50,6 @@ protocol DebugData {
 };
 
 /// DebugDataVmoToken is an empty protocol used by a client calling
-/// `DebugData.Publish` to indicate when the reciever may begin processing a
+/// `DebugData.Publish` to indicate when the receiver may begin processing a
 /// VMO. See `DebugData.Publish` for more details.
 protocol DebugDataVmoToken {};
