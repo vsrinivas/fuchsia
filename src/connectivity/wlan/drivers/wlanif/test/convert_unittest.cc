@@ -4,6 +4,7 @@
 
 #include <fuchsia/hardware/wlan/associnfo/c/banjo.h>
 #include <fuchsia/hardware/wlan/fullmac/c/banjo.h>
+#include <fuchsia/hardware/wlan/phyinfo/c/banjo.h>
 #include <fuchsia/wlan/common/c/banjo.h>
 #include <fuchsia/wlan/common/cpp/fidl.h>
 #include <fuchsia/wlan/ieee80211/cpp/fidl.h>
@@ -13,17 +14,20 @@
 #include <fuchsia/wlan/stats/cpp/fidl.h>
 #include <lib/fidl/llcpp/traits.h>
 
+#include <random>
 #include <vector>
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 #include <src/connectivity/wlan/drivers/wlanif/convert.h>
 #include <wlan/common/element.h>
+#include <wlan/drivers/log.h>
 
 #include "lib/fidl/cpp/encoder.h"
 
 namespace wlanif {
 namespace {
+namespace wlan_common = ::fuchsia::wlan::common;
 namespace wlan_ieee80211 = ::fuchsia::wlan::ieee80211;
 namespace wlan_internal = ::fuchsia::wlan::internal;
 namespace wlan_mlme = ::fuchsia::wlan::mlme;
@@ -35,6 +39,7 @@ using ::testing::IsEmpty;
 using ::testing::IsNull;
 using ::testing::Matcher;
 using ::testing::NotNull;
+using ::testing::UnorderedElementsAre;
 using ::testing::UnorderedElementsAreArray;
 
 template <typename T>
@@ -50,6 +55,20 @@ zx_status_t ValidateMessage(T* msg) {
   // |fidl_decode_etc| performs validation as part of decode.
   return fidl_decode_etc(T::FidlType, msg_data.bytes().data(), msg_data.bytes().size(), nullptr, 0,
                          &err_msg);
+}
+
+// Tests should call `RAND64()` with a UniformRandomBitGenerator, such as the kind returned
+// by create_and_seed_rng(), when requiring a random 64-bit integer.
+static std::uniform_int_distribution<uint64_t> RAND64(0, UINT64_MAX);
+
+// Randomly generates an `unsigned int` to seed a `std::mt19937`, log the test name
+// and seed chosen, and returns the seeded `std::mt19937`.
+std::mt19937 create_and_seed_rng() {
+  const char* test_name = testing::UnitTest::GetInstance()->current_test_info()->name();
+  std::random_device rd;
+  unsigned int seed = rd();
+  linfo("%s seed: %u", test_name, seed);
+  return std::mt19937(seed);
 }
 
 TEST(ConvertTest, ToFidlBssDescription) {
@@ -137,6 +156,209 @@ TEST(ConvertTest, ToFidlEapolConf) {
   auto expected_dst_addr = std::array<uint8_t, 6>{1, 2, 3, 4, 5, 6};
   EXPECT_EQ(fidl_resp.dst_addr, expected_dst_addr);
   EXPECT_EQ(fidl_resp.result_code, wlan_mlme::EapolResultCode::SUCCESS);
+}
+
+ht_capabilities_fields_t fake_ht_cap(std::mt19937& rng) {
+  ht_capabilities_fields_t ht_caps = {
+      .ht_capability_info = static_cast<uint16_t>(RAND64(rng)),
+      .ampdu_params = static_cast<uint8_t>(RAND64(rng)),
+      .ht_ext_capabilities = static_cast<uint16_t>(RAND64(rng)),
+      .tx_beamforming_capabilities = static_cast<uint32_t>(RAND64(rng)),
+      .asel_capabilities = static_cast<uint8_t>(RAND64(rng)),
+  };
+
+  for (unsigned char& mcs : ht_caps.supported_mcs_set) {
+    mcs = RAND64(rng);
+  }
+
+  return ht_caps;
+}
+
+vht_capabilities_fields_t fake_vht_cap(std::mt19937& rng) {
+  return {
+      .vht_capability_info = static_cast<uint32_t>(RAND64(rng)),
+      .supported_vht_mcs_and_nss_set = static_cast<uint64_t>(RAND64(rng)),
+  };
+}
+
+TEST(ConvertTest, ToFidlHtCapabilities) {
+  auto rng = create_and_seed_rng();
+
+  ht_capabilities_fields_t ht_cap = fake_ht_cap(rng);
+  auto fidl_ht_cap = std::make_unique<wlan_internal::HtCapabilities>();
+  ConvertHtCapabilities(fidl_ht_cap.get(), ht_cap);
+  static_assert(sizeof(ht_cap) == sizeof(fidl_ht_cap->bytes));
+  // TODO(fxbug.dev/95240): We may wish to change the FIDL definition in the future
+  // so this memcmp() is more obviously correct.
+  EXPECT_EQ(0, memcmp(&ht_cap, fidl_ht_cap->bytes.data(), sizeof(ht_cap)));
+}
+
+TEST(ConvertTest, ToFidlVhtCapabilities) {
+  auto rng = create_and_seed_rng();
+
+  vht_capabilities_fields_t vht_cap = fake_vht_cap(rng);
+  auto fidl_vht_cap = std::make_unique<wlan_internal::VhtCapabilities>();
+  ConvertVhtCapabilities(fidl_vht_cap.get(), vht_cap);
+  // TODO(fxbug.dev/95240): We may wish to change the FIDL definition in the future
+  // so this memcmp() is more obviously correct.
+  static_assert(sizeof(vht_cap) == sizeof(fidl_vht_cap->bytes));
+  EXPECT_EQ(0, memcmp(&vht_cap, fidl_vht_cap->bytes.data(), sizeof(vht_cap)));
+}
+
+TEST(ConvertTest, ToFidlBandCapability) {
+  auto rng = create_and_seed_rng();
+
+  ht_capabilities_fields_t ht_cap = fake_ht_cap(rng);
+  auto fidl_ht_cap = std::make_unique<wlan_internal::HtCapabilities>();
+  ConvertHtCapabilities(fidl_ht_cap.get(), ht_cap);
+
+  vht_capabilities_fields_t vht_cap = fake_vht_cap(rng);
+  auto fidl_vht_cap = std::make_unique<wlan_internal::VhtCapabilities>();
+  ConvertVhtCapabilities(fidl_vht_cap.get(), vht_cap);
+
+  wlan_mlme::BandCapability fidl_band_capability = {};
+
+  wlan_fullmac_band_capability_t band_capability_two_ghz = {
+      .band = WLAN_BAND_TWO_GHZ,
+      .basic_rate_count = 2,
+      .basic_rate_list = {2, 4},
+      .ht_supported = true,
+      .ht_caps = ht_cap,
+      .vht_supported = true,
+      .vht_caps = vht_cap,
+      .operating_channel_count = 3,
+      .operating_channel_list = {1, 6, 11},
+  };
+
+  ConvertBandCapability(&fidl_band_capability, band_capability_two_ghz);
+  EXPECT_EQ(fidl_band_capability.band, wlan_common::WlanBand::TWO_GHZ);
+  EXPECT_THAT(fidl_band_capability.basic_rates, UnorderedElementsAre(2, 4));
+  ASSERT_NE(fidl_band_capability.ht_cap, nullptr);
+  EXPECT_EQ(fidl_band_capability.ht_cap->bytes, fidl_ht_cap->bytes);
+  ASSERT_NE(fidl_band_capability.vht_cap, nullptr);
+  EXPECT_EQ(fidl_band_capability.vht_cap->bytes, fidl_vht_cap->bytes);
+  EXPECT_THAT(fidl_band_capability.operating_channels, UnorderedElementsAre(1, 6, 11));
+
+  wlan_fullmac_band_capability_t band_capability_five_ghz = {
+      .band = WLAN_BAND_FIVE_GHZ,
+      .basic_rate_count = 3,
+      .basic_rate_list = {12, 18, 24},
+      .ht_supported = true,
+      .ht_caps = ht_cap,
+      .vht_supported = true,
+      .vht_caps = vht_cap,
+      .operating_channel_count = 2,
+      .operating_channel_list = {36, 48},
+  };
+
+  ConvertBandCapability(&fidl_band_capability, band_capability_five_ghz);
+  EXPECT_EQ(fidl_band_capability.band, wlan_common::WlanBand::FIVE_GHZ);
+  EXPECT_THAT(fidl_band_capability.basic_rates, UnorderedElementsAre(12, 18, 24));
+  ASSERT_NE(fidl_band_capability.ht_cap, nullptr);
+  EXPECT_EQ(fidl_band_capability.ht_cap->bytes, fidl_ht_cap->bytes);
+  ASSERT_NE(fidl_band_capability.vht_cap, nullptr);
+  EXPECT_EQ(fidl_band_capability.vht_cap->bytes, fidl_vht_cap->bytes);
+  EXPECT_THAT(fidl_band_capability.operating_channels, UnorderedElementsAre(36, 48));
+}
+
+TEST(ConvertTest, ToFidlDeviceInfo) {
+  auto rng = create_and_seed_rng();
+
+  wlan_mlme::DeviceInfo fidl_resp = {};
+  const std::array<uint8_t, 6> expected_sta_addr{1, 2, 3, 4, 5, 6};
+
+  ht_capabilities_fields_t ht_cap = fake_ht_cap(rng);
+  auto fidl_ht_cap = std::make_unique<wlan_internal::HtCapabilities>();
+  ConvertHtCapabilities(fidl_ht_cap.get(), ht_cap);
+
+  vht_capabilities_fields_t vht_cap = fake_vht_cap(rng);
+  auto fidl_vht_cap = std::make_unique<wlan_internal::VhtCapabilities>();
+  ConvertVhtCapabilities(fidl_vht_cap.get(), vht_cap);
+
+  wlan_fullmac_query_info_t query_info_some_driver_features = {
+      .sta_addr = {1, 2, 3, 4, 5, 6},
+      .role = WLAN_MAC_ROLE_CLIENT,
+      .features = static_cast<uint32_t>(RAND64(rng)),
+      .band_cap_list = {{
+          .band = WLAN_BAND_TWO_GHZ,
+          .basic_rate_count = 3,
+          .basic_rate_list = {2, 4, 11},
+          .ht_supported = true,
+          .ht_caps = ht_cap,
+          .vht_supported = false,
+          .operating_channel_count = 3,
+          .operating_channel_list = {1, 6, 11},
+      }},
+      .band_cap_count = 1,
+      .driver_features = WLAN_INFO_DRIVER_FEATURE_SCAN_OFFLOAD | WLAN_INFO_DRIVER_FEATURE_DFS |
+                         WLAN_INFO_DRIVER_FEATURE_SAE_SME_AUTH | WLAN_INFO_DRIVER_FEATURE_MFP};
+  ConvertQueryInfoToDeviceInfo(&fidl_resp, query_info_some_driver_features);
+
+  EXPECT_EQ(fidl_resp.sta_addr, expected_sta_addr);
+  EXPECT_EQ(fidl_resp.role, wlan_common::WlanMacRole::CLIENT);
+  ASSERT_EQ(fidl_resp.bands.size(), 1u);
+  EXPECT_EQ(fidl_resp.bands[0].band, wlan_common::WlanBand::TWO_GHZ);
+  EXPECT_THAT(fidl_resp.bands[0].basic_rates, UnorderedElementsAre(2, 4, 11));
+  ASSERT_NE(fidl_resp.bands[0].ht_cap, nullptr);
+  EXPECT_EQ(fidl_resp.bands[0].ht_cap->bytes, fidl_ht_cap->bytes);
+  EXPECT_EQ(fidl_resp.bands[0].vht_cap, nullptr);
+  EXPECT_THAT(fidl_resp.bands[0].operating_channels, UnorderedElementsAre(1, 6, 11));
+  EXPECT_THAT(fidl_resp.driver_features,
+              UnorderedElementsAre(
+                  wlan_common::DriverFeature::SCAN_OFFLOAD, wlan_common::DriverFeature::DFS,
+                  wlan_common::DriverFeature::SAE_SME_AUTH, wlan_common::DriverFeature::MFP));
+  // TODO(fxbug.dev/88315): This field will be replaced in the new driver features
+  // framework.
+  EXPECT_EQ(fidl_resp.softmac_hardware_capability, 0u);
+  // TODO(fxbug.dev/43938): This field is stubbed out for future use.
+  EXPECT_EQ(fidl_resp.qos_capable, false);
+
+  wlan_fullmac_query_info_t query_info_all_driver_features = {
+      .sta_addr = {1, 2, 3, 4, 5, 6},
+      .role = WLAN_MAC_ROLE_CLIENT,
+      .features = static_cast<uint32_t>(RAND64(rng)),
+      .band_cap_list = {{
+          .band = WLAN_BAND_TWO_GHZ,
+          .basic_rate_count = 3,
+          .basic_rate_list = {2, 4, 11},
+          .ht_supported = true,
+          .ht_caps = ht_cap,
+          .vht_supported = false,
+          .operating_channel_count = 3,
+          .operating_channel_list = {1, 6, 11},
+      }},
+      .band_cap_count = 1,
+      .driver_features = WLAN_INFO_DRIVER_FEATURE_SCAN_OFFLOAD |
+                         WLAN_INFO_DRIVER_FEATURE_RATE_SELECTION | WLAN_INFO_DRIVER_FEATURE_SYNTH |
+                         WLAN_INFO_DRIVER_FEATURE_TX_STATUS_REPORT | WLAN_INFO_DRIVER_FEATURE_DFS |
+                         WLAN_INFO_DRIVER_FEATURE_SAE_SME_AUTH |
+                         WLAN_INFO_DRIVER_FEATURE_SAE_DRIVER_AUTH | WLAN_INFO_DRIVER_FEATURE_MFP |
+                         WLAN_INFO_DRIVER_FEATURE_PROBE_RESP_OFFLOAD,
+  };
+  ConvertQueryInfoToDeviceInfo(&fidl_resp, query_info_all_driver_features);
+
+  EXPECT_EQ(fidl_resp.sta_addr, expected_sta_addr);
+  EXPECT_EQ(fidl_resp.role, wlan_common::WlanMacRole::CLIENT);
+  ASSERT_EQ(fidl_resp.bands.size(), 1u);
+  EXPECT_EQ(fidl_resp.bands[0].band, wlan_common::WlanBand::TWO_GHZ);
+  EXPECT_THAT(fidl_resp.bands[0].basic_rates, UnorderedElementsAre(2, 4, 11));
+  ASSERT_NE(fidl_resp.bands[0].ht_cap, nullptr);
+  EXPECT_EQ(fidl_resp.bands[0].ht_cap->bytes, fidl_ht_cap->bytes);
+  EXPECT_EQ(fidl_resp.bands[0].vht_cap, nullptr);
+  EXPECT_THAT(fidl_resp.bands[0].operating_channels, UnorderedElementsAre(1, 6, 11));
+  EXPECT_THAT(
+      fidl_resp.driver_features,
+      UnorderedElementsAre(
+          wlan_common::DriverFeature::SCAN_OFFLOAD, wlan_common::DriverFeature::RATE_SELECTION,
+          wlan_common::DriverFeature::SYNTH, wlan_common::DriverFeature::TX_STATUS_REPORT,
+          wlan_common::DriverFeature::DFS, wlan_common::DriverFeature::SAE_SME_AUTH,
+          wlan_common::DriverFeature::SAE_DRIVER_AUTH, wlan_common::DriverFeature::MFP,
+          wlan_common::DriverFeature::PROBE_RESP_OFFLOAD));
+  // TODO(fxbug.dev/88315): This field will be replaced in the new driver features
+  // framework.
+  EXPECT_EQ(fidl_resp.softmac_hardware_capability, 0u);
+  // TODO(fxbug.dev/43938): This field is stubbed out for future use.
+  EXPECT_EQ(fidl_resp.qos_capable, false);
 }
 
 // Fancier parameterized tests use PER_ANTENNA scope, so let's do quick smoke tests with STATION

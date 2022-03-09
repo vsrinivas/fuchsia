@@ -54,8 +54,12 @@ type DeviceInfo = struct {
     role fuchsia.wlan.common.WlanMacRole;
     bands vector<BandCapability>:fuchsia.wlan.common.MAX_BANDS;
     driver_features vector<fuchsia.wlan.common.DriverFeature>:32;
+
+    // TODO(fxbug.dev/88315): This field will be replaced in the new driver features
+    // framework.
     softmac_hardware_capability fuchsia.wlan.common.WlanSoftmacHardwareCapability;
 
+    // TODO(fxbug.dev/43938): This field is stubbed out for future use.
     qos_capable bool;
 };
 

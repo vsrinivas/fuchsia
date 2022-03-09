@@ -606,49 +606,12 @@ void Device::EapolReq(wlan_mlme::EapolRequest req) {
 
 void Device::QueryDeviceInfo(QueryDeviceInfoCallback cb) {
   std::lock_guard<std::mutex> lock(lock_);
-
   if (binding_ == nullptr) {
     return;
   }
 
-  wlan_mlme::DeviceInfo fidl_resp;
-
-  // sta_addr
-  std::memcpy(fidl_resp.sta_addr.data(), query_info_.sta_addr, ETH_ALEN);
-
-  // role
-  fidl_resp.role = ConvertMacRole(query_info_.role);
-
-  // bands
-  fidl_resp.bands.resize(query_info_.band_cap_count);
-  for (size_t ndx = 0; ndx < query_info_.band_cap_count; ndx++) {
-    ConvertBandCapability(&fidl_resp.bands[ndx], query_info_.band_cap_list[ndx]);
-  }
-
-  // driver features flag
-  fidl_resp.driver_features.resize(0);
-  if (query_info_.driver_features & WLAN_INFO_DRIVER_FEATURE_SCAN_OFFLOAD) {
-    fidl_resp.driver_features.push_back(wlan_common::DriverFeature::SCAN_OFFLOAD);
-  }
-  if (query_info_.driver_features & WLAN_INFO_DRIVER_FEATURE_RATE_SELECTION) {
-    fidl_resp.driver_features.push_back(wlan_common::DriverFeature::RATE_SELECTION);
-  }
-  if (query_info_.driver_features & WLAN_INFO_DRIVER_FEATURE_SYNTH) {
-    fidl_resp.driver_features.push_back(wlan_common::DriverFeature::SYNTH);
-  }
-  if (query_info_.driver_features & WLAN_INFO_DRIVER_FEATURE_TX_STATUS_REPORT) {
-    fidl_resp.driver_features.push_back(wlan_common::DriverFeature::TX_STATUS_REPORT);
-  }
-  if (query_info_.driver_features & WLAN_INFO_DRIVER_FEATURE_DFS) {
-    fidl_resp.driver_features.push_back(wlan_common::DriverFeature::DFS);
-  }
-  if (query_info_.driver_features & WLAN_INFO_DRIVER_FEATURE_SAE_SME_AUTH) {
-    fidl_resp.driver_features.push_back(wlan_common::DriverFeature::SAE_SME_AUTH);
-  }
-  if (query_info_.driver_features & WLAN_INFO_DRIVER_FEATURE_PROBE_RESP_OFFLOAD) {
-    fidl_resp.driver_features.push_back(wlan_common::DriverFeature::PROBE_RESP_OFFLOAD);
-  }
-
+  wlan_mlme::DeviceInfo fidl_resp = {};
+  ConvertQueryInfoToDeviceInfo(&fidl_resp, query_info_);
   cb(std::move(fidl_resp));
 }
 

@@ -53,6 +53,8 @@ uint8_t ConvertAssocResultCode(::fuchsia::wlan::mlme::AssociateResultCode code);
 ::fuchsia::wlan::common::WlanMacRole ConvertMacRole(wlan_mac_role_t role);
 void ConvertBandCapability(::fuchsia::wlan::mlme::BandCapability* fidl_band,
                            const wlan_fullmac_band_capability_t& band);
+void ConvertQueryInfoToDeviceInfo(::fuchsia::wlan::mlme::DeviceInfo* fidl_device_info,
+                                  const wlan_fullmac_query_info_t& query_info);
 // Convert a Banjo noise floor histogram into FIDL.
 void ConvertNoiseFloorHistogram(::fuchsia::wlan::stats::NoiseFloorHistogram* fidl_stats,
                                 const wlan_fullmac_noise_floor_histogram_t& stats);
@@ -84,6 +86,13 @@ void ConvertSaeAuthFrame(const wlan_fullmac_sae_frame_t* frame_in,
                          ::fuchsia::wlan::mlme::SaeFrame& frame_out);
 void ConvertWmmStatus(const wlan_wmm_params_t* params_in,
                       ::fuchsia::wlan::internal::WmmStatusResponse* resp);
+
+// The following functions are only exposed for convenience in unit tests.
+void ConvertHtCapabilities(::fuchsia::wlan::internal::HtCapabilities* fidl_ht_cap,
+                           const ht_capabilities_fields_t& ht_cap);
+void ConvertVhtCapabilities(::fuchsia::wlan::internal::VhtCapabilities* fidl_vht_cap,
+                            const vht_capabilities_fields_t& vht_cap);
+
 }  // namespace wlanif
 
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_WLANIF_CONVERT_H_

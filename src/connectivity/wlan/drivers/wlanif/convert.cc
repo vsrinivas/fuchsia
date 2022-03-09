@@ -523,6 +523,28 @@ wlan_common::WlanMacRole ConvertMacRole(wlan_mac_role_t role) {
   }
 }
 
+void ConvertHtCapabilities(wlan_internal::HtCapabilities* fidl_ht_cap,
+                           const ht_capabilities_fields_t& ht_cap) {
+  *fidl_ht_cap = {};
+  static_assert(sizeof(fidl_ht_cap->bytes) == sizeof(ht_cap));
+  // TODO(fxbug.dev/95240): The underlying bytes in
+  // fuchsia.hardware.wlan.fullmac/HtCapabilitiesField are @packed so that copying them directly to
+  // a byte array works. We may wish to change the FIDL definition in the future so this copy is
+  // however more obviously correct.
+  memcpy(fidl_ht_cap->bytes.data(), &ht_cap, sizeof(ht_cap));
+}
+
+void ConvertVhtCapabilities(wlan_internal::VhtCapabilities* fidl_vht_cap,
+                            const vht_capabilities_fields_t& vht_cap) {
+  *fidl_vht_cap = {};
+  static_assert(sizeof(fidl_vht_cap->bytes) == sizeof(vht_cap));
+  // TODO(fxbug.dev/95240): The underlying bytes in
+  // fuchsia.hardware.wlan.fullmac/VhtCapabilitiesField are @packed so that copying them directly to
+  // a byte array works. We may wish to change the definition in the future so this copy is however
+  // more obviously correct.
+  memcpy(fidl_vht_cap->bytes.data(), &vht_cap, sizeof(vht_cap));
+}
+
 void ConvertBandCapability(wlan_mlme::BandCapability* fidl_band,
                            const wlan_fullmac_band_capability_t& band) {
   zx_status_t status = ::wlan::common::ToFidl(&fidl_band->band, band.band);
@@ -540,15 +562,65 @@ void ConvertBandCapability(wlan_mlme::BandCapability* fidl_band,
 
   if (band.ht_supported) {
     fidl_band->ht_cap = std::make_unique<wlan_internal::HtCapabilities>();
-    static_assert(sizeof(fidl_band->ht_cap->bytes) == sizeof(band.ht_caps));
-    memcpy(fidl_band->ht_cap->bytes.data(), &band.ht_caps, sizeof(band.ht_caps));
+    ConvertHtCapabilities(fidl_band->ht_cap.get(), band.ht_caps);
   }
 
   if (band.vht_supported) {
     fidl_band->vht_cap = std::make_unique<wlan_internal::VhtCapabilities>();
-    static_assert(sizeof(fidl_band->vht_cap->bytes) == sizeof(band.vht_caps));
-    memcpy(fidl_band->vht_cap->bytes.data(), &band.vht_caps, sizeof(band.vht_caps));
+    ConvertVhtCapabilities(fidl_band->vht_cap.get(), band.vht_caps);
   }
+}
+
+void ConvertQueryInfoToDeviceInfo(wlan_mlme::DeviceInfo* fidl_device_info,
+                                  const wlan_fullmac_query_info_t& query_info) {
+  *fidl_device_info = {};
+
+  std::memcpy(fidl_device_info->sta_addr.data(), query_info.sta_addr, ETH_ALEN);
+
+  fidl_device_info->role = ConvertMacRole(query_info.role);
+
+  // fuchsia.hardware.wlan.fullmac/WlanFullmacQueryInfo.features is not copied
+  // up to fuchsia.wlan.mlme/DeviceInfo.
+
+  fidl_device_info->bands.resize(query_info.band_cap_count);
+  for (size_t i = 0; i < query_info.band_cap_count; ++i) {
+    ConvertBandCapability(&fidl_device_info->bands[i], query_info.band_cap_list[i]);
+  }
+
+  fidl_device_info->driver_features.resize(0);
+  if (query_info.driver_features & WLAN_INFO_DRIVER_FEATURE_SCAN_OFFLOAD) {
+    fidl_device_info->driver_features.push_back(wlan_common::DriverFeature::SCAN_OFFLOAD);
+  }
+  if (query_info.driver_features & WLAN_INFO_DRIVER_FEATURE_RATE_SELECTION) {
+    fidl_device_info->driver_features.push_back(wlan_common::DriverFeature::RATE_SELECTION);
+  }
+  if (query_info.driver_features & WLAN_INFO_DRIVER_FEATURE_SYNTH) {
+    fidl_device_info->driver_features.push_back(wlan_common::DriverFeature::SYNTH);
+  }
+  if (query_info.driver_features & WLAN_INFO_DRIVER_FEATURE_TX_STATUS_REPORT) {
+    fidl_device_info->driver_features.push_back(wlan_common::DriverFeature::TX_STATUS_REPORT);
+  }
+  if (query_info.driver_features & WLAN_INFO_DRIVER_FEATURE_DFS) {
+    fidl_device_info->driver_features.push_back(wlan_common::DriverFeature::DFS);
+  }
+  if (query_info.driver_features & WLAN_INFO_DRIVER_FEATURE_SAE_SME_AUTH) {
+    fidl_device_info->driver_features.push_back(wlan_common::DriverFeature::SAE_SME_AUTH);
+  }
+  if (query_info.driver_features & WLAN_INFO_DRIVER_FEATURE_SAE_DRIVER_AUTH) {
+    fidl_device_info->driver_features.push_back(wlan_common::DriverFeature::SAE_DRIVER_AUTH);
+  }
+  if (query_info.driver_features & WLAN_INFO_DRIVER_FEATURE_MFP) {
+    fidl_device_info->driver_features.push_back(wlan_common::DriverFeature::MFP);
+  }
+  if (query_info.driver_features & WLAN_INFO_DRIVER_FEATURE_PROBE_RESP_OFFLOAD) {
+    fidl_device_info->driver_features.push_back(wlan_common::DriverFeature::PROBE_RESP_OFFLOAD);
+  }
+
+  // TODO(fxbug.dev/88315): This field will be replaced in the new driver features
+  // framework.
+  fidl_device_info->softmac_hardware_capability = 0;
+  // TODO(fxbug.dev/43938): This field is stubbed out for future use.
+  fidl_device_info->qos_capable = false;
 }
 
 void ConvertCounter(wlan_stats::Counter* fidl_counter, const wlan_fullmac_counter_t& counter) {
