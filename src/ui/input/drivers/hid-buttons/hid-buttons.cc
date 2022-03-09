@@ -102,7 +102,8 @@ void HidButtonsDevice::Notify(uint32_t button_index) {
       ButtonType type = static_cast<ButtonType>(raw_type);
       for (ButtonsNotifyInterface* interface : registered_notifiers_[type]) {
         auto result = fidl::WireSendEvent(interface->binding())->OnNotify(type, button_value);
-        ZX_ASSERT(result.ok());
+        if (!result.ok())
+          zxlogf(ERROR, "OnNotify() failed: %s", result.FormatDescription().c_str());
       }
     }
   }
