@@ -1000,7 +1000,7 @@ TEST_F(DispatcherTest, DestroyDispatcherQueueChannelReadCallback) {
         [&](fdf_dispatcher_t* dispatcher, fdf::ChannelRead* channel_read, fdf_status_t status) {
           ASSERT_EQ(status, ZX_ERR_CANCELED);
           // We should not be able to queue the read again.
-          ASSERT_EQ(channel_read->Begin(dispatcher), ZX_ERR_BAD_STATE);
+          ASSERT_EQ(channel_read->Begin(dispatcher), ZX_ERR_UNAVAILABLE);
           read_complete.Signal();
           delete channel_read;
         });

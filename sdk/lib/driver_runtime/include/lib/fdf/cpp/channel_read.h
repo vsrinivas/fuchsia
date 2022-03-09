@@ -62,7 +62,8 @@ class ChannelReadBase {
   // Returns |ZX_ERR_PEER_CLOSED| if there are no available messages and the other
   // side of the channel is closed.
   // Returns |ZX_ERR_BAD_STATE| if there is already a dispatcher waiting
-  // on this channel, or if the dispatcher is shutting down.
+  // on this channel.
+  // Returns |ZX_ERR_UNAVAILABLE| if |dispatcher| is shutting down.
   zx_status_t Begin(fdf_dispatcher_t* dispatcher);
 
   // Cancels the wait.

@@ -225,7 +225,7 @@ fdf_status_t Channel::WaitAsync(struct fdf_dispatcher* dispatcher, fdf_channel_r
       dispatcher_ = nullptr;
       channel_read_ = nullptr;
       ResetCallbackRequestStateLocked(std::move(callback_request));
-      return ZX_ERR_BAD_STATE;
+      return ZX_ERR_UNAVAILABLE;
     }
     dispatcher_ref = dispatcher_;
     // If there are messages available, we should queue the callback now.

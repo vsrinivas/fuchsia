@@ -127,7 +127,8 @@ fdf_status_t fdf_channel_read(fdf_handle_t channel, uint32_t options, fdf_arena_
 // Returns |ZX_ERR_PEER_CLOSED| if there are no available messages and the other
 // side of the channel is closed.
 // Returns |ZX_ERR_BAD_STATE| if there is already a dispatcher waiting
-// on this channel, or if the dispatcher is shutting down.
+// on this channel.
+// Returns |ZX_ERR_UNAVAILABLE| if |dispatcher| is shutting down.
 //
 // This operation is thread-safe.
 fdf_status_t fdf_channel_wait_async(struct fdf_dispatcher* dispatcher,
