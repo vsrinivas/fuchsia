@@ -84,11 +84,12 @@ executable("bin") {
   public_deps = [ "//zircon/system/ulib/perftest" ]
 }
 
-# "Helper" executable used to implement the fdio_spawn benchmark.
-executable("fdio_spawn_helper") {
-  output_name = "fdio_spawn_helper"
+# This is an executable that immediately exits when run.  This is used by the
+# process-spawn benchmarks.
+executable("no_op_executable") {
+  output_name = "no_op_executable"
   testonly = true
-  sources = [ "fdio_spawn_helper.cc" ]
+  sources = [ "no_op_executable.cc" ]
   deps = []
   public_deps = []
 }
@@ -133,7 +134,7 @@ fidl("fuchsia.zircon.benchmarks") {
 # installed.
 #
 # This package's copy of fuchsia_microbenchmarks invokes both itself
-# (fuchsia_microbenchmarks) and fdio_spawn_helper as subprocesses, but it
+# (fuchsia_microbenchmarks) and no_op_executable as subprocesses, but it
 # does so via the redirector executables in /bin (via the shell-commands
 # package).  Those point to the copies of those executables in
 # fuchsia_microbenchmarks_perftestmode, which is why that package is
@@ -178,8 +179,8 @@ fuchsia_shell_package("fuchsia_microbenchmarks_perftestmode") {
   deps = [
     ":bin",
     ":context_switch_overhead_helper",
-    ":fdio_spawn_helper",
     ":get_info_helper",
+    ":no_op_executable",
   ]
 }
 
@@ -192,8 +193,8 @@ if (is_linux) {
     ]
   }
   host_test_data("runtime_deps") {
-    sources = [ "$root_out_dir/fdio_spawn_helper" ]
-    deps = [ ":fdio_spawn_helper" ]
+    sources = [ "$root_out_dir/no_op_executable" ]
+    deps = [ ":no_op_executable" ]
   }
 }
 

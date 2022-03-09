@@ -15,11 +15,11 @@
 
 namespace {
 
-// See fdio_spawn_helper.cc.
+// See no_op_executable.cc.
 // Note: while being both a "shell binary" and a "test component", this
 // execution path results in benchmarking shell binary resolution as well as
 // fdio_spawn.
-constexpr const char* kPath = "/bin/fdio_spawn_helper";
+constexpr const char* kPath = "/bin/no_op_executable";
 constexpr const char* const kArgv[]{kPath, nullptr};
 
 // Benchmark |fdio_spawn| by spawning a process that simply exits.

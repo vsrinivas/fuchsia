@@ -22,7 +22,7 @@ namespace {
 // mappings), because fork() takes a snapshot of that address space.
 bool SpawnTest(perftest::RepeatState* state) {
   std::string parent_dir = files::GetDirectoryName(argv0);
-  std::string executable = files::JoinPath(parent_dir, "fdio_spawn_helper");
+  std::string executable = files::JoinPath(parent_dir, "no_op_executable");
   const char* executable_str = executable.c_str();
   const char* argv[] = {executable_str, nullptr};
 
