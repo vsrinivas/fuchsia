@@ -33,8 +33,7 @@ struct TestServer : public fdf::WireServer<test_transport::OneWayTest> {
   fdf_arena_t* fdf_request_arena;
 };
 
-// TODO(fxbug.dev/92488): Investigate use-after-free in |driver_runtime::Dispatcher|.
-TEST(DriverTransport, DISABLED_OneWayVector) {
+TEST(DriverTransport, OneWayVector) {
   fidl_driver_testing::ScopedFakeDriver driver;
 
   auto dispatcher = fdf::Dispatcher::Create(FDF_DISPATCHER_OPTION_UNSYNCHRONIZED);

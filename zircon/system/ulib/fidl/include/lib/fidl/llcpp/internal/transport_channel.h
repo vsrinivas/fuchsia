@@ -84,7 +84,12 @@ class ChannelWaiter : private async_wait_t, public TransportWaiter {
         success_handler_(std::move(success_handler)),
         failure_handler_(std::move(failure_handler)) {}
   zx_status_t Begin() override {
-    return async_begin_wait(dispatcher_, static_cast<async_wait_t*>(this));
+    zx_status_t status = async_begin_wait(dispatcher_, static_cast<async_wait_t*>(this));
+    if (status == ZX_ERR_BAD_STATE) {
+      // async_begin_wait return ZX_ERR_BAD_STATE if the dispatcher is shutting down.
+      return ZX_ERR_CANCELED;
+    }
+    return status;
   }
   zx_status_t Cancel() override {
     return async_cancel_wait(dispatcher_, static_cast<async_wait_t*>(this));

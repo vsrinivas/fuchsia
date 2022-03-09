@@ -1201,7 +1201,7 @@ TEST(BindServerTestCase, UnbindInfoDispatcherBeginsShutdownDuringMessageHandling
   ASSERT_OK(endpoints.status_value());
   auto [local, remote] = std::move(*endpoints);
 
-  UnbindObserver<Example> observer(fidl::Reason::kDispatcherError, ZX_ERR_BAD_STATE);
+  UnbindObserver<Example> observer(fidl::Reason::kDispatcherError, ZX_ERR_CANCELED);
   fidl::BindServer(loop->dispatcher(), std::move(remote), server.get(), observer.GetCallback());
 
   fidl::WireResult result = fidl::WireCall(local)->TwoWay("");

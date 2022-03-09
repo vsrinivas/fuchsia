@@ -244,7 +244,13 @@ zx_status_t DriverWaiter::Begin() {
         state.channel_read = std::nullopt;
         return state.success_handler(msg, std::move(incoming_transport_context));
       });
-  return state_.channel_read->Begin(fdf_dispatcher_from_async_dispatcher(state_.dispatcher));
+  zx_status_t status =
+      state_.channel_read->Begin(fdf_dispatcher_from_async_dispatcher(state_.dispatcher));
+  if (status == ZX_ERR_UNAVAILABLE) {
+    // Begin() is called when the dispatcher is shutting down.
+    return ZX_ERR_CANCELED;
+  }
+  return status;
 }
 
 zx_status_t DriverWaiter::Cancel() {
