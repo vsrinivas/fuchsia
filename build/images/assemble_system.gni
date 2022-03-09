@@ -279,6 +279,7 @@ template("assemble_system") {
     fvm = "${outdir}/fvm.blk"
     fvm_sparse = "${outdir}/fvm.sparse.blk"
     fvm_blob_sparse = "${outdir}/fvm.blob.sparse.blk"
+    fvm_fastboot_tmp = "${outdir}/fvm.fastboot.tmp.blk"
     fvm_fastboot = "${outdir}/fvm.fastboot.blk"
 
     base_package = "${outdir}/base/meta.far"
@@ -858,6 +859,9 @@ template("assemble_system") {
       if (fvm_emmc_partition_size != false ||
           fvm_ftl_nand_block_count != false) {
         outputs += [ files.fvm_fastboot ]
+        if (fvm_ftl_nand_block_count != false) {
+          outputs += [ files.fvm_fastboot_tmp ]
+        }
       }
     }
 

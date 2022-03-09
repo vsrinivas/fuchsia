@@ -128,13 +128,18 @@ impl FvmBuilder {
         }
     }
 
+    /// Set the output path.
+    pub fn output(&mut self, output: impl AsRef<Path>) {
+        self.output = output.as_ref().to_path_buf();
+    }
+
     /// Add a `filesystem` to the FVM.
     pub fn filesystem(&mut self, filesystem: Filesystem) {
         self.filesystems.push(filesystem);
     }
 
     /// Build the FVM.
-    pub fn build(self) -> Result<()> {
+    pub fn build(&self) -> Result<()> {
         let args = self.build_args().context("building fvm arguments")?;
         self.tool.run(&args)
     }

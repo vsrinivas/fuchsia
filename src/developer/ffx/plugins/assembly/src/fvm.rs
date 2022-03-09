@@ -158,11 +158,16 @@ pub fn construct_fvm(
             pages_per_block,
             block_count,
         }) => {
+            // Build the sparse fvm to feed into the nand fvm.
+            let tmp_path = outdir.as_ref().join("fvm.fastboot.tmp.blk");
+            sparse_blob_fvm_builder.output(&tmp_path);
+            sparse_blob_fvm_builder.build().context("building sparse fvm for nand fvm")?;
+
             let nand_path = outdir.as_ref().join("fvm.fastboot.blk");
             let nand_fvm_builder = NandFvmBuilder {
                 tool: tools.get_tool("fvm")?,
                 output: nand_path.clone(),
-                sparse_blob_fvm: sparse_blob_path.clone(),
+                sparse_blob_fvm: tmp_path,
                 max_disk_size: fvm_config.max_disk_size,
                 compression: compression.clone(),
                 page_size: *page_size,
