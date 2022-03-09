@@ -235,6 +235,7 @@ class Controller : public DeviceType,
       __TA_REQUIRES(display_lock_);
 
   zx_device_t* zx_gpu_dev_ = nullptr;
+  zx_device_t* display_controller_dev_ = nullptr;
   bool gpu_released_ = false;
   bool display_released_ = false;
 

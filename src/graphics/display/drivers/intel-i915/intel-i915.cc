@@ -86,6 +86,14 @@ static fuchsia_sysmem::wire::PixelFormatType yuv_pixel_format_types[2] = {
 static void gpu_release(void* ctx) { static_cast<i915::Controller*>(ctx)->GpuRelease(); }
 
 static zx_protocol_device_t i915_gpu_core_device_proto = {};
+static zx_protocol_device_t i915_display_controller_device_proto = {
+    .version = DEVICE_OPS_VERSION,
+    .get_protocol =
+        [](void* ctx, uint32_t id, void* proto) {
+          return device_get_protocol(reinterpret_cast<zx_device_t*>(ctx), id, proto);
+        },
+    .release = [](void* ctx) {},
+};
 
 static uint32_t get_bus_base(void* ctx) { return 0; }
 
@@ -2067,6 +2075,7 @@ void Controller::DdkInit(ddk::InitTxn txn) {
 
 void Controller::DdkUnbind(ddk::UnbindTxn txn) {
   device_async_remove(zx_gpu_dev_);
+  device_async_remove(display_controller_dev_);
 
   {
     fbl::AutoLock lock(&display_lock_);
@@ -2087,7 +2096,8 @@ zx_status_t Controller::DdkGetProtocol(uint32_t proto_id, void* out) {
   if (proto_id == ZX_PROTOCOL_DISPLAY_CONTROLLER_IMPL) {
     auto ops = static_cast<display_controller_impl_protocol_t*>(out);
     ops->ctx = this;
-    ops->ops = static_cast<display_controller_impl_protocol_ops_t*>(ddk_proto_ops_);
+    ops->ops = static_cast<display_controller_impl_protocol_ops_t*>(
+        &display_controller_impl_protocol_ops_);
   } else if (proto_id == ZX_PROTOCOL_I2C_IMPL) {
     auto ops = static_cast<i2c_impl_protocol_t*>(out);
     ops->ctx = this;
@@ -2293,9 +2303,24 @@ zx_status_t Controller::Init() {
     }
   }
 
-  status = DdkAdd(ddk::DeviceAddArgs("intel_i915").set_inspect_vmo(inspector_.DuplicateVmo()));
+  status = DdkAdd(ddk::DeviceAddArgs("intel_i915")
+                      .set_inspect_vmo(inspector_.DuplicateVmo())
+                      .set_flags(DEVICE_ADD_NON_BINDABLE));
   if (status != ZX_OK) {
     zxlogf(ERROR, "Failed to add controller device");
+    return status;
+  }
+
+  device_add_args_t args = {};
+  args.version = DEVICE_ADD_ARGS_VERSION;
+  args.name = "intel-display-controller";
+  args.ctx = zxdev();
+  args.ops = &i915_display_controller_device_proto;
+  args.proto_id = ZX_PROTOCOL_DISPLAY_CONTROLLER_IMPL;
+  args.proto_ops = &display_controller_impl_protocol_ops_;
+  status = device_add(zxdev(), &args, &display_controller_dev_);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "Failed to publish display controller device (%d)", status);
     return status;
   }
 
@@ -2304,7 +2329,7 @@ zx_status_t Controller::Init() {
   // zx_gpu_dev_ is removed when unbind is called for zxdev() (in ::DdkUnbind),
   // so it's not necessary to give it its own unbind method.
 
-  device_add_args_t args = {};
+  args = {};
   args.version = DEVICE_ADD_ARGS_VERSION;
   args.name = "intel-gpu-core";
   args.ctx = this;

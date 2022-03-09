@@ -537,7 +537,7 @@ TEST_F(DeviceEnumerationTest, EveTest) {
 TEST_F(DeviceEnumerationTest, NucTest) {
   static const char* kDevicePaths[] = {
       "pci-00:02.0/intel_i915/intel-gpu-core",
-      "pci-00:02.0/intel_i915/display-controller",
+      "pci-00:02.0/intel_i915/intel-display-controller/display-controller",
       "pci-00:14.0/xhci/usb-bus",
       "pci-00:15.0/i2c-bus-9d60",
       "pci-00:15.1/i2c-bus-9d61",

@@ -208,7 +208,7 @@ TEST_F(IntegrationTest, BindAndInit) {
   // grandchild "intel-gpu-core" device.
   ASSERT_EQ(1u, parent()->child_count());
   auto dev = parent()->GetLatestChild();
-  ASSERT_EQ(1u, dev->child_count());
+  ASSERT_EQ(2u, dev->child_count());
 
   // Perform the async initialization and wait for a response.
   dev->InitOp();
