@@ -22,12 +22,6 @@ set -e
 basedir=${PWD##*/}
 outdir="out/magma_meson"
 
-with_tests=false
-if [ "${1}" == "--with-tests" ]; then
-	with_tests=true
-	echo "Building with tests"
-fi
-
 if [ ! -d "src/graphics/lib/magma" ]; then
 	echo Error: must be executed from toplevel fuchsia directory
 	exit 1
@@ -46,6 +40,6 @@ if [ ! -d ${outdir} ]; then
 	meson ${outdir}
 fi
 
-meson configure ${outdir} -Dwith_tests=${with_tests}
+meson configure ${outdir} $@
 
 ninja -C ${outdir}
