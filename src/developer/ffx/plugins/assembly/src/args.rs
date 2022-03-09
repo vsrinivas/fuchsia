@@ -61,6 +61,11 @@ pub struct ImageArgs {
 #[derive(Debug, FromArgs, PartialEq)]
 #[argh(subcommand, name = "create-system")]
 pub struct CreateSystemArgs {
+    /// the configuration file that specifies the packages, binaries, and
+    /// settings specific to the product being assembled.
+    #[argh(option)]
+    pub image_assembly_config: PathBuf,
+
     /// the configuration file that specifies which images to generate and how.
     #[argh(option)]
     pub images: PathBuf,
@@ -72,6 +77,11 @@ pub struct CreateSystemArgs {
     /// the directory to write generated intermediate files to.
     #[argh(option)]
     pub gendir: Option<PathBuf>,
+
+    /// name to give the Base Package. This is useful if you must publish multiple
+    /// base packages to the same TUF repository.
+    #[argh(option)]
+    pub base_package_name: Option<String>,
 }
 
 /// construct an UpdatePackage using images and package.

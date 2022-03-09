@@ -218,6 +218,7 @@ template("assemble_system") {
     product_assembly_config = "${image_name}_product_assembly_config"
     image_assembly_config = "${image_name}_image_assembly_config"
     image_assembly_inputs = "${image_name}_image_assembly_inputs"
+    cs_image_assembly_inputs = "${image_name}_cs_image_assembly_inputs"
     compare_image_assembly_configs =
         "${image_name}_compare_image_assembly_configs"
     board_config = "${image_name}_board_config"
@@ -247,6 +248,8 @@ template("assemble_system") {
         "$target_out_dir/${image_name}_image_assembly_config.json"
     image_assembly_inputs =
         "$target_out_dir/${image_name}_image_assembly_inputs"
+    cs_image_assembly_inputs =
+        "$target_out_dir/${image_name}_cs_image_assembly_inputs"
 
     board_config = "$target_out_dir/${image_name}_board_config.json"
     images_config = "$target_out_dir/${image_name}_images_config.json"
@@ -300,6 +303,19 @@ template("assemble_system") {
 
     image_command_log = "${gendir}/command_log.json"
     cs_command_log = "${cs_gendir}/command_log.json"
+
+    # Outputs for create-system.
+    # These are transitory.
+    cs_base_package = "${cs_outdir}/base/meta.far"
+    cs_base_package_manifest = "${cs_outdir}/base/package_manifest.json"
+    cs_base_package_merkle = "${cs_outdir}/base/base.merkle"
+    cs_blobfs_manifest = "${cs_gendir}/blob.manifest"
+    cs_static_packages =
+        "${cs_gendir}/${base_package_name}/data/static_packages"
+    cs_cache_packages = "${cs_gendir}/${base_package_name}/data/cache_packages"
+    cs_base_meta_package = "${cs_gendir}/${base_package_name}/meta/package"
+    cs_base_pkg_abi_revision =
+        "${cs_gendir}/${base_package_name}/meta/fuchsia.abi/abi-revision"
 
     # Determine which ZBI we are shipping.
     zbi_final = zbi
@@ -883,6 +899,17 @@ template("assemble_system") {
     }
   }
 
+  hermetic_inputs_for_image_assembly(labels.cs_image_assembly_inputs) {
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visibility",
+                           ])
+    deps = [ ":${labels.image_assembly_config}" ]
+    image_assembly_config = files.image_assembly_config
+    output = files.cs_image_assembly_inputs
+  }
+
   ffx_action(labels.create_system) {
     forward_variables_from(invoker,
                            [
@@ -894,17 +921,44 @@ template("assemble_system") {
       "assembly_enabled=true",
       "assembly",
       "create-system",
+      "--image-assembly-config",
+      rebase_path(files.image_assembly_config, root_build_dir),
       "--images",
       rebase_path(files.images_config, root_build_dir),
+      "--base-package-name",
+      "$base_package_name",
       "--gendir",
       rebase_path(files.cs_gendir, root_build_dir),
       "--outdir",
       rebase_path(files.cs_outdir, root_build_dir),
     ]
 
-    deps = [ ":${labels.images_config}" ]
-    inputs = [ files.images_config ]
+    deps = [
+      ":${labels.cs_image_assembly_inputs}",
+      ":${labels.image_assembly_config}",
+      ":${labels.images_config}",
+    ]
+
+    hermetic_inputs_file = files.cs_image_assembly_inputs
+    inputs = [
+      files.image_assembly_config,
+      files.images_config,
+    ]
+
     outputs = [ files.cs_command_log ]
+
+    if (generate_fvm) {
+      outputs += [
+        files.cs_base_package,
+        files.cs_base_package_manifest,
+        files.cs_base_package_merkle,
+        files.cs_blobfs_manifest,
+        files.cs_static_packages,
+        files.cs_cache_packages,
+        files.cs_base_meta_package,
+        files.cs_base_pkg_abi_revision,
+      ]
+    }
   }
 
   compare_command_logs(labels.compare_command_logs) {

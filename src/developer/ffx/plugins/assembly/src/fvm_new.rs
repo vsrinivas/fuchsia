@@ -165,7 +165,7 @@ impl<'a> MultiFvmBuilder<'a> {
 
                 // Second, prepare it for NAND.
                 let tool = tools.get_tool("fvm")?;
-                let sparse_output = self.gendir.join(format!("{}.blk", &sparse_tmp_name));
+                let sparse_output = self.outdir.join(format!("{}.blk", &sparse_tmp_name));
                 let output = self.outdir.join(format!("{}.blk", &config.name));
                 let compression = if config.compress { Some("lz4".to_string()) } else { None };
                 let builder = NandFvmBuilder {

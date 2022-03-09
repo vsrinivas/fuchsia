@@ -117,12 +117,20 @@ template("generated_images_config") {
       "data",
       "blob",
     ]
+
+    if (fvm_max_disk_size != false) {
+      max_disk_size = fvm_max_disk_size
+    }
   }
 
   blob_sparse_fvm = {
     type = "sparse"
     name = "fvm.blob.sparse"
     filesystems = [ "blob" ]
+
+    if (fvm_max_disk_size != false) {
+      max_disk_size = fvm_max_disk_size
+    }
   }
 
   emmc_fvm = {
@@ -133,6 +141,10 @@ template("generated_images_config") {
       "blob",
     ]
 
+    if (fvm_max_disk_size != false) {
+      max_disk_size = fvm_max_disk_size
+    }
+
     # EMMC fvms are by default compressed.
     compress = fvm_fastboot_compression != "none"
     resize_image_file_to_fit = true
@@ -142,11 +154,11 @@ template("generated_images_config") {
   nand_fvm = {
     type = "nand"
     name = "fvm.fastboot"
-    filesystems = [
-      "data",
-      "blob",
-    ]
-    max_disk_size = fvm_max_disk_size
+    filesystems = [ "blob" ]
+
+    if (fvm_max_disk_size != false) {
+      max_disk_size = fvm_max_disk_size
+    }
 
     # NAND fvms are by default uncompressed.
     compress = fvm_fastboot_compression != "default"
@@ -253,6 +265,7 @@ template("generated_images_config") {
   # added in ffx assembly image so that we can diff the command logs.
   # Once ffx assembly image is removed, we can cleanup this file.
   blob_sparse_fvm.filesystems += [ "empty-data" ]
+  nand_fvm.filesystems += [ "empty-data" ]
 
   # Collect the fvms to generate.
   fvm_outputs = [

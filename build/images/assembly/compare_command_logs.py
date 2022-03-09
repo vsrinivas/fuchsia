@@ -58,7 +58,11 @@ def main():
 
     # Only compare commands that use these tools.
     # This allows us to incrementally add support for more commands.
-    tools_to_compare = []
+    tools_to_compare = [
+        './host_x64/minfs',
+        './host_x64/blobfs',
+        './host_x64/fvm',
+    ]
 
     # Check for missing commands.
     # We only care that all the commands in reference are also in comparison,
