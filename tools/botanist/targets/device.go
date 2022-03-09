@@ -15,6 +15,7 @@ import (
 	"os"
 	"os/exec"
 	"sync/atomic"
+	"time"
 
 	"go.fuchsia.dev/fuchsia/tools/bootserver"
 	"go.fuchsia.dev/fuchsia/tools/lib/iomisc"
@@ -104,13 +105,24 @@ func NewDeviceTarget(ctx context.Context, config DeviceConfig, opts Options) (*D
 	}
 	var s io.ReadWriteCloser
 	if config.SerialMux != "" {
-		s, err = serial.NewSocket(ctx, config.SerialMux)
-		if err != nil {
-			return nil, fmt.Errorf("unable to open: %s: %w", config.SerialMux, err)
-		}
-		// Dump the existing serial debug log buffer.
-		if _, err := io.WriteString(s, dlogCmd); err != nil {
-			return nil, fmt.Errorf("failed to tail serial logs: %w", err)
+		if config.FastbootSernum == "" {
+			s, err = serial.NewSocket(ctx, config.SerialMux)
+			if err != nil {
+				return nil, fmt.Errorf("unable to open: %s: %w", config.SerialMux, err)
+			}
+			// Dump the existing serial debug log buffer.
+			// This is useful for getting early boot logs from Zedboot.
+			if _, err := io.WriteString(s, dlogCmd); err != nil {
+				return nil, fmt.Errorf("failed to tail serial logs: %w", err)
+			}
+		} else {
+			// We don't want to wait for the console to be ready if the device
+			// is idling in Fastboot, as Fastboot does not have an interactive
+			// serial console.
+			s, err = serial.NewSocketWithIOTimeout(ctx, config.SerialMux, 2*time.Minute, false)
+			if err != nil {
+				return nil, fmt.Errorf("unable to open: %s: %w", config.SerialMux, err)
+			}
 		}
 	} else if config.Serial != "" {
 		s, err = serial.Open(config.Serial)
@@ -118,6 +130,8 @@ func NewDeviceTarget(ctx context.Context, config DeviceConfig, opts Options) (*D
 			return nil, fmt.Errorf("unable to open %s: %w", config.Serial, err)
 		}
 		// Dump the existing serial debug log buffer.
+		// This is only useful for getting early boot logs from Zedboot, and
+		// will no longer be useful after switching to fastboot flows.
 		if _, err := io.WriteString(s, dlogCmd); err != nil {
 			return nil, fmt.Errorf("failed to tail serial logs: %w", err)
 		}

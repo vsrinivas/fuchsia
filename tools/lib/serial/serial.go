@@ -94,12 +94,12 @@ func asSerialCmd(cmd []string) string {
 
 // NewSocket opens a connection on the provided `socketPath`.
 func NewSocket(ctx context.Context, socketPath string) (*SerialSocket, error) {
-	return NewSocketWithIOTimeout(ctx, socketPath, defaultSocketIOTimeout)
+	return NewSocketWithIOTimeout(ctx, socketPath, defaultSocketIOTimeout, true)
 }
 
 // NewSocketWithIOTimeout opens a connection on the provided `socketPath` with
 // the provided socket IO timeout for reads and writes.
-func NewSocketWithIOTimeout(ctx context.Context, socketPath string, ioTimeout time.Duration) (*SerialSocket, error) {
+func NewSocketWithIOTimeout(ctx context.Context, socketPath string, ioTimeout time.Duration, waitUntilReady bool) (*SerialSocket, error) {
 	if socketPath == "" {
 		return nil, fmt.Errorf("serialSocketPath not set")
 	}
@@ -111,15 +111,17 @@ func NewSocketWithIOTimeout(ctx context.Context, socketPath string, ioTimeout ti
 		ioTimeout = defaultSocketIOTimeout
 	}
 	socket := &SerialSocket{Conn: conn, ioTimeout: ioTimeout}
-	// Trigger a new cursor print by sending a newline. This may do nothing if the
-	// system was not ready to process input, but in that case it will print a
-	// new cursor anyways when it is ready to receive input.
-	io.WriteString(socket, asSerialCmd([]string{}))
-	// Look for the cursor, which should indicate that the console is ready for input.
-	ctx, cancel := context.WithTimeout(ctx, 45*time.Second)
-	defer cancel()
-	if _, err = iomisc.ReadUntilMatchString(ctx, socket, consoleCursor); err != nil {
-		return nil, fmt.Errorf("%s: %w", constants.FailedToFindCursorMsg, err)
+	if waitUntilReady {
+		// Trigger a new cursor print by sending a newline. This may do nothing if the
+		// system was not ready to process input, but in that case it will print a
+		// new cursor anyways when it is ready to receive input.
+		io.WriteString(socket, asSerialCmd([]string{}))
+		// Look for the cursor, which should indicate that the console is ready for input.
+		ctx, cancel := context.WithTimeout(ctx, 45*time.Second)
+		defer cancel()
+		if _, err = iomisc.ReadUntilMatchString(ctx, socket, consoleCursor); err != nil {
+			return nil, fmt.Errorf("%s: %w", constants.FailedToFindCursorMsg, err)
+		}
 	}
 	return socket, nil
 }
