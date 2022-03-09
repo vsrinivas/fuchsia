@@ -16,6 +16,8 @@ PackageName = str
 FileHash = str
 T = TypeVar('T')
 
+MISMATCH_EXCEPTIONS = {}
+
 
 def compare_pkg_sets(
         first: Iterable[FilePath], second: Iterable[FilePath],
@@ -75,6 +77,9 @@ def compare_packages(
 
     for name in sorted(set(first_by_name.keys()).intersection(
             second_by_name.keys())):
+        if name in MISMATCH_EXCEPTIONS:
+            continue
+
         first_path, first_manifest = first_by_name[name]
         second_path, second_manifest = second_by_name[name]
 
@@ -122,6 +127,9 @@ def compare_file_hash_maps(
         second_map: Dict[FilePath, FileHash], item_type: str) -> List[str]:
     errors: List[str] = []
     for (name, file_hash) in sorted(first_map.items()):
+        if name in MISMATCH_EXCEPTIONS:
+            continue
+
         if name not in second_map:
             errors.append(f"missing from second ({item_type}): {name}")
             continue
@@ -136,6 +144,8 @@ def compare_file_hash_maps(
 
     if second_map:
         for name in second_map.keys():
+            if name in MISMATCH_EXCEPTIONS:
+                continue
             errors.append(f"missing from first ({item_type}): {name}")
 
     return errors

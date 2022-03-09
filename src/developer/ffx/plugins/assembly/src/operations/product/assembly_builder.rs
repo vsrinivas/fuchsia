@@ -3,31 +3,39 @@
 // found in the LICENSE file.
 
 use crate::util;
-use anyhow::{anyhow, Context, Result};
+use anyhow::{anyhow, ensure, Context, Result};
 use assembly_config::{
-    self as image_assembly_config, product_config::AssemblyInputBundle, FileEntry,
+    self as image_assembly_config,
+    product_config::{AssemblyInputBundle, PackageConfigPatch, StructuredConfigPatches},
+    FileEntry,
 };
 use assembly_config_data::ConfigDataBuilder;
+use assembly_structured_config::Repackager;
 use assembly_util::{DuplicateKeyError, InsertAllUniqueExt, InsertUniqueExt, MapEntry};
+use fuchsia_pkg::PackageManifest;
 use std::path::Path;
 use std::{
     collections::{BTreeMap, BTreeSet},
+    fs::File,
+    io::BufReader,
     path::PathBuf,
 };
 
 type FileEntryMap = BTreeMap<String, PathBuf>;
 type ConfigDataMap = BTreeMap<String, FileEntryMap>;
+/// A set of packages with their manifests parsed into memory, keyed by package name.
+type PackageSet = BTreeMap<String, PackageEntry>;
 
 #[derive(Default)]
 pub struct ImageAssemblyConfigBuilder {
     /// The base packages from the AssemblyInputBundles
-    base: BTreeSet<PathBuf>,
+    base: PackageSet,
 
     /// The cache packages from the AssemblyInputBundles
-    cache: BTreeSet<PathBuf>,
+    cache: PackageSet,
 
     /// The system packages from the AssemblyInputBundles
-    system: BTreeSet<PathBuf>,
+    system: PackageSet,
 
     /// The boot_args from the AssemblyInputBundles
     boot_args: BTreeSet<String>,
@@ -37,6 +45,9 @@ pub struct ImageAssemblyConfigBuilder {
 
     /// The config_data entries, by package and by destination path.
     config_data: ConfigDataMap,
+
+    // Modifications that must be made to structured config within packages.
+    structured_config: StructuredConfigPatches,
 
     kernel_path: Option<PathBuf>,
     kernel_args: BTreeSet<String>,
@@ -72,17 +83,20 @@ impl ImageAssemblyConfigBuilder {
         let bundle_path = bundle_path.as_ref();
         let AssemblyInputBundle { image_assembly: bundle, config_data } = bundle;
 
-        self.base
-            .try_insert_all_unique(Self::paths_from(bundle_path, bundle.base))
-            .map_err(|path| anyhow!("duplicate base package entry found: {:?}", path))?;
-
-        self.cache
-            .try_insert_all_unique(Self::paths_from(bundle_path, bundle.cache))
-            .map_err(|path| anyhow!("duplicate cache package entry found: {:?}", path))?;
-
-        self.system
-            .try_insert_all_unique(Self::paths_from(bundle_path, bundle.system))
-            .map_err(|path| anyhow!("duplicate system package entry found: {:?}", path))?;
+        let add_all_packages =
+            |to_add_to: &mut PackageSet, subpaths, set_name| -> anyhow::Result<()> {
+                for p in Self::paths_from(bundle_path, subpaths) {
+                    let entry = PackageEntry::parse_from(p)
+                        .context("parsing package entry from parsed bundle")?;
+                    to_add_to.try_insert_unique(MapEntry(entry.name().to_owned(), entry)).map_err(
+                        |e| anyhow!("duplicate {} package entry found: {:?}", set_name, e),
+                    )?;
+                }
+                Ok(())
+            };
+        add_all_packages(&mut self.base, bundle.base, "base")?;
+        add_all_packages(&mut self.cache, bundle.cache, "cache")?;
+        add_all_packages(&mut self.system, bundle.system, "system")?;
 
         self.boot_args
             .try_insert_all_unique(bundle.boot_args)
@@ -156,6 +170,20 @@ impl ImageAssemblyConfigBuilder {
             ))
     }
 
+    /// Set the structured configuration updates for a package. Can only be called once per
+    /// package.
+    pub fn set_structured_config(
+        &mut self,
+        package: impl AsRef<str>,
+        config: PackageConfigPatch,
+    ) -> Result<()> {
+        if self.structured_config.insert(package.as_ref().to_owned(), config).is_none() {
+            Ok(())
+        } else {
+            Err(anyhow::format_err!("duplicate config patch"))
+        }
+    }
+
     /// Construct an ImageAssembly ImageAssemblyConfig from the collected items in the
     /// builder.
     ///
@@ -169,12 +197,14 @@ impl ImageAssemblyConfigBuilder {
         self,
         outdir: impl AsRef<Path>,
     ) -> Result<image_assembly_config::ImageAssemblyConfig> {
+        let outdir = outdir.as_ref();
         // Decompose the fields in self, so that they can be recomposed into the generated
         // image assembly configuration.
         let Self {
+            structured_config,
             mut base,
-            cache,
-            system,
+            mut cache,
+            mut system,
             boot_args,
             bootfs_files,
             config_data,
@@ -182,6 +212,32 @@ impl ImageAssemblyConfigBuilder {
             kernel_args,
             kernel_clock_backstop,
         } = self;
+
+        // repackage any matching packages, ignoring whether we actually succeed. if a patch has
+        // been provided that doesn't match a package, we silently skip it and let product
+        // validation catch any issues
+        for (package, config) in structured_config {
+            // get the manifest for this package name, returning the set from which it was removed
+            if let Some((manifest, source_package_set)) =
+                remove_package_from_sets(&package, [&mut base, &mut cache, &mut system])
+                    .with_context(|| format!("removing {} for repackaging", package))?
+            {
+                let outdir = outdir.join("repackaged").join(&package);
+                let mut repackager = Repackager::new(manifest, &outdir)
+                    .with_context(|| format!("reading existing manifest for {}", package))?;
+                for (component, values) in &config.components {
+                    repackager
+                        .set_component_config(component, values.clone())
+                        .with_context(|| format!("setting new config for {}", component))?;
+                }
+                let new_path = repackager
+                    .build()
+                    .with_context(|| format!("building repackaged {}", package))?;
+                let new_entry = PackageEntry::parse_from(new_path)
+                    .with_context(|| format!("parsing repackaged {}", package))?;
+                source_package_set.insert(new_entry.name().to_owned(), new_entry);
+            }
+        }
 
         if !config_data.is_empty() {
             // Build the config_data package
@@ -194,10 +250,12 @@ impl ImageAssemblyConfigBuilder {
             let manifest_path = config_data_builder
                 .build(&outdir)
                 .context("Writing the 'config_data' package metafar.")?;
-            base.try_insert_unique(manifest_path).map_err(|p| {
+            let entry = PackageEntry::parse_from(manifest_path)
+                .context("parsing generated config-data package")?;
+            base.try_insert_unique(MapEntry(entry.name().to_owned(), entry)).map_err(|p| {
                 anyhow!(
                     "found a duplicate config_data package when adding generated package at: {}",
-                    p.display()
+                    p.new_value().path.display()
                 )
             })?;
         }
@@ -206,9 +264,9 @@ impl ImageAssemblyConfigBuilder {
         // then pass this to the ImageAssemblyConfig::try_from_partials() to get the
         // final validation that it's complete.
         let partial = image_assembly_config::PartialImageAssemblyConfig {
-            system: system.into_iter().collect(),
-            base: base.into_iter().collect(),
-            cache: cache.into_iter().collect(),
+            system: system.into_iter().map(|(_, e)| e.path).collect(),
+            base: base.into_iter().map(|(_, e)| e.path).collect(),
+            cache: cache.into_iter().map(|(_, e)| e.path).collect(),
             kernel: Some(image_assembly_config::PartialKernelConfig {
                 path: kernel_path,
                 args: kernel_args.into_iter().collect(),
@@ -229,19 +287,66 @@ impl ImageAssemblyConfigBuilder {
     }
 }
 
+/// Remove a package with a matching name from the provided package sets, returning its parsed
+/// manifest and a mutable reference to the set from which it was removed.
+fn remove_package_from_sets<'a, 'b: 'a, const N: usize>(
+    package_name: &str,
+    package_sets: [&'a mut PackageSet; N],
+) -> anyhow::Result<Option<(PackageManifest, &'a mut PackageSet)>> {
+    let mut matches_name = None;
+
+    for package_set in package_sets {
+        if let Some(entry) = package_set.remove(package_name) {
+            ensure!(
+                matches_name.is_none(),
+                "only one package with a given name is allowed per product"
+            );
+            matches_name = Some((entry.manifest, package_set));
+        }
+    }
+
+    Ok(matches_name)
+}
+
+#[derive(Debug)]
+struct PackageEntry {
+    path: PathBuf,
+    manifest: PackageManifest,
+}
+
+impl PackageEntry {
+    fn parse_from(path: impl AsRef<Path>) -> Result<Self> {
+        let path = path.as_ref().to_owned();
+        let file = File::open(&path).with_context(|| format!("opening {}", path.display()))?;
+        let manifest: PackageManifest = serde_json::from_reader(BufReader::new(file))
+            .with_context(|| format!("parsing {} as a package manifest", path.display()))?;
+        Ok(Self { path, manifest })
+    }
+
+    fn name(&self) -> &str {
+        self.manifest.name().as_ref()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
-    use fuchsia_pkg::PackageManifest;
+    use fuchsia_pkg::{PackageBuilder, PackageManifest};
     use std::fs::File;
     use tempfile::TempDir;
 
-    fn make_test_assembly_bundle() -> AssemblyInputBundle {
+    fn make_test_assembly_bundle(bundle_path: &Path) -> AssemblyInputBundle {
+        let write_empty_pkg = |path: &str| {
+            let mut builder = PackageBuilder::new("test_pkg");
+            builder.manifest_path(bundle_path.join(path));
+            builder.build(&bundle_path, bundle_path.join(format!("{}_meta.far", path))).unwrap();
+            PathBuf::from(path)
+        };
         AssemblyInputBundle {
             image_assembly: image_assembly_config::PartialImageAssemblyConfig {
-                system: vec!["sys_package0".into()],
-                base: vec!["base_package0".into()],
-                cache: vec!["cache_package0".into()],
+                base: vec![write_empty_pkg("base_package0")],
+                system: vec![write_empty_pkg("sys_package0")],
+                cache: vec![write_empty_pkg("cache_package0")],
                 kernel: Some(image_assembly_config::PartialKernelConfig {
                     path: Some("kernel/path".into()),
                     args: vec!["kernel_arg0".into()],
@@ -261,23 +366,23 @@ mod tests {
     fn test_builder() {
         let outdir = TempDir::new().unwrap();
         let mut builder = ImageAssemblyConfigBuilder::default();
-        builder.add_parsed_bundle(PathBuf::from("test"), make_test_assembly_bundle()).unwrap();
+        builder.add_parsed_bundle(outdir.path(), make_test_assembly_bundle(outdir.path())).unwrap();
         let result: image_assembly_config::ImageAssemblyConfig = builder.build(&outdir).unwrap();
 
-        assert_eq!(result.base, vec!(PathBuf::from("test/base_package0")));
-        assert_eq!(result.cache, vec!(PathBuf::from("test/cache_package0")));
-        assert_eq!(result.system, vec!(PathBuf::from("test/sys_package0")));
+        assert_eq!(result.base, vec![outdir.path().join("base_package0")]);
+        assert_eq!(result.cache, vec![outdir.path().join("cache_package0")]);
+        assert_eq!(result.system, vec![outdir.path().join("sys_package0")]);
 
         assert_eq!(result.boot_args, vec!("boot_arg0".to_string()));
         assert_eq!(
             result.bootfs_files,
             vec!(FileEntry {
-                source: "test/source/path/to/file".into(),
+                source: outdir.path().join("source/path/to/file"),
                 destination: "dest/file/path".into()
             })
         );
 
-        assert_eq!(result.kernel.path, PathBuf::from("test/kernel/path"));
+        assert_eq!(result.kernel.path, outdir.path().join("kernel/path"));
         assert_eq!(result.kernel.args, vec!("kernel_arg0".to_string()));
         assert_eq!(result.kernel.clock_backstop, 56244);
     }
@@ -297,7 +402,7 @@ mod tests {
         std::fs::write(&config_data_file_path, "configuration data").unwrap();
 
         // Create an assembly bundle and add a config_data entry to it.
-        let mut bundle = make_test_assembly_bundle();
+        let mut bundle = make_test_assembly_bundle(&bundle_path);
         bundle.config_data.insert(
             config_data_target_package_name.to_string(),
             vec![FileEntry {
@@ -356,29 +461,32 @@ mod tests {
 
     #[test]
     fn test_builder_catches_dupe_base_pkgs_in_aib() {
-        let mut aib = make_test_assembly_bundle();
+        let temp = TempDir::new().unwrap();
+        let mut aib = make_test_assembly_bundle(temp.path());
         duplicate_first(&mut aib.image_assembly.base);
 
         let mut builder = ImageAssemblyConfigBuilder::default();
-        assert!(builder.add_parsed_bundle(PathBuf::from("first"), aib).is_err());
+        assert!(builder.add_parsed_bundle(temp.path(), aib).is_err());
     }
 
     #[test]
     fn test_builder_catches_dupe_cache_pkgs_in_aib() {
-        let mut aib = make_test_assembly_bundle();
+        let temp = TempDir::new().unwrap();
+        let mut aib = make_test_assembly_bundle(temp.path());
         duplicate_first(&mut aib.image_assembly.cache);
 
         let mut builder = ImageAssemblyConfigBuilder::default();
-        assert!(builder.add_parsed_bundle(PathBuf::from("first"), aib).is_err());
+        assert!(builder.add_parsed_bundle(temp.path(), aib).is_err());
     }
 
     #[test]
     fn test_builder_catches_dupe_system_pkgs_in_aib() {
-        let mut aib = make_test_assembly_bundle();
+        let temp = TempDir::new().unwrap();
+        let mut aib = make_test_assembly_bundle(temp.path());
         duplicate_first(&mut aib.image_assembly.system);
 
         let mut builder = ImageAssemblyConfigBuilder::default();
-        assert!(builder.add_parsed_bundle(PathBuf::from("first"), aib).is_err());
+        assert!(builder.add_parsed_bundle(temp.path(), aib).is_err());
     }
 
     fn test_duplicates_across_aibs_impl<
@@ -387,7 +495,8 @@ mod tests {
     >(
         accessor: F,
     ) {
-        let mut aib = make_test_assembly_bundle();
+        let outdir = TempDir::new().unwrap();
+        let mut aib = make_test_assembly_bundle(outdir.path());
         let mut second_aib = AssemblyInputBundle::default();
 
         let first_list = (accessor)(&mut aib);
@@ -399,8 +508,8 @@ mod tests {
         second_list.push(value.clone());
 
         let mut builder = ImageAssemblyConfigBuilder::default();
-        builder.add_parsed_bundle(PathBuf::from("first"), aib).unwrap();
-        assert!(builder.add_parsed_bundle(PathBuf::from("second"), second_aib).is_err());
+        builder.add_parsed_bundle(outdir.path(), aib).unwrap();
+        assert!(builder.add_parsed_bundle(outdir.path().join("second"), second_aib).is_err());
     }
 
     #[test]
@@ -431,7 +540,8 @@ mod tests {
 
     #[test]
     fn test_builder_catches_dupe_config_data_across_aibs() {
-        let mut first_aib = make_test_assembly_bundle();
+        let temp = TempDir::new().unwrap();
+        let mut first_aib = make_test_assembly_bundle(temp.path());
         let mut second_aib = AssemblyInputBundle::default();
 
         let config_data_file_entry = FileEntry {
@@ -443,7 +553,7 @@ mod tests {
         second_aib.config_data.insert("base_package0".into(), vec![config_data_file_entry]);
 
         let mut builder = ImageAssemblyConfigBuilder::default();
-        builder.add_parsed_bundle(PathBuf::from("first"), first_aib).unwrap();
-        assert!(builder.add_parsed_bundle(PathBuf::from("second"), second_aib).is_err());
+        builder.add_parsed_bundle(temp.path(), first_aib).unwrap();
+        assert!(builder.add_parsed_bundle(temp.path().join("second"), second_aib).is_err());
     }
 }

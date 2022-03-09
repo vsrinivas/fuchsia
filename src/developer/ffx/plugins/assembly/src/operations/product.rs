@@ -17,10 +17,14 @@ pub fn assemble(args: ProductArgs) -> Result<()> {
     info!("Loading configuration files.");
     info!("  product: {}", product.display());
 
-    let _product: ProductAssemblyConfig =
+    let config: ProductAssemblyConfig =
         util::read_config(&product).context("Loading product configuration")?;
 
     let mut builder = ImageAssemblyConfigBuilder::default();
+
+    for (package, config) in config.define_repackaging()? {
+        builder.set_structured_config(package, config)?;
+    }
 
     let legacy_bundle_path = input_bundles_dir.join("legacy").join("assembly_config.json");
     for bundle_path in vec![legacy_bundle_path] {

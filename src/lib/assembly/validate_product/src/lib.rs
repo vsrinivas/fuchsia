@@ -22,7 +22,6 @@ pub fn validate_product(product: &ImageAssemblyConfig) -> Result<(), ProductVali
     let packages: BTreeMap<_, _> = manifests
         .par_bridge()
         .filter_map(|package| {
-            let package = package.as_ref();
             if let Err(e) = validate_package(package) {
                 Some((package.to_owned(), e))
             } else {
@@ -66,7 +65,9 @@ fn validate_bootfs(bootfs_files: &[FileEntry]) -> Result<(), BootfsValidationErr
 ///
 /// Assumes that all component manifests will be in the `meta/` directory and have a `.cm` extension
 /// within the package namespace.
-fn validate_package(manifest_path: &Path) -> Result<(), PackageValidationError> {
+pub fn validate_package(manifest_path: impl AsRef<Path>) -> Result<(), PackageValidationError> {
+    let manifest_path = manifest_path.as_ref();
+
     // deserialize the manifest for the package
     let file = File::open(manifest_path).map_err(|source| PackageValidationError::Open {
         source,

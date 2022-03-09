@@ -14,6 +14,7 @@ use std::collections::BTreeMap;
 #[derive(Debug, Deserialize, Serialize)]
 pub struct ProductAssemblyConfig {
     pub platform: PlatformConfig,
+    pub product: ProductConfig,
 }
 
 #[derive(Debug, Deserialize, Serialize, PartialEq)]
@@ -32,6 +33,28 @@ impl Default for BuildType {
     fn default() -> Self {
         BuildType::Eng
     }
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct ProductConfig {}
+
+impl ProductAssemblyConfig {
+    /// Convert the high-level description of product configuration into a series of configuration
+    /// value files with concrete package/component tuples.
+    ///
+    /// Returns a map from package names to configuration updates.
+    pub fn define_repackaging(&self) -> anyhow::Result<StructuredConfigPatches> {
+        Ok(BTreeMap::new())
+    }
+}
+
+/// A map from package names to patches to apply to their structured configuration.
+pub type StructuredConfigPatches = BTreeMap<String, PackageConfigPatch>;
+
+#[derive(Clone, Debug)]
+pub struct PackageConfigPatch {
+    /// A map from manifest paths within the package namespace to the values for the component.
+    pub components: BTreeMap<String, BTreeMap<String, serde_json::Value>>,
 }
 
 /// A bundle of inputs to be used in the assembly of a product.  This is closely
@@ -63,6 +86,7 @@ mod tests {
               platform: {
                 build_type: "eng",
               },
+              product: {},
             }
         "#;
 

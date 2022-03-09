@@ -641,6 +641,7 @@ template("assemble_system") {
     output_conversion = "json"
     contents = {
       platform = platform_config
+      product = product_config
     }
   }
 

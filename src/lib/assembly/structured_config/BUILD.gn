@@ -11,16 +11,17 @@ if (is_host) {
     name = "assembly_structured_config"
     sources = [ "src/lib.rs" ]
     deps = [
-      "//sdk/fidl/fuchsia.component.config:fuchsia.component.config-rustc",
-      "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl-rustc",
       "//src/lib/assembly/validate_util",
       "//src/lib/fidl/rust/fidl",
       "//src/sys/lib/cm_fidl_validator",
       "//src/sys/lib/cm_rust",
       "//src/sys/lib/config_encoder",
       "//src/sys/pkg/lib/far/rust:fuchsia-archive",
+      "//src/sys/pkg/lib/fuchsia-pkg",
       "//third_party/rust_crates:anyhow",
+      "//third_party/rust_crates:serde_json",
       "//third_party/rust_crates:thiserror",
+      "//tools/lib/config_value_file",
     ]
   }
 }
@@ -59,6 +60,7 @@ if (is_host) {
   package_out_dir = get_label_info(
           ":validate_structured_config_packaging($default_toolchain)",
           "target_out_dir")
+  test_package_manifest_path = "$package_out_dir/validate_structured_config_packaging/package_manifest.json"
   test_meta_far_path =
       "$package_out_dir/validate_structured_config_packaging/meta.far"
 
@@ -67,17 +69,32 @@ if (is_host) {
     source_root = "src/test.rs"
     deps = [
       ":structured_config",
+      "//src/lib/assembly/validate_product",
       "//src/sys/pkg/lib/far/rust:fuchsia-archive",
+      "//src/sys/pkg/lib/fuchsia-pkg",
+      "//third_party/rust_crates:maplit",
+      "//third_party/rust_crates:serde_json",
+      "//third_party/rust_crates:tempfile",
     ]
-    non_rust_deps =
-        [ ":validate_structured_config_packaging($default_toolchain)" ]
-    configs += [ ":test_assets" ]
-    inputs = [ test_meta_far_path ]
+    non_rust_deps = [ ":test_asset_data" ]
+    configs += [ ":test_asset_paths" ]
   }
 
-  config("test_assets") {
-    # the `include_bytes!()` macro expects paths relative to the source root
-    rustenv = [ "TEST_META_FAR=" + rebase_path(test_meta_far_path, "./src/") ]
+  host_test_data("test_asset_data") {
+    sources = [
+      test_meta_far_path,
+      test_package_manifest_path,
+    ]
+    deps = [ ":validate_structured_config_packaging($default_toolchain)" ]
+  }
+
+  config("test_asset_paths") {
+    # host tests are run with cwd=out/default
+    rustenv = [
+      "TEST_META_FAR=" + rebase_path(test_meta_far_path, root_build_dir),
+      "TEST_MANIFEST_PATH=" +
+          rebase_path(test_package_manifest_path, root_build_dir),
+    ]
   }
 
   group("host_tests") {

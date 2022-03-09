@@ -28,4 +28,8 @@ declare_args() {
   # Passed as the `platform` key in the product assembly config.
   platform_config = {
   }
+
+  # Passed as the `product` key in the product assembly config.
+  product_config = {
+  }
 }
