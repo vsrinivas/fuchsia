@@ -2470,8 +2470,7 @@ mod tests {
         offset: usize,
     ) {
         // Check the ICMP that bob attempted to send to alice
-        #[allow(clippy::clone_double_ref)] // TODO(fxbug.dev/95029)
-        let device_frames = ctx.dispatcher.frames_sent().clone();
+        let device_frames = ctx.dispatcher.frames_sent();
         assert!(!device_frames.is_empty());
         let mut buffer = Buf::new(device_frames[offset].1.as_slice(), ..);
         let _frame =

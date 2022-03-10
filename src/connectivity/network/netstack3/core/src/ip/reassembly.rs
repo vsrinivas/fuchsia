@@ -673,8 +673,7 @@ fn get_header<B: ByteSlice, I: Ip>(packet: &<I as IpExtByteSlice<B>>::Packet) ->
 }
 
 /// A fragment of a packet's body.
-#[allow(clippy::derive_ord_xor_partial_ord)] // TODO(fxbug.dev/95029)
-#[derive(Debug, PartialEq, Eq, Ord)]
+#[derive(Debug, PartialEq, Eq)]
 struct PacketBodyFragment {
     offset: u16,
     data: Vec<u8>,
@@ -692,6 +691,12 @@ impl PacketBodyFragment {
 impl PartialOrd for PacketBodyFragment {
     fn partial_cmp(&self, other: &PacketBodyFragment) -> Option<Ordering> {
         self.offset.partial_cmp(&other.offset)
+    }
+}
+
+impl Ord for PacketBodyFragment {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.offset.cmp(&other.offset)
     }
 }
 
