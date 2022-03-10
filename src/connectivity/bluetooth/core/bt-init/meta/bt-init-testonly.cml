@@ -1,0 +1,22 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [ "//src/connectivity/bluetooth/core/bt-init/meta/bt-init.shard.cml" ],
+    children: [
+        {
+            name: "bt-gap",
+            url: "fuchsia-pkg://fuchsia.com/bt-gap#meta/bt-gap.cm",
+        },
+        {
+            name: "bt-rfcomm",
+            url: "fuchsia-pkg://fuchsia.com/bt-rfcomm-testonly#meta/bt-rfcomm-testonly.cm",
+        },
+    ],
+    expose: [
+        {
+            protocol: [ "fuchsia.bluetooth.rfcomm.test.RfcommTest" ],
+            from: "#bt-rfcomm",
+        },
+    ],
+}

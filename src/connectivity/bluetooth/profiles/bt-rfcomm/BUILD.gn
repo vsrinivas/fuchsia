@@ -64,8 +64,6 @@ fuchsia_component("component") {
   deps = [ ":bin" ]
 }
 
-# TODO(fxbug.dev/72960): This v2 component is not yet used in production - it currently exists for
-# testing scenarios only.
 fuchsia_component("component-v2") {
   component_name = "bt-rfcomm"
   manifest = "meta/bt-rfcomm.cml"
@@ -77,6 +75,11 @@ fuchsia_package("bt-rfcomm") {
     ":component",
     ":component-v2",
   ]
+}
+
+fuchsia_package_with_single_component("bt-rfcomm-testonly") {
+  deps = [ ":bin" ]
+  manifest = "meta/bt-rfcomm-testonly.cml"
 }
 
 fuchsia_unittest_package("bt-rfcomm-tests") {

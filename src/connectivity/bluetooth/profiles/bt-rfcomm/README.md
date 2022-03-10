@@ -43,6 +43,11 @@ To run the tests:
 fx test bt-rfcomm-tests
 ```
 
+### Manual Testing
+
+In some cases, it is useful to construct a testonly Bluetooth realm for manual tests.
+Follow the instructions in the [manual testing README](manual_testing.md).
+
 ## Inspect
 
 The `bt-rfcomm` component includes support for

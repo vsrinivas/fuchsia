@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 {
-    // TODO(fxbug.dev/72960): This v2 manifest is not yet used in production - it currently exists
-    // for testing scenarios.
     include: [
         "inspect/client.shard.cml",
         "syslog/client.shard.cml",
@@ -14,10 +12,7 @@
     },
     capabilities: [
         {
-            protocol: [
-                "fuchsia.bluetooth.bredr.Profile",
-                "fuchsia.bluetooth.rfcomm.test.RfcommTest",
-            ],
+            protocol: [ "fuchsia.bluetooth.bredr.Profile" ],
         },
     ],
     use: [
@@ -28,10 +23,7 @@
     ],
     expose: [
         {
-            protocol: [
-                "fuchsia.bluetooth.bredr.Profile",
-                "fuchsia.bluetooth.rfcomm.test.RfcommTest",
-            ],
+            protocol: [ "fuchsia.bluetooth.bredr.Profile" ],
             from: "self",
         },
     ],
