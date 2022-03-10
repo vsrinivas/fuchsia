@@ -413,16 +413,6 @@ if (current_toolchain != default_toolchain) {
   # TODO(fxbug.dev/88583): remove usage of legacy ZBI when TrampolineBoot allows arbitrary
   # addresses.
   zbi_executable("trampoline-boot-test") {
-    # The add, remove trick ensures these are removed, whether or not they're
-    # present in the default configs list.
-    configs += [ "//zircon/kernel/arch/x86/phys:load-1mb" ]
-    configs -= [ "//zircon/kernel/arch/x86/phys:load-1mb" ]
-    configs += [ "//zircon/kernel/phys:load-pic" ]
-    configs -= [ "//zircon/kernel/phys:load-pic" ]
-
-    # Now add the one we want.
-    configs += [ "//zircon/kernel/arch/x86/phys:load-1mb" ]
-
     testonly = true
     sources = [ "trampoline-boot-test.cc" ]
     deps = [

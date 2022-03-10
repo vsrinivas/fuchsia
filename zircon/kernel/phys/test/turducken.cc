@@ -22,15 +22,16 @@
 #include <phys/symbolize.h>
 #include <phys/zbitl-allocation.h>
 
-#ifdef __x86_64__
+#if defined(__x86_64__) || defined(__i386__)
 
 #include <phys/trampoline-boot.h>
 
 #else  // arm
 
+// TODO(fxbug.dev/88583): Needed to keep arm building. ASM is still x86 only.
 using TrampolineBoot = BootZbi;
 
-#endif  // __x86_64__
+#endif  // __x86_64__ || __i386__
 
 #include "test-main.h"
 
@@ -182,7 +183,7 @@ void TurduckenTestBase::Boot() {
     printf("%s: BootZbi::Init OK\n", test_name());
   }
 
-  result = boot.Load();
+  result = boot.Load(0, kernel_load_address_);
   if (result.is_error()) {
     printf("%s: cannot load embedded ZBI: ", test_name());
     zbitl::PrintViewCopyError(result.error_value());
