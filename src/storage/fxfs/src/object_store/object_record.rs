@@ -309,7 +309,7 @@ impl From<EncryptionKeysV1> for EncryptionKeys {
 mod tests {
     use {super::ObjectKey, crate::lsm_tree::types::NextKey};
 
-    // TODO(ripper): Tests similar to extent_record.rs
+    // TODO(fxbug.dev/95406): Tests similar to extent_record.rs
 
     #[test]
     fn test_next_key() {

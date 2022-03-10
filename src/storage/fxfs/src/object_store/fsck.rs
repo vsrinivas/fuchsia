@@ -413,9 +413,6 @@ impl<F: Fn(&FsckIssue)> Fsck<F> {
                 store_object_id,
                 layer_file.get_size()
             ));
-            // TODO(ripper): When we have multiple layer file formats, we'll need some way of
-            // detecting which format we are dealing with.  For now, we just assume it's
-            // SimplePersistentLayer.
             let layer = SimplePersistentLayer::open(layer_file).await?;
             self.check_layer_file_contents(
                 store_object_id,

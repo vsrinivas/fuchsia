@@ -32,8 +32,11 @@ use {
 pub struct LayerInfo {
     /// The version of the key and value structs serialized in this layer.
     key_value_version: Version,
-    /// The block size used within this layer file. Each block starts with a 2 byte item count so
-    /// there is a 64k item limit per block.
+    /// The block size used within this layer file. This is typically set at compaction time to the
+    /// same block size as the underlying object handle.
+    ///
+    /// (Each block starts with a 2 byte item count so there is a 64k item limit per block,
+    /// regardless of block size).
     block_size: u64,
 }
 
@@ -155,9 +158,6 @@ impl SimplePersistentLayer {
     /// SimplePersistentLayerWriter.
     pub async fn open(object_handle: impl ReadObjectHandle + 'static) -> Result<Arc<Self>, Error> {
         let size = object_handle.get_size();
-        // TODO(ripper): Eventually we should be storing a chunk size in a header of some sort for
-        // the layer file.  For now we assume the chunk size is the same as the filesystem block
-        // size, although it need not be so.
         let physical_block_size = object_handle.block_size();
 
         // The first block contains layer file information instead of key/value data.

@@ -244,8 +244,8 @@ impl SuperBlock {
         assert_eq!(root_parent_store.store_object_id(), self.root_parent_store_object_id);
 
         let object_manager = root_parent_store.filesystem().object_manager().clone();
-        // TODO(ripper): Don't use the same code here for Journal and SuperBlock. They aren't the
-        // same things and it is already getting convoluted. e.g of diff sstream content:
+        // TODO(fxbug.dev/95404): Don't use the same code here for Journal and SuperBlock. They
+        // aren't the same things and it is already getting convoluted. e.g of diff stream content:
         //   Superblock:  (Magic, Ver, Header(Ver), SuperBlockRecord(Ver)*, ...)
         //   Journal:     (Ver, JournalRecord(Ver)*, RESET, Ver2, JournalRecord(Ver2)*, ...)
         // We should abstract away the checksum code and implement these separately.

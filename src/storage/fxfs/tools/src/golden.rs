@@ -81,7 +81,7 @@ async fn save_device(device: Arc<dyn Device>, path: &Path) -> Result<(), Error> 
 pub async fn create_image() -> Result<(), Error> {
     let path = golden_image_dir()?.join(latest_image_filename());
 
-    // TODO(ripper): We need a way of testing crypt devices too.
+    // TODO(fxbug.dev/95403): We need a way of testing crypt devices too.
     let crypt: Arc<dyn Crypt> = Arc::new(InsecureCrypt::new());
     {
         let device_holder = DeviceHolder::new(FakeDevice::new(IMAGE_BLOCKS, IMAGE_BLOCK_SIZE));
