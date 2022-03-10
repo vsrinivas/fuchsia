@@ -205,6 +205,8 @@ protocol DeviceControl {
     /// Detaches the client end from the device's lifetime.
     ///
     /// After calling `Detach`, closing this client end no longer causes the
-    /// device or any of the interfaces created from it to be removed.
+    /// device or any of the interfaces created from it to be removed. Note that
+    /// the lifetime of any created interface will continue to be coupled with
+    /// the associated [`Control`] client end.
     Detach();
 };
