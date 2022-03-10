@@ -89,7 +89,7 @@ impl NotificationStream {
                 }
                 match StatusCode::try_from(payload[0]).or(Err(Error::UnexpectedResponse))? {
                     StatusCode::AddressedPlayerChanged => {
-                        // Return value is ignored, we will re-register the notificaton.
+                        // Return value is ignored, we will re-register the notification.
                         self.stream = None;
                         return Err(Error::UnexpectedResponse);
                     }

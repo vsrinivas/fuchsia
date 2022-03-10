@@ -594,7 +594,7 @@ mod tests {
             x => panic!("Unexpected request from client stream: {:?}", x),
         };
 
-        // The requestr should be answered.
+        // The request should be answered.
         assert!(exec.run_until_stalled(&mut handler_fut).is_pending());
         assert_matches!(exec.run_until_stalled(&mut request_fut), Poll::Ready(Ok(Ok(()))));
 
@@ -606,7 +606,7 @@ mod tests {
     }
 
     #[test]
-    /// Tests that the client strream handler will spawn a controller when a controller request
+    /// Tests that the client stream handler will spawn a controller when a controller request
     /// successfully sets up a controller.
     fn test_avrcp_client_stream_handler_controller_request() -> Result<(), Error> {
         let mut exec = fasync::TestExecutor::new().expect("TestExecutor should be created");

@@ -55,7 +55,7 @@ impl TargetDelegate {
     }
 
     /// Sets the target delegate. Resets any pending registered notifications.
-    /// If the delegate is already set, reutrns an Error.
+    /// If the delegate is already set, returns an Error.
     pub fn set_target_handler(&self, target_handler: TargetHandlerProxy) -> Result<(), Error> {
         let mut guard = self.inner.lock();
         if guard.target_handler.as_ref().map_or(false, |p| !p.is_closed()) {
