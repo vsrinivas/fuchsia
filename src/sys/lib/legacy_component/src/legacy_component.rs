@@ -244,7 +244,9 @@ impl LegacyComponent {
             );
         }
 
-        #[allow(clippy::never_loop)] // TODO(fxbug.dev/95070)
+        // We want exhaustive match, and if we add more variants in the future we'd need to
+        // handle the requests in a loop, so allow this link violation.
+        #[allow(clippy::never_loop)]
         while let Some(req) =
             stream.try_next().await.context("invalid controller request from component manager")?
         {

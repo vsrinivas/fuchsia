@@ -143,7 +143,9 @@ pub async fn collect_listener_event(
                 ret.push(ListenerEvent::StartTest(name.clone()));
                 loggers.push(std_handles);
                 let mut listener = listener.into_stream()?;
-                #[allow(clippy::never_loop)] // TODO(fxbug.dev/95070)
+                // We want exhaustive match, and if we add more variants in the future we'd need to
+                // handle the requests in a loop, so allow this lint violation.
+                #[allow(clippy::never_loop)]
                 while let Some(result) = listener.try_next().await? {
                     match result {
                         Finished { result, .. } => {

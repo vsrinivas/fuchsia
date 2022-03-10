@@ -74,8 +74,7 @@ where
         test_url: &str,
         stream: ftest::SuiteRequestStream,
     ) -> AbortHandle {
-        #[allow(clippy::clone_double_ref)] // TODO(fxbug.dev/95070)
-        let test_url = test_url.clone().to_owned();
+        let test_url = test_url.to_owned();
         let (fut, test_suite_abortable_handle) =
             abortable(self.serve_test_suite(stream, weak_component.clone()));
 

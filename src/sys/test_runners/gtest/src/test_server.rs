@@ -211,8 +211,7 @@ impl SuiteServer for TestServer {
     ) -> AbortHandle {
         let test_data_name = self.output_dir_name.clone();
         let test_data_parent = self.output_dir_parent_path.clone();
-        #[allow(clippy::clone_double_ref)] // TODO(fxbug.dev/95070)
-        let test_url = test_url.clone().to_owned();
+        let test_url = test_url.to_owned();
         let (fut, test_suite_abortable_handle) =
             abortable(self.serve_test_suite(stream, weak_component.clone()));
 
