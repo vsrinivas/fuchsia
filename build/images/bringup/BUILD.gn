@@ -142,7 +142,7 @@ assemble_system("bringup_fastboot") {
   metadata = {
     images = [
       {
-        fastboot_boot = [ "--boot" ]
+        fastboot_boot = [ "boot" ]
         name = "fuchsia"
         path = "bringup_fastboot.zbi.signed"
         type = "zbi_fastboot"
