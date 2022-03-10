@@ -1083,7 +1083,7 @@ mod tests {
     fn test_panic_slice_2() {
         let buf = unsafe { SharedBuffer::new(ptr::null_mut(), 10) };
         // "slice starts at byte 6 but ends at byte 5"
-        #[allow(clippy::reversed_empty_ranges)] // TODO(fxbug.dev/95077)
+        #[allow(clippy::reversed_empty_ranges)]
         buf.slice(6..5);
     }
 }
