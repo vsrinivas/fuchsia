@@ -30,9 +30,7 @@ if (is_host) {
     # output dir, which means the output dir leaks into the command.
     # This command will only succeed with a matching output dir,
     # so we must disable working-dir canonicalization.
-    if (enable_rbe) {  # for Rust
-      rustflags = [ "--remote-flag=--canonicalize_working_dir=false" ]
-    }
+    configs = [ "//build/config/rust:output_dir_sensitive" ]
   }
 
   rustc_macro("config-proc-macros") {

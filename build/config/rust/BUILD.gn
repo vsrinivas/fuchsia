@@ -4,6 +4,7 @@
 
 import("//build/images/filesystem_limits.gni")
 import("//build/rust/config.gni")
+import("//build/toolchain/rbe.gni")
 
 declare_args() {
   # Controls whether the rust compiler uses v0 symbol mangling scheme
@@ -215,4 +216,17 @@ config("coverage") {
 # TODO(fxbug.dev/94237): Consider moving this to platform and board configs, respectively.
 config("allow_simd") {
   rustflags = [ "-Zallow-features=stdsimd,aarch64_target_feature" ]
+}
+
+# TODO(fxbug.dev/94355): Eliminate or identify all sources of output dir leaks.
+# This option makes it explicit that a particular build action is sensitive
+# to the output dir path, and informs remote execution to refrain from
+# normalizing the output dir, which improves caching.
+# As a goal, we should aim to minimize the need for this config.
+config("output_dir_sensitive") {
+  if (enable_rbe) {  # for Rust
+    # --remote-flag=* is a pseudo flag that is intercepted by
+    # build/rbe/rustc-remote-wrapper.sh and forwarded to rewrapper (reclient).
+    rustflags = [ "--remote-flag=--canonicalize_working_dir=false" ]
+  }
 }
