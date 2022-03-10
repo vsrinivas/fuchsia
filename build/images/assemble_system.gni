@@ -195,6 +195,10 @@ template("assemble_system") {
   assert(defined(invoker.base_packages), "Need to define base_packages")
   assert(defined(invoker.bootfs_labels), "Need to define bootfs_labels")
 
+  fvm_tool_target = "//src/storage/bin/fvm($host_toolchain)"
+  fvm_tool_path = get_label_info(fvm_tool_target, "root_out_dir")
+  fvm_tool_path += "/fvm"
+
   # This should be removed once all clients are no longer supplying board_name.
   not_needed(invoker, [ "board_name" ])
 
@@ -325,6 +329,12 @@ template("assemble_system") {
     cs_fvm_blob_sparse = "${cs_outdir}/fvm.blob.sparse.blk"
     cs_fvm_fastboot_tmp = "${cs_outdir}/fvm.fastboot.tmp.blk"
     cs_fvm_fastboot = "${cs_outdir}/fvm.fastboot.blk"
+    cs_bootfs_files = "${cs_gendir}/bootfs_files.list"
+    cs_devmgr_config = "${cs_gendir}/devmgr_config.txt"
+    cs_zbi = "${cs_outdir}/${image_name}.zbi"
+    cs_zbi_manifest = "${cs_gendir}/zbi.json"
+    cs_zbi_signed = "${cs_zbi}.signed"
+    cs_vbmeta = "${cs_outdir}/${image_name}.vbmeta"
 
     # Determine which ZBI we are shipping.
     zbi_final = zbi
@@ -860,10 +870,6 @@ template("assemble_system") {
 
     # Base package dependencies and outputs, if this configuration uses them.
     if (generate_fvm) {
-      fvm_tool_target = "//src/storage/bin/fvm($host_toolchain)"
-      fvm_tool_path = get_label_info(fvm_tool_target, "root_out_dir")
-      fvm_tool_path += "/fvm"
-
       deps += [
         blobfs_tool_target,
         fvm_tool_target,
@@ -960,7 +966,11 @@ template("assemble_system") {
       ]
     }
 
-    deps = [
+    deps = []
+    if (defined(invoker.deps)) {
+      deps += invoker.deps
+    }
+    deps += [
       ":${labels.images_config}",
       ":${labels.product_assembler}",
     ]
@@ -971,10 +981,46 @@ template("assemble_system") {
       files.regenerated_image_assembly_config,
       files.images_config,
     ]
+    if (defined(invoker.inputs)) {
+      inputs += invoker.inputs
+    }
 
-    outputs = [ files.cs_command_log ]
+    # We depend on the image assembler because bringup_fastboot hardcodes the
+    # path to the non-create-system vbmeta, and this will fail the hermetic
+    # checks otherwise. This can be removed once we have switched over to
+    # create-system.
+    if (use_vbmeta) {
+      deps += [ ":${labels.image_assembler}" ]
+      inputs += [ files.vbmeta ]
+    }
+
+    outputs = [
+      files.cs_command_log,
+      files.cs_bootfs_files,
+      files.cs_devmgr_config,
+      files.cs_zbi,
+      files.cs_zbi_manifest,
+    ]
+
+    if (defined(invoker.zbi_signing_script)) {
+      outputs += [ files.cs_zbi_signed ]
+    }
+
+    if (use_vbmeta) {
+      outputs += [ files.cs_vbmeta ]
+    }
 
     if (generate_fvm) {
+      deps += [
+        blobfs_tool_target,
+        fvm_tool_target,
+      ]
+
+      inputs += [
+        blobfs_tool_path,
+        fvm_tool_path,
+      ]
+
       outputs += [
         files.cs_base_package,
         files.cs_base_package_manifest,

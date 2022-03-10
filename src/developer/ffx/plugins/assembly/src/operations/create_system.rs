@@ -5,10 +5,12 @@
 use crate::base_package::{construct_base_package, BasePackage};
 use crate::fvm_new::construct_fvm;
 use crate::util;
+use crate::vbmeta;
+use crate::zbi;
 
-use anyhow::{Context, Result};
+use anyhow::{anyhow, Context, Result};
 use assembly_config::ImageAssemblyConfig;
-use assembly_images_config::{Fvm, Image, ImagesConfig};
+use assembly_images_config::{Fvm, Image, ImagesConfig, VBMeta, Zbi};
 use assembly_images_manifest::ImagesManifest;
 use assembly_tool::{SdkToolProvider, ToolProvider};
 use ffx_assembly_args::{CreateSystemArgs, PackageMode};
@@ -66,13 +68,66 @@ pub fn create_system(args: CreateSystemArgs) -> Result<()> {
     };
 
     // Find the first standard FVM that was generated.
-    let _fvm_for_zbi: Option<PathBuf> = match &mode {
+    let fvm_for_zbi: Option<PathBuf> = match &mode {
         PackageMode::FvmInZbi => images_manifest.images.iter().find_map(|i| match i {
             assembly_images_manifest::Image::FVM(path) => Some(path.clone()),
             _ => None,
         }),
         _ => None,
     };
+
+    // Get the ZBI config.
+    let zbi_config: Option<&Zbi> = images_config.images.iter().find_map(|i| match i {
+        Image::Zbi(zbi) => Some(zbi),
+        _ => None,
+    });
+
+    let zbi_path: Option<PathBuf> = if let Some(zbi_config) = zbi_config {
+        Some(zbi::construct_zbi(
+            tools.get_tool("zbi")?,
+            &outdir,
+            &gendir,
+            &image_assembly_config,
+            &zbi_config,
+            base_package.as_ref(),
+            fvm_for_zbi,
+        )?)
+    } else {
+        info!("Skipping zbi creation");
+        None
+    };
+
+    // Building a ZBI is expected, therefore throw an error otherwise.
+    let zbi_path = zbi_path.ok_or(anyhow!("Missing a ZBI in the images config"))?;
+
+    // Get the VBMeta config.
+    let vbmeta_config: Option<&VBMeta> = images_config.images.iter().find_map(|i| match i {
+        Image::VBMeta(vbmeta) => Some(vbmeta),
+        _ => None,
+    });
+
+    if let Some(vbmeta_config) = vbmeta_config {
+        info!("Creating the VBMeta image");
+        vbmeta::construct_vbmeta(&outdir, &vbmeta_config, &zbi_path)
+            .context("Creating the VBMeta image")?;
+    } else {
+        info!("Skipping vbmeta creation");
+    }
+
+    // If the board specifies a vendor-specific signing script, use that to
+    // post-process the ZBI.
+    if let Some(zbi_config) = zbi_config {
+        match &zbi_config.postprocessing_script {
+            Some(script) => {
+                let signing_tool = tools.get_tool_with_path(script.path.clone())?;
+                zbi::vendor_sign_zbi(signing_tool, &outdir, &zbi_config, &zbi_path)
+                    .context("Vendor-signing the ZBI")?;
+            }
+            _ => {}
+        }
+    } else {
+        info!("Skipping zbi signing");
+    }
 
     // Write the tool command log.
     let command_log_path = gendir.join("command_log.json");

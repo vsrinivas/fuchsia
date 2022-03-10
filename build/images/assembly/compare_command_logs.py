@@ -67,6 +67,7 @@ def main():
         './host_x64/minfs',
         './host_x64/blobfs',
         './host_x64/fvm',
+        './host_x64/zbi',
     ]
 
     # Check for missing commands.
