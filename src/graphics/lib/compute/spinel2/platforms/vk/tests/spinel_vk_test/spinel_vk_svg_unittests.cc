@@ -132,15 +132,16 @@ param const params[] = {
     .name      = "rasters_prefix_fix", // bug:39620
     .surface   = { 1024, 300 },
     .checksums = {
+      { 0xFE013607, {
+          { param::ARM,    { { param::ARM_MALI_G31, param::ARM_MALI_G31 } } },
+        }
+      },
       { 0xFD0B4012, {
+          { param::ARM,    { { param::ARM_MALI_G52, param::ARM_MALI_G52 } } },
           { param::INTEL,  {} },
           { param::NVIDIA, {} },
         }
       },
-      { 0xFE013607, {
-          { param::ARM,    {} },
-        }
-      }
     },
     .test = std::make_shared<test>(
       "<svg xmlns=\"http://www.w3.org/2000/svg\">\n"
@@ -197,12 +198,13 @@ param const params[] = {
     .surface     = { 1024, 1024 },
     .checksums = {
       { 0xF0F96717, {
-          { param::ARM,    {} },                                      // all arm
+          { param::ARM,    { { param::ARM_MALI_G31, param::ARM_MALI_G31 } } },
         }
       },
       { 0xEE9E0BBE, {
-          { param::INTEL,  {} },                                      // all intel
-          { param::NVIDIA, {} },                                      // all nvidia
+          { param::ARM,    { { param::ARM_MALI_G52, param::ARM_MALI_G52 } } },
+          { param::INTEL,  {} },
+          { param::NVIDIA, {} },
         }
       },
     },
@@ -225,12 +227,13 @@ param const params[] = {
     .surface     = { 1024, 1024 },
     .checksums = {
       { 0xC34EC099, {
-          { param::ARM,    {} },                                      // all arm
+          { param::ARM,    { { param::ARM_MALI_G31, param::ARM_MALI_G31 } } },
         }
       },
       { 0xBEFA6C49, {
-          { param::INTEL,  {} },                                      // all intel
-          { param::NVIDIA, {} },                                      // all nvidia
+          { param::ARM,    { { param::ARM_MALI_G52, param::ARM_MALI_G52 } } },
+          { param::INTEL,  {} },
+          { param::NVIDIA, {} },
         }
       },
     },
@@ -256,16 +259,17 @@ param const params[] = {
     .surface     = { 1024, 1024 },
     .checksums = {
       { 0xF9364B98, {
-          { param::ARM,    {} },                                      // all arm
+          { param::ARM,    { { param::ARM_MALI_G31, param::ARM_MALI_G31 } } },
         }
       },
       { 0xF994CF80, {
-          { param::INTEL,  {} },                                      // all intel
-          { param::NVIDIA, { { param::NVIDIA_VOLTA, UINT32_MAX } } }, // nvidia fp16
+          { param::ARM,    { { param::ARM_MALI_G52, param::ARM_MALI_G52 } } },
+          { param::INTEL,  {} },
+          { param::NVIDIA, { { param::NVIDIA_VOLTA, UINT32_MAX } } },
         }
       },
       { 0xF994BD80, {
-          { param::NVIDIA, { { 0, param::NVIDIA_PASCAL } } }          // nvidia fp32
+          { param::NVIDIA, { { 0, param::NVIDIA_PASCAL } } },
         }
       },
     },
@@ -325,16 +329,17 @@ param const params[] = {
     .surface     = { 1024, 1024 },
     .checksums = {
       { 0xC4D0DB79, {
-          { param::ARM,    {} },                                      // all arm
+          { param::ARM,    { { param::ARM_MALI_G31, param::ARM_MALI_G31 } } },
         }
       },
       { 0xC5127E22, {
-          { param::INTEL,  {} },                                      // all intel
-          { param::NVIDIA, { { param::NVIDIA_VOLTA, UINT32_MAX } } }, // nvidia fp16
+          { param::ARM,    { { param::ARM_MALI_G52, param::ARM_MALI_G52 } } },
+          { param::INTEL,  {} },
+          { param::NVIDIA, { { param::NVIDIA_VOLTA, UINT32_MAX } } },
         }
       },
       { 0xC5127B22, {
-          { param::NVIDIA, { { 0, param::NVIDIA_PASCAL } } }          // nvidia fp32
+          { param::NVIDIA, { { 0, param::NVIDIA_PASCAL } } }
         }
       },
     },
@@ -376,19 +381,23 @@ param const params[] = {
     .surface     = { 1024, 1024 },
     .checksums = {
       { 0xB90FF0FC, {
-          { param::ARM,    {} }                                      // all arm
+          { param::ARM,    { { param::ARM_MALI_G31, param::ARM_MALI_G31 } } },
+        }
+      },
+      { 0xB7841DF8, {
+          { param::ARM,    { { param::ARM_MALI_G52, param::ARM_MALI_G52 } } },
         }
       },
       { 0xB783FDD8, {
-          { param::INTEL,  {} }                                      // all intel
+          { param::INTEL,  {} }
         }
       },
       { 0xB783B9A6, {
-          { param::NVIDIA, { { 0, param::NVIDIA_PASCAL } } }         // nvidia fp32
+          { param::NVIDIA, { { 0, param::NVIDIA_PASCAL } } }
         }
       },
       { 0xB783CBA6, {
-          { param::NVIDIA, { { param::NVIDIA_VOLTA, UINT32_MAX } } } // nvidia fp16
+          { param::NVIDIA, { { param::NVIDIA_VOLTA, UINT32_MAX } } }
         }
       },
     },
@@ -448,16 +457,17 @@ param const params[] = {
     .surface     = { 1024, 1024 },
     .checksums = {
       { 0x1502A167, {
-          { param::ARM,    {} },                                      // all arm
+          { param::ARM,    { { param::ARM_MALI_G31, param::ARM_MALI_G31 } } },
         }
       },
       { 0x138096C0, {
-          { param::INTEL,  {} },                                      // all intel
-          { param::NVIDIA, { { param::NVIDIA_VOLTA, UINT32_MAX } } }, // nvidia fp16
+          { param::ARM,    { { param::ARM_MALI_G52, param::ARM_MALI_G52 } } },
+          { param::INTEL,  {} },
+          { param::NVIDIA, { { param::NVIDIA_VOLTA, UINT32_MAX } } },
         }
       },
       { 0x138093C0, {
-          { param::NVIDIA, { { 0, param::NVIDIA_PASCAL } } }          // nvidia fp32
+          { param::NVIDIA, { { 0, param::NVIDIA_PASCAL } } },
         }
       },
     },
@@ -499,12 +509,13 @@ param const params[] = {
     .surface     = { 1024, 1024 },
     .checksums = {
       { 0xE7E21D06, {
-          { param::ARM,    {} },                                      // all arm
+          { param::ARM,    { { param::ARM_MALI_G31, param::ARM_MALI_G31 } } },
         }
       },
       { 0xE86BA68F, {
-          { param::INTEL,  {} },                                      // all intel
-          { param::NVIDIA, {} },                                      // nvidia
+          { param::ARM,    { { param::ARM_MALI_G52, param::ARM_MALI_G52 } } },
+          { param::INTEL,  {} },
+          { param::NVIDIA, {} },
         }
       },
     },
@@ -523,15 +534,16 @@ param const params[] = {
 
     .checksums = {
       { 0xCC46AC82, {
-          { param::ARM,    {}                    }, // all arm
+          { param::ARM,    { { param::ARM_MALI_G31, param::ARM_MALI_G31 } } },
         }
       },
       { 0xCB49AF86, {
-          { param::INTEL,  {}                    }  // all intel
+          { param::ARM,    { { param::ARM_MALI_G52, param::ARM_MALI_G52 } } },
+          { param::INTEL,  {} },
         }
       },
       { 0xCB21875E, {
-          { param::NVIDIA, {}                    }  // all nvidia
+          { param::NVIDIA, {} },
         }
       },
     },
@@ -549,16 +561,20 @@ param const params[] = {
     .surface     = { 1024, 512 },
     .checksums = {
       { 0xC337DEDF, {
-          { param::ARM,    {} }                                       // all arm
+          { param::ARM,    { { param::ARM_MALI_G31, param::ARM_MALI_G31 } } },
+        }
+      },
+      { 0xC2E4C4A9, {
+          { param::ARM,    { { param::ARM_MALI_G52, param::ARM_MALI_G52 } } },
         }
       },
       { 0xC2E4C3A9, {
-          { param::INTEL,  {} },                                      // all intel
-          { param::NVIDIA, { { param::NVIDIA_VOLTA, UINT32_MAX } } }, // nvidia fp16
+          { param::INTEL,  {} },
+          { param::NVIDIA, { { param::NVIDIA_VOLTA, UINT32_MAX } } },
         }
       },
       { 0xC2E7CDA9, {
-          { param::NVIDIA, { { 0, param::NVIDIA_PASCAL } } }          // nvidia fp32
+          { param::NVIDIA, { { 0, param::NVIDIA_PASCAL } } },
         }
       },
     },
@@ -614,10 +630,11 @@ param const params[] = {
     .surface     = { 600, 1024 },
     .checksums = {
       { 0xD4E08B15, {
-          { param::ARM,    {} }
+          { param::ARM,    { { param::ARM_MALI_G31, param::ARM_MALI_G31 } } },
         }
       },
       { 0xD526D15B, {
+          { param::ARM,    { { param::ARM_MALI_G52, param::ARM_MALI_G52 } } },
           { param::INTEL,  {} },
           { param::NVIDIA, {} },
         }
