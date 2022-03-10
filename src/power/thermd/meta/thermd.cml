@@ -1,0 +1,23 @@
+{
+    include: [
+        // Enable system logging
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        runner: "elf",
+        binary: "bin/thermd",
+    },
+    use: [
+        {
+            directory: "dev-thermal",
+            rights: [ "r*" ],
+            path: "/dev/class/thermal",
+        },
+        {
+            protocol: [
+                "fuchsia.kernel.PowerResource",
+                "fuchsia.tracing.provider.Registry",
+            ],
+        },
+    ],
+}

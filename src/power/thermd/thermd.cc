@@ -15,6 +15,7 @@
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/watcher.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/trace-provider/provider.h>
 #include <lib/trace/event.h>
 #include <lib/zx/channel.h>
@@ -66,7 +67,7 @@ static zx_status_t get_power_resource(zx_handle_t* power_resource_handle) {
   status = fdio_service_connect(
       (std::string("/svc/") + fuchsia::kernel::PowerResource::Name_).c_str(), remote.release());
   if (status != ZX_OK) {
-    fprintf(stderr, "ERROR: Failed to open fuchsia.kernel.PowerResource: %d\n", status);
+    FX_PLOGS(ERROR, status) << "Failed to open fuchsia.kernel.PowerResource";
     return status;
   }
 
@@ -74,7 +75,7 @@ static zx_status_t get_power_resource(zx_handle_t* power_resource_handle) {
   zx::resource power_resource;
   status = proxy.Get(&power_resource);
   if (status != ZX_OK) {
-    fprintf(stderr, "ERROR: FIDL error while trying to get power resource: %d\n", status);
+    FX_PLOGS(ERROR, status) << "FIDL error while trying to get power resource";
     return status;
   }
   *power_resource_handle = power_resource.release();
@@ -119,7 +120,7 @@ zx_status_t PlatformConfiguration::SetPL1Mw(uint32_t target_mw) {
   };
   zx_status_t st = zx_system_powerctl(power_resource, ZX_SYSTEM_POWERCTL_X86_SET_PKG_PL1, &arg);
   if (st != ZX_OK) {
-    fprintf(stderr, "ERROR: Failed to set PL1 to %d: %d\n", target_mw, st);
+    FX_PLOGS(ERROR, st) << "Failed to set PL1 to " << target_mw;
     return st;
   }
   current_pl1_mw_ = target_mw;
@@ -145,7 +146,7 @@ static void start_trace(void) {
   static trace::TraceProviderWithFdio trace_provider(loop.dispatcher());
   static bool started = false;
   if (!started) {
-    printf("thermd: start trace\n");
+    FX_LOGS(INFO) << "thermd: start trace";
     loop.StartThread();
     started = true;
   }
@@ -157,13 +158,13 @@ int main(int argc, char** argv) {
     return 0;
   }
 
-  printf("thermd: started\n");
+  FX_LOGS(INFO) << "thermd: started";
 
   start_trace();
 
   zx_status_t st = get_power_resource(&power_resource);
   if (st != ZX_OK) {
-    fprintf(stderr, "ERROR: Failed to get power resource: %d\n", st);
+    FX_PLOGS(ERROR, st) << "Failed to get power resource";
     return -1;
   }
 
@@ -171,16 +172,14 @@ int main(int argc, char** argv) {
 
   int dirfd = open("/dev/class/thermal", O_DIRECTORY | O_RDONLY);
   if (dirfd < 0) {
-    fprintf(stderr, "ERROR: Failed to open /dev/class/thermal: %d (errno %d)\n", dirfd, errno);
+    FX_PLOGS(ERROR, errno) << "Failed to open /dev/class/thermal: " << dirfd;
     return -1;
   }
 
   st = fdio_watch_directory(dirfd, thermal_device_added, ZX_TIME_INFINITE, NULL);
 
   if (st != ZX_ERR_STOP) {
-    fprintf(stderr,
-            "ERROR: watcher terminating without finding sensors, "
-            "terminating thermd...\n");
+    FX_LOGS(ERROR) << "watcher terminating without finding sensors, terminating thermd...";
     return -1;
   }
 
@@ -188,7 +187,7 @@ int main(int argc, char** argv) {
   // TODO: come up with a way to detect this is the ambient sensor
   fbl::unique_fd fd(open("/dev/class/thermal/000", O_RDWR));
   if (fd.get() < 0) {
-    fprintf(stderr, "ERROR: Failed to open sensor: %d\n", fd.get());
+    FX_PLOGS(ERROR, fd.get()) << "Failed to open sensor";
     return -1;
   }
 
@@ -199,7 +198,7 @@ int main(int argc, char** argv) {
   st = fuchsia_hardware_thermal_DeviceGetTemperatureCelsius(caller.borrow_channel(), &status2,
                                                             &temp);
   if (st != ZX_OK || status2 != ZX_OK) {
-    fprintf(stderr, "ERROR: Failed to get temperature: %d %d\n", st, status2);
+    FX_LOGS(ERROR) << "Failed to get temperature: " << st << " " << status2;
     return -1;
   }
   TRACE_COUNTER("thermal", "temp", 0, "ambient-c", temp);
@@ -207,7 +206,7 @@ int main(int argc, char** argv) {
   fuchsia_hardware_thermal_ThermalInfo info;
   st = fuchsia_hardware_thermal_DeviceGetInfo(caller.borrow_channel(), &status2, &info);
   if (st != ZX_OK || status2 != ZX_OK) {
-    fprintf(stderr, "ERROR: Failed to get thermal info: %d %d\n", st, status2);
+    FX_LOGS(ERROR) << "Failed to get thermal info: %d %d" << st << " " << status2;
     return -1;
   }
 
@@ -217,12 +216,12 @@ int main(int argc, char** argv) {
   zx_handle_t h = ZX_HANDLE_INVALID;
   st = fuchsia_hardware_thermal_DeviceGetStateChangeEvent(caller.borrow_channel(), &status2, &h);
   if (st != ZX_OK || status2 != ZX_OK) {
-    fprintf(stderr, "ERROR: Failed to get event: %d %d\n", st, status2);
+    FX_LOGS(ERROR) << "Failed to get event: %d %d" << st << " " << status2;
     return -1;
   }
 
   if (info.max_trip_count == 0) {
-    fprintf(stderr, "Trip points not supported, exiting\n");
+    FX_LOGS(ERROR) << "Trip points not supported, exiting";
     return 0;
   }
 
@@ -230,14 +229,14 @@ int main(int argc, char** argv) {
   st = fuchsia_hardware_thermal_DeviceSetTripCelsius(caller.borrow_channel(), 0,
                                                      info.passive_temp_celsius, &status2);
   if (st != ZX_OK || status2 != ZX_OK) {
-    fprintf(stderr, "ERROR: Failed to set trip point: %d %d\n", st, status2);
+    FX_LOGS(ERROR) << "Failed to set trip point: %d %d" << st << " " << status2;
     return -1;
   }
 
   // Update info
   st = fuchsia_hardware_thermal_DeviceGetInfo(caller.borrow_channel(), &status2, &info);
   if (st != ZX_OK || status2 != ZX_OK) {
-    fprintf(stderr, "ERROR: Failed to get thermal info: %d %d\n", st, status2);
+    FX_LOGS(ERROR) << "Failed to get thermal info: %d %d" << st << " " << status2;
     return -1;
   }
   TRACE_COUNTER("thermal", "trip-point", 0, "passive-c", info.passive_temp_celsius, "critical-c",
@@ -250,13 +249,13 @@ int main(int argc, char** argv) {
     zx_signals_t observed = 0;
     st = zx_object_wait_one(h, ZX_USER_SIGNAL_0, zx_deadline_after(ZX_SEC(1)), &observed);
     if ((st != ZX_OK) && (st != ZX_ERR_TIMED_OUT)) {
-      fprintf(stderr, "ERROR: Failed to wait on event: %d\n", st);
+      FX_PLOGS(ERROR, st) << "Failed to wait on event";
       return st;
     }
     if (observed & ZX_USER_SIGNAL_0) {
       st = fuchsia_hardware_thermal_DeviceGetInfo(caller.borrow_channel(), &status2, &info);
       if (st != ZX_OK || status2 != ZX_OK) {
-        fprintf(stderr, "ERROR: Failed to get thermal info: %d %d\n", st, status2);
+        FX_LOGS(ERROR) << "Failed to get thermal info: %d %d" << st << " " << status2;
         return -1;
       }
       if (info.state) {
@@ -266,7 +265,7 @@ int main(int argc, char** argv) {
         st = fuchsia_hardware_thermal_DeviceGetTemperatureCelsius(caller.borrow_channel(), &status2,
                                                                   &temp);
         if (st != ZX_OK || status2 != ZX_OK) {
-          fprintf(stderr, "ERROR: Failed to get temperature: %d %d\n", st, status2);
+          FX_LOGS(ERROR) << "Failed to get temperature: %d %d" << st << " " << status2;
           return -1;
         }
       } else {
@@ -277,7 +276,7 @@ int main(int argc, char** argv) {
       st = fuchsia_hardware_thermal_DeviceGetTemperatureCelsius(caller.borrow_channel(), &status2,
                                                                 &temp);
       if (st != ZX_OK || status2 != ZX_OK) {
-        fprintf(stderr, "ERROR: Failed to get temperature: %d %d\n", st, status2);
+        FX_LOGS(ERROR) << "Failed to get temperature: %d %d" << st << " " << status2;
         return -1;
       }
       TRACE_COUNTER("thermal", "temp", 0, "ambient-c", temp);
@@ -287,7 +286,7 @@ int main(int argc, char** argv) {
         // Make sure the state is clear
         st = fuchsia_hardware_thermal_DeviceGetInfo(caller.borrow_channel(), &status2, &info);
         if (st != ZX_OK || status2 != ZX_OK) {
-          fprintf(stderr, "ERROR: Failed to get thermal info: %d %d\n", st, status2);
+          FX_LOGS(ERROR) << "Failed to get thermal info: %d %d" << st << " " << status2;
           return -1;
         }
         if (!info.state) {
@@ -302,7 +301,7 @@ int main(int argc, char** argv) {
     }
   }
 
-  printf("thermd terminating: %d\n", st);
+  FX_PLOGS(INFO, st) << "thermd terminating";
 
   return 0;
 }

@@ -5,6 +5,7 @@
 import("//build/components.gni")
 import("//build/config.gni")
 import("//build/rust/rustc_binary.gni")
+import("//src/sys/core/build/core_shard.gni")
 
 if (target_cpu == "x64") {
   executable("bin") {
@@ -18,6 +19,7 @@ if (target_cpu == "x64") {
       "//sdk/fidl/fuchsia.hardware.thermal:fuchsia.hardware.thermal_c",
       "//sdk/fidl/fuchsia.kernel",
       "//sdk/lib/fdio",
+      "//sdk/lib/syslog/cpp",
       "//src/lib/ddk",
       "//zircon/system/ulib/async",
       "//zircon/system/ulib/async-default",
@@ -32,14 +34,13 @@ if (target_cpu == "x64") {
   }
 
   fuchsia_package_with_single_component("thermd") {
-    manifest = "meta/thermd.cmx"
+    manifest = "meta/thermd.cml"
     deps = [ ":bin" ]
   }
-}
 
-config_data("config") {
-  for_pkg = "sysmgr"
-  sources = [ "thermd.config" ]
+  core_shard("thermd-core-shard") {
+    shard_file = "meta/thermd.core_shard.cml"
+  }
 }
 
 group("tests") {

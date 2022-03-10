@@ -55,15 +55,16 @@ board_system_image_deps += [
 ]
 
 board_package_labels += [
-  "//src/power/thermd",
-  "//src/power/thermd:config",
   "//src/devices/sysmem/bin/sysmem_connector",
   "//src/graphics/bin/vulkan_loader",
+  "//src/power/thermd",
   "//src/hwinfo:default_board_config",
   "//src/graphics/drivers/intel-gen/icd:libvulkan_intel_gen",
   "//src/graphics/lib/goldfish-vulkan/gnbuild:goldfish-vulkan",
   "//src/graphics/lib/goldfish-vulkan/gnbuild:goldfish-vulkan-config",
 ]
+
+board_core_realm_shards += [ "//src/power/thermd:thermd-core-shard" ]
 
 # userspace PCI migration flags
 # fxbug.dev/32978

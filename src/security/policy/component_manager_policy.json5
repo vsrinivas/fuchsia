@@ -169,6 +169,7 @@
                 target_monikers: [
                     "/bootstrap",
                     "/core",
+                    "/core/thermd",
                 ],
             },
             {
