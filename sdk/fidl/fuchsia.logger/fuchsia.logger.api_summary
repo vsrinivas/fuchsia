@@ -49,7 +49,6 @@ struct/member fuchsia.logger/LogMessage.time int64
 struct fuchsia.logger/LogMessage
 protocol/member fuchsia.logger/LogSink.Connect(zx/handle:SOCKET socket)
 protocol/member fuchsia.logger/LogSink.ConnectStructured(zx/handle:SOCKET socket)
-protocol/member fuchsia.logger/LogSink.OnInterestChanged -> (fuchsia.diagnostics/Interest interest)
 protocol/member fuchsia.logger/LogSink.OnRegisterInterest -> (fuchsia.diagnostics/Interest interest)
 protocol/member fuchsia.logger/LogSink.WaitForInterestChange() -> (fuchsia.logger/LogSink_WaitForInterestChange_Result result)
 protocol fuchsia.logger/LogSink
