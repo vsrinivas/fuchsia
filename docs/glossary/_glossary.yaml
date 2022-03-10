@@ -1090,6 +1090,18 @@ environment to form a full <a href=\"/docs/glossary#fuchsia-sdk\">Fuchsia SDK</a
   related_guides: [""]
   area: ["Component Framework"]
 
+- term: "Roller"
+  short_description: "A roller is an infrastructure job that watches for updates to a repository's
+  pinned dependencies and automatically creates and submits a commit that updates the pinned
+  version (a \"roll\") when it detects that a new version of a dependency is available."
+  full_description: "The Fuchsia project uses rollers to update pinned versions of repositories and
+  <a href=\"https://chromium.googlesource.com/infra/luci/luci-go/+/HEAD/cipd/README.md\">CIPD</a>
+  packages. Rollers can be configured to trigger automatically on new commits to a repository, run
+  as a cron job that periodically polls for changes, or only be triggered manually."
+  see_also: [""]
+  related_guides: [""]
+  area: ["General"]
+
 - term: "Runner"
   short_description: "A <a href=\"/docs/glossary#component\">component</a> that provides a
   runtime environment for other components, e.g. the ELF runner, the Dart AOT runner, the Chromium
