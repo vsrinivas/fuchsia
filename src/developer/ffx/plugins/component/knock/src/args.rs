@@ -34,6 +34,11 @@ pub struct KnockCommand {
     /// the namespace, also called node selector. Correspond to the routing terminology used in the component manifest.
     /// One of ['in', 'out', 'expose']. Defaults to 'out'
     pub node: Node,
+
+    #[argh(option, default = "5")]
+    /// the time in seconds to wait when status is SHOULD_WAIT before assuming success.
+    /// Defaults to 5 second.
+    pub timeout: u64,
 }
 
 #[derive(PartialEq, Debug)]

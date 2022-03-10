@@ -8,11 +8,16 @@ use {
     ffx_component::SELECTOR_FORMAT_HELP,
     ffx_core::ffx_plugin,
     ffx_knock_args::{KnockCommand, Node},
+    fidl::client::Client,
     fidl::handle::Channel,
-    fidl_fuchsia_developer_remotecontrol as rc, fuchsia_zircon_status as zx_status,
+    fidl_fuchsia_developer_remotecontrol as rc,
+    fuchsia_async::futures::{StreamExt, TryStreamExt},
+    fuchsia_async::{Duration, TimeoutExt},
+    fuchsia_zircon_status as zx_status,
     moniker::{AbsoluteMoniker, AbsoluteMonikerBase},
     selectors::{self, VerboseError},
     std::io::{stdout, Write},
+    thiserror::Error,
 };
 
 fn generate_selector(moniker: String, service: String, node: Node) -> Result<String> {
@@ -32,14 +37,20 @@ fn generate_selector(moniker: String, service: String, node: Node) -> Result<Str
 pub async fn knock_cmd(remote_proxy: rc::RemoteControlProxy, cmd: KnockCommand) -> Result<()> {
     let writer = Box::new(stdout());
 
-    knock(remote_proxy, writer, generate_selector(cmd.moniker, cmd.service, cmd.node)?.as_str())
-        .await
+    knock(
+        remote_proxy,
+        writer,
+        generate_selector(cmd.moniker, cmd.service, cmd.node)?.as_str(),
+        cmd.timeout,
+    )
+    .await
 }
 
 async fn knock<W: Write>(
     remote_proxy: rc::RemoteControlProxy,
     mut write: W,
     selector_str: &str,
+    timeout_secs: u64,
 ) -> Result<()> {
     let writer = &mut write;
     let selector = selectors::parse_selector::<VerboseError>(selector_str).map_err(|e| {
@@ -49,37 +60,73 @@ async fn knock<W: Write>(
     let (client, server) = Channel::create()?;
     match remote_proxy.connect(selector, server).await.context("awaiting connect call")? {
         Ok(m) => {
-            match client.read_split(&mut vec![], &mut vec![]) {
-                Err(zx_status::Status::PEER_CLOSED) => writeln!(
-                    writer,
-                    "Failure: service is not up. Connection to '{}:{}:{}' reported PEER_CLOSED.",
-                    m.moniker.join("/"),
-                    m.subdir,
-                    m.service
-                )?,
-                Err(zx_status::Status::SHOULD_WAIT) => writeln!(
-                    writer,
-                    "Success: service is up. Connected to '{}:{}:{}'.",
-                    m.moniker.join("/"),
-                    m.subdir,
-                    m.service
-                )?,
-                Err(e) => writeln!(
-                    writer,
-                    "Unknown: opened connection to '{}:{}:{}', but channel read reported {:?}.",
-                    m.moniker.join("/"),
-                    m.subdir,
-                    m.service,
-                    e
-                )?,
-                _ => writeln!(
-                    writer,
-                    "Success: service is up. Connected to '{}:{}:{}'.",
-                    m.moniker.join("/"),
-                    m.subdir,
-                    m.service
-                )?,
-            };
+            let client = fuchsia_async::Channel::from_channel(client)?;
+            let client = Client::new(client, "protocol_name");
+
+            let mut event_receiver = client.take_event_receiver().map_err(|err| match err {
+                fidl::Error::ClientRead(status) if status == zx_status::Status::PEER_CLOSED => {
+                    KnockError::PeerClosed
+                }
+                other => KnockError::Fidl { err: other },
+            });
+            let result = event_receiver
+                .next()
+                .on_timeout(Duration::from_secs(timeout_secs), || {
+                    Some(Err(KnockError::Timeout { duration: timeout_secs }))
+                })
+                .await;
+
+            match result {
+                None => {
+                    writeln!(
+                        writer,
+                        "Failure: service is not up. Connection to '{}:{}:{}' returned none.",
+                        m.moniker.join("/"),
+                        m.subdir,
+                        m.service
+                    )?;
+                }
+                Some(result) => match result {
+                    Err(KnockError::Timeout { duration }) => {
+                        writeln!(
+                            writer,
+                            "Connection to '{}:{}:{}' is alive after {} seconds. Assuming success.",
+                            m.moniker.join("/"),
+                            m.subdir,
+                            m.service,
+                            duration
+                        )?;
+                    }
+                    Err(KnockError::PeerClosed) => {
+                        writeln!(
+                            writer,
+                            "Failure: service is not up. Connection to '{}:{}:{}' reported PEER_CLOSED.",
+                            m.moniker.join("/"),
+                            m.subdir,
+                            m.service
+                        )?;
+                    }
+                    Err(KnockError::Fidl { err }) => {
+                        writeln!(
+                            writer,
+                            "Unknown: opened connection to '{}:{}:{}', but channel read reported {:?}.",
+                            m.moniker.join("/"),
+                            m.subdir,
+                            m.service,
+                            err
+                        )?;
+                    }
+                    Ok(_) => {
+                        writeln!(
+                            writer,
+                            "Success: service is up. Connected to '{}:{}:{}'.",
+                            m.moniker.join("/"),
+                            m.subdir,
+                            m.service
+                        )?;
+                    }
+                },
+            }
 
             Ok(())
         }
@@ -88,6 +135,22 @@ async fn knock<W: Write>(
             Ok(())
         }
     }
+}
+
+/// The error type used by Knock operations.
+#[derive(Debug, Error, Clone)]
+pub enum KnockError {
+    /// The timeout has been reached while knocking
+    #[error("Timeout reached. No response received after {} seconds", duration)]
+    Timeout { duration: u64 },
+
+    /// Got a Fidl client read error with status PEER_CLOSED
+    #[error("FIDL client read error with status PEER_CLOSED")]
+    PeerClosed,
+
+    /// A FIDL error has been thrown while knocking.
+    #[error("FIDL error: {}", err)]
+    Fidl { err: fidl::Error },
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -141,7 +204,7 @@ mod test {
     async fn test_knock_invalid_selector() -> Result<()> {
         let mut output = Vec::new();
         let remote_proxy = setup_fake_remote_server(false);
-        let response = knock(remote_proxy, &mut output, "a:b:").await;
+        let response = knock(remote_proxy, &mut output, "a:b:", 5).await;
         let e = response.unwrap_err();
         assert!(e.to_string().contains(SELECTOR_FORMAT_HELP));
         Ok(())
@@ -152,11 +215,11 @@ mod test {
         let mut output_utf8 = Vec::new();
         let remote_proxy = setup_fake_remote_server(true);
         let _response =
-            knock(remote_proxy, &mut output_utf8, "*:*:*").await.expect("knock should not fail");
+            knock(remote_proxy, &mut output_utf8, "*:*:*", 5).await.expect("knock should not fail");
 
         let output = String::from_utf8(output_utf8).expect("Invalid UTF-8 bytes");
-        assert!(output.contains("Success"));
-        assert!(output.contains("core/test:out:fuchsia.myservice"));
+        assert!(output
+            .contains("Connection to 'core/test:out:fuchsia.myservice' is alive after 5 seconds. Assuming success."));
         Ok(())
     }
 
@@ -165,7 +228,7 @@ mod test {
         let mut output_utf8 = Vec::new();
         let remote_proxy = setup_fake_remote_server(false);
         let _response =
-            knock(remote_proxy, &mut output_utf8, "*:*:*").await.expect("knock should not fail");
+            knock(remote_proxy, &mut output_utf8, "*:*:*", 5).await.expect("knock should not fail");
 
         let output = String::from_utf8(output_utf8).expect("Invalid UTF-8 bytes");
         assert!(!output.contains("Success"));
