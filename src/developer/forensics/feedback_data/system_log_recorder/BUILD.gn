@@ -19,6 +19,7 @@ source_set("main") {
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
     "//src/developer/forensics/feedback_data:constants",
+    "//src/developer/forensics/utils/redact",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/trace-provider:trace-provider-with-fdio",
@@ -53,6 +54,7 @@ source_set("src") {
     "//src/developer/forensics/feedback_data:archive_accessor",
     "//src/developer/forensics/utils:logs",
     "//src/developer/forensics/utils:storage_size",
+    "//src/developer/forensics/utils/redact",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
   ]
 

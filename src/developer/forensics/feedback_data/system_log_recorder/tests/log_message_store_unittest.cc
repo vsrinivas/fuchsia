@@ -14,6 +14,7 @@
 #include "src/developer/forensics/feedback_data/system_log_recorder/system_log_recorder.h"
 #include "src/developer/forensics/testing/log_message.h"
 #include "src/developer/forensics/utils/log_format.h"
+#include "src/developer/forensics/utils/redact/redactor.h"
 
 namespace forensics {
 namespace feedback_data {
@@ -40,10 +41,36 @@ std::unique_ptr<Encoder> MakeIdentityEncoder() {
   return std::unique_ptr<Encoder>(new IdentityEncoder());
 }
 
+std::unique_ptr<RedactorBase> MakeIdentityRedactor() {
+  return std::unique_ptr<RedactorBase>(new IdentityRedactor());
+}
+
+class SimpleRedactor : public RedactorBase {
+ public:
+  SimpleRedactor(const bool count_calls) : count_calls_(count_calls) {}
+
+  std::string& Redact(std::string& text) override {
+    text = (count_calls_) ? fxl::StringPrintf("R: %d", ++num_calls_) : "R";
+    return text;
+  }
+
+  std::string UnredactedCanary() const override { return ""; }
+  std::string RedactedCanary() const override { return ""; }
+
+ private:
+  bool count_calls_;
+  int num_calls_{0};
+};
+
+std::unique_ptr<RedactorBase> MakeSimpleRedactor(const bool count_calls) {
+  return std::unique_ptr<RedactorBase>(new SimpleRedactor(count_calls));
+}
+
 TEST(LogMessageStoreTest, UnlimitedMessages) {
   // Set the block to hold 10 log messages while the buffer holds 1 log message (but the buffer
   // limits should be ignored because the component has just started up).
-  LogMessageStore store(kMaxLogLineSize * 10, kMaxLogLineSize, MakeIdentityEncoder());
+  LogMessageStore store(kMaxLogLineSize * 10, kMaxLogLineSize, MakeIdentityRedactor(),
+                        MakeIdentityEncoder());
 
   EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 0")));
   EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 0")));
@@ -67,9 +94,65 @@ TEST(LogMessageStoreTest, UnlimitedMessages) {
   EXPECT_FALSE(end_of_block);
 }
 
+TEST(LogMessageStoreTest, AppliesRedaction) {
+  // Set the block to hold 10 log messages while the buffer holds 1 log message (but the buffer
+  // limits should be ignored because the component has just started up).
+  LogMessageStore store(kMaxLogLineSize * 10, kMaxLogLineSize,
+                        MakeSimpleRedactor(/*count_calls=*/true), MakeIdentityEncoder());
+
+  EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 0")));
+  EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 0")));
+  EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 0")));
+  EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 1")));
+  EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 1")));
+  EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 1")));
+  EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 2")));
+  EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 2")));
+  EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 2")));
+
+  bool end_of_block;
+  EXPECT_EQ(store.Consume(&end_of_block), R"([15604.000][07559][07687][] INFO: R: 1
+[15604.000][07559][07687][] INFO: R: 2
+[15604.000][07559][07687][] INFO: R: 3
+[15604.000][07559][07687][] INFO: R: 4
+[15604.000][07559][07687][] INFO: R: 5
+[15604.000][07559][07687][] INFO: R: 6
+[15604.000][07559][07687][] INFO: R: 7
+[15604.000][07559][07687][] INFO: R: 8
+[15604.000][07559][07687][] INFO: R: 9
+)");
+
+  EXPECT_FALSE(end_of_block);
+}
+
+TEST(LogMessageStoreTest, RedactionCompressed) {
+  // Set the block to hold 10 log messages while the buffer holds 1 log message (but the buffer
+  // limits should be ignored because the component has just started up).
+  LogMessageStore store(kMaxLogLineSize * 10, kMaxLogLineSize,
+                        MakeSimpleRedactor(/*count_calls=*/false), MakeIdentityEncoder());
+
+  EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 0")));
+  EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 0")));
+  EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 0")));
+  EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 1")));
+  EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 1")));
+  EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 1")));
+  EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 2")));
+  EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 2")));
+  EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 2")));
+
+  bool end_of_block;
+  EXPECT_EQ(store.Consume(&end_of_block), R"([15604.000][07559][07687][] INFO: R
+!!! MESSAGE REPEATED 8 MORE TIMES !!!
+)");
+
+  EXPECT_FALSE(end_of_block);
+}
+
 TEST(LogMessageStoreTest, VerifyBlock) {
   // Set the block to hold 2 log messages while the buffer holds 1 log message.
-  LogMessageStore store(kMaxLogLineSize * 2, kMaxLogLineSize, MakeIdentityEncoder());
+  LogMessageStore store(kMaxLogLineSize * 2, kMaxLogLineSize, MakeIdentityRedactor(),
+                        MakeIdentityEncoder());
   store.TurnOnRateLimiting();
   bool end_of_block;
 
@@ -96,7 +179,8 @@ TEST(LogMessageStoreTest, VerifyBlock) {
 
 TEST(LogMessageStoreTest, AddAndConsume) {
   // Set up the store to hold 2 log lines.
-  LogMessageStore store(kVeryLargeBlockSize, kMaxLogLineSize * 2, MakeIdentityEncoder());
+  LogMessageStore store(kVeryLargeBlockSize, kMaxLogLineSize * 2, MakeIdentityRedactor(),
+                        MakeIdentityEncoder());
   store.TurnOnRateLimiting();
   bool end_of_block;
 
@@ -120,7 +204,8 @@ TEST(LogMessageStoreTest, AddAndConsume) {
 TEST(LogMessageStoreTest, DropsCorrectly) {
   bool end_of_block;
   // Set up the store to hold 2 log lines to test that the subsequent 3 are dropped.
-  LogMessageStore store(kVeryLargeBlockSize, kMaxLogLineSize * 2, MakeIdentityEncoder());
+  LogMessageStore store(kVeryLargeBlockSize, kMaxLogLineSize * 2, MakeIdentityRedactor(),
+                        MakeIdentityEncoder());
   store.TurnOnRateLimiting();
 
   EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 0")));
@@ -140,7 +225,8 @@ TEST(LogMessageStoreTest, DropsSubsequentShorterMessages) {
   bool end_of_block;
   // Even though the store could hold 2 log lines, all the lines after the first one will be
   // dropped because the second log message is very long.
-  LogMessageStore store(kVeryLargeBlockSize, kMaxLogLineSize * 2, MakeIdentityEncoder());
+  LogMessageStore store(kVeryLargeBlockSize, kMaxLogLineSize * 2, MakeIdentityRedactor(),
+                        MakeIdentityEncoder());
   store.TurnOnRateLimiting();
 
   EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 0")));
@@ -160,7 +246,8 @@ TEST(LogMessageStoreTest, VerifyRepetitionMessage_AtConsume) {
   bool end_of_block;
   // Set up the store to hold 2 log line. With three repeated messages, the last two messages
   // should get reduced to a single repeated message.
-  LogMessageStore store(kVeryLargeBlockSize, kMaxLogLineSize, MakeIdentityEncoder());
+  LogMessageStore store(kVeryLargeBlockSize, kMaxLogLineSize, MakeIdentityRedactor(),
+                        MakeIdentityEncoder());
   store.TurnOnRateLimiting();
 
   EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 0")));
@@ -191,7 +278,8 @@ TEST(LogMessageStoreTest, VerifyRepetition_DoNotResetRepeatedWarningOnConsume) {
   // |________|_______| _|
   //
   // Note: xN = last message repeated N times
-  LogMessageStore store(kVeryLargeBlockSize, kMaxLogLineSize, MakeIdentityEncoder());
+  LogMessageStore store(kVeryLargeBlockSize, kMaxLogLineSize, MakeIdentityRedactor(),
+                        MakeIdentityEncoder());
   store.TurnOnRateLimiting();
 
   EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 0")));
@@ -232,7 +320,8 @@ TEST(LogMessageStoreTest, VerifyRepetition_ResetRepeatedWarningOnConsume) {
   // |  End of Block  |
   // -----------------
   // Note: xN = last message repeated N times
-  LogMessageStore store(kMaxLogLineSize, kMaxLogLineSize, MakeIdentityEncoder());
+  LogMessageStore store(kMaxLogLineSize, kMaxLogLineSize, MakeIdentityRedactor(),
+                        MakeIdentityEncoder());
   store.TurnOnRateLimiting();
 
   EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 0")));
@@ -278,7 +367,7 @@ TEST(LogMessageStoreTest, VerifyRepetition_LimitRepetitionBuffers) {
   //
   // Note: xN = last message repeated N times, Rep = kMaxRepeatedBuffers.
   LogMessageStore store(2 * kMaxRepeatedBuffers * kMaxLogLineSize, 2 * kMaxLogLineSize,
-                        MakeIdentityEncoder());
+                        MakeIdentityRedactor(), MakeIdentityEncoder());
   store.TurnOnRateLimiting();
 
   EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 0")));
@@ -312,7 +401,7 @@ TEST(LogMessageStoreTest, VerifyRepetitionMessage_WhenMessageChanges) {
   // Set up the store to hold 3 log line. Verify that a repetition message appears after input
   // repetition and before the input change.
   LogMessageStore store(kVeryLargeBlockSize, kMaxLogLineSize * 2 + kRepeatedFormatStrSize,
-                        MakeIdentityEncoder());
+                        MakeIdentityRedactor(), MakeIdentityEncoder());
   store.TurnOnRateLimiting();
 
   EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 0")));
@@ -330,7 +419,8 @@ TEST(LogMessageStoreTest, VerifyDroppedRepeatedMessage_OnBufferFull) {
   bool end_of_block;
   // Set up the store to hold 1 log line. Verify that repeated messages that occur after the
   // buffer is full get dropped.
-  LogMessageStore store(kVeryLargeBlockSize, kMaxLogLineSize * 1, MakeIdentityEncoder());
+  LogMessageStore store(kVeryLargeBlockSize, kMaxLogLineSize * 1, MakeIdentityRedactor(),
+                        MakeIdentityEncoder());
   store.TurnOnRateLimiting();
 
   EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 0")));
@@ -347,7 +437,8 @@ TEST(LogMessageStoreTest, VerifyNoRepeatMessage_AfterFirstConsume) {
   bool end_of_block;
   // Set up the store to hold 1 log line. Verify that there is no repeat message right after
   // dropping messages.
-  LogMessageStore store(kVeryLargeBlockSize, kMaxLogLineSize * 1, MakeIdentityEncoder());
+  LogMessageStore store(kVeryLargeBlockSize, kMaxLogLineSize * 1, MakeIdentityRedactor(),
+                        MakeIdentityEncoder());
   store.TurnOnRateLimiting();
 
   EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 0")));
@@ -368,7 +459,8 @@ TEST(LogMessageStoreTest, VerifyRepeatMessage_AfterFirstConsume) {
   bool end_of_block;
   // Set up the store to hold 3 log lines. Verify that there can be a repeat message after
   // consume, when no messages were dropped.
-  LogMessageStore store(kVeryLargeBlockSize, kMaxLogLineSize * 3, MakeIdentityEncoder());
+  LogMessageStore store(kVeryLargeBlockSize, kMaxLogLineSize * 3, MakeIdentityRedactor(),
+                        MakeIdentityEncoder());
   store.TurnOnRateLimiting();
 
   EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 0")));
@@ -391,7 +483,8 @@ TEST(LogMessageStoreTest, VerifyRepeatedAndDropped) {
   bool end_of_block;
   // Set up the store to hold 2 log lines. Verify that we can have the repeated message, and then
   // the dropped message.
-  LogMessageStore store(kVeryLargeBlockSize, kMaxLogLineSize * 2, MakeIdentityEncoder());
+  LogMessageStore store(kVeryLargeBlockSize, kMaxLogLineSize * 2, MakeIdentityRedactor(),
+                        MakeIdentityEncoder());
   store.TurnOnRateLimiting();
 
   EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 0")));
@@ -414,7 +507,8 @@ TEST(LogMessageStoreTest, VerifyNoRepeatMessage_TimeOrdering) {
   bool end_of_block;
   // Set up the store to hold 2 log line. Verify time ordering: a message cannot be counted as
   // repeated if it's in between messages, even if those messages get dropped.
-  LogMessageStore store(kVeryLargeBlockSize, kMaxLogLineSize * 2, MakeIdentityEncoder());
+  LogMessageStore store(kVeryLargeBlockSize, kMaxLogLineSize * 2, MakeIdentityRedactor(),
+                        MakeIdentityEncoder());
   store.TurnOnRateLimiting();
 
   EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 0")));
@@ -440,7 +534,8 @@ TEST(LogMessageStoreTest, VerifyAppendToEnd) {
   bool end_of_block;
   // Set up the store to hold 2 log line. Verify time ordering: a message cannot be counted as
   // repeated if it's in between messages, even if those messages get dropped.
-  LogMessageStore store(kVeryLargeBlockSize, kMaxLogLineSize * 2, MakeIdentityEncoder());
+  LogMessageStore store(kVeryLargeBlockSize, kMaxLogLineSize * 2, MakeIdentityRedactor(),
+                        MakeIdentityEncoder());
   store.TurnOnRateLimiting();
 
   EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 0")));
@@ -469,7 +564,8 @@ TEST(LogMessageStoreTest, VerifyNoRepeatWarningAfter_AppendToEnd) {
   bool end_of_block;
   // Set up the store to hold 2 log line. Verify time ordering: a message cannot be counted as
   // repeated if it's in between messages, even if those messages get dropped.
-  LogMessageStore store(kVeryLargeBlockSize, kMaxLogLineSize * 2, MakeIdentityEncoder());
+  LogMessageStore store(kVeryLargeBlockSize, kMaxLogLineSize * 2, MakeIdentityRedactor(),
+                        MakeIdentityEncoder());
   store.TurnOnRateLimiting();
 
   EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 0")));

@@ -13,6 +13,7 @@
 #include "src/developer/forensics/feedback_data/system_log_recorder/encoding/encoder.h"
 #include "src/developer/forensics/feedback_data/system_log_recorder/log_message_store.h"
 #include "src/developer/forensics/feedback_data/system_log_recorder/writer.h"
+#include "src/developer/forensics/utils/redact/redactor.h"
 #include "src/developer/forensics/utils/storage_size.h"
 
 namespace forensics {
@@ -31,7 +32,8 @@ class SystemLogRecorder {
 
   SystemLogRecorder(async_dispatcher_t* archive_dispatcher, async_dispatcher_t* write_dispatcher,
                     std::shared_ptr<sys::ServiceDirectory> services,
-                    WriteParameters write_parameters, std::unique_ptr<Encoder> encoder);
+                    WriteParameters write_parameters, std::unique_ptr<RedactorBase> redactor,
+                    std::unique_ptr<Encoder> encoder);
   void Start();
 
   void Flush(std::optional<std::string> message);

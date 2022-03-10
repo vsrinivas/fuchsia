@@ -16,6 +16,8 @@ namespace forensics {
 
 class RedactorBase {
  public:
+  virtual ~RedactorBase() = default;
+  //
   // Redacts |text| in-place and returns a reference to |text|.
   virtual std::string& Redact(std::string& text) = 0;
 
@@ -32,6 +34,7 @@ class RedactorBase {
 class Redactor : public RedactorBase {
  public:
   Redactor();
+  ~Redactor() override = default;
 
   std::string& Redact(std::string& text) override;
 
@@ -50,6 +53,8 @@ class Redactor : public RedactorBase {
 // Do-nothing redactor
 class IdentityRedactor : public RedactorBase {
  public:
+  ~IdentityRedactor() override = default;
+
   std::string& Redact(std::string& text) override;
 
   std::string UnredactedCanary() const override;

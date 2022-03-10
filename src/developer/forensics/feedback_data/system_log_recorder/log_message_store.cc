@@ -34,11 +34,13 @@ std::string FormatError(const std::string& error) {
 }  // namespace
 
 LogMessageStore::LogMessageStore(StorageSize max_block_capacity, StorageSize max_buffer_capacity,
+                                 std::unique_ptr<RedactorBase> redactor,
                                  std::unique_ptr<Encoder> encoder)
     : mtx_(),
       buffer_(),
       buffer_stats_(max_buffer_capacity),
       block_stats_(max_block_capacity),
+      redactor_(std::move(redactor)),
       encoder_(std::move(encoder)) {
   FX_CHECK(max_block_capacity >= max_buffer_capacity);
 }
@@ -55,7 +57,7 @@ bool LogMessageStore::Add(::fpromise::result<fuchsia::logger::LogMessage, std::s
 
   std::lock_guard<std::mutex> lk(mtx_);
 
-  const auto& log_msg = (log.is_ok()) ? log.value().msg : log.error();
+  const auto& log_msg = (log.is_ok()) ? redactor_->Redact(log.value().msg) : log.error();
 
   // 1. Early return if the incoming message is the same as last time.
   if (last_pushed_message_ == log_msg) {

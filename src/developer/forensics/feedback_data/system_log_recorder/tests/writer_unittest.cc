@@ -19,6 +19,7 @@
 #include "src/developer/forensics/feedback_data/system_log_recorder/system_log_recorder.h"
 #include "src/developer/forensics/testing/log_message.h"
 #include "src/developer/forensics/utils/log_format.h"
+#include "src/developer/forensics/utils/redact/redactor.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/path.h"
 #include "src/lib/files/scoped_temp_dir.h"
@@ -68,6 +69,10 @@ std::unique_ptr<Encoder> MakeIdentityEncoder() {
   return std::unique_ptr<Encoder>(new IdentityEncoder());
 }
 
+std::unique_ptr<RedactorBase> MakeIdentityRedactor() {
+  return std::unique_ptr<RedactorBase>(new IdentityRedactor());
+}
+
 std::string MakeLogFilePath(files::ScopedTempDir& temp_dir, const size_t file_num) {
   return files::JoinPath(temp_dir.path(), std::to_string(file_num));
 }
@@ -81,7 +86,7 @@ TEST(WriterTest, VerifyFileOrdering) {
   const StorageSize kBlockSize = kMaxLogLineSize;
   const StorageSize kBufferSize = kMaxLogLineSize;
 
-  LogMessageStore store(kBlockSize, kBufferSize, MakeIdentityEncoder());
+  LogMessageStore store(kBlockSize, kBufferSize, MakeIdentityRedactor(), MakeIdentityEncoder());
   store.TurnOnRateLimiting();
   SystemLogWriter writer(temp_dir.path(), 4u, &store);
 
@@ -144,7 +149,7 @@ TEST(WriterTest, VerifyEncoderInput) {
 
   auto encoder = std::unique_ptr<EncoderStub>(new EncoderStub());
   auto encoder_ptr = encoder.get();
-  LogMessageStore store(kBlockSize, kBufferSize, std::move(encoder));
+  LogMessageStore store(kBlockSize, kBufferSize, MakeIdentityRedactor(), std::move(encoder));
   store.TurnOnRateLimiting();
   SystemLogWriter writer(temp_dir.path(), 2u, &store);
 
@@ -173,7 +178,8 @@ TEST(WriterTest, WritesMessages) {
 
   // Set up the writer such that each file can fit 2 log messages and the "!!! DROPPED..."
   // string.
-  LogMessageStore store(kMaxLogLineSize * 2, kMaxLogLineSize * 2, MakeIdentityEncoder());
+  LogMessageStore store(kMaxLogLineSize * 2, kMaxLogLineSize * 2, MakeIdentityRedactor(),
+                        MakeIdentityEncoder());
   store.TurnOnRateLimiting();
   SystemLogWriter writer(temp_dir.path(), 2u, &store);
 
@@ -214,7 +220,8 @@ TEST(WriterTest, VerifyCompressionRatio) {
   // Generate 2x data when decoding. The decoder data output is not useful, just its size.
   files::ScopedTempDir temp_dir;
 
-  LogMessageStore store(kMaxLogLineSize * 4, kMaxLogLineSize * 4, MakeIdentityEncoder());
+  LogMessageStore store(kMaxLogLineSize * 4, kMaxLogLineSize * 4, MakeIdentityRedactor(),
+                        MakeIdentityEncoder());
   store.TurnOnRateLimiting();
   SystemLogWriter writer(temp_dir.path(), 2u, &store);
 
@@ -237,7 +244,8 @@ TEST(WriterTest, VerifyProductionEcoding) {
 
   // Set up the writer such that one file contains 5 log messages.
   auto encoder = std::unique_ptr<Encoder>(new ProductionEncoder());
-  LogMessageStore store(kMaxLogLineSize * 5, kMaxLogLineSize * 5, std::move(encoder));
+  LogMessageStore store(kMaxLogLineSize * 5, kMaxLogLineSize * 5, MakeIdentityRedactor(),
+                        std::move(encoder));
   store.TurnOnRateLimiting();
   SystemLogWriter writer(temp_dir.path(), 2u, &store);
 
@@ -272,7 +280,8 @@ TEST(WriterTest, FilesAlreadyPresent) {
   {
     // Set up the writer such that one file contains at most 5 log messages.
     auto encoder = std::unique_ptr<Encoder>(new ProductionEncoder());
-    LogMessageStore store(kMaxLogLineSize * 5, kMaxLogLineSize * 5, std::move(encoder));
+    LogMessageStore store(kMaxLogLineSize * 5, kMaxLogLineSize * 5, MakeIdentityRedactor(),
+                          std::move(encoder));
     store.TurnOnRateLimiting();
 
     SystemLogWriter writer(temp_dir.path(), 2u, &store);
@@ -284,7 +293,8 @@ TEST(WriterTest, FilesAlreadyPresent) {
   {
     // Set up the writer such that one file contains at most 5 log messages.
     auto encoder = std::unique_ptr<Encoder>(new ProductionEncoder());
-    LogMessageStore store(kMaxLogLineSize * 5, kMaxLogLineSize * 5, std::move(encoder));
+    LogMessageStore store(kMaxLogLineSize * 5, kMaxLogLineSize * 5, MakeIdentityRedactor(),
+                          std::move(encoder));
     store.TurnOnRateLimiting();
 
     SystemLogWriter writer(temp_dir.path(), 2u, &store);

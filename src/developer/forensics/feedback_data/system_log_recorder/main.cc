@@ -16,6 +16,7 @@
 #include "src/developer/forensics/feedback_data/system_log_recorder/controller.h"
 #include "src/developer/forensics/feedback_data/system_log_recorder/encoding/production_encoding.h"
 #include "src/developer/forensics/feedback_data/system_log_recorder/system_log_recorder.h"
+#include "src/developer/forensics/utils/redact/redactor.h"
 
 namespace forensics {
 namespace feedback_data {
@@ -61,6 +62,7 @@ int main() {
                                  .max_num_files = kMaxNumLogFiles,
                                  .total_log_size = kPersistentLogsMaxSize,
                              },
+                             std::unique_ptr<RedactorBase>(new IdentityRedactor()),
                              std::unique_ptr<Encoder>(new ProductionEncoder()));
 
   // Set up the controller to shut down or flush the buffers of the system log recorder when it gets

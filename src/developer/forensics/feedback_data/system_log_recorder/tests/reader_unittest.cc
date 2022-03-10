@@ -42,6 +42,10 @@ std::unique_ptr<Encoder> MakeIdentityEncoder() {
   return std::unique_ptr<Encoder>(new IdentityEncoder());
 }
 
+std::unique_ptr<RedactorBase> MakeIdentityRedactor() {
+  return std::unique_ptr<RedactorBase>(new IdentityRedactor());
+}
+
 std::string MakeLogFilePath(files::ScopedTempDir& temp_dir, const size_t file_num) {
   return files::JoinPath(temp_dir.path(), std::to_string(file_num));
 }
@@ -143,7 +147,7 @@ TEST(ReaderTest, SortsMessages) {
   files::ScopedTempDir temp_dir;
 
   LogMessageStore store(StorageSize::Kilobytes(8), StorageSize::Kilobytes(8),
-                        MakeIdentityEncoder());
+                        MakeIdentityRedactor(), MakeIdentityEncoder());
   SystemLogWriter writer(temp_dir.path(), 1u, &store);
 
   EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 0", zx::msec(0))));
@@ -216,7 +220,8 @@ TEST(ReaderTest, SortsMessagesMultipleFiles) {
   files::ScopedTempDir temp_dir;
 
   // Set the block and buffer to both hold 4 log messages.
-  LogMessageStore store(kMaxLogLineSize * 4, kMaxLogLineSize * 4, MakeIdentityEncoder());
+  LogMessageStore store(kMaxLogLineSize * 4, kMaxLogLineSize * 4, MakeIdentityRedactor(),
+                        MakeIdentityEncoder());
   SystemLogWriter writer(temp_dir.path(), 8u, &store);
 
   EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 0", zx::msec(0))));

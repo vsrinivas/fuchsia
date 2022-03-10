@@ -134,6 +134,7 @@ TEST_F(SystemLogRecorderTest, SingleThreaded_SmokeTest) {
                                  .max_num_files = 2u,
                                  .total_log_size = 2u * kWriteSize,
                              },
+                             std::unique_ptr<RedactorBase>(new IdentityRedactor()),
                              std::unique_ptr<Encoder>(new IdentityEncoder()));
   recorder.Start();
 
@@ -296,6 +297,7 @@ TEST_F(SystemLogRecorderTest, SingleThreaded_StopAndDeleteLogs) {
                                  .max_num_files = 2u,
                                  .total_log_size = 2u * kWriteSize,
                              },
+                             std::unique_ptr<RedactorBase>(new IdentityRedactor()),
                              std::unique_ptr<Encoder>(new IdentityEncoder()));
   recorder.Start();
 
@@ -415,6 +417,7 @@ TEST_F(SystemLogRecorderTest, SingleThreaded_Flush) {
                                  .max_num_files = 2u,
                                  .total_log_size = 2u * kWriteSize,
                              },
+                             std::unique_ptr<RedactorBase>(new IdentityRedactor()),
                              std::unique_ptr<Encoder>(new IdentityEncoder()));
   recorder.Start();
 
