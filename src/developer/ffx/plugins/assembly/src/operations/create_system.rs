@@ -9,20 +9,16 @@ use crate::util;
 use anyhow::{Context, Result};
 use assembly_config::ImageAssemblyConfig;
 use assembly_images_config::{Fvm, Image, ImagesConfig};
+use assembly_images_manifest::ImagesManifest;
 use assembly_tool::{SdkToolProvider, ToolProvider};
-use ffx_assembly_args::CreateSystemArgs;
+use ffx_assembly_args::{CreateSystemArgs, PackageMode};
 use log::info;
 use std::fs::File;
+use std::path::PathBuf;
 
 pub fn create_system(args: CreateSystemArgs) -> Result<()> {
-    let CreateSystemArgs {
-        image_assembly_config,
-        images,
-        outdir,
-        gendir,
-        base_package_name,
-        mode: _,
-    } = args;
+    let CreateSystemArgs { image_assembly_config, images, outdir, gendir, base_package_name, mode } =
+        args;
     let gendir = gendir.unwrap_or(outdir.clone());
     let base_package_name = base_package_name.unwrap_or("system_image".to_string());
 
@@ -33,6 +29,8 @@ pub fn create_system(args: CreateSystemArgs) -> Result<()> {
 
     // Get the tool set.
     let tools = SdkToolProvider::try_new()?;
+
+    let mut images_manifest = ImagesManifest::default();
 
     // 1. Create the base package if needed.
     let base_package: Option<BasePackage> = if has_base_package(&image_assembly_config) {
@@ -57,6 +55,7 @@ pub fn create_system(args: CreateSystemArgs) -> Result<()> {
                 &outdir,
                 &gendir,
                 &tools,
+                &mut images_manifest,
                 &image_assembly_config,
                 fvm_config.clone(),
                 &base_package,
@@ -64,6 +63,15 @@ pub fn create_system(args: CreateSystemArgs) -> Result<()> {
         }
     } else {
         info!("Skipping fvm creation");
+    };
+
+    // Find the first standard FVM that was generated.
+    let _fvm_for_zbi: Option<PathBuf> = match &mode {
+        PackageMode::FvmInZbi => images_manifest.images.iter().find_map(|i| match i {
+            assembly_images_manifest::Image::FVM(path) => Some(path.clone()),
+            _ => None,
+        }),
+        _ => None,
     };
 
     // Write the tool command log.

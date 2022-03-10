@@ -11,6 +11,7 @@ use anyhow::{Context, Result};
 use assembly_config::ImageAssemblyConfig;
 use assembly_fvm::{Filesystem, FilesystemAttributes, FvmBuilder, FvmType, NandFvmBuilder};
 use assembly_images_config::{Fvm, FvmFilesystem, FvmOutput, SparseFvm};
+use assembly_images_manifest::{Image, ImagesManifest};
 use assembly_minfs::MinFSBuilder;
 use assembly_tool::ToolProvider;
 use log::info;
@@ -31,12 +32,19 @@ pub fn construct_fvm<'a>(
     outdir: impl AsRef<Path>,
     gendir: impl AsRef<Path>,
     tools: &impl ToolProvider,
+    images_manifest: &mut ImagesManifest,
     assembly_config: &ImageAssemblyConfig,
     fvm_config: Fvm,
     base_package: &BasePackage,
 ) -> Result<()> {
-    let mut builder =
-        MultiFvmBuilder::new(outdir, gendir, assembly_config, fvm_config.slice_size, base_package);
+    let mut builder = MultiFvmBuilder::new(
+        outdir,
+        gendir,
+        assembly_config,
+        images_manifest,
+        fvm_config.slice_size,
+        base_package,
+    );
     for filesystem in fvm_config.filesystems {
         builder.filesystem(filesystem);
     }
@@ -60,6 +68,8 @@ pub struct MultiFvmBuilder<'a> {
     gendir: PathBuf,
     /// The image assembly config.
     assembly_config: &'a ImageAssemblyConfig,
+    /// The manifest of images to add new FVMs to.
+    images_manifest: &'a mut ImagesManifest,
     /// The size of a slice for the FVM.
     slice_size: u64,
     /// The base package to add to blobfs.
@@ -81,6 +91,7 @@ impl<'a> MultiFvmBuilder<'a> {
         outdir: impl AsRef<Path>,
         gendir: impl AsRef<Path>,
         assembly_config: &'a ImageAssemblyConfig,
+        images_manifest: &'a mut ImagesManifest,
         slice_size: u64,
         base_package: &'a BasePackage,
     ) -> Self {
@@ -90,6 +101,7 @@ impl<'a> MultiFvmBuilder<'a> {
             outdir: outdir.as_ref().to_path_buf(),
             gendir: gendir.as_ref().to_path_buf(),
             assembly_config,
+            images_manifest,
             slice_size,
             base_package,
         }
@@ -116,13 +128,29 @@ impl<'a> MultiFvmBuilder<'a> {
     pub fn build(&mut self, tools: &impl ToolProvider) -> Result<()> {
         let outputs = self.outputs.clone();
         for output in outputs {
-            self.build_output(tools, &output)?;
+            self.build_output_and_add_to_manifest(tools, &output)?;
         }
         Ok(())
     }
 
-    /// Build a single FVM output.
-    fn build_output(&mut self, tools: &impl ToolProvider, output: &FvmOutput) -> Result<()> {
+    /// Build a single FVM output, and always add the result to the |images_manifest|.
+    fn build_output_and_add_to_manifest(
+        &mut self,
+        tools: &impl ToolProvider,
+        output: &FvmOutput,
+    ) -> Result<()> {
+        let add_to_manifest = true;
+        self.build_output(tools, output, add_to_manifest)
+    }
+
+    /// Build a single FVM output, and let the caller choose whether to add it to the
+    /// |images_manifest|.
+    fn build_output(
+        &mut self,
+        tools: &impl ToolProvider,
+        output: &FvmOutput,
+        add_to_manifest: bool,
+    ) -> Result<()> {
         match &output {
             FvmOutput::Standard(config) => {
                 let fvm_tool = tools.get_tool("fvm")?;
@@ -132,7 +160,7 @@ impl<'a> MultiFvmBuilder<'a> {
                     truncate_to_length: config.truncate_to_length,
                 };
                 let mut builder =
-                    FvmBuilder::new(fvm_tool, path, self.slice_size, config.compress, fvm_type);
+                    FvmBuilder::new(fvm_tool, &path, self.slice_size, config.compress, fvm_type);
                 for filesystem_name in &config.filesystems {
                     let fs = self
                         .get_filesystem(tools, &filesystem_name)
@@ -140,6 +168,9 @@ impl<'a> MultiFvmBuilder<'a> {
                     builder.filesystem(fs);
                 }
                 builder.build()?;
+                if add_to_manifest {
+                    self.images_manifest.images.push(Image::FVM(path));
+                }
             }
             FvmOutput::Sparse(config) => {
                 let fvm_tool = tools.get_tool("fvm")?;
@@ -147,11 +178,26 @@ impl<'a> MultiFvmBuilder<'a> {
                 let fvm_type = FvmType::Sparse { max_disk_size: config.max_disk_size };
                 let compress = true;
                 let mut builder =
-                    FvmBuilder::new(fvm_tool, path, self.slice_size, compress, fvm_type);
+                    FvmBuilder::new(fvm_tool, &path, self.slice_size, compress, fvm_type);
+
+                let mut has_minfs = false;
                 for filesystem_name in &config.filesystems {
-                    builder.filesystem(self.get_filesystem(tools, &filesystem_name)?);
+                    let fs = self.get_filesystem(tools, &filesystem_name)?;
+                    match fs {
+                        Filesystem::MinFS { path: _, attributes: _ } => has_minfs = true,
+                        _ => {}
+                    }
+                    builder.filesystem(fs);
                 }
+
                 builder.build()?;
+                if add_to_manifest {
+                    if has_minfs {
+                        self.images_manifest.images.push(Image::FVMSparse(path));
+                    } else {
+                        self.images_manifest.images.push(Image::FVMSparseBlob(path));
+                    }
+                }
             }
             FvmOutput::Nand(config) => {
                 // First, build the sparse FVM.
@@ -161,7 +207,8 @@ impl<'a> MultiFvmBuilder<'a> {
                     filesystems: config.filesystems.clone(),
                     max_disk_size: config.max_disk_size,
                 });
-                self.build_output(tools, &sparse_output)?;
+                let do_not_add_to_manifest = false;
+                self.build_output(tools, &sparse_output, do_not_add_to_manifest)?;
 
                 // Second, prepare it for NAND.
                 let tool = tools.get_tool("fvm")?;
@@ -170,7 +217,7 @@ impl<'a> MultiFvmBuilder<'a> {
                 let compression = if config.compress { Some("lz4".to_string()) } else { None };
                 let builder = NandFvmBuilder {
                     tool,
-                    output,
+                    output: output.clone(),
                     sparse_blob_fvm: sparse_output,
                     max_disk_size: config.max_disk_size,
                     compression,
@@ -180,6 +227,10 @@ impl<'a> MultiFvmBuilder<'a> {
                     block_count: config.block_count,
                 };
                 builder.build()?;
+
+                if add_to_manifest {
+                    self.images_manifest.images.push(Image::FVMFastboot(output));
+                }
             }
         }
         Ok(())
@@ -200,9 +251,12 @@ impl<'a> MultiFvmBuilder<'a> {
             // Build the filesystem and assemble the info.
             FilesystemEntry::Params(params) => {
                 info!("Creating FVM filesystem: {}", name);
-                let filesystem = self
+                let (image, filesystem) = self
                     .build_filesystem(tools, params)
                     .context(format!("Building filesystem: {}", name))?;
+                if let Some(image) = image {
+                    self.images_manifest.images.push(image);
+                }
                 self.filesystems
                     .insert(name.clone(), FilesystemEntry::Filesystem(filesystem.clone()));
                 Ok(filesystem)
@@ -210,13 +264,14 @@ impl<'a> MultiFvmBuilder<'a> {
         }
     }
 
-    /// Build a filesystem and return the info to use it.
+    /// Build a filesystem and return the info to use it, and optionally the image metadata to
+    /// insert into the image manifest.
     fn build_filesystem(
         &self,
         tools: &impl ToolProvider,
         params: &FvmFilesystem,
-    ) -> Result<Filesystem> {
-        let filesystem = match &params {
+    ) -> Result<(Option<Image>, Filesystem)> {
+        let (image, filesystem) = match &params {
             FvmFilesystem::BlobFS(config) => {
                 let path = construct_blobfs(
                     tools.get_tool("blobfs")?,
@@ -227,35 +282,43 @@ impl<'a> MultiFvmBuilder<'a> {
                     &self.base_package,
                 )
                 .context("Constructing blobfs")?;
-                Filesystem::BlobFS {
-                    path,
-                    attributes: FilesystemAttributes {
-                        name: config.name.clone(),
-                        minimum_inodes: config.minimum_inodes,
-                        minimum_data_bytes: config.minimum_data_bytes,
-                        maximum_bytes: config.maximum_bytes,
+                (
+                    Some(Image::BlobFS(path.clone())),
+                    Filesystem::BlobFS {
+                        path,
+                        attributes: FilesystemAttributes {
+                            name: config.name.clone(),
+                            minimum_inodes: config.minimum_inodes,
+                            minimum_data_bytes: config.minimum_data_bytes,
+                            maximum_bytes: config.maximum_bytes,
+                        },
                     },
-                }
+                )
             }
             FvmFilesystem::MinFS(config) => {
                 let path = self.outdir.join("data.blk");
                 let builder = MinFSBuilder::new(tools.get_tool("minfs")?);
                 builder.build(&path).context("Constructing minfs")?;
-                Filesystem::MinFS {
-                    path,
-                    attributes: FilesystemAttributes {
-                        name: config.name.clone(),
-                        minimum_inodes: config.minimum_inodes,
-                        minimum_data_bytes: config.minimum_data_bytes,
-                        maximum_bytes: config.maximum_bytes,
+                (
+                    None,
+                    Filesystem::MinFS {
+                        path,
+                        attributes: FilesystemAttributes {
+                            name: config.name.clone(),
+                            minimum_inodes: config.minimum_inodes,
+                            minimum_data_bytes: config.minimum_data_bytes,
+                            maximum_bytes: config.maximum_bytes,
+                        },
                     },
-                }
+                )
             }
-            FvmFilesystem::EmptyMinFS(_config) => Filesystem::EmptyMinFS {},
-            FvmFilesystem::EmptyAccount(_config) => Filesystem::EmptyAccount {},
-            FvmFilesystem::Reserved(config) => Filesystem::Reserved { slices: config.slices },
+            FvmFilesystem::EmptyMinFS(_config) => (None, Filesystem::EmptyMinFS {}),
+            FvmFilesystem::EmptyAccount(_config) => (None, Filesystem::EmptyAccount {}),
+            FvmFilesystem::Reserved(config) => {
+                (None, Filesystem::Reserved { slices: config.slices })
+            }
         };
-        Ok(filesystem)
+        Ok((image, filesystem))
     }
 }
 
@@ -269,6 +332,7 @@ mod tests {
         BlobFS, BlobFSLayout, EmptyAccount, EmptyMinFS, FvmFilesystem, FvmOutput, MinFS, NandFvm,
         Reserved, SparseFvm, StandardFvm,
     };
+    use assembly_images_manifest::ImagesManifest;
     use assembly_tool::testing::FakeToolProvider;
     use assembly_tool::{ToolCommandLog, ToolProvider};
     use assembly_util::PathToStringExt;
@@ -294,6 +358,7 @@ mod tests {
             boot_args: Vec::new(),
             bootfs_files: Vec::new(),
         };
+        let mut images_manifest = ImagesManifest::default();
         let base_package = BasePackage {
             merkle: [0u8; 32].into(),
             contents: BTreeMap::new(),
@@ -304,6 +369,7 @@ mod tests {
             dir.path(),
             dir.path(),
             &assembly_config,
+            &mut images_manifest,
             slice_size,
             &base_package,
         );
@@ -333,6 +399,7 @@ mod tests {
             boot_args: Vec::new(),
             bootfs_files: Vec::new(),
         };
+        let mut images_manifest = ImagesManifest::default();
         let base_package = BasePackage {
             merkle: [0u8; 32].into(),
             contents: BTreeMap::new(),
@@ -343,6 +410,7 @@ mod tests {
             dir.path(),
             dir.path(),
             &assembly_config,
+            &mut images_manifest,
             slice_size,
             &base_package,
         );
@@ -390,6 +458,7 @@ mod tests {
             boot_args: Vec::new(),
             bootfs_files: Vec::new(),
         };
+        let mut images_manifest = ImagesManifest::default();
         let base_package = BasePackage {
             merkle: [0u8; 32].into(),
             contents: BTreeMap::new(),
@@ -400,6 +469,7 @@ mod tests {
             dir.path(),
             dir.path(),
             &assembly_config,
+            &mut images_manifest,
             slice_size,
             &base_package,
         );
@@ -504,6 +574,7 @@ mod tests {
             boot_args: Vec::new(),
             bootfs_files: Vec::new(),
         };
+        let mut images_manifest = ImagesManifest::default();
 
         let base_package_path = dir.path().join("base.far");
         let mut base_package_file = File::create(&base_package_path).unwrap();
@@ -519,6 +590,7 @@ mod tests {
             dir.path(),
             dir.path(),
             &assembly_config,
+            &mut images_manifest,
             slice_size,
             &base_package,
         );
@@ -620,6 +692,7 @@ mod tests {
             boot_args: Vec::new(),
             bootfs_files: Vec::new(),
         };
+        let mut images_manifest = ImagesManifest::default();
 
         let base_package_path = dir.path().join("base.far");
         let mut base_package_file = File::create(&base_package_path).unwrap();
@@ -635,6 +708,7 @@ mod tests {
             dir.path(),
             dir.path(),
             &assembly_config,
+            &mut images_manifest,
             slice_size,
             &base_package,
         );
