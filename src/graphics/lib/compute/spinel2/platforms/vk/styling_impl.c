@@ -304,8 +304,8 @@ spinel_styling_impl_create(struct spinel_device *               device,
   uint32_t const layers_dwords = create_info->layer_count * SPN_STYLING_LAYER_COUNT_DWORDS;
   uint32_t const dwords_count  = layers_dwords + create_info->cmd_count;
 
-  s->dwords.count = dwords_count;
   s->dwords.next  = layers_dwords;
+  s->dwords.count = dwords_count;
 
   //
   // initialize rest of impl
@@ -339,6 +339,9 @@ spinel_styling_impl_create(struct spinel_device *               device,
                (void **)&s->extent));
 
   struct spinel_target_config const * config = &device->ti.config;
+
+  // For now, require `hw_dr` is always coherent
+  assert((config->allocator.device.hw_dr.properties & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT) != 0);
 
   if ((config->allocator.device.hw_dr.properties & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) == 0)
     {

@@ -132,7 +132,15 @@ param const params[] = {
     .name      = "rasters_prefix_fix", // bug:39620
     .surface   = { 1024, 300 },
     .checksums = {
-      { 0xFD0B4012, {} }
+      { 0xFD0B4012, {
+          { param::INTEL,  {} },
+          { param::NVIDIA, {} },
+        }
+      },
+      { 0xFE013607, {
+          { param::ARM,    {} },
+        }
+      }
     },
     .test = std::make_shared<test>(
       "<svg xmlns=\"http://www.w3.org/2000/svg\">\n"
@@ -188,7 +196,15 @@ param const params[] = {
     .name        = "bezier_quads",
     .surface     = { 1024, 1024 },
     .checksums = {
-      { 0xEE9E0BBE, {} }
+      { 0xF0F96717, {
+          { param::ARM,    {} },                                      // all arm
+        }
+      },
+      { 0xEE9E0BBE, {
+          { param::INTEL,  {} },                                      // all intel
+          { param::NVIDIA, {} },                                      // all nvidia
+        }
+      },
     },
     .test = std::make_shared<test>(
       "<svg xmlns=\"http://www.w3.org/2000/svg\">\n"
@@ -208,7 +224,15 @@ param const params[] = {
     .name        = "bezier_cubics",
     .surface     = { 1024, 1024 },
     .checksums = {
-      { 0xBEFA6C49, {} }
+      { 0xC34EC099, {
+          { param::ARM,    {} },                                      // all arm
+        }
+      },
+      { 0xBEFA6C49, {
+          { param::INTEL,  {} },                                      // all intel
+          { param::NVIDIA, {} },                                      // all nvidia
+        }
+      },
     },
     .test = std::make_shared<test>(
       "<svg xmlns=\"http://www.w3.org/2000/svg\">\n"
@@ -231,8 +255,11 @@ param const params[] = {
     .name        = "rational_quads",
     .surface     = { 1024, 1024 },
     .checksums = {
-      { 0xF994CF80, {
+      { 0xF9364B98, {
           { param::ARM,    {} },                                      // all arm
+        }
+      },
+      { 0xF994CF80, {
           { param::INTEL,  {} },                                      // all intel
           { param::NVIDIA, { { param::NVIDIA_VOLTA, UINT32_MAX } } }, // nvidia fp16
         }
@@ -297,8 +324,11 @@ param const params[] = {
     .name        = "proj_quads",
     .surface     = { 1024, 1024 },
     .checksums = {
-      { 0xC5127E22, {
+      { 0xC4D0DB79, {
           { param::ARM,    {} },                                      // all arm
+        }
+      },
+      { 0xC5127E22, {
           { param::INTEL,  {} },                                      // all intel
           { param::NVIDIA, { { param::NVIDIA_VOLTA, UINT32_MAX } } }, // nvidia fp16
         }
@@ -345,7 +375,7 @@ param const params[] = {
     .name        = "rational_cubics",
     .surface     = { 1024, 1024 },
     .checksums = {
-      { 0xB7841DF8, {
+      { 0xB90FF0FC, {
           { param::ARM,    {} }                                      // all arm
         }
       },
@@ -417,8 +447,11 @@ param const params[] = {
     .name        = "proj_cubics",
     .surface     = { 1024, 1024 },
     .checksums = {
-      { 0x138096C0, {
+      { 0x1502A167, {
           { param::ARM,    {} },                                      // all arm
+        }
+      },
+      { 0x138096C0, {
           { param::INTEL,  {} },                                      // all intel
           { param::NVIDIA, { { param::NVIDIA_VOLTA, UINT32_MAX } } }, // nvidia fp16
         }
@@ -465,7 +498,15 @@ param const params[] = {
     .name        = "circles",
     .surface     = { 1024, 1024 },
     .checksums = {
-      { 0xE86BA68F, {} }
+      { 0xE7E21D06, {
+          { param::ARM,    {} },                                      // all arm
+        }
+      },
+      { 0xE86BA68F, {
+          { param::INTEL,  {} },                                      // all intel
+          { param::NVIDIA, {} },                                      // nvidia
+        }
+      },
     },
     .test = std::make_shared<test>(
       "<svg version=\"1.1\" xmlns=\"http://www.w3.org/2000/svg\">\n"
@@ -481,8 +522,11 @@ param const params[] = {
     .surface     = { 1024, 1024 },
 
     .checksums = {
-      { 0xCB49AF86, {
+      { 0xCC46AC82, {
           { param::ARM,    {}                    }, // all arm
+        }
+      },
+      { 0xCB49AF86, {
           { param::INTEL,  {}                    }  // all intel
         }
       },
@@ -504,7 +548,7 @@ param const params[] = {
     .name        = "arcs",
     .surface     = { 1024, 512 },
     .checksums = {
-      { 0xC2E4C4A9, {
+      { 0xC337DEDF, {
           { param::ARM,    {} }                                       // all arm
         }
       },
@@ -569,7 +613,15 @@ param const params[] = {
     .name        = "bifrost4",
     .surface     = { 600, 1024 },
     .checksums = {
-      { 0xD526D15B, {} }
+      { 0xD4E08B15, {
+          { param::ARM,    {} }
+        }
+      },
+      { 0xD526D15B, {
+          { param::INTEL,  {} },
+          { param::NVIDIA, {} },
+        }
+      },
     },
     .test = std::make_shared<test>(
         "<svg version=\"1.1\" xmlns=\"http://www.w3.org/2000/svg\">\n"

@@ -133,6 +133,8 @@
 
 #define SPN_SUBGROUP_UNIFORM  subgroupuniformEXT
 
+#error "subgroupuniformEXT() was previously unimplemented in glslang"
+
 #else
 
 #define SPN_SUBGROUP_UNIFORM

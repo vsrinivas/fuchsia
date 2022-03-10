@@ -10,7 +10,6 @@
 
 #include <float.h>
 #include <memory.h>
-#include <stdio.h>
 #include <stdlib.h>
 
 #include "block_pool.h"

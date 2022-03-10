@@ -51,19 +51,25 @@ env_vk_device::SetUp()
 
   vkGetPhysicalDeviceQueueFamilyProperties(instance->vk.pd, &qfp_count, NULL);
 
-  VkQueueFamilyProperties qfp[qfp_count];
+  uint32_t const vk_qfp_len    = ARRAY_LENGTH_MACRO(vk.qfp);
+  uint32_t       qfp_count_max = std::min(qfp_count, vk_qfp_len);
 
-  vkGetPhysicalDeviceQueueFamilyProperties(instance->vk.pd, &qfp_count, qfp);
+  vkGetPhysicalDeviceQueueFamilyProperties(instance->vk.pd, &qfp_count_max, vk.qfp);
 
   //
   // make sure a compute-capable queue family is at index 0
   //
-  ASSERT_TRUE((qfp[0].queueFlags & VK_QUEUE_COMPUTE_BIT) != 0);
+  ASSERT_TRUE((vk.qfp[0].queueFlags & VK_QUEUE_COMPUTE_BIT) != 0);
 
   //
   // we only need a compute-capable queue family for this device
   //
-  float const qps[] = { 1.0f };
+  float qps[vk.qfp[0].queueCount];
+
+  for (uint32_t ii = 0; ii < vk.qfp[0].queueCount; ii++)
+    {
+      qps[ii] = 1.0f;
+    }
 
   VkDeviceQueueCreateInfo dqcis[] = {
     {
@@ -71,7 +77,7 @@ env_vk_device::SetUp()
       .pNext            = NULL,
       .flags            = 0,  // unprotected queue
       .queueFamilyIndex = 0,
-      .queueCount       = 1,
+      .queueCount       = vk.qfp[0].queueCount,
       .pQueuePriorities = qps,
     },
   };

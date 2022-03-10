@@ -15,7 +15,6 @@ using namespace spinel::vk::test;
 //
 //
 //
-
 static void
 vk_alloc_dbi_dm(VkPhysicalDevice         pd,
                 VkDevice                 d,
@@ -93,7 +92,6 @@ vk_alloc_dbi_dm(VkPhysicalDevice         pd,
 //
 //
 //
-
 void
 fxt_spinel_vk_render::SetUp()
 {
@@ -195,13 +193,18 @@ fxt_spinel_vk_render::SetUp()
   //
   // create styling
   //
-  // 16 cmds per layer is conservative plus 7 for a group at depth one
+  // The SVG decoder creates a top-level group and a child group per SVG.
+  //
+  // This requires
+  //
   //
   uint32_t const layer_count = param.test->layer_count();
 
   spinel_styling_create_info_t const styling_create_info = {
     .layer_count = layer_count,
-    .cmd_count   = layer_count * 16 + 7,
+    .cmd_count   = layer_count * 8  // conservative 8 dwords per layer
+                 + (6 + 1 + 4)      // top level SVG group
+                 + (6 + 1),         // per-SVG group
   };
 
   spinel_styling_t styling;
@@ -281,24 +284,29 @@ fxt_spinel_vk_render::SetUp()
     }
 
   //
+  //
+  //
+  spinel(swapchain_release(swapchain));
+
+  //
   // checksum?
   //
   checksum();
 
   //
-  // release the builders, composition and styling
+  // release the builders, composition, styling and swapchain
   //
   spinel(path_builder_release(pb));
   spinel(raster_builder_release(rb));
   spinel(composition_release(composition));
   spinel(styling_release(styling));
-  spinel(swapchain_release(swapchain));
 
   //
   // release the transform stack
   //
   spinel_transform_stack_release(ts);
 
+  //
   //
   // dispose of the param
   //
@@ -308,7 +316,6 @@ fxt_spinel_vk_render::SetUp()
 //
 //
 //
-
 void
 fxt_spinel_vk_render::TearDown()
 {
@@ -327,7 +334,6 @@ fxt_spinel_vk_render::TearDown()
 //
 //
 //
-
 void
 fxt_spinel_vk_render::checksum()
 {
@@ -474,6 +480,9 @@ fxt_spinel_vk_render::checksum()
     }
 }
 
+//
+//
+//
 void ::spinel::vk::test::PrintTo(const param_spinel_vk_render & render, std::ostream * os)
 {
   // clang-format off

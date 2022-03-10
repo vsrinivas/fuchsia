@@ -1336,7 +1336,7 @@ main(int argc, char * const argv[])
   spinel_styling_create_info_t const styling_create_info = {
 
     .layer_count = layer_count,
-    .cmd_count   = layer_count * 16 + ARRAY_LENGTH_MACRO(ws) * 7,
+    .cmd_count   = layer_count * 8 + ARRAY_LENGTH_MACRO(ws) * 32,
   };
 
   spinel_styling_t styling;

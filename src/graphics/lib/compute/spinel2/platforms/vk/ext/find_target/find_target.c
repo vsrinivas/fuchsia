@@ -14,7 +14,7 @@
 //
 #ifdef SPN_VK_TARGET_ARCHIVE_LINKABLE
 
-#ifdef SPN_VK_TARGET_ARCHIVE_AMD_GCN3
+#ifdef SPN_VK_TARGET_AMD_GCN3
 #include "spinel_vk_amd_gcn3_linkable.h"
 #endif
 #ifdef SPN_VK_TARGET_ARM_BIFROST4

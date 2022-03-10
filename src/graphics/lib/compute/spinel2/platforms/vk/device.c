@@ -187,7 +187,9 @@ spinel_device_create(struct spinel_vk_context_create_info const * create_info)
                                   spinel_handle_pool_get_handle_count(device->handle_pool));
 
   //
-  // Drain all submitted deps...
+  // Drain all submitted deps.
+  //
+  // This includes initialization of the block pool.
   //
   spinel_deps_drain_all(device->deps, &device->vk);
 
@@ -215,11 +217,6 @@ spinel_device_dispose(struct spinel_device * const device)
   // The handle pool implicitly drains its in-flight dispatchse.
   //
   spinel_device_handle_pool_dispose(device);
-
-  //
-  // make sure there are no undrained dispatches
-  //
-  assert(!spinel_deps_drain_1(device->deps, &device->vk));
 
   //
   // shut down each major module in reverse order

@@ -31,8 +31,9 @@ struct env_vk_device : public ::testing::Environment
 
   struct
   {
-    VkDevice        d;
-    VkPipelineCache pc;
+    VkDevice                d;
+    VkPipelineCache         pc;
+    VkQueueFamilyProperties qfp[1];
   } vk;
 
   env_vk_device(env_vk_instance * const instance, env_spinel_vk_target * const target);

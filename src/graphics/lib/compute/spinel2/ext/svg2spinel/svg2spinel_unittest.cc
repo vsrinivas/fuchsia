@@ -15,8 +15,7 @@
 
 namespace {
 
-class Svg2SpinelTest : public mock_spinel::Test {
-};
+class Svg2SpinelTest : public mock_spinel::Test {};
 
 }  // namespace
 

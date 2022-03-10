@@ -50,15 +50,19 @@ fxt_spinel_vk::SetUp()
   // create Spinel context
   //
   struct spinel_vk_context_create_info const cci = {
-
-    .vk = { .pd = shared_env->instance->vk.pd,
-            .d  = shared_env->device->vk.d,
-            .pc = shared_env->device->vk.pc,
-            .ac = nullptr,
-            .q  = { .compute = { .flags        = 0,  // One compute queue / nothing shared
-                                 .family_index = 0,
-                                 .count        = 1 } } },
-
+    .vk = {
+      .pd = shared_env->instance->vk.pd,
+      .d  = shared_env->device->vk.d,
+      .pc = shared_env->device->vk.pc,
+      .ac = nullptr,
+      .q  = {
+        .compute = {
+          .flags        = 0,
+          .family_index = 0,
+          .count        = shared_env->device->vk.qfp[0].queueCount,
+        },
+      },
+    },
     .target          = shared_env->target->spinel,
     .block_pool_size = 1 << 25,  // 32 MB
     .handle_count    = 1 << 15,  // 32K handles
