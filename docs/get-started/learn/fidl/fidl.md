@@ -123,7 +123,7 @@ caller.
 Start by creating a new directory for the FIDL library target:
 
 ```posix-terminal
-mkdir vendor/fuchsia-codelab/echo-fidl
+mkdir -p vendor/fuchsia-codelab/echo-fidl
 ```
 
 Add a new FIDL interface file called `echo.fidl` with the following contents:
