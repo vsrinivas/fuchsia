@@ -384,6 +384,41 @@ Board files can set this to true if they have a package with a mali libvulkan VC
 
 From //src/graphics/lib/magma/gnbuild/magma.gni:45
 
+### board_is_emu
+Whether or not the board supports emulator/physical devices.
+This is used to determine if product bundle metadata should generate a
+physical/virtual device spec or both.
+
+**Current value for `target_cpu = "arm64"`:** `true`
+
+From //boards/arm64.gni:43
+
+**Overridden from the default:** `false`
+
+From //build/board.gni:75
+
+**Current value for `target_cpu = "x64"`:** `true`
+
+From //boards/x64.gni:79
+
+**Overridden from the default:** `false`
+
+From //build/board.gni:75
+
+### board_is_phys
+
+**Current value for `target_cpu = "arm64"`:** `false`
+
+From //boards/arm64.gni:44
+
+**Overridden from the default:** `true`
+
+From //build/board.gni:76
+
+**Current value (from the default):** `true`
+
+From //build/board.gni:76
+
 ### board_name
 Board name used for paving and amber updates.
 
@@ -861,7 +896,7 @@ From //build/toolchain/zircon/clang.gni:11
 ### clippy_cause_failure
 Makes clippy targets fail to build when any deny lints are found
 
-**Current value (from the default):** `true`
+**Current value (from the default):** `false`
 
 From //build/rust/config.gni:62
 
@@ -1242,6 +1277,19 @@ Explicitly specify DWARF version used.
 **Current value (from the default):** `5`
 
 From //build/config/compiler.gni:66
+
+### emu_window_size_height
+
+**Current value (from the default):** `false`
+
+From //build/product.gni:44
+
+### emu_window_size_width
+Configuration to override the default window size for the virtual device in pixels.
+
+**Current value (from the default):** `false`
+
+From //build/product.gni:43
 
 ### enable_api_diff
 Detect dart API changes
@@ -3703,7 +3751,7 @@ toolchain, so that recompilations with the new compiler can be triggered.
 When using the prebuilt, this is ignored and the CIPD instance ID of the
 prebuilt is used.
 
-**Current value (from the default):** `"8ptfFEbQ9reIx1cCrqrerhuDNH4tAhSFj1f-azfW9mkC"`
+**Current value (from the default):** `"-hgFZdM6KdKdZFqdeJILjg1iwY_iBdeE3t8tWFvScmwC"`
 
 From //build/rust/config.gni:30
 
@@ -4596,6 +4644,16 @@ not much the actual host page size then a run time error will occur.
 **Current value (from the default):** `12`
 
 From //zircon/kernel/lib/virtual_alloc/BUILD.gn:13
+
+### virtual_device_name_prefix
+TODO(fxbug.dev/94051): move to board definitions.
+Adds a prefix to the start of the virtual device name. Used to distinguish
+between similar virtual device's using different configuration's such as
+`emu_window_size`.
+
+**Current value (from the default):** `""`
+
+From //build/product.gni:40
 
 ### vm_tracing_level
 The level of detail for traces emitted by the VM system. Values greater than
