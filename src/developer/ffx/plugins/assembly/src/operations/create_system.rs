@@ -9,8 +9,7 @@ use crate::util;
 use anyhow::{Context, Result};
 use assembly_config::ImageAssemblyConfig;
 use assembly_images_config::{Fvm, Image, ImagesConfig};
-use assembly_tool::testing::FakeToolProvider;
-use assembly_tool::ToolProvider;
+use assembly_tool::{SdkToolProvider, ToolProvider};
 use ffx_assembly_args::CreateSystemArgs;
 use log::info;
 use std::fs::File;
@@ -33,7 +32,7 @@ pub fn create_system(args: CreateSystemArgs) -> Result<()> {
         util::read_config(images).context("Failed to read the images config")?;
 
     // Get the tool set.
-    let tools = FakeToolProvider::default();
+    let tools = SdkToolProvider::try_new()?;
 
     // 1. Create the base package if needed.
     let base_package: Option<BasePackage> = if has_base_package(&image_assembly_config) {
