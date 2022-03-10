@@ -8,7 +8,7 @@ use rustc_hash::FxHashMap;
 use surpass::{
     self,
     painter::{for_each_row, Channel, Color, LayerProps, Props, Rect},
-    rasterizer::{self, Rasterizer},
+    rasterizer::Rasterizer,
     LinesBuilder,
 };
 
@@ -249,14 +249,6 @@ impl Composition {
                 rasterizer.sort();
             }
 
-            let last_segment =
-                rasterizer::search_last_by_key(rasterizer.segments(), false, |segment| {
-                    segment.is_none()
-                })
-                .unwrap_or(0);
-
-            let segments = rasterizer.segments().get(0..=last_segment).unwrap_or(&[]);
-
             let layers_per_tile = buffer
                 .layer_cache
                 .as_ref()
@@ -270,7 +262,7 @@ impl Composition {
                     channels,
                     buffer.flusher.as_deref(),
                     layers_per_tile,
-                    segments,
+                    rasterizer.segments(),
                     background_color,
                     &crop,
                     &context,

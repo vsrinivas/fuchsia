@@ -28,20 +28,20 @@ rustc_library("surpass") {
     "src/layout/mod.rs",
     "src/layout/slice_cache.rs",
     "src/lib.rs",
+    "src/lines.rs",
     "src/painter/layer_workbench.rs",
     "src/painter/mod.rs",
     "src/painter/style.rs",
     "src/path.rs",
     "src/point.rs",
+    "src/rasterizer/grouped_iter.rs",
     "src/rasterizer/mod.rs",
     "src/rasterizer/pixel_segment.rs",
-    "src/segment.rs",
     "src/simd/aarch64.rs",
     "src/simd/auto.rs",
     "src/simd/avx.rs",
     "src/simd/mod.rs",
     "src/transform.rs",
-    "src/uninitialized.rs",
   ]
 }
 

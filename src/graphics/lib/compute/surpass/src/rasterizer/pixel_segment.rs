@@ -2,13 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use std::{cmp::Ordering, convert::TryFrom, mem};
+use std::{cmp::Ordering, fmt, mem};
 
 use crate::{MAX_HEIGHT_SHIFT, MAX_WIDTH_SHIFT, TILE_SHIFT, TILE_SIZE};
 
-const NONE: u64 = 1 << 63;
-
-pub const BIT_FIELD_LENS: [usize; 8] = {
+pub const BIT_FIELD_LENS: [usize; 7] = {
     const fn log2_round_up(n: usize) -> usize {
         if n.count_ones() == 1 {
             n.trailing_zeros() as usize
@@ -18,7 +16,6 @@ pub const BIT_FIELD_LENS: [usize; 8] = {
     }
 
     let mut bit_field_lens = [
-        1,
         MAX_HEIGHT_SHIFT - TILE_SHIFT,
         MAX_WIDTH_SHIFT - TILE_SHIFT,
         0,
@@ -31,13 +28,12 @@ pub const BIT_FIELD_LENS: [usize; 8] = {
     let layer_id_len = mem::size_of::<PixelSegment>() * 8
         - bit_field_lens[0]
         - bit_field_lens[1]
-        - bit_field_lens[2]
+        - bit_field_lens[3]
         - bit_field_lens[4]
         - bit_field_lens[5]
-        - bit_field_lens[6]
-        - bit_field_lens[7];
+        - bit_field_lens[6];
 
-    bit_field_lens[3] = layer_id_len;
+    bit_field_lens[2] = layer_id_len;
 
     bit_field_lens
 };
@@ -68,48 +64,73 @@ macro_rules! extract {
     }};
 }
 
-#[derive(Clone, Copy, Eq, Ord, PartialEq, PartialOrd, Debug)]
+#[derive(Clone, Copy, Default, Eq, Ord, PartialEq, PartialOrd)]
 pub struct PixelSegment(u64);
 
 impl PixelSegment {
-    #[allow(clippy::too_many_arguments)]
     #[inline]
     pub fn new(
-        is_none: bool,
-        tile_y: i16,
-        tile_x: i16,
         layer_id: u32,
-        local_y: u8,
+        tile_x: i16,
+        tile_y: i16,
         local_x: u8,
+        local_y: u8,
         double_area_multiplier: u8,
         cover: i8,
     ) -> Self {
         let mut val = 0;
 
-        val |= mask_for(0) & is_none as u64;
+        val |= mask_for(0) & tile_y as u64;
 
         val <<= BIT_FIELD_LENS[1];
-        val |= mask_for(1) & tile_y as u64;
+        val |= mask_for(1) & tile_x as u64;
 
         val <<= BIT_FIELD_LENS[2];
-        val |= mask_for(2) & tile_x as u64;
+        val |= mask_for(2) & layer_id as u64;
 
         val <<= BIT_FIELD_LENS[3];
-        val |= mask_for(3) & layer_id as u64;
+        val |= mask_for(3) & local_y as u64;
 
         val <<= BIT_FIELD_LENS[4];
-        val |= mask_for(4) & local_y as u64;
+        val |= mask_for(4) & local_x as u64;
 
         val <<= BIT_FIELD_LENS[5];
-        val |= mask_for(5) & local_x as u64;
+        val |= mask_for(5) & double_area_multiplier as u64;
 
         val <<= BIT_FIELD_LENS[6];
-        val |= mask_for(6) & double_area_multiplier as u64;
-
-        val <<= BIT_FIELD_LENS[7];
-        val |= mask_for(7) & cover as u64;
+        val |= mask_for(6) & cover as u64;
 
         Self(val)
+    }
+
+    #[inline]
+    pub fn layer_id(self) -> u32 {
+        extract!(self.0, 2) as u32
+    }
+
+    #[inline]
+    pub fn tile_x(self) -> i16 {
+        extract!(self.0 as i64, 1) as i16
+    }
+
+    #[inline]
+    pub fn tile_y(self) -> i16 {
+        extract!(self.0 as i64, 0) as i16
+    }
+
+    #[inline]
+    pub fn local_x(self) -> u8 {
+        extract!(self.0, 4) as u8
+    }
+
+    #[inline]
+    pub fn local_y(self) -> u8 {
+        extract!(self.0, 3) as u8
+    }
+
+    #[inline]
+    fn double_area_multiplier(self) -> u8 {
+        extract!(self.0, 5) as u8
     }
 
     #[inline]
@@ -118,49 +139,23 @@ impl PixelSegment {
     }
 
     #[inline]
-    pub fn is_none(self) -> bool {
-        extract!(self.0, 0) == 0b1
-    }
-
-    #[inline]
-    pub fn tile_y(self) -> i16 {
-        extract!(self.0 as i64, 1) as i16
-    }
-
-    #[inline]
-    pub fn tile_x(self) -> i16 {
-        extract!(self.0 as i64, 2) as i16
-    }
-
-    #[inline]
-    pub fn layer_id(self) -> u32 {
-        extract!(self.0, 3) as u32
-    }
-
-    #[inline]
-    pub fn local_y(self) -> u8 {
-        extract!(self.0, 4) as u8
-    }
-
-    #[inline]
-    pub fn local_x(self) -> u8 {
-        extract!(self.0, 5) as u8
-    }
-
-    #[inline]
-    fn double_area_multiplier(self) -> u8 {
-        extract!(self.0, 6) as u8
-    }
-
-    #[inline]
     pub fn cover(self) -> i8 {
-        extract!(self.0 as i64, 7) as i8
+        extract!(self.0 as i64, 6) as i8
     }
 }
 
-impl Default for PixelSegment {
-    fn default() -> Self {
-        PixelSegment(NONE)
+impl fmt::Debug for PixelSegment {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let unpacked: PixelSegmentUnpacked = (*self).into();
+        f.debug_struct("PixelSegment")
+            .field("layer_id", &unpacked.layer_id)
+            .field("tile_x", &unpacked.tile_x)
+            .field("tile_y", &unpacked.tile_y)
+            .field("local_x", &unpacked.local_x)
+            .field("local_y", &unpacked.local_y)
+            .field("double_area", &unpacked.double_area)
+            .field("cover", &unpacked.cover)
+            .finish()
     }
 }
 
@@ -211,22 +206,16 @@ pub struct PixelSegmentUnpacked {
     pub cover: i8,
 }
 
-impl TryFrom<PixelSegment> for PixelSegmentUnpacked {
-    type Error = ();
-
-    fn try_from(value: PixelSegment) -> Result<Self, Self::Error> {
-        if value.is_none() {
-            Err(())
-        } else {
-            Ok(PixelSegmentUnpacked {
-                layer_id: value.layer_id(),
-                tile_x: value.tile_x(),
-                tile_y: value.tile_y(),
-                local_x: value.local_x(),
-                local_y: value.local_y(),
-                double_area: value.double_area(),
-                cover: value.cover(),
-            })
+impl From<PixelSegment> for PixelSegmentUnpacked {
+    fn from(value: PixelSegment) -> Self {
+        PixelSegmentUnpacked {
+            layer_id: value.layer_id(),
+            tile_x: value.tile_x(),
+            tile_y: value.tile_y(),
+            local_x: value.local_x(),
+            local_y: value.local_y(),
+            double_area: value.double_area(),
+            cover: value.cover(),
         }
     }
 }
@@ -234,68 +223,92 @@ impl TryFrom<PixelSegment> for PixelSegmentUnpacked {
 #[cfg(test)]
 mod tests {
     use super::*;
+
     use crate::{LAYER_LIMIT, PIXEL_DOUBLE_WIDTH, PIXEL_WIDTH};
 
     #[test]
-    fn pixel_segment_max() {
-        let is_none = true;
-        let tile_y = (1 << (BIT_FIELD_LENS[1] - 1)) - 1;
-        let tile_x = (1 << (BIT_FIELD_LENS[2] - 1)) - 1;
-        let layer_id = LAYER_LIMIT as u32;
-        let local_y = (1 << BIT_FIELD_LENS[4]) - 1;
-        let local_x = (1 << BIT_FIELD_LENS[5]) - 1;
-        let double_area_multiplier = PIXEL_DOUBLE_WIDTH as u8;
-        let cover = PIXEL_WIDTH as i8;
+    fn pixel_segment() {
+        let layer_id = 3;
+        let tile_x = 4;
+        let tile_y = 5;
+        let local_x = 6;
+        let local_y = 7;
+        let double_area_multiplier = 8;
+        let cover = 9;
 
         let pixel_segment = PixelSegment::new(
-            is_none,
-            tile_y,
-            tile_x,
             layer_id,
-            local_y,
+            tile_x,
+            tile_y,
             local_x,
+            local_y,
             double_area_multiplier,
             cover,
         );
 
-        assert_eq!(pixel_segment.is_none(), is_none);
-        assert_eq!(pixel_segment.tile_y(), tile_y);
-        assert_eq!(pixel_segment.tile_x(), tile_x);
         assert_eq!(pixel_segment.layer_id(), layer_id);
-        assert_eq!(pixel_segment.local_y(), local_y);
+        assert_eq!(pixel_segment.tile_x(), tile_x);
+        assert_eq!(pixel_segment.tile_y(), tile_y);
         assert_eq!(pixel_segment.local_x(), local_x);
+        assert_eq!(pixel_segment.local_y(), local_y);
+        assert_eq!(pixel_segment.double_area(), double_area_multiplier as i16 * cover as i16);
+        assert_eq!(pixel_segment.cover(), cover);
+    }
+
+    #[test]
+    fn pixel_segment_max() {
+        let layer_id = LAYER_LIMIT as u32;
+        let tile_x = (1 << (BIT_FIELD_LENS[1] - 1)) - 1;
+        let tile_y = (1 << (BIT_FIELD_LENS[0] - 1)) - 1;
+        let local_x = (1 << BIT_FIELD_LENS[4]) - 1;
+        let local_y = (1 << BIT_FIELD_LENS[3]) - 1;
+        let double_area_multiplier = PIXEL_DOUBLE_WIDTH as u8;
+        let cover = PIXEL_WIDTH as i8;
+
+        let pixel_segment = PixelSegment::new(
+            layer_id,
+            tile_x,
+            tile_y,
+            local_x,
+            local_y,
+            double_area_multiplier,
+            cover,
+        );
+
+        assert_eq!(pixel_segment.layer_id(), layer_id);
+        assert_eq!(pixel_segment.tile_x(), tile_x);
+        assert_eq!(pixel_segment.tile_y(), tile_y);
+        assert_eq!(pixel_segment.local_x(), local_x);
+        assert_eq!(pixel_segment.local_y(), local_y);
         assert_eq!(pixel_segment.double_area(), double_area_multiplier as i16 * cover as i16);
         assert_eq!(pixel_segment.cover(), cover);
     }
 
     #[test]
     fn pixel_segment_min() {
-        let is_none = false;
-        let tile_y = -(1 << (BIT_FIELD_LENS[1] - 1));
-        let tile_x = -(1 << (BIT_FIELD_LENS[2] - 1));
         let layer_id = 0;
-        let local_y = 0;
+        let tile_x = -(1 << (BIT_FIELD_LENS[1] - 1));
+        let tile_y = -(1 << (BIT_FIELD_LENS[0] - 1));
         let local_x = 0;
+        let local_y = 0;
         let double_area_multiplier = 0;
         let cover = -(PIXEL_WIDTH as i8);
 
         let pixel_segment = PixelSegment::new(
-            is_none,
-            tile_y,
-            tile_x,
             layer_id,
-            local_y,
+            tile_x,
+            tile_y,
             local_x,
+            local_y,
             double_area_multiplier,
             cover,
         );
 
-        assert_eq!(pixel_segment.is_none(), is_none);
-        assert_eq!(pixel_segment.tile_y(), tile_y);
-        assert_eq!(pixel_segment.tile_x(), tile_x);
         assert_eq!(pixel_segment.layer_id(), layer_id);
-        assert_eq!(pixel_segment.local_y(), local_y);
+        assert_eq!(pixel_segment.tile_x(), tile_x);
+        assert_eq!(pixel_segment.tile_y(), tile_y);
         assert_eq!(pixel_segment.local_x(), local_x);
+        assert_eq!(pixel_segment.local_y(), local_y);
         assert_eq!(pixel_segment.double_area(), double_area_multiplier as i16 * cover as i16);
         assert_eq!(pixel_segment.cover(), cover);
     }

@@ -698,11 +698,8 @@ mod tests {
     use std::{collections::HashMap, iter};
 
     use crate::{
-        layout::LinearLayout,
-        painter::style::Color,
-        point::Point,
-        rasterizer::{self, Rasterizer},
-        LinesBuilder, Segment, TILE_SIZE,
+        layout::LinearLayout, painter::style::Color, point::Point, rasterizer::Rasterizer,
+        LinesBuilder, TILE_SIZE,
     };
 
     const BLACK: [f32; 4] = [0.0, 0.0, 0.0, 1.0];
@@ -786,7 +783,7 @@ mod tests {
 
         for (layer, &(p0, p1)) in points.iter().enumerate() {
             let layer = if same_layer { 0 } else { layer };
-            builder.push(layer as u32, &Segment::new(p0, p1));
+            builder.push(layer as u32, [p0, p1]);
         }
 
         let lines = builder.build(|_| None);
@@ -797,10 +794,6 @@ mod tests {
         let mut segments: Vec<_> = rasterizer.segments().iter().copied().collect();
         segments.sort_unstable();
 
-        let last_segment =
-            rasterizer::search_last_by_key(&segments, false, |segment| segment.is_none())
-                .unwrap_or(0);
-        segments.truncate(last_segment + 1);
         segments
     }
 
@@ -1051,7 +1044,7 @@ mod tests {
     fn flusher() {
         macro_rules! seg {
             ( $j:expr, $i:expr ) => {
-                PixelSegment::new(false, $j, $i, 0, 0, 0, 0, 0)
+                PixelSegment::new($j, $i, 0, 0, 0, 0, 0)
             };
         }
 
@@ -1127,37 +1120,26 @@ mod tests {
         let mut segments = vec![];
         for y in 0..TILE_SIZE {
             segments.push(PixelSegment::new(
-                false,
-                0,
-                -1,
                 2,
-                y as u8,
+                -1,
+                0,
                 TILE_SIZE as u8 - 1,
+                y as u8,
                 0,
                 PIXEL_WIDTH as i8,
             ));
         }
 
-        segments.push(PixelSegment::new(
-            false,
-            0,
-            -1,
-            0,
-            0,
-            TILE_SIZE as u8 - 1,
-            0,
-            PIXEL_WIDTH as i8,
-        ));
-        segments.push(PixelSegment::new(false, 0, 0, 1, 1, 0, 0, PIXEL_WIDTH as i8));
+        segments.push(PixelSegment::new(0, -1, 0, TILE_SIZE as u8 - 1, 0, 0, PIXEL_WIDTH as i8));
+        segments.push(PixelSegment::new(1, 0, 0, 0, 1, 0, PIXEL_WIDTH as i8));
 
         for y in 0..TILE_SIZE {
             segments.push(PixelSegment::new(
-                false,
-                0,
-                1,
                 2,
-                y as u8,
+                1,
+                0,
                 TILE_SIZE as u8 - 1,
+                y as u8,
                 0,
                 -(PIXEL_WIDTH as i8),
             ));
@@ -1214,12 +1196,11 @@ mod tests {
         for j in 0..3 {
             for y in 0..TILE_SIZE {
                 segments.push(PixelSegment::new(
-                    false,
+                    0,
+                    0,
                     j,
-                    0,
-                    0,
-                    y as u8,
                     TILE_SIZE as u8 - 1,
+                    y as u8,
                     0,
                     PIXEL_WIDTH as i8,
                 ));

@@ -2,200 +2,46 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use std::mem::MaybeUninit;
-
 use rayon::prelude::*;
 
-use crate::{
-    segment::{to_sub_pixel, Lines, LinesBuilder},
-    uninitialized::{write, UninitializedVec},
-    PIXEL_MASK, PIXEL_SHIFT, PIXEL_WIDTH, TILE_MASK, TILE_SHIFT,
-};
+use crate::{Lines, PIXEL_SHIFT, PIXEL_WIDTH, TILE_MASK, TILE_SHIFT};
 
+mod grouped_iter;
 mod pixel_segment;
 
-pub use pixel_segment::{search_last_by_key, PixelSegment, BIT_FIELD_LENS};
+use grouped_iter::GroupedIter;
+pub use pixel_segment::{search_last_by_key, PixelSegment, PixelSegmentUnpacked, BIT_FIELD_LENS};
 
-const INDICES_MAX_CHUNK_SIZE: u32 = 16_258;
-const SEGMENTS_MIN_LEN: usize = 4_096;
+// This finds the ith term in the ordered union of two sequences:
+//
+// 1. a * x + c
+// 2. b * x + d
+//
+// It works by estimating the amount of items that came from sequence 1 and
+// sequence 2 such that the next item will be the ith. This results in two
+// indices from each sequence. The final step is to simply pick the smaller one
+// which naturally comes next.
+fn find(i: i32, sum_recip: f32, cd: f32, a: f32, b: f32, c: f32, d: f32) -> f32 {
+    const BIAS: f32 = -0.000_000_5;
 
-pub fn line_indices(
-    builder: LinesBuilder,
-    line_indices: &mut Vec<MaybeUninit<usize>>,
-    pixel_indices: &mut Vec<MaybeUninit<i32>>,
-) -> LinesBuilder {
-    unsafe fn reserve_if_required<T>(vec: &mut Vec<T>, len: usize) {
-        if vec.capacity() < len {
-            vec.reserve(len - vec.capacity());
-        }
-        if vec.len() < len {
-            vec.set_len(len);
-        }
-    }
+    let i = i as f32;
 
-    let lines = builder.build(|_| None);
-    let len = lines.lengths.iter().copied().sum::<usize>();
-    unsafe {
-        reserve_if_required(line_indices, len);
-        reserve_if_required(pixel_indices, len);
-    }
+    let ja = if b.is_finite() { (b.mul_add(i, -cd).mul_add(sum_recip, BIAS)).ceil() } else { i };
+    let jb = if a.is_finite() { (a.mul_add(i, cd).mul_add(sum_recip, BIAS)).ceil() } else { i };
 
-    populate_indices(&lines.lengths, line_indices, pixel_indices);
+    let guess_a = a.mul_add(ja, c);
+    let guess_b = b.mul_add(jb, d);
 
-    lines.unwrap()
+    guess_a.min(guess_b)
 }
 
-#[derive(Debug)]
-struct Chunk<'l, 'i> {
-    start_index: usize,
-    lengths: &'l [usize],
-    lines_indices: &'i mut [MaybeUninit<usize>],
-    pixel_indices: &'i mut [MaybeUninit<i32>],
-}
-
-fn chunks<'l, 'i>(
-    mut lengths: &'l [usize],
-    mut line_indices: &'i mut [MaybeUninit<usize>],
-    mut pixel_indices: &'i mut [MaybeUninit<i32>],
-    max_chunk_size: usize,
-) -> Vec<Chunk<'l, 'i>> {
-    let mut chunks = vec![];
-
-    let mut lengths_index = 0;
-    let mut indices_index = 0;
-    let mut start_index = 0;
-
-    for &len in lengths {
-        lengths_index += 1;
-        indices_index += len;
-
-        if indices_index > max_chunk_size || lengths_index == lengths.len() {
-            let (current_lengths, next_lengths) = lengths.split_at(lengths_index);
-            let (current_line_indices, next_line_indices) =
-                line_indices.split_at_mut(indices_index);
-            let (current_pixel_indices, next_pixel_indices) =
-                pixel_indices.split_at_mut(indices_index);
-
-            chunks.push(Chunk {
-                start_index,
-                lengths: current_lengths,
-                lines_indices: current_line_indices,
-                pixel_indices: current_pixel_indices,
-            });
-
-            lengths = next_lengths;
-            line_indices = next_line_indices;
-            pixel_indices = next_pixel_indices;
-
-            start_index += lengths_index;
-
-            lengths_index = 0;
-            indices_index = 0;
-        }
-    }
-
-    chunks
-}
-
-fn populate_indices(
-    lengths: &[usize],
-    line_indices: &mut [MaybeUninit<usize>],
-    pixel_indices: &mut [MaybeUninit<i32>],
-) {
-    let mut splits = chunks(lengths, line_indices, pixel_indices, INDICES_MAX_CHUNK_SIZE as usize);
-
-    splits.par_iter_mut().for_each(|chunk| {
-        let mut indices_index = 0;
-        for (lengths_index, &len) in chunk.lengths.iter().enumerate() {
-            let index = lengths_index + chunk.start_index;
-
-            for i in indices_index..indices_index + len {
-                write(&mut chunk.lines_indices[i], index);
-                write(&mut chunk.pixel_indices[i], (i - indices_index) as i32);
-            }
-
-            indices_index += len;
-        }
-    });
-}
-
-#[inline]
-fn intersects_y_border(y0_sub: i32, y1_sub: i32) -> bool {
-    y0_sub & PIXEL_MASK as i32 != 0
-        && y1_sub & PIXEL_MASK as i32 != 0
-        && y0_sub >> PIXEL_SHIFT as i32 != y1_sub >> PIXEL_SHIFT as i32
-}
-
-fn tiles(border_x: i32, border_y: i32, octant: u8) -> (i16, i16, u8, u8) {
-    let (border_x, border_y) = match octant {
-        0 | 3 | 4 | 7 => (border_x, border_y),
-        1 | 2 | 5 | 6 => (border_y, border_x),
-        _ => unreachable!(),
-    };
-
-    let tile_x = (border_x >> TILE_SHIFT as i32) as i16;
-    let tile_y = (border_y >> TILE_SHIFT as i32) as i16;
-    let local_x = (border_x & TILE_MASK as i32) as u8;
-    let local_y = (border_y & TILE_MASK as i32) as u8;
-
-    (tile_x, tile_y, local_x, local_y)
-}
-
-fn area_cover_for_octant(x0: i32, x1: i32, y0: i32, y1: i32, octant: u8) -> (u8, i8) {
-    let (x0, x1, y0, y1) = match octant {
-        0 => (x0, x1, y0, y1),
-        1 => (y0, y1, x0, x1),
-        2 => (y1, y0, x0, x1),
-        3 => (x0, x1, y1, y0),
-        4 => (x0, x1, y1, y0),
-        5 => (y0, y1, x1, x0),
-        6 => (y1, y0, x1, x0),
-        7 => (x0, x1, y0, y1),
-        _ => unreachable!(),
-    };
-
-    let border = (x0 & !(PIXEL_MASK as i32)) + PIXEL_WIDTH as i32;
-    let height = y1 - y0;
-
-    let double_area_multiplier = ((x1 - x0) + 2 * (border - x1)).abs() as u8;
-    let cover = height as i8;
-
-    (double_area_multiplier, cover)
-}
-
-#[allow(clippy::too_many_arguments)]
-#[inline]
-fn segment(
-    layer_id: Option<u32>,
-    x0: i32,
-    x1: i32,
-    y0: i32,
-    y1: i32,
-    border_x: i32,
-    border_y: i32,
-    octant: u8,
-) -> PixelSegment {
-    let (ti, tj, tx, ty) = tiles(border_x, border_y, octant);
-    let (double_area_multiplier, cover) = area_cover_for_octant(x0, x1, y0, y1, octant);
-
-    PixelSegment::new(
-        layer_id.is_none(),
-        tj,
-        ti,
-        layer_id.unwrap_or_default(),
-        ty,
-        tx,
-        double_area_multiplier,
-        cover,
-    )
+fn round(v: f32) -> i32 {
+    unsafe { (v + 0.5).floor().to_int_unchecked() }
 }
 
 #[derive(Debug, Default)]
 pub struct Rasterizer {
-    line_indices: Vec<MaybeUninit<usize>>,
-    pixel_indices: Vec<MaybeUninit<i32>>,
-    segments: Vec<[PixelSegment; 2]>,
-    segments_len: usize,
+    segments: Vec<PixelSegment>,
 }
 
 impl Rasterizer {
@@ -204,115 +50,94 @@ impl Rasterizer {
     }
 
     pub fn segments(&self) -> &[PixelSegment] {
-        unsafe { std::slice::from_raw_parts(self.segments.as_ptr() as *const _, self.segments_len) }
+        self.segments.as_slice()
     }
 
-    fn segments_mut(&mut self) -> &mut [PixelSegment] {
-        unsafe {
-            std::slice::from_raw_parts_mut(self.segments.as_mut_ptr() as *mut _, self.segments_len)
-        }
-    }
-
+    #[inline(never)]
     pub fn rasterize(&mut self, lines: &Lines) {
-        let len = lines.lengths.iter().copied().sum::<usize>();
-        self.line_indices.resize_uninit(len);
-        self.pixel_indices.resize_uninit(len);
-        self.segments.clear();
+        let iter = GroupedIter::new(&lines.lengths);
 
-        populate_indices(&lines.lengths, &mut self.line_indices, &mut self.pixel_indices);
+        iter.into_par_iter()
+            .with_min_len(256)
+            .map(|(li, pi)| {
+                let a = lines.a[li as usize];
+                let b = lines.b[li as usize];
+                let c = lines.c[li as usize];
+                let d = lines.d[li as usize];
 
-        let line_indices = unsafe { self.line_indices.assume_init() };
-        let pixel_indices = unsafe { self.pixel_indices.assume_init() };
+                let i = pi as i32
+                    + match (c != 0.0, d != 0.0) {
+                        (true, true) => -2,
+                        (false, false) => 0,
+                        _ => -1,
+                    };
 
-        let par_iter = line_indices
-            .par_iter()
-            .with_min_len(SEGMENTS_MIN_LEN)
-            .zip_eq(pixel_indices.par_iter().with_min_len(SEGMENTS_MIN_LEN))
-            .map(|(&li, &pi)| {
-                let layer = lines.orders[li];
-                let py_slope_px = lines.py_slope_pxs[li];
-                let px_slope_recip_py = lines.px_slope_recip_pys[li];
-                let octant = lines.octants[li];
+                let i0 = i;
+                let i1 = i + 1;
 
-                let x0 = lines.starts[li] + pi;
-                let x1 = x0 + 1;
+                let sum_recip = (a + b).recip();
+                let cd = c - d;
 
-                let border_x = x0;
+                let t0 = find(i0, sum_recip, cd, a, b, c, d).max(0.0);
+                let t1 = find(i1, sum_recip, cd, a, b, c, d).min(1.0);
 
-                let x0 = (x0 as f32).max(lines.starts_f32[li]);
-                let x1 = (x1 as f32).min(lines.ends_f32[li]);
+                let x0f = t0.mul_add(lines.dx[li as usize], lines.x0[li as usize]);
+                let y0f = t0.mul_add(lines.dy[li as usize], lines.y0[li as usize]);
+                let x1f = t1.mul_add(lines.dx[li as usize], lines.x0[li as usize]);
+                let y1f = t1.mul_add(lines.dy[li as usize], lines.y0[li as usize]);
 
-                let y0 = lines.slopes[li].mul_add(x0, py_slope_px);
-                let y1 = lines.slopes[li].mul_add(x1, py_slope_px);
+                let x0_sub = round(x0f);
+                let x1_sub = round(x1f);
+                let y0_sub = round(y0f);
+                let y1_sub = round(y1f);
 
-                let x0_sub = to_sub_pixel(x0);
-                let x1_sub = to_sub_pixel(x1);
-                let y0_sub = to_sub_pixel(y0);
-                let y1_sub = to_sub_pixel(y1);
+                let border_x = x0_sub.min(x1_sub) >> PIXEL_SHIFT;
+                let border_y = y0_sub.min(y1_sub) >> PIXEL_SHIFT;
 
-                if intersects_y_border(y0_sub, y1_sub) {
-                    let y = y0_sub.max(y1_sub) >> PIXEL_SHIFT as i32;
-                    let y_sub = y << PIXEL_SHIFT as i32;
+                let tile_x = (border_x >> TILE_SHIFT as i32) as i16;
+                let tile_y = (border_y >> TILE_SHIFT as i32) as i16;
+                let local_x = (border_x & TILE_MASK as i32) as u8;
+                let local_y = (border_y & TILE_MASK as i32) as u8;
 
-                    let x = lines.slopes_recip[li].mul_add(y as f32, px_slope_recip_py);
-                    let x_sub = to_sub_pixel(x);
+                let border = (border_x << TILE_SHIFT) + PIXEL_WIDTH as i32;
+                let height = y1_sub - y0_sub;
 
-                    let border_y = y_sub.min(y0_sub) >> PIXEL_SHIFT as i32;
-                    let segment0 =
-                        segment(layer, x0_sub, x_sub, y0_sub, y_sub, border_x, border_y, octant);
+                let double_area_multiplier =
+                    ((x1_sub - x0_sub).abs() + 2 * (border - x0_sub.max(x1_sub))) as u8;
+                let cover = height as i8;
 
-                    let border_y = y_sub.min(y1_sub) >> PIXEL_SHIFT as i32;
-                    let segment1 =
-                        segment(layer, x_sub, x1_sub, y_sub, y1_sub, border_x, border_y, octant);
-
-                    [segment0, segment1]
-                } else {
-                    let border_y = y0_sub.min(y1_sub) >> PIXEL_SHIFT as i32;
-                    let segment0 =
-                        segment(layer, x0_sub, x1_sub, y0_sub, y1_sub, border_x, border_y, octant);
-
-                    [segment0, PixelSegment::default()]
-                }
-            });
-
-        self.segments.par_extend(par_iter);
-        self.segments_len = self.segments.len() * 2;
+                PixelSegment::new(
+                    lines.orders[li as usize],
+                    tile_x,
+                    tile_y,
+                    local_x,
+                    local_y,
+                    double_area_multiplier,
+                    cover,
+                )
+            })
+            .collect_into_vec(&mut self.segments);
     }
 
+    #[inline]
     pub fn sort(&mut self) {
-        self.segments_mut().par_sort_unstable_by_key(|segment| {
+        self.segments.par_sort_unstable_by_key(|segment| {
             let segment: u64 = segment.into();
             segment
-                >> (BIT_FIELD_LENS[4] + BIT_FIELD_LENS[5] + BIT_FIELD_LENS[6] + BIT_FIELD_LENS[7])
+                >> (BIT_FIELD_LENS[3] + BIT_FIELD_LENS[4] + BIT_FIELD_LENS[5] + BIT_FIELD_LENS[6])
         });
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use std::convert::TryInto;
-
     use super::*;
 
-    use crate::{rasterizer::pixel_segment::PixelSegmentUnpacked, Point, Segment, TILE_SIZE};
-
-    #[test]
-    fn lengths_to_indices() {
-        let lengths = [1, 2, 3, 1, 2, 3];
-        let mut lines_indices = vec![];
-        lines_indices.resize_uninit(12);
-        let mut pixel_indices = vec![];
-        pixel_indices.resize_uninit(12);
-
-        populate_indices(&lengths, &mut lines_indices, &mut pixel_indices);
-
-        assert_eq!(unsafe { lines_indices.assume_init() }, [0, 1, 1, 2, 2, 2, 3, 4, 4, 5, 5, 5]);
-        assert_eq!(unsafe { pixel_indices.assume_init() }, [0, 0, 1, 0, 1, 2, 0, 0, 1, 0, 1, 2]);
-    }
+    use crate::{rasterizer::pixel_segment::PixelSegmentUnpacked, LinesBuilder, Point, TILE_SIZE};
 
     fn segments(p0: Point, p1: Point) -> Vec<PixelSegment> {
         let mut builder = LinesBuilder::new();
-        builder.push(0, &Segment::new(p0, p1));
+        builder.push(0, [p0, p1]);
         let lines = builder.build(|_| None);
 
         let mut rasterizer = Rasterizer::default();
@@ -321,12 +146,12 @@ mod tests {
         rasterizer.segments().to_vec()
     }
 
-    fn areas_and_covers(segments: &[PixelSegment]) -> Vec<Option<(i16, i8)>> {
+    fn areas_and_covers(segments: &[PixelSegment]) -> Vec<(i16, i8)> {
         segments
             .iter()
             .map(|&segment| {
-                let segment: Option<PixelSegmentUnpacked> = segment.try_into().ok();
-                segment.map(|segment| (segment.double_area, segment.cover))
+                let segment: PixelSegmentUnpacked = segment.into();
+                (segment.double_area, segment.cover)
             })
             .collect()
     }
@@ -335,14 +160,7 @@ mod tests {
     fn area_cover_octant_1() {
         assert_eq!(
             areas_and_covers(&segments(Point::new(0.0, 0.0), Point::new(3.0, 2.0))),
-            [
-                Some((11 * 16, 11)),
-                None,
-                Some((5 * 8 + 2 * (5 * 8), 5)),
-                Some((5 * 8, 5)),
-                Some((11 * 16, 11)),
-                None,
-            ],
+            [(11 * 16, 11), (5 * 8 + 2 * (5 * 8), 5), (5 * 8, 5), (11 * 16, 11)],
         );
     }
 
@@ -350,14 +168,7 @@ mod tests {
     fn area_cover_octant_2() {
         assert_eq!(
             areas_and_covers(&segments(Point::new(0.0, 0.0), Point::new(2.0, 3.0))),
-            [
-                Some((16 * 11 + 2 * (16 * 5), 16)),
-                None,
-                Some((8 * 5, 8)),
-                Some((8 * 5 + 2 * (8 * 11), 8)),
-                Some((16 * 11, 16)),
-                None,
-            ],
+            [(16 * 11 + 2 * (16 * 5), 16), (8 * 5, 8), (8 * 5 + 2 * (8 * 11), 8), (16 * 11, 16)],
         );
     }
 
@@ -365,14 +176,7 @@ mod tests {
     fn area_cover_octant_3() {
         assert_eq!(
             areas_and_covers(&segments(Point::new(0.0, 0.0), Point::new(-2.0, 3.0))),
-            [
-                Some((16 * 11, 16)),
-                None,
-                Some((8 * 5 + 2 * (8 * 11), 8)),
-                Some((8 * 5, 8)),
-                Some((16 * 11 + 2 * (16 * 5), 16)),
-                None,
-            ],
+            [(16 * 11, 16), (8 * 5 + 2 * (8 * 11), 8), (8 * 5, 8), (16 * 11 + 2 * (16 * 5), 16)],
         );
     }
 
@@ -380,14 +184,7 @@ mod tests {
     fn area_cover_octant_4() {
         assert_eq!(
             areas_and_covers(&segments(Point::new(0.0, 0.0), Point::new(-3.0, 2.0))),
-            [
-                Some((11 * 16, 11)),
-                None,
-                Some((5 * 8 + 2 * (5 * 8), 5)),
-                Some((5 * 8, 5)),
-                Some((11 * 16, 11)),
-                None,
-            ],
+            [(11 * 16, 11), (5 * 8, 5), (5 * 8 + 2 * (5 * 8), 5), (11 * 16, 11)],
         );
     }
 
@@ -395,14 +192,7 @@ mod tests {
     fn area_cover_octant_5() {
         assert_eq!(
             areas_and_covers(&segments(Point::new(0.0, 0.0), Point::new(-3.0, -2.0))),
-            [
-                Some((-(11 * 16), -11)),
-                None,
-                Some((-(5 * 8 + 2 * (5 * 8)), -5)),
-                Some((-(5 * 8), -5)),
-                Some((-(11 * 16), -11)),
-                None,
-            ],
+            [(-(11 * 16), -11), (-(5 * 8), -5), (-(5 * 8 + 2 * (5 * 8)), -5), (-(11 * 16), -11)],
         );
     }
 
@@ -411,12 +201,10 @@ mod tests {
         assert_eq!(
             areas_and_covers(&segments(Point::new(0.0, 0.0), Point::new(-2.0, -3.0))),
             [
-                Some((-(16 * 11 + 2 * (16 * 5)), -16)),
-                None,
-                Some((-(8 * 5), -8)),
-                Some((-(8 * 5 + 2 * (8 * 11)), -8)),
-                Some((-(16 * 11), -16)),
-                None,
+                (-(16 * 11), -16),
+                (-(8 * 5 + 2 * (8 * 11)), -8),
+                (-(8 * 5), -8),
+                (-(16 * 11 + 2 * (16 * 5)), -16),
             ],
         );
     }
@@ -426,12 +214,10 @@ mod tests {
         assert_eq!(
             areas_and_covers(&segments(Point::new(0.0, 0.0), Point::new(2.0, -3.0))),
             [
-                Some((-(16 * 11), -16)),
-                None,
-                Some((-(8 * 5 + 2 * (8 * 11)), -8)),
-                Some((-(8 * 5), -8)),
-                Some((-(16 * 11 + 2 * (16 * 5)), -16)),
-                None,
+                (-(16 * 11 + 2 * (16 * 5)), -16),
+                (-(8 * 5), -8),
+                (-(8 * 5 + 2 * (8 * 11)), -8),
+                (-(16 * 11), -16),
             ],
         );
     }
@@ -440,27 +226,20 @@ mod tests {
     fn area_cover_octant_8() {
         assert_eq!(
             areas_and_covers(&segments(Point::new(0.0, 0.0), Point::new(3.0, -2.0))),
-            [
-                Some((-(11 * 16), -11)),
-                None,
-                Some((-(5 * 8 + 2 * (5 * 8)), -5)),
-                Some((-(5 * 8), -5)),
-                Some((-(11 * 16), -11)),
-                None,
-            ],
+            [(-(11 * 16), -11), (-(5 * 8 + 2 * (5 * 8)), -5), (-(5 * 8), -5), (-(11 * 16), -11)],
         );
     }
 
     #[test]
     fn area_cover_axis_0() {
-        assert_eq!(areas_and_covers(&segments(Point::new(0.0, 0.0), Point::new(1.0, 0.0))), [],);
+        assert_eq!(areas_and_covers(&segments(Point::new(0.0, 0.0), Point::new(1.0, 0.0))), []);
     }
 
     #[test]
     fn area_cover_axis_45() {
         assert_eq!(
             areas_and_covers(&segments(Point::new(0.0, 0.0), Point::new(1.0, 1.0))),
-            [Some((16 * 16, 16)), None],
+            [(16 * 16, 16)],
         );
     }
 
@@ -468,7 +247,7 @@ mod tests {
     fn area_cover_axis_90() {
         assert_eq!(
             areas_and_covers(&segments(Point::new(0.0, 0.0), Point::new(0.0, 1.0))),
-            [Some((2 * 16 * 16, 16)), None],
+            [(2 * 16 * 16, 16)],
         );
     }
 
@@ -476,20 +255,20 @@ mod tests {
     fn area_cover_axis_135() {
         assert_eq!(
             areas_and_covers(&segments(Point::new(0.0, 0.0), Point::new(-1.0, 1.0))),
-            [Some((16 * 16, 16)), None],
+            [(16 * 16, 16)],
         );
     }
 
     #[test]
     fn area_cover_axis_180() {
-        assert_eq!(areas_and_covers(&segments(Point::new(0.0, 0.0), Point::new(-1.0, 0.0))), [],);
+        assert_eq!(areas_and_covers(&segments(Point::new(0.0, 0.0), Point::new(-1.0, 0.0))), []);
     }
 
     #[test]
     fn area_cover_axis_225() {
         assert_eq!(
             areas_and_covers(&segments(Point::new(0.0, 0.0), Point::new(-1.0, -1.0))),
-            [Some((-(16 * 16), -16)), None],
+            [(-(16 * 16), -16)],
         );
     }
 
@@ -497,7 +276,7 @@ mod tests {
     fn area_cover_axis_270() {
         assert_eq!(
             areas_and_covers(&segments(Point::new(0.0, 0.0), Point::new(0.0, -1.0))),
-            [Some((2 * -(16 * 16), -16)), None],
+            [(2 * -(16 * 16), -16)],
         );
     }
 
@@ -505,18 +284,16 @@ mod tests {
     fn area_cover_axis_315() {
         assert_eq!(
             areas_and_covers(&segments(Point::new(0.0, 0.0), Point::new(-1.0, -1.0))),
-            [Some((-(16 * 16), -16)), None],
+            [(-(16 * 16), -16)],
         );
     }
 
-    fn tiles(segments: &[PixelSegment]) -> Vec<Option<(i16, i16, u8, u8)>> {
+    fn tiles(segments: &[PixelSegment]) -> Vec<(i16, i16, u8, u8)> {
         segments
             .iter()
             .map(|&segment| {
-                let segment: Option<PixelSegmentUnpacked> = segment.try_into().ok();
-                segment.map(|segment| {
-                    (segment.tile_x, segment.tile_y, segment.local_x, segment.local_y)
-                })
+                let segment: PixelSegmentUnpacked = segment.into();
+                (segment.tile_x, segment.tile_y, segment.local_x, segment.local_y)
             })
             .collect()
     }
@@ -528,14 +305,7 @@ mod tests {
                 Point::new(TILE_SIZE as f32, TILE_SIZE as f32),
                 Point::new(TILE_SIZE as f32 + 3.0, TILE_SIZE as f32 + 2.0),
             )),
-            [
-                Some((1, 1, 0, 0)),
-                None,
-                Some((1, 1, 1, 0)),
-                Some((1, 1, 1, 1)),
-                Some((1, 1, 2, 1)),
-                None,
-            ],
+            [(1, 1, 0, 0), (1, 1, 1, 0), (1, 1, 1, 1), (1, 1, 2, 1)],
         );
     }
 
@@ -546,14 +316,7 @@ mod tests {
                 Point::new(TILE_SIZE as f32, TILE_SIZE as f32),
                 Point::new(TILE_SIZE as f32 + 2.0, TILE_SIZE as f32 + 3.0),
             )),
-            [
-                Some((1, 1, 0, 0)),
-                None,
-                Some((1, 1, 0, 1)),
-                Some((1, 1, 1, 1)),
-                Some((1, 1, 1, 2)),
-                None,
-            ],
+            [(1, 1, 0, 0), (1, 1, 0, 1), (1, 1, 1, 1), (1, 1, 1, 2)],
         );
     }
 
@@ -565,12 +328,10 @@ mod tests {
                 Point::new(-(TILE_SIZE as f32) - 2.0, TILE_SIZE as f32 + 3.0),
             )),
             [
-                Some((-2, 1, TILE_SIZE as u8 - 1, 0)),
-                None,
-                Some((-2, 1, TILE_SIZE as u8 - 1, 1)),
-                Some((-2, 1, TILE_SIZE as u8 - 2, 1)),
-                Some((-2, 1, TILE_SIZE as u8 - 2, 2)),
-                None,
+                (-2, 1, TILE_SIZE as u8 - 1, 0),
+                (-2, 1, TILE_SIZE as u8 - 1, 1),
+                (-2, 1, TILE_SIZE as u8 - 2, 1),
+                (-2, 1, TILE_SIZE as u8 - 2, 2),
             ],
         );
     }
@@ -583,12 +344,10 @@ mod tests {
                 Point::new(-(TILE_SIZE as f32) - 3.0, TILE_SIZE as f32 + 2.0),
             )),
             [
-                Some((-2, 1, TILE_SIZE as u8 - 3, 1)),
-                None,
-                Some((-2, 1, TILE_SIZE as u8 - 2, 1)),
-                Some((-2, 1, TILE_SIZE as u8 - 2, 0)),
-                Some((-2, 1, TILE_SIZE as u8 - 1, 0)),
-                None,
+                (-2, 1, TILE_SIZE as u8 - 1, 0),
+                (-2, 1, TILE_SIZE as u8 - 2, 0),
+                (-2, 1, TILE_SIZE as u8 - 2, 1),
+                (-2, 1, TILE_SIZE as u8 - 3, 1),
             ],
         );
     }
@@ -601,12 +360,10 @@ mod tests {
                 Point::new(-(TILE_SIZE as f32) - 3.0, -(TILE_SIZE as f32) - 2.0),
             )),
             [
-                Some((-2, -2, TILE_SIZE as u8 - 3, TILE_SIZE as u8 - 2)),
-                None,
-                Some((-2, -2, TILE_SIZE as u8 - 2, TILE_SIZE as u8 - 2)),
-                Some((-2, -2, TILE_SIZE as u8 - 2, TILE_SIZE as u8 - 1)),
-                Some((-2, -2, TILE_SIZE as u8 - 1, TILE_SIZE as u8 - 1)),
-                None,
+                (-2, -2, TILE_SIZE as u8 - 1, TILE_SIZE as u8 - 1),
+                (-2, -2, TILE_SIZE as u8 - 2, TILE_SIZE as u8 - 1),
+                (-2, -2, TILE_SIZE as u8 - 2, TILE_SIZE as u8 - 2),
+                (-2, -2, TILE_SIZE as u8 - 3, TILE_SIZE as u8 - 2),
             ],
         );
     }
@@ -619,12 +376,10 @@ mod tests {
                 Point::new(-(TILE_SIZE as f32) - 2.0, -(TILE_SIZE as f32) - 3.0),
             )),
             [
-                Some((-2, -2, TILE_SIZE as u8 - 2, TILE_SIZE as u8 - 3)),
-                None,
-                Some((-2, -2, TILE_SIZE as u8 - 2, TILE_SIZE as u8 - 2)),
-                Some((-2, -2, TILE_SIZE as u8 - 1, TILE_SIZE as u8 - 2)),
-                Some((-2, -2, TILE_SIZE as u8 - 1, TILE_SIZE as u8 - 1)),
-                None,
+                (-2, -2, TILE_SIZE as u8 - 1, TILE_SIZE as u8 - 1),
+                (-2, -2, TILE_SIZE as u8 - 1, TILE_SIZE as u8 - 2),
+                (-2, -2, TILE_SIZE as u8 - 2, TILE_SIZE as u8 - 2),
+                (-2, -2, TILE_SIZE as u8 - 2, TILE_SIZE as u8 - 3),
             ],
         );
     }
@@ -637,12 +392,10 @@ mod tests {
                 Point::new(TILE_SIZE as f32 + 2.0, -(TILE_SIZE as f32) - 3.0),
             )),
             [
-                Some((1, -2, 1, TILE_SIZE as u8 - 3)),
-                None,
-                Some((1, -2, 1, TILE_SIZE as u8 - 2)),
-                Some((1, -2, 0, TILE_SIZE as u8 - 2)),
-                Some((1, -2, 0, TILE_SIZE as u8 - 1)),
-                None,
+                (1, -2, 0, TILE_SIZE as u8 - 1),
+                (1, -2, 0, TILE_SIZE as u8 - 2),
+                (1, -2, 1, TILE_SIZE as u8 - 2),
+                (1, -2, 1, TILE_SIZE as u8 - 3),
             ],
         );
     }
@@ -655,12 +408,10 @@ mod tests {
                 Point::new(TILE_SIZE as f32 + 3.0, -(TILE_SIZE as f32) - 2.0),
             )),
             [
-                Some((1, -2, 0, TILE_SIZE as u8 - 1)),
-                None,
-                Some((1, -2, 1, TILE_SIZE as u8 - 1)),
-                Some((1, -2, 1, TILE_SIZE as u8 - 2)),
-                Some((1, -2, 2, TILE_SIZE as u8 - 2)),
-                None,
+                (1, -2, 0, TILE_SIZE as u8 - 1),
+                (1, -2, 1, TILE_SIZE as u8 - 1),
+                (1, -2, 1, TILE_SIZE as u8 - 2),
+                (1, -2, 2, TILE_SIZE as u8 - 2),
             ],
         );
     }
@@ -669,12 +420,12 @@ mod tests {
     fn start_and_end_not_on_pixel_border() {
         assert_eq!(
             areas_and_covers(&segments(Point::new(0.5, 0.25), Point::new(4.0, 2.0)))[0],
-            Some((4 * 8, 4)),
+            (4 * 8, 4),
         );
 
         assert_eq!(
-            areas_and_covers(&segments(Point::new(0.0, 0.0), Point::new(3.5, 1.75)))[6],
-            Some((4 * 8 + 2 * (4 * 8), 4)),
+            areas_and_covers(&segments(Point::new(0.0, 0.0), Point::new(3.5, 1.75)))[4],
+            (4 * 8 + 2 * (4 * 8), 4),
         );
     }
 }

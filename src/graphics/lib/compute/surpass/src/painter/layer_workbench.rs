@@ -516,7 +516,7 @@ mod tests {
     }
 
     fn segment(layer_id: u32) -> PixelSegment {
-        PixelSegment::new(false, 0, 0, layer_id, 0, 0, 0, 0)
+        PixelSegment::new(layer_id, 0, 0, 0, 0, 0, 0)
     }
 
     #[test]

@@ -9,26 +9,24 @@ mod affine_transform;
 mod extend;
 mod layer;
 pub mod layout;
+mod lines;
 pub mod painter;
 mod path;
 mod point;
 pub mod rasterizer;
-mod segment;
 mod simd;
 mod transform;
-mod uninitialized;
 
 pub use affine_transform::AffineTransform;
 pub use layer::Layer;
+pub use lines::{Lines, LinesBuilder};
 pub use path::{Path, PathBuilder};
 pub use point::Point;
-pub use segment::{Lines, LinesBuilder, Segment};
 pub use transform::{GeomPresTransform, GeomPresTransformError};
 
 const PIXEL_WIDTH: usize = 16;
 const PIXEL_DOUBLE_WIDTH: usize = PIXEL_WIDTH * 2;
 const PIXEL_SHIFT: usize = PIXEL_WIDTH.trailing_zeros() as usize;
-const PIXEL_MASK: usize = PIXEL_WIDTH - 1;
 
 pub const MAX_WIDTH: usize = 1 << 16;
 pub const MAX_HEIGHT: usize = 1 << 15;
@@ -43,4 +41,4 @@ const _ASSERT_MAX_TILE_SIZE: usize = 128 - TILE_SIZE;
 const TILE_SHIFT: usize = TILE_SIZE.trailing_zeros() as usize;
 const TILE_MASK: usize = TILE_SIZE - 1;
 
-pub const LAYER_LIMIT: usize = (1 << rasterizer::BIT_FIELD_LENS[3]) - 1;
+pub const LAYER_LIMIT: usize = (1 << rasterizer::BIT_FIELD_LENS[2]) - 1;
