@@ -36,6 +36,62 @@ bool RectFContainsPoint(const fuchsia::math::RectF& rect, float x, float y) {
          y <= rect.y + rect.height + kEpsilon;
 }
 
+std::optional<size_t> GetViewRefIndex(
+    zx_koid_t view_ref_koid, const std::vector<flatland::TransformHandle>& transforms,
+    const std::unordered_map<flatland::TransformHandle,
+                             std::shared_ptr<const fuchsia::ui::views::ViewRef>>& view_refs) {
+  for (const auto& [transform, view_ref] : view_refs) {
+    if (view_ref_koid == utils::ExtractKoid(*view_ref)) {
+      // Found |view_ref_koid|, now calculate the index of its root transform in |transforms|.
+      for (size_t start = 0; start < transforms.size(); ++start) {
+        if (transforms[start] == transform) {
+          return start;
+        }
+      }
+      FX_DCHECK(false) << "view ref root transform not in transforms vector";
+    }
+  }
+
+  // |view_ref_koid| was not found.
+  return std::nullopt;
+}
+
+// Returns the last index (exclusive) of the subtree rooted at |start|.
+//
+// Prerequisite: |start| was returned from `GetStartFromTopologyVector()`
+size_t GetSubtreeEndIndex(size_t start, const std::vector<flatland::TransformHandle>& transforms,
+                          const std::vector<size_t>& parent_indices) {
+  FX_DCHECK(start < transforms.size()) << "precondition";
+
+  // We need to be careful about the case where start == 0, since in that case hitting the global
+  // root and hitting start are identical. It is simpler to handle this case explicitly, and then in
+  // the loop below we have this additional guarantee.
+  if (start == 0) {
+    return transforms.size();
+  }
+
+  // |end| is an exclusive index.
+  size_t end = start + 1;
+
+  // This is an O(n logn) op. We can make it O(n) if performance needs dictate.
+  while (end < transforms.size()) {
+    // Do an ancestor check to see if the current transform is a descendant of |start_node|.
+    size_t cur_idx = end;
+    while (cur_idx != start && cur_idx != 0) {
+      cur_idx = parent_indices[cur_idx];
+    }
+
+    // We have ran up the ancestor tree until we hit the root of the entire tree - exit.
+    if (cur_idx == 0) {
+      break;
+    }
+
+    ++end;
+  }
+
+  return end;
+}
+
 }  // namespace
 
 namespace flatland {
@@ -343,13 +399,23 @@ view_tree::SubtreeSnapshot GlobalTopologyData::GenerateViewTreeSnapshot(
   // it's safe to call from any thread.
   hit_tester = [transforms = data.topology_vector, view_refs = data.view_refs,
                 parent_indices = data.parent_indices, hit_regions = data.hit_regions,
-                root_transforms = data.root_transforms](zx_koid_t start_node, glm::vec2 world_point,
-                                                        bool is_semantic_hit_test) {
+                children_vector = data.child_counts, root_transforms = data.root_transforms](
+                   zx_koid_t start_node, glm::vec2 world_point, bool is_semantic_hit_test) {
+    size_t start = 0, end = 0;
+    if (auto result = GetViewRefIndex(start_node, transforms, view_refs)) {
+      start = *result;
+      end = GetSubtreeEndIndex(start, transforms, parent_indices);
+    } else {
+      return view_tree::SubtreeHitTestResult{};
+    }
+
+    FX_DCHECK(0 <= start && start < end && end <= transforms.size());
+
     const auto x = world_point[0];
     const auto y = world_point[1];
     std::vector<zx_koid_t> hits = {};
 
-    for (size_t i = 0; i < transforms.size(); ++i) {
+    for (size_t i = start; i < end; ++i) {
       const auto& transform = transforms[i];
       FX_DCHECK(root_transforms.find(transform) != root_transforms.end());
       const auto& root_transform = root_transforms.at(transform);
