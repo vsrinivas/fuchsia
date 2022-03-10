@@ -33,7 +33,6 @@ import (
 )
 
 const (
-	aptRepo      = "http://http.us.debian.org/debian"
 	packagesFile = "Packages.xz"
 )
 
@@ -51,6 +50,7 @@ func (i *stringsValue) Set(value string) error {
 type Config struct {
 	Dists         []string  `yaml:"dists"`
 	Components    []string  `yaml:"components"`
+	Sources       []string  `yaml:"sources"`
 	Keyring       string    `yaml:"keyring"`
 	Architectures []string  `yaml:"architectures"`
 	Packages      []Package `yaml:"packages"`
@@ -68,10 +68,10 @@ type Lockfile struct {
 }
 
 type Lock struct {
-	Name     string `yaml:"package"`
-	Version  string `yaml:"version"`
-	Filename string `yaml:"filename"`
-	Hash     string `yaml:"hash"`
+	Name    string `yaml:"package"`
+	Version string `yaml:"version"`
+	Url     string `yaml:"url"`
+	Hash    string `yaml:"hash"`
 }
 
 type Locks []Lock
@@ -86,19 +86,16 @@ func (l Locks) Swap(i, j int) {
 
 func (l Locks) Less(i, j int) bool {
 	if l[i].Name == l[j].Name {
-		return l[i].Filename < l[j].Filename
+		return l[i].Url < l[j].Url
 	}
 	return l[i].Name < l[j].Name
 }
-
-// Descriptor represents a Debian package description.
-type Descriptor map[string]string
 
 // parsePackages parses Debian's control file which described packages.
 //
 // See chapter 5.1 (Syntax of control files) of the Debian Policy Manual:
 // http://www.debian.org/doc/debian-policy/ch-controlfields.html
-func parsePackages(r io.Reader) ([]Descriptor, error) {
+func parsePackages(r io.Reader) ([]map[string]string, error) {
 	// Packages are separated by double newline, use scanner to split them.
 	scanner := bufio.NewScanner(r)
 	scanner.Split(func(data []byte, atEOF bool) (int, []byte, error) {
@@ -110,22 +107,29 @@ func parsePackages(r io.Reader) ([]Descriptor, error) {
 	})
 	space := regexp.MustCompile(`\s+`)
 	exp := regexp.MustCompile(`(?m)^(?P<key>\S+): (?P<value>(.*)(?:$\s^ .*)*)$`)
-	var descriptors []Descriptor
+	var ps []map[string]string
 	for scanner.Scan() {
-		descriptor := make(Descriptor)
+		p := make(map[string]string)
 		for _, m := range exp.FindAllStringSubmatch(scanner.Text(), -1) {
-			descriptor[m[1]] = space.ReplaceAllString(m[2], " ")
+			p[m[1]] = space.ReplaceAllString(m[2], " ")
 		}
-		descriptors = append(descriptors, descriptor)
+		ps = append(ps, p)
 	}
 	if err := scanner.Err(); err != nil {
 		return nil, err
 	}
-	return descriptors, nil
+	return ps, nil
 }
 
 func downloadPackageList(config *Config, depends bool) ([]Lock, error) {
-	descriptors := map[string]map[string]Descriptor{}
+	type descriptor struct {
+		name    string
+		version string
+		url     string
+		hash    string
+		depends []string
+	}
+	descriptors := map[string]map[string]descriptor{}
 
 	file, err := os.Open(config.Keyring)
 	if err != nil {
@@ -137,116 +141,150 @@ func downloadPackageList(config *Config, depends bool) ([]Lock, error) {
 		return nil, err
 	}
 
-	for _, dist := range config.Dists {
-		u, err := url.Parse(aptRepo)
-		u.Path = path.Join(u.Path, "dists", dist, "Release")
-		r, err := http.Get(u.String())
+	for _, source := range config.Sources {
+		sourceUrl, err := url.Parse(source)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("%s: invalid url", source)
 		}
-		defer r.Body.Close()
 
-		b, err := ioutil.ReadAll(r.Body)
-		if err != nil {
-			return nil, err
-		}
-		var lines []string
-		sha256section := false
-		for _, l := range strings.Split(string(b), "\n") {
-			if sha256section {
-				if strings.HasPrefix(l, " ") {
-					lines = append(lines, l[1:])
-				} else {
-					sha256section = false
-				}
-			} else if strings.HasPrefix(l, "SHA256:") {
-				sha256section = true
+		for _, dist := range config.Dists {
+			releaseUrl := *sourceUrl
+			releaseUrl.Path = path.Join(sourceUrl.Path, "dists", dist, "Release")
+			r, err := http.Get(releaseUrl.String())
+			if err != nil {
+				return nil, err
 			}
-		}
+			if r.StatusCode != http.StatusOK {
+				return nil, fmt.Errorf("%s not available", releaseUrl.String())
+			}
+			defer r.Body.Close()
 
-		u, err = url.Parse(aptRepo)
-		u.Path = path.Join(u.Path, "dists", dist, "Release.gpg")
-		r, err = http.Get(u.String())
-		if err != nil {
-			return nil, err
-		}
-		defer r.Body.Close()
-
-		_, err = openpgp.CheckArmoredDetachedSignature(keyring, bytes.NewReader(b), r.Body)
-		if err != nil {
-			return nil, err
-		}
-
-		for _, a := range config.Architectures {
-			for _, c := range config.Components {
-				u, err := url.Parse(aptRepo)
-				u.Path = path.Join(u.Path, "dists", dist, c, "binary-"+a, packagesFile)
-				r, err := http.Get(u.String())
-				if err != nil {
-					return nil, err
-				}
-				defer r.Body.Close()
-
-				buf, err := ioutil.ReadAll(r.Body)
-				if err != nil {
-					return nil, err
-				}
-
-				var checksum string
-				f := path.Join(c, "binary-"+a, packagesFile)
-				for _, l := range lines {
-					if strings.HasSuffix(l, f) {
-						checksum = strings.Fields(l)[0]
-						break
+			b, err := ioutil.ReadAll(r.Body)
+			if err != nil {
+				return nil, err
+			}
+			var lines []string
+			sha256section := false
+			for _, l := range strings.Split(string(b), "\n") {
+				if sha256section {
+					if strings.HasPrefix(l, " ") {
+						lines = append(lines, l[1:])
+					} else {
+						sha256section = false
 					}
+				} else if strings.HasPrefix(l, "SHA256:") {
+					sha256section = true
 				}
-				if checksum == "" {
-					return nil, fmt.Errorf("%s: checksum missing", f)
-				}
+			}
 
-				sum := sha256.Sum256(buf)
-				if checksum != hex.EncodeToString(sum[:]) {
-					return nil, fmt.Errorf("%s: checksum doesn't match", f)
-				}
+			keyUrl := *sourceUrl
+			keyUrl.Path = path.Join(keyUrl.Path, "dists", dist, "Release.gpg")
+			r, err = http.Get(keyUrl.String())
+			if err != nil {
+				return nil, fmt.Errorf("failed to download the key: %v", err)
+			}
+			defer r.Body.Close()
 
-				g, err := xz.NewReader(bytes.NewReader(buf))
-				if err != nil {
-					return nil, err
-				}
+			_, err = openpgp.CheckArmoredDetachedSignature(keyring, bytes.NewReader(b), r.Body)
+			if err != nil {
+				return nil, fmt.Errorf("%s: failed to check the signature: %v", keyUrl.String(), err)
+			}
 
-				ps, err := parsePackages(g)
-				if err != nil {
-					return nil, err
-				}
-
-				// We only want development libraries, filter out everything else.
-				for _, p := range ps {
-					var include bool
-					// Use sections as a coarse grained filter.
-					switch p["Section"] {
-					case "libs", "libdevel", "devel", "x11", "python":
-						include = true
+		Architectures:
+			for _, a := range config.Architectures {
+				for _, c := range config.Components {
+					packagesUrl := *sourceUrl
+					packagesUrl.Path = path.Join(packagesUrl.Path, "dists", dist, c, "binary-"+a, packagesFile)
+					fmt.Printf("Processing %s %s %s %s...", source, dist, a, c)
+					r, err := http.Get(packagesUrl.String())
+					if err != nil || r.StatusCode != http.StatusOK {
+						fmt.Printf(" skipping\n")
+						continue Architectures
 					}
-					if include {
-						if ts, ok := p["Tag"]; ok {
-							// Use tags as a more fine-grained filter.
-							include = false
-							for _, n := range strings.Split(ts, ", ") {
-								t := strings.Split(strings.TrimSpace(n), " ")[0]
-								switch t {
-								case "devel::library", "x11::library", "role::devel-lib", "role::shared-lib":
-									include = true
+					defer r.Body.Close()
+					fmt.Printf("\n")
+
+					buf, err := ioutil.ReadAll(r.Body)
+					if err != nil {
+						return nil, fmt.Errorf("failed to read packages file: %v", err)
+					}
+
+					var checksum string
+					f := path.Join(c, "binary-"+a, packagesFile)
+					for _, l := range lines {
+						if strings.HasSuffix(l, f) {
+							checksum = strings.Fields(l)[0]
+							break
+						}
+					}
+					if checksum == "" {
+						return nil, fmt.Errorf("%s: checksum missing", f)
+					}
+
+					sum := sha256.Sum256(buf)
+					if checksum != hex.EncodeToString(sum[:]) {
+						return nil, fmt.Errorf("%s: checksum doesn't match %s vs %s", packagesUrl.String(), checksum, hex.EncodeToString(sum[:]))
+					}
+
+					g, err := xz.NewReader(bytes.NewReader(buf))
+					if err != nil {
+						return nil, err
+					}
+
+					ps, err := parsePackages(g)
+					if err != nil {
+						return nil, err
+					}
+
+					// We only want development libraries, filter out everything else.
+					for _, p := range ps {
+						var include bool
+						// Use sections as a coarse grained filter.
+						switch strings.TrimPrefix(p["Section"], c+"/") {
+						case
+							"devel",
+							"libdevel",
+							"libs",
+							"python",
+							"x11":
+							include = true
+						}
+						if include {
+							if ts, ok := p["Tag"]; ok {
+								// Use tags as a more fine-grained filter.
+								include = false
+								for _, n := range strings.Split(ts, ", ") {
+									t := strings.Split(strings.TrimSpace(n), " ")[0]
+									switch t {
+									case
+										"devel::library",
+										"role::devel-lib",
+										"role::shared-lib",
+										"x11::library":
+										include = true
+									}
 								}
 							}
 						}
-					}
-					// Skip everything that doesn't match.
-					if include {
-						n := p["Package"]
-						if _, ok := descriptors[n]; !ok {
-							descriptors[n] = map[string]Descriptor{}
+						// Skip everything that doesn't match.
+						if include {
+							var depends []string
+							for _, n := range strings.Split(p["Depends"], ", ") {
+								depends = append(depends, strings.Split(strings.TrimSpace(n), " ")[0])
+							}
+							n := p["Package"]
+							//fmt.Printf("%s (%s)\n", n, a)
+							if _, ok := descriptors[n]; !ok {
+								descriptors[n] = map[string]descriptor{}
+							}
+							descriptors[n][a] = descriptor{
+								name:    p["Package"],
+								version: p["Version"],
+								url:     path.Join(source, p["Filename"]),
+								hash:    p["SHA256"],
+								depends: depends,
+							}
 						}
-						descriptors[n][a] = p
 					}
 				}
 			}
@@ -292,18 +330,17 @@ func downloadPackageList(config *Config, depends bool) ([]Lock, error) {
 			if _, ok := locks[p.name]; !ok {
 				locks[p.name] = map[string]Lock{}
 			}
-			if pkg, ok := ds[p.architecture]; ok {
+			if d, ok := ds[p.architecture]; ok {
 				locks[p.name][p.architecture] = Lock{
-					Name:     pkg["Package"],
-					Version:  pkg["Version"],
-					Filename: pkg["Filename"],
-					Hash:     pkg["SHA256"],
+					Name:    d.name,
+					Version: d.version,
+					Url:     d.url,
+					Hash:    d.hash,
 				}
 				if depends {
-					for _, n := range strings.Split(pkg["Depends"], ", ") {
-						d := strings.Split(strings.TrimSpace(n), " ")[0]
+					for _, n := range d.depends {
 						queue = append(queue, dependency{
-							name:         d,
+							name:         n,
 							architecture: p.architecture,
 						})
 					}
@@ -377,13 +414,16 @@ func installSysroot(list []Lock, installDir, debsCache string) error {
 	}
 
 	for _, pkg := range list {
-		filename := filepath.Base(pkg.Filename)
+		u, err := url.Parse(pkg.Url)
+		if err != nil {
+			return err
+		}
+
+		filename := filepath.Base(u.Path)
 		deb := filepath.Join(debsCache, filename)
 		if _, err := os.Stat(deb); os.IsNotExist(err) {
 			fmt.Printf("Downloading %s...\n", filename)
 
-			u, err := url.Parse(aptRepo)
-			u.Path = path.Join(u.Path, pkg.Filename)
 			r, err := http.Get(u.String())
 			if err != nil {
 				return err
@@ -407,8 +447,7 @@ func installSysroot(list []Lock, installDir, debsCache string) error {
 
 		fmt.Printf("Installing %s...\n", filename)
 		// Extract the content of the package into the install directory.
-		err := exec.Command("dpkg-deb", "-x", deb, installDir).Run()
-		if err != nil {
+		if err := exec.Command("dpkg-deb", "-x", deb, installDir).Run(); err != nil {
 			return err
 		}
 		// Get the package name.
