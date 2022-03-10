@@ -341,6 +341,11 @@ static constexpr zx_driver_ops_t driver_ops = []() {
   return ops;
 }();
 
+template class Register<uint8_t>;
+template class Register<uint16_t>;
+template class Register<uint32_t>;
+template class Register<uint64_t>;
+
 }  // namespace registers
 
 // clang-format off

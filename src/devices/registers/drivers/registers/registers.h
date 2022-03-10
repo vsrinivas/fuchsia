@@ -167,6 +167,11 @@ class RegistersDevice : public RegistersDeviceType<T> {
   std::map<uint32_t, std::shared_ptr<MmioInfo>> mmios_;  // MMIO ID to MmioInfo
 };
 
+extern template class Register<uint8_t>;
+extern template class Register<uint16_t>;
+extern template class Register<uint32_t>;
+extern template class Register<uint64_t>;
+
 }  // namespace registers
 
 #endif  // SRC_DEVICES_REGISTERS_DRIVERS_REGISTERS_REGISTERS_H_
