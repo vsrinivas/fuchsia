@@ -9,6 +9,7 @@ import (
 	"bytes"
 	"regexp"
 
+	"go.fuchsia.dev/fuchsia/src/connectivity/network/testing/conformance/parseoutput"
 	"go.fuchsia.dev/fuchsia/tools/testing/runtests"
 )
 
@@ -25,6 +26,7 @@ func Parse(stdout []byte) []runtests.TestCaseResult {
 		goTestPreamblePattern,
 		rustTestPreamblePattern,
 		zirconUtestPreamblePattern,
+		parseoutput.TestPreamblePattern,
 	}
 	remainingLines, match := firstMatch(lines, res)
 
@@ -44,6 +46,8 @@ func Parse(stdout []byte) []runtests.TestCaseResult {
 		cases = parseRustTest(remainingLines)
 	case zirconUtestPreamblePattern:
 		cases = parseZirconUtest(remainingLines)
+	case parseoutput.TestPreamblePattern:
+		cases = parseNetworkConformanceTest(remainingLines)
 	}
 
 	// Ensure that an empty set of cases is serialized to JSON as an empty
@@ -54,7 +58,10 @@ func Parse(stdout []byte) []runtests.TestCaseResult {
 	return cases
 }
 
-func firstMatch(lines [][]byte, res []*regexp.Regexp) ([][]byte, *regexp.Regexp) {
+func firstMatch(
+	lines [][]byte,
+	res []*regexp.Regexp,
+) ([][]byte, *regexp.Regexp) {
 	for num, line := range lines {
 		for _, re := range res {
 			if re.Match(line) {

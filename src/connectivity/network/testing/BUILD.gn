@@ -5,6 +5,7 @@
 group("tests") {
   testonly = true
   deps = [
+    "conformance:tests",
     "netemul:tests",
     "netemul-v2:tests",
     "network-test-realm:tests",

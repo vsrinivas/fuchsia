@@ -11,6 +11,7 @@ go_library("testparser") {
     "dartsystemtest.go",
     "googletest.go",
     "gotest.go",
+    "networkconformancetest.go",
     "rusttest.go",
     "testparser.go",
     "testparser_test.go",
@@ -19,7 +20,10 @@ go_library("testparser") {
     "zircon_utest.go",
   ]
 
-  deps = [ "//tools/testing/runtests" ]
+  deps = [
+    "//src/connectivity/network/testing/conformance/parseoutput",
+    "//tools/testing/runtests",
+  ]
 }
 
 group("tests") {

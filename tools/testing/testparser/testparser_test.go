@@ -8,10 +8,12 @@ import (
 	"bytes"
 	"encoding/json"
 	"testing"
+	"time"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 
+	"go.fuchsia.dev/fuchsia/src/connectivity/network/testing/conformance/parseoutput"
 	"go.fuchsia.dev/fuchsia/tools/testing/runtests"
 )
 
@@ -33,7 +35,11 @@ func testCase(t *testing.T, stdout string, want string) {
 	if !bytes.Equal(actual, compactJSON([]byte(want))) {
 		actualIndented := string(indentJSON(actual))
 		wantIndented := string(indentJSON([]byte(want)))
-		t.Errorf("Parse(stdout) = `\n%v\n`; want `\n%v\n`", actualIndented, wantIndented)
+		t.Errorf(
+			"Parse(stdout) = `\n%v\n`; want `\n%v\n`",
+			actualIndented,
+			wantIndented,
+		)
 	}
 }
 
@@ -1153,5 +1159,43 @@ Test case 'dEQP-VK.renderpass.suballocation.multisample.r32g32_uint.samples_10'.
 			Format:      "VulkanCtsTest",
 		},
 	}
+	testCaseCmp(t, stdout, want)
+}
+
+func TestParseNetworkConformanceTest(t *testing.T) {
+	stdout := `
+[network-conformance output] 2022/03/09 18:36:31
+[network-conformance output] 2022/03/09 18:36:31 >> SOME-Suite_name-2.1
+2022/03/09 18:36:31 [network-conformance case start] NS2--SOME-Suite_name-2.1
+[network-conformance output] 2022/03/09 18:36:32 << SOME-Suite_name-2.1: Passed
+[network-conformance output] 2022/03/09 18:36:32
+2022/03/09 18:36:32 [network-conformance case end] {"identifier":{"platform":"NS2","suite_name":"SOME-Suite_name","major_number":2,"minor_number":1},"expected_outcome":"Passed","actual_outcome":"Passed","duration_millis":1469}
+[network-conformance output] 2022/03/09 18:36:32 >> SOME-Suite_name-2.2
+2022/03/09 18:36:32 [network-conformance case start] NS2--SOME-Suite_name-2.2
+[network-conformance output] 2022/03/09 18:36:37 << SOME-Suite_name-2.2: Passed
+2022/03/09 18:36:37 [network-conformance case end] {"identifier":{"platform":"NS2","suite_name":"SOME-Suite_name","major_number":2,"minor_number":2},"expected_outcome":"!FAILED!","actual_outcome":"Passed","duration_millis":5292}
+[network-conformance output] 2022/03/09 18:36:37
+`
+
+	want := []runtests.TestCaseResult{
+		{
+			DisplayName: "NS2--SOME-Suite_name-2.1",
+			SuiteName:   "SOME-Suite_name",
+			CaseName:    "2.1",
+			Status:      runtests.TestSuccess,
+			Duration:    1469 * time.Millisecond,
+			Format:      parseoutput.NetworkConformanceFormatName,
+		},
+		{
+			DisplayName: "NS2--SOME-Suite_name-2.2",
+			SuiteName:   "SOME-Suite_name",
+			CaseName:    "2.2",
+			Status:      runtests.TestFailure,
+			Duration:    5292 * time.Millisecond,
+			Format:      parseoutput.NetworkConformanceFormatName,
+			FailReason:  "actual test outcome Passed does not match expected test outcome !FAILED!",
+		},
+	}
+
 	testCaseCmp(t, stdout, want)
 }
