@@ -14,7 +14,7 @@ group("cmx_allowlist") {
   # This is an allowlist of targets that use CMX (.cmx) files.
   # CMX is the component manifest v1 syntax. There is a migration in progress
   # to CML files, the component manifest v2 syntax. See:
-  # https://fuchsia.dev/fuchsia-src/concepts/components/v2/migration
+  # https://fuchsia.dev/fuchsia-src/contribute/open_projects/components/migration
   #
   # Developers are encouraged to migrate to v2. See the migration guide:
   # https://fuchsia.dev/fuchsia-src/development/components/v2/migration
