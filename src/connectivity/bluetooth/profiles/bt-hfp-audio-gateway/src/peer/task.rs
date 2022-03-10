@@ -1428,7 +1428,7 @@ mod tests {
         info!("transfers_change_sco_state: Transferring call to HF by AG.");
         let (sco, mut run_fut) =
             run_while(&mut exec, run_fut, expect_sco_connection(&mut profile, true, Ok(())));
-        info!("transfers_change_sco_state: Transferring call to HF by AG--pausing aduio.");
+        info!("transfers_change_sco_state: Transferring call to HF by AG--pausing audio.");
         let _ = exec.run_one_step(&mut run_fut);
         let sco = sco.expect("SCO Connection.");
         // Run until the connection is handled by the task.  This avoids a race where the

@@ -347,7 +347,7 @@ impl MediaSessionsInner {
         //
         // For the TrackPosChanged event id, ignore the input parameter `current`
         // and use current local values.
-        // The response timeout (nanos) will be the scaled (nonezero) `pos_change_interval`
+        // The response timeout (nanos) will be the scaled (nonzero) `pos_change_interval`
         // duration after the current time.
         //
         // For AddressedPlayerChanged, send an immediate reject because we currently only

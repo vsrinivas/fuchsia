@@ -352,9 +352,9 @@ mod tests {
         // Stop the inner task and wait until it has fully stopped
         // The inner task is replaced by a no-op task so that it can be consumed and canceled.
         let task = std::mem::replace(&mut peer.task, fasync::Task::local(async move {}));
-        let cancelation = task.cancel();
-        pin_mut!(cancelation);
-        let _ = exec.run_until_stalled(&mut cancelation).expect("task to stop completely");
+        let cancellation = task.cancel();
+        pin_mut!(cancellation);
+        let _ = exec.run_until_stalled(&mut cancellation).expect("task to stop completely");
 
         // create profile_event_fut in a block to limit its lifetime
         {
@@ -382,10 +382,10 @@ mod tests {
 
         // Stop the inner task and wait until it has fully stopped
         // The inner task is replaced by a no-op task so that it can be consumed and canceled.
-        let cancelation =
+        let cancellation =
             std::mem::replace(&mut peer.task, fasync::Task::local(async move {})).cancel();
-        pin_mut!(cancelation);
-        let _ = exec.run_until_stalled(&mut cancelation).expect("task to stop completely");
+        pin_mut!(cancellation);
+        let _ = exec.run_until_stalled(&mut cancellation).expect("task to stop completely");
 
         let build_handler_fut = peer.build_handler();
         pin_mut!(build_handler_fut);

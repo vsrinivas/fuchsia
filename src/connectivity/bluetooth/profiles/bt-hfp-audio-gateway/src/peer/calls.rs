@@ -1293,7 +1293,7 @@ mod tests {
             assert!(result.is_err());
         }
 
-        // Updaate the call state to one which will accept DTMF codes.
+        // Update the call state to one which will accept DTMF codes.
         update_call(&mut exec, &mut call_1, CallState::OngoingActive);
         poll_calls_until_pending(&mut exec, &mut calls);
         let watch_state_responder = get_watch_state(&mut exec, &mut call_1);

@@ -101,7 +101,7 @@ the [`ProfileRegistrar`](src/profile_registrar.rs) which directly manages the RF
 
 ## `rfcomm` mod
 
-The `rfcomm` module contains the relevant handlers, datatypes, and functionality needed to
+The `rfcomm` module contains the relevant handlers, data types, and functionality needed to
 support creating and receiving RFCOMM connections. The `ProfileRegistrar` will route any
 inbound/outbound requests to the `RfcommServer`, which manages the active RFCOMM Sessions
 between the local endpoint and any remote peers. The main entry point to this module is the

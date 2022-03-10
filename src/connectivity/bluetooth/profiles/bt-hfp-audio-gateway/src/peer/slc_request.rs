@@ -127,7 +127,7 @@ impl fmt::Debug for SlcRequest {
             Self::SetNrec { enable: false, .. } => "SetNrec(disabled)",
             Self::GetNetworkOperatorName { .. } => "GetNetworkOperatorName",
             Self::QueryCurrentCalls { .. } => "QueryCurrentCalls ",
-            // DTFM Code values are not displayed in Debug representation
+            // DTMF Code values are not displayed in Debug representation
             Self::SendDtmf { .. } => "SendDtmf",
             Self::SendHfIndicator { indicator, .. } => {
                 s = format!("SendHfIndicator({:?})", indicator);

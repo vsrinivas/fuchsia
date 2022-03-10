@@ -13,7 +13,7 @@ use tracing::warn;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum CodecConnectionSetupProcedure {
-    /// Inital State of the Codec Setup Procedure
+    /// Initial State of the Codec Setup Procedure
     Start,
     /// Request has been made to the HF to set the codec id.
     RequestCodec { codec: CodecId },
@@ -94,7 +94,7 @@ impl Procedure for CodecConnectionSetupProcedure {
         }
 
         match (state, update) {
-            // Allow this prodedure to be restarted at any point.
+            // Allow this procedure to be restarted at any point.
             // We shouldn't have a codec selected on startup of this.
             (_, AgUpdate::CodecSetup(None)) => {
                 if slc_state.codec_negotiation() && Some(selected) != slc_state.selected_codec {
@@ -208,7 +208,7 @@ mod tests {
     }
 
     #[test]
-    fn peer_inititated_startup_and_selection() {
+    fn peer_initiated_startup_and_selection() {
         let both_codecs = vec![CodecId::MSBC, CodecId::CVSD];
         let mut slc_state = SlcState {
             ag_features: AgFeatures::CODEC_NEGOTIATION,

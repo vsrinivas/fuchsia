@@ -102,7 +102,7 @@ mod tests {
     }
 
     #[test]
-    fn microphonbe_update_produces_expected_request() {
+    fn microphone_update_produces_expected_request() {
         let mut procedure = VolumeControlProcedure::new();
         let mut state = SlcState::default();
 

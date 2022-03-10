@@ -72,7 +72,7 @@ pub mod codec_connection_setup;
 /// Defines the implementation of the the Audio Volume Control Procedure.
 pub mod volume_control;
 
-/// Defines the implementaion of several ways for the HF to initiate calls.
+/// Defines the implementation of several ways for the HF to initiate calls.
 pub mod initiate_call;
 
 /// Defines the Codec Support Procedure.

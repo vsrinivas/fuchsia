@@ -12,7 +12,7 @@ use {
     fidl_fuchsia_bluetooth_hfp as fidl,
 };
 
-/// Represents a single Dual-tone multi-requency signaling code.
+/// Represents a single Dual-tone multi-frequency signaling code.
 /// This is a native representation of the FIDL enum `fuchsia.bluetooth.hfp.DtmfCode`.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum DtmfCode {

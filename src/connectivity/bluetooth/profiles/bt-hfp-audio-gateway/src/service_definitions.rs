@@ -26,14 +26,14 @@ const PROFILE_MINOR_VERSION: u8 = 8;
 
 bitflags! {
     struct AudioGatewayFeaturesSdpAttribute: u16 {
-        const THREE_WAY_CALLING                    = 0b0000_0001;
-        const ECHO_CANCELATION_AND_NOISE_REDUCTION = 0b0000_0010;
-        const VOICE_RECOGNITION                    = 0b0000_0100;
-        const IN_BAND_RING                         = 0b0000_1000;
-        const ATTACH_NUMBER_TO_VOICE_TAG           = 0b0001_0000;
-        const WIDEBAND_SPEECH                      = 0b0010_0000;
-        const ENHANCED_VOICE_RECOGNITION           = 0b0100_0000;
-        const ENHANCED_VOICE_RECOGNITION_TEXT      = 0b1000_0000;
+        const THREE_WAY_CALLING                     = 0b0000_0001;
+        const ECHO_CANCELLATION_AND_NOISE_REDUCTION = 0b0000_0010;
+        const VOICE_RECOGNITION                     = 0b0000_0100;
+        const IN_BAND_RING                          = 0b0000_1000;
+        const ATTACH_NUMBER_TO_VOICE_TAG            = 0b0001_0000;
+        const WIDEBAND_SPEECH                       = 0b0010_0000;
+        const ENHANCED_VOICE_RECOGNITION            = 0b0100_0000;
+        const ENHANCED_VOICE_RECOGNITION_TEXT       = 0b1000_0000;
 
         /// Defined by HFP v1.8, Table 5.3: Service Record for the AG
         const DEFAULT = Self::THREE_WAY_CALLING.bits | Self::IN_BAND_RING.bits;
@@ -45,7 +45,7 @@ impl From<AudioGatewayFeatureSupport> for AudioGatewayFeaturesSdpAttribute {
         let mut value = Self::empty();
         value.set(Self::THREE_WAY_CALLING, features.three_way_calling);
         value.set(
-            Self::ECHO_CANCELATION_AND_NOISE_REDUCTION,
+            Self::ECHO_CANCELLATION_AND_NOISE_REDUCTION,
             features.echo_canceling_and_noise_reduction,
         );
         value.set(Self::IN_BAND_RING, features.in_band_ringtone);
@@ -118,7 +118,7 @@ mod tests {
             ..Default::default()
         };
         assert_eq!(
-            AudioGatewayFeaturesSdpAttribute::ECHO_CANCELATION_AND_NOISE_REDUCTION,
+            AudioGatewayFeaturesSdpAttribute::ECHO_CANCELLATION_AND_NOISE_REDUCTION,
             ec_nr.into()
         );
 

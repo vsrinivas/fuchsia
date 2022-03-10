@@ -156,7 +156,7 @@ mod tests {
             ProcedureRequest::SendMessages(resp) if resp == vec![at::Response::Ok]
         );
 
-        // Check that the procedure is termianted and any new messages produce an error.
+        // Check that the procedure is terminated and any new messages produce an error.
         assert!(proc.is_terminated());
         assert_matches!(
             proc.hf_update(at::Command::Nrec { nrec: true }, &mut state),
