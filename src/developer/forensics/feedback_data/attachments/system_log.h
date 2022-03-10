@@ -13,6 +13,7 @@
 
 #include "src/developer/forensics/feedback_data/attachments/types.h"
 #include "src/developer/forensics/utils/fit/timeout.h"
+#include "src/developer/forensics/utils/redact/redactor.h"
 
 namespace forensics {
 namespace feedback_data {
@@ -20,9 +21,10 @@ namespace feedback_data {
 // Collects the system log.
 //
 // fuchsia.diagnostics.FeedbackArchiveAccessor is expected to be in |services|.
+// |redactor| must not be deleted until after the returned promise completes.
 ::fpromise::promise<AttachmentValue> CollectSystemLog(
     async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
-    fit::Timeout timeout);
+    fit::Timeout timeout, RedactorBase* redactor);
 
 }  // namespace feedback_data
 }  // namespace forensics

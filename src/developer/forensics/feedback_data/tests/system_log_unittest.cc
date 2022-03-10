@@ -24,6 +24,7 @@
 #include "src/developer/forensics/testing/stubs/diagnostics_batch_iterator.h"
 #include "src/developer/forensics/testing/unit_test_fixture.h"
 #include "src/developer/forensics/utils/errors.h"
+#include "src/developer/forensics/utils/redact/redactor.h"
 
 namespace forensics {
 namespace feedback_data {
@@ -108,9 +109,15 @@ class CollectLogDataTest : public UnitTestFixture {
   }
 
   ::fpromise::result<AttachmentValue> CollectSystemLog(const zx::duration timeout = zx::sec(1)) {
+    return CollectSystemLog(&redactor_, timeout);
+  }
+
+  ::fpromise::result<AttachmentValue> CollectSystemLog(RedactorBase* redactor,
+                                                       const zx::duration timeout = zx::sec(1)) {
     ::fpromise::result<AttachmentValue> result;
     executor_.schedule_task(feedback_data::CollectSystemLog(dispatcher(), services(),
-                                                            fit::Timeout(timeout, /*action=*/[] {}))
+                                                            fit::Timeout(timeout, /*action=*/[] {}),
+                                                            redactor)
                                 .then([&result](::fpromise::result<AttachmentValue>& res) {
                                   result = std::move(res);
                                 }));
@@ -122,6 +129,7 @@ class CollectLogDataTest : public UnitTestFixture {
 
  private:
   std::unique_ptr<stubs::DiagnosticsArchiveBase> log_server_;
+  IdentityRedactor redactor_;
 };
 
 TEST_F(CollectLogDataTest, Succeed_AllSystemLogs) {
@@ -176,6 +184,39 @@ TEST_F(CollectLogDataTest, Succeed_FormattingErrors) {
   ASSERT_STREQ(logs.Value().c_str(), R"([01234.000][00200][00300][tag_1, tag_a] INFO: Message 1
 [01234.000][00200][00300][tag_2] INFO: Message 2
 [01234.000][00200][00300][tag_3] INFO: Message 3
+!!! Failed to format chunk: Failed to parse content as JSON. Offset 1: Invalid value. !!!
+!!! Failed to format chunk: Failed to parse content as JSON. Offset 0: Invalid value. !!!
+)");
+}
+
+class SimpleRedactor : public RedactorBase {
+  std::string& Redact(std::string& text) override {
+    text = "REDACTED";
+    return text;
+  }
+
+  std::string UnredactedCanary() const override { return ""; }
+  std::string RedactedCanary() const override { return ""; }
+};
+
+TEST_F(CollectLogDataTest, Succeed_AppliesRedaction) {
+  SetupLogServer(std::make_unique<stubs::DiagnosticsArchive>(
+      std::make_unique<stubs::DiagnosticsBatchIterator>(std::vector<std::vector<std::string>>({
+          {kMessage1Json, kMessage2Json},
+          {kMessage3Json},
+          {"foo", "bar"},
+          {},
+      }))));
+
+  SimpleRedactor redactor;
+  ::fpromise::result<AttachmentValue> result = CollectSystemLog(&redactor);
+  ASSERT_TRUE(result.is_ok());
+
+  const AttachmentValue& logs = result.value();
+  ASSERT_EQ(logs.State(), AttachmentValue::State::kComplete);
+  ASSERT_STREQ(logs.Value().c_str(), R"([01234.000][00200][00300][tag_1, tag_a] INFO: REDACTED
+[01234.000][00200][00300][tag_2] INFO: REDACTED
+[01234.000][00200][00300][tag_3] INFO: REDACTED
 !!! Failed to format chunk: Failed to parse content as JSON. Offset 1: Invalid value. !!!
 !!! Failed to format chunk: Failed to parse content as JSON. Offset 0: Invalid value. !!!
 )");

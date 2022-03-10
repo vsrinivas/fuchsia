@@ -23,6 +23,7 @@
 #include "src/developer/forensics/utils/cobalt/metrics.h"
 #include "src/developer/forensics/utils/fit/timeout.h"
 #include "src/developer/forensics/utils/previous_boot_file.h"
+#include "src/developer/forensics/utils/redact/redactor.h"
 
 namespace forensics {
 namespace feedback_data {
@@ -72,6 +73,7 @@ class Datastore {
   async_dispatcher_t* dispatcher_;
   const std::shared_ptr<sys::ServiceDirectory> services_;
   cobalt::Logger* cobalt_;
+  IdentityRedactor redactor_;
   const AnnotationKeys annotation_allowlist_;
   AttachmentKeys attachment_allowlist_;
 

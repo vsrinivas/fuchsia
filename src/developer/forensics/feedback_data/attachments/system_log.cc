@@ -37,7 +37,7 @@ struct LogMessage {
 
 ::fpromise::promise<AttachmentValue> CollectSystemLog(
     async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
-    fit::Timeout timeout) {
+    fit::Timeout timeout, RedactorBase* redactor) {
   auto log_service =
       std::make_unique<ArchiveAccessor>(dispatcher, services, fuchsia::diagnostics::DataType::LOGS,
                                         fuchsia::diagnostics::StreamMode::SNAPSHOT);
@@ -53,7 +53,8 @@ struct LogMessage {
   };
 
   // System log collection task.
-  log_service->Collect([log_messages, AddError](fuchsia::diagnostics::FormattedContent chunk) {
+  log_service->Collect([log_messages, AddError,
+                        redactor](fuchsia::diagnostics::FormattedContent chunk) {
     auto chunk_result =
         diagnostics::accessor2logger::ConvertFormattedContentToLogMessages(std::move(chunk));
     if (chunk_result.is_error()) {
@@ -68,6 +69,8 @@ struct LogMessage {
             fxl::StringPrintf("!!! Failed to format chunk: %s !!!", log_result.error().c_str()));
         continue;
       }
+
+      redactor->Redact(log_result.value().msg);
 
       // Stable-sort |log_messages| by timestamp when adding a new message. If a message in
       // |log_messages| only has errors, assume the new message comes after it. Sorting is stable

@@ -139,6 +139,7 @@ source_set("datastore") {
     "//src/developer/forensics/feedback_data/attachments:types",
     "//src/developer/forensics/utils:previous_boot_file",
     "//src/developer/forensics/utils/cobalt",
+    "//src/developer/forensics/utils/redact",
     "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/zx",
   ]
