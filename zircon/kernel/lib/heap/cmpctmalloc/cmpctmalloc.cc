@@ -605,7 +605,7 @@ static void add_to_heap(void* new_area, size_t size) TA_REQ(TheHeapLock::Get()) 
 
 // Create a new free-list entry of at least size bytes (including the
 // allocation header).  Called with the lock, apart from during init.
-NO_ASAN static ssize_t heap_grow(size_t size) TA_REQ(TheHeapLock::Get()) {
+NO_ASAN static zx_status_t heap_grow(size_t size) TA_REQ(TheHeapLock::Get()) {
   // This function accesses field members of header_t which are poisoned so it
   // has to be NO_ASAN.
 
@@ -668,7 +668,7 @@ NO_ASAN static ssize_t heap_grow(size_t size) TA_REQ(TheHeapLock::Get()) {
 
   add_to_heap(ptr, size);
 
-  return size;
+  return ZX_OK;
 }
 
 // Use HEAP_ENABLE_TESTS to enable internal testing. The tests are not useful
@@ -916,7 +916,7 @@ NO_ASAN void* cmpct_alloc(size_t size) {
     ZX_DEBUG_ASSERT(growby >= rounded_up);
     // Try to add a new OS allocation to the heap, reducing the size until
     // we succeed or get too small.
-    while (heap_grow(growby) < 0) {
+    while (heap_grow(growby) == ZX_ERR_NO_MEMORY) {
       if (growby <= rounded_up) {
         return NULL;
       }
