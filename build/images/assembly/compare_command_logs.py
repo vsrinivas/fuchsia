@@ -16,26 +16,28 @@ def removeprefix(line, prefix):
     return line
 
 
-# Return a modified |cmd| where the |outdir| is stripped
+# Return a modified |cmd| where the |outdirs| is stripped
 # from the prefix of any arguments. This is useful for
 # comparing two commands that use files in different |outdirs|.
-def strip_outdir_from_cmd(cmd, outdir):
+def strip_outdirs_from_cmd(cmd, outdirs):
     if 'args' not in cmd:
         return cmd
     newcmd = {}
     newcmd['tool'] = cmd['tool']
     newcmd['args'] = []
     for arg in cmd['args']:
-        newcmd['args'].append(removeprefix(arg, outdir))
+        for outdir in outdirs:
+            arg = removeprefix(arg, outdir)
+        newcmd['args'].append(arg)
     return newcmd
 
 
-# Load a command from a file, and strip the |outdir| prefixes in the arguments.
-def load_command_log(log, outdir):
+# Load a command from a file, and strip the |outdirs| in the arguments.
+def load_command_log(log, outdirs):
     log = json.load(log)
     commands = []
     for cmd in log.get('commands', []):
-        commands.append(strip_outdir_from_cmd(cmd, outdir))
+        commands.append(strip_outdirs_from_cmd(cmd, outdirs))
     return commands
 
 
@@ -53,8 +55,11 @@ def main():
     parser.add_argument('--stamp', type=argparse.FileType('w'), required=True)
     args = parser.parse_args()
 
-    reference = load_command_log(args.reference, args.reference_outdir)
-    comparison = load_command_log(args.comparison, args.comparison_outdir)
+    # The comparison must be stripped first, because it is a longer path.
+    # This is hacky... a better fix in coming up for review.
+    outdirs = [args.comparison_outdir, args.reference_outdir]
+    reference = load_command_log(args.reference, outdirs)
+    comparison = load_command_log(args.comparison, outdirs)
 
     # Only compare commands that use these tools.
     # This allows us to incrementally add support for more commands.
