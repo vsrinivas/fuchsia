@@ -222,7 +222,6 @@ template("assemble_system") {
     product_assembly_config = "${image_name}_product_assembly_config"
     image_assembly_config = "${image_name}_image_assembly_config"
     image_assembly_inputs = "${image_name}_image_assembly_inputs"
-    cs_image_assembly_inputs = "${image_name}_cs_image_assembly_inputs"
     compare_image_assembly_configs =
         "${image_name}_compare_image_assembly_configs"
     board_config = "${image_name}_board_config"
@@ -230,7 +229,6 @@ template("assemble_system") {
     partitions_config = "${image_name}_partitions_config"
     product_assembler = "${image_name}_product_assembler"
     image_assembler = "${image_name}_image_assembler"
-    create_system = "${image_name}_create_system"
     copy_vbmeta = "${image_name}_copy_vbmeta"
     copy_zbi = "${image_name}_copy_zbi"
     copy_zbi_signed = "${image_name}_copy_zbi_signed"
@@ -253,8 +251,6 @@ template("assemble_system") {
         "$target_out_dir/${image_name}_image_assembly_config.json"
     image_assembly_inputs =
         "$target_out_dir/${image_name}_image_assembly_inputs"
-    cs_image_assembly_inputs =
-        "$target_out_dir/${image_name}_cs_image_assembly_inputs"
 
     board_config = "$target_out_dir/${image_name}_board_config.json"
     images_config = "$target_out_dir/${image_name}_images_config.json"
@@ -262,9 +258,6 @@ template("assemble_system") {
 
     outdir = "$target_out_dir/$image_name"
     gendir = "$outdir/gen"
-
-    cs_outdir = "$outdir/cs"
-    cs_gendir = "$cs_outdir/gen"
 
     legacy_assembly_input_bundle_manifest =
         "${outdir}/legacy/assembly_config.json"
@@ -307,37 +300,6 @@ template("assemble_system") {
     assembly_inputs = "${outdir}/assembly_inputs.json"
 
     image_command_log = "${gendir}/command_log.json"
-    cs_command_log = "${cs_gendir}/command_log.json"
-
-    # Outputs for create-system.
-    # These are transitory.
-    cs_base_package = "${cs_outdir}/base/meta.far"
-    cs_base_package_manifest = "${cs_outdir}/base/package_manifest.json"
-    cs_base_package_merkle = "${cs_outdir}/base/base.merkle"
-    cs_blobfs_manifest = "${cs_gendir}/blob.manifest"
-    cs_static_packages =
-        "${cs_gendir}/${base_package_name}/data/static_packages"
-    cs_cache_packages = "${cs_gendir}/${base_package_name}/data/cache_packages"
-    cs_base_meta_package = "${cs_gendir}/${base_package_name}/meta/package"
-    cs_base_pkg_abi_revision =
-        "${cs_gendir}/${base_package_name}/meta/fuchsia.abi/abi-revision"
-    cs_blobfs_manifest = "${cs_gendir}/blob.manifest"
-    cs_blobs_json = "${cs_gendir}/blobs.json"
-    cs_minfs = "${cs_outdir}/data.blk"
-    cs_blobfs = "${cs_outdir}/blob.blk"
-    cs_fvm = "${cs_outdir}/fvm.blk"
-    cs_fvm_sparse = "${cs_outdir}/fvm.sparse.blk"
-    cs_fvm_blob_sparse = "${cs_outdir}/fvm.blob.sparse.blk"
-    cs_fvm_fastboot_tmp = "${cs_outdir}/fvm.fastboot.tmp.blk"
-    cs_fvm_fastboot = "${cs_outdir}/fvm.fastboot.blk"
-    cs_bootfs_files = "${cs_gendir}/bootfs_files.list"
-    cs_devmgr_config = "${cs_gendir}/devmgr_config.txt"
-    cs_packages = "${cs_outdir}/packages.json"
-    cs_zbi = "${cs_outdir}/${image_name}.zbi"
-    cs_zbi_manifest = "${cs_gendir}/zbi.json"
-    cs_zbi_signed = "${cs_zbi}.signed"
-    cs_vbmeta = "${cs_outdir}/${image_name}.vbmeta"
-    cs_images_manifest = "${cs_outdir}/images.json"
 
     # Determine which ZBI we are shipping.
     zbi_final = zbi
@@ -783,12 +745,12 @@ template("assemble_system") {
                              "visibility",
                            ])
     deps = [
-      ":${labels.board_config}",
+      ":${labels.images_config}",
       ":${labels.product_assembler}",
     ]
 
     image_assembly_config = files.regenerated_image_assembly_config
-    board_config = files.board_config
+    images_config = files.images_config
     output = files.image_assembly_inputs
   }
 
@@ -823,30 +785,42 @@ template("assemble_system") {
       "--config",
       "assembly_enabled=true",
       "assembly",
-      "image",
-      "--product",
+      "create-system",
+      "--image-assembly-config",
       rebase_path(files.regenerated_image_assembly_config, root_build_dir),
-      "--board",
-      rebase_path(files.board_config, root_build_dir),
-      "--log-commands",
+      "--images",
+      rebase_path(files.images_config, root_build_dir),
+      "--base-package-name",
+      "$base_package_name",
       "--gendir",
       rebase_path(files.gendir, root_build_dir),
       "--outdir",
       rebase_path(files.outdir, root_build_dir),
     ]
 
-    # The SDK produces a manifest, which is used by ffx to find the host tools.
-    deps = [ "//sdk:host_tools.modular($host_toolchain)" ]
+    if (embed_fvm_in_zbi) {
+      args += [
+        "--mode",
+        "fvm-in-zbi",
+      ]
+    } else if (!generate_fvm) {
+      args += [
+        "--mode",
+        "bootfs",
+      ]
+    }
+
+    deps = []
     if (defined(invoker.deps)) {
       deps += invoker.deps
     }
     deps += [
-      ":${labels.board_config}",
+      ":${labels.images_config}",
       ":${labels.product_assembler}",
     ]
 
     inputs = [
-      files.board_config,
+      files.images_config,
       files.regenerated_image_assembly_config,
     ]
     if (defined(invoker.inputs)) {
@@ -915,179 +889,6 @@ template("assemble_system") {
     if (check_production_tag) {
       assert_no_deps = [ "//build/validate:non_production_tag" ]
     }
-  }
-
-  hermetic_inputs_for_image_assembly(labels.cs_image_assembly_inputs) {
-    forward_variables_from(invoker,
-                           [
-                             "testonly",
-                             "visibility",
-                           ])
-    deps = [
-      ":${labels.images_config}",
-      ":${labels.product_assembler}",
-    ]
-    image_assembly_config = files.regenerated_image_assembly_config
-    images_config = files.images_config
-    output = files.cs_image_assembly_inputs
-  }
-
-  ffx_action(labels.create_system) {
-    no_output_dir_leaks = false
-
-    forward_variables_from(invoker,
-                           [
-                             "testonly",
-                             "visibility",
-                           ])
-    args = [
-      "--config",
-      "assembly_enabled=true",
-      "assembly",
-      "create-system",
-      "--image-assembly-config",
-      rebase_path(files.regenerated_image_assembly_config, root_build_dir),
-      "--images",
-      rebase_path(files.images_config, root_build_dir),
-      "--base-package-name",
-      "$base_package_name",
-      "--gendir",
-      rebase_path(files.cs_gendir, root_build_dir),
-      "--outdir",
-      rebase_path(files.cs_outdir, root_build_dir),
-    ]
-
-    if (embed_fvm_in_zbi) {
-      args += [
-        "--mode",
-        "fvm-in-zbi",
-      ]
-    } else if (!generate_fvm) {
-      args += [
-        "--mode",
-        "bootfs",
-      ]
-    }
-
-    deps = []
-    if (defined(invoker.deps)) {
-      deps += invoker.deps
-    }
-    deps += [
-      ":${labels.images_config}",
-      ":${labels.product_assembler}",
-    ]
-
-    hermetic_inputs_target = ":${labels.cs_image_assembly_inputs}"
-    hermetic_inputs_file = files.cs_image_assembly_inputs
-    inputs = [
-      files.regenerated_image_assembly_config,
-      files.images_config,
-    ]
-    if (defined(invoker.inputs)) {
-      inputs += invoker.inputs
-    }
-
-    # We depend on the image assembler because bringup_fastboot hardcodes the
-    # path to the non-create-system vbmeta, and this will fail the hermetic
-    # checks otherwise. This can be removed once we have switched over to
-    # create-system.
-    if (use_vbmeta) {
-      deps += [ ":${labels.image_assembler}" ]
-      inputs += [ files.vbmeta ]
-    }
-
-    outputs = [
-      files.cs_command_log,
-      files.cs_images_manifest,
-      files.cs_bootfs_files,
-      files.cs_devmgr_config,
-      files.cs_zbi,
-      files.cs_zbi_manifest,
-      files.cs_packages,
-    ]
-
-    if (defined(invoker.zbi_signing_script)) {
-      outputs += [ files.cs_zbi_signed ]
-    }
-
-    if (use_vbmeta) {
-      outputs += [ files.cs_vbmeta ]
-    }
-
-    if (generate_fvm) {
-      deps += [
-        blobfs_tool_target,
-        fvm_tool_target,
-      ]
-
-      inputs += [
-        blobfs_tool_path,
-        fvm_tool_path,
-      ]
-
-      outputs += [
-        files.cs_base_package,
-        files.cs_base_package_manifest,
-        files.cs_base_package_merkle,
-        files.cs_blobfs_manifest,
-        files.cs_static_packages,
-        files.cs_cache_packages,
-        files.cs_base_meta_package,
-        files.cs_base_pkg_abi_revision,
-        files.cs_blobs_json,
-        files.cs_blobfs,
-        files.cs_minfs,
-        files.cs_fvm,
-        files.cs_fvm_sparse,
-        files.cs_fvm_blob_sparse,
-      ]
-
-      if (fvm_emmc_partition_size != false ||
-          fvm_ftl_nand_block_count != false) {
-        outputs += [ files.cs_fvm_fastboot ]
-        if (fvm_ftl_nand_block_count != false) {
-          outputs += [ files.cs_fvm_fastboot_tmp ]
-        }
-      }
-    }
-  }
-
-  compare_json_list(labels.compare_command_logs) {
-    forward_variables_from(invoker,
-                           [
-                             "testonly",
-                             "visibility",
-                           ])
-    deps = [
-      ":${labels.create_system}",
-      ":${labels.image_assembler}",
-    ]
-    reference = files.image_command_log
-    comparison = files.cs_command_log
-    prefixes = [
-      rebase_path(files.cs_outdir, root_build_dir),
-      rebase_path(files.outdir, root_build_dir),
-    ]
-    list_key = "commands"
-  }
-
-  compare_json_list(labels.compare_images_manifests) {
-    forward_variables_from(invoker,
-                           [
-                             "testonly",
-                             "visibility",
-                           ])
-    deps = [
-      ":${labels.create_system}",
-      ":${labels.image_assembler}",
-    ]
-    reference = files.images_manifest
-    comparison = files.cs_images_manifest
-    prefixes = [
-      rebase_path(files.cs_outdir, root_build_dir),
-      rebase_path(files.outdir, root_build_dir),
-    ]
   }
 
   #######
@@ -1249,10 +1050,7 @@ template("assemble_system") {
     # available to external targets.
     public_deps = [
       ":${labels.assembly_inputs}",
-      ":${labels.compare_command_logs}",
       ":${labels.compare_image_assembly_configs}",
-      ":${labels.compare_images_manifests}",
-      ":${labels.create_system}",
       ":${labels.image_assembler}",
       ":${labels.images_config}",
       ":${labels.partitions_config}",
