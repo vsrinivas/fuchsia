@@ -191,11 +191,9 @@ fdf_status_t fdf_channel_call(fdf_handle_t handle, uint32_t options, zx_time_t d
                               const fdf_channel_call_args_t* args);
 
 // If there is a pending callback registered via |fdf_channel_wait_async|,
-// how it is handled depends on whether the dispatcher it was registered with is
-// synchronized.
-// If the dispatcher is synchronized, this must only be called from a dispatcher
-// thread, and any pending callback will be canceled synchronously.
-// If the dispatcher is unsynchronized, the callback will be scheduled to be called.
+// it must be cancelled before this is called. For unsynchronized dispatchers,
+// cancellation is not considered complete until the callback is invoked.
+// This is safe to call from any thread.
 void fdf_handle_close(fdf_handle_t handle);
 
 __END_CDECLS

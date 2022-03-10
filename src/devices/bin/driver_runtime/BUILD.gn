@@ -8,7 +8,10 @@ import("//build/test.gni")
 
 group("tests") {
   testonly = true
-  deps = [ ":driver_runtime_tests" ]
+  deps = [
+    ":driver_runtime_death_tests",
+    ":driver_runtime_tests",
+  ]
 }
 
 config("include") {
@@ -67,6 +70,24 @@ test("driver_runtime_test") {
   ]
 }
 
+test("driver_runtime_death_test") {
+  sources = [ "channel_death_test.cc" ]
+  deps = [
+    ":driver_runtime_impl",
+    "//sdk/lib/driver_runtime",
+    "//sdk/lib/driver_runtime:driver_runtime_cpp",
+    "//zircon/system/ulib/fidl:fidl-llcpp",
+    "//zircon/system/ulib/sync",
+    "//zircon/system/ulib/sync:sync-cpp",
+    "//zircon/system/ulib/zx",
+    "//zircon/system/ulib/zxtest",
+  ]
+}
+
 fuchsia_unittest_package("driver_runtime_tests") {
   deps = [ ":driver_runtime_test" ]
+}
+
+fuchsia_unittest_package("driver_runtime_death_tests") {
+  deps = [ ":driver_runtime_death_test" ]
 }

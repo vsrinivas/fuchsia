@@ -303,72 +303,20 @@ TEST_F(ChannelTest, CloseSignalsPeerClosed) {
   sync_completion_wait(&read_completion, ZX_TIME_INFINITE);
 }
 
-// Tests that we get a read call back if we had registered a read wait,
-// and we close the channel.
-TEST_F(ChannelTest, UnsyncDispatcherCallbackOnClose) {
-  DispatcherDestructedObserver dispatcher_observer;
-  driver_runtime::Dispatcher* async_dispatcher;
-  ASSERT_EQ(ZX_OK, driver_runtime::Dispatcher::CreateWithLoop(
-                       FDF_DISPATCHER_OPTION_UNSYNCHRONIZED, "", 0, CreateFakeDriver(), &loop_,
-                       dispatcher_observer.fdf_observer(), &async_dispatcher));
-
-  sync_completion_t read_completion;
+// Tests closing the channel from the channel read callback is allowed.
+TEST_F(ChannelTest, CloseChannelInCallback) {
+  sync::Completion completion;
   auto channel_read = std::make_unique<fdf::ChannelRead>(
       remote_.get(), 0,
-      [&read_completion](fdf_dispatcher_t* dispatcher, fdf::ChannelRead* channel_read,
-                         fdf_status_t status) {
-        ASSERT_EQ(status, ZX_ERR_CANCELED);
-        sync_completion_signal(&read_completion);
+      [&](fdf_dispatcher_t* dispatcher, fdf::ChannelRead* channel_read, fdf_status_t status) {
+        ASSERT_OK(status);
+        remote_.reset();
+        completion.Signal();
       });
-  ASSERT_OK(channel_read->Begin(static_cast<fdf_dispatcher_t*>(async_dispatcher)));
+  ASSERT_OK(channel_read->Begin(fdf_dispatcher_));
 
-  remote_.reset();
-
-  sync_completion_wait(&read_completion, ZX_TIME_INFINITE);
-
-  async_dispatcher->Destroy();
-  ASSERT_OK(dispatcher_observer.WaitUntilDestructed());
-}
-
-TEST_F(ChannelTest, CancelSynchronousDispatcherCallbackOnClose) {
-  loop_.Quit();
-  loop_.JoinThreads();
-  loop_.ResetQuit();
-
-  const void* driver = CreateFakeDriver();
-  DispatcherDestructedObserver dispatcher_observer;
-  driver_runtime::Dispatcher* sync_dispatcher;
-  ASSERT_EQ(ZX_OK,
-            driver_runtime::Dispatcher::CreateWithLoop(
-                0, "", 0, driver, &loop_, dispatcher_observer.fdf_observer(), &sync_dispatcher));
-
-  ASSERT_EQ(ZX_OK, fdf_channel_write(local_.get(), 0, arena_.get(), nullptr, 0, nullptr, 0));
-
-  // Make the read reentrant so that the callback will be queued on the async loop.
-  driver_context::PushDriver(driver);
-  auto pop_driver = fit::defer([]() { driver_context::PopDriver(); });
-
-  // Use the C API for this test, since we want to check Close() cancels the read,
-  // and the C++ ChannelRead destructor would assert that the read had already been cancelled.
-  fdf_channel_read_t channel_read;
-  channel_read.handler = [](fdf_dispatcher_t* dispatcher, fdf_channel_read_t* read,
-                            fdf_status_t status) {};
-  channel_read.channel = remote_.get();
-  // Since there is a pending message, this should queue a callback on the dispatcher.
-  ASSERT_OK(
-      fdf_channel_wait_async(static_cast<fdf_dispatcher*>(sync_dispatcher), &channel_read, 0));
-
-  ASSERT_EQ(sync_dispatcher->callback_queue_size_slow(), 1);
-
-  // Close the channel to trigger the cancellation.
-  remote_.reset();
-
-  ASSERT_EQ(sync_dispatcher->callback_queue_size_slow(), 0);
-
-  loop_.StartThread();
-
-  sync_dispatcher->Destroy();
-  ASSERT_OK(dispatcher_observer.WaitUntilDestructed());
+  ASSERT_EQ(ZX_OK, local_.Write(0, arena_, nullptr, 0, cpp20::span<zx_handle_t>()).status_value());
+  ASSERT_OK(completion.Wait(zx::time::infinite()));
 }
 
 // Tests cancelling a channel read that has not yet been queued with the synchronized dispatcher.

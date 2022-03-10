@@ -409,6 +409,8 @@ void Channel::Close() __TA_NO_THREAD_SAFETY_ANALYSIS {
   {
     fbl::AutoLock lock(get_lock());
 
+    ZX_ASSERT(!IsWaitAsyncRegisteredLocked());
+
     peer = std::move(peer_);
     if (peer) {
       peer->peer_.reset();
@@ -421,7 +423,6 @@ void Channel::Close() __TA_NO_THREAD_SAFETY_ANALYSIS {
       waiter->CancelLocked(ZX_ERR_PEER_CLOSED);
     }
   }
-  CancelWait();
   if (peer) {
     peer->OnPeerClosed();
   }

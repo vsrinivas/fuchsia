@@ -56,6 +56,10 @@ class Channel {
     return *this;
   }
 
+  // If there is a pending callback registered via |ChannelRead::Begin|,
+  // it must be cancelled before this is called. For unsynchronized dispatchers,
+  // cancellation is not considered complete until the callback is invoked.
+  // This is safe to call from any thread.
   ~Channel() { close(); }
 
   // Attempts to write a message to the channel.
