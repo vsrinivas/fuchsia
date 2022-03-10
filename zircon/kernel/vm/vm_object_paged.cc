@@ -659,11 +659,21 @@ zx_status_t VmObjectPaged::CommitRangeInternal(uint64_t offset, uint64_t len, bo
   // change if the operation is being executed against a child slice.
   DEBUG_ASSERT(!is_resizable() || !is_slice());
 
-  // Round offset and len to be page aligned.
-  const uint64_t end = ROUNDUP_PAGE_SIZE(offset + len);
-  DEBUG_ASSERT(end >= offset);
-  offset = ROUNDDOWN(offset, PAGE_SIZE);
-  len = end - offset;
+  // Round offset and len to be page aligned. Use a sub-scope to validate that temporary end
+  // calculations cannot be accidentally used later on.
+  {
+    uint64_t end;
+    if (add_overflow(offset, len, &end)) {
+      return ZX_ERR_OUT_OF_RANGE;
+    }
+    const uint64_t end_page = ROUNDUP_PAGE_SIZE(end);
+    if (end_page < end) {
+      return ZX_ERR_OUT_OF_RANGE;
+    }
+    DEBUG_ASSERT(end_page >= offset);
+    offset = ROUNDDOWN(offset, PAGE_SIZE);
+    len = end_page - offset;
+  }
 
   // If a pin is requested the entire range must exist and be valid,
   // otherwise we can commit a partial range.

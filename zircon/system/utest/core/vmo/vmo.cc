@@ -1113,6 +1113,11 @@ TEST(VmoTestCase, Commit) {
   status = zx_vmar_unmap(zx_vmar_root_self(), ptr3, size);
   EXPECT_OK(status, "vm_unmap");
 
+  // commit invalid ranges that overflow.
+  EXPECT_EQ(ZX_ERR_OUT_OF_RANGE,
+            zx_vmo_op_range(vmo, ZX_VMO_OP_COMMIT, zx_system_get_page_size(),
+                            UINT64_MAX - zx_system_get_page_size() + 1, nullptr, 0));
+
   // close the handle
   status = zx_handle_close(vmo);
   EXPECT_OK(status, "handle_close");
