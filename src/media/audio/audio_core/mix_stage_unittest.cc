@@ -765,6 +765,47 @@ TEST_F(MixStageTest, CachedUntilFullyConsumed) {
   }
 }
 
+TEST_F(MixStageTest, FirstPacketOffsetLargerThanBlockSize) {
+  // Create a packet queue to use as our source stream.
+  auto stream = std::make_shared<PacketQueue>(
+      kDefaultFormat, timeline_function_,
+      context().clock_factory()->CreateClientFixed(clock::CloneOfMonotonic()));
+
+  // Enqueue 10ms of frames in the packet queue starting just after the first block.
+  testing::PacketFactory packet_factory(dispatcher(), kDefaultFormat, zx_system_get_page_size());
+  packet_factory.SeekToFrame(Fixed(kBlockSizeFrames + 1));
+  stream->PushPacket(packet_factory.CreatePacket(1.0, zx::msec(10), [] {}));
+
+  // packet_factory must outlive mix_stage_.
+  mix_stage_ = std::make_shared<MixStage>(kDefaultFormat, kBlockSizeFrames, timeline_function_,
+                                          *device_clock_);
+  auto mixer = mix_stage_->AddInput(stream, std::nullopt, Mixer::Resampler::SampleAndHold);
+
+  // Request the first four blocks. What should happen:
+  //
+  // 1. MixStage requests first block from the packet queue, plus 1 extra frame for the point
+  //    sampler's filter width. No packet covers this range, so the packet queue returns nullopt.
+  //    Since the MixStage has no source data to mix, it also returns nullopt.
+  //
+  // 2. MixStage requests the second block from the packet queue, plus 1 extra frame. The packet
+  //    starts 1 frame into the second block, so this should return 1 frame of silence followed
+  //    by the first kBlockSizeFrames-1 frames of the packet.
+  //
+  {
+    auto buf = mix_stage_->ReadLock(rlctx, Fixed(0), 4 * kBlockSizeFrames);
+    ASSERT_TRUE(buf);
+    EXPECT_EQ(buf->start().Floor(), kBlockSizeFrames);
+    EXPECT_EQ(buf->length(), kBlockSizeFrames);
+    EXPECT_EQ(static_cast<float*>(buf->payload())[0], 0.0);
+    EXPECT_EQ(static_cast<float*>(buf->payload())[kDefaultNumChannels], 1.0);
+    EXPECT_EQ(static_cast<float*>(buf->payload())[kBlockSizeFrames - 1], 1.0);
+  }
+
+  // Trim away the packet so its callback runs before we tear down the PacketFactory.
+  mix_stage_->Trim(Fixed(4 * kBlockSizeFrames));
+  RunLoopUntilIdle();
+}
+
 // Double-check the reset of rate-adjustment coefficients upon first ReadLock call, and validate
 // that source_pos_modulo is not being double-incremented.
 TEST_F(MixStageTest, PositionResetAndAdvance) {
