@@ -1626,7 +1626,7 @@ mod tests {
                         },
                         {
                             "event": "stopped",
-                            "mode": "sync",
+                            "mode": "async",
                         },
                         {
                             "event": "launched",
@@ -1977,7 +1977,6 @@ mod tests {
                             },
                             {
                                 "event": "destroyed",
-                                "mode": "sync",
                             }
                         ],
                     },

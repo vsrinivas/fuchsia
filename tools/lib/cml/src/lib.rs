@@ -721,8 +721,6 @@ pub enum RegistrationRef {
 pub enum EventMode {
     /// Async events are allowed.
     Async,
-    /// Sync events are allowed.
-    Sync,
 }
 
 #[derive(Deserialize, Debug, PartialEq, Clone)]

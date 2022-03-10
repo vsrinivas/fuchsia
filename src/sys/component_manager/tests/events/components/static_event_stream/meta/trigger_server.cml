@@ -34,7 +34,7 @@
                 "started",
             ],
             from: "framework",
-            modes: [ "sync" ],
+            modes: [ "async" ],
         },
         {
             event: [ "capability_requested" ],
@@ -65,7 +65,7 @@
             subscriptions: [
                 {
                     event: "resolved",
-                    mode: "sync",
+                    mode: "async",
                 },
             ],
         },

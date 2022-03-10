@@ -287,16 +287,7 @@ fn translate_use(
                     source: Some(clone_ref(&source)?),
                     source_name: Some(source_name.into()),
                     target_name: Some(target_name.into()),
-                    mode: match use_.event_modes() {
-                        Some(modes) => {
-                            if modes.0.contains(&EventMode::Sync) {
-                                Some(fdecl::EventMode::Sync)
-                            } else {
-                                Some(fdecl::EventMode::Async)
-                            }
-                        }
-                        None => Some(fdecl::EventMode::Async),
-                    },
+                    mode: Some(fdecl::EventMode::Async),
                     // We have already validated that none will be present if we were using many
                     // events.
                     filter: match use_.filter.clone() {
@@ -320,10 +311,7 @@ fn translate_use(
                             let mode = subscription.mode.as_ref();
                             subscription.event.iter().map(move |event| fdecl::EventSubscription {
                                 event_name: Some(event.to_string()),
-                                mode: Some(match mode {
-                                    Some(EventMode::Sync) => fdecl::EventMode::Sync,
-                                    _ => fdecl::EventMode::Async,
-                                }),
+                                mode: Some(fdecl::EventMode::Async),
                                 ..fdecl::EventSubscription::EMPTY
                             })
                         })
@@ -629,16 +617,7 @@ fn translate_offer(
                         Some(dict) => Some(dictionary_from_map(dict)?),
                         None => None,
                     },
-                    mode: match offer.event_modes() {
-                        Some(modes) => {
-                            if modes.0.contains(&EventMode::Sync) {
-                                Some(fdecl::EventMode::Sync)
-                            } else {
-                                Some(fdecl::EventMode::Async)
-                            }
-                        }
-                        None => Some(fdecl::EventMode::Async),
-                    },
+                    mode: Some(fdecl::EventMode::Async),
                     ..fdecl::OfferEvent::EMPTY
                 }));
             }
@@ -1701,7 +1680,7 @@ mod tests {
                             },
                             {
                                 "event": [ "destroyed" ],
-                                "mode": "sync"
+                                "mode": "async"
                             }
                         ]
                     },
@@ -1886,7 +1865,7 @@ mod tests {
                             },
                             fdecl::EventSubscription {
                                 event_name: Some("destroyed".to_string()),
-                                mode: Some(fdecl::EventMode::Sync),
+                                mode: Some(fdecl::EventMode::Async),
                                 ..fdecl::EventSubscription::EMPTY
                             },
                         ]),
