@@ -240,7 +240,8 @@ pub fn generate_from_manifest<W: io::Write>(
     let mut build_graph = GnBuildGraph::new(&metadata);
     match metadata.resolve.as_ref() {
         Some(resolve) => {
-            let top_level_id = resolve.root.as_ref().unwrap();
+            let top_level_id =
+                resolve.root.as_ref().expect("the Cargo.toml file must define a package");
             if skip_root {
                 let top_level_node = resolve
                     .nodes
