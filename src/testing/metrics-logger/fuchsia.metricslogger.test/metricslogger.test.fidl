@@ -19,6 +19,10 @@ type MetricsLoggerError = strict enum : uint32 {
     ALREADY_LOGGING = 3;
     /// Indicates that the logging request contains duplicated metric type.
     DUPLICATED_METRIC = 4;
+    /// Indicates that the total number of active clients has reached the
+    /// allowed maxium (defined by `MAX_CONCURRENT_CLIENTS = 20` in
+    /// the MetricsLogger to keep memory use bounded).
+    TOO_MANY_ACTIVE_CLIENTS = 5;
 };
 
 /// Metric type requested in MetricsLogger methods.

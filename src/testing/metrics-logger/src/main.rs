@@ -14,16 +14,22 @@ use {
     fuchsia_syslog::{fx_log_err, fx_log_info},
     fuchsia_zircon as zx,
     futures::{
+        future::join_all,
         stream::{FuturesUnordered, StreamExt, TryStreamExt},
-        TryFutureExt,
+        task::Context,
+        FutureExt, TryFutureExt,
     },
     serde_derive::Deserialize,
     serde_json as json,
     std::{
-        cell::RefCell, collections::HashMap, collections::HashSet, iter::FromIterator, rc::Rc,
-        task::Poll,
+        cell::RefCell, collections::HashMap, collections::HashSet, iter::FromIterator, pin::Pin,
+        rc::Rc,
     },
 };
+
+// Max number of clients that can log concurrently. This limit is chosen mostly arbitrarily to allow
+// a fixed number clients to keep memory use bounded.
+const MAX_CONCURRENT_CLIENTS: usize = 20;
 
 const CONFIG_PATH: &'static str = "/config/data/config.json";
 
@@ -197,11 +203,9 @@ impl<'a> ServerBuilder<'a> {
         // Optionally use the default inspect root node
         let inspect_root = self.inspect_root.unwrap_or(inspect::component::inspector().root());
 
-        let driver_names = drivers.iter().map(|c| c.name().to_string()).collect();
-
         Ok(MetricsLoggerServer::new(
             Rc::new(drivers),
-            Rc::new(InspectData::new(inspect_root, driver_names)),
+            inspect_root.create_child("MetricsLogger"),
             Rc::new(cpu_stats_proxy),
         ))
     }
@@ -220,7 +224,7 @@ struct TemperatureLogger {
     /// Time at which the logger will stop.
     end_time: fasync::Time,
 
-    inspect: Rc<InspectData>,
+    inspect: InspectData,
 }
 
 impl TemperatureLogger {
@@ -228,33 +232,31 @@ impl TemperatureLogger {
         drivers: Rc<Vec<TemperatureDriver>>,
         interval: zx::Duration,
         duration: Option<zx::Duration>,
-        inspect: Rc<InspectData>,
+        inspect: InspectData,
     ) -> Self {
         let start_time = fasync::Time::now();
         let end_time = duration.map_or(fasync::Time::INFINITE, |d| start_time + d);
         TemperatureLogger { drivers, interval, start_time, end_time, inspect }
     }
 
-    /// Constructs a Task that will log temperatures from all provided sensors.
-    fn spawn_logging_task(self) -> fasync::Task<()> {
+    /// Logs temperatures from all provided sensors.
+    async fn log_temperatures(self) {
         let mut interval = fasync::Interval::new(self.interval);
 
-        fasync::Task::local(async move {
-            while let Some(()) = interval.next().await {
-                // If we're interested in very high-rate polling in the future, it might be worth
-                // comparing the elapsed time to the intended polling interval and logging any
-                // anomalies.
-                let now = fasync::Time::now();
-                if now >= self.end_time {
-                    break;
-                }
-                self.log_temperatures(now - self.start_time).await;
+        while let Some(()) = interval.next().await {
+            // If we're interested in very high-rate polling in the future, it might be worth
+            // comparing the elapsed time to the intended polling interval and logging any
+            // anomalies.
+            let now = fasync::Time::now();
+            if now >= self.end_time {
+                break;
             }
-        })
+            self.log_temperature(now - self.start_time).await;
+        }
     }
 
     /// Polls temperature sensors and logs the resulting data to Inspect and trace.
-    async fn log_temperatures(&self, elapsed: zx::Duration) {
+    async fn log_temperature(&self, elapsed: zx::Duration) {
         // Execute a query to each temperature sensor driver.
         let queries = FuturesUnordered::new();
         for (index, driver) in self.drivers.iter().enumerate() {
@@ -326,18 +328,16 @@ impl CpuLoadLogger {
         CpuLoadLogger { interval, end_time, last_sample: None, stats_proxy }
     }
 
-    fn spawn_logging_task(mut self) -> fasync::Task<()> {
+    async fn log_cpu_usages(mut self) {
         let mut interval = fasync::Interval::new(self.interval);
 
-        fasync::Task::local(async move {
-            while let Some(()) = interval.next().await {
-                let now = fasync::Time::now();
-                if now >= self.end_time {
-                    break;
-                }
-                self.log_cpu_usage(now).await;
+        while let Some(()) = interval.next().await {
+            let now = fasync::Time::now();
+            if now >= self.end_time {
+                break;
             }
-        })
+            self.log_cpu_usage(now).await;
+        }
     }
 
     async fn log_cpu_usage(&mut self, now: fasync::Time) {
@@ -377,31 +377,28 @@ struct MetricsLoggerServer {
     /// List of temperature sensor drivers for polling temperatures.
     temperature_drivers: Rc<Vec<TemperatureDriver>>,
 
-    /// Task that asynchronously executes the polling and logging of temperature.
-    temperature_logging_task: RefCell<Option<fasync::Task<()>>>,
-
-    // Inspect node for logging temperature data.
-    temperature_inspect: Rc<InspectData>,
-
-    /// Task that asynchronously executes the polling and logging of cpu stats.
-    cpu_logging_task: RefCell<Option<fasync::Task<()>>>,
+    /// Root node for MetricsLogger
+    inspect_root: inspect::Node,
 
     /// Proxy for polling CPU stats.
     cpu_stats_proxy: Rc<fkernel::StatsProxy>,
+
+    /// Map that stores the logging task for all clients. Once a logging request is received
+    /// with a new client_id, a task is lazily inserted into the map using client_id as the key.
+    client_tasks: RefCell<HashMap<String, fasync::Task<()>>>,
 }
 
 impl MetricsLoggerServer {
     fn new(
         temperature_drivers: Rc<Vec<TemperatureDriver>>,
-        temperature_inspect: Rc<InspectData>,
+        inspect_root: inspect::Node,
         cpu_stats_proxy: Rc<fkernel::StatsProxy>,
     ) -> Rc<Self> {
         Rc::new(Self {
             temperature_drivers,
-            temperature_inspect,
+            inspect_root,
             cpu_stats_proxy,
-            temperature_logging_task: RefCell::new(None),
-            cpu_logging_task: RefCell::new(None),
+            client_tasks: RefCell::new(HashMap::new()),
         })
     }
 
@@ -412,7 +409,7 @@ impl MetricsLoggerServer {
         fasync::Task::local(
             async move {
                 while let Some(request) = stream.try_next().await? {
-                    self.handle_metrics_logger_request(request).await?;
+                    self.clone().handle_metrics_logger_request(request).await?;
                 }
                 Ok(())
             }
@@ -420,13 +417,41 @@ impl MetricsLoggerServer {
         )
     }
 
+    async fn handle_metrics_logger_request(
+        self: &Rc<Self>,
+        request: MetricsLoggerRequest,
+    ) -> Result<()> {
+        self.purge_completed_tasks();
+
+        match request {
+            MetricsLoggerRequest::StartLogging { client_id, metrics, duration_ms, responder } => {
+                let mut result = self.start_logging(&client_id, metrics, Some(duration_ms)).await;
+                responder.send(&mut result)?;
+            }
+            MetricsLoggerRequest::StartLoggingForever { client_id, metrics, responder } => {
+                let mut result = self.start_logging(&client_id, metrics, None).await;
+                responder.send(&mut result)?;
+            }
+            MetricsLoggerRequest::StopLogging { client_id, responder } => {
+                responder.send(self.client_tasks.borrow_mut().remove(&client_id).is_some())?;
+            }
+        }
+
+        Ok(())
+    }
+
     async fn start_logging(
         &self,
+        client_id: &str,
         metrics: Vec<fmetrics::Metric>,
         duration_ms: Option<u32>,
     ) -> fmetrics::MetricsLoggerStartLoggingResult {
-        if self.already_logging().await {
+        if self.client_tasks.borrow_mut().contains_key(client_id) {
             return Err(fmetrics::MetricsLoggerError::AlreadyLogging);
+        }
+
+        if self.client_tasks.borrow().len() >= MAX_CONCURRENT_CLIENTS {
+            return Err(fmetrics::MetricsLoggerError::TooManyActiveClients);
         }
 
         let incoming_metric_types: HashSet<_> =
@@ -435,142 +460,101 @@ impl MetricsLoggerServer {
             return Err(fmetrics::MetricsLoggerError::DuplicatedMetric);
         }
 
-        for metric in metrics {
+        for metric in metrics.iter() {
             match metric {
                 fmetrics::Metric::CpuLoad(fmetrics::CpuLoad { interval_ms }) => {
-                    self.start_logging_cpu_usage(interval_ms, duration_ms).await?
+                    if *interval_ms == 0 || duration_ms.map_or(false, |d| d <= *interval_ms) {
+                        return Err(fmetrics::MetricsLoggerError::InvalidArgument);
+                    }
                 }
                 fmetrics::Metric::Temperature(fmetrics::Temperature { interval_ms }) => {
-                    self.start_logging_temperature(interval_ms, duration_ms).await?
-                }
-            }
-        }
-        Ok(())
-    }
-
-    async fn start_logging_temperature(
-        &self,
-        interval_ms: u32,
-        duration_ms: Option<u32>,
-    ) -> fmetrics::MetricsLoggerStartLoggingResult {
-        if self.temperature_drivers.len() == 0 {
-            return Err(fmetrics::MetricsLoggerError::NoDrivers);
-        }
-
-        if interval_ms == 0 || duration_ms.map_or(false, |d| d <= interval_ms) {
-            return Err(fmetrics::MetricsLoggerError::InvalidArgument);
-        }
-
-        let temperature_logger = TemperatureLogger::new(
-            self.temperature_drivers.clone(),
-            zx::Duration::from_millis(interval_ms as i64),
-            duration_ms.map(|ms| zx::Duration::from_millis(ms as i64)),
-            self.temperature_inspect.clone(),
-        );
-        self.temperature_logging_task.borrow_mut().replace(temperature_logger.spawn_logging_task());
-
-        Ok(())
-    }
-
-    async fn start_logging_cpu_usage(
-        &self,
-        interval_ms: u32,
-        duration_ms: Option<u32>,
-    ) -> fmetrics::MetricsLoggerStartLoggingResult {
-        if interval_ms == 0 || duration_ms.map_or(false, |d| d <= interval_ms) {
-            return Err(fmetrics::MetricsLoggerError::InvalidArgument);
-        }
-
-        let cpu_logger = CpuLoadLogger::new(
-            zx::Duration::from_millis(interval_ms as i64),
-            duration_ms.map(|ms| zx::Duration::from_millis(ms as i64)),
-            self.cpu_stats_proxy.clone(),
-        );
-        self.cpu_logging_task.borrow_mut().replace(cpu_logger.spawn_logging_task());
-
-        Ok(())
-    }
-
-    async fn already_logging(&self) -> bool {
-        // If any task exists and is Pending then logging is already active.
-        if let Some(task) = self.temperature_logging_task.borrow_mut().as_mut() {
-            if let Poll::Pending = futures::poll!(task) {
-                return true;
-            }
-        }
-        if let Some(task) = self.cpu_logging_task.borrow_mut().as_mut() {
-            if let Poll::Pending = futures::poll!(task) {
-                return true;
-            }
-        }
-        false
-    }
-
-    fn stop_logging(&self) {
-        *self.cpu_logging_task.borrow_mut() = None;
-        *self.temperature_logging_task.borrow_mut() = None;
-    }
-
-    async fn handle_metrics_logger_request(
-        self: &Rc<Self>,
-        request: MetricsLoggerRequest,
-    ) -> Result<()> {
-        // TODO (fxbug.dev/92142): Use client_id to support concurrent clients.
-        match request {
-            MetricsLoggerRequest::StartLogging {
-                client_id: _,
-                metrics,
-                duration_ms,
-                responder,
-            } => {
-                let mut result = self.start_logging(metrics, Some(duration_ms)).await;
-                // If the current request contains an error, clear all tasks and respond.
-                // If Logger is already active, directly respond.
-                if let Err(e) = result {
-                    if e != fmetrics::MetricsLoggerError::AlreadyLogging {
-                        self.stop_logging();
+                    if self.temperature_drivers.len() == 0 {
+                        return Err(fmetrics::MetricsLoggerError::NoDrivers);
+                    }
+                    if *interval_ms == 0 || duration_ms.map_or(false, |d| d <= *interval_ms) {
+                        return Err(fmetrics::MetricsLoggerError::InvalidArgument);
                     }
                 }
-                responder.send(&mut result)?;
-            }
-            MetricsLoggerRequest::StartLoggingForever { client_id: _, metrics, responder } => {
-                let mut result = self.start_logging(metrics, None).await;
-                // If the current request contains an error, clear all tasks and respond.
-                // If Logger is already active, directly respond.
-                if let Err(e) = result {
-                    if e != fmetrics::MetricsLoggerError::AlreadyLogging {
-                        self.stop_logging();
-                    }
-                }
-                responder.send(&mut result)?;
-            }
-            MetricsLoggerRequest::StopLogging { client_id: _, responder } => {
-                let already_logging = self.already_logging().await;
-                self.stop_logging();
-                responder.send(already_logging)?;
             }
         }
 
+        self.client_tasks.borrow_mut().insert(
+            client_id.to_string(),
+            self.spawn_client_tasks(client_id, metrics, duration_ms),
+        );
+
         Ok(())
+    }
+
+    fn purge_completed_tasks(&self) {
+        self.client_tasks.borrow_mut().retain(|_n, task| {
+            task.poll_unpin(&mut Context::from_waker(fasync::futures::task::noop_waker_ref()))
+                .is_pending()
+        });
+    }
+
+    fn spawn_client_tasks(
+        &self,
+        client_id: &str,
+        metrics: Vec<fmetrics::Metric>,
+        duration_ms: Option<u32>,
+    ) -> fasync::Task<()> {
+        let cpu_stats_proxy = self.cpu_stats_proxy.clone();
+        let temperature_drivers = self.temperature_drivers.clone();
+        let client_inspect = self.inspect_root.create_child(client_id);
+
+        fasync::Task::local(async move {
+            let mut futures: Vec<Box<dyn futures::Future<Output = ()>>> = Vec::new();
+
+            for metric in metrics {
+                match metric {
+                    fmetrics::Metric::CpuLoad(fmetrics::CpuLoad { interval_ms }) => {
+                        let cpu_load_logger = CpuLoadLogger::new(
+                            zx::Duration::from_millis(interval_ms as i64),
+                            duration_ms.map(|ms| zx::Duration::from_millis(ms as i64)),
+                            cpu_stats_proxy.clone(),
+                        );
+                        futures.push(Box::new(cpu_load_logger.log_cpu_usages()));
+                    }
+                    fmetrics::Metric::Temperature(fmetrics::Temperature { interval_ms }) => {
+                        let temperature_driver_names: Vec<String> =
+                            temperature_drivers.iter().map(|c| c.name().to_string()).collect();
+
+                        let temperature_logger = TemperatureLogger::new(
+                            temperature_drivers.clone(),
+                            zx::Duration::from_millis(interval_ms as i64),
+                            duration_ms.map(|ms| zx::Duration::from_millis(ms as i64)),
+                            InspectData::new(
+                                &client_inspect,
+                                "TemperatureLogger",
+                                temperature_driver_names,
+                            ),
+                        );
+                        futures.push(Box::new(temperature_logger.log_temperatures()));
+                    }
+                }
+            }
+            join_all(futures.into_iter().map(|f| Pin::from(f))).await;
+        })
     }
 }
 
-// TODO (fxbug.dev/92320): Populate CPU Usage and active client info into Inspect.
+// TODO (fxbug.dev/92320): Populate CPU Usageinfo into Inspect.
 struct InspectData {
     temperatures: Vec<inspect::DoubleProperty>,
     elapsed_millis: inspect::IntProperty,
+    _inspect_node: inspect::Node,
 }
 
 impl InspectData {
-    fn new(parent: &inspect::Node, sensor_names: Vec<String>) -> Self {
-        let root = parent.create_child("TemperatureLogger");
+    fn new(parent: &inspect::Node, logger_name: &str, sensor_names: Vec<String>) -> Self {
+        let root = parent.create_child(logger_name);
         let temperatures = sensor_names
             .into_iter()
             .map(|name| root.create_double(name + " (°C)", f64::MIN))
             .collect();
         let elapsed_millis = root.create_int("elapsed time (ms)", std::i64::MIN);
-        parent.record(root);
-        Self { temperatures, elapsed_millis: elapsed_millis }
+        Self { temperatures, elapsed_millis, _inspect_node: root }
     }
 
     fn log_temperature(&self, index: usize, value: f32, elapsed_millis: i64) {
@@ -626,7 +610,7 @@ mod tests {
         super::*,
         fidl_fuchsia_kernel::{CpuStats, PerCpuStats},
         fmetrics::{CpuLoad, Metric, Temperature},
-        futures::{FutureExt, TryStreamExt},
+        futures::{task::Poll, FutureExt, TryStreamExt},
         inspect::assert_data_tree,
         matches::assert_matches,
         std::cell::{Cell, RefCell},
@@ -651,7 +635,7 @@ mod tests {
         (proxy, task)
     }
 
-    fn setup_fake_driver<'a>(
+    fn setup_fake_driver(
         mut get_temperature: impl FnMut() -> f32 + 'static,
     ) -> (ftemperature::DeviceProxy, fasync::Task<()>) {
         let (proxy, mut stream) =
@@ -775,16 +759,134 @@ mod tests {
     }
 
     #[test]
+    fn test_spawn_client_tasks() {
+        let mut runner = Runner::new();
+
+        // Check the root Inspect node for MetricsLogger is created.
+        assert_data_tree!(
+            runner.inspector,
+            root: {
+                MetricsLogger: {
+                }
+            }
+        );
+
+        // Create a logging request.
+        let mut query = runner.proxy.start_logging(
+            "test",
+            &mut vec![
+                &mut Metric::CpuLoad(CpuLoad { interval_ms: 100 }),
+                &mut Metric::Temperature(Temperature { interval_ms: 100 }),
+            ]
+            .into_iter(),
+            1000,
+        );
+
+        assert_matches!(runner.executor.run_until_stalled(&mut query), Poll::Ready(Ok(Ok(()))));
+
+        // Check client Inspect node is added.
+        assert_data_tree!(
+            runner.inspector,
+            root: {
+                MetricsLogger: {
+                    test: {}
+                }
+            }
+        );
+
+        // Run  `server_task`  until stalled to create futures for logging
+        // temperatures and CpuLoads.
+        assert_matches!(runner.executor.run_until_stalled(&mut runner.server_task), Poll::Pending);
+
+        // Check the Inspect node for TemperatureLogger is created.
+        assert_data_tree!(
+            runner.inspector,
+            root: {
+                MetricsLogger: {
+                    test: {
+                        TemperatureLogger: {
+                            "cpu (°C)": f64::MIN,
+                            "/dev/fake/gpu_temperature (°C)": f64::MIN,
+                            "elapsed time (ms)": std::i64::MIN
+                        }
+                    }
+                }
+            }
+        );
+
+        runner.cpu_temperature.set(35.0 as f32);
+        runner.gpu_temperature.set(45.0 as f32);
+
+        // Run the initial logging tasks.
+        for _ in 0..2 {
+            assert_eq!(runner.iterate_logging_task(), true);
+        }
+
+        // Check data is logged to TemperatureLogger Inspect node.
+        assert_data_tree!(
+            runner.inspector,
+            root: {
+                MetricsLogger: {
+                    test: {
+                        TemperatureLogger: {
+                            "cpu (°C)": 35.0,
+                            "/dev/fake/gpu_temperature (°C)": 45.0,
+                            "elapsed time (ms)": 100i64
+                        }
+                    }
+                }
+            }
+        );
+
+        // Run the remaining logging tasks (8 CpuLoad tasks + 8 Temperature tasks).
+        for _ in 0..16 {
+            assert_eq!(runner.iterate_logging_task(), true);
+        }
+
+        // Check data is logged to TemperatureLogger Inspect node.
+        assert_data_tree!(
+            runner.inspector,
+            root: {
+                MetricsLogger: {
+                    test: {
+                        TemperatureLogger: {
+                            "cpu (°C)": 35.0,
+                            "/dev/fake/gpu_temperature (°C)": 45.0,
+                            "elapsed time (ms)": 900i64
+                        }
+                    }
+                }
+            }
+        );
+
+        // Run the last 2 tasks which hits `now >= self.end_time` and ends the logging.
+        for _ in 0..2 {
+            assert_eq!(runner.iterate_logging_task(), true);
+        }
+
+        // Check Inspect node for the client is removed.
+        assert_data_tree!(
+            runner.inspector,
+            root: {
+                MetricsLogger: {
+                }
+            }
+        );
+
+        assert_eq!(runner.iterate_logging_task(), false);
+    }
+
+    #[test]
     fn test_logging_duration() {
         let mut runner = Runner::new();
 
         // Start logging every 100ms for a total of 2000ms.
-        let mut query = runner.proxy.start_logging(
+        let _query = runner.proxy.start_logging(
             "test",
             &mut vec![&mut Metric::CpuLoad(CpuLoad { interval_ms: 100 })].into_iter(),
             2000,
         );
-        assert_matches!(runner.executor.run_until_stalled(&mut query), Poll::Ready(Ok(Ok(()))));
+        assert_matches!(runner.executor.run_until_stalled(&mut runner.server_task), Poll::Pending);
 
         // Ensure that we get exactly 20 samples.
         for _ in 0..20 {
@@ -807,6 +909,14 @@ mod tests {
         assert_matches!(
             runner.executor.run_until_stalled(&mut query),
             Poll::Ready(Ok(Err(fmetrics::MetricsLoggerError::InvalidArgument)))
+        );
+
+        // Check client node is not added in Inspect.
+        assert_data_tree!(
+            runner.inspector,
+            root: {
+                MetricsLogger: {}
+            }
         );
     }
 
@@ -836,11 +946,11 @@ mod tests {
         let mut runner = Runner::new();
 
         // Start logging every 100ms with no predetermined end time.
-        let mut query = runner.proxy.start_logging_forever(
+        let _query = runner.proxy.start_logging_forever(
             "test",
             &mut vec![&mut Metric::CpuLoad(CpuLoad { interval_ms: 100 })].into_iter(),
         );
-        assert_matches!(runner.executor.run_until_stalled(&mut query), Poll::Ready(Ok(Ok(()))));
+        assert_matches!(runner.executor.run_until_stalled(&mut runner.server_task), Poll::Pending);
 
         // Samples should continue forever. Obviously we can't check infinitely many samples, but
         // we can check that they don't stop for a relatively large number of iterations.
@@ -850,6 +960,9 @@ mod tests {
 
         let mut query = runner.proxy.stop_logging("test");
         assert_matches!(runner.executor.run_until_stalled(&mut query), Poll::Ready(Ok(true)));
+
+        // Check that we can start another request for the same client_id after
+        // `stop_logging` is called.
         let mut query = runner.proxy.start_logging_forever(
             "test",
             &mut vec![&mut Metric::CpuLoad(CpuLoad { interval_ms: 100 })].into_iter(),
@@ -861,7 +974,7 @@ mod tests {
     fn test_concurrent_logging() {
         let mut runner = Runner::new();
 
-        let mut query = runner.proxy.start_logging(
+        let _query = runner.proxy.start_logging(
             "test",
             &mut vec![
                 &mut Metric::CpuLoad(CpuLoad { interval_ms: 100 }),
@@ -870,16 +983,20 @@ mod tests {
             .into_iter(),
             600,
         );
-        assert_matches!(runner.executor.run_until_stalled(&mut query), Poll::Ready(Ok(Ok(()))));
+        assert_matches!(runner.executor.run_until_stalled(&mut runner.server_task), Poll::Pending);
 
-        // Check default values before first temperature poll.
+        // Check logger added to client with default values before first temperature poll.
         assert_data_tree!(
             runner.inspector,
             root: {
-                TemperatureLogger: {
-                    "cpu (°C)": f64::MIN,
-                    "/dev/fake/gpu_temperature (°C)": f64::MIN,
-                    "elapsed time (ms)": std::i64::MIN
+                MetricsLogger: {
+                    test: {
+                        TemperatureLogger: {
+                            "cpu (°C)": f64::MIN,
+                            "/dev/fake/gpu_temperature (°C)": f64::MIN,
+                            "elapsed time (ms)": std::i64::MIN
+                        }
+                    }
                 }
             }
         );
@@ -887,24 +1004,270 @@ mod tests {
         runner.cpu_temperature.set(35.0 as f32);
         runner.gpu_temperature.set(45.0 as f32);
 
-        // Run existing logging tasks to completion (6 CPU Load tasks + 3 Temperature tasks).
+        // Run existing tasks to completion (6 CpuLoad tasks + 3 Temperature tasks).
         for _ in 0..9 {
             assert_eq!(runner.iterate_logging_task(), true);
         }
-        // Two tasks stop at the same time.
         assert_eq!(runner.iterate_logging_task(), false);
+
+        // Check temperature logger removed in Inspect.
+        assert_data_tree!(
+            runner.inspector,
+            root: {
+                MetricsLogger: {}
+            }
+        );
+    }
+
+    #[test]
+    fn test_stop_logging() {
+        let mut runner = Runner::new();
+
+        let _query = runner.proxy.start_logging_forever(
+            "test",
+            &mut vec![&mut Metric::Temperature(Temperature { interval_ms: 100 })].into_iter(),
+        );
+        assert_matches!(runner.executor.run_until_stalled(&mut runner.server_task), Poll::Pending);
+
+        // Check logger added to client with default values before first temperature poll.
+        assert_data_tree!(
+            runner.inspector,
+            root: {
+                MetricsLogger: {
+                    test: {
+                        TemperatureLogger: {
+                            "cpu (°C)": f64::MIN,
+                            "/dev/fake/gpu_temperature (°C)": f64::MIN,
+                            "elapsed time (ms)": std::i64::MIN
+                        }
+                    }
+                }
+            }
+        );
+
+        runner.cpu_temperature.set(35.0 as f32);
+        runner.gpu_temperature.set(45.0 as f32);
+
+        // Run a few logging tasks to populate Inspect node before we test `stop_logging`.
+        for _ in 0..10 {
+            assert_eq!(runner.iterate_logging_task(), true);
+        }
+
+        // Checked data populated to Inspect node.
+        assert_data_tree!(
+            runner.inspector,
+            root: {
+                MetricsLogger: {
+                    test: {
+                        TemperatureLogger: {
+                            "cpu (°C)": 35.0,
+                            "/dev/fake/gpu_temperature (°C)": 45.0,
+                            "elapsed time (ms)": 1_000i64,
+                        }
+                    }
+                }
+            }
+        );
+
+        let mut query = runner.proxy.stop_logging("test");
+        assert_matches!(runner.executor.run_until_stalled(&mut query), Poll::Ready(Ok(true)));
+        assert_matches!(runner.executor.run_until_stalled(&mut runner.server_task), Poll::Pending);
+
+        assert_eq!(runner.iterate_logging_task(), false);
+
+        // Check temperature logger removed in Inspect.
+        assert_data_tree!(
+            runner.inspector,
+            root: {
+                MetricsLogger: {}
+            }
+        );
+    }
+
+    #[test]
+    fn test_multi_clients() {
+        let mut runner = Runner::new();
+
+        // Create a request for logging CPU load and Temperature.
+        let _query1 = runner.proxy.start_logging(
+            "test1",
+            &mut vec![
+                &mut Metric::CpuLoad(CpuLoad { interval_ms: 300 }),
+                &mut Metric::Temperature(Temperature { interval_ms: 200 }),
+            ]
+            .into_iter(),
+            500,
+        );
+
+        // Create a request for logging Temperature.
+        let _query2 = runner.proxy.start_logging(
+            "test2",
+            &mut vec![&mut Metric::Temperature(Temperature { interval_ms: 200 })].into_iter(),
+            300,
+        );
+        assert_matches!(runner.executor.run_until_stalled(&mut runner.server_task), Poll::Pending);
+
+        // Check default values before first temperature poll.
+        assert_data_tree!(
+            runner.inspector,
+            root: {
+                MetricsLogger: {
+                    test1: {
+                        TemperatureLogger: {
+                            "cpu (°C)": f64::MIN,
+                            "/dev/fake/gpu_temperature (°C)": f64::MIN,
+                            "elapsed time (ms)": std::i64::MIN
+                        }
+                    },
+                    test2: {
+                        TemperatureLogger: {
+                            "cpu (°C)": f64::MIN,
+                            "/dev/fake/gpu_temperature (°C)": f64::MIN,
+                            "elapsed time (ms)": std::i64::MIN
+                        }
+                    }
+                }
+            }
+        );
+
+        runner.cpu_temperature.set(35.0 as f32);
+        runner.gpu_temperature.set(45.0 as f32);
+
+        // Run the first task which is the first logging task for client `test1`.
+        assert_eq!(runner.iterate_logging_task(), true);
 
         // Check temperature data in Inspect.
         assert_data_tree!(
             runner.inspector,
             root: {
-                TemperatureLogger: {
-                    "cpu (°C)": 35.0,
-                    "/dev/fake/gpu_temperature (°C)": 45.0,
-                    "elapsed time (ms)": 400i64
+                MetricsLogger: {
+                    test1: {
+                        TemperatureLogger: {
+                            "cpu (°C)": 35.0,
+                            "/dev/fake/gpu_temperature (°C)": 45.0,
+                            "elapsed time (ms)": 200i64
+                        }
+                    },
+                    test2: {
+                        TemperatureLogger: {
+                            "cpu (°C)": f64::MIN,
+                            "/dev/fake/gpu_temperature (°C)": f64::MIN,
+                            "elapsed time (ms)": std::i64::MIN
+                        }
+                    }
                 }
             }
         );
+
+        // Set new temperature data.
+        runner.cpu_temperature.set(36.0 as f32);
+        runner.gpu_temperature.set(46.0 as f32);
+
+        for _ in 0..2 {
+            assert_eq!(runner.iterate_logging_task(), true);
+        }
+
+        // Check `test1` data remaining the same, `test2` data updated.
+        assert_data_tree!(
+            runner.inspector,
+            root: {
+                MetricsLogger: {
+                    test1: {
+                        TemperatureLogger: {
+                            "cpu (°C)": 35.0,
+                            "/dev/fake/gpu_temperature (°C)": 45.0,
+                            "elapsed time (ms)": 200i64
+                        }
+                    },
+                    test2: {
+                        TemperatureLogger: {
+                            "cpu (°C)": 36.0,
+                            "/dev/fake/gpu_temperature (°C)": 46.0,
+                            "elapsed time (ms)": 200i64
+                        }
+                    }
+                }
+            }
+        );
+
+        assert_eq!(runner.iterate_logging_task(), true);
+
+        // Check `test1` data updated, `test2` data remaining the same.
+        assert_data_tree!(
+            runner.inspector,
+            root: {
+                MetricsLogger: {
+                    test1: {
+                        TemperatureLogger: {
+                            "cpu (°C)": 36.0,
+                            "/dev/fake/gpu_temperature (°C)": 46.0,
+                            "elapsed time (ms)": 400i64
+                        }
+                    },
+                    test2: {
+                        TemperatureLogger: {
+                            "cpu (°C)": 36.0,
+                            "/dev/fake/gpu_temperature (°C)": 46.0,
+                            "elapsed time (ms)": 200i64
+                        }
+                    }
+                }
+            }
+        );
+
+        // Run the remaining 3 tasks.
+        for _ in 0..3 {
+            assert_eq!(runner.iterate_logging_task(), true);
+        }
+        assert_eq!(runner.iterate_logging_task(), false);
+
+        assert_data_tree!(
+            runner.inspector,
+            root: {
+                MetricsLogger: {}
+            }
+        );
+    }
+
+    #[test]
+    fn test_large_number_of_clients() {
+        let mut runner = Runner::new();
+
+        // Create MAX_CONCURRENT_CLIENTS clients.
+        for i in 0..MAX_CONCURRENT_CLIENTS {
+            let mut query = runner.proxy.start_logging_forever(
+                &(i as u32).to_string(),
+                &mut vec![&mut Metric::CpuLoad(CpuLoad { interval_ms: 300 })].into_iter(),
+            );
+            assert_matches!(runner.executor.run_until_stalled(&mut query), Poll::Ready(Ok(Ok(()))));
+            assert_matches!(
+                runner.executor.run_until_stalled(&mut runner.server_task),
+                Poll::Pending
+            );
+        }
+
+        // Check new client logging request returns TOO_MANY_ACTIVE_CLIENTS error.
+        let mut query = runner.proxy.start_logging(
+            "test",
+            &mut vec![&mut Metric::CpuLoad(CpuLoad { interval_ms: 100 })].into_iter(),
+            400,
+        );
+        assert_matches!(
+            runner.executor.run_until_stalled(&mut query),
+            Poll::Ready(Ok(Err(fmetrics::MetricsLoggerError::TooManyActiveClients)))
+        );
+
+        // Remove one active client.
+        let mut query = runner.proxy.stop_logging("3");
+        assert_matches!(runner.executor.run_until_stalled(&mut query), Poll::Ready(Ok(true)));
+
+        // Check we can add another client.
+        let mut query = runner.proxy.start_logging(
+            "test",
+            &mut vec![&mut Metric::CpuLoad(CpuLoad { interval_ms: 100 })].into_iter(),
+            400,
+        );
+        assert_matches!(runner.executor.run_until_stalled(&mut query), Poll::Ready(Ok(Ok(()))));
     }
 
     #[test]
@@ -912,12 +1275,13 @@ mod tests {
         let mut runner = Runner::new();
 
         // Start the first logging task.
-        let mut query = runner.proxy.start_logging(
+        let _query = runner.proxy.start_logging(
             "test",
             &mut vec![&mut Metric::CpuLoad(CpuLoad { interval_ms: 100 })].into_iter(),
             400,
         );
-        assert_matches!(runner.executor.run_until_stalled(&mut query), Poll::Ready(Ok(Ok(()))));
+
+        assert_matches!(runner.executor.run_until_stalled(&mut runner.server_task), Poll::Pending);
 
         assert_eq!(runner.iterate_logging_task(), true);
 
@@ -945,19 +1309,37 @@ mod tests {
             Poll::Ready(Ok(Err(fmetrics::MetricsLoggerError::AlreadyLogging)))
         );
 
-        // Run existing logging tasks to completion.
-        for _ in 0..3 {
+        // Starting a new logging task of a different client should succeed.
+        let mut query = runner.proxy.start_logging(
+            "test2",
+            &mut vec![&mut Metric::Temperature(Temperature { interval_ms: 500 })].into_iter(),
+            1000,
+        );
+        assert_matches!(runner.executor.run_until_stalled(&mut query), Poll::Ready(Ok(Ok(()))));
+
+        // Run logging tasks of the first client to completion.
+        for _ in 0..4 {
             assert_eq!(runner.iterate_logging_task(), true);
         }
-        assert_eq!(runner.iterate_logging_task(), false);
 
-        // Starting a new logging task should succeed now.
-        let mut query = runner.proxy.start_logging(
+        // Starting a new logging task of the first client should succeed now.
+        let _query = runner.proxy.start_logging(
             "test",
             &mut vec![&mut Metric::Temperature(Temperature { interval_ms: 100 })].into_iter(),
             200,
         );
-        assert_matches!(runner.executor.run_until_stalled(&mut query), Poll::Ready(Ok(Ok(()))));
+        assert_matches!(runner.executor.run_until_stalled(&mut runner.server_task), Poll::Pending);
+
+        // Starting a new logging task of the second client should still fail.
+        let mut query = runner.proxy.start_logging(
+            "test2",
+            &mut vec![&mut Metric::Temperature(Temperature { interval_ms: 100 })].into_iter(),
+            200,
+        );
+        assert_matches!(
+            runner.executor.run_until_stalled(&mut query),
+            Poll::Ready(Ok(Err(fmetrics::MetricsLoggerError::AlreadyLogging)))
+        );
     }
 
     #[test]
@@ -991,6 +1373,7 @@ mod tests {
             200,
         );
         assert_matches!(runner.executor.run_until_stalled(&mut query), Poll::Ready(Ok(Ok(()))));
+        assert_matches!(runner.executor.run_until_stalled(&mut runner.server_task), Poll::Pending);
 
         let mut query = runner.proxy.stop_logging("test");
         assert_matches!(runner.executor.run_until_stalled(&mut query), Poll::Ready(Ok(true)));
@@ -1006,21 +1389,25 @@ mod tests {
 
         // Starting logging for 1 second at 100ms intervals. When the query stalls, the logging task
         // will be waiting on its timer.
-        let mut query = runner.proxy.start_logging(
+        let _query = runner.proxy.start_logging(
             "test",
             &mut vec![&mut Metric::Temperature(Temperature { interval_ms: 100 })].into_iter(),
             1_000,
         );
-        assert_matches!(runner.executor.run_until_stalled(&mut query), Poll::Ready(Ok(Ok(()))));
+        assert_matches!(runner.executor.run_until_stalled(&mut runner.server_task), Poll::Pending);
 
         // Check default values before first temperature poll.
         assert_data_tree!(
             runner.inspector,
             root: {
-                TemperatureLogger: {
-                    "cpu (°C)": f64::MIN,
-                    "/dev/fake/gpu_temperature (°C)": f64::MIN,
-                    "elapsed time (ms)": std::i64::MIN
+                MetricsLogger: {
+                    test: {
+                    TemperatureLogger: {
+                            "cpu (°C)": f64::MIN,
+                            "/dev/fake/gpu_temperature (°C)": f64::MIN,
+                            "elapsed time (ms)": std::i64::MIN
+                        }
+                    }
                 }
             }
         );
@@ -1033,27 +1420,25 @@ mod tests {
             assert_data_tree!(
                 runner.inspector,
                 root: {
-                    TemperatureLogger: {
-                        "cpu (°C)": runner.cpu_temperature.get() as f64,
-                        "/dev/fake/gpu_temperature (°C)": runner.gpu_temperature.get() as f64,
-                        "elapsed time (ms)": 100 * (1 + i as i64)
+                    MetricsLogger: {
+                        test: {
+                            TemperatureLogger: {
+                                "cpu (°C)": runner.cpu_temperature.get() as f64,
+                                "/dev/fake/gpu_temperature (°C)": runner.gpu_temperature.get() as f64,
+                                "elapsed time (ms)": 100 * (1 + i as i64)
+                            }
+                        }
                     }
                 }
             );
         }
 
-        // With one more time step, the end time has been reached, and Inspect data is not updated.
-        runner.cpu_temperature.set(77.0);
-        runner.gpu_temperature.set(77.0);
+        // With one more time step, the end time has been reached, the client is removed from Inspect.
         runner.iterate_logging_task();
         assert_data_tree!(
             runner.inspector,
             root: {
-                TemperatureLogger: {
-                    "cpu (°C)": 38.0,
-                    "/dev/fake/gpu_temperature (°C)": 48.0,
-                    "elapsed time (ms)": 900i64
-                }
+                MetricsLogger: {}
             }
         );
     }
