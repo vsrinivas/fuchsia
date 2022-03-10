@@ -37,12 +37,8 @@ test("unittest_bin") {
 }
 
 fuchsia_unittest_package("audio-libwav-unittests") {
-  manifest = "meta/audio-libwav-unittests.cmx"
   deps = [ ":unittest_bin" ]
-
-  test_specs = {
-    environments = basic_envs
-  }
+  manifest = "meta/audio-libwav-unittests.cml"
 }
 
 group("tests") {

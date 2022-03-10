@@ -149,22 +149,7 @@ fuchsia_unittest_package("audio_mixer_unittests") {
   deps = [ ":mixer_unittest_bin" ]
 }
 
-fuchsia_component("mixer_death_unittest_comp") {
-  testonly = true
-  manifest = "meta/audio_mixer_death_unittests.cmx"
-  deps = [ ":mixer_death_test_bin" ]
-}
-
-fuchsia_test_package("audio_mixer_death_unittests") {
-  test_specs = {
-    log_settings = {
-      max_severity = "FATAL"
-    }
-  }
-  test_components = [ ":mixer_death_unittest_comp" ]
-}
-
-executable("mixer_death_test_bin") {
+executable("mixer_death_unittest_bin") {
   testonly = true
   output_name = "audio_mixer_death_unittests"
 
@@ -178,6 +163,16 @@ executable("mixer_death_test_bin") {
     "//src/media/audio/audio_core/mixer:prebuilt_coefficient_tables",
     "//third_party/googletest:gmock",
   ]
+}
+
+fuchsia_unittest_package("audio_mixer_death_unittests") {
+  deps = [ ":mixer_death_unittest_bin" ]
+  manifest = "meta/audio_mixer_death_unittests.cml"
+  test_specs = {
+    log_settings = {
+      max_severity = "FATAL"
+    }
+  }
 }
 
 # This executable is run automatically as part of the build deps for

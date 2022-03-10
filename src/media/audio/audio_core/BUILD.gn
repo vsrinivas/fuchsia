@@ -347,7 +347,7 @@ executable("unittest_bin") {
 }
 
 fuchsia_unittest_package("audio_core_unittests") {
-  manifest = "meta/audio_core_unittests.cmx"
+  manifest = "meta/audio_core_unittests.cml"
   deps = [
     ":unittest_bin",
     "//src/media/audio/effects/test_effects:test_effects_v1",
