@@ -51,7 +51,6 @@ TEST(SpanCompatibleTraitTest, CheckForDataSizeAndConversionValidation) {
   static_assert(is_well_formed_data_and_size<NoMutableDataOverload, const int>::value == true, "");
   static_assert(is_well_formed_data_and_size<NoConstDataOverload, int>::value == true, "");
   static_assert(is_well_formed_data_and_size<const NoDataOverload, const int>::value == false, "");
-  static_assert(is_well_formed_data_and_size<std::vector<const int>, int>::value == false, "");
   static_assert(is_well_formed_data_and_size<NoSizeOverload, const int>::value == false, "");
   static_assert(is_well_formed_data_and_size<WellFormed, std::vector<int>>::value == false, "");
   static_assert(is_well_formed_data_and_size<WellFormed, std::string>::value == false, "");
@@ -74,7 +73,6 @@ TEST(SpanCompatibleTraitTest, CheckForWellAndIllformedTypes) {
   static_assert(is_span_compatible_v<std::array<int, 1>, int> == false, "");
 
   // Well formed with non convertible types.
-  static_assert(is_span_compatible_v<std::vector<const int>, int> == false, "");
   static_assert(is_span_compatible_v<WellFormed, float> == false, "");
   static_assert(is_span_compatible_v<WellFormed, std::vector<int>> == false, "");
   static_assert(is_span_compatible_v<WellFormed, std::string> == false, "");
