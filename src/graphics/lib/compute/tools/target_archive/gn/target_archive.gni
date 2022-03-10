@@ -69,6 +69,7 @@ template("target_archive") {
   #
   # Define template internal names
   #
+  main_target = target_name
   _target_archive_dir = "${target_gen_dir}/${_target_archive_name}"
   _target_archive_name_part = "${_target_archive_dir}/${_target_archive_name}"
 
@@ -82,81 +83,44 @@ template("target_archive") {
     _target_archive_file_S,
   ]
 
+  _target_archive_deps = []
+
   #
   # Compile the sources
   #
-  # For now, only a single `.c` source file makes sense here.
-  #
-  _struct_sources = []
+  if (defined(invoker.struct_sources) && invoker.struct_sources != []) {
+    _struct_sources_executable = "_target_archive.$target_name.executable"
+    _struct_sources_image = "_target_archive.$target_name.image"
 
-  if (defined(invoker.struct_sources)) {
-    _struct_sources = filter_include(invoker.struct_sources, [ "*.c" ])
-  }
-
-  if (_struct_sources != []) {
-    #
-    # Compile the header structure using using a source set.
-    #
-    # Assumes a single `.c` file.
-    #
-    _data_to_object = _target_archive_name + "_data_to_object"
-
-    source_set(_data_to_object) {
+    # First build a tiny executable that is specially linked to use no normal
+    # startup or library code so it contains just the definitions from
+    # struct_sources, rooted at the `kRodata` symbol.
+    executable(_struct_sources_executable) {
+      visibility = [ ":*" ]
+      forward_variables_from(invoker,
+                             [
+                               "defines",
+                               "testonly",
+                             ])
       sources = invoker.struct_sources
-      if (defined(invoker.defines)) {
-        defines = invoker.defines
-      }
       if (defined(invoker.struct_include_dirs)) {
         include_dirs = invoker.struct_include_dirs
       }
-    }
-
-    #
-    # The source_set() doesn't support get_target_outputs() so we have
-    # construct the names.
-    #
-    # tool("cc") defines its outputs as:
-    #
-    #   [ "{{source_out_dir}}/{{target_output_name}}.{{source_file_part}}.o" ]
-    #
-    _struct_objects = []
-    foreach(_struct_source, _struct_sources) {
-      _struct_object_path = target_out_dir + "/$_data_to_object." +
-                            get_path_info(_struct_source, "file") + ".o"
-      _struct_objects += [ _struct_object_path ]
-    }
-
-    #
-    # Name the binary produced by llvm-objcopy.
-    #
-    # For now, assumes a single `.c`, `.o`, and `.bin` file.
-    #
-    _data_binaries = []
-    foreach(_struct_source, _struct_sources) {
-      _data_binaries += [ _target_archive_dir + "/bin/" +
-                          get_path_info(_struct_source, "name") + ".bin" ]
-    }
-
-    #
-    # Action: Dump the read-only section of the compiled header
-    # structure.  The assumption is that this resolves to llvm-objcopy
-    # and not binutils objcopy.
-    #
-    _object_dump_section = "--dump-section=.rodata.header="
-
-    _object_to_binary = _target_archive_name + "_object_to_binary"
-
-    toolchain_utils_action(_object_to_binary) {
-      utils = [ "objcopy" ]
-      deps = [ ":${_data_to_object}" ]
-      inputs = [ _struct_objects[0] ]
-      outputs = [ _data_binaries[0] ]
-      args = [
-        rebase_path(inputs[0], root_build_dir),
-        "/dev/null",
-        _object_dump_section + rebase_path(outputs[0], root_build_dir),
+      configs += [
+        "//src/graphics/lib/compute/tools/target_archive:struct_sources.config",
       ]
     }
+
+    # Now extract the raw binary image from that executable into a file.
+    # The resulting binary contains just the `kRodata` variable's contents.
+    image_binary(_struct_sources_image) {
+      visibility = [ ":$main_target" ]
+      forward_variables_from(invoker, [ "testonly" ])
+      deps = [ ":$_struct_sources_executable" ]
+      output_name = _target_archive_name
+    }
+
+    _target_archive_deps += [ ":$_struct_sources_image" ]
   }
 
   #
@@ -165,7 +129,7 @@ template("target_archive") {
   #
   _spirv_modules = _target_archive_name + "_spirv_modules"
 
-  if (defined(invoker.shader_sources)) {
+  if (defined(invoker.shader_sources) && invoker.shader_sources != []) {
     graphics_compute_compile_glsl_shader_foreach(_spirv_modules) {
       output_dir = _target_archive_dir
       args = [
@@ -186,6 +150,8 @@ template("target_archive") {
                                "skip_spirv_opt",
                              ])
     }
+
+    _target_archive_deps += [ ":$_spirv_modules" ]
   }
 
   #
@@ -193,20 +159,14 @@ template("target_archive") {
   #
   # If it exists, the target binary is listed first.
   #
-  compiled_action(target_name) {
+  compiled_action(main_target) {
     tool = "//src/graphics/lib/compute/tools/target_archive"
     outputs = _target_archive_outputs
+
+    deps = _target_archive_deps
     sources = []
-    deps = []
-
-    if (defined(invoker.struct_sources)) {
-      deps += [ ":${_object_to_binary}" ]
-      sources += get_target_outputs(":${_object_to_binary}")
-    }
-
-    if (defined(invoker.shader_sources)) {
-      deps += [ ":${_spirv_modules}" ]
-      sources += get_target_outputs(":${_spirv_modules}")
+    foreach(label, deps) {
+      sources += get_target_outputs(label)
     }
 
     if (defined(invoker.binary_deps)) {

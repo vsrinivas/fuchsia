@@ -30,3 +30,22 @@ if (is_host) {
     # output_name = "target-archive"
   }
 }
+
+# This is used by the target_archive() template in gn/target_archive.gni.  It's
+# added to configs in an executable() target to make it do a link appropriate
+# for extracting standalone raw binary image containing only RODATA.
+# See the linker script for more details.
+config("struct_sources.config") {
+  inputs = [ "rodata-extract.ld" ]
+  ldflags = [
+    "-nostdlib",
+    "-nostartfiles",
+    "-Wl,--build-id=none",
+    "-Wl,-T," + rebase_path(inputs[0], root_build_dir),
+
+    # TODO(fxbug.dev/95379): Suppress complaints about library-selection
+    # options from standard configs that are moot with -nostdlib.
+    "-Wno-unused-command-line-argument",
+  ]
+  configs = [ "//build/config/sanitizers:no_sanitizers" ]
+}

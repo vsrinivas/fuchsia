@@ -13,7 +13,7 @@
 //
 //
 
-static struct radix_sort_vk_target_header const header __attribute__((used)) =
+const struct radix_sort_vk_target_header kRodata =
 {
   .magic = RS_HEADER_MAGIC,
 

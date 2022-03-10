@@ -16,7 +16,7 @@
 //
 //
 
-static struct spinel_target_header const header __attribute__((used)) =
+const struct spinel_target_header kRodata =
 {
   .magic = SPN_HEADER_MAGIC,
 
