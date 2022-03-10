@@ -10,5 +10,17 @@ group("tests") {
     "integration_input_tests",
     "lib",
     "scenic-stress-tests:tests",
+
+    # Targets in the "workstation_tests" group below are excluded because they
+    # should not run on core builds.
   ]
+}
+
+# Tests in this group are enabled for workstation in //bundles/buildbot:workstation.
+# TODO(https://fxbug.dev/94919): This comment should be updated with the
+# final location of the test targets for workstation.
+group("workstation_tests") {
+  testonly = true
+
+  deps = [ "integration_input_tests:workstation_tests" ]
 }

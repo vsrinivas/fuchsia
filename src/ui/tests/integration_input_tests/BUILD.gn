@@ -10,16 +10,23 @@ group("integration_input_tests") {
   testonly = true
 
   deps = [
-    ":workstation-test-realm",
     "factory-reset:tests",
     "factory-reset-handler:tests",
     "focus:tests",
     "media-buttons:tests",
-    "mouse:tests",
     "pointerinjector_config:tests",
-    "text-input:tests",
     "touch:tests",
     "virtual-keyboard:tests",
+  ]
+}
+
+group("workstation_tests") {
+  testonly = true
+
+  deps = [
+    ":workstation-test-realm",
+    "mouse:tests",
+    "text-input:tests",
   ]
 }
 
