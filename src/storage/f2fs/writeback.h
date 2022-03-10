@@ -5,7 +5,14 @@
 #ifndef SRC_STORAGE_F2FS_WRITEBACK_H_
 #define SRC_STORAGE_F2FS_WRITEBACK_H_
 
+#ifdef __Fuchsia__
 #include "src/lib/storage/vfs/cpp/journal/background_executor.h"
+#else  // __Fuchsia__
+#include <lib/fpromise/promise.h>
+#include <lib/fpromise/single_threaded_executor.h>
+
+#include <storage/buffer/array_buffer.h>
+#endif  // __Fuchsia__
 
 namespace f2fs {
 
@@ -15,8 +22,12 @@ constexpr auto kWriteTimeOut = std::chrono::seconds(60);
 
 class SegmentWriteBuffer {
  public:
+#ifdef __Fuchsia__
   SegmentWriteBuffer(storage::VmoidRegistry *vmoid_registry, size_t blocks, uint32_t block_size,
                      PageType type);
+#else   // __Fuchsia__
+  SegmentWriteBuffer(Bcache *bc, size_t blocks, uint32_t block_size, PageType type);
+#endif  // __Fuchsia__
   SegmentWriteBuffer() = delete;
   SegmentWriteBuffer(const SegmentWriteBuffer &) = delete;
   SegmentWriteBuffer &operator=(const SegmentWriteBuffer &) = delete;
@@ -36,7 +47,11 @@ class SegmentWriteBuffer {
 
   fs::BufferedOperationsBuilder builder_ __TA_GUARDED(mutex_);
   std::vector<fbl::RefPtr<Page>> pages_ __TA_GUARDED(mutex_);
+#ifdef __Fuchsia__
   storage::VmoBuffer buffer_;
+#else
+  storage::ArrayBuffer buffer_;
+#endif  // __Fuchsia__
   uint32_t start_index_ __TA_GUARDED(mutex_) = 0;
   uint32_t count_ __TA_GUARDED(mutex_) = 0;
   std::condition_variable_any cvar_;
@@ -107,11 +122,13 @@ class Writer {
   // regarding FileCache for releasing mappings and committed pages.
   fpromise::promise<> SubmitPages(sync_completion_t *completion, PageType type);
 
-  F2fs *fs_ = nullptr;
-  fs::TransactionHandler *transaction_handler_ = nullptr;
   std::array<std::unique_ptr<SegmentWriteBuffer>, static_cast<uint32_t>(PageType::kNrPageType)>
       write_buffer_;
+  F2fs *fs_ = nullptr;
+  fs::TransactionHandler *transaction_handler_ = nullptr;
+#ifdef __Fuchsia__
   fs::BackgroundExecutor executor_;
+#endif  // __Fuchsia__
 };
 
 }  // namespace f2fs

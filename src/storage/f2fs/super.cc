@@ -195,8 +195,9 @@ loff_t F2fs::MaxFileSize(unsigned bits) {
 zx_status_t F2fs::SanityCheckRawSuper() {
   unsigned int blocksize;
 
-  if (kF2fsSuperMagic != LeToCpu(raw_sb_->magic))
+  if (kF2fsSuperMagic != LeToCpu(raw_sb_->magic)) {
     return ZX_ERR_INVALID_ARGS;
+  }
 
   // Currently, support 512/1024/2048/4096 block size
   blocksize = 1 << LeToCpu(raw_sb_->log_blocksize);

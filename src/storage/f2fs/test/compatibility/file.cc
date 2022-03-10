@@ -26,12 +26,13 @@ using FileCompatibilityTest = CompatibilityTest;
 TEST_F(FileCompatibilityTest, WriteVerifyHostToFuchsia) {
   constexpr uint32_t kVerifyPatternSize = 1024 * 1024 * 100;  // 100MB
 
-  std::string mkfs_option_list[] = {"-f",
-                                    "-f -O extra_attr",
-                                    "-f -O extra_attr,project_quota",
-                                    "-f -O extra_attr,inode_checksum",
-                                    "-f -O extra_attr,inode_crtime",
-                                    "-f -O extra_attr,compression"};
+  std::string mkfs_option_list[] = {"-f"};
+  // TODO: Supported options vary according to the version.
+  // "-f -O extra_attr",
+  // "-f -O extra_attr,project_quota",
+  // "-f -O extra_attr,inode_checksum",
+  // "-f -O extra_attr,inode_crtime",
+  // "-f -O extra_attr,compression"};
 
   for (std::string_view mkfs_option : mkfs_option_list) {
     {

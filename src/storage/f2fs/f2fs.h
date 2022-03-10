@@ -13,11 +13,9 @@
 #include <lib/async-loop/default.h>
 #include <lib/fidl-async/cpp/bind.h>
 #include <lib/zircon-internal/thread_annotations.h>
-
 #include <fbl/auto_lock.h>
 #include <fbl/condition_variable.h>
 #include <fbl/mutex.h>
-
 #include <fidl/fuchsia.fs/cpp/wire.h>
 #endif  // __Fuchsia__
 
@@ -55,6 +53,8 @@
 #include "lib/inspect/service/cpp/service.h"
 #include "src/lib/storage/vfs/cpp/fuchsia_vfs.h"
 #include "src/lib/storage/vfs/cpp/inspect/inspect_tree.h"
+#else  // __Fuchsia__
+#include "src/storage/f2fs/sync_host.h"
 #endif  // __Fuchsia__
 
 #include "src/lib/storage/vfs/cpp/vfs.h"
@@ -80,7 +80,9 @@
 #include "src/storage/f2fs/fsck.h"
 #include "src/storage/f2fs/admin.h"
 #include "src/storage/f2fs/dir_entry_cache.h"
+#ifdef __Fuchsia__
 #include "src/storage/f2fs/inspect.h"
+#endif  // __Fuchsia__
 // clang-format on
 
 namespace f2fs {
@@ -114,18 +116,11 @@ class F2fs : public fs::Vfs {
   F2fs &operator=(const F2fs &) = delete;
   F2fs(F2fs &&) = delete;
   F2fs &operator=(F2fs &&) = delete;
+  ~F2fs() override;
 
 #ifdef __Fuchsia__
   explicit F2fs(async_dispatcher_t *dispatcher, std::unique_ptr<f2fs::Bcache> bc,
                 std::unique_ptr<Superblock> sb, const MountOptions &mount_options);
-#else   // __Fuchsia__
-  explicit F2fs(std::unique_ptr<f2fs::Bcache> bc, std::unique_ptr<Superblock> sb,
-                const MountOptions &mount_options);
-#endif  // __Fuchsia__
-
-  ~F2fs() override;
-
-#ifdef __Fuchsia__
   [[nodiscard]] static zx_status_t Create(async_dispatcher_t *dispatcher,
                                           std::unique_ptr<f2fs::Bcache> bc,
                                           const MountOptions &options, std::unique_ptr<F2fs> *out);
@@ -138,7 +133,12 @@ class F2fs : public fs::Vfs {
   void SetAdminService(fbl::RefPtr<AdminService> svc) { admin_svc_ = std::move(svc); }
 
   zx::status<fs::FilesystemInfo> GetFilesystemInfo() final;
+  DirEntryCache &GetDirEntryCache() { return dir_entry_cache_; }
+  InspectTree &GetInspectTree() { return inspect_tree_; }
+  void Sync(SyncCallback closure);
 #else   // __Fuchsia__
+  explicit F2fs(std::unique_ptr<f2fs::Bcache> bc, std::unique_ptr<Superblock> sb,
+                const MountOptions &mount_options);
   [[nodiscard]] static zx_status_t Create(std::unique_ptr<f2fs::Bcache> bc,
                                           const MountOptions &options, std::unique_ptr<F2fs> *out);
 #endif  // __Fuchsia__
@@ -149,10 +149,6 @@ class F2fs : public fs::Vfs {
   inline zx_status_t LookupVnode(ino_t ino, fbl::RefPtr<VnodeF2fs> *out) {
     return vnode_cache_.Lookup(ino, out);
   }
-
-#ifdef __Fuchsia__
-  DirEntryCache &GetDirEntryCache() { return dir_entry_cache_; }
-#endif  // __Fuchsia__
 
   void ResetBc(std::unique_ptr<f2fs::Bcache> *out = nullptr) {
     if (out == nullptr) {
@@ -187,7 +183,6 @@ class F2fs : public fs::Vfs {
   // super.cc
   void PutSuper();
   void SyncFs(bool bShutdown = false);
-  void Sync(SyncCallback closure);
   zx_status_t SanityCheckRawSuper();
   zx_status_t SanityCheckCkpt();
   void InitSuperblockInfo();
@@ -265,8 +260,6 @@ class F2fs : public fs::Vfs {
   VnodeF2fs &GetNodeVnode() { return *node_vnode_; }
   VnodeF2fs &GetMetaVnode() { return *meta_vnode_; }
 
-  InspectTree &GetInspectTree() { return inspect_tree_; }
-
   // Flush all dirty Pages for the meta vnode that meet |operation|.if_page.
   pgoff_t SyncMetaPages(WritebackOperation &operation);
   // Flush all dirty data Pages for dirty vnodes that meet |operation|.if_vnode and if_page.
@@ -275,7 +268,6 @@ class F2fs : public fs::Vfs {
   zx_status_t MakeOperation(storage::OperationType op, fbl::RefPtr<Page> page, block_t blk_addr,
                             PageType type, block_t nblocks = 1);
 
-  void ScheduleWriterTask(fpromise::pending_task task) { writer_->ScheduleTask(std::move(task)); }
   void ScheduleWriterSubmitPages(sync_completion_t *completion = nullptr,
                                  PageType type = PageType::kNrPageType) {
     writer_->ScheduleSubmitPages(completion, type);
@@ -303,14 +295,11 @@ class F2fs : public fs::Vfs {
 
 #ifdef __Fuchsia__
   DirEntryCache dir_entry_cache_;
-
   fbl::RefPtr<fs::QueryService> query_svc_;
   fbl::RefPtr<AdminService> admin_svc_;
-
   zx::event fs_id_;
-#endif  // __Fuchsia__
-
   InspectTree inspect_tree_;
+#endif  // __Fuchsia__
 };
 
 f2fs_hash_t DentryHash(std::string_view name);

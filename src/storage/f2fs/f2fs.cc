@@ -40,16 +40,18 @@ F2fs::F2fs(async_dispatcher_t* dispatcher, std::unique_ptr<f2fs::Bcache> bc,
       inspect_tree_(this) {
   zx::event::create(0, &fs_id_);
 }
-#else   // __Fuchsia__
-F2fs::F2fs(std::unique_ptr<f2fs::Bcache> bc, std::unique_ptr<Superblock> sb,
-           const MountOptions& mount_options)
-    : bc_(std::move(bc)), mount_options_(mount_options), raw_sb_(std::move(sb)) {}
-#endif  // __Fuchsia__
 
 F2fs::~F2fs() {
   // Inform PagedVfs so that it can stop threads that might call out to f2fs.
   TearDown();
 }
+#else   // __Fuchsia__
+F2fs::F2fs(std::unique_ptr<f2fs::Bcache> bc, std::unique_ptr<Superblock> sb,
+           const MountOptions& mount_options)
+    : bc_(std::move(bc)), mount_options_(mount_options), raw_sb_(std::move(sb)) {}
+
+F2fs::~F2fs() {}
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 zx_status_t F2fs::Create(async_dispatcher_t* dispatcher, std::unique_ptr<f2fs::Bcache> bc,
@@ -81,21 +83,17 @@ zx_status_t F2fs::Create(std::unique_ptr<f2fs::Bcache> bc, const MountOptions& o
 }
 
 zx_status_t LoadSuperblock(f2fs::Bcache* bc, Superblock* out_info, block_t bno) {
-  ZX_ASSERT(bno <= 1);
+  ZX_DEBUG_ASSERT(bno <= 1);
   FsBlock super_block;
 #ifdef __Fuchsia__
-  if (zx_status_t status = bc->Readblk(bno, super_block.GetData().data()); status != ZX_OK) {
+  auto buffer = super_block.GetData().data();
 #else   // __Fuchsia__
-  if (zx_status_t status = bc->Readblk(bno, super_block.GetData()); status != ZX_OK) {
+  auto buffer = super_block.GetData();
 #endif  // __Fuchsia__
+  if (zx_status_t status = bc->Readblk(bno, buffer); status != ZX_OK) {
     return status;
   }
-#ifdef __Fuchsia__
-  memcpy(out_info, static_cast<uint8_t*>(super_block.GetData().data()) + kSuperOffset,
-         sizeof(Superblock));
-#else   // __Fuchsia__
-  memcpy(out_info, static_cast<uint8_t*>(super_block.GetData()) + kSuperOffset, sizeof(Superblock));
-#endif  // __Fuchsia__
+  std::memcpy(out_info, buffer + kSuperOffset, sizeof(Superblock));
   return ZX_OK;
 }
 
@@ -231,7 +229,9 @@ zx_status_t F2fs::IncValidBlockCount(VnodeF2fs* vnode, block_t count) {
   std::lock_guard lock(superblock_info_->GetStatLock());
   valid_block_count = superblock_info_->GetTotalValidBlockCount() + count;
   if (valid_block_count > superblock_info_->GetUserBlockCount()) {
+#ifdef __Fuchsia__
     inspect_tree_.OnOutOfSpace();
+#endif  // __Fuchsia__
     return ZX_ERR_NO_SPACE;
   }
   vnode->IncBlocks(count);

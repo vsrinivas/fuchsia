@@ -1004,7 +1004,9 @@ zx_status_t NodeManager::NewNodePage(DnodeOfData &dn, uint32_t ofs, fbl::RefPtr<
   if (!IncValidNodeCount(dn.vnode, 1)) {
     (*out)->ClearUptodate();
     Page::PutPage(std::move(*out), true);
+#ifdef __Fuchsia__
     fs_->GetInspectTree().OnOutOfSpace();
+#endif
     return ZX_ERR_NO_SPACE;
   }
   SetNodeAddr(new_ni, kNewAddr);
@@ -1414,7 +1416,9 @@ bool NodeManager::AllocNid(nid_t &out) {
         // scan NAT in order to build free nid list
         BuildFreeNids();
         if (!free_nid_count_) {
+#ifdef __Fuchsia__
           fs_->GetInspectTree().OnOutOfSpace();
+#endif
           return false;
         }
       }

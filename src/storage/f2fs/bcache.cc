@@ -62,102 +62,16 @@ std::unique_ptr<block_client::BlockDevice> Bcache::Destroy(std::unique_ptr<Bcach
   bcache->DestroyVmoBuffer();
   return std::move(bcache->owned_device_);
 }
-#endif  // __Fuchsia__
 
-#ifdef __Fuchsia__
-zx_status_t Bcache::Readblk(block_t bno, void* data) {
-  TRACE_DURATION("f2fs", "Bcache::Readblk", "blk", bno);
-  if (bno >= max_blocks_) {
-    return ZX_ERR_OUT_OF_RANGE;
-  }
-  storage::Operation operation = {};
-  operation.type = storage::OperationType::kRead;
-  operation.vmo_offset = 0;
-  operation.dev_offset = bno;
-  operation.length = 1;
-  std::lock_guard lock(buffer_mutex_);
-  zx_status_t status = RunOperation(operation, &buffer_);
-  if (status != ZX_OK) {
-    return status;
-  }
-  std::memcpy(data, buffer_.Data(0), BlockSize());
-  return ZX_OK;
-}
-#else   // __Fuchsia__
-zx_status_t Bcache::Readblk(block_t bno, void* data) {
-  off_t off = static_cast<off_t>(bno) * kBlockSize;
-  assert(off / kBlockSize == bno);  // Overflow
-  if (lseek(fd_.get(), off, SEEK_SET) < 0) {
-    FX_LOGS(ERROR) << "cannot seek to block " << bno;
-    return ZX_ERR_IO;
-  }
-  if (read(fd_.get(), data, kBlockSize) != kBlockSize) {
-    FX_LOGS(ERROR) << "cannot read block " << bno;
-    return ZX_ERR_IO;
-  }
-  return ZX_OK;
-}
-#endif  // __Fuchsia__
+Bcache::Bcache(block_client::BlockDevice* device, uint64_t max_blocks, block_t block_size)
+    : max_blocks_(max_blocks), block_size_(block_size), device_(device) {}
 
-#ifdef __Fuchsia__
-zx_status_t Bcache::Writeblk(block_t bno, const void* data) {
-  if (bno >= max_blocks_) {
-    return ZX_ERR_OUT_OF_RANGE;
-  }
-  TRACE_DURATION("f2fs", "Bcache::Writeblk", "blk", bno);
-  storage::Operation operation = {};
-  operation.type = storage::OperationType::kWrite;
-  operation.vmo_offset = 0;
-  operation.dev_offset = bno;
-  operation.length = 1;
-  std::lock_guard lock(buffer_mutex_);
-  std::memcpy(buffer_.Data(0), data, BlockSize());
-  return RunOperation(operation, &buffer_);
-}
-#else   // __Fuchsia__
-zx_status_t Bcache::Writeblk(block_t bno, const void* data) {
-  off_t off = static_cast<off_t>(bno) * kBlockSize;
-  assert(off / kBlockSize == bno);  // Overflow
-  if (lseek(fd_.get(), off, SEEK_SET) < 0) {
-    FX_LOGS(ERROR) << "cannot seek to block " << bno << ". " << errno;
-    return ZX_ERR_IO;
-  }
-  ssize_t ret = write(fd_.get(), data, kBlockSize);
-  if (ret != kBlockSize) {
-    FX_LOGS(ERROR) << "cannot write block " << bno << " (" << ret << ")";
-    return ZX_ERR_IO;
-  }
-  return ZX_OK;
-}
-#endif  // __Fuchsia__
-
-zx_status_t Bcache::Trim(block_t start, block_t num) {
-#ifdef __Fuchsia__
-  if (!(info_.flags & fuchsia_hardware_block_FLAG_TRIM_SUPPORT)) {
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-
-  block_fifo_request_t request = {
-      .opcode = BLOCKIO_TRIM,
-      .vmoid = BLOCK_VMOID_INVALID,
-      .length = static_cast<uint32_t>(BlockNumberToDevice(num)),
-      .vmo_offset = 0,
-      .dev_offset = BlockNumberToDevice(start),
-  };
-
-  return device()->FifoTransaction(&request, 1);
-#else   // __Fuchsia__
-  return ZX_OK;
-#endif  // __Fuchsia__
-}
-
-#ifdef __Fuchsia__
 zx_status_t Bcache::BlockAttachVmo(const zx::vmo& vmo, storage::Vmoid* out) {
-  return device()->BlockAttachVmo(vmo, out);
+  return GetDevice()->BlockAttachVmo(vmo, out);
 }
 
 zx_status_t Bcache::BlockDetachVmo(storage::Vmoid vmoid) {
-  return device()->BlockDetachVmo(std::move(vmoid));
+  return GetDevice()->BlockDetachVmo(std::move(vmoid));
 }
 
 zx_status_t Bcache::Create(std::unique_ptr<block_client::BlockDevice> device, uint64_t max_blocks,
@@ -186,33 +100,63 @@ zx_status_t Bcache::Create(block_client::BlockDevice* device, uint64_t max_block
   *out = std::move(bcache);
   return ZX_OK;
 }
-
 #else   // __Fuchsia__
+Bcache::Bcache(fbl::unique_fd fd, uint64_t max_blocks)
+    : max_blocks_(max_blocks), fd_(std::move(fd)), buffer_(1, kBlockSize) {}
+
 zx_status_t Bcache::Create(fbl::unique_fd fd, uint64_t max_blocks, std::unique_ptr<Bcache>* out) {
   uint64_t max_blocks_converted = max_blocks * kBlockSize / kDefaultSectorSize;
-  out->reset(new Bcache(std::move(fd), max_blocks_converted));
+  std::unique_ptr<Bcache> bcache(new Bcache(std::move(fd), max_blocks_converted));
+  *out = std::move(bcache);
   return ZX_OK;
 }
 #endif  // __Fuchsia__
 
-uint64_t Bcache::DeviceBlockSize() const {
+zx_status_t Bcache::Readblk(block_t bno, void* data) {
+  if (bno >= max_blocks_) {
+    return ZX_ERR_OUT_OF_RANGE;
+  }
 #ifdef __Fuchsia__
-  return info_.block_size;
-#else   // __Fuchsia__
-  return kDefaultSectorSize;
-#endif  // __Fuchsia__
+  TRACE_DURATION("f2fs", "Bcache::Readblk", "blk", bno);
+#endif
+  storage::Operation operation = {};
+  operation.type = storage::OperationType::kRead;
+  operation.vmo_offset = 0;
+  operation.dev_offset = bno;
+  operation.length = 1;
+  std::lock_guard lock(buffer_mutex_);
+  zx_status_t status = RunOperation(operation, &buffer_);
+  if (status != ZX_OK) {
+    return status;
+  }
+  std::memcpy(data, buffer_.Data(0), BlockSize());
+  return ZX_OK;
+}
+
+zx_status_t Bcache::Writeblk(block_t bno, const void* data) {
+  if (bno >= max_blocks_) {
+    return ZX_ERR_OUT_OF_RANGE;
+  }
+#ifdef __Fuchsia__
+  TRACE_DURATION("f2fs", "Bcache::Writeblk", "blk", bno);
+#endif
+  storage::Operation operation = {};
+  operation.type = storage::OperationType::kWrite;
+  operation.vmo_offset = 0;
+  operation.dev_offset = bno;
+  operation.length = 1;
+  std::lock_guard lock(buffer_mutex_);
+  std::memcpy(buffer_.Data(0), data, BlockSize());
+  return RunOperation(operation, &buffer_);
 }
 
 #ifdef __Fuchsia__
-Bcache::Bcache(block_client::BlockDevice* device, uint64_t max_blocks, block_t block_size)
-    : max_blocks_(max_blocks), block_size_(block_size), device_(device) {}
-#else   // __Fuchsia__
-Bcache::Bcache(fbl::unique_fd fd, uint64_t max_blocks)
-    : max_blocks_(max_blocks), fd_(std::move(fd)) {}
-#endif  // __Fuchsia__
+zx_status_t Bcache::RunRequests(const std::vector<storage::BufferedOperation>& operations) {
+  std::shared_lock lock(mutex_);
+  return DeviceTransactionHandler::RunRequests(operations);
+}
 
 zx_status_t Bcache::VerifyDeviceInfo() {
-#ifdef __Fuchsia__
   zx_status_t status = device_->BlockGetInfo(&info_);
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "cannot get block device information: " << status;
@@ -224,19 +168,72 @@ zx_status_t Bcache::VerifyDeviceInfo() {
                      << info_.block_size;
     return ZX_ERR_BAD_STATE;
   }
-#endif  // __Fuchsia__
   return ZX_OK;
 }
-
-void Bcache::Pause() {
-#ifdef __Fuchsia__
-  mutex_.lock();
-#endif  // __Fuchsia__
+#else   // __Fuchsia__
+zx_status_t Bcache::RunOperation(const storage::Operation& operation,
+                                 storage::BlockBuffer* buffer) {
+  return TransactionHandler::RunOperation(operation, buffer);
 }
 
-void Bcache::Resume() {
+zx_status_t Bcache::RunRequests(const std::vector<storage::BufferedOperation>& operations) {
+  std::shared_lock lock(mutex_);
+  for (auto& operation : operations) {
+    const auto& op = operation.op;
+    off_t off = static_cast<off_t>(op.dev_offset) * BlockSize();
+
+    if (lseek(fd_.get(), off, SEEK_SET) < 0) {
+      FX_LOGS(ERROR) << "seek failed at " << op.dev_offset << ". " << errno;
+      return ZX_ERR_IO;
+    }
+
+    size_t length = op.length * BlockSize();
+    size_t buffer_offset = op.vmo_offset * BlockSize();
+    switch (op.type) {
+      case storage::OperationType::kRead:
+        if (size_t ret =
+                read(fd_.get(), static_cast<uint8_t*>(operation.data) + buffer_offset, length);
+            ret != length) {
+          FX_LOGS(ERROR) << "read failed at " << op.dev_offset;
+          return ZX_ERR_IO;
+        }
+        break;
+      case storage::OperationType::kWrite:
+        if (size_t ret =
+                write(fd_.get(), static_cast<uint8_t*>(operation.data) + buffer_offset, length);
+            ret != length) {
+          FX_LOGS(ERROR) << "write failed at " << op.dev_offset << " (" << ret << ")";
+          return ZX_ERR_IO;
+        }
+        break;
+      case storage::OperationType::kTrim:
+        // TODO : zeroing
+        break;
+      default:
+        ZX_DEBUG_ASSERT_MSG(false, "Unsupported operation");
+    }
+  }
+  return ZX_OK;
+}
+#endif  // __Fuchsia__
+
+zx_status_t Bcache::Trim(block_t start, block_t num) {
 #ifdef __Fuchsia__
-  mutex_.unlock();
+  if (!(info_.flags & fuchsia_hardware_block_FLAG_TRIM_SUPPORT)) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
+  block_fifo_request_t request = {
+      .opcode = BLOCKIO_TRIM,
+      .vmoid = BLOCK_VMOID_INVALID,
+      .length = static_cast<uint32_t>(BlockNumberToDevice(num)),
+      .vmo_offset = 0,
+      .dev_offset = BlockNumberToDevice(start),
+  };
+
+  return GetDevice()->FifoTransaction(&request, 1);
+#else   // __Fuchsia__
+  return ZX_OK;
 #endif  // __Fuchsia__
 }
 

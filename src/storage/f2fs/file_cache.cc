@@ -37,7 +37,7 @@ void Page::fbl_recycle() {
 bool Page::SetDirty() {
   SetUptodate();
   if (!flags_[static_cast<uint8_t>(PageFlag::kPageDirty)].test_and_set(std::memory_order_acquire)) {
-    ZX_ASSERT(vmo_.op_range(ZX_VMO_OP_TRY_LOCK, 0, BlockSize(), nullptr, 0) == ZX_OK);
+    ZX_ASSERT(VmoOpLock() == ZX_OK);
     VnodeF2fs &vnode = GetVnode();
     SuperblockInfo &superblock_info = fs_->GetSuperblockInfo();
     vnode.MarkInodeDirty();
@@ -93,22 +93,22 @@ zx_status_t Page::GetPage(bool need_vmo_lock) {
     ZX_DEBUG_ASSERT(!IsDirty());
     ZX_DEBUG_ASSERT(!IsWriteback());
     ClearFlag(PageFlag::kPageUptodate);
+#ifdef __Fuchsia__
     if (ret = vmo_.create(BlockSize(), ZX_VMO_DISCARDABLE, &vmo_); ret != ZX_OK) {
       return ret;
     }
-    if (ret = vmo_.op_range(ZX_VMO_OP_COMMIT | ZX_VMO_OP_TRY_LOCK, 0, BlockSize(), nullptr, 0);
-        ret != ZX_OK) {
+#endif  // __Fuchsia__
+    if (ret = VmoOpLock(true); ret != ZX_OK) {
       return ret;
     }
     ZX_ASSERT(Map() == ZX_OK);
   } else if (need_vmo_lock) {
-    if (ret = vmo_.op_range(ZX_VMO_OP_TRY_LOCK, 0, BlockSize(), nullptr, 0); ret != ZX_OK) {
+    if (ret = VmoOpLock(); ret != ZX_OK) {
       ZX_DEBUG_ASSERT(ret == ZX_ERR_UNAVAILABLE);
       ZX_DEBUG_ASSERT(!IsDirty());
       ZX_DEBUG_ASSERT(!IsWriteback());
       ClearFlag(PageFlag::kPageUptodate);
-      if (ret = vmo_.op_range(ZX_VMO_OP_COMMIT | ZX_VMO_OP_TRY_LOCK, 0, BlockSize(), nullptr, 0);
-          ret != ZX_OK) {
+      if (ret = VmoOpLock(true); ret != ZX_OK) {
         return ret;
       }
     }
@@ -116,11 +116,6 @@ zx_status_t Page::GetPage(bool need_vmo_lock) {
   }
   clear_flag.cancel();
   return ret;
-}
-
-zx_status_t Page::VmoOpUnlock() {
-  ZX_DEBUG_ASSERT(IsAllocated());
-  return vmo_.op_range(ZX_VMO_OP_UNLOCK, 0, BlockSize(), nullptr, 0);
 }
 
 void Page::PutPage(fbl::RefPtr<Page> &&page, bool unlock) {
@@ -135,7 +130,9 @@ zx_status_t Page::Unmap() {
   zx_status_t ret = ZX_OK;
   if (IsMapped()) {
     ClearMapped();
+#ifdef __Fuchsia__
     ret = zx::vmar::root_self()->unmap(address_, BlockSize());
+#endif  // __Fuchsia__
   }
   return ret;
 }
@@ -143,8 +140,12 @@ zx_status_t Page::Unmap() {
 zx_status_t Page::Map() {
   zx_status_t ret = ZX_OK;
   if (!SetFlag(PageFlag::kPageMapped)) {
+#ifdef __Fuchsia__
     ret = zx::vmar::root_self()->map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, vmo_, 0, BlockSize(),
                                      &address_);
+#else   // __Fuchsia__
+    address_ = reinterpret_cast<zx_vaddr_t>(blk_.GetData());
+#endif  // __Fuchsia__
   }
   return ret;
 }
@@ -185,6 +186,7 @@ void Page::ClearWriteback() {
   }
 }
 
+#ifdef __Fuchsia__
 zx_status_t Page::VmoWrite(const void *buffer, uint64_t offset, size_t buffer_size) {
   return vmo_.write(buffer, offset, buffer_size);
 }
@@ -192,6 +194,31 @@ zx_status_t Page::VmoWrite(const void *buffer, uint64_t offset, size_t buffer_si
 zx_status_t Page::VmoRead(void *buffer, uint64_t offset, size_t buffer_size) {
   return vmo_.read(buffer, offset, buffer_size);
 }
+
+zx_status_t Page::VmoOpUnlock() {
+  ZX_DEBUG_ASSERT(IsAllocated());
+  return vmo_.op_range(ZX_VMO_OP_UNLOCK, 0, BlockSize(), nullptr, 0);
+}
+
+zx_status_t Page::VmoOpLock(bool commit) {
+  uint32_t op = ZX_VMO_OP_TRY_LOCK;
+  if (commit) {
+    op |= ZX_VMO_OP_COMMIT;
+  }
+  return vmo_.op_range(op, 0, BlockSize(), nullptr, 0);
+}
+#else   // __Fuchsia__
+// Do nothing on Linux.
+zx_status_t Page::VmoWrite(const void *buffer, uint64_t offset, size_t buffer_size) {
+  return ZX_OK;
+}
+
+zx_status_t Page::VmoRead(void *buffer, uint64_t offset, size_t buffer_size) { return ZX_OK; }
+
+zx_status_t Page::VmoOpUnlock() { return ZX_OK; }
+
+zx_status_t Page::VmoOpLock(bool commit) { return ZX_OK; }
+#endif  // __Fuchsia__
 
 FileCache::FileCache(VnodeF2fs *vnode) : vnode_(vnode) {}
 

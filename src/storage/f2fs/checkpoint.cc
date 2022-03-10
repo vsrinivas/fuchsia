@@ -82,7 +82,9 @@ zx_status_t F2fs::CheckOrphanSpace() {
   std::lock_guard lock(superblock_info.GetOrphanInodeMutex());
   if (superblock_info.GetOrphanCount() >= max_orphans) {
     err = ZX_ERR_NO_SPACE;
+#ifdef __Fuchsia__
     inspect_tree_.OnOutOfSpace();
+#endif  // __Fuchsia__
   }
   return err;
 }

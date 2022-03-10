@@ -25,7 +25,7 @@ TEST(BCacheTest, Trim) {
     ASSERT_EQ(f2fs::CreateBcache(std::move(device), &readonly_device, &bc), ZX_OK);
 
     fuchsia_hardware_block_BlockInfo info;
-    bc->device()->BlockGetInfo(&info);
+    bc->GetDevice()->BlockGetInfo(&info);
     block_t end_blk = static_cast<block_t>(bc->Maxblk() / (kBlockSize / info.block_size));
     ASSERT_EQ(bc->Trim(0, end_blk), ZX_ERR_NOT_SUPPORTED);
   }
@@ -38,7 +38,7 @@ TEST(BCacheTest, Trim) {
     ASSERT_EQ(f2fs::CreateBcache(std::move(device), &readonly_device, &bc), ZX_OK);
 
     fuchsia_hardware_block_BlockInfo info;
-    bc->device()->BlockGetInfo(&info);
+    bc->GetDevice()->BlockGetInfo(&info);
     block_t end_blk = static_cast<block_t>(bc->Maxblk() / (kBlockSize / info.block_size));
     ASSERT_EQ(bc->Trim(0, end_blk), ZX_OK);
   }
@@ -54,10 +54,10 @@ TEST(BCacheTest, GetDevice) {
     auto device_ptr = device.get();
     ASSERT_EQ(f2fs::CreateBcache(std::move(device), &readonly_device, &bc), ZX_OK);
 
-    block_client::BlockDevice* bcache_device_ptr = bc->device();
+    block_client::BlockDevice* bcache_device_ptr = bc->GetDevice();
     ASSERT_EQ(bcache_device_ptr, device_ptr);
 
-    const block_client::BlockDevice* bcache_const_device_ptr = bc->device();
+    const block_client::BlockDevice* bcache_const_device_ptr = bc->GetDevice();
     ASSERT_EQ(bcache_const_device_ptr, device_ptr);
   }
 }

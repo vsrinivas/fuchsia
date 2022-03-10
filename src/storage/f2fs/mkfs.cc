@@ -75,7 +75,7 @@ zx_status_t MkfsWorker::GetDeviceInfo() {
 #ifdef __Fuchsia__
   fuchsia_hardware_block_BlockInfo info;
 
-  bc_->device()->BlockGetInfo(&info);
+  bc_->GetDevice()->BlockGetInfo(&info);
 
   params_.sector_size = info.block_size;
   params_.sectors_per_blk = kBlockSize / info.block_size;

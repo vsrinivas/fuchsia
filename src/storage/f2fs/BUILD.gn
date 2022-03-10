@@ -26,7 +26,6 @@ static_library("f2fs") {
     "fsck.cc",
     "gc.cc",
     "inline.cc",
-    "inspect.cc",
     "mkfs.cc",
     "mount.cc",
     "namei.cc",
@@ -35,7 +34,6 @@ static_library("f2fs") {
     "segment.cc",
     "super.cc",
     "third_party/ext2_hash/hash.cc",
-    "third_party/ext2_hash/hash.h",
     "vnode.cc",
     "vnode_cache.cc",
     "writeback.cc",
@@ -54,31 +52,30 @@ static_library("f2fs") {
     "file.h",
     "file_cache.h",
     "fsck.h",
-    "inspect.h",
     "mkfs.h",
     "mount.h",
     "node.h",
     "segment.h",
+    "third_party/ext2_hash/hash.h",
     "vnode.h",
     "vnode_cache.h",
     "writeback.h",
   ]
 
   public_deps = [
+    "//sdk/lib/fit-promise",
     "//src/lib/storage/vfs/cpp",
-    "//src/lib/storage/vfs/cpp/inspect",
-    "//src/lib/storage/vfs/cpp/journal",
     "//src/lib/storage/vfs/cpp/journal",
     "//src/lib/storage/vfs/cpp/transaction",
     "//src/lib/uuid",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/storage/buffer",
+    "//zircon/system/ulib/zx",
     "//zircon/third_party/ulib/safemath",
   ]
 
   deps = [
     "//sdk/lib/syslog/cpp",
-    "//zircon/system/ulib/inspect",
     "//zircon/system/ulib/zxc",
   ]
 
@@ -92,9 +89,20 @@ static_library("f2fs") {
     defines += [ "F2FS_ROLL_FORWARD" ]
   }
 
+  if (is_linux) {
+    sources += [ "sync_host.cc" ]
+
+    public += [ "sync_host.h" ]
+  }
+
   if (is_fuchsia) {
+    sources += [ "inspect.cc" ]
+
+    public += [ "inspect.h" ]
+
     public_deps += [
       "//src/lib/storage/block_client/cpp",
+      "//src/lib/storage/vfs/cpp/inspect",
       "//zircon/system/ulib/zircon-internal",
     ]
 
@@ -113,11 +121,12 @@ static_library("f2fs") {
       "//zircon/system/ulib/fidl",
       "//zircon/system/ulib/fidl-async:fidl-async-cpp",
       "//zircon/system/ulib/fidl-utils",
+      "//zircon/system/ulib/inspect",
       "//zircon/system/ulib/storage-metrics",
+      "//zircon/system/ulib/sync",
       "//zircon/system/ulib/trace",
       "//zircon/system/ulib/trace-engine",
       "//zircon/system/ulib/trace-provider:trace-provider-with-fdio",
-      "//zircon/system/ulib/zx",
     ]
   }
 }

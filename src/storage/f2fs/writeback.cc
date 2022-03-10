@@ -6,12 +6,18 @@
 
 namespace f2fs {
 
+#ifdef __Fuchsia__
 SegmentWriteBuffer::SegmentWriteBuffer(storage::VmoidRegistry *vmoid_registry, size_t blocks,
                                        uint32_t block_size, PageType type) {
   ZX_DEBUG_ASSERT(type < PageType::kNrPageType);
   ZX_ASSERT(buffer_.Initialize(vmoid_registry, blocks, block_size,
                                kVmoBufferLabels[static_cast<uint32_t>(type)].data()) == ZX_OK);
 }
+#else  // __Fuchsia__
+SegmentWriteBuffer::SegmentWriteBuffer(Bcache *bc, size_t blocks, uint32_t block_size,
+                                       PageType type)
+    : buffer_(blocks, block_size) {}
+#endif
 
 PageOperations SegmentWriteBuffer::TakeOperations() {
   std::lock_guard lock(mutex_);
@@ -121,22 +127,25 @@ fpromise::promise<> Writer::SubmitPages(sync_completion_t *completion, PageType 
 }
 
 void Writer::ScheduleTask(fpromise::pending_task task) {
-  return executor_.schedule_task(std::move(task));
+#ifdef __Fuchsia__
+  executor_.schedule_task(std::move(task));
+#else   // __Fuchsia__
+  auto result = fpromise::run_single_threaded(task.take_promise());
+  assert(result.is_ok());
+#endif  // __Fuchsia__
 }
 
 void Writer::ScheduleSubmitPages(sync_completion_t *completion, PageType type) {
-  if (type == PageType::kNrPageType) {
-    auto tasks = SubmitPages(nullptr, PageType::kData)
-                     .then([this](fpromise::result<> &result) {
-                       return SubmitPages(nullptr, PageType::kNode);
-                     })
-                     .then([this, completion](fpromise::result<> &result) {
-                       return SubmitPages(completion, PageType::kMeta);
-                     });
-    return ScheduleTask(std::move(tasks));
-  } else {
-    return ScheduleTask(SubmitPages(completion, type));
-  }
+  auto task = (type == PageType::kNrPageType)
+                  ? SubmitPages(nullptr, PageType::kData)
+                        .then([this](fpromise::result<> &result) {
+                          return SubmitPages(nullptr, PageType::kNode);
+                        })
+                        .then([this, completion](fpromise::result<> &result) {
+                          return SubmitPages(completion, PageType::kMeta);
+                        })
+                  : SubmitPages(completion, type);
+  ScheduleTask(std::move(task));
 }
 
 }  // namespace f2fs

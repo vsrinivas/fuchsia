@@ -93,6 +93,7 @@ class Page : public PageRefCounted<Page>,
   // reference.
   static void PutPage(fbl::RefPtr<Page> &&page, bool unlock);
   zx_status_t VmoOpUnlock();
+  zx_status_t VmoOpLock(bool commit = false);
   void *GetAddress() const {
     // TODO: |address_| needs to be atomically mapped in a on-demand manner.
     ZX_DEBUG_ASSERT(IsMapped());
@@ -191,7 +192,11 @@ class Page : public PageRefCounted<Page>,
       ATOMIC_FLAG_INIT};
   // It contains the data of the block at |index_|.
   // TODO: when resizeable paged_vmo is available, clone a part of paged_vmo
+#ifdef __Fuchsia__
   zx::vmo vmo_;
+#else
+  FsBlock blk_;
+#endif
   // It indicates FileCache to which |this| belongs.
   // It is only use for Downgrade() or unit tests.
   FileCache *file_cache_ = nullptr;
