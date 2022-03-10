@@ -279,7 +279,7 @@ impl CapabilityId {
         )))
     }
 
-    /// Given an Offer or Exposeclause, return the set of target identifiers.
+    /// Given an Offer or Expose clause, return the set of target identifiers.
     ///
     /// When only one capability identifier is specified, the target identifier name is derived
     /// using the "as" clause. If an "as" clause is not specified, the target identifier is the
@@ -943,58 +943,14 @@ pub struct Document {
     /// determine what keys it expects to receive, and how it interprets them.
     ///
     /// [doc-runners]: /docs/concepts/components/v2/capabilities/runners.md
+    #[reference_doc(json_type = "object")]
     pub program: Option<Program>,
 
     /// The `children` section declares child component instances as described in
     /// [Child component instances][doc-children].
     ///
-    /// Keys:
-    ///
-    /// -   `name`: The name of the child component instance, which is a string of one
-    ///     or more of the following characters: `a-z`, `0-9`, `_`, `.`, `-`. The name
-    ///     identifies this component when used in a [reference](#references).
-    /// -   `url`: The [component URL][component-url] for the child component instance.
-    /// -   `startup` _(optional)_: The component instance's startup mode.
-    ///     -   `lazy` _(default)_: Start the component instance only if another
-    ///         component instance binds to it.
-    ///     -   [`eager`][doc-eager]: Start the component instance as soon as its parent
-    ///         starts.
-    /// -   `environment` _(optional)_: If present, the name of the environment to be
-    ///     assigned to the child component instance, one of
-    ///     [`environments`](#environments). If omitted, the child will inherit the same
-    ///     environment assigned to this component.
-    /// -   `on_terminate` _(optional)_: Determines the fault recovery policy to apply
-    ///     if this component terminates.
-    ///     -   `none` _(default)_: Do nothing.
-    ///     -   `reboot`: Gracefully reboot the system if the component terminates for
-    ///         any reason. This is a special feature for use only by a narrow set of
-    ///         components; see [Termination policies][doc-reboot-on-terminate] for more
-    ///         information.
-    ///
-    /// Example:
-    ///
-    /// ```json5
-    /// children: [
-    ///     {
-    ///         name: "logger",
-    ///         url: "fuchsia-pkg://fuchsia.com/logger#logger.cm",
-    ///     },
-    ///     {
-    ///         name: "pkg_cache",
-    ///         url: "fuchsia-pkg://fuchsia.com/pkg_cache#meta/pkg_cache.cm",
-    ///         startup: "eager",
-    ///     },
-    ///     {
-    ///         name: "child",
-    ///         url: "#meta/child.cm",
-    ///     }
-    /// ],
-    /// ```
-    ///
     /// [doc-children]: /docs/concepts/components/v2/realms.md#child-component-instances
-    /// [component-url]: /docs/reference/components/url.md
-    /// [doc-eager]: /docs/concepts/components/v2/lifecycle.md#eager_binding
-    /// [doc-reboot-on-terminate]: /docs/concepts/components/v2/termination_policies.md#reboot-on-terminate
+    #[reference_doc(recurse)]
     pub children: Option<Vec<Child>>,
 
     /// The `collections` section declares collections as described in
@@ -1025,6 +981,7 @@ pub struct Document {
     ///     },
     /// ],
     /// ```
+    #[reference_doc(json_type = "object")]
     pub collections: Option<Vec<Collection>>,
 
     /// The `environments` section declares environments as described in
@@ -1086,6 +1043,7 @@ pub struct Document {
     /// ```
     ///
     /// [doc-environments]: /docs/concepts/components/v2/environments.md
+    #[reference_doc(json_type = "object")]
     pub environments: Option<Vec<Environment>>,
 
     /// The `capabilities` section defines capabilities that are provided by this component.
@@ -1176,6 +1134,7 @@ pub struct Document {
     /// [doc-event]: /docs/concepts/components/v2/capabilities/event.md
     /// [doc-directory-rights]: /docs/concepts/components/v2/capabilities/directory#directory-capability-rights
     /// [glossary.outgoing directory]: /docs/glossary/README.md#outgoing-directory
+    #[reference_doc(json_type = "object")]
     pub capabilities: Option<Vec<Capability>>,
 
     /// For executable components, declares capabilities that this
@@ -1240,6 +1199,7 @@ pub struct Document {
     ///
     /// [fidl-environment-decl]: /reference/fidl/fuchsia.component.decl#Environment
     /// [glossary.namespace]: /docs/glossary/README.md#namespace
+    #[reference_doc(json_type = "object")]
     pub r#use: Option<Vec<Use>>,
 
     /// Declares the capabilities that are made available to the parent component or to the
@@ -1300,6 +1260,7 @@ pub struct Document {
     ///     },
     /// ],
     /// ```
+    #[reference_doc(json_type = "object")]
     pub expose: Option<Vec<Expose>>,
 
     /// Declares the capabilities that are made available to a [child component][doc-children]
@@ -1399,6 +1360,7 @@ pub struct Document {
     ///     },
     /// ],
     /// ```
+    #[reference_doc(json_type = "object")]
     pub offer: Option<Vec<Offer>>,
 
     /// Contains metadata that components may interpret for their own purposes. The component
@@ -2150,14 +2112,60 @@ pub struct Offer {
     pub modes: Option<EventModes>,
 }
 
-#[derive(Deserialize, Debug, PartialEq)]
+#[derive(ReferenceDoc, Deserialize, Debug, PartialEq)]
 #[serde(deny_unknown_fields)]
+#[reference_doc(fields_as = "list", top_level_doc_after_fields)]
+/// Example:
+///
+/// ```json5
+/// children: [
+///     {
+///         name: "logger",
+///         url: "fuchsia-pkg://fuchsia.com/logger#logger.cm",
+///     },
+///     {
+///         name: "pkg_cache",
+///         url: "fuchsia-pkg://fuchsia.com/pkg_cache#meta/pkg_cache.cm",
+///         startup: "eager",
+///     },
+///     {
+///         name: "child",
+///         url: "#meta/child.cm",
+///     }
+/// ],
+/// ```
+///
+/// [component-url]: /docs/concepts/components/component_urls.md
+/// [doc-eager]: /docs/concepts/components/v2/lifecycle.md#eager_binding
+/// [doc-reboot-on-terminate]: /docs/concepts/components/v2/termination_policies.md#reboot-on-terminate
 pub struct Child {
+    /// The name of the child component instance, which is a string of one
+    /// or more of the following characters: `a-z`, `0-9`, `_`, `.`, `-`. The name
+    /// identifies this component when used in a [reference](#references).
     pub name: Name,
+
+    /// The [component URL][component-url] for the child component instance.
     pub url: Url,
+
     #[serde(default)]
+    /// The component instance's startup mode. One of:
+    /// -   `lazy` _(default)_: Start the component instance only if another
+    ///     component instance binds to it.
+    /// -   [`eager`][doc-eager]: Start the component instance as soon as its parent
+    ///     starts.
     pub startup: StartupMode,
+
+    /// Determines the fault recovery policy to apply if this component terminates.
+    /// -   `none` _(default)_: Do nothing.
+    /// -   `reboot`: Gracefully reboot the system if the component terminates for
+    ///     any reason. This is a special feature for use only by a narrow set of
+    ///     components; see [Termination policies][doc-reboot-on-terminate] for more
+    ///     information.
     pub on_terminate: Option<OnTerminate>,
+
+    /// If present, the name of the environment to be assigned to the child component instance, one
+    /// of [`environments`](#environments). If omitted, the child will inherit the same environment
+    /// assigned to this component.
     pub environment: Option<EnvironmentRef>,
 }
 

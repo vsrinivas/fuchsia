@@ -27,7 +27,7 @@ A reference string takes the form of `#<name>`, where `<name>` refers to the nam
 
 ### `include` {#include}
 
-_array of `strings` (optional)_
+_array of `string` (optional)_
 
 The optional `include` property describes zero or more other component manifest
 files to be merged into this component manifest. For example:
@@ -113,34 +113,31 @@ determine what keys it expects to receive, and how it interprets them.
 
 ### `children` {#children}
 
-_array of `objects` (optional)_
+_array of `object` (optional)_
 
 The `children` section declares child component instances as described in
 [Child component instances][doc-children].
 
-Keys:
+[doc-children]: /docs/concepts/components/v2/realms.md#child-component-instances
 
--   `name`: The name of the child component instance, which is a string of one
-    or more of the following characters: `a-z`, `0-9`, `_`, `.`, `-`. The name
-    identifies this component when used in a [reference](#references).
--   `url`: The [component URL][component-url] for the child component instance.
--   `startup` _(optional)_: The component instance's startup mode.
-    -   `lazy` _(default)_: Start the component instance only if another
-        component instance binds to it.
-    -   [`eager`][doc-eager]: Start the component instance as soon as its parent
-        starts.
--   `environment` _(optional)_: If present, the name of the environment to be
-    assigned to the child component instance, one of
-    [`environments`](#environments). If omitted, the child will inherit the same
-    environment assigned to this component.
--   `on_terminate` _(optional)_: Determines the fault recovery policy to apply
-    if this component terminates.
-    -   `none` _(default)_: Do nothing.
-    -   `reboot`: Gracefully reboot the system if the component terminates for
-        any reason. This is a special feature for use only by a narrow set of
-        components; see [Termination policies][doc-reboot-on-terminate] for more
-        information.
-
+- `name`: (_`string`_) The name of the child component instance, which is a string of one
+  or more of the following characters: `a-z`, `0-9`, `_`, `.`, `-`. The name
+  identifies this component when used in a [reference](#references).
+- `url`: (_`string`_) The [component URL][component-url] for the child component instance.
+- `startup`: (_`string`_) The component instance's startup mode. One of:
+  -   `lazy` _(default)_: Start the component instance only if another
+      component instance binds to it.
+  -   [`eager`][doc-eager]: Start the component instance as soon as its parent
+      starts.
+- `on_terminate`: (_optional `string`_) Determines the fault recovery policy to apply if this component terminates.
+  -   `none` _(default)_: Do nothing.
+  -   `reboot`: Gracefully reboot the system if the component terminates for
+      any reason. This is a special feature for use only by a narrow set of
+      components; see [Termination policies][doc-reboot-on-terminate] for more
+      information.
+- `environment`: (_optional `string`_) If present, the name of the environment to be assigned to the child component instance, one
+  of [`environments`](#environments). If omitted, the child will inherit the same environment
+  assigned to this component.
 Example:
 
 ```json5
@@ -161,14 +158,15 @@ children: [
 ],
 ```
 
-[doc-children]: /docs/concepts/components/v2/realms.md#child-component-instances
-[component-url]: /docs/reference/components/url.md
+[component-url]: /docs/concepts/components/component_urls.md
 [doc-eager]: /docs/concepts/components/v2/lifecycle.md#eager_binding
 [doc-reboot-on-terminate]: /docs/concepts/components/v2/termination_policies.md#reboot-on-terminate
 
+
+
 ### `collections` {#collections}
 
-_array of `objects` (optional)_
+_array of `object` (optional)_
 
 The `collections` section declares collections as described in
 [Component collections][doc-collections].
@@ -201,7 +199,7 @@ collections: [
 
 ### `environments` {#environments}
 
-_array of `objects` (optional)_
+_array of `object` (optional)_
 
 The `environments` section declares environments as described in
 [Environments][doc-environments].
@@ -265,7 +263,7 @@ environments: [
 
 ### `capabilities` {#capabilities}
 
-_array of `objects` (optional)_
+_array of `object` (optional)_
 
 The `capabilities` section defines capabilities that are provided by this component.
 Capabilities that are [offered](#offer) or [exposed](#expose) from `self` must be declared
@@ -358,7 +356,7 @@ A definition of a [resolver capability][doc-resolvers].
 
 ### `use` {#use}
 
-_array of `objects` (optional)_
+_array of `object` (optional)_
 
 For executable components, declares capabilities that this
 component requires in its [namespace][glossary.namespace] at runtime.
@@ -425,7 +423,7 @@ use: [
 
 ### `expose` {#expose}
 
-_array of `objects` (optional)_
+_array of `object` (optional)_
 
 Declares the capabilities that are made available to the parent component or to the
 framework. It is valid to `expose` from `self` or from a child component.
@@ -488,7 +486,7 @@ expose: [
 
 ### `offer` {#offer}
 
-_array of `objects` (optional)_
+_array of `object` (optional)_
 
 Declares the capabilities that are made available to a [child component][doc-children]
 instance or a [child collection][doc-collections].

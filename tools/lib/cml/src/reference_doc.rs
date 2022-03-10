@@ -12,11 +12,18 @@ pub trait MarkdownReferenceDocGenerator {
 
     /// This method is called internally by the reference doc generator when
     /// recursing to generate documentation for field types.
-    fn get_reference_doc_markdown_with_options(indent_headers_by: usize) -> String {
+    fn get_reference_doc_markdown_with_options(
+        indent_headers_by: usize,
+        indent_with_spaces: usize,
+    ) -> String {
         let doc = Self::get_reference_doc_markdown();
-        indent_all_markdown_headers_by(&doc, indent_headers_by)
+        indent_lines_with_spaces(
+            &indent_all_markdown_headers_by(&doc, indent_headers_by),
+            indent_with_spaces,
+        )
     }
 }
+
 /// Helper function to indent markdown headers in `str` by `n` additional hash
 /// marks.
 fn indent_all_markdown_headers_by(s: &str, n: usize) -> String {
@@ -32,5 +39,14 @@ fn indent_markdown_header_by(s: &str, n: usize) -> String {
         "#".to_string().repeat(n) + &s
     } else {
         s.to_string()
+    }
+}
+
+fn indent_lines_with_spaces(s: &str, n: usize) -> String {
+    if n == 0 {
+        s.to_string()
+    } else {
+        let prefix = " ".to_string().repeat(n);
+        s.split('\n').map(|part| prefix.clone() + part).collect::<Vec<_>>().join("\n")
     }
 }

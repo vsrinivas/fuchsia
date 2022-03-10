@@ -6,11 +6,10 @@
 // with #[allow(dead_code)]
 #![allow(dead_code)]
 
-#[cfg(test)]
 mod tests {
     use {
         cml::reference_doc::MarkdownReferenceDocGenerator, cml_macro::ReferenceDoc,
-        difference::assert_diff,
+        pretty_assertions::assert_eq, std::collections::HashMap,
     };
 
     /// # Big picture
@@ -25,26 +24,53 @@ mod tests {
         /// # This heading will be indented by default
         str: Option<String>,
 
-        /// This is a vector.
+        /// This is a vector with overridden json type number.
+        #[reference_doc(json_type = "number")]
         r#use: Vec<String>,
+
+        /// This is a map!
+        map: Option<HashMap<String, String>>,
 
         /// This will appear first when describing `objects`.
         #[reference_doc(recurse)]
-        objects: Option<Vec<ReferenceDocTestObject>>,
+        objects: Option<Vec<ReferenceDocTestObject1>>,
+
+        /// More objects.
+        #[reference_doc(recurse)]
+        objects2: ReferenceDocTestObject2,
     }
 
-    /// This will appear before describing the fields.
+    /// This will appear after describing the fields.
     #[derive(ReferenceDoc)]
-    struct ReferenceDocTestObject {
+    #[reference_doc(top_level_doc_after_fields)]
+    struct ReferenceDocTestObject1 {
         /// This will appear when documenting this field specifically.
         ///
         /// # A super indented header!
         an_int: i32,
     }
 
+    /// This should display fields as a list.
+    #[derive(ReferenceDoc)]
+    #[reference_doc(fields_as = "list")]
+    struct ReferenceDocTestObject2 {
+        /// It's a string, but it can take the following values:
+        /// - "0": zero things
+        /// - "1": one thing!
+        val: String,
+
+        /// An enum.
+        val2: Option<ReferenceDocTestEnum>,
+    }
+
+    enum ReferenceDocTestEnum {
+        Foo,
+        Bar,
+    }
+
     #[test]
     fn test_reference_doc() {
-        assert_diff!(
+        assert_eq!(
             &ReferenceDocTest::get_reference_doc_markdown(),
             r#"# Big picture
 
@@ -62,31 +88,49 @@ This content describes str.
 
 ### `use` {#use}
 
-_array of `strings`_
+_array of `number`_
 
-This is a vector.
+This is a vector with overridden json type number.
+
+### `map` {#map}
+
+_`object` (optional)_
+
+This is a map!
 
 ### `objects` {#objects}
 
-_array of `objects` (optional)_
+_array of `object` (optional)_
 
 This will appear first when describing `objects`.
 
-This will appear before describing the fields.
-
 #### `an_int` {#an_int}
 
-_`object`_
+_`number`_
 
 This will appear when documenting this field specifically.
 
 ##### A super indented header!
 
+This will appear after describing the fields.
+
+
+
+### `objects2` {#objects2}
+
+_`object`_
+
+More objects.
+
+This should display fields as a list.
+
+- `val`: (_`string`_) It's a string, but it can take the following values:
+  - "0": zero things
+  - "1": one thing!
+- `val2`: (_optional `string`_) An enum.
 
 
 "#,
-            "",
-            0
         );
     }
 }

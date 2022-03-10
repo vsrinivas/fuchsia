@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    darling::{ast, FromDeriveInput, FromField},
+    darling::{ast, FromDeriveInput, FromField, FromMeta},
     proc_macro2::TokenStream as TokenStream2,
     quote::{quote, ToTokens, TokenStreamExt},
     syn,
@@ -17,11 +17,11 @@ pub fn impl_derive_reference_doc(ast: syn::DeriveInput) -> Result<TokenStream2, 
         .indent_headers
         .unwrap_or_else(|| doc.map(|docstr| get_last_markdown_header_depth(&docstr)).unwrap_or(0));
 
-    // Unless overridden, forward the struct-level indent_headers value to
-    // all field attributes.
+    // Forward the struct-level `fields_as` value and optionally `indent_headers` to all field attributes.
     match &mut parsed.data {
         ast::Data::Struct(fields) => {
             for field in &mut fields.fields {
+                field.fields_as = parsed.fields_as.clone();
                 match &mut field.indent_headers {
                     Some(_) => {}
                     None => {
@@ -39,11 +39,15 @@ pub fn impl_derive_reference_doc(ast: syn::DeriveInput) -> Result<TokenStream2, 
                 let mut s = String::new();
             );
 
-            if let Some(doc) = get_doc_attr(&self.attrs) {
-                section_tokens.append_all(quote!(
-                    s.push_str(&#doc);
-                    s.push_str("\n\n");
-                ));
+            let top_level_doc_after_fields = self.top_level_doc_after_fields.unwrap_or_default();
+            let top_level_doc = if let Some(doc) = get_doc_attr(&self.attrs) {
+                format!("{}\n\n", doc)
+            } else {
+                "".to_string()
+            };
+
+            if !top_level_doc_after_fields {
+                section_tokens.append_all(quote!(s.push_str(&#top_level_doc);));
             }
 
             match &self.data {
@@ -57,6 +61,10 @@ pub fn impl_derive_reference_doc(ast: syn::DeriveInput) -> Result<TokenStream2, 
                 ast::Data::Enum(_) => {}
             }
 
+            if top_level_doc_after_fields {
+                section_tokens.append_all(quote!(s.push_str(&#top_level_doc);));
+            }
+
             tokens.append_all(section_tokens);
             tokens.append_all(quote!(s));
         }
@@ -66,52 +74,97 @@ pub fn impl_derive_reference_doc(ast: syn::DeriveInput) -> Result<TokenStream2, 
         fn to_tokens(&self, tokens: &mut TokenStream2) {
             let name = get_ident_name(&self.ident);
             let indent_headers = self.indent_headers.unwrap_or(0);
-            let mut ty_path = expect_typepath(&self.ty);
+            let mut rust_ty_path = expect_typepath(&self.ty);
             let mut is_optional = false;
             let mut is_vec = false;
-            if outer_type_ident_eq(&ty_path, "Option") {
+            if outer_type_ident_eq(&rust_ty_path, "Option") {
                 is_optional = true;
-                ty_path = get_first_inner_type_from_generic(&ty_path).unwrap();
+                rust_ty_path = get_first_inner_type_from_generic(&rust_ty_path).unwrap();
             }
-            if outer_type_ident_eq(&ty_path, "Vec") {
+            if outer_type_ident_eq(&rust_ty_path, "Vec") {
                 is_vec = true;
-                ty_path = get_first_inner_type_from_generic(&ty_path).unwrap();
+                rust_ty_path = get_first_inner_type_from_generic(&rust_ty_path).unwrap();
             }
 
-            // If the field has a doc-comment, extract it and add newlines.
-            let doc = get_doc_attr(&self.attrs)
-                .map(|s| format!("{}\n\n", indent_all_markdown_headers_by(&s, indent_headers + 1)))
-                .unwrap_or_default();
-
-            // If instructed to recurse, call get_reference_doc_markdown() on
-            // the inner Rust type of this field.
-            let ty_string = get_outer_type_without_generics(&ty_path);
-            let ty_ident = quote::format_ident!("{}", ty_string);
-            let trait_output = if self.recurse {
-                quote!(
-                    format!("{}\n\n", #ty_ident::get_reference_doc_markdown_with_options(#indent_headers + 1))
-                )
-            } else {
-                quote!("")
-            };
-
+            let rust_ty_string = get_outer_type_without_generics(&rust_ty_path);
+            let rust_ty_ident = quote::format_ident!("{}", rust_ty_string);
             // Get the json-equivalent value type for this Rust type.
-            let ty_display_string = get_json_type_string_from_ty_string(&ty_string);
-            let indented_format_string = indent_all_markdown_headers_by(
-                "# `{}` {{#{}}}\n\n_{}`{}{}`{}_\n\n{}{}",
-                indent_headers,
-            );
-            tokens.append_all(quote!(format!(
-                #indented_format_string,
-                #name,
-                #name,
-                if #is_vec { "array of " } else { "" },
-                #ty_display_string,
-                if #is_vec { "s" } else { "" },
-                if #is_optional { " (optional)" } else { "" },
-                #doc,
-                #trait_output,
-            )));
+            let json_type_string = get_json_type_string_from_field_attrs(&self, &rust_ty_string);
+            match &self.fields_as {
+                FieldOutputType::Headings => {
+                    let doc = get_doc_attr(&self.attrs)
+                        .map(|s| indent_all_markdown_headers_by(&s, indent_headers + 1))
+                        .unwrap_or_default();
+                    let trait_output = if self.recurse {
+                        quote!(
+                            #rust_ty_ident::get_reference_doc_markdown_with_options(#indent_headers + 1, 0)
+                        )
+                    } else {
+                        quote!("")
+                    };
+
+                    let indented_format_string =
+                        indent_markdown_header_by("# `{name}` {{#{name}}}\n\n", indent_headers);
+                    tokens.append_all(quote!({
+                        let doc = #doc.to_string();
+                        let trait_output = #trait_output.to_string();
+                        let mut output = format!(#indented_format_string, name=#name);
+                        output.push_str("_");
+                        if #is_vec {
+                            output.push_str("array of ");
+                        }
+                        output.push_str("`");
+                        output.push_str(#json_type_string);
+                        output.push_str("`");
+                        if #is_optional {
+                            output.push_str(" (optional)");
+                        }
+                        output.push_str("_\n\n");
+                        if !doc.is_empty() {
+                            output.push_str(&doc);
+                            output.push_str("\n\n");
+                        }
+                        if !trait_output.is_empty() {
+                            output.push_str(&trait_output);
+                            output.push_str("\n\n");
+                        }
+                        output
+                    }));
+                }
+                FieldOutputType::List => {
+                    let doc = get_doc_attr(&self.attrs)
+                        .map(|s| indent_lines_with_spaces(&s, 2, 1))
+                        .unwrap_or_default();
+                    let trait_output = if self.recurse {
+                        quote!(
+                            #rust_ty_ident::get_reference_doc_markdown_with_options(#indent_headers, 2)
+                        )
+                    } else {
+                        quote!("")
+                    };
+                    // FieldOutputType::List
+                    tokens.append_all(quote!({
+                        let trait_output = #trait_output.to_string();
+                        let mut output = format!("- `{}`: (_", #name);
+                        if #is_optional {
+                            output.push_str("optional ");
+                        }
+                        if #is_vec {
+                            output.push_str("array of ");
+                        }
+                        output.push_str("`");
+                        output.push_str(#json_type_string);
+                        output.push_str("`_) ");
+                        output.push_str(#doc);
+                        if !trait_output.is_empty() {
+                            output.push_str("\n   ");
+                            output.push_str(&trait_output);
+                        }
+                        output.push_str("\n");
+                        output
+                    }));
+                }
+            }
         }
     }
 
@@ -132,13 +185,36 @@ struct ReferenceDocAttributes {
     data: ast::Data<(), ReferenceDocFieldAttributes>,
     attrs: Vec<syn::Attribute>,
 
-    #[darling(default)]
     /// Instructs the doc generator to indent any markdown headers encountered
     /// on fields with this many additional hash (#) marks.
     ///
     /// A default value is derived by looking at the top-level doc comment
     /// and extracting header depth.
+    #[darling(default)]
     indent_headers: Option<usize>,
+
+    /// Instructs the doc generator to output struct fields as a list or
+    /// a header.
+    #[darling(default)]
+    fields_as: FieldOutputType,
+
+    /// Instructs the doc generator to place the struct's top-level doc comment
+    /// after the fields' doc comments.
+    #[darling(default)]
+    top_level_doc_after_fields: Option<bool>,
+}
+
+#[derive(Debug, Clone, FromMeta)]
+#[darling(rename_all = "lowercase")]
+enum FieldOutputType {
+    Headings,
+    List,
+}
+
+impl Default for FieldOutputType {
+    fn default() -> FieldOutputType {
+        FieldOutputType::Headings
+    }
 }
 
 /// Receiver struct for darling to parse macro arguments on fields in a struct.
@@ -149,15 +225,31 @@ struct ReferenceDocFieldAttributes {
     ty: syn::Type,
     attrs: Vec<syn::Attribute>,
 
+    /// If specified, the JSON value type for this field. For example: "string",
+    /// "object", "number", "boolean".
+    ///
+    /// If omitted, a naive type will be derived from the Rust type:
+    ///   String -> string
+    ///   bool -> boolean
+    ///   u8, u16, i8, ... -> number
+    ///   anything with `recursive=true` -> object
+    ///   default -> string
     #[darling(default)]
+    json_type: Option<String>,
+
     /// Instructs the doc generator to retrieve markdown by calling
     /// `get_reference_doc_markdown()` on the inner type of the field.
+    #[darling(default)]
     recurse: bool,
 
-    #[darling(default)]
     /// Instructs the doc generator to indent any markdown headers encountered
     /// with this many additional hash (#) marks.
+    #[darling(default)]
     indent_headers: Option<usize>,
+
+    /// Forwarded from `ReferenceDocAttributes.fields_as`.
+    #[darling(skip)]
+    fields_as: FieldOutputType,
 }
 
 /// Returns true if the outer type in `p` is equal to `str`. For example, for
@@ -202,12 +294,32 @@ fn get_first_inner_type_from_generic(path: &syn::TypePath) -> Option<&syn::TypeP
     }
 }
 
+/// Returns an appropriate JSON type string from parsed token attributes.
+fn get_json_type_string_from_field_attrs(
+    attrs: &ReferenceDocFieldAttributes,
+    rust_ty_string: &str,
+) -> String {
+    attrs.json_type.clone().unwrap_or_else(|| {
+        get_json_type_string_from_ty_string(&rust_ty_string)
+            .unwrap_or_else(|| if attrs.recurse { "object" } else { "string" })
+            .to_string()
+    })
+}
+
 /// Returns an appropriate JSON type string for a Rust type ident string.
-fn get_json_type_string_from_ty_string(ty_string: &String) -> &str {
+fn get_json_type_string_from_ty_string(ty_string: &str) -> Option<&str> {
+    let number_types = &[
+        "i8", "i16", "i32", "i64", "i128", "u8", "u16", "u32", "u64", "u128", "usize", "f32", "f64",
+    ];
+    let map_types = &["Map", "BTreeMap", "HashMap"];
     if ty_string == "String" {
-        "string"
+        Some("string")
+    } else if map_types.iter().any(|v| v == &ty_string) {
+        Some("object")
+    } else if number_types.iter().any(|v| v == &ty_string) {
+        Some("number")
     } else {
-        "object"
+        None
     }
 }
 
@@ -285,5 +397,26 @@ fn indent_markdown_header_by(s: &str, n: usize) -> String {
         "#".to_string().repeat(n) + &s
     } else {
         s.to_string()
+    }
+}
+
+fn indent_lines_with_spaces(s: &str, n: usize, ignore_first: usize) -> String {
+    if n == 0 {
+        s.to_string()
+    } else {
+        let prefix = " ".to_string().repeat(n);
+        s.split('\n')
+            .enumerate()
+            .map(
+                |(i, part)| {
+                    if i < ignore_first {
+                        part.to_string()
+                    } else {
+                        prefix.clone() + part
+                    }
+                },
+            )
+            .collect::<Vec<_>>()
+            .join("\n")
     }
 }
