@@ -5,6 +5,7 @@
 use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Sub, SubAssign};
 
 /// Cursor messages.
+#[derive(Debug, PartialEq)]
 pub enum CursorMessage {
     /// Set the position of the cursor.
     SetPosition(Position),
