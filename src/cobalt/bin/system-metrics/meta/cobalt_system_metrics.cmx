@@ -16,7 +16,6 @@
         ],
         "services": [
             "fuchsia.cobalt.LoggerFactory",
-            "fuchsia.diagnostics.ArchiveAccessor",
             "fuchsia.kernel.Stats",
             "fuchsia.sysinfo.SysInfo",
             "fuchsia.tracing.provider.Registry",

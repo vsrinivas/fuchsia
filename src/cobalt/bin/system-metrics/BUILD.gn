@@ -15,15 +15,6 @@ metrics_registry("metrics_registry") {
   generate_binarypb = false
 }
 
-metrics_registry("diagnostics_metrics_registry") {
-  # This must match the ID of our Cobalt project as specified in:
-  # third_party/cobalt_config/projects.yaml
-  project_id = 5
-  namespace = "fuchsia_component_diagnostics"
-  generate_cc = true
-  generate_binarypb = false
-}
-
 source_set("system_metrics_daemon_lib") {
   sources = [
     "activity_listener.cc",
@@ -36,10 +27,8 @@ source_set("system_metrics_daemon_lib") {
   ]
 
   public_deps = [
-    ":diagnostics_metrics_registry_cc",
     ":metrics_registry_cc",
     "//sdk/fidl/fuchsia.cobalt",
-    "//sdk/fidl/fuchsia.diagnostics",
     "//sdk/fidl/fuchsia.hardware.thermal:fuchsia.hardware.thermal_c",
     "//sdk/fidl/fuchsia.kernel:fuchsia.kernel_llcpp",
     "//sdk/fidl/fuchsia.ui.activity",
