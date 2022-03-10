@@ -50,11 +50,25 @@ async fn pb_list<W: Write + Sync>(_sdk: Sdk, writer: &mut W, cmd: &ListCommand) 
     let entries = get_pbms(/*update_metadata=*/ !cmd.cached, /*verbose=*/ false, writer)
         .await
         .context("list pbms")?;
-    for entry in entries.iter() {
-        match entry {
-            Metadata::ProductBundleV1(bundle) => writeln!(writer, "{}", bundle.name)?,
-            _ => {}
-        }
+    let mut entry_names = entries
+        .iter()
+        .map(|entry| {
+            match entry {
+                Metadata::ProductBundleV1(bundle) => bundle.name.to_owned(),
+                _ => {
+                    // Returning an error would prevent all values from being
+                    // displayed. This is a more graceful failure. This message
+                    // is vague because the data may be newer or older (so
+                    // asking that they update ffx isn't necessarily the right
+                    // choice).
+                    "[Unknown ProductBundle, may need another ffx version]".to_string()
+                }
+            }
+        })
+        .collect::<Vec<_>>();
+    entry_names.sort();
+    for entry in entry_names {
+        writeln!(writer, "{}", entry)?;
     }
     Ok(())
 }
