@@ -4,15 +4,17 @@
 
 use anyhow::Context as _;
 use async_utils::stream::FlattenUnorderedExt as _;
+use fidl::endpoints::Proxy as _;
 use fidl::endpoints::{ControlHandle as _, RequestStream as _};
 use fidl_fuchsia_component as fcomponent;
 use fidl_fuchsia_component_runner as frunner;
 use fidl_fuchsia_data as fdata;
 use fidl_fuchsia_io as fio;
+use fidl_fuchsia_netemul as fnetemul;
 use fidl_fuchsia_test as ftest;
 use fuchsia_component::server::{ServiceFs, ServiceFsDir};
 use fuchsia_zircon as zx;
-use futures_util::{FutureExt as _, StreamExt as _, TryStreamExt as _};
+use futures::{FutureExt as _, StreamExt as _, TryStreamExt as _};
 use log::{error, info, warn};
 
 mod config;
@@ -44,7 +46,7 @@ async fn main() -> Result<(), anyhow::Error> {
 async fn test_setup(
     program: fdata::Dictionary,
     namespace: Vec<frunner::ComponentNamespaceEntry>,
-) -> Result<fidl::endpoints::ClientEnd<fio::DirectoryMarker>, anyhow::Error> {
+) -> Result<(config::NetworkEnvironment, fio::DirectoryProxy), anyhow::Error> {
     // Retrieve the '/svc' and '/pkg' directories from the test root's namespace, so
     // we can access the `fuchsia.test/Suite` protocol from the test driver, the
     // network configuration file, and any netstacks that need to be configured.
@@ -67,19 +69,28 @@ async fn test_setup(
     );
     let svc_dir = svc_dir
         .context("/svc directory not in namespace")?
-        .context("directory field not set for /svc namespace entry")?;
+        .context("directory field not set for /svc namespace entry")?
+        .into_proxy()
+        .context("client end into proxy")?;
     let pkg_dir = pkg_dir
         .context("/pkg directory not in namespace")?
         .context("directory field not set for /pkg namespace entry")?
         .into_proxy()
         .context("client end into proxy")?;
 
-    let config::Config { networks, netstacks } = config::load_from_program(program, &pkg_dir)
+    let env = config::Config::load_from_program(program, &pkg_dir)
         .await
-        .context("retrieving and parsing network configuration")?;
-    info!("configuring environment with networks: {:#?} and netstacks: {:#?}", networks, netstacks);
+        .context("retrieving and parsing network configuration")?
+        .apply(|name| {
+            fuchsia_component::client::connect_to_named_protocol_at_dir_root::<
+                fnetemul::ConfigurableNetstackMarker,
+            >(&svc_dir, &name)
+            .context("connect to protocol")
+        })
+        .await
+        .context("configuring networking environment")?;
 
-    Ok(svc_dir)
+    Ok((env, svc_dir))
 }
 
 async fn handle_runner_request(
@@ -97,16 +108,23 @@ async fn handle_runner_request(
                 outgoing_dir.context("outgoing directory missing from start info")?;
 
             let mut fs = ServiceFs::new_local();
-            let component_epitaph = match test_setup(program, namespace).await {
-                Ok(svc_dir) => {
+            let (
+                // Keep around the handles to the virtual networks and endpoints we created, so
+                // that they're not cleaned up before test execution is complete.
+                _network_environment,
+                component_epitaph,
+            ) = match test_setup(program, namespace).await {
+                Ok((env, svc_dir)) => {
                     // Proxy `fuchsia.test/Suite` requests at the test root's outgoing directory,
                     // where the test manager will expect to be able to access it, to the '/svc'
                     // directory in the test root's namespace, where the protocol was routed from
                     // the test driver.
-                    let svc_dir = std::sync::Arc::new(svc_dir.into_channel());
+                    let svc_dir = std::sync::Arc::new(
+                        svc_dir.into_channel().expect("proxy into channel").into(),
+                    );
                     let _: &mut ServiceFsDir<'_, _> =
                         fs.dir("svc").add_proxy_service_to::<ftest::SuiteMarker, ()>(svc_dir);
-                    zx::Status::OK
+                    (Some(env), zx::Status::OK)
                 }
                 Err(e) => {
                     error!("failed to set up test {}: {:?}", resolved_url, e);
@@ -126,7 +144,7 @@ async fn handle_runner_request(
                         fs.dir("svc").add_fidl_service(|stream: ftest::SuiteRequestStream| {
                             stream.control_handle().shutdown()
                         });
-                    zx::Status::from_raw(fcomponent::Error::InstanceCannotStart as i32)
+                    (None, zx::Status::from_raw(fcomponent::Error::InstanceCannotStart as i32))
                 }
             };
             let serve_test_suite = fs
@@ -137,7 +155,7 @@ async fn handle_runner_request(
             let mut request_stream =
                 controller.into_stream().context("server end into request stream")?;
 
-            let request = futures_util::select! {
+            let request = futures::select! {
                 () = serve_test_suite.fuse() => panic!("service fs closed unexpectedly"),
                 request = request_stream.try_next() => request,
             };

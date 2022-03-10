@@ -233,6 +233,11 @@
             to: [
                 "#cmx_runner",
                 "#legacy_test_runner",
+
+                // TODO(https://fxbug.dev/87164): when these legacy capabilities used by the
+                // realm builder server can be optional, don't offer them to the
+                // netemul_test_runner.
+                "#netemul_test_runner",
             ],
         },
         {
@@ -260,6 +265,7 @@
                 "#elf_test_runner",
                 "#go_test_runner",
                 "#gtest_runner",
+                "#netemul_test_runner",
                 "#rust_test_runner",
                 "#starnix_test_runner",
                 "#starnix_unit_test_runner",

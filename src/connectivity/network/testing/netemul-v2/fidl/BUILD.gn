@@ -6,11 +6,15 @@ import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.netemul") {
   name = "fuchsia.netemul"
-  sources = [ "netemul.fidl" ]
+  sources = [
+    "configurable_netstack.fidl",
+    "netemul.fidl",
+  ]
 
   public_deps = [
     "//sdk/fidl/fuchsia.component",
     "//sdk/fidl/fuchsia.io",
+    "//sdk/fidl/fuchsia.net",
     "//sdk/fidl/fuchsia.url",
     "//src/connectivity/network/testing/netemul/lib/fidl:network",
     "//src/connectivity/network/testing/netemul/lib/fidl:sync",

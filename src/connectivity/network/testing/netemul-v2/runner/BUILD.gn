@@ -17,6 +17,7 @@ rustc_binary("bin") {
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//sdk/fidl/fuchsia.net:fuchsia.net-rustc",
     "//sdk/fidl/fuchsia.test:fuchsia.test-rustc",
+    "//src/connectivity/network/testing/netemul-v2/fidl:fuchsia.netemul-rustc",
     "//src/connectivity/network/testing/netemul/lib/fidl:network-rustc",
     "//src/connectivity/network/testing/netemul/rust:lib",
     "//src/lib/async-utils",
@@ -27,7 +28,7 @@ rustc_binary("bin") {
     "//src/lib/network/fidl_fuchsia_net_ext",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:futures-util",
+    "//third_party/rust_crates:futures",
     "//third_party/rust_crates:log",
     "//third_party/rust_crates:serde",
     "//third_party/rust_crates:serde_json",
@@ -49,7 +50,10 @@ fuchsia_component("component") {
   testonly = true
   component_name = "netemul-test-runner"
   manifest = "meta/netemul-test-runner.cml"
-  deps = [ ":bin" ]
+  deps = [
+    ":bin",
+    "//src/connectivity/network/testing/netemul-v2/service:netemul-sandbox",
+  ]
 }
 
 fuchsia_package("package") {
@@ -59,8 +63,10 @@ fuchsia_package("package") {
 }
 
 fuchsia_unittest_package("netemul-runner-unit-tests") {
-  v2 = true
-  deps = [ ":bin_test" ]
+  deps = [
+    ":bin_test",
+    "//src/connectivity/network/testing/netemul-v2/service:netemul-sandbox",
+  ]
 }
 
 group("tests") {

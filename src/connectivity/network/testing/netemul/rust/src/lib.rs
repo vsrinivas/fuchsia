@@ -151,7 +151,7 @@ impl TestSandbox {
     }
 
     /// Connects to the sandbox's `NetworkManager`.
-    fn get_network_manager(&self) -> Result<fnetemul_network::NetworkManagerProxy> {
+    pub fn get_network_manager(&self) -> Result<fnetemul_network::NetworkManagerProxy> {
         let ctx = self.get_network_context()?;
         let (network_manager, server) =
             fidl::endpoints::create_proxy::<fnetemul_network::NetworkManagerMarker>()?;
@@ -160,7 +160,7 @@ impl TestSandbox {
     }
 
     /// Connects to the sandbox's `EndpointManager`.
-    fn get_endpoint_manager(&self) -> Result<fnetemul_network::EndpointManagerProxy> {
+    pub fn get_endpoint_manager(&self) -> Result<fnetemul_network::EndpointManagerProxy> {
         let ctx = self.get_network_context()?;
         let (ep_manager, server) =
             fidl::endpoints::create_proxy::<fnetemul_network::EndpointManagerMarker>()?;
@@ -641,6 +641,17 @@ impl<'a> std::fmt::Debug for TestNetwork<'a> {
 }
 
 impl<'a> TestNetwork<'a> {
+    /// Extracts the proxy to the backing network.
+    ///
+    /// Note that this defeats the lifetime semantics that ensure the sandbox in
+    /// which this network was created lives as long as the network. The caller of
+    /// [`TestNetwork::into_proxy`] is responsible for ensuring that the sandbox
+    /// outlives the network.
+    pub fn into_proxy(self) -> fnetemul_network::NetworkProxy {
+        let Self { network, name: _, sandbox: _ } = self;
+        network
+    }
+
     /// Attaches `ep` to this network.
     pub async fn attach_endpoint(&self, ep: &TestEndpoint<'a>) -> Result<()> {
         let status =
@@ -793,6 +804,17 @@ async fn to_netdevice_inner(
 }
 
 impl<'a> TestEndpoint<'a> {
+    /// Extracts the proxy to the backing endpoint.
+    ///
+    /// Note that this defeats the lifetime semantics that ensure the sandbox in
+    /// which this endpoint was created lives as long as the endpoint. The caller of
+    /// [`TestEndpoint::into_proxy`] is responsible for ensuring that the sandbox
+    /// outlives the endpoint.
+    pub fn into_proxy(self) -> fnetemul_network::EndpointProxy {
+        let Self { endpoint, name: _, _sandbox: _ } = self;
+        endpoint
+    }
+
     /// Gets access to this device's virtual Ethernet device.
     ///
     /// Note that an error is returned if the Endpoint is not a

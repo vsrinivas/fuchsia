@@ -19,6 +19,12 @@
             protocol: [
                 "fuchsia.logger.LogSink",
                 "fuchsia.process.Launcher",
+
+                // TODO(https://fxbug.dev/87164): when these legacy capabilities used by the
+                // realm builder server can be optional, don't offer them to the
+                // netemul_test_runner.
+                "fuchsia.sys.Environment",
+                "fuchsia.sys.Loader",
             ],
             from: "parent",
             to: [ "#sandbox" ],

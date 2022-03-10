@@ -5,9 +5,13 @@
 use anyhow::{anyhow, Context as _};
 use fidl_fuchsia_data as fdata;
 use fidl_fuchsia_net_ext as fnet_ext;
+use fidl_fuchsia_netemul as fnetemul;
 use fidl_fuchsia_netemul_network as fnetemul_network;
-use std::collections::{hash_map, HashMap, HashSet};
-use std::str::FromStr;
+use log::{debug, info};
+use std::{
+    collections::{hash_map, HashMap, HashSet},
+    str::FromStr,
+};
 
 #[derive(serde::Deserialize, Debug, PartialEq)]
 #[serde(deny_unknown_fields)]
@@ -118,8 +122,8 @@ struct UnvalidatedConfig {
 
 #[derive(Debug, PartialEq)]
 pub(crate) struct Config {
-    pub networks: Vec<Network>,
-    pub netstacks: Vec<Netstack>,
+    networks: Vec<Network>,
+    netstacks: Vec<Netstack>,
 }
 
 #[derive(thiserror::Error, Debug, PartialEq)]
@@ -191,59 +195,224 @@ impl FromStr for Config {
 
 const NETWORK_CONFIG_PROPERTY_NAME: &str = "network_config";
 
-/// Loads the virtual network configuration that the test should be run in.
+/// A handle to the virtual network environment created for the test.
 ///
-/// The configuration should be a JSON file available in the package directory at `pkg_dir`, and the
-/// filepath is specified in `program`.
-pub(crate) async fn load_from_program(
-    program: fdata::Dictionary,
-    pkg_dir: &fidl_fuchsia_io::DirectoryProxy,
-) -> Result<Config, anyhow::Error> {
-    let fdata::Dictionary { entries, .. } = program;
+/// This encodes the lifetime of the network environment, as the netemul sandbox
+/// and any networks or endpoints it contains are garbage-collected when the
+/// client end of their control channel is dropped.
+pub(crate) struct NetworkEnvironment {
+    _sandbox: netemul::TestSandbox,
+    _networks: HashMap<String, fnetemul_network::NetworkProxy>,
+    _endpoints: HashMap<String, fnetemul_network::EndpointProxy>,
+}
 
-    // TODO(https://fxbug.dev/92247): read the configuration directly from the `program` section
-    // rather than from a packaged config file, once the CML schema supports it.
-    let network_config = entries
-        .context("`entries` field not set in program")?
-        .into_iter()
-        .find_map(|fdata::DictionaryEntry { key, value }| {
-            (key == NETWORK_CONFIG_PROPERTY_NAME).then(|| value)
+impl Config {
+    /// Loads the virtual network configuration that the test should be run in.
+    ///
+    /// The configuration should be a JSON file available in the package directory
+    /// at `pkg_dir`, and the filepath is specified in `program`.
+    pub(crate) async fn load_from_program(
+        program: fdata::Dictionary,
+        pkg_dir: &fidl_fuchsia_io::DirectoryProxy,
+    ) -> Result<Self, anyhow::Error> {
+        let fdata::Dictionary { entries, .. } = program;
+
+        // TODO(https://fxbug.dev/95219): read the configuration directly from the
+        // `program` section rather than from a packaged config file, once the CML
+        // schema supports it.
+        let network_config = entries
+            .context("`entries` field not set in program")?
+            .into_iter()
+            .find_map(|fdata::DictionaryEntry { key, value }| {
+                (key == NETWORK_CONFIG_PROPERTY_NAME).then(|| value)
+            })
+            .with_context(|| format!("`{}` missing in program", NETWORK_CONFIG_PROPERTY_NAME))?
+            .context("missing value for network configuration property")?;
+
+        let network_config_path = match *network_config {
+            fdata::DictionaryValue::Str(path) => Ok(path),
+            fdata::DictionaryValue::StrVec(vec) => Err(anyhow!(
+                "`{}` should be a single filepath; got a list: {:?}",
+                NETWORK_CONFIG_PROPERTY_NAME,
+                vec
+            )),
+            other => {
+                Err(anyhow::anyhow!("encountered unknown DictionaryValue variant: {:?}", other))
+            }
+        }?;
+
+        let file = io_util::open_file(
+            pkg_dir,
+            std::path::Path::new(&network_config_path),
+            fidl_fuchsia_io::OPEN_RIGHT_READABLE,
+        )
+        .with_context(|| format!("opening network config file at {}", network_config_path))?;
+        let contents =
+            io_util::file::read_to_string(&file).await.context("reading network config file")?;
+
+        contents.parse()
+    }
+
+    /// Applies the virtual network configuration.
+    ///
+    /// A netemul sandbox is used to create virtual networks and endpoints, and the
+    /// netstacks to be configured are connected to with `connect_to_netstack`.
+    pub(crate) async fn apply<F>(
+        self,
+        mut connect_to_netstack: F,
+    ) -> Result<NetworkEnvironment, anyhow::Error>
+    where
+        F: FnMut(String) -> Result<fnetemul::ConfigurableNetstackProxy, anyhow::Error>,
+    {
+        info!("configuring environment for test: {:#?}", self);
+        let Self { networks, netstacks } = self;
+
+        // Create the networks and endpoints in a netemul sandbox.
+        let sandbox = netemul::TestSandbox::new().context("create test sandbox")?;
+        let mut network_handles = HashMap::new();
+        let mut endpoint_handles = HashMap::new();
+        for Network { name, endpoints } in networks {
+            let network = sandbox
+                .create_network(name.clone())
+                .await
+                .with_context(|| format!("create network `{}`", name))?;
+            for Endpoint { name, mac, mtu, up, backing } in endpoints {
+                let endpoint = network
+                    .create_endpoint_with(
+                        name.clone(),
+                        fnetemul_network::EndpointConfig {
+                            mac: mac.map(Into::into).map(Box::new),
+                            mtu,
+                            backing: backing.into(),
+                        },
+                    )
+                    .await
+                    .with_context(|| format!("create endpoint `{}`", name))?;
+                if up {
+                    endpoint.set_link_up(true).await.context("set link up")?;
+                }
+                assert!(endpoint_handles.insert(name, endpoint.into_proxy()).is_none());
+            }
+            assert!(network_handles.insert(name, network.into_proxy()).is_none());
+        }
+
+        // Configure the netstacks.
+        for Netstack { name, interfaces } in netstacks {
+            debug!("configuring netstack `{}`", name);
+            let netstack = connect_to_netstack(name).context("connect to configurable netstack")?;
+
+            for Interface {
+                name,
+                without_autogenerated_addresses,
+                static_ips,
+                enable_dhcp,
+                gateway,
+            } in interfaces
+            {
+                debug!("configuring interface `{}` with static IPs {:?}", name, static_ips);
+                let device = endpoint_handles
+                    .get(&name)
+                    .with_context(|| format!("could not find endpoint `{}`", name))?
+                    .get_device()
+                    .await
+                    .with_context(|| format!("retrieve device from test endpoint `{}`", name))?;
+                let options = fnetemul::InterfaceOptions {
+                    name: Some(name.to_string()),
+                    device: Some(device),
+                    without_autogenerated_addresses: Some(without_autogenerated_addresses),
+                    static_ips: Some(static_ips.into_iter().map(Into::into).collect()),
+                    enable_dhcp: Some(enable_dhcp),
+                    gateway: gateway.map(Into::into),
+                    ..fnetemul::InterfaceOptions::EMPTY
+                };
+                netstack
+                    .configure_interface(options)
+                    .await
+                    .context("call configure interface")?
+                    .map_err(|e| anyhow!("error configuring netstack: {:?}", e))?;
+            }
+        }
+
+        Ok(NetworkEnvironment {
+            _sandbox: sandbox,
+            _networks: network_handles,
+            _endpoints: endpoint_handles,
         })
-        .with_context(|| format!("`{}` missing in program", NETWORK_CONFIG_PROPERTY_NAME))?
-        .context("missing value for network configuration property")?;
-
-    // Temporarily allow unreachable patterns while fuchsia.data.DictionaryValue
-    // is migrated from `strict` to `flexible`.
-    // TODO(https://fxbug.dev/92247): Remove this.
-    #[allow(unreachable_patterns)]
-    let network_config_path = match *network_config {
-        fdata::DictionaryValue::Str(path) => Ok(path),
-        fdata::DictionaryValue::StrVec(vec) => Err(anyhow!(
-            "`{}` should be a single filepath; got a list: {:?}",
-            NETWORK_CONFIG_PROPERTY_NAME,
-            vec
-        )),
-        other => Err(anyhow::anyhow!("encountered unknown DictionaryValue variant: {:?}", other)),
-    }?;
-
-    let file = io_util::open_file(
-        pkg_dir,
-        std::path::Path::new(&network_config_path),
-        fidl_fuchsia_io::OPEN_RIGHT_READABLE,
-    )
-    .with_context(|| format!("opening network config file at {}", network_config_path))?;
-    let contents =
-        io_util::file::read_to_string(&file).await.context("reading network config file")?;
-
-    contents.parse()
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use assert_matches::assert_matches;
+    use futures::{channel::mpsc, StreamExt as _, TryStreamExt as _};
     use net_declare::{fidl_ip, fidl_mac, fidl_subnet};
     use test_case::test_case;
+
+    const LOCAL_NETSTACK: &str = "local";
+    const REMOTE_NETSTACK: &str = "remote";
+
+    fn example_config() -> Config {
+        Config {
+            netstacks: vec![
+                Netstack {
+                    name: LOCAL_NETSTACK.to_string(),
+                    interfaces: vec![
+                        Interface {
+                            name: "local-ep1".to_string(),
+                            without_autogenerated_addresses: true,
+                            static_ips: vec![fidl_subnet!("192.168.0.2/24").into()],
+                            enable_dhcp: false,
+                            gateway: Some(fidl_ip!("192.168.1.1").into()),
+                        },
+                        Interface {
+                            name: "local-ep2".to_string(),
+                            without_autogenerated_addresses: false,
+                            static_ips: vec![fidl_subnet!("192.168.0.3/24").into()],
+                            enable_dhcp: false,
+                            gateway: None,
+                        },
+                    ],
+                },
+                Netstack {
+                    name: REMOTE_NETSTACK.to_string(),
+                    interfaces: vec![Interface {
+                        name: "remote-ep".to_string(),
+                        without_autogenerated_addresses: false,
+                        static_ips: vec![fidl_subnet!("192.168.0.1/24").into()],
+                        enable_dhcp: false,
+                        gateway: None,
+                    }],
+                },
+            ],
+            networks: vec![Network {
+                name: "net".to_string(),
+                endpoints: vec![
+                    Endpoint {
+                        name: "local-ep1".to_string(),
+                        mac: Some(fidl_mac!("aa:bb:cc:dd:ee:ff").into()),
+                        mtu: 999,
+                        up: false,
+                        backing: EndpointBacking::NetworkDevice,
+                    },
+                    Endpoint {
+                        name: "local-ep2".to_string(),
+                        mac: None,
+                        mtu: Endpoint::default_mtu(),
+                        up: Endpoint::default_link_up(),
+                        backing: Default::default(),
+                    },
+                    Endpoint {
+                        name: "remote-ep".to_string(),
+                        mac: None,
+                        mtu: Endpoint::default_mtu(),
+                        up: Endpoint::default_link_up(),
+                        backing: Default::default(),
+                    },
+                ],
+            }],
+        }
+    }
 
     #[test]
     fn valid_config() {
@@ -299,68 +468,8 @@ mod tests {
 }
 "#;
 
-        let expected = Config {
-            netstacks: vec![
-                Netstack {
-                    name: "local".to_string(),
-                    interfaces: vec![
-                        Interface {
-                            name: "local-ep1".to_string(),
-                            without_autogenerated_addresses: true,
-                            static_ips: vec![fidl_subnet!("192.168.0.2/24").into()],
-                            enable_dhcp: false,
-                            gateway: Some(fidl_ip!("192.168.1.1").into()),
-                        },
-                        Interface {
-                            name: "local-ep2".to_string(),
-                            without_autogenerated_addresses: false,
-                            static_ips: vec![fidl_subnet!("192.168.0.3/24").into()],
-                            enable_dhcp: false,
-                            gateway: None,
-                        },
-                    ],
-                },
-                Netstack {
-                    name: "remote".to_string(),
-                    interfaces: vec![Interface {
-                        name: "remote-ep".to_string(),
-                        without_autogenerated_addresses: false,
-                        static_ips: vec![fidl_subnet!("192.168.0.1/24").into()],
-                        enable_dhcp: false,
-                        gateway: None,
-                    }],
-                },
-            ],
-            networks: vec![Network {
-                name: "net".to_string(),
-                endpoints: vec![
-                    Endpoint {
-                        name: "local-ep1".to_string(),
-                        mac: Some(fidl_mac!("aa:bb:cc:dd:ee:ff").into()),
-                        mtu: 999,
-                        up: false,
-                        backing: EndpointBacking::NetworkDevice,
-                    },
-                    Endpoint {
-                        name: "local-ep2".to_string(),
-                        mac: None,
-                        mtu: Endpoint::default_mtu(),
-                        up: Endpoint::default_link_up(),
-                        backing: Default::default(),
-                    },
-                    Endpoint {
-                        name: "remote-ep".to_string(),
-                        mac: None,
-                        mtu: Endpoint::default_mtu(),
-                        up: Endpoint::default_link_up(),
-                        backing: Default::default(),
-                    },
-                ],
-            }],
-        };
-
         let config: Config = file.parse().expect("deserialize network config");
-        assert_eq!(config, expected);
+        assert_eq!(config, example_config());
     }
 
     #[test_case(r#"{ "netstacks": [] }"#; "missing required field `networks`")]
@@ -524,5 +633,137 @@ mod tests {
     )]
     fn invalid_config(config: UnvalidatedConfig, error: Error) {
         assert_eq!(config.validate(), Err(error));
+    }
+
+    async fn expect_incoming_requests(
+        rx: &mut mpsc::UnboundedReceiver<(String, fnetemul::ConfigurableNetstackRequestStream)>,
+        expected_netstack: &str,
+        expected_configs: Vec<Interface>,
+    ) {
+        let (netstack, mut stream) =
+            rx.next().await.expect("no connection requests for mock netstack");
+        assert_eq!(
+            netstack, expected_netstack,
+            "expected request for netstack '{}', got '{}'",
+            expected_netstack, netstack
+        );
+        for expected_config in expected_configs {
+            let fnetemul::ConfigurableNetstackRequest::ConfigureInterface { options, responder } =
+                stream
+                    .next()
+                    .await
+                    .expect("expected request not received by mock configurable netstack")
+                    .expect("FIDL error on request");
+            let fnetemul::InterfaceOptions {
+                name,
+                without_autogenerated_addresses,
+                static_ips,
+                enable_dhcp,
+                gateway,
+                device: _,
+                ..
+            } = options;
+            assert_eq!(
+                Interface {
+                    name: name.expect("missing interface name"),
+                    without_autogenerated_addresses: without_autogenerated_addresses
+                        .unwrap_or_default(),
+                    static_ips: static_ips
+                        .unwrap_or_default()
+                        .into_iter()
+                        .map(Into::into)
+                        .collect(),
+                    enable_dhcp: enable_dhcp.unwrap_or_default(),
+                    gateway: gateway.map(Into::into),
+                },
+                expected_config
+            );
+            responder.send(&mut Ok(())).expect("send response");
+        }
+        let remaining = stream
+            .map_ok(
+                |fnetemul::ConfigurableNetstackRequest::ConfigureInterface {
+                     options,
+                     responder: _,
+                 }| options,
+            )
+            .try_collect::<Vec<_>>()
+            .await
+            .expect("collect remaining requests");
+        assert_eq!(remaining, vec![]);
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn configurable_netstack() {
+        diagnostics_log::init!();
+
+        let (tx, mut rx) = mpsc::unbounded();
+        let configure_environment = async {
+            example_config()
+                .apply(|name| {
+                    let (proxy, server_end) =
+                        fidl::endpoints::create_proxy::<fnetemul::ConfigurableNetstackMarker>()
+                            .context("create proxy")?;
+                    let stream =
+                        server_end.into_stream().context("server end into request stream")?;
+                    tx.unbounded_send((name, stream))
+                        .expect("request stream receiver should not be closed");
+                    Ok(proxy)
+                })
+                .await
+                .expect("configure network environment for test")
+        };
+        let mock_service = async {
+            // Expect netstacks to be configured in the order in which they're declared: the
+            // "local" netstack first and "remote" second. The same order applies to the
+            // interfaces that are installed in the netstacks.
+            expect_incoming_requests(
+                &mut rx,
+                LOCAL_NETSTACK,
+                vec![
+                    Interface {
+                        name: "local-ep1".to_string(),
+                        without_autogenerated_addresses: true,
+                        static_ips: vec![fidl_subnet!("192.168.0.2/24").into()],
+                        enable_dhcp: false,
+                        gateway: Some(fidl_ip!("192.168.1.1").into()),
+                    },
+                    Interface {
+                        name: "local-ep2".to_string(),
+                        without_autogenerated_addresses: false,
+                        static_ips: vec![fidl_subnet!("192.168.0.3/24").into()],
+                        enable_dhcp: false,
+                        gateway: None,
+                    },
+                ],
+            )
+            .await;
+            expect_incoming_requests(
+                &mut rx,
+                REMOTE_NETSTACK,
+                vec![Interface {
+                    name: "remote-ep".to_string(),
+                    without_autogenerated_addresses: false,
+                    static_ips: vec![fidl_subnet!("192.168.0.1/24").into()],
+                    enable_dhcp: false,
+                    gateway: None,
+                }],
+            )
+            .await;
+        };
+        let (NetworkEnvironment { _sandbox: sandbox, _networks, _endpoints }, ()) =
+            futures::future::join(configure_environment, mock_service).await;
+
+        let network_manager = sandbox.get_network_manager().expect("get network manager");
+        let networks = network_manager.list_networks().await.expect("list virtual networks");
+        assert_eq!(networks, vec!["net".to_string()]);
+        let endpoint_manager = sandbox.get_endpoint_manager().expect("get endpoint manager");
+        let mut endpoints =
+            endpoint_manager.list_endpoints().await.expect("list virtual endpoints");
+        endpoints.sort();
+        assert_eq!(
+            endpoints,
+            vec!["local-ep1".to_string(), "local-ep2".to_string(), "remote-ep".to_string()],
+        );
     }
 }
