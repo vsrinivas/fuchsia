@@ -27,9 +27,6 @@ use crate::{
 // Audio related includes
 use crate::audio::facade::AudioFacade;
 
-// Backlight related includes
-use crate::backlight::facade::BacklightFacade;
-
 // Session related includes
 use crate::modular::facade::ModularFacade;
 
@@ -70,29 +67,14 @@ use crate::feedback_data_provider::facade::FeedbackDataProviderFacade;
 // File related includes
 use crate::file::facade::FileFacade;
 
-// Gpio related includes
-use crate::gpio::facade::GpioFacade;
-
 // Device Manager related includes
 use crate::hardware_power_statecontrol::facade::HardwarePowerStatecontrolFacade;
 
 // Hwinfo related includes
 use crate::hwinfo::facade::HwinfoFacade;
 
-// i2c related includes
-use crate::i2c::facade::I2cFacade;
-
 // Input related includes
 use crate::input::facade::InputFacade;
-
-// Input report related includes
-use crate::input_report::facade::InputReportFacade;
-
-// Kernel related includes
-use crate::kernel::facade::KernelFacade;
-
-// Light related includes
-use crate::light::facade::LightFacade;
 
 // Location related includes
 use crate::location::emergency_provider_facade::EmergencyProviderFacade;
@@ -103,9 +85,6 @@ use crate::logging::facade::LoggingFacade;
 
 // Netstack related includes
 use crate::netstack::facade::NetstackFacade;
-
-// Ram related includes
-use crate::ram::facade::RamFacade;
 
 // Paver related includes
 use crate::paver::facade::PaverFacade;
@@ -118,9 +97,6 @@ use crate::scenic::facade::ScenicFacade;
 
 // SetUi related includes
 use crate::setui::facade::SetUiFacade;
-
-// SysInfo related includes
-use crate::sysinfo::facade::SysInfoFacade;
 
 // System Metrics related includes
 use crate::system_metrics::facade::SystemMetricsFacade;
@@ -200,7 +176,6 @@ impl Sl4f {
                 "audio_facade" => AudioFacade::new()?,
                 "avdtp_facade" => AvdtpFacade::new(),
                 "avrcp_facade" => AvrcpFacade::new(),
-                "backlight_facade" => BacklightFacade::new(),
                 // TODO(fxbug.dev/77551): Remove basemgr_facade in favor of modular_facade
                 "basemgr_facade" => ModularFacade::new(),
                 "modular_facade" => ModularFacade::new(),
@@ -216,27 +191,20 @@ impl Sl4f {
                 "file_facade" => FileFacade::new(),
                 "gatt_client_facade" => GattClientFacade::new(),
                 "gatt_server_facade" => GattServerFacade::new(),
-                "gpio_facade" => GpioFacade::new(),
                 "hardware_power_statecontrol_facade" => HardwarePowerStatecontrolFacade::new(),
                 "hfp_facade" => HfpFacade::new(),
                 "hwinfo_facade" => HwinfoFacade::new(),
-                "i2c_facade" => I2cFacade::new(),
                 "input_facade" => InputFacade::new(),
-                "input_report_facade" => InputReportFacade::new(),
-                "kernel_facade" => KernelFacade::new(),
-                "light_facade" => LightFacade::new(),
                 "location_emergency_provider_facade" => EmergencyProviderFacade::new()?,
                 "location_regulatory_region_facade" => RegulatoryRegionFacade::new()?,
                 "logging_facade" => LoggingFacade::new(),
                 "netstack_facade" => NetstackFacade::default(),
-                "ram_facade" => RamFacade::new(),
                 "rfcomm_facade" => RfcommFacade::new()?,
                 "paver" => PaverFacade::new(),
                 "profile_server_facade" => ProfileServerFacade::new(),
                 "proxy_facade" => ProxyFacade::new(),
                 "scenic_facade" => ScenicFacade::new(),
                 "setui_facade" => SetUiFacade::new(),
-                "sysinfo_facade" => SysInfoFacade::new(),
                 "system_metrics_facade" => SystemMetricsFacade::new(),
                 "temperature_facade" => TemperatureFacade::new(),
                 "tiles_facade" => TilesFacade::new(),
