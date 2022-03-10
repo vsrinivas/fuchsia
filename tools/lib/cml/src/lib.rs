@@ -836,8 +836,6 @@ impl Right {
     }
 }
 
-#[derive(ReferenceDoc, Deserialize, Debug, PartialEq)]
-#[serde(deny_unknown_fields)]
 /// # Component manifest (`.cml`) reference
 ///
 /// A `.cml` file contains a single json5 object literal with the keys below.
@@ -864,6 +862,8 @@ impl Right {
 /// [doc-collections]: /docs/concepts/components/v2/realms.md#collections
 ///
 /// ## Top-level keys
+#[derive(ReferenceDoc, Deserialize, Debug, PartialEq)]
+#[serde(deny_unknown_fields)]
 pub struct Document {
     /// The optional `include` property describes zero or more other component manifest
     /// files to be merged into this component manifest. For example:
@@ -2112,9 +2112,6 @@ pub struct Offer {
     pub modes: Option<EventModes>,
 }
 
-#[derive(ReferenceDoc, Deserialize, Debug, PartialEq)]
-#[serde(deny_unknown_fields)]
-#[reference_doc(fields_as = "list", top_level_doc_after_fields)]
 /// Example:
 ///
 /// ```json5
@@ -2138,6 +2135,9 @@ pub struct Offer {
 /// [component-url]: /docs/concepts/components/component_urls.md
 /// [doc-eager]: /docs/concepts/components/v2/lifecycle.md#eager_binding
 /// [doc-reboot-on-terminate]: /docs/concepts/components/v2/termination_policies.md#reboot-on-terminate
+#[derive(ReferenceDoc, Deserialize, Debug, PartialEq)]
+#[serde(deny_unknown_fields)]
+#[reference_doc(fields_as = "list", top_level_doc_after_fields)]
 pub struct Child {
     /// The name of the child component instance, which is a string of one
     /// or more of the following characters: `a-z`, `0-9`, `_`, `.`, `-`. The name
@@ -2147,12 +2147,12 @@ pub struct Child {
     /// The [component URL][component-url] for the child component instance.
     pub url: Url,
 
-    #[serde(default)]
     /// The component instance's startup mode. One of:
     /// -   `lazy` _(default)_: Start the component instance only if another
     ///     component instance binds to it.
     /// -   [`eager`][doc-eager]: Start the component instance as soon as its parent
     ///     starts.
+    #[serde(default)]
     pub startup: StartupMode,
 
     /// Determines the fault recovery policy to apply if this component terminates.
