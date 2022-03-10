@@ -142,11 +142,15 @@ pub fn create_system(args: CreateSystemArgs) -> Result<()> {
         info!("Skipping zbi signing");
     }
 
+    // Write the images manifest.
+    let images_json_path = outdir.join("images.json");
+    let images_json = File::create(images_json_path).context("Creating images manifest")?;
+    serde_json::to_writer(images_json, &images_manifest).context("Writing images manifest")?;
+
     // Write the tool command log.
     let command_log_path = gendir.join("command_log.json");
-    let command_log =
-        File::create(command_log_path).context("Failed to create command_log.json")?;
-    serde_json::to_writer(&command_log, tools.log()).context("Failed to write the command log")?;
+    let command_log = File::create(command_log_path).context("Creating command log")?;
+    serde_json::to_writer(&command_log, tools.log()).context("Writing command log")?;
 
     Ok(())
 }

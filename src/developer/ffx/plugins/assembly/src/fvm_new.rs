@@ -169,7 +169,13 @@ impl<'a> MultiFvmBuilder<'a> {
                 }
                 builder.build()?;
                 if add_to_manifest {
-                    self.images_manifest.images.push(Image::FVM(path));
+                    let image = match config.name.as_str() {
+                        // Even though this is a standard FVM, people expect it to find it using
+                        // the fvm.fastboot key in the ImagesManifest.
+                        "fvm.fastboot" => Image::FVMFastboot(path),
+                        _ => Image::FVM(path),
+                    };
+                    self.images_manifest.images.push(image);
                 }
             }
             FvmOutput::Sparse(config) => {

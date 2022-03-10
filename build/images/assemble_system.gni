@@ -242,6 +242,7 @@ template("assemble_system") {
     fshost_config = "${image_name}_fshost_config"
     pkgfs_package_label = "//src/sys/pkg/bin/pkgfs"
     compare_command_logs = "${image_name}_compare_command_logs"
+    compare_images_manifests = "${image_name}_compare_images_manifests"
   }
 
   # Intermediate files produced for Image Assembly.
@@ -335,6 +336,7 @@ template("assemble_system") {
     cs_zbi_manifest = "${cs_gendir}/zbi.json"
     cs_zbi_signed = "${cs_zbi}.signed"
     cs_vbmeta = "${cs_outdir}/${image_name}.vbmeta"
+    cs_images_manifest = "${cs_outdir}/images.json"
 
     # Determine which ZBI we are shipping.
     zbi_final = zbi
@@ -996,6 +998,7 @@ template("assemble_system") {
 
     outputs = [
       files.cs_command_log,
+      files.cs_images_manifest,
       files.cs_bootfs_files,
       files.cs_devmgr_config,
       files.cs_zbi,
@@ -1065,6 +1068,24 @@ template("assemble_system") {
       rebase_path(files.outdir, root_build_dir),
     ]
     list_key = "commands"
+  }
+
+  compare_json_list(labels.compare_images_manifests) {
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visibility",
+                           ])
+    deps = [
+      ":${labels.create_system}",
+      ":${labels.image_assembler}",
+    ]
+    reference = files.images_manifest
+    comparison = files.cs_images_manifest
+    prefixes = [
+      rebase_path(files.cs_outdir, root_build_dir),
+      rebase_path(files.outdir, root_build_dir),
+    ]
   }
 
   #######
@@ -1228,6 +1249,7 @@ template("assemble_system") {
       ":${labels.assembly_inputs}",
       ":${labels.compare_command_logs}",
       ":${labels.compare_image_assembly_configs}",
+      ":${labels.compare_images_manifests}",
       ":${labels.create_system}",
       ":${labels.image_assembler}",
       ":${labels.images_config}",
