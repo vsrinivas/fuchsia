@@ -18,7 +18,6 @@ test_scripts = [
   "femu-exec-wrapper-test.sh",
   "femu-test.sh",
   "fpave-test.sh",
-  "fserve-remote-test.sh",
   "fuchsia-common-tests.sh",
   "femu-osx-test.sh",
 ]
@@ -48,7 +47,6 @@ host_script_test_data("gn_sdk_bash_tests") {
         "//scripts/sdk/gn/base/bin/femu-exec-wrapper.sh",
         "//scripts/sdk/gn/base/bin/femu.sh",
         "//scripts/sdk/gn/base/bin/fpave.sh",
-        "//scripts/sdk/gn/base/bin/fserve-remote.sh",
         "//scripts/sdk/gn/base/bin/fuchsia-common.sh",
         "//scripts/sdk/gn/base/bin/devshell/lib/image_build_vars.sh",
       ]
@@ -85,7 +83,6 @@ host_script_test_data("gn_sdk_bash_tests") {
         "//tools/devshell/emu",
         "//tools/devshell/lib/fvm.sh",
         "//tools/devshell/lib/emu-ifup-macos.sh",
-        "//tools/devshell/tests/subcommands/data/fx_remote_test/verify-default-keys.sh",
       ]
     },
     {

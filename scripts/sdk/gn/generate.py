@@ -64,13 +64,6 @@ EXTRA_COPY = [
             FUCHSIA_ROOT, 'tools', 'devshell', 'lib', 'emu-ifup-macos.sh'),
         base=os.path.join(FUCHSIA_ROOT, 'tools'),
         dest='bin'),
-    # Copy scripts to support SSH credential handling.
-    # {fuchsia}/tools/devshell/lib/verify-default-keys.sh -> {out}/bin/devshell/lib/verify-default-keys.sh
-    CopyArgs(
-        src=os.path.join(
-            FUCHSIA_ROOT, 'tools', 'devshell', 'lib', 'verify-default-keys.sh'),
-        base=os.path.join(FUCHSIA_ROOT, 'tools'),
-        dest='bin'),
 ]
 
 # Capture the version of required prebuilts from the jiri manifest. Note

@@ -17,10 +17,6 @@
       "type": "host_tool"
     },
     {
-      "meta": "bin/fserve-remote-meta.json",
-      "type": "host_tool"
-    },
-    {
       "meta": "build/gn-build-files-meta.json",
       "type": "documentation"
     },

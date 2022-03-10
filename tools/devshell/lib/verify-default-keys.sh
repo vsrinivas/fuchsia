@@ -37,8 +37,8 @@ Before you continue, update your local and remote source code.
 This ensures that the host tools on both machines expect the SSH credentials
 in a consistent location.
 
-If you have been using local tools like 'fx pave-remote' or 'fserve-remote.sh',
-the local credentials are probably most recent and you can backup and delete
+If you have been using local tools like 'fx pave-remote', the local
+credentials are probably most recent and you can backup and delete
 the remote keys on ${host}:
     ~/.ssh/fuchsia_ed25519*${extra_path_remote}
 and then run this command again.
