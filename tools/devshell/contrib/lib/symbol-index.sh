@@ -30,5 +30,6 @@ ${FUCHSIA_DIR}/prebuilt/.build-id
 ${PREBUILT_CLANG_DIR}/lib/debug/.build-id
 ${PREBUILT_RUST_DIR}/lib/debug/.build-id
 EOF
-  fx-command-run ffx debug symbol-index add "${FUCHSIA_BUILD_DIR}/.symbol-index.json" || return $?
+  FUCHSIA_ANALYTICS_DISABLED=1 fx-command-run \
+    ffx debug symbol-index add "${FUCHSIA_BUILD_DIR}/.symbol-index.json" || return $?
 }
