@@ -22,8 +22,8 @@
 #include <string_view>
 
 #include <fbl/algorithm.h>
-#include <gtest/gtest.h>
 #include <ramdevice-client/ramdisk.h>
+#include <zxtest/zxtest.h>
 
 #include "src/lib/storage/fs_management/cpp/fvm.h"
 #include "src/lib/storage/fs_management/cpp/mount.h"
@@ -33,7 +33,7 @@
 namespace {
 
 using driver_integration_test::IsolatedDevmgr;
-using ::testing::Test;
+using zxtest::Test;
 
 const uint32_t kBlockCount = 1024 * 256;
 const uint32_t kBlockSize = 512;
@@ -41,6 +41,7 @@ const uint32_t kSliceSize = (1 << 20);
 const size_t kDeviceSize = kBlockCount * kBlockSize;
 constexpr std::string_view kDataName = "fdr-data";
 const char* kRamCtlPath = "sys/platform/00:00:2d/ramctl";
+constexpr char kTestDevPath[] = "/fake/dev";
 const size_t kKeyBytes = 32;  // Generate a 256-bit key for the zxcrypt volume
 
 class MockAdmin : public fuchsia::hardware::power::statecontrol::testing::Admin_TestBase {
@@ -75,12 +76,21 @@ class FactoryResetTest : public Test {
     args.disable_block_watcher = true;
 
     ASSERT_EQ(IsolatedDevmgr::Create(&args, devmgr_.get()), ZX_OK);
+    fdio_ns_t* name_space;
+    ASSERT_OK(fdio_ns_get_installed(&name_space));
+
+    ASSERT_OK(fdio_ns_bind_fd(name_space, kTestDevPath, devmgr_->devfs_root().get()));
 
     CreateRamdisk();
     CreateFvmPartition();
   }
 
-  void TearDown() override { ASSERT_EQ(ramdisk_destroy(ramdisk_client_), ZX_OK); }
+  void TearDown() override {
+    fdio_ns_t* name_space;
+    ASSERT_OK(fdio_ns_get_installed(&name_space));
+    ASSERT_OK(fdio_ns_unbind(name_space, kTestDevPath));
+    ASSERT_EQ(ramdisk_destroy(ramdisk_client_), ZX_OK);
+  }
 
   bool PartitionHasFormat(fs_management::DiskFormat format) {
     fbl::unique_fd fd(openat(devmgr_->devfs_root().get(), fvm_block_path_.c_str(), O_RDONLY));
@@ -172,17 +182,15 @@ class FactoryResetTest : public Test {
   }
 
   void CreateRamdisk() {
-    zx::vmo disk;
-    ASSERT_EQ(zx::vmo::create(kDeviceSize, 0, &disk), ZX_OK);
-    int fd = -1;
-    ASSERT_EQ(fdio_fd_create(disk.get(), &fd), ZX_OK);
-    ASSERT_GE(fd, 0);
-    ASSERT_EQ(fs_management::FvmInitWithSize(fd, kDeviceSize, kSliceSize), ZX_OK);
-
     fbl::unique_fd ramctl;
     WaitForDevice(kRamCtlPath, &ramctl);
-    ASSERT_EQ(ramdisk_create_at_from_vmo(devfs_root().get(), disk.release(), &ramdisk_client_),
-              ZX_OK);
+    ASSERT_OK(ramdisk_create_at(devfs_root().get(), kBlockSize, kBlockCount, &ramdisk_client_));
+    char ramdisk_path[PATH_MAX] = {};
+    snprintf(ramdisk_path, PATH_MAX, "%s/%s", kTestDevPath, ramdisk_get_path(ramdisk_client_));
+    fbl::unique_fd fd(open(ramdisk_path, O_RDWR));
+    ASSERT_TRUE(fd);
+
+    ASSERT_OK(fs_management::FvmInitPreallocated(fd.get(), kDeviceSize, kDeviceSize, kSliceSize));
   }
 
   zx_status_t AttachDriver(const fbl::unique_fd& fd, std::string_view driver) {
