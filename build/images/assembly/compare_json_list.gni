@@ -12,22 +12,15 @@
 #   comparison (required)
 #     [path] The path to the comparison command log.
 #
-#   reference_outdir (required)
-#     [path] The outdir prefix that is found in file paths in the reference.
-#            This must be known, so that the prefix can be stripped before
-#            comparing.
+#   list_key (optional)
+#     [string] The key to use in the json file to find the list.
 #
-#   comparison_outdir (required)
-#     [path] The outdir prefix that is found in file paths in the comparison.
-#            This must be known, so that the prefix can be stripped before
-#            comparing.
+#   prefixes (optional)
+#     [list] Any prefixes to strip from strings in the json before comparing.
 #
-template("compare_command_logs") {
+template("compare_json_list") {
   assert(defined(invoker.reference), "Need to define a reference")
   assert(defined(invoker.comparison), "Need to define a comparison")
-  assert(defined(invoker.reference_outdir), "Need to define a reference_outdir")
-  assert(defined(invoker.comparison_outdir),
-         "Need to define a comparison_outdir")
 
   action(target_name) {
     forward_variables_from(invoker,
@@ -36,8 +29,8 @@ template("compare_command_logs") {
                              "testonly",
                              "visibility",
                            ])
-    script = "//build/images/assembly/compare_command_logs.py"
-    stamp = "${target_out_dir}/${target_name}/compare_command_logs.stamp"
+    script = "//build/images/assembly/compare_json_list.py"
+    stamp = "${target_out_dir}/${target_name}_compare_json_list.stamp"
     outputs = [ stamp ]
     inputs = [
       invoker.reference,
@@ -49,12 +42,22 @@ template("compare_command_logs") {
       rebase_path(invoker.reference, root_build_dir),
       "--comparison",
       rebase_path(invoker.comparison, root_build_dir),
-      "--reference-outdir",
-      rebase_path(invoker.reference_outdir, root_build_dir),
-      "--comparison-outdir",
-      rebase_path(invoker.comparison_outdir, root_build_dir),
       "--stamp",
       rebase_path(stamp, root_build_dir),
     ]
+
+    if (defined(invoker.list_key)) {
+      args += [
+        "--list-key",
+        invoker.list_key,
+      ]
+    }
+
+    if (defined(invoker.prefixes)) {
+      args += [ "--strip-prefix" ]
+      foreach(prefix, invoker.prefixes) {
+        args += [ prefix ]
+      }
+    }
   }
 }

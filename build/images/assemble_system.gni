@@ -6,7 +6,7 @@ import("//build/assembly/legacy.gni")
 import("//build/component/component_id_index.gni")
 import("//build/config.gni")
 import("//build/drivers/driver_manifest.gni")
-import("//build/images/assembly/compare_command_logs.gni")
+import("//build/images/assembly/compare_json_list.gni")
 import("//build/images/assembly/generated_assembly_inputs.gni")
 import("//build/images/assembly/generated_board_config.gni")
 import("//build/images/assembly/generated_images_config.gni")
@@ -1048,7 +1048,7 @@ template("assemble_system") {
     }
   }
 
-  compare_command_logs(labels.compare_command_logs) {
+  compare_json_list(labels.compare_command_logs) {
     forward_variables_from(invoker,
                            [
                              "testonly",
@@ -1060,8 +1060,11 @@ template("assemble_system") {
     ]
     reference = files.image_command_log
     comparison = files.cs_command_log
-    reference_outdir = files.outdir
-    comparison_outdir = files.cs_outdir
+    prefixes = [
+      rebase_path(files.cs_outdir, root_build_dir),
+      rebase_path(files.outdir, root_build_dir),
+    ]
+    list_key = "commands"
   }
 
   #######
