@@ -30,6 +30,7 @@ import (
 
 const (
 	printSSHConfigFlag = "print-ssh-config"
+	repoPortFlag       = "repo-port"
 	tunnelPortsFlag    = "tunnel-ports"
 )
 
@@ -46,6 +47,7 @@ type tunnelCmd struct {
 	sshConfig      string
 	printSSHConfig bool
 	verbose        bool
+	repoPort       int
 	tunnelPorts    intSlice
 	logLevel       logger.LogLevel
 }
@@ -70,6 +72,7 @@ func (c *tunnelCmd) SetFlags(f *flag.FlagSet) {
 	f.StringVar(&c.deviceName, deviceNameFlag, "", fmt.Sprintf("The name of the target device to use to create the tunnel. If provided the value provided for the flag %s will take presedence over this flag.", deviceIPFlag))
 	f.StringVar(&c.dataPath, dataPathFlag, "", "Specifies the data path for SDK tools. Defaults to $HOME/.fuchsia")
 	f.StringVar(&c.sshConfig, sshConfigFlag, "", fmt.Sprintf("Optional. Path to a SSH configuration file to use in leiu of the default SSH config. Run 'fssh tunnel -%s' to view the default SSH configuration.", printSSHConfigFlag))
+	f.IntVar(&c.repoPort, repoPortFlag, 8083, "Repository port to forward when setting up the tunnel")
 	f.Var(&c.tunnelPorts, tunnelPortsFlag, fmt.Sprintf(`Optional. Comma separated list of additional ports to forward when setting up the tunnel. It is an error to specify a protected port (any port less than 1024).
 If using the default SSH config, the following ports which are already in use will be ignored: %s.`, usedPortsString()))
 	f.BoolVar(&c.printSSHConfig, printSSHConfigFlag, false, "Print the SSH config instead of setting up the tunnel.")
@@ -231,7 +234,7 @@ func (c *tunnelCmd) parseFlags(ctx context.Context, sdk sdkProvider) ([]byte, er
 	}
 	var sshConfigContents []byte
 	if c.sshConfig == "" {
-		sshConfigContents, err = tunnel.GenerateSSHConfig(tunnel.DefaultSSHConfigTemplate, c.remoteHost, c.deviceIP, []int(c.tunnelPorts), c.verbose)
+		sshConfigContents, err = tunnel.GenerateSSHConfig(tunnel.DefaultSSHConfigTemplate, c.remoteHost, c.deviceIP, c.repoPort, []int(c.tunnelPorts), c.verbose)
 		if err != nil {
 			return []byte{}, fmt.Errorf("Could not generate default SSH config: %s", err)
 		}

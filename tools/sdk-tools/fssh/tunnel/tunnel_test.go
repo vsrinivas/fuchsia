@@ -17,6 +17,7 @@ func TestGenerateDefaultSSHConfig(t *testing.T) {
 		template          string
 		remote            string
 		deviceIP          string
+		repoPort          int
 		tunnelPorts       []int
 		sshControlPath    string
 		verbose           bool
@@ -27,6 +28,7 @@ func TestGenerateDefaultSSHConfig(t *testing.T) {
 			template:          "{{.Remote}} {{.DeviceIP}}",
 			remote:            "fake-remote-hostname",
 			deviceIP:          "fake-IP-address",
+			repoPort:          8083,
 			verbose:           false,
 			expectedSSHConfig: "fake-remote-hostname fake-IP-address",
 		},
@@ -34,6 +36,7 @@ func TestGenerateDefaultSSHConfig(t *testing.T) {
 			template:          "{{.DeviceIP}}{{.DeviceIP}}{{.DeviceIP}}{{.DeviceIP}}",
 			remote:            "fake-remote-hostname",
 			deviceIP:          "fake-IP-address",
+			repoPort:          8083,
 			verbose:           false,
 			expectedSSHConfig: "fake-IP-addressfake-IP-addressfake-IP-addressfake-IP-address",
 		},
@@ -41,6 +44,7 @@ func TestGenerateDefaultSSHConfig(t *testing.T) {
 			template:          "{{.Remote}}",
 			remote:            "fake-remote-hostname",
 			deviceIP:          "fake-IP-address",
+			repoPort:          8083,
 			verbose:           false,
 			expectedSSHConfig: "fake-remote-hostname",
 		},
@@ -48,6 +52,7 @@ func TestGenerateDefaultSSHConfig(t *testing.T) {
 			template:          "{{.Remote}} {{.DeviceIP}}",
 			remote:            "fake-remote-hostname",
 			deviceIP:          "fake-IP-address",
+			repoPort:          8083,
 			verbose:           true,
 			expectedSSHConfig: "fake-remote-hostname fake-IP-address" + DebugLoggingSSHConfig,
 		},
@@ -55,6 +60,7 @@ func TestGenerateDefaultSSHConfig(t *testing.T) {
 			template:          "{{.DeviceIP}}{{.DeviceIP}}{{.DeviceIP}}{{.DeviceIP}}",
 			remote:            "fake-remote-hostname",
 			deviceIP:          "fake-IP-address",
+			repoPort:          8083,
 			verbose:           true,
 			expectedSSHConfig: "fake-IP-addressfake-IP-addressfake-IP-addressfake-IP-address" + DebugLoggingSSHConfig,
 		},
@@ -62,6 +68,7 @@ func TestGenerateDefaultSSHConfig(t *testing.T) {
 			template:          "{{.Remote}}",
 			remote:            "fake-remote-hostname",
 			deviceIP:          "fake-IP-address",
+			repoPort:          8083,
 			verbose:           true,
 			expectedSSHConfig: "fake-remote-hostname" + DebugLoggingSSHConfig,
 		},
@@ -69,6 +76,7 @@ func TestGenerateDefaultSSHConfig(t *testing.T) {
 			template:          "{{.TunnelPath}}",
 			remote:            "fake-remote-hostname",
 			deviceIP:          "fake-IP-address",
+			repoPort:          8083,
 			sshControlPath:    "somthing",
 			verbose:           false,
 			expectedSSHConfig: sshControlPath,
@@ -77,14 +85,26 @@ func TestGenerateDefaultSSHConfig(t *testing.T) {
 			template:       "",
 			remote:         "fake-remote-hostname",
 			deviceIP:       "fake-IP-address",
+			repoPort:       8083,
 			sshControlPath: "somthing",
 			verbose:        false,
 			expectedErrMsg: "empty SSH config generated",
 		},
 		{
+			template:          "{{.RepoPort}}",
+			remote:            "fake-remote-hostname",
+			deviceIP:          "fake-IP-address",
+			repoPort:          9999,
+			tunnelPorts:       []int{},
+			sshControlPath:    "somthing",
+			verbose:           false,
+			expectedSSHConfig: "9999",
+		},
+		{
 			template:          "{{range .TunnelPorts}}{{.}},{{end}}",
 			remote:            "fake-remote-hostname",
 			deviceIP:          "fake-IP-address",
+			repoPort:          8083,
 			tunnelPorts:       []int{1234, 8887, 8888, 9999},
 			sshControlPath:    "somthing",
 			verbose:           false,
@@ -94,6 +114,7 @@ func TestGenerateDefaultSSHConfig(t *testing.T) {
 			template:       "{{.TunnelPath}}",
 			remote:         "fake-remote-hostname",
 			deviceIP:       "fake-IP-address",
+			repoPort:       8083,
 			tunnelPorts:    []int{22, 8888, 21, 9999},
 			sshControlPath: "somthing",
 			verbose:        false,
@@ -101,7 +122,7 @@ func TestGenerateDefaultSSHConfig(t *testing.T) {
 		},
 	}
 	for _, test := range tests {
-		sshConfig, err := GenerateSSHConfig(test.template, test.remote, test.deviceIP, test.tunnelPorts, test.verbose)
+		sshConfig, err := GenerateSSHConfig(test.template, test.remote, test.deviceIP, test.repoPort, test.tunnelPorts, test.verbose)
 		if err != nil {
 			if err.Error() != test.expectedErrMsg {
 				t.Errorf("Unexpected error calling GenerateDefaultSSHConfig: %s", err)
@@ -113,10 +134,11 @@ func TestGenerateDefaultSSHConfig(t *testing.T) {
 		}
 	}
 
+	repoPort := 8083
 	tunnelPorts := []int{8888, 9013, 1234, 8083, 9865}
 	expectedTunnelPorts := []int{9013, 1234, 9865, 8888}
 	unexpectedTunnelPorts := []int{8083}
-	realConfig, err := GenerateSSHConfig(DefaultSSHConfigTemplate, "fake-remote-hostname", "fake-IP-address", tunnelPorts, false)
+	realConfig, err := GenerateSSHConfig(DefaultSSHConfigTemplate, "fake-remote-hostname", "fake-IP-address", repoPort, tunnelPorts, false)
 	if err != nil {
 		t.Errorf("Error calling GenerateDefaultSSHConfig: %s", err)
 	}
@@ -127,7 +149,7 @@ func TestGenerateDefaultSSHConfig(t *testing.T) {
 	}
 	for _, port := range unexpectedTunnelPorts {
 		if strings.Contains(string(realConfig), fmt.Sprintf("RemoteForward %d [fake-IP-address]:%d", port, port)) {
-			t.Errorf("Expected NOT to find %d forwarded as an extra port in the ssh config", port)
+			t.Errorf("Expected NOT to find %d forwarded as an extra port in the ssh config: %s", port, string(realConfig))
 		}
 	}
 }

@@ -39,7 +39,7 @@ AddressFamily inet6
 # can manage a connection seperately from the user's connection. We
 # intentionally do not use %h/%p in the control path because
 # there can only be one forwarding session at a time (due to the local
-# forward of 8083).
+# forward of {{.RepoPort}}).
 ControlPath {{.TunnelPath}}
 # "ControlMaster auto" enables multiple SSH connections to use the same
 # tunnel/TCP connection. Enabling this option means that SSH connections
@@ -53,7 +53,7 @@ ControlMaster auto
 RequestTTY no
 # Request to a package server on the local host are forwarded to the remote
 # host.
-LocalForward *:8083 localhost:8083
+LocalForward *:{{.RepoPort}} localhost:{{.RepoPort}}
 # Requests from the remote to ssh to localhost:8022 will be forwarded to the
 # target.
 RemoteForward 8022 [{{.DeviceIP}}]:22
@@ -90,7 +90,6 @@ var (
 		8007: {},
 		8008: {},
 		8022: {},
-		8083: {},
 		8443: {},
 		8888: {},
 		9080: {},
@@ -335,12 +334,18 @@ func findSSH() (string, error) {
 
 // GenerateSSHConfig generates a default SSH config file based on the
 // specified template `tpl`, `remote`, `deviceIP`, and `tunnelPorts`.
-func GenerateSSHConfig(tpl string, remote string, deviceIP string, tunnelPorts []int, verbose bool) ([]byte, error) {
+func GenerateSSHConfig(tpl string, remote string, deviceIP string, repoPort int, tunnelPorts []int, verbose bool) ([]byte, error) {
 	filteredTunnelPorts := []int{}
 	badTunnelPorts := []string{}
+	if repoPort < 1024 {
+		badTunnelPorts = append(badTunnelPorts, strconv.Itoa(repoPort))
+	}
 	for _, port := range tunnelPorts {
 		if port < 1024 {
 			badTunnelPorts = append(badTunnelPorts, strconv.Itoa(port))
+			continue
+		}
+		if port == repoPort {
 			continue
 		}
 		if _, used := UsedPorts[port]; !used {
@@ -354,11 +359,13 @@ func GenerateSSHConfig(tpl string, remote string, deviceIP string, tunnelPorts [
 	data := struct {
 		Remote      string
 		DeviceIP    string
+		RepoPort    int
 		TunnelPath  string
 		TunnelPorts []int
 	}{
 		remote,
 		deviceIP,
+		repoPort,
 		sshControlPath,
 		filteredTunnelPorts,
 	}

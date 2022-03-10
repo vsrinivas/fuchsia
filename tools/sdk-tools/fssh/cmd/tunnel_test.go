@@ -86,6 +86,7 @@ func TestParseFlags(t *testing.T) {
 				deviceName:     fakeFoundName,
 				sshConfig:      "",
 				printSSHConfig: false,
+				repoPort:       8083,
 				tunnelPorts:    intSlice([]int{}),
 			},
 			expectedRemoteHost:     "fake.remote.host",
@@ -108,6 +109,7 @@ func TestParseFlags(t *testing.T) {
 				deviceName:     "",
 				sshConfig:      "",
 				printSSHConfig: false,
+				repoPort:       8083,
 				tunnelPorts:    intSlice([]int{}),
 			},
 			expectedRemoteHost:     "fake.remote.host",
@@ -129,6 +131,7 @@ func TestParseFlags(t *testing.T) {
 				deviceName:     fakeFoundName,
 				sshConfig:      "",
 				printSSHConfig: false,
+				repoPort:       8083,
 				tunnelPorts:    intSlice([]int{}),
 			},
 			expectedRemoteHost:     "fake.remote.host",
@@ -150,6 +153,7 @@ func TestParseFlags(t *testing.T) {
 				deviceName:     fakeFoundName,
 				sshConfig:      "",
 				printSSHConfig: true,
+				repoPort:       8083,
 				tunnelPorts:    intSlice([]int{}),
 			},
 			expectedRemoteHost:     "fake.remote.host",
@@ -171,6 +175,7 @@ func TestParseFlags(t *testing.T) {
 				deviceName:     fakeFoundName,
 				sshConfig:      fakeSSHConfigPath,
 				printSSHConfig: true,
+				repoPort:       8083,
 				tunnelPorts:    intSlice([]int{}),
 			},
 			expectedRemoteHost:     "fake.remote.host",
@@ -192,6 +197,7 @@ func TestParseFlags(t *testing.T) {
 				deviceName:     "",
 				sshConfig:      "",
 				printSSHConfig: false,
+				repoPort:       8083,
 				tunnelPorts:    intSlice([]int{}),
 			},
 			expectedRemoteHost:     "fake.remote.host",
@@ -214,6 +220,7 @@ func TestParseFlags(t *testing.T) {
 				deviceName:     "",
 				sshConfig:      fakeSSHConfigPath,
 				printSSHConfig: true,
+				repoPort:       8083,
 				tunnelPorts:    intSlice([]int{}),
 			},
 			expectedRemoteHost:     "fake.remote.host",
@@ -258,6 +265,7 @@ func TestRemoteHostCache(t *testing.T) {
 		deviceName:     fakeFoundName,
 		sshConfig:      "",
 		printSSHConfig: false,
+		repoPort:       8083,
 		tunnelPorts:    intSlice([]int{}),
 	}
 	expectedErrMsg := "No remote host provided. Please add the '-remote-host' flag"
@@ -282,6 +290,7 @@ func TestRemoteHostCache(t *testing.T) {
 		deviceName:     fakeFoundName,
 		sshConfig:      "",
 		printSSHConfig: false,
+		repoPort:       8083,
 		tunnelPorts:    intSlice([]int{}),
 	}
 
@@ -301,6 +310,7 @@ func TestRemoteHostCache(t *testing.T) {
 		deviceName:     fakeFoundName,
 		sshConfig:      "",
 		printSSHConfig: false,
+		repoPort:       8083,
 		tunnelPorts:    intSlice([]int{}),
 	}
 
@@ -330,6 +340,7 @@ func TestNegativeParseFlags(t *testing.T) {
 				deviceName:     "",
 				sshConfig:      "",
 				printSSHConfig: false,
+				repoPort:       0,
 				tunnelPorts:    intSlice([]int{}),
 			},
 			sdk:            testSDKProperties{DataPath: fakeHomePath},
@@ -342,6 +353,7 @@ func TestNegativeParseFlags(t *testing.T) {
 				deviceName:     fakeNotFoundName,
 				sshConfig:      "",
 				printSSHConfig: false,
+				repoPort:       8083,
 				tunnelPorts:    intSlice([]int{}),
 			},
 			sdk: testSDKProperties{
@@ -361,6 +373,26 @@ func TestNegativeParseFlags(t *testing.T) {
 				deviceName:     fakeFoundName,
 				sshConfig:      "",
 				printSSHConfig: true,
+				repoPort:       80,
+				tunnelPorts:    intSlice([]int{}),
+			},
+			sdk: testSDKProperties{
+				DataPath: fakeHomePath,
+				device: sdkcommon.DeviceConfig{
+					DeviceIP:   fakeFoundIPAddr,
+					DeviceName: fakeFoundName,
+				},
+			},
+			expectedErrMsg: "Could not generate default SSH config: Cannot create SSH config with protected ports: 80",
+		},
+		{
+			tunnelCmd: &tunnelCmd{
+				remoteHost:     "fake.remote.host",
+				deviceIP:       fakeFoundIPAddr,
+				deviceName:     fakeFoundName,
+				sshConfig:      "",
+				printSSHConfig: true,
+				repoPort:       8083,
 				tunnelPorts:    intSlice([]int{22, 8888, 9060}),
 			},
 			sdk: testSDKProperties{
