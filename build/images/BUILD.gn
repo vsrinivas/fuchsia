@@ -194,6 +194,7 @@ verify_component_resolvers("verify_component_resolvers") {
 action("check_vtables_in_rodata") {
   testonly = true
   hermetic_deps = false
+  no_output_dir_leaks = false
   script = "//scripts/clang/check_vtable_rodata.py"
   outputs = [ "$root_build_dir/$target_name" ]
   depfile = "$root_build_dir/$target_name.d"
