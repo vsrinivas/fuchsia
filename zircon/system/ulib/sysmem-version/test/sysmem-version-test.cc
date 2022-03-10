@@ -60,7 +60,7 @@ class LinearSnap {
   explicit LinearSnap(FidlType&& to_move_in) {
     alignas(FIDL_ALIGNMENT) FidlType aligned = std::move(to_move_in);
     // TODO(fxbug.dev/45252): Use FIDL at rest.
-    fidl::unstable::UnownedEncodedMessage<FidlType> encoded(fidl::internal::WireFormatVersion::kV1,
+    fidl::unstable::UnownedEncodedMessage<FidlType> encoded(fidl::internal::WireFormatVersion::kV2,
                                                             linear_data_, kMaxDataSize, &aligned);
     ZX_ASSERT(encoded.ok());
     fidl::OutgoingMessage& outgoing_message = encoded.GetOutgoingMessage();
@@ -80,7 +80,7 @@ class LinearSnap {
     outgoing_to_incoming_result_.emplace(encoded.GetOutgoingMessage());
     ZX_ASSERT(outgoing_to_incoming_result_.value().ok());
     // TODO(fxbug.dev/45252): Use FIDL at rest.
-    decoded_.emplace(fidl::internal::WireFormatVersion::kV1,
+    decoded_.emplace(fidl::internal::WireFormatVersion::kV2,
                      std::move(outgoing_to_incoming_result_.value().incoming_message()));
     ZX_ASSERT(decoded_.value().ok());
   }
