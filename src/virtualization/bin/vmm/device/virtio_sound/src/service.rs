@@ -568,7 +568,7 @@ impl<'s> VirtSoundService<'s> {
         // Write all requested infos.
         let mut chain = reply_controlq::success(req_wrapper.take_chain())?;
         for id in start_id..end_id {
-            chain.write(infos[id].get_info().as_bytes())?;
+            chain.write_all(infos[id].get_info().as_bytes())?;
         }
         Ok(())
     }
