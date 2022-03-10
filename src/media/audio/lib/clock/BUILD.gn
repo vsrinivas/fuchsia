@@ -70,7 +70,7 @@ fuchsia_unittest_package("audio-libclock-unittests") {
 }
 
 fuchsia_unittest_package("audio-libclock-death-unittests") {
-  manifest = "meta/audio-libclock-death-unittests.cmx"
+  manifest = "meta/audio-libclock-death-unittests.cml"
   deps = [ ":death_unittest_bin" ]
   test_specs = {
     log_settings = {
