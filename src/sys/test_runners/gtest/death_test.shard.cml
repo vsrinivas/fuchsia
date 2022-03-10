@@ -1,0 +1,7 @@
+{
+    use: [
+        {
+            protocol: [ "fuchsia.process.Launcher" ],
+        },
+    ],
+}

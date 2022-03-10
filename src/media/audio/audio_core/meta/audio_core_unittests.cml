@@ -2,15 +2,11 @@
     include: [
         "//sdk/lib/inspect/client.shard.cml",
         "//sdk/lib/syslog/client.shard.cml",
+        "//src/sys/test_runners/gtest/death_test.shard.cml",
         "//src/sys/test_runners/gtest/default.shard.cml",
         "//src/sys/test_runners/tmp_storage.shard.cml",
     ],
     program: {
         binary: "bin/audio_core_unittests",
     },
-    use: [
-        {
-            protocol: [ "fuchsia.process.Launcher" ],
-        },
-    ],
 }

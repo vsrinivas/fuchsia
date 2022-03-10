@@ -26,6 +26,23 @@ fuchsia_component("echo_gtest_client_component") {
   deps = [ ":echo_gtest_client" ]
 }
 
+executable("death_gtest") {
+  testonly = true
+  sources = [ "death_test.cc" ]
+
+  deps = [
+    "//sdk/lib/syslog/cpp",
+    "//src/lib/fxl/test:gtest_main",
+  ]
+}
+
+fuchsia_component("death_gtest_component") {
+  testonly = true
+  manifest = "meta/death_gtest.cml"
+  component_name = "death_gtest"
+  deps = [ ":death_gtest" ]
+}
+
 executable("gtest_runner_no_tests") {
   testonly = true
   sources = [ "empty_test_file.cc" ]
@@ -132,6 +149,7 @@ fuchsia_component("concurrency_test_driver_component") {
 group("all_bins") {
   testonly = true
   deps = [
+    ":death_gtest",
     ":echo_gtest_client",
     ":gtest_runner_no_tests",
     ":gtest_runner_sample_tests",
@@ -157,6 +175,7 @@ fuchsia_package("gtest-runner-example-tests") {
   deps = [
     ":concurrency_test_component",
     ":concurrency_test_driver_component",
+    ":death_gtest_component",
     ":echo_gtest_client_component",
     ":echo_test_realm",
     ":empty_test_component",

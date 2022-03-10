@@ -1,6 +1,6 @@
 # GTest Runner
 
-Reviewed on: 2020-04-20
+Reviewed on: 2022-03-09
 
 GTest Runner is a [test runner][test-runner] that launches a gtest binary as a
 component, parses its output, and translates it to fuchsia.test.Suite protocol
@@ -13,16 +13,37 @@ fx set core.x64 --with //src/sys/test_runners/gtest
 fx build
 ```
 
-## Examples
+## Example
 
-Examples to demonstrate how to write v2 test
+A test that needs additional capabilities can use a manifest like the following:
 
--   [Simple test](meta/sample_tests.cml)
+```
+{
+    include: [
+        "//src/sys/test_runners/gtest/default.shard.cml",
+    ],
+    program: {
+        binary: "bin/my_component_test",
+    },
+    // ... other capabilities
+}
+```
 
-To run this example:
+If the test uses death checks, such as `ASSERT_DEATH` or `EXPECT_DEATH`, the
+test needs extra capabilities which can be requested with the `death_test`
+shard:
 
-```bash
-fx test gtest-runner-example-tests
+```
+{
+    include: [
+        "//src/sys/test_runners/gtest/death_test.shard.cml",
+        "//src/sys/test_runners/gtest/default.shard.cml",
+    ],
+    program: {
+        binary: "bin/my_component_test",
+    },
+    // ... other capabilities
+}
 ```
 
 ## Concurrency
@@ -37,8 +58,7 @@ See [passing arguments][passing-arguments] to learn more.
 ## Limitations
 
 -   If a test calls `GTEST_SKIP()`, it will be recorded as `Passed` rather than
-    as `Skipped`.
-    This is due to a bug in gtest itself.
+    as `Skipped`. This is due to a bug in gtest itself.
 
 ## Testing
 

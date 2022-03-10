@@ -1,10 +1,10 @@
 {
     include: [
-        "//sdk/lib/syslog/client.shard.cml",
         "//src/sys/test_runners/gtest/death_test.shard.cml",
         "//src/sys/test_runners/gtest/default.shard.cml",
+        "syslog/client.shard.cml",
     ],
     program: {
-        binary: "bin/audio-libclock-death-unittests",
+        binary: "bin/death_gtest",
     },
 }
