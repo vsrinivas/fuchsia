@@ -17,36 +17,40 @@ mod eventloop;
 
 use crate::eventloop::EventLoop;
 
-fn main() -> Result<(), anyhow::Error> {
+fn main() {
     // TODO(dpradilla): use a `StructOpt` to pass in a log level option where the user can control
     // how verbose logs should be.
 
     syslog::init_with_tags(&["reachability"]).expect("failed to initialize logger");
 
     info!("Starting reachability monitor!");
-    let mut executor = fuchsia_async::LocalExecutor::new()?;
+    let mut executor =
+        fuchsia_async::LocalExecutor::new().expect("failed to create local executor");
 
     let mut fs = ServiceFs::new_local();
-    let mut fs = fs.take_and_serve_directory_handle()?;
+    let mut fs = fs.take_and_serve_directory_handle().expect("failed to serve ServiceFS directory");
 
     let inspector = component::inspector();
-    let () = inspect_runtime::serve(&inspector, &mut fs)?;
+    let () = inspect_runtime::serve(&inspector, &mut fs).expect("failed to serve inspect");
 
-    let mut monitor = Monitor::new()?;
+    let mut monitor = Monitor::new().expect("failed to create reachability monitor");
     let () = monitor.set_inspector(inspector);
 
     info!("monitoring");
     let mut eventloop = EventLoop::new(monitor);
     let eventloop_fut = eventloop.run().fuse();
-    futures::pin_mut!(eventloop_fut);
-    let mut serve_fut = fs.collect().map(Ok);
-    #[allow(clippy::never_loop)] // TODO(fxbug.dev/95055)
+    let serve_fut = fs.fuse().collect();
+    futures::pin_mut!(eventloop_fut, serve_fut);
+
     executor.run_singlethreaded(async {
-        loop {
-            futures::select! {
-                r = eventloop_fut => break r,
-                r = serve_fut => break r,
-            }
+        futures::select! {
+            r = eventloop_fut => {
+                let r: Result<(), anyhow::Error> = r;
+                panic!("unexpectedly exited event loop with result {:?}", r);
+            },
+            () = serve_fut => {
+                panic!("unexpectedly stopped serving ServiceFS");
+            },
         }
     })
 }
