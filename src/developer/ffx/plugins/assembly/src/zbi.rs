@@ -8,6 +8,7 @@ use crate::util::pkg_manifest_from_path;
 use anyhow::{anyhow, Context, Result};
 use assembly_config::{ImageAssemblyConfig, ZbiConfig};
 use assembly_images_config::{PostProcessingScript, Zbi, ZbiCompression};
+use assembly_images_manifest::{Image, ImagesManifest};
 use assembly_tool::Tool;
 use assembly_util::PathToStringExt;
 use fuchsia_pkg::PackageManifest;
@@ -30,6 +31,7 @@ pub fn convert_to_new_config(zbi_config: &ZbiConfig) -> Result<Zbi> {
 
 pub fn construct_zbi(
     zbi_tool: Box<dyn Tool>,
+    images_manifest: &mut ImagesManifest,
     outdir: impl AsRef<Path>,
     gendir: impl AsRef<Path>,
     product: &ImageAssemblyConfig,
@@ -107,6 +109,12 @@ pub fn construct_zbi(
     // Build and return the ZBI.
     let zbi_path = outdir.as_ref().join(format!("{}.zbi", zbi_config.name));
     zbi_builder.build(gendir, zbi_path.as_path())?;
+
+    // Only add the unsigned ZBI to the images manifest if we will not be signing the ZBI.
+    if let None = zbi_config.postprocessing_script {
+        images_manifest.images.push(Image::ZBI { path: zbi_path.clone(), signed: false });
+    }
+
     Ok(zbi_path)
 }
 
@@ -114,6 +122,7 @@ pub fn construct_zbi(
 /// the bootloaders, then perform that task here.
 pub fn vendor_sign_zbi(
     signing_tool: Box<dyn Tool>,
+    images_manifest: &mut ImagesManifest,
     outdir: impl AsRef<Path>,
     zbi_config: &Zbi,
     zbi: impl AsRef<Path>,
@@ -138,6 +147,7 @@ pub fn vendor_sign_zbi(
 
     // Run the tool.
     signing_tool.run(&args)?;
+    images_manifest.images.push(Image::ZBI { path: signed_path.clone(), signed: true });
     Ok(signed_path)
 }
 
@@ -148,6 +158,7 @@ mod tests {
     use crate::base_package::BasePackage;
     use assembly_config::{ImageAssemblyConfig, ZbiConfig, ZbiSigningScript};
     use assembly_images_config::{PostProcessingScript, Zbi, ZbiCompression};
+    use assembly_images_manifest::ImagesManifest;
     use assembly_tool::testing::FakeToolProvider;
     use assembly_tool::{ToolCommandLog, ToolProvider};
     use assembly_util::PathToStringExt;
@@ -237,8 +248,10 @@ mod tests {
         let tools = FakeToolProvider::default();
         let zbi_tool = tools.get_tool("zbi").unwrap();
 
+        let mut images_manifest = ImagesManifest::default();
         construct_zbi(
             zbi_tool,
+            &mut images_manifest,
             dir.path(),
             dir.path(),
             &product_config,
@@ -271,7 +284,10 @@ mod tests {
         // Sign the zbi.
         let tools = FakeToolProvider::default();
         let signing_tool = tools.get_tool("fake").unwrap();
-        let signed_zbi_path = vendor_sign_zbi(signing_tool, dir.path(), &zbi, &zbi_path).unwrap();
+        let mut images_manifest = ImagesManifest::default();
+        let signed_zbi_path =
+            vendor_sign_zbi(signing_tool, &mut images_manifest, dir.path(), &zbi, &zbi_path)
+                .unwrap();
         assert_eq!(signed_zbi_path, expected_output);
 
         let expected_commands: ToolCommandLog = serde_json::from_value(json!({

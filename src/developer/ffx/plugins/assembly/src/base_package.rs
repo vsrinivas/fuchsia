@@ -7,6 +7,7 @@ use crate::util::pkg_manifest_from_path;
 use anyhow::{Context, Result};
 use assembly_base_package::BasePackageBuilder;
 use assembly_config::ImageAssemblyConfig;
+use assembly_images_manifest::{Image, ImagesManifest};
 use fuchsia_hash::Hash;
 use fuchsia_merkle::MerkleTree;
 use log::info;
@@ -21,6 +22,7 @@ pub struct BasePackage {
 }
 
 pub fn construct_base_package(
+    images_manifest: &mut ImagesManifest,
     outdir: impl AsRef<Path>,
     gendir: impl AsRef<Path>,
     name: impl AsRef<str>,
@@ -66,6 +68,7 @@ pub fn construct_base_package(
     let merkle_path = outdir.join("base.merkle");
     std::fs::write(merkle_path, hex::encode(base_merkle.as_bytes()))?;
 
+    images_manifest.images.push(Image::BasePackage(base_package_path.clone()));
     Ok(BasePackage {
         merkle: base_merkle,
         contents: build_results.contents,
@@ -97,9 +100,15 @@ mod tests {
         product_config.cache.push(cache_manifest);
 
         // Construct the base package.
-        let base_package =
-            construct_base_package(dir.path(), dir.path(), "system_image", &product_config)
-                .unwrap();
+        let mut images_manifest = ImagesManifest::default();
+        let base_package = construct_base_package(
+            &mut images_manifest,
+            dir.path(),
+            dir.path(),
+            "system_image",
+            &product_config,
+        )
+        .unwrap();
         assert_eq!(base_package.path, dir.path().join("base/meta.far"));
 
         // Read the base package, and assert the contents are correct.
@@ -130,9 +139,15 @@ mod tests {
         product_config.cache.push(cache_manifest);
 
         // Construct the base package.
-        let base_package =
-            construct_base_package(dir.path(), dir.path(), "system_image", &product_config)
-                .unwrap();
+        let mut images_manifest = ImagesManifest::default();
+        let base_package = construct_base_package(
+            &mut images_manifest,
+            dir.path(),
+            dir.path(),
+            "system_image",
+            &product_config,
+        )
+        .unwrap();
         assert_eq!(base_package.path, dir.path().join("base/meta.far"));
 
         // Read the base package, and assert the contents are correct.

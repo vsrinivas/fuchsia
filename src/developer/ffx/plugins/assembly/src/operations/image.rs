@@ -40,11 +40,23 @@ pub fn assemble(args: ImageArgs) -> Result<()> {
     // Use the sdk to get the host tool paths.
     let tools = SdkToolProvider::try_new()?;
 
+    // Some of the below methods now require an images manifest. Use a fake one for now until we
+    // have switched to create-system. It is more preferable to keep this file mostly untouched to
+    // ensure that we can build up create-system and compare the result against this known-working
+    // operation.
+    let mut fake_images_manifest = ImagesManifest::default();
+
     let base_package: Option<BasePackage> = if has_base_package(&product) {
         info!("Creating base package");
         Some(
-            construct_base_package(&outdir, &gendir, &board.base_package_name, &product)
-                .context("Creating base package")?,
+            construct_base_package(
+                &mut fake_images_manifest,
+                &outdir,
+                &gendir,
+                &board.base_package_name,
+                &product,
+            )
+            .context("Creating base package")?,
         )
     } else {
         info!("Skipping base package creation");
@@ -94,6 +106,7 @@ pub fn assemble(args: ImageArgs) -> Result<()> {
     let zbi_config = zbi::convert_to_new_config(&board.zbi)?;
     let zbi_path = zbi::construct_zbi(
         tools.get_tool("zbi")?,
+        &mut fake_images_manifest,
         &outdir,
         &gendir,
         &product,
@@ -106,7 +119,7 @@ pub fn assemble(args: ImageArgs) -> Result<()> {
         info!("Creating the VBMeta image");
         let vbmeta_config = vbmeta::convert_to_new_config(&board.zbi.name, vbmeta_config)?;
         Some(
-            vbmeta::construct_vbmeta(&outdir, &vbmeta_config, &zbi_path)
+            vbmeta::construct_vbmeta(&mut fake_images_manifest, &outdir, &vbmeta_config, &zbi_path)
                 .context("Creating the VBMeta image")?,
         )
     } else {
@@ -122,8 +135,14 @@ pub fn assemble(args: ImageArgs) -> Result<()> {
             info!("Vendor signing the ZBI");
             let signing_tool = tools.get_tool_with_path(script.path.clone())?;
             (
-                zbi::vendor_sign_zbi(signing_tool, &outdir, &zbi_config, &zbi_path)
-                    .context("Vendor-signing the ZBI")?,
+                zbi::vendor_sign_zbi(
+                    signing_tool,
+                    &mut fake_images_manifest,
+                    &outdir,
+                    &zbi_config,
+                    &zbi_path,
+                )
+                .context("Vendor-signing the ZBI")?,
                 true,
             )
         }

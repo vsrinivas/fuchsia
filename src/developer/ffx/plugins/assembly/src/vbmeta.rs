@@ -8,6 +8,7 @@ use crate::vfs::{FilesystemProvider, RealFilesystemProvider};
 use anyhow::Result;
 use assembly_config::VBMetaConfig;
 use assembly_images_config::{VBMeta, VBMetaDescriptor};
+use assembly_images_manifest::{Image, ImagesManifest};
 use std::path::{Path, PathBuf};
 use vbmeta::VBMeta as VBMetaImage;
 use vbmeta::{HashDescriptor, Key, Salt};
@@ -28,6 +29,7 @@ pub fn convert_to_new_config(name: impl AsRef<str>, config: &VBMetaConfig) -> Re
 }
 
 pub fn construct_vbmeta(
+    images_manifest: &mut ImagesManifest,
     outdir: impl AsRef<Path>,
     vbmeta_config: &VBMeta,
     zbi: impl AsRef<Path>,
@@ -49,6 +51,7 @@ pub fn construct_vbmeta(
     // Write VBMeta to a file and return the path.
     let vbmeta_path = outdir.as_ref().join(format!("{}.vbmeta", vbmeta_config.name));
     std::fs::write(&vbmeta_path, vbmeta.as_bytes())?;
+    images_manifest.images.push(Image::VBMeta(vbmeta_path.clone()));
     Ok(vbmeta_path)
 }
 
@@ -101,6 +104,7 @@ mod tests {
 
     use assembly_config::VBMetaConfig;
     use assembly_images_config::VBMeta;
+    use assembly_images_manifest::ImagesManifest;
     use serde_json::json;
     use std::convert::TryFrom;
     use std::path::PathBuf;
@@ -158,7 +162,9 @@ mod tests {
         let zbi_path = dir.path().join("fuchsia.zbi");
         std::fs::write(&zbi_path, "fake zbi").unwrap();
 
-        let vbmeta_path = construct_vbmeta(dir.path(), &vbmeta_config, zbi_path).unwrap();
+        let mut images_manifest = ImagesManifest::default();
+        let vbmeta_path =
+            construct_vbmeta(&mut images_manifest, dir.path(), &vbmeta_config, zbi_path).unwrap();
         assert_eq!(vbmeta_path, dir.path().join("fuchsia.vbmeta"));
     }
 

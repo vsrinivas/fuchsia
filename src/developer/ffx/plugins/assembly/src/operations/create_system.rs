@@ -37,7 +37,13 @@ pub fn create_system(args: CreateSystemArgs) -> Result<()> {
     // 1. Create the base package if needed.
     let base_package: Option<BasePackage> = if has_base_package(&image_assembly_config) {
         info!("Creating base package");
-        Some(construct_base_package(&outdir, &gendir, &base_package_name, &image_assembly_config)?)
+        Some(construct_base_package(
+            &mut images_manifest,
+            &outdir,
+            &gendir,
+            &base_package_name,
+            &image_assembly_config,
+        )?)
     } else {
         info!("Skipping base package creation");
         None
@@ -85,6 +91,7 @@ pub fn create_system(args: CreateSystemArgs) -> Result<()> {
     let zbi_path: Option<PathBuf> = if let Some(zbi_config) = zbi_config {
         Some(zbi::construct_zbi(
             tools.get_tool("zbi")?,
+            &mut images_manifest,
             &outdir,
             &gendir,
             &image_assembly_config,
@@ -108,7 +115,7 @@ pub fn create_system(args: CreateSystemArgs) -> Result<()> {
 
     if let Some(vbmeta_config) = vbmeta_config {
         info!("Creating the VBMeta image");
-        vbmeta::construct_vbmeta(&outdir, &vbmeta_config, &zbi_path)
+        vbmeta::construct_vbmeta(&mut images_manifest, &outdir, &vbmeta_config, &zbi_path)
             .context("Creating the VBMeta image")?;
     } else {
         info!("Skipping vbmeta creation");
@@ -120,8 +127,14 @@ pub fn create_system(args: CreateSystemArgs) -> Result<()> {
         match &zbi_config.postprocessing_script {
             Some(script) => {
                 let signing_tool = tools.get_tool_with_path(script.path.clone())?;
-                zbi::vendor_sign_zbi(signing_tool, &outdir, &zbi_config, &zbi_path)
-                    .context("Vendor-signing the ZBI")?;
+                zbi::vendor_sign_zbi(
+                    signing_tool,
+                    &mut images_manifest,
+                    &outdir,
+                    &zbi_config,
+                    &zbi_path,
+                )
+                .context("Vendor-signing the ZBI")?;
             }
             _ => {}
         }
