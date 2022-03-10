@@ -2,8 +2,6 @@
     "facets": {
         "fuchsia.test": {
             "injected-services": {
-                "fuchsia.buildinfo.Provider": "fuchsia-pkg://fuchsia.com/build-info-service#meta/build-info.cmx",
-                "fuchsia.intl.PropertyProvider": "fuchsia-pkg://fuchsia.com/intl_property_manager#meta/intl_property_manager_v1.cmx",
                 "fuchsia.net.interfaces.State": "fuchsia-pkg://fuchsia.com/semantics-integration-tests#meta/netstack.cmx",
                 "fuchsia.netstack.Netstack": "fuchsia-pkg://fuchsia.com/semantics-integration-tests#meta/netstack.cmx",
                 "fuchsia.posix.socket.Provider": "fuchsia-pkg://fuchsia.com/semantics-integration-tests#meta/netstack.cmx"

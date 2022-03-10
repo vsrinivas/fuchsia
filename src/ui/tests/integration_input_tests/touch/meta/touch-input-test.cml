@@ -7,18 +7,6 @@
     program: {
         binary: "bin/touch-input-test",
     },
-
-    // Add capability providers for the protocols required by WebEngine.
-    children: [
-        {
-            name: "build-info-service",
-            url: "fuchsia-pkg://fuchsia.com/build-info-service#meta/build-info.cm",
-        },
-        {
-            name: "intl_property_manager",
-            url: "fuchsia-pkg://fuchsia.com/intl_property_manager#meta/intl_property_manager.cm",
-        },
-    ],
     use: [
         // The Chromium test case requires observing if the One Chromium client
         // terminates early. To do so, we have to use event capabilities which
@@ -37,23 +25,6 @@
             event: "stopped",
             from: "framework",
         },
-
-        // Protocols required by WebEngine.
-        {
-            protocol: [ "fuchsia.buildinfo.Provider" ],
-            from: "#build-info-service",
-        },
-        {
-            protocol: [ "fuchsia.intl.PropertyProvider" ],
-            from: "#intl_property_manager",
-        },
-
-        // Required by the build-info-service child.
-        {
-            directory: "build-info",
-            rights: [ "r*" ],
-            path: "/config/build-info",
-        },
     ],
     offer: [
         {
@@ -63,7 +34,6 @@
             protocol: [
                 "fuchsia.kernel.RootJobForInspect",
                 "fuchsia.kernel.Stats",
-                "fuchsia.logger.LogSink",
                 "fuchsia.scheduler.ProfileProvider",
                 "fuchsia.sys.Environment",
                 "fuchsia.sysmem.Allocator",
@@ -73,11 +43,6 @@
             ],
             from: "parent",
             to: "#realm_builder",
-        },
-        {
-            directory: "build-info",
-            from: "parent",
-            to: "#build-info-service",
         },
     ],
 }
