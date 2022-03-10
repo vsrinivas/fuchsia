@@ -332,6 +332,7 @@ template("assemble_system") {
     cs_fvm_fastboot = "${cs_outdir}/fvm.fastboot.blk"
     cs_bootfs_files = "${cs_gendir}/bootfs_files.list"
     cs_devmgr_config = "${cs_gendir}/devmgr_config.txt"
+    cs_packages = "${cs_outdir}/packages.json"
     cs_zbi = "${cs_outdir}/${image_name}.zbi"
     cs_zbi_manifest = "${cs_gendir}/zbi.json"
     cs_zbi_signed = "${cs_zbi}.signed"
@@ -1003,6 +1004,7 @@ template("assemble_system") {
       files.cs_devmgr_config,
       files.cs_zbi,
       files.cs_zbi_manifest,
+      files.cs_packages,
     ]
 
     if (defined(invoker.zbi_signing_script)) {
