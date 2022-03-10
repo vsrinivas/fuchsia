@@ -270,83 +270,23 @@ mod test {
     use {
         super::*,
         crate::{
-            repository::{PmRepository, RepositoryManager, RepositoryServer},
-            test_utils::repo_private_key,
+            repository::{RepositoryManager, RepositoryServer},
+            test_utils::make_repository,
         },
         camino::Utf8Path,
         fuchsia_async as fasync,
         fuchsia_hyper::new_https_client,
-        fuchsia_pkg::PackageBuilder,
-        futures::io::AllowStdIo,
-        maplit::hashmap,
         std::{fs::create_dir, net::Ipv4Addr},
-        tuf::{
-            interchange::Json, metadata::TargetPath, repo_builder::RepoBuilder,
-            repository::FileSystemRepositoryBuilder,
-        },
     };
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_download_package() {
-        let manager = RepositoryManager::new();
-
         let tmp = tempfile::tempdir().unwrap();
         let dir = Utf8Path::from_path(tmp.path()).unwrap();
 
-        let metadata_dir = dir.join("repository");
-        create_dir(&metadata_dir).unwrap();
+        let repo = make_repository("tuf", dir.join("repo")).await;
 
-        let build_path = dir.join("build");
-        let mut builder = PackageBuilder::new("my-package-name");
-        builder.add_contents_as_blob("lib/mylib.so", b"", &build_path).unwrap();
-        builder
-            .add_contents_to_far("meta/my_component.cmx", b"my_component.cmx contents", &build_path)
-            .unwrap();
-
-        let meta_far_path = dir.join("meta.far");
-        let manifest = builder.build(&build_path, &meta_far_path).unwrap();
-
-        // Copy the package blobs into the blobs directory.
-        let blob_dir = metadata_dir.join("blobs");
-        create_dir(&blob_dir).unwrap();
-
-        let mut meta_far_merkle = None;
-        for blob in manifest.blobs() {
-            let merkle = blob.merkle.to_string();
-
-            if blob.path == "meta/" {
-                meta_far_merkle = Some(merkle.clone());
-            }
-
-            let mut src = std::fs::File::open(&blob.source_path).unwrap();
-            let mut dst = std::fs::File::create(blob_dir.join(merkle)).unwrap();
-            std::io::copy(&mut src, &mut dst).unwrap();
-        }
-
-        // Write TUF metadata
-        let key = repo_private_key();
-        let repo = FileSystemRepositoryBuilder::<Json>::new(metadata_dir.clone()).build().unwrap();
-        RepoBuilder::create(repo)
-            .trusted_root_keys(&[&key])
-            .trusted_targets_keys(&[&key])
-            .trusted_snapshot_keys(&[&key])
-            .trusted_timestamp_keys(&[&key])
-            .stage_root()
-            .unwrap()
-            .add_target_with_custom(
-                TargetPath::new("test_package").unwrap(),
-                AllowStdIo::new(File::open(meta_far_path).unwrap()),
-                hashmap! { "merkle".into() => meta_far_merkle.unwrap().into() },
-            )
-            .await
-            .unwrap()
-            .commit()
-            .await
-            .unwrap();
-
-        // Create the repository.
-        let backend = PmRepository::new(dir.to_path_buf());
-        let repo = Repository::new("tuf", Box::new(backend)).await.unwrap();
+        let manager = RepositoryManager::new();
         manager.add(Arc::new(repo));
 
         let addr = (Ipv4Addr::LOCALHOST, 0).into();

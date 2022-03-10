@@ -408,14 +408,17 @@ impl Repository {
         let package_entries = self
             .show_target_package(trusted_targets, package.name.as_ref().unwrap().to_string())
             .await?;
+
         if package_entries.is_none() {
             return Ok(None);
         }
+
         let components = package_entries
             .unwrap()
             .into_iter()
             .filter(|e| is_component_manifest(&e.path.as_ref().unwrap()))
             .collect();
+
         Ok(Some(components))
     }
 
@@ -428,20 +431,24 @@ impl Repository {
             let mut client = self.client.lock().await;
 
             // Get the latest TUF metadata.
-            client.update().await?;
+            client.update().await.context("updating TUF metadata")?;
 
             client.database().trusted_targets().context("missing target information")?.clone()
         };
 
         let packages: Result<Vec<RepositoryPackage>, Error> =
             join_all(trusted_targets.targets().into_iter().filter_map(|(k, v)| {
+                let size = v.length();
                 let custom = v.custom();
-                let size = custom.get("size")?.as_u64()?;
                 let hash = custom.get("merkle")?.as_str().unwrap_or("").to_string();
-                let path = format!("blobs/{}", hash);
                 Some(async move {
                     let mut bytes = vec![];
-                    self.fetch_blob(&hash).await?.read_to_end(&mut bytes).await?;
+                    self.fetch_blob(&hash)
+                        .await
+                        .with_context(|| format!("fetching blob {}", hash))?
+                        .read_to_end(&mut bytes)
+                        .await
+                        .with_context(|| format!("reading blob {}", hash))?;
                     let mut archive = AsyncReader::new(Adapter::new(Cursor::new(bytes))).await?;
                     let contents = archive.read_file("meta/contents").await?;
                     let contents = MetaContents::deserialize(contents.as_slice())?;
@@ -458,8 +465,9 @@ impl Repository {
 
                     let modified = self
                         .backend
-                        .blob_modification_time(&path)
-                        .await?
+                        .blob_modification_time(&hash)
+                        .await
+                        .with_context(|| format!("fetching blob modification time {}", hash))?
                         .map(|x| -> anyhow::Result<u64> {
                             Ok(x.duration_since(SystemTime::UNIX_EPOCH)?.as_secs())
                         })
@@ -522,6 +530,7 @@ impl Repository {
             return Ok(None);
         };
 
+        let size = target.length();
         let custom = target.custom();
 
         let hash = custom
@@ -535,17 +544,15 @@ impl Repository {
             })?
             .to_string();
 
-        let size = custom
-            .get("size")
-            .ok_or_else(|| anyhow!("package {:?} is missing the `size` field", package_name))?;
-
-        let size = size
-            .as_u64()
-            .ok_or_else(|| anyhow!("package {:?} should be a u64, not {:?}", package_name, size))?;
-
         // Read the meta.far.
         let mut meta_far_bytes = vec![];
-        self.fetch_blob(&hash).await?.read_to_end(&mut meta_far_bytes).await?;
+        self.fetch_blob(&hash)
+            .await
+            .with_context(|| format!("fetching blob {}", hash))?
+            .read_to_end(&mut meta_far_bytes)
+            .await
+            .with_context(|| format!("reading blob {}", hash))?;
+
         let mut archive = AsyncReader::new(Adapter::new(Cursor::new(meta_far_bytes))).await?;
 
         let modified = self
@@ -654,10 +661,22 @@ pub trait RepositoryBackend: std::fmt::Debug {
 mod test {
     use {
         super::*,
-        crate::test_utils::{make_readonly_empty_repository, repo_key},
+        crate::test_utils::{make_readonly_empty_repository, make_repository, repo_key},
+        camino::Utf8Path,
+        pretty_assertions::assert_eq,
     };
     const ROOT_VERSION: u32 = 1;
     const REPO_NAME: &str = "fake-repo";
+
+    fn get_modtime(path: Utf8PathBuf) -> u64 {
+        std::fs::metadata(path)
+            .unwrap()
+            .modified()
+            .unwrap()
+            .duration_since(SystemTime::UNIX_EPOCH)
+            .unwrap()
+            .as_secs()
+    }
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_get_config() {
@@ -691,6 +710,124 @@ mod test {
                     subscribe: Some(true),
                 }]),
             },
+        );
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_list_packages() {
+        let tmp = tempfile::tempdir().unwrap();
+        let dir = Utf8Path::from_path(tmp.path()).unwrap();
+
+        let repo = make_repository(REPO_NAME, dir.to_path_buf()).await;
+
+        // Look up the timestamp for the meta.far for the modified setting.
+        let hash = "b7e707e133e43afd4676049da32c38229739cfb1191955e58e31f961428a963e";
+        let modified = get_modtime(dir.join("repository").join("blobs").join(hash));
+
+        assert_eq!(
+            repo.list_packages(ListFields::empty()).await.unwrap(),
+            vec![RepositoryPackage {
+                name: Some("test_package".into()),
+                hash: Some(hash.into()),
+                size: Some(20480),
+                modified: Some(modified),
+                entries: None,
+                ..RepositoryPackage::EMPTY
+            },],
+        );
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_list_packages_with_components() {
+        let tmp = tempfile::tempdir().unwrap();
+        let dir = Utf8Path::from_path(tmp.path()).unwrap();
+
+        let repo = make_repository(REPO_NAME, dir.to_path_buf()).await;
+
+        // Look up the timestamp for the meta.far for the modified setting.
+        let hash = "b7e707e133e43afd4676049da32c38229739cfb1191955e58e31f961428a963e";
+        let modified = get_modtime(dir.join("repository").join("blobs").join(hash));
+
+        assert_eq!(
+            repo.list_packages(ListFields::COMPONENTS).await.unwrap(),
+            vec![RepositoryPackage {
+                name: Some("test_package".into()),
+                hash: Some(hash.into()),
+                size: Some(20480),
+                modified: Some(modified),
+                entries: Some(vec![PackageEntry {
+                    path: Some("meta/my_component.cm".into()),
+                    hash: None,
+                    size: Some(24),
+                    modified: Some(modified),
+                    ..PackageEntry::EMPTY
+                },]),
+                ..RepositoryPackage::EMPTY
+            },],
+        );
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_show_package() {
+        let tmp = tempfile::tempdir().unwrap();
+        let dir = Utf8Path::from_path(tmp.path()).unwrap();
+
+        let repo = make_repository(REPO_NAME, dir.to_path_buf()).await;
+
+        // Look up the timestamps for the blobs.
+        let blob_dir = dir.join("repository").join("blobs");
+        let meta_far_hash = "b7e707e133e43afd4676049da32c38229739cfb1191955e58e31f961428a963e";
+        let meta_far_modified = get_modtime(blob_dir.join(meta_far_hash));
+
+        let lib_hash = "15ec7bf0b50732b49f8228e07d24365338f9e3ab994b00af08e5a3bffe55fd8b";
+        let lib_modified = get_modtime(blob_dir.join(lib_hash));
+
+        assert_eq!(
+            repo.show_package("test_package".into()).await.unwrap(),
+            Some(vec![
+                PackageEntry {
+                    path: Some("meta.far".into()),
+                    hash: Some(meta_far_hash.into()),
+                    size: Some(20480),
+                    modified: Some(meta_far_modified),
+                    ..PackageEntry::EMPTY
+                },
+                PackageEntry {
+                    path: Some("meta/contents".into()),
+                    hash: None,
+                    size: Some(78),
+                    modified: Some(meta_far_modified),
+                    ..PackageEntry::EMPTY
+                },
+                PackageEntry {
+                    path: Some("meta/fuchsia.abi/abi-revision".into()),
+                    hash: None,
+                    size: Some(8),
+                    modified: Some(meta_far_modified),
+                    ..PackageEntry::EMPTY
+                },
+                PackageEntry {
+                    path: Some("meta/my_component.cm".into()),
+                    hash: None,
+                    size: Some(24),
+                    modified: Some(meta_far_modified),
+                    ..PackageEntry::EMPTY
+                },
+                PackageEntry {
+                    path: Some("meta/package".into()),
+                    hash: None,
+                    size: Some(37),
+                    modified: Some(meta_far_modified),
+                    ..PackageEntry::EMPTY
+                },
+                PackageEntry {
+                    path: Some("lib/mylib.so".into()),
+                    hash: Some(lib_hash.into()),
+                    size: Some(0),
+                    modified: Some(lib_modified),
+                    ..PackageEntry::EMPTY
+                }
+            ])
         );
     }
 }
