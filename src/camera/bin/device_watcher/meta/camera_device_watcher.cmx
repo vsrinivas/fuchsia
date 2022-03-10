@@ -1,0 +1,17 @@
+{
+    "include": [
+        "syslog/client.shard.cmx"
+    ],
+    "program": {
+        "binary": "bin/camera_device_watcher_bin"
+    },
+    "sandbox": {
+        "dev": [
+            "class/camera"
+        ],
+        "services": [
+            "fuchsia.sys.Environment",
+            "fuchsia.sys.Launcher"
+        ]
+    }
+}

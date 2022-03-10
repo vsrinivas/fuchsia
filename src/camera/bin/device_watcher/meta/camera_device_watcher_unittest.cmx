@@ -1,0 +1,23 @@
+{
+    "facets": {
+        "fuchsia.test": {
+            "injected-services": {
+                "fuchsia.camera.test.DeviceWatcherTester": "fuchsia-pkg://fuchsia.com/camera_device_watcher#meta/camera_device_watcher.cmx",
+                "fuchsia.camera3.DeviceWatcher": "fuchsia-pkg://fuchsia.com/camera_device_watcher#meta/camera_device_watcher.cmx"
+            }
+        }
+    },
+    "include": [
+        "syslog/client.shard.cmx"
+    ],
+    "program": {
+        "binary": "bin/camera_device_watcher_unittest_bin"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.camera.test.DeviceWatcherTester",
+            "fuchsia.camera3.DeviceWatcher",
+            "fuchsia.tracing.provider.Registry"
+        ]
+    }
+}
