@@ -429,14 +429,16 @@ constexpr int kSockOptOn = 1;
 constexpr int kSockOptOff = 0;
 
 struct SocketOption {
+  SocketOption(int level, std::string level_str, int name, std::string name_str)
+      : level(level), level_str(level_str), name(name), name_str(name_str) {}
+
   int level;
   std::string level_str;
   int name;
   std::string name_str;
 };
 
-#define STRINGIFIED_SOCKOPT(level, name) \
-  SocketOption { level, #level, name, #name }
+#define STRINGIFIED_SOCKOPT(level, name) SocketOption(level, #level, name, #name)
 
 struct IntSocketOption {
   SocketOption option;
@@ -5513,20 +5515,25 @@ TEST(NetDatagramTest, PingIpv4LoopbackAddresses) {
   }
 }
 
-struct CmsgSocketOption {
+struct Cmsg {
+  Cmsg(int level, std::string level_str, int type, std::string type_str)
+      : level(level), level_str(level_str), type(type), type_str(type_str) {}
+
   int level;
   std::string level_str;
-  int cmsg_type;
-  std::string cmsg_type_str;
-  socklen_t cmsg_size;
-  int optname_to_enable_receive;
+  int type;
+  std::string type_str;
 };
 
-#define STRINGIFIED_CMSGOPT(lvl, type, size, optname)                                              \
-  CmsgSocketOption {                                                                               \
-    .level = lvl, .level_str = #lvl, .cmsg_type = type, .cmsg_type_str = #type, .cmsg_size = size, \
-    .optname_to_enable_receive = optname                                                           \
-  }
+#define STRINGIFIED_CMSG(level, type) Cmsg(level, #level, type, #type)
+
+struct CmsgSocketOption {
+  Cmsg cmsg;
+  socklen_t cmsg_size;
+  // The option and the control message always share the same level, so we only need the name of the
+  // option here.
+  int optname_to_enable_receive;
+};
 
 using SocketDomainAndOption = std::tuple<sa_family_t, CmsgSocketOption>;
 
@@ -5535,8 +5542,8 @@ std::string SocketDomainAndOptionToString(
   auto const& [domain, cmsg_opt] = info.param;
   std::ostringstream oss;
   oss << socketDomainToString(domain);
-  oss << '_' << cmsg_opt.level_str;
-  oss << '_' << cmsg_opt.cmsg_type_str;
+  oss << '_' << cmsg_opt.cmsg.level_str;
+  oss << '_' << cmsg_opt.cmsg.type_str;
   return oss.str();
 }
 
@@ -5641,8 +5648,8 @@ class NetDatagramSocketsCmsgRecvTest : public NetDatagramSocketsCmsgTestBase,
 
     // Enable the specified socket option.
     constexpr int kOne = 1;
-    ASSERT_EQ(setsockopt(bound().get(), cmsg_sockopt.level, cmsg_sockopt.optname_to_enable_receive,
-                         &kOne, sizeof(kOne)),
+    ASSERT_EQ(setsockopt(bound().get(), cmsg_sockopt.cmsg.level,
+                         cmsg_sockopt.optname_to_enable_receive, &kOne, sizeof(kOne)),
               0)
         << strerror(errno);
   }
@@ -5677,15 +5684,15 @@ TEST_P(NetDatagramSocketsCmsgRecvTest, DisableReceiveSocketOption) {
           cmsghdr* cmsg = CMSG_FIRSTHDR(&msghdr);
           ASSERT_NE(cmsg, nullptr);
           EXPECT_EQ(cmsg->cmsg_len, CMSG_LEN(cmsg_sockopt.cmsg_size));
-          EXPECT_EQ(cmsg->cmsg_level, cmsg_sockopt.level);
-          EXPECT_EQ(cmsg->cmsg_type, cmsg_sockopt.cmsg_type);
+          EXPECT_EQ(cmsg->cmsg_level, cmsg_sockopt.cmsg.level);
+          EXPECT_EQ(cmsg->cmsg_type, cmsg_sockopt.cmsg.type);
           EXPECT_EQ(CMSG_NXTHDR(&msghdr, cmsg), nullptr);
         }));
   }
 
   constexpr int kZero = 0;
-  ASSERT_EQ(setsockopt(bound().get(), cmsg_sockopt.level, cmsg_sockopt.optname_to_enable_receive,
-                       &kZero, sizeof(kZero)),
+  ASSERT_EQ(setsockopt(bound().get(), cmsg_sockopt.cmsg.level,
+                       cmsg_sockopt.optname_to_enable_receive, &kZero, sizeof(kZero)),
             0)
       << strerror(errno);
 
@@ -5760,16 +5767,16 @@ TEST_P(NetDatagramSocketsCmsgRecvTest, TruncatedMessageMinimumValidSize) {
     cmsghdr* cmsg = CMSG_FIRSTHDR(&msghdr);
     ASSERT_NE(cmsg, nullptr);
     EXPECT_EQ(cmsg->cmsg_len, sizeof(control));
-    auto const& cmsg_socketopt = std::get<1>(GetParam());
-    EXPECT_EQ(cmsg->cmsg_level, cmsg_socketopt.level);
-    EXPECT_EQ(cmsg->cmsg_type, cmsg_socketopt.cmsg_type);
+    auto const& cmsg_sockopt = std::get<1>(GetParam());
+    EXPECT_EQ(cmsg->cmsg_level, cmsg_sockopt.cmsg.level);
+    EXPECT_EQ(cmsg->cmsg_type, cmsg_sockopt.cmsg.type);
 #endif
   }));
 }
 
 TEST_P(NetDatagramSocketsCmsgRecvTest, TruncatedMessageByOneByte) {
-  auto const& cmsg_socketopt = std::get<1>(GetParam());
-  char control[CMSG_LEN(cmsg_socketopt.cmsg_size) - 1];
+  auto const& cmsg_sockopt = std::get<1>(GetParam());
+  char control[CMSG_LEN(cmsg_sockopt.cmsg_size) - 1];
   ASSERT_NO_FATAL_FAILURE(
       SendAndCheckReceivedMessage(control, socklen_t(sizeof(control)), [&](msghdr& msghdr) {
 #if defined(__Fuchsia__)
@@ -5782,8 +5789,8 @@ TEST_P(NetDatagramSocketsCmsgRecvTest, TruncatedMessageByOneByte) {
     cmsghdr* cmsg = CMSG_FIRSTHDR(&msghdr);
     ASSERT_NE(cmsg, nullptr);
     EXPECT_EQ(cmsg->cmsg_len, sizeof(control));
-    EXPECT_EQ(cmsg->cmsg_level, cmsg_socketopt.level);
-    EXPECT_EQ(cmsg->cmsg_type, cmsg_socketopt.cmsg_type);
+    EXPECT_EQ(cmsg->cmsg_level, cmsg_sockopt.cmsg.level);
+    EXPECT_EQ(cmsg->cmsg_type, cmsg_sockopt.cmsg.type);
 #endif
       }));
 }
@@ -5791,28 +5798,48 @@ TEST_P(NetDatagramSocketsCmsgRecvTest, TruncatedMessageByOneByte) {
 INSTANTIATE_TEST_SUITE_P(
     NetDatagramSocketsCmsgRecvTests, NetDatagramSocketsCmsgRecvTest,
     testing::Combine(testing::Values(AF_INET, AF_INET6),
-                     testing::Values(STRINGIFIED_CMSGOPT(SOL_SOCKET, SO_TIMESTAMP, sizeof(timeval),
-                                                         SO_TIMESTAMP),
-                                     STRINGIFIED_CMSGOPT(SOL_SOCKET, SO_TIMESTAMPNS,
-                                                         sizeof(timespec), SO_TIMESTAMPNS))),
+                     testing::Values(
+                         CmsgSocketOption{
+                             .cmsg = STRINGIFIED_CMSG(SOL_SOCKET, SO_TIMESTAMP),
+                             .cmsg_size = sizeof(timeval),
+                             .optname_to_enable_receive = SO_TIMESTAMP,
+                         },
+                         CmsgSocketOption{
+                             .cmsg = STRINGIFIED_CMSG(SOL_SOCKET, SO_TIMESTAMPNS),
+                             .cmsg_size = sizeof(timespec),
+                             .optname_to_enable_receive = SO_TIMESTAMPNS,
+                         })),
     SocketDomainAndOptionToString);
 
-INSTANTIATE_TEST_SUITE_P(
-    NetDatagramSocketsCmsgRecvIPv4Tests, NetDatagramSocketsCmsgRecvTest,
-    testing::Combine(testing::Values(AF_INET),
-                     testing::Values(STRINGIFIED_CMSGOPT(SOL_IP, IP_TOS, sizeof(uint8_t),
-                                                         IP_RECVTOS),
-                                     STRINGIFIED_CMSGOPT(SOL_IP, IP_TTL, sizeof(int), IP_RECVTTL))),
-    SocketDomainAndOptionToString);
+INSTANTIATE_TEST_SUITE_P(NetDatagramSocketsCmsgRecvIPv4Tests, NetDatagramSocketsCmsgRecvTest,
+                         testing::Combine(testing::Values(AF_INET),
+                                          testing::Values(
+                                              CmsgSocketOption{
+                                                  .cmsg = STRINGIFIED_CMSG(SOL_IP, IP_TOS),
+                                                  .cmsg_size = sizeof(uint8_t),
+                                                  .optname_to_enable_receive = IP_RECVTOS,
+                                              },
+                                              CmsgSocketOption{
+                                                  .cmsg = STRINGIFIED_CMSG(SOL_IP, IP_TTL),
+                                                  .cmsg_size = sizeof(int),
+                                                  .optname_to_enable_receive = IP_RECVTTL,
+                                              })),
+                         SocketDomainAndOptionToString);
 
-INSTANTIATE_TEST_SUITE_P(
-    NetDatagramSocketsCmsgRecvIPv6Tests, NetDatagramSocketsCmsgRecvTest,
-    testing::Combine(testing::Values(AF_INET6),
-                     testing::Values(STRINGIFIED_CMSGOPT(SOL_IPV6, IPV6_TCLASS, sizeof(int),
-                                                         IPV6_RECVTCLASS),
-                                     STRINGIFIED_CMSGOPT(SOL_IPV6, IPV6_HOPLIMIT, sizeof(int),
-                                                         IPV6_RECVHOPLIMIT))),
-    SocketDomainAndOptionToString);
+INSTANTIATE_TEST_SUITE_P(NetDatagramSocketsCmsgRecvIPv6Tests, NetDatagramSocketsCmsgRecvTest,
+                         testing::Combine(testing::Values(AF_INET6),
+                                          testing::Values(
+                                              CmsgSocketOption{
+                                                  .cmsg = STRINGIFIED_CMSG(SOL_IPV6, IPV6_TCLASS),
+                                                  .cmsg_size = sizeof(int),
+                                                  .optname_to_enable_receive = IPV6_RECVTCLASS,
+                                              },
+                                              CmsgSocketOption{
+                                                  .cmsg = STRINGIFIED_CMSG(SOL_IPV6, IPV6_HOPLIMIT),
+                                                  .cmsg_size = sizeof(int),
+                                                  .optname_to_enable_receive = IPV6_RECVHOPLIMIT,
+                                              })),
+                         SocketDomainAndOptionToString);
 
 class NetDatagramSocketsCmsgSendTest : public NetDatagramSocketsCmsgTestBase,
                                        public testing::WithParamInterface<sa_family_t> {
