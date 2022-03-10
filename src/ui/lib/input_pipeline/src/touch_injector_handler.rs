@@ -63,6 +63,8 @@ impl UnhandledInputHandler for TouchInjectorHandler {
         self: Rc<Self>,
         unhandled_input_event: input_device::UnhandledInputEvent,
     ) -> Vec<input_device::InputEvent> {
+        fuchsia_trace::duration!("input", "presentation_on_event");
+
         match unhandled_input_event {
             input_device::UnhandledInputEvent {
                 device_event: input_device::InputDeviceEvent::Touch(ref touch_event),
@@ -296,12 +298,17 @@ impl TouchInjectorHandler {
         };
         let data = pointerinjector::Data::PointerSample(pointer_sample);
 
-        pointerinjector::Event {
+        let trace_flow_id = fuchsia_trace::generate_nonce();
+        let event = pointerinjector::Event {
             timestamp: Some(event_time.into_nanos()),
             data: Some(data),
-            trace_flow_id: None,
+            trace_flow_id: Some(trace_flow_id),
             ..pointerinjector::Event::EMPTY
-        }
+        };
+
+        fuchsia_trace::flow_begin!("input", "dispatch_event_to_scenic", trace_flow_id);
+
+        event
     }
 
     /// Converts an input event touch to a display coordinate, which is the coordinate space in

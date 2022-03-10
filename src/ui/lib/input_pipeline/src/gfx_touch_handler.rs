@@ -34,6 +34,8 @@ impl UnhandledInputHandler for GfxTouchHandler {
         self: Rc<Self>,
         unhandled_input_event: input_device::UnhandledInputEvent,
     ) -> Vec<input_device::InputEvent> {
+        fuchsia_trace::duration!("input", "presentation_on_event");
+
         match unhandled_input_event {
             input_device::UnhandledInputEvent {
                 device_event: input_device::InputDeviceEvent::Touch(ref touch_event),
@@ -105,6 +107,8 @@ impl GfxTouchHandler {
                     &touch_descriptor,
                     event_time,
                 );
+                let trace_flow_id = fuchsia_trace::generate_nonce();
+                fuchsia_trace::flow_begin!("input", "dispatch_event_to_scenic", trace_flow_id);
                 locked_session.enqueue(command);
             }
         }
