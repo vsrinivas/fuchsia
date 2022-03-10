@@ -132,40 +132,46 @@ if (is_linux || is_mac) {
     cycle_timeout = "2m"
   }
 
-  system_test_upgrade_suite("nuc-release-upgrade") {
-    downgrade_release_builder =
-        "fuchsia/global.ci/workstation.x64-release-e2e-isolated"
+  # FIXME(http://fxbug.dev/89684): This test paves the latest version onto the
+  # device, then tries to OTA to the build-under-test. Unfortunately the OTA backstop
+  # can prevent this build from being installed:
+  # https://fuchsia.dev/fuchsia-src/contribute/governance/rfcs/0071_ota_backstop
+  # So we'll disable this test for release branches for now until we find a
+  # better way to block these tests from running in release tests.
+  # system_test_upgrade_suite("nuc-release-upgrade") {
+  #   downgrade_release_builder =
+  #      "fuchsia/global.ci/workstation.x64-release-e2e-isolated"
+  #
+  #   environments = [
+  #      {
+  #       dimensions = {
+  #         device_type = "Intel NUC Kit NUC7i5DNHE"
+  #       }
+  #      tags = [ "e2e-isolated" ]
+  #     },
+  #   ]
+  #   pave_timeout = "10m"
+  #   cycle_count = "1"
+  #   cycle_timeout = "10m"
+  # }
 
-    environments = [
-      {
-        dimensions = {
-          device_type = "Intel NUC Kit NUC7i5DNHE"
-        }
-        tags = [ "e2e-isolated" ]
-      },
-    ]
-    pave_timeout = "10m"
-    cycle_count = "1"
-    cycle_timeout = "10m"
-  }
-
-  system_test_upgrade_suite("nuc-release-upgrade-longevity") {
-    downgrade_release_builder =
-        "fuchsia/global.ci/core.x64-release-nuc_in_basic_envs"
-
-    environments = [
-      {
-        dimensions = {
-          device_type = "Intel NUC Kit NUC7i5DNHE"
-        }
-        tags = [ "e2e-isolated-longevity" ]
-      },
-    ]
-    timeout = "4h"
-    pave_timeout = "10m"
-    cycle_count = "40"
-    cycle_timeout = "10m"
-  }
+  # system_test_upgrade_suite("nuc-release-upgrade-longevity") {
+  #   downgrade_release_builder =
+  #       "fuchsia/global.ci/core.x64-release-nuc_in_basic_envs"
+  #
+  #   environments = [
+  #     {
+  #       dimensions = {
+  #         device_type = "Intel NUC Kit NUC7i5DNHE"
+  #       }
+  #       tags = [ "e2e-isolated-longevity" ]
+  #     },
+  #   ]
+  #   timeout = "4h"
+  #   pave_timeout = "10m"
+  #   cycle_count = "40"
+  #   cycle_timeout = "10m"
+  # }
 }
 
 group("tests") {
@@ -173,8 +179,9 @@ group("tests") {
   public_deps = [
     ":nuc-release-reboot($host_toolchain)",
     ":nuc-release-reboot-longevity($host_toolchain)",
-    ":nuc-release-upgrade($host_toolchain)",
-    ":nuc-release-upgrade-longevity($host_toolchain)",
+
+    # ":nuc-release-upgrade($host_toolchain)",
+    # ":nuc-release-upgrade-longevity($host_toolchain)",
     ":system_tests",
   ]
 }
