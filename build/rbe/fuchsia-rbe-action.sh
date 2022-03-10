@@ -45,6 +45,8 @@ options:
       [default: $reclient_bindir]
   --dry-run: If set, print the computed rewrapper command without running it.
 
+  --label STRING: build system identifier, for diagnostic messages.
+
   --log: capture stdout/stderr to \$output_files[0].remote-log.
       This is useful when the stdout/stderr size exceeds RPC limits.
 
@@ -68,6 +70,7 @@ output_files=
 rewrapper_options=()
 want_auto_reproxy=0
 canonicalize_working_dir="false"
+label=
 
 prev_opt=
 # Extract script options before --
@@ -96,6 +99,9 @@ do
 
     --bindir=*) reclient_bindir="$optarg" ;;
     --bindir) prev_opt=reclient_bindir ;;
+
+    --label=*) label="$optarg" ;;
+    --label) prev_opt=label ;;
 
     --fsatrace-path=*) fsatrace_path="$optarg" ;;
     --fsatrace-path) prev_opt=fsatrace_path ;;
@@ -204,8 +210,17 @@ test "$want_auto_reproxy" = 0 ||
 
 full_command=( "${reproxy_prefix[@]}" "${rewrapped_command[@]}" )
 
+if test -n "$label"
+then message_header="[$script][$label]:"
+else message_header="[$script]:"
+fi
+
+function message() {
+  echo "$message_header" "$@"
+}
+
 test "$dry_run" = 0 || {
-  echo "[$script]:" "${full_command[@]}"
+  message "${full_command[@]}"
   exit
 }
 
@@ -216,7 +231,7 @@ test "$dry_run" = 0 || {
 # *exec_root*, and thus, contain the $build_subdir in their paths' prefixes.
 test "$canonicalize_working_dir" = "false" || \
   "$check_output_dir_leaks" --no-execute "${output_files_rel[@]}" -- "$@" || {
-  echo "Detected local output dir leaks in the command.  Aborting remote execution."
+  message "Error: Detected local output dir leaks in the command.  Aborting remote execution."
   exit 1
 }
 
@@ -245,12 +260,13 @@ esac
 # Look for symptoms inside reproxy's log, where most of the action is.
 tmpdir="${RBE_proxy_log_dir:-/tmp}"
 reproxy_errors="$tmpdir"/reproxy.ERROR
-echo "The last lines of $reproxy_errors might explain a remote failure:"
+message "The last lines of $reproxy_errors might explain a remote failure:"
 if test -r "$reproxy_errors" ; then tail "$reproxy_errors" ; fi
 
 if grep -q "Fail to dial" "$reproxy_errors"
 then
   cat <<EOF
+$message_header:
 "Fail to dial" could indicate that reproxy is not running.
 Did you run with 'fx build'?
 If not, you may need to wrap your build command with:
@@ -265,15 +281,18 @@ fi
 if grep -q "Error connecting to remote execution client: rpc error: code = PermissionDenied" "$reproxy_errors"
 then
   cat <<EOF
+$message_header:
 You might not have permssion to access the RBE instance.
 Contact fuchsia-build-team@google.com for support.
 
 EOF
 fi
 
+# TODO(b/201697587): surface this diagnostic from rewrapper
 mapfile -t local_missing_files < <(grep "Status:LocalErrorResultStatus.*: no such file or directory" "$reproxy_errors" | sed -e 's|^.*Err:stat ||' -e 's|: no such file.*$||')
 test "${#local_missing_files[@]}" = 0 || {
 cat <<EOF
+$message_header:
 The following files are expected to exist locally for uploading,
 but were not found:
 
