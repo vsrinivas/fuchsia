@@ -7,6 +7,7 @@
 #include <lib/sys/component/llcpp/handlers.h>
 #include <lib/sys/component/llcpp/outgoing_directory.h>
 #include <lib/zx/status.h>
+#include <zircon/assert.h>
 #include <zircon/errors.h>
 #include <zircon/process.h>
 #include <zircon/processargs.h>
@@ -15,35 +16,61 @@
 #include <memory>
 #include <sstream>
 
-namespace component_llcpp {
+namespace component {
 
-OutgoingDirectory::OutgoingDirectory(async_dispatcher_t* dispatcher) : dispatcher_(dispatcher) {
-  if (dispatcher_ == nullptr) {
-    dispatcher_ = async_get_default_dispatcher();
-  }
+OutgoingDirectory OutgoingDirectory::Create(async_dispatcher_t* dispatcher) {
+  ZX_ASSERT_MSG(dispatcher != nullptr, "OutgoingDirectory::Create received nullptr |dispatcher|.");
+
+  svc_dir_t* root = nullptr;
+  // It's safe to ignore return value here since the function always returns
+  // ZX_OK.
+  (void)svc_dir_create_without_serve(&root);
+
+  return OutgoingDirectory(dispatcher, root);
+}
+
+OutgoingDirectory::OutgoingDirectory(async_dispatcher_t* dispatcher, svc_dir_t* root)
+    : dispatcher_(dispatcher), root_(root) {}
+
+OutgoingDirectory::OutgoingDirectory(OutgoingDirectory&& other) noexcept
+    : dispatcher_(other.dispatcher_), root_(other.root_), serving_(other.serving_) {
+  other.dispatcher_ = nullptr;
+  other.root_ = nullptr;
+  other.serving_ = false;
+}
+
+OutgoingDirectory& OutgoingDirectory::operator=(OutgoingDirectory&& other) noexcept {
+  dispatcher_ = other.dispatcher_;
+  root_ = other.root_;
+  serving_ = other.serving_;
+
+  other.dispatcher_ = nullptr;
+  other.root_ = nullptr;
+  other.serving_ = false;
+
+  return *this;
 }
 
 OutgoingDirectory::~OutgoingDirectory() {
-  if (root_ != nullptr) {
+  if (root_) {
     svc_dir_destroy(root_);
   }
 }
 
 zx::status<> OutgoingDirectory::Serve(fidl::ServerEnd<fuchsia_io::Directory> directory_request) {
-  if (root_ != nullptr) {
-    return zx::make_status(ZX_ERR_ALREADY_EXISTS);
+  if (serving_) {
+    return zx::error_status(ZX_ERR_ALREADY_BOUND);
   }
-
-  if (dispatcher_ == nullptr) {
-    return zx::make_status(ZX_ERR_INVALID_ARGS);
-  }
-
   if (!directory_request.is_valid()) {
-    return zx::make_status(ZX_ERR_BAD_HANDLE);
+    return zx::error_status(ZX_ERR_BAD_HANDLE);
   }
 
-  zx_status_t status =
-      svc_dir_create(dispatcher_, directory_request.TakeHandle().release(), &root_);
+  zx_status_t status = svc_dir_serve(root_, dispatcher_, directory_request.TakeHandle().release());
+  if (status != ZX_OK) {
+    return zx::error_status(status);
+  }
+
+  serving_ = true;
   return zx::make_status(status);
 }
 
@@ -54,9 +81,10 @@ zx::status<> OutgoingDirectory::ServeFromStartupInfo() {
 }
 
 zx::status<> OutgoingDirectory::AddNamedProtocol(AnyHandler handler, cpp17::string_view name) {
-  if (root_ == nullptr) {
-    return zx::make_status(ZX_ERR_BAD_HANDLE);
+  if (name.empty()) {
+    return zx::error_status(ZX_ERR_INVALID_ARGS);
   }
+
   auto& svc_root_handlers = registered_handlers_[kServiceDirectory];
   std::string protocol_entry = std::string(name);
   if (svc_root_handlers.count(protocol_entry) != 0) {
@@ -74,8 +102,11 @@ zx::status<> OutgoingDirectory::AddNamedProtocol(AnyHandler handler, cpp17::stri
 
 zx::status<> OutgoingDirectory::AddDirectory(fidl::ClientEnd<fuchsia_io::Directory> remote_dir,
                                              cpp17::string_view directory_name) {
-  if (root_ == nullptr) {
-    return zx::make_status(ZX_ERR_BAD_HANDLE);
+  if (!remote_dir.is_valid()) {
+    return zx::error_status(ZX_ERR_BAD_HANDLE);
+  }
+  if (directory_name.empty()) {
+    return zx::error_status(ZX_ERR_INVALID_ARGS);
   }
 
   zx_status_t status =
@@ -85,8 +116,8 @@ zx::status<> OutgoingDirectory::AddDirectory(fidl::ClientEnd<fuchsia_io::Directo
 
 zx::status<> OutgoingDirectory::AddNamedService(ServiceHandler handler, cpp17::string_view service,
                                                 cpp17::string_view instance) {
-  if (root_ == nullptr) {
-    return zx::make_status(ZX_ERR_BAD_HANDLE);
+  if (service.empty() || instance.empty()) {
+    return zx::error_status(ZX_ERR_INVALID_ARGS);
   }
 
   std::string basepath = MakePath(service, instance);
@@ -123,10 +154,6 @@ zx::status<> OutgoingDirectory::AddNamedService(ServiceHandler handler, cpp17::s
 }
 
 zx::status<> OutgoingDirectory::RemoveNamedProtocol(cpp17::string_view name) {
-  if (root_ == nullptr) {
-    return zx::make_status(ZX_ERR_BAD_HANDLE);
-  }
-
   if (registered_handlers_.count(kServiceDirectory) == 0) {
     return zx::make_status(ZX_ERR_NOT_FOUND);
   }
@@ -144,10 +171,6 @@ zx::status<> OutgoingDirectory::RemoveNamedProtocol(cpp17::string_view name) {
 
 zx::status<> OutgoingDirectory::RemoveNamedService(cpp17::string_view service,
                                                    cpp17::string_view instance) {
-  if (root_ == nullptr) {
-    return zx::make_status(ZX_ERR_BAD_HANDLE);
-  }
-
   std::string path = MakePath(service, instance);
   if (registered_handlers_.count(path) == 0) {
     return zx::make_status(ZX_ERR_NOT_FOUND);
@@ -166,10 +189,6 @@ zx::status<> OutgoingDirectory::RemoveNamedService(cpp17::string_view service,
 }
 
 zx::status<> OutgoingDirectory::RemoveDirectory(cpp17::string_view directory_name) {
-  if (root_ == nullptr) {
-    return zx::make_status(ZX_ERR_BAD_HANDLE);
-  }
-
   zx_status_t status = svc_dir_remove_directory(root_, directory_name.data());
   return zx::make_status(status);
 }
@@ -185,4 +204,4 @@ std::string OutgoingDirectory::MakePath(cpp17::string_view service, cpp17::strin
   return path.str();
 }
 
-}  // namespace component_llcpp
+}  // namespace component

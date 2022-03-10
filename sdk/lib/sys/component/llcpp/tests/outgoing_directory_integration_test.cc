@@ -27,7 +27,7 @@ using namespace sys::testing::experimental;
 using namespace sys::testing;
 
 constexpr char kEchoServiceServer[] = "echo_service_server";
-constexpr char kEchoServiceServerUrl[] = "#meta/echo_service_server.cm";
+constexpr char kEchoServiceServerUrl[] = "#meta/llcpp_echo_service_server.cm";
 
 class OutgoingDirectoryTest : public gtest::RealLoopFixture {};
 

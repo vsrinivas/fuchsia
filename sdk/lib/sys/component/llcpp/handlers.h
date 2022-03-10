@@ -13,7 +13,7 @@
 
 #include <map>
 
-namespace component_llcpp {
+namespace component {
 
 // Callback invoked when a request is made to a FIDL protocol server end.
 using AnyHandler = fit::function<void(zx::channel)>;
@@ -71,6 +71,6 @@ class ServiceHandler final : public fidl::ServiceHandlerInterface {
   std::map<std::string, AnyHandler> handlers_ = {};
 };
 
-}  // namespace component_llcpp
+}  // namespace component
 
 #endif  // LIB_SYS_COMPONENT_LLCPP_HANDLERS_H_

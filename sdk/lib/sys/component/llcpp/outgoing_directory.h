@@ -6,7 +6,6 @@
 #define LIB_SYS_COMPONENT_LLCPP_OUTGOING_DIRECTORY_H_
 
 #include <fidl/fuchsia.io/cpp/wire.h>
-#include <lib/async/default.h>
 #include <lib/async/dispatcher.h>
 #include <lib/fit/function.h>
 #include <lib/stdcompat/string_view.h>
@@ -21,7 +20,7 @@
 #include <memory>
 #include <stack>
 
-namespace component_llcpp {
+namespace component {
 
 // The directory containing handles to capabilities this component provides.
 // Entries served from this outgoing directory should correspond to the
@@ -56,17 +55,25 @@ class OutgoingDirectory final {
   // Creates an OutgoingDirectory which will serve requests when
   // |Serve(zx::channel)| or |ServeFromStartupInfo()| is called.
   //
-  // If |dispatcher| is nullptr, then the global dispatcher set via
-  // |async_get_default_dispatcher| will be used.
-  explicit OutgoingDirectory(async_dispatcher_t* dispatcher = nullptr);
+  // |dispatcher| must not be nullptr. If it is, this method will panic.
+  static OutgoingDirectory Create(async_dispatcher_t* dispatcher);
 
-  ~OutgoingDirectory();
+  OutgoingDirectory() = delete;
 
-  // Outgoing objects cannot be copied.
+  // OutgoingDirectory can be moved. Once moved, invoking a method on an
+  // instance will yield undefined behavior.
+  OutgoingDirectory(OutgoingDirectory&&) noexcept;
+  OutgoingDirectory& operator=(OutgoingDirectory&&) noexcept;
+
+  // OutgoingDirectory cannot be copied.
   OutgoingDirectory(const OutgoingDirectory&) = delete;
   OutgoingDirectory& operator=(const OutgoingDirectory&) = delete;
 
-  // Starts serving the outgoing directory on the given channel.
+  ~OutgoingDirectory();
+
+  // Starts serving the outgoing directory on the given channel. This should
+  // be invoked after the outgoing directory has been populated, e.g. via
+  // |AddProtocol|.
   //
   // This object will implement the |fuchsia.io.Directory| interface using this
   // channel.
@@ -77,10 +84,7 @@ class OutgoingDirectory final {
   //
   // ZX_ERR_ACCESS_DENIED: |directory_request| has insufficient rights.
   //
-  // ZX_ERR_ALREADY_EXISTS: |Serve| was already invoked previously.
-  //
-  // ZX_ERR_INVALID_ARGS: |dispatcher| passed to constructor is nullptr and no
-  // dispatcher is set globally via |async_set_default_dispatcher|.
+  // ZX_ERR_ALREADY_BOUND: |Serve| had already been called before.
   zx::status<> Serve(fidl::ServerEnd<fuchsia_io::Directory> directory_request);
 
   // Starts serving the outgoing directory on the channel provided to this
@@ -98,14 +102,9 @@ class OutgoingDirectory final {
   // startup handle or it was already taken.
   //
   // ZX_ERR_ACCESS_DENIED: |directory_request| has insufficient rights.
-  //
-  // ZX_ERR_ALREADY_EXISTS: |Serve| was already invoked previously.
-  //
-  // ZX_ERR_INVALID_ARGS: |dispatcher| passed to constructor is nullptr and no
-  // dispatcher is set globally via |async_set_default_dispatcher|.
   zx::status<> ServeFromStartupInfo();
 
-  // Adds a protocol instance.
+  // Adds a FIDL Protocol instance.
   //
   // |impl| will be used to handle requests for this protocol.
   // |name| is used to determine where to host the protocol. This protocol will
@@ -116,14 +115,7 @@ class OutgoingDirectory final {
   //
   // ZX_ERR_ALREADY_EXISTS: An entry already exists for this protocol.
   //
-  // ZX_ERR_BAD_HANDLE: This instance is not serving the outgoing directory.
-  // This is only returned if |Serve| or |ServeFromStartupInfo| is not called
-  // before invoking this method.
-  //
-  // ZX_ERR_INVALID_ARGS: |impl| is nullptr.
-  //
-  // ZX_ERR_INVALID_ARGS: |dispatcher| passed to constructor is nullptr and no
-  // dispatcher is set globally via |async_set_default_dispatcher|.
+  // ZX_ERR_INVALID_ARGS: |impl| is nullptr or |name| is an empty string.
   //
   // # Examples
   //
@@ -145,7 +137,7 @@ class OutgoingDirectory final {
         name);
   }
 
-  // Adds a protocol instance.
+  // Adds a FIDL Protocol instance.
   //
   // A |handler| is added to handle connection requests for the this particular
   // protocol. |name| is used to determine where to host the protocol.
@@ -156,12 +148,7 @@ class OutgoingDirectory final {
   //
   // ZX_ERR_ALREADY_EXISTS: An entry already exists for this protocol.
   //
-  // ZX_ERR_BAD_HANDLE: This instance is not serving the outgoing directory.
-  // This is only returned if |Serve| or |ServeFromStartupInfo| is not called
-  // before invoking this method.
-  //
-  // ZX_ERR_INVALID_ARGS: |dispatcher| passed to constructor is nullptr and no
-  // dispatcher is set globally via |async_set_default_dispatcher|.
+  // ZX_ERR_INVALID_ARGS: |name| is an empty string.
   //
   // # Examples
   //
@@ -182,23 +169,7 @@ class OutgoingDirectory final {
   // is made available if a generic handler needs to be provided.
   zx::status<> AddNamedProtocol(AnyHandler handler, cpp17::string_view name);
 
-  // Serve a subdirectory at the root of this outgoing directory.
-  //
-  // The directory will be installed under the path |directory_name|. When
-  // a request is received under this path, then it will be forwarded to
-  // |remote_dir|.
-  //
-  // # Errors
-  //
-  // ZX_ERR_ALREADY_EXISTS: An entry with the provided name already exists.
-  //
-  // ZX_ERR_BAD_HANDLE: This instance is not serving the outgoing directory.
-  // This is only returned if |Serve| or |ServeFromStartupInfo| is not called
-  // before invoking this method.
-  zx::status<> AddDirectory(fidl::ClientEnd<fuchsia_io::Directory> remote_dir,
-                            cpp17::string_view directory_name);
-
-  // Adds an instance of a service.
+  // Adds an instance of a FIDL Service.
   //
   // A |handler| is added to provide an |instance| of a service.
   //
@@ -209,9 +180,7 @@ class OutgoingDirectory final {
   //
   // ZX_ERR_ALREADY_EXISTS: The instance already exists.
   //
-  // ZX_ERR_BAD_HANDLE: This instance is not serving the outgoing directory.
-  // This is only returned if |Serve| or |ServeFromStartupInfo| is not called
-  // before invoking this method.
+  // ZX_ERR_INVALID_ARGS: |instance| is an empty string or |handler| is empty.
   //
   // # Example
   //
@@ -222,7 +191,7 @@ class OutgoingDirectory final {
     return AddNamedService(std::move(handler), Service::Name, instance);
   }
 
-  // Adds an instance of a service.
+  // Adds an instance of a FIDL Service.
   //
   // A |handler| is added to provide an |instance| of a |service|.
   //
@@ -230,9 +199,8 @@ class OutgoingDirectory final {
   //
   // ZX_ERR_ALREADY_EXISTS: The instance already exists.
   //
-  // ZX_ERR_BAD_HANDLE: This instance is not serving the outgoing directory.
-  // This is only returned if |Serve| or |ServeFromStartupInfo| is not called
-  // before invoking this method.
+  // ZX_ERR_INVALID_ARGS: |service| or |instance| is an empty string. Also,
+  // if |handler| is empty.
   //
   // # Example
   //
@@ -241,15 +209,27 @@ class OutgoingDirectory final {
   zx::status<> AddNamedService(ServiceHandler handler, cpp17::string_view service,
                                cpp17::string_view instance = kDefaultInstance);
 
-  // Removes a protocol entry.
+  // Serve a subdirectory at the root of this outgoing directory.
+  //
+  // The directory will be installed under the path |directory_name|. When
+  // a request is received under this path, then it will be forwarded to
+  // |remote_dir|.
+  //
+  // # Errors
+  //
+  // ZX_ERR_ALREADY_EXISTS: An entry with the provided name already exists.
+  //
+  // ZX_ERR_BAD_HANDLE: |remote_dir| is an invalid handle.
+  //
+  // ZX_ERR_INVALID_ARGS: |directory_name| is an empty string.
+  zx::status<> AddDirectory(fidl::ClientEnd<fuchsia_io::Directory> remote_dir,
+                            cpp17::string_view directory_name);
+
+  // Removes a FIDL Protocol entry.
   //
   // # Errors
   //
   // ZX_ERR_NOT_FOUND: The protocol entry was not found.
-  //
-  // ZX_ERR_BAD_HANDLE: This instance is not serving the outgoing directory.
-  // This is only returned if |Serve| or |ServeFromStartupInfo| is not called
-  // before invoking this method.
   //
   // # Example
   //
@@ -264,15 +244,11 @@ class OutgoingDirectory final {
   // Same as above but untyped.
   zx::status<> RemoveNamedProtocol(cpp17::string_view name);
 
-  // Removes an instance of a service.
+  // Removes an instance of a FIDL Service.
   //
   // # Errors
   //
   // ZX_ERR_NOT_FOUND: The instance was not found.
-  //
-  // ZX_ERR_BAD_HANDLE: This instance is not serving the outgoing directory.
-  // This is only returned if |Serve| or |ServeFromStartupInfo| is not called
-  // before invoking this method.
   //
   // # Example
   //
@@ -284,15 +260,11 @@ class OutgoingDirectory final {
     return RemoveNamedService(Service::Name, instance);
   }
 
-  // Removes an instance of a service.
+  // Removes an instance of a FIDL Service.
   //
   // # Errors
   //
   // ZX_ERR_NOT_FOUND: The instance was not found.
-  //
-  // ZX_ERR_BAD_HANDLE: This instance is not serving the outgoing directory.
-  // This is only returned if |Serve| or |ServeFromStartupInfo| is not called
-  // before invoking this method.
   zx::status<> RemoveNamedService(cpp17::string_view service,
                                   cpp17::string_view instance = kDefaultInstance);
 
@@ -301,13 +273,11 @@ class OutgoingDirectory final {
   // # Errors
   //
   // ZX_ERR_NOT_FOUND: No entry was found with provided name.
-  //
-  // ZX_ERR_BAD_HANDLE: This instance is not serving the outgoing directory.
-  // This is only returned if |Serve| or |ServeFromStartupInfo| is not called
-  // before invoking this method.
   zx::status<> RemoveDirectory(cpp17::string_view directory_name);
 
  private:
+  OutgoingDirectory(async_dispatcher_t* dispatcher, svc_dir_t* root);
+
   // |svc_dir_add_service_by_path| takes in a void* |context| that is passed to
   // the |handler| callback passed as the last argument to the function call.
   // This library will pass in a casted void* pointer to this object, and when
@@ -324,9 +294,9 @@ class OutgoingDirectory final {
 
   static std::string MakePath(cpp17::string_view service, cpp17::string_view instance);
 
-  svc_dir_t* root_ = nullptr;
-
   async_dispatcher_t* dispatcher_ = nullptr;
+
+  svc_dir_t* root_ = nullptr;
 
   // Mapping of all registered protocol handlers. Key represents a path to
   // the directory in which the protocol ought to be installed. For example,
@@ -344,8 +314,12 @@ class OutgoingDirectory final {
   // The OnConnectContext has to be stored in the heap because its pointer
   // is used by |OnConnect|, a static function, during channel connection attempt.
   std::map<std::string, std::map<std::string, OnConnectContext>> registered_handlers_ = {};
+
+  // Status used to track whether or not this object is serving the directory
+  // on a directory handle.
+  bool serving_ = false;
 };
 
-}  // namespace component_llcpp
+}  // namespace component
 
 #endif  // LIB_SYS_COMPONENT_LLCPP_OUTGOING_DIRECTORY_H_

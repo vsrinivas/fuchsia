@@ -5,7 +5,7 @@
 #ifndef LIB_SYS_COMPONENT_LLCPP_CONSTANTS_H_
 #define LIB_SYS_COMPONENT_LLCPP_CONSTANTS_H_
 
-namespace component_llcpp {
+namespace component {
 
 // The name of the default FIDL Service instance.
 constexpr const char kDefaultInstance[] = "default";
@@ -16,6 +16,6 @@ constexpr const char kServiceDirectory[] = "svc";
 // Path delimiter used by svc library.
 constexpr const char kSvcPathDelimiter[] = "/";
 
-}  // namespace component_llcpp
+}  // namespace component
 
 #endif  // LIB_SYS_COMPONENT_LLCPP_CONSTANTS_H_

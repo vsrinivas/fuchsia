@@ -63,7 +63,7 @@ executable("llcpp_outgoing_directory_integration_test_bin") {
 fuchsia_component("llcpp_echo_service_server") {
   testonly = true
   deps = [ ":llcpp_echo_service_server_bin" ]
-  manifest = "meta/echo_service_server.cml"
+  manifest = "meta/llcpp_echo_service_server.cml"
   restricted_features = [ "services" ]
 }
 
