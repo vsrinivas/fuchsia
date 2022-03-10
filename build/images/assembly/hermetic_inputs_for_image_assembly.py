@@ -37,6 +37,10 @@ def main():
         type=argparse.FileType('r'),
         help='The path to the image assembly board config file')
     parser.add_argument(
+        '--images-config',
+        type=argparse.FileType('r'),
+        help='The path to the image assembly images config file')
+    parser.add_argument(
         '--output',
         type=str,
         required=True,
@@ -82,6 +86,21 @@ def main():
             zbi = board_config['zbi']
             if 'signing_script' in zbi:
                 inputs.append(zbi['signing_script']['tool'])
+
+    if args.images_config:
+        images_config = json.load(args.images_config)['images']
+        for image in images_config:
+            if image['type'] == 'vbmeta':
+                if 'key' in image:
+                    inputs.append(image['key'])
+                if 'key_metadata' in image:
+                    inputs.append(image['key_metadata'])
+                inputs.extend(image.get('additional_descriptor_files', []))
+            elif image['type'] == 'zbi':
+                if 'postprocessing_script' in image:
+                    script = image['postprocessing_script']
+                    if 'path' in script:
+                        inputs.append(script['path'])
 
     with open(args.output, 'w') as f:
         for input in inputs:

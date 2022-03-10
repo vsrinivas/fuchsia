@@ -914,8 +914,12 @@ template("assemble_system") {
                              "testonly",
                              "visibility",
                            ])
-    deps = [ ":${labels.product_assembler}" ]
+    deps = [
+      ":${labels.images_config}",
+      ":${labels.product_assembler}",
+    ]
     image_assembly_config = files.regenerated_image_assembly_config
+    images_config = files.images_config
     output = files.cs_image_assembly_inputs
   }
 
@@ -957,11 +961,11 @@ template("assemble_system") {
     }
 
     deps = [
-      ":${labels.cs_image_assembly_inputs}",
       ":${labels.images_config}",
       ":${labels.product_assembler}",
     ]
 
+    hermetic_inputs_target = ":${labels.cs_image_assembly_inputs}"
     hermetic_inputs_file = files.cs_image_assembly_inputs
     inputs = [
       files.regenerated_image_assembly_config,

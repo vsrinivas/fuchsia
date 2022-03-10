@@ -32,6 +32,9 @@ import("//build/python/python_action.gni")
 #   board_config (optional)
 #     [path] The path to the board config.
 #
+#   images_config (optional)
+#     [path] The path to the images config.
+#
 #   output (required)
 #     [path] Where to write the output hermetic inputs list.
 #
@@ -70,6 +73,14 @@ template("hermetic_inputs_for_image_assembly") {
         rebase_path(invoker.board_config, root_build_dir),
       ]
       inputs += [ invoker.board_config ]
+    }
+
+    if (defined(invoker.images_config)) {
+      args += [
+        "--images-config",
+        rebase_path(invoker.images_config, root_build_dir),
+      ]
+      inputs += [ invoker.images_config ]
     }
   }
 }
