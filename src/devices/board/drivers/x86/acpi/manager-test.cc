@@ -56,6 +56,10 @@ static void ExpectProps(acpi::DeviceBuilder* b, std::vector<zx_device_prop_t> ex
             ASSERT_EQ(actual.property_value.value.bool_val,
                       expected_prop.property_value.value.bool_val);
             break;
+          case ZX_DEVICE_PROPERTY_VALUE_ENUM:
+            ASSERT_STREQ(actual.property_value.value.enum_val,
+                         expected_prop.property_value.value.enum_val);
+            break;
           default:
             // This should never happen.
             ASSERT_TRUE(false);

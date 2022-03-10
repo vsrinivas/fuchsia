@@ -300,10 +300,17 @@ TEST_F(DeviceTest, AddChildWithStringProps) {
     ASSERT_EQ(
         strncmp(prop.value().string_value().data(), "value", prop.value().string_value().size()),
         0);
+
+    prop = rv->args.properties()[3];
+    ASSERT_EQ(
+        strncmp(prop.key().string_value().data(), "enum_key", prop.key().string_value().size()), 0);
+    ASSERT_EQ(strncmp(prop.value().string_value().data(), "enum_value",
+                      prop.value().string_value().size()),
+              0);
   });
 
   // Add a child device.
-  zx_device_str_prop_t props[3] = {
+  zx_device_str_prop_t props[4] = {
       zx_device_str_prop_t{
           .key = "hello",
           .property_value = str_prop_int_val(1),
@@ -315,6 +322,10 @@ TEST_F(DeviceTest, AddChildWithStringProps) {
       zx_device_str_prop_t{
           .key = "key",
           .property_value = str_prop_str_val("value"),
+      },
+      zx_device_str_prop_t{
+          .key = "enum_key",
+          .property_value = str_prop_enum_val("enum_value"),
       },
   };
   device_add_args_t args{.name = "child",

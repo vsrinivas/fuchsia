@@ -112,6 +112,10 @@ fuchsia_device_manager::wire::DeviceStrProperty convert_device_str_prop(
   } else if (prop.property_value.value_type == ZX_DEVICE_PROPERTY_VALUE_BOOL) {
     str_property.value = fuchsia_device_manager::wire::PropertyValue::WithBoolValue(
         prop.property_value.value.bool_val);
+  } else if (prop.property_value.value_type == ZX_DEVICE_PROPERTY_VALUE_ENUM) {
+    str_property.value = fuchsia_device_manager::wire::PropertyValue::WithStrValue(
+        fidl::ObjectView<fidl::StringView>(allocator, allocator,
+                                           prop.property_value.value.enum_val));
   }
 
   return str_property;

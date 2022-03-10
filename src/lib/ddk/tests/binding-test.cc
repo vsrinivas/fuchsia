@@ -22,6 +22,10 @@ TEST(Binding, CreateStringPropertyValues) {
   zx_device_str_prop_val str_prop_val = str_prop_str_val(str_val.c_str());
   ASSERT_EQ(ZX_DEVICE_PROPERTY_VALUE_STRING, str_prop_val.value_type);
   ASSERT_STREQ(str_val, str_prop_val.value.str_val);
+
+  zx_device_str_prop_val enum_prop_val = str_prop_enum_val(str_val.c_str());
+  ASSERT_EQ(ZX_DEVICE_PROPERTY_VALUE_ENUM, enum_prop_val.value_type);
+  ASSERT_STREQ(str_val, enum_prop_val.value.enum_val);
 }
 
 }  // namespace

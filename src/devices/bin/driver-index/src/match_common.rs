@@ -31,6 +31,7 @@ pub fn node_to_device_property(
             fdf::NodePropertyValue::StringValue(s) => {
                 bind::compiler::Symbol::StringValue(s.clone())
             }
+            fdf::NodePropertyValue::EnumValue(s) => bind::compiler::Symbol::EnumValue(s.clone()),
             fdf::NodePropertyValue::BoolValue(b) => bind::compiler::Symbol::BoolValue(b.clone()),
         };
 

@@ -179,6 +179,7 @@ typedef enum {
   ZX_DEVICE_PROPERTY_VALUE_INT = 1,
   ZX_DEVICE_PROPERTY_VALUE_STRING = 2,
   ZX_DEVICE_PROPERTY_VALUE_BOOL = 3,
+  ZX_DEVICE_PROPERTY_VALUE_ENUM = 4
 } zx_device_str_prop_val_type;
 
 // The value type in zx_device_str_prop_val must match what's
@@ -190,6 +191,7 @@ typedef struct zx_device_str_prop_val {
     uint32_t int_val;
     const char* str_val;
     bool bool_val;
+    const char* enum_val;
   } value;
 } zx_device_str_prop_val_t;
 
@@ -205,6 +207,10 @@ typedef struct zx_device_str_prop_val {
 #define str_prop_bool_val(val)                                                 \
   zx_device_str_prop_val {                                                     \
     .value_type = ZX_DEVICE_PROPERTY_VALUE_BOOL, .value = {.bool_val = (val) } \
+  }
+#define str_prop_enum_val(val)                                                 \
+  zx_device_str_prop_val {                                                     \
+    .value_type = ZX_DEVICE_PROPERTY_VALUE_ENUM, .value = {.enum_val = (val) } \
   }
 
 typedef struct zx_device_str_prop {

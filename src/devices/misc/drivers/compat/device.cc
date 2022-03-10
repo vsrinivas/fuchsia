@@ -155,6 +155,10 @@ zx_status_t Device::Add(device_add_args_t* zx_args, zx_device_t** out) {
       case ZX_DEVICE_PROPERTY_VALUE_INT:
         ref.set_value(arena_, fdf::wire::NodePropertyValue::WithIntValue(value.value.int_val));
         break;
+      case ZX_DEVICE_PROPERTY_VALUE_ENUM:
+        ref.set_value(arena_, fdf::wire::NodePropertyValue::WithStringValue(
+                                  arena_, fidl::StringView::FromExternal(value.value.enum_val)));
+        break;
       default:
         FDF_LOG(ERROR, "Unsupported property type, key: %s", key);
         break;

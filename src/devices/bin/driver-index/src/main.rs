@@ -723,6 +723,71 @@ mod tests {
     }
 
     #[fasync::run_singlethreaded(test)]
+    async fn test_bind_enum() {
+        // Make the bind instructions.
+        let always_match = bind::compiler::BindRules {
+            instructions: vec![SymbolicInstructionInfo {
+                location: None,
+                instruction: SymbolicInstruction::AbortIfNotEqual {
+                    lhs: Symbol::Key("my-key".to_string(), ValueType::Enum),
+                    rhs: Symbol::EnumValue("test-value".to_string()),
+                },
+            }],
+            symbol_table: HashMap::new(),
+            use_new_bytecode: true,
+        };
+        let always_match = DecodedRules::new(
+            bind::bytecode_encoder::encode_v2::encode_to_bytecode_v2(always_match).unwrap(),
+        )
+        .unwrap();
+
+        // Make our driver.
+        let base_repo = BaseRepo::Resolved(std::vec![ResolvedDriver {
+            component_url: url::Url::parse("fuchsia-pkg://fuchsia.com/package#driver/my-driver.cm")
+                .unwrap(),
+            v1_driver_path: None,
+            bind_rules: always_match.clone(),
+            colocate: false,
+            fallback: false,
+        },]);
+
+        let (proxy, stream) =
+            fidl::endpoints::create_proxy_and_stream::<fdf::DriverIndexMarker>().unwrap();
+
+        let index = Rc::new(Indexer::new(std::vec![], base_repo));
+
+        let index_task = run_index_server(index.clone(), stream).fuse();
+        let test_task = async move {
+            let property = fdf::NodeProperty {
+                key: Some(fdf::NodePropertyKey::StringValue("my-key".to_string())),
+                value: Some(fdf::NodePropertyValue::EnumValue("test-value".to_string())),
+                ..fdf::NodeProperty::EMPTY
+            };
+            let args =
+                fdf::NodeAddArgs { properties: Some(vec![property]), ..fdf::NodeAddArgs::EMPTY };
+
+            let result = proxy.match_drivers_v1(args).await.unwrap().unwrap();
+
+            let expected_result = vec![fdf::MatchedDriver::Driver(fdf::MatchedDriverInfo {
+                url: Some("fuchsia-pkg://fuchsia.com/package#driver/my-driver.cm".to_string()),
+                colocate: Some(false),
+                ..fdf::MatchedDriverInfo::EMPTY
+            })];
+
+            assert_eq!(expected_result, result);
+        }
+        .fuse();
+
+        futures::pin_mut!(index_task, test_task);
+        futures::select! {
+            result = index_task => {
+                panic!("Index task finished: {:?}", result);
+            },
+            () = test_task => {},
+        }
+    }
+
+    #[fasync::run_singlethreaded(test)]
     async fn test_match_drivers_v1() {
         // Make the bind instructions.
         let always_match = bind::compiler::BindRules {
