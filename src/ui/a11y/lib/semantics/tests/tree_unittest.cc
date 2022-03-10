@@ -282,19 +282,37 @@ TEST_F(SemanticTreeTest, DeletingRootNodeClearsTheTree) {
 }
 
 TEST_F(SemanticTreeTest, ReplaceNodeWithADeletion) {
-  SemanticTree::TreeUpdates updates = BuildUpdatesFromFile(kSemanticTreeOddNodesPath);
-  EXPECT_TRUE(tree_->Update(std::move(updates)));
+  {
+    SemanticTree::TreeUpdates updates = BuildUpdatesFromFile(kSemanticTreeOddNodesPath);
+    EXPECT_TRUE(tree_->Update(std::move(updates)));
+  }
 
-  SemanticTree::TreeUpdates delete_updates;
-  delete_updates.emplace_back(2);
-  delete_updates.emplace_back(CreateTestNode(2, "new node 2", {5, 6}));
+  {
+    SemanticTree::TreeUpdates updates;
+    updates.emplace_back(2);
 
-  EXPECT_TRUE(tree_->Update(std::move(delete_updates)));
+    // Create a test node that sets a new field (1), and does NOT set one of the
+    // fields in the original node (2). We want to verify that the new node contains
+    // field (1), but not field (2).
+    fuchsia::accessibility::semantics::Node node;
+    node.set_node_id(2u);
+    node.set_child_ids({5, 6});
+    node.set_container_id(0u);
+    updates.emplace_back(std::move(node));
+
+    EXPECT_TRUE(tree_->Update(std::move(updates)));
+  }
 
   EXPECT_EQ(tree_->Size(), 7u);
   auto node = tree_->GetNode(2);
   EXPECT_TRUE(node);
-  EXPECT_THAT(node->attributes().label(), "new node 2");
+
+  // The node should no longer have a label. If it still does, then we did not
+  // properly delete the node before updating.
+  EXPECT_FALSE(node->has_attributes());
+
+  EXPECT_TRUE(node->has_container_id());
+  EXPECT_EQ(node->container_id(), 0u);
   EXPECT_THAT(node->child_ids(), testing::ElementsAre(5, 6));
 }
 
@@ -305,6 +323,52 @@ TEST_F(SemanticTreeTest, SemanticTreeWithMissingChildren) {
   updates.emplace_back(CreateTestNode(2u, "node2", {3}));
   EXPECT_FALSE(tree_->Update(std::move(updates)));
   EXPECT_EQ(tree_->Size(), 0u);
+}
+
+TEST_F(SemanticTreeTest, SemanticTreeCommitLeavesTreeEmpty) {
+  SemanticTree::TreeUpdates updates;
+
+  // Create and delete the same set of nodes.
+  updates.emplace_back(CreateTestNode(1u, "node1", {2u}));
+  updates.emplace_back(CreateTestNode(2u, "node2", {}));
+  updates.emplace_back(1u);
+  updates.emplace_back(2u);
+
+  EXPECT_TRUE(tree_->Update(std::move(updates)));
+}
+
+TEST_F(SemanticTreeTest, SemanticTreeCommitLeavesTreeEmptyInvalidDeletion) {
+  SemanticTree::TreeUpdates updates;
+
+  // Attempt to delete a node that doesn't exist.
+  updates.emplace_back(1u);
+
+  EXPECT_FALSE(tree_->Update(std::move(updates)));
+}
+
+TEST_F(SemanticTreeTest, SemanticTreeCommitCreatesAndDeletesSameNodes) {
+  {
+    SemanticTree::TreeUpdates updates;
+    updates.emplace_back(CreateTestNode(SemanticTree::kRootNodeId, "node0", {1, 2}));
+    updates.emplace_back(CreateTestNode(1u, "node1"));
+    updates.emplace_back(CreateTestNode(2u, "node2"));
+
+    EXPECT_TRUE(tree_->Update(std::move(updates)));
+    EXPECT_EQ(tree_->Size(), 3u);
+  }
+
+  // Create and delete the same set of nodes.
+  {
+    SemanticTree::TreeUpdates updates;
+    updates.emplace_back(CreateTestNode(3u, "node3"));
+    updates.emplace_back(CreateTestNode(4u, "node4"));
+    updates.emplace_back(3u);
+    updates.emplace_back(4u);
+
+    EXPECT_TRUE(tree_->Update(std::move(updates)));
+  }
+
+  EXPECT_EQ(tree_->Size(), 3u);
 }
 
 TEST_F(SemanticTreeTest, PartialUpdateCopiesNewInfo) {

@@ -312,7 +312,19 @@ bool SemanticTree::Update(TreeUpdates updates) {
   for (auto& update : updates) {
     inspect_property_update_count_.Set(++update_count_);
     if (update.has_delete_node_id()) {
-      nodes_to_be_updated_[update.TakeDeleteNodeId()].reset();
+      auto delete_node_id = update.TakeDeleteNodeId();
+      // If the node we're deleting doesn't exist in the pre-commit tree, then
+      // the deletion is effectively a no-op (even if the deletion is preceded by
+      // updates to the same node), as the post-commit tree state also won't
+      // contain this node. Note that since we support partial tree updates,
+      // this logic ONLY applies in the case that a node does not exist
+      // pre-commit.
+      if (nodes_.find(delete_node_id) == nodes_.end() &&
+          nodes_to_be_updated_.find(delete_node_id) != nodes_to_be_updated_.end()) {
+        nodes_to_be_updated_.erase(delete_node_id);
+      } else {
+        nodes_to_be_updated_[update.TakeDeleteNodeId()].reset();
+      }
     } else if (update.has_node()) {
       MarkNodeForUpdate(update.TakeNode());
     }
@@ -332,16 +344,22 @@ bool SemanticTree::Update(TreeUpdates updates) {
 bool SemanticTree::ValidateUpdate(std::unordered_set<uint32_t>* visited_nodes) {
   const Node* root = GetUpdatedOrDefaultNode(kRootNodeId, nodes_to_be_updated_, nodes_);
   if (!root) {
-    // Note that there are only two occasions where the root could be null:
+    // Note that there are only three occasions where the root could be null:
     // 1. The tree is empty and this is a new update to the tree without a root
     // (invalid).
     // 2. This is an update that explicitly deletes the root node (valid). This
     // effectively causes the tree to be garbage collected and all nodes are
     // deleted.
+    // 3. This update creates, and then deletes the same set of nodes, starting
+    // from an empty tree (valid). In this case, the post-commit tree is also empty,
+    // which remains a valid state.
     if (auto it = nodes_to_be_updated_.find(kRootNodeId); it != nodes_to_be_updated_.end()) {
       return true;
     } else {
-      return false;
+      // If nodes_to_be_updated_ is empty, then the pre- and post-commit states
+      // must be identical. The pre-commit state must have been valid, so the
+      // post-commit state must also be valid.
+      return nodes_to_be_updated_.empty();
     }
   }
   if (!ValidateSubTreeForUpdate(kRootNodeId, 0 /* parent id, only used to print error message */,
