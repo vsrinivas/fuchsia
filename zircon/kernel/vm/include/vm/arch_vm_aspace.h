@@ -86,26 +86,42 @@ class ArchVmAspaceInterface {
   virtual vaddr_t PickSpot(vaddr_t base, vaddr_t end, vaddr_t align, size_t size,
                            uint mmu_flags) = 0;
 
-  // Walks the given range of pages and for any pages that are mapped and have their access bit set
-  //  * Tells the page queues it has been accessed via PageQueues::MarkAccessed
-  //  * Removes the accessed flag.
-  // For any non-terminal entries they will have any accessed information cleared, and will
-  // otherwise perform the provided NonTerminalAction
+  // For HarvestAccessed Terminal and non-terminal get processed based on the following two
+  // controls.
   enum class NonTerminalAction : bool {
+    // If a non-terminal entry has no accessed information, unmap and free it. If it has accessed
+    // information, just remove the flag.
     FreeUnaccessed,
+    // Retain both the non-terminal mappings and any accessed information.
     Retain,
   };
-  virtual zx_status_t HarvestAccessed(vaddr_t vaddr, size_t count, NonTerminalAction action) = 0;
+  enum class TerminalAction : bool {
+    // If the page is accessed update its age in the page queues, and remove the accessed flag.
+    UpdateAgeAndHarvest,
+    // If the page is accessed update its age in the page queues, but do not clear the flag.
+    UpdateAge,
+  };
+  // Walks the given range of pages and for any pages that are mapped and have their access bit set
+  //  * Tells the page queues it has been accessed via PageQueues::MarkAccessed
+  //  * Potentially removes the accessed flag.
+  //  * Potentially frees unaccessed page tables.
+  virtual zx_status_t HarvestAccessed(vaddr_t vaddr, size_t count,
+                                      NonTerminalAction non_terminal_action,
+                                      TerminalAction terminal_action) = 0;
 
   // Marks any pages in the given virtual address range as being accessed.
   virtual zx_status_t MarkAccessed(vaddr_t vaddr, size_t count) = 0;
 
-  // Returns whether or not this aspace has been active since the last time this method was called.
+  // Returns whether or not this aspace has been active since the last time this method was called
+  // with clear=true.
   //
   // This is intended for use by the harvester to avoid scanning for any accessed or dirty bits if
   // the aspace has not been active in the mmu, since an aspace that has not been active cannot
   // generate new information.
-  virtual bool ActiveSinceLastCheck() = 0;
+  //
+  // The |clear| flag controls whether the aspace having been active should be cleared or not. Not
+  // clearing makes this function const and not modify any state.
+  virtual bool ActiveSinceLastCheck(bool clear) = 0;
 
   // Physical address of the backing data structure used for translation.
   //

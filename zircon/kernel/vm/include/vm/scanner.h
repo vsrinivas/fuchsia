@@ -40,7 +40,7 @@ void scanner_disable_page_table_reclaim();
 // Blocks until the scanner has completed an access scan that occurred at |upate_time| or later.
 // This means if an accessed scan already happened more recently this function will immediately
 // return, otherwise it will wait for a new scan to complete.
-void scanner_wait_for_accessed_scan(zx_time_t update_time);
+void scanner_wait_for_accessed_scan(zx_time_t update_time, bool clear_bits);
 
 // This is guaranteed to return live ActiveInactiveCounts from the page queue blocking until any
 // current accessed scan completes.
