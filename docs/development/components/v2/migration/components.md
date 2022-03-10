@@ -335,10 +335,11 @@ to get this from the config mapping).
 It is very common for there to be components in the v1 `sys` realm that depend
 on your component's exposed services. Make your component's services available
 to the v1 `sys` realm by adding a declaration like the following to your core
-realm shard or `core.cml`.
+realm shard, or if you've added your component directly to `core`, add the
+declaration to [`appmgr.core_shard.cml`][cs-appmgr-core-shard].
 
 ```json5
-// core.cml / component.core_shard.cml
+// appmgr.core_shard.cml / component.core_shard.cml
 {
     use: [
         {
@@ -378,9 +379,9 @@ You’ll reach this case if a mapping for the service exists in a sysmgr config
 file. To make the service available to your component, do the following.
 
 1.  Make sure a declaration like the following is present in
-    `appmgr.core_shard.cml` (if the service is configured in fuchsia.git) or
-    your [core realm shard](#add-core-shard) (if it's configured outside
-    fuchsia.git):
+    [`appmgr.core_shard.cml`][cs-appmgr-core-shard] (if the service is
+    configured in fuchsia.git) or your [core realm shard](#add-core-shard) (if
+    it's configured outside fuchsia.git):
 
     ```json5
     // appmgr.core_shard.cml / component.core_shard.cml
@@ -717,6 +718,7 @@ correctly, try following the advice in
 [components-topology]: /docs/concepts/components/v2/topology.md
 [core-realm-rfc]: /docs/contribute/governance/rfcs/0089_core_realm_variations.md
 [cs-core-cml]: /src/sys/core/meta/core.cml
+[cs-appmgr-core-shard]: /src/sys/appmgr/meta/appmgr.core_shard.cml
 [ffx-component]: /docs/development/tools/ffx/getting-started.md#interacting_with_components
 [ffx-plugins]: /docs/development/tools/ffx/development/plugins.md
 [fx-scrutiny]: https://fuchsia.dev/reference/tools/fx/cmd/scrutiny
