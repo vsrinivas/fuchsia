@@ -35,7 +35,6 @@
 
 #include <fbl/string_printf.h>
 
-#include "src/lib/storage/block_client/cpp/remote_block_device.h"
 #include "src/lib/storage/fs_management/cpp/fvm_internal.h"
 #include "src/storage/fvm/fvm.h"
 
@@ -116,7 +115,10 @@ zx_status_t FvmOverwriteImpl(const fbl::unique_fd& fd, size_t slice_size) {
   std::unique_ptr<uint8_t[]> buf(new uint8_t[metadata_size]);
   memset(buf.get(), 0, metadata_size);
 
-  if (block_client::SingleWriteBytes(fd.get(), buf.get(), metadata_size, 0) != ZX_OK) {
+  if (lseek(fd.get(), 0, SEEK_SET) < 0) {
+    return ZX_ERR_IO;
+  }
+  if (write(fd.get(), buf.get(), metadata_size) != static_cast<ssize_t>(metadata_size)) {
     fprintf(stderr, "FvmOverwriteImpl: Failed to write metadata\n");
     return ZX_ERR_IO;
   }
@@ -331,15 +333,22 @@ zx_status_t FvmInitPreallocated(int fd, uint64_t initial_volume_size, uint64_t m
     return ZX_ERR_BAD_STATE;
   }
 
+  if (lseek(fd, 0, SEEK_SET) < 0) {
+    return ZX_ERR_BAD_STATE;
+  }
   // Write to primary copy.
-  auto status = block_client::SingleWriteBytes(fd, mvmo.get(), metadata_allocated_bytes, 0);
-  if (status != ZX_OK) {
-    return status;
+  if (write(fd, mvmo.get(), metadata_allocated_bytes) !=
+      static_cast<ssize_t>(metadata_allocated_bytes)) {
+    return ZX_ERR_BAD_STATE;
   }
   // Write to secondary copy, to overwrite any previous FVM metadata copy that
   // could be here.
-  return block_client::SingleWriteBytes(fd, mvmo.get(), metadata_allocated_bytes,
-                                        metadata_allocated_bytes);
+  if (write(fd, mvmo.get(), metadata_allocated_bytes) !=
+      static_cast<ssize_t>(metadata_allocated_bytes)) {
+    return ZX_ERR_BAD_STATE;
+  }
+
+  return ZX_OK;
 }
 
 __EXPORT

@@ -100,6 +100,7 @@ test("factory_reset_unittests") {
     "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_llcpp",
     "//sdk/fidl/fuchsia.hardware.power.statecontrol",
     "//src/devices/testing/driver-integration-test-shim",
+    "//src/lib/fxl/test:gtest_main",
     "//src/lib/storage/fs_management",
     "//src/lib/storage/ramdevice_client/cpp",
     "//src/security/fcrypto",
@@ -109,7 +110,6 @@ test("factory_reset_unittests") {
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fdio-caller",
     "//zircon/system/ulib/fzl",
-    "//zircon/system/ulib/zxtest",
   ]
 
   # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
