@@ -1,663 +1,663 @@
 hash: 1976d2a6af82d5828c1d991780e9e0fd52e07bb96aa70a986f968c7b1712f8a6
-updated: 2022-03-10T00:57:52.199971065-08:00
+updated: 2022-03-10T20:07:44.463676656-08:00
 packages:
 - package: libc6
   version: 2.27-3ubuntu1.5
-  url: http:/us.archive.ubuntu.com/ubuntu/pool/main/g/glibc/libc6_2.27-3ubuntu1.5_amd64.deb
+  url: http://us.archive.ubuntu.com/ubuntu/pool/main/g/glibc/libc6_2.27-3ubuntu1.5_amd64.deb
   hash: c4af07dc8a2fdc9c4f25f103cd03bcca7231c19d9ac9171fa7eb5eecb7fc46d7
 - package: libc6
   version: 2.27-3ubuntu1.5
-  url: http:/us.archive.ubuntu.com/ubuntu/pool/main/g/glibc/libc6_2.27-3ubuntu1.5_i386.deb
+  url: http://us.archive.ubuntu.com/ubuntu/pool/main/g/glibc/libc6_2.27-3ubuntu1.5_i386.deb
   hash: a9c37ea4dd8f8dc989ecf28a2d8df60517f07eacc5850a7feff5ff19a3255b15
 - package: libc6
   version: 2.27-3ubuntu1.5
-  url: http:/us.ports.ubuntu.com/ubuntu-ports/pool/main/g/glibc/libc6_2.27-3ubuntu1.5_arm64.deb
+  url: http://us.ports.ubuntu.com/ubuntu-ports/pool/main/g/glibc/libc6_2.27-3ubuntu1.5_arm64.deb
   hash: 776eca0b14a2a9305650c46dfbabe317a647dceed068217c7173717cbd0f8811
 - package: libc6
   version: 2.27-3ubuntu1.5
-  url: http:/us.ports.ubuntu.com/ubuntu-ports/pool/main/g/glibc/libc6_2.27-3ubuntu1.5_armhf.deb
+  url: http://us.ports.ubuntu.com/ubuntu-ports/pool/main/g/glibc/libc6_2.27-3ubuntu1.5_armhf.deb
   hash: 2c3488f586ced78e13da02573b4f6c143a7115d6abb650f5a0321f62f724bf41
 - package: libc6-dev
   version: 2.27-3ubuntu1.5
-  url: http:/us.archive.ubuntu.com/ubuntu/pool/main/g/glibc/libc6-dev_2.27-3ubuntu1.5_amd64.deb
+  url: http://us.archive.ubuntu.com/ubuntu/pool/main/g/glibc/libc6-dev_2.27-3ubuntu1.5_amd64.deb
   hash: 9bbf759782ac78b05d761d41ad258f243d5ac73cee03ee456d4e69179d07975d
 - package: libc6-dev
   version: 2.27-3ubuntu1.5
-  url: http:/us.archive.ubuntu.com/ubuntu/pool/main/g/glibc/libc6-dev_2.27-3ubuntu1.5_i386.deb
+  url: http://us.archive.ubuntu.com/ubuntu/pool/main/g/glibc/libc6-dev_2.27-3ubuntu1.5_i386.deb
   hash: e1173616f31155f6c3f50342a2a41228fe61ea2d27c45de2ee0d75e69632aeac
 - package: libc6-dev
   version: 2.27-3ubuntu1.5
-  url: http:/us.ports.ubuntu.com/ubuntu-ports/pool/main/g/glibc/libc6-dev_2.27-3ubuntu1.5_arm64.deb
+  url: http://us.ports.ubuntu.com/ubuntu-ports/pool/main/g/glibc/libc6-dev_2.27-3ubuntu1.5_arm64.deb
   hash: 823cfb7ac6d94b1ee42b1d81ad84d9cc8ea6c7976cf999d0b29c95c3113423ad
 - package: libc6-dev
   version: 2.27-3ubuntu1.5
-  url: http:/us.ports.ubuntu.com/ubuntu-ports/pool/main/g/glibc/libc6-dev_2.27-3ubuntu1.5_armhf.deb
+  url: http://us.ports.ubuntu.com/ubuntu-ports/pool/main/g/glibc/libc6-dev_2.27-3ubuntu1.5_armhf.deb
   hash: c76711b6d92d4f637d8fff0ad39edca3d4cc1aa4224a2338290d1b384d65dc9d
 - package: libgcc-8-dev
   version: 8.4.0-1ubuntu1~18.04
-  url: http:/us.archive.ubuntu.com/ubuntu/pool/main/g/gcc-8/libgcc-8-dev_8.4.0-1ubuntu1~18.04_amd64.deb
+  url: http://us.archive.ubuntu.com/ubuntu/pool/main/g/gcc-8/libgcc-8-dev_8.4.0-1ubuntu1~18.04_amd64.deb
   hash: 5285b3ca6a0cce7ce77bb15072206066a6a6b57e7b7c83a42737cb5cbdc0976d
 - package: libgcc-8-dev
   version: 8.4.0-1ubuntu1~18.04
-  url: http:/us.archive.ubuntu.com/ubuntu/pool/main/g/gcc-8/libgcc-8-dev_8.4.0-1ubuntu1~18.04_i386.deb
+  url: http://us.archive.ubuntu.com/ubuntu/pool/main/g/gcc-8/libgcc-8-dev_8.4.0-1ubuntu1~18.04_i386.deb
   hash: b46142a716edef77d98e9355da80763a726e6bfbf4962e8609b19b94a215eb2d
 - package: libgcc-8-dev
   version: 8.4.0-1ubuntu1~18.04
-  url: http:/us.ports.ubuntu.com/ubuntu-ports/pool/main/g/gcc-8/libgcc-8-dev_8.4.0-1ubuntu1~18.04_arm64.deb
+  url: http://us.ports.ubuntu.com/ubuntu-ports/pool/main/g/gcc-8/libgcc-8-dev_8.4.0-1ubuntu1~18.04_arm64.deb
   hash: 0a9c9e9e1cd18b365e9947dd4eba08912077c9e23823d21ccac3acb18366df50
 - package: libgcc-8-dev
   version: 8.4.0-1ubuntu1~18.04
-  url: http:/us.ports.ubuntu.com/ubuntu-ports/pool/main/g/gcc-8/libgcc-8-dev_8.4.0-1ubuntu1~18.04_armhf.deb
+  url: http://us.ports.ubuntu.com/ubuntu-ports/pool/main/g/gcc-8/libgcc-8-dev_8.4.0-1ubuntu1~18.04_armhf.deb
   hash: 80c02000c7a222b8d4a225eb3f17f191966263060a97022be81ed90d2b7d8c2e
 - package: libgcc1
   version: 1:8.4.0-1ubuntu1~18.04
-  url: http:/us.archive.ubuntu.com/ubuntu/pool/main/g/gcc-8/libgcc1_8.4.0-1ubuntu1~18.04_amd64.deb
+  url: http://us.archive.ubuntu.com/ubuntu/pool/main/g/gcc-8/libgcc1_8.4.0-1ubuntu1~18.04_amd64.deb
   hash: 116dadf4ceaba7150eb46a6598dd3defa62b1b2a6578fb494f4c932878634994
 - package: libgcc1
   version: 1:8.4.0-1ubuntu1~18.04
-  url: http:/us.archive.ubuntu.com/ubuntu/pool/main/g/gcc-8/libgcc1_8.4.0-1ubuntu1~18.04_i386.deb
+  url: http://us.archive.ubuntu.com/ubuntu/pool/main/g/gcc-8/libgcc1_8.4.0-1ubuntu1~18.04_i386.deb
   hash: ee616604c668fbcf6e014c49668cb44cd19cc6f8dc57297a09d7fcd93f662117
 - package: libgcc1
   version: 1:8.4.0-1ubuntu1~18.04
-  url: http:/us.ports.ubuntu.com/ubuntu-ports/pool/main/g/gcc-8/libgcc1_8.4.0-1ubuntu1~18.04_arm64.deb
+  url: http://us.ports.ubuntu.com/ubuntu-ports/pool/main/g/gcc-8/libgcc1_8.4.0-1ubuntu1~18.04_arm64.deb
   hash: 6e5afc6293e54fd4a11136b46dccf24c55989af7eccff9ecb3ba5a0b2069b3be
 - package: libgcc1
   version: 1:8.4.0-1ubuntu1~18.04
-  url: http:/us.ports.ubuntu.com/ubuntu-ports/pool/main/g/gcc-8/libgcc1_8.4.0-1ubuntu1~18.04_armhf.deb
+  url: http://us.ports.ubuntu.com/ubuntu-ports/pool/main/g/gcc-8/libgcc1_8.4.0-1ubuntu1~18.04_armhf.deb
   hash: f73266dcc49b1667a5f416387689017a68a89a27660679dc86fd912aa8ab4660
 - package: libgl1
   version: 1.0.0-2ubuntu2.3
-  url: http:/us.archive.ubuntu.com/ubuntu/pool/main/libg/libglvnd/libgl1_1.0.0-2ubuntu2.3_amd64.deb
+  url: http://us.archive.ubuntu.com/ubuntu/pool/main/libg/libglvnd/libgl1_1.0.0-2ubuntu2.3_amd64.deb
   hash: c2f15ffaa7395da326054bd452c60274b5aa6a4e7eced774a798fac6312f33c8
 - package: libgl1
   version: 1.0.0-2ubuntu2.3
-  url: http:/us.archive.ubuntu.com/ubuntu/pool/main/libg/libglvnd/libgl1_1.0.0-2ubuntu2.3_i386.deb
+  url: http://us.archive.ubuntu.com/ubuntu/pool/main/libg/libglvnd/libgl1_1.0.0-2ubuntu2.3_i386.deb
   hash: 27aa70d4ba55f8ea15c07022454408c4f02a6188ec326be02c8d28dd210b6ac0
 - package: libgl1
   version: 1.0.0-2ubuntu2.3
-  url: http:/us.ports.ubuntu.com/ubuntu-ports/pool/main/libg/libglvnd/libgl1_1.0.0-2ubuntu2.3_arm64.deb
+  url: http://us.ports.ubuntu.com/ubuntu-ports/pool/main/libg/libglvnd/libgl1_1.0.0-2ubuntu2.3_arm64.deb
   hash: 021765febd6fb9f7d7004c8adcedc49a7fa614c9fc2a9d5af670e7e65f33d769
 - package: libgl1
   version: 1.0.0-2ubuntu2.3
-  url: http:/us.ports.ubuntu.com/ubuntu-ports/pool/main/libg/libglvnd/libgl1_1.0.0-2ubuntu2.3_armhf.deb
+  url: http://us.ports.ubuntu.com/ubuntu-ports/pool/main/libg/libglvnd/libgl1_1.0.0-2ubuntu2.3_armhf.deb
   hash: f0b65980a2fa87025b9edc9d7a22f6909148d8082badd2d1c903f49c06abef60
 - package: libgl1-mesa-dev
   version: 20.0.8-0ubuntu1~18.04.1
-  url: http:/us.archive.ubuntu.com/ubuntu/pool/main/m/mesa/libgl1-mesa-dev_20.0.8-0ubuntu1~18.04.1_amd64.deb
+  url: http://us.archive.ubuntu.com/ubuntu/pool/main/m/mesa/libgl1-mesa-dev_20.0.8-0ubuntu1~18.04.1_amd64.deb
   hash: b9f5ec68c6996f62278da5eb545398d1a9b112391dac3aa3330537331cf57d29
 - package: libgl1-mesa-dev
   version: 20.0.8-0ubuntu1~18.04.1
-  url: http:/us.archive.ubuntu.com/ubuntu/pool/main/m/mesa/libgl1-mesa-dev_20.0.8-0ubuntu1~18.04.1_i386.deb
+  url: http://us.archive.ubuntu.com/ubuntu/pool/main/m/mesa/libgl1-mesa-dev_20.0.8-0ubuntu1~18.04.1_i386.deb
   hash: 253710d0dba88a636b58bfa30bee042eed810b04fe40574fbcc7cef72e20e9f0
 - package: libgl1-mesa-dev
   version: 20.0.8-0ubuntu1~18.04.1
-  url: http:/us.ports.ubuntu.com/ubuntu-ports/pool/main/m/mesa/libgl1-mesa-dev_20.0.8-0ubuntu1~18.04.1_arm64.deb
+  url: http://us.ports.ubuntu.com/ubuntu-ports/pool/main/m/mesa/libgl1-mesa-dev_20.0.8-0ubuntu1~18.04.1_arm64.deb
   hash: 040f3cb62808ef4dc47d505c4ee55a575341a50256b4862c9c487d11955f0743
 - package: libgl1-mesa-dev
   version: 20.0.8-0ubuntu1~18.04.1
-  url: http:/us.ports.ubuntu.com/ubuntu-ports/pool/main/m/mesa/libgl1-mesa-dev_20.0.8-0ubuntu1~18.04.1_armhf.deb
+  url: http://us.ports.ubuntu.com/ubuntu-ports/pool/main/m/mesa/libgl1-mesa-dev_20.0.8-0ubuntu1~18.04.1_armhf.deb
   hash: 5316807f820e944720209093c72c9a46f205b9809a18fff9bc0e7cc1e3517f33
 - package: libglapi-mesa
   version: 20.0.8-0ubuntu1~18.04.1
-  url: http:/us.archive.ubuntu.com/ubuntu/pool/main/m/mesa/libglapi-mesa_20.0.8-0ubuntu1~18.04.1_amd64.deb
+  url: http://us.archive.ubuntu.com/ubuntu/pool/main/m/mesa/libglapi-mesa_20.0.8-0ubuntu1~18.04.1_amd64.deb
   hash: da7e6014a30f35de9c66af426eef3d7b4b25c4e4af0540ea5c1f9c7ed20ec8cf
 - package: libglapi-mesa
   version: 20.0.8-0ubuntu1~18.04.1
-  url: http:/us.archive.ubuntu.com/ubuntu/pool/main/m/mesa/libglapi-mesa_20.0.8-0ubuntu1~18.04.1_i386.deb
+  url: http://us.archive.ubuntu.com/ubuntu/pool/main/m/mesa/libglapi-mesa_20.0.8-0ubuntu1~18.04.1_i386.deb
   hash: 1bcea2ce65f56edbbf64d6fa90d1672d50f7c01db1b4cdd540b37c2031f499c4
 - package: libglapi-mesa
   version: 20.0.8-0ubuntu1~18.04.1
-  url: http:/us.ports.ubuntu.com/ubuntu-ports/pool/main/m/mesa/libglapi-mesa_20.0.8-0ubuntu1~18.04.1_arm64.deb
+  url: http://us.ports.ubuntu.com/ubuntu-ports/pool/main/m/mesa/libglapi-mesa_20.0.8-0ubuntu1~18.04.1_arm64.deb
   hash: da2c19db47483c5b01036068e0b9cb95e1afd2266bb618601093f903f77107b0
 - package: libglapi-mesa
   version: 20.0.8-0ubuntu1~18.04.1
-  url: http:/us.ports.ubuntu.com/ubuntu-ports/pool/main/m/mesa/libglapi-mesa_20.0.8-0ubuntu1~18.04.1_armhf.deb
+  url: http://us.ports.ubuntu.com/ubuntu-ports/pool/main/m/mesa/libglapi-mesa_20.0.8-0ubuntu1~18.04.1_armhf.deb
   hash: cabf5e581b2bc55f29304a4641feb9e96c79ff1688555ea69c689a11c30db6bd
 - package: libpython3.8
   version: 3.8.0-3ubuntu1~18.04.2
-  url: http:/us.archive.ubuntu.com/ubuntu/pool/universe/p/python3.8/libpython3.8_3.8.0-3ubuntu1~18.04.2_amd64.deb
+  url: http://us.archive.ubuntu.com/ubuntu/pool/universe/p/python3.8/libpython3.8_3.8.0-3ubuntu1~18.04.2_amd64.deb
   hash: 5619cd78d23ac90b477c26ee36e8646037026a0c336c13cecd760fe22d707f65
 - package: libpython3.8
   version: 3.8.0-3ubuntu1~18.04.2
-  url: http:/us.archive.ubuntu.com/ubuntu/pool/universe/p/python3.8/libpython3.8_3.8.0-3ubuntu1~18.04.2_i386.deb
+  url: http://us.archive.ubuntu.com/ubuntu/pool/universe/p/python3.8/libpython3.8_3.8.0-3ubuntu1~18.04.2_i386.deb
   hash: 3058a14affe1c77130d20c7b244243b1958383ea67045cb695e4bacbcdc87ace
 - package: libpython3.8
   version: 3.8.0-3ubuntu1~18.04.2
-  url: http:/us.ports.ubuntu.com/ubuntu-ports/pool/universe/p/python3.8/libpython3.8_3.8.0-3ubuntu1~18.04.2_arm64.deb
+  url: http://us.ports.ubuntu.com/ubuntu-ports/pool/universe/p/python3.8/libpython3.8_3.8.0-3ubuntu1~18.04.2_arm64.deb
   hash: c932563ea0577cd17db4bf8660cd8b3e576ea024dd8b2fd3d6cd4e528bc23944
 - package: libpython3.8
   version: 3.8.0-3ubuntu1~18.04.2
-  url: http:/us.ports.ubuntu.com/ubuntu-ports/pool/universe/p/python3.8/libpython3.8_3.8.0-3ubuntu1~18.04.2_armhf.deb
+  url: http://us.ports.ubuntu.com/ubuntu-ports/pool/universe/p/python3.8/libpython3.8_3.8.0-3ubuntu1~18.04.2_armhf.deb
   hash: 315a7063216fd0f7c6cad1c05fda9c512866a09e859c55c77e979a15adddcdac
 - package: libpython3.8-dev
   version: 3.8.0-3ubuntu1~18.04.2
-  url: http:/us.archive.ubuntu.com/ubuntu/pool/universe/p/python3.8/libpython3.8-dev_3.8.0-3ubuntu1~18.04.2_amd64.deb
+  url: http://us.archive.ubuntu.com/ubuntu/pool/universe/p/python3.8/libpython3.8-dev_3.8.0-3ubuntu1~18.04.2_amd64.deb
   hash: 2b302b61e768e7bfc6bca26cd526959d2616ee5cae508ff1b8ead4c8565b6b90
 - package: libpython3.8-dev
   version: 3.8.0-3ubuntu1~18.04.2
-  url: http:/us.archive.ubuntu.com/ubuntu/pool/universe/p/python3.8/libpython3.8-dev_3.8.0-3ubuntu1~18.04.2_i386.deb
+  url: http://us.archive.ubuntu.com/ubuntu/pool/universe/p/python3.8/libpython3.8-dev_3.8.0-3ubuntu1~18.04.2_i386.deb
   hash: 20c1c19ff5aa207323143caad5235dc06e2ac7a877a8b8069fa3f52bd0534d0a
 - package: libpython3.8-dev
   version: 3.8.0-3ubuntu1~18.04.2
-  url: http:/us.ports.ubuntu.com/ubuntu-ports/pool/universe/p/python3.8/libpython3.8-dev_3.8.0-3ubuntu1~18.04.2_arm64.deb
+  url: http://us.ports.ubuntu.com/ubuntu-ports/pool/universe/p/python3.8/libpython3.8-dev_3.8.0-3ubuntu1~18.04.2_arm64.deb
   hash: 0f7f6a3af66201fe1185ea23a3ebad21f60e002d2b81fbac22391b8b688dcc1c
 - package: libpython3.8-dev
   version: 3.8.0-3ubuntu1~18.04.2
-  url: http:/us.ports.ubuntu.com/ubuntu-ports/pool/universe/p/python3.8/libpython3.8-dev_3.8.0-3ubuntu1~18.04.2_armhf.deb
+  url: http://us.ports.ubuntu.com/ubuntu-ports/pool/universe/p/python3.8/libpython3.8-dev_3.8.0-3ubuntu1~18.04.2_armhf.deb
   hash: b871e927f78874dffa1c12e6726fde0b4221ccc24dd3118dfdd7135194a04396
 - package: libstdc++-8-dev
   version: 8.4.0-1ubuntu1~18.04
-  url: http:/us.archive.ubuntu.com/ubuntu/pool/universe/g/gcc-8/libstdc++-8-dev_8.4.0-1ubuntu1~18.04_amd64.deb
+  url: http://us.archive.ubuntu.com/ubuntu/pool/universe/g/gcc-8/libstdc++-8-dev_8.4.0-1ubuntu1~18.04_amd64.deb
   hash: 5d16e6c1b862052285660a1e426c7f05ac7c74b6ca5579648a2cb73d07916aff
 - package: libstdc++-8-dev
   version: 8.4.0-1ubuntu1~18.04
-  url: http:/us.archive.ubuntu.com/ubuntu/pool/universe/g/gcc-8/libstdc++-8-dev_8.4.0-1ubuntu1~18.04_i386.deb
+  url: http://us.archive.ubuntu.com/ubuntu/pool/universe/g/gcc-8/libstdc++-8-dev_8.4.0-1ubuntu1~18.04_i386.deb
   hash: 6f52bbbad992b16a33dc5129ddaf4d7146827646a2bc1f1db8b7abc197ee294a
 - package: libstdc++-8-dev
   version: 8.4.0-1ubuntu1~18.04
-  url: http:/us.ports.ubuntu.com/ubuntu-ports/pool/universe/g/gcc-8/libstdc++-8-dev_8.4.0-1ubuntu1~18.04_arm64.deb
+  url: http://us.ports.ubuntu.com/ubuntu-ports/pool/universe/g/gcc-8/libstdc++-8-dev_8.4.0-1ubuntu1~18.04_arm64.deb
   hash: 610d08c7b35fd89bc1feed8ded8fa6da9b3eb56df24e347db2060809f2c5b1a5
 - package: libstdc++-8-dev
   version: 8.4.0-1ubuntu1~18.04
-  url: http:/us.ports.ubuntu.com/ubuntu-ports/pool/universe/g/gcc-8/libstdc++-8-dev_8.4.0-1ubuntu1~18.04_armhf.deb
+  url: http://us.ports.ubuntu.com/ubuntu-ports/pool/universe/g/gcc-8/libstdc++-8-dev_8.4.0-1ubuntu1~18.04_armhf.deb
   hash: 23dcb7135dd87f484c70a7672719a5d6fb00eca20c4306c81b3dc4b1610f7598
 - package: libstdc++6
   version: 8.4.0-1ubuntu1~18.04
-  url: http:/us.archive.ubuntu.com/ubuntu/pool/main/g/gcc-8/libstdc++6_8.4.0-1ubuntu1~18.04_amd64.deb
+  url: http://us.archive.ubuntu.com/ubuntu/pool/main/g/gcc-8/libstdc++6_8.4.0-1ubuntu1~18.04_amd64.deb
   hash: 4dbd1ffa20011329608f584ff329a10507cfa78c3f76fa34e6f479f9680b64f4
 - package: libstdc++6
   version: 8.4.0-1ubuntu1~18.04
-  url: http:/us.archive.ubuntu.com/ubuntu/pool/main/g/gcc-8/libstdc++6_8.4.0-1ubuntu1~18.04_i386.deb
+  url: http://us.archive.ubuntu.com/ubuntu/pool/main/g/gcc-8/libstdc++6_8.4.0-1ubuntu1~18.04_i386.deb
   hash: 62387b024e9c514d2242e016d2b3e8d438d36e2e71eb51d067e6198c50fedb2a
 - package: libstdc++6
   version: 8.4.0-1ubuntu1~18.04
-  url: http:/us.ports.ubuntu.com/ubuntu-ports/pool/main/g/gcc-8/libstdc++6_8.4.0-1ubuntu1~18.04_arm64.deb
+  url: http://us.ports.ubuntu.com/ubuntu-ports/pool/main/g/gcc-8/libstdc++6_8.4.0-1ubuntu1~18.04_arm64.deb
   hash: ef673418b89e9c0b029e2fea9416847745e1a6cd0925169e3ef7682a36d075d1
 - package: libstdc++6
   version: 8.4.0-1ubuntu1~18.04
-  url: http:/us.ports.ubuntu.com/ubuntu-ports/pool/main/g/gcc-8/libstdc++6_8.4.0-1ubuntu1~18.04_armhf.deb
+  url: http://us.ports.ubuntu.com/ubuntu-ports/pool/main/g/gcc-8/libstdc++6_8.4.0-1ubuntu1~18.04_armhf.deb
   hash: d377fce8228d685b134ee1795a7695102407fa3b14fff71143667572a7833730
 - package: libx11-6
   version: 2:1.6.4-3ubuntu0.4
-  url: http:/us.archive.ubuntu.com/ubuntu/pool/main/libx/libx11/libx11-6_1.6.4-3ubuntu0.4_amd64.deb
+  url: http://us.archive.ubuntu.com/ubuntu/pool/main/libx/libx11/libx11-6_1.6.4-3ubuntu0.4_amd64.deb
   hash: 4095f0a83f7d4ef87d8ddc96de641735c4d6de11495183ab6ec7b9c35671cffe
 - package: libx11-6
   version: 2:1.6.4-3ubuntu0.4
-  url: http:/us.archive.ubuntu.com/ubuntu/pool/main/libx/libx11/libx11-6_1.6.4-3ubuntu0.4_i386.deb
+  url: http://us.archive.ubuntu.com/ubuntu/pool/main/libx/libx11/libx11-6_1.6.4-3ubuntu0.4_i386.deb
   hash: 1250785f03c6ed9df3973abb1183f7a510243aa578276e94beec220352b20b09
 - package: libx11-6
   version: 2:1.6.4-3ubuntu0.4
-  url: http:/us.ports.ubuntu.com/ubuntu-ports/pool/main/libx/libx11/libx11-6_1.6.4-3ubuntu0.4_arm64.deb
+  url: http://us.ports.ubuntu.com/ubuntu-ports/pool/main/libx/libx11/libx11-6_1.6.4-3ubuntu0.4_arm64.deb
   hash: d595379abec774b0632041cf11dbf2594517f28e2b55c74cf1b9c7a65d85f568
 - package: libx11-6
   version: 2:1.6.4-3ubuntu0.4
-  url: http:/us.ports.ubuntu.com/ubuntu-ports/pool/main/libx/libx11/libx11-6_1.6.4-3ubuntu0.4_armhf.deb
+  url: http://us.ports.ubuntu.com/ubuntu-ports/pool/main/libx/libx11/libx11-6_1.6.4-3ubuntu0.4_armhf.deb
   hash: f65e6d928e8287512dc4a7c4c6f66549792d2309e990a5468f557f4417a12fd9
 - package: libx11-dev
   version: 2:1.6.4-3ubuntu0.4
-  url: http:/us.archive.ubuntu.com/ubuntu/pool/main/libx/libx11/libx11-dev_1.6.4-3ubuntu0.4_amd64.deb
+  url: http://us.archive.ubuntu.com/ubuntu/pool/main/libx/libx11/libx11-dev_1.6.4-3ubuntu0.4_amd64.deb
   hash: fbd73cddc3913a18bb0a85188b710da421b953916d869bce039c503536dff1f6
 - package: libx11-dev
   version: 2:1.6.4-3ubuntu0.4
-  url: http:/us.archive.ubuntu.com/ubuntu/pool/main/libx/libx11/libx11-dev_1.6.4-3ubuntu0.4_i386.deb
+  url: http://us.archive.ubuntu.com/ubuntu/pool/main/libx/libx11/libx11-dev_1.6.4-3ubuntu0.4_i386.deb
   hash: cdb257bf8147d45f5152685b317dee883c441ec2316ebca63317afa0143c2bbc
 - package: libx11-dev
   version: 2:1.6.4-3ubuntu0.4
-  url: http:/us.ports.ubuntu.com/ubuntu-ports/pool/main/libx/libx11/libx11-dev_1.6.4-3ubuntu0.4_arm64.deb
+  url: http://us.ports.ubuntu.com/ubuntu-ports/pool/main/libx/libx11/libx11-dev_1.6.4-3ubuntu0.4_arm64.deb
   hash: 4603112a9be89d7f33c701949917e5e8bea822781fc2e2c90ee7e413ba1b3f89
 - package: libx11-dev
   version: 2:1.6.4-3ubuntu0.4
-  url: http:/us.ports.ubuntu.com/ubuntu-ports/pool/main/libx/libx11/libx11-dev_1.6.4-3ubuntu0.4_armhf.deb
+  url: http://us.ports.ubuntu.com/ubuntu-ports/pool/main/libx/libx11/libx11-dev_1.6.4-3ubuntu0.4_armhf.deb
   hash: e8012758e9d781c4588e6e111d69239beb19306752f453eab65176954905b970
 - package: libx11-xcb-dev
   version: 2:1.6.4-3ubuntu0.4
-  url: http:/us.archive.ubuntu.com/ubuntu/pool/main/libx/libx11/libx11-xcb-dev_1.6.4-3ubuntu0.4_amd64.deb
+  url: http://us.archive.ubuntu.com/ubuntu/pool/main/libx/libx11/libx11-xcb-dev_1.6.4-3ubuntu0.4_amd64.deb
   hash: a16dedb01c1970c30fa03bdd6024d138e3c584fc97e4833f949c8aeee17dc350
 - package: libx11-xcb-dev
   version: 2:1.6.4-3ubuntu0.4
-  url: http:/us.archive.ubuntu.com/ubuntu/pool/main/libx/libx11/libx11-xcb-dev_1.6.4-3ubuntu0.4_i386.deb
+  url: http://us.archive.ubuntu.com/ubuntu/pool/main/libx/libx11/libx11-xcb-dev_1.6.4-3ubuntu0.4_i386.deb
   hash: 715561c1e91a033dc320287413449031d5f2185d239fe569dbd580821dc6dd71
 - package: libx11-xcb-dev
   version: 2:1.6.4-3ubuntu0.4
-  url: http:/us.ports.ubuntu.com/ubuntu-ports/pool/main/libx/libx11/libx11-xcb-dev_1.6.4-3ubuntu0.4_arm64.deb
+  url: http://us.ports.ubuntu.com/ubuntu-ports/pool/main/libx/libx11/libx11-xcb-dev_1.6.4-3ubuntu0.4_arm64.deb
   hash: bd29121f5e10cb31afef79671e888d38cefa52ba75c2a6d5b6a5d97f84a5f92e
 - package: libx11-xcb-dev
   version: 2:1.6.4-3ubuntu0.4
-  url: http:/us.ports.ubuntu.com/ubuntu-ports/pool/main/libx/libx11/libx11-xcb-dev_1.6.4-3ubuntu0.4_armhf.deb
+  url: http://us.ports.ubuntu.com/ubuntu-ports/pool/main/libx/libx11/libx11-xcb-dev_1.6.4-3ubuntu0.4_armhf.deb
   hash: d54ae9362a2086fcd77df1298b002092f7e3d82656a435ffcb80faf22b1f0fc3
 - package: libx11-xcb1
   version: 2:1.6.4-3ubuntu0.4
-  url: http:/us.archive.ubuntu.com/ubuntu/pool/main/libx/libx11/libx11-xcb1_1.6.4-3ubuntu0.4_amd64.deb
+  url: http://us.archive.ubuntu.com/ubuntu/pool/main/libx/libx11/libx11-xcb1_1.6.4-3ubuntu0.4_amd64.deb
   hash: a69a4e9396a13346523417d0fbed7cc2e0448ce0eab9a0919097c82f79fe0e44
 - package: libx11-xcb1
   version: 2:1.6.4-3ubuntu0.4
-  url: http:/us.archive.ubuntu.com/ubuntu/pool/main/libx/libx11/libx11-xcb1_1.6.4-3ubuntu0.4_i386.deb
+  url: http://us.archive.ubuntu.com/ubuntu/pool/main/libx/libx11/libx11-xcb1_1.6.4-3ubuntu0.4_i386.deb
   hash: cce8ab7a1618671a4330a8c68f50901a1682c96a535fd115c96ad305c2d0955d
 - package: libx11-xcb1
   version: 2:1.6.4-3ubuntu0.4
-  url: http:/us.ports.ubuntu.com/ubuntu-ports/pool/main/libx/libx11/libx11-xcb1_1.6.4-3ubuntu0.4_arm64.deb
+  url: http://us.ports.ubuntu.com/ubuntu-ports/pool/main/libx/libx11/libx11-xcb1_1.6.4-3ubuntu0.4_arm64.deb
   hash: 3229f4fe067b77f6c1a4e5356e55ae23f62a15ad03f6ab9eb38c1bde7d58f0cb
 - package: libx11-xcb1
   version: 2:1.6.4-3ubuntu0.4
-  url: http:/us.ports.ubuntu.com/ubuntu-ports/pool/main/libx/libx11/libx11-xcb1_1.6.4-3ubuntu0.4_armhf.deb
+  url: http://us.ports.ubuntu.com/ubuntu-ports/pool/main/libx/libx11/libx11-xcb1_1.6.4-3ubuntu0.4_armhf.deb
   hash: 27f411d8c903cbc1e15382ca7107aefff9b53bfc586b379b6ffcc25a0a5fe676
 - package: libxau-dev
   version: 1:1.0.8-1ubuntu1
-  url: http:/us.archive.ubuntu.com/ubuntu/pool/main/libx/libxau/libxau-dev_1.0.8-1ubuntu1_amd64.deb
+  url: http://us.archive.ubuntu.com/ubuntu/pool/main/libx/libxau/libxau-dev_1.0.8-1ubuntu1_amd64.deb
   hash: f3480f13db87e776f4ae830fb2ce9385fdf4df08ca2601727ee20bdc29ee9d94
 - package: libxau-dev
   version: 1:1.0.8-1ubuntu1
-  url: http:/us.archive.ubuntu.com/ubuntu/pool/main/libx/libxau/libxau-dev_1.0.8-1ubuntu1_i386.deb
+  url: http://us.archive.ubuntu.com/ubuntu/pool/main/libx/libxau/libxau-dev_1.0.8-1ubuntu1_i386.deb
   hash: 3894db8c10e86448a7161f5d213524ae3dc25199d1b3fb2ed846a1bed2279d56
 - package: libxau-dev
   version: 1:1.0.8-1ubuntu1
-  url: http:/us.ports.ubuntu.com/ubuntu-ports/pool/main/libx/libxau/libxau-dev_1.0.8-1ubuntu1_arm64.deb
+  url: http://us.ports.ubuntu.com/ubuntu-ports/pool/main/libx/libxau/libxau-dev_1.0.8-1ubuntu1_arm64.deb
   hash: 6c43969bd79f26d7c4b80d1024c6b80c123834109c996980e37242f0e439124e
 - package: libxau-dev
   version: 1:1.0.8-1ubuntu1
-  url: http:/us.ports.ubuntu.com/ubuntu-ports/pool/main/libx/libxau/libxau-dev_1.0.8-1ubuntu1_armhf.deb
+  url: http://us.ports.ubuntu.com/ubuntu-ports/pool/main/libx/libxau/libxau-dev_1.0.8-1ubuntu1_armhf.deb
   hash: 1116b8fd987008e94b752b78b9935bcdc610fc95d9af0f79e7b3b76264e22272
 - package: libxau6
   version: 1:1.0.8-1ubuntu1
-  url: http:/us.archive.ubuntu.com/ubuntu/pool/main/libx/libxau/libxau6_1.0.8-1ubuntu1_amd64.deb
+  url: http://us.archive.ubuntu.com/ubuntu/pool/main/libx/libxau/libxau6_1.0.8-1ubuntu1_amd64.deb
   hash: fa1ae4072a6955195eb78e7ac1f0fd3fb525cfd33b340a99357a21bf6f94eb74
 - package: libxau6
   version: 1:1.0.8-1ubuntu1
-  url: http:/us.archive.ubuntu.com/ubuntu/pool/main/libx/libxau/libxau6_1.0.8-1ubuntu1_i386.deb
+  url: http://us.archive.ubuntu.com/ubuntu/pool/main/libx/libxau/libxau6_1.0.8-1ubuntu1_i386.deb
   hash: b365463c52e8ac0264685f6055453593075a2ed3832a0f99d8dbc5624eb25e04
 - package: libxau6
   version: 1:1.0.8-1ubuntu1
-  url: http:/us.ports.ubuntu.com/ubuntu-ports/pool/main/libx/libxau/libxau6_1.0.8-1ubuntu1_arm64.deb
+  url: http://us.ports.ubuntu.com/ubuntu-ports/pool/main/libx/libxau/libxau6_1.0.8-1ubuntu1_arm64.deb
   hash: 61bcad89db9bcc54078df884ac28f0a32c1d2aa696a26d5517c914aa9d9b530b
 - package: libxau6
   version: 1:1.0.8-1ubuntu1
-  url: http:/us.ports.ubuntu.com/ubuntu-ports/pool/main/libx/libxau/libxau6_1.0.8-1ubuntu1_armhf.deb
+  url: http://us.ports.ubuntu.com/ubuntu-ports/pool/main/libx/libxau/libxau6_1.0.8-1ubuntu1_armhf.deb
   hash: 09605699be3924871855f1c343c811e0b1396ea9eb4cce8ca4905f12cf4ce8e0
 - package: libxcb-shm0
   version: 1.13-2~ubuntu18.04
-  url: http:/us.archive.ubuntu.com/ubuntu/pool/main/libx/libxcb/libxcb-shm0_1.13-2~ubuntu18.04_amd64.deb
+  url: http://us.archive.ubuntu.com/ubuntu/pool/main/libx/libxcb/libxcb-shm0_1.13-2~ubuntu18.04_amd64.deb
   hash: cfb25c44be66ce27b9c06fcae70179c0b92607542775a1281e39465efdd0461a
 - package: libxcb-shm0
   version: 1.13-2~ubuntu18.04
-  url: http:/us.archive.ubuntu.com/ubuntu/pool/main/libx/libxcb/libxcb-shm0_1.13-2~ubuntu18.04_i386.deb
+  url: http://us.archive.ubuntu.com/ubuntu/pool/main/libx/libxcb/libxcb-shm0_1.13-2~ubuntu18.04_i386.deb
   hash: 3ebb86ce6aeb497abeee6cfaeb3e02bfdc9ebe47cc62c94ef90a77281e160d98
 - package: libxcb-shm0
   version: 1.13-2~ubuntu18.04
-  url: http:/us.ports.ubuntu.com/ubuntu-ports/pool/main/libx/libxcb/libxcb-shm0_1.13-2~ubuntu18.04_arm64.deb
+  url: http://us.ports.ubuntu.com/ubuntu-ports/pool/main/libx/libxcb/libxcb-shm0_1.13-2~ubuntu18.04_arm64.deb
   hash: 0c78a15261b184979ec9d912a1ed90a79826bcdf8b7e0a0ead117a224676a157
 - package: libxcb-shm0
   version: 1.13-2~ubuntu18.04
-  url: http:/us.ports.ubuntu.com/ubuntu-ports/pool/main/libx/libxcb/libxcb-shm0_1.13-2~ubuntu18.04_armhf.deb
+  url: http://us.ports.ubuntu.com/ubuntu-ports/pool/main/libx/libxcb/libxcb-shm0_1.13-2~ubuntu18.04_armhf.deb
   hash: 2e8baf798e226ca0ceb654c4b195d892b1d5bad63e4a5db00a6f333ab778c45d
 - package: libxcb-shm0-dev
   version: 1.13-2~ubuntu18.04
-  url: http:/us.archive.ubuntu.com/ubuntu/pool/main/libx/libxcb/libxcb-shm0-dev_1.13-2~ubuntu18.04_amd64.deb
+  url: http://us.archive.ubuntu.com/ubuntu/pool/main/libx/libxcb/libxcb-shm0-dev_1.13-2~ubuntu18.04_amd64.deb
   hash: d6eb9600d8ca3a921304309a3a8b2a83895a5b2749b7dd6c3d1947192dbb3f6d
 - package: libxcb-shm0-dev
   version: 1.13-2~ubuntu18.04
-  url: http:/us.archive.ubuntu.com/ubuntu/pool/main/libx/libxcb/libxcb-shm0-dev_1.13-2~ubuntu18.04_i386.deb
+  url: http://us.archive.ubuntu.com/ubuntu/pool/main/libx/libxcb/libxcb-shm0-dev_1.13-2~ubuntu18.04_i386.deb
   hash: bdcbf6a966c0d5fbf36b99adf1ded3374a08dc4bedfd382776b9bf216e890fdc
 - package: libxcb-shm0-dev
   version: 1.13-2~ubuntu18.04
-  url: http:/us.ports.ubuntu.com/ubuntu-ports/pool/main/libx/libxcb/libxcb-shm0-dev_1.13-2~ubuntu18.04_arm64.deb
+  url: http://us.ports.ubuntu.com/ubuntu-ports/pool/main/libx/libxcb/libxcb-shm0-dev_1.13-2~ubuntu18.04_arm64.deb
   hash: 8313cd1fe6e67c7036facda375de1ef811cbf712adc2a109a0086a2ee99c8626
 - package: libxcb-shm0-dev
   version: 1.13-2~ubuntu18.04
-  url: http:/us.ports.ubuntu.com/ubuntu-ports/pool/main/libx/libxcb/libxcb-shm0-dev_1.13-2~ubuntu18.04_armhf.deb
+  url: http://us.ports.ubuntu.com/ubuntu-ports/pool/main/libx/libxcb/libxcb-shm0-dev_1.13-2~ubuntu18.04_armhf.deb
   hash: f1df7eee4206c472f37cc69640ff78f84754abd2502306f6faa72f03b52ffeef
 - package: libxcb1
   version: 1.13-2~ubuntu18.04
-  url: http:/us.archive.ubuntu.com/ubuntu/pool/main/libx/libxcb/libxcb1_1.13-2~ubuntu18.04_amd64.deb
+  url: http://us.archive.ubuntu.com/ubuntu/pool/main/libx/libxcb/libxcb1_1.13-2~ubuntu18.04_amd64.deb
   hash: 9a29e9ff0598a2bde15de5f53152247607515183548b342eea7f397a5df4cf38
 - package: libxcb1
   version: 1.13-2~ubuntu18.04
-  url: http:/us.archive.ubuntu.com/ubuntu/pool/main/libx/libxcb/libxcb1_1.13-2~ubuntu18.04_i386.deb
+  url: http://us.archive.ubuntu.com/ubuntu/pool/main/libx/libxcb/libxcb1_1.13-2~ubuntu18.04_i386.deb
   hash: 078f141aff4b6b86022e3107c29650087c1a641cab9597f95fb57454252b3be1
 - package: libxcb1
   version: 1.13-2~ubuntu18.04
-  url: http:/us.ports.ubuntu.com/ubuntu-ports/pool/main/libx/libxcb/libxcb1_1.13-2~ubuntu18.04_arm64.deb
+  url: http://us.ports.ubuntu.com/ubuntu-ports/pool/main/libx/libxcb/libxcb1_1.13-2~ubuntu18.04_arm64.deb
   hash: db6b8b2d90da8f8a4ea7ba468bd09a7e47bda8f86cf2e88a967579798db6967a
 - package: libxcb1
   version: 1.13-2~ubuntu18.04
-  url: http:/us.ports.ubuntu.com/ubuntu-ports/pool/main/libx/libxcb/libxcb1_1.13-2~ubuntu18.04_armhf.deb
+  url: http://us.ports.ubuntu.com/ubuntu-ports/pool/main/libx/libxcb/libxcb1_1.13-2~ubuntu18.04_armhf.deb
   hash: e0311479ff9e61b42800fb02efa535bb3086a5d349a69389ca070ea11fd16f40
 - package: libxcb1-dev
   version: 1.13-2~ubuntu18.04
-  url: http:/us.archive.ubuntu.com/ubuntu/pool/main/libx/libxcb/libxcb1-dev_1.13-2~ubuntu18.04_amd64.deb
+  url: http://us.archive.ubuntu.com/ubuntu/pool/main/libx/libxcb/libxcb1-dev_1.13-2~ubuntu18.04_amd64.deb
   hash: 3b308d513bdedf949b67b8a1679ff6093085c7cea34b339292902651108ab270
 - package: libxcb1-dev
   version: 1.13-2~ubuntu18.04
-  url: http:/us.archive.ubuntu.com/ubuntu/pool/main/libx/libxcb/libxcb1-dev_1.13-2~ubuntu18.04_i386.deb
+  url: http://us.archive.ubuntu.com/ubuntu/pool/main/libx/libxcb/libxcb1-dev_1.13-2~ubuntu18.04_i386.deb
   hash: 3f903c8fdc8513a326ee0161f8fc6d5c685f6a437f3c8c80aab78f231f3a14be
 - package: libxcb1-dev
   version: 1.13-2~ubuntu18.04
-  url: http:/us.ports.ubuntu.com/ubuntu-ports/pool/main/libx/libxcb/libxcb1-dev_1.13-2~ubuntu18.04_arm64.deb
+  url: http://us.ports.ubuntu.com/ubuntu-ports/pool/main/libx/libxcb/libxcb1-dev_1.13-2~ubuntu18.04_arm64.deb
   hash: 35feb194a9499f463611d9039e7b21daa5c558a76c78ad40869e407d71c218d2
 - package: libxcb1-dev
   version: 1.13-2~ubuntu18.04
-  url: http:/us.ports.ubuntu.com/ubuntu-ports/pool/main/libx/libxcb/libxcb1-dev_1.13-2~ubuntu18.04_armhf.deb
+  url: http://us.ports.ubuntu.com/ubuntu-ports/pool/main/libx/libxcb/libxcb1-dev_1.13-2~ubuntu18.04_armhf.deb
   hash: 07d414f92ee7bdd0fcb6fe1b28549e2566bafd81bb1e8ade78d9c4aea56f6eaa
 - package: libxcursor-dev
   version: 1:1.1.15-1
-  url: http:/us.archive.ubuntu.com/ubuntu/pool/main/libx/libxcursor/libxcursor-dev_1.1.15-1_amd64.deb
+  url: http://us.archive.ubuntu.com/ubuntu/pool/main/libx/libxcursor/libxcursor-dev_1.1.15-1_amd64.deb
   hash: bf4fb52bff3f40d5d8750b2434d48ff3706fb6fd7d668bed4e9dc41ecaa1b4ea
 - package: libxcursor-dev
   version: 1:1.1.15-1
-  url: http:/us.archive.ubuntu.com/ubuntu/pool/main/libx/libxcursor/libxcursor-dev_1.1.15-1_i386.deb
+  url: http://us.archive.ubuntu.com/ubuntu/pool/main/libx/libxcursor/libxcursor-dev_1.1.15-1_i386.deb
   hash: 430792aa2de77466886b3f2df5dc1249f715f5b1968eab9aba645682e65ccf8a
 - package: libxcursor-dev
   version: 1:1.1.15-1
-  url: http:/us.ports.ubuntu.com/ubuntu-ports/pool/main/libx/libxcursor/libxcursor-dev_1.1.15-1_arm64.deb
+  url: http://us.ports.ubuntu.com/ubuntu-ports/pool/main/libx/libxcursor/libxcursor-dev_1.1.15-1_arm64.deb
   hash: 54bb9889f314b8dca275724300e44c3878881d84db8a6d9b24c10f8769331e83
 - package: libxcursor-dev
   version: 1:1.1.15-1
-  url: http:/us.ports.ubuntu.com/ubuntu-ports/pool/main/libx/libxcursor/libxcursor-dev_1.1.15-1_armhf.deb
+  url: http://us.ports.ubuntu.com/ubuntu-ports/pool/main/libx/libxcursor/libxcursor-dev_1.1.15-1_armhf.deb
   hash: 942896a683357c08ab5afb42054af4cc66abe838fa00a84b5f3c2b2a06a46ed5
 - package: libxcursor1
   version: 1:1.1.15-1
-  url: http:/us.archive.ubuntu.com/ubuntu/pool/main/libx/libxcursor/libxcursor1_1.1.15-1_amd64.deb
+  url: http://us.archive.ubuntu.com/ubuntu/pool/main/libx/libxcursor/libxcursor1_1.1.15-1_amd64.deb
   hash: f1c42fb0f30d1b4d38f5b21a83dc25fd8408a384a47aa9770735f256d065a04d
 - package: libxcursor1
   version: 1:1.1.15-1
-  url: http:/us.archive.ubuntu.com/ubuntu/pool/main/libx/libxcursor/libxcursor1_1.1.15-1_i386.deb
+  url: http://us.archive.ubuntu.com/ubuntu/pool/main/libx/libxcursor/libxcursor1_1.1.15-1_i386.deb
   hash: d159cde95edd2908335c85f1d2a20b25d911a3782926bab27cd3901123eef5c3
 - package: libxcursor1
   version: 1:1.1.15-1
-  url: http:/us.ports.ubuntu.com/ubuntu-ports/pool/main/libx/libxcursor/libxcursor1_1.1.15-1_arm64.deb
+  url: http://us.ports.ubuntu.com/ubuntu-ports/pool/main/libx/libxcursor/libxcursor1_1.1.15-1_arm64.deb
   hash: 6573502a0a56164e003ff6f25066dad8ef7968b56a851433541b9dfdda581ecc
 - package: libxcursor1
   version: 1:1.1.15-1
-  url: http:/us.ports.ubuntu.com/ubuntu-ports/pool/main/libx/libxcursor/libxcursor1_1.1.15-1_armhf.deb
+  url: http://us.ports.ubuntu.com/ubuntu-ports/pool/main/libx/libxcursor/libxcursor1_1.1.15-1_armhf.deb
   hash: 30f5ebce7565d1e853ad9e112ca99114b22beea1fbb8d39d9252b84333ce6426
 - package: libxdmcp-dev
   version: 1:1.1.2-3
-  url: http:/us.archive.ubuntu.com/ubuntu/pool/main/libx/libxdmcp/libxdmcp-dev_1.1.2-3_amd64.deb
+  url: http://us.archive.ubuntu.com/ubuntu/pool/main/libx/libxdmcp/libxdmcp-dev_1.1.2-3_amd64.deb
   hash: 570a0a7afa81ab9deb66e8b46e97e0322659078137bbdb086697e2844929fbb7
 - package: libxdmcp-dev
   version: 1:1.1.2-3
-  url: http:/us.archive.ubuntu.com/ubuntu/pool/main/libx/libxdmcp/libxdmcp-dev_1.1.2-3_i386.deb
+  url: http://us.archive.ubuntu.com/ubuntu/pool/main/libx/libxdmcp/libxdmcp-dev_1.1.2-3_i386.deb
   hash: ce8f987efb7bf7fda41985d8290ad715399f267ab59ae29661ed6ed8a0d3bf76
 - package: libxdmcp-dev
   version: 1:1.1.2-3
-  url: http:/us.ports.ubuntu.com/ubuntu-ports/pool/main/libx/libxdmcp/libxdmcp-dev_1.1.2-3_arm64.deb
+  url: http://us.ports.ubuntu.com/ubuntu-ports/pool/main/libx/libxdmcp/libxdmcp-dev_1.1.2-3_arm64.deb
   hash: 1ac17a094f697f448224b0e1c0a7c5a7af94f3d6ce8b17b696f7ea6efda65604
 - package: libxdmcp-dev
   version: 1:1.1.2-3
-  url: http:/us.ports.ubuntu.com/ubuntu-ports/pool/main/libx/libxdmcp/libxdmcp-dev_1.1.2-3_armhf.deb
+  url: http://us.ports.ubuntu.com/ubuntu-ports/pool/main/libx/libxdmcp/libxdmcp-dev_1.1.2-3_armhf.deb
   hash: 874ee19f60c319106a53818d2be07a2c5c5aee3f97d12303e46706734fdad134
 - package: libxdmcp6
   version: 1:1.1.2-3
-  url: http:/us.archive.ubuntu.com/ubuntu/pool/main/libx/libxdmcp/libxdmcp6_1.1.2-3_amd64.deb
+  url: http://us.archive.ubuntu.com/ubuntu/pool/main/libx/libxdmcp/libxdmcp6_1.1.2-3_amd64.deb
   hash: 8905e3441f5e408208b73817253504498c4488c7803ff4a8fb85e225f0757e55
 - package: libxdmcp6
   version: 1:1.1.2-3
-  url: http:/us.archive.ubuntu.com/ubuntu/pool/main/libx/libxdmcp/libxdmcp6_1.1.2-3_i386.deb
+  url: http://us.archive.ubuntu.com/ubuntu/pool/main/libx/libxdmcp/libxdmcp6_1.1.2-3_i386.deb
   hash: 86a3816cd045f43bfd2681b1101bfdaddc8ec775ed6fbfaab74ca346e2246a87
 - package: libxdmcp6
   version: 1:1.1.2-3
-  url: http:/us.ports.ubuntu.com/ubuntu-ports/pool/main/libx/libxdmcp/libxdmcp6_1.1.2-3_arm64.deb
+  url: http://us.ports.ubuntu.com/ubuntu-ports/pool/main/libx/libxdmcp/libxdmcp6_1.1.2-3_arm64.deb
   hash: a53af3910246e6609b67b1587291bcc13946f787080b22b0e69d3a767953e4dd
 - package: libxdmcp6
   version: 1:1.1.2-3
-  url: http:/us.ports.ubuntu.com/ubuntu-ports/pool/main/libx/libxdmcp/libxdmcp6_1.1.2-3_armhf.deb
+  url: http://us.ports.ubuntu.com/ubuntu-ports/pool/main/libx/libxdmcp/libxdmcp6_1.1.2-3_armhf.deb
   hash: 41d1d7beec30e72871e564fcb17be3f6660f25fb2d634e799958b5b237bea5b9
 - package: libxext-dev
   version: 2:1.3.3-1
-  url: http:/us.archive.ubuntu.com/ubuntu/pool/main/libx/libxext/libxext-dev_1.3.3-1_amd64.deb
+  url: http://us.archive.ubuntu.com/ubuntu/pool/main/libx/libxext/libxext-dev_1.3.3-1_amd64.deb
   hash: a2f35c6a3571aefa523641c726fc44ed2ed58373f8fc2f37b7d2d44934a55a64
 - package: libxext-dev
   version: 2:1.3.3-1
-  url: http:/us.archive.ubuntu.com/ubuntu/pool/main/libx/libxext/libxext-dev_1.3.3-1_i386.deb
+  url: http://us.archive.ubuntu.com/ubuntu/pool/main/libx/libxext/libxext-dev_1.3.3-1_i386.deb
   hash: 5baeb3521357d2770095fc4f2e26825cb81ce4414dc0420dbccb384042522c16
 - package: libxext-dev
   version: 2:1.3.3-1
-  url: http:/us.ports.ubuntu.com/ubuntu-ports/pool/main/libx/libxext/libxext-dev_1.3.3-1_arm64.deb
+  url: http://us.ports.ubuntu.com/ubuntu-ports/pool/main/libx/libxext/libxext-dev_1.3.3-1_arm64.deb
   hash: 18eb7c2293628cb1f0ca8140697f3fdfdf9c621063da35bc40a715cac169257c
 - package: libxext-dev
   version: 2:1.3.3-1
-  url: http:/us.ports.ubuntu.com/ubuntu-ports/pool/main/libx/libxext/libxext-dev_1.3.3-1_armhf.deb
+  url: http://us.ports.ubuntu.com/ubuntu-ports/pool/main/libx/libxext/libxext-dev_1.3.3-1_armhf.deb
   hash: c042e7b323e296e6f2b23a8d3b22a7e35f2fa6c3ce26beeb3dfe9a054c03567c
 - package: libxext6
   version: 2:1.3.3-1
-  url: http:/us.archive.ubuntu.com/ubuntu/pool/main/libx/libxext/libxext6_1.3.3-1_amd64.deb
+  url: http://us.archive.ubuntu.com/ubuntu/pool/main/libx/libxext/libxext6_1.3.3-1_amd64.deb
   hash: 05a861283b2aa54ee5f40e6844d0cc73f50c30440a28964da00302b7fbcecc9e
 - package: libxext6
   version: 2:1.3.3-1
-  url: http:/us.archive.ubuntu.com/ubuntu/pool/main/libx/libxext/libxext6_1.3.3-1_i386.deb
+  url: http://us.archive.ubuntu.com/ubuntu/pool/main/libx/libxext/libxext6_1.3.3-1_i386.deb
   hash: 61857f80b1a4a4d2e6f8b47e1feb104635b01556b79c4846557c773728e8e924
 - package: libxext6
   version: 2:1.3.3-1
-  url: http:/us.ports.ubuntu.com/ubuntu-ports/pool/main/libx/libxext/libxext6_1.3.3-1_arm64.deb
+  url: http://us.ports.ubuntu.com/ubuntu-ports/pool/main/libx/libxext/libxext6_1.3.3-1_arm64.deb
   hash: e1fb4dc4abae8f1efc335b124745302ee0de3369c838bd209594a5acc4e9a0f5
 - package: libxext6
   version: 2:1.3.3-1
-  url: http:/us.ports.ubuntu.com/ubuntu-ports/pool/main/libx/libxext/libxext6_1.3.3-1_armhf.deb
+  url: http://us.ports.ubuntu.com/ubuntu-ports/pool/main/libx/libxext/libxext6_1.3.3-1_armhf.deb
   hash: 2cbe41d83124bb85f280785c15a40988c25b8a3ee0da1687ffda42892b4db547
 - package: libxfixes-dev
   version: 1:5.0.3-1
-  url: http:/us.archive.ubuntu.com/ubuntu/pool/main/libx/libxfixes/libxfixes-dev_5.0.3-1_amd64.deb
+  url: http://us.archive.ubuntu.com/ubuntu/pool/main/libx/libxfixes/libxfixes-dev_5.0.3-1_amd64.deb
   hash: d567768666432bf6d64f739a705527859a715bdd81edd120b0648ff54f117ed7
 - package: libxfixes-dev
   version: 1:5.0.3-1
-  url: http:/us.archive.ubuntu.com/ubuntu/pool/main/libx/libxfixes/libxfixes-dev_5.0.3-1_i386.deb
+  url: http://us.archive.ubuntu.com/ubuntu/pool/main/libx/libxfixes/libxfixes-dev_5.0.3-1_i386.deb
   hash: c95c6c04e99adfdf15adb52adf0e725a914fd04579ae12429a6661cd37057441
 - package: libxfixes-dev
   version: 1:5.0.3-1
-  url: http:/us.ports.ubuntu.com/ubuntu-ports/pool/main/libx/libxfixes/libxfixes-dev_5.0.3-1_arm64.deb
+  url: http://us.ports.ubuntu.com/ubuntu-ports/pool/main/libx/libxfixes/libxfixes-dev_5.0.3-1_arm64.deb
   hash: 7f02c1eeac838776afa077ac905bc30c63d7d33d93db9547018f14cd7bd494d1
 - package: libxfixes-dev
   version: 1:5.0.3-1
-  url: http:/us.ports.ubuntu.com/ubuntu-ports/pool/main/libx/libxfixes/libxfixes-dev_5.0.3-1_armhf.deb
+  url: http://us.ports.ubuntu.com/ubuntu-ports/pool/main/libx/libxfixes/libxfixes-dev_5.0.3-1_armhf.deb
   hash: 4c42c5653125c4c7dd6c95173bc23407e86b634c38c3a8eb40f24757e83e5bdd
 - package: libxfixes3
   version: 1:5.0.3-1
-  url: http:/us.archive.ubuntu.com/ubuntu/pool/main/libx/libxfixes/libxfixes3_5.0.3-1_amd64.deb
+  url: http://us.archive.ubuntu.com/ubuntu/pool/main/libx/libxfixes/libxfixes3_5.0.3-1_amd64.deb
   hash: 901d15813e30f8a14ec4869f9d21cfdd33df5a50886ae5b8384423111b81a88b
 - package: libxfixes3
   version: 1:5.0.3-1
-  url: http:/us.archive.ubuntu.com/ubuntu/pool/main/libx/libxfixes/libxfixes3_5.0.3-1_i386.deb
+  url: http://us.archive.ubuntu.com/ubuntu/pool/main/libx/libxfixes/libxfixes3_5.0.3-1_i386.deb
   hash: 2a2ed86b6f0b760c8f7797a6f478339ffe4478920e9f08140e3b7011a88fabb8
 - package: libxfixes3
   version: 1:5.0.3-1
-  url: http:/us.ports.ubuntu.com/ubuntu-ports/pool/main/libx/libxfixes/libxfixes3_5.0.3-1_arm64.deb
+  url: http://us.ports.ubuntu.com/ubuntu-ports/pool/main/libx/libxfixes/libxfixes3_5.0.3-1_arm64.deb
   hash: 4236597b616620b4641793f1af610d972eff6f31513d282646d4fe73e5278948
 - package: libxfixes3
   version: 1:5.0.3-1
-  url: http:/us.ports.ubuntu.com/ubuntu-ports/pool/main/libx/libxfixes/libxfixes3_5.0.3-1_armhf.deb
+  url: http://us.ports.ubuntu.com/ubuntu-ports/pool/main/libx/libxfixes/libxfixes3_5.0.3-1_armhf.deb
   hash: ef1d62c04aeaa388d903ea793478396bb7aa071ee3c10e2104bea7ec477ac4b7
 - package: libxi-dev
   version: 2:1.7.9-1
-  url: http:/us.archive.ubuntu.com/ubuntu/pool/main/libx/libxi/libxi-dev_1.7.9-1_amd64.deb
+  url: http://us.archive.ubuntu.com/ubuntu/pool/main/libx/libxi/libxi-dev_1.7.9-1_amd64.deb
   hash: 26be222d44b0b277e629100fd2b08f1f60929ef26d708c09945fd8ab9193caf8
 - package: libxi-dev
   version: 2:1.7.9-1
-  url: http:/us.archive.ubuntu.com/ubuntu/pool/main/libx/libxi/libxi-dev_1.7.9-1_i386.deb
+  url: http://us.archive.ubuntu.com/ubuntu/pool/main/libx/libxi/libxi-dev_1.7.9-1_i386.deb
   hash: dd180ea1087efa103b671922532e8424cfab9aa88847269a0335d4f9a452f0a6
 - package: libxi-dev
   version: 2:1.7.9-1
-  url: http:/us.ports.ubuntu.com/ubuntu-ports/pool/main/libx/libxi/libxi-dev_1.7.9-1_arm64.deb
+  url: http://us.ports.ubuntu.com/ubuntu-ports/pool/main/libx/libxi/libxi-dev_1.7.9-1_arm64.deb
   hash: 519f2006c68a521a6aac3b7427073b85964b51fecff9337dba2bc149dbbeaef0
 - package: libxi-dev
   version: 2:1.7.9-1
-  url: http:/us.ports.ubuntu.com/ubuntu-ports/pool/main/libx/libxi/libxi-dev_1.7.9-1_armhf.deb
+  url: http://us.ports.ubuntu.com/ubuntu-ports/pool/main/libx/libxi/libxi-dev_1.7.9-1_armhf.deb
   hash: 293389e2db1371f5ed06d11b91219cbc7f6536cfab9977a13c87b76457eb2d65
 - package: libxi6
   version: 2:1.7.9-1
-  url: http:/us.archive.ubuntu.com/ubuntu/pool/main/libx/libxi/libxi6_1.7.9-1_amd64.deb
+  url: http://us.archive.ubuntu.com/ubuntu/pool/main/libx/libxi/libxi6_1.7.9-1_amd64.deb
   hash: 26926e76aa7230d7ee4232e3f70b24fb57294968898b0970dbe66c9ed1a40501
 - package: libxi6
   version: 2:1.7.9-1
-  url: http:/us.archive.ubuntu.com/ubuntu/pool/main/libx/libxi/libxi6_1.7.9-1_i386.deb
+  url: http://us.archive.ubuntu.com/ubuntu/pool/main/libx/libxi/libxi6_1.7.9-1_i386.deb
   hash: fd9dfd721686438deaf08b07f833577ab2f909898fceda0b51d8b9ff5a76890c
 - package: libxi6
   version: 2:1.7.9-1
-  url: http:/us.ports.ubuntu.com/ubuntu-ports/pool/main/libx/libxi/libxi6_1.7.9-1_arm64.deb
+  url: http://us.ports.ubuntu.com/ubuntu-ports/pool/main/libx/libxi/libxi6_1.7.9-1_arm64.deb
   hash: d33d624e2cc55ba3aa41c2db9f93a033ff588ebab746b770feeee069059e6b4c
 - package: libxi6
   version: 2:1.7.9-1
-  url: http:/us.ports.ubuntu.com/ubuntu-ports/pool/main/libx/libxi/libxi6_1.7.9-1_armhf.deb
+  url: http://us.ports.ubuntu.com/ubuntu-ports/pool/main/libx/libxi/libxi6_1.7.9-1_armhf.deb
   hash: 4d8136bff064e273e5e7d8b79ebcd875bde699ee9e294c951480a10e977df59b
 - package: libxinerama-dev
   version: 2:1.1.3-1
-  url: http:/us.archive.ubuntu.com/ubuntu/pool/main/libx/libxinerama/libxinerama-dev_1.1.3-1_amd64.deb
+  url: http://us.archive.ubuntu.com/ubuntu/pool/main/libx/libxinerama/libxinerama-dev_1.1.3-1_amd64.deb
   hash: 17e0b3c732630f64e45f9e77e3b6639c20afe3e9f42ac29014c1c41602523e57
 - package: libxinerama-dev
   version: 2:1.1.3-1
-  url: http:/us.archive.ubuntu.com/ubuntu/pool/main/libx/libxinerama/libxinerama-dev_1.1.3-1_i386.deb
+  url: http://us.archive.ubuntu.com/ubuntu/pool/main/libx/libxinerama/libxinerama-dev_1.1.3-1_i386.deb
   hash: 43eb9974b4d5d99bd0aea53162109a3ce7e70e45369ad0ebc5f63d0c610c83c8
 - package: libxinerama-dev
   version: 2:1.1.3-1
-  url: http:/us.ports.ubuntu.com/ubuntu-ports/pool/main/libx/libxinerama/libxinerama-dev_1.1.3-1_arm64.deb
+  url: http://us.ports.ubuntu.com/ubuntu-ports/pool/main/libx/libxinerama/libxinerama-dev_1.1.3-1_arm64.deb
   hash: cb4041e9151387c5ecbce1eba9dd9ab6a8addee4291fe09aa70c14fe79c1eced
 - package: libxinerama-dev
   version: 2:1.1.3-1
-  url: http:/us.ports.ubuntu.com/ubuntu-ports/pool/main/libx/libxinerama/libxinerama-dev_1.1.3-1_armhf.deb
+  url: http://us.ports.ubuntu.com/ubuntu-ports/pool/main/libx/libxinerama/libxinerama-dev_1.1.3-1_armhf.deb
   hash: b85b9d36ed31241c1557e0e4b6c3e02763ff9bad4dd3c11e7fcbcc20cd3624dc
 - package: libxinerama1
   version: 2:1.1.3-1
-  url: http:/us.archive.ubuntu.com/ubuntu/pool/main/libx/libxinerama/libxinerama1_1.1.3-1_amd64.deb
+  url: http://us.archive.ubuntu.com/ubuntu/pool/main/libx/libxinerama/libxinerama1_1.1.3-1_amd64.deb
   hash: a2619fb2c8afe71fff0a047ffda776a8fadc5a914334abf00183442a3e46fca8
 - package: libxinerama1
   version: 2:1.1.3-1
-  url: http:/us.archive.ubuntu.com/ubuntu/pool/main/libx/libxinerama/libxinerama1_1.1.3-1_i386.deb
+  url: http://us.archive.ubuntu.com/ubuntu/pool/main/libx/libxinerama/libxinerama1_1.1.3-1_i386.deb
   hash: acbc483ce97574da5c224f9f9d54fc933edc15e68a0867de8712b0686caf6d9e
 - package: libxinerama1
   version: 2:1.1.3-1
-  url: http:/us.ports.ubuntu.com/ubuntu-ports/pool/main/libx/libxinerama/libxinerama1_1.1.3-1_arm64.deb
+  url: http://us.ports.ubuntu.com/ubuntu-ports/pool/main/libx/libxinerama/libxinerama1_1.1.3-1_arm64.deb
   hash: f76150e9b5f61e81b63be7874d3c7de2138fbb368a6fe7a3e8a225bfc9f6bb48
 - package: libxinerama1
   version: 2:1.1.3-1
-  url: http:/us.ports.ubuntu.com/ubuntu-ports/pool/main/libx/libxinerama/libxinerama1_1.1.3-1_armhf.deb
+  url: http://us.ports.ubuntu.com/ubuntu-ports/pool/main/libx/libxinerama/libxinerama1_1.1.3-1_armhf.deb
   hash: 0e3595fc329511ed84828a9fb241d6c34376aa8042516a992b5eca99095d1c05
 - package: libxrandr-dev
   version: 2:1.5.1-1
-  url: http:/us.archive.ubuntu.com/ubuntu/pool/main/libx/libxrandr/libxrandr-dev_1.5.1-1_amd64.deb
+  url: http://us.archive.ubuntu.com/ubuntu/pool/main/libx/libxrandr/libxrandr-dev_1.5.1-1_amd64.deb
   hash: 98e4c7467487b6d4eaf1b02f4329c41d7e11c6a1164899654460828397692846
 - package: libxrandr-dev
   version: 2:1.5.1-1
-  url: http:/us.archive.ubuntu.com/ubuntu/pool/main/libx/libxrandr/libxrandr-dev_1.5.1-1_i386.deb
+  url: http://us.archive.ubuntu.com/ubuntu/pool/main/libx/libxrandr/libxrandr-dev_1.5.1-1_i386.deb
   hash: 76c977ffe8b928916ec13aefd561830b0d025b28e11629bfe1dae7d70d77dde8
 - package: libxrandr-dev
   version: 2:1.5.1-1
-  url: http:/us.ports.ubuntu.com/ubuntu-ports/pool/main/libx/libxrandr/libxrandr-dev_1.5.1-1_arm64.deb
+  url: http://us.ports.ubuntu.com/ubuntu-ports/pool/main/libx/libxrandr/libxrandr-dev_1.5.1-1_arm64.deb
   hash: 9160cc63d5b623bfcad3c7581726ee3cd213cc032e876a432ff3595b9eded18f
 - package: libxrandr-dev
   version: 2:1.5.1-1
-  url: http:/us.ports.ubuntu.com/ubuntu-ports/pool/main/libx/libxrandr/libxrandr-dev_1.5.1-1_armhf.deb
+  url: http://us.ports.ubuntu.com/ubuntu-ports/pool/main/libx/libxrandr/libxrandr-dev_1.5.1-1_armhf.deb
   hash: ef302bb6a11b505c5835d53a0f0b66ca88686360aa777534d98feeacea74d306
 - package: libxrandr2
   version: 2:1.5.1-1
-  url: http:/us.archive.ubuntu.com/ubuntu/pool/main/libx/libxrandr/libxrandr2_1.5.1-1_amd64.deb
+  url: http://us.archive.ubuntu.com/ubuntu/pool/main/libx/libxrandr/libxrandr2_1.5.1-1_amd64.deb
   hash: 5ee2ac50a7e374a8312fb68c64da27dad7eb44ab905551304ab0b92e1ccec23c
 - package: libxrandr2
   version: 2:1.5.1-1
-  url: http:/us.archive.ubuntu.com/ubuntu/pool/main/libx/libxrandr/libxrandr2_1.5.1-1_i386.deb
+  url: http://us.archive.ubuntu.com/ubuntu/pool/main/libx/libxrandr/libxrandr2_1.5.1-1_i386.deb
   hash: d04b21a29cedbf1a9ced8b147482799e429191b633c8fe609478ef9da497508e
 - package: libxrandr2
   version: 2:1.5.1-1
-  url: http:/us.ports.ubuntu.com/ubuntu-ports/pool/main/libx/libxrandr/libxrandr2_1.5.1-1_arm64.deb
+  url: http://us.ports.ubuntu.com/ubuntu-ports/pool/main/libx/libxrandr/libxrandr2_1.5.1-1_arm64.deb
   hash: 014f7e2dfaf2a59f1d8b1752e4ce32ea34ea79788d0acabe28d4dce0518998c5
 - package: libxrandr2
   version: 2:1.5.1-1
-  url: http:/us.ports.ubuntu.com/ubuntu-ports/pool/main/libx/libxrandr/libxrandr2_1.5.1-1_armhf.deb
+  url: http://us.ports.ubuntu.com/ubuntu-ports/pool/main/libx/libxrandr/libxrandr2_1.5.1-1_armhf.deb
   hash: 46d88d1047aeedcdf9c4a75bd345df2d62409a213270b7624536db0d026b367b
 - package: libxrender-dev
   version: 1:0.9.10-1
-  url: http:/us.archive.ubuntu.com/ubuntu/pool/main/libx/libxrender/libxrender-dev_0.9.10-1_amd64.deb
+  url: http://us.archive.ubuntu.com/ubuntu/pool/main/libx/libxrender/libxrender-dev_0.9.10-1_amd64.deb
   hash: aeb7abe8409afbb484c06882c158e7e695743d678387064ef95bdb3d6edbce15
 - package: libxrender-dev
   version: 1:0.9.10-1
-  url: http:/us.archive.ubuntu.com/ubuntu/pool/main/libx/libxrender/libxrender-dev_0.9.10-1_i386.deb
+  url: http://us.archive.ubuntu.com/ubuntu/pool/main/libx/libxrender/libxrender-dev_0.9.10-1_i386.deb
   hash: ed84d34f76c11e6ebd670b8bef50e4e5c67501e4560ebb93804cf3c77218a8f5
 - package: libxrender-dev
   version: 1:0.9.10-1
-  url: http:/us.ports.ubuntu.com/ubuntu-ports/pool/main/libx/libxrender/libxrender-dev_0.9.10-1_arm64.deb
+  url: http://us.ports.ubuntu.com/ubuntu-ports/pool/main/libx/libxrender/libxrender-dev_0.9.10-1_arm64.deb
   hash: c987f23fbe7ff13f1c7f41f9b63e2cb6345777f3da37c55e9edf181939904ae0
 - package: libxrender-dev
   version: 1:0.9.10-1
-  url: http:/us.ports.ubuntu.com/ubuntu-ports/pool/main/libx/libxrender/libxrender-dev_0.9.10-1_armhf.deb
+  url: http://us.ports.ubuntu.com/ubuntu-ports/pool/main/libx/libxrender/libxrender-dev_0.9.10-1_armhf.deb
   hash: 61dcfe2ca3fd6f458b70198cb0c3b19ef045f91fd27d460848066d720fd55be8
 - package: libxrender1
   version: 1:0.9.10-1
-  url: http:/us.archive.ubuntu.com/ubuntu/pool/main/libx/libxrender/libxrender1_0.9.10-1_amd64.deb
+  url: http://us.archive.ubuntu.com/ubuntu/pool/main/libx/libxrender/libxrender1_0.9.10-1_amd64.deb
   hash: bfda6dc44a39d6500ac2974b3113105477adce457699aadd99f022d5a4858c1c
 - package: libxrender1
   version: 1:0.9.10-1
-  url: http:/us.archive.ubuntu.com/ubuntu/pool/main/libx/libxrender/libxrender1_0.9.10-1_i386.deb
+  url: http://us.archive.ubuntu.com/ubuntu/pool/main/libx/libxrender/libxrender1_0.9.10-1_i386.deb
   hash: 0a6c4e2b4e0ef89a26c03fc8df50fdab4aa76960285e1a42b4154d327ffec03f
 - package: libxrender1
   version: 1:0.9.10-1
-  url: http:/us.ports.ubuntu.com/ubuntu-ports/pool/main/libx/libxrender/libxrender1_0.9.10-1_arm64.deb
+  url: http://us.ports.ubuntu.com/ubuntu-ports/pool/main/libx/libxrender/libxrender1_0.9.10-1_arm64.deb
   hash: 931f3d61ec6528221a0a2dc6f9fdac494e24d7e92e49ce1811c495571f3b2cea
 - package: libxrender1
   version: 1:0.9.10-1
-  url: http:/us.ports.ubuntu.com/ubuntu-ports/pool/main/libx/libxrender/libxrender1_0.9.10-1_armhf.deb
+  url: http://us.ports.ubuntu.com/ubuntu-ports/pool/main/libx/libxrender/libxrender1_0.9.10-1_armhf.deb
   hash: 7a0b762dcb8684cb40125e1c1b4912788bd884c9334eae23ab91cf1cb1e1a074
 - package: linux-libc-dev
   version: 4.15.0-171.180
-  url: http:/us.archive.ubuntu.com/ubuntu/pool/main/l/linux/linux-libc-dev_4.15.0-171.180_amd64.deb
+  url: http://us.archive.ubuntu.com/ubuntu/pool/main/l/linux/linux-libc-dev_4.15.0-171.180_amd64.deb
   hash: 900d63be39192859c55e0717dfebf9d21cd26d4e08645eb2e3fb3c1973b47e4e
 - package: linux-libc-dev
   version: 4.15.0-171.180
-  url: http:/us.archive.ubuntu.com/ubuntu/pool/main/l/linux/linux-libc-dev_4.15.0-171.180_i386.deb
+  url: http://us.archive.ubuntu.com/ubuntu/pool/main/l/linux/linux-libc-dev_4.15.0-171.180_i386.deb
   hash: 29de981e37700d7c8e640b357ed3897474318d10ca94fa42ec7c56ec20281d0e
 - package: linux-libc-dev
   version: 4.15.0-171.180
-  url: http:/us.ports.ubuntu.com/ubuntu-ports/pool/main/l/linux/linux-libc-dev_4.15.0-171.180_arm64.deb
+  url: http://us.ports.ubuntu.com/ubuntu-ports/pool/main/l/linux/linux-libc-dev_4.15.0-171.180_arm64.deb
   hash: c04e5a6190bc37014b9ca00f90cce9038d6c430387a0e0794b757c4e4ba5c156
 - package: linux-libc-dev
   version: 4.15.0-171.180
-  url: http:/us.ports.ubuntu.com/ubuntu-ports/pool/main/l/linux/linux-libc-dev_4.15.0-171.180_armhf.deb
+  url: http://us.ports.ubuntu.com/ubuntu-ports/pool/main/l/linux/linux-libc-dev_4.15.0-171.180_armhf.deb
   hash: aa997f69b269709624cf8f68d1db1570e99b8f27818dc5e424ddf5384c1c5e78
 - package: mesa-common-dev
   version: 20.0.8-0ubuntu1~18.04.1
-  url: http:/us.archive.ubuntu.com/ubuntu/pool/main/m/mesa/mesa-common-dev_20.0.8-0ubuntu1~18.04.1_amd64.deb
+  url: http://us.archive.ubuntu.com/ubuntu/pool/main/m/mesa/mesa-common-dev_20.0.8-0ubuntu1~18.04.1_amd64.deb
   hash: 511a8776e8a326cdad8563f9ff0c6c2c7c617cd6f3f31ba2b74cfb8afa508b3c
 - package: mesa-common-dev
   version: 20.0.8-0ubuntu1~18.04.1
-  url: http:/us.archive.ubuntu.com/ubuntu/pool/main/m/mesa/mesa-common-dev_20.0.8-0ubuntu1~18.04.1_i386.deb
+  url: http://us.archive.ubuntu.com/ubuntu/pool/main/m/mesa/mesa-common-dev_20.0.8-0ubuntu1~18.04.1_i386.deb
   hash: 6efd57a14dc24194beb795cd074bd4e858db1a5727afb9af2a136519ec8f387a
 - package: mesa-common-dev
   version: 20.0.8-0ubuntu1~18.04.1
-  url: http:/us.ports.ubuntu.com/ubuntu-ports/pool/main/m/mesa/mesa-common-dev_20.0.8-0ubuntu1~18.04.1_arm64.deb
+  url: http://us.ports.ubuntu.com/ubuntu-ports/pool/main/m/mesa/mesa-common-dev_20.0.8-0ubuntu1~18.04.1_arm64.deb
   hash: 637a19c0704997538fe12256f3300c8570b0d7f9275d12c8cc28a70015046032
 - package: mesa-common-dev
   version: 20.0.8-0ubuntu1~18.04.1
-  url: http:/us.ports.ubuntu.com/ubuntu-ports/pool/main/m/mesa/mesa-common-dev_20.0.8-0ubuntu1~18.04.1_armhf.deb
+  url: http://us.ports.ubuntu.com/ubuntu-ports/pool/main/m/mesa/mesa-common-dev_20.0.8-0ubuntu1~18.04.1_armhf.deb
   hash: 89b6d2e6e9fb9c92421a682961557ec6808b7d184f2f2f9d83d22bafb7f49c7e
 - package: x11proto-core-dev
   version: 2018.4-4
-  url: http:/us.ports.ubuntu.com/ubuntu-ports/pool/main/x/xorgproto/x11proto-core-dev_2018.4-4_all.deb
+  url: http://us.archive.ubuntu.com/ubuntu/pool/main/x/xorgproto/x11proto-core-dev_2018.4-4_all.deb
   hash: c9c13b43604d175084a528ed5047d0c8a3af1ff4913f5fe4feebd99842e67dbe
 - package: x11proto-dev
   version: 2018.4-4
-  url: http:/us.archive.ubuntu.com/ubuntu/pool/main/x/xorgproto/x11proto-dev_2018.4-4_all.deb
+  url: http://us.archive.ubuntu.com/ubuntu/pool/main/x/xorgproto/x11proto-dev_2018.4-4_all.deb
   hash: 1797fb12c67d037fb530e7203bf38a2c94e1e239bf654432506181c9d43bda01
 - package: x11proto-fixes-dev
   version: 1:2018.4-4
-  url: http:/us.archive.ubuntu.com/ubuntu/pool/main/x/xorgproto/x11proto-fixes-dev_2018.4-4_all.deb
+  url: http://us.archive.ubuntu.com/ubuntu/pool/main/x/xorgproto/x11proto-fixes-dev_2018.4-4_all.deb
   hash: fbb1e347762b71e3b66f41cd2be3be9d4542e4f33fd11b358ecf17bba9734ed1
 - package: x11proto-gl-dev
   version: 2018.4-4
-  url: http:/us.archive.ubuntu.com/ubuntu/pool/main/x/xorgproto/x11proto-gl-dev_2018.4-4_all.deb
+  url: http://us.ports.ubuntu.com/ubuntu-ports/pool/main/x/xorgproto/x11proto-gl-dev_2018.4-4_all.deb
   hash: a5bcc7ca201d4d6a7fa6a67d555688e2289f9709de7c201b7ed0d26b990b771c
 - package: x11proto-input-dev
   version: 2018.4-4
-  url: http:/us.archive.ubuntu.com/ubuntu/pool/main/x/xorgproto/x11proto-input-dev_2018.4-4_all.deb
+  url: http://us.archive.ubuntu.com/ubuntu/pool/main/x/xorgproto/x11proto-input-dev_2018.4-4_all.deb
   hash: 8ca2175e3b9d4418040e9dff91b2300c18a27711486d4b2783a996837fb1597d
 - package: x11proto-kb-dev
   version: 2018.4-4
-  url: http:/us.archive.ubuntu.com/ubuntu/pool/main/x/xorgproto/x11proto-kb-dev_2018.4-4_all.deb
+  url: http://us.archive.ubuntu.com/ubuntu/pool/main/x/xorgproto/x11proto-kb-dev_2018.4-4_all.deb
   hash: e8e559cc8db45eebb6a86a6a113e86d7638ffd456e2b769254f737c8bf1e829c
 - package: x11proto-randr-dev
   version: 2018.4-4
-  url: http:/us.archive.ubuntu.com/ubuntu/pool/main/x/xorgproto/x11proto-randr-dev_2018.4-4_all.deb
+  url: http://us.archive.ubuntu.com/ubuntu/pool/main/x/xorgproto/x11proto-randr-dev_2018.4-4_all.deb
   hash: acd0fdb0cd24d5f2da801d797334c2dd7a841fa801a61179ffe23f4b37e66588
 - package: x11proto-render-dev
   version: 2:2018.4-4
-  url: http:/us.archive.ubuntu.com/ubuntu/pool/main/x/xorgproto/x11proto-render-dev_2018.4-4_all.deb
+  url: http://us.archive.ubuntu.com/ubuntu/pool/main/x/xorgproto/x11proto-render-dev_2018.4-4_all.deb
   hash: 6367711d72f5cc0593a8da82f238864d3247b1b1cd4e3a7290502f6c6b8169ab
 - package: x11proto-xext-dev
   version: 2018.4-4
-  url: http:/us.ports.ubuntu.com/ubuntu-ports/pool/main/x/xorgproto/x11proto-xext-dev_2018.4-4_all.deb
+  url: http://us.archive.ubuntu.com/ubuntu/pool/main/x/xorgproto/x11proto-xext-dev_2018.4-4_all.deb
   hash: 4253ca282c54e551990b5912401321c709c3f628bcd3a676b7253c22335e1f3a

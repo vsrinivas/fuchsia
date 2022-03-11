@@ -277,10 +277,12 @@ func downloadPackageList(config *Config, depends bool) ([]Lock, error) {
 							if _, ok := descriptors[n]; !ok {
 								descriptors[n] = map[string]descriptor{}
 							}
+							url := *sourceUrl
+							url.Path = path.Join(url.Path, p["Filename"])
 							descriptors[n][a] = descriptor{
 								name:    p["Package"],
 								version: p["Version"],
-								url:     path.Join(source, p["Filename"]),
+								url:     url.String(),
 								hash:    p["SHA256"],
 								depends: depends,
 							}
