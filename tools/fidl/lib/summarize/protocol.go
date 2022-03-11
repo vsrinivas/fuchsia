@@ -52,8 +52,8 @@ func (p protocol) Serialize() ElementStr {
 type method struct {
 	membership      isMember
 	method          fidlgen.Method
-	requestPayload  *fidlgen.Struct
-	responsePayload *fidlgen.Struct
+	requestPayload  parameterizer
+	responsePayload parameterizer
 }
 
 // newMethod creates a new protocol method element.
@@ -63,10 +63,10 @@ func newMethod(s *symbolTable, parent fidlgen.EncodedCompoundIdentifier, m fidlg
 		method:     m,
 	}
 	if m.RequestPayload != nil {
-		out.requestPayload = s.getStruct(m.RequestPayload.Identifier)
+		out.requestPayload = s.getPayload(m.RequestPayload.Identifier)
 	}
 	if m.ResponsePayload != nil {
-		out.responsePayload = s.getStruct(m.ResponsePayload.Identifier)
+		out.responsePayload = s.getPayload(m.ResponsePayload.Identifier)
 	}
 	return out
 }
@@ -116,18 +116,14 @@ func (m method) Serialize() ElementStr {
 }
 
 // getParamList formats a parameter list, as in Foo(ty1 a, ty2b)
-func (m method) getParamList(hasParams bool, payload *fidlgen.Struct) string {
+func (m method) getParamList(hasParams bool, payload parameterizer) string {
 	if !hasParams {
 		return ""
 	}
 	if payload == nil {
-		payload = &fidlgen.Struct{}
+		payload = &structPayload{}
 	}
 
-	params := payload.Members
-	var ps []string
-	for _, p := range params {
-		ps = append(ps, fmt.Sprintf("%v %v", m.membership.symbolTable.fidlTypeString(p.Type), p.Name))
-	}
-	return fmt.Sprintf("(%v)", strings.Join(ps, ","))
+	typePrinter := m.membership.symbolTable.fidlTypeString
+	return payload.AsParameters(typePrinter)
 }

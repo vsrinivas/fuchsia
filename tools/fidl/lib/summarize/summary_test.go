@@ -29,7 +29,16 @@ resource_definition handle : uint32 {
 `
 
 	// l2Library is a sample dependency taken in by some tests.
-	l2Library = `library l2; type T = struct {};`
+	l2Library = `
+library l2;
+type T = struct {};
+type UnaryArg = struct {
+    num int32;
+};
+protocol Inverter {
+    Invert(UnaryArg) -> (UnaryArg);
+};
+`
 )
 
 type summaryTestCase struct {
@@ -498,6 +507,86 @@ library l
 `,
 		},
 		{
+			name: "protocols with named payloads",
+			fidl: `
+library l;
+type Payload = struct {
+    a bool;
+};
+protocol P {
+    M1(Payload);
+    -> M2(Payload) error uint32;
+};
+`,
+			expected: `protocol/member l/P.M1(bool a)
+protocol/member l/P.M2 -> (l/P_M2_Result result)
+protocol l/P
+union/member l/P_M2_Result.err uint32
+union/member l/P_M2_Result.response l/Payload
+strict union l/P_M2_Result
+struct/member l/Payload.a bool
+struct l/Payload
+library l
+`,
+		},
+		{
+			name: "protocols with non-struct payloads",
+			fidl: `
+library l;
+type U = flexible union {
+    1: a uint64;
+};
+type T = table {
+    1: b int32;
+};
+protocol P {
+    M1(U)-> (T);
+    M2(table {1: c bool; })-> (strict union {1: d uint32; });
+};
+`,
+			expected: `protocol/member l/P.M1(l/U payload) -> (l/T payload)
+protocol/member l/P.M2(l/PM2Request payload) -> (l/PM2Response payload)
+protocol l/P
+table/member l/PM2Request.c bool
+table l/PM2Request
+union/member l/PM2Response.d uint32
+strict union l/PM2Response
+table/member l/T.b int32
+table l/T
+union/member l/U.a uint64
+flexible union l/U
+library l
+`,
+		},
+		{
+			name: "protocols with errorable non-struct payloads",
+			fidl: `
+library l;
+type T = table {
+    1: b string;
+};
+protocol P {
+    -> M1(flexible union { 1: a bool; }) error uint32;
+    -> M2(T) error int32;
+};
+`,
+			expected: `protocol/member l/P.M1 -> (l/P_M1_Result result)
+protocol/member l/P.M2 -> (l/P_M2_Result result)
+protocol l/P
+union/member l/P_M1_Response.a bool
+flexible union l/P_M1_Response
+union/member l/P_M1_Result.err uint32
+union/member l/P_M1_Result.response l/P_M1_Response
+strict union l/P_M1_Result
+union/member l/P_M2_Result.err int32
+union/member l/P_M2_Result.response l/T
+strict union l/P_M2_Result
+table/member l/T.b string
+table l/T
+library l
+`,
+		},
+		{
 			name: "check types",
 			fidl: `
 library l;
@@ -538,11 +627,15 @@ using l2;
 type Foo = struct {};
 type Bar = struct {};
 protocol Calculator {
+    compose l2.Inverter;
+    Halve(l2.UnaryArg) -> (l2.UnaryArg);
     Add(struct { a l2.T; b Bar; }) -> (struct { c Foo; });
 };
 `,
 			expected: `struct l/Bar
 protocol/member l/Calculator.Add(l2/T a,l/Bar b) -> (l/Foo c)
+protocol/member l/Calculator.Halve(int32 num) -> (int32 num)
+protocol/member l/Calculator.Invert(int32 num) -> (int32 num)
 protocol l/Calculator
 struct l/Foo
 library l
@@ -1410,6 +1503,222 @@ protocol P {
 `,
 		},
 		{
+			name: "protocols with named payloads",
+			fidl: `
+library l;
+type Payload = struct {
+    a bool;
+};
+protocol P {
+    M1(Payload);
+    -> M2(Payload) error uint32;
+};
+`,
+			expected: `[
+    {
+        "declaration": "(bool a)",
+        "kind": "protocol/member",
+        "name": "l/P.M1"
+    },
+    {
+        "declaration": " -> (l/P_M2_Result result)",
+        "kind": "protocol/member",
+        "name": "l/P.M2"
+    },
+    {
+        "kind": "protocol",
+        "name": "l/P"
+    },
+    {
+        "declaration": "uint32",
+        "kind": "union/member",
+        "name": "l/P_M2_Result.err"
+    },
+    {
+        "declaration": "l/Payload",
+        "kind": "union/member",
+        "name": "l/P_M2_Result.response"
+    },
+    {
+        "kind": "union",
+        "name": "l/P_M2_Result",
+        "strictness": "strict"
+    },
+    {
+        "declaration": "bool",
+        "kind": "struct/member",
+        "name": "l/Payload.a"
+    },
+    {
+        "kind": "struct",
+        "name": "l/Payload"
+    },
+    {
+        "kind": "library",
+        "name": "l"
+    }
+]
+`,
+		},
+		{
+			name: "protocols with non-struct payloads",
+			fidl: `
+library l;
+type U = flexible union {
+    1: a uint64;
+};
+type T = table {
+    1: b int32;
+};
+protocol P {
+    M1(U)-> (T);
+    M2(table {1: c bool; })-> (strict union {1: d uint32; });
+};
+`,
+			expected: `[
+    {
+        "declaration": "(l/U payload) -> (l/T payload)",
+        "kind": "protocol/member",
+        "name": "l/P.M1"
+    },
+    {
+        "declaration": "(l/PM2Request payload) -> (l/PM2Response payload)",
+        "kind": "protocol/member",
+        "name": "l/P.M2"
+    },
+    {
+        "kind": "protocol",
+        "name": "l/P"
+    },
+    {
+        "declaration": "bool",
+        "kind": "table/member",
+        "name": "l/PM2Request.c"
+    },
+    {
+        "kind": "table",
+        "name": "l/PM2Request"
+    },
+    {
+        "declaration": "uint32",
+        "kind": "union/member",
+        "name": "l/PM2Response.d"
+    },
+    {
+        "kind": "union",
+        "name": "l/PM2Response",
+        "strictness": "strict"
+    },
+    {
+        "declaration": "int32",
+        "kind": "table/member",
+        "name": "l/T.b"
+    },
+    {
+        "kind": "table",
+        "name": "l/T"
+    },
+    {
+        "declaration": "uint64",
+        "kind": "union/member",
+        "name": "l/U.a"
+    },
+    {
+        "kind": "union",
+        "name": "l/U",
+        "strictness": "flexible"
+    },
+    {
+        "kind": "library",
+        "name": "l"
+    }
+]
+`,
+		},
+		{
+			name: "protocols with errorable non-struct payloads",
+			fidl: `
+library l;
+type T = table {
+    1: b string;
+};
+protocol P {
+    -> M1(flexible union { 1: a bool; }) error uint32;
+    -> M2(T) error int32;
+};
+`,
+			expected: `[
+    {
+        "declaration": " -> (l/P_M1_Result result)",
+        "kind": "protocol/member",
+        "name": "l/P.M1"
+    },
+    {
+        "declaration": " -> (l/P_M2_Result result)",
+        "kind": "protocol/member",
+        "name": "l/P.M2"
+    },
+    {
+        "kind": "protocol",
+        "name": "l/P"
+    },
+    {
+        "declaration": "bool",
+        "kind": "union/member",
+        "name": "l/P_M1_Response.a"
+    },
+    {
+        "kind": "union",
+        "name": "l/P_M1_Response",
+        "strictness": "flexible"
+    },
+    {
+        "declaration": "uint32",
+        "kind": "union/member",
+        "name": "l/P_M1_Result.err"
+    },
+    {
+        "declaration": "l/P_M1_Response",
+        "kind": "union/member",
+        "name": "l/P_M1_Result.response"
+    },
+    {
+        "kind": "union",
+        "name": "l/P_M1_Result",
+        "strictness": "strict"
+    },
+    {
+        "declaration": "int32",
+        "kind": "union/member",
+        "name": "l/P_M2_Result.err"
+    },
+    {
+        "declaration": "l/T",
+        "kind": "union/member",
+        "name": "l/P_M2_Result.response"
+    },
+    {
+        "kind": "union",
+        "name": "l/P_M2_Result",
+        "strictness": "strict"
+    },
+    {
+        "declaration": "string",
+        "kind": "table/member",
+        "name": "l/T.b"
+    },
+    {
+        "kind": "table",
+        "name": "l/T"
+    },
+    {
+        "kind": "library",
+        "name": "l"
+    }
+]
+`,
+		},
+		{
 			name: "check types",
 			fidl: `
 library l;
@@ -1482,6 +1791,8 @@ using l2;
 type Foo = struct {};
 type Bar = struct {};
 protocol Calculator {
+    compose l2.Inverter;
+    Halve(l2.UnaryArg) -> (l2.UnaryArg);
     Add(struct { a l2.T; b Bar; }) -> (struct { c Foo; });
 };
 `,
@@ -1494,6 +1805,16 @@ protocol Calculator {
         "declaration": "(l2/T a,l/Bar b) -> (l/Foo c)",
         "kind": "protocol/member",
         "name": "l/Calculator.Add"
+    },
+    {
+        "declaration": "(int32 num) -> (int32 num)",
+        "kind": "protocol/member",
+        "name": "l/Calculator.Halve"
+    },
+    {
+        "declaration": "(int32 num) -> (int32 num)",
+        "kind": "protocol/member",
+        "name": "l/Calculator.Invert"
     },
     {
         "kind": "protocol",

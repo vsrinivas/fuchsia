@@ -11,6 +11,75 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 )
 
+type typePrinter = func(t fidlgen.Type) Decl
+
+// structPayload is a thin wrapper around the Struct type imported from fidlgen.
+// It exists solely to implement the parameterizer interface over that type.
+type structPayload struct {
+	fidlgen.Struct
+}
+
+func (p *structPayload) Name() fidlgen.EncodedCompoundIdentifier {
+	return p.Struct.Name
+}
+
+func (p *structPayload) AsParameters(tp typePrinter) string {
+	members := p.Struct.Members
+	var ps []string
+	for _, m := range members {
+		ps = append(ps, fmt.Sprintf("%v %v", tp(m.Type), m.Name))
+	}
+	return fmt.Sprintf("(%v)", strings.Join(ps, ","))
+}
+
+// tablePayload is a thin wrapper around the Table type imported from fidlgen.
+// It exists solely to implement the parameterizer interface over that type.
+type tablePayload struct {
+	fidlgen.Table
+}
+
+func (p *tablePayload) Name() fidlgen.EncodedCompoundIdentifier {
+	return p.Table.Name
+}
+
+func (p *tablePayload) AsParameters(_ typePrinter) string {
+	return fmt.Sprintf("(%v payload)", p.Name())
+}
+
+// unionPayload is a thin wrapper around the Union type imported from fidlgen.
+// It exists solely to implement the parameterizer interface over that type.
+type unionPayload struct {
+	fidlgen.Union
+}
+
+func (p *unionPayload) Name() fidlgen.EncodedCompoundIdentifier {
+	return p.Union.Name
+}
+
+func (p *unionPayload) AsParameters(_ typePrinter) string {
+	return fmt.Sprintf("(%v payload)", p.Name())
+}
+
+// parameterizer describes a FIDL type that may be rendered as a set of
+// request/response parameters for a FIDL protocol method.
+type parameterizer interface {
+	// Name returns the name of the type in question.
+	Name() fidlgen.EncodedCompoundIdentifier
+	// AsParameters renders the type in question into a parameter list. This
+	// rendering takes different forms depending on the layout of the underlying
+	// type: structs are "flattened" into a list of their constituent elements,
+	// while tables and unions are always a list pointing to the type in question,
+	// always named "payload."
+	AsParameters(typePrinter) string
+}
+
+// All implementers of parameterizer.
+var _ = []parameterizer{
+	(*structPayload)(nil),
+	(*tablePayload)(nil),
+	(*unionPayload)(nil),
+}
+
 // symbolTable knows how to represent a symbol's type as a string.
 //
 // In the RFC-0050 compatible syntax, knowledge of identifier types is required
@@ -24,6 +93,11 @@ type symbolTable struct {
 	// resolving optional structs which have a different syntax
 	// (box<Foo> instead of Foo:optional).
 	structDecls map[fidlgen.EncodedCompoundIdentifier]*fidlgen.Struct
+
+	// payloads contains all struct,table, or union layouts used in any of the
+	// protocol methods in the library being summarized. Used for generating
+	// parameter lists for method signatures.
+	payloads payloadDict
 }
 
 // addProtocol registers that name corresponds to a FIDL protocol.
@@ -54,9 +128,15 @@ func (n *symbolTable) isStruct(name fidlgen.EncodedCompoundIdentifier) bool {
 	return ok
 }
 
-// getStruct returns the stored struct definition, if one exists.
-func (n *symbolTable) getStruct(name fidlgen.EncodedCompoundIdentifier) *fidlgen.Struct {
-	if def, ok := n.structDecls[name]; ok {
+// addPayloads registers that a map of each `name` that corresponds to a FIDL
+// payload layout.
+func (n *symbolTable) addPayloads(payloads payloadDict) {
+	n.payloads = payloads
+}
+
+// getPayload returns the stored payload definition, if one exists.
+func (n *symbolTable) getPayload(name fidlgen.EncodedCompoundIdentifier) parameterizer {
+	if def, ok := n.payloads[name]; ok {
 		return def
 	}
 	return nil
@@ -117,9 +197,11 @@ func (d *symbolTable) fidlTypeString(t fidlgen.Type) Decl {
 	return Decl(ret.String())
 }
 
-// typeString contains a declaration of a FIDL type, and knows how to print it out.
+// typeString contains a declaration of a FIDL type, and knows how to print it
+// out.
 //
-// See https://fuchsia.dev/fuchsia-src/contribute/governance/rfcs/0050_syntax_revamp?hl=en
+// See
+// https://fuchsia.dev/fuchsia-src/contribute/governance/rfcs/0050_syntax_revamp?hl=en
 type typeString struct {
 	layout      string
 	params      []string
@@ -201,11 +283,11 @@ func (t *typeString) addHandleRights(r fidlgen.HandleRights) {
 	var right fidlgen.HandleRights
 	for right = 1; right != 0; right = right << 1 {
 		if right&r != 0 {
-			// While not all HandleRights bits have a name, ostensibly the ones that are
-			// used do have a name, and the code below will work.  If ever there is a new
-			// bit introduced without giving it a name, this will fail. But since unnamed
-			// but used bit is a bug, failing is OK.  Fix by adding the missing name to
-			// handleRightsNames above.
+			// While not all HandleRights bits have a name, ostensibly the ones that
+			// are used do have a name, and the code below will work.  If ever there
+			// is a new bit introduced without giving it a name, this will fail. But
+			// since unnamed but used bit is a bug, failing is OK.  Fix by adding the
+			// missing name to handleRightsNames above.
 			t.addConstraint(handleRightsNames[right])
 		}
 	}
