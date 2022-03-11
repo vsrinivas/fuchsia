@@ -450,7 +450,7 @@ From //boards/arm64.gni:33
 
 From //build/board.gni:21
 
-**Current value for `target_cpu = "x64"`:** `["//src/power/thermd", "//src/power/thermd:config", "//src/devices/sysmem/bin/sysmem_connector", "//src/graphics/bin/vulkan_loader", "//src/hwinfo:default_board_config", "//src/graphics/drivers/intel-gen/icd:libvulkan_intel_gen", "//src/graphics/lib/goldfish-vulkan/gnbuild:goldfish-vulkan", "//src/graphics/lib/goldfish-vulkan/gnbuild:goldfish-vulkan-config"]`
+**Current value for `target_cpu = "x64"`:** `["//src/devices/sysmem/bin/sysmem_connector", "//src/graphics/bin/vulkan_loader", "//src/power/thermd", "//src/hwinfo:default_board_config", "//src/graphics/drivers/intel-gen/icd:libvulkan_intel_gen", "//src/graphics/lib/goldfish-vulkan/gnbuild:goldfish-vulkan", "//src/graphics/lib/goldfish-vulkan/gnbuild:goldfish-vulkan-config"]`
 
 From //boards/common/x64-common.gni:57
 
